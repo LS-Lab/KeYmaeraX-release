@@ -2,10 +2,13 @@
     <h3 class="modal-title">Proof Result</h3>
 </div>
 <div class="modal-body">
+    <p ng-if="proof.checking" ng-cloak>
+        <i class="fa fa-spinner fa-spin"></i> Checking your proof.
+    </p>
     <p ng-if="proof.isProved" ng-cloak>
         <i class="fa fa-check"></i> All goals in your proof agenda have been closed.
     </p>
-    <p ng-if="!proof.isProved" ng-cloak>
+    <p ng-if="proof.isProved !== undefined && !proof.isProved" ng-cloak>
         <i class="fa fa-bolt"></i> Your proof still has open goals.
     </p>
 
@@ -23,8 +26,8 @@
 
 </div>
 <div class="modal-footer">
-    <button class="btn btn-default" ng-click="downloadTactic()"><i class="fa fa-download"></i> Download tactic</button>
-    <button class="btn btn-default" ng-click="downloadLemma()"><i class="fa fa-certificate"></i> Download lemma</button>
-    <button class="btn btn-default" ng-click="downloadProofArchive()"><i class="fa fa-archive"></i> Download archive</button>
+    <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}" ng-click="downloadTactic()"><i class="fa fa-download"></i> Download tactic</button>
+    <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}" ng-click="downloadLemma()"><i class="fa fa-certificate"></i> Download lemma</button>
+    <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}" ng-click="downloadProofArchive()"><i class="fa fa-archive"></i> Download archive</button>
     <button class="btn btn-primary" ng-click="cancel()">Close</button>
 </div>

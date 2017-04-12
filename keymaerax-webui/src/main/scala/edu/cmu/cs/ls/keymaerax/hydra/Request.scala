@@ -52,8 +52,22 @@ sealed trait Request {
   def permission(t: SessionToken): Boolean = true
 
   final def getResultingResponses(t: SessionToken): List[Response] = {
-    assert(permission(t), "Permission denied but still responses queried (see completeRequest)")
-    resultingResponses()
+    if (!permission(t)) new PossibleAttackResponse("Permission denied")::Nil
+    else {
+      assert(permission(t), "Permission denied but still responses queried (see completeRequest)")
+      try {
+        resultingResponses()
+      } catch {
+        //@note Avoids "Boxed Error" without error message by wrapping unchecked exceptions here.
+        //      The web server translates exception into 500 response, the web UI picks them up in the error alert dialog
+        // assert, ensuring
+        case a: AssertionError => throw new Exception(
+          "We're sorry, an internal safety check was violated, which may point to a bug. The safety check reports " + a.getMessage, a)
+        // require
+        case e: IllegalArgumentException => throw new Exception(
+          "We're sorry, an internal safety check was violated, which may point to a bug. The safety check reports " + e.getMessage, e)
+      }
+    }
   }
 
   def resultingResponses(): List[Response] //see Response.scala.
@@ -71,11 +85,11 @@ sealed trait Request {
   * @param username The username of the current user.
   */
 abstract class UserRequest(username: String) extends Request {
-  override def permission(t: SessionToken) = t belongsTo username
+  override def permission(t: SessionToken): Boolean = t belongsTo username
 }
 
 abstract class LocalhostOnlyRequest() extends Request {
-  override def permission(t: SessionToken) = !HyDRAServerConfig.isHosted //@todo change this to a literal false prior to deployment.
+  override def permission(t: SessionToken): Boolean = !HyDRAServerConfig.isHosted //@todo change this to a literal false prior to deployment.
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -83,7 +97,7 @@ abstract class LocalhostOnlyRequest() extends Request {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 class CreateUserRequest(db: DBAbstraction, username: String, password: String, mode: String) extends Request {
-  override def resultingResponses() = {
+  override def resultingResponses(): List[Response] = {
     val userExists = db.userExists(username)
     val sessionToken =
       if (!userExists) {
@@ -105,7 +119,7 @@ class LoginRequest(db : DBAbstraction, username : String, password : String) ext
 }
 
 class ProofsForUserRequest(db : DBAbstraction, userId: String) extends UserRequest(userId) {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     val proofs = db.getProofsForUser(userId).filterNot(_._1.temporary).map(proof =>
       (proof._1, "loaded"/*KeYmaeraInterface.getTaskLoadStatus(proof._1.proofId.toString).toString.toLowerCase*/))
     new ProofListResponse(proofs) :: Nil
@@ -113,7 +127,7 @@ class ProofsForUserRequest(db : DBAbstraction, userId: String) extends UserReque
 }
 
 class UpdateProofNameRequest(db : DBAbstraction, userId: String, proofId : String, newName : String) extends UserRequest(userId) {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     val proof = db.getProofInfo(proofId)
     db.updateProofName(proofId, newName)
     new UpdateProofNameResponse(proofId, newName) :: Nil
@@ -121,7 +135,7 @@ class UpdateProofNameRequest(db : DBAbstraction, userId: String, proofId : Strin
 }
 
 class FailedRequest(userId: String, msg: String, cause: Throwable = null) extends UserRequest(userId) {
-  def resultingResponses() = { new ErrorResponse(msg, cause) :: Nil }
+  def resultingResponses(): List[Response] = { new ErrorResponse(msg, cause) :: Nil }
 }
 
 /**
@@ -163,78 +177,77 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
   }
 
   override def resultingResponses(): List[Response] = {
-    val trace = db.getExecutionTrace(proofId.toInt)
-    val tree = ProofTree.ofTrace(trace)
-    val node =
-      tree.findNode(nodeId) match {
-        case None => throw new ProverException("Invalid node " + nodeId)
-        case Some(n) => n
-      }
-
-    //@note not a tactic because we don't want to change the proof tree just by looking for counterexamples
-    val fml = node.sequent.toFormula
-    def nonfoError = {
-      val nonFOAnte = node.sequent.ante.filterNot(_.isFOL)
-      val nonFOSucc = node.sequent.succ.filterNot(_.isFOL)
-      new CounterExampleResponse("cex.nonfo", (nonFOSucc ++ nonFOAnte).head) :: Nil
-    }
-    try {
-      ToolProvider.cexTool() match {
-        case Some(cexTool) =>
-          if (fml.isFOL) {
-            findCounterExample(fml, cexTool) match {
-              //@todo return actual sequent, use collapsiblesequentview to display counterexample
-              case Some(cex) =>
-                new CounterExampleResponse("cex.found", fml, cex) :: Nil
-              case None => new CounterExampleResponse("cex.none") :: Nil
-            }
-          } else {
-            /* TODO: Case on this instead */
-            val qeTool:QETool = ToolProvider.qeTool().get
-            val snode: SearchNode = ProgramSearchNode(fml)(qeTool)
-            val search = new BoundedDFS(10)
-            try {
-              search(snode) match {
-                case None => nonfoError
-                case Some(cex) =>
-                  new CounterExampleResponse("cex.found", fml, cex.map) :: Nil
+    val tree = DbProofTree(db, proofId)
+    tree.locate(nodeId) match {
+      case None => new ErrorResponse("Unknown node " + nodeId)::Nil
+      case Some(node) =>
+        //@note not a tactic because we don't want to change the proof tree just by looking for counterexamples
+        val sequent = node.goal.get
+        val fml = sequent.toFormula
+        def nonfoError = {
+          val nonFOAnte = sequent.ante.filterNot(_.isFOL)
+          val nonFOSucc = sequent.succ.filterNot(_.isFOL)
+          new CounterExampleResponse("cex.nonfo", (nonFOSucc ++ nonFOAnte).head) :: Nil
+        }
+        try {
+          ToolProvider.cexTool() match {
+            case Some(cexTool) =>
+              if (fml.isFOL) {
+                findCounterExample(fml, cexTool) match {
+                  //@todo return actual sequent, use collapsiblesequentview to display counterexample
+                  case Some(cex) =>
+                    new CounterExampleResponse("cex.found", fml, cex) :: Nil
+                  case None => new CounterExampleResponse("cex.none") :: Nil
+                }
+              } else {
+                /* TODO: Case on this instead */
+                val qeTool:QETool = ToolProvider.qeTool().get
+                val snode: SearchNode = ProgramSearchNode(fml)(qeTool)
+                val search = new BoundedDFS(10)
+                try {
+                  search(snode) match {
+                    case None => nonfoError
+                    case Some(cex) =>
+                      new CounterExampleResponse("cex.found", fml, cex.map) :: Nil
+                  }
+                } catch {
+                  // Counterexample generation is quite hard for, e.g. ODEs, so expect some cases to be unimplemented.
+                  // When that happens, just tell the user they need to simplify the formula more.
+                  case _ : NotImplementedError => nonfoError
+                }
               }
-            } catch {
-              // Counterexample generation is quite hard for, e.g. ODEs, so expect some cases to be unimplemented.
-              // When that happens, just tell the user they need to simplify the formula more.
-              case _ : NotImplementedError => nonfoError
-            }
+            case None => new CounterExampleResponse("cex.notool") :: Nil
           }
-        case None => new CounterExampleResponse("cex.notool") :: Nil
-      }
-    } catch {
-      case ex: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
+        } catch {
+          case ex: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
+        }
     }
   }
 }
 
 class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserRequest(userId) {
   override def resultingResponses(): List[Response] = {
-    val trace = db.getExecutionTrace(proofId.toInt)
-    val tree = ProofTree.ofTrace(trace)
-    val node = tree.findNode(nodeId) match {
-      case None => throw new ProverException("Invalid node " + nodeId)
-      case Some(n) => n
+    val tree = DbProofTree(db, proofId)
+    tree.locate(nodeId) match {
+      case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+      case Some(node) =>
+        //@note not a tactic because we don't want to change the proof tree just by simulating
+        val sequent = node.goal.get
+        val fml = sequent.toFormula match {
+          case Imply(True, succ) => succ //@todo really? below we error response if not an implication
+          case f => f
+        }
+        if (ToolProvider.odeTool().isDefined) fml match {
+          case Imply(initial, b@Box(prg, _)) =>
+            // all symbols because we need frame constraints for constants
+            val vars = (StaticSemantics.symbols(prg) ++ StaticSemantics.symbols(initial)).filter(_.isInstanceOf[Variable])
+            val Box(prgPre, _) = vars.foldLeft[Formula](b)((b, v) => b.replaceAll(v, Variable("pre" + v.name, v.index, v.sort)))
+            val stateRelEqs = vars.map(v => Equal(v.asInstanceOf[Term], Variable("pre" + v.name, v.index, v.sort))).reduceRightOption(And).getOrElse(True)
+            val simSpec = Diamond(solveODEs(prgPre), stateRelEqs)
+            new SetupSimulationResponse(addNonDetInitials(initial, vars), transform(simSpec)) :: Nil
+          case _ => new ErrorResponse("Simulation only supported for formulas of the form initial -> [program]safe") :: Nil
+        } else new ErrorResponse("No simulation tool available, please configure Mathematica") :: Nil
     }
-
-    //@note not a tactic because we don't want to change the proof tree just by simulating
-    val fml = if (node.sequent.ante.nonEmpty) node.sequent.toFormula else { val Imply(True, succ) = node.sequent.toFormula; succ }
-    if (ToolProvider.odeTool().isDefined) fml match {
-      case Imply(initial, b@Box(prg, _)) =>
-        // all symbols because we need frame constraints for constants
-        val vars = (StaticSemantics.symbols(prg) ++ StaticSemantics.symbols(initial)).filter(_.isInstanceOf[Variable])
-        val Box(prgPre, _) = vars.foldLeft[Formula](b)((b, v) => b.replaceAll(v, Variable("pre" + v.name, v.index, v.sort)))
-        val stateRelEqs = vars.map(v => Equal(v.asInstanceOf[Term], Variable("pre" + v.name, v.index, v.sort))).reduceRightOption(And).getOrElse(True)
-        val simSpec = Diamond(solveODEs(prgPre), stateRelEqs)
-        new SetupSimulationResponse(addNonDetInitials(initial, vars), transform(simSpec)) :: Nil
-      case _ => new ErrorResponse("Simulation only supported for formulas of the form initial -> [program]safe") :: Nil
-    }
-    else new ErrorResponse("No simulation tool available, please configure Mathematica") :: Nil
   }
 
   private def addNonDetInitials(initial: Formula, vars: Set[NamedSymbol]): Formula = {
@@ -281,7 +294,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
   }
 
   private def replaceFree(f: Formula, vars: Map[Variable, Variable]) = {
-    vars.keySet.foldLeft[Formula](f)((b, v) => b.replaceFree(v, vars.get(v).get))
+    vars.keySet.foldLeft[Formula](f)((b, v) => b.replaceFree(v, vars(v)))
   }
 
   private def primedSymbols(ode: DifferentialProgram) = {
@@ -342,7 +355,7 @@ class KeymaeraXVersionRequest() extends Request {
   override def resultingResponses() : List[Response] = {
     val keymaeraXVersion = VERSION
     val (upToDate, latestVersion) = UpdateChecker.getVersionStatus() match {
-      case Some((upToDate, latestVersion)) => (Some(upToDate), Some(latestVersion))
+      case Some((upd, lv)) => (Some(upd), Some(lv))
       case _ => (None, None)
     }
     new KeymaeraXVersionResponse(keymaeraXVersion, upToDate, latestVersion) :: Nil
@@ -468,10 +481,13 @@ class GetToolRequest(db: DBAbstraction) extends LocalhostOnlyRequest {
 class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyRequest {
   override def resultingResponses(): List[Response] = {
     //@todo more/different tools
-    assert(tool == "mathematica" || tool == "z3", "Expected either Mathematica or Z3 tool")
-    val toolConfig = new ConfigurationPOJO("tool", Map("qe" -> tool))
-    db.updateConfiguration(toolConfig)
-    new KvpResponse("tool", tool) :: Nil
+    if (tool != "mathematica" && tool != "z3") new ErrorResponse("Unknown tool " + tool + ", expected either 'mathematica' or 'z3'")::Nil
+    else {
+      assert(tool == "mathematica" || tool == "z3", "Expected either Mathematica or Z3 tool")
+      val toolConfig = new ConfigurationPOJO("tool", Map("qe" -> tool))
+      db.updateConfiguration(toolConfig)
+      new KvpResponse("tool", tool) :: Nil
+    }
   }
 }
 
@@ -561,47 +577,43 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
 class CreateModelFromFormulaRequest(db: DBAbstraction, userId: String, nameOfModel: String, formula: String) extends UserRequest(userId) {
   private var createdId : Option[String] = None
 
-  def resultingResponses() = try {
-    val f = KeYmaeraXParser(formula).asInstanceOf[Formula]
-    if(db.getModelList(userId).map(_.name).contains(nameOfModel))
-      new BooleanResponse(false, Some("A model with that name already exists.")) :: Nil
-    else {
-      createdId = db.createModel(userId, nameOfModel, formula, currentDate()).map(x => x.toString)
-      new BooleanResponse(createdId.isDefined) :: Nil
+  def resultingResponses(): List[Response] = try {
+    KeYmaeraXParser(formula) match {
+      case _: Formula =>
+        if(db.getModelList(userId).map(_.name).contains(nameOfModel))
+          new BooleanResponse(false, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
+        else {
+          createdId = db.createModel(userId, nameOfModel, formula, currentDate()).map(_.toString)
+          new BooleanResponse(createdId.isDefined) :: Nil
+        }
+      case t => new ErrorResponse("Expected a formula, but got the " + t.kind + " " + formula) :: Nil
     }
   } catch {
-    case e : ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+    case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
   }
 
-  def getModelId = createdId match {
+  def getModelId: String = createdId match {
     case Some(s) => s
     case None => throw new IllegalStateException("Requested created model ID before calling resultingResponses, or else an error occurred during creation.")
   }
 }
 
 class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : String, keyFileContents : String) extends UserRequest(userId) {
-  private var createdId : Option[String] = None
-
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     try {
       KeYmaeraXProblemParser.parseAsProblemOrFormula(keyFileContents) match {
         case _: Formula =>
-          if(db.getModelList(userId).map(_.name).contains(nameOfModel)) {
-            //Nope. Give a good error message.
-            new BooleanResponse(false, Some("A model with that name already exists.")) :: Nil
+          if (db.getModelList(userId).map(_.name).contains(nameOfModel)) {
+            new BooleanResponse(false, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
           } else {
-            createdId = db.createModel(userId, nameOfModel, keyFileContents, currentDate()).map(x => x.toString)
+            val createdId = db.createModel(userId, nameOfModel, keyFileContents, currentDate()).map(x => x.toString)
             new BooleanResponse(createdId.isDefined) :: Nil
           }
+        case t => new ErrorResponse("Expected a model formula, but got a file with a " + t.kind) :: Nil
       }
     } catch {
       case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
     }
-  }
-
-  def getModelId = createdId match {
-    case Some(s) => s
-    case None => throw new IllegalStateException("Requested created model ID before calling resultingResponses, or else an error occurred during creation.")
   }
 }
 
@@ -621,10 +633,11 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: S
       val archiveEntries = KeYmaeraXArchiveParser.read(kyaFileContents)
       //@todo checks: fresh names, model created etc.
       archiveEntries.foreach({ case (name, modelFileContent, tactic) =>
-        val modelId = db.createModel(userId, name, modelFileContent, currentDate()).map(x => x.toString)
+        val modelId = db.createModel(userId, name, modelFileContent, currentDate(), None, None, None,
+          tactic.headOption.map(_._2)).map(_.toString)
         tactic.foreach({ case (tname, ttext) =>
-          val proofId = db.createProofForModel(Integer.parseInt(modelId.get), tname, "Proof from archive", currentDate())
-          DatabasePopulator.executeTactic(db, modelFileContent, proofId, ttext)
+          db.createProofForModel(Integer.parseInt(modelId.get), tname, "Proof from archive",
+            currentDate(), Some(ttext))
         })
       })
       new BooleanResponse(true) :: Nil
@@ -660,35 +673,35 @@ class DeleteProofRequest(db: DBAbstraction, userId: String, proofId: String) ext
 }
 
 class GetModelListRequest(db : DBAbstraction, userId : String) extends UserRequest(userId) {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     new ModelListResponse(db.getModelList(userId).filterNot(_.temporary)) :: Nil
   }
 }
 
 class GetModelRequest(db : DBAbstraction, userId : String, modelId : String) extends UserRequest(userId) {
-  val model = db.getModel(modelId)
-  insist(model.userId == userId, s"model ${modelId} does not belong to ${userId}")
-  def resultingResponses() = {
+  private val model: ModelPOJO = db.getModel(modelId)
+  insist(model.userId == userId, s"model $modelId does not belong to $userId")
+  def resultingResponses(): List[Response] = {
     new GetModelResponse(model) :: Nil
   }
 }
 
 class GetModelTacticRequest(db : DBAbstraction, userId : String, modelId : String) extends UserRequest(userId) {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     val model = db.getModel(modelId)
     new GetModelTacticResponse(model) :: Nil
   }
 }
 
 class AddModelTacticRequest(db : DBAbstraction, userId : String, modelId : String, tactic: String) extends UserRequest(userId) {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     val tacticId = db.addModelTactic(modelId, tactic)
     new BooleanResponse(tacticId.isDefined) :: Nil
   }
 }
 
 class ModelPlexMandatoryVarsRequest(db: DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     val model = db.getModel(modelId)
     val modelFml = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
     new ModelPlexMandatoryVarsResponse(model, StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable])) :: Nil
@@ -707,7 +720,8 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
       case ("controller", Some(tool)) =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
         try {
-          TactixLibrary.proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)*)
+          TactixLibrary.proveBy(foResult.subgoals.head,
+            SaturateTactic(ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)))
         } catch {
           case _: Throwable => foResult
         }
@@ -736,7 +750,8 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
       case ("controller", Some(tool)) =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
         try {
-          TactixLibrary.proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)*)
+          TactixLibrary.proveBy(foResult.subgoals.head,
+            SaturateTactic(ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)))
         } catch {
           case _: Throwable => foResult
         }
@@ -794,39 +809,27 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
 
 class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, name : String, description : String)
   extends UserRequest(userId) {
-  private var proofId : Option[String] = None
-
-  def getProofId = proofId match {
-    case Some(s) => s
-    case None => throw new IllegalStateException("The ID of the created proof was requested before resultingResponses was called.")
-  }
-  def resultingResponses() = {
-    proofId = Some(db.createProofForModel(modelId, name, description, currentDate()))
-
-    // Create a "task" for the model associated with this proof.
-    val keyFile = db.getModel(modelId).keyFile
-    //KeYmaeraInterface.addTask(proofId.get, keyFile)
-
-    new CreatedIdResponse(proofId.get) :: Nil
+  def resultingResponses(): List[Response] = {
+    val proofId = db.createProofForModel(modelId, name, description, currentDate(), None)
+    new CreatedIdResponse(proofId) :: Nil
   }
 }
 
-class ProveFromTacticRequest(db: DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) {
-  def resultingResponses() = {
+class CreateModelTacticProofRequest(db: DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) {
+  def resultingResponses(): List[Response] = {
     val model = db.getModel(modelId)
     model.tactic match {
       case Some(tacticText) =>
-        val proofId = db.createProofForModel(Integer.parseInt(modelId), model.name + " from tactic", "Proof from tactic", currentDate())
-        DatabasePopulator.executeTactic(db, model.keyFile, proofId, tacticText)
+        val proofId = db.createProofForModel(Integer.parseInt(modelId), model.name + " from tactic",
+          "Proof from tactic", currentDate(), Some(tacticText))
         new CreatedIdResponse(proofId.toString) :: Nil
-      case None => ???
+      case None => new ErrorResponse("Model " + modelId + " does not have a tactic associated")::Nil
     }
-
   }
 }
 
 class ProofsForModelRequest(db : DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     val proofs = db.getProofsForModel(modelId).map(proof =>
       (proof, "loaded"/*KeYmaeraInterface.getTaskLoadStatus(proof.proofId.toString).toString.toLowerCase*/))
     new ProofListResponse(proofs) :: Nil
@@ -834,10 +837,26 @@ class ProofsForModelRequest(db : DBAbstraction, userId: String, modelId: String)
 }
 
 class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wait : Boolean = false) extends UserRequest(userId) {
-  insist(db.getModel(db.getProofInfo(proofId).modelId.getOrElse(throw new CoreException(s"Cannot open a proof without model, proofId=$proofId"))).userId == userId, s"User $userId does not own the model associated with proof $proofId")
-  def resultingResponses() = {
-    val proofInfo = db.getProofInfo(proofId)
-    new OpenProofResponse(db.getProofInfo(proofId), "loaded"/*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
+  def resultingResponses(): List[Response] = {
+    val modelId = db.getProofInfo(proofId).modelId
+    if (modelId.isEmpty) new ErrorResponse("Unable to open proof " + proofId + ", because it does not refer to a model")::Nil
+    else if (db.getModel(modelId.get).userId != userId) new PossibleAttackResponse("Permission denied")::Nil
+    else {
+      insist(db.getModel(db.getProofInfo(proofId).modelId.getOrElse(throw new CoreException(s"Cannot open a proof without model, proofId=$proofId"))).userId == userId, s"User $userId does not own the model associated with proof $proofId")
+
+      //@HACK cache the invariants in TactixLibrary -> later requests fetch it from there without reparsing the model
+      // over and over again
+      val proofInfo = db.getProofInfo(proofId)
+      proofInfo.modelId match {
+        case None => new ErrorResponse("Unable to open proof " + proofId + ", because it does not refer to a model")::Nil // duplicate check to above
+        case Some(mId) =>
+          val generator = new ConfigurableGenerator[Formula]()
+          KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p -> inv))
+          KeYmaeraXProblemParser(db.getModel(mId).keyFile)
+          TactixLibrary.invGenerator = generator
+          new OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
+      }
+    }
   }
 }
 
@@ -850,134 +869,102 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wa
   */
 class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : String) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
-    val proofIdInt = proofId.toInt
-    val closed = db.isProofClosed(proofIdInt)
-    val trace = db.getExecutionTrace(proofIdInt)
-    val proofTree = ProofTree.ofTrace(trace, () => db.agendaItemsForProof(proofIdInt), proofFinished = closed)
-    val (_ :: leaves) = proofTree.leavesAndRoot
-    val leavesWithPositions = leaves.map(n => (n, RequestHelper.stepPosition(db, n)))
-    new AgendaAwesomeResponse(proofId, proofTree.root, leavesWithPositions, proofTree.leaves, closed) :: Nil
+    val tree: ProofTree = DbProofTree(db, proofId)
+    val leaves = tree.openGoals
+    val closed = tree.openGoals.isEmpty && tree.verifyClosed
+    //@todo goal names
+    val agendaItems: List[AgendaItem] = leaves.map(n => AgendaItem(n.id.toString, "Unnamed Goal", proofId, null))
+    new AgendaAwesomeResponse(proofId, tree.root, leaves, agendaItems, closed) :: Nil
   }
 }
 
 case class GetAgendaItemRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
-    val closed = db.getProofInfo(proofId).closed
-    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
-    val possibleItems = db.agendaItemsForProof(proofId.toInt)
-    var currNode:Option[Int] = Some(nodeId.toInt)
-    tree.agendaItemForNode(nodeId, possibleItems) match {
-      case Some(item) => new GetAgendaItemResponse (item) :: Nil
-      case None => new ErrorResponse("No information stored for agenda item " + nodeId) :: Nil
-    }
+    //@todo seems unused
+    ???
+//    val closed = db.getProofInfo(proofId).closed
+//    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
+//    val possibleItems = db.agendaItemsForProof(proofId.toInt)
+//    tree.agendaItemForNode(NodeId.fromString(nodeId), possibleItems) match {
+//      case Some(item) => new GetAgendaItemResponse (item) :: Nil
+//      case None => new ErrorResponse("No information stored for agenda item " + nodeId) :: Nil
+//    }
   }
 }
 
 case class SetAgendaItemNameRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, displayName: String) extends UserRequest(userId) {
-  def resultingResponses() = {
-    val closed = db.getProofInfo(proofId).closed
-    val node =
-      ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
-      .nodes.find({case node => node.id.toString == nodeId})
-    node match {
-      case None => throw new Exception("Node not found")
-      case Some(node) =>
-        var currNode = node
-        var done = false
-        while (currNode.parent.nonEmpty && !done) {
-          val nextNode = currNode.parent.get
-          /* Don't stop at the first node just because it branches (it may be the end of one branch and the start of the
-          * next), but if we see branching anywhere else we've found the end of our branch. */
-          if (currNode.children.size > 1) {
-            done = true
-          } else {
-            currNode = nextNode
-          }
-        }
-        db.getAgendaItem(proofId.toInt, currNode.id) match {
-          case Some(item) =>
-            val newItem = AgendaItemPOJO(item.itemId, item.proofId, item.initialProofNode, displayName)
-            db.updateAgendaItem(newItem)
-            new SetAgendaItemNameResponse(newItem) :: Nil
-          case None =>
-            val id = db.addAgendaItem(proofId.toInt, currNode.id, displayName)
-            new SetAgendaItemNameResponse(AgendaItemPOJO(id, proofId.toInt, currNode.id, displayName)) :: Nil
-        }
+  def resultingResponses(): List[Response] = {
+    val tree = DbProofTree(db, proofId)
+    val nId = tree.nodeIdFromString(nodeId)
+    db.getAgendaItem(proofId.toInt, nId) match {
+      case Some(item) =>
+        val newItem = AgendaItemPOJO(item.itemId, item.proofId, item.initialProofNode, displayName)
+        db.updateAgendaItem(newItem)
+        new SetAgendaItemNameResponse(newItem) :: Nil
+      case None =>
+        val id = db.addAgendaItem(proofId.toInt, nId, displayName)
+        new SetAgendaItemNameResponse(AgendaItemPOJO(id, proofId.toInt, nId, displayName)) :: Nil
     }
   }
 }
 
 class ProofTaskParentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserRequest(userId) {
-  def resultingResponses() = {
-    val closed = db.getProofInfo(proofId).closed
-    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
-    tree.findNode(nodeId).flatMap(_.parent) match {
-      case None => throw new Exception("Tried to get parent of node " + nodeId + " which has no parent")
-      case Some(parent) =>
-        val positionLocator = RequestHelper.stepPosition(db, parent)
-        val response = new ProofTaskParentResponse(parent, positionLocator)
-        response :: Nil
+  def resultingResponses(): List[Response] = {
+    val tree = DbProofTree(db, proofId)
+    tree.locate(nodeId).flatMap(_.parent) match {
+      case Some(parent) => new ProofTaskParentResponse(parent)::Nil
+      case None => new ErrorResponse("Cannot get parent of node " + nodeId + ", node might be unknown or root")::Nil
     }
   }
 }
 
 case class GetPathAllRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserRequest(userId) {
-  def resultingResponses() = {
-    val closed = db.getProofInfo(proofId).closed
-    val tree: ProofTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
-    var node: Option[TreeNode] = tree.findNode(nodeId)
-    var path: List[TreeNode] = Nil
+  def resultingResponses(): List[Response] = {
+    val tree = DbProofTree(db, proofId)
+    tree.load()
+    var node: Option[ProofTreeNode] = tree.locate(nodeId)
+    var path: List[ProofTreeNode] = Nil
     while (node.nonEmpty) {
-      path = node.get :: path
+      path = node.get::path
       node = node.get.parent
     }
-    /* To start with, always send the whole path. */
     val parentsRemaining = 0
-    val pathWithPos = path.map(n => (n, RequestHelper.stepPosition(db, n)))
-    val response = new GetPathAllResponse(pathWithPos.reverse, parentsRemaining)
-    response :: Nil
+    new GetPathAllResponse(path.reverse, parentsRemaining)::Nil
   }
 }
 
 case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserRequest(userId) {
-  def resultingResponses() = {
-    val closed = db.getProofInfo(proofId).closed
-    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
-    val node = tree.nodes.find(_.id.toString == nodeId)
-    node match {
-      case None => throw new Exception("Node not found")
-      case Some(node) =>
-        var currNode = node
-        var done = false
-        while (currNode.parent.nonEmpty && !done) {
-          currNode = currNode.parent.get
-          /* Don't stop at the first node just because it branches (it may be the end of one branch and the start of the
-          * next), but if we see branching anywhere else we've found the end of our branch. */
-          if (currNode.children.size > 1) {
-            done = true
-          }
-        }
-        val positionLocator = RequestHelper.stepPosition(db, currNode)
-        new GetBranchRootResponse(currNode, positionLocator) :: Nil
+  def resultingResponses(): List[Response] = {
+    val tree = DbProofTree(db, proofId)
+    var currNode = tree.locate(nodeId)
+    var done = false
+    while (currNode.flatMap(_.parent).nonEmpty && !done) {
+      currNode = currNode.flatMap(_.parent)
+      /* Don't stop at the first node just because it branches (it may be the end of one branch and the start of the
+      * next), but if we see branching anywhere else we've found the end of our branch. */
+      done = currNode.get.children.size > 1
     }
+    currNode match {
+      case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+      case Some(n) => new GetBranchRootResponse(n) :: Nil
+    }
+
   }
 }
 
 class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
-    val closed = db.getProofInfo(proofId).closed
-    val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt), proofFinished = closed)
-    tree.findNode(nodeId) match {
+    val tree = DbProofTree(db, proofId)
+    tree.locate(nodeId) match {
       case None => throw new Exception("Unknown node " + nodeId)
-      case Some(node) =>
-        val (localProvable, parentStep, parentRule) = node.endStep match {
-          case Some(end) =>
-            (ProvableSig.startProof(end.input.subgoals(end.branch)),
-              db.getExecutable(end.executableId).belleExpr, end.rule)
-        }
+      case Some(node) if node.maker.isEmpty || node.makerShortName.isEmpty =>
+        new ErrorResponse("Unable to expand node " + nodeId + " of proof " + proofId + ", because it did not record a tactic")::Nil
+      case Some(node) if node.maker.isDefined && node.makerShortName.isDefined =>
+        assert(node.maker.isDefined && node.makerShortName.isDefined, "Unable to expand node without tactics")
+        val (localProvable, parentStep, parentRule) = (node.localProvable, node.maker.get, node.makerShortName.get)
         val localProofId = db.createProof(localProvable)
-        val innerInterpreter = SpoonFeedingInterpreter(localProofId, db.createProof, RequestHelper.listenerFactory(db, Some(localProvable)),
-          SequentialInterpreter, 1, strict=false)
+        val innerInterpreter = SpoonFeedingInterpreter(localProofId, db.createProof,
+          RequestHelper.listenerFactory(db, Some(localProvable)), SequentialInterpreter, 1, strict=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(localProvable))
 
@@ -988,13 +975,14 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
             case None => new ErrorResponse("No further details available") :: Nil
           }
         } else {
-          val stepDetails = new ExtractTacticFromTrace(db).getTacticString(trace)
-          val innerTree = ProofTree.ofTrace(trace, proofFinished = closed)
-          //@note reparse may fail, for now just display tactic without position anyway
-          val innerSteps = innerTree.nodes.map(n => n -> (try { RequestHelper.stepPosition(db, n) } catch { case _: Throwable => None }))
-          val openGoals = innerTree.leaves
+          val innerTree = DbProofTree(db, localProofId.toString)
+          innerTree.load()
+          val stepDetails = innerTree.tacticString
+          val innerSteps = innerTree.nodes
+          val agendaItems: List[AgendaItem] = innerTree.openGoals.map(n =>
+            AgendaItem(n.id.toString, "Unnamed Goal", proofId, null))
 
-          new ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, openGoals) :: Nil
+          new ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, agendaItems) :: Nil
         }
     }
   }
@@ -1002,45 +990,23 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
 
 class StepwiseTraceRequest(db: DBAbstraction, userId: String, proofId: Int) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
-    val closed = db.getProofInfo(proofId).closed
-    val trace = db.getExecutionTrace(proofId)
-    val stepDetails = new ExtractTacticFromTrace(db).getTacticString(trace)
-    val innerTree = ProofTree.ofTrace(trace, proofFinished = closed)
-    //@note reparse may fail, for now just display tactic without position anyway
-    val innerSteps = innerTree.nodes.map(n => n -> (try { RequestHelper.stepPosition(db, n) } catch { case _: Throwable => None }))
-    val openGoals = innerTree.leaves
+    val tree = DbProofTree(db, proofId.toString)
+    tree.load()
+    val innerSteps = tree.nodes
+    val agendaItems: List[AgendaItem] = tree.openGoals.map(n =>
+      AgendaItem(n.id.toString, "Unnamed Goal", proofId.toString, null))
     //@todo fill in parent step for empty ""
-    new ExpandTacticResponse(proofId, "", stepDetails, innerSteps, openGoals) :: Nil
+    new ExpandTacticResponse(proofId, "", tree.tacticString, innerSteps, agendaItems) :: Nil
   }
 }
 
-
 class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, pos:Position) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
-    import Augmentors._
-    val closed = db.getProofInfo(proofId).closed
-    if (closed)
-      return new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
-    val proof = db.getProofInfo(proofId)
-    val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
-    sequent.sub(pos) match {
-      case Some(subFormula) =>
-        val axioms = UIIndex.allStepsAt(subFormula, Some(pos), Some(sequent)).
-          map{axiom => (
-            DerivationInfo(axiom),
-            UIIndex.comfortOf(axiom).map(DerivationInfo(_)))}
-        val generator = new ConfigurableGenerator(db.getInvariants(proof.modelId.get))
-        //@todo extend generator to generate for named arguments j(x), R, P according to tactic info
-        //@HACK for loop and dG
-        val suggestedInput: Map[ArgInfo,Expression] = subFormula match {
-          case Box(Loop(_), _) =>
-            val invariant = generator(sequent, pos)
-            if (invariant.hasNext) Map(FormulaArg("j(x)") -> invariant.next)
-            else Map.empty
-          case Box(_: ODESystem, p) => Map(FormulaArg("P") -> p)
-          case _ => Map.empty
-        }
-        new ApplicableAxiomsResponse(axioms, suggestedInput) :: Nil
+    val tree = DbProofTree(db, proofId)
+    if (tree.isClosed) return new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+
+    tree.locate(nodeId).map(n => (n.applicableTacticsAt(pos), n.tacticInputSuggestions(pos))) match {
+      case Some((tactics, inputs)) => new ApplicableAxiomsResponse(tactics, inputs) :: Nil
       case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
     }
   }
@@ -1048,12 +1014,12 @@ class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: Stri
 
 class GetApplicableTwoPosTacticsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, pos1: Position, pos2: Position) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
-    val closed = db.getProofInfo(proofId).closed
-    if (closed) return new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
-    val sequent = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt)).findNode(nodeId).get.sequent
-    val tactics = UIIndex.allTwoPosSteps(pos1, pos2, sequent).map(step =>
-      (DerivationInfo.ofCodeName(step), UIIndex.comfortOf(step).map(DerivationInfo.ofCodeName)))
-    new ApplicableAxiomsResponse(tactics, Map.empty) :: Nil
+    val tree = DbProofTree(db, proofId)
+    if (tree.isClosed) return new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+    tree.locate(nodeId).map(n => n.applicableTacticsAt(pos1, Some(pos2))) match {
+      case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+      case Some(tactics) => new ApplicableAxiomsResponse(tactics, Map.empty) :: Nil
+    }
   }
 }
 
@@ -1067,17 +1033,14 @@ class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: Strin
 class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserRequest(userId) {
   override def resultingResponses(): List[Response] = {
     if(!db.getProofsForUser(userId).exists(p => p._1.proofId == proofId.toInt)) {
-      new PossibleAttackResponse("You do not have permission to access this resource.") :: Nil
-    }
-    else {
-      val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
-      tree.findNode(nodeId) match {
-        case Some(node) => {
-          val provable = ProvableSig.startProof(node.sequent)
+      new PossibleAttackResponse("Permission denied") :: Nil
+    } else {
+      DbProofTree(db, proofId).locate(nodeId).flatMap(_.goal) match {
+        case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+        case Some(goal) =>
+          val provable = ProvableSig.startProof(goal)
           val lemma = Lemma.apply(provable, List(ToolEvidence(List("tool" -> "mock"))), None)
           new KvpResponse("sequent", "Provable: \n" + provable.prettyString + "\n\nLemma:\n" + lemma.toString) :: Nil
-        }
-        case None => new ErrorResponse(s"Could not find a node with id ${nodeId} associated with ${userId}.${proofId}.\nThis error should NOT occur; please report it.") :: Nil
       }
     }
   }
@@ -1086,20 +1049,13 @@ class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, n
 class ExportFormula(db: DBAbstraction, userId: String, proofId: String, nodeId: String, formulaId: String) extends UserRequest(userId) {
   override def resultingResponses(): List[Response] = {
     if(!db.getProofsForUser(userId).exists(p => p._1.proofId == proofId.toInt)) {
-      new PossibleAttackResponse("You do not have permission to access this resource.") :: Nil
-    }
-    else {
-      val tree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
-      tree.findNode(nodeId) match {
-        case Some(node) => {
-          try {
-            val formula = node.sequent(SeqPos(formulaId.toInt))
-            new KvpResponse("formula", formula.prettyString) :: Nil
-          } finally {
-            new ErrorResponse(s"Could not find formula with formulaId ${formulaId} in node ${nodeId}")
-          }
-        }
-        case None => new ErrorResponse(s"Could not find a node with id ${nodeId} associated with ${userId}.${proofId}.\nThis error should NOT occur; please report it.") :: Nil
+      new PossibleAttackResponse("Permission denied") :: Nil
+    } else {
+      DbProofTree(db, proofId).locate(nodeId).flatMap(_.goal) match {
+        case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+        case Some(goal) =>
+          val formula = goal(SeqPos(formulaId.toInt))
+          new KvpResponse("formula", formula.prettyString) :: Nil
       }
     }
   }
@@ -1109,34 +1065,26 @@ case class BelleTermInput(value: String, spec:Option[ArgInfo])
 
 class GetStepRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, pos: Position) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
-    val trace = db.getExecutionTrace(proofId.toInt)
-    val tree = ProofTree.ofTrace(trace)
-    val node = tree.findNode(nodeId) match {
-      case None => throw new ProverException("Invalid node " + nodeId)
-      case Some(n) => n
-    }
-
-    node.sequent.sub(pos) match {
-      case Some(fml: Formula) =>
-        UIIndex.theStepAt(fml, Some(pos)) match {
-          case Some(step) => new ApplicableAxiomsResponse((DerivationInfo(step), None) :: Nil, Map.empty) :: Nil
-          case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+    val tree = DbProofTree(db, proofId)
+    tree.locate(nodeId).flatMap(_.goal) match {
+      case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+      case Some(goal) =>
+        goal.sub(pos) match {
+          case Some(fml: Formula) =>
+            UIIndex.theStepAt(fml, Some(pos)) match {
+              case Some(step) => new ApplicableAxiomsResponse((DerivationInfo(step), None) :: Nil, Map.empty) :: Nil
+              case None => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+            }
+          case _ => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
         }
-      case _ => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
     }
   }
 }
 
 class GetFormulaPrettyStringRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, pos: Position) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
-    val trace = db.getExecutionTrace(proofId.toInt)
-    val tree = ProofTree.ofTrace(trace)
-    val node = tree.findNode(nodeId) match {
-      case None => throw new ProverException("Invalid node " + nodeId)
-      case Some(n) => n
-    }
-
-    node.sequent.sub(pos) match {
+    DbProofTree(db, proofId).locate(nodeId).flatMap(_.goal.flatMap(_.sub(pos))) match {
+      case None => new ErrorResponse("Unknown position " + pos + " at node " + nodeId)::Nil
       case Some(e: Expression) => new PlainResponse("prettyString" -> JsString(e.prettyString))::Nil
     }
   }
@@ -1148,7 +1096,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                           pos: Option[PositionLocator], pos2: Option[PositionLocator] = None,
                           inputs:List[BelleTermInput] = Nil, consultAxiomInfo: Boolean = true, stepwise: Boolean = false) extends UserRequest(userId) {
   /** Turns belleTerm into a specific tactic expression, including input arguments */
-  private def fullExpr(node: TreeNode) = {
+  private def fullExpr(sequent: Sequent) = {
     val paramStrings: List[String] = inputs.map{
       case BelleTermInput(value, Some(_:TermArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:FormulaArg)) => "{`"+value+"`}"
@@ -1157,7 +1105,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case BelleTermInput(value, Some(ListArg(_, "formula"))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
       case BelleTermInput(value, None) => value
     }
-    val specificTerm = if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, node.sequent, pos, pos2, _.codeName) else belleTerm
+    val specificTerm = if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, _.codeName) else belleTerm
     if (inputs.isEmpty && pos.isEmpty) { assert(pos2.isEmpty, "Undefined pos1, but defined pos2"); specificTerm }
     else if (inputs.isEmpty && pos.isDefined && pos2.isEmpty) { specificTerm + "(" + pos.get.prettyString + ")" }
     else if (inputs.isEmpty && pos.isDefined && pos2.isDefined) { specificTerm + "(" + pos.get.prettyString + "," + pos2.get.prettyString + ")" }
@@ -1168,71 +1116,90 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 
   def resultingResponses(): List[Response] = {
     val proof = db.getProofInfo(proofId)
-    val closed = proof.closed
-    if (closed) {
-      return new ErrorResponse("Can't execute tactics on a closed proof") :: Nil
-    }
-    val generator = new ConfigurableGenerator(db.getInvariants(proof.modelId.get))
-    val trace = db.getExecutionTrace(proofId.toInt)
-    val tree = ProofTree.ofTrace(trace)
-    val node =
-      tree.findNode(nodeId) match {
-        case None => throw new ProverException("Invalid node " + nodeId)
-        case Some(n) => n
-      }
+    if (proof.closed) new ErrorResponse("Can't execute tactics on a closed proof") :: Nil
+    else {
+      val tree: ProofTree = DbProofTree(db, proofId)
+      tree.locate(tree.nodeIdFromString(nodeId)) match {
+        case None => new ErrorResponse("Unknown node " + nodeId + " in proof " + proofId)::Nil
+        case Some(node) if node.goal.isEmpty => new ErrorResponse("Node " + nodeId + " does not have a goal")::Nil
+        case Some(node) if node.goal.isDefined =>
+          val sequent = node.goal.get
 
-    try {
-      val expr = BelleParser.parseWithInvGen(fullExpr(node), Some(generator))
+          try {
+            //@note no invariant generator (parsing from model) for performance reasons, since included in tactic suggestions anyway ->
+            //      if we ever execute tactics that require a generator, include a heuristic to determine from the tactic string here
+            val expr = BelleParser.parseWithInvGen(fullExpr(sequent), None)
 
-      val appliedExpr:BelleExpr = (pos, pos2, expr) match {
-        case (None, None, _:AtPosition[BelleExpr]) =>
-          throw new TacticPositionError("Can't run a positional tactic without specifying a position", expr.getLocation, "Expected position in argument list but found none")
-        case (None, None, _) => expr
-        case (Some(position), None, expr: AtPosition[BelleExpr]) => expr(position)
-        case (Some(position), None, expr: BelleExpr) => expr
-        case (Some(Fixed(p1, None, _)), Some(Fixed(p2, None, _)), expr: BuiltInTwoPositionTactic) => expr(p1, p2)
-        case (Some(_), Some(_), expr: BelleExpr) => expr
-        case _ => println ("pos " + pos.getClass.getName + ", expr " +  expr.getClass.getName); throw new ProverException("Match error")
-      }
+            val appliedExpr: BelleExpr = (pos, pos2, expr) match {
+              case (None, None, _: AtPosition[BelleExpr]) =>
+                throw new TacticPositionError("Can't run a positional tactic without specifying a position", expr.getLocation, "Expected position in argument list but found none")
+              case (None, None, _) => expr
+              case (Some(position), None, expr: AtPosition[BelleExpr]) => expr(position)
+              case (Some(position), None, expr: BelleExpr) => expr
+              case (Some(Fixed(p1, None, _)), Some(Fixed(p2, None, _)), expr: BuiltInTwoPositionTactic) => expr(p1, p2)
+              case (Some(_), Some(_), expr: BelleExpr) => expr
+              case _ => println("pos " + pos.getClass.getName + ", expr " + expr.getClass.getName); throw new ProverException("Match error")
+            }
 
-      val branch = tree.goalIndex(nodeId)
-      val ruleName =
-        if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, node.sequent, pos, pos2, _.display.name)
-        else "custom"
-      val localProvable = ProvableSig.startProof(node.sequent)
-      val globalProvable = trace.lastProvable
-      assert(globalProvable.subgoals(branch).equals(node.sequent), "Inconsistent branches in RunBelleTerm")
-      if (stepwise) {
-        val localProofId = db.createProof(localProvable)
-        //@todo attach a listener to the spoonfeeding interpreter (to kill all listeners created by it)
-        val interpreter = (_: List[IOListener]) => new Interpreter {
-          val inner = SpoonFeedingInterpreter(localProofId, db.createProof, RequestHelper.listenerFactory(db), SequentialInterpreter, 1, strict = false)
-          override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
-            inner(expr, v)
+            val ruleName =
+              if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, _.display.name)
+              else "custom"
+
+            if (stepwise) {
+              val localProvable = ProvableSig.startProof(sequent)
+              val localProofId = db.createProof(localProvable)
+
+              val interpreter = new Interpreter {
+                val inner = SpoonFeedingInterpreter(localProofId, db.createProof, RequestHelper.listenerFactory(db), SequentialInterpreter, 1, strict = false)
+
+                override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
+                  inner(expr, v)
+                } catch {
+                  //@note stop and display whatever progress was made
+                  case ex: Throwable =>
+                    val innerId = inner.innerProofId.getOrElse(localProofId)
+                    val innerTrace = db.getExecutionTrace(innerId)
+                    if (innerTrace.steps.nonEmpty) BelleSubProof(innerId)
+                    else throw BelleTacticFailure("No progress", ex)
+                }
+
+                override def kill(): Unit = inner.kill()
+              }
+
+              //@todo Refactor to new proof tree
+              val innerTrace = db.getExecutionTrace(localProofId)
+              val proofTree = ProofTree.ofTrace(innerTrace, () => Nil)
+              val executor = BellerophonTacticExecutor.defaultExecutor
+              val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter)
+              new RunBelleTermResponse(localProofId.toString, proofTree.root.id.toString, taskId) :: Nil
+            } else {
+              val taskId = node.runTactic(userId, SequentialInterpreter, appliedExpr, ruleName)
+              new RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
+            }
           } catch {
-            //@note stop and display whatever progress was made
-            case ex: Throwable =>
-              val innerId = inner.innerProofId.getOrElse(localProofId)
-              val innerTrace = db.getExecutionTrace(innerId)
-              if (innerTrace.steps.nonEmpty) BelleSubProof(innerId)
-              else throw BelleTacticFailure("No progress", ex)
+            case e: ProverException if e.getMessage == "No step possible" => new ErrorResponse("No step possible") :: Nil
+            case e: TacticPositionError => new TacticErrorResponse(e.msg, HackyInlineErrorMsgPrinter(belleTerm, e.pos, e.inlineMsg), e) :: Nil
+            case e: BelleThrowable => new TacticErrorResponse(e.getMessage, HackyInlineErrorMsgPrinter(belleTerm, UnknownLocation, e.getMessage), e) :: Nil
           }
-        }
-        val innerTrace = db.getExecutionTrace(localProofId)
-        val proofTree = ProofTree.ofTrace(innerTrace, () => Nil)
-        val executor = BellerophonTacticExecutor.defaultExecutor
-        val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter, Nil)
-        new RunBelleTermResponse(localProofId.toString, proofTree.root.id.toString, taskId) :: Nil
-      } else {
-        val listener = new TraceRecordingListener(db, proofId.toInt, trace.executionId.toInt, trace.lastStepId, globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName)
-        val executor = BellerophonTacticExecutor.defaultExecutor
-        val taskId = executor.schedule (userId, appliedExpr, BelleProvable(localProvable), SequentialInterpreter, List(listener))
-        new RunBelleTermResponse(proofId, nodeId, taskId) :: Nil
       }
-    } catch {
-      case e: ProverException if e.getMessage == "No step possible" => new ErrorResponse("No step possible") :: Nil
-      case e: TacticPositionError => new TacticErrorResponse(e.msg, HackyInlineErrorMsgPrinter(belleTerm, e.pos, e.inlineMsg), e) :: Nil
-      case e: BelleThrowable => new TacticErrorResponse(e.getMessage, HackyInlineErrorMsgPrinter(belleTerm, UnknownLocation, e.getMessage), e) :: Nil
+    }
+  }
+}
+
+class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofId: String) extends UserRequest(userId) {
+  override def resultingResponses(): List[Response] = {
+    val proofInfo = db.getProofInfo(proofId)
+    proofInfo.tactic match {
+      case None => new ErrorResponse("Proof " + proofId + " does not have a tactic") :: Nil
+      case Some(t) if proofInfo.modelId.isEmpty => throw new Exception("Proof " + proofId + " does not refer to a model")
+      case Some(t) if proofInfo.modelId.isDefined =>
+        val executor = BellerophonTacticExecutor.defaultExecutor
+        val interpreter = DatabasePopulator.prepareInterpreter(db, proofId.toInt)
+        val model = KeYmaeraXProblemParser(db.getModel(proofInfo.modelId.get).keyFile)
+        val provable = BelleProvable(ProvableSig.startProof(model))
+        val tactic = BelleParser(t)
+        val taskId = executor.schedule(userId, tactic, provable, interpreter)
+        new RunBelleTermResponse(proofId, "()", taskId) :: Nil
     }
   }
 }
@@ -1242,7 +1209,7 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
     val executor = BellerophonTacticExecutor.defaultExecutor
     val (isDone, lastStep) = executor.synchronized {
       //@todo need intermediate step recording and query to get meaningful progress reports
-      val latestExecutionStep = db.getExecutionSteps(proofId.toInt).sortBy(s => s.stepId).lastOption
+      //val latestExecutionStep = db.getExecutionSteps(proofId.toInt).sortBy(s => s.stepId).lastOption
       //@note below is the conceptually correct implementation of latestExecutionStep, but getExecutionTrace doesn't work
       //when there's not yet an associated profableId for the step (which is the case here since we are mid-step and the
       //provable isn't computed yet).
@@ -1251,7 +1218,7 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
 //        case None => None
 //      }
 
-      (!executor.contains(taskId) || executor.isDone(taskId), latestExecutionStep)
+      (!executor.contains(taskId) || executor.isDone(taskId), None)
     }
     new TaskStatusResponse(proofId, nodeId, taskId, if (isDone) "done" else "running", lastStep) :: Nil
   }
@@ -1261,43 +1228,39 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
   /* It's very important not to report a branch as closed when it isn't. Other wise the user will carry on in blissful
   * ignorance thinking the hardest part of their proof is over when it's not. This is actually a bit difficult to get
   * right, so check the actual provables to make sure we're closing a branch. */
-  private def noBogusClosing(tree: ProofTree, parent: TreeNode): Boolean = {
-    if (parent.children.nonEmpty || parent.isFake)
-      return true
-    if (parent.endStep.isEmpty)
-      return false
-    val endStep = parent.endStep.get
-    if (endStep.output.get.subgoals.length != endStep.input.subgoals.length - 1)
-      return false
-
-    for (i <- endStep.input.subgoals.indices) {
-      if(i < endStep.branch && !endStep.output.get.subgoals(i).equals(endStep.input.subgoals(i)))  {
-        return false
-      }
-      if(i > endStep.branch && !endStep.output.get.subgoals(i-1).equals(endStep.input.subgoals(i))) {
-        return false
-      }
-    }
-    true
+  private def noBogusClosing(tree: OldProofTree, parent: TreeNode): Boolean = {
+    parent.isFake || (parent.children.size == parent.provable.subgoals.size &&
+      parent.children.zip(parent.provable.subgoals).forall({case (c, sg) => c.provable.conclusion == sg}))
   }
+
+  private def noBogusClosing(tree: ProofTree, pn: ProofTreeNode): Boolean =
+    pn.children.size == pn.localProvable.subgoals.size &&
+      pn.children.zip(pn.localProvable.subgoals).forall({case (c, sg) => c.localProvable.conclusion == sg})
 
   def resultingResponses(): List[Response] = {
     val executor = BellerophonTacticExecutor.defaultExecutor
     executor.synchronized {
       val response = executor.wait(taskId) match {
         case Some(Left(BelleProvable(_, _))) =>
-          val finalTree = ProofTree.ofTrace(db.getExecutionTrace(proofId.toInt))
-          val parentNode = finalTree.findNode(nodeId).get
-          val positionLocator = if (parentNode.children.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
-          assert(noBogusClosing(finalTree, parentNode), "Server thinks a goal has been closed when it clearly has not")
-          new TaskResultResponse(proofId, parentNode, parentNode.children, positionLocator, progress = true)
+          val tree = DbProofTree(db, proofId)
+          tree.locate(nodeId) match {
+            case None => new ErrorResponse("Unknown node " + nodeId)
+            case Some(node) =>
+              //@todo construct provable (expensive!)
+              //assert(noBogusClosing(tree, node), "Server thinks a goal has been closed when it clearly has not")
+              new TaskResultResponse(proofId, node, progress=true)
+          }
+//          val positionLocator = if (parentNode.children.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
+//          assert(noBogusClosing(finalTree, parentNode), "Server thinks a goal has been closed when it clearly has not")
+//          new TaskResultResponse(proofId, parentNode, positionLocator, progress = true)
         case Some(Left(BelleSubProof(subId))) =>
+          //@todo untested with new tree data structure
           //@HACK for stepping into Let steps
-          val finalTree = ProofTree.ofTrace(db.getExecutionTrace(subId))
-          val parentNode = finalTree.root//findNode(nodeId).get
-          val positionLocator = if (parentNode.children.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
-          assert(noBogusClosing(finalTree, parentNode), "Server thinks a goal has been closed when it clearly has not")
-          new TaskResultResponse(subId.toString, parentNode, parentNode.children, positionLocator, progress = true)
+          val tree = DbProofTree(db, subId.toString)
+          val node = tree.root//findNode(nodeId).get
+          //val positionLocator = if (parentNode.subgoals.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
+          assert(noBogusClosing(tree, node), "Server thinks a goal has been closed when it clearly has not")
+          new TaskResultResponse(subId.toString, node, progress = true)
         case Some(Right(error: BelleThrowable)) => new ErrorResponse("Tactic failed with error: " + error.getMessage, error.getCause)
         case None => new ErrorResponse("Could not get tactic result - execution cancelled? ")
       }
@@ -1317,79 +1280,25 @@ class StopTaskRequest(db: DBAbstraction, userId: String, proofId: String, nodeId
   }
 }
 
-
+/** Prunes a node and everything below */
 class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String) extends UserRequest(userId) {
-  /**
-    * Replay [trace] minus the steps specified in [prune]. The crux of the problem is branch renumbering: determining
-    * which branch a kept step (as in not-pruned) will act on once other nodes have been pruned. We compute this by
-    * maintaining at each step which goals were or were not produced by a pruned step. The branch number of an kept
-    * step is the number of kept goals that proceeds its old branch number, with a potential bonus of +1 if the pruned
-    * branch was closed in one of the pruned steps.
-    *
-    * @param trace The steps to replay (both pruned and kept steps)
-    * @param pruned ID's of the pruned steps in trace
-    * @return The kept steps of trace with updated branch numbers
-    */
-  def prune(trace: ExecutionTrace, pruned:Set[Int]): ExecutionTrace = {
-    val tr = trace.steps.filter(_.stepId >= pruned.min)
-    val pruneRoot = tr.head
-    val prunedGoals = Array.tabulate(pruneRoot.input.subgoals.length)(_ == pruneRoot.branch)
-    val (_ ,outputSteps) =
-      tr.foldLeft((prunedGoals, Nil:List[ExecutionStep])){case ((prunedGoals, acc), step) =>
-        val delta = step.output.get.subgoals.length - step.input.subgoals.length
-        val branch = step.branch
-        assert(prunedGoals(branch) == pruned.contains(step.stepId), "Pruning algorithm has got its branches confused")
-        val updatedGoals =
-          if (delta == 0) prunedGoals
-          else if (delta == -1) {
-            prunedGoals.slice(0, branch) ++ prunedGoals.slice(branch + 1, prunedGoals.length)
-          } else {
-            prunedGoals ++ Array.tabulate(delta){case _ => pruned.contains(step.stepId)}
-          }
-        val outputBranch =
-          prunedGoals.zipWithIndex.count{case(b,i) => i < branch && !b}  + (if(step.branch >= pruneRoot.branch) 1 else 0)
-        if(pruned.contains(step.stepId)) {
-          (updatedGoals, acc)
-        } else {
-          // @todo This is a messy mix of the old trace (ID, Provables) and new trace (branch numbers). Perhaps add a new
-          // data structure to avoid the messiness.
-          (updatedGoals, ExecutionStep(step.stepId, step.executionId, step.input, step.output, outputBranch, step.alternativeOrder, step.rule, step.executableId, step.isUserExecuted) :: acc)
-        }
-      }
-    ExecutionTrace(trace.proofId, trace.executionId, trace.conclusion, outputSteps.reverse)
-  }
-
-  def truncateTrace(trace: ExecutionTrace, firstDroppedStep: Int) = {
-    ExecutionTrace(trace.proofId, trace.executionId, trace.conclusion, trace.steps.filter(_.stepId < firstDroppedStep))
-  }
-
   def resultingResponses(): List[Response] = {
-    val closed = db.getProofInfo(proofId).closed
-    if (closed) {
-      return new ErrorResponse("Pruning not allowed on closed proofs") :: Nil
+    if (db.getProofInfo(proofId).closed) new ErrorResponse("Pruning not allowed on closed proofs") :: Nil
+    else {
+      val tree = DbProofTree(db, proofId)
+      tree.locate(nodeId) match {
+        case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+        case Some(node) =>
+          node.pruneBelow()
+          val item = AgendaItem(node.id.toString, "Unnamed Goal", proofId, null)
+          new PruneBelowResponse(item) :: Nil
+      }
     }
-    val trace = db.getExecutionTrace(proofId.toInt)
-    val tree = ProofTree.ofTrace(trace, includeUndos = true)
-    val prunedSteps = tree.allDescendants(nodeId).flatMap{case node => node.endStep.toList}
-    if(prunedSteps.isEmpty) {
-      return new ErrorResponse("No steps under node. Nothing to do.") :: Nil
-    }
-    val prunedStepIds = prunedSteps.map{case step => step.stepId}.toSet
-    val prunedTrace = prune(trace, prunedStepIds)
-    val previousTrace = truncateTrace(trace, prunedStepIds.min)
-    val inputProvable = previousTrace.lastProvable
-    db.addAlternative(prunedStepIds.min, inputProvable, prunedTrace)
-    val goalNode = tree.findNode(nodeId).get
-    val allItems = db.agendaItemsForProof(proofId.toInt)
-    val itemName = tree.agendaItemForNode(goalNode.id.toString, allItems).map(_.displayName).getOrElse("Unnamed Item")
-    val item = AgendaItem(goalNode.id.toString, itemName, proofId.toString, goalNode)
-    val response = new PruneBelowResponse(item)
-    response :: Nil
   }
 }
 
 class GetProofProgressStatusRequest(db: DBAbstraction, userId: String, proofId: String) extends UserRequest(userId) {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     // @todo return Loading/NotLoaded when appropriate
     val proof = db.getProofInfo(proofId)
     new ProofProgressResponse(proofId, isClosed = proof.closed) :: Nil
@@ -1397,29 +1306,43 @@ class GetProofProgressStatusRequest(db: DBAbstraction, userId: String, proofId: 
 }
 
 class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) extends UserRequest(userId) {
-  def resultingResponses() = {
-    val proof = db.getProofInfo(proofId)
-    val model = db.getModel(proof.modelId.get)
+  def resultingResponses(): List[Response] = {
+    val tree = DbProofTree(db, proofId)
+    tree.load()
+    val model = db.getModel(tree.info.modelId.get)
     val conclusionFormula = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
     val conclusion = Sequent(IndexedSeq(), IndexedSeq(conclusionFormula))
-    val trace = db.getExecutionTrace(proofId.toInt)
-    val provable = trace.lastProvable
-    assert(provable.conclusion == conclusion, "Conclusion of provable " + provable + " must match problem " + conclusion)
-    val tactic = new ExtractTacticFromTrace(db).getTacticString(trace)
-    new ProofVerificationResponse(proofId, provable, tactic) :: Nil
+    val provable = tree.root.provable
+    if (!provable.isProved) new ErrorResponse("Proof verification failed: proof " + proofId + " is not closed.\n Expected a provable without subgoals, but result provable is\n" + provable.prettyString)::Nil
+    else if (provable.conclusion != conclusion) new ErrorResponse("Proof verification failed: proof " + proofId + " does not conclude the associated model.\n Expected " + conclusion.prettyString + "\nBut got\n" + provable.conclusion.prettyString)::Nil
+    else {
+      assert(provable.isProved, "Provable " + provable + " must be proved")
+      assert(provable.conclusion == conclusion, "Conclusion of provable " + provable + " must match problem " + conclusion)
+      tree.info.tactic match {
+        case None =>
+          // remember tactic string
+          val newInfo = new ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
+            tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
+            Some(tree.tacticString))
+          db.updateProofInfo(newInfo)
+        case Some(_) => // already have a tactic, so do nothing
+      }
+      new ProofVerificationResponse(proofId, provable, tree.tacticString) :: Nil
+    }
   }
 }
 
 class IsLicenseAcceptedRequest(db : DBAbstraction) extends Request {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     new BooleanResponse(
-      db.getConfiguration("license").config.contains("accepted") && db.getConfiguration("license").config.get("accepted").get.equals("true")
+      db.getConfiguration("license").config.contains("accepted") &&
+      db.getConfiguration("license").config("accepted") == "true"
     ) :: Nil
   }
 }
 
 class AcceptLicenseRequest(db : DBAbstraction) extends Request {
-  def resultingResponses() = {
+  def resultingResponses(): List[Response] = {
     val newConfiguration = new ConfigurationPOJO("license", Map("accepted" -> "true"))
     db.updateConfiguration(newConfiguration)
     new BooleanResponse(true) :: Nil
@@ -1440,38 +1363,38 @@ class IsLocalInstanceRequest() extends Request {
 
 class ExtractDatabaseRequest() extends LocalhostOnlyRequest {
   override def resultingResponses(): List[Response] = {
-    if(HyDRAServerConfig.isHosted)
-      throw new Exception("Cannot extract the database on a hosted instance of KeYmaera X")
+    if (HyDRAServerConfig.isHosted) new ErrorResponse("Cannot extract the database on a hosted instance of KeYmaera X") :: Nil
+    else {
+      val productionDatabase = edu.cmu.cs.ls.keymaerax.hydra.SQLite.ProdDB
+      productionDatabase.syncDatabase()
 
-    val productionDatabase = edu.cmu.cs.ls.keymaerax.hydra.SQLite.ProdDB
-    productionDatabase.syncDatabase()
+      val today = Calendar.getInstance().getTime
+      val fmt = new SimpleDateFormat("MDY")
 
-    val today = Calendar.getInstance().getTime()
-    val fmt = new SimpleDateFormat("MDY")
+      val extractionPath = System.getProperty("user.home") + File.separator + s"extracted_${fmt.format(today)}.sqlite"
+      val dbPath = productionDatabase.dblocation
 
-    val extractionPath = System.getProperty("user.home") + File.separator + s"extracted_${fmt.format(today)}.sqlite"
-    val dbPath         = productionDatabase.dblocation
-
-    val src = new File(dbPath)
-    val dest = new File(extractionPath)
-    new FileOutputStream(dest) getChannel() transferFrom(
-      new FileInputStream(src) getChannel, 0, Long.MaxValue )
+      val src = new File(dbPath)
+      val dest = new File(extractionPath)
+      new FileOutputStream(dest).getChannel.transferFrom(
+        new FileInputStream(src).getChannel, 0, Long.MaxValue)
 
 
-    //@todo Maybe instead do this in the production database and then have a catch all that undoes it.
-    //That way we don't have to sync twice. Actually, I'm also not sure if this sync is necessary or not...
-    val extractedDatabase = new SQLiteDB(extractionPath)
-    extractedDatabase.updateConfiguration(new ConfigurationPOJO("extractedflag", Map("extracted" -> "true")))
-    extractedDatabase.syncDatabase()
+      //@todo Maybe instead do this in the production database and then have a catch all that undoes it.
+      //That way we don't have to sync twice. Actually, I'm also not sure if this sync is necessary or not...
+      val extractedDatabase = new SQLiteDB(extractionPath)
+      extractedDatabase.updateConfiguration(new ConfigurationPOJO("extractedflag", Map("extracted" -> "true")))
+      extractedDatabase.syncDatabase()
 
-    new ExtractDatabaseResponse(extractionPath) :: Nil
+      new ExtractDatabaseResponse(extractionPath) :: Nil
+    }
   }
 }
 
 class ShutdownReqeuest() extends LocalhostOnlyRequest {
   override def resultingResponses() : List[Response] = {
     new Thread() {
-      override def run() = {
+      override def run(): Unit = {
         try {
           //Tell all scheduled tactics to stop.
           //@todo figure out which of these are actually necessary.
@@ -1495,24 +1418,19 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest {
         }
 
       }
-    }.start
+    }.start()
 
     new BooleanResponse(true) :: Nil
   }
 }
 
 class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Request {
-  private val proofId = Integer.parseInt(proofIdStr)
-
   override def resultingResponses(): List[Response] = {
-    val exprText = new ExtractTacticFromTrace(db).getTacticString(db.getExecutionTrace(proofId))
-    new ExtractTacticResponse(exprText) :: Nil
+    new ExtractTacticResponse(DbProofTree(db, proofIdStr).tacticString) :: Nil
   }
 }
 
 class TacticDiffRequest(db: DBAbstraction, proofIdStr: String, oldTactic: String, newTactic: String) extends Request {
-  private val proofId = Integer.parseInt(proofIdStr)
-
   override def resultingResponses(): List[Response] = {
     val oldT = BelleParser(oldTactic)
     try {
@@ -1526,20 +1444,18 @@ class TacticDiffRequest(db: DBAbstraction, proofIdStr: String, oldTactic: String
 }
 
 class ExtractLemmaRequest(db: DBAbstraction, proofIdStr: String) extends Request {
-  private val proofId = Integer.parseInt(proofIdStr)
-
   override def resultingResponses(): List[Response] = {
-    val proofInfo = db.getProofInfo(proofIdStr)
-    val model = db.getModel(proofInfo.modelId.get)
-    val trace = db.getExecutionTrace(proofId)
-    val tactic = new ExtractTacticFromTrace(db).getTacticString(trace)
-    val provable = trace.lastProvable
+    val tree = DbProofTree(db, proofIdStr)
+    tree.load()
+    val model = db.getModel(tree.info.modelId.get)
+    val tactic = tree.tacticString
+    val provable = tree.root.provable
     val evidence = Lemma.requiredEvidence(provable, ToolEvidence(List(
       "tool" -> "KeYmaera X",
       "model" -> model.keyFile,
       "tactic" -> tactic
     )) :: Nil)
-    new ExtractProblemSolutionResponse(new Lemma(provable, evidence, Some(proofInfo.name)).toString) :: Nil
+    new ExtractProblemSolutionResponse(new Lemma(provable, evidence, Some(tree.info.name)).toString) :: Nil
   }
 }
 
@@ -1563,11 +1479,10 @@ object ArchiveEntryPrinter {
 
 class ExtractProblemSolutionRequest(db: DBAbstraction, proofId: String) extends Request {
   override def resultingResponses(): List[Response] = {
-    val pid = Integer.parseInt(proofId)
-    val pi = db.getProofInfo(pid)
-    val proofName = pi.name
-    val tactic = BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(pid)))
-    val model = db.getModel(pi.modelId.get)
+    val tree = DbProofTree(db, proofId)
+    val proofName = tree.info.name
+    val tactic = tree.tacticString
+    val model = db.getModel(tree.info.modelId.get)
     val archiveContent = ArchiveEntryPrinter.archiveEntry(model, (proofName, tactic)::Nil)
     new ExtractProblemSolutionResponse(archiveContent) :: Nil
   }
@@ -1578,7 +1493,7 @@ class ExtractModelSolutionsRequest(db: DBAbstraction, modelIds: List[Int],
   override def resultingResponses(): List[Response] = {
     def modelProofs(modelId: Int): List[(String, String)] = {
       if (withProofs) db.getProofsForModel(modelId).map(p =>
-        p.name -> BellePrettyPrinter(new ExtractTacticFromTrace(db).apply(db.getExecutionTrace(p.proofId))))
+        p.name -> DbProofTree(db, p.proofId.toString).tacticString)
       else Nil
     }
     val models = modelIds.map(mid => db.getModel(mid) -> modelProofs(mid)).filter(exportEmptyProof || _._2.nonEmpty)
@@ -1599,7 +1514,7 @@ class MockRequest(resourceName: String) extends Request {
 object ProofValidationRunner {
   private val results : mutable.Map[String, (Formula, BelleExpr, Option[Boolean])] = mutable.Map()
 
-  case class ValidationRequestDNE(taskId: String) extends Exception(s"The requested taskId ${taskId} does not exist.")
+  case class ValidationRequestDNE(taskId: String) extends Exception(s"The requested taskId $taskId does not exist.")
 
   /** Returns Option[Proved] which is None iff the task is still running, and True if formula didn't prove. */
   def status(taskId: String) : Option[Boolean] = results.get(taskId) match {
@@ -1613,8 +1528,8 @@ object ProofValidationRunner {
     results update (taskId, (model, proof, None))
 
     new Thread(new Runnable() {
-      override def run() = {
-        println(s"Received request to validate ${taskId}. Running in separate thread.")
+      override def run(): Unit = {
+        println(s"Received request to validate $taskId. Running in separate thread.")
         val provable = NoProofTermProvable( Provable.startProof(model) )
 
         try {
@@ -1627,7 +1542,7 @@ object ProofValidationRunner {
           case e : Throwable => results update (taskId, (model, proof, Some(false)))
         }
 
-        println(s"Done executing validation check for ${taskId}")
+        println(s"Done executing validation check for $taskId")
       }
     }).start()
 
@@ -1696,19 +1611,23 @@ object RequestHelper {
   }
 
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  def listenerFactory(db: DBAbstraction, initGlobal: Option[ProvableSig] = None)(proofId: Int)(tacticName: String, branch: Int): Seq[IOListener] = {
-    val trace = db.getExecutionTrace(proofId)
+  def listenerFactory(db: DBAbstraction, initGlobal: Option[ProvableSig] = None)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = {
+    val trace = db.getExecutionTrace(proofId, withProvables=false)
+    assert(-1 <= parentInTrace && parentInTrace < trace.steps.length, "Invalid trace index " + parentInTrace + ", expected -1<=i<trace.length")
+    val parentStep: Option[Int] = if (parentInTrace < 0) None else Some(trace.steps(parentInTrace).stepId)
     val globalProvable = initGlobal match {
       case Some(gp) if trace.steps.isEmpty => gp
-      case _ => trace.lastProvable
+      case _ => parentStep match {
+        case None => db.getProvable(db.getProofInfo(proofId).provableId.get).provable
+      }
     }
     val ruleName = try {
       RequestHelper.getSpecificName(tacticName.split("\\(").head, null, None, None, _.display.name)
     } catch {
       case _: Throwable => tacticName
     }
-    new TraceRecordingListener(db, proofId, trace.executionId.toInt, trace.lastStepId,
-      globalProvable, trace.alternativeOrder, branch, recursive = false, ruleName) :: Nil
+    new TraceRecordingListener(db, proofId, parentStep,
+      globalProvable, branch, recursive = false, ruleName) :: Nil
   }
 
 }

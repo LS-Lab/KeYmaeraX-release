@@ -35,18 +35,18 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
 
   it should "parse all tactics" in withMathematica { _ =>
     tutorialEntries.filter(_.tactic.isDefined).foreach(e =>
-      try { BelleParser(e.tactic.get._1) } catch { case ex: Throwable =>
-        fail(s"${e.name} tactic did not parse", ex) })
+      try { BelleParser(e.tactic.get._2) } catch { case ex: Throwable =>
+        fail(s"Tactic ${e.tactic.get._1} of model ${e.name} did not parse", ex) })
   }
 
   it should "prove all provable entries" in withMathematica { _ => withDatabase { db =>
-    tutorialEntries.filter(e => e.tactic.isDefined && e.tactic.get._2).foreach(e => {
-      println(s"Proving ${e.name}")
+    tutorialEntries.filter(e => e.tactic.isDefined && e.tactic.get._3).foreach(e => {
+      println(s"Proving ${e.name} with ${e.tactic.get._1}")
       (try {
-          db.proveBy(e.model, BelleParser(e.tactic.get._1), e.name)
+          db.proveBy(e.model, BelleParser(e.tactic.get._2), e.name)
        } catch {
           case ex: Throwable => fail(s"Exception while proving ${e.name}", ex)
-       }) shouldBe 'proved withClue e.name})
+       }) shouldBe 'proved withClue e.name + "/" + e.tactic.get._1})
   }}
 
 }

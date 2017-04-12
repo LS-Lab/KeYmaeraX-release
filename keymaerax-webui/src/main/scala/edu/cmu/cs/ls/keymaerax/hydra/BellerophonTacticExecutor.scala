@@ -14,9 +14,9 @@ object BellerophonTacticExecutor {
   val defaultExecutor = new BellerophonTacticExecutor(defaultSize)
 }
 
-case class ListenerFuture[T] (userId: String, listeners: List[IOListener], callable: Callable[T]) extends FutureTask[T] (callable) {
+case class InterpreterFuture[T] (userId: String, interpreter: Interpreter, callable: Callable[T]) extends FutureTask[T] (callable) {
   override def cancel(mayInterruptIfRunning:Boolean): Boolean = {
-    listeners.foreach(_.kill())
+    interpreter.kill()
     super.cancel(mayInterruptIfRunning)
   }
 }
@@ -29,7 +29,7 @@ class BellerophonTacticExecutor(poolSize: Int) {
     * [[scheduledTactics]] could be at any state of execution, included finished.
     * Tactics are never removed from the [[scheduledTactics]] mapping unless explicitly via .remove()
     */
-  private val scheduledTactics : scala.collection.mutable.Map[String, ListenerFuture[Either[BelleValue, BelleThrowable]]] = scala.collection.mutable.Map()
+  private val scheduledTactics : scala.collection.mutable.Map[String, InterpreterFuture[Either[BelleValue, BelleThrowable]]] = scala.collection.mutable.Map()
 
   def tasksForUser(userId: String):List[String] = {
     scheduledTactics.flatMap{case (task, future) =>
@@ -41,16 +41,16 @@ class BellerophonTacticExecutor(poolSize: Int) {
   }
 
   /**
-    *
+    * Schedules a tactic for execution.
     * @param tactic The tactic to run
-    * @param value The value to apply the tactic to
+    * @param value The value to apply the tactic to.
+    * @param interpreter The interpreter that actually runs the tactic.
     * @return The ID that [[BellerophonTacticExecutor]] uses to identify this tactic.
     */
-  def schedule(userId: String, tactic: BelleExpr, value: BelleValue, interpreter: List[IOListener]=>Interpreter,
-               listeners: List[IOListener] = Nil) : String = {
+  def schedule(userId: String, tactic: BelleExpr, value: BelleValue, interpreter: Interpreter): String = {
     val id = java.util.UUID.randomUUID().toString
     assert(!scheduledTactics.contains(id), "All running tactic IDs should be unique.")
-    val future = makeFuture(userId, tactic, value, interpreter, listeners)
+    val future = makeFuture(userId, tactic, value, interpreter)
     pool.submit(future)
     scheduledTactics += ((id, future))
     id
@@ -121,12 +121,11 @@ class BellerophonTacticExecutor(poolSize: Int) {
     }
   }
 
-  private def makeFuture(userId: String, tactic: BelleExpr, value: BelleValue, interpreter: List[IOListener]=>Interpreter,
-                         listeners: List[IOListener]) = {
-    new ListenerFuture[Either[BelleValue, BelleThrowable]](userId, listeners, new Callable[Either[BelleValue, BelleThrowable]]() {
+  private def makeFuture(userId: String, tactic: BelleExpr, value: BelleValue, interpreter: Interpreter) = {
+    new InterpreterFuture[Either[BelleValue, BelleThrowable]](userId, interpreter, new Callable[Either[BelleValue, BelleThrowable]]() {
       override def call(): Either[BelleValue, BelleThrowable] = {
         try {
-          Left(interpreter(listeners)(tactic, value))
+          Left(interpreter(tactic, value))
         } catch {
           case e : BelleThrowable     => Right(e)
           case thrown : Throwable => Right(new BelleThrowable("Unknown throwable thrown during tactic execution", thrown))

@@ -19,7 +19,7 @@ angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', funct
 
   $scope.proveFromTactic = function(modelId) {
     spinnerService.show('modelListProofLoadingSpinner');
-    var uri     = 'models/users/' + $cookies.get('userId') + '/model/' + modelId + '/proveFromTactic'
+    var uri     = 'models/users/' + $cookies.get('userId') + '/model/' + modelId + '/createTacticProof'
     $http.post(uri, {}).success(function(data) {
       var proofId = data.id;
       $location.path('proofs/' + proofId);

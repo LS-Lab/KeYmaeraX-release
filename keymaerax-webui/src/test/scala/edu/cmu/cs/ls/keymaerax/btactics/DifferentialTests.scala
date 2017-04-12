@@ -1487,6 +1487,20 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain theSameElementsAs "\\forall t_ (t_>=0 -> 1/r*t_+v>0)".asFormula::Nil
   }
 
+  it should "not choke on constant fact 'true'" in withMathematica { _ =>
+    val result = proveBy("r>0 & true -> [{v'=1/r}]v>0".asFormula, implyR(1) & andL('L) & solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs "r>0".asFormula::"true".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "\\forall t_ (t_>=0 -> 1/r*t_+v>0)".asFormula::Nil
+  }
+
+  it should "not choke on constant conjunct with 'true'" in withMathematica { _ =>
+    val result = proveBy("r>0 & true -> [{v'=1/r}]v>0".asFormula, implyR(1) & solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs "r>0&true".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "\\forall t_ (t_>=0 -> 1/r*t_+v>0)".asFormula::Nil
+  }
+
   it should "solve in context" in withMathematica { _ =>
     val result = proveBy("A>0 -> [a:=A;][{v'=a}]v>0".asFormula, implyR(1) & solve(1, 1::Nil))
     result.subgoals should have size 1

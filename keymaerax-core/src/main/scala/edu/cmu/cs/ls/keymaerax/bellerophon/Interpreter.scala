@@ -13,7 +13,11 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
   * @see [[SequentialInterpreter]]
   */
 trait Interpreter {
-  def apply(expr: BelleExpr, v : BelleValue) : BelleValue
+  /** Returns the result of applying tactic `expr` to the proof value `v` (usually a provable). */
+  def apply(expr: BelleExpr, v: BelleValue): BelleValue
+
+  /** Stops the interpreter and kills all its tactic executions. */
+  def kill(): Unit
 }
 
 /**
