@@ -742,6 +742,18 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1).succ should contain theSameElementsAs List("[{dx'=0,dy'=0}](dx=dx_0&dy=dy_0)".asFormula)
   }
 
+  it should "not duplicate ghosts with multiple occurrences of old" in withMathematica { qeTool =>
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=5}]x>0".asFormula)),
+      dC("x>=old(x)".asFormula)(1) <(dC("x>=2*old(x)-old(x)".asFormula)(1), skip))
+    result.subgoals should have size 3
+    result.subgoals(0).ante should contain theSameElementsAs "x_0>0".asFormula::"x_0=x".asFormula::Nil
+    result.subgoals(0).succ should contain theSameElementsAs "[{x'=5&(true&x>=x_0)&x>=2*x_0-x_0}]x>0".asFormula::Nil
+    result.subgoals(1).ante should contain theSameElementsAs "x_0>0".asFormula::"x_0=x".asFormula::Nil
+    result.subgoals(1).succ should contain theSameElementsAs "[{x'=5}]x>=x_0".asFormula::Nil
+    result.subgoals(2).ante should contain theSameElementsAs "x_0>0".asFormula::"x_0=x".asFormula::Nil
+    result.subgoals(2).succ should contain theSameElementsAs "[{x'=5&true&x>=x_0}]x>=2*x_0-x_0".asFormula::Nil
+  }
+
   it should "cut in multiple formulas" in withMathematica { qeTool =>
     val result = proveBy(Sequent(IndexedSeq("v>=0".asFormula, "x>0".asFormula), IndexedSeq("[{x'=v,v'=2}]x>=0".asFormula)),
       dC("v>=0".asFormula, "x>=old(x)".asFormula)(1))

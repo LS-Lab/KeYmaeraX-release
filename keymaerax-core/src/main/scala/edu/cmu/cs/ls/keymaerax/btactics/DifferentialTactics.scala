@@ -278,12 +278,22 @@ private object DifferentialTactics {
       dc(f)(pos)
     } else {
       val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {
-        val ghost = old match {
-          case v: Variable => TacticHelper.freshNamedSymbol(v, sequent)
-          case _ => TacticHelper.freshNamedSymbol(Variable("old"), sequent)
+        val (ghost: Variable, ghostPos: Option[Position]) = old match {
+          case v: Variable =>
+            sequent.ante.zipWithIndex.find({
+              //@note heuristic to avoid new ghosts on repeated old(v) usage
+              case (Equal(x0: Variable, x: Variable), _) => v==x && x0.name==x.name
+              case _ => false
+            }).map[(Variable, Option[Position])]({ case (Equal(x0: Variable, _), i) => (x0, Some(AntePosition.base0(i))) }).
+              getOrElse((TacticHelper.freshNamedSymbol(v, sequent), None))
+          case _ => (TacticHelper.freshNamedSymbol(Variable("old"), sequent), None)
         }
         (old -> ghost,
-          discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) & TactixLibrary.exhaustiveEqR2L(hide=false)('Llast))
+          ghostPos match {
+            case None => discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) &
+              TactixLibrary.exhaustiveEqR2L(hide=false)('Llast)
+            case Some(gp) => TactixLibrary.exhaustiveEqR2L(hide=false)(gp)
+          })
       }).toList
       ghosts.map(_._2).reduce(_ & _) & dc(replaceOld(f, ghosts.map(_._1).toMap))(pos)
     }
