@@ -22,6 +22,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable.Nil
 import scala.slick.driver.SQLiteDriver
+import scala.util.Try
 
 //import Tables.TacticonproofRow
 import scala.slick.jdbc.StaticQuery.interpolation
@@ -348,6 +349,17 @@ object SQLite {
     })
 
     //Models
+    override def getUniqueModelName(userId: String, modelName: String): String = {
+      val models = Models.filter(_.userid === userId).filter(_.name.startsWith(modelName)).map(_.name).list
+      if (models.isEmpty) modelName
+      else {
+        val max = (0 :: models.filter(_.isDefined).map(s =>
+          Try(s.get.substring(modelName.length).trim().stripPrefix("(").stripSuffix(")").toInt).toOption).
+          filter(_.isDefined).map(_.get)).max
+        s"$modelName (${max+1})"
+      }
+    }
+
     override def createModel(userId: String, name: String, fileContents: String, date: String,
                              description: Option[String] = None, publink: Option[String] = None,
                              title: Option[String] = None, tactic: Option[String] = None): Option[Int] =

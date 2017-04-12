@@ -76,6 +76,8 @@ class InMemoryDB extends DBAbstraction {
   }
 
   //Models
+  override def getUniqueModelName(userId: String, modelName: String): String = ???
+
   override def createModel(userId: String, name: String, fileContents: String, date: String,
                            description: Option[String] = None, publink: Option[String] = None,
                            title: Option[String] = None, tactic: Option[String] = None): Option[Int] =

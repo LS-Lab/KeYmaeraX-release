@@ -195,6 +195,11 @@ trait DBAbstraction {
     getProofsForUser(userId).map(_._1).filter(!_.closed)
 
   //Models
+  /** Returns a unique model name by appending an index, if `modelName` already exists. */
+  def getUniqueModelName(userId: String, modelName: String): String
+
+  /** Creates a new model in the database if `name` does not exist yet. Returns the ID of the created model.
+    * Otherwise (if the model name is used already) returns None and the database is unmodified. */
   def createModel(userId: String, name: String, fileContents: String, date: String,
                   description: Option[String] = None, publink: Option[String] = None,
                   title: Option[String] = None, tactic: Option[String] = None): Option[Int]

@@ -631,16 +631,25 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: S
   def resultingResponses(): List[Response] = {
     try {
       val archiveEntries = KeYmaeraXArchiveParser.read(kyaFileContents)
-      //@todo checks: fresh names, model created etc.
-      archiveEntries.foreach({ case (name, modelFileContent, tactic) =>
-        val modelId = db.createModel(userId, name, modelFileContent, currentDate(), None, None, None,
-          tactic.headOption.map(_._2)).map(_.toString)
-        tactic.foreach({ case (tname, ttext) =>
-          db.createProofForModel(Integer.parseInt(modelId.get), tname, "Proof from archive",
-            currentDate(), Some(ttext))
-        })
+      val (failedModels, succeededModels) = archiveEntries.foldLeft((List[String](), List[String]()))({ case ((failedImports, succeededImports), (name, modelFileContent, tactic)) =>
+        val uniqueModelName = db.getUniqueModelName(userId, name)
+        db.createModel(userId, uniqueModelName, modelFileContent, currentDate(), None, None, None,
+          tactic.headOption.map(_._2)) match {
+          case None =>
+            // really should not get here. print and continue importing the remainder of the archive
+            println(s"Model import failed: model $name already exists in the database and attempt of importing under uniquified name $uniqueModelName failed. Continuing with remainder of the archive.")
+            (failedImports :+ name, succeededImports)
+          case Some(modelId) =>
+            tactic.foreach({ case (tname, ttext) =>
+              db.createProofForModel(modelId, tname, "Proof from archive", currentDate(), Some(ttext))
+            })
+            (failedImports, succeededImports :+ name)
+        }
       })
-      new BooleanResponse(true) :: Nil
+      if (failedModels.isEmpty) new BooleanResponse(true) :: Nil
+      else throw new Exception("Failed to import the following models\n" + failedModels.mkString("\n") +
+        "\nSucceeded importing:\n" + succeededModels.mkString("\n") +
+        "\nModel import may have failed because of model name clashed. Try renaming the failed models in the archive to names that do not yet exist in your model list.")
     } catch {
       case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
     }

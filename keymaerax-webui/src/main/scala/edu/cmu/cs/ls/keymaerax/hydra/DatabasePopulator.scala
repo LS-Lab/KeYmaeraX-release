@@ -78,25 +78,22 @@ object DatabasePopulator {
   /** Imports a model with info into the database; optionally records a proof obtained using `tactic`. */
   def importModel(db: DBAbstraction, user: String, prove: Boolean)(entry: TutorialEntry): Unit = {
     val now = Calendar.getInstance()
-    if (!db.getModelList(user).exists(_.name == entry.name)) {
-      println("Importing model " + entry.name + "...")
-      db.createModel(user, entry.name, entry.model, now.getTime.toString, entry.description,
-        entry.link, entry.title, entry.tactic match { case Some((_, t, _)) => Some(t) case _ => None }) match {
-        case Some(modelId) => entry.tactic match {
-          case Some((tname, tacticText, _)) =>
-            println("Importing proof...")
-            val proofId = db.createProofForModel(modelId, entry.name + " (" + tname + ")", "Imported from tactic " + tname,
-              now.getTime.toString, Some(tacticText))
-            if (prove) executeTactic(db, entry.model, proofId, tacticText)
-            println("...done")
-          case _ => // nothing else to do, not asked to prove or don't know how to prove without tactic
-        }
-        case None => ???
+    val entryName = db.getUniqueModelName(user, entry.name)
+    println("Importing model " + entryName + "...")
+    db.createModel(user, entryName, entry.model, now.getTime.toString, entry.description,
+      entry.link, entry.title, entry.tactic match { case Some((_, t, _)) => Some(t) case _ => None }) match {
+      case Some(modelId) => entry.tactic match {
+        case Some((tname, tacticText, _)) =>
+          println("Importing proof...")
+          val proofId = db.createProofForModel(modelId, entryName + " (" + tname + ")", "Imported from tactic " + tname,
+            now.getTime.toString, Some(tacticText))
+          if (prove) executeTactic(db, entry.model, proofId, tacticText)
+          println("...done")
+        case _ => // nothing else to do, not asked to prove or don't know how to prove without tactic
       }
-      println("...done")
-    } else {
-      println("WARNING: trying to import model that already exists in DB --> skipping import")
+      case None => ???
     }
+    println("...done")
   }
 
   /** Prepares an interpreter for executing tactics. */
