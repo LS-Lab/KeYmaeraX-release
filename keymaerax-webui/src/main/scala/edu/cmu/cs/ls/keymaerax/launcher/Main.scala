@@ -76,7 +76,8 @@ object Main {
       edu.cmu.cs.ls.keymaerax.hydra.SSLBoot.main(args)
     }
     else {
-      LoadingDialogFactory() //Intialize the loading dialog.
+      // Initialize the loading dialog splash screen.
+      LoadingDialogFactory()
       edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot.main(args)
     }
   }
