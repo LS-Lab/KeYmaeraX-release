@@ -359,11 +359,37 @@ private object DifferentialTactics {
     */
   private def DG(ghost: DifferentialProgram): DependentPositionTactic = "ANON" byWithInputs (listifiedGhost(ghost), (pos: Position, sequent: Sequent) => {
     val (y, a, b) = DifferentialHelper.parseGhost(ghost)
+    
     sequent.sub(pos) match {
       case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
-        val singular = FormulaTools.singularities(a) ++ FormulaTools.singularities(b)
-        if (!singular.isEmpty) throw new BelleThrowable("Possible singularities during DG(" + ghost + ") will be rejected: " + singular.mkString(",") + " in\n" + sequent.prettyString)
+                
+        //SOUNDNESS-CRITICAL: DO NOT ALLOW SINGULARITIES IN GHOSTS.
+        //@TODO This is a bit hacky. We should either:
+        //  1) try to cut <(nil, dI(1)) NotEqual(v, Number(0)) before doing
+        //     the ghost, and only check for that here; or
+        //  2) insist on NotEqual and provide the user with an errormessage.
+        //But ultimately, we need a systematic way of checking this in the
+        //core (last-case resort could always just move this check into the core and apply
+        //it whenever DG differential ghost is applied, but that's pretty
+        //hacky).
+        val singular = {
+          val evDomFmls = flattenConjunctions(h)
+          (FormulaTools.singularities(a) ++ FormulaTools.singularities(b)).filter(v =>
+            !evDomFmls.contains(Less(v, Number(0)))     &&
+            !evDomFmls.contains(Less(Number(0), v))     &&
+            !evDomFmls.contains(Greater(v, Number(0)))  &&
+            !evDomFmls.contains(Greater(Number(0), v))  &&
+            !evDomFmls.contains(NotEqual(v, Number(0))) &&
+            !evDomFmls.contains(Greater(Number(0), v))  
+          )
+        }
+
+        if (!singular.isEmpty) 
+          throw new BelleThrowable("Possible singularities during DG(" + ghost + ") will be rejected: " + 
+            singular.mkString(",") + " in\n" + sequent.prettyString +
+            "\nWhen dividing by a variable v, try cutting v!=0 into the evolution domain constraint"
+          )
 
         val subst = (us: Option[Subst]) => us.getOrElse(throw BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
           (Variable("y_",None,Real), y) ::
