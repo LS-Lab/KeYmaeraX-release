@@ -321,8 +321,8 @@ class PolynomialArithTests extends TacticTestBase {
     val succ = IndexedSeq("0<=1+r^2-2*r*t").map(_.asFormula)
     val ineq = List(0)
     val linear = List((1,"t","-wit__1^2 + 1","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm))
-    val witness = List(("1","1/4*r*wit__0*wit_^2 + r*wit__0 - 1/4*wit__0*wit_^2 - wit__0"),("1/12","r*wit__0^2*wit_ - r*wit_ + wit__0^2*wit_ - wit_"),("1/48","r*wit__0*wit_^2 - wit__0*wit_^2"),("1/6","r*wit__0*wit__1 + wit__0*wit__1"),("1/12","r*wit__0^2*wit__1 + r*wit__1 + wit__0^2*wit__1 + wit__1"),("1/12","r*wit__0*wit__1*wit_ - wit__0*wit__1*wit_")).map( s => (s._1.asTerm,s._2.asTerm))
-    val insts = Some(List((0,"-2*r*wit_^2 + r^2 - 2*r + 1"),(1,"-1/12*(r^2 + 2*r + 1)*wit__0^4 - 4*r^2*wit__1^2 - 2*r^3 - 1/12*((r^2 - 2*r + 1)*wit_^2 + 4*r^2 + 8*r + 4)*wit__0^2 + 47/12*r^2 - 13/6*r - 1/12")).map (s => (s._1,s._2.asTerm)))
+    val witness = List(("1","-r*wit__0 + wit__0"),("1/2","-r*wit_ + wit__0^2*wit_"),("1/2","r*wit__1 + wit__0^2*wit__1")).map( s => (s._1.asTerm,s._2.asTerm))
+    val insts = Some(List((0,"-2*r*wit_^2 + r^2 - 2*r + 1"),(1,"-1/2*wit__0^4 - 4*r^2*wit__1^2 - 2*r^3 - r*wit__0^2 + 7/2*r^2 - 2*r")).map (s => (s._1,s._2.asTerm)))
 
     val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& linearElim(linear) & genWitnessTac(ineq,witness,insts))
     res shouldBe 'proved
@@ -386,4 +386,24 @@ class PolynomialArithTests extends TacticTestBase {
     res shouldBe 'proved
   }
 
+  "PolynomialArith" should "prove JH examples from Monniaux & Corbineau, ITP'11" in withMathematica { qeTool =>
+    val problems = List(
+      Sequent(IndexedSeq("0<=x","0<=y","0<=z","x*y*z=1").map(_.asFormula),IndexedSeq("x+y+z <= (x^2 * z + y^2 * x + z^2 * y)").map(_.asFormula)),
+      //The positive squares heuristic doesn't work for this one
+      //Sequent(IndexedSeq("0<=x","0<=y","0<=z").map(_.asFormula),IndexedSeq("(x^2 * z + y^2 * x + z^2 * y)^3 <= ((x * y * z)^2 * (x + y + z)^3)").map(_.asFormula)),
+      Sequent(IndexedSeq("(a^2 = (k^2 + 1) * b^2)","1<=k","1<=a","1<=b").map(_.asFormula),IndexedSeq("(a - k * b) < b").map(_.asFormula))
+    )
+    val ineq = List(0)
+    val witness = List(("1","wit_*x1^3"),("1","-9/14*wit_*x1^2*x3 + wit_*x2^2*x3"),("1","-9/14*wit_*x1^2*x2 + wit_*x2*x3^2"),("3/7","x1^4*x2*x3 - 1/2*x1^2*x2^3*x3 - 1/2*x1^2*x2*x3^3"),("3/7","-x1^5*x2 + x1*x2^3*x3^2"),("3/7","-x1^5*x3 + x1*x2^2*x3^3"),("9/28","-x1^2*x2^3*x3 + x1^2*x2*x3^3"),("3/196","wit_*x1^2*x3"),("3/196","wit_*x1^2*x2")).map( s => (s._1.asTerm,s._2.asTerm))
+
+    val res = problems.map( s => proveBy(s,prepareArith2 & printGoal)) //& genWitnessTac(ineq,witness))
+
+  }
+
+  "PolynomialArith" should "remove division from antecedents" in withMathematica { qeTool =>
+    val antes = IndexedSeq("x/y + a/b + c * d","a+b*c/2","5","X() +A()+B()/C()").map(t => Equal(t.asTerm,Number(0)))
+    val seq = Sequent(antes,IndexedSeq())
+    println(proveBy(seq,ratFormTac(0,true,true)))
+    println(proveBy(seq,ratFormTac(0,true,false)))
+  }
 }

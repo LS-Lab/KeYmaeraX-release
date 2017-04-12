@@ -940,4 +940,131 @@ object PolynomialArith {
     }
   }
 
+  //Only the B ones are necessary, but the others help avoid extra terms
+  val addDiv =
+  (proveBy("F_()/G_() + A_()/B_() = (F_()*B_()+A_()*G_())/(G_()*B_())".asFormula,QE),
+    proveBy("F_()/G_() + A_() = (F_()+A_()*G_())/G_()".asFormula,QE),
+    proveBy("F_() + A_()/B_() = (F_()*B_()+A_())/B_()".asFormula,QE))
+
+  val mulDiv =
+  (proveBy("F_()/G_() * A_()/B_() = (F_()*A_())/(G_()*B_())".asFormula,QE),
+    proveBy("F_()/G_() * A_() = (F_()*A_())/G_()".asFormula,QE),
+    proveBy("F_() * A_()/B_() = (F_()*A_())/B_()".asFormula,QE))
+
+  val subDiv =
+  (proveBy("F_()/G_() - A_()/B_() = (F_()*B_()-A_()*G_())/(G_()*B_())".asFormula,QE),
+    proveBy("F_()/G_() - A_() = (F_()-A_()*G_())/G_()".asFormula,QE),
+    proveBy("F_() - A_()/B_() = (F_()*B_()-A_())/B_()".asFormula,QE))
+
+  val divDiv =
+    (proveBy("(F_()/G_()) / (A_()/B_()) = (F_()*B_())/(A_()*G_())".asFormula,QE),
+      proveBy("(F_()/G_()) / A_() = (F_()/(G_()*A_()))".asFormula,QE),
+      proveBy("F_()/(A_()/B_()) = (F_()*B_())/A_()".asFormula,QE))
+  // This is only provable for concrete instances of K_(), probably have to do it on the fly
+  // val powDivB = proveBy("(F_()/G_())^K_() = F_()^K_()/G_()^K_()".asFormula,QE)
+
+  def useForOpt(pr:Option[ProvableSig],p:Position) : ForwardTactic = {
+    pr match {
+      case None => iden
+      case Some(pr) => useFor(pr,PosInExpr(0 :: Nil))(p)
+    }
+  }
+
+  // Given a term, turns it into a "rational form" and proves |- t = t, where A , B do not contain divisions
+  // If no division occurs in the term then it does nothing
+  def ratForm(l:Term) : (Option[ProvableSig]) = {
+    if(DEBUG) println("rat form at",l)
+    val res = l match {
+      case Power(_,_) => None //(a/b)^k unhandled
+      case b: BinaryCompositeTerm =>
+        val lem = b match {
+          case Divide(_,_) => divDiv
+          case Plus(_, _) => addDiv
+          case Minus(_, _) => subDiv
+          case Times(_, _) => mulDiv
+        }
+        val pr1 = ratForm(b.left)
+        val pr2 = ratForm(b.right)
+        (pr1, pr2) match {
+          case (None, None) =>
+            b match {
+              case Divide(_, _) => Some(proveBy(Equal(l, l), byUS(DerivedAxioms.equalReflex.fact)))
+              case _ => None
+            }
+          case (Some(pr1), None) =>
+            val pr = proveBy(Equal(l, l), byUS(DerivedAxioms.equalReflex.fact))
+            Some(useFor(lem._2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))
+            (useFor(pr1, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 0 :: Nil))(pr)))
+          case (None, Some(pr2)) =>
+            val pr = proveBy(Equal(l, l), byUS(DerivedAxioms.equalReflex.fact))
+            Some(useFor(lem._3, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))
+            (useFor(pr2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 1 :: Nil))(pr)))
+          case (Some(pr1), Some(pr2)) =>
+            val pr = proveBy(Equal(l, l), byUS(DerivedAxioms.equalReflex.fact))
+            Some(useFor(lem._1, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))
+            (useFor(pr2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 1 :: Nil))
+            (useFor(pr1, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 0 :: Nil))(pr))))
+        }
+      case _ => None
+    }
+    res
+  }
+
+  val divEq = proveBy("!(G_()=0) -> F_()/G_() = 0 -> F_() = 0".asFormula,QE)
+  val divNeq = proveBy("!(G_()=0) -> (F_()/G_() != 0) -> F_() != 0".asFormula,QE) //Derivable from the above
+  val neqzConj = proveBy(" A * B != 0 <-> A!=0 & B!=0".asFormula,QE)
+
+  // Repeatedly finds the first rational term in the antecedent starting at an index and cuts in the appropriate side goal
+  // A/B = 0 , G |-  turns into A = 0 , G |- and B = 0 , G |-
+  // This assumes that ALL divisions occuring in the goal are well-defined
+  def ratFormTac(antepos:Int, ignore:Boolean, rec:Boolean):DependentTactic = new SingleGoalDependentTactic("rat ante") {
+    override def computeExpr(seq: Sequent): BelleExpr = {
+      print("AT", antepos)
+      if (seq.ante.length <= antepos)
+        ident
+      else
+        seq.ante(antepos) match {
+          case Equal(t, n) =>
+            val propt = ratForm(t)
+            propt match {
+              case None => ratFormTac(antepos + 1, ignore, rec)
+              case Some(pr) =>
+                if (ignore)
+                  pr.conclusion.succ(0).sub(PosInExpr(1 :: Nil)) match {
+                    case (Some(Divide(num, den))) =>
+                      useAt(pr)(-(antepos + 1), PosInExpr(0 :: Nil)) &
+                        cutL(Equal(num, Number(0)))(-(antepos + 1)) < (
+                          ratFormTac(antepos + 1, ignore, rec),
+                          useAt(divEq, PosInExpr(1 :: Nil))(1) & notR(1) & ratFormTac(antepos, rec, rec)
+                          )
+                    case _ => ???
+                  }
+                else
+                  ratFormTac(antepos + 1, ignore, rec) & hideL(-(antepos + 1))
+            }
+          case NotEqual(t, n) =>
+            val propt = ratForm(t)
+            propt match {
+              case None => ratFormTac(antepos + 1, ignore, rec)
+              case Some(pr) =>
+                if (ignore)
+                  pr.conclusion.succ(0).sub(PosInExpr(1 :: Nil)) match {
+                    case (Some(Divide(num, den))) =>
+                      useAt(pr)(-(antepos + 1), PosInExpr(0 :: Nil)) &
+                        cutL(NotEqual(num, Number(0)))(-(antepos + 1)) < (
+                          ratFormTac(antepos + 1, ignore, rec),
+                          useAt(divNeq, PosInExpr(1 :: Nil))(1) & notR(1) & ratFormTac(antepos, rec, rec)
+                          )
+                    case _ => ???
+                  }
+                else
+                  ratFormTac(antepos + 1, ignore, rec) & hideL(-(antepos + 1))
+            }
+          case _ => ratFormTac(antepos + 1, ignore, rec)
+        }
+    }
+  }
+
+  lazy val ratTac = ratFormTac(0,true,false)
+
 }
