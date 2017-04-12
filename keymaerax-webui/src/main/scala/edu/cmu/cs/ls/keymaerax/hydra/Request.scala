@@ -1318,6 +1318,15 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     else {
       assert(provable.isProved, "Provable " + provable + " must be proved")
       assert(provable.conclusion == conclusion, "Conclusion of provable " + provable + " must match problem " + conclusion)
+      tree.info.tactic match {
+        case None =>
+          // remember tactic string
+          val newInfo = new ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
+            tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
+            Some(tree.tacticString))
+          db.updateProofInfo(newInfo)
+        case Some(_) => // already have a tactic, so do nothing
+      }
       new ProofVerificationResponse(proofId, provable, tree.tacticString) :: Nil
     }
   }
