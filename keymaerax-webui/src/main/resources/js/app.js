@@ -108,6 +108,10 @@ keymaeraProofApp.config(['$routeProvider',
                 templateUrl: 'partials/license_page.html',
                 controller: 'ServerInfoCtrl'
       }).
+      when('/import', {
+                templateUrl: 'partials/import.html',
+                controller: 'ModelUploadCtrl'
+      }).
       otherwise({
         redirectTo: '/dashboard'
       });
