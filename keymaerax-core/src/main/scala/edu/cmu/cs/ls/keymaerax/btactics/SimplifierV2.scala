@@ -9,13 +9,15 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable.{Map, _}
-import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 
 /**
   * Created by yongkiat on 9/29/16.
   */
 object SimplifierV2 {
+
+  private val namespace = "simplifierv2"
 
   /**
     * Returns the expression in expected position of ctx |- t = t' or ctx |- f <-> f'
@@ -33,8 +35,8 @@ object SimplifierV2 {
     val ttt  = tt.asTerm
     (ttt,
       f match{
-        case None => proveBy(Equal(t.asTerm,ttt),QE & done)
-        case Some(f) => proveBy(Imply(f.asFormula,Equal(t.asTerm,ttt)),QE & done)
+        case None => remember(Equal(t.asTerm,ttt), QE & done, namespace).fact
+        case Some(f) => remember(Imply(f.asFormula,Equal(t.asTerm,ttt)),QE & done, namespace).fact
       })
   }
 
@@ -212,22 +214,22 @@ object SimplifierV2 {
   }
 
   //Technically, we don't need QE for these (just use the proof for divideLemma)
-  private lazy val plusLemma = proveBy(
-    "(A_() = B_()) & (X_() = Y_()) -> (A_()+X_() = B_()+Y_())".asFormula,QE & done)
+  private lazy val plusLemma = remember(
+    "(A_() = B_()) & (X_() = Y_()) -> (A_()+X_() = B_()+Y_())".asFormula,QE & done, namespace).fact
   private lazy val minusLemma =
-    proveBy(
-      "(A_() = B_()) & (X_() = Y_()) -> (A_()-X_() = B_()-Y_())".asFormula,QE & done)
+    remember(
+      "(A_() = B_()) & (X_() = Y_()) -> (A_()-X_() = B_()-Y_())".asFormula,QE & done, namespace).fact
   private lazy val timesLemma =
-    proveBy(
-      "(A_() = B_()) & (X_() = Y_()) -> (A_()*X_() = B_()*Y_())".asFormula,QE & done)
+    remember(
+      "(A_() = B_()) & (X_() = Y_()) -> (A_()*X_() = B_()*Y_())".asFormula,QE & done, namespace).fact
   private lazy val divideLemma =
-    proveBy(
+    remember(
       "(A_() = B_()) & (X_() = Y_()) -> (A_()/X_() = B_()/Y_())".asFormula,
-      implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive"))
+      implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive"), namespace).fact
   private lazy val powerLemma =
-    proveBy(
+    remember(
       "(A_() = B_()) & (X_() = Y_()) -> (A_()^X_() = B_()^Y_())".asFormula,
-      implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive"))
+      implyR(1) & andL(-1) & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive"), namespace).fact
 
   /**
     * Takes a term t, with an equality context ctx and returns ctx |- t = t' using all equalities of the shape
@@ -279,53 +281,53 @@ object SimplifierV2 {
 
   //Justifications for adding things to the context
   private lazy val andLemma =
-  proveBy(
-    "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() & Q_() <-> F_() & G_())".asFormula,prop & done)
+  remember(
+    "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() & Q_() <-> F_() & G_())".asFormula,prop & done, namespace).fact
 
   private lazy val implyLemma =
-    proveBy(
-      "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() -> Q_() <-> F_() -> G_())".asFormula,prop & done)
+    remember(
+      "((P_() <-> F_()) & (F_() -> (Q_() <-> G_()))) ->(P_() -> Q_() <-> F_() -> G_())".asFormula,prop & done, namespace).fact
 
   private lazy val orLemma =
-    proveBy(
-      "((P_() <-> F_()) & (!(F_()) -> (Q_() <-> G_()))) ->(P_() | Q_() <-> F_() | G_())".asFormula,prop & done)
+    remember(
+      "((P_() <-> F_()) & (!(F_()) -> (Q_() <-> G_()))) ->(P_() | Q_() <-> F_() | G_())".asFormula,prop & done, namespace).fact
 
   private lazy val equivLemma =
-    proveBy(
-      "((P_() <-> F_()) & (Q_() <-> G_())) ->((P_() <-> Q_()) <-> (F_() <-> G_()))".asFormula,prop & done)
+    remember(
+      "((P_() <-> F_()) & (Q_() <-> G_())) ->((P_() <-> Q_()) <-> (F_() <-> G_()))".asFormula,prop & done, namespace).fact
 
   private lazy val notLemma =
-    proveBy(
-      "(P_() <-> F_()) ->(!P_() <-> !F_())".asFormula,prop & done)
+    remember(
+      "(P_() <-> F_()) ->(!P_() <-> !F_())".asFormula,prop & done, namespace).fact
 
   private lazy val equalLemma =
-    proveBy(
-      "(A_() = B_()) & (X_() = Y_()) -> (A_() = X_() <-> B_() = Y_())".asFormula,QE & done)
+    remember(
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() = X_() <-> B_() = Y_())".asFormula,QE & done, namespace).fact
 
   private lazy val notequalLemma =
-    proveBy(
-      "(A_() = B_()) & (X_() = Y_()) -> (A_() != X_() <-> B_() != Y_())".asFormula,QE & done)
+    remember(
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() != X_() <-> B_() != Y_())".asFormula,QE & done, namespace).fact
 
   private lazy val greaterequalLemma =
-    proveBy(
-      "(A_() = B_()) & (X_() = Y_()) -> (A_() >= X_() <-> B_() >= Y_())".asFormula,QE & done)
+    remember(
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() >= X_() <-> B_() >= Y_())".asFormula,QE & done, namespace).fact
 
   private lazy val greaterLemma =
-    proveBy(
-      "(A_() = B_()) & (X_() = Y_()) -> (A_() > X_() <-> B_() > Y_())".asFormula,QE & done)
+    remember(
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() > X_() <-> B_() > Y_())".asFormula,QE & done, namespace).fact
 
   private lazy val lessequalLemma =
-    proveBy(
-      "(A_() = B_()) & (X_() = Y_()) -> (A_() <= X_() <-> B_() <= Y_())".asFormula,QE & done)
+    remember(
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() <= X_() <-> B_() <= Y_())".asFormula,QE & done, namespace).fact
 
   private lazy val lessLemma =
-    proveBy(
-      "(A_() = B_()) & (X_() = Y_()) -> (A_() < X_() <-> B_() < Y_())".asFormula,QE & done)
+    remember(
+      "(A_() = B_()) & (X_() = Y_()) -> (A_() < X_() <-> B_() < Y_())".asFormula,QE & done, namespace).fact
 
   private lazy val equivTrans =
-    proveBy("(P_() <-> Q_()) -> (Q_() <-> R_()) -> (P_() <-> R_())".asFormula,prop & done)
+    remember("(P_() <-> Q_()) -> (Q_() <-> R_()) -> (P_() <-> R_())".asFormula,prop & done, namespace).fact
 
-  private lazy val eqSym = proveBy("P_() = Q_() <-> Q_() = P_()".asFormula,QE & done)
+  private lazy val eqSym = remember("P_() = Q_() <-> Q_() = P_()".asFormula,QE & done, namespace).fact
 
   // Context management tactic generator for simplifier
   // Returns a new context ctx', and a tactic that turns
@@ -376,7 +378,7 @@ object SimplifierV2 {
   // (some already are)
   private def propProof(f:String,ff:String):ProvableSig =
   {
-    proveBy(Equiv(f.asFormula,ff.asFormula), prop & done)
+    remember(Equiv(f.asFormula,ff.asFormula), prop & done, namespace).fact
   }
 
   lazy val andT = propProof("F_() & true","F_()")
@@ -402,10 +404,10 @@ object SimplifierV2 {
   lazy val notT = propProof("!true","false")
   lazy val notF = propProof("!false","true")
 
-  lazy val forallTrue = proveBy("(\\forall x true)<->true".asFormula, auto )
-  lazy val forallFalse = proveBy("(\\forall x false)<->false".asFormula, auto)
-  lazy val existsTrue = proveBy("(\\exists x true)<->true".asFormula, auto )
-  lazy val existsFalse = proveBy("(\\exists x false)<->false".asFormula, auto )
+  lazy val forallTrue = remember("(\\forall x true)<->true".asFormula, auto, namespace).fact
+  lazy val forallFalse = remember("(\\forall x false)<->false".asFormula, auto, namespace).fact
+  lazy val existsTrue = remember("(\\exists x true)<->true".asFormula, auto, namespace).fact
+  lazy val existsFalse = remember("(\\exists x false)<->false".asFormula, auto, namespace).fact
 
 
   //Proves |- f -> t = tt or just t = tt
@@ -413,8 +415,8 @@ object SimplifierV2 {
   {
     val ttt  = tt.asFormula
     f match{
-      case None => proveBy(Equiv(t.asFormula,ttt),prop & QE & done)
-      case Some(f) => proveBy(Imply(f.asFormula,Equiv(t.asFormula,ttt)),prop & QE & done)
+      case None => remember(Equiv(t.asFormula,ttt),prop & QE & done, namespace).fact
+      case Some(f) => remember(Imply(f.asFormula,Equiv(t.asFormula,ttt)),prop & QE & done, namespace).fact
     }
   }
 
@@ -497,7 +499,7 @@ object SimplifierV2 {
   lazy val eqGtFalse = qeFormulaProof(Some("G_()>F_()"),"G_()=F_()","false")
   lazy val eqNeqFalse = qeFormulaProof(Some("G_()!=F_()"),"G_()=F_()","false")
 
-  lazy val neqSym = proveBy("F_() != G_() <-> G_() != F_()".asFormula,QE & done)
+  lazy val neqSym = remember("F_() != G_() <-> G_() != F_()".asFormula,QE & done, namespace).fact
 
   lazy val trueReflex = qeFormulaProof(Some("F_()"),"F_()","true")
   lazy val falseReflex = qeFormulaProof(Some("!F_()"),"F_()","false")
