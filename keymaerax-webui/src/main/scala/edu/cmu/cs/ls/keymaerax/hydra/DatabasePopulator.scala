@@ -65,7 +65,14 @@ object DatabasePopulator {
     if (url.startsWith("classpath:")) {
       io.Source.fromInputStream(getClass.getResourceAsStream(url.substring("classpath:".length))).mkString
     } else {
-      io.Source.fromURL(url).mkString
+      try {
+        io.Source.fromURL(url).mkString
+      }
+      catch {
+        case e : java.net.MalformedURLException => {
+          throw new Exception(s"Problem with url $url");
+        }
+      }
     }
 
   /** Imports a model with info into the database; optionally records a proof obtained using `tactic`. */
