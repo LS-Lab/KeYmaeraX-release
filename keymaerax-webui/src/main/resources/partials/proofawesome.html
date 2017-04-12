@@ -205,12 +205,13 @@
 <div class="row">
     <div class="col-md-12">
         <!-- TODO restrict to < 10 tasks as tabs, then complement the rest with dropdown -->
-        <uib-tabset justified="true" active="agenda.selectedId()">
-            <uib-tab ng-repeat="task in agenda.items()" id="provingtab" index="task.id" select="agenda.select(task)">
+        <uib-tabset justified="true" active="agenda.selectedTab">
+            <uib-tab ng-repeat="task in agenda.items() track by task.id" index="task.id"
+                     deselect="agenda.deselect(task)" select="agenda.select(task)">
                 <uib-tab-heading>
                     <!-- ng-class={'fa fa-tasks':openGoal, 'fa fa-check-square-o':closedGoal} -->
                     <!--<span class="fa fa-tasks"> {{task.goalLabel}}</span>-->
-                    <div class="row" >
+                    <div class="row">
                         <div class="col-md-11"
                              data-intro="Each unfinished subgoal of a proof is displayed on its own tab, which shows the current open proof goal at the top. Hover over formulas for tactic advice. Left-click to apply default, right-click for a list of tactics. Hover over &#8866; for tactics that transform the entire subgoal."
                              data-position="bottom" ng-if="$first">
