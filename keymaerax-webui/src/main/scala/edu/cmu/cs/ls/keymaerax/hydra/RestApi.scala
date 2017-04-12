@@ -376,10 +376,10 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
-  val proveFromTactic = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "proveFromTactic") { (userId, modelId) => { pathEnd {
+  val createModelTacticProof = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "createTacticProof") { (userId, modelId) => { pathEnd {
     post {
       entity(as[String]) { x => {
-        val request = new ProveFromTacticRequest(database, userId, modelId)
+        val request = new CreateModelTacticProofRequest(database, userId, modelId)
         completeRequest(request, t)
       }}
     }
@@ -402,6 +402,13 @@ trait RestApi extends HttpService with SLF4JLogging {
   val openProof = (t : SessionToken) => path("proofs" / "user" / Segment / Segment) { (userId, proofId) => { pathEnd {
     get {
       val request = new OpenProofRequest(database, userId, proofId)
+      completeRequest(request, t)
+    }
+  }}}
+
+  val initProofFromTactic = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "initfromtactic") { (userId, proofId) => { pathEnd {
+    get {
+      val request = new InitializeProofFromTacticRequest(database, userId, proofId)
       completeRequest(request, t)
     }
   }}}
@@ -947,7 +954,8 @@ trait RestApi extends HttpService with SLF4JLogging {
     userModel2            ::
     deleteModel           ::
     createProof           ::
-    proveFromTactic       ::
+    createModelTacticProof::
+    initProofFromTactic   ::
     importExampleRepo     ::
     deleteProof           ::
     proofListForModel     ::

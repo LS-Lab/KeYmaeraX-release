@@ -434,6 +434,7 @@ class OpenProofResponse(proof : ProofPOJO, loadStatus : String) extends Response
     "modelId" -> JsString(proof.modelId.toString),
     "stepCount" -> JsNumber(proof.stepCount),
     "status" -> JsBoolean(proof.closed),
+    "tactic" -> (proof.tactic match { case None => JsNull case Some(t) => JsString(t) }),
     "loadStatus" -> JsString(loadStatus)
   )
 }

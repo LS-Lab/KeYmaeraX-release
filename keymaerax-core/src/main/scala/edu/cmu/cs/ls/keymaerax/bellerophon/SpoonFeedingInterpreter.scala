@@ -64,11 +64,15 @@ case class SpoonFeedingInterpreter(rootProofId: Int, idProvider: ProvableSig => 
                                    strict: Boolean = true) extends Interpreter {
   var innerProofId: Option[Int] = None
 
+  private var runningInner: Interpreter = _
+
+  private var isDead = false
+
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = runTactic(expr, v, descend, DbAtomPointer(-1))._1
 
-  //@todo remove branch
-  private def runTactic(tactic: BelleExpr, goal: BelleValue, level: Int, ctx: ExecutionContext): (BelleValue, ExecutionContext) = {
-    tactic match {
+  private def runTactic(tactic: BelleExpr, goal: BelleValue, level: Int, ctx: ExecutionContext): (BelleValue, ExecutionContext) = synchronized {
+    if (isDead) (goal, ctx)
+    else tactic match {
       // combinators
       case SeqTactic(left, right) =>
         val (leftResult, leftCtx) = try {
@@ -224,11 +228,18 @@ case class SpoonFeedingInterpreter(rootProofId: Int, idProvider: ProvableSig => 
         if (!strict && tactic == Idioms.nil) (goal, ctx)
         else goal match {
           case BelleProvable(provable, _) if provable.subgoals.isEmpty =>
-            (inner(Seq())(tactic, goal), ctx)
+            runningInner = inner(Seq())
+            val result = (runningInner(tactic, goal), ctx)
+            runningInner = null
+            result
           case BelleProvable(provable, labels) if provable.subgoals.nonEmpty =>
             if (ctx.onBranch >= 0) {
-              inner(listeners(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))(tactic, BelleProvable(provable.sub(0), labels)) match {
-                case BelleProvable(innerProvable, _) => (BelleProvable(provable(innerProvable, 0), labels), ctx.store(tactic))
+              runningInner = inner(listeners(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
+              runningInner(tactic, BelleProvable(provable.sub(0), labels)) match {
+                case BelleProvable(innerProvable, _) =>
+                  val result = (BelleProvable(provable(innerProvable, 0), labels), ctx.store(tactic))
+                  runningInner = null
+                  result
               }
             } else {
               //@todo store and reload a trace with branch -1 (=merging point of a branching tactic)
@@ -242,5 +253,10 @@ case class SpoonFeedingInterpreter(rootProofId: Int, idProvider: ProvableSig => 
             }
         }
     }
+  }
+
+  override def kill(): Unit = synchronized {
+    isDead = true
+    if (runningInner != null) runningInner.kill()
   }
 }

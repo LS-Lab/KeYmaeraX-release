@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import java.util.Calendar
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, SpoonFeedingInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, Interpreter, SequentialInterpreter, SpoonFeedingInterpreter}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
@@ -76,11 +76,11 @@ object DatabasePopulator {
       db.createModel(user, entry.name, entry.model, now.getTime.toString, entry.description,
         entry.link, entry.title, entry.tactic match { case Some((_, t, _)) => Some(t) case _ => None }) match {
         case Some(modelId) => entry.tactic match {
-          case Some((tname, tacticText, _)) if prove =>
+          case Some((tname, tacticText, _)) =>
             println("Importing proof...")
             val proofId = db.createProofForModel(modelId, entry.name + " (" + tname + ")", "Imported from tactic " + tname,
-              now.getTime.toString)
-            executeTactic(db, entry.model, proofId, tacticText)
+              now.getTime.toString, Some(tacticText))
+            if (prove) executeTactic(db, entry.model, proofId, tacticText)
             println("...done")
           case _ => // nothing else to do, not asked to prove or don't know how to prove without tactic
         }
@@ -92,8 +92,8 @@ object DatabasePopulator {
     }
   }
 
-  /** Executes the `tactic` on the `model` and records the tactic steps as proof in the database. */
-  def executeTactic(db: DBAbstraction, model: String, proofId: Int, tactic: String): Unit = {
+  /** Prepares an interpreter for executing tactics. */
+  def prepareInterpreter(db: DBAbstraction, proofId: Int): Interpreter = {
     def listener(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int) = {
       val trace = db.getExecutionTrace(proofId, withProvables=false)
       assert(-1 <= parentInTrace && parentInTrace < trace.steps.length, "Invalid trace index " + parentInTrace + ", expected -1<=i<trace.length")
@@ -105,7 +105,12 @@ object DatabasePopulator {
       new TraceRecordingListener(db, proofId, parentStep,
         globalProvable, branch, recursive = false, tacticName) :: Nil
     }
-    val interpreter = SpoonFeedingInterpreter(proofId, db.createProof, listener, SequentialInterpreter)
+    SpoonFeedingInterpreter(proofId, db.createProof, listener, SequentialInterpreter)
+  }
+
+  /** Executes the `tactic` on the `model` and records the tactic steps as proof in the database. */
+  def executeTactic(db: DBAbstraction, model: String, proofId: Int, tactic: String): Unit = {
+    val interpreter = prepareInterpreter(db, proofId)
     val parsedTactic = BelleParser(tactic)
     interpreter(parsedTactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(model))))
   }

@@ -92,14 +92,15 @@ class InMemoryDB extends DBAbstraction {
 
   override def addModelTactic(modelId: String, fileContents: String): Option[Int] = ???
 
-  override def createProofForModel(modelId: Int, name: String, description: String, date: String): Int = synchronized {
+  override def createProofForModel(modelId: Int, name: String, description: String, date: String,
+                                   tactic: Option[String]): Int = synchronized {
     val proofId = proofs.keys.size
     val provableId = provables.keys.size
     val model = KeYmaeraXProblemParser(models(modelId).keyFile)
     val provable = ProvableSig.startProof(model)
     provables(provableId) = provable
     proofs(proofId) = (provable, new ProofPOJO(proofId, Some(modelId), name, description, date, 0, closed=false,
-      Some(provableId), temporary=false))
+      Some(provableId), temporary=false, tactic))
     proofId
   }
 
@@ -108,7 +109,7 @@ class InMemoryDB extends DBAbstraction {
     val provableId = provables.keys.size
     provables(provableId) = provable
     proofs(proofId) = (provable, new ProofPOJO(proofId, None, "", "", "", 0, closed=false, Some(provableId),
-      temporary=true))
+      temporary=true, None))
     proofId
   }
 

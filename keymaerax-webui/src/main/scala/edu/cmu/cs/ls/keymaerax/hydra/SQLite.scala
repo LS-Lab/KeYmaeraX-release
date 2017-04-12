@@ -274,7 +274,7 @@ object SQLite {
         val list = Proofs.filter(_._Id === proofId)
           .list
           .map(p => new ProofPOJO(p._Id.get, p.modelid, blankOk(p.name), blankOk(p.description),
-            blankOk(p.date), stepCount, p.closed.getOrElse(0) == 1, p.lemmaid, p.istemporary.getOrElse(0) == 1))
+            blankOk(p.date), stepCount, p.closed.getOrElse(0) == 1, p.lemmaid, p.istemporary.getOrElse(0) == 1, p.tactic))
         if (list.length > 1) throw new Exception("Duplicate proof " + proofId)
         else if (list.isEmpty) throw new Exception("Proof not found: " + proofId)
         else list.head
@@ -318,7 +318,7 @@ object SQLite {
     private def proofPojoToRow(p: ProofPOJO): ProofsRow =
       ProofsRow(_Id = Some(p.proofId), modelid = p.modelId, name = Some(p.name),
         description = Some(p.description), date =Some(p.date), closed = Some(if (p.closed) 1 else 0),
-        lemmaid = p.provableId, istemporary = Some(if (p.temporary) 1 else 0)
+        lemmaid = p.provableId, istemporary = Some(if (p.temporary) 1 else 0), tactic = p.tactic
       )
 
     private def sqliteBoolToBoolean(x: Int) = if (x == 0) false else if (x == 1) true else throw new Exception()
@@ -332,7 +332,7 @@ object SQLite {
           val closed: Boolean = sqliteBoolToBoolean(p.closed.getOrElse(0))
           val temporary: Boolean = sqliteBoolToBoolean(p.istemporary.getOrElse(0))
           new ProofPOJO(p._Id.get, p.modelid, blankOk(p.name), blankOk(p.description), blankOk(p.date), stepCount,
-            closed, p.lemmaid, temporary)
+            closed, p.lemmaid, temporary, p.tactic)
         })
       })
 
@@ -378,7 +378,7 @@ object SQLite {
         else None
       })
 
-    override def createProofForModel(modelId: Int, name: String, description: String, date: String): Int =
+    override def createProofForModel(modelId: Int, name: String, description: String, date: String, tactic: Option[String]): Int =
       synchronizedTransaction({
         nInserts = nInserts + 2
         val model = getModel(modelId)
@@ -388,13 +388,9 @@ object SQLite {
         val provableId = createProvable(provable)
         val proofId =
           (Proofs.map(p => ( p.modelid.get, p.name.get, p.description.get, p.date.get, p.closed.get, p.lemmaid.get,
-                             p.istemporary.get))
+                             p.istemporary.get, p.tactic))
             returning Proofs.map(_._Id.get))
-            .insert(modelId, name, description, date, 0, provableId, 0)
-
-//        val executableId = addBelleExpr(TactixLibrary.nil)
-//        addExecutionStep(ExecutionStepPOJO(None, proofId, None, None, Some(0), None, 0,
-//          ExecutionStepStatus.Finished, executableId, None, None, Some(provableId), userExecuted=false, "start"))
+            .insert(modelId, name, description, date, 0, provableId, 0, tactic)
 
         proofId
       })

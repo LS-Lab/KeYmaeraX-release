@@ -633,10 +633,10 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: S
       val archiveEntries = KeYmaeraXArchiveParser.read(kyaFileContents)
       //@todo checks: fresh names, model created etc.
       archiveEntries.foreach({ case (name, modelFileContent, tactic) =>
-        val modelId = db.createModel(userId, name, modelFileContent, currentDate()).map(x => x.toString)
+        val modelId = db.createModel(userId, name, modelFileContent, currentDate()).map(_.toString)
         tactic.foreach({ case (tname, ttext) =>
-          val proofId = db.createProofForModel(Integer.parseInt(modelId.get), tname, "Proof from archive", currentDate())
-          DatabasePopulator.executeTactic(db, modelFileContent, proofId, ttext)
+          val proofId = db.createProofForModel(Integer.parseInt(modelId.get), tname, "Proof from archive",
+            currentDate(), Some(ttext))
         })
       })
       new BooleanResponse(true) :: Nil
@@ -809,18 +809,18 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
 class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, name : String, description : String)
   extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
-    val proofId = db.createProofForModel(modelId, name, description, currentDate())
+    val proofId = db.createProofForModel(modelId, name, description, currentDate(), None)
     new CreatedIdResponse(proofId) :: Nil
   }
 }
 
-class ProveFromTacticRequest(db: DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) {
+class CreateModelTacticProofRequest(db: DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
     val model = db.getModel(modelId)
     model.tactic match {
       case Some(tacticText) =>
-        val proofId = db.createProofForModel(Integer.parseInt(modelId), model.name + " from tactic", "Proof from tactic", currentDate())
-        DatabasePopulator.executeTactic(db, model.keyFile, proofId, tacticText)
+        val proofId = db.createProofForModel(Integer.parseInt(modelId), model.name + " from tactic",
+          "Proof from tactic", currentDate(), Some(tacticText))
         new CreatedIdResponse(proofId.toString) :: Nil
       case None => new ErrorResponse("Model " + modelId + " does not have a tactic associated")::Nil
     }
@@ -1147,8 +1147,8 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             if (stepwise) {
               val localProvable = ProvableSig.startProof(sequent)
               val localProofId = db.createProof(localProvable)
-              //@todo attach a listener to the spoonfeeding interpreter (to kill all listeners created by it)
-              val interpreter = (_: List[IOListener]) => new Interpreter {
+
+              val interpreter = new Interpreter {
                 val inner = SpoonFeedingInterpreter(localProofId, db.createProof, RequestHelper.listenerFactory(db), SequentialInterpreter, 1, strict = false)
 
                 override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
@@ -1161,12 +1161,15 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                     if (innerTrace.steps.nonEmpty) BelleSubProof(innerId)
                     else throw BelleTacticFailure("No progress", ex)
                 }
+
+                override def kill(): Unit = inner.kill()
               }
-              //@todo
+
+              //@todo Refactor to new proof tree
               val innerTrace = db.getExecutionTrace(localProofId)
               val proofTree = ProofTree.ofTrace(innerTrace, () => Nil)
               val executor = BellerophonTacticExecutor.defaultExecutor
-              val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter, Nil)
+              val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter)
               new RunBelleTermResponse(localProofId.toString, proofTree.root.id.toString, taskId) :: Nil
             } else {
               val taskId = node.runTactic(userId, SequentialInterpreter, appliedExpr, ruleName)
@@ -1178,6 +1181,24 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             case e: BelleThrowable => new TacticErrorResponse(e.getMessage, HackyInlineErrorMsgPrinter(belleTerm, UnknownLocation, e.getMessage), e) :: Nil
           }
       }
+    }
+  }
+}
+
+class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofId: String) extends UserRequest(userId) {
+  override def resultingResponses(): List[Response] = {
+    val proofInfo = db.getProofInfo(proofId)
+    proofInfo.tactic match {
+      case None => new ErrorResponse("Proof " + proofId + " does not have a tactic") :: Nil
+      case Some(t) if proofInfo.modelId.isEmpty => throw new Exception("Proof " + proofId + " does not refer to a model")
+      case Some(t) if proofInfo.modelId.isDefined =>
+        val executor = BellerophonTacticExecutor.defaultExecutor
+        val interpreter = DatabasePopulator.prepareInterpreter(db, proofId.toInt)
+        val model = KeYmaeraXProblemParser(db.getModel(proofInfo.modelId.get).keyFile)
+        val provable = BelleProvable(ProvableSig.startProof(model))
+        val tactic = BelleParser(t)
+        val taskId = executor.schedule(userId, tactic, provable, interpreter)
+        new RunBelleTermResponse(proofId, "()", taskId) :: Nil
     }
   }
 }

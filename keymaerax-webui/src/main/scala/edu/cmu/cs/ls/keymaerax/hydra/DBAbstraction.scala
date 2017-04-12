@@ -9,7 +9,6 @@ import _root_.edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
 import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 
@@ -80,7 +79,7 @@ class UserPOJO(val userName: String, val level: Int)
  */
 class ProofPOJO(val proofId:Int, val modelId: Option[Int], val name:String, val description:String,
                 val date:String, val stepCount : Int, val closed : Boolean, val provableId: Option[Int],
-                val temporary: Boolean = false) {
+                val temporary: Boolean = false, val tactic: Option[String]) {
   assert(modelId.isDefined || provableId.isDefined, "Require either model or provable")
 }
 
@@ -212,11 +211,11 @@ trait DBAbstraction {
   def getInvariants(modelId: Int): Map[Expression, Formula]
 
   //Proofs of models
-  def createProofForModel(modelId: Int, name: String, description: String, date: String): Int
+  def createProofForModel(modelId: Int, name: String, description: String, date: String, tactic: Option[String]): Int
 
   // all create functions return ID of created object
-  def createProofForModel(modelId: String, name: String, description: String, date: String): String =
-    createProofForModel(modelId.toInt, name, description, date).toString
+  def createProofForModel(modelId: String, name: String, description: String, date: String, tactic: Option[String]): String =
+    createProofForModel(modelId.toInt, name, description, date, tactic).toString
 
   /** Create a temporary proof without model, starting from 'provable'. */
   def createProof(provable: ProvableSig): Int
@@ -239,7 +238,7 @@ trait DBAbstraction {
   def updateProofName(proofId: Int, name: String): Unit = {
     val info = getProofInfo(proofId)
     updateProofInfo(new ProofPOJO(proofId, info.modelId, name, info.description, info.date,
-      info.stepCount, info.closed, info.provableId, info.temporary))
+      info.stepCount, info.closed, info.provableId, info.temporary, info.tactic))
   }
 
   def updateProofName(proofId: String, name: String): Unit = updateProofName(proofId.toInt, name)

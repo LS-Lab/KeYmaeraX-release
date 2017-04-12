@@ -34,7 +34,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     /** Creates a new proof entry in the database for a model parsed from `modelContent`. */
     def createProof(modelContent: String, modelName: String = "", proofName: String = "Proof"): Int = {
       db.createModel("guest", modelName, modelContent, "", None, None, None, None) match {
-        case Some(modelId) => db.createProofForModel(modelId, modelName + proofName, "", "")
+        case Some(modelId) => db.createProofForModel(modelId, modelName + proofName, "", "", None)
         case None => fail("Unable to create temporary model in DB")
       }
     }

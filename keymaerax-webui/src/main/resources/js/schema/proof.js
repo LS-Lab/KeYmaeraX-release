@@ -22,6 +22,9 @@
       },
       "loadStatus": {
         "type" : "string"
+      },
+      "tactic": {
+        "type": "string"
       }
     },
     "required" : ["id", "name", "date", "stepCount", "status", "loadStatus"]

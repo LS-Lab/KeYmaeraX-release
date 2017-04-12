@@ -244,16 +244,17 @@ trait Tables {
    *  @param date Database column date DBType(TEXT)
    *  @param closed Database column closed DBType(INTEGER)
    *  @param lemmaid Database column lemmaId DBType(INTEGER)
-   *  @param istemporary Database column isTemporary DBType(INTEGER) */
-  case class ProofsRow(_Id: Option[Int], modelid: Option[Int], name: Option[String], description: Option[String], date: Option[String], closed: Option[Int], lemmaid: Option[Int], istemporary: Option[Int])
+   *  @param istemporary Database column isTemporary DBType(INTEGER)
+   *  @param tactic Database column tactic DBType(TEXT) */
+  case class ProofsRow(_Id: Option[Int], modelid: Option[Int], name: Option[String], description: Option[String], date: Option[String], closed: Option[Int], lemmaid: Option[Int], istemporary: Option[Int], tactic: Option[String])
   /** GetResult implicit for fetching ProofsRow objects using plain SQL queries */
   implicit def GetResultProofsRow(implicit e0: GR[Option[Int]], e1: GR[Option[String]]): GR[ProofsRow] = GR{
     prs => import prs._
-    ProofsRow.tupled((<<?[Int], <<?[Int], <<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int], <<?[Int]))
+    ProofsRow.tupled((<<?[Int], <<?[Int], <<?[String], <<?[String], <<?[String], <<?[Int], <<?[Int], <<?[Int], <<?[String]))
   }
   /** Table description of table proofs. Objects of this class serve as prototypes for rows in queries. */
   class Proofs(_tableTag: Tag) extends Table[ProofsRow](_tableTag, "proofs") {
-    def * = (_Id, modelid, name, description, date, closed, lemmaid, istemporary) <> (ProofsRow.tupled, ProofsRow.unapply)
+    def * = (_Id, modelid, name, description, date, closed, lemmaid, istemporary, tactic) <> (ProofsRow.tupled, ProofsRow.unapply)
     
     /** Database column _id DBType(INTEGER), PrimaryKey */
     val _Id: Column[Option[Int]] = column[Option[Int]]("_id", O.PrimaryKey, O.AutoInc)
@@ -271,6 +272,8 @@ trait Tables {
     val lemmaid: Column[Option[Int]] = column[Option[Int]]("lemmaId")
     /** Database column isTemporary DBType(INTEGER) */
     val istemporary: Column[Option[Int]] = column[Option[Int]]("isTemporary")
+    /** Database column tactic DBType(TEXT) */
+    val tactic: Column[Option[String]] = column[Option[String]]("tactic")
     
     /** Foreign key referencing Models (database name models_FK_1) */
     lazy val modelsFk = foreignKey("models_FK_1", modelid, Models)(r => r._Id, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)

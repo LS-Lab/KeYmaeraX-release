@@ -58,7 +58,19 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
       $scope.closed = data.closed;
       $scope.stepCount= data.stepCount;
       $scope.date = data.date;
-      sequentProofData.fetchAgenda($scope, $scope.userId, $scope.proofId);
+      if (data.stepCount == 0 && data.tactic !== undefined && data.tactic !== null) {
+        // imported but not yet executed proof
+        spinnerService.show('tacticExecutionSpinner')
+        $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/initfromtactic')
+          .then(function(response) { $scope.runningTask.start($scope.proofId, '()', response.data.taskId,
+                                     $scope.updateFreshProof, $scope.broadcastProofError, undefined); })
+          .catch(function(err) {
+            spinnerService.hide('tacticExecutionSpinner');
+            $rootScope.$broadcast("proof.message", err.data);
+          });
+      } else {
+        sequentProofData.fetchAgenda($scope, $scope.userId, $scope.proofId);
+      }
   });
   $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
 
@@ -84,6 +96,24 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
       });
     }
   });
+
+  $scope.updateFreshProof = function(taskResult) {
+    if (taskResult.type === 'taskresult') {
+      if ($scope.proofId === taskResult.proofId) {
+        if ($scope.runningTask.nodeId === taskResult.parent.id) {
+          sequentProofData.fetchAgenda($scope, $scope.userId, $scope.proofId)
+        } else {
+          showMessage($uibModal, "Unexpected tactic result, parent mismatch: expected " +
+            $scope.runningTask.nodeId + " but got " + taskResult.parent.id);
+        }
+      } else {
+        showMessage($uibModal, "Unexpected tactic result, proof mismatch: expected " +
+          $scope.proofId + " but got " + taskResult.proofId);
+      }
+    } else {
+      showCaughtErrorMessage($uibModal, taskResult, "Unable to fetch tactic result")
+    }
+  }
 
   $scope.updateMainProof = function(taskResult) {
     if (taskResult.type === 'taskresult') {

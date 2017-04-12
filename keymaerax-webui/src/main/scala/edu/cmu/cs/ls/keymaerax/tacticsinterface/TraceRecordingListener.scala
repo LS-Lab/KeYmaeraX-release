@@ -137,7 +137,7 @@ class TraceRecordingListener(db: DBAbstraction,
               //@note proof might be done
               val p = db.getProofInfo(proofId)
               val provedProof = new ProofPOJO(p.proofId, p.modelId, p.name, p.description, p.date, p.stepCount,
-                closed = true, p.provableId, p.temporary)
+                closed = true, p.provableId, p.temporary, p.tactic)
               db.updateProofInfo(provedProof)
             }
           case _ =>
