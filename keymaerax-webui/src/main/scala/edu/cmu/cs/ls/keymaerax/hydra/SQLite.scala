@@ -834,7 +834,7 @@ object SQLite {
 
     // performance degrades a little with increasing database volume
     private def closedBranchesSql(proofId: Int, openSteps: Set[Int]) =
-      sql"""SELECT previousStep,group_concat(branchOrder) FROM executionSteps WHERE proofId=$proofId AND previousStep IN (#${openSteps.mkString(",")}) GROUP BY previousStep""".as[(Int,String)]
+      sql"""SELECT previousStep,group_concat(branchOrder) FROM executionSteps WHERE proofId=$proofId AND status='Finished' AND previousStep IN (#${openSteps.mkString(",")}) GROUP BY previousStep""".as[(Int,String)]
 
     // slightly slower than query above
 //    private def closedBranchesSlick(proofId: Int, openSteps: Set[Int]) =

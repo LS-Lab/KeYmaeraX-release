@@ -8,6 +8,8 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable.IndexedSeq
 
+import org.scalatest.LoneElement._
+
 /**
   * Tests the proof tree data structure.
   * Created by smitsch on 3/31/17.
@@ -18,8 +20,7 @@ class ProofTreeTests extends TacticTestBase {
     val modelContent = "Variables. R x. End. Problem. x>0 -> x>0 End."
     val proofId = db.createProof(modelContent)
     val tree = DbProofTree(db.db, proofId.toString)
-    tree.openGoals should have size 1
-    tree.openGoals.head.goal shouldBe Some(Sequent(IndexedSeq(), IndexedSeq("x>0->x>0".asFormula)))
+    tree.openGoals.loneElement.goal shouldBe Some(Sequent(IndexedSeq(), IndexedSeq("x>0->x>0".asFormula)))
     tree.root.children shouldBe empty
     tree.root.goal shouldBe tree.openGoals.head.goal
     tree.locate("()").get.goal shouldBe tree.root.goal
@@ -86,6 +87,19 @@ class ProofTreeTests extends TacticTestBase {
 
     tree.tactic shouldBe QE
   }}
+
+  it should "not forget about open goals when a step fails" in withDatabase { db =>
+    val modelContent = "Variables. R x. End. Problem. x>0 -> [x:=x+1;]x>0 End."
+    val proofId = db.createProof(modelContent)
+
+    var tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals.loneElement.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait=true)
+    tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals.loneElement.goal shouldBe Some("x>0 ==> [x:=x+1;]x>0".asSequent)
+    tree.openGoals.loneElement.runTactic("guest", SequentialInterpreter, solve(1), "solve", wait=true)
+    tree = DbProofTree(db.db, proofId.toString)
+    tree.openGoals.loneElement.goal shouldBe Some("x>0 ==> [x:=x+1;]x>0".asSequent)
+  }
 
   it should "create a proved tree from implyR ; QE" in withDatabase { db => withMathematica { _ =>
     val modelContent = "Variables. R x. End. Problem. x>0 -> x>0 End."
