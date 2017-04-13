@@ -252,4 +252,12 @@ class SimplifierV3Tests extends TacticTestBase {
     val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
     println(result)
   }
+
+  it should "cooperate with chase" in withMathematica { qeTool =>
+    val fml = "!(A = 5 | !3<=6 & B<=1 & C>=7 & !(D+B<=A+C | !(C+D<=F_() & G_()*5=8) | 100=1))".asFormula
+    val ctxt = IndexedSeq()
+    val tactic = simpTac(faxs = composeIndex(defaultFaxs,chaseIndex),taxs = emptyTaxs)
+    val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
+    println(result)
+  }
 }

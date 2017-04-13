@@ -4,11 +4,14 @@ import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 
 import scala.collection.immutable.{Map, _}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, RenUSubst, _}
+
+import scala.collection.immutable
 
 /**
   * Created by yongkiat on 11/27/16.
@@ -949,7 +952,7 @@ object PolynomialArith {
   val mulDiv =
   (proveBy("F_()/G_() * A_()/B_() = (F_()*A_())/(G_()*B_())".asFormula,QE),
     proveBy("F_()/G_() * A_() = (F_()*A_())/G_()".asFormula,QE),
-    proveBy("F_() * A_()/B_() = (F_()*A_())/B_()".asFormula,QE))
+    proveBy("F_() * (A_()/B_()) = (F_()*A_())/B_()".asFormula,QE))
 
   val subDiv =
   (proveBy("F_()/G_() - A_()/B_() = (F_()*B_()-A_()*G_())/(G_()*B_())".asFormula,QE),
@@ -1019,7 +1022,6 @@ object PolynomialArith {
   // This assumes that ALL divisions occuring in the goal are well-defined
   def ratFormTac(antepos:Int, ignore:Boolean, rec:Boolean):DependentTactic = new SingleGoalDependentTactic("rat ante") {
     override def computeExpr(seq: Sequent): BelleExpr = {
-      print("AT", antepos)
       if (seq.ante.length <= antepos)
         ident
       else
@@ -1067,4 +1069,71 @@ object PolynomialArith {
 
   lazy val ratTac = ratFormTac(0,true,false)
 
+  //Move everything into antecedents via double negation
+  lazy val doubleNeg = proveBy("P_() <-> !(!P_())".asFormula,prop)
+  lazy val clearSuccNNF:BelleExpr =
+    ((useAt(doubleNeg)(1) & notR(1))*) & fullSimpTac(faxs = composeIndex(defaultFaxs,chaseIndex),taxs = emptyTaxs)
+
+  //NOTE: this doesn't (can't?) make use of the alternate inequality formulation!
+  lazy val existsOr1 = proveBy("(\\exists x_ p_(x_) | \\exists y_ q_(y_)) <-> (\\exists x_ (p_(x_) |  q_(x_)))".asFormula,
+    prop & OnAll(existsL('L) & prop) <( existsR('R), existsR('R), existsR("y_".asTerm)('R), existsR("x_".asTerm)('Rlast)) & OnAll(prop))
+
+  lazy val existsSame = proveBy("(\\exists x_ p_(x_) | \\exists x_ q_(x_)) <-> (\\exists x_ (p_(x_) |  q_(x_)))".asFormula,
+    prop & OnAll(existsL('L) & prop) <( existsR('R), existsR('R), existsR("x_".asTerm)('R), existsR("x_".asTerm)('Rlast)) & OnAll(prop))
+
+  lazy val existsOr2 = proveBy("\\exists x_ p_(x_) | q_() <-> (\\exists x_ (p_(x_) |  q_()))".asFormula,
+    prop & OnAll((existsL('L)*) & (existsR('R)*) & prop))
+
+  lazy val existsOr3 = proveBy("q_() | \\exists x_ p_(x_) <-> (\\exists x_ (p_(x_) |  q_()))".asFormula,
+    prop & OnAll((existsL('L)*) & (existsR('R)*) & prop))
+
+  lazy val existsAnd1 = proveBy("(\\exists x_ p_(x_) & \\exists y_ q_(y_)) <-> (\\exists x_ \\exists y_ (p_(x_) & q_(y_)))".asFormula,
+    prop & OnAll((existsL('L)*) & prop) <( existsR('R) & existsR('R) & prop, existsR('R) & prop,existsR('R)&prop))
+
+  lazy val existsAnd2 = proveBy("(\\exists x_ p_(x_) & q_()) <-> (\\exists x_ (p_(x_) & q_()))".asFormula,
+    prop & OnAll((existsL('L)*) & (existsR('R)*) & prop))
+
+  lazy val existsAnd3 = proveBy("(q_() & \\exists x_ p_(x_)) <-> (\\exists x_ (p_(x_) & q_()))".asFormula,
+    prop & OnAll((existsL('L)*) & (existsR('R)*) & prop))
+
+  lazy val existsRename = proveBy("(\\exists x_ p_(x_) & \\exists x_ q_(x_)) <-> (\\exists x_ p_(x_) & \\exists z_ q_(z_))".asFormula,
+    prop & OnAll((existsL('L)*) & prop) <(existsR("x_".asTerm)('R), existsR("z_".asTerm)('R)) & OnAll(prop))
+
+  def renWitness(f:Formula,ctx:context) : List[ProvableSig] = {
+    f match{
+      case And(Exists(v1,f1),Exists(v2,f2)) =>
+        if(v1 == v2)
+        {
+          //Clashing witness vars
+          val v3 = TacticHelper.freshNamedSymbol(v2.head, f)
+          List(proveBy(Equiv(f,Exists(v1,Exists(Seq(v3),And(f1,SubstitutionHelper.replaceFree(f2)(v2.head, v3))))),
+            useAt(existsAnd1,PosInExpr(1::Nil))(1,1::Nil) &
+              byUS(existsRename)
+          ))
+        }
+        else
+          List(proveBy(Equiv(f,Exists(v1,Exists(v2,And(f1,f2)))),
+            byUS(existsAnd1)
+          ))
+      case And(_,_) => List(existsAnd2,existsAnd3)
+      case Or(Exists(v1,f1),Exists(v2,f2)) =>
+        if (v1==v2)
+          List(existsSame)
+        else
+          List(existsOr1)
+      case Or(_,_) => List(existsOr2,existsOr3)
+      case _ => List()
+    }
+  }
+
+  lazy val ths = List(leAnte,ltAnte,geAnte,gtAnte,eqAnte,neAnte)
+
+  //A=0 | B = 0 <-> A*B=0
+  //A=0 & B = 0 <-> A^2+B^2=0
+  lazy val orEqz = proveBy("F_()=0 | G_() =0 <-> F_()*G_()=0".asFormula,QE)
+  lazy val andEqz = proveBy("F_()=0 & G_() =0 <-> F_()^2 + G_()^2 =0".asFormula,QE)
+
+  lazy val normAntes1 = fullSimpTac(ths = ths,faxs = renWitness,taxs = emptyTaxs)
+  lazy val normAntes2 = fullSimpTac(ths = List(andEqz,orEqz),faxs = emptyFaxs,taxs = emptyTaxs)
+  lazy val normaliseNNF = clearSuccNNF & normAntes1 & (existsL('L)*) & normAntes2
 }

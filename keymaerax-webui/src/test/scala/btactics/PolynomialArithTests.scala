@@ -1,6 +1,6 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArith._
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -405,5 +405,22 @@ class PolynomialArithTests extends TacticTestBase {
     val seq = Sequent(antes,IndexedSeq())
     println(proveBy(seq,ratFormTac(0,true,true)))
     println(proveBy(seq,ratFormTac(0,true,false)))
+  }
+
+  "PolynomialArith" should "normalise sequent without changing structure" in withMathematica { qeTool =>
+    val antes = IndexedSeq(
+      "a + b = c | (d <= 0 & c = 5)".asFormula,
+      "x + 2/5*y >=z & F() < G()".asFormula,
+      "d * f = 12 & 2 * a -5 + 2 * c= b".asFormula
+    )
+    val succs = IndexedSeq(
+      "k = z".asFormula,
+      "g() <= f()".asFormula,
+      "K() > A+2*B+C & A<=B+C*D | E=0".asFormula
+    )
+
+    val pr = proveBy(Sequent(antes,succs), normaliseNNF)
+    println(pr)
+
   }
 }

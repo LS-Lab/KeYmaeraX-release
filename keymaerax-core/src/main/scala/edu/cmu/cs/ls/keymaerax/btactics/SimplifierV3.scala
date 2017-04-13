@@ -943,4 +943,14 @@ object SimplifierV3 {
       case _ => List()
     }
   }
+
+  def chaseIndex(f:Formula,ctx:context) : List[ProvableSig] = {
+    val id = proveBy(Equiv(f,f),byUS(DerivedAxioms.equivReflexiveAxiom.fact))
+    val cpr = chaseFor(3,3,e=>AxiomIndex.axiomsFor(e),(s,p)=>pr=>pr)(SuccPosition(1,1::Nil))(id)
+    List(cpr)
+  }
+
+  def emptyTaxs(t:Term,ctx:context) : List[ProvableSig] = List()
+  def emptyFaxs(f:Formula,ctx:context) : List[ProvableSig] = List()
+
 }
