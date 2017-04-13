@@ -904,15 +904,18 @@ case class GetAgendaItemRequest(db: DBAbstraction, userId: String, proofId: Stri
 case class SetAgendaItemNameRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, displayName: String) extends UserRequest(userId) {
   def resultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
-    val nId = tree.nodeIdFromString(nodeId)
-    db.getAgendaItem(proofId.toInt, nId) match {
-      case Some(item) =>
-        val newItem = AgendaItemPOJO(item.itemId, item.proofId, item.initialProofNode, displayName)
-        db.updateAgendaItem(newItem)
-        new SetAgendaItemNameResponse(newItem) :: Nil
-      case None =>
-        val id = db.addAgendaItem(proofId.toInt, nId, displayName)
-        new SetAgendaItemNameResponse(AgendaItemPOJO(id, proofId.toInt, nId, displayName)) :: Nil
+    tree.nodeIdFromString(nodeId) match {
+      case Some(nId) =>
+        db.getAgendaItem(proofId.toInt, nId) match {
+          case Some(item) =>
+            val newItem = AgendaItemPOJO(item.itemId, item.proofId, item.initialProofNode, displayName)
+            db.updateAgendaItem(newItem)
+            new SetAgendaItemNameResponse(newItem) :: Nil
+          case None =>
+            val id = db.addAgendaItem(proofId.toInt, nId, displayName)
+            new SetAgendaItemNameResponse(AgendaItemPOJO(id, proofId.toInt, nId, displayName)) :: Nil
+        }
+      case None => new ErrorResponse("Unknown node " + nodeId)::Nil
     }
   }
 }
@@ -1128,7 +1131,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     if (proof.closed) new ErrorResponse("Can't execute tactics on a closed proof") :: Nil
     else {
       val tree: ProofTree = DbProofTree(db, proofId)
-      tree.locate(tree.nodeIdFromString(nodeId)) match {
+      tree.locate(nodeId) match {
         case None => new ErrorResponse("Unknown node " + nodeId + " in proof " + proofId)::Nil
         case Some(node) if node.goal.isEmpty => new ErrorResponse("Node " + nodeId + " does not have a goal")::Nil
         case Some(node) if node.goal.isDefined =>

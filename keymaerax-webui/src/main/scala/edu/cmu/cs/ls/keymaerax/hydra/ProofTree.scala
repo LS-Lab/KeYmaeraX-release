@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 
 import scala.collection.immutable.{List, Map}
+import scala.util.Try
 
 trait ProofTreeNodeId {}
 
@@ -108,7 +109,7 @@ trait ProofTree {
   def locate(id: ProofTreeNodeId): Option[ProofTreeNode]
 
   /** Locates a node in the proof tree by its ID (string representation). */
-  def locate(id: String): Option[ProofTreeNode] = locate(nodeIdFromString(id))
+  def locate(id: String): Option[ProofTreeNode] = nodeIdFromString(id).flatMap(locate)
 
   /** Locates the tree root. */
   def root: ProofTreeNode
@@ -138,7 +139,7 @@ trait ProofTree {
   def verifyClosed: Boolean = { load(); root.provable.isProved }
 
   /** Converts a string representation to a node ID. */
-  def nodeIdFromString(id: String): ProofTreeNodeId
+  def nodeIdFromString(id: String): Option[ProofTreeNodeId]
 
   override def toString: String = printBelow(root, "")
 
@@ -457,12 +458,15 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   override def info: ProofPOJO = dbProofInfo
 
   /** Converts a string representation to a node ID. */
-  override def nodeIdFromString(id: String): ProofTreeNodeId =
-    if (id == "()") DbStepPathNodeId(None, None)
+  override def nodeIdFromString(id: String): Option[ProofTreeNodeId] =
+    if (id == "()") Some(DbStepPathNodeId(None, None))
     else {
-      val pathElems = id.stripPrefix("(").stripSuffix(")").split(",").map(_.toInt)
-      assert(pathElems.length == 2, "Expected step path with 2 elements, but got " + pathElems)
-      DbStepPathNodeId(Some(pathElems.head), Some(pathElems.last))
+      Try(id.stripPrefix("(").stripSuffix(")").split(",").map(_.toInt)).toOption match {
+        case Some(pathElems) if pathElems.length == 2 =>
+          Some(DbStepPathNodeId(Some(pathElems.head), Some(pathElems.last)))
+        case _ => None
+      }
+
     }
 
   // cached db query results
