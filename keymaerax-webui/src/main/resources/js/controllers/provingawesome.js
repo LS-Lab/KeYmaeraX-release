@@ -499,7 +499,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
 
     $scope.saveTaskName = function(newName) {
       var nodeId = sequentProofData.agenda.selectedId();
-      $http.post("proofs/user/" + $scope.userId + "/" + $scope.proofId + "/" + nodeId + "/name/" + newName, {});
+      if (nodeId != undefined) $http.post("proofs/user/" + $scope.userId + "/" + $scope.proofId + "/" + nodeId + "/name/" + newName, {});
     }
   });
 

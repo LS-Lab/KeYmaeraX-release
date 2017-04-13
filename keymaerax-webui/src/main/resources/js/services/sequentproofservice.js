@@ -16,7 +16,7 @@ angular.module('keymaerax.services').factory('Agenda', function() {
          if (selected !== undefined && selected.length > 0) this.selectedTab = selected[0].id;
          return theItems;
        },
-       deselect: function(item) { item.isSelected = false; },
+       deselect: function(item) { /* do not deselect item, otherwise agenda name textbox won't show */ },
        select: function(item) {
          $.each(this.items(), function(i, e) { e.isSelected = false; });
          if (item) {
