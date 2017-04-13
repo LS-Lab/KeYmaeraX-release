@@ -1485,11 +1485,18 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 & t_+x>0)".asFormula)
   }
 
-  it should "solve diamond ODE" in withMathematica { tool =>
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("<{x'=1}>x>0".asFormula)), solve(1))
+  it should "solve diamond ODE" in withMathematica { _ =>
+    val result = proveBy("x>0 ==> <{x'=1}>x>0".asSequent, solve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
     result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 & t_+x>0)".asFormula)
+  }
+
+  it should "solve diamond ODE in context" in withMathematica { _ =>
+    val result = proveBy("x>0, v>=0 ==> [v:=v;]<{x'=v}>x>0".asSequent, solve(1, 1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula, "v>=0".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("[v:=v;]\\exists t_ (t_>=0 & v*t_+x>0)".asFormula)
   }
 
   it should "not lose constant facts" in withMathematica { _ =>
