@@ -52,6 +52,8 @@ object AxiomaticODESolver {
       case Some(Box(ODESystem(o, qq), _)) => (o, qq)
       case Some(Diamond(ODESystem(o, qq), _)) if !instEnd => (o, qq)
       case Some(Diamond(ODESystem(o, qq), _)) if instEnd => throw BelleUnsupportedFailure("Cannot instantiate evolution domain check with duration in diamonds")
+      case Some(f) => throw BelleUnsupportedFailure("Position " + pos + " does not point to a differential equation, but to " + f.prettyString)
+      case None => throw BelleUnsupportedFailure("Position " + pos + " does not point to a differential equation")
     }
 
     val osize = odeSize(ode)
