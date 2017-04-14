@@ -4,6 +4,9 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms
+import TacticComparator._
+
 sealed trait BelleContext extends (Map[BelleDot, BelleExpr] => BelleExpr) {
   /** Return the result of instantiating this context with argument `t`.
     * That is filling the respective placeholder `p` of this context with tactic `t`. */
@@ -23,6 +26,20 @@ case class ReplacementBelleContext(t: BelleExpr) extends BelleContext {
     // atomic
     case b: BelleDot => repl.getOrElse(b, b)
     case _ => in
+  }
+}
+
+object TacticComparator {
+  import scala.language.implicitConversions
+  implicit def TToTacticComparator[T <: BelleExpr](e: T): TacticComparator[T] = new TacticComparator[T](e)
+}
+
+class TacticComparator[T <: BelleExpr](val l: T) {
+  def ===(r: T): Boolean = (l, r) match {
+    case (SeqTactic(ll, lr), SeqTactic(rl, rr)) => ll===rl && lr===rr
+    case (SeqTactic(ll, lr), _) if lr==Idioms.nil => ll===r
+    case (SeqTactic(ll, lr), _) if ll==Idioms.nil => lr===r
+    case _ => l == r
   }
 }
 
@@ -88,46 +105,66 @@ object TacticDiff {
     // atomic cases
     case BuiltInTactic(n1) => t2 match {
       case BuiltInTactic(n2) if n1 == n2 => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
+      case SeqTactic(n2l, n2r) if t1 == n2l =>
+        val p = new BelleDot()
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> Idioms.nil), Map(p -> n2r))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
     }
     case NamedTactic(n1, c1) => t2 match {
       case NamedTactic(n2, c2) if n1 == n2 && c1 == c2 => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
+      case SeqTactic(n2l, n2r) if t1 == n2l =>
+        val p = new BelleDot()
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> Idioms.nil), Map(p -> n2r))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
     }
     case DependentTactic(n1) => t2 match {
       case DependentTactic(n2) if n1 == n2 => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
+      case SeqTactic(n2l, n2r) if t1 == n2l =>
+        val p = new BelleDot()
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> Idioms.nil), Map(p -> n2r))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
     }
     case AppliedPositionTactic(c1, l1) => t2 match {
       case AppliedPositionTactic(c2, l2) if c1 == c2 && l1 == l2 => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
+      case SeqTactic(n2l, n2r) if t1 == n2l =>
+        val p = new BelleDot()
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> Idioms.nil), Map(p -> n2r))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
     }
     case AppliedBuiltinTwoPositionTactic(c1, p1L, p1R) => t2 match {
       case AppliedBuiltinTwoPositionTactic(c2, p2L, p2R) if c1 == c2 && p1L == p2L && p1R == p2R => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
+      case SeqTactic(n2l, n2r) if t1 == n2l =>
+        val p = new BelleDot()
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> Idioms.nil), Map(p -> n2r))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
     }
     case it1: AppliedDependentPositionTacticWithAppliedInput => t2 match {
       case it2: AppliedDependentPositionTacticWithAppliedInput if it1.pt == it2.pt => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
+      case SeqTactic(n2l, n2r) if t1 == n2l =>
+        val p = new BelleDot()
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> Idioms.nil), Map(p -> n2r))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
     }
     case InputTactic(n1, i1) => t2 match {
       case InputTactic(n2, i2) if n1 == n2 && i1 == i2 => (ReplacementBelleContext(t1), Map[BelleDot, BelleExpr](), Map[BelleDot, BelleExpr]())
+        case SeqTactic(n2l, n2r) if t1 == n2l =>
+        val p = new BelleDot()
+        (ReplacementBelleContext(SeqTactic(t1, p)), Map(p -> Idioms.nil), Map(p -> n2r))
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
     }
-  }) ensuring(r => r._1(r._2)==t1 && r._1(r._3)==t2, "Reapplying context expected to produce original tactics")
-
+  }) ensuring(r => r._1(r._2)===t1 && r._1(r._3)===t2, "Reapplying context expected to produce original tactics")
 }
