@@ -969,11 +969,12 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
       case None => throw new Exception("Unknown node " + nodeId)
-      case Some(node) if node.maker.isEmpty || node.makerShortName.isEmpty =>
+      case Some(node) if node.children.isEmpty || node.children.head.maker.isEmpty =>
         new ErrorResponse("Unable to expand node " + nodeId + " of proof " + proofId + ", because it did not record a tactic")::Nil
-      case Some(node) if node.maker.isDefined && node.makerShortName.isDefined =>
-        assert(node.maker.isDefined && node.makerShortName.isDefined, "Unable to expand node without tactics")
-        val (localProvable, parentStep, parentRule) = (node.localProvable, node.maker.get, node.makerShortName.get)
+      case Some(node) if node.children.nonEmpty && node.children.head.maker.isDefined =>
+        assert(node.children.nonEmpty && node.children.head.maker.isDefined, "Unable to expand node without tactics")
+        //@note all children share the same maker
+        val (localProvable, parentStep, parentRule) = (node.localProvable, node.children.head.maker.get, node.children.head.makerShortName.get)
         val localProofId = db.createProof(localProvable)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, db.createProof,
           RequestHelper.listenerFactory(db, Some(localProvable)), SequentialInterpreter, 1, strict=false)
@@ -1162,7 +1163,8 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               val localProofId = db.createProof(localProvable)
 
               val interpreter = new Interpreter {
-                val inner = SpoonFeedingInterpreter(localProofId, db.createProof, RequestHelper.listenerFactory(db), SequentialInterpreter, 1, strict = false)
+                val inner = SpoonFeedingInterpreter(localProofId, db.createProof, RequestHelper.listenerFactory(db),
+                  SequentialInterpreter, 1, strict = false)
 
                 override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
                   inner(expr, v)
@@ -1177,13 +1179,9 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 
                 override def kill(): Unit = inner.kill()
               }
-
-              //@todo Refactor to new proof tree
-              val innerTrace = db.getExecutionTrace(localProofId)
-              val proofTree = ProofTree.ofTrace(innerTrace, () => Nil)
               val executor = BellerophonTacticExecutor.defaultExecutor
               val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter)
-              new RunBelleTermResponse(localProofId.toString, proofTree.root.id.toString, taskId) :: Nil
+              new RunBelleTermResponse(localProofId.toString, "()", taskId) :: Nil
             } else {
               val taskId = node.runTactic(userId, SequentialInterpreter, appliedExpr, ruleName)
               new RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
