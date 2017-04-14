@@ -300,6 +300,17 @@ object SQLite {
         })
       })
 
+    private val userOwnsProofQuery = Compiled((userId: Column[String], proofId: Column[Int]) => {
+      (for {
+        p <- Proofs.filter(_._Id === proofId)
+        m <- Models.filter(_.userid === userId) if m._Id === p.modelid
+      } yield p._Id).exists
+    })
+
+    override def userOwnsProof(userId: String, proofId: String): Boolean = synchronizedTransaction({
+      userOwnsProofQuery(userId, proofId.toInt).run
+    })
+
     override def checkPassword(username: String, password: String): Boolean =
       synchronizedTransaction({
         nSelects = nSelects + 1

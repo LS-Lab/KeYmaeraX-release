@@ -191,6 +191,9 @@ trait DBAbstraction {
 
   def getProofsForUser(userId: String): List[(ProofPOJO, String)]
 
+  /** Indicates whether or not the user `userId` owns the proof `proofId`. */
+  def userOwnsProof(userId: String, proofId: String): Boolean
+
   def openProofs(userId: String): List[ProofPOJO] =
     getProofsForUser(userId).map(_._1).filter(!_.closed)
 

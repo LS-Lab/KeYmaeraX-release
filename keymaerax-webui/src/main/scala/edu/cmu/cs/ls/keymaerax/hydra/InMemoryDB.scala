@@ -52,6 +52,9 @@ class InMemoryDB extends DBAbstraction {
 
   override def getProofsForUser(userId: String): List[(ProofPOJO, String)] = ???
 
+  override def userOwnsProof(userId: String, proofId: String): Boolean =
+    getProofsForUser(userId).exists(_._1.proofId == proofId.toInt)
+
   override def checkPassword(username: String, password: String): Boolean = ???
 
   override def updateProofInfo(proof: ProofPOJO): Unit = {
