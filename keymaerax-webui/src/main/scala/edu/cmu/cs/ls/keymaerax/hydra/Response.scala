@@ -48,7 +48,7 @@ sealed trait Response {
   def getJson: JsValue
 }
 
-class BooleanResponse(flag : Boolean, errorText: Option[String] = None) extends Response {
+case class BooleanResponse(flag : Boolean, errorText: Option[String] = None) extends Response {
   override val schema = Some("BooleanResponse.js")
 
   def getJson = errorText match {
@@ -305,7 +305,8 @@ class KvpResponse(val key: String, val value: String) extends Response {
   override def getJson: JsValue = JsObject(key -> JsString(value))
 }
 
-class ParseErrorResponse(msg: String, expect: String, found: String, detailedMsg: String, loc: Location, exn: Throwable = null) extends ErrorResponse(msg, exn) {
+case class ParseErrorResponse(override val msg: String, expect: String, found: String, detailedMsg: String,
+                         loc: Location, override val exn: Throwable = null) extends ErrorResponse(msg, exn) {
   override def getJson = JsObject(super.getJson.fields ++ Map(
     "details" -> JsObject(
       "expect" -> JsString(expect),
@@ -366,7 +367,7 @@ class GetProblemResponse(proofid:String, tree:String) extends Response {
   )
 }
 
-class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String) extends Response {
+case class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String) extends Response {
   def getJson = JsObject(
     "proofId" -> JsString(proofId),
     "nodeId" -> JsString(nodeId),
@@ -375,7 +376,8 @@ class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String) exte
   )
 }
 
-class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status: String, lastStep: Option[ExecutionStepPOJO]) extends Response {
+case class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status: String,
+                              lastStep: Option[ExecutionStepPOJO]) extends Response {
   def getJson: JsValue =
     if (lastStep.isDefined) JsObject(
       "proofId" -> JsString(proofId),
@@ -395,7 +397,7 @@ class TaskStatusResponse(proofId: String, nodeId: String, taskId: String, status
       "type" -> JsString("taskstatus"))
 }
 
-class TaskResultResponse(proofId: String, parent: ProofTreeNode, progress: Boolean = true) extends Response {
+case class TaskResultResponse(proofId: String, parent: ProofTreeNode, progress: Boolean = true) extends Response {
   private lazy val openChildren = parent.children.filter(_.numSubgoals > 0)
 
   def getJson = JsObject(
@@ -563,8 +565,8 @@ object Helpers {
   }
 }
 
-class AgendaAwesomeResponse(proofId: String, root: ProofTreeNode, leaves: List[ProofTreeNode],
-                            agenda: List[AgendaItem], closed: Boolean) extends Response {
+case class AgendaAwesomeResponse(proofId: String, root: ProofTreeNode, leaves: List[ProofTreeNode],
+                                 agenda: List[AgendaItem], closed: Boolean) extends Response {
   override val schema = Some("agendaawesome.js")
 
   private lazy val proofTree = {
@@ -968,7 +970,8 @@ class ExtractTacticResponse(tacticText: String) extends Response {
   )
 }
 
-class ExpandTacticResponse(detailsProofId: Int, tacticParent: String, stepsTactic: String, tree: List[ProofTreeNode], openGoals: List[AgendaItem]) extends Response {
+case class ExpandTacticResponse(detailsProofId: Int, tacticParent: String, stepsTactic: String,
+                                tree: List[ProofTreeNode], openGoals: List[AgendaItem]) extends Response {
   private lazy val proofTree = {
     val theNodes: List[(String, JsValue)] = tree.map(nodeJson)
     JsObject(
