@@ -191,6 +191,9 @@ object UIIndex {
             case (_: Forall, false) => "allR" :: alwaysApplicable
             case (_: Exists, true) => "existsL" :: alwaysApplicable
             case (_: Exists, false) => "existsR" :: alwaysApplicable
+            case (Equal(_: Variable | _: FuncOf, _: Variable | _: FuncOf), true) => "allL2R" :: "allR2L" :: Nil
+            case (Equal(_: Variable | _: FuncOf, _), true) => "allL2R" :: Nil
+            case (Equal(_, _: Variable | _: FuncOf), true) => "allR2L" :: Nil
             case _ => alwaysApplicable
           }
         }
