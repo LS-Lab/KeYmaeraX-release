@@ -218,6 +218,8 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proofId: String) extends P
         case Box(_: ODESystem, p) => Map(FormulaArg("P") -> p)
         case _ => Map.empty
       }
+    case Some((_, None)) => Map.empty
+    case None => Map.empty
   }
 
   /** Deletes this node with the entire subtree underneath. */

@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentPositionWithAppliedInputTactic, _}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, FormulaArg, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.Inside._
@@ -145,6 +145,39 @@ class ScriptedRequestTests extends TacticTestBase {
       case ExpandTacticResponse(_, tactic, _, _, _) =>
         tactic shouldBe "implyR"
     }
+  }
+
+  "Applicable axioms" should "not choke on wrong positions" in withDatabase { db =>
+    val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> [x:=x+1;]x>=0 End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+
+    val response = new GetApplicableAxiomsRequest(db.db, db.user, proofId.toString, "()", SuccPosition(5)).
+      getResultingResponses(t).loneElement
+    response should have ('derivationInfos (Nil), 'suggestedInput (Map.empty))
+  }
+
+  it should "work on a simple example without input suggestion" in withDatabase { db =>
+    val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> [x:=x+1;]x>=0 End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+
+    val response = new GetApplicableAxiomsRequest(db.db, db.user, proofId.toString, "()", SuccPosition(1)).
+      getResultingResponses(t).loneElement
+    response should have ('derivationInfos ((DerivationInfo("implyR"), None)::Nil), 'suggestedInput (Map.empty))
+  }
+
+  it should "work with input suggestion" in withDatabase { db =>
+    val modelContents = "ProgramVariables. R x. End. Problem. [{x:=x+1;}*@invariant(x>-1)]x>=0 End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+
+    val response = new GetApplicableAxiomsRequest(db.db, db.user, proofId.toString, "()", SuccPosition(1)).
+      getResultingResponses(t).loneElement
+    response should have (
+      'derivationInfos ((DerivationInfo("loop"), None)::(DerivationInfo("[*] iterate"), None)::
+        (DerivationInfo("GV"), None)::(DerivationInfo("MR"), None)::Nil),
+      'suggestedInput (Map(FormulaArg("j(x)") -> "x>-1".asFormula)))
   }
 
   private def runTactic(db: DbTacticTester, token: SessionToken, proofId: Int)(nodeId: String, tactic: BelleExpr): Response = {

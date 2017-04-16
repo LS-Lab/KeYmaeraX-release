@@ -619,8 +619,8 @@ class GetBranchRootResponse(node: ProofTreeNode) extends Response {
   def getJson: JsValue = nodeJson(node)._2
 }
 
-class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Option[DerivationInfo])],
-                               suggestedInput: Map[ArgInfo, Expression]) extends Response {
+case class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Option[DerivationInfo])],
+                                    suggestedInput: Map[ArgInfo, Expression]) extends Response {
   def inputJson(input: ArgInfo): JsValue = {
     (suggestedInput.get(input), input) match {
       case (Some(e), FormulaArg(name)) =>
