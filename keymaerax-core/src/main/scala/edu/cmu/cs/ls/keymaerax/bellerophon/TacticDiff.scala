@@ -36,9 +36,14 @@ object TacticComparator {
 
 class TacticComparator[T <: BelleExpr](val l: T) {
   def ===(r: T): Boolean = (l, r) match {
-    case (SeqTactic(ll, lr), SeqTactic(rl, rr)) => ll===rl && lr===rr
-    case (SeqTactic(ll, lr), _) if lr==Idioms.nil => ll===r
-    case (SeqTactic(ll, lr), _) if ll==Idioms.nil => lr===r
+    case (SeqTactic(ll, lr), SeqTactic(rl, rr)) => ll === rl && lr === rr
+    case (SeqTactic(ll, lr), _) if lr == Idioms.nil => ll === r
+    case (SeqTactic(ll, lr), _) if ll == Idioms.nil => lr === r
+    case (BranchTactic(bl), BranchTactic(br)) => bl.size == br.size && bl.zip(br).forall(x => x._1 === x._2)
+    case (EitherTactic(ell, elr), EitherTactic(erl, err)) => ell === erl && elr === err
+    case (SaturateTactic(sl), SaturateTactic(sr)) => sl === sr
+    case (RepeatTactic(rl, nl), RepeatTactic(rr, nr)) => nl == nr && rl === rr
+    case (OnAll(al), OnAll(ar)) => al === ar
     case _ => l == r
   }
 }
