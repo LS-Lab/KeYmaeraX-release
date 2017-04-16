@@ -37,12 +37,12 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
   def getTacticString(indent: String)(node: ProofTreeNode): String = {
     assert(!node.children.contains(node), "A node should not be its own child.") //but apparently this happens.
     val thisTactic = tacticStringAt(node)
-    val subgoals = node.children.map(getTacticString(indent + "  ")(_))
+    val subgoals = node.children.map(getTacticString(indent + (if (node.children.size <= 1) "" else "  "))(_))
 
     //@todo does pretty-printing
     if (subgoals.isEmpty) thisTactic
     else if (subgoals.size == 1) sequentialTactic(thisTactic, subgoals.head)
-    else sequentialTactic(thisTactic, BRANCH_COMBINATOR.img + "(\n" + subgoals.mkString(",\n") + "\n" + indent + ")")
+    else sequentialTactic(thisTactic, BRANCH_COMBINATOR.img + "(\n" + indent + subgoals.mkString(",\n" + indent) + "\n" + indent + ")")
   }
 
   private def tacticAt(gen: Option[Generator.Generator[Formula]], node: ProofTreeNode): BelleExpr = BelleParser.parseWithInvGen(tacticStringAt(node), gen)
