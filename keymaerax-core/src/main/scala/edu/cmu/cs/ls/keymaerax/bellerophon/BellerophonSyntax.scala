@@ -337,8 +337,12 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
       case LastSucc(goal) => positionTactic.computeResult(provable, SuccPosition.base0(provable.subgoals(goal).succ.size-1))
     }
   } catch {
-    //@todo shouldn't catch stuff
     case be: BelleThrowable => throw be
+    //note the following exceptions are likely caused by wrong positioning
+    case ex: IndexOutOfBoundsException => throw new BelleThrowable("Position " + locator +
+      " may point outside the positions of the goal " + provable.prettyString, ex)
+    case ex: MatchError => ???
+    //@note wrap failing assertions etc. so that searchy tactic combinators follow up on the tactic failure
     case t: Throwable => throw new BelleThrowable(t.getMessage, t)
   }
 
@@ -470,28 +474,44 @@ class AppliedDependentPositionTacticWithAppliedInput(pt: DependentPositionWithAp
 class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locator: PositionLocator) extends DependentTactic(pt.name) {
   import Augmentors._
   override def prettyString: String = pt.name + "(" + locator.prettyString + ")"
-  final override def computeExpr(v: BelleValue): BelleExpr = locator match {
-    //@note interprets PositionLocator
-    case Fixed(pos, shape, exact) => shape match {
-      case Some(f) => v match {
-        case BelleProvable(provable, _) =>
-          require(provable.subgoals.size == 1, "Locator 'fixed with shape' applies only to provables with exactly 1 subgoal")
-          //@note (implicit .apply needed to ensure subposition to pos.inExpr
-          if ((exact && provable.subgoals.head.sub(pos).contains(f)) ||
-            (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.sub(pos).get).isDefined)) {
-            pt.factory(pos).computeExpr(v)
-          } else {
-            throw new BelleThrowable("Formula " + provable.subgoals.head.sub(pos) + " at position " + pos +
-              " is not of expected shape " + f)
-          }
+  final override def computeExpr(v: BelleValue): BelleExpr = try {
+    locator match {
+      //@note interprets PositionLocator
+      case Fixed(pos, shape, exact) => shape match {
+        case Some(f) => v match {
+          case BelleProvable(provable, _) =>
+            require(provable.subgoals.size == 1, "Locator 'fixed with shape' applies only to provables with exactly 1 subgoal")
+            //@note (implicit .apply needed to ensure subposition to pos.inExpr
+            if ((exact && provable.subgoals.head.sub(pos).contains(f)) ||
+              (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.sub(pos).get).isDefined)) {
+              pt.factory(pos).computeExpr(v)
+            } else {
+              throw new BelleThrowable("Formula " + provable.subgoals.head.sub(pos) + " at position " + pos +
+                " is not of expected shape " + f)
+            }
+        }
+        case None => pt.factory(pos).computeExpr(v)
       }
-      case None => pt.factory(pos).computeExpr(v)
+      case Find(goal, shape, start, exact) =>
+        require(start.isTopLevel, "Start position must be top-level in sequent")
+        tryAllAfter(goal, shape, start, exact, null)
+      case LastAnte(goal) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition.base0(provable.subgoals(goal).ante.size - 1) })
+      case LastSucc(goal) => pt.factory(v match { case BelleProvable(provable, _) => SuccPosition.base0(provable.subgoals(goal).succ.size - 1) })
     }
-    case Find(goal, shape, start, exact) =>
-      require(start.isTopLevel, "Start position must be top-level in sequent")
-      tryAllAfter(goal, shape, start, exact, null)
-    case LastAnte(goal) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition.base0(provable.subgoals(goal).ante.size-1) })
-    case LastSucc(goal) => pt.factory(v match { case BelleProvable(provable, _) => SuccPosition.base0(provable.subgoals(goal).succ.size-1) })
+  } catch {
+    //note the following exceptions are likely caused by wrong positioning
+    case be: BelleThrowable => locator match {
+      case _: Find => throw be
+      case Fixed(pos, _, _) => v match {
+        case BelleProvable(provable, _) if provable.subgoals.size == 1 =>
+          throw new BelleThrowable("Tactic " + prettyString + " may point to wrong position, found " + provable.subgoals.head.sub(pos) + " at position " + locator, be)
+        case _ => throw be
+      }
+    }
+    case ex: IndexOutOfBoundsException => throw new BelleThrowable("Position " + locator +
+      " may point outside the positions of the goal " + v.prettyString, ex)
+    //@note wrap failing assertions etc. so that searchy tactic combinators follow up on the tactic failure
+    case t: Throwable => throw new BelleThrowable(t.getMessage, t)
   }
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */

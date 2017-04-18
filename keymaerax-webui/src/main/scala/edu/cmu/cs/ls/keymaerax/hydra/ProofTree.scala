@@ -77,6 +77,8 @@ trait ProofTreeNode {
   def done: Boolean = provable.isProved
 
   /** Runs a tactic on this node. */
+  //@todo shortName should be derived from tactic
+  //@todo interpreter/listener interface needs revision
   def runTactic(userId: String, interpreter: List[IOListener]=>Interpreter, tactic: BelleExpr, shortName: String,
                 wait: Boolean = false): String
 
@@ -86,14 +88,15 @@ trait ProofTreeNode {
   // cached computations
   private lazy val theProvable = {
     if (localProvable.isProved) localProvable
-    else if (children.isEmpty) localProvable.sub(goalIdx)
+    else if (children.isEmpty) localProvable.sub(goalIdx) //@note if no followup proof step happened, then return stuttering proof step
     else {
-      assert(children.forall(_.localProvable == children.head.localProvable), "All children share the same local provable")
-      val nextStepProvable = children.head.localProvable
-      val myGoal = localProvable.sub(goalIdx)
-      assert(myGoal.subgoals.head == nextStepProvable.conclusion, "Expected next step to prove my goal")
+      // the provable representing our proof step is the localProvable stored in all children (for lookup performance)
+      // myProvable := obtain the unique localProvable that all children agree on, because they are off to prove its respective subgoals
+      //@todo should become part of the documentation of the respective methods
+      val myProvable = children.head.localProvable
+      assert(children.forall(_.localProvable == myProvable), "All children share the same local provable, only differing in goalIdx")
 
-      val myProvable = myGoal(nextStepProvable, 0)
+      // merge finalized provables from all children into nyProvable
       if (myProvable.isProved) myProvable
       else children.map(_.provable).zipWithIndex.foldRight(myProvable)({ case ((sub, i), global) =>
         global(sub, i)
@@ -105,40 +108,47 @@ trait ProofTreeNode {
 }
 
 trait ProofTree {
-  /** Locates a node in the proof tree by its ID. */
+  /** Locates a node in the proof tree by its ID.
+    * @see noteIdFromString(String) */
   def locate(id: ProofTreeNodeId): Option[ProofTreeNode]
 
-  /** Locates a node in the proof tree by its ID (string representation). */
+  /** Locates a node in the proof tree by its ID (string representation).
+    * @see noteIdFromString(String)
+    * @see [[locate(ProofTreeNodeId)]] */
   def locate(id: String): Option[ProofTreeNode] = nodeIdFromString(id).flatMap(locate)
 
-  /** Locates the tree root. */
+  /** Locates the tree root, which contains the original conjecture that this proof tries to prove. */
   def root: ProofTreeNode
 
-  /** All proof nodes */
+  /** All proof nodes anywhere in the proof tree, including root, inner nodes, and leaves. */
   def nodes: List[ProofTreeNode]
 
-  /** The proof's open goals */
+  /** The proof's open goals, which are the leaves that are not done yet */
   def openGoals: List[ProofTreeNode]
 
-  /** The tactic to produce this tree from its root conclusion. */
+  /** String representation of the global tactic that reproducse this whole proof tree from the conjecture at the root (very expensive) */
   def tacticString: String
 
-  /** The tactic to produce this tree from its root conclusion. */
+  /** The global tactic that reproducse this whole proof tree from the conjecture at the root (very expensive) */
   def tactic: BelleExpr = BelleParser(tacticString)
 
-  /** Indicates whether or not the proof might be closed. */
+  /** Indicates whether or not the proof database representation thinkgs it might be closed (not verified by core yet).
+    * @see [[verifyClosed]] */
   def isClosed: Boolean
 
   /** The proof info. */
   def info: ProofPOJO
 
-  /** Returns a loaded proof tree to avoid ripple loading. Does not include provables by default (expensive to load). */
+  /** Prefetch all nodes in a proof tree from the database. Does not include provables by default (expensive to load).
+    * The resulting ProofTree is functionally equivalent to this tree but provides fast access. */
   def load(withProvables: Boolean=false): ProofTree
 
-  /** Verify that the proof is closed by constructing a proved provable. */
+  /** Verify that the proof is closed by constructing a proved provable.
+    * @ensures \result==root.provable.isProved */
   def verifyClosed: Boolean = { load(); root.provable.isProved }
 
-  /** Converts a string representation to a node ID. */
+  /** Converts a string representation to a node ID.
+    * @see [[locate(ProofTreeNodeId) */
   def nodeIdFromString(id: String): Option[ProofTreeNodeId]
 
   override def toString: String = printBelow(root, "")
@@ -208,6 +218,8 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proofId: String) extends P
         case Box(_: ODESystem, p) => Map(FormulaArg("P") -> p)
         case _ => Map.empty
       }
+    case Some((_, None)) => Map.empty
+    case None => Map.empty
   }
 
   /** Deletes this node with the entire subtree underneath. */

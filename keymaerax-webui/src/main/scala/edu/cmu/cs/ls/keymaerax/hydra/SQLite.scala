@@ -300,6 +300,17 @@ object SQLite {
         })
       })
 
+    private val userOwnsProofQuery = Compiled((userId: Column[String], proofId: Column[Int]) => {
+      (for {
+        p <- Proofs.filter(_._Id === proofId)
+        m <- Models.filter(_.userid === userId) if m._Id === p.modelid
+      } yield p._Id).exists
+    })
+
+    override def userOwnsProof(userId: String, proofId: String): Boolean = synchronizedTransaction({
+      userOwnsProofQuery(userId, proofId.toInt).run
+    })
+
     override def checkPassword(username: String, password: String): Boolean =
       synchronizedTransaction({
         nSelects = nSelects + 1
@@ -834,7 +845,7 @@ object SQLite {
 
     // performance degrades a little with increasing database volume
     private def closedBranchesSql(proofId: Int, openSteps: Set[Int]) =
-      sql"""SELECT previousStep,group_concat(branchOrder) FROM executionSteps WHERE proofId=$proofId AND previousStep IN (#${openSteps.mkString(",")}) GROUP BY previousStep""".as[(Int,String)]
+      sql"""SELECT previousStep,group_concat(branchOrder) FROM executionSteps WHERE proofId=$proofId AND status='Finished' AND previousStep IN (#${openSteps.mkString(",")}) GROUP BY previousStep""".as[(Int,String)]
 
     // slightly slower than query above
 //    private def closedBranchesSlick(proofId: Int, openSteps: Set[Int]) =
