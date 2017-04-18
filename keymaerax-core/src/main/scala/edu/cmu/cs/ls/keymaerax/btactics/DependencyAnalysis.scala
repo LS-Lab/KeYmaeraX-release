@@ -1,8 +1,5 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import java.util
-
-import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable._
@@ -17,36 +14,45 @@ import scala.language.postfixOps
 object DependencyAnalysis {
 
   //Same as freeVars except it throws out differential symbols
-  def freeVarsTerm(t:Term) : Set[BaseVariable] = {
+  def freeVars(t:Expression) : Set[BaseVariable] = {
     StaticSemantics.freeVars(t).toSet.collect(PartialFunction[Variable,BaseVariable]{
       case bv:BaseVariable => bv
     })
   }
 
-  def freeVarsFml(f:Formula) : Set[BaseVariable] = {
-    StaticSemantics.freeVars(f).toSet.collect(PartialFunction[Variable,BaseVariable]{
-      case bv:BaseVariable => bv
+  //Same as signature except it throws out everything except Function symbols
+  def signature(t:Expression) : Set[Function] = {
+    StaticSemantics.signature(t).collect(PartialFunction[NamedSymbol,Function]{
+      case bv:Function => bv
     })
   }
 
-  def dependencies(p:Program,s:HashSet[BaseVariable]) : HashSet[BaseVariable] ={
+  def dependencies(p:Program,s:Set[BaseVariable]) : (Set[BaseVariable],Set[Function]) ={
     p match {
       case Assign(v:BaseVariable,t) =>
-        if(s.contains(v)) s.union(freeVarsTerm(t))
-        else s
+        if(s.contains(v))
+          ((s - v).union(freeVars(t)),signature(t))
+        else (s,Set.empty)
       case AssignAny(v:BaseVariable) =>
-        s - v
+        (s - v,Set.empty)
       case Test(f) =>
-        s.union(freeVarsFml(f))
+        (s.union(freeVars(f)),signature(f))
       case Choice(p1,p2) =>
-        dependencies(p1,s).union(dependencies(p2,s))
+        val (d1,f1) = dependencies(p1,s)
+        val (d2,f2) = dependencies(p2,s)
+        (d1.union(d2),f1.union(f2))
       case Compose(p1,p2) =>
-        dependencies(p1,dependencies(p2,s))
+        val (d2,f2) = dependencies(p2,s)
+        val (d1,f1) = dependencies(p1,d2)
+        (d1,f1.union(f2))
       case p:ODESystem => analyseODE(p,s)
       case Loop(l) =>
-        val inn = dependencies(l,s)
-        if(inn.subsetOf(s)) s //Nothing to add
-        else dependencies(p,s.union(inn)) //More to add
+        val (inn,funcs) = dependencies(l,s)
+        if(inn.subsetOf(s)) (s,funcs) //Nothing to add
+        else {
+          val (d, f) = dependencies(p, s.union(inn)) //More to add
+          (d, f.union(funcs))
+        }
       case _ => ???
     }
 
@@ -75,7 +81,7 @@ object DependencyAnalysis {
         else 0
       case Neg(t) => degVar(t,v)
       case Times(l,r) => degVar(l,v) * degVar(r,v)
-      case Power(l,n:Number) => degVar(l,v) * n.value.toInt
+      case Power(l,n:Number) if n.value.isValidInt => degVar(l,v) * n.value.toInt
       case Divide(l,r) =>
         val dr = degVar(r,v)
         if(dr != 0) -1 //Fails on stupid cases like 1 / (1/x)
@@ -84,8 +90,17 @@ object DependencyAnalysis {
         Math.max(degVar(l,v),degVar(r,v))
       case Minus(l,r) =>
         Math.max(degVar(l,v),degVar(r,v))
+      case FuncOf(_,Nothing) =>
+        0
+      case FuncOf(_,t) =>
+        if(degVar(t,v)!=0)
+          -1
+        else
+          0
+      case Pair(l,r) =>
+        Math.max(degVar(l,v),degVar(r,v))
       case _ => print(t)
-        ??? //Unimplemented: Pair, AppOf, Differential, Power that is not an integer
+        ??? //Unimplemented: Pair, Differential, Power that is not a number
     }
   }
 
@@ -100,37 +115,41 @@ object DependencyAnalysis {
       }))
   }
 
-  def transitiveAnalysis(vs:Map[BaseVariable,Set[BaseVariable]],s:HashSet[BaseVariable]) : HashSet[BaseVariable] = {
+  def transitiveAnalysis(vs:Map[BaseVariable,(Set[BaseVariable],Set[Function])],s:Set[BaseVariable],f:Set[Function]) : (Set[BaseVariable],Set[Function]) = {
     val newvars =
     s.map(v => vs.get(v) match{
-      case None => Set[BaseVariable]()
-      case Some(vs) => vs -- s
-    } ).foldLeft(Set[BaseVariable]())((s,t) => s.union(t))
-    if(newvars.isEmpty)
-      return s
+      case None => (Set[BaseVariable](),Set[Function]())
+      case Some((vars,fs)) => (vars -- s,fs)
+    } ).foldLeft(Set[BaseVariable](),Set[Function]())((s,t) => (s._1.union(t._1),s._2.union(t._2)))
+    if(newvars._1.isEmpty)
+      return (s,f.union(newvars._2))
     else
-      return transitiveAnalysis(vs,s.union(newvars))
+      return transitiveAnalysis(vs,s.union(newvars._1),f.union(newvars._2))
   }
 
   //Dependency Analysis for ODEs
-  def analyseODE(p:ODESystem,s:HashSet[BaseVariable]) : HashSet[BaseVariable] = {
+  def analyseODE(p:ODESystem,s:Set[BaseVariable]) : (Set[BaseVariable],Set[Function]) = {
     val ode = p.ode
     val dom = p.constraint
-    val fvdom = freeVarsFml(dom)
+    val fvdom = freeVars(dom)
+    val fvsig = signature(dom)
     //Converts the ODE to a list of AtomicODEs
     val odels = collapseODE(ode)
     //If the ODE is linear, apply the transitive analysis
     if(isLinearODE(odels)){
       //println("Linear ODE")
-      val ds = odels.mapValues( v => freeVarsTerm(v) )
-      transitiveAnalysis(ds,s.union(fvdom))
+      val ds = odels.mapValues( v => (freeVars(v),signature(v)) )
+      transitiveAnalysis(ds,s.union(fvdom),fvsig)
     }
     else {
      //println("Non-linear ODE")
      if(s.intersect(odels.keySet).isEmpty)
-       s.union(fvdom)
-     else
-       (odels.values.map(t => freeVarsTerm(t))).foldLeft(s.union(odels.keySet))( (s,t) => s.union(t)).union(fvdom)
+       (s.union(fvdom),fvsig)
+     else {
+       val odedom = odels.values.map(t => freeVars(t)).foldLeft(s.union(odels.keySet))((s, t) => s.union(t))
+       val odesig = odels.values.map(t => signature(t)).foldLeft(Set[Function]())((s, t) => s.union(t))
+       (odedom.union(fvdom), odesig.union(fvsig))
+     }
     }
   }
 
