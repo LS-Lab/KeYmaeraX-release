@@ -30,7 +30,8 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
   $scope.downloadCCode = function() {
     spinnerService.show('modelplexExecutionSpinner')
     $http({method: 'GET',
-           url: "user/" + userid + "/model/" + $scope.mxdata.modelid + "/modelplex/generate/" + $scope.mxdata.monitorkind + "/c",
+           url: "user/" + userid + "/model/" + $scope.mxdata.modelid + "/modelplex/generate/" +
+            $scope.mxdata.monitorkind + "/" + $scope.mxdata.monitorShape + "/c",
            params: {vars: JSON.stringify($scope.mxdata.additionalMonitorVars)}})
       .then(function(response) {
         var data = new Blob([response.data.code], { type: 'text/plain;charset=utf-8' });
