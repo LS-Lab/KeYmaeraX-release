@@ -116,20 +116,21 @@ object DependencyAnalysis {
   def analyseODE(p:ODESystem,s:HashSet[BaseVariable]) : HashSet[BaseVariable] = {
     val ode = p.ode
     val dom = p.constraint
+    val fvdom = freeVarsFml(dom)
     //Converts the ODE to a list of AtomicODEs
     val odels = collapseODE(ode)
     //If the ODE is linear, apply the transitive analysis
     if(isLinearODE(odels)){
       //println("Linear ODE")
       val ds = odels.mapValues( v => freeVarsTerm(v) )
-      transitiveAnalysis(ds,s)
+      transitiveAnalysis(ds,s.union(fvdom))
     }
     else {
      //println("Non-linear ODE")
      if(s.intersect(odels.keySet).isEmpty)
-       s
+       s.union(fvdom)
      else
-       (odels.values.map(t => freeVarsTerm(t))).foldLeft(s.union(odels.keySet))( (s,t) => s.union(t))
+       (odels.values.map(t => freeVarsTerm(t))).foldLeft(s.union(odels.keySet))( (s,t) => s.union(t)).union(fvdom)
     }
   }
 

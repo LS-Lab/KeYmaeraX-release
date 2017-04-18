@@ -44,4 +44,12 @@ class DependencyAnalysisTests extends TacticTestBase {
     dependencies(p,HashSet(y)) should contain only (y)
   }
 
+  "DependencyAnalysis" should "compute fixed-point on linear ODEs with evol domain" in withMathematica { qeTool =>
+    val p = "{t'=1,v'=a & v >= 0}".asProgram
+    val t = "t".asVariable.asInstanceOf[BaseVariable]
+    val v = "v".asVariable.asInstanceOf[BaseVariable]
+    val a = "a".asVariable.asInstanceOf[BaseVariable]
+    dependencies(p,HashSet(t)) should contain only (t,v,a)
+  }
+
 }
