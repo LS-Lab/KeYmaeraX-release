@@ -164,18 +164,18 @@ object ModelPlex extends ModelPlexTrait {
     * @return The tactic.
     */
   lazy val modelMonitorByChase: DependentPositionTactic = modelMonitorByChase()
-  def modelMonitorByChase(ode: DependentPositionTactic = solveAllIn): DependentPositionTactic = "modelMonitor" by ((pos: Position, seq: Sequent) => chase(3,3, (e:Expression) => e match {
+  def modelMonitorByChase(ode: DependentPositionTactic = AxiomaticODESolver.axiomaticSolve()): DependentPositionTactic = "modelMonitor" by ((pos: Position, seq: Sequent) => chase(3,3, (e:Expression) => e match {
     // remove loops
     case Diamond(Loop(_), _) => "<*> approx" :: Nil
     // keep ODEs, solve later
     case Diamond(ODESystem(_, _), _) => Nil
     case _ => println("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
-  })(pos) & ode(pos))
+  })(pos) & applyAtAllODEs(ode)(pos))
 
-  /** Solve all ODEs somewhere underneath pos */
-  def solveAllIn: DependentPositionTactic = TacticFactory.anon((pos: Position, sequent: Sequent) => {
+  /** Applies tatic `t` at all ODEs underneath this tactic's position. */
+  def applyAtAllODEs(t: DependentPositionTactic): DependentPositionTactic = TacticFactory.anon((pos: Position, sequent: Sequent) => {
     val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
-      case (Diamond(_: ODESystem, _), pp) => Some(AxiomaticODESolver.axiomaticSolve()(pp))
+      case (Diamond(_: ODESystem, _), pp) => Some(t(pp))
       case _ => None
     })
     positions.reduceRightOption[BelleExpr](_ & _).getOrElse(skip)
