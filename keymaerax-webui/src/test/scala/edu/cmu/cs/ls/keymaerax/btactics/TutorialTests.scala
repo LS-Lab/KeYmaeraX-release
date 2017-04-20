@@ -24,6 +24,7 @@ class TutorialTests extends Suites(
   new TutorialRegressionTester("FCPS17-10", "http://symbolaris.com/course/fcps17/10-diffinv.kya"),
   new TutorialRegressionTester("FCPS17-11", "http://symbolaris.com/course/fcps17/11-diffcut.kya"),
   new TutorialRegressionTester("FCPS17-12", "http://symbolaris.com/course/fcps17/12-diffghost.kya"),
+  new TutorialRegressionTester("FCPS17-18", "http://symbolaris.com/course/fcps17/18-gameproofs.kya"),
   new TutorialRegressionTester("FCPS-R02", "http://symbolaris.com/course/fcps17/recitation02.kya"),
   new TutorialRegressionTester("FCPS-R03", "http://symbolaris.com/course/fcps17/recitation03.kya"),
   new TutorialRegressionTester("FCPS-R04", "http://symbolaris.com/course/fcps17/recitation04.kya"),
