@@ -668,12 +668,15 @@ del {
   padding: 4px 4px 4px 4px;
   border-top-right-radius: 3px;
   border-bottom-right-radius: 3px;
-  display: table-cell;
+  display: block;
 }
 .k4-formula .k4-formula-content-abbreviate {
   padding: 4px 4px 4px 4px;
   border-top-right-radius: 3px;
   border-bottom-right-radius: 3px;
+}
+.k4-formula-container {
+  max-width: 90%;
 }
 
 /*

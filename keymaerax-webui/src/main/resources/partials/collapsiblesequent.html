@@ -76,7 +76,7 @@
                 </ul>
                 <div class="k4-formula-content col-md-12">
                     <ul><li>{{f.id}}:</li></ul>
-                    <k4-formula class="pull-right"
+                    <k4-formula class="k4-formula-container pull-right"
                             k4-draggable drag-data="{{f.formula.id}}" on-drag-start="onDragStart(event)"
                             user-id="userId" proof-id="proofId" node-id="nodeId"
                             formula="f.formula" highlight="true" collapsed="false"
@@ -87,7 +87,7 @@
             </div>
             <div class="col-md-12 k4-formula nohover" ng-if="readOnly">
                 <div class="k4-formula-content col-md-12">
-                    <k4-formula class="pull-right" user-id="userId" proof-id="proofId" node-id="nodeId"
+                    <k4-formula class="k4-formula-container pull-right" user-id="userId" proof-id="proofId" node-id="nodeId"
                                 formula="f.formula" highlight="false" collapsed="false"></k4-formula>
                 </div>
             </div>
@@ -141,7 +141,8 @@
                 </ul>
                 <div class="k4-formula-content">
                     <ul><li>{{f.id}}:</li></ul>
-                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
+                    <k4-formula class="k4-formula-container"
+                                user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
                                 formula="f.formula" highlight="true" collapsed="false"
                                 on-tactic="onTactic(formulaId, tacticId)"
                                 on-input-tactic="onInputTactic(formulaId, tacticId, input)"
@@ -150,7 +151,8 @@
             </div>
             <div class="col-md-12 k4-formula nohover" ng-if="readOnly">
                 <div class="row k4-formula-content">
-                    <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
+                    <k4-formula class="k4-formula-container"
+                                user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
                                 formula="f.formula" highlight="false" collapsed="false"></k4-formula>
                 </div>
 
