@@ -33,6 +33,10 @@ angular.module('formula')
               }
             }
 
+            scope.saveValue = function(input, newValue) {
+              return input.saveValue(scope.userId, scope.proofId, scope.nodeId, newValue);
+            }
+
             scope.editClick = function(formulaId, event) {
               if (sequentProofData.formulas.mode == 'edit') {
                 // avoid event propagation to parent span (otherwise: multiple calls with a single click since nested spans)

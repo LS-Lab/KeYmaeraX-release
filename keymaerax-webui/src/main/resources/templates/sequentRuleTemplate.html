@@ -11,7 +11,7 @@
                           buttons="no"
                           style="display: inline-block; max-width: 100px; overflow: hidden; text-overflow: ellipsis; margin-bottom: -6px;"
                           ng-if="!readOnly && !premise.isClosed && antePart.isInput"
-                          editable-text="antePart.value" onbeforesave="saveValue($data)"
+                          editable-text="antePart.value" onbeforesave="saveValue(antePart, $data)"
                           e-required>{{antePart.value || antePart.placeholder}}</span>
                 </span>
                 {{$last ? '' : ','}}
@@ -28,7 +28,7 @@
                           buttons="no"
                           style="display: inline-block; max-width: 100px; overflow: hidden; text-overflow: ellipsis; margin-bottom: -6px;"
                           ng-if="!readOnly && !premise.isClosed && succPart.isInput"
-                          editable-text="succPart.value" onbeforesave="saveValue($data)"
+                          editable-text="succPart.value" onbeforesave="saveValue(succPart, $data)"
                           e-required>{{succPart.value || succPart.placeholder}}</span>
                 </span>
                 {{$last ? '' : ','}}

@@ -526,6 +526,14 @@ trait RestApi extends HttpService with SLF4JLogging {
     }}
   }}
 
+  val checkInput: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "checkInput" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
+    get {
+      parameters('param, 'type, 'value) { (pName, pType, pValue) =>
+        completeRequest(new CheckTacticInputRequest(database, userId, proofId, nodeId, tacticId, pName, pType, pValue), t)
+      }
+    }
+  }}}
+
   val doInputAt: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "doInputAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
     post {
       parameters('stepwise.as[Boolean]) { stepwise => entity(as[String]) { params => {
@@ -979,6 +987,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     doAt                  ::
     doTwoPosAt            ::
     doInputAt             ::
+    checkInput            ::
     doTactic              ::
     doInputTactic         ::
     doCustomTactic        ::

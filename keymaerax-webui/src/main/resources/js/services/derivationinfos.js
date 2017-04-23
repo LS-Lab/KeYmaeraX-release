@@ -1,4 +1,4 @@
-angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$rootScope', function($http, $rootScope) {
+angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$rootScope', '$q', function($http, $rootScope, $q) {
   var serviceDef = {
     formulaDerivationInfos: function(userId, proofId, nodeId, formulaId) {
       var promise = $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/' + formulaId + '/list')
@@ -114,9 +114,19 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
         isInput: true,
         placeholder: inputId,
         value: $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value,
-        saveValue: function(newValue) {
-          //@todo validate input (formula, term etc.)
-          $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0].value = newValue;
+        saveValue: function(userId, proofId, nodeId, newValue) {
+          var input = $.grep(tactic.derivation.input, function(elem, i) { return elem.param === inputId; })[0];
+          input.value = newValue;
+          var d = $q.defer();
+          var uri = 'proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/checkInput/' + tactic.id;
+          $http.get(uri, {params: input}).then(function(response) {
+            if (response.data.success) d.resolve();
+            else d.resolve(response.data.errorText);
+          })
+          .catch(function(err) {
+            d.resolve(err.data);
+          });
+          return d.promise;
         }
       };
       // auto-update all input elements that are scattered around different parts of the premise

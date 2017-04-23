@@ -1123,6 +1123,87 @@ class GetFormulaPrettyStringRequest(db: DBAbstraction, userId: String, proofId: 
   }
 }
 
+class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, tacticId: String,
+                              paramName: String, paramType: String, paramValue: String)
+  extends UserProofRequest(db, userId, proofId) {
+
+  /** Basic input sanity checks w.r.t. symbols in `sequent`. */
+  private def checkInput(sequent: Sequent, input: BelleTermInput): Response = {
+    try {
+      val (arg, exprs) = input match {
+        case BelleTermInput(value, Some(arg: TermArg)) => arg -> (KeYmaeraXParser(value) :: Nil)
+        case BelleTermInput(value, Some(arg: FormulaArg)) => arg -> (KeYmaeraXParser(value) :: Nil)
+        case BelleTermInput(value, Some(arg: VariableArg)) => arg -> (KeYmaeraXParser(value) :: Nil)
+        case BelleTermInput(value, Some(arg: ExpressionArg)) => arg -> (KeYmaeraXParser(value) :: Nil)
+        case BelleTermInput(value, Some(arg@ListArg(_, "formula", _))) => arg -> value.split(",").map(KeYmaeraXParser).toList
+      }
+
+      val sortMismatch = arg match {
+        case _: TermArg if exprs.size == 1 && exprs.head.kind == TermKind => None
+        case _: FormulaArg if exprs.size == 1 && exprs.head.kind == FormulaKind => None
+        case _: VariableArg if exprs.size == 1 && exprs.head.kind == TermKind && exprs.head.isInstanceOf[Variable] => None
+        case _: ExpressionArg if exprs.size == 1 => None
+        case ListArg(_, "formula", _) if exprs.forall(_.kind == FormulaKind) => None
+        case _ => Some("Expected " + arg.sort + ", but got " + exprs.map(_.kind).mkString(",") + " " + exprs.map(_.prettyString).mkString(","))
+      }
+
+      sortMismatch match {
+        case None =>
+          val symbols = StaticSemantics.symbols(sequent)
+          val paramFV: Set[NamedSymbol] =
+            exprs.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet
+
+          val (hintFresh, allowedFresh) = arg match {
+            case _: VariableArg if arg.allowsFresh.contains(arg.name) => (Nil, Nil)
+            case _ => (paramFV -- symbols, arg.allowsFresh) //@todo would need other inputs to check
+          }
+
+          if (hintFresh.size > allowedFresh.size) {
+            val fnVarMismatch = hintFresh.map(fn => fn -> symbols.find(s => s.name == fn.name && s.index == fn.index)).
+              filter(_._2.isDefined)
+            val msg =
+              if (fnVarMismatch.isEmpty) "Argument " + arg.name + " uses fresh symbols " + hintFresh.mkString(",") +
+                (if (allowedFresh.nonEmpty) "\nbut only allows fresh symbols as introduced for " + allowedFresh.mkString(",")
+                else "\nbut does not allow fresh symbols")
+              else "Argument " + arg.name + " function/variable mismatch: " +
+                fnVarMismatch.map(m => "have " + m._1.fullString + ", expected " + m._2.get.fullString).mkString(",")
+            BooleanResponse(flag=false, Some(msg))
+          } else {
+            BooleanResponse(flag=true)
+          }
+        case Some(mismatch) => BooleanResponse(flag=false, Some(mismatch))
+      }
+    } catch {
+      case ex: ParseException => BooleanResponse(flag=false, Some(ex.msg))
+    }
+  }
+
+  override protected def doResultingResponses(): List[Response] = {
+    val info = DerivationInfo(tacticId)
+    val expectedInputs = info.inputs
+    val paramInfo = expectedInputs.find(_.name == paramName)
+    val isIllFormed = paramInfo.isEmpty || paramValue.isEmpty
+    if (!isIllFormed) {
+      val input = BelleTermInput(paramValue, expectedInputs.find(_.name == paramName))
+
+      val tree: ProofTree = DbProofTree(db, proofId)
+      tree.locate(nodeId) match {
+        case None => BooleanResponse(flag=false, Some("Unknown node " + nodeId + " in proof " + proofId)) :: Nil
+        case Some(node) if node.goal.isEmpty => BooleanResponse(flag=false, Some("Node " + nodeId + " does not have a goal")) :: Nil
+        case Some(node) if node.goal.isDefined =>
+          val sequent = node.goal.get
+          checkInput(sequent, input)::Nil
+      }
+    } else {
+      val msg =
+        if (paramValue.isEmpty) "Missing value of parameter " + paramName
+        else "Parameter " + paramName + " not a valid argument of tactic " + tacticId + ", expected one of " + expectedInputs.map(_.name).mkString(",")
+      BooleanResponse(flag=false, Some(msg))::Nil
+    }
+  }
+
+}
+
 /* If pos is Some then belleTerm must parse to a PositionTactic, else if pos is None belleTerm must parse
 * to a Tactic */
 class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, belleTerm: String,
@@ -1136,7 +1217,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case BelleTermInput(value, Some(_:FormulaArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:VariableArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:ExpressionArg)) => "{`"+value+"`}"
-      case BelleTermInput(value, Some(ListArg(_, "formula"))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
+      case BelleTermInput(value, Some(ListArg(_, "formula", _))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
       case BelleTermInput(value, None) => value
     }
     val specificTerm = if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, _.codeName) else belleTerm

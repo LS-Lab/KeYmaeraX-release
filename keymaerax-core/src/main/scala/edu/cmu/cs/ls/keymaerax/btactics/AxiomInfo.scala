@@ -183,7 +183,7 @@ object DerivationInfo {
         /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
         /* premises */ List( (List("&Gamma;"), List("∃y [{x′=f(x),y′=a(x)y+b(x) & Q}]P", "&Delta;")) )
       ),
-      List(VariableArg("y"), TermArg("a(x)"), TermArg("b(x)"), FormulaArg("P")),
+      List(VariableArg("y", "y"::Nil), TermArg("a(x)"), TermArg("b(x)"), FormulaArg("P", "y"::Nil)),
       _ =>
         ((y: Variable) =>
           ((t1: Term) =>
@@ -600,7 +600,7 @@ object DerivationInfo {
     new InputPositionTacticInfo("allL"
       , RuleDisplayInfo(("∀L", "allL"), (List("&Gamma;","∀x P(x)"), List("&Delta;")),
         List((List("&Gamma;", "P(θ)"),List("&Delta;"))))
-      , List(TermArg("θ"))
+      , List(TermArg("θ", "θ"::Nil))
       , _ => ((t:Term) => SequentCalculus.allL(t)): TypedFunc[Term, BelleExpr]),
     new PositionTacticInfo("allR"
       , RuleDisplayInfo(("∀R", "allR"), (List("&Gamma;"), List("∀x P(x)", "&Delta;")),
@@ -620,7 +620,7 @@ object DerivationInfo {
     new InputPositionTacticInfo("existsR"
       , RuleDisplayInfo(("∃R", "existsR"), (List("&Gamma;"), List("∃x P(x)", "&Delta;")),
         List((List("&Gamma;"),List("P(θ)", "&Delta;"))))
-      , List(TermArg("θ"))
+      , List(TermArg("θ", "θ"::Nil))
       , _ => ((t:Term) => SequentCalculus.existsR(t)): TypedFunc[Term, BelleExpr]),
 
     new PositionTacticInfo("commuteEquivL", ("↔CL", "<->CL"), {case () => SequentCalculus.commuteEquivL}),
@@ -688,7 +688,7 @@ object DerivationInfo {
         ,(List("&Gamma;"), List("&Delta;"))
         ,List(
           (List("&Gamma;", "v=t"),List("&Delta;"))))
-      ,List(TermArg("t"),VariableArg("v")), _ => ((t:Term) => ((v: Option[Variable]) => EqualityTactics.abbrv(t, v)): TypedFunc[Option[Variable], BelleExpr]): TypedFunc[Term, _]),
+      ,List(TermArg("t"),VariableArg("v", "v"::Nil)), _ => ((t:Term) => ((v: Option[Variable]) => EqualityTactics.abbrv(t, v)): TypedFunc[Option[Variable], BelleExpr]): TypedFunc[Term, _]),
     // Proof rule input position tactics
     new InputPositionTacticInfo("cutL", "Cut", List(FormulaArg("cutFormula")),
       _ => ((fml:Formula) => TactixLibrary.cutL(fml)): TypedFunc[Formula, BelleExpr]),
@@ -745,7 +745,7 @@ object DerivationInfo {
       "discreteGhost",
       RuleDisplayInfo(("[:=] ghost", "[:=] ghost"), (List("&Gamma;"),List("P","&Delta;")),
         List((List("&Gamma;"), List("[gv:=gt;]P","&Delta;")))),
-      TermArg("gt") :: VariableArg("gv") :: Nil,
+      TermArg("gt") :: VariableArg("gv", "gv"::Nil) :: Nil,
       _ => ((t:Term) => ((v: Option[Variable]) => DLBySubst.discreteGhost(t, v)): TypedFunc[Option[Variable], BelleExpr]): TypedFunc[Term, _]),
 
     /*new TacticInfo("monb", "Box Monotonicity", {case () => TactixLibrary.monb}),
@@ -921,24 +921,25 @@ object TacticInfo {
 sealed trait ArgInfo {
   val sort: String
   val name: String
+  val allowsFresh: List[String]
 }
-case class FormulaArg (override val name: String) extends ArgInfo {
+case class FormulaArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "formula"
 }
-case class VariableArg (override val name: String) extends ArgInfo {
+case class VariableArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "variable"
 }
-case class ExpressionArg (override val name: String) extends ArgInfo {
+case class ExpressionArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "expression"
 }
-case class TermArg (override val name: String) extends ArgInfo {
+case class TermArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "term"
 }
-case class StringArg (override val name: String) extends ArgInfo {
+case class StringArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "string"
 }
 @deprecated("Until lists are actually added to the concrete syntax of Bellerophon.", "4.2b1")
-case class ListArg (override val name: String, elementSort: String) extends ArgInfo {
+case class ListArg (override val name: String, elementSort: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "list"
 }
 
