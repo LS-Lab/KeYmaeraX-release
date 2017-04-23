@@ -110,6 +110,15 @@ del {
   top: 0;
 }
 
+.editable-error {
+  position: absolute;
+  background: white;
+  white-space: normal;
+  padding: 5px;
+  margin-left: -5px;
+  z-index: 1;
+}
+
 .well-compact {
   padding: 0px;
   margin-bottom: 10px;
