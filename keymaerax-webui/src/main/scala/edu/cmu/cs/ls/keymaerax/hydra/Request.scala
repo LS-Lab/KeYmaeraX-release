@@ -1127,6 +1127,20 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
                               paramName: String, paramType: String, paramValue: String)
   extends UserProofRequest(db, userId, proofId) {
 
+  /** Prints a sort as users might expect from other web UI presentations. */
+  private def printSort(s: Sort): String = s match {
+    case Unit => ""
+    case Real => "R"
+    case Bool => "B"
+    case Tuple(l, r) => printSort(l) + "," + printSort(r)
+  }
+
+  /** Prints a named symbol as users might expect from other web UI presentations. */
+  private def printNamedSymbol(n: NamedSymbol): String = n match {
+    case _: Variable => "variable " + n.prettyString
+    case Function(_, _, domain, _, _) => "function " + n.prettyString + "(" + printSort(domain) + ")"
+  }
+
   /** Basic input sanity checks w.r.t. symbols in `sequent`. */
   private def checkInput(sequent: Sequent, input: BelleTermInput): Response = {
     try {
@@ -1162,11 +1176,11 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
             val fnVarMismatch = hintFresh.map(fn => fn -> symbols.find(s => s.name == fn.name && s.index == fn.index)).
               filter(_._2.isDefined)
             val msg =
-              if (fnVarMismatch.isEmpty) "Argument " + arg.name + " uses fresh symbols " + hintFresh.mkString(",") +
-                (if (allowedFresh.nonEmpty) "\nbut only allows fresh symbols as introduced for " + allowedFresh.mkString(",")
-                else "\nbut does not allow fresh symbols")
+              if (fnVarMismatch.isEmpty) "Argument " + arg.name + " uses new names that do not occur in the sequent: " + hintFresh.mkString(",") +
+                (if (allowedFresh.nonEmpty) ", expected new names only as introduced for " + allowedFresh.mkString(",")
+                else ", is it a typo?")
               else "Argument " + arg.name + " function/variable mismatch: " +
-                fnVarMismatch.map(m => "have " + m._1.fullString + ", expected " + m._2.get.fullString).mkString(",")
+                fnVarMismatch.map(m => "have " + printNamedSymbol(m._1) + ", expected " + printNamedSymbol(m._2.get)).mkString(",")
             BooleanResponse(flag=false, Some(msg))
           } else {
             BooleanResponse(flag=true)
