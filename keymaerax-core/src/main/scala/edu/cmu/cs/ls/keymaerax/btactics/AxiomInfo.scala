@@ -181,7 +181,7 @@ object DerivationInfo {
       RuleDisplayInfo(
         "Differential Ghost",
         /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
-        /* premises */ List( (List("&Gamma;"), List("∃y [{x′=f(x),y′=a(x)y+b(x) & Q}]P", "&Delta;")) )
+        /* premises */ List( (List("&Gamma;"), List("∃y [{x′=f(x),y′=a(x)*y+b(x) & Q}]P", "&Delta;")) )
       ),
       List(VariableArg("y", "y"::Nil), TermArg("a(x)"), TermArg("b(x)"), FormulaArg("P", "y"::Nil)),
       _ =>
