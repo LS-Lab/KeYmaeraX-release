@@ -121,7 +121,7 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
           var uri = 'proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/checkInput/' + tactic.id;
           $http.get(uri, {params: input}).then(function(response) {
             if (response.data.success) d.resolve();
-            else d.resolve(response.data.errorText);
+            else d.resolve("Warning: executing tactic may fail, because " + response.data.errorText);
           })
           .catch(function(err) {
             d.resolve(err.data);
