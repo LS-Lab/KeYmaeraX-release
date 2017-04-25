@@ -250,9 +250,34 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     called shouldBe true
   }
 
-  it should "expand functions to their defintion" in {
+  it should "expand functions to their definition" in {
     val input = "Functions. R y() = (3+7). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End."
     //@todo mock objects
+    var called = false
+    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
+      called = true
+      prg shouldBe "{x:=x+1;}*".asProgram
+      fml shouldBe "x>=(3+7)+1".asFormula
+    })
+    KeYmaeraXProblemParser(input)
+    called shouldBe true
+  }
+
+  it should "expand functions recursively to their definition" in {
+    val input = "Functions. R y() = (3+z()). R z() = (7). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End."
+    var called = false
+    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
+      called = true
+      prg shouldBe "{x:=x+1;}*".asProgram
+      fml shouldBe "x>=(3+7)+1".asFormula
+    })
+    KeYmaeraXProblemParser(input)
+    called shouldBe true
+  }
+
+  //@todo
+  it should "detect cycles when expanding functions recursively to their definition" ignore {
+    val input = "Functions. R y() = (3+z()). R z() = (7*y()). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End."
     var called = false
     KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
       called = true
