@@ -623,13 +623,13 @@ case class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Opti
                                     suggestedInput: Map[ArgInfo, Expression]) extends Response {
   def inputJson(input: ArgInfo): JsValue = {
     (suggestedInput.get(input), input) match {
-      case (Some(e), FormulaArg(name)) =>
+      case (Some(e), FormulaArg(name, _)) =>
         JsObject (
           "type" -> JsString(input.sort),
           "param" -> JsString(name),
           "value" -> JsString(e.prettyString)
         )
-      case (_, ListArg(name, elementSort)) => //@todo suggested input for Formula*
+      case (_, ListArg(name, elementSort, _)) => //@todo suggested input for Formula*
         JsObject(
           "type" -> JsString(input.sort),
           "elementType" -> JsString(elementSort),
