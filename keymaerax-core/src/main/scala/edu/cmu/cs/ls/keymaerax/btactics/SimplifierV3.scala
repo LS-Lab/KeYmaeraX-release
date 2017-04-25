@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -699,14 +700,24 @@ object SimplifierV3 {
                   faxs:formulaIndex=defaultFaxs,
                   taxs:termIndex=defaultTaxs):DependentTactic = new SingleGoalDependentTactic("fullSimplify") {
 
-    val simps = simpTac(ths,faxs,taxs)
+    private val simps = simpTac(ths,faxs,taxs)
+
+    private lazy val hideTrues = "ANON" by ((seq: Sequent) => {
+      seq.ante.zipWithIndex.filter(_._1 == True).map(t => hideL(AntePosition.base0(t._2), True)).reverse.
+        reduceRightOption[BelleExpr](_ & _).getOrElse(ident)
+    })
+
+    private lazy val hideFalses = "ANON" by ((seq: Sequent) => {
+      seq.succ.zipWithIndex.filter(_._1 == False).map(t => hideR(SuccPosition.base0(t._2), False)).reverse.
+        reduceRightOption[BelleExpr](_ & _).getOrElse(ident)
+    })
 
     override def computeExpr(seq: Sequent): BelleExpr = {
       val succ =
         (List.range(1,seq.succ.length+1,1).foldRight(ident)
         ((i:Int,tac:BelleExpr)=> simps(i) & tac))
       (List.range(-1,-(seq.ante.length+1),-1).foldRight(succ)
-        ((i:Int,tac:BelleExpr)=> simps(i) & tac))
+        ((i:Int,tac:BelleExpr)=> simps(i) & tac)) & hideTrues & hideFalses
     }
   }
 
