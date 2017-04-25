@@ -785,8 +785,8 @@ object PolynomialArith {
 
   //This just makes sorting the assumptions a bit easier
   private lazy val neAnteZ: ProvableSig = proveBy("f_() != g_() <-> !!(f_()-g_() !=0)".asFormula,QE & done)
-  private lazy val ltAnteZ: ProvableSig = proveBy("f_() < g_() <-> f_() <= g_() & f_() != g_() ".asFormula,QE)
-  private lazy val gtAnteZ: ProvableSig = proveBy("f_() > g_() <-> f_() >= g_() & f_() != g_() ".asFormula,QE)
+  private lazy val ltAnteZ: ProvableSig = proveBy("f_() < g_() <-> f_() <= g_() & f_() - g_() != 0 ".asFormula,QE)
+  private lazy val gtAnteZ: ProvableSig = proveBy("f_() > g_() <-> f_() >= g_() & f_() - g_() != 0 ".asFormula,QE)
 
   //clearSucc and normAnte are the real nullstellensatz versions (i.e. they normalise everything to equalities on the left)
   lazy val clearSucc:DependentTactic = new SingleGoalDependentTactic("flip succ") {
@@ -950,8 +950,8 @@ object PolynomialArith {
     proveBy("F_() + A_()/B_() = (F_()*B_()+A_())/B_()".asFormula,QE))
 
   val mulDiv =
-  (proveBy("F_()/G_() * A_()/B_() = (F_()*A_())/(G_()*B_())".asFormula,QE),
-    proveBy("F_()/G_() * A_() = (F_()*A_())/G_()".asFormula,QE),
+  (proveBy("(F_()/G_()) * (A_()/B_()) = (F_()*A_())/(G_()*B_())".asFormula,QE),
+    proveBy("(F_()/G_()) * A_() = (F_()*A_())/G_()".asFormula,QE),
     proveBy("F_() * (A_()/B_()) = (F_()*A_())/B_()".asFormula,QE))
 
   val subDiv =
@@ -963,6 +963,8 @@ object PolynomialArith {
     (proveBy("(F_()/G_()) / (A_()/B_()) = (F_()*B_())/(A_()*G_())".asFormula,QE),
       proveBy("(F_()/G_()) / A_() = (F_()/(G_()*A_()))".asFormula,QE),
       proveBy("F_()/(A_()/B_()) = (F_()*B_())/A_()".asFormula,QE))
+
+  val negDiv = proveBy("-(F_()/G_()) = (-F_())/G_()".asFormula,QE)
   // This is only provable for concrete instances of K_(), probably have to do it on the fly
   // val powDivB = proveBy("(F_()/G_())^K_() = F_()^K_()/G_()^K_()".asFormula,QE)
 
@@ -1008,6 +1010,15 @@ object PolynomialArith {
             (useFor(pr2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 1 :: Nil))
             (useFor(pr1, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 0 :: Nil))(pr))))
         }
+      case Neg(u) =>
+        val pr1 = ratForm(u)
+        pr1 match {
+          case None => None
+          case Some(pr1) =>
+            val pr = proveBy(Equal(l, l), byUS(DerivedAxioms.equalReflex.fact))
+            Some(useFor(negDiv, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))
+            (useFor(pr1, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 0 :: Nil))(pr)))
+        }
       case _ => None
     }
     res
@@ -1020,7 +1031,7 @@ object PolynomialArith {
   // Repeatedly finds the first rational term in the antecedent starting at an index and cuts in the appropriate side goal
   // A/B = 0 , G |-  turns into A = 0 , G |- and B = 0 , G |-
   // This assumes that ALL divisions occuring in the goal are well-defined
-  def ratFormTac(antepos:Int, ignore:Boolean, rec:Boolean):DependentTactic = new SingleGoalDependentTactic("rat ante") {
+  def ratFormTac(antepos:Int, handle:Boolean, rec:Boolean):DependentTactic = new SingleGoalDependentTactic("rat ante") {
     override def computeExpr(seq: Sequent): BelleExpr = {
       if (seq.ante.length <= antepos)
         ident
@@ -1029,40 +1040,40 @@ object PolynomialArith {
           case Equal(t, n) =>
             val propt = ratForm(t)
             propt match {
-              case None => ratFormTac(antepos + 1, ignore, rec)
+              case None => ratFormTac(antepos + 1, handle, rec)
               case Some(pr) =>
-                if (ignore)
+                if (handle)
                   pr.conclusion.succ(0).sub(PosInExpr(1 :: Nil)) match {
                     case (Some(Divide(num, den))) =>
                       useAt(pr)(-(antepos + 1), PosInExpr(0 :: Nil)) &
                         cutL(Equal(num, Number(0)))(-(antepos + 1)) < (
-                          ratFormTac(antepos + 1, ignore, rec),
+                          ratFormTac(antepos + 1, handle, rec),
                           useAt(divEq, PosInExpr(1 :: Nil))(1) & notR(1) & ratFormTac(antepos, rec, rec)
                           )
                     case _ => ???
                   }
                 else
-                  ratFormTac(antepos + 1, ignore, rec) & hideL(-(antepos + 1))
+                  ratFormTac(antepos + 1, handle, rec) & hideL(-(antepos + 1))
             }
           case NotEqual(t, n) =>
             val propt = ratForm(t)
             propt match {
-              case None => ratFormTac(antepos + 1, ignore, rec)
+              case None => ratFormTac(antepos + 1, handle, rec)
               case Some(pr) =>
-                if (ignore)
+                if (handle)
                   pr.conclusion.succ(0).sub(PosInExpr(1 :: Nil)) match {
                     case (Some(Divide(num, den))) =>
                       useAt(pr)(-(antepos + 1), PosInExpr(0 :: Nil)) &
                         cutL(NotEqual(num, Number(0)))(-(antepos + 1)) < (
-                          ratFormTac(antepos + 1, ignore, rec),
+                          ratFormTac(antepos + 1, handle, rec),
                           useAt(divNeq, PosInExpr(1 :: Nil))(1) & notR(1) & ratFormTac(antepos, rec, rec)
                           )
                     case _ => ???
                   }
                 else
-                  ratFormTac(antepos + 1, ignore, rec) & hideL(-(antepos + 1))
+                  ratFormTac(antepos + 1, handle, rec) & hideL(-(antepos + 1))
             }
-          case _ => ratFormTac(antepos + 1, ignore, rec)
+          case _ => ratFormTac(antepos + 1, handle, rec)
         }
     }
   }
@@ -1133,7 +1144,34 @@ object PolynomialArith {
   lazy val orEqz = proveBy("F_()=0 | G_() =0 <-> F_()*G_()=0".asFormula,QE)
   lazy val andEqz = proveBy("F_()=0 & G_() =0 <-> F_()^2 + G_()^2 =0".asFormula,QE)
 
-  lazy val normAntes1 = fullSimpTac(ths = ths,faxs = renWitness,taxs = emptyTaxs)
-  lazy val normAntes2 = fullSimpTac(ths = List(andEqz,orEqz),faxs = emptyFaxs,taxs = emptyTaxs)
-  lazy val normaliseNNF = clearSuccNNF & normAntes1 & (existsL('L)*) & normAntes2
+  //Relax strict to non-strict inequalities, and then hide all the top-level != to the right
+  lazy val relaxStrict2:DependentTactic = new SingleGoalDependentTactic("strict to non2") {
+    override def computeExpr(seq: Sequent): BelleExpr = {
+      seq.ante.zipWithIndex.foldLeft(ident) { (tac: BelleExpr, fi) =>
+        val ind = -(fi._2 + 1);
+        (fi._1 match {
+          case Greater(f, g) => useAt(gtAnteZ)(ind)
+          case Less(f, g) => useAt(ltAnteZ)(ind)
+          case _ => ident
+        }) & tac
+      } & (andL('L)*)
+    }
+  }
+
+  lazy val hideTopNeq:DependentTactic = new SingleGoalDependentTactic("hide top neq") {
+    override def computeExpr(seq: Sequent): BelleExpr = {
+      seq.ante.zipWithIndex.foldLeft(ident) { (tac: BelleExpr, fi) =>
+        val ind = -(fi._2 + 1);
+        (fi._1 match {
+          case NotEqual(f, g) => useAt(doubleNeg)(ind) & notL(ind)
+          case _ => ident
+        }) & tac
+      }
+    }
+  }
+
+  lazy val normAntes1 = fullSimpTac(ths = ths,faxs = renWitness,taxs = emptyTaxs,simpSuccs = false)
+  lazy val normAntes2 = fullSimpTac(ths = List(andEqz,orEqz),faxs = emptyFaxs,taxs = emptyTaxs,simpSuccs = false)
+  lazy val normaliseNNF = clearSuccNNF & (onAll(alphaRule)*) & relaxStrict2 & hideTopNeq & normAntes1 & (existsL('L)*) & normAntes2 & (notR('R)*)
+  //lazy val normaliseNNF = clearSuccNNF & (onAll(alphaRule)*) & normAntes1 & (existsL('L)*) & normAntes2
 }

@@ -698,7 +698,9 @@ object SimplifierV3 {
   //Full sequent simplification tactic
   def fullSimpTac(ths:List[ProvableSig]=List(),
                   faxs:formulaIndex=defaultFaxs,
-                  taxs:termIndex=defaultTaxs):DependentTactic = new SingleGoalDependentTactic("fullSimplify") {
+                  taxs:termIndex=defaultTaxs,
+                  simpAntes:Boolean = true,
+                  simpSuccs:Boolean = true):DependentTactic = new SingleGoalDependentTactic("fullSimplify") {
 
     private val simps = simpTac(ths,faxs,taxs)
 
@@ -714,10 +716,13 @@ object SimplifierV3 {
 
     override def computeExpr(seq: Sequent): BelleExpr = {
       val succ =
-        (List.range(1,seq.succ.length+1,1).foldRight(ident)
-        ((i:Int,tac:BelleExpr)=> simps(i) & tac))
-      (List.range(-1,-(seq.ante.length+1),-1).foldRight(succ)
-        ((i:Int,tac:BelleExpr)=> simps(i) & tac)) & hideTrues & hideFalses
+        if(simpSuccs)
+          List.range(1,seq.succ.length+1,1).foldRight(ident) ((i:Int,tac:BelleExpr)=> simps(i) & tac)
+        else
+          ident
+      (if(simpAntes)
+        List.range(-1,-(seq.ante.length+1),-1).foldRight(succ) ((i:Int,tac:BelleExpr)=> simps(i) & tac)
+      else succ) & hideTrues & hideFalses
     }
   }
 
