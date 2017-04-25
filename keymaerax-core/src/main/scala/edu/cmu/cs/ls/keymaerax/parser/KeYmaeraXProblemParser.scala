@@ -123,7 +123,9 @@ object KeYmaeraXProblemParser {
     //@note redirect annotation listener to elaborate products
     val annotationListener = parser.annotationListener
     parser.setAnnotationListener((prg, fml) => {
-      annotationListener(elaborateToFunctions(prg, decls), elaborateToFunctions(fml, decls))
+      // make annotations compatible with parse result: add () and expand function declarations
+      val substs = decls.filter(_._2._3.isDefined).map((KeYmaeraXDeclarationsParser.declAsSubstitutionPair _).tupled).toList
+      annotationListener(USubst(substs)(elaborateToFunctions(prg, decls)), USubst(substs)(elaborateToFunctions(fml, decls)))
     })
 
     val problem : Formula = parser.parse(theProblem.tail :+ Token(EOF, UnknownLocation)) match {

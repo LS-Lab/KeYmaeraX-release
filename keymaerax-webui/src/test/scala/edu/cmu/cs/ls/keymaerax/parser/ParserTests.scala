@@ -223,6 +223,58 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     }
   }
   */
+
+  "Annotation parsing" should "populate easy loop annotations" in {
+    val input = "x>=2 -> [{x:=x+1;}*@invariant(x>=1)]x>=0"
+    //@todo mock objects
+    var called = false
+    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
+      called = true
+      prg shouldBe "{x:=x+1;}*".asProgram
+      fml shouldBe "x>=1".asFormula
+    })
+    KeYmaeraXParser(input)
+    called shouldBe true
+  }
+
+  it should "add () to functions used as variables" in {
+    val input = "Functions. R y(). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y+1)]x>=y End."
+    //@todo mock objects
+    var called = false
+    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
+      called = true
+      prg shouldBe "{x:=x+1;}*".asProgram
+      fml shouldBe "x>=y()+1".asFormula
+    })
+    KeYmaeraXProblemParser(input)
+    called shouldBe true
+  }
+
+  it should "expand functions to their defintion" in {
+    val input = "Functions. R y() = (3+7). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y()+1)]x>=y End."
+    //@todo mock objects
+    var called = false
+    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
+      called = true
+      prg shouldBe "{x:=x+1;}*".asProgram
+      fml shouldBe "x>=(3+7)+1".asFormula
+    })
+    KeYmaeraXProblemParser(input)
+    called shouldBe true
+  }
+
+  it should "add () and then expand functions to their defintion" in {
+    val input = "Functions. R y() = (3+7). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y+1)]x>=y End."
+    //@todo mock objects
+    var called = false
+    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
+      called = true
+      prg shouldBe "{x:=x+1;}*".asProgram
+      fml shouldBe "x>=(3+7)+1".asFormula
+    })
+    KeYmaeraXProblemParser(input)
+    called shouldBe true
+  }
   
   //////////////////////////////////////////////////////////////////////////////
   // Begin ALP Parser tests
