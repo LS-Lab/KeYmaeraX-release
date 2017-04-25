@@ -785,8 +785,8 @@ object PolynomialArith {
 
   //This just makes sorting the assumptions a bit easier
   private lazy val neAnteZ: ProvableSig = proveBy("f_() != g_() <-> !!(f_()-g_() !=0)".asFormula,QE & done)
-  private lazy val ltAnteZ: ProvableSig = proveBy("f_() < g_() <-> f_() <= g_() & f_() != g_() ".asFormula,QE)
-  private lazy val gtAnteZ: ProvableSig = proveBy("f_() > g_() <-> f_() >= g_() & f_() != g_() ".asFormula,QE)
+  private lazy val ltAnteZ: ProvableSig = proveBy("f_() < g_() <-> f_() <= g_() & f_() - g_() != 0 ".asFormula,QE)
+  private lazy val gtAnteZ: ProvableSig = proveBy("f_() > g_() <-> f_() >= g_() & f_() - g_() != 0 ".asFormula,QE)
 
   //clearSucc and normAnte are the real nullstellensatz versions (i.e. they normalise everything to equalities on the left)
   lazy val clearSucc:DependentTactic = new SingleGoalDependentTactic("flip succ") {
@@ -963,6 +963,8 @@ object PolynomialArith {
     (proveBy("(F_()/G_()) / (A_()/B_()) = (F_()*B_())/(A_()*G_())".asFormula,QE),
       proveBy("(F_()/G_()) / A_() = (F_()/(G_()*A_()))".asFormula,QE),
       proveBy("F_()/(A_()/B_()) = (F_()*B_())/A_()".asFormula,QE))
+
+  val negDiv = proveBy("-(F_()/G_()) = (-F_())/G_()".asFormula,QE)
   // This is only provable for concrete instances of K_(), probably have to do it on the fly
   // val powDivB = proveBy("(F_()/G_())^K_() = F_()^K_()/G_()^K_()".asFormula,QE)
 
@@ -1008,6 +1010,15 @@ object PolynomialArith {
             (useFor(pr2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 1 :: Nil))
             (useFor(pr1, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 0 :: Nil))(pr))))
         }
+      case Neg(u) =>
+        val pr1 = ratForm(u)
+        pr1 match {
+          case None => None
+          case Some(pr1) =>
+            val pr = proveBy(Equal(l, l), byUS(DerivedAxioms.equalReflex.fact))
+            Some(useFor(negDiv, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))
+            (useFor(pr1, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: 0 :: Nil))(pr)))
+        }
       case _ => None
     }
     res
@@ -1028,7 +1039,6 @@ object PolynomialArith {
         seq.ante(antepos) match {
           case Equal(t, n) =>
             val propt = ratForm(t)
-            val foo = println("EQ AT",t,n,propt)
             propt match {
               case None => ratFormTac(antepos + 1, handle, rec)
               case Some(pr) =>
@@ -1162,6 +1172,6 @@ object PolynomialArith {
 
   lazy val normAntes1 = fullSimpTac(ths = ths,faxs = renWitness,taxs = emptyTaxs,simpSuccs = false)
   lazy val normAntes2 = fullSimpTac(ths = List(andEqz,orEqz),faxs = emptyFaxs,taxs = emptyTaxs,simpSuccs = false)
-  //lazy val normaliseNNF = clearSuccNNF & (onAll(alphaRule)*) & relaxStrict2 & hideTopNeq & normAntes1 & (existsL('L)*) & normAntes2 & (notR('R)*)
-  lazy val normaliseNNF = clearSuccNNF & (onAll(alphaRule)*) & normAntes1 & (existsL('L)*) & normAntes2
+  lazy val normaliseNNF = clearSuccNNF & (onAll(alphaRule)*) & relaxStrict2 & hideTopNeq & normAntes1 & (existsL('L)*) & normAntes2 & (notR('R)*)
+  //lazy val normaliseNNF = clearSuccNNF & (onAll(alphaRule)*) & normAntes1 & (existsL('L)*) & normAntes2
 }
