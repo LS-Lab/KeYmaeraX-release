@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, Generator, TactixLibrary, TypedFunc}
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Term, Variable}
+import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.reflect.runtime.universe.typeTag
 
@@ -11,12 +11,13 @@ import scala.reflect.runtime.universe.typeTag
   * @author Brandon Bohrer
   */
 object ReflectiveExpressionBuilder {
-  def build(info: DerivationInfo, args: List[Either[Seq[Any], PositionLocator]], generator: Option[Generator.Generator[Formula]]): BelleExpr = {
+  def build(info: DerivationInfo, args: List[Either[Seq[Any], PositionLocator]],
+            generator: Option[Generator.Generator[Expression]], defs: List[SubstitutionPair]): BelleExpr = {
     val posArgs = args.filter(_.isRight).map(_.right.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only right-inhabited elements... this exn should never be thrown.")))
     val withGenerator =
       if (info.needsGenerator) {
         generator match {
-          case Some(theGenerator) => info.belleExpr.asInstanceOf[Generator.Generator[Formula] => Any](theGenerator)
+          case Some(theGenerator) => info.belleExpr.asInstanceOf[Generator.Generator[Expression] => Any](theGenerator)
           case None =>
             println(s"Need a generator for tactic ${info.codeName} but none was provided; switching to default.")
             info.belleExpr.asInstanceOf[Generator.Generator[Formula] => Any](TactixLibrary.invGenerator)
@@ -24,7 +25,10 @@ object ReflectiveExpressionBuilder {
       } else {
         info.belleExpr
       }
-    val expressionArgs = args.filter(_.isLeft).map(_.left.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only left-inhabited elements... this exn should never be thrown.")))
+    val expressionArgs = args.filter(_.isLeft).
+      map(_.left.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only left-inhabited elements... this exn should never be thrown."))).
+      map(_.map(exhaustiveSubst(defs, _)))
+
     val applied: Any = expressionArgs.foldLeft(withGenerator) {
       //@note matching on generics only to make IntelliJ happy, "if type <:< other" is the relevant check
       case (expr: TypedFunc[String, _], (s: String) :: Nil) if expr.argType.tpe <:< typeTag[String].tpe => expr(s)
@@ -71,20 +75,30 @@ object ReflectiveExpressionBuilder {
     }
   }
 
-  def apply(name: String, arguments: List[Either[Seq[Any], PositionLocator]] = Nil, generator: Option[Generator.Generator[Formula]]) : BelleExpr = {
+  def apply(name: String, arguments: List[Either[Seq[Any], PositionLocator]] = Nil,
+            generator: Option[Generator.Generator[Expression]], defs: List[SubstitutionPair]) : BelleExpr = {
     if(!DerivationInfo.hasCodeName(name)) {
       throw new ReflectiveExpressionBuilderExn(s"Identifier '$name' is not recognized as a tactic identifier.")
-    }
-    else {
+    } else {
       try {
-        build(DerivationInfo.ofCodeName(name), arguments, generator)
-      }
-      catch {
+        build(DerivationInfo.ofCodeName(name), arguments, generator, defs)
+      } catch {
         case e: java.util.NoSuchElementException =>
           println("Error: " + e)
           throw new Exception(s"Encountered errror when trying to find info for identifier $name, even though $name is a code-name for a tactic.")
       }
     }
+  }
+
+  /** Applies substitutions per `substs` exhaustively to expression-like `arg`. */
+  private def exhaustiveSubst[T](substs: List[SubstitutionPair], arg: T): T = arg match {
+    case e: Expression =>
+      def exhaustiveSubst(f: Expression): Expression = {
+        val fs = USubst(substs)(f)
+        if (fs != f) exhaustiveSubst(fs) else fs
+      }
+      exhaustiveSubst(e).asInstanceOf[T]
+    case _ => arg
   }
 }
 

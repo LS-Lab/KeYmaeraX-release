@@ -13,7 +13,8 @@ import BelleLexer.TokenStream
   * @author Nathan Fulton
   */
 object BelleParser extends (String => BelleExpr) {
-  private var invariantGenerator : Option[Generator.Generator[Formula]] = None
+  private var invariantGenerator : Option[Generator.Generator[Expression]] = None
+  private var definitions: List[SubstitutionPair] = Nil
   private var DEBUG = false
 
   private case class DefScope[K, V](defs: scala.collection.mutable.Map[K, V] = scala.collection.mutable.Map.empty[K, V],
@@ -29,11 +30,13 @@ object BelleParser extends (String => BelleExpr) {
 
   override def apply(s: String): BelleExpr = parseWithInvGen(s, None)
 
-  def parseWithInvGen(s: String, g:Option[Generator.Generator[Formula]] = None): BelleExpr =
+  def parseWithInvGen(s: String, g: Option[Generator.Generator[Expression]] = None,
+                      defs: List[SubstitutionPair] = Nil): BelleExpr =
     KeYmaeraXProblemParser.firstNonASCIICharacter(s) match {
       case Some((loc, char)) => throw ParseException(s"Found a non-ASCII character when parsing tactic: $char", loc, "<unknown>", "<unknown>", "", "")
       case None =>
         invariantGenerator = g
+        definitions = defs
         try {
           parseTokenStream(BelleLexer(s), DefScope[String, DefTactic](), DefScope[Expression, DefExpression]())
         } catch {
@@ -460,7 +463,7 @@ object BelleParser extends (String => BelleExpr) {
       ApplyDefTactic(tacticDef.get)
     } else {
       try {
-        ReflectiveExpressionBuilder(name, newArgs, invariantGenerator)
+        ReflectiveExpressionBuilder(name, newArgs, invariantGenerator, definitions)
       } catch {
         case e: ReflectiveExpressionBuilderExn => throw ParseException(e.getMessage + s" Encountered while parsing $name", location, e)
       }
