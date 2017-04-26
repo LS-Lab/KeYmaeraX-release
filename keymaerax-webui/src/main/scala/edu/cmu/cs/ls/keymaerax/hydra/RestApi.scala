@@ -1038,29 +1038,37 @@ trait RestApi extends HttpService with SLF4JLogging {
   * @todo do we want to enforce timeouts as well?
   */
 object SessionManager {
+  type Session = scala.collection.mutable.Map[String, Any]
+
   private var sessionMap : Map[String, (String, Date)] = Map() //Session tokens -> usernames
+  private var sessions: Map[String, Session] = Map()
 
   def token(key: String): SessionToken = sessionMap.get(key) match {
-    case Some((username, timeout)) => {
-      if(new Date().before(timeout)) {
+    case Some((username, timeout)) =>
+      if (new Date().before(timeout)) {
         UsedToken(key, username)
-      }
-      else {
-        remove(key);
+      } else {
+        remove(key)
         NewlyExpiredToken(key)
       }
-    }
     case None => EmptyToken()
   }
 
   def add(username: String): String = {
     val sessionToken = generateToken() //@todo generate a proper key.
-    sessionMap = sessionMap + (sessionToken -> (username, timeoutDate))
+    sessionMap += sessionToken -> (username, timeoutDate)
+    sessions += sessionToken -> scala.collection.mutable.Map()
     sessionToken
   }
 
+  def session(token: SessionToken): Session = token match {
+    case UsedToken(t, _) => sessions(t)
+    case _ => scala.collection.mutable.Map()
+  }
+
   def remove(key: String): Unit = {
-    sessionMap = sessionMap.filter(p => p._1 != key)
+    sessionMap -= key
+    sessions -= key
   }
 
   private def timeoutDate : Date = {
@@ -1070,11 +1078,11 @@ object SessionManager {
   }
 
   private def generateToken(): String = {
-    val random: SecureRandom = new SecureRandom();
+    val random: SecureRandom = new SecureRandom()
     val bytes = Array[Byte](20)
-    random.nextBytes(bytes);
-    val candidate = bytes.toString();
-    if(sessionMap.contains(candidate)) generateToken()
+    random.nextBytes(bytes)
+    val candidate = bytes.toString
+    if (sessionMap.contains(candidate)) generateToken()
     else candidate
   }
 }
