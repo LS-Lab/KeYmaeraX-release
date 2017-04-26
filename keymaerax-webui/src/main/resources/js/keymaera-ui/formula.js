@@ -2,7 +2,8 @@ angular.module('formula', ['ngSanitize']);
 
 /** Renders a formula into hierarchically structured spans */
 angular.module('formula')
-  .directive('k4Formula', ['$compile', '$http', '$sce', '$q', 'derivationInfos', 'sequentProofData', function($compile, $http, $sce, $q, derivationInfos, sequentProofData) {
+  .directive('k4Formula', ['$compile', '$http', '$sce', '$q', 'derivationInfos', 'sequentProofData', 'spinnerService',
+      function($compile, $http, $sce, $q, derivationInfos, sequentProofData, spinnerService) {
     return {
         restrict: 'AE',
         scope: {
@@ -52,12 +53,14 @@ angular.module('formula')
               if (sequentProofData.formulas.mode == 'prove') {
                 // avoid event propagation to parent span (otherwise: multiple calls with a single click since nested spans)
                 event.stopPropagation();
+                spinnerService.show('tacticExecutionSpinner');
                 $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/whatStep').
                   then(function(response) {
                     if (response.data.length > 0) {
                       scope.onTactic({formulaId: formulaId, tacticId: "StepAt"});
                     } else {
                       scope.fetchFormulaAxioms(formulaId, function() {
+                        spinnerService.hide('tacticExecutionSpinner')
                         scope.tacticPopover.open(formulaId);
                       });
                     }
