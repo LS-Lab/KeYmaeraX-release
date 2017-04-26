@@ -135,7 +135,7 @@ object UIIndex {
         case _: Choice => "<++> choice" :: rules
         case _: Dual => "<d> dual direct" :: rules
         case _: Loop => "con" :: "<*> iterate" :: rules
-        case _: ODESystem => println("AxiomIndex for <ODE> still missing"); unknown
+        case _: ODESystem => ("ODE" :: "solve" :: Nil) ++ rules
         case _ => rules
       }
 
@@ -151,7 +151,7 @@ object UIIndex {
         case _: Less => "! <" :: alwaysApplicable
         case _: LessEqual => "! <=" :: alwaysApplicable
         case _: Greater => "! >" :: alwaysApplicable
-        case _: GreaterEqual => "! >=" :: alwaysApplicable
+        case _: GreaterEqual => "< negate" :: alwaysApplicable
         case _: Not => "!! double negation" :: alwaysApplicable
         case _: And => "!& deMorgan" :: alwaysApplicable
         case _: Or => "!| deMorgan" :: alwaysApplicable
