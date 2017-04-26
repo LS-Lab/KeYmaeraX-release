@@ -1266,7 +1266,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 
           try {
             val proofSession = session(proofId).asInstanceOf[ProofSession]
-            val expr = BelleParser.parseWithInvGen(fullExpr(sequent), None)
+            val expr = BelleParser.parseWithInvGen(fullExpr(sequent), Some(proofSession.invGenerator), proofSession.defs)
 
             val appliedExpr: BelleExpr = (pos, pos2, expr) match {
               case (None, None, _: AtPosition[BelleExpr]) =>
