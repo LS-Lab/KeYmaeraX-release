@@ -1175,7 +1175,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
         case None =>
           val symbols = StaticSemantics.symbols(sequent)
           val paramFV: Set[NamedSymbol] =
-            exprs.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet
+            exprs.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet - Function("old", None, Real, Real)
 
           val (hintFresh, allowedFresh) = arg match {
             case _: VariableArg if arg.allowsFresh.contains(arg.name) => (Nil, Nil)
