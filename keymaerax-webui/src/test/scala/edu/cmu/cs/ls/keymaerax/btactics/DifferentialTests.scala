@@ -742,6 +742,18 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1).succ should contain theSameElementsAs List("[{dx'=0,dy'=0}](dx=dx_0&dy=dy_0)".asFormula)
   }
 
+  it should "not duplicate ghosts with multiple occurrences of old" in withMathematica { qeTool =>
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=5}]x>0".asFormula)),
+      dC("x>=old(x)".asFormula)(1) <(dC("x>=2*old(x)-old(x)".asFormula)(1), skip))
+    result.subgoals should have size 3
+    result.subgoals(0).ante should contain theSameElementsAs "x_0>0".asFormula::"x_0=x".asFormula::Nil
+    result.subgoals(0).succ should contain theSameElementsAs "[{x'=5&(true&x>=x_0)&x>=2*x_0-x_0}]x>0".asFormula::Nil
+    result.subgoals(1).ante should contain theSameElementsAs "x_0>0".asFormula::"x_0=x".asFormula::Nil
+    result.subgoals(1).succ should contain theSameElementsAs "[{x'=5}]x>=x_0".asFormula::Nil
+    result.subgoals(2).ante should contain theSameElementsAs "x_0>0".asFormula::"x_0=x".asFormula::Nil
+    result.subgoals(2).succ should contain theSameElementsAs "[{x'=5&true&x>=x_0}]x>=2*x_0-x_0".asFormula::Nil
+  }
+
   it should "cut in multiple formulas" in withMathematica { qeTool =>
     val result = proveBy(Sequent(IndexedSeq("v>=0".asFormula, "x>0".asFormula), IndexedSeq("[{x'=v,v'=2}]x>=0".asFormula)),
       dC("v>=0".asFormula, "x>=old(x)".asFormula)(1))
@@ -1473,17 +1485,38 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 & t_+x>0)".asFormula)
   }
 
-  it should "solve diamond ODE" in withMathematica { tool =>
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("<{x'=1}>x>0".asFormula)), solve(1))
+  it should "solve diamond ODE" in withMathematica { _ =>
+    val result = proveBy("x>0 ==> <{x'=1}>x>0".asSequent, solve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
     result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 & t_+x>0)".asFormula)
+  }
+
+  it should "solve diamond ODE in context" in withMathematica { _ =>
+    val result = proveBy("x>0, v>=0 ==> [v:=v;]<{x'=v}>x>0".asSequent, solve(1, 1::Nil))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula, "v>=0".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("[v:=v;]\\exists t_ (t_>=0 & v*t_+x>0)".asFormula)
   }
 
   it should "not lose constant facts" in withMathematica { _ =>
     val result = proveBy("r>0 -> [{v'=1/r}]v>0".asFormula, implyR(1) & solve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs "r>0".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "\\forall t_ (t_>=0 -> 1/r*t_+v>0)".asFormula::Nil
+  }
+
+  it should "not choke on constant fact 'true'" in withMathematica { _ =>
+    val result = proveBy("r>0 & true -> [{v'=1/r}]v>0".asFormula, implyR(1) & andL('L) & solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs "r>0".asFormula::"true".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "\\forall t_ (t_>=0 -> 1/r*t_+v>0)".asFormula::Nil
+  }
+
+  it should "not choke on constant conjunct with 'true'" in withMathematica { _ =>
+    val result = proveBy("r>0 & true -> [{v'=1/r}]v>0".asFormula, implyR(1) & solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs "r>0&true".asFormula::Nil
     result.subgoals.head.succ should contain theSameElementsAs "\\forall t_ (t_>=0 -> 1/r*t_+v>0)".asFormula::Nil
   }
 

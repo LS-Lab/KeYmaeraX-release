@@ -173,7 +173,6 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove = commute" in withMathematica { qetool =>check(equalCommute)}
   it should "prove <=" in withMathematica { qetool =>check(lessEqual)}
   it should "prove ! !=" in withMathematica { qetool =>check(notNotEqual)}
-  it should "prove < negate" in withMathematica { qetool =>check(notGreaterEqual)}
   it should "prove >= flip" in withMathematica { qetool =>check(flipGreaterEqual)}
   it should "prove > flip" in withMathematica { qetool =>check(flipGreater)}
   it should "prove <= flip" in withMathematica { qetool =>check(flipLessEqual)}
@@ -256,7 +255,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "tactically prove = commute" in withMathematica { qeTool => check(equalCommute)}
   it should "tactically prove <=" in withMathematica { qeTool => check(lessEqual)}
   it should "tactically prove ! !=" in withMathematica { qeTool => check(notNotEqual)}
-  it should "tactically prove < negate" in withMathematica { qeTool => check(notGreaterEqual)}
+  it should "tactically prove ! >=" in withMathematica { qeTool => check(notGreaterEqual)}
   it should "tactically prove >= flip" in withMathematica { qeTool => check(flipGreaterEqual)}
   it should "tactically prove > flip" in withMathematica { qeTool => check(flipGreater)}
   it should "tactically prove all substitute" in {check(allSubstitute)}

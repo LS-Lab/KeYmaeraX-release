@@ -1,24 +1,36 @@
 <div class="modal-header" >
     <h4 class="modal-title">Report this error to <b>bug@keymaerax.org</b> by clicking <kbd>Report</kbd>.</h4>
-    <h5 class="modal-title">Make sure to <font color="red">copy all error information</font> shown below to the email content.</h5>
 </div>
-<div class="modal-body" style="overflow: scroll; height: 200px;">
-    ****************************<br>
-    ERROR REPORT<br>
-    ****************************<br>
-    System configuration<br>
-    <br>
-    <pre>{{kyxConfig}}</pre>
-    ----------------------------<br>
-    Error message<br>
-    <br>
-    <pre>{{errorText}}</pre>
-    ----------------------------<br>
-    Error trace<br>
-    <br>
-    <pre>{{errorTrace}}</pre>
+<div class="modal-body">
+    <form>
+        <div class="form-group row">
+            <label class="col-sm-2 col-form-label">(Optional) Description</label>
+            <div class="col-sm-10">
+                <textarea class="form-control" id="userDescription" rows="3" ng-model="userDescription"
+                          placeholder="Please describe what went wrong"></textarea>
+            </div>
+        </div>
+        <div class="form-group row">
+            <label class="col-sm-2 col-form-label"><input type="checkbox" ng-model="omitSysConfig"> Do not want to report system configuration</label>
+            <div class="col-sm-10" style="overflow:scroll">
+                <p class="form-control-static"><pre>{{kyxConfig}}</pre></p>
+            </div>
+        </div>
+        <div class="form-group row">
+            <label class="col-sm-2 col-form-label">Error message</label>
+            <div class="col-sm-10" style="overflow:scroll">
+                <p class="form-control-static">{{errorText}}</p>
+            </div>
+        </div>
+        <div class="form-group row">
+            <label class="col-sm-2 col-form-label">Error trace</label>
+            <div class="col-sm-10" style="overflow:scroll">
+                <p class="form-control-static"><pre>{{errorTrace}}</pre></p>
+            </div>
+        </div>
+    </form>
 </div>
 <div class="modal-footer">
-    <button class="btn btn-primary"><a href="mailto:bug@keymaerax.org?Subject=KeYmaera X error report" style='color: white;text-decoration: none'>Report</a></button>
+    <button class="btn btn-primary"><a ng-href="mailto:bug@keymaerax.org?subject={{subjectText}}&body={{bodyText()}}" style='color: white;text-decoration: none'>Report</a></button>
     <button class="btn btn-primary" ng-click="cancel()">Close</button>
 </div>

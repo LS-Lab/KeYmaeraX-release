@@ -92,7 +92,7 @@ object DerivationInfo {
   private [btactics] val allInfo: List[DerivationInfo] = convert(ProvableSig.rules) ++ List(
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> diamond"
-      , AxiomDisplayInfo(("〈·〉", "<.>"), "<span class=\"k4-axiom-key\">〈a〉P </span> ↔ ¬[a]¬P")
+      , AxiomDisplayInfo(("<·>", "<.>"), "<span class=\"k4-axiom-key\">&langle;a&rangle;P</span> ↔ ¬[a]¬P")
       , "diamond", {case () => HilbertCalculus.diamond}),
     new DerivedAxiomInfo("[] box", "[.]", "box", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom)}),
     new PositionTacticInfo("assignb"
@@ -139,13 +139,13 @@ object DerivationInfo {
       , "iterateb", {case () => HilbertCalculus.iterateb}),
     new DerivedAxiomInfo("<*> iterate", "<*>", "iterated", {case () => HilbertCalculus.iterated}),
     new CoreAxiomInfo("<d> dual"
-      , AxiomDisplayInfo(("<d>", "<d>"), "〈a^d〉P↔¬〈a〉¬P"), "duald", {case () => HilbertCalculus.duald}),
+      , AxiomDisplayInfo(("<d>", "<d>"), "<span class=\"k4-axiom-key\">&langle;a<sup>d</sup>&rangle;P</span>↔¬&langle;a&rangle;¬P"), "duald", {case () => HilbertCalculus.duald}),
     new DerivedAxiomInfo("[d] dual"
-      , AxiomDisplayInfo(("[d]", "[d]"), "[a^d]P↔¬[a]¬P"), "dualb", {case () => HilbertCalculus.dualb}),
+      , AxiomDisplayInfo(("[d]", "[d]"), "<span class=\"k4-axiom-key\">[a<sup>d</sup>]P</span>↔¬[a]¬P"), "dualb", {case () => HilbertCalculus.dualb}),
     new DerivedAxiomInfo("[d] dual direct"
-      , AxiomDisplayInfo(("[d]", "[d]"), "[a^d]P↔<a>P"), "dualDirectb", {case () => HilbertCalculus.useAt(DerivedAxioms.dualbDirectAxiom)}),
+      , AxiomDisplayInfo(("[d]", "[d]"), "<span class=\"k4-axiom-key\">[a<sup>d</sup>]P</span>↔&langle;a&rangle;P"), "dualDirectb", {case () => HilbertCalculus.useAt(DerivedAxioms.dualbDirectAxiom)}),
     new DerivedAxiomInfo("<d> dual direct"
-      , AxiomDisplayInfo(("<d>", "<d>"), "<a^d>P↔[a]P"), "dualDirectd", {case () => HilbertCalculus.useAt(DerivedAxioms.dualdDirectAxiom)}),
+      , AxiomDisplayInfo(("<d>", "<d>"), "<span class=\"k4-axiom-key\">&langle;a<sup>d</sup>&rangle;P</span>↔[a]P"), "dualDirectd", {case () => HilbertCalculus.useAt(DerivedAxioms.dualdDirectAxiom)}),
     new CoreAxiomInfo("K modal modus ponens", "K", "K", {case () => TactixLibrary.K}),
     //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I axiom
   //@todo why isn't the code name just "I"? And the belleExpr could be useAt("I")?
@@ -181,9 +181,9 @@ object DerivationInfo {
       RuleDisplayInfo(
         "Differential Ghost",
         /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
-        /* premises */ List( (List("&Gamma;"), List("∃y [{x′=f(x),y′=a(x)y+b(x) & Q}]P", "&Delta;")) )
+        /* premises */ List( (List("&Gamma;"), List("∃y [{x′=f(x),y′=a(x)*y+b(x) & Q}]P", "&Delta;")) )
       ),
-      List(VariableArg("y"), TermArg("a(x)"), TermArg("b(x)"), FormulaArg("P")),
+      List(VariableArg("y", "y"::Nil), TermArg("a(x)"), TermArg("b(x)"), FormulaArg("P", "y"::Nil)),
       _ =>
         ((y: Variable) =>
           ((t1: Term) =>
@@ -396,7 +396,7 @@ object DerivationInfo {
       , AxiomDisplayInfo(("[]→∧", "[]->^"), "<span class=\"k4-axiom-key\">[a](P→Q∧R)</span> ↔ [a](P→Q) ∧ [a](P→R)")
       , "boxImpliesAnd", {case () => HilbertCalculus.boxImpliesAnd}),
     new DerivedAxiomInfo("<> split"
-      , AxiomDisplayInfo(("<>∨","<>|"), "<span class=\"k4-axiom-key\">〈a〉(P∨Q)</span>↔〈a〉P ∨ 〈a〉Q")
+      , AxiomDisplayInfo(("<>∨","<>|"), "<span class=\"k4-axiom-key\">&langle;a&rangle;(P∨Q)</span>↔&langle;a&rangle;P ∨ &langle;a&rangle;Q")
         , "diamondOr", {case () => useAt(DerivedAxioms.diamondOr)}),
 //    new DerivedAxiomInfo("<> split left", "<>|<-", "diamondSplitLeft", {case () => useAt(DerivedAxioms.diamondSplitLeft)}),
 //    new DerivedAxiomInfo("[] split left", "[]&<-", "boxSplitLeft", {case () => useAt(DerivedAxioms.boxSplitLeft)}),
@@ -455,7 +455,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("! >"
       , AxiomDisplayInfo(("¬>","!>"), "<span class=\"k4-axiom-key\">¬(f>g)</span>↔(f≤g)")
       , "notGreater", {case () => useAt(DerivedAxioms.notGreater)}),
-    new DerivedAxiomInfo("< negate", ("¬≤","!<="), "notGreaterEqual", {case () => useAt(DerivedAxioms.notGreaterEqual)}),
+    new DerivedAxiomInfo("! >=", ("¬≥","!>="), "notGreaterEqual", {case () => useAt(DerivedAxioms.notGreaterEqual)}),
     new DerivedAxiomInfo(">= flip", ">=F", "flipGreaterEqual", {case () => useAt(DerivedAxioms.flipGreaterEqual)}),
     new DerivedAxiomInfo("> flip", ">F", "flipGreater", {case () => useAt(DerivedAxioms.flipGreater)}),
     new DerivedAxiomInfo("<= flip", "<=F", "flipLessEqual", {case () => useAt(DerivedAxioms.flipLessEqual)}),
@@ -600,7 +600,7 @@ object DerivationInfo {
     new InputPositionTacticInfo("allL"
       , RuleDisplayInfo(("∀L", "allL"), (List("&Gamma;","∀x P(x)"), List("&Delta;")),
         List((List("&Gamma;", "P(θ)"),List("&Delta;"))))
-      , List(TermArg("θ"))
+      , List(TermArg("θ", "θ"::Nil))
       , _ => ((t:Term) => SequentCalculus.allL(t)): TypedFunc[Term, BelleExpr]),
     new PositionTacticInfo("allR"
       , RuleDisplayInfo(("∀R", "allR"), (List("&Gamma;"), List("∀x P(x)", "&Delta;")),
@@ -620,7 +620,7 @@ object DerivationInfo {
     new InputPositionTacticInfo("existsR"
       , RuleDisplayInfo(("∃R", "existsR"), (List("&Gamma;"), List("∃x P(x)", "&Delta;")),
         List((List("&Gamma;"),List("P(θ)", "&Delta;"))))
-      , List(TermArg("θ"))
+      , List(TermArg("θ", "θ"::Nil))
       , _ => ((t:Term) => SequentCalculus.existsR(t)): TypedFunc[Term, BelleExpr]),
 
     new PositionTacticInfo("commuteEquivL", ("↔CL", "<->CL"), {case () => SequentCalculus.commuteEquivL}),
@@ -688,7 +688,7 @@ object DerivationInfo {
         ,(List("&Gamma;"), List("&Delta;"))
         ,List(
           (List("&Gamma;", "v=t"),List("&Delta;"))))
-      ,List(TermArg("t"),VariableArg("v")), _ => ((t:Term) => ((v: Option[Variable]) => EqualityTactics.abbrv(t, v)): TypedFunc[Option[Variable], BelleExpr]): TypedFunc[Term, _]),
+      ,List(TermArg("t"),VariableArg("v", "v"::Nil)), _ => ((t:Term) => ((v: Option[Variable]) => EqualityTactics.abbrv(t, v)): TypedFunc[Option[Variable], BelleExpr]): TypedFunc[Term, _]),
     // Proof rule input position tactics
     new InputPositionTacticInfo("cutL", "Cut", List(FormulaArg("cutFormula")),
       _ => ((fml:Formula) => TactixLibrary.cutL(fml)): TypedFunc[Formula, BelleExpr]),
@@ -745,7 +745,7 @@ object DerivationInfo {
       "discreteGhost",
       RuleDisplayInfo(("[:=] ghost", "[:=] ghost"), (List("&Gamma;"),List("P","&Delta;")),
         List((List("&Gamma;"), List("[gv:=gt;]P","&Delta;")))),
-      TermArg("gt") :: VariableArg("gv") :: Nil,
+      TermArg("gt") :: VariableArg("gv", "gv"::Nil) :: Nil,
       _ => ((t:Term) => ((v: Option[Variable]) => DLBySubst.discreteGhost(t, v)): TypedFunc[Option[Variable], BelleExpr]): TypedFunc[Term, _]),
 
     /*new TacticInfo("monb", "Box Monotonicity", {case () => TactixLibrary.monb}),
@@ -921,24 +921,25 @@ object TacticInfo {
 sealed trait ArgInfo {
   val sort: String
   val name: String
+  val allowsFresh: List[String]
 }
-case class FormulaArg (override val name: String) extends ArgInfo {
+case class FormulaArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "formula"
 }
-case class VariableArg (override val name: String) extends ArgInfo {
+case class VariableArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "variable"
 }
-case class ExpressionArg (override val name: String) extends ArgInfo {
+case class ExpressionArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "expression"
 }
-case class TermArg (override val name: String) extends ArgInfo {
+case class TermArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "term"
 }
-case class StringArg (override val name: String) extends ArgInfo {
+case class StringArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "string"
 }
 @deprecated("Until lists are actually added to the concrete syntax of Bellerophon.", "4.2b1")
-case class ListArg (override val name: String, elementSort: String) extends ArgInfo {
+case class ListArg (override val name: String, elementSort: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "list"
 }
 

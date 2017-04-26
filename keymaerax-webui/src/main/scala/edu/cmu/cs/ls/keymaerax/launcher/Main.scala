@@ -76,7 +76,8 @@ object Main {
       edu.cmu.cs.ls.keymaerax.hydra.SSLBoot.main(args)
     }
     else {
-      LoadingDialogFactory() //Intialize the loading dialog.
+      // Initialize the loading dialog splash screen.
+      LoadingDialogFactory()
       edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot.main(args)
     }
   }
@@ -160,23 +161,21 @@ object Main {
         UpdateChecker.needDatabaseUpgrade(databaseVersion).getOrElse(false)) {
       //Exit if KeYmaera X is up to date but the production database belongs to a deprecated version of KeYmaera X.
       //@todo maybe it makes more sense for the JSON file to associate each KeYmaera X version to a list of database and cache versions that work with that version.
+      val backupPath = s"~/.keymaerax/keymaerax.sqlite-$databaseVersion-*"
+      val defaultName = "keymaerax.sqlite"
       try {
-        upgradeDatabase(databaseVersion)
-        println("Successful database upgrade to version: " + SQLite.ProdDB.getConfiguration("version").config("version"))
+        val upgradedVersion = upgradeDatabase(databaseVersion)
+        if (UpdateChecker.needDatabaseUpgrade(upgradedVersion).getOrElse(false)) {
+          val message = upgradeFailedMessage(defaultName, backupPath)
+          println(message)
+          JOptionPane.showMessageDialog(null, message)
+          System.exit(-1)
+        } else {
+          println("Successful database upgrade to version: " + SQLite.ProdDB.getConfiguration("version").config("version"))
+        }
       } catch {
         case e: Throwable =>
-          val backupPath = s"~/.keymaerax/keymaerax.sqlite-$databaseVersion-*"
-          val defaultName = "keymaerax.sqlite"
-          val message =
-            s"""
-              |Your KeYmaera X database is not compatible with this version of KeYmaera X.
-              |Automated upgrade failed and changes have been rolled back.
-              |Additionally, a backup copy of your current database was placed at $backupPath.
-              |Please revert to an old version of KeYmaera X.
-              |If necessary, restore the backup database from $backupPath back to $defaultName.
-              |
-              |Internal error details:
-            """.stripMargin
+          val message = upgradeFailedMessage(defaultName, backupPath) + "\n\nInternal error details:"
           println(message)
           e.printStackTrace()
           JOptionPane.showMessageDialog(null, message)
@@ -185,6 +184,29 @@ object Main {
     }
     else {} //getOrElse(false) ignores cases where we couldn't download some needed information.
   }
+
+  private def upgradeFailedMessage(defaultName: String, backupPath: String): String = s"""
+       |Your KeYmaera X database is not compatible with this version of KeYmaera X.
+       |Automated upgrade failed and changes have been rolled back.
+       |Additionally, a backup copy of your current database was placed at
+       |$backupPath.
+       |To upgrade KeYmaera X, please follow these steps:
+       |1. Make a database backup by copying
+       |   ~/.keymaerax/$defaultName
+       |   and
+       |   $backupPath
+       |   to a safe place
+       |2. Revert to your previous version of KeYmaera X
+       |3. Export your models and proofs into an archive file (.kya) using the Web UI
+       |   model list page's "Export all (with proofs)" button and store the file in
+       |   a safe place. If you want to export only select models and proofs, use the export
+       |   buttons in the model list instead. If necessary, restore the backup database
+       |   from $backupPath back to $defaultName before exporting
+       |4. Delete the database ~/.keymaerax/$defaultName
+       |5. Upgrade and start KeYmaera X. The models and proofs pages will now be empty.
+       |6. Import the models and proofs from the .kya file of step 3, using the Web UI
+       |   model list page's upload functionality: "Select file" and then press "Upload"
+       |   """.stripMargin
 
   private def backupDatabase(currentVersion: String): Unit = {
     val src = new File(SQLite.ProdDB.dblocation)
@@ -210,16 +232,18 @@ object Main {
     }
   }
 
-  private def upgradeDatabase(currentVersion: String): Unit = {
+  /** Runs auto-upgrades from the current version, returns the version after upgrade */
+  private def upgradeDatabase(currentVersion: String): String = {
+    backupDatabase(currentVersion)
     val upgradeScripts = io.Source.fromInputStream(getClass.getResourceAsStream("/sql/upgradescripts.json")).mkString
     val scripts = upgradeScripts.parseJson.asJsObject.fields("autoUpgrades").asInstanceOf[JsArray]
     val currentScripts = scripts.elements.filter(_.asJsObject.fields("upgradeFrom").convertTo[String] == currentVersion)
     if (currentScripts.nonEmpty) {
-      backupDatabase(currentVersion)
       currentScripts.map(_.asJsObject.fields("scripts").asInstanceOf[JsArray]).foreach(script =>
         script.elements.foreach(s => runUpgradeScript(s.asJsObject.fields("url").convertTo[String]))
       )
     }
+    SQLite.ProdDB.getConfiguration("version").config("version")
   }
 
   def processIsAlive(proc : Process) = {

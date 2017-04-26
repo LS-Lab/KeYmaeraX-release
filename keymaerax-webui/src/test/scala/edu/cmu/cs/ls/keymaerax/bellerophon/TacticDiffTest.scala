@@ -11,6 +11,8 @@ import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 
 import scala.collection.immutable._
 
+import org.scalatest.Inside._
+
 
 /**
   * Tests tactic diff.
@@ -155,6 +157,190 @@ class TacticDiffTest extends TacticTestBase {
         c2 shouldBe BelleParser("hideR(2)")
         diff._2 should contain theSameElementsAs List((c0, BelleParser("notL(-1)")), (c1, BelleParser("nil")), (c3, BelleParser("hideR(3)")))
         diff._3 should contain theSameElementsAs List((c0, BelleParser("notR(1)")), (c1, BelleParser("hideL(-1)")), (c3, BelleParser("andR(1) & <(hideR(3), hideR(4))")))
+    }
+  }
+
+  it should "extend a sequential composition" in {
+    val t1 = BelleParser("implyR(1) ; andL(-1)")
+    val t2 = BelleParser("implyR(1) ; andL(-1) ; orR(1)")
+    val diff = TacticDiff.diff(t1, t2)
+    inside (diff._1.t) {
+      case SeqTactic(c0, SeqTactic(c1, c2: BelleDot)) =>
+        c0 shouldBe BelleParser("implyR(1)")
+        c1 shouldBe BelleParser("andL(-1)")
+        diff._2 should contain theSameElementsAs (c2, BelleParser("nil")) :: Nil
+        diff._3 should contain theSameElementsAs (c2, BelleParser("orR(1)")) :: Nil
+    }
+  }
+
+  it should "extend a sequential composition 2" in {
+    val t1 = BelleParser("implyR(1) ; andL(-1)")
+    val t2 = BelleParser("(implyR(1) ; andL(-1)) ; orR(1)")
+    val diff = TacticDiff.diff(t1, t2)
+    //@todo strange result, but irrelevant
+    inside (diff._1.t) {
+      case SeqTactic(SeqTactic(c0, c1: BelleDot), c2: BelleDot) =>
+        c0 shouldBe BelleParser("implyR(1)")
+        diff._2 should contain theSameElementsAs (c1, BelleParser("nil")) :: (c2, BelleParser("andL(-1)")) :: Nil
+        diff._3 should contain theSameElementsAs (c1, BelleParser("andL(-1)")) :: (c2, BelleParser("orR(1)")) :: Nil
+    }
+  }
+
+  it should "extend an atom underneath a branch" in {
+    val t1 = BelleParser("orL(-1) ; <(nil, andL(-1))")
+    val t2 = BelleParser("orL(-1) ; <(nil, andL(-1) ; orR(1))")
+    val diff = TacticDiff.diff(t1, t2)
+    inside (diff._1.t) {
+      case SeqTactic(c0, BranchTactic(c1 :: SeqTactic(c2, c3: BelleDot) :: Nil)) =>
+        c0 shouldBe BelleParser("orL(-1)")
+        c1 shouldBe BelleParser("nil")
+        c2 shouldBe BelleParser("andL(-1)")
+        diff._2 should contain theSameElementsAs (c3, BelleParser("nil"))::Nil
+        diff._3 should contain theSameElementsAs (c3, BelleParser("orR(1)"))::Nil
+    }
+  }
+
+  it should "extend a sequential composition underneath a branch" in {
+    val t1 = BelleParser("orL(-1) ; <(nil, andL(-1) ; andL(-2))")
+    val t2 = BelleParser("orL(-1) ; <(nil, andL(-1) ; andL(-2) ; orR(1))")
+    val diff = TacticDiff.diff(t1, t2)
+    inside (diff._1.t) {
+      case SeqTactic(c0, BranchTactic(c1 :: SeqTactic(c2, SeqTactic(c3, (c4: BelleDot))) :: Nil)) =>
+        c0 shouldBe BelleParser("orL(-1)")
+        c1 shouldBe BelleParser("nil")
+        c2 shouldBe BelleParser("andL(-1)")
+        c3 shouldBe BelleParser("andL(-2)")
+        diff._2 should contain theSameElementsAs (c4, BelleParser("nil"))::Nil
+        diff._3 should contain theSameElementsAs (c4, BelleParser("orR(1)"))::Nil
+    }
+  }
+
+  it should "extend an atom inside either" in {
+    val t1 = BelleParser("andL(-1) | andL(-2) ")
+    val t2 = BelleParser("andL(-1) | (andL(-2) ; andL(-3))")
+    val diff = TacticDiff.diff(t1, t2)
+    inside (diff._1.t) {
+      case EitherTactic(c0, SeqTactic(c1, c2: BelleDot)) =>
+        c0 shouldBe BelleParser("andL(-1)")
+        c1 shouldBe BelleParser("andL(-2)")
+        diff._2 should contain theSameElementsAs (c2, BelleParser("nil"))::Nil
+        diff._3 should contain theSameElementsAs (c2, BelleParser("andL(-3)"))::Nil
+    }
+  }
+
+  it should "extend a sequential inside either" in {
+    val t1 = BelleParser("andL(-1) | (andL(-2) ; andL(-3))")
+    val t2 = BelleParser("andL(-1) | (andL(-2) ; andL(-3) ; andL(-4))")
+    val diff = TacticDiff.diff(t1, t2)
+    inside (diff._1.t) {
+      case EitherTactic(c0, SeqTactic(c1, SeqTactic(c2, c3: BelleDot))) =>
+        c0 shouldBe BelleParser("andL(-1)")
+        c1 shouldBe BelleParser("andL(-2)")
+        c2 shouldBe BelleParser("andL(-3)")
+        diff._2 should contain theSameElementsAs (c3, BelleParser("nil"))::Nil
+        diff._3 should contain theSameElementsAs (c3, BelleParser("andL(-4)"))::Nil
+    }
+  }
+
+  it should "extend an atom inside saturate" in {
+    val t1 = BelleParser("andL(-1)*")
+    val t2 = BelleParser("(andL(-1) ; andL(-2))*")
+    val diff = TacticDiff.diff(t1, t2)
+    inside (diff._1.t) {
+      case SaturateTactic(SeqTactic(c0, c1: BelleDot)) =>
+        c0 shouldBe BelleParser("andL(-1)")
+        diff._2 should contain theSameElementsAs (c1, BelleParser("nil"))::Nil
+        diff._3 should contain theSameElementsAs (c1, BelleParser("andL(-2)"))::Nil
+    }
+  }
+
+  it should "extend a sequential inside saturate" in {
+    val t1 = BelleParser("(andL(-1) ; andL(-2))*")
+    val t2 = BelleParser("(andL(-1) ; andL(-2) ; andL(-3))*")
+    val diff = TacticDiff.diff(t1, t2)
+    inside (diff._1.t) {
+      case SaturateTactic(SeqTactic(c0, SeqTactic(c1, c2: BelleDot))) =>
+        c0 shouldBe BelleParser("andL(-1)")
+        c1 shouldBe BelleParser("andL(-2)")
+        diff._2 should contain theSameElementsAs (c2, BelleParser("nil"))::Nil
+        diff._3 should contain theSameElementsAs (c2, BelleParser("andL(-3)"))::Nil
+    }
+  }
+
+  it should "extend an atom inside repeat" in {
+    val t1 = BelleParser("andL(-1)*3")
+    val t2 = BelleParser("(andL(-1) ; andL(-2))*3")
+    val diff = TacticDiff.diff(t1, t2)
+    inside (diff._1.t) {
+      case RepeatTactic(SeqTactic(c0, c1: BelleDot), _) =>
+        c0 shouldBe BelleParser("andL(-1)")
+        diff._2 should contain theSameElementsAs (c1, BelleParser("nil"))::Nil
+        diff._3 should contain theSameElementsAs (c1, BelleParser("andL(-2)"))::Nil
+    }
+  }
+
+  it should "extend a sequential inside repeat" in {
+    val t1 = BelleParser("(andL(-1) ; andL(-2))*3")
+    val t2 = BelleParser("(andL(-1) ; andL(-2) ; andL(-3))*3")
+    val diff = TacticDiff.diff(t1, t2)
+    inside (diff._1.t) {
+      case RepeatTactic(SeqTactic(c0, SeqTactic(c1, c2: BelleDot)), _) =>
+        c0 shouldBe BelleParser("andL(-1)")
+        c1 shouldBe BelleParser("andL(-2)")
+        diff._2 should contain theSameElementsAs (c2, BelleParser("nil"))::Nil
+        diff._3 should contain theSameElementsAs (c2, BelleParser("andL(-3)"))::Nil
+    }
+  }
+
+  it should "extend an atom inside onall" in {
+    val t1 = BelleParser("doall(andL(-1))")
+    val t2 = BelleParser("doall(andL(-1) ; andL(-2))")
+    val diff = TacticDiff.diff(t1, t2)
+    inside (diff._1.t) {
+      case OnAll(SeqTactic(c0, c1: BelleDot)) =>
+        c0 shouldBe BelleParser("andL(-1)")
+        diff._2 should contain theSameElementsAs (c1, BelleParser("nil"))::Nil
+        diff._3 should contain theSameElementsAs (c1, BelleParser("andL(-2)"))::Nil
+    }
+  }
+
+  it should "extend a sequential inside onall" in {
+    val t1 = BelleParser("doall(andL(-1) ; andL(-2))")
+    val t2 = BelleParser("doall(andL(-1) ; andL(-2) ; andL(-3))")
+    val diff = TacticDiff.diff(t1, t2)
+    inside (diff._1.t) {
+      case OnAll(SeqTactic(c0, SeqTactic(c1, c2: BelleDot))) =>
+        c0 shouldBe BelleParser("andL(-1)")
+        c1 shouldBe BelleParser("andL(-2)")
+        diff._2 should contain theSameElementsAs (c2, BelleParser("nil"))::Nil
+        diff._3 should contain theSameElementsAs (c2, BelleParser("andL(-3)"))::Nil
+    }
+  }
+
+  //@todo not yet supported in diff
+  it should "extend an atom inside let" ignore {
+    val t1 = BelleParser("let ({`x=y`}) in (andL(-1))")
+    val t2 = BelleParser("let ({`x=y`}) in (andL(-1) ; andL(-2))")
+    val diff = TacticDiff.diff(t1, t2)
+    inside (diff._1.t) {
+      case Let(_, _, SeqTactic(c0, c1: BelleDot)) =>
+        c0 shouldBe BelleParser("andL(-1)")
+        diff._2 should contain theSameElementsAs (c1, BelleParser("nil"))::Nil
+        diff._3 should contain theSameElementsAs (c1, BelleParser("andL(-2)"))::Nil
+    }
+  }
+
+  //@note not yet supported in diff
+  it should "extend a sequential inside let" ignore {
+    val t1 = BelleParser("let ({`x=y`}) in (andL(-1) ; andL(-2))")
+    val t2 = BelleParser("let ({`x=y`}) in (andL(-1) ; andL(-2) ; andL(-3))")
+    val diff = TacticDiff.diff(t1, t2)
+    inside (diff._1.t) {
+      case Let(_, _, SeqTactic(c0, SeqTactic(c1, c2: BelleDot))) =>
+        c0 shouldBe BelleParser("andL(-1)")
+        c1 shouldBe BelleParser("andL(-2)")
+        diff._2 should contain theSameElementsAs (c2, BelleParser("nil"))::Nil
+        diff._3 should contain theSameElementsAs (c2, BelleParser("andL(-3)"))::Nil
     }
   }
 

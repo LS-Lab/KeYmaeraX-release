@@ -34,7 +34,8 @@ object AnonymousLemmas {
     assert(p.conclusion.ante.isEmpty && p.conclusion.succ.size == 1, "Can store only lemmas with sequents of the form `|- conclusion`, but got " + p.conclusion.prettyString)
     //@todo store tactic as evidence and link lookup to tactic extraction
     val evidence = ToolEvidence(immutable.List("input" -> p.conclusion.prettyString, "output" -> "true")) :: Nil
-    val id = lemmaDB.add(Lemma(p, evidence, Some(generateName(p.conclusion.succ.head, namespace))))
+    val id = lemmaDB.add(Lemma(p, Lemma.requiredEvidence(p, evidence),
+      Some(generateName(p.conclusion.succ.head, namespace))))
     getAnonymousLemma(id, p.conclusion.succ.head).get
   }
 

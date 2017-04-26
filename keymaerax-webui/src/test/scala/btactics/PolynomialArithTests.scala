@@ -1,6 +1,6 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.PolynomialArith._
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -225,14 +225,6 @@ class PolynomialArithTests extends TacticTestBase {
     println(reduction(List(p1,p2,p3),p))
   }
 
-  "PolynomialArith" should "generate non-zero squares witness" in withMathematica { qeTool =>
-    val witness = List("x+y+z ".asTerm,"z-b^2".asTerm,"a-b^2*c".asTerm).map( t => (Number(5),t))
-    val pr = assertWitness(witness)
-    pr._1 shouldBe "1+5*(a-b^2*c)^2+5*(z-b^2)^2+5*(x+y+z)^2".asTerm
-    pr._2 shouldBe 'proved
-    pr._2.conclusion.succ(0) shouldBe "1+5*(a-b^2*c)^2+5*(z-b^2)^2+5*(x+y+z)^2>0".asFormula
-  }
-
   "PolynomialArith" should "normalize pure arithmetic sequent" in withMathematica { qeTool =>
     // A sequent of pure arithmetic only has (in)equational formulas (operators >,>=,=  TODO: !=)
     // i.e. no dL, no &, |, <, <= negations, etc.
@@ -289,45 +281,75 @@ class PolynomialArithTests extends TacticTestBase {
     pr._2.conclusion.succ(0) shouldBe "a+b*c*d>0->a+b*c*d+(0+5*(a-b^2*c)^2+5*(z-b^2)^2+5*(x+y+z)^2)>0".asFormula
   }
 
-  "PolynomialArith" should "prove RWV example with oracle witness" in withMathematica { qeTool =>
-    val antes = IndexedSeq("x - y -1*a^2","z-b^2","z*(y-x)*c^2-1").map(t => Equal(t.asTerm,Number(0)))
-
-    val seq = Sequent(antes,IndexedSeq())
-    //The witness is 1+ 1*(a*b*c)^2
-    val w = ("1".asTerm,"(a*b*c)".asTerm)
-
-    val insts = List((1,"a^2*c^2".asTerm),(0,"z*c^2".asTerm),(2,"1".asTerm))
-
-    //Guided reduction
-    val pr1 = proveBy(seq,witnessTac(List(w),Some(insts)))
-
-    //Since the input happens to be a groebner basis, we can use confluent automated reduction
-    val pr2 = proveBy(seq,witnessTac(List(w)))
-    val pr3 = proveBy(seq,witnessTac(List(w)))
-    val pr4 = proveBy(seq,witnessTac(List(w)))
-
-    pr1 shouldBe 'proved
-    pr2 shouldBe 'proved
-    pr3 shouldBe 'proved
-    pr4 shouldBe 'proved
-  }
-
-  "PolynomialArith" should "prove JH's example with real nullstellensatz" in withMathematica { qeTool =>
+  "PolynomialArith" should "prove JH's example using special case witness (g=1)" in withMathematica { qeTool =>
 
     //One direction of the quadratic formula (non-zeroness of determinants)
     val antes = IndexedSeq("a*x^2 + b*x + c=0").map(_.asFormula)
     val succ = IndexedSeq("b^2-4*a*c >= 0").map(_.asFormula)
 
-    val witness = List(("1".asTerm,"2*a*x*wit_+b*wit_".asTerm))
-    val insts = List((0,"-4*a*wit_^2".asTerm),(1,"1".asTerm))
+    val ineq = List()
+    val linear = List((0,"c","-a*x^2 - b*x","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm))
+    val witness = List(("4","a*wit_*x + 1/2*b*wit_")).map( s => (s._1.asTerm,s._2.asTerm))
+    val insts = List((0,"1")).map (s => (s._1,s._2.asTerm))
 
     //For this problem, the ante/succ pair is already a groebner basis in degrevlex ordering
-    val res = proveBy(Sequent(antes,succ),prepareArith & DebuggingTactics.print("after norm") & witnessTac(witness))
+    val res = proveBy(Sequent(antes,succ),prepareArith & printGoal & linearElim(linear) & genWitnessTac(ineq,witness))
     //Alternatively, we can compute the cofactors
-    val res2 = proveBy(Sequent(antes,succ),prepareArith & witnessTac(witness,Some(insts)))
+    val res2 = proveBy(Sequent(antes,succ),prepareArith & linearElim(linear) & genWitnessTac(ineq,witness,Some(insts)))
 
     res shouldBe 'proved
     res2 shouldBe 'proved
+  }
+
+  "PolynomialArith" should "prove more JH examples (1)" in withMathematica { qeTool =>
+
+    val antes = IndexedSeq("0<=a","0<=b","0<=c","c*(2*a+b)^3/27 <= x").map(_.asFormula)
+    val succ = IndexedSeq("c*a^2*b <=x").map(_.asFormula)
+    val ineq = List(0)
+    val linear = List((4,"a","wit_^2","-1"),(3,"b","wit__3^2","-1"),(2,"c","wit__2^2","-1"),(0,"x","wit_^4*wit__2^2*wit__3^2 - wit__0^2","-1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm))
+    val witness = List(("8/27","wit_^3*wit__0*wit__2 - wit_*wit__0*wit__2*wit__3^2"),("1/27","-wit_^2*wit__0*wit__2*wit__3 + wit__0*wit__2*wit__3^3"),("1","wit__0*wit__1")).map( s => (s._1.asTerm,s._2.asTerm))
+
+    //For this problem, the ante/succ pair is already a groebner basis in degrevlex ordering
+    val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& linearElim(linear) & genWitnessTac(ineq,witness))
+
+    res shouldBe 'proved
+  }
+
+  "PolynomialArith" should "prove more JH examples (2)" in withMathematica { qeTool =>
+
+    val antes = IndexedSeq("1<=t","t<=1").map(_.asFormula)
+    val succ = IndexedSeq("0<=1+r^2-2*r*t").map(_.asFormula)
+    val ineq = List(0)
+    val linear = List((1,"t","-wit__1^2 + 1","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm))
+    val witness = List(("1","-r*wit__0 + wit__0"),("1/2","-r*wit_ + wit__0^2*wit_"),("1/2","r*wit__1 + wit__0^2*wit__1")).map( s => (s._1.asTerm,s._2.asTerm))
+    val insts = Some(List((0,"-2*r*wit_^2 + r^2 - 2*r + 1"),(1,"-1/2*wit__0^4 - 4*r^2*wit__1^2 - 2*r^3 - r*wit__0^2 + 7/2*r^2 - 2*r")).map (s => (s._1,s._2.asTerm)))
+
+    val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& linearElim(linear) & genWitnessTac(ineq,witness,insts))
+    res shouldBe 'proved
+  }
+
+  "PolynomialArith" should "prove more JH examples (3)" in withMathematica { qeTool =>
+
+    val antes = IndexedSeq("a*a+a*b-b*b>=0","2*a+b>=0","c*c+c*d-d*d<=0","d>=0").map(_.asFormula)
+    val succ = IndexedSeq("a*d+c*b+b*d>=0").map(_.asFormula)
+    val ineq = List(0)
+    val linear = List((3,"a","1/2*wit__3^2 - 1/2*b","2"),(1,"d","wit__1^2","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm))
+    val witness = List(("1","wit__0*wit__1*wit__3"),("1/5","wit__3^2*wit__2"),("1/5","2*c*wit_ + wit__1^2*wit_")).map( s => (s._1.asTerm,s._2.asTerm))
+    val insts = Some(List((0,"wit__1^2*wit__3^2"),(1,"-1/5*wit__3^4"),(2,"1/5*wit__1^4 + 4/5*c*wit__1^2 + 4/5*c^2")).map (s => (s._1,s._2.asTerm)))
+    val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& linearElim(linear) & genWitnessTac(ineq,witness,insts))
+    res shouldBe 'proved
+  }
+
+  "PolynomialArith" should "prove more JH examples (4)" in withMathematica { qeTool =>
+    //Same as (3), but >= changed to >, Harrison reports that this is harder for his implementation
+    val antes = IndexedSeq("a*a+a*b-b*b>0","2*a+b>0","c*c+c*d-d*d<=0","d>0").map(_.asFormula)
+    val succ = IndexedSeq("a*d+c*b+b*d>=0").map(_.asFormula)
+    val ineq = List(0)
+    val linear = List((2,"a","1/2*wit__2^2 - 1/2*b","2"),(1,"d","wit__1^2","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm))
+    val witness = List(("1","wit__0*wit__1*wit__2"),("1/5","wit__2^2*wit_"),("1/5","2*c*wit__3 + wit__1^2*wit__3")).map( s => (s._1.asTerm,s._2.asTerm))
+    val insts = Some(List((0,"wit__1^2*wit__2^2"),(1,"1/5*wit__1^4 + 4/5*c*wit__1^2 + 4/5*c^2"),(2,"-1/5*wit__2^4")).map (s => (s._1,s._2.asTerm)))
+    val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& linearElim(linear) & genWitnessTac(ineq,witness,insts))
+    res shouldBe 'proved
   }
 
   "PolynomialArith" should "prove RWV example with general oracle witness" in withMathematica { qeTool =>
@@ -353,4 +375,52 @@ class PolynomialArithTests extends TacticTestBase {
     pr4 shouldBe 'proved
   }
 
+  "PolynomialArith" should "prove non-negativity of the Motzkin polynomial" in withMathematica { qeTool =>
+    //Standard example used in many SOS papers
+    val antes = IndexedSeq()
+    val succ = IndexedSeq("x1^6+x2^4*x3^2+x2^2*x3^4-3*x1^2*x2^2*x3^2>=0").map(_.asFormula)
+    val ineq = List(0)
+    val witness = List(("1","wit_*x1^3"),("1","-9/14*wit_*x1^2*x3 + wit_*x2^2*x3"),("1","-9/14*wit_*x1^2*x2 + wit_*x2*x3^2"),("3/7","x1^4*x2*x3 - 1/2*x1^2*x2^3*x3 - 1/2*x1^2*x2*x3^3"),("3/7","-x1^5*x2 + x1*x2^3*x3^2"),("3/7","-x1^5*x3 + x1*x2^2*x3^3"),("9/28","-x1^2*x2^3*x3 + x1^2*x2*x3^3"),("3/196","wit_*x1^2*x3"),("3/196","wit_*x1^2*x2")).map( s => (s._1.asTerm,s._2.asTerm))
+
+    val res = proveBy(Sequent(antes,succ),prepareArith2 & printGoal& genWitnessTac(ineq,witness))
+    res shouldBe 'proved
+  }
+
+  "PolynomialArith" should "prove JH examples from Monniaux & Corbineau, ITP'11" in withMathematica { qeTool =>
+    val problems = List(
+      Sequent(IndexedSeq("0<=x","0<=y","0<=z","x*y*z=1").map(_.asFormula),IndexedSeq("x+y+z <= (x^2 * z + y^2 * x + z^2 * y)").map(_.asFormula)),
+      //The positive squares heuristic doesn't work for this one
+      //Sequent(IndexedSeq("0<=x","0<=y","0<=z").map(_.asFormula),IndexedSeq("(x^2 * z + y^2 * x + z^2 * y)^3 <= ((x * y * z)^2 * (x + y + z)^3)").map(_.asFormula)),
+      Sequent(IndexedSeq("(a^2 = (k^2 + 1) * b^2)","1<=k","1<=a","1<=b").map(_.asFormula),IndexedSeq("(a - k * b) < b").map(_.asFormula))
+    )
+    val ineq = List(0)
+    val witness = List(("1","wit_*x1^3"),("1","-9/14*wit_*x1^2*x3 + wit_*x2^2*x3"),("1","-9/14*wit_*x1^2*x2 + wit_*x2*x3^2"),("3/7","x1^4*x2*x3 - 1/2*x1^2*x2^3*x3 - 1/2*x1^2*x2*x3^3"),("3/7","-x1^5*x2 + x1*x2^3*x3^2"),("3/7","-x1^5*x3 + x1*x2^2*x3^3"),("9/28","-x1^2*x2^3*x3 + x1^2*x2*x3^3"),("3/196","wit_*x1^2*x3"),("3/196","wit_*x1^2*x2")).map( s => (s._1.asTerm,s._2.asTerm))
+
+    val res = problems.map( s => proveBy(s,prepareArith2 & printGoal)) //& genWitnessTac(ineq,witness))
+
+  }
+
+  "PolynomialArith" should "remove division from antecedents" in withMathematica { qeTool =>
+    val antes = IndexedSeq("x/y + a/b + c * d","a+b*c/2","5","X() +A()+B()/C()").map(t => Equal(t.asTerm,Number(0)))
+    val seq = Sequent(antes,IndexedSeq())
+    println(proveBy(seq,ratFormTac(0,true,true)))
+    println(proveBy(seq,ratFormTac(0,true,false)))
+  }
+
+  "PolynomialArith" should "normalise sequent without changing structure" in withMathematica { qeTool =>
+    val antes = IndexedSeq(
+      "a + b = c | (d <= 0 & c = 5)".asFormula,
+      "x + 2/5*y >=z & F() < G()".asFormula,
+      "d * f = 12 & 2 * a -5 + 2 * c= b".asFormula
+    )
+    val succs = IndexedSeq(
+      "k = z".asFormula,
+      "g() <= f()".asFormula,
+      "K() > A+2*B+C & A<=B+C*D | E=0".asFormula
+    )
+
+    val pr = proveBy(Sequent(antes,succs), normaliseNNF)
+    println(pr)
+
+  }
 }

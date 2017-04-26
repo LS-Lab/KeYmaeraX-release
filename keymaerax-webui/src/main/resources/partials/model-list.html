@@ -81,17 +81,17 @@
                  data-intro="Click 'Import' to add tutorials to your models overview."
                  data-position="bottom">
                 <div style="margin-bottom: 10px"> <!-- So that carousel doesn't overlap overlay help -->
-                <uib-carousel active="active" interval="5000">
-                    <uib-slide ng-repeat="repo in examples track by repo.id" index="repo.id">
-                        <img ng-src="{{repo.image}}" style="margin:auto;max-height:100%;max-width:100%;">
+                <div uib-carousel active="activeTutorialSlide" interval="5000">
+                    <div uib-slide ng-repeat="repo in examples" index="$index">
+                        <img ng-src="{{repo.image}}" style="margin:auto;max-width:100%;">
                         <div class="k4-examples-carousel-caption">
                             <h4>{{repo.title}} <button class="btn btn-default"
                                                        ng-click="importRepo(repo.url)"
                                                        ng-controller="ModelUploadCtrl">Import</button></h4>
                             <p>{{repo.description}} <small><a ng-href="{{repo.infoUrl}}">Details...</a></small></p>
                         </div>
-                    </uib-slide>
-                </uib-carousel>
+                    </div>
+                </div>
                 </div>
             </div>
     </div>

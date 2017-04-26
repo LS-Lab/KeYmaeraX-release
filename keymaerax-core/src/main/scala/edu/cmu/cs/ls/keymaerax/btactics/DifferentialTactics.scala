@@ -278,12 +278,22 @@ private object DifferentialTactics {
       dc(f)(pos)
     } else {
       val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {
-        val ghost = old match {
-          case v: Variable => TacticHelper.freshNamedSymbol(v, sequent)
-          case _ => TacticHelper.freshNamedSymbol(Variable("old"), sequent)
+        val (ghost: Variable, ghostPos: Option[Position]) = old match {
+          case v: Variable =>
+            sequent.ante.zipWithIndex.find({
+              //@note heuristic to avoid new ghosts on repeated old(v) usage
+              case (Equal(x0: Variable, x: Variable), _) => v==x && x0.name==x.name
+              case _ => false
+            }).map[(Variable, Option[Position])]({ case (Equal(x0: Variable, _), i) => (x0, Some(AntePosition.base0(i))) }).
+              getOrElse((TacticHelper.freshNamedSymbol(v, sequent), None))
+          case _ => (TacticHelper.freshNamedSymbol(Variable("old"), sequent), None)
         }
         (old -> ghost,
-          discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) & TactixLibrary.exhaustiveEqR2L(hide=false)('Llast))
+          ghostPos match {
+            case None => discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) &
+              TactixLibrary.exhaustiveEqR2L(hide=false)('Llast)
+            case Some(gp) => TactixLibrary.exhaustiveEqR2L(hide=false)(gp)
+          })
       }).toList
       ghosts.map(_._2).reduce(_ & _) & dc(replaceOld(f, ghosts.map(_._1).toMap))(pos)
     }
@@ -359,11 +369,37 @@ private object DifferentialTactics {
     */
   private def DG(ghost: DifferentialProgram): DependentPositionTactic = "ANON" byWithInputs (listifiedGhost(ghost), (pos: Position, sequent: Sequent) => {
     val (y, a, b) = DifferentialHelper.parseGhost(ghost)
+    
     sequent.sub(pos) match {
       case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
-        val singular = FormulaTools.singularities(a) ++ FormulaTools.singularities(b)
-        if (!singular.isEmpty) throw new BelleThrowable("Possible singularities during DG(" + ghost + ") will be rejected: " + singular.mkString(",") + " in\n" + sequent.prettyString)
+                
+        //SOUNDNESS-CRITICAL: DO NOT ALLOW SINGULARITIES IN GHOSTS.
+        //@TODO This is a bit hacky. We should either:
+        //  1) try to cut <(nil, dI(1)) NotEqual(v, Number(0)) before doing
+        //     the ghost, and only check for that here; or
+        //  2) insist on NotEqual and provide the user with an errormessage.
+        //But ultimately, we need a systematic way of checking this in the
+        //core (last-case resort could always just move this check into the core and apply
+        //it whenever DG differential ghost is applied, but that's pretty
+        //hacky).
+        val singular = {
+          val evDomFmls = flattenConjunctions(h)
+          (FormulaTools.singularities(a) ++ FormulaTools.singularities(b)).filter(v =>
+            !evDomFmls.contains(Less(v, Number(0)))     &&
+            !evDomFmls.contains(Less(Number(0), v))     &&
+            !evDomFmls.contains(Greater(v, Number(0)))  &&
+            !evDomFmls.contains(Greater(Number(0), v))  &&
+            !evDomFmls.contains(NotEqual(v, Number(0))) &&
+            !evDomFmls.contains(Greater(Number(0), v))  
+          )
+        }
+
+        if (!singular.isEmpty) 
+          throw new BelleThrowable("Possible singularities during DG(" + ghost + ") will be rejected: " + 
+            singular.mkString(",") + " in\n" + sequent.prettyString +
+            "\nWhen dividing by a variable v, try cutting v!=0 into the evolution domain constraint"
+          )
 
         val subst = (us: Option[Subst]) => us.getOrElse(throw BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
           (Variable("y_",None,Real), y) ::

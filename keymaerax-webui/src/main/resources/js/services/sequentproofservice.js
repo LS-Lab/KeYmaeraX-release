@@ -2,6 +2,7 @@ angular.module('keymaerax.services').factory('Agenda', function() {
   var agenda = function() {
     return {
        itemsMap: {},           // { id: { id: String, name: String, isSelected: Bool, path: [ref PTNode] } }, ... }
+       selectedTab: "()",
        selectedId: function() {
          var selected = $.grep(this.items(), function(e, i) { return e.isSelected; });
          if (selected !== undefined && selected.length > 0) return selected[0].id;
@@ -9,13 +10,18 @@ angular.module('keymaerax.services').factory('Agenda', function() {
        },
        itemIds: function() { return Object.keys(this.itemsMap); },
        items: function() {
-         return $.map(this.itemsMap, function(v) {return v;});
+         //@HACK set selectedTab here because angular bootstrap v2.5.0 screws up active=selectedTab when tabs are removed
+         var theItems = $.map(this.itemsMap, function(v) {return v;});
+         var selected = $.grep(theItems, function(e, i) { return e.isSelected; });
+         if (selected !== undefined && selected.length > 0) this.selectedTab = selected[0].id;
+         return theItems;
        },
+       deselect: function(item) { /* do not deselect item, otherwise agenda name textbox won't show */ },
        select: function(item) {
-         //@note bootstrap tab directive sends a select on remove -> only change selection if the item is still on the agenda
-         if (this.itemsMap[item.id] !== undefined) {
-           $.each(this.items(), function(i, e) { e.isSelected = false; });
+         $.each(this.items(), function(i, e) { e.isSelected = false; });
+         if (item) {
            item.isSelected = true;
+           this.selectedTab.tabId = item.id;
          }
        },
        selectById: function(itemId) { this.select(this.itemsMap[itemId]); },
@@ -244,7 +250,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           theProofTree.root = response.data.proofTree.root;
           if (theAgenda.items().length > 0) {
             // select first task if nothing is selected yet
-            if (theAgenda.selectedId() === undefined) theAgenda.items()[0].isSelected = true;
+            if (theAgenda.selectedId() === undefined) theAgenda.select(theAgenda.items()[0]);
           }
           if (response.data.closed || theAgenda.items().length == 0) {
             // proof might be finished
@@ -288,9 +294,10 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           theAgenda.itemsMap[newAgendaItem.id] = newAgendaItem;
         });
         delete theAgenda.itemsMap[oldAgendaItem.id];
+        theAgenda.select(theAgenda.itemsMap[theAgenda.selectedId()]);
         if (theAgenda.itemIds().length == 0 && !theAgenda.proofStatusDisplayed) {
           theAgenda.proofStatusDisplayed == true
-          console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
+          console.log("Emitting agenda.isEmpty from sequentproofservice.js 1");
           $rootScope.$broadcast('agenda.isEmpty', {proofId: proofId});
         }
         if(theAgenda.proofStatusDisplayed == true) {

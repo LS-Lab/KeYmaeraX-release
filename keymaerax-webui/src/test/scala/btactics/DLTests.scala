@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DLBySubst.assignbExists
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.hydra.ProofTree
+import edu.cmu.cs.ls.keymaerax.hydra.DbProofTree
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -587,11 +587,9 @@ class DLTests extends TacticTestBase {
 
     val BelleProvable(result, _) = interpreter(tactic, BelleProvable(ProvableSig.startProof(fml)))
     result.subgoals.size shouldBe 3
-    val finalTree = ProofTree.ofTrace(db.db.getExecutionTrace(proofId.toInt))
-    finalTree.theLeaves should have size result.subgoals.size
-    finalTree.root.children.foreach(c => c.endStep shouldBe 'defined)
-    finalTree.theLeaves.foreach(l => l.goal.startStep shouldBe 'defined)
-    finalTree.theLeaves.foreach(l => l.goal.endStep should not be 'defined)
+    val finalTree = DbProofTree(db.db, proofId.toString).load()
+    finalTree.openGoals.flatMap(_.goal) should contain theSameElementsAs result.subgoals
+    (finalTree.nodes.toSet - finalTree.root).foreach(_.maker shouldBe 'defined)
   }
 
   ignore should "work with multi-variate abstract invariant" in {

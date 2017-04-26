@@ -2,12 +2,13 @@ package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable._
+
+import org.scalatest.LoneElement._
 
 /**
   * Created by yongkiat on 12/19/16.
@@ -51,11 +52,7 @@ class SimplifierV3Tests extends TacticTestBase {
     )
     //todo: A 'not' like mechanism to simplify across multiple succedents?
     val pr = proveBy(Sequent(antes,succs),fullSimpTac())
-    pr.subgoals should contain only
-      Sequent(
-        IndexedSeq("x>=-k".asFormula,"ar>0".asFormula,"x*y=z+y".asFormula,"dhd-(a*t_+dho)=0".asFormula),
-        IndexedSeq("P_()|Q_()|Q()".asFormula,"P_()|Q_()|Q()".asFormula,"true".asFormula)
-      )
+    pr.subgoals.loneElement shouldBe "x>=-k, ar>0, x*y=z+y, dhd-(a*t_+dho)=0 ==> P_()|Q_()|Q(), P_()|Q_()|Q(), true".asSequent
 
     //If ground arithmetic simplification is desired, it can be mixed in
 //    val pr2 = proveBy(Sequent(antes,succs),fullSimpTac(taxs=composeIndex(arithGroundIndex,defaultTaxs)))
@@ -66,10 +63,15 @@ class SimplifierV3Tests extends TacticTestBase {
 //      )
   }
 
+  it should "hide resulting true, false" in withMathematica { _ =>
+    val fml = "x>=0, x=0 ==> x<0".asSequent
+    proveBy(fml, SimplifierV3.fullSimpTac()).subgoals.loneElement shouldBe "x=0 ==> ".asSequent
+  }
+
   "SimplifierV3" should "search for close heuristics" in withMathematica { qeTool =>
     val fml = " 0 > x -> x <= 0 & y = 0 & z<x -> x != y+z | x >= 5 -> 5 < x | (x !=5 -> 5<x ) & a = 0 & y = z+a+b & a+z+b = y".asFormula
     val result = proveBy(fml, SimplifierV3.simpTac()(1))
-    result.subgoals.head.succ should contain only "0>x->y=0&z < x->x!=y+z|x>=5->5 < x|!x!=5&a=0&y=z+a+b&a+z+b=y".asFormula
+    result.subgoals.loneElement shouldBe "==> 0>x->y=0&z < x->x!=y+z|x>=5->5 < x|!x!=5&a=0&y=z+a+b&a+z+b=y".asSequent
   }
 
   "SimplifierV3" should "allow controlled custom rewrites" in withMathematica { qeTool =>
@@ -250,6 +252,14 @@ class SimplifierV3Tests extends TacticTestBase {
     val ctxt = IndexedSeq()
     val tactic = simpTac()
     val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
-    println(result)
+    result.subgoals.loneElement shouldBe "==> 4-4.0/3=-3.0/2+1/6+20".asSequent
+  }
+
+  it should "cooperate with chase" in withMathematica { qeTool =>
+    val fml = "!(A = 5 | !3<=6 & B<=1 & C>=7 & !(D+B<=A+C | !(C+D<=F_() & G_()*5=8) | 100=1))".asFormula
+    val ctxt = IndexedSeq()
+    val tactic = simpTac(faxs = composeIndex(defaultFaxs,chaseIndex),taxs = emptyTaxs)
+    val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
+    result.subgoals.loneElement shouldBe "==>  A!=5&(3<=6|B>1|C < 7|D+B<=A+C|(C+D>F_()|G_()*5!=8)|100=1)".asSequent
   }
 }

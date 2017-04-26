@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.awt.GridLayout
 import javax.swing.{JWindow, JLabel, JProgressBar}
+import edu.cmu.cs.ls.keymaerax.core
 
 /**
   * @author Nathan Fulton
@@ -12,6 +13,9 @@ trait LoadingDialog {
   def close() : Unit
 }
 
+/**
+  * Obtain lightweight splash screens or command line status messages about KeYmaera X loading
+  */
 object LoadingDialogFactory {
   var theDialog : Option[LoadingDialog] = None
 
@@ -24,12 +28,12 @@ object LoadingDialogFactory {
     theDialog.get
   }
 
-  def closed() = theDialog = None
+  def closed() = {theDialog = None}
 }
 
 class CLILoadingDialog() extends LoadingDialog {
   private var status : Int = 0
-  override val msg = "Headless KeYmaera X Server is Loading... "
+  override val msg = "Headless KeYmaera X Server " + core.VERSION + " is Loading... "
 
   override def addToStatus(x: Int): Unit = {
     status = status + x
@@ -43,9 +47,12 @@ class CLILoadingDialog() extends LoadingDialog {
   }
 }
 
+/**
+  * Splash screen indicator that the user interface is in the process of loading.
+  */
 class GraphicalLoadingDialog() extends LoadingDialog {
   println("Starting GUI Loading Dialog.")
-  override val msg = "KeYmaera X User Interface is Loading..."
+  override val msg = "KeYmaera X User Interface " + core.VERSION + " is Loading..."
 
   private val progressBar = new JProgressBar()
   //  val progressMonitor = new ProgressMonitor(progressBar, "Initializing HyDRA..", "Binding port 8090", 0, 100)

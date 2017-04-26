@@ -18,7 +18,7 @@ angular.module('keymaerax.controllers').controller('FormulaUploadCtrl',
 );
 
 angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
-  function ($scope, $http, $cookies, $cookieStore, $route, $uibModal, Models, spinnerService) {
+  function ($scope, $http, $cookies, $cookieStore, $route, $uibModal, $location, Models, spinnerService) {
 
      $scope.runPreloadedProof = function(model) {
         $http.post("/models/users/" + $scope.userId + "/model/" + model.id + "/initialize")
@@ -107,7 +107,11 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
       $http.post("models/users/" + $cookies.get('userId') + "/importRepo", repoUrl).success(function(data) {
         $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
           Models.addModels(data);
-          $route.reload();
+          if($location.path() == "/models") {
+            $route.reload();
+          } else {
+            $location.path( "/models" );
+          }
         }).finally(function() { spinnerService.hide('caseStudyImportSpinner'); });
       })
      }
@@ -167,6 +171,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
   });
 
   $scope.examples = [];
+  $scope.activeTutorialSlide = 0;
   $http.get("examples/user/" + $scope.userId + "/all").then(function(response) {
       $scope.examples = response.data;
   });

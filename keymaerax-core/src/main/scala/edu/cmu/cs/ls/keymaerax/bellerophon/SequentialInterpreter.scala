@@ -368,6 +368,8 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
     }
   }
 
+  override def kill(): Unit = listeners.foreach(_.kill())
+
   /** Maps sequents to BelleProvables. */
   private def bval(s: Sequent) = BelleProvable(ProvableSig.startProof(s))
 

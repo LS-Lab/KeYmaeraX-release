@@ -310,28 +310,28 @@ trait RestApi extends HttpService with SLF4JLogging {
     post {
       entity(as[String]) { contents => {
         val tactics = contents.parseJson.asJsObject
-        val request = new TacticDiffRequest(database, proofId, tactics.fields("old").asInstanceOf[JsString].value, tactics.fields("new").asInstanceOf[JsString].value)
+        val request = new TacticDiffRequest(database, tactics.fields("old").asInstanceOf[JsString].value, tactics.fields("new").asInstanceOf[JsString].value)
         completeRequest(request, t)
       }}}
   }}}
 
   val extractLemma = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "lemma") { (userId, proofId) => { pathEnd {
     get {
-      val request = new ExtractLemmaRequest(database, proofId)
+      val request = new ExtractLemmaRequest(database, userId, proofId)
       completeRequest(request, t)
     }
   }}}
 
   val downloadProblemSolution = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "download") { (userId, proofId) => { pathEnd {
     get {
-      val request = new ExtractProblemSolutionRequest(database, proofId)
+      val request = new ExtractProblemSolutionRequest(database, userId, proofId)
       completeRequest(request, t)
     }
   }}}
 
   val downloadModelProofs = (t : SessionToken) => path("models" / "user" / Segment / "model" / Segment / "downloadProofs") { (userId, modelId) => { pathEnd {
     get {
-      val request = new ExtractModelSolutionsRequest(database, Integer.parseInt(modelId) :: Nil,
+      val request = new ExtractModelSolutionsRequest(database, userId, Integer.parseInt(modelId) :: Nil,
         withProofs = true, exportEmptyProof = true)
       completeRequest(request, t)
     }
@@ -341,7 +341,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     get {
       //@note potential performance bottleneck: loads all models just to get ids
       val allModels = database.getModelList(userId).map(_.modelId)
-      val request = new ExtractModelSolutionsRequest(database, allModels, withProofs = true, exportEmptyProof = false)
+      val request = new ExtractModelSolutionsRequest(database, userId, allModels, withProofs = true, exportEmptyProof = false)
       completeRequest(request, t)
     }
   }}}
@@ -349,7 +349,7 @@ trait RestApi extends HttpService with SLF4JLogging {
   val downloadAllModels = (t : SessionToken) => path("models" / "user" / Segment / "downloadAllModels" / Segment) { (userId, proofs) => { pathEnd {
     get {
       val allModels = database.getModelList(userId).map(_.modelId)
-      val request = new ExtractModelSolutionsRequest(database, allModels,
+      val request = new ExtractModelSolutionsRequest(database, userId, allModels,
         withProofs = proofs == "withProofs", exportEmptyProof = true)
       completeRequest(request, t)
     }
@@ -376,10 +376,10 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
-  val proveFromTactic = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "proveFromTactic") { (userId, modelId) => { pathEnd {
+  val createModelTacticProof = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "createTacticProof") { (userId, modelId) => { pathEnd {
     post {
       entity(as[String]) { x => {
-        val request = new ProveFromTacticRequest(database, userId, modelId)
+        val request = new CreateModelTacticProofRequest(database, userId, modelId)
         completeRequest(request, t)
       }}
     }
@@ -402,6 +402,13 @@ trait RestApi extends HttpService with SLF4JLogging {
   val openProof = (t : SessionToken) => path("proofs" / "user" / Segment / Segment) { (userId, proofId) => { pathEnd {
     get {
       val request = new OpenProofRequest(database, userId, proofId)
+      completeRequest(request, t)
+    }
+  }}}
+
+  val initProofFromTactic = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "initfromtactic") { (userId, proofId) => { pathEnd {
+    get {
+      val request = new InitializeProofFromTacticRequest(database, userId, proofId)
       completeRequest(request, t)
     }
   }}}
@@ -450,7 +457,7 @@ trait RestApi extends HttpService with SLF4JLogging {
 
   val stepwiseTrace: SessionToken => Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "trace") { (userId, proofId) => { pathEnd {
     get {
-      val request = new StepwiseTraceRequest(database, userId, proofId.toInt)
+      val request = new StepwiseTraceRequest(database, userId, proofId)
       completeRequest(request, t)
     }
   }}}
@@ -518,6 +525,14 @@ trait RestApi extends HttpService with SLF4JLogging {
       completeRequest(request, t)
     }}
   }}
+
+  val checkInput: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "checkInput" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
+    get {
+      parameters('param, 'type, 'value) { (pName, pType, pValue) =>
+        completeRequest(new CheckTacticInputRequest(database, userId, proofId, nodeId, tacticId, pName, pType, pValue), t)
+      }
+    }
+  }}}
 
   val doInputAt: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "doInputAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
     post {
@@ -947,7 +962,8 @@ trait RestApi extends HttpService with SLF4JLogging {
     userModel2            ::
     deleteModel           ::
     createProof           ::
-    proveFromTactic       ::
+    createModelTacticProof::
+    initProofFromTactic   ::
     importExampleRepo     ::
     deleteProof           ::
     proofListForModel     ::
@@ -971,6 +987,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     doAt                  ::
     doTwoPosAt            ::
     doInputAt             ::
+    checkInput            ::
     doTactic              ::
     doInputTactic         ::
     doCustomTactic        ::

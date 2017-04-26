@@ -68,9 +68,22 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
         case _ => false
       }
     })
-    // emit complicated span only for elements with actual rule
-    //@note problematic for drag&drop
-    wrap(topId + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else ""), s, hasStep, editable)
+
+    //@note base pretty printer emits a quantifier and its variable with same ID -> avoid spans with same ID
+    val isQuantifiedVar = topExpr match {
+      case f: Formula => f.sub(q) match {
+        case Some(quant: Quantified) => !s.startsWith(op(quant).opcode)
+        case _ => false
+      }
+      case _ => false
+    }
+
+    if (isQuantifiedVar) s
+    else {
+      // emit complicated span only for elements with actual rule
+      //@note problematic for drag&drop
+      wrap(topId + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else ""), s, hasStep, editable)
+    }
   }
 
   protected override def pp(q: PosInExpr, term: Term): String = emit(q, term match {

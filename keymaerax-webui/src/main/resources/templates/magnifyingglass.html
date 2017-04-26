@@ -5,8 +5,9 @@
 </div>
 <div class="modal-body">
     <!-- TODO: sequent deduction view -->
-    <uib-tabset justified="true">
-        <uib-tab active="task.isSelected" ng-repeat="task in agenda.items()" id="provingtab">
+    <uib-tabset justified="true" active="agenda.selectedTab">
+        <uib-tab ng-repeat="task in agenda.items() track by task.id" index="task.id"
+                 deselect="agenda.deselect(task)" select="agenda.select(task)">
             <uib-tab-heading>
                 <div class="row" >
                     <div class="col-md-11">

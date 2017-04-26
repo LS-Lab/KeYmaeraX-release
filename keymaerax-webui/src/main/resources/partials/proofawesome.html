@@ -205,26 +205,34 @@
 <div class="row">
     <div class="col-md-12">
         <!-- TODO restrict to < 10 tasks as tabs, then complement the rest with dropdown -->
-        <uib-tabset justified="true" active="agenda.selectedId()">
-            <uib-tab ng-repeat="task in agenda.items()" id="provingtab" index="task.id" select="agenda.select(task)">
+        <uib-tabset justified="true" active="agenda.selectedTab">
+            <uib-tab ng-repeat="task in agenda.items() track by task.id" index="task.id"
+                     deselect="agenda.deselect(task)" select="agenda.select(task)">
                 <uib-tab-heading>
                     <!-- ng-class={'fa fa-tasks':openGoal, 'fa fa-check-square-o':closedGoal} -->
                     <!--<span class="fa fa-tasks"> {{task.goalLabel}}</span>-->
-                    <div class="row" >
-                        <div class="col-md-11"
+                    <div class="row">
+                        <div class="col-md-11" ng-if="$first"
                              data-intro="Each unfinished subgoal of a proof is displayed on its own tab, which shows the current open proof goal at the top. Hover over formulas for tactic advice. Left-click to apply default, right-click for a list of tactics. Hover over &#8866; for tactics that transform the entire subgoal."
-                             data-position="bottom" ng-if="$first">
+                             data-position="bottom">
                             <span class="fa fa-tasks"></span>
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
-                            <span editable-text="task.name" onbeforesave="saveTaskName($data)" buttons="no" blur="submit">
+                            <span ng-if="task.isSelected" ng-cloak editable-text="task.name"
+                                  onbeforesave="saveTaskName($data)" buttons="no" blur="submit">
+                                {{task.name}} {{task.id}}
+                            </span>
+                            <span ng-if="!task.isSelected" ng-cloak>
                                 {{task.name}} {{task.id}}
                             </span>
                         </div>
-                        <div class="col-md-11"
-                             ng-if="!$first">
+                        <div class="col-md-11" ng-if="!$first">
                             <span class="fa fa-tasks"></span>
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
-                            <span editable-text="task.name" onbeforesave="saveTaskName($data)" buttons="no" blur="submit">
+                            <span ng-if="task.isSelected" ng-cloak editable-text="task.name"
+                                  onbeforesave="saveTaskName($data)" buttons="no" blur="submit">
+                                {{task.name}} {{task.id}}
+                            </span>
+                            <span ng-if="!task.isSelected" ng-cloak>
                                 {{task.name}} {{task.id}}
                             </span>
                         </div>
@@ -266,7 +274,7 @@
                 <div style="margin-top:20px;"></div>
 
                 <!-- Tactic -->
-                <div class="row" id="provingtactics">
+                <div class="row" id="provingtactics" ng-if="task.isSelected">
                     <div class="col-md-12">
                         <div class="panel panel-default">
                             <div class="panel-heading">

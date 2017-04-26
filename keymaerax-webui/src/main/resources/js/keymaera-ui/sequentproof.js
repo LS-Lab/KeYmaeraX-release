@@ -253,7 +253,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
     $scope.proofTree.root = proofTree.root;
     if ($scope.agenda.items().length > 0) {
       // select first task if nothing is selected yet
-      if ($scope.agenda.selectedId() === undefined) $scope.agenda.items()[0].isSelected = true;
+      if ($scope.agenda.selectedId() === undefined) $scope.agenda.select($scope.agenda.items()[0]);
     }
 
     updateProof = function(proofTreeNode) {

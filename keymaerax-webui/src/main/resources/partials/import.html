@@ -1,0 +1,22 @@
+<div class="panel panel-default"> <!-- ModelListCtrl per app.js -->
+    <spinner name="caseStudyImportSpinner" ng-cloak>
+        <div class="spinner-overlay"></div>
+        <div class="spinner">
+            <div class="spinner-double-bounce1"></div>
+            <div class="spinner-double-bounce2"></div>
+        </div>
+        <div class="spinner-please-wait">Importing archive, please wait...</div>
+    </spinner>
+
+    <form ng-controller="ModelUploadCtrl">
+        <label for="repoUrl">JSON File</label>
+        <div class="input-group">
+        <input type="text" ng-model="repoUrl" class="form-control" name="repoUrl" id="repoUrl" placeholder="http://"/>
+    <a ng-class="{'input-group-addon':true, 'btn':true, 'btn-default':true}"
+       ng-click="importRepo(repoUrl)" ng-cloak>Upload</a>
+    </form>
+</div> 
+
+
+
+

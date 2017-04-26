@@ -15,6 +15,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 
+import scala.collection.immutable._
+
 /**
   * An Axiomatic ODE solver.
   * Current Limitations:
@@ -50,6 +52,8 @@ object AxiomaticODESolver {
       case Some(Box(ODESystem(o, qq), _)) => (o, qq)
       case Some(Diamond(ODESystem(o, qq), _)) if !instEnd => (o, qq)
       case Some(Diamond(ODESystem(o, qq), _)) if instEnd => throw BelleUnsupportedFailure("Cannot instantiate evolution domain check with duration in diamonds")
+      case Some(f) => throw BelleUnsupportedFailure("Position " + pos + " does not point to a differential equation, but to " + f.prettyString)
+      case None => throw BelleUnsupportedFailure("Position " + pos + " does not point to a differential equation")
     }
 
     val osize = odeSize(ode)
@@ -65,6 +69,8 @@ object AxiomaticODESolver {
     val odeVars = StaticSemantics.boundVars(ode).toSet + DURATION + EVOL_DOM_TIME
     val consts = assumptions.flatMap(FormulaTools.conjuncts).
       filter(StaticSemantics.freeVars(_).toSet.intersect(odeVars).isEmpty).
+      filterNot(f => f==True || f==False). //@todo improve DI
+      map(SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), _, SimplifierV3.defaultFaxs, SimplifierV3.defaultTaxs)._1).
       reduceOption(And).getOrElse(True)
 
     val simpSol = simplifier(pos ++ (if (q == True) PosInExpr(0 :: 1 :: Nil) else PosInExpr(0 :: 1 :: 1 :: Nil)))
@@ -421,24 +427,29 @@ object AxiomaticODESolver {
     //to the domain constraint for recurrences to work. IMO we should probably go for a different implementation of
     //integral and recurrence so that saturating this tactic isn't necessary, and we can just do it all in one shot.
 
+    cutAndProveFml(solnToCut, odeSize+1)(pos)
+  })
+
+  /** Augment ODE with formula `cut`, consider context of size `contextSize` when proving with DI. */
+  def cutAndProveFml(cut: Formula, contextSize: Int = 0): DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
-    val withInitialsPos = pos.topLevel ++ PosInExpr(pos.inExpr.pos.dropRight(odeSize+1))
+    val withInitialsPos = pos.topLevel ++ PosInExpr(pos.inExpr.pos.dropRight(contextSize))
 
     val fact = s.sub(withInitialsPos) match {
       case Some(fml: Formula) =>
-        val odePos = PosInExpr(pos.inExpr.pos.takeRight(odeSize+1))
+        val odePos = PosInExpr(pos.inExpr.pos.takeRight(contextSize))
         val (ctx, modal: Modal) = Context.at(fml, odePos)
         val ODESystem(_, e) = modal.program
         val factFml =
-          if (polarity > 0) Imply(ctx(modal.replaceAt(PosInExpr(0::1::Nil), And(e, solnToCut))), fml)
-          else Imply(fml, ctx(modal.replaceAt(PosInExpr(0::1::Nil), And(e, solnToCut))))
+          if (polarity > 0) Imply(ctx(modal.replaceAt(PosInExpr(0::1::Nil), And(e, cut))), fml)
+          else Imply(fml, ctx(modal.replaceAt(PosInExpr(0::1::Nil), And(e, cut))))
         TactixLibrary.proveBy(factFml,
-          TactixLibrary.implyR(1) & TactixLibrary.dC(solnToCut)(if (polarity > 0) 1 else -1, odePos) <(
+          TactixLibrary.implyR(1) & TactixLibrary.dC(cut)(if (polarity > 0) 1 else -1, odePos) <(
             TactixLibrary.close
             ,
             TactixLibrary.cohideR('Rlast) &
-            DebuggingTactics.debug("Normalizing", ODE_DEBUGGER) & TactixLibrary.assignb(1)*(odeSize+1) &
-            DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done
+              DebuggingTactics.debug("Normalizing", ODE_DEBUGGER) & TactixLibrary.assignb(1)*contextSize &
+              DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done
           )
         )
     }

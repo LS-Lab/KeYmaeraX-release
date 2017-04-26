@@ -46,11 +46,18 @@ object KeYmaeraXProblemParser {
     val result = try { Some(KeYmaeraXParser(input).asInstanceOf[Formula]) } catch { case _: Throwable => None }
     result match {
       case Some(formula) => formula
-      case None =>
-        val (decls, fml) = KeYmaeraXProblemParser.parseProblem(input)
-        val substs = decls.filter(_._2._3.isDefined).map((KeYmaeraXDeclarationsParser.declAsSubstitutionPair _).tupled).toList
-        USubst(substs)(fml)
+      case None => (exhaustiveSubst[Formula] _).tupled(KeYmaeraXProblemParser.parseProblem(input))
     }
+  }
+
+  /** Applies substitutions per `decls` exhaustively to `fml`. */
+  private def exhaustiveSubst[T <: Expression](decls: Declaration, fml: T): T = {
+    val substs = decls.filter(_._2._3.isDefined).map((KeYmaeraXDeclarationsParser.declAsSubstitutionPair _).tupled).toList
+    def exhaustiveSubst(f: T): T = {
+      val fs: T = USubst(substs)(f).asInstanceOf[T]
+      if (fs != f) exhaustiveSubst(fs) else fs
+    }
+    exhaustiveSubst(fml)
   }
 
   /** //almost always the line number where the Problem section begins. (see todo) */
@@ -123,7 +130,9 @@ object KeYmaeraXProblemParser {
     //@note redirect annotation listener to elaborate products
     val annotationListener = parser.annotationListener
     parser.setAnnotationListener((prg, fml) => {
-      annotationListener(elaborateToFunctions(prg, decls), elaborateToFunctions(fml, decls))
+      // make annotations compatible with parse result: add () and expand function declarations
+      val substs = decls.filter(_._2._3.isDefined).map((KeYmaeraXDeclarationsParser.declAsSubstitutionPair _).tupled).toList
+      annotationListener(exhaustiveSubst(decls, elaborateToFunctions(prg, decls)), exhaustiveSubst(decls, elaborateToFunctions(fml, decls)))
     })
 
     val problem : Formula = parser.parse(theProblem.tail :+ Token(EOF, UnknownLocation)) match {

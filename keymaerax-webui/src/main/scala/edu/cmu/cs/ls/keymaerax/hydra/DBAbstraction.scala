@@ -4,21 +4,15 @@
 */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import java.nio.channels.Channels
-
-import _root_.edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Sequent}
+import _root_.edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
 
 import java.io.File
-import java.io.FileOutputStream
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
-import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
 
 import scala.collection.immutable.Nil
-import scala.io.Source
-import spray.json.DefaultJsonProtocol._
 
 //Global setting:
 object DBAbstractionObj {
@@ -37,7 +31,7 @@ object DBAbstractionObj {
 
   val dblocation: String = getLocation(isTest=false)
   println(dblocation)
-  val testLocation = getLocation(isTest=true)
+  val testLocation: String = getLocation(isTest=true)
 }
 
 class ConfigurationPOJO(val name: String, val config: Map[String,String])
@@ -85,7 +79,7 @@ class UserPOJO(val userName: String, val level: Int)
  */
 class ProofPOJO(val proofId:Int, val modelId: Option[Int], val name:String, val description:String,
                 val date:String, val stepCount : Int, val closed : Boolean, val provableId: Option[Int],
-                val temporary: Boolean = false) {
+                val temporary: Boolean = false, val tactic: Option[String]) {
   assert(modelId.isDefined || provableId.isDefined, "Require either model or provable")
 }
 
@@ -95,7 +89,7 @@ case class SequentPOJO(sequentId: Int, provableId: Int)
 
 case class SequentFormulaPOJO(sequentFormulaId: Int, sequentId: Int, isAnte: Boolean, index: Int, formulaStr: String)
 
-case class AgendaItemPOJO(itemId: Int, proofId: Int, initialProofNode:Int, displayName: String)
+case class AgendaItemPOJO(itemId: Int, proofId: Int, initialProofNode: ProofTreeNodeId, displayName: String)
 
 /* See schema for descriptions */
 object ExecutionStepStatus extends Enumeration {
@@ -125,40 +119,44 @@ object ExecutionStepStatus extends Enumeration {
 case class TacticExecutionPOJO(executionId: Int, proofId: Int)
 
 case class ExecutionStepPOJO(stepId: Option[Int], executionId: Int,
-                             previousStep: Option[Int], parentStep: Option[Int],
-                             branchOrder: Option[Int],
-                             branchLabel: Option[String],
-                             alternativeOrder: Int,
+                             previousStep: Option[Int],
+                             branchOrder: Int,
                              status: ExecutionStepStatus,
                              executableId: Int,
                              inputProvableId: Option[Int],
                              resultProvableId: Option[Int],
                              localProvableId: Option[Int],
                              userExecuted: Boolean,
-                             ruleName: String)
+                             ruleName: String,
+                             numSubgoals: Int,
+                             numOpenSubgoals: Int)
 {
-  require(branchOrder.isEmpty != branchLabel.isEmpty) //also schema constraint
+
 }
 
-/* User-friendly representation for execution traces */
-case class ExecutionStep(stepId: Int, executionId: Int, input:ProvableSig, local:Option[ProvableSig], branch:Int, alternativeOrder:Int, rule:String, executableId: Int, isUserExecuted: Boolean = true) {
-  def output: Option[ProvableSig] = local.map{case localProvable => input(localProvable, branch)}
+/** A proof step in a proof execution trace, can be represented as a node in a proof tree. */
+case class ExecutionStep(stepId: Int, prevStepId: Option[Int], executionId: Int,
+                         localProvableLoader: () => ProvableSig, branch: Int, subgoalsCount: Int, openSubgoalsCount: Int,
+                         successorIds: List[Int],
+                         rule: String, executableId: Int, isUserExecuted: Boolean = true) {
+
+  /** Triggers a database call if step was loaded without provables. */
+  def local: ProvableSig = localProvableLoader()
+
 }
 
-case class ExecutionTrace(proofId: String, executionId: String, conclusion: Sequent, steps:List[ExecutionStep]) {
-  def branch = steps.lastOption.map{case step => step.branch}
+case class ExecutionTrace(proofId: String, executionId: String, steps: List[ExecutionStep]) {
+  //@note expensive assert
+  assert(isTraceExecutable(steps), "Trace steps not ordered in descending branches")
 
-  def alternativeOrder =
-    steps match {
-      case Nil => 0
-      case _ => steps.last.alternativeOrder
-    }
-
-  def lastStepId:Option[Int] = {
-    steps.lastOption.map{case step => step.stepId}
+  def isTraceExecutable(steps: List[ExecutionStep]): Boolean = steps match {
+    case Nil => true
+    case step::tail => tail.filter(_.prevStepId == step.prevStepId).forall(_.branch < step.branch) && isTraceExecutable(tail)
   }
 
-  def lastProvable:ProvableSig = steps.lastOption.flatMap(_.output).getOrElse(ProvableSig.startProof(conclusion))
+  def branch: Option[Int] = steps.lastOption.map(_.branch)
+
+  def lastStepId:Option[Int] = steps.lastOption.map(_.stepId)
 }
 
 case class ExecutablePOJO(executableId: Int, belleExpr:String)
@@ -193,10 +191,18 @@ trait DBAbstraction {
 
   def getProofsForUser(userId: String): List[(ProofPOJO, String)]
 
+  /** Indicates whether or not the user `userId` owns the proof `proofId`. */
+  def userOwnsProof(userId: String, proofId: String): Boolean
+
   def openProofs(userId: String): List[ProofPOJO] =
     getProofsForUser(userId).map(_._1).filter(!_.closed)
 
   //Models
+  /** Returns a unique model name by appending an index, if `modelName` already exists. */
+  def getUniqueModelName(userId: String, modelName: String): String
+
+  /** Creates a new model in the database if `name` does not exist yet. Returns the ID of the created model.
+    * Otherwise (if the model name is used already) returns None and the database is unmodified. */
   def createModel(userId: String, name: String, fileContents: String, date: String,
                   description: Option[String] = None, publink: Option[String] = None,
                   title: Option[String] = None, tactic: Option[String] = None): Option[Int]
@@ -213,11 +219,11 @@ trait DBAbstraction {
   def getInvariants(modelId: Int): Map[Expression, Formula]
 
   //Proofs of models
-  def createProofForModel(modelId: Int, name: String, description: String, date: String): Int
+  def createProofForModel(modelId: Int, name: String, description: String, date: String, tactic: Option[String]): Int
 
   // all create functions return ID of created object
-  def createProofForModel(modelId: String, name: String, description: String, date: String): String =
-    createProofForModel(modelId.toInt, name, description, date).toString
+  def createProofForModel(modelId: String, name: String, description: String, date: String, tactic: Option[String]): String =
+    createProofForModel(modelId.toInt, name, description, date, tactic).toString
 
   /** Create a temporary proof without model, starting from 'provable'. */
   def createProof(provable: ProvableSig): Int
@@ -240,16 +246,16 @@ trait DBAbstraction {
   def updateProofName(proofId: Int, name: String): Unit = {
     val info = getProofInfo(proofId)
     updateProofInfo(new ProofPOJO(proofId, info.modelId, name, info.description, info.date,
-      info.stepCount, info.closed, info.provableId, info.temporary))
+      info.stepCount, info.closed, info.provableId, info.temporary, info.tactic))
   }
 
   def updateProofName(proofId: String, name: String): Unit = updateProofName(proofId.toInt, name)
 
   def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String]): Unit
 
-  def addAgendaItem(proofId: Int, initialProofNode: Int, displayName:String): Int
+  def addAgendaItem(proofId: Int, initialProofNode: ProofTreeNodeId, displayName:String): Int
 
-  def getAgendaItem(proofId: Int, initialProofNode: Int): Option[AgendaItemPOJO]
+  def getAgendaItem(proofId: Int, initialProofNode: ProofTreeNodeId): Option[AgendaItemPOJO]
 
   def updateAgendaItem(item:AgendaItemPOJO): Unit
 
@@ -270,12 +276,6 @@ trait DBAbstraction {
 
   /////////////////////
 
-  /** Creates a new execution and returns the new ID in tacticExecutions */
-  def createExecution(proofId: Int): Int
-
-  /** Deletes an execution from the database */
-  def deleteExecution(executionId: Int): Boolean
-
   /**
     * Adds an execution step to an existing execution
     *
@@ -286,16 +286,38 @@ trait DBAbstraction {
   /** Truncate the execution trace at the beginning of alternativeTo and replace it with trace. */
   def addAlternative(alternativeTo: Int, inputProvable: ProvableSig, trace:ExecutionTrace)
 
-  /** Return the sequence of steps that led to the current state of the proof. */
-  def getExecutionTrace(proofID: Int): ExecutionTrace
+  /** Return the sequence of steps that led to the current state of the proof. Loading a trace with provables is slow. */
+  def getExecutionTrace(proofID: Int, withProvables: Boolean=true): ExecutionTrace
 
   /** Return a list of all finished execution steps in the current history of the execution, in the order in which they
     * occurred.
     * @note For most purposes, getExecutionTrace is more convenient, but slower. */
   def getExecutionSteps(executionId: Int) : List[ExecutionStepPOJO]
 
+  /** Returns the first step of the proof */
+  def getFirstExecutionStep(proofId: Int) : Option[ExecutionStepPOJO]
+
+  /** Returns a list of steps that do not have successors for each of their subgoals.
+    * Along with each step, it lists the step's subgoals that are actually closed. */
+  def getPlainOpenSteps(proofId: Int): List[(ExecutionStepPOJO,List[Int])]
+
+  /** Returns the execution step with id `stepId` of proof `proofId` in plain database form. */
+  def getPlainExecutionStep(proofId: Int, stepId: Int): Option[ExecutionStepPOJO]
+
+  /** Returns the successors of the execution step with id `stepId` of proof `proofId` in plain database form. */
+  def getPlainStepSuccessors(proofId: Int, prevStepId: Int, branchOrder: Int): List[ExecutionStepPOJO]
+
+  /** Returns the execution step with id `stepId` of proof `proofId` with all provables etc. filled in. */
+  def getExecutionStep(proofId: Int, stepId: Int): Option[ExecutionStep]
+
+  /** Returns the `subgoal` of execution step `stepId` of proof `proofId`; proof conclusion if both None. */
+  def getStepProvable(proofId: Int, stepId: Option[Int], subgoal: Option[Int]): Option[ProvableSig]
+
   /** Update existing execution step. */
   def updateExecutionStep(executionStepId: Int, step:ExecutionStepPOJO): Unit
+
+  /** Delete an execution step. */
+  def deleteExecutionStep(proofId: Int, stepId: Int): Unit
 
   /////////////////////
   /** Adds a bellerophon expression as an executable and returns the new executableId */

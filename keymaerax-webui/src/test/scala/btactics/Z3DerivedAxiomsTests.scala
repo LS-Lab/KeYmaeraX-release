@@ -123,7 +123,7 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "prove = commute" in withZ3 { qetool =>check(equalCommute)}
   it should "prove <=" in withZ3 { qetool =>check(lessEqual)}
   it should "prove ! !=" in withZ3 { qetool =>check(notNotEqual)}
-  it should "prove < negate" in withZ3 { qetool =>check(notGreaterEqual)}
+  it should "prove ! >=" in withZ3 { qetool =>check(notGreaterEqual)}
   it should "prove >= flip" in withZ3 { qetool =>check(flipGreaterEqual)}
   it should "prove > flip" in withZ3 { qetool =>check(flipGreater)}
   it should "prove <= flip" in withZ3 { qetool =>check(flipLessEqual)}
@@ -145,7 +145,6 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "prove ! <=" in withZ3 { qeTool => check(notLessEqual)}
   it should "prove >" in withZ3 { qeTool => check(greater)}
   it should "prove ! >" in withZ3 { qeTool => check(notGreater)}
-  it should "prove ! >=" in withZ3 { qeTool => check(notGreaterEqual)}
 
   /** Axioms for arithmetic in core (some not yet provable with Z3) */
 //  it should "prove != elimination" ignore withZ3 { qeTool => check(notEqualElim)}
@@ -193,7 +192,7 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "tactically prove = commute" in withZ3 { qeTool => check(equalCommute)}
   it should "tactically prove <=" in withZ3 { qeTool => check(lessEqual)}
   it should "tactically prove ! !=" in withZ3 { qeTool => check(notNotEqual)}
-  it should "tactically prove < negate" in withZ3 { qeTool => check(notGreaterEqual)}
+  it should "tactically prove ! >=" in withZ3 { qeTool => check(notGreaterEqual)}
   it should "tactically prove >= flip" in withZ3 { qeTool => check(flipGreaterEqual)}
   it should "tactically prove > flip" in withZ3 { qeTool => check(flipGreater)}
   it should "tactically prove all substitute" in {check(allSubstitute)}

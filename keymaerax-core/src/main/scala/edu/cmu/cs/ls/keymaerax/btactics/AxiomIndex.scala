@@ -268,7 +268,7 @@ object AxiomIndex {
         case _: Less => "! <" :: Nil
         case _: LessEqual => "! <=" :: Nil
         case _: Greater => "! >" :: Nil
-        case _: GreaterEqual => "< negate" :: Nil
+        case _: GreaterEqual => "! >=" :: Nil
         case _: Not => "!! double negation" :: Nil
         case _: And => "!& deMorgan" :: Nil
         case _: Or => "!| deMorgan" :: Nil

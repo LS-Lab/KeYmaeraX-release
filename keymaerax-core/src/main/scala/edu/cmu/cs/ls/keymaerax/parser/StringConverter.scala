@@ -37,4 +37,12 @@ class StringConverter(val s: String) {
   def asDifferentialProgram: DifferentialProgram = KeYmaeraXParser.differentialProgramParser(s)
 
   def asTactic : BelleExpr = BelleParser(s)
+
+  def asSequent: Sequent = {
+    val (ante::succ::Nil) = s.split("==>").map(_.trim()).toList
+    Sequent(
+      ante.split(",(?![^{]*})").filter(_.nonEmpty).map(KeYmaeraXParser.formulaParser).toIndexedSeq,
+      succ.split(",(?![^{]*})").filter(_.nonEmpty).map(KeYmaeraXParser.formulaParser).toIndexedSeq
+    )
+  }
 }
