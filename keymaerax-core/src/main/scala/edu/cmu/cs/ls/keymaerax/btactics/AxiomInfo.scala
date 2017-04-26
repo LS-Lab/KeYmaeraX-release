@@ -455,7 +455,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("! >"
       , AxiomDisplayInfo(("¬>","!>"), "<span class=\"k4-axiom-key\">¬(f>g)</span>↔(f≤g)")
       , "notGreater", {case () => useAt(DerivedAxioms.notGreater)}),
-    new DerivedAxiomInfo("< negate", ("¬≤","!<="), "notGreaterEqual", {case () => useAt(DerivedAxioms.notGreaterEqual)}),
+    new DerivedAxiomInfo("! >=", ("¬≥","!>="), "notGreaterEqual", {case () => useAt(DerivedAxioms.notGreaterEqual)}),
     new DerivedAxiomInfo(">= flip", ">=F", "flipGreaterEqual", {case () => useAt(DerivedAxioms.flipGreaterEqual)}),
     new DerivedAxiomInfo("> flip", ">F", "flipGreater", {case () => useAt(DerivedAxioms.flipGreater)}),
     new DerivedAxiomInfo("<= flip", "<=F", "flipLessEqual", {case () => useAt(DerivedAxioms.flipLessEqual)}),
