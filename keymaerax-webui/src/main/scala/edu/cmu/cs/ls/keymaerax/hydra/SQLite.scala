@@ -133,23 +133,30 @@ object SQLite {
       }
     }
 
+    private lazy val lemmaQuery = Compiled((lemmaId: Column[Int]) =>
+      Lemmas.filter(_._Id === lemmaId).map(_.lemma.getOrElse("")))
+
     /** Allow retrieving lemmas in bulk to reduce the number of database queries */
     private[SQLite] def getLemmas(lemmaIds: List[Int]): Option[List[String]] = {
-      //@todo Code Review: This code should be revised to either select in SQL land from lemmaIds, or read all and filter, or read individual ones in a single transaction
       synchronizedTransaction({
-        val lemmaMap = Lemmas.map{row => {
-          val id = row._Id.getOrElse(throw new IllegalStateException("Did not expect lemma with null Id."))
-          //Note: we allow the lemma text to be empty because of the Create / check we got ID / actually write lemma protocol assumed by CachedLemmaDB.
-          //@todo Code Review: for lemmas that are in lemmaIds, assert not None, for all other lemmas, filter them out instead of converting to empty string
-          val lemmaText = row.lemma.getOrElse("")
-          (id, lemmaText)
-        }}.list.toMap
-        try {
-          //@todo Code Review: check that lemmaIds really should not have "" names now
-          Some(lemmaIds.map(lemmaMap(_)))
-        } catch {
-          case _:Exception => None
-        }
+        if (lemmaIds.size > 1) {
+          //@todo Code Review: This code should be revised to either select in SQL land from lemmaIds, or read all and filter, or read individual ones in a single transaction
+          val lemmaMap = Lemmas.map{row => {
+            val id = row._Id.getOrElse(throw new IllegalStateException("Did not expect lemma with null Id."))
+            //Note: we allow the lemma text to be empty because of the Create / check we got ID / actually write lemma protocol assumed by CachedLemmaDB.
+            //@todo Code Review: for lemmas that are in lemmaIds, assert not None, for all other lemmas, filter them out instead of converting to empty string
+            val lemmaText = row.lemma.getOrElse("")
+            (id, lemmaText)
+          }}.list.toMap
+          try {
+            //@todo Code Review: check that lemmaIds really should not have "" names now
+            Some(lemmaIds.map(lemmaMap(_)))
+          } catch {
+            case _:Exception => None
+          }
+        } else if (lemmaIds.size == 1) {
+          Some(lemmaQuery(lemmaIds.head).list)
+        } else Some(Nil)
       })
     }
 
