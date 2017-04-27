@@ -1,9 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentPositionWithAppliedInputTactic, _}
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, FormulaArg, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, FixedGenerator, FormulaArg, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.Inside._
@@ -40,6 +39,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Nil)
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", implyR(1)) should have (
@@ -58,6 +58,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val modelContents = "ProgramVariables. R x. R v. End. Problem. x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Nil)
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", implyR(1))
@@ -73,6 +74,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> [x:=x+1;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Nil)
     val tacticRunner = runTactic(db, t, proofId) _
 
     val response = tacticRunner("()", implyR(2))
@@ -89,6 +91,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val modelContents = "ProgramVariables. R x. R v. End. Problem. x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Nil)
     val tacticRunner = runTactic(db, t, proofId) _
 
     val response = tacticRunner("()", choiceb(1, 1::Nil))
@@ -105,6 +108,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val modelContents = "ProgramVariables. R x. R v. End. Problem. x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Nil)
     val tacticRunner = runTactic(db, t, proofId) _
 
     val response = tacticRunner("()", choiceb(2))
@@ -121,6 +125,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val modelContents = "ProgramVariables. R x. R v. End. Problem. x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Nil)
     val tacticRunner = runTactic(db, t, proofId) _
 
     val response = tacticRunner("()", dG("y'=0*y+2".asDifferentialProgram, None)(1, 1::Nil))
@@ -138,6 +143,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> [x:=x+1;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Nil)
     val tacticRunner = runTactic(db, t, proofId) _
 
     tacticRunner("()", implyR(1))
@@ -151,6 +157,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> [x:=x+1;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Nil)
 
     val response = new GetApplicableAxiomsRequest(db.db, db.user, proofId.toString, "()", SuccPosition(5)).
       getResultingResponses(t).loneElement
@@ -161,6 +168,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> [x:=x+1;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Nil)
 
     val response = new GetApplicableAxiomsRequest(db.db, db.user, proofId.toString, "()", SuccPosition(1)).
       getResultingResponses(t).loneElement
@@ -171,6 +179,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val modelContents = "ProgramVariables. R x. End. Problem. [{x:=x+1;}*@invariant(x>-1)]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Nil)
 
     val response = new GetApplicableAxiomsRequest(db.db, db.user, proofId.toString, "()", SuccPosition(1)).
       getResultingResponses(t).loneElement

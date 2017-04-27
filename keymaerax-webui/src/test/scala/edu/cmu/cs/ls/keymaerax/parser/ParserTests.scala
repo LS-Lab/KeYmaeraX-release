@@ -14,6 +14,7 @@ import scala.collection.immutable._
 
 class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   override def beforeEach(): Unit = { PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp) }
+  override def afterEach(): Unit = { KeYmaeraXParser.setAnnotationListener((prg, fml) =>{}) }
 
   // type declaration header for tests
   def makeInput(program : String) : String = {
