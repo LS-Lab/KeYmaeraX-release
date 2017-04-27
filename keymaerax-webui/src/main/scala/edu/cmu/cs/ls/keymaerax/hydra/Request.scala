@@ -93,9 +93,10 @@ abstract class UserRequest(username: String) extends Request {
   override def permission(t: SessionToken): Boolean = t belongsTo username
 }
 
-abstract class UserProofRequest(db: DBAbstraction, username: String, proofId: String) extends UserRequest(username) {
-  case class ProofSession(proofId: String, invGenerator: Generator[Formula], defs: List[SubstitutionPair])
+/** A proof session storing information between requests. */
+case class ProofSession(proofId: String, invGenerator: Generator[Formula], defs: List[SubstitutionPair])
 
+abstract class UserProofRequest(db: DBAbstraction, username: String, proofId: String) extends UserRequest(username) {
   override final def resultingResponses(): List[Response] = {
     if (proofId == "undefined" || proofId == "null") throw new Exception("The user interface lost track of the proof, please try reloading the page.") //@note Web UI bug
     //@todo faster query for existence
