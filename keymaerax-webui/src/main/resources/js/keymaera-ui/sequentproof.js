@@ -164,7 +164,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
               templateUrl: 'templates/magnifyingglass.html',
               controller: 'MagnifyingGlassDialogCtrl',
               scope: scope,
-              size: 'magnifyingglass',
+              size: 'fullscreen',
               resolve: {
                 proofInfo: function() {
                   return {

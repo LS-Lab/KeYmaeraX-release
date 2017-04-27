@@ -180,7 +180,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
       var modalInstance = $uibModal.open({
         templateUrl: 'partials/modeldialog.html',
         controller: 'ModelDialogCtrl',
-        size: 'lg',
+        size: 'fullscreen',
         resolve: {
           userid: function() { return $scope.userId; },
           modelid: function () { return modelid; }
@@ -249,7 +249,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
       var modalInstance = $uibModal.open({
         templateUrl: 'partials/modeltacticdialog.html',
         controller: 'ModelTacticDialogCtrl',
-        size: 'lg',
+        size: 'fullscreen',
         resolve: {
           userid: function() { return $scope.userId; },
           modelid: function () { return modelid; }
