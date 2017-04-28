@@ -49,13 +49,13 @@ object QELogger {
   def measure(s:Sequent) : Int = s.succ.map(measure).sum + s.ante.map(measure).sum
 
   /**
-    *   A simple Logging facility
-    *   The sequents are separated by a separator (@ (optional name))
+    *   A simple QE logging facility
+    *   Each sequent is recorded together with the underlying conclusion of the provable that it is linked to
+    *   # separates the conclusion and the actual sequent, @ separates lines
     *
-    *   @
-    *   Seq_1
-    *   @ bla
-    *   Seq_2
+    *   @ name_1 # Concl_1 # Seq_1
+    *   @ name_2 # Concl_2 # Seq_2
+    *   @ name_3 # Concl_3 # Seq_3
     *   ...
     *
     *   Sequents with the same name are grouped together when the file is re-parsed
@@ -72,50 +72,72 @@ object QELogger {
     }
   }
 
-  def logSequent(s:Sequent, name :String, filename:String = defaultPath): Unit = {
+  def logSequent(pr:Sequent,s:Sequent, name :String, filename:String = defaultPath): Unit = {
     try {
       val f = scala.tools.nsc.io.File(filename)
-      val namestr = "@"+name+"\n"
-      f.appendAll(namestr+s.toString+"\n")
+      val namestr = "@"+name+"#"+pr.toString+"#"+s.toString+"\n"
+      f.appendAll(namestr)
     }
     catch {
       case ex: Exception => println("Failed to record sequent")
     }
   }
 
-  def parseLog(filename:String = defaultPath) : Map[String,List[Sequent]] = {
+  // Must be of the form Seq # Seq # Seq
+  private def parseStr(s:String) : Option[(String,Sequent,Sequent)] = {
+    val ss = s.split("#")
+    if (ss.length!=3)
+      return None
+    try{
+      val pr = ss(1).asSequent
+      val seq = ss(2).asSequent
+      Some(ss(0),pr,seq)
+    }
+    catch {
+      case ex:Exception => {
+        println("Failed to parse",s)
+        None
+      }
+    }
+  }
+
+  def parseLog(filename:String = defaultPath) : Map[String,List[(Sequent,Sequent)]] = {
+    // Upon reading @, save the previous sequent and provable
     var curString = ""
-    var curName = ""
-    var seqMap = new ListBuffer[(String,Sequent)]()
+
+    var seqMap = new ListBuffer[(String,Sequent,Sequent)]()
     try {
       for (line <- Source.fromFile(filename).getLines()) {
         if(line.startsWith("@")) {
-          if (curString!="") {
-              seqMap += ((curName,curString.asSequent))
+          parseStr(curString) match {
+            case None => ()
+            case Some(p) => seqMap += p
           }
-          curName = line.substring(1)
-          curString = ""
+          curString=line.substring(1)
         }
         else
           curString += line
       }
-      if (curString!="")
-        seqMap += ((curName,curString.asSequent))
+      parseStr(curString) match {
+        case None => ()
+        case Some(p) => seqMap += p
+      }
 
     } catch {
       case ex: Exception => println("File I/O exception")
     }
-    return seqMap.toList.groupBy(_._1).mapValues(_.map(_._2))
+    return seqMap.toList.groupBy(_._1).mapValues(_.map(p => (p._2,p._3)))
   }
 
   type LogConfig = (Int,String)
+  val defaultConf = (0,"")
 
-  def measureRecordQE(lb:LogConfig = (0,"") ): BuiltInTactic = new BuiltInTactic("logQE") {
+  def measureRecordQE(lb:LogConfig = defaultConf  ): BuiltInTactic = new BuiltInTactic("logQE") {
       override def result(pr: ProvableSig): ProvableSig = {
         if(pr.subgoals.length==1) {
           val sequent = pr.subgoals(0)
           if (measure(sequent) > lb._1)
-            logSequent(sequent, lb._2)
+            logSequent(pr.conclusion,sequent, lb._2)
         }
         pr
       }
@@ -127,7 +149,7 @@ object QELogger {
 
   //This bakes the recorder into the QE tactic, so it will record every single QE call, including internal ones made by
   //e.g. the ODE solver
-  def enableLogging(loglevel:LogConfig = (100,"") ) : Unit = {
+  def enableLogging(loglevel:LogConfig = defaultConf ) : Unit = {
     logTactic = measureRecordQE(loglevel)
   }
 
