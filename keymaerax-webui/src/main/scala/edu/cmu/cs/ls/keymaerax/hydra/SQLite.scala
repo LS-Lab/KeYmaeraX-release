@@ -414,13 +414,19 @@ object SQLite {
         val model = getModel(modelId)
         val (decls, problem) = KeYmaeraXProblemParser.parseProblem(model.keyFile)
         val substs = decls.filter(_._2._3.isDefined).map((KeYmaeraXDeclarationsParser.declAsSubstitutionPair _).tupled).toList
-        val provable = ProvableSig.startProof(USubst(substs)(problem))
+
+        val substTactic = tactic match {
+          case None => None
+          case Some(t) => Some(BelleParser.parseWithInvGen(t, None, substs).prettyString)
+        }
+
+        val provable = ProvableSig.startProof(problem)
         val provableId = createProvable(provable)
         val proofId =
           (Proofs.map(p => ( p.modelid.get, p.name.get, p.description.get, p.date.get, p.closed.get, p.lemmaid.get,
                              p.istemporary.get, p.tactic))
             returning Proofs.map(_._Id.get))
-            .insert(modelId, name, description, date, 0, provableId, 0, tactic)
+            .insert(modelId, name, description, date, 0, provableId, 0, substTactic)
 
         proofId
       })
