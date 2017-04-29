@@ -135,7 +135,7 @@ object UIIndex {
         case _: Choice => "<++> choice" :: rules
         case _: Dual => "<d> dual direct" :: rules
         case _: Loop => "con" :: "<*> iterate" :: rules
-        case _: ODESystem => println("AxiomIndex for <ODE> still missing"); unknown
+        case _: ODESystem => ("ODE" :: "solve" :: Nil) ++ rules
         case _ => rules
       }
 
