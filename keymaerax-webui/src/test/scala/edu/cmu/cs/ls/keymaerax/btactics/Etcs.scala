@@ -177,7 +177,7 @@ class Etcs extends TacticTestBase {
       Variable("a"))
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) & SimplifierV2.simpTac(1))
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) & SimplifierV2.simpTac(1))
     foResult.subgoals should have size 1
     foResult.subgoals.head.ante shouldBe empty
     foResult.subgoals.head.succ should contain only "((dpost()>=0&d^2-dpost()^2<=2*b()*(mpost()-m)&vdespost()>=0)&SBpost()=SB&vpost()=v&empost()=em&dopost()=d&zpost()=z&tpost()=t&mopost()=m&apost()=a|vdespost()=vdes&SBpost()=SB&vpost()=v&empost()=1&dopost()=do&zpost()=z&tpost()=t&mopost()=mo&mpost()=m&dpost()=d&apost()=a)|v<=vdes&(apost()>=-b()&apost()<=A())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|em=1)&(v>=0&0<=ep())&vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost()=v&empost()=em&dopost()=do&zpost()=z&tpost()=0&mopost()=mo&mpost()=m&dpost()=d&apost()=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&em!=1)&(v>=0&0<=ep())&vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost()=v&empost()=em&dopost()=do&zpost()=z&tpost()=0&mopost()=mo&mpost()=m&dpost()=d)|v>=vdes&(apost() < 0&apost()>=-b())&((m-z<=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|em=1)&(v>=0&0<=ep())&vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost()=v&empost()=em&dopost()=do&zpost()=z&tpost()=0&mopost()=mo&mpost()=m&dpost()=d&apost()=-b()|(m-z>(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&em!=1)&(v>=0&0<=ep())&vdespost()=vdes&SBpost()=(v^2-d^2)/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)&vpost()=v&empost()=em&dopost()=do&zpost()=z&tpost()=0&mopost()=mo&mpost()=m&dpost()=d)".asFormula
@@ -192,7 +192,7 @@ class Etcs extends TacticTestBase {
       Variable("a"))
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) & SimplifierV2.simpTac(1))
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) & SimplifierV2.simpTac(1))
 
     foResult.subgoals should have size 1
     foResult.subgoals.head.ante shouldBe empty
@@ -207,7 +207,7 @@ class Etcs extends TacticTestBase {
       Variable("z"), Variable("t"), Variable("a"))
 
     val foResult = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
-      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) & DebuggingTactics.print("After Opt. 1")
+      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) & DebuggingTactics.print("After Opt. 1")
       & SimplifierV2.simpTac(1)) //@note simplification rewrites too many equalities into awkward conditions, e.g., ep=0&ep=tpost()&apost()+b=0 becomes apost()+b=tpost()
 
     foResult.subgoals should have size 1
@@ -232,7 +232,7 @@ class Etcs extends TacticTestBase {
     result.subgoals should have size 5 // ignore all but first branch (open because Euler "axiom" is not an axiom)
     val flipped = ModelPlex.flipUniversalEulerQuantifiers(result.subgoals.head.succ.head)
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
-    val simplified = proveBy(flipped, ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) & simplifier(1))
+    val simplified = proveBy(flipped, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) & simplifier(1))
     simplified.subgoals should have size 1
     simplified.subgoals.head.ante shouldBe empty
     simplified.subgoals.head.succ should contain only "((dpost()>=0&d^2-dpost()^2<=2*(voff()*sbsc()/ms())*(mpost()-m)&vdespost()>=0)&dopost()=d&mopost()=m&empost()=em&Ibpost()=Ib&Twpost()=Tw&SBpost()=SB&tpost()=t&zpost()=z&vpost()=v|dopost()=do&mopost()=mo&dpost()=d&mpost()=m&vdespost()=vdes&empost()=1&Ibpost()=Ib&Twpost()=Tw&SBpost()=SB&tpost()=t&zpost()=z&vpost()=v)|v<=vdes&(0<=Twpost()&Twpost()<=A())&((m-z<=(v^2-d^2)/(2*voff()*sbsc()/ms())+(A()/ms()/(voff()*sbsc()/ms())+1)*(A()/ms()/2*ep()^2+ep()*v)|em=1)&1<=Ibpost()&tpost_0()>=0&epost_0()>0&h0post_0()>0&0 < hpost_0()&hpost_0() < h0post_0()&(z+hpost_0()*v-zpost())^2+(v+hpost_0()*((Ft(0)-Fe(v)-Fb(v*(Ibpost()-1)))/ms())-vpost())^2+(hpost_0()-tpost())^2 < epost_0()^2&dopost()=do&mopost()=mo&dpost()=d&mpost()=m&vdespost()=vdes&empost()=em&Twpost()=0&SBpost()=SB|!(m-z<=(v^2-d^2)/(2*voff()*sbsc()/ms())+(A()/ms()/(voff()*sbsc()/ms())+1)*(A()/ms()/2*ep()^2+ep()*v)|em=1)&tpost_0()>=0&epost_0()>0&h0post_0()>0&0 < hpost_0()&hpost_0() < h0post_0()&(z+hpost_0()*v-zpost())^2+(v+hpost_0()*((Ft(Twpost())-Fe(v)-Fb(0))/ms())-vpost())^2+(hpost_0()-tpost())^2 < epost_0()^2&dopost()=do&mopost()=mo&dpost()=d&mpost()=m&vdespost()=vdes&empost()=em&Ibpost()=1&SBpost()=SB)|v>=vdes&1<=Ibpost()&((m-z<=(v^2-d^2)/(2*voff()*sbsc()/ms())+(A()/ms()/(voff()*sbsc()/ms())+1)*(A()/ms()/2*ep()^2+ep()*v)|em=1)&tpost_0()>=0&epost_0()>0&h0post_0()>0&0 < hpost_0()&hpost_0() < h0post_0()&(z+hpost_0()*v-zpost())^2+(v+hpost_0()*((Ft(0)-Fe(v)-Fb(v*(Ibpost()-1)))/ms())-vpost())^2+(hpost_0()-tpost())^2 < epost_0()^2&dopost()=do&mopost()=mo&dpost()=d&mpost()=m&vdespost()=vdes&empost()=em&Twpost()=0&SBpost()=SB|!(m-z<=(v^2-d^2)/(2*voff()*sbsc()/ms())+(A()/ms()/(voff()*sbsc()/ms())+1)*(A()/ms()/2*ep()^2+ep()*v)|em=1)&tpost_0()>=0&epost_0()>0&h0post_0()>0&0 < hpost_0()&hpost_0() < h0post_0()&(z+hpost_0()*v-zpost())^2+(v+hpost_0()*((Ft(0)-Fe(v)-Fb(v*(Ibpost()-1)))/ms())-vpost())^2+(hpost_0()-tpost())^2 < epost_0()^2&dopost()=do&mopost()=mo&dpost()=d&mpost()=m&vdespost()=vdes&empost()=em&Twpost()=0&SBpost()=SB)".asFormula
@@ -286,7 +286,7 @@ class Etcs extends TacticTestBase {
     val fml = proveBy(modelplexInput,
       ModelPlex.modelMonitorByChase(1) &
       SimplifierV3.simpTac(Nil, SimplifierV3.defaultFaxs, SimplifierV3.arithBaseIndex)(1) &
-      ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)
     ).subgoals.head.succ.head
 
     val ts = new TestSynthesis(tool)

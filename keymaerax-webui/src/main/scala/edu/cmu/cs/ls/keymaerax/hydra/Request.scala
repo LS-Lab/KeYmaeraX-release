@@ -747,7 +747,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
       ++ additionalVars.map(_.asVariable)).toList
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
     val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
-      case ("controller", Some(tool)) =>
+      case ("controller", tool) =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
         try {
           TactixLibrary.proveBy(foResult.subgoals.head,
@@ -755,7 +755,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
         } catch {
           case _: Throwable => foResult
         }
-      case ("model", Some(tool)) => TactixLibrary.proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
+      case ("model", tool) => TactixLibrary.proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
         ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) /*& SimplifierV2.simpTac(1)*/)
     }
 
@@ -777,7 +777,7 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
     val vars = StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable]).toList
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
     val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
-      case ("controller", Some(tool)) =>
+      case ("controller", tool) =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
         try {
           TactixLibrary.proveBy(foResult.subgoals.head,
@@ -785,7 +785,7 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
         } catch {
           case _: Throwable => foResult
         }
-      case ("model", Some(tool)) => TactixLibrary.proveBy(modelplexInput,
+      case ("model", tool) => TactixLibrary.proveBy(modelplexInput,
         ModelPlex.modelMonitorByChase(1) &
         SimplifierV3.simpTac(Nil, SimplifierV3.defaultFaxs, SimplifierV3.arithBaseIndex)(1) &
         ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)
