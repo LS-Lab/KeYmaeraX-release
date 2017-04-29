@@ -44,7 +44,7 @@ implyR('R) & (andL('L)*) & loop({`v^2<=2*b()*(m()-z)`}, 'R) & <(  /* prove loop 
   ) & doall(dW('R)) & <(
       QE                                                      /* braking is still safe even if we don't know anything about SB */
       ,
-      implyR('R) & (andL('L)*) & allL2R(-8) & hideL(-8) &     /* accelerating without knowing SB is unsafe (QE would fail), rewrite to find conditions */
+      implyR('R) & (andL('L)*) &                              /* accelerating without knowing SB is unsafe (QE would fail), rewrite to find conditions */
       allL2R(-7) & hideL(-7) & allL2R(-6) & hideL(-6) &
       allL2R(-5) & hideL(-5))                                 /* result: m-z <= SB & t<=ep & ... -> (v+A*t)^2<=2*b*(m-(z+v*t+A/2*t^2)), with some arithmetic rewriting we find boundary SB >= v^2/(2*b) + (A/b+1)(A/2*ep^2 + ep*v), which is used in ETCS-essentials.kyx */
 )
