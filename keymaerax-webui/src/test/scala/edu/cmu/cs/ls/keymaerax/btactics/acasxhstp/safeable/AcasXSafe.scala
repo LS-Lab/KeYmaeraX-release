@@ -10,8 +10,9 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter
 import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.CondCongruence._
 import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.SharedTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
-import edu.cmu.cs.ls.keymaerax.btactics.{DifferentialTactics, EqualityTactics, Idioms, SimplifierV2}
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -59,6 +60,9 @@ class AcasXSafe extends AcasXBase {
     abs('R, "abs(r)".asTerm) &
       abs('R, "abs(h)".asTerm) &
       abs('L, "abs(r-0)".asTerm)
+
+  // Logs all the QE calls, including internal ones
+  //private val logQE = QELogger.enableLogging((40,"ACAS X Safe"))
 
   "ACAS X safe" should "prove use case lemma" in withMathematica { tool => withDatabase { db =>
     if (lemmaDB.contains("nodelay_ucLoLemma")) lemmaDB.remove("nodelay_ucLoLemma")
@@ -108,7 +112,7 @@ class AcasXSafe extends AcasXBase {
 
     val safeLemmaTac = dT("lemma") & implyR('R) & (andL('L)*) & solveEnd('R) &
       dT("Before skolem") & ((allR('R) | implyR('R))*) & dT("After skolem") &
-      SimplifierV2.simpTac(1) & dT("Simplified using known facts") & (allR('R)*) &
+      SimplifierV3.simpTac()(1) & dT("Simplified using known facts") & (allR('R)*) &
       //here we'd want to access previously introduced skolem symbol and
       // time introduced by diffSolution;goal 90
       allL(Variable("t"), "t_+t".asTerm)('L) & // t_22+t_23: t_ == t_22, t == t_23
@@ -151,15 +155,15 @@ class AcasXSafe extends AcasXBase {
     storeLemma(safeLemma, Some("nodelay_safeLoLemma"))
   }
 
-  it should "prove Theorem 1: correctness of implicit safe regions" in {
+  it should "prove Theorem 1: correctness of implicit safe regions" in withMathematica { tool =>
     if (lemmaDB.contains("safe_implicit")) lemmaDB.remove("safe_implicit")
 
     runLemmaTest("nodelay_ucLoLemma", "ACAS X safe should prove use case lemma")
     runLemmaTest("nodelay_safeLoLemma", "ACAS X safe should prove lower bound safe lemma")
 
-    withMathematica { tool =>
+    withMathematica {
       beforeEach()
-
+      tool =>
       /** * Main safe theorem and its tactic ***/
       val safeSeq = KeYmaeraXProblemParser(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_implicit.kyx")).mkString)
@@ -173,13 +177,13 @@ class AcasXSafe extends AcasXBase {
         ) & done)
         ,
         (indStep, dT("Step") & composeb('R) & generalize(invariant)('R) & Idioms.<(
-          dT("Generalization Holds") & chase('R) & (andL('L)*) & SimplifierV2.simpTac('R) & close
+          dT("Generalization Holds") & chase('R) & (andL('L)*) & SimplifierV3.simpTac()('R) &  close
           ,
           dT("Generalization Strong Enough") &
             EqualityTactics.abbrv("max((0,w*(dhf-dhd)))".asTerm, Some(Variable("maxI"))) & dT("abbrv2") &
 
             DifferentialTactics.diffUnpackEvolutionDomainInitially(1) &
-            dT("Preparing for safeLoLemma") & (andLi *) & implyRi &
+            dT("Preparing for safeLoLemma") & hideL(-1) & (andLi *) & implyRi &
             by(lemmaDB.get("nodelay_safeLoLemma").getOrElse(throw new Exception("Lemma nodelay_safeLoLemma must be proved first"))) & done
           ) /* End indStepLbl */
         )
@@ -551,11 +555,11 @@ class AcasXSafe extends AcasXBase {
     runLemmaTest("safe_implicit", "ACAS X safe should prove Theorem 1: correctness of implicit safe regions")
     runLemmaTest("safe_equivalence", "ACAS X safe should prove Lemma 1: equivalence between implicit and explicit region formulation")
 
-    withMathematica { tool =>
+    withMathematica {
 
       // rerun initialization (runTest runs afterEach() at the end)
       beforeEach()
-
+      tool =>
       // load lemmas
 
       val acasximplicit = KeYmaeraXProblemParser( io.Source.fromInputStream(

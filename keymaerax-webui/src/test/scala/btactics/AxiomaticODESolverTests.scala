@@ -382,6 +382,20 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
   }
 
+  it should "suport diamond with postcond that binds variables we bind"  in withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("<{x'=1}>\\forall x x^2 >= 0".asFormula)), solve(1))
+    result.subgoals should have size 1
+    //result.subgoals.head.ante should contain theSameElementsAs List("x_1>0".asFormula)
+    //result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
+  }
+
+  it should "support box with postcond that binds variables we bind" in  withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=1}]\\forall x x^2 >= 0".asFormula)), solve(1))
+    result.subgoals should have size 1
+    //result.subgoals.head.ante should contain theSameElementsAs List("x_1>0".asFormula)
+    //result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
+  }
+
   it should "solve a ModelPlex question" in withMathematica { tool =>
     val result = proveBy("(-1<=fpost_0()&fpost_0()<=(m-l)/ep)&\\forall c (c=cpost_0()->c=0&<{l'=0*l+fpost_0(),c'=0*c+1&0<=l&c<=ep}>((fpost()=fpost_0()&lpost()=l)&cpost()=c))".asFormula,
       solve(1, 1::0::1::1::Nil))

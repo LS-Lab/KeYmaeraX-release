@@ -5,6 +5,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.toSingleFormula
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger.LogConfig
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -20,11 +22,12 @@ import scala.collection.immutable._
  * @author Stefan Mitsch
  */
 private object ToolTactics {
+
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(order: List[NamedSymbol] = Nil)(qeTool: QETool): BelleExpr = {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("QE",
-//      DebuggingTactics.recordQECall() &
+      QELogger.getLogTactic &
       done | //@note don't fail QE if already proved
         ((alphaRule*) &
         (close |

@@ -28,6 +28,7 @@ import java.io.{File, FileInputStream, FileNotFoundException, FileOutputStream}
 import java.text.SimpleDateFormat
 import java.util.{Calendar, Locale}
 
+import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 
 import scala.io.Source
@@ -56,6 +57,7 @@ sealed trait Request {
     else {
       assert(permission(t), "Permission denied but still responses queried (see completeRequest)")
       try {
+        theSession = SessionManager.session(t)
         resultingResponses()
       } catch {
         //@note Avoids "Boxed Error" without error message by wrapping unchecked exceptions here.
@@ -70,7 +72,10 @@ sealed trait Request {
     }
   }
 
-  def resultingResponses(): List[Response] //see Response.scala.
+  private var theSession: SessionManager.Session = _
+  def session: SessionManager.Session = theSession
+
+  def resultingResponses(): List[Response]
 
   def currentDate(): String = {
     val format = new SimpleDateFormat("d-M-y")
@@ -87,6 +92,9 @@ sealed trait Request {
 abstract class UserRequest(username: String) extends Request {
   override def permission(t: SessionToken): Boolean = t belongsTo username
 }
+
+/** A proof session storing information between requests. */
+case class ProofSession(proofId: String, invGenerator: Generator[Formula], defs: List[SubstitutionPair])
 
 abstract class UserProofRequest(db: DBAbstraction, username: String, proofId: String) extends UserRequest(username) {
   override final def resultingResponses(): List[Response] = {
@@ -127,6 +135,7 @@ class LoginRequest(db : DBAbstraction, username : String, password : String) ext
     val sessionToken =
       if(check) Some(SessionManager.add(username))
       else None
+
     new LoginResponse(check, username, sessionToken) ::  Nil
   }
 }
@@ -738,7 +747,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
       ++ additionalVars.map(_.asVariable)).toList
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
     val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
-      case ("controller", Some(tool)) =>
+      case ("controller", tool) =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
         try {
           TactixLibrary.proveBy(foResult.subgoals.head,
@@ -746,7 +755,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
         } catch {
           case _: Throwable => foResult
         }
-      case ("model", Some(tool)) => TactixLibrary.proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
+      case ("model", tool) => TactixLibrary.proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
         ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) /*& SimplifierV2.simpTac(1)*/)
     }
 
@@ -768,7 +777,7 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
     val vars = StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable]).toList
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
     val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
-      case ("controller", Some(tool)) =>
+      case ("controller", tool) =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
         try {
           TactixLibrary.proveBy(foResult.subgoals.head,
@@ -776,7 +785,7 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
         } catch {
           case _: Throwable => foResult
         }
-      case ("model", Some(tool)) => TactixLibrary.proveBy(modelplexInput,
+      case ("model", tool) => TactixLibrary.proveBy(modelplexInput,
         ModelPlex.modelMonitorByChase(1) &
         SimplifierV3.simpTac(Nil, SimplifierV3.defaultFaxs, SimplifierV3.arithBaseIndex)(1) &
         ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)
@@ -865,16 +874,18 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
     else {
       insist(db.getModel(db.getProofInfo(proofId).modelId.getOrElse(throw new CoreException(s"Cannot open a proof without model, proofId=$proofId"))).userId == userId, s"User $userId does not own the model associated with proof $proofId")
 
-      //@HACK cache the invariants in TactixLibrary -> later requests fetch it from there without reparsing the model
-      // over and over again
       val proofInfo = db.getProofInfo(proofId)
       proofInfo.modelId match {
         case None => new ErrorResponse("Unable to open proof " + proofId + ", because it does not refer to a model")::Nil // duplicate check to above
         case Some(mId) =>
           val generator = new ConfigurableGenerator[Formula]()
           KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p -> inv))
-          KeYmaeraXProblemParser(db.getModel(mId).keyFile)
-          TactixLibrary.invGenerator = generator
+          val defsGenerator = new ConfigurableGenerator[Expression]()
+          val (decls, _) = KeYmaeraXProblemParser.parseProblem(db.getModel(mId).keyFile)
+          val substs = decls.filter(_._2._3.isDefined).map((KeYmaeraXDeclarationsParser.declAsSubstitutionPair _).tupled).toList
+          substs.foreach(sp => defsGenerator.products += (sp.what -> sp.repl))
+          session += proofId -> ProofSession(proofId, generator, substs)
+          TactixLibrary.invGenerator = generator //@todo should not store invariant generator globally for all users
           new OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
       }
     }
@@ -1165,7 +1176,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
         case None =>
           val symbols = StaticSemantics.symbols(sequent)
           val paramFV: Set[NamedSymbol] =
-            exprs.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet
+            exprs.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet - Function("old", None, Real, Real)
 
           val (hintFresh, allowedFresh) = arg match {
             case _: VariableArg if arg.allowsFresh.contains(arg.name) => (Nil, Nil)
@@ -1255,16 +1266,15 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
           val sequent = node.goal.get
 
           try {
-            //@note no invariant generator (parsing from model) for performance reasons, since included in tactic suggestions anyway ->
-            //      if we ever execute tactics that require a generator, include a heuristic to determine from the tactic string here
-            val expr = BelleParser.parseWithInvGen(fullExpr(sequent), None)
+            val proofSession = session(proofId).asInstanceOf[ProofSession]
+            val expr = BelleParser.parseWithInvGen(fullExpr(sequent), Some(proofSession.invGenerator), proofSession.defs)
 
             val appliedExpr: BelleExpr = (pos, pos2, expr) match {
               case (None, None, _: AtPosition[BelleExpr]) =>
                 throw new TacticPositionError("Can't run a positional tactic without specifying a position", expr.getLocation, "Expected position in argument list but found none")
               case (None, None, _) => expr
               case (Some(position), None, expr: AtPosition[BelleExpr]) => expr(position)
-              case (Some(position), None, expr: BelleExpr) => expr
+              case (Some(_), None, expr: BelleExpr) => expr
               case (Some(Fixed(p1, None, _)), Some(Fixed(p2, None, _)), expr: BuiltInTwoPositionTactic) => expr(p1, p2)
               case (Some(_), Some(_), expr: BelleExpr) => expr
               case _ => println("pos " + pos.getClass.getName + ", expr " + expr.getClass.getName); throw new ProverException("Match error")
@@ -1297,10 +1307,10 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               }
               val executor = BellerophonTacticExecutor.defaultExecutor
               val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter)
-              new RunBelleTermResponse(localProofId.toString, "()", taskId) :: Nil
+              RunBelleTermResponse(localProofId.toString, "()", taskId) :: Nil
             } else {
               val taskId = node.runTactic(userId, SequentialInterpreter, appliedExpr, ruleName)
-              new RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
+              RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
             }
           } catch {
             case e: ProverException if e.getMessage == "No step possible" => new ErrorResponse("No step possible") :: Nil

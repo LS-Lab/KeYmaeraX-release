@@ -131,8 +131,9 @@ object KeYmaeraXProblemParser {
     val annotationListener = parser.annotationListener
     parser.setAnnotationListener((prg, fml) => {
       // make annotations compatible with parse result: add () and expand function declarations
-      val substs = decls.filter(_._2._3.isDefined).map((KeYmaeraXDeclarationsParser.declAsSubstitutionPair _).tupled).toList
-      annotationListener(exhaustiveSubst(decls, elaborateToFunctions(prg, decls)), exhaustiveSubst(decls, elaborateToFunctions(fml, decls)))
+      annotationListener(
+        exhaustiveSubst(decls, elaborateToFunctions(prg, decls)),
+        exhaustiveSubst(decls, elaborateToFunctions(fml, decls)))
     })
 
     val problem : Formula = parser.parse(theProblem.tail :+ Token(EOF, UnknownLocation)) match {
@@ -145,7 +146,7 @@ object KeYmaeraXProblemParser {
       case Some(error) => throw ParseException("Semantic analysis error\n" + error, problem)
     }
 
-    val elaborated = elaborateToFunctions(problem, decls)
+    val elaborated = exhaustiveSubst(decls, elaborateToFunctions(problem, decls))
 
     KeYmaeraXDeclarationsParser.typeAnalysis(decls, elaborated) //throws ParseExceptions.
 
@@ -209,8 +210,15 @@ object KeYmaeraXDeclarationsParser {
   /** Turns a function declaration (with defined body) into a substitution pair. */
   def declAsSubstitutionPair(name: KeYmaeraXDeclarationsParser.Name, signature: KeYmaeraXDeclarationsParser.Signature): SubstitutionPair = {
     assert(signature._3.isDefined, "Substitution only for defined functions")
-    val arg = if (signature._1.isDefined) DotTerm(signature._1.get) else Nothing
-    SubstitutionPair(FuncOf(Function(name._1, name._2, signature._1.get, signature._2), arg), signature._3.get)
+    val (arg, sig) = signature._1 match {
+      case Some(Unit) => (Nothing, Unit)
+      case Some(s) => (DotTerm(s), s)
+    }
+    val what = signature._2 match {
+      case Real => FuncOf(Function(name._1, name._2, sig, signature._2), arg)
+      case Bool => PredOf(Function(name._1, name._2, sig, signature._2), arg)
+    }
+    SubstitutionPair(what, signature._3.get)
   }
 
   /** Returns all the quantified variables in an expression. Used in [[typeAnalysis()]] */
@@ -340,7 +348,7 @@ object KeYmaeraXDeclarationsParser {
     if(afterName.head.tok.equals(LPAREN)) {
       val (domainSort, domainSortRemainder) = parseFunctionDomainSort(afterName, nameToken)
 
-      val (interpretation, remainder) = parseInterpretation(domainSortRemainder, nameToken)
+      val (interpretation, remainder) = parseInterpretation(sort, domainSortRemainder, nameToken)
 
       checkInput(remainder.last.tok.equals(PERIOD),
         "Expected declaration to end with . but found " + remainder.last, remainder.last.loc, "Reading a declaration")
@@ -397,14 +405,23 @@ object KeYmaeraXDeclarationsParser {
     *          _1: The interpretation,
     *          _2: The reamining tokens.
     */
-  private def parseInterpretation(tokens : List[Token], of: Token) : (Option[Expression], List[Token]) = {
-    if (tokens.head.tok.equals(EQ)) {
-      val decl = tokens.tail.sliding(2).toList.span({case Token(RPAREN, _)::Token(PERIOD, _)::Nil => false case _ => true})
-      val splitAtPeriod = (decl._1.map(_.head) :+ decl._2.head.head, decl._2.map(_.last))
-      checkInput(splitAtPeriod._2.head.tok.equals(PERIOD),
-        "Non-delimited function declaration. Found: " + splitAtPeriod._2.head, splitAtPeriod._2.head.loc, "parsing function interpretation")
-      (Some(KeYmaeraXParser.parse(splitAtPeriod._1 :+ Token(EOF))), splitAtPeriod._2)
-    } else (None, tokens)
+  private def parseInterpretation(sort: Sort, tokens : List[Token], of: Token) : (Option[Expression], List[Token]) = {
+    (sort, tokens.head.tok) match {
+      case (Real, EQUIV) => throw new ParseException("Operator and sort mismatch", tokens.head.loc, EQUIV.img + " <" + EQUIV + ">", EQ.img + " <" + EQ + ">", "", "parsing function interpretation")
+      case (Bool, EQ)    => throw new ParseException("Operator and sort mismatch", tokens.head.loc, EQ.img + " <" + EQ + ">", EQUIV.img + " <" + EQUIV + ">", "", "parsing function interpretation")
+      case (_, EQUIV | EQ) =>
+        val decl = tokens.tail.sliding(2).toList.span({case Token(RPAREN, _)::Token(PERIOD, _)::Nil => false case _ => true})
+        if (decl._2.isEmpty) throw new ParseException("Non-delimited function definition",
+          tokens.head.loc.spanTo(decl._1.last.last.loc), decl._1.last.last.toString, ")", "", "parsing function interpretation")
+        val splitAtPeriod = (decl._1.map(_.head) :+ decl._2.head.head, decl._2.map(_.last))
+        checkInput(splitAtPeriod._2.head.tok == PERIOD,
+          "Non-delimited function definition. Found: " + splitAtPeriod._2.head, tokens.head.loc.spanTo(splitAtPeriod._2.head.loc), "parsing function interpretation")
+        val expr = KeYmaeraXParser.parse(splitAtPeriod._1 :+ Token(EOF))
+        if (expr.sort != sort) throw new ParseException("Definition sort does not match declaration",
+          tokens.head.loc.spanTo(splitAtPeriod._2.head.loc), "<" + expr.sort + ">", "<" + sort + ">", "", "parsing function interpretation")
+        else (Some(expr), splitAtPeriod._2)
+      case _ => (None, tokens)
+    }
   }
 
   private def parseSort(sortToken : Token, of: Token) : Sort = sortToken.tok match {

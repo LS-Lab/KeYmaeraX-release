@@ -3,11 +3,13 @@ package bellerophon.pptests
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.core.SubstitutionPair
 import edu.cmu.cs.ls.keymaerax.parser.{ParseException, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 
 import scala.language.postfixOps
+import org.scalatest.Inside._
 
 /**
   * Very simple positive unit tests for the Bellerophon parser. Useful for TDD and bug isolation but probably not
@@ -466,7 +468,7 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   //region argument parser
 
-  it should "parse string arguments" in {
+  "Tactic argument parser" should "parse string arguments" in {
     BelleParser("print({`a message`})") shouldBe DebuggingTactics.print("a message")
   }
 
@@ -480,6 +482,21 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   it should "parse mixed arguments" in {
     BelleParser("dG({`z`},{`-1`},{`0`},{`x*z^2=1`},1)") shouldBe TactixLibrary.dG("z'=-1*z+0".asDifferentialProgram, Some("x*z^2=1".asFormula))(1)
+  }
+
+  it should "expand definitions when parsing arguments" in {
+    inside(BelleParser.parseWithInvGen("MR({`safeDist()>0`},1)", None, Nil)) {
+      case adpt: AppliedDependentPositionTactic => adpt.pt should have (
+        'inputs ("safeDist()>0".asFormula::Nil)
+      )
+    }
+
+    inside(BelleParser.parseWithInvGen("MR({`safeDist()>0`},1)", None,
+      SubstitutionPair("safeDist()".asTerm, "y".asTerm)::Nil)) {
+      case adpt: AppliedDependentPositionTactic => adpt.pt should have (
+        'inputs ("y>0".asFormula::Nil)
+      )
+    }
   }
 
   //endregion

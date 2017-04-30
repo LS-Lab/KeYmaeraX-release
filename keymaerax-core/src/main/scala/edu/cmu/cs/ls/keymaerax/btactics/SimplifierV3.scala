@@ -872,10 +872,10 @@ object SimplifierV3 {
     cmps.flatMap(
       (cmp:(Term,Term) => Formula) => {
           List(
-            remember(Imply(cmp(f, g), Equiv(key, True)), prop & onAll(QE), namespace).fact,
-            remember(Imply(cmp(f, g), Equiv(key, False)), prop & onAll(QE), namespace).fact,
-            remember(Imply(cmp(g, f), Equiv(key, True)), prop & onAll(QE), namespace).fact,
-            remember(Imply(cmp(g, f), Equiv(key, False)), prop & onAll(QE), namespace).fact
+            remember(Imply(cmp(f, g), Equiv(key, True)), prop & onAll(?(QE)), namespace).fact,
+            remember(Imply(cmp(f, g), Equiv(key, False)), prop & onAll(?(QE)), namespace).fact,
+            remember(Imply(cmp(g, f), Equiv(key, True)), prop & onAll(?(QE)), namespace).fact,
+            remember(Imply(cmp(g, f), Equiv(key, False)), prop & onAll(?(QE)), namespace).fact
           )
       }
     ).filter(_.isProved)

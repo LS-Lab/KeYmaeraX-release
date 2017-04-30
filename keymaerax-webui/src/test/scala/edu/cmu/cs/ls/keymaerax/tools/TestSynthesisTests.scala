@@ -21,7 +21,7 @@ class TestSynthesisTests extends TacticTestBase {
       "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, Variable("x"))
 
     val monitor = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) &
+      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) &
       DebuggingTactics.print("After Opt. 1")
       & SimplifierV2.simpTac(1)).subgoals.head.succ.head
 
@@ -43,7 +43,7 @@ class TestSynthesisTests extends TacticTestBase {
       "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, Variable("x"))
 
     val monitor = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) &
+      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) &
       DebuggingTactics.print("After Opt. 1")
       & SimplifierV2.simpTac(1)).subgoals.head.succ.head
 
@@ -66,7 +66,7 @@ class TestSynthesisTests extends TacticTestBase {
       "true -> [x:=2;]x>=2".asFormula, Variable("x"))
 
     val monitor = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) &
+      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) &
       DebuggingTactics.print("After Opt. 1")
       & SimplifierV2.simpTac(1)).subgoals.head.succ.head
 
@@ -84,7 +84,7 @@ class TestSynthesisTests extends TacticTestBase {
       "true -> [x:=*; ?-3<=x&x<=5;]x>=-3".asFormula, Variable("x"))
 
     val monitor = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) &
+      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) &
       DebuggingTactics.print("After Opt. 1")
       & SimplifierV2.simpTac(1)).subgoals.head.succ.head
 
@@ -101,7 +101,7 @@ class TestSynthesisTests extends TacticTestBase {
       "true -> [x:=2;]x>=2".asFormula, Variable("x"))
 
     val monitor = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) &
+      DebuggingTactics.print("After chase") & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) &
       DebuggingTactics.print("After Opt. 1")
       & SimplifierV2.simpTac(1)).subgoals.head.succ.head
 

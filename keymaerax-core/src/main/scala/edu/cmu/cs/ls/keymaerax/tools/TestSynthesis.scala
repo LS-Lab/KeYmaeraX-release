@@ -55,6 +55,7 @@ class TestSynthesis(mathematicaTool: Mathematica) extends BaseKeYmaeraMathematic
     println("Execute in Mathematica to compute safety margin of test case: " + cmd)
     run(cmd) match {
       case (_, t: Number) => t
+      case (_, Divide(Number(a), Number(b))) => Number(a/b)
     }
   }
 
@@ -71,6 +72,7 @@ class TestSynthesis(mathematicaTool: Mathematica) extends BaseKeYmaeraMathematic
     println("Execute in Mathematica to compute safety range: " + cmd)
     run(cmd) match {
       case (_, upper: Number) => (Number(0), upper)
+      case (_, Divide(Number(a), Number(b))) => (Number(0), Number(a/b))
     }
   }
 

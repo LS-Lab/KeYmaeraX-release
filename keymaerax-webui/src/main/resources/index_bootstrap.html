@@ -35,7 +35,7 @@
             <a class="navbar-brand" href="#">KeYmaera X</a>
         </div>
         <div class="navbar-collapse collapse">
-            <form class="navbar-form navbar-right" role="form" ng-submit="processLogin()">
+            <form name="loginForm" class="navbar-form navbar-right">
                 <div class="form-group">
                     <input type="text" placeholder="Email" id="username" ng-model="username" class="form-control"
                            tabindex="1" required autofocus>
@@ -44,8 +44,10 @@
                     <input type="password" placeholder="Password" id="password" ng-model="password" class="form-control"
                            tabindex="2" required>
                 </div>
-                <button type="submit" class="btn btn-success">Sign in</button>
-                <button type="button" class="btn btn-info" ng-click="processRegistration()">Register</button>
+                <button class="btn btn-success"
+                        ng-click="loginForm.$valid && processLogin()">Sign in</button>
+                <button class="btn btn-info"
+                        ng-click="loginForm.$valid && processRegistration()">Register</button>
             </form>
         </div><!--/.navbar-collapse -->
     </div>

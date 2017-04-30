@@ -14,6 +14,7 @@ import scala.collection.immutable._
 
 class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   override def beforeEach(): Unit = { PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp) }
+  override def afterEach(): Unit = { KeYmaeraXParser.setAnnotationListener((prg, fml) =>{}) }
 
   // type declaration header for tests
   def makeInput(program : String) : String = {
@@ -246,7 +247,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       prg shouldBe "{x:=x+1;}*".asProgram
       fml shouldBe "x>=y()+1".asFormula
     })
-    KeYmaeraXProblemParser(input)
+    KeYmaeraXProblemParser(input) shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
     called shouldBe true
   }
 
@@ -259,7 +260,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       prg shouldBe "{x:=x+1;}*".asProgram
       fml shouldBe "x>=(3+7)+1".asFormula
     })
-    KeYmaeraXProblemParser(input)
+    KeYmaeraXProblemParser(input) shouldBe "x>=(3+7)+2 -> [{x:=x+1;}*]x>=3+7".asFormula
     called shouldBe true
   }
 
@@ -271,7 +272,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       prg shouldBe "{x:=x+1;}*".asProgram
       fml shouldBe "x>=(3+7)+1".asFormula
     })
-    KeYmaeraXProblemParser(input)
+    KeYmaeraXProblemParser(input) shouldBe "x>=(3+7)+2 -> [{x:=x+1;}*]x>=3+7".asFormula
     called shouldBe true
   }
 
@@ -284,7 +285,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       prg shouldBe "{x:=x+1;}*".asProgram
       fml shouldBe "x>=(3+7)+1".asFormula
     })
-    KeYmaeraXProblemParser(input)
+    KeYmaeraXProblemParser(input) shouldBe "x>=(3+7)+2 -> [{x:=x+1;}*]x>=3+7".asFormula
     called shouldBe true
   }
 
@@ -297,8 +298,62 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       prg shouldBe "{x:=x+1;}*".asProgram
       fml shouldBe "x>=(3+7)+1".asFormula
     })
-    KeYmaeraXProblemParser(input)
+    KeYmaeraXProblemParser(input) shouldBe "x>=(3+7)+2 -> [{x:=x+1;}*]x>=3+7".asFormula
     called shouldBe true
+  }
+
+  it should "expand properties to their definition" in {
+    //@todo support for n-ary functions/predicates
+    val input = "Functions. B init() <-> (x>=2). B safe(R) <-> (.>=0). End. ProgramVariables. R x. End. Problem. init() -> [{x:=x+1;}*]safe(x) End."
+    KeYmaeraXProblemParser(input) shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
+  }
+
+  it should "expand properties to their definition in annotations" in {
+    val input = "Functions. B inv() <-> (x>=1). End. ProgramVariables. R x. End. Problem. x>=2 -> [{x:=x+1;}*@invariant(inv())]x>=0 End."
+    var called = false
+    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
+      called = true
+      prg shouldBe "{x:=x+1;}*".asProgram
+      fml shouldBe "x>=1".asFormula
+    })
+    KeYmaeraXProblemParser(input) shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
+    called shouldBe true
+  }
+
+  it should "expand functions in properties" in {
+    val input = "Functions. R y() = (3+7). B inv() <-> (x>=y()). End. ProgramVariables. R x. End. Problem. x>=2 -> [{x:=x+1;}*@invariant(inv())]x>=0 End."
+    var called = false
+    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
+      called = true
+      prg shouldBe "{x:=x+1;}*".asProgram
+      fml shouldBe "x>=3+7".asFormula
+    })
+    KeYmaeraXProblemParser(input) shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
+    called shouldBe true
+  }
+
+  it should "complain about sort mismatches in function declaration and operator" in {
+    val input = "Functions. R y() <-> (3+7). End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
+    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
+      """1:18 Operator and sort mismatch
+        |Found:    <-> <EQUIV$> at 1:18 to 1:20
+        |Expected: = <EQ$>""".stripMargin
+  }
+
+  it should "complain about sort mismatches" in {
+    val input = "Functions. R y() = (3>2). End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
+    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
+      """1:18 Definition sort does not match declaration
+        |Found:    <Bool> at 1:18 to 1:25
+        |Expected: <Real>""".stripMargin
+  }
+
+  it should "complain about non-delimited definitions" in {
+    val input = "Functions. R y() = (3>2. End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
+    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
+      """1:18 Non-delimited function definition
+        |Found:    NUM(2.) at 1:18 to 1:23
+        |Expected: )""".stripMargin
   }
   
   //////////////////////////////////////////////////////////////////////////////

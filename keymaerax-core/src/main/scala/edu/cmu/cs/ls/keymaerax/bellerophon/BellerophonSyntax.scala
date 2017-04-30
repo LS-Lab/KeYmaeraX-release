@@ -504,6 +504,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
       case _: Find => throw be
       case Fixed(pos, _, _) => v match {
         case BelleProvable(provable, _) if provable.subgoals.size == 1 =>
+          println("Raise bellethrow: " + be)
           throw new BelleThrowable("Tactic " + prettyString + " may point to wrong position, found " + provable.subgoals.head.sub(pos) + " at position " + locator, be)
         case _ => throw be
       }

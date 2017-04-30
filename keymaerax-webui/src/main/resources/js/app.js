@@ -8,6 +8,7 @@
   'angularSpinners',
   'angular-intro',
   'chart.js',
+  'hljs',
   'ui.bootstrap',
   'ui.bootstrap.tabs',
   'ui.bootstrap.tooltip',
@@ -129,3 +130,10 @@ keymaeraProofApp.config(['$httpProvider', function($httpProvider) {
   $httpProvider.interceptors.push('ResponseErrorHandler');
   $httpProvider.interceptors.push('authInjector');
 }])
+
+keymaeraProofApp.config(function (hljsServiceProvider) {
+  hljsServiceProvider.setOptions({
+    // replace tab with 2 spaces
+    tabReplace: '  '
+  });
+});

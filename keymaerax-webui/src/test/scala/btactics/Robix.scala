@@ -102,7 +102,7 @@ class Robix extends TacticTestBase {
       Variable("x"), Variable("y"), Variable("v"), Variable("a"), Variable("dx"), Variable("dy"), Variable("w"))
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
-      ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) & SimplifierV2.simpTac(1))
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) & SimplifierV2.simpTac(1))
 
     foResult.subgoals should have size 1
     foResult.subgoals.head.ante shouldBe empty

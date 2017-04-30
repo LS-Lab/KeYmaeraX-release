@@ -135,7 +135,7 @@ class ExampleProblems extends FlatSpec with Matchers {
       codomain shouldBe Real
       interpretation shouldBe Number(5)
     }
-    formula shouldBe KeYmaeraXParser("f()>3")
+    formula shouldBe KeYmaeraXParser("5>3")
   }
 
   it should "parse function declarations with one parameter" in {
@@ -158,10 +158,6 @@ class ExampleProblems extends FlatSpec with Matchers {
       codomain shouldBe Real
       interpretation shouldBe Plus(Number(5), Times(DotTerm(Real), DotTerm(Real)))
     }
-    formula shouldBe KeYmaeraXParser("f(4)>3")
-
-    val substResult = testHelper.ParserFactory.parseToSequent(problem)
-    substResult.ante shouldBe empty
-    substResult.succ should contain only KeYmaeraXParser("5+4*4>3")
+    formula shouldBe KeYmaeraXParser("5+4*4>3")
   }
 }

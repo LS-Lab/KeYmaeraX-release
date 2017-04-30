@@ -28,6 +28,7 @@ class PairParserTests extends FlatSpec with Matchers {
   val uipp = if (true) None else Some(new UIKeYmaeraXPrettyPrinter("-7",true))
 
   def parseShouldBe(input: String, expr: Expression) = {
+    parser.setAnnotationListener((prg, fml) => {})
     val parse = parser(input)
     if (!(parse == expr)) {
       println("Reparsing" +

@@ -38,11 +38,28 @@ class StringConverter(val s: String) {
 
   def asTactic : BelleExpr = BelleParser(s)
 
+  //If a split failed to parse, merge it with the next formula and try again because it might have been split incorrectly
+  //e.g. max((a,b)) would be incorrectly split
+  private def smartFmlSplit(acc:String,ls:List[String]) : List[Formula] = {
+    ls match {
+      case Nil => Nil
+      case (l::ls) =>
+        try{
+          KeYmaeraXParser.formulaParser(acc+l) :: smartFmlSplit("",ls)
+        }
+        catch {
+          case e:ParseException =>
+            smartFmlSplit(acc+l,ls)
+        }
+    }
+  }
+
   def asSequent: Sequent = {
     val (ante::succ::Nil) = s.split("==>").map(_.trim()).toList
+
     Sequent(
-      ante.split(",(?![^{]*})").filter(_.nonEmpty).map(KeYmaeraXParser.formulaParser).toIndexedSeq,
-      succ.split(",(?![^{]*})").filter(_.nonEmpty).map(KeYmaeraXParser.formulaParser).toIndexedSeq
+      smartFmlSplit("",ante.split(",(?![^{]*})").toList).toIndexedSeq,
+      smartFmlSplit("",succ.split(",(?![^{]*})").toList).toIndexedSeq
     )
   }
 }
