@@ -163,6 +163,51 @@ del {
   display: none !important;
 }
 
+.k4-term-op {
+
+}
+
+.k4-propfml-op {
+  font-family: "Lucida Grande", tahoma, arial, sans serif; /* some boldface math symbols, unfortunately not all */
+  font-weight: bold;
+  color: var(--lsverylightblue);
+}
+
+.k4-cmpfml-op {
+
+}
+
+.k4-fml-op {
+  font-style: italic;
+}
+
+.k4-prg-op {
+  font-weight: bold;
+}
+
+.k4-prg-brace {
+  font-weight: bold;
+}
+
+.k4-mod-open {
+  font-weight: bold;
+  font-size: larger;
+}
+
+span.hl:not(.hlhover) > .k4-mod-close {
+  color: var(--lsmain)!important;
+  font-weight: bold;
+  font-size: larger;
+}
+
+/* Everything inside a box/diamond, unless formula is highlighted */
+span.hl:not(.hlhover) > .k4-mod-open ~ span {
+  color: green;
+}
+span.hl:not(.hlhover) > .k4-mod-close ~ span {
+  color: var(--lsmain);
+}
+
 .k4-axiom-key {
   font-weight: bold;
 }
