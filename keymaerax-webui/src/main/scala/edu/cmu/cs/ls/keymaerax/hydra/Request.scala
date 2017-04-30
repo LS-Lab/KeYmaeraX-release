@@ -94,7 +94,7 @@ abstract class UserRequest(username: String) extends Request {
 }
 
 /** A proof session storing information between requests. */
-case class ProofSession(proofId: String, invGenerator: Generator[Formula], defs: List[SubstitutionPair])
+case class ProofSession(proofId: String, invGenerator: Generator[Formula], defs: KeYmaeraXDeclarationsParser.Declaration)
 
 abstract class UserProofRequest(db: DBAbstraction, username: String, proofId: String) extends UserRequest(username) {
   override final def resultingResponses(): List[Response] = {
@@ -881,10 +881,9 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
           val generator = new ConfigurableGenerator[Formula]()
           KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p -> inv))
           val defsGenerator = new ConfigurableGenerator[Expression]()
-          val (decls, _) = KeYmaeraXProblemParser.parseProblem(db.getModel(mId).keyFile)
-          val substs = decls.filter(_._2._3.isDefined).map((KeYmaeraXDeclarationsParser.declAsSubstitutionPair _).tupled).toList
-          substs.foreach(sp => defsGenerator.products += (sp.what -> sp.repl))
-          session += proofId -> ProofSession(proofId, generator, substs)
+          val (d, _) = KeYmaeraXProblemParser.parseProblem(db.getModel(mId).keyFile)
+          d.substs.foreach(sp => defsGenerator.products += (sp.what -> sp.repl))
+          session += proofId -> ProofSession(proofId, generator, d)
           TactixLibrary.invGenerator = generator //@todo should not store invariant generator globally for all users
           new OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
       }
@@ -1153,7 +1152,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
   }
 
   /** Basic input sanity checks w.r.t. symbols in `sequent`. */
-  private def checkInput(sequent: Sequent, input: BelleTermInput): Response = {
+  private def checkInput(sequent: Sequent, input: BelleTermInput, defs: KeYmaeraXProblemParser.Declaration): Response = {
     try {
       val (arg, exprs) = input match {
         case BelleTermInput(value, Some(arg: TermArg)) => arg -> (KeYmaeraXParser(value) :: Nil)
@@ -1176,7 +1175,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
         case None =>
           val symbols = StaticSemantics.symbols(sequent)
           val paramFV: Set[NamedSymbol] =
-            exprs.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet - Function("old", None, Real, Real)
+            exprs.flatMap(e => StaticSemantics.freeVars(e).toSet ++ StaticSemantics.signature(e)).toSet -- defs.asFunctions - Function("old", None, Real, Real)
 
           val (hintFresh, allowedFresh) = arg match {
             case _: VariableArg if arg.allowsFresh.contains(arg.name) => (Nil, Nil)
@@ -1217,7 +1216,8 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
         case Some(node) if node.goal.isEmpty => BooleanResponse(flag=false, Some("Node " + nodeId + " does not have a goal")) :: Nil
         case Some(node) if node.goal.isDefined =>
           val sequent = node.goal.get
-          checkInput(sequent, input)::Nil
+          val proofSession = session(proofId).asInstanceOf[ProofSession]
+          checkInput(sequent, input, proofSession.defs)::Nil
       }
     } else {
       val msg =

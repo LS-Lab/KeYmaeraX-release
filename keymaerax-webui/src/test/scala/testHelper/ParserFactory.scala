@@ -25,10 +25,9 @@ object ParserFactory {
   def parseToSequent(in: String): Sequent = {
     KeYmaeraXProblemParser.parseProblem(in) match {
       case (decls, f: Formula) =>
-        val substs = decls.filter(_._2._3.isDefined).map((KeYmaeraXDeclarationsParser.declAsSubstitutionPair _).tupled).toList
         Sequent(
           collection.immutable.IndexedSeq[Formula](),
-          collection.immutable.IndexedSeq[Formula](USubst(substs)(f)))
+          collection.immutable.IndexedSeq[Formula](USubst(decls.substs)(f)))
       case (_, a) => throw new IllegalArgumentException("Parsing the input did not result in a formula but in: " + a)
     }
   }

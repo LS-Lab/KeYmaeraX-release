@@ -6,6 +6,8 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import BelleLexer.TokenStream
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser.Declaration
 
 /**
   * The Bellerophon parser
@@ -14,7 +16,7 @@ import BelleLexer.TokenStream
   */
 object BelleParser extends (String => BelleExpr) {
   private var invariantGenerator : Option[Generator.Generator[Expression]] = None
-  private var definitions: List[SubstitutionPair] = Nil
+  private var definitions: Declaration = Declaration(Map())
   private var DEBUG = false
 
   private case class DefScope[K, V](defs: scala.collection.mutable.Map[K, V] = scala.collection.mutable.Map.empty[K, V],
@@ -31,7 +33,7 @@ object BelleParser extends (String => BelleExpr) {
   override def apply(s: String): BelleExpr = parseWithInvGen(s, None)
 
   def parseWithInvGen(s: String, g: Option[Generator.Generator[Expression]] = None,
-                      defs: List[SubstitutionPair] = Nil): BelleExpr =
+                      defs: Declaration = Declaration(Map())): BelleExpr =
     KeYmaeraXProblemParser.firstNonASCIICharacter(s) match {
       case Some((loc, char)) => throw ParseException(s"Found a non-ASCII character when parsing tactic: $char", loc, "<unknown>", "<unknown>", "", "")
       case None =>
@@ -504,11 +506,11 @@ object BelleParser extends (String => BelleExpr) {
           nonPosArgCount = nonPosArgCount + 1
           theArg +: arguments(tail)
         case BelleToken(SEARCH_SUCCEDENT, _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, loc)::tail =>
-          Right(Find.FindR(0, Some(expr.expression), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
+          Right(Find.FindR(0, Some(definitions.exhaustiveSubst(expr.expression)), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
         case BelleToken(SEARCH_ANTECEDENT, _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, loc)::tail =>
-          Right(Find.FindL(0, Some(expr.expression), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
+          Right(Find.FindL(0, Some(definitions.exhaustiveSubst(expr.expression)), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
         case BelleToken(SEARCH_EVERYWHERE, _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, loc)::tail =>
-          Right(new Find(0, Some(expr.expression), AntePosition(1), exact = matchKind==EXACT_MATCH)) +: arguments(tail)
+          Right(new Find(0, Some(definitions.exhaustiveSubst(expr.expression)), AntePosition(1), exact = matchKind==EXACT_MATCH)) +: arguments(tail)
         case tok::tail => parseArgumentToken(None)(tok, UnknownLocation) +: arguments(tail)
       }
 

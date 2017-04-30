@@ -3,7 +3,8 @@ package bellerophon.pptests
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core.SubstitutionPair
+import edu.cmu.cs.ls.keymaerax.core.Real
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.{ParseException, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
@@ -485,17 +486,28 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "expand definitions when parsing arguments" in {
-    inside(BelleParser.parseWithInvGen("MR({`safeDist()>0`},1)", None, Nil)) {
+    inside(BelleParser.parseWithInvGen("MR({`safeDist()>0`},1)", None, Declaration(Map()))) {
       case adpt: AppliedDependentPositionTactic => adpt.pt should have (
         'inputs ("safeDist()>0".asFormula::Nil)
       )
     }
 
     inside(BelleParser.parseWithInvGen("MR({`safeDist()>0`},1)", None,
-      SubstitutionPair("safeDist()".asTerm, "y".asTerm)::Nil)) {
+        Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))))) {
       case adpt: AppliedDependentPositionTactic => adpt.pt should have (
         'inputs ("y>0".asFormula::Nil)
       )
+    }
+  }
+
+  it should "expand definitions when parsing locators" in {
+    inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None, Declaration(Map()))) {
+      case apt: AppliedPositionTactic => apt.locator shouldBe Find.FindL(0, Some("s=safeDist()".asFormula))
+    }
+
+    inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None,
+        Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))))) {
+      case apt: AppliedPositionTactic => apt.locator shouldBe Find.FindL(0, Some("s=y".asFormula))
     }
   }
 
