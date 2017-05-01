@@ -140,6 +140,12 @@ object DependencyAnalysis {
     val fvsig = signature(dom)
     //Converts the ODE to a list of AtomicODEs
     val odels = collapseODE(ode)
+
+    //Special case: variables not mentioned at all in the ODE
+    if (s.intersect(odels.keySet).isEmpty) {
+      return (s,Set())
+    }
+
     //If the ODE is linear, apply the transitive analysis
     if(isLinearODE(odels)){
       //println("Linear ODE")
@@ -167,29 +173,43 @@ object DependencyAnalysis {
   // Naive DFS starting from a variable
   // Returns a set of newly visited variables and a visit order
   def dfs_aux(v:BaseVariable, adjlist: Map[BaseVariable,Set[BaseVariable]], done:Set[BaseVariable]) : (List[BaseVariable],Set[BaseVariable]) = {
-    //println("DFS: ",v)
-    if(adjlist.contains(v)){
-      adjlist(v).foldLeft((List[BaseVariable](),done))((l,v) =>
-        if(l._2.contains(v)) l
-        else {
-          val (ls,vis) = dfs_aux(v,adjlist,l._2+v)
-          (v::ls++l._1,vis)
-        }
+    //println("DFS: ",v,done)
+
+    //Already visited or visiting
+    if(done.contains(v))
+      (List(),done)
+
+    else if(adjlist.contains(v)){
+      val ls = adjlist(v).foldLeft((List[BaseVariable](),done+v))((l,vv) => {
+        //println(v,l,vv)
+        val (ls, vis) = dfs_aux(vv, adjlist, l._2)
+        (ls ++ l._1, vis)
+      }
       )
+      (v::ls._1,ls._2)
     }
     else {
-      (List(v),Set(v))
+      (List(v),done+v)
     }
   }
 
   def dfs(adjlist: Map[BaseVariable,Set[BaseVariable]]) : List[BaseVariable] = {
 
-    adjlist.keySet.foldLeft(List[BaseVariable](),Set[BaseVariable]())((l,v) =>
+    adjlist.keySet.foldLeft(List[BaseVariable](),Set[BaseVariable]())((l,v) => {
       if(l._2.contains(v)) l
       else {
-        val (ls,vis) = dfs_aux(v,adjlist,l._2+v)
-        (v::ls++l._1,vis)
-      })._1
+        val (ls,vis) = dfs_aux(v,adjlist,l._2)
+        (ls++l._1,vis)
+      }
+    }
+    )._1
+  }
+
+  //Could be done faster, but the problems aren't that big
+  def transClose(adjlist: Map[BaseVariable,Set[BaseVariable]]) : Map[BaseVariable,Set[BaseVariable]] = {
+    adjlist.keySet.map( v => {
+      (v,dfs_aux(v,adjlist,Set[BaseVariable]())._2)
+    }).toMap
   }
 
   def transpose(adjlist:Map[BaseVariable,Set[BaseVariable]]) : Map[BaseVariable,Set[BaseVariable]] = {
@@ -202,6 +222,7 @@ object DependencyAnalysis {
     val stack = dfs(adjlist)
     val trans = transpose(adjlist)
     stack.foldLeft((List[Set[BaseVariable]](),Set[BaseVariable]()))( (d,v) => {
+
       if(d._2.contains(v)){
         d
       }
@@ -210,5 +231,22 @@ object DependencyAnalysis {
         (ls.toSet::d._1,vis)
       }
     })._1
+  }
+
+  private def stripImp(f:Formula) : Option[Program] = {
+    f match {
+      case Imply(l,r) => stripImp(r)
+      case Box(a,f) => Some(a)
+      case _ => None
+    }
+  }
+
+  // Returns the program in [A]P, but only if the sequent is in the appropriate shape
+  // e.g. Gamma ==> R_1 -> R_2 -> ... -> [A]P
+  def stripSeq(s:Sequent) : Option[Program] = {
+    if (s.succ.length==1)
+      stripImp(s.succ(0))
+    else
+      None
   }
 }
