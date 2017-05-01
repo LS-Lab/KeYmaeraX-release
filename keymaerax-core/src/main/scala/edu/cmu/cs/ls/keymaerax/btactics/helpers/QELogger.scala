@@ -84,7 +84,7 @@ object QELogger {
   }
 
   // Must be of the form Seq # Seq # Seq
-  private def parseStr(s:String) : Option[(String,Sequent,Sequent)] = {
+  def parseStr(s:String) : Option[(String,Sequent,Sequent)] = {
     val ss = s.split("#")
     if (ss.length!=3)
       return None

@@ -15,15 +15,20 @@ object DependencyAnalysis {
 
   //Same as freeVars except it throws out differential symbols
   def freeVars(t:Expression) : Set[BaseVariable] = {
-    StaticSemantics.freeVars(t).toSet.collect(PartialFunction[Variable,BaseVariable]{
-      case bv:BaseVariable => bv
-    })
+    StaticSemantics.freeVars(t).toSet.flatMap( (v:Variable) =>
+      v match {
+        case bv:BaseVariable => Some(bv)
+        case _ => None
+      }
+    )
   }
 
   //Same as signature except it throws out everything except Function symbols
   def signature(t:Expression) : Set[Function] = {
-    StaticSemantics.signature(t).collect(PartialFunction[NamedSymbol,Function]{
-      case bv:Function => bv
+    StaticSemantics.signature(t).flatMap( (e:Expression) =>
+      e match {
+        case bv:Function => Some(bv)
+        case _ => None
     })
   }
 
@@ -153,4 +158,57 @@ object DependencyAnalysis {
     }
   }
 
+  //Given a sequent, find the dependencies of all its variables w.r.t. a modal program
+  def analyseModal(p:Program,s:Sequent) : Map[BaseVariable,(Set[BaseVariable],Set[Function])]= {
+    val vars = (s.succ.map( f => freeVars(f)) ++ s.ante.map(f=>freeVars(f))).flatten.toSet
+    vars.map(v => (v,dependencies(p,Set(v)))).toMap
+  }
+
+  // Naive DFS starting from a variable
+  // Returns a set of newly visited variables and a visit order
+  def dfs_aux(v:BaseVariable, adjlist: Map[BaseVariable,Set[BaseVariable]], done:Set[BaseVariable]) : (List[BaseVariable],Set[BaseVariable]) = {
+    //println("DFS: ",v)
+    if(adjlist.contains(v)){
+      adjlist(v).foldLeft((List[BaseVariable](),done))((l,v) =>
+        if(l._2.contains(v)) l
+        else {
+          val (ls,vis) = dfs_aux(v,adjlist,l._2+v)
+          (v::ls++l._1,vis)
+        }
+      )
+    }
+    else {
+      (List(v),Set(v))
+    }
+  }
+
+  def dfs(adjlist: Map[BaseVariable,Set[BaseVariable]]) : List[BaseVariable] = {
+
+    adjlist.keySet.foldLeft(List[BaseVariable](),Set[BaseVariable]())((l,v) =>
+      if(l._2.contains(v)) l
+      else {
+        val (ls,vis) = dfs_aux(v,adjlist,l._2+v)
+        (v::ls++l._1,vis)
+      })._1
+  }
+
+  def transpose(adjlist:Map[BaseVariable,Set[BaseVariable]]) : Map[BaseVariable,Set[BaseVariable]] = {
+    adjlist.values.flatten.map( k => (k,
+      adjlist.keys.filter(v => adjlist(v).contains(k)).toSet)).toMap
+  }
+
+  //Find the SCCs of a graph defined on the BaseVariables
+  def scc(adjlist: Map[BaseVariable,Set[BaseVariable]]) : List[Set[BaseVariable]] = {
+    val stack = dfs(adjlist)
+    val trans = transpose(adjlist)
+    stack.foldLeft((List[Set[BaseVariable]](),Set[BaseVariable]()))( (d,v) => {
+      if(d._2.contains(v)){
+        d
+      }
+      else {
+        val (ls, vis) = dfs_aux(v, trans, d._2)
+        (ls.toSet::d._1,vis)
+      }
+    })._1
+  }
 }
