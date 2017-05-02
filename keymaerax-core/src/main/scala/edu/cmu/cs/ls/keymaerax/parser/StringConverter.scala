@@ -43,24 +43,27 @@ class StringConverter(val s: String) {
   private def smartFmlSplit(acc:String,ls:List[String]) : List[Formula] = {
     ls match {
       case Nil =>
-        if (ls!="")
+        if (acc!="")
           List(KeYmaeraXParser.formulaParser(acc))
         else
           Nil
-      case (l::ls) =>
-        try{
-          KeYmaeraXParser.formulaParser(acc+l) :: smartFmlSplit("",ls)
-        }
-        catch {
-          case e:ParseException =>
-            smartFmlSplit(acc+l,ls)
+      case (l::lss) =>
+        if(l == "") smartFmlSplit(acc,lss)
+        else {
+          try {
+            KeYmaeraXParser.formulaParser(acc + l) :: smartFmlSplit("", lss)
+          }
+          catch {
+            case e: ParseException =>
+              smartFmlSplit(acc + l + ",", lss)
+          }
         }
     }
   }
 
   def asSequent: Sequent = {
     val (ante::succ::Nil) = s.split("==>").map(_.trim()).toList
-
+    //println("parsing",ante,succ)
     val res = Sequent(
       smartFmlSplit("",ante.split(",(?![^{]*})").toList).toIndexedSeq,
       smartFmlSplit("",succ.split(",(?![^{]*})").toList).toIndexedSeq

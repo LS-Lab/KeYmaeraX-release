@@ -23,6 +23,10 @@ object DependencyAnalysis {
     )
   }
 
+  def freeVars(s:Sequent) : Set[BaseVariable] = {
+    (s.succ.map( f => freeVars(f)) ++ s.ante.map(f=>freeVars(f))).flatten.toSet
+  }
+
   //Same as signature except it throws out everything except Function symbols
   def signature(t:Expression) : Set[Function] = {
     StaticSemantics.signature(t).flatMap( (e:Expression) =>
@@ -32,7 +36,7 @@ object DependencyAnalysis {
     })
   }
 
-  def dependencies(p:Program,s:Set[BaseVariable]) : (Set[BaseVariable],Set[Function]) ={
+  def dependencies(p:Program,s:Set[BaseVariable],ignoreTest:Boolean = false) : (Set[BaseVariable],Set[Function]) ={
     p match {
       case Assign(v:BaseVariable,t) =>
         if(s.contains(v))
@@ -41,21 +45,22 @@ object DependencyAnalysis {
       case AssignAny(v:BaseVariable) =>
         (s - v,Set.empty)
       case Test(f) =>
-        (s.union(freeVars(f)),signature(f))
+        if(ignoreTest) (s,Set.empty)
+        else (s.union(freeVars(f)),signature(f))
       case Choice(p1,p2) =>
-        val (d1,f1) = dependencies(p1,s)
-        val (d2,f2) = dependencies(p2,s)
+        val (d1,f1) = dependencies(p1,s,ignoreTest)
+        val (d2,f2) = dependencies(p2,s,ignoreTest)
         (d1.union(d2),f1.union(f2))
       case Compose(p1,p2) =>
-        val (d2,f2) = dependencies(p2,s)
-        val (d1,f1) = dependencies(p1,d2)
+        val (d2,f2) = dependencies(p2,s,ignoreTest)
+        val (d1,f1) = dependencies(p1,d2,ignoreTest)
         (d1,f1.union(f2))
-      case p:ODESystem => analyseODE(p,s)
+      case p:ODESystem => analyseODE(p,s,ignoreTest)
       case Loop(l) =>
-        val (inn,funcs) = dependencies(l,s)
+        val (inn,funcs) = dependencies(l,s,ignoreTest)
         if(inn.subsetOf(s)) (s,funcs) //Nothing to add
         else {
-          val (d, f) = dependencies(p, s.union(inn)) //More to add
+          val (d, f) = dependencies(p, s.union(inn),ignoreTest) //More to add
           (d, f.union(funcs))
         }
       case _ => ???
@@ -133,11 +138,11 @@ object DependencyAnalysis {
   }
 
   //Dependency Analysis for ODEs
-  def analyseODE(p:ODESystem,s:Set[BaseVariable]) : (Set[BaseVariable],Set[Function]) = {
+  def analyseODE(p:ODESystem,s:Set[BaseVariable],ignoreTest:Boolean) : (Set[BaseVariable],Set[Function]) = {
     val ode = p.ode
     val dom = p.constraint
-    val fvdom = freeVars(dom)
-    val fvsig = signature(dom)
+    val (fvdom:Set[BaseVariable]) = if (ignoreTest) Set.empty else freeVars(dom)
+    val (fvsig:Set[Function]) = if (ignoreTest) Set.empty else signature(dom)
     //Converts the ODE to a list of AtomicODEs
     val odels = collapseODE(ode)
 
@@ -164,10 +169,14 @@ object DependencyAnalysis {
     }
   }
 
+  def analyseModalVars(p:Program,ls:Set[BaseVariable],ignoreTest:Boolean = false) : Map[BaseVariable,(Set[BaseVariable],Set[Function])]= {
+    ls.map(v => (v,dependencies(p,Set(v),ignoreTest))).toMap
+  }
+
   //Given a sequent, find the dependencies of all its variables w.r.t. a modal program
-  def analyseModal(p:Program,s:Sequent) : Map[BaseVariable,(Set[BaseVariable],Set[Function])]= {
+  def analyseModal(p:Program,s:Sequent,ignoreTest:Boolean = false) : Map[BaseVariable,(Set[BaseVariable],Set[Function])]= {
     val vars = (s.succ.map( f => freeVars(f)) ++ s.ante.map(f=>freeVars(f))).flatten.toSet
-    vars.map(v => (v,dependencies(p,Set(v)))).toMap
+    analyseModalVars(p,vars,ignoreTest)
   }
 
   // Naive DFS starting from a variable
@@ -233,7 +242,7 @@ object DependencyAnalysis {
     })._1
   }
 
-  private def stripImp(f:Formula) : Option[Program] = {
+  def stripImp(f:Formula) : Option[Program] = {
     f match {
       case Imply(l,r) => stripImp(r)
       case Box(a,f) => Some(a)
@@ -248,5 +257,22 @@ object DependencyAnalysis {
       stripImp(s.succ(0))
     else
       None
+  }
+
+  def inducedOrd(edges: Map[BaseVariable,Set[BaseVariable]]) : Ordering[Variable] = new Ordering[Variable]{
+
+    def compare(x:Variable,y:Variable): Int = {
+      (x,y) match{
+        case(x:BaseVariable,y:BaseVariable) => {
+          if(!edges.contains(x) || !edges.contains(y)) 0 //Not in the PO graph
+          val b1 = edges(x).contains(y)
+          val b2 = edges(y).contains(x)
+          if(b1 == b2) 0 // Same eq class
+          else
+          if(b2) -1 else 1
+        }
+        case _ => 0
+      }
+    }
   }
 }
