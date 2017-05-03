@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
 
@@ -25,6 +26,16 @@ class UnifyUSCalculusTests extends TacticTestBase {
     //Both of the following fail because of unification
     proveBy(fml,useAt("ANON", minusCancel,PosInExpr(0::Nil))(SuccPosition(1, 0 :: Nil)))
     useFor(minusCancel, PosInExpr(0 :: Nil))(SuccPosition(1, 0 :: Nil))(minusReflex)
+  }
+
+  "Unifier" should "compute a substitution that results in the original formula" in withMathematica { qeTool =>
+    val pv:ProvableSig = AxiomInfo("DGd diamond differential ghost constant").provable
+    val fact:Sequent = Sequent(IndexedSeq[Formula](), IndexedSeq[Formula]("<{c{|y_|}&q(|y_|)}>p(|y_|)<->\\forall y_ <{c{|y_|},y_'=b(|y_|)&q(|y_|)}>p(|y_|)".asFormula))
+    val sequent:Sequent = Sequent(IndexedSeq[Formula](), IndexedSeq[Formula]("<{kyxtime'=1&true}>\\forall x x^2>=0<->\\forall x <{kyxtime'=1,x'=1&true}>\\forall x x^2>=0".asFormula))
+    val tac = HilbertCalculus.US(pv)
+    // raises exception "unification computed an incorrect unifier", should not raise exception but instead prove the axiom instance
+    val res = proveBy(sequent,tac)
+    res shouldBe 'proved
   }
 
   //Various kinds of CEating
