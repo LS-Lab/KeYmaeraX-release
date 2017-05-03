@@ -15,19 +15,28 @@ object DependencyAnalysis {
 
   //Same as freeVars except it throws out differential symbols
   def freeVars(t:Expression) : Set[BaseVariable] = {
-    StaticSemantics.freeVars(t).toSet.collect(PartialFunction[Variable,BaseVariable]{
-      case bv:BaseVariable => bv
-    })
+    StaticSemantics.freeVars(t).toSet.flatMap( (v:Variable) =>
+      v match {
+        case bv:BaseVariable => Some(bv)
+        case _ => None
+      }
+    )
+  }
+
+  def freeVars(s:Sequent) : Set[BaseVariable] = {
+    (s.succ.map( f => freeVars(f)) ++ s.ante.map(f=>freeVars(f))).flatten.toSet
   }
 
   //Same as signature except it throws out everything except Function symbols
   def signature(t:Expression) : Set[Function] = {
-    StaticSemantics.signature(t).collect(PartialFunction[NamedSymbol,Function]{
-      case bv:Function => bv
+    StaticSemantics.signature(t).flatMap( (e:Expression) =>
+      e match {
+        case bv:Function => Some(bv)
+        case _ => None
     })
   }
 
-  def dependencies(p:Program,s:Set[BaseVariable]) : (Set[BaseVariable],Set[Function]) ={
+  def dependencies(p:Program,s:Set[BaseVariable],ignoreTest:Boolean = false) : (Set[BaseVariable],Set[Function]) ={
     p match {
       case Assign(v:BaseVariable,t) =>
         if(s.contains(v))
@@ -36,21 +45,22 @@ object DependencyAnalysis {
       case AssignAny(v:BaseVariable) =>
         (s - v,Set.empty)
       case Test(f) =>
-        (s.union(freeVars(f)),signature(f))
+        if(ignoreTest) (s,Set.empty)
+        else (s.union(freeVars(f)),signature(f))
       case Choice(p1,p2) =>
-        val (d1,f1) = dependencies(p1,s)
-        val (d2,f2) = dependencies(p2,s)
+        val (d1,f1) = dependencies(p1,s,ignoreTest)
+        val (d2,f2) = dependencies(p2,s,ignoreTest)
         (d1.union(d2),f1.union(f2))
       case Compose(p1,p2) =>
-        val (d2,f2) = dependencies(p2,s)
-        val (d1,f1) = dependencies(p1,d2)
+        val (d2,f2) = dependencies(p2,s,ignoreTest)
+        val (d1,f1) = dependencies(p1,d2,ignoreTest)
         (d1,f1.union(f2))
-      case p:ODESystem => analyseODE(p,s)
+      case p:ODESystem => analyseODE(p,s,ignoreTest)
       case Loop(l) =>
-        val (inn,funcs) = dependencies(l,s)
+        val (inn,funcs) = dependencies(l,s,ignoreTest)
         if(inn.subsetOf(s)) (s,funcs) //Nothing to add
         else {
-          val (d, f) = dependencies(p, s.union(inn)) //More to add
+          val (d, f) = dependencies(p, s.union(inn),ignoreTest) //More to add
           (d, f.union(funcs))
         }
       case _ => ???
@@ -128,13 +138,19 @@ object DependencyAnalysis {
   }
 
   //Dependency Analysis for ODEs
-  def analyseODE(p:ODESystem,s:Set[BaseVariable]) : (Set[BaseVariable],Set[Function]) = {
+  def analyseODE(p:ODESystem,s:Set[BaseVariable],ignoreTest:Boolean) : (Set[BaseVariable],Set[Function]) = {
     val ode = p.ode
     val dom = p.constraint
-    val fvdom = freeVars(dom)
-    val fvsig = signature(dom)
+    val (fvdom:Set[BaseVariable]) = if (ignoreTest) Set.empty else freeVars(dom)
+    val (fvsig:Set[Function]) = if (ignoreTest) Set.empty else signature(dom)
     //Converts the ODE to a list of AtomicODEs
     val odels = collapseODE(ode)
+
+    //Special case: variables not mentioned at all in the ODE
+    if (s.intersect(odels.keySet).isEmpty) {
+      return (s,Set())
+    }
+
     //If the ODE is linear, apply the transitive analysis
     if(isLinearODE(odels)){
       //println("Linear ODE")
@@ -153,4 +169,110 @@ object DependencyAnalysis {
     }
   }
 
+  def analyseModalVars(p:Program,ls:Set[BaseVariable],ignoreTest:Boolean = false) : Map[BaseVariable,(Set[BaseVariable],Set[Function])]= {
+    ls.map(v => (v,dependencies(p,Set(v),ignoreTest))).toMap
+  }
+
+  //Given a sequent, find the dependencies of all its variables w.r.t. a modal program
+  def analyseModal(p:Program,s:Sequent,ignoreTest:Boolean = false) : Map[BaseVariable,(Set[BaseVariable],Set[Function])]= {
+    val vars = (s.succ.map( f => freeVars(f)) ++ s.ante.map(f=>freeVars(f))).flatten.toSet
+    analyseModalVars(p,vars,ignoreTest)
+  }
+
+  // Naive DFS starting from a variable
+  // Returns a set of newly visited variables and a visit order
+  def dfs_aux(v:BaseVariable, adjlist: Map[BaseVariable,Set[BaseVariable]], done:Set[BaseVariable]) : (List[BaseVariable],Set[BaseVariable]) = {
+    //println("DFS: ",v,done)
+
+    //Already visited or visiting
+    if(done.contains(v))
+      (List(),done)
+
+    else if(adjlist.contains(v)){
+      val ls = adjlist(v).foldLeft((List[BaseVariable](),done+v))((l,vv) => {
+        //println(v,l,vv)
+        val (ls, vis) = dfs_aux(vv, adjlist, l._2)
+        (ls ++ l._1, vis)
+      }
+      )
+      (v::ls._1,ls._2)
+    }
+    else {
+      (List(v),done+v)
+    }
+  }
+
+  def dfs(adjlist: Map[BaseVariable,Set[BaseVariable]]) : List[BaseVariable] = {
+
+    adjlist.keySet.foldLeft(List[BaseVariable](),Set[BaseVariable]())((l,v) => {
+      if(l._2.contains(v)) l
+      else {
+        val (ls,vis) = dfs_aux(v,adjlist,l._2)
+        (ls++l._1,vis)
+      }
+    }
+    )._1
+  }
+
+  //Could be done faster, but the problems aren't that big
+  def transClose(adjlist: Map[BaseVariable,Set[BaseVariable]]) : Map[BaseVariable,Set[BaseVariable]] = {
+    adjlist.keySet.map( v => {
+      (v,dfs_aux(v,adjlist,Set[BaseVariable]())._2)
+    }).toMap
+  }
+
+  def transpose(adjlist:Map[BaseVariable,Set[BaseVariable]]) : Map[BaseVariable,Set[BaseVariable]] = {
+    adjlist.values.flatten.map( k => (k,
+      adjlist.keys.filter(v => adjlist(v).contains(k)).toSet)).toMap
+  }
+
+  //Find the SCCs of a graph defined on the BaseVariables
+  def scc(adjlist: Map[BaseVariable,Set[BaseVariable]]) : List[Set[BaseVariable]] = {
+    val stack = dfs(adjlist)
+    val trans = transpose(adjlist)
+    stack.foldLeft((List[Set[BaseVariable]](),Set[BaseVariable]()))( (d,v) => {
+
+      if(d._2.contains(v)){
+        d
+      }
+      else {
+        val (ls, vis) = dfs_aux(v, trans, d._2)
+        (ls.toSet::d._1,vis)
+      }
+    })._1
+  }
+
+  def stripImp(f:Formula) : Option[Program] = {
+    f match {
+      case Imply(l,r) => stripImp(r)
+      case Box(a,f) => Some(a)
+      case _ => None
+    }
+  }
+
+  // Returns the program in [A]P, but only if the sequent is in the appropriate shape
+  // e.g. Gamma ==> R_1 -> R_2 -> ... -> [A]P
+  def stripSeq(s:Sequent) : Option[Program] = {
+    if (s.succ.length==1)
+      stripImp(s.succ(0))
+    else
+      None
+  }
+
+  def inducedOrd(edges: Map[BaseVariable,Set[BaseVariable]]) : Ordering[Variable] = new Ordering[Variable]{
+
+    def compare(x:Variable,y:Variable): Int = {
+      (x,y) match{
+        case(x:BaseVariable,y:BaseVariable) => {
+          if(!edges.contains(x) || !edges.contains(y)) 0 //Not in the PO graph
+          val b1 = edges(x).contains(y)
+          val b2 = edges(y).contains(x)
+          if(b1 == b2) 0 // Same eq class
+          else
+          if(b2) -1 else 1
+        }
+        case _ => 0
+      }
+    }
+  }
 }

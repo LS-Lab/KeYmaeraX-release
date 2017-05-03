@@ -3,7 +3,9 @@ package btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.OnAll
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.DependencyAnalysis._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger._
+import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Box}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /**
@@ -39,22 +41,30 @@ class QELoggerTests extends TacticTestBase {
     ls("").length shouldBe 48
   }
 
-  //Timing tests
-  "QE logger" should "record time to re-prove the log with QE" in withMathematica { qeTool =>
+  "QE logger" should "keep only records with required shape" in withMathematica { qeTool =>
     val ls = parseLog()
     for ((k,vs) <- ls) {
-      println("Replaying QE calls for: "+k)
-      var time = 0L
+      println(k,vs.size)
+      var ctr = 0
       for ((pr,seq) <- vs) {
-        val t0 = System.nanoTime()
-        proveBy(seq,QE) //TODO: kill after timeout
-        val t1 = System.nanoTime()
-        time+=t1-t0
+        if (pr.succ.length>0){
+          pr.succ(0) match {
+            case Box(p,f) =>
+              //println(p)
+              //println(f)
+              ctr+=1
+            case _ => ()
+          }
+        }
       }
-      println("Total time (s): "+time.toDouble/1000000000.0)
+      println(ctr)
     }
+  }
 
+  "QE logger" should "re-parse logs" in withMathematica { qeTool =>
+    val entry = List("ACAS X Safe#w=-1|w=1, hp>0, rp>=0, rv>=0, a>0  ==>  abs(r)>rp|abs(h)>hp, 0<=0&0 < max((0,w*(dhf-dhd)))/a&0=rv*0&0=w*a/2*0^2+dhd*0|0>=max((0,w*(dhf-dhd)))/a&0=rv*0&0=dhf*0-w*max((0,w*(dhf-dhd)))^2/(2*a)#w=-1|w=1, hp>0, rp>=0, rv>=0, a>0, maxI=max_0, 0>=w*(dhf-dhd)&max_0=0|0 < w*(dhf-dhd)&max_0=w*(dhf-dhd)  ==>  0<=0&0 < maxI/a&0=rv*0&0=w*a/2*0^2+dhd*0|0>=maxI/a&0=rv*0&0=dhf*0-w*maxI^2/(2*a)","AxiomaticODESolver#  ==>  x=1&v=2->[{x'=v&true}]x^3>=1#x=1&v=2  ==>  \\forall t_ (t_>=0->(v*t_+x)^3>=1)")
 
+    println(entry.map(s =>parseStr(s)))
   }
 
 }

@@ -107,23 +107,30 @@ private object ToolTactics {
       (m:Map[Variable,(Int,Int,Int)],f:Formula) => merge(m,fmlDegs(f),(x,y)=>math.max(x,y),(x,y)=>math.max(x,y),(x,y)=>x+y))
   }
 
-  private def orderHeuristic(s:Sequent) : List[Variable] = {
+  private def equalityOrder[T] : Ordering[T] = new Ordering[T] {
+    def compare(x:T,y:T): Int =  0
+  }
+
+  private def orderHeuristic(s:Sequent,po:Ordering[Variable]) : List[Variable] = {
     val m = seqDegs(s)
-    val ls = m.keySet.toList.sortWith( (x,y) => m(x) < m(y) )
-//    println("From ",s)
-//    println("Got ",ls,m)
+    val ls = m.keySet.toList.sortWith( (x,y) => {
+      val c = po.compare(x,y)
+      if (c==0) m(x) < m(y)
+      else c < 0
+      }
+    )
     ls
   }
 
-  private def orderedClosure = new SingleGoalDependentTactic("ordered closure") {
+  private def orderedClosure(po:Ordering[Variable]) = new SingleGoalDependentTactic("ordered closure") {
     override def computeExpr(seq: Sequent): BelleExpr = {
-      val order = orderHeuristic(seq)
+      val order = orderHeuristic(seq,po)
       FOQuantifierTactics.universalClosure(order)(1)
     }
   }
 
-  //Note: the same as fullQE except it uses a rough heuristic order
-  def heuristicQE(qeTool: QETool): BelleExpr = {
+  //Note: the same as fullQE except it uses computes the heuristic order in the middle
+  def heuristicQE(qeTool: QETool,po:Ordering[Variable]=equalityOrder): BelleExpr = {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("ordered QE",
       //      DebuggingTactics.recordQECall() &
@@ -132,7 +139,7 @@ private object ToolTactics {
         (close |
           ((atomExhaustiveEqL2R('L)*) &
           hidePredicates &
-          toSingleFormula & orderedClosure & rcf(qeTool) &
+          toSingleFormula & orderedClosure(po) & rcf(qeTool) &
             (done | ("ANON" by ((s: Sequent) =>
               if (s.succ.head == False) label("QE CEX")
               else DebuggingTactics.done("QE was unable to prove: invalid formula")))
