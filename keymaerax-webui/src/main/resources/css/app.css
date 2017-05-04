@@ -163,18 +163,22 @@ del {
   font-size: larger;
 }
 
-span.hl:not(.hlhover) > .k4-mod-close {
-  color: var(--lsmain)!important;
+.k4-mod-close {
+  color: var(--lsmain);
   font-weight: bold;
   font-size: larger;
 }
 
-/* Everything inside a box/diamond, unless formula is highlighted */
-span.hl:not(.hlhover) > .k4-mod-open ~ span {
+/* Everything inside a box/diamond */
+.k4-mod-open ~ span:not(.k4-mod-close) {
   color: green;
 }
-span.hl:not(.hlhover) > .k4-mod-close ~ span {
+.k4-mod-close ~ span:not(.k4-mod-open) {
   color: var(--lsmain);
+}
+/* Unless a parent is highlighted */
+.hlhover span {
+  color: white;
 }
 
 .k4-axiom-key {
