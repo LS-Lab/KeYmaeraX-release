@@ -105,8 +105,9 @@ object DebuggingTactics {
   def assert(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("assert") {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.size != 1 || !cond(provable.subgoals.head)) {
-        throw new BelleUserGeneratedError(message + "\nExpected 1 subgoal whose sequent matches condition " + cond + ",\n\t but got " +
-          provable.subgoals.size + " subgoals, or sole subgoal does not match")
+        throw BelleUserGeneratedError(message + "\nExpected 1 subgoal whose sequent matches condition " + cond + ",\n\t but got " +
+          (if (provable.subgoals.size != 1) provable.subgoals.size + " subgoals"
+          else provable.subgoals.head.prettyString))
       }
       provable
     }
