@@ -28,7 +28,18 @@ class UnifyUSCalculusTests extends TacticTestBase {
     useFor(minusCancel, PosInExpr(0 :: Nil))(SuccPosition(1, 0 :: Nil))(minusReflex)
   }
 
-  "Unifier" should "unify DG with universal postcondition" in {
+  "Unifier" should "unify DG key with universal postcondition" in {
+    val y = Variable("y_", None, Real)
+    val fact = AxiomInfo("DGd diamond differential ghost constant").formula match {case Equiv(l,_) => l}
+    val goal = "<{t'=1}>\\forall x x^2>=0".asFormula
+    UnificationMatch(fact, goal) shouldBe RenUSubst(
+      (DifferentialProgramConst("c", Except(y)), AtomicODE(DifferentialSymbol(Variable("t")), Number(1))) ::
+        (UnitPredicational("q", Except(y)), True) ::
+        (UnitPredicational("p", Except(y)), Forall(Seq(Variable("x")), GreaterEqual(Power(Variable("x"),Number(2)), Number(0)))) :: Nil
+    )
+  }
+
+  it should "unify DG with universal postcondition" in {
     val y = Variable("y_", None, Real)
     val fact = AxiomInfo("DGd diamond differential ghost constant").formula
     val goal = "<{t'=1}>\\forall x x^2>=0<->\\forall x <{t'=1,x'=1&true}>\\forall x x^2>=0".asFormula
