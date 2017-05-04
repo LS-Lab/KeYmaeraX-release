@@ -229,6 +229,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     case _: Program => "{" -> "}"
     case _: DifferentialProgram => "{" -> "}"
     case _: UnaryCompositeProgram => "{" -> "}"
+    case _: Pair => "(" -> ")"
   }
 
   //@todo could add contract that TermAugmentor(original)(q) == term
