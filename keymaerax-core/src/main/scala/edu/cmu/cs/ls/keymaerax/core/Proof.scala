@@ -416,7 +416,7 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     * @note soundness-critical. And soundness needs Rule to be sealed.
     */
   final def apply(rule: Rule, subgoal: Subgoal): Provable = {
-    require(0 <= subgoal && subgoal < subgoals.length, "Rules " + rule + " should be applied to an index " + subgoal + " that is within the subgoals " + subgoals)
+    require(0 <= subgoal && subgoal < subgoals.length, "Rules " + rule + " should be applied to a subgoal " + subgoal + " that is within the subgoals " + subgoals)
     rule(subgoals(subgoal)) match {
       // subgoal closed by proof rule
       case Nil => new Provable(conclusion, subgoals.patch(subgoal, Nil, 1))
