@@ -1,0 +1,6 @@
+@import url("idea.css");
+
+.hljs-symbol {
+  background: transparent;
+  font-weight: bold;
+}
