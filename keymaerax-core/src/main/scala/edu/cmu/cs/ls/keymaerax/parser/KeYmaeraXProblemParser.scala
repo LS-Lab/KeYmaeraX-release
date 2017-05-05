@@ -46,18 +46,10 @@ object KeYmaeraXProblemParser {
     val result = try { Some(KeYmaeraXParser(input).asInstanceOf[Formula]) } catch { case _: Throwable => None }
     result match {
       case Some(formula) => formula
-      case None => (exhaustiveSubst[Formula] _).tupled(KeYmaeraXProblemParser.parseProblem(input))
+      case None =>
+        val (d, fml) = KeYmaeraXProblemParser.parseProblem(input)
+        d.exhaustiveSubst(fml)
     }
-  }
-
-  /** Applies substitutions per `decls` exhaustively to `fml`. */
-  private def exhaustiveSubst[T <: Expression](decls: Declaration, fml: T): T = {
-    val substs = decls.filter(_._2._3.isDefined).map((KeYmaeraXDeclarationsParser.declAsSubstitutionPair _).tupled).toList
-    def exhaustiveSubst(f: T): T = {
-      val fs: T = USubst(substs)(f).asInstanceOf[T]
-      if (fs != f) exhaustiveSubst(fs) else fs
-    }
-    exhaustiveSubst(fml)
   }
 
   /** //almost always the line number where the Problem section begins. (see todo) */
@@ -112,11 +104,11 @@ object KeYmaeraXProblemParser {
 
   protected def parseProblem(tokens: List[Token]):  (Declaration, Formula) = {
     val parser = KeYmaeraXParser
-    val (decls, remainingTokens) = KeYmaeraXDeclarationsParser(tokens)
+    val (d, remainingTokens) = KeYmaeraXDeclarationsParser(tokens)
     checkInput(remainingTokens.nonEmpty, "Problem. block expected", UnknownLocation, "kyx problem input problem block")
     checkInput(remainingTokens.head.tok.equals(PROBLEM_BLOCK), "Problem. block expected", remainingTokens.head.loc, "kyx reading problem block")
 
-    if(decls.keySet.nonEmpty && remainingTokens.head.loc.line <= 1)
+    if(d.decls.keySet.nonEmpty && remainingTokens.head.loc.line <= 1)
       println("WARNING: There were declarations in this file but the non-declaration portion of the file starts at line 0 or line 1. There may be off-by-n errors in location messages.")
 
     val (theProblem, eof) = remainingTokens.span(x => !x.tok.equals(END_BLOCK))
@@ -132,8 +124,8 @@ object KeYmaeraXProblemParser {
     parser.setAnnotationListener((prg, fml) => {
       // make annotations compatible with parse result: add () and expand function declarations
       annotationListener(
-        exhaustiveSubst(decls, elaborateToFunctions(prg, decls)),
-        exhaustiveSubst(decls, elaborateToFunctions(fml, decls)))
+        d.exhaustiveSubst(elaborateToFunctions(prg, d)),
+        d.exhaustiveSubst(elaborateToFunctions(fml, d)))
     })
 
     val problem : Formula = parser.parse(theProblem.tail :+ Token(EOF, UnknownLocation)) match {
@@ -146,17 +138,17 @@ object KeYmaeraXProblemParser {
       case Some(error) => throw ParseException("Semantic analysis error\n" + error, problem)
     }
 
-    val elaborated = exhaustiveSubst(decls, elaborateToFunctions(problem, decls))
+    val elaborated = d.exhaustiveSubst(elaborateToFunctions(problem, d))
 
-    KeYmaeraXDeclarationsParser.typeAnalysis(decls, elaborated) //throws ParseExceptions.
+    KeYmaeraXDeclarationsParser.typeAnalysis(d, elaborated) //throws ParseExceptions.
 
-    (decls, elaborated)
+    (d, elaborated)
   }
 
   /** Elaborate ()-less functions, which get parsed as variables, to functions with domain Unit. */
-  private def elaborateToFunctions[T <: Expression](expr: T, decls: Declaration): T = {
+  private def elaborateToFunctions[T <: Expression](expr: T, d: Declaration): T = {
     val elaboratables = StaticSemantics.freeVars(expr).toSet[Variable].filter({
-      case BaseVariable(name, i, _) => decls.contains((name, i)) && decls((name, i))._1 == Some(Unit)
+      case BaseVariable(name, i, _) => d.decls.contains((name, i)) && d.decls((name, i))._1 == Some(Unit)
       case _ => false
     })
     elaboratables.foldLeft(expr)((e, v) =>
@@ -173,7 +165,44 @@ object KeYmaeraXDeclarationsParser {
   /** Signature is domain sort, codomain sort, "interpretation", token that starts the declaration. */
   type Signature = (Option[Sort], Sort, Option[Expression], Token)
   /** A declaration */
-  type Declaration = Map[Name, Signature]
+  case class Declaration(decls: Map[Name, Signature]) {
+    /** The declarations as substitution pair. */
+    lazy val substs: List[SubstitutionPair] = decls.filter(_._2._3.isDefined).
+      map((declAsSubstitutionPair _).tupled).toList
+
+    /** Declared names and signatures as functions. */
+    lazy val asFunctions: List[Function] = decls.map({ case ((name, idx), (domain, codomain, _, _)) =>
+      Function(name, idx, domain.getOrElse(Unit), codomain) }).toList
+
+    /** Applies substitutions per `substs` exhaustively to expression-like `arg`. */
+    def exhaustiveSubst[T](arg: T): T = arg match {
+      case e: Expression =>
+        def exhaustiveSubst(f: Expression): Expression = {
+          val fs = USubst(substs)(f)
+          if (fs != f) exhaustiveSubst(fs) else fs
+        }
+        exhaustiveSubst(e).asInstanceOf[T]
+      case _ => arg
+    }
+
+    /** Joins two declarations. */
+    def ++(other: Declaration): Declaration = Declaration(decls ++ other.decls)
+
+    /** Turns a function declaration (with defined body) into a substitution pair. */
+    private def declAsSubstitutionPair(name: KeYmaeraXDeclarationsParser.Name, signature: KeYmaeraXDeclarationsParser.Signature): SubstitutionPair = {
+      assert(signature._3.isDefined, "Substitution only for defined functions")
+      val (arg, sig) = signature._1 match {
+        case Some(Unit) => (Nothing, Unit)
+        case Some(s) => (DotTerm(s), s)
+        case None => (Nothing, Unit)
+      }
+      val what = signature._2 match {
+        case Real => FuncOf(Function(name._1, name._2, sig, signature._2), arg)
+        case Bool => PredOf(Function(name._1, name._2, sig, signature._2), arg)
+      }
+      SubstitutionPair(what, signature._3.get)
+    }
+  }
 
   /**
    *
@@ -203,22 +232,8 @@ object KeYmaeraXDeclarationsParser {
       processVariables(tokens)
     }
     else {
-      (Map(), tokens)
+      (Declaration(Map()), tokens)
     }
-  }
-
-  /** Turns a function declaration (with defined body) into a substitution pair. */
-  def declAsSubstitutionPair(name: KeYmaeraXDeclarationsParser.Name, signature: KeYmaeraXDeclarationsParser.Signature): SubstitutionPair = {
-    assert(signature._3.isDefined, "Substitution only for defined functions")
-    val (arg, sig) = signature._1 match {
-      case Some(Unit) => (Nothing, Unit)
-      case Some(s) => (DotTerm(s), s)
-    }
-    val what = signature._2 match {
-      case Real => FuncOf(Function(name._1, name._2, sig, signature._2), arg)
-      case Bool => PredOf(Function(name._1, name._2, sig, signature._2), arg)
-    }
-    SubstitutionPair(what, signature._3.get)
   }
 
   /** Returns all the quantified variables in an expression. Used in [[typeAnalysis()]] */
@@ -242,15 +257,15 @@ object KeYmaeraXDeclarationsParser {
 
   /**
    * Type analysis of expression according to the given type declarations decls
-   * @param decls the type declarations known from the context
+   * @param d the type declarations known from the context
    * @param expr the expression parsed
    * @throws [[edu.cmu.cs.ls.keymaerax.parser.ParseException]] if the type analysis fails.
    */
-  def typeAnalysis(decls: Declaration, expr: Expression): Boolean = {
+  def typeAnalysis(d: Declaration, expr: Expression): Boolean = {
     StaticSemantics.symbols(expr).forall({
       case f:Function =>
-        val (declaredDomain,declaredSort, interpretation, declarationToken) = decls.get((f.name,f.index)) match {
-          case Some(d) => d
+        val (declaredDomain,declaredSort, interpretation, declarationToken) = d.decls.get((f.name,f.index)) match {
+          case Some(decl) => decl
           case None => throw ParseException("type analysis" + ": " + "undefined symbol " + f, f)
         }
         if(f.sort != declaredSort) throw ParseException(s"type analysis: ${f.prettyString} declared with sort $declaredSort but used where sort ${f.sort} was expected.", declarationToken.loc)
@@ -264,7 +279,7 @@ object KeYmaeraXDeclarationsParser {
         else true
       case x : Variable if quantifiedVars(expr).contains(x) => true //Allow all undeclared variables if they are at some point bound by a \forall or \exists. @todo this is an approximation. Should only allow quantifier bindings...
       case x: Variable =>
-        val (declaredSort, declarationToken) = decls.get((x.name,x.index)) match {
+        val (declaredSort, declarationToken) = d.decls.get((x.name,x.index)) match {
           case Some((None,sort, _, token)) => (sort, token)
           case Some((Some(domain), sort, _, token)) => throw ParseException(s"Type analysis: ${x.name} was declared as a function but used as a non-function.", token.loc)
           case None => throw ParseException("type analysis" + ": " + "undefined symbol " + x + " with index " + x.index, x)
@@ -274,7 +289,7 @@ object KeYmaeraXDeclarationsParser {
       case _: UnitPredicational => true //@note needs not be declared
       case _: UnitFunctional => true //@note needs not be declared
       case _: DotTerm => true //@note needs not be declared
-      case DifferentialSymbol(v) => decls.contains(v.name, v.index) //@note hence it is checked as variable already
+      case DifferentialSymbol(v) => d.decls.contains(v.name, v.index) //@note hence it is checked as variable already
       case _ => false
     })
   }
@@ -288,12 +303,11 @@ object KeYmaeraXDeclarationsParser {
    *          _2: The remainder of the file.
    */
   def processProgramVariables(tokens : List[Token]): (Declaration, List[Token]) = {
-    if(tokens.head.tok.equals(PROGRAM_VARIABLES_BLOCK)) {
+    if (tokens.head.tok.equals(PROGRAM_VARIABLES_BLOCK)) {
       val(progVarsSection, remainder) = tokens.span(x => !x.tok.equals(END_BLOCK))
         val progVarsTokens = progVarsSection.tail
-        (processDeclarations(progVarsTokens, Map()), remainder.tail)
-    }
-    else (Map(), tokens)
+        (processDeclarations(progVarsTokens, Declaration(Map())), remainder.tail)
+    } else (Declaration(Map()), tokens)
 
   }
 
@@ -301,21 +315,21 @@ object KeYmaeraXDeclarationsParser {
     if(tokens.head.tok.equals(FUNCTIONS_BLOCK)) {
       val(funSymbolsTokens, remainder) = tokens.span(x => !x.tok.equals(END_BLOCK))
       val funSymbolsSection = funSymbolsTokens.tail
-      (processDeclarations(funSymbolsSection, Map()).map({case d@(i, (domain, sort, interpretation, token)) => domain match {
+      (Declaration(processDeclarations(funSymbolsSection, Declaration(Map())).decls.map({case d@(i, (domain, sort, interpretation, token)) => domain match {
         case None => (i, (Some(Unit), sort, interpretation, token)) //@note allow A() declared without parentheses
         case Some(_) => d
-      }}), remainder.tail)
+      }})), remainder.tail)
     }
-    else (Map(), tokens)
+    else (Declaration(Map()), tokens)
   }
 
   def processVariables(tokens: List[Token]) : (Declaration, List[Token]) = {
     if(tokens.head.tok.equals(VARIABLES_BLOCK)) {
       val(funSymbolsTokens, remainder) = tokens.span(x => !x.tok.equals(END_BLOCK))
       val funSymbolsSection = funSymbolsTokens.tail
-      (processDeclarations(funSymbolsSection, Map()), remainder.tail)
+      (processDeclarations(funSymbolsSection, Declaration(Map())), remainder.tail)
     }
-    else (Map(), tokens)
+    else (Declaration(Map()), tokens)
   }
 
 
@@ -444,7 +458,7 @@ object KeYmaeraXDeclarationsParser {
   /** Turns an IDENT into a string for the sake of error messages only. This is probably replicated in the parser. */
   private def identTerminalToString(terminal: Terminal) = terminal match {
     case i : IDENT => i.name + {i.index match {case Some(x) => "_x" case None => ""}}
-    case _ => throw new Exception(s"Expected an IDENT terminal but found ${terminal}")
+    case _ => throw new Exception(s"Expected an IDENT terminal but found $terminal")
   }
 
   private def isSort(terminal: Terminal) = terminal match {
@@ -464,7 +478,7 @@ object KeYmaeraXDeclarationsParser {
   private def processDeclarations(ts: List[Token], sortDeclarations: Declaration) : Declaration =
     if(ts.nonEmpty) {
       val (nextDecl, remainders) = parseDeclaration(ts)
-      processDeclarations(remainders, sortDeclarations.updated(nextDecl._1, nextDecl._2))
+      processDeclarations(remainders, Declaration(sortDeclarations.decls.updated(nextDecl._1, nextDecl._2)))
     } else {
       sortDeclarations
     }

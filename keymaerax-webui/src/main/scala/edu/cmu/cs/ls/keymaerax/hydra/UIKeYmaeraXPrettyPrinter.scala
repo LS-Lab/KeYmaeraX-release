@@ -22,6 +22,8 @@ object UIKeYmaeraXPrettyPrinter {
 class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extends KeYmaeraXWeightedPrettyPrinter {
   private val HTML_OPEN = "$#@@$"
   private val HTML_CLOSE = "$@@#$"
+  private val HTML_END_SPAN = s"$HTML_OPEN/span$HTML_CLOSE"
+  private def htmlSpan(c: String, body: String): String = s"""${HTML_OPEN}span class="$c"$HTML_CLOSE$body$HTML_END_SPAN"""
 
   private var topExpr: Expression = _
   //@note just to get isAnte right for UIIndex
@@ -72,7 +74,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
     //@note base pretty printer emits a quantifier and its variable with same ID -> avoid spans with same ID
     val isQuantifiedVar = topExpr match {
       case f: Formula => f.sub(q) match {
-        case Some(quant: Quantified) => !s.startsWith(op(quant).opcode)
+        case Some(quant: Quantified) => !s.startsWith(ppOp(quant))
         case _ => false
       }
       case _ => false
@@ -84,6 +86,23 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
       //@note problematic for drag&drop
       wrap(topId + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else ""), s, hasStep, editable)
     }
+  }
+
+  protected override def ppOp(expr: Expression): String = expr match {
+    case _: Term => htmlSpan("k4-term-op", super.ppOp(expr))
+    case _: CompositeFormula => htmlSpan("k4-propfml-op", super.ppOp(expr))
+    case _: ComparisonFormula => htmlSpan("k4-cmpfml-op", super.ppOp(expr))
+    case _: Formula => htmlSpan("k4-fml-op", super.ppOp(expr))
+    case _: Program => htmlSpan("k4-prg-op", super.ppOp(expr))
+    case _ => super.ppOp(expr)
+  }
+
+  protected override def ppEnclosingOp(expr: Expression): (String, String) = expr match {
+    case _: Box | _: Diamond =>
+      htmlSpan("k4-mod-open", super.ppEnclosingOp(expr)._1) -> htmlSpan("k4-mod-close", super.ppEnclosingOp(expr)._2)
+    case _: ODESystem | _: Program | _: DifferentialProgram | _: UnaryCompositeProgram =>
+      htmlSpan("k4-prg-open", super.ppEnclosingOp(expr)._1) -> htmlSpan("k4-prg-close", super.ppEnclosingOp(expr)._2)
+    case _ => super.ppEnclosingOp(expr)
   }
 
   protected override def pp(q: PosInExpr, term: Term): String = emit(q, term match {

@@ -412,12 +412,11 @@ object SQLite {
       synchronizedTransaction({
         nInserts = nInserts + 2
         val model = getModel(modelId)
-        val (decls, problem) = KeYmaeraXProblemParser.parseProblem(model.keyFile)
-        val substs = decls.filter(_._2._3.isDefined).map((KeYmaeraXDeclarationsParser.declAsSubstitutionPair _).tupled).toList
+        val (d, problem) = KeYmaeraXProblemParser.parseProblem(model.keyFile)
 
         val substTactic = tactic match {
           case None => None
-          case Some(t) => Some(BelleParser.parseWithInvGen(t, None, substs).prettyString)
+          case Some(t) => Some(BelleParser.parseWithInvGen(t, None, d).prettyString)
         }
 
         val provable = ProvableSig.startProof(problem)

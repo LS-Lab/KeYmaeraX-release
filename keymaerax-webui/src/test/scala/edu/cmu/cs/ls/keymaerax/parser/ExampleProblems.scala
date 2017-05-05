@@ -127,10 +127,10 @@ class ExampleProblems extends FlatSpec with Matchers {
         |End.
       """.stripMargin
 
-    val (decls, formula) = KeYmaeraXProblemParser.parseProblem(problem)
-    decls should have size 1
-    decls should contain key ("f", None)
-    decls(("f", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+    val (d, formula) = KeYmaeraXProblemParser.parseProblem(problem)
+    d.decls should have size 1
+    d.decls should contain key ("f", None)
+    d.decls(("f", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
       domain shouldBe Unit
       codomain shouldBe Real
       interpretation shouldBe Number(5)
@@ -150,10 +150,10 @@ class ExampleProblems extends FlatSpec with Matchers {
         |End.
       """.stripMargin
 
-    val (decls, formula) = KeYmaeraXProblemParser.parseProblem(problem)
-    decls should have size 1
-    decls should contain key ("f", None)
-    decls(("f", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+    val (d, formula) = KeYmaeraXProblemParser.parseProblem(problem)
+    d.decls should have size 1
+    d.decls should contain key ("f", None)
+    d.decls(("f", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
       domain shouldBe Real
       codomain shouldBe Real
       interpretation shouldBe Plus(Number(5), Times(DotTerm(Real), DotTerm(Real)))

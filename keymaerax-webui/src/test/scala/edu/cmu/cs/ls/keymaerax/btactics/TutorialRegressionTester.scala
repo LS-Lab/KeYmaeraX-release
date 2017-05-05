@@ -39,7 +39,7 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
         fail(s"Tactic ${e.tactic.get._1} of model ${e.name} did not parse", ex) })
   }
 
-  it should "prove all provable entries" in withMathematica { _ => withDatabase { db =>
+  it should "prove all entries flagged as being provable" in withMathematica { _ => withDatabase { db =>
     tutorialEntries.filter(e => e.tactic.isDefined && e.tactic.get._3).foreach(e => {
       println(s"Proving ${e.name} with ${e.tactic.get._1}")
       (try {
