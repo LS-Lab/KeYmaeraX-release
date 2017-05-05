@@ -128,6 +128,12 @@ class SequentialInterpreterTests extends TacticTestBase {
     result.subgoals(3).succ should contain only "i=8".asFormula
   }
 
+  it should "fail inapplicable builtin-rules with legible error messages" in {
+    the [BelleThrowable] thrownBy proveBy("x=5".asFormula, andR(1)) should have message
+      """[Bellerophon Runtime] Tactic andR applied at Fixed(1,None,true) on a non-matching expression in NoProofTermProvable(Provable(==> 1:  x=5	Equal
+        |  from   ==> 1:  x=5	Equal))""".stripMargin
+  }
+
   "* combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
     val expr = (
