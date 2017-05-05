@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalactic.{AbstractStringUniformity, Uniformity}
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers, Assertions}
 
 import scala.collection.immutable._
 
@@ -82,7 +82,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
    * Creates and initializes Mathematica for tests that want to use QE. Also necessary for tests that use derived
    * axioms that are proved by QE.
    * @example{{{
-   *    "My test" should "prove something with Mathematica" in withMathematica { implicit qeTool =>
+   *    "My test" should "prove something with Mathematica" in withMathematica { qeTool =>
    *      // ... your test code here
    *    }
    * }}}
@@ -98,7 +98,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     * axioms that are proved by QE.
     * Note that Mathematica should also ne initialized in order to perform DiffSolution and CounterExample
     * @example{{{
-    *    "My test" should "prove something with Mathematica" in withZ3 { implicit qeTool =>
+    *    "My test" should "prove something with Z3" in withZ3 { qeTool =>
     *      // ... your test code here
     *    }
     * }}}
@@ -107,6 +107,14 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     val provider = new Z3ToolProvider
     ToolProvider.setProvider(provider)
     testcode(provider.tool())
+  }
+
+  /** Tests with both Mathematica and Z3 as QE tools. */
+  def withQE(testcode: QETool => Any): Unit = {
+    withClue("Mathematica") { withMathematica(testcode) }
+    afterEach()
+    beforeEach()
+    withClue("Z3") { withZ3(testcode) }
   }
 
   /**
