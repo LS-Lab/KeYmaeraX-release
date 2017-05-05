@@ -1,0 +1,77 @@
+ArchiveEntry "Parachute".
+
+Functions.
+  R g().      /* gravity */
+  R pr().     /* parachute drag coefficient */
+  R ar().     /* skydiver drag coefficient */
+  R m().      /* impact velocity */
+  R T().      /* skydiver reaction time */
+
+  R steadyStateSpeed() = (-(g()/pr())^(1/2)).                            /* Steady state speed of an opened parachute */
+
+  R reactionDelaySpeed(R) = ((.) - g()*T()).                        /* Speed after a delay equal to the reaction time */
+
+  B parachuteIsClosed(R) <-> ((.)=ar()).                                /* Indicates whether the parachute is closed. */
+
+  B dive(R) <-> (reactionDelaySpeed(.) > steadyStateSpeed()).              /* Indicates whether diving is still safe. */
+
+  B bounds() <-> (                                                                             /* bounds on constants */
+      g() > 0 & pr() > ar() & ar() > 0 & T() > 0 &
+      m() < steadyStateSpeed()
+    ).
+
+  B loopinv() <-> ((x >= 0 & v < 0) & bounds() & v > steadyStateSpeed()). /* conservative: open parachute before getting too fast */
+
+  B initialState() <-> (                                                  /* start in free fall with parachute closed */
+    x >= 0 & v < 0 & parachuteIsClosed(r) & v > steadyStateSpeed()
+  ).
+
+  B assumptions() <-> (bounds() & initialState()).
+
+  /* A helping QEand */
+  B fourwayTransitivity() <-> (\forall a \forall b \forall c \forall d (a>=b&b>=c&c>d->a>d)).
+End.
+
+ProgramVariables.
+  R x.    /* skydiver altitude */
+  R v.    /* skydiver speed (< 0, so lower is faster) */
+  R r.    /* skydiver current drag coefficient (depends on parachute open/closed) */
+  R t.    /* time */
+End.
+
+Problem.
+assumptions() ->
+  [
+    {
+      {
+        ?(dive(v) & parachuteIsClosed(r));
+        ++
+        r := pr();
+      }
+      t := 0;
+      {x'=v, v'=-g() + r*v^2, t'=1 & t <= T() & x >= 0 & v < 0}
+    }*@invariant(loopinv())
+  ](x=0 -> v >= m())
+End.
+
+Tactic "Parachute proof".
+  implyR(1) ; loop({`loopinv()`}, 1) ; <(
+    QE,
+    QE,
+    boxAnd(1) ; andR(1) ; <(
+      master,
+      boxAnd(1) ; andR(1) ; <(
+        master,
+        unfold ; <(
+          fullSimplify ; diffInvariant({`v>=old(v)-g()*t`}, 1) ;
+            dW(1) ; abbrv({`steadyStateSpeed()`}, {`c`}) ; hideL('L=={`c=-(g()/pr())^(1/2)`}) ; QE,
+          diffInvariant({`g()>0&pr()>0`}, 1) ;
+            dG({`y`}, {`-1/2*pr()*(v+steadyStateSpeed())`}, {`0`}, {`g()>0&pr()>0&y^2*(v-steadyStateSpeed())=1`}, 1) ;
+            dI(1.0) ; QE
+          )
+        )
+      )
+    )
+End.
+
+End.

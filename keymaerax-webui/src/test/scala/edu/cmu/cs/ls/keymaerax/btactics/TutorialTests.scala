@@ -38,5 +38,7 @@ class TutorialTests extends Suites(
   new TutorialRegressionTester("FCPS-R11", "http://symbolaris.com/course/fcps17/recitation11.kya"),
   new TutorialRegressionTester("FCPS-R12", "http://symbolaris.com/course/fcps17/recitation12.kya"),
   // Case Study Archives
-  new TutorialRegressionTester("ETCS", "classpath:/examples/casestudies/etcs/rephrased/ETCS.kya")
+  new TutorialRegressionTester("ETCS", "classpath:/examples/casestudies/etcs/rephrased/ETCS.kya"),
+  // Other Publication Archives
+  new TutorialRegressionTester("Parachute", "classpath:/examples/simple/parachute/parachute.kya")
 )
