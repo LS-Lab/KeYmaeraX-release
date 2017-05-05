@@ -1,0 +1,354 @@
+ArchiveEntry "ETCS Essentials".
+
+/**
+ * Essentials of European Train Control System (ETCS)
+ * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning,
+ *                      41(2), pages 143-189, 2008."
+ */
+Functions.
+  R ep. /* Control cycle duration upper bound */
+  R b.  /* Braking force */
+  R A.  /* Maximum acceleration */
+  R m.  /* End of movement authority (train must not drive past m) */
+
+  R stopDist(R) = ((.)^2/(2*b)).                       /* Train stopping distance from speed (.) with braking force b */
+  R accCompensation(R) = (((A/b) + 1)*((A/2)*ep^2 + ep*(.))).               /* Distance to compensate speed increase. */
+  R SB(R)       = (stopDist(.) + accCompensation(.)).        /* Distance needed to stop safely when accelerating once */
+
+  /* Initial states */
+  B initial() <-> (
+    m-z >= stopDist(v) &         /* train has sufficient distance to the end of the movement authority to stop safely */
+    b>0 &                                                                                       /* brakes are working */
+    A>=0                                                                                         /* engine is working */
+  ).
+
+  B safe(R) <-> ((.) <= m).             /* safety property: train 'z' never drives past end of movement authority 'm' */
+
+  B loopInv() <-> (m-z >= stopDist(v)).               /* loop invariant: always maintain sufficient stopping distance */
+End.
+
+ProgramVariables.
+  R a.  /* Actual acceleration -b <= a <= A */
+  R v.  /* Current velocity */
+  R z.  /* Train position */
+  R t.  /* Actual control cycle duration t <= ep */
+End.
+
+/* Safety specification of the form: initial -> [{ctrl;plant}*]safe
+ * Starting in any state where initial is true,
+ * any number of repetitions of running a controller 'ctrl' and then driving according to 'plant'
+ * keeps the system safe (end up only in states where 'safe' is true).
+ */
+Problem.
+initial()  ->
+    [
+      {
+        /* train controller */
+        {    ?m - z <= SB(v); a := -b;   /* train protection: emergency brake when close to end of movement authority */
+          ++ ?m - z >= SB(v); a :=  A;                           /* free driving: accelerate when sufficient distance */
+        }
+        t := 0;                                                                          /* reset control cycle timer */
+
+        /* train dynamics */
+        {z'=v, v' = a, t'=1  & v >= 0 & t <= ep}       /* drive (not backwards v>=0) for at most ep time (t<=ep) until next controller run */
+      }*@invariant(loopInv())                              /* repeat, loop invariant documents system design property */
+    ] (safe(z))
+End.
+
+Tactic "ETCS Essentials Proof".
+implyR('R);
+(andL('L)*);
+loopAuto('R) ; <(                                             /* prove loop by induction with invariant annotated in model */
+  prop,                                                       /* induction initial case */
+  QE,                                                         /* induction use case */
+  unfold ; <(                                                 /* induction step, symbolically execute program until ODE */
+    /* prove ODE in train protection branch (a=-b) */
+    diffInvariant({`t>=old(t)`}, 'R);                         /* intuition: time progresses */
+    diffInvariant({`v=old(v)-b*t`}, 'R);                      /* intuition: new speed is old speed - decrease by braking */
+    diffInvariant({`z=old(z)+old(v)*t-b/2*t^2`}, 'R)          /* intuition: new position is old position + distance travelled with mean speed */
+    ,
+    /* prove ODE in free driving branch (a=A) */
+    diffInvariant({`t>=old(t)`}, 'R);
+    diffInvariant({`v=old(v)+A*t`}, 'R);
+    diffInvariant({`z=old(z)+old(v)*t+A/2*t^2`}, 'R)
+  ) ; doall(dW('R) ; QE)                                      /* prove safety from just the differential invariants */
+)
+End.
+
+End.
+
+ArchiveEntry "ETCS RBC Controllability".
+
+/**
+ * Proposition 2: RBC preserves train controllability.
+ * Characterises the constraint ensuring that RBC preserves controllability.
+ * @see "Andre Platzer and Jan-David Quesel. European Train Control System: A case study in formal verification.
+ *       In Karin Breitman and Ana Cavalcanti, editors, 11th International Conference on Formal Engineering Methods,
+ *       ICFEM, Rio de Janeiro, Brasil, Proceedings, volume 5885 of LNCS, pages 246-265. Springer, 2009."
+ */
+Functions.
+  R b.
+
+  R emOn()  = (1).
+  R emOff() = (0).
+End.
+
+ProgramVariables.
+  R vdes.
+  R SB.
+  R mo.
+  R t.
+  R a.
+  R v.
+  R z.
+  R m.
+  R d.
+  R do.
+  R em.
+End.
+
+Problem.
+  em = emOff()
+& d >= 0
+& b > 0 ->
+  [ do := d; mo := m;
+		{
+		   vdes :=*; ?vdes >= 0; do := d; mo := m; m :=*; d :=*;
+		++ em := emOn();
+		}
+	] ((do^2 - d^2 <= 2*b*(m-mo) & do >= 0 & d >= 0)
+        <->
+        \forall z \forall v ((v^2 - do^2 <= 2*b*(mo-z) & v >=0 & do >= 0 & b > 0)
+                             -> (v^2 - d^2 <= 2*b*(m-z) & v >=0 & d >= 0 & b > 0))
+    )
+End.
+
+Tactic "ETCS RBC Controllability Proof".
+  master
+End.
+
+End.
+
+
+ArchiveEntry "ETCS RBC Controllability Lemma".
+
+/**
+ * RBC preserves train controllability (one part of Proposition 2).
+ * @see "Andre Platzer and Jan-David Quesel. European Train Control System: A case study in formal verification.
+ *       In Karin Breitman and Ana Cavalcanti, editors, 11th International Conference on Formal Engineering Methods,
+ *       ICFEM, Rio de Janeiro, Brasil, Proceedings, volume 5885 of LNCS, pages 246-265. Springer, 2009."
+ */
+Functions.
+  R b.
+  R v.
+  R z.
+
+  R emOn()  = (1).
+  R emOff() = (0).
+End.
+
+ProgramVariables.
+  R vdes.
+  R m.
+  R mo.
+  R d.
+  R do.
+  R em.
+End.
+
+Problem.
+em = emOff() & v^2 - d^2 <= 2*b*(m-z) & v >=0 & d >= 0 & b > 0 ->
+  [
+       vdes :=*; ?vdes >= 0; do := d; mo := m; m :=*; d :=*; ?d >= 0 & do^2 - d^2 <= 2*b*(m-mo);
+    ++ em := emOn();
+  ](v^2 - d^2 <= 2*b*(m-z) & v >=0 & d >= 0 & b > 0)
+End.
+
+Tactic "ETCS RBC Controllability Lemma Proof".
+  master
+End.
+
+End.
+
+ArchiveEntry "ETCS RBC Controllability Corollary".
+
+/**
+ * Proposition 3: RBC Controllability Corollary
+ * @see "Andre Platzer and Jan-David Quesel. European Train Control System: A case study in formal verification.
+ *       In Karin Breitman and Ana Cavalcanti, editors, 11th International Conference on Formal Engineering Methods,
+ *       ICFEM, Rio de Janeiro, Brasil, Proceedings, volume 5885 of LNCS, pages 246-265. Springer, 2009."
+ */
+Functions.
+  R b.
+  R amax.
+  R ep.
+
+  R emOn()  = (1).
+  R emOff() = (0).
+End.
+
+ProgramVariables.
+  R vdes.
+  R SB.
+  R mo.
+  R t.
+  R a.
+  R v.
+  R z.
+  R m.
+  R d.
+  R do.
+  R em.
+End.
+
+Problem.
+em = emOff() & mo = m & v^2 - d^2 <= 2*b*(m-z) & d>=0 & v>=0 & b>0 & ep >0 ->
+  [
+       do := d; mo := m; m :=*; d :=*; vdes :=*; ?d >= 0 & do^2 - d^2 <= 2*b*(m-mo) & vdes >= 0;
+    ++ em := emOn();
+  ](d >= 0 & do^2 - d^2 <= 2*b*(m-mo) & vdes >= 0 ->
+     [
+          ?v <= vdes; a :=*; ?a >=0 & a <= amax;
+       ++ ?v >= vdes; a :=*; ?a <=0 & a >= -b;
+     ]
+     <SB:=*;>
+     [
+       {   ?  m - z <= SB | em = 1; a := -b;
+        ++ ?!(m - z <= SB | em = 1);
+       }
+       t:=0;
+       {z'=v, v' = a, t'=1 & v >= 0 & t <= ep}
+     ](z >= m -> v <= d)
+  )
+End.
+
+Tactic "ETCS RBC Controllability Corollary Proof".
+  implyR(1);
+  composeb(1.1.1.1.1);                                                                                 /* isolate ODE */
+  composeb(1.1.1.1.1.1);
+  solve(1.1.1.1.1.1.1);                                                             /* solve ODE only once in context */
+  unfold;                                                     /* fast-forward to existential quantifier from <SB:=*;> */
+  doall(chase(1.0)); <(                                                                /* all programs after <SB:=*;> */
+    existsR({`v^2/(2*b)+(a/b+1)*(a/2*ep^2+ep*v)`}, 1),
+    existsR({`v^2/(2*b)+(a/b+1)*(a/2*ep^2+ep*v)`}, 1),
+    existsR({`v^2/(2*b)+v*ep`}, 1),
+    existsR({`v^2/(2*b)`}, 1)
+  );
+  doall(andR(1));
+  doall(QE)
+End.
+
+End.
+
+ArchiveEntry "ETCS Reactivity Constraint".
+
+/**
+ * Proposition 4: Reactivity constraint
+ * @see "Andre Platzer and Jan-David Quesel. European Train Control System: A case study in formal verification.
+ *       In Karin Breitman and Ana Cavalcanti, editors, 11th International Conference on Formal Engineering Methods,
+ *       ICFEM, Rio de Janeiro, Brasil, Proceedings, volume 5885 of LNCS, pages 246-265. Springer, 2009."
+*/
+Functions.
+  R b.
+  R amax.
+  R ep.
+
+  R emOn()  = (0).
+  R emOff() = (1).
+End.
+
+ProgramVariables.
+  R vdes.
+  R SB.
+  R mo.
+  R t.
+  R a.
+  R v.
+  R z.
+  R m.
+  R d.
+  R do.
+  R em.
+End.
+
+Problem.
+em = 0 & d >= 0 & b > 0 & ep > 0 & amax > 0 & v>=0
+  -> ((
+        \forall m1 \forall z1 [ m := m1; z := z1; ](m-z>= SB & v^2 - d^2 <= 2*b*(m-z) & d >= 0 & b > 0 ->
+          [ t:=0; {z'=v, v' = amax, t'=1 & v >= 0 & t <= ep} ](v^2 - d^2 <= 2*b*(m-z) & d >= 0 & b > 0))
+      )
+      <->
+      SB >= (v^2 - d^2) /(2*b) + (amax/b + 1) * (amax/2 * ep^2 + ep * v)
+     )
+End.
+
+Tactic "ETCS Reactivity Constraint Proof"
+unfold ; equivR(1) ; <(
+  composeb(-7.0.0.1.1) ; solve(-7.0.0.1.1.1) ; assignb(-7.0.0.1.1) ; composeb(-7.0.0) ; assignb(-7.0.0.1) ; assignb(-7.0.0) ; QE,
+  (allR(1)*2) ; composeb(1) ; assignb(1.1) ; assignb(1) ; composeb(1.0.1.1) ; solve(1.0.1.1.1) ; assignb(1.0.1.1) ; QE
+  )
+End.
+
+End.
+
+ArchiveEntry "ETCS Safety".
+
+/**
+ * Proposition 5: Safety
+ * @see "Andre Platzer and Jan-David Quesel. European Train Control System: A case study in formal verification.
+ *       In Karin Breitman and Ana Cavalcanti, editors, 11th International Conference on Formal Engineering Methods,
+ *       ICFEM, Rio de Janeiro, Brasil, Proceedings, volume 5885 of LNCS, pages 246-265. Springer, 2009."
+ *
+ * The following refinement is provable, too: SB := (v^2 - d^2)/(2*b) + (a/b+1)*(A/2*ep^2+ep*v);
+ */
+Functions.
+  R b.
+  R A.
+  R ep.
+
+  R emOn()  = (1).
+  R emOff() = (0).
+End.
+
+ProgramVariables.
+	R vdes.
+	R SB.
+	R mo.
+	R t.
+	R a.
+	R v.
+	R z.
+	R m.
+	R d.
+	R do.
+	R em.
+End.
+
+Problem.
+em = emOff() & v^2 - d^2 <= 2*b*(m-z) & d >=0 & b > 0 & A >= 0 & ep >= 0
+  ->
+  [{
+       {
+           do := d; mo := m; m :=*; d :=*; vdes :=*; ?d >= 0 & do^2 - d^2 <= 2*b*(m-mo) & vdes >= 0;
+        ++ em := emOn();
+       }
+    ++ {
+         {    ?v <= vdes; a:=*; ?a >=-b & a <= A;
+           ++ ?v >= vdes; a:=*; ?a < 0 & a >= -b;
+         };
+         SB := (v^2 - d^2)/(2*b) + (A/b+1)*(A/2*ep^2+ep*v);
+         {   ?  m - z <= SB | em = emOn(); a:= -b;
+          ++ ?!(m - z <= SB | em = emOn());
+         }
+         t:=0;
+         {z'=v, v' = a, t'=1 & v >= 0 & t <= ep}
+       }
+   }*@invariant(v^2 - d^2 <= 2*b*(m-z) & d >= 0)
+  ](z >= m -> v <= d)
+End.
+
+Tactic "ETCS Safety Proof".
+  master
+End.
+
+End.
