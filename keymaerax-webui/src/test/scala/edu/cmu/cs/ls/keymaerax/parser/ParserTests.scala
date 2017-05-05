@@ -289,7 +289,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     called shouldBe true
   }
 
-  it should "add () and then expand functions to their defintion" in {
+  it should "add () and then expand functions to their definition" in {
     val input = "Functions. R y() = (3+7). End. ProgramVariables. R x. End. Problem. x>=y+2 -> [{x:=x+1;}*@invariant(x>=y+1)]x>=y End."
     //@todo mock objects
     var called = false
@@ -329,6 +329,18 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       fml shouldBe "x>=3+7".asFormula
     })
     KeYmaeraXProblemParser(input) shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
+    called shouldBe true
+  }
+
+  it should "add () when expanding functions in properties" in {
+    val input = "Functions. R b. R y() = (3+b). B inv() <-> (x>=y()). End. ProgramVariables. R x. End. Problem. x>=2 -> [{x:=x+b;}*@invariant(inv())]x>=0 End."
+    var called = false
+    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
+      called = true
+      prg shouldBe "{x:=x+b();}*".asProgram
+      fml shouldBe "x>=3+b()".asFormula
+    })
+    KeYmaeraXProblemParser(input) shouldBe "x>=2 -> [{x:=x+b();}*]x>=0".asFormula
     called shouldBe true
   }
 

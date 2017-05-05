@@ -28,7 +28,7 @@ object ReflectiveExpressionBuilder {
       }
     val expressionArgs = args.filter(_.isLeft).
       map(_.left.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only left-inhabited elements... this exn should never be thrown."))).
-      map(_.map(defs.exhaustiveSubst))
+      map(_.map({ case e: Expression => defs.exhaustiveSubst(e) case e => e }))
 
     val applied: Any = expressionArgs.foldLeft(withGenerator) {
       //@note matching on generics only to make IntelliJ happy, "if type <:< other" is the relevant check
