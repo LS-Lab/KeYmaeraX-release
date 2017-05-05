@@ -5,7 +5,8 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DependencyAnalysis._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger._
-import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Box}
+import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Box, Formula}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /**
@@ -67,4 +68,28 @@ class QELoggerTests extends TacticTestBase {
     println(entry.map(s =>parseStr(s)))
   }
 
+//  "QE logger" should "log my lab 2" in withMathematica { qeTool =>
+//    val l2 = scala.io.Source.fromFile("L2Q2.kya").mkString //Avoid committing the solution to cse repo
+//    enableLogging((10,"L2"))
+//    //Note: logger must be enabled before calling the parser, or it will parse explicit QE calls to the wrong tactic!
+//    val archiveL2::Nil = KeYmaeraXArchiveParser.parse(l2)
+//
+//    val (l2f,l2t) = (archiveL2._3.asInstanceOf[Formula],archiveL2._4.head._2)
+//
+//    println("Proving",l2f,l2t)
+//    println(proveBy(l2f,l2t))
+//
+//  }
+//
+//  "QE logger" should "log my lab 3" in withMathematica { qeTool =>
+//    val l3 = scala.io.Source.fromFile("L3Q6.kya").mkString //Avoid committing the solution to cse repo
+//    enableLogging((10,"L3"))
+//    //Note: logger must be enabled before calling the parser, or it will parse explicit QE calls to the wrong tactic!
+//    val archiveL3::Nil = KeYmaeraXArchiveParser.parse(l3)
+//
+//    val (l3f,l3t) = (archiveL3._3.asInstanceOf[Formula],archiveL3._4.head._2)
+//
+//    println("Proving",l3f,l3t)
+//    proveBy(l3f,l3t)
+//  }
 }

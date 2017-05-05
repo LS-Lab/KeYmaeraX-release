@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable._
@@ -35,9 +35,19 @@ class DependencyAnalysisTests extends TacticTestBase {
 
   "DependencyAnalysis" should "correctly identify non-linear ODEs" in withMathematica { qeTool =>
     val p = "{x'=1,y'=y^2}".asProgram
+    // Optimised analysis: x depends on y, but y does not depend on x
     val x = "x".asVariable.asInstanceOf[BaseVariable]
     val y = "y".asVariable.asInstanceOf[BaseVariable]
     dependencies(p,HashSet(x))._1 should contain only (x,y)
+    dependencies(p,HashSet(y))._1 should contain only y
+  }
+
+  "DependencyAnalysis" should "correctly identify non-linear ODEs (2)" in withMathematica { qeTool =>
+    val p = "{x'=1,y'=x^10}".asProgram
+    // Optimised analysis: y depends on x and y, but x only depends on itself
+    val x = "x".asVariable.asInstanceOf[BaseVariable]
+    val y = "y".asVariable.asInstanceOf[BaseVariable]
+    dependencies(p,HashSet(x))._1 should contain only x
     dependencies(p,HashSet(y))._1 should contain only (x,y)
   }
 
@@ -118,8 +128,8 @@ class DependencyAnalysisTests extends TacticTestBase {
     val sccs1 = scc(adjls1)
     val sccs2 = scc(adjls2)
 
-    sccs1 shouldBe List(Set("v".asVariable, "kyxtime".asVariable), Set("z".asVariable))
-    sccs2 shouldBe List(Set("l".asVariable), Set("t".asVariable), Set("v".asVariable), Set("Tl".asVariable, "Tw".asVariable))
+    sccs1 should contain only (Set("v".asVariable, "kyxtime".asVariable), Set("z".asVariable))
+    sccs2 should contain only (Set("l".asVariable), Set("t".asVariable), Set("v".asVariable), Set("Tl".asVariable, "Tw".asVariable))
   }
 
   "DependencyAnalysis" should "provide a partial order to QE problems" in withMathematica { qeTool =>
@@ -181,28 +191,29 @@ class DependencyAnalysisTests extends TacticTestBase {
     timeLs.toList
   }
 
-  private def timeheuPOQE(problems:List[(Program,Sequent)]) : List[Double] = {
+  private def timeheuPOQE(problems:List[(Program,Sequent)], ignoreTest:Boolean) : List[Double] = {
     val timeLs = ListBuffer[(Double)]()
     for( (p,seq) <- problems) {
       val t = timeCall(_ => {
-        val adjls = transClose(analyseModal(p, seq, false).mapValues(v => v._1))
+        val adjls = transClose(analyseModal(p, seq, ignoreTest).mapValues(v => v._1))
         proveBy(seq,heuQEPO(inducedOrd(adjls)))
       })
       timeLs+=t
     }
     timeLs.toList
   }
-//
-//  private def timeheuPOQEFixed(problems:List[(Program,Sequent)],po:Ordering[Variable]) : List[Double] = {
-//    val timeLs = ListBuffer[(Double)]()
-//    for( (p,seq) <- problems) {
-//      val t = timeCall(_ => {
-//        proveBy(seq,heuQEPO(po))
-//      })
-//      timeLs+=t
-//    }
-//    timeLs.toList
-//  }
+
+  //Timing with a fixed PO
+  private def timeheufixedPOQE(problems:List[(Program,Sequent)], po:Ordering[Variable]) : List[Double] = {
+    val timeLs = ListBuffer[(Double)]()
+    for( (p,seq) <- problems) {
+      val t = timeCall(_ => {
+        proveBy(seq,heuQEPO(po))
+      })
+      timeLs+=t
+    }
+    timeLs.toList
+  }
 
   //Timing tests
   "DependencyAnalysis" should "record time to re-prove the ODE logs" in withMathematica { qeTool =>
@@ -213,14 +224,20 @@ class DependencyAnalysisTests extends TacticTestBase {
         case Some(p) => Some(p,r._2)
       }
     })
-    val t0 = timeQE(problems) //Apparently, this warms up the QE connection
-    println(t0,t0.sum)
-    val t1 = timeQE(problems)
+    val t0 = timeQE(problems) //Apparently, this also warms up the QE connection
+    //Ignore any problems that took < 2s
+    val red_probs = problems.zip(t0).collect{case p if p._2 >= 2.0 => p._1}
+    println(red_probs,red_probs.length)
+
+    //println(t0,t0.sum)
+    val t1 = timeQE(red_probs)
     println(t1,t1.sum)
-    val t2 = timeheuQE(problems)
+    val t2 = timeheuQE(red_probs)
     println(t2,t2.sum)
-    val t3 = timeheuPOQE(problems)
+    val t3 = timeheuPOQE(red_probs,false)
     println(t3,t3.sum)
+    val t4 = timeheuPOQE(red_probs,true)
+    println(t4,t4.sum)
 
   }
 
@@ -232,13 +249,70 @@ class DependencyAnalysisTests extends TacticTestBase {
         case Some(p) => Some(p,r._2)
       }
     })
-    val t0 = timeQE(problems) //Apparently, this warms up the QE connection
-    val t1 = timeQE(problems)
+    val t0 = timeQE(problems) //Apparently, this also warms up the QE connection
+    //Ignore any problems that took < 2s
+    val red_probs = problems.zip(t0).collect{case p if p._2 >= 2.0 => p._1}
+    println(red_probs,red_probs.length)
+
+    //println(t0,t0.sum)
+    val t1 = timeQE(red_probs)
     println(t1,t1.sum)
-    val t2 = timeheuQE(problems)
+    val t2 = timeheuQE(red_probs)
     println(t2,t2.sum)
-    val t3 = timeheuPOQE(problems)
+    val t3 = timeheuPOQE(red_probs,false)
     println(t3,t3.sum)
+    val t4 = timeheuPOQE(red_probs,true)
+    println(t4,t4.sum)
+
+  }
+
+  "DependencyAnalysis" should "record time to re-prove the STTT logs" in withMathematica { qeTool =>
+    val ls = parseLog(System.getProperty("user.home") + "/.keymaerax/STTT.txt")
+    val problems = ls("STTT").flatMap ( r => {
+      stripSeq(r._1) match {
+        case None => None
+        case Some(p) => Some(p,r._2)
+      }
+    })
+    val t0 = timeQE(problems) //Apparently, this also warms up the QE connection
+    //Ignore any problems that took < 2s
+    val red_probs = problems.zip(t0).collect{case p if p._2 >= 2.0 => p._1}
+    println(problems.length,red_probs,red_probs.length)
+
+    //println(t0,t0.sum)
+    val t1 = timeQE(red_probs)
+    println(t1,t1.sum)
+    val t2 = timeheuQE(red_probs)
+    println(t2,t2.sum)
+    val t3 = timeheuPOQE(red_probs,false)
+    println(t3,t3.sum)
+    val t4 = timeheuPOQE(red_probs,true)
+    println(t4,t4.sum)
+
+  }
+
+  "DependencyAnalysis" should "record time to re-prove the chilled water logs" in withMathematica { qeTool =>
+    val ls = parseLog(System.getProperty("user.home") + "/.keymaerax/chilled.txt")
+    val problems = ls("Chilled water").flatMap ( r => {
+      stripSeq(r._1) match {
+        case None => None
+        case Some(p) => Some(p,r._2)
+      }
+    })
+    val t0 = timeQE(problems) //Apparently, this also warms up the QE connection
+    //Ignore any problems that took < 2s
+    val red_probs = problems.zip(t0).collect{case p if p._2 >= 2.0 => p._1}
+    println(problems.length,red_probs,red_probs.length)
+
+    //println(t0,t0.sum)
+    val t1 = timeQE(red_probs)
+    println(t1,t1.sum)
+    val t2 = timeheuQE(red_probs)
+    println(t2,t2.sum)
+    val t3 = timeheuPOQE(red_probs,false)
+    println(t3,t3.sum)
+    val t4 = timeheuPOQE(red_probs,true)
+    println(t4,t4.sum)
 
   }
 
@@ -248,41 +322,106 @@ class DependencyAnalysisTests extends TacticTestBase {
     val acasximplicit = KeYmaeraXProblemParser( io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_explicit.kyx")).mkString)
 
-//    val prog = stripImp(acasximplicit).get
-//    val adjls = analyseModal(prog,Sequent(IndexedSeq(),IndexedSeq(acasximplicit)),true).mapValues(v => v._1)
-//    val po = inducedOrd()
+    val prog = stripImp(acasximplicit).get
+    val adjls = analyseModalVars(prog,varSetToBaseVarSet(StaticSemantics.vars(prog).toSet),true)
+    println(adjls)
 
-    val problems = ls("ACAS X Safe").flatMap ( r => {
-      stripSeq(r._1) match {
-        case None => None
-        case Some(p) => Some(p,r._2)
-      }
-    })
-    val t0 = timeQE(problems) //Apparently, this warms up the QE connection
-    println(t0,t0.sum)
-    val t1 = timeQE(problems)
-    println(t1,t1.sum)
-    val t2 = timeheuQE(problems)
-    println(t2,t2.sum)
-    val t3 = timeheuPOQE(problems)
-    println(t3,t3.sum)
-
-  }
-//
-//  "DependencyAnalysis" should "record time to re-prove the STTT logs" in withMathematica { qeTool =>
-//    val ls = parseLog(System.getProperty("user.home") + "/.keymaerax/STTT.txt")
-//    val problems = ls("STTT").flatMap ( r => {
+//    val problems = ls("ACAS X Safe").flatMap ( r => {
 //      stripSeq(r._1) match {
 //        case None => None
 //        case Some(p) => Some(p,r._2)
 //      }
 //    })
-//
-//    val timeLs = ListBuffer[(Double)]()
-//
-//
-//    println(timeLs)
-//    println(timeLs.sum)
-//
-//  }
+//    val t0 = timeQE(problems) //Apparently, this warms up the QE connection
+//    println(t0,t0.sum)
+//    val t1 = timeQE(problems)
+//    println(t1,t1.sum)
+//    val t2 = timeheuQE(problems)
+//    println(t2,t2.sum)
+//    val t3 = timeheuPOQE(problems)
+//    println(t3,t3.sum)
+
+  }
+
+  //NOTE: Avoid committing the solutions to the repo
+
+  "DependencyAnalysis" should "analyse dependencies for labs" in withMathematica { qeTool =>
+    val l2 = scala.io.Source.fromFile("L2Q2.kya").mkString
+    val l3 = scala.io.Source.fromFile("L3Q6.kya").mkString
+    val archiveL2 :: Nil = KeYmaeraXArchiveParser.parse(l2)
+    val archiveL3 :: Nil = KeYmaeraXArchiveParser.parse(l3)
+
+    val (l2f, l2t) = (archiveL2._3.asInstanceOf[Formula], archiveL2._4.head._2)
+    val (l3f, l3t) = (archiveL3._3.asInstanceOf[Formula], archiveL3._4.head._2)
+
+    val p2 = stripImp(l2f).get
+    val p3 = stripImp(l3f).get
+    println(analyseModalVars(p2,varSetToBaseVarSet(StaticSemantics.vars(p2).toSet),true))
+    println(analyseModalVars(p2,varSetToBaseVarSet(StaticSemantics.vars(p2).toSet),false))
+
+    println(analyseModalVars(p3,varSetToBaseVarSet(StaticSemantics.vars(p3).toSet),true))
+    println(analyseModalVars(p3,varSetToBaseVarSet(StaticSemantics.vars(p3).toSet),false))
+  }
+
+  "DependencyAnalysis" should "record time to re-prove lab 2" in withMathematica { qeTool =>
+    val l2 = scala.io.Source.fromFile("L2Q2.kya").mkString
+    val archiveL2 :: Nil = KeYmaeraXArchiveParser.parse(l2)
+
+    val (l2f, l2t) = (archiveL2._3.asInstanceOf[Formula], archiveL2._4.head._2)
+
+    val p2 = stripImp(l2f).get
+
+    val pof = inducedOrd(transClose(analyseModalVars(p2,varSetToBaseVarSet(StaticSemantics.vars(p2).toSet),false).mapValues(v => v._1)))
+    val pot = inducedOrd(transClose(analyseModalVars(p2,varSetToBaseVarSet(StaticSemantics.vars(p2).toSet),true).mapValues(v => v._1)))
+
+    val ls = parseLog(System.getProperty("user.home") + "/.keymaerax/lab2.txt")
+
+    val problems = ls("L2").flatMap ( r => Some(Test(True),r._2))
+
+    val t0 = timeQE(problems) //Apparently, this also warms up the QE connection
+    //Ignore any problems that took < 2s
+    val red_probs = problems.zip(t0).collect{case p if p._2 >= 2.0 => p._1}
+    println(problems.length,red_probs,red_probs.length)
+
+    //println(t0,t0.sum)
+    val t1 = timeQE(red_probs)
+    println(t1,t1.sum)
+    val t2 = timeheuQE(red_probs)
+    println(t2,t2.sum)
+    val t3 = timeheufixedPOQE(red_probs,pof)
+    println(t3,t3.sum)
+    val t4 = timeheufixedPOQE(red_probs,pot)
+    println(t4,t4.sum)
+  }
+
+  "DependencyAnalysis" should "record time to re-prove lab 3" in withMathematica { qeTool =>
+    val l3 = scala.io.Source.fromFile("L3Q6.kya").mkString
+    val archiveL3 :: Nil = KeYmaeraXArchiveParser.parse(l3)
+
+    val (l3f, l3t) = (archiveL3._3.asInstanceOf[Formula], archiveL3._4.head._2)
+
+    val p3 = stripImp(l3f).get
+
+    val pof = inducedOrd(transClose(analyseModalVars(p3,varSetToBaseVarSet(StaticSemantics.vars(p3).toSet),false).mapValues(v => v._1)))
+    val pot = inducedOrd(transClose(analyseModalVars(p3,varSetToBaseVarSet(StaticSemantics.vars(p3).toSet),true).mapValues(v => v._1)))
+
+    val ls = parseLog(System.getProperty("user.home") + "/.keymaerax/lab3.txt")
+
+    val problems = ls("L3").flatMap ( r => Some(Test(True),r._2))
+
+    val t0 = timeQE(problems) //Apparently, this also warms up the QE connection
+  //Ignore any problems that took < 2s
+  val red_probs = problems.zip(t0).collect{case p if p._2 >= 2.0 => p._1}
+    println(problems.length,red_probs,red_probs.length)
+
+    //println(t0,t0.sum)
+    val t1 = timeQE(red_probs)
+    println(t1,t1.sum)
+    val t2 = timeheuQE(red_probs)
+    println(t2,t2.sum)
+    val t3 = timeheufixedPOQE(red_probs,pof)
+    println(t3,t3.sum)
+    val t4 = timeheufixedPOQE(red_probs,pot)
+    println(t4,t4.sum)
+  }
 }

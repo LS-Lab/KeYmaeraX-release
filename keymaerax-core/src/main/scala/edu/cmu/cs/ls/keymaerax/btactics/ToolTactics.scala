@@ -26,9 +26,9 @@ private object ToolTactics {
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(order: List[NamedSymbol] = Nil)(qeTool: QETool): BelleExpr = {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
+    QELogger.getLogTactic &
     Idioms.NamedTactic("QE",
-      QELogger.getLogTactic &
-      done | //@note don't fail QE if already proved
+        done | //@note don't fail QE if already proved
         ((alphaRule*) &
         (close |
           ((atomExhaustiveEqL2R('L)*) &

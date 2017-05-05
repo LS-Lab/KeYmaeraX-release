@@ -13,14 +13,17 @@ import scala.language.postfixOps
 
 object DependencyAnalysis {
 
-  //Same as freeVars except it throws out differential symbols
-  def freeVars(t:Expression) : Set[BaseVariable] = {
-    StaticSemantics.freeVars(t).toSet.flatMap( (v:Variable) =>
+  def varSetToBaseVarSet (s:Set[Variable]) : Set[BaseVariable] = {
+    s.flatMap( (v:Variable) =>
       v match {
         case bv:BaseVariable => Some(bv)
         case _ => None
       }
     )
+  }
+  //Same as freeVars except it throws out differential symbols
+  def freeVars(t:Expression) : Set[BaseVariable] = {
+    varSetToBaseVarSet(StaticSemantics.freeVars(t).toSet)
   }
 
   def freeVars(s:Sequent) : Set[BaseVariable] = {
@@ -81,48 +84,48 @@ object DependencyAnalysis {
     }
   }
 
-  //Returns an estimate of the maximum degree of a given variable
+  //Returns an estimate of the maximum degree w.r.t. a set of variables
   //This is accurate only when it reports degree either 0 or 1, which is what we need for linearity
-  def degVar(t:Term,v:BaseVariable) : Int = {
+  def degVar(t:Term,vs:Set[BaseVariable]) : Int = {
     t match {
       case n:Number => 0
-      case x:Variable =>
-        if(x.equals(v)) 1
+      case x:BaseVariable =>
+        if(vs.contains(x)) 1
         else 0
-      case Neg(t) => degVar(t,v)
-      case Times(l,r) => degVar(l,v) * degVar(r,v)
-      case Power(l,n:Number) if n.value.isValidInt => degVar(l,v) * n.value.toInt
+      case Neg(t) => degVar(t,vs)
+      case Times(l,r) => degVar(l,vs) + degVar(r,vs)
+      case Power(l,n:Number) if n.value.isValidInt => degVar(l,vs) * n.value.toInt
       case Divide(l,r) =>
-        val dr = degVar(r,v)
+        val dr = degVar(r,vs)
         if(dr != 0) -1 //Fails on stupid cases like 1 / (1/x)
-        else degVar(l,v) //Denominator doesn't contain v
+        else degVar(l,vs) //Denominator doesn't contain vs
       case Plus(l,r) =>
-        Math.max(degVar(l,v),degVar(r,v))
+        Math.max(degVar(l,vs),degVar(r,vs))
       case Minus(l,r) =>
-        Math.max(degVar(l,v),degVar(r,v))
+        Math.max(degVar(l,vs),degVar(r,vs))
       case FuncOf(_,Nothing) =>
         0
       case FuncOf(_,t) =>
-        if(degVar(t,v)!=0)
+        if(degVar(t,vs)!=0)
           -1
         else
           0
       case Pair(l,r) =>
-        Math.max(degVar(l,v),degVar(r,v))
+        Math.max(degVar(l,vs),degVar(r,vs))
       case _ => print(t)
-        ??? //Unimplemented: Pair, Differential, Power that is not a number
+        ??? //Unimplemented: Differential, Power that is not a number
     }
   }
 
-  // The ODE is linear if all the variables on the RHS occur with
+  // The ODE is linear if all the variables on the RHS occur linearly
   def isLinearODE(vs:Map[BaseVariable,Term]) : Boolean = {
-    val vars = vs.keySet
-    vars.forall(v =>
-      vs.values.forall( t =>
-      {
-        val dv = degVar(t,v)
-        dv == 0 || dv ==1
-      }))
+    //val vars = vs.keySet
+    //println(vars)
+    vs.values.forall( t =>
+    {
+      val dv = degVar(t,vs.keySet)
+      dv == 0 || dv ==1
+    })
   }
 
   def transitiveAnalysis(vs:Map[BaseVariable,(Set[BaseVariable],Set[Function])],s:Set[BaseVariable],f:Set[Function]) : (Set[BaseVariable],Set[Function]) = {
@@ -131,8 +134,9 @@ object DependencyAnalysis {
       case None => (Set[BaseVariable](),Set[Function]())
       case Some((vars,fs)) => (vars -- s,fs)
     } ).foldLeft(Set[BaseVariable](),Set[Function]())((s,t) => (s._1.union(t._1),s._2.union(t._2)))
-    if(newvars._1.isEmpty)
-      return (s,f.union(newvars._2))
+    if(newvars._1.isEmpty) {
+      return (s, f.union(newvars._2))
+    }
     else
       return transitiveAnalysis(vs,s.union(newvars._1),f.union(newvars._2))
   }
@@ -146,26 +150,28 @@ object DependencyAnalysis {
     //Converts the ODE to a list of AtomicODEs
     val odels = collapseODE(ode)
 
-    //Special case: variables not mentioned at all in the ODE
+    //Special case: the set of variables that we are concerned with is not mentioned at all in the ODE
     if (s.intersect(odels.keySet).isEmpty) {
-      return (s,Set())
+      return (s.union(fvdom),fvsig)
     }
 
-    //If the ODE is linear, apply the transitive analysis
-    if(isLinearODE(odels)){
-      //println("Linear ODE")
-      val ds = odels.mapValues( v => (freeVars(v),signature(v)) )
-      transitiveAnalysis(ds,s.union(fvdom),fvsig)
+    //Otherwise, transitively close over the set
+    val ds = odels.mapValues( v => (freeVars(v),signature(v)) )
+
+    //Compute the transitive closure T
+    val (vars,funcs) = transitiveAnalysis(ds,s.union(fvdom),fvsig)
+
+    //println("T analysis",vars,funcs)
+
+    //Check that the remainder of the ODE is linear
+    if (isLinearODE(odels -- vars)) {
+      (vars, funcs)
     }
+    //Otherwise, give up and return the whole ODE
     else {
-     //println("Non-linear ODE")
-     if(s.intersect(odels.keySet).isEmpty)
-       (s.union(fvdom),fvsig)
-     else {
        val odedom = odels.values.map(t => freeVars(t)).foldLeft(s.union(odels.keySet))((s, t) => s.union(t))
        val odesig = odels.values.map(t => signature(t)).foldLeft(Set[Function]())((s, t) => s.union(t))
        (odedom.union(fvdom), odesig.union(fvsig))
-     }
     }
   }
 
@@ -264,7 +270,7 @@ object DependencyAnalysis {
     def compare(x:Variable,y:Variable): Int = {
       (x,y) match{
         case(x:BaseVariable,y:BaseVariable) => {
-          if(!edges.contains(x) || !edges.contains(y)) 0 //Not in the PO graph
+          if(!edges.contains(x) || !edges.contains(y)) return 0 //Not in the PO graph
           val b1 = edges(x).contains(y)
           val b2 = edges(y).contains(x)
           if(b1 == b2) 0 // Same eq class
