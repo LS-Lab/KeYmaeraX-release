@@ -375,23 +375,38 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&(j/2/3*t_^3+a/2*t_^2+v*t_+x)^3>=1)".asFormula
   }
 
-  it should "solve simple nested ODEs" ignore withMathematica { tool =>
+  it should "solve simple nested ODEs" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("<{x'=2}>[{x'=3}]x>0".asFormula)), solve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x_1>0".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 & \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
   }
 
-  it should "suport diamond with postcond that binds variables we bind"  in withMathematica { tool =>
+  it should "support diamond with postcond that binds variables we bind"  in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("<{x'=1}>\\forall x x^2 >= 0".asFormula)), solve(1))
     result.subgoals should have size 1
-    //result.subgoals.head.ante should contain theSameElementsAs List("x_1>0".asFormula)
-    //result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
+    result.subgoals.head.ante should contain theSameElementsAs List()
+    result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 & \\forall x x^2 >= 0)".asFormula)
   }
 
   it should "support box with postcond that binds variables we bind" in  withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=1}]\\forall x x^2 >= 0".asFormula)), solve(1))
     result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List()
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall x x^2 >= 0)".asFormula)
+  }
+
+  it should "support diamond with postcond that binds variables we bind via assignment" in  withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("<{x'=1}>[x:= x + 1;] x^2 >= 0".asFormula)), solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List()
+    result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 & [x:=1*(0+1*t_-0)+x+1;]x^2 >= 0)".asFormula)
+  }
+
+  it should "support box with postcond that binds variables we bind via assignment" in  withMathematica { tool =>
+    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=1}][x:= x + 1;] x^2 >= 0".asFormula)), solve(1))
+    result.subgoals should have size 1
+    println("assign: result: " + result)
     //result.subgoals.head.ante should contain theSameElementsAs List("x_1>0".asFormula)
     //result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
   }

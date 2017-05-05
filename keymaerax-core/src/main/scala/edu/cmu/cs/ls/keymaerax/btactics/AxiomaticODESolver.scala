@@ -607,20 +607,26 @@ object AxiomaticODESolver {
             TactixLibrary.existsR(y_DE.xp.x)(1) & TactixLibrary.closeId
         ) & checkResult(ode, y_DE)
       case Some(f@Diamond(ODESystem(ode@DifferentialProduct(y_DE@AtomicODE(DifferentialSymbol(y), t), c), q), p)) =>
-        val axiomName =
-          if (StaticSemantics.freeVars(t).contains(y)) "DGd diamond differential ghost" //@todo ensure a*x+b shape
-          else "DGd diamond differential ghost constant"
+        val (axiomName:String, closeTac:BelleExpr) =
+          if (StaticSemantics.freeVars(t).contains(y))
+            ("DGd diamond differential ghost",
+              TactixLibrary.useAt(",d commute")(1, PosInExpr(1::0::Nil)) &
+              TactixLibrary.byUS("DGd diamond differential ghost"))//@todo ensure a*x+b shape
+          else
+            ("DGd diamond differential ghost constant converse",
+                TactixLibrary.useAt("DGd diamond differential ghost constant converse", key = PosInExpr(1::Nil))(1, PosInExpr(1::Nil))
+              & TactixLibrary.byUS("<-> reflexive"))
         //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
         FOQuantifierTactics.universalGen(Some(y_DE.xp.x), y_DE.xp.x)(pos) &
         TactixLibrary.cutAt(Diamond(ODESystem(c, q), p))(pos) <(
           TactixLibrary.skip
           ,
-          DebuggingTactics.debug(s"[inverseDiffGhost] Trying to eliminate $y_DE from the ODE via an application of $axiomName.", ODE_DEBUGGER) &
+          DebuggingTactics.debug(s"[inverseDiffGhost] Trying to eliminate $y_DE from the ODE via an application of $axiomName", ODE_DEBUGGER) &
           TactixLibrary.cohideR('Rlast) & TactixLibrary.equivifyR(1) &
             TactixLibrary.CE(pos.inExpr) &
-            TactixLibrary.useAt(",d commute")(1, PosInExpr(1::0::Nil)) &
-            TactixLibrary.byUS(axiomName) & TactixLibrary.done
-        ) & checkResult(ode, y_DE)
+            closeTac &
+            TactixLibrary.done
+    ) & checkResult(ode, y_DE)
     }
   })
 

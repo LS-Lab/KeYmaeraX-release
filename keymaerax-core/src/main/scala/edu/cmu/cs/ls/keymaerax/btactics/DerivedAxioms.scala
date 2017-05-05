@@ -1831,6 +1831,20 @@ object DerivedAxioms {
       byUS(equivReflexiveAxiom)
   )
 
+  lazy val DGCddifferentialghostconstconv = derivedAxiom("DGd diamond differential ghost constant converse",
+    Sequent(IndexedSeq(), IndexedSeq("<{c{|y_|}&q(|y_|)}>p(|y_|) <-> \\forall y_ <{y_'=b(|y_|),c{|y_|}&q(|y_|)}>p(|y_|)".asFormula)),
+      useAt(proveBy("<{c,d&q(||)}>p(||) <-> <{d,c&q(||)}>p(||)".asFormula, useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+        useAt("<> diamond", PosInExpr(1::Nil))(1, 1::Nil) &
+        useAt(proveBy("(!p() <-> !q()) <-> (p() <-> q())".asFormula, TactixLibrary.prop))(1) &
+        byUS(", commute")))(1,PosInExpr(1::0::Nil)) &
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("DG differential ghost constant")(1, 0::0::Nil) &
+      useAt("!! double negation", PosInExpr(1::Nil))(1, 0::0::0::Nil) &
+      useAt("all dual y", PosInExpr(0::Nil))(1, 0::Nil) &
+      useAt("<> diamond", PosInExpr(0::Nil))(1, 0::0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
   lazy val DGCddifferentialghostconstexists = derivedAxiom("DGd diamond differential ghost constant exists",
     Sequent(IndexedSeq(), IndexedSeq("<{c{|y_|}&q(|y_|)}>p(|y_|) <-> \\exists y_ <{c{|y_|},y_'=b(|y_|)&q(|y_|)}>p(|y_|)".asFormula)),
       useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
