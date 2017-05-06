@@ -49,6 +49,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
               case (a: Formula, v: Formula) => edu.cmu.cs.ls.keymaerax.core.Equiv(a, v)
             })) + ") " + IN.img + " (" +
             newline(indent+1) + pp(inner, indent+1) + newline(indent) + ")"
+          case DependentTactic(name) => name
           case DependentPositionTactic(name) => name // name of a DependentPositionTactic is the codeName
           case adp: AppliedDependentPositionTactic => adp.pt match {
             case e: DependentPositionWithAppliedInputTactic =>
