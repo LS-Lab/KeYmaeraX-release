@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
@@ -216,7 +217,7 @@ class DependencyAnalysisTests extends TacticTestBase {
   }
 
   //Timing tests
-  "DependencyAnalysis" should "record time to re-prove the ODE logs" in withMathematica { qeTool =>
+  "DependencyAnalysis" should "record time to re-prove the ODE logs" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val ls = parseLog(System.getProperty("user.home") + "/.keymaerax/ODElog.txt")
     val problems = ls("AxiomaticODESolver").flatMap ( r => {
       stripSeq(r._1) match {
@@ -241,7 +242,7 @@ class DependencyAnalysisTests extends TacticTestBase {
 
   }
 
-  "DependencyAnalysis" should "record time to re-prove the ETCS logs" in withMathematica { qeTool =>
+  "DependencyAnalysis" should "record time to re-prove the ETCS logs" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val ls = parseLog(System.getProperty("user.home") + "/.keymaerax/ETCS.txt")
     val problems = ls("ETCS").flatMap ( r => {
       stripSeq(r._1) match {
@@ -266,7 +267,7 @@ class DependencyAnalysisTests extends TacticTestBase {
 
   }
 
-  "DependencyAnalysis" should "record time to re-prove the STTT logs" in withMathematica { qeTool =>
+  "DependencyAnalysis" should "record time to re-prove the STTT logs" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val ls = parseLog(System.getProperty("user.home") + "/.keymaerax/STTT.txt")
     val problems = ls("STTT").flatMap ( r => {
       stripSeq(r._1) match {
@@ -291,7 +292,7 @@ class DependencyAnalysisTests extends TacticTestBase {
 
   }
 
-  "DependencyAnalysis" should "record time to re-prove the chilled water logs" in withMathematica { qeTool =>
+  "DependencyAnalysis" should "record time to re-prove the chilled water logs" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val ls = parseLog(System.getProperty("user.home") + "/.keymaerax/chilled.txt")
     val problems = ls("Chilled water").flatMap ( r => {
       stripSeq(r._1) match {
@@ -316,7 +317,7 @@ class DependencyAnalysisTests extends TacticTestBase {
 
   }
 
-  "DependencyAnalysis" should "record time to re-prove the ACAS X logs" in withMathematica { qeTool =>
+  "DependencyAnalysis" should "record time to re-prove the ACAS X logs" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val ls = parseLog(System.getProperty("user.home") + "/.keymaerax/ACASX.txt")
 
     val acasximplicit = KeYmaeraXProblemParser( io.Source.fromInputStream(
@@ -345,7 +346,7 @@ class DependencyAnalysisTests extends TacticTestBase {
 
   //NOTE: Avoid committing the solutions to the repo
 
-  "DependencyAnalysis" should "analyse dependencies for labs" in withMathematica { qeTool =>
+  "DependencyAnalysis" should "analyse dependencies for labs" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val l2 = scala.io.Source.fromFile("L2Q2.kya").mkString
     val l3 = scala.io.Source.fromFile("L3Q6.kya").mkString
     val archiveL2 :: Nil = KeYmaeraXArchiveParser.parse(l2)
@@ -363,7 +364,7 @@ class DependencyAnalysisTests extends TacticTestBase {
     println(analyseModalVars(p3,varSetToBaseVarSet(StaticSemantics.vars(p3).toSet),false))
   }
 
-  "DependencyAnalysis" should "record time to re-prove lab 2" in withMathematica { qeTool =>
+  "DependencyAnalysis" should "record time to re-prove lab 2" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val l2 = scala.io.Source.fromFile("L2Q2.kya").mkString
     val archiveL2 :: Nil = KeYmaeraXArchiveParser.parse(l2)
 
@@ -394,7 +395,7 @@ class DependencyAnalysisTests extends TacticTestBase {
     println(t4,t4.sum)
   }
 
-  "DependencyAnalysis" should "record time to re-prove lab 3" in withMathematica { qeTool =>
+  "DependencyAnalysis" should "record time to re-prove lab 3" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     val l3 = scala.io.Source.fromFile("L3Q6.kya").mkString
     val archiveL3 :: Nil = KeYmaeraXArchiveParser.parse(l3)
 
@@ -410,8 +411,8 @@ class DependencyAnalysisTests extends TacticTestBase {
     val problems = ls("L3").flatMap ( r => Some(Test(True),r._2))
 
     val t0 = timeQE(problems) //Apparently, this also warms up the QE connection
-  //Ignore any problems that took < 2s
-  val red_probs = problems.zip(t0).collect{case p if p._2 >= 2.0 => p._1}
+    //Ignore any problems that took < 2s
+    val red_probs = problems.zip(t0).collect{case p if p._2 >= 2.0 => p._1}
     println(problems.length,red_probs,red_probs.length)
 
     //println(t0,t0.sum)
