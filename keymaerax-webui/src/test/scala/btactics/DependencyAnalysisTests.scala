@@ -114,7 +114,7 @@ class DependencyAnalysisTests extends TacticTestBase {
     val Some((_,pr,seq)) = parseStr("@Chilled water#Tll() < a(), a() < Tlu(), h()>0, r()>0, e()=1, h()/r()+a() < Tlu(), Tw < Tl, Tl < Tlu(), a()<=Tw, l=1->v=1, v=0->l=0, l=0|l=1, v=1|v=0, v=1->Tw=a(), v=1, t=0\n  ==>  [{Tw'=-r()*(1-v)*(Tw-Tl),Tl'=-r()*(Tl-Tw)+1*h(),t'=1&(0<=t&t < e())&Tw=a()}]((1=1->v=1)&(v=0->1=0)&(1=0|1=1)&(v=1|v=0)&(v=1->Tw=a()))#Tll() < a(), a() < Tlu(), h()>0, r()>0, e()=1, h()/r()+a() < Tlu(), l=1->v=1, v=0->l=0, l=0|l=1, v=1|v=0, v=1\n  ==>  (0<=t&t < e())&Tw=a()->(1=1->v=1)&(v=0->1=0)&(1=0|1=1)&(v=1|v=0)&(v=1->Tw=a())")
     val p = stripSeq(pr).get
     val adjls = analyseModal(p,seq).mapValues( v => v._1)
-    scc(adjls) shouldBe List(Set("v".asVariable), Set("Tl".asVariable), Set("t".asVariable, "Tw".asVariable), Set("l".asVariable))
+    scc(adjls) should contain only (Set("Tl".asVariable), Set("t".asVariable, "Tw".asVariable,"v".asVariable), Set("l".asVariable))
   }
 
   "DependencyAnalysis" should "analyse dependencies for some examples" in withMathematica { qeTool =>
@@ -135,7 +135,7 @@ class DependencyAnalysisTests extends TacticTestBase {
 
   "DependencyAnalysis" should "provide a partial order to QE problems" in withMathematica { qeTool =>
 
-    val p = "{A:=B; C:=D; {D'=E , E' = D & F>1}}".asProgram
+    val p = "{A:=B; C:=D; {D'=E , E' = D}; E:=E+F;}".asProgram
     val seq = " ==> A+C+B+D+E+G() > 0".asSequent
     val adjls = analyseModal(p,seq).mapValues( v => v._1)
     val rtc = transClose(adjls)
@@ -145,6 +145,8 @@ class DependencyAnalysisTests extends TacticTestBase {
 
     //The dependency graph is
     // A -> B, C -> D <-> E -> F
+    //rtc is
+    //Map(D -> Set(D, E, F), A -> Set(A, B), C -> Set(C, D, E, F), B -> Set(B), E -> Set(E, F, D))
 
     //x -> y ==> x < y (most dependent first)
     val ord1 = vars.toList.sortWith( (x,y) =>
@@ -154,7 +156,7 @@ class DependencyAnalysisTests extends TacticTestBase {
         else ord < 0
       }
     )
-    ord1 shouldBe List("A", "B", "C", "D", "E").map(v=>v.asVariable)
+    ord1 shouldBe List("B", "A", "D", "E", "C").map(v=>v.asVariable)
 
     //x -> y ==> x > y (least dependent first)
     val ord2 = vars.toList.sortWith( (x,y) =>
@@ -164,7 +166,7 @@ class DependencyAnalysisTests extends TacticTestBase {
         else ord > 0
       }
     )
-    ord2 shouldBe List("B", "A", "D", "E", "C").map(v=>v.asVariable)
+    ord2 shouldBe List("A", "B", "C", "D", "E").map(v=>v.asVariable)
   }
 
   private def timeCall[A](f : Unit => A) : Double = {
