@@ -52,6 +52,18 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
     roundTrip("transform({`x>0`}, 1)")
   }
 
+  "Applied position tactics" should "print position" in {
+    val tactic = TactixLibrary.implyR(1)
+    BellePrettyPrinter(tactic) shouldBe "implyR(1)"
+    roundTrip("implyR(1)")
+  }
+
+  "Applied position with input tactics" should "print input and position" in {
+    val tactic = TactixLibrary.loop("x>0".asFormula)(1)
+    BellePrettyPrinter(tactic) shouldBe "loop({`x>0`}, 1)"
+    roundTrip("loop({`x>0`}, 1)")
+  }
+
   "Operator precedence" should "bind saturate * stronger than ;" in { roundTrip("implyR(1) ; andL('L)*") }
 
   it should "parenthesize ; in saturate *" in { roundTrip("(implyR(1) ; andL('L))*") }

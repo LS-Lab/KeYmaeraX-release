@@ -22,6 +22,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends Interpreter {
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
     if (Thread.currentThread().isInterrupted) {
+      //@todo kill the running tactic (cancel QE), here or in kill
       //@note end executing the interpreter when its thread gets interrupted
       //@todo throw an error that is easier to identify (for now: irrelevant, since Hydra Future already gone when we throw here)
       throw new BelleThrowable("Execution Stopped by interrupting the interpreter thread")
@@ -368,7 +369,10 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
     }
   }
 
-  override def kill(): Unit = listeners.foreach(_.kill())
+  override def kill(): Unit = {
+    //@todo kill the running tactic (cancel QE)
+    listeners.foreach(_.kill())
+  }
 
   /** Maps sequents to BelleProvables. */
   private def bval(s: Sequent) = BelleProvable(ProvableSig.startProof(s))
