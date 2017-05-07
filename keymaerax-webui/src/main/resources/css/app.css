@@ -63,7 +63,7 @@ del {
 
 .hl {background: transparent; }
 .hlhover {
-  color: white;
+  color: var(--lsmainback);
   background-color:var(--lslightblue);
   position: relative;
 }
