@@ -16,7 +16,7 @@
 .hljs-boxopenop {
   font-weight: bold;
   font-size: larger;
-  border-top: 1px dashed black;
+  border-bottom: 1px dashed black;
   padding-right: 100%;
   margin-right: -100%;
 }
@@ -24,7 +24,7 @@
 .hljs-boxcloseop {
   font-weight: bold;
   font-size: larger;
-  border-bottom: 1px dashed black;
+  border-top: 1px dashed black;
   padding-right: 100%;
   margin-right: -100%;
 }
