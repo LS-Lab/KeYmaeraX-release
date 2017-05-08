@@ -28,14 +28,22 @@ class DifferentialSaturationTests extends TacticTestBase {
     val (w::d1::d2::x1::x2::Nil) = List("w","d1","d2","x1","x2").map(_.asVariable)
     val ode = p.ode
     val dom = p.constraint
-    //No non-trivial invariants
-    parametricInvariants(ode,dom,List(List(w)),3)
 
-    parametricInvariants(ode,dom,List(List(w,d1,d2)),3)
-//    val param = parametricCand(vars,2,0)
-//    val trm = simplifiedLieDerivative(ode,param._1)
-//    val fml = diffClosure(ode,Imply(dom,GreaterEqual(trm,Number(0))))
-//    println(guessInstantiation(fml,param._2))
+    //This is the dependency ordering
+    println(parametricInvariants(ode,dom,List(List(w),List(w,d1,d2),List(w,d1,d2,x1),List(w,d1,d2,x2),List(w,d1,d2,x1,x2)),3))
   }
+
+  "DiffSat" should "solve for parameters(2)" in withMathematica { qeTool =>
+    val p = "{x'=y,y'=-w^2*x-2*w*y}".asProgram.asInstanceOf[ODESystem]
+    val (w::x::y::Nil) = List("w","x","y").map(_.asVariable)
+    val ode = p.ode
+    val dom = p.constraint
+
+    //This is the dependency ordering
+    println(parametricInvariants(ode,dom,List(List(w,x,y)),4))
+  }
+
+
+
 
 }
