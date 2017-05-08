@@ -118,7 +118,8 @@ class JLinkMathematicaLink extends MathematicaLink {
         "-linkmode", "launch",
         "-linkname", linkName + " -mathlink",
         "-linkprotocol", "tcpip"))
-        ml.discardAnswer()
+      ml.connect()
+      ml.discardAnswer()
         //@todo How to gracefully shutdown an unsuccessfully initialized math link again without causing follow-up problems?
         //@note print warnings for license issues instead of shutting down immediately
         isActivated match {
@@ -160,7 +161,7 @@ class JLinkMathematicaLink extends MathematicaLink {
       println("Shutting down Mathematica...")
       val l: KernelLink = ml
       ml = null
-      l.connect()           /* Wolfram suggestion re our bug report on shutdown problems */
+      l.abandonEvaluation()
       l.terminateKernel()
       l.close()
       println("...Done")
@@ -171,6 +172,7 @@ class JLinkMathematicaLink extends MathematicaLink {
   def restart(): Unit = {
     val l: KernelLink = ml
     ml = null
+    l.abandonEvaluation()
     l.terminateKernel()
     init(linkName, jlinkLibDir)
     l.close()
