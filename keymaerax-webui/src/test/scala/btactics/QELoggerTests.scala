@@ -75,7 +75,7 @@ class QELoggerTests extends TacticTestBase {
     //Note: logger must be enabled before calling the parser, or it will parse explicit QE calls to the wrong tactic!
     val archiveL2::Nil = KeYmaeraXArchiveParser.parse(l2)
 
-    val (l2f,l2t) = (archiveL2._3.asInstanceOf[Formula],archiveL2._4.head._2)
+    val (l2f,l2t) = (archiveL2.model.asInstanceOf[Formula],archiveL2.tactics.head._2)
 
     println("Proving",l2f,l2t)
     println(proveBy(l2f,l2t))
@@ -88,7 +88,7 @@ class QELoggerTests extends TacticTestBase {
     //Note: logger must be enabled before calling the parser, or it will parse explicit QE calls to the wrong tactic!
     val archiveL3::Nil = KeYmaeraXArchiveParser.parse(l3)
 
-    val (l3f,l3t) = (archiveL3._3.asInstanceOf[Formula],archiveL3._4.head._2)
+    val (l3f,l3t) = (archiveL3.model.asInstanceOf[Formula],archiveL3.tactics.head._2)
 
     println("Proving",l3f,l3t)
     proveBy(l3f,l3t)

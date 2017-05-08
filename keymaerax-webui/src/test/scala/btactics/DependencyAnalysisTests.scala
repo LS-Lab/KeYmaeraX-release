@@ -354,8 +354,8 @@ class DependencyAnalysisTests extends TacticTestBase {
     val archiveL2 :: Nil = KeYmaeraXArchiveParser.parse(l2)
     val archiveL3 :: Nil = KeYmaeraXArchiveParser.parse(l3)
 
-    val (l2f, l2t) = (archiveL2._3.asInstanceOf[Formula], archiveL2._4.head._2)
-    val (l3f, l3t) = (archiveL3._3.asInstanceOf[Formula], archiveL3._4.head._2)
+    val (l2f, l2t) = (archiveL2.model.asInstanceOf[Formula], archiveL2.tactics.head._2)
+    val (l3f, l3t) = (archiveL3.model.asInstanceOf[Formula], archiveL3.tactics.head._2)
 
     val p2 = stripImp(l2f).get
     val p3 = stripImp(l3f).get
@@ -370,7 +370,7 @@ class DependencyAnalysisTests extends TacticTestBase {
     val l2 = scala.io.Source.fromFile("L2Q2.kya").mkString
     val archiveL2 :: Nil = KeYmaeraXArchiveParser.parse(l2)
 
-    val (l2f, l2t) = (archiveL2._3.asInstanceOf[Formula], archiveL2._4.head._2)
+    val (l2f, l2t) = (archiveL2.model.asInstanceOf[Formula], archiveL2.tactics.head._2)
 
     val p2 = stripImp(l2f).get
 
@@ -401,7 +401,7 @@ class DependencyAnalysisTests extends TacticTestBase {
     val l3 = scala.io.Source.fromFile("L3Q6.kya").mkString
     val archiveL3 :: Nil = KeYmaeraXArchiveParser.parse(l3)
 
-    val (l3f, l3t) = (archiveL3._3.asInstanceOf[Formula], archiveL3._4.head._2)
+    val (l3f, l3t) = (archiveL3.model.asInstanceOf[Formula], archiveL3.tactics.head._2)
 
     val p3 = stripImp(l3f).get
 

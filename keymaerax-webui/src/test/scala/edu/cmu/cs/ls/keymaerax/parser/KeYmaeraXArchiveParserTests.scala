@@ -7,7 +7,10 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+
+import org.scalatest.LoneElement._
 
 /**
   * Tests the archive parser.
@@ -25,10 +28,11 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       """.stripMargin
     val entries = KeYmaeraXArchiveParser.parse(input)
     entries should have size 1
-    entries.head shouldBe (
+    entries.head shouldBe ParsedArchiveEntry(
       "Entry 1",
       """ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.""".stripMargin,
+      "theorem",
       "x>y -> x>=y".asFormula,
       Nil
     )
@@ -45,10 +49,11 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       """.stripMargin
     val entries = KeYmaeraXArchiveParser.parse(input)
     entries should have size 1
-    entries.head shouldBe (
+    entries.head shouldBe ParsedArchiveEntry(
       "Entry 1",
       """ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.""".stripMargin,
+      "theorem",
       "x>y -> x>=y".asFormula,
       ("Proof 1", implyR(1) & QE) :: Nil
     )
@@ -65,11 +70,11 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         |End.
       """.stripMargin
     val entries = KeYmaeraXArchiveParser.parse(input)
-    entries should have size 1
-    entries.head shouldBe (
+    entries.loneElement shouldBe ParsedArchiveEntry(
       "Entry 1",
       """ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.""".stripMargin,
+      "theorem",
       "x>y -> x>=y".asFormula,
       ("Proof 1", implyR(1) & QE) :: ("Proof 2", implyR('R)) :: Nil
     )
@@ -91,20 +96,60 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       """.stripMargin
     val entries = KeYmaeraXArchiveParser.parse(input)
     entries should have size 2
-    entries.head shouldBe (
+    entries.head shouldBe ParsedArchiveEntry(
       "Entry 1",
       """ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.""".stripMargin,
+      "theorem",
       "x>y -> x>=y".asFormula,
       Nil
     )
-    entries.last shouldBe (
+    entries.last shouldBe ParsedArchiveEntry(
       "Entry 2",
       """Functions. R x(). End.
         |  ProgramVariables R y. End.
         |  Problem. x()>=y -> x()>=y End.""".stripMargin,
+      "theorem",
       "x()>=y -> x()>=y".asFormula,
       ("Prop Proof", prop) :: Nil
+    )
+  }
+
+  it should "parse a lemma entry" in {
+    val input =
+      """
+        |Lemma "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.
+        |End.
+      """.stripMargin
+    val entries = KeYmaeraXArchiveParser.parse(input)
+    entries.loneElement shouldBe ParsedArchiveEntry(
+      "Entry 1",
+      """ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.""".stripMargin,
+      "lemma",
+      "x>y -> x>=y".asFormula,
+      Nil
+    )
+  }
+
+  it should "parse a theorem entry" in {
+    val input =
+      """
+        |Theorem "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.
+        |End.
+      """.stripMargin
+    val entries = KeYmaeraXArchiveParser.parse(input)
+    entries.loneElement shouldBe ParsedArchiveEntry(
+      "Entry 1",
+      """ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.""".stripMargin,
+      "theorem",
+      "x>y -> x>=y".asFormula,
+      Nil
     )
   }
 

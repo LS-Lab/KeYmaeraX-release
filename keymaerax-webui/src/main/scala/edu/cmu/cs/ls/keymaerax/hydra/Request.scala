@@ -652,7 +652,7 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: S
   def resultingResponses(): List[Response] = {
     try {
       val archiveEntries = KeYmaeraXArchiveParser.read(kyaFileContents)
-      val (failedModels, succeededModels) = archiveEntries.foldLeft((List[String](), List[String]()))({ case ((failedImports, succeededImports), (name, modelFileContent, tactic)) =>
+      val (failedModels, succeededModels) = archiveEntries.foldLeft((List[String](), List[String]()))({ case ((failedImports, succeededImports), (name, modelFileContent, _, tactic)) =>
         val uniqueModelName = db.getUniqueModelName(userId, name)
         db.createModel(userId, uniqueModelName, modelFileContent, currentDate(), None, None, None,
           tactic.headOption.map(_._2)) match {
