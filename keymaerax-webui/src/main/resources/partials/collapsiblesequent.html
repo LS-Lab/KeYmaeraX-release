@@ -45,7 +45,23 @@
     </div>
 </div>
 
-<div class="row" ng-show="!collapsed">
+<div ng-show="!collapsed">
+
+<div class="row k4-sequent-hint">
+    <div class="pull-right">
+        <!-- todo make executable -->
+        Hint:
+        <span ng-repeat="tactic in sequentSuggestions">
+            <abbr class="initialism" title="{{tactic.selectedDerivation().id}}"
+                  uib-popover-template="'templates/sequentSuggestionPopoverTemplate.html'"
+                  popover-append-to-body="true"
+                  popover-trigger="'outsideClick'"
+                  popover-placement="auto bottom">{{tactic.selectedDerivation().id}}</abbr>&nbsp;|&nbsp;
+        </span>
+    </div>
+</div>
+
+<div class="row">
 
     <!-- Collapse button -->
     <div class="col-md-1">
@@ -165,4 +181,5 @@
         </div>
     </div>
 
+</div>
 </div>

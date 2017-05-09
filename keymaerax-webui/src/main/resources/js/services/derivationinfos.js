@@ -12,6 +12,18 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
         });
       return promise;
     },
+    sequentSuggestionDerivationInfos: function(userId, proofId, nodeId) {
+      var promise = $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/listStepSuggestions')
+        .then(function(response) {
+          // return value gets picked up by 'then' in the controller using this service
+          return {
+            data: $.map(response.data, function(info, i) {
+              return serviceDef.convertTacticInfo(info, true);
+            })
+          };
+        });
+      return promise;
+    },
 
     byName: function(userId, proofId, nodeId, name) {
       //@todo cache

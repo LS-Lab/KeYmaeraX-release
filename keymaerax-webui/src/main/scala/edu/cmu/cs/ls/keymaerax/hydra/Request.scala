@@ -1040,6 +1040,30 @@ class StepwiseTraceRequest(db: DBAbstraction, userId: String, proofId: String) e
   }
 }
 
+class GetSequentStepSuggestionRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
+  extends UserProofRequest(db, userId, proofId) {
+  override protected def doResultingResponses(): List[Response] = {
+    val tree = DbProofTree(db, proofId)
+    tree.locate(nodeId) match {
+      case None => ???
+      case Some(node) => node.goal match {
+        case None => ??? // node closed
+        case Some(seq) =>
+          if (seq.isFOL) {
+            val folSuggestions = "QE"::"abbrv"::"hideL"::Nil
+            // todo: counterexample, find assumptions + general help
+            val tactics = folSuggestions.map(s => (DerivationInfo(s), None))
+            ApplicableAxiomsResponse(tactics, Map.empty) :: Nil
+          } else {
+            // find "largest" succedent formula with programs and suggest top-level popup content
+            val pos = SuccPosition(1)
+            ApplicableAxiomsResponse(node.applicableTacticsAt(pos), node.tacticInputSuggestions(pos)) :: Nil
+          }
+      }
+    }
+  }
+}
+
 class GetApplicableAxiomsRequest(db:DBAbstraction, userId: String, proofId: String, nodeId: String, pos:Position)
   extends UserProofRequest(db, userId, proofId) {
   override protected def doResultingResponses(): List[Response] = {

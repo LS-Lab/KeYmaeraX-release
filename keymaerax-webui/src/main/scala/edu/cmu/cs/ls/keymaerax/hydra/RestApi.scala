@@ -479,6 +479,13 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
+  val sequentList = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "listStepSuggestions") { (userId, proofId, nodeId) => { pathEnd {
+    get {
+      val request = new GetSequentStepSuggestionRequest(database, userId, proofId, nodeId)
+      completeRequest(request, t)
+    }
+  }}}
+
   val twoPosList = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "twoposlist") { (userId, proofId, nodeId, fml1Id, fml2Id) => { pathEnd {
     get {
       val request = new GetApplicableTwoPosTacticsRequest(database, userId, proofId, nodeId, parseFormulaId(fml1Id), parseFormulaId(fml2Id))
@@ -982,6 +989,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     proofTasksBranchRoot  ::
     proofTaskExpand       ::
     axiomList             ::
+    sequentList           ::
     twoPosList            ::
     derivationInfo        ::
     doAt                  ::

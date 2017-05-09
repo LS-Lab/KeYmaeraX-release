@@ -132,6 +132,10 @@ del {
   display: none !important;
 }
 
+.k4-sequent-hint {
+  font-size: xx-small;
+}
+
 .k4-term-op {
 
 }
