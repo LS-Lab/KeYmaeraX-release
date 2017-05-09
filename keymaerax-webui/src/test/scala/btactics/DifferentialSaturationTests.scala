@@ -33,10 +33,10 @@ class DifferentialSaturationTests extends TacticTestBase {
     invs.head._1.map(s => s._1) should contain only "a__0+a__5*(v^2+a*w^2)".asTerm
   }
 
-  "DiffSat" should "find invariants for linear movement" in withMathematica { qeTool =>
+  //Note: mathematica's simplification tool is non deterministic???
+  "DiffSat" should "find invariants for linear movement" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
     //This system needs a time variable in order to find interesting invariants
-    //todo: PQE doesn't work well when A() is replaced with a variable
-    val p = "{x'=v,v'=A(),t'=1 &v>=0}".asProgram.asInstanceOf[ODESystem]
+    val p = "{x'=v,v'=a,t'=1 &v>=0}".asProgram.asInstanceOf[ODESystem]
     val ode = p.ode
     val dom = p.constraint
 
@@ -46,9 +46,8 @@ class DifferentialSaturationTests extends TacticTestBase {
     val invs = ls.map( p => parametricInvariants(ode, List(dom), p.map(s=>s.toList), 4, false,Some(qeTool)))
 
     invs.length shouldBe 1
-    invs.head._1.map(s => s._1) should contain only "a__0+a__2*(-1*A()*t+v)".asTerm
-    //todo: this invariant is v = v_0 + a *t
-    //can't seem to find x = x_0 + v_0 t + a/2 * t^2 with current approach
+    invs.head._1.map(s => s._1) should contain only ("a__0+a__2*(-1*a*t+v)".asTerm,"a__4+a^2*a__9*t^2+1/2*a*t*(-2*a__7+a__5*t+-4*a__9*v)+v*(a__7+-1*a__5*t+a__9*v)+a__5*x".asTerm)
+    //todo: this fails to find the second invariant when saturating
   }
 
   "DiffSat" should "saturate taylor series" in withMathematica { qeTool =>
@@ -62,13 +61,12 @@ class DifferentialSaturationTests extends TacticTestBase {
     val ls = bfsSCC(adjs).flatten.map(l => l.toList) ++ List(odevars(p).toList)
 
     val invs = parametricInvariants(ode, List(dom), ls, 4, true,Some(qeTool))
-    println(invs)
+    invs._2.map(s => s._1) should contain only ("a__0+t".asTerm,"a__2+x^2".asTerm)
   }
 
-
-  "DiffSat" should "solve for parameters" in withMathematica { qeTool =>
-    val p = ("{x1'=d1,x2'=d2,d1'=-w*d2,d2'=w*d1,t'=1," +
-              "y1'=e1,y2'=e2,e1'=-p*e2,e2'=p*e1,s'=1 & true}").asProgram.asInstanceOf[ODESystem]
+  //Note: mathematica's simplification tool is non deterministic???
+  "DiffSat" should "solve for parameters" taggedAs IgnoreInBuildTest in withMathematica { qeTool =>
+    val p = ("{x1'=d1,x2'=d2,d1'=-w*d2,d2'=w*d1,t'=1 & true}").asProgram.asInstanceOf[ODESystem]
     val ode = p.ode
     val dom = p.constraint
 
@@ -77,12 +75,15 @@ class DifferentialSaturationTests extends TacticTestBase {
     val ls = bfsSCC(adjs).flatten.map(l => l.toList) ++ List(odevars(p).toList)
 
     val invs = parametricInvariants(ode, List(dom), ls, 4, true,Some(qeTool))
-    println(invs)
+    invs._1.map(s => s._1) should contain only ("a__0+a__2*(d1^2+d2^2)".asTerm,"a__6+a__9*(d2+-1*w*x1)+a__7*(d1+w*x2)".asTerm,"a__11+a__12*(d1+w*x2)+1/2*(2*a__17*d2+2*a__20*d2^2+2*a__24*d2*x1+-2*a__17*w*x1+-1*a__24*w*x1^2+-2*d1*(a__24+2*a__20*w)*x2+-1*w*(a__24+2*a__20*w)*x2^2+2*a__18*(d2+-1*w*x1)*(d1+w*x2)+2*a__13*(d1+w*x2)^2)".asTerm)
+
+    //Note that the second one is already implied by one of the equational ones
+    invs._2.map(s=>s._1) should contain only ("a__26+t".asTerm,"a__28+a__31*d2+t+-1*a__31*w*x1+a__29*(d1+w*x2)".asTerm)
   }
 
   // Mathematica PQE returns false for this
   "foo" should "fix weird pqe" in withMathematica { qeTool =>
-    val fml = "\\forall x \\forall v \\forall t (v>=0&a__0+a__3*(-1*a*t+v)=0->a__5+2*a__6*t+v*(a__11+a__7+a__8*t+a__12*v)=0)".asFormula
+    val fml = "\\forall x \\forall v \\forall t (v>=0->a__5+2*a__6*t+v*(a__11+a__7+a__8*t+a__12*v)=0)".asFormula
     val pr1 = proveBy(fml,partialQE)
     println(pr1)
   }

@@ -71,7 +71,9 @@ object DifferentialSaturation {
   // The simplifier can't do the last simplification without proof (since 0^0 is nasty)
   def stripConstants(t:Term) : Term = {
     t match {
-      case v:DifferentialSymbol => Number(0)
+      case v:DifferentialSymbol => {
+        Number(0)
+      }
       case bop:BinaryCompositeTerm => bop.reapply(stripConstants(bop.left),stripConstants(bop.right))
       case uop:UnaryCompositeTerm => uop.reapply(stripConstants(uop.child))
       case _ => t
@@ -172,11 +174,15 @@ object DifferentialSaturation {
   //The substitution is only allowed to instantiate variables in instVars
   def guessInstantiations(fml:Formula, instVars : List[Variable]) : List[Map[Variable,Term]] = {
     //todo: should not be using PQE here, the generated decomposition is heavily dependent on the variable order
+    val pr = proveBy(fml,partialQE)
+    if(pr.isProved)
+      return List(Map())
 
-    val conc = pQE(fml)
+    val conc = pr.subgoals(0).succ(0)
+    //val conc = pQE(fml)
+
     val subs = extractEquations(conc,instVars)
     //val subs = occamify(subs,instVars)
-
     //Occam-ify the substitutions: set all unconstrained variables to 1
     //Filter out the substitutions that don't work
     subs.filter( s => {
@@ -208,9 +214,11 @@ object DifferentialSaturation {
       tool.get.simplify(invCandPre, domls)
     }
     else invCandPre
-    val dom = domls.foldLeft(True:Formula)( (f,p) => And(f,p))
+    //val dom = domls.foldLeft(True:Formula)( (f,p) => And(f,p))
 
-    val fml = diffClosure(Imply(dom,invCand),ode)
+    //val fml = diffClosure(Imply(dom,invCand),ode)
+    val fml = diffClosure(invCand,ode) //todo: disabled saturation
+
     //println("Candidate",candidate,dom)
     //println("closure of derivative",fml)
     //val fml = instClosure(Imply(dom,invCand),instvars)
@@ -230,10 +238,9 @@ object DifferentialSaturation {
         // and that the candidate isn't already implied by the evolution domain
         else {
           val invCandSubst = if (ineq) GreaterEqual(invTrm,Number(0)) else Equal(invTrm,Number(0))
-          //This check is actually redundant if we do not enrich the evol domain
-          //if (domls.exists( f => UnificationMatch.unifiable(f,invCandSubst).isDefined)) None
+          if (domls.exists( f => UnificationMatch.unifiable(f,invCandSubst).isDefined)) None
           //else if(proveBy(Imply(dom,invCandSubst),QE).isProved) None
-          Some(invTrm,s)
+          else Some(invTrm,s)
         }
       }
     })
@@ -273,7 +280,7 @@ object DifferentialSaturation {
             fresh = nf
             println("Found = invariant",t)
             //This unfortunately seems to make PQE do badly...
-            //domain += Equal(t,Number(0))
+            domain += Equal(t,Number(0))
             eqinvs+=((t,s))
             true
         }
@@ -288,7 +295,7 @@ object DifferentialSaturation {
               fresh = nf
               println("Found >= invariant", t)
               //This unfortunately seems to make PQE do badly...
-              //domain += GreaterEqual(t, Number(0))
+              domain += GreaterEqual(t, Number(0))
               ineqinvs += ((t, s))
           }
         }
