@@ -1,11 +1,29 @@
 <div>
 <p>
-A differential cut (<code>dC</code>) adds formula <code>R</code> to the evolution domain <code>Q</code> of a
+A differential cut <kbd>dC</kbd> adds formula <code>R</code> to the evolution domain <code>Q</code> of a
     differential equation system <code>[{x′=f(x) & Q}]P</code>, so that the resulting differential equation system has
     the form <code>[{x′=f(x) & Q∧R}]P</code>.
 </p>
 <p>
 The cut <code>R</code> may refer to the initial state of the differential equation system using the special function
     symbol <code>old(.)</code>, e.g., <code>x=old(x) + vt</code>.
+</p>
+<p>
+See also
+<ul>
+    <li>Differential invariant <kbd>dI</kbd> to prove the formula <code>R</code> is an invariant of the
+        differential equation system.</li>
+    <li>Differential weakening <kbd>dW</kbd> to prove the postcondition <code>P</code> from only the
+        evolution domain <code>Q∧R</code> after sufficient strengthening with differential cuts <kbd>dC</kbd>.</li>
+</ul>
+</p>
+<p>
+Learning resources
+<ul>
+    <!--todo example model and tactic-->
+    <!--<li><a target="_blank" href="">Example proof</a></li>-->
+    <li><a target="_blank" href="http://symbolaris.com/course/fcps17/11-diffcut.pdf">
+        Lecture Notes: Differential Equations & Proofs</a></li>
+</ul>
 </p>
 </div>
