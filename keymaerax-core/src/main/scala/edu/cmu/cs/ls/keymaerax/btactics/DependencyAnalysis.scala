@@ -21,6 +21,11 @@ object DependencyAnalysis {
       }
     )
   }
+
+  def odevars(p:ODESystem) : Set[BaseVariable] = {
+    varSetToBaseVarSet(StaticSemantics.boundVars(p).toSet)
+  }
+
   //Same as freeVars except it throws out differential symbols
   def freeVars(t:Expression) : Set[BaseVariable] = {
     varSetToBaseVarSet(StaticSemantics.freeVars(t).toSet)
@@ -161,7 +166,7 @@ object DependencyAnalysis {
     //Compute the transitive closure T
     val (vars,funcs) = transitiveAnalysis(ds,s.union(fvdom),fvsig)
 
-    //println("T analysis",vars,funcs)
+//    println("T analysis",vars,funcs)
 
     //Check that the remainder of the ODE is linear
     if (isLinearODE(odels -- vars)) {
@@ -185,9 +190,15 @@ object DependencyAnalysis {
     analyseModalVars(p,vars,ignoreTest)
   }
 
+  //Finds the SCC on the ODE variables, and ignores any variables that do not occur in the ODE 'ed variables
+  def analyseODEVars(p:ODESystem, ignoreTest:Boolean = false)  : Map[BaseVariable,Set[BaseVariable]] = {
+    val vars = odevars(p)
+    vars.map(v => (v,analyseODE(p,Set(v),ignoreTest)._1.intersect(vars))).toMap
+  }
+
   // Naive DFS starting from a variable
   // Returns a set of newly visited variables and a visit order
-  def dfs_aux(v:BaseVariable, adjlist: Map[BaseVariable,Set[BaseVariable]], done:Set[BaseVariable]) : (List[BaseVariable],Set[BaseVariable]) = {
+  def dfs_aux[A](v:A, adjlist: Map[A,Set[A]], done:Set[A]) : (List[A],Set[A]) = {
     //println("DFS: ",v,done)
 
     //Already visited or visiting
@@ -195,7 +206,7 @@ object DependencyAnalysis {
       (List(),done)
 
     else if(adjlist.contains(v)){
-      val ls = adjlist(v).foldLeft((List[BaseVariable](),done+v))((l,vv) => {
+      val ls = adjlist(v).foldLeft((List[A](),done+v))((l,vv) => {
         //println(v,l,vv)
         val (ls, vis) = dfs_aux(vv, adjlist, l._2)
         (ls ++ l._1, vis)
@@ -208,9 +219,9 @@ object DependencyAnalysis {
     }
   }
 
-  def dfs(adjlist: Map[BaseVariable,Set[BaseVariable]]) : List[BaseVariable] = {
+  def dfs[A](adjlist: Map[A,Set[A]]) : List[A] = {
 
-    adjlist.keySet.foldLeft(List[BaseVariable](),Set[BaseVariable]())((l,v) => {
+    adjlist.keySet.foldLeft(List[A](),Set[A]())((l,v) => {
       if(l._2.contains(v)) l
       else {
         val (ls,vis) = dfs_aux(v,adjlist,l._2)
@@ -221,22 +232,22 @@ object DependencyAnalysis {
   }
 
   //Could be done faster, but the problems aren't that big
-  def transClose(adjlist: Map[BaseVariable,Set[BaseVariable]]) : Map[BaseVariable,Set[BaseVariable]] = {
+  def transClose[A](adjlist: Map[A,Set[A]]) : Map[A,Set[A]] = {
     adjlist.keySet.map( v => {
-      (v,dfs_aux(v,adjlist,Set[BaseVariable]())._2)
+      (v,dfs_aux(v,adjlist,Set[A]())._2)
     }).toMap
   }
 
-  def transpose(adjlist:Map[BaseVariable,Set[BaseVariable]]) : Map[BaseVariable,Set[BaseVariable]] = {
+  def transpose[A](adjlist:Map[A,Set[A]]) : Map[A,Set[A]] = {
     adjlist.values.flatten.map( k => (k,
       adjlist.keys.filter(v => adjlist(v).contains(k)).toSet)).toMap
   }
 
-  //Find the SCCs of a graph defined on the BaseVariables
-  def scc(adjlist: Map[BaseVariable,Set[BaseVariable]]) : List[Set[BaseVariable]] = {
+  //Find the SCCs of a graph defined on the As
+  def scc[A](adjlist: Map[A,Set[A]]) : List[Set[A]] = {
     val stack = dfs(adjlist)
-    val trans = transpose(adjlist)
-    stack.foldLeft((List[Set[BaseVariable]](),Set[BaseVariable]()))( (d,v) => {
+    val trans = transpose(adjlist).filterKeys( p => adjlist.keySet.contains(p))
+    stack.foldLeft((List[Set[A]](),Set[A]()))( (d,v) => {
 
       if(d._2.contains(v)){
         d
@@ -244,6 +255,32 @@ object DependencyAnalysis {
       else {
         val (ls, vis) = dfs_aux(v, trans, d._2)
         (ls.toSet::d._1,vis)
+      }
+    })._1
+  }
+
+  //Returns a visit order and the set of visited vertices
+  def breadthClosure[A] (cur:Set[A],adjlist:Map[A,Set[A]]) : (List[Set[A]],Set[A]) = {
+    val next = cur.flatMap(v => if (adjlist.contains(v)) adjlist(v) else List[A](v))
+    if(next.diff(cur).isEmpty)
+      (List(cur),cur)
+    else {
+      val (ls,vis) = breadthClosure(next,adjlist)
+      (cur::ls,vis++cur)
+    }
+  }
+  
+  //Find the SCCs, then return a breadth-wise closure from least to most dependent in each SCC
+  def bfsSCC[A](adjlist:Map[A,Set[A]]) : List[List[Set[A]]] = {
+    val sccs = scc(adjlist)
+    val trans = transpose(adjlist).filterKeys( p => adjlist.keySet.contains(p))
+    sccs.foldLeft(List[List[Set[A]]](),Set[A]()) ( (d,v) => {
+      if(v.diff(d._2).isEmpty){
+        d
+      }
+      else {
+        val (ls, vis) = breadthClosure(v,trans)
+        (ls::d._1,d._2.union(vis))
       }
     })._1
   }

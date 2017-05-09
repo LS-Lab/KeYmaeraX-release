@@ -1,8 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleThrowable, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable._
@@ -18,10 +20,16 @@ import scala.language.postfixOps
 
 object DifferentialSaturation {
 
-  //Check if the evolution domain already implies the post condition using QE
-  def checkProved(domain:Formula, post:Formula) : Boolean = {
-    val pr = TactixLibrary.proveBy(Imply(domain,post),TactixLibrary.QE)
-    pr.isProved
+  def pQE(f:Formula) : Formula = {
+    val qe = ToolProvider.qeTool().getOrElse(throw new BelleThrowable("partialQE requires a QETool, but got None"))
+    qe.qeEvidence(f)._1
+  }
+
+  def simpWithTool(tool: Option[SimplificationTool],t:Term) : Term = {
+    tool match {
+      case None => termSimp(t,emptyCtx,defaultTaxs)._1
+      case Some(tl) => tl.simplify(t,List())
+    }
   }
 
   //Generate a polynomial parametric candidates up to degree deg
@@ -79,10 +87,10 @@ object DifferentialSaturation {
     }
   }
 
-  def simplifiedLieDerivative(p:DifferentialProgram,t:Term) : Term = {
+  def simplifiedLieDerivative(p:DifferentialProgram,t:Term, tool: Option[SimplificationTool]) : Term = {
     val ld = stripConstants(lieDerivative(p,t))
-    val ts1 = termSimp(ld,emptyCtx,defaultTaxs)._1
-    val ts2 = termSimp(stripPowZero(ts1),emptyCtx,defaultTaxs)._1
+    val ts1 = simpWithTool(tool,ld)
+    val ts2 = simpWithTool(tool,stripPowZero(ts1))
     ts2
   }
 
@@ -104,9 +112,23 @@ object DifferentialSaturation {
   // that formula true (not accurate for comparisons)
   def extractEquations(fml:Formula,instVars: List[Variable]) : List[Map[Variable,Term]] = {
     fml match {
-      case Equal(l:Variable,r) =>
-        if (instVars.contains(l)) List(Map(l -> r))
-        else Nil
+      case False => List()
+      case bop:ComparisonFormula if bop.left.isInstanceOf[Variable] =>
+        //Avoid generating invs with singular RHS
+        if (instVars.contains(bop.left) && FormulaTools.singularities(bop.right).isEmpty){
+          bop match {
+            //First one is legit, the rest are horrible hacks to find instantiations when pQE gives ineqs instead of =
+            case Equal(l:Variable,r) => List(Map(l->r))
+            case GreaterEqual(l:Variable,r:Number) if r.value.intValue() == 0 => List(Map(l -> Plus(r,Number(1))))
+            case Greater(l:Variable,r:Number) if r.value.intValue() == 0  => List(Map(l -> Plus(r,Number(1))))
+            case LessEqual(l:Variable,r:Number)  if r.value.intValue() == 0 => List(Map(l -> Minus(r,Number(1))))
+            case Less(l:Variable,r:Number)  if r.value.intValue() == 0 => List(Map(l -> Minus(r,Number(1))))
+            case _ => List(Map())
+          }
+        }
+        else {
+          List(Map())
+        }
       case And(l,r) => {
         //Might lead to contradictory substitutions
         val lm = extractEquations(l, instVars)
@@ -121,14 +143,13 @@ object DifferentialSaturation {
       }
       case _ => {
         // todo: does mathematica ever return other formula shapes?
-        // Might also consider hacky instantiations like a__2 > 0 --> a__2 = 1
-        //println(fml)
+        // this just ignores all other shapes
         List(Map())
       }
     }
   }
 
-  // This is just a hack to deal with repeated substitution
+  // This is just to deal with looping substitution
   def repeatedSubst(e:Expression,subst:Map[Variable,Term],limit:Int = 100) : Option[Expression] = {
     val e2 = subst.foldLeft(e)( (f,s) =>
       SubstitutionHelper.replaceFree(f)(s._1,s._2))
@@ -139,62 +160,85 @@ object DifferentialSaturation {
       repeatedSubst(e2,subst,limit-1)
   }
 
+  def occamify(subs : List[Map[Variable,Term]],instVars:List[Variable]) : List[Map[Variable,Term]] = {
+    subs.map( s =>
+      s++instVars.diff(s.keySet.toList).map( v => (v,Number(1))).toMap
+    )
+  }
+
   //Generate parametric differential invariants
   //Given a formula, compute its partial QE and guess partial substitutions from the PQE
-  //For each guessed substitution, double check that it erally works
+  //For each guessed substitution, double check that it really works
   //The substitution is only allowed to instantiate variables in instVars
   def guessInstantiations(fml:Formula, instVars : List[Variable]) : List[Map[Variable,Term]] = {
-    val pr1 = proveBy(fml,partialQE)
-    //println("PQE",pr1)
-    //Free choice of variables
-    if (pr1.isProved)
-      return List(Map())
-    val conc = pr1.subgoals(0).succ(0)
+    //todo: should not be using PQE here, the generated decomposition is heavily dependent on the variable order
+
+    val conc = pQE(fml)
     val subs = extractEquations(conc,instVars)
-    //println("Substs",subs)
+    //val subs = occamify(subs,instVars)
+
+    //Occam-ify the substitutions: set all unconstrained variables to 1
     //Filter out the substitutions that don't work
     subs.filter( s => {
       val fml2 = repeatedSubst(fml, s)
       if(fml2.isEmpty) false
-      else
-        proveBy(fml2.get.asInstanceOf[Formula],QE).isProved
+      else {
+        proveBy(fml2.get.asInstanceOf[Formula], QE).isProved
+      }
     }
     )
   }
 
-  //Attempts to guess a parametric equational differential invariant for ode&dom
+  //Attempts to guess a parametric differential invariant for ode&dom
   //candSet = variables to consider in the parametric invariant
   //insts = parameters that can be instantiated
   //fresh = next index for fresh parameter
   //deg = degree of the parametric candidate
 
-  def parametricInvariant(ode:DifferentialProgram, dom:Formula, candSet: List[Variable], insts : List[Variable],
-                          fresh:Int, deg : Int)  : Option[(Term,Map[Variable,Term],List[Variable],Int)]  = {
+  def parametricInvariant(ode:DifferentialProgram, domls:List[Formula], candSet: List[Variable], insts : List[Variable],
+                          fresh:Int, deg : Int, tool: Option[SimplificationTool], ineq : Boolean) : Option[(Term,Map[Variable,Term],List[Variable],Int)]  = {
     val (candidate,genvars,nextfresh) = parametricCand(candSet,deg,fresh)
-    val trm = simplifiedLieDerivative(ode,candidate)
+    val trm = simplifiedLieDerivative(ode,candidate,tool)
     val instvars = genvars ++ insts
-    val invCand = Equal(trm,Number(0))
-    //println("Invariant",invCand,candidate)
-    //This only closes over the variables in the ODE
+    val invCandPre = if (ineq) GreaterEqual(trm,Number(0)) else Equal(trm,Number(0))
+
+    //If a simplifier is available, and the formula is non-trivial, pre-simplify it
+    val invCand =
+    if(!StaticSemantics.freeVars(invCandPre).isEmpty && tool.isDefined) {
+      tool.get.simplify(invCandPre, domls)
+    }
+    else invCandPre
+    val dom = domls.foldLeft(True:Formula)( (f,p) => And(f,p))
+
     val fml = diffClosure(Imply(dom,invCand),ode)
+    //println("Candidate",candidate,dom)
+    //println("closure of derivative",fml)
     //val fml = instClosure(Imply(dom,invCand),instvars)
     //println("Formula:"+fml)
     val substeqns = guessInstantiations(fml,instvars)
 
     //Find the first substitution that results in a non-trivial invariant term
     //where non-trivial means not already implied by the evolution domain
-    val subst = substeqns.iterator.map( s => {
+    val substpre = substeqns.iterator.map( s => {
       val candSubst = repeatedSubst(candidate,s)
       if(candSubst.isEmpty) None
       else {
-        val invTrm = termSimp(candSubst.get.asInstanceOf[Term], emptyCtx, defaultTaxs)._1
+        val invTrm = simpWithTool(tool,candSubst.get.asInstanceOf[Term])
+        val fvs = StaticSemantics.freeVars(invTrm)
         // Check that it at least mentions part of the ODE
-        if(StaticSemantics.freeVars(invTrm).intersect(StaticSemantics.boundVars(ode)).isEmpty) None
+        if(fvs.intersect(StaticSemantics.boundVars(ode)).isEmpty) None
         // and that the candidate isn't already implied by the evolution domain
-        else if(proveBy(Imply(dom,Equal(invTrm,Number(0))),QE).isProved) None
-        else Some(invTrm,s)
+        else {
+          val invCandSubst = if (ineq) GreaterEqual(invTrm,Number(0)) else Equal(invTrm,Number(0))
+          //This check is actually redundant if we do not enrich the evol domain
+          //if (domls.exists( f => UnificationMatch.unifiable(f,invCandSubst).isDefined)) None
+          //else if(proveBy(Imply(dom,invCandSubst),QE).isProved) None
+          Some(invTrm,s)
+        }
       }
-    }).find(!_.isEmpty)
+    })
+
+    val subst = substpre.find(_.isDefined)
 
     if(subst.isEmpty)
       return None
@@ -208,26 +252,49 @@ object DifferentialSaturation {
   }
 
   //Generate increasingly complex candidates
-  def parametricInvariants(ode:DifferentialProgram,dom:Formula, candSets: List[List[Variable]], degLimit : Int) : List[(Term,Map[Variable,Term])] = {
+  def parametricInvariants(ode:DifferentialProgram,dom:List[Formula], candSets: List[List[Variable]],
+                           degLimit : Int, withIneq :Boolean = false,tool: Option[SimplificationTool] = None)
+                            : (List[(Term,Map[Variable,Term])],List[(Term,Map[Variable,Term])]) = {
     var insts = List[Variable]()
     var fresh = 0
-    var invs = ListBuffer[(Term,Map[Variable,Term])]()
-    var domain = dom
+    var eqinvs = ListBuffer[(Term,Map[Variable,Term])]()
+    var ineqinvs = ListBuffer[(Term,Map[Variable,Term])]()
+    var domain = dom.to[ListBuffer]
     for (cs <- candSets) {
       println("Parametric invariants for",cs)
       for (deg <- List.range(1,degLimit)) {
-        parametricInvariant(ode,domain,cs,insts,fresh,deg) match {
-          case None => ()
+        println("Degree",deg)
+
+        //Try for equational invariant first
+        val eqinv = parametricInvariant(ode,domain.toList,cs,insts,fresh,deg,tool,false) match {
+          case None => false
           case Some((t,s,iv,nf)) =>
             insts = iv
             fresh = nf
-            println("Found invariant",t)
-            domain = And(domain,Equal(t,Number(0)))
-            invs+=((t,s))
+            println("Found = invariant",t)
+            //This unfortunately seems to make PQE do badly...
+            //domain += Equal(t,Number(0))
+            eqinvs+=((t,s))
+            true
+        }
+
+        //If we found an equational invariant, don't bother with the inequality version (by DDC)
+        if(withIneq && !eqinv) {
+          //Then try for a >= invariant
+          parametricInvariant(ode, domain.toList, cs, insts, fresh, deg, tool, true) match {
+            case None => ()
+            case Some((t, s, iv, nf)) =>
+              insts = iv
+              fresh = nf
+              println("Found >= invariant", t)
+              //This unfortunately seems to make PQE do badly...
+              //domain += GreaterEqual(t, Number(0))
+              ineqinvs += ((t, s))
+          }
         }
       }
     }
-    invs.toList
+    (eqinvs.toList,ineqinvs.toList)
   }
 
 }
