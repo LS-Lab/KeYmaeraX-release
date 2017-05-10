@@ -1,14 +1,12 @@
 <div class="row" ng-show="collapsed">
 
-    <!-- Expand button -->
-    <div class="col-md-1">
-        <a ng-click="collapsed = !collapsed" ng-show="sequent.ante.length > 1 || sequent.succ.length > 1">
+    <!-- Collapsed antecedent, also readonly -->
+    <div class="col-md-3">
+        <!-- Expand button -->
+        <a ng-class="{'k4-sequent-caret-inline': readOnly, 'k4-sequent-caret-left': !readOnly}"
+           ng-click="collapsed = !collapsed" ng-show="sequent.ante.length > 1 || sequent.succ.length > 1">
             <span class="fa fa-caret-right"></span>
         </a>
-    </div>
-
-    <!-- Collapsed antecedent, also readonly -->
-    <div class="col-md-2">
         <div class="row k4-flexrow" ng-repeat="f in sequent.ante | limitTo:1" id="{{f.id}}">
             <div class="col-md-12 k4-formula">
                 <div class="k4-formula-content-abbreviate k4-abbreviate">
@@ -23,7 +21,7 @@
 
     <!-- Turnstile -->
     <div class="col-md-1">
-        <div class="row k4-flexrow">
+        <div class="row k4-flexrow pull-right">
             <div class="col-md-12 k4-formula k4-flexcell">
                 <div class="k4-formula-content-abbreviate">&#8866;</div>
             </div>
@@ -63,15 +61,13 @@
 
 <div class="row">
 
-    <!-- Collapse button -->
-    <div class="col-md-1">
-        <a ng-click="collapsed = !collapsed" ng-show="sequent.ante.length > 1 || sequent.succ.length > 1">
+    <!-- Antecedent -->
+    <div class="col-md-3">
+        <!-- Collapse button -->
+        <a ng-class="{'k4-sequent-caret-inline': readOnly, 'k4-sequent-caret-left': !readOnly}"
+           ng-click="collapsed = !collapsed" ng-show="sequent.ante.length > 1 || sequent.succ.length > 1">
             <small><span class="fa fa-caret-down"></span></small>
         </a>
-    </div>
-
-    <!-- Antecedent -->
-    <div class="col-md-2">
         <div class="row k4-flexrow" ng-repeat="f in sequent.ante" id="{{f.id}}">
             <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
@@ -112,7 +108,7 @@
 
     <!-- Turnstile -->
     <div class="col-md-1">
-        <div class="row k4-flexrow">
+        <div class="row k4-flexrow pull-right">
             <div class="col-md-12 k4-formula" ng-if="!readOnly">
                 <ul>
                     <li><a ng-click="onTactic(undefined, 'QE')"

@@ -132,6 +132,15 @@ del {
   display: none !important;
 }
 
+.k4-sequent-caret-inline {
+  float: left;
+}
+
+.k4-sequent-caret-left {
+  margin-left: -2em;
+  float: left;
+}
+
 .k4-menu-icon.ng-hide {
   display: inline-block!important;
   visibility: hidden;
@@ -662,11 +671,10 @@ del {
   list-style-type: none;
   padding: 0px 0px 0px 0px;
   margin-top: -1ex;
-  text-align: center;
-  width: 2em;
+  text-align: right;
   display: block;
   position: absolute;
-  left: -0.5em;
+  left: -1em;
   top: 50%;
 }
 .k4-formula-content > ul:first-child li {
@@ -743,7 +751,7 @@ del {
   border-bottom-right-radius: 3px;
 }
 .k4-formula-container {
-  max-width: 90%;
+  max-width: 100%;
 }
 
 /*
