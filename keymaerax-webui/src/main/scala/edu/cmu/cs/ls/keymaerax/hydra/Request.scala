@@ -904,7 +904,7 @@ class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : Str
     val leaves = tree.openGoals
     val closed = tree.openGoals.isEmpty && tree.verifyClosed
     //@todo goal names
-    val agendaItems: List[AgendaItem] = leaves.map(n => AgendaItem(n.id.toString, "Unnamed Goal", proofId, null))
+    val agendaItems: List[AgendaItem] = leaves.map(n => AgendaItem(n.id.toString, "Unnamed Goal", proofId))
     new AgendaAwesomeResponse(proofId, tree.root, leaves, agendaItems, closed) :: Nil
   }
 }
@@ -1019,7 +1019,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
           val stepDetails = innerTree.tacticString
           val innerSteps = innerTree.nodes
           val agendaItems: List[AgendaItem] = innerTree.openGoals.map(n =>
-            AgendaItem(n.id.toString, "Unnamed Goal", proofId, null))
+            AgendaItem(n.id.toString, "Unnamed Goal", proofId))
 
           ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, agendaItems) :: Nil
         }
@@ -1033,7 +1033,7 @@ class StepwiseTraceRequest(db: DBAbstraction, userId: String, proofId: String) e
     tree.load()
     val innerSteps = tree.nodes
     val agendaItems: List[AgendaItem] = tree.openGoals.map(n =>
-      AgendaItem(n.id.toString, "Unnamed Goal", proofId.toString, null))
+      AgendaItem(n.id.toString, "Unnamed Goal", proofId.toString))
     //@todo fill in parent step for empty ""
     new ExpandTacticResponse(proofId.toInt, "", tree.tacticString, innerSteps, agendaItems) :: Nil
   }
@@ -1389,11 +1389,6 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
   /* It's very important not to report a branch as closed when it isn't. Other wise the user will carry on in blissful
   * ignorance thinking the hardest part of their proof is over when it's not. This is actually a bit difficult to get
   * right, so check the actual provables to make sure we're closing a branch. */
-  private def noBogusClosing(tree: OldProofTree, parent: TreeNode): Boolean = {
-    parent.isFake || (parent.children.size == parent.provable.subgoals.size &&
-      parent.children.zip(parent.provable.subgoals).forall({case (c, sg) => c.provable.conclusion == sg}))
-  }
-
   private def noBogusClosing(tree: ProofTree, pn: ProofTreeNode): Boolean =
     pn.children.size == pn.localProvable.subgoals.size &&
       pn.children.zip(pn.localProvable.subgoals).forall({case (c, sg) => c.localProvable.conclusion == sg})
@@ -1453,7 +1448,7 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
         case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
         case Some(node) =>
           node.pruneBelow()
-          val item = AgendaItem(node.id.toString, "Unnamed Goal", proofId, null)
+          val item = AgendaItem(node.id.toString, "Unnamed Goal", proofId)
           new PruneBelowResponse(item) :: Nil
       }
     }
@@ -1733,19 +1728,6 @@ class CheckValidationRequest(db: DBAbstraction, taskId: String) extends Request 
 //endregion
 
 object RequestHelper {
-  /** Queries the database for the position where the tactic that created the node `node` was applied. */
-  def stepPosition(db: DBAbstraction, node: TreeNode): Option[PositionLocator] = {
-    node.startStep match {
-      case Some(step) =>
-        BelleParser(db.getExecutable(step.executableId).belleExpr) match {
-          case pt: AppliedPositionTactic => Some(pt.locator)
-          case pt: AppliedDependentPositionTactic => Some(pt.locator)
-          case _ => None
-        }
-      case None => None
-    }
-  }
-
   /* Try to figure out the most intuitive inference rule to display for this tactic. If the user asks us "StepAt" then
    * we should use the StepAt logic to figure out which rule is actually being applied. Otherwise just ask TacticInfo */
   def getSpecificName(tacticId: String, sequent:Sequent, l1: Option[PositionLocator], l2: Option[PositionLocator], what: DerivationInfo => String): String = {

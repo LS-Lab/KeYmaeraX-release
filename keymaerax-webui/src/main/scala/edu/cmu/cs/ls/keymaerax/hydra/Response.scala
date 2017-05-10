@@ -454,8 +454,6 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, List[Int], String)]) extends 
 
 /** JSON conversions for frequently-used response formats */
 object Helpers {
-  def childrenJson(children: List[TreeNode]): JsValue = JsArray(children.map(node => nodeIdJson(node.id)):_*)
-
   def sequentJson(sequent: Sequent): JsValue = {
     def fmlsJson (isAnte:Boolean, fmls: IndexedSeq[Formula]): JsValue = {
       JsArray(fmls.zipWithIndex.map { case (fml, i) =>
@@ -477,20 +475,6 @@ object Helpers {
       "ante" -> fmlsJson(isAnte = true, sequent.ante),
       "succ" -> fmlsJson(isAnte = false, sequent.succ)
     )
-  }
-
-  def nodeJson(node: TreeNode, pos: Option[PositionLocator]): JsValue = {
-    val id = nodeIdJson(node.id)
-    val sequent = sequentJson(node.provable.conclusion)
-    val children = childrenJson(node.children)
-    val parentOpt = node.parent.map(n => nodeIdJson(n.id))
-    val parent = parentOpt.getOrElse(JsNull)
-    JsObject(
-      "id" -> id,
-      "sequent" -> sequent,
-      "children" -> children,
-      "rule" -> ruleJson(node.rule, pos),
-      "parent" -> parent)
   }
 
   def nodeJson(node: ProofTreeNode): (String, JsValue) = {
@@ -543,16 +527,6 @@ object Helpers {
         case Some(Fixed(p, _, _)) => JsString(p.prettyString)
         case _ => JsString("")
       })
-    )
-  }
-
-  def singleNodeJson(pos: Option[PositionLocator] = None)(node: TreeNode): JsValue = {
-    JsObject (
-      "id" -> nodeIdJson(node.id),
-      "sequent" -> sequentJson(node.provable.conclusion),
-      "children" -> childrenJson(node.children),
-      "rule" -> ruleJson(node.rule, pos),
-      "parent" -> node.parent.map(parent => nodeIdJson(parent.id)).getOrElse(JsNull)
     )
   }
 
