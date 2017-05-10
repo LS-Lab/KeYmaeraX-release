@@ -43,7 +43,7 @@ code {
 
 .match,
 .textdiff span {
-  color: gray;
+  color: var(--lsmain);
 }
 
 .hlhover {
@@ -78,3 +78,8 @@ code {
 .k4-formula .k4-formula-content {
   font-size: 24px; /*large:26px*/
 }
+
+.k4-sequent-hint {
+  font-size: smaller;
+}
+
