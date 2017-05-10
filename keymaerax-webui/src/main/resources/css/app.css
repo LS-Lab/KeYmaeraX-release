@@ -132,6 +132,11 @@ del {
   display: none !important;
 }
 
+.k4-menu-icon.ng-hide {
+  display: inline-block!important;
+  visibility: hidden;
+}
+
 .k4-sequent-hint {
   font-size: xx-small;
 }
