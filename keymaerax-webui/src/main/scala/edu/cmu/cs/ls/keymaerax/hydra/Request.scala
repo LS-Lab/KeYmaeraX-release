@@ -1004,25 +1004,24 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val (localProvable, parentStep, parentRule) = (node.localProvable, node.children.head.maker.get, node.children.head.makerShortName.get)
         val localProofId = db.createProof(localProvable)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, db.createProof,
-          RequestHelper.listenerFactory(db, Some(localProvable)), SequentialInterpreter, 1, strict=false)
+          RequestHelper.listenerFactory(db), SequentialInterpreter, 1, strict=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(localProvable))
 
         val trace = db.getExecutionTrace(localProofId)
         if (trace.steps.size == 1 && trace.steps.head.rule == parentRule) {
           DerivationInfo.locate(parentTactic) match {
-            case Some(ptInfo) => new ExpandTacticResponse(localProofId, ptInfo.codeName, "", Nil, Nil) :: Nil
+            case Some(ptInfo) => ExpandTacticResponse(localProofId, ptInfo.codeName, "", Nil, Nil) :: Nil
             case None => new ErrorResponse("No further details available") :: Nil
           }
         } else {
-          val innerTree = DbProofTree(db, localProofId.toString)
-          innerTree.load()
+          val innerTree = DbProofTree(db, localProofId.toString).load()
           val stepDetails = innerTree.tacticString
           val innerSteps = innerTree.nodes
           val agendaItems: List[AgendaItem] = innerTree.openGoals.map(n =>
             AgendaItem(n.id.toString, "Unnamed Goal", proofId, null))
 
-          new ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, agendaItems) :: Nil
+          ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, agendaItems) :: Nil
         }
     }
   }
@@ -1775,15 +1774,13 @@ object RequestHelper {
   }
 
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  def listenerFactory(db: DBAbstraction, initGlobal: Option[ProvableSig] = None)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = {
-    val trace = db.getExecutionTrace(proofId, withProvables=false)
-    assert(-1 <= parentInTrace && parentInTrace < trace.steps.length, "Invalid trace index " + parentInTrace + ", expected -1<=i<trace.length")
-    val parentStep: Option[Int] = if (parentInTrace < 0) None else Some(trace.steps(parentInTrace).stepId)
-    val globalProvable = initGlobal match {
-      case Some(gp) if trace.steps.isEmpty => gp
-      case _ => parentStep match {
-        case None => db.getProvable(db.getProofInfo(proofId).provableId.get).provable
-      }
+  def listenerFactory(db: DBAbstraction)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = {
+    val trace = db.getExecutionSteps(proofId)
+    assert(-1 <= parentInTrace && parentInTrace < trace.length, "Invalid trace index " + parentInTrace + ", expected -1<=i<trace.length")
+    val parentStep: Option[Int] = if (parentInTrace < 0) None else trace(parentInTrace).stepId
+    val globalProvable = parentStep match {
+      case None => db.getProvable(db.getProofInfo(proofId).provableId.get).provable
+      case Some(sId) => db.getExecutionStep(proofId, sId).map(_.local).get
     }
     val ruleName = try {
       RequestHelper.getSpecificName(tacticName.split("\\(").head, null, None, None, _.display.name)
