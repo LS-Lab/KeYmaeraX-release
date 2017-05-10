@@ -15,6 +15,8 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
             onApplyTwoPositionTactic: '&'
         },
         link: function(scope, elem, attr) {
+            scope.sequentSuggestions = [];
+
             derivationInfos.sequentSuggestionDerivationInfos(scope.userId, scope.proofId, scope.nodeId)
               .then(function(response) {
                 scope.sequentSuggestions = response.data;
