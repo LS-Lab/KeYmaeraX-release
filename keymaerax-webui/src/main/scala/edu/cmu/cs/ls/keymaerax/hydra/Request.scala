@@ -1044,9 +1044,9 @@ class GetSequentStepSuggestionRequest(db: DBAbstraction, userId: String, proofId
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
     tree.locate(nodeId) match {
-      case None => ???
+      case None => ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
       case Some(node) => node.goal match {
-        case None => ??? // node closed
+        case None => ApplicableAxiomsResponse(Nil, Map.empty) :: Nil //@note node closed
         case Some(seq) =>
           if (seq.isFOL) {
             val folSuggestions = "QE"::"abbrv"::"hideL"::Nil
