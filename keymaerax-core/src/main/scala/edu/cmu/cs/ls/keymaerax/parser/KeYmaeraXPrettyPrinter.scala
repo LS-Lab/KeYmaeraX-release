@@ -217,7 +217,11 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
   private val LEXSPACE: String = " "
 
   /** Pretty-print the operator of a term */
-  protected def ppOp(expr: Expression): String = op(expr).opcode
+  protected def ppOp(expr: Expression): String = expr match {
+    //@note in statementSemicolon mode, suppress opcode of Compose since already after each statement
+    case _: Compose if OpSpec.statementSemicolon => ""
+    case _ => op(expr).opcode
+  }
 
   /** Pretty-print enclosing parentheses, braces, brackets etc. */
   protected def ppEnclosingOp(expr: Expression): (String, String) = expr match {
@@ -291,11 +295,8 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     //@note forced parentheses in grammar for loops and duals
     case t: UnaryCompositeProgram => ppEnclosingOp(t)._1 + pp(q++0, t.child) + ppEnclosingOp(t)._2 + ppOp(program)
     //case t: UnaryCompositeProgram=> (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
-    case t: Compose if OpSpec.statementSemicolon =>
-      //@note in statementSemicolon mode, suppress opcode of Compose since already after each statement
-      pwrapLeft(t, pp(q++0, t.left)) + /*op(t).opcode + */ pwrapRight(t, pp(q++1, t.right))
-    case t: BinaryCompositeProgram =>
-      pwrapLeft(t, pp(q++0, t.left)) + ppOp(t) + pwrapRight(t, pp(q++1, t.right))
+    case t: Compose => pwrapLeft(t, pp(q++0, t.left)) + ppOp(t) + pwrapRight(t, pp(q++1, t.right))
+    case t: BinaryCompositeProgram => pwrapLeft(t, pp(q++0, t.left)) + ppOp(t) + pwrapRight(t, pp(q++1, t.right))
   })
 
   private def ppODE(q: PosInExpr, program: DifferentialProgram): String = emit(q, program match {
