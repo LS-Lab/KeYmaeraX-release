@@ -150,6 +150,29 @@ del {
   font-size: xx-small;
 }
 
+/* Mark top-level operator */
+.hlhover > .k4-op:after {
+  content: "\f085"; /* fontawesome cogs */
+  font-family: FontAwesome;
+  -webkit-text-stroke: 1px black;
+  position: relative;
+  right: 1ex;
+  top: -1.5ex;
+  width: 1em;
+  margin-right: -1em;
+}
+/* Mark top-level operator in programs */
+.hlhover > .k4-mod-open ~ span > .k4-prg-op:after {
+  content: "\f085"; /* fontawesome cogs */
+  font-family: FontAwesome;
+  -webkit-text-stroke: 1px black;
+  position: relative;
+  right: 1ex;
+  top: -1.5ex;
+  width: 1em;
+  margin-right: -1em;
+}
+
 .k4-term-op {
 
 }
@@ -157,7 +180,7 @@ del {
 .k4-propfml-op {
   font-family: "Lucida Grande", tahoma, arial, sans serif; /* some boldface math symbols, unfortunately not all */
   font-weight: bold;
-  color: var(--lsverylightblue);
+  color: darkblue;
 }
 
 .k4-cmpfml-op {
