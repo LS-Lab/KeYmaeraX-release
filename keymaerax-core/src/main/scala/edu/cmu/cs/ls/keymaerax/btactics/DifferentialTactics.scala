@@ -803,12 +803,33 @@ private object DifferentialTactics {
       )
   })
 
-  //Keeps the top level =s in evol domain as a basis
+  //Keeps the top level =s in evol domain as a groebner basis of terms?
   private def domToTerms(f:Formula) : List[Term] = {
     f match {
       case Equal(l,r) => Minus(l,r) :: Nil
       case And(l,r) => domToTerms(l) ++ domToTerms(r)
       case _ => Nil
+    }
+  }
+
+  //Pulls out divisions
+  private def stripDenom(t:Term) : (Term,Term) = {
+    t match {
+      case Times(l,r) =>
+        val (ln,ld) = stripDenom(l)
+        val (rn,rd) = stripDenom(r)
+        (Times(ln,rn),Times(ld,rd))
+      case Divide(l,r) =>
+        val (ln,ld) = stripDenom(l)
+        val (rn,rd) = stripDenom(r)
+        (Times(ln,rd),Times(ld,rn))
+      case Power(tt,p:Number) if p.value < 0 =>
+        (Number(1),Power(tt,Number(-p.value)))
+      case Power(tt,p) =>
+        val (tn,td) = stripDenom(tt)
+        (Power(tn,p),Power(td,p))
+      //Ignore everything else todo: could deal with common denominators
+      case _ => (t,Number(1))
     }
   }
 
@@ -830,10 +851,18 @@ private object DifferentialTactics {
     //todo: groebnerBasis seems broken for > 1 term??
     val gb = if(domterms.nonEmpty) algTool.groebnerBasis(domterms) else Nil
     val quo = algTool.polynomialReduce(lie,p::gb)
+    //Maybe this should take the polynomial LCM (rp' = qp), then divide by r after proving it is non-zero?
 
     quo._2 match {
       case n:Number if n.value == 0 => {
-        useAt(ax)(pos ++ PosInExpr(1 :: Nil)) & dgDbx(quo._1.head)(pos)
+        val cofactor = quo._1.head
+        //This might contain fractions
+        val (num,den) = stripDenom(cofactor) //Need to put it in a form that DG can understand
+        useAt(ax)(pos ++ PosInExpr(1 :: Nil)) & diffCut(NotEqual(den,Number(0))) (pos) <(
+        dgDbx(Divide(num,den))(pos),
+        //Leaves the fractional goal open if it isn't implied by DW
+        ?(dW(pos) & QE & done) | skip
+        )
       }
       case _ => skip
     }
