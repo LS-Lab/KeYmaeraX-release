@@ -656,23 +656,11 @@ del {
   white-space: pre-wrap;
 }
 
-.k4-highlight-steppos {
-  border-bottom: var(--lsmain) solid;
+.k4-highlight-steppos > .k4-op {
+  border-bottom: solid var(--lsmain);
 }
-.k4-highlight-steppos > span {
-  border-bottom: var(--lsmainback) dotted;
-}
-.k4-highlight-steppos-modality {
-  border-bottom: var(--lsmain) solid;
-}
-.k4-highlight-steppos-modality > span:first-child {
-  border-bottom: var(--lsmain) solid;
-}
-.k4-highlight-steppos-modality > span:first-child > span {
-  border-bottom: var(--lsmainback) dotted;
-}
-.k4-highlight-steppos-modality > span {
-  border-bottom: var(--lsmainback) dotted;
+.k4-highlight-steppos-modality > .k4-mod-open ~ span > .k4-prg-op {
+  border-bottom: solid var(--lsmain);
 }
 
 .k4-formula.hover > ul:first-child, .k4-formula:hover > ul:first-child {
