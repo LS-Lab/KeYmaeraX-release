@@ -115,6 +115,68 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     )
   }
 
+  it should "parse a list of mixed entries, lemmas, and theorems" in withMathematica { tool =>
+    val input =
+      """ArchiveEntry "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.
+        |End.
+        |
+        |Lemma "Entry 2".
+        |  Functions. R x(). End.
+        |  ProgramVariables R y. End.
+        |  Problem. x()>=y -> x()>=y End.
+        |  Tactic "Prop Proof". prop End.
+        |End.
+        |
+        |Theorem "Entry 3".
+        |  ProgramVariables. R x. End.
+        |  Problem. x>3 -> x>=3 End.
+        |End.
+        |
+        |ArchiveEntry "Entry 4".
+        |  ProgramVariables. R x. End.
+        |  Problem. x>4 -> x>=4 End.
+        |End.
+      """.stripMargin
+    val entries = KeYmaeraXArchiveParser.parse(input)
+    entries should have size 4
+    entries should contain theSameElementsInOrderAs
+      ParsedArchiveEntry(
+        "Entry 1",
+        """ProgramVariables. R x. R y. End.
+          | Problem. x>y -> x>=y End.""".stripMargin,
+        "theorem",
+        "x>y -> x>=y".asFormula,
+        Nil
+      ) ::
+      ParsedArchiveEntry(
+        "Entry 2",
+        """Functions. R x(). End.
+          |  ProgramVariables R y. End.
+          |  Problem. x()>=y -> x()>=y End.""".stripMargin,
+        "lemma",
+        "x()>=y -> x()>=y".asFormula,
+        ("Prop Proof", prop) :: Nil
+      ) ::
+      ParsedArchiveEntry(
+        "Entry 3",
+        """ProgramVariables. R x. End.
+          |  Problem. x>3 -> x>=3 End.""".stripMargin,
+        "theorem",
+        "x>3 -> x>=3".asFormula,
+        Nil
+      ) ::
+      ParsedArchiveEntry(
+        "Entry 4",
+        """ProgramVariables. R x. End.
+          |  Problem. x>4 -> x>=4 End.""".stripMargin,
+        "theorem",
+        "x>4 -> x>=4".asFormula,
+        Nil
+      ) :: Nil
+  }
+
   it should "parse a lemma entry" in {
     val input =
       """
