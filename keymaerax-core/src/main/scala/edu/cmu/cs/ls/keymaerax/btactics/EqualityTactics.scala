@@ -107,6 +107,12 @@ private object EqualityTactics {
    */
   lazy val exhaustiveEqL2R: DependentPositionTactic = exhaustiveEq("allL2R")
 
+  /* Rewrites equalities exhaustively with hiding, but only if left-hand side is an atom (variable or function) */
+  def atomExhaustiveEqL2R: DependentPositionTactic = "atomAllL2R" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    case Some(fml@Equal(_: Variable, _)) => EqualityTactics.exhaustiveEqL2R(pos) & hideL(pos, fml)
+    case Some(fml@Equal(_: FuncOf, _)) => EqualityTactics.exhaustiveEqL2R(pos) & hideL(pos, fml)
+  })
+
   /**
    * Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively.
    * @example{{{

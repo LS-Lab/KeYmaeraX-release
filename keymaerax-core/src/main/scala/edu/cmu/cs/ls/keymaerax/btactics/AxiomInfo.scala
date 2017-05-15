@@ -648,6 +648,7 @@ object DerivationInfo {
     new PositionTacticInfo("cohide", "W", {case () => SequentCalculus.cohide}),
     new PositionTacticInfo("hide", "W", {case () => SequentCalculus.hide}),
     new PositionTacticInfo("allL2R", "L=R all", {case () => TactixLibrary.exhaustiveEqL2R}),
+    new PositionTacticInfo("atomAllL2R", "L=R all atoms", {case () => EqualityTactics.atomExhaustiveEqL2R}),
     new PositionTacticInfo("allR2L", "R=L all", {case () => TactixLibrary.exhaustiveEqR2L}),
     new PositionTacticInfo("minmax", "min/max", {case () => EqualityTactics.minmax}),
     new PositionTacticInfo("absExp", "absExp", {case () => EqualityTactics.abs}),
