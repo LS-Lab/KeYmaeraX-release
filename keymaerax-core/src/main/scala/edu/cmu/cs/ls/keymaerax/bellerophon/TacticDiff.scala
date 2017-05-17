@@ -23,6 +23,7 @@ case class ReplacementBelleContext(t: BelleExpr) extends BelleContext {
     case RepeatTactic(c, n) => RepeatTactic(replace(c, repl), n)
     case BranchTactic(c)    => BranchTactic(c.map(replace(_, repl)))
     case OnAll(c)           => OnAll(replace(c, repl))
+    case DefTactic(n, c)    => DefTactic(n, replace(c, repl))
     // atomic
     case b: BelleDot => repl.getOrElse(b, b)
     case _ => in
@@ -44,6 +45,7 @@ class TacticComparator[T <: BelleExpr](val l: T) {
     case (SaturateTactic(sl), SaturateTactic(sr)) => sl === sr
     case (RepeatTactic(rl, nl), RepeatTactic(rr, nr)) => nl == nr && rl === rr
     case (OnAll(al), OnAll(ar)) => al === ar
+    case (DefTactic(nl,al), DefTactic(nr, ar)) => nl==nr && al === ar
     case _ => l == r
   }
 }
@@ -170,6 +172,11 @@ object TacticDiff {
       case _ =>
         val p = new BelleDot()
         (ReplacementBelleContext(p), Map(p -> t1), Map(p -> t2))
+    }
+    case DefTactic(n1, i1) => t2 match {
+      case DefTactic(n2, i2) if n1==n2 =>
+        val d = diff(i1, i2)
+        (ReplacementBelleContext(DefTactic(n1, d._1.t)), d._2, d._3)
     }
   }) ensuring(r => r._1(r._2)===t1 && r._1(r._3)===t2, "Reapplying context expected to produce original tactics")
 }
