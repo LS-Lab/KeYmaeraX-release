@@ -655,7 +655,9 @@ object DerivationInfo {
     new PositionTacticInfo("toSingleFormula", "toSingleFormula", {case () => PropositionalTactics.toSingleFormula}),
 
     // proof management tactics
-    new TacticInfo("debug", "debug", {case () => DebuggingTactics.debug("")}),   // turn into input tactic if message should be stored too
+    InputTacticInfo("debug"
+      , SimpleDisplayInfo("Debug","debug")
+      ,List(StringArg("msg")), _ => ((msg: String) => DebuggingTactics.debug(msg)): TypedFunc[String, BelleExpr]),
     new TacticInfo("done", "done", {case () => TactixLibrary.done}), // turn into input tactic if message should be stored too
 
     // Proof rule two-position tactics

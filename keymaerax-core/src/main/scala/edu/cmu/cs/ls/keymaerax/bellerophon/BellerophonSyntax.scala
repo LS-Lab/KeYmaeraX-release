@@ -464,6 +464,10 @@ abstract case class InputTactic(name: String, inputs: List[Expression]) extends 
   override def prettyString: String =
     s"$name(${inputs.map(input => s"{`${input.prettyString}`}").mkString(",")})"
 }
+abstract class StringInputTactic(override val name: String, val inputs: List[String]) extends BuiltInTactic(name) {
+  override def prettyString: String =
+    s"$name(${inputs.map(input => s"{`$input`}").mkString(",")})"
+}
 
 abstract class DependentPositionWithAppliedInputTactic(private val n: String, val inputs: List[Expression]) extends DependentPositionTactic(n) {
   override def apply(locator: PositionLocator): AppliedDependentPositionTacticWithAppliedInput = new AppliedDependentPositionTacticWithAppliedInput(this, locator)

@@ -32,6 +32,9 @@ object BellePrettyPrinter extends (BelleExpr => String) {
         case BranchTactic(ts) => op(e).terminal.img +
           "(" + newline(indent) + ts.map(pp(_, indent+1)).mkString(", " + newline(indent+1)) + newline(indent) + ")"
         case SaturateTactic(t) => wrapLeft(e, t, indent) + op(e).terminal.img
+        case it : StringInputTactic =>
+          val eargs = it.inputs.map(input => argPrinter(Left(input))).mkString(", ")
+          it.name + "(" + eargs + ")"
         case b : BuiltInTactic => b.name
         case b: BuiltInPositionTactic => b.name
         case b: BuiltInLeftTactic => b.name
