@@ -96,13 +96,254 @@ object Kaisar {
     def add(x:Variable, at:AntePosition):Context = {
       Context(gmap.+((x,at)),defmap)
     }
+    def inter(other: Context): Context = Context(gmap.filter({case (k,v) => other.gmap(k) == v}), defmap.filter({case (k,v) => other.defmap(k) == v}))
   }
   object Context {
     var empty = new Context(Map(),Map())
+    def ofDef(base:VBase, e:Expression):Context = {
+      new Context(Map(), Map(base -> e))
+    }
   }
 
+  /*- union, intersection, and negation patterns on *terms only* due to technical reasons at the moment:
+    *    function union(e1,e2), inter(e1,e2), neg(e). */
+  def collectVarPat(t:Term):Option[List[BaseVariable]] = {
+    t match {
+      case (Pair(x, y)) =>
+        (collectVarPat(x), collectVarPat(y)) match {
+          case (Some(vs1), Some(vs2)) => Some(vs1 ++ vs2)
+          case _ => None
+        }
+      case (v : BaseVariable) => Some(List(v))
+      case _ => None
+    }
+  }
+
+  def collectNegVarPat(t:Term):Option[List[BaseVariable]] = {
+    t match {
+      case (Pair(x, y)) =>
+        (collectVarPat(x), collectVarPat(y)) match {
+          case (Some(vs1), Some(vs2)) => Some(vs1 ++ vs2)
+          case _ => None
+        }
+      case Neg(v : BaseVariable) => Some(List(v))
+      case _ => None
+    }
+  }
+
+  case class PatternMatchError(msg:String) extends Exception
+
   /* TODO: I think these need to be filled in with gammas first */
-  def pmatch(pat:Expression, e:Expression):Context = { ??? }
+  def pmatch(pat:Expression, e:Expression):Context = {
+    val exn:PatternMatchError = new PatternMatchError("Structure of expression doesnt match pat")
+    def atom(e1:Expression, e2:Expression) = {
+      if(e1 == e2) { Context.empty } else { throw exn }
+    }
+    pat match {
+      case PredOf(Function("p", _, _, _, _), args) =>
+        (collectVarPat(args), collectNegVarPat(args)) match {
+          case (Some(pos), _) =>
+            val posvs:SetLattice[Variable] = SetLattice(pos.toSet.asInstanceOf[Set[Variable]])
+            val fvs:SetLattice[Variable] = StaticSemantics.freeVars(e)
+            if (posvs.subsetOf(fvs)) {
+              Context.empty
+            } else {
+              throw new PatternMatchError("Bad variable occurrence")
+            }
+          case (_, Some(neg)) =>
+            val negvs:SetLattice[Variable] = SetLattice(neg.toSet.asInstanceOf[Set[Variable]])
+            val fvs:SetLattice[Variable] = StaticSemantics.freeVars(e)
+            if (negvs.intersect(fvs).isEmpty) {
+              Context.empty
+            } else {
+              throw new PatternMatchError("Bad variable occurrence")
+            }
+          case _ => throw new PatternMatchError("Invalid variable occurrence pattern syntax")
+        }
+      case PredOf(Function("union", _, _, _, _), Pair(pat1, pat2)) =>
+        try { pmatch(pat1,e) }
+        catch {case _ : Throwable => pmatch(pat2,e) }
+      case PredOf(Function("inter", _, _, _, _), Pair(pat1, pat2)) =>
+        pmatch(pat1,e).inter(pmatch(pat2,e))
+      case PredOf(Function("neg", _, _, _, _) , pat1) =>
+        try { pmatch(pat1,e); throw PatternMatchError("Pattern should not have matched but did: " + pat1.prettyString)}
+        catch {case _ : Throwable => Context.empty }
+      case FuncOf(Function("f", _, _, _, _), args) =>
+        (collectVarPat(args), collectNegVarPat(args)) match {
+          case (Some(pos), _) =>
+            val posvs:SetLattice[Variable] = SetLattice(pos.toSet.asInstanceOf[Set[Variable]])
+            val fvs:SetLattice[Variable] = StaticSemantics.freeVars(e)
+            if (posvs.subsetOf(fvs)) {
+              Context.empty
+            } else {
+              throw new PatternMatchError("Bad variable occurrence")
+            }
+          case (_, Some(neg)) =>
+            val negvs:SetLattice[Variable] = SetLattice(neg.toSet.asInstanceOf[Set[Variable]])
+            val fvs:SetLattice[Variable] = StaticSemantics.freeVars(e)
+            if (negvs.intersect(fvs).isEmpty) {
+              Context.empty
+            } else {
+              throw new PatternMatchError("Bad variable occurrence")
+            }
+          case _ => throw new PatternMatchError("Invalid variable occurrence pattern syntax")
+        }
+      case FuncOf(Function("union", _, _, _, _), Pair(pat1, pat2)) =>
+        try { pmatch(pat1,e) }
+        catch {case _ : Throwable => pmatch(pat2,e) }
+      case FuncOf(Function("inter", _, _, _, _), Pair(pat1, pat2)) =>
+        pmatch(pat1,e).inter(pmatch(pat2,e))
+      case FuncOf(Function("neg", _, _, _, _) , pat1) =>
+        try { pmatch(pat1,e); throw PatternMatchError("Pattern should not have matched but did: " + pat1.prettyString)}
+        catch {case _ : Throwable => Context.empty }
+      case FuncOf(Function("wild", _, _, _, _), pat) => Context.empty
+      case PredOf(Function("wild", _, _, _, _), pat) => Context.empty
+      case PredicationalOf(Function("wild", _, _, _, _), pat) => Context.empty
+      case UnitPredicational("wild", _) => Context.empty
+      case BaseVariable(vname, _, _) =>
+        if(vname.last == '_') {
+          Context.ofDef(vname.dropRight(1), e)
+        } else if (pat == e) {
+          Context.empty
+        } else {
+          throw exn
+        }
+      case FuncOf(fn: Function, Nothing) =>
+        if(fn.name.last == '_') {
+          Context.ofDef(fn.name.dropRight(1), e)
+        } else if (pat == e) {
+          Context.empty
+        } else {
+          throw exn
+        }
+      case UnitFunctional(name: String, _, _) =>
+        if(name.last == '_') {
+          Context.ofDef(name.dropRight(1), e)
+        } else if (pat == e) {
+          Context.empty
+        } else {
+          throw exn
+        }
+      case DifferentialProgramConst(name: String,  _) =>
+        if(name.last == '_') {
+          Context.ofDef(name.dropRight(1), e)
+        } else if (pat == e) {
+          Context.empty
+        } else {
+          throw exn
+        }
+      case ProgramConst(name: String) =>
+        if(name.last == '_') {
+          Context.ofDef(name.dropRight(1), e)
+        } else if (pat == e) {
+          Context.empty
+        } else {
+          throw exn
+        }
+      case SystemConst(name: String) =>
+        if(name.last == '_') {
+          Context.ofDef(name.dropRight(1), e)
+        } else if (pat == e) {
+          Context.empty
+        } else {
+          throw exn
+        }
+      case PredicationalOf(fn: Function, _) =>
+        if(fn.name.last == '_') {
+          Context.ofDef(fn.name.dropRight(1), e)
+        } else if (pat == e) {
+          Context.empty
+        } else {
+          throw exn
+        }
+      case PredOf(fn: Function, _) =>
+        if(fn.name.last == '_') {
+          Context.ofDef(fn.name.dropRight(1), e)
+        } else if (pat == e) {
+          Context.empty
+        } else {
+          throw exn
+        }
+      case UnitPredicational(name:String, _) =>
+        if(name.last == '_') {
+          Context.ofDef(name.dropRight(1), e)
+        } else if (pat == e) {
+          Context.empty
+        } else {
+          throw exn
+        }
+      case _ =>
+        (pat, e) match {
+          case (e1: DifferentialSymbol, e2: DifferentialSymbol) => atom(e1, e2)
+          case (e1: Number, e2: Number) => atom(e1, e2)
+          case (e1: DotTerm, e2: DotTerm) => atom(e1, e2)
+          case (Nothing, Nothing) => Context.empty
+          case (True, True) => Context.empty
+          case (False, False) => Context.empty
+          case (e1: Plus, e2: Plus) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: Minus, e2: Minus) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: Times, e2: Times) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: Divide, e2: Divide) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: Power, e2: Power) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: Pair, e2: Pair) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: Equal, e2: Equal) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: NotEqual, e2: NotEqual) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: GreaterEqual, e2: GreaterEqual) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: Greater, e2: Greater) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: LessEqual, e2: LessEqual) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: Less, e2: Less) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: And, e2: And) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: Or, e2: Or) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: Imply, e2: Imply) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: Equiv, e2: Equiv) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: Box, e2: Box) =>
+            pmatch(e1.program, e2.program).concat(pmatch(e1.child,e2.child))
+          case (e1: Diamond, e2: Diamond) =>
+            pmatch(e1.program, e2.program).concat(pmatch(e1.child,e2.child))
+          case (e1: Choice, e2: Choice) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: Compose, e2: Compose) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: DifferentialProduct, e2: DifferentialProduct) =>
+            pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          case (e1: Forall, e2: Forall) =>
+            if(e1.vars != e2.vars) { throw exn }
+            else { pmatch(e1.child, e2.child) }
+          case (e1: Exists, e2: Exists) =>
+            if(e1.vars != e2.vars) { throw exn }
+            else { pmatch(e1.child, e2.child) }
+          case (e1: Assign, e2: Assign) => atom(e1,e2)
+          case (e1: AssignAny, e2: AssignAny) => atom(e1,e2)
+          case(e1:Test, e2:Test) => pmatch(e1.cond, e2.cond)
+          case(e1:ODESystem, e2:ODESystem) => pmatch(e1.ode,e2.ode).concat(pmatch(e1.constraint,e2.constraint))
+          case(e1:AtomicODE, e2:AtomicODE) =>
+            if (e1.xp != e2.xp) { throw exn }
+            else { pmatch(e1.e, e2.e)}
+          case(e1:Neg, e2:Neg) => pmatch(e1.child,e2.child)
+          case(e1:Differential, e2:Differential) => pmatch(e1.child,e2.child)
+          case(e1:Not, e2:Not) => pmatch(e1.child,e2.child)
+          case(e1:DifferentialFormula, e2:DifferentialFormula) => pmatch(e1.child,e2.child)
+          case(e1:Loop, e2:Loop) => pmatch(e1.child,e2.child)
+          case(e1:Dual, e2:Dual) => pmatch(e1.child,e2.child)
+        }
+    }
+  }
   def doesMatch(pat:Expression, e:Expression):Boolean = {try {pmatch(pat, e); true} catch {case _:Throwable => false}}
 
   def eval(method:Method, pr:Provable):Provable = {
