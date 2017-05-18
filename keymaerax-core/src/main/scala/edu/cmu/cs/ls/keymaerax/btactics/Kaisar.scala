@@ -97,6 +97,15 @@ object Kaisar {
       Context(gmap.+((x,at)),defmap)
     }
     def inter(other: Context): Context = Context(gmap.filter({case (k,v) => other.gmap(k) == v}), defmap.filter({case (k,v) => other.defmap(k) == v}))
+    def usubst:USubst = {
+      defmap.toList.toIndexedSeq.map({
+        case(name, e: DifferentialProgram) => SubstitutionPair(DifferentialProgramConst(name), e)
+        case(name, e: Program) => SubstitutionPair(ProgramConst(name), e)
+        case(name, e: Term) => SubstitutionPair(FuncOf(Function(name, domain = Unit, sort = Real), Nothing), e)
+        case(name, e: Formula) => SubstitutionPair(PredOf(Function(name, domain = Unit, sort = Bool), Nothing), e)
+      })
+    }
+
   }
   object Context {
     var empty = new Context(Map(),Map())
@@ -394,9 +403,9 @@ object Kaisar {
     // todo: add all inst
   )
 
-  def expand(e:Term, c:Context):Term = {???}
-  def expand(e:Formula, c:Context):Formula = {???}
-  def expand(e:Program, c:Context):Program = {???}
+  def expand(e:Term, c:Context):Term = {c.usubst(e)}
+  def expand(e:Formula, c:Context):Formula = {c.usubst(e)}
+  def expand(e:Program, c:Context):Program = {c.usubst(e)}
 
   def eval(fp:FP, h:History, c:Context, ante:immutable.IndexedSeq[Formula]):Provable = {
     fp match {
