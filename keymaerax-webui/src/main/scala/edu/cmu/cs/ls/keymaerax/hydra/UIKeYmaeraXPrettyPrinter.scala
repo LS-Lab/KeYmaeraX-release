@@ -105,12 +105,12 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
     case _ => super.ppOp(expr)
   }
 
-  protected override def ppEnclosingOp(expr: Expression): (String, String) = expr match {
+  protected override def wrap(text: String, expr: Expression): String = expr match {
     case _: Box | _: Diamond =>
-      htmlSpan("k4-mod-open", super.ppEnclosingOp(expr)._1) -> htmlSpan("k4-mod-close", super.ppEnclosingOp(expr)._2)
+      htmlSpan("k4-mod-open", "[") + text + htmlSpan("k4-mod-close", "]")
     case _: ODESystem | _: Program | _: DifferentialProgram | _: UnaryCompositeProgram =>
-      htmlSpan("k4-prg-open", super.ppEnclosingOp(expr)._1) -> htmlSpan("k4-prg-close", super.ppEnclosingOp(expr)._2)
-    case _ => super.ppEnclosingOp(expr)
+      htmlSpan("k4-prg-open", "{") + text + htmlSpan("k4-prg-close", "}")
+    case _ => super.wrap(text, expr)
   }
 
   protected override def pp(q: PosInExpr, term: Term): String = emit(q, term match {
