@@ -1,0 +1,8 @@
+implyR(1) ; composeb(1.1.1.1.1) ; composeb(1.1.1.1.1.1) ; solve(1.1.1.1.1.1.1) ; unfold ; doall(chase(1.0)) ; <(
+  existsR({`v^2/(2*b())+(a/b()+1)*(a/2*ep()^2+ep()*v)`}, 1),
+  existsR({`v^2/(2*b())+(a/b()+1)*(a/2*ep()^2+ep()*v)`}, 1),
+  existsR({`v^2/(2*b())+v*ep()`}, 1),
+  existsR({`v^2/(2*b())`}, 1)
+  );
+doall(andR(1));
+doall(QE)

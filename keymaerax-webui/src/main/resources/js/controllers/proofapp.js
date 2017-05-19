@@ -1,12 +1,14 @@
 angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$http', '$cookies', function ($scope, $http, $cookies) {
 
-  $scope.theme = {css: 'app', name: 'KeYmaera X'};
+  $scope.theme = {css: 'app', name: 'KeYmaera X (Small)'};
 
   $scope.themes = [
-    {css: 'app', name: 'KeYmaera X'},
-    {css: 'presentation_small', name: 'Presentation (Small)'},
-    {css: 'presentation', name: 'Presentation (Medium)'},
-    {css: 'presentation_large', name: 'Presentation (Large)'}
+    {css: 'app', name: 'KeYmaera X (Small)'},
+    {css: 'app-medium', name: 'KeYmaera X (Medium)'},
+    {css: 'app-large', name: 'KeYmaera X (Large)'},
+    {css: 'presentation_small', name: 'High Contrast (Small)'},
+    {css: 'presentation', name: 'High Contrast (Medium)'},
+    {css: 'presentation_large', name: 'High Contrast (Large)'}
   ];
 
   $http.get('/users/' + $cookies.get('userId') + '/theme').then(function(response) {

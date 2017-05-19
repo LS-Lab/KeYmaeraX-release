@@ -28,7 +28,7 @@ private object ToolTactics {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("QE",
       QELogger.getLogTactic &
-      done | //@note don't fail QE if already proved
+      (done | //@note don't fail QE if already proved
         ((alphaRule*) &
         (close |
           ((atomExhaustiveEqL2R('L)*) &
@@ -42,6 +42,7 @@ private object ToolTactics {
             )
           )
         )
+      )
   )}
   def fullQE(qeTool: QETool): BelleExpr = fullQE()(qeTool)
 

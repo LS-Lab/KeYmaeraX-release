@@ -5,8 +5,11 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Program}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser.Declaration
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import org.scalatest.AppendedClues
 
@@ -27,26 +30,37 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
 
   //@todo do not fail on first failing model/tactic/proof, accumulate errors and print
 
-  tutorialName should "parse all models" in withMathematica { _ =>
+  tutorialName should "parse all models" in {
     tutorialEntries.foreach(e =>
       try { KeYmaeraXProblemParser(e.model) } catch { case ex: Throwable =>
         fail(s"${e.name} model did not parse", ex) })
   }
 
-  it should "parse all tactics" in withMathematica { _ =>
+  it should "parse all tactics" in withZ3 { _ => //@note QE tool only so that tactics parse
     tutorialEntries.filter(_.tactic.isDefined).foreach(e =>
       try { BelleParser(e.tactic.get._2) } catch { case ex: Throwable =>
         fail(s"Tactic ${e.tactic.get._1} of model ${e.name} did not parse", ex) })
   }
 
   it should "prove all entries flagged as being provable" in withMathematica { _ => withDatabase { db =>
-    tutorialEntries.filter(e => e.tactic.isDefined && e.tactic.get._3).foreach(e => {
-      println(s"Proving ${e.name} with ${e.tactic.get._1}")
-      (try {
-          db.proveBy(e.model, BelleParser(e.tactic.get._2), e.name)
-       } catch {
-          case ex: Throwable => fail(s"Exception while proving ${e.name}", ex)
-       }) shouldBe 'proved withClue e.name + "/" + e.tactic.get._1})
+    tutorialEntries.filter(e => e.tactic.isDefined && e.tactic.get._3).
+      map(e => (e.name, e.model, parseProblem(e.model), e.tactic.get)).
+      foreach({case (name, model, (decls, invGen), tactic) =>
+        println(s"Proving $name with ${tactic._1}")
+        (try {
+          db.proveBy(model, BelleParser.parseWithInvGen(tactic._2, Some(invGen), decls), name)
+         } catch {
+            case ex: Throwable => fail(s"Exception while proving $name", ex)
+         }) shouldBe 'proved withClue name + "/" + tactic._1})
   }}
+
+  /** Parse a problem file to find declarations and invariant annotations */
+  private def parseProblem(model: String): (Declaration, Generator[Expression]) = {
+    val generator = new ConfigurableGenerator[Formula]()
+    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p -> inv))
+    val (decls, _) = KeYmaeraXProblemParser.parseProblem(model)
+    KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {}) //@note cleanup for separation between tutorial entries
+    (decls, generator)
+  }
 
 }

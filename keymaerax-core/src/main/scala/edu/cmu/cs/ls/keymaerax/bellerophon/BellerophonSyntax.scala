@@ -341,7 +341,8 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
     //note the following exceptions are likely caused by wrong positioning
     case ex: IndexOutOfBoundsException => throw new BelleThrowable("Position " + locator +
       " may point outside the positions of the goal " + provable.prettyString, ex)
-    case ex: MatchError => ???
+    case ex: MatchError => throw new BelleThrowable("Tactic " + positionTactic.prettyString +
+      " applied at " + locator + " on a non-matching expression in " + provable.prettyString, ex)
     //@note wrap failing assertions etc. so that searchy tactic combinators follow up on the tactic failure
     case t: Throwable => throw new BelleThrowable(t.getMessage, t)
   }

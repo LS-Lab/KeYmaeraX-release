@@ -65,7 +65,7 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
   var timeout: Int = TIMEOUT_OFF
 
   protected val DEBUG: Boolean = System.getProperty("DEBUG", "false")=="true"
-  protected val mathematicaExecutor: ToolExecutor[(String, T)] = ToolExecutor.defaultExecutor()
+  protected val mathematicaExecutor: ToolExecutor[(String, T)] = new ToolExecutor(1)
 
   override def runUnchecked(cmd: String): (String, T) = link.synchronized { link.runUnchecked(timeConstrained(cmd), m2k) }
   override def run(cmd: MExpr): (String, T) = link.synchronized { link.run(timeConstrained(cmd), m2k, mathematicaExecutor) }
@@ -116,8 +116,10 @@ class JLinkMathematicaLink extends MathematicaLink {
     try {
       ml = MathLinkFactory.createKernelLink(Array[String](
         "-linkmode", "launch",
-        "-linkname", linkName + " -mathlink"))
-        ml.discardAnswer()
+        "-linkname", linkName + " -mathlink",
+        "-linkprotocol", "tcpip"))
+      ml.connect()
+      ml.discardAnswer()
         //@todo How to gracefully shutdown an unsuccessfully initialized math link again without causing follow-up problems?
         //@note print warnings for license issues instead of shutting down immediately
         isActivated match {
@@ -140,11 +142,11 @@ class JLinkMathematicaLink extends MathematicaLink {
         shutdown()
         false
       case e: MathLinkException =>
-        println("Shutting down since Mathematica J/Link errored " + e + "\nPlease double check configuration and Mathematica license." + diagnostic)
+        println("Shutting down since Mathematica J/Link errored " + e + "\nPlease double check configuration and Mathematica license.\n" + diagnostic)
         shutdown()
         false
       case ex: Throwable =>
-        println("Unknown error " + ex + "\nMathematica may or may not be working. If you experience problems, please double check configuration paths and Mathematica license." + diagnostic)
+        println("Unknown error " + ex + "\nMathematica may or may not be working. If you experience problems, please double check configuration paths and Mathematica license.\n" + diagnostic)
         true
     }
   }
@@ -159,6 +161,7 @@ class JLinkMathematicaLink extends MathematicaLink {
       println("Shutting down Mathematica...")
       val l: KernelLink = ml
       ml = null
+      l.abandonEvaluation()
       l.terminateKernel()
       l.close()
       println("...Done")
@@ -169,6 +172,7 @@ class JLinkMathematicaLink extends MathematicaLink {
   def restart(): Unit = {
     val l: KernelLink = ml
     ml = null
+    l.abandonEvaluation()
     l.terminateKernel()
     init(linkName, jlinkLibDir)
     l.close()

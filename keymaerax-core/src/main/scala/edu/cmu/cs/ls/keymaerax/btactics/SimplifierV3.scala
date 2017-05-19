@@ -759,7 +759,7 @@ object SimplifierV3 {
       case Minus(_,_) => minusArith
       case Times(_,_) => mulArith
       case Divide(_,_) => divArith
-      case Power(_,_) => divArith
+      case Power(_,_) => powArith
       case _ => List()
     }
   }

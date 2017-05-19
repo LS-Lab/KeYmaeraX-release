@@ -13,10 +13,12 @@ import org.scalatest.Suites
   */
 @SlowTest
 class TutorialTests extends Suites(
+  // Tutorials
   new TutorialRegressionTester("Basic", "classpath:/examples/tutorials/basic/basic.json"),
   new TutorialRegressionTester("FM", "classpath:/examples/tutorials/fm/fm.json"),
   new TutorialRegressionTester("STTT", "classpath:/examples/tutorials/sttt/sttt.json"),
   new TutorialRegressionTester("CPSWeek", "classpath:/examples/tutorials/cpsweek/cpsweek.json"),
+  // Course
   new TutorialRegressionTester("FCPS17-05", "http://symbolaris.com/course/fcps17/05-dynax.kya"),
   new TutorialRegressionTester("FCPS17-07", "http://symbolaris.com/course/fcps17/07-loops.kya"),
   new TutorialRegressionTester("FCPS17-08", "http://symbolaris.com/course/fcps17/08-events.kya"),
@@ -34,5 +36,9 @@ class TutorialTests extends Suites(
   new TutorialRegressionTester("FCPS-R08", "http://symbolaris.com/course/fcps17/recitation08.kya"),
   new TutorialRegressionTester("FCPS-R09", "http://symbolaris.com/course/fcps17/recitation09.kya"),
   new TutorialRegressionTester("FCPS-R11", "http://symbolaris.com/course/fcps17/recitation11.kya"),
-  new TutorialRegressionTester("FCPS-R12", "http://symbolaris.com/course/fcps17/recitation12.kya")
+  new TutorialRegressionTester("FCPS-R12", "http://symbolaris.com/course/fcps17/recitation12.kya"),
+  // Case Study Archives
+  new TutorialRegressionTester("ETCS", "classpath:/examples/casestudies/etcs/rephrased/ETCS.kya"),
+  // Other Publication Archives
+  new TutorialRegressionTester("Parachute", "classpath:/examples/simple/parachute/parachute.kya")
 )

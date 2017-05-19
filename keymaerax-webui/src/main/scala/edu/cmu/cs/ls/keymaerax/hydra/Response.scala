@@ -454,8 +454,6 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, List[Int], String)]) extends 
 
 /** JSON conversions for frequently-used response formats */
 object Helpers {
-  def childrenJson(children: List[TreeNode]): JsValue = JsArray(children.map(node => nodeIdJson(node.id)):_*)
-
   def sequentJson(sequent: Sequent): JsValue = {
     def fmlsJson (isAnte:Boolean, fmls: IndexedSeq[Formula]): JsValue = {
       JsArray(fmls.zipWithIndex.map { case (fml, i) =>
@@ -477,20 +475,6 @@ object Helpers {
       "ante" -> fmlsJson(isAnte = true, sequent.ante),
       "succ" -> fmlsJson(isAnte = false, sequent.succ)
     )
-  }
-
-  def nodeJson(node: TreeNode, pos: Option[PositionLocator]): JsValue = {
-    val id = nodeIdJson(node.id)
-    val sequent = sequentJson(node.provable.conclusion)
-    val children = childrenJson(node.children)
-    val parentOpt = node.parent.map(n => nodeIdJson(n.id))
-    val parent = parentOpt.getOrElse(JsNull)
-    JsObject(
-      "id" -> id,
-      "sequent" -> sequent,
-      "children" -> children,
-      "rule" -> ruleJson(node.rule, pos),
-      "parent" -> parent)
   }
 
   def nodeJson(node: ProofTreeNode): (String, JsValue) = {
@@ -543,16 +527,6 @@ object Helpers {
         case Some(Fixed(p, _, _)) => JsString(p.prettyString)
         case _ => JsString("")
       })
-    )
-  }
-
-  def singleNodeJson(pos: Option[PositionLocator] = None)(node: TreeNode): JsValue = {
-    JsObject (
-      "id" -> nodeIdJson(node.id),
-      "sequent" -> sequentJson(node.provable.conclusion),
-      "children" -> childrenJson(node.children),
-      "rule" -> ruleJson(node.rule, pos),
-      "parent" -> node.parent.map(parent => nodeIdJson(parent.id)).getOrElse(JsNull)
     )
   }
 
@@ -650,6 +624,12 @@ case class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Opti
     }
   }
 
+  private def helpJson(codeName: String): JsString = {
+    val helpResource = getClass.getResourceAsStream(s"/help/axiomsrules/$codeName.html")
+    if (helpResource == null) JsString("")
+    else JsString(scala.io.Source.fromInputStream(helpResource).mkString)
+  }
+
   def axiomJson(info:DerivationInfo): JsObject = {
     val formulaText =
       (info, info.display) match {
@@ -660,14 +640,16 @@ case class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Opti
     JsObject (
     "type" -> JsString("axiom"),
     "formula" -> JsString(formulaText),
-    "input" -> inputsJson(info.inputs)
+    "input" -> inputsJson(info.inputs),
+    "help" -> helpJson(info.codeName)
     )
   }
 
   def tacticJson(info:TacticInfo): JsObject = {
     JsObject(
       "type" -> JsString("tactic"),
-      "input" -> inputsJson(info.inputs)
+      "input" -> inputsJson(info.inputs),
+      "help" -> helpJson(info.codeName)
     )
   }
 
@@ -683,17 +665,12 @@ case class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Opti
   def ruleJson(info: TacticInfo, conclusion: SequentDisplay, premises: List[SequentDisplay]): JsObject = {
     val conclusionJson = sequentJson(conclusion)
     val premisesJson = JsArray(premises.map(sequentJson):_*)
-    val helpJson = {
-      val helpResource = getClass.getResourceAsStream(s"/help/axiomsrules/${info.codeName}.html")
-      if (helpResource == null) JsString("")
-      else JsString(scala.io.Source.fromInputStream(helpResource).mkString)
-    }
     JsObject(
       "type" -> JsString("sequentrule"),
       "conclusion" -> conclusionJson,
       "premise" -> premisesJson,
       "input" -> inputsJson(info.inputs),
-      "help" -> helpJson
+      "help" -> helpJson(info.codeName)
     )
   }
 

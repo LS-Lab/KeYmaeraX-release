@@ -1,0 +1,30 @@
+@import url("idea.css");
+
+.hljs-symbol {
+  background: transparent;
+  font-weight: bold;
+}
+
+.hljs-progop {
+  font-style: italic;
+}
+
+.hljs-logop {
+  font-weight: bold;
+}
+
+.hljs-boxopenop {
+  font-weight: bold;
+  font-size: larger;
+  border-bottom: 1px dashed black;
+  padding-right: 100%;
+  margin-right: -100%;
+}
+
+.hljs-boxcloseop {
+  font-weight: bold;
+  font-size: larger;
+  border-top: 1px dashed black;
+  padding-right: 100%;
+  margin-right: -100%;
+}

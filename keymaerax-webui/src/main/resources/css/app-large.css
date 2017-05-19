@@ -1,0 +1,46 @@
+@import url("app.css");
+
+a {
+  font-size: 18px;
+}
+
+.btn-link {
+  font-size: 18px;
+}
+
+body {
+  font-size: 18px;
+}
+
+.dropdown-menu {
+  font-size: 16px;
+}
+
+pre {
+  font-size: 20px;
+}
+
+.k4-narrowinput {
+  max-width: 45px;
+}
+
+.k4-proofrow .k4-proofrule {
+  width: 2em;
+  font-size: 18px;
+}
+
+.popover {
+  font-size: 22px;
+}
+
+.k4-proofrow .k4-proofrule {
+  font-size: 18px;
+}
+
+.k4-formula .k4-formula-content {
+  font-size: 26px;
+}
+
+.k4-sequent-hint {
+  font-size: medium;
+}

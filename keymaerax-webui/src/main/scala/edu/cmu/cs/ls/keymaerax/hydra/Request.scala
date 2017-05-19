@@ -652,7 +652,7 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: S
   def resultingResponses(): List[Response] = {
     try {
       val archiveEntries = KeYmaeraXArchiveParser.read(kyaFileContents)
-      val (failedModels, succeededModels) = archiveEntries.foldLeft((List[String](), List[String]()))({ case ((failedImports, succeededImports), (name, modelFileContent, tactic)) =>
+      val (failedModels, succeededModels) = archiveEntries.foldLeft((List[String](), List[String]()))({ case ((failedImports, succeededImports), (name, modelFileContent, _, tactic)) =>
         val uniqueModelName = db.getUniqueModelName(userId, name)
         db.createModel(userId, uniqueModelName, modelFileContent, currentDate(), None, None, None,
           tactic.headOption.map(_._2)) match {
@@ -904,7 +904,7 @@ class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : Str
     val leaves = tree.openGoals
     val closed = tree.openGoals.isEmpty && tree.verifyClosed
     //@todo goal names
-    val agendaItems: List[AgendaItem] = leaves.map(n => AgendaItem(n.id.toString, "Unnamed Goal", proofId, null))
+    val agendaItems: List[AgendaItem] = leaves.map(n => AgendaItem(n.id.toString, "Unnamed Goal", proofId))
     new AgendaAwesomeResponse(proofId, tree.root, leaves, agendaItems, closed) :: Nil
   }
 }
@@ -1004,25 +1004,24 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val (localProvable, parentStep, parentRule) = (node.localProvable, node.children.head.maker.get, node.children.head.makerShortName.get)
         val localProofId = db.createProof(localProvable)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, db.createProof,
-          RequestHelper.listenerFactory(db, Some(localProvable)), SequentialInterpreter, 1, strict=false)
+          RequestHelper.listenerFactory(db), SequentialInterpreter, 1, strict=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(localProvable))
 
         val trace = db.getExecutionTrace(localProofId)
         if (trace.steps.size == 1 && trace.steps.head.rule == parentRule) {
           DerivationInfo.locate(parentTactic) match {
-            case Some(ptInfo) => new ExpandTacticResponse(localProofId, ptInfo.codeName, "", Nil, Nil) :: Nil
+            case Some(ptInfo) => ExpandTacticResponse(localProofId, ptInfo.codeName, "", Nil, Nil) :: Nil
             case None => new ErrorResponse("No further details available") :: Nil
           }
         } else {
-          val innerTree = DbProofTree(db, localProofId.toString)
-          innerTree.load()
+          val innerTree = DbProofTree(db, localProofId.toString).load()
           val stepDetails = innerTree.tacticString
           val innerSteps = innerTree.nodes
           val agendaItems: List[AgendaItem] = innerTree.openGoals.map(n =>
-            AgendaItem(n.id.toString, "Unnamed Goal", proofId, null))
+            AgendaItem(n.id.toString, "Unnamed Goal", proofId))
 
-          new ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, agendaItems) :: Nil
+          ExpandTacticResponse(localProofId, parentStep, stepDetails, innerSteps, agendaItems) :: Nil
         }
     }
   }
@@ -1034,9 +1033,33 @@ class StepwiseTraceRequest(db: DBAbstraction, userId: String, proofId: String) e
     tree.load()
     val innerSteps = tree.nodes
     val agendaItems: List[AgendaItem] = tree.openGoals.map(n =>
-      AgendaItem(n.id.toString, "Unnamed Goal", proofId.toString, null))
+      AgendaItem(n.id.toString, "Unnamed Goal", proofId.toString))
     //@todo fill in parent step for empty ""
     new ExpandTacticResponse(proofId.toInt, "", tree.tacticString, innerSteps, agendaItems) :: Nil
+  }
+}
+
+class GetSequentStepSuggestionRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
+  extends UserProofRequest(db, userId, proofId) {
+  override protected def doResultingResponses(): List[Response] = {
+    val tree = DbProofTree(db, proofId)
+    tree.locate(nodeId) match {
+      case None => ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
+      case Some(node) => node.goal match {
+        case None => ApplicableAxiomsResponse(Nil, Map.empty) :: Nil //@note node closed
+        case Some(seq) =>
+          if (seq.isFOL) {
+            val folSuggestions = "QE"::"abbrv"::"hideL"::Nil
+            // todo: counterexample, find assumptions + general help
+            val tactics = folSuggestions.map(s => (DerivationInfo(s), None))
+            ApplicableAxiomsResponse(tactics, Map.empty) :: Nil
+          } else {
+            // find "largest" succedent formula with programs and suggest top-level popup content
+            val pos = SuccPosition(1)
+            ApplicableAxiomsResponse(node.applicableTacticsAt(pos), node.tacticInputSuggestions(pos)) :: Nil
+          }
+      }
+    }
   }
 }
 
@@ -1366,11 +1389,6 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
   /* It's very important not to report a branch as closed when it isn't. Other wise the user will carry on in blissful
   * ignorance thinking the hardest part of their proof is over when it's not. This is actually a bit difficult to get
   * right, so check the actual provables to make sure we're closing a branch. */
-  private def noBogusClosing(tree: OldProofTree, parent: TreeNode): Boolean = {
-    parent.isFake || (parent.children.size == parent.provable.subgoals.size &&
-      parent.children.zip(parent.provable.subgoals).forall({case (c, sg) => c.provable.conclusion == sg}))
-  }
-
   private def noBogusClosing(tree: ProofTree, pn: ProofTreeNode): Boolean =
     pn.children.size == pn.localProvable.subgoals.size &&
       pn.children.zip(pn.localProvable.subgoals).forall({case (c, sg) => c.localProvable.conclusion == sg})
@@ -1430,7 +1448,7 @@ class PruneBelowRequest(db : DBAbstraction, userId : String, proofId : String, n
         case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
         case Some(node) =>
           node.pruneBelow()
-          val item = AgendaItem(node.id.toString, "Unnamed Goal", proofId, null)
+          val item = AgendaItem(node.id.toString, "Unnamed Goal", proofId)
           new PruneBelowResponse(item) :: Nil
       }
     }
@@ -1710,19 +1728,6 @@ class CheckValidationRequest(db: DBAbstraction, taskId: String) extends Request 
 //endregion
 
 object RequestHelper {
-  /** Queries the database for the position where the tactic that created the node `node` was applied. */
-  def stepPosition(db: DBAbstraction, node: TreeNode): Option[PositionLocator] = {
-    node.startStep match {
-      case Some(step) =>
-        BelleParser(db.getExecutable(step.executableId).belleExpr) match {
-          case pt: AppliedPositionTactic => Some(pt.locator)
-          case pt: AppliedDependentPositionTactic => Some(pt.locator)
-          case _ => None
-        }
-      case None => None
-    }
-  }
-
   /* Try to figure out the most intuitive inference rule to display for this tactic. If the user asks us "StepAt" then
    * we should use the StepAt logic to figure out which rule is actually being applied. Otherwise just ask TacticInfo */
   def getSpecificName(tacticId: String, sequent:Sequent, l1: Option[PositionLocator], l2: Option[PositionLocator], what: DerivationInfo => String): String = {
@@ -1751,15 +1756,13 @@ object RequestHelper {
   }
 
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  def listenerFactory(db: DBAbstraction, initGlobal: Option[ProvableSig] = None)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = {
-    val trace = db.getExecutionTrace(proofId, withProvables=false)
-    assert(-1 <= parentInTrace && parentInTrace < trace.steps.length, "Invalid trace index " + parentInTrace + ", expected -1<=i<trace.length")
-    val parentStep: Option[Int] = if (parentInTrace < 0) None else Some(trace.steps(parentInTrace).stepId)
-    val globalProvable = initGlobal match {
-      case Some(gp) if trace.steps.isEmpty => gp
-      case _ => parentStep match {
-        case None => db.getProvable(db.getProofInfo(proofId).provableId.get).provable
-      }
+  def listenerFactory(db: DBAbstraction)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = {
+    val trace = db.getExecutionSteps(proofId)
+    assert(-1 <= parentInTrace && parentInTrace < trace.length, "Invalid trace index " + parentInTrace + ", expected -1<=i<trace.length")
+    val parentStep: Option[Int] = if (parentInTrace < 0) None else trace(parentInTrace).stepId
+    val globalProvable = parentStep match {
+      case None => db.getProvable(db.getProofInfo(proofId).provableId.get).provable
+      case Some(sId) => db.getExecutionStep(proofId, sId).map(_.local).get
     }
     val ruleName = try {
       RequestHelper.getSpecificName(tacticName.split("\\(").head, null, None, None, _.display.name)

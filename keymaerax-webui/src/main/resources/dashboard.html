@@ -28,7 +28,7 @@
     <link href="/css/intro/introjs.css" rel="stylesheet" type="text/css">
     <link href="/css/chardin/chardinjs.css" rel="stylesheet" type="text/css">
     <link href="css/sticky-footer-navbar.css" rel="stylesheet" type="text/css">
-    <link rel="stylesheet" href="/js/highlight/styles/default.css">
+    <link rel="stylesheet" href="/js/highlight/styles/dl.css">
 
 </head>
 
@@ -65,7 +65,7 @@
                 <li class="dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown">Theme <span class="caret"></span></a>
                     <ul class="dropdown-menu" role="menu">
-                        <li ng-repeat="t in themes"><a ng-click="selectTheme(t)"><i ng-if="theme.name === t.name" class="fa fa-check"></i> {{t.name}}</a></li>
+                        <li ng-repeat="t in themes"><a ng-click="selectTheme(t)"><i ng-show="theme.name === t.name" class="k4-menu-icon fa fa-check"></i> {{t.name}}</a></li>
                     </ul>
                 </li>
                 <li class="dropdown">

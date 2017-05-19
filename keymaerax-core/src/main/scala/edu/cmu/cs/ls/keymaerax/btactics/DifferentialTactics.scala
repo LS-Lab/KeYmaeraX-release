@@ -369,7 +369,7 @@ private object DifferentialTactics {
     */
   private def DG(ghost: DifferentialProgram): DependentPositionTactic = "ANON" byWithInputs (listifiedGhost(ghost), (pos: Position, sequent: Sequent) => {
     val (y, a, b) = DifferentialHelper.parseGhost(ghost)
-    
+
     sequent.sub(pos) match {
       case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
@@ -743,6 +743,129 @@ private object DifferentialTactics {
       TactixLibrary.useAt("dgZeroEquilibrium")(1) //| backupTactic
     else
       backupTactic
+  })
+
+  /**
+    * Proves Darboux properties
+    * p = 0 -> [ {ODE & Q} ] p = 0
+    * where Q -> p' = q p
+    * (similarly for >= 0, > 0, != 0)
+    * Note: this also works for fractional q, if its denominator is already in Q
+    * Otherwise, DG will fail on the singularity
+    */
+  def dgDbx(qco:Term) : DependentPositionTactic = "dgDbx" by ((pos: Position, seq:Sequent) => {
+
+    val Some(Box(ODESystem(system, _), property)) = seq.sub(pos)
+
+    /** The argument works for any comparison operator */
+    val (p,pop) = property match {
+      case bop:ComparisonFormula if bop.right.isInstanceOf[Number] && bop.right.asInstanceOf[Number].value == 0 =>
+        (bop.left,bop)
+      case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}")
+    }
+
+    /** The ghost variable */
+    val gvy = "dbxy_".asVariable
+    require(!StaticSemantics.vars(system).contains(gvy), "fresh ghost " + gvy + " in " + system.prettyString)
+    //@todo should not occur anywhere else in the sequent either...
+
+    /** Another ghost variable */
+    val gvz = "dbxz_".asVariable
+    require(!StaticSemantics.vars(system).contains(gvz), "fresh ghost " + gvz + " in " + system.prettyString)
+    //@todo should not occur anywhere else in the sequent either...
+
+    //Construct the diff ghost y' = -qy
+    val dey = AtomicODE(DifferentialSymbol(gvy), Times(Neg(qco),gvy))
+    //Diff ghost z' = qz/2
+    val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(qco,Number(2)),gvz))
+
+    val zero = Number(0)
+    val one = Number(1)
+    val two = Number(2)
+
+    //Postcond:
+    //For equalities, != 0 works too, but the > 0 works for >=, > as well
+    val gtz = Greater(gvy,zero)
+    val pcy = And(gtz, pop.reapply(Times(gvy,p),zero))
+    val pcz = Equal(Times(gvy,Power(gvz,two)), one)
+
+    DebuggingTactics.debug("Darboux postcond "+pcy.toString+" "+pcz.toString) &
+      dG(dey,Some(pcy))(pos) &     //Introduce the dbx ghost
+      existsR(one)(pos) &          //Anything works here, as long as it is > 0, 1 is convenient
+      diffCut(gtz)(pos) <(
+        boxAnd(pos) & andR(pos) <(
+          dW(pos) & prop,
+          diffInd('full)(pos)) // Closes p z = 0 invariant
+      ,
+        dG(dez,Some(pcz))(pos) &     //Introduce the dbx ghost
+        existsR(one)(pos) &          //The sqrt inverse of y, 1 is convenient
+        diffInd('full)(pos)          // Closes z > 0 invariant with another diff ghost
+      )
+  })
+
+  //Keeps the top level =s in evol domain as a groebner basis of terms?
+  private def domToTerms(f:Formula) : List[Term] = {
+    f match {
+      case Equal(l,r) => Minus(l,r) :: Nil
+      case And(l,r) => domToTerms(l) ++ domToTerms(r)
+      case _ => Nil
+    }
+  }
+
+  //Pulls out divisions
+  private def stripDenom(t:Term) : (Term,Term) = {
+    t match {
+      case Times(l,r) =>
+        val (ln,ld) = stripDenom(l)
+        val (rn,rd) = stripDenom(r)
+        (Times(ln,rn),Times(ld,rd))
+      case Divide(l,r) =>
+        val (ln,ld) = stripDenom(l)
+        val (rn,rd) = stripDenom(r)
+        (Times(ln,rd),Times(ld,rn))
+      case Power(tt,p:Number) if p.value < 0 =>
+        (Number(1),Power(tt,Number(-p.value)))
+      case Power(tt,p) =>
+        val (tn,td) = stripDenom(tt)
+        (Power(tn,p),Power(td,p))
+      //Ignore everything else todo: could deal with common denominators
+      case _ => (t,Number(1))
+    }
+  }
+
+  private lazy val eqNorm: ProvableSig = proveBy(" f_() = g_() <-> f_()-g_() = 0 ".asFormula,QE)
+  // Normalises to p = 0
+  // then attempts to automatically guess the darboux cofactor
+  def dgDbxAuto: DependentPositionTactic = "dgDbxAuto" by ((pos: Position, seq:Sequent) => {
+    if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable("dgDbxAuto requires a AlgebraTool, but got None")
+
+    val Some(Box(ODESystem(system, dom), property)) = seq.sub(pos)
+
+    val (p,pop,ax) = property match {
+      case Equal(lhs, rhs) => (Minus(lhs,rhs),Equal,eqNorm)
+    }
+    val lie = DifferentialHelper.lieDerivative(system, p)
+    val algTool = ToolProvider.algebraTool().get
+    //val gb = p::domToTerms(dom)
+    val domterms = domToTerms(dom)
+    //todo: groebnerBasis seems broken for > 1 term??
+    val gb = if(domterms.nonEmpty) algTool.groebnerBasis(domterms) else Nil
+    val quo = algTool.polynomialReduce(lie,p::gb)
+    //Maybe this should take the polynomial LCM (rp' = qp), then divide by r after proving it is non-zero?
+
+    quo._2 match {
+      case n:Number if n.value == 0 => {
+        val cofactor = quo._1.head
+        //This might contain fractions
+        val (num,den) = stripDenom(cofactor) //Need to put it in a form that DG can understand
+        useAt(ax)(pos ++ PosInExpr(1 :: Nil)) & diffCut(NotEqual(den,Number(0))) (pos) <(
+        dgDbx(Divide(num,den))(pos),
+        //Leaves the fractional goal open if it isn't implied by DW
+        ?(dW(pos) & QE & done) | skip
+        )
+      }
+      case _ => skip
+    }
   })
 
   /** @see [[TactixLibrary.DGauto]]

@@ -1,0 +1,35 @@
+<div class="row k4-tactic-popover-entry">
+    <!-- padding around content -->
+    <div class="col-md-12">
+        <div class="row" ng-if="tactic.selectedDerivation().derivation.type === 'axiom'">
+            <!-- TODO make executable with correct IDs, see axiomPopoverTemplate.html -->
+            <div class="col-md-2"><b ng-bind-html="tactic.selectedDerivation().name"></b></div>
+            <div class="col-md-10"
+                 ng-bind-html="tactic.selectedDerivation().derivation.formula"></div>
+        </div>
+        <div class="row" ng-if="tactic.selectedDerivation().derivation.type === 'tactic'">
+            <div class="col-md-2"><b ng-bind-html="tactic.selectedDerivation().name"></b></div>
+            <div class="col-md-10"
+                 ng-bind-html="tactic.selectedDerivation().derivation.formula"></div>
+        </div>
+        <div ng-if="tactic.selectedDerivation().derivation.type === 'sequentrule'"
+             class="row">
+            <div class="col-md-12">
+                <div class="panel panel-default panel-sm">
+                    <div class="panel-heading panel-heading-compact">
+                        <b ng-bind-html="tactic.selectedDerivation().name"></b>
+                    </div>
+                    <div class="panel-body">
+                        <div class="col-md-12" ng-repeat="tactic in [tactic.selectedDerivation()]"
+                             ng-include="'templates/sequentRuleTemplate.html'"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div ng-if="tactic.selectedDerivation().derivation.help"
+             class="row">
+            <div class="col-md-12"
+                 ng-bind-html="tactic.selectedDerivation().derivation.help"></div>
+        </div>
+    </div>
+</div>

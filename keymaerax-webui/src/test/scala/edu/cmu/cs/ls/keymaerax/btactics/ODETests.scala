@@ -22,6 +22,80 @@ import scala.collection.immutable.IndexedSeq
  */
 @UsualTest
 class ODETests extends TacticTestBase {
+
+  /**
+    * Temporary test cases for Darboux
+    */
+
+  "ODE" should "prove equational darboux" in withMathematica { qeTool =>
+    //(x+z)' = (x*A+B)(x+z)
+    val fml = "x+z=0 -> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] x+z=0".asFormula
+    val pr = TactixLibrary.proveBy(fml,implyR(1) & DifferentialTactics.dgDbx("x*A+B()".asTerm)(1))
+    pr shouldBe 'proved
+  }
+
+  "ODE" should "prove fractional darboux" in withMathematica { qeTool =>
+    //(x+z)' = ((x*A+B)/z^2)(x+z), where z^2 > 0
+    //assumes z^2 already in evol domain, or the ghost will report a singularity
+    val fml = "x+z=0 -> [{x'=(A*y+B()*x)/z^2, z' = (A*x+B())/z & y = x^2 & z^2 > 0}] x+z=0".asFormula
+    val pr = TactixLibrary.proveBy(fml,implyR(1) & DifferentialTactics.dgDbx("(x*A+B())/z^2".asTerm)(1))
+    pr shouldBe 'proved
+  }
+
+  "ODE" should "prove >= darboux" in withMathematica { qeTool =>
+    //(x+z)' =  x^2 + z*x + x^2 >= x*(x+z)
+    //Maybe this should leave open that the remainder is >= 0?
+    val fml = "x+z>=0 -> [{x'=x^2, z' = z*x+y & y = x^2}] x+z>=0".asFormula
+    val pr = TactixLibrary.proveBy(fml,implyR(1) & DifferentialTactics.dgDbx("x".asTerm)(1))
+    pr shouldBe 'proved
+  }
+
+  "ODE" should "prove >= fractional darboux" in withMathematica { qeTool =>
+    //(x+z)' =  (1/z^2)(x+z) + x^2 >= (1/z^2)(x+z)
+    //Maybe this should leave open that the remainder is >= 0?
+    val fml = "x+z>=0 -> [{x'=1/z, z' = x/z^2 + y & z^2 > 0 & y = x^2}] x+z>=0".asFormula
+    val pr = TactixLibrary.proveBy(fml,implyR(1) & DifferentialTactics.dgDbx("1/z^2".asTerm)(1))
+    pr shouldBe 'proved
+  }
+
+  "ODE" should "prove < darboux" in withMathematica { qeTool =>
+    //(x+z)' =  x^2 + z*x - x^2 <= x*(x+z)
+    val fml = "x+z<0 -> [{x'=x^2, z' = z*x+y & y = -x^2}] x+z<0".asFormula
+    val pr = TactixLibrary.proveBy(fml,implyR(1) & DifferentialTactics.dgDbx("x".asTerm)(1))
+    pr shouldBe 'proved
+  }
+
+  "ODE" should "prove < fractional darboux" in withMathematica { qeTool =>
+    //(x+z)' =  (1/z^2)(x+z) - x^2 <= (1/z^2)(x+z)
+    //Maybe this should leave open that the remainder is >= 0?
+    val fml = "x+z<0 -> [{x'=1/z, z' = x/z^2 + y & z^2 > 0 & y = -x^2}] x+z<0".asFormula
+    val pr = TactixLibrary.proveBy(fml,implyR(1) & DifferentialTactics.dgDbx("1/z^2".asTerm)(1))
+    pr shouldBe 'proved
+  }
+
+  "ODE" should "automatically find equational darboux" in withMathematica { qeTool =>
+    //(x+z)' = (x*A+B)(x+z)
+    val fml = "x+z=0 -> [{x'=(A*x^2+B()*x), z' = A*z*x+B()*z}] 0=-x-z".asFormula
+    val pr = TactixLibrary.proveBy(fml,implyR(1) & DifferentialTactics.dgDbxAuto(1))
+    pr shouldBe 'proved
+  }
+
+  "ODE" should "automatically find fractional darboux" in withMathematica { qeTool =>
+    //(x+z)' = ((x*A+B)/z^2)(x+z), where z^2 > 0
+    val fml = "x+z=0 -> [{x'=(A*x^2+B()*x)/z^2, z' = (A*x+B())/z & z^2 > 0}] x+z=0".asFormula
+    val pr = TactixLibrary.proveBy(fml,implyR(1) & DifferentialTactics.dgDbxAuto(1))
+    pr shouldBe 'proved
+  }
+
+  "ODE" should "fail with evolution domain constraints" in withMathematica { qeTool =>
+    //(x+z)' = (x*A+B)(x+z)
+    val fml = "x+z=0 -> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] x+z=0".asFormula
+    val pr = TactixLibrary.proveBy(fml,implyR(1) & DifferentialTactics.dgDbxAuto(1))
+    println(pr)
+  }
+
+  /** End temporary tests */
+
   "ODE" should "prove x=0 -> [{x'=-x}]x=0" in withMathematica { qeTool =>
     TactixLibrary.proveBy("x=0 -> [{x'=-x}]x=0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }

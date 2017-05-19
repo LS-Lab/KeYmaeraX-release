@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
-import java.util.concurrent.{Callable, FutureTask, Executors, ExecutorService}
+import java.util.concurrent._
+
 import scala.collection.mutable
 
 object ToolExecutor {
@@ -76,7 +77,13 @@ class ToolExecutor[T](poolSize: Int) {
     }
   }
 
-  def shutdown(): Unit = pool.shutdown()
+  def shutdown(): Unit = {
+    pool.shutdownNow()
+    if (!pool.awaitTermination(5, TimeUnit.SECONDS)) {
+      // timeout before all tasks terminated
+      println("Tasks did not terminate while shutting down")
+    }
+  }
 
   /** Creates the future that ultimately executes the task. */
   private def makeFuture(task: Unit => T): FutureTask[Either[T, Throwable]] =

@@ -239,7 +239,7 @@ object DbPlainExecStepProofTreeNode {
     * execution step. If None, the node refers to the steps source node. */
   def fromExecutionStep(db: DBAbstraction, proofId: String)(step: ExecutionStepPOJO, branch: Option[Int]): DbPlainExecStepProofTreeNode = branch match {
     case None => DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(step.previousStep, Some(step.branchOrder)), proofId,
-      () => {println("WARNING: ripple loading (node parent)"); db.getPlainExecutionStep(proofId.toInt, step.previousStep.get).get})
+      () => { if (BelleExpr.DEBUG) println("WARNING: ripple loading (node parent)"); db.getPlainExecutionStep(proofId.toInt, step.previousStep.get).get})
     case Some(b) => DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(step.stepId, Some(b)), proofId,
       () => step)
   }
@@ -278,22 +278,22 @@ case class DbPlainExecStepProofTreeNode(db: DBAbstraction,
   }
 
   private lazy val dbMaker = {
-    println(s"Node $id: querying maker")
+    if (BelleExpr.DEBUG) println(s"Node $id: querying maker")
     db.getExecutable(step.executableId).belleExpr
   }
 
   private lazy val dbParent = step.previousStep match {
     case None => Some(DbRootProofTreeNode(db)(DbStepPathNodeId(None, None), proofId))
     case Some(pId) =>
-      println(s"Node $id: querying parent")
+      if (BelleExpr.DEBUG) println(s"Node $id: querying parent")
       // this step knows on which branch it was executed
       val parentBranch = db.getPlainExecutionStep(proofId.toInt, stepId.get).map(_.branchOrder)
       Some(DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(Some(pId), parentBranch), proofId,
-        () => {println("WARNING: ripple loading (parent " + pId + ")"); db.getPlainExecutionStep(proofId.toInt, pId).get}))
+        () => { if (BelleExpr.DEBUG) println("WARNING: ripple loading (parent " + pId + ")"); db.getPlainExecutionStep(proofId.toInt, pId).get}))
   }
 
   private lazy val dbSubgoals = {
-    println(s"Node $id: querying subgoals")
+    if (BelleExpr.DEBUG) println(s"Node $id: querying subgoals")
     // subgoals are the steps that have this.stepId as previousStep and this.goalIdx as branchOrder
     val successors = db.getPlainStepSuccessors(proofId.toInt, stepId.get, goalIdx)
     assert(successors.size <= 1, "Expected unique successor step for node " + id + ", but got " + successors)
@@ -486,8 +486,6 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
 
   private lazy val dbRoot = locate(DbStepPathNodeId(None, None)).get
 
-  private lazy val dbTrace = db.getExecutionSteps(proofId.toInt)
-
   private lazy val dbOpenGoals = db.getPlainOpenSteps(proofId.toInt)
 
   private var loadedRoot: Option[ProofTreeNode] = None
@@ -495,103 +493,7 @@ case class DbProofTree(db: DBAbstraction, override val proofId: String) extends 
   private var loadedNodes: List[ProofTreeNode] = Nil
 }
 
-/** Represents (one state of) an entire proof. A node in the tree represents a user-executed step. The conclusion of
-  * a tree node fits its corresponding subgoal in the parent node. The conclusion of the root node is the proof
-  * conclusion.
-  * Created by bbohrer on 12/29/15.
-  */
-case class OldProofTree(proofId: String, nodes: List[TreeNode], root: TreeNode, theLeaves: List[AgendaItem]) {
-  def leaves: List[AgendaItem] = theLeaves.map(item => AgendaItem(item.id, item.name, item.proofId, item.goal))
-
-  def leavesAndRoot: List[TreeNode] = root :: leaves.map(item => item.goal)
-
-  def findNode(id: String): Option[TreeNode] = nodes.find(node => node.id == ???/*NodeId.fromString(id)*/)
-
-  def goalIndex(id: String): Int = { leaves.zipWithIndex.find({case (item, _) => item.id == id}).get._2 }
-
-  def allDescendants(id: String): List[TreeNode] = {
-    findNode(id).get.allDescendants
-  }
-
-  def agendaItemForNode(id: List[Int], items: List[AgendaItemPOJO]): Option[AgendaItemPOJO] = {
-    ProofTree.agendaItemForNode(nodes, id, items)
-  }
- }
-
-object ProofTree {
-  def agendaItemForNode(nodes: List[TreeNode], id: List[Int], items: List[AgendaItemPOJO]): Option[AgendaItemPOJO] = {
-    nodes.find(_.id == id) match {
-      case Some(node) =>
-        var currNode: Option[List[Int]] = Some(node.id)
-        while (currNode.isDefined) {
-          items.find(_.initialProofNode == currNode.get) match {
-            case Some(item) => return Some(item)
-            case None => currNode = nodes.find(_.id == currNode.get).get.parent.map(_.id)
-          }}
-        None
-      case None => None
-    }
-  }
-
-  /** Creates a proof tree of a trace of execution steps. If the trace is incomplete, i.e., starts in the middle of
-    * the actual proof, the created tree's root does not point to the actual parent in the overall tree. */
-  def ofTrace(proofId: String, trace: List[ExecutionStep], rootConclusion: () => Sequent): OldProofTree = {
-    val stepNodes = trace.foldLeft(Map[Int, TreeNode]())({ case (nodes, s) =>
-      val nodeId = s.prevStepId match {
-        case None => Nil
-        case Some(prevId) => prevId :: s.branch :: Nil
-      }
-      val parent = s.prevStepId.flatMap(nodes.get) //@note parent==None if overall proof root, or if first elem of `trace`
-      assert(parent.isEmpty || s.local.conclusion == parent.get.provable.subgoals(s.branch),
-        "Inconsistent tree: conclusion of subderivation " + s.local.conclusion + " undefined or does not fit its parent " + parent.get.provable.subgoals(s.branch))
-      nodes + (s.stepId -> treeNode(nodeId, s.local, parent, Some(s)))
-    })
-    val openGoals = stepNodes.filter({ case (_, node) =>
-      node.children.size < node.provable.subgoals.size && !node.provable.isProved })
-    val goalNodes =
-      if (trace.isEmpty) treeNode(Nil, ProvableSig.startProof(rootConclusion()), None, None, isFake=true)::Nil
-      else openGoals.flatMap({case (_, node) => node.provable.subgoals.zipWithIndex.
-        filterNot({case (_, i) => node.children.exists(_.id(1) == i)}).
-        map({case (sg, i) =>
-          treeNode(node.startStep.get.stepId::i::Nil, ProvableSig.startProof(sg), Some(node), None, isFake=true) })})
-
-    val finalNodes = stepNodes.values ++ goalNodes
-
-    assert(finalNodes.count(_.parent.isEmpty) == 1, "Inconsistent tree: unique root expected, but got " + finalNodes.filter(_.parent.isEmpty))
-
-    val items: List[AgendaItem] = goalNodes.map(goalToItem(finalNodes.toList, _, () => Nil, proofId)).toList
-    OldProofTree(proofId, finalNodes.toList, finalNodes.head, items)
-  }
-
-  def ofTrace(trace:ExecutionTrace, agendaItems: () => List[AgendaItemPOJO] = () => Nil, proofFinished:Boolean = false, includeUndos:Boolean = false): OldProofTree = {
-    ??? //ofTrace(trace.proofId, trace.steps, () => trace.conclusion)
-  }
-
-  private def treeNode(nodeId: List[Int], subgoal: ProvableSig, parent: Option[TreeNode], step:Option[ExecutionStep], isFake:Boolean = false): TreeNode = {
-    TreeNode(nodeId, subgoal, parent, step, isFake)
-  }
-
-  private def goalToItem(allNodes: List[TreeNode], goal: TreeNode, agendaItems: () => List[AgendaItemPOJO], proofId: String):AgendaItem = {
-    val item = agendaItemForNode(allNodes, goal.id, agendaItems())
-    val itemName = item.map(_.displayName).getOrElse("Unnamed Goal")
-    AgendaItem(???/*NodeId.toString(goal.id)*/, itemName, proofId, goal)
-  }
-}
-
-// @note isFake might be completely unnecessary.
-case class TreeNode (id: List[Int], provable: ProvableSig, parent: Option[TreeNode], startStep:Option[ExecutionStep], var isFake:Boolean = false) {
-  assert(id.isEmpty || id.size == 2, "ID either root (Nil) or points to producing step's subgoal (stepId::subgoalIdx::Nil)")
-  var endStep: Option[ExecutionStep] = None //@todo still required?
-  var children: List[TreeNode] = Nil
-  if (parent.nonEmpty)
-    parent.get.children = parent.get.children ::: List(this)
-
-  def allDescendants:List[TreeNode] = this :: children.flatMap(_.allDescendants)
-  def rule: String = startStep.map(_.rule).getOrElse("")
-}
-
-case class AgendaItem(id: String, name: String, proofId: String, goal: TreeNode) {
+case class AgendaItem(id: String, name: String, proofId: String) {
   // @todo full path
   def path: List[String] = id::Nil
 }
-

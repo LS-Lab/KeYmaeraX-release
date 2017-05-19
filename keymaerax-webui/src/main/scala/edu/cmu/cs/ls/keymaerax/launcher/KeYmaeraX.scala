@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.codegen.CGenerator
 import edu.cmu.cs.ls.keymaerax.btactics.IsabelleSyntax._
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable
@@ -481,7 +482,7 @@ object KeYmaeraX {
     val input = scala.io.Source.fromFile(inputFileName).mkString
     val archiveContent = KeYmaeraXArchiveParser.parse(input)
 
-    archiveContent.foreach({case (modelName, modelString, model: Formula, tactics) =>
+    archiveContent.foreach({case ParsedArchiveEntry(modelName, modelString, _, model: Formula, tactics) =>
       tactics.foreach({case (tacticName, tactic) =>
         val witnessFileName = (modelName + "_" + tacticName).replaceAll("\\s", "") + ".kyp"
         prove(model, tactic, witnessFileName, options, storeWitness=false)

@@ -89,11 +89,11 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
   }
 
   protected override def ppOp(expr: Expression): String = expr match {
-    case _: Term => htmlSpan("k4-term-op", super.ppOp(expr))
-    case _: CompositeFormula => htmlSpan("k4-propfml-op", super.ppOp(expr))
-    case _: ComparisonFormula => htmlSpan("k4-cmpfml-op", super.ppOp(expr))
-    case _: Formula => htmlSpan("k4-fml-op", super.ppOp(expr))
-    case _: Program => htmlSpan("k4-prg-op", super.ppOp(expr))
+    case _: Term => htmlSpan("k4-op k4-term-op", super.ppOp(expr))
+    case _: CompositeFormula => htmlSpan("k4-op k4-propfml-op", super.ppOp(expr))
+    case _: ComparisonFormula => htmlSpan("k4-op k4-cmpfml-op", super.ppOp(expr))
+    case _: Formula => htmlSpan("k4-op k4-fml-op", super.ppOp(expr))
+    case _: Program => htmlSpan("k4-op k4-prg-op", super.ppOp(expr))
     case _ => super.ppOp(expr)
   }
 

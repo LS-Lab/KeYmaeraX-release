@@ -123,9 +123,7 @@ object KeYmaeraXProblemParser {
     val annotationListener = parser.annotationListener
     parser.setAnnotationListener((prg, fml) => {
       // make annotations compatible with parse result: add () and expand function declarations
-      annotationListener(
-        d.exhaustiveSubst(elaborateToFunctions(prg, d)),
-        d.exhaustiveSubst(elaborateToFunctions(fml, d)))
+      annotationListener(d.exhaustiveSubst(prg), d.exhaustiveSubst(fml))
     })
 
     val problem : Formula = parser.parse(theProblem.tail :+ Token(EOF, UnknownLocation)) match {
@@ -138,21 +136,11 @@ object KeYmaeraXProblemParser {
       case Some(error) => throw ParseException("Semantic analysis error\n" + error, problem)
     }
 
-    val elaborated = d.exhaustiveSubst(elaborateToFunctions(problem, d))
+    val elaborated = d.exhaustiveSubst(problem)
 
     KeYmaeraXDeclarationsParser.typeAnalysis(d, elaborated) //throws ParseExceptions.
 
     (d, elaborated)
-  }
-
-  /** Elaborate ()-less functions, which get parsed as variables, to functions with domain Unit. */
-  private def elaborateToFunctions[T <: Expression](expr: T, d: Declaration): T = {
-    val elaboratables = StaticSemantics.freeVars(expr).toSet[Variable].filter({
-      case BaseVariable(name, i, _) => d.decls.contains((name, i)) && d.decls((name, i))._1 == Some(Unit)
-      case _ => false
-    })
-    elaboratables.foldLeft(expr)((e, v) =>
-      SubstitutionHelper.replaceFree(e)(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing)))
   }
 }
 
@@ -175,14 +163,14 @@ object KeYmaeraXDeclarationsParser {
       Function(name, idx, domain.getOrElse(Unit), codomain) }).toList
 
     /** Applies substitutions per `substs` exhaustively to expression-like `arg`. */
-    def exhaustiveSubst[T](arg: T): T = arg match {
+    def exhaustiveSubst[T <: Expression](arg: T): T = elaborateToFunctions(arg) match {
       case e: Expression =>
         def exhaustiveSubst(f: Expression): Expression = {
           val fs = USubst(substs)(f)
           if (fs != f) exhaustiveSubst(fs) else fs
         }
         exhaustiveSubst(e).asInstanceOf[T]
-      case _ => arg
+      case e => e
     }
 
     /** Joins two declarations. */
@@ -200,7 +188,17 @@ object KeYmaeraXDeclarationsParser {
         case Real => FuncOf(Function(name._1, name._2, sig, signature._2), arg)
         case Bool => PredOf(Function(name._1, name._2, sig, signature._2), arg)
       }
-      SubstitutionPair(what, signature._3.get)
+      SubstitutionPair(what, elaborateToFunctions(signature._3.get))
+    }
+
+    /** Elaborates variable uses of declared functions. */
+    private def elaborateToFunctions[T <: Expression](expr: T): T = {
+      val elaboratables = StaticSemantics.freeVars(expr).toSet[Variable].filter({
+        case BaseVariable(name, i, _) => decls.contains((name, i)) && decls((name, i))._1 == Some(Unit)
+        case _ => false
+      })
+      elaboratables.foldLeft(expr)((e, v) =>
+        SubstitutionHelper.replaceFree(e)(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing)))
     }
   }
 

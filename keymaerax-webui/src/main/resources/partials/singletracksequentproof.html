@@ -54,7 +54,7 @@
                 </span>
             </li>
         </ul>
-        <div class="col-md-12 k4-goalwithsiblings" id="seq_{{step}}">
+        <div class="col-md-12 k4-goalwithsiblings" id="seq_{{htmlNodeId(step)}}">
             <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
                         sequent="proofTree.nodesMap[step].sequent"
                         read-only="true" collapsed="true"></k4-sequent>
@@ -100,7 +100,7 @@
                 </span>
             </li>
         </ul>
-        <div class="col-md-12" id="seq_{{step}}">
+        <div class="col-md-12" id="seq_{{htmlNodeId(step)}}">
             <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
                         sequent="proofTree.nodesMap[step].sequent"
                         read-only="true" collapsed="true"></k4-sequent>
@@ -187,7 +187,7 @@
             <span class="k4-proofrule" ng-if="step === undefined"></span>
         </li>
     </ul>
-    <div class="col-md-12 k4-goalwithsiblings" id="seq_{{step.id}}" ng-if="step !== undefined">
+    <div class="col-md-12 k4-goalwithsiblings" id="seq_{{htmlNodeId(step.id)}}" ng-if="step !== undefined">
         <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
                     sequent="step.sequent"
                     read-only="true" collapsed="true"></k4-sequent>

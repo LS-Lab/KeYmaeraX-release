@@ -60,8 +60,4 @@ class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach
     proveBy(provable.subgoals.head, andR(SuccPos(0)))
     db.printStats()
   }
-
-  it should "print out some steps for me to check by hand" in {
-    println(ProofTree.ofTrace(db.getExecutionTrace(10)))
-  }
 }

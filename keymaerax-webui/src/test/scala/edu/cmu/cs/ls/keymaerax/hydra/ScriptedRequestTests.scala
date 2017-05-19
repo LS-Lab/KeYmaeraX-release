@@ -72,6 +72,24 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
+  it should "make a branching input step at a position" in withDatabase { db => withMathematica { _ =>
+    val modelContents = "ProgramVariables. R x. End. Problem. x>=2 -> [{x:=x+1;}*]x>=0 End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", implyR(1))
+    tacticRunner("(1,0)", loop("x>=1".asFormula)(1))
+    inside (new GetAgendaAwesomeRequest(db.db, db.user, proofId.toString).getResultingResponses(t).loneElement) {
+      case AgendaAwesomeResponse(_, root, l1::l2::l3::Nil, _, _) =>
+        root should have ('goal (Some("==> x>=2 -> [{x:=x+1;}*]x>=0".asSequent)))
+        l1 should have ('goal (Some("x>=2 ==> x>=1".asSequent)))
+        l2 should have ('goal (Some("x>=1 ==> x>=0".asSequent)))
+        l3 should have ('goal (Some("x>=1 ==> [x:=x+1;]x>=1".asSequent)))
+    }
+  }}
+
   "Step misapplication" should "give a useful error message on non-existing sequent top-level position" in withDatabase { db =>
     val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> [x:=x+1;]x>=0 End."
     val proofId = db.createProof(modelContents)
@@ -150,10 +168,41 @@ class ScriptedRequestTests extends TacticTestBase {
 
     tacticRunner("()", implyR(1))
     inside(new ProofTaskExpandRequest(db.db, db.user, proofId.toString, "()").getResultingResponses(t).loneElement) {
-      case ExpandTacticResponse(_, tactic, _, _, _) =>
-        tactic shouldBe "implyR"
+      case ExpandTacticResponse(_, parentTactic, stepsTactic, _, _) =>
+        parentTactic shouldBe "implyR"
+        stepsTactic shouldBe ""
     }
   }
+
+  it should "expand prop" in withDatabase { db =>
+    val modelContents = "ProgramVariables. R x. R y. End. Problem. x>=0&y>0 -> [x:=x+y;]x>=0 End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", prop)
+    inside(new ProofTaskExpandRequest(db.db, db.user, proofId.toString, "()").getResultingResponses(t).loneElement) {
+      case ExpandTacticResponse(_, parentTactic, stepsTactic, _, _) =>
+        parentTactic shouldBe "prop"
+        stepsTactic shouldBe "implyR(1) ; andL(-1)"
+    }
+  }
+
+  it should "expand master" in withMathematica { _ => withDatabase { db =>
+    val modelContents = "ProgramVariables. R x. R y. End. Problem. x>=0&y>0 -> [x:=x+y;]x>=0 End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", master())
+    inside(new ProofTaskExpandRequest(db.db, db.user, proofId.toString, "()").getResultingResponses(t).loneElement) {
+      case ExpandTacticResponse(_, parentTactic, stepsTactic, _, _) =>
+        parentTactic shouldBe "master"
+        stepsTactic shouldBe "implyR(1) ; andL(-1) ; step(1) ; QE"
+    }
+  }}
 
   "Applicable axioms" should "not choke on wrong positions" in withDatabase { db =>
     val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> [x:=x+1;]x>=0 End."
@@ -268,6 +317,7 @@ class ScriptedRequestTests extends TacticTestBase {
           (inner.name, inputs, Some(t.locator), None)
         case _ => (t.pt.name, Nil, Some(t.locator), None)
       }
+      case NamedTactic(name, _) => (name, Nil, None, None)
       //@todo extend on demand
     }
     val proofIdString = proofId.toString

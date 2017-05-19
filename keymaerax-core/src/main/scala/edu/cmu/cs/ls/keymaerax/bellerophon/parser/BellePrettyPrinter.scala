@@ -65,6 +65,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
           case t: AppliedBuiltinTwoPositionTactic => t.positionTactic.name + "(" + t.posOne.prettyString + ", " + t.posTwo.prettyString + ")"
           case NamedTactic(name, _) if name != "ANON" => name
           case dot: BelleDot => "_@" + dot.hashCode()
+          case DependentTactic(name) => name // must be last, otherwise applied dependent tactics lose their position
           case _ => throw PrinterException(s"Do not know how to pretty-print $e")
         }
     }

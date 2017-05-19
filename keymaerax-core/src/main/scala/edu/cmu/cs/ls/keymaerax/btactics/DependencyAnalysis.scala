@@ -13,14 +13,22 @@ import scala.language.postfixOps
 
 object DependencyAnalysis {
 
-  //Same as freeVars except it throws out differential symbols
-  def freeVars(t:Expression) : Set[BaseVariable] = {
-    StaticSemantics.freeVars(t).toSet.flatMap( (v:Variable) =>
+  def varSetToBaseVarSet (s:Set[Variable]) : Set[BaseVariable] = {
+    s.flatMap( (v:Variable) =>
       v match {
         case bv:BaseVariable => Some(bv)
         case _ => None
       }
     )
+  }
+
+  def odevars(p:ODESystem) : Set[BaseVariable] = {
+    varSetToBaseVarSet(StaticSemantics.boundVars(p).toSet)
+  }
+
+  //Same as freeVars except it throws out differential symbols
+  def freeVars(t:Expression) : Set[BaseVariable] = {
+    varSetToBaseVarSet(StaticSemantics.freeVars(t).toSet)
   }
 
   def freeVars(s:Sequent) : Set[BaseVariable] = {
@@ -81,48 +89,48 @@ object DependencyAnalysis {
     }
   }
 
-  //Returns an estimate of the maximum degree of a given variable
+  //Returns an estimate of the maximum degree w.r.t. a set of variables
   //This is accurate only when it reports degree either 0 or 1, which is what we need for linearity
-  def degVar(t:Term,v:BaseVariable) : Int = {
+  def degVar(t:Term,vs:Set[BaseVariable]) : Int = {
     t match {
       case n:Number => 0
-      case x:Variable =>
-        if(x.equals(v)) 1
+      case x:BaseVariable =>
+        if(vs.contains(x)) 1
         else 0
-      case Neg(t) => degVar(t,v)
-      case Times(l,r) => degVar(l,v) * degVar(r,v)
-      case Power(l,n:Number) if n.value.isValidInt => degVar(l,v) * n.value.toInt
+      case Neg(t) => degVar(t,vs)
+      case Times(l,r) => degVar(l,vs) + degVar(r,vs)
+      case Power(l,n:Number) if n.value.isValidInt => degVar(l,vs) * n.value.toInt
       case Divide(l,r) =>
-        val dr = degVar(r,v)
+        val dr = degVar(r,vs)
         if(dr != 0) -1 //Fails on stupid cases like 1 / (1/x)
-        else degVar(l,v) //Denominator doesn't contain v
+        else degVar(l,vs) //Denominator doesn't contain vs
       case Plus(l,r) =>
-        Math.max(degVar(l,v),degVar(r,v))
+        Math.max(degVar(l,vs),degVar(r,vs))
       case Minus(l,r) =>
-        Math.max(degVar(l,v),degVar(r,v))
+        Math.max(degVar(l,vs),degVar(r,vs))
       case FuncOf(_,Nothing) =>
         0
       case FuncOf(_,t) =>
-        if(degVar(t,v)!=0)
+        if(degVar(t,vs)!=0)
           -1
         else
           0
       case Pair(l,r) =>
-        Math.max(degVar(l,v),degVar(r,v))
+        Math.max(degVar(l,vs),degVar(r,vs))
       case _ => print(t)
-        ??? //Unimplemented: Pair, Differential, Power that is not a number
+        ??? //Unimplemented: Differential, Power that is not a number
     }
   }
 
-  // The ODE is linear if all the variables on the RHS occur with
+  // The ODE is linear if all the variables on the RHS occur linearly
   def isLinearODE(vs:Map[BaseVariable,Term]) : Boolean = {
-    val vars = vs.keySet
-    vars.forall(v =>
-      vs.values.forall( t =>
-      {
-        val dv = degVar(t,v)
-        dv == 0 || dv ==1
-      }))
+    //val vars = vs.keySet
+    //println(vars)
+    vs.values.forall( t =>
+    {
+      val dv = degVar(t,vs.keySet)
+      dv == 0 || dv ==1
+    })
   }
 
   def transitiveAnalysis(vs:Map[BaseVariable,(Set[BaseVariable],Set[Function])],s:Set[BaseVariable],f:Set[Function]) : (Set[BaseVariable],Set[Function]) = {
@@ -131,8 +139,9 @@ object DependencyAnalysis {
       case None => (Set[BaseVariable](),Set[Function]())
       case Some((vars,fs)) => (vars -- s,fs)
     } ).foldLeft(Set[BaseVariable](),Set[Function]())((s,t) => (s._1.union(t._1),s._2.union(t._2)))
-    if(newvars._1.isEmpty)
-      return (s,f.union(newvars._2))
+    if(newvars._1.isEmpty) {
+      return (s, f.union(newvars._2))
+    }
     else
       return transitiveAnalysis(vs,s.union(newvars._1),f.union(newvars._2))
   }
@@ -146,26 +155,28 @@ object DependencyAnalysis {
     //Converts the ODE to a list of AtomicODEs
     val odels = collapseODE(ode)
 
-    //Special case: variables not mentioned at all in the ODE
+    //Special case: the set of variables that we are concerned with is not mentioned at all in the ODE
     if (s.intersect(odels.keySet).isEmpty) {
-      return (s,Set())
+      return (s.union(fvdom),fvsig)
     }
 
-    //If the ODE is linear, apply the transitive analysis
-    if(isLinearODE(odels)){
-      //println("Linear ODE")
-      val ds = odels.mapValues( v => (freeVars(v),signature(v)) )
-      transitiveAnalysis(ds,s.union(fvdom),fvsig)
+    //Otherwise, transitively close over the set
+    val ds = odels.mapValues( v => (freeVars(v),signature(v)) )
+
+    //Compute the transitive closure T
+    val (vars,funcs) = transitiveAnalysis(ds,s.union(fvdom),fvsig)
+
+//    println("T analysis",vars,funcs)
+
+    //Check that the remainder of the ODE is linear
+    if (isLinearODE(odels -- vars)) {
+      (vars, funcs)
     }
+    //Otherwise, give up and return the whole ODE
     else {
-     //println("Non-linear ODE")
-     if(s.intersect(odels.keySet).isEmpty)
-       (s.union(fvdom),fvsig)
-     else {
        val odedom = odels.values.map(t => freeVars(t)).foldLeft(s.union(odels.keySet))((s, t) => s.union(t))
        val odesig = odels.values.map(t => signature(t)).foldLeft(Set[Function]())((s, t) => s.union(t))
        (odedom.union(fvdom), odesig.union(fvsig))
-     }
     }
   }
 
@@ -179,9 +190,15 @@ object DependencyAnalysis {
     analyseModalVars(p,vars,ignoreTest)
   }
 
+  //Finds the SCC on the ODE variables, and ignores any variables that do not occur in the ODE 'ed variables
+  def analyseODEVars(p:ODESystem, ignoreTest:Boolean = false)  : Map[BaseVariable,Set[BaseVariable]] = {
+    val vars = odevars(p)
+    vars.map(v => (v,analyseODE(p,Set(v),ignoreTest)._1.intersect(vars))).toMap
+  }
+
   // Naive DFS starting from a variable
   // Returns a set of newly visited variables and a visit order
-  def dfs_aux(v:BaseVariable, adjlist: Map[BaseVariable,Set[BaseVariable]], done:Set[BaseVariable]) : (List[BaseVariable],Set[BaseVariable]) = {
+  def dfs_aux[A](v:A, adjlist: Map[A,Set[A]], done:Set[A]) : (List[A],Set[A]) = {
     //println("DFS: ",v,done)
 
     //Already visited or visiting
@@ -189,7 +206,7 @@ object DependencyAnalysis {
       (List(),done)
 
     else if(adjlist.contains(v)){
-      val ls = adjlist(v).foldLeft((List[BaseVariable](),done+v))((l,vv) => {
+      val ls = adjlist(v).foldLeft((List[A](),done+v))((l,vv) => {
         //println(v,l,vv)
         val (ls, vis) = dfs_aux(vv, adjlist, l._2)
         (ls ++ l._1, vis)
@@ -202,9 +219,9 @@ object DependencyAnalysis {
     }
   }
 
-  def dfs(adjlist: Map[BaseVariable,Set[BaseVariable]]) : List[BaseVariable] = {
+  def dfs[A](adjlist: Map[A,Set[A]]) : List[A] = {
 
-    adjlist.keySet.foldLeft(List[BaseVariable](),Set[BaseVariable]())((l,v) => {
+    adjlist.keySet.foldLeft(List[A](),Set[A]())((l,v) => {
       if(l._2.contains(v)) l
       else {
         val (ls,vis) = dfs_aux(v,adjlist,l._2)
@@ -215,22 +232,22 @@ object DependencyAnalysis {
   }
 
   //Could be done faster, but the problems aren't that big
-  def transClose(adjlist: Map[BaseVariable,Set[BaseVariable]]) : Map[BaseVariable,Set[BaseVariable]] = {
+  def transClose[A](adjlist: Map[A,Set[A]]) : Map[A,Set[A]] = {
     adjlist.keySet.map( v => {
-      (v,dfs_aux(v,adjlist,Set[BaseVariable]())._2)
+      (v,dfs_aux(v,adjlist,Set[A]())._2)
     }).toMap
   }
 
-  def transpose(adjlist:Map[BaseVariable,Set[BaseVariable]]) : Map[BaseVariable,Set[BaseVariable]] = {
+  def transpose[A](adjlist:Map[A,Set[A]]) : Map[A,Set[A]] = {
     adjlist.values.flatten.map( k => (k,
       adjlist.keys.filter(v => adjlist(v).contains(k)).toSet)).toMap
   }
 
-  //Find the SCCs of a graph defined on the BaseVariables
-  def scc(adjlist: Map[BaseVariable,Set[BaseVariable]]) : List[Set[BaseVariable]] = {
+  //Find the SCCs of a graph defined on the As
+  def scc[A](adjlist: Map[A,Set[A]]) : List[Set[A]] = {
     val stack = dfs(adjlist)
-    val trans = transpose(adjlist)
-    stack.foldLeft((List[Set[BaseVariable]](),Set[BaseVariable]()))( (d,v) => {
+    val trans = transpose(adjlist).filterKeys( p => adjlist.keySet.contains(p))
+    stack.foldLeft((List[Set[A]](),Set[A]()))( (d,v) => {
 
       if(d._2.contains(v)){
         d
@@ -238,6 +255,32 @@ object DependencyAnalysis {
       else {
         val (ls, vis) = dfs_aux(v, trans, d._2)
         (ls.toSet::d._1,vis)
+      }
+    })._1
+  }
+
+  //Returns a visit order and the set of visited vertices
+  def breadthClosure[A] (cur:Set[A],adjlist:Map[A,Set[A]]) : (List[Set[A]],Set[A]) = {
+    val next = cur.flatMap(v => if (adjlist.contains(v)) adjlist(v) else List[A](v))
+    if(next.diff(cur).isEmpty)
+      (List(cur),cur)
+    else {
+      val (ls,vis) = breadthClosure(next,adjlist)
+      (cur::ls,vis++cur)
+    }
+  }
+  
+  //Find the SCCs, then return a breadth-wise closure from least to most dependent in each SCC
+  def bfsSCC[A](adjlist:Map[A,Set[A]]) : List[List[Set[A]]] = {
+    val sccs = scc(adjlist)
+    val trans = transpose(adjlist).filterKeys( p => adjlist.keySet.contains(p))
+    sccs.foldLeft(List[List[Set[A]]](),Set[A]()) ( (d,v) => {
+      if(v.diff(d._2).isEmpty){
+        d
+      }
+      else {
+        val (ls, vis) = breadthClosure(v,trans)
+        (ls::d._1,d._2.union(vis))
       }
     })._1
   }
@@ -264,7 +307,7 @@ object DependencyAnalysis {
     def compare(x:Variable,y:Variable): Int = {
       (x,y) match{
         case(x:BaseVariable,y:BaseVariable) => {
-          if(!edges.contains(x) || !edges.contains(y)) 0 //Not in the PO graph
+          if(!edges.contains(x) || !edges.contains(y)) return 0 //Not in the PO graph
           val b1 = edges(x).contains(y)
           val b2 = edges(y).contains(x)
           if(b1 == b2) 0 // Same eq class
