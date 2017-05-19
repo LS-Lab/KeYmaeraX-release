@@ -11,6 +11,33 @@ import edu.cmu.cs.ls.keymaerax.parser.OpSpec.op
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 
 object UIKeYmaeraXPrettyPrinter {
+  private val HTML_OPEN = "$#@@$"
+  private val HTML_CLOSE = "$@@#$"
+  private val HTML_END_SPAN = s"$HTML_OPEN/span$HTML_CLOSE"
+
+  //@todo custom OpSpec?
+  private val rewritings = List(
+    "&" -> "&#8743;",
+    "!=" -> "&ne;",
+    "!" -> "&not;",
+    "|" -> "&#8744;",
+    "<->" -> "&#8596;",
+    "->" -> "&rarr;",
+    "<=" -> "&leq;",
+    ">=" -> "&geq;",
+    "\\forall" -> "&forall;",
+    "\\exists" -> "&exist;",
+    "[" -> "&#91;",
+    "]" -> "&#93;",
+    "++" -> "&#8746;",
+    "<" -> "&lt;",
+    ">" -> "&gt;",
+    HTML_OPEN -> "<",
+    HTML_CLOSE -> ">"
+  )
+
+  //private val opPattern: Regex = "(&|!=|!|\\||<->|->|<=|>=|\\\\forall|\\\\exists|\\[|\\]|<|>|\\$#@@\\$|\\$@@#\\$)".r
+
   /** UIKeYmaeraXPrettyPrinter(topId) is a UI pretty printer for sequent-formula with identifier topId */
   def apply(topId: String, plainText: Boolean): Expression=>String = new UIKeYmaeraXPrettyPrinter(topId, plainText)
 }
@@ -20,9 +47,7 @@ object UIKeYmaeraXPrettyPrinter {
   * @author Andre Platzer
   */
 class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extends KeYmaeraXWeightedPrettyPrinter {
-  private val HTML_OPEN = "$#@@$"
-  private val HTML_CLOSE = "$@@#$"
-  private val HTML_END_SPAN = s"$HTML_OPEN/span$HTML_CLOSE"
+  import UIKeYmaeraXPrettyPrinter._
   private def htmlSpan(c: String, body: String): String = s"""${HTML_OPEN}span class="$c"$HTML_CLOSE$body$HTML_END_SPAN"""
 
   private var topExpr: Expression = _
@@ -31,27 +56,10 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
 
   override def apply(expr: Expression): String = {
     topExpr=expr
-    stringify(expr)
-    //@todo custom OpSpec?
-    .replaceAllLiterally("&", "&#8743;")
-    .replaceAllLiterally("!=", "&ne;")
-    .replaceAllLiterally("!", "&not;")
-    .replaceAllLiterally("|", "&#8744;")
-    .replaceAllLiterally("<->", "&#8596;")
-    .replaceAllLiterally("->", "&rarr;")
-    .replaceAllLiterally("<=", "&leq;")
-    .replaceAllLiterally(">=", "&geq;")
-    //.replaceAllLiterally("*", "&middot;") // program * vs. multiplication *
-    // ^y --> <sup>y</sup>
-    .replaceAllLiterally("\\forall", "&forall;")
-    .replaceAllLiterally("\\exists", "&exist;")
-    .replaceAllLiterally("[", "&#91;")
-    .replaceAllLiterally("]", "&#93;")
-    .replaceAllLiterally("++", "&#8746;")
-    .replaceAllLiterally("<", "&lt;")
-    .replaceAllLiterally(">", "&gt;")
-    .replaceAllLiterally(HTML_OPEN, "<")
-    .replaceAllLiterally(HTML_CLOSE, ">")
+    rewritings.foldLeft(stringify(expr))({ case (s, (key, repl)) => s.replaceAllLiterally(key, repl) })
+    //@note single pass with regex matching is slower than multi-pass literal replacement
+    //val mapper = (m: Match) => rewritings.get(m.group(1))
+    //opPattern.replaceSomeIn(stringify(expr), mapper)
   }
 
   protected override def emit(q: PosInExpr, s: String): String = {
