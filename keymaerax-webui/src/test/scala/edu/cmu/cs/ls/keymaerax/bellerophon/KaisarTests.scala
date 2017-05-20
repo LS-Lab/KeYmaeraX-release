@@ -12,111 +12,119 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
   * Created by bbohrer on 12/3/16.
   */
 class KaisarTests extends TacticTestBase {
-  val pq = "p() & q()".asFormula
-  val p = "p()".asFormula
+  val pq:Formula = "p() & q()".asFormula
+  val p:Formula = "p()".asFormula
 
   "Proof with no programs" should "prove" in {
-    val e:BelleExpr = /* "ImplyR(1) & AndL(1) & CloseId(1,1)" */
-      implyR(1) & andL(-1) & close(-1,1)
-    val proof: Proof = (Imply(pq,p), List(Show(Variable("x"), Imply(pq,p), (Nil, e))))
-    Kaisar.eval(proof)
+    withZ3 (qeTool => {
+      val pr: Provable = Provable.startProof(Imply(pq, p))
+      val up: UP = UP(List(Left("x".asExpr)), Auto())
+      val show: Show = Show(p, up)
+      val sp: SP = BRule(RBAssume(Variable("x"), pq), List(show))
+      Kaisar.eval(sp, History.empty, Context.empty, pr) shouldBe 'proved
+    })
   }
-
   "Proof with one program that modifies nothing" should "prove" in {
     withZ3 (qeTool => {
       val box = "[?p();]p()".asFormula
       val prog = "?p();".asProgram
-      val e: BelleExpr = debug("what") & chase(1) & implyR(1) & debug("what") & close
-      val proof: Proof = (box, List(Run(Variable("a"), prog), Show(Variable("x"), "p()".asFormula, (Nil, e))))
-      Kaisar.eval(proof)
-    })
-  }
-  "Proof with one program that modifies a relevant variable" should "prove" in {
-    withZ3 (qeTool => {
-      val box = "[x:=1;]x>0".asFormula
-      val prog = "x:=1;".asProgram
-      val e: BelleExpr = debug("what") & chase(1) & debug("what") & QE
-      val proof: Proof = (box, List(Run(Variable("a"), prog), Show(Variable("x"), "x>0".asFormula, (Nil, e))))
-      Kaisar.eval(proof)
-    })
-  }
+      val pr:Provable = Provable.startProof(box)
+      val sp = BRule(RBAssume(Variable("x"),"p()".asFormula), List(Show("p()".asFormula, UP(List(Left("x".asExpr)), Auto()))))
+      Kaisar.eval(sp, History.empty, Context.empty, pr) shouldBe 'proved
 
-  /* Multiple programs */
-  /* This test will pass once we start V()-ing in the appropriate programs after doing a step. */
-  "Proof with two programs that independently modify a relevant variable" should "prove" in {
-    withZ3 (qeTool => {
-      val box = "[x:=2;][x:= 1;]x>0".asFormula
-      val prog1 = "x:=2;".asProgram
-      val prog2 = "x:=1;".asProgram
-      val e: BelleExpr = debug("what1") & chase(1) & debug("what2") & QE
-      val proof: Proof = (box, List(Run(Variable("a"), prog1), Run(Variable("b"), prog2), Show(Variable("x"), "x>0".asFormula, (Nil, e))))
-      Kaisar.eval(proof)
     })
   }
+    "Proof with one program that modifies a relevant variable" should "prove" in {
+      withZ3 (qeTool => {
+        val box = "[x:=1;]x>0".asFormula
+        val prog = "x:=1;".asProgram
+        val sp =
+          BRule(RBAssign(Assign("x".asVariable, "1".asTerm)),
+          List(Show("1>0".asFormula, UP(List(), Auto()))))
+        Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      })
+    }
 
-  /* Use programs */
-  "Proof with using of program" should "prove" in {
-    withZ3 (qeTool => {
-      val box = "[x:=2;][x:= x - 1;]x>0".asFormula
-      val prog1 = "x:=2;".asProgram
-      val prog2 = "x:=x - 1;".asProgram
-      val e: BelleExpr = debug("what1") & chase(1) & debug("what2") & QE
-      val proof: Proof = (box, List(Run(Variable("a"), prog1), Run(Variable("b"), prog2), Show(Variable("x"), "x>0".asFormula, (List(ProgramVariable(Variable("a"))), e))))
-      Kaisar.eval(proof)
-    })
-  }
+      /* Multiple programs */
+      /* This test will pass once we start V()-ing in the appropriate programs after doing a step. */
+      "Proof with two programs that independently modify a relevant variable" should "prove" in {
+        withZ3 (qeTool => {
+          val box = "[x:=2;][x:= 1;]x>0".asFormula
+          val prog1 = "x:=2;".asProgram
+          val prog2 = "x:=1;".asProgram
+          val sp =
+            BRule(RBAssign(Assign("x".asVariable, "2".asTerm)),
+              List(
+            BRule(RBAssign(Assign("x".asVariable, "1".asTerm)),
+              List(Show("1>0".asFormula, UP(List(), Auto()))))))
+          Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+        })
+      }
 
-  /* Use facts */
-  "Proof with one fact" should "prove" in {
-    withZ3 (qeTool => {
-      val box = "[x:=2;][x:= x - 1;]x>0".asFormula
-      val prog1 = "x:=2;".asProgram
-      val prog2 = "x:=x - 1;".asProgram
-      val e1: BelleExpr = debug("what1") & chase(1) & debug("what2") & QE
-      val e2: BelleExpr = debug("what1") & chase(1) & debug("what2") & QE
-      val proof: Proof = (box, List(
-        Run(Variable("a"), prog1),
-        Show(Variable("x"),"x > 1".asFormula, (Nil, e1)),
-        Run(Variable("b"), prog2),
-        Show(Variable("y"), "x>0".asFormula, (List(FactVariable(Variable("x"))), e2))))
-      Kaisar.eval(proof)
-    })
-  }
+        /* Use programs */
+        "Proof with using of program" should "prove" in {
+          withZ3 (qeTool => {
+            val box = "[x:=2;][x:= x - 1;]x>0".asFormula
+            val prog1 = "x:=2;".asProgram
+            val prog2 = "x:=x - 1;".asProgram
+            val sp:SP =
+              BRule(RBAssign(Assign("x".asVariable, "2".asTerm)),
+                List(
+              BRule(RBAssign(Assign("x".asVariable, "2 - 1".asTerm)),
+                List(Show("2 - 1>0".asFormula, UP(List(), Auto()))))))
+            //val e: BelleExpr = debug("what1") & chase(1) & debug("what2") & QE
+            //val proof: Proof = (box, List(Run(Variable("a"), prog1), Run(Variable("b"), prog2), Show(Variable("x"), "x>0".asFormula, (List(ProgramVariable(Variable("a"))), e))))
+            Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+          })
+        }
+          /* Use facts */
+          "Proof with one fact" should "prove" in {
+            withZ3 (qeTool => {
+              val box = "[x:=2;][x:= x - 1;]x>0".asFormula
+              val prog1 = "x:=2;".asProgram
+              val prog2 = "x:=x - 1;".asProgram
+              // TODO: Add timestep(e) notation and manage different renaming for assign vs. ODE
+              val sp:SP =
+                BRule(RBAssign(Assign("x".asVariable, "2".asTerm)),
+                  List(Have("xBig".asVariable, "2 > 1".asFormula, Show("2 > 1".asFormula, UP(List(Left("p(x)".asExpr)), Kaisar.RCF())),
+                BRule(RBAssign(Assign("x".asVariable, "2 - 1".asTerm)),
+                  List(Show("2 - 1>0".asFormula, UP(List(), Auto())))))))
+              Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+            })
+          }
 
-  /* Use facts */
-  "Proof with two facts" should "prove" in {
-    withZ3 (qeTool => {
-      val box = "[x:=2;][x:= x - 1;]x>0".asFormula
-      val prog1 = "x:=2;".asProgram
-      val prog2 = "x:=x - 1;".asProgram
-      val e1: BelleExpr = debug("what1") & chase(1) & debug("what2") & QE
-      val e2: BelleExpr = debug("what1") & chase(1) & debug("what2") & QE
-      val proof: Proof = (box, List(
-        Run(Variable("a"), prog1),
-        Show(Variable("x"),"x > 1".asFormula, (Nil, e1)),
-        Show(Variable("y"),"x != 0".asFormula, (Nil, e1)),
-        Run(Variable("b"), prog2),
-        Show(Variable("z"), "x>0".asFormula, (List(FactVariable(Variable("x")), FactVariable(Variable("y"))), e2))))
-      Kaisar.eval(proof)
-    })
-  }
-
-  "Proof with two facts further in future" should "prove" in {
-    withZ3 (qeTool => {
-      val box = "[x := 3;][x:=2;][x:= x - 1;]x>0".asFormula
-      val prog1 = "x:=3;".asProgram
-      val prog2 = "x:=2;".asProgram
-      val prog3 = "x:=x - 1;".asProgram
-      val e1: BelleExpr = debug("what1") & chase(1) & debug("what2") & QE
-      val e2: BelleExpr = debug("what1") & chase(1) & debug("what2") & QE
-      val proof: Proof = (box, List(
-        Run(Variable("a"), prog1),
-        Run(Variable("b"), prog2),
-        Show(Variable("x"),"x > 1".asFormula, (Nil, e1)),
-        Show(Variable("y"),"x != 0".asFormula, (Nil, e1)),
-        Run(Variable("c"), prog3),
-        Show(Variable("z"), "x>0".asFormula, (List(FactVariable(Variable("x")), FactVariable(Variable("y"))), e2))))
-      Kaisar.eval(proof)
-    })
-  }
+          /* Use facts */
+          "Proof with two facts" should "prove" in {
+            withZ3 (qeTool => {
+              val box = "[x:=2;][x:= x - 1;]x>0".asFormula
+              val prog1 = "x:=2;".asProgram
+              val prog2 = "x:=x - 1;".asProgram
+              val sp:SP =
+                BRule(RBAssign(Assign("x".asVariable, "2".asTerm)),
+                  // TODO: Uniqueness checking for pattern matching should break this
+                  List(Have("xBig".asVariable, "2 > 1".asFormula, Show("2 > 1".asFormula, UP(List(Left("p(x)".asExpr)), Kaisar.RCF())),
+                    Have("xNonZero".asVariable, "2 != 0".asFormula, Show("2 != 0".asFormula, UP(List(Left("p(x)".asExpr)), Kaisar.RCF())),
+                    BRule(RBAssign(Assign("x".asVariable, "2 - 1".asTerm)),
+                      List(Show("2 - 1>0".asFormula, UP(List(), Auto()))))))))
+              Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+            })
+          }
+          "Proof with two facts further in future" should "prove" in {
+              withZ3 (qeTool => {
+                val box = "[x := 3;][x:=2;][x:= x - 1;]x>0".asFormula
+                val prog1 = "x:=3;".asProgram
+                val prog2 = "x:=2;".asProgram
+                val prog3 = "x:=x - 1;".asProgram
+                val sp:SP =
+                  BRule(RBAssign(Assign("x".asVariable, "3".asTerm)),
+                    // TODO: Uniqueness checking for pattern matching should break this
+                    List(
+                  BRule(RBAssign(Assign("x".asVariable, "2".asTerm)),
+                    List(Have("xBig".asVariable, "2 > 1".asFormula, Show("2 > 1".asFormula, UP(List(Left("p(x)".asExpr)), Kaisar.RCF())),
+                      Have("xNonZero".asVariable, "2 != 0".asFormula, Show("2 != 0".asFormula, UP(List(Left("p(x)".asExpr)), Kaisar.RCF())),
+                        BRule(RBAssign(Assign("x".asVariable, "2 - 1".asTerm)),
+                          List(Show("2 - 1>0".asFormula, UP(List(), Auto()))))))))))
+                Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+              })
+            }
 }

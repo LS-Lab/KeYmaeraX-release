@@ -62,7 +62,7 @@ object Kaisar {
   case class RCF() extends Method
   case class CloseId() extends Method
 
-  class UP(use:List[Either[Expression,FP]], method:Method)
+  case class UP(use:List[Either[Expression,FP]], method:Method)
 
   abstract class IP
   case class Inv(fml:Formula, pre:SP, inv:SP, tail:IP) extends IP
@@ -88,10 +88,10 @@ object Kaisar {
     def advance(t:TimeName):History = {History(t::steps,map)}
     def now:TimeName = steps.head
     def update(x:VBase, e:Term):History = {
-      History(steps, map.+((x,(now,Left(e))::map(x))))
+      History(steps, map.+((x,(now,Left(e))::map.getOrElse(x, Nil))))
     }
     def update(x:VBase):History = {
-      History(steps, map.+((x,(now,Right())::map(x))))
+      History(steps, map.+((x,(now,Right())::map.getOrElse(x, Nil))))
     }
   }
   object History {
@@ -105,12 +105,12 @@ object Kaisar {
     }
     def inter(other: Context): Context = Context(gmap.filter({case (k,v) => other.gmap(k) == v}), defmap.filter({case (k,v) => other.defmap(k) == v}))
     def usubst:USubst = {
-      defmap.toList.toIndexedSeq.map({
+      USubst(defmap.toList.toIndexedSeq.map({
         case(name, e: DifferentialProgram) => SubstitutionPair(DifferentialProgramConst(name), e)
         case(name, e: Program) => SubstitutionPair(ProgramConst(name), e)
         case(name, e: Term) => SubstitutionPair(FuncOf(Function(name, domain = Unit, sort = Real), Nothing), e)
         case(name, e: Formula) => SubstitutionPair(PredOf(Function(name, domain = Unit, sort = Bool), Nothing), e)
-      })
+      }))
     }
 
   }
@@ -128,20 +128,21 @@ object Kaisar {
         case Simp() => SimplifierV3.fullSimpTac()
         case Auto() => TactixLibrary.master()
         case RCF() => TactixLibrary.QE()
-        case CloseId() => TactixLibrary.closeId()
+        case CloseId() => TactixLibrary.closeId
       }
     interpret(e, pr)
   }
 
   def eval(up:UP, h:History, c:Context, g:Provable):Provable = {
-    val (use:List[Either[Expression,FP]], method) = up
+    val use = up.use
+    val method =  up.method
     val pats = use.filter({case Left(_) => true case _ => false}).map({case Left(x) => x})
-    val fps = use.filter({case Left(_) => true case _ => false}).map({case Left(x) => x})
+    val fps = use.filter({case Right(_) => true case _ => false}).map({case Right(x) => x})
     val seq = g.subgoals.head
     val ante = seq.ante
-    val fprvs = fps.foldLeft[(List[Provable], immutable.IndexedSeq[Formula])]((Nil, ante))({case ((prvs, ante2), fp:FP) =>
+    val fprvs = fps.foldLeft[(List[Provable], immutable.IndexedSeq[Formula])]((Nil, ante))({case ((prvs:List[Provable], ante2:immutable.IndexedSeq[Formula]), fp:FP) =>
         val prv:Provable = eval(fp, h, c, ante2)
-        (prv::prvs, ante2 :+ prv.conclusion.ante.head)
+        (prv::prvs, ante2 ++ immutable.IndexedSeq(prv.conclusion.ante.head))
       })._1
     val withFacts:Provable = fprvs.foldLeft[Provable](g)({case (pr:Provable, next:Provable) => pr(Cut(next.conclusion.succ.head),0)(next,1)})
     val inds:immutable.IndexedSeq[Int] = withFacts.subgoals.head.ante.zipWithIndex.filter({case (f,i) => pats.exists({case pat => doesMatch(pat, f)})}).map({case (f,i) => i}).reverse
@@ -275,7 +276,7 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
       val bigImp:Formula = invSeq.foldRight[Formula](Imply(fml,Box(a,post)))({case (acc,p) => Imply(p,acc)})
       val impRs: BelleExpr = List.tabulate(invSeq.length)({case _ => implyR(1)}).foldLeft(nil)({case (e1,e2) => e1 & e2})
       val e:BelleExpr =
-        cut(Box(Loop(a),fml)) <(nil, hideR(0) & cut(bigImp) <(nil, hideR(0) & impRs & useAt(NoProofTermProvable(prInv)))
+        cut(Box(Loop(a),fml)) <(nil, hideR(0) & cut(bigImp) <(nil, hideR(0) & impRs & useAt(NoProofTermProvable(prInv))))
       val pr:Provable = interpret(e, g)
       eval(tail, h, c, polyK(pr, invSeq.map{case fml => interpret(TactixLibrary.close, Provable.startProof(Sequent(invSeq,immutable.IndexedSeq(fml))))}.toList), nInvs+1)
     }
@@ -295,7 +296,7 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
       val impRs: BelleExpr = List.tabulate(invSeq.length)({case _ => implyR(1)}).foldLeft(nil)({case (e1,e2) => e1 & e2})
       val e:BelleExpr = cut(bigImp) <(nil, hideR(0) & impRs & useAt(NoProofTermProvable(prEnd)))
       val pr:Provable = interpret(e, g)
-      polyK(pr, invSeq.map{case fml => interpret(TactixLibrary.close, Provable.startProof(Sequent(invSeq,immutable.IndexedSeq(fml))))}.toList))
+      polyK(pr, invSeq.map{case fml => interpret(TactixLibrary.close, Provable.startProof(Sequent(invSeq,immutable.IndexedSeq(fml))))}.toList)
     }
     case (Finally(tail: SP), Box(ODESystem(ode,constraint),post)) =>
       //TODO: Context management
@@ -391,7 +392,7 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
       val prOut = eval(sp, h, c, prIn)
       val size = prOut.conclusion.ante.size
       val newPos = AntePos(size)
-      eval(tail,h,c.add(x,newPos), g(Cut(fml),0)(prOut,1))
+      eval(tail,h,c.add(x,newPos), g(Cut(fml),0)(HideRight(SuccPos(0)),1)(prOut,1))
     case BRule (r:RuleSpec, tails: List[SP]) => eval(r,tails,h,c,g)
     case State (st:TimeName, tail: SP) => eval(tail,h.advance(st),c,g)
     case Run (a:VBase, hp:Program, tail:SP) => ???
@@ -424,16 +425,17 @@ def collectNegVarPat(t:Term):Option[List[BaseVariable]] = {
   }
 }
 
-case class PatternMatchError(msg:String) extends Exception
+case class PatternMatchError(msg:String) extends Exception { override def toString:String = "Pattern Match Error: " + msg}
 
 /* TODO: I think these need to be filled in with gammas first */
 def pmatch(pat:Expression, e:Expression):Context = {
-  val exn:PatternMatchError = new PatternMatchError("Structure of expression doesnt match pat")
-  def atom(e1:Expression, e2:Expression) = {
-    if(e1 == e2) { Context.empty } else { throw exn }
+  def patExn(pat:Expression, e:Expression, additional:String = "N/A"):PatternMatchError = { PatternMatchError("Expected expression " + e + " to match pattern " + pat + " Additional message?: " + additional)}
+  val exn:PatternMatchError = patExn(pat, e)
+  def atom(e1:Expression, e2:Expression, additional:String = "N/A") = {
+    if(e1 == e2) { Context.empty } else { throw new PatternMatchError("Expected atomic expression " + e2 + " to match atomic pattern " + e1 + " Additional message?: " + additional) }
   }
   pat match {
-    case PredOf(Function("p", _, _, _, _), args) =>
+    case PredOf(Function("p", _, _, _, _), args) if collectVarPat(args).isDefined || collectNegVarPat(args).isDefined =>
       (collectVarPat(args), collectNegVarPat(args)) match {
         case (Some(pos), _) =>
           val posvs:SetLattice[Variable] = SetLattice(pos.toSet.asInstanceOf[Set[Variable]])
@@ -441,7 +443,7 @@ def pmatch(pat:Expression, e:Expression):Context = {
           if (posvs.subsetOf(fvs)) {
             Context.empty
           } else {
-            throw new PatternMatchError("Bad variable occurrence")
+            throw patExn(pat, e, "Bad variable occurrence")
           }
         case (_, Some(neg)) =>
           val negvs:SetLattice[Variable] = SetLattice(neg.toSet.asInstanceOf[Set[Variable]])
@@ -449,9 +451,9 @@ def pmatch(pat:Expression, e:Expression):Context = {
           if (negvs.intersect(fvs).isEmpty) {
             Context.empty
           } else {
-            throw new PatternMatchError("Bad variable occurrence")
+            throw patExn(pat, e, "Bad negative variable occurrence")
           }
-        case _ => throw new PatternMatchError("Invalid variable occurrence pattern syntax")
+        case _ => throw patExn(pat, e, "Invalid variable occurrence pattern syntax")
       }
     case PredOf(Function("union", _, _, _, _), Pair(pat1, pat2)) =>
       try { pmatch(pat1,e) }
@@ -459,7 +461,7 @@ def pmatch(pat:Expression, e:Expression):Context = {
     case PredOf(Function("inter", _, _, _, _), Pair(pat1, pat2)) =>
       pmatch(pat1,e).inter(pmatch(pat2,e))
     case PredOf(Function("neg", _, _, _, _) , pat1) =>
-      try { pmatch(pat1,e); throw PatternMatchError("Pattern should not have matched but did: " + pat1.prettyString)}
+      try { pmatch(pat1,e); throw patExn(pat1, e, "Pattern should not have matched but did: " + pat1.prettyString)}
       catch {case _ : Throwable => Context.empty }
     case FuncOf(Function("f", _, _, _, _), args) =>
       (collectVarPat(args), collectNegVarPat(args)) match {
@@ -469,7 +471,7 @@ def pmatch(pat:Expression, e:Expression):Context = {
           if (posvs.subsetOf(fvs)) {
             Context.empty
           } else {
-            throw new PatternMatchError("Bad variable occurrence")
+            throw patExn(pat, e, "Bad variable occurrence")
           }
         case (_, Some(neg)) =>
           val negvs:SetLattice[Variable] = SetLattice(neg.toSet.asInstanceOf[Set[Variable]])
@@ -477,9 +479,9 @@ def pmatch(pat:Expression, e:Expression):Context = {
           if (negvs.intersect(fvs).isEmpty) {
             Context.empty
           } else {
-            throw new PatternMatchError("Bad variable occurrence")
+            throw patExn(pat, e, "Bad negative variable occurrence")
           }
-        case _ => throw new PatternMatchError("Invalid variable occurrence pattern syntax")
+        case _ => throw patExn(pat, e, "Invalid variable occurrence pattern syntax")
       }
     case FuncOf(Function("union", _, _, _, _), Pair(pat1, pat2)) =>
       try { pmatch(pat1,e) }
