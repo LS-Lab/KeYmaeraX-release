@@ -120,7 +120,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
       if ($scope.proofId === taskResult.proofId) {
         if ($scope.runningTask.nodeId === taskResult.parent.id) {
           $rootScope.$broadcast('proof.message', { textStatus: "", errorThrown: "" });
-          sequentProofData.updateAgendaAndTree(taskResult.proofId, taskResult);
+          sequentProofData.updateAgendaAndTree($scope.userId, taskResult.proofId, taskResult);
           sequentProofData.tactic.fetch($scope.userId, taskResult.proofId);
         } else {
           showMessage($uibModal, "Unexpected tactic result, parent mismatch: expected " +

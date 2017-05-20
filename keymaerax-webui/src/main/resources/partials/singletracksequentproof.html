@@ -3,7 +3,7 @@
     <div class="col-md-12">
         <!-- need duplication because 'step.subgoals.length > 0' is non-assignable -->
         <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
-                    sequent="proofTree.nodesMap[deductionPath.sections[0].path[0]].sequent"
+                    sequent="proofTree.nodesMap[deductionPath.sections[0].path[0]].getSequent()"
                     read-only="readOnly" collapsed="false"
                     on-apply-tactic="onApplyTactic(formulaId, tacticId)"
                     on-apply-input-tactic="onApplyInputTactic(formulaId, tacticId, input)"
@@ -56,7 +56,7 @@
         </ul>
         <div class="col-md-12 k4-goalwithsiblings" id="seq_{{htmlNodeId(step)}}">
             <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
-                        sequent="proofTree.nodesMap[step].sequent"
+                        sequent="proofTree.nodesMap[step].getSequent()"
                         read-only="true" collapsed="true"></k4-sequent>
             <div ng-include="'siblinglinks.html'" replace-include></div>
         </div>
@@ -102,7 +102,7 @@
         </ul>
         <div class="col-md-12" id="seq_{{htmlNodeId(step)}}">
             <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
-                        sequent="proofTree.nodesMap[step].sequent"
+                        sequent="proofTree.nodesMap[step].getSequent()"
                         read-only="true" collapsed="true"></k4-sequent>
         </div>
     </div>
@@ -222,14 +222,14 @@
 <script type="text/ng-template" id="siblingSequentTooltip.html">
     <div>
     <span class="k4-nobreak">
-        <span ng-repeat="f in proofTree.nodesMap[sibling].sequent.ante | limitTo:1">
+        <span ng-repeat="f in proofTree.nodesMap[sibling].getSequent().ante | limitTo:1">
             <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
                         formula="f.formula" highlight="false" collapsed="true" on-tactic=""></k4-formula>
-            <span ng-if="proofTree.nodesMap[sibling].sequent.ante.length > 1">...</span>
+            <span ng-if="proofTree.nodesMap[sibling].getSequent().ante.length > 1">...</span>
         </span>
         <span>&#8866;</span>
-        <span ng-repeat="f in proofTree.nodesMap[sibling].sequent.succ | limitTo:-1">
-            <span ng-if="proofTree.nodesMap[sibling].sequent.succ.length > 1">... </span>
+        <span ng-repeat="f in proofTree.nodesMap[sibling].getSequent().succ | limitTo:-1">
+            <span ng-if="proofTree.nodesMap[sibling].getSequent().succ.length > 1">... </span>
             <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
                         formula="f.formula" highlight="false" collapsed="true" on-tactic=""></k4-formula>
         </span>
