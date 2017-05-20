@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -84,18 +85,86 @@ object Kaisar {
   case class Run (a:VBase, hp:Program, tail:SP) extends SP
 
 
-  case class History (steps:List[TimeName], map:Map[VBase,List[(TimeName,Either[Term,Unit])]]){
-    def advance(t:TimeName):History = {History(t::steps,map)}
-    def now:TimeName = steps.head
-    def update(x:VBase, e:Term):History = {
-      History(steps, map.+((x,(now,Left(e))::map.getOrElse(x, Nil))))
+  abstract class HistChange
+  case class HCAssign(hp:Assign) extends HistChange {
+    def rename(from: Variable, to:Variable):HCAssign = {
+      val (name, e) = (hp.x, hp.e)
+      HCAssign(Assign(if(name == from) to else name, URename(from,to)(e)))
     }
+  }
+  case class HCRename(baseName:BaseVariable, permName:BaseVariable) extends HistChange {assert (baseName.name == permName.name && baseName.index.isEmpty)}
+  case class HCTimeStep(ts:TimeName) extends HistChange
+
+  // map:Map[VBase,List[(TimeName,Either[Term,Unit])]]
+  // todo: need to rename "current x" for clarities
+  case class History (steps:List[HistChange]){
+    def hasTimeStep(ts:TimeName):Boolean = { steps.exists({case hcts: HCTimeStep => hcts.ts == ts case _ => false})}
+    def advance(t:TimeName):History = {History(HCTimeStep(t)::steps)}
+    def now:TimeName = steps.collectFirst({case HCTimeStep(ts) => ts}).get
+    def update(x:VBase, e:Term):History = {
+      History(HCAssign(Assign(Variable(x), e))::steps)
+    }
+    private def partBefore[A](xs:List[A], f:(A => Boolean)):(List[A],List[A]) = {
+      xs match {
+        case Nil => (Nil, Nil)
+        case (x::xs) =>
+          if(f(x)) {
+            (Nil, x::xs)
+          } else {
+            partBefore(xs,f) match {
+              case (xs,ys) => (x::xs, ys)
+            }
+          }
+      }
+    }
+
+    private def partAfter[A](xs:List[A], f:(A => Boolean)):(List[A],List[A]) = {
+      partBefore(xs, f) match {
+        case (xs, y::ys) => (xs ++ List(y), ys)
+        case _ => ???
+      }
+    }
+
     def update(x:VBase):History = {
-      History(steps, map.+((x,(now,Right())::map.getOrElse(x, Nil))))
+      // TODO: Optimize by keeping count of renames per variable
+      val from = Variable(x)
+      val isRename:(HistChange => Boolean)={case HCRename(bn, _) => bn.name==x}
+      val to = Variable(x, Some(steps.count(isRename)))
+      val (recent, old) = partBefore(steps, isRename)
+      val hist = recent.map{case ch : HCAssign => ch.rename(from, to) case x => x} ++ old
+      History(HCRename(from, to)::hist)
+    }
+
+    def replay(changes:List[HCAssign], e:Term):Term = {
+      import Augmentors._
+      // e.replaceAll(hc.hp.x,hc.hp.e)
+      //
+     changes.foldRight(e)({case (hc,e:Term) => USubst(List(SubstitutionPair(hc.hp.x, hc.hp.e)))(e)})
+    }
+
+    def resolve(x:VBase, at:TimeName):Term = {
+      val isThisTime:(HistChange => Boolean)={case HCTimeStep(ts) => ts == at case _ => false}
+      val isThisRename:(HistChange => Boolean)={case HCRename(from,to) => from.name == x}
+      val isThisAssign:(HistChange => Boolean)={case HCAssign(Assign(xx,_)) => xx.name == x case _ => false}
+      val (_, relevant) = partAfter(steps, isThisTime)
+      val (changes, postChange) = partBefore(relevant,isThisRename)
+      val fullName = postChange match {case Nil => Variable(x) case ((y:HCRename)::ys) => y.permName case _ => ???}
+      val xChanges = changes.filter(isThisAssign)
+      replay(xChanges.asInstanceOf[List[HCAssign]], fullName)
+    }
+
+    def eval(e:Term, at:TimeName = now):Term = {
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+          e match {
+            case v: Variable => Right(resolve(v.name, at))
+            case _ => Left(None)
+          }
+      }, e).get
     }
   }
   object History {
-    var empty = new History(List("init"), Map())
+    var empty = new History(List(HCTimeStep("init")))
   }
 
   case class Context (gmap:Map[Variable,Position], defmap:Map[VBase, Expression]){
@@ -110,6 +179,7 @@ object Kaisar {
         case(name, e: Program) => SubstitutionPair(ProgramConst(name), e)
         case(name, e: Term) => SubstitutionPair(FuncOf(Function(name, domain = Unit, sort = Real), Nothing), e)
         case(name, e: Formula) => SubstitutionPair(PredOf(Function(name, domain = Unit, sort = Bool), Nothing), e)
+        case _ => ???
       }))
     }
 
@@ -136,8 +206,8 @@ object Kaisar {
   def eval(up:UP, h:History, c:Context, g:Provable):Provable = {
     val use = up.use
     val method =  up.method
-    val pats = use.filter({case Left(_) => true case _ => false}).map({case Left(x) => x})
-    val fps = use.filter({case Right(_) => true case _ => false}).map({case Right(x) => x})
+    val pats = use.filter({case Left(_) => true case _ => false}).map({case Left(x) => x case _ => ???})
+    val fps = use.filter({case Right(_) => true case _ => false}).map({case Right(x) => x case _ => ???})
     val seq = g.subgoals.head
     val ante = seq.ante
     val fprvs = fps.foldLeft[(List[Provable], immutable.IndexedSeq[Formula])]((Nil, ante))({case ((prvs:List[Provable], ante2:immutable.IndexedSeq[Formula]), fp:FP) =>
@@ -171,6 +241,21 @@ object Kaisar {
     // todo: add all inst
   )
 
+  private def doTravel(h:History):ExpressionTraversalFunction = {
+    new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+        e match {
+          case v: Variable => Right(h.eval(v))
+          case FuncOf(Function(fname,_,_,_,_), arg) =>
+            if(h.hasTimeStep(fname)) {
+              Right(h.eval(arg, fname))
+            } else {
+              Left(None)
+            }
+          case _ => Left(None)
+        }
+    }
+  }
   // TODO: Support time-travel
   def expand(e:Term, c:Context):Term = {c.usubst(e)}
   def expand(e:Formula, c:Context):Formula = {c.usubst(e)}
