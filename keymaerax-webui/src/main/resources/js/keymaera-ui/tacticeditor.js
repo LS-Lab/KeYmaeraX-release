@@ -87,20 +87,23 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
             }
           };
 
+          var tacticDiffRequestTimer = undefined;
+
           scope.$watch('tactic.tacticText', function(newValue, oldValue) {
             var newText = jQuery('<p>'+newValue+'</p>').text(); // strip HTML tags
             var oldText = jQuery('<p>'+oldValue+'</p>').text();
             if (oldText !== newText && scope.tactic.lastExecutedTacticText !== undefined && scope.tactic.tacticText !== undefined) {
               //@note compute diff
               var diffInput = { 'old' : scope.tactic.lastExecutedTacticText, 'new' : newText };
-              $http.post('proofs/user/' + scope.userId + '/' + scope.proofId + '/tacticDiff', diffInput)
-                .then(function(response) {
-                  scope.tacticError.isVisible = false;
+              if (tacticDiffRequestTimer) clearTimeout(tacticDiffRequestTimer);
+              tacticDiffRequestTimer = setTimeout(function() {
+                $http.post('proofs/user/' + scope.userId + '/' + scope.proofId + '/tacticDiff', diffInput)
+                  .then(function(response) {
+                    scope.tacticError.isVisible = false;
 
-                  //@todo multiple diffs
-                  scope.tactic.tacticDel = response.data.replOld.length > 0 ? response.data.replOld[0].repl : "";
-                  scope.tactic.tacticDiff = response.data.replNew.length > 0 ? response.data.replNew[0].repl : "";
-
+                    //@todo multiple diffs
+                    scope.tactic.tacticDel = response.data.replOld.length > 0 ? response.data.replOld[0].repl : "";
+                    scope.tactic.tacticDiff = response.data.replNew.length > 0 ? response.data.replNew[0].repl : "";
 //                  var formattedTactic = response.data.context;
 //                  $.each(response.data.replNew, function(i, e) {
 //                    var old = $.grep(response.data.replOld, function(oe, i) { return oe.dot == e.dot; });
@@ -109,21 +112,21 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
 //                      formattedTactic.replace(e.dot, '<span class="k4-tacticeditor-new">' + e.repl + '</span>');
 //                  });
 //                  scope.tactic.tacticText = formattedTactic;
-                })
-                .catch(function(response) {
-                  if (response.data !== undefined) {
-                    var errorText = response.data.textStatus;
-                    var location = response.data.location; // { column: Int, line: Int }
-                    scope.tacticError.text = location.line + ':' + location.column + " " + errorText;
-                    scope.tacticError.isVisible = true;
-
+                  })
+                  .catch(function(response) {
+                    if (response.data !== undefined) {
+                      var errorText = response.data.textStatus;
+                      var location = response.data.location; // { column: Int, line: Int }
+                      scope.tacticError.text = location.line + ':' + location.column + " " + errorText;
+                      scope.tacticError.isVisible = true;
 //                    var unparsableStart = newText.split('\n', location.line-1).join('\n').length + location.column-1;
                     //@todo location end
 //                    scope.tactic.tacticText = newText.substring(0, unparsableStart) +
 //                      '<span class="k4-tacticeditor-error" title="' + errorText + '">' +
 //                      newText.substring(unparsableStart, newText.length) + '</span>'
-                  }
-                });
+                    }
+                  });
+              }, 1000);
             }
           });
 
