@@ -81,6 +81,7 @@ object Kaisar {
   case class Note (x:Variable, fp:FP, tail: SP) extends SP
   case class Have (x:Variable, fml:Formula, sp:SP, tail: SP) extends SP
   case class BRule (r:RuleSpec, tails: List[SP]) extends SP
+  case class PrintGoal(msg:String, sp:SP) extends SP
   case class State (st:TimeName, tail: SP) extends SP
   case class Run (a:VBase, hp:Program, tail:SP) extends SP
 
@@ -136,28 +137,30 @@ object Kaisar {
     }
 
     def replay(changes:List[HCAssign], e:Term):Term = {
-      import Augmentors._
-      // e.replaceAll(hc.hp.x,hc.hp.e)
-      //
-     changes.foldRight(e)({case (hc,e:Term) => USubst(List(SubstitutionPair(hc.hp.x, hc.hp.e)))(e)})
+      import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+      changes.foldLeft(e)({case (e:Term,hc) => e.replaceFree(hc.hp.x,hc.hp.e)})
     }
 
-    def resolve(x:VBase, at:TimeName):Term = {
-      val isThisTime:(HistChange => Boolean)={case HCTimeStep(ts) => ts == at case _ => false}
-      val isThisRename:(HistChange => Boolean)={case HCRename(from,to) => from.name == x}
+    def resolve(x:VBase, theSteps:List[HistChange] = steps):Term = {
+      val isThisRename:(HistChange => Boolean)={case HCRename(from,to) => from.name == x case _ => false}
       val isThisAssign:(HistChange => Boolean)={case HCAssign(Assign(xx,_)) => xx.name == x case _ => false}
-      val (_, relevant) = partAfter(steps, isThisTime)
-      val (changes, postChange) = partBefore(relevant,isThisRename)
+      val (changes, postChange) = partBefore(theSteps,isThisRename)
       val fullName = postChange match {case Nil => Variable(x) case ((y:HCRename)::ys) => y.permName case _ => ???}
       val xChanges = changes.filter(isThisAssign)
       replay(xChanges.asInstanceOf[List[HCAssign]], fullName)
     }
 
-    def eval(e:Term, at:TimeName = now):Term = {
+    def resolve(x:VBase, at:TimeName):Term = {
+      val isThisTime:(HistChange => Boolean)={case HCTimeStep(ts) => ts == at case _ => false}
+      val (_, relevant) = partAfter(steps, isThisTime)
+      resolve(x, relevant)
+    }
+
+    def eval(e:Term, at:Option[TimeName] = None):Term = {
       ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
           e match {
-            case v: Variable => Right(resolve(v.name, at))
+            case v: Variable => Right(at match {case Some(at) => resolve(v.name, at) case None => resolve(v.name)})
             case _ => Left(None)
           }
       }, e).get
@@ -245,10 +248,11 @@ object Kaisar {
     new ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
         e match {
-          case v: Variable => Right(h.eval(v))
+          case v: Variable =>
+            Right(h.eval(v))
           case FuncOf(Function(fname,_,_,_,_), arg) =>
             if(h.hasTimeStep(fname)) {
-              Right(h.eval(arg, fname))
+              Right(h.eval(arg, Some(fname)))
             } else {
               Left(None)
             }
@@ -257,9 +261,19 @@ object Kaisar {
     }
   }
   // TODO: Support time-travel
-  def expand(e:Term, c:Context):Term = {c.usubst(e)}
-  def expand(e:Formula, c:Context):Formula = {c.usubst(e)}
-  def expand(e:Program, c:Context):Program = {c.usubst(e)}
+  def expand(e:Term, h:History, c:Context):Term       = {c.usubst(ExpressionTraversal.traverse(doTravel(h), e).get)}
+  def expand(e:Formula, h:History, c:Context):Formula = {
+    val traveled = ExpressionTraversal.traverse(doTravel(h), e)
+    c.usubst(traveled.get)
+  }
+  def expand(e:Program, h:History, c:Context):Program = {c.usubst(ExpressionTraversal.traverse(doTravel(h), e).get)}
+  def expand(e:Expression, h:History, c:Context):Expression = {
+    e match {
+      case t:Term => expand(t,h,c)
+      case f:Formula => expand(f,h,c)
+      case p:Program => expand(p,h,c)
+    }
+  }
 
   def eval(fp:FP, h:History, c:Context, ante:immutable.IndexedSeq[Formula]):Provable = {
     fp match {
@@ -289,7 +303,7 @@ object Kaisar {
           case _ => throw new Exception("proposition mismatch in modus ponens")
          }
       case FInst(fp1, term) =>
-        val t2 = expand(term,c)
+        val t2 = expand(term,h, c)
         val pr1:Provable = eval(fp1, h, c, ante)
         assert(pr1.conclusion.succ.nonEmpty)
         val goal = pr1.conclusion.succ.head
@@ -458,11 +472,12 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
   val goal = g.subgoals.head.succ.head
   sp match {
     case Show (phi:Formula, proof: UP)  =>
-      val cc = pmatch(phi, goal)
+      val expanded = expand(phi,h,c)
+      val cc = pmatch(expanded, goal)
       val ccc = c.concat(cc)
       eval(proof, h, ccc, g)
     case Let (pat:Expression, e:Expression, tail:SP) =>
-      val cc = pmatch(pat, e)
+      val cc = pmatch(expand(pat,h,c), e)
       eval(tail, h, cc, g)
     case Note (x:Variable, fp:FP, tail: SP)  =>
       val fpr:Provable = eval(fp, h, c, g.subgoals.head.ante)
@@ -472,14 +487,18 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
       val res:Formula = fpr.conclusion.succ.head
       eval(tail, h, c.add(x,newPos), fpr(Cut(res), 0)(fpr,1))
     case Have (x:Variable, fml:Formula, sp:SP, tail: SP)  =>
-      val seq = Sequent(g.subgoals.head.ante, immutable.IndexedSeq(fml))
+      val fmlExpanded = expand(fml,h,c)
+      val seq = Sequent(g.subgoals.head.ante, immutable.IndexedSeq(fmlExpanded))
       val prIn = Provable.startProof(seq)
       val prOut = eval(sp, h, c, prIn)
       val size = prOut.conclusion.ante.size
       val newPos = AntePos(size)
-      eval(tail,h,c.add(x,newPos), g(Cut(fml),0)(HideRight(SuccPos(0)),1)(prOut,1))
+      eval(tail,h,c.add(x,newPos), g(Cut(fmlExpanded),0)(HideRight(SuccPos(0)),1)(prOut,1))
     case BRule (r:RuleSpec, tails: List[SP]) => eval(r,tails,h,c,g)
     case State (st:TimeName, tail: SP) => eval(tail,h.advance(st),c,g)
+    case PrintGoal(msg,tail) =>
+      println("====== " + msg + " ======\n" + g.prettyString)
+      eval(tail, h,c,g)
     case Run (a:VBase, hp:Program, tail:SP) => ???
   }
 }
@@ -814,7 +833,7 @@ def doGreatProof(userProof:ProvableSig, a:Program, maybeFacts:List[Formula], fac
 
 def eval(hist: History, ctx: Context, step:Statement):(History,Context) = {
   step match {
-    case Run(a,hp) => (hist.add(a,hp), ctx)
+    case Run(a,hp) => (hist.add(a,hp), ctx
     case Show(x,phi,(resources, e)) =>
       val (progs:Seq[ProgramVariable], facts:Seq[FactVariable]) =
         resources.partition({case _: ProgramVariable => true case _:FactVariable => false})
