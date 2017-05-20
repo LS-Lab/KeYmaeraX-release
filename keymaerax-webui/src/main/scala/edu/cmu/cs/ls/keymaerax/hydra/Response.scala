@@ -509,7 +509,7 @@ object Helpers {
 
     (node.id.toString, JsObject(
       "id" -> id,
-      "isClosed" -> JsBoolean(node.goal match {case None => true case _ => false}),
+      "isClosed" -> JsBoolean(node.numSubgoals <= 0),
       "sequent" -> sequent,
       "children" -> childrenIds,
       "rule" -> ruleJson(node.makerShortName.getOrElse(""), posLocator),
