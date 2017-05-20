@@ -263,7 +263,7 @@ object SQLite {
         })
       })
 
-    val proofClosedQuery = Compiled((proofId: Column[Int]) =>
+    private lazy val proofClosedQuery = Compiled((proofId: Column[Int]) =>
       Proofs.filter(p => p._Id === proofId && p.closed.getOrElse(0) === 1).exists)
     override def isProofClosed(proofId: Int): Boolean = synchronizedTransaction({
       proofClosedQuery(proofId).run
@@ -307,7 +307,7 @@ object SQLite {
         })
       })
 
-    private val userOwnsProofQuery = Compiled((userId: Column[String], proofId: Column[Int]) => {
+    private lazy val userOwnsProofQuery = Compiled((userId: Column[String], proofId: Column[Int]) => {
       (for {
         p <- Proofs.filter(_._Id === proofId)
         m <- Models.filter(_.userid === userId) if m._Id === p.modelid
@@ -667,10 +667,10 @@ object SQLite {
       })
     }
 
-    private val stepQuery = Compiled((proofId: Column[Int], stepId: Column[Int]) =>
+    private lazy val stepQuery = Compiled((proofId: Column[Int], stepId: Column[Int]) =>
       Executionsteps.filter(row => row.proofid === proofId && row._Id === stepId).map(_.numsubgoals))
 
-    private val succStepCountQuery = Compiled((proofId: Column[Int], stepId: Column[Int]) =>
+    private lazy val succStepCountQuery = Compiled((proofId: Column[Int], stepId: Column[Int]) =>
       Executionsteps.filter(row =>
         row.proofid === proofId &&
         row.previousstep === stepId &&
@@ -688,7 +688,7 @@ object SQLite {
       }
     }
 
-    private val stepParentQuery = Compiled((proofId: Column[Int], stepId: Column[Int]) =>
+    private lazy val stepParentQuery = Compiled((proofId: Column[Int], stepId: Column[Int]) =>
       Executionsteps.filter(row => row.proofid === proofId && row._Id === stepId).map(_.previousstep))
 
     /** Deletes execution steps. */
@@ -703,7 +703,7 @@ object SQLite {
       println("Updates: " + nUpdates + " Inserts: " + nInserts + " Selects: " + nSelects)
     }
 
-    val executionStepsQuery = Compiled((proofId: Column[Int]) =>
+    private lazy val executionStepsQuery = Compiled((proofId: Column[Int]) =>
       Executionsteps.filter(row => row.proofid === proofId &&
         row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished)).
         sortBy(e => (e.previousstep.asc, e.branchorder.desc)))
@@ -738,7 +738,7 @@ object SQLite {
       })
     }
 
-    private val executionStepsUnorderedQuery = (proofId: Int, stepIds: Set[Int]) =>
+    private lazy val executionStepsUnorderedQuery = (proofId: Int, stepIds: Set[Int]) =>
       Executionsteps.filter(row =>
         row.proofid === proofId &&
         (row._Id inSet stepIds) &&
@@ -809,7 +809,7 @@ object SQLite {
 
     override def getExecutionSteps(executionId: Int): List[ExecutionStepPOJO] = proofSteps(executionId)
 
-    private val firstExecutionStepQuery = Compiled((proofId: Column[Int]) =>
+    private lazy val firstExecutionStepQuery = Compiled((proofId: Column[Int]) =>
       Executionsteps.filter(
         row => row.proofid === proofId &&
         row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished) &&
@@ -849,7 +849,7 @@ object SQLite {
 //    })
 
 
-    private val openStepsQuery = Compiled((proofId: Column[Int]) =>
+    private lazy val openStepsQuery = Compiled((proofId: Column[Int]) =>
       Executionsteps.filter(row =>
         row.proofid === proofId &&
         row.numopensubgoals > 0 &&
@@ -883,7 +883,7 @@ object SQLite {
       openSteps.map(s => (s, parseClosedBranches(closedBranches.get(s.stepId.get))))
     })
 
-    val executionStepQuery = Compiled((proofId: Column[Int], stepId: Column[Int]) =>
+    private lazy val executionStepQuery = Compiled((proofId: Column[Int], stepId: Column[Int]) =>
       Executionsteps.filter(row => row.proofid === proofId && row._Id === stepId &&
         row.status === ExecutionStepStatus.toString(ExecutionStepStatus.Finished)))
 
@@ -897,7 +897,7 @@ object SQLite {
       }
     }
 
-    val stepSuccessorsQuery = Compiled((proofId: Column[Int], prevStepId: Column[Int], branchOrder: Column[Int]) =>
+    private lazy val stepSuccessorsQuery = Compiled((proofId: Column[Int], prevStepId: Column[Int], branchOrder: Column[Int]) =>
       Executionsteps.filter(row =>
         row.proofid === proofId &&
         row.previousstep === prevStepId &&
