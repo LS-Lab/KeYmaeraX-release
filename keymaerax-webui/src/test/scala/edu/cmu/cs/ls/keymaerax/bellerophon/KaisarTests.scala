@@ -160,4 +160,17 @@ class KaisarTests extends TacticTestBase {
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
+  "Proof with loop with one invariant" should "prove" in {
+    withZ3(qeTool => {
+      val box = "x = 0 -> [{x:=x+1;}*]x>=0".asFormula
+      val sp:SP =
+        BRule(RBAssume("x".asVariable, "x = 0".asFormula),
+        List(BRule(RBInv(
+          Inv("x >= 0".asFormula, Show("x >= 0".asFormula, UP(List(), Auto())),
+            BRule(RBAssign(Assign("x".asVariable, "x+1".asTerm)), List(Show("x >= 0".asFormula, UP(List(),Auto())))),
+            Finally(Show("x>= 0".asFormula, UP(List(),Auto()))))),
+          List())))
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+    })
+  }
 }

@@ -336,24 +336,25 @@ object Kaisar {
 *  facts is ([a]P_j, ..., [a]P_n)
 *  @ensures provable is proved.
 * */
-def polyK(pr:Provable, facts:List[Provable], onSecond:Boolean = false): Provable = {
+def polyK(pr:Provable, facts:List[Provable], onSecond:Boolean = false, impAtEnd:Boolean = false): Provable = {
+  val doPrint = false
   facts match {
-    case Nil => /*NoProofTermProvable(pr) */ interpret(debug("foobar") & close, pr)
+    case Nil => /*NoProofTermProvable(pr) */ interpret(DebuggingTactics.debug("foobar", doPrint = doPrint) & close, pr)
     case fact::facts =>
-      val Box(a,Imply(p,q)) = pr.subgoals(if(onSecond) 1 else 0).ante(0)
+      val pos = if(impAtEnd) {pr.subgoals(if(onSecond) 1 else 0).ante.length-1} else 0
+      val Box(a,Imply(p,q)) = pr.subgoals(if(onSecond) 1 else 0).ante(pos)
       val e:BelleExpr =
         cut(Imply(Box(a,Imply(p,q)),Imply(Box(a,p),Box(a,q)))) <(
-          debug("a") &
-          /* Use */ implyL(-2) <(/* use */ debug("b") & close,
-            debug("c") &
-          //close &
-          implyL(-2) <( debug("d") & hide(1) & debug("d") & cohideR(1) & useAt(NoProofTermProvable(fact), PosInExpr(Nil))(1)
-            , debug("d1") & nil )
+          DebuggingTactics.debug("a", doPrint = doPrint) &
+          /* Use */ implyL(-(pos + 2)) <(/* use */ debug("b") & close,
+            DebuggingTactics.debug("c", doPrint = doPrint) &
+          implyL(-(pos+2)) <( DebuggingTactics.debug("d", doPrint = doPrint) & hide(1) & DebuggingTactics.debug("d", doPrint = doPrint) &  useAt(NoProofTermProvable(fact), PosInExpr(Nil))(1)
+            , DebuggingTactics.debug("d1", doPrint = doPrint) & nil )
         ),
-          debug("e") &
+          DebuggingTactics.debug("e", doPrint = doPrint) &
           /* show */ cohideR(2) & useAt("K modal modus ponens", PosInExpr(Nil))(1,Nil)) &
       hide(-1) &
-      debug("before recur")
+          DebuggingTactics.debug("before recur", doPrint = doPrint)
       polyK(interpret(if(onSecond) { nil <(nil, e)} else {e}, pr), facts)
   }
 }
@@ -374,10 +375,21 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
       val prInv: Provable = eval(inv, h,c, Provable.startProof(indSeq))
       val bigImp:Formula = invSeq.foldRight[Formula](Imply(fml,Box(a,post)))({case (acc,p) => Imply(p,acc)})
       val impRs: BelleExpr = List.tabulate(invSeq.length)({case _ => implyR(1)}).foldLeft(nil)({case (e1,e2) => e1 & e2})
+      //  P & [a*](P -> [a]P) -> [a*]P
+      //DLBySubst.loop(invariant, nil)
       val e:BelleExpr =
-        cut(Box(Loop(a),fml)) <(nil, hideR(0) & cut(bigImp) <(nil, hideR(0) & impRs & useAt(NoProofTermProvable(prInv))))
+        cut(Box(Loop(a),fml)) <(nil, hideR(1) & DLBySubst.loop(fml, nil)(1) <(
+          useAt(NoProofTermProvable(prPre), key = PosInExpr(Nil))(1),
+          close,
+          useAt(NoProofTermProvable(prInv), key = PosInExpr(Nil))(1))
+        )
+
+      //val e:BelleExpr = // cut(bigImp) <(nil, hideR(1) & impRs & DebuggingTactics.debug("The thing", doPrint = true) & useAt(NoProofTermProvable(prInv))(1))
+//        cut(Box(Loop(a),fml)) <(nil, hideR(1) & cut(bigImp) <(nil, hideR(1) & impRs & DebuggingTactics.debug("The thing", doPrint = true) & useAt(NoProofTermProvable(prInv))(1)))
       val pr:Provable = interpret(e, g)
-      eval(tail, h, c, polyK(pr, invSeq.map{case fml => interpret(TactixLibrary.close, Provable.startProof(Sequent(invSeq,immutable.IndexedSeq(fml))))}.toList), nInvs+1)
+      println("Done first step of interpreting thing: " + pr.prettyString)
+      // polyK(pr, invSeq.map{case fml => interpret(TactixLibrary.close, Provable.startProof(Sequent(invSeq,immutable.IndexedSeq(fml))))}.toList)
+      eval(tail, h, c, pr, nInvs+1)
     }
     case (Inv (fml: Formula, pre: SP, inv: SP, tail: IP), Box(ODESystem(ode,constraint),post)) => {
       //TODO: deal with time and context management
@@ -386,16 +398,21 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
       eval(tail, h,c,pr, nInvs+1)
     }
     case (Ghost (gvar: Variable, gterm: Term, ginv: Formula, pre: SP, inv: SP, tail: IP), _) => ???
-    // TODO: Hardcore polyK
+    // TODO: Hardcore polyK with vacuity
     case (Finally (tail: SP), Box(Loop(a),post)) =>  {
       val invSeq: immutable.IndexedSeq[Formula] = ante.takeRight(nInvs).map({ case Box(_, p) => p })
       val indSeq:Sequent =  Sequent(invSeq, immutable.IndexedSeq(post))
       val prEnd:Provable = eval(tail, h, c, Provable.startProof(indSeq))
-      val bigImp:Formula = invSeq.foldRight[Formula](Box(a,post))({case (acc,p) => Imply(p,acc)})
+      val bigImp:Formula = invSeq.foldRight[Formula](post)({case (acc,p) => Imply(p,acc)})
+      val bigBox:Formula = Box(Loop(a), bigImp)
+      println("*******\n" + prEnd.prettyString + "\n****")
       val impRs: BelleExpr = List.tabulate(invSeq.length)({case _ => implyR(1)}).foldLeft(nil)({case (e1,e2) => e1 & e2})
-      val e:BelleExpr = cut(bigImp) <(nil, hideR(0) & impRs & useAt(NoProofTermProvable(prEnd)))
+      val e:BelleExpr = cut(bigBox) <(DebuggingTactics.debug("barFoo", doPrint = true), hideR(1) & abstractionb(1) & cohideR(1) & (allR(1)*)  & DebuggingTactics.debug("Foobar", doPrint = true) & impRs  & useAt(NoProofTermProvable(prEnd), key = PosInExpr(Nil))(1))
       val pr:Provable = interpret(e, g)
-      polyK(pr, invSeq.map{case fml => interpret(TactixLibrary.close, Provable.startProof(Sequent(invSeq,immutable.IndexedSeq(fml))))}.toList)
+      println("|*******\n" + pr.prettyString + "\n****")
+      val subPrs = invSeq.map{case fml => interpret(TactixLibrary.close, Provable.startProof(Sequent(pr.subgoals.head.ante,immutable.IndexedSeq(Box(Loop(a),fml)))))}.toList
+      subPrs.map({case sp => println("||*******\n" + sp.prettyString + "\n****")})
+      polyK(pr, subPrs, impAtEnd = true)
     }
     case (Finally(tail: SP), Box(ODESystem(ode,constraint),post)) =>
       //TODO: Context management
