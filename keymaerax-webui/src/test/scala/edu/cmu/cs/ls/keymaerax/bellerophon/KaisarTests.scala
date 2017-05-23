@@ -160,7 +160,7 @@ class KaisarTests extends TacticTestBase {
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
-  "Proof with loop with one invariant" should "prove" in {
+  "Proof with loop with one invariant, no constant formulas" should "prove" in {
     withZ3(qeTool => {
       val box = "x = 0 -> [{x:=x+1;}*]x>=0".asFormula
       val sp:SP =
@@ -170,6 +170,27 @@ class KaisarTests extends TacticTestBase {
             BRule(RBAssign(Assign("x".asVariable, "x+1".asTerm)), List(Show("x >= 0".asFormula, UP(List(),Auto())))),
             Finally(Show("x>= 0".asFormula, UP(List(),Auto()))))),
           List())))
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+    })
+  }
+  "Proof with loop with two successive invariants, no constant formulas" should "prove" in {
+    withZ3(qeTool => {
+      // TODO: Implement currying conversion rule
+      val box = "x = 0 & y = 1 -> [{y:=y+x; x:=x+1;}*]y>=0".asFormula
+      val sp:SP =
+        BRule(RBAssume("xy".asVariable, "x = 0 & y = 1".asFormula),
+          List(BRule(RBInv(
+            Inv("x >= 0".asFormula, pre = Show("x >= 0".asFormula, UP(List(), Auto())),
+              inv = BRule(RBAssign(Assign("y".asVariable, "y+x".asTerm)),
+                List(BRule(RBAssign(Assign("x".asVariable, "x+1".asTerm)),
+                List(Show("x >= 0".asFormula, UP(List(),Auto())))))),
+              tail =
+            Inv(fml = "y >= 1".asFormula, pre = Show("y >= 1".asFormula, UP(List(), Auto())),
+              inv = BRule(RBAssign(Assign("y".asVariable, "y+x".asTerm)),
+                List(BRule(RBAssign(Assign("x".asVariable, "x+1".asTerm)),
+                  List(Show("y >= 1".asFormula, UP(List(),Auto())))))),
+              tail = Finally(Show("y>= 0".asFormula, UP(List(),Auto())))))), tails = List())))
+
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }

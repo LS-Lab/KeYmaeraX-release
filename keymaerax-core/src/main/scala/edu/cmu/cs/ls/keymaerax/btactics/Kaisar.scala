@@ -93,7 +93,7 @@ object Kaisar {
       HCAssign(Assign(if(name == from) to else name, URename(from,to)(e)))
     }
   }
-  case class HCRename(baseName:BaseVariable, permName:BaseVariable) extends HistChange {assert (baseName.name == permName.name && baseName.index.isEmpty)}
+  case class HCRename(baseName:BaseVariable, permName:BaseVariable, defn:Option[AntePos] = None) extends HistChange {assert (baseName.name == permName.name && baseName.index.isEmpty)}
   case class HCTimeStep(ts:TimeName) extends HistChange
 
   // map:Map[VBase,List[(TimeName,Either[Term,Unit])]]
@@ -102,8 +102,12 @@ object Kaisar {
     def hasTimeStep(ts:TimeName):Boolean = { steps.exists({case hcts: HCTimeStep => hcts.ts == ts case _ => false})}
     def advance(t:TimeName):History = {History(HCTimeStep(t)::steps)}
     def now:TimeName = steps.collectFirst({case HCTimeStep(ts) => ts}).get
+    def nextIndex(x:VBase):Int = {steps.count{case HCRename(b,_,_) => b.name == x case _ => false}}
     def update(x:VBase, e:Term):History = {
       History(HCAssign(Assign(Variable(x), e))::steps)
+    }
+    def updateRen(baseName:BaseVariable, permName:BaseVariable, defn:AntePos):History = {
+      History(HCRename(baseName, permName, Some(defn))::steps)
     }
     private def partBefore[A](xs:List[A], f:(A => Boolean)):(List[A],List[A]) = {
       xs match {
@@ -129,7 +133,7 @@ object Kaisar {
     def update(x:VBase):History = {
       // TODO: Optimize by keeping count of renames per variable
       val from = Variable(x)
-      val isRename:(HistChange => Boolean)={case HCRename(bn, _) => bn.name==x}
+      val isRename:(HistChange => Boolean)={case HCRename(bn, _, _) => bn.name==x}
       val to = Variable(x, Some(steps.count(isRename)))
       val (recent, old) = partBefore(steps, isRename)
       val hist = recent.map{case ch : HCAssign => ch.rename(from, to) case x => x} ++ old
@@ -142,10 +146,11 @@ object Kaisar {
     }
 
     def resolve(x:VBase, theSteps:List[HistChange] = steps):Term = {
-      val isThisRename:(HistChange => Boolean)={case HCRename(from,to) => from.name == x case _ => false}
+      val isThisRename:(HistChange => Boolean)={case HCRename(from,to, _) => from.name == x case _ => false}
       val isThisAssign:(HistChange => Boolean)={case HCAssign(Assign(xx,_)) => xx.name == x case _ => false}
       val (changes, postChange) = partBefore(theSteps,isThisRename)
-      val fullName = postChange match {case Nil => Variable(x) case ((y:HCRename)::ys) => y.permName case _ => ???}
+      //TODO: might be bug val fullName = postChange match {case Nil => Variable(x) case ((y:HCRename)::ys) => y.permName case _ => ???}
+      val fullName = Variable(x)
       val xChanges = changes.filter(isThisAssign)
       replay(xChanges.asInstanceOf[List[HCAssign]], fullName)
     }
@@ -359,15 +364,66 @@ def polyK(pr:Provable, facts:List[Provable], onSecond:Boolean = false, impAtEnd:
   }
 }
 
+def collectLoopInvs(ip: IP):(List[Formula], List[SP], List[SP], IP) = {
+  ip match {
+    case Inv(fml, pre, inv, tail) =>
+      val (f,p,i,t) = collectLoopInvs(tail)
+      (fml::f, pre::p, inv::i, t)
+    case _ : Finally => (Nil, Nil, Nil, ip)
+    case _ => ???
+  }
+}
+
 def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
-  val seq = g.subgoals(0)
+  val gg = interpret(andL('L)*, g)
+  val seq = gg.subgoals(0)
   val ante = seq.ante
   val goal = seq.succ.head
   (ip, goal) match {
     // TODO: Names to refer the invariants
     // TODO: Update invariant names for the inductive step what with the vacuation
-    case (Inv (fml: Formula, pre: SP, inv: SP, tail: IP), Box(Loop(a),post)) => {
-      val invSeq: immutable.IndexedSeq[Formula] = ante.takeRight(nInvs).map({ case Box(_, p) => p })
+    case (nextInv : Inv, Box(Loop(a),post)) => {
+      // Inv (fml: Formula, pre: SP, inv: SP, tail: IP)
+      val (fmls, pres, invs, lastTail) = collectLoopInvs(nextInv)
+      val conj = fmls.reduceRight(And)
+      def baseCase(fmlPres:List[(Formula,SP)], done:List[Formula] = Nil):BelleExpr = {
+        fmlPres match {
+          case Nil => ???
+          case (fml, pre:SP)::Nil =>
+            val preSeq = Sequent(ante, immutable.IndexedSeq(fml))
+            println("base case useat base nohiding " + (done.length) + ": " + preSeq)
+            val tail = eval(pre, h, c, Provable.startProof(preSeq))
+            DebuggingTactics.debug("base", doPrint = true) & useAt(NoProofTermProvable(tail), PosInExpr(Nil))(1)
+          case (fml, pre:SP)::fps =>
+            val preSeq = Sequent(ante, immutable.IndexedSeq(fml))
+            println("Ind case useat ind nohiding " + (done.length) + ": " + preSeq)
+            val tail = eval(pre, h, c, Provable.startProof(preSeq))
+            val e1 = useAt(NoProofTermProvable(tail), PosInExpr(Nil))(1)
+            val e2 = baseCase(fps, fml::done)
+            andR(1) <(DebuggingTactics.debug("left", doPrint = true) & e1, DebuggingTactics.debug("right", doPrint = true) & e2)
+        }
+      }
+      def indCase(fmlPres:List[(Formula,SP)], done:immutable.IndexedSeq[Formula] = immutable.IndexedSeq()):BelleExpr = {
+        fmlPres match {
+          case Nil => ???
+          case (fml, inv:SP)::Nil =>
+            val invSeq = Sequent(done ++ immutable.IndexedSeq(fml), immutable.IndexedSeq(Box(a,fml)))
+            println("Ind case useat base hiding " + (ante.length - (done.length + 1)) + ": " + invSeq)
+            val e = hideL('Llast)*(ante.length - (done.length + 1))
+            val tail = eval(inv, h, c, Provable.startProof(invSeq))
+            DebuggingTactics.debug("preHide icubh", doPrint = true) & e & DebuggingTactics.debug("postHide", doPrint = true) & useAt(NoProofTermProvable(tail), PosInExpr(Nil))(1)
+          case (fml, pre:SP)::fps =>
+            val invSeq = Sequent(done ++ immutable.IndexedSeq(fml), immutable.IndexedSeq(Box(a,fml)))
+            println("Ind case useat inductive hiding " + (ante.length - done.length) + ": " + invSeq)
+            val hide = hideL('Llast)*(ante.length - (done.length + 1))
+            val tail = NoProofTermProvable(eval(pre, h, c, Provable.startProof(invSeq)))
+            val e1 = DebuggingTactics.debug("preHide", doPrint = true) &  hide & DebuggingTactics.debug("postHide", doPrint = true)& useAt(tail, PosInExpr(Nil))(1)
+            val e2 = indCase(fps, done ++ immutable.IndexedSeq(fml))
+            boxAnd(1) & andR(1) <(e1, e2)
+        }
+      }
+      val e:BelleExpr = DLBySubst.loop(conj)(1) <( DebuggingTactics.debug("base case", doPrint = true) & baseCase(fmls.zip(pres)), nil, (andL('L)*) & DebuggingTactics.debug("inductive case", doPrint = true) & indCase(fmls.zip(invs)))
+      /*val invSeq: immutable.IndexedSeq[Formula] = ante.takeRight(nInvs).map({ case Box(_, p) => p })
       val invAnte:immutable.IndexedSeq[Formula] = invSeq ++ immutable.IndexedSeq(fml)
       val preSeq = Sequent(ante, immutable.IndexedSeq(fml))
       val prPre: Provable = eval(pre, h, c, Provable.startProof(preSeq))
@@ -382,14 +438,14 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
           useAt(NoProofTermProvable(prPre), key = PosInExpr(Nil))(1),
           close,
           useAt(NoProofTermProvable(prInv), key = PosInExpr(Nil))(1))
-        )
+        )*/
 
       //val e:BelleExpr = // cut(bigImp) <(nil, hideR(1) & impRs & DebuggingTactics.debug("The thing", doPrint = true) & useAt(NoProofTermProvable(prInv))(1))
 //        cut(Box(Loop(a),fml)) <(nil, hideR(1) & cut(bigImp) <(nil, hideR(1) & impRs & DebuggingTactics.debug("The thing", doPrint = true) & useAt(NoProofTermProvable(prInv))(1)))
-      val pr:Provable = interpret(e, g)
+      val pr:Provable = interpret(e, gg)
       println("Done first step of interpreting thing: " + pr.prettyString)
       // polyK(pr, invSeq.map{case fml => interpret(TactixLibrary.close, Provable.startProof(Sequent(invSeq,immutable.IndexedSeq(fml))))}.toList)
-      eval(tail, h, c, pr, nInvs+1)
+      eval(lastTail, h, c, pr, nInvs+1)
     }
     case (Inv (fml: Formula, pre: SP, inv: SP, tail: IP), Box(ODESystem(ode,constraint),post)) => {
       //TODO: deal with time and context management
@@ -399,8 +455,12 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
     }
     case (Ghost (gvar: Variable, gterm: Term, ginv: Formula, pre: SP, inv: SP, tail: IP), _) => ???
     // TODO: Hardcore polyK with vacuity
-    case (Finally (tail: SP), Box(Loop(a),post)) =>  {
-      val invSeq: immutable.IndexedSeq[Formula] = ante.takeRight(nInvs).map({ case Box(_, p) => p })
+    case (Finally(tail: SP), Box(ODESystem(ode,constraint),post)) =>
+      //TODO: Context management
+      eval(tail, h, c, interpret(dW(1), g))
+    case (Finally (tail: SP),post) =>  {
+      eval(tail, h, c, g)
+      /*val invSeq: immutable.IndexedSeq[Formula] = ante.takeRight(nInvs).map({ case Box(_, p) => p })
       val indSeq:Sequent =  Sequent(invSeq, immutable.IndexedSeq(post))
       val prEnd:Provable = eval(tail, h, c, Provable.startProof(indSeq))
       val bigImp:Formula = invSeq.foldRight[Formula](post)({case (acc,p) => Imply(p,acc)})
@@ -412,11 +472,8 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
       println("|*******\n" + pr.prettyString + "\n****")
       val subPrs = invSeq.map{case fml => interpret(TactixLibrary.close, Provable.startProof(Sequent(pr.subgoals.head.ante,immutable.IndexedSeq(Box(Loop(a),fml)))))}.toList
       subPrs.map({case sp => println("||*******\n" + sp.prettyString + "\n****")})
-      polyK(pr, subPrs, impAtEnd = true)
+      polyK(pr, subPrs, impAtEnd = true)*/
     }
-    case (Finally(tail: SP), Box(ODESystem(ode,constraint),post)) =>
-      //TODO: Context management
-      eval(tail, h, c, interpret(dW(1), g))
   }
 }
 
@@ -434,11 +491,21 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
       eval(brule, sp, h, c, interpret(useAt("[?] test")(1), g))
     case _ =>
       (brule, goal) match {
+          // TODO: More readable match error
         case (RBAssign(hp:Assign), Box(Assign(x,theta),p)) if hp.x == x =>
           assertBranches(sp.length, 1)
-          val hh = h.update(hp.x.name, theta)
           // TODO: Renaming of stuff
-          eval(sp.head, hh, c, interpret(useAt("[:=] assign")(1), g))
+          try {
+            val hh = h.update(hp.x.name, theta)
+            eval(sp.head, hh, c, interpret(useAt("[:=] assign")(1), g))
+          } catch {
+            case _ : Throwable =>
+              val gg = interpret(DLBySubst.assignEquality(1), g)
+              val defn:Equal = gg.subgoals.head.ante.last.asInstanceOf[Equal]
+              val base = defn.left.asInstanceOf[BaseVariable]
+              val hh = h.updateRen(Variable(base.name), Variable(base.name, Some(h.nextIndex(base.name))), AntePos(gg.subgoals.head.ante.length-1))
+              eval(sp.head, hh, c, gg)
+          }
         case (RBConsequence(fml:Formula), Box(Compose(a,b),p)) =>
           assertBranches(sp.length, 2)
           // TODO: How many assumptions stick around?
