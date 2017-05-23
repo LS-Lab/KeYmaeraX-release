@@ -449,7 +449,7 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
     }
     case (Inv (fml: Formula, pre: SP, inv: SP, tail: IP), Box(ODESystem(ode,constraint),post)) => {
       //TODO: deal with time and context management
-      val e:BelleExpr = dC(fml)(1) <(nil, dI()(1))
+      val e:BelleExpr = dC(fml)(1) <(nil, DebuggingTactics.debug("Blah", doPrint = true) &  dI()(1))
       val pr = interpret(e, g)
       eval(tail, h,c,pr, nInvs+1)
     }
@@ -457,7 +457,7 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
     // TODO: Hardcore polyK with vacuity
     case (Finally(tail: SP), Box(ODESystem(ode,constraint),post)) =>
       //TODO: Context management
-      eval(tail, h, c, interpret(dW(1), g))
+      eval(tail, h, c, interpret(dW(1) & implyR(1), g))
     case (Finally (tail: SP),post) =>  {
       eval(tail, h, c, g)
       /*val invSeq: immutable.IndexedSeq[Formula] = ante.takeRight(nInvs).map({ case Box(_, p) => p })
@@ -551,7 +551,7 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
 }
 
 def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
-  assert(g.subgoals.length == 1)
+  assert(g.subgoals.length == 1, "Expected 1 subgoal, got: " + g.subgoals.length)
   assert(g.subgoals.head.succ.nonEmpty)
   val goal = g.subgoals.head.succ.head
   sp match {

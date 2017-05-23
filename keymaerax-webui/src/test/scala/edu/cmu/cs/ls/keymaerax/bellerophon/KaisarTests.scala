@@ -190,7 +190,6 @@ class KaisarTests extends TacticTestBase {
                     List(BRule(RBAssign(Assign("x".asVariable, "x+1".asTerm)),
                       List(Show("y >= 1".asFormula, UP(List(), Auto())))))),
                   tail = Finally(Show("y>= 0".asFormula, UP(List(), Auto())))))), tails = List())))
-
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
@@ -204,7 +203,37 @@ class KaisarTests extends TacticTestBase {
               inv = BRule(RBAssign(Assign("x".asVariable, "x+y".asTerm)),
                   List(Show("x >= 0".asFormula, UP(List(), Auto())))),
               tail = Finally(Show("x>= 0".asFormula, UP(List(), Auto()))))), tails = List())))
-
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+    })
+  }
+  "Proof of easy differential invariant" should "prove" in {
+    withZ3(qeTool => {
+      val box = "x = 0 & y = 1 -> [{x' = -y, y' = x}]x^2 + y^2 > 0".asFormula
+      val sp:SP =
+        BRule(RBAssume("xy".asVariable, "x = 0 & y = 1".asFormula),
+          List(BRule(RBInv(
+            Inv("x^2 + y^2 = 1".asFormula, pre = Show("x^2 + y^2 = 1".asFormula, UP(List(), Auto())),
+              inv = Show("(x^2 + y^2 = 1)'".asFormula, UP(List(), Auto())),
+              tail = Finally(Show("x^2 + y^2 > 0".asFormula, UP(List(), Auto()))))
+          ), List())))
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+    })
+  }
+  "Proof with double differential invariant" should "prove" in {
+    withZ3(qeTool => {
+      val box = "x = 0 & y = 1 & dx = 1 & dy = 0 -> [{x' = dx*v, y'=dy*v, dx' = -dy*v, dy'=dx*v, v'=a}]x^2 + y^2 = 1".asFormula
+      val sp:SP =
+        BRule(RBAssume("assms".asVariable, "x = 0 & y = 1 & dx = 1 & dy = 0".asFormula),
+          List(BRule(RBInv(
+            Inv("dx=-y&dy=x".asFormula, Show("dx=-y&dy=x".asFormula, UP(List(), Auto())),
+            inv = Show("(x^2 + y^2 = 1)'".asFormula, UP(List(), Auto())),
+            tail =
+              Inv("x^2 + y^2 = 1".asFormula, Show("x^2 + y^2 = 1".asFormula, UP(List(), Auto())),
+                inv = Show("(x^2 + y^2 = 1)'".asFormula, UP(List(), Auto())),
+                tail = Finally(Show("x^2 + y^2 = 1".asFormula, UP(List(), Auto()))))
+            )
+          ), List())))
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
 }
