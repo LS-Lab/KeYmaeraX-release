@@ -177,21 +177,34 @@ class KaisarTests extends TacticTestBase {
     withZ3(qeTool => {
       // TODO: Implement currying conversion rule
       val box = "x = 0 & y = 1 -> [{y:=y+x; x:=x+1;}*]y>=0".asFormula
-      val sp:SP =
+      val sp: SP =
         BRule(RBAssume("xy".asVariable, "x = 0 & y = 1".asFormula),
           List(BRule(RBInv(
             Inv("x >= 0".asFormula, pre = Show("x >= 0".asFormula, UP(List(), Auto())),
               inv = BRule(RBAssign(Assign("y".asVariable, "y+x".asTerm)),
                 List(BRule(RBAssign(Assign("x".asVariable, "x+1".asTerm)),
-                List(Show("x >= 0".asFormula, UP(List(),Auto())))))),
+                  List(Show("x >= 0".asFormula, UP(List(), Auto())))))),
               tail =
-            Inv(fml = "y >= 1".asFormula, pre = Show("y >= 1".asFormula, UP(List(), Auto())),
-              inv = BRule(RBAssign(Assign("y".asVariable, "y+x".asTerm)),
-                List(BRule(RBAssign(Assign("x".asVariable, "x+1".asTerm)),
-                  List(Show("y >= 1".asFormula, UP(List(),Auto())))))),
-              tail = Finally(Show("y>= 0".asFormula, UP(List(),Auto())))))), tails = List())))
+                Inv(fml = "y >= 1".asFormula, pre = Show("y >= 1".asFormula, UP(List(), Auto())),
+                  inv = BRule(RBAssign(Assign("y".asVariable, "y+x".asTerm)),
+                    List(BRule(RBAssign(Assign("x".asVariable, "x+1".asTerm)),
+                      List(Show("y >= 1".asFormula, UP(List(), Auto())))))),
+                  tail = Finally(Show("y>= 0".asFormula, UP(List(), Auto())))))), tails = List())))
 
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+    })
+  }
+  "Proof of loop where constant proposition matters" should "prove" in {
+    withZ3(qeTool => {
+      val box = "x > 0 & y > 0 -> [{x := x + y;}*]x>=0".asFormula
+      val sp: SP =
+        BRule(RBAssume("xy".asVariable, "x > 0 & y > 1".asFormula),
+          List(BRule(RBInv(
+            Inv("x >= 0".asFormula, pre = Show("x >= 0".asFormula, UP(List(), Auto())),
+              inv = BRule(RBAssign(Assign("x".asVariable, "x+y".asTerm)),
+                  List(Show("x >= 0".asFormula, UP(List(), Auto())))),
+              tail = Finally(Show("x>= 0".asFormula, UP(List(), Auto()))))), tails = List())))
+
     })
   }
 }
