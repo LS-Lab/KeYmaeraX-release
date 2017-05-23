@@ -67,7 +67,7 @@ object Kaisar {
 
   abstract class IP
   case class Inv(fml:Formula, pre:SP, inv:SP, tail:IP) extends IP
-  case class Ghost(gvar:Variable, gterm:Term, ginv:Formula, pre:SP, inv:SP, tail:IP) extends IP
+  case class Ghost(gvar:Variable, gterm:Term, ginv:Formula, x0:Term, pre:SP, inv:SP, tail:IP) extends IP
   case class Finally(tail:SP) extends IP
 
   abstract class FP
@@ -453,7 +453,11 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
       val pr = interpret(e, g)
       eval(tail, h,c,pr, nInvs+1)
     }
-    case (Ghost (gvar: Variable, gterm: Term, ginv: Formula, pre: SP, inv: SP, tail: IP), _) => ???
+    case (Ghost (gvar: Variable, gterm: Term, ginv: Formula, x0:Term,  pre: SP, inv: SP, tail: IP), _) =>
+      //val (Plus(Times(c1,ggvar), c2)) = gterm
+      val e:BelleExpr = dG(AtomicODE(DifferentialSymbol(gvar), gterm), Some(ginv))(1)
+      val pr = interpret(e & existsR(x0)(1) & DebuggingTactics.debug("after ghost", doPrint = true), g)
+      eval(tail, h,c,pr,nInvs+1)
     // TODO: Hardcore polyK with vacuity
     case (Finally(tail: SP), Box(ODESystem(ode,constraint),post)) =>
       //TODO: Context management

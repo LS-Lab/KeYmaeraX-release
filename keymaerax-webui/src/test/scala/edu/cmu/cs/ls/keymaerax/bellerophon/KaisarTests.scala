@@ -236,4 +236,17 @@ class KaisarTests extends TacticTestBase {
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
+  "Proof with world's easiest diff ghost" should "prove" in {
+    withZ3(qeTool => {
+      val box = "x > 0 -> [{x' = -x}]x > 0".asFormula
+      val sp:SP =
+        BRule(RBAssume("x".asVariable, "x > 0".asFormula),
+          List(BRule(RBInv(
+            Ghost("y".asVariable, "(1/2)*y + 0".asTerm, "x*y^2 = 1".asFormula, "(1/x)^(1/2)".asTerm, Show("x*y^2 = 1".asFormula, UP(List(), Auto())), Show("x*y^2=1".asFormula, UP(List(), Auto())),
+              Inv("x*y^2=1".asFormula, Show("x*y^2=1".asFormula, UP(List(), Auto())), Show("x*y^2=1".asFormula, UP(List(), Auto())),
+              Finally(Show("x*y^2=1".asFormula, UP(List(), Auto())))))
+          ), List())))
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+    })
+  }
 }
