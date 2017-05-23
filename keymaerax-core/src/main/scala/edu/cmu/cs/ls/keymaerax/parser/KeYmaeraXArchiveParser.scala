@@ -51,6 +51,11 @@ object KeYmaeraXArchiveParser {
     })
   }
 
+  /** Reads a specific entry from the archive. */
+  def getEntry(entryName: String, archiveContentBOM: String): Option[ParsedArchiveEntry] = {
+    parse(archiveContentBOM).find(_.name == entryName)
+  }
+
   /** Reads the archive content into string-only archive entries. */
   def read(archiveContentBOM: String): List[ArchiveEntry] = {
     val archiveContent: String = ParserHelper.removeBOM(archiveContentBOM)
