@@ -383,6 +383,7 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
     // TODO: Names to refer the invariants
     // TODO: Update invariant names for the inductive step what with the vacuation
     case (nextInv : Inv, Box(Loop(a),post)) => {
+      val anteConst = ante.filter({case f => StaticSemantics.freeVars(f).intersect(StaticSemantics.boundVars(a)).isEmpty})
       // Inv (fml: Formula, pre: SP, inv: SP, tail: IP)
       val (fmls, pres, invs, lastTail) = collectLoopInvs(nextInv)
       val conj = fmls.reduceRight(And)
@@ -407,22 +408,22 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
         fmlPres match {
           case Nil => ???
           case (fml, inv:SP)::Nil =>
-            val invSeq = Sequent(done ++ immutable.IndexedSeq(fml), immutable.IndexedSeq(Box(a,fml)))
-            println("Ind case useat base hiding " + (ante.length - (done.length + 1)) + ": " + invSeq)
-            val e = hideL('Llast)*(ante.length - (done.length + 1))
+            val invSeq = Sequent(done ++ immutable.IndexedSeq(fml) ++ anteConst, immutable.IndexedSeq(Box(a,fml)))
+            println("Ind case useat base hiding " + (invs.length - (done.length + 1)) + ": " + invSeq)
+            val e = hideL('Llast)*(invs.length - (done.length + 1))
             val tail = eval(inv, h, c, Provable.startProof(invSeq))
             DebuggingTactics.debug("preHide icubh", doPrint = true) & e & DebuggingTactics.debug("postHide", doPrint = true) & useAt(NoProofTermProvable(tail), PosInExpr(Nil))(1)
           case (fml, pre:SP)::fps =>
-            val invSeq = Sequent(done ++ immutable.IndexedSeq(fml), immutable.IndexedSeq(Box(a,fml)))
-            println("Ind case useat inductive hiding " + (ante.length - done.length) + ": " + invSeq)
-            val hide = hideL('Llast)*(ante.length - (done.length + 1))
+            val invSeq = Sequent(done ++ immutable.IndexedSeq(fml) ++ anteConst, immutable.IndexedSeq(Box(a,fml)))
+            println("Ind case useat inductive hiding " + (invs.length - done.length) + ": " + invSeq)
+            val hide = hideL('Llast)*(invs.length - (done.length + 1))
             val tail = NoProofTermProvable(eval(pre, h, c, Provable.startProof(invSeq)))
             val e1 = DebuggingTactics.debug("preHide", doPrint = true) &  hide & DebuggingTactics.debug("postHide", doPrint = true)& useAt(tail, PosInExpr(Nil))(1)
             val e2 = indCase(fps, done ++ immutable.IndexedSeq(fml))
             boxAnd(1) & andR(1) <(e1, e2)
         }
       }
-      val e:BelleExpr = DLBySubst.loop(conj)(1) <( DebuggingTactics.debug("base case", doPrint = true) & baseCase(fmls.zip(pres)), nil, (andL('L)*) & DebuggingTactics.debug("inductive case", doPrint = true) & indCase(fmls.zip(invs)))
+      val e:BelleExpr = DLBySubst.loop(conj)(1) <( DebuggingTactics.debug("base case", doPrint = true) & baseCase(fmls.zip(pres)), DebuggingTactics.debug("use case", doPrint = true) &  nil, (andL('L)*) & DebuggingTactics.debug("inductive case", doPrint = true) & indCase(fmls.zip(invs)))
       /*val invSeq: immutable.IndexedSeq[Formula] = ante.takeRight(nInvs).map({ case Box(_, p) => p })
       val invAnte:immutable.IndexedSeq[Formula] = invSeq ++ immutable.IndexedSeq(fml)
       val preSeq = Sequent(ante, immutable.IndexedSeq(fml))

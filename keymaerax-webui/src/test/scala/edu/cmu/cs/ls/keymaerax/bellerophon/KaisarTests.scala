@@ -221,9 +221,9 @@ class KaisarTests extends TacticTestBase {
   }
   "Proof with double differential invariant" should "prove" in {
     withZ3(qeTool => {
-      val box = "x = 0 & y = 1 & dx = 1 & dy = 0 -> [{x' = dx*v, y'=dy*v, dx' = -dy*v, dy'=dx*v, v'=a}]x^2 + y^2 = 1".asFormula
+      val box = "x = 0 & y = 1 & dx = -1 & dy = 0 -> [{x' = dx*v, y'=dy*v, dx' = -dy*v, dy'=dx*v, v'=a}]x^2 + y^2 = 1".asFormula
       val sp:SP =
-        BRule(RBAssume("assms".asVariable, "x = 0 & y = 1 & dx = 1 & dy = 0".asFormula),
+        BRule(RBAssume("assms".asVariable, "x = 0 & y = 1 & dx = -1 & dy = 0".asFormula),
           List(BRule(RBInv(
             Inv("dx=-y&dy=x".asFormula, Show("dx=-y&dy=x".asFormula, UP(List(), Auto())),
             inv = Show("(x^2 + y^2 = 1)'".asFormula, UP(List(), Auto())),
