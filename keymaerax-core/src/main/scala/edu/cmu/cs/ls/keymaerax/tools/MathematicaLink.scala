@@ -114,19 +114,10 @@ class JLinkMathematicaLink extends MathematicaLink {
       System.setProperty("com.wolfram.jlink.libdir", jlinkLibDir.get) //e.g., "/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink"
     }
     try {
-      //TODO get tcpip link working on ohmu. And/or fallback to other link on ALL machines where the tcpip link fails.
-      val onOhmu = java.awt.GraphicsEnvironment.isHeadless 
-      ml =
-        if(!onOhmu)
-          MathLinkFactory.createKernelLink(Array[String](
-            "-linkmode", "launch",
-            "-linkname", linkName + " -mathlink",
-            "-linkprotocol", "tcpip"))
-        else
-          MathLinkFactory.createKernelLink(Array[String](
-            "-linkmode", "launch",
-            "-linkname", linkName + " -mathlink"))
-
+      ml = MathLinkFactory.createKernelLink(Array[String](
+        "-linkmode", "launch",
+        "-linkname", linkName + " -mathlink",
+        "-linkprotocol", "tcpip"))
       ml.connect()
       ml.discardAnswer()
         //@todo How to gracefully shutdown an unsuccessfully initialized math link again without causing follow-up problems?
