@@ -1363,12 +1363,18 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
       case None => new ErrorResponse("Proof " + proofId + " does not have a tactic") :: Nil
       case Some(t) if proofInfo.modelId.isEmpty => throw new Exception("Proof " + proofId + " does not refer to a model")
       case Some(t) if proofInfo.modelId.isDefined =>
-        val executor = BellerophonTacticExecutor.defaultExecutor
-        val interpreter = DatabasePopulator.prepareInterpreter(db, proofId.toInt)
-        val model = KeYmaeraXProblemParser(db.getModel(proofInfo.modelId.get).keyFile)
-        val provable = BelleProvable(ProvableSig.startProof(model))
         val tactic = BelleParser(t)
-        val taskId = executor.schedule(userId, tactic, provable, interpreter)
+        //@TODO switch back to spoon-feeding interpreter:
+//        val executor = BellerophonTacticExecutor.defaultExecutor
+//        val interpreter = DatabasePopulator.prepareInterpreter(db, proofId.toInt)
+//        val model = KeYmaeraXProblemParser(db.getModel(proofInfo.modelId.get).keyFile)
+//        val provable = BelleProvable(ProvableSig.startProof(model))
+//        val taskId = executor.schedule(userId, tactic, provable, interpreter)
+
+        //@TODO currently using sequential interpreter because spoon-feeding interpreter doesn't support graph-style proofs.
+        val tree: ProofTree = DbProofTree(db, proofId)
+        val taskId = tree.root.runTactic(userId, SequentialInterpreter, tactic, "custom")
+
         new RunBelleTermResponse(proofId, "()", taskId) :: Nil
     }
   }
