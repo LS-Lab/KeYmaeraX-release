@@ -404,7 +404,8 @@ object Main {
           val msg = "WARNING: A lock file exists but nothing is bound to the KeYmaera X web server's port.\nDeleting the lock file and starting KeYmaera X. If you experience errors, try killing all instances of KeYmaera X from your system's task manager."
           forceDeleteLock()
           launcherLog(msg)
-          JOptionPane.showMessageDialog(null, msg)
+          if(!java.awt.GraphicsEnvironment.isHeadless)
+            JOptionPane.showMessageDialog(null, msg)
         }
         else {
           //lock file exists but port isn't bound, so another instance of KeYmaera X probably *just* started. Don't even bother with a GUI message -- the user probably double-launched on accident.
