@@ -254,7 +254,7 @@ angular.module('keymaerax.controllers').controller('LoginDialogCtrl', ['$scope',
               $uibModalInstance.close("Login success");
             } else {
               $uibModalInstance.dismiss("Please check user name and/or password");
-              showMessage($uibModal, "Login failed", "Please check user name and/or password");
+              showMessage($uibModal, "Login failed", "Please check user name and/or password. Or register a new account.");
             }
           }
         });
@@ -269,7 +269,7 @@ angular.module('keymaerax.controllers').controller('LoginDialogCtrl', ['$scope',
             $uibModalInstance.close("Login success");
           } else {
             $uibModalInstance.dismiss("Please check user name and/or password");
-            showMessage($uibModal, "Login failed", "Please check user name and/or password");
+            showMessage($uibModal, "Login failed", "Please check user name and/or password. Or register a new account.");
           }
         }
       });
