@@ -277,7 +277,7 @@ class KaisarTests extends TacticTestBase {
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })}
 
-  "DaLi'18 Example 1d" should "prove" in {
+  "DaLi'17 Example 1d" should "prove" in {
     withZ3(qeTool => {
       val box =
         "(x + y + z > 1 & huge = 0 -> (x + y + z -1)^2 != (x + y + z + 1)^2)".asFormula
@@ -285,7 +285,7 @@ class KaisarTests extends TacticTestBase {
         SLet("w_()".asTerm, "x + y + z".asTerm,
         BRule(RBAssume("xy".asVariable,"w_() > 1 & wild()".asFormula),List(
           Note("w".asVariable, FMP(FPat("andE1()".asFormula), FPat("xy".asVariable)),
-            Show("wild()".asFormula, UP(List(Left("w_()".asFormula)),Kaisar.RCF()))
+            Show("wild()".asFormula, UP(List(Left("w()".asFormula)),Kaisar.RCF()))
             )
         )))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
@@ -300,7 +300,7 @@ note w = (andE1 xy)
 show (_)
   using w by R
 */
-  "DaLi'18 Example 2a" should "prove" in {
+  "DaLi'17 Example 2a" should "prove" in {
     withZ3(qeTool => {
       ???
     })
@@ -320,7 +320,7 @@ case (y := _)
   show (x > 2*y)
     by auto
 */
-  "DaLi'18 Example 2b" should "prove" in {
+  "DaLi'17 Example 2b" should "prove" in {
     withZ3(qeTool => {
       ???
     })
@@ -332,7 +332,7 @@ mid J:(x>y)
 assign x:=x*2
 show (x > 2y) using J by auto
 */
-  "DaLi'18 Example 2c" should "prove" in {
+  "DaLi'17 Example 2c" should "prove" in {
     withZ3(qeTool => {
       ???
     })
@@ -347,7 +347,7 @@ have xs:(x >= 2*pre-assign(x) & pre-assign(x) > y)
   by auto
 show _ using J by auto
 */
-"DaLi'18 Example 2d" should "prove" in {
+"DaLi'17 Example 2d" should "prove" in {
     withZ3(qeTool => {
       ???
     })
@@ -364,7 +364,7 @@ time t2
 Inv J3:(y>0 & x>=t2(x))   { Pre => show _ by R | Inv => show _ by R }
 show (y >= 0) using J1 J2 J3 by R
 */
-  "DaLi'18 Example 3" should "prove" in {
+  "DaLi'17 Example 3" should "prove" in {
     withZ3(qeTool => {
       ???
     })
@@ -387,7 +387,7 @@ Inv J(y >= 0 & ??E = init(E) {
      show _ by auto }
 show _  using J assms by auto
 */
-  "DaLi'18 Example 4" should "prove" in {
+  "DaLi'17 Example 4" should "prove" in {
     withZ3(qeTool => {
       ???
     })
@@ -402,7 +402,7 @@ Inv Jx:(x > 0)
 Inv Jy:(y > init(y))
 show (Jy > 0) using assms Jy by auto
 */
-  "DaLi'18 Example 5" should "prove" in {
+  "DaLi'17 Example 5" should "prove" in {
     withZ3(qeTool => {
       ???
     })

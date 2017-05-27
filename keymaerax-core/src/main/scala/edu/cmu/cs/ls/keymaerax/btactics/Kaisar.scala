@@ -190,7 +190,20 @@ object Kaisar {
         case _ => ???
       }))
     }
+    def hasAssm(ident:String):Boolean = gmap.contains(Variable(ident))
+    def getAssm(ident:String, ante:immutable.IndexedSeq[Formula]):Formula = ante(gmap(Variable(ident)).checkAnte.index0)
+    def getDef(ident:String):Expression = {
+      if(defmap.contains(ident)) {defmap(ident)}
+      else if (ident.last == '_' && defmap.contains(ident.dropRight(1))) {
+        defmap(ident.dropRight(1))
+      } else {
+        throw new Exception("Tried to get invalid definition for " + ident )
+      }
+    }
+    def hasDef(ident:String):Boolean = {
+      defmap.contains(ident) || (ident.last == '_' && defmap.contains(ident.dropRight(1)))
 
+    }
   }
   object Context {
     var empty = new Context(Map(),Map())
@@ -223,11 +236,38 @@ object Kaisar {
         (prv::prvs, ante2 ++ immutable.IndexedSeq(prv.conclusion.ante.head))
       })._1
     val withFacts:Provable = fprvs.foldLeft[Provable](g)({case (pr:Provable, next:Provable) => pr(Cut(next.conclusion.succ.head),0)(next,1)})
-    //TODO: Negate this
-    //TODO: Consider bound vars in patmatch
-    //TODO: search for stuff from context
-    val inds:immutable.IndexedSeq[Int] = withFacts.subgoals.head.ante.zipWithIndex.filter({case (f,i) => pats.exists({case pat => doesMatch(pat, f)})}).map({case (f,i) => i}).reverse
-    val pr = inds.foldLeft[Provable](withFacts)({case (pr2:Provable,i:Int) => pr2(HideLeft(AntePos(i)),0)})
+    def patIdent(e:Expression):Option[String] = {
+      e match {
+        case PredOf(Function(id, _, _, _, _), _)  => Some(id)
+        case FuncOf(Function(id, _, _, _, _), _) => Some(id)
+        case PredicationalOf(Function(id, _, _, _, _), _) => Some(id)
+        case UnitPredicational(id, _) => Some(id)
+        case BaseVariable(id, _, _) => Some(id)
+        case UnitFunctional(id, _, _) => Some(id)
+        case ProgramConst(id) => Some(id)
+        case SystemConst(id) => Some(id)
+        case _ => None
+      }
+    }
+    def matchesAssm(i:Int,pat:Expression):Boolean = {
+      patIdent(pat) match {
+        case None => false
+          // TODO: Faster: do only index cmp
+        case Some(id) =>
+          val hasOne = c.hasAssm(id)
+          println("Checking for assm: " ,c,id,ante,i,ante(i), hasOne)
+          hasOne && c.getAssm(id,ante) == ante(i)
+      }
+    }
+    val inds:immutable.IndexedSeq[Int] = withFacts.subgoals.head.ante.zipWithIndex.filter({case (f,i) => !pats.exists({case pat =>
+      val dm = doesMatch(pat, f,c)
+      val ma = matchesAssm(i,pat)
+      //println("dm ", pat, f, c, dm)
+      //println("ma ", i, pat, ma)
+      dm || ma})}).map({case (f,i) => i}).reverse
+    //TODO: Optimize the default case
+    val indss = if(use.isEmpty) { immutable.IndexedSeq[Int]()} else {inds}
+    val pr = indss.foldLeft[Provable](withFacts)({case (pr2:Provable,i:Int) => pr2(HideLeft(AntePos(i)),0)})
     eval(method, pr)
   }
 
@@ -289,7 +329,7 @@ object Kaisar {
     ofIdent match {
       case Some(pos)  => pos.checkAnte.index0
       case None =>
-        val matches = ante.zipWithIndex.filter({case (fml,_) => doesMatch(pat, fml)})
+        val matches:immutable.IndexedSeq[(Formula,Int)] = ante.zipWithIndex.filter({case (fml,_) => doesMatch(pat, fml,c)})
         matches.toList match {
           case ((_,i)::Nil) => i
           case _ => throw new Exception("Non-unique match in pattern-matching construct")
@@ -331,7 +371,6 @@ object Kaisar {
               val impPos = AntePos(ante.length+1)
               val pr1b = pr1(subst.usubst)
               Provable.startProof(seq)(Cut(p2),0)(HideRight(SuccPos(0)),1)(pr2,1)(Cut(Imply(p2,q2)),0)(HideRight(SuccPos(0)),1)(HideLeft(argPos),1)(pr1b,1)(ImplyLeft(impPos),0)(Close(argPos,SuccPos(1)),0)(Close(impPos,SuccPos(0)),0)
-
             } catch {
               case e : UnificationException => throw new Exception("proposition mismatch in modus ponens", e)
             }
@@ -592,11 +631,11 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
   sp match {
     case Show (phi:Formula, proof: UP)  =>
       val expanded = expand(phi,h,c)
-      val cc = pmatch(expanded, goal)
+      val cc = pmatch(expanded, goal,c)
       val ccc = c.concat(cc)
       eval(proof, h, ccc, g)
     case SLet (pat:Expression, e:Expression, tail:SP) =>
-      val cc = pmatch(expand(pat,h,c), e)
+      val cc = pmatch(expand(pat,h,c), e,c)
       eval(tail, h, cc, g)
     case Note (x:Variable, fp:FP, tail: SP)  =>
       val fpr:Provable = eval(fp, h, c, g.subgoals.head.ante)
@@ -653,13 +692,28 @@ def collectNegVarPat(t:Term):Option[List[BaseVariable]] = {
 case class PatternMatchError(msg:String) extends Exception { override def toString:String = "Pattern Match Error: " + msg}
 
 /* TODO: I think these need to be filled in with gammas first */
-def pmatch(pat:Expression, e:Expression):Context = {
+def pmatch(pat:Expression, e:Expression, c:Context):Context = {
   def patExn(pat:Expression, e:Expression, additional:String = "N/A"):PatternMatchError = { PatternMatchError("Expected expression " + e + " to match pattern " + pat + " Additional message?: " + additional)}
   val exn:PatternMatchError = patExn(pat, e)
   def atom(e1:Expression, e2:Expression, additional:String = "N/A") = {
     if(e1 == e2) { Context.empty } else { throw new PatternMatchError("Expected atomic expression " + e2 + " to match atomic pattern " + e1 + " Additional message?: " + additional) }
   }
+  def matchDef(id:String) = {
+    if(e == c.getDef(id)) {
+      Context.empty
+    } else {
+      throw PatternMatchError("Bound variable pattern " + id + " only matches expression " + c.getDef(id) + " but instead got " + e)
+    }
+  }
   pat match {
+    case PredOf(Function(id, _, _, _, _), _) if c.hasDef(id) =>  matchDef(id)
+    case FuncOf(Function(id, _, _, _, _), _) if c.hasDef(id) => matchDef(id)
+    case PredicationalOf(Function(id,_,_,_,_), _) if c.hasDef(id) => matchDef(id)
+    case UnitPredicational(id, _) if c.hasDef(id) => matchDef(id)
+    case BaseVariable(id, _, _) if c.hasDef(id) => matchDef(id)
+    case UnitFunctional(id, _, _) if c.hasDef(id) => matchDef(id)
+    case ProgramConst(id) if c.hasDef(id) => matchDef(id)
+    case SystemConst(id) if c.hasDef(id) => matchDef(id)
     case PredOf(Function("p", _, _, _, _), args) if collectVarPat(args).isDefined || collectNegVarPat(args).isDefined =>
       (collectVarPat(args), collectNegVarPat(args)) match {
         case (Some(pos), _) =>
@@ -681,12 +735,12 @@ def pmatch(pat:Expression, e:Expression):Context = {
         case _ => throw patExn(pat, e, "Invalid variable occurrence pattern syntax")
       }
     case PredOf(Function("union", _, _, _, _), Pair(pat1, pat2)) =>
-      try { pmatch(pat1,e) }
-      catch {case _ : Throwable => pmatch(pat2,e) }
+      try { pmatch(pat1,e,c) }
+      catch {case _ : Throwable => pmatch(pat2,e,c) }
     case PredOf(Function("inter", _, _, _, _), Pair(pat1, pat2)) =>
-      pmatch(pat1,e).inter(pmatch(pat2,e))
+      pmatch(pat1,e,c).inter(pmatch(pat2,e,c))
     case PredOf(Function("neg", _, _, _, _) , pat1) =>
-      try { pmatch(pat1,e); throw patExn(pat1, e, "Pattern should not have matched but did: " + pat1.prettyString)}
+      try { pmatch(pat1,e,c); throw patExn(pat1, e, "Pattern should not have matched but did: " + pat1.prettyString)}
       catch {case _ : Throwable => Context.empty }
     case FuncOf(Function("f", _, _, _, _), args) =>
       (collectVarPat(args), collectNegVarPat(args)) match {
@@ -709,19 +763,19 @@ def pmatch(pat:Expression, e:Expression):Context = {
         case _ => throw patExn(pat, e, "Invalid variable occurrence pattern syntax")
       }
     case FuncOf(Function("union", _, _, _, _), Pair(pat1, pat2)) =>
-      try { pmatch(pat1,e) }
-      catch {case _ : Throwable => pmatch(pat2,e) }
+      try { pmatch(pat1,e,c) }
+      catch {case _ : Throwable => pmatch(pat2,e,c) }
     case FuncOf(Function("inter", _, _, _, _), Pair(pat1, pat2)) =>
-      pmatch(pat1,e).inter(pmatch(pat2,e))
+      pmatch(pat1,e,c).inter(pmatch(pat2,e,c))
     case FuncOf(Function("neg", _, _, _, _) , pat1) =>
-      try { pmatch(pat1,e); throw PatternMatchError("Pattern should not have matched but did: " + pat1.prettyString)}
+      try { pmatch(pat1,e,c); throw PatternMatchError("Pattern should not have matched but did: " + pat1.prettyString)}
       catch {case _ : Throwable => Context.empty }
     case FuncOf(Function("wild", _, _, _, _), pat) => Context.empty
     case PredOf(Function("wild", _, _, _, _), pat) => Context.empty
     case PredicationalOf(Function("wild", _, _, _, _), pat) => Context.empty
     case UnitPredicational("wild", _) => Context.empty
     case BaseVariable(vname, _, _) =>
-      if(vname.last == '_') {
+      if(vname.last == '_' && !c.hasDef(vname)) {
         Context.ofDef(vname.dropRight(1), e)
       } else if (pat == e) {
         Context.empty
@@ -729,7 +783,7 @@ def pmatch(pat:Expression, e:Expression):Context = {
         throw exn
       }
     case FuncOf(fn: Function, Nothing) =>
-      if(fn.name.last == '_') {
+      if(fn.name.last == '_' && !c.hasDef(fn.name)) {
         Context.ofDef(fn.name.dropRight(1), e)
       } else if (pat == e) {
         Context.empty
@@ -737,7 +791,7 @@ def pmatch(pat:Expression, e:Expression):Context = {
         throw exn
       }
     case UnitFunctional(name: String, _, _) =>
-      if(name.last == '_') {
+      if(name.last == '_' && !c.hasDef(name)) {
         Context.ofDef(name.dropRight(1), e)
       } else if (pat == e) {
         Context.empty
@@ -745,7 +799,7 @@ def pmatch(pat:Expression, e:Expression):Context = {
         throw exn
       }
     case DifferentialProgramConst(name: String,  _) =>
-      if(name.last == '_') {
+      if(name.last == '_' && !c.hasDef(name)) {
         Context.ofDef(name.dropRight(1), e)
       } else if (pat == e) {
         Context.empty
@@ -753,7 +807,7 @@ def pmatch(pat:Expression, e:Expression):Context = {
         throw exn
       }
     case ProgramConst(name: String) =>
-      if(name.last == '_') {
+      if(name.last == '_' && !c.hasDef(name)) {
         Context.ofDef(name.dropRight(1), e)
       } else if (pat == e) {
         Context.empty
@@ -761,7 +815,7 @@ def pmatch(pat:Expression, e:Expression):Context = {
         throw exn
       }
     case SystemConst(name: String) =>
-      if(name.last == '_') {
+      if(name.last == '_' && !c.hasDef(name)) {
         Context.ofDef(name.dropRight(1), e)
       } else if (pat == e) {
         Context.empty
@@ -769,7 +823,7 @@ def pmatch(pat:Expression, e:Expression):Context = {
         throw exn
       }
     case PredicationalOf(fn: Function, _) =>
-      if(fn.name.last == '_') {
+      if(fn.name.last == '_' && !c.hasDef(fn.name)) {
         Context.ofDef(fn.name.dropRight(1), e)
       } else if (pat == e) {
         Context.empty
@@ -777,7 +831,7 @@ def pmatch(pat:Expression, e:Expression):Context = {
         throw exn
       }
     case PredOf(fn: Function, _) =>
-      if(fn.name.last == '_') {
+      if(fn.name.last == '_' && !c.hasDef(fn.name)) {
         Context.ofDef(fn.name.dropRight(1), e)
       } else if (pat == e) {
         Context.empty
@@ -785,7 +839,7 @@ def pmatch(pat:Expression, e:Expression):Context = {
         throw exn
       }
     case UnitPredicational(name:String, _) =>
-      if(name.last == '_') {
+      if(name.last == '_' && !c.hasDef(name)) {
         Context.ofDef(name.dropRight(1), e)
       } else if (pat == e) {
         Context.empty
@@ -801,70 +855,70 @@ def pmatch(pat:Expression, e:Expression):Context = {
         case (True, True) => Context.empty
         case (False, False) => Context.empty
         case (e1: Plus, e2: Plus) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: Minus, e2: Minus) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: Times, e2: Times) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: Divide, e2: Divide) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: Power, e2: Power) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: Pair, e2: Pair) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: Equal, e2: Equal) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: NotEqual, e2: NotEqual) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: GreaterEqual, e2: GreaterEqual) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: Greater, e2: Greater) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: LessEqual, e2: LessEqual) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: Less, e2: Less) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: And, e2: And) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: Or, e2: Or) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: Imply, e2: Imply) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: Equiv, e2: Equiv) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: Box, e2: Box) =>
-          pmatch(e1.program, e2.program).concat(pmatch(e1.child,e2.child))
+          pmatch(e1.program, e2.program,c).concat(pmatch(e1.child,e2.child,c))
         case (e1: Diamond, e2: Diamond) =>
-          pmatch(e1.program, e2.program).concat(pmatch(e1.child,e2.child))
+          pmatch(e1.program, e2.program,c).concat(pmatch(e1.child,e2.child,c))
         case (e1: Choice, e2: Choice) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: Compose, e2: Compose) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: DifferentialProduct, e2: DifferentialProduct) =>
-          pmatch(e1.left, e2.left).concat(pmatch(e1.right,e2.right))
+          pmatch(e1.left, e2.left,c).concat(pmatch(e1.right,e2.right,c))
         case (e1: Forall, e2: Forall) =>
           if(e1.vars != e2.vars) { throw exn }
-          else { pmatch(e1.child, e2.child) }
+          else { pmatch(e1.child, e2.child,c) }
         case (e1: Exists, e2: Exists) =>
           if(e1.vars != e2.vars) { throw exn }
-          else { pmatch(e1.child, e2.child) }
+          else { pmatch(e1.child, e2.child,c) }
         case (e1: Assign, e2: Assign) => atom(e1,e2)
         case (e1: AssignAny, e2: AssignAny) => atom(e1,e2)
-        case(e1:Test, e2:Test) => pmatch(e1.cond, e2.cond)
-        case(e1:ODESystem, e2:ODESystem) => pmatch(e1.ode,e2.ode).concat(pmatch(e1.constraint,e2.constraint))
+        case(e1:Test, e2:Test) => pmatch(e1.cond, e2.cond,c)
+        case(e1:ODESystem, e2:ODESystem) => pmatch(e1.ode,e2.ode,c).concat(pmatch(e1.constraint,e2.constraint,c))
         case(e1:AtomicODE, e2:AtomicODE) =>
           if (e1.xp != e2.xp) { throw exn }
-          else { pmatch(e1.e, e2.e)}
-        case(e1:Neg, e2:Neg) => pmatch(e1.child,e2.child)
-        case(e1:Differential, e2:Differential) => pmatch(e1.child,e2.child)
-        case(e1:Not, e2:Not) => pmatch(e1.child,e2.child)
-        case(e1:DifferentialFormula, e2:DifferentialFormula) => pmatch(e1.child,e2.child)
-        case(e1:Loop, e2:Loop) => pmatch(e1.child,e2.child)
-        case(e1:Dual, e2:Dual) => pmatch(e1.child,e2.child)
+          else { pmatch(e1.e, e2.e,c)}
+        case(e1:Neg, e2:Neg) => pmatch(e1.child,e2.child,c)
+        case(e1:Differential, e2:Differential) => pmatch(e1.child,e2.child,c)
+        case(e1:Not, e2:Not) => pmatch(e1.child,e2.child,c)
+        case(e1:DifferentialFormula, e2:DifferentialFormula) => pmatch(e1.child,e2.child,c)
+        case(e1:Loop, e2:Loop) => pmatch(e1.child,e2.child,c)
+        case(e1:Dual, e2:Dual) => pmatch(e1.child,e2.child,c)
       }
   }
 }
-def doesMatch(pat:Expression, e:Expression):Boolean = {try {pmatch(pat, e); true} catch {case _:Throwable => false}}
+def doesMatch(pat:Expression, e:Expression, c:Context):Boolean = {try {pmatch(pat, e,c); true} catch {case _:Throwable => false}}
 
 
 /* TODO: Better to skip *all* skippable formulas, but that makes recovering the original theorem
