@@ -77,7 +77,7 @@ object Kaisar {
 
   abstract class SP
   case class Show (phi:Formula, proof: UP) extends SP
-  case class Let (pat:Expression, e:Expression, tail:SP) extends SP
+  case class SLet (pat:Expression, e:Expression, tail:SP) extends SP
   case class Note (x:Variable, fp:FP, tail: SP) extends SP
   case class Have (x:Variable, fml:Formula, sp:SP, tail: SP) extends SP
   case class BRule (r:RuleSpec, tails: List[SP]) extends SP
@@ -223,6 +223,9 @@ object Kaisar {
         (prv::prvs, ante2 ++ immutable.IndexedSeq(prv.conclusion.ante.head))
       })._1
     val withFacts:Provable = fprvs.foldLeft[Provable](g)({case (pr:Provable, next:Provable) => pr(Cut(next.conclusion.succ.head),0)(next,1)})
+    //TODO: Negate this
+    //TODO: Consider bound vars in patmatch
+    //TODO: search for stuff from context
     val inds:immutable.IndexedSeq[Int] = withFacts.subgoals.head.ante.zipWithIndex.filter({case (f,i) => pats.exists({case pat => doesMatch(pat, f)})}).map({case (f,i) => i}).reverse
     val pr = inds.foldLeft[Provable](withFacts)({case (pr2:Provable,i:Int) => pr2(HideLeft(AntePos(i)),0)})
     eval(method, pr)
@@ -280,13 +283,40 @@ object Kaisar {
     }
   }
 
+  def uniqueMatch(pat:Expression, c:Context, ante:immutable.IndexedSeq[Formula]):Int = {
+    val ident:Option[String] = pat match {case ns:NamedSymbol => Some(ns.name) case f:ApplicationOf => Some(f.func.name ) case _ => None}
+    val ofIdent:Option[Position] = ident.flatMap{case x => c.gmap.get(Variable(x))}
+    ofIdent match {
+      case Some(pos)  => pos.checkAnte.index0
+      case None =>
+        val matches = ante.zipWithIndex.filter({case (fml,_) => doesMatch(pat, fml)})
+        matches.toList match {
+          case ((_,i)::Nil) => i
+          case _ => throw new Exception("Non-unique match in pattern-matching construct")
+        }
+
+    }
+  }
+
   def eval(fp:FP, h:History, c:Context, ante:immutable.IndexedSeq[Formula]):Provable = {
     fp match {
-      case FPat(BaseVariable(id, _,_)) if propAxioms.keySet.contains(id.toLowerCase) =>
+      case (FPat(ns : NamedSymbol)) if propAxioms.keySet.contains(ns.name.toLowerCase) =>
+        val id = ns.name
         val fml = propAxioms(id)
         val pr:Provable = Provable.startProof(Sequent(ante, immutable.IndexedSeq(fml)))
         val pr2:Provable = pr(CoHideRight(SuccPos(0)),0)
         interpret(prop, pr2)
+      case FPat(f : ApplicationOf) if propAxioms.keySet.contains(f.func.name.toLowerCase) =>
+        val id = f.func.name
+        val fml = propAxioms(id.toLowerCase)
+        val pr:Provable = Provable.startProof(Sequent(ante, immutable.IndexedSeq(fml)))
+        val pr2:Provable = pr(CoHideRight(SuccPos(0)),0)
+        interpret(prop, pr2)
+      case FPat(e : Expression) =>
+        val i = uniqueMatch(e, c, ante)
+        val fml = ante(i)
+        val pr:Provable = Provable.startProof(Sequent(ante, immutable.IndexedSeq(fml)))
+        pr(Close(AntePos(i),SuccPos(0)),0)
       case FMP(fp1, fp2) =>
         val pr1:Provable = eval(fp1, h, c, ante)
         val pr2:Provable = eval(fp2, h, c, ante)
@@ -300,8 +330,8 @@ object Kaisar {
               val argPos = AntePos(ante.length)
               val impPos = AntePos(ante.length+1)
               val pr1b = pr1(subst.usubst)
-              // todo: positioning
-              Provable.startProof(seq) (Cut(p2),0)(pr2,1)  (Cut(Imply(p2,q2)),0)(pr1b,1) (ImplyLeft(impPos),0) (Close(argPos,SuccPos(0)),0) (Close(AntePos(0),SuccPos(0)),0)
+              Provable.startProof(seq)(Cut(p2),0)(HideRight(SuccPos(0)),1)(pr2,1)(Cut(Imply(p2,q2)),0)(HideRight(SuccPos(0)),1)(HideLeft(argPos),1)(pr1b,1)(ImplyLeft(impPos),0)(Close(argPos,SuccPos(1)),0)(Close(impPos,SuccPos(0)),0)
+
             } catch {
               case e : UnificationException => throw new Exception("proposition mismatch in modus ponens", e)
             }
@@ -565,7 +595,7 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
       val cc = pmatch(expanded, goal)
       val ccc = c.concat(cc)
       eval(proof, h, ccc, g)
-    case Let (pat:Expression, e:Expression, tail:SP) =>
+    case SLet (pat:Expression, e:Expression, tail:SP) =>
       val cc = pmatch(expand(pat,h,c), e)
       eval(tail, h, cc, g)
     case Note (x:Variable, fp:FP, tail: SP)  =>
@@ -574,7 +604,9 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
       val size = fpr.conclusion.ante.size
       val newPos = AntePos(size)
       val res:Formula = fpr.conclusion.succ.head
-      eval(tail, h, c.add(x,newPos), fpr(Cut(res), 0)(fpr,1))
+      val gg = g(Cut(res), 0)(HideRight(SuccPos(0)),1)(fpr,1)
+      val cc = c.add(x,newPos)
+      eval(tail, h, cc, gg)
     case Have (x:Variable, fml:Formula, sp:SP, tail: SP)  =>
       val fmlExpanded = expand(fml,h,c)
       val seq = Sequent(g.subgoals.head.ante, immutable.IndexedSeq(fmlExpanded))

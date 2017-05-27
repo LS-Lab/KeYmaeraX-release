@@ -249,4 +249,162 @@ class KaisarTests extends TacticTestBase {
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
+  "DaLi'17 Example 1a" should "prove" in {
+    withZ3(qeTool => {
+    val box = "x > 1 & y = 0 -> (x-1)^2 != (x+1)^2".asFormula
+    val sp:SP =
+      BRule(RBAssume("xy".asVariable, "x > 1 & y = 0".asFormula),
+        List(Show("(x-1)^2 != (x+1)^2".asFormula, UP(Nil, Kaisar.RCF()))))
+    Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+  })}
+  "DaLi'17 Example 1b" should "prove" in {
+    withZ3(qeTool => {
+      val box = "x > 1 & y = 0 -> (x-1)^2 != (x+1)^2".asFormula
+      val sp:SP =
+        BRule(RBAssume("xy".asVariable, "x_() & y_()".asFormula), List(
+          Show("wild()".asFormula, UP(Nil, Kaisar.RCF()))
+        ))
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+    })}
+  "DaLi'17 Example 1c" should "prove" in {
+    withZ3(qeTool => {
+      val box = "x > 1 & y = 0 -> (x-1)^2 != (x+1)^2".asFormula
+      val sp:SP =
+        BRule(RBAssume("xy".asVariable, "x_() & y_()".asFormula), List(
+          Have("x".asVariable, "x != 0".asFormula, Show("x != 0".asFormula, UP(List(Left("xy".asVariable)), Kaisar.RCF())),
+          Show("wild()".asFormula, UP(Nil, Kaisar.RCF())))
+        ))
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+    })}
+
+  "DaLi'18 Example 1d" should "prove" in {
+    withZ3(qeTool => {
+      val box =
+        "(x + y + z > 1 & huge = 0 -> (x + y + z -1)^2 != (x + y + z + 1)^2)".asFormula
+      val sp:SP =
+        SLet("w_()".asTerm, "x + y + z".asTerm,
+        BRule(RBAssume("xy".asVariable,"w_() > 1 & wild()".asFormula),List(
+          Note("w".asVariable, FMP(FPat("andE1()".asFormula), FPat("xy".asVariable)),
+            Show("wild()".asFormula, UP(List(Left("w_()".asFormula)),Kaisar.RCF()))
+            )
+        )))
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+    })
+  }
+/*# Example 1d
+# prove (x + y + z > 1 & huge = 0 ->
+# (x + y + z -1)^2 != (x + y + z + 1)^2)
+let ?w = (x + y + z)
+assume xy:(?w > 1  & _)
+note w = (andE1 xy)
+show (_)
+  using w by R
+*/
+  "DaLi'18 Example 2a" should "prove" in {
+    withZ3(qeTool => {
+      ???
+    })
+  }
+/*
+* x=2\cdot y\limply \left[\left\{\{?(x<-2);x:=x^2\}\cup y:=\frac{1}{3}\cdot y\right\}x:=x\cdot 2\right]x > 2\cdot y
+* # Example 2a
+assume xy:(x=2*y)
+case (?(x<-2); _)
+  assume x:(x<-2)
+  assign x:=x^2
+  show(x > 2*y)
+    by auto
+case (y := _)
+  assign (y:=(1/3)*y)
+  assign x:=x^2
+  show (x > 2*y)
+    by auto
+*/
+  "DaLi'18 Example 2b" should "prove" in {
+    withZ3(qeTool => {
+      ???
+    })
+  }
+  /*# Example 2b
+assume xy:(x=2*y)
+mid J:(x>y)
+  show ([_]x>y) by auto
+assign x:=x*2
+show (x > 2y) using J by auto
+*/
+  "DaLi'18 Example 2c" should "prove" in {
+    withZ3(qeTool => {
+      ???
+    })
+  }
+/*# Example 2c
+assume xy:(x=2*y)
+mid J:(x>y)
+  show ([_]x>y) by auto
+state pre-assign
+assign x:=x*2
+have xs:(x >= 2*pre-assign(x) & pre-assign(x) > y)
+  by auto
+show _ using J by auto
+*/
+"DaLi'18 Example 2d" should "prove" in {
+    withZ3(qeTool => {
+      ???
+    })
+  }
+  // x=0\land{y=1}\limply[\{y:= (1/2)\cdot{y}\}^*;\{x:=x+y;y:=(1/2)\cdot{y}\}^*;\{x:=x+y\}^*]x \geq 0
+
+  /*#Example 3
+assume xy:(x=0&y=1)
+time init
+Inv J1:(y > 0)            { Pre => show _ by R | Inv => show _ by R }
+time t1
+Inv J2:(y>0 & x>=init(x)) { Pre => show _ by R | Inv => show _ by R }
+time t2
+Inv J3:(y>0 & x>=t2(x))   { Pre => show _ by R | Inv => show _ by R }
+show (y >= 0) using J1 J2 J3 by R
+*/
+  "DaLi'18 Example 3" should "prove" in {
+    withZ3(qeTool => {
+      ???
+    })
+  }
+  /*  g>0\land &y\geq H\land H>0\land v_y=0 \limply\\
+\Big[\Big\{\big\{  &\{?(y>0\vee v_y\geq 0)\}  \cup  \{?(y\leq 0\wedge v_y < 0); v_y := -v_y\}\big\}\\
+          &\{y'=v_y,v_y'=-g \& y\geq 0\}\\
+\Big\}^*\Big](&0 \leq y \wedge y \leq H)\\
+*/
+
+  /*assume assms:(g>0 & y>=H & H>0 & vy=0)
+let ?E(t) = t(v^2/2 + H)
+time init
+Inv J(y >= 0 & ??E = init(E) {
+  Inv =>
+   time loop-init
+   mid (?E = loop-init(E))
+     show [_ U _]_ by auto
+   solve {_ & ?dc} t:(t>=0) dc:?dc
+     show _ by auto }
+show _  using J assms by auto
+*/
+  "DaLi'18 Example 4" should "prove" in {
+    withZ3(qeTool => {
+      ???
+    })
+  }
+  // x>0\wedge{y>0}\limply[\{x'=-x,y'=x\}]y>0
+
+  /* assume assms:(x>0 & y>0)
+time init
+Ghost z'=x/2, z = (1/x)^(1/2)
+Inv JG:(x*z^2 = 1)
+Inv Jx:(x > 0)
+Inv Jy:(y > init(y))
+show (Jy > 0) using assms Jy by auto
+*/
+  "DaLi'18 Example 5" should "prove" in {
+    withZ3(qeTool => {
+      ???
+    })
+  }
 }
