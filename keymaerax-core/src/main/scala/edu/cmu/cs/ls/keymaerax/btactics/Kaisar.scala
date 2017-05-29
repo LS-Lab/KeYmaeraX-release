@@ -133,7 +133,7 @@ object Kaisar {
     def update(x:VBase):History = {
       // TODO: Optimize by keeping count of renames per variable
       val from = Variable(x)
-      val isRename:(HistChange => Boolean)={case HCRename(bn, _, _) => bn.name==x}
+      val isRename:(HistChange => Boolean)={case HCRename(bn, _, _) => bn.name==x case _ => false}
       val to = Variable(x, Some(steps.count(isRename)))
       val (recent, old) = partBefore(steps, isRename)
       val hist = recent.map{case ch : HCAssign => ch.rename(from, to) case x => x} ++ old
@@ -580,16 +580,86 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
               val hh = h.updateRen(Variable(base.name), Variable(base.name, Some(h.nextIndex(base.name))), AntePos(gg.subgoals.head.ante.length-1))
               eval(sp.head, hh, c, gg)
           }
-        case (RBConsequence(fml:Formula), Box(Compose(a,b),p)) =>
+        case (RBConsequence(fml:Formula), Box(a,Box(b,p))) =>
           assertBranches(sp.length, 2)
-          // TODO: How many assumptions stick around?
+
+/*          private def ghostDC(f: Formula, pos: Position, sequent: Sequent): BelleExpr = {
+      def dc = sequent.sub(pos) match {
+      case Some(Box(_, _)) => DC _
+      case Some(Diamond(_, _)) => DCd _
+      }
+
+      val ov = oldVars(f)
+      if (ov.isEmpty) {
+      dc(f)(pos)
+      } else {
+      val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {/
+      val (ghost: Variable, ghostPos: Option[Position]) = old match {
+      case v: Variable =>
+      sequent.ante.zipWithIndex.find({
+        //@note heuristic to avoid new ghosts on repeated old(v) usage
+      case (Equal(x0: Variable, x: Variable), _) => v==x && x0.name==x.name
+      case _ => false
+      }).map[(Variable, Option[Position])]({ case (Equal(x0: Variable, _), i) => (x0, Some(AntePosition.base0(i))) }).
+      getOrElse((TacticHelper.freshNamedSymbol(v, sequent), None))
+      case _ => (TacticHelper.freshNamedSymbol(Variable("old"), sequent), None)
+      }
+      (old -> ghost,
+      ghostPos match {
+      case None => discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) &
+      TactixLibrary.exhaustiveEqR2L(hide=false)('Llast)
+      case Some(gp) => TactixLibrary.exhaustiveEqR2L(hide=false)(gp)
+      })
+      }).toList
+      ghosts.map(_._2).reduce(_ & _) & dc(replaceOld(f, ghosts.map(_._1).toMap))(pos)
+      }
+      }*/
+
+          val bvs = StaticSemantics.boundVars(a)
           val seq1:Sequent = Sequent(sequent.ante, immutable.IndexedSeq(Box(a,fml)) ++ sequent.succ.tail)
-          val seq2:Sequent = Sequent(immutable.IndexedSeq(fml), immutable.IndexedSeq(Box(a,p)))
           val pr1:Provable = eval(sp(0),h,c,Provable.startProof(seq1))
-          val pr2:Provable = eval(sp(1),h,c,Provable.startProof(seq2))
-          // TODO: Not right, need a cut somewhere
-          val prr:Provable = interpret(TactixLibrary.monb, g)
-          prr(pr1,0)(pr2,0)
+          def doBigRename(pr:Provable) = {
+            bvs.toSet.foldRight[(Provable,List[(Variable)])]((pr,Nil))({case(v:Variable,(acc,accVs)) =>
+              println("Right now: ", acc.prettyString)
+              val vv:Variable = TacticHelper.freshNamedSymbol(v,pr1.conclusion)
+              val last = acc.subgoals.head.ante.length+1
+              val e:BelleExpr = discreteGhost(v,Some(vv))(1) &
+                DLBySubst.assignEquality(1) &
+                TactixLibrary.exhaustiveEqR2L(hide=false)('Llast) &
+                DebuggingTactics.debug("what " + last, doPrint = true) &
+                TactixLibrary.eqL2R(-last)(1) &
+                TactixLibrary.eqL2R(-last)(-1)
+              (interpret(e, acc), vv::accVs)
+            })
+          }
+          // TODO: Document the proof tree for this proof.
+          // TODO: How many assumptions stick around?
+          val seq2:Sequent = Sequent(immutable.IndexedSeq(fml) ++ sequent.ante, immutable.IndexedSeq(Box(b,p)))
+          val pr2a:Provable = Provable.startProof(seq2)
+          val (rename,renVs) = doBigRename(pr2a)
+          val hh = renVs.foldRight(h)({case (v, acc) => acc.update(v.name)})
+          val pr2Help = Provable.startProof(rename.subgoals.head)
+          val G1 = pr2Help.conclusion.ante
+          val FG1:Formula = G1.reduceRight(And)
+          val pr2Hid = interpret(hideL('Llast)*(bvs.toSet.size), pr2Help)
+          val pr2Start = Provable.startProof(pr2Hid.subgoals.head)
+          val G2 = pr2Hid.subgoals.head.ante.tail
+          val FG2:Formula = G2.reduceRight(And)
+          val pr2:Provable = eval(sp(1),hh,c,pr2Start)
+          val pp1:Provable = doBigRename(g)._1
+          val pp2:Provable = interpret(cut(Box(a,And(fml,FG2))), pp1)
+          val pp3:Provable = interpret(nil <( hideL(-1)*(G1.length-1) & monb & ((andL('L))*) & useAt(NoProofTermProvable(pr2), PosInExpr(Nil))(1), nil), pp2)
+          val pp4:Provable = interpret(hideR(1), pp3)
+          val pp5:Provable = interpret(boxAnd(1) & andR(1), pp4)
+          val pp6:Provable = interpret(nil <(hideL('Llast)*bvs.toSet.size & useAt(NoProofTermProvable(pr1), PosInExpr(Nil))(1),nil), pp5)
+          val poses = List.tabulate(bvs.toSet.size)({case i => AntePosition(pp6.subgoals.head.ante.length - i)})
+          val e = poses.foldLeft(nil)({case (acc, pos) => acc & TactixLibrary.eqR2L(pos)(-1) & hideL(pos)})
+          val pp7:Provable = interpret(e, pp6)
+          val pp8:Provable = interpret(useAt("V vacuous")(1), pp7)
+
+
+          val prr:Provable = interpret(prop, pp8)
+          prr//(pr1,0)(pr2,0)
         case (RBCase(), Box(Choice(a,b),p)) =>
           assertBranches(sp.length, 2)
           val seq1:Sequent = Sequent(sequent.ante, immutable.IndexedSeq(Box(a,p)) ++ sequent.succ.tail)
@@ -597,7 +667,7 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val pr1:Provable = eval(sp(0),h,c,Provable.startProof(seq1))
           val pr2:Provable = eval(sp(1),h,c,Provable.startProof(seq2))
           // TODO: Not right, need a cut somewhere
-          val prr:Provable = interpret(TactixLibrary.choiceb & andR(1), g)
+          val prr:Provable = interpret(TactixLibrary.choiceb(1) & andR(1), g)
           prr(pr1,0)(pr2,0)
         case (RBAssume(x:Variable,fml:Formula),Imply(p,q)) =>
           assertBranches(sp.length, 1)
@@ -770,6 +840,8 @@ def pmatch(pat:Expression, e:Expression, c:Context):Context = {
     case FuncOf(Function("neg", _, _, _, _) , pat1) =>
       try { pmatch(pat1,e,c); throw PatternMatchError("Pattern should not have matched but did: " + pat1.prettyString)}
       catch {case _ : Throwable => Context.empty }
+      // TODO: Wild ODE system should only match ODE systems, but because parser prefers diffprogramconst to programconst we do this instead
+    case ODESystem(DifferentialProgramConst("wild",_),_) => Context.empty
     case FuncOf(Function("wild", _, _, _, _), pat) => Context.empty
     case PredOf(Function("wild", _, _, _, _), pat) => Context.empty
     case PredicationalOf(Function("wild", _, _, _, _), pat) => Context.empty

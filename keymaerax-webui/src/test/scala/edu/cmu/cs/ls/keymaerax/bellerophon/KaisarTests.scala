@@ -277,7 +277,15 @@ class KaisarTests extends TacticTestBase {
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })}
 
-  "DaLi'17 Example 1d" should "prove" in {
+  /*# Example 1d
+  # prove (x + y + z > 1 & huge = 0 ->
+  # (x + y + z -1)^2 != (x + y + z + 1)^2)
+  let ?w = (x + y + z)
+  assume xy:(?w > 1  & _)
+  note w = (andE1 xy)
+  show (_)
+    using w by R
+  */  "DaLi'17 Example 1d" should "prove" in {
     withZ3(qeTool => {
       val box =
         "(x + y + z > 1 & huge = 0 -> (x + y + z -1)^2 != (x + y + z + 1)^2)".asFormula
@@ -291,38 +299,45 @@ class KaisarTests extends TacticTestBase {
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
-/*# Example 1d
-# prove (x + y + z > 1 & huge = 0 ->
-# (x + y + z -1)^2 != (x + y + z + 1)^2)
-let ?w = (x + y + z)
-assume xy:(?w > 1  & _)
-note w = (andE1 xy)
-show (_)
-  using w by R
-*/
+
+  /*
+   * x=2 * y-> [{{?(x<-2);x:=x^2}++ {?(x >= 0 & y >= 0);y:=1/3*y}}x:=x*2;]x > 2* y
+      * # Example 2a
+    assume xy:(x=2*y)
+    case (?(x<-2); _)
+      assume x:(x<-2)
+      assign x:=x^2
+      show(x > 2*y)
+      by auto
+      //TODO: Add pattern-matches to case construct
+      //TODO: Fix this pattern in paper
+    case (y := _)
+      assign (y:=(1/3)*y)
+      assign x:=x^2
+      show (x > 2*y)
+      by auto
+      */
   "DaLi'17 Example 2a" should "prove" in {
     withZ3(qeTool => {
-      ???
-    })
-  }
-/*
-* x=2\cdot y\limply \left[\left\{\{?(x<-2);x:=x^2\}\cup y:=\frac{1}{3}\cdot y\right\}x:=x\cdot 2\right]x > 2\cdot y
-* # Example 2a
-assume xy:(x=2*y)
-case (?(x<-2); _)
-  assume x:(x<-2)
-  assign x:=x^2
-  show(x > 2*y)
-    by auto
-case (y := _)
-  assign (y:=(1/3)*y)
-  assign x:=x^2
-  show (x > 2*y)
-    by auto
-*/
-  "DaLi'17 Example 2b" should "prove" in {
-    withZ3(qeTool => {
-      ???
+      val box = "x=2*y -> [{{?(x< -2);x:=x^2;} ++ {?(x >= 0 & y > 0);y:=1/3*y;}}x:=x*2;]x > 2*y".asFormula
+      val sp:SP =
+        BRule(RBAssume("xy".asVariable,"x=2*y".asFormula),List(
+          BRule(RBCase(), List(
+            BRule(RBAssume("x".asVariable,"x< -2".asFormula),List(
+            BRule(RBAssign(Assign("x".asVariable,"x^2".asTerm)),List(
+            BRule(RBAssign(Assign("x".asVariable,"(x*2)".asTerm)), List(
+              Show("x > 2*y".asFormula, UP(List(), Auto()))
+            )))))),
+            BRule(RBAssume("xy".asVariable,"x >= 0 & y > 0".asFormula),List(
+            BRule(RBAssign(Assign("y".asVariable,"(1/3)*y".asTerm)),List(
+            BRule(RBAssign(Assign("x".asVariable,"(x*2)".asTerm)), List(
+            Show("x > 2*y".asFormula, UP(List(), Auto()))
+            ))
+            )
+          )
+          ))
+        ))))
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
   /*# Example 2b
@@ -332,6 +347,21 @@ mid J:(x>y)
 assign x:=x*2
 show (x > 2y) using J by auto
 */
+  //TODO: Add variables in con rule, also rename con rule
+  "DaLi'17 Example 2b" should "prove" in {
+    withZ3(qeTool => {
+      val box = "x=2*y -> [{{?(x< -2);x:=x^2;} ++ {?(x >= 0 & y > 0);y:=1/3*y;}}x:=x*2;]x > 2*y".asFormula
+      val sp:SP =
+         BRule(RBAssume("xy".asVariable,"x=2*y".asFormula),List(
+           BRule(RBConsequence("x>y".asFormula),List(
+             Show("[{wild}]x>y".asFormula, UP(List(),Auto()))
+        ,BRule(RBAssign(Assign("x".asVariable,"x*2".asTerm)),List(
+             Show("x>2*y".asFormula, UP(List(),Auto()))))
+          ))
+        ))
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+    })
+  }
   "DaLi'17 Example 2c" should "prove" in {
     withZ3(qeTool => {
       ???
