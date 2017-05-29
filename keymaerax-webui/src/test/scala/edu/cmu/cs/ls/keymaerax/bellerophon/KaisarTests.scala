@@ -364,7 +364,19 @@ show (x > 2y) using J by auto
   }
   "DaLi'17 Example 2c" should "prove" in {
     withZ3(qeTool => {
-      ???
+      val box = "x=2*y -> [{{?(x< -2);x:=x^2;} ++ {?(x >= 0 & y > 0);y:=1/3*y;}}x:=x*2;]x > 2*y".asFormula
+      val sp:SP =
+        BRule(RBAssume("xy".asVariable, "x=2*y".asFormula), List(
+          BRule(RBConsequence("x>y".asFormula),List(
+            Show("[{wild}]x>y".asFormula, UP(Nil, Auto())),
+            State("preassign",
+              BRule(RBAssign(Assign("x".asVariable,"x*2".asTerm)),List(
+                Have("xs".asVariable,"x >= 2*preassign(x) & (preassign(y) > 0 -> preassign(x) > y)".asFormula, Show("wild()".asFormula, UP(Nil, Auto())),
+                  Show("wild()".asFormula, UP(List(),Auto()))) // Left("J".asVariable)
+              )))
+          ))
+        ))
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
 /*# Example 2c
@@ -373,6 +385,7 @@ mid J:(x>y)
   show ([_]x>y) by auto
 state pre-assign
 assign x:=x*2
+//TODO: Fix this in the paper, see test case
 have xs:(x >= 2*pre-assign(x) & pre-assign(x) > y)
   by auto
 show _ using J by auto

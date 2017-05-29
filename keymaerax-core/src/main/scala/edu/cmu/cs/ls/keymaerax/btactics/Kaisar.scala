@@ -493,25 +493,6 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
         }
       }
       val e:BelleExpr = DLBySubst.loop(conj)(1) <( DebuggingTactics.debug("base case", doPrint = true) & baseCase(fmls.zip(pres)), DebuggingTactics.debug("use case", doPrint = true) &  nil, (andL('L)*) & DebuggingTactics.debug("inductive case", doPrint = true) & indCase(fmls.zip(invs)))
-      /*val invSeq: immutable.IndexedSeq[Formula] = ante.takeRight(nInvs).map({ case Box(_, p) => p })
-      val invAnte:immutable.IndexedSeq[Formula] = invSeq ++ immutable.IndexedSeq(fml)
-      val preSeq = Sequent(ante, immutable.IndexedSeq(fml))
-      val prPre: Provable = eval(pre, h, c, Provable.startProof(preSeq))
-      val indSeq:Sequent =  Sequent(invAnte, immutable.IndexedSeq(Box(a, fml)))
-      val prInv: Provable = eval(inv, h,c, Provable.startProof(indSeq))
-      val bigImp:Formula = invSeq.foldRight[Formula](Imply(fml,Box(a,post)))({case (acc,p) => Imply(p,acc)})
-      val impRs: BelleExpr = List.tabulate(invSeq.length)({case _ => implyR(1)}).foldLeft(nil)({case (e1,e2) => e1 & e2})
-      //  P & [a*](P -> [a]P) -> [a*]P
-      //DLBySubst.loop(invariant, nil)
-      val e:BelleExpr =
-        cut(Box(Loop(a),fml)) <(nil, hideR(1) & DLBySubst.loop(fml, nil)(1) <(
-          useAt(NoProofTermProvable(prPre), key = PosInExpr(Nil))(1),
-          close,
-          useAt(NoProofTermProvable(prInv), key = PosInExpr(Nil))(1))
-        )*/
-
-      //val e:BelleExpr = // cut(bigImp) <(nil, hideR(1) & impRs & DebuggingTactics.debug("The thing", doPrint = true) & useAt(NoProofTermProvable(prInv))(1))
-//        cut(Box(Loop(a),fml)) <(nil, hideR(1) & cut(bigImp) <(nil, hideR(1) & impRs & DebuggingTactics.debug("The thing", doPrint = true) & useAt(NoProofTermProvable(prInv))(1)))
       val pr:Provable = interpret(e, gg)
       println("Done first step of interpreting thing: " + pr.prettyString)
       // polyK(pr, invSeq.map{case fml => interpret(TactixLibrary.close, Provable.startProof(Sequent(invSeq,immutable.IndexedSeq(fml))))}.toList)
@@ -534,19 +515,6 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
       eval(tail, h, c, interpret(dW(1) & implyR(1), g))
     case (Finally (tail: SP),post) =>  {
       eval(tail, h, c, g)
-      /*val invSeq: immutable.IndexedSeq[Formula] = ante.takeRight(nInvs).map({ case Box(_, p) => p })
-      val indSeq:Sequent =  Sequent(invSeq, immutable.IndexedSeq(post))
-      val prEnd:Provable = eval(tail, h, c, Provable.startProof(indSeq))
-      val bigImp:Formula = invSeq.foldRight[Formula](post)({case (acc,p) => Imply(p,acc)})
-      val bigBox:Formula = Box(Loop(a), bigImp)
-      println("*******\n" + prEnd.prettyString + "\n****")
-      val impRs: BelleExpr = List.tabulate(invSeq.length)({case _ => implyR(1)}).foldLeft(nil)({case (e1,e2) => e1 & e2})
-      val e:BelleExpr = cut(bigBox) <(DebuggingTactics.debug("barFoo", doPrint = true), hideR(1) & abstractionb(1) & cohideR(1) & (allR(1)*)  & DebuggingTactics.debug("Foobar", doPrint = true) & impRs  & useAt(NoProofTermProvable(prEnd), key = PosInExpr(Nil))(1))
-      val pr:Provable = interpret(e, g)
-      println("|*******\n" + pr.prettyString + "\n****")
-      val subPrs = invSeq.map{case fml => interpret(TactixLibrary.close, Provable.startProof(Sequent(pr.subgoals.head.ante,immutable.IndexedSeq(Box(Loop(a),fml)))))}.toList
-      subPrs.map({case sp => println("||*******\n" + sp.prettyString + "\n****")})
-      polyK(pr, subPrs, impAtEnd = true)*/
     }
   }
 }
@@ -582,39 +550,6 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           }
         case (RBConsequence(fml:Formula), Box(a,Box(b,p))) =>
           assertBranches(sp.length, 2)
-
-/*          private def ghostDC(f: Formula, pos: Position, sequent: Sequent): BelleExpr = {
-      def dc = sequent.sub(pos) match {
-      case Some(Box(_, _)) => DC _
-      case Some(Diamond(_, _)) => DCd _
-      }
-
-      val ov = oldVars(f)
-      if (ov.isEmpty) {
-      dc(f)(pos)
-      } else {
-      val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {/
-      val (ghost: Variable, ghostPos: Option[Position]) = old match {
-      case v: Variable =>
-      sequent.ante.zipWithIndex.find({
-        //@note heuristic to avoid new ghosts on repeated old(v) usage
-      case (Equal(x0: Variable, x: Variable), _) => v==x && x0.name==x.name
-      case _ => false
-      }).map[(Variable, Option[Position])]({ case (Equal(x0: Variable, _), i) => (x0, Some(AntePosition.base0(i))) }).
-      getOrElse((TacticHelper.freshNamedSymbol(v, sequent), None))
-      case _ => (TacticHelper.freshNamedSymbol(Variable("old"), sequent), None)
-      }
-      (old -> ghost,
-      ghostPos match {
-      case None => discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) &
-      TactixLibrary.exhaustiveEqR2L(hide=false)('Llast)
-      case Some(gp) => TactixLibrary.exhaustiveEqR2L(hide=false)(gp)
-      })
-      }).toList
-      ghosts.map(_._2).reduce(_ & _) & dc(replaceOld(f, ghosts.map(_._1).toMap))(pos)
-      }
-      }*/
-
           val bvs = StaticSemantics.boundVars(a)
           val seq1:Sequent = Sequent(sequent.ante, immutable.IndexedSeq(Box(a,fml)) ++ sequent.succ.tail)
           val pr1:Provable = eval(sp(0),h,c,Provable.startProof(seq1))
@@ -628,13 +563,14 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
                 TactixLibrary.exhaustiveEqR2L(hide=false)('Llast) &
                 DebuggingTactics.debug("what " + last, doPrint = true) &
                 TactixLibrary.eqL2R(-last)(1) &
-                TactixLibrary.eqL2R(-last)(-1)
+                TactixLibrary.eqL2R(-last)(1 + accVs.length - last) &
+                  DebuggingTactics.debug("whomst " + (accVs.length - last), doPrint = true)
               (interpret(e, acc), vv::accVs)
             })
           }
           // TODO: Document the proof tree for this proof.
           // TODO: How many assumptions stick around?
-          val seq2:Sequent = Sequent(immutable.IndexedSeq(fml) ++ sequent.ante, immutable.IndexedSeq(Box(b,p)))
+          val seq2:Sequent = Sequent(sequent.ante ++ immutable.IndexedSeq(fml), immutable.IndexedSeq(Box(b,p)))
           val pr2a:Provable = Provable.startProof(seq2)
           val (rename,renVs) = doBigRename(pr2a)
           val hh = renVs.foldRight(h)({case (v, acc) => acc.update(v.name)})
@@ -643,14 +579,15 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val FG1:Formula = G1.reduceRight(And)
           val pr2Hid = interpret(hideL('Llast)*(bvs.toSet.size), pr2Help)
           val pr2Start = Provable.startProof(pr2Hid.subgoals.head)
-          val G2 = pr2Hid.subgoals.head.ante.tail
+          val G2 = pr2Hid.subgoals.head.ante//.tail
           val FG2:Formula = G2.reduceRight(And)
           val pr2:Provable = eval(sp(1),hh,c,pr2Start)
           val pp1:Provable = doBigRename(g)._1
           val poses = List.tabulate(bvs.toSet.size)({case i => AntePosition(pp1.subgoals.head.ante.length - i)})
           val e = poses.foldLeft(nil)({case (acc, pos) => acc & TactixLibrary.eqR2L(pos)(-1) & hideL(pos)})
-          val prr:Provable = interpret(cut(Box(a,And(fml,FG2))) <(hideL(-1)*(G1.length-1) & monb & ((andL('L))*) & useAt(NoProofTermProvable(pr2), PosInExpr(Nil))(1),
-            hideR(1) & boxAnd(1) & andR(1) <(hideL('Llast)*bvs.toSet.size & useAt(NoProofTermProvable(pr1), PosInExpr(Nil))(1), e & useAt("V vacuous")(1) & prop)), pp1)
+          //
+          val prr:Provable = interpret(cut(Box(a,FG2)) <(DebuggingTactics.debug("DooD " + (G1.length-1), doPrint = true) & hideL(-1)*(G1.length-1) & DebuggingTactics.debug("hmmm", doPrint = true) & monb & ((andL('L))*) & DebuggingTactics.debug("The useat time ", doPrint = true ) & useAt(NoProofTermProvable(pr2), PosInExpr(Nil))(1),
+            hideR(1) & boxAnd(1) & andR(1) & DebuggingTactics.debug("stuff", doPrint = true) <( e & useAt("V vacuous")(1) & prop, hideL('Llast)*bvs.toSet.size & useAt(NoProofTermProvable(pr1),PosInExpr(Nil))(1))), pp1)
           prr
         case (RBCase(), Box(Choice(a,b),p)) =>
           assertBranches(sp.length, 2)
@@ -715,7 +652,8 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
       val prOut = eval(sp, h, c, prIn)
       val size = prOut.conclusion.ante.size
       val newPos = AntePos(size)
-      eval(tail,h,c.add(x,newPos), g(Cut(fmlExpanded),0)(HideRight(SuccPos(0)),1)(prOut,1))
+      val gg = g(Cut(fmlExpanded),0)(HideRight(SuccPos(0)),1)(prOut,1)
+      eval(tail,h,c.add(x,newPos), gg)
     case BRule (r:RuleSpec, tails: List[SP]) => eval(r,tails,h,c,g)
     case State (st:TimeName, tail: SP) => eval(tail,h.advance(st),c,g)
     case PrintGoal(msg,tail) =>
