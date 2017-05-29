@@ -433,11 +433,11 @@ def polyK(pr:Provable, facts:List[Provable], onSecond:Boolean = false, impAtEnd:
   }
 }
 
-def collectLoopInvs(ip: IP):(List[Formula], List[SP], List[SP], IP) = {
+def collectLoopInvs(ip: IP,h:History,c:Context):(List[Formula], List[SP], List[SP], IP) = {
   ip match {
     case Inv(fml, pre, inv, tail) =>
-      val (f,p,i,t) = collectLoopInvs(tail)
-      (fml::f, pre::p, inv::i, t)
+      val (f,p,i,t) = collectLoopInvs(tail,h,c)
+      (expand(fml,h,c)::f, pre::p, inv::i, t)
     case _ : Finally => (Nil, Nil, Nil, ip)
     case _ => ???
   }
@@ -454,7 +454,7 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
     case (nextInv : Inv, Box(Loop(a),post)) => {
       val anteConst = ante.filter({case f => StaticSemantics.freeVars(f).intersect(StaticSemantics.boundVars(a)).isEmpty})
       // Inv (fml: Formula, pre: SP, inv: SP, tail: IP)
-      val (fmls, pres, invs, lastTail) = collectLoopInvs(nextInv)
+      val (fmls, pres, invs, lastTail) = collectLoopInvs(nextInv,h,c)
       val conj = fmls.reduceRight(And)
       def baseCase(fmlPres:List[(Formula,SP)], done:List[Formula] = Nil):BelleExpr = {
         fmlPres match {
@@ -492,7 +492,7 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
             boxAnd(1) & andR(1) <(e1, e2)
         }
       }
-      val e:BelleExpr = DLBySubst.loop(conj)(1) <( DebuggingTactics.debug("base case", doPrint = true) & baseCase(fmls.zip(pres)), DebuggingTactics.debug("use case", doPrint = true) &  nil, (andL('L)*) & DebuggingTactics.debug("inductive case", doPrint = true) & indCase(fmls.zip(invs)))
+      val e:BelleExpr = DLBySubst.loop(conj)(1) <( DebuggingTactics.debug("base case", doPrint = true) & baseCase(fmls.zip(pres)), DebuggingTactics.debug("use case", doPrint = true) &  nil, DebuggingTactics.debug("preductive case", doPrint = true) & (andL('L)*(Math.max(0, invs.length-1))) & DebuggingTactics.debug("inductive case", doPrint = true) & indCase(fmls.zip(invs)))
       val pr:Provable = interpret(e, gg)
       println("Done first step of interpreting thing: " + pr.prettyString)
       // polyK(pr, invSeq.map{case fml => interpret(TactixLibrary.close, Provable.startProof(Sequent(invSeq,immutable.IndexedSeq(fml))))}.toList)

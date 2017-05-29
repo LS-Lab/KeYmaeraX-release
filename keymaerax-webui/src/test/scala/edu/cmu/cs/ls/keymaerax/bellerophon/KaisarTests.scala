@@ -362,6 +362,17 @@ show (x > 2y) using J by auto
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
+  /*# Example 2c
+  assume xy:(x=2*y)
+  mid J:(x>y)
+    show ([_]x>y) by auto
+  state pre-assign
+  assign x:=x*2
+  //TODO: Fix this in the paper, see test case
+  have xs:(x >= 2*pre-assign(x) & pre-assign(x) > y)
+    by auto
+  show _ using J by auto
+  */
   "DaLi'17 Example 2c" should "prove" in {
     withZ3(qeTool => {
       val box = "x=2*y -> [{{?(x< -2);x:=x^2;} ++ {?(x >= 0 & y > 0);y:=1/3*y;}}x:=x*2;]x > 2*y".asFormula
@@ -379,23 +390,7 @@ show (x > 2y) using J by auto
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
-/*# Example 2c
-assume xy:(x=2*y)
-mid J:(x>y)
-  show ([_]x>y) by auto
-state pre-assign
-assign x:=x*2
-//TODO: Fix this in the paper, see test case
-have xs:(x >= 2*pre-assign(x) & pre-assign(x) > y)
-  by auto
-show _ using J by auto
-*/
-"DaLi'17 Example 2d" should "prove" in {
-    withZ3(qeTool => {
-      ???
-    })
-  }
-  // x=0\land{y=1}\limply[\{y:= (1/2)\cdot{y}\}^*;\{x:=x+y;y:=(1/2)\cdot{y}\}^*;\{x:=x+y\}^*]x \geq 0
+  // x=0&y=1->[{{y:= (1/2)*y}*};{{x:=x+y;y:=(1/2)*y}*};{{x:=x+y}*}]x >= 0
 
   /*#Example 3
 assume xy:(x=0&y=1)
@@ -409,7 +404,32 @@ show (y >= 0) using J1 J2 J3 by R
 */
   "DaLi'17 Example 3" should "prove" in {
     withZ3(qeTool => {
-      ???
+      val box = "x=0&y=1->[{{y:= (1/2)*y;}*};{{x:=x+y;y:=(1/2)*y;}*};{{x:=x+y;}*}]x >= 0".asFormula
+      val duh:SP = Show("wild()".asFormula,UP(List(),Kaisar.Auto()))
+      val sp:SP =
+        BRule(RBAssume("xy".asVariable, "x=0&y=1".asFormula), List(
+          State("init",
+            BRule(
+            RBInv(Inv("y > 0".asFormula, duh, duh,
+              Finally(
+          State("t1",
+            BRule(
+            RBInv(Inv("y>0 & x>=init(x)".asFormula, duh, duh,
+              Finally(
+                State("t2",
+                  BRule(
+                    RBInv(Inv("y>0 & x>=t2(x)".asFormula, duh, duh,
+                      Finally(Show("x >= 0".asFormula, UP(List(), Kaisar.RCF()))))),
+                    List())
+                  ))
+              )), List()
+
+          )
+              ))))
+              ,List()
+          )
+        )))
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
   /*  g>0\land &y\geq H\land H>0\land v_y=0 \limply\\
