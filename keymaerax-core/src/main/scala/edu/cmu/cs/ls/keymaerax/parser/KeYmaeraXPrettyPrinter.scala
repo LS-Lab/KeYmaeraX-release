@@ -224,16 +224,13 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
   }
 
   /** Pretty-print enclosing parentheses, braces, brackets etc. */
-  protected def ppEnclosingOp(expr: Expression): (String, String) = expr match {
-    case _: Box => "[" -> "]"
-    case _: Diamond => "<" -> ">"
-    case _: PredOf => "(" -> ")"
-    case _: PredicationalOf => "{" -> "}"
-    case _: ODESystem => "{" -> "}"
-    case _: Program => "{" -> "}"
-    case _: DifferentialProgram => "{" -> "}"
-    case _: UnaryCompositeProgram => "{" -> "}"
-    case _: Pair => "(" -> ")"
+  protected def wrap(text: String, expr: Expression): String = expr match {
+    case _: Box => "[" + text + "]"
+    case _: Diamond => "<" + text + ">"
+    case _: Program => "{" + text + "}"
+    case _: PredOf => "(" + text + ")"
+    case _: Pair => "(" + text + ")"
+    case _: PredicationalOf => "{" + text + "}"
   }
 
   //@todo could add contract that TermAugmentor(original)(q) == term
@@ -250,7 +247,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     } else n.toString()
     case FuncOf(f, c)           => f.asString + "(" + pp(q++0, c) + ")"
     // special notation
-    case Pair(l, r)             => ppEnclosingOp(term)._1 + pp(q++0, l) + ppOp(term) + pp(q++1, r) + ppEnclosingOp(term)._2
+    case Pair(l, r)             => wrap(pp(q++0, l) + ppOp(term) + pp(q++1, r), term)
     case UnitFunctional(name,space,sort) => name + "(" + space + ")"
     // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5). OpSpec.negativeNumber
     case t@Neg(Number(n))       => ppOp(t) + "(" + pp(q++0, Number(n)) + ")"
@@ -272,8 +269,8 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     case DifferentialFormula(g) => "(" + pp(q++0, g) + ")" + ppOp(formula)
     //@note the q position for variables is a little weird since it identifies the quantifier not the variable
     case f: Quantified          => ppOp(formula) + " " + f.vars.map(pp(q,_)).mkString(",") + " " + wrapChild(f, pp(q++0, f.child))
-    case f: Box                 => ppEnclosingOp(f)._1 + pp(q++0, f.program) + ppEnclosingOp(f)._2 + wrapChild(f, pp(q++1, f.child))
-    case f: Diamond             => ppEnclosingOp(f)._1 + pp(q++0, f.program) + ppEnclosingOp(f)._2 + wrapChild(f, pp(q++1, f.child))
+    case f: Box                 => wrap(pp(q++0, f.program), f) + wrapChild(f, pp(q++1, f.child))
+    case f: Diamond             => wrap(pp(q++0, f.program), f) + wrapChild(f, pp(q++1, f.child))
     case UnitPredicational(name,space) => name + "(" + space + ")"
     case t: UnaryCompositeFormula=> ppOp(t) + wrapChild(t, pp(q++0, t.child))
     case t: BinaryCompositeFormula=>
@@ -287,13 +284,13 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     //case DiffAssign(xp, e)      => statement(pp(q++0, xp) + op(program).opcode + pp(q++1, e))
     case AssignAny(x)           => statement(pp(q++0, x) + ppOp(program))
     case Test(f)                => statement(ppOp(program) + pp(q++0, f))
-    case ODESystem(ode, f)      => ppEnclosingOp(program)._1 + ppODE(q++0, ode) + (if (false && f==True) "" else ppOp(program) + pp(q++1, f)) + ppEnclosingOp(program)._2
+    case ODESystem(ode, f)      => wrap(ppODE(q++0, ode) + (if (false && f==True) "" else ppOp(program) + pp(q++1, f)), program)
     //@note unambiguously reparse as ODE not as equation that happens to involve a differential symbol.
     //@note This is only used in printing internal data structures, not user input.
     //@note no positional change since only internal data structure swap-over
-    case ode: DifferentialProgram => ppEnclosingOp(ode)._1 + ppODE(q, ode) + ppEnclosingOp(ode)._2
+    case ode: DifferentialProgram => wrap(ppODE(q, ode), program)
     //@note forced parentheses in grammar for loops and duals
-    case t: UnaryCompositeProgram => ppEnclosingOp(t)._1 + pp(q++0, t.child) + ppEnclosingOp(t)._2 + ppOp(program)
+    case t: UnaryCompositeProgram => wrap(pp(q++0, t.child), program) + ppOp(program)
     //case t: UnaryCompositeProgram=> (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
     case t: Compose => pwrapLeft(t, pp(q++0, t.left)) + ppOp(t) + pwrapRight(t, pp(q++1, t.right))
     case t: BinaryCompositeProgram => pwrapLeft(t, pp(q++0, t.left)) + ppOp(t) + pwrapRight(t, pp(q++1, t.right))

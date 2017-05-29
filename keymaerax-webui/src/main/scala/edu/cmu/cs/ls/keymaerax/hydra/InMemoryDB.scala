@@ -20,42 +20,48 @@ class InMemoryDB extends DBAbstraction {
 
   private val models: scala.collection.mutable.Map[Int, ModelPOJO] = scala.collection.mutable.Map()
   private val proofs: scala.collection.mutable.Map[Int, (ProvableSig, ProofPOJO)] = scala.collection.mutable.Map()
-  //@note proofId = executionId
+  //@note proofId == executionId
   private val executionSteps: scala.collection.mutable.Map[Int, ExecutionStepPOJO] = scala.collection.mutable.Map()
   private val executables: scala.collection.mutable.Map[Int, ExecutablePOJO] = scala.collection.mutable.Map()
   private val provables: scala.collection.mutable.Map[Int, ProvableSig] = scala.collection.mutable.Map()
+  private val agendaItems: scala.collection.mutable.Map[Int, AgendaItemPOJO] = scala.collection.mutable.Map()
+
+  private val configs: scala.collection.mutable.Map[String, ConfigurationPOJO] = scala.collection.mutable.Map(
+    "version" -> new ConfigurationPOJO("version", Map("version" -> VERSION)),
+    "tool" -> new ConfigurationPOJO("tool", Map("qe" -> "mathematica")),
+    "mathematica" -> new ConfigurationPOJO("mathematica", Map(
+      "linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel",
+      "jlinkLibDir" -> "/Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/SystemFiles/Libraries/MacOSX-x86-64"
+    ))
+  )
 
 
   // Configuration and database setup and initialization and all DB communication
 
-  override def getAllConfigurations: Set[ConfigurationPOJO] = ???
+  override def getAllConfigurations: Set[ConfigurationPOJO] = configs.values.toSet
 
-  override def getModelList(userId: String): List[ModelPOJO] = ???
+  override def getModelList(userId: String): List[ModelPOJO] = models.values.toList
 
-  override def createUser(username: String, password: String, mode: String): Unit = ???
+  override def createUser(username: String, password: String, mode: String): Unit = {}
 
-  override def getUser(username: String) = ???
+  override def getUser(username: String): UserPOJO = new UserPOJO(username, 1)
 
-  /**
-    * Poorly named -- either update the config, or else insert an existing key.
-    * But in Mongo it was just update, because of the nested documents thing.
-    *
-    * @param config
-    */
-  override def updateConfiguration(config: ConfigurationPOJO): Unit = ???
+  override def updateConfiguration(config: ConfigurationPOJO): Unit = { configs(config.name) = config }
 
   //Proofs and Proof Nodes
   override def getProofInfo(proofId: Int): ProofPOJO = synchronized { proofs(proofId)._2 }
 
   // Users
-  override def userExists(username: String): Boolean = ???
+  override def userExists(username: String): Boolean = true
 
-  override def getProofsForUser(userId: String): List[(ProofPOJO, String)] = ???
+  override def getProofsForUser(userId: String): List[(ProofPOJO, String)] = {
+    proofs.values.map({ case (_, p) => (p, models(p.modelId.get).name)}).toList
+  }
 
   override def userOwnsProof(userId: String, proofId: String): Boolean =
     getProofsForUser(userId).exists(_._1.proofId == proofId.toInt)
 
-  override def checkPassword(username: String, password: String): Boolean = ???
+  override def checkPassword(username: String, password: String): Boolean = true
 
   override def updateProofInfo(proof: ProofPOJO): Unit = {
     val (provable, _) = proofs(proof.proofId)
@@ -68,18 +74,17 @@ class InMemoryDB extends DBAbstraction {
   }
 
   def deleteExecution(executionId: Int): Boolean = synchronized {
-    //@todo remove executionSteps by executionId
+    executionSteps.filter(_._2.executionId == executionId).foreach(s => executionSteps.remove(s._1))
     true
   }
 
   override def deleteProof(proofId: Int): Boolean = synchronized {
-    //@todo remove executionSteps
-    proofs.remove(proofId)
-    true
+    deleteExecution(proofId)
+    proofs.remove(proofId).isDefined
   }
 
   //Models
-  override def getUniqueModelName(userId: String, modelName: String): String = ???
+  override def getUniqueModelName(userId: String, modelName: String): String = modelName + models.size
 
   override def createModel(userId: String, name: String, fileContents: String, date: String,
                            description: Option[String] = None, publink: Option[String] = None,
@@ -93,9 +98,23 @@ class InMemoryDB extends DBAbstraction {
     } else None
   }
 
-  override def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String]): Unit = ???
+  override def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String]): Unit = {
+    val model = models(modelId)
+    val nm = new ModelPOJO(modelId, model.userId, name, model.date, model.keyFile, description.get, model.pubLink,
+      title.get, model.tactic, model.numProofs, model.temporary)
+    models(modelId) = nm
+  }
 
-  override def addModelTactic(modelId: String, fileContents: String): Option[Int] = ???
+  override def addModelTactic(modelId: String, fileContents: String): Option[Int] = {
+    val mId = modelId.toInt
+    val model = models(mId)
+    if (model.tactic.isEmpty) {
+      val nm = new ModelPOJO(mId, model.userId, model.name, model.date, model.keyFile, model.description, model.pubLink,
+        model.title, Some(fileContents), model.numProofs, model.temporary)
+      models(mId) = nm
+      Some(1)
+    } else None
+  }
 
   override def createProofForModel(modelId: Int, name: String, description: String, date: String,
                                    tactic: Option[String]): Int = synchronized {
@@ -121,12 +140,11 @@ class InMemoryDB extends DBAbstraction {
   override def getModel(modelId: Int): ModelPOJO = synchronized { models(modelId) }
 
   override def deleteModel(modelId: Int): Boolean = synchronized {
-    //@todo delete proofs
-    models.remove(modelId)
-    true
+    proofs.filter({case (_, (_, p)) => p.modelId == Some(modelId)}).foreach({case (_, (_, p)) => deleteProof(p.proofId)})
+    models.remove(modelId).isDefined
   }
 
-  override def getConfiguration(configName: String): ConfigurationPOJO = ???
+  override def getConfiguration(configName: String): ConfigurationPOJO = configs(configName)
 
   /**
     * Initializes a new database.
@@ -135,7 +153,7 @@ class InMemoryDB extends DBAbstraction {
   def cleanup(which: String): Unit = {}
 
   /** Deletes a provable and all associated sequents / formulas */
-  override def deleteProvable(provableId: Int): Boolean = ???
+  override def deleteProvable(provableId: Int): Boolean = true
 
   /**
     * Adds an execution step to an existing execution
@@ -148,7 +166,7 @@ class InMemoryDB extends DBAbstraction {
     stepId
   }
 
-  override def addAlternative(alternativeTo: Int, inputProvable: ProvableSig, trace:ExecutionTrace): Unit = ???
+  override def addAlternative(alternativeTo: Int, inputProvable: ProvableSig, trace:ExecutionTrace): Unit = {}
 
   /** Adds a Bellerophon expression as an executable and returns the new executableId */
   override def addBelleExpr(expr: BelleExpr): Int = synchronized {
@@ -182,13 +200,18 @@ class InMemoryDB extends DBAbstraction {
   def loadProvables(lemmaIds: List[Int]): List[ProvablePOJO] = provables.filterKeys(lemmaIds.contains).
     map({ case (k, v) => ProvablePOJO(k, v)}).toList.sortBy(_.provableId)
 
-  override def addAgendaItem(proofId: Int, initialProofNode: ProofTreeNodeId, displayName:String): Int = ???
+  override def addAgendaItem(proofId: Int, initialProofNode: ProofTreeNodeId, displayName: String): Int = {
+    val item = AgendaItemPOJO(agendaItems.size, proofId, initialProofNode, displayName)
+    agendaItems(item.itemId) = item
+    item.itemId
+  }
 
-  override def updateAgendaItem(item:AgendaItemPOJO) = ???
+  override def updateAgendaItem(item: AgendaItemPOJO): Unit = agendaItems(item.itemId) = item
 
-  override def agendaItemsForProof(proofId: Int): List[AgendaItemPOJO] = ???
+  override def agendaItemsForProof(proofId: Int): List[AgendaItemPOJO] = agendaItems.values.filter(_.proofId == proofId).toList
 
-  override def getAgendaItem(proofId: Int, initialProofNode: ProofTreeNodeId): Option[AgendaItemPOJO] = ???
+  override def getAgendaItem(proofId: Int, initialProofNode: ProofTreeNodeId): Option[AgendaItemPOJO] =
+    agendaItems.values.find(i => i.proofId == proofId && i.initialProofNode == initialProofNode)
 
   /** Updates an executable step */
   override def updateExecutionStep(executionStepId: Int, step: ExecutionStepPOJO): Unit = synchronized {
@@ -198,7 +221,7 @@ class InMemoryDB extends DBAbstraction {
   /** Deletes execution steps. */
   override def deleteExecutionStep(proofId: Int, stepId: Int): Unit = executionSteps.remove(stepId)
 
-  def printStats(): Unit = ???
+  def printStats(): Unit = {}
 
   def proofSteps(executionId: Int): List[ExecutionStepPOJO] = synchronized {
     executionSteps.values.filter(v =>
@@ -208,7 +231,7 @@ class InMemoryDB extends DBAbstraction {
 
   private def zipTrace(executionSteps: List[ExecutionStepPOJO], executables: List[ExecutablePOJO], localProvables: List[ProvableSig]): List[ExecutionStep] = {
     (executionSteps, executables, localProvables) match {
-      case (step::steps, exe::exes, localProvable::moreProvables) =>
+      case (step::steps, _::exes, localProvable::moreProvables) =>
         val successorIds = steps.filter(_.previousStep == step.stepId).flatMap(_.stepId)
         ExecutionStep(step.stepId.get, step.previousStep, step.executionId, () => localProvable,
           step.branchOrder, step.numSubgoals, step.numOpenSubgoals, successorIds, step.ruleName, step.executableId,
@@ -232,7 +255,9 @@ class InMemoryDB extends DBAbstraction {
   override def getPlainExecutionStep(executionId: Int, stepId: Int): Option[ExecutionStepPOJO] =
     getExecutionSteps(executionId).find(_.stepId == Some(stepId))
 
-  override def getPlainStepSuccessors(proofId: Int, prevStepId: Int, branchOrder: Int): List[ExecutionStepPOJO] = ???
+  override def getPlainStepSuccessors(proofId: Int, prevStepId: Int, branchOrder: Int): List[ExecutionStepPOJO] = {
+    proofSteps(proofId).filter(s => s.previousStep == Some(prevStepId) && s.branchOrder == branchOrder)
+  }
 
   override def getExecutionStep(proofId: Int, stepId: Int): Option[ExecutionStep] = {
     val steps = proofSteps(proofId)
@@ -270,7 +295,6 @@ class InMemoryDB extends DBAbstraction {
       val provableIds = steps.map(_.localProvableId.get)
       val executableIds = steps.map(_.executableId)
       val provables = loadProvables(provableIds).map(_.provable)
-      val conclusion = provables.head.conclusion
       val executables = getExecutables(executableIds)
       val traceSteps = zipTrace(steps, executables, provables)
       ExecutionTrace(proofId.toString, proofId.toString, traceSteps)
@@ -290,8 +314,8 @@ class InMemoryDB extends DBAbstraction {
   }
 
   /** Ensures any changes which might currently reside in auxilliary storage have been synced to main storage. */
-  override def syncDatabase(): Unit = ???
+  override def syncDatabase(): Unit = {}
 
   //Proofs and Proof Nodes
-  override def isProofClosed(proofId: Int): Boolean = ???
+  override def isProofClosed(proofId: Int): Boolean = proofs(proofId)._2.closed
 }

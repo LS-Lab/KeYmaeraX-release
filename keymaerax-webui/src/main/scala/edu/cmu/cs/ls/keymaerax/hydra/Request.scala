@@ -100,7 +100,7 @@ abstract class UserProofRequest(db: DBAbstraction, username: String, proofId: St
   override final def resultingResponses(): List[Response] = {
     if (proofId == "undefined" || proofId == "null") throw new Exception("The user interface lost track of the proof, please try reloading the page.") //@note Web UI bug
     //@todo faster query for existence
-    else if(!db.userOwnsProof(username, proofId)) {
+    else if (!db.userOwnsProof(username, proofId)) {
       new PossibleAttackResponse("Permission denied") :: Nil
     }
     else doResultingResponses()
@@ -990,6 +990,17 @@ case class GetBranchRootRequest(db: DBAbstraction, userId: String, proofId: Stri
   }
 }
 
+class ProofNodeSequentRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
+  extends UserProofRequest(db, userId, proofId) {
+  override protected def doResultingResponses(): List[Response] = {
+    val tree = DbProofTree(db, proofId)
+    tree.locate(nodeId) match {
+      case None => throw new Exception("Unknown node " + nodeId)
+      case Some(node) => ProofNodeSequentResponse(proofId, node) :: Nil
+    }
+  }
+}
+
 class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
   extends UserProofRequest(db, userId, proofId) {
   override protected def doResultingResponses(): List[Response] = {
@@ -1352,12 +1363,18 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
       case None => new ErrorResponse("Proof " + proofId + " does not have a tactic") :: Nil
       case Some(t) if proofInfo.modelId.isEmpty => throw new Exception("Proof " + proofId + " does not refer to a model")
       case Some(t) if proofInfo.modelId.isDefined =>
-        val executor = BellerophonTacticExecutor.defaultExecutor
-        val interpreter = DatabasePopulator.prepareInterpreter(db, proofId.toInt)
-        val model = KeYmaeraXProblemParser(db.getModel(proofInfo.modelId.get).keyFile)
-        val provable = BelleProvable(ProvableSig.startProof(model))
         val tactic = BelleParser(t)
-        val taskId = executor.schedule(userId, tactic, provable, interpreter)
+        //@TODO switch back to spoon-feeding interpreter:
+//        val executor = BellerophonTacticExecutor.defaultExecutor
+//        val interpreter = DatabasePopulator.prepareInterpreter(db, proofId.toInt)
+//        val model = KeYmaeraXProblemParser(db.getModel(proofInfo.modelId.get).keyFile)
+//        val provable = BelleProvable(ProvableSig.startProof(model))
+//        val taskId = executor.schedule(userId, tactic, provable, interpreter)
+
+        //@TODO currently using sequential interpreter because spoon-feeding interpreter doesn't support graph-style proofs.
+        val tree: ProofTree = DbProofTree(db, proofId)
+        val taskId = tree.root.runTactic(userId, SequentialInterpreter, tactic, "custom")
+
         new RunBelleTermResponse(proofId, "()", taskId) :: Nil
     }
   }
@@ -1404,7 +1421,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
             case Some(node) =>
               //@todo construct provable (expensive!)
               //assert(noBogusClosing(tree, node), "Server thinks a goal has been closed when it clearly has not")
-              new TaskResultResponse(proofId, node, progress=true)
+              TaskResultResponse(proofId, node, progress=true)
           }
 //          val positionLocator = if (parentNode.children.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
 //          assert(noBogusClosing(finalTree, parentNode), "Server thinks a goal has been closed when it clearly has not")
@@ -1416,7 +1433,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
           val node = tree.root//findNode(nodeId).get
           //val positionLocator = if (parentNode.subgoals.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
           assert(noBogusClosing(tree, node), "Server thinks a goal has been closed when it clearly has not")
-          new TaskResultResponse(subId.toString, node, progress = true)
+          TaskResultResponse(subId.toString, node, progress = true)
         case Some(Right(error: BelleThrowable)) => new ErrorResponse("Tactic failed with error: " + error.getMessage, error.getCause)
         case None => new ErrorResponse("Could not get tactic result - execution cancelled? ")
       }

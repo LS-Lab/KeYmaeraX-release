@@ -455,6 +455,13 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
+  val proofNodeSequent: SessionToken => Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "sequent") { (userId, proofId, nodeId) => { pathEnd {
+    get {
+      val request = new ProofNodeSequentRequest(database, userId, proofId, nodeId)
+      completeRequest(request, t)
+    }
+  }}}
+
   val stepwiseTrace: SessionToken => Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "trace") { (userId, proofId) => { pathEnd {
     get {
       val request = new StepwiseTraceRequest(database, userId, proofId)
@@ -988,6 +995,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     proofTasksPathAll     ::
     proofTasksBranchRoot  ::
     proofTaskExpand       ::
+    proofNodeSequent      ::
     axiomList             ::
     sequentList           ::
     twoPosList            ::

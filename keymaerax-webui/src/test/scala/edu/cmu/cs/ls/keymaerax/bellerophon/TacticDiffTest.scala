@@ -344,4 +344,21 @@ class TacticDiffTest extends TacticTestBase {
     }
   }
 
+  it should "match tactic definitions" in {
+    val t1 = BelleParser("tactic t as (implyR(1))")
+    val t2 = BelleParser("tactic t as (implyR(1))")
+    TacticDiff.diff(t1, t2)._1.t shouldBe DefTactic("t", BelleParser("implyR(1)"))
+  }
+
+  it should "match inside tactic definitions" in {
+    val t1 = BelleParser("tactic t as (implyR(1))")
+    val t2 = BelleParser("tactic t as (andR(1))")
+    val diff = TacticDiff.diff(t1, t2)
+    inside (diff._1.t) {
+      case DefTactic(n, c: BelleDot) =>
+        diff._2 should contain theSameElementsAs (c, BelleParser("implyR(1)"))::Nil
+        diff._3 should contain theSameElementsAs (c, BelleParser("andR(1)"))::Nil
+    }
+  }
+
 }

@@ -51,10 +51,15 @@ object KeYmaeraXArchiveParser {
     })
   }
 
+  /** Reads a specific entry from the archive. */
+  def getEntry(entryName: String, archiveContentBOM: String): Option[ParsedArchiveEntry] = {
+    parse(archiveContentBOM).find(_.name == entryName)
+  }
+
   /** Reads the archive content into string-only archive entries. */
   def read(archiveContentBOM: String): List[ArchiveEntry] = {
     val archiveContent: String = ParserHelper.removeBOM(archiveContentBOM)
-    archiveContent.trim().split(s"(?=($ARCHIVE_ENTRY_BEGIN | $LEMMA_BEGIN | $THEOREM_BEGIN))").flatMap({s =>
+    archiveContent.trim().split(s"(?=($ARCHIVE_ENTRY_BEGIN|$LEMMA_BEGIN|$THEOREM_BEGIN))").flatMap({s =>
       val (entry, kind) =
         if (s.startsWith(ARCHIVE_ENTRY_BEGIN)) (s.stripPrefix(ARCHIVE_ENTRY_BEGIN), "theorem")
         else if (s.startsWith(THEOREM_BEGIN)) (s.stripPrefix(THEOREM_BEGIN), "theorem")

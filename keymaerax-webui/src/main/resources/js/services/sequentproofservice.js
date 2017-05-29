@@ -1,3 +1,20 @@
+/** Makes a node that fetches its sequent lazily */
+makeLazyNode = function(http, userId, proofId, node) {
+  node.getSequent = function() {
+    var theNode = node;
+    if (theNode.sequent) return theNode.sequent;
+    else {
+      theNode.sequent = {};
+      http.get('proofs/user/' + userId + '/' + proofId + '/' + theNode.id + '/sequent').then(function(response) {
+        theNode.sequent.ante = response.data.sequent.ante;
+        theNode.sequent.succ = response.data.sequent.succ;
+      });
+      return theNode.sequent;
+    }
+  };
+  return node;
+}
+
 angular.module('keymaerax.services').factory('Agenda', function() {
   var agenda = function() {
     return {
@@ -243,9 +260,10 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       var theAgenda = this.agenda;
       spinnerService.show('proofLoadingSpinner');
       this.tactic.fetch(userId, proofId);
-      $http.get('proofs/user/' + userId + "/" + proofId + '/agendaawesome')
+      $http.get('proofs/user/' + userId + '/' + proofId + '/agendaawesome')
         .then(function(response) {
           theAgenda.itemsMap = response.data.agendaItems;
+          $.each(response.data.proofTree.nodes, function(i, v) { makeLazyNode($http, userId, proofId, v); });
           theProofTree.nodesMap = response.data.proofTree.nodes;
           theProofTree.root = response.data.proofTree.root;
           if (theAgenda.items().length > 0) {
@@ -272,14 +290,14 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     },
 
     /** Updates the agenda and the proof tree with new items resulting from a tactic */
-    updateAgendaAndTree: function(proofId, proofUpdate) {
+    updateAgendaAndTree: function(userId, proofId, proofUpdate) {
       if (proofUpdate.progress) {
         var theProofTree = this.proofTree;
         var theAgenda = this.agenda;
         var oldAgendaItem = theAgenda.itemsMap[proofUpdate.parent.id];
         $.each(proofUpdate.newNodes, function(i, node) {
           // update tree
-          theProofTree.nodesMap[node.id] = node;
+          theProofTree.nodesMap[node.id] = makeLazyNode($http, userId, proofId, node);
           var parent = theProofTree.nodesMap[node.parent]
           if (parent.children === undefined || parent.children === null) parent.children = [node.id];
           else parent.children.push(node.id);

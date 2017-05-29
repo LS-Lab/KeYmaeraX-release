@@ -40,7 +40,7 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
             sessionService.setUser(response.data.value);
             document.location.href = firstTime ? "dashboard.html?#/modelsFirstTime" : "dashboard.html?#/models";
           } else {
-            showMessage($uibModal, "Login failed", "Please check user name and/or password");
+            showMessage($uibModal, "Login failed", "Please check user name and/or password. Or register a new account.");
           }
         }
       });

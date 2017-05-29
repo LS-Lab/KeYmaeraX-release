@@ -648,13 +648,16 @@ object DerivationInfo {
     new PositionTacticInfo("cohide", "W", {case () => SequentCalculus.cohide}),
     new PositionTacticInfo("hide", "W", {case () => SequentCalculus.hide}),
     new PositionTacticInfo("allL2R", "L=R all", {case () => TactixLibrary.exhaustiveEqL2R}),
+    new PositionTacticInfo("atomAllL2R", "L=R all atoms", {case () => EqualityTactics.atomExhaustiveEqL2R}),
     new PositionTacticInfo("allR2L", "R=L all", {case () => TactixLibrary.exhaustiveEqR2L}),
     new PositionTacticInfo("minmax", "min/max", {case () => EqualityTactics.minmax}),
     new PositionTacticInfo("absExp", "absExp", {case () => EqualityTactics.abs}),
     new PositionTacticInfo("toSingleFormula", "toSingleFormula", {case () => PropositionalTactics.toSingleFormula}),
 
     // proof management tactics
-    new TacticInfo("debug", "debug", {case () => DebuggingTactics.debug("")}),   // turn into input tactic if message should be stored too
+    InputTacticInfo("debug"
+      , SimpleDisplayInfo("Debug","debug")
+      ,List(StringArg("msg")), _ => ((msg: String) => DebuggingTactics.debug(msg)): TypedFunc[String, BelleExpr]),
     new TacticInfo("done", "done", {case () => TactixLibrary.done}), // turn into input tactic if message should be stored too
 
     // Proof rule two-position tactics
