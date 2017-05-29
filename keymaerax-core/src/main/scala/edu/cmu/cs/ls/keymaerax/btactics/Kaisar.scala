@@ -647,19 +647,11 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val FG2:Formula = G2.reduceRight(And)
           val pr2:Provable = eval(sp(1),hh,c,pr2Start)
           val pp1:Provable = doBigRename(g)._1
-          val pp2:Provable = interpret(cut(Box(a,And(fml,FG2))), pp1)
-          val pp3:Provable = interpret(nil <( hideL(-1)*(G1.length-1) & monb & ((andL('L))*) & useAt(NoProofTermProvable(pr2), PosInExpr(Nil))(1), nil), pp2)
-          val pp4:Provable = interpret(hideR(1), pp3)
-          val pp5:Provable = interpret(boxAnd(1) & andR(1), pp4)
-          val pp6:Provable = interpret(nil <(hideL('Llast)*bvs.toSet.size & useAt(NoProofTermProvable(pr1), PosInExpr(Nil))(1),nil), pp5)
-          val poses = List.tabulate(bvs.toSet.size)({case i => AntePosition(pp6.subgoals.head.ante.length - i)})
+          val poses = List.tabulate(bvs.toSet.size)({case i => AntePosition(pp1.subgoals.head.ante.length - i)})
           val e = poses.foldLeft(nil)({case (acc, pos) => acc & TactixLibrary.eqR2L(pos)(-1) & hideL(pos)})
-          val pp7:Provable = interpret(e, pp6)
-          val pp8:Provable = interpret(useAt("V vacuous")(1), pp7)
-
-
-          val prr:Provable = interpret(prop, pp8)
-          prr//(pr1,0)(pr2,0)
+          val prr:Provable = interpret(cut(Box(a,And(fml,FG2))) <(hideL(-1)*(G1.length-1) & monb & ((andL('L))*) & useAt(NoProofTermProvable(pr2), PosInExpr(Nil))(1),
+            hideR(1) & boxAnd(1) & andR(1) <(hideL('Llast)*bvs.toSet.size & useAt(NoProofTermProvable(pr1), PosInExpr(Nil))(1), e & useAt("V vacuous")(1) & prop)), pp1)
+          prr
         case (RBCase(), Box(Choice(a,b),p)) =>
           assertBranches(sp.length, 2)
           val seq1:Sequent = Sequent(sequent.ante, immutable.IndexedSeq(Box(a,p)) ++ sequent.succ.tail)
