@@ -353,7 +353,7 @@ show (x > 2y) using J by auto
       val box = "x=2*y -> [{{?(x< -2);x:=x^2;} ++ {?(x >= 0 & y > 0);y:=1/3*y;}}x:=x*2;]x > 2*y".asFormula
       val sp:SP =
          BRule(RBAssume("xy".asVariable,"x=2*y".asFormula),List(
-           BRule(RBConsequence("x>y".asFormula),List(
+           BRule(RBConsequence("J".asVariable, "x>y".asFormula),List(
              Show("[{wild}]x>y".asFormula, UP(List(),Auto()))
         ,BRule(RBAssign(Assign("x".asVariable,"x*2".asTerm)),List(
              Show("x>2*y".asFormula, UP(List(),Auto()))))
@@ -367,12 +367,12 @@ show (x > 2y) using J by auto
       val box = "x=2*y -> [{{?(x< -2);x:=x^2;} ++ {?(x >= 0 & y > 0);y:=1/3*y;}}x:=x*2;]x > 2*y".asFormula
       val sp:SP =
         BRule(RBAssume("xy".asVariable, "x=2*y".asFormula), List(
-          BRule(RBConsequence("x>y".asFormula),List(
+          BRule(RBConsequence("J".asVariable,"x>y".asFormula),List(
             Show("[{wild}]x>y".asFormula, UP(Nil, Auto())),
             State("preassign",
               BRule(RBAssign(Assign("x".asVariable,"x*2".asTerm)),List(
                 Have("xs".asVariable,"x >= 2*preassign(x) & (preassign(y) > 0 -> preassign(x) > y)".asFormula, Show("wild()".asFormula, UP(Nil, Auto())),
-                  Show("wild()".asFormula, UP(List(),Auto()))) // Left("J".asVariable)
+                  Show("wild()".asFormula, UP(List(Left("J".asVariable)),Auto())))
               )))
           ))
         ))

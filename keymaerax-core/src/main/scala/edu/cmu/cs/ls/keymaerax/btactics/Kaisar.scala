@@ -43,7 +43,7 @@ object Kaisar {
   abstract class RuleSpec
   case class RIdent (x:String) extends RuleSpec
   case class RBAssign(hp:Assign) extends RuleSpec
-  case class RBConsequence(fml:Formula) extends RuleSpec
+  case class RBConsequence(x:Variable, fml:Formula) extends RuleSpec
   case class RBCase() extends RuleSpec
   case class RBAssume(x:Variable,fml:Formula) extends RuleSpec
   case class RBSolve(t:Variable,fmlT:Formula,dc:Variable,fmlDC:Formula,sols:List[(Variable,Formula)]) extends RuleSpec
@@ -548,7 +548,7 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
               val hh = h.updateRen(Variable(base.name), Variable(base.name, Some(h.nextIndex(base.name))), AntePos(gg.subgoals.head.ante.length-1))
               eval(sp.head, hh, c, gg)
           }
-        case (RBConsequence(fml:Formula), Box(a,Box(b,p))) =>
+        case (RBConsequence(varName:Variable,fml:Formula), Box(a,Box(b,p))) =>
           assertBranches(sp.length, 2)
           val bvs = StaticSemantics.boundVars(a)
           val seq1:Sequent = Sequent(sequent.ante, immutable.IndexedSeq(Box(a,fml)) ++ sequent.succ.tail)
@@ -581,7 +581,8 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val pr2Start = Provable.startProof(pr2Hid.subgoals.head)
           val G2 = pr2Hid.subgoals.head.ante//.tail
           val FG2:Formula = G2.reduceRight(And)
-          val pr2:Provable = eval(sp(1),hh,c,pr2Start)
+          val cc = c.add(varName,AntePos(pr2Start.conclusion.ante.length-1))
+          val pr2:Provable = eval(sp(1),hh,cc,pr2Start)
           val pp1:Provable = doBigRename(g)._1
           val poses = List.tabulate(bvs.toSet.size)({case i => AntePosition(pp1.subgoals.head.ante.length - i)})
           val e = poses.foldLeft(nil)({case (acc, pos) => acc & TactixLibrary.eqR2L(pos)(-1) & hideL(pos)})
