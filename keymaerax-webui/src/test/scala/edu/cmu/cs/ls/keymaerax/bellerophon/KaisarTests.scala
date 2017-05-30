@@ -7,6 +7,8 @@ import org.scalatest.{FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 
+import scala.collection.immutable
+
 
 /**
   * Created by bbohrer on 12/3/16.
@@ -166,7 +168,7 @@ class KaisarTests extends TacticTestBase {
       val sp:SP =
         BRule(RBAssume("x".asVariable, "x = 0".asFormula),
         List(BRule(RBInv(
-          Inv("x >= 0".asFormula, Show("x >= 0".asFormula, UP(List(), Auto())),
+          Inv("J".asVariable, "x >= 0".asFormula, Show("x >= 0".asFormula, UP(List(), Auto())),
             BRule(RBAssign(Assign("x".asVariable, "x+1".asTerm)), List(Show("x >= 0".asFormula, UP(List(),Auto())))),
             Finally(Show("x>= 0".asFormula, UP(List(),Auto()))))),
           List())))
@@ -180,12 +182,12 @@ class KaisarTests extends TacticTestBase {
       val sp: SP =
         BRule(RBAssume("xy".asVariable, "x = 0 & y = 1".asFormula),
           List(BRule(RBInv(
-            Inv("x >= 0".asFormula, pre = Show("x >= 0".asFormula, UP(List(), Auto())),
+            Inv("J1".asVariable, "x >= 0".asFormula, pre = Show("x >= 0".asFormula, UP(List(), Auto())),
               inv = BRule(RBAssign(Assign("y".asVariable, "y+x".asTerm)),
                 List(BRule(RBAssign(Assign("x".asVariable, "x+1".asTerm)),
                   List(Show("x >= 0".asFormula, UP(List(), Auto())))))),
               tail =
-                Inv(fml = "y >= 1".asFormula, pre = Show("y >= 1".asFormula, UP(List(), Auto())),
+                Inv("J2".asVariable, fml = "y >= 1".asFormula, pre = Show("y >= 1".asFormula, UP(List(), Auto())),
                   inv = BRule(RBAssign(Assign("y".asVariable, "y+x".asTerm)),
                     List(BRule(RBAssign(Assign("x".asVariable, "x+1".asTerm)),
                       List(Show("y >= 1".asFormula, UP(List(), Auto())))))),
@@ -199,7 +201,7 @@ class KaisarTests extends TacticTestBase {
       val sp: SP =
         BRule(RBAssume("xy".asVariable, "x > 0 & y > 1".asFormula),
           List(BRule(RBInv(
-            Inv("x >= 0".asFormula, pre = Show("x >= 0".asFormula, UP(List(), Auto())),
+            Inv("J".asVariable, "x >= 0".asFormula, pre = Show("x >= 0".asFormula, UP(List(), Auto())),
               inv = BRule(RBAssign(Assign("x".asVariable, "x+y".asTerm)),
                   List(Show("x >= 0".asFormula, UP(List(), Auto())))),
               tail = Finally(Show("x>= 0".asFormula, UP(List(), Auto()))))), tails = List())))
@@ -212,7 +214,7 @@ class KaisarTests extends TacticTestBase {
       val sp:SP =
         BRule(RBAssume("xy".asVariable, "x = 0 & y = 1".asFormula),
           List(BRule(RBInv(
-            Inv("x^2 + y^2 = 1".asFormula, pre = Show("x^2 + y^2 = 1".asFormula, UP(List(), Auto())),
+            Inv("J".asVariable, "x^2 + y^2 = 1".asFormula, pre = Show("x^2 + y^2 = 1".asFormula, UP(List(), Auto())),
               inv = Show("(x^2 + y^2 = 1)'".asFormula, UP(List(), Auto())),
               tail = Finally(Show("x^2 + y^2 > 0".asFormula, UP(List(), Auto()))))
           ), List())))
@@ -225,10 +227,10 @@ class KaisarTests extends TacticTestBase {
       val sp:SP =
         BRule(RBAssume("assms".asVariable, "x = 0 & y = 1 & dx = -1 & dy = 0".asFormula),
           List(BRule(RBInv(
-            Inv("dx=-y&dy=x".asFormula, Show("dx=-y&dy=x".asFormula, UP(List(), Auto())),
+            Inv("J1".asVariable, "dx=-y&dy=x".asFormula, Show("dx=-y&dy=x".asFormula, UP(List(), Auto())),
             inv = Show("(x^2 + y^2 = 1)'".asFormula, UP(List(), Auto())),
             tail =
-              Inv("x^2 + y^2 = 1".asFormula, Show("x^2 + y^2 = 1".asFormula, UP(List(), Auto())),
+              Inv("J2".asVariable, "x^2 + y^2 = 1".asFormula, Show("x^2 + y^2 = 1".asFormula, UP(List(), Auto())),
                 inv = Show("(x^2 + y^2 = 1)'".asFormula, UP(List(), Auto())),
                 tail = Finally(Show("x^2 + y^2 = 1".asFormula, UP(List(), Auto()))))
             )
@@ -243,8 +245,8 @@ class KaisarTests extends TacticTestBase {
         BRule(RBAssume("x".asVariable, "x > 0".asFormula),
           List(BRule(RBInv(
             Ghost("y".asVariable, "(1/2)*y + 0".asTerm, "x*y^2 = 1".asFormula, "(1/x)^(1/2)".asTerm, Show("x*y^2 = 1".asFormula, UP(List(), Auto())), Show("x*y^2=1".asFormula, UP(List(), Auto())),
-              Inv("x*y^2=1".asFormula, Show("x*y^2=1".asFormula, UP(List(), Auto())), Show("x*y^2=1".asFormula, UP(List(), Auto())),
-              Finally(Show("x*y^2=1".asFormula, UP(List(), Auto())))))
+              Inv("J".asVariable, "x*y^2=1".asFormula, Show("x*y^2=1".asFormula, UP(List(), Auto())), Show("x*y^2=1".asFormula, UP(List(), Auto())),
+              Finally(Show("x > 0".asFormula, UP(List(), Auto())))))
           ), List())))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
@@ -402,33 +404,70 @@ time t2
 Inv J3:(y>0 & x>=t2(x))   { Pre => show _ by R | Inv => show _ by R }
 show (y >= 0) using J1 J2 J3 by R
 */
-  "DaLi'17 Example 3" should "prove" in {
+
+  "DaLi'17 Example 3 Second Inv Sub-test" should "prove" in {
     withZ3(qeTool => {
+
+      val seq = Sequent(immutable.IndexedSeq[Formula](And("x=0".asFormula,Equal(Variable("y",Some(0)),Number(1))), "y>0".asFormula), immutable.IndexedSeq("[{x:=x+y;y:=1/2*y;}*](y>0 & x>=x)".asFormula))
+      val g = Context(Map(Variable("xy") -> AntePosition(1), Variable("J1") -> AntePosition(2)), Map())
+      val h = History(List(HCTimeStep("t1"), HCRename(Variable("y"), Variable("y", Some(0)), None), HCTimeStep("init")))
+      val duh:SP = Show("wild()".asFormula,UP(List(),Kaisar.Auto()))
+      val sp:SP =
+        BRule(
+          RBInv(Inv("J2".asVariable, "y>0 & x>=init(x)".asFormula, duh, duh,
+            Finally(
+              duh))),List())
+
+                //History:History(List(HCTimeStep(t1), HCRename(y,y_0,None), HCTimeStep(init), HCTimeStep(init)))
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(seq)) shouldBe 'proved
+
+    })
+    /*====== About to second inv ======
+      Goal:Provable(==> 1:  x=0&y=1->[{y:=1/2*y;}*{x:=x+y;y:=1/2*y;}*{x:=x+y;}*]x>=0	Imply
+      from      -1:  y>0	Greater
+      -2:  x=0	Equal
+      -3:  y_0=1	Equal
+      ==> 1:  [{x:=x+y;y:=1/2*y;}*{x:=x+y;}*]x>=0	Box)
+
+    Context:Context(Map(xy -> -1, J1 -> -4),Map())
+
+    History:History(List(HCTimeStep(t1), HCRename(y,y_0,None), HCTimeStep(init), HCTimeStep(init)))
+    (Right now: ,Provable(==> 1:  x=0&y=1->[{y:=1/2*y;}*{x:=x+y;y:=1/2*y;}*{x:=x+y;}*]x>=0	Imply
+      from      -1:  y>0	Greater
+      -2:  x=0	Equal
+      -3:  y_0=1	Equal
+      ==> 1:  [{x:=x+y;y:=1/2*y;}*][{x:=x+y;}*]x>=0	Box))
+
+      x=0&y_0=1, y>0  ==>  y>0&x>=x proved)
+
+      Proves
+      x=0&y_1=1, y>0  ==>  y>0&x>=x))
+*/
+  }
+  "DaLi'17 Example 3" should "prove" in {
+    withMathematica(qeTool => {
       val box = "x=0&y=1->[{{y:= (1/2)*y;}*};{{x:=x+y;y:=(1/2)*y;}*};{{x:=x+y;}*}]x >= 0".asFormula
       val duh:SP = Show("wild()".asFormula,UP(List(),Kaisar.Auto()))
       val sp:SP =
         BRule(RBAssume("xy".asVariable, "x=0&y=1".asFormula), List(
           State("init",
-            BRule(
-            RBInv(Inv("y > 0".asFormula, duh, duh,
+            PrintGoal("About to first inv",
+              BRule(
+            RBInv(Inv("J1".asVariable, "y > 0".asFormula, duh, duh,
               Finally(
           State("t1",
-            BRule(
-            RBInv(Inv("y>0 & x>=init(x)".asFormula, duh, duh,
+            PrintGoal("About to second inv",
+              BRule(
+            RBInv(Inv("J2".asVariable, "y>0 & x>=init(x)".asFormula, duh, duh,
               Finally(
                 State("t2",
-                  BRule(
-                    RBInv(Inv("y>0 & x>=t2(x)".asFormula, duh, duh,
-                      Finally(Show("x >= 0".asFormula, UP(List(), Kaisar.RCF()))))),
-                    List())
-                  ))
-              )), List()
-
-          )
-              ))))
-              ,List()
-          )
-        )))
+                  PrintGoal("About to third inv",
+                    BRule(
+                    RBInv(Inv("J3".asVariable, "y>0 & x>=t2(x)".asFormula, duh, duh,
+                      Finally(
+                        PrintGoal("About to show final goal",
+                        Show("x >= 0".asFormula, UP(List(), Kaisar.RCF())))))),
+                    List())))))), List())))))),List())))))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
@@ -455,7 +494,7 @@ show _  using J assms by auto
       ???
     })
   }
-  // x>0\wedge{y>0}\limply[\{x'=-x,y'=x\}]y>0
+  // x>0&y>0 -> [{x'=-x,y'=x}]y>0
 
   /* assume assms:(x>0 & y>0)
 time init
@@ -467,7 +506,27 @@ show (Jy > 0) using assms Jy by auto
 */
   "DaLi'17 Example 5" should "prove" in {
     withZ3(qeTool => {
-      ???
+      val duh:SP = Show("wild()".asFormula,UP(List(),Kaisar.Auto()))
+
+      val box = "x>0&y>0 -> [{x' =-x, y'=x}]y>0".asFormula
+      val sp:SP =
+        BRule(RBAssume("assms".asVariable, "x>0&y>0".asFormula), List(
+          State("init",BRule(RBInv(
+            //
+            Ghost("z".asVariable,"x/2".asTerm, "true".asFormula, "(1/x)^(1/2)".asTerm, duh, duh,
+              Inv("JG".asVariable, "x*z^2 = 1".asFormula, duh, duh,
+              Inv("Jx".asVariable, "x>0".asFormula,  duh, duh,
+              Inv("Jy".asVariable, "y >= init(y)".asFormula,  duh, duh,
+                Finally(Show("Jy > 0".asFormula, UP(List(Left("assms".asVariable),Left("Jy".asVariable)),Auto())))
+              )
+
+
+                ))
+            )
+          ),List()))
+
+        ))
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
 }

@@ -66,7 +66,7 @@ object Kaisar {
   case class UP(use:List[Either[Expression,FP]], method:Method)
 
   abstract class IP
-  case class Inv(fml:Formula, pre:SP, inv:SP, tail:IP) extends IP
+  case class Inv(x:Variable, fml:Formula, pre:SP, inv:SP, tail:IP) extends IP
   case class Ghost(gvar:Variable, gterm:Term, ginv:Formula, x0:Term, pre:SP, inv:SP, tail:IP) extends IP
   case class Finally(tail:SP) extends IP
 
@@ -433,18 +433,18 @@ def polyK(pr:Provable, facts:List[Provable], onSecond:Boolean = false, impAtEnd:
   }
 }
 
-def collectLoopInvs(ip: IP,h:History,c:Context):(List[Formula], List[SP], List[SP], IP) = {
+def collectLoopInvs(ip: IP,h:History,c:Context):(List[Variable], List[Formula], List[SP], List[SP], IP) = {
   ip match {
-    case Inv(fml, pre, inv, tail) =>
-      val (f,p,i,t) = collectLoopInvs(tail,h,c)
-      (expand(fml,h,c)::f, pre::p, inv::i, t)
-    case _ : Finally => (Nil, Nil, Nil, ip)
+    case Inv(x, fml, pre, inv, tail) =>
+      val (vs, f,p,i,t) = collectLoopInvs(tail,h,c)
+      (x::vs, expand(fml,h,c)::f, pre::p, inv::i, t)
+    case _ : Finally => (Nil, Nil, Nil, Nil, ip)
     case _ => ???
   }
 }
 
 def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
-  val gg = interpret(andL('L)*, g)
+  val gg = g // interpret(andL('L)*, g)
   val seq = gg.subgoals(0)
   val ante = seq.ante
   val goal = seq.succ.head
@@ -452,10 +452,15 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
     // TODO: Names to refer the invariants
     // TODO: Update invariant names for the inductive step what with the vacuation
     case (nextInv : Inv, Box(Loop(a),post)) => {
-      val anteConst = ante.filter({case f => StaticSemantics.freeVars(f).intersect(StaticSemantics.boundVars(a)).isEmpty})
+      val bvs = StaticSemantics.boundVars(a)
+      val (ggg:Provable, saved)  = saveVars(gg, bvs.toSet, invCurrent = false)
+      val anteConst = ggg.subgoals.head.ante.take(ante.length)
       // Inv (fml: Formula, pre: SP, inv: SP, tail: IP)
-      val (fmls, pres, invs, lastTail) = collectLoopInvs(nextInv,h,c)
+      val (vars, fmls, pres, invs, lastTail) = collectLoopInvs(nextInv,h,c)
       val conj = fmls.reduceRight(And)
+      //TODO: Intermediate hh and cc
+      val hh =  bvs.toSet.foldLeft(h)({case(acc, v) => acc.update(v.name)})
+      val cc = vars.zipWithIndex.foldLeft(c)({case (acc, (v,i)) => acc.add(v, AntePos(anteConst.length + i))})
       def baseCase(fmlPres:List[(Formula,SP)], done:List[Formula] = Nil):BelleExpr = {
         fmlPres match {
           case Nil => ???
@@ -492,13 +497,18 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
             boxAnd(1) & andR(1) <(e1, e2)
         }
       }
-      val e:BelleExpr = DLBySubst.loop(conj)(1) <( DebuggingTactics.debug("base case", doPrint = true) & baseCase(fmls.zip(pres)), DebuggingTactics.debug("use case", doPrint = true) &  nil, DebuggingTactics.debug("preductive case", doPrint = true) & (andL('L)*(Math.max(0, invs.length-1))) & DebuggingTactics.debug("inductive case", doPrint = true) & indCase(fmls.zip(invs)))
-      val pr:Provable = interpret(e, gg)
-      println("Done first step of interpreting thing: " + pr.prettyString)
+      val e:BelleExpr = DebuggingTactics.debug("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", doPrint = true) &  DLBySubst.loop(conj, pre = nil)(1) <(DebuggingTactics.debug("pre-base case", doPrint = true) &  unsaveVars(gg, bvs.toSet) & DebuggingTactics.debug("base case", doPrint = true) & baseCase(fmls.zip(pres)), DebuggingTactics.debug("use case", doPrint = true) &  nil, DebuggingTactics.debug("preductive case", doPrint = true) & (andL('L)*(Math.max(0, invs.length-1))) & DebuggingTactics.debug("inductive case", doPrint = true) & indCase(fmls.zip(invs)))
+      val pr:Provable = interpret(e, ggg)
+      def rotAnte(pr:Provable):Provable = {
+       val fml = pr.subgoals.head.ante.head
+       interpret(cut(fml) <(hideL(-1), close), pr)
+      }
+      val pr1 = rotAnte(pr)
+      println("Done first step of interpreting thing: " + pr1.prettyString)
       // polyK(pr, invSeq.map{case fml => interpret(TactixLibrary.close, Provable.startProof(Sequent(invSeq,immutable.IndexedSeq(fml))))}.toList)
-      eval(lastTail, h, c, pr, nInvs+1)
+      eval(lastTail, hh, cc, pr1, nInvs+1)
     }
-    case (Inv (fml: Formula, pre: SP, inv: SP, tail: IP), Box(ODESystem(ode,constraint),post)) => {
+    case (Inv (x:Variable, fml: Formula, pre: SP, inv: SP, tail: IP), Box(ODESystem(ode,constraint),post)) => {
       //TODO: deal with time and context management
       val e:BelleExpr = dC(fml)(1) <(nil, DebuggingTactics.debug("Blah", doPrint = true) &  dI()(1))
       val pr = interpret(e, g)
@@ -506,7 +516,8 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
     }
     case (Ghost (gvar: Variable, gterm: Term, ginv: Formula, x0:Term,  pre: SP, inv: SP, tail: IP), _) =>
       //val (Plus(Times(c1,ggvar), c2)) = gterm
-      val e:BelleExpr = dG(AtomicODE(DifferentialSymbol(gvar), gterm), Some(ginv))(1)
+      // Some(ginv)
+      val e:BelleExpr = dG(AtomicODE(DifferentialSymbol(gvar), gterm), None)(1)
       val pr = interpret(e & existsR(x0)(1) & DebuggingTactics.debug("after ghost", doPrint = true), g)
       eval(tail, h,c,pr,nInvs+1)
     // TODO: Hardcore polyK with vacuity
@@ -522,6 +533,36 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
 case class BadBranchingFactorException(had:Int,wanted:Int) extends Exception
 
 def assertBranches(had:Int, wanted:Int):Unit =  {if(had != wanted) throw BadBranchingFactorException(had,wanted)}
+
+private def saveVars(pr:Provable, savedVars:Set[Variable], invCurrent:Boolean = true, hide:Boolean = true):(Provable, List[Variable]) = {
+  savedVars.foldRight[(Provable,List[(Variable)])]((pr,Nil))({case(v:Variable,(acc,accVs)) =>
+    val vv:Variable = TacticHelper.freshNamedSymbol(v,acc.subgoals.head) // was once pr1.conclusion
+    val last = acc.subgoals.head.ante.length+1
+    println("DEBUGGGGG ME1: ", acc.prettyString, last, v, vv)
+    val e:BelleExpr =
+      DebuggingTactics.debug("DEBUGGGGG ME2:", doPrint = true) &
+      discreteGhost(v,Some(vv))(1) &
+      DebuggingTactics.debug("DEBUGGGGG ME3:", doPrint = true) &
+      DLBySubst.assignEquality(1) &
+      DebuggingTactics.debug("DEBUGGGGG ME4:", doPrint = true) &
+      TactixLibrary.exhaustiveEqR2L(hide=false)('Llast) &
+      DebuggingTactics.debug("DEBUGGGGG ME5:", doPrint = true) &
+      TactixLibrary.eqL2R(-last)(1) &
+      DebuggingTactics.debug("DEBUGGGGG ME6:", doPrint = true) &
+      (if (invCurrent) {TactixLibrary.eqL2R(-last)(1 + accVs.length - last)} else { nil }) &
+      DebuggingTactics.debug("DEBUGGGGG ME7:", doPrint = true) /*&
+      DebuggingTactics.debug("whomst " + (accVs.length - last), doPrint = true)*/
+    (interpret(e, acc), vv::accVs)
+  })
+}
+
+private def unsaveVars(pr:Provable, bvs:Set[Variable]):BelleExpr = {
+  val poses = List.tabulate(bvs.size)({case i => AntePosition(bvs.size + pr.subgoals.head.ante.length - i)})
+  poses.foldLeft(nil)({case (acc, pos) =>
+    val numRens = pos.index0
+    val rens = List.tabulate(numRens)({case i => TactixLibrary.eqL2R(pos)(AntePosition(1 + i))}).foldLeft(nil)({case (acc,e) => acc & e})
+    acc & DebuggingTactics.debug("unsaving " + pos, doPrint = true) & /*(TactixLibrary.eqL2R(pos)('L)*)*/ rens & DebuggingTactics.debug("unsave huh " + pos, doPrint = true)& hideL(pos) & DebuggingTactics.debug("unsaved " + pos, doPrint = true)})
+}
 
 def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable = {
   val sequent = g.subgoals.head
@@ -553,26 +594,11 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val bvs = StaticSemantics.boundVars(a)
           val seq1:Sequent = Sequent(sequent.ante, immutable.IndexedSeq(Box(a,fml)) ++ sequent.succ.tail)
           val pr1:Provable = eval(sp(0),h,c,Provable.startProof(seq1))
-          def doBigRename(pr:Provable) = {
-            bvs.toSet.foldRight[(Provable,List[(Variable)])]((pr,Nil))({case(v:Variable,(acc,accVs)) =>
-              println("Right now: ", acc.prettyString)
-              val vv:Variable = TacticHelper.freshNamedSymbol(v,pr1.conclusion)
-              val last = acc.subgoals.head.ante.length+1
-              val e:BelleExpr = discreteGhost(v,Some(vv))(1) &
-                DLBySubst.assignEquality(1) &
-                TactixLibrary.exhaustiveEqR2L(hide=false)('Llast) &
-                DebuggingTactics.debug("what " + last, doPrint = true) &
-                TactixLibrary.eqL2R(-last)(1) &
-                TactixLibrary.eqL2R(-last)(1 + accVs.length - last) &
-                  DebuggingTactics.debug("whomst " + (accVs.length - last), doPrint = true)
-              (interpret(e, acc), vv::accVs)
-            })
-          }
           // TODO: Document the proof tree for this proof.
           // TODO: How many assumptions stick around?
           val seq2:Sequent = Sequent(sequent.ante ++ immutable.IndexedSeq(fml), immutable.IndexedSeq(Box(b,p)))
           val pr2a:Provable = Provable.startProof(seq2)
-          val (rename,renVs) = doBigRename(pr2a)
+          val (rename,renVs) = saveVars(pr2a,bvs.toSet)
           val hh = renVs.foldRight(h)({case (v, acc) => acc.update(v.name)})
           val pr2Help = Provable.startProof(rename.subgoals.head)
           val G1 = pr2Help.conclusion.ante
@@ -583,7 +609,7 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val FG2:Formula = G2.reduceRight(And)
           val cc = c.add(varName,AntePos(pr2Start.conclusion.ante.length-1))
           val pr2:Provable = eval(sp(1),hh,cc,pr2Start)
-          val pp1:Provable = doBigRename(g)._1
+          val pp1:Provable = saveVars(g,bvs.toSet)._1
           val poses = List.tabulate(bvs.toSet.size)({case i => AntePosition(pp1.subgoals.head.ante.length - i)})
           val e = poses.foldLeft(nil)({case (acc, pos) => acc & TactixLibrary.eqR2L(pos)(-1) & hideL(pos)})
           //
@@ -658,7 +684,7 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
     case BRule (r:RuleSpec, tails: List[SP]) => eval(r,tails,h,c,g)
     case State (st:TimeName, tail: SP) => eval(tail,h.advance(st),c,g)
     case PrintGoal(msg,tail) =>
-      println("====== " + msg + " ======\n" + g.prettyString)
+      println("====== " + msg + " ======\n" + "Goal:" + g.prettyString + "\n\nContext:" + c + "\n\nHistory:" + h)
       eval(tail, h,c,g)
     case Run (a:VBase, hp:Program, tail:SP) => ???
   }
