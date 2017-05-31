@@ -550,7 +550,7 @@ Inv Jy:(y > init(y))
 show (Jy > 0) using assms Jy by auto
 */
   "DaLi'17 Example 5" should "prove" in {
-    withZ3(qeTool => {
+    withMathematica(qeTool => {
       val duh:SP = Show("wild()".asFormula,UP(List(),Kaisar.Auto()))
 
       val box = "x>0&y>0 -> [{x' =-x, y'=x}]y>0".asFormula
@@ -558,11 +558,12 @@ show (Jy > 0) using assms Jy by auto
         BRule(RBAssume("assms".asVariable, "x>0&y>0".asFormula), List(
           State("init",BRule(RBInv(
             //
-            Ghost("z".asVariable,"x/2".asTerm, "true".asFormula, "(1/x)^(1/2)".asTerm, duh, duh,
+            Ghost("z".asVariable,"(1/2)*z + 0".asTerm, "true".asFormula, "(1/x)^(1/2)".asTerm, duh, duh,
               Inv("JG".asVariable, "x*z^2 = 1".asFormula, duh, duh,
               Inv("Jx".asVariable, "x>0".asFormula,  duh, duh,
               Inv("Jy".asVariable, "y >= init(y)".asFormula,  duh, duh,
-                Finally(Show("Jy > 0".asFormula, UP(List(Left("assms".asVariable),Left("Jy".asVariable)),Auto())))
+                // TODO: Fix context management
+                Finally(Show("y > 0".asFormula, UP(List(Left("assms".asVariable),Left("Jy".asVariable)),Auto())))
               )
 
 

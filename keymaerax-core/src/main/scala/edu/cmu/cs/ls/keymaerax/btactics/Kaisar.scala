@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{existsR, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 
@@ -496,6 +496,26 @@ def collectLoopInvs(ip: IP,h:History,hh:History,c:Context):(List[Variable], List
   }
 }
 
+abstract class OdeInvInfo
+case class DiffCutInfo(proofVar:Variable, bcFml: Formula, indFml: Formula, bcProof:SP, indProof:SP) extends OdeInvInfo
+case class DiffGhostInfo(dgVar:Variable, dgPrime:Term, dg0:Term) extends OdeInvInfo
+
+def collectODEInvs(ip: IP,h:History,hh:History,c:Context):(List[OdeInvInfo], IP) = {
+  ip match {
+    case Inv(x, fml, pre, inv, tail) =>
+      val (infs,t) = collectODEInvs(tail,h,hh,c)
+      println("Expanding invariant formula: ", fml, " becomes ", expand(fml,h,c), " under history ", h, " and context ", c)
+      (DiffCutInfo(proofVar = x, bcFml = expand(fml,h,c), indFml = expand(fml,hh,c), pre, inv)::infs,t)
+    case Ghost(gvar,gterm,ginv,x0,pre,inv,tail) =>
+      val (infs,t) = collectODEInvs(tail,h,hh,c)
+      (DiffGhostInfo(gvar,gterm,x0)::infs,t)
+
+    case _ : Finally => (Nil, ip)
+    case _ => ???
+  }
+}
+
+
 def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
   val gg = g // interpret(andL('L)*, g)
   val seq = gg.subgoals(0)
@@ -585,21 +605,48 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
       // polyK(pr, invSeq.map{case fml => interpret(TactixLibrary.close, Provable.startProof(Sequent(invSeq,immutable.IndexedSeq(fml))))}.toList)
       eval(lastTail, hh, cc, pr1, nInvs+1)
     }
-    case (Inv (x:Variable, fml: Formula, pre: SP, inv: SP, tail: IP), Box(ODESystem(ode,constraint),post)) => {
-      //TODO: deal with time and context management
-      val e:BelleExpr = dC(fml)(1) <(nil, DebuggingTactics.debug("Blah", doPrint = true) &  dI()(1))
-      val pr = interpret(e, g)
-      eval(tail, h,c,pr, nInvs+1)
+    case (firstInv, Box(ODESystem(ode,constraint),post)) if !firstInv.isInstanceOf[Finally]=> {
+      val bvs = StaticSemantics(ode).bv.toSet.filter({case _:BaseVariable => true case _ => false}:(Variable=>Boolean))
+      val hh =  bvs.foldLeft(h)({case(acc, v) => acc.update(v.name)})
+      // TODO: Contexts
+      val (infs, t) = collectODEInvs(ip, h, hh, c)
+      val (ggg, saved) = saveVars(gg, bvs.toSet, invCurrent = false)
+      val anteSize = gg.subgoals.head.ante.size
+      var cutsSoFar = 0
+      def proveInvs(pr:Provable, infs:List[OdeInvInfo], c:Context):(Provable,Context) = {
+        infs match {
+          case Nil => (pr,c)
+          case DiffCutInfo(proofVar, bcFml, indFml, bcProof, indProof)::invTail =>
+            val e:BelleExpr = dC(indFml)(1) <(nil, DebuggingTactics.debug("Blah", doPrint = true) &  (dI()(1) | (DebuggingTactics.debug("Blahhh", doPrint = true)  & dW(1) & master())))
+            val pos = AntePos(anteSize + cutsSoFar)
+            cutsSoFar = cutsSoFar + 1
+            val prr = interpret(e, pr)
+            proveInvs(prr, invTail, c.add(proofVar, pos))
+          case DiffGhostInfo(dgVar, dgPrime, dG0)::invTail =>
+            val e:BelleExpr = dG(AtomicODE(DifferentialSymbol(dgVar), dgPrime), None)(1)
+            val ee = e & existsR(dG0)(1) & DebuggingTactics.debug("after ghost", doPrint = true)
+            val prr = interpret(ee, pr)
+            proveInvs(prr, invTail, c)
+        }
+      }
+      val (g3,cc) = proveInvs(ggg, infs,c)
+      val g4 = interpret(dW(1) & implyR(1), g3)
+      val nInvs = infs.filter{case _:DiffCutInfo => true case _ => false}.length
+      val conjPos = AntePosition(anteSize+1)
+      val oneAnd = andL(conjPos)
+      // The conjunction in the domain constraint is associated in a way that makes t positioning nasty.First reassociate it.
+      def flatAnd(f:Formula):List[Formula] = {f match {case And(a,b) => flatAnd(a) ++ List(b) case ff => List(ff)}}
+      def unflatAnd(l:List[Formula]):Formula = l match {case List(l) => l case (x::xs) => And(x,unflatAnd(xs))}
+      val conj = unflatAnd(flatAnd(g4.subgoals.head.ante.last))
+      val cutConj = cut(conj)<(hideL(conjPos), hideR(1) & (hideL(-1)*(anteSize-1)) & prop)
+      val killAnds = if(nInvs > 0) {andL('Llast)*(nInvs)} else nil
+      val killTrue = if(nInvs > 0) {hideL(AntePosition(anteSize+1))} else {hideL('Llast)}
+      val pr = interpret(cutConj & killAnds & killTrue, g4)
+      eval(t.asInstanceOf[Finally].tail, hh, cc, pr)
     }
-    case (Ghost (gvar: Variable, gterm: Term, ginv: Formula, x0:Term,  pre: SP, inv: SP, tail: IP), _) =>
-      //val (Plus(Times(c1,ggvar), c2)) = gterm
-      // Some(ginv)
-      val e:BelleExpr = dG(AtomicODE(DifferentialSymbol(gvar), gterm), None)(1)
-      val pr = interpret(e & existsR(x0)(1) & DebuggingTactics.debug("after ghost", doPrint = true), g)
-      eval(tail, h,c,pr,nInvs+1)
-    // TODO: Hardcore polyK with vacuity
+
     case (Finally(tail: SP), Box(ODESystem(ode,constraint),post)) =>
-      //TODO: Context management
+      //TODO: Delete because handled elsewhere
       eval(tail, h, c, interpret(dW(1) & implyR(1), g))
     case (Finally (tail: SP),post) =>  {
       eval(tail, h, c, g)
