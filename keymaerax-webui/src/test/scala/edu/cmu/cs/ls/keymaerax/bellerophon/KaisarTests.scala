@@ -16,6 +16,51 @@ import scala.collection.immutable
 class KaisarTests extends TacticTestBase {
   val pq:Formula = "p() & q()".asFormula
   val p:Formula = "p()".asFormula
+  val h1 = History(List(HCRename(Variable("x"),Variable("x",Some(1))), HCTimeStep("t2"), HCTimeStep("init")))
+  val h2 = History(List(HCAssign(Assign(Variable("x"),"x*2".asTerm)), HCTimeStep("preassign"), HCRename(Variable("x"),Variable("x",Some(0))), HCRename(Variable("y"),Variable("y",Some(0))), HCTimeStep("init")))
+  val h3 = History(List(HCRename(Variable("y"),Variable("y",Some(1))), HCRename(Variable("x"),Variable("x",Some(0))), HCTimeStep("t1"), HCRename(Variable("y"),Variable("y",Some(0))), HCTimeStep("init")))
+  val c1 = Context(Map(),Map())
+  //,x>=0, becomes ,x_0>=0, under history ,History(List(HCRename(x,x_0,None), HCTimeStep(init))), and context ,Context(Map(x -> -1),Map()))
+  //"Variable resolution" should "notice renaming after new state" in {
+//    val res = h1.resolve("x", "t2")
+//    res shouldBe Variable("x",Some(1))
+//  }
+
+  "Variable resolution" should "notice renaming after new state" in {
+    val res = h1.resolve("x", Some("t2"))
+    res shouldBe Variable("x",Some(1))
+  }
+
+  it should "use current variable for current time even after rename" in {
+    h1.resolve("x", None) shouldBe Variable("x")
+  }
+  it should "work for current-time when combining renames and subs" in {
+    h2.resolve("x", None) shouldBe "x*2".asTerm
+    //h2.eval("x>=2*preassign(x)&(preassign(y)>0->preassign(x)>y)".asFormula) shouldBe "2*x>=2*x&(y>0->x>y)".asFormula
+  }
+  it should "work for past-time when combining renames and subs" in {
+    h2.resolve("x", Some("preassign")) shouldBe "x".asTerm
+  }
+
+  it should "work when multiple variables all get renamed" in {
+    h3.resolve("x", Some("init")) shouldBe Variable("x",Some(0))
+  }
+
+  "Extended term expansion" should "notice renaming after new state" in {
+    Kaisar.expand("t2(x)".asTerm, h1, c1) shouldBe Variable("x",Some(1))
+    //Kaisar.expand("y>0&x>=t2(x)".asFormula, h, c) shouldBe And(Greater(Variable("y"),Number(0)), GreaterEqual(Variable("x"), Variable("x",Some(1))))
+  }
+
+  it should "use current variable for current time even after rename" in {
+    Kaisar.expand("x".asTerm, h1, c1) shouldBe Variable("x")
+  }
+
+  "Pattern matching" should "match variable dependency pattern" in {
+    val pat:Expression = "p(x)".asFormula
+    val e:Expression = "x > 2".asExpr
+    val dm = Kaisar.doesMatch(pat,e,c1)
+    dm shouldBe true
+  }
 
   "Proof with no programs" should "prove" in {
     withZ3 (qeTool => {
@@ -133,8 +178,8 @@ class KaisarTests extends TacticTestBase {
           // TODO: Uniqueness checking for pattern matching should break this
           List(
         BRule(RBAssign(Assign("x".asVariable, "2".asTerm)),
-          List(Have("xBig".asVariable, "x > 1".asFormula, Show("x > 1".asFormula, UP(List(Left("p(x)".asExpr)), Kaisar.RCF())),
-            Have("xNonZero".asVariable, "x != 0".asFormula, Show("x != 0".asFormula, UP(List(Left("p(x)".asExpr)), Kaisar.RCF())),
+          List(Have("xBig".asVariable, "x > 1".asFormula, Show("x > 1".asFormula, UP(List(Left("p(x)".asFormula)), Kaisar.RCF())),
+            Have("xNonZero".asVariable, "x != 0".asFormula, Show("x != 0".asFormula, UP(List(Left("p(x)".asFormula)), Kaisar.RCF())),
               BRule(RBAssign(Assign("x".asVariable, "2 - 1".asTerm)),
                 List(Show("x>0".asFormula, UP(List(), Auto()))))))))))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
@@ -154,8 +199,8 @@ class KaisarTests extends TacticTestBase {
               BRule(RBAssign(Assign("x".asVariable, "2".asTerm)),
               List(
                 PrintGoal("After second assign",
-                Have("xBig".asVariable, "x > 1".asFormula, Show("x > 1".asFormula, UP(List(Left("p(x)".asExpr)), Kaisar.RCF())),
-                Have("xNonZero".asVariable, "x != 0".asFormula, Show("x != 0".asFormula, UP(List(Left("p(x)".asExpr)), Kaisar.RCF())),
+                Have("xBig".asVariable, "x > 1".asFormula, Show("x > 1".asFormula, UP(List(Left("p(x)".asFormula)), Kaisar.RCF())),
+                Have("xNonZero".asVariable, "x != 0".asFormula, Show("x != 0".asFormula, UP(List(Left("p(x)".asFormula)), Kaisar.RCF())),
                   PrintGoal("After third assign",
                     BRule(RBAssign(Assign("x".asVariable, "x - 1".asTerm)),
                     List(Show("2-1>0".asFormula, UP(List(), Auto())))))))))))))
@@ -408,7 +453,7 @@ show (y >= 0) using J1 J2 J3 by R
   "DaLi'17 Example 3 Second Inv Sub-test" should "prove" in {
     withZ3(qeTool => {
 
-      val seq = Sequent(immutable.IndexedSeq[Formula](And("x=0".asFormula,Equal(Variable("y",Some(0)),Number(1))), "y>0".asFormula), immutable.IndexedSeq("[{x:=x+y;y:=1/2*y;}*](y>0 & x>=x)".asFormula))
+      val seq = Sequent(immutable.IndexedSeq[Formula](And("x=0".asFormula,Equal(Variable("y",Some(0)),Number(1))), "y>0".asFormula), immutable.IndexedSeq("[{x:=x+y;y:=1/2*y;}*](y>0 & x>=0)".asFormula))
       val g = Context(Map(Variable("xy") -> AntePosition(1), Variable("J1") -> AntePosition(2)), Map())
       val h = History(List(HCTimeStep("t1"), HCRename(Variable("y"), Variable("y", Some(0)), None), HCTimeStep("init")))
       val duh:SP = Show("wild()".asFormula,UP(List(),Kaisar.Auto()))
@@ -419,7 +464,7 @@ show (y >= 0) using J1 J2 J3 by R
               duh))),List())
 
                 //History:History(List(HCTimeStep(t1), HCRename(y,y_0,None), HCTimeStep(init), HCTimeStep(init)))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(seq)) shouldBe 'proved
+      Kaisar.eval(sp, h, g, Provable.startProof(seq)) shouldBe 'proved
 
     })
     /*====== About to second inv ======
@@ -452,21 +497,21 @@ show (y >= 0) using J1 J2 J3 by R
         BRule(RBAssume("xy".asVariable, "x=0&y=1".asFormula), List(
           State("init",
             PrintGoal("About to first inv",
-              BRule(
+            BRule(
             RBInv(Inv("J1".asVariable, "y > 0".asFormula, duh, duh,
               Finally(
           State("t1",
             PrintGoal("About to second inv",
-              BRule(
+            BRule(
             RBInv(Inv("J2".asVariable, "y>0 & x>=init(x)".asFormula, duh, duh,
               Finally(
                 State("t2",
-                  PrintGoal("About to third inv",
-                    BRule(
-                    RBInv(Inv("J3".asVariable, "y>0 & x>=t2(x)".asFormula, duh, duh,
-                      Finally(
-                        PrintGoal("About to show final goal",
-                        Show("x >= 0".asFormula, UP(List(), Kaisar.RCF())))))),
+                PrintGoal("About to third inv",
+            BRule(
+            RBInv(Inv("J3".asVariable, "y>0 & x>=t2(x)".asFormula, duh, duh,
+              Finally(
+                PrintGoal("About to show final goal",
+                Show("x >= 0".asFormula, UP(List(), Kaisar.RCF())))))),
                     List())))))), List())))))),List())))))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
