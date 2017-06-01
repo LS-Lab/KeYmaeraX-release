@@ -76,11 +76,12 @@ object Kaisar {
   case class FInst(fp:FP, t:Term) extends FP
 
   abstract class SP
-  case class Show (phi:Formula, proof: UP) extends SP
-  case class SLet (pat:Expression, e:Expression, tail:SP) extends SP
-  case class Note (x:Variable, fp:FP, tail: SP) extends SP
-  case class Have (x:Variable, fml:Formula, sp:SP, tail: SP) extends SP
-  case class BRule (r:RuleSpec, tails: List[SP]) extends SP
+  case class Show(phi:Formula, proof: UP) extends SP
+  case class SLet(pat:Expression, e:Expression, tail:SP) extends SP
+  case class FLet(x:VBase, arg:VBase, e:Expression, tail:SP) extends SP
+  case class Note(x:Variable, fp:FP, tail: SP) extends SP
+  case class Have(x:Variable, fml:Formula, sp:SP, tail: SP) extends SP
+  case class BRule(r:RuleSpec, tails: List[SP]) extends SP
   case class PrintGoal(msg:String, sp:SP) extends SP
   case class State (st:TimeName, tail: SP) extends SP
   case class Run (a:VBase, hp:Program, tail:SP) extends SP
@@ -225,12 +226,13 @@ object Kaisar {
     var empty = new History(List(HCTimeStep("init")))
   }
 
-  case class Context (gmap:Map[Variable,Position], defmap:Map[VBase, Expression]){
-    def concat(other: Context): Context = Context(gmap.++(other.gmap), defmap.++(other.defmap))
+  case class Context (gmap:Map[Variable,Position], defmap:Map[VBase, Expression], fundefmap:Map[VBase,(VBase,Expression)]){
+    def concat(other: Context): Context = Context(gmap.++(other.gmap), defmap.++(other.defmap), fundefmap.++(other.fundefmap))
+    def addFun(x:VBase,arg:VBase,e:Expression):Context = Context(gmap,defmap,fundefmap.+((x,(arg,e)))  )
     def add(x:Variable, at:AntePos):Context = {
-      Context(gmap.+((x,at)),defmap)
+      Context(gmap.+((x,at)),defmap, fundefmap)
     }
-    def inter(other: Context): Context = Context(gmap.filter({case (k,v) => other.gmap(k) == v}), defmap.filter({case (k,v) => other.defmap(k) == v}))
+    def inter(other: Context): Context = Context(gmap.filter({case (k,v) => other.gmap(k) == v}), defmap.filter({case (k,v) => other.defmap(k) == v}), fundefmap.filter({case (k,v) => other.fundefmap(k) == v}))
     def usubst:USubst = {
       USubst(defmap.toList.toIndexedSeq.map({
         case(name, e: DifferentialProgram) => SubstitutionPair(DifferentialProgramConst(name), e)
@@ -256,9 +258,9 @@ object Kaisar {
     }
   }
   object Context {
-    var empty = new Context(Map(),Map())
+    var empty = new Context(Map(),Map(), Map())
     def ofDef(base:VBase, e:Expression):Context = {
-      new Context(Map(), Map(base -> e))
+      new Context(Map(), Map(base -> e), Map())
     }
   }
 
@@ -789,8 +791,11 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
       val ccc = c.concat(cc)
       eval(proof, h, ccc, g)
     case SLet(pat:Expression, e:Expression, tail:SP) =>
+      //TODO: is this just totally overwriting the context
       val cc = pmatch(expand(pat,h,c), e,c)
-      eval(tail, h, cc, g)
+      eval(tail, h, c.concat(cc), g)
+    case FLet(x:VBase, arg:VBase, e:Expression, tail:SP) =>
+      eval(tail, h, c.addFun(x,arg,e), g)
     case Note(x:Variable, fp:FP, tail: SP)  =>
       val fpr:Provable = eval(fp, h, c, g.subgoals.head.ante)
       assert(fpr.conclusion.succ.nonEmpty)

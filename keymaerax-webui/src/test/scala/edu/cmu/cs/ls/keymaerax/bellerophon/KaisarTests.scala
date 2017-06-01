@@ -19,7 +19,7 @@ class KaisarTests extends TacticTestBase {
   val h1 = History(List(HCRename(Variable("x"),Variable("x",Some(1))), HCTimeStep("t2"), HCTimeStep("init")))
   val h2 = History(List(HCAssign(Assign(Variable("x"),"x*2".asTerm)), HCTimeStep("preassign"), HCRename(Variable("x"),Variable("x",Some(0))), HCRename(Variable("y"),Variable("y",Some(0))), HCTimeStep("init")))
   val h3 = History(List(HCRename(Variable("y"),Variable("y",Some(1))), HCRename(Variable("x"),Variable("x",Some(0))), HCTimeStep("t1"), HCRename(Variable("y"),Variable("y",Some(0))), HCTimeStep("init")))
-  val c1 = Context(Map(),Map())
+  val c1 = Context(Map(),Map(), Map())
   //,x>=0, becomes ,x_0>=0, under history ,History(List(HCRename(x,x_0,None), HCTimeStep(init))), and context ,Context(Map(x -> -1),Map()))
   //"Variable resolution" should "notice renaming after new state" in {
 //    val res = h1.resolve("x", "t2")
@@ -296,6 +296,29 @@ class KaisarTests extends TacticTestBase {
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
+  def shouldThrow[T](f:(Unit => T)):Unit = {
+    try {val x:T = f()} catch {case _ => return}
+    false shouldBe true
+  }
+
+  "Let bindings" should "not throw out the existing context" in {
+    withZ3(qeTool => {
+      val box = "x = 0 & y = 0 -> x + y = 0".asFormula
+      val sp:SP =
+        BRule(RBAssume("xy".asVariable, "x = 0 & y = 0".asFormula),
+          List(
+            SLet("xD_".asVariable, "x".asTerm,
+              SLet("yD_".asVariable, "y".asTerm,
+                Show("xD_ + xD_ = 0".asFormula,
+                  UP(List(), Auto())
+                )
+              )
+            )
+          ))
+      shouldThrow{case () => Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box))}
+    })
+  }
+
   "DaLi'17 Example 1a" should "prove" in {
     withZ3(qeTool => {
     val box = "x > 1 & y = 0 -> (x-1)^2 != (x+1)^2".asFormula
@@ -454,7 +477,7 @@ show (y >= 0) using J1 J2 J3 by R
     withZ3(qeTool => {
 
       val seq = Sequent(immutable.IndexedSeq[Formula](And("x=0".asFormula,Equal(Variable("y",Some(0)),Number(1))), "y>0".asFormula), immutable.IndexedSeq("[{x:=x+y;y:=1/2*y;}*](y>0 & x>=0)".asFormula))
-      val g = Context(Map(Variable("xy") -> AntePosition(1), Variable("J1") -> AntePosition(2)), Map())
+      val g = Context(Map(Variable("xy") -> AntePosition(1), Variable("J1") -> AntePosition(2)), Map(), Map())
       val h = History(List(HCTimeStep("t1"), HCRename(Variable("y"), Variable("y", Some(0)), None), HCTimeStep("init")))
       val duh:SP = Show("wild()".asFormula,UP(List(),Kaisar.Auto()))
       val sp:SP =
