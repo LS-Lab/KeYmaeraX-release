@@ -252,9 +252,40 @@ object Kaisar {
         throw new Exception("Tried to get invalid definition for " + ident )
       }
     }
+    def stripNominal(nom:VBase, e:Expression):Expression = {
+      val f:ExpressionTraversalFunction =
+        new ExpressionTraversalFunction() {
+          override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = {
+            t match {
+              case FuncOf(Function(fname,_,_,_,_),args) if fname == nom =>
+                Right(args.asInstanceOf)
+              case _ =>
+                Left(None)
+            }
+          }
+        }
+      e match {
+        case ee: Term => ExpressionTraversal.traverse(f, ee).get
+        case ee: Formula => ExpressionTraversal.traverse(f, ee).get
+        case ee: Program => ExpressionTraversal.traverse(f, ee).get
+        //case ee: ODESystem => ???
+      }
+    }
+    def getFunDef(ident:String):Expression = {
+      val (tVar, body) =
+        if(fundefmap.contains(ident)) { fundefmap(ident) }
+        else if(ident.last == '_' && defmap.contains(ident.dropRight(1))) {
+          fundefmap(ident.dropRight(1))
+        } else {
+          throw new Exception("Tried to get invalid function definition for " + ident )
+        }
+      stripNominal(tVar,body)
+    }
     def hasDef(ident:String):Boolean = {
       defmap.contains(ident) || (ident.last == '_' && defmap.contains(ident.dropRight(1)))
-
+    }
+    def hasFunDef(ident:String):Boolean = {
+      fundefmap.contains(ident) || (ident.last == '_' && defmap.contains(ident.dropRight(1)))
     }
   }
   object Context {
@@ -263,7 +294,6 @@ object Kaisar {
       new Context(Map(), Map(base -> e), Map())
     }
   }
-
 
   def eval(method:Method, pr:Provable):Provable = {
     val e:BelleExpr =
@@ -344,30 +374,55 @@ object Kaisar {
     // todo: add all inst
   )
 
-  private def doTravel(h:History):ExpressionTraversalFunction = {
+  // //DifferentialProgramConst(name) ProgramConst(name) FuncOf(Function(name, domain = Unit, sort = Real), Nothing)  PredOf(Function(name, domain = Unit, sort = Bool), Nothing)
+  //ExpressionTraversal.traverse(doTravel(h,c), e).get
+  private def doTravel(h:History,c:Context):ExpressionTraversalFunction = {
     new ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
         e match {
           case v: Variable =>
             Right(h.eval(v))
-          case FuncOf(Function(fname,_,_,_,_), arg) =>
-            if(h.hasTimeStep(fname)) {
-              Right(h.eval(arg, Some(fname)))
-            } else {
-              Left(None)
-            }
+          // Note: if there's a nominal but it's not in h, this isn't necessarily an error - we use this when expanding FLet's for the first time during definition to make sure
+          // argument references stick around and don't get expanded
+          case FuncOf(Function(fname,_,_,_,_), arg) if h.hasTimeStep(fname) =>
+            Right(h.eval(arg, Some(fname)))
+          case FuncOf(Function(fname,_,_,_,_), arg) if c.hasFunDef(fname) =>
+            Right(c.getFunDef(fname).asInstanceOf[Term])
+          case FuncOf(Function(fname,_,_,_,_), arg) if c.hasDef(fname) =>
+            Right(c.getDef(fname).asInstanceOf[Term])
           case _ =>
             Left(None)
+        }
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
+        e match {
+          case PredOf(Function(fname,_,_,_,_), arg) if c.hasDef(fname)=>
+            Right(c.getDef(fname).asInstanceOf[Formula])
+          case PredicationalOf(Function(fname,_,_,_,_), arg) if c.hasDef(fname) =>
+            Right(c.getDef(fname).asInstanceOf[Formula])
+          case UnitPredicational(fname, arg) if c.hasDef(fname) =>
+            Right(c.getDef(fname).asInstanceOf[Formula])
+          case _ => Left(None)
+        }
+      override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] =
+        e match {
+          case ProgramConst(fname) if c.hasDef(fname) =>
+            Right(c.getDef(fname).asInstanceOf[Program])
+          case SystemConst(fname) if c.hasDef(fname) =>
+            Right(c.getDef(fname).asInstanceOf[Program])
+          case DifferentialProgramConst(fname,_) if c.hasDef(fname) =>
+            Right(c.getDef(fname).asInstanceOf[Program])
+          case _ => Left(None)
         }
     }
   }
   // TODO: Support time-travel
-  def expand(e:Term, h:History, c:Context):Term       = {c.usubst(ExpressionTraversal.traverse(doTravel(h), e).get)}
+  def expand(e:Term, h:History, c:Context):Term       = {ExpressionTraversal.traverse(doTravel(h,c), e).get}
   def expand(e:Formula, h:History, c:Context):Formula = {
-    val traveled = ExpressionTraversal.traverse(doTravel(h), e)
-    c.usubst(traveled.get)
+    val traveled = ExpressionTraversal.traverse(doTravel(h,c), e)
+    traveled.get
+    //c.usubst(traveled.get)
   }
-  def expand(e:Program, h:History, c:Context):Program = {c.usubst(ExpressionTraversal.traverse(doTravel(h), e).get)}
+  def expand(e:Program, h:History, c:Context):Program = {ExpressionTraversal.traverse(doTravel(h,c), e).get}
   def expand(e:Expression, h:History, c:Context):Expression = {
     e match {
       case t:Term => expand(t,h,c)
@@ -791,11 +846,11 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
       val ccc = c.concat(cc)
       eval(proof, h, ccc, g)
     case SLet(pat:Expression, e:Expression, tail:SP) =>
-      //TODO: is this just totally overwriting the context
-      val cc = pmatch(expand(pat,h,c), e,c)
+      //TODO: Expand e?
+      val cc = pmatch(expand(pat,h,c), expand(e,h,c),c)
       eval(tail, h, c.concat(cc), g)
     case FLet(x:VBase, arg:VBase, e:Expression, tail:SP) =>
-      eval(tail, h, c.addFun(x,arg,e), g)
+      eval(tail, h, c.addFun(x,arg,expand(e,h,c)), g)
     case Note(x:Variable, fp:FP, tail: SP)  =>
       val fpr:Provable = eval(fp, h, c, g.subgoals.head.ante)
       assert(fpr.conclusion.succ.nonEmpty)
