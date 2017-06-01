@@ -20,6 +20,7 @@ class KaisarTests extends TacticTestBase {
   val h2 = History(List(HCAssign(Assign(Variable("x"),"x*2".asTerm)), HCTimeStep("preassign"), HCRename(Variable("x"),Variable("x",Some(0))), HCRename(Variable("y"),Variable("y",Some(0))), HCTimeStep("init")))
   val h3 = History(List(HCRename(Variable("y"),Variable("y",Some(1))), HCRename(Variable("x"),Variable("x",Some(0))), HCTimeStep("t1"), HCRename(Variable("y"),Variable("y",Some(0))), HCTimeStep("init")))
   val c1 = Context(Map(),Map(), Map())
+  val duh:SP = Show("wild()".asFormula,UP(List(),Kaisar.Auto()))
   //,x>=0, becomes ,x_0>=0, under history ,History(List(HCRename(x,x_0,None), HCTimeStep(init))), and context ,Context(Map(x -> -1),Map()))
   //"Variable resolution" should "notice renaming after new state" in {
 //    val res = h1.resolve("x", "t2")
@@ -47,12 +48,28 @@ class KaisarTests extends TacticTestBase {
   }
 
   "Extended term expansion" should "notice renaming after new state" in {
-    Kaisar.expand("t2(x)".asTerm, h1, c1) shouldBe Variable("x",Some(1))
+    Kaisar.expand("t2(x)".asTerm, h1, c1,None) shouldBe Variable("x",Some(1))
     //Kaisar.expand("y>0&x>=t2(x)".asFormula, h, c) shouldBe And(Greater(Variable("y"),Number(0)), GreaterEqual(Variable("x"), Variable("x",Some(1))))
   }
 
   it should "use current variable for current time even after rename" in {
-    Kaisar.expand("x".asTerm, h1, c1) shouldBe Variable("x")
+    Kaisar.expand("x".asTerm, h1, c1,None) shouldBe Variable("x")
+  }
+
+  it should "expand functional let" in {
+    val c = Context(Map(Variable("assms") -> AntePosition(1)),Map(),Map("E" -> ("t","t(v^2/2+H)".asTerm)))
+    val h = History(List(HCRename(Variable("y"),Variable("y", Some(0))), HCRename(Variable("vy"),Variable("vy",Some(0))), HCTimeStep("init"), HCTimeStep("init")))
+    val f = "y>=0&v^2/2+H=E()".asFormula
+    val exp = Kaisar.expand(f,h,c,None)
+    exp shouldBe "y>=0&v^2/2+H=(v^2/2+H)".asFormula
+  }
+
+  it should "expand functional let inside a nominal" in {
+    val c = Context(Map(Variable("assms") -> AntePosition(1)),Map(),Map("E" -> ("t","t(v^2/2+H)".asTerm)))
+    val h = History(List(HCRename(Variable("y"),Variable("y", Some(0))), HCRename(Variable("vy"),Variable("vy",Some(0))), HCTimeStep("init"), HCTimeStep("init")))
+    val f = "y>=0&E()=init(E())".asFormula
+    val exp = Kaisar.expand(f,h,c,None)
+    exp shouldBe "y>=0&v^2/2+H=(v^2/2+H)".asFormula
   }
 
   "Pattern matching" should "match variable dependency pattern" in {
@@ -515,7 +532,6 @@ show (y >= 0) using J1 J2 J3 by R
   "DaLi'17 Example 3" should "prove" in {
     withMathematica(qeTool => {
       val box = "x=0&y=1->[{{y:= (1/2)*y;}*};{{x:=x+y;y:=(1/2)*y;}*};{{x:=x+y;}*}]x >= 0".asFormula
-      val duh:SP = Show("wild()".asFormula,UP(List(),Kaisar.Auto()))
       val sp:SP =
         BRule(RBAssume("xy".asVariable, "x=0&y=1".asFormula), List(
           State("init",
@@ -539,10 +555,10 @@ show (y >= 0) using J1 J2 J3 by R
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
-  /*  g>0\land &y\geq H\land H>0\land v_y=0 \limply\\
-\Big[\Big\{\big\{  &\{?(y>0\vee v_y\geq 0)\}  \cup  \{?(y\leq 0\wedge v_y < 0); v_y := -v_y\}\big\}\\
-          &\{y'=v_y,v_y'=-g \& y\geq 0\}\\
-\Big\}^*\Big](&0 \leq y \wedge y \leq H)\\
+  /*  g>0&y>=H&H>0&vy=0 ->
+[{{{?(y>0 | vy >= 0)}  ++  {?(y<=0 & vy < 0); vy := -vy}}
+     {y'=vy,vy'=-g & y >= 0}
+  }*](0 <= y & y <= H)
 */
 
   /*assume assms:(g>0 & y>=H & H>0 & vy=0)
@@ -559,7 +575,23 @@ show _  using J assms by auto
 */
   "DaLi'17 Example 4" should "prove" in {
     withZ3(qeTool => {
-      ???
+      val box:Formula = "g>0&y>=H&H>0&vy=0 -> [{{{?(y>0 | vy >= 0);} ++ {?(y<=0 & vy < 0); vy := -vy;}}{y'=vy,vy'=-g & y >= 0}}*](0 <= y & y <= H)".asFormula
+      val sp:SP =
+        BRule(
+            RBAssume("assms".asVariable, "g>0&y>=H&H>0&vy=0".asFormula),
+          List(
+            State("init",
+            FLet("E", "t", "t(v^2/2 + H)".asExpr,
+          BRule(RBInv(
+            Inv("J".asVariable, "y >= 0 & E() = init(E())".asFormula, duh,
+                BRule(
+                  RBConsequence("conserv".asVariable, "E() = loop-init(E())".asFormula), List(
+                  Show("[wild ++ wild]wild()".asFormula, UP(List(), Auto()))
+               ,BRule(
+                  RBSolve("t".asVariable, "t >= 0".asFormula, "dc".asVariable, "dc_()".asFormula,List())
+                    , List(duh))))
+        , Finally(Show("wild()".asFormula, UP(List(Left("J".asVariable), Left("assms".asVariable)),Auto()))))), List())))))
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
   // x>0&y>0 -> [{x'=-x,y'=x}]y>0

@@ -258,7 +258,7 @@ object Kaisar {
           override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = {
             t match {
               case FuncOf(Function(fname,_,_,_,_),args) if fname == nom =>
-                Right(args.asInstanceOf)
+                Right(args.asInstanceOf[Term])
               case _ =>
                 Left(None)
             }
@@ -285,7 +285,7 @@ object Kaisar {
       defmap.contains(ident) || (ident.last == '_' && defmap.contains(ident.dropRight(1)))
     }
     def hasFunDef(ident:String):Boolean = {
-      fundefmap.contains(ident) || (ident.last == '_' && defmap.contains(ident.dropRight(1)))
+      fundefmap.contains(ident) || (ident.last == '_' && fundefmap.contains(ident.dropRight(1)))
     }
   }
   object Context {
@@ -376,16 +376,18 @@ object Kaisar {
 
   // //DifferentialProgramConst(name) ProgramConst(name) FuncOf(Function(name, domain = Unit, sort = Real), Nothing)  PredOf(Function(name, domain = Unit, sort = Bool), Nothing)
   //ExpressionTraversal.traverse(doTravel(h,c), e).get
-  private def doTravel(h:History,c:Context):ExpressionTraversalFunction = {
+  private def doTravel(h:History,c:Context, at:Option[TimeName]):ExpressionTraversalFunction = {
     new ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
-        e match {
+      //case v: Variable => Right(resolve(v.name, at))
+
+      e match {
           case v: Variable =>
-            Right(h.eval(v))
+            Right(h.resolve(v.name,at))
           // Note: if there's a nominal but it's not in h, this isn't necessarily an error - we use this when expanding FLet's for the first time during definition to make sure
           // argument references stick around and don't get expanded
           case FuncOf(Function(fname,_,_,_,_), arg) if h.hasTimeStep(fname) =>
-            Right(h.eval(arg, Some(fname)))
+            Right(expand(arg,h,c,Some(fname)))
           case FuncOf(Function(fname,_,_,_,_), arg) if c.hasFunDef(fname) =>
             Right(c.getFunDef(fname).asInstanceOf[Term])
           case FuncOf(Function(fname,_,_,_,_), arg) if c.hasDef(fname) =>
@@ -416,18 +418,18 @@ object Kaisar {
     }
   }
   // TODO: Support time-travel
-  def expand(e:Term, h:History, c:Context):Term       = {ExpressionTraversal.traverse(doTravel(h,c), e).get}
-  def expand(e:Formula, h:History, c:Context):Formula = {
-    val traveled = ExpressionTraversal.traverse(doTravel(h,c), e)
+  def expand(e:Term, h:History, c:Context, at:Option[TimeName]):Term       = {ExpressionTraversal.traverse(doTravel(h,c, at), e).get}
+  def expand(e:Formula, h:History, c:Context, at:Option[TimeName]):Formula = {
+    val traveled = ExpressionTraversal.traverse(doTravel(h,c, at), e)
     traveled.get
     //c.usubst(traveled.get)
   }
-  def expand(e:Program, h:History, c:Context):Program = {ExpressionTraversal.traverse(doTravel(h,c), e).get}
-  def expand(e:Expression, h:History, c:Context):Expression = {
+  def expand(e:Program, h:History, c:Context, at:Option[TimeName]):Program = {ExpressionTraversal.traverse(doTravel(h,c, at), e).get}
+  def expand(e:Expression, h:History, c:Context, at:Option[TimeName]):Expression = {
     e match {
-      case t:Term => expand(t,h,c)
-      case f:Formula => expand(f,h,c)
-      case p:Program => expand(p,h,c)
+      case t:Term => expand(t,h,c,at)
+      case f:Formula => expand(f,h,c,at)
+      case p:Program => expand(p,h,c,at)
     }
   }
 
@@ -485,7 +487,7 @@ object Kaisar {
           case _ => throw new Exception("proposition mismatch in modus ponens")
          }
       case FInst(fp1, term) =>
-        val t2 = expand(term,h, c)
+        val t2 = expand(term,h, c, None)
         val pr1:Provable = eval(fp1, h, c, ante)
         assert(pr1.conclusion.succ.nonEmpty)
         val goal = pr1.conclusion.succ.head
@@ -546,8 +548,10 @@ def collectLoopInvs(ip: IP,h:History,hh:History,c:Context):(List[Variable], List
   ip match {
     case Inv(x, fml, pre, inv, tail) =>
       val (vs, f,ff, p,i,t) = collectLoopInvs(tail,h,hh,c)
-      println("Expanding invariant formula: ", fml, " becomes ", expand(fml,h,c), " under history ", h, " and context ", c)
-      (x::vs, expand(fml,h,c)::f, expand(fml,hh,c)::ff, pre::p, inv::i, t)
+      val baseFml = expand(fml,h,c, None)
+      val indFml = expand(fml,hh,c, None)
+      println("Expanding invariant formula: ", fml, " becomes ", expand(fml,h,c, None), " under history ", h, " and context ", c)
+      (x::vs, baseFml::f, indFml::ff, pre::p, inv::i, t)
     case _ : Finally => (Nil, Nil, Nil, Nil, Nil, ip)
     case _ => ???
   }
@@ -561,8 +565,8 @@ def collectODEInvs(ip: IP,h:History,hh:History,c:Context):(List[OdeInvInfo], IP)
   ip match {
     case Inv(x, fml, pre, inv, tail) =>
       val (infs,t) = collectODEInvs(tail,h,hh,c)
-      println("Expanding invariant formula: ", fml, " becomes ", expand(fml,h,c), " under history ", h, " and context ", c)
-      (DiffCutInfo(proofVar = x, bcFml = expand(fml,h,c), indFml = expand(fml,hh,c), pre, inv)::infs,t)
+      println("Expanding invariant formula: ", fml, " becomes ", expand(fml,h,c, None), " under history ", h, " and context ", c)
+      (DiffCutInfo(proofVar = x, bcFml = expand(fml,h,c, None), indFml = expand(fml,hh,c, None), pre, inv)::infs,t)
     case Ghost(gvar,gterm,ginv,x0,pre,inv,tail) =>
       val (infs,t) = collectODEInvs(tail,h,hh,c)
       (DiffGhostInfo(gvar,gterm,x0)::infs,t)
@@ -582,12 +586,12 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
     // TODO: Names to refer the invariants
     // TODO: Update invariant names for the inductive step what with the vacuation
     case (nextInv : Inv, Box(Loop(a),post)) => {
-      val bvs = StaticSemantics.boundVars(a)
-      val (ggg:Provable, saved)  = saveVars(gg, bvs.toSet, invCurrent = false)
+      val bvs = StaticSemantics.boundVars(a).toSet.filter({case _ : BaseVariable => true case _ => false}:(Variable=>Boolean))
+      val (ggg:Provable, saved)  = saveVars(gg, bvs, invCurrent = false)
       val anteConst = ggg.subgoals.head.ante.take(ante.length)
       // Inv (fml: Formula, pre: SP, inv: SP, tail: IP)
       //TODO: Intermediate hh and cc
-      val hh =  bvs.toSet.foldLeft(h)({case(acc, v) => acc.update(v.name)})
+      val hh =  bvs.foldLeft(h)({case(acc, v) => acc.update(v.name)})
       val (vars, baseFmls, indFmls, pres, invs, lastTail) = collectLoopInvs(nextInv,h, hh,c)
       val conj = indFmls.reduceRight(And)
       val cc = vars.zipWithIndex.foldLeft(c)({case (acc, (v,i)) => acc.add(v, AntePos(anteConst.length + i))})
@@ -650,7 +654,7 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
         }
       val e:BelleExpr = DebuggingTactics.debug("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", doPrint = true) &
         DLBySubst.loop(conj, pre = nil)(1) <(DebuggingTactics.debug("pre-base case", doPrint = true) &
-          unsaveVars(gg, bvs.toSet, rewritePost = true) & DebuggingTactics.debug("base case", doPrint = true)
+          unsaveVars(gg, bvs, rewritePost = true) & DebuggingTactics.debug("base case", doPrint = true)
           & baseCase(baseFmls.zip(pres)), DebuggingTactics.debug("use case", doPrint = true) &  nil,
             DebuggingTactics.debug("preductive case", doPrint = true) &
           unpack & DebuggingTactics.debug("inductive case", doPrint = true)
@@ -841,16 +845,16 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
   val goal = g.subgoals.head.succ.head
   sp match {
     case Show(phi:Formula, proof: UP)  =>
-      val expanded = expand(phi,h,c)
+      val expanded = expand(phi,h,c, None)
       val cc = pmatch(expanded, goal,c)
       val ccc = c.concat(cc)
       eval(proof, h, ccc, g)
     case SLet(pat:Expression, e:Expression, tail:SP) =>
       //TODO: Expand e?
-      val cc = pmatch(expand(pat,h,c), expand(e,h,c),c)
+      val cc = pmatch(expand(pat,h,c,None), expand(e,h,c, None),c)
       eval(tail, h, c.concat(cc), g)
     case FLet(x:VBase, arg:VBase, e:Expression, tail:SP) =>
-      eval(tail, h, c.addFun(x,arg,expand(e,h,c)), g)
+      eval(tail, h, c.addFun(x,arg,expand(e,h,c,None)), g)
     case Note(x:Variable, fp:FP, tail: SP)  =>
       val fpr:Provable = eval(fp, h, c, g.subgoals.head.ante)
       assert(fpr.conclusion.succ.nonEmpty)
@@ -861,7 +865,7 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
       val cc = c.add(x,newPos)
       eval(tail, h, cc, gg)
     case Have(x:Variable, fml:Formula, sp:SP, tail: SP)  =>
-      val fmlExpanded = expand(fml,h,c)
+      val fmlExpanded = expand(fml,h,c,None)
       val seq = Sequent(g.subgoals.head.ante, immutable.IndexedSeq(fmlExpanded))
       val prIn = Provable.startProof(seq)
       val prOut = eval(sp, h, c, prIn)
