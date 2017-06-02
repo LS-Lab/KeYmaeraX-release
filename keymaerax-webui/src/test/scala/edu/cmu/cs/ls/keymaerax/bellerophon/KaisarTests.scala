@@ -19,7 +19,9 @@ class KaisarTests extends TacticTestBase {
   val h1 = History(List(HCRename(Variable("x"),Variable("x",Some(1))), HCTimeStep("t2"), HCTimeStep("init")))
   val h2 = History(List(HCAssign(Assign(Variable("x"),"x*2".asTerm)), HCTimeStep("preassign"), HCRename(Variable("x"),Variable("x",Some(0))), HCRename(Variable("y"),Variable("y",Some(0))), HCTimeStep("init")))
   val h3 = History(List(HCRename(Variable("y"),Variable("y",Some(1))), HCRename(Variable("x"),Variable("x",Some(0))), HCTimeStep("t1"), HCRename(Variable("y"),Variable("y",Some(0))), HCTimeStep("init")))
+  val h4 = History(List(HCRename(Variable("v"), Variable("v",Some(1))), HCTimeStep("loopinit"), HCRename(Variable("y"),Variable("y",Some(0))), HCRename(Variable("v"),Variable("v",Some(0))), HCTimeStep("init"), HCTimeStep("init")))
   val c1 = Context(Map(),Map(), Map())
+  val c2 = Context(Map(),Map(), Map("E" -> ("t", "t(v^2/2 + y)".asTerm)))
   val duh:SP = Show("wild()".asFormula,UP(List(),Kaisar.Auto()))
   //,x>=0, becomes ,x_0>=0, under history ,History(List(HCRename(x,x_0,None), HCTimeStep(init))), and context ,Context(Map(x -> -1),Map()))
   //"Variable resolution" should "notice renaming after new state" in {
@@ -70,6 +72,16 @@ class KaisarTests extends TacticTestBase {
     val f = "y>=0&E()=init(E())".asFormula
     val exp = Kaisar.expand(f,h,c,None)
     exp shouldBe "y>=0&v^2/2+H=(v^2/2+H)".asFormula
+  }
+
+  it should "expand variable across multiple renames" in {
+    val exp = Kaisar.expand("v".asTerm, h4,c2,Some("init"))
+    exp shouldBe Variable("v",Some(0))
+  }
+
+  it should "expand functional let inside nominal even when renaming occurs over multiple variables" in {
+    val exp = Kaisar.expand("E() = init(E())".asFormula, h4,c2,None)
+    exp shouldBe Equal("v^2/2+y".asTerm, Plus(Divide(Power(Variable("v",Some(0)),Number(2)),Number(2)),Variable("y",Some(0))))
   }
 
   "Pattern matching" should "match variable dependency pattern" in {
@@ -574,23 +586,31 @@ Inv J(y >= 0 & ??E = init(E) {
 show _  using J assms by auto
 */
   "DaLi'17 Example 4" should "prove" in {
-    withZ3(qeTool => {
-      val box:Formula = "g>0&y>=H&H>0&vy=0 -> [{{{?(y>0 | vy >= 0);} ++ {?(y<=0 & vy < 0); vy := -vy;}}{y'=vy,vy'=-g & y >= 0}}*](0 <= y & y <= H)".asFormula
+    withMathematica(qeTool => {
+      // TODO: End unit gravity
+      val box:Formula = "0 <= y & y<=H&H>0&v=0 -> [{{{?(y>0 | v >= 0);} ++ {?(y<=0 & v < 0); v := -v;}}{y'=v,v'=-1 & y >= 0}}*](0 <= y & y <= H)".asFormula
       val sp:SP =
         BRule(
-            RBAssume("assms".asVariable, "g>0&y>=H&H>0&vy=0".asFormula),
+          //TODO this pattern match might be broke, i.e. patmatch didnt fail even when I changed some stuff
+            RBAssume("assms".asVariable, "0 <= y & y<=H&H>0&v=0".asFormula),
           List(
             State("init",
-            FLet("E", "t", "t(v^2/2 + H)".asExpr,
+            FLet("E", "t", "t(v^2/2 + y)".asExpr,
           BRule(RBInv(
             Inv("J".asVariable, "y >= 0 & E() = init(E())".asFormula, duh,
+              State("loopinit",
                 BRule(
-                  RBConsequence("conserv".asVariable, "E() = loop-init(E())".asFormula), List(
-                  Show("[wild ++ wild]wild()".asFormula, UP(List(), Auto()))
-               ,BRule(
-                  RBSolve("t".asVariable, "t >= 0".asFormula, "dc".asVariable, "dc_()".asFormula,List())
-                    , List(duh))))
-        , Finally(Show("wild()".asFormula, UP(List(Left("J".asVariable), Left("assms".asVariable)),Auto()))))), List())))))
+                  RBConsequence("conserv".asVariable, "E() = loopinit(E())& 1111 = 1111 & E() = init(E())".asFormula), List(
+                  Show("[{wild ++ wild}]wild()".asFormula, UP(List(), Auto()))
+               ,PrintGoal("Pre-solve",
+                  BRule(
+                      RBSolve("t".asVariable, "t >= 0".asFormula, "dc".asVariable, "dc_()".asFormula,List())
+                    , List(
+                        PrintGoal("Almost done",duh)))))))
+        , Finally(
+                PrintGoal("Finish himm!!!!",
+                //
+                Show("wild()".asFormula, UP(List(Left("J".asVariable), Left("assms".asVariable)),Auto())))))), List())))))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }

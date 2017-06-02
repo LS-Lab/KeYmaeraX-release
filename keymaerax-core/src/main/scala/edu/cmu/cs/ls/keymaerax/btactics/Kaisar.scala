@@ -175,7 +175,7 @@ object Kaisar {
       //val (postRen, _) = partAfter(renSteps, isThisRename)
       //val (_, preSub) = partBefore(subSteps, isThisRename)
       //TODO: might be bug val fullName = postChange match {case Nil => Variable(x) case ((y:HCRename)::ys) => y.permName case _ => ???}
-      val fullName = rs match {case (HCRename(_,to,_)::_) => to case _ => Variable(x)}
+      val fullName = rs.reverse match {case (HCRename(_,to,_)::_) => to case _ => Variable(x)}
       val xChanges = ss.filter(isThisAssign)
       val xxChanges = if(xChanges.length  > 1 ) {xChanges.take(1)} else xChanges
       replay(xxChanges.asInstanceOf[List[HCAssign]], fullName)
@@ -252,13 +252,17 @@ object Kaisar {
         throw new Exception("Tried to get invalid definition for " + ident )
       }
     }
-    def stripNominal(nom:VBase, e:Expression):Expression = {
+    def stripNominal(nom:VBase, e:Expression, at:Option[TimeName]):Expression = {
       val f:ExpressionTraversalFunction =
         new ExpressionTraversalFunction() {
           override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = {
             t match {
               case FuncOf(Function(fname,_,_,_,_),args) if fname == nom =>
-                Right(args.asInstanceOf[Term])
+                at match {
+                  case Some(atTime) => Right(FuncOf(Function(atTime, domain = Real, sort = Real), args.asInstanceOf[Term]))
+                  case None => Right(args.asInstanceOf[Term])
+                }
+
               case _ =>
                 Left(None)
             }
@@ -271,7 +275,7 @@ object Kaisar {
         //case ee: ODESystem => ???
       }
     }
-    def getFunDef(ident:String):Expression = {
+    def getFunDef(ident:String, at:Option[TimeName]):Expression = {
       val (tVar, body) =
         if(fundefmap.contains(ident)) { fundefmap(ident) }
         else if(ident.last == '_' && defmap.contains(ident.dropRight(1))) {
@@ -279,7 +283,7 @@ object Kaisar {
         } else {
           throw new Exception("Tried to get invalid function definition for " + ident )
         }
-      stripNominal(tVar,body)
+      stripNominal(tVar,body, at)
     }
     def hasDef(ident:String):Boolean = {
       defmap.contains(ident) || (ident.last == '_' && defmap.contains(ident.dropRight(1)))
@@ -389,7 +393,7 @@ object Kaisar {
           case FuncOf(Function(fname,_,_,_,_), arg) if h.hasTimeStep(fname) =>
             Right(expand(arg,h,c,Some(fname)))
           case FuncOf(Function(fname,_,_,_,_), arg) if c.hasFunDef(fname) =>
-            Right(c.getFunDef(fname).asInstanceOf[Term])
+            Right(expand(c.getFunDef(fname, at).asInstanceOf[Term],h,c,at))
           case FuncOf(Function(fname,_,_,_,_), arg) if c.hasDef(fname) =>
             Right(c.getDef(fname).asInstanceOf[Term])
           case _ =>
@@ -550,7 +554,8 @@ def collectLoopInvs(ip: IP,h:History,hh:History,c:Context):(List[Variable], List
       val (vs, f,ff, p,i,t) = collectLoopInvs(tail,h,hh,c)
       val baseFml = expand(fml,h,c, None)
       val indFml = expand(fml,hh,c, None)
-      println("Expanding invariant formula: ", fml, " becomes ", expand(fml,h,c, None), " under history ", h, " and context ", c)
+      println("CC Expanding invariant formula: ", fml, " becomes ", expand(fml,h,c, None), " under history ", h, " and context ", c)
+      println("DD Expanding invariant formula: ", fml, " becomes ", expand(fml,hh,c, None), " under history ", hh, " and context ", c)
       (x::vs, baseFml::f, indFml::ff, pre::p, inv::i, t)
     case _ : Finally => (Nil, Nil, Nil, Nil, Nil, ip)
     case _ => ???
@@ -565,7 +570,8 @@ def collectODEInvs(ip: IP,h:History,hh:History,c:Context):(List[OdeInvInfo], IP)
   ip match {
     case Inv(x, fml, pre, inv, tail) =>
       val (infs,t) = collectODEInvs(tail,h,hh,c)
-      println("Expanding invariant formula: ", fml, " becomes ", expand(fml,h,c, None), " under history ", h, " and context ", c)
+      println("AA Expanding invariant formula: ", fml, " becomes ", expand(fml,h,c, None), " under history ", h, " and context ", c)
+      println("BB Expanding invariant formula: ", fml, " becomes ", expand(fml,hh,c, None), " under history ", hh, " and context ", c)
       (DiffCutInfo(proofVar = x, bcFml = expand(fml,h,c, None), indFml = expand(fml,hh,c, None), pre, inv)::infs,t)
     case Ghost(gvar,gterm,ginv,x0,pre,inv,tail) =>
       val (infs,t) = collectODEInvs(tail,h,hh,c)
@@ -576,7 +582,10 @@ def collectODEInvs(ip: IP,h:History,hh:History,c:Context):(List[OdeInvInfo], IP)
   }
 }
 
-
+  def rotAnte(pr:Provable):Provable = {
+    val fml = pr.subgoals.head.ante.head
+    interpret(cut(fml) <(hideL(-1), close), pr)
+  }
 def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
   val gg = g // interpret(andL('L)*, g)
   val seq = gg.subgoals(0)
@@ -621,14 +630,14 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
             val invSeq = Sequent(anteConst ++ done ++ immutable.IndexedSeq(fml), immutable.IndexedSeq(Box(a,fml)))
             println("Ind case useat base hiding " + (invs.length - (done.length + 1)) + ": " + invSeq)
             val e = hideL('Llast)*(invs.length - (done.length + 1))
-            val tail = eval(inv, h, c, Provable.startProof(invSeq))
+            val tail = eval(inv, hh, c, Provable.startProof(invSeq))
             assert(tail.isProved, "Failed to prove first inductive case subgoal " + fml + " in subproof " + inv + ", left behind provable " + tail.prettyString)
             DebuggingTactics.debug("preHide icubh", doPrint = true) & e & DebuggingTactics.debug("postHide IND0", doPrint = true) & useAt(NoProofTermProvable(tail), PosInExpr(Nil))(1)
           case (fml, pre:SP)::fps =>
             val invSeq = Sequent(anteConst ++ done ++ immutable.IndexedSeq(fml), immutable.IndexedSeq(Box(a,fml)))
             println("Ind case useat inductive hiding " + (invs.length - done.length) + ": " + invSeq)
             val hide = hideL('Llast)*(invs.length - (done.length + 1))
-            val tail = NoProofTermProvable(eval(pre, h, c, Provable.startProof(invSeq)))
+            val tail = NoProofTermProvable(eval(pre, hh, c, Provable.startProof(invSeq)))
             assert(tail.isProved, "Failed to prove additional inductive case subgoal " + fml + " in subproof " + pre + ", left behind provable " + tail.prettyString)
             val e1 = DebuggingTactics.debug("preHide", doPrint = true) &  hide & DebuggingTactics.debug("postINDN", doPrint = true)& useAt(tail, PosInExpr(Nil))(1)
             val e2 = indCase(fps, done ++ immutable.IndexedSeq(fml))
@@ -636,10 +645,7 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
         }
       }
       //by(t: (ProvableSig, SuccPosition) => ProvableSig)
-      def rotAnte(pr:Provable):Provable = {
-        val fml = pr.subgoals.head.ante.head
-        interpret(cut(fml) <(hideL(-1), close), pr)
-      }
+
       //(andL('L)*(Math.max(0, invs.length-1)))
       val unpack:BelleExpr =
         if (invs.length > 1) { andL('L)*(invs.length-1) }
@@ -741,13 +747,14 @@ private def saveVars(pr:Provable, savedVars:Set[Variable], invCurrent:Boolean = 
   })
 }
 
-private def unsaveVars(pr:Provable, bvs:Set[Variable], rewritePost:Boolean = false):BelleExpr = {
+private def unsaveVars(pr:Provable, bvs:Set[Variable], rewritePost:Boolean = false, hide:Boolean = true):BelleExpr = {
   val poses = List.tabulate(bvs.size)({case i => AntePosition(bvs.size + pr.subgoals.head.ante.length - i)})
   poses.foldLeft(nil)({case (acc, pos) =>
     val numRens = pos.index0
     val rens = List.tabulate(numRens)({case i => TactixLibrary.eqL2R(pos)(AntePosition(1 + i))}).foldLeft(nil)({case (acc,e) => acc & e})
-    val renss = if(rewritePost) {rens & TactixLibrary.eqL2R(pos)(SuccPosition(1))} else rens
-    acc & DebuggingTactics.debug("unsaving " + pos, doPrint = true) & /*(TactixLibrary.eqL2R(pos)('L)*)*/ renss & DebuggingTactics.debug("unsave huh " + pos, doPrint = true)& hideL(pos) & DebuggingTactics.debug("unsaved " + pos, doPrint = true)})
+    val doHide = if(hide) {hideL(pos)} else nil
+    val renss = if(rewritePost) {rens & DebuggingTactics.debug("Rewriting post " + pos, doPrint = true) & TactixLibrary.eqL2R(pos)(SuccPosition(1))} else rens
+    acc & DebuggingTactics.debug("unsaving " + pos, doPrint = true) & /*(TactixLibrary.eqL2R(pos)('L)*)*/ renss & DebuggingTactics.debug("unsave huh " + pos, doPrint = true)& doHide & DebuggingTactics.debug("unsaved " + pos, doPrint = true)})
 }
 
 def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable = {
@@ -781,29 +788,64 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
         case (RBConsequence(varName:Variable,fml:Formula), Box(a,Box(b,p))) =>
           assertBranches(sp.length, 2)
           val bvs = StaticSemantics.boundVars(a)
-          val seq1:Sequent = Sequent(sequent.ante, immutable.IndexedSeq(Box(a,fml)) ++ sequent.succ.tail)
-          val pr1:Provable = eval(sp(0),h,c,Provable.startProof(seq1))
+          val hh = bvs.toSet.foldLeft(h)({case (acc,v) => (acc.update(v.name))})
+          val fmlEarly = expand(fml, h, c, None)
+          val fmlLate = expand(fml,hh,c,None)
+          val (pr1prep,_) = saveVars(g,bvs.toSet)
+          val seq1:Sequent = Sequent(pr1prep.subgoals.head.ante, immutable.IndexedSeq(Box(a,fmlLate)) ++ sequent.succ.tail)
+          val pr1:Provable = eval(sp(0),hh,c,Provable.startProof(seq1))
+          assert(pr1.isProved, "Failed to prove subgoal in subproof " + sp(0) + ", left behind provable " + pr1.prettyString)
           // TODO: Document the proof tree for this proof.
           // TODO: How many assumptions stick around?
           val seq2:Sequent = Sequent(sequent.ante ++ immutable.IndexedSeq(fml), immutable.IndexedSeq(Box(b,p)))
           val pr2a:Provable = Provable.startProof(seq2)
           val (rename,renVs) = saveVars(pr2a,bvs.toSet)
-          val hh = renVs.foldRight(h)({case (v, acc) => acc.update(v.name)})
-          val pr2Help = Provable.startProof(rename.subgoals.head)
+          //val hh = renVs.foldRight(h)({case (v, acc) => acc.update(v.name)})
+          //val fmlLate = expand(fml, hh,c,None)
+          val pr2Help = Provable.startProof(rename.subgoals.head.updated(AntePos(sequent.ante.length),fmlLate))
           val G1 = pr2Help.conclusion.ante
           val FG1:Formula = G1.reduceRight(And)
           val pr2Hid = interpret(hideL('Llast)*(bvs.toSet.size), pr2Help)
           val pr2Start = Provable.startProof(pr2Hid.subgoals.head)
           val G2 = pr2Hid.subgoals.head.ante//.tail
-          val FG2:Formula = G2.reduceRight(And)
+          val FG2:Formula = And(G2.last, G2.dropRight(1).reduceRight(And))
           val cc = c.add(varName,AntePos(pr2Start.conclusion.ante.length-1))
           val pr2:Provable = eval(sp(1),hh,cc,pr2Start)
-          val pp1:Provable = saveVars(g,bvs.toSet)._1
+          assert(pr2.isProved, "Failed to prove subgoal in subproof " + sp(1) + ", left behind provable " + pr2.prettyString)
+          val pp1:Provable = saveVars(g,bvs.toSet, invCurrent = false)._1
           val poses = List.tabulate(bvs.toSet.size)({case i => AntePosition(pp1.subgoals.head.ante.length - i)})
           val e = poses.foldLeft(nil)({case (acc, pos) => acc & TactixLibrary.eqR2L(pos)(-1) & hideL(pos)})
           //
-          val prr:Provable = interpret(cut(Box(a,FG2)) <(DebuggingTactics.debug("DooD " + (G1.length-1), doPrint = true) & hideL(-1)*(G1.length-1) & DebuggingTactics.debug("hmmm", doPrint = true) & monb & ((andL('L))*) & DebuggingTactics.debug("The useat time ", doPrint = true ) & useAt(NoProofTermProvable(pr2), PosInExpr(Nil))(1),
-            hideR(1) & boxAnd(1) & andR(1) & DebuggingTactics.debug("stuff", doPrint = true) <( e & useAt("V vacuous")(1) & prop, hideL('Llast)*bvs.toSet.size & useAt(NoProofTermProvable(pr1),PosInExpr(Nil))(1))), pp1)
+          //
+          //
+          /* interpret(cut(Box(a,FG2)) <(hideL(-1)*(G1.length-1) & monb & ((andL('L))*)& useAt(NoProofTermProvable(pr2), PosInExpr(Nil))(1),
+                   hideR(1) & boxAnd(1) & andR(1)  <( e & useAt("V vacuous")(1) & prop, hideL('Llast)*bvs.toSet.size & useAt(NoProofTermProvable(pr1),PosInExpr(Nil))(1))), pp1)*/
+
+          val pp2 = interpret(cut(Box(a,FG2)), pp1)
+          val ppa = Provable.startProof(pp2.subgoals.head)
+          val ppa1 = interpret(hideL(-1)*(G1.length-1), ppa)
+          val ppa2 = interpret(monb, ppa1)
+          val ppa3 = interpret(((andL('Llast))*(G2.length-1)), ppa2)
+          val ppa35 = rotAnte(ppa3)
+          val ppa4 = interpret(useAt(NoProofTermProvable(pr2), PosInExpr(Nil))(1), ppa35)
+          val ppb = Provable.startProof(pp2.subgoals.tail.head)
+          val ppb1 = interpret(hideR(1), ppb)
+          val ppb2 = interpret(boxAnd(1) & andR(1),ppb1)
+          val ppc = Provable.startProof(ppb2.subgoals.tail.head)
+          val ppc1 = interpret(e, ppc)
+          val ppc2 = interpret(useAt("V vacuous")(1), ppc1)
+          val ppc3 = interpret(prop, ppc2)
+          val ppd = Provable.startProof(ppb2.subgoals.head)
+          val ppd1 = interpret(unsaveVars(g, bvs.toSet, rewritePost = false, hide = false), ppd)
+          //val ppd1 = interpret(hideL('Llast)*bvs.toSet.size, ppd)
+          val ppd2 = interpret(useAt(NoProofTermProvable(pr1),PosInExpr(Nil))(1), ppd1)
+          val b3 = ppb2(ppd2,0)
+          val b2 = b3(ppc3,0)
+          val b4 = pp2(ppa4,0)
+          val prr =b4(b2,0)
+
+          /*val prr:Provable = interpret(cut(Box(a,FG2)) <(DebuggingTactics.debug("DooD " + (G1.length-1), doPrint = true) & hideL(-1)*(G1.length-1) & DebuggingTactics.debug("hmmm", doPrint = true) & monb & ((andL('L))*) & DebuggingTactics.debug("The useat time ", doPrint = true ) & useAt(NoProofTermProvable(pr2), PosInExpr(Nil))(1),
+            hideR(1) & boxAnd(1) & andR(1) & DebuggingTactics.debug("stuff", doPrint = true) <( e & useAt("V vacuous")(1) & prop, hideL('Llast)*bvs.toSet.size & useAt(NoProofTermProvable(pr1),PosInExpr(Nil))(1))), pp1)*/
           prr
         case (RBCase(), Box(Choice(a,b),p)) =>
           assertBranches(sp.length, 2)
@@ -819,7 +861,9 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val newPos = AntePos(sequent.ante.length)
           val cc:Context = c.add(x,newPos)
           eval(sp.head, h, cc, g(ImplyRight(SuccPos(0)),0))
-        case (RBSolve(t:Variable,fmlT:Formula,dc:Variable,fmlDC:Formula,sols:List[(Variable,Formula)]),Box(ODESystem(ode,q),p)) => ???
+        case (RBSolve(t:Variable,fmlT:Formula,dc:Variable,fmlDC:Formula,sols:List[(Variable,Formula)]),Box(ODESystem(ode,q),p)) =>
+          val pr = interpret(solve(1) & allR(1) & implyR(1), g)
+          eval(sp.head, h, c, pr)
         case (RBAssignAny(x:Variable),Box(AssignAny(y),p)) if x == y =>
           assertBranches(sp.length, 1)
           val hh = h.update(x.name)
@@ -991,7 +1035,9 @@ def pmatch(pat:Expression, e:Expression, c:Context):Context = {
       try { pmatch(pat1,e,c); throw PatternMatchError("Pattern should not have matched but did: " + pat1.prettyString)}
       catch {case _ : Throwable => Context.empty }
       // TODO: Wild ODE system should only match ODE systems, but because parser prefers diffprogramconst to programconst we do this instead
+    case ProgramConst("wild") => Context.empty
     case ODESystem(DifferentialProgramConst("wild",_),_) => Context.empty
+    case FuncOf(Function("wild", _, _, _, _), pat) => Context.empty
     case FuncOf(Function("wild", _, _, _, _), pat) => Context.empty
     case PredOf(Function("wild", _, _, _, _), pat) => Context.empty
     case PredicationalOf(Function("wild", _, _, _, _), pat) => Context.empty
