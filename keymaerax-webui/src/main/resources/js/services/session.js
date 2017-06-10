@@ -3,11 +3,11 @@ angular.module('keymaerax.services').factory('sessionService', ['$cookies', func
   //todo session recovery interceptor
 
   var serviceDef = {
-    setToken: function(token) { $cookies.put('sessionToken', token); },
-    getToken: function() { return $cookies.get('sessionToken'); },
-    setUser: function(user) { $cookies.put('userId', user); },
-    getUser: function() { return $cookies.get('userId'); },
-    isAnonymous: function() { return $cookies.get('sessionToken') === undefined; }
+    setToken: function(token) { $cookies.put('sessionToken', token, { path: '/' }); },
+    getToken: function() { return $cookies.get('sessionToken', { path: '/' }); },
+    setUser: function(user) { $cookies.put('userId', user, { path: '/' }); },
+    getUser: function() { return $cookies.get('userId', { path: '/' }); },
+    isAnonymous: function() { return $cookies.get('sessionToken', { path: '/' }) === undefined; }
   }
   return serviceDef;
 }])
