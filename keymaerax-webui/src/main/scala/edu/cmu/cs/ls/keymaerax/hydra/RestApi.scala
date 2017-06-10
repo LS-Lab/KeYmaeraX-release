@@ -25,6 +25,7 @@ import spray.json._
 import spray.routing
 import spray.util.LoggingContext
 import spray.http.StatusCodes.{Forbidden, Unauthorized}
+import spray.httpx.marshalling.ToResponseMarshallable
 
 import scala.language.postfixOps
 
@@ -88,7 +89,7 @@ trait RestApi extends HttpService with SLF4JLogging {
       else complete(Forbidden, Nil, s"Permission to this resource (${r.getClass.getCanonicalName}) is denied for session $t")
   }
 
-  private def standardCompletion(r: Request, t: SessionToken): String = t match {
+  private def standardCompletion(r: Request, t: SessionToken): ToResponseMarshallable = t match {
     case NewlyExpiredToken(_) => throw new AssertionError("Expired tokens are not standard request completions, use completeRequest instead")
     case _ =>
       val responses = r.getResultingResponses(t)
@@ -96,7 +97,7 @@ trait RestApi extends HttpService with SLF4JLogging {
   }
 
   /** @note you probably don't actually want to use this. Use standardCompletion instead. */
-  private def completeResponse(responses: List[Response]): String = {
+  private def completeResponse(responses: List[Response]): ToResponseMarshallable  = {
     //@note log all error responses
     responses.foreach({
       case e: ErrorResponse => log.warn("Error response details: " + e.msg, e.exn)
@@ -104,8 +105,8 @@ trait RestApi extends HttpService with SLF4JLogging {
     })
 
     responses match {
-      case hd :: Nil => hd.getJson.prettyPrint
-      case _         => JsArray(responses.map(_.getJson):_*).prettyPrint
+      case hd :: Nil => hd.print
+      case _         => JsArray(responses.map(_.getJson):_*).compactPrint
     }
   }
 
@@ -758,6 +759,13 @@ trait RestApi extends HttpService with SLF4JLogging {
     complete("[]")
   }}}
 
+  val guestBrowseArchiveRequest: Route = path("guest" / "browse") { pathEnd {
+    get { parameters('archive.as[String]) { archiveUri =>
+      val request = new OpenGuestArchiveRequest(database, archiveUri)
+      completeRequest(request, EmptyToken())
+    }}
+  }}
+
   val kyxConfig = path("kyxConfig") {
     pathEnd {
       get {
@@ -958,6 +966,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     mathematicaConfig  ::
     toolStatus         ::
     tool               ::
+    guestBrowseArchiveRequest ::
     systemInfo         ::
     mathConfSuggestion ::
     devAction          ::
@@ -1105,11 +1114,17 @@ object SessionManager {
 
 /** @note a custom Option so that Scala doesn't use None as an implicit parameter. */
 trait SessionToken {
-  def isLoggedIn = this.isInstanceOf[UsedToken]
+  def isLoggedIn: Boolean = this.isInstanceOf[UsedToken]
 
-  def belongsTo(uname: String) = this match {
+  def belongsTo(uname: String): Boolean = this match {
     case UsedToken(t,u) => u == uname
     case x:EmptyToken => false
+  }
+
+  def tokenString: String = this match {
+    case UsedToken(t,_) => t
+    case NewlyExpiredToken(t) => t
+    case _ => ""
   }
 }
 case class UsedToken(token: String, username: String) extends SessionToken

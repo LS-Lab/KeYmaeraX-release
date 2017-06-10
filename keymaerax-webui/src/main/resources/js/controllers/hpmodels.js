@@ -1,6 +1,6 @@
 angular.module('keymaerax.controllers').controller('FormulaUploadCtrl',
-  function ($scope, $http, $cookies, $cookieStore, $route, $uibModal, Models, spinnerService) {
-    $scope.userId = $cookies.get('userId');
+  function ($scope, $http, $route, $uibModal, Models, sessionService, spinnerService) {
+    $scope.userId = sessionService.getUser();
 
     $scope.addModelFromFormula = function(modelName, formula) {
       $http.post('/user/' + $scope.userId + '/modelFromFormula/' + modelName, formula)
@@ -18,7 +18,7 @@ angular.module('keymaerax.controllers').controller('FormulaUploadCtrl',
 );
 
 angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
-  function ($scope, $http, $cookies, $cookieStore, $route, $uibModal, $location, Models, spinnerService) {
+  function ($scope, $http, $route, $uibModal, $location, Models, sessionService, spinnerService) {
 
      $scope.runPreloadedProof = function(model) {
         $http.post("/models/users/" + $scope.userId + "/model/" + model.id + "/initialize")
@@ -32,12 +32,12 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      };
 
       $scope.deleteModel = function(modelId) {
-          $http.post("/user/" + $cookies.get('userId') + "/model/" + modelId + "/delete").success(function(data) {
+          $http.post("/user/" + sessionService.getUser() + "/model/" + modelId + "/delete").success(function(data) {
               if(data.errorThrown) {
                   showCaughtErrorMessage($uibModal, data, "Model Deleter")
               } else {
                   console.log("Model " + modelId + " was deleted. Getting a new model list and reloading the route.")
-                  $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
+                  $http.get("models/users/" + sessionService.getUser()).success(function(data) {
                       Models.addModels(data);
                       $route.reload();
                   });
@@ -59,7 +59,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
           fr.onload = function(e) {
 
             var fileContent = e.target.result;
-            var url = "user/" + $cookies.get('userId');
+            var url = "user/" + sessionService.getUser();
             if (file.name.endsWith('.kyx')) url = url + "/modeltextupload/" + modelName;
             else if (file.name.endsWith('.kya')) url = url + "/archiveupload/";
 
@@ -80,7 +80,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
                   while (Models.getModels().length != 0) {
                     Models.getModels().shift()
                   }
-                  $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
+                  $http.get("models/users/" + sessionService.getUser()).success(function(data) {
                     Models.addModels(data);
                     $route.reload();
                   });
@@ -104,8 +104,9 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
 
      $scope.importRepo = function(repoUrl) {
       spinnerService.show('caseStudyImportSpinner');
-      $http.post("models/users/" + $cookies.get('userId') + "/importRepo", repoUrl).success(function(data) {
-        $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
+      var userId = sessionService.getUser();
+      $http.post("models/users/" + userId + "/importRepo", repoUrl).success(function(data) {
+        $http.get("models/users/" + userId).success(function(data) {
           Models.addModels(data);
           if($location.path() == "/models") {
             $route.reload();
@@ -123,10 +124,10 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      $scope.$emit('routeLoaded', {theview: 'models'});
 });
 
-angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($scope, $http, $cookies, $uibModal,
-    $location, FileSaver, Blob, Models, spinnerService, firstTime) {
+angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($scope, $http, $uibModal,
+    $location, FileSaver, Blob, Models, spinnerService, sessionService, firstTime) {
   $scope.models = [];
-  $scope.userId = $cookies.get('userId');
+  $scope.userId = sessionService.getUser();
   $scope.intro.firstTime = firstTime;
 
   $scope.intro.introOptions = {

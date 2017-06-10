@@ -5,7 +5,7 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
     $scope.username = ""
     $scope.password = ""
 
-    $scope.processLogin = function() { login($scope.username, $scope.password, false); }
+    $scope.processLogin = function() { $scope.login($scope.username, $scope.password, false); }
 
     $scope.processRegistration = function() {
       var modeModalInstance = $uibModal.open({
@@ -31,14 +31,14 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
       })
     }
 
-    login = function(username, password, firstTime) {
+    $scope.login = function(username, password, firstTime) {
       $http.get("/user/" + username + "/" + password + "/mode/0")
       .then(function(response) {
         if(response.data.type == "LoginResponse") {
           if(response.data.success) {
             sessionService.setToken(response.data.sessionToken);
             sessionService.setUser(response.data.value);
-            document.location.href = firstTime ? "dashboard.html?#/modelsFirstTime" : "dashboard.html?#/models";
+            document.location.href = firstTime ? "/dashboard.html?#/modelsFirstTime" : "/dashboard.html?#/models";
           } else {
             showMessage($uibModal, "Login failed", "Please check user name and/or password. Or register a new account.");
           }

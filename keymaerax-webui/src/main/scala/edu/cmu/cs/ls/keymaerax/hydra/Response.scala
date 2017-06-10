@@ -22,8 +22,10 @@ import Helpers._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.codegen.CGenerator
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import spray.httpx.marshalling.ToResponseMarshallable
 
 import scala.collection.mutable.ListBuffer
+import scala.xml.{Elem, XML}
 
 
 /**
@@ -45,7 +47,17 @@ sealed trait Response {
    */
   val schema: Option[String] = None
 
+  /** Returns the response data in JSON format (unsupported by HtmlResponse). */
   def getJson: JsValue
+
+  /** Returns the printed marshallable response. */
+  def print: ToResponseMarshallable = getJson.compactPrint
+}
+
+/** Responds with a dynamically generated (server-side) HTML page. */
+case class HtmlResponse(html: Elem) extends Response {
+  override def getJson: JsValue = throw new UnsupportedOperationException("HTML response is no JSON data")
+  override def print: ToResponseMarshallable = html
 }
 
 case class BooleanResponse(flag : Boolean, errorText: Option[String] = None) extends Response {

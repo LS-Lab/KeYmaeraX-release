@@ -891,6 +891,65 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
   }
 }
 
+class OpenGuestArchiveRequest(db: DBAbstraction, uri: String) extends Request {
+  override def resultingResponses(): List[Response] = {
+    //@todo create a user from the uri
+    //@todo return user + session token
+
+    val userId = uri.substring(uri.lastIndexOf('/') + 1)
+    val pwd = "guest"
+    val userExists = db.userExists(userId)
+    if (!userExists) db.createUser(userId, pwd, "3")
+
+    if (db.getModelList(userId).isEmpty) {
+      //@todo actually check (existing models might be outdated)
+      DatabasePopulator.importKya(db, userId, uri)
+    }
+
+    //@todo template engine, e.g., twirl, or at least figure out how to parse from a string
+    val html =
+      <html lang="en" ng-app="loginApp" ng-controller="ServerInfoCtrl">
+        <head>
+          <meta charset="utf-8" />
+          <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <meta name="description" content="" />
+          <meta name="author" content="Logical Systems Lab, Carnegie Mellon University" />
+          <link rel="icon" href="../../favicon.ico" />
+          <title>KeYmaera X</title>
+          <link href="/css/bootstrap.css" rel="stylesheet" type="text/css" />
+          <link href="/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+          <link href="/css/sticky-footer-navbar.css" rel="stylesheet" />
+        </head>
+        <body>
+          <script src="/js/jquery.min.js"></script>
+          <script src="/js/jquery-ui.min.js"></script>
+          <script src="/js/bootstrap/bootstrap.min.js"></script>
+          <script src="/js/angular/angular.min.js"></script>
+          <script src="/js/angular/angular-sanitize.min.js"></script>
+          <script src="/js/angular/angular-cookies.min.js"></script>
+          <script src="/js/angular/angular-route.min.js"></script>
+          <script src="/js/angular/angular-animate.min.js"></script>
+          <script src="/js/angular/bootstrap/ui-bootstrap-tpls-2.5.0.min.js" ></script>
+          <script src="/js/loginApp.js"></script>
+          <script src="/js/services/services.js"></script>
+          <script src="/js/services/session.js"></script>
+          <script src="/js/controllers/interceptors.js"></script>
+          <script src="/js/controllers/auth.js"></script>
+          <script src="/js/controllers.js"></script>
+          <script src="/js/controllers/factories.js"></script>
+          <script src="/js/controllers/errorReport.js"></script>
+          <script src="/js/controllers/login.js"></script>
+          <script src="/js/controllers/serverinfo.js"></script>
+
+          <div ng-controller="LoginCtrl" ng-init={"login('"+userId+"','"+pwd+"',true);"}></div>
+        </body>
+        </html>
+
+    HtmlResponse(html)::Nil
+  }
+}
+
 /**
   * Gets all tasks of the specified proof. A task is some work the user has to do. It is not a KeYmaera task!
   *
