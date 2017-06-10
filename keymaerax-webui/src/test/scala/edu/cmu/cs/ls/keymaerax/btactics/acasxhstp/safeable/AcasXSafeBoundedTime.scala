@@ -840,9 +840,8 @@ class AcasXSafeBoundedTime extends AcasXBase {
     runLemmaTest("bounded_lower_equivalence", "ACAS X bounded time should prove Lemma 4a: time-limited implicit-explicit lower equivalence")
     runLemmaTest("bounded_upper_equivalence", "ACAS X bounded time should prove Lemma 4b: time-limited implicit-explicit upper equivalence")
 
-    withMathematica { tool =>
-
-      beforeEach()
+    beforeEach()
+    withMathematica { _ =>
 
       val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/bounded_lower_equivalence.kyx")).mkString)
@@ -931,9 +930,8 @@ class AcasXSafeBoundedTime extends AcasXBase {
     runLemmaTest("bounded_lower_equivalence", "ACAS X bounded time should prove Lemma 4a: time-limited implicit-explicit lower equivalence")
     runLemmaTest("bounded_upper_equivalence", "ACAS X bounded time should prove Lemma 4b: time-limited implicit-explicit upper equivalence")
 
-    withMathematica { tool =>
-
-      beforeEach()
+    beforeEach()
+    withMathematica { _ =>
 
       val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/bounded_lower_equivalence.kyx")).mkString)
@@ -1032,10 +1030,9 @@ class AcasXSafeBoundedTime extends AcasXBase {
     runLemmaTest("lemma4-bounded_lower_equivalence_lemma", "ACAS X bounded time should prove Lemma 4: alternative proof fitting the form required by Corollary 4")
     runLemmaTest("lemma4-alt-bounded_lower_equivalence_lemma", "ACAS X bounded time should prove Lemma 4: alternative proof fitting the form required by Corollary 4")
 
-    withMathematica { tool =>
-
-      // rerun initialization (runTest runs afterEach() at the end)
-      beforeEach()
+    // rerun initialization (runTest runs afterEach() at the end)
+    beforeEach()
+    withMathematica { _ =>
 
       val implicitSafety = KeYmaeraXProblemParser(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/bounded_implicit.kyx")).mkString)
