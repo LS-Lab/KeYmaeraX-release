@@ -112,8 +112,8 @@ case class NoProofTermProvable(provable: Provable) extends ProvableSig {
   override def prettyString: String = s"NoProofTermProvable(${provable.prettyString})"
 }
 object NoProofTermProvable {
-  val axioms: Map[String, ProvableSig] = Provable.axioms.map(kvp => (kvp._1, NoProofTermProvable(kvp._2, 1)))
-  val rules: Map[String, ProvableSig] = Provable.rules.map(kvp => (kvp._1, NoProofTermProvable(kvp._2, 1)))
+  val axioms: Map[String, ProvableSig] = Provable.axioms.map(kvp => (kvp._1, NoProofTermProvable(kvp._2, 0)))
+  val rules: Map[String, ProvableSig] = Provable.rules.map(kvp => (kvp._1, NoProofTermProvable(kvp._2, 0)))
 
   def apply(provable: Provable, initSteps: Int): NoProofTermProvable = new NoProofTermProvable(provable) { override def steps: Int = initSteps }
 
