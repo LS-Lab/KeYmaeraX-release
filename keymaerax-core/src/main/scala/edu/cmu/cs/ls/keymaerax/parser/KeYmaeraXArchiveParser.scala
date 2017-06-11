@@ -46,8 +46,10 @@ object KeYmaeraXArchiveParser {
   def parse(archiveContentBOM: String): List[ParsedArchiveEntry] = {
     val archiveContents: List[ArchiveEntry] = read(archiveContentBOM)
     archiveContents.map({case (name, modelText, kind, tactics) =>
-      ParsedArchiveEntry(name, modelText, kind, KeYmaeraXProblemParser.parseAsProblemOrFormula(modelText),
-        tactics.map({case (tacticName, tacticText) => (tacticName, BelleParser(tacticText))}))
+      val (defs, formula) = KeYmaeraXProblemParser.parseProblem(modelText)
+      val parsedTactics = tactics.map({
+        case (tacticName, tacticText) => (tacticName, BelleParser.parseWithInvGen(tacticText, None, defs)) })
+      ParsedArchiveEntry(name, modelText, kind, formula, parsedTactics)
     })
   }
 
