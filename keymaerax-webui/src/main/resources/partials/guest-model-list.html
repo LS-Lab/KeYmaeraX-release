@@ -73,12 +73,14 @@
             <td ng-model="model" id="modelactions"
                 data-intro="Check proof, download models (.kyx, includes only the model) and archives (.kya, includes a model with all its partial and finished proofs)."
                 data-position="bottom" ng-if="$first">
-                <a class="btn btn-default" ng-href="dashboard.html?#/models/{{ model.id }}/proofs" uib-tooltip="Show proofs"><i class="fa fa-list"></i></a>
+                <a class="btn btn-default" ng-disabled="!model.hasTactic" ng-controller="ModelProofCreateCtrl"
+                   ng-click="openFirstProof(model.id)" uib-tooltip="Check proof"><i class="fa fa-certificate"></i></a>
                 <a class="btn btn-default" ng-click="downloadModel(model.id)" uib-tooltip="Download model (.kyx)"><i class="fa fa-download"></i></a>
                 <a class="btn btn-default" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download model+proofs (.kya)"><i class="fa fa-archive"></i></a>
             </td>
             <td ng-model="model" ng-if="!$first">
-                <a class="btn btn-default" ng-href="dashboard.html?#/models/{{ model.id }}/proofs" uib-tooltip="Show proofs"><i class="fa fa-list"></i></a>
+                <a class="btn btn-default" ng-disabled="!model.hasTactic" ng-controller="ModelProofCreateCtrl"
+                   ng-click="openFirstProof(model.id)" uib-tooltip="Check proof"><i class="fa fa-certificate"></i></a>
                 <a class="btn btn-default" ng-click="downloadModel(model.id)" uib-tooltip="Download"><i class="fa fa-download"></i></a>
                 <a class="btn btn-default" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download with proofs"><i class="fa fa-archive"></i></a>
             </td>
