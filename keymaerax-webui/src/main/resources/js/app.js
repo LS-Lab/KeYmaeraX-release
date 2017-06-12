@@ -93,6 +93,10 @@ keymaeraProofApp.config(['$routeProvider',
         templateUrl: 'partials/proof-list.html',
         controller: 'ProofListCtrl'
       }).
+      when('/guestproofs', {
+        templateUrl: 'partials/guest-proof-list.html',
+        controller: 'ProofListCtrl'
+      }).
       when('/proofs/:proofId', {
         //templateUrl: 'partials/proof-detail.html',
         templateUrl: 'partials/proofawesome.html',
@@ -130,6 +134,9 @@ keymaeraProofApp.config(['$routeProvider',
           if (next.templateUrl == "partials/model-list.html" ) {
             // redirect to guest models
             $location.path( "/guestmodels" );
+          } else if (next.templateUrl == "partials/proof-list.html" ) {
+            // redirect to guest proof list
+            $location.path( "/guestproofs" );
           }
         }
       });
