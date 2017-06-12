@@ -1,0 +1,89 @@
+<div class="panel panel-default"> <!-- ModelListCtrl per app.js -->
+    <spinner name="modelListProofLoadingSpinner" ng-cloak>
+        <div class="spinner-overlay"></div>
+        <div class="spinner">
+            <div class="spinner-double-bounce1"></div>
+            <div class="spinner-double-bounce2"></div>
+        </div>
+        <div class="spinner-please-wait">Loading proof, please wait...</div>
+    </spinner>
+    <spinner name="caseStudyImportSpinner" ng-cloak>
+        <div class="spinner-overlay"></div>
+        <div class="spinner">
+            <div class="spinner-double-bounce1"></div>
+            <div class="spinner-double-bounce2"></div>
+        </div>
+        <div class="spinner-please-wait">Importing archive, please wait...</div>
+    </spinner>
+    <spinner name="modelProofExportSpinner" ng-cloak>
+        <div class="spinner-overlay"></div>
+        <div class="spinner">
+            <div class="spinner-double-bounce1"></div>
+            <div class="spinner-double-bounce2"></div>
+        </div>
+        <div class="spinner-please-wait">Exporting archive, please wait...</div>
+    </spinner>
+    <!-- Default panel contents -->
+    <div class="panel-heading">
+        <div class="row">
+            <div class="col-md-2"><b>Models</b></div>
+            <div class="col-md-10">
+                <span class="pull-right" id="modelarchiving"
+                      data-intro="<strong>Export</strong> all models with/without proofs into a single archive (.kya, includes all models, optionally with all their partial or finished proofs)."
+                      data-position="left">
+                    <a class="btn btn-default"
+                       ng-click="downloadAllModels()"
+                       uib-tooltip="Export all models into a single archive (.kya)"><i class="fa fa-archive"></i> Export all</a>
+                    <a class="btn btn-default"
+                       ng-click="downloadAllProofs()"
+                       uib-tooltip="Export all models with their proofs into a single archive (.kya)"><i class="fa fa-archive"></i> Export all (with proofs)</a>
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="panel-body">
+
+    <div class="row">
+    <table class="table table-hover table-condensed" id="ModelList" ng-if="models.length > 0" ng-cloak>
+        <thead>
+        <tr>
+            <td>ID</td>
+            <td>Name</td>
+            <td>Description</td>
+            <td>Tactic</td>
+            <td>Actions</td>
+        </tr>
+        </thead>
+        <tbody>
+        <tr ng-repeat="model in models | orderBy:'name'">
+            <td>{{ model.id }}</td>
+            <td id="modelopen">
+                <div data-intro="Inspect model definitions." data-position="right" ng-if="$first">
+                    <a class="btn btn-link" href="" ng-click="open(model.id)">{{ model.name }}</a>
+                </div>
+                <div ng-if="!$first">
+                    <a class="btn btn-link" href="" ng-click="open(model.id)">{{ model.name }}</a>
+                </div>
+            </td>
+            <td>
+              <a ng-if="model.pubLink" href="{{model.pubLink}}">{{model.title}}</a>
+              <span ng-if="!model.pubLink">{{model.title}}</span>
+            </td>
+            <td><a href="" ng-if="model.hasTactic" ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></a></td>
+            <td ng-model="model" id="modelactions"
+                data-intro="Check proof, download models (.kyx, includes only the model) and archives (.kya, includes a model with all its partial and finished proofs)."
+                data-position="bottom" ng-if="$first">
+                <a class="btn btn-default" ng-href="dashboard.html?#/models/{{ model.id }}/proofs" uib-tooltip="Show proofs"><i class="fa fa-list"></i></a>
+                <a class="btn btn-default" ng-click="downloadModel(model.id)" uib-tooltip="Download model (.kyx)"><i class="fa fa-download"></i></a>
+                <a class="btn btn-default" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download model+proofs (.kya)"><i class="fa fa-archive"></i></a>
+            </td>
+            <td ng-model="model" ng-if="!$first">
+                <a class="btn btn-default" ng-href="dashboard.html?#/models/{{ model.id }}/proofs" uib-tooltip="Show proofs"><i class="fa fa-list"></i></a>
+                <a class="btn btn-default" ng-click="downloadModel(model.id)" uib-tooltip="Download"><i class="fa fa-download"></i></a>
+                <a class="btn btn-default" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download with proofs"><i class="fa fa-archive"></i></a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    </div>
+</div>

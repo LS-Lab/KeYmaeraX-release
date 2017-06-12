@@ -62,6 +62,11 @@ keymaeraProofApp.config(['$routeProvider',
         controller: 'ModelListCtrl',
         resolve: { firstTime: function() { return true; } }
       }).
+      when('/guestmodels', {
+        templateUrl: 'partials/guest-model-list.html',
+        controller: 'ModelListCtrl',
+        resolve: { firstTime: function() { return true; } }
+      }).
       when('/tutorials', {
         templateUrl: 'partials/tutorials.html'
       }).
@@ -116,7 +121,20 @@ keymaeraProofApp.config(['$routeProvider',
       otherwise({
         redirectTo: '/dashboard'
       });
-  }]);
+  }]).run(
+    function($rootScope, $location, sessionService) {
+      // watch route changes
+      $rootScope.$on("$routeChangeStart", function(event, next, current) {
+        if (sessionService.isGuest()) {
+          // guest user, replace model-list.html (most requests in default model-list.html will fail for missing access rights).
+          if (next.templateUrl == "partials/model-list.html" ) {
+            // redirect to guest models
+            $location.path( "/guestmodels" );
+          }
+        }
+      });
+     }
+  );
 
 // triggers for tooltip and popover
 keymaeraProofApp.config(['$uibTooltipProvider', function($uibTooltipProvider) {
