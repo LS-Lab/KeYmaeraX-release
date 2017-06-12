@@ -1,5 +1,5 @@
 angular.module('keymaerax.controllers').controller('MathematicaConfig',
-  function($scope, $rootScope, $http, $cookies, $uibModal, $routeParams) {
+  function($scope, $rootScope, $http, $uibModal) {
     $http.get("/config/mathematica/suggest")
       .success(function(data) {
           if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Encountered an error when attempting to get a suggested Mathematica configuration.")
@@ -84,13 +84,13 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
     }
 });
 
-angular.module('keymaerax.controllers').controller('MathematicaConfig.FailureDialog', function($scope, $http, $cookies, $uibModalInstance) {
+angular.module('keymaerax.controllers').controller('MathematicaConfig.FailureDialog', function($scope, $uibModalInstance) {
   $scope.cancel = function() {
       $uibModalInstance.dismiss('cancel');
   }
 });
 
-angular.module('keymaerax.controllers').controller('MathematicaConfig.UpdateDialog', function($scope, $http, $cookies, $uibModalInstance) {
+angular.module('keymaerax.controllers').controller('MathematicaConfig.UpdateDialog', function($scope, $uibModalInstance) {
   $scope.cancel = function() {
       $uibModalInstance.dismiss('cancel');
   }

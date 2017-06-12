@@ -1,5 +1,5 @@
 angular.module('keymaerax.controllers').controller('LoginCtrl',
-  function ($scope, $cookies, $uibModal, $http, sessionService) {
+  function ($scope, $uibModal, $http, sessionService) {
     $scope.defaultLogin = function() { login("guest", "guest") }
 
     $scope.username = ""

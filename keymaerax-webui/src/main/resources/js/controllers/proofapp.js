@@ -1,4 +1,4 @@
-angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$http', '$cookies', function ($scope, $http, $cookies) {
+angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$http', 'sessionService', function ($scope, $http, sessionService) {
 
   $scope.theme = {css: 'app', name: 'KeYmaera X (Small)'};
 
@@ -11,13 +11,13 @@ angular.module('keymaerax.controllers').controller('ProofAppCtrl', ['$scope', '$
     {css: 'presentation_large', name: 'High Contrast (Large)'}
   ];
 
-  $http.get('/users/' + $cookies.get('userId') + '/theme').then(function(response) {
+  $http.get('/users/' + sessionService.getUser() + '/theme').then(function(response) {
     var savedTheme = $.grep($scope.themes, function(theme) { return theme.css === response.data.theme; });
     if (savedTheme.length > 0) $scope.theme = savedTheme[0];
   });
 
   $scope.selectTheme = function(theme) {
-    $http.post('/users/' + $cookies.get('userId') + '/theme', theme.css).then(function(response) {
+    $http.post('/users/' + sessionService.getUser() + '/theme', theme.css).then(function(response) {
       var savedTheme = $.grep($scope.themes, function(t) { return t.css === theme.css; });
       $scope.theme = savedTheme[0];
     });

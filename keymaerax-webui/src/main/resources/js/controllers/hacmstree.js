@@ -1,9 +1,9 @@
-angular.module('keymaerax.controllers').controller('HACMSTreeCtrl', function($scope, $http, $cookies, $uibModal, $routeParams) {
+angular.module('keymaerax.controllers').controller('HACMSTreeCtrl', function($scope, $http, $uibModal, $routeParams, sessionService) {
   $scope.proofId = $routeParams.proofId;
 
   $scope.treeContents = "asdf"
   { //grab tree data.
-      var uri = "/proofs/user/" + $cookies.get('userId') + "/" + $routeParams.proofId + "/tree/"
+      var uri = "/proofs/user/" + sessionService.getUser() + "/" + $routeParams.proofId + "/tree/"
       $http.get(uri)
           .success(function(data) {
               if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Error encountered while trying to retrieve the tree.")

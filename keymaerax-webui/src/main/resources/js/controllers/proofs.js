@@ -78,9 +78,9 @@ var pollProofStatus = function(proof, userId, http) {
 
 /* Proof list (those of an individual model if the route param modelId is defined, all proofs otherwise) */
 angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
-    $scope, $http, $cookies, $location, $routeParams, $route, FileSaver, Blob, spinnerService) {
+    $scope, $http, $location, $routeParams, $route, FileSaver, Blob, spinnerService, sessionService) {
   $scope.modelId = $routeParams.modelId;
-  $scope.userId = $cookies.get('userId')
+  $scope.userId = sessionService.getUser();
 
   $scope.intro.introOptions = {
     steps:[
