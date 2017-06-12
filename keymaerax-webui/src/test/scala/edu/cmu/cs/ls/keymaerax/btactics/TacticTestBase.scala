@@ -5,14 +5,14 @@ import java.io.File
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree}
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, UserPOJO}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalactic.{AbstractStringUniformity, Uniformity}
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers, Assertions}
+import org.scalatest.{Assertions, BeforeAndAfterEach, FlatSpec, Matchers}
 
 import scala.collection.immutable._
 
@@ -24,7 +24,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   /** Tests that want to record proofs in a database. */
   class DbTacticTester {
-    val user: String = "guest"
+    lazy val user: UserPOJO = db.getUser("guest")
 
     val db: SQLiteDB = {
       val testLocation = File.createTempFile("testdb", ".sqlite")
@@ -35,7 +35,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     /** Creates a new proof entry in the database for a model parsed from `modelContent`. */
     def createProof(modelContent: String, modelName: String = "", proofName: String = "Proof"): Int = {
-      db.createModel(user, modelName, modelContent, "", None, None, None, None) match {
+      db.createModel(user.userName, modelName, modelContent, "", None, None, None, None) match {
         case Some(modelId) => db.createProofForModel(modelId, modelName + proofName, "", "", None)
         case None => fail("Unable to create temporary model in DB")
       }

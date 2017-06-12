@@ -12,11 +12,8 @@ import akka.event.slf4j.SLF4JLogging
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import akka.actor.Actor
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.core
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXExtendedLemmaParser}
-import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import edu.cmu.cs.ls.keymaerax.core.Formula
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import spray.http.CacheDirectives.{`max-age`, `no-cache`}
 import spray.http.HttpHeaders.`Cache-Control`
 import spray.routing._
@@ -752,8 +749,8 @@ trait RestApi extends HttpService with SLF4JLogging {
 
   val logoff = (t: SessionToken) => path("user" / "logoff") { pathEnd { get {
     t match {
-      case UsedToken(token, username) => SessionManager.remove(token)
-      case NewlyExpiredToken(token) => //Well, that was convienant.
+      case ut: UserToken => SessionManager.remove(ut.token)
+      case NewlyExpiredToken(_) => //Well, that was convienant.
       case _ => //that works too.
     }
     complete("[]")
@@ -1065,13 +1062,16 @@ trait RestApi extends HttpService with SLF4JLogging {
 object SessionManager {
   type Session = scala.collection.mutable.Map[String, Any]
 
-  private var sessionMap : Map[String, (String, Date)] = Map() //Session tokens -> usernames
+  private var sessionMap : Map[String, (UserPOJO, Date)] = Map() //Session tokens -> usernames
   private var sessions: Map[String, Session] = Map()
 
   def token(key: String): SessionToken = sessionMap.get(key) match {
-    case Some((username, timeout)) =>
+    case Some((user, timeout)) =>
       if (new Date().before(timeout)) {
-        UsedToken(key, username)
+        //@HACK need better way of mapping user levels to tokens
+        if (user.level == 0 || user.level == 1) ReadWriteToken(key, user.userName)
+        else if (user.level == 3) ReadonlyToken(key, user.userName)
+        else ???
       } else {
         remove(key)
         NewlyExpiredToken(key)
@@ -1079,15 +1079,15 @@ object SessionManager {
     case None => EmptyToken()
   }
 
-  def add(username: String): String = {
+  def add(user: UserPOJO): String = {
     val sessionToken = generateToken() //@todo generate a proper key.
-    sessionMap += sessionToken -> (username, timeoutDate)
+    sessionMap += sessionToken -> (user, timeoutDate)
     sessions += sessionToken -> scala.collection.mutable.Map()
     sessionToken
   }
 
   def session(token: SessionToken): Session = token match {
-    case UsedToken(t, _) => sessions(t)
+    case ut: UserToken => sessions(ut.token)
     case _ => scala.collection.mutable.Map()
   }
 
@@ -1114,19 +1114,21 @@ object SessionManager {
 
 /** @note a custom Option so that Scala doesn't use None as an implicit parameter. */
 trait SessionToken {
-  def isLoggedIn: Boolean = this.isInstanceOf[UsedToken]
+  def isLoggedIn: Boolean = this.isInstanceOf[UserToken]
 
   def belongsTo(uname: String): Boolean = this match {
-    case UsedToken(t,u) => u == uname
+    case ut: UserToken => ut.username == uname
     case x:EmptyToken => false
   }
 
   def tokenString: String = this match {
-    case UsedToken(t,_) => t
+    case ut: UserToken => ut.token
     case NewlyExpiredToken(t) => t
     case _ => ""
   }
 }
-case class UsedToken(token: String, username: String) extends SessionToken
+abstract class UserToken(val token: String, val username: String) extends SessionToken
 case class NewlyExpiredToken(token: String) extends SessionToken
+case class ReadWriteToken(override val token: String, override val username: String) extends UserToken(token, username)
+case class ReadonlyToken(override val token: String, override val username: String) extends UserToken(token, username)
 case class EmptyToken() extends SessionToken
