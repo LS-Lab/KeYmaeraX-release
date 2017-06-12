@@ -756,11 +756,16 @@ trait RestApi extends HttpService with SLF4JLogging {
     complete("[]")
   }}}
 
-  val guestBrowseArchiveRequest: Route = path("guest" / "browse") { pathEnd {
-    get { parameters('archive.as[String]) { archiveUri =>
-      val request = new OpenGuestArchiveRequest(database, archiveUri)
+  val guestBrowseArchiveRequest: Route = path("show" / Segment) { archiveUri => pathEnd {
+    get {
+      val archiveLocation =
+        if (archiveUri.startsWith("http:")) archiveUri
+        else
+          //@todo append to default location
+          ???
+      val request = new OpenGuestArchiveRequest(database, archiveLocation)
       completeRequest(request, EmptyToken())
-    }}
+    }
   }}
 
   val kyxConfig = path("kyxConfig") {
