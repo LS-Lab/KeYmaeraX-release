@@ -130,23 +130,25 @@ abstract class LocalhostOnlyRequest() extends Request {
 class CreateUserRequest(db: DBAbstraction, username: String, password: String, mode: String) extends Request with WriteRequest {
   override def resultingResponses(): List[Response] = {
     val userExists = db.userExists(username)
-    val sessionToken =
+    val (sessionToken, user) =
       if (!userExists) {
         db.createUser(username, password, mode)
-        Some(SessionManager.add(db.getUser(username)))
-      } else None
-    new LoginResponse(!userExists, username, sessionToken) ::  Nil
+        val user = db.getUser(username)
+        (Some(SessionManager.add(user)), user)
+      } else (None, db.getUser(username))
+    new LoginResponse(!userExists, user, sessionToken) ::  Nil
   }
 }
 
 class LoginRequest(db : DBAbstraction, username : String, password : String) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val check = db.checkPassword(username, password)
+    val user = db.getUser(username)
     val sessionToken =
-      if(check) Some(SessionManager.add(db.getUser(username)))
+      if(check) Some(SessionManager.add(user))
       else None
 
-    new LoginResponse(check, username, sessionToken) ::  Nil
+    new LoginResponse(check, user, sessionToken) ::  Nil
   }
 }
 
