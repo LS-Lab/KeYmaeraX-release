@@ -251,6 +251,7 @@ angular.module('keymaerax.controllers').controller('LoginDialogCtrl', ['$scope',
             if(response.data.success) {
               sessionService.setToken(response.data.sessionToken);
               sessionService.setUser(response.data.value);
+              sessionService.setUserAuthLevel(response.data.userAuthLevel);
               $uibModalInstance.close("Login success");
             } else {
               $uibModalInstance.dismiss("Please check user name and/or password");

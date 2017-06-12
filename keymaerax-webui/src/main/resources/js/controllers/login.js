@@ -38,6 +38,7 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
           if(response.data.success) {
             sessionService.setToken(response.data.sessionToken);
             sessionService.setUser(response.data.value);
+            sessionService.setUserAuthLevel(response.data.userAuthLevel);
             document.location.href = firstTime ? "/dashboard.html?#/modelsFirstTime" : "/dashboard.html?#/models";
           } else {
             showMessage($uibModal, "Login failed", "Please check user name and/or password. Or register a new account.");
