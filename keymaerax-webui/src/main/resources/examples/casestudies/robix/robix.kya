@@ -737,8 +737,6 @@ End.
 ProgramVariables.
   R x.    /* robot position: x */
   R y.    /* robot position: y */
-  R mx.   /* robot measured position: x */
-  R my.   /* robot measured position: y */
   R v.    /* robot translational velocity */
   R a.    /* robot control choice: translational acceleration */
   R da.   /* robot actuator disturbance */
@@ -888,6 +886,206 @@ Tactic "Proof Theorem 7: Passive safety despite actuator perturbation".
     ,
     print({`Induction step`}); unfold; <(
       print({`Braking branch`}); dib; dw; abbrv({`b*Da()`},{`actB`}); cut({`actB>0`}); <(hideL('L=={`actB=b*Da()`}), hideR(1); smartQE); prop; doall(print({`Braking QE`}); smartQE); print({`Braking branch done`})
+      ,
+      print({`Stopped branch`}); di0; dw; prop; doall(smartQE); print({`Stopped branch done`})
+      ,
+      print({`Acceleration branch`});
+      hideL('L == {`v>0 -> abs(x-xo_0)>stopDist(v) | abs(y-yo_0)>stopDist(v)`});
+      dia; dw;
+      prop; <(
+        xAccArith,
+        yAccArith
+      );
+      print({`Acceleration branch done`})
+    );
+    print({`Induction step done`})
+  );
+  done;
+  print({`Proof done`})
+
+End.
+
+End.
+
+Theorem "Theorem 8: Passive safety despite velocity uncertainty".
+
+Functions.
+  R ep().      /* time limit for control decisions */
+  R b().       /* minimum braking capability of the robot */
+  R A().       /* maximum acceleration -b <= a <= A */
+  R W().       /* maximum steering */
+  R V().       /* maximum obstacle velocity */
+  R Dv().      /* maximum velocity uncertainty */
+  R abs(R).    /* predefined function of absolute value */
+
+  R stopDist(R) = ( (.)^2 / (2*b()) + V()*(.)/b() ).
+  R accelComp(R) = ( (A()/b() + 1) * (A()/2 * ep()^2 + ep()*((.)+V())) ).
+  R admissibleSeparation(R) = (stopDist(.) + accelComp(.)).
+
+  B isWellformedDir() <-> (dx^2 + dy^2 = 1).                        /* The orientation of the robot is a unit vector. */
+
+  B bounds() <-> (                                                                     /* Bounds for global constants */
+      A() >= 0                                                                                      /* Working engine */
+    & b() > 0                                                                                       /* Working brakes */
+    & ep() > 0                                                                            /* Controller reaction time */
+    & V() >= 0
+    & Dv() >= 0
+  ).
+  B initialState() <-> (                                                          /* Stopped somewhere safe initially */
+    v = 0
+    & (x-xo)^2 - (y-yo)^2 > 0
+    & isWellformedDir()
+  ).
+  B assumptions() <-> (bounds() & initialState()).                     /* Under these assumptions we guarantee safety */
+
+  B loopinv() <-> (                                                /* Conditions that are true on each loop iteration */
+    v >= 0
+    & isWellformedDir()
+    & (v>0 -> abs(x-xo) > stopDist(v) | abs(y-yo) > stopDist(v))
+  ).
+End.
+
+ProgramVariables.
+  R x.    /* robot position: x */
+  R y.    /* robot position: y */
+  R v.    /* robot translational velocity */
+  R mv.   /* robot measured velocity */
+  R a.    /* robot control choice: translational acceleration */
+  R dx.   /* robot orientation: x */
+  R dy.   /* robot orientation: y */
+  R w.    /* robot rotational velocity */
+  R r.    /* robot curve radius */
+  R xo.   /* position of closest obstacle on curve */
+  R yo.
+  R vxo.  /* velocity vector of obstacle */
+  R vyo.
+  R t.    /* time */
+End.
+
+Problem.
+assumptions() ->
+  [
+    {
+      {
+        /* sense */
+        {
+          mv := *; ?0<=mv & v-Dv()<=mv & mv<=v+Dv();
+        }
+        /* obstacle control */
+        {
+          vxo := *; vyo := *;
+          ?vxo^2+vyo^2<=V^2;
+        }
+        /* robot control */
+        {
+          /* brake on current curve or remain stopped */
+          { a := -b; }
+          ++
+          { ?v = 0; a := 0; w := 0; }
+      	  ++
+          /* or choose a new safe curve */
+          { a := A;
+            w := *; ?-W<=w & w<=W;       /* choose steering */
+            r := *;
+            xo := *; yo := *;            /* measure closest obstacle on the curve */
+
+            /* admissible curve */
+            ?r!=0 & r*w = v;
+
+            /* use that curve, if it is a safe one (admissible velocities) */
+            ? abs(x-xo) > admissibleSeparation(mv+Dv())
+            | abs(y-yo) > admissibleSeparation(mv+Dv());
+          }
+        };
+    	  t := 0;
+      }
+
+      /* dynamics */
+      { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
+        dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
+        xo' = vxo, yo' = vyo,                    /* obstacle moves */
+        t' = 1 & t <= ep & v >= 0
+      }
+    }*@invariant(loopinv())
+  ](v>0 -> (x - xo)^2 + (y - yo)^2 > 0)
+End.
+
+Tactic "Proof Theorem 8: Passive safety despite velocity uncertainty".
+  tactic diall as (
+    diffInvariant({`t>=0`}, 1);
+    diffInvariant({`isWellformedDir()`}, 1);
+    diffInvariant({`-t*V() <= xo - old(xo) & xo - old(xo) <= t*V()`}, 1);
+    diffInvariant({`-t*V() <= yo - old(yo) & yo - old(yo) <= t*V()`}, 1)
+  );
+
+  tactic dib as (
+    diall;
+    diffInvariant({`v <= old(v) - b()*t`}, 1);
+    diffInvariant({`-t * (old(v) - b()/2*t) <= x - old(x) & x - old(x) <= t * (old(v) - b()/2*t)`}, 1);
+    diffInvariant({`-t * (old(v) - b()/2*t) <= y - old(y) & y - old(y) <= t * (old(v) - b()/2*t)`}, 1)
+  );
+
+  tactic di0 as (
+    diall;
+    diffInvariant({`v = old(v)`}, 1);
+    diffInvariant({`x = old(x)`}, 1);
+    diffInvariant({`y = old(y)`}, 1)
+  );
+
+  tactic dia as (
+    diall;
+    diffInvariant({`v <= old(v) + A()*t`}, 1);
+    diffInvariant({`-t * (old(v) + A()/2*t) <= x - old(x) & x - old(x) <= t * (old(v) + A()/2*t)`}, 1);
+    diffInvariant({`-t * (old(v) + A()/2*t) <= y - old(y) & y - old(y) <= t * (old(v) + A()/2*t)`}, 1)
+  );
+
+  tactic dw as (andL('L)*; dW(1));
+
+  tactic xAccArith as (
+    andL('L)*;
+    hideL('L=={`r!=0`});
+    hideL('L=={`vxo^2+vyo^2<=V()^2`});
+    hideL('L=={`dx^2+dy^2=1`});
+    hideL('L=={`-t*(v_0+A()/2*t)<=y-y_0`});
+    hideL('L=={`y-y_0<=t*(v_0+A()/2*t)`});
+    hideL('L=={`-t*V()<=yo-yo_0`});
+    hideL('L=={`yo-yo_0<=t*V()`});
+    print({`Transforming...`});
+    transform({`abs(x_0-xo_0)>(mv+Dv())^2/(2*b())+V()*(mv+Dv())/b()+(A()/b()+1)*(A()/2*t^2+t*((mv+Dv())+V()))`}, 'L=={`abs(x_0-xo_0)>admissibleSeparation(mv+Dv())`});
+    hideL('L=={`t<=ep()`});
+    hideL('L=={`ep()>0`});
+    hideR('R=={`abs(y-yo)>stopDist(v)`});
+    transform({`abs(x_0-xo_0)>v_0^2/(2*b())+V()*v_0/b()+(A()/b()+1)*(A()/2*t^2+t*(v_0+V()))`}, 'L=={`abs(x_0-xo_0)>(mv+Dv())^2/(2*b())+V()*(mv+Dv())/b()+(A()/b()+1)*(A()/2*t^2+t*((mv+Dv())+V()))`});
+    smartQE;
+    print({`Proved acc arithmetic`})
+  );
+
+  tactic yAccArith as (
+    andL('L)*;
+    hideL('L=={`r!=0`});
+    hideL('L=={`vxo^2+vyo^2<=V()^2`});
+    hideL('L=={`dx^2+dy^2=1`});
+    hideL('L=={`-t*(v_0+A()/2*t)<=x-x_0`});
+    hideL('L=={`x-x_0<=t*(v_0+A()/2*t)`});
+    hideL('L=={`-t*V()<=xo-xo_0`});
+    hideL('L=={`xo-xo_0<=t*V()`});
+    print({`Transforming...`});
+    transform({`abs(y_0-yo_0)>(mv+Dv())^2/(2*b())+V()*(mv+Dv())/b()+(A()/b()+1)*(A()/2*t^2+t*((mv+Dv())+V()))`}, 'L=={`abs(y_0-yo_0)>admissibleSeparation(mv+Dv())`});
+    hideL('L=={`t<=ep()`});
+    hideL('L=={`ep()>0`});
+    hideR('R=={`abs(x-xo)>stopDist(v)`});
+    transform({`abs(y_0-yo_0)>v_0^2/(2*b())+V()*v_0/b()+(A()/b()+1)*(A()/2*t^2+t*(v_0+V()))`}, 'L=={`abs(y_0-yo_0)>(mv+Dv())^2/(2*b())+V()*(mv+Dv())/b()+(A()/b()+1)*(A()/2*t^2+t*((mv+Dv())+V()))`});
+    smartQE;
+    print({`Proved acc arithmetic`})
+  );
+
+  implyR(1); andL('L)*; loop({`loopinv()`}, 1); <(
+    print({`Base case...`}); smartQE; print({`Base case done`})
+    ,
+    print({`Use case...`}); smartQE; print({`Use case done`})
+    ,
+    print({`Induction step`}); unfold; <(
+      print({`Braking branch`}); dib; dw; prop; doall(print({`Braking QE`}); smartQE); print({`Braking branch done`})
       ,
       print({`Stopped branch`}); di0; dw; prop; doall(smartQE); print({`Stopped branch done`})
       ,
