@@ -331,6 +331,218 @@ End.
 
 End.
 
+Theorem "Theorem 4: Passive orientation safety".
+Functions.
+  R ep().      /* time limit for control decisions */
+  R b().       /* minimum braking capability of the robot */
+  R A().       /* maximum acceleration -b <= a <= A */
+  R W().       /* maximum steering */
+  R V().       /* maximum obstacle velocity */
+  R Gamma().   /* Sensor range in radian */
+  R abs(R).    /* predefined function of absolute value */
+
+  R stopDist(R)   = ( (.)^2 / (2*b()) ).
+  R stopMargin(R) = ( stopDist(.) + V()*(.)/b() ).
+  R accelComp(R)  = ( (A()/b() + 1) * (A()/2 * ep()^2 + ep()*(.)) ).
+  R accelMargin(R)  = ( accelComp(.) + (A()/b() + 1)*ep()*V() ).
+  R admissibleSeparation(R) = ( stopMargin(.) + accelMargin(.) ).
+  R admissibleTurnLength(R) = ( stopDist(.) + accelComp(.) ).
+
+  B isWellformedDir() <-> (dx^2 + dy^2 = 1).                        /* The orientation of the robot is a unit vector. */
+
+  B isVisible(R) <-> ((.)>0).      /* Indicates whether or not the obstacle is visible for the robot at the decision. */
+
+  B bounds() <-> (                                                                     /* Bounds for global constants */
+      A() >= 0                                                                                      /* Working engine */
+    & b() > 0                                                                                       /* Working brakes */
+    & ep() > 0                                                                            /* Controller reaction time */
+    & V() >= 0
+    & Gamma() > 0
+  ).
+  B initialState() <-> (                                                          /* Stopped somewhere safe initially */
+    v = 0
+    & beta = 0
+    & r != 0
+    & (x-xo)^2 - (y-yo)^2 > 0
+    & isWellformedDir()
+  ).
+  B assumptions() <-> (bounds() & initialState()).                     /* Under these assumptions we guarantee safety */
+
+  B loopinv() <-> (                                                /* Conditions that are true on each loop iteration */
+    v >= 0
+    & isWellformedDir()
+    & r != 0
+    & (v>0 -> ( (abs(x-xo) > stopMargin(v) | abs(y-yo) > stopMargin(v))
+              | (!isVisible(visDeg) & abs(beta) + stopDist(v)/abs(r) < Gamma() )) )
+  ).
+End.
+
+ProgramVariables.
+  R x.    /* robot position: x */
+  R y.    /* robot position: y */
+  R v.    /* robot translational velocity */
+  R a.    /* robot translational acceleration */
+  R dx.   /* robot orientation: x */
+  R dy.   /* robot orientation: y */
+  R w.    /* robot rotational velocity */
+  R r.    /* robot curve radius */
+  R xo.   /* position of closest obstacle on curve */
+  R yo.
+  R vxo.  /* velocity vector of obstacle */
+  R vyo.
+  R t.    /* time */
+  R beta. /* Angle that the robot traveled since it last chose a new curve */
+  R visDeg. /* Indicates the "degree" to which the obstacle is visible to the robot (input to isVisible) */
+End.
+
+Problem.
+  assumptions() -> [
+      {
+        {
+        /* obstacle control */
+        {
+          vxo := *;
+          vyo := *;
+          ?vxo^2+vyo^2 <= V()^2;
+        }
+
+        /* robot control */
+        {
+           /* brake on current curve. If the velocity is zero this just means that the robot remains stopped */
+           {a := -b();}
+        ++ /* When we are stopped, both translational and rotational acceleration are 0 */
+           {?v=0; a := 0; w := 0;}
+        ++ /* or choose a new safe curve */
+           {a := A();
+            beta := 0;
+            r :=*; ?r!=0;
+
+            /* measure obstacle position and whether or not it is visible to the robot */
+            xo := *; yo := *; visDeg := *;
+            ?(isVisible(visDeg) ->
+               ( abs(x-xo) > admissibleSeparation(v)
+               | abs(y-yo) > admissibleSeparation(v)) );
+            ?admissibleTurnLength(v) < Gamma()*abs(r);
+            }
+        }
+
+        /* Reset the clocks */
+        t := 0;
+        /* Set w according to physics (rigid body motion) */
+        w :=*; ?w*r = v;
+        }
+
+        {x' = v * dx, y' = v * dy, dx' = -w * dy, dy' = w * dx, v' = a, w' = a/r, beta'=w,
+                      xo' = vxo, yo' = vyo, t' = 1 & (t <= ep & v >= 0)}
+      }*
+    ] (v > 0 -> ((x - xo)^2 + (y - yo)^2 > 0 | (!isVisible(visDeg) & (abs(beta) < Gamma()))) )
+End.
+
+Tactic "Proof Theorem 4: Passive orientation safety".
+  tactic diall as (
+    diffInvariant({`t>=0`}, 1);
+    diffInvariant({`isWellformedDir()`}, 1);
+    diffInvariant({`-t*V() <= xo - old(xo) & xo - old(xo) <= t*V()`}, 1);
+    diffInvariant({`-t*V() <= yo - old(yo) & yo - old(yo) <= t*V()`}, 1);
+    diffInvariant({`w*r=v`}, 1)
+  );
+
+  tactic dib as (
+    diall;
+    diffInvariant({`v = old(v) - b()*t`}, 1);
+    diffInvariant({`beta = old(beta) + t/r*(v + b()/2*t)`}, 1);
+    diffInvariant({`-t * (v + b()/2*t) <= x - old(x) & x - old(x) <= t * (v + b()/2*t)`}, 1);
+    diffInvariant({`-t * (v + b()/2*t) <= y - old(y) & y - old(y) <= t * (v + b()/2*t)`}, 1)
+  );
+
+  tactic di0 as (
+    diall;
+    diffInvariant({`v = old(v)`}, 1);
+    diffInvariant({`beta = old(beta)`}, 1);
+    diffInvariant({`x = old(x)`}, 1);
+    diffInvariant({`y = old(y)`}, 1)
+  );
+
+  tactic dia as (
+    diall;
+    diffInvariant({`v = old(v) + A()*t`}, 1);
+    diffInvariant({`beta = old(beta) + t/r*(v - A()/2*t)`}, 1);
+    diffInvariant({`-t * (v - A()/2*t) <= x - old(x) & x - old(x) <= t * (v - A()/2*t)`}, 1);
+    diffInvariant({`-t * (v - A()/2*t) <= y - old(y) & y - old(y) <= t * (v - A()/2*t)`}, 1)
+  );
+
+  tactic dw as (andL('L)*; dW(1));
+
+  tactic xAccArith as (
+    hideR('R=={`abs(y-yo)>stopMargin(v)`});
+    hideL('L=={`-t*(v-A()/2*t)<=y-y_0`});
+    hideL('L=={`y-y_0<=t*(v-A()/2*t)`});
+    hideL('L=={`-t*V()<=yo-yo_0`});
+    hideL('L=={`yo-yo_0<=t*V()`});
+    print({`Transforming...`});
+    transform({`abs(x_0-xo_0)>v_0^2/(2*b())+V()*v_0/b()+((A()/b()+1)*(A()/2*t^2+t*v_0)+(A()/b()+1)*t*V())`}, 'L=={`abs(x_0-xo_0)>admissibleSeparation(v_0)`});
+    smartQE;
+    print({`Proved acc arithmetic`})
+  );
+
+  tactic yAccArith as (
+    hideR('R=={`abs(x-xo)>stopMargin(v)`});
+    hideL('L=={`-t*(v-A()/2*t)<=x-x_0`});
+    hideL('L=={`x-x_0<=t*(v-A()/2*t)`});
+    hideL('L=={`-t*V()<=xo-xo_0`});
+    hideL('L=={`xo-xo_0<=t*V()`});
+    print({`Transforming...`});
+    transform({`abs(y_0-yo_0)>v_0^2/(2*b())+V()*v_0/b()+((A()/b()+1)*(A()/2*t^2+t*v_0)+(A()/b()+1)*t*V())`}, 'L=={`abs(y_0-yo_0)>admissibleSeparation(v_0)`});
+    smartQE;
+    print({`Proved acc arithmetic`})
+  );
+
+  implyR(1); andL('L)*; loop({`loopinv()`}, 1); <(
+    print({`Base case...`}); smartQE; print({`Base case done`})
+    ,
+    print({`Use case...`}); smartQE; print({`Use case done`})
+    ,
+    print({`Induction step`}); unfold; <(
+      print({`Braking branch`}); dib; dw; prop ; doall(smartQE); print({`Braking branch done`})
+      ,
+      print({`Stopped branch`}); di0; dw; prop; doall(smartQE); print({`Stopped branch done`})
+      ,
+      print({`Acceleration branch`});
+      hideL('L == {`v>0->((abs(x-xo_0)>stopMargin(v)|abs(y-yo_0)>stopMargin(v))|!isVisible(visDeg_0)&abs(beta_0)+stopDist(v)/abs(r_0) < Gamma())`});
+      unfold;
+      dia; dw;
+      print({`Acceleration arithmetic`});
+      implyR(1) ; andL('L)* ; fullSimplify ; implyR(1) ; orR(1) ; notGreater(2.0) ; orR(1) ;
+      implyL('L=={`isVisible(visDeg) -> ( abs(x_0-xo_0) > admissibleSeparation(v_0) | abs(y_0-yo_0) > admissibleSeparation(v_0))`}) ; <(
+        hideR('R=={`abs(x-xo)>stopMargin(v)`}) ; hideR('R=={`abs(y-yo)>stopMargin(v)`}) ; andR(1) ; doall(smartQE)
+        ,
+        print({`Acc Distance`});
+        hideL('L=={`admissibleTurnLength(v_0) < Gamma()*abs(r)`}) ;
+        hideR('R=={`visDeg<=0 & abs(beta) + stopDist(v)/abs(r) < Gamma()`});
+        hideL('L=={`r_0!=0`});
+        hideL('L=={`vxo^2+vyo^2<=V()^2`});
+        hideL('L=={`dx^2+dy^2=1`});
+        hideL('L=={`Gamma()>0`});
+        hideL('L=={`beta_0=0`});
+        hideL('L=={`w*r=v`});
+        hideL('L=={`beta=beta_0+t/r*(v-A()/2*t)`});
+        orL('L=={`abs(x_0-xo_0)>admissibleSeparation(v_0) | abs(y_0-yo_0)>admissibleSeparation(v_0)`}); <(
+          xAccArith
+          ,
+          yAccArith
+        )
+      );
+      print({`Acceleration branch done`})
+    );
+    print({`Induction step done`})
+  );
+  done;
+  print({`Proof done`})
+
+End.
+
+End.
+
 Theorem "Theorem 5: Passive safety with actual acceleration".
 
 Functions.
