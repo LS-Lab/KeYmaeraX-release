@@ -48,6 +48,7 @@ class RestApiActor extends Actor with RestApi {
 trait RestApi extends HttpService with SLF4JLogging {
   private val database = DBAbstractionObj.defaultDatabase //SQLite //Not sure when or where to create this... (should be part of Boot?)
   private val DEFAULT_ARCHIVE_LOCATION = "https://raw.githubusercontent.com/LS-Lab/KeYmaeraX-projects/master/"
+  private val BUNDLED_ARCHIVE_LOCATION = "classpath:/keymaerax-projects/"
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Helper Methods
@@ -761,7 +762,10 @@ trait RestApi extends HttpService with SLF4JLogging {
     get {
       val archiveLocation: String = archiveUri match {
         case head::Nil if head.startsWith("http") || head.startsWith("https") => head
-        case segments => DEFAULT_ARCHIVE_LOCATION + segments.reduce(_+"/"+_)
+        case segments =>
+          val path = segments.reduce(_+"/"+_)
+          if (getClass.getResourceAsStream(path) != null) BUNDLED_ARCHIVE_LOCATION + path
+          else DEFAULT_ARCHIVE_LOCATION + path
       }
       val request = new OpenGuestArchiveRequest(database, archiveLocation)
       completeRequest(request, EmptyToken())
