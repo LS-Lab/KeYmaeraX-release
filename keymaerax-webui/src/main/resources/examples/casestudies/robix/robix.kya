@@ -1318,3 +1318,116 @@ Tactic "Proof Theorem 8: Passive safety despite velocity uncertainty".
 End.
 
 End.
+
+Theorem "Theorem 14: Reach waypoint with deadline".
+
+/*
+ *	Robot must stop within distance delta at goal.
+ *
+ *  Robot
+ * 	- must stop within distance delta of goal
+ *  - can only drive straight and forward
+ *  - ensures progress towards goal
+ *
+ *  Liveness property:
+ *  - Robot can stop at goal
+ *
+ */
+
+Functions.
+	R ep().      /* time limit for control decisions */
+  R b().       /* minimum braking capability of the robot */
+  R A().       /* maximum acceleration -b <= a <= A */
+  R GDelta().	 /* goal area size */
+	R Vmax().    /* robot cannot go faster than this */
+
+	R waypointStartDist(R) = ( (.)-GDelta() ).
+	R waypointEndDist(R)   = ( (.)+GDelta() ).
+
+  R minV() = ( A()*ep() ).
+  R maxTravelTime(R) = ( waypointStartDist(.)/minV() ).
+  R stopTime(R)      = ( (.)/b() ).
+  R speedUpTime(R)   = ( ep()-(.)/A() ).
+
+	R stopDist(R) = ( (.)^2/(2*b()) ).
+	R accComp(R)  = ( (A()/b() + 1)*(A()/2*ep()^2 + ep()*(.)) ).
+
+	B bounds() <-> (                                                                     /* Bounds for global constants */
+      A() > 0                                                                                       /* Working engine */
+    & b() > 0                                                                                       /* Working brakes */
+    & ep() > 0                                                                            /* Controller reaction time */
+    & Vmax() >= 2*A()*ep()
+    & GDelta() > Vmax()*ep() + Vmax()^2/(2*b())                            /* waypoint is large enough that robot can
+                                                                                  start driving and still stop inside */
+    & T > ep() + maxTravelTime(xg-xr) + ep() + stopTime(Vmax())
+  ).
+  B initialState() <-> (                                                          /* Stopped somewhere safe initially */
+    vr = 0
+    & xr < waypointStartDist(xg)
+  ).
+  B assumptions() <-> (bounds() & initialState()).                     /* Under these assumptions we guarantee safety */
+
+	B loopinv() <-> (
+	  0 <= vr & vr <= Vmax & xr + stopDist(vr) < waypointEndDist(xg)
+    				& (waypointStartDist(xg) < xr -> (vr = 0 | T >= stopTime(vr)))
+    				& (xr <= waypointStartDist(xg) ->
+    				       (vr >= minV() & T > maxTravelTime(xg-xr) + ep() + stopTime(Vmax()))
+    				     | (vr <= minV() & T > speedUpTime(vr) + maxTravelTime(xg-xr) + ep() + stopTime(Vmax())))
+	).
+End.
+
+ProgramVariables.
+	R xr.		/* robot position: x */
+	R vr.		/* robot translational velocity */
+	R ar.		/* robot translational acceleration */
+	R xg.		/* goal position */
+	R t.		/* control cycle time */
+	R T.		/* global time */
+End.
+
+Problem.
+  assumptions()
+	  -> [
+  			{	{
+  			  {
+  			     if (xr > waypointStartDist(xg)) {
+  			       /* in the goal area: brake or stay stopped */
+  			       ar := -b(); ++ ?vr = 0; ar := 0;
+  			     } else {
+  			       if (xr + stopDist(vr) + accComp(vr) < waypointEndDist(xg) & vr+A()*ep() <= Vmax()) {
+  			         /* if robot can stop from higher speed before leaving goal area then accelerate */
+  			         ar := A();
+  			       } else {
+  				       /* else coast until at goal */
+  				       ar := 0;
+  				     }
+  				   }
+          }
+				  /* dynamics */
+				  t := 0;
+				  }
+				  {xr' = vr, vr' = ar, t' = 1, T'=-1 & t <= ep() & vr >= 0}
+			  }*@invariant(loopinv())
+		] (xr < waypointEndDist(xg) & (T <= 0 -> (waypointStartDist(xg) < xr & vr = 0)))
+End.
+
+Tactic "Proof Theorem 14: Reach waypoint with deadline".
+  /* Proves with Z3 */
+  implyR(1); (andL('L)*);
+  /* normalize else conditions */
+  notGreater(1.0.0.0.0.1.0.0) ;
+  notAnd(1.0.0.0.0.1.1.1.0.0) ; notLess(1.0.0.0.0.1.1.1.0.0.0) ; notLessEqual(1.0.0.0.0.1.1.1.0.0.1);
+  /* loop induction */
+  loop({`loopinv()`}, 1); <(
+    print({`Base case`}); QE; done
+    ,
+    print({`Use case`}); QE; done
+    ,
+    print({`Induction step`}); unfold;
+    doall(ODE('R); allR('R); (implyR('R)*2); allL({`t_`}, 'Llast); QE); done
+  );
+  done;
+  print({`Proof done`})
+End.
+
+End.
