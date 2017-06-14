@@ -905,9 +905,6 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
 
 class OpenGuestArchiveRequest(db: DBAbstraction, uri: String) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    //@todo create a user from the uri
-    //@todo return user + session token
-
     val userId = uri.substring(uri.lastIndexOf('/') + 1)
     val pwd = "guest"
     val userExists = db.userExists(userId)
