@@ -109,7 +109,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
     case _: Box  =>
       htmlSpan("k4-mod-open", "[") + text + htmlSpan("k4-mod-close", "]")
     case _: Diamond =>
-      htmlSpan("k4-mod-open", "&lt;") + text + htmlSpan("k4-mod-close", "&gt;")
+      htmlSpan("k4-mod-open", "<") + text + htmlSpan("k4-mod-close", ">")
     case _: ODESystem | _: Program | _: DifferentialProgram | _: UnaryCompositeProgram =>
       htmlSpan("k4-prg-open", "{") + text + htmlSpan("k4-prg-close", "}")
     case _ => super.wrap(text, expr)
