@@ -47,8 +47,7 @@ class RestApiActor extends Actor with RestApi {
  */
 trait RestApi extends HttpService with SLF4JLogging {
   private val database = DBAbstractionObj.defaultDatabase //SQLite //Not sure when or where to create this... (should be part of Boot?)
-  //@todo replace with projects repo
-  private val DEFAULT_ARCHIVE_LOCATION = "https://raw.githubusercontent.com/LS-Lab/KeYmaeraX-release/master/keymaerax-webui/src/main/resources/examples/"
+  private val DEFAULT_ARCHIVE_LOCATION = "https://raw.githubusercontent.com/LS-Lab/KeYmaeraX-projects/master/"
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Helper Methods
