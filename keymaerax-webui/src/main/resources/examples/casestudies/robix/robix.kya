@@ -331,6 +331,240 @@ End.
 
 End.
 
+Theorem "Theorem 3: Passive Friendly Safety".
+Functions.
+  R ep().      /* time limit for control decisions */
+  R tau().     /* time limit for obstacle reaction */
+  R b().       /* minimum braking capability of the robot */
+  R bo().      /* obstacle brakes */
+  R A().       /* maximum acceleration -b <= a <= A */
+  R W().       /* maximum steering */
+  R V().       /* maximum obstacle velocity */
+  R abs(R).    /* predefined function of absolute value */
+
+  R friendlyMargin(R) = ( (.)^2/(2*bo()) + tau()*(.) ).
+  R stopDist(R) = ((.)^2 / (2*b()) + V()*(.)/b()).
+  R accelComp(R) = ((A()/b() + 1) * (A()/2 * ep()^2 + ep()*((.)+V))).
+  R admissibleSeparation(R) = (stopDist(.) + friendlyMargin(V()) + accelComp(.)).
+
+  B isWellformedDir() <-> (dx^2 + dy^2 = 1).                        /* The orientation of the robot is a unit vector. */
+
+  B bounds() <-> (                                                                     /* Bounds for global constants */
+      A() >= 0                                                                                      /* Working engine */
+    & b() > 0                                                                                       /* Working brakes */
+    & ep() > 0                                                                            /* Controller reaction time */
+    & V() >= 0
+    & tau() >= 0
+    & bo() > 0
+  ).
+  B initialState() <-> (                                                          /* Stopped somewhere safe initially */
+    v = 0
+    & (abs(x-xo) > friendlyMargin(V()) | abs(y-yo) > friendlyMargin(V()))
+    & vxo^2+vyo^2<=V()^2
+    & isWellformedDir()
+  ).
+  B assumptions() <-> (bounds() & initialState()).                     /* Under these assumptions we guarantee safety */
+
+  B loopinv() <-> (                                                /* Conditions that are true on each loop iteration */
+    v >= 0
+    & isWellformedDir()
+    & (v>0 -> abs(x-xo) > stopDist(v)+friendlyMargin(V()) | abs(y-yo) > stopDist(v)+friendlyMargin(V()))
+    & vxo^2+vyo^2<=V()^2
+  ).
+End.
+
+ProgramVariables.
+  R x.    /* robot position: x */
+  R y.    /* robot position: y */
+  R v.    /* robot translational velocity */
+  R a.    /* robot translational acceleration */
+  R dx.   /* robot orientation: x */
+  R dy.   /* robot orientation: y */
+  R w.    /* robot rotational velocity */
+  R r.    /* robot curve radius */
+  R xo.   /* position of closest obstacle on curve */
+  R yo.
+  R vxo.  /* velocity vector of obstacle */
+  R vyo.
+  R vo.   /* refined obstacle: speed, acceleration, and direction */
+  R ao.
+  R dxo.
+  R dyo.
+  R t.    /* time */
+End.
+
+Problem.
+assumptions() ->
+  [
+    {
+      {
+        /* obstacle control */
+        {
+          vxo := *; vyo := *;
+          ?vxo^2+vyo^2<=V()^2;
+        }
+        /* robot control */
+        {
+          /* brake on current curve or remain stopped */
+          { a := -b; }
+          ++
+          { ?v = 0; a := 0; w := 0; }
+      	  ++
+          /* or choose a new safe curve */
+          { a := A;
+            w := *; ?-W<=w & w<=W;       /* choose steering */
+            r := *;
+            xo := *; yo := *;            /* measure closest obstacle on the curve */
+
+            /* admissible curve */
+            ?r!=0 & r*w = v;
+
+            /* use that curve, if it is a safe one (admissible velocities) */
+            ? abs(x-xo) > admissibleSeparation(v)
+            | abs(y-yo) > admissibleSeparation(v);
+          }
+        };
+    	  t := 0;
+      }
+
+      /* dynamics */
+      { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
+        dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
+        xo' = vxo, yo' = vyo,                    /* obstacle moves */
+        t' = 1 & t <= ep() & v >= 0
+      }
+    }*@invariant(loopinv())
+  ](  (vxo^2+vyo^2<=V()^2                                                                  /* obstacle never too fast */
+    & (v>0 -> (x - xo)^2 + (y - yo)^2 > (friendlyMargin(V()))^2))                    /* robot ensures friendly margin */
+    & (  0<=vo&vo<=V() & dxo^2+dyo^2=1 /* assumption: vo*dxo=vxo & vo*dyo=vyo*/                  /* obstacle can stop */
+       & (x - xo)^2 + (y - yo)^2 > (friendlyMargin(V()))^2
+       ->
+        <{
+          dxo := *; dyo := *; ?dxo^2+dyo^2 = 1;
+          ao := *; ?-bo() <= ao & vo + ao*ep() <= V();
+          t := 0;
+          {xo'=vo*dxo, yo'=vo*dyo, vo'=ao, t'=1 & vo>=0 & t<=ep()}
+         }*>((x-xo)^2 + (y-yo)^2 > 0 & vo=0))
+  )
+End.
+
+Tactic "Proof Theorem 3: Passive Friendly Safety".
+  tactic obstacleCanStop as (
+    unfold ; con({`dxo^2+dyo^2=1&bo()>0&ep()>0&(x-xo)^2+(y-yo)^2>(vo^2/(2*bo()))^2&0<=vo&vo<=V()&(v*ep()*bo()>=vo|vo=0)`}, 1) ; <(
+      QE,
+      unfold ; existsR({`1`}, 1) ; unfold ; existsR({`0`}, 1) ; unfold ; <(
+        QE,
+        existsR({`-bo()`}, 1) ; unfold ; <(
+          fullSimplify ; closeTrue,
+          solve(1); fullSimplify; existsR({`min((vo/bo(),ep()))`}, 1) ;
+          abbrv({`min((vo/bo(),ep()))`}, {`minT`}) ; minmax(-10.1) ;
+          QE
+          ,
+          QE
+        )
+      ),
+      QE
+    )
+  );
+
+  tactic diall as (
+    diffInvariant({`t>=0`}, 1);
+    diffInvariant({`isWellformedDir()`}, 1);
+    diffInvariant({`-t*V() <= xo - old(xo) & xo - old(xo) <= t*V()`}, 1);
+    diffInvariant({`-t*V() <= yo - old(yo) & yo - old(yo) <= t*V()`}, 1)
+  );
+
+  tactic dib as (
+    diall;
+    diffInvariant({`v = old(v) - b()*t`}, 1);
+    diffInvariant({`-t * (v + b()/2*t) <= x - old(x) & x - old(x) <= t * (v + b()/2*t)`}, 1);
+    diffInvariant({`-t * (v + b()/2*t) <= y - old(y) & y - old(y) <= t * (v + b()/2*t)`}, 1)
+  );
+
+  tactic di0 as (
+    diall;
+    diffInvariant({`v = old(v)`}, 1);
+    diffInvariant({`x = old(x)`}, 1);
+    diffInvariant({`y = old(y)`}, 1)
+  );
+
+  tactic dia as (
+    diall;
+    diffInvariant({`v = old(v) + A()*t`}, 1);
+    diffInvariant({`-t * (v - A()/2*t) <= x - old(x) & x - old(x) <= t * (v - A()/2*t)`}, 1);
+    diffInvariant({`-t * (v - A()/2*t) <= y - old(y) & y - old(y) <= t * (v - A()/2*t)`}, 1)
+  );
+
+  tactic dw as (andL('L)*; dW(1));
+
+  tactic xAccArith as (
+    andL('L)*;
+    print({`Transforming...`});
+    transform({`abs(x_0-xo_0)>v_0^2/(2*b())+V()*v_0/b()+fm+(A()/b()+1)*(A()/2*t^2+t*(v_0+V()))`}, 'L=={`abs(x_0-xo_0)>v_0^2/(2*b())+V()*v_0/b()+fm+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))`});
+    hideR('R=={`abs(y-yo)>stopDist(v)+fm`});
+    smartQE;
+    print({`Proved acc arithmetic`})
+  );
+
+  tactic yAccArith as (
+    andL('L)*;
+    print({`Transforming...`});
+    transform({`abs(y_0-yo_0)>v_0^2/(2*b())+V()*v_0/b()+fm+(A()/b()+1)*(A()/2*t^2+t*(v_0+V()))`}, 'L=={`abs(y_0-yo_0)>v_0^2/(2*b())+V()*v_0/b()+fm+(A()/b()+1)*(A()/2*ep()^2+ep()*(v_0+V()))`});
+    hideR('R=={`abs(x-xo)>stopDist(v)+fm`});
+    smartQE;
+    print({`Proved acc arithmetic`})
+  );
+
+  tactic robotAlwaysStops as (
+    loop({`loopinv()`}, 1); <(
+      print({`Base case...`}); smartQE; print({`Base case done`})
+      ,
+      print({`Use case...`}); smartQE; print({`Use case done`})
+      ,
+      print({`Induction step`}); unfold; <(
+        print({`Braking branch`});
+        abbrv({`(V()^2/(2*bo())+tau()*V())`}, {`fm`});
+        cut({`fm>=0`}); <(hideL('L=={`fm=(V()^2/(2*bo())+tau()*V())`}), hideR(1); QE);
+        dib; dw; prop; doall(smartQE); print({`Braking branch done`})
+        ,
+        print({`Stopped branch`});
+        abbrv({`(V()^2/(2*bo())+tau()*V())`}, {`fm`});
+        cut({`fm>=0`}); <(hideL('L=={`fm=(V()^2/(2*bo())+tau()*V())`}), hideR(1); QE);
+        di0; dw; prop; doall(smartQE); print({`Stopped branch done`})
+        ,
+        print({`Acceleration branch`});
+        hideL('L == {`v>0 -> abs(x-xo_0)>stopDist(v)+friendlyMargin(V()) | abs(y-yo_0)>stopDist(v)+friendlyMargin(V())`});
+        abbrv({`(V()^2/(2*bo())+tau()*V())`}, {`fm`});
+        cut({`fm>=0`}); <(hideL('L=={`fm=(V()^2/(2*bo())+tau()*V())`}), hideR(1); QE);
+        dia; dw;
+        prop; <(
+          xAccArith,
+          yAccArith
+        );
+        print({`Acceleration branch done`})
+      );
+      print({`Induction step done`})
+    );
+    done;
+    print({`Robot done`})
+  );
+
+  implyR(1) ; andL('L)* ; boxAnd(1) ; andR(1) ; <(
+    robotAlwaysStops
+    ,
+    GV(1);
+    hideL('L=={`A()>=0`});
+    hideL('L=={`v=0`});
+    hideL('L=={`b()>0`});
+    hideL('L=={`abs(x-xo) > friendlyMargin(V()) | abs(y-yo) > friendlyMargin(V())`});
+    hideL('L=={`dx^2+dy^2=1`});
+    hideL('L=={`vxo^2+vyo^2<=V()^2`});
+    obstacleCanStop
+  )
+End.
+
+End.
+
 Theorem "Theorem 4: Passive orientation safety".
 Functions.
   R ep().      /* time limit for control decisions */
