@@ -20,7 +20,7 @@ Functions.
   ).
   B initialState() <-> (                                                          /* Stopped somewhere safe initially */
     v = 0
-    & (x-xo)^2 - (y-yo)^2 > 0
+    & (x-xo)^2 + (y-yo)^2 > 0
     & isWellformedDir()
   ).
   B assumptions() <-> (bounds() & initialState()).                     /* Under these assumptions we guarantee safety */
@@ -182,7 +182,7 @@ Functions.
   ).
   B initialState() <-> (                                                          /* Stopped somewhere safe initially */
     v = 0
-    & (x-xo)^2 - (y-yo)^2 > 0
+    & (x-xo)^2 + (y-yo)^2 > 0
     & isWellformedDir()
   ).
   B assumptions() <-> (bounds() & initialState()).                     /* Under these assumptions we guarantee safety */
@@ -597,7 +597,7 @@ Functions.
     v = 0
     & beta = 0
     & r != 0
-    & (x-xo)^2 - (y-yo)^2 > 0
+    & (x-xo)^2 + (y-yo)^2 > 0
     & isWellformedDir()
   ).
   B assumptions() <-> (bounds() & initialState()).                     /* Under these assumptions we guarantee safety */
@@ -802,7 +802,7 @@ Functions.
   ).
   B initialState() <-> (                                                          /* Stopped somewhere safe initially */
     v = 0
-    & (x-xo)^2 - (y-yo)^2 > 0
+    & (x-xo)^2 + (y-yo)^2 > 0
     & isWellformedDir()
   ).
   B assumptions() <-> (bounds() & initialState()).                     /* Under these assumptions we guarantee safety */
@@ -986,7 +986,7 @@ Functions.
   ).
   B initialState() <-> (                                                          /* Stopped somewhere safe initially */
     v = 0
-    & (x-xo)^2 - (y-yo)^2 > 0
+    & (x-xo)^2 + (y-yo)^2 > 0
     & isWellformedDir()
   ).
   B assumptions() <-> (bounds() & initialState()).                     /* Under these assumptions we guarantee safety */
@@ -1168,7 +1168,7 @@ Functions.
   ).
   B initialState() <-> (                                                          /* Stopped somewhere safe initially */
     v = 0
-    & (x-xo)^2 - (y-yo)^2 > 0
+    & (x-xo)^2 + (y-yo)^2 > 0
     & isWellformedDir()
   ).
   B assumptions() <-> (bounds() & initialState()).                     /* Under these assumptions we guarantee safety */
@@ -1379,7 +1379,7 @@ Functions.
   ).
   B initialState() <-> (                                                          /* Stopped somewhere safe initially */
     v = 0
-    & (x-xo)^2 - (y-yo)^2 > 0
+    & (x-xo)^2 + (y-yo)^2 > 0
     & isWellformedDir()
   ).
   B assumptions() <-> (bounds() & initialState()).                     /* Under these assumptions we guarantee safety */
