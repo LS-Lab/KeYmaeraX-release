@@ -369,7 +369,6 @@ Functions.
     v >= 0
     & isWellformedDir()
     & (v>0 -> abs(x-xo) > stopDist(v)+friendlyMargin(V()) | abs(y-yo) > stopDist(v)+friendlyMargin(V()))
-    & vxo^2+vyo^2<=V()^2
   ).
 End.
 
@@ -434,13 +433,11 @@ assumptions() ->
         t' = 1 & t <= ep() & v >= 0
       }
     }*@invariant(loopinv())
-  ](  (vxo^2+vyo^2<=V()^2                                                                  /* obstacle never too fast */
-    & (v>0 -> (x - xo)^2 + (y - yo)^2 > (friendlyMargin(V()))^2))                    /* robot ensures friendly margin */
-    & (  0<=vo&vo<=V() & dxo^2+dyo^2=1 /* assumption: vo*dxo=vxo & vo*dyo=vyo*/                  /* obstacle can stop */
+  ](  (v>0 -> (x - xo)^2 + (y - yo)^2 > (friendlyMargin(V()))^2)                     /* robot ensures friendly margin */
+    & (  0<=vo & vo^2=vxo^2+vyo^2 & dxo*vo=vxo & dyo*vo=vyo                                      /* obstacle can stop */
        & (x - xo)^2 + (y - yo)^2 > (friendlyMargin(V()))^2
        ->
         <{
-          dxo := *; dyo := *; ?dxo^2+dyo^2 = 1;
           ao := *; ?-bo() <= ao & vo + ao*ep() <= V();
           t := 0;
           {xo'=vo*dxo, yo'=vo*dyo, vo'=ao, t'=1 & vo>=0 & t<=ep()}
@@ -450,20 +447,26 @@ End.
 
 Tactic "Proof Theorem 3: Passive Friendly Safety".
   tactic obstacleCanStop as (
-    unfold ; con({`dxo^2+dyo^2=1&bo()>0&ep()>0&(x-xo)^2+(y-yo)^2>(vo^2/(2*bo()))^2&0<=vo&vo<=V()&(v*ep()*bo()>=vo|vo=0)`}, 1) ; <(
-      QE,
-      unfold ; existsR({`1`}, 1) ; unfold ; existsR({`0`}, 1) ; unfold ; <(
-        QE,
-        existsR({`-bo()`}, 1) ; unfold ; <(
-          fullSimplify ; closeTrue,
-          solve(1); fullSimplify; existsR({`min((vo/bo(),ep()))`}, 1) ;
-          abbrv({`min((vo/bo(),ep()))`}, {`minT`}) ; minmax(-10.1) ;
-          QE
+    unfold ; cut({`vo=0|dxo^2+dyo^2=1`}) ; <(
+      cut({`vo<=V()`}) ; <(
+        hideL('L=={`vo^2=vxo^2+vyo^2`}) ; hideL('L=={`vxo^2+vyo^2<=V()^2`});
+        con({`(vo=0|dxo^2+dyo^2=1)&bo()>0&ep()>0&(x-xo)^2+(y-yo)^2>(vo^2/(2*bo()))^2&0<=vo&vo<=V()&(v*ep()*bo()>=vo|vo=0)`}, 1); <(
+          QE,
+          unfold ; existsR({`-bo()`}, 1) ; unfold ; <(
+            fullSimplify ; closeTrue
+            ,
+            solve(1) ; existsR({`min((vo/bo(),ep()))`}, 1) ; abbrv({`min((vo/bo(),ep()))`}, {`minT`}) ; minmax(-10.1) ;
+            orL('L=={`vo=0|dxo^2+dyo^2=1`}) ; doall(QE)
+            ,
+            QE
+          )
           ,
           QE
         )
+        ,
+        hideR(1) ; QE
       ),
-      QE
+      hideR(1) ; QE
     )
   );
 
@@ -552,14 +555,19 @@ Tactic "Proof Theorem 3: Passive Friendly Safety".
   implyR(1) ; andL('L)* ; boxAnd(1) ; andR(1) ; <(
     robotAlwaysStops
     ,
-    GV(1);
-    hideL('L=={`A()>=0`});
-    hideL('L=={`v=0`});
-    hideL('L=={`b()>0`});
-    hideL('L=={`abs(x-xo) > friendlyMargin(V()) | abs(y-yo) > friendlyMargin(V())`});
-    hideL('L=={`dx^2+dy^2=1`});
-    hideL('L=={`vxo^2+vyo^2<=V()^2`});
-    obstacleCanStop
+    MR({`vxo^2+vyo^2<=V()^2`},1); <(
+      loop({`vxo^2+vyo^2<=V()^2`}, 1) ; <(
+        closeId,
+        closeId,
+        composeb(1) ; GV(1.1) ; composeb(1) ; GV(1.1) ; master
+      )
+      ,
+      andL('L)* ;
+      hideL('L=={`A()>=0`});
+      hideL('L=={`b()>0`});
+      obstacleCanStop
+    )
+
   )
 End.
 
