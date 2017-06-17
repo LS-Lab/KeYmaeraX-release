@@ -3,7 +3,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 angular.module('keymaerax.controllers').controller('DevCtrl',
-  function ($scope, $http, $cookies, $routeParams) {
+  function ($scope, $http, $routeParams) {
     $scope.deletedb = function() {
         $http.get("/dev/deletedb")
             .success(function(data) {

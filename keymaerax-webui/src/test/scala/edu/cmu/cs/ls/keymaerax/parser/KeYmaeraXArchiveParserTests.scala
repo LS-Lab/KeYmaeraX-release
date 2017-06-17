@@ -177,6 +177,68 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       ) :: Nil
   }
 
+  it should "parse a list of mixed entries, lemmas, and theorems, whose names are again entry/lemma/theorem" in withMathematica { tool =>
+    val input =
+      """ArchiveEntry "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.
+        |End.
+        |
+        |Lemma "Lemma 2: Some Entry".
+        |  Functions. R x(). End.
+        |  ProgramVariables R y. End.
+        |  Problem. x()>=y -> x()>=y End.
+        |  Tactic "Prop Proof". prop End.
+        |End.
+        |
+        |Theorem "Theorem 1: Some Entry".
+        |  ProgramVariables. R x. End.
+        |  Problem. x>3 -> x>=3 End.
+        |End.
+        |
+        |ArchiveEntry "ArchiveEntry 4: Name".
+        |  ProgramVariables. R x. End.
+        |  Problem. x>4 -> x>=4 End.
+        |End.
+      """.stripMargin
+    val entries = KeYmaeraXArchiveParser.parse(input)
+    entries should have size 4
+    entries should contain theSameElementsInOrderAs
+      ParsedArchiveEntry(
+        "Entry 1",
+        """ProgramVariables. R x. R y. End.
+          | Problem. x>y -> x>=y End.""".stripMargin,
+        "theorem",
+        "x>y -> x>=y".asFormula,
+        Nil
+      ) ::
+        ParsedArchiveEntry(
+          "Lemma 2: Some Entry",
+          """Functions. R x(). End.
+            |  ProgramVariables R y. End.
+            |  Problem. x()>=y -> x()>=y End.""".stripMargin,
+          "lemma",
+          "x()>=y -> x()>=y".asFormula,
+          ("Prop Proof", prop) :: Nil
+        ) ::
+        ParsedArchiveEntry(
+          "Theorem 1: Some Entry",
+          """ProgramVariables. R x. End.
+            |  Problem. x>3 -> x>=3 End.""".stripMargin,
+          "theorem",
+          "x>3 -> x>=3".asFormula,
+          Nil
+        ) ::
+        ParsedArchiveEntry(
+          "ArchiveEntry 4: Name",
+          """ProgramVariables. R x. End.
+            |  Problem. x>4 -> x>=4 End.""".stripMargin,
+          "theorem",
+          "x>4 -> x>=4".asFormula,
+          Nil
+        ) :: Nil
+  }
+
   it should "parse a lemma entry" in {
     val input =
       """

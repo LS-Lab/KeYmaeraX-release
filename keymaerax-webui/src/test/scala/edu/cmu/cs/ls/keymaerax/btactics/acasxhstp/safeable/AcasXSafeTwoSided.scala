@@ -214,8 +214,8 @@ class AcasXSafeTwoSided extends AcasXBase {
     runLemmaTest("2side_safe_implicit", "ACAS X 2-sided safe should prove Theorem 3, lemma safe implicit")
     runLemmaTest("2side_safe_upimplicit", "ACAS X 2-sided safe should prove Theorem 3, lemma up safe implicit")
 
-    withMathematica { tool =>
-      beforeEach()
+    beforeEach()
+    withMathematica { _ =>
 
       def applyLemma(formula: Formula, apply: BelleExpr) = cut(formula) & Idioms.<(
         (cutUse, dT("use Lemma " + formula) & SimplifierV2.simpTac('L, formula) & closeId & done)
@@ -257,7 +257,7 @@ class AcasXSafeTwoSided extends AcasXBase {
               hideL('L, Not(evolutionDomain)) &
               dT("After DI") & dC("0=1".asFormula)('R) & Idioms.<(
               /*use*/ dT("After DC 2") & dW('R) & dT("after DW") &
-                implyR('R) & andL('L) & cohideL('L, "0=1".asFormula) & dT("before QE") & QE,
+                implyR('R) & (andL('L)*) & cohideL('L, "0=1".asFormula) & dT("before QE") & QE,
               /*show*/ dT("After DC 1") & closeId & done
             )
             ,
@@ -382,9 +382,8 @@ class AcasXSafeTwoSided extends AcasXBase {
     runLemmaTest("safe_equivalence", "ACAS X 2-sided safe should prove Lemma 3a: implicit-explicit lower equivalence")
     runLemmaTest("upper_equivalence", "ACAS X 2-sided safe should prove Lemma 3b: implicit-explicit upper equivalence")
 
-    withMathematica { tool =>
-
-      beforeEach()
+    beforeEach()
+    withMathematica { _ =>
 
       val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_equivalence.kyx")).mkString)
@@ -451,9 +450,8 @@ class AcasXSafeTwoSided extends AcasXBase {
     runLemmaTest("safe_equivalence", "ACAS X 2-sided safe should prove Lemma 3a: implicit-explicit lower equivalence")
     runLemmaTest("upper_equivalence", "ACAS X 2-sided safe should prove Lemma 3b: implicit-explicit upper equivalence")
 
-    withMathematica { tool =>
-
-      beforeEach()
+    beforeEach()
+    withMathematica { _ =>
 
       val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_equivalence.kyx")).mkString)
@@ -530,10 +528,9 @@ class AcasXSafeTwoSided extends AcasXBase {
     runLemmaTest("twosided_implicit_usecase", "ACAS X 2-sided safe should prove Theorem 3: uc lo lemma")
     runLemmaTest("lemma3-alt-safe_equivalence_lemma", "ACAS X 2-sided safe should prove Lemma 3 fitting the form required by Corollary 3")
 
-    withMathematica { tool =>
-
-      // rerun initialization (runTest runs afterEach() at the end)
-      beforeEach()
+    // rerun initialization (runTest runs afterEach() at the end)
+    beforeEach()
+    withMathematica { _ =>
 
       val implicitSafety = KeYmaeraXProblemParser(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/twosided_implicit.kyx")).mkString)

@@ -22,6 +22,9 @@ trait ProvableSig {
     case NoProofTermProvable(provable) => provable
   }
 
+  /* The number of steps performed to create this provable. */
+  def steps: Int = 0
+
   type Subgoal = Int
   val conclusion: Sequent
 
@@ -87,34 +90,36 @@ case class NoProofTermProvable(provable: Provable) extends ProvableSig {
   override val axioms: Map[String, ProvableSig] = NoProofTermProvable.axioms
   override val rules: Map[String, ProvableSig] = NoProofTermProvable.rules
 
-  override def apply(rule: Rule, subgoal: Subgoal): ProvableSig = NoProofTermProvable(provable(rule,subgoal))
+  override def apply(rule: Rule, subgoal: Subgoal): ProvableSig = NoProofTermProvable(provable(rule,subgoal), steps+1)
 
   override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig =
-    NoProofTermProvable(provable(subderivation.underlyingProvable, subgoal))
+    NoProofTermProvable(provable(subderivation.underlyingProvable, subgoal), steps+subderivation.steps)
 
-  override def apply(subst: USubst): ProvableSig = NoProofTermProvable(provable(subst))
+  override def apply(subst: USubst): ProvableSig = NoProofTermProvable(provable(subst), steps+1)
 
-  override def apply(newConsequence: Sequent, rule: Rule): ProvableSig = NoProofTermProvable(provable(newConsequence, rule))
+  override def apply(newConsequence: Sequent, rule: Rule): ProvableSig = NoProofTermProvable(provable(newConsequence, rule), steps+1)
 
-  override def apply(prolongation: ProvableSig): ProvableSig = NoProofTermProvable(provable(prolongation.underlyingProvable))
+  override def apply(prolongation: ProvableSig): ProvableSig = NoProofTermProvable(provable(prolongation.underlyingProvable), steps+prolongation.steps)
 
-  override def sub(subgoal: Subgoal): ProvableSig = NoProofTermProvable(provable.sub(subgoal))
+  override def sub(subgoal: Subgoal): ProvableSig = NoProofTermProvable(provable.sub(subgoal), steps)
 
-  override def startProof(goal: Sequent): ProvableSig = NoProofTermProvable(Provable.startProof(goal))
+  override def startProof(goal: Sequent): ProvableSig = NoProofTermProvable(Provable.startProof(goal), 0)
 
-  override def startProof(goal: Formula): ProvableSig = NoProofTermProvable(Provable.startProof(goal))
+  override def startProof(goal: Formula): ProvableSig = NoProofTermProvable(Provable.startProof(goal), 0)
 
   override def proveArithmetic(t: QETool, f: Formula): Lemma = Provable.proveArithmetic(t,f)
 
   override def prettyString: String = s"NoProofTermProvable(${provable.prettyString})"
 }
 object NoProofTermProvable {
-  val axioms: Map[String, ProvableSig] = Provable.axioms.map(kvp => (kvp._1, NoProofTermProvable(kvp._2)))
-  val rules: Map[String, ProvableSig] = Provable.rules.map(kvp => (kvp._1, NoProofTermProvable(kvp._2)))
+  val axioms: Map[String, ProvableSig] = Provable.axioms.map(kvp => (kvp._1, NoProofTermProvable(kvp._2, 0)))
+  val rules: Map[String, ProvableSig] = Provable.rules.map(kvp => (kvp._1, NoProofTermProvable(kvp._2, 0)))
 
-  def startProof(goal: Sequent): ProvableSig = NoProofTermProvable(Provable.startProof(goal))
+  def apply(provable: Provable, initSteps: Int): NoProofTermProvable = new NoProofTermProvable(provable) { override def steps: Int = initSteps }
 
-  def startProof(goal: Formula): ProvableSig = NoProofTermProvable(Provable.startProof(goal))
+  def startProof(goal: Sequent): ProvableSig = NoProofTermProvable(Provable.startProof(goal), 0)
+
+  def startProof(goal: Formula): ProvableSig = NoProofTermProvable(Provable.startProof(goal), 0)
 
   def proveArithmetic(t: QETool, f: Formula): Lemma = Provable.proveArithmetic(t,f)
 }

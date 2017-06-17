@@ -46,8 +46,10 @@ object KeYmaeraXArchiveParser {
   def parse(archiveContentBOM: String): List[ParsedArchiveEntry] = {
     val archiveContents: List[ArchiveEntry] = read(archiveContentBOM)
     archiveContents.map({case (name, modelText, kind, tactics) =>
-      ParsedArchiveEntry(name, modelText, kind, KeYmaeraXProblemParser.parseAsProblemOrFormula(modelText),
-        tactics.map({case (tacticName, tacticText) => (tacticName, BelleParser(tacticText))}))
+      val (defs, formula) = KeYmaeraXProblemParser.parseProblem(modelText)
+      val parsedTactics = tactics.map({
+        case (tacticName, tacticText) => (tacticName, BelleParser.parseWithInvGen(tacticText, None, defs)) })
+      ParsedArchiveEntry(name, modelText, kind, formula, parsedTactics)
     })
   }
 
@@ -59,7 +61,9 @@ object KeYmaeraXArchiveParser {
   /** Reads the archive content into string-only archive entries. */
   def read(archiveContentBOM: String): List[ArchiveEntry] = {
     val archiveContent: String = ParserHelper.removeBOM(archiveContentBOM)
-    archiveContent.trim().split(s"(?=($ARCHIVE_ENTRY_BEGIN|$LEMMA_BEGIN|$THEOREM_BEGIN))").flatMap({s =>
+    // match ArchiveEntry, Lemma, Theorem, unless inside quotation marks
+    val regex = s"(?=($ARCHIVE_ENTRY_BEGIN|$LEMMA_BEGIN|$THEOREM_BEGIN)" + "(?=([^\"]*\"[^\"]*\")*[^\"]*$))"
+    archiveContent.trim().split(regex).flatMap({s =>
       val (entry, kind) =
         if (s.startsWith(ARCHIVE_ENTRY_BEGIN)) (s.stripPrefix(ARCHIVE_ENTRY_BEGIN), "theorem")
         else if (s.startsWith(THEOREM_BEGIN)) (s.stripPrefix(THEOREM_BEGIN), "theorem")

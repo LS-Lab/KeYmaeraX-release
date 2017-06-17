@@ -1,6 +1,6 @@
 angular.module('keymaerax.controllers').controller('FormulaUploadCtrl',
-  function ($scope, $http, $cookies, $cookieStore, $route, $uibModal, Models, spinnerService) {
-    $scope.userId = $cookies.get('userId');
+  function ($scope, $http, $route, $uibModal, Models, sessionService, spinnerService) {
+    $scope.userId = sessionService.getUser();
 
     $scope.addModelFromFormula = function(modelName, formula) {
       $http.post('/user/' + $scope.userId + '/modelFromFormula/' + modelName, formula)
@@ -18,32 +18,12 @@ angular.module('keymaerax.controllers').controller('FormulaUploadCtrl',
 );
 
 angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
-  function ($scope, $http, $cookies, $cookieStore, $route, $uibModal, $location, Models, spinnerService) {
-
-     $scope.runPreloadedProof = function(model) {
-        $http.post("/models/users/" + $scope.userId + "/model/" + model.id + "/initialize")
-            .success(function(data) {
-                if(data.errorThrown) {
-                    showCaughtErrorMessage($uibModal, data, "Proof Preloader")
-                } else {
-                    console.log("yay! Take the user to the proof load page?")
-                }
-            })
+  function ($scope, $http, $route, $uibModalInstance, $uibModal, $location, Models, sessionService, spinnerService) {
+     /** Model data */
+     $scope.model = {
+       modelName: undefined,
+       content: undefined
      };
-
-      $scope.deleteModel = function(modelId) {
-          $http.post("/user/" + $cookies.get('userId') + "/model/" + modelId + "/delete").success(function(data) {
-              if(data.errorThrown) {
-                  showCaughtErrorMessage($uibModal, data, "Model Deleter")
-              } else {
-                  console.log("Model " + modelId + " was deleted. Getting a new model list and reloading the route.")
-                  $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
-                      Models.addModels(data);
-                      $route.reload();
-                  });
-              }
-          })
-      };
 
      $(".fileinput").on("change.bs.fileinput", function(e) {
        e.stopPropagation();
@@ -51,69 +31,66 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
        $scope.$apply(); //notify angular, otherwise it won't recognize that fileExt changed
      });
 
-     $scope.addModel = function(modelName) {
-          var file = keyFile.files[0];
+     $scope.addModel = function() {
+        var file = keyFile.files[0];
 
-          var fr = new FileReader();
-          fr.onerror = function(e) { alert("Could not even open your file: " + e.getMessage()); };
-          fr.onload = function(e) {
+        var fr = new FileReader();
+        fr.onerror = function(e) { alert("Error opening file: " + e.getMessage()); };
+        fr.onload = function(e) {
 
-            var fileContent = e.target.result;
-            var url = "user/" + $cookies.get('userId');
-            if (file.name.endsWith('.kyx')) url = url + "/modeltextupload/" + modelName;
-            else if (file.name.endsWith('.kya')) url = url + "/archiveupload/";
+          var fileContent = e.target.result;
+          var url = "user/" + sessionService.getUser();
+          if (file.name.endsWith('.kyx')) url = url + "/modeltextupload/" + $scope.model.modelName;
+          else if (file.name.endsWith('.kya')) url = url + "/archiveupload/";
 
-            spinnerService.show('caseStudyImportSpinner');
+          upload(url, fileContent);
+        };
 
-            $http.post(url, fileContent)
-              .then(function(response) {
-                if(!response.data.success) {
-                  if(response.data.errorText) {
-                    showMessage($uibModal, "Error Uploading File", response.data.errorText, "md")
-                  }
-                  else {
-                    showMessage($uibModal, "Unknown Error Uploading File", "An unknown error that did not raise an uncaught exception occurred while trying to insert a model into the database. Perhaps see the server console output for more information.", "md")
-                  }
-                }
-                else { //Successfully uploaded model!
-                  //Update the models list -- this should result in the view being updated?
-                  while (Models.getModels().length != 0) {
-                    Models.getModels().shift()
-                  }
-                  $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
-                    Models.addModels(data);
-                    $route.reload();
-                  });
-                }
-              })
-              .catch(function(err) {
-                $uibModal.open({
-                  templateUrl: 'templates/parseError.html',
-                  controller: 'ParseErrorCtrl',
-                  size: 'lg',
-                  resolve: {
-                    model: function () { return fileContent; },
-                    error: function () { return err.data; }
-                }});
-              })
-              .finally(function() { spinnerService.hide('caseStudyImportSpinner'); });
-          };
-
-          fr.readAsText(file);
+        fr.readAsText(file);
      };
 
-     $scope.importRepo = function(repoUrl) {
-      spinnerService.show('caseStudyImportSpinner');
-      $http.post("models/users/" + $cookies.get('userId') + "/importRepo", repoUrl).success(function(data) {
-        $http.get("models/users/" + $cookies.get('userId')).success(function(data) {
-          Models.addModels(data);
-          if($location.path() == "/models") {
-            $route.reload();
-          } else {
-            $location.path( "/models" );
-          }
-        }).finally(function() { spinnerService.hide('caseStudyImportSpinner'); });
-      })
+     $scope.uploadContent = function() {
+       var url = "user/" + sessionService.getUser() + "/modeltextupload/" + $scope.model.modelName;
+       upload(url, $scope.model.content);
+     }
+
+     $scope.close = function() { $uibModalInstance.close(); };
+
+     var upload = function(url, content) {
+       spinnerService.show('caseStudyImportSpinner');
+       $http.post(url, content)
+         .then(function(response) {
+           if(!response.data.success) {
+             if(response.data.errorText) {
+               showMessage($uibModal, "Error Uploading Model", response.data.errorText, "md")
+             }
+             else {
+               showMessage($uibModal, "Unknown Error Uploading Model", "An unknown error that did not raise an uncaught exception occurred while trying to insert a model into the database. Perhaps see the server console output for more information.", "md")
+             }
+           }
+           else { //Successfully uploaded model!
+             $scope.close();
+             //Update the models list -- this should result in the view being updated?
+             while (Models.getModels().length != 0) {
+               Models.getModels().shift()
+             }
+             $http.get("models/users/" + sessionService.getUser()).success(function(data) {
+               Models.addModels(data);
+               $route.reload();
+             });
+           }
+         })
+         .catch(function(err) {
+           $uibModal.open({
+             templateUrl: 'templates/parseError.html',
+             controller: 'ParseErrorCtrl',
+             size: 'lg',
+             resolve: {
+               model: function () { return content; },
+               error: function () { return err.data; }
+           }});
+         })
+         .finally(function() { spinnerService.hide('caseStudyImportSpinner'); });
      }
 
      $scope.$watch('models',
@@ -123,10 +100,10 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      $scope.$emit('routeLoaded', {theview: 'models'});
 });
 
-angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($scope, $http, $cookies, $uibModal,
-    $location, FileSaver, Blob, Models, spinnerService, firstTime) {
+angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($scope, $http, $uibModal, $route,
+    $location, FileSaver, Blob, Models, spinnerService, sessionService, firstTime) {
   $scope.models = [];
-  $scope.userId = $cookies.get('userId');
+  $scope.userId = sessionService.getUser();
   $scope.intro.firstTime = firstTime;
 
   $scope.intro.introOptions = {
@@ -186,6 +163,43 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
           modelid: function () { return modelid; }
         }
       });
+  };
+
+  $scope.openNewModelDialog = function() {
+    $uibModal.open({
+      templateUrl: 'templates/modeluploaddialog.html',
+      controller: 'ModelUploadCtrl',
+      size: 'fullscreen'
+    });
+  };
+
+  $scope.importRepo = function(repoUrl) {
+    spinnerService.show('caseStudyImportSpinner');
+    var userId = sessionService.getUser();
+    $http.post("models/users/" + userId + "/importRepo", repoUrl).success(function(data) {
+      $http.get("models/users/" + userId).success(function(data) {
+        Models.addModels(data);
+        if($location.path() == "/models") {
+          $route.reload();
+        } else {
+          $location.path( "/models" );
+        }
+      }).finally(function() { spinnerService.hide('caseStudyImportSpinner'); });
+    })
+  };
+
+  $scope.deleteModel = function(modelId) {
+    $http.post("/user/" + sessionService.getUser() + "/model/" + modelId + "/delete").success(function(data) {
+      if(data.errorThrown) {
+        showCaughtErrorMessage($uibModal, data, "Model Deleter")
+      } else {
+        console.log("Model " + modelId + " was deleted. Getting a new model list and reloading the route.")
+        $http.get("models/users/" + sessionService.getUser()).success(function(data) {
+          Models.addModels(data);
+          $route.reload();
+        });
+      }
+    })
   };
 
   $scope.downloadModel = function(modelid) {

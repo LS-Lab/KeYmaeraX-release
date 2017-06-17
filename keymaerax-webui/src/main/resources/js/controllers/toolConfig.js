@@ -1,5 +1,5 @@
 angular.module('keymaerax.controllers').controller('ToolConfig',
-  function($scope, $rootScope, $http, $cookies, $uibModal, $routeParams) {
+  function($scope, $http) {
 
     $http.get("/config/systeminfo").then(function(response) {
       $scope.systemInfo = response.data;

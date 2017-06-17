@@ -148,6 +148,9 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
        */
       scope.fetchSectionParent = function(section) {
         var nodeId = section.path[section.path.length - 1];
+        scope.fetchParent(nodeId);
+      }
+      scope.fetchParent = function(nodeId) {
         $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + nodeId + '/parent').success(function(data) {
           updateProof(data);
         });

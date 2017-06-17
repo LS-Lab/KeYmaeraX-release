@@ -15,7 +15,9 @@
     <div hljs hljs-language="bellerophon" style="overflow: scroll" hljs-source="tactic.tacticBody"></div>
 </div>
 <div class="modal-footer">
-    <button class="btn btn-primary" ng-click="ok();proveFromTactic(modelId)"
-            ng-controller="ModelProofCreateCtrl">Prove associated model</button>
+    <span ng-controller="ModelProofCreateCtrl">
+    <button ng-if="!user.isGuest()" class="btn btn-primary"
+            ng-click="ok();proveFromTactic(modelId)">Prove associated model</button>
+    </span>
     <button class="btn btn-primary" ng-click="ok()">Close</button>
 </div>

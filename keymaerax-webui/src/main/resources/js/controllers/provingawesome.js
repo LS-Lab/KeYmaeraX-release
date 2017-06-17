@@ -3,10 +3,9 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 angular.module('keymaerax.controllers').controller('ProofCtrl',
-//    ['$http', '$rootScope', '$cookies', '$routeParams', '$q', '$uibModal', '$timeout', 'sequentProofData', 'spinnerService',
-    function($scope, $rootScope, $http, $cookies, $routeParams, $q, $uibModal, $timeout, sequentProofData, spinnerService) {
+    function($scope, $rootScope, $http, $routeParams, $q, $uibModal, $timeout, sequentProofData, spinnerService, sessionService) {
 
-  $scope.userId = $cookies.get('userId');
+  $scope.userId = sessionService.getUser();
   $scope.proofId = $routeParams.proofId;
 
   $scope.intro.introOptions = {
@@ -190,9 +189,9 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
 });
 
 angular.module('keymaerax.controllers').controller('TaskCtrl',
-  function($rootScope, $scope, $http, $cookies, $routeParams, $q, $uibModal, Tactics, sequentProofData, spinnerService, derivationInfos) {
+  function($rootScope, $scope, $http, $routeParams, $q, $uibModal, Tactics, sequentProofData, spinnerService, derivationInfos, sessionService) {
     $scope.proofId = $routeParams.proofId;
-    $scope.userId = $cookies.get('userId');
+    $scope.userId = sessionService.getUser();
     $scope.agenda = sequentProofData.agenda;
     $scope.prooftree = sequentProofData.proofTree;
     $scope.tactic = sequentProofData.tactic;
@@ -504,7 +503,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
   });
 
 angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',
-        function($scope, $http, $cookies, $uibModalInstance, FileSaver, Blob, userId, proofId, proofName) {
+        function($scope, $http, $uibModalInstance, FileSaver, Blob, userId, proofId, proofName) {
 
     // empty open proof until fetched from server
     $scope.proof = {

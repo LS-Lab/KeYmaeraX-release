@@ -8,7 +8,7 @@ angular.module('formula', ['ngSanitize'])
             formula: '=',
             highlight: '='
         },
-        controller: function($scope, $sce, $cookies, Tactics) {
+        controller: function($scope, $sce, Tactics) {
 
           $scope.dropped = [];
           $scope.onDropFormula = function(event, ui, formula) {

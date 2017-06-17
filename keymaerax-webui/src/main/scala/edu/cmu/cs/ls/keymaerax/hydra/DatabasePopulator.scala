@@ -29,6 +29,11 @@ object DatabasePopulator {
     readTutorialEntries(url).foreach(importModel(db, user, prove))
   }
 
+  /** Imports an archive from URL. Optionally proves the models when tactics are present. */
+  def importKya(db: DBAbstraction, user: String, url: String, prove: Boolean = false): Unit = {
+    readKya(url).foreach(importModel(db, user, prove))
+  }
+
   /** Reads a .kya archive from the URL `url` as tutorial entries (i.e., one tactic per entry). */
   def readKya(url: String): List[TutorialEntry] = {
     val kya = loadResource(url)

@@ -23,9 +23,10 @@
     <div hljs hljs-language="dl" style="overflow: scroll; height: 500px" hljs-source="model.keyFile"></div>
 </div>
 <div class="modal-footer">
-    <button class="btn btn-primary" ng-if="model.hasTactic"
-            ng-click="ok();proveFromTactic(model.id)"
-            ng-controller="ModelProofCreateCtrl">Prove with associated tactic</button>
+    <span ng-controller="ModelProofCreateCtrl">
+    <button class="btn btn-primary" ng-if="model.hasTactic && !user.isGuest()"
+            ng-click="ok();proveFromTactic(model.id)">Prove with associated tactic</button>
+    </span>
     <button class="btn btn-primary" ng-click="ok()">Close</button>
 </div>
 </form>

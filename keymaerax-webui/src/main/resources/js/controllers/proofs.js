@@ -1,9 +1,17 @@
 /**
  * Controllers for proof lists and proof information pages.
  */
-angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', function ($scope, $http, $cookies, $routeParams, $location, spinnerService) {
+angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', function ($scope, $http,
+    $routeParams, $location, sessionService, spinnerService) {
+  /** User data and helper functions. */
+  $scope.user = {
+    /** Returns true if the user is a guest, false otherwise. */
+    isGuest: function() { return sessionService.isGuest(); }
+  };
+
+  /** Create a new proof for model 'modelId' with 'proofName' and 'proofDescription' (both optional: empty ""). */
   $scope.createProof = function(modelId, proofName, proofDescription) {
-      var uri     = 'models/users/' + $cookies.get('userId') + '/model/' + modelId + '/createProof'
+      var uri     = 'models/users/' + sessionService.getUser() + '/model/' + modelId + '/createProof'
       var dataObj = {proofName: proofName, proofDescription: proofDescription}
 
       $http.post(uri, dataObj).
@@ -17,9 +25,19 @@ angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', funct
           });
   };
 
+  /** Opens the first proof (finished or not) of this model. */
+  $scope.openFirstProof = function(modelId) {
+    $http.get('models/users/' + sessionService.getUser() + "/model/" + modelId + "/proofs").then(function(response) {
+      if (response.data.length > 0) {
+        $location.path('proofs/' + response.data[0].id);
+      }
+    });
+  };
+
+  /** Creates a new proof from the model's tactic (if any). */
   $scope.proveFromTactic = function(modelId) {
     spinnerService.show('modelListProofLoadingSpinner');
-    var uri     = 'models/users/' + $cookies.get('userId') + '/model/' + modelId + '/createTacticProof'
+    var uri     = 'models/users/' + sessionService.getUser() + '/model/' + modelId + '/createTacticProof'
     $http.post(uri, {}).success(function(data) {
       var proofId = data.id;
       $location.path('proofs/' + proofId);
@@ -60,9 +78,9 @@ var pollProofStatus = function(proof, userId, http) {
 
 /* Proof list (those of an individual model if the route param modelId is defined, all proofs otherwise) */
 angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
-    $scope, $http, $cookies, $location, $routeParams, $route, FileSaver, Blob, spinnerService) {
+    $scope, $http, $location, $routeParams, $route, FileSaver, Blob, spinnerService, sessionService) {
   $scope.modelId = $routeParams.modelId;
-  $scope.userId = $cookies.get('userId')
+  $scope.userId = sessionService.getUser();
 
   $scope.intro.introOptions = {
     steps:[

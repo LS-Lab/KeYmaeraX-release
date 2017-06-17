@@ -1,4 +1,4 @@
-angular.module('keymaerax.controllers').controller('ServerInfoCtrl', ['$scope', '$uibModal', '$cookies', '$http', function ($scope, $uibModal, $cookies, $http) {
+angular.module('keymaerax.controllers').controller('ServerInfoCtrl', ['$scope', '$uibModal', '$http', function ($scope, $uibModal, $http) {
   // Set the view for menu active class
   $scope.$on('routeLoaded', function (event, args) {
     $scope.theview = args.theview;
