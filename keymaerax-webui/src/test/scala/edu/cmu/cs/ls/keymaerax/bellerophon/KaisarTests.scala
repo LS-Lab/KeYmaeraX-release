@@ -661,11 +661,11 @@ show (Jy > 0) using assms Jy by auto
     withMathematica(qeTool =>{
       val box = "(m<=0 & pr > ar & pr > 0 & ar > 0 & m < -(g/pr)^(1/2) & T>0 & vn>(g/pr)^(1/2) & vn < 0 & t <= T & x >= 0 & v < 0) -> (rp > 0 & g > 0) -> (v >= vn-g*t) -> (vn-g*t >= vn-g*T) -> (vn-g*T > -(g/rp)^(1/2)) -> (v > -(g/rp)^(1/2))".asFormula
       val sp:SP =
-        BRule(RBAssume("nonsens".asVariable, "m<=0 & pr > ar & pr > 0 & ar > 0 & m < -(g/pr) & T>0 & vn>(g/pr)^(1/2) & vn < 0 & t <= T & x >= 0 & v < 0".asFormula),List(
+        BRule(RBAssume("nonsens".asVariable, "m<=0 & pr > ar & pr > 0 & ar > 0 & m < -(g/pr)^(1/2) & T>0 & vn>(g/pr)^(1/2) & vn < 0 & t <= T & x >= 0 & v < 0".asFormula),List(
           BRule(RBAssume("nz".asVariable, "rp > 0 & g > 0".asFormula),List(
         BRule(RBAssume("v".asVariable, "v >= vn-g*t".asFormula),List(
-        BRule(RBAssume("gt".asVariable, "v0-g*t >= v0-g*T".asFormula), List(
-        BRule(RBAssume("gT".asVariable, "v0-g*T > -(g/rp)^(1/2)".asFormula), List(
+        BRule(RBAssume("gt".asVariable, "vn-g*t >= vn-g*T".asFormula), List(
+        BRule(RBAssume("gT".asVariable, "vn-g*T > -(g/rp)^(1/2)".asFormula), List(
         Show("v>-(g/rp)^(1/2)".asFormula, UP(List(),Kaisar.RCF()))
         ))
         ))
@@ -675,19 +675,57 @@ show (Jy > 0) using assms Jy by auto
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
+  /*
+  # Example 1b
+  assume v:"v >= ?vt"
+  assume gt:"?vt >= ?vT"
+  assume gT:"?vT > ?vBound"
+  show "v > ?vBound"
+  by R*/
+  "POPL'18 1b" should "prove" in {
+    withMathematica(qeTool =>{
+      val box = "(m<=0 & pr > ar & pr > 0 & ar > 0 & m < -(g/pr)^(1/2) & T>0 & vn>(g/pr)^(1/2) & vn < 0 & t <= T & x >= 0 & v < 0) -> (rp > 0 & g > 0) -> (v >= vn-g*t) -> (vn-g*t >= vn-g*T) -> (vn-g*T > -(g/rp)^(1/2)) -> (v > -(g/rp)^(1/2))".asFormula
+      val sp:SP =
+        BRule(RBAssume("nonsens".asVariable, "m<=0 & pr > ar & pr > 0 & ar > 0 & m < -(g/pr)^(1/2) & T>0 & vn>(g/pr)^(1/2) & vn < 0 & t <= T & x >= 0 & v < 0".asFormula),List(
+        BRule(RBAssume("nz".asVariable, "rp > 0 & g > 0".asFormula),List(
+        BRule(RBAssume("v".asVariable, "v >= vt_".asFormula),List(
+        BRule(RBAssume("gt".asVariable, "vt_ >= vT_".asFormula), List(
+        BRule(RBAssume("gT".asVariable, "vT_ > vBound_".asFormula), List(
+          Show("v > vBound_".asFormula, UP(List(),Kaisar.RCF()))
+                ))
+              ))
+            ))))))
+      val time = System.currentTimeMillis()
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      println("Time taken (millis): " + (System.currentTimeMillis() - time))
+    })
+  }
+  /*
+     # Example 1c
+     assume v:"v >= ?vt"
+     assume gt:"?vt >= ?vT"
+     assume gT:"?vT > ?vBound"
+     have trans:"\forall w x y z. w>=x
+     -> x>=y -> y>z -> w>z"
+     by R
+       note res =
+       trans v ?vt ?vT ?vBound v gt gT
+     show "v > ?vBound"
+     using res by id
+     */
   "POPL'18 1c" should "prove" in {
     withMathematica(qeTool => {
       val box = "(m<=0 & pr > ar & pr > 0 & ar > 0 & m < -(g/pr)^(1/2) & T>0 & vn>(g/pr)^(1/2) & vn < 0 & t <= T & x >= 0 & v < 0) -> (rp > 0 & g > 0) -> (v >= vn-g*t) -> (vn-g*t >= vn-g*T) -> (vn-g*T > -(g/rp)^(1/2)) -> (v > -(g/rp)^(1/2))".asFormula
       val sp:SP =
         BRule(RBAssume("nonsens".asVariable, "m<=0 & pr > ar & pr > 0 & ar > 0 & m < -(g/pr)^(1/2) & T>0 & vn>(g/pr)^(1/2) & vn < 0 & t <= T & x >= 0 & v < 0".asFormula),List(
         BRule(RBAssume("nz".asVariable, "rp > 0 & g > 0".asFormula),List(
-        BRule(RBAssume("v".asVariable, "v >= vn-g*t".asFormula),List(
-        BRule(RBAssume("gt".asVariable, "vn-g*t >= vn-g*T".asFormula), List(
-        BRule(RBAssume("gT".asVariable, "vn-g*T > -(g/rp)^(1/2)".asFormula), List(
+        BRule(RBAssume("v".asVariable, "v >= vt_".asFormula),List(
+        BRule(RBAssume("gt".asVariable, "vt_ >= vT_".asFormula), List(
+        BRule(RBAssume("gT".asVariable, "vT_ > vBound_".asFormula), List(
         Have("trans".asVariable, "\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula,
              Show("\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula, UP(List(),Kaisar.RCF())),
         Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable),"v".asTerm),"vn-g*t".asTerm),"vn-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("v".asExpr)), FPat("gt".asExpr)), FPat("gT".asExpr)),
-        Show("v>-(g/rp)^(1/2)".asFormula, UP(List(Left("res".asVariable)), CloseId())))
+        Show("v > vBound_".asFormula, UP(List(Left("res".asVariable)), CloseId())))
         )))))))))))
       val time = System.currentTimeMillis()
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
@@ -713,48 +751,39 @@ show (Jy > 0) using assms Jy by auto
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
-      /*
-      # Example 1c
-      assume v:"v >= ?vt"
-      assume gt:"?vt >= ?vT"
-      assume gT:"?vT > ?vBound"
-      have trans:"\forall w x y z. w>=x
-      -> x>=y -> y>z -> w>z"
-      by R
-        note res =
-        trans v ?vt ?vT ?vBound v gt gT
-      show "v > ?vBound"
-      using res by id
-      */
-/*
-    1:5
-  # Example 1b
-  assume v:"v >= ?vt"
-  assume gt:"?vt >= ?vT"
-  assume gT:"?vT > ?vBound"
-  show "v > ?vBound"
-  by R
-  # Example 1c
-  assume v:"v >= ?vt"
-  assume gt:"?vt >= ?vT"
-  assume gT:"?vT > ?vBound"
-  have trans:"\forall w x y z. w>=x
-  -> x>=y -> y>z -> w>z"
-  by R
-    note res =
-    trans v ?vt ?vT ?vBound v gt gT
-  show "v > ?vBound"
-  using res by id
-  # Example 1d
-  assume v:"v >= ?vt"
-  assume gt:"?vt >= ?vT"
-  assume gT:"?vT > ?vBound"
-  have trans:"\forall w x y z. w>=x
-  -> x>=y -> y>z -> w>z"
-  by R
-    note res =
-    trans v ?vt ?vT ?vBound v gt gT
-  let ?goal = (v > ?vBound)
-  show (?goal)
-  using res by id*/
+
+  /*
+    # Example 1d
+    assume v:"v >= ?vt"
+    assume gt:"?vt >= ?vT"
+    assume gT:"?vT > ?vBound"
+    have trans:"\forall w x y z. w>=x
+    -> x>=y -> y>z -> w>z"
+    by R
+      note res =
+      trans v ?vt ?vT ?vBound v gt gT
+    let ?goal = (v > ?vBound)
+    show (?goal)
+    using res by id*/
+  "POPL'18 1d" should "prove" in {
+    withMathematica(qeTool => {
+      val box = "(m<=0 & pr > ar & pr > 0 & ar > 0 & m < -(g/pr)^(1/2) & T>0 & vn>(g/pr)^(1/2) & vn < 0 & t <= T & x >= 0 & v < 0) -> (rp > 0 & g > 0) -> (v >= vn-g*t) -> (vn-g*t >= vn-g*T) -> (vn-g*T > -(g/rp)^(1/2)) -> (v > -(g/rp)^(1/2))".asFormula
+      val sp:SP =
+        BRule(RBAssume("nonsens".asVariable, "m<=0 & pr > ar & pr > 0 & ar > 0 & m < -(g/pr)^(1/2) & T>0 & vn>(g/pr)^(1/2) & vn < 0 & t <= T & x >= 0 & v < 0".asFormula),List(
+        BRule(RBAssume("nz".asVariable, "rp > 0 & g > 0".asFormula),List(
+        BRule(RBAssume("v".asVariable, "v >= vt_".asFormula),List(
+        BRule(RBAssume("gt".asVariable, "vt_ >= vT_".asFormula), List(
+        BRule(RBAssume("gT".asVariable, "vT_ > vBound_".asFormula), List(
+        Have("trans".asVariable, "\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula,
+          Show("\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula, UP(List(),Kaisar.RCF())),
+        Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable),"v".asTerm),"vn-g*t".asTerm),"vn-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("v".asExpr)), FPat("gt".asExpr)), FPat("gT".asExpr)),
+          SLet("goal_()".asFormula,"v > vBound_".asFormula ,
+          Show("goal_()".asFormula, UP(List(Left("res".asVariable)), CloseId())))
+                  ))))))))))))
+      val time = System.currentTimeMillis()
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      println("Time taken (millis): " + (System.currentTimeMillis() - time))
+    })
+  }
+
 }

@@ -892,9 +892,10 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           prr(pr1,0)(pr2,0)
         case (RBAssume(x:Variable,fml:Formula),Imply(p,q)) =>
           assertBranches(sp.length, 1)
+          val cc = pmatch(expand(fml,h,c,None), p,c)
           val newPos = AntePos(sequent.ante.length)
-          val cc:Context = c.add(x,newPos)
-          eval(sp.head, h, cc, g(ImplyRight(SuccPos(0)),0))
+          val ccc:Context = c.concat(cc).add(x,newPos)
+          eval(sp.head, h, ccc, g(ImplyRight(SuccPos(0)),0))
         case (RBSolve(t:Variable,fmlT:Formula,dc:Variable,fmlDC:Formula,sols:List[(Variable,Formula)]),Box(ODESystem(ode,q),p)) =>
           val pr = interpret(solve(1) & allR(1) & implyR(1), g)
           eval(sp.head, h, c, pr)
