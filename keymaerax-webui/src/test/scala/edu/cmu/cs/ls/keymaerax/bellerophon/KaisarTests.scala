@@ -658,17 +658,18 @@ show (Jy > 0) using assms Jy by auto
   by R
 */
   "POPL'18 1a" should "prove" in {
-    withZ3(qeTool =>{
-      val box = "(rp > 0 & g > 0) -> (v >= vn-g*t) -> (vn-g*t >= vn-g*T) -> (vn-g*T > -(g/rp)^(1/2)) -> (v > -(g/rp)^(1/2))".asFormula
+    withMathematica(qeTool =>{
+      val box = "(m<=0 & pr > ar & pr > 0 & ar > 0 & m < -(g/pr)^(1/2) & T>0 & vn>(g/pr)^(1/2) & vn < 0 & t <= T & x >= 0 & v < 0) -> (rp > 0 & g > 0) -> (v >= vn-g*t) -> (vn-g*t >= vn-g*T) -> (vn-g*T > -(g/rp)^(1/2)) -> (v > -(g/rp)^(1/2))".asFormula
       val sp:SP =
-        BRule(RBAssume("nz".asVariable, "rp > 0 & g > 0".asFormula),List(
+        BRule(RBAssume("nonsens".asVariable, "m<=0 & pr > ar & pr > 0 & ar > 0 & m < -(g/pr) & T>0 & vn>(g/pr)^(1/2) & vn < 0 & t <= T & x >= 0 & v < 0".asFormula),List(
+          BRule(RBAssume("nz".asVariable, "rp > 0 & g > 0".asFormula),List(
         BRule(RBAssume("v".asVariable, "v >= vn-g*t".asFormula),List(
         BRule(RBAssume("gt".asVariable, "v0-g*t >= v0-g*T".asFormula), List(
         BRule(RBAssume("gT".asVariable, "v0-g*T > -(g/rp)^(1/2)".asFormula), List(
         Show("v>-(g/rp)^(1/2)".asFormula, UP(List(),Kaisar.RCF()))
         ))
         ))
-        ))))
+        ))))))
       val time = System.currentTimeMillis()
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
@@ -676,8 +677,9 @@ show (Jy > 0) using assms Jy by auto
   }
   "POPL'18 1c" should "prove" in {
     withMathematica(qeTool => {
-      val box = "(rp > 0 & g > 0) -> (v >= vn-g*t) -> (vn-g*t >= vn-g*T) -> (vn-g*T > -(g/rp)^(1/2)) -> (v > -(g/rp)^(1/2))".asFormula
+      val box = "(m<=0 & pr > ar & pr > 0 & ar > 0 & m < -(g/pr)^(1/2) & T>0 & vn>(g/pr)^(1/2) & vn < 0 & t <= T & x >= 0 & v < 0) -> (rp > 0 & g > 0) -> (v >= vn-g*t) -> (vn-g*t >= vn-g*T) -> (vn-g*T > -(g/rp)^(1/2)) -> (v > -(g/rp)^(1/2))".asFormula
       val sp:SP =
+        BRule(RBAssume("nonsens".asVariable, "m<=0 & pr > ar & pr > 0 & ar > 0 & m < -(g/pr)^(1/2) & T>0 & vn>(g/pr)^(1/2) & vn < 0 & t <= T & x >= 0 & v < 0".asFormula),List(
         BRule(RBAssume("nz".asVariable, "rp > 0 & g > 0".asFormula),List(
         BRule(RBAssume("v".asVariable, "v >= vn-g*t".asFormula),List(
         BRule(RBAssume("gt".asVariable, "vn-g*t >= vn-g*T".asFormula), List(
@@ -686,7 +688,26 @@ show (Jy > 0) using assms Jy by auto
              Show("\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula, UP(List(),Kaisar.RCF())),
         Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable),"v".asTerm),"vn-g*t".asTerm),"vn-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("v".asExpr)), FPat("gt".asExpr)), FPat("gT".asExpr)),
         Show("v>-(g/rp)^(1/2)".asFormula, UP(List(Left("res".asVariable)), CloseId())))
-        )))))))))
+        )))))))))))
+      val time = System.currentTimeMillis()
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+      println("Time taken (millis): " + (System.currentTimeMillis() - time))
+    })
+  }
+  "POPL'18 1cAlt" should "prove" in {
+    withMathematica(qeTool => {
+      val box = "(m<=0 & pr > ar & pr > 0 & ar > 0 & m < -(g/pr)^(1/2) & T>0 & vn>(g/pr)^(1/2) & vn < 0 & t <= T & x >= 0 & v < 0) -> (rp > 0 & g > 0) -> (v >= vn-g*t) -> (vn-g*t >= vn-g*T) -> (vn-g*T > -(g/rp)^(1/2)) -> (v > -(g/rp)^(1/2))".asFormula
+      val sp:SP =
+        BRule(RBAssume("nonsens".asVariable, "m<=0 & pr > ar & pr > 0 & ar > 0 & m < -(g/pr)^(1/2) & T>0 & vn>(g/pr)^(1/2) & vn < 0 & t <= T & x >= 0 & v < 0".asFormula),List(
+        BRule(RBAssume("nz".asVariable, "rp > 0 & g > 0".asFormula),List(
+        BRule(RBAssume("v".asVariable, "v >= vn-g*t".asFormula),List(
+        BRule(RBAssume("gt".asVariable, "vn-g*t >= vn-g*T".asFormula), List(
+        BRule(RBAssume("gT".asVariable, "vn-g*T > -(g/rp)^(1/2)".asFormula), List(
+        //Have("trans".asVariable, "\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula,
+//             Show("\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula, UP(List(),Kaisar.RCF())),
+  //      Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable),"v".asTerm),"vn-g*t".asTerm),"vn-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("v".asExpr)), FPat("gt".asExpr)), FPat("gT".asExpr)),
+        Show("v>-(g/rp)^(1/2)".asFormula, UP(List(Left("nz".asVariable),Left("gT".asVariable),Left("v".asVariable),Left("gt".asVariable)), Kaisar.RCF()))
+        ))))))))))
       val time = System.currentTimeMillis()
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
