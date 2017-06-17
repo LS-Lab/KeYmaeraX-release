@@ -484,7 +484,18 @@ object Kaisar {
               val argPos = AntePos(ante.length)
               val impPos = AntePos(ante.length+1)
               val pr1b = pr1(subst.usubst)
-              Provable.startProof(seq)(Cut(p2),0)(HideRight(SuccPos(0)),1)(pr2,1)(Cut(Imply(p2,q2)),0)(HideRight(SuccPos(0)),1)(HideLeft(argPos),1)(pr1b,1)(ImplyLeft(impPos),0)(Close(argPos,SuccPos(1)),0)(Close(impPos,SuccPos(0)),0)
+              val step1 = Provable.startProof(seq)
+              val step2 = step1(Cut(p2),0)
+              val step3 = step2(HideRight(SuccPos(0)),1)(pr2,1)
+              val step4 = step3(Cut(Imply(p2,q2)),0)
+              val step5 = step4(HideRight(SuccPos(0)),1)
+              val step6 = step5(HideLeft(argPos),1)
+              val step7 = step6(pr1b,1)
+              val step8 = step7(ImplyLeft(impPos),0)
+              val step9 = step8(Close(argPos,SuccPos(1)),0)
+              val step10 = step9(Close(impPos,SuccPos(0)),0)
+              step10
+
             } catch {
               case e : UnificationException => throw new Exception("proposition mismatch in modus ponens", e)
             }
@@ -498,16 +509,39 @@ object Kaisar {
         goal  match {
           case (Forall(xs,q)) =>
             try {
+              def repvTerm(e:Formula, x:Variable, t:Term):Formula = {
+                ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+                  override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+                    e match {
+                      case y: Variable if x == y => Right(t)
+                      case _ => Left(None)
+                    }
+                }, e).get
+              }
               val subst:Subst = UnificationMatch(AxiomInfo("all instantiate").provable.conclusion.succ.head.asInstanceOf[Imply].left, goal)
-              val pair = SubstitutionPair(FuncOf(Function("f", None, Real, Real), DotTerm()), t2)
-              val subst2 = USubst(immutable.IndexedSeq.concat(immutable.IndexedSeq[SubstitutionPair](pair), subst.usubst.subsDefsInput))
-              val q2=subst2(q)
-              val p2:Provable=subst2(AxiomInfo("all instantiate").provable).underlyingProvable
+              val pair = (FuncOf(Function("f", None, Unit, Real), Nothing), t2)
+              val vpair = (Variable("x_"), xs.head)
+              val renu:RenUSubst = RenUSubst(immutable.IndexedSeq.concat(immutable.IndexedSeq[(Expression,Expression)](vpair,pair), subst.usubst.subsDefsInput.map({case x => (x.what, x.repl)})))
+              val q2=repvTerm(q,xs.head, term)
+              val ax=AxiomInfo("all instantiate").provable
+              //val subst2 = USubst(immutable.IndexedSeq.concat(immutable.IndexedSeq[SubstitutionPair](SubstitutionPair(vpair._1,vpair._2),SubstitutionPair(pair._1,pair._2)), subst.usubst.subsDefsInput))
+              val p2:Provable=renu.toForward(ax).underlyingProvable
               val seq = Sequent(ante, immutable.IndexedSeq(q2))
               val impPos = AntePos(ante.length)
               val allPos = AntePos(ante.length+1)
-              val pr1b = pr1(subst.usubst)
-              Provable.startProof(seq) (Cut(p2.conclusion.succ.head), 0)(p2,1) (Cut(pr1.conclusion.succ.head),0)(pr1,1) (ImplyLeft(impPos), 0) (Close(allPos,SuccPos(0)),0) (Close(AntePos(0),SuccPos(0)),0)
+              val pr1b = renu.toForward(NoProofTermProvable(pr1)).underlyingProvable
+                //renupr1(subst.usubst)
+              val s1 = Provable.startProof(seq)(Cut(p2.conclusion.succ.head), 0)
+              val s1a = s1(CoHideRight(SuccPos(1)),1)
+              val s2 = s1a(p2,1)
+              val s3 = s2(Cut(pr1.conclusion.succ.head),0)
+              val s3a = s3(HideRight(SuccPos(0)),1)
+              val s3b = s3a(HideLeft(AntePos(s3a.subgoals(1).ante.length-1)),1)
+              val s4 = s3b(pr1,1)
+              val s5 = s4(ImplyLeft(impPos), 0)
+              val s6 = s5(Close(impPos,SuccPos(1)),0)
+              val s7 = s6(Close(impPos,SuccPos(0)),0)
+              s7
             } catch {
               case e : UnificationException => throw new Exception("proposition mismatch in all instantiation", e)
             }
