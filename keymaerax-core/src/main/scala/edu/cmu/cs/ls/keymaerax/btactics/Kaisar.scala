@@ -446,7 +446,8 @@ object Kaisar {
         val matches:immutable.IndexedSeq[(Formula,Int)] = ante.zipWithIndex.filter({case (fml,_) => doesMatch(pat, fml,c)})
         matches.toList match {
           case ((_,i)::Nil) => i
-          case _ => throw new Exception("Non-unique match in pattern-matching construct")
+          case ms =>
+            throw new Exception("Non-unique match in pattern-matching construct: " + ms)
         }
 
     }
@@ -497,7 +498,9 @@ object Kaisar {
               step10
 
             } catch {
-              case e : UnificationException => throw new Exception("proposition mismatch in modus ponens", e)
+              case e : UnificationException =>
+                println(e)
+                throw new Exception("proposition mismatch in modus ponens", e)
             }
           case _ => throw new Exception("proposition mismatch in modus ponens")
          }
@@ -522,7 +525,7 @@ object Kaisar {
               val pair = (FuncOf(Function("f", None, Unit, Real), Nothing), t2)
               val vpair = (Variable("x_"), xs.head)
               val renu:RenUSubst = RenUSubst(immutable.IndexedSeq.concat(immutable.IndexedSeq[(Expression,Expression)](vpair,pair), subst.usubst.subsDefsInput.map({case x => (x.what, x.repl)})))
-              val q2=repvTerm(q,xs.head, term)
+              val q2=repvTerm(q,xs.head, t2)
               val ax=AxiomInfo("all instantiate").provable
               //val subst2 = USubst(immutable.IndexedSeq.concat(immutable.IndexedSeq[SubstitutionPair](SubstitutionPair(vpair._1,vpair._2),SubstitutionPair(pair._1,pair._2)), subst.usubst.subsDefsInput))
               val p2:Provable=renu.toForward(ax).underlyingProvable
@@ -736,9 +739,9 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
       val conjPos = AntePosition(anteSize+1)
       val oneAnd = andL(conjPos)
       // The conjunction in the domain constraint is associated in a way that makes t positioning nasty.First reassociate it.
-      def flatAnd(f:Formula):List[Formula] = {f match {case And(a,b) => flatAnd(a) ++ List(b) case ff => List(ff)}}
+      def flatAnd(f:Formula, n:Int):List[Formula] = {f match {case And(a,b) if n > 0 => flatAnd(a,n-1) ++ List(b) case ff => List(ff)}}
       def unflatAnd(l:List[Formula]):Formula = l match {case List(l) => l case (x::xs) => And(x,unflatAnd(xs))}
-      val conj = unflatAnd(flatAnd(g4.subgoals.head.ante.last))
+      val conj = unflatAnd(flatAnd(g4.subgoals.head.ante.last,nInvs))
       val cutConj = cut(conj)<(hideL(conjPos), hideR(1) & (hideL(-1)*(anteSize-1)) & prop)
       val killAnds = if(nInvs > 0) {andL('Llast)*(nInvs)} else nil
       val killTrue = if(nInvs > 0) {hideL(AntePosition(anteSize+1))} else {hideL('Llast)}

@@ -795,45 +795,58 @@ show (Jy > 0) using assms Jy by auto
   }
 
   private val dc = "x>= 0 & v < 0".asFormula
-  private val const = "g > 0 & 0 < ra & ra = r & ra < rp & T >= 0".asFormula
-  private val dyn = "m < -(g/rp)^(1/2) & -(g/rp)^(1/2) < v".asFormula
-  private val pre = And(And(dc, const), dyn)
-  private val ctrl = "{{?(a=ra & v-g*T > -(g/rp)^(1/2));} ++ {r:=rp;}}".asProgram
-  private val plant = "t:=0;{x'=v,v'=r*v^2-g & x>=0 & v<0 & t<=T}".asProgram
+  private val const = "g > 0 & 0 < ra &  ra < rp & T >= 0".asFormula
+  private val dyn = "m < -(g/rp)^(1/2) & -(g/rp)^(1/2) < v ".asFormula
+  private val dynInv = "m < -(g/rp)^(1/2) & -(g/rp)^(1/2) < v & v >= init(v)".asFormula
+  private val pre = And("r=ra".asFormula, And(And(dc, const), dyn))
+  private val ctrl = "{{?(r=ra & v-g*T > -(g/rp)^(1/2));} ++ {r:=rp;}}".asProgram
+  private val plant = "t:=0;{x'=v,v'=r*v^2-g, t'=1 & x>=0 & v<0 & t<=T}".asProgram
   private val post = "x=0 -> v<=m".asFormula
-  private val safePara = Imply(And("r=ra".asFormula, And(dc, And(const, dyn))), Box(Loop(Compose(ctrl, plant)), post))
+  private val safePara = Imply(pre, Box(Loop(Compose(ctrl, plant)), post))
+
   "POPL'18 3" should "prove" in {
     withMathematica(qeTool => {
       val time = System.currentTimeMillis()
       val sp:SP =
-        BRule(RBAssume("assms".asVariable,pre), List(
+        PrintGoal("blah",
         State("init",
+        BRule(RBAssume("assms".asVariable,pre), List(
         BRule(RBInv(Inv("DCCONST".asVariable, And(dc,const), duh, duh,
-        Inv("DYN".asVariable, dyn, duh,
+        Inv("DYN".asVariable, dynInv, duh,
           // TODO: Add pattern matching
-          BRule(RBCase(), List(
-            BRule(RBAssume("safe".asVariable, "a=ra & v-g*T > -(g/rp)^(1/2)".asFormula),  List(
+            State("loop",
+            BRule(RBCase(), List(
+            BRule(RBAssume("safe".asVariable, "r=ra & v-g*T > -(g/rp)^(1/2)".asFormula),  List(
+            BRule(RBAssign(Assign("t".asVariable,"0".asTerm)), List(
             BRule(RBInv(
-              Inv("pr".asVariable, "g>0 & pr>0".asFormula, duh, duh,
-              Inv("vBig".asVariable, "v >= init(v) - g*t".asFormula, duh, duh,
-              Inv("vInitBig".asVariable, "init(v)-g*T > -(g/pr)^(1/2)".asFormula, duh, duh,
-              Finally(
-                Have("tBound".asVariable, "init(v) -g*t >= init(v) - g*T".asFormula, Show("wild()".asFormula, UP(List(Left("const".asVariable)), Kaisar.RCF())),
+              Inv("rp".asVariable, "g>0 & rp>0".asFormula, duh, duh,
+              Inv("vBig".asVariable, "v >= loop(v) - g*t".asFormula, duh, duh,
+              Inv("vInitBig".asVariable, "loop(v)-g*T > -(g/rp)^(1/2)".asFormula, duh, duh,
+              Inv("dc".asVariable, "t <= T".asFormula, duh, duh,
+                  Finally(
+                Have("tBound".asVariable, "loop(v) -g*t >= loop(v) - g*T".asFormula, Show("wild()".asFormula,
+                  //TODO: Should be const not vBig but stuff messed up
+                  //UP(List(Left("vBig".asVariable), Left("dc".asVariable)), Kaisar.RCF())
+                    UP(List(Left("rp".asVariable), Left("dc".asVariable)), Kaisar.RCF())
+                ),
                 Have("trans".asVariable, "\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula, duh,
-                Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable), "v".asTerm), "vn-g*t".asTerm), "vn-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("v".asExpr)), FPat("gt".asExpr)), FPat("gT".asExpr)),
-                  Show("wild()".asFormula, UP(List(Left("res".asVariable)), CloseId())))))))))
-            ),List())
+                Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable), "v".asTerm), "loop(v)-g*t".asTerm), "loop(v)-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("vBig".asExpr)), FPat("tBound".asExpr)), FPat("vInitBig".asExpr)),
+                //TODO: Show needs some more stuff about v>=v0 and m < equilib
+                  Show("wild()".asFormula, UP(List(Left("res".asVariable)), CloseId()))))))))))
+            ),List())))
             ))
             ,
-            BRule(RBAssign(Assign("r".asVariable,"pr".asVariable)), List(
+            PrintGoal("Second branch",
+            BRule(RBAssign(Assign("r".asVariable,"rp".asVariable)), List(
+            BRule(RBAssign(Assign("t".asVariable,"0".asTerm)), List(
             BRule(RBInv(
-            Inv("consts".asVariable, "pr>0 & g>0".asFormula, duh, duh,
-            Ghost("y".asVariable,"-1/2*pr*(v-(g/pr)^(1/2))".asTerm,True,"0".asTerm, duh, duh,
-            Inv("ghostInv".asVariable, "(y^2*(v+(g/pr)^(1/2))=1)".asFormula, duh, duh,
+            Inv("consts".asVariable, "rp>0 & g>0".asFormula, duh, duh,
+            Ghost("y".asVariable,"-1/2*rp*(v-(g/rp)^(1/2))".asTerm,True,"0".asTerm, duh, duh,
+            Inv("ghostInv".asVariable, "(y^2*(v+(g/rp)^(1/2))=1)".asFormula, duh, duh,
             Finally(
-            Show("wild()".asFormula, UP(List(Left("ghostInv".asVariable)), Kaisar.RCF()))))))),List()))))),
+            Show("wild()".asFormula, UP(List(Left("ghostInv".asVariable)), Kaisar.RCF()))))))),List()))))))))),
         Finally(
-          Show(post, UP(List(Left("DCCONST".asVariable), Left("DYN".asVariable)), Auto())))))), List()))))
+          Show(post, UP(List(Left("DCCONST".asVariable), Left("DYN".asVariable)), Auto())))))), List())))))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(safePara)) shouldBe 'proved
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
@@ -849,6 +862,7 @@ assume (vT>?vBound & r=ar)
 Inv pr:(g>0 & pr>0) {}
 Inv vBig:(v >= init(v) - g*t) {}
 Inv vInitBig:(init(v) - g*T > -(g/pr)^(1/2)) {}
+TODO: Nicer handling of dC
 finally have tBound:(init(v) - g*t >= init(v) - g*T)
 using const by R
 have trans:(\forall w x y z (w>=x -> x>=y -> y>z -> w>z)) by R
