@@ -243,7 +243,14 @@ object Kaisar {
       }))
     }
     def hasAssm(ident:String):Boolean = gmap.contains(Variable(ident))
-    def getAssm(ident:String, ante:immutable.IndexedSeq[Formula]):Formula = ante(gmap(Variable(ident)).checkAnte.index0)
+    def getAssm(ident:String, ante:immutable.IndexedSeq[Formula]):Formula =
+      try {
+        ante(gmap(Variable(ident)).checkAnte.index0)
+      } catch {
+        case e: IndexOutOfBoundsException =>
+          val 2 = 1 + 1
+          ???
+      }
     def getDef(ident:String):Expression = {
       if(defmap.contains(ident)) {defmap(ident)}
       else if (ident.last == '_' && defmap.contains(ident.dropRight(1))) {
@@ -660,24 +667,26 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
             andR(1) <(DebuggingTactics.debug("left", doPrint = true) & e1, DebuggingTactics.debug("right", doPrint = true) & e2)
         }
       }
-      def indCase(fmlPres:List[(Formula,SP)], done:immutable.IndexedSeq[Formula] = immutable.IndexedSeq()):BelleExpr = {
+      def indCase(fmlPres:List[(Variable,(Formula,SP))], c:Context, done:immutable.IndexedSeq[Formula] = immutable.IndexedSeq()):BelleExpr = {
         fmlPres match {
           case Nil => ???
-          case (fml, inv:SP)::Nil =>
+          case (x,(fml, inv:SP))::Nil =>
             val invSeq = Sequent(anteConst ++ done ++ immutable.IndexedSeq(fml), immutable.IndexedSeq(Box(a,fml)))
+            val cc = c.add(x, AntePos(invSeq.ante.length-1))
             println("Ind case useat base hiding " + (invs.length - (done.length + 1)) + ": " + invSeq)
             val e = hideL('Llast)*(invs.length - (done.length + 1))
-            val tail = eval(inv, hh, c, Provable.startProof(invSeq))
+            val tail = eval(inv, hh, cc, Provable.startProof(invSeq))
             assert(tail.isProved, "Failed to prove first inductive case subgoal " + fml + " in subproof " + inv + ", left behind provable " + tail.prettyString)
             DebuggingTactics.debug("preHide icubh", doPrint = true) & e & DebuggingTactics.debug("postHide IND0", doPrint = true) & useAt(NoProofTermProvable(tail), PosInExpr(Nil))(1)
-          case (fml, pre:SP)::fps =>
+          case (x, (fml,pre:SP))::fps =>
             val invSeq = Sequent(anteConst ++ done ++ immutable.IndexedSeq(fml), immutable.IndexedSeq(Box(a,fml)))
+            val cc = c.add(x, AntePos(invSeq.ante.length-1))
             println("Ind case useat inductive hiding " + (invs.length - done.length) + ": " + invSeq)
             val hide = hideL('Llast)*(invs.length - (done.length + 1))
-            val tail = NoProofTermProvable(eval(pre, hh, c, Provable.startProof(invSeq)))
+            val tail = NoProofTermProvable(eval(pre, hh, cc, Provable.startProof(invSeq)))
             assert(tail.isProved, "Failed to prove additional inductive case subgoal " + fml + " in subproof " + pre + ", left behind provable " + tail.prettyString)
-            val e1 = DebuggingTactics.debug("preHide", doPrint = true) &  hide & DebuggingTactics.debug("postINDN", doPrint = true)& useAt(tail, PosInExpr(Nil))(1)
-            val e2 = indCase(fps, done ++ immutable.IndexedSeq(fml))
+            val e1 = DebuggingTactics.debug("preHide", doPrint = true) &  hide & DebuggingTactics.debug("postINDN", doPrint = true) & useAt(tail, PosInExpr(Nil))(1)
+            val e2 = indCase(fps, cc, done ++ immutable.IndexedSeq(fml))
             boxAnd(1) & andR(1) <(e1, e2)
         }
       }
@@ -701,7 +710,7 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
           & baseCase(baseFmls.zip(pres)), DebuggingTactics.debug("use case", doPrint = true) &  nil,
             DebuggingTactics.debug("preductive case", doPrint = true) &
           unpack & DebuggingTactics.debug("inductive case", doPrint = true)
-          & indCase(indFmls.zip(invs)))
+          & indCase(vars.zip(indFmls.zip(invs)),c))
       val pr:Provable = interpret(e, ggg)
       val pr1 = rotAnte(pr)
       //val pr1 = pr

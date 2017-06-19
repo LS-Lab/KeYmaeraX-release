@@ -797,18 +797,18 @@ show (Jy > 0) using assms Jy by auto
   private val dc = "x>= 0 & v < 0".asFormula
   private val const = "g > 0 & 0 < ra &  ra < rp & T >= 0".asFormula
   private val dyn = "m < -(g/rp)^(1/2) & -(g/rp)^(1/2) < v ".asFormula
-  private val dynInv = "m < -(g/rp)^(1/2) & -(g/rp)^(1/2) < v & v >= init(v)".asFormula
+  private val dynInv = "-(g/rp)^(1/2) < v".asFormula
   private val pre = And("r=ra".asFormula, And(And(dc, const), dyn))
   private val ctrl = "{{?(r=ra & v-g*T > -(g/rp)^(1/2));} ++ {r:=rp;}}".asProgram
   private val plant = "t:=0;{x'=v,v'=r*v^2-g, t'=1 & x>=0 & v<0 & t<=T}".asProgram
-  private val post = "x=0 -> v<=m".asFormula
+  private val post = "x=0 -> v>=m".asFormula
   private val safePara = Imply(pre, Box(Loop(Compose(ctrl, plant)), post))
-
+//  & v >= init(v)
   "POPL'18 3" should "prove" in {
     withMathematica(qeTool => {
       val time = System.currentTimeMillis()
       val sp:SP =
-        PrintGoal("blah",
+      //  PrintGoal("blah",
         State("init",
         BRule(RBAssume("assms".asVariable,pre), List(
         BRule(RBInv(Inv("DCCONST".asVariable, And(dc,const), duh, duh,
@@ -832,21 +832,25 @@ show (Jy > 0) using assms Jy by auto
                 Have("trans".asVariable, "\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula, duh,
                 Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable), "v".asTerm), "loop(v)-g*t".asTerm), "loop(v)-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("vBig".asExpr)), FPat("tBound".asExpr)), FPat("vInitBig".asExpr)),
                 //TODO: Show needs some more stuff about v>=v0 and m < equilib
-                  Show("wild()".asFormula, UP(List(Left("res".asVariable)), CloseId()))))))))))
+                  PrintGoal("Almost done goal one ",
+                  Show("wild()".asFormula, UP(List(Left("res".asVariable),Left("vBig".asVariable), Left("DYN".asVariable), Left("DCCONST".asVariable)), Auto())))))))))))
             ),List())))
             ))
             ,
-            PrintGoal("Second branch",
+            //PrintGoal("Second branch",
             BRule(RBAssign(Assign("r".asVariable,"rp".asVariable)), List(
             BRule(RBAssign(Assign("t".asVariable,"0".asTerm)), List(
             BRule(RBInv(
             Inv("consts".asVariable, "rp>0 & g>0".asFormula, duh, duh,
-            Ghost("y".asVariable,"-1/2*rp*(v-(g/rp)^(1/2))".asTerm,True,"0".asTerm, duh, duh,
+            Ghost("y".asVariable,"-1/2*rp*(v-(g/rp)^(1/2))*y".asTerm,True,"(v+(g/rp)^(1/2))^(-1/2)".asTerm, duh, duh,
+            Inv("vBig".asVariable, "v >= loop(v) - g*t".asFormula, duh, duh,
             Inv("ghostInv".asVariable, "(y^2*(v+(g/rp)^(1/2))=1)".asFormula, duh, duh,
             Finally(
-            Show("wild()".asFormula, UP(List(Left("ghostInv".asVariable)), Kaisar.RCF()))))))),List()))))))))),
+              Show("wild()".asFormula, UP(List(Left("ghostInv".asVariable),Left("vBig".asVariable), Left("DYN".asVariable), Left("DCCONST".asVariable)), Kaisar.RCF())))))))),List())))))))),
         Finally(
-          Show(post, UP(List(Left("DCCONST".asVariable), Left("DYN".asVariable)), Auto())))))), List())))))
+          PrintGoal("About to conclude",
+            //TODO: Badness Left("DCCONST".asVariable), Left("DYN".asVariable)
+            Show(post, UP(List(), Auto()))))))), List()))))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(safePara)) shouldBe 'proved
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
