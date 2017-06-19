@@ -1,3 +1,5 @@
+/** Sequent proof structured into sections according to branches in the proof (expensive!) */
+
 /** Makes a node that fetches its sequent lazily */
 makeLazyNode = function(http, userId, proofId, node) {
   node.getSequent = function() {
@@ -57,7 +59,14 @@ angular.module('keymaerax.services').factory('Agenda', function() {
          return { sectionIdx: -1, pathStepIdx: -1 };
        },
        /** Returns the index of the section where any proofTreeNode's child is last (child is unique). */
-       childSectionIndex: function(itemId, proofTreeNode) { return 0; },
+       childSectionIndex: function(itemId, proofTreeNode) {
+         var agendaItem = this.itemsMap[itemId];
+         for (var i = 0; i < agendaItem.deduction.sections.length; i++) {
+           var section = agendaItem.deduction.sections[i];
+           if (proofTreeNode.children.indexOf(section.path[section.path.length - 1]) >= 0) return i;
+         }
+         return -1;
+       },
 
        /**
         * Updates the specified section by adding the proof tree node. If the node has more than 1 child, a new section
@@ -66,10 +75,42 @@ angular.module('keymaerax.services').factory('Agenda', function() {
         * @param sectionIdx The section where to add the proof node.
         */
        updateSection: function(proofTree, proofTreeNode, agendaItem, sectionIdx) {
-         var section = agendaItem.deduction.sections[sectionIdx];
-         if (section.path.indexOf(proofTreeNode.id) < 0) {
-           proofTreeNode.getSequent = function() { return proofTreeNode.sequent; };
-           section.path.push(proofTreeNode.id);
+         // only update if node not added previously
+         if (sectionIdx+1 >= agendaItem.deduction.sections.length || agendaItem.deduction.sections[sectionIdx+1].path.indexOf(proofTreeNode.id) < 0) {
+           var section = agendaItem.deduction.sections[sectionIdx];
+           var sectionEnd = section.path[section.path.length-1];
+           if (proofTreeNode.children != null && proofTreeNode.children.length > 1) {
+             if (sectionIdx+1 >= agendaItem.deduction.sections.length || agendaItem.deduction.sections[sectionIdx+1].path[0] !== null) {
+               // start new section with parent, parent section is complete if parent is root
+               agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: proofTreeNode.parent === null});
+             } // else: parent already has its own section, see fetchBranchRoot
+             // in any case: child's section is loaded completely if it's ending in one of the children of the proof tree node
+             section.isComplete = proofTreeNode.children.indexOf(sectionEnd) >= 0;
+           } else {
+             // parent has exactly 1 child, append parent to child's section
+             if (sectionIdx === -1) {
+               //@todo client error message
+//               showClientErrorMessage($uibModal, 'Expected a unique path section ending in a child of ' + proofTreeNode.id + ', but agenda item ' + agendaItem.id +
+//                 ' has ' + agendaItem.sections + ' as path sections');
+             } else if (proofTreeNode.parent !== null) {
+               section.path.push(proofTreeNode.id);
+               var parentCandidate =
+                 (sectionIdx+1 < agendaItem.deduction.sections.length
+                 ? proofTree.nodesMap[agendaItem.deduction.sections[sectionIdx+1].path[0]]
+                 : undefined);
+               section.isComplete =
+                 parentCandidate !== undefined && parentCandidate.children != null && parentCandidate.children.indexOf(proofTreeNode.id) >= 0;
+             } else {
+               if (sectionIdx+1 < agendaItem.deduction.sections.length) {
+                //@todo client error message
+//                 showClientErrorMessage($uibModal, 'Received proof tree root, which can only be added to last section, but ' + sectionIdx +
+//                   ' is not last section in ' + agendaItem.deduction.sections);
+               } else {
+                 agendaItem.deduction.sections.splice(sectionIdx+1, 0, {path: [proofTreeNode.id], isCollapsed: false, isComplete: true});
+                 section.isComplete = proofTreeNode.children != null && proofTreeNode.children.indexOf(sectionEnd) >= 0;
+               }
+             }
+           }
          }
        }
      }
@@ -213,12 +254,6 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
         // refresh tactic
         theTactic.fetch(userId, proofId);
       }).then(onPruned);
-    },
-
-    /** Clears all proof data (at proof start). */
-    clear: function() {
-      this.proofTree = new ProofTree();
-      this.agenda = new Agenda();
     },
 
     /** Fetches the agenda from the server */

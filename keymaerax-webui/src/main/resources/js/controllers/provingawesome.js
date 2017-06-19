@@ -7,6 +7,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
 
   $scope.userId = sessionService.getUser();
   $scope.proofId = $routeParams.proofId;
+  sequentProofData.clear(); // @note we load a new proof, so clear agenda and proof tree
 
   $scope.intro.introOptions = {
     steps: [
