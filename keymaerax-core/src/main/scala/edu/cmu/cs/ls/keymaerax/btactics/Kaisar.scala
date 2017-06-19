@@ -714,9 +714,11 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
       val pr:Provable = interpret(e, ggg)
       val pr1 = rotAnte(pr)
       //val pr1 = pr
-      println("Done first step of interpreting thing: " + pr1.prettyString)
+      val killAnds = if(invs.length <= 1) TactixLibrary.nil else (andL('Llast)*(invs.length-1))
+      val pr2 = interpret(killAnds,pr1)
+      println("Done first step of interpreting thing: " + pr2.prettyString)
       // polyK(pr, invSeq.map{case fml => interpret(TactixLibrary.close, Provable.startProof(Sequent(invSeq,immutable.IndexedSeq(fml))))}.toList)
-      eval(lastTail, hh, cc, pr1, nInvs+1)
+      eval(lastTail, hh, cc, pr2, nInvs+1)
     }
     case (firstInv, Box(ODESystem(ode,constraint),post)) if !firstInv.isInstanceOf[Finally]=> {
       val bvs = StaticSemantics(ode).bv.toSet.filter({case _:BaseVariable => true case _ => false}:(Variable=>Boolean))

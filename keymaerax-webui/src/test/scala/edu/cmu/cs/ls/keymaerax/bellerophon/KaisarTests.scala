@@ -849,8 +849,8 @@ show (Jy > 0) using assms Jy by auto
               Show("wild()".asFormula, UP(List(Left("ghostInv".asVariable),Left("vBig".asVariable), Left("DYN".asVariable), Left("DCCONST".asVariable)), Kaisar.RCF())))))))),List())))))))),
         Finally(
           PrintGoal("About to conclude",
-            //TODO: Badness Left("DCCONST".asVariable), Left("DYN".asVariable)
-            Show(post, UP(List(), Auto()))))))), List()))))
+            //TODO: Badness
+            Show(post, UP(List(Left("assms".asVariable), Left("DCCONST".asVariable), Left("DYN".asVariable)), Auto()))))))), List()))))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(safePara)) shouldBe 'proved
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
