@@ -44,7 +44,7 @@ object Kaisar {
   case class RIdent (x:String) extends RuleSpec
   case class RBAssign(hp:Assign) extends RuleSpec
   case class RBConsequence(x:Variable, fml:Formula) extends RuleSpec
-  case class RBCase() extends RuleSpec
+  case class RBCase(pats:List[Expression]) extends RuleSpec
   case class RBAssume(x:Variable,fml:Formula) extends RuleSpec
   case class RBSolve(t:Variable,fmlT:Formula,dc:Variable,fmlDC:Formula,sols:List[(Variable,Formula)]) extends RuleSpec
   case class RBAssignAny(x:Variable)extends RuleSpec
@@ -773,6 +773,7 @@ case class BadBranchingFactorException(had:Int,wanted:Int) extends Exception
 
 def assertBranches(had:Int, wanted:Int):Unit =  {if(had != wanted) throw BadBranchingFactorException(had,wanted)}
 
+
 private def saveVars(pr:Provable, savedVars:Set[Variable], invCurrent:Boolean = true, hide:Boolean = true):(Provable, List[Variable]) = {
   savedVars.foldRight[(Provable,List[(Variable)])]((pr,Nil))({case(v:Variable,(acc,accVs)) =>
     val vv:Variable = TacticHelper.freshNamedSymbol(v,acc.subgoals.head) // was once pr1.conclusion
@@ -809,10 +810,6 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
   val sequent = g.subgoals.head
   val goal = sequent.succ.head
   goal match {
-    case (Box(Compose(a,b),p)) =>
-      eval(brule, sp, h, c, interpret(useAt("[;] compose")(1), g))
-    case (Box(Test(_),p)) =>
-      eval(brule, sp, h, c, interpret(useAt("[?] test")(1), g))
     case _ =>
       (brule, goal) match {
           // TODO: More readable match error
@@ -895,7 +892,7 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           /*val prr:Provable = interpret(cut(Box(a,FG2)) <(DebuggingTactics.debug("DooD " + (G1.length-1), doPrint = true) & hideL(-1)*(G1.length-1) & DebuggingTactics.debug("hmmm", doPrint = true) & monb & ((andL('L))*) & DebuggingTactics.debug("The useat time ", doPrint = true ) & useAt(NoProofTermProvable(pr2), PosInExpr(Nil))(1),
             hideR(1) & boxAnd(1) & andR(1) & DebuggingTactics.debug("stuff", doPrint = true) <( e & useAt("V vacuous")(1) & prop, hideL('Llast)*bvs.toSet.size & useAt(NoProofTermProvable(pr1),PosInExpr(Nil))(1))), pp1)*/
           prr
-        case (RBCase(), Box(Choice(a,b),p)) =>
+        case (RBCase(pat1::pat2::Nil), Box(Choice(a,b),p)) if doesMatch(pat1,a,c) && doesMatch(pat2,a,c) =>
           assertBranches(sp.length, 2)
           val seq1:Sequent = Sequent(sequent.ante, immutable.IndexedSeq(Box(a,p)) ++ sequent.succ.tail)
           val seq2:Sequent = Sequent(sequent.ante, immutable.IndexedSeq(Box(b,p)) ++ sequent.succ.tail)
@@ -903,6 +900,14 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val pr2:Provable = eval(sp(1),h,c,Provable.startProof(seq2))
           // TODO: Not right, need a cut somewhere
           val prr:Provable = interpret(TactixLibrary.choiceb(1) & andR(1), g)
+          prr(pr1,0)(pr2,0)
+        case (RBCase(pat1::pat2::Nil), Box(a,And(p,q))) if doesMatch(pat1,p,c) && doesMatch(pat2,q,c) =>
+          assertBranches(sp.length, 2)
+          val seq1:Sequent = Sequent(sequent.ante, immutable.IndexedSeq(Box(a,p)) ++ sequent.succ.tail)
+          val seq2:Sequent = Sequent(sequent.ante, immutable.IndexedSeq(Box(a,q)) ++ sequent.succ.tail)
+          val pr1:Provable = eval(sp(0),h,c,Provable.startProof(seq1))
+          val pr2:Provable = eval(sp(1),h,c,Provable.startProof(seq2))
+          val prr:Provable = interpret(TactixLibrary.boxAnd(1) & andR(1), g)
           prr(pr1,0)(pr2,0)
         case (RBAssume(x:Variable,fml:Formula),Imply(p,q)) =>
           assertBranches(sp.length, 1)
@@ -927,7 +932,13 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
         case (RDAssert(x:Variable,fml:Formula), _) => ???
         case (RDSolve(t:Variable,fmlT:Formula,dc:Variable,fmlDC:Formula,sols:List[(Variable,Formula)]), _) => ???
         case (RDAssignAny(x:Variable, xVal:Term), _)  => ???
-
+        case (_, Box(Compose(a,b),p)) =>
+          eval(brule, sp, h, c, interpret(useAt("[;] compose")(1), g))
+        case (_, Box(Test(_),p)) =>
+          eval(brule, sp, h, c, interpret(useAt("[?] test")(1), g))
+        case (RBCase(pats), fml) =>
+          println("Patterns " + pats + " did not match " + fml + " in case")
+          ???
       }
   }
 }
