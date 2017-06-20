@@ -957,6 +957,31 @@ show (Jy > 0) using assms Jy by auto
     })
   }
 
+  /*#Example 3
+assume assms:"r = ar & ?dc & ?const & ?dyn"
+state init
+inv DCCONST:(?dc & ?const) {}
+inv DYN:(?dyn) {
+Inv => {
+case ?(_) =>
+assume (vT>?vBound & r=ar)
+Inv pr:(g>0 & pr>0) {}
+Inv vBig:(v >= init(v) - g*t) {}
+Inv vInitBig:(init(v) - g*T > -(g/pr)^(1/2)) {}
+TODO: Nicer handling of dC
+finally have tBound:(init(v) - g*t >= init(v) - g*T)
+using const by R
+have trans:(\forall w x y z (w>=x -> x>=y -> y>z -> w>z)) by R
+note res = trans v ?vt ?vT ?vBound v gt gT
+show _ using res by id
+|r := pr =>
+assign r := pr
+Inv consts:(pr>0&g>0)
+Ghost y=0, y'=(-1/2*pr*(v-(g/pr)^(1/2)))
+Inv ghostInv:(y^2*(v+(g/pr)^(1/2))=1)
+finally show _ using ghostInv by R
+}}} finally show (x=0 -> v > m) using DCCONST DYN by auto
+  * */
   "POPL'18 3d" should "prove" in {
     withMathematica(qeTool => {
       val time = System.currentTimeMillis()
@@ -1008,30 +1033,188 @@ show (Jy > 0) using assms Jy by auto
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }
-  /*#Example 3
-assume assms:"r = ar & ?dc & ?const & ?dyn"
-state init
-inv DCCONST:(?dc & ?const) {}
-inv DYN:(?dyn) {
-Inv => {
-case ?(_) =>
-assume (vT>?vBound & r=ar)
-Inv pr:(g>0 & pr>0) {}
-Inv vBig:(v >= init(v) - g*t) {}
-Inv vInitBig:(init(v) - g*T > -(g/pr)^(1/2)) {}
-TODO: Nicer handling of dC
-finally have tBound:(init(v) - g*t >= init(v) - g*T)
-using const by R
-have trans:(\forall w x y z (w>=x -> x>=y -> y>z -> w>z)) by R
-note res = trans v ?vt ?vT ?vBound v gt gT
-show _ using res by id
-|r := pr =>
-assign r := pr
-Inv consts:(pr>0&g>0)
-Ghost y=0, y'=(-1/2*pr*(v-(g/pr)^(1/2)))
-Inv ghostInv:(y^2*(v+(g/pr)^(1/2))=1)
-finally show _ using ghostInv by R
-}}} finally show (x=0 -> v > m) using DCCONST DYN by auto
-  * */
+
+  // Kaisar port of RSS robotics case study
+  "RSS Theorem 1" should "prove" in {
+    withMathematica(qeTool => {
+      // Theorem 1
+      val b ="b()".asTerm
+      val A =  "A()".asTerm
+      val ep = "ep()".asTerm
+      val v = "v".asVariable
+
+      def stopDist(e: Term): Term = Divide(Power(e, Number(2)), Times(Number(2), b))
+      def accelComp(e: Term): Term = Times(Plus(Divide(A, b), Number(1)), Plus(Times(Divide(A, Number(2)), Power(ep, Number(2))), Times(ep, e)))
+      def admissibleSeparation(e: Term): Term = Plus(stopDist(e), accelComp(e))
+
+      val isWellformedDir = "dx^2 + dy^2 = 1".asFormula
+
+      val bounds = And(GreaterEqual(A, Number(0)), And(Greater(b, Number(0)), Greater(ep, Number(0))))
+      val initialState = And("v=0".asFormula, And("(x-xo)^2 - (y-yo)^2 > 0".asFormula, isWellformedDir))
+      val assumptions = And(bounds, initialState)
+      val loopinv = And("v >= 0".asFormula, And(isWellformedDir, Or(Greater("abs(x-xo)".asTerm, stopDist(v)), Greater("abs(y-yo)".asTerm, stopDist(v)))))
+      val accelTest: Program = Test(Or(Greater("abs(x-xo)".asTerm, admissibleSeparation(v)), Greater("abs(y-yo)".asTerm, admissibleSeparation(v))))
+      val acclCtrl: Program = Compose(
+        """a := A;
+           w := *; ?-W<=w & w<=W;       /* choose steering */
+           r := *;
+           xo := *; yo := *;            /* measure closest obstacle on the curve */
+           /* admissible curve */
+           ?r!=0 & r*w = v;""".asProgram,accelTest)
+      val ctrl:Program = Compose(Choice(
+        "a:=-b;".asProgram,Choice("?v=0; a:=0; w:=0;".asProgram,acclCtrl)),
+        "t:=0;".asProgram)
+      val plant:Program =
+      """ { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
+          dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
+          t' = 1 & t <= ep & v >= 0
+          }""".asProgram
+      val theorem1:Formula = Imply(assumptions, Box(Loop(Compose(ctrl,plant)), "(x-xo)^2 + (y-yo)^2 > 0".asFormula))
+/*assumptions() ->
+  [{{{/* brake on current curve or remain stopped */
+          { a := -b; }
+          ++
+          { ?v = 0; a := 0; w := 0; }
+      	  ++
+          /* or choose a new safe curve */
+          { a := A;
+            w := *; ?-W<=w & w<=W;       /* choose steering */
+            r := *;
+            xo := *; yo := *;            /* measure closest obstacle on the curve */
+
+            /* admissible curve */
+            ?r!=0 & r*w = v;
+
+            /* use that curve, if it is a safe one (admissible velocities) */
+            ? abs(x-xo) > admissibleSeparation(v)
+            | abs(y-yo) > admissibleSeparation(v);
+          }
+        };t := 0;}
+      /* dynamics */
+      { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
+        dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
+        t' = 1 & t <= ep & v >= 0}}*@invariant(loopinv())
+  ](x - xo)^2 + (y - yo)^2 > 0*/
+      /**       assign a := A;
+        *       assign w:= *; assume wGood:(-W<=w & w <=W)
+        *       assign r:=*; assign xo:=*; assign yo:=*;
+        *       assume goodCurve:(r!=0 & r*w =v)
+        *       assume safeCurve:((abs(x-xo) > admitSepV
+        *              |(abs(y-yo) > admitSepV))
+        *       Inv tPos:(t>=0)  {}
+        *       Inv wfDir:(WFDIR_()) {}
+        *       Inv vBound:(v = loop(v) + A()*t)
+        *       Inv xBound:(-t * (v - A()/2*t) <= x - loop(x) & x - loop(x) <= t * (v - A()/2*t))
+        *       Inv yBound:(-t * (v - A()/2*t) <= y - loop(y) & y - loop(y) <= t * (v - A()/2*t))*/
+      val sp:SP =
+        FLet("WFDIR", "t", PredicationalOf(Function("t", None, Bool, Bool), isWellformedDir),
+        FLet("SD", "t", FuncOf(Function("t", None, Real, Real), stopDist("v".asVariable)),
+        FLet("ASEP", "t", FuncOf(Function("t", None, Real, Real), Plus(stopDist("v".asVariable), accelComp("v".asVariable))),
+        BRule(RBAssume("assms".asVariable, "wild()".asFormula), List(
+        BRule(RBInv(Inv("J".asVariable, "(v >= 0 & WFDIR() & (abs(x-xo) > SD() | abs(y-yo) > SD() ))".asFormula, duh,
+        State("loop",
+        BRule(RBCase(List("a := -b;".asProgram, "{wild} ++ {wild}".asProgram)), List(
+          // braking
+          BRule(RBAssign(Assign("a".asVariable,"-b".asTerm)),List(
+          BRule(RBAssign(Assign("t".asVariable,"0".asTerm)),List(
+          PrintGoal("Begin first branch",
+          BRule(RBInv(
+            Inv("tPos".asVariable,  "t>=0".asFormula, duh, duh,
+            Inv("wfDir".asVariable, "WFDIR()".asFormula, duh, duh,
+            Inv("vBound".asVariable, "v = loop(v)-b()*t".asFormula, duh, duh,
+            Inv("xBound".asVariable, "-t * (v + b()/2*t) <= x - loop(x) & x - loop(x) <= t * (v + b()/2*t)".asFormula, duh, duh,
+            Inv("yBound".asVariable, "-t * (v + b()/2*t) <= y - loop(y) & y - loop(y) <= t * (v + b()/2*t)".asFormula, duh, duh,
+            Finally(PrintGoal("End first branch",
+              Show("wild()".asFormula, UP(List(), Kaisar.RCF())))))))))
+          ), List()))
+          ))
+          ))
+          , // stopped + accel
+          PrintGoal("Begin second branch",
+          BRule(RBCase(List("?v=0; a:=0; w:=0;t:=0;".asProgram, "a := A;{wild}".asProgram)),List(
+            // stopped
+            BRule(RBAssume("stopped".asVariable, "v=0".asFormula),List(
+            BRule(RBAssign(Assign("a".asVariable,"0".asTerm)),List(
+            BRule(RBAssign(Assign("w".asVariable,"0".asTerm)),List(
+            BRule(RBAssign(Assign("t".asVariable,"0".asTerm)),List(
+            BRule(RBInv(
+            Inv("tPos".asVariable,  "t>=0".asFormula, duh, duh,
+            Inv("wfDir".asVariable, "WFDIR()".asFormula, duh, duh,
+            Inv("vEq".asVariable, "v = loop(v)".asFormula, duh, duh,
+            Inv("xEq".asVariable, "x = loop(x)".asFormula, duh, duh,
+            Inv("yEq".asVariable, "y = loop(y)".asFormula, duh, duh,
+            Finally(
+              PrintGoal("End second branch",
+              Show("wild()".asFormula, UP(List(), Kaisar.RCF())))))))))),List())))))))))
+            ,
+            PrintGoal("Begin third branch",
+            BRule(RBAssign(Assign("a".asVariable,"A".asTerm)),List(
+            BRule(RBAssignAny("w".asVariable), List(
+            BRule(RBAssume("wGood".asVariable, "-W<=w & w<=W".asFormula), List(
+            BRule(RBAssignAny("r".asVariable), List(
+            BRule(RBAssignAny("xo".asVariable), List(
+            BRule(RBAssignAny("yo".asVariable), List(
+            BRule(RBAssume("goodCurve".asVariable, "r!=0 & r*w=v".asFormula),List(
+            BRule(RBAssume("safeCurve".asVariable, "(abs(x-xo) > ASEP())|(abs(y-yo)>ASEP())".asFormula),List(
+            BRule(RBInv(
+            Inv("tPos".asVariable,  "t>=0".asFormula, duh, duh,
+            Inv("wfDir".asVariable, "WFDIR()".asFormula, duh, duh,
+            Inv("vBound".asVariable, "v = loop(v) + A()*t".asFormula, duh, duh,
+            Inv("xBound".asVariable, "-t * (v - A()/2*t) <= x - loop(x) & x - loop(x) <= t * (v - A()/2*t)".asFormula, duh, duh,
+            Inv("yBound".asVariable, "-t * (v - A()/2*t) <= y - loop(y) & y - loop(y) <= t * (v - A()/2*t)".asFormula, duh, duh,
+            Finally(
+              PrintGoal("End third goal", Show("wild()".asFormula, UP(List(), Kaisar.RCF())))))))))),List())))))))))))))))))))))))),
+          Finally(Show("wild()".asFormula, UP(List(),Kaisar.RCF()))))),
+          List()))))))
+      val time = System.currentTimeMillis()
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(theorem1)) shouldBe 'proved
+      println("Time taken (millis): " + (System.currentTimeMillis() - time))
+      /*
+      * assume assms:"assumptions_()"
+      * Inv J:(v >= 0 & WFDir_() & (abs(x-xo) > SD_() | abs(y-yo) > SD_() )) {
+      *   Ind =>
+      *   state loop
+      *   // TODO: Support n-ary case
+      *   Case (a := -b) => {
+      *     assign a:= -b;
+      *     assign t:= 0;
+      *     // Braking case
+      *     Inv tPos:(t>=0)  {}
+      *     Inv wfDir:(WDFIR_()) {}
+      *     Inv vBound:(v = loop(v)-b()*t) {}
+      *     // TODO: Too sequent-level?
+      *     Inv xBound:(-t * (v + b()/2*t) <= x - loop(x) & x - loop(x) <= t * (v + b()/2*t))
+      *     Inv yBound:(-t * (v + b()/2*t) <= y - loop(y) & y - loop(y) <= t * (v + b()/2*t))
+      *     finally show (_) by QE
+      *
+      *   } Case (_ ++ _) => {
+      *     Case (?v=0; a:=0; w:=0;) {
+      *       assume stopped:(?v=0)
+      *       assign a:=0
+      *       assign w:=0
+      *       assign t:=0
+      *       Inv tPos:(t>=0)  {}
+      *       Inv wfDir:(WDFIR_()) {}
+      *       Inv vEq:(v = loop(v))
+      *       Inv xEq:(x = loop(x))
+      *       Inv yEq:(y = loop(y))
+      *       finally show (_) by QE
+      *     }
+      *       Case(a := A;_) {
+      *       assign a := A;
+      *       assign w:= *; assume wGood:(-W<=w & w <=W)
+      *       assign r:=*; assign xo:=*; assign yo:=*;
+      *       assume goodCurve:(r!=0 & r*w =v)
+      *       assume safeCurve:((abs(x-xo) > admitSepV
+      *              |(abs(y-yo) > admitSepV))
+      *       Inv tPos:(t>=0)  {}
+      *       Inv wfDir:(WDFIR_()) {}
+      *       Inv vBound:(v = loop(v) + A()*t)
+      *       Inv xBound:(-t * (v - A()/2*t) <= x - loop(x) & x - loop(x) <= t * (v - A()/2*t))
+      *       Inv yBound:(-t * (v - A()/2*t) <= y - loop(y) & y - loop(y) <= t * (v - A()/2*t))
+      *       finally show (_) by QE}}
+      * show ((x-xo)^2 + (y-yo)^2 > 0) using J by auto
+      * */
+})}
 
 }
