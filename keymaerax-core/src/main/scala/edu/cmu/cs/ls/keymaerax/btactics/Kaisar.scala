@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{existsR, _}
+import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 
@@ -61,6 +62,7 @@ object Kaisar {
   case class Simp() extends Method
   case class Auto() extends Method
   case class RCF() extends Method
+  case class SmartQE() extends Method
   case class CloseId() extends Method
 
   case class UP(use:List[Either[Expression,FP]], method:Method)
@@ -269,7 +271,17 @@ object Kaisar {
                   case Some(atTime) => Right(FuncOf(Function(atTime, domain = Real, sort = Real), args.asInstanceOf[Term]))
                   case None => Right(args.asInstanceOf[Term])
                 }
-
+              case _ =>
+                Left(None)
+            }
+          }
+          override def preF(p:PosInExpr, f:Formula): Either[Option[StopTraversal], Formula] = {
+            f match {
+              case PredicationalOf(Function(fname,_,_,_,_),args) if fname == nom =>
+                at match {
+                  case Some(atTime) => Right(PredicationalOf(Function(atTime, domain = Bool, sort = Bool), args.asInstanceOf[Formula]))
+                  case None => Right(args.asInstanceOf[Formula])
+                }
               case _ =>
                 Left(None)
             }
@@ -312,6 +324,7 @@ object Kaisar {
         case Simp() => SimplifierV3.fullSimpTac()
         case Auto() => TactixLibrary.master()
         case RCF() => TactixLibrary.QE()
+        case SmartQE() => ArithmeticSpeculativeSimplification.speculativeQE
         case CloseId() => TactixLibrary.closeId
       }
     interpret(e, pr)
@@ -414,6 +427,14 @@ object Kaisar {
             Right(c.getDef(fname).asInstanceOf[Formula])
           case UnitPredicational(fname, arg) if c.hasDef(fname) =>
             Right(c.getDef(fname).asInstanceOf[Formula])
+          case PredOf(Function(fname,_,_,_,_), arg) if c.hasFunDef(fname)=>
+            Right(expand(c.getFunDef(fname, at).asInstanceOf[Formula],h,c,at))
+          case PredicationalOf(Function(fname,_,_,_,_), arg) if c.hasFunDef(fname) =>
+            Right(expand(c.getFunDef(fname, at).asInstanceOf[Formula],h,c,at))
+          case UnitPredicational(fname, arg) if c.hasFunDef(fname) =>
+            Right(expand(c.getFunDef(fname, at).asInstanceOf[Formula],h,c,at))
+          case PredicationalOf(Function(fname,_,_,_,_), arg) if h.hasTimeStep(fname) =>
+            Right(expand(arg,h,c,Some(fname)))
           case _ => Left(None)
         }
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] =
@@ -899,7 +920,7 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           /*val prr:Provable = interpret(cut(Box(a,FG2)) <(DebuggingTactics.debug("DooD " + (G1.length-1), doPrint = true) & hideL(-1)*(G1.length-1) & DebuggingTactics.debug("hmmm", doPrint = true) & monb & ((andL('L))*) & DebuggingTactics.debug("The useat time ", doPrint = true ) & useAt(NoProofTermProvable(pr2), PosInExpr(Nil))(1),
             hideR(1) & boxAnd(1) & andR(1) & DebuggingTactics.debug("stuff", doPrint = true) <( e & useAt("V vacuous")(1) & prop, hideL('Llast)*bvs.toSet.size & useAt(NoProofTermProvable(pr1),PosInExpr(Nil))(1))), pp1)*/
           prr
-        case (RBCase(pat1::pat2::Nil), Box(Choice(a,b),p)) if doesMatch(pat1,a,c) && doesMatch(pat2,a,c) =>
+        case (RBCase(pat1::pat2::Nil), Box(Choice(a,b),p)) if doesMatch(pat1,a,c) && doesMatch(pat2,b,c) =>
           assertBranches(sp.length, 2)
           val seq1:Sequent = Sequent(sequent.ante, immutable.IndexedSeq(Box(a,p)) ++ sequent.succ.tail)
           val seq2:Sequent = Sequent(sequent.ante, immutable.IndexedSeq(Box(b,p)) ++ sequent.succ.tail)
@@ -944,6 +965,16 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
         case (_, Box(Test(_),p)) =>
           eval(brule, sp, h, c, interpret(useAt("[?] test")(1), g))
         case (RBCase(pats), fml) =>
+          fml match {
+            case Box(Choice(a,b), p) =>
+              //if doesMatch(pat1,a,c)
+              if (pats.nonEmpty && !doesMatch(pats.head,a,c)) {
+                println("In choice: pattern " + pats.head + " did not match program " + a)
+              }
+              if (pats.length > 1 && !doesMatch(pats.tail.head,b,c)) {
+                println("In choice: pattern " + pats.tail.head + " did not match program " + b)
+              }
+          }
           println("Patterns " + pats + " did not match " + fml + " in case")
           ???
       }
@@ -959,7 +990,9 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
       val expanded = expand(phi,h,c, None)
       val cc = pmatch(expanded, goal,c)
       val ccc = c.concat(cc)
-      eval(proof, h, ccc, g)
+      val pr =eval(proof, h, ccc, g)
+      assert(pr.isProved, "Shown formula not proved: " + phi + " not proved by " + pr.prettyString)
+      pr
     case SLet(pat:Expression, e:Expression, tail:SP) =>
       //TODO: Expand e?
       val cc = pmatch(expand(pat,h,c,None), expand(e,h,c, None),c)
@@ -1250,6 +1283,11 @@ def pmatch(pat:Expression, e:Expression, c:Context):Context = {
         case(e1:DifferentialFormula, e2:DifferentialFormula) => pmatch(e1.child,e2.child,c)
         case(e1:Loop, e2:Loop) => pmatch(e1.child,e2.child,c)
         case(e1:Dual, e2:Dual) => pmatch(e1.child,e2.child,c)
+        case(e1:FuncOf, e2:FuncOf) =>
+          if (e1.func == e2.func) { pmatch(e1.child, e2.child, c)}
+          else {throw PatternMatchError("Functions did not match in pattern match: " + e1.func + " vs. " + e2.func)}
+        //case(e1:Pair, e2:Pair) =>
+//          pmatch(e1.left,e2.left,c).concat(pmatch(e1.right,e2.right,c))
       }
   }
 }

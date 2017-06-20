@@ -1055,19 +1055,19 @@ finally show _ using ghostInv by R
       val loopinv = And("v >= 0".asFormula, And(isWellformedDir, Or(Greater("abs(x-xo)".asTerm, stopDist(v)), Greater("abs(y-yo)".asTerm, stopDist(v)))))
       val accelTest: Program = Test(Or(Greater("abs(x-xo)".asTerm, admissibleSeparation(v)), Greater("abs(y-yo)".asTerm, admissibleSeparation(v))))
       val acclCtrl: Program = Compose(
-        """a := A;
-           w := *; ?-W<=w & w<=W;       /* choose steering */
+        """a := A();
+           w := *; ?-W()<=w & w<=W();       /* choose steering */
            r := *;
            xo := *; yo := *;            /* measure closest obstacle on the curve */
            /* admissible curve */
            ?r!=0 & r*w = v;""".asProgram,accelTest)
       val ctrl:Program = Compose(Choice(
-        "a:=-b;".asProgram,Choice("?v=0; a:=0; w:=0;".asProgram,acclCtrl)),
+        "a:=-b();".asProgram,Choice("?v=0; a:=0; w:=0;".asProgram,acclCtrl)),
         "t:=0;".asProgram)
       val plant:Program =
       """ { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
           dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
-          t' = 1 & t <= ep & v >= 0
+          t' = 1 & t <= ep() & v >= 0
           }""".asProgram
       val theorem1:Formula = Imply(assumptions, Box(Loop(Compose(ctrl,plant)), "(x-xo)^2 + (y-yo)^2 > 0".asFormula))
 /*assumptions() ->
@@ -1113,25 +1113,26 @@ finally show _ using ghostInv by R
         BRule(RBAssume("assms".asVariable, "wild()".asFormula), List(
         BRule(RBInv(Inv("J".asVariable, "(v >= 0 & WFDIR() & (abs(x-xo) > SD() | abs(y-yo) > SD() ))".asFormula, duh,
         State("loop",
-        BRule(RBCase(List("a := -b;".asProgram, "{wild} ++ {wild}".asProgram)), List(
+        BRule(RBCase(List("a := -b();".asProgram, "{wild} ++ {wild}".asProgram)), List(
           // braking
-          BRule(RBAssign(Assign("a".asVariable,"-b".asTerm)),List(
+          BRule(RBAssign(Assign("a".asVariable,"-b()".asTerm)),List(
           BRule(RBAssign(Assign("t".asVariable,"0".asTerm)),List(
-          PrintGoal("Begin first branch",
+          //PrintGoal("Begin first branch",
           BRule(RBInv(
             Inv("tPos".asVariable,  "t>=0".asFormula, duh, duh,
             Inv("wfDir".asVariable, "WFDIR()".asFormula, duh, duh,
             Inv("vBound".asVariable, "v = loop(v)-b()*t".asFormula, duh, duh,
             Inv("xBound".asVariable, "-t * (v + b()/2*t) <= x - loop(x) & x - loop(x) <= t * (v + b()/2*t)".asFormula, duh, duh,
             Inv("yBound".asVariable, "-t * (v + b()/2*t) <= y - loop(y) & y - loop(y) <= t * (v + b()/2*t)".asFormula, duh, duh,
+            Inv("dC".asVariable, "v >= 0 & t <= ep()".asFormula, duh, duh,
             Finally(PrintGoal("End first branch",
-              Show("wild()".asFormula, UP(List(), Kaisar.RCF())))))))))
-          ), List()))
+              Show("wild()".asFormula, UP(List(), Kaisar.RCF()))))))))))
+          ), List())//)
           ))
           ))
           , // stopped + accel
-          PrintGoal("Begin second branch",
-          BRule(RBCase(List("?v=0; a:=0; w:=0;t:=0;".asProgram, "a := A;{wild}".asProgram)),List(
+          //PrintGoal("Begin second branch",
+          BRule(RBCase(List("?v=0; a:=0; w:=0;".asProgram, "{a := A();{wild}}{wild}".asProgram)),List(
             // stopped
             BRule(RBAssume("stopped".asVariable, "v=0".asFormula),List(
             BRule(RBAssign(Assign("a".asVariable,"0".asTerm)),List(
@@ -1143,27 +1144,33 @@ finally show _ using ghostInv by R
             Inv("vEq".asVariable, "v = loop(v)".asFormula, duh, duh,
             Inv("xEq".asVariable, "x = loop(x)".asFormula, duh, duh,
             Inv("yEq".asVariable, "y = loop(y)".asFormula, duh, duh,
-            Finally(
-              PrintGoal("End second branch",
-              Show("wild()".asFormula, UP(List(), Kaisar.RCF())))))))))),List())))))))))
+            Inv("dC".asVariable, "v >= 0 & t <= ep()".asFormula, duh, duh,
+                Finally(
+              //PrintGoal("End second branch",
+              Show("wild()".asFormula, UP(List(), Kaisar.RCF()))/*)*/)))))))),List())))))))))
             ,
-            PrintGoal("Begin third branch",
-            BRule(RBAssign(Assign("a".asVariable,"A".asTerm)),List(
+            //PrintGoal("Begin third branch",
+            BRule(RBAssign(Assign("a".asVariable,"A()".asTerm)),List(
             BRule(RBAssignAny("w".asVariable), List(
-            BRule(RBAssume("wGood".asVariable, "-W<=w & w<=W".asFormula), List(
+            BRule(RBAssume("wGood".asVariable, "-W()<=w & w<=W()".asFormula), List(
             BRule(RBAssignAny("r".asVariable), List(
             BRule(RBAssignAny("xo".asVariable), List(
             BRule(RBAssignAny("yo".asVariable), List(
             BRule(RBAssume("goodCurve".asVariable, "r!=0 & r*w=v".asFormula),List(
             BRule(RBAssume("safeCurve".asVariable, "(abs(x-xo) > ASEP())|(abs(y-yo)>ASEP())".asFormula),List(
+            BRule(RBAssign(Assign("t".asVariable,"0".asTerm)),List(
             BRule(RBInv(
             Inv("tPos".asVariable,  "t>=0".asFormula, duh, duh,
             Inv("wfDir".asVariable, "WFDIR()".asFormula, duh, duh,
             Inv("vBound".asVariable, "v = loop(v) + A()*t".asFormula, duh, duh,
             Inv("xBound".asVariable, "-t * (v - A()/2*t) <= x - loop(x) & x - loop(x) <= t * (v - A()/2*t)".asFormula, duh, duh,
             Inv("yBound".asVariable, "-t * (v - A()/2*t) <= y - loop(y) & y - loop(y) <= t * (v - A()/2*t)".asFormula, duh, duh,
+            Inv("dC".asVariable, "v >= 0 & t <= ep()".asFormula, duh, duh,
             Finally(
-              PrintGoal("End third goal", Show("wild()".asFormula, UP(List(), Kaisar.RCF())))))))))),List())))))))))))))))))))))))),
+              // transform({`abs(y_0-yo)>v_0^2/(2*b())+(A()/b()+1)*(A()/2*t^2+t*v_0)`}, 'L=={`abs(y_0-yo)>admissibleSeparation(v_0)`});
+              //hideR('R=={`abs(x-xo)>stopDist(v)`});
+
+            PrintGoal("End third goal", Show("wild()".asFormula, UP(List(), Kaisar.RCF()))))))))))),List())))))))))))))))))))/*)*/))/*)*/))),
           Finally(Show("wild()".asFormula, UP(List(),Kaisar.RCF()))))),
           List()))))))
       val time = System.currentTimeMillis()
