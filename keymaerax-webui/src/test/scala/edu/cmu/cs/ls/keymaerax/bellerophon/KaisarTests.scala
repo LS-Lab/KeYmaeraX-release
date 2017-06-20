@@ -619,7 +619,7 @@ show _  using J assms by auto
                       PrintGoal("Finish himm!!!!",
                         //
                         Show("wild()".asFormula, UP(List(Left("J".asVariable), Left("assms".asVariable)), Auto())))))), List())))))
-      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
+        Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
   // x>0&y>0 -> [{x'=-x,y'=x}]y>0
@@ -803,7 +803,10 @@ show (Jy > 0) using assms Jy by auto
   private val plant = "t:=0;{x'=v,v'=r*v^2-g, t'=1 & x>=0 & v<0 & t<=T}".asProgram
   private val post = "x=0 -> v>=m".asFormula
   private val safePara = Imply(pre, Box(Loop(Compose(ctrl, plant)), post))
-//  & v >= init(v)
+  //private val lowPre = And("x <= xmax".asFormula, pre)
+  private val lowPost = "x <= xmax".asFormula
+  private val lowPara = Imply("x <= xmax".asFormula, Imply(pre, Box(Loop(Compose(ctrl, plant)), lowPost)))
+  //  & v >= init(v)
 
   "POPL'18 3a" should "prove" in {
     withMathematica(qeTool => {
@@ -950,6 +953,58 @@ show (Jy > 0) using assms Jy by auto
             //TODO: Badness
             Show(post, UP(List(Left("assms".asVariable), Left("DCCONST".asVariable), Left("DYN".asVariable)), Auto()))))))), List()))))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(safePara)) shouldBe 'proved
+      println("Time taken (millis): " + (System.currentTimeMillis() - time))
+    })
+  }
+
+  "POPL'18 3d" should "prove" in {
+    withMathematica(qeTool => {
+      val time = System.currentTimeMillis()
+      val sp:SP =
+      //  PrintGoal("blah",
+      State("init",
+      BRule(RBAssume("niceAssume".asVariable,"x<=xmax".asFormula), List(
+      BRule(RBAssume("assms".asVariable,pre), List(
+      BRule(RBInv(Inv("DCCONST".asVariable, And(dc,const), duh, duh,
+      Inv("DYN".asVariable, dynInv, duh,
+        // TODO: Add pattern matching
+      State("loop",
+      BRule(RBCase(List("{wild}".asProgram,"{wild}".asProgram)), List(
+      BRule(RBAssume("safe".asVariable, "r=ra & v-g*T > -(g/rp)^(1/2)".asFormula),  List(
+      BRule(RBAssign(Assign("t".asVariable,"0".asTerm)), List(
+      BRule(RBInv(
+      Inv("rp".asVariable, "g>0 & rp>0".asFormula, duh, duh,
+      Inv("vBig".asVariable, "v >= loop(v) - g*t".asFormula, duh, duh,
+      Inv("vInitBig".asVariable, "loop(v)-g*T > -(g/rp)^(1/2)".asFormula, duh, duh,
+      Inv("dc".asVariable, "t <= T".asFormula, duh, duh,
+      Finally(
+      Have("tBound".asVariable, "loop(v) -g*t >= loop(v) - g*T".asFormula, Show("wild()".asFormula,
+        UP(List(Left("rp".asVariable), Left("dc".asVariable)), Kaisar.RCF())
+      ),Have("trans".asVariable, "\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula, duh,
+      Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable), "v".asTerm), "loop(v)-g*t".asTerm), "loop(v)-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("vBig".asExpr)), FPat("tBound".asExpr)), FPat("vInitBig".asExpr)),
+      //PrintGoal("WUST Almost done goal one ",
+        Show("wild()".asFormula, UP(List(Left("res".asVariable),Left("vBig".asVariable), Left("DYN".asVariable), Left("DCCONST".asVariable)), Auto()))/*)*/))))))))
+            ),List())))
+        ))
+        ,
+        //PrintGoal("WUST Second branch",
+        BRule(RBAssign(Assign("r".asVariable,"rp".asVariable)), List(
+        BRule(RBAssign(Assign("t".asVariable,"0".asTerm)), List(
+        BRule(RBInv(
+        Inv("consts".asVariable, "rp>0 & g>0".asFormula, duh, duh,
+        Ghost("y".asVariable,"-1/2*rp*(v-(g/rp)^(1/2))*y".asTerm,True,"(v+(g/rp)^(1/2))^(-1/2)".asTerm, duh, duh,
+        Inv("vBig".asVariable, "v >= loop(v) - g*t".asFormula, duh, duh,
+        Inv("ghostInv".asVariable, "(y^2*(v+(g/rp)^(1/2))=1)".asFormula, duh, duh,
+        Finally(
+          /*PrintGoal("WUST Almost done goal two ",*/
+            Show("wild()".asFormula, UP(List(Left("ghostInv".asVariable),Left("vBig".asVariable), Left("DYN".asVariable), Left("DCCONST".asVariable)), Kaisar.RCF()))/*)*/)))))),List())))))/*)*/))),
+      Inv("xdown".asVariable, "x <= init(x)".asFormula, PrintGoal("idown BC ",
+        duh), /*PrintGoal("WUST idown IS ",*/duh/*)*/,
+      Finally(
+      PrintGoal("WUST About to conclude",
+        // , Left("DYN".asVariable)
+      Show(lowPost, UP(List(Left("niceAssume".asVariable), Left("xdown".asVariable)), Auto())))))))), List()))))))
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(lowPara)) shouldBe 'proved
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
   }

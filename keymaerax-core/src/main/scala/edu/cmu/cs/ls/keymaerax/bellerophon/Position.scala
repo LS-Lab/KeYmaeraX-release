@@ -236,7 +236,8 @@ trait TopSuccPosition extends SuccPosition with TopPosition {
 
 // Pseudo-Constructors
 
-object AntePosition {
+object
+AntePosition {
   def apply(top: AntePos): TopAntePosition = new AntePositionImpl(top, HereP) with TopAntePosition
   def apply(top: AntePos, inExpr: PosInExpr): AntePosition = new AntePositionImpl(top, inExpr)
 

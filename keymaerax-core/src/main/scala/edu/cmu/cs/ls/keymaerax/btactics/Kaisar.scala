@@ -694,13 +694,20 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
 
       //(andL('L)*(Math.max(0, invs.length-1)))
       val unpack:BelleExpr =
-        if (invs.length > 1) { andL('L)*(invs.length-1) }
-        else {
+        if (invs.length > 1) {
+          DebuggingTactics.debug("UPACKING TIMES " + (invs.length - 1), doPrint = true) &
+            andL(AntePosition(1)) &
+            DebuggingTactics.debug("UUPACKING TIMES " + (invs.length - 1), doPrint = true) &
+            andL('Llast) * (invs.length - 2) &
+            DebuggingTactics.debug("UUUPACKING TIMES " + (invs.length - 1), doPrint = true)
+        }
+          else {
           def rot(pr:ProvableSig,p:SuccPosition):ProvableSig = NoProofTermProvable(rotAnte(pr.underlyingProvable))
           // (t: (ProvableSig, SuccPosition) => ProvableSig)
           import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
-          val e =TacticFactory.TacticForNameFactory("ANON").by((pos: ProvableSig, seq: SuccPosition) =>{rot(pos,seq)})
-          e(1) & DebuggingTactics.debug("Rotated the ante for you", doPrint = true)
+          val e = DebuggingTactics.debug("Rottin' " + (invs.length), doPrint = true) &
+            TacticFactory.TacticForNameFactory("ANON").by((pos: ProvableSig, seq: SuccPosition) =>{rot(pos,seq)})(1)
+          e & DebuggingTactics.debug("Rotated the ante for you", doPrint = true)
           //by ((pos: Position, seq: Sequent) =>{???})
           //by (rot:((ProvableSig,SuccPosition) => ProvableSig))
         }
