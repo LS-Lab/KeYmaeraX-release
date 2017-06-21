@@ -184,7 +184,7 @@ del {
 }
 
 /* Mark top-level operator */
-.hlhover > .k4-op:after {
+.k4-has-step.k4-prove-hover > span > .k4-op:after {
   content: "\f085"; /* fontawesome cogs */
   font-family: FontAwesome;
   -webkit-text-stroke: 1px black;
@@ -195,7 +195,7 @@ del {
   margin-right: -1em;
 }
 /* Mark top-level operator in programs */
-.hlhover > .k4-mod-open ~ span > .k4-prg-op:after {
+.k4-has-step.k4-prove-hover > span > span.k4-mod-open ~ span.k4-program > span > span.k4-prg-op:after {
   content: "\f085"; /* fontawesome cogs */
   font-family: FontAwesome;
   -webkit-text-stroke: 1px black;
@@ -228,7 +228,11 @@ del {
   font-weight: bold;
 }
 
-.k4-prg-brace {
+.k4-prg-open {
+  font-weight: bold;
+}
+
+.k4-prg-close {
   font-weight: bold;
 }
 
@@ -251,7 +255,7 @@ del {
   color: var(--lsmain);
 }
 /* Unless a parent is highlighted */
-.hlhover span {
+.k4-has-step.k4-prove-hover span {
   color: white;
 }
 
