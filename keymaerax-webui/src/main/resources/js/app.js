@@ -25,6 +25,7 @@
   'keymaerax.ui.mouseevents',
   'keymaerax.ui.directives',
   'keymaerax.ui.tacticeditor',
+  'keymaerax.ui.directives',
   'formula',
   'sequent',
   'sequentproof',

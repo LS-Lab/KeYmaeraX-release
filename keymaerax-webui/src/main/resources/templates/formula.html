@@ -1,0 +1,18 @@
+<span frang-tree ng-class="{'k4-abbreviate': collapsed}">
+    <span frang-tree-repeat="expr in [formula.json]"
+          class="k4-{{expr.kind}} k4-{{expr.step}} k4-{{expr.editable}}"
+          id="fml_{{expr.id}}"
+          ng-mouseover="exprMouseOver($event, expr.step, expr.editable)"
+          ng-mouseout="exprMouseOut($event)"
+          ng-click="exprClick($event, expr.id, expr.step, expr.editable)"
+          ng-right-click="exprRightClick($event, expr.id, expr.step, expr.editable)"
+          uib-popover-template="modeIsProve() ? 'templates/axiomPopoverTemplate.html' : 'templates/editFormulaPopoverTemplate.html'"
+          popover-is-open="tacticPopover.isOpen(expr.id) || editFormulaPopover.isOpen(expr.id)"
+          popover-trigger="'none'"
+          popover-append-to-body="true"
+          popover-placement="auto bottom">
+        <span ng-bind-html="expr.text"></span>
+        <span ng-if="expr.children && expr.children.length > 0"
+              frang-tree-insert-children="expr.children"></span>
+    </span>
+</span>

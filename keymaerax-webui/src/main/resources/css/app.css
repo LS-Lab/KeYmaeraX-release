@@ -132,6 +132,39 @@ del {
   display: none !important;
 }
 
+.k4-formula {background: transparent; }
+.k4-term {background: transparent; }
+
+.k4-has-step.k4-prove-hover {
+  color: var(--lsmainback);
+  background-color:var(--lslightblue);
+  position: relative;
+}
+
+.k4-editable.k4-edit-hover {
+  border-bottom: 1px dashed;
+  position: relative;
+}
+.k4-editable.k4-edit-hover:after {
+  content: "\f040"; /* fontawesome pencil */
+  font-family: FontAwesome;
+  right: -15px;
+  position: absolute;
+  top: 0;
+}
+
+.edithover {
+  border-bottom: 1px dashed;
+  position: relative;
+}
+.edithover:after {
+  content: "\f040"; /* fontawesome pencil */
+  font-family: FontAwesome;
+  right: -15px;
+  position: absolute;
+  top: 0;
+}
+
 .k4-sequent-caret-inline {
   float: left;
 }

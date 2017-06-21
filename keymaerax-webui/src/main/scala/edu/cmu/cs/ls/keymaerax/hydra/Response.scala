@@ -10,11 +10,12 @@
  */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import _root_.edu.cmu.cs.ls.keymaerax.btactics._
-import _root_.edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
+import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, Location}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, Location, OpSpec}
 import spray.json._
 import java.io.{PrintWriter, StringWriter}
 
@@ -484,11 +485,15 @@ object Helpers {
         val idx = if (isAnte) (-i)-1 else i+1
         val fmlHtml = JsString(UIKeYmaeraXPrettyPrinter(idx.toString, plainText=false)(fml))
         val fmlString = JsString(UIKeYmaeraXPrettyPrinter(idx.toString, plainText=true)(fml))
+        val fmlJson = printJson(PosInExpr(), fml)(Position(idx))
+//        val foo = (new UIKeYmaeraXJsonPrettyPrinter(idx.toString, plainText=false))(fml)
+//        val fmlJson = JsonParser(foo)
         JsObject(
           "id" -> JsString(idx.toString),
           "formula" -> JsObject(
             "html" -> fmlHtml,
-            "string" -> fmlString
+            "string" -> fmlString,
+            "json" -> fmlJson
           )
         )}.toVector)
     }
@@ -496,6 +501,78 @@ object Helpers {
       "ante" -> fmlsJson(isAnte = true, sequent.ante),
       "succ" -> fmlsJson(isAnte = false, sequent.succ)
     )
+  }
+
+  private def print(text: String, kind: String = "text"): JsValue =
+    print(text, PosInExpr(), kind, hasStep=false, isEditable=false)(null)
+  private def print(text: String, q: PosInExpr, kind: String, hasStep: Boolean, isEditable: Boolean,
+                    children: JsValue*)(implicit top: Position): JsValue =
+    JsObject(
+      "text"->JsString(text),
+      "id"->JsString(if (top != null) top + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else "") else ""),
+      "kind" -> JsString(kind),
+      "step" -> JsString(if (hasStep) "has-step" else "no-step"),
+      "editable" -> JsString(if (isEditable) "editable" else "not-editable"),
+      "children"->JsArray(children:_*))
+
+  private def op(expr: Expression): String = expr match {
+    // terms
+    case _: Minus        => "&minus;"
+    case _: Neg          => "&minus;"
+    // formulas
+    case _: NotEqual     => "&ne;"
+    case _: GreaterEqual => "&ge;"
+    case _: Greater      => "&gt;"
+    case _: LessEqual    => "&le;"
+    case _: Less         => "&lt;"
+    case _: Forall       => "&forall;"
+    case _: Exists       => "&exist;"
+    case _: Not          => "&not;"
+    case _: And          => "&and;"
+    case _: Or           => "&or;"
+    case _: Imply        => "&rarr;"
+    case _: Equiv        => "&#8596;"
+    // programs
+    case _: Choice       => "&cup;"
+    case _ => OpSpec.op(expr).opcode
+  }
+
+
+  private def printJson(q: PosInExpr, expr: Expression)(implicit top: Position): JsValue = {
+    val hasStep = UIIndex.allStepsAt(expr, Some(top++q), None).nonEmpty
+    val isEditable = expr match {
+      case f: Formula => f.isFOL
+      case _: Number => false
+      case _: Term => true
+      case _ => false
+    }
+
+    if (hasStep || isEditable) {
+      expr match {
+        case t: UnaryCompositeTerm => print("", q, "term", hasStep, isEditable, print(op(t)), printJson(q ++ 0, t.child))
+        case t: BinaryCompositeTerm => print("", q, "term", hasStep, isEditable, printJson(q ++ 0, t.left), print(op(t)), printJson(q ++ 1, t.right))
+        case f: ComparisonFormula =>
+          print("", q, "formula", hasStep, isEditable, print("("), printJson(q ++ 0, f.left), print(")"), print(op(f)), print("("), printJson(q ++ 1, f.right), print(")"))
+        case DifferentialFormula(g) => print("", q, "formula", hasStep, isEditable, print("("), print(g.prettyString), print(")"), print(op(expr)))
+        case f: Quantified => print("", q, "formula", hasStep, isEditable, print(op(f)), print(" "), print(f.vars.map(_.prettyString).mkString(",")), print(" "), print("("), printJson(q ++ 0, f.child), print(")"))
+        case f: Box => print("", q, "formula", hasStep, isEditable, print("[", "mod-open"), printJson(q ++ 0, f.program), print("]", "mod-close"), print("("), printJson(q ++ 1, f.child), print(")"))
+        case f: Diamond => print("", q, "formula", hasStep, isEditable, print("<", "mod-open"), printJson(q ++ 0, f.program), print(">", "mod-close"), print("("), printJson(q ++ 1, f.child), print(")"))
+        case t: UnaryCompositeFormula => print("", q, "formula", hasStep, isEditable, print(op(t)), print("("), printJson(q ++ 0, t.child), print(")"))
+        case t: BinaryCompositeFormula => print("", q, "formula", hasStep, isEditable, print("("), printJson(q ++ 0, t.left), print(")"), print(op(t)), print("("), printJson(q ++ 1, t.right), print(")"))
+        case Assign(x, e) => print("", q, "program", hasStep, isEditable, printJson(q ++ 0, x), print(op(expr)), printJson(q ++ 1, e), print(";"))
+        case AssignAny(x) => print("", q, "program", hasStep, isEditable, printJson(q ++ 0, x), print(op(expr)), print(";"))
+        case Test(f) => print("", q, "program", hasStep, isEditable, print(op(expr)), printJson(q ++ 0, f), print(";"))
+        case ODESystem(ode, f) => print("", q, "program", hasStep, isEditable, print("{", "prg-open"), printJson(q ++ 0, ode), print("&"), printJson(q ++ 1, f), print("}", "prg-close"))
+        case t: UnaryCompositeProgram => print("", q, "program", hasStep, isEditable, print("("), printJson(q ++ 0, t.child), print(")"), print(op(t)))
+        case t: Compose => print("", q, "program", hasStep, isEditable, printJson(q ++ 0, t.left), printJson(q ++ 1, t.right))
+        case t: BinaryCompositeProgram => print("", q, "program", hasStep, isEditable, printJson(q ++ 0, t.left), print(op(t)), printJson(q ++ 1, t.right))
+        case AtomicODE(xp, e) => print("", q, "program", hasStep, isEditable, printJson(q ++ 0, xp), print("="), printJson(q ++ 1, e))
+        case t: DifferentialProduct => print("", q, "program", hasStep, isEditable, printJson(q ++ 0, t.left), print(","), printJson(q ++ 1, t.right))
+        case _ => print(expr.prettyString, q, "term", hasStep, isEditable)
+      }
+    } else {
+      print(expr.prettyString, q, "text", hasStep=false, isEditable=false)
+    }
   }
 
   /** Only first node's sequent is printed. */

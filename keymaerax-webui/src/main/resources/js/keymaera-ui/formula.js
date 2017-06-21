@@ -17,6 +17,7 @@ angular.module('formula')
             onTwoPositionTactic: '&',
             onInputTactic: '&' // onInputTactic(formulaId, tacticId, input)
         },
+        templateUrl: 'templates/formula.html',
         link: function(scope, element, attrs) {
             scope.formulaAxiomsMap = {};
 
@@ -38,20 +39,24 @@ angular.module('formula')
               return input.saveValue(scope.userId, scope.proofId, scope.nodeId, newValue);
             }
 
-            scope.editClick = function(formulaId, event) {
-              if (sequentProofData.formulas.mode == 'edit') {
-                // avoid event propagation to parent span (otherwise: multiple calls with a single click since nested spans)
+            scope.exprMouseOver = function(event, step, editable) {
+              if (scope.modeIsEdit() && editable=='editable') {
                 event.stopPropagation();
-                $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/prettyString').
-                  then(function(response) {
-                    scope.editFormulaPopover.open(formulaId, response.data.prettyString);
-                  });
+                $(event.currentTarget).addClass("k4-edit-hover");
+              } else if (scope.modeIsProve() && step=='has-step') {
+                event.stopPropagation();
+                $(event.currentTarget).addClass("k4-prove-hover");
               }
             }
 
-            scope.formulaClick = function(formulaId, event) {
-              if (sequentProofData.formulas.mode == 'prove') {
-                // avoid event propagation to parent span (otherwise: multiple calls with a single click since nested spans)
+            scope.exprMouseOut = function(event) {
+              $(event.currentTarget).removeClass("k4-edit-hover");
+              $(event.currentTarget).removeClass("k4-prove-hover");
+            }
+
+            scope.exprClick = function(event, formulaId, step, editable) {
+              if (scope.modeIsProve() && formulaId && formulaId !== '' && step == 'has-step') {
+                // avoid event propagation once a span with an ID is found
                 event.stopPropagation();
                 spinnerService.show('tacticExecutionSpinner');
                 $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/whatStep').
@@ -65,15 +70,23 @@ angular.module('formula')
                       });
                     }
                 });
+              } else if (scope.modeIsEdit() && formulaId && formulaId !== '' && editable == 'editable') {
+                event.stopPropagation();
+                $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/prettyString').
+                  then(function(response) {
+                    scope.editFormulaPopover.open(formulaId, response.data.prettyString);
+                  });
               }
             }
 
-            scope.formulaRightClick = function(formulaId, event) {
-              event.stopPropagation();
-              if (sequentProofData.formulas.mode == 'prove') {
+            scope.exprRightClick = function(event, formulaId, step, editable) {
+              if (scope.modeIsProve() && formulaId && formulaId !== '' && step == 'has-step') {
+                event.stopPropagation();
                 scope.fetchFormulaAxioms(formulaId, function() {
                   scope.tacticPopover.open(formulaId);
                 });
+              } else if (scope.modeIsEdit() && formulaId && formulaId !== '' && editable == 'editable') {
+                // not used yet
               }
             }
 
@@ -97,7 +110,7 @@ angular.module('formula')
 
             scope.tacticPopover = {
               openFormulaId: undefined,
-              isOpen: function(formulaId) { return sequentProofData.formulas.mode=='prove' && scope.tacticPopover.openFormulaId !== undefined && scope.tacticPopover.openFormulaId === formulaId; },
+              isOpen: function(formulaId) { return scope.modeIsProve() && scope.tacticPopover.openFormulaId && scope.tacticPopover.openFormulaId === formulaId; },
               open: function(formulaId) { scope.tacticPopover.openFormulaId = formulaId; },
               formulaId: function() { return scope.tacticPopover.openFormulaId; },
               close: function() { scope.tacticPopover.openFormulaId = undefined; }
@@ -109,7 +122,7 @@ angular.module('formula')
               formulaOrAbbrv: undefined,
               abbrv: false,
               tooltip: 'Abbreviate',
-              isOpen: function(formulaId) { return sequentProofData.formulas.mode=='edit' && scope.editFormulaPopover.openFormulaId !== undefined && scope.editFormulaPopover.openFormulaId === formulaId; },
+              isOpen: function(formulaId) { return scope.modeIsEdit() && scope.editFormulaPopover.openFormulaId && scope.editFormulaPopover.openFormulaId === formulaId; },
               open: function(formulaId, formulaText) {
                 scope.editFormulaPopover.openFormulaId = formulaId;
                 scope.editFormulaPopover.formula = formulaText;
@@ -193,13 +206,6 @@ angular.module('formula')
               return dndSinks[sinkFormulaId];
             }
 
-            scope.highlightFormula = function(event, formulaId, onMode) {
-              if (sequentProofData.formulas.mode == onMode) {
-                event.stopPropagation();
-                sequentProofData.formulas.highlighted = formulaId;
-              }
-            }
-
             scope.modeIsProve = function() {
               return sequentProofData.formulas.mode == 'prove';
             }
@@ -208,24 +214,17 @@ angular.module('formula')
               return sequentProofData.formulas.mode == 'edit';
             }
 
-            scope.isProveFormulaHighlighted = function(formulaId) {
-              return scope.highlight && sequentProofData.formulas.highlighted == formulaId && sequentProofData.formulas.mode == 'prove';
-            }
-
-            scope.isEditFormulaHighlighted = function(formulaId) {
-              return scope.highlight && sequentProofData.formulas.highlighted == formulaId && sequentProofData.formulas.mode == 'edit';
-            }
-
-            var fmlMarkup = scope.collapsed ? scope.formula.string : scope.formula.html;
-            // compile template, bind to scope, and add into DOM
-            if (scope.collapsed) {
-              //@note if collapsed we don't have any listeners, no need to compile
-              element.append('<span class="k4-formula-preformat">' + fmlMarkup + '</span>');
-            } else {
-              var template = '<span ng-class="{\'k4-abbreviate\': collapsed, \'k4-formula-preformat\': true}">' + fmlMarkup + '</span>';
-              element.append($compile(template)(scope));
-            }
-
+//            console.log("Compiling formula")
+//            var fmlMarkup = scope.collapsed ? scope.formula.string : scope.formula.html;
+//            // compile template, bind to scope, and add into DOM
+//            if (scope.collapsed) {
+//              //@note if collapsed we don't have any listeners, no need to compile
+//              element.append('<span class="k4-formula-preformat">' + fmlMarkup + '</span>');
+//            } else {
+//              var template = '<span ng-class="{\'k4-abbreviate\': collapsed, \'k4-formula-preformat\': true}">' + fmlMarkup + '</span>';
+//              element.append($compile(template)(scope));
+//            }
+//            console.log("Done compiling")
         }
     };
   }]);
