@@ -1,0 +1,266 @@
+<!-- Path through the sequent proof, structured into sections according to the branches (expensive!) -->
+
+<!-- Open Goal -->
+<div class="row k4-proofrow">
+    <div class="col-md-12">
+        <!-- need duplication because 'step.subgoals.length > 0' is non-assignable -->
+        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
+                    sequent="proofTree.nodesMap[deductionPath.sections[0].path[0]].getSequent()"
+                    read-only="readOnly" collapsed="false"
+                    on-apply-tactic="onApplyTactic(formulaId, tacticId)"
+                    on-apply-input-tactic="onApplyInputTactic(formulaId, tacticId, input)"
+                    on-apply-two-position-tactic="onApplyTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-sequent>
+    </div>
+</div>
+<!-- Conclusion -->
+<div ng-repeat="section in deductionPath.sections"
+     ng-init="outerIdx=$index"
+     ng-if="!deductionPath.isCollapsed">
+
+    <!-- section start is always displayed -->
+    <div ng-class="(outerIdx === deductionPath.sections.length-1 && section.path.length === 1 && section.isComplete) ? 'row k4-proofrow k4-proofrow-last': 'row k4-proofrow'"
+         ng-repeat="step in [section.path[0]]"
+         ng-if="outerIdx > 0">
+        <ul>
+            <li >
+                <!-- Full collapse if the first section contains only one element (and is not collapsed) -->
+                <span class="k4-prooficon">
+                <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
+                   uib-tooltip="Collapse/uncollapse everything"
+                   tooltip-popup-delay="1000"
+                   ng-if="outerIdx === 1 && deductionPath.sections[0].isComplete && !deductionPath.sections[0].isCollapsed && deductionPath.sections[0].path.length === 1">
+                    <span ng-class="deductionPath.isCollapsed ? 'fa fa-plus-square-o': 'fa fa-minus-square-o'"></span></a>
+                    <!-- nonbreaking space to reserve space for icon -->
+                <span ng-if="outerIdx > 0">&nbsp;</span>
+                </span>
+                <!-- Collapse upwards: on first element of next section, if previous section is large enough to collapse -->
+                <span class="k4-prooficon">
+                <a ng-click="deductionPath.sections[outerIdx-1].isCollapsed = !deductionPath.sections[outerIdx-1].isCollapsed"
+                   ng-mouseover="deductionPath.sections[outerIdx-1].isHighlighted=true"
+                   ng-mouseout="deductionPath.sections[outerIdx-1].isHighlighted=false"
+                   ng-if="outerIdx > 0 && !deductionPath.sections[outerIdx-1].isCollapsed && deductionPath.sections[outerIdx-1].path.length > 1">
+                    <span ng-class="deductionPath.sections[outerIdx-1].isHighlighted ? 'fa fa-chevron-circle-up' : 'fa fa-angle-up'"></span></a>
+                    <!-- nonbreaking space to reserve space for icon -->
+                <span ng-if="!(outerIdx > 0 && !deductionPath.sections[outerIdx-1].isCollapsed && deductionPath.sections[outerIdx-1].path.length > 1)">&nbsp;</span>
+                <!-- TODO vertical line between down/up angle -->
+                </span>
+                <!-- proof rule -->
+                <span class="k4-withcontextmenu k4-proofrule"
+                      tooltip-placement="right"
+                      ng-mouseover="highlightStepPosition(step, true)"
+                      ng-mouseleave="highlightStepPosition(step, false)"
+                      ng-right-click="proofStepRightClick($event)" tabindex="-1"
+                      uib-popover-template="'proofStepPopover.html'"
+                      popover-title="Proof step" popover-placement="auto bottom" popover-trigger="'rightClick'">
+                    {{step | childRuleName:this}}
+                </span>
+            </li>
+        </ul>
+        <div class="col-md-12 k4-goalwithsiblings" id="seq_{{htmlNodeId(step)}}">
+            <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
+                        sequent="proofTree.nodesMap[step].getSequent()"
+                        read-only="true" collapsed="true"></k4-sequent>
+            <div ng-include="'siblinglinks.html'" replace-include></div>
+        </div>
+    </div>
+
+    <!-- section remainder -->
+    <div ng-class="(outerIdx === deductionPath.sections.length-1 && $last && section.isComplete) ? 'row k4-proofrow k4-proofrow-last': 'row k4-proofrow'"
+         ng-repeat="step in section.path.slice(1)"
+         uib-collapse="section.isCollapsed">
+        <ul>
+            <li>
+                <span class="k4-prooficon">
+                    <!-- first element full collapse on second element in first section -->
+                    <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
+                       uib-tooltip="Collapse/expand all"
+                       tooltip-popup-delay="1000"
+                       ng-if="outerIdx === 0 && $first">
+                        <span ng-class="deductionPath.isCollapsed ? 'fa fa-plus-square-o': 'fa fa-minus-square-o'"></span></a>
+                    <!-- nonbreaking space to reserve space for icon -->
+                    <span ng-if="!(outerIdx === 0 && $first)">&nbsp;</span>
+                </span>
+                <span class="k4-prooficon">
+                    <!-- Downwards collapse: on second element in section, but only if section actually is large enough to collapse-->
+                    <a ng-click="section.isCollapsed = !section.isCollapsed"
+                       ng-mouseover="section.isHighlighted=true"
+                       ng-mouseout="section.isHighlighted=false"
+                       ng-if="!section.isCollapsed && $first && (deductionPath.sections[outerIdx].path.length > 2 || outerIdx < deductionPath.sections.length-1 && deductionPath.sections[outerIdx].path.length > 1)">
+                        <span ng-class="section.isHighlighted ? 'fa fa-chevron-circle-down' : 'fa fa-angle-down'"></span></a>
+                <!-- nonbreaking space to reserve space for icon -->
+                <span ng-if="!(!section.isCollapsed && $first && (deductionPath.sections[outerIdx].path.length > 2 || outerIdx < deductionPath.sections.length-1 && deductionPath.sections[outerIdx].path.length > 1))">&nbsp;</span>
+                </span>
+                <!-- proof rule -->
+                <span class="k4-withcontextmenu k4-proofrule"
+                      ng-mouseover="highlightStepPosition(step, true)"
+                      ng-mouseleave="highlightStepPosition(step, false)"
+                      tooltip-placement="right"
+                      ng-right-click="proofStepRightClick($event)" tabindex="-1"
+                      uib-popover-template="'proofStepPopover.html'"
+                      popover-title="Proof step" popover-placement="auto bottom" popover-trigger="'rightClick'">
+                    {{step | childRuleName:this}}
+                </span>
+            </li>
+        </ul>
+        <div class="col-md-12" id="seq_{{htmlNodeId(step)}}">
+            <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
+                        sequent="proofTree.nodesMap[step].getSequent()"
+                        read-only="true" collapsed="true"></k4-sequent>
+        </div>
+    </div>
+    <!-- fetch parent of incomplete section (if exists), collapse/uncollapse for unfinished sections/last section-->
+    <div ng-class="(outerIdx === deductionPath.sections.length-1 || (section.isComplete && !section.isCollapsed)) ? 'row k4-proofrow k4-proofrow-last': 'row k4-proofrow'">
+        <ul>
+            <li>
+                <span class="k4-prooficon">
+                <!-- Full collapse if the first section is collapsed or is incomplete with only 1 element -->
+                <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
+                   uib-tooltip="Collapse/expand all"
+                   tooltip-popup-delay="1000"
+                   ng-if="outerIdx === 0 && (section.isCollapsed || (!section.isComplete && section.path.length === 1))">
+                    <span ng-class="deductionPath.isCollapsed ? 'fa fa-plus-square-o': 'fa fa-minus-square-o'"></span></a>
+                <span ng-if="!(outerIdx === 0 && (section.isCollapsed || (!section.isComplete && section.path.length === 1)))">&nbsp;</span>
+                </span>
+                <span class="k4-prooficon">
+                <!-- Collapse upwards -->
+                <a ng-click="section.isCollapsed = !section.isCollapsed"
+                   ng-mouseover="section.isHighlighted=true"
+                   ng-mouseout="section.isHighlighted=false"
+                   ng-if="!section.isCollapsed && section.path.length > 2">
+                    <span ng-class="section.isHighlighted ? 'fa fa-chevron-circle-up' : 'fa fa-angle-up'"></span></a>
+                <!-- TODO vertical line between down/up angle -->
+                <!-- Uncollapse -->
+                <a ng-click="section.isCollapsed = !section.isCollapsed"
+                   ng-mouseover="section.isHighlighted=true"
+                   ng-mouseout="section.isHighlighted=false"
+                   ng-if="section.isCollapsed && section.path.length > 1">
+                    <span ng-class="section.isHighlighted ? 'fa fa-chevron-circle-right' : 'fa fa-angle-right'"></span></a>
+                <span ng-if="section.path.length <= 1">&nbsp;</span>
+                </span>
+                <span class="k4-proofrule">&nbsp;</span>
+            </li>
+        </ul>
+        <div class="col-md-12 k4-proofrow-annotation" ng-if="hasParent(section)">
+            ...
+            <ul>
+                <li>
+                    <!-- load parent -->
+                    <span class="k4-withcontextmenu fa fa-plus-square-o"
+                       ng-click="fetchSectionParent(deductionPath.sections[outerIdx])"
+                       uib-tooltip="Fetch parent step"
+                       tooltip-popup-delay="1000"
+                       ng-right-click="fetchParentRightClick($event)" tabindex="-1"
+                       uib-popover-template="'navigateTowardsRootPopover.html'"
+                       popover-title="Proof history" popover-placement="auto bottom" popover-trigger="'rightClick'"
+                       ng-if="!section.isComplete && !section.isCollapsed"></span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+<!-- full expand and previous step if full-collapsed -->
+<div class="row k4-proofrow k4-proofrow-last"
+     ng-init="outerIdx=0"
+     ng-repeat="step in [proofStepParent(deductionPath.sections[0].path[0])]"
+     ng-if="deductionPath.isCollapsed">
+    <ul>
+        <li >
+            <!-- Full collapse if the first section contains only one element (and is not collapsed) -->
+            <span class="k4-prooficon">
+                <a ng-click="deductionPath.isCollapsed = !deductionPath.isCollapsed"
+                   uib-tooltip="Expand all"
+                   tooltip-popup-delay="1000">
+                    <span class="fa fa-plus-square-o"></span>
+                </a>
+                <span ng-if="step !== undefined">&nbsp;</span>
+            </span>
+            <span class="k4-prooficon">&nbsp;</span>
+            <!-- proof rule -->
+            <span class="k4-withcontextmenu k4-proofrule"
+                  ng-if="step !== undefined"
+                  tooltip-placement="right"
+                  ng-mouseover="highlightStepPosition(step.id, true)"
+                  ng-mouseleave="highlightStepPosition(step.id, false)"
+                  ng-right-click="proofStepRightClick($event)" tabindex="-1"
+                  uib-popover-template="'proofStepPopoverPrev.html'"
+                  popover-title="Proof step" popover-placement="auto bottom" popover-trigger="'rightClick'">
+                    {{step.id | childRuleName:this}}
+                </span>
+            <span class="k4-proofrule" ng-if="step === undefined"></span>
+        </li>
+    </ul>
+    <div class="col-md-12 k4-goalwithsiblings" id="seq_{{htmlNodeId(step.id)}}" ng-if="step !== undefined">
+        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
+                    sequent="step.sequent"
+                    read-only="true" collapsed="true"></k4-sequent>
+        <div ng-include="'siblinglinks.html'" replace-include></div>
+    </div>
+    <div class="col-md-12 k4-proofrow-annotation" ng-if="step === undefined">
+        ...
+        <ul>
+            <li>
+                <!-- load parent -->
+                <span class="k4-withcontextmenu fa fa-plus-square-o"
+                   ng-click="fetchSectionParent(deductionPath.sections[0])"
+                   uib-tooltip="Fetch parent step"
+                   tooltip-popup-delay="1000"
+                   ng-right-click="fetchParentRightClick($event)" tabindex="-1"
+                   uib-popover-template="'navigateTowardsRootPopover.html'"
+                   popover-title="Proof history" popover-placement="auto bottom" popover-trigger="'rightClick'"
+                   ng-if="!deductionPath.sections[0].isComplete && !deductionPath.sections[0].isCollapsed"></span>
+            </li>
+        </ul>
+    </div>
+</div>
+
+
+<script type="text/ng-template" id="navigateTowardsRootPopover.html">
+    <div class="k4-nobreak">
+        <a ng-click="fetchBranchRoot(outerIdx)"><span class="fa fa-code-fork"> Show fork</span></a><br/>
+        <a ng-click="showProofRoot()" ng-show="!isProofRootVisible()"><span class="fa fa-angle-down"> Show original conjecture</span><br/></a>
+        <a ng-click="fetchPathAll(outerIdx)"><span class="fa fa-angle-double-down"> Expand all</span></a>
+    </div>
+</script>
+<script type="text/ng-template" id="siblingSequentTooltip.html">
+    <div>
+    <span class="k4-nobreak">
+        <span ng-repeat="f in proofTree.nodesMap[sibling].getSequent().ante | limitTo:1">
+            <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
+                        formula="f.formula" highlight="false" collapsed="true" on-tactic=""></k4-formula>
+            <span ng-if="proofTree.nodesMap[sibling].getSequent().ante.length > 1">...</span>
+        </span>
+        <span>&#8866;</span>
+        <span ng-repeat="f in proofTree.nodesMap[sibling].getSequent().succ | limitTo:-1">
+            <span ng-if="proofTree.nodesMap[sibling].getSequent().succ.length > 1">... </span>
+            <k4-formula user-id="userId" proof-id="proofId" node-id="nodeId"
+                        formula="f.formula" highlight="false" collapsed="true" on-tactic=""></k4-formula>
+        </span>
+    </span>
+    </div>
+</script>
+<script type="text/ng-template" id="proofStepPopover.html">
+    <div class="k4-nobreak">
+        <a ng-click="prune(step)"><span class="fa fa-eraser"> Prune</span></a><br/>
+        <a ng-click="stepInto(proofId, step)"><span class="fa fa-book"> Details</span></a><br/>
+        <!--<a ng-click="startProof(step)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>-->
+    </div>
+</script>
+<script type="text/ng-template" id="proofStepPopoverPrev.html">
+    <div class="k4-nobreak">
+        <a ng-click="prune(step.id)"><span class="fa fa-eraser"> Prune</span></a><br/>
+        <a ng-click="stepInto(proofId, step.id)"><span class="fa fa-book"> Details</span></a><br/>
+        <!--<a ng-click="startProof(step)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>-->
+    </div>
+</script>
+<script type="text/ng-template" id="siblinglinks.html">
+    <ul data-intro="Parent has multiple subgoals, click subgoal number to change tab" data-position="left">
+        <!-- display siblings at fork -->
+        <li ng-repeat="sibling in siblingsWithAgendaItem(step.children)">
+            <!-- assumes that only one agenda item mentions a specific node in the proof tree -->
+            <a ng-click="agenda.select(agenda.itemsByProofStep(sibling)[0])"
+               class="badge"
+               uib-tooltip-template="'siblingSequentTooltip.html'"
+               tooltip-placement="left">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
+        </li>
+    </ul>
+</script>

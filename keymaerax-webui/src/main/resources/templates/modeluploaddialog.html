@@ -1,6 +1,6 @@
 <div class="modal-body">
     <uib-tabset active="active">
-        <uib-tab index="0" heading="File Upload">
+        <uib-tab index="0" heading="File Import">
             <div class="row">
             <div class="col-md-12" id="modelupload"
                  data-intro="Load new .kyx model files or .kya archive files here."
@@ -21,7 +21,7 @@
                         </span>
                             <a class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
                             <a class="input-group-addon btn btn-default fileinput-exists"
-                               ng-if="fileExt=='.kya'" ng-click="addModel()" ng-cloak>Upload</a>
+                               ng-if="fileExt=='.kya'" ng-click="addModel()" ng-cloak>Import</a>
                         </div>
                         <div class="fileinput-exists" ng-if="fileExt=='.kyx'" ng-cloak>
                             <label for="modelName">Model name</label>
@@ -29,7 +29,7 @@
                                 <input type="text" ng-model="model.modelName" class="form-control" name="modelName"
                                        id="modelName" placeholder="Model Name"/>
                                 <a ng-class="{'input-group-addon':true, 'btn':true, 'btn-default':true, 'disabled':!model.modelName}"
-                                   ng-if="fileExt=='.kyx'" ng-click="addModel()" ng-cloak>Upload</a>
+                                   ng-if="fileExt=='.kyx'" ng-click="addModel()" ng-cloak>Import</a>
                             </div>
                         </div>
                     </div>
@@ -46,7 +46,7 @@
                         <input type="text" ng-model="model.modelName" class="form-control" name="modelName" id="modelName"
                                placeholder="Model Name"/>
                         <a ng-class="{'input-group-addon':true, 'btn':true, 'btn-default':true, 'disabled':!model.modelName}"
-                           ng-click="uploadContent()" ng-cloak>Upload</a>
+                           ng-click="uploadContent()" ng-cloak>Save</a>
                     </div>
                     </div>
                 </div>
@@ -74,5 +74,5 @@
     </uib-tabset>
 </div>
 <div class="modal-footer">
-    <button class="btn btn-primary" ng-click="close()">Close</button>
+    <button class="btn btn-primary" ng-click="close()">Cancel</button>
 </div>

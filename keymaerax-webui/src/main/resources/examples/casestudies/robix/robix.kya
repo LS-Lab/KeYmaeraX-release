@@ -369,7 +369,6 @@ Functions.
     v >= 0
     & isWellformedDir()
     & (v>0 -> abs(x-xo) > stopDist(v)+friendlyMargin(V()) | abs(y-yo) > stopDist(v)+friendlyMargin(V()))
-    & vxo^2+vyo^2<=V()^2
   ).
 End.
 
@@ -434,13 +433,11 @@ assumptions() ->
         t' = 1 & t <= ep() & v >= 0
       }
     }*@invariant(loopinv())
-  ](  (vxo^2+vyo^2<=V()^2                                                                  /* obstacle never too fast */
-    & (v>0 -> (x - xo)^2 + (y - yo)^2 > (friendlyMargin(V()))^2))                    /* robot ensures friendly margin */
-    & (  0<=vo&vo<=V() & dxo^2+dyo^2=1 /* assumption: vo*dxo=vxo & vo*dyo=vyo*/                  /* obstacle can stop */
+  ](  (v>0 -> (x - xo)^2 + (y - yo)^2 > (friendlyMargin(V()))^2)                     /* robot ensures friendly margin */
+    & (  0<=vo & vo^2=vxo^2+vyo^2 & dxo*vo=vxo & dyo*vo=vyo                                      /* obstacle can stop */
        & (x - xo)^2 + (y - yo)^2 > (friendlyMargin(V()))^2
        ->
         <{
-          dxo := *; dyo := *; ?dxo^2+dyo^2 = 1;
           ao := *; ?-bo() <= ao & vo + ao*ep() <= V();
           t := 0;
           {xo'=vo*dxo, yo'=vo*dyo, vo'=ao, t'=1 & vo>=0 & t<=ep()}
@@ -450,20 +447,26 @@ End.
 
 Tactic "Proof Theorem 3: Passive Friendly Safety".
   tactic obstacleCanStop as (
-    unfold ; con({`dxo^2+dyo^2=1&bo()>0&ep()>0&(x-xo)^2+(y-yo)^2>(vo^2/(2*bo()))^2&0<=vo&vo<=V()&(v*ep()*bo()>=vo|vo=0)`}, 1) ; <(
-      QE,
-      unfold ; existsR({`1`}, 1) ; unfold ; existsR({`0`}, 1) ; unfold ; <(
-        QE,
-        existsR({`-bo()`}, 1) ; unfold ; <(
-          fullSimplify ; closeTrue,
-          solve(1); fullSimplify; existsR({`min((vo/bo(),ep()))`}, 1) ;
-          abbrv({`min((vo/bo(),ep()))`}, {`minT`}) ; minmax(-10.1) ;
-          QE
+    unfold ; cut({`vo=0|dxo^2+dyo^2=1`}) ; <(
+      cut({`vo<=V()`}) ; <(
+        hideL('L=={`vo^2=vxo^2+vyo^2`}) ; hideL('L=={`vxo^2+vyo^2<=V()^2`});
+        con({`(vo=0|dxo^2+dyo^2=1)&bo()>0&ep()>0&(x-xo)^2+(y-yo)^2>(vo^2/(2*bo()))^2&0<=vo&vo<=V()&(v*ep()*bo()>=vo|vo=0)`}, 1); <(
+          QE,
+          unfold ; existsR({`-bo()`}, 1) ; unfold ; <(
+            fullSimplify ; closeTrue
+            ,
+            solve(1) ; existsR({`min((vo/bo(),ep()))`}, 1) ; abbrv({`min((vo/bo(),ep()))`}, {`minT`}) ; minmax(-10.1) ;
+            orL('L=={`vo=0|dxo^2+dyo^2=1`}) ; doall(QE)
+            ,
+            QE
+          )
           ,
           QE
         )
+        ,
+        hideR(1) ; QE
       ),
-      QE
+      hideR(1) ; QE
     )
   );
 
@@ -552,14 +555,19 @@ Tactic "Proof Theorem 3: Passive Friendly Safety".
   implyR(1) ; andL('L)* ; boxAnd(1) ; andR(1) ; <(
     robotAlwaysStops
     ,
-    GV(1);
-    hideL('L=={`A()>=0`});
-    hideL('L=={`v=0`});
-    hideL('L=={`b()>0`});
-    hideL('L=={`abs(x-xo) > friendlyMargin(V()) | abs(y-yo) > friendlyMargin(V())`});
-    hideL('L=={`dx^2+dy^2=1`});
-    hideL('L=={`vxo^2+vyo^2<=V()^2`});
-    obstacleCanStop
+    MR({`vxo^2+vyo^2<=V()^2`},1); <(
+      loop({`vxo^2+vyo^2<=V()^2`}, 1) ; <(
+        closeId,
+        closeId,
+        composeb(1) ; GV(1.1) ; composeb(1) ; GV(1.1) ; master
+      )
+      ,
+      andL('L)* ;
+      hideL('L=={`A()>=0`});
+      hideL('L=={`b()>0`});
+      obstacleCanStop
+    )
+
   )
 End.
 
@@ -1776,6 +1784,139 @@ Tactic "Proof Theorem 9: Passive safety for asynchronous controllers".
   );
   done;
   print({`Proof done`})
+
+End.
+
+Theorem "Theorem 11: Reach waypoint".
+
+/*
+ *	Robot must stop within distance delta at goal.
+ *
+ *  Robot
+ * 	- must stop within distance delta of goal
+ *  - can only drive straight and forward
+ *  - ensures progress towards goal
+ *
+ *  Liveness property:
+ *  - Robot can stop at goal
+ *
+ */
+
+Functions.
+	R ep().      /* time limit for control decisions */
+  R b().       /* minimum braking capability of the robot */
+  R A().       /* maximum acceleration -b <= a <= A */
+  R GDelta().	 /* goal area size */
+	R Vmax().    /* robot cannot go faster than this */
+
+	R waypointStartDist(R) = ( (.)-GDelta() ).
+	R waypointEndDist(R)   = ( (.)+GDelta() ).
+
+  R minV() = ( A()*ep() ).
+
+	R stopDist(R) = ( (.)^2/(2*b()) ).
+	R accComp(R)  = ( (A()/b() + 1)*(A()/2*ep()^2 + ep()*(.)) ).
+
+	B bounds() <-> (                                                                     /* Bounds for global constants */
+      A() > 0                                                                                       /* Working engine */
+    & b() > 0                                                                                       /* Working brakes */
+    & ep() > 0                                                                            /* Controller reaction time */
+    & Vmax() >= 2*A()*ep()
+    & GDelta() > Vmax()*ep() + Vmax()^2/(2*b())                            /* waypoint is large enough that robot can
+                                                                                  start driving and still stop inside */
+  ).
+  B initialState() <-> (                                                          /* Stopped somewhere safe initially */
+    vr = 0
+    & xr < waypointStartDist(xg)
+  ).
+  B assumptions() <-> (bounds() & initialState()).                     /* Under these assumptions we guarantee safety */
+
+	B loopinv() <-> (
+	  0 <= vr & vr <= Vmax & xr + stopDist(vr) < waypointEndDist(xg)
+	).
+End.
+
+ProgramVariables.
+	R xr.		/* robot position: x */
+	R vr.		/* robot translational velocity */
+	R ar.		/* robot translational acceleration */
+	R xg.		/* goal position */
+	R t.		/* control cycle time */
+End.
+
+Problem.
+  assumptions()
+	  ->
+	  /* safety */
+	  [
+      {	{
+        {
+              ar := -b();
+           ++ ?vr = 0; ar := 0;
+           ++ ?xr + stopDist(vr) + accComp(vr) < waypointEndDist(xg) & vr+A()*ep()<=Vmax(); ar := A();
+           ++ ?xr <= waypointStartDist(xg) & vr <= Vmax(); ar := *; ?-b() <= ar & ar <= (Vmax()-vr)/ep() & ar <= A();
+        }
+        /* dynamics */
+        t := 0;
+        }
+        {xr' = vr, vr' = ar, t' = 1 & t <= ep() & vr >= 0}
+      }*@invariant(loopinv())
+		] (xr < waypointEndDist(xg))
+		&
+		/* liveness */
+		<
+      {	{
+        {
+              ar := -b();
+           ++ ?vr = 0; ar := 0;
+           ++ ?xr + stopDist(vr) + accComp(vr) < waypointEndDist(xg) & vr+A()*ep()<=Vmax(); ar := A();
+           ++ ?xr <= waypointStartDist(xg) & vr <= Vmax(); ar := *; ?-b() <= ar & ar <= (Vmax()-vr)/ep() & ar <= A();
+        }
+        /* dynamics */
+        t := 0;
+        }
+        {xr' = vr, vr' = ar, t' = 1 & t <= ep() & vr >= 0}
+      }*
+		>(waypointStartDist(xg) < xr)
+End.
+
+Tactic "Proof Theorem 11: Reach waypoint".
+  implyR(1) ; andL('L)* ; andR(1) ; <(
+    master,
+    iterated(1) ; orR(1) ; composed(2) ; composed(2) ; choiced(2) ; orR(2) ; hideR(2) ; choiced(2) ; orR(2) ;
+    hideR(2) ; choiced(2) ; orR(2) ; hideR(2) ; composed(2) ; testd(2) ; andR(2) ; <(
+      QE,
+      composed(2) ; randomd(2) ; existsR({`min(((Vmax()-vr)/ep(),A()))`}, 2) ; testd(2) ; andR(2) ; <(
+        QE,
+        assignd(2) ; allR(2) ; implyR(2) ; solve(2) ; existsR({`ep()`}, 2) ; andR(2) ; <(
+          QE,
+          andR(2) ; <(
+            QE,
+            allR(2) ; implyR(2) ; allR(2) ; implyR(2) ;
+            con({`Vmax()>0&A()>0&b()>0&ep()>0&0 < vr&vr<=Vmax()&xg-GDelta() < xr+v*ep()*vr`}, 2) ; <(
+              QE,
+              composed(1) ; composed(1) ; cut({`xr<=xg-GDelta()|xg-GDelta() < xr`}) ; <(
+                orL('L=={`xr<=xg-GDelta()|xg-GDelta() < xr`}) ; <(
+                  choiced(1) ; orR(1) ; hideR(1) ; choiced(1) ; orR(1) ; hideR(1) ; choiced(1) ; orR(1) ;
+                  hideR(1) ; composed(1) ; testd(1) ; andR(1) ; <(
+                    master,
+                    composed(1) ; randomd(1) ; existsR({`0`}, 1) ; testd(1) ; andR(1) ; <(
+                      QE,
+                      assignd(1) ; allR(1) ; implyR(1) ; solve(1) ; QE
+                      )
+                    ),
+                  choiced(1) ; orR(1) ; hideR(2) ; assignd(1) ; assignd(1) ; allR(1) ; implyR(1) ; solve(1) ; QE
+                  ),
+                hideR(1) ; QE
+                ),
+              QE
+              )
+            )
+          )
+        )
+      )
+    )
+End.
 
 End.
 
