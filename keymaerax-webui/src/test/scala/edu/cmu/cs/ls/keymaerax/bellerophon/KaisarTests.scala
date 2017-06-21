@@ -1256,10 +1256,6 @@ finally show _ using ghostInv by R
       // neg{wild() > wild() + wild() + (wild()*(wild()*ep()^2 + wild()))}
       val sp:SP =
         BRule(RBCaseOrL("absdx".asVariable, "safeCurve(abs(x-xo)) > wild()".asFormula, "absyx".asVariable, "safeCurve(abs(y-yo)) > wild()".asFormula), List(
-          // TODO: context management
-          //abs(x_0-xo_0)>v_0^2/(2*b())+V()*v_0/b()+(A()/b()+1)*(A()/2*t^2+t*(v_0+V()))
-          // "safeCurve(abs(x-xo)) > safeCurve(v^2)/(2*b()) + V()*(safeCurve(v)/b()) + (A()/b() + 1)*(A()/2*t^2 +t*(safeCurve(v)+V()))"
-          // "safeCurve(abs(y-xo)) > safeCurve(v^2/(2*b()) + V()*(v/b()) + (A()/b() + 1)*(A()/2*t^2 +t*(v+V())))"
           Have("dxep".asVariable, "safeCurve(abs(x-xo)) > safeCurve(v^2)/(2*b()) + V()*(safeCurve(v)/b()) + (A()/b() + 1)*(A()/2*t^2 +t*(safeCurve(v)+V()))".asFormula, duh,
           Show("wild()".asFormula, UP(List(Left("neg(greatCurve)".asExpr)), Kaisar.RCF())))
         , Have("dyep".asVariable, "safeCurve(abs(y-yo)) > safeCurve(v^2)/(2*b()) + V()*(safeCurve(v)/b()) + (A()/b() + 1)*(A()/2*t^2 +t*(safeCurve(v)+V()))".asFormula, duh,
@@ -1439,7 +1435,7 @@ finally show _ using ghostInv by R
         BRule(RBAssignAny("xo".asVariable), List(
         BRule(RBAssignAny("yo".asVariable), List(
         BRule(RBAssume("goodCurve".asVariable, "r!=0 & r*w=v".asFormula),List(
-        BRule(RBAssume("safeCurve".asVariable, "(abs(x-xo) > ASEP())|(abs(y-yo)>ASEP())".asFormula),List(
+        BRule(RBAssume("greatCurve".asVariable, "(abs(x-xo) > ASEP())|(abs(y-yo)>ASEP())".asFormula),List(
         BRule(RBAssign(Assign("t".asVariable,"0".asTerm)),List(
         State("safeCurve",
         PrintGoal("COVFEFE Beginning third invs",
@@ -1453,7 +1449,15 @@ finally show _ using ghostInv by R
         Inv("yBound".asVariable, "-t * (v - A()/2*t) <= y - loop(y) & y - loop(y) <= t * (v - A()/2*t)".asFormula, duh, duh,
         Inv("dC".asVariable, "v >= 0 & t <= ep()".asFormula, duh, duh,
           Finally(
-            PrintGoal("End third goal", Show("wild()".asFormula, UP(List(), Kaisar.RCF()))))))))))))),List()))))))))))))))))))))))/*)*/)))/*)*/))))))))),
+            PrintGoal("End third goal",
+              BRule(RBCaseOrL("absdx".asVariable, "safeCurve(abs(x-xo)) > wild()".asFormula, "absyx".asVariable, "safeCurve(abs(y-yo)) > wild()".asFormula), List(
+                Have("dxep".asVariable, "safeCurve(abs(x-xo)) > safeCurve(v^2)/(2*b()) + V()*(safeCurve(v)/b()) + (A()/b() + 1)*(A()/2*t^2 +t*(safeCurve(v)+V()))".asFormula, duh,
+                  Show("wild()".asFormula, UP(List(Left("neg(greatCurve)".asExpr)), Kaisar.RCF())))
+                , Have("dyep".asVariable, "safeCurve(abs(y-yo)) > safeCurve(v^2)/(2*b()) + V()*(safeCurve(v)/b()) + (A()/b() + 1)*(A()/2*t^2 +t*(safeCurve(v)+V()))".asFormula, duh,
+                  Show("wild()".asFormula, UP(List(Left("neg(greatCurve)".asExpr)), Kaisar.RCF())))
+              ))
+              //Show("wild()".asFormula, UP(List(), Kaisar.RCF()))
+            ))))))))))),List()))))))))))))))))))))))/*)*/)))/*)*/))))))))),
         Finally(Show("wild()".asFormula, UP(List(),Kaisar.RCF()))))),List()))))))
       val time = System.currentTimeMillis()
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(theorem2)) shouldBe 'proved
