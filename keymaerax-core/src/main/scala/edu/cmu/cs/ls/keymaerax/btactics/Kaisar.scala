@@ -46,6 +46,8 @@ object Kaisar {
   case class RBAssign(hp:Assign) extends RuleSpec
   case class RBConsequence(x:Variable, fml:Formula) extends RuleSpec
   case class RBCase(pats:List[Expression]) extends RuleSpec
+  case class RBCaseOrL(x1:Variable, pat1:Expression, x2:Variable, pat2:Expression) extends RuleSpec
+  case class RBCaseOrR(x1:Variable, x2:Variable) extends RuleSpec
   case class RBAssume(x:Variable,fml:Formula) extends RuleSpec
   case class RBSolve(t:Variable,fmlT:Formula,dc:Variable,fmlDC:Formula,sols:List[(Variable,Formula)]) extends RuleSpec
   case class RBAssignAny(x:Variable)extends RuleSpec
@@ -355,21 +357,38 @@ object Kaisar {
         case _ => None
       }
     }
+    def patChild(e:Expression):Option[Expression] = {
+      e match {
+        case PredOf(Function(id, _, _, _, _), x)  => Some(x)
+        case FuncOf(Function(id, _, _, _, _), x) => Some(x)
+        case PredicationalOf(Function(id, _, _, _, _), x) => Some(x)
+        case _ => None
+      }
+    }
     def matchesAssm(i:Int,pat:Expression):Boolean = {
-      patIdent(pat) match {
-        case None => false
+      (patIdent(pat), patChild(pat)) match {
+        case (None, _) => false
           // TODO: Faster: do only index cmp
-        case Some(id) =>
+        case (Some("neg"), Some(p)) =>
+          !matchesAssm(i, p)
+        case (Some(id), _) =>
           val hasOne = c.hasAssm(id)
           println("Checking for assm: " ,c,id,ante,i,ante(i), hasOne)
           hasOne && c.getAssm(id,ante) == ante(i)
       }
     }
+    // TODO HACK: assume neg(id) is an id pattern and not a value pattern
+    def matchesOne(pat:Expression,f:Formula,c:Context) = {
+      (patIdent(pat), patChild(pat)) match {
+        case (Some("neg"), Some(_)) => false
+        case _ => doesMatch(pat,f,c)
+      }
+    }
     val inds:immutable.IndexedSeq[Int] = withFacts.subgoals.head.ante.zipWithIndex.filter({case (f,i) => !pats.exists({case pat =>
-      val dm = doesMatch(pat, f,c)
+      val dm = matchesOne(pat, f,c)
       val ma = matchesAssm(i,pat)
-      //println("dm ", pat, f, c, dm)
-      //println("ma ", i, pat, ma)
+      println("dm ", pat, f, c, dm)
+      println("ma ", i, pat, ma)
       dm || ma})}).map({case (f,i) => i}).reverse
     //TODO: Optimize the default case
     val indss = if(use.isEmpty) { immutable.IndexedSeq[Int]()} else {inds}
@@ -937,6 +956,25 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val pr2:Provable = eval(sp(1),h,c,Provable.startProof(seq2))
           val prr:Provable = interpret(TactixLibrary.boxAnd(1) & andR(1), g)
           prr(pr1,0)(pr2,0)
+        // TODO: Decide whether to keep around the old variable
+        case (RBCaseOrL(x1,pat1:Formula,x2,pat2:Formula), _)  =>
+          //TODO continue search if cant find one
+          assertBranches(sp.length, 2)
+          val pat = expand(Or(pat1,pat2),h,c, None)
+          val i =  uniqueMatch(pat, c, sequent.ante)
+          val (Or(p,q)) = sequent.ante(i)
+          val seq1:Sequent = Sequent(sequent.ante.updated(i,p), sequent.succ)
+          val seq2:Sequent = Sequent(sequent.ante.updated(i,q), sequent.succ)
+          val pr1:Provable = eval(sp(0),h,c,Provable.startProof(seq1))
+          val pr2:Provable = eval(sp(1),h,c,Provable.startProof(seq2))
+          val prr:Provable = interpret(TactixLibrary.orL(-(i+1)), g)
+          prr(pr1,0)(pr2,0)
+        case (RBCaseOrR(x1:Variable, x2:Variable),Or(p,q)) =>
+          assertBranches(sp.length, 1)
+          val seq1:Sequent = Sequent(sequent.ante, immutable.IndexedSeq(p,q) ++ sequent.succ.tail)
+          val pr1:Provable = eval(sp(0),h,c,Provable.startProof(seq1))
+          val prr:Provable = interpret(TactixLibrary.orR(1),g)
+          prr(pr1,0)
         case (RBAssume(x:Variable,fml:Formula),Imply(p,q)) =>
           assertBranches(sp.length, 1)
           val cc = pmatch(expand(fml,h,c,None), p,c)
@@ -1017,7 +1055,8 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
       val size = prOut.conclusion.ante.size
       val newPos = AntePos(size)
       val gg = g(Cut(fmlExpanded),0)(HideRight(SuccPos(0)),1)(prOut,1)
-      eval(tail,h,c.add(x,newPos), gg)
+      val res = eval(tail,h,c.add(x,newPos), gg)
+      res
     case BRule (r:RuleSpec, tails: List[SP]) => eval(r,tails,h,c,g)
     case State (st:TimeName, tail: SP) => eval(tail,h.advance(st),c,g)
     case PrintGoal(msg,tail) =>
