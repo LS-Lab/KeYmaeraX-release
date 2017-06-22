@@ -88,7 +88,7 @@ class KaisarTests extends TacticTestBase {
   "Pattern matching" should "match variable dependency pattern" in {
     val pat: Expression = "p(x)".asFormula
     val e: Expression = "x > 2".asExpr
-    val dm = Kaisar.doesMatch(pat, e, c1)
+    val dm = Kaisar.doesMatch(pat, e, c1, immutable.IndexedSeq())
     dm shouldBe true
   }
 
@@ -1640,6 +1640,88 @@ finally show _ using ghostInv by R
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })}
 
+  "Pattern-matching" should "support patterns for RSS Theorem 5" in {
+    val ante = immutable.IndexedSeq[Formula](
+      "(A()>=0&b()>0&ep()>0&V()>0)&v_0=0&(x_0-xo_0)^2-(y_0-yo_0)^2>0&dx_0^2+dy_0^2=1".asFormula,
+      "v_1>=0&dx_1^2+dy_1^2=1&(v_1>0->abs(x_1-xo_1)>v_1^2/(2*b())+V()*(v_1/b())|abs(y_1-yo_1)>v_1^2/(2*b())+V()*(v_1/b()))".asFormula,
+      "vxo^2+vyo^2<=V()^2".asFormula,
+      "-b()<=a&a<=A()".asFormula,
+      "-W()<=w_0&w_0<=W()".asFormula,
+      "r!=0&r*w_0=v_1".asFormula,
+      "v_1+a*ep()>=0".asFormula,
+      "abs(x_1-xo_2)>v_1^2/(2*b())+V()*v_1/b()+(a/b()+1)*(a/2*ep()^2+ep()*(v_1+V()))|abs(y_1-yo_2)>v_1^2/(2*b())+V()*v_1/b()+(a/b()+1)*(a/2*ep()^2+ep()*(v_1+V()))".asFormula,
+      "t_0=0".asFormula,
+      "t>=0".asFormula,
+      "dx^2+dy^2=1".asFormula,
+      "-t*V()<=xo-xo_2&xo-xo_2<=t*V()".asFormula,
+      "-t*V()<=yo-yo_2&yo-yo_2<=t*V()".asFormula,
+      "v=v_1+a*t".asFormula,
+      "-t*(v-a/2*t)<=x-x_1&x-x_1<=t*(v-a/2*t)".asFormula,
+      "-t*(v-a/2*t)<=y-y_1&y-y_1<=t*(v-a/2*t)".asFormula,
+      "v>=0&t<=ep()".asFormula)
+    def asBV(s:String):BaseVariable = s.asVariable.asInstanceOf[BaseVariable]
+//    val h:History = History(List(HCRename(asBV("w"),asBV("w_2"),None), HCRename(asBV("t"),asBV("t_2"),None), HCRename(asBV("x"),asBV("x_1"),None), HCRename(asBV("dx"),asBV("dx_1"),None), HCRename(asBV("yo"),asBV("yo_2"),None), HCRename(asBV("v"),asBV("v_1"),None), HCRename(asBV("y"),asBV("y_1"),None), HCRename(asBV("xo"),asBV("xo_2"),None), HCRename(asBV("dy"),asBV("dy_1"),None), HCTimeStep("safeCurve"), HCRename(asBV("t"),asBV("t_1"),Some(AntePos(8))), HCRename(asBV("yo"),asBV("yo_1"),None), HCRename(asBV("xo"),asBV("xo_1"),None), HCRename(asBV("r"),asBV("r_1"),None), HCRename(asBV("w"),asBV("w_1"),None), HCRename(asBV("a"),asBV("a_1"),None), HCRename(asBV("vyo"),asBV("vyo_1"),None), HCRename(asBV("vxo"),asBV("vxo_1"),None), HCTimeStep("loop"), HCRename(asBV("vxo"),asBV("vxo_0"),None), HCRename(asBV("w"),asBV("w_0"),None), HCRename(asBV("t"),asBV("t_0"),None), HCRename(asBV("x"),asBV("x_0"),None), HCRename(asBV("vyo"),asBV("vyo_0"),None), HCRename(asBV("dx"),asBV("dx_0"),None), HCRename(asBV("yo"),asBV("yo_0"),None), HCRename(asBV("a"),asBV("a_0"),None), HCRename(asBV("v"),asBV("v_0"),None), HCRename(asBV("y"),asBV("y_0"),None), HCRename(asBV("xo"),asBV("xo_0"),None), HCRename(asBV("r"),asBV("r_0"),None), HCRename(asBV("dy"),asBV("dy_0"),None), HCTimeStep("init")))
+    val c:Context = Context(Map(
+      "assms".asVariable -> AntePosition(1),
+      "J".asVariable -> AntePosition(2),
+      "safeObs".asVariable -> AntePosition(3),
+      "aGood".asVariable -> AntePosition(4),
+      "wGood".asVariable -> AntePosition(5),
+      "goodCurve".asVariable -> AntePosition(6),
+      "alrightCurve".asVariable -> AntePosition(7),
+      "greatCurve".asVariable -> AntePosition(8),
+      "tPos".asVariable -> AntePosition(10),
+      "wfDir".asVariable -> AntePosition(11),
+      "xoBound".asVariable -> AntePosition(12),
+      "yoBound".asVariable -> AntePosition(13),
+      "vBound".asVariable -> AntePosition(14),
+      "xBound".asVariable -> AntePosition(15),
+      "yBound".asVariable -> AntePosition(16),
+      "dC".asVariable -> AntePosition(17)
+    ),Map(),Map("WFDIR" -> ("t","t{dx^2+dy^2=1}".asFormula), "SD" -> ("t","t(v^2/(2*b())+V()*(v/b()))".asTerm)))
+
+    val p1 = "assm(J)".asExpr
+    val p2 = "assm(greatCurve)".asExpr
+    val p3 = "union(assm(J), assm(greatCurve))".asExpr
+    val p4 = "neg(union(assm(J), assm(greatCurve)))".asExpr
+
+    val e1 = "v_1>=0&dx_1^2+dy_1^2=1&(v_1>0->abs(x_1-xo_1)>v_1^2/(2*b())+V()*(v_1/b())|abs(y_1-yo_1)>v_1^2/(2*b())+V()*(v_1/b()))".asExpr
+    val e2 = "abs(x_1-xo_2)>v_1^2/(2*b())+V()*v_1/b()+(a/b()+1)*(a/2*ep()^2+ep()*(v_1+V()))|abs(y_1-yo_2)>v_1^2/(2*b())+V()*v_1/b()+(a/b()+1)*(a/2*ep()^2+ep()*(v_1+V()))".asFormula
+    val e3 = "t>=0".asFormula
+
+    val dm1a = doesMatch(p1,e1,c,ante)
+    val dm1b = doesMatch(p1,e2,c,ante)
+    val dm1c = doesMatch(p1,e3,c,ante)
+
+    val dm2a = doesMatch(p2,e1,c,ante)
+    val dm2b = doesMatch(p2,e2,c,ante)
+    val dm2c = doesMatch(p2,e3,c,ante)
+
+    val dm3a = doesMatch(p3,e1,c,ante)
+    val dm3b = doesMatch(p3,e2,c,ante)
+    val dm3c = doesMatch(p3,e3,c,ante)
+
+    val dm4a = doesMatch(p4,e1,c,ante)
+    val dm4b = doesMatch(p4,e2,c,ante)
+    val dm4c = doesMatch(p4,e3,c,ante)
+
+    dm1a shouldBe true
+    dm1b shouldBe false
+    dm1c shouldBe false
+
+    dm2a shouldBe false
+    dm2b shouldBe true
+    dm2c shouldBe false
+
+    dm3a shouldBe true
+    dm3b shouldBe true
+    dm3c shouldBe false
+
+    dm4a shouldBe false
+    dm4b shouldBe false
+    dm4c shouldBe true
+
+  }
 
   "RSS Theorem 5 branch 3/4 arithmetic goal" should "prove" in {
     withMathematica(qeTool => {
@@ -1704,11 +1786,12 @@ finally show _ using ghostInv by R
         duh,
         BRule(RBAssume("vPos".asVariable, "v>0".asFormula), List(
         BRule(RBCaseOrL("absdx".asVariable, "safeCurve(abs(x-xo)) > wild()".asFormula, "absyx".asVariable, "safeCurve(abs(y-yo)) > wild()".asFormula), List(
-          Have("dxep".asVariable, "abs(safeCurve(x-xo)) > (safeCurve(v)^2 / (2*b()) + V()*safeCurve(v)/b()) + (a/b()+1)*(a/2*t^2 + t*(safeCurve(v) +V()))".asFormula, duh,
+            Have("dxep".asVariable, "abs(safeCurve(x-xo)) > (safeCurve(v)^2 / (2*b()) + V()*safeCurve(v)/b()) + (a/b()+1)*(a/2*t^2 + t*(safeCurve(v) +V()))".asFormula, duh,
             BRule(RBCaseOrR("goal1".asVariable, "goal2".asVariable), List(
-            Show("abs(x-xo) > wild()".asFormula, UP(List(Left("neg(greatCurve)".asExpr), Left("neg(J)".asExpr)), Kaisar.RCF())))))
+            Show("abs(x-xo) > wild()".asFormula, UP(List(Left("neg(union(assm(greatCurve),assm(J)))".asExpr)), Kaisar.SmartQE())))))
           , Have("dyep".asVariable, "abs(safeCurve(y-yo)) > (safeCurve(v)^2 / (2*b()) + V()*safeCurve(v)/b()) + (a/b()+1)*(a/2*t^2 + t*(safeCurve(v) +V()))".asFormula, duh,
-            Show("abs(y-yo) > wild()".asFormula, UP(List(Left("neg(greatCurve)".asExpr), Left("neg(J)".asExpr)), Kaisar.RCF())))))))
+            BRule(RBCaseOrR("goal1".asVariable, "goal2".asVariable), List(
+              Show("abs(y-yo) > wild()".asFormula, UP(List(Left("neg(union(assm(greatCurve),assm(J)))".asExpr)), Kaisar.SmartQE())))))))))
       ))))
 
       val time = System.currentTimeMillis()
