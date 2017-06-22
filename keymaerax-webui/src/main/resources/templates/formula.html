@@ -1,4 +1,6 @@
-<span frang-tree ng-class="{'k4-abbreviate': collapsed}">
+<span ng-if="collapsed" ng-bind-html="formula.string">
+</span>
+<span frang-tree ng-if="!collapsed">
     <span frang-tree-repeat="expr in [formula.json]"
           class="k4-{{expr.kind}} k4-{{expr.step}} k4-{{expr.editable}}"
           id="fml_{{expr.id}}"
@@ -11,7 +13,7 @@
           popover-trigger="'none'"
           popover-append-to-body="true"
           popover-placement="auto bottom">
-        <span ng-bind-html="expr.text"></span>
+        <span ng-if="expr.text" ng-bind-html="expr.text"></span>
         <span ng-if="expr.children && expr.children.length > 0"
               frang-tree-insert-children="expr.children"></span>
     </span>
