@@ -956,6 +956,14 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val pr2:Provable = eval(sp(1),h,c,Provable.startProof(seq2))
           val prr:Provable = interpret(TactixLibrary.boxAnd(1) & andR(1), g)
           prr(pr1,0)(pr2,0)
+        case (RBCase(pat1::pat2::Nil), And(p,q)) if doesMatch(pat1,p,c) && doesMatch(pat2,q,c) =>
+          assertBranches(sp.length, 2)
+          val seq1:Sequent = Sequent(sequent.ante, immutable.IndexedSeq(p) ++ sequent.succ.tail)
+          val seq2:Sequent = Sequent(sequent.ante, immutable.IndexedSeq(q) ++ sequent.succ.tail)
+          val pr1:Provable = eval(sp(0),h,c,Provable.startProof(seq1))
+          val pr2:Provable = eval(sp(1),h,c,Provable.startProof(seq2))
+          val prr:Provable = interpret(andR(1), g)
+          prr(pr1,0)(pr2,0)
         // TODO: Decide whether to keep around the old variable
         case (RBCaseOrL(x1,pat1:Formula,x2,pat2:Formula), _)  =>
           //TODO continue search if cant find one
@@ -1025,10 +1033,18 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
   val goal = g.subgoals.head.succ.head
   sp match {
     case Show(phi:Formula, proof: UP)  =>
+      val succ = g.subgoals.head.succ
+      def ifilter[T,S](p:(T,Int)=>Boolean, f:(T,Int)=>S, xs: IndexedSeq[T]):IndexedSeq[S] = {
+        xs.zipWithIndex.flatMap({case (x,i) => if (p(x,i)) {IndexedSeq(f(x,i))} else {IndexedSeq()}})
+      }
       val expanded = expand(phi,h,c, None)
-      val cc = pmatch(expanded, goal,c)
-      val ccc = c.concat(cc)
-      val pr =eval(proof, h, ccc, g)
+      val hideInds = ifilter({case (x,i) => !doesMatch(expanded, x, c)}:((Formula,Int) => Boolean), {case (x,i) => i}:((Formula,Int) => Int), succ)
+      val upsucc = ifilter({case (x,i) => !hideInds.contains(i)}:((Formula,Int) => Boolean), {case (x,i) => x}:((Formula,Int) => Formula), succ)
+      val cxts = upsucc.map(pmatch(expanded,_, c))
+      val ccc = cxts.foldLeft(c)({case(acc,x) => x.concat(acc)})
+      val hideTac = hideInds.reverse.foldLeft(TactixLibrary.nil)({case (e, i) => e & hideR(i+1)})
+      val prIn = interpret(hideTac, g)
+      val pr =eval(proof, h, ccc, prIn)
       assert(pr.isProved, "Shown formula not proved: " + phi + " not proved by " + pr.prettyString)
       pr
     case SLet(pat:Expression, e:Expression, tail:SP) =>
