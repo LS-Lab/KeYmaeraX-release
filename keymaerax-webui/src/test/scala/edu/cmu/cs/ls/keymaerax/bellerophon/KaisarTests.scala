@@ -2033,20 +2033,22 @@ Provable((A()>=0&b()>0&ep()>0&V()>0)&v_0=0&(x_0-xo_0)^2-(y_0-yo_0)^2>0&dx_0^2+dy
                             Inv("dC".asVariable, "v >= 0 & t <= ep()".asFormula, duh, duh,
                             Finally(
                             PrintGoal("End third goal",
-                            BRule(RBCase(List("v>=0".asFormula, "wild()".asFormula)), List(
-                            duh
-                            ,
-                            BRule(RBCase(List("dx^2+dy^2=1".asFormula, "wild()".asFormula)), List(
-                            duh,
-                            BRule(RBAssume("vPos".asVariable, "v>0".asFormula), List(
-                            BRule(RBCaseOrL("absdx".asVariable, "safeCurve(abs(mx-xo)) > wild()".asFormula, "absyx".asVariable, "safeCurve(abs(my-yo)) > wild()".asFormula), List(
-                            Have("dxep".asVariable, "abs(safeCurve(x)-safeCurve(xo))>safeCurve(v)^2/(2*b())+V()*safeCurve(v)/b()+(A()/b()+1)*(A()/2*t^2+t*(safeCurve(v)+V()))".asFormula, duh,
-                            BRule(RBCaseOrR("goal1".asVariable, "goal2".asVariable), List(
-                            Show("abs(x-xo) > wild()".asFormula, UP(List(Left("neg(union(assm(greatCurve),assm(J)))".asExpr)), Kaisar.SmartQE())))))
-                          , Have("dyep".asVariable, "abs(safeCurve(y)-safeCurve(yo))>safeCurve(v)^2/(2*b())+V()*safeCurve(v)/b()+(A()/b()+1)*(A()/2*t^2+t*(safeCurve(v)+V()))".asFormula, duh,
-                            BRule(RBCaseOrR("goal1".asVariable, "goal2".asVariable), List(
-                            Show("abs(y-yo) > wild()".asFormula, UP(List(Left("neg(union(assm(greatCurve),assm(J)))".asExpr)), Kaisar.SmartQE())))))))))
-                                                                                      ))))
+                              BRule(RBCase(List("v>=0".asFormula, "wild()".asFormula)), List(
+                                duh
+                                ,
+                                BRule(RBCase(List("dx^2+dy^2=1".asFormula, "wild()".asFormula)), List(
+                                  duh,
+                                  BRule(RBAssume("vPos".asVariable, "v>0".asFormula), List(
+                                    BRule(RBCaseOrL("absdx".asVariable, "safeCurve(abs(mx-xo)) > wild()".asFormula, "absyx".asVariable, "safeCurve(abs(my-yo)) > wild()".asFormula), List(
+                                      Have("dxep".asVariable, "abs(safeCurve(mx)-safeCurve(xo))>safeCurve(v)^2/(2*b())+V()*safeCurve(v)/b()+(A()/b()+1)*(A()/2*t^2+t*(safeCurve(v)+V()))+ Dp()".asFormula,
+                                        Show("wild()".asFormula, UP(List(Left("neg(union(union(assm(xBound),assm(J)),union(assm(yBound),assm(wfDir))))".asExpr)), Kaisar.RCF())),
+                                        BRule(RBCaseOrR("goal1".asVariable, "goal2".asVariable), List(
+                                          Show("abs(x-xo) > wild()".asFormula, UP(List(Left("neg(union(assm(greatCurve),assm(J)))".asExpr)), Kaisar.SmartQE())))))
+                                      , Have("dyep".asVariable, "abs(safeCurve(my)-safeCurve(yo))>safeCurve(v)^2/(2*b())+V()*safeCurve(v)/b()+(A()/b()+1)*(A()/2*t^2+t*(safeCurve(v)+V()))+ Dp()".asFormula,
+                                        Show("wild()".asFormula, UP(List(Left("neg(union(union(assm(xBound),assm(J)),union(assm(yBound),assm(wfDir))))".asExpr)), Kaisar.RCF())),
+                                        BRule(RBCaseOrR("goal1".asVariable, "goal2".asVariable), List(
+                                          Show("abs(y-yo) > wild()".asFormula, UP(List(Left("neg(union(assm(greatCurve),assm(J)))".asExpr)), Kaisar.SmartQE())))))))))
+                                ))))
                                                                                   ))))))))))),List())))))))))
 
                                                     ))))))))))))))))))))))))))))))))
