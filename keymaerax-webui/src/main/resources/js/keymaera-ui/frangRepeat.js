@@ -1,7 +1,6 @@
 'use strict';
 // https://github.com/tchatel/angular-treeRepeat
-angular.module('keymaerax.ui.directives', [])
-
+angular.module('keymaerax.ui.directives')
     // Main directive, that just publish a controller
     .directive('frangTree', function ($parse, $animate) {
         return {
