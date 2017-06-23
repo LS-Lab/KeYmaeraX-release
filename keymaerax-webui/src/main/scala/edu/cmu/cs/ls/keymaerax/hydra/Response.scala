@@ -503,11 +503,12 @@ object Helpers {
   private def print(q: PosInExpr, text: String, kind: String)(implicit top: Position): JsValue =
     JsObject("id" -> JsString(top + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else "")),
       "text"->JsString(text), "kind" -> JsString(kind))
-  private def print(q: PosInExpr, kind: String, hasStep: Boolean, isEditable: Boolean,
+  private def print(q: PosInExpr, kind: String, hasStep: Boolean, isEditable: Boolean, plainText: => String,
                     children: JsValue*)(implicit top: Position): JsValue = {
     JsObject(
       "id" -> JsString(top + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else "")),
       "kind" -> JsString(kind),
+      "plain" -> (if (isEditable) JsString(plainText) else JsNull),
       "step" -> JsString(if (hasStep) "has-step" else "no-step"),
       "editable" -> JsString(if (isEditable) "editable" else "not-editable"),
       "children"->JsArray(children:_*))
@@ -574,10 +575,8 @@ object Helpers {
       case _ => None
     }
     val isEditable = (expr, parent) match {
-      // edit dialog on top-most formula/term only, more editing options are available once the edit dialog is open
-      case (f: Formula, Some(_: Program) | None) => f.isFOL
-      case (_: Number, _) => false
-      case (_: Term, Some(_: Formula | _: Program) | None) => true
+      // edit "top-most" formula only
+      case (f: Formula, Some(_: Program | _: Modal) | None) => f.isFOL
       case (_, _) => false
     }
 
@@ -585,15 +584,15 @@ object Helpers {
       //case t: UnaryCompositeTerm => print("", q, "term", hasStep, isEditable, op(t) +: wrapChild(t, printJson(q ++ 0, t.child)):_*)
       //case t: BinaryCompositeTerm => print("", q, "term", hasStep, isEditable, wrapLeft(t, printJson(q ++ 0, t.left)) ++ (op(t)::Nil) ++ wrapRight(t, printJson(q ++ 1, t.right)):_*)
       case f: ComparisonFormula =>
-        print(q, "formula", hasStep, isEditable, wrapLeft(f, printJson(q ++ 0, f.left)) ++ (op(f)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right)):_*)
-      case DifferentialFormula(g) => print(q, "formula", hasStep, isEditable, print("("), print(g.prettyString), print(")"), op(expr))
-      case f: Quantified => print(q, "formula", hasStep, isEditable, op(f)::print(" ")::print(f.vars.map(_.prettyString).mkString(","))::print(" ")::Nil ++ wrapChild(f, printJson(q ++ 0, f.child)):_*)
-      case f: Box => print(q, "formula", hasStep, isEditable, print("[", "mod-open")::printJson(q ++ 0, f.program)::print("]", "mod-close")::Nil ++ wrapChild(f, printJson(q ++ 1, f.child)):_*)
-      case f: Diamond => print(q, "formula", hasStep, isEditable, print("<", "mod-open")::printJson(q ++ 0, f.program)::print(">", "mod-close")::Nil ++ wrapChild(f, printJson(q ++ 1, f.child)):_*)
-      case t: UnaryCompositeFormula => print(q, "formula", hasStep, isEditable, op(t) +: wrapChild(t, printJson(q ++ 0, t.child)):_*)
-      case f: Less => print(q, "formula", hasStep, isEditable, wrapLeft(f, printJson(q++0, f.left)) ++ (print(" ")::op(f)::print(" ")::Nil) ++ wrapRight(f, printJson(q++1, f.right)):_*)
-      case t: BinaryCompositeFormula => print(q, "formula", hasStep, isEditable, wrapLeft(t, printJson(q ++ 0, t.left)) ++ (op(t)::Nil) ++ wrapRight(t, printJson(q ++ 1, t.right)):_*)
-      case p: Program => print(q, "program", false, false, printPrgJson(q, p):_*)
+        print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q ++ 0, f.left)) ++ (op(f)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right)):_*)
+      case DifferentialFormula(g) => print(q, "formula", hasStep, isEditable, expr.prettyString, print("("), print(g.prettyString), print(")"), op(expr))
+      case f: Quantified => print(q, "formula", hasStep, isEditable, expr.prettyString, op(f)::print(" ")::print(f.vars.map(_.prettyString).mkString(","))::print(" ")::Nil ++ wrapChild(f, printJson(q ++ 0, f.child)):_*)
+      case f: Box => print(q, "formula", hasStep, isEditable, expr.prettyString, print("[", "mod-open")::printJson(q ++ 0, f.program)::print("]", "mod-close")::Nil ++ wrapChild(f, printJson(q ++ 1, f.child)):_*)
+      case f: Diamond => print(q, "formula", hasStep, isEditable, expr.prettyString, print("<", "mod-open")::printJson(q ++ 0, f.program)::print(">", "mod-close")::Nil ++ wrapChild(f, printJson(q ++ 1, f.child)):_*)
+      case t: UnaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, op(t) +: wrapChild(t, printJson(q ++ 0, t.child)):_*)
+      case f: Less => print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q++0, f.left)) ++ (print(" ")::op(f)::print(" ")::Nil) ++ wrapRight(f, printJson(q++1, f.right)):_*)
+      case t: BinaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(t, printJson(q ++ 0, t.left)) ++ (op(t)::Nil) ++ wrapRight(t, printJson(q ++ 1, t.right)):_*)
+      case p: Program => print(q, "program", false, false, expr.prettyString, printPrgJson(q, p):_*)
       case _ => print(q, expr.prettyString, "term")
     }
   }
