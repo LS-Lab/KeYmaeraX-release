@@ -998,7 +998,10 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           assertBranches(sp.length, 1)
           val hh = h.update(x.name)
           eval(sp.head, hh, c, interpret(TactixLibrary.randomb(1) & allR(1), g))
-        case (RBInv(ip:IP), _) =>
+        case (RBInv(ip:IP), Box(_:Loop,_)) =>
+          assertBranches(sp.length, 0)
+          eval(ip, h, c, g)
+        case (RBInv(ip:IP), Box(_:ODESystem,_)) =>
           assertBranches(sp.length, 0)
           eval(ip, h, c, g)
         case (RIdent (x:String), _) => ???

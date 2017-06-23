@@ -10,10 +10,12 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 
 import scala.collection.immutable
 
+import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 
 /**
   * Created by bbohrer on 12/3/16.
   */
+@SlowTest
 class KaisarTests extends TacticTestBase {
   val pq: Formula = "p() & q()".asFormula
   val p: Formula = "p()".asFormula
@@ -95,7 +97,7 @@ class KaisarTests extends TacticTestBase {
   "Proof with no programs" should "prove" in {
     withZ3(qeTool => {
       val pr: Provable = Provable.startProof(Imply(pq, p))
-      val up: UP = UP(List(Left("x".asExpr)), Auto())
+      val up: UP = UP(List(Left("assm(x)".asExpr)), Auto())
       val show: Show = Show(p, up)
       val sp: SP = BRule(RBAssume(Variable("x"), pq), List(show))
       Kaisar.eval(sp, History.empty, Context.empty, pr) shouldBe 'proved
@@ -106,7 +108,7 @@ class KaisarTests extends TacticTestBase {
       val box = "[?p();]p()".asFormula
       val prog = "?p();".asProgram
       val pr: Provable = Provable.startProof(box)
-      val sp = BRule(RBAssume(Variable("x"), "p()".asFormula), List(Show("p()".asFormula, UP(List(Left("x".asExpr)), Auto()))))
+      val sp = BRule(RBAssume(Variable("x"), "p()".asFormula), List(Show("p()".asFormula, UP(List(Left("assm(x)".asExpr)), Auto()))))
       Kaisar.eval(sp, History.empty, Context.empty, pr) shouldBe 'proved
 
     })
@@ -374,11 +376,13 @@ class KaisarTests extends TacticTestBase {
     })
   }
   "DaLi'17 Example 1c" should "prove" in {
-    withZ3(qeTool => {
+    withMathematica(qeTool => {
       val box = "x > 1 & y = 0 -> (x-1)^2 != (x+1)^2".asFormula
       val sp: SP =
-        BRule(RBAssume("xy".asVariable, "x_() & y_()".asFormula), List(
-          Have("x".asVariable, "x != 0".asFormula, Show("x != 0".asFormula, UP(List(Left("xy".asVariable)), Kaisar.RCF())),
+        BRule(RBAssume("xy".asVariable, "xfml_() & yfml_()".asFormula), List(
+          Have("x".asVariable, "x != 0".asFormula,
+            // TODO: Don't treat x and x_() as equal please
+             Show("x != 0".asFormula, UP(List(Left("assm(xy)".asExpr)), Kaisar.RCF())),
             Show("wild()".asFormula, UP(Nil, Kaisar.RCF())))
         ))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
@@ -401,7 +405,7 @@ class KaisarTests extends TacticTestBase {
         SLet("w_()".asTerm, "x + y + z".asTerm,
           BRule(RBAssume("xy".asVariable, "w_() > 1 & wild()".asFormula), List(
             Note("w".asVariable, FMP(FPat("andE1()".asFormula), FPat("xy".asVariable)),
-              Show("wild()".asFormula, UP(List(Left("w()".asFormula)), Kaisar.RCF()))
+              Show("wild()".asFormula, UP(List(Left("assm(w)".asFormula)), Kaisar.RCF()))
             )
           )))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
@@ -491,7 +495,7 @@ show (x > 2y) using J by auto
             State("preassign",
               BRule(RBAssign(Assign("x".asVariable, "x*2".asTerm)), List(
                 Have("xs".asVariable, "x >= 2*preassign(x) & (preassign(y) > 0 -> preassign(x) > y)".asFormula, Show("wild()".asFormula, UP(Nil, Auto())),
-                  Show("wild()".asFormula, UP(List(Left("J".asVariable)), Auto())))
+                  Show("wild()".asFormula, UP(List(Left("assm(J)".asExpr)), Auto())))
               )))
           ))
         ))
@@ -555,23 +559,23 @@ show (y >= 0) using J1 J2 J3 by R
       val box = "x=0&y=1->[{{y:= (1/2)*y;}*};{{x:=x+y;y:=(1/2)*y;}*};{{x:=x+y;}*}]x >= 0".asFormula
       val sp: SP =
         BRule(RBAssume("xy".asVariable, "x=0&y=1".asFormula), List(
-          State("init",
-            PrintGoal("About to first inv",
-              BRule(
-                RBInv(Inv("J1".asVariable, "y > 0".asFormula, duh, duh,
-                  Finally(
-                    State("t1",
-                      PrintGoal("About to second inv",
-                        BRule(
-                          RBInv(Inv("J2".asVariable, "y>0 & x>=init(x)".asFormula, duh, duh,
-                            Finally(
-                              State("t2",
-                                PrintGoal("About to third inv",
-                                  BRule(
-                                    RBInv(Inv("J3".asVariable, "y>0 & x>=t2(x)".asFormula, duh, duh,
-                                      Finally(
-                                        PrintGoal("About to show final goal",
-                                          Show("x >= 0".asFormula, UP(List(), Kaisar.RCF())))))),
+        State("init",
+        PrintGoal("About to first inv",
+        BRule(
+        RBInv(Inv("J1".asVariable, "y > 0".asFormula, duh, duh,
+        Finally(
+        State("t1",
+        PrintGoal("About to second inv",
+        BRule(
+        RBInv(Inv("J2".asVariable, "y>0 & x>=init(x)".asFormula, duh, duh,
+        Finally(
+        State("t2",
+        PrintGoal("About to third inv",
+        BRule(
+        RBInv(Inv("J3".asVariable, "y>0 & x>=t2(x)".asFormula, duh, duh,
+        Finally(
+        PrintGoal("About to show final goal",
+        Show("x >= 0".asFormula, UP(List(), Kaisar.RCF())))))),
                                     List())))))), List())))))), List())))))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
@@ -603,23 +607,23 @@ show _  using J assms by auto
           //TODO this pattern match might be broke, i.e. patmatch didnt fail even when I changed some stuff
           RBAssume("assms".asVariable, "0 <= y & y<=H&H>0&v=0".asFormula),
           List(
-            State("init",
-              FLet("E", "t", "t(v^2/2 + y)".asExpr,
-                BRule(RBInv(
-                  Inv("J".asVariable, "y >= 0 & E() = init(E())".asFormula, duh,
-                    State("loopinit",
-                      BRule(
-                        RBConsequence("conserv".asVariable, "E() = loopinit(E())& 1111 = 1111 & E() = init(E())".asFormula), List(
-                          Show("[{wild ++ wild}]wild()".asFormula, UP(List(), Auto()))
-                          , PrintGoal("Pre-solve",
-                            BRule(
-                              RBSolve("t".asVariable, "t >= 0".asFormula, "dc".asVariable, "dc_()".asFormula, List())
-                              , List(
-                                PrintGoal("Almost done", duh)))))))
-                    , Finally(
-                      PrintGoal("Finish himm!!!!",
+          State("init",
+          FLet("E", "t", "t(v^2/2 + y)".asExpr,
+          BRule(RBInv(
+          Inv("J".asVariable, "y >= 0 & E() = init(E())".asFormula, duh,
+          State("loopinit",
+          BRule(
+          RBConsequence("conserv".asVariable, "E() = loopinit(E())& 1111 = 1111 & E() = init(E())".asFormula), List(
+          Show("[{wild ++ wild}]wild()".asFormula, UP(List(), Auto()))
+        , PrintGoal("Pre-solve",
+          BRule(
+          RBSolve("t".asVariable, "t >= 0".asFormula, "dc".asVariable, "dc_()".asFormula, List())
+        , List(
+          PrintGoal("Almost done", duh)))))))
+        , Finally(
+          PrintGoal("Finish himm!!!!",
                         //
-                        Show("wild()".asFormula, UP(List(Left("J".asVariable), Left("assms".asVariable)), Auto())))))), List())))))
+          Show("wild()".asFormula, UP(List(Left("assm(J)".asExpr), Left("assm(assms)".asExpr)), Auto())))))), List())))))
         Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
@@ -647,15 +651,8 @@ show (Jy > 0) using assms Jy by auto
                 Inv("Jx".asVariable, "x>0".asFormula, duh, duh,
                   Inv("Jy".asVariable, "y >= init(y)".asFormula, duh, duh,
                     // TODO: Fix context management
-                    Finally(Show("y > 0".asFormula, UP(List(Left("assms".asVariable), Left("Jy".asVariable)), Auto())))
-                  )
-
-
-                ))
-            )
-          ), List()))
-
-        ))
+                    Finally(Show("y > 0".asFormula, UP(List(Left("assm(assms)".asFormula), Left("assm(Jy)".asFormula)), Auto())))
+                  ))))), List()))))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
     })
   }
@@ -727,14 +724,14 @@ show (Jy > 0) using assms Jy by auto
       val box = "(m<=0 & pr > ar & pr > 0 & ar > 0 & m < -(g/pr)^(1/2) & T>0 & vn>(g/pr)^(1/2) & vn < 0 & t <= T & x >= 0 & v < 0) -> (rp > 0 & g > 0) -> (v >= vn-g*t) -> (vn-g*t >= vn-g*T) -> (vn-g*T > -(g/rp)^(1/2)) -> (v > -(g/rp)^(1/2))".asFormula
       val sp: SP =
         BRule(RBAssume("nonsens".asVariable, "m<=0 & pr > ar & pr > 0 & ar > 0 & m < -(g/pr)^(1/2) & T>0 & vn>(g/pr)^(1/2) & vn < 0 & t <= T & x >= 0 & v < 0".asFormula), List(
-          BRule(RBAssume("nz".asVariable, "rp > 0 & g > 0".asFormula), List(
-            BRule(RBAssume("v".asVariable, "v >= vt_".asFormula), List(
-              BRule(RBAssume("gt".asVariable, "vt_ >= vT_".asFormula), List(
-                BRule(RBAssume("gT".asVariable, "vT_ > vBound_".asFormula), List(
-                  Have("trans".asVariable, "\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula,
-                    Show("\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula, UP(List(), Kaisar.RCF())),
-                    Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable), "v".asTerm), "vn-g*t".asTerm), "vn-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("v".asExpr)), FPat("gt".asExpr)), FPat("gT".asExpr)),
-                      Show("v > vBound_".asFormula, UP(List(Left("res".asVariable)), CloseId())))
+        BRule(RBAssume("nz".asVariable, "rp > 0 & g > 0".asFormula), List(
+        BRule(RBAssume("v".asVariable, "v >= vt_".asFormula), List(
+        BRule(RBAssume("gt".asVariable, "vt_ >= vT_".asFormula), List(
+        BRule(RBAssume("gT".asVariable, "vT_ > vBound_".asFormula), List(
+        Have("trans".asVariable, "\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula,
+        Show("\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula, UP(List(), Kaisar.RCF())),
+        Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable), "v".asTerm), "vn-g*t".asTerm), "vn-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("assm(v)".asExpr)), FPat("assm(gt)".asExpr)), FPat("assm(gT)".asExpr)),
+        Show("v > vBound_".asFormula, UP(List(Left("assm(res)".asExpr)), CloseId())))
                   )))))))))))
       val time = System.currentTimeMillis()
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
@@ -753,7 +750,7 @@ show (Jy > 0) using assms Jy by auto
                   //Have("trans".asVariable, "\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula,
                   //             Show("\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula, UP(List(),Kaisar.RCF())),
                   //      Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable),"v".asTerm),"vn-g*t".asTerm),"vn-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("v".asExpr)), FPat("gt".asExpr)), FPat("gT".asExpr)),
-                  Show("v>-(g/rp)^(1/2)".asFormula, UP(List(Left("nz".asVariable), Left("gT".asVariable), Left("v".asVariable), Left("gt".asVariable)), Kaisar.RCF()))
+                  Show("v>-(g/rp)^(1/2)".asFormula, UP(List(Left("assm(nz)".asExpr), Left("assm(gT)".asExpr), Left("assm(v)".asExpr), Left("assm(gt)".asExpr)), Kaisar.RCF()))
                 ))))))))))
       val time = System.currentTimeMillis()
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
@@ -785,9 +782,9 @@ show (Jy > 0) using assms Jy by auto
         BRule(RBAssume("gT".asVariable, "vT_ > vBound_".asFormula), List(
         Have("trans".asVariable, "\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula,
         Show("\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula, UP(List(), Kaisar.RCF())),
-        Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable), "v".asTerm), "vn-g*t".asTerm), "vn-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("v".asExpr)), FPat("gt".asExpr)), FPat("gT".asExpr)),
+        Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable), "v".asTerm), "vn-g*t".asTerm), "vn-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("assm(v)".asExpr)), FPat("assm(gt)".asExpr)), FPat("assm(gT)".asExpr)),
         SLet("goal_()".asFormula, "v > vBound_".asFormula,
-        Show("goal_()".asFormula, UP(List(Left("res".asVariable)), CloseId())))
+        Show("goal_()".asFormula, UP(List(Left("assm(res)".asFormula)), CloseId())))
                     ))))))))))))
       val time = System.currentTimeMillis()
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(box)) shouldBe 'proved
@@ -834,11 +831,11 @@ show (Jy > 0) using assms Jy by auto
             Inv("dc".asVariable, "t <= T".asFormula, duh, duh,
             Finally(
               Have("tBound".asVariable, "loop(v) -g*t >= loop(v) - g*T".asFormula, Show("wild()".asFormula,
-                  UP(List(Left("rp".asVariable), Left("dc".asVariable)), Kaisar.RCF())),
+                  UP(List(Left("assm(rp)".asExpr), Left("assm(dc)".asExpr)), Kaisar.RCF())),
               Have("trans".asVariable, "\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula, duh,
-              Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable), "v".asTerm), "loop(v)-g*t".asTerm), "loop(v)-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("vBig".asExpr)), FPat("tBound".asExpr)), FPat("vInitBig".asExpr)),
+              Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable), "v".asTerm), "loop(v)-g*t".asTerm), "loop(v)-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("assm(vBig)".asExpr)), FPat("assm(tBound)".asExpr)), FPat("assm(vInitBig)".asExpr)),
               PrintGoal("Almost done goal one ",
-              Show("wild()".asFormula, UP(List(Left("res".asVariable),Left("vBig".asVariable), Left("J".asVariable)), Auto())))))))))))),List())))))
+              Show("wild()".asFormula, UP(List(Left("assm(res)".asExpr),Left("assm(vBig)".asExpr), Left("assm(J)".asExpr)), Auto())))))))))))),List())))))
 
           ,BRule(RBAssign(Assign("r".asVariable,"rp".asVariable)), List(
             BRule(RBAssign(Assign("t".asVariable,"0".asTerm)), List(
@@ -848,11 +845,11 @@ show (Jy > 0) using assms Jy by auto
             Inv("vBig".asVariable, "v >= loop(v) - g*t".asFormula, duh, duh,
             Inv("ghostInv".asVariable, "(y^2*(v+(g/rp)^(1/2))=1)".asFormula, duh, duh,
             Finally(
-            Show("wild()".asFormula, UP(List(Left("ghostInv".asVariable),Left("vBig".asVariable), Left("J".asVariable)), Kaisar.RCF())))))))),List())))))))))),
+            Show("wild()".asFormula, UP(List(Left("assm(ghostInv)".asExpr),Left("assm(vBig)".asExpr), Left("assm(J)".asExpr)), Kaisar.RCF())))))))),List())))))))))),
         Finally(
           PrintGoal("About to conclude",
             //TODO: Badness
-            Show(post, UP(List(Left("assms".asVariable), Left("J".asVariable)), Auto())))))),List()))))
+            Show(post, UP(List(Left("assm(assms)".asExpr), Left("assm(J)".asExpr)), Auto())))))),List()))))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(safePara)) shouldBe 'proved
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
@@ -882,11 +879,12 @@ show (Jy > 0) using assms Jy by auto
                   Inv("dc".asVariable, "t <= T".asFormula, duh, duh,
                   Finally(
                   Have("tBound".asVariable, "loop(v) -g*t >= loop(v) - g*T".asFormula, Show("wild()".asFormula,
-                  UP(List(Left("rp".asVariable), Left("dc".asVariable)), Kaisar.RCF())),
+                  UP(List(Left("assm(rp)".asExpr), Left("assm(dc)".asExpr)), Kaisar.RCF())),
                 Have("trans".asVariable, "\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula, duh,
-                Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable), "v".asTerm), "loop(v)-g*t".asTerm), "loop(v)-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("vBig".asExpr)), FPat("tBound".asExpr)), FPat("vInitBig".asExpr)),
+                Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable), "v".asTerm), "loop(v)-g*t".asTerm), "loop(v)-g*T".asTerm), "-(g/rp)^(1/2)".asTerm),
+                  FPat("assm(vBig)".asExpr)), FPat("assm(tBound)".asExpr)), FPat("assm(vInitBig)".asExpr)),
                 PrintGoal("Almost done goal one ",
-                Show("wild()".asFormula, UP(List(Left("res".asVariable),Left("vBig".asVariable), Left("J".asVariable)), Auto())))))))))))),List())))))
+                Show("wild()".asFormula, UP(List(Left("assm(res)".asExpr),Left("assm(vBig)".asExpr), Left("assm(J)".asExpr)), Auto())))))))))))),List())))))
                   ,BRule(RBAssign(Assign("r".asVariable,"rp".asVariable)), List(
                   BRule(RBAssign(Assign("t".asVariable,"0".asTerm)), List(
                   BRule(RBInv(
@@ -895,11 +893,11 @@ show (Jy > 0) using assms Jy by auto
                   Inv("vBig".asVariable, "v >= loop(v) - g*t".asFormula, duh, duh,
                   Inv("ghostInv".asVariable, "(y^2*(v+(g/rp)^(1/2))=1)".asFormula, duh, duh,
                   Finally(
-                  Show("wild()".asFormula, UP(List(Left("ghostInv".asVariable),Left("vBig".asVariable), Left("J".asVariable)), Kaisar.RCF())))))))),List())))))))))),
+                  Show("wild()".asFormula, UP(List(Left("assm(ghostInv)".asExpr),Left("assm(vBig)".asExpr), Left("assm(J)".asExpr)), Kaisar.RCF())))))))),List())))))))))),
                 Finally(
                   PrintGoal("About to conclude",
                     //TODO: Badness
-                    Show(post, UP(List(Left("assms".asVariable), Left("J".asVariable)), Auto())))))),List()))))
+                    Show(post, UP(List(Left("assm(assms)".asExpr), Left("assm(J)".asExpr)), Auto())))))),List()))))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(safePara)) shouldBe 'proved
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
@@ -929,13 +927,14 @@ show (Jy > 0) using assms Jy by auto
                 Have("tBound".asVariable, "loop(v) -g*t >= loop(v) - g*T".asFormula, Show("wild()".asFormula,
                   //TODO: Should be const not vBig but stuff messed up
                   //UP(List(Left("vBig".asVariable), Left("dc".asVariable)), Kaisar.RCF())
-                    UP(List(Left("rp".asVariable), Left("dc".asVariable)), Kaisar.RCF())
+                    UP(List(Left("assm(rp)".asExpr), Left("assm(dc)".asExpr)), Kaisar.RCF())
                 ),
                 Have("trans".asVariable, "\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula, duh,
-                Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable), "v".asTerm), "loop(v)-g*t".asTerm), "loop(v)-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("vBig".asExpr)), FPat("tBound".asExpr)), FPat("vInitBig".asExpr)),
+                Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable), "v".asTerm), "loop(v)-g*t".asTerm), "loop(v)-g*T".asTerm), "-(g/rp)^(1/2)".asTerm),
+                  FPat("assm(vBig)".asExpr)), FPat("assm(tBound)".asExpr)), FPat("assm(vInitBig)".asExpr)),
                 //TODO: Show needs some more stuff about v>=v0 and m < equilib
                   PrintGoal("Almost done goal one ",
-                  Show("wild()".asFormula, UP(List(Left("res".asVariable),Left("vBig".asVariable), Left("DYN".asVariable), Left("DCCONST".asVariable)), Auto())))))))))))
+                  Show("wild()".asFormula, UP(List(Left("assm(res)".asExpr),Left("assm(vBig)".asExpr), Left("assm(DYN)".asExpr), Left("assm(DCCONST)".asExpr)), Auto())))))))))))
             ),List())))
             ))
             ,
@@ -948,11 +947,11 @@ show (Jy > 0) using assms Jy by auto
             Inv("vBig".asVariable, "v >= loop(v) - g*t".asFormula, duh, duh,
             Inv("ghostInv".asVariable, "(y^2*(v+(g/rp)^(1/2))=1)".asFormula, duh, duh,
             Finally(
-              Show("wild()".asFormula, UP(List(Left("ghostInv".asVariable),Left("vBig".asVariable), Left("DYN".asVariable), Left("DCCONST".asVariable)), Kaisar.RCF())))))))),List())))))))),
+              Show("wild()".asFormula, UP(List(Left("assm(ghostInv)".asExpr),Left("assm(vBig)".asExpr), Left("assm(DYN)".asExpr), Left("assm(DCCONST)".asExpr)), Kaisar.RCF())))))))),List())))))))),
         Finally(
           PrintGoal("About to conclude",
             //TODO: Badness
-            Show(post, UP(List(Left("assms".asVariable), Left("DCCONST".asVariable), Left("DYN".asVariable)), Auto()))))))), List()))))
+            Show(post, UP(List(Left("assm(assms)".asExpr), Left("assm(DCCONST)".asExpr), Left("assm(DYN)".asExpr)), Auto()))))))), List()))))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(safePara)) shouldBe 'proved
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
@@ -1005,11 +1004,12 @@ finally show _ using ghostInv by R
       Inv("dc".asVariable, "t <= T".asFormula, duh, duh,
       Finally(
       Have("tBound".asVariable, "loop(v) -g*t >= loop(v) - g*T".asFormula, Show("wild()".asFormula,
-        UP(List(Left("rp".asVariable), Left("dc".asVariable)), Kaisar.RCF())
+        UP(List(Left("assm(rp)".asExpr), Left("assm(dc)".asExpr)), Kaisar.RCF())
       ),Have("trans".asVariable, "\\forall w \\forall x \\forall y \\forall z (w>=x -> x>=y -> y>z -> w>z)".asFormula, duh,
-      Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable), "v".asTerm), "loop(v)-g*t".asTerm), "loop(v)-g*T".asTerm), "-(g/rp)^(1/2)".asTerm), FPat("vBig".asExpr)), FPat("tBound".asExpr)), FPat("vInitBig".asExpr)),
+      Note("res".asVariable, FMP(FMP(FMP(FInst(FInst(FInst(FInst(FPat("trans".asVariable), "v".asTerm), "loop(v)-g*t".asTerm), "loop(v)-g*T".asTerm), "-(g/rp)^(1/2)".asTerm),
+        FPat("assm(vBig)".asExpr)), FPat("assm(tBound)".asExpr)), FPat("assm(vInitBig)".asExpr)),
       //PrintGoal("WUST Almost done goal one ",
-        Show("wild()".asFormula, UP(List(Left("res".asVariable),Left("vBig".asVariable), Left("DYN".asVariable), Left("DCCONST".asVariable)), Auto()))/*)*/))))))))
+        Show("wild()".asFormula, UP(List(Left("assm(res)".asExpr),Left("assm(vBig)".asExpr), Left("assm(DYN)".asExpr), Left("assm(DCCONST)".asExpr)), Auto()))/*)*/))))))))
             ),List())))
         ))
         ,
@@ -1023,13 +1023,13 @@ finally show _ using ghostInv by R
         Inv("ghostInv".asVariable, "(y^2*(v+(g/rp)^(1/2))=1)".asFormula, duh, duh,
         Finally(
           /*PrintGoal("WUST Almost done goal two ",*/
-            Show("wild()".asFormula, UP(List(Left("ghostInv".asVariable),Left("vBig".asVariable), Left("DYN".asVariable), Left("DCCONST".asVariable)), Kaisar.RCF()))/*)*/)))))),List())))))/*)*/))),
+            Show("wild()".asFormula, UP(List(Left("assm(ghostInv)".asExpr),Left("assm(vBig)".asExpr), Left("assm(DYN)".asExpr), Left("assm(DCCONST)".asExpr)), Kaisar.RCF()))/*)*/)))))),List())))))/*)*/))),
       Inv("xdown".asVariable, "x <= init(x)".asFormula, PrintGoal("idown BC ",
         duh), /*PrintGoal("WUST idown IS ",*/duh/*)*/,
       Finally(
       PrintGoal("WUST About to conclude",
         // , Left("DYN".asVariable)
-      Show(lowPost, UP(List(Left("niceAssume".asVariable), Left("xdown".asVariable)), Auto())))))))), List()))))))
+      Show(lowPost, UP(List(Left("assm(niceAssume)".asExpr), Left("assm(xdown)".asExpr)), Auto())))))))), List()))))))
       Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(lowPara)) shouldBe 'proved
       println("Time taken (millis): " + (System.currentTimeMillis() - time))
     })
@@ -1257,9 +1257,9 @@ finally show _ using ghostInv by R
       val sp:SP =
         BRule(RBCaseOrL("absdx".asVariable, "safeCurve(abs(x-xo)) > wild()".asFormula, "absyx".asVariable, "safeCurve(abs(y-yo)) > wild()".asFormula), List(
           Have("dxep".asVariable, "safeCurve(abs(x-xo)) > safeCurve(v^2)/(2*b()) + V()*(safeCurve(v)/b()) + (A()/b() + 1)*(A()/2*t^2 +t*(safeCurve(v)+V()))".asFormula, duh,
-          Show("wild()".asFormula, UP(List(Left("neg(greatCurve)".asExpr)), Kaisar.RCF())))
+          Show("wild()".asFormula, UP(List(Left("neg(assm(greatCurve))".asExpr)), Kaisar.RCF())))
         , Have("dyep".asVariable, "safeCurve(abs(y-yo)) > safeCurve(v^2)/(2*b()) + V()*(safeCurve(v)/b()) + (A()/b() + 1)*(A()/2*t^2 +t*(safeCurve(v)+V()))".asFormula, duh,
-            Show("wild()".asFormula, UP(List(Left("neg(greatCurve)".asExpr)), Kaisar.RCF())))
+            Show("wild()".asFormula, UP(List(Left("neg(assm(greatCurve))".asExpr)), Kaisar.RCF())))
         ))
 
       Kaisar.eval(sp,h, c, pr) shouldBe 'proved
@@ -1452,9 +1452,9 @@ finally show _ using ghostInv by R
             PrintGoal("End third goal",
               BRule(RBCaseOrL("absdx".asVariable, "safeCurve(abs(x-xo)) > wild()".asFormula, "absyx".asVariable, "safeCurve(abs(y-yo)) > wild()".asFormula), List(
                 Have("dxep".asVariable, "safeCurve(abs(x-xo)) > safeCurve(v^2)/(2*b()) + V()*(safeCurve(v)/b()) + (A()/b() + 1)*(A()/2*t^2 +t*(safeCurve(v)+V()))".asFormula, duh,
-                  Show("wild()".asFormula, UP(List(Left("neg(greatCurve)".asExpr)), Kaisar.RCF())))
+                  Show("wild()".asFormula, UP(List(Left("neg(assm(greatCurve))".asExpr)), Kaisar.RCF())))
                 , Have("dyep".asVariable, "safeCurve(abs(y-yo)) > safeCurve(v^2)/(2*b()) + V()*(safeCurve(v)/b()) + (A()/b() + 1)*(A()/2*t^2 +t*(safeCurve(v)+V()))".asFormula, duh,
-                  Show("wild()".asFormula, UP(List(Left("neg(greatCurve)".asExpr)), Kaisar.RCF())))
+                  Show("wild()".asFormula, UP(List(Left("neg(assm(greatCurve))".asExpr)), Kaisar.RCF())))
               ))
               //Show("wild()".asFormula, UP(List(), Kaisar.RCF()))
             ))))))))))),List()))))))))))))))))))))))/*)*/)))/*)*/))))))))),
