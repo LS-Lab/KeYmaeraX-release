@@ -277,6 +277,7 @@ private object DifferentialTactics {
     if (ov.isEmpty) {
       dc(f)(pos)
     } else {
+      var freshOld = TacticHelper.freshNamedSymbol(Variable("old"), sequent)
       val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {
         val (ghost: Variable, ghostPos: Option[Position]) = old match {
           case v: Variable =>
@@ -286,7 +287,10 @@ private object DifferentialTactics {
               case _ => false
             }).map[(Variable, Option[Position])]({ case (Equal(x0: Variable, _), i) => (x0, Some(AntePosition.base0(i))) }).
               getOrElse((TacticHelper.freshNamedSymbol(v, sequent), None))
-          case _ => (TacticHelper.freshNamedSymbol(Variable("old"), sequent), None)
+          case _ =>
+            val fo = freshOld
+            freshOld = Variable("old", Some(freshOld.index.getOrElse(-1) + 1))
+            (fo, None)
         }
         (old -> ghost,
           ghostPos match {
