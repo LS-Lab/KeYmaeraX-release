@@ -722,6 +722,28 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1).succ should contain theSameElementsAs List("[{x'=2 & (x>=0 | y<z)}]x>=old".asFormula)
   }
 
+  it should "auto-generate multiple names for term-ghosts when special function old is used" in withMathematica { qeTool =>
+    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=2 & x>=0 | y<z}]x>=0".asFormula)),
+      dC("x>=old(x^2+4)+old(y*z)".asFormula)(1))
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain theSameElementsAs List("old=x^2+4".asFormula, "old_0=y*z".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("[{x'=2 & (x>=0 | y<z) & x>=old+old_0}]x>=0".asFormula)
+    result.subgoals(1).ante should contain theSameElementsAs List("old=x^2+4".asFormula, "old_0=y*z".asFormula)
+    result.subgoals(1).succ should contain theSameElementsAs List("[{x'=2 & (x>=0 | y<z)}]x>=old+old_0".asFormula)
+  }
+
+  it should "auto-generate multiple names for term-ghosts when special function old is used over consecutive cuts" in withMathematica { _ =>
+    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=2 & x>=0 | y<z}]x>=0".asFormula)),
+      dC("x>=old(x^2+4)+old(y*z)".asFormula)(1) & Idioms.<(dC("x>old(2+4)".asFormula)(1), nil))
+    result.subgoals should have size 3
+    result.subgoals.head.ante should contain theSameElementsAs List("old=x^2+4".asFormula, "old_0=y*z".asFormula, "old_1=2+4".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("[{x'=2 & ((x>=0 | y<z) & x>=old+old_0) & x>old_1}]x>=0".asFormula)
+    result.subgoals(1).ante should contain theSameElementsAs List("old=x^2+4".asFormula, "old_0=y*z".asFormula)
+    result.subgoals(1).succ should contain theSameElementsAs List("[{x'=2 & (x>=0 | y<z)}]x>=old+old_0".asFormula)
+    result.subgoals(2).ante should contain theSameElementsAs List("old=x^2+4".asFormula, "old_0=y*z".asFormula, "old_1=2+4".asFormula)
+    result.subgoals(2).succ should contain theSameElementsAs List("[{x'=2 & (x>=0 | y<z) & x>=old+old_0}]x>old_1".asFormula)
+  }
+
   it should "already rewrite existing conditions and introduce ghosts when special function old is used" in withMathematica { qeTool =>
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}]x>=0".asFormula)),
       dC("x>=old(x)".asFormula)(1))
