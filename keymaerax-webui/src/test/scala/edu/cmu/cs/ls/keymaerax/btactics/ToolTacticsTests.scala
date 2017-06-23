@@ -154,4 +154,15 @@ class ToolTacticsTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "==> [x:=x/b+2;]x>0".asSequent
   }
 
+  "Edit" should "transform when no new symbols are introduced" in withMathematica { _ =>
+    proveBy("x>=0".asFormula, edit("x>=1".asFormula)(1)).subgoals.loneElement shouldBe "==> x>=1".asSequent
+  }
+
+  it should "abbreviate when new symbols are introduced" in withMathematica { _ =>
+    proveBy("x>=2+3".asFormula, edit("x>=y".asFormula)(1)).subgoals.loneElement shouldBe "y=2+3 ==> x>=y".asSequent
+    proveBy("2*g()*x=37".asFormula, edit("foo*x=37".asFormula)(1)).subgoals.loneElement shouldBe "foo=2*g() ==> foo*x=37".asSequent
+    // does not unify
+    //proveBy("2*g()*x=37".asFormula, edit("2*foo=37".asFormula)(1)).subgoals.loneElement shouldBe "foo=g()*x ==> 2*foo=37".asSequent
+  }
+
 }

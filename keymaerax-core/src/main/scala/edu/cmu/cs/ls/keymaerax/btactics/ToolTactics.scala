@@ -188,6 +188,37 @@ private object ToolTactics {
     }
   })
 
+  /** @see [[TactixLibrary.edit()]] */
+  def edit(to: Expression): DependentPositionWithAppliedInputTactic = "edit" byWithInput (to, (pos: Position, sequent: Sequent) => {
+    val srcExpr = sequent.sub(pos).getOrElse(throw new IllegalArgumentException("Edit does not point to a term or formula in the sequent"))
+
+    require(srcExpr match {
+      case fml: Formula => fml.isFOL && to.kind == fml.kind
+      case t: Term => to.kind == t.kind
+      case _ => false
+    }, "Edit only on arithmetic formulas and terms")
+
+    // prepare for unification match: replace new (abbreviation) variables with functions
+    val diff = StaticSemantics.symbols(to)--StaticSemantics.symbols(srcExpr)
+    val toExpr = diff.foldLeft(to)((r, s) => s match {
+      case v: Variable => SubstitutionHelper.replaceFree(r)(v, FuncOf(Function(v.name, v.index, Unit, Real), Nothing))
+      case _: FuncOf => r
+    })
+
+    //@todo abbreviate and transform at once, but UnificationMatch does not report non-substitution diffs (e.g., 0~>1)
+    try {
+      val diff = UnificationMatch(toExpr, srcExpr)
+      diff.usubst.subsDefsInput.map({
+        // undo unification preparation, abbrv cannot abbreviate to functions (cuts in shape \exists y y=x)
+        case SubstitutionPair(FuncOf(Function(name, idx, _, _, _), _), t: Term) => EqualityTactics.abbrv(t, Some(Variable(name, idx)))
+      }).reduce[BelleExpr](_&_)
+    } catch {
+      case _: UnificationException =>
+        // assumes: exception raised due to transformation, e.g. 0~>1 in x>=1 -> x>=0
+        transform(to)(pos)
+    }
+  })
+
   /** Transforms the formula at position `pos` into the formula `to`. */
   private def transformFormula(to: Formula, sequent: Sequent, pos: Position) = {
     val polarity = FormulaTools.polarityAt(sequent(pos.top), pos.inExpr)*(if (pos.isSucc) 1 else -1)
