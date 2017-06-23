@@ -310,6 +310,7 @@ class ErrorResponse(val msg: String, val exn: Throwable = null) extends Response
     } else ""
   def getJson = JsObject(
     "textStatus" -> (if (msg != null) JsString(msg) else JsString("")),
+    "causeMsg" -> (if (exn != null) JsString(exn.getMessage) else JsString("")),
     "errorThrown" -> JsString(stacktrace),
     "type" -> JsString("error")
   )
