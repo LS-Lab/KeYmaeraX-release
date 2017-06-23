@@ -322,7 +322,7 @@ object Kaisar {
     def getFunDef(ident:String, at:Option[TimeName]):Expression = {
       val (tVar, body) =
         if(fundefmap.contains(ident)) { fundefmap(ident) }
-        else if(ident.last == '_' && defmap.contains(ident.dropRight(1))) {
+        else if(ident.last == '_' && fundefmap.contains(ident.dropRight(1))) {
           fundefmap(ident.dropRight(1))
         } else {
           throw new Exception("Tried to get invalid function definition for " + ident )
@@ -497,7 +497,7 @@ object Kaisar {
         matches.toList match {
           case ((_,i)::Nil) => i
           case ms =>
-            throw new Exception("Non-unique match in pattern-matching construct: " + ms)
+            throw new Exception("Non-unique match for pattern " + pat + " in pattern-matching construct: " + ms)
         }
 
     }
@@ -1075,7 +1075,7 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
       val hideTac = hideInds.reverse.foldLeft(TactixLibrary.nil)({case (e, i) => e & hideR(i+1)})
       val prIn = interpret(hideTac, g)
       val pr =eval(proof, h, ccc, prIn)
-      assert(pr.isProved, "Shown formula not proved: " + phi + " not proved by " + pr.prettyString)
+      assert(pr.isProved, "Shown formula not proved: " + phi + " not proved by " + pr.prettyString + "\\n\\n at " + g.prettyString)
       pr
     case SLet(pat:Expression, e:Expression, tail:SP) =>
       //TODO: Expand e?

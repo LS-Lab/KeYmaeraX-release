@@ -2242,6 +2242,10 @@ Provable((A()>=0&b()>0&ep()>0&V()>0)&v_0=0&(x_0-xo_0)^2-(y_0-yo_0)^2>0&dx_0^2+dy
   /* case class RBImplyL(p:Variable, patp:Expression, q:Variable, patq:Expression) extends RuleSpec
              case class RBAbbrev(xphi:Variable, x:Variable, theta:Term) extends RuleSpec */
 
+
+
+
+
   "ijrr thm 7 first arith" should "prove" in {withMathematica(qeTool => {
     val seq = Sequent(immutable.IndexedSeq[Formula](
       "(A()>=0&b()>0&ep()>0&V()>0&0 < Da()&Da()<=1)&v_0=0&(x_0-xo_0)^2-(y_0-yo_0)^2>0&dx_0^2+dy_0^2=1".asFormula,
@@ -2263,10 +2267,48 @@ Provable((A()>=0&b()>0&ep()>0&V()>0)&v_0=0&(x_0-xo_0)^2-(y_0-yo_0)^2>0&dx_0^2+dy
     val h = History(List(HCRename(asBV("w"),asBV("w_1"),None), HCRename(asBV("x"),asBV("x_1"),None), HCRename(asBV("dx"),asBV("dx_1"),None), HCRename(asBV("v"),asBV("v_1"),None), HCRename(asBV("xo"),asBV("xo_1"),None), HCRename(asBV("t"),asBV("t_2"),None), HCRename(asBV("dy"),asBV("dy_1"),None), HCRename(asBV("yo"),asBV("yo_1"),None), HCRename(asBV("y"),asBV("y_1"),None), HCRename(asBV("t"),asBV("t_1"),Some(AntePos(4))), HCAssign("acc:=da*(-b());".asProgram.asInstanceOf[Assign]), HCRename(asBV("da"),asBV("da_1"),None), HCAssign("a:=-b();".asProgram.asInstanceOf[Assign]), HCRename(asBV("vyo"),asBV("vyo_1"),None), HCRename(asBV("vxo"),asBV("vxo_1"),None), HCTimeStep("loop"), HCRename(asBV("w"),asBV("w_0"),None), HCRename(asBV("acc"),asBV("acc_0"),None), HCRename(asBV("a"),asBV("a_0"),None), HCRename(asBV("x"),asBV("x_0"),None), HCRename(asBV("dx"),asBV("dx_0"),None), HCRename(asBV("v"),asBV("v_0"),None), HCRename(asBV("vyo"),asBV("vyo_0"),None), HCRename(asBV("da"),asBV("da_0"),None), HCRename(asBV("r"),asBV("r_0"),None), HCRename(asBV("xo"),asBV("xo_0"),None), HCRename(asBV("t"),asBV("t_0"),None), HCRename(asBV("dy"),asBV("dy_0"),None), HCRename(asBV("yo"),asBV("yo_0"),None), HCRename(asBV("vxo"),asBV("vxo_0"),None), HCRename(asBV("y"),asBV("y_0"),None), HCTimeStep("init")))
     val c = Context(Map("dC".asVariable -> AntePosition(13), "perturb".asVariable -> AntePosition(4), "safeObs".asVariable -> AntePosition(3), "J".asVariable -> AntePosition(2), "wfDir".asVariable -> AntePosition(7), "vBound".asVariable -> AntePosition(10), "yBound".asVariable -> AntePosition(12), "yoBound".asVariable -> AntePosition(9), "xBound".asVariable -> AntePosition(11), "xoBound".asVariable -> AntePosition(8), "assms".asVariable -> AntePosition(1), "tPos".asVariable -> AntePosition(6)),
       Map(),
-      Map("WFDIR" -> ("t","t{dx^2+dy^2=1}".asFormula), "SD" -> ("t","t(v^2/(2*(b()*Da()))+V()*v/(b()*Da()))".asFormula), "ASEP" -> ("t","t(v^2/(2*(b()*Da()))+V()*v/(b()*Da())+(A()/(b()*Da())+1)*(A()/2*ep()^2+ep()*(v+V())))".asFormula)))
+      Map("WFDIR" -> ("t","t{dx^2+dy^2=1}".asFormula), "SD" -> ("t","t(v^2/(2*(b()*Da()))+V()*v/(b()*Da()))".asTerm), "ASEP" -> ("t","t(v^2/(2*(b()*Da()))+V()*v/(b()*Da())+(A()/(b()*Da())+1)*(A()/2*ep()^2+ep()*(v+V())))".asFormula)))
     val time = System.currentTimeMillis()
-    val sp:SP = ???
-    Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(seq)) shouldBe 'proved
+    val sp:SP =
+      // TODO: Pick right assumptions for each subproof
+      BRule(RBCase(List("v>=0".asFormula, "wild()".asFormula)), List(
+        Show("wild()".asFormula, UP(List(Left("assm(dC)".asExpr)), Kaisar.RCF()))
+        ,
+        BRule(RBCase(List("dx^2+dy^2=1".asFormula, "wild()".asFormula)), List(
+          Show("wild()".asFormula, UP(List(),CloseId())),
+          BRule(RBAssume("vPos".asVariable, "v>0".asFormula), List(
+          Have("imp".asVariable, "loop{v> 0 -> (abs(x-xo) > SD_() | abs(y-yo) > SD_())}".asFormula,
+            Show("wild()".asFormula, UP(List(Left("assm(J)".asExpr)), Kaisar.RCF()))
+            ,
+          BRule(RBAbbrev("actBEq".asVariable, "actB".asVariable, "b()*Da()".asTerm), List(
+          Have("actBPos".asVariable, "actB>0".asFormula, Show("wild()".asFormula, UP(List(Left("assm(assms)".asExpr)),Kaisar.RCF())),
+
+          BRule(RBCaseImplyL("oldVPos".asVariable, "loop(v)>0 ".asFormula, "disj".asVariable, "wild()".asFormula), List(
+            Show("loop(v)>0".asFormula, UP(List(), Kaisar.SmartQE())),
+            BRule(RBCaseOrL("xxo".asVariable, "loop(abs(x-xo)) > wild()".asFormula, "yyo".asVariable, "loop(abs(y-yo)) > wild()".asFormula), List(
+              PrintGoal("SG1",
+                BRule(RBCaseOrR("goal1".asVariable, "goal2".asVariable), List(
+                  Show("abs(x-xo) > wild()".asFormula, UP(List(Left("neg(union(assm(greatCurve),assm(J)))".asExpr)), Kaisar.SmartQE()))))
+              ),
+              PrintGoal("SG2",
+                BRule(RBCaseOrR("goal1".asVariable, "goal2".asVariable), List(
+                  Show("abs(y-yo) > wild()".asFormula, UP(List(Left("neg(union(assm(greatCurve),assm(J)))".asExpr)), Kaisar.SmartQE()))))
+              )
+            )))
+            //???
+          ))
+            )))
+          /*  BRule(RBCaseOrL("absdx".asVariable, "safeCurve(abs(x-xo)) > wild()".asFormula, "absyx".asVariable, "safeCurve(abs(y-yo)) > wild()".asFormula), List(
+              Have("dxep".asVariable, "abs(safeCurve(x-xo)) > (safeCurve(v)^2 / (2*b()) + V()*safeCurve(v)/b()) + (a/b()+1)*(a/2*t^2 + t*(safeCurve(v) +V()))".asFormula, duh,
+                BRule(RBCaseOrR("goal1".asVariable, "goal2".asVariable), List(
+                  Show("abs(x-xo) > wild()".asFormula, UP(List(Left("neg(union(assm(greatCurve),assm(J)))".asExpr)), Kaisar.SmartQE())))))
+              , Have("dyep".asVariable, "abs(safeCurve(y-yo)) > (safeCurve(v)^2 / (2*b()) + V()*safeCurve(v)/b()) + (a/b()+1)*(a/2*t^2 + t*(safeCurve(v) +V()))".asFormula, duh,
+                BRule(RBCaseOrR("goal1".asVariable, "goal2".asVariable), List(
+                  Show("abs(y-yo) > wild()".asFormula, UP(List(Left("neg(union(assm(greatCurve),assm(J)))".asExpr)), Kaisar.SmartQE())))))))*/
+
+          ))
+        ))))
+    Kaisar.eval(sp, h, c, Provable.startProof(seq)) shouldBe 'proved
     println("Time taken (millis): " + (System.currentTimeMillis() - time))
   })}
   /*  from      -1:  (A()>=0&b()>0&ep()>0&V()>0&0 < Da()&Da()<=1)&v_0=0&(x_0-xo_0)^2-(y_0-yo_0)^2>0&dx_0^2+dy_0^2=1	And
