@@ -988,7 +988,7 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val cc = c.add(xphi, AntePos(sequent.ante.length))
           val e = EqualityTactics.abbrv(theta,Some(x))
           val pr1 = interpret(e, g)
-          val pr = eval(sp.head,hh,cc,pr1)
+          val pr = eval(sp.head,h,cc,pr1)
           pr
         case (RBCaseImplyL(p,patp,q,patq), _ ) =>
           assertBranches(sp.length, 2)
@@ -1100,7 +1100,9 @@ def eval(sp:SP, h:History, c:Context, g:Provable):Provable = {
       assert(prOut.isProved, "Failed to prove subgoal " + x + ":" + fml + " in subproof " + sp + ", left behind provable " + prOut.prettyString)
       val size = prOut.conclusion.ante.size
       val newPos = AntePos(size)
-      val gg = g(Cut(fmlExpanded),0)(HideRight(SuccPos(0)),1)(prOut,1)
+      val succSize = g.subgoals.head.succ.length
+      def cohideR(g:Provable,n:Int):Provable = if(n == 0) {g} else {cohideR(g(HideRight(SuccPos(0)),1),n-1)}
+      val gg = cohideR(g(Cut(fmlExpanded),0),succSize)(prOut,1)
       val res = eval(tail,h,c.add(x,newPos), gg)
       res
     case BRule (r:RuleSpec, tails: List[SP]) => eval(r,tails,h,c,g)
