@@ -71,11 +71,7 @@ angular.module('formula')
                     }
                 });
               } else if (scope.modeIsEdit() && formulaId && formulaId !== '' && editable == 'editable') {
-                event.stopPropagation();
-                $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/prettyString').
-                  then(function(response) {
-                    scope.editFormulaPopover.open(formulaId, response.data.prettyString);
-                  });
+                // not used
               }
             }
 
@@ -86,8 +82,21 @@ angular.module('formula')
                   scope.tacticPopover.open(formulaId);
                 });
               } else if (scope.modeIsEdit() && formulaId && formulaId !== '' && editable == 'editable') {
-                // not used yet
+                // not used
               }
+            }
+
+            scope.editExpr = function(exprId, newExpr) {
+              scope.onInputTactic({formulaId: exprId, tacticId: 'edit', input: [{'param': 'to', 'value': newExpr}]});
+              var tacticResult = $q.defer();
+              scope.$on('proof.message', function(event, data) {
+                if (data.textStatus && data.textStatus != "") {
+                  tacticResult.resolve(data.textStatus + "\nDetails:" + data.causeMsg);
+                } else {
+                  tacticResult.resolve();
+                }
+              });
+              return tacticResult.promise;
             }
 
             scope.applyTactic = function(formulaId, tacticId) {
