@@ -46,6 +46,8 @@ object Kaisar {
   case class RBAssign(hp:Assign) extends RuleSpec
   case class RBConsequence(x:Variable, fml:Formula) extends RuleSpec
   case class RBCase(pats:List[Expression]) extends RuleSpec
+  case class RBCaseImplyL(p:Variable, patp:Formula, q:Variable, patq:Formula) extends RuleSpec
+  case class RBAbbrev(xphi:Variable, x:Variable, theta:Term) extends RuleSpec
   case class RBCaseOrL(x1:Variable, pat1:Expression, x2:Variable, pat2:Expression) extends RuleSpec
   case class RBCaseOrR(x1:Variable, x2:Variable) extends RuleSpec
   case class RBAssume(x:Variable,fml:Formula) extends RuleSpec
@@ -978,6 +980,28 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val pr1:Provable = eval(sp(0),h,c,Provable.startProof(seq1))
           val pr2:Provable = eval(sp(1),h,c,Provable.startProof(seq2))
           val prr:Provable = interpret(TactixLibrary.orL(-(i+1)), g)
+          prr(pr1,0)(pr2,0)
+
+        case (RBAbbrev(xphi, x, theta),_) =>
+          assertBranches(sp.length, 1)
+          val hh = h.update(x.name,theta)
+          val cc = c.add(xphi, AntePos(sequent.ante.length))
+          val e = EqualityTactics.abbrv(theta,Some(x))
+          val pr1 = interpret(e, g)
+          val pr = eval(sp.head,hh,cc,pr1)
+          pr
+        case (RBCaseImplyL(p,patp,q,patq), _ ) =>
+          assertBranches(sp.length, 2)
+          val pat = expand(Imply(patp,patq),h,c,None)
+          val i = uniqueMatch(pat,c,sequent.ante)
+          val (Imply(pfml,qfml)) = sequent.ante(i)
+          val seq1:Sequent = sequent.updated(AntePos(i), Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(pfml)))
+          val seq2:Sequent = Sequent(sequent.ante.updated(i,qfml), sequent.succ)
+          //ante.sli
+          //TODO add p,q to contexts, also shift positioning on all other
+          val pr1:Provable = eval(sp(0),h,c,Provable.startProof(seq1))
+          val pr2:Provable = eval(sp(1),h,c,Provable.startProof(seq2))
+          val prr:Provable = interpret(TactixLibrary.implyL(-(i+1)), g)
           prr(pr1,0)(pr2,0)
         case (RBCaseOrR(x1:Variable, x2:Variable),Or(p,q)) =>
           assertBranches(sp.length, 1)

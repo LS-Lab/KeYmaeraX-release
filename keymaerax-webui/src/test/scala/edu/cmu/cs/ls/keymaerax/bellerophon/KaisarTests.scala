@@ -2060,4 +2060,231 @@ Provable((A()>=0&b()>0&ep()>0&V()>0)&v_0=0&(x_0-xo_0)^2-(y_0-yo_0)^2>0&dx_0^2+dy
     })}
 
 
+
+  "IJRR Theorem 7" should "prove" in {
+    withMathematica(qeTool => {
+      // Theorem 1
+      val b ="b()".asTerm
+      val A =  "A()".asTerm
+      val ep = "ep()".asTerm
+      val v = "v".asVariable
+      val V = "V()".asTerm
+      val Da = "Da()".asTerm
+
+      def stopDist(e: Term): Term = Plus(Divide(Power(e,Number(2)),Times(Number(2),Times(b,Da))), Divide(Times(V,e),Times(b,Da)))
+        //Plus(Divide(Power(e, Number(2)), Times(Number(2), b)), Times(V,Divide(e,b)))
+      //( (A()/(b()*Da()) + 1) * (A()/2 * ep()^2 + ep()*((.)+V())) )
+
+      def accelComp(e: Term): Term =Times(Plus(Divide(A,Times(b,Da)),Number(1)),Plus(Times(Divide(A,Number(2)),Power(ep,Number(2))),Times(ep,Plus(e,V))))
+        //Plus(Times(Plus(Divide(A, b), Number(1)), Plus(Times(Divide(A, Number(2)), Power(ep, Number(2))), Times(ep, Plus(e,V)))), Dp)
+      def admissibleSeparation(e: Term): Term = Plus(stopDist(e), accelComp(e))
+
+      val isWellformedDir = "dx^2 + dy^2 = 1".asFormula
+      val bounds = And(GreaterEqual(A, Number(0)), And(Greater(b, Number(0)), And(Greater(ep, Number(0)), And(Greater(V, Number(0)), And(Less(Number(0),Da),LessEqual(Da,Number(1)))))))
+      val initialState = And("v=0".asFormula, And("(x-xo)^2 - (y-yo)^2 > 0".asFormula, isWellformedDir))
+      val assumptions = And(bounds, initialState)
+      val loopinv = And("v >= 0".asFormula, And(isWellformedDir, Imply(Greater(v,Number(0)),Or(Greater("abs(x-xo)".asTerm, stopDist(v)), Greater("abs(y-yo)".asTerm, stopDist(v))))))
+      //val accelTest: Program = Test(Or(Greater("abs(x-xo)".asTerm, admissibleSeparation(v)), Greater("abs(y-yo)".asTerm, admissibleSeparation(v))))
+      // (v^2 / (2*b()) + V()*v/b())
+      val acclCtrl: Program =
+      """a :=A();
+         w := *; ?(-W()<=w & w<=W());       /* choose steering */
+           r := *; xo := *; yo := *;            /* measure closest obstacle on the curve */
+           /* admissible curve */
+           ?r!=0 & r*w = v;
+          ? (abs(mx-xo) > (v^2 / (2*b()) + V()*v/b()) + ((A()/b() + 1) * (A()/2 * ep()^2 + ep()*(v+V())) + Dp())
+           | abs(my-yo) > (v^2 / (2*b()) + V()*v/b()) + ((A()/b() + 1) * (A()/2 * ep()^2 + ep()*(v+V())) + Dp()));
+
+       """.asProgram
+      val obsCtrl:Program = "vxo:=*;vyo:=*;?(vxo^2+vyo^2<=V()^2);".asProgram
+      val robCtrl:Program = Compose(Choice(
+        "a:=-b();".asProgram, Choice(
+        "?v=0; a:=0; w:=0;".asProgram,
+          acclCtrl)),
+        "da :=*; ?(Da() <= da & da <= 1); acc := da*a;t:=0;".asProgram)
+      val plant:Program =
+        """ { x' = v * dx, y' = v * dy, v' = acc,        /* accelerate/decelerate and move */
+          dx' = -w * dy, dy' = w * dx, w' = acc/r,   /* follow curve */
+          xo' = vxo, yo' = vyo,
+          t' = 1 & t <= ep() & v >= 0
+          }""".asProgram
+      val ctrl = Compose(obsCtrl,robCtrl)
+      val theorem5:Formula = Imply(assumptions, Box(Loop(Compose(ctrl,plant)), "v>0 -> ((x-xo)^2 + (y-yo)^2 > 0)".asFormula))
+
+
+      val sp:SP =
+        FLet("WFDIR", "t", PredicationalOf(Function("t", None, Bool, Bool), isWellformedDir),
+        FLet("SD", "t", FuncOf(Function("t", None, Real, Real), stopDist("v".asVariable)),
+        FLet("ASEP", "t", FuncOf(Function("t", None, Real, Real), Plus(stopDist("v".asVariable), accelComp("v".asVariable))),
+        BRule(RBAssume("assms".asVariable, "wild()".asFormula), List(
+        BRule(RBInv(Inv("J".asVariable, "(v >= 0 & WFDIR() & (v> 0 -> (abs(x-xo) > SD() | abs(y-yo) > SD() )))".asFormula, duh,
+        State("loop",
+        //BRule(RBAssignAny("mx".asVariable),List(
+        //BRule(RBAssignAny("my".asVariable),List(
+        //BRule(RBAssume("uncertain".asVariable, "(mx-x)^2+(my-y)^2 <= Dp()^2".asFormula), List(
+        BRule(RBAssignAny("vxo".asVariable),List(
+        BRule(RBAssignAny("vyo".asVariable),List(
+        BRule(RBAssume("safeObs".asVariable, "vxo^2+vyo^2<=V()^2".asFormula), List(
+        BRule(RBCase(List("a := -b();".asProgram, "{wild} ++ {wild}".asProgram)), List(
+        // braking
+        BRule(RBAssign(Assign("a".asVariable,"-b()".asTerm)),List(
+        BRule(RBAssignAny("da".asVariable),List(
+        BRule(RBAssume("perturb".asVariable, "Da()<=da & da<=1".asFormula), List(
+        BRule(RBAssign(Assign("acc".asVariable, "da*a".asTerm)), List(
+        BRule(RBAssign(Assign("t".asVariable,"0".asTerm)),List(
+        BRule(RBInv(
+        Inv("tPos".asVariable,  "t>=0".asFormula, duh, duh,
+        Inv("wfDir".asVariable, "WFDIR()".asFormula, duh, duh,
+        Inv("xoBound".asVariable, "-t*V() <= xo - loop(xo) & xo - loop(xo) <= t*V()".asFormula, duh, duh,
+        Inv("yoBound".asVariable, "-t*V() <= yo - loop(yo) & yo - loop(yo) <= t*V()".asFormula, duh, duh,
+        Inv("vBound".asVariable, "v <= loop(v)- (b()*Da())*t".asFormula, duh, duh,
+        Inv("xBound".asVariable, "-t * (loop(v) - (b()*Da())/2*t) <= x - loop(x) & x - loop(x) <= t * (loop(v) - (b()*Da())/2*t)".asFormula, duh, duh,
+        Inv("yBound".asVariable, "-t * (loop(v) - (b()*Da())/2*t) <= y - loop(y) & y - loop(y) <= t * (loop(v) - (b()*Da())/2*t)".asFormula, duh, duh,
+        Inv("dC".asVariable, "v >= 0 & t <= ep()".asFormula, duh, duh,
+        Finally(PrintGoal("End first branch",
+          // abbrv({`b*Da()`},{`actB`}); cut({`actB>0`}); <(hideL('L=={`actB=b*Da()`}), hideR(1); smartQE); prop; doall(print({`Braking QE`}); smartQE); print({`Braking branch done`})
+          /* unfold ; abbrv({`b()*Da()`}, {`actB`}) ; cut({`actB>0`}) ; <(
+  hideL(-31) ; prop ; <(
+    smartQE,
+    smartQE,
+    smartQE
+    ),
+  hideR(1) ; hideR(1) ; hideL(-6) ; hideL(-11) ; hideL(-11) ; hideL(-11) ; hideL(-11) ; hideL(-11) ; hideL(-11) ; hideL(-11) ; hideL(-11) ; hideL(-11) ; hideL(-11) ; hideL(-1) ; hideL(-1) ; hideL(-1) ; hideL(-1) ; hideL(-1) ; hideL(-1) ; hideL(-1) ; hideL(-1) ; hideL(-1) ; hideL(-1) ; hideL(-1) ; hideL(-1) ; hideL(-1) ; hideL(-2) ; hideL(-2) ; QE
+  )*/
+        Show("wild()".asFormula, UP(List(), Kaisar.RCF()))))))))))))), List())))))))))))
+        , // stopped + accel
+        PrintGoal("COVFEFE Beginning second branch",
+          // "{a := A();{wild}}{wild}
+        BRule(RBCase(List("?v=0; a:=0; w:=0;".asProgram, "{a :=A();{wild}}".asProgram)),List(
+        // stopped
+        BRule(RBAssume("stopped".asVariable, "v=0".asFormula),List(
+        BRule(RBAssign(Assign("a".asVariable,"0".asTerm)),List(
+        BRule(RBAssign(Assign("w".asVariable,"0".asTerm)),List(
+        BRule(RBAssignAny("da".asVariable),List(
+        BRule(RBAssume("perturb".asVariable, "Da()<=da & da<=1".asFormula), List(
+        BRule(RBAssign(Assign("acc".asVariable, "da*a".asTerm)), List(
+        BRule(RBAssign(Assign("t".asVariable,"0".asTerm)),List(
+        PrintGoal("COVFEFE Beginning second inv",
+        BRule(RBInv(
+        Inv("tPos".asVariable,  "t>=0".asFormula, duh, duh,
+        Inv("wfDir".asVariable, "WFDIR()".asFormula, duh, duh,
+        Inv("xoBound".asVariable, "-t*V() <= xo - loop(xo) & xo - loop(xo) <= t*V()".asFormula, duh, duh,
+        Inv("yoBound".asVariable, "-t*V() <= yo - loop(yo) & yo - loop(yo) <= t*V()".asFormula, duh, duh,
+        Inv("vEq".asVariable, "v = loop(v)".asFormula, duh, duh,
+        Inv("xEq".asVariable, "x = loop(x)".asFormula, duh, duh,
+        Inv("yEq".asVariable, "y = loop(y)".asFormula, duh, duh,
+        Inv("dC".asVariable, "v >= 0 & t <= ep()".asFormula, duh, duh,
+        Finally(
+        PrintGoal("COVFEFE End of second branch",
+        Show("wild()".asFormula, UP(List(), Kaisar.SmartQE())))/*)*/)))))))))),List())))))))))))))))),
+        //Free Driving cases
+        PrintGoal("COVFEFE Beginning third branch",
+        BRule(RBAssign("a:=A();".asProgram.asInstanceOf[Assign]),List(
+        //BRule(RBAssume("aGood".asVariable, "-b()<=a & a <= A()".asFormula), List(
+        BRule(RBAssignAny("w".asVariable), List(
+        BRule(RBAssume("wGood".asVariable, "-W()<=w & w<=W()".asFormula), List(
+        BRule(RBAssignAny("r".asVariable), List(
+        BRule(RBAssignAny("xo".asVariable), List(
+        BRule(RBAssignAny("yo".asVariable), List(
+        BRule(RBAssume("goodCurve".asVariable, "r!=0 & r*w=v".asFormula),List(
+        PrintGoal("COVFEFE Beginning thirdbranching",
+        //        BRule(RBAssume("greatCurve".asVariable, "(abs(x-xo) > ASEP())|(abs(y-yo)>ASEP())".asFormula),List(
+        //"{a :=*;{wild}}{wild}".asProgram)),List(
+
+
+        //BRule(RBAssume("alrightCurve".asVariable, "(v+a*ep()>=0)".asFormula),List(
+          // TODO: update this assumption
+        BRule(RBAssume("greatCurve".asVariable, "abs(x-xo) > (v^2/(2*(b()*Da())) + V()*v/(b()*Da())) + ( (A()/(b()*Da()) + 1) * (A()/2 * ep()^2 + ep()*(v+V())) )\n| abs(y-yo) > (v^2/(2*(b()*Da())) + V()*v/(b()*Da())) + ( (A()/(b()*Da()) + 1) * (A()/2 * ep()^2 + ep()*(v+V())))".asFormula),List(
+//            BRule(RBAssume("greatCurve".asVariable, "abs(mx-xo) > (v^2 / (2*b()) + V()*v/b()) + ((A()/b() + 1) * (A()/2 * ep()^2 + ep()*(v+V())) + Dp()) | abs(my-yo) > (v^2 / (2*b()) + V()*v/b()) + ((A()/b() + 1) * (A()/2 * ep()^2 + ep()*(v+V())) + Dp())".asFormula),List(
+        BRule(RBAssignAny("da".asVariable),List(
+        BRule(RBAssume("perturb".asVariable, "Da()<=da & da<=1".asFormula), List(
+        BRule(RBAssign(Assign("acc".asVariable, "da*a".asTerm)), List(
+        BRule(RBAssign(Assign("t".asVariable,"0".asTerm)),List(
+        State("safeCurve",
+        PrintGoal("COVFEFE Beginning third invs",
+        BRule(RBInv(
+        Inv("tPos".asVariable,  "t>=0".asFormula, duh, duh,
+        Inv("wfDir".asVariable, "WFDIR()".asFormula, duh, duh,
+        Inv("xoBound".asVariable, "-t*V() <= xo - safeCurve(xo) & xo - safeCurve(xo) <= t*V()".asFormula, duh, duh,
+        Inv("yoBound".asVariable, "-t*V() <= yo - safeCurve(yo) & yo - safeCurve(yo) <= t*V()".asFormula, duh, duh,
+        Inv("vBound".asVariable, "v <= loop(v) + A()*t".asFormula, duh, duh,
+        Inv("xBound".asVariable, "-t * (loop(v) + A()/2*t) <= x - loop(x) & x - loop(x) <= t * (loop(v) + A()/2*t)".asFormula, duh, duh,
+        Inv("yBound".asVariable, "-t * (loop(v) + A()/2*t) <= y - loop(y) & y - loop(y) <= t * (loop(v) + A()/2*t)".asFormula, duh, duh,
+        Inv("dC".asVariable, "v >= 0 & t <= ep()".asFormula, duh, duh,
+        Finally(
+        PrintGoal("End third goal",
+        BRule(RBCase(List("v>=0".asFormula, "wild()".asFormula)), List(
+          duh
+          ,
+        BRule(RBCase(List("dx^2+dy^2=1".asFormula, "wild()".asFormula)), List(
+        duh,
+        BRule(RBAssume("vPos".asVariable, "v>0".asFormula), List(
+        BRule(RBCaseOrL("absdx".asVariable, "safeCurve(abs(mx-xo)) > wild()".asFormula, "absyx".asVariable, "safeCurve(abs(my-yo)) > wild()".asFormula), List(
+        Have("dxep".asVariable, "abs(safeCurve(mx)-safeCurve(xo))>safeCurve(v)^2/(2*b())+V()*safeCurve(v)/b()+(A()/b()+1)*(A()/2*t^2+t*(safeCurve(v)+V()))+ Dp()".asFormula,
+        Show("wild()".asFormula, UP(List(Left("neg(union(union(assm(xBound),assm(J)),union(assm(yBound),assm(wfDir))))".asExpr)), Kaisar.RCF())),
+        BRule(RBCaseOrR("goal1".asVariable, "goal2".asVariable), List(
+          Show("abs(x-xo) > wild()".asFormula, UP(List(Left("neg(union(assm(greatCurve),assm(J)))".asExpr)), Kaisar.SmartQE())))))
+      , Have("dyep".asVariable, "abs(safeCurve(my)-safeCurve(yo))>safeCurve(v)^2/(2*b())+V()*safeCurve(v)/b()+(A()/b()+1)*(A()/2*t^2+t*(safeCurve(v)+V()))+ Dp()".asFormula,
+        Show("wild()".asFormula, UP(List(Left("neg(union(union(assm(xBound),assm(J)),union(assm(yBound),assm(wfDir))))".asExpr)), Kaisar.RCF())),
+        BRule(RBCaseOrR("goal1".asVariable, "goal2".asVariable), List(
+          Show("abs(y-yo) > wild()".asFormula, UP(List(Left("neg(union(assm(greatCurve),assm(J)))".asExpr)), Kaisar.SmartQE())))))))))
+                                                                                    ))))
+                                                                                ))))))))))),List())))))))))))))))
+
+                                                    ))))))))))))))))))))))))))
+                  //)))))))))//)
+                  ,Finally(Show("wild()".asFormula, UP(List(),Kaisar.RCF()))))),List()))))))
+      val time = System.currentTimeMillis()
+      Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(theorem5)) shouldBe 'proved
+      println("Time taken (millis): " + (System.currentTimeMillis() - time))
+    })}
+
+  /* case class RBImplyL(p:Variable, patp:Expression, q:Variable, patq:Expression) extends RuleSpec
+             case class RBAbbrev(xphi:Variable, x:Variable, theta:Term) extends RuleSpec */
+
+  "ijrr thm 7 first arith" should "prove" in {withMathematica(qeTool => {
+    val seq = Sequent(immutable.IndexedSeq[Formula](
+      "(A()>=0&b()>0&ep()>0&V()>0&0 < Da()&Da()<=1)&v_0=0&(x_0-xo_0)^2-(y_0-yo_0)^2>0&dx_0^2+dy_0^2=1".asFormula,
+      "v_1>=0&dx_1^2+dy_1^2=1&(v_1>0->abs(x_1-xo_1)>v_1^2/(2*(b()*Da()))+V()*v_1/(b()*Da())|abs(y_1-yo_1)>v_1^2/(2*(b()*Da()))+V()*v_1/(b()*Da()))".asFormula,
+      "vxo^2+vyo^2<=V()^2".asFormula,
+      "Da()<=da&da<=1".asFormula,
+      "t_0=0".asFormula,
+      "t>=0".asFormula,
+      "dx^2+dy^2=1".asFormula,
+      "-t*V()<=xo-xo_1&xo-xo_1<=t*V()".asFormula,
+      "-t*V()<=yo-yo_1&yo-yo_1<=t*V()".asFormula,
+      " v<=v_1-b()*Da()*t".asFormula,
+      " -t*(v_1-b()*Da()/2*t)<=x-x_1&x-x_1<=t*(v_1-b()*Da()/2*t)".asFormula,
+      " -t*(v_1-b()*Da()/2*t)<=y-y_1&y-y_1<=t*(v_1-b()*Da()/2*t)".asFormula,
+      " v>=0&t<=ep()".asFormula)
+      ,
+      immutable.IndexedSeq[Formula]("v>=0&dx^2+dy^2=1&(v>0->abs(x-xo)>v^2/(2*(b()*Da()))+V()*v/(b()*Da())|abs(y-yo)>v^2/(2*(b()*Da()))+V()*v/(b()*Da()))".asFormula))
+    def asBV(s:String):BaseVariable = s.asVariable.asInstanceOf[BaseVariable]
+    val h = History(List(HCRename(asBV("w"),asBV("w_1"),None), HCRename(asBV("x"),asBV("x_1"),None), HCRename(asBV("dx"),asBV("dx_1"),None), HCRename(asBV("v"),asBV("v_1"),None), HCRename(asBV("xo"),asBV("xo_1"),None), HCRename(asBV("t"),asBV("t_2"),None), HCRename(asBV("dy"),asBV("dy_1"),None), HCRename(asBV("yo"),asBV("yo_1"),None), HCRename(asBV("y"),asBV("y_1"),None), HCRename(asBV("t"),asBV("t_1"),Some(AntePos(4))), HCAssign("acc:=da*(-b());".asProgram.asInstanceOf[Assign]), HCRename(asBV("da"),asBV("da_1"),None), HCAssign("a:=-b();".asProgram.asInstanceOf[Assign]), HCRename(asBV("vyo"),asBV("vyo_1"),None), HCRename(asBV("vxo"),asBV("vxo_1"),None), HCTimeStep("loop"), HCRename(asBV("w"),asBV("w_0"),None), HCRename(asBV("acc"),asBV("acc_0"),None), HCRename(asBV("a"),asBV("a_0"),None), HCRename(asBV("x"),asBV("x_0"),None), HCRename(asBV("dx"),asBV("dx_0"),None), HCRename(asBV("v"),asBV("v_0"),None), HCRename(asBV("vyo"),asBV("vyo_0"),None), HCRename(asBV("da"),asBV("da_0"),None), HCRename(asBV("r"),asBV("r_0"),None), HCRename(asBV("xo"),asBV("xo_0"),None), HCRename(asBV("t"),asBV("t_0"),None), HCRename(asBV("dy"),asBV("dy_0"),None), HCRename(asBV("yo"),asBV("yo_0"),None), HCRename(asBV("vxo"),asBV("vxo_0"),None), HCRename(asBV("y"),asBV("y_0"),None), HCTimeStep("init")))
+    val c = Context(Map("dC".asVariable -> AntePosition(13), "perturb".asVariable -> AntePosition(4), "safeObs".asVariable -> AntePosition(3), "J".asVariable -> AntePosition(2), "wfDir".asVariable -> AntePosition(7), "vBound".asVariable -> AntePosition(10), "yBound".asVariable -> AntePosition(12), "yoBound".asVariable -> AntePosition(9), "xBound".asVariable -> AntePosition(11), "xoBound".asVariable -> AntePosition(8), "assms".asVariable -> AntePosition(1), "tPos".asVariable -> AntePosition(6)),
+      Map(),
+      Map("WFDIR" -> ("t","t{dx^2+dy^2=1}".asFormula), "SD" -> ("t","t(v^2/(2*(b()*Da()))+V()*v/(b()*Da()))".asFormula), "ASEP" -> ("t","t(v^2/(2*(b()*Da()))+V()*v/(b()*Da())+(A()/(b()*Da())+1)*(A()/2*ep()^2+ep()*(v+V())))".asFormula)))
+    val time = System.currentTimeMillis()
+    val sp:SP = ???
+    Kaisar.eval(sp, History.empty, Context.empty, Provable.startProof(seq)) shouldBe 'proved
+    println("Time taken (millis): " + (System.currentTimeMillis() - time))
+  })}
+  /*  from      -1:  (A()>=0&b()>0&ep()>0&V()>0&0 < Da()&Da()<=1)&v_0=0&(x_0-xo_0)^2-(y_0-yo_0)^2>0&dx_0^2+dy_0^2=1	And
+   -2:  v_1>=0&dx_1^2+dy_1^2=1&(v_1>0->abs(x_1-xo_1)>v_1^2/(2*(b()*Da()))+V()*v_1/(b()*Da())|abs(y_1-yo_1)>v_1^2/(2*(b()*Da()))+V()*v_1/(b()*Da()))	And
+   -3:  vxo^2+vyo^2<=V()^2	LessEqual
+   -4:  Da()<=da&da<=1	And
+   -5:  t_0=0	Equal
+   -6:  t>=0	GreaterEqual
+   -7:  dx^2+dy^2=1	Equal
+   -8:  -t*V()<=xo-xo_1&xo-xo_1<=t*V()	And
+   -9:  -t*V()<=yo-yo_1&yo-yo_1<=t*V()	And
+   -10:  v<=v_1-b()*Da()*t	LessEqual
+   -11:  -t*(v_1-b()*Da()/2*t)<=x-x_1&x-x_1<=t*(v_1-b()*Da()/2*t)	And
+   -12:  -t*(v_1-b()*Da()/2*t)<=y-y_1&y-y_1<=t*(v_1-b()*Da()/2*t)	And
+   -13:  v>=0&t<=ep()	And
+==> 1:  v>=0&dx^2+dy^2=1&(v>0->abs(x-xo)>v^2/(2*(b()*Da()))+V()*v/(b()*Da())|abs(y-yo)>v^2/(2*(b()*Da()))+V()*v/(b()*Da()))	And)
+
+Context:Context(Map(dC -> -13, perturb -> -4, safeObs -> -3, J -> -2, wfDir -> -7, vBound -> -10, yBound -> -12, yoBound -> -9, xBound -> -11, xoBound -> -8, assms -> -1, tPos -> -6),Map(),Map(WFDIR -> (t,t{dx^2+dy^2=1}), SD -> (t,t(v^2/(2*(b()*Da()))+V()*v/(b()*Da()))), ASEP -> (t,t(v^2/(2*(b()*Da()))+V()*v/(b()*Da())+(A()/(b()*Da())+1)*(A()/2*ep()^2+ep()*(v+V()))))))
+
+History:History(List(HCRename(w,w_1,None), HCRename(x,x_1,None), HCRename(dx,dx_1,None), HCRename(v,v_1,None), HCRename(xo,xo_1,None), HCRename(t,t_2,None), HCRename(dy,dy_1,None), HCRename(yo,yo_1,None), HCRename(y,y_1,None), HCRename(t,t_1,Some(-5)), HCAssign(acc:=da*(-b());), HCRename(da,da_1,None), HCAssign(a:=-b();), HCRename(vyo,vyo_1,None), HCRename(vxo,vxo_1,None), HCTimeStep(loop), HCRename(w,w_0,None), HCRename(acc,acc_0,None), HCRename(a,a_0,None), HCRename(x,x_0,None), HCRename(dx,dx_0,None), HCRename(v,v_0,None), HCRename(vyo,vyo_0,None), HCRename(da,da_0,None), HCRename(r,r_0,None), HCRename(xo,xo_0,None), HCRename(t,t_0,None), HCRename(dy,dy_0,None), HCRename(yo,yo_0,None), HCRename(vxo,vxo_0,None), HCRename(y,y_0,None), HCTimeStep(init)))*/
 }
