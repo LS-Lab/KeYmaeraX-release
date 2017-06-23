@@ -320,7 +320,7 @@ private object DLBySubst {
           case Some(gv) => require(gv == t || (!StaticSemantics.symbols(f).contains(gv))); gv
           case None => t match {
             case v: Variable => TacticHelper.freshNamedSymbol(v, f)
-            case _ => throw new IllegalArgumentException("Only variables allowed when ghost name should be auto-provided")
+            case _ => TacticHelper.freshNamedSymbol(Variable("term"), seq)
           }
         }
         val theGhost = ghostV(f)

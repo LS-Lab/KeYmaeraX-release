@@ -672,10 +672,6 @@ class DLTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[z:=x+5;]y>0".asFormula
   }
 
-  it should "not allow arbitrary terms t when no ghost name is specified" in {
-    a [BelleThrowable] should be thrownBy proveBy("y>0".asFormula, discreteGhost("x+5".asTerm)(1))
-  }
-
   it should "use same variable if asked to do so" in {
     val result = proveBy("y>0".asFormula, DLBySubst.stutter("y".asVariable)(1))
     result.subgoals should have size 1
@@ -745,6 +741,20 @@ class DLTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "[z:=0;][x:=5+z;]x>z".asFormula
+  }
+
+  it should "introduce anonymous ghosts for terms" in {
+    val result = proveBy("x>0".asFormula, discreteGhost("y+v/1".asTerm)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[term:=y+v/1;]x>0".asFormula
+  }
+
+  it should "not clash with preexisting variables when introducing anonymous ghosts" in {
+    val result = proveBy("term>0 ==> x>0".asSequent, discreteGhost("y+v/1".asTerm)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "term>0".asFormula
+    result.subgoals.head.succ should contain only "[term_0:=y+v/1;]x>0".asFormula
   }
 
   "[:=] assign exists" should "turn existential quantifier into assignment" in {
