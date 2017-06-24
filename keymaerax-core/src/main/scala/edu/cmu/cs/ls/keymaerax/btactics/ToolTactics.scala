@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.toSingleFormula
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
@@ -198,25 +199,43 @@ private object ToolTactics {
       case _ => false
     }, "Edit only on arithmetic formulas and terms")
 
-    // prepare for unification match: replace new (abbreviation) variables with functions
-    val diff = StaticSemantics.symbols(to)--StaticSemantics.symbols(srcExpr)
-    val toExpr = diff.foldLeft(to)((r, s) => s match {
-      case v: Variable => SubstitutionHelper.replaceFree(r)(v, FuncOf(Function(v.name, v.index, Unit, Real), Nothing))
-      case _: FuncOf => r
-    })
+    var nextAbbrvName: Variable = TacticHelper.freshNamedSymbol(Variable("abbrv"), sequent)
+    val abbrvs = scala.collection.mutable.Map[PosInExpr, Term]()
+    val abbrvTo: Expression =
+      //@todo support traverse expressions
+      if (to.kind == FormulaKind) ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+          case FuncOf(Function("abbrv", None, _, _, _), abbrv@Pair(_, v: Variable)) =>
+            abbrvs(p) = abbrv
+            Right(v)
+          case FuncOf(Function("abbrv", None, _, _, _), t) =>
+            val abbrv = nextAbbrvName
+            nextAbbrvName = Variable(abbrv.name, Some(abbrv.index.getOrElse(-1) + 1))
+            abbrvs(p) = Pair(t, abbrv)
+            Right(abbrv)
+          case _ => Left(None)
+        }
+      }, to.asInstanceOf[Formula]).get
+      else ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+          case FuncOf(Function("abbrv", None, _, _, _), abbrv@Pair(_, v: Variable)) =>
+            abbrvs(p) = abbrv
+            Right(v)
+          case FuncOf(Function("abbrv", None, _, _, _), t) =>
+            val abbrv = nextAbbrvName
+            nextAbbrvName = Variable(abbrv.name, Some(abbrv.index.getOrElse(-1) + 1))
+            abbrvs(p) = Pair(t, abbrv)
+            Right(abbrv)
+          case _ => Left(None)
+        }
+      }, to.asInstanceOf[Term]).get
+    //@todo unify to check whether abbrv is valid; may need reassociating, e.g. in x*y*z x*abbrv(y*z)
 
-    //@todo abbreviate and transform at once, but UnificationMatch does not report non-substitution diffs (e.g., 0~>1)
-    try {
-      val diff = UnificationMatch(toExpr, srcExpr)
-      diff.usubst.subsDefsInput.map({
-        // undo unification preparation, abbrv cannot abbreviate to functions (cuts in shape \exists y y=x)
-        case SubstitutionPair(FuncOf(Function(name, idx, _, _, _), _), t: Term) => EqualityTactics.abbrv(t, Some(Variable(name, idx)))
-      }).reduce[BelleExpr](_&_)
-    } catch {
-      case _: UnificationException =>
-        // assumes: exception raised due to transformation, e.g. 0~>1 in x>=1 -> x>=0
-        transform(to)(pos)
-    }
+    val abbrvTactic = abbrvs.values.map({
+      case Pair(t, v: Variable) => EqualityTactics.abbrv(t, Some(v))
+    }).reduceOption[BelleExpr](_&_).getOrElse(skip)
+
+    abbrvTactic & transform(abbrvTo)(pos)
   })
 
   /** Transforms the formula at position `pos` into the formula `to`. */
