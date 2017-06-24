@@ -177,6 +177,25 @@ object DerivationInfo {
         (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
     , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
     , _ => ((fml: Formula) => TactixLibrary.dC(fml)): TypedFunc[Formula, BelleExpr]),
+    new InputPositionTacticInfo("dGfancy",
+      RuleDisplayInfo(
+        "Differential Ghost",
+        /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
+        /* premises */ List( (List("&Gamma;"), List("∃y [{x′=f(x),y′=a(x)*y+b(x) & Q}]P", "&Delta;")) )
+      ),
+      List(ExpressionArg("F", "y"::Nil), FormulaArg("P", "y"::Nil)),
+      _ =>
+        ((f: Expression) =>
+          ((p : Option[Formula]) => f match {
+            case f : Equal => {
+              assert(f.left.isInstanceOf[DifferentialSymbol])
+              val dp = AtomicODE(f.left.asInstanceOf[DifferentialSymbol], f.right)
+              TactixLibrary.dG(dp, p)
+            }
+            case f: DifferentialProgram => TactixLibrary.dG(f.asInstanceOf[DifferentialProgram], p)
+          }) :  TypedFunc[Option[Formula], BelleExpr]
+        ) : TypedFunc[Expression, TypedFunc[Option[Formula], BelleExpr]]
+    ),
     new InputPositionTacticInfo("dG",
       RuleDisplayInfo(
         "Differential Ghost",
