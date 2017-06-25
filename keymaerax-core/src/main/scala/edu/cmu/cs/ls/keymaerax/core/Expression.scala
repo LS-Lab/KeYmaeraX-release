@@ -52,12 +52,6 @@ case class Tuple(left: Sort, right: Sort) extends Sort { override def toString =
 /** User-defined object sort */
 case class ObjectSort(name : String) extends Sort { override def toString = name }
 
-sealed trait DimensionalSort extends Sort
-/** Vector Sort */
-case class VectorSort(dim: Int) extends DimensionalSort { override def toString = s"Vertex(${dim})" }
-/** Matrix Sort */
-case class MatrixSort(rows: Int, columns: Int) extends DimensionalSort { override def toString = s"Matrix(${rows}, ${columns})" }
-
 /** Sorts of state spaces for state-dependent operators */
 sealed trait Space
 /** The sort denoting the whole state space alias list of all variables as arguments \bar{x} (axioms that allow any variable dependency) */
@@ -218,33 +212,6 @@ sealed trait SpaceDependent extends StateDependent {
   */
 sealed trait Term extends Expression {
   final val kind: Kind = TermKind
-}
-
-/** Vectors and Matrices */
-sealed trait DimensionalTerm extends Term
-/** Real-valued projections from a Dimension */
-sealed trait ProjectionTerm extends RTerm {
-  val value : RTerm
-}
-/** Vectors */
-case class Vector(x: List[RTerm]) extends DimensionalTerm {
-  assert(x.forall(a => a.isInstanceOf[AtomicTerm]), "Each element of a vector must be scalar (aka atomic)")
-  final val sort: VectorSort = VectorSort(x.length)
-}
-/** Matrices */
-case class Matrix(m: List[Vector]) extends DimensionalTerm {
-  assert(m.forall(v => v.sort.dim == m.head.sort.dim), "All vectors in a matrix must have the same length.")
-  final val sort: Sort = MatrixSort(m.length, m.head.sort.dim)
-}
-/** Dot product of two vectors. */
-case class DotProduct(v1: Vector, v2: Vector) extends AtomicTerm with ProjectionTerm {
-  assert(v1.sort.dim == v2.sort.dim, s"The dot product of ${v1.prettyString} and ${v2.prettyString} is undefined.")
-  final lazy val value : RTerm = v1.x.zip(v2.x).map(ab => Times(ab._1, ab._2)).reduce(Plus.apply)
-}
-/** Project the Nth element from a vector. */
-case class VectorProjection(v: Vector, n: Int) extends AtomicTerm with ProjectionTerm {
-  assert(v.sort.dim < n, s"Cannot project the ${n}th element from a ${v.sort.dim} dimensional array.")
-  final lazy val value : RTerm = v.x(n)
 }
 
 /** Atomic terms */
