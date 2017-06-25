@@ -744,6 +744,18 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(2).succ should contain theSameElementsAs List("[{x'=2 & (x>=0 | y<z) & x>=old+old_0}]x>old_1".asFormula)
   }
 
+  it should "auto-generate and re-use names" in withMathematica { _ =>
+    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=2 & x>=0 | y<z}]x>=0".asFormula)),
+      dC("x>=old(x^2+4)+old(y*z)+old(x^2+4)".asFormula)(1) & Idioms.<(dC("x>old(x^2+4)".asFormula)(1), nil))
+    result.subgoals should have size 3
+    result.subgoals.head.ante should contain theSameElementsAs List("old=x^2+4".asFormula, "old_0=y*z".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("[{x'=2 & ((x>=0 | y<z) & x>=old+old_0+old) & x>old}]x>=0".asFormula)
+    result.subgoals(1).ante should contain theSameElementsAs List("old=x^2+4".asFormula, "old_0=y*z".asFormula)
+    result.subgoals(1).succ should contain theSameElementsAs List("[{x'=2 & (x>=0 | y<z)}]x>=old+old_0+old".asFormula)
+    result.subgoals(2).ante should contain theSameElementsAs List("old=x^2+4".asFormula, "old_0=y*z".asFormula)
+    result.subgoals(2).succ should contain theSameElementsAs List("[{x'=2 & (x>=0 | y<z) & x>=old+old_0+old}]x>old".asFormula)
+  }
+
   it should "already rewrite existing conditions and introduce ghosts when special function old is used" in withMathematica { qeTool =>
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}]x>=0".asFormula)),
       dC("x>=old(x)".asFormula)(1))

@@ -288,9 +288,16 @@ private object DifferentialTactics {
             }).map[(Variable, Option[Position])]({ case (Equal(x0: Variable, _), i) => (x0, Some(AntePosition.base0(i))) }).
               getOrElse((TacticHelper.freshNamedSymbol(v, sequent), None))
           case _ =>
-            val fo = freshOld
-            freshOld = Variable("old", Some(freshOld.index.getOrElse(-1) + 1))
-            (fo, None)
+            sequent.ante.zipWithIndex.find({
+              //@note heuristic to avoid new ghosts on repeated old(v) usage
+              case (Equal(x0: Variable, t: Term), _) => old==t && x0.name == "old"
+              case _ => false
+            }).map[(Variable, Option[Position])]({ case (Equal(x0: Variable, _), i) => (x0, Some(AntePosition.base0(i))) }).
+              getOrElse({
+                val fo = freshOld
+                freshOld = Variable("old", Some(freshOld.index.getOrElse(-1) + 1))
+                (fo, None)
+              })
         }
         (old -> ghost,
           ghostPos match {
