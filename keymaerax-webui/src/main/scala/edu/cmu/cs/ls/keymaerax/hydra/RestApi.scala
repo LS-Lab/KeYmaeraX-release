@@ -514,11 +514,6 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
-  val exportFormula: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / "exportformula" / Segment / Segment / Segment / Segment) { (userId, proofId, nodeId, formulaId) => { pathEnd {
-    val request = new ExportFormula(database, userId, proofId, nodeId, formulaId)
-    completeRequest(request, t)
-  }}}
-
   val doAt: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
     get { parameters('stepwise.as[Boolean]) { stepwise =>
       val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))), None, Nil, consultAxiomInfo=true, stepwise=stepwise)
@@ -1040,7 +1035,6 @@ trait RestApi extends HttpService with SLF4JLogging {
     modelplex             ::
     modelplexMandatoryVars::
     exportSequent         ::
-    exportFormula         ::
     testSynthesis         ::
     uploadArchive         ::
     userModelFromFormula  ::

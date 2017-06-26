@@ -43,14 +43,6 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
                     .finally(function() { spinnerService.hide('counterExampleSpinner'); });
             }
 
-            scope.exportFormula = function(formulaId) {
-                $http.get("proofs/user/exportformula/" + scope.userId + '/' + scope.proofId + "/" + scope.nodeId + "/" + formulaId)
-                    .then(function(response) {
-                        if(response.data.errorThrown) showCaughtErrorMessage($uibModal, response.data.message, response.data)
-                        else showVerbatimMessage($uibModal, "Copy/Paste Formula", response.data.formula)
-                    })
-            }
-
             scope.onTactic = function(formulaId, tacticId) {
               scope.onApplyTactic({formulaId: formulaId, tacticId: tacticId});
             }

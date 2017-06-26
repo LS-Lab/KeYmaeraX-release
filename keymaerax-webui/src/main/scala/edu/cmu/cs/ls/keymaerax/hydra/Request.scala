@@ -1188,22 +1188,6 @@ class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, n
   }
 }
 
-class ExportFormula(db: DBAbstraction, userId: String, proofId: String, nodeId: String, formulaId: String)
-  extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
-    if(!db.getProofsForUser(userId).exists(p => p._1.proofId == proofId.toInt)) {
-      new PossibleAttackResponse("Permission denied") :: Nil
-    } else {
-      DbProofTree(db, proofId).locate(nodeId).flatMap(_.goal) match {
-        case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
-        case Some(goal) =>
-          val formula = goal(SeqPos(formulaId.toInt))
-          new KvpResponse("formula", formula.prettyString) :: Nil
-      }
-    }
-  }
-}
-
 case class BelleTermInput(value: String, spec:Option[ArgInfo])
 
 class GetStepRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, pos: Position)
