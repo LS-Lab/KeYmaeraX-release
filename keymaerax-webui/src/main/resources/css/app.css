@@ -185,22 +185,24 @@ del {
 
 /* Mark top-level operator */
 .k4-has-step.k4-prove-hover > span > .k4-op:after {
-  content: "\f085"; /* fontawesome cogs */
+  content: "\f063"; /* fontawesome downarrow */
   font-family: FontAwesome;
+  font-size: smaller;
   -webkit-text-stroke: 1px black;
   position: relative;
-  right: 1ex;
+  right: 1em;
   top: -1.5ex;
   width: 1em;
   margin-right: -1em;
 }
 /* Mark top-level operator in programs */
 .k4-has-step.k4-prove-hover > span > span.k4-mod-open ~ span.k4-program > span > span.k4-topop.k4-prg-op:after {
-  content: "\f085"; /* fontawesome cogs */
+  content: "\f063"; /* fontawesome downarrow */
   font-family: FontAwesome;
+  font-size: smaller;
   -webkit-text-stroke: 1px black;
   position: relative;
-  right: 1ex;
+  right: 1em;
   top: -1.5ex;
   width: 1em;
   margin-right: -1em;
