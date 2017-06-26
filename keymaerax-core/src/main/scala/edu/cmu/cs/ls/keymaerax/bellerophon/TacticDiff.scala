@@ -178,5 +178,10 @@ object TacticDiff {
         val d = diff(i1, i2)
         (ReplacementBelleContext(DefTactic(n1, d._1.t)), d._2, d._3)
     }
+    case ApplyDefTactic(i1) => t2 match {
+      case ApplyDefTactic(i2) =>
+        val d = diff(i1, i2)
+        (ReplacementBelleContext(ApplyDefTactic(d._1.t.asInstanceOf[DefTactic])), d._2, d._3)
+    }
   }) ensuring(r => r._1(r._2)===t1 && r._1(r._3)===t2, "Reapplying context expected to produce original tactics")
 }
