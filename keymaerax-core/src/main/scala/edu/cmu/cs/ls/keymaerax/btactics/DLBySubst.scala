@@ -320,15 +320,21 @@ private object DLBySubst {
           case Some(gv) => require(gv == t || (!StaticSemantics.symbols(f).contains(gv))); gv
           case None => t match {
             case v: Variable => TacticHelper.freshNamedSymbol(v, f)
-            case _ => TacticHelper.freshNamedSymbol(Variable("term"), seq)
+            case _ => TacticHelper.freshNamedSymbol(Variable("ghost"), seq)
           }
         }
         val theGhost = ghostV(f)
+        val theF = t match {
+          //@note first two cases: backwards compatibility with diffSolve and others
+          case _: Variable => f.replaceFree(t, DotTerm())
+          case _ if StaticSemantics.boundVars(f).intersect(StaticSemantics.freeVars(t)).isEmpty => f.replaceFree(t, DotTerm())
+          case _ => f //@note new: arbitrary term ghosts
+        }
 
         val subst = (us: Option[Subst]) => RenUSubst(
           ("x_".asVariable, theGhost) ::
           ("f()".asTerm, t) ::
-          ("p(.)".asFormula, f.replaceFree(t, DotTerm())) ::
+          ("p(.)".asFormula, theF) ::
           Nil
         )
 
