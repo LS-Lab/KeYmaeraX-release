@@ -26,6 +26,8 @@ angular.module('formula')
                 // axioms not fetched yet
                 derivationInfos.formulaDerivationInfos(scope.userId, scope.proofId, scope.nodeId, formulaId)
                   .then(function(response) {
+                    // first tactic entry in popover should be open by default
+                    if (response.data.length > 0) response.data[0].isOpen = true
                     scope.formulaAxiomsMap[formulaId] = response.data;
                     axiomsHandler.call();
                   });
