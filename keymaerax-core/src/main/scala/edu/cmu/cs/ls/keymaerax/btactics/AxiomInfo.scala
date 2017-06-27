@@ -638,10 +638,10 @@ object DerivationInfo {
     new TacticInfo("smartHide", "smartHide", {case () => ArithmeticSimplification.smartHide}),
     new PositionTacticInfo("cohideL", "W", {case () => SequentCalculus.cohideL}),
     new PositionTacticInfo("cohideR", "W", {case () => SequentCalculus.cohideR}),
-    new PositionTacticInfo("closeFalse"
+    new TacticInfo("closeFalse"
       , RuleDisplayInfo(("⊥L", "falseL"), (List("⊥","&Gamma;"),List("&Delta;")), List())
       , {case () => TactixLibrary.closeF}),
-    new PositionTacticInfo("closeTrue"
+    new TacticInfo("closeTrue"
       , RuleDisplayInfo(("⊤R","trueR"), (List("&Gamma;"), List("⊤","&Delta;")),List())
         ,{case () => TactixLibrary.closeT}),
     new PositionTacticInfo("skolemizeR", "skolem", {case () => ProofRuleTactics.skolemizeR}),
