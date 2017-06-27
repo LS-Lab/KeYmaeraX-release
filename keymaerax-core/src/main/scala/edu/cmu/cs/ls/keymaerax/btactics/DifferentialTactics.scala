@@ -301,12 +301,14 @@ private object DifferentialTactics {
         }
         (old -> ghost,
           ghostPos match {
-            case None => discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) &
+            case None if pos.isTopLevel => discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) &
               TactixLibrary.exhaustiveEqR2L(hide=false)('Llast)
-            case Some(gp) => TactixLibrary.exhaustiveEqR2L(hide=false)(gp)
+            case Some(gp) if pos.isTopLevel => TactixLibrary.exhaustiveEqR2L(hide=false)(gp)
+            case _ if !pos.isTopLevel => discreteGhost(old, Some(ghost))(pos)
           })
       }).toList
-      ghosts.map(_._2).reduce(_ & _) & dc(replaceOld(f, ghosts.map(_._1).toMap))(pos)
+      val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
+      ghosts.map(_._2).reduce(_ & _) & dc(replaceOld(f, ghosts.map(_._1).toMap))(pos ++ PosInExpr(List.fill(posIncrements)(1)))
     }
   }
 

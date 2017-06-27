@@ -800,6 +800,20 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(2).succ should contain theSameElementsAs List("[{x'=v,v'=2 & true & v>=0}]x>=x_0".asFormula)
   }
 
+  it should "not expand old() ghosts in context" in withMathematica { _ =>
+    val result = proveBy("[x:=0;][{x'=1}]x>=0".asFormula, dC("x>=old(x)".asFormula)(1, 1::Nil))
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty // contain theSameElementsAs "!t<0".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "[x:=0;][x_0:=x;][{x'=1 & true & x>=x_0}]x>=0".asFormula::Nil
+  }
+
+  it should "compute the followup position correctly" in withMathematica { _ =>
+    val result = proveBy("y=1 ==> [x:=0;][{x'=1,y'=-1}]x>=0".asSequent, dC("x>=old(x) & y<=old(y)".asFormula)(1, 1::Nil))
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain theSameElementsAs "y=1".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "[x:=0;][y_0:=y;][x_0:=x;][{x'=1,y'=-1 & true & (x>=x_0 & y<=y_0)}]x>=0".asFormula::Nil
+  }
+
   "Diamond differential cut" should "cut in a simple formula" in withMathematica { qeTool =>
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("<{x'=2}>x>=0".asFormula)),
       dC("x>0".asFormula)(1))
