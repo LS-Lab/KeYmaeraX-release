@@ -590,9 +590,10 @@ object Helpers {
       case f: Quantified => print(q, "formula", hasStep, isEditable, expr.prettyString, op(f)::print(" ")::print(f.vars.map(_.prettyString).mkString(","))::print(" ")::Nil ++ wrapChild(f, printJson(q ++ 0, f.child)):_*)
       case f: Box => print(q, "formula", hasStep, isEditable, expr.prettyString, print("[", "mod-open")::printJson(q ++ 0, f.program)::print("]", "mod-close")::Nil ++ wrapChild(f, printJson(q ++ 1, f.child)):_*)
       case f: Diamond => print(q, "formula", hasStep, isEditable, expr.prettyString, print("<", "mod-open")::printJson(q ++ 0, f.program)::print(">", "mod-close")::Nil ++ wrapChild(f, printJson(q ++ 1, f.child)):_*)
-      case t: UnaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, op(t) +: wrapChild(t, printJson(q ++ 0, t.child)):_*)
+      case f: UnaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, op(f) +: wrapChild(f, printJson(q ++ 0, f.child)):_*)
+      case f: AtomicFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, print(expr.prettyString))
       case f: Less => print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q++0, f.left)) ++ (print(" ")::op(f)::print(" ")::Nil) ++ wrapRight(f, printJson(q++1, f.right)):_*)
-      case t: BinaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(t, printJson(q ++ 0, t.left)) ++ (op(t)::Nil) ++ wrapRight(t, printJson(q ++ 1, t.right)):_*)
+      case f: BinaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q ++ 0, f.left)) ++ (op(f)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right)):_*)
       case p: Program => print(q, "program", false, false, expr.prettyString, printPrgJson(q, p):_*)
       case _ => print(q, expr.prettyString, "term")
     }
