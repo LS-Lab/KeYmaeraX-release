@@ -744,6 +744,18 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(2).succ should contain theSameElementsAs List("[{x'=2 & (x>=0 | y<z) & x>=old+old_0}]x>old_1".asFormula)
   }
 
+  it should "auto-generate and re-use names" in withMathematica { _ =>
+    val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=2 & x>=0 | y<z}]x>=0".asFormula)),
+      dC("x>=old(x^2+4)+old(y*z)+old(x^2+4)".asFormula)(1) & Idioms.<(dC("x>old(x^2+4)".asFormula)(1), nil))
+    result.subgoals should have size 3
+    result.subgoals.head.ante should contain theSameElementsAs List("old=x^2+4".asFormula, "old_0=y*z".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("[{x'=2 & ((x>=0 | y<z) & x>=old+old_0+old) & x>old}]x>=0".asFormula)
+    result.subgoals(1).ante should contain theSameElementsAs List("old=x^2+4".asFormula, "old_0=y*z".asFormula)
+    result.subgoals(1).succ should contain theSameElementsAs List("[{x'=2 & (x>=0 | y<z)}]x>=old+old_0+old".asFormula)
+    result.subgoals(2).ante should contain theSameElementsAs List("old=x^2+4".asFormula, "old_0=y*z".asFormula)
+    result.subgoals(2).succ should contain theSameElementsAs List("[{x'=2 & (x>=0 | y<z) & x>=old+old_0+old}]x>old".asFormula)
+  }
+
   it should "already rewrite existing conditions and introduce ghosts when special function old is used" in withMathematica { qeTool =>
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}]x>=0".asFormula)),
       dC("x>=old(x)".asFormula)(1))
@@ -786,6 +798,20 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1).succ should contain theSameElementsAs List("[{x'=v,v'=2}]v>=0".asFormula)
     result.subgoals(2).ante should contain theSameElementsAs List("v>=0".asFormula, "x_0>0".asFormula, "x_0=x".asFormula)
     result.subgoals(2).succ should contain theSameElementsAs List("[{x'=v,v'=2 & true & v>=0}]x>=x_0".asFormula)
+  }
+
+  it should "not expand old() ghosts in context" in withMathematica { _ =>
+    val result = proveBy("[x:=0;][{x'=1}]x>=0".asFormula, dC("x>=old(x)".asFormula)(1, 1::Nil))
+    result.subgoals should have size 2
+    result.subgoals.head.ante shouldBe empty // contain theSameElementsAs "!t<0".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "[x:=0;][x_0:=x;][{x'=1 & true & x>=x_0}]x>=0".asFormula::Nil
+  }
+
+  it should "compute the followup position correctly" in withMathematica { _ =>
+    val result = proveBy("y=1 ==> [x:=0;][{x'=1,y'=-1}]x>=0".asSequent, dC("x>=old(x) & y<=old(y)".asFormula)(1, 1::Nil))
+    result.subgoals should have size 2
+    result.subgoals.head.ante should contain theSameElementsAs "y=1".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "[x:=0;][y_0:=y;][x_0:=x;][{x'=1,y'=-1 & true & (x>=x_0 & y<=y_0)}]x>=0".asFormula::Nil
   }
 
   "Diamond differential cut" should "cut in a simple formula" in withMathematica { qeTool =>

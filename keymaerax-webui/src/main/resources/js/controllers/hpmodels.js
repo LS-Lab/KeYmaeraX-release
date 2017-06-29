@@ -25,28 +25,11 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
        content: undefined
      };
 
-     $(".fileinput").on("change.bs.fileinput", function(e) {
-       e.stopPropagation();
-       $scope.fileExt = keyFile == undefined || keyFile.files == undefined ? '' : keyFile.files[0].name.substr(keyFile.files[0].name.lastIndexOf('.'), 4);
-       $scope.$apply(); //notify angular, otherwise it won't recognize that fileExt changed
-     });
-
-     $scope.addModel = function() {
-        var file = keyFile.files[0];
-
-        var fr = new FileReader();
-        fr.onerror = function(e) { alert("Error opening file: " + e.getMessage()); };
-        fr.onload = function(e) {
-
-          var fileContent = e.target.result;
+     $scope.uploadFile = function(fileName, fileContent) {
           var url = "user/" + sessionService.getUser();
-          if (file.name.endsWith('.kyx')) url = url + "/modeltextupload/" + $scope.model.modelName;
-          else if (file.name.endsWith('.kya')) url = url + "/archiveupload/";
-
+          if (fileName.endsWith('.kyx')) url = url + "/modeltextupload/" + $scope.model.modelName;
+          else if (fileName.endsWith('.kya')) url = url + "/archiveupload/";
           upload(url, fileContent);
-        };
-
-        fr.readAsText(file);
      };
 
      $scope.uploadContent = function() {

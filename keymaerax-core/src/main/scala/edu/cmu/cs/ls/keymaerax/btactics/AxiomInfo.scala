@@ -657,10 +657,10 @@ object DerivationInfo {
     new TacticInfo("smartHide", "smartHide", {case () => ArithmeticSimplification.smartHide}),
     new PositionTacticInfo("cohideL", "W", {case () => SequentCalculus.cohideL}),
     new PositionTacticInfo("cohideR", "W", {case () => SequentCalculus.cohideR}),
-    new PositionTacticInfo("closeFalse"
+    new TacticInfo("closeFalse"
       , RuleDisplayInfo(("⊥L", "falseL"), (List("⊥","&Gamma;"),List("&Delta;")), List())
       , {case () => TactixLibrary.closeF}),
-    new PositionTacticInfo("closeTrue"
+    new TacticInfo("closeTrue"
       , RuleDisplayInfo(("⊤R","trueR"), (List("&Gamma;"), List("⊤","&Delta;")),List())
         ,{case () => TactixLibrary.closeT}),
     new PositionTacticInfo("skolemizeR", "skolem", {case () => ProofRuleTactics.skolemizeR}),
@@ -747,6 +747,8 @@ object DerivationInfo {
     , List(FormulaArg("Q")), _ => ((fml:Formula) => TactixLibrary.generalize(fml)): TypedFunc[Formula, BelleExpr]),
     new InputPositionTacticInfo("transform", "trafo", List(ExpressionArg("to")),
       _ => ((expr:Expression) => TactixLibrary.transform(expr)): TypedFunc[Expression, BelleExpr]),
+    new InputPositionTacticInfo("edit", "edit", List(ExpressionArg("to")),
+      _ => ((expr:Expression) => TactixLibrary.edit(expr)): TypedFunc[Expression, BelleExpr]),
     new InputPositionTacticInfo("boundRename"
       , RuleDisplayInfo(("BR", "BR"), (List("&Gamma;"), List("∀x P(x)","&Delta;")),
         List((List("&Gamma;"),List("∀y P(y)","&Delta;"))))

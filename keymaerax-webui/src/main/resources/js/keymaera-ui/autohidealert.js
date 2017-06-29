@@ -1,11 +1,10 @@
-angular.module('keymaerax.ui.directives', ['ngSanitize']);
-
 angular.module('keymaerax.ui.directives').directive('k4AutoHideAlert', function($timeout) {
   return {
     scope: {
       timeout: '@',
       isVisible: '=',
       message: '=',
+      causeMsg: '=',
       taskStepwiseRequest: '=',
       details: '='
     },

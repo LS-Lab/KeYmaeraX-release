@@ -132,6 +132,39 @@ del {
   display: none !important;
 }
 
+.k4-formula {background: transparent; }
+.k4-term {background: transparent; }
+
+.k4-has-step.k4-prove-hover {
+  color: var(--lsmainback);
+  background-color:var(--lslightblue);
+  position: relative;
+}
+
+.k4-editable.k4-edit-hover {
+  border-bottom: 1px dashed;
+  position: relative;
+}
+.k4-editable.k4-edit-hover:after {
+  content: "\f040"; /* fontawesome pencil */
+  font-family: FontAwesome;
+  right: -15px;
+  position: absolute;
+  top: 0;
+}
+
+.edithover {
+  border-bottom: 1px dashed;
+  position: relative;
+}
+.edithover:after {
+  content: "\f040"; /* fontawesome pencil */
+  font-family: FontAwesome;
+  right: -15px;
+  position: absolute;
+  top: 0;
+}
+
 .k4-sequent-caret-inline {
   float: left;
 }
@@ -151,23 +184,25 @@ del {
 }
 
 /* Mark top-level operator */
-.hlhover > .k4-op:after {
-  content: "\f085"; /* fontawesome cogs */
+.k4-has-step.k4-prove-hover > span > .k4-op:after {
+  content: "\f063"; /* fontawesome downarrow */
   font-family: FontAwesome;
+  font-size: smaller;
   -webkit-text-stroke: 1px black;
   position: relative;
-  right: 1ex;
+  right: 1em;
   top: -1.5ex;
   width: 1em;
   margin-right: -1em;
 }
 /* Mark top-level operator in programs */
-.hlhover > .k4-mod-open ~ span > .k4-prg-op:after {
-  content: "\f085"; /* fontawesome cogs */
+.k4-has-step.k4-prove-hover > span > span.k4-mod-open ~ span.k4-program > span > span.k4-topop.k4-prg-op:after {
+  content: "\f063"; /* fontawesome downarrow */
   font-family: FontAwesome;
+  font-size: smaller;
   -webkit-text-stroke: 1px black;
   position: relative;
-  right: 1ex;
+  right: 1em;
   top: -1.5ex;
   width: 1em;
   margin-right: -1em;
@@ -195,7 +230,11 @@ del {
   font-weight: bold;
 }
 
-.k4-prg-brace {
+.k4-prg-open {
+  font-weight: bold;
+}
+
+.k4-prg-close {
   font-weight: bold;
 }
 
@@ -218,7 +257,7 @@ del {
   color: var(--lsmain);
 }
 /* Unless a parent is highlighted */
-.hlhover span {
+.k4-has-step.k4-prove-hover span {
   color: white;
 }
 

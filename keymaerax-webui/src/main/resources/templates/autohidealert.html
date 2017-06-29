@@ -1,16 +1,21 @@
 <div class="alert alert-warning alert-dismissible k4-narrowalert" role="alert" ng-show="isVisible" ng-cloak>
     <button type="button" class="close" ng-click="isVisible=false;"><i class="fa fa-close"></i></button>
     <i class="fa fa-exclamation-triangle"></i> {{message}}&nbsp;
-    <span ng-if="details !== undefined && details !== ''"
+    <span ng-if="(details && details !== '') || (causeMsg && causeMsg !== '')"
           uib-popover-template="'proofmessagedetails.html'"
           popover-placement="auto bottom" popover-trigger="'click'"
           popover-class="tacticalert-popover"
           popover-append-to-body="true"
-          style="border-bottom: 1px dashed;"><i class="fa fa-bolt"></i> Details</span>&nbsp;
-    <span style="border-bottom: 1px dashed;" ng-click="$parent.stepwiseTactic(taskStepwiseRequest)">
-        <i class="fa fa-book"></i> Progress until error</span>
+          style="border-bottom: 1px dashed;"><i class="fa fa-bolt"></i> Details</span><!--&nbsp;
+    <span style="border-bottom: 1px dashed;" ng-click="$parent.stepwiseTactic(taskStepwiseRequest)">-->
+        <!--<i class="fa fa-book"></i> Progress until error</span>-->
 </div>
 
 <script type="text/ng-template" id="proofmessagedetails.html">
-    <div><pre style="overflow:scroll;">{{details}}</pre></div>
+    <div>
+        <div class="row" ng-if="causeMsg && causeMsg != ''">
+            <div class="col-md-12">{{causeMsg}}</div>
+        </div>
+        <div class="row"><pre class="col-md-12" style="overflow:scroll;">{{details}}</pre></div>
+    </div>
 </script>
