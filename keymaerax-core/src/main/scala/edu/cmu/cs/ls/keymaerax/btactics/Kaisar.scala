@@ -23,7 +23,34 @@ object Kaisar {
   type VBase = String
   type TimeName = String
 
-  /* Here we make horrible abuses of the existing expression syntax in order to avoid defining it ourselves.
+  /*
+  * Important notes on implementation: The implementation is absolutely a prototype and a work in progress, though the
+  * examples and case study we have implemented definitely demonstrate its applicability for non-trivial proofs.
+  * Major TODOs for implementation:
+  *  - At present we lack a parser. Our tests are perfomed with a deep embedding which is then fed to the parser.
+  *    This gives a clear separation between the Kaisar language and Scala, which is what's important for validating the
+  *    language, but obviously not desirable for production use.
+  *  - We reuse existing parsers and data structures everywhere we can, which means reusing their concrete syntax too.
+  *    Therefore until we write a parser much of the concrete syntax will be uglier than the abstract syntax in the paper.
+  *  - Features which are not yet used in any proof are unimplemented, namely liveness proofs.
+  *  However, even given these caveats, this implementation and its tests validate the claim that Kaisar can be
+  *  implemented and prove non-trivial models.
+  *
+  * Assorted notes:
+  *
+  * - One of the main implementation hurdles which is more evident here than in the writeup is that both the prover core
+  * and the unstructured Bellerophon tactics language do everything with numerical indices for formula positions in
+  * contexts. Our implementation reduces named contexts to indexed contexts outside of the core and thus does a lot of
+  * position-munging. This all makes the low-level proofs very difficult to write/read/debug/understand - you may not
+  * want to read them.
+  *
+  * - Note also that there are far more cases in the grammar of dL as it appears in KeYmaera X than you see in the paper.
+  *  This is because the KeYmaera X core is based on the calculus of:
+  *  "André Platzer.  A complete uniform substitution calculus for differential dynamic logic.  Journal of Automated Reasoning, 2016."
+  *  And even then has a number of constructs needed in practice but not mentioned there.
+  *
+  *
+  *
   * Everywhere we refer to an expression, it is either:
   * (a) a pattern, if we are comparing the expression against some known expression
   * (b) an extended term, if we are constructing a new expression from scratch
@@ -41,27 +68,32 @@ object Kaisar {
   * - union, intersection, and negation patterns on *terms only* due to technical reasons at the moment:
   *    function union(e1,e2), inter(e1,e2), neg(e).
   * */
+
+  // Backward-chaining box rules
   abstract class RuleSpec
   case class RIdent (x:String) extends RuleSpec
   case class RBAssign(hp:Assign) extends RuleSpec
-  case class RBConsequence(x:Variable, fml:Formula) extends RuleSpec
+  case class RBMid(x:Variable, fml:Formula) extends RuleSpec
   case class RBCase(pats:List[Expression]) extends RuleSpec
   case class RBCaseImplyL(p:Variable, patp:Formula, q:Variable, patq:Formula) extends RuleSpec
-  case class RBAbbrev(xphi:Variable, x:Variable, theta:Term) extends RuleSpec
   case class RBCaseOrL(x1:Variable, pat1:Expression, x2:Variable, pat2:Expression) extends RuleSpec
   case class RBCaseOrR(x1:Variable, x2:Variable) extends RuleSpec
   case class RBAssume(x:Variable,fml:Formula) extends RuleSpec
   case class RBSolve(t:Variable,fmlT:Formula,dc:Variable,fmlDC:Formula,sols:List[(Variable,Formula)]) extends RuleSpec
   case class RBAssignAny(x:Variable)extends RuleSpec
   case class RBInv(ip:IP) extends RuleSpec
+  // Added to make some of the proofs easier
+  case class RBAbbrev(xphi:Variable, x:Variable, theta:Term) extends RuleSpec
 
+  // Backward-chaining diamond rules
   case class RDAssign(hp:Assign) extends RuleSpec
-  case class RDConsequence(fml:Formula) extends RuleSpec
+  case class RDMid(fml:Formula) extends RuleSpec
   case class RDCase(a:Program) extends RuleSpec
   case class RDAssert(x:Variable,fml:Formula) extends RuleSpec
   case class RDSolve(t:Variable,fmlT:Formula,dc:Variable,fmlDC:Formula,sols:List[(Variable,Formula)]) extends RuleSpec
   case class RDAssignAny(x:Variable, xVal:Term) extends RuleSpec
 
+  // Unstructured proof methods
   abstract class Method
   case class Simp() extends Method
   case class Auto() extends Method
@@ -71,16 +103,19 @@ object Kaisar {
 
   case class UP(use:List[Either[Expression,FP]], method:Method)
 
+  // Invariant proof
   abstract class IP
   case class Inv(x:Variable, fml:Formula, pre:SP, inv:SP, tail:IP) extends IP
   case class Ghost(gvar:Variable, gterm:Term, ginv:Formula, x0:Term, pre:SP, inv:SP, tail:IP) extends IP
   case class Finally(tail:SP) extends IP
 
+  // Forward proof
   abstract class FP
   case class FPat(e:Expression) extends FP
   case class FMP(fp1: FP, fp2:FP) extends FP
   case class FInst(fp:FP, t:Term) extends FP
 
+  // Structured proof
   abstract class SP
   case class Show(phi:Formula, proof: UP) extends SP
   case class SLet(pat:Expression, e:Expression, tail:SP) extends SP
@@ -88,11 +123,13 @@ object Kaisar {
   case class Note(x:Variable, fp:FP, tail: SP) extends SP
   case class Have(x:Variable, fml:Formula, sp:SP, tail: SP) extends SP
   case class BRule(r:RuleSpec, tails: List[SP]) extends SP
-  case class PrintGoal(msg:String, sp:SP) extends SP
   case class State (st:TimeName, tail: SP) extends SP
   case class Run (a:VBase, hp:Program, tail:SP) extends SP
+  // For debugging
+  case class PrintGoal(msg:String, sp:SP) extends SP
 
 
+  // History records hr
   abstract class HistChange
   case class HCAssign(hp:Assign) extends HistChange {
     def rename(from: Variable, to:Variable):HCAssign = {
@@ -103,6 +140,7 @@ object Kaisar {
   case class HCRename(baseName:BaseVariable, permName:BaseVariable, defn:Option[AntePos] = None) extends HistChange {assert (baseName.name == permName.name && baseName.index.isEmpty)}
   case class HCTimeStep(ts:TimeName) extends HistChange
 
+  // helpers
   def patIdent(e:Expression):Option[String] = {
     e match {
       case PredOf(Function(id, _, _, _, _), _)  => Some(id)
@@ -124,8 +162,8 @@ object Kaisar {
       case _ => None
     }
   }
+  // static traces H
   // map:Map[VBase,List[(TimeName,Either[Term,Unit])]]
-  // todo: need to rename "current x" for clarities
   case class History (steps:List[HistChange]) {
     def hasTimeStep(ts: TimeName): Boolean = {
       steps.exists({ case hcts: HCTimeStep => hcts.ts == ts case _ => false })
@@ -199,9 +237,6 @@ object Kaisar {
       }
       val rs = renSteps.filter(isThisRename)
       val ss = subSteps.filter(isThisAssign)
-      //val (postRen, _) = partAfter(renSteps, isThisRename)
-      //val (_, preSub) = partBefore(subSteps, isThisRename)
-      //TODO: might be bug val fullName = postChange match {case Nil => Variable(x) case ((y:HCRename)::ys) => y.permName case _ => ???}
       val fullName = rs.reverse match {case (HCRename(_,to,_)::_) => to case _ => Variable(x)}
       val xChanges = ss.filter(isThisAssign)
       val xxChanges = if(xChanges.length  > 1 ) {xChanges.take(1)} else xChanges
@@ -253,6 +288,7 @@ object Kaisar {
     var empty = new History(List(HCTimeStep("init")))
   }
 
+  // Named contexts \Gamma
   case class Context (gmap:Map[Variable,Position], defmap:Map[VBase, Expression], fundefmap:Map[VBase,(VBase,Expression)]){
     def concat(other: Context): Context = Context(gmap.++(other.gmap), defmap.++(other.defmap), fundefmap.++(other.fundefmap))
     def addFun(x:VBase,arg:VBase,e:Expression):Context = Context(gmap,defmap,fundefmap.+((x,(arg,e)))  )
@@ -343,6 +379,7 @@ object Kaisar {
     }
   }
 
+  // proof-checking
   def eval(method:Method, pr:Provable):Provable = {
     val e:BelleExpr =
       method match {
@@ -355,6 +392,7 @@ object Kaisar {
     interpret(e, pr)
   }
 
+  // proof-checking
   def eval(up:UP, h:History, c:Context, g:Provable):Provable = {
     val use = up.use
     val method =  up.method
@@ -376,23 +414,12 @@ object Kaisar {
           !matchesAssm(i, p)
         case (Some(id), _) =>
           val hasOne = c.hasAssm(id)
-          println("Checking for assm: " ,c,id,ante,i,ante(i), hasOne)
           hasOne && c.getAssm(id,ante) == ante(i)
       }
     }
-    // TODO HACK: assume neg(id) is an id pattern and not a value pattern
-    /*def matchesOne(pat:Expression,f:Formula,c:Context) = {
-      (patIdent(pat), patChild(pat)) match {
-        case (Some("neg"), Some(_)) => false
-        case _ => doesMatch(pat,f,c)
-      }
-    }*/
     val inds:immutable.IndexedSeq[Int] = withFacts.subgoals.head.ante.zipWithIndex.filter({case (f,i) => !pats.exists({case pat =>
       val dm = doesMatch(pat, f,c, ante)
-      //val ma = matchesAssm(i,pat)
-      println("dm ", pat, f, c, dm)
-      //println("ma ", i, pat, ma)
-      dm /*|| ma*/})}).map({case (f,i) => i}).reverse
+      dm })}).map({case (f,i) => i}).reverse
     //TODO: Optimize the default case
     val indss = if(use.isEmpty) { immutable.IndexedSeq[Int]()} else {inds}
     val pr = indss.foldLeft[Provable](withFacts)({case (pr2:Provable,i:Int) => pr2(HideLeft(AntePos(i)),0)})
@@ -406,7 +433,7 @@ object Kaisar {
   }
 
   // TODO: Do we need impI
-  //val frules = List("ande1", "ande2", "andi", "ore", "ori1", "ori2", "ne", "ni", "existsi")
+  // built-in forward-chaining rules
   val propAxioms:Map[String,Formula] = Map(
     "ande1" -> "p() & q() -> p()".asFormula,
     "ande2" -> "p() & q() -> q()".asFormula,
@@ -420,13 +447,9 @@ object Kaisar {
     // todo: add all inst
   )
 
-  // //DifferentialProgramConst(name) ProgramConst(name) FuncOf(Function(name, domain = Unit, sort = Real), Nothing)  PredOf(Function(name, domain = Unit, sort = Bool), Nothing)
-  //ExpressionTraversal.traverse(doTravel(h,c), e).get
   private def doTravel(h:History,c:Context, at:Option[TimeName]):ExpressionTraversalFunction = {
     new ExpressionTraversalFunction() {
       override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
-      //case v: Variable => Right(resolve(v.name, at))
-
       e match {
           case v: Variable =>
             Right(h.resolve(v.name,at))
@@ -471,12 +494,11 @@ object Kaisar {
         }
     }
   }
-  // TODO: Support time-travel
+  // Expansion of (arbitrary) nominal expressions, not just terms.
   def expand(e:Term, h:History, c:Context, at:Option[TimeName]):Term       = {ExpressionTraversal.traverse(doTravel(h,c, at), e).get}
   def expand(e:Formula, h:History, c:Context, at:Option[TimeName]):Formula = {
     val traveled = ExpressionTraversal.traverse(doTravel(h,c, at), e)
     traveled.get
-    //c.usubst(traveled.get)
   }
   def expand(e:Program, h:History, c:Context, at:Option[TimeName]):Program = {ExpressionTraversal.traverse(doTravel(h,c, at), e).get}
   def expand(e:Expression, h:History, c:Context, at:Option[TimeName]):Expression = {
@@ -487,6 +509,7 @@ object Kaisar {
     }
   }
 
+  // helper
   def uniqueMatch(pat:Expression, c:Context, ante:immutable.IndexedSeq[Formula]):Int = {
     val ident:Option[String] = pat match {case ns:NamedSymbol => Some(ns.name) case f:ApplicationOf => Some(f.func.name ) case _ => None}
     val ofIdent:Option[Position] = ident.flatMap{case x => c.gmap.get(Variable(x))}
@@ -503,6 +526,7 @@ object Kaisar {
     }
   }
 
+  // proof-checking
   def eval(fp:FP, h:History, c:Context, ante:immutable.IndexedSeq[Formula]):Provable = {
     fp match {
       case (FPat(ns : NamedSymbol)) if propAxioms.keySet.contains(ns.name.toLowerCase) =>
@@ -577,13 +601,11 @@ object Kaisar {
               val renu:RenUSubst = RenUSubst(immutable.IndexedSeq.concat(immutable.IndexedSeq[(Expression,Expression)](vpair,pair), subst.usubst.subsDefsInput.map({case x => (x.what, x.repl)})))
               val q2=repvTerm(q,xs.head, t2)
               val ax=AxiomInfo("all instantiate").provable
-              //val subst2 = USubst(immutable.IndexedSeq.concat(immutable.IndexedSeq[SubstitutionPair](SubstitutionPair(vpair._1,vpair._2),SubstitutionPair(pair._1,pair._2)), subst.usubst.subsDefsInput))
               val p2:Provable=renu.toForward(ax).underlyingProvable
               val seq = Sequent(ante, immutable.IndexedSeq(q2))
               val impPos = AntePos(ante.length)
               val allPos = AntePos(ante.length+1)
               val pr1b = renu.toForward(NoProofTermProvable(pr1)).underlyingProvable
-                //renupr1(subst.usubst)
               val s1 = Provable.startProof(seq)(Cut(p2.conclusion.succ.head), 0)
               val s1a = s1(CoHideRight(SuccPos(1)),1)
               val s2 = s1a(p2,1)
@@ -621,10 +643,9 @@ def polyK(pr:Provable, facts:List[Provable], onSecond:Boolean = false, impAtEnd:
       val e:BelleExpr =
         cut(Imply(Box(a,Imply(p,q)),Imply(Box(a,p),Box(a,q)))) <(
           DebuggingTactics.debug("a", doPrint = doPrint) &
-          /* Use */ implyL(-(pos + 2)) <(/* use */ debug("b") & close,
-            DebuggingTactics.debug("c", doPrint = doPrint) &
-          implyL(-(pos+2)) <( DebuggingTactics.debug("d", doPrint = doPrint) & hide(1) & DebuggingTactics.debug("d", doPrint = doPrint) &  useAt(NoProofTermProvable(fact), PosInExpr(Nil))(1)
-            , DebuggingTactics.debug("d1", doPrint = doPrint) & nil )
+          /* Use */ implyL(-(pos + 2)) <(/* use */ close,
+          implyL(-(pos+2)) <(  hide(1) &  useAt(NoProofTermProvable(fact), PosInExpr(Nil))(1)
+            ,  nil )
         ),
           DebuggingTactics.debug("e", doPrint = doPrint) &
           /* show */ cohideR(2) & useAt("K modal modus ponens", PosInExpr(Nil))(1,Nil)) &
@@ -641,8 +662,6 @@ def collectLoopInvs(ip: IP,h:History,hh:History,c:Context):(List[Variable], List
       val (vs, f,ff, p,i,t) = collectLoopInvs(tail,h,hh,c)
       val baseFml = expand(fml,h,c, None)
       val indFml = expand(fml,hh,c, None)
-      println("CC Expanding invariant formula: ", fml, " becomes ", expand(fml,h,c, None), " under history ", h, " and context ", c)
-      println("DD Expanding invariant formula: ", fml, " becomes ", expand(fml,hh,c, None), " under history ", hh, " and context ", c)
       (x::vs, baseFml::f, indFml::ff, pre::p, inv::i, t)
     case _ : Finally => (Nil, Nil, Nil, Nil, Nil, ip)
     case _ => ???
@@ -657,13 +676,10 @@ def collectODEInvs(ip: IP,h:History,hh:History,c:Context):(List[OdeInvInfo], IP)
   ip match {
     case Inv(x, fml, pre, inv, tail) =>
       val (infs,t) = collectODEInvs(tail,h,hh,c)
-      println("AA Expanding invariant formula: ", fml, " becomes ", expand(fml,h,c, None), " under history ", h, " and context ", c)
-      println("BB Expanding invariant formula: ", fml, " becomes ", expand(fml,hh,c, None), " under history ", hh, " and context ", c)
       (DiffCutInfo(proofVar = x, bcFml = expand(fml,h,c, None), indFml = expand(fml,hh,c, None), pre, inv)::infs,t)
     case Ghost(gvar,gterm,ginv,x0,pre,inv,tail) =>
       val (infs,t) = collectODEInvs(tail,h,hh,c)
       (DiffGhostInfo(gvar,gterm,x0)::infs,t)
-
     case _ : Finally => (Nil, ip)
     case _ => ???
   }
@@ -674,7 +690,7 @@ def collectODEInvs(ip: IP,h:History,hh:History,c:Context):(List[OdeInvInfo], IP)
     interpret(cut(fml) <(hideL(-1), close), pr)
   }
 def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
-  val gg = g // interpret(andL('L)*, g)
+  val gg = g
   val seq = gg.subgoals(0)
   val ante = seq.ante
   val goal = seq.succ.head
@@ -685,7 +701,6 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
       val bvs = StaticSemantics.boundVars(a).toSet.filter({case _ : BaseVariable => true case _ => false}:(Variable=>Boolean))
       val (ggg:Provable, saved)  = saveVars(gg, bvs, invCurrent = false)
       val anteConst = ggg.subgoals.head.ante.take(ante.length)
-      // Inv (fml: Formula, pre: SP, inv: SP, tail: IP)
       //TODO: Intermediate hh and cc
       val hh =  bvs.foldLeft(h)({case(acc, v) => acc.update(v.name)})
       val (vars, baseFmls, indFmls, pres, invs, lastTail) = collectLoopInvs(nextInv,h, hh,c)
@@ -698,11 +713,9 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
             val preSeq = Sequent(ante, immutable.IndexedSeq(fml))
             val tail = eval(pre, h, c, Provable.startProof(preSeq))
             assert(tail.isProved, "Failed to prove first base case subgoal " + fml + " in subproof " + pre + ", left behind provable " + tail.prettyString)
-            println("BASE0 I had ", tail.prettyString)
             DebuggingTactics.debug("BASE0 I WANTED", doPrint = true) & useAt(NoProofTermProvable(tail), PosInExpr(Nil))(1) & DebuggingTactics.debug("BASE0B", doPrint = true)
           case (fml, pre:SP)::fps =>
             val preSeq = Sequent(ante, immutable.IndexedSeq(fml))
-            println("BASEN " + (done.length) + ": " + preSeq)
             val tail = eval(pre, h, c, Provable.startProof(preSeq))
             assert(tail.isProved, "Failed to prove additional base case subgoal " + fml + " in subproof " + pre + ", left behind provable " + tail.prettyString)
             val e1 = useAt(NoProofTermProvable(tail), PosInExpr(Nil))(1)
@@ -716,19 +729,17 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
           case (x,(fml, inv:SP))::Nil =>
             val invSeq = Sequent(anteConst ++ done ++ immutable.IndexedSeq(fml), immutable.IndexedSeq(Box(a,fml)))
             val cc = c.add(x, AntePos(invSeq.ante.length-1))
-            println("Ind case useat base hiding " + (invs.length - (done.length + 1)) + ": " + invSeq)
             val e = hideL('Llast)*(invs.length - (done.length + 1))
             val tail = eval(inv, hh, cc, Provable.startProof(invSeq))
             assert(tail.isProved, "Failed to prove first inductive case subgoal " + fml + " in subproof " + inv + ", left behind provable " + tail.prettyString)
-            DebuggingTactics.debug("preHide icubh", doPrint = true) & e & DebuggingTactics.debug("postHide IND0", doPrint = true) & useAt(NoProofTermProvable(tail), PosInExpr(Nil))(1)
+            e  & useAt(NoProofTermProvable(tail), PosInExpr(Nil))(1)
           case (x, (fml,pre:SP))::fps =>
             val invSeq = Sequent(anteConst ++ done ++ immutable.IndexedSeq(fml), immutable.IndexedSeq(Box(a,fml)))
             val cc = c.add(x, AntePos(invSeq.ante.length-1))
-            println("Ind case useat inductive hiding " + (invs.length - done.length) + ": " + invSeq)
             val hide = hideL('Llast)*(invs.length - (done.length + 1))
             val tail = NoProofTermProvable(eval(pre, hh, cc, Provable.startProof(invSeq)))
             assert(tail.isProved, "Failed to prove additional inductive case subgoal " + fml + " in subproof " + pre + ", left behind provable " + tail.prettyString)
-            val e1 = DebuggingTactics.debug("preHide", doPrint = true) &  hide & DebuggingTactics.debug("postINDN", doPrint = true) & useAt(tail, PosInExpr(Nil))(1)
+            val e1 = hide & useAt(tail, PosInExpr(Nil))(1)
             val e2 = indCase(fps, cc, done ++ immutable.IndexedSeq(fml))
             boxAnd(1) & andR(1) <(e1, e2)
         }
@@ -738,36 +749,25 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
       //(andL('L)*(Math.max(0, invs.length-1)))
       val unpack:BelleExpr =
         if (invs.length > 1) {
-          DebuggingTactics.debug("UPACKING TIMES " + (invs.length - 1), doPrint = true) &
             andL(AntePosition(1)) &
-            DebuggingTactics.debug("UUPACKING TIMES " + (invs.length - 1), doPrint = true) &
-            andL('Llast) * (invs.length - 2) &
-            DebuggingTactics.debug("UUUPACKING TIMES " + (invs.length - 1), doPrint = true)
+            andL('Llast) * (invs.length - 2)
         }
           else {
           def rot(pr:ProvableSig,p:SuccPosition):ProvableSig = NoProofTermProvable(rotAnte(pr.underlyingProvable))
-          // (t: (ProvableSig, SuccPosition) => ProvableSig)
-          import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
-          val e = DebuggingTactics.debug("Rottin' " + (invs.length), doPrint = true) &
+          val e =
             TacticFactory.TacticForNameFactory("ANON").by((pos: ProvableSig, seq: SuccPosition) =>{rot(pos,seq)})(1)
-          e & DebuggingTactics.debug("Rotated the ante for you", doPrint = true)
-          //by ((pos: Position, seq: Sequent) =>{???})
-          //by (rot:((ProvableSig,SuccPosition) => ProvableSig))
+          e
         }
-      val e:BelleExpr = DebuggingTactics.debug("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", doPrint = true) &
-        DLBySubst.loop(conj, pre = nil)(1) <(DebuggingTactics.debug("pre-base case", doPrint = true) &
-          unsaveVars(gg, bvs, rewritePost = true) & DebuggingTactics.debug("base case", doPrint = true)
-          & baseCase(baseFmls.zip(pres)), DebuggingTactics.debug("use case", doPrint = true) &  nil,
-            DebuggingTactics.debug("preductive case", doPrint = true) &
-          unpack & DebuggingTactics.debug("inductive case", doPrint = true)
+      val e:BelleExpr =
+        DLBySubst.loop(conj, pre = nil)(1) <(
+          unsaveVars(gg, bvs, rewritePost = true)
+          & baseCase(baseFmls.zip(pres)), nil,
+          unpack
           & indCase(vars.zip(indFmls.zip(invs)),c))
       val pr:Provable = interpret(e, ggg)
       val pr1 = rotAnte(pr)
-      //val pr1 = pr
       val killAnds = if(invs.length <= 1) TactixLibrary.nil else (andL('Llast)*(invs.length-1))
       val pr2 = interpret(killAnds,pr1)
-      println("Done first step of interpreting thing: " + pr2.prettyString)
-      // polyK(pr, invSeq.map{case fml => interpret(TactixLibrary.close, Provable.startProof(Sequent(invSeq,immutable.IndexedSeq(fml))))}.toList)
       eval(lastTail, hh, cc, pr2, nInvs+1)
     }
     case (firstInv, Box(ODESystem(ode,constraint),post)) if !firstInv.isInstanceOf[Finally]=> {
@@ -828,20 +828,12 @@ private def saveVars(pr:Provable, savedVars:Set[Variable], invCurrent:Boolean = 
   savedVars.foldRight[(Provable,List[(Variable)])]((pr,Nil))({case(v:Variable,(acc,accVs)) =>
     val vv:Variable = TacticHelper.freshNamedSymbol(v,acc.subgoals.head) // was once pr1.conclusion
     val last = acc.subgoals.head.ante.length+1
-    println("DEBUGGGGG ME1: ", acc.prettyString, last, v, vv)
     val e:BelleExpr =
-      DebuggingTactics.debug("DEBUGGGGG ME2:", doPrint = true) &
       discreteGhost(v,Some(vv))(1) &
-      DebuggingTactics.debug("DEBUGGGGG ME3:", doPrint = true) &
       DLBySubst.assignEquality(1) &
-      DebuggingTactics.debug("DEBUGGGGG ME4:", doPrint = true) &
       TactixLibrary.exhaustiveEqR2L(hide=false)('Llast) &
-      DebuggingTactics.debug("DEBUGGGGG ME5:", doPrint = true) &
       TactixLibrary.eqL2R(-last)(1) &
-      DebuggingTactics.debug("DEBUGGGGG ME6:", doPrint = true) &
       (if (invCurrent) {TactixLibrary.eqL2R(-last)(1 + accVs.length - last)} else { nil }) &
-      DebuggingTactics.debug("DEBUGGGGG ME7:", doPrint = true) /*&
-      DebuggingTactics.debug("whomst " + (accVs.length - last), doPrint = true)*/
     (interpret(e, acc), vv::accVs)
   })
 }
@@ -881,7 +873,7 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
               return eval(sp.head, hh, c, gg)
           }
           eval(sp.head, hh, c, gsub.get)
-        case (RBConsequence(varName:Variable,fml:Formula), Box(a,Box(b,p))) =>
+        case (RBMid(varName:Variable,fml:Formula), Box(a,Box(b,p))) =>
           assertBranches(sp.length, 2)
           val bvs = StaticSemantics.boundVars(a)
           val hh = bvs.toSet.foldLeft(h)({case (acc,v) => (acc.update(v.name))})
@@ -1030,7 +1022,7 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           eval(ip, h, c, g)
         case (RIdent (x:String), _) => ???
         case (RDAssign(hp:Assign), _)  => ???
-        case (RDConsequence(fml:Formula), _)  => ???
+        case (RDMid(fml:Formula), _)  => ???
         case (RDCase(a:Program), _) => ???
         case (RDAssert(x:Variable,fml:Formula), _) => ???
         case (RDSolve(t:Variable,fmlT:Formula,dc:Variable,fmlDC:Formula,sols:List[(Variable,Formula)]), _) => ???
@@ -1399,177 +1391,8 @@ def pmatch(pat:Expression, e:Expression, c:Context, ante:immutable.IndexedSeq[Fo
         case(e1:FuncOf, e2:FuncOf) =>
           if (e1.func == e2.func) { pmatch(e1.child, e2.child, c,ante)}
           else {throw PatternMatchError("Functions did not match in pattern match: " + e1.func + " vs. " + e2.func)}
-        //case(e1:Pair, e2:Pair) =>
-//          pmatch(e1.left,e2.left,c).concat(pmatch(e1.right,e2.right,c))
       }
   }
 }
 def doesMatch(pat:Expression, e:Expression, c:Context, ante:immutable.IndexedSeq[Formula]):Boolean = {try {pmatch(pat, e,c, ante); true} catch {case _:Throwable => false}}
-
-
-/* TODO: Better to skip *all* skippable formulas, but that makes recovering the original theorem
-     /*def add(a:Variable, hp:Program): History = {
-       val nextTime = vmap.size
-       History(vmap.+((a,(nextTime,hp))), tmap.+((nextTime,(a,hp))))
-     }
-
-     def time(a:ProgramVariable):Int = vmap(a.a)._1
-     def tmax:Int = tmap.size-1
-     def extent(tp:(Int, Formula,Provable)):Int = {
-       var (t, phi,_) = tp
-       var fv = StaticSemantics(phi).fv
-       while (tmap.contains(t) && fv.intersect(StaticSemantics(tmap(t)._2).bv).isEmpty) {
-         t = t + 1
-       }
-       t
-     }*/
-      * more work, so do it later. */
-/*def extend(phi:Formula,tmin:Int,tmax:Int):Formula = {
-  var t = tmax
-  var p = phi
-  while(t >= tmin) {
-    p = Box(tmap(t)._2, p)
-    t = t -1
-  }
-  p
-}*/ /*
-  def apply(p:FactVariable):(Int, Formula,Provable) = xmap(p.p)
-  def add(a:Variable, phi:Formula, pr:Provable,time:Int): Context = {
-    val nextTime = xmap.size
-    Context(xmap.+((a,(time,phi,pr))),fmap.+((phi,pr)))
-  }
-  def findProvable(fml:Formula):Provable = fmap(fml)*/
-/*private def min(seq:Seq[Int]):Int =
-  seq.fold(Int.MaxValue)((x,y) => Math.min(x,y))
-
-def interpret(e:BelleExpr, pr:Provable):ProvableSig = {
-  SequentialInterpreter()(e, BelleProvable(NoProofTermProvable(pr))) match {
-    case BelleProvable(result,_) => result
-  }
-}
-def cutEZ(c: Formula, t: BelleExpr): BelleExpr = cut(c) & Idioms.<(skip, /* show */ t & done)
-
-def implicate(fs:List[Formula],acc:Formula):Formula = {
-   fs.reverse.foldLeft(acc)((acc,f) => Imply(f,acc))
-}
-
-def unboxProg(f:Formula, n:Int):(List[Program], Formula) = {
-  (f, n) match {
-    case (_, 0) => (Nil, f)
-    case (Box(a,p), _) =>
-      val (as:List[Program], p2:Formula) = unboxProg(p,n-1)
-      (a::as, p2)
-  }
-}
-
-def unbox(f:Formula, n:Int):Formula = {
-  unboxProg(f,n)._2
-}
-
-def composeProgs(progs:List[Program]):Program = {
-  val (prog::progs1) = progs//.reverse
-  progs1.foldLeft(prog)((a,b) => Compose(a,b))
-}
-
-def composify(progs:List[Program],fml:Formula):Formula = {
-  Box(composeProgs(progs), fml)
-}
-
-def reboxify(progs:List[Program],fml:Formula):Formula = {
-  progs.reverse.foldLeft(fml)((p,a) => Box(a,p))
-}
-
-def transboxify(progs:List[Program],fml:Formula):Formula = {
-  val Box(_,p) = fml
-  reboxify(progs, p)
-}
-*/
-/*
-def doGreatProof(userProof:ProvableSig, a:Program, maybeFacts:List[Formula], factProofs:List[ProvableSig], result:Formula): ProvableSig = {
-  val pr = Provable.startProof(Box(a,result))
-  val e = cutEZ(Box(a,implicate(maybeFacts,result)), debug("wat") & hide(1) & useAt(userProof,PosInExpr(Nil))(1))
-  val pr2 = interpret(e,pr).underlyingProvable
-  polyK(pr2, factProofs)
-}
-
-def eval(hist: History, ctx: Context, step:Statement):(History,Context) = {
-  step match {
-    case Run(a,hp) => (hist.add(a,hp), ctx
-    case Show(x,phi,(resources, e)) =>
-      val (progs:Seq[ProgramVariable], facts:Seq[FactVariable]) =
-        resources.partition({case _: ProgramVariable => true case _:FactVariable => false})
-      val tmax = hist.tmax
-      val tphi = min(facts.map{case p:FactVariable => hist.extent(ctx(p))})
-      val ta = min(progs.map{case a:ProgramVariable => hist.time(a)})
-      val tmin = min(Seq(tphi,ta, tmax))
-      val assms:Seq[Formula] = facts.map{case p:FactVariable =>
-        val tp = ctx(p)
-        hist.extend(tp._2, tmin, tp._1)
-      }
-      val concl:Formula = hist.extend(phi, 0, tmax)
-      val pr:Provable = Provable.startProof(Sequent(assms.toIndexedSeq, collection.immutable.IndexedSeq(concl)))
-      var concE = e
-      var t = tmin-1
-      while (t >= 0) {
-        concE = TactixLibrary.G(1) & concE
-        t = t -1
-      }
-      val addedProvable:Provable =
-        tmin match {
-          case 0 | -1 =>
-            SequentialInterpreter()(concE, BelleProvable(NoProofTermProvable(pr))) match {
-              case BelleProvable(result, _) =>
-                assert(result.isProved)
-                result.underlyingProvable
-            }
-          case _ =>
-            val boxen = tmin
-            val (as, p) = unboxProg(concl, boxen)
-            val fmls = assms.map(f => unbox(f, boxen)).toList
-            val toProve = composify(as, implicate(fmls,p))
-            val seqifyTac = debug ("hmm") & G(1) & List.fill(assms.size)(implyR(1)).fold(nil)((e1,e2) => e1 & e2) & debug ("hmm2")
-            val userProof = interpret(seqifyTac & e, Provable.startProof(toProve))
-            val factProofs:List[ProvableSig] = facts.map{case p:FactVariable =>
-                NoProofTermProvable(ctx(p)._3)
-            }.toList
-            val giveUp = Int.MaxValue
-            val breadth = 1
-            val facterProofs:List[ProvableSig] = factProofs.map{case (p:ProvableSig) =>
-              val pr = p.underlyingProvable
-              val (as1, p1) = unboxProg(p.conclusion.succ(0), boxen)
-              val pr2 = Provable.startProof(composify(as1,p1))
-              val e = debug("a") & chase(breadth, giveUp, ((e:Expression) => e match {case Box(Compose(_,_),_) => List("[;] compose") case _ => Nil}))(1) & debug ("b") & useAt(p, PosInExpr(Nil))(1) & debug("c")
-              val newProof = interpret(e, pr2)
-              newProof
-            }
-
-            val foo = doGreatProof(userProof, composeProgs(as), fmls, facterProofs, p)
-            val bestProof = Provable.startProof(transboxify(as,foo.underlyingProvable.conclusion.succ(0)))
-            val bestE = debug("a") & chase(breadth, giveUp, ((e:Expression) => e match {case Box(Compose(_,_),_) => List("[;] compose") case _ => Nil}))(1) & debug ("b") & useAt(foo, PosInExpr(Nil))(1) & debug("c")
-            val lastProof = interpret(e, bestProof)
-            lastProof.underlyingProvable
-        }
-
-      (hist, ctx.add(x,concl,addedProvable,hist.tmax))
-  }
-}
-
-def eval(hist: History, ctx: Context, steps:List[Statement]):(History,Context) = {
-  steps match {
-    case (Nil) => (hist, Context.empty)
-    case (step :: steps) =>
-      var AD1 = eval(hist, ctx, step)
-      var AD2 = eval(AD1._1, AD1._2, steps)
-      (AD2._1, AD1._2.concat(AD2._2))
-  }
-}
-
-def eval(pf:Proof):Provable = {
-  val (fml, steps) = pf
-  val (h,c) = eval(History.empty,Context.empty, steps)
-  val pr:Provable = c.findProvable(fml)
-  assert(pr.conclusion == Sequent(collection.immutable.IndexedSeq(), collection.immutable.IndexedSeq(fml)))
-  assert(pr.isProved)
-  pr
-}*/
 }

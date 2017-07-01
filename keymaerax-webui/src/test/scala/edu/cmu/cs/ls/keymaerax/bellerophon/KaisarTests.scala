@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 
 /**
   * Created by bbohrer on 12/3/16.
+  * Note these tests can take on the order of a few hours combined, even on fast machine. Quantifier elimination is VERY slow.
   */
 @SlowTest
 class KaisarTests extends TacticTestBase {
@@ -266,7 +267,7 @@ class KaisarTests extends TacticTestBase {
     withZ3(qeTool => {
       val box = "x > 0 & y > 0 -> [{x := x + y;}*]x>=0".asFormula
       val sp: SP =
-        BRule(RBAssume("xy".asVariable, "x > 0 & y > 1".asFormula),
+        BRule(RBAssume("xy".asVariable, "x > 0 & y > 0".asFormula),
           List(BRule(RBInv(
             Inv("J".asVariable, "x >= 0".asFormula, pre = Show("x >= 0".asFormula, UP(List(), Auto())),
               inv = BRule(RBAssign(Assign("x".asVariable, "x+y".asTerm)),
@@ -455,7 +456,7 @@ show (x > 2y) using J by auto
       val box = "x=2*y -> [{{?(x< -2);x:=x^2;} ++ {?(x >= 0 & y > 0);y:=1/3*y;}}x:=x*2;]x > 2*y".asFormula
       val sp: SP =
         BRule(RBAssume("xy".asVariable, "x=2*y".asFormula), List(
-          BRule(RBConsequence("J".asVariable, "x>y".asFormula), List(
+          BRule(RBMid("J".asVariable, "x>y".asFormula), List(
             Show("[{wild}]x>y".asFormula, UP(List(), Auto()))
             , BRule(RBAssign(Assign("x".asVariable, "x*2".asTerm)), List(
               Show("x>2*y".asFormula, UP(List(), Auto()))))
@@ -480,7 +481,7 @@ show (x > 2y) using J by auto
       val box = "x=2*y -> [{{?(x< -2);x:=x^2;} ++ {?(x >= 0 & y > 0);y:=1/3*y;}}x:=x*2;]x > 2*y".asFormula
       val sp: SP =
         BRule(RBAssume("xy".asVariable, "x=2*y".asFormula), List(
-          BRule(RBConsequence("J".asVariable, "x>y".asFormula), List(
+          BRule(RBMid("J".asVariable, "x>y".asFormula), List(
             Show("[{wild}]x>y".asFormula, UP(Nil, Auto())),
             State("preassign",
               BRule(RBAssign(Assign("x".asVariable, "x*2".asTerm)), List(
@@ -587,7 +588,7 @@ Inv J(y >= 0 & ??E = init(E) {
      show _ by auto }
 show _  using J assms by auto
 */
-  "POPL'18 Old Draft" should "prove" in {
+  "POPL'18 Old Draft another example" should "prove" in {
     withMathematica(qeTool => {
       // TODO: End unit gravity
       val box: Formula = "0 <= y & y<=H&H>0&v=0 -> [{{{?(y>0 | v >= 0);} ++ {?(y<=0 & v < 0); v := -v;}}{y'=v,v'=-1 & y >= 0}}*](0 <= y & y <= H)".asFormula
@@ -602,7 +603,7 @@ show _  using J assms by auto
                   Inv("J".asVariable, "y >= 0 & E() = init(E())".asFormula, duh,
                     State("loopinit",
                       BRule(
-                        RBConsequence("conserv".asVariable, "E() = loopinit(E())& 1111 = 1111 & E() = init(E())".asFormula), List(
+                        RBMid("conserv".asVariable, "E() = loopinit(E())& 1111 = 1111 & E() = init(E())".asFormula), List(
                           Show("[{wild ++ wild}]wild()".asFormula, UP(List(), Auto()))
                           , PrintGoal("Pre-solve",
                             BRule(
@@ -625,7 +626,7 @@ Inv Jx:(x > 0)
 Inv Jy:(y > init(y))
 show (Jy > 0) using assms Jy by auto
 */
-  "POPL'18 Old Draft" should "prove" in {
+  "POPL'18 Old Draft yet another example" should "prove" in {
     withMathematica(qeTool => {
       val duh: SP = Show("wild()".asFormula, UP(List(), Kaisar.Auto()))
       val box = "x>0&y>0 -> [{x' =-x, y'=x}]y>0".asFormula
@@ -852,7 +853,7 @@ show (Jy > 0) using assms Jy by auto
               Inv("J".asVariable, And(And(dc, const), dyn), duh,
                 State("loop",
                   BRule(RBCase(List("dc_() & const_()".asFormula, "dyn_()".asFormula)), List(
-                    BRule(RBConsequence("I".asVariable, True), List(
+                    BRule(RBMid("I".asVariable, True), List(
                       Show("wild()".asFormula, UP(List(), Kaisar.Auto()))
                       , Show("wild()".asFormula, UP(List(), Kaisar.Auto()))
                     ))
