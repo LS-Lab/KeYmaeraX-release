@@ -663,6 +663,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     */
   def transform(to: Expression): DependentPositionTactic = ToolTactics.transform(to)
 
+  /** Determines difference between expression at position and expression `to` and turns diff.
+    * into transformations and abbreviations. */
+  def edit(to: Expression): DependentPositionTactic = ToolTactics.edit(to)
+
   //
   /** OnAll(e) == <(e, ..., e) runs tactic `e` on all current branches. */
   def onAll(e: BelleExpr): BelleExpr = OnAll(e)

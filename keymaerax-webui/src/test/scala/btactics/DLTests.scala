@@ -729,6 +729,13 @@ class DLTests extends TacticTestBase {
     result.subgoals.head.succ should contain only "[y_0:=y;][{y'=1}]y>0".asFormula
   }
 
+  it should "work on ODEs mentioning the ghost in the evolution domain" in {
+    val result = proveBy("[{y'=1 & y+1>0}]y>0".asFormula, discreteGhost("y+1".asTerm)(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only "[ghost:=y+1;][{y'=1 & y+1>0}]y>0".asFormula
+  }
+
   it should "not propagate arbitrary terms into ODEs" in {
     val result = proveBy("[{y'=1}]y>0".asFormula, discreteGhost("y+1".asTerm, Some("z".asVariable))(1))
     result.subgoals should have size 1
@@ -747,14 +754,14 @@ class DLTests extends TacticTestBase {
     val result = proveBy("x>0".asFormula, discreteGhost("y+v/1".asTerm)(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "[term:=y+v/1;]x>0".asFormula
+    result.subgoals.head.succ should contain only "[ghost:=y+v/1;]x>0".asFormula
   }
 
   it should "not clash with preexisting variables when introducing anonymous ghosts" in {
-    val result = proveBy("term>0 ==> x>0".asSequent, discreteGhost("y+v/1".asTerm)(1))
+    val result = proveBy("ghost>0 ==> x>0".asSequent, discreteGhost("y+v/1".asTerm)(1))
     result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "term>0".asFormula
-    result.subgoals.head.succ should contain only "[term_0:=y+v/1;]x>0".asFormula
+    result.subgoals.head.ante should contain only "ghost>0".asFormula
+    result.subgoals.head.succ should contain only "[ghost_0:=y+v/1;]x>0".asFormula
   }
 
   "[:=] assign exists" should "turn existential quantifier into assignment" in {

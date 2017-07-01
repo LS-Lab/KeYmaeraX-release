@@ -28,7 +28,8 @@ private object EqualityTactics {
     sequent.sub(pos) match {
       case Some(eq@Equal(lhs, rhs)) =>
         // prevent endless self rewriting (e.g., 0=0) -> compute dependencies first to figure out what to rewrite when
-        require(!lhs.isInstanceOf[Number] && lhs != rhs, "LHS and RHS are not allowed to overlap")
+        require(!lhs.isInstanceOf[Number], "Rewriting numbers not supported")
+        require(lhs != rhs, "LHS and RHS are not allowed to overlap")
 
         val occurrences = positionsOf(lhs, sequent).filter(p => p.isAnte != pos.isAnte || p.index0 != pos.index0).
           filter(p => boundAt(sequent(p.top), p.inExpr).intersect(StaticSemantics.freeVars(lhs)).isEmpty).map(_.top).toList

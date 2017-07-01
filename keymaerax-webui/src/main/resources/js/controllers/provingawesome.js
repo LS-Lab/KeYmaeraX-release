@@ -139,6 +139,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
     $rootScope.$broadcast('proof.message', {
       errorThrown: err.data.errorThrown,
       textStatus: err.data.textStatus,
+      causeMsg: err.data.causeMsg,
       tacticMsg: err.data.tacticMsg,
       taskStepwiseRequest: $scope.runningTask.taskStepwiseRequest
     })

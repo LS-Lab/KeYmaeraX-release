@@ -1,0 +1,1 @@
+angular.module('keymaerax.ui.directives', ['ngSanitize']);

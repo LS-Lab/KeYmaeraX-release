@@ -34,10 +34,6 @@
                            tooltip-placement="top" tooltip-popup-delay="500">
                         <span class="fa fa-exchange"></span></a>
                     </li>
-                    <li><a ng-click="exportFormula(f.id)"
-                           uib-tooltip="ASCII" tooltip-placement="left" tooltip-popup-delay="500">
-                        <span class="fa fa-clipboard"></span></a>
-                    </li>
                 </ul>
                 <div class="k4-formula-content col-md-12">
                     <ul><li>{{f.id}}:</li></ul>
@@ -99,16 +95,12 @@
                            uib-tooltip="Simplify formula" tooltip-placement="top" tooltip-popup-delay="500">
                         <span class="fa fa-compress"></span></a>
                     </li>
-                    <li><a ng-click="exportFormula(f.id)"
-                           uib-tooltip="ASCII" tooltip-placement="left" tooltip-popup-delay="500">
-                        <span class="fa fa-clipboard"></span></a>
-                    </li>
                 </ul>
                 <div class="k4-formula-content">
                     <ul><li>{{f.id}}:</li></ul>
                     <k4-formula class="k4-formula-container"
                                 user-id="userId" proof-id="proofId" node-id="nodeId" goal-id="goalId"
-                                formula="f.formula" highlight="true" collapsed="collapsed"
+                                formula="f.formula" highlight="!collapsed" collapsed="collapsed"
                                 on-tactic="onTactic(formulaId, tacticId)"
                                 on-input-tactic="onInputTactic(formulaId, tacticId, input)"
                                 on-two-position-tactic="onTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-formula>

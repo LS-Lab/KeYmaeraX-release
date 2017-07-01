@@ -103,6 +103,11 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
     parser("absExp('L~={`abs(x)`})") shouldBe TactixLibrary.abs('Llike, "abs(x)".asTerm)
   }
 
+  it should "parse dgfancy" in {
+    parser("dGfancy({`y' = 0`})") shouldBe TactixLibrary.dG("y'=0".asDifferentialProgram, None)
+    parser("dGfancy({`y' = 0`}, {`1=1`})") shouldBe TactixLibrary.dG("y'=0".asDifferentialProgram, Some("1=1".asFormula))
+  }
+
   "Propositional Examples" should "close p() -> p()" in {
     val tactic = parser("implyR(1) & closeId")
 //    val tactic = ExposedTacticsLibrary.tactics("implyR") & ExposedTacticsLibrary.tactics("TrivialCloser")

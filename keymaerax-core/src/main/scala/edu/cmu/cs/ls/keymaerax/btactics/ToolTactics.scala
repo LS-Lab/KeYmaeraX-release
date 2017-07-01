@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.toSingleFormula
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
@@ -186,6 +187,55 @@ private object ToolTactics {
       case f: Formula => transformFormula(f, sequent, pos)
       case t: Term => transformTerm(t, sequent, pos)
     }
+  })
+
+  /** @see [[TactixLibrary.edit()]] */
+  def edit(to: Expression): DependentPositionWithAppliedInputTactic = "edit" byWithInput (to, (pos: Position, sequent: Sequent) => {
+    val srcExpr = sequent.sub(pos).getOrElse(throw new IllegalArgumentException("Edit does not point to a term or formula in the sequent"))
+
+    require(srcExpr match {
+      case fml: Formula => fml.isFOL && to.kind == fml.kind
+      case t: Term => to.kind == t.kind
+      case _ => false
+    }, "Edit only on arithmetic formulas and terms")
+
+    var nextAbbrvName: Variable = TacticHelper.freshNamedSymbol(Variable("abbrv"), sequent)
+    val abbrvs = scala.collection.mutable.Map[PosInExpr, Term]()
+    val abbrvTo: Expression =
+      //@todo support traverse expressions
+      if (to.kind == FormulaKind) ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+          case FuncOf(Function("abbrv", None, _, _, _), abbrv@Pair(_, v: Variable)) =>
+            abbrvs(p) = abbrv
+            Right(v)
+          case FuncOf(Function("abbrv", None, _, _, _), t) =>
+            val abbrv = nextAbbrvName
+            nextAbbrvName = Variable(abbrv.name, Some(abbrv.index.getOrElse(-1) + 1))
+            abbrvs(p) = Pair(t, abbrv)
+            Right(abbrv)
+          case _ => Left(None)
+        }
+      }, to.asInstanceOf[Formula]).get
+      else ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+          case FuncOf(Function("abbrv", None, _, _, _), abbrv@Pair(_, v: Variable)) =>
+            abbrvs(p) = abbrv
+            Right(v)
+          case FuncOf(Function("abbrv", None, _, _, _), t) =>
+            val abbrv = nextAbbrvName
+            nextAbbrvName = Variable(abbrv.name, Some(abbrv.index.getOrElse(-1) + 1))
+            abbrvs(p) = Pair(t, abbrv)
+            Right(abbrv)
+          case _ => Left(None)
+        }
+      }, to.asInstanceOf[Term]).get
+    //@todo unify to check whether abbrv is valid; may need reassociating, e.g. in x*y*z x*abbrv(y*z)
+
+    val abbrvTactic = abbrvs.values.map({
+      case Pair(t, v: Variable) => EqualityTactics.abbrv(t, Some(v))
+    }).reduceOption[BelleExpr](_&_).getOrElse(skip)
+
+    abbrvTactic & transform(abbrvTo)(pos)
   })
 
   /** Transforms the formula at position `pos` into the formula `to`. */

@@ -1,0 +1,24 @@
+<span ng-if="collapsed" ng-bind-html="formula.string">
+</span>
+<span frang-tree ng-if="!collapsed">
+    <span frang-tree-repeat="expr in [formula.json]"
+          class="k4-{{expr.kind}} k4-{{expr.step}} k4-{{expr.editable}}"
+          id="fml_{{expr.id}}"
+          ng-mouseover="exprMouseOver($event, expr.step, expr.editable)"
+          ng-mouseout="exprMouseOut($event)"
+          ng-click="exprClick($event, expr.id, expr.step, expr.editable)"
+          ng-right-click="exprRightClick($event, expr.id, expr.step, expr.editable)"
+          uib-popover-template="'templates/axiomPopoverTemplate.html'"
+          popover-is-open="tacticPopover.isOpen(expr.id)"
+          popover-trigger="'none'"
+          popover-append-to-body="true"
+          popover-placement="auto bottom">
+        <span ng-if="modeIsEdit() && expr.plain">
+            <span editable-text="expr.plain" onbeforesave="editExpr(expr.id, $data)">{{expr.plain}}</span>
+        </span>
+        <span ng-if="(modeIsProve() || !expr.plain) && expr.text" ng-bind-html="expr.text"></span>
+        <span ng-if="(modeIsProve() || !expr.plain) && expr.children && expr.children.length > 0"
+              frang-tree-insert-children="expr.children"></span>
+        </span>
+    </span>
+</span>

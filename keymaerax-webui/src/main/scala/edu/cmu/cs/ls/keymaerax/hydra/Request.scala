@@ -1188,22 +1188,6 @@ class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, n
   }
 }
 
-class ExportFormula(db: DBAbstraction, userId: String, proofId: String, nodeId: String, formulaId: String)
-  extends UserProofRequest(db, userId, proofId) with ReadRequest {
-  override protected def doResultingResponses(): List[Response] = {
-    if(!db.getProofsForUser(userId).exists(p => p._1.proofId == proofId.toInt)) {
-      new PossibleAttackResponse("Permission denied") :: Nil
-    } else {
-      DbProofTree(db, proofId).locate(nodeId).flatMap(_.goal) match {
-        case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
-        case Some(goal) =>
-          val formula = goal(SeqPos(formulaId.toInt))
-          new KvpResponse("formula", formula.prettyString) :: Nil
-      }
-    }
-  }
-}
-
 case class BelleTermInput(value: String, spec:Option[ArgInfo])
 
 class GetStepRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, pos: Position)
@@ -1338,7 +1322,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                           inputs:List[BelleTermInput] = Nil, consultAxiomInfo: Boolean = true, stepwise: Boolean = false)
   extends UserProofRequest(db, userId, proofId) with WriteRequest {
   /** Turns belleTerm into a specific tactic expression, including input arguments */
-  private def fullExpr(sequent: Sequent) = {
+  private def fullExpr(sequent: Sequent): String = {
     val paramStrings: List[String] = inputs.map{
       case BelleTermInput(value, Some(_:TermArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:FormulaArg)) => "{`"+value+"`}"
@@ -1347,10 +1331,21 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case BelleTermInput(value, Some(ListArg(_, "formula", _))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
       case BelleTermInput(value, None) => value
     }
-    val specificTerm = if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, _.codeName) else belleTerm
-    if (inputs.isEmpty && pos.isEmpty) { assert(pos2.isEmpty, "Undefined pos1, but defined pos2"); specificTerm }
-    else if (inputs.isEmpty && pos.isDefined && pos2.isEmpty) { specificTerm + "(" + pos.get.prettyString + ")" }
-    else if (inputs.isEmpty && pos.isDefined && pos2.isDefined) { specificTerm + "(" + pos.get.prettyString + "," + pos2.get.prettyString + ")" }
+    //@note stepAt(pos) may refer to a search tactic without position (e.g, closeTrue, closeFalse)
+    val (specificTerm, adaptedPos, adaptedPos2) =
+      if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2) match {
+        case Left(s) => (s, pos, pos2)
+        case Right(t: PositionTacticInfo) => (t.codeName, pos, None)
+        case Right(t: InputPositionTacticInfo) => (t.codeName, pos, None)
+        case Right(t: TwoPositionTacticInfo) => (t.codeName, pos, pos2)
+        case Right(t: InputTwoPositionTacticInfo) => (t.codeName, pos, pos2)
+        case Right(t) => (t.codeName, None, None)
+      }
+      else (belleTerm, pos, pos2)
+
+    if (inputs.isEmpty && adaptedPos.isEmpty) { assert(adaptedPos2.isEmpty, "Undefined pos1, but defined pos2"); specificTerm }
+    else if (inputs.isEmpty && adaptedPos.isDefined && adaptedPos2.isEmpty) { specificTerm + "(" + adaptedPos.get.prettyString + ")" }
+    else if (inputs.isEmpty && adaptedPos.isDefined && adaptedPos2.isDefined) { specificTerm + "(" + adaptedPos.get.prettyString + "," + adaptedPos2.get.prettyString + ")" }
     else specificTerm + "(" + paramStrings.mkString(",") + ")"
   }
 
@@ -1814,9 +1809,18 @@ class CheckValidationRequest(db: DBAbstraction, taskId: String) extends Request 
 //endregion
 
 object RequestHelper {
+
+  /* String representation of the actual step (if tacticId refers to stepAt, otherwise tacticId).
+     For display purposes only. */
+  def getSpecificName(tacticId: String, sequent:Sequent, l1: Option[PositionLocator], l2: Option[PositionLocator],
+                      what: DerivationInfo => String): String =  getSpecificName(tacticId, sequent, l1, l2) match {
+    case Left(s) => s
+    case Right(t) => what(t)
+  }
+
   /* Try to figure out the most intuitive inference rule to display for this tactic. If the user asks us "StepAt" then
    * we should use the StepAt logic to figure out which rule is actually being applied. Otherwise just ask TacticInfo */
-  def getSpecificName(tacticId: String, sequent:Sequent, l1: Option[PositionLocator], l2: Option[PositionLocator], what: DerivationInfo => String): String = {
+  def getSpecificName(tacticId: String, sequent:Sequent, l1: Option[PositionLocator], l2: Option[PositionLocator]): Either[String,DerivationInfo] = {
     val pos = l1 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
     val pos2 = l2 match {case Some(Fixed(p, _, _)) => Some(p) case _ => None}
     tacticId.toLowerCase match {
@@ -1824,20 +1828,20 @@ object RequestHelper {
         sequent.sub(pos.get) match {
           case Some(fml: Formula) =>
             UIIndex.theStepAt(fml, pos) match {
-              case Some(step) => what(DerivationInfo(step))
-              case None => tacticId
+              case Some(step) => Right(DerivationInfo(step))
+              case None => Left(tacticId)
             }
-          case _ => what(DerivationInfo.ofCodeName(tacticId))
+          case _ => Right(DerivationInfo.ofCodeName(tacticId))
         }
       case ("step" | "stepat") if pos.isDefined && pos2.isDefined =>
         sequent.sub(pos.get) match {
           case Some(fml: Formula) =>
             UIIndex.theStepAt(pos.get, pos2.get, sequent) match {
-              case Some(step) => what(DerivationInfo(step))
-              case None => tacticId
+              case Some(step) => Right(DerivationInfo(step))
+              case None => Left(tacticId)
             }
         }
-      case _ => what(DerivationInfo.ofCodeName(tacticId))
+      case _ => Right(DerivationInfo.ofCodeName(tacticId))
     }
   }
 
