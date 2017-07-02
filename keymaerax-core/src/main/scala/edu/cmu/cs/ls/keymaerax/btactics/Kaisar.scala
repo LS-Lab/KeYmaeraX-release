@@ -833,7 +833,7 @@ private def saveVars(pr:Provable, savedVars:Set[Variable], invCurrent:Boolean = 
       DLBySubst.assignEquality(1) &
       TactixLibrary.exhaustiveEqR2L(hide=false)('Llast) &
       TactixLibrary.eqL2R(-last)(1) &
-      (if (invCurrent) {TactixLibrary.eqL2R(-last)(1 + accVs.length - last)} else { nil }) &
+      (if (invCurrent) {TactixLibrary.eqL2R(-last)(1 + accVs.length - last)} else { nil })
     (interpret(e, acc), vv::accVs)
   })
 }
