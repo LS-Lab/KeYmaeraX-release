@@ -88,11 +88,11 @@ Specification
 =============
 
 The goal of KeYmaera X is to implement the proof calculus of differential dynamic logic in a way that is amenable to soundness assurance by way of a small trusted LCF-style kernel while still being amenable to automatic theorem proving.
-Differential dynamic logic and its Hilbert-type and sequent proof calculi have been described and specified in more detail in:
+Differential dynamic logic and its Hilbert-type and sequent proof calculi have been described and specified in:
 
 1. André Platzer. 
 [A complete uniform substitution calculus for differential dynamic logic](http://dx.doi.org/10.1007/s10817-016-9385-1). 
-Journal of Automated Reasoning, 2016.
+Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
 
 Based on: André Platzer. 
 [A uniform substitution calculus for differential dynamic logic](http://dx.doi.org/10.1007/978-3-319-21401-6_32). 
@@ -115,28 +115,28 @@ Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
 [Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics](http://dx.doi.org/10.1007/978-3-642-14509-4).
 Springer, 2010. 426 p. ISBN 978-3-642-14508-7. 
 
+The advanced proof techniques of differential invariants, differential cuts, and differential ghosts are also described and specified in
+
 6. André Platzer.
-[Differential dynamic logic for verifying parametric hybrid systems](http://dx.doi.org/10.1007/978-3-540-73099-6_17).
-In Nicola Olivetti, editor, Automated Reasoning with Analytic Tableaux and Related Methods, International Conference, TABLEAUX 2007, Aix en Provence, France, July 3-6, 2007, Proceedings, volume 4548 of LNCS, pages 216-232. Springer, 2007. 
-
-The advanced proof techniques of differential invariants, differential cuts, and differential ghosts are described and specified in
-
-7. André Platzer.
 [The structure of differential invariants and differential cut elimination](http://dx.doi.org/10.2168/LMCS-8(4:16)2012).
 Logical Methods in Computer Science, 8(4), pages 1-38, 2012. 
 
 A secondary goal of KeYmaera X is to also make it possible to implement extensions of differential dynamic logic, such as differential game logic for hybrid games as well as quantified differential dynamic logic for distributed hybrid systems, which, along with its proof calculus, are described and specified in
 
-8. André Platzer. 
+7. André Platzer. 
 [Differential game logic](http://dx.doi.org/10.1145/2817824). 
 ACM Trans. Comput. Log., 17(1), 2015.
 
-10. André Platzer.
+8. André Platzer. 
+[Differential hybrid games](http://dx.doi.org/10.1145/3091123). 
+ACM Trans. Comput. Log., 18(3), 2017.
+
+9. André Platzer.
 [A complete axiomatization of quantified differential dynamic logic for distributed hybrid systems](http://dx.doi.org/10.2168/LMCS-8(4:17)2012).
 Logical Methods in Computer Science, 8(4), pages 1-44, 2012.
 Special issue for selected papers from CSL'10. 
 
-11. André Platzer.
+10. André Platzer.
 [Dynamic logics of dynamical systems](http://arxiv.org/abs/1205.4788).
 May 2012.
 arXiv:1205.4788
