@@ -34,7 +34,7 @@ or run KeYmaera X via
 If KeYmaera X acts weird after an update, you should clean your local cache of lemmas by removing (or renaming) the directory `~/.keymaerax/cache`.
 You could also try removing or renaming the model and proof database `~/.keymaerax/keymaerax.sqlite` (if this file has become corrupt, it may prevent KeYmaera X from working properly).
 
-Errors related to JLinkNative Library are caused by incompatibilities of Java 1.8 in combination with Mathematica 9. It is recommended to use Mathematica 10.
+Errors related to JLinkNative Library are caused by incompatibilities of Java 1.8 in combination with Mathematica 9. It is recommended to use Mathematica 10. Or they may be caused by some operating system configuration issues.
 
 Command Line Execution and Templates
 ====================================
@@ -107,36 +107,40 @@ ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, 
 [KeYmaera X: An axiomatic tactical theorem prover for hybrid systems](http://dx.doi.org/10.1007/978-3-319-21401-6_36). 
 In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. 
 
-4. André Platzer.
+4. Nathan Fulton, Stefan Mitsch, Brandon Bohrer and André Platzer. 
+Bellerophon: Tactical theorem proving for hybrid systems. 
+In Mauricio Ayala-Rincón and César Muñoz, editors, Interactive Theorem Proving, International Conference, ITP 2017, LNCS. Springer, 2017. 
+
+5. André Platzer.
 [Differential dynamic logic for hybrid systems](http://dx.doi.org/10.1007/s10817-008-9103-8).
 Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
 
-5. André Platzer.
+6. André Platzer.
 [Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics](http://dx.doi.org/10.1007/978-3-642-14509-4).
 Springer, 2010. 426 p. ISBN 978-3-642-14508-7. 
 
 The advanced proof techniques of differential invariants, differential cuts, and differential ghosts are also described and specified in
 
-6. André Platzer.
+7. André Platzer.
 [The structure of differential invariants and differential cut elimination](http://dx.doi.org/10.2168/LMCS-8(4:16)2012).
 Logical Methods in Computer Science, 8(4), pages 1-38, 2012. 
 
 A secondary goal of KeYmaera X is to also make it possible to implement extensions of differential dynamic logic, such as differential game logic for hybrid games as well as quantified differential dynamic logic for distributed hybrid systems, which, along with its proof calculus, are described and specified in
 
-7. André Platzer. 
+8. André Platzer. 
 [Differential game logic](http://dx.doi.org/10.1145/2817824). 
 ACM Trans. Comput. Log., 17(1), 2015.
 
-8. André Platzer. 
+9. André Platzer. 
 [Differential hybrid games](http://dx.doi.org/10.1145/3091123). 
 ACM Trans. Comput. Log., 18(3), 2017.
 
-9. André Platzer.
+10. André Platzer.
 [A complete axiomatization of quantified differential dynamic logic for distributed hybrid systems](http://dx.doi.org/10.2168/LMCS-8(4:17)2012).
 Logical Methods in Computer Science, 8(4), pages 1-44, 2012.
 Special issue for selected papers from CSL'10. 
 
-10. André Platzer.
+11. André Platzer.
 [Dynamic logics of dynamical systems](http://arxiv.org/abs/1205.4788).
 May 2012.
 arXiv:1205.4788
