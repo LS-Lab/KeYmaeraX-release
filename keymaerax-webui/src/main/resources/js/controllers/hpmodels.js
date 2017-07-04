@@ -25,11 +25,11 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
        content: undefined
      };
 
-     $scope.uploadFile = function(fileName, fileContent) {
-          var url = "user/" + sessionService.getUser();
-          if (fileName.endsWith('.kyx')) url = url + "/modeltextupload/" + $scope.model.modelName;
-          else if (fileName.endsWith('.kya')) url = url + "/archiveupload/";
-          upload(url, fileContent);
+     $scope.uploadFile = function(fileName, fileContent, modelName) {
+       var url = "user/" + sessionService.getUser();
+       if (fileName.endsWith('.kyx')) url = url + "/modeltextupload/" + modelName;
+       else if (fileName.endsWith('.kya')) url = url + "/archiveupload/";
+       upload(url, fileContent);
      };
 
      $scope.uploadContent = function() {

@@ -2,7 +2,7 @@ angular.module('keymaerax.ui.directives').directive('k4FileUpload', function () 
   return {
     restrict: 'E',
     scope: {
-      onFileConfirmed: '&',
+      onFileConfirmed: '&'
     },
     templateUrl: 'templates/kyxupload.html',
     link: function(scope, element, attrs) {
@@ -17,10 +17,11 @@ angular.module('keymaerax.ui.directives').directive('k4FileUpload', function () 
       scope.readFile = function() {
         var file = keyFile.files[0];
         var fr = new FileReader();
+        var modelName = scope.fileExt == '.kyx' ? modelNameInput.value : undefined;
         fr.onerror = function(e) { alert("Error opening file: " + e.getMessage()); };
         fr.onload = function(e) {
           var fileContent = e.target.result;
-          scope.onFileConfirmed({fileName: file.name, fileContent: fileContent});
+          scope.onFileConfirmed({ fileName: file.name, fileContent: fileContent, modelName: modelName });
         };
 
         fr.readAsText(file);
