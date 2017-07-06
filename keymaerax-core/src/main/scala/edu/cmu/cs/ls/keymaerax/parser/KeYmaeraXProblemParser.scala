@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversal
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 
 import scala.annotation.tailrec
+import scala.util.Try
 
 /**
  * Parses `.kyx` KeYmaera X problem files.
@@ -43,13 +44,10 @@ object KeYmaeraXProblemParser {
 
   /** Tries parsing as a formula first. If that fails, tries parsing as a problem file. */
   def parseAsProblemOrFormula(input : String): Formula = {
-    val result = try { Some(KeYmaeraXParser(input).asInstanceOf[Formula]) } catch { case _: Throwable => None }
-    result match {
-      case Some(formula) => formula
-      case None =>
-        val (d, fml) = KeYmaeraXProblemParser.parseProblem(input)
-        d.exhaustiveSubst(fml)
-    }
+    Try(KeYmaeraXParser(input).asInstanceOf[Formula]).getOrElse({
+      val (d, fml) = KeYmaeraXProblemParser.parseProblem(input)
+      d.exhaustiveSubst(fml)
+    })
   }
 
   /** //almost always the line number where the Problem section begins. (see todo) */
