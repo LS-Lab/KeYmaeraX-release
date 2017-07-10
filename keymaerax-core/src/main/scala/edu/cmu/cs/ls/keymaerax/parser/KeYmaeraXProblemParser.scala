@@ -30,7 +30,7 @@ object KeYmaeraXProblemParser {
   def parseProblem(inputWithPossibleBOM : String): (Declaration, Formula) = {
     val input = ParserHelper.removeBOM(inputWithPossibleBOM)
     try {
-      firstNonASCIICharacter(input) match {
+      firstUnacceptableCharacter(input) match {
         case Some(pair) => throw ParseException(s"Input string contains non-ASCII character ${pair._2}", pair._1)
         case None =>
           val lexResult = KeYmaeraXLexer.inMode(input, ProblemFileMode)
@@ -60,7 +60,7 @@ object KeYmaeraXProblemParser {
 
   /** Parses a file of the form Problem. ... End. Solution. ... End. */
   def parseProblemAndTactic(input: String): (Formula, BelleExpr) = try {
-    firstNonASCIICharacter(input) match {
+    firstUnacceptableCharacter(input) match {
       case Some(pair) => throw ParseException(s"Input string contains non-ASCII character ${pair._2}", pair._1)
       case None => {
         val parts = input.split("Solution.")
@@ -78,14 +78,30 @@ object KeYmaeraXProblemParser {
   }
   catch {case e: ParseException => throw e.inInput(input)} //@todo properly offset Belle parse exceptions...
 
-  /** Returns the location and value of the first non-ASCII character in a string. */
-  def firstNonASCIICharacter(s : String) : Option[(Location, Char)] = {
-    val pattern = """([^\p{ASCII}])""".r
-    val matches = pattern.findAllIn(s).matchData
+  /** Non-unicode characters that are allowed in KeYmaera X input files.
+    * Should correspond to the unicode that's printed in the web UI. */
+  private val allowedUnicodeChars : Set[Char] = Set[Char](
+    '≤',
+    '≤',
+    '∧',
+    '∨',
+    '≠',
+    '∀',
+    '∃'
+    //@todo allow also: implication, equivalence, anything else?
+  )
 
-    if(matches.nonEmpty) {
+  /** Returns the location and value of the first non-ASCII character in a string that is not in [[allowedUnicodeChars]] */
+  def firstUnacceptableCharacter(s : String) : Option[(Location, Char)] = {
+    val pattern = """([^\p{ASCII}])""".r
+    val nonAsciiChars = pattern.findAllIn(s).matchData.map(_.group(0).toCharArray.last).toList
+
+    //Some unicode is allowed! Find only the unicode that is not allwed.
+    val disallowedChars = nonAsciiChars.filter(!allowedUnicodeChars.contains(_))
+
+    if(disallowedChars.nonEmpty) {
       val nonAsciiCharacter : Char = {
-        if(matches.hasNext) matches.next().group(0).toCharArray.last
+        if(disallowedChars.nonEmpty) disallowedChars.head
         else throw new Exception("Expected at least one match but matchData.hasNext returned false when matches.nonEmpty was true!")
       }
       val prefix = s.split(nonAsciiCharacter).head
@@ -95,7 +111,7 @@ object KeYmaeraXProblemParser {
       Some(new Region(lineNumber, columnNumber, lineNumber, columnNumber), nonAsciiCharacter)
     }
     else {
-      assert(s.matches("\\A\\p{ASCII}*\\z"))
+      //@todo change this assertion: assert(s.matches("\\A\\p{ASCII}*\\z"))
       None
     }
   }

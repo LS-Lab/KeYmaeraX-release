@@ -34,7 +34,7 @@ object BelleParser extends (String => BelleExpr) {
 
   def parseWithInvGen(s: String, g: Option[Generator.Generator[Expression]] = None,
                       defs: Declaration = Declaration(Map())): BelleExpr =
-    KeYmaeraXProblemParser.firstNonASCIICharacter(s) match {
+    KeYmaeraXProblemParser.firstUnacceptableCharacter(s) match {
       case Some((loc, char)) => throw ParseException(s"Found a non-ASCII character when parsing tactic: $char", loc, "<unknown>", "<unknown>", "", "")
       case None =>
         invariantGenerator = g
