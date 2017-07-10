@@ -80,9 +80,9 @@ object KeYmaeraXProblemParser {
 
   /** Non-unicode characters that are allowed in KeYmaera X input files.
     * Should correspond to the unicode that's printed in the web UI. */
-  private val allowedUnicodeChars : Set[Char] = Set[Char](
+  val allowedUnicodeChars : Set[Char] = Set[Char](
     '≤',
-    '≤',
+    '≥',
     '∧',
     '∨',
     '≠',
