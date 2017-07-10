@@ -400,6 +400,15 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
     def consumeTerminalLength(terminal: Terminal, location: Location): Option[(String, Token, Location)] =
       consumeColumns(terminal.img.length, terminal, location)
 
+    def consumeUnicodeTerminalLength(terminal: Terminal, location: Location, replacementTerminal: Terminal): Option[(String, Token, Location)] = {
+      val result: Option[(String, Token, Location)] = consumeColumns(terminal.img.length, terminal, location)
+
+      result match {
+        case None => None
+        case Some((s,t,l)) => Some((s, Token(replacementTerminal, t.loc), l))
+      }
+    }
+
     def swapOutFor(found: Option[(String, Token, Location)], repl: Terminal): Option[(String, Token, Location)] = found match {
       case None => None
       case Some((s,tok,cur)) => Some((s,Token(repl,tok.loc),cur))
@@ -532,9 +541,9 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
 
       //These have to come before LBOX,RBOX because otherwise <= becopmes LDIA, EQUALS
       case GREATEREQ.startPattern(_*) => consumeTerminalLength(GREATEREQ, loc)
-      case GREATEREQ_UNICODE.startPattern(_*) => consumeTerminalLength(GREATEREQ_UNICODE, loc)
+      case GREATEREQ_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(GREATEREQ_UNICODE, loc, GREATEREQ)
       case LESSEQ.startPattern(_*) => consumeTerminalLength(LESSEQ, loc)
-      case LESSEQ_UNICODE.startPattern(_*) => consumeTerminalLength(LESSEQ_UNICODE, loc)
+      case LESSEQ_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(LESSEQ_UNICODE, loc, LESSEQ)
       case NOTEQ.startPattern(_*) => consumeTerminalLength(NOTEQ, loc)
 
       case LBANANA.startPattern(_*) => consumeTerminalLength(LBANANA, loc)
@@ -567,24 +576,24 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
 
 
       case AMP.startPattern(_*) => consumeTerminalLength(AMP, loc)
-      case AND_UNICODE.startPattern(_*) => consumeTerminalLength(AND_UNICODE, loc)
+      case AND_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(AND_UNICODE, loc, AMP)
       case NOT.startPattern(_*) => consumeTerminalLength(NOT, loc)
       case OR.startPattern(_*) => consumeTerminalLength(OR, loc)
-      case OR_UNICODE.startPattern(_*) => consumeTerminalLength(OR_UNICODE, loc)
+      case OR_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(OR_UNICODE, loc, OR)
       case EQUIV.startPattern(_*) => consumeTerminalLength(EQUIV, loc)
-      case EQUIV_UNICODE.startPattern(_*) => consumeTerminalLength(EQUIV_UNICODE, loc)
+      case EQUIV_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(EQUIV_UNICODE, loc, EQUIV)
       case IMPLY.startPattern(_*) => consumeTerminalLength(IMPLY, loc)
-      case IMPLY_UNICODE.startPattern(_*) => consumeTerminalLength(IMPLY_UNICODE, loc)
+      case IMPLY_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(IMPLY_UNICODE, loc, IMPLY)
       case REVIMPLY.startPattern(_*) => consumeTerminalLength(REVIMPLY, loc)
-      case REVIMPLY_UNICODE.startPattern(_*) => consumeTerminalLength(REVIMPLY_UNICODE, loc)
+      case REVIMPLY_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(REVIMPLY_UNICODE, loc, REVIMPLY)
 
       case FORALL.startPattern(_*) => consumeTerminalLength(FORALL, loc)
-      case FORALL_UNICODE.startPattern(_*) => consumeTerminalLength(FORALL_UNICODE, loc)
+      case FORALL_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(FORALL_UNICODE, loc, FORALL)
       case EXISTS.startPattern(_*) => consumeTerminalLength(EXISTS, loc)
-      case EXISTS_UNICODE.startPattern(_*) => consumeTerminalLength(EXISTS_UNICODE, loc)
+      case EXISTS_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(EXISTS_UNICODE, loc, EXISTS)
 
       case EQ.startPattern(_*) => consumeTerminalLength(EQ, loc)
-      case UNEQUAL_UNICODE.startPattern(_*) => consumeTerminalLength(UNEQUAL_UNICODE, loc)
+      case UNEQUAL_UNICODE.startPattern(_*) => ???
       case TRUE.startPattern(_*) => consumeTerminalLength(TRUE, loc)
       case FALSE.startPattern(_*) => consumeTerminalLength(FALSE, loc)
 
