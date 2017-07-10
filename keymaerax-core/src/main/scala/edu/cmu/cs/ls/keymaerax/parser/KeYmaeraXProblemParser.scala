@@ -87,8 +87,10 @@ object KeYmaeraXProblemParser {
     '∨',
     '≠',
     '∀',
-    '∃'
-    //@todo allow also: implication, equivalence, anything else?
+    '∃',
+    '→',
+    '↔',
+    '←'
   )
 
   /** Returns the location and value of the first non-ASCII character in a string that is not in [[allowedUnicodeChars]] */

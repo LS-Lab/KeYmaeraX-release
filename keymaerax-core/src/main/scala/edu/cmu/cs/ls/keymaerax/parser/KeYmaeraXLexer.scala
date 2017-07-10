@@ -132,9 +132,13 @@ private object OR      extends OPERATOR("|") {
   override def regexp = """\|""".r
 }
 private object EQUIV   extends OPERATOR("<->")
+private object EQUIV_UNICODE extends OPERATOR("↔")
 private object IMPLY   extends OPERATOR("->")
+private object IMPLY_UNICODE extends OPERATOR("→")
+
 //@todo maybe could change to <-- to disambiguate poor lexer's x<-7 REVIMPLY from LDIA MINUS
 private object REVIMPLY extends OPERATOR("<-")
+private object REVIMPLY_UNICODE extends OPERATOR("←")
 
 private object FORALL  extends OPERATOR("\\forall") {
   override def regexp = """\\forall""".r
@@ -568,8 +572,11 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case OR.startPattern(_*) => consumeTerminalLength(OR, loc)
       case OR_UNICODE.startPattern(_*) => consumeTerminalLength(OR_UNICODE, loc)
       case EQUIV.startPattern(_*) => consumeTerminalLength(EQUIV, loc)
+      case EQUIV_UNICODE.startPattern(_*) => consumeTerminalLength(EQUIV_UNICODE, loc)
       case IMPLY.startPattern(_*) => consumeTerminalLength(IMPLY, loc)
+      case IMPLY_UNICODE.startPattern(_*) => consumeTerminalLength(IMPLY_UNICODE, loc)
       case REVIMPLY.startPattern(_*) => consumeTerminalLength(REVIMPLY, loc)
+      case REVIMPLY_UNICODE.startPattern(_*) => consumeTerminalLength(REVIMPLY_UNICODE, loc)
 
       case FORALL.startPattern(_*) => consumeTerminalLength(FORALL, loc)
       case FORALL_UNICODE.startPattern(_*) => consumeTerminalLength(FORALL_UNICODE, loc)
