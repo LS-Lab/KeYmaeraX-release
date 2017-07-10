@@ -150,6 +150,15 @@ private object NOTEQ   extends OPERATOR("!=") {
 private object GREATEREQ extends OPERATOR(">=")
 private object LESSEQ  extends OPERATOR("<=")
 
+//Unicode versions of operators:
+private object LESSEQ_UNICODE extends OPERATOR("≤")
+private object GREATEREQ_UNICODE extends OPERATOR("≥")
+private object AND_UNICODE extends OPERATOR("∧")
+private object OR_UNICODE extends OPERATOR("∨")
+private object UNEQUAL_UNICODE extends OPERATOR("≠")
+private object FORALL_UNICODE extends OPERATOR("∀")
+private object EXISTS_UNICODE extends OPERATOR("∃")
+
 private object TRUE    extends OPERATOR("true")
 private object FALSE   extends OPERATOR("false")
 
@@ -193,7 +202,6 @@ private object PSEUDO  extends Terminal("<pseudo>")
 private object INVARIANT extends Terminal("@invariant") {
   override def regexp = """\@invariant""".r
 }
-
 
 // axiom and problem file
 
@@ -520,7 +528,9 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
 
       //These have to come before LBOX,RBOX because otherwise <= becopmes LDIA, EQUALS
       case GREATEREQ.startPattern(_*) => consumeTerminalLength(GREATEREQ, loc)
+      case GREATEREQ_UNICODE.startPattern(_*) => consumeTerminalLength(GREATEREQ_UNICODE, loc)
       case LESSEQ.startPattern(_*) => consumeTerminalLength(LESSEQ, loc)
+      case LESSEQ_UNICODE.startPattern(_*) => consumeTerminalLength(LESSEQ_UNICODE, loc)
       case NOTEQ.startPattern(_*) => consumeTerminalLength(NOTEQ, loc)
 
       case LBANANA.startPattern(_*) => consumeTerminalLength(LBANANA, loc)
@@ -553,16 +563,21 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
 
 
       case AMP.startPattern(_*) => consumeTerminalLength(AMP, loc)
+      case AND_UNICODE.startPattern(_*) => consumeTerminalLength(AND_UNICODE, loc)
       case NOT.startPattern(_*) => consumeTerminalLength(NOT, loc)
       case OR.startPattern(_*) => consumeTerminalLength(OR, loc)
+      case OR_UNICODE.startPattern(_*) => consumeTerminalLength(OR_UNICODE, loc)
       case EQUIV.startPattern(_*) => consumeTerminalLength(EQUIV, loc)
       case IMPLY.startPattern(_*) => consumeTerminalLength(IMPLY, loc)
       case REVIMPLY.startPattern(_*) => consumeTerminalLength(REVIMPLY, loc)
 
       case FORALL.startPattern(_*) => consumeTerminalLength(FORALL, loc)
+      case FORALL_UNICODE.startPattern(_*) => consumeTerminalLength(FORALL_UNICODE, loc)
       case EXISTS.startPattern(_*) => consumeTerminalLength(EXISTS, loc)
+      case EXISTS_UNICODE.startPattern(_*) => consumeTerminalLength(EXISTS_UNICODE, loc)
 
       case EQ.startPattern(_*) => consumeTerminalLength(EQ, loc)
+      case UNEQUAL_UNICODE.startPattern(_*) => consumeTerminalLength(UNEQUAL_UNICODE, loc)
       case TRUE.startPattern(_*) => consumeTerminalLength(TRUE, loc)
       case FALSE.startPattern(_*) => consumeTerminalLength(FALSE, loc)
 
