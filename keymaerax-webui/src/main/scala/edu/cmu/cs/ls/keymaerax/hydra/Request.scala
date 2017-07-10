@@ -631,21 +631,34 @@ class CreateModelFromFormulaRequest(db: DBAbstraction, userId: String, nameOfMod
   }
 }
 
-class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : String, keyFileContents : String) extends UserRequest(userId) with WriteRequest {
+class CreateModelRequest(db: DBAbstraction, userId: String, nameOfModel: String, modelText: String) extends UserRequest(userId) with WriteRequest {
+  private def augmentDeclarations(content: String, parsedContent: Formula): String =
+    if (content.contains("Problem.")) modelText //@note determine by mandatory "Problem." block of KeYmaeraXProblemParser
+    else {
+      val declarations = StaticSemantics.symbols(parsedContent).filter(_.isInstanceOf[BaseVariable]).
+        map(v => s"R ${v.prettyString}.").mkString("\n  ")
+      s"""ProgramVariables.
+         |  $declarations
+         |End.
+         |Problem.
+         |  $modelText
+         |End.""".stripMargin
+    }
+
   def resultingResponses(): List[Response] = {
     try {
-      KeYmaeraXProblemParser.parseAsProblemOrFormula(keyFileContents) match {
-        case _: Formula =>
+      KeYmaeraXProblemParser.parseAsProblemOrFormula(modelText) match {
+        case fml: Formula =>
           if (db.getModelList(userId).map(_.name).contains(nameOfModel)) {
-            new BooleanResponse(false, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
+            BooleanResponse(flag=false, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
           } else {
-            val createdId = db.createModel(userId, nameOfModel, keyFileContents, currentDate()).map(x => x.toString)
-            new BooleanResponse(createdId.isDefined) :: Nil
+            val createdId = db.createModel(userId, nameOfModel, augmentDeclarations(modelText, fml), currentDate()).map(x => x.toString)
+            BooleanResponse(createdId.isDefined) :: Nil
           }
         case t => new ErrorResponse("Expected a model formula, but got a file with a " + t.kind) :: Nil
       }
     } catch {
-      case e: ParseException => new ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+      case e: ParseException => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
     }
   }
 }

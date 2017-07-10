@@ -48,6 +48,10 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
         case fml: Formula => Sequent(IndexedSeq(), IndexedSeq(fml))
         case _ => fail("Model content " + modelContent + " cannot be parsed")
       }
+      db.getModelList(user.userName).find(_.name == modelName) match {
+        case Some(m) => db.deleteModel(m.modelId)
+        case None => // nothing to do
+      }
       val proofId = createProof(modelContent, modelName)
       val globalProvable = ProvableSig.startProof(s)
       val listener = new TraceRecordingListener(db, proofId, None,

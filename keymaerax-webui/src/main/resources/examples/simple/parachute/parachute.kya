@@ -1,4 +1,103 @@
-ArchiveEntry "Parachute".
+ArchiveEntry "Parachute Plain".
+
+Functions.
+  R g().
+  R pr().
+End.
+
+ProgramVariables.
+  R x.
+  R v.
+  R m.
+  R u.
+  R t.
+  R ar.
+  R r.
+  R T.
+End.
+
+Problem.
+  x >= 0 & g() > 0 & v < 0 & m <= 0 &
+  pr() > ar & pr() > 0 & ar > 0 &
+  r = ar &
+  m < -(g()/pr())^(1/2) &
+  v > -(g()/pr())^(1/2) &
+  T > 0
+->
+[ {
+    {
+      ?(v - g()*T > -(g()/pr())^(1/2) & r = ar);
+      ++
+      r := pr();
+    }
+    t := 0;
+    {x'=v, v'=-g() + r*v^2, t'=1 & t <= T & x >= 0 & v < 0}
+  }*@invariant(
+    (x >= 0 & v < 0) &
+    (T > 0 & g() > 0 & m <= 0 & pr() > ar & pr() > 0 & ar > 0 & m < -(g()/pr())^(1/2)) &
+    v > -(g()/pr())^(1/2))
+](x=0 -> v >= m)
+End.
+
+Tactic "Proof: Parachute Plain (dI in context)".
+implyR(1);
+loop({`(x>=0&v < 0)&(T>0&g()>0&m<=0&pr()>ar&pr()>0&ar>0&m < -(g()/pr())^(1/2))&v>-(g()/pr())^(1/2)`}, 1) <(
+  QE,
+  QE,
+  boxAnd(1); andR(1) <(master, nil); /* prove x>=0 & v<0 is an invariant */
+  boxAnd(1); andR(1) <(master, nil); /* prove all constraints on constants are invariants */
+  unfold <(
+    dC({`g()>0 & pr()>0`}, 1) <(nil, dI(1));
+    dC({`v >= old(v) - g()*t`}, 1) <(nil, dI(1));
+    dC({`old(v) - g()*t >= old(v) - g()*T`}, 1) <(nil, dW(1); QE);
+    dC({`old(v) - g()*T > -(g()/pr())^(1/2)`}, 1) <(nil, dI(1));
+    dW(1);
+    cut({`\forall a \forall b \forall c \forall d (a>=b&b>=c&c>d->a>d)`}) <(nil, cohideR('Rlast); QE);
+    allL({`v`}, 'Llast) ; allL({`v_0-g()*t`}, 'Llast) ; allL({`v_0-g()*T`}, 'Llast) ; allL({`-(g()/pr())^(1/2)`}, 'Llast);
+    QE
+    ,
+    dC({`pr()>0&g()>0`}, 1) <(nil, dI(1)); /* avoid singularities in dG */
+    dG({`y`}, {`-1/2*pr()*(v-(g()/pr())^(1/2))`}, {`0`}, {`pr()>0&g()>0&y^2*(v+(g()/pr())^(1/2))=1`}, 1) ;
+    dI(1.0); /* Apply dI inside of existential. */
+    QE
+  )
+)
+End.
+
+Tactic "Proof: Parachute Plain (monotonicity after dG and existsR)".
+implyR(1);
+loop({`(x>=0&v < 0)&(g()>0&m<=0&pr()>ar&pr()>0&ar>0&m<=-(g()/pr())^(1/2))&v>-(g()/pr())^(1/2)`}, 1) <(
+  QE,
+  QE,
+  unfold <(
+    boxAnd(1) ; andR(1) ; <(dW(1); QE, nil);
+    boxAnd(1) ; andR(1) ; <(dI(1), nil);
+    dC({`g()>0 & pr()>0`}, 1) <(nil, dI(1));
+    dC({`v >= old(v) - g()*t`}, 1) <(nil, dI(1));
+    dC({`v_0 - g()*t >= v_0 - g()*T`}, 1) <(nil, dW(1); QE);
+    dC({`v_0 - g()*T > -(g()/pr())^(1/2)`}, 1) <(nil, dI(1));
+    dW(1);
+    cut({`\forall a \forall b \forall c \forall d (a>=b&b>=c&c>d->a>d)`}) <(nil, cohideR('Rlast); QE);
+    allL({`v`}, 'Llast) ; allL({`v_0-g()*t`}, 'Llast) ; allL({`v_0-g()*T`}, 'Llast) ; allL({`-(g()/pr())^(1/2)`}, 'Llast);
+    QE
+    ,
+    boxAnd(1) ; andR(1) ; <(dW(1); QE, nil);
+    boxAnd(1) ; andR(1) ; <(dI(1), nil);
+    dC({`pr()>0&g()>0`}, 1) <(nil, dI(1)); /* avoid singularities in dG */
+    dG({`y`}, {`-1/2*pr()*(v-(g()/pr())^(1/2))`}, {`0`}, {`v>-(g()/pr())^(1/2)`}, 1) ;
+    MR({`pr()>0&g()>0&y^2*(v+(g()/pr())^(1/2))=1`}, 1.0) <(nil, QE); /* demonstration: how to adapt post condition later */
+    cut({`\exists y (pr()>0&g()>0&y^2*(v+(g()/pr())^(1/2))=1)`}) <(nil, hideR(1) ; QE);
+    existsL('L) ; existsR({`y`}, 1) ; fullSimplify() ;
+    boxAnd(1) ; andR(1) ; <(dI(1), nil);
+    boxAnd(1) ; andR(1) ; <(dI(1), nil);
+    dI(1)
+  )
+)
+End.
+
+End.
+
+ArchiveEntry "Parachute with Declarations".
 
 Functions.
   R g().      /* gravity */
@@ -54,7 +153,32 @@ assumptions() ->
   ](x=0 -> v >= m())
 End.
 
-Tactic "Parachute proof".
+Tactic "Proof: Parachute with Declarations".
+implyR(1);
+loop({`loopinv()`}, 1) <(
+  QE,
+  QE,
+  boxAnd(1); andR(1) <(master, nil); /* prove x>=0 & v<0 is an invariant */
+  boxAnd(1); andR(1) <(master, nil); /* prove all constraints on constants are invariants */
+  unfold <(
+    dC({`g()>0 & pr()>0`}, 1) <(nil, dI(1));
+    dC({`v >= old(v) - g()*t`}, 1) <(nil, dI(1));
+    dC({`old(v) - g()*t >= reactionDelaySpeed(old(v))`}, 1) <(nil, dW(1); QE);
+    dC({`reactionDelaySpeed(old(v)) > steadyStateSpeed()`}, 1) <(nil, dI(1));
+    dW(1);
+    cut({`fourwayTransitivity()`}) <(nil, cohideR('Rlast); QE);
+    allL({`v`}, 'Llast) ; allL({`v_0-g()*t`}, 'Llast) ; allL({`reactionDelaySpeed(v_0)`}, 'Llast) ; allL({`steadyStateSpeed()`}, 'Llast);
+    QE
+    ,
+    dC({`pr()>0&g()>0`}, 1) <(nil, dI(1)); /* avoid singularities in dG */
+    dG({`y`}, {`-1/2*pr()*(v+steadyStateSpeed())`}, {`0`}, {`pr()>0&g()>0&y^2*(v-steadyStateSpeed())=1`}, 1) ;
+    dI(1.0); /* Apply dI inside of existential. */
+    QE
+  )
+)
+End.
+
+Tactic "Proof: Parachute with Declarations (transformation and abbreviate)".
   implyR(1) ; loop({`loopinv()`}, 1) ; <(
     QE,
     QE,
