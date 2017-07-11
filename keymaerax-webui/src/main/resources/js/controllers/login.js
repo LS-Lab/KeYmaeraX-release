@@ -24,7 +24,7 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
         modalInstance.result.then(function() {
           $http.post("/user/" + $scope.username + "/" + $scope.password + "/mode/" + selectedMode)
             .then(function(response) {
-              if (response.data.success === true) { login($scope.username, $scope.password, true); }
+              if (response.data.success === true) { $scope.login($scope.username, $scope.password, true); }
               else { showMessage($uibModal, "Registration failed", "Sorry, user name is already taken. Please choose a different name."); }
             });
         });
@@ -41,9 +41,11 @@ angular.module('keymaerax.controllers').controller('LoginCtrl',
             sessionService.setUserAuthLevel(response.data.userAuthLevel);
             document.location.href = firstTime ? "/dashboard.html?#/modelsFirstTime" : "/dashboard.html?#/models";
           } else {
-            showMessage($uibModal, "Login failed", "Please check user name and/or password. Or register a new account.");
+            showMessage($uibModal, "Login failed", "Please check user name and password. Or choose a new user name and password, and click 'register' to register a new account.");
           }
         }
+      }).catch(function(data, status) {
+        showMessage($uibModal, "Login failed", "Please check user name and password. Or choose a new user name and password, and click 'register' to register a new account.");
       });
     }
   });

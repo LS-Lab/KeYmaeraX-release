@@ -225,14 +225,13 @@ object SQLite {
         nInserts = nInserts + 1
       })}
 
-    override def getUser(username: String): UserPOJO = synchronizedTransaction({
+    override def getUser(username: String): Option[UserPOJO] = synchronizedTransaction({
       nSelects = nSelects + 1
       val users =
         Users.filter(_.email === username)
           .list
           .map(m => new UserPOJO(m.email.get, m.level.get))
-      if (users.length < 1) throw new Exception("getUser type should be an Option")
-      else if (users.length == 1) users.head
+      if (users.length <= 1) users.headOption
       else throw new Exception("Primary keys aren't unique in models table.")
     })
 

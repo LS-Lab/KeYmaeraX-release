@@ -24,7 +24,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   /** Tests that want to record proofs in a database. */
   class DbTacticTester {
-    lazy val user: UserPOJO = db.getUser("guest")
+    lazy val user: UserPOJO = db.getUser("guest").get
 
     val db: SQLiteDB = {
       val testLocation = File.createTempFile("testdb", ".sqlite")

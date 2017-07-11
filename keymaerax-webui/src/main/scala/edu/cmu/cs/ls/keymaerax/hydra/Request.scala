@@ -129,26 +129,30 @@ abstract class LocalhostOnlyRequest() extends Request {
 
 class CreateUserRequest(db: DBAbstraction, username: String, password: String, mode: String) extends Request with WriteRequest {
   override def resultingResponses(): List[Response] = {
-    val userExists = db.userExists(username)
-    val (sessionToken, user) =
-      if (!userExists) {
+    db.getUser(username) match {
+      case Some(user) => new LoginResponse(false, user, None) ::  Nil
+      case None =>
         db.createUser(username, password, mode)
-        val user = db.getUser(username)
-        (Some(SessionManager.add(user)), user)
-      } else (None, db.getUser(username))
-    new LoginResponse(!userExists, user, sessionToken) ::  Nil
+        db.getUser(username) match {
+          case Some(newUser) => new LoginResponse(true, newUser, Some(SessionManager.add(newUser))) ::  Nil
+          case None => new ErrorResponse("Failed to create user " + username) :: Nil
+        }
+    }
   }
 }
 
 class LoginRequest(db : DBAbstraction, username : String, password : String) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val check = db.checkPassword(username, password)
-    val user = db.getUser(username)
-    val sessionToken =
-      if(check) Some(SessionManager.add(user))
-      else None
-
-    new LoginResponse(check, user, sessionToken) ::  Nil
+    db.getUser(username) match {
+      case Some(user) =>
+        val sessionToken =
+          if(check) Some(SessionManager.add(user))
+          else None
+        new LoginResponse(check, user, sessionToken) ::  Nil
+      case None => new ErrorResponse("Unable to login user " + username
+        + ". Please double-check user name and password, or register a new user.") :: Nil
+    }
   }
 }
 
@@ -595,8 +599,11 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
         "/examples/tutorials/fm/fm.png", 0) ::
       Nil
 
-    val user = db.getUser(userId)
-    new ListExamplesResponse(examples.filter(_.level <= user.level)) :: Nil
+    db.getUser(userId) match {
+      case Some(user) => new ListExamplesResponse(examples.filter(_.level <= user.level)) :: Nil
+      case None => new ErrorResponse("Unable to retrieve examples. Unknown user " + userId) :: Nil
+    }
+
   }
 }
 

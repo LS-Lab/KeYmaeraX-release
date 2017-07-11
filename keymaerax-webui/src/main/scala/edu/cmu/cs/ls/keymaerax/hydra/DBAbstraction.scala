@@ -188,7 +188,7 @@ trait DBAbstraction {
 
   def createUser(username: String, password: String, mode: String): Unit
 
-  def getUser(username: String): UserPOJO
+  def getUser(username: String): Option[UserPOJO]
 
   def checkPassword(username: String, password: String): Boolean
 
