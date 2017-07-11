@@ -639,13 +639,28 @@ class CreateModelFromFormulaRequest(db: DBAbstraction, userId: String, nameOfMod
 }
 
 class CreateModelRequest(db: DBAbstraction, userId: String, nameOfModel: String, modelText: String) extends UserRequest(userId) with WriteRequest {
+  private def printDomain(d: Sort): String = d match {
+    case Real => "R"
+    case Bool => "B"
+    case Unit => ""
+    case Tuple(l, r) => printDomain(l) + "," + printDomain(r)
+  }
+
   private def augmentDeclarations(content: String, parsedContent: Formula): String =
     if (content.contains("Problem.")) modelText //@note determine by mandatory "Problem." block of KeYmaeraXProblemParser
     else {
-      val declarations = StaticSemantics.symbols(parsedContent).filter(_.isInstanceOf[BaseVariable]).
-        map(v => s"R ${v.prettyString}.").mkString("\n  ")
-      s"""ProgramVariables.
-         |  $declarations
+      val symbols = StaticSemantics.symbols(parsedContent)
+      val fnDecls = symbols.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>
+        if (fn.sort == Real) s"R ${fn.asString}(${printDomain(fn.domain)})."
+        else if (fn.sort == Bool) s"B ${fn.asString}(${printDomain(fn.domain)})."
+        else ???
+      ).mkString("\n  ")
+      val varDecls = symbols.filter(_.isInstanceOf[BaseVariable]).map(v => s"R ${v.prettyString}.").mkString("\n  ")
+      s"""Functions.
+         |  $fnDecls
+         |End.
+         |ProgramVariables.
+         |  $varDecls
          |End.
          |Problem.
          |  $modelText
