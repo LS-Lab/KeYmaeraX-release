@@ -22,7 +22,7 @@ import scala.sys.process._
  * @author Ran Ji
  */
 class Z3Solver extends SMTSolver {
-  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
+  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
   private val converter = DefaultSMTConverter
 
