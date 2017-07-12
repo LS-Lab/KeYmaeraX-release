@@ -760,7 +760,10 @@ trait RestApi extends HttpService with SLF4JLogging {
         case segments =>
           val path = segments.reduce(_+"/"+_)
           if (getClass.getResourceAsStream(path) != null) BUNDLED_ARCHIVE_LOCATION + path
-          else DEFAULT_ARCHIVE_LOCATION + path
+          else {
+            println(s"Could not find ${BUNDLED_ARCHIVE_LOCATION + path} resource in JAR file. Accessing remote host.")
+            DEFAULT_ARCHIVE_LOCATION + path
+          }
       }
       val request = new OpenGuestArchiveRequest(database, archiveLocation)
       completeRequest(request, EmptyToken())
