@@ -540,4 +540,13 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   //endregion
+
+  //region New dG syntax
+
+  "new dG syntax" should "work" in {
+    val f = "x>1 -> [{x'=-x}]x>0".asFormula
+    val t = "implyR(1) ; dG({`y'=1/2*y`}, {`x*y^2=1`}, 1) ; dI(1.0) ".asTactic
+  }
+
+  //endregion
 }

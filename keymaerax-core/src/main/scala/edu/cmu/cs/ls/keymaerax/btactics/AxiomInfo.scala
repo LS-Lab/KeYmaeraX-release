@@ -177,7 +177,7 @@ object DerivationInfo {
         (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
     , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
     , _ => ((fml: Formula) => TactixLibrary.dC(fml)): TypedFunc[Formula, BelleExpr]),
-    new InputPositionTacticInfo("dGfancy",
+    new InputPositionTacticInfo("dG",
       RuleDisplayInfo(
         "Differential Ghost",
         /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
@@ -196,7 +196,7 @@ object DerivationInfo {
           }) :  TypedFunc[Option[Formula], BelleExpr]
         ) : TypedFunc[Expression, TypedFunc[Option[Formula], BelleExpr]]
     ),
-    new InputPositionTacticInfo("dG",
+    new InputPositionTacticInfo("dGold",
       RuleDisplayInfo(
         "Differential Ghost",
         /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
