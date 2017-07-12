@@ -4,6 +4,7 @@
   'ngFileSaver',
   'ngSanitize',
   'ngAnimate',
+  'ngclipboard',
   'ngTextcomplete',
   'angularSpinners',
   'angular-intro',

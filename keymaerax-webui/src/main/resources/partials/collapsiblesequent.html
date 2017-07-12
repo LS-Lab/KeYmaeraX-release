@@ -34,6 +34,10 @@
                            tooltip-placement="top" tooltip-popup-delay="500">
                         <span class="fa fa-exchange"></span></a>
                     </li>
+                    <li><a ngclipboard data-clipboard-text="{{f.formula.json.plain}}"
+                           uib-tooltip="Copy to clipboard" tooltip-placement="top" tooltip-popup-delay="500">
+                        <span class="fa fa-copy"></span></a>
+                    </li>
                 </ul>
                 <div class="k4-formula-content col-md-12">
                     <ul><li>{{f.id}}:</li></ul>
@@ -94,6 +98,10 @@
                     <li><a ng-click="onTactic(f.id, 'simplify')"
                            uib-tooltip="Simplify formula" tooltip-placement="top" tooltip-popup-delay="500">
                         <span class="fa fa-compress"></span></a>
+                    </li>
+                    <li><a ngclipboard data-clipboard-text="{{f.formula.json.plain}}"
+                           uib-tooltip="Copy to clipboard" tooltip-placement="top" tooltip-popup-delay="500">
+                        <span class="fa fa-copy"></span></a>
                     </li>
                 </ul>
                 <div class="k4-formula-content">
