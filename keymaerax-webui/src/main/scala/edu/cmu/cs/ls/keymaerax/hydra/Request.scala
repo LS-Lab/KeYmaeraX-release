@@ -1772,7 +1772,7 @@ class ExtractModelSolutionsRequest(db: DBAbstraction, userId: String, modelIds: 
     }
     val models = modelIds.map(mid => db.getModel(mid) -> modelProofs(mid)).filter(exportEmptyProof || _._2.nonEmpty)
     val archiveContent = models.map({case (model, proofs) => ArchiveEntryPrinter.archiveEntry(model, proofs)}).mkString("\n\n")
-    new ExtractProblemSolutionResponse(archiveContent) :: Nil
+    new ExtractProblemSolutionResponse(archiveContent + "\n") :: Nil
   }
 }
 
