@@ -92,9 +92,17 @@ object DerivationInfo {
   private [btactics] val allInfo: List[DerivationInfo] = convert(ProvableSig.rules) ++ List(
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> diamond"
-      , AxiomDisplayInfo(("<·>", "<.>"), "<span class=\"k4-axiom-key\">&langle;a&rangle;P</span> ↔ ¬[a]¬P")
+      , AxiomDisplayInfo(("<·>", "<.>"), "<span class=\"k4-axiom-key\">&not;[a]&not;P</span> ↔ &langle;a&rangle;P")
       , "diamond", {case () => HilbertCalculus.diamond}),
-    new DerivedAxiomInfo("[] box", "[.]", "box", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom)}),
+    new DerivedAxiomInfo("<>d diamond"
+      , AxiomDisplayInfo(("<·>d", "<.>d"), "<span class=\"k4-axiom-key\">&langle;a&rangle;P</span> ↔ &not;[a]&not;P")
+      , "diamondd", {case () => HilbertCalculus.useAt("<> diamond", PosInExpr(1::Nil))}),
+    new DerivedAxiomInfo("[] box"
+      , AxiomDisplayInfo(("[·]", "[.]"), "<span class=\"k4-axiom-key\">&not;&langle;a&rangle;&not;P</span> ↔ &langle;a&rangle;P")
+      , "box", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom)}),
+    new DerivedAxiomInfo("[]d box"
+      , AxiomDisplayInfo(("[·]d", "[.]d"), "<span class=\"k4-axiom-key\">[a]P</span> ↔ &not;&langle;a&rangle;&not;P")
+      , "boxd", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom, PosInExpr(1::Nil))}),
     new PositionTacticInfo("assignb"
       , AxiomDisplayInfo("[:=]", "<span class=\"k4-axiom-key\">[x:=c]p(x)</span>↔p(c)")
       , {case () => TactixLibrary.assignb}),

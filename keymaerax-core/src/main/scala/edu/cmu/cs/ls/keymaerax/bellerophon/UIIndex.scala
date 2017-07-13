@@ -104,7 +104,7 @@ object UIIndex {
           }, post)
           foundPrime
         }
-        val rules = maybeSplit ++ ("GV" :: "MR" :: Nil)
+        val rules = maybeSplit ++ ("GV" :: "MR" :: "[]d box" :: Nil)
         a match {
           case Assign(_: DifferentialSymbol,_) => "[':=] differential assign" :: rules
           case Assign(_: BaseVariable, _) => "assignb" :: rules
@@ -113,7 +113,7 @@ object UIIndex {
           case _: Compose => "[;] compose" :: rules
           case _: Choice => "[++] choice" :: rules
           case _: Dual => "[d] dual direct" :: Nil
-          case _: Loop => "loop" :: "[*] iterate" :: rules
+          case _: Loop => "loop" +: (maybeSplit ++ ("[*] iterate" :: "GV" :: "[]d box" :: Nil))
           case ODESystem(ode, _) if containsPrime => ode match {
             case _: AtomicODE => "DE differential effect" :: "dW" :: "dC" :: rules
             case _: DifferentialProduct => "DE differential effect (system)" :: "dW" :: "dC" :: rules
@@ -125,40 +125,45 @@ object UIIndex {
 
       case Diamond(a, post) => 
         val maybeSplit = post match {case _ : Or => "<> split" :: Nil case _ => Nil }
-        val rules = alwaysApplicable ++ maybeSplit
+        val rules = maybeSplit ++ alwaysApplicable ++ ("<>d diamond" :: Nil)
         a match {
-        case Assign(_: DifferentialSymbol, _) => "<':=> differential assign" :: rules
-        case Assign(_: BaseVariable, _) => "<:=> assign" :: rules
-        case _: AssignAny => "<:*> assign nondet" :: rules
-        case _: Test => "<?> test" :: rules
-        case _: Compose => "<;> compose" :: rules
-        case _: Choice => "<++> choice" :: rules
-        case _: Dual => "<d> dual direct" :: rules
-        case _: Loop => "con" :: "<*> iterate" :: rules
-        case _: ODESystem => "solve" :: "dC" :: rules
-        case _ => rules
-      }
+          case Assign(_: DifferentialSymbol, _) => "<':=> differential assign" :: rules
+          case Assign(_: BaseVariable, _) => "<:=> assign" :: rules
+          case _: AssignAny => "<:*> assign nondet" :: rules
+          case _: Test => "<?> test" :: rules
+          case _: Compose => "<;> compose" :: rules
+          case _: Choice => "<++> choice" :: rules
+          case _: Dual => "<d> dual direct" :: rules
+          case _: Loop => "con" +: maybeSplit :+ "<*> iterate" :+ "<>d diamond"
+          case _: ODESystem => "solve" :: "dC" :: rules
+          case _ => rules
+        }
 
-      case Not(f) => f match {
-        case Box(_, Not(_)) => "<> diamond" :: alwaysApplicable
-        case _: Box => "![]" :: alwaysApplicable
-        case Diamond(_, Not(_)) => "[] box" :: alwaysApplicable
-        case _: Diamond => "!<>" :: alwaysApplicable
-        case _: Forall => "!all" :: alwaysApplicable
-        case _: Exists => "!exists" :: alwaysApplicable
-        case _: Equal => "! =" :: alwaysApplicable
-        case _: NotEqual => "! !=" :: alwaysApplicable
-        case _: Less => "! <" :: alwaysApplicable
-        case _: LessEqual => "! <=" :: alwaysApplicable
-        case _: Greater => "! >" :: alwaysApplicable
-        case _: GreaterEqual => "! >=" :: alwaysApplicable
-        case _: Not => "!! double negation" :: alwaysApplicable
-        case _: And => "!& deMorgan" :: alwaysApplicable
-        case _: Or => "!| deMorgan" :: alwaysApplicable
-        case _: Imply => "!-> deMorgan" :: alwaysApplicable
-        case _: Equiv => "!<-> deMorgan" :: alwaysApplicable
-        case _ => alwaysApplicable
-      }
+      case Not(f) =>
+        val alwaysApplicableAtNot =
+          if (isTop && isAnte) "notL" :: alwaysApplicable
+          else if (isTop && !isAnte) "notR" :: alwaysApplicable
+          else alwaysApplicable
+        f match {
+          case Box(_, Not(_)) => "<> diamond" :: alwaysApplicableAtNot
+          case _: Box => "![]" :: alwaysApplicableAtNot
+          case Diamond(_, Not(_)) => "[] box" :: alwaysApplicableAtNot
+          case _: Diamond => "!<>" :: alwaysApplicableAtNot
+          case _: Forall => "!all" :: alwaysApplicableAtNot
+          case _: Exists => "!exists" :: alwaysApplicableAtNot
+          case _: Equal => "! =" :: alwaysApplicableAtNot
+          case _: NotEqual => "! !=" :: alwaysApplicableAtNot
+          case _: Less => "! <" :: alwaysApplicableAtNot
+          case _: LessEqual => "! <=" :: alwaysApplicableAtNot
+          case _: Greater => "! >" :: alwaysApplicableAtNot
+          case _: GreaterEqual => "! >=" :: alwaysApplicableAtNot
+          case _: Not => "!! double negation" :: alwaysApplicableAtNot
+          case _: And => "!& deMorgan" :: alwaysApplicableAtNot
+          case _: Or => "!| deMorgan" :: alwaysApplicableAtNot
+          case _: Imply => "!-> deMorgan" :: alwaysApplicableAtNot
+          case _: Equiv => "!<-> deMorgan" :: alwaysApplicableAtNot
+          case _ => alwaysApplicableAtNot
+        }
 
       case _ =>
         // Check for axioms vs. rules separately because sometimes we might want to apply these axioms when we don't
