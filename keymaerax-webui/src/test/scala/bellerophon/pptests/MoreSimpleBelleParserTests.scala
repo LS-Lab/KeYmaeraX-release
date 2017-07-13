@@ -106,6 +106,15 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
   it should "parse fancy dG" in {
     parser("dG({`y' = 0`})") shouldBe TactixLibrary.dG("y'=0".asDifferentialProgram, None)
     parser("dG({`y' = 0`}, {`1=1`})") shouldBe TactixLibrary.dG("y'=0".asDifferentialProgram, Some("1=1".asFormula))
+    parser("dG({`y' = 0`}, {`1=1`},1)") shouldBe TactixLibrary.dG("y'=0".asDifferentialProgram, Some("1=1".asFormula))(1)
+  }
+
+  //@todo move this.
+  it should "print fancy dG and round trip" in {
+    val t = TactixLibrary.dG("y'=0".asDifferentialProgram, Some("1=1".asFormula))(1)
+    val result = t.prettyString
+    parser(result) shouldBe t
+    result shouldBe "dG({`{y'=0}`},{`1=1`},1)"
   }
 
   "Propositional Examples" should "close p() -> p()" in {
