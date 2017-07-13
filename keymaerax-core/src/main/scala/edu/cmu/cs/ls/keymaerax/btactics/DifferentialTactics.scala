@@ -433,12 +433,26 @@ private object DifferentialTactics {
   }
 
   /** @see [[TactixLibrary.dG]] */
-  def dG(ghost: DifferentialProgram, r: Option[Formula]): DependentPositionTactic =
-      "dG" byWithInputs (r match { case Some(rr) => listifiedGhost(ghost) :+ rr case None => listifiedGhost(ghost) },
-        (pos: Position, sequent: Sequent) => r match {
-    case Some(rr) if r != sequent.sub(pos ++ PosInExpr(1::Nil)) => DG(ghost)(pos) & transform(rr)(pos ++ PosInExpr(0::1::Nil))
-    case _ => DG(ghost)(pos) //@note no r or r==p
-  })
+  def dG(ghost: DifferentialProgram, r: Option[Formula]): DependentPositionTactic = {
+    val finalTactic: DependentPositionWithAppliedInputTactic =
+          "dG" byWithInputs (r match { case Some(rr) => listifiedGhost(ghost) :+ rr case None => listifiedGhost(ghost) },
+            (pos: Position, sequent: Sequent) => r match {
+        case Some(rr) if r != sequent.sub(pos ++ PosInExpr(1::Nil)) => DG(ghost)(pos) & transform(rr)(pos ++ PosInExpr(0::1::Nil))
+        case _ => DG(ghost)(pos) //@note no r or r==p
+      })
+
+    r match {
+      case Some(newPostcond) => new DependentPositionWithAppliedInputTactic("dG", ghost :: newPostcond :: Nil) {
+        /** Create the actual tactic to be applied at position pos */
+        override def factory(pos: Position): DependentTactic = finalTactic(pos)
+      }
+      case None => new DependentPositionWithAppliedInputTactic("dG", ghost :: r.get :: Nil) {
+        /** Create the actual tactic to be applied at position pos */
+        override def factory(pos: Position): DependentTactic = finalTactic(pos)
+      }
+    }
+  }
+
 
   /** @see [[HilbertCalculus.Derive.Dvar]] */
   //@todo could probably simplify implementation by picking atomic formula, using "x' derive var" and then embedding this equivalence into context by CE.
