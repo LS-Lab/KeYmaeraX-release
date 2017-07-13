@@ -1526,7 +1526,7 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> t_+x>0)".asFormula)
   }
 
-  it should "solve diamond explicit-form ODE" in withMathematica { tool =>
+  it should "solve diamond explicit-form ODE" ignore withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("<{x'=0*x+1}>x>0".asFormula)), solve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)

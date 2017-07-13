@@ -293,7 +293,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   "Diamond axiomatic ODE solver" should "work on the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
-    val f = "x=1&v=2 -> <{x'=0*x+v}>x^3>=1".asFormula
+    val f = "x=1&v=2 -> <{x'=v}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
     result.subgoals should have size 1
@@ -311,7 +311,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   it should "work on the single integrator x'=v in context" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
-    val f = "x=1&v=2 -> <{x'=0*x+v}>x^3>=1".asFormula
+    val f = "x=1&v=2 -> <{x'=v}>x^3>=1".asFormula
     val t = AxiomaticODESolver()(1, 1::Nil)
     val result = proveBy(f, t)
     result.subgoals should have size 1
@@ -319,8 +319,24 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain only "x=1&v=2 -> \\exists t_ (t_>=0 & (v*t_+x)^3>=1)".asFormula
   }
 
+  it should "work on the single integrator x'=v in the antecedent" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+    val result = proveBy("<{x'=v}>x^3>=1 ==> x>=1 | v>0".asSequent, AxiomaticODESolver()(-1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only "\\exists t_ (t_>=0 & (v*t_+x)^3>=1)".asFormula
+    result.subgoals.head.succ should contain only "x>=1 | v>0".asFormula
+  }
+
+  it should "work on the single integrator x'=v in negative polarity" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+    val f = "x=-1, v=-2, ==> !<{x'=v}>x^3>=1".asSequent
+    val t = AxiomaticODESolver()(1, 0::Nil)
+    val result = proveBy(f, t)
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain only ("x=-1".asFormula, "v=-2".asFormula)
+    result.subgoals.head.succ should contain only "!\\exists t_ (t_>=0 & (v*t_+x)^3>=1)".asFormula
+  }
+
   it should "introduce initial ghosts" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
-    val f = "x>=1&v>=2 -> <{x'=0*x+v}>x^3>=1".asFormula
+    val f = "x>=1&v>=2 -> <{x'=v}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
     result.subgoals should have size 1
@@ -329,7 +345,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   it should "work on the double integrator x''=a" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
-    val f = "x=1&v=2&a=0 -> <{x'=0*x+v,v'=0*v+a}>x^3>=1".asFormula
+    val f = "x=1&v=2&a=0 -> <{x'=v,v'=a}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
     result.subgoals should have size 1
@@ -338,7 +354,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   it should "still introduce internal time even if own time is present" in withMathematica { qeTool =>
-    val f = "x=1&v=2&a=0&t=0 -> <{x'=0*x+v,v'=0*v+a,t'=0*t+1}>x^3>=1".asFormula
+    val f = "x=1&v=2&a=0&t=0 -> <{x'=v,v'=a,t'=1}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
     result.subgoals should have size 1
@@ -347,7 +363,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   it should "solve double integrator" in  withMathematica { qeTool =>
-    val f = "x=1&v=2&a=3&t=0 -> <{x'=0*x+v,v'=0*v+a, t'=0*t+1}>x>=0".asFormula
+    val f = "x=1&v=2&a=3&t=0 -> <{x'=v,v'=a, t'=1}>x>=0".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f,t)
     result.subgoals should have size 1
@@ -356,7 +372,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   it should "work with a non-arithmetic post-condition" in withMathematica { qeTool =>
-    val f = "x=1&v=2&a=3&t=0 -> <{x'=0*x+v,v'=0*v+a, t'=0*t+1}>[{j'=k,k'=l, z'=1}]x>=0".asFormula
+    val f = "x=1&v=2&a=3&t=0 -> <{x'=v,v'=a, t'=1}>[{j'=k,k'=l, z'=1}]x>=0".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f,t)
     result.subgoals should have size 1
@@ -365,7 +381,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   it should "work on the triple integrator x'''=j" in withMathematica { qeTool =>
-    val f = "x=1&v=2&a=3&j=4 -> <{x'=0*x+v,v'=0*v+a,a'=0*a+j}>x^3>=1".asFormula
+    val f = "x=1&v=2&a=3&j=4 -> <{x'=v,v'=a,a'=j}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
     //@todo solution 1/6 (jt^3 + 3at^2 + 6vt + 6x)
@@ -379,7 +395,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("<{x'=2}>[{x'=3}]x>0".asFormula)), solve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x_1>0".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 & \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 & \\exists x (x=2*t_+x_1 & [{x'=3}]x>0))".asFormula)
   }
 
   it should "support diamond with postcond that binds variables we bind"  in withMathematica { tool =>
@@ -412,7 +428,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
   it should "solve a ModelPlex question" in withMathematica { tool =>
-    val result = proveBy("(-1<=fpost_0()&fpost_0()<=(m-l)/ep)&\\forall c (c=cpost_0()->c=0&<{l'=0*l+fpost_0(),c'=0*c+1&0<=l&c<=ep}>((fpost()=fpost_0()&lpost()=l)&cpost()=c))".asFormula,
+    val result = proveBy("(-1<=fpost_0()&fpost_0()<=(m-l)/ep)&\\forall c (c=cpost_0()->c=0&<{l'=fpost_0(),c'=1&0<=l&c<=ep}>((fpost()=fpost_0()&lpost()=l)&cpost()=c))".asFormula,
       solve(1, 1::0::1::1::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
