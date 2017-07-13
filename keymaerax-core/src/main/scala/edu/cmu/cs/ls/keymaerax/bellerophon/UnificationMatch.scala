@@ -35,6 +35,8 @@ object UnificationMatch extends FreshUnificationMatch
   * @author Andre Platzer
   */
 trait Matcher extends ((Expression,Expression) => RenUSubst) {
+  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+
   /** Check result of unification for being a valid unifier/matcher */
   private[bellerophon] val REVERIFY = BelleExpr.RECHECK
 
@@ -58,10 +60,10 @@ trait Matcher extends ((Expression,Expression) => RenUSubst) {
 
 
   /** unifiable(shape, input) Compute some unifier matching `input` against the pattern `shape` if unifiable else None */
-  def unifiable(shape: Expression, input: Expression): Option[Subst] = try {Some(apply(shape, input))} catch {case e: UnificationException => println("Expression un-unifiable " + e); None}
+  def unifiable(shape: Expression, input: Expression): Option[Subst] = try {Some(apply(shape, input))} catch {case e: UnificationException => if(DEBUG) {println("Expression un-unifiable " + e)}; None}
 
   /** unifiable(shape, input) Compute some unifier matching `input` against the pattern `shape` if unifiable else None */
-  def unifiable(shape: Sequent, input: Sequent): Option[Subst] = try {Some(apply(shape, input))} catch {case e: UnificationException => println("Sequent un-unifiable " + e); None}
+  def unifiable(shape: Sequent, input: Sequent): Option[Subst] = try {Some(apply(shape, input))} catch {case e: UnificationException => if(DEBUG) {println("Sequent un-unifiable " + e)}; None}
 
   /** apply(shape, input) matches `input` against the pattern `shape` to find a uniform substitution `\result` such that `\result(shape)==input`. */
   def apply(shape: Expression, input: Expression): Subst
@@ -409,7 +411,7 @@ class UnificationMatchBase extends SchematicUnificationMatch {
           after.filter(sp => !before.exists(op => op._1 == sp._1))
         if (DEBUGALOT) println("      unify.compose: " + after.mkString(", ") + " with " + before.mkString(", ") + " is " + r.mkString(", "))
         r
-      } catch {case e:Throwable => println("UnificationMatch.compose({" + after.mkString(", ") + "} , {" + before.mkString(", ") + "})"); throw e}
+      } catch {case e:Throwable => if(DEBUGALOT) println("UnificationMatch.compose({" + after.mkString(", ") + "} , {" + before.mkString(", ") + "})"); throw e}
     }
 
 }
@@ -603,7 +605,7 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher {
           replaceFree(rhs)(ren(argOfPred(what.asInstanceOf[PredOf].func)), DotTerm())
         )
       }
-      println("\t\t\tINFO: post-hoc optimizable: " + repl + " dottify " + r)
+      if(DEBUG) println("\t\t\tINFO: post-hoc optimizable: " + repl + " dottify " + r)
       r
     }
     //@note URename with TRANSPOSITION=true are their own inverses
