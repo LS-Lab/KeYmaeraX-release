@@ -72,11 +72,8 @@ object DatabasePopulator {
     } else {
       try {
         io.Source.fromURL(url).mkString
-      }
-      catch {
-        case e : java.net.MalformedURLException => {
-          throw new Exception(s"Problem with url $url");
-        }
+      } catch {
+        case _: java.net.MalformedURLException => throw new Exception(s"Malformed URL $url")
       }
     }
 

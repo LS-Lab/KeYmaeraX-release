@@ -756,17 +756,17 @@ trait RestApi extends HttpService with SLF4JLogging {
 
   val guestBrowseArchiveRequest: Route = path("show" / Segments) { archiveUri => pathEnd {
     get {
-      val archiveLocation: String = archiveUri match {
-        case head::Nil if head.startsWith("http") || head.startsWith("https") => head
+      val (archiveLocation: String, archiveRelativeLocation: String) = archiveUri match {
+        case head::Nil if head.startsWith("http") || head.startsWith("https") => (head, head)
         case segments =>
           val path = segments.reduce(_+"/"+_)
-          if (getClass.getResourceAsStream(BUNDLED_ARCHIVE_DIR + path) != null) BUNDLED_ARCHIVE_LOCATION + path
+          if (getClass.getResourceAsStream(BUNDLED_ARCHIVE_DIR + path) != null) (BUNDLED_ARCHIVE_LOCATION + path, path)
           else {
             println(s"Could not find ${BUNDLED_ARCHIVE_LOCATION + path} resource in JAR file. Accessing remote host.")
-            DEFAULT_ARCHIVE_LOCATION + path
+            (DEFAULT_ARCHIVE_LOCATION + path, path)
           }
       }
-      val request = new OpenGuestArchiveRequest(database, archiveLocation)
+      val request = new OpenGuestArchiveRequest(database, archiveLocation, archiveRelativeLocation)
       completeRequest(request, EmptyToken())
     }
   }}
