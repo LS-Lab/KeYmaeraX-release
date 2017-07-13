@@ -509,7 +509,7 @@ object Helpers {
     JsObject(
       "id" -> JsString(top + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else "")),
       "kind" -> JsString(kind),
-      "plain" -> (if (isEditable) JsString(plainText) else JsNull),
+      "plain" -> (if (isEditable || q.pos.isEmpty) JsString(plainText) else JsNull),
       "step" -> JsString(if (hasStep) "has-step" else "no-step"),
       "editable" -> JsString(if (isEditable) "editable" else "not-editable"),
       "children"->JsArray(children:_*))
