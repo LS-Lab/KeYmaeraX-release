@@ -1,4 +1,4 @@
-<span ng-if="collapsed" ng-bind-html="formula.string">
+<span ng-if="collapsed" ng-bind-html="trustedHtml(formula.string)">
 </span>
 <span frang-tree ng-if="!collapsed">
     <span frang-tree-repeat="expr in [formula.json]"

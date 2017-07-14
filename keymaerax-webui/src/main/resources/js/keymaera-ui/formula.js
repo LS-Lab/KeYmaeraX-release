@@ -225,6 +225,10 @@ angular.module('formula')
               return sequentProofData.formulas.mode == 'edit';
             }
 
+            scope.trustedHtml = function(html) {
+              return $sce.trustAsHtml(html);
+            }
+
 //            console.log("Compiling formula")
 //            var fmlMarkup = scope.collapsed ? scope.formula.string : scope.formula.html;
 //            // compile template, bind to scope, and add into DOM
