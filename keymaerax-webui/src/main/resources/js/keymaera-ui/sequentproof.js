@@ -234,6 +234,144 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         templateUrl: 'partials/singletracksequentproof.html'
     };
   }])
+  /**
+   * A sequent deduction view focused on a single path through the deduction, with links to sibling goals when
+   * branching occurs.
+   * {{{
+   *      <k4-browse-sequentproof userId="1" proofId="35" nodeId="N1"
+                           deductionRoot="..." agenda="..." read-only="false"></k4-sequentproof>
+   * }}}
+   * @param userId          The user ID; for interaction with the server.
+   * @param proofId         The current proof; for interaction with the server.
+   * @param nodeId          The node (=task); for interaction with the server.
+   * @param deductionPath   Identifies the path to the goal (as far as loaded); Array[goalId]
+   * @param proofTree       The proof tree, see provingawesome.js for schema.
+   * @param agenda          The agenda, see provingawesome.js for schema.
+   */
+  .directive('k4BrowseSequentproof', ['$http', '$uibModal', '$q', '$timeout', 'sequentProofData', 'spinnerService', 'derivationInfos',
+      function($http, $uibModal, $q, $timeout, sequentProofData, spinnerService, derivationInfos) {
+    /* The directive's internal control. */
+    function link(scope, element, attrs) {
+
+      scope.isProofRootVisible = function() {
+        var root = scope.proofTree.nodesMap[scope.proofTree.root];
+        return scope.deductionPath.sections[scope.deductionPath.sections.length - 1].path.indexOf(root.id) >= 0;
+      }
+
+      /**
+       * Adds a proof tree node and updates the agenda sections.
+       */
+      updateProof = function(proofTreeNode) {
+        scope.proofTree.addNode(proofTreeNode);
+
+        // append parent to the appropriate section in all relevant agenda items
+        var items = $.map(proofTreeNode.children, function(e) { return scope.agenda.itemsByProofStep(e); }); // JQuery flat map
+        $.each(items, function(i, v) {
+          var childSectionIdx = scope.agenda.childSectionIndex(v.id, proofTreeNode);
+          if (childSectionIdx >= 0) {
+            scope.agenda.updateSection(scope.proofTree, proofTreeNode, v, childSectionIdx);
+          }
+        });
+      }
+
+      scope.fetchNodeChildren = function(userId, proofId, nodeId) {
+        spinnerService.show('tacticExecutionSpinner')
+        $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/browseChildren')
+          .then(function(response) {
+            //$rootScope.$broadcast('proof.message', { textStatus: "", errorThrown: "" });
+            sequentProofData.updateAgendaAndTree(userId, response.data.proofId, response.data);
+            //sequentProofData.tactic.fetch($scope.userId, response.data.proofId);
+          })
+          .finally(function() { spinnerService.hide('tacticExecutionSpinner'); });
+      }
+
+      /** Filters sibling candidates: removes this item's goal and path */
+      scope.siblingsWithAgendaItem = function(candidates) {
+        var item = scope.agenda.itemsMap[scope.nodeId];
+        var fp = flatPath(item);
+        return (candidates != null ? candidates.filter(function(e) { return fp.indexOf(e) < 0 && scope.agenda.itemsByProofStep(e).length > 0; }) : []);
+      }
+
+      scope.htmlNodeId = function(id) { return id.replace(/\(|\)/g, "").replace(/,/g, "-"); }
+
+      scope.highlightStepPosition = function(nodeId, highlight) {
+        var parent = sequentProofData.proofTree.nodesMap[nodeId];
+        var fstChild = sequentProofData.proofTree.nodesMap[parent.children[0]];
+        var posId = fstChild.rule.pos.replace(/\./g, "\\,");
+        var element = $("#seq_"+scope.htmlNodeId(nodeId) + " #fml_"+posId);
+        if (highlight) {
+          if (element.text().startsWith("[") || element.text().startsWith("&lt;")) element.addClass("k4-highlight-steppos-modality");
+          else element.addClass("k4-highlight-steppos");
+        } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-modality");
+      }
+
+      flatPath = function(item) {
+        var result = [];
+        $.each(item.deduction.sections, function(i, v) { $.merge(result, v.path); });
+        return result;
+      }
+
+      scope.stepInto = function(proofId, nodeId) {
+        spinnerService.show('magnifyingglassSpinner')
+        $http.get('proofs/user/' + scope.userId + '/' + proofId + '/' + nodeId + '/expand').then(function(response) {
+          if (response.data.proofTree.nodes !== undefined) {
+            var modalInstance = $uibModal.open({
+              templateUrl: 'templates/magnifyingglass.html',
+              controller: 'MagnifyingGlassDialogCtrl',
+              scope: scope,
+              size: 'fullscreen',
+              resolve: {
+                proofInfo: function() {
+                  return {
+                    userId: scope.userId,
+                    proofId: proofId,
+                    nodeId: nodeId,
+                    detailsProofId: response.data.detailsProofId
+                  }
+                },
+                tactic: function() { return response.data.tactic; },
+                proofTree: function() { return response.data.proofTree; },
+                openGoals: function() { return response.data.openGoals; }
+              }
+            });
+          } else {
+            var tacticName = response.data.tactic.parent;
+            var tactics = derivationInfos.byName(scope.userId, scope.proofId, nodeId, tacticName)
+              .then(function(response) {
+                return response.data;
+              });
+
+            var modalInstance = $uibModal.open({
+              templateUrl: 'templates/derivationInfoDialog.html',
+              controller: 'DerivationInfoDialogCtrl',
+              size: 'md',
+              resolve: {
+                tactics: function() { return tactics; },
+                readOnly: function() { return true; }
+              }
+            });
+          }
+        })
+        .finally(function() {
+          spinnerService.hide('magnifyingglassSpinner');
+        });
+      }
+    }
+
+    return {
+        restrict: 'AE',
+        scope: {
+            userId: '=',
+            proofId: '=',
+            nodeId: '=',
+            deductionPath: '=',
+            proofTree: '=',
+            agenda: '='
+        },
+        link: link,
+        templateUrl: 'partials/browsesingletracksequentproof.html'
+    };
+  }])
   .filter('childRuleName', function () {
     return function (input, scope) {
       if (input !== undefined) {

@@ -1,0 +1,83 @@
+<div class="row">
+<div class="col-md-12">
+<spinner name="tacticExecutionSpinner" ng-cloak>
+    <div class="tactic-spinner-background"></div>
+    <div class="tactic-spinner-overlay">
+    <div class="tactic-spinner">
+        <div class="spinner-double-bounce1"></div>
+        <div class="spinner-double-bounce2"></div>
+    </div>
+    <div class="tactic-spinner-please-wait">
+        <p>Tactic is executing, please wait...</p>
+        <p><button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button></p>
+    </div>
+    </div>
+</spinner>
+<spinner name="magnifyingglassSpinner" ng-cloak>
+    <div class="tactic-spinner-background"></div>
+    <div class="tactic-spinner-overlay">
+        <div class="tactic-spinner">
+            <div class="spinner-double-bounce1"></div>
+            <div class="spinner-double-bounce2"></div>
+        </div>
+        <div class="tactic-spinner-please-wait">
+            <p>Computing details, please wait...</p>
+            <p><button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button></p>
+        </div>
+    </div>
+</spinner>
+<spinner name="proofLoadingSpinner" ng-cloak>
+    <div class="spinner-overlay"></div>
+    <div class="spinner">
+        <div class="spinner-double-bounce1"></div>
+        <div class="spinner-double-bounce2"></div>
+    </div>
+    <div class="spinner-please-wait">Proof is loading, please wait...</div>
+</spinner>
+<spinner name="counterExampleSpinner" ng-cloak>
+    <div class="spinner-overlay"></div>
+    <div class="spinner">
+        <div class="spinner-double-bounce1"></div>
+        <div class="spinner-double-bounce2"></div>
+    </div>
+    <div class="spinner-please-wait">
+        Searching for counterexample, please wait...<br/>
+        <!--<button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button>-->
+    </div>
+</spinner>
+<div>
+
+<div class="row" ng-controller="BrowseProofCtrl">
+    <div class="col-md-12">
+        <!-- TODO restrict to < 10 tasks as tabs, then complement the rest with dropdown -->
+        <uib-tabset justified="true" active="agenda.selectedTab">
+            <uib-tab ng-repeat="task in agenda.items() track by task.id" index="task.id"
+                     deselect="agenda.deselect(task)" select="agenda.select(task)">
+                <uib-tab-heading>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <span class="fa fa-tasks"></span>
+                            <span>{{task.name}} {{task.id}}</span>
+                        </div>
+                    </div>
+                </uib-tab-heading>
+
+                <!-- ng-if: prevent compiling invisible (other) tabs, but recompiles every time tab is selected -->
+                <div class="container" id="provingsequentview">
+                    <k4-browse-sequentproof
+                        user-id="userId"
+                        proof-id="proofId"
+                        node-id="task.id"
+                        deduction-path="task.deduction"
+                        proof-tree="prooftree"
+                        agenda="agenda"
+                        ng-if="task.isSelected"></k4-browse-sequentproof>
+                </div>
+            </uib-tab>
+        </uib-tabset>
+    </div>
+</div>
+
+</div>
+</div>
+</div>

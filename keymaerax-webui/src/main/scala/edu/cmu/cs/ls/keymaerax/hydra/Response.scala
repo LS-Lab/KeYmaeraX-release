@@ -427,6 +427,18 @@ case class TaskResultResponse(proofId: String, parent: ProofTreeNode, progress: 
   )
 }
 
+case class NodeChildrenResponse(proofId: String, parent: ProofTreeNode) extends Response {
+  def getJson = JsObject(
+    "proofId" -> JsString(proofId),
+    "parent" -> JsObject(
+      "id" -> JsString(parent.id.toString),
+      "children" -> JsArray(parent.children.map(c => JsString(c.id.toString)):_*)
+    ),
+    "newNodes" -> JsArray(nodesJson(parent.children).map(_._2):_*),
+    "progress" -> JsBoolean(true)
+  )
+}
+
 case class ProofNodeSequentResponse(proofId: String, node: ProofTreeNode) extends Response {
   def getJson = JsObject(
     "proofId" -> JsString(proofId),

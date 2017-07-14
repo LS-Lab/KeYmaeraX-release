@@ -1,0 +1,88 @@
+<div class="col-md-12">
+    <div class="row k4-proofrow" ng-if="proofTree.nodesMap[deductionPath.sections[0].path[0]].children.length > 0">
+        <div class="col-md-12">
+            <button class="btn btn-link" ng-click="fetchNodeChildren(userId, proofId, deductionPath.sections[0].path[0])">
+                <i class="fa fa-ellipsis-h"></i>
+            </button>
+        </div>
+    </div>
+    <div class="row k4-proofrow">
+        <!-- need duplication because 'step.subgoals.length > 0' is non-assignable -->
+        <div class="col-md-12">
+            <k4-sequent user-id="userId" proof-id="proofId" node-id="deductionPath.sections[0].path[0]"
+                        sequent="proofTree.nodesMap[deductionPath.sections[0].path[0]].getSequent()"
+                        read-only="true" collapsed="false"></k4-sequent>
+        </div>
+    </div>
+    <div ng-repeat="step in deductionPath.sections[0].path">
+        <!-- Conclusion -->
+        <div class="row k4-proofrow" ng-if="$middle">
+            <ul>
+                <li >
+                    <!-- proof rule -->
+                    <span class="k4-withcontextmenu k4-proofrule"
+                          tooltip-placement="right"
+                          ng-mouseover="highlightStepPosition(step, true)"
+                          ng-mouseleave="highlightStepPosition(step, false)"
+                          ng-right-click="proofStepRightClick($event)" tabindex="-1"
+                          uib-popover-template="'proofStepPopover.html'"
+                          popover-title="Proof step" popover-placement="auto bottom" popover-trigger="'rightClick'">
+                        {{step | childRuleName:this}}
+                    </span>
+                </li>
+            </ul>
+            <div class="col-md-12 k4-goalwithsiblings" id="seq_{{htmlNodeId(step)}}">
+                <k4-sequent user-id="userId" proof-id="proofId" node-id="step"
+                            sequent="proofTree.nodesMap[step].getSequent()"
+                            read-only="true" collapsed="true"></k4-sequent>
+                <div ng-include="'siblinglinks.html'" replace-include></div>
+            </div>
+        </div>
+        <div ng-if="$last" class="row k4-proofrow k4-proofrow-last">
+            <ul>
+                <li>
+                    <!-- Proof rule if not root -->
+                    <span class="k4-withcontextmenu k4-proofrule"
+                          tooltip-placement="right"
+                          ng-mouseover="highlightStepPosition(step, true)"
+                          ng-mouseleave="highlightStepPosition(step, false)"
+                          ng-right-click="proofStepRightClick($event)" tabindex="-1"
+                          uib-popover-template="'proofStepPopoverPrev.html'"
+                          popover-title="Proof step" popover-placement="auto bottom" popover-trigger="'rightClick'">
+                    {{step | childRuleName:this}}
+                </span>
+                </li>
+            </ul>
+            <!-- do not repeat if first==last, i.e., sole element in list fetched so far -->
+            <div ng-if="!$first" class="col-md-12 k4-goalwithsiblings" id="seq_{{htmlNodeId(step)}}">
+                <k4-sequent user-id="userId" proof-id="proofId" node-id="step"
+                            sequent="proofTree.nodesMap[step].getSequent()"
+                            read-only="true" collapsed="true"></k4-sequent>
+                <div ng-include="'siblinglinks.html'" replace-include></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/ng-template" id="proofStepPopover.html">
+    <div class="k4-nobreak">
+        <a ng-click="stepInto(proofId, step)"><span class="fa fa-book"> Details</span></a><br/>
+        <!--<a ng-click="startProof(step)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>-->
+    </div>
+</script>
+<script type="text/ng-template" id="proofStepPopoverPrev.html">
+    <div class="k4-nobreak">
+        <a ng-click="stepInto(proofId, step.id)"><span class="fa fa-book"> Details</span></a><br/>
+        <!--<a ng-click="startProof(step)"><span class="fa fa-clone"> Start alternative proof</span></a><br/>-->
+    </div>
+</script>
+<script type="text/ng-template" id="siblinglinks.html">
+    <ul data-intro="Parent has multiple subgoals, click subgoal number to change tab" data-position="left">
+        <!-- display siblings at fork -->
+        <li ng-repeat="sibling in siblingsWithAgendaItem(step.children)">
+            <!-- assumes that only one agenda item mentions a specific node in the proof tree -->
+            <a ng-click="agenda.select(agenda.itemsByProofStep(sibling)[0])"
+               class="badge">{{agenda.itemsByProofStep(sibling)[0].id}}</a>
+        </li>
+    </ul>
+</script>

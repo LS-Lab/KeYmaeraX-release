@@ -421,6 +421,20 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}
 
+  val browseProofRoot: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "browseagenda") { (userId, proofId) => { pathEnd {
+    get {
+      val request = new GetProofRootAgendaRequest(database, userId, proofId)
+      completeRequest(request, t)
+    }
+  }}}
+
+  val browseNodeChildren: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "browseChildren") { (userId, proofId, nodeId) => { pathEnd {
+    get {
+      val request = new GetProofNodeChildrenRequest(database, userId, proofId, nodeId)
+      completeRequest(request, t)
+    }
+  }}}
+
   val proofTasksNew: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "agendaawesome") { (userId, proofId) => { pathEnd {
     get {
       val request = new GetAgendaAwesomeRequest(database, userId, proofId)
@@ -1046,6 +1060,8 @@ trait RestApi extends HttpService with SLF4JLogging {
     stepwiseTrace         ::
     updateUserModel       ::
     userTheme             ::
+    browseProofRoot       ::
+    browseNodeChildren    ::
     logoff                ::
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil

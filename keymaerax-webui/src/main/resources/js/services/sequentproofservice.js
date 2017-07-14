@@ -221,13 +221,19 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       this.agenda = new Agenda();
     },
 
-    /** Fetches the agenda from the server */
-    fetchAgenda: function(scope, userId, proofId) {
+    /** Fetches the agenda from the server for the purpose of continuing a proof */
+    fetchAgenda: function(scope, userId, proofId) { this.doFetchAgenda(scope, userId, proofId, 'agendaawesome'); },
+
+    /** Fetches the agenda from the server for the purpose of browsing a proof from root to leaves */
+    fetchBrowseAgenda: function(scope, userId, proofId) { this.doFetchAgenda(scope, userId, proofId, 'browseagenda'); },
+
+    /** Fetches a proof's agenda of kind `agendaKind` from the server */
+    doFetchAgenda: function(scope, userId, proofId, agendaKind) {
       var theProofTree = this.proofTree;
       var theAgenda = this.agenda;
       spinnerService.show('proofLoadingSpinner');
       this.tactic.fetch(userId, proofId);
-      $http.get('proofs/user/' + userId + '/' + proofId + '/agendaawesome')
+      $http.get('proofs/user/' + userId + '/' + proofId + '/' + agendaKind)
         .then(function(response) {
           theAgenda.itemsMap = response.data.agendaItems;
           $.each(response.data.proofTree.nodes, function(i, v) { makeLazyNode($http, userId, proofId, v); });

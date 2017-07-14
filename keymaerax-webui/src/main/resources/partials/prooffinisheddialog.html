@@ -26,8 +26,13 @@
 
 </div>
 <div class="modal-footer">
-    <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}" ng-click="downloadTactic()"><i class="fa fa-download"></i> Download tactic</button>
-    <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}" ng-click="downloadLemma()"><i class="fa fa-certificate"></i> Download lemma</button>
-    <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}" ng-click="downloadProofArchive()"><i class="fa fa-archive"></i> Download archive</button>
+    <a ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
+       ng-href="dashboard.html?#/proofs/{{proof.proofId}}/browse"><i class="fa fa-globe"></i> Browse proof</a>
+    <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
+            ng-click="downloadTactic()"><i class="fa fa-download"></i> Download tactic</button>
+    <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
+            ng-click="downloadLemma()"><i class="fa fa-certificate"></i> Download lemma</button>
+    <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
+            ng-click="downloadProofArchive()"><i class="fa fa-archive"></i> Download archive</button>
     <button class="btn btn-primary" ng-click="cancel()">Close</button>
 </div>

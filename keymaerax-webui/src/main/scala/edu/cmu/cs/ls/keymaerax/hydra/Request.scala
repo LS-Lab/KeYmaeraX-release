@@ -1051,6 +1051,40 @@ class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : Str
   }
 }
 
+/**
+  * Gets the proof root as agenda item (browse a proof from root to leaves).
+  * @param db Access to the database.
+  * @param userId Identifies the user.
+  * @param proofId Identifies the proof.
+  */
+class GetProofRootAgendaRequest(db: DBAbstraction, userId: String, proofId: String)
+    extends UserProofRequest(db, userId, proofId) with ReadRequest {
+  override protected def doResultingResponses(): List[Response] = {
+    val tree: ProofTree = DbProofTree(db, proofId)
+    val agendaItems: List[AgendaItem] = AgendaItem(tree.root.id.toString, "Unnamed Goal", proofId) :: Nil
+    AgendaAwesomeResponse(proofId, tree.root, tree.root::Nil, agendaItems, closed=false) :: Nil
+  }
+}
+
+/**
+  * Gets the children of a proof node (browse a proof from root to leaves).
+  * @param db Access to the database.
+  * @param userId Identifies the user.
+  * @param proofId Identifies the proof.
+  * @param nodeId Identifies the proof node.
+  */
+class GetProofNodeChildrenRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String)
+    extends UserProofRequest(db, userId, proofId) with ReadRequest {
+
+  override protected def doResultingResponses(): List[Response] = {
+    val tree = DbProofTree(db, proofId)
+    tree.locate(nodeId) match {
+      case None => new ErrorResponse("Unknown node " + nodeId) :: Nil
+      case Some(node) => NodeChildrenResponse(proofId, node) :: Nil
+    }
+  }
+}
+
 case class GetAgendaItemRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     //@todo seems unused
