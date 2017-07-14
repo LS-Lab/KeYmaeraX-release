@@ -126,13 +126,13 @@ object DerivationInfo {
       _ => ((e: Term) => DLBySubst.assignbExists(e)): TypedFunc[Term, BelleExpr]
     ),
     new CoreAxiomInfo("[':=] differential assign"
-      , AxiomDisplayInfo(("[′:=]","[':=]"), "[x′:=c]p(x′)↔p(c)")
+      , AxiomDisplayInfo(("[′:=]","[':=]"), "<span class=\"k4-axiom-key\">[x′:=c]p(x′)</span>↔p(c)")
       , "Dassignb", {case () => HilbertCalculus.Dassignb}),
     new CoreAxiomInfo("[:*] assign nondet"
       , AxiomDisplayInfo("[:*]", "<span class=\"k4-axiom-key\">[x:=*]p(x)</span>↔∀x p(x)")
       , "randomb", {case () => HilbertCalculus.randomb}),
     new CoreAxiomInfo("[?] test"
-      , AxiomDisplayInfo("[?]", "[?Q]P↔(Q→P)")
+      , AxiomDisplayInfo("[?]", "<span class=\"k4-axiom-key\">[?Q]P</span>↔(Q→P)")
       , "testb", {case () => HilbertCalculus.testb}),
     new DerivedAxiomInfo("<?> test", "<?>", "testd", {case () => HilbertCalculus.testd}),
     new CoreAxiomInfo("[++] choice"
@@ -159,10 +159,10 @@ object DerivationInfo {
   //@todo why isn't the code name just "I"? And the belleExpr could be useAt("I")?
     new CoreAxiomInfo("I induction", "I", "induction", {case () => ???}),
     new CoreAxiomInfo("VK vacuous"
-      , AxiomDisplayInfo("VK", "(p→[a]p)←[a]T")
+      , AxiomDisplayInfo("VK", "(p→<span class=\"k4-axiom-key\">[a]p</span>)←[a]T")
       , "VK", {case () => HilbertCalculus.VK}),
     new DerivedAxiomInfo("V vacuous"
-      , AxiomDisplayInfo("V", "p→[a]p")
+      , AxiomDisplayInfo("V", "p→<span class=\"k4-axiom-key\">[a]p</span>")
       , "V", {case () => HilbertCalculus.V}),
     new CoreAxiomInfo("[]T system"
       , AxiomDisplayInfo("[]T", "[a]true")
