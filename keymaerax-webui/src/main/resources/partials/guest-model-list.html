@@ -66,8 +66,8 @@
                 </div>
             </td>
             <td>
-              <a ng-if="model.pubLink" href="{{model.pubLink}}">{{model.title}}</a>
-              <span ng-if="!model.pubLink">{{model.title}}</span>
+              <a ng-if="model.pubLink" href="{{model.pubLink}}">{{model.description}}</a>
+              <span ng-if="!model.pubLink">{{model.description}}</span>
             </td>
             <td><a href="" ng-if="model.hasTactic" ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></a></td>
             <td ng-model="model" id="modelactions"

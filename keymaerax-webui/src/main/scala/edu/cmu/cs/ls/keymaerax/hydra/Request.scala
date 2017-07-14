@@ -36,6 +36,7 @@ import scala.collection.immutable._
 import scala.collection.mutable
 import edu.cmu.cs.ls.keymaerax.btactics.cexsearch
 import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, BreadthFirstSearch, ProgramSearchNode, SearchNode}
+import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 
 /**
  * A Request should handle all expensive computation as well as all
@@ -947,8 +948,11 @@ class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: Strin
       if (!userExists) db.createUser(userId, pwd, "3")
 
       if (db.getModelList(userId).isEmpty) {
-        //@todo actually check (existing models might be outdated)
-        DatabasePopulator.importKya(db, userId, uri)
+        //@todo actually check model content (existing models might be outdated)
+        //@note use tactic name as description
+        DatabasePopulator.readKya(uri).map(e => TutorialEntry(e.name, e.model,
+            e.tactic match { case Some((tname, _, _)) => Some(tname) case None => None }, e.title, e.link, e.tactic))
+          .foreach(DatabasePopulator.importModel(db, userId, prove = false))
       }
 
       //@todo template engine, e.g., twirl, or at least figure out how to parse from a string
