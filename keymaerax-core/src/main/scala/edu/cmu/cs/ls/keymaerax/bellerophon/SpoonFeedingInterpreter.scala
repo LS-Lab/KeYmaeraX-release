@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms}
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -105,7 +105,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, idProvider: ProvableSig => 
           case _: BelleThrowable =>
         }
         result
-      case RepeatTactic(child, times) if times < 1 => throw new BelleThrowable("RepeatTactic done")
+      case RepeatTactic(_, times) if times < 1 => throw new BelleThrowable("RepeatTactic done")
       case RepeatTactic(child, times) if times >= 1 =>
         //assert(times >= 1, "Invalid number of repetitions " + times + ", expected >= 1")
         var result: (BelleValue, ExecutionContext) = (goal, ctx)
@@ -241,6 +241,12 @@ case class SpoonFeedingInterpreter(rootProofId: Int, idProvider: ProvableSig => 
                   runningInner = null
                   result
               }
+            } else if (provable.subgoals.size == 1) {
+              // adapt context to continue on the sole open subgoal (either nil or some other atom to follow up on)
+              val newCtx = ctx match {
+                case DbBranchPointer(_, _, predStep) => DbAtomPointer(predStep)
+              }
+              runTactic(tactic, goal, level, newCtx)
             } else {
               //@todo store and reload a trace with branch -1 (=merging point of a branching tactic)
               // possible solution: store a nil/applyUsubst step with prevStepId=StartOfBranching and branchOrder=-1, without a local provable;
