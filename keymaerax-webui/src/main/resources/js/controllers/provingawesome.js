@@ -618,7 +618,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
   });
 
 angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',
-        function($scope, $http, $uibModalInstance, FileSaver, Blob, userId, proofId, proofName) {
+        function($scope, $http, $uibModalInstance, $location, FileSaver, Blob, userId, proofId, proofName) {
 
     // empty open proof until fetched from server
     $scope.proof = {
@@ -636,6 +636,11 @@ angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',
 
     // just close the dialog
     $scope.cancel = function() { $uibModalInstance.dismiss('cancel'); };
+
+    $scope.browseProof = function() {
+      $uibModalInstance.dismiss('cancel');
+      $location.path('/proofs/' + $scope.proof.proofId + '/browse');
+    };
 
     // don't trust local cache, fetch new from server
     //@todo duplicate with proofs.js downloadTactic

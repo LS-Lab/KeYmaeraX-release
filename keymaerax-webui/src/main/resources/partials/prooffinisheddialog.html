@@ -26,8 +26,8 @@
 
 </div>
 <div class="modal-footer">
-    <a ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
-       ng-href="dashboard.html?#/proofs/{{proof.proofId}}/browse"><i class="fa fa-globe"></i> Browse proof</a>
+    <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
+            ng-click="browseProof()"><i class="fa fa-globe"></i> Browse proof</button>
     <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
             ng-click="downloadTactic()"><i class="fa fa-download"></i> Download tactic</button>
     <button ng-class="{'btn':true, 'btn-default':true, 'disabled':proof.checking}"
