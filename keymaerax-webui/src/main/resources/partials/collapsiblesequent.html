@@ -60,7 +60,7 @@
     </div>
 
     <!-- Turnstile -->
-    <div class="col-md-1">
+    <div class="col-md-1" ng-if="sequent.ante.length > 0 || sequent.succ.length > 0">
         <div class="row k4-flexrow pull-right">
             <div class="col-md-12 k4-formula" ng-if="!readOnly && !collapsed">
                 <ul>
@@ -82,6 +82,14 @@
             </div>
             <div class="col-md-12 k4-formula nohover" ng-if="readOnly || collapsed">
                 <div class="k4-formula-content">&#8866;</div>
+            </div>
+        </div>
+    </div>
+    <!-- Asterisk -->
+    <div class="col-md-1" ng-if="sequent.ante.length === 0 && sequent.succ.length === 0">
+        <div class="row k4-flexrow pull-right">
+            <div class="col-md-12 k4-formula nohover">
+                <div class="k4-formula-content"><i class="fa fa-asterisk"></i></div>
             </div>
         </div>
     </div>
@@ -123,7 +131,7 @@
 
             </div>
         </div>
-        <div class="row k4-flexrow" ng-if="sequent.succ.length === 0">
+        <div class="row k4-flexrow" ng-if="sequent.ante.length > 0 && sequent.succ.length === 0">
             <div class="col-md-12 k4-formula nohover">
                 <div class="k4-formula-content">false</div>
             </div>

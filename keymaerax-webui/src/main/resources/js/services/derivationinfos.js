@@ -54,7 +54,9 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
     },
 
     convertTactic: function(tactic) {
-      if (tactic.derivation.type === 'sequentrule') {
+      if (tactic == undefined) {
+        return tactic;
+      } else if (tactic.derivation.type === 'sequentrule') {
         return serviceDef.convertSequentRuleToInput(tactic);
       } else if (tactic.derivation.type === 'axiom') {
         return tactic;
