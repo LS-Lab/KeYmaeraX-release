@@ -262,4 +262,29 @@ class SimplifierV3Tests extends TacticTestBase {
     val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
     result.subgoals.loneElement shouldBe "==>  A!=5&(3<=6|B>1|C < 7|D+B<=A+C|(C+D>F_()|G_()*5!=8)|100=1)".asSequent
   }
+
+  it should "simplify FuncOf args" in withMathematica { qeTool =>
+    val fml = "y=3 & v=5 & y=3  -> f((v,v,v),x,(y,z,(z,z),y))=1".asFormula
+    val ctxt = IndexedSeq()
+    val tactic = simpTac(faxs = composeIndex(defaultFaxs,chaseIndex),taxs = groundEqualityIndex)
+    val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
+    result.subgoals.loneElement shouldBe "==>  y=3&v=5->f(((5,(5,5)),(x,(3,(z,((z,z),3))))))=1".asSequent
+  }
+
+  it should "simplify PredOf args" in withMathematica { qeTool =>
+    val fml = "y=3 & v=5 & y=3  -> P((v,v,v),x,(y,z,(z,z),y)) -> 1 = v".asFormula
+    val ctxt = IndexedSeq()
+    val tactic = simpTac(faxs = composeIndex(defaultFaxs,chaseIndex),taxs = groundEqualityIndex)
+    val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
+    result.subgoals.loneElement shouldBe "==>  y=3&v=5->P(((5,(5,5)),(x,(3,(z,((z,z),3))))))->1=5".asSequent
+  }
+
+  it should "allow full equality rewrites" in withMathematica { qeTool =>
+    val fml = "\\forall v (v=5*x+3 -> p(v))".asFormula
+    val ctxt = IndexedSeq()
+    val tactic = simpTac(faxs = composeIndex(defaultFaxs,chaseIndex),taxs = fullEqualityIndex)
+    val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
+    result.subgoals.loneElement shouldBe "==>  \\forall v (v=5*x+3 -> p(5*x+3))".asSequent
+  }
+
 }

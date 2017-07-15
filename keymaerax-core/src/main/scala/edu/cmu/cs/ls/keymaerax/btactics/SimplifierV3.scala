@@ -154,22 +154,16 @@ object SimplifierV3 {
               (nt,Some((uprem,proveBy(fml, useAt(negAx, PosInExpr(1 :: Nil))(1) & by(upr)))))
           }
 
-        //todo: this currently throws the context away, but I think it can probably be done better using eqL2R
         case FuncOf(fn, c) if c != Nothing =>
           val (nArgs,proofs) = pairWalk(c,
-            t=>{
-              val (tt,pr) = termSimp(t,ctx,taxs)
-              (tt,pr match {
-                case None => None
-                case Some((f,pr)) => Some(completeDischarge(f,t,tt,pr))
-              })
-            }
-          )
-          val pref = 0::0::Nil
+            t=> termSimp(t,ctx,taxs))
           val nt = FuncOf(fn, nArgs)
-          val tactic = proofs.map({ case (None,_) => ident case (Some(eqPr), i) => useAt(eqPr)(1,pref++i) }).
-            reduceRight(_&_) & byUS(DerivedAxioms.equalReflex)
-          (nt,Some(True,proveBy(Imply(True,Equal(t, nt)), implyR(1) & cohideR(1) & tactic)))
+          val premise = proofs.map({ case (None,_) => True case (Some(pr),_) => pr._1}).
+                        reduceRight( And(_,_))
+          val cuts = proofs.zipWithIndex.map({ case ((None,_),_) => ident case ((Some(prf),_),i) => useAt(prf._2)(-(i+1)) & eqL2R(-(i+1))(1)}).
+            reduceRight( _&_)
+          val pr = proveBy(Imply(premise,Equal(t,nt)),implyR(1) & (andL('Llast)*(proofs.length-1)) & cuts & cohideR(1) & byUS("= reflexive"))
+          (nt,Some(premise,pr))
         //todo: Function arguments
         case _ => (t, None)
       }
@@ -511,20 +505,15 @@ object SimplifierV3 {
         }
       case PredOf(fn, c) if c != Nothing =>
         val (nArgs,proofs) = pairWalk(c,
-          t=>{
-            val (tt,pr) = termSimp(t,ctx,taxs)
-            (tt,pr match {
-              case None => None
-              case Some((f,pr)) => Some(completeDischarge(f,t,tt,pr))
-            })
-          }
-        )
-        val pref = 0::0::Nil
+          t=> termSimp(t,ctx,taxs))
         val nf = PredOf(fn, nArgs)
-        val tactic = proofs.map({ case (None,_) => ident case (Some(eqPr), i) => useAt(eqPr)(1,pref++i) }).
-        reduceRight(_&_) & byUS(DerivedAxioms.equivReflexiveAxiom)
-        (nf,Some(True,proveBy(Imply(True,Equiv(f, nf)), implyR(1) & cohideR(1) & tactic)))
-
+        val premise = proofs.map({ case (None,_) => True case (Some(pr),_) => pr._1}).
+          reduceRight( And(_,_))
+        val cuts = proofs.zipWithIndex.map({ case ((None,_),_) => ident case ((Some(prf),_),i) => useAt(prf._2)(-(i+1)) & eqL2R(-(i+1))(1)}).
+          reduceRight( _&_)
+        val pr = proveBy(Imply(premise,Equiv(f,nf)),implyR(1) & (andL('Llast)*(proofs.length-1)) & cuts & cohideR(1)
+          & byUS(DerivedAxioms.equivReflexiveAxiom))
+        (nf,Some(premise,pr))
       //Differentials
       case _ => (f,None)
     }
@@ -584,7 +573,6 @@ object SimplifierV3 {
   def termSimpWithDischarge(ctx:IndexedSeq[Formula],t:Term,taxs:termIndex) : (Term,Option[ProvableSig]) = {
     val hs = HashSet(ctx: _*) //todo: Apply simple decomposition that prop can handle here
     val (recf,recpropt) = termSimp(t,hs,taxs)
-
     (recf,
       recpropt match {
         case None => None
@@ -791,31 +779,31 @@ object SimplifierV3 {
 
   //Constrained search for equalities of the form t = Num (or Num = t) in the context
   def groundEqualityIndex (t:Term,ctx:context) : List[ProvableSig] = {
-      ctx.collectFirst(
-        {
-        case Equal(tt,n:Number) if tt.equals(t) =>
-            impReflexive(
-              USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), Equal(t,n:Number)) :: Nil))
-        case Equal(n:Number,tt) if tt.equals(t) =>
-            eqSymmetricImp(
-              USubst(SubstitutionPair(FuncOf(Function("F_", None, Unit, Real), Nothing), n) ::
-                     SubstitutionPair(FuncOf(Function("G_", None, Unit, Real), Nothing), t) :: Nil))
-        }).toList
-//    t match {
-//      case v:Variable =>
-//        ctx.collectFirst(
-//          {
-//          case Equal(vv:Variable,n:Number) if vv.equals(v) =>
-//              impReflexive(
-//                USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), Equal(vv:Variable,n:Number)) :: Nil))
-//          case Equal(n:Number,vv:Variable) if vv.equals(v) =>
-//              eqSymmetricImp(
-//                USubst(SubstitutionPair(FuncOf(Function("F_", None, Unit, Real), Nothing), n) ::
-//                       SubstitutionPair(FuncOf(Function("G_", None, Unit, Real), Nothing), v) :: Nil))
-//          }).toList
-//      case _ => List()
-//
-//    }
+    ctx.collectFirst(
+      {
+        case Equal(tt, n: Number) if tt.equals(t) =>
+          impReflexive(
+            USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), Equal(t, n: Number)) :: Nil))
+        case Equal(n: Number, tt) if tt.equals(t) =>
+          eqSymmetricImp(
+            USubst(SubstitutionPair(FuncOf(Function("F_", None, Unit, Real), Nothing), n) ::
+              SubstitutionPair(FuncOf(Function("G_", None, Unit, Real), Nothing), t) :: Nil))
+      }).toList
+  }
+
+  //Unconstrained search for equalities of the form t = tt or tt = t in the context
+  //It will always apply the first equality
+  def fullEqualityIndex (t:Term,ctx:context) : List[ProvableSig] = {
+    ctx.collectFirst(
+      {
+        case Equal(tt, ttt) if tt.equals(t) =>
+          impReflexive(
+            USubst(SubstitutionPair(PredOf(Function("p_", None, Unit, Bool), Nothing), Equal(t, ttt)) :: Nil))
+        case Equal(ttt, tt) if tt.equals(t) =>
+          eqSymmetricImp(
+            USubst(SubstitutionPair(FuncOf(Function("F_", None, Unit, Real), Nothing), ttt) ::
+              SubstitutionPair(FuncOf(Function("G_", None, Unit, Real), Nothing), t) :: Nil))
+      }).toList
   }
 
   /** Formula simplification indices */
