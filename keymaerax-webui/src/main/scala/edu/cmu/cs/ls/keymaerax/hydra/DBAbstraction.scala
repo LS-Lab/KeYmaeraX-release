@@ -148,8 +148,10 @@ case class ExecutionStep(stepId: Int, prevStepId: Option[Int], executionId: Int,
 case class ExecutionTrace(proofId: String, executionId: String, steps: List[ExecutionStep]) {
   //@note expensive assert
   private val orderViolationStep = findOutOfOrderBranchStep(steps)
-  assert(orderViolationStep.isEmpty, "Trace steps not ordered in descending branches: branch of step " +
-    orderViolationStep.get.stepId + " is higher than its predecessor's branch")
+  assert(orderViolationStep.isEmpty, "Trace steps not ordered in descending branches:"
+    + " branch " + orderViolationStep.get.branch
+    + " of step " + orderViolationStep.get.stepId + " (" + orderViolationStep.get.rule + ")"
+    + " is higher than its predecessor's branch")
 
   /** Finds the first step whose branch is out of order (higher than its predecessor's branch) */
   def findOutOfOrderBranchStep(steps: List[ExecutionStep]): Option[ExecutionStep] = steps match {
