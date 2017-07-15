@@ -711,9 +711,11 @@ del {
 
 .k4-highlight-steppos > .k4-op {
   border-bottom: solid var(--lsmain);
+  background-color: plum;
 }
 .k4-highlight-steppos-modality > .k4-mod-open ~ span > .k4-prg-op {
   border-bottom: solid var(--lsmain);
+  background-color: plum;
 }
 
 .k4-formula.hover > ul:first-child, .k4-formula:hover > ul:first-child {

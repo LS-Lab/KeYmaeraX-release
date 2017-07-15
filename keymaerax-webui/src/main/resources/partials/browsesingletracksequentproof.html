@@ -22,8 +22,6 @@
                     <!-- proof rule -->
                     <span class="k4-withcontextmenu k4-proofrule"
                           tooltip-placement="right"
-                          ng-mouseover="highlightStepPosition(step, true)"
-                          ng-mouseleave="highlightStepPosition(step, false)"
                           ng-right-click="proofStepRightClick($event)" tabindex="-1"
                           uib-popover-template="'proofStepPopover.html'"
                           popover-title="Proof step" popover-placement="auto bottom" popover-trigger="'rightClick'">
@@ -35,6 +33,7 @@
                 <k4-sequent user-id="userId" proof-id="proofId" node-id="step"
                             sequent="proofTree.nodesMap[step].getSequent()"
                             read-only="true" collapsed="true"></k4-sequent>
+                {{highlightStepPosition(step, true)}} <!-- permanently highlight step -->
                 <div ng-include="'siblinglinks.html'" replace-include></div>
             </div>
         </div>
@@ -44,8 +43,6 @@
                     <!-- Proof rule if not root -->
                     <span class="k4-withcontextmenu k4-proofrule"
                           tooltip-placement="right"
-                          ng-mouseover="highlightStepPosition(step, true)"
-                          ng-mouseleave="highlightStepPosition(step, false)"
                           ng-right-click="proofStepRightClick($event)" tabindex="-1"
                           uib-popover-template="'proofStepPopoverPrev.html'"
                           popover-title="Proof step" popover-placement="auto bottom" popover-trigger="'rightClick'">
@@ -58,6 +55,7 @@
                 <k4-sequent user-id="userId" proof-id="proofId" node-id="step"
                             sequent="proofTree.nodesMap[step].getSequent()"
                             read-only="true" collapsed="true"></k4-sequent>
+                {{highlightStepPosition(step, true)}} <!-- permanently highlight step -->
                 <div ng-include="'siblinglinks.html'" replace-include></div>
             </div>
         </div>
