@@ -181,8 +181,7 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proofId: String) extends P
     val listener = new TraceRecordingListener(db, proofId.toInt, stepId, localProvable,
       goalIdx, recursive = false, shortName)
     val executor = BellerophonTacticExecutor.defaultExecutor
-    val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx)),
-      SequentialInterpreter(listener::Nil))
+    val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx)), interpreter(listener::Nil))
     if (wait) executor.wait(taskId)
     taskId
   }

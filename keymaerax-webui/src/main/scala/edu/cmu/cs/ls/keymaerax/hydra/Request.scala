@@ -1536,18 +1536,20 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
       case Some(t) if proofInfo.modelId.isEmpty => throw new Exception("Proof " + proofId + " does not refer to a model")
       case Some(t) if proofInfo.modelId.isDefined =>
         val tactic = BelleParser(t)
-        //@TODO switch back to spoon-feeding interpreter:
-//        val executor = BellerophonTacticExecutor.defaultExecutor
-//        val interpreter = DatabasePopulator.prepareInterpreter(db, proofId.toInt)
-//        val model = KeYmaeraXProblemParser(db.getModel(proofInfo.modelId.get).keyFile)
-//        val provable = BelleProvable(ProvableSig.startProof(model))
-//        val taskId = executor.schedule(userId, tactic, provable, interpreter)
-
-        //@TODO currently using sequential interpreter because spoon-feeding interpreter doesn't support graph-style proofs.
-        val tree: ProofTree = DbProofTree(db, proofId)
-        val taskId = tree.root.runTactic(userId, SequentialInterpreter, tactic, "custom")
-
-        new RunBelleTermResponse(proofId, "()", taskId) :: Nil
+        try {
+          //@note replace listener created by proof tree (we want a different tactic name for each component of the executed tactic)
+          val interpreter = (_: List[IOListener]) => DatabasePopulator.prepareInterpreter(db, proofId.toInt)
+          val tree: ProofTree = DbProofTree(db, proofId)
+          val taskId = tree.root.runTactic(userId, interpreter, tactic, "")
+          RunBelleTermResponse(proofId, "()", taskId) :: Nil
+        } catch {
+          case _: Throwable =>
+            //@note if spoonfeeding interpreter fails, try sequential interpreter so that tactics at least proofcheck
+            //      even if browsing then shows a single step only
+            val tree: ProofTree = DbProofTree(db, proofId)
+            val taskId = tree.root.runTactic(userId, SequentialInterpreter, tactic, "custom")
+            RunBelleTermResponse(proofId, "()", taskId) :: Nil
+        }
     }
   }
 }
