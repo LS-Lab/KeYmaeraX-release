@@ -294,20 +294,24 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
 angular.module('keymaerax.controllers').controller('ModelDialogCtrl', function ($scope, $http, $uibModalInstance, Models, userid, modelid) {
   $http.get("user/" + userid + "/model/" + modelid).then(function(response) {
       $scope.model = response.data;
+      $scope.origModel = JSON.parse(JSON.stringify(response.data)); // deep copy
   });
 
   $scope.saveModelData = function() {
-    var data = {
-      name: $scope.model.name,
-      title: $scope.model.title,
-      description: $scope.model.description
-    };
-    $http.post("user/" + userid + "/model/" + modelid + "/update", data).then(function(response) {
-      var model = $.grep(Models.getModels(), function(m) { return m.id === modelid; })[0];
-      model.name = $scope.model.name;
-      model.title = $scope.model.title;
-      model.description = $scope.model.description;
-    })
+    if ($scope.origModel.name !== $scope.model.name || $scope.origModel.title !== $scope.model.title
+     || $scope.origModel.description !== $scope.model.description) {
+      var data = {
+        name: $scope.model.name,
+        title: $scope.model.title,
+        description: $scope.model.description
+      };
+      $http.post("user/" + userid + "/model/" + modelid + "/update", data).then(function(response) {
+        var model = $.grep(Models.getModels(), function(m) { return m.id === modelid; })[0];
+        model.name = $scope.model.name;
+        model.title = $scope.model.title;
+        model.description = $scope.model.description;
+      })
+    }
   }
 
   $scope.checkName = function(name) {
