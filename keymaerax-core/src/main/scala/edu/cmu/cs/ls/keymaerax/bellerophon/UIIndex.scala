@@ -112,7 +112,7 @@ object UIIndex {
           case _: Test => "[?] test" :: rules
           case _: Compose => "[;] compose" :: rules
           case _: Choice => "[++] choice" :: rules
-          case _: Dual => "[d] dual direct" :: Nil
+          case _: Dual => "[d] dual direct" :: "[d] dual" :: Nil
           case _: Loop => "loop" +: (maybeSplit ++ ("[*] iterate" :: "GV" :: "[]d box" :: Nil))
           case ODESystem(ode, _) if containsPrime => ode match {
             case _: AtomicODE => "DE differential effect" :: "dW" :: "dC" :: rules
@@ -133,7 +133,7 @@ object UIIndex {
           case _: Test => "<?> test" :: rules
           case _: Compose => "<;> compose" :: rules
           case _: Choice => "<++> choice" :: rules
-          case _: Dual => "<d> dual direct" :: rules
+          case _: Dual => "<d> dual direct" :: "<d> dual" :: rules
           case _: Loop => "con" +: maybeSplit :+ "<*> iterate" :+ "<>d diamond"
           case _: ODESystem => "solve" :: "dC" :: rules
           case _ => rules
