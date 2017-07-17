@@ -4,13 +4,13 @@
     <div class="well well-compact" ng-if="tactic.selectedDerivation().derivation.type === 'axiom'">
         <!-- TODO transmit key from server and underline, make changeable -->
         <div class="row">
-            <div class="col-md-2"><a class="btn btn-link" ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b ng-bind-html="tactic.selectedDerivation().name"></b></a></div>
+            <div class="col-md-2"><a class="btn btn-link" ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b ng-include="'nameAndCodeName.html'"></b></a></div>
             <div class="col-md-10" ng-bind-html="tactic.selectedDerivation().derivation.formula"></div>
         </div>
     </div>
     <div class="well well-compact" ng-if="tactic.selectedDerivation().derivation.type === 'tactic'">
         <div class="row">
-            <div class="col-md-2"><a class="btn btn-link" ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b ng-bind-html="tactic.selectedDerivation().name"></b></a></div>
+            <div class="col-md-2"><a class="btn btn-link" ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b ng-include="'nameAndCodeName.html'"></b></a></div>
             <div class="col-md-10" ng-bind-html="tactic.selectedDerivation().derivation.formula"></div>
         </div>
     </div>
@@ -18,17 +18,17 @@
         <div class="panel-heading panel-heading-compact">
             <a ng-if="tactic.selectedDerivation().derivation.input.length === 0"
                ng-class="{'disabled' : tacticForm.$invalid, 'btn': true, 'btn-link': true}"
-               ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b ng-bind-html="tactic.selectedDerivation().name"></b></a>
+               ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b ng-include="'nameAndCodeName.html'"></b></a>
             <!-- Rule link: execute if form is valid, otherwise open details -->
             <a ng-if="tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length <= 0"
                class="btn btn-link"
-               ng-click="applyInputTactic(tacticPopover.formulaId(), tactic.selectedDerivation())"><b ng-bind-html="tactic.selectedDerivation().name"></b></a>
+               ng-click="applyInputTactic(tacticPopover.formulaId(), tactic.selectedDerivation())"><b ng-include="'nameAndCodeName.html'"></b></a>
             <a ng-if="tactic.isOpen && tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length > 0"
                class="btn btn-link"
-               ng-click="tactic.selectedDerivation().showMissingInputError = true"><b ng-bind-html="tactic.selectedDerivation().name"></b></a>
+               ng-click="tactic.selectedDerivation().showMissingInputError = true"><b ng-include="'nameAndCodeName.html'"></b></a>
             <a ng-if="!tactic.isOpen && tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length > 0"
                class="btn btn-link"
-               ng-click="tactic.isOpen = !tactic.isOpen"><b ng-bind-html="tactic.selectedDerivation().name"></b><b> ...</b></a>
+               ng-click="tactic.isOpen = !tactic.isOpen"><b ng-include="'nameAndCodeName.html'"></b><b> ...</b></a>
             <span class="text-danger" ng-if="tactic.selectedDerivation().showMissingInputError && tactic.selectedDerivation().missingInputNames().length > 0">Please enter {{tactic.selectedDerivation().missingInputNames().join(', ')}} and confirm each input with <kbd>Enter</kbd></span>
 
             <div class="pull-right">
@@ -64,3 +64,6 @@
 <div ng-if="formulaAxiomsMap[tacticPopover.formulaId()] === undefined || formulaAxiomsMap[tacticPopover.formulaId()] === null || formulaAxiomsMap[tacticPopover.formulaId()].length == 0">
     <span class="fa fa-exclamation-triangle"> Sorry, no tactics applicable here. Try working on formulas from outside in, starting from the left.</span>
 </div>
+<script type="text/ng-template" id="nameAndCodeName.html">
+    <span ng-bind-html="tactic.selectedDerivation().name"></span> <code>{{tactic.selectedDerivation().codeName}}</code>
+</script>
