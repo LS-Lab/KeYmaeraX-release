@@ -101,6 +101,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
     case _: CompositeFormula => htmlSpan("k4-op k4-propfml-op", super.ppOp(expr))
     case _: ComparisonFormula => htmlSpan("k4-op k4-cmpfml-op", super.ppOp(expr))
     case _: Formula => htmlSpan("k4-op k4-fml-op", super.ppOp(expr))
+    case _: Dual => htmlSpan("k4-op k4-prg-op", s"${HTML_OPEN}sup$HTML_CLOSE@$HTML_OPEN/sup$HTML_CLOSE")
     case _: Program => htmlSpan("k4-op k4-prg-op", super.ppOp(expr))
     case _ => super.ppOp(expr)
   }
@@ -117,7 +118,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
 
   protected override def pp(q: PosInExpr, term: Term): String = emit(q, term match {
     case t: Power =>
-      wrapLeft(t, pp(q++0, t.left)) + "$#@@$sup$@@#$" + wrapRight(t, pp(q++1, t.right)) + "$#@@$/sup$@@#$"
+      wrapLeft(t, pp(q++0, t.left)) + s"${HTML_OPEN}sup$HTML_CLOSE" + wrapRight(t, pp(q++1, t.right)) + s"$HTML_OPEN/sup$HTML_CLOSE"
     case _ => super.pp(q, term)
   })
 
