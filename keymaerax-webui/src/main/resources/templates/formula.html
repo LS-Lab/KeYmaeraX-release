@@ -1,6 +1,6 @@
-<span ng-if="collapsed" ng-bind-html="trustedHtml(formula.string)">
+<span ng-if="!highlight || collapsed" ng-bind-html="trustedHtml(formula.string)">
 </span>
-<span frang-tree ng-if="!collapsed">
+<span frang-tree ng-if="highlight && !collapsed">
     <span frang-tree-repeat="expr in [formula.json]"
           class="k4-{{expr.kind}} k4-{{expr.step}} k4-{{expr.editable}}"
           id="fml_{{expr.id}}"
