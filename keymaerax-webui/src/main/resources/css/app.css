@@ -712,10 +712,18 @@ del {
 .k4-highlight-steppos > .k4-op {
   border-bottom: solid var(--lsmain);
   background-color: plum;
+  padding: 3px;
+  margin: -3px;
+  position: relative; /* required for z-index */
+  z-index: -1;        /* don't overwrite siblings (negative margin) */
 }
 .k4-highlight-steppos-modality > .k4-mod-open ~ span > .k4-prg-op {
   border-bottom: solid var(--lsmain);
   background-color: plum;
+  padding: 3px;
+  margin: -3px;
+  position: relative; /* required for z-index */
+  z-index: -1;        /* don't overwrite siblings (negative margin) */
 }
 
 .k4-formula.hover > ul:first-child, .k4-formula:hover > ul:first-child {
