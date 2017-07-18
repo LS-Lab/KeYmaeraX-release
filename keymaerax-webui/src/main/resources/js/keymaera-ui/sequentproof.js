@@ -399,6 +399,25 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
       return undefined;
     };
   })
+  .filter('ruleName', function () {
+    return function (input, scope) {
+      if (input !== undefined) {
+        var node = scope.proofTree.nodesMap[input];
+        var rule = node ? node.rule : undefined;
+        return rule ? (rule.codeName ? (rule.name.length <= rule.codeName.length ? rule.name : rule.codeName) : rule.name) : undefined;
+      }
+      return undefined;
+    };
+  })
+  .filter('maker', function () {
+    return function (input, scope) {
+      if (input !== undefined) {
+        var node = scope.proofTree.nodesMap[input];
+        return node ? node.rule.maker : undefined;
+      }
+      return undefined;
+    };
+  })
   .controller('MagnifyingGlassDialogCtrl', function ($scope, $uibModalInstance, Agenda, ProofTree, proofInfo, tactic, proofTree, openGoals) {
     $scope.proofInfo = proofInfo;
     $scope.tactic = tactic;

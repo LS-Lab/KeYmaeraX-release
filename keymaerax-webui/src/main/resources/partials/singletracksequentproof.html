@@ -21,8 +21,12 @@
                            uib-tooltip="Collapse/uncollapse everything"
                            tooltip-popup-delay="1000"><span class="fa fa-plus-square-o"></span></a>
                     </span>
-                    <!-- proof rule placeholder -->
-                    <span class="k4-withcontextmenu k4-proofrule"></span>
+                    <!-- proof rule -->
+                    <span class="k4-withcontextmenu k4-proofrule"
+                          tooltip-placement="right"
+                          uib-tooltip="{{deductionPath.sections[0].path[0] | maker:this}}">
+                        {{deductionPath.sections[0].path[0] | ruleName:this}}
+                    </span>
                 </li>
             </ul>
         </div>
