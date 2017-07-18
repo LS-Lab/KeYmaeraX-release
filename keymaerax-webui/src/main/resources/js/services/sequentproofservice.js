@@ -282,7 +282,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           // update agenda: prepend new open goal to deduction path
           var newAgendaItem = {
             id: node.id,
-            name: oldAgendaItem.name,                               // inherit name from old
+            name: 'Goal: ' + node.rule.name,                        // see AgendaAwesomeRequest
             isSelected: i === 0 ? oldAgendaItem.isSelected : false, // first new item inherits selection from old
             deduction: $.extend(true, {}, oldAgendaItem.deduction)  // object deep copy
           }

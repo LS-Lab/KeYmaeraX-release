@@ -38,6 +38,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.cexsearch
 import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, BreadthFirstSearch, ProgramSearchNode, SearchNode}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 
+import scala.util.Try
+
 /**
  * A Request should handle all expensive computation as well as all
  * possible side-effects of a request (e.g. updating the database), but should
@@ -1046,9 +1048,18 @@ class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : Str
     val tree: ProofTree = DbProofTree(db, proofId)
     val leaves = tree.openGoals
     val closed = tree.openGoals.isEmpty && tree.verifyClosed
-    //@todo goal names
-    val agendaItems: List[AgendaItem] = leaves.map(n => AgendaItem(n.id.toString, "Unnamed Goal", proofId))
-    new AgendaAwesomeResponse(proofId, tree.root, leaves, agendaItems, closed) :: Nil
+
+    //@todo fetch goal names from DB
+    def agendaItemName(codeName: String): String = {
+      Try(DerivationInfo.ofCodeName(codeName)).toOption match {
+        case Some(di) => di.display.name
+        case None => codeName
+      }
+    }
+
+    val agendaItems: List[AgendaItem] = leaves.map(n =>
+      AgendaItem(n.id.toString, "Goal: " + agendaItemName(n.makerShortName.getOrElse("").split("\\(").head), proofId))
+    AgendaAwesomeResponse(proofId, tree.root, leaves, agendaItems, closed) :: Nil
   }
 }
 

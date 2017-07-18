@@ -223,10 +223,10 @@
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
                             <span ng-if="task.isSelected" ng-cloak editable-text="task.name"
                                   onbeforesave="saveTaskName($data)" buttons="no" blur="submit">
-                                {{task.name}} {{task.id}}
+                                <span ng-bind-html="task.name"></span> <small>{{task.id}}</small>
                             </span>
                             <span ng-if="!task.isSelected" ng-cloak>
-                                {{task.name}} {{task.id}}
+                                <span ng-bind-html="task.name"></span> <small>{{task.id}}</small>
                             </span>
                         </div>
                         <div class="col-md-11" ng-if="!$first">
@@ -234,10 +234,10 @@
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
                             <span ng-if="task.isSelected" ng-cloak editable-text="task.name"
                                   onbeforesave="saveTaskName($data)" buttons="no" blur="submit">
-                                {{task.name}} {{task.id}}
+                                <span ng-bind-html="task.name"></span> <small>{{task.id}}</small>
                             </span>
                             <span ng-if="!task.isSelected" ng-cloak>
-                                {{task.name}} {{task.id}}
+                                <span ng-bind-html="task.name"></span> <small>{{task.id}}</small>
                             </span>
                         </div>
                         <!-- TODO failed attempt to provide a preview of the goal -->

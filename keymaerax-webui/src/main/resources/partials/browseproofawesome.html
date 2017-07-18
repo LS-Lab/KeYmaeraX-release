@@ -57,10 +57,10 @@
                     <div class="row">
                         <div class="col-md-12">
                             <span class="text-muted" ng-if="prooftree.nodesMap[task.deduction.sections[0].path[0]].children.length === 0">
-                                <i class="fa fa-check"></i><span>{{task.name}} {{task.id}}</span>
+                                <i class="fa fa-check"></i>&nbsp;<span ng-bind-html="task.name"></span> <small>{{task.id}}</small>
                             </span>
                             <span ng-if="prooftree.nodesMap[task.deduction.sections[0].path[0]].children.length > 0">
-                                <i class="fa fa-globe"></i><span>{{task.name}} {{task.id}}</span>
+                                <i class="fa fa-globe"></i>&nbsp;<span ng-bind-html="task.name"></span> <small>{{task.id}}</small>
                             </span>
                         </div>
                     </div>
