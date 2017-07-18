@@ -63,10 +63,9 @@ object Lemma {
       case Some(HashEvidence(hash)) =>
         assert(hash == checksum(sequents.to),
           "Expected hashed evidence to match hash of conclusion + subgoals: " + name + "\n" + lemma)
-      case None => {
+      case None =>
         if(LEMMA_COMPAT_MODE) println(s"WARNING: ${name.getOrElse("An unnamed lemma")} was reloaded without a hash confirmation.")
         else throw new CoreException("Cannot reload a lemma without some Hash evidence: " + name)
-      }
     }
     //@note soundness-critical
     val fact = Provable.oracle(sequents.head, sequents.tail.toIndexedSeq)
@@ -81,7 +80,10 @@ object Lemma {
     digest(sequents.map(s => printer.stringify(s)).mkString(","))
 
   /** Checksum computation implementation */
-  private[this] def digest(s: String): String = digest.digest(s.getBytes("UTF-8")).map("%02x".format(_)).mkString
+  private[this] def digest(s: String): String = digest.synchronized {
+    //@note digest() is not threadsafe. It calls digest.update() internally, so may compute hash of multiple strings at once
+    digest.digest(s.getBytes("UTF-8")).map("%02x".format(_)).mkString
+  }
 
   /** Computes the required extra evidence to add to `fact` in order to turn it into a lemma */
   def requiredEvidence(fact: ProvableSig, evidence: List[Evidence] = Nil): List[Evidence] = {
