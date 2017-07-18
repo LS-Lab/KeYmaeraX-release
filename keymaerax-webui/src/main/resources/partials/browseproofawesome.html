@@ -56,8 +56,12 @@
                 <uib-tab-heading>
                     <div class="row">
                         <div class="col-md-12">
-                            <span class="fa fa-tasks"></span>
-                            <span>{{task.name}} {{task.id}}</span>
+                            <span class="text-muted" ng-if="prooftree.nodesMap[task.deduction.sections[0].path[0]].children.length === 0">
+                                <i class="fa fa-check"></i><span>{{task.name}} {{task.id}}</span>
+                            </span>
+                            <span ng-if="prooftree.nodesMap[task.deduction.sections[0].path[0]].children.length > 0">
+                                <i class="fa fa-globe"></i><span>{{task.name}} {{task.id}}</span>
+                            </span>
                         </div>
                     </div>
                 </uib-tab-heading>
