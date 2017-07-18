@@ -554,11 +554,12 @@ class GetUserThemeRequest(db: DBAbstraction, userName: String) extends UserReque
   }
 }
 
-class SetUserThemeRequest(db: DBAbstraction, userName: String, theme: String) extends UserRequest(userName) with WriteRequest {
+/** Sets the UI theme. @note ReadRequest allows changing theme in guest mode for presentation purposes. */
+class SetUserThemeRequest(db: DBAbstraction, userName: String, theme: String) extends UserRequest(userName) with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val config = db.getConfiguration(userName)
     db.updateConfiguration(new ConfigurationPOJO(userName, config.config.updated("theme", theme)))
-    new BooleanResponse(true) :: Nil
+    BooleanResponse(flag=true) :: Nil
   }
 }
 
