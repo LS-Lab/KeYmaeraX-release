@@ -1487,7 +1487,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             }
 
             val ruleName =
-              if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, _.display.name)
+              if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, _ => appliedExpr.prettyString)
               else "custom"
 
             if (stepwise) {
@@ -1965,8 +1965,9 @@ object RequestHelper {
       case None => db.getProvable(db.getProofInfo(proofId).provableId.get).provable
       case Some(sId) => db.getExecutionStep(proofId, sId).map(_.local).get
     }
+    val codeName = tacticName.split("\\(").head
     val ruleName = try {
-      RequestHelper.getSpecificName(tacticName.split("\\(").head, null, None, None, _.display.name)
+      RequestHelper.getSpecificName(codeName, null, None, None, _ => tacticName)
     } catch {
       case _: Throwable => tacticName
     }

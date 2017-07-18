@@ -41,6 +41,7 @@
                     <!-- proof rule -->
                     <span class="k4-withcontextmenu k4-proofrule"
                           tooltip-placement="right"
+                          uib-tooltip="{{step | childMaker:this}}"
                           ng-mouseover="highlightStepPosition(step, true)"
                           ng-mouseleave="highlightStepPosition(step, false)"
                           ng-right-click="proofStepRightClick($event)" tabindex="-1"
@@ -69,6 +70,7 @@
                     <!-- Proof rule if not root -->
                     <span class="k4-withcontextmenu k4-proofrule"
                           tooltip-placement="right"
+                          uib-tooltip="{{step | childMaker:this}}"
                           ng-mouseover="highlightStepPosition(step, true)"
                           ng-mouseleave="highlightStepPosition(step, false)"
                           ng-right-click="proofStepRightClick($event)" tabindex="-1"
