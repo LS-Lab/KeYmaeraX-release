@@ -22,6 +22,7 @@
                     <!-- proof rule -->
                     <span class="k4-withcontextmenu k4-proofrule"
                           tooltip-placement="right"
+                          uib-tooltip="{{step | childMaker:this}}"
                           ng-right-click="proofStepRightClick($event)" tabindex="-1"
                           uib-popover-template="'proofStepPopover.html'"
                           popover-title="Proof step" popover-placement="auto bottom" popover-trigger="'rightClick'">
@@ -40,9 +41,10 @@
         <div ng-if="$last" class="row k4-proofrow k4-proofrow-last">
             <ul>
                 <li>
-                    <!-- Proof rule if not root -->
+                    <!-- proof rule -->
                     <span class="k4-withcontextmenu k4-proofrule"
                           tooltip-placement="right"
+                          uib-tooltip="{{step | childMaker:this}}"
                           ng-right-click="proofStepRightClick($event)" tabindex="-1"
                           uib-popover-template="'proofStepPopoverPrev.html'"
                           popover-title="Proof step" popover-placement="auto bottom" popover-trigger="'rightClick'">

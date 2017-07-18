@@ -385,8 +385,21 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
       }
       return undefined;
     };
-  }).
-  controller('MagnifyingGlassDialogCtrl', function ($scope, $uibModalInstance, Agenda, ProofTree, proofInfo, tactic, proofTree, openGoals) {
+  })
+  .filter('childMaker', function () {
+    return function (input, scope) {
+      if (input !== undefined) {
+        var node = scope.proofTree.nodesMap[input];
+        if (node !== undefined) {
+          var loaded = $.grep(node.children, function(e, i) { return scope.proofTree.nodeIds().indexOf(e) >= 0; });
+          var rule = loaded.length > 0 ? scope.proofTree.nodesMap[loaded[0]].rule : undefined;
+          return rule ? rule.maker : undefined;
+        }
+      }
+      return undefined;
+    };
+  })
+  .controller('MagnifyingGlassDialogCtrl', function ($scope, $uibModalInstance, Agenda, ProofTree, proofInfo, tactic, proofTree, openGoals) {
     $scope.proofInfo = proofInfo;
     $scope.tactic = tactic;
 

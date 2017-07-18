@@ -690,9 +690,9 @@ object Helpers {
 
   def ruleJson(ruleName: String, pos: Option[PositionLocator]):JsValue = {
     val belleTerm = ruleName.split("\\(")(0)
-    val (name, codeName, asciiName) = Try(DerivationInfo.ofCodeName(belleTerm)).toOption match {
-      case Some(di) => (di.display.name, di.codeName, di.display.asciiName)
-      case None => (ruleName, ruleName, ruleName)
+    val (name, codeName, asciiName, maker) = Try(DerivationInfo.ofCodeName(belleTerm)).toOption match {
+      case Some(di) => (di.display.name, di.codeName, di.display.asciiName, ruleName)
+      case None => (ruleName, ruleName, ruleName, ruleName)
     }
 
     JsObject(
@@ -700,6 +700,7 @@ object Helpers {
       "name" -> JsString(name),
       "codeName" -> JsString(codeName),
       "asciiName" -> JsString(asciiName),
+      "maker" -> JsString(maker),
       "pos" -> (pos match {
         case Some(Fixed(p, _, _)) => JsString(p.prettyString)
         case _ => JsString("")
