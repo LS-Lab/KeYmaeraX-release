@@ -211,10 +211,10 @@ angular.module('keymaerax.controllers').controller('ErrorReportCtrl', function($
   $scope.subjectText = "KeYmaera X error report"
 
   $scope.bodyText = function() {
-    return "Description%0D%0A" + ($scope.userDescription ? $scope.userDescription : "") +
-    ($scope.omitSysConfig ? "%0D%0A%0D%0ASystem configuration unreported" : "%0D%0A%0D%0ASystem configuration%0D%0A" + $scope.kyxConfig) +
-    "%0D%0A%0D%0AError message%0D%0A" + $scope.errorText +
-    "%0D%0A%0D%0AError trace%0D%0A" + $scope.errorTrace
+    return "Description%0D%0A" + ($scope.userDescription ? encodeURI($scope.userDescription) : "") +
+      ($scope.omitSysConfig ? "%0D%0A%0D%0ASystem%20configuration%20unreported" : "%0D%0A%0D%0ASystem%20configuration%0D%0A" + encodeURI($scope.kyxConfig)) +
+      "%0D%0A%0D%0AError%20message%0D%0A" + encodeURI($scope.errorText) +
+      "%0D%0A%0D%0AError%20trace%0D%0A" + encodeURI($scope.errorTrace);
   }
 
   $scope.cancel = function() {
