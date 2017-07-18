@@ -26,6 +26,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import spray.httpx.marshalling.ToResponseMarshallable
 
 import scala.collection.mutable.ListBuffer
+import scala.util.Try
 import scala.xml.{Elem, XML}
 
 
@@ -688,9 +689,17 @@ object Helpers {
   def proofIdJson(n: String):JsValue = JsString(n)
 
   def ruleJson(ruleName: String, pos: Option[PositionLocator]):JsValue = {
+    val belleTerm = ruleName.split("\\(")(0)
+    val (name, codeName, asciiName) = Try(DerivationInfo.ofCodeName(belleTerm)).toOption match {
+      case Some(di) => (di.display.name, di.codeName, di.display.asciiName)
+      case None => (ruleName, ruleName, ruleName)
+    }
+
     JsObject(
-      "id" -> JsString(ruleName),
-      "name" -> JsString(ruleName),
+      "id" -> JsString(name),
+      "name" -> JsString(name),
+      "codeName" -> JsString(codeName),
+      "asciiName" -> JsString(asciiName),
       "pos" -> (pos match {
         case Some(Fixed(p, _, _)) => JsString(p.prettyString)
         case _ => JsString("")

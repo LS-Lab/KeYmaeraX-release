@@ -378,7 +378,9 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         var node = scope.proofTree.nodesMap[input];
         if (node !== undefined) {
           var loaded = $.grep(node.children, function(e, i) { return scope.proofTree.nodeIds().indexOf(e) >= 0; });
-          return loaded.length > 0 ? scope.proofTree.nodesMap[loaded[0]].rule.name : undefined;
+          var rule = loaded.length > 0 ? scope.proofTree.nodesMap[loaded[0]].rule : undefined;
+          //@note axioms often have shorter names (->R vs. implyR), tactics often shorter code names (differential cut vs. dC)
+          return rule ? (rule.codeName ? (rule.name.length <= rule.codeName.length ? rule.name : rule.codeName) : rule.name) : undefined;
         }
       }
       return undefined;
