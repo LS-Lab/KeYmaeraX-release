@@ -1207,7 +1207,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         //@note all children share the same maker
         val (localProvable, parentStep, parentRule) = (node.localProvable, node.children.head.maker.get, node.children.head.makerShortName.get)
         val localProofId = db.createProof(localProvable)
-        val innerInterpreter = SpoonFeedingInterpreter(localProofId, db.createProof,
+        val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof,
           RequestHelper.listenerFactory(db), SequentialInterpreter, 1, strict=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(localProvable))
@@ -1506,31 +1506,43 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, _ => appliedExpr.prettyString)
               else "custom"
 
-            if (stepwise) {
-              val localProvable = ProvableSig.startProof(sequent)
-              val localProofId = db.createProof(localProvable)
+            def interpreter(proofId: Int, startNodeId: Int) = new Interpreter {
+              val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof, RequestHelper.listenerFactory(db),
+                SequentialInterpreter, 1, strict = false)
 
-              val interpreter = new Interpreter {
-                val inner = SpoonFeedingInterpreter(localProofId, db.createProof, RequestHelper.listenerFactory(db),
-                  SequentialInterpreter, 1, strict = false)
-
-                override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
-                  inner(expr, v)
-                } catch {
-                  //@note stop and display whatever progress was made
-                  case ex: Throwable =>
-                    val innerId = inner.innerProofId.getOrElse(localProofId)
+              override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
+                inner(expr, v)
+              } catch {
+                case ex: Throwable => inner.innerProofId match {
+                  case Some(innerId) =>
+                    //@note display progress of inner (Let) proof, works only in stepwise execution (step details dialog)
                     val innerTrace = db.getExecutionTrace(innerId)
                     if (innerTrace.steps.nonEmpty) BelleSubProof(innerId)
                     else throw BelleTacticFailure("No progress", ex)
+                  case None => throw ex
                 }
-
-                override def kill(): Unit = inner.kill()
               }
+
+              override def kill(): Unit = inner.kill()
+            }
+
+            if (stepwise) {
+              val localProvable = ProvableSig.startProof(sequent)
+              val localProofId = db.createProof(localProvable)
               val executor = BellerophonTacticExecutor.defaultExecutor
-              val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter)
+              val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter(localProofId, -1))
               RunBelleTermResponse(localProofId.toString, "()", taskId) :: Nil
+            } else if (ruleName == "custom") {
+              //@note execute tactic scripts step-by-step for better browsing
+              val startStepIndex = node.id match {
+                case DbStepPathNodeId(id, _) => db.getExecutionSteps(proofId.toInt).indexWhere(_.stepId == id)
+                case _ => throw new Exception("Unexpected node ID shape " + node.id.toString
+                  + ". Expected step path ID of the form (node ID,branch index)")
+              }
+              val taskId = node.stepTactic(userId, interpreter(proofId.toInt, startStepIndex), appliedExpr)
+              RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
             } else {
+              //@note execute clicked single-step tactics on sequential interpreter right away
               val taskId = node.runTactic(userId, SequentialInterpreter, appliedExpr, ruleName)
               RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
             }

@@ -49,6 +49,7 @@ case class DbBranchPointer(parent: Int, branch: Int, predStep: Int) extends Exec
   * Sequential interpreter for Bellerophon tactic expressions: breaks apart combinators and spoon-feeds "atomic" tactics
   * to another interpreter.
   * @param rootProofId The ID of the proof this interpreter is working on.
+  * @param startStepIndex The index in the proof trace where the interpreter starts appending steps (-1 for none, e.g., in a fresh proof).
   * @param idProvider Provides IDs for child provables created in this interpreter.
   * @param listeners Creates listener that are notified from the inner interpreter, takes (tactic name, parent step index in trace, branch).
   * @param inner Processes atomic tactics.
@@ -58,7 +59,7 @@ case class DbBranchPointer(parent: Int, branch: Int, predStep: Int) extends Exec
   * @author Andre Platzer
   * @author Stefan Mitsch
   */
-case class SpoonFeedingInterpreter(rootProofId: Int, idProvider: ProvableSig => Int,
+case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProvider: ProvableSig => Int,
                                    listeners: Int => ((String, Int, Int) => Seq[IOListener]),
                                    inner: Seq[IOListener] => Interpreter, descend: Int = 0,
                                    strict: Boolean = true) extends Interpreter {
@@ -68,7 +69,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, idProvider: ProvableSig => 
 
   private var isDead = false
 
-  override def apply(expr: BelleExpr, v: BelleValue): BelleValue = runTactic(expr, v, descend, DbAtomPointer(-1))._1
+  override def apply(expr: BelleExpr, v: BelleValue): BelleValue = runTactic(expr, v, descend, DbAtomPointer(startStepIndex))._1
 
   private def runTactic(tactic: BelleExpr, goal: BelleValue, level: Int, ctx: ExecutionContext): (BelleValue, ExecutionContext) = synchronized {
     if (isDead) (goal, ctx)
@@ -175,7 +176,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, idProvider: ProvableSig => 
         println("INFO: " + tactic + " considers\n" + in + "\nfor outer\n" + provable)
         val innerId = idProvider(in)
         innerProofId = Some(innerId)
-        val innerFeeder = SpoonFeedingInterpreter(innerId, idProvider, listeners, inner, descend, strict = strict)
+        val innerFeeder = SpoonFeedingInterpreter(innerId, -1, idProvider, listeners, inner, descend, strict = strict)
         innerFeeder.runTactic(innerMost, BelleProvable(in), level, DbAtomPointer(-1)) match {
           case (BelleProvable(derivation, _), _) =>
             val backsubst: ProvableSig = derivation(us)
