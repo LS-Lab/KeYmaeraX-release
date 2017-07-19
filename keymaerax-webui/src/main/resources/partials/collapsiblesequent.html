@@ -73,12 +73,13 @@
                         <span class="fa fa-scissors"></span></a>
                     </li>
                 </ul>
+                <!-- Drag&drop tooltip (should open only on drag over) -->
+                <!-- uib-tooltip="Rewrite all occurrences of the equality left-hand side into the right-hand side everywhere in the sequent"
+                     tooltip-placement="bottom"
+                     tooltip-trigger="none" tooltip-is-open="isTurnstileTooltipOpen()" -->
                 <div class="k4-formula-content"
                      k4-droppable on-drop="turnstileDrop(dragData)" on-drag-enter="turnstileDragEnter(dragData)"
-                     on-drag-leave="turnstileDragLeave(dragData)"
-                     uib-tooltip="Rewrite all occurrences of the equality left-hand side into the right-hand side everywhere in the sequent"
-                     tooltip-placement="bottom"
-                     tooltip-trigger="none" tooltip-is-open="isTurnstileTooltipOpen()">&#8866;</div>
+                     on-drag-leave="turnstileDragLeave(dragData)">&#8866;</div>
             </div>
             <div class="col-md-12 k4-formula nohover" ng-if="readOnly || collapsed">
                 <div class="k4-formula-content">&#8866;</div>
