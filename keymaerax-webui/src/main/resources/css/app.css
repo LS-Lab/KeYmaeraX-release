@@ -717,6 +717,14 @@ del {
   position: relative; /* required for z-index */
   z-index: -1;        /* don't overwrite siblings (negative margin) */
 }
+.k4-highlight-steppos-full {
+  border-bottom: solid var(--lsmain);
+  background-color: plum;
+  padding: 3px;
+  margin: -3px;
+  position: relative; /* required for z-index */
+  z-index: -1;        /* don't overwrite siblings (negative margin) */
+}
 .k4-highlight-steppos-modality-prg > .k4-mod-open ~ span > .k4-prg-op {
   border-bottom: solid var(--lsmain);
   background-color: plum;

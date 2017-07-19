@@ -131,11 +131,13 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         var posId = fstChild.rule.pos.replace(/\./g, "\\,");
         var element = $("#seq_"+scope.htmlNodeId(nodeId) + " #fml_"+posId);
         if (highlight) {
+          if (fstChild.rule.asciiName == "WL" || fstChild.rule.asciiName == "WR") element.addClass("k4-highlight-steppos-full");
+          else element.addClass("k4-highlight-steppos");
           if (element.text().startsWith("[") || element.text().startsWith("<")) {
             if (fstChild.rule.asciiName == "[]^" || fstChild.rule.asciiName == "<>|") element.addClass("k4-highlight-steppos-modality-post");
             else element.addClass("k4-highlight-steppos-modality-prg");
-          } else element.addClass("k4-highlight-steppos");
-        } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-modality-prg k4-highlight-steppos-modality-post");
+          }
+        } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-full k4-highlight-steppos-modality-prg k4-highlight-steppos-modality-post");
       }
 
       flatPath = function(item) {
@@ -302,11 +304,13 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         var posId = fstChild.rule.pos.replace(/\./g, "\\,");
         var element = $("#seq_"+scope.htmlNodeId(nodeId) + " #fml_"+posId);
         if (highlight) {
+          if (fstChild.rule.asciiName == "WL" || fstChild.rule.asciiName == "WR") element.addClass("k4-highlight-steppos-full");
+          else element.addClass("k4-highlight-steppos");
           if (element.text().startsWith("[") || element.text().startsWith("<")) {
             if (fstChild.rule.asciiName == "[]^" || fstChild.rule.asciiName == "<>|") element.addClass("k4-highlight-steppos-modality-post");
             else element.addClass("k4-highlight-steppos-modality-prg");
-          } else element.addClass("k4-highlight-steppos");
-        } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-modality-prg k4-highlight-steppos-modality-post");
+          }
+        } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-full k4-highlight-steppos-modality-prg k4-highlight-steppos-modality-post");
       }
 
       flatPath = function(item) {
