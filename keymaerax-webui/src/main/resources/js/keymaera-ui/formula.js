@@ -45,15 +45,19 @@ angular.module('formula')
               if (scope.modeIsEdit() && editable=='editable') {
                 event.stopPropagation();
                 $(event.currentTarget).addClass("k4-edit-hover");
-              } else if (scope.modeIsProve() && step=='has-step') {
+              } else if (scope.modeIsProve() && !event.altKey && step=='has-step') {
                 event.stopPropagation();
                 $(event.currentTarget).addClass("k4-prove-hover");
+              } else if (scope.modeIsProve() && event.altKey && step=='has-step') {
+                event.stopPropagation();
+                $(event.currentTarget).addClass("k4-chase-hover");
               }
             }
 
             scope.exprMouseOut = function(event) {
               $(event.currentTarget).removeClass("k4-edit-hover");
               $(event.currentTarget).removeClass("k4-prove-hover");
+              $(event.currentTarget).removeClass("k4-chase-hover");
             }
 
             scope.exprClick = function(event, formulaId, step, editable) {
@@ -61,17 +65,23 @@ angular.module('formula')
                 // avoid event propagation once a span with an ID is found
                 event.stopPropagation();
                 spinnerService.show('tacticExecutionSpinner');
-                $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/whatStep').
-                  then(function(response) {
-                    if (response.data.length > 0) {
-                      scope.onTactic({formulaId: formulaId, tacticId: "StepAt"});
-                    } else {
-                      scope.fetchFormulaAxioms(formulaId, function() {
-                        spinnerService.hide('tacticExecutionSpinner')
-                        scope.tacticPopover.open(formulaId);
-                      });
-                    }
-                });
+                if (event.altKey) {
+                  // chase
+                  scope.onTactic({formulaId: formulaId, tacticId: 'chase'})
+                } else {
+                  // step
+                  $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/whatStep').
+                    then(function(response) {
+                      if (response.data.length > 0) {
+                        scope.onTactic({formulaId: formulaId, tacticId: "StepAt"});
+                      } else {
+                        scope.fetchFormulaAxioms(formulaId, function() {
+                          spinnerService.hide('tacticExecutionSpinner')
+                          scope.tacticPopover.open(formulaId);
+                        });
+                      }
+                  });
+                }
               } else if (scope.modeIsEdit() && formulaId && formulaId !== '' && editable == 'editable') {
                 // not used
               }

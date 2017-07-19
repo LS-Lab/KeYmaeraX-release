@@ -140,6 +140,11 @@ del {
   background-color:var(--lslightblue);
   position: relative;
 }
+.k4-has-step.k4-chase-hover {
+  color: var(--lsmainback);
+  background-color:var(--lslightblue);
+  position: relative;
+}
 
 .k4-editable.k4-edit-hover {
   border-bottom: 1px dashed;
@@ -195,9 +200,31 @@ del {
   width: 1em;
   margin-right: -1em;
 }
+.k4-has-step.k4-chase-hover > span > .k4-op:after {
+  content: "\f013"; /* fontawesome cog */
+  font-family: FontAwesome;
+  font-size: smaller;
+  -webkit-text-stroke: 1px black;
+  position: relative;
+  right: 1em;
+  top: -1.5ex;
+  width: 1em;
+  margin-right: -1em;
+}
 /* Mark top-level operator in programs */
 .k4-has-step.k4-prove-hover > span > span.k4-mod-open ~ span.k4-program > span > span.k4-topop.k4-prg-op:after {
   content: "\f063"; /* fontawesome downarrow */
+  font-family: FontAwesome;
+  font-size: smaller;
+  -webkit-text-stroke: 1px black;
+  position: relative;
+  right: 1em;
+  top: -1.5ex;
+  width: 1em;
+  margin-right: -1em;
+}
+.k4-has-step.k4-chase-hover > span > span.k4-mod-open ~ span.k4-program > span > span.k4-topop.k4-prg-op:after {
+  content: "\f013"; /* fontawesome cog */
   font-family: FontAwesome;
   font-size: smaller;
   -webkit-text-stroke: 1px black;
@@ -258,6 +285,9 @@ del {
 }
 /* Unless a parent is highlighted */
 .k4-has-step.k4-prove-hover span {
+  color: white;
+}
+.k4-has-step.k4-chase-hover span {
   color: white;
 }
 
