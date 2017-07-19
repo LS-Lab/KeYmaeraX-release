@@ -236,7 +236,6 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     doFetchAgenda: function(scope, userId, proofId, agendaKind) {
       var theProofTree = this.proofTree;
       var theAgenda = this.agenda;
-      spinnerService.show('proofLoadingSpinner');
       this.tactic.fetch(userId, proofId);
       $http.get('proofs/user/' + userId + '/' + proofId + '/' + agendaKind)
         .then(function(response) {
@@ -262,9 +261,8 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
         })
         .catch(function(data) {
           $rootScope.$broadcast('agenda.loadError'); // TODO somewhere: open modal dialog and ask if proof should be loaded
-
         })
-        .finally(function() { spinnerService.hide('proofLoadingSpinner'); });
+        .finally(function() { spinnerService.hideAll(); });
     },
 
     /** Updates the agenda and the proof tree with new items resulting from a tactic */

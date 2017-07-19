@@ -69,6 +69,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
             $rootScope.$broadcast("proof.message", err.data);
           });
       } else {
+        spinnerService.show('proofLoadingSpinner');
         sequentProofData.fetchAgenda($scope, $scope.userId, $scope.proofId);
       }
   });
@@ -494,13 +495,13 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var nodeId = sequentProofData.agenda.selectedId();
       spinnerService.show('tacticExecutionSpinner');
       var uri = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/doCustomTactic';
-      var stepwise = { method: 'POST', url: uri + '?stepwise=true', data: tacticText};
       $http.post(uri + '?stepwise=false', tacticText)
-        .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, $scope.updateMainProof, $scope.broadcastProofError, stepwise); })
+        .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId,
+                                      $scope.updateFreshProof, $scope.broadcastProofError, undefined); })
         .catch(function(err) {
+          spinnerService.hideAll();
           if (err.data.errorThrown) {
             //@note errors that occur before scheduling (parsing etc.), but not tactic execution errors -> cannot repeat from here
-            spinnerService.hide('tacticExecutionSpinner');
             $rootScope.$broadcast('proof.message', err.data);
           } else {
             console.error("Expected errorThrown field on error object but found something else: " + JSON.stringify(err))
