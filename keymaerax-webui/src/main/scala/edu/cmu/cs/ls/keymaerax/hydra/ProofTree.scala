@@ -82,6 +82,9 @@ trait ProofTreeNode {
   def runTactic(userId: String, interpreter: List[IOListener]=>Interpreter, tactic: BelleExpr, shortName: String,
                 wait: Boolean = false): String
 
+  /** Runs a tactic step-by-step, starting on this node. */
+  def stepTactic(userId: String, interpreter: Interpreter, tactic: BelleExpr, wait: Boolean = false): String
+
   /** Deletes this node with the entire subtree underneath. */
   def pruneBelow(): Unit
 
@@ -182,6 +185,15 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proofId: String) extends P
       goalIdx, recursive = false, shortName)
     val executor = BellerophonTacticExecutor.defaultExecutor
     val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx)), interpreter(listener::Nil))
+    if (wait) executor.wait(taskId)
+    taskId
+  }
+
+  /** Runs a tactic step-by-step, starting on this node. */
+  override def stepTactic(userId: String, interpreter: Interpreter, tactic: BelleExpr, wait: Boolean = false): String = {
+    assert(goalIdx >= 0, "Cannot execute tactics on closed nodes without open subgoal")
+    val executor = BellerophonTacticExecutor.defaultExecutor
+    val taskId = executor.schedule(userId, tactic, BelleProvable(localProvable.sub(goalIdx)), interpreter)
     if (wait) executor.wait(taskId)
     taskId
   }
