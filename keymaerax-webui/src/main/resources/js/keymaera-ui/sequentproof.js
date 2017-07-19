@@ -131,7 +131,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         var posId = fstChild.rule.pos.replace(/\./g, "\\,");
         var element = $("#seq_"+scope.htmlNodeId(nodeId) + " #fml_"+posId);
         if (highlight) {
-          if (element.text().startsWith("[") || element.text().startsWith("&lt;")) element.addClass("k4-highlight-steppos-modality");
+          if (element.text().startsWith("[") || element.text().startsWith("<")) element.addClass("k4-highlight-steppos-modality");
           else element.addClass("k4-highlight-steppos");
         } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-modality");
       }
@@ -300,7 +300,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         var posId = fstChild.rule.pos.replace(/\./g, "\\,");
         var element = $("#seq_"+scope.htmlNodeId(nodeId) + " #fml_"+posId);
         if (highlight) {
-          if (element.text().startsWith("[") || element.text().startsWith("&lt;")) element.addClass("k4-highlight-steppos-modality");
+          if (element.text().startsWith("[") || element.text().startsWith("<")) element.addClass("k4-highlight-steppos-modality");
           else element.addClass("k4-highlight-steppos");
         } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-modality");
       }
