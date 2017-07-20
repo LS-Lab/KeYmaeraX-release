@@ -624,6 +624,34 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.tactic shouldBe BelleParser("implyR(1); dC({`x>=old(x)`}, 1); <(cut({`0<=1`}); <(dW(1); QE, cohideR(2); QE), dI(1))")
   }}
 
+  it should "work for branching tactic when following sole second open goal" in withMathematica { _ => withDatabase { db =>
+    val problem = "x>=0 -> [{x'=1}]x>=0"
+    val modelContent = s"Variables. R x. End. Problem. $problem End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter)
+    val tactic = BelleParser("implyR(1); dC({`x>=old(x)`}, 1); <(dW(1); QE, nil); dI(1)")
+    interpreter(tactic, BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    val foo = tree.nodes
+    tree.tactic shouldBe BelleParser("implyR(1); dC({`x>=old(x)`}, 1); <(dW(1); QE, dI(1))")
+  }}
+
+  it should "work for branching tactic when following sole middle open goal" in withMathematica { _ => withDatabase { db =>
+    val problem = "x>=0 -> [{x:=x+1;}*]x>=0"
+    val modelContent = s"Variables. R x. End. Problem. $problem End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter)
+    val tactic = BelleParser("implyR(1); loop({`x>=0`}, 1); <(QE, nil, master); QE")
+    interpreter(tactic, BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    val foo = tree.nodes
+    tree.tactic shouldBe BelleParser("implyR(1); loop({`x>=0`}, 1); <(QE, QE, master)")
+  }}
+
   "Continuing a proof" should "work for atomic tactic" in withMathematica { _ => withDatabase { db =>
     val problem = "x>=0 -> [{x'=1}]x>=0"
     val modelContent = s"Variables. R x. End. Problem. $problem End."

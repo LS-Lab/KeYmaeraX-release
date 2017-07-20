@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 trait ExecutionContext {
   def store(e: BelleExpr): ExecutionContext
   def branch(count: Int): List[ExecutionContext]
-  def glue(ctx: ExecutionContext): ExecutionContext
+  def glue(ctx: ExecutionContext, createdSubgoals: Int): ExecutionContext
   def closeBranch(): ExecutionContext
   def onBranch: Int
   def parentId: Int
@@ -22,25 +22,25 @@ trait ExecutionContext {
 case class DbAtomPointer(id: Int) extends ExecutionContext {
   override def store(e: BelleExpr): ExecutionContext = DbAtomPointer(id+1)
   override def branch(count: Int): List[ExecutionContext] = (0 until count).map(DbBranchPointer(id, _, id)).toList
-  override def glue(ctx: ExecutionContext): ExecutionContext = ctx
+  override def glue(ctx: ExecutionContext, createdSubgoals: Int): ExecutionContext = ctx
   override def closeBranch(): ExecutionContext = this
   override def onBranch: Int = 0
   override def parentId: Int = id
 }
 
 /** Computes IDs for branching steps stored in the database. Anticipates how the DB issues IDs. */
-case class DbBranchPointer(parent: Int, branch: Int, predStep: Int) extends ExecutionContext {
+case class DbBranchPointer(parent: Int, branch: Int, predStep: Int, openBranchesAfterExec: List[Int] = Nil) extends ExecutionContext {
   override def store(e: BelleExpr): ExecutionContext = DbAtomPointer(predStep+1)
   override def branch(count: Int): List[ExecutionContext] =
     if (count == 1) DbAtomPointer(predStep)::Nil
     else (0 until count).map(DbBranchPointer(predStep, _, predStep)).toList
-  override def glue(ctx: ExecutionContext): ExecutionContext = ctx match {
-    case DbAtomPointer(id) => DbBranchPointer(parent, branch, id)
-    case DbBranchPointer(_, _, pc2) => DbBranchPointer(parent, branch, pc2) // continue after pc2 (final step of the other branch)
+  override def glue(ctx: ExecutionContext, createdSubgoals: Int): ExecutionContext = ctx match {
+    case DbAtomPointer(id) => DbBranchPointer(parent, branch, id, openBranchesAfterExec ++ List.fill(createdSubgoals)(id))
+    case DbBranchPointer(_, _, pc2, ob2) => DbBranchPointer(parent, branch, pc2, openBranchesAfterExec++ob2) // continue after pc2 (final step of the other branch)
   }
   // branch=-1 indicates the merging point after branch tactics (often points to a closed provable when the branches all close,
   // but may point to a provable of arbitrary size)
-  override def closeBranch(): ExecutionContext = DbBranchPointer(parent, -1, predStep)
+  override def closeBranch(): ExecutionContext = DbBranchPointer(parent, -1, predStep, openBranchesAfterExec)
   override def onBranch: Int = branch
   override def parentId: Int = parent
 }
@@ -128,10 +128,13 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
 
           //@note execute in reverse for stable global subgoal indexing
           val (provables, resultCtx) = branchTactics.zipWithIndex.foldRight((List[BelleValue](), branchCtxs.last))({ case (((ct, cp), i), (accProvables, accCtx)) =>
-            val localCtx = branchCtxs(i).glue(accCtx)
+            val localCtx = branchCtxs(i).glue(accCtx, 0)
             assert(i == localCtx.onBranch, "Expected context branch and branch tactic index to agree, but got context=" + localCtx.onBranch + " vs. index=" + i)
             val branchResult = runTactic(ct, cp, level, localCtx)
-            (accProvables :+ branchResult._1, accCtx.glue(branchResult._2))
+            val branchOpenGoals = branchResult._1 match {
+              case BelleProvable(bp, _) => bp.subgoals.size
+            }
+            (accProvables :+ branchResult._1, accCtx.glue(branchResult._2, branchOpenGoals))
           })
 
           val result = provables.reverse.zipWithIndex.foldRight(p)({case ((BelleProvable(cp, _), i), provable) => provable(cp, i) })
@@ -245,7 +248,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
             } else if (provable.subgoals.size == 1) {
               // adapt context to continue on the sole open subgoal (either nil or some other atom to follow up on)
               val newCtx = ctx match {
-                case DbBranchPointer(_, _, predStep) => DbAtomPointer(predStep)
+                case DbBranchPointer(_, _, _, openBranchesAfterExec) if openBranchesAfterExec.size == 1 => DbAtomPointer(openBranchesAfterExec.head)
               }
               runTactic(tactic, goal, level, newCtx)
             } else {
