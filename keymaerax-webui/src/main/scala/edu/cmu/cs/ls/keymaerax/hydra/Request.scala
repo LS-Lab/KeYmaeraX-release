@@ -950,7 +950,7 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
 class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: String) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
     try {
-      val userId = uri.substring(uri.lastIndexOf('/') + 1)
+      val userId = archiveName.stripPrefix("http://").stripPrefix("https://").replaceAll("/", "-")
       val pwd = "guest"
       val userExists = db.userExists(userId)
       if (!userExists) db.createUser(userId, pwd, "3")
