@@ -116,8 +116,7 @@ class JLinkMathematicaLink extends MathematicaLink {
     try {
       ml = MathLinkFactory.createKernelLink(Array[String](
         "-linkmode", "launch",
-        "-linkname", linkName + " -mathlink",
-        "-linkprotocol", "tcpip"))
+        "-linkname", linkName + " -mathlink"))
       ml.connect()
       ml.discardAnswer()
         //@todo How to gracefully shutdown an unsuccessfully initialized math link again without causing follow-up problems?
