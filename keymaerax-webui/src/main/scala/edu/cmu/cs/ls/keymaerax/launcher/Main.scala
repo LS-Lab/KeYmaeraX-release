@@ -157,6 +157,7 @@ object Main {
   private def exitIfDeprecated() = {
     val databaseVersion = SQLite.ProdDB.getConfiguration("version").config("version")
     println("Current database version: " + databaseVersion)
+    cleanupGuestData()
     if (UpdateChecker.upToDate().getOrElse(false) &&
         UpdateChecker.needDatabaseUpgrade(databaseVersion).getOrElse(false)) {
       //Exit if KeYmaera X is up to date but the production database belongs to a deprecated version of KeYmaera X.
@@ -244,6 +245,27 @@ object Main {
       )
     }
     SQLite.ProdDB.getConfiguration("version").config("version")
+  }
+
+  private def cleanupGuestData() = {
+    launcherLog("Cleaning up guest data...")
+    val script = io.Source.fromInputStream(getClass.getResourceAsStream("/sql/deleteguestdata.sql")).mkString
+    val statements = script.replaceAll("\n", "").split(";")
+    val conn = SQLite.ProdDB.sqldb.createConnection()
+    conn.createStatement().executeUpdate("PRAGMA journal_mode = WAL")
+    conn.createStatement().executeUpdate("PRAGMA foreign_keys = ON")
+    conn.createStatement().executeUpdate("PRAGMA synchronous = NORMAL")
+    conn.createStatement().executeUpdate("VACUUM")
+    try {
+      val stmt = conn.createStatement()
+      statements.foreach(stmt.addBatch)
+      stmt.executeBatch()
+    } catch {
+      case e: Throwable => launcherLog("Error cleaning up guest data"); throw e
+    } finally {
+      conn.close()
+    }
+    launcherLog("done.")
   }
 
   def processIsAlive(proc : Process) = {
