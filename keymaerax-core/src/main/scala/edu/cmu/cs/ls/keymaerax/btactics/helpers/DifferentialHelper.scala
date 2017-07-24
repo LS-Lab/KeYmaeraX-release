@@ -95,8 +95,7 @@ object DifferentialHelper {
   //@todo duplicate with FormulaTools.conjuncts
   def flattenAnds(fs : immutable.List[Formula]): immutable.List[Formula] = fs.flatMap(decomposeAnds)
 
-  /** Split a differential program into its ghost constituents: parseGhost("y'=a*x+b".asProgram) is (y,a,b)
-    * @todo rewrite so this is easier to maintain/read... */
+  /** Split a differential program into its ghost constituents: parseGhost("y'=a*x+b".asProgram) is (y,a,b) */
   def parseGhost(ghost: DifferentialProgram): (Variable,Term,Term) = {
     //Four cases contain both a and b: +a+b, +a-b, -a+b, -a-b
     //y' = ay + b
@@ -131,13 +130,13 @@ object DifferentialHelper {
 
     //2 cases contain just a: +a and -a
     //y' = ay
-    UnificationMatch.unifiable("{y_'=a(|y_|)*y_".asDifferentialProgram, ghost) match {
+    UnificationMatch.unifiable("{y_'=a(|y_|)*y_}".asDifferentialProgram, ghost) match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), "0".asTerm)
       case None    =>
     }
 
     //y' = -ay
-    UnificationMatch.unifiable("{y_'=-a(|y_|)*y_".asDifferentialProgram, ghost) match {
+    UnificationMatch.unifiable("{y_'=-a(|y_|)*y_}".asDifferentialProgram, ghost) match {
       case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("-a(|y_|)".asTerm), "0".asTerm)
       case None    =>
     }
@@ -168,8 +167,6 @@ object DifferentialHelper {
     }
 
     throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or y'=a*y or y'=b or y'=a*y-b or y'=y")
-
-
   }
 
   /**
