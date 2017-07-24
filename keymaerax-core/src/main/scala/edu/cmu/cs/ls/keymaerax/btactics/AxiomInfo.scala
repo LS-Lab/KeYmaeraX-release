@@ -191,7 +191,7 @@ object DerivationInfo {
         /* conclusion */ (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
         /* premises */ List( (List("&Gamma;"), List("∃y [{x′=f(x),E & Q}]P", "&Delta;")) )
       ),
-      List(ExpressionArg("E", "y"::Nil), FormulaArg("P", "y"::Nil)),
+      List(ExpressionArg("E", "y"::"x"::"y'"::Nil), FormulaArg("P", "y"::Nil)),
       _ =>
         ((f: Expression) =>
           ((p : Option[Formula]) => f match {
