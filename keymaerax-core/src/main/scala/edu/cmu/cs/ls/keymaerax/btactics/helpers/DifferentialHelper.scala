@@ -95,27 +95,81 @@ object DifferentialHelper {
   //@todo duplicate with FormulaTools.conjuncts
   def flattenAnds(fs : immutable.List[Formula]): immutable.List[Formula] = fs.flatMap(decomposeAnds)
 
-  /** Split a differential program into its ghost constituents: parseGhost("y'=a*x+b".asProgram) is (y,a,b) */
+  /** Split a differential program into its ghost constituents: parseGhost("y'=a*x+b".asProgram) is (y,a,b)
+    * @todo rewrite so this is easier to maintain/read... */
   def parseGhost(ghost: DifferentialProgram): (Variable,Term,Term) = {
+    //Four cases contain both a and b: +a+b, +a-b, -a+b, -a-b
+    //y' = ay + b
     UnificationMatch.unifiable("{y_'=a(|y_|)*y_+b(|y_|)}".asDifferentialProgram, ghost) match {
-      case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), s("b(|y_|)".asTerm))
-      case None => UnificationMatch.unifiable("{y_'=a(|y_|)*y_}".asDifferentialProgram, ghost) match {
-        case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), "0".asTerm)
-        case None => UnificationMatch.unifiable("{y_'=b(|y_|)}".asDifferentialProgram, ghost) match {
-          case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|y_|)".asTerm))
-          case None => UnificationMatch.unifiable("{y_'=a(|y_|)*y_-b(|y_|)}".asDifferentialProgram, ghost) match {
-            case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), Neg(s("b(|y_|)".asTerm)))
-            case None => UnificationMatch.unifiable("{y_'=y_}".asDifferentialProgram, ghost) match {
-              case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, "0".asTerm)
-              case None => UnificationMatch.unifiable("{y_'=-y_}".asDifferentialProgram, ghost) match {
-                case Some(s) => (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, "0".asTerm)
-                case None => throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or y'=a*y or y'=b or y'=a*y-b or y'=y")
-              }
-            }
-          }
-        }
-      }
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), s("b(|y_|)".asTerm))
+      case None    =>
     }
+
+    //y' = ay - b
+    UnificationMatch.unifiable(" {y_'=a(|y_|)*y_-b(|y_|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), Neg(s("b(|y_|)".asTerm)))
+      case None =>
+    }
+
+    //y' = -ay + b
+    UnificationMatch.unifiable("{y_'=-a(|y_|)*y_+b(|y_|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("a(|y_|)".asTerm)), s("b(|y_|)".asTerm))
+      case None =>
+    }
+
+    //y' = -ay - b
+    UnificationMatch.unifiable("{y_'=-a(|y_|)*y_-b(|y_|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], Neg(s("a(|y_|)".asTerm)), Neg(s("b(|y_|)".asTerm)))
+      case None =>
+    }
+
+    //y' = ay - b
+    UnificationMatch.unifiable("{y_'=a(|y_|)*y_-b(|y_|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), Neg(s("b(|y_|)".asTerm)))
+      case None    =>
+    }
+
+    //2 cases contain just a: +a and -a
+    //y' = ay
+    UnificationMatch.unifiable("{y_'=a(|y_|)*y_".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), "0".asTerm)
+      case None    =>
+    }
+
+    //y' = -ay
+    UnificationMatch.unifiable("{y_'=-a(|y_|)*y_".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("-a(|y_|)".asTerm), "0".asTerm)
+      case None    =>
+    }
+
+    //2 cases contain just b: +b and -b
+    //y' = b
+    UnificationMatch.unifiable("{y_'=b(|y_|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "0".asTerm, s("b(|y_|)".asTerm))
+      case None    =>
+    }
+    //y' = b
+    UnificationMatch.unifiable("{y_'=-b(|y_|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "0".asTerm, Neg(s("b(|y_|)".asTerm)))
+      case None    =>
+    }
+
+    //Two cases contain neither a or b: y'=y and y'=-y
+    //y' = y
+    UnificationMatch.unifiable("{y_'=y_}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, "0".asTerm)
+      case None    =>
+    }
+
+    //y' = -y
+    UnificationMatch.unifiable("{y_'=-y_}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, "0".asTerm)
+      case None    =>
+    }
+
+    throw new IllegalArgumentException("Ghost is not of the form y'=a*y+b or y'=a*y or y'=b or y'=a*y-b or y'=y")
+
+
   }
 
   /**
