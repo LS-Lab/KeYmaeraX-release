@@ -445,4 +445,57 @@ class ODETests extends TacticTestBase {
     val f = "x>=0->[{x'=x}]x>=0".asFormula
     proveBy(f, implyR(1) & ODE(1) & onAll(QE)) shouldBe 'proved
   })
+
+  "1D Saddle Node" should "prove with a bifurcation" in withMathematica(_ => {
+    val formula = """r <= 0 -> \exists f (x=f -> [{x'=r+x^2}]x=f)""".asFormula
+    val tactic = """implyR(1);
+              |cut({`r=0|r < 0`}) <(hideL(-1), hideR(1) ; QE); orL(-1) <(
+              |  existsR({`0`}, 1) ;
+              |  implyR(1) ;
+              |  dG({`{y'=-x*y}`}, {`y*x=0&y>0`}, 1) ; existsR({`1`}, 1) ;
+              |  boxAnd(1) ; andR(1) ; <(
+              |    dI(1),
+              |    dG({`{z'=x/2*z}`}, {`z^2*y=1`}, 1) ; existsR({`1`}, 1) ; dI(1)
+              |  )
+              |  ,
+              |  cut({`\exists s r=-s*s`}) ; <(
+              |    existsL(-2) ; existsR({`-s`}, 1) ; implyR(1) ; dG({`{y'=(-(x-s))*y}`}, {`y*(x+s)=0&y>0`}, 1) ; existsR({`1`}, 1) ; boxAnd(1) ; andR(1) ; <(
+              |      dI(1),
+              |      dG({`{z'=(x-s)/2*z}`}, {`z^2*y=1`}, 1) ; existsR({`1`}, 1) ; dI(1)
+              |    ),
+              |    hideR(1) ; QE
+              |  )
+              |)""".stripMargin.asTactic
+
+    proveBy(formula, tactic) shouldBe 'proved
+  })
+
+  it should "prove with tree-shaped proof" in withMathematica(_ => {
+    val formula = """r <= 0 -> \exists f (x=f -> [{x'=r+x^2}]x=f)""".asFormula
+
+    val tactic = """implyR(1);
+                   |cut({`r=0|r < 0`}) <(
+                   |  hideL(-1); orL(-1) <(
+                   |    existsR({`0`}, 1) ;
+                   |    implyR(1) ;
+                   |    dG({`{y'=-x*y}`}, {`y*x=0&y>0`}, 1) ; existsR({`1`}, 1) ;
+                   |    boxAnd(1) ; andR(1) ; <(
+                   |      dI(1),
+                   |      dG({`{z'=x/2*z}`}, {`z^2*y=1`}, 1) ; existsR({`1`}, 1) ; dI(1)
+                   |    )
+                   |    ,
+                   |    cut({`\exists s r=-s*s`}) ; <(
+                   |      existsL(-2) ; existsR({`-s`}, 1) ; implyR(1) ; dG({`{y'=(-(x-s))*y}`}, {`y*(x+s)=0&y>0`}, 1) ; existsR({`1`}, 1) ; boxAnd(1) ; andR(1) ; <(
+                   |        dI(1),
+                   |        dG({`{z'=(x-s)/2*z}`}, {`z^2*y=1`}, 1) ; existsR({`1`}, 1) ; dI(1)
+                   |      ),
+                   |      hideR(1) ; QE
+                   |    )
+                   |  )
+                   |  ,
+                   |  hideR(1) ; QE
+                   |)""".stripMargin.asTactic
+
+    proveBy(formula, tactic) shouldBe 'proved
+  })
 }
