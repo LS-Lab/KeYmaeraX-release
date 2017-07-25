@@ -34,7 +34,8 @@ object AxiomaticODESolver {
   private lazy val simplifier = SimplifierV3.simpTac()
 
   /** The name of the explicit time variables. */
-  private lazy val TIMEVAR: Variable = "kyxtime".asVariable
+  //WARNING global mutable state. Changed by addTimeVar. Do not run 2 AxiomaticODESolvers sequentially!
+  private var TIMEVAR: Variable = "kyxtime".asVariable
 
   /** The name of the ODE duration variable. */
   private lazy val DURATION: Variable = "t_".asVariable
@@ -379,6 +380,7 @@ object AxiomaticODESolver {
     }
 
     val t = TacticHelper.freshNamedSymbol(TIMEVAR, s)
+    TIMEVAR = t //WARNING global state
 
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
 
@@ -409,9 +411,14 @@ object AxiomaticODESolver {
 
     tmpmsg(s"next equation to integrate and cut: ${nextEqn.prettyString}")
 
+    val initIdx = TIMEVAR.index match {
+      case Some(n) => n+1
+      case None => 0
+    }
+
     //@todo switch completely to the new integrator, so that this is a single tactic instead of a saturated tactic.
     val solnToCut =
-      Integrator(initialConditions, Minus(TIMEVAR, Variable(TIMEVAR.name, Some(0))), system).find(eq => eq.left == nextEqn.xp.x)
+      Integrator(initialConditions, Minus(TIMEVAR, Variable(TIMEVAR.name, Some(initIdx))), system).find(eq => eq.left == nextEqn.xp.x)
         .getOrElse(throw new Exception(s"Could not get integrated value for ${nextEqn.xp.x} using new integration logic."))
 
     tmpmsg(s"Solution for ${nextEqn.prettyString} is $solnToCut")
