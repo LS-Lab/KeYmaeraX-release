@@ -27,9 +27,15 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
 
      $scope.uploadFile = function(fileName, fileContent, modelName, startProof) {
        var url = "user/" + sessionService.getUser();
-       if (fileName.endsWith('.kyx')) url = url + "/modeltextupload/" + modelName;
-       else if (fileName.endsWith('.kya')) url = url + "/archiveupload/";
-       upload(url, fileContent, startProof && fileName.endsWith('.kyx'));
+       if (!(fileName.endsWith('.kyx') || fileName.endsWith('.kyx.txt') ||
+             fileName.endsWith('.kya') || fileName.endsWith('.kya.txt'))) {
+         showMessage($uibModal, "Unknown file extension",
+                                "Expected file extension: .kyx / .kya / .kyx.txt / .kya.txt", "md");
+       } else {
+         var isKyx = fileName.endsWith('.kyx') || fileName.endsWith('.kyx.txt');
+         url = url + (isKyx ? "/modeltextupload/" + modelName : "/archiveupload/");
+         upload(url, fileContent, startProof && isKyx);
+       }
      };
 
      $scope.uploadContent = function(startProof) {

@@ -7,9 +7,15 @@ angular.module('keymaerax.ui.directives').directive('k4FileUpload', function () 
     templateUrl: 'templates/kyxupload.html',
     link: function(scope, element, attrs) {
 
+      getFileExt = function(fileName) {
+        var txtIdx = fileName.lastIndexOf('.txt'); //@note some browsers download our files as .kyx.txt
+        var fn = txtIdx >= 0 ? fileName.substr(0, txtIdx) : fileName;
+        return fn.substr(fn.lastIndexOf('.'), 4);
+      }
+
       element.on("change.bs.fileinput", function(e) {
         scope.fileExt = (keyFile && keyFile.files && keyFile.files.length > 0
-          ? keyFile.files[0].name.substr(keyFile.files[0].name.lastIndexOf('.'), 4)
+          ? getFileExt(keyFile.files[0].name)
           : '');
         scope.$apply();
       });
