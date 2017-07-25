@@ -210,11 +210,18 @@ angular.module('keymaerax.controllers').controller('ErrorReportCtrl', function($
   $scope.userDescription = undefined
   $scope.subjectText = "KeYmaera X error report"
 
+  encodeText = function(str) {
+    // replace characters not encoded by encodeURIComponent manually
+    return encodeURIComponent(str).replace(/[!'()*]/g, function(c) {
+      return '%' + c.charCodeAt(0).toString(16);
+    });
+  }
+
   $scope.bodyText = function() {
-    return "Description%0D%0A" + ($scope.userDescription ? encodeURI($scope.userDescription) : "") +
-      ($scope.omitSysConfig ? "%0D%0A%0D%0ASystem%20configuration%20unreported" : "%0D%0A%0D%0ASystem%20configuration%0D%0A" + encodeURI($scope.kyxConfig)) +
-      "%0D%0A%0D%0AError%20message%0D%0A" + encodeURI($scope.errorText) +
-      "%0D%0A%0D%0AError%20trace%0D%0A" + encodeURI($scope.errorTrace);
+    return encodeText("Description\n" + ($scope.userDescription ? $scope.userDescription : "") +
+      ($scope.omitSysConfig ? "\n\nSystem configuration unreported" : "\n\nSystem configuration\n" + $scope.kyxConfig) +
+      "\n\nError message\n" + $scope.errorText +
+      "\n\nError trace\n" + $scope.errorTrace);
   }
 
   $scope.cancel = function() {
