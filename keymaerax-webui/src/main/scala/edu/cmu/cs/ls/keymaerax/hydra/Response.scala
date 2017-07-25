@@ -100,6 +100,13 @@ class ModelListResponse(models : List[ModelPOJO]) extends Response {
   def getJson = JsArray(objects:_*)
 }
 
+class ModelUploadResponse(modelId: Option[String], errorText: Option[String]) extends Response {
+  def getJson = JsObject(
+    "success" -> JsBoolean(modelId.isDefined),
+    "errorText"->JsString(errorText.getOrElse("")),
+    "modelId"->JsString(modelId.getOrElse("")))
+}
+
 class UpdateProofNameResponse(proofId : String, newName : String) extends Response {
   def getJson = JsArray()
 }

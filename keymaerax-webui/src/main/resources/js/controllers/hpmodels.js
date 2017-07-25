@@ -25,42 +25,50 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
        content: undefined
      };
 
-     $scope.uploadFile = function(fileName, fileContent, modelName) {
+     $scope.uploadFile = function(fileName, fileContent, modelName, startProof) {
        var url = "user/" + sessionService.getUser();
        if (fileName.endsWith('.kyx')) url = url + "/modeltextupload/" + modelName;
        else if (fileName.endsWith('.kya')) url = url + "/archiveupload/";
-       upload(url, fileContent);
+       upload(url, fileContent, startProof && fileName.endsWith('.kyx'));
      };
 
-     $scope.uploadContent = function() {
+     $scope.uploadContent = function(startProof) {
        var url = "user/" + sessionService.getUser() + "/modeltextupload/" + $scope.model.modelName;
-       upload(url, $scope.model.content);
+       upload(url, $scope.model.content, startProof);
      }
 
      $scope.close = function() { $uibModalInstance.close(); };
 
-     var upload = function(url, content) {
+     var upload = function(url, content, startProof) {
        spinnerService.show('caseStudyImportSpinner');
        $http.post(url, content)
          .then(function(response) {
-           if(!response.data.success) {
-             if(response.data.errorText) {
+           if (!response.data.success) {
+             if (response.data.errorText) {
                showMessage($uibModal, "Error Uploading Model", response.data.errorText, "md")
-             }
-             else {
+             } else {
                showMessage($uibModal, "Unknown Error Uploading Model", "An unknown error that did not raise an uncaught exception occurred while trying to insert a model into the database. Perhaps see the server console output for more information.", "md")
              }
-           }
-           else { //Successfully uploaded model!
+           } else { //Successfully uploaded model!
              $scope.close();
-             //Update the models list -- this should result in the view being updated?
-             while (Models.getModels().length != 0) {
-               Models.getModels().shift()
+             var modelId = response.data.modelId;
+             if (startProof) {
+               var uri = 'models/users/' + sessionService.getUser() + '/model/' + modelId + '/createProof'
+               $http.post(uri, {proofName: '', proofDescription: ''}).
+                 success(function(data) { $location.path('proofs/' + data.id); }).
+                 error(function(data, status, headers, config) {
+                   console.log('Error starting new proof for model ' + modelId)
+                 });
+             } else {
+               //Update the models list -- this should result in the view being updated?
+               while (Models.getModels().length != 0) {
+                 Models.getModels().shift()
+               }
+               $http.get("models/users/" + sessionService.getUser()).success(function(data) {
+                 Models.addModels(data);
+                 $route.reload();
+               });
              }
-             $http.get("models/users/" + sessionService.getUser()).success(function(data) {
-               Models.addModels(data);
-               $route.reload();
-             });
            }
          })
          .catch(function(err) {

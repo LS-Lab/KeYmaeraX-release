@@ -14,14 +14,14 @@ angular.module('keymaerax.ui.directives').directive('k4FileUpload', function () 
         scope.$apply();
       });
 
-      scope.readFile = function() {
+      scope.readFile = function(startProof) {
         var file = keyFile.files[0];
         var fr = new FileReader();
         var modelName = scope.fileExt == '.kyx' ? modelNameInput.value : undefined;
         fr.onerror = function(e) { alert("Error opening file: " + e.getMessage()); };
         fr.onload = function(e) {
           var fileContent = e.target.result;
-          scope.onFileConfirmed({ fileName: file.name, fileContent: fileContent, modelName: modelName });
+          scope.onFileConfirmed({ fileName: file.name, fileContent: fileContent, modelName: modelName, startProof: startProof });
         };
 
         fr.readAsText(file);

@@ -676,10 +676,10 @@ class CreateModelRequest(db: DBAbstraction, userId: String, nameOfModel: String,
       KeYmaeraXProblemParser.parseAsProblemOrFormula(modelText) match {
         case fml: Formula =>
           if (db.getModelList(userId).map(_.name).contains(nameOfModel)) {
-            BooleanResponse(flag=false, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
+            new ModelUploadResponse(None, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
           } else {
             val createdId = db.createModel(userId, nameOfModel, augmentDeclarations(modelText, fml), currentDate()).map(x => x.toString)
-            BooleanResponse(createdId.isDefined) :: Nil
+            new ModelUploadResponse(createdId, None) :: Nil
           }
         case t => new ErrorResponse("Expected a model formula, but got a file with a " + t.kind) :: Nil
       }

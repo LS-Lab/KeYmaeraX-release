@@ -5,7 +5,7 @@
             <div class="col-md-12" id="modelupload"
                  data-intro="Load new .kyx model files or .kya archive files here."
                  data-position="bottom">
-                <k4-file-upload on-file-confirmed="uploadFile(fileName, fileContent, modelName)"></k4-file-upload>
+                <k4-file-upload on-file-confirmed="uploadFile(fileName, fileContent, modelName, startProof)"></k4-file-upload>
             </div>
             </div>
         </uib-tab>
@@ -18,7 +18,9 @@
                         <input type="text" ng-model="model.modelName" class="form-control" name="modelName" id="modelName"
                                placeholder="Model Name"/>
                         <a ng-class="{'input-group-addon':true, 'btn':true, 'btn-default':true, 'disabled':!model.modelName}"
-                           ng-click="uploadContent()" ng-cloak>Save</a>
+                           ng-click="uploadContent(false)" ng-cloak>Save</a>
+                        <a ng-class="{'input-group-addon':true, 'btn':true, 'btn-default':true, 'disabled':!model.modelName}"
+                           ng-click="uploadContent(true)" ng-cloak>Start Proof</a>
                     </div>
                     </div>
                 </div>
