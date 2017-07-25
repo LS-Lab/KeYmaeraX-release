@@ -7,7 +7,136 @@
   --lslightgreen:#54B9DF;       /* Blue (bright 2) */
   --lsmain:black;
   --lsmainback:white;
+  --lsfontsize:14px;
 }
+
+body {
+  font-size: var(--lsfontsize);
+}
+
+/* Convert Bootstrap absolute font sizes into relative font sizes */
+pre {
+  font-size: 90%;
+}
+
+output {
+  font-size: var(--lsfontsize);
+}
+
+.form-control {
+  font-size: var(--lsfontsize);
+}
+
+.form-group-sm {
+  font-size: 85%;
+}
+
+.form-group-lg {
+  font-size: 130%;
+}
+
+.btn {
+  font-size: var(--lsfontsize);
+}
+
+.btn-lg,
+.btn-group-lg > .btn {
+  font-size: 130%;
+}
+
+.btn-sm,
+.btn-group-sm > .btn {
+  font-size: 85%;
+}
+
+.btn-xs,
+.btn-group-xs > .btn {
+  font-size: 85%;
+}
+
+.dropdown-menu {
+  font-size: var(--lsfontsize);
+}
+
+.dropdown-header {
+  font-size: 85%;
+}
+
+.input-group-lg > .form-control,
+.input-group-lg > .input-group-addon,
+.input-group-lg > .input-group-btn > .btn {
+  font-size: 130%;
+}
+
+.input-group-sm > .form-control,
+.input-group-sm > .input-group-addon,
+.input-group-sm > .input-group-btn > .btn {
+  font-size: 85%;
+}
+
+.input-group-addon {
+  font-size: var(--lsfontsize);
+}
+
+.input-group-addon.input-sm {
+  font-size: 85%;
+}
+
+.input-group-addon.input-lg {
+  font-size: 130%;
+}
+
+.navbar-brand {
+  font-size: 130%;
+}
+
+.pagination-lg > li > a,
+.pagination-lg > li > span {
+  font-size: 130%;
+}
+
+.pagination-sm > li > a,
+.pagination-sm > li > span {
+  font-size: 85%;
+}
+
+.badge {
+  font-size: 85%;
+}
+
+.jumbotron p {
+  font-size: 150%;
+}
+
+.progress-bar {
+  font-size: 85%;
+}
+
+.panel-title {
+  font-size: 115%;
+}
+
+.close {
+  font-size: 150%;
+}
+
+.tooltip {
+  font-size: 85%;
+}
+
+.popover {
+  font-size: var(--lsfontsize);
+}
+
+.popover-title {
+  font-size: var(--lsfontsize);
+}
+
+.carousel-control {
+  font-size: 150%;
+}
+
+/* End Bootstrap font size conversion */
 
 .btn-file {
   position: relative;
@@ -851,7 +980,7 @@ del {
   padding: 0 0 0 0px; /* padding: 0 5px 0 10px; */
   display: block;
   line-height: 13px;
-  font-size: 10px;
+  font-size: 70%;
 }
 .k4-formula > ul:first-child li:hover {
   background: var(--lslightblue);

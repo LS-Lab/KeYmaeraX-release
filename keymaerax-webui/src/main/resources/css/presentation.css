@@ -4,13 +4,13 @@
 High-contrast color and bigger fonts
 */
 a {
-  font-size: 18px;
+  font-size: var(--lsfontsize);
   color: var(--lsmain);
   text-decoration: none;
 }
 
 .btn-link {
-  font-size: 18px;
+  font-size: var(--lsfontsize);
   color: var(--lsmain);
   text-decoration: none;
 }
@@ -20,17 +20,17 @@ a {
 }
 
 body {
-  font-size: 18px;
+  font-size: var(--lsfontsize);
   color: var(--lsmain);
   background-color: var(--lsmainback);
 }
 
 .dropdown-menu {
-  font-size: 16px;
+  font-size: 90%;
 }
 
 pre {
-  font-size: 20px;
+  font-size: 110%;
 }
 
 /*
@@ -51,7 +51,7 @@ code {
 }
 
 .popover {
-  font-size: 20px; /* large:22px*/
+  font-size: 110%;
 }
 
 .k4-narrowinput {
@@ -60,7 +60,7 @@ code {
 
 .k4-proofrow .k4-proofrule {
   width: 2em;
-  font-size: 16px; /*large:18px*/
+  font-size: 90%;
 }
 
 .k4-formula.hover > ul:first-child, .k4-formula:hover > ul:first-child {
@@ -76,7 +76,7 @@ code {
   color: var(--lsmain);
 }
 .k4-formula .k4-formula-content {
-  font-size: 24px; /*large:26px*/
+  font-size: 133%;
 }
 
 .k4-sequent-hint {

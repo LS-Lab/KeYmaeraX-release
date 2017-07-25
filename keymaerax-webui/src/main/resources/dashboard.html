@@ -20,9 +20,7 @@
     <!-- Custom styles for this template -->
     <link ng-href="css/{{theme.css}}.css" title="KeYmaera X" rel="stylesheet" type="text/css">
     <link href="css/app-print.css" title="KeYmaera X Print" rel="alternate stylesheet" type="text/css">
-    <link href="css/presentation_small.css" title="KeYmaera X Presentation Mode Small" rel="alternate stylesheet" type="text/css">
-    <link href="css/presentation.css" title="KeYmaera X Presentation Mode Medium" rel="alternate stylesheet" type="text/css">
-    <link href="css/presentation_large.css" title="KeYmaera X Presentation Mode Large" rel="alternate stylesheet" type="text/css">
+    <link href="css/presentation.css" title="KeYmaera X Presentation Mode" rel="alternate stylesheet" type="text/css">
 
     <!-- plugins -->
     <link href="/css/intro/introjs.css" rel="stylesheet" type="text/css">
@@ -65,6 +63,8 @@
                 <li class="dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown">Theme <span class="caret"></span></a>
                     <ul class="dropdown-menu" role="menu">
+                        <li>Font size: <input type="number" name="fontsize" min="10" max="100" size="3" ng-model="theme.fontSize" ng-change="selectTheme(theme)">px</li>
+                        <li class="divider"></li>
                         <li ng-repeat="t in themes"><a ng-click="selectTheme(t)"><i ng-show="theme.name === t.name" class="k4-menu-icon fa fa-check"></i> {{t.name}}</a></li>
                     </ul>
                 </li>
@@ -227,6 +227,13 @@
 <script src="js/keymaera-ui/kyxupload.js"></script>
 
 <script>hljs.initHighlightingOnLoad();</script>
+
+<!-- avoid closing the menu when an input is clicked -->
+<script type="text/javascript">
+    $('.dropdown-menu input').click(function(e) {
+        e.stopPropagation();
+    });
+</script>
 
 </body>
 </html>

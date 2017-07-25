@@ -166,8 +166,9 @@ trait RestApi extends HttpService with SLF4JLogging {
       completeRequest(request, t)
     } ~
       post {
-        entity(as[String]) { theme => {
-          val request = new SetUserThemeRequest(database, userId, theme)
+        entity(as[String]) { themeStr => {
+          val theme = themeStr.parseJson.asJsObject.fields.map({case (k,v) => k -> v.toString})
+          val request = new SetUserThemeRequest(database, userId, theme("css"), theme("fontSize"))
           completeRequest(request, t)
         }}}
   }}

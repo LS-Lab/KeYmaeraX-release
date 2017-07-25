@@ -552,16 +552,21 @@ class GetMathematicaConfigurationRequest(db : DBAbstraction) extends LocalhostOn
 class GetUserThemeRequest(db: DBAbstraction, userName: String) extends UserRequest(userName) with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val config = db.getConfiguration(userName).config
-    new PlainResponse("theme" -> JsString(config.getOrElse("theme", "app"))) :: Nil
+    new PlainResponse(
+      "themeCss" -> config.getOrElse("themeCss", "\"app\"").parseJson,
+      "themeFontSize" -> config.getOrElse("themeFontSize", "14").parseJson) :: Nil
   }
 }
 
 /** Sets the UI theme. @note ReadRequest allows changing theme in guest mode for presentation purposes. */
-class SetUserThemeRequest(db: DBAbstraction, userName: String, theme: String) extends UserRequest(userName) with ReadRequest {
+class SetUserThemeRequest(db: DBAbstraction, userName: String, themeCss: String, themeFontSize: String)
+    extends UserRequest(userName) with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val config = db.getConfiguration(userName)
-    db.updateConfiguration(new ConfigurationPOJO(userName, config.config.updated("theme", theme)))
-    BooleanResponse(flag=true) :: Nil
+    db.updateConfiguration(new ConfigurationPOJO(userName, config.config.updated("themeCss", themeCss).updated("themeFontSize", themeFontSize)))
+    new PlainResponse(
+      "themeCss" -> themeCss.parseJson,
+      "themeFontSize" -> themeFontSize.parseJson) :: Nil
   }
 }
 
