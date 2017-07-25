@@ -1508,7 +1508,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 
             def interpreter(proofId: Int, startNodeId: Int) = new Interpreter {
               val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof, RequestHelper.listenerFactory(db),
-                SequentialInterpreter, 1, strict = false)
+                SequentialInterpreter, 0, strict = false)
 
               override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
                 inner(expr, v)
