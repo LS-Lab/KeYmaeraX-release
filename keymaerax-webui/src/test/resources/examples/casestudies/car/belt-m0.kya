@@ -1,0 +1,98 @@
+﻿ ArchiveEntry "Safety Belt Mechanism: Pendulum Under Lateral Acceleration".
+
+/* 
+ * Model of pendulum suspended from an accelerating object.
+ * Inspired by: System Dynamics 4th Ed., Katsuhiko Ogata, Problem A-4-15, pp 164. Prentice Hall.
+ * Pendulums are used to engage safety belts by detecting excessive accelerations.
+ * In this model we prove that under sufficient acceleration, a pendulum will swing forward within
+ * a certain time bound (which in a safety belt would engage the rachet and cause the belt to lock).
+ */
+
+Functions.
+  R B. /* Lateral acceleration on the top of the pendulum */
+  R g. /* Gravity acting on the head of the pendulum*/
+End.
+
+ProgramVariables.
+  R x. /* x-coordinate of pendulum head */
+  R y. /* y-coordinate of pendulum head */
+  R t. /* Current time */
+  R v. /* Current linear velocity of pendulum head */
+End.
+
+Problem.
+/* Prove that a pendulum under sufficient acceleration reaches a target position 
+ * (angle Pi/4) within bounded time (here 2^(5/4)/sqrt(B-g), tighter bounds are possible) */
+x = 0 & y = -1 &       /* Pendulum head initially at bottom-center (origin is top of pendulum) */
+B() > g() & g() > 0 &  /* Lateral acceleration stronger than gravity */
+t = 0 & v = 0          /* Initially stopped */
+-> [
+/* Pendulum evolves in a circle at velocity v, with
+ * acceleration determined by orthogonal gravity g()
+ * and braking B() */
+{ x' = -y*v, y'=x*v, v' = x*g() - y*B(), t' = 1 &
+ /* x^2 <= (1/2) & x >= 0 restricts motion to the first pi/4 of quadrant IV,
+    making the proof easier. */
+ (x^2 <= (1/2) & x >= 0 & y <= 0 & v >= 0)
+}]
+t <= 2^(5/4)*(B()-g())^(-1/2)
+End.
+
+
+/* Because the exact solutions of a pendulum involve undecidable arithmetic, 
+ * the proof of safety establishes a series of differential invariants.
+ * Each invariant is introduced with a differential cut dC() and proves automatically by ODE()
+ * The original proof is given here. 
+ * A slight refactoring is given below which may be more readable. */
+Tactic "Safety Belt : Proof 1".
+  unfold ; 
+  /* Time is positive */
+  dC({`t>=0`}, 1) ; <(
+  /* Pendulum stays on circle */
+  dC({`x^2+y^2=1`}, 1) ; <(
+  /* Bound on y from x^2 + y^2 = 1 identity */
+  dC({`y^2>=1/2`}, 1) ; <(
+  /* By transitivity, relate x and y */
+  dC({`-y>=x`}, 1) ; <(
+  /* Conservative velocity bound from x, y bounds */
+  dC({`v>=2^(-1/2)*(B()-g())*t`}, 1) ; <(
+  /* Position bound from velocity bound */
+  dC({`x>=1/2*2^(-1/2)*(B()-g())*t^2/2`}, 1) ; <(
+            /* Time bound follows arithmetically from position bound */
+            ODE(1),
+            ODE(1)
+            ),
+          ODE(1)
+          ),
+        ODE(1)
+        ),
+      ODE(1)
+      ),
+    ODE(1)
+    ),
+  ODE(1)
+  )
+End.
+
+Tactic "Safety Belt : Optimized Proof".
+  unfold ; 
+  /* Time is positive */
+  dC({`t>=0`}, 1) ;      <(nil, ODE(1)) ;
+  /* Pendulum stays on circle */
+  dC({`x^2+y^2=1`}, 1) ; <(nil, ODE(1)) ;
+  /* Bound on y from x^2 + y^2 = 1 identity */
+  dC({`y^2>=1/2`}, 1) ;  <(nil, ODE(1)) ;
+  /* By transitivity, relate x and y */
+  dC({`-y>=x`}, 1) ;     <(nil, ODE(1)) ;
+  /* Conservative velocity bound from x, y bounds */
+  dC({`v>=2^(-1/2)*(B()-g())*t`}, 1) ; <(nil, ODE(1)) ;
+  /* Position bound from velocity bound */
+  dC({`x>=1/2*2^(-1/2)*(B()-g())*t^2/2`}, 1) ; <(nil, ODE(1)) ;
+  /* Time bound follows arithmetically from position bound */
+  ODE(1)
+End.
+
+
+
+
+End.

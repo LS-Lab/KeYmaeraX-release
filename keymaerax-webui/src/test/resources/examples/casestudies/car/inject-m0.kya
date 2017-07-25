@@ -1,0 +1,149 @@
+﻿ArchiveEntry "(Highly Simplified) Fuel Injector: Engine Heat Dissipation".
+
+/*
+ * Model of heat in an internal combustion engine.
+ * Discrete ignitions increase heat energy, which continuously
+ * dissipates into the atmosphere by Newton's cooling law.
+ * Realistic models of combustion are too complex for an introductory example.
+ * In our combustion model an injector discretely sets the rate at which fuel
+ * enters a cylinder. Each time the cylinder fires, the fuel is depleted and
+ * heat energy is released in proportion to the volume of fuel. We show that
+ * discrete fuel injector control allows us to enforce a limit on the heat of
+ * the engine.
+ *
+ * The model is time-triggered: the injector can only modify its rate every "eps" time.
+ * Time-triggered controllers plan ahead into the future: An injection rate is safe if,
+ * even in the future, the energy stored in the fuel would not overheat the engine.
+ *
+ * This model is conservative in several ways. The injection rate calculation accounts
+ * neither for cooling that occurs during the current "eps" timestep, nor for the maximum
+ * capacity Vmax. The model could be extended to handle these cases, e.g. by modifying
+ * the test following "Rc :=*;" and adjusting the proof to account for the changes.
+ */
+
+Functions.
+  R Ta.   /* Ambient temperature of air */
+  R Tmax. /* Maximum safe temperature for cylinder */
+  R k.    /* Constant energy content of fuel */
+  R eps.  /* Maximum time between control iterations */
+  R Vmax. /* Maximum volume of cylinder */
+End.
+
+ProgramVariables.
+  R Tc. /* Temperature of cylinder */
+  R Rc. /* Rate of fuel flow into cylinder */
+  R Vc. /* Volume of fuel in cylinder */
+  R t.  /* Time */
+End.
+
+Problem.
+
+k() > 0 & eps() > 0 & Vmax() > 0 &
+/* Cylinder initially empty */
+Vc = 0 &
+/* Environment cooler than cylinder, cooler than limit */
+Ta() < Tc & Tc < Tmax() 
+->
+[{
+ /* At any time the cylinder might fire, consuming fuel and releasing heat.
+  * (or not) */
+{{Tc := Tc + (k() * Vc); Vc := 0;}
+  ++ 
+ {?(true);}}
+ /* Set fuel rate so that after eps() time, cylinder contains safe volume */
+{Rc :=*; ?(Rc >= 0 & Tc + (k() * (Vc + Rc * eps())) <= Tmax());}
+t:=0;
+{Tc' = (Ta() - Tc), /* Temperature follows Newton's cooling law */
+ Vc' = Rc,          /* Volume changes at discretely-set rate Rc */
+ t' = 1
+ & t <= eps() & Vc <= Vmax()} /* Only run for time eps() and while cylinder isn't full */
+}*]
+Tc <= Tmax() /* Never exceed maximum temperature */
+
+End.
+
+
+/* The original proof is given here. 
+ * A slight refactoring is given below which may be more readable. */
+Tactic "Injection Model 0 : Proof 1".
+  /* Loop invariant: Engine hotter than environment, cylinder volume safe */
+  unfold ; loop({`Ta() < Tc&Tc+k()*Vc<=Tmax()&Vc>=0`}, 1) ; <(
+  master,
+  master,
+  /* Two cases of proof for two cases of ignition vs. no ignition.
+   * In each case, apply (the same) differential invariants */
+  unfold ; <(
+    /* Time always positive */
+    dC({`t>=0`}, 1) ; <(
+      /* Linear increase in volume */
+      dC({`Vc=old(Vc)+Rc*t`}, 1) ; <(
+        /* Never below ambient temperature */
+        dC({`Ta()-Tc < 0`}, 1) ; <(
+           /* Bound energy capacity of cylinder in terms of time */
+          dC({`Tc+k()*(Vc+Rc*(eps()-t))<=Tmax()`}, 1) ; <(
+            dW(1) ; QE,
+            dI(1)
+            ),
+          /* ODE(1) automatically performs ghost argument for Ta()-Tc < 0 invariant */
+          ODE(1)
+          ),
+        dI(1)
+        ),
+      dI(1)
+      ),
+    /* Time always positive */
+    dC({`t>=0`}, 1) ; <(
+      /* Linear increase in volume */
+      dC({`Vc=old(Vc)+Rc*t`}, 1) ; <(
+        /* Never below ambient temperature */
+        dC({`Ta()-Tc<0`}, 1) ; <(
+          /* Bound energy capacity of cylinder in terms of time */
+          dC({`Tc+k()*(Vc+Rc*(eps()-t))<=Tmax()`}, 1) ; <(
+              dW(1) ; QE,
+              ODE(1)
+              ),
+            /* ODE(1) automatically performs ghost argument for Ta()-Tc < 0 invariant */
+            ODE(1)
+            ),
+          dI(1)
+          ),
+        dI(1)
+        )))
+End.
+
+Tactic "Injection Model 0 : Proof 2".
+  /* Loop invariant: Engine hotter than environment, cylinder volume safe */
+  unfold ; loop({`Ta() < Tc&Tc+k()*Vc<=Tmax()&Vc>=0`}, 1) ; <(
+  master,
+  master,
+  /* Two cases of proof for two cases of ignition vs. no ignition.
+   * In each case, apply (the same) differential invariants */
+
+  unfold ; <(
+    /* Time always positive */
+    dC({`t>=0`}, 1)                            ;<(nil, dI(1));
+    /* Linear increase in volume */
+    dC({`Vc=old(Vc)+Rc*t`}, 1)                 ;<(nil, dI(1));
+    /* Never below ambient temperature */
+    dC({`Ta()-Tc < 0`}, 1)                     ;<(nil, ODE(1));
+    /* Bound energy capacity of cylinder in terms of time */
+    dC({`Tc+k()*(Vc+Rc*(eps()-t))<=Tmax()`}, 1);<(nil, dI(1));
+    dW(1) ; QE,
+
+    /* Time always positive */
+    dC({`t>=0`}, 1);                           <(nil, dI(1));
+    /* Linear increase in volume */
+    dC({`Vc=old(Vc)+Rc*t`}, 1) ;                 <(nil, dI(1));
+    /* Never below ambient temperature 
+     *  ODE(1) automatically performs ghost argument for Ta()-Tc < 0 invariant */
+    dC({`Ta()-Tc < 0`}, 1) ;                    <(nil, ODE(1));
+    /* Bound energy capacity of cylinder in terms of time */
+    dC({`Tc+k()*(Vc+Rc*(eps()-t))<=Tmax()`}, 1); <(nil, dI(1));
+    dW(1) ; QE
+    )
+  )
+End.
+       
+
+End.
+       
