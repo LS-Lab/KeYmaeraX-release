@@ -25,6 +25,7 @@ output {
 
 .form-control {
   font-size: var(--lsfontsize);
+  height: inherit;
 }
 
 .form-group-sm {
@@ -729,7 +730,7 @@ del {
 }
 .k4-proofrow-annotation > ul:last-child li {
   height: 3ex;
-  font-size: x-small;
+  font-size: smaller;
   border: none;
   color: var(--lsmain);
   display: block;
@@ -745,7 +746,7 @@ del {
   border-top: none;
   border-right: none;
   border-bottom: thin solid var(--lsmain);
-  margin: 0 0 0 6em;
+  margin: 0 0 0 3em;
 }
 
 /* must be after k4-proofrow: overrides border styling */
@@ -760,25 +761,25 @@ del {
 .k4-proofrow > ul:first-child {
   list-style-type: none;
   padding: 0 0 0 0;
-  margin: -1.4ex 0 0 0.5em;
+  margin: -1.4ex 0 0 -0.5em;
   text-align: right;
-  width: 6em;
+  width: 3em;
   display: block;
   position: absolute;
   left: 0;
 }
 .k4-proofrow > ul:first-child li {
   height: 3ex;
-  font-size: x-small;
+  font-size: smaller;
   border: none;
   color: var(--lsmain);
   display: inline-block;
   white-space: nowrap;
-  width: 6.5em;
+  width: 3.5em;
 }
 
 .k4-proofrow .k4-proofrule {
-  width: 3em;
+  width: 2em;
   display: inline-block;
   white-space: nowrap;
   overflow-x: hidden;
@@ -789,7 +790,7 @@ del {
 .k4-proofrow .k4-prooficon {
   display: inline-block;
   text-align: center;
-  width: 1.5em;
+  width: 1em;
 }
 
 .k4-flexrow {
