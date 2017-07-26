@@ -648,42 +648,21 @@ class CreateModelFromFormulaRequest(db: DBAbstraction, userId: String, nameOfMod
 }
 
 class CreateModelRequest(db: DBAbstraction, userId: String, nameOfModel: String, modelText: String) extends UserRequest(userId) with WriteRequest {
-  private def printDomain(d: Sort): String = d match {
-    case Real => "R"
-    case Bool => "B"
-    case Unit => ""
-    case Tuple(l, r) => printDomain(l) + "," + printDomain(r)
-  }
-
-  private def augmentDeclarations(content: String, parsedContent: Formula): String =
-    if (content.contains("Problem.")) modelText //@note determine by mandatory "Problem." block of KeYmaeraXProblemParser
-    else {
-      val symbols = StaticSemantics.symbols(parsedContent)
-      val fnDecls = symbols.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>
-        if (fn.sort == Real) s"R ${fn.asString}(${printDomain(fn.domain)})."
-        else if (fn.sort == Bool) s"B ${fn.asString}(${printDomain(fn.domain)})."
-        else ???
-      ).mkString("\n  ")
-      val varDecls = symbols.filter(_.isInstanceOf[BaseVariable]).map(v => s"R ${v.prettyString}.").mkString("\n  ")
-      s"""Functions.
-         |  $fnDecls
-         |End.
-         |ProgramVariables.
-         |  $varDecls
-         |End.
-         |Problem.
-         |  $modelText
-         |End.""".stripMargin
-    }
-
   def resultingResponses(): List[Response] = {
-    try {
+    if (KeYmaeraXProblemParser.isExercise(modelText)) {
+      if (db.getModelList(userId).map(_.name).contains(nameOfModel)) {
+        new ModelUploadResponse(None, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
+      } else {
+        val createdId = db.createModel(userId, nameOfModel, modelText, currentDate()).map(_.toString)
+        new ModelUploadResponse(createdId, None) :: Nil
+      }
+    } else try {
       KeYmaeraXProblemParser.parseAsProblemOrFormula(modelText) match {
         case fml: Formula =>
           if (db.getModelList(userId).map(_.name).contains(nameOfModel)) {
             new ModelUploadResponse(None, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
           } else {
-            val createdId = db.createModel(userId, nameOfModel, augmentDeclarations(modelText, fml), currentDate()).map(x => x.toString)
+            val createdId = db.createModel(userId, nameOfModel, RequestHelper.augmentDeclarations(modelText, fml), currentDate()).map(_.toString)
             new ModelUploadResponse(createdId, None) :: Nil
           }
         case t => new ErrorResponse("Expected a model formula, but got a file with a " + t.kind) :: Nil
@@ -699,8 +678,20 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
   private def emptyToOption(s: String): Option[String] = if (s.isEmpty) None else Some(s)
 
   def resultingResponses(): List[Response] = {
-    db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(content))
-    BooleanResponse(flag=true) :: Nil
+    if (KeYmaeraXProblemParser.isExercise(content)) {
+      db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(content))
+      BooleanResponse(flag=true) :: Nil
+    } else try {
+      KeYmaeraXProblemParser.parseAsProblemOrFormula(content) match {
+        case fml: Formula =>
+          val newContent = RequestHelper.augmentDeclarations(content, fml)
+          db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(newContent))
+          BooleanResponse(flag = true) :: Nil
+        case t => new ErrorResponse("Expected a model formula, but got a file with a " + t.kind) :: Nil
+      }
+    } catch {
+      case e: ParseException => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
+    }
   }
 }
 
@@ -1953,6 +1944,34 @@ class CheckValidationRequest(db: DBAbstraction, taskId: String) extends Request 
 //endregion
 
 object RequestHelper {
+
+  def printDomain(d: Sort): String = d match {
+    case Real => "R"
+    case Bool => "B"
+    case Unit => ""
+    case Tuple(l, r) => printDomain(l) + "," + printDomain(r)
+  }
+
+  def augmentDeclarations(content: String, parsedContent: Formula): String =
+    if (content.contains("Problem.")) content //@note determine by mandatory "Problem." block of KeYmaeraXProblemParser
+    else {
+      val symbols = StaticSemantics.symbols(parsedContent)
+      val fnDecls = symbols.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>
+        if (fn.sort == Real) s"R ${fn.asString}(${printDomain(fn.domain)})."
+        else if (fn.sort == Bool) s"B ${fn.asString}(${printDomain(fn.domain)})."
+        else ???
+      ).mkString("\n  ")
+      val varDecls = symbols.filter(_.isInstanceOf[BaseVariable]).map(v => s"R ${v.prettyString}.").mkString("\n  ")
+      s"""Functions.
+         |  $fnDecls
+         |End.
+         |ProgramVariables.
+         |  $varDecls
+         |End.
+         |Problem.
+         |  $content
+         |End.""".stripMargin
+    }
 
   /* String representation of the actual step (if tacticId refers to stepAt, otherwise tacticId).
      For display purposes only. */

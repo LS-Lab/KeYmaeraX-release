@@ -151,15 +151,16 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
   });
 
   $scope.open = function (modelId) {
-      var modalInstance = $uibModal.open({
-        templateUrl: 'partials/modeldialog.html',
-        controller: 'ModelDialogCtrl',
-        size: 'fullscreen',
-        resolve: {
-          userid: function() { return $scope.userId; },
-          modelid: function () { return modelId; }
-        }
-      });
+    var modalInstance = $uibModal.open({
+      templateUrl: 'partials/modeldialog.html',
+      controller: 'ModelDialogCtrl',
+      size: 'fullscreen',
+      resolve: {
+        userid: function() { return $scope.userId; },
+        modelid: function() { return modelId; },
+        mode: function() { return Models.getModel(modelId).isExercise ? 'exercise' : 'edit'; }
+      }
+    });
   };
 
   $scope.openNewModelDialog = function() {
@@ -306,7 +307,9 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
 });
 
 angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
-    function ($scope, $http, $uibModalInstance, $location, Models, userid, modelid) {
+    function ($scope, $http, $uibModal, $uibModalInstance, $location, Models, userid, modelid, mode) {
+  $scope.mode = mode;
+
   $http.get("user/" + userid + "/model/" + modelid).then(function(response) {
       $scope.model = response.data;
       $scope.origModel = JSON.parse(JSON.stringify(response.data)); // deep copy
@@ -325,6 +328,16 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
           $scope.model.id = response.data.modelId;
           $scope.model.name = modelCopyName + i + ')';
           $scope.origModel = JSON.parse(JSON.stringify($scope.model)); // deep copy
+        })
+        .catch(function(err) {
+          $uibModal.open({
+            templateUrl: 'templates/parseError.html',
+            controller: 'ParseErrorCtrl',
+            size: 'lg',
+            resolve: {
+              model: function () { return $scope.model.keyFile; },
+              error: function () { return err.data; }
+          }});
         });
       } else {
         var data = {
@@ -334,13 +347,23 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
           content: $scope.model.keyFile
         };
         $http.post("user/" + userid + "/model/" + modelid + "/update", data).then(function(response) {
-          var model = $.grep(Models.getModels(), function(m) { return m.id === modelid; })[0];
+          var model = Models.getModel(modelid);
           model.name = $scope.model.name;
           model.title = $scope.model.title;
           model.description = $scope.model.description;
           model.keyFile = $scope.model.keyFile;
           $scope.origModel = JSON.parse(JSON.stringify($scope.model)); // deep copy
         })
+        .catch(function(err) {
+          $uibModal.open({
+            templateUrl: 'templates/parseError.html',
+            controller: 'ParseErrorCtrl',
+            size: 'lg',
+            resolve: {
+              model: function () { return $scope.model.keyFile; },
+              error: function () { return err.data; }
+          }});
+        });
       }
     }
   }
@@ -354,6 +377,8 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
         console.log('Error starting new proof for model ' + modelid)
       });
   }
+
+  $scope.modelIsComplete = function() { return $scope.model && $scope.model.keyFile.indexOf('__________') < 0; }
 
   $scope.checkName = function(name) {
     var nameIsUnique = $.grep(Models.getModels(), function(m) { return m.name === name && m.id !== modelid; }).length == 0;

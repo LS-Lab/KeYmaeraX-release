@@ -6,6 +6,10 @@ angular.module('keymaerax.controllers').factory('Models', function () {
         getModels: function() {
             return models;
         },
+        getModel: function(modelId) {
+          var model = $.grep(models, function(m) { return m.id === modelId; });
+          return model && model.length > 0 ? model[0] : undefined;
+        },
         setModels: function(m) {
             models = m;
         },

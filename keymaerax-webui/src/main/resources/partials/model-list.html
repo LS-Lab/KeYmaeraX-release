@@ -103,21 +103,23 @@
             <td ng-model="model" id="modelactions"
                 data-intro="Start new proofs, generate monitor conditions, synthesize test cases, and download models (.kyx, includes only the model) and archives (.kya, includes a model with all its partial and finished proofs)."
                 data-position="bottom" ng-if="$first">
-                <a class="btn btn-default" ng-href="dashboard.html?#/models/{{ model.id }}/proofs" uib-tooltip="Show proofs"><i class="fa fa-list"></i></a>
-                <a class="btn btn-default" ng-controller="ModelProofCreateCtrl" ng-click="createProof(model.id, '', '')" uib-tooltip="Start new proof"><i class="fa fa-gears"></i></a>
-                <a class="btn btn-default" ng-click="modelplex(model.id)" uib-tooltip="Generate ModelPlex monitor" tooltip-placement="auto top"><i class="fa fa-shield"></i></a>
-                <a class="btn btn-default" ng-click="testsynthesis(model.id)" uib-tooltip="Test Case Synthesis and Analysis" tooltip-placement="auto top"><i class="fa fa-flask"></i></a>
+                <a class="btn btn-default" ng-if="model.isExercise" ng-click="startExercise(model.id)" uib-tooltip="Start exercise"><i class="fa fa-pencil-square-o"></i></a>
+                <a class="btn btn-default" ng-if="!model.isExercise" ng-href="dashboard.html?#/models/{{ model.id }}/proofs" uib-tooltip="Show proofs"><i class="fa fa-list"></i></a>
+                <a class="btn btn-default" ng-if="!model.isExercise" ng-controller="ModelProofCreateCtrl" ng-click="createProof(model.id, '', '')" uib-tooltip="Start new proof"><i class="fa fa-gears"></i></a>
+                <a class="btn btn-default" ng-if="!model.isExercise" ng-click="modelplex(model.id)" uib-tooltip="Generate ModelPlex monitor" tooltip-placement="auto top"><i class="fa fa-shield"></i></a>
+                <a class="btn btn-default" ng-if="!model.isExercise" ng-click="testsynthesis(model.id)" uib-tooltip="Test Case Synthesis and Analysis" tooltip-placement="auto top"><i class="fa fa-flask"></i></a>
                 <a class="btn btn-default" ng-click="downloadModel(model.id)" uib-tooltip="Download model (.kyx)"><i class="fa fa-download"></i></a>
-                <a class="btn btn-default" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download model+proofs (.kya)"><i class="fa fa-archive"></i></a>
+                <a class="btn btn-default" ng-if="!model.isExercise" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download model+proofs (.kya)"><i class="fa fa-archive"></i></a>
                 <a class="btn btn-default" ng-click="deleteModel(model.id)" uib-tooltip="Delete model and proofs" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
             </td>
             <td ng-model="model" ng-if="!$first">
-                <a class="btn btn-default" ng-href="dashboard.html?#/models/{{ model.id }}/proofs" uib-tooltip="Show proofs"><i class="fa fa-list"></i></a>
-                <a class="btn btn-default" ng-controller="ModelProofCreateCtrl" ng-click="createProof(model.id, '', '')" uib-tooltip="Start new proof"><i class="fa fa-gears"></i></a>
-                <a class="btn btn-default" ng-click="modelplex(model.id)" uib-tooltip="Generate ModelPlex monitor" tooltip-placement="auto top"><i class="fa fa-shield"></i></a>
-                <a class="btn btn-default" ng-click="testsynthesis(model.id)" uib-tooltip="Test Case Synthesis and Analysis" tooltip-placement="auto top"><i class="fa fa-flask"></i></a>
+                <a class="btn btn-default" ng-if="model.isExercise" ng-click="startExercise(model.id)" uib-tooltip="Start exercise"><i class="fa fa-pencil-square-o"></i></a>
+                <a class="btn btn-default" ng-if="!model.isExercise" ng-href="dashboard.html?#/models/{{ model.id }}/proofs" uib-tooltip="Show proofs"><i class="fa fa-list"></i></a>
+                <a class="btn btn-default" ng-if="!model.isExercise" ng-controller="ModelProofCreateCtrl" ng-click="createProof(model.id, '', '')" uib-tooltip="Start new proof"><i class="fa fa-gears"></i></a>
+                <a class="btn btn-default" ng-if="!model.isExercise" ng-click="modelplex(model.id)" uib-tooltip="Generate ModelPlex monitor" tooltip-placement="auto top"><i class="fa fa-shield"></i></a>
+                <a class="btn btn-default" ng-if="!model.isExercise" ng-click="testsynthesis(model.id)" uib-tooltip="Test Case Synthesis and Analysis" tooltip-placement="auto top"><i class="fa fa-flask"></i></a>
                 <a class="btn btn-default" ng-click="downloadModel(model.id)" uib-tooltip="Download"><i class="fa fa-download"></i></a>
-                <a class="btn btn-default" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download with proofs"><i class="fa fa-archive"></i></a>
+                <a class="btn btn-default" ng-if="!model.isExercise" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download with proofs"><i class="fa fa-archive"></i></a>
                 <a class="btn btn-default" ng-click="deleteModel(model.id)" uib-tooltip="Delete model and proofs" tooltip-placement="auto top"><i class="fa fa-trash"></i></a>
             </td>
         </tr>

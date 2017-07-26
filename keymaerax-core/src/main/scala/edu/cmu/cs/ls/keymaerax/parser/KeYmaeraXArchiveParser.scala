@@ -32,6 +32,7 @@ object KeYmaeraXArchiveParser {
   private val LEMMA_BEGIN: String = "Lemma"
   private val THEOREM_BEGIN: String = "Theorem"
   private val TACTIC_BEGIN: String = "Tactic"
+  private val EXERCISE_BEGIN: String = "Exercise"
   private val END_BLOCK: String = "End."
 
   /** Two groups: entry name, model+optional tactic */
@@ -62,12 +63,13 @@ object KeYmaeraXArchiveParser {
   def read(archiveContentBOM: String): List[ArchiveEntry] = {
     val archiveContent: String = ParserHelper.removeBOM(archiveContentBOM)
     // match ArchiveEntry, Lemma, Theorem, unless inside quotation marks
-    val regex = s"(?=($ARCHIVE_ENTRY_BEGIN|$LEMMA_BEGIN|$THEOREM_BEGIN)" + "(?=([^\"]*\"[^\"]*\")*[^\"]*$))"
+    val regex = s"(?=($ARCHIVE_ENTRY_BEGIN|$LEMMA_BEGIN|$THEOREM_BEGIN|$EXERCISE_BEGIN)" + "(?=([^\"]*\"[^\"]*\")*[^\"]*$))"
     archiveContent.trim().split(regex).flatMap({s =>
       val (entry, kind) =
         if (s.startsWith(ARCHIVE_ENTRY_BEGIN)) (s.stripPrefix(ARCHIVE_ENTRY_BEGIN), "theorem")
         else if (s.startsWith(THEOREM_BEGIN)) (s.stripPrefix(THEOREM_BEGIN), "theorem")
         else if (s.startsWith(LEMMA_BEGIN)) (s.stripPrefix(LEMMA_BEGIN), "lemma")
+        else if (s.startsWith(EXERCISE_BEGIN)) (s.stripPrefix(EXERCISE_BEGIN), "exercise")
         else throw new IllegalArgumentException("Expected either ArchiveEntry, Lemma, Theorem, but got unknown entry kind " + s)
       NAME_REGEX.findAllMatchIn(entry.trim().stripSuffix(END_BLOCK)).map(
         { m =>

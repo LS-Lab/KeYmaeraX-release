@@ -23,6 +23,9 @@ import scala.util.Try
 object KeYmaeraXProblemParser {
   type Declaration = KeYmaeraXDeclarationsParser.Declaration
 
+  /** Indicates whether or not the model represents an exercise. */
+  def isExercise(model: String): Boolean = model.contains("__________")
+
   /** Convenience wrapper to get formula only. */
   def apply(inputWithPossibleBOM : String): Formula = parseProblem(inputWithPossibleBOM)._2
 
@@ -42,12 +45,15 @@ object KeYmaeraXProblemParser {
     }
   }
 
-  /** Tries parsing as a formula first. If that fails, tries parsing as a problem file. */
+  /** Tries parsing as a problem first. If it fails due to a missing Problem block, tries parsing as a plain formula. */
   def parseAsProblemOrFormula(input : String): Formula = {
-    Try(KeYmaeraXParser(input).asInstanceOf[Formula]).getOrElse({
+    try {
       val (d, fml) = KeYmaeraXProblemParser.parseProblem(input)
       d.exhaustiveSubst(fml)
-    })
+    } catch {
+      case ex: ParseException if ex.msg == "Problem. block expected" =>
+        KeYmaeraXParser(input).asInstanceOf[Formula]
+    }
   }
 
   /** //almost always the line number where the Problem section begins. (see todo) */

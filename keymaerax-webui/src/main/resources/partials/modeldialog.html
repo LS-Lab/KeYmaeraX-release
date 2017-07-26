@@ -1,11 +1,13 @@
 <form editable-form name="modelDataForm" onaftersave="saveModelData()">
 <div class="modal-header row">
     <div class="col-md-10">
-        <h3 class="modal-title"><span editable-text="model.name" e-name="modelName"
+        <h3 class="modal-title" ng-if="mode==='edit'"><span editable-text="model.name" e-name="modelName"
                                       e-placeholder="Model name" e-required onbeforesave="checkName($data)">{{model.name}}</span></h3>
+        <h3 class="modal-title" ng-if="mode==='exercise'">{{model.name}}</h3>
     </div>
     <div class="col-md-2">
-        <a class="btn btn-link pull-right" ng-click="modelDataForm.$show()" ng-hide="modelDataForm.$visible"><i class="fa fa-pencil"></i></a>
+        <a class="btn btn-link pull-right" ng-click="modelDataForm.$show()" ng-if="mode==='edit'" ng-hide="modelDataForm.$visible"><i class="fa fa-pencil"></i> Edit</a>
+        <a class="btn btn-link pull-right" ng-click="modelDataForm.$show()" ng-if="mode==='exercise'" ng-hide="modelDataForm.$visible"><i class="fa fa-pencil-square-o"></i> Fill in the blanks (______)</a>
         <span ng-show="modelDataForm.$visible" class="pull-right">
           <button type="submit" class="btn btn-primary" ng-disabled="modelDataForm.$waiting">
               <i class="fa fa-check"></i>
@@ -17,17 +19,19 @@
     </div>
 </div>
 <div class="modal-body">
-    <p><strong><span editable-text="model.title" e-name="modelTitle" e-placeholder="Model title">{{model.title}}</span></strong></p>
-    <p><span editable-textarea="model.description" e-name="modelDescription" e-placeholder="A short model description" e-rows="1" e-cols="100">{{model.description}}</span></p>
+    <p ng-if="mode=='edit'"><strong><span editable-text="model.title" e-name="modelTitle" e-placeholder="Model title">{{model.title}}</span></strong></p>
+    <p ng-if="mode=='edit'"><span editable-textarea="model.description" e-name="modelDescription" e-placeholder="A short model description" e-rows="1" e-cols="100">{{model.description}}</span></p>
     <!--<p>See additionally <a href="{{model.pubLink}}">{{model.pubLink}}</a> for further information</p>-->
     <div ng-if="modelDataForm.$visible && model.numProofs > 0" uib-alert class="alert-warning">Model changes are made on a copy, since the model already has proofs.</div>
     <textarea ng-if="modelDataForm.$visible" class="k4-modeleditor" rows="20" ng-model="model.keyFile"></textarea>
     <div ng-if="!modelDataForm.$visible" hljs hljs-language="dl" style="overflow: scroll; height: 500px" hljs-source="model.keyFile"></div>
 </div>
 <div class="modal-footer">
-    <button class="btn btn-primary" ng-if="!user.isGuest()" ng-click="startProof()">Start new proof</button>
+    <button class="btn btn-primary" ng-if="!user.isGuest() && mode==='edit'" ng-click="startProof()">Start new proof</button>
+    <button class="btn btn-primary" ng-if="!user.isGuest() && mode==='exercise'"
+            ng-disabled="modelDataForm.$visible || !modelIsComplete()" ng-click="startProof()">Proof exercise</button>
     <span ng-controller="ModelProofCreateCtrl">
-    <button class="btn btn-primary" ng-if="model.hasTactic && !user.isGuest()"
+    <button class="btn btn-primary" ng-if="model.hasTactic && !user.isGuest() && mode==='edit'"
             ng-click="ok();proveFromTactic(model.id)">Prove with associated tactic</button>
     </span>
     <button class="btn btn-primary" ng-click="ok()">Close</button>
