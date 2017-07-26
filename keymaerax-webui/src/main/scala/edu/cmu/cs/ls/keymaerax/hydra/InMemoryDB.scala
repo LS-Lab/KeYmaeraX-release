@@ -98,9 +98,9 @@ class InMemoryDB extends DBAbstraction {
     } else None
   }
 
-  override def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String]): Unit = {
+  override def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String], content: Option[String]): Unit = {
     val model = models(modelId)
-    val nm = new ModelPOJO(modelId, model.userId, name, model.date, model.keyFile, description.get, model.pubLink,
+    val nm = new ModelPOJO(modelId, model.userId, name, model.date, content.get, description.get, model.pubLink,
       title.get, model.tactic, model.numProofs, model.temporary)
     models(modelId) = nm
   }

@@ -391,10 +391,11 @@ object SQLite {
         else None
       })
 
-    override def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String]): Unit = synchronizedTransaction({
-      Models.filter(_._Id === modelId).map(m => (m.name, m.title, m.description)).update(Some(name), title, description)
+    override def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String], content: Option[String]): Unit = synchronizedTransaction({
+      assert(Models.filter(m => m._Id === modelId && m.filecontents === content).exists.run
+        || !Proofs.filter(_.modelid === modelId).exists.run, "Updating model content only possible for models without proofs")
+      Models.filter(_._Id === modelId).map(m => (m.name, m.title, m.description, m.filecontents)).update(Some(name), title, description, content)
       nUpdates = nUpdates + 1
-
     })
 
     override def addModelTactic(modelId: String, fileContents: String): Option[Int] =

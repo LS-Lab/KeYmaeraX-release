@@ -201,7 +201,7 @@ trait RestApi extends HttpService with SLF4JLogging {
       entity(as[String]) { modelJson =>
         val modelData = modelJson.parseJson.asJsObject.fields.map({case (k,v) => k -> v.asInstanceOf[JsString].value})
         completeRequest(new UpdateModelRequest(database, userId, modelId, modelData("name"),
-          modelData("title"), modelData("description")), t)
+          modelData("title"), modelData("description"), modelData("content")), t)
       }
     }
   }}}

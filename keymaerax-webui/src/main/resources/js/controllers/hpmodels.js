@@ -150,14 +150,14 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
       $scope.examples = response.data;
   });
 
-  $scope.open = function (modelid) {
+  $scope.open = function (modelId) {
       var modalInstance = $uibModal.open({
         templateUrl: 'partials/modeldialog.html',
         controller: 'ModelDialogCtrl',
         size: 'fullscreen',
         resolve: {
           userid: function() { return $scope.userId; },
-          modelid: function () { return modelid; }
+          modelid: function () { return modelId; }
         }
       });
   };
@@ -303,9 +303,10 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
       function (newModels) { if (newModels) Models.setModels(newModels); }
   );
   $scope.$emit('routeLoaded', {theview: 'models'});
-})
+});
 
-angular.module('keymaerax.controllers').controller('ModelDialogCtrl', function ($scope, $http, $uibModalInstance, Models, userid, modelid) {
+angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
+    function ($scope, $http, $uibModalInstance, $location, Models, userid, modelid) {
   $http.get("user/" + userid + "/model/" + modelid).then(function(response) {
       $scope.model = response.data;
       $scope.origModel = JSON.parse(JSON.stringify(response.data)); // deep copy
@@ -313,19 +314,45 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl', function (
 
   $scope.saveModelData = function() {
     if ($scope.origModel.name !== $scope.model.name || $scope.origModel.title !== $scope.model.title
-     || $scope.origModel.description !== $scope.model.description) {
-      var data = {
-        name: $scope.model.name,
-        title: $scope.model.title,
-        description: $scope.model.description
-      };
-      $http.post("user/" + userid + "/model/" + modelid + "/update", data).then(function(response) {
-        var model = $.grep(Models.getModels(), function(m) { return m.id === modelid; })[0];
-        model.name = $scope.model.name;
-        model.title = $scope.model.title;
-        model.description = $scope.model.description;
-      })
+     || $scope.origModel.description !== $scope.model.description
+     || $scope.origModel.keyFile !== $scope.model.keyFile) {
+      if ($scope.model.numProofs > 0) {
+        var modelCopyName = $scope.model.name + ' (Copy ';
+        var i = 1;
+        while ($scope.checkName(modelCopyName + i + ')') !== true) { ++i; }
+        var url = "user/" + userid + "/modeltextupload/" + modelCopyName + i + ')';
+        $http.post(url, $scope.model.keyFile).then(function(response) {
+          $scope.model.id = response.data.modelId;
+          $scope.model.name = modelCopyName + i + ')';
+          $scope.origModel = JSON.parse(JSON.stringify($scope.model)); // deep copy
+        });
+      } else {
+        var data = {
+          name: $scope.model.name,
+          title: $scope.model.title,
+          description: $scope.model.description,
+          content: $scope.model.keyFile
+        };
+        $http.post("user/" + userid + "/model/" + modelid + "/update", data).then(function(response) {
+          var model = $.grep(Models.getModels(), function(m) { return m.id === modelid; })[0];
+          model.name = $scope.model.name;
+          model.title = $scope.model.title;
+          model.description = $scope.model.description;
+          model.keyFile = $scope.model.keyFile;
+          $scope.origModel = JSON.parse(JSON.stringify($scope.model)); // deep copy
+        })
+      }
     }
+  }
+
+  $scope.startProof = function() {
+    $uibModalInstance.close();
+    var uri = 'models/users/' + userid + '/model/' + $scope.model.id + '/createProof'
+    $http.post(uri, {proofName: '', proofDescription: ''}).
+      success(function(data) { $location.path('proofs/' + data.id); }).
+      error(function(data, status, headers, config) {
+        console.log('Error starting new proof for model ' + modelid)
+      });
   }
 
   $scope.checkName = function(name) {
@@ -335,7 +362,14 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl', function (
     else return true;
   }
 
-  $scope.ok = function() { $uibModalInstance.close(); };
+  $scope.ok = function() {
+    $uibModalInstance.close();
+    // Update the models list
+    while (Models.getModels().length != 0) { Models.getModels().shift(); }
+    $http.get("models/users/" + userid).success(function(data) {
+      Models.addModels(data);
+    });
+  };
 });
 
 angular.module('keymaerax.controllers').controller('ModelTacticDialogCtrl', function ($scope, $http, $uibModalInstance, userid, modelid) {

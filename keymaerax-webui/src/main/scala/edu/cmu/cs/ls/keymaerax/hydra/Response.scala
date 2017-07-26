@@ -162,7 +162,8 @@ class GetModelResponse(model : ModelPOJO) extends Response {
     "keyFile" -> JsString(model.keyFile),
     "title" -> JsString(model.title),
     "hasTactic" -> JsBoolean(model.tactic.isDefined),
-    "tactic" -> JsString(model.tactic.getOrElse(""))
+    "tactic" -> JsString(model.tactic.getOrElse("")),
+    "numProofs" -> JsNumber(model.numProofs)
   )
 }
 
