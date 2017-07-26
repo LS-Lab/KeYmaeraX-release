@@ -1,53 +1,44 @@
 <div class="modal-body">
-    <uib-tabset active="active">
-        <uib-tab index="0" heading="File Import">
-            <div class="row">
-            <div class="col-md-12" id="modelupload"
-                 data-intro="Load new .kyx model files or .kya archive files here."
-                 data-position="bottom">
-                <k4-file-upload on-file-confirmed="uploadFile(fileName, fileContent, modelName, startProof)"></k4-file-upload>
-            </div>
-            </div>
-        </uib-tab>
-        <uib-tab index="1" heading="Edit">
-            <form>
-                <div class="row">
-                    <div class="col-md-12">
-                    <label for="modelName">Model name</label>
-                    <div class="input-group">
-                        <input type="text" ng-model="model.modelName" class="form-control" name="modelName" id="modelName"
-                               placeholder="Model Name"/>
-                        <a ng-class="{'input-group-addon':true, 'btn':true, 'btn-default':true,
+    <div class="row">
+        <div class="col-md-12" id="modelupload"
+             data-intro="Load new .kyx model files or .kya archive files here."
+             data-position="bottom">
+            <k4-file-upload on-file-changed="updateModelContent(fileName, fileContent)"></k4-file-upload>
+        </div>
+    </div>
+    <form>
+        <div class="row">
+            <div class="col-md-12">
+                <label for="modelName">Model name</label>
+                <div class="input-group">
+                    <input type="text" ng-model="model.modelName" class="form-control" name="modelName" id="modelName"
+                           placeholder="Model Name"/>
+                    <a ng-class="{'input-group-addon':true, 'btn':true, 'btn-default':true,
                                       'disabled':!model.modelName || model.content.length <= 0}"
-                           ng-click="uploadContent(false)" ng-cloak>Save</a>
-                        <a ng-class="{'input-group-addon':true, 'btn':true, 'btn-default':true,
-                                      'disabled':!model.modelName || model.content.length <= 0 || model.content.indexOf('__________') >= 0}"
-                           ng-click="uploadContent(true)" ng-cloak>Start Proof</a>
-                    </div>
-                    </div>
+                       ng-click="uploadContent(false)" ng-cloak>Save</a>
+                    <a ng-class="{'input-group-addon':true, 'btn':true, 'btn-default':true,
+                                      'disabled':!model.modelName || !model.content || model.content.length <= 0 || model.content.indexOf('__________') >= 0 || model.kind == 'kya'}"
+                       ng-click="uploadContent(true)" ng-cloak>Start Proof</a>
                 </div>
-                <div class="row">
-                    <div class="col-md-12">
-                        <uib-tabset>
-                            <uib-tab index="0" heading="Write">
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <textarea class="k4-modeleditor" rows="20" ng-model="model.content" />
-                                    </div>
-                                </div>
-                            </uib-tab>
-                            <uib-tab index="1" heading="Preview">
-                                <div hljs hljs-language="dl" style="overflow: scroll; height: 500px" hljs-source="model.content"></div>
-                            </uib-tab>
-                        </uib-tabset>
-                    </div>
-                </div>
-            </form>
-        </uib-tab>
-        <!--<uib-tab index="2" heading="Browse Library">-->
-            <!---->
-        <!--</uib-tab>-->
-    </uib-tabset>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <uib-tabset>
+                    <uib-tab index="0" heading="Edit">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <textarea class="k4-modeleditor" rows="20" ng-model="model.content" />
+                            </div>
+                        </div>
+                    </uib-tab>
+                    <uib-tab index="1" heading="Preview">
+                        <div hljs hljs-language="dl" style="overflow: scroll; height: 500px" hljs-source="model.content"></div>
+                    </uib-tab>
+                </uib-tabset>
+            </div>
+        </div>
+    </form>
 </div>
 <div class="modal-footer">
     <button class="btn btn-primary" ng-click="close()">Cancel</button>

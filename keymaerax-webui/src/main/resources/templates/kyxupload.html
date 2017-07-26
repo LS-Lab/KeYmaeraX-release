@@ -12,19 +12,6 @@
                             <input type="file" name="source" id="keyFile" class="form-control"/>
                         </span>
             <a class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
-            <a class="input-group-addon btn btn-default fileinput-exists"
-               ng-if="fileExt=='.kya'" ng-click="readFile(false)" ng-cloak>Import</a>
-        </div>
-        <div class="fileinput-exists" ng-if="fileExt=='.kyx'" ng-cloak>
-            <label for="modelNameInput">Model name</label>
-            <div class="input-group">
-                <input type="text" ng-model="name" class="form-control" name="modelNameInput"
-                       id="modelNameInput" placeholder="Model Name"/>
-                <a ng-class="{'input-group-addon':true, 'btn':true, 'btn-default':true, 'disabled':!name}"
-                   ng-if="fileExt=='.kyx'" ng-click="readFile(false)" ng-cloak>Import</a>
-                <a ng-class="{'input-group-addon':true, 'btn':true, 'btn-default':true, 'disabled':!name}"
-                   ng-if="fileExt=='.kyx'" ng-click="readFile(true)" ng-cloak>Start Proof</a>
-            </div>
         </div>
     </div>
 </form>

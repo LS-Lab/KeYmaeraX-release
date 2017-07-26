@@ -22,25 +22,26 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      /** Model data */
      $scope.model = {
        modelName: undefined,
-       content: undefined
+       content: undefined,
+       kind: 'kyx'
      };
 
-     $scope.uploadFile = function(fileName, fileContent, modelName, startProof) {
-       var url = "user/" + sessionService.getUser();
+     $scope.updateModelContent = function(fileName, fileContent) {
        if (!(fileName.endsWith('.kyx') || fileName.endsWith('.kyx.txt') ||
              fileName.endsWith('.kya') || fileName.endsWith('.kya.txt'))) {
          showMessage($uibModal, "Unknown file extension",
                                 "Expected file extension: .kyx / .kya / .kyx.txt / .kya.txt", "md");
        } else {
          var isKyx = fileName.endsWith('.kyx') || fileName.endsWith('.kyx.txt');
-         url = url + (isKyx ? "/modeltextupload/" + modelName : "/archiveupload/");
-         upload(url, fileContent, startProof && isKyx);
+         $scope.model.kind = isKyx ? 'kyx' : 'kya';
+         $scope.model.content = fileContent;
        }
      };
 
      $scope.uploadContent = function(startProof) {
-       var url = "user/" + sessionService.getUser() + "/modeltextupload/" + $scope.model.modelName;
-       upload(url, $scope.model.content, startProof);
+       var url =  "user/" + sessionService.getUser() +
+         ($scope.model.kind == 'kya' ? "/archiveupload/" : "/modeltextupload/" + $scope.model.modelName);
+       upload(url, $scope.model.content, startProof && $scope.model.kind == 'kyx');
      }
 
      $scope.close = function() { $uibModalInstance.close(); };
