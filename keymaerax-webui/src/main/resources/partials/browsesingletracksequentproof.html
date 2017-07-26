@@ -1,4 +1,9 @@
-<div class="col-md-12">
+<div class="col-md-12"
+     uib-tooltip-template="'templates/stepExplanationTooltipTemplate.html'"
+     tooltip-is-open="explanationNodeId !== undefined"
+     tooltip-trigger="'none'"
+     tooltip-append-to-body="true"
+     tooltip-placement="auto top-right">
     <div class="row k4-proofrow" ng-if="proofTree.nodesMap[deductionPath.sections[0].path[0]].children.length > 0">
         <div class="col-md-12">
             <button class="btn btn-link" ng-click="fetchNodeChildren(userId, proofId, deductionPath.sections[0].path[0])">
@@ -23,6 +28,8 @@
                     <span class="k4-withcontextmenu k4-proofrule"
                           tooltip-placement="right"
                           uib-tooltip="{{step | childMaker:this}}"
+                          ng-mouseover="explainStep(step, true)"
+                          ng-mouseleave="explainStep(step, false)"
                           ng-right-click="proofStepRightClick($event)" tabindex="-1"
                           uib-popover-template="'proofStepPopover.html'"
                           popover-title="Proof step" popover-placement="auto bottom" popover-trigger="'rightClick'">
@@ -30,7 +37,7 @@
                     </span>
                 </li>
             </ul>
-            <div class="col-md-12 k4-goalwithsiblings" id="seq_{{htmlNodeId(step)}}">
+            <div class="col-md-12 k4-goalwithsiblings" id="seq_{{proofTree.htmlNodeId(step)}}">
                 <k4-sequent user-id="userId" proof-id="proofId" node-id="step"
                             sequent="proofTree.nodesMap[step].getSequent()"
                             read-only="true" collapsed="true"></k4-sequent>
@@ -45,6 +52,8 @@
                     <span class="k4-withcontextmenu k4-proofrule"
                           tooltip-placement="right"
                           uib-tooltip="{{step | childMaker:this}}"
+                          ng-mouseover="explainStep(step, true)"
+                          ng-mouseleave="explainStep(step, false)"
                           ng-right-click="proofStepRightClick($event)" tabindex="-1"
                           uib-popover-template="'proofStepPopoverPrev.html'"
                           popover-title="Proof step" popover-placement="auto bottom" popover-trigger="'rightClick'">
@@ -53,7 +62,7 @@
                 </li>
             </ul>
             <!-- do not repeat if first==last, i.e., sole element in list fetched so far -->
-            <div ng-if="!$first" class="col-md-12 k4-goalwithsiblings" id="seq_{{htmlNodeId(step)}}">
+            <div ng-if="!$first" class="col-md-12 k4-goalwithsiblings" id="seq_{{proofTree.htmlNodeId(step)}}">
                 <k4-sequent user-id="userId" proof-id="proofId" node-id="step"
                             sequent="proofTree.nodesMap[step].getSequent()"
                             read-only="true" collapsed="true"></k4-sequent>

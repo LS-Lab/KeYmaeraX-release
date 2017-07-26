@@ -111,8 +111,28 @@ angular.module('keymaerax.services').factory('ProofTree', function() {
             this.nodesMap[node.id].rule = node.rule;
           }
         },
+        /** Returns the proof tree root. */
         rootNode: function() { return this.nodesMap[this.root]; },
+        /** Returns the node `nodeId`. */
         node: function(nodeId) { return this.nodesMap[nodeId]; },
+        /** Converts the server-issued `nodeId` into an ID suitable for HTML id=... */
+        htmlNodeId: function(nodeId) { return nodeId.replace(/\(|\)/g, "").replace(/,/g, "-"); },
+        /** Highlights the operator where the step that created sequent/node `nodeId` was applied. */
+        highlightNodeStep: function(nodeId, highlight) {
+          var parent = this.node(nodeId);
+          parent.isExplanationVisible = highlight;
+          var fstChild = this.node(parent.children[0]);
+          var pos = fstChild.rule.pos.replace(/\./g, "\\,");
+          var element = $("#seq_"+this.htmlNodeId(nodeId) + " #fml_"+pos);
+          if (highlight) {
+            if (fstChild.rule.asciiName == "WL" || fstChild.rule.asciiName == "WR") element.addClass("k4-highlight-steppos-full");
+            else element.addClass("k4-highlight-steppos");
+            if (element.text().startsWith("[") || element.text().startsWith("<")) {
+              if (fstChild.rule.asciiName == "[]^" || fstChild.rule.asciiName == "<>|") element.addClass("k4-highlight-steppos-modality-post");
+              else element.addClass("k4-highlight-steppos-modality-prg");
+            }
+          } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-full k4-highlight-steppos-modality-prg k4-highlight-steppos-modality-post");
+        },
 
         paths: function(node) {
           //@todo what if we have a branching tree?

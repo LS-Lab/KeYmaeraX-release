@@ -1,4 +1,9 @@
-<div class="col-md-12">
+<div class="col-md-12"
+     uib-tooltip-template="'templates/stepExplanationTooltipTemplate.html'"
+     tooltip-is-open="explanationNodeId !== undefined"
+     tooltip-trigger="'none'"
+     tooltip-append-to-body="true"
+     tooltip-placement="auto top-right">
     <!-- Open Goal -->
     <div class="row k4-proofrow">
         <!-- need duplication because 'step.subgoals.length > 0' is non-assignable -->
@@ -55,7 +60,7 @@
                     </span>
                 </li>
             </ul>
-            <div class="col-md-12 k4-goalwithsiblings" id="seq_{{htmlNodeId(step)}}">
+            <div class="col-md-12 k4-goalwithsiblings" id="seq_{{proofTree.htmlNodeId(step)}}">
                 <k4-sequent user-id="userId" proof-id="proofId" node-id="step"
                             sequent="proofTree.nodesMap[step].getSequent()"
                             read-only="true" collapsed="true"></k4-sequent>
@@ -85,7 +90,7 @@
                 </li>
             </ul>
             <!-- do not repeat if first==last, i.e., sole element in list fetched so far -->
-            <div ng-if="!$first" class="col-md-12 k4-goalwithsiblings" id="seq_{{htmlNodeId(step)}}">
+            <div ng-if="!$first" class="col-md-12 k4-goalwithsiblings" id="seq_{{proofTree.htmlNodeId(step)}}">
                 <k4-sequent user-id="userId" proof-id="proofId" node-id="step"
                             sequent="proofTree.nodesMap[step].getSequent()"
                             read-only="true" collapsed="true"></k4-sequent>

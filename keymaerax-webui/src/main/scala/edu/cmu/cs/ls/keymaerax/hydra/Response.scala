@@ -697,9 +697,11 @@ object Helpers {
 
   def ruleJson(ruleName: String, pos: Option[PositionLocator]):JsValue = {
     val belleTerm = ruleName.split("\\(")(0)
-    val (name, codeName, asciiName, maker) = Try(DerivationInfo.ofCodeName(belleTerm)).toOption match {
-      case Some(di) => (di.display.name, di.codeName, di.display.asciiName, ruleName)
-      case None => (ruleName, ruleName, ruleName, ruleName)
+    val (name, codeName, asciiName, maker, derivation: JsValue) = Try(DerivationInfo.ofCodeName(belleTerm)).toOption match {
+      case Some(di) =>
+        (di.display.name, di.codeName, di.display.asciiName, ruleName,
+          ApplicableAxiomsResponse(Nil, Map.empty).derivationJson(di).fields.getOrElse("derivation", JsNull))
+      case None => (ruleName, ruleName, ruleName, ruleName, JsNull)
     }
 
     JsObject(
@@ -711,7 +713,8 @@ object Helpers {
       "pos" -> (pos match {
         case Some(Fixed(p, _, _)) => JsString(p.prettyString)
         case _ => JsString("")
-      })
+      }),
+      "derivation" -> derivation
     )
   }
 

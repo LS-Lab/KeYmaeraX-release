@@ -1,0 +1,65 @@
+<script type="text/ng-template" id="templates/sequentRuleExplanationTemplate.html">
+    <div class="k4-sequentRule">
+        <div class="row k4-sequentRulePremise">
+            <div class="col-md-12">
+                <div class="row" ng-if="stepDeriv.premise.length === 0">
+                    <span class="col-md-4 k4-sequentRuleAnt"></span>
+                    <span class="col-md-1"><i class="fa fa-asterisk" style="font-size:0.5em"></i></span>
+                    <span class="col-md-7 k4-sequentRuleSucc"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div ng-repeat="premise in stepDeriv.premise">
+                            <div ng-class="{'row': !premise.isClosed, 'row small': premise.isClosed}">
+                                <span class="col-md-4 k4-nobreak k4-sequentRuleAnte">
+                                    <span ng-repeat="ante in premise.ante">
+                                        <span ng-bind-html="ante"></span>
+                                        {{$last ? '' : ','}}
+                                    </span>
+                                </span>
+                                <span class="col-md-1">&#8866;</span>
+                                <span class="col-md-7 k4-nobreak k4-sequentRuleSucc">
+                                    <span ng-repeat="succ in premise.succ">
+                                        <span ng-bind-html="succ"></span>
+                                        {{$last ? '' : ','}}
+                                    </span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row k4-sequentRuleConclusion">
+            <div class="col-md-4 k4-nobreak k4-sequentRuleAnte">
+                <span ng-repeat="ante in stepDeriv.conclusion.ante">
+                    <span ng-bind-html="ante"></span>{{$last ? '' : ','}}</span>
+            </div>
+            <div class="col-md-1">&#8866;</div>
+            <div class="col-md-7 k4-nobreak k4-sequentRuleSucc">
+                <span class="k4-nobreak" ng-repeat="succ in stepDeriv.conclusion.succ">
+                    <span ng-bind-html="succ"></span>{{$last ? '' : ','}}</span>
+            </div>
+        </div>
+    </div>
+</script>
+
+<script type="text/ng-template" id="templates/stepExplanationPopover.html">
+    <div>
+        <div class="col-md-12" ng-if="stepExpl.derivation.type === 'axiom'" ng-bind-html="stepExpl.derivation.formula"></div>
+        <div class="col-md-12" ng-if="stepExpl.derivation.type === 'tactic'" ng-bind-html="stepExpl.derivation.formula"></div>
+        <div ng-if="stepExpl.derivation.type === 'sequentrule'">
+            <div class="col-md-12" ng-repeat="stepDeriv in [stepExpl.derivation]"
+                 ng-include="'templates/sequentRuleExplanationTemplate.html'"></div>
+        </div>
+    </div>
+</script>
+
+<div class="row">
+    <div class="col-md-12">
+        <div ng-repeat="stepExpl in stepAxiom()" class="k4-tactic-popover-entry">
+            <div ng-include="'templates/stepExplanationPopover.html'"></div>
+        </div>
+    </div>
+</div>

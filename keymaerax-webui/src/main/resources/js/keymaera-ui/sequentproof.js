@@ -123,21 +123,17 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         return parent;
       }
 
-      scope.htmlNodeId = function(id) { return id.replace(/\(|\)/g, "").replace(/,/g, "-"); }
+      scope.stepAxiom = function(nodeId) {
+        if (scope.explanationNodeId) {
+          var parent = sequentProofData.proofTree.node(scope.explanationNodeId);
+          var fstChild = sequentProofData.proofTree.node(parent.children[0]);
+          return [fstChild.rule];
+        } else [];
+      }
 
       scope.highlightStepPosition = function(nodeId, highlight) {
-        var parent = sequentProofData.proofTree.nodesMap[nodeId];
-        var fstChild = sequentProofData.proofTree.nodesMap[parent.children[0]];
-        var posId = fstChild.rule.pos.replace(/\./g, "\\,");
-        var element = $("#seq_"+scope.htmlNodeId(nodeId) + " #fml_"+posId);
-        if (highlight) {
-          if (fstChild.rule.asciiName == "WL" || fstChild.rule.asciiName == "WR") element.addClass("k4-highlight-steppos-full");
-          else element.addClass("k4-highlight-steppos");
-          if (element.text().startsWith("[") || element.text().startsWith("<")) {
-            if (fstChild.rule.asciiName == "[]^" || fstChild.rule.asciiName == "<>|") element.addClass("k4-highlight-steppos-modality-post");
-            else element.addClass("k4-highlight-steppos-modality-prg");
-          }
-        } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-full k4-highlight-steppos-modality-prg k4-highlight-steppos-modality-post");
+        scope.explanationNodeId = highlight ? nodeId : undefined;
+        sequentProofData.proofTree.highlightNodeStep(nodeId, highlight);
       }
 
       flatPath = function(item) {
@@ -296,21 +292,20 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         return (candidates != null ? candidates.filter(function(e) { return fp.indexOf(e) < 0 && scope.agenda.itemsByProofStep(e).length > 0; }) : []);
       }
 
-      scope.htmlNodeId = function(id) { return id.replace(/\(|\)/g, "").replace(/,/g, "-"); }
+      scope.explainStep = function(nodeId, highlight) {
+        scope.explanationNodeId = highlight ? nodeId : undefined;
+      }
+
+      scope.stepAxiom = function(nodeId) {
+        if (scope.explanationNodeId) {
+          var parent = sequentProofData.proofTree.node(scope.explanationNodeId);
+          var fstChild = sequentProofData.proofTree.node(parent.children[0]);
+          return [fstChild.rule];
+        } else [];
+      }
 
       scope.highlightStepPosition = function(nodeId, highlight) {
-        var parent = sequentProofData.proofTree.nodesMap[nodeId];
-        var fstChild = sequentProofData.proofTree.nodesMap[parent.children[0]];
-        var posId = fstChild.rule.pos.replace(/\./g, "\\,");
-        var element = $("#seq_"+scope.htmlNodeId(nodeId) + " #fml_"+posId);
-        if (highlight) {
-          if (fstChild.rule.asciiName == "WL" || fstChild.rule.asciiName == "WR") element.addClass("k4-highlight-steppos-full");
-          else element.addClass("k4-highlight-steppos");
-          if (element.text().startsWith("[") || element.text().startsWith("<")) {
-            if (fstChild.rule.asciiName == "[]^" || fstChild.rule.asciiName == "<>|") element.addClass("k4-highlight-steppos-modality-post");
-            else element.addClass("k4-highlight-steppos-modality-prg");
-          }
-        } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-full k4-highlight-steppos-modality-prg k4-highlight-steppos-modality-post");
+        sequentProofData.proofTree.highlightNodeStep(nodeId, highlight);
       }
 
       flatPath = function(item) {
