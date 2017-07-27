@@ -60,7 +60,10 @@
                         <div class="k4-examples-carousel-caption">
                             <h4>{{repo.title}} <button class="btn btn-default"
                                                        ng-click="importRepo(repo.url)">Import</button></h4>
-                            <p>{{repo.description}} <small><a ng-href="{{repo.infoUrl}}">Details...</a></small></p>
+                            <p>{{repo.description}}
+                                <small><a ng-if="repo.infoUrl && repo.infoUrl.length > 0"
+                                          ng-href="{{repo.infoUrl}}">Details...</a></small>
+                            </p>
                         </div>
                     </div>
                 </div>
