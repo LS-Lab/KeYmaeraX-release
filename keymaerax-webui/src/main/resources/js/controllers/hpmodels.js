@@ -21,12 +21,13 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
   function ($scope, $http, $route, $uibModalInstance, $uibModal, $location, Models, sessionService, spinnerService) {
      /** Model data */
      $scope.model = {
+       uri: undefined,
        modelName: undefined,
        content: undefined,
        kind: 'kyx'
      };
 
-     $scope.updateModelContent = function(fileName, fileContent) {
+     $scope.updateModelContentFromFile = function(fileName, fileContent) {
        if (!(fileName.endsWith('.kyx') || fileName.endsWith('.kyx.txt') ||
              fileName.endsWith('.kya') || fileName.endsWith('.kya.txt'))) {
          showMessage($uibModal, "Unknown file extension",
@@ -35,8 +36,21 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
          var isKyx = fileName.endsWith('.kyx') || fileName.endsWith('.kyx.txt');
          $scope.model.kind = isKyx ? 'kyx' : 'kya';
          $scope.model.content = fileContent;
+         $scope.model.uri = "file://" + fileName;
        }
      };
+
+     $scope.updateModelContentFromURL = function() {
+       if ($scope.model.uri && !$scope.model.uri.startsWith('file://') &&
+            ($scope.model.uri.endsWith('.kyx') || $scope.model.uri.endsWith('.kyx.txt')
+            || $scope.model.uri.endsWith('.kya') || $scope.model.uri.endsWith('.kya.txt'))) {
+         $http.get($scope.model.uri).then(function(response) {
+            var isKyx = $scope.model.uri.endsWith('.kyx') || $scope.model.uri.endsWith('.kyx.txt');
+            $scope.model.kind = isKyx ? 'kyx' : 'kya';
+            $scope.model.content = response.data;
+         })
+       }
+     }
 
      $scope.uploadContent = function(startProof) {
        var url =  "user/" + sessionService.getUser() +
