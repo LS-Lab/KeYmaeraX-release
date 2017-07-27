@@ -606,6 +606,12 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
         "/dashboard.html?#/tutorials",
         "classpath:/examples/tutorials/basic/basic.json",
         "/examples/tutorials/fm/fm.png", 0) ::
+        new ExamplePOJO(3, "DLDS",
+          "Dynamic Logic for Dynamical Systems Examples",
+          //"/keymaerax-projects/dlds/README.md",
+          "",
+          "classpath:/keymaerax-projects/dlds/dlds.kya",
+          "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
       Nil
 
     db.getUser(userId) match {
@@ -731,8 +737,15 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: S
 
 class ImportExampleRepoRequest(db: DBAbstraction, userId: String, repoUrl: String) extends UserRequest(userId) with WriteRequest {
   override def resultingResponses(): List[Response] = {
-    DatabasePopulator.importJson(db, userId, repoUrl, prove=false)
-    new BooleanResponse(true) :: Nil
+    if (repoUrl.endsWith(".json")) {
+      DatabasePopulator.importJson(db, userId, repoUrl, prove=false)
+      BooleanResponse(flag=true) :: Nil
+    } else if (repoUrl.endsWith(".kya")) {
+      DatabasePopulator.importKya(db, userId, repoUrl, prove=false)
+      BooleanResponse(flag=true) :: Nil
+    } else {
+      new ErrorResponse("Unknown repository type " + repoUrl + ". Expected .json or .kya") :: Nil
+    }
   }
 }
 
@@ -953,10 +966,7 @@ class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: Strin
 
       if (db.getModelList(userId).isEmpty) {
         //@todo actually check model content (existing models might be outdated)
-        //@note use tactic name as description
-        DatabasePopulator.readKya(uri).map(e => TutorialEntry(e.name, e.model,
-            e.tactic match { case Some((tname, _, _)) => Some(tname) case None => None }, e.title, e.link, e.tactic))
-          .foreach(DatabasePopulator.importModel(db, userId, prove = false))
+        DatabasePopulator.importKya(db, userId, uri, prove=false)
       }
 
       //@todo template engine, e.g., twirl, or at least figure out how to parse from a string
