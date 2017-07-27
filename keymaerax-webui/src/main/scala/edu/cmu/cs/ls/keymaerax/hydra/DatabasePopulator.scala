@@ -31,7 +31,13 @@ object DatabasePopulator {
 
   /** Imports an archive from URL. Optionally proves the models when tactics are present. */
   def importKya(db: DBAbstraction, user: String, url: String, prove: Boolean = false): Unit = {
-    readKya(url).foreach(importModel(db, user, prove))
+    //@note use tactic name as description if entry does not come with a description itself
+    readKya(url)
+      .map(e =>
+        if (e.description.isDefined) e
+        else TutorialEntry(e.name, e.model,
+          e.tactic match { case Some((tname, _, _)) => Some(tname) case None => None }, e.title, e.link, e.tactic))
+      .foreach(DatabasePopulator.importModel(db, user, prove = false))
   }
 
   /** Reads a .kya archive from the URL `url` as tutorial entries (i.e., one tactic per entry). */
