@@ -50,7 +50,8 @@ object AxiomaticODESolver {
 
   def apply(): DependentPositionTactic = axiomaticSolve()
 
-  def axiomaticSolve(instEnd: Boolean = false): DependentPositionTactic = "solve" by ((pos: Position, s: Sequent) => {
+  def axiomaticSolve(instEnd: Boolean = false): DependentPositionTactic =
+      (if (instEnd) "solveEnd" else "solve") by ((pos: Position, s: Sequent) => {
     s.sub(pos) match {
       case Some(Diamond(ODESystem(_, True), _)) =>
         useAt("<> diamond", PosInExpr(1::Nil))(pos) &
