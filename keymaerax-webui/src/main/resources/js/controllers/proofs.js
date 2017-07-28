@@ -25,11 +25,11 @@ angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', funct
           });
   };
 
-  /** Opens the first proof (finished or not) of this model. */
-  $scope.openFirstProof = function(modelId) {
+  /** Opens the last proof (finished or not) of this model. */
+  $scope.openLastProof = function(modelId) {
     $http.get('models/users/' + sessionService.getUser() + "/model/" + modelId + "/proofs").then(function(response) {
       if (response.data.length > 0) {
-        $location.path('proofs/' + response.data[0].id);
+        $location.path('proofs/' + response.data[response.data.length-1].id);
       }
     });
   };
