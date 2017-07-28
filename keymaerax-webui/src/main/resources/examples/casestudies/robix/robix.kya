@@ -1892,7 +1892,8 @@ Tactic "Proof Theorem 11: Reach waypoint".
           QE,
           andR(2) ; <(
             QE,
-            allR(2) ; implyR(2) ; allR(2) ; implyR(2) ;
+            existsR({`ar*ep()+vr_1`}, 2) ; simplify(2) ;
+            existsR({`ar/2*ep()^2+vr_1*ep()+xr_1`}, 2) ; simplify(2) ;
             con({`Vmax()>0&A()>0&b()>0&ep()>0&0 < vr&vr<=Vmax()&xg-GDelta() < xr+v*ep()*vr`}, 2) ; <(
               QE,
               composed(1) ; composed(1) ; cut({`xr<=xg-GDelta()|xg-GDelta() < xr`}) ; <(
