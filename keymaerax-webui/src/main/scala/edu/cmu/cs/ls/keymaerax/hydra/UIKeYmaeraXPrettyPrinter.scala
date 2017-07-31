@@ -117,6 +117,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
   }
 
   protected override def pp(q: PosInExpr, term: Term): String = emit(q, term match {
+    case FuncOf(f, Nothing) => f.asString + "()"
     case t: Power =>
       wrapLeft(t, pp(q++0, t.left)) + s"${HTML_OPEN}sup$HTML_CLOSE" + wrapRight(t, pp(q++1, t.right)) + s"$HTML_OPEN/sup$HTML_CLOSE"
     case _ => super.pp(q, term)

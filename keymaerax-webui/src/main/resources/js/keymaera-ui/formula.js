@@ -239,6 +239,12 @@ angular.module('formula')
               return $sce.trustAsHtml(html);
             }
 
+            scope.replaceNullaryFn = function(html) {
+              return html.replace(/(\w+)(\(\))/g, function(match, fn, parens, offset, string) {
+                return '<span class="k4-nullary-fn">' + fn + '</span>';
+              });
+            }
+
 //            console.log("Compiling formula")
 //            var fmlMarkup = scope.collapsed ? scope.formula.string : scope.formula.html;
 //            // compile template, bind to scope, and add into DOM

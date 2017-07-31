@@ -264,6 +264,7 @@ del {
 
 .k4-formula {background: transparent; }
 .k4-term {background: transparent; }
+.k4-nullary-fn { font-style: italic; }
 
 .k4-has-step.k4-prove-hover {
   color: var(--lsmainback);
