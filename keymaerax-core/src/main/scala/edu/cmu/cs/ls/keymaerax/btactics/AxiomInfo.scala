@@ -799,7 +799,10 @@ object DerivationInfo {
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
     new TacticInfo("master", "master", {case () => (gen:Generator.Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true),
-    new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),
+    InputTacticInfo("QE", "QE",
+      List(VariableArg("tool")),
+      _ => { case Some(toolName: Variable) => TactixLibrary.QE(Nil, Some(toolName.name))
+             case _ => TactixLibrary.QE }: TypedFunc[Option[Variable], BelleExpr], needsTool = true),
     new TacticInfo("rcf", "rcf",  {case () => TactixLibrary.RCF}, needsTool = true),
     //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),
