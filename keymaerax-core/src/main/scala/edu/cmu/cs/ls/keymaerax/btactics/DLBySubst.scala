@@ -189,6 +189,45 @@ private object DLBySubst {
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident)
   })
 
+  /**
+    * Equality assignment to a fresh variable.
+    * Introduces an existential quantifier in the antecedent, a universal quantifier in the succedent, which both are
+    * already skolemized if applied at top-level; quantifier remains unhandled in non-top-level context.
+    *
+    * @example{{{
+    *    x_0=x+1 |- [{x_0:=x_0+1;}*]x_0>0
+    *    ----------------------------------assignEquality(1)
+    *        |- < x:=x+1; >[{x:=x+1;}*]x>0
+    * }}}
+    * @example{{{
+    *    x_0=x+1, [{x_0:=x_0+1;}*]x_0>0) |-
+    *    --------------------------------------------------- assignEquality(-1)
+    *         < x:=x+1; >[{x:=x+1;}*]x>0 |-
+    * }}}
+    * @example Other uses of the variable in the context remain unchanged.
+    * {{{
+    *    x=2 |- [y:=2;]\\forall x_0 (x_0=x+1 -> [{x_0:=x_0+1;}*]x_0>0)
+    *    -------------------------------------------------------------- assignEquational(1, 1::Nil)
+    *    x=2   |- [y:=2;]<x:=x+1;>[{x:=x+1;}*]x>0
+    * }}}
+    * @author Andre Platzer, Stefan Mitsch
+    * @incontext
+    */
+  lazy val assigndEquality: DependentPositionTactic = "assigndEquality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    //@note have already failed assigning directly so grab fresh name index otherwise
+    // <x:=f(x);>P(x)
+    case Some(Diamond(Assign(x, _), _)) =>
+      //@todo polarity
+      val axiom = if (pos.isSucc) "<:=> assign equality all" else "<:=> assign equality"
+      val y = TacticHelper.freshNamedSymbol(x, sequent)
+      ProofRuleTactics.boundRenaming(x, y)(pos) &
+        useAt(axiom)(pos) &
+        ProofRuleTactics.uniformRenaming(y, x) &
+        (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
+         else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL(pos)
+         else ident)
+  })
+
   /** @see [[TactixLibrary.generalize()]]
    * @todo same for diamonds by the dual of K
    */

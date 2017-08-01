@@ -150,8 +150,7 @@ trait HilbertCalculus extends UnifyUSCalculus {
   lazy val box                : DependentPositionTactic = useAt("[] box")
   /** assignd: <:=> simplify assignment `<x:=f;>p(x)` by substitution `p(f)` or equation */
   lazy val assignd            : DependentPositionTactic = "assignd" by { (pos:Position) =>
-    //@todo make complete by an analogue of DLBySubst.assignEquality for diamonds
-    useAt("<:=> assign")(pos) | (if (pos.isSucc) useAt("<:=> assign equality all")(pos) else useAt("<:=> assign equality")(pos))
+    useAt("<:=> assign")(pos) | DLBySubst.assigndEquality(pos)
   }
 
   /** randomd: <:*> simplify nondeterministic assignment `<x:=*;>p(x)` to an existential quantifier `\exists x p(x)` */

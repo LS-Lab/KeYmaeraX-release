@@ -14,6 +14,8 @@ import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps
 
+import org.scalatest.LoneElement._
+
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.DLBySubst]]
  */
@@ -542,6 +544,26 @@ class DLTests extends TacticTestBase {
     result.subgoals(1).succ should contain only "<x:=x-1;>v-1=x".asFormula
     result.subgoals(2).ante should contain only ("v<0".asFormula, "v=x".asFormula)
     result.subgoals(2).succ should contain only "x < 0".asFormula
+  }
+
+  "assignd" should "work when bound later" in {
+    val result = proveBy("<x:=x+1;><x:=x+2;>x>3".asFormula, HilbertCalculus.assignd(1))
+    result.subgoals.loneElement shouldBe "==> <x:=x+1+2;>x>3".asSequent
+  }
+
+  it should "work top-level when bound later in an ODE" in {
+    val result = proveBy("<x:=x+1;><{x'=2}>x>3".asFormula, HilbertCalculus.assignd(1))
+    result.subgoals.loneElement shouldBe "x=x_0+1 ==> <{x'=2}>x>3".asSequent
+  }
+
+  it should "work top-level in antecedent when bound later in an ODE" in {
+    val result = proveBy("<x:=x+1;><{x'=2}>x>3 ==> ".asSequent, HilbertCalculus.assignd(-1))
+    result.subgoals.loneElement shouldBe "x=x_0+1, <{x'=2}>x>3 ==> ".asSequent
+  }
+
+  it should "work in context when bound later in an ODE" in {
+    val result = proveBy("x=1 -> <x:=x+1;><{x'=2}>x>3".asFormula, HilbertCalculus.assignd(1, 1::Nil))
+    result.subgoals.loneElement shouldBe "==> x_0=1 -> \\forall x (x=x_0+1 -> <{x'=2}>x>3)".asSequent
   }
 
   "Loop" should "work with abstract invariant" in {
