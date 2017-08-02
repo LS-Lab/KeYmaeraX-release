@@ -16,7 +16,7 @@ body {
 
 /* Convert Bootstrap absolute font sizes into relative font sizes */
 pre {
-  font-size: 90%;
+  font-size: 100%;
 }
 
 output {
