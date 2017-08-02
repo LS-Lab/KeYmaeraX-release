@@ -44,33 +44,42 @@
     <div class="panel-body">
 
     <div class="row">
-    <table class="table table-hover table-condensed" id="ModelList" ng-if="models.length > 0" ng-cloak>
+    <table class="table table-hover table-condensed k4-table-fixed" id="ModelList" ng-if="models.length > 0" ng-cloak>
         <thead>
         <tr>
-            <td>ID</td>
-            <td>Name</td>
-            <td>Description</td>
-            <td>Tactic</td>
-            <td>Actions</td>
+            <th class="col-sm-1">ID</th>
+            <th class="col-sm-4">Name</th>
+            <th class="col-sm-4">Description</th>
+            <th class="col-sm-1">Tactic</th>
+            <th class="col-sm-2">Actions</th>
         </tr>
         </thead>
         <tbody>
         <tr ng-repeat="model in models | orderBy:'name'">
-            <td>{{ model.id }}</td>
-            <td id="modelopen">
-                <div data-intro="Inspect model definitions." data-position="right" ng-if="$first">
-                    <a class="btn btn-link" href="" ng-click="open(model.id)">{{ model.name }}</a>
-                </div>
-                <div ng-if="!$first">
-                    <a class="btn btn-link" href="" ng-click="open(model.id)">{{ model.name }}</a>
+            <td class="k4-abbreviate">{{ model.id }}</td>
+            <td class="k4-abbreviate" id="modelopen">
+                <div>
+                    <button class="btn btn-link" ng-click="open(model.id)"
+                            uib-tooltip="{{model.name}}" tooltip-placement="auto top" tooltip-popup-delay="1000"
+                            data-intro="Inspect model definitions." data-position="right" ng-if="$first">{{ model.name }}</button>
+                    <button class="btn btn-link" ng-click="open(model.id)"
+                            uib-tooltip="{{model.name}}" tooltip-placement="auto top" tooltip-popup-delay="1000"
+                            ng-if="!$first">{{ model.name }}</button>
                 </div>
             </td>
-            <td>
-              <a ng-if="model.pubLink" href="{{model.pubLink}}">{{model.description}}</a>
-              <span ng-if="!model.pubLink">{{model.description}}</span>
+            <td class="k4-abbreviate">
+                <div>
+                    <button class="btn btn-link" ng-if="model.pubLink"
+                            uib-tooltip="{{model.description}}" tooltip-placement="auto top" tooltip-popup-delay="1000"
+                            href="{{model.pubLink}}">{{model.description}}</button>
+                    <div uib-tooltip="{{model.description}}" tooltip-placement="auto top" tooltip-popup-delay="1000"
+                         ng-if="!model.pubLink">{{model.description}}</div>
+                </div>
             </td>
-            <td><a href="" ng-if="model.hasTactic" ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></a></td>
-            <td ng-model="model" id="modelactions"
+            <td class="k4-abbreviate">
+                <button class="btn btn-link" ng-if="model.hasTactic"
+                        ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></button></td>
+            <td class="k4-abbreviate" ng-model="model" id="modelactions"
                 data-intro="Check proof, download models (.kyx, includes only the model) and archives (.kya, includes a model with all its partial and finished proofs)."
                 data-position="bottom" ng-if="$first">
                 <a class="btn btn-default" ng-disabled="!model.hasTactic" ng-controller="ModelProofCreateCtrl"
@@ -78,7 +87,7 @@
                 <a class="btn btn-default" ng-click="downloadModel(model.id)" uib-tooltip="Download model (.kyx)"><i class="fa fa-download"></i></a>
                 <a class="btn btn-default" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download model+proofs (.kya)"><i class="fa fa-archive"></i></a>
             </td>
-            <td ng-model="model" ng-if="!$first">
+            <td class="k4-abbreviate" ng-model="model" ng-if="!$first">
                 <a class="btn btn-default" ng-disabled="!model.hasTactic" ng-controller="ModelProofCreateCtrl"
                    ng-click="openLastProof(model.id)" uib-tooltip="Check proof"><i class="fa fa-check-square"></i></a>
                 <a class="btn btn-default" ng-click="downloadModel(model.id)" uib-tooltip="Download"><i class="fa fa-download"></i></a>

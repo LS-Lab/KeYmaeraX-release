@@ -262,6 +262,10 @@ del {
   display: none !important;
 }
 
+.k4-table-fixed {
+  table-layout: fixed;
+}
+
 .k4-formula {background: transparent; }
 .k4-term {background: transparent; }
 .k4-nullary-fn { font-style: italic; }
