@@ -632,8 +632,9 @@ del {
   display: inline-block;
 }
 
-.tooltip .k4-sequentRule {
-  width: 350px; /* @todo solve tactic popover layout problem for real */
+.k4-stepexplanation-tooltip {
+  width: 80%;
+  font-size: 100%;
 }
 
 .increase-popover-width {

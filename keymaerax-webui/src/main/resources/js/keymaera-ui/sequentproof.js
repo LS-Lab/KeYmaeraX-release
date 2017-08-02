@@ -123,7 +123,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         return parent;
       }
 
-      scope.stepAxiom = function(nodeId) {
+      scope.stepAxiom = function() {
         if (scope.explanationNodeId) {
           var parent = sequentProofData.proofTree.node(scope.explanationNodeId);
           var fstChild = sequentProofData.proofTree.node(parent.children[0]);
@@ -296,7 +296,7 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         scope.explanationNodeId = highlight ? nodeId : undefined;
       }
 
-      scope.stepAxiom = function(nodeId) {
+      scope.stepAxiom = function() {
         if (scope.explanationNodeId) {
           var parent = sequentProofData.proofTree.node(scope.explanationNodeId);
           var fstChild = sequentProofData.proofTree.node(parent.children[0]);

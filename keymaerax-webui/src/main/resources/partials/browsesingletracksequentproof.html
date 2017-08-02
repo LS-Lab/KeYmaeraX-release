@@ -2,8 +2,9 @@
      uib-tooltip-template="'templates/stepExplanationTooltipTemplate.html'"
      tooltip-is-open="explanationNodeId !== undefined"
      tooltip-trigger="'none'"
+     tooltip-class="k4-stepexplanation-tooltip"
      tooltip-append-to-body="true"
-     tooltip-placement="auto top-right">
+     tooltip-placement="auto top-left">
     <div class="row k4-proofrow" ng-if="proofTree.nodesMap[deductionPath.sections[0].path[0]].children.length > 0">
         <div class="col-md-12">
             <button class="btn btn-link" ng-click="fetchNodeChildren(userId, proofId, deductionPath.sections[0].path[0])">
