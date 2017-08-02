@@ -282,11 +282,15 @@
                     <div class="col-md-12">
                         <div class="panel panel-default">
                             <div class="panel-heading">
-                                <div class="col-md-2"><h3 class="panel-title">Proof Programming</h3></div>
-                                <div class="col-md-1" data-intro="Rerun the tactic from the start" data-position="right">
-                                    <button class="btn btn-default" ng-click="rerunTactic()" uib-tooltip="Rerun tactic from original conjecture">Rerun</button>
-                                </div>
-                                <div class="input-group col-md-9" ng-if="tactic.tacticDel === ''">
+                                <div class="col-md-2"><h3 class="panel-title k4-abbreviate"
+                                                          uib-tooltip="Proof Programming" tooltip-placement="auto top"
+                                                          tooltip-popup-delay="1000">Proof Programming</h3></div>
+                                <div class="input-group col-md-10" ng-if="tactic.tacticDel === ''">
+                                    <span class="input-group-btn"
+                                          uib-tooltip="Rerun tactic from original conjecture"
+                                          data-intro="Rerun the tactic from the start" data-position="right">
+                                        <button class="btn btn-default" ng-click="rerunTactic()">Rerun</button>
+                                    </span>
                                     <span class="input-group-addon">Fresh steps</span>
                                     <input type="text" readonly class="form-control k4-abbreviate" placeholder="None"
                                            uib-tooltip="Edit tactic below (augment proof with fresh steps by pressing 'shift-enter' or clicking 'Execute')"
@@ -299,7 +303,12 @@
                                                 ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Execute</button>
                                     </span>
                                 </div>
-                                <div class="input-group col-md-9" ng-if="tactic.tacticDel !== ''">
+                                <div class="input-group col-md-10" ng-if="tactic.tacticDel !== ''">
+                                    <span class="input-group-btn"
+                                          uib-tooltip="Rerun tactic from original conjecture"
+                                          data-intro="Rerun the tactic from the start" data-position="right">
+                                        <button class="btn btn-default" ng-click="rerunTactic()">Rerun</button>
+                                    </span>
                                     <span class="input-group-addon">Replace {{tactic.tacticDel}} with </span>
                                     <input type="text" readonly class="form-control k4-abbreviate" placeholder="None"
                                            uib-tooltip="Edit tactic below (augment proof with fresh steps by pressing 'shift-enter' or clicking 'Execute')"
