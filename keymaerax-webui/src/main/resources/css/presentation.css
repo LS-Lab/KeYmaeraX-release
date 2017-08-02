@@ -83,3 +83,19 @@ code {
   font-size: smaller;
 }
 
+.k4-highlight-steppos > .k4-op {
+  background-color: var(--lsmain);
+  color: var(--lsmainback);
+}
+.k4-highlight-steppos-full {
+  background-color: var(--lsmain);
+  color: var(--lsmainback);
+}
+.k4-highlight-steppos-modality-prg > .k4-mod-open ~ span > .k4-prg-op {
+  background-color: var(--lsmain);
+  color: var(--lsmainback);
+}
+.k4-highlight-steppos-modality-post > .k4-mod-close ~ span > .k4-op {
+  background-color: var(--lsmain);
+  color: var(--lsmainback);
+}
