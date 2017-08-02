@@ -906,7 +906,6 @@ del {
 .k4-formula.hover > ul:first-child, .k4-formula:hover > ul:first-child {
   opacity: 1;
   position: absolute;
-  left: 0px; /* -79px with text */
   top: 0px;
   z-index: 100;
 }
@@ -948,25 +947,24 @@ del {
 .k4-formula > ul:first-child {
   list-style-type: none;
   padding: 0;
-  margin: 0 0 0 -4px; /* margin: 0 8px 0 -4px */
+  margin: 0 0 0 -0.97em;
   text-align: left;
-  width: 20px; /* 100 px with text */
+  width: 1em;
   opacity: 0;
   display: block;
   position: absolute;
-  left: 0px; /* -79px with text */
   top: 0px;
   z-index: 1;
 }
 .k4-formula > ul:first-child li {
-  height: 15px;
+  height: 2ex;
   border: 1px solid var(--lsblue);
   display: list-item;
   margin: 0 -1px;
   background: var(--lssuperlightblue);
   border-top-left-radius: 3px;
   border-bottom-left-radius: 3px;
-  width: 20px; /* 100px with text */
+  width: 1em; /* 100px with text */
   text-align: center;
 }
 .k4-formula > ul:first-child li.show {
@@ -981,7 +979,6 @@ del {
   color: var(--lsblue);
   padding: 0 0 0 0px; /* padding: 0 5px 0 10px; */
   display: block;
-  line-height: 13px;
   font-size: 70%;
 }
 .k4-formula > ul:first-child li:hover {
