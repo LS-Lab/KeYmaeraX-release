@@ -136,7 +136,7 @@
 
 <div class="footer" ng-controller="ServerInfoCtrl">
     <div class="container">
-        <p class="text-muted">KeYmaera X version {{keymaeraXVersion}}
+        <p class="text-muted k4-server-info">KeYmaera X version {{keymaeraXVersion}}
             <span class="text-danger" ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a class="text-danger" href="http://keymaerax.org">KeYmaeraX.org</a></b>).</span>
             <span ng-if="!versionInfoAvailable">(could not retrieve version information from KeYmaeraX.org).</span>
             <span ng-if="upToDate && versionInfoAvailable">(latest release).</span>

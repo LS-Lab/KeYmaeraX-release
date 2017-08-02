@@ -595,6 +595,10 @@ del {
   outline: none;
 }
 
+.k4-server-info {
+  font-size: 14px;
+}
+
 .k4-carousel-caption {
   position: absolute;
   right: 0%;
