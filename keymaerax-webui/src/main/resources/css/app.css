@@ -636,10 +636,6 @@ del {
   width: 350px; /* @todo solve tactic popover layout problem for real */
 }
 
-.popover .k4-tactic-popover-entry {
-  width: 700px; /* @todo solve tactic popover layout problem for real */
-}
-
 .increase-popover-width {
    width: 180px;
 }
@@ -680,6 +676,18 @@ del {
 
 .k4-sequentRuleSucc {
   text-align: left;
+}
+
+.k4-axiomtactic-popover {
+  width: 80%;
+}
+
+.k4-axiomtactic-input {
+  display: inline-block;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: -6px;
 }
 
 .k4-tacticPopoverRow {

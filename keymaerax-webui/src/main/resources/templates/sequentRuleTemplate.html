@@ -7,10 +7,10 @@
                     <span ng-bind-html="antePart.text" ng-if="!antePart.isInput"></span>
                     <span ng-if="premise.isClosed && antePart.isInput && antePart.value() !== undefined">{{antePart.value()}}</span>
                     <span ng-if="readOnly || (premise.isClosed && antePart.isInput && antePart.value() === undefined)">{{antePart.placeholder}}</span>
-                    <span id="{{antePart.text}}" e-name="{{antePart.text}}" e-placeholder="{{antePart.placeholder}}"
-                          buttons="no"
-                          style="display: inline-block; max-width: 100px; overflow: hidden; text-overflow: ellipsis; margin-bottom: -6px;"
+                    <span id="{{antePart.text}}" class="k4-axiomtactic-input"
+                          e-name="{{antePart.text}}" e-placeholder="{{antePart.placeholder}}" buttons="no"
                           ng-if="!readOnly && !premise.isClosed && antePart.isInput"
+                          uib-tooltip="{{antePart.value}}" tooltip-placement="auto top"
                           editable-text="antePart.value" onbeforesave="saveValue(antePart, $data)"
                           e-required>{{antePart.value || antePart.placeholder}}</span>
                 </span>
@@ -24,10 +24,10 @@
                     <span ng-bind-html="succPart.text" ng-if="!succPart.isInput"></span>
                     <span ng-if="premise.isClosed && succPart.isInput && succPart.value() !== undefined">{{succPart.value()}}</span>
                     <span ng-if="readOnly || (premise.isClosed && succPart.isInput && succPart.value() === undefined)">{{succPart.placeholder}}</span>
-                    <span id="{{succPart.text}}" e-name="{{succPart.text}}" e-placeholder="{{succPart.placeholder}}"
-                          buttons="no"
-                          style="display: inline-block; max-width: 100px; overflow: hidden; text-overflow: ellipsis; margin-bottom: -6px;"
+                    <span id="{{succPart.text}}" class="k4-axiomtactic-input"
+                          e-name="{{succPart.text}}" e-placeholder="{{succPart.placeholder}}" buttons="no"
                           ng-if="!readOnly && !premise.isClosed && succPart.isInput"
+                          uib-tooltip="{{succPart.value}}" tooltip-placement="auto top"
                           editable-text="succPart.value" onbeforesave="saveValue(succPart, $data)"
                           e-required>{{succPart.value || succPart.placeholder}}</span>
                 </span>
