@@ -7,7 +7,9 @@
   --lslightgreen:#54B9DF;       /* Blue (bright 2) */
   --lsmain:black;
   --lsmainback:white;
+  --lslightred:thistle;
   --lsfontsize:14px;
+  --lsoutlineshadow: 1px 0px white, -1px 0px white, 0px 1px white, 0px -1px white;
 }
 
 body {
@@ -889,7 +891,9 @@ del {
 
 .k4-highlight-steppos > .k4-op {
   border-bottom: solid var(--lsmain);
-  background-color: plum;
+  background-color: var(--lslightred);
+  color: var(--lsmain);
+  text-shadow: var(--lsoutlineshadow);
   padding: 3px;
   margin: -3px;
   position: relative; /* required for z-index */
@@ -897,7 +901,9 @@ del {
 }
 .k4-highlight-steppos-full {
   border-bottom: solid var(--lsmain);
-  background-color: plum;
+  background-color: var(--lslightred);
+  color: var(--lsmain);
+  text-shadow: var(--lsoutlineshadow);
   padding: 3px;
   margin: -3px;
   position: relative; /* required for z-index */
@@ -905,7 +911,9 @@ del {
 }
 .k4-highlight-steppos-modality-prg > .k4-mod-open ~ span > .k4-prg-op {
   border-bottom: solid var(--lsmain);
-  background-color: plum;
+  background-color: var(--lslightred);
+  color: var(--lsmain);
+  text-shadow: var(--lsoutlineshadow);
   padding: 3px;
   margin: -3px;
   position: relative; /* required for z-index */
@@ -913,7 +921,9 @@ del {
 }
 .k4-highlight-steppos-modality-post > .k4-mod-close ~ span > .k4-op {
   border-bottom: solid var(--lsmain);
-  background-color: plum;
+  background-color: var(--lslightred);
+  color: var(--lsmain);
+  text-shadow: var(--lsoutlineshadow);
   padding: 3px;
   margin: -3px;
   position: relative; /* required for z-index */
