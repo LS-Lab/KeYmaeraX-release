@@ -160,7 +160,7 @@ object HyDRAInitializer {
   private def createTool(options: OptionMap, config: ToolProvider.Configuration, preferredTool: String): Unit = {
     val tool: String = options.getOrElse('tool, preferredTool).toString
     val provider = tool.toLowerCase() match {
-      case "mathematica" => new MathematicaZ3ToolProvider(config)
+      case "mathematica" => new MathematicaToolProvider(config)
       case "z3" => new Z3ToolProvider
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
