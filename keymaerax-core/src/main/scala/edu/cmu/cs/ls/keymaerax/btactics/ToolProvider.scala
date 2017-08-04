@@ -33,13 +33,13 @@ object ToolProvider extends ToolProvider {
     * Set a new tool provider to be used from now on.
     * @param provider the tool provider to use in KeYmaera X from now on.
     */
-  def setProvider(provider: ToolProvider): Unit = {
+  def setProvider(provider: ToolProvider) = {
     if (provider!=this) this.f = provider else throw new IllegalArgumentException("Provide a concrete tool provider, not this repository.")
   }
 
   // convenience methods forwarding to the current factory
 
-  def qeTool(name: Option[String] = None): Option[QETool] = f.qeTool(name)
+  def qeTool(): Option[QETool] = f.qeTool()
 
   def odeTool(): Option[ODESolverTool] = f.odeTool()
 
@@ -70,7 +70,7 @@ trait ToolProvider {
   def tools(): List[Tool]
 
   /** Returns a QE tool. */
-  def qeTool(name: Option[String] = None): Option[QETool]
+  def qeTool(): Option[QETool]
 
   /** Returns an ODE tool. */
   def odeTool(): Option[ODESolverTool]
@@ -114,10 +114,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
   private[this] lazy val algebra: Option[Tool with AlgebraTool] = toolPreferences.find(_.isInstanceOf[AlgebraTool]).map(_.asInstanceOf[Tool with AlgebraTool])
 
   override def tools(): List[Tool] = toolPreferences
-  override def qeTool(name: Option[String] = None): Option[QETool] = ensureInitialized[Tool with QETool](name match {
-    case Some(qeToolName) => toolPreferences.find(t => t.isInstanceOf[QETool] && t.name == qeToolName).map(_.asInstanceOf[Tool with QETool])
-    case None => qe
-  })
+  override def qeTool(): Option[QETool] = ensureInitialized(qe)
   override def odeTool(): Option[ODESolverTool] = ensureInitialized(ode)
   override def pdeTool(): Option[PDESolverTool] = ensureInitialized(pde)
   override def cexTool(): Option[CounterExampleTool] = ensureInitialized(cex)
@@ -139,7 +136,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
   */
 class NoneToolProvider extends ToolProvider {
   override def tools(): List[Tool] = Nil
-  override def qeTool(name: Option[String] = None): Option[QETool] = None
+  override def qeTool(): Option[QETool] = None
   override def odeTool(): Option[ODESolverTool] = None
   override def pdeTool(): Option[PDESolverTool] = None
   override def simplifierTool(): Option[SimplificationTool] = None
@@ -171,9 +168,3 @@ class MathematicaToolProvider(config: Configuration) extends PreferredToolProvid
 class Z3ToolProvider extends PreferredToolProvider({ val z = new Z3; z.init(Map()); val ode = new IntegratorODESolverTool; ode.init(Map()); z :: ode :: Nil }) {
   def tool(): Z3 = tools().head.asInstanceOf[Z3]
 }
-
-/** A tool provider that provides all Mathematica tools, but favors Z3 for QE unless specifically asked to provide Mathematica.
-  * @author Stefan Mitsch
-  */
-class MathematicaZ3ToolProvider(config: Configuration) extends PreferredToolProvider(
-  { val m = new Mathematica(); m.init(config); val z = new Z3; z.init(Map()); z :: m :: Nil }) { }

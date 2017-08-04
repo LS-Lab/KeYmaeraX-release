@@ -25,7 +25,8 @@ import scala.collection.immutable._
 private object ToolTactics {
 
   /** Performs QE and fails if the goal isn't closed. */
-  def fullQE(order: List[NamedSymbol] = Nil)(qeTool: => QETool): BelleExpr = {
+  def fullQE(order: List[NamedSymbol] = Nil)(qeTool: QETool): BelleExpr = {
+    require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("QE",
       QELogger.getLogTactic &
       (done | //@note don't fail QE if already proved
@@ -44,7 +45,7 @@ private object ToolTactics {
         )
       )
   )}
-  def fullQE(qeTool: => QETool): BelleExpr = fullQE()(qeTool)
+  def fullQE(qeTool: QETool): BelleExpr = fullQE()(qeTool)
 
   // Follows heuristic in C.W. Brown. Companion to the tutorial: Cylindrical algebraic decomposition, (ISSAC 2004)
   // www.usna.edu/Users/cs/wcbrown/research/ISSAC04/handout.pdf
@@ -131,7 +132,7 @@ private object ToolTactics {
   }
 
   //Note: the same as fullQE except it uses computes the heuristic order in the middle
-  def heuristicQE(qeTool: => QETool, po: Ordering[Variable]=equalityOrder): BelleExpr = {
+  def heuristicQE(qeTool: QETool,po:Ordering[Variable]=equalityOrder): BelleExpr = {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("ordered QE",
       //      DebuggingTactics.recordQECall() &
@@ -150,7 +151,7 @@ private object ToolTactics {
   /** Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
     */
-  def partialQE(qeTool: => QETool): BelleExpr = {
+  def partialQE(qeTool: QETool): BelleExpr = {
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
     Idioms.NamedTactic("pQE",
       toSingleFormula & rcf(qeTool)
@@ -158,8 +159,7 @@ private object ToolTactics {
   }
 
   /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
-  def rcf(qeTool: => QETool): BelleExpr = "rcf" by ((sequent: Sequent) => {
-    require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
+  def rcf(qeTool: QETool): BelleExpr = "rcf" by ((sequent: Sequent) => {
     assert(sequent.ante.isEmpty && sequent.succ.length == 1, "Provable's subgoal should have only a single succedent.")
     require(sequent.succ.head.isFOL, "QE only on FOL formulas")
 
