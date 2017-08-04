@@ -1921,6 +1921,378 @@ End.
 
 End.
 
+Theorem "Theorem 12: Cross intersection".
+
+/*
+ *	Robot must safely cross an intersection.
+ *
+ *  Robot
+ * 	- must cross intersection safely
+ *  - can only drive straight and forward
+ *  - ensures progress towards intersection
+ *
+ *  Obstacle
+ *  - Drives forward with minimum speed (does not block intersection)
+ *
+ *  Intersection
+ *  - At position 0 (on both the robot's and the obstacle's path)
+ *
+ *  Liveness property:
+ *  - Robot can cross intersection
+ *
+ *  Safety property:
+ *  - Robot and obstacle are not at the intersection at the same time
+ *
+ */
+
+Functions.
+	R ep().      /* time limit for control decisions */
+  R b().       /* minimum braking capability of the robot */
+  R A().       /* maximum acceleration -b <= a <= A */
+	R Vmin().    /* obstacle minimum speed */
+	R ixr() = ( 0 ). /* position of intersection on path of robot */
+	R ixo() = ( 0 ). /* position of intersection on path of obstacle */
+
+	R minV() = ( A()*ep() ).
+
+	R stopDist(R) = ( (.)^2/(2*b()) ).
+	R accComp(R)  = ( (A()/b() + 1)*(A()/2*ep()^2 + ep()*(.)) ).
+
+	B OAfterX(R) <-> ( (.)>ixo() ).
+	B RAfterX(R) <-> ( (.)>ixr() ).
+
+	B bounds() <-> (                                                                     /* Bounds for global constants */
+      A() > 0                                                                                       /* Working engine */
+    & b() > 0                                                                                       /* Working brakes */
+    & ep() > 0                                                                            /* Controller reaction time */
+    & Vmin() > 0
+  ).
+  B initialState() <-> (                                                   /* Somewhere before intersection initially */
+    vr = 0
+    & vo>=Vmin()
+    & xr < ixr()
+  ).
+  B assumptions() <-> (bounds() & initialState()).                     /* Under these assumptions we guarantee safety */
+
+	B loopinv() <-> (
+	  0 <= vr & Vmin()<=vo & (OAfterX(xr) | OAfterX(xo) | xr + stopDist(vr) < ixr() |
+	    (vr>0 & ( xo+vo*(ixr()-xr)/vr+A/2*((ixr()-xr)/vr)^2 < ixo()
+              | ixo() < xo + Vmin()*(ixr()-xr)/vr))
+    )
+	).
+End.
+
+ProgramVariables.
+	R xr.		/* robot position: x */
+	R vr.		/* robot translational velocity */
+	R ar.		/* robot translational acceleration */
+	R xo.		/* obstacle position */
+	R vo.   /* obstacle velocity */
+	R ao.   /* obstacle acceleration */
+	R t.		/* control cycle time */
+End.
+
+Problem.
+  assumptions()
+	  ->
+	  /* safety */
+	  [
+      {	/* obstacle */
+        {
+          ao := *; ?-b()<=ao&ao<=A();
+        }
+        /* robot */
+        {
+        {
+          if (RAfterX(xr) | OAfterX(xo)) {
+            ar := *; ?-b()<=ar&ar<=A();
+          } else { if (/*PassFaster*/ vr>0 & ( xo+vo*(ixr()-xr)/vr+A()/2*((ixr()-xr)/vr)^2 < ixo()
+                                             | ixo() < xo + Vmin()*(ixr()-xr)/(vr+A()*ep()) ) ) {
+            ar := *; ?0<=ar&ar<=A();
+          } else { if (/*PassCoast*/ vr>0 & ixo() < xo + Vmin()*(ixr()-xr)/vr) {
+            ar := 0;
+          } else {         /* 1D Model 3 */
+              ar := -b();
+           ++ ?vr = 0; ar := 0;
+           ++ ?xr + stopDist(vr) + accComp(vr) < ixr(); ar := A();
+          }}}
+        }
+        /* dynamics */
+        t := 0;
+        }
+        {xr' = vr, vr' = ar, xo'=vo, vo'=ao, t' = 1 & t <= ep() & vr >= 0 & vo>=Vmin() }
+      }*@invariant(loopinv())
+		] (xr=ixr() -> xo!=ixo())
+		&
+		/* liveness */
+		<
+      {	/* obstacle */
+        {
+          ao := *; ?-b()<=ao&ao<=A();
+        }
+        /* robot */
+        {
+        {
+          if (RAfterX(xr) | OAfterX(xo)) {
+            ar := *; ?-b()<=ar&ar<=A();
+          } else { if (/*PassFaster*/ vr>0 & ( xo+vo*(ixr()-xr)/vr+A()/2*((ixr()-xr)/vr)^2 < ixo()
+                                             | ixo() < xo + Vmin()*(ixr()-xr)/(vr+A()*ep()) ) ) {
+            ar := *; ?0<=ar&ar<=A();
+          } else { if (/*PassCoast*/ vr>0 & ixo() < xo + Vmin()*(ixr()-xr)/vr) {
+            ar := 0;
+          } else {         /* 1D Model 3 */
+              ar := -b();
+           ++ ?vr = 0; ar := 0;
+           ++ ?xr + stopDist(vr) + accComp(vr) < ixr(); ar := A();
+          }}}
+        }
+        /* dynamics */
+        t := 0;
+        }
+        {xr' = vr, vr' = ar, xo' = vo, vo' = ao, t' = 1 & t <= ep() & vr >= 0 & vo>=Vmin() }
+      }*
+		>(RAfterX(xr))
+End.
+
+Tactic "Proof Theorem 12: Cross intersection".
+  implyR(1) ; andR(1) ; <(
+  loop({`0<=vr&Vmin()<=vo&(xr>0|xo>0|xr+vr^2/(2*b()) < 0|vr>0&(xo+vo*(0-xr)/vr+A()/2*((0-xr)/vr)^2 < 0|0 < xo+Vmin()*(0-xr)/vr))`}, 1) ; <(
+    QE,
+    QE,
+    composeb(1) ; composeb(1.1) ; solve(1.1.1) ; chase(1) ; allR(1) ; implyR(1) ; andL(-1) ; andL(-7) ; andR(1) ; <(
+      implyR(1) ; allR(1) ; implyR(1) ; allR(1) ; implyR(1) ; implyR(1) ; orL(-9) ; <(
+        fullSimplify ; andR(1) ; <(
+          QE,
+          andR(1) ; <(
+            QE,
+            orR(1) ; hideR(2) ; QE
+            )
+          ),
+        fullSimplify ; andR(1) ; <(
+          QE,
+          andR(1) ; <(
+            QE,
+            orR(1) ; orR(2) ; hideR(3) ; hideR(1) ; QE
+            )
+          )
+        ),
+      implyR(1) ; andR(1) ; <(
+        implyR(1) ; andL(-10) ; fullSimplify ; allR(1) ; implyR(1) ; allR(1) ; implyR(1) ; implyR(1) ; andR(1) ; <(
+          QE,
+          andR(1) ; <(
+            QE,
+            orR(1) ; orR(2) ; orR(3) ; hideL(-7) ; hideR(3) ; andR(3) ; <(
+              QE,
+              orR(3) ; orL(-9) ; <(
+                hideR(4) ; hideL(-7) ; hideR(2) ; QE,
+                hideL(-7) ; hideR(3) ; hideR(2) ; QE
+                )
+              )
+            )
+          ),
+        implyR(1) ; andR(1) ; <(
+          implyR(1) ; andL(-11) ; fullSimplify ; allR(1) ; implyR(1) ; implyR(1) ; andR(1) ; <(
+            QE,
+            orR(1) ; orR(2) ; orR(3) ; orR(4) ; hideR(4) ; hideR(3) ; hideL(-7) ; hideL(-7) ; hideL(-7) ; QE
+            ),
+          implyR(1) ; andR(1) ; <(
+            notOr(-9) ; andL(-9) ; notAnd(-9) ; notAnd(-10) ; fullSimplify ; allR(1) ; implyR(1) ; implyR(1) ; andR(1) ; <(
+              QE,
+              andR(1) ; <(
+                QE,
+                orR(1) ; orR(2) ; orR(3) ; orL(-8) ; <(
+                  hideR(4) ; hideR(1) ; hideR(1) ; hideL(-9) ; hideL(-9) ; QE,
+                  andL(-8) ; fullSimplify ; fullSimplify ; closeFalse
+                  )
+                )
+              ),
+            andR(1) ; <(
+              implyR(1) ; allR(1) ; implyR(1) ; implyR(1) ; fullSimplify ; andR(1) ; <(
+                QE,
+                QE
+                ),
+              implyR(1) ; allR(1) ; implyR(1) ; implyR(1) ; hideL(-10) ; hideL(-10) ; hideL(-9) ; hideL(-8) ; andR(1) ; <(
+                QE,
+                andR(1) ; <(
+                  QE,
+                  orR(1) ; orR(2) ; orR(3) ; hideR(4) ; hideR(1) ; hideR(1) ; QE
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    ),
+  con({`A()>0&b()>0&ep()>0&Vmin()>0&vo>=Vmin()&vr>=0&(xo<=0->vr=0)&\exists n (n>=2&xo+(v-n)*ep()*Vmin()>0&vr+(min((v,n-1))-(n-2))*ep()*A()>=A()*ep()&(xr>0|xr+min((v,n-2))*ep()*(A()*ep())>0))`}, 1) ; <(
+    QE,
+    composed(1) ; composed(1.1) ; solve(1.1.1) ; composed(1) ; randomd(1) ; existsR({`0`}, 1) ; testd(1) ; andR(1) ; <(
+      QE,
+      composed(1) ; andL(-2) ; andL(-3) ; andL(-4) ; andL(-5) ; andL(-6) ; andL(-7) ; andL(-8) ; existsL(-9) ; andL(-9) ; andL(-10) ; andL(-11) ; choiced(1) ; orR(1) ; composed(1) ; testd(1) ; orL(-12) ; <(
+        hideR(2) ; fullSimplify ; composed(1) ; randomd(1) ; implyL(-8) ; <(
+          cut({`xo+vo*ep()>0|xo+vo*ep()<=0`}) ; <(
+            orL(-12) ; <(
+              existsR({`A()`}, 1) ; testd(1) ; andR(1) ; <(
+                QE,
+                assignd(1) ; existsR({`ep()`}, 1) ; andR(1) ; <(
+                  QE,
+                  andR(1) ; <(
+                    QE,
+                    fullSimplify ; andR(1) ; <(
+                      QE,
+                      existsR({`n`}, 1) ; fullSimplify ; andR(1) ; <(
+                        QE,
+                        andR(1) ; <(
+                          QE,
+                          QE
+                          )
+                        )
+                      )
+                    )
+                  )
+                ),
+              hideR(1) ; QE
+              ),
+            hideR(1) ; QE
+            ),
+          cut({`xo+vo*ep()>0|xo+vo*ep()<=0`}) ; <(
+            orL(-13) ; <(
+              existsR({`A()`}, 1) ; testd(1) ; andR(1) ; <(
+                QE,
+                assignd(1) ; existsR({`ep()`}, 1) ; andR(1) ; <(
+                  QE,
+                  andR(1) ; <(
+                    QE,
+                    fullSimplify ; andR(1) ; <(
+                      QE,
+                      existsR({`n`}, 1) ; fullSimplify ; andR(1) ; <(
+                        QE,
+                        andR(1) ; <(
+                          QE,
+                          QE
+                          )
+                        )
+                      )
+                    )
+                  )
+                ),
+              existsR({`0`}, 1) ; testd(1) ; andR(1) ; <(
+                QE,
+                assignd(1) ; existsR({`ep()`}, 1) ; andR(1) ; <(
+                  QE,
+                  andR(1) ; <(
+                    QE,
+                    fullSimplify ; existsR({`n`}, 1) ; fullSimplify ; andR(1) ; <(
+                      QE,
+                      andR(1) ; <(
+                        QE,
+                        QE
+                        )
+                      )
+                    )
+                  )
+                )
+              ),
+            hideR(1) ; QE
+            )
+          ),
+        composed(2) ; testd(2) ; implyL(-8) ; <(
+          andR(1) ; <(
+            hideR(2) ; QE,
+            hideR(2) ; composed(1) ; randomd(1) ; existsR({`A()`}, 1) ; testd(1) ; andR(1) ; <(
+              QE,
+              assignd(1) ; existsR({`ep()`}, 1) ; andR(1) ; <(
+                QE,
+                andR(1) ; <(
+                  QE,
+                  fullSimplify ; andR(1) ; <(
+                    QE,
+                    existsR({`n`}, 1) ; fullSimplify ; andR(1) ; <(
+                      QE,
+                      andR(1) ; <(
+                        QE,
+                        QE
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            ),
+          andR(1) ; <(
+            andR(2) ; <(
+              QE,
+              choiced(2) ; orR(2) ; hideR(2) ; composed(2) ; testd(2) ; andR(2) ; <(
+                QE,
+                choiced(2) ; orR(2) ; hideR(2) ; composed(2) ; testd(2) ; andR(2) ; <(
+                  QE,
+                  choiced(2) ; orR(2) ; hideR(2) ; choiced(2) ; orR(2) ; hideR(3) ; composed(2) ; testd(2) ; fullSimplify ; assignd(2) ; assignd(2) ; existsR({`ep()`}, 2) ; andR(2) ; <(
+                    QE,
+                    andR(2) ; <(
+                      QE,
+                      fullSimplify ; existsR({`n`}, 2) ; fullSimplify ; andR(2) ; <(
+                        QE,
+                        andR(2) ; <(
+                          QE,
+                          QE
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              ),
+            hideR(2) ; composed(1) ; randomd(1) ; cut({`xo+vo*ep()>0|xo+vo*ep()<=0`}) ; <(
+              orL(-13) ; <(
+                existsR({`A()`}, 1) ; testd(1) ; andR(1) ; <(
+                  QE,
+                  assignd(1) ; existsR({`ep()`}, 1) ; andR(1) ; <(
+                    QE,
+                    andR(1) ; <(
+                      QE,
+                      fullSimplify ; andR(1) ; <(
+                        QE,
+                        existsR({`n`}, 1) ; fullSimplify ; andR(1) ; <(
+                          QE,
+                          andR(1) ; <(
+                            QE,
+                            QE
+                            )
+                          )
+                        )
+                      )
+                    )
+                  ),
+                existsR({`0`}, 1) ; testd(1) ; andR(1) ; <(
+                  QE,
+                  assignd(1) ; existsR({`ep()`}, 1) ; andR(1) ; <(
+                    QE,
+                    andR(1) ; <(
+                      QE,
+                      fullSimplify ; existsR({`n`}, 1) ; fullSimplify ; andR(1) ; <(
+                        QE,
+                        andR(1) ; <(
+                          QE,
+                          QE
+                          )
+                        )
+                      )
+                    )
+                  )
+                ),
+              hideR(1) ; QE
+              )
+            )
+          )
+        )
+      ),
+    QE
+    )
+  )
+End.
+
+End.
+
 Theorem "Theorem 14: Reach waypoint with deadline".
 
 /*
