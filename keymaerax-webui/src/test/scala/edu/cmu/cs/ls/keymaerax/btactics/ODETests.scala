@@ -100,6 +100,15 @@ class ODETests extends TacticTestBase {
     TactixLibrary.proveBy("x=0 -> [{x'=-x}]x=0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
+  it should "do a ghost with Z3" in withZ3(qetool =>
+    TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+  )
+
+  "QE" should "be able to prove the arithmetic subgoal from x'=-x case" in withZ3 { qeTool =>
+    val f = "x>0->(\\exists y_ (true->x*y_^2>0&\\forall x \\forall y_ (-x)*y_^2+x*(2*y_^(2-1)*(1/2*y_+0))>=0))".asFormula
+    TactixLibrary.proveBy(f, QE) shouldBe 'proved
+  }
+
   "Pretest" should "PDEify x^2+y^2=1&e=x -> [{x'=-y,y'=e,e'=-y}](x^2+y^2=1&e=x)" in withMathematica { qeTool =>
     TactixLibrary.proveBy("x^2+y^2=1&e=x -> [{x'=-y,y'=e,e'=-y}](x^2+y^2=1&e=x)".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
