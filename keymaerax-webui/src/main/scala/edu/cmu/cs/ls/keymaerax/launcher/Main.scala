@@ -148,7 +148,11 @@ object Main {
       }
       else true
     }
-    else if(f.list().length == 0) f.delete()
+    else if(f.list().length == 0) {
+      val result = f.delete()
+      assert(result, s"Could not delete file ${f.getName} in: ${f.getAbsolutePath}")
+      result
+    }
     else {
       val recSuccess = f.listFiles().forall(deleteDirectory)
       if(recSuccess) f.delete()
