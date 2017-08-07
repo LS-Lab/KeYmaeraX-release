@@ -23,7 +23,12 @@ object DefaultSMTConverter extends SMTConverter {}
   */
 abstract class SMTConverter extends (Formula=>String) {
   /** Convert given formula to an SMTLib specification that, if SMT(\result) returns `unsat` says that `expr` is valid. */
-  def apply(expr: Formula): String = generateAssertNegation(expr)
+  def apply(expr: Formula): String = {
+    val negation = generateAssertNegation(expr)
+    val result = negation
+    println(s"SMT output for ${expr.prettyString} (NEGATED AS: ${result}) is: \n${result}")
+    result
+  }
 
   // a prefix that SMT accepts but NamedSymbol would refuse to make disjoint by construction
   private val PREFIX = "_"
