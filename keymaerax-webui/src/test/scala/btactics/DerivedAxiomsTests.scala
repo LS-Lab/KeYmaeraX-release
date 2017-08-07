@@ -76,14 +76,14 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "prove !!" in {check(doubleNegationAxiom)}
   it should "prove exists dual" in {check(existsDualAxiom)}
-  ignore should "prove all eliminate" taggedAs OptimisticTest in {check(allEliminateAxiom)}
-  ignore should "prove exists eliminate" taggedAs OptimisticTest in {check(existsEliminate)}
+  it should "prove all eliminate" taggedAs OptimisticTest ignore {check(allEliminateAxiom)}
+  it should "prove exists eliminate" taggedAs OptimisticTest ignore {check(existsEliminate)}
   it should "prove !exists" in {check(notExists)}
   it should "prove !all" in {check(notAll)}
 //  it should "prove !all2" in {check(notAll2)}
   it should "prove ![]" in {check(notBox)}
   it should "prove !<>" in {check(notDiamond)}
-  ignore should "prove all distribute" in {check(allDistributeAxiom)}
+  it should "prove all distribute" ignore {check(allDistributeAxiom)}
   it should "prove box dual" in {check(boxAxiom)}
   it should "prove V vacuous" in {check(vacuousAxiom)}
 //  it should "prove K1" in {check(K1)}
@@ -235,7 +235,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   "Derived Axiom Tactics" should "tactically prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "tactically prove !!" in {check(doubleNegationAxiom)}
   it should "tactically prove exists dual" in {check(existsDualAxiom)}
-  ignore should "tactically prove all eliminate" taggedAs OptimisticTest in {check(allEliminateAxiom)}
+  it should "tactically prove all eliminate" taggedAs OptimisticTest ignore {check(allEliminateAxiom)}
   it should "tactically prove exists eliminate" in {check(existsEliminate)}
   it should "tactically prove all distribute" in {check(allDistributeAxiom)}
   it should "tactically prove box dual" in {check(boxAxiom)}
