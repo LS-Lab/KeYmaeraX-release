@@ -61,7 +61,10 @@ class Z3Solver extends SMTSolver {
     if(DEBUG) println("Updating Z3 binary...")
     val versionWhenLastCopied =
       if(versionFile(z3TempDir).exists()) {
-        scala.io.Source.fromFile(versionFile(z3TempDir)).mkString
+        val source = scala.io.Source.fromFile(versionFile(z3TempDir))
+        val result = source.mkString
+        source.close()
+        result
       }
       else {
         "Not A Version Number" //Return an invalid version number, forcing Z3 to be copied to disk.
