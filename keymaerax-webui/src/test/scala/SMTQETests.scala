@@ -6,14 +6,15 @@
 import edu.cmu.cs.ls.keymaerax.core.True
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
-import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
+import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
+import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 
 /**
  * Created by ran on 3/27/15.
  *
  * @author Ran Ji
  */
-class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
+class SMTQETests extends TacticTestBase {
   var z3: Z3Solver = null
   var polya: PolyaSolver = null
 
