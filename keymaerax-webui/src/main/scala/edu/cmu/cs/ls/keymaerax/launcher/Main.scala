@@ -135,6 +135,7 @@ object Main {
     assert(versionFile.exists())
     val fw = new FileWriter(versionFile)
     fw.write(edu.cmu.cs.ls.keymaerax.core.VERSION)
+    fw.flush()
     fw.close()
   }
 
