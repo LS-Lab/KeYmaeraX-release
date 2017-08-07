@@ -104,6 +104,17 @@ class ODETests extends TacticTestBase {
     TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   )
 
+  "Z3" should "prove what's needed by ODE for the Z3 ghost" in withZ3(_=> {
+    //    Mathematica QE result from input \forall x_0 (x_0>0&true->\forall x (x>0->-x>=0)): false
+    //    Mathematica QE result from input \forall y__0 \forall x_0 (x_0*y__0^2>0->x_0>0): true
+    //    Mathematica QE result from input true->2!=0: true
+    //    Mathematica QE result from input \forall x_0 (x_0>0->\exists y_ (true->x_0*y_^2>0&\forall x \forall y_ (-x)*y_^2+x*(2*y_^(2-1)*(1/2*y_+0))>=0)): true
+    TactixLibrary.proveBy("\\forall y__0 \\forall x_0 (x_0*y__0^2>0->x_0>0)".asFormula, QE) shouldBe 'proved
+    TactixLibrary.proveBy("true->2!=0".asFormula,QE) shouldBe 'proved
+    TactixLibrary.proveBy("\\forall x_0 (x_0>0->\\exists y_ (true->x_0*y_^2>0&\\forall x \\forall y_ (-x)*y_^2+x*(2*y_^(2-1)*(1/2*y_+0))>=0))".asFormula, QE) shouldBe 'proved
+  })
+
+
   "QE" should "be able to prove the arithmetic subgoal from x'=-x case" in withZ3 { qeTool =>
     val f = "x>0->(\\exists y_ (true->x*y_^2>0&\\forall x \\forall y_ (-x)*y_^2+x*(2*y_^(2-1)*(1/2*y_+0))>=0))".asFormula
     TactixLibrary.proveBy(f, QE) shouldBe 'proved
