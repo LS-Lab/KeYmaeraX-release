@@ -90,7 +90,7 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
   // ---------------------------
 
   it should "prove complex quantifiers" in {
-    a [SMTQeException] should be thrownBy z3.qeEvidence("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula)
+    z3.qeEvidence("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) should be("true".asFormula)
     //@todo update Polya to latest version
     //polya.qeEvidence("\\forall x \\forall y \\exists z x^2+y^2=z^2".asFormula) //@todo check expected result
   }
