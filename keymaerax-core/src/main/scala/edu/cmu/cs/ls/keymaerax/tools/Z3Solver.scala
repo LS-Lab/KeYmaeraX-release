@@ -139,7 +139,7 @@ class Z3Solver extends SMTSolver {
     val cmd = pathToZ3 + " " + smtFile.getAbsolutePath
     /** Z3 output as String, (check-sat) gives unsat, sat or unknown */
     val z3Output = cmd.!!
-    if (DEBUG) println("[Z3 result] \n" + z3Output + "\n")
+    if (DEBUG) println(s"[Z3 result] From calling Z3 on ${f.prettyString}: " + z3Output + "\n")
     //@todo So far does not handle get-model or unsat-core
     z3Output.stripLineEnd match {
       case "unsat" => (True, ToolEvidence(immutable.List("input" -> smtCode, "output" -> z3Output)))
