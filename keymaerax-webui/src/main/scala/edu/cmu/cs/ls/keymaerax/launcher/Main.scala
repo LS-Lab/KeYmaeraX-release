@@ -112,6 +112,7 @@ object Main {
       catch {
         case e: NumberFormatException => {
           println("Warning: Could not parse the cache version file, cache contained: " + cacheVersion)
+          cacheVersionFile.delete()
           clearCache(cacheDirectory)
         }
       }
