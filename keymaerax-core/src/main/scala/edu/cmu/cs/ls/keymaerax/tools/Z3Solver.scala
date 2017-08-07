@@ -58,7 +58,6 @@ class Z3Solver extends SMTSolver {
 
   /** Returns the version of Z3 that the current system's JAR was updated from. */
   private def needsUpdate(z3TempDir: String) = {
-    if(DEBUG) println("Updating Z3 binary...")
     val versionWhenLastCopied =
       if(versionFile(z3TempDir).exists()) {
         val source = scala.io.Source.fromFile(versionFile(z3TempDir))
@@ -70,7 +69,9 @@ class Z3Solver extends SMTSolver {
         "Not A Version Number" //Return an invalid version number, forcing Z3 to be copied to disk.
       }
     //Update if the version stroed in the version file does not equal the current version.
-    !versionWhenLastCopied.equals(edu.cmu.cs.ls.keymaerax.core.VERSION)
+    val result = !versionWhenLastCopied.equals(edu.cmu.cs.ls.keymaerax.core.VERSION)
+    if(result && DEBUG) println("Updating Z3 binary...")
+    result
   }
 
   /** Copies Z3 to the disk. */
