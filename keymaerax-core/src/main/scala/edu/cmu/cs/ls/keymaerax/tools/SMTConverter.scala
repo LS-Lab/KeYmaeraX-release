@@ -22,11 +22,13 @@ object DefaultSMTConverter extends SMTConverter {}
   * @author Stefan Mitsch
   */
 abstract class SMTConverter extends (Formula=>String) {
+  protected val DEBUG: Boolean = System.getProperty("DEBUG", "false")=="true"
+
   /** Convert given formula to an SMTLib specification that, if SMT(\result) returns `unsat` says that `expr` is valid. */
   def apply(expr: Formula): String = {
     val negation = generateAssertNegation(expr)
     val result = negation
-    println(s"SMT output for ${expr.prettyString} (NEGATED AS: ${result}) is: \n${result}")
+    if(DEBUG) println(s"SMT output for ${expr.prettyString} (NEGATED AS: ${result}) is: \n${result}")
     result
   }
 
