@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, UserPOJO}
@@ -33,18 +34,51 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       db
     }
 
+    /** Turns a formula into a model problem with mandatory declarations. */
+    def makeModel(content: String): String = {
+      def printDomain(d: Sort): String = d match {
+        case Real => "R"
+        case Bool => "B"
+        case Unit => ""
+        case Tuple(l, r) => printDomain(l) + "," + printDomain(r)
+      }
+
+      def augmentDeclarations(content: String, parsedContent: Formula): String =
+        if (content.contains("Problem.")) content //@note determine by mandatory "Problem." block of KeYmaeraXProblemParser
+        else {
+          val symbols = StaticSemantics.symbols(parsedContent)
+          val fnDecls = symbols.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>
+            if (fn.sort == Real) s"R ${fn.asString}(${printDomain(fn.domain)})."
+            else if (fn.sort == Bool) s"B ${fn.asString}(${printDomain(fn.domain)})."
+            else ???
+          ).mkString("\n  ")
+          val varDecls = symbols.filter(_.isInstanceOf[BaseVariable]).map(v => s"R ${v.prettyString}.").mkString("\n  ")
+          s"""Functions.
+             |  $fnDecls
+             |End.
+             |ProgramVariables.
+             |  $varDecls
+             |End.
+             |Problem.
+             |  $content
+             |End.""".stripMargin
+        }
+
+      augmentDeclarations(content, KeYmaeraXProblemParser.parseAsProblemOrFormula(content))
+    }
+
     /** Creates a new proof entry in the database for a model parsed from `modelContent`. */
     def createProof(modelContent: String, modelName: String = "", proofName: String = "Proof"): Int = {
-      db.createModel(user.userName, modelName, modelContent, "", None, None, None, None) match {
+      db.createModel(user.userName, modelName, makeModel(modelContent), "", None, None, None, None) match {
         case Some(modelId) => db.createProofForModel(modelId, modelName + proofName, "", "", None)
         case None => fail("Unable to create temporary model in DB")
       }
     }
 
-    /** Prove sequent `s` using tactic  `t`. Record the proof in the database and check that the recorded tactic is
-      * the provided tactic. */
-    def proveBy(modelContent: String, t: BelleExpr, modelName: String = ""): ProvableSig = {
-      val s: Sequent = KeYmaeraXProblemParser(modelContent) match {
+    /** Prove model `modelContent` using tactic  `t`. Record the proof in the database and check that the recorded
+      * tactic is the provided tactic. Returns the proof ID and resulting provable. */
+    def proveByWithProofId(modelContent: String, t: BelleExpr, modelName: String = ""): (Int, ProvableSig) = {
+      val s: Sequent = KeYmaeraXProblemParser.parseAsProblemOrFormula(modelContent) match {
         case fml: Formula => Sequent(IndexedSeq(), IndexedSeq(fml))
         case _ => fail("Model content " + modelContent + " cannot be parsed")
       }
@@ -70,13 +104,31 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
               case Some(parent) => n.conclusion shouldBe parent.localProvable.subgoals(n.goalIdx)
             })
           }
-          provable
+          (proofId, provable)
         case r => fail("Unexpected tactic result " + r)
       }
     }
 
+    /** Prove model `modelContent` using tactic  `t`. Record the proof in the database and check that the recorded
+      * tactic is the provided tactic. Returns the resulting provable. */
+    def proveBy(modelContent: String, t: BelleExpr, modelName: String = ""): ProvableSig = proveByWithProofId(modelContent, t, modelName)._2
+
     /** Returns the tactic recorded for the proof `proofId`. */
     def extractTactic(proofId: Int): BelleExpr = DbProofTree(db, proofId.toString).tactic
+
+    /** Extracts the internal steps taken by proof step `stepId` at level `level` (0: original tactic, 1: direct internal steps, etc.)  */
+    def extractStepDetails(proofId: Int, stepId: String, level: Int = 1): BelleExpr = {
+      DbProofTree(db, proofId.toString).locate(stepId) match {
+        case Some(node) => node.maker match {
+          case Some(tactic) =>
+            val localProofId = db.createProof(node.localProvable)
+            val interpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, listener(db), SequentialInterpreter, level, strict=false)
+            interpreter(BelleParser(tactic), BelleProvable(ProvableSig.startProof(node.localProvable.conclusion)))
+            extractTactic(localProofId)
+        }
+      }
+
+    }
   }
 
   /** For tests that want to record proofs in the database. */
