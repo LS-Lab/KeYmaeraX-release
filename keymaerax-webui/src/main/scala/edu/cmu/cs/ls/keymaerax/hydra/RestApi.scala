@@ -415,13 +415,6 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
-  val dashInfo: SessionToken=>Route = (t : SessionToken) => path("users" / Segment / "dashinfo") { userId => pathEnd {
-    get {
-      val request = new DashInfoRequest(database, userId)
-      completeRequest(request, t)
-    }
-  }}
-
   val browseProofRoot: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "browseagenda") { (userId, proofId) => { pathEnd {
     get {
       val request = new GetProofRootAgendaRequest(database, userId, proofId)
@@ -1050,7 +1043,6 @@ trait RestApi extends HttpService with SLF4JLogging {
     setupSimulation       ::
     simulate              ::
     pruneBelow            ::
-    dashInfo              ::
     modelplex             ::
     modelplexMandatoryVars::
     exportSequent         ::

@@ -178,22 +178,6 @@ class FailedRequest(userId: String, msg: String, cause: Throwable = null) extend
   def resultingResponses(): List[Response] = { new ErrorResponse(msg, cause) :: Nil }
 }
 
-/**
- * Returns an object containing all information necessary to fill out the global template (e.g., the "new events" bubble)
-  *
-  * @param db
- * @param userId
- */
-class DashInfoRequest(db : DBAbstraction, userId : String) extends UserRequest(userId) with ReadRequest {
-  override def resultingResponses() : List[Response] = {
-    val openProofCount : Int = db.openProofs(userId).length
-    val allModelsCount: Int = db.getModelList(userId).length
-    val provedModelsCount: Int = db.getModelList(userId).count(m => db.getProofsForModel(m.modelId).exists(_.closed))
-
-    new DashInfoResponse(openProofCount, allModelsCount, provedModelsCount) :: Nil
-  }
-}
-
 class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   def allFnToVar(fml: Formula, fn: Function): Formula = {
     fml.find(t => t match {
