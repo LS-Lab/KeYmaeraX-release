@@ -37,7 +37,6 @@ import scala.collection.mutable
 import edu.cmu.cs.ls.keymaerax.btactics.cexsearch
 import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, BreadthFirstSearch, ProgramSearchNode, SearchNode}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
-import edu.cmu.cs.ls.keymaerax.launcher.LoadingDialogFactory
 
 import scala.util.Try
 
@@ -1796,7 +1795,6 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest with RegisteredOnlyRequest
           }
           System.out.flush()
           System.err.flush()
-          LoadingDialogFactory.theDialog match { case Some(x)=>x.dispose() case None => /*ok*/}
           System.exit(0) //should've already stopped the application by now.
         }
         catch {
