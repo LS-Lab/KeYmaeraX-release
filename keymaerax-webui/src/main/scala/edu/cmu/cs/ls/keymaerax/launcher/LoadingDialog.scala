@@ -10,8 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core
 trait LoadingDialog {
   val msg: String
   def addToStatus(x :  Int) : Unit
-  def hide() : Unit
-  def dispose() : Unit
+  def close() : Unit
 }
 
 /**
@@ -38,16 +37,14 @@ class CLILoadingDialog() extends LoadingDialog {
 
   override def addToStatus(x: Int): Unit = {
     status = status + x
-    if(status >= 100) hide()
+    if(status >= 100) close()
     else println(s"$msg ($status% complete)")
   }
 
-  override def hide(): Unit = {
+  override def close(): Unit = {
     println("Loading Complete!")
     LoadingDialogFactory.closed()
   }
-
-  override def dispose() = ()
 }
 
 /**
@@ -77,20 +74,15 @@ class GraphicalLoadingDialog() extends LoadingDialog {
     progressBar.setValue(newValue)
     //    progressMonitor.setProgress(newValue)
     progressBar.repaint()
-    if (progressBar.getValue >= 100) hide()
+    if (progressBar.getValue >= 100) close()
   }
 
-  override def hide():Unit = {
+  override def close() = {
     if (window != null) {
       window.setVisible(false)
-//      window.dispose()  //@note might exit the JVM if no other window is showing up yet
-
+      //window.dispose()  //@note might exit the JVM if no other window is showing up yet
+      window = null
+      LoadingDialogFactory.closed()
     }
-  }
-
-  override def dispose() = {
-    LoadingDialogFactory.closed()
-    window.dispose()
-    window = null
   }
 }
