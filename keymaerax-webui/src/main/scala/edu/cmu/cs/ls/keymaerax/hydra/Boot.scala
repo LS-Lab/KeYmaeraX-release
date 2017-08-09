@@ -35,9 +35,6 @@ object NonSSLBoot extends App {
   import HyDRAServerConfig._
   implicit var system = ActorSystem("on-spray-can")
 
-  HyDRAInitializer(args, database)
-  IO(Http) ! Http.Bind(service, interface = host, port = port)
-
   {
     import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -62,6 +59,9 @@ object NonSSLBoot extends App {
       LoadingDialogFactory().close()
     })
   }
+
+  HyDRAInitializer(args, database)
+  IO(Http) ! Http.Bind(service, interface = host, port = port)
 }
 
 /**
