@@ -235,7 +235,21 @@ private object ToolTactics {
       case Pair(t, v: Variable) => EqualityTactics.abbrv(t, Some(v))
     }).reduceOption[BelleExpr](_&_).getOrElse(skip)
 
-    abbrvTactic & transform(abbrvTo)(pos)
+    val transformTactic = "ANON" by (sequent.sub(pos) match {
+      case Some(e) =>
+        try {
+          //@note skip transformation if diff is abbreviations only (better performance on large formulas)
+          //@todo find specific transform position based on diff (needs unification for terms like 2+3, 5)
+          val diff = UnificationMatch(to, e)
+          if (diff.usubst.subsDefsInput.forall(_.what match {
+            case FuncOf(Function("abbrv", None, _, _, _), _) => true case _ => false })) skip
+          else transform(abbrvTo)(pos)
+        } catch {
+          case _: UnificationException => transform(abbrvTo)(pos)
+        }
+    })
+
+    abbrvTactic & transformTactic
   })
 
   /** Transforms the formula at position `pos` into the formula `to`. */

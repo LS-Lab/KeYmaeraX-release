@@ -1,10 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
-
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
 
@@ -167,8 +167,18 @@ class ToolTacticsTests extends TacticTestBase {
     //proveBy("2*g()*x=37".asFormula, edit("2*foo=37".asFormula)(1)).subgoals.loneElement shouldBe "foo=g()*x ==> 2*foo=37".asSequent
   }
 
-  it should "abbreviate and transform" in withMathematica { _ =>
-    proveBy("2*g()*x=37+4".asFormula, edit("abbrv(2*g())*x=41".asFormula)(1)).subgoals.loneElement shouldBe "abbrv=2*g() ==> abbrv*x=41".asSequent
-  }
+  it should "only abbreviate if no transformations are present" in withMathematica { _ => withDatabase { db =>
+    val (proofId, provable) = db.proveByWithProofId("x>=2+3", edit("x>=abbrv(2+3,y)".asFormula)(1))
+    provable.subgoals.loneElement shouldBe "y=2+3 ==> x>=y".asSequent
+    db.extractTactic(proofId) shouldBe BelleParser("edit({`x>=abbrv(2+3,y)`},1)")
+    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("abbrv({`2+3`},{`y`})")
+  }}
+
+  it should "abbreviate and transform" in withMathematica { _ => withDatabase { db =>
+    val (proofId, provable) = db.proveByWithProofId("2*g()*x=37+4", edit("abbrv(2*g())*x=41".asFormula)(1))
+    provable.subgoals.loneElement shouldBe "abbrv=2*g() ==> abbrv*x=41".asSequent
+    db.extractTactic(proofId) shouldBe BelleParser("edit({`abbrv(2*g())*x=41`},1)")
+    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("abbrv({`2*g()`},{`abbrv`}) & transform({`abbrv*x=41`},1)")
+  }}
 
 }

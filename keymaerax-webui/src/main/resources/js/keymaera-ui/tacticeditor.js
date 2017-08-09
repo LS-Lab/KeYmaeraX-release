@@ -92,7 +92,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
           scope.$watch('tactic.tacticText', function(newValue, oldValue) {
             var newText = jQuery('<p>'+newValue+'</p>').text(); // strip HTML tags
             var oldText = jQuery('<p>'+oldValue+'</p>').text();
-            if (oldText !== newText && scope.tactic.lastExecutedTacticText !== undefined && scope.tactic.tacticText !== undefined) {
+            if (oldText !== newText && scope.tactic.lastExecutedTacticText && scope.tactic.tacticText && scope.tactic.lastExecutedTacticText !== scope.tactic.tacticText) {
               //@note compute diff
               var diffInput = { 'old' : scope.tactic.lastExecutedTacticText, 'new' : newText };
               if (tacticDiffRequestTimer) clearTimeout(tacticDiffRequestTimer);
