@@ -58,8 +58,8 @@ object NonSSLBoot extends App {
           "**** THE BROWSER MAY NEED RELOADS TILL THE PAGE SHOWS ****\n" +
           "**********************************************************\n"
       )
+      LoadingDialogFactory().hide()
       SystemWebBrowser(s"http://$host:$port/")
-      LoadingDialogFactory().close()
     })
   }
 }
