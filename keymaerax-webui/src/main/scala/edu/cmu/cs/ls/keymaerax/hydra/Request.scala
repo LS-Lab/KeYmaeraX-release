@@ -1517,20 +1517,22 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             }
 
             if (stepwise) {
-              val localProvable = ProvableSig.startProof(sequent)
-              val localProofId = db.createProof(localProvable)
-              val executor = BellerophonTacticExecutor.defaultExecutor
-              val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter(localProofId, -1))
-              RunBelleTermResponse(localProofId.toString, "()", taskId) :: Nil
-            } else if (ruleName == "custom") {
-              //@note execute tactic scripts step-by-step for better browsing
-              val startStepIndex = node.id match {
-                case DbStepPathNodeId(id, _) => db.getExecutionSteps(proofId.toInt).indexWhere(_.stepId == id)
-                case _ => throw new Exception("Unexpected node ID shape " + node.id.toString
-                  + ". Expected step path ID of the form (node ID,branch index)")
+              if (ruleName == "custom") {
+                //@note execute tactic scripts step-by-step for better browsing
+                val startStepIndex = node.id match {
+                  case DbStepPathNodeId(id, _) => db.getExecutionSteps(proofId.toInt).indexWhere(_.stepId == id)
+                  case _ => throw new Exception("Unexpected node ID shape " + node.id.toString
+                    + ". Expected step path ID of the form (node ID,branch index)")
+                }
+                val taskId = node.stepTactic(userId, interpreter(proofId.toInt, startStepIndex), appliedExpr)
+                RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
+              } else {
+                val localProvable = ProvableSig.startProof(sequent)
+                val localProofId = db.createProof(localProvable)
+                val executor = BellerophonTacticExecutor.defaultExecutor
+                val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter(localProofId, -1))
+                RunBelleTermResponse(localProofId.toString, "()", taskId) :: Nil
               }
-              val taskId = node.stepTactic(userId, interpreter(proofId.toInt, startStepIndex), appliedExpr)
-              RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
             } else {
               //@note execute clicked single-step tactics on sequential interpreter right away
               val taskId = node.runTactic(userId, SequentialInterpreter, appliedExpr, ruleName)

@@ -491,11 +491,11 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         });
     }
 
-    $scope.onTacticScript = function(tacticText) {
+    $scope.onTacticScript = function(tacticText, stepwise) {
       var nodeId = sequentProofData.agenda.selectedId();
       spinnerService.show('tacticExecutionSpinner');
       var uri = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/doCustomTactic';
-      $http.post(uri + '?stepwise=false', tacticText)
+      $http.post(uri + '?stepwise='+stepwise, tacticText)
         .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId,
                                       $scope.updateFreshProof, $scope.broadcastProofError, undefined); })
         .catch(function(err) {
@@ -543,9 +543,9 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       })
     }
 
-    $scope.executeTacticDiff = function() {
+    $scope.executeTacticDiff = function(stepwise) {
       if ($scope.tactic.tacticDel === '' || $scope.tactic.tacticDel === 'nil') {
-        $scope.onTacticScript($scope.tactic.tacticDiff);
+        $scope.onTacticScript($scope.tactic.tacticDiff, stepwise);
       } else {
         $scope.rerunTactic();
       }
@@ -554,7 +554,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.rerunTactic = function() {
       var tactic = $scope.tactic.tacticText;
       sequentProofData.prune($scope.userId, $scope.proofId, $scope.prooftree.root, function() {
-        $scope.onTacticScript(tactic);
+        $scope.onTacticScript(tactic, true);
       });
     }
 

@@ -75,14 +75,14 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
             }
           ]);
 
-          scope.executeTacticDiff = function() {
+          scope.executeTacticDiff = function(stepwise) {
             if (scope.tactic.tacticDel === '' || scope.tactic.tacticDel === 'nil') {
-              scope.onTacticScript({tacticText: scope.tactic.tacticDiff});
+              scope.onTacticScript({tacticText: scope.tactic.tacticDiff, stepwise: stepwise});
             } else {
               //todo prune deleted stuff instead of rerun from root
               var tactic = scope.tactic.tacticText;
               sequentProofData.prune(scope.userId, scope.proofId, sequentProofData.proofTree.root, function() {
-                scope.onTacticScript({tacticText: tactic});
+                scope.onTacticScript({tacticText: tactic, stepwise: true});
               });
             }
           };
@@ -145,7 +145,7 @@ angular.module('keymaerax.ui.tacticeditor', ['ngSanitize', 'ngTextcomplete'])
           });
         },
         template: '<div class="row k4-tacticeditor"><div class="col-md-12">' +
-                    '<div contenteditable id="tacticcontent" class="k4-tacticeditor" ng-model="tactic.tacticText" ng-shift-enter="executeTacticDiff()"></div>' +
+                    '<div contenteditable id="tacticcontent" class="k4-tacticeditor" ng-model="tactic.tacticText" ng-shift-enter="executeTacticDiff(false)"></div>' +
                   '</div></div>' +
                   '<div class=row><div class="col-md-12">' +
                   '<k4-auto-hide-alert message="tacticError.text"' +
