@@ -64,7 +64,7 @@ object SimplifierV3 {
   private lazy val equalTrans = remember("(P_() -> (F_() = FF_())) & (Q_() -> (FF_() = FFF_())) -> (P_() & Q_() -> (F_() = FFF_())) ".asFormula,prop & QE & done, namespace).fact
 
   //TODO: think more about the type used to represent the current context
-  type context = HashSet[Formula]
+  type context = Set[Formula]
   type termIndex = (Term,context) => List[ProvableSig]
   type formulaIndex = (Formula,context) => List[ProvableSig]
 
