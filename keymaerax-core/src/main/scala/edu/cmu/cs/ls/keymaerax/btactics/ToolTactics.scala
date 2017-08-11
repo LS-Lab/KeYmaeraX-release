@@ -363,4 +363,11 @@ private object ToolTactics {
     ++ sequent.succ.zipWithIndex.filter({ case (_: PredOf, _) => true case _ => false}).reverse.map({ case (fml, i) => hideR(SuccPos(i), fml) })
       ).reduceOption[BelleExpr](_ & _).getOrElse(skip)
   )
+
+  /** Hides all non-FOL formulas from the sequent. */
+  def hideNonFOL: DependentTactic = "ANON" by ((sequent: Sequent) =>
+    (  sequent.ante.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverse.map({ case (fml, i) => hideL(AntePos(i), fml) })
+    ++ sequent.succ.zipWithIndex.filter({ case (fml, _) => !fml.isFOL }).reverse.map({ case (fml, i) => hideR(SuccPos(i), fml) })
+      ).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+  )
 }
