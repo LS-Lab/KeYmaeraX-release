@@ -705,7 +705,7 @@ object Helpers {
     val (name, codeName, asciiName, maker, derivation: JsValue) = Try(DerivationInfo.ofCodeName(belleTerm)).toOption match {
       case Some(di) =>
         (di.display.name, di.codeName, di.display.asciiName, ruleName,
-          ApplicableAxiomsResponse(Nil, Map.empty).derivationJson(di).fields.getOrElse("derivation", JsNull))
+          ApplicableAxiomsResponse(Nil, Map.empty, pos).derivationJson(di).fields.getOrElse("derivation", JsNull))
       case None => (ruleName, ruleName, ruleName, ruleName, JsNull)
     }
 
@@ -779,7 +779,8 @@ class GetBranchRootResponse(node: ProofTreeNode) extends Response {
 }
 
 case class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Option[DerivationInfo])],
-                                    suggestedInput: Map[ArgInfo, Expression]) extends Response {
+                                    suggestedInput: Map[ArgInfo, Expression],
+                                    suggestedPosition: Option[PositionLocator] = None) extends Response {
   def inputJson(input: ArgInfo): JsValue = {
     (suggestedInput.get(input), input) match {
       case (Some(e), FormulaArg(name, _)) =>
@@ -879,15 +880,24 @@ case class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Opti
     )
   }
 
+  private def posJson(pos: Option[PositionLocator]): JsValue = pos match {
+    case Some(Fixed(pos, _, _)) => new JsString(pos.toString)
+    case Some(Find(_, _, _: AntePosition, _)) => new JsString("L")
+    case Some(Find(_, _, _: SuccPosition, _)) => new JsString("R")
+    case _ => JsNull
+  }
+
   def derivationJson(info: (DerivationInfo, Option[DerivationInfo])): JsObject = info._2 match {
     case Some(comfort) =>
       JsObject(
         "standardDerivation" -> derivationJson(info._1),
-        "comfortDerivation" -> derivationJson(comfort)
+        "comfortDerivation" -> derivationJson(comfort),
+        "positionSuggestion" -> posJson(suggestedPosition)
       )
     case None =>
       JsObject(
-        "standardDerivation" -> derivationJson(info._1)
+        "standardDerivation" -> derivationJson(info._1),
+        "positionSuggestion" -> posJson(suggestedPosition)
       )
   }
 

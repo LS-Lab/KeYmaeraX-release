@@ -1250,7 +1250,7 @@ class GetSequentStepSuggestionRequest(db: DBAbstraction, userId: String, proofId
           } else {
             // find "largest" succedent formula with programs and suggest top-level popup content
             val pos = SuccPosition(1)
-            ApplicableAxiomsResponse(node.applicableTacticsAt(pos), node.tacticInputSuggestions(pos)) :: Nil
+            ApplicableAxiomsResponse(node.applicableTacticsAt(pos), node.tacticInputSuggestions(pos), Some(Fixed(1))) :: Nil
           }
       }
     }
