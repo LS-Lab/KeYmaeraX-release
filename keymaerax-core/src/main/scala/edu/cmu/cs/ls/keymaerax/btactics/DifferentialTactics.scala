@@ -125,14 +125,14 @@ private object DifferentialTactics {
         if (pos.isTopLevel) {
           val t = DI(pos) &
             implyR(pos) & andR(pos) & Idioms.<(
-              if (auto == 'full) QE & done else skip,
+              if (auto == 'full) ToolTactics.hideNonFOL & QE & done else skip,
               if (auto != 'none) {
                 //@note derive before DE to keep positions easier
                 derive(pos ++ PosInExpr(1 :: Nil)) &
                 DE(pos) &
                 (if (auto == 'full) Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) &
                   //@note DW after DE to keep positions easier
-                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & QE & done
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & ToolTactics.hideNonFOL & QE & done
                  else {
                   assert(auto == 'diffInd)
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
@@ -196,7 +196,7 @@ private object DifferentialTactics {
         }
         if (pos.isTopLevel) {
           val t = useAt(axUse)(pos) <(
-              testb(pos) & QE & done,
+              testb(pos) & ToolTactics.hideNonFOL & QE & done,
               //@note derive before DE to keep positions easier
               implyR(pos) & (
                 if(der) derive(pos ++ PosInExpr(1::1::Nil))
@@ -205,7 +205,7 @@ private object DifferentialTactics {
                 DE(pos) &
                 (Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) &
                   //@note DW after DE to keep positions easier
-                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & QE & done
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & ToolTactics.hideNonFOL & QE & done
                   )
               )
           Dconstify(t)(pos)
