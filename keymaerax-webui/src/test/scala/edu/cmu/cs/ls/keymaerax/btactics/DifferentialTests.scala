@@ -1592,6 +1592,13 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain theSameElementsAs "\\forall t_ (t_>=0->(s/2/3*t_^3+a/2*t_^2)/g()+v*t_+x>=0)".asFormula::Nil
   }
 
+  it should "solve double integrator with sum of constants" in withMathematica { _ =>
+    val result = proveBy("y<b, x<=0, Y()>=0, Z()<Y() ==> [{y'=x, x'=-Y()+Z()}]y<b".asSequent, solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List("y<b".asFormula, "x<=0".asFormula, "Y()>=0".asFormula, "Z()<Y()".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> (-Y()+Z())/2*t_^2+x*t_+y<b)".asFormula)
+  }
+
   "diffUnpackEvolutionDomainInitially" should "unpack the evolution domain of an ODE as fact at time zero" in {
     val result = proveBy("[{x'=3&x>=0}]x>=0".asFormula, DifferentialTactics.diffUnpackEvolutionDomainInitially(1))
     result.subgoals should have size 1
