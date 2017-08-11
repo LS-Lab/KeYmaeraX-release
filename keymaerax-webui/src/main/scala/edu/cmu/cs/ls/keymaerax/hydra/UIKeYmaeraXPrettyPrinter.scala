@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 object UIKeYmaeraXPrettyPrinter {
   private val HTML_OPEN = "$#@@$"
   private val HTML_CLOSE = "$@@#$"
-  private val HTML_END_SPAN = s"$HTML_OPEN/span$HTML_CLOSE"
+  private val HTML_END_SPAN = htmlEndTag("span")
 
   //@todo custom OpSpec?
   private val rewritings = List(
@@ -40,6 +40,26 @@ object UIKeYmaeraXPrettyPrinter {
 
   /** UIKeYmaeraXPrettyPrinter(topId) is a UI pretty printer for sequent-formula with identifier topId */
   def apply(topId: String, plainText: Boolean): Expression=>String = new UIKeYmaeraXPrettyPrinter(topId, plainText)
+
+  /** Returns an opening tag with encoded <>. */
+  def htmlOpenTag(tag: String, clazz: Option[String] = None): String = clazz match {
+    case None => s"$HTML_OPEN$tag$HTML_CLOSE"
+    case Some(c) => s"""$HTML_OPEN$tag class="$c"$HTML_CLOSE"""
+  }
+
+  /** Returns a closing tag with encoded <>. */
+  def htmlEndTag(tag: String): String = s"$HTML_OPEN/$tag$HTML_CLOSE"
+
+  /** Returns the `body` enclosed in an encoded HTML `tag`. */
+  def htmlElement(tag: String, body: String, clazz: Option[String] = None): String = htmlOpenTag(tag, clazz) + body + htmlEndTag(tag)
+
+  /** Replaces KeYmaeraX syntax with HTML characters (e.g., < becomes &lt;) and introduces opening/closing tags HTML syntax. */
+  def htmlEncode(html: String): String = {
+    rewritings.foldLeft(html)({ case (s, (key, repl)) => s.replaceAllLiterally(key, repl) })
+    //@note single pass with regex matching is slower than multi-pass literal replacement
+    //val mapper = (m: Match) => rewritings.get(m.group(1))
+    //opPattern.replaceSomeIn(stringify(expr), mapper)
+  }
 }
 
 /**
@@ -48,7 +68,7 @@ object UIKeYmaeraXPrettyPrinter {
   */
 class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extends KeYmaeraXWeightedPrettyPrinter {
   import UIKeYmaeraXPrettyPrinter._
-  private def htmlSpan(c: String, body: String): String = s"""${HTML_OPEN}span class="$c"$HTML_CLOSE$body$HTML_END_SPAN"""
+  private def htmlSpan(c: String, body: String): String = htmlElement("span", body, Some(c))
 
   private var topExpr: Expression = _
   //@note just to get isAnte right for UIIndex
@@ -56,10 +76,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
 
   override def apply(expr: Expression): String = {
     topExpr=expr
-    rewritings.foldLeft(stringify(expr))({ case (s, (key, repl)) => s.replaceAllLiterally(key, repl) })
-    //@note single pass with regex matching is slower than multi-pass literal replacement
-    //val mapper = (m: Match) => rewritings.get(m.group(1))
-    //opPattern.replaceSomeIn(stringify(expr), mapper)
+    htmlEncode(stringify(expr))
   }
 
   protected override def emit(q: PosInExpr, s: String): String = {
