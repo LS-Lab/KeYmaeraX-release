@@ -26,8 +26,10 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import spray.httpx.marshalling.ToResponseMarshallable
 
 import scala.collection.mutable.ListBuffer
+import scala.collection.immutable
 import scala.util.Try
-import scala.xml.{Elem, XML}
+import scala.util.matching.Regex.Match
+import scala.xml.Elem
 
 
 /**
@@ -901,7 +903,7 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
   def getJson = JsObject(
     "result" -> JsString(kind),
     "origFormula" -> JsString(fml.prettyString),
-    "cexFormula" -> JsString(createCexFormula(fml, cex).prettyString),
+    "cexFormula" -> JsString(createCexFormula(fml, cex)),
     "cexValues" -> JsArray(
       cex.map(e => JsObject(
         "symbol" -> JsString(e._1.prettyString),
@@ -910,18 +912,62 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
     )
   )
 
-  private def createCexFormula(fml: Formula, cex: Map[NamedSymbol, Expression]): Formula = {
-    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
-      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-        case v: Variable => Right(cex(v).asInstanceOf[Term])
-        case FuncOf(fn, _) => Right(cex(fn).asInstanceOf[Term])
-        case tt => Right(tt)
-      }
-      override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
-        case PredOf(fn, _) => Right(cex(fn).asInstanceOf[Formula])
-        case ff => Right(ff)
-      }
-    }, fml).get
+  private def createCexFormula(fml: Formula, cex: Map[NamedSymbol, Expression]): String = {
+    def replaceWithCexVals(fml: Formula, cex: Map[NamedSymbol, Expression]): Formula = {
+      ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+        override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+          case v: Variable => Right(cex(v).asInstanceOf[Term])
+          case FuncOf(fn, _) => Right(cex(fn).asInstanceOf[Term])
+          case _ => Left(None)
+        }
+
+        override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
+          case PredOf(fn, _) => Right(cex(fn).asInstanceOf[Formula])
+          case _ => Left(None)
+        }
+      }, fml).get
+    }
+
+    if (cex.forall(_._2.isInstanceOf[Term])) {
+      val Imply(assumptions, conclusion) = fml
+
+      //@note flag false comparison formulas `cmp` with (cmp<->false)
+      val cexConclusion = ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+        private def makeSeq(fml: Formula): Sequent = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(fml))
+
+        override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
+          case cmp: ComparisonFormula =>
+            val cexCmp = TactixLibrary.proveBy(replaceWithCexVals(cmp, cex), TactixLibrary.RCF)
+            if (cexCmp.subgoals.size > 1 || cexCmp.subgoals.headOption.getOrElse(makeSeq(True)) == makeSeq(False)) {
+              Right(Equiv(cmp, False))
+            } else Right(cmp)
+          case _ => Left(None)
+        }
+      }, conclusion).get
+
+      val cexFml = UIKeYmaeraXPrettyPrinter.htmlEncode(Imply(assumptions, cexConclusion).prettyString)
+
+      //@note look for variables at word boundary (do not match in the middle of other words)
+      val symMatcher = s"(${cex.keySet.map(_.prettyString).mkString("|")})\\b".r("v")
+      val cexFmlWithVals = symMatcher.replaceAllIn(cexFml, (m: Match) => {
+        val cexSym = UIKeYmaeraXPrettyPrinter.htmlEncode(m.group("v"))
+        if ((m.before + cexSym).endsWith("false")) {
+          cexSym
+        } else {
+          val cexVal = UIKeYmaeraXPrettyPrinter.htmlEncode(cex.find(_._1.prettyString == cexSym).get._2.prettyString)
+          s"""<div class="k4-cex-fml"><ul><li>$cexVal</li></ul>$cexSym</div>"""
+        }
+      })
+
+      //@note look for (cexCmp<->false) groups and replace with boldface danger spans
+      val cexMatcher = "\\(([^\\)]+?)&#8596;false\\)".r("fml")
+      cexMatcher.replaceAllIn(cexFmlWithVals, (m: Match) => {
+        val cexCmp = m.group("fml")
+        s"""<div class="k4-cex-highlight text-danger">$cexCmp</div>"""
+      })
+    } else {
+      replaceWithCexVals(fml, cex).prettyString
+    }
   }
 }
 
