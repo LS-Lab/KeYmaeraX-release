@@ -28,7 +28,7 @@ object Approximator {
   val ADEBUG = true
 
   def expApproximation(e: Variable, n: Number) =
-    new DependentPositionWithAppliedInputTactic("exp", e::n::Nil) {
+    new DependentPositionWithAppliedInputTactic("expApproximation", e::n::Nil) {
       override def factory(pos: Position): DependentTactic = {
         anon((sequent: Sequent) => {
           val t = timeVarInModality(sequent.apply(pos.topLevel))
