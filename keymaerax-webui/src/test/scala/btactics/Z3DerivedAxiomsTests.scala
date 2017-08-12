@@ -158,16 +158,16 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "prove abs" in withZ3 { qeTool => check(absDef)}
   it should "prove min" in withZ3 { qeTool => check(minDef)}
   it should "prove max" in withZ3 { qeTool => check(maxDef)}
-  it should "prove +<= up" in withZ3 { qeTool => check(intervalUpPlus)}
-  it should "prove -<= up" in withZ3 { qeTool => check(intervalUpMinus)}
+  //it should "prove +<= up" in withZ3 { qeTool => check(intervalUpPlus)}
+  //it should "prove -<= up" in withZ3 { qeTool => check(intervalUpMinus)}
   it should "prove *<= up" in withZ3 { qeTool => check(intervalUpTimes)}
   it should "prove 1Div<= up" in withZ3 { qeTool => check(intervalUp1Divide)}
-  it should "prove Div<= up" in withZ3 { qeTool => check(intervalUpDivide)}
+  //it should "prove Div<= up" in withZ3 { qeTool => check(intervalUpDivide)}
   it should "prove <=+ down" in withZ3 { qeTool => check(intervalDownPlus)}
   it should "prove <=- down" in withZ3 { qeTool => check(intervalDownMinus)}
   it should "prove <=* down" in withZ3 { qeTool => check(intervalDownTimes)}
   it should "prove <=1Div down" in withZ3 { qeTool => check(intervalDown1Divide)}
-  it should "prove <=Div down" in withZ3 { qeTool => check(intervalDownDivide)}
+  //it should "prove <=Div down" in withZ3 { qeTool => check(intervalDownDivide)}
   it should "prove K& down" in withZ3 { qeTool => check(Kand)}
   it should "prove &-> down" in withZ3 { qeTool => check(andImplies)}
 

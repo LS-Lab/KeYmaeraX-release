@@ -220,13 +220,11 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove *<= up" in withMathematica { qeTool => check(intervalUpTimes)}
   it should "prove pow<= up" in withMathematica { qeTool => check(intervalUpPower)}
   it should "prove 1Div<= up" in withMathematica { qeTool => check(intervalUp1Divide)}
-  it should "prove Div<= up" in withMathematica { qeTool => check(intervalUpDivide)}
   it should "prove <=+ down" in withMathematica { qeTool => check(intervalDownPlus)}
   it should "prove <=- down" in withMathematica { qeTool => check(intervalDownMinus)}
   it should "prove <=* down" in withMathematica { qeTool => check(intervalDownTimes)}
   it should "prove <=pow down" in withMathematica { qeTool => check(intervalDownPower)}
   it should "prove <=1Div down" in withMathematica { qeTool => check(intervalDown1Divide)}
-  it should "prove <=Div down" in withMathematica { qeTool => check(intervalDownDivide)}
   it should "prove K& down" in withMathematica { qeTool => check(Kand)}
   it should "prove &-> down" in withMathematica { qeTool => check(andImplies)}
   it should "prove <= & <=" in withMathematica { qeTool => check(metricAndLe)}
