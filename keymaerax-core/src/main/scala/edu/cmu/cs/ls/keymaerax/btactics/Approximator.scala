@@ -94,6 +94,7 @@ object Approximator {
     else if(n % 2 == 0) s"${t.prettyString}^${2*n+1}/${fac(2*n+1)}".asTerm
     else s"-${t.prettyString}^${2*n+1}/${fac(2*n+1)}".asTerm
   private def taylorSin(t: Term, N: Int) = Range(0,N+1).map(taylorSinTerm(t,_)).reduce(Plus.apply)
+  private def sumTerms(t: Term, ithTerm : (Term,Int) => Term, N: Int) = Range(0,N+1).map(ithTerm(t,_)).reduce(Plus.apply)
 
   //endregion
 
