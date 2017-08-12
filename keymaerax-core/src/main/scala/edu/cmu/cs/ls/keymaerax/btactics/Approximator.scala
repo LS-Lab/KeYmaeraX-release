@@ -80,20 +80,21 @@ object Approximator {
   //region Definitions of series.
 
   /** The nth term of a Taylor series approximation of sin(t) */
+  private def taylorCos(t: Term, N: Int) = sumTerms(t, taylorCosTerm, N)
   private def taylorCosTerm(t: Term, n: Int):Term = {
     assert(n >= 0, "Series are 0-indexed.")
     if(n == 0) "1".asTerm
     else if(n % 2 == 0) s"${t.prettyString}^${2*n}/${fac(2*n)}".asTerm
     else s"-${t.prettyString}^${2*n}/${fac(2*n)}".asTerm
   }
-  private def taylorCos(t: Term, N: Int) = Range(0,N+1).map(taylorCosTerm(t,_)).reduce(Plus.apply)
 
   /** The nth term of a Taylor series approximation of cos(t) */
+  private def taylorSin(t: Term, N: Int) = sumTerms(t, taylorSinTerm, N)
   private def taylorSinTerm(t: Term, n: Int):Term =
     if(n == 0) t
     else if(n % 2 == 0) s"${t.prettyString}^${2*n+1}/${fac(2*n+1)}".asTerm
     else s"-${t.prettyString}^${2*n+1}/${fac(2*n+1)}".asTerm
-  private def taylorSin(t: Term, N: Int) = Range(0,N+1).map(taylorSinTerm(t,_)).reduce(Plus.apply)
+
   private def sumTerms(t: Term, ithTerm : (Term,Int) => Term, N: Int) = Range(0,N+1).map(ithTerm(t,_)).reduce(Plus.apply)
 
   //endregion
