@@ -103,6 +103,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           val valueDependentTactic = d.computeExpr(v)
           apply(valueDependentTactic, v)
         } catch {
+          case e: BelleFriendlyUserMessage => throw e
           case e: BelleThrowable => throw e.inContext(d, v.prettyString)
             //@todo unable to create is a serious error in the tactic not just an "oops whatever try something else exception"
           case e: Throwable => throw new BelleThrowable("Unable to create dependent tactic: " + e.getMessage, e).inContext(d, "")

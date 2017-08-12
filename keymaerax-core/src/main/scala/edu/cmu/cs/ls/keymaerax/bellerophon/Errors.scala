@@ -11,6 +11,10 @@ import edu.cmu.cs.ls.keymaerax.core.ProverException
  */
 //@todo class TacticException(msg:String) extends ProverException(msg)
 
+/** These exceptions have well-understood causes and the given explanation should be propagated all the way to the user.
+  * @todo give proper formatting and inContext and such. */
+class BelleFriendlyUserMessage(message: String) extends Exception
+
 /** Common exception type for all Bellerophon tactic exceptions. */
 class BelleThrowable(message: String, cause: Throwable = null)
   extends ProverException(s"[Bellerophon Runtime] $message", if (cause != null) cause else new Throwable(message)) {
