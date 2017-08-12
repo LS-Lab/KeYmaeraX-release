@@ -27,6 +27,31 @@ object Approximator {
   /** Debugging for the Approximator. */
   val ADEBUG = true
 
+  def expApproximation(e: Variable, n: Number) =
+    new DependentPositionWithAppliedInputTactic("exp", e::n::Nil) {
+      override def factory(pos: Position): DependentTactic = {
+        anon((sequent: Sequent) => {
+          val t = timeVarInModality(sequent.apply(pos.topLevel))
+
+          val N = n.value.toInt
+          assert(N >= 0, s"${this.name} expects a non-negative number as its 3rd argument (# of terms to expand the Taylor series.)")
+
+          val cuts = Range(0,N).map(i => GreaterEqual(e, expExpansion(e,i)))
+
+          if(ADEBUG) println(s"exp approximator performing these cuts: ${cuts.mkString("\n")}")
+
+          val cutTactics: Seq[BelleExpr] =
+            cuts.map(cut =>
+              TactixLibrary.dC(cut)(pos) < (
+                TactixLibrary.dI()(pos)
+                ,
+                nil
+              ) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
+            )
+          cutTactics.reduce(_ & _)
+        })
+      }
+    }
 
   /** Cuts in Taylor approixmations for circular dynamics {{{x'=y,y'=-x}}}.
     * @todo Handle the first two cuts
