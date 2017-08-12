@@ -31,4 +31,7 @@ class ApproximatorTests extends TacticTestBase {
     println(result.prettyString)
   })
 
+  //@todo test parsing/printing.
+
+  //@todo test some actual proofs.
 }
