@@ -86,6 +86,13 @@ object Approximator {
     else if(n % 2 == 0) s"${t.prettyString}^${2*n+1}/${fac(2*n+1)}".asTerm
     else s"-${t.prettyString}^${2*n+1}/${fac(2*n+1)}".asTerm
 
+
+  private def expExpansion(t: Term, N: Int):Term = sumTerms(t, ithExpTerm, N)
+  private def ithExpTerm(t: Term, n: Int):Term =
+    if(n == 0) Plus(Number(1), t)
+    else if(n == 1) t //We don't need these two special cases but it keeps things readable.
+    else Divide(Power(t, Number(n)), Number(fac(n)))
+
   private def sumTerms(t: Term, ithTerm : (Term,Int) => Term, N: Int) = Range(0,N+1).map(ithTerm(t,_)).reduce(Plus.apply)
 
   //endregion
