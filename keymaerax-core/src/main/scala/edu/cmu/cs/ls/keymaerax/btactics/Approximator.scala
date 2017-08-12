@@ -134,5 +134,15 @@ object Approximator {
     }
     case _ => throw new BelleFriendlyUserMessage("Approximation tactics should only be applied to modalities")
   }
+
+  /** An alternator. Not sure if this is useful or obfuscatory. */
+  private def alternatorSchema[A,B](even : A => B, odd: A => B)(idx: Int) = (a: A) => if(idx % 2 == 0) even(a) else odd(a)
+
+  private def alternateBounds(variable: Term, series: (Term,Int)=>Term, startLess: Boolean)(idx: Int) = {
+    val evenConstructor = if(startLess) LessEqual else GreaterEqual
+    val oddConstrctor   = if(startLess) GreaterEqual else LessEqual
+    ???
+  }
+
   //endregion
 }
