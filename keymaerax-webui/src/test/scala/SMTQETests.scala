@@ -172,14 +172,14 @@ class SMTQETests extends TacticTestBase {
   }
 
 
-  "Z3Reports" should "prove intervalUpDivide" in {
+  "Z3Reports" should "prove intervalUpDivide" ignore {
     val intervalUpDivideStr = "\\forall yy \\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (x/y<=z <- (((xx<=x & x<=X) & (yy<=y & y<=Y)) & ((Y<0|0<yy) &(xx/yy<=z & xx/Y<=z & X/yy<=z & X/Y<=z))))"
     val intervalUpDivide = intervalUpDivideStr.asFormula;
     println(intervalUpDivideStr)
     z3.qeEvidence(intervalUpDivide)
   }
 
-  it should "prove intervalDownDivide" in {
+  it should "prove intervalDownDivide" ignore {
     val intervalDownDivideStr = "\\forall yy \\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (z<=x/y <- (((xx<=x & x<=X) & (yy<=y & y<=Y)) & ((Y<0|0<yy) &(z<=xx/yy & z<=xx/Y & z<=X/yy & z<=X/Y))))"
 //    val intervalDownDivideStr = "h_() <= f_()/g_() <- (((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & ((G_()<0 | 0 < gg_()) & (h_()<=ff_()/gg_() & h_()<=ff_()/G_() & h_()<=F_()/gg_() & h_()<=F_()/G_())))"
     val intervalDownDivide = intervalDownDivideStr.asFormula
