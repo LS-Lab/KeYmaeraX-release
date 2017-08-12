@@ -31,7 +31,19 @@ class ApproximatorTests extends TacticTestBase {
     println(result.prettyString)
   })
 
-  //@todo test parsing/printing.
+  "Tactic pretty printer" should "properly print expApproximation tactics" in {
+    val t = Approximator.expApproximation("e".asVariable, Number(10))(1)
+    val print = t.prettyString
+    print shouldBe "expApproximation({`e`},{`10`},1)"
+    //@todo check preint of parse after patching DerivationInfo.
+  }
+
+  it should "properly print taylor approximation tactics" in {
+    val t = Approximator.taylorCircular("s".asVariable, "c".asVariable, Number(5))(1)
+    val print = t.prettyString
+    print shouldBe "taylorCircular({`s`},{`c`},{`5`},1)"
+    //@todo check preint of parse after patching DerivationInfo.
+  }
 
   //@todo test some actual proofs.
 }
