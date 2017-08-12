@@ -13,6 +13,14 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 
 /**
+  * Approximations
+  * More Ideas:
+  *     - Add more functions: exp,ln,etc.
+  *     - Pre-processing -- add time var, auto base tactics instead of assuming already in domain constraint, t_0=0, etc.
+  *     - Post-processing -- after reducing the arithmetic, hide all approximate terms except the last one.
+  *       It might even be possible to do this during the tactic by remving all but the most recent <= and >=, but I'm
+  *       not sure if that's true for any/all expansions.
+  *     - Generalized tactics. Not sure this makes much sense though.
   * @author Nathan Fulton
   */
 object Approximator {
