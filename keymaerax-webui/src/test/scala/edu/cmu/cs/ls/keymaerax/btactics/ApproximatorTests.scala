@@ -16,6 +16,9 @@ class ApproximatorTests extends TacticTestBase {
     val f = "c=0 & s=1 & t=0->[{s'=c,c'=-s,t'=1&s^2+c^2=1&s<=t&c<=1}]1=1".asFormula
     val t = TactixLibrary.implyR(1) & Approximator.taylorCircular("s".asVariable, "c".asVariable, Number(5))(1)
 
-    println(proveBy(f,t).prettyString)
+
+    val result = proveBy(f,t)
+    result.subgoals.length shouldBe 1
+    println(result.prettyString)
   })
 }
