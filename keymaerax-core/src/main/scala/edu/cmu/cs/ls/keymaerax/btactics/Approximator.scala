@@ -124,5 +124,15 @@ object Approximator {
     }
   }
 
+  private def timeVarInModality(e:Expression) = e match {
+    case m:Modal => m.program match {
+      case ODESystem(ode,child) => timeVar(ode) match {
+        case Some(t) => t
+        case None => throw new BelleFriendlyUserMessage("Approximation tactics require existence of an explicit time variable; i.e., expected to find t'=1 in the ODE but no such t was found.")
+      }
+      case _ => throw new BelleFriendlyUserMessage("Approximation tactics should only be applied to modalities containing ODEs in the top level")
+    }
+    case _ => throw new BelleFriendlyUserMessage("Approximation tactics should only be applied to modalities")
+  }
   //endregion
 }
