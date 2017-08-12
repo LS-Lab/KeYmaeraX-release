@@ -27,54 +27,45 @@ object Approximator {
   /** Debugging for the Approximator. */
   val ADEBUG = true
 
-  /** Cuts in Taylor approixmations for circular dynamics {{{x'=y,y'=-x}}}. */
+
+  /** Cuts in Taylor approixmations for circular dynamics {{{x'=y,y'=-x}}}.
+    * @todo Handle the first two cuts
+    * @todo Good error messages for when the first cut or two fail ==> "missing assumptions." */
   def taylorCircular(s: Variable, c: Variable, n: Number) =
     new DependentPositionWithAppliedInputTactic("taylorCircular", s::c::n::Nil) {
       override def factory(pos: Position): DependentTactic = {
-        val tactic = {
-          anon((sequent: Sequent) => sequent.apply(pos.topLevel) match {
-            case m: Modal => {
-              assert(m.program.isInstanceOf[ODESystem], s"Expected a differential program but found ${m.program.prettyString}")
-              //Find the time variable.
-              val t = timeVar(m.program.asInstanceOf[ODESystem].ode) match {
-                case Some(v) => v
-                case None => throw new BelleFriendlyUserMessage(s"${this.name} expects and ODE with a time variable already introduced (i.e., t'=1 expected but not found in ODE)")
-              }
+        anon((sequent: Sequent) => {
+          val t = timeVarInModality(sequent.apply(pos.topLevel))
 
-              //Get the number of terms we should expand.
-              val N = n.value.toInt
-              assert(N >= 0, s"${this.name} expects a non-negative number as its 3rd argument (# of terms to expand the Taylor series.)")
+          //Get the number of terms we should expand.
+          val N = n.value.toInt
+          assert(N >= 0, s"${this.name} expects a non-negative number as its 3rd argument (# of terms to expand the Taylor series.)")
 
-              //Compute th series of cuts.
-              //@todo alternate inequalities in each sequence.
-              val sinCuts = Range(0, N).map(i =>
-                if(i % 2 == 0) LessEqual(s, taylorSin(t, i))
-                else GreaterEqual(s, taylorSin(t, i))
-              )
-              val cosCuts = Range(0, N).map(i =>
-                if(i % 2 == 0) LessEqual(c, taylorCos(t, i))
-                else GreaterEqual(c, taylorCos(t,i))
-              )
+          //Compute the series of cuts.
+          val sinCuts = Range(0, N).map(i =>
+            if (i % 2 == 0) LessEqual(s, taylorSin(t, i))
+            else GreaterEqual(s, taylorSin(t, i))
+          )
+          val cosCuts = Range(0, N).map(i =>
+            if (i % 2 == 0) LessEqual(c, taylorCos(t, i))
+            else GreaterEqual(c, taylorCos(t, i))
+          )
 
-              val cuts = interleave(sinCuts, cosCuts)
-              if(ADEBUG) println(s"Taylor Approximator performing these cuts: ${cuts.mkString("\n")}")
+          val cuts = interleave(sinCuts, cosCuts)
+          if (ADEBUG) println(s"Taylor Approximator performing these cuts: ${cuts.mkString("\n")}")
 
-              //Construct a tactic that interleaves these cuts.
-              val cutTactics : Seq[BelleExpr] =
-                cuts.map(cut =>
-                  TactixLibrary.dC(cut)(pos) <(
-                    TactixLibrary.dI()(pos)
-                    ,
-                    nil
-                  ) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
-                )
-              cutTactics.reduce(_ & _)
-            }
-          })
-        }
-        tactic
+          //Construct a tactic that interleaves these cuts.
+          val cutTactics: Seq[BelleExpr] =
+            cuts.map(cut =>
+              TactixLibrary.dC(cut)(pos) < (
+                TactixLibrary.dI()(pos)
+                ,
+                nil
+              ) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
+            )
+          cutTactics.reduce(_ & _)
+        })
       }
-
     }
 
   //region Definitions of series.
