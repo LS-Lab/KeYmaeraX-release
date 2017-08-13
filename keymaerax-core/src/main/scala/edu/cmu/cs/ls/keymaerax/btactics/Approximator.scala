@@ -168,5 +168,4 @@ object Approximator {
     case _ => throw new BelleFriendlyUserMessage("Approximation tactics should only be applied to modalities")
   }
 
-  //endregion
 }
