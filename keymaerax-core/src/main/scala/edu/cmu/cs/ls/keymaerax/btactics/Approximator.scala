@@ -38,7 +38,7 @@ object Approximator {
 
           val cuts = Range(0,N).map(i => GreaterEqual(e, expExpansion(t,i)))
 
-          if(ADEBUG) println(s"exp approximator performing these cuts: ${cuts.mkString("\n")}")
+          if(ADEBUG) println(s"exp approximator performing these cuts:\n\t ${cuts.mkString("\n\t")}")
 
           val cutTactics: Seq[BelleExpr] =
             cuts.map(cut =>
