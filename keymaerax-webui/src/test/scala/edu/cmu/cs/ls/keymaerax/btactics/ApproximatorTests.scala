@@ -55,7 +55,7 @@ class ApproximatorTests extends TacticTestBase {
   })
 
   "expApproximation" should "approximate e'=e" in withMathematica(_ => {
-    val f = "t=0 & e=1 -> [{e'=e,t'=1 & e >= 1 + x}]1=0".asFormula
+    val f = "t=0 & e=1 -> [{e'=e,t'=1 & e >= 1 & e >= 1 + t}]1=0".asFormula
     val t = TactixLibrary.implyR(1) & Approximator.expApproximation("e".asVariable, Number(10))(1)
 
     val result = proveBy(f,t)
