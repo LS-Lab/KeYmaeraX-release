@@ -36,7 +36,7 @@ object Approximator {
           val N = n.value.toInt
           assert(N >= 0, s"${this.name} expects a non-negative number as its 3rd argument (# of terms to expand the Taylor series.)")
 
-          val cuts = Range(0,N).map(i => GreaterEqual(e, expExpansion(e,i)))
+          val cuts = Range(0,N).map(i => GreaterEqual(e, expExpansion(t,i)))
 
           if(ADEBUG) println(s"exp approximator performing these cuts: ${cuts.mkString("\n")}")
 
