@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{cut, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 
 /**
@@ -43,10 +43,10 @@ object Approximator {
           val cutTactics: Seq[BelleExpr] =
             cuts.map(cut =>
               TactixLibrary.dC(cut)(pos) < (
-                TactixLibrary.dI()(pos)
+                TactixLibrary.dI()(pos) & DebuggingTactics.done("Expected dI to succeed.")
                 ,
                 nil
-              ) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
+              ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
             )
           cutTactics.reduce(_ & _)
         })
@@ -76,19 +76,27 @@ object Approximator {
             else GreaterEqual(c, taylorCos(t, i))
           )
 
-          val cuts = interleave(sinCuts, cosCuts)
+          //Prove that (c,s) is a circle. @todo allow for any radius.
+          val isOnCircle = TactixLibrary.dC("s^2 + c^2 = 1".asFormula)(1) < (
+            nil
+            ,
+            TactixLibrary.dI()(1) & DebuggingTactics.done("Expected dI to succeed")
+          ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut isOnCircle", ADEBUG)
+
+          val cuts = interleave(cosCuts, sinCuts)
           if (ADEBUG) println(s"Taylor Approximator performing these cuts: ${cuts.mkString("\n")}")
 
           //Construct a tactic that interleaves these cuts.
           val cutTactics: Seq[BelleExpr] =
             cuts.map(cut =>
               TactixLibrary.dC(cut)(pos) < (
-                TactixLibrary.dI()(pos)
-                ,
                 nil
-              ) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
+                ,
+                DebuggingTactics.debug("Trying to prove next bound: ", ADEBUG) & (TactixLibrary.dI()(pos) | (TactixLibrary.dW(1)&QE)) & DebuggingTactics.done("Expected dI to succeed")
+              ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
             )
-          cutTactics.reduce(_ & _)
+
+          isOnCircle & cutTactics.reduce(_ & _)
         })
       }
     }
