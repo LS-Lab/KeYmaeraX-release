@@ -43,9 +43,8 @@ object Approximator {
           val cutTactics: Seq[BelleExpr] =
             cuts.map(cut =>
               TactixLibrary.dC(cut)(pos) < (
-                TactixLibrary.dI()(pos) & DebuggingTactics.done("Expected dI to succeed.")
-                ,
-                nil
+                nil,
+                DebuggingTactics.debug("Trying to prove this by ODE", true) & (TactixLibrary.dI()(pos) | TactixLibrary.ODE(1)) & DebuggingTactics.done("Expected dI to succeed.")
               ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
             )
           cutTactics.reduce(_ & _)
