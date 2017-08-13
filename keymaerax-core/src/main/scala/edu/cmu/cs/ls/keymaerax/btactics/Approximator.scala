@@ -44,7 +44,9 @@ object Approximator {
             cuts.map(cut =>
               TactixLibrary.dC(cut)(pos) < (
                 nil,
-                DebuggingTactics.debug("Trying to prove this by ODE", true) & (TactixLibrary.dI()(pos) | TactixLibrary.ODE(1)) & DebuggingTactics.done("Expected dI to succeed.")
+                DebuggingTactics.debug("Trying to prove this by dI or by ODE", true) &
+                //dI handles the normal case, ODE handles the base case.
+                (TactixLibrary.dI()(pos) | TactixLibrary.ODE(1)) & DebuggingTactics.done("Expected dI to succeed.")
               ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
             )
           cutTactics.reduce(_ & _)
@@ -91,6 +93,7 @@ object Approximator {
               TactixLibrary.dC(cut)(pos) < (
                 nil
                 ,
+                //dW&QE handles the base case, dI handles all others.
                 DebuggingTactics.debug("Trying to prove next bound: ", ADEBUG) & (TactixLibrary.dI()(pos) | (TactixLibrary.dW(1)&QE)) & DebuggingTactics.done("Expected dI to succeed")
               ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
             )
