@@ -41,9 +41,9 @@ object Approximator {
         val system = m.program.asInstanceOf[ODESystem]
         val t = timeVar(system.ode)
 
-        hasExp(system.ode) match {
+        DifferentialHelper.hasExp(system.ode) match {
           case Some(v) => expApproximation(v, n)(pos)
-          case None    => hasSinCos(system.ode) match {
+          case None    => DifferentialHelper.hasSinCos(system.ode) match {
             case Some((cos,sin)) => taylorCircular(sin, cos, n)(pos)
             case None => throw new BelleFriendlyUserMessage("Could not find a system to approximate.")
           }
@@ -53,40 +53,7 @@ object Approximator {
     })
   }
 
-  private def hasExp(dp: DifferentialProgram): Option[Variable] = {
-    val expODE = DifferentialHelper.atomicOdes(dp).find(_ match {
-        case AtomicODE(DifferentialSymbol(x1), x2) if(x1.equals(x2)) => true //@todo QE-check x1=x2 instead of syntactic check.
-        case _ => false
-      })
 
-    expODE match {
-      case Some(ode) => Some(ode.xp.x)
-      case None => None
-    }
-  }
-
-  /**
-    * Finds an ODE of the form {s'=c,c'=-s}.
-    * @param dp The differential program.
-    * @return (cos variable, sin variable)
-    */
-  private def hasSinCos(dp: DifferentialProgram): Option[(Variable, Variable)] = {
-    val eqns = DifferentialHelper.atomicOdes(dp)
-
-    //Find all equations of the form {x'=-v} for any variable v. Returns a pair (cosVar, sinVar)
-    val candidates = eqns
-      .filter(p => p.e match {
-        case Neg(t) if(t.isInstanceOf[Variable]) => true
-        case _ => false
-      })
-      .map(ode => (ode.xp.x, ode.e.asInstanceOf[Neg].child.asInstanceOf[Variable]) )
-
-    //For each of the candidates try to find a corresponding equation of the form {v'=x}
-    candidates.find(p => {
-        val (cos,sin) = p
-        eqns.contains(AtomicODE(DifferentialSymbol(sin), cos))
-    })
-  }
 
   //endregion
 
