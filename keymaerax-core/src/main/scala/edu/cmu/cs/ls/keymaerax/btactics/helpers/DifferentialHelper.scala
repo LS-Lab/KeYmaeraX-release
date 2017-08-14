@@ -15,7 +15,7 @@ import scala.collection.immutable
 
 /**
   * @todo move to formula tools? Or make this ProgramTools?
-  * Created by nfulton on 7/14/16.
+  * @author Nathan Fulton
   */
 object DifferentialHelper {
   /** Returns all of the AtomicODE's in a system. */
