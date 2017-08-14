@@ -150,7 +150,7 @@ object Approximator {
                 nil
                 ,
                 //dW&QE handles the base case, dI handles all others.
-                DebuggingTactics.debug("Trying to prove next bound: ", ADEBUG) & (TactixLibrary.dI()(pos) | (TactixLibrary.dW(1)&QE)) & DebuggingTactics.done("Expected dI to succeed")
+                DebuggingTactics.debug("Trying to prove next bound: ", ADEBUG) & (TactixLibrary.dI()(pos) | (TactixLibrary.dW(pos)&QE)) & DebuggingTactics.done("Expected dI to succeed")
               ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
             )
 
