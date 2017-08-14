@@ -163,7 +163,7 @@ object Approximator {
               ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
             )
 
-          isOnCircle & cutTactics.reduce(_ & _)
+          DebuggingTactics.debug(s"Beginning expApproximation on ${s.prettyString}, ${c.prettyString}, ${n.prettyString}", ADEBUG) & isOnCircle & cutTactics.reduce(_ & _)
         })
       }
     }
