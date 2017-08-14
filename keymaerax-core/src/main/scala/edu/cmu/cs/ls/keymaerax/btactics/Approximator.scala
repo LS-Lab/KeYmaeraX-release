@@ -56,6 +56,30 @@ object Approximator {
     case AtomicODE(xp, e) if(xp.x.equals(e)) => Some(xp.x) //@todo do a non-tactical QE and determine if x'=f(x), not just literal equality.
     case _ => None
   }
+
+  /**
+    * Finds an ODE of the form {s'=c,c'=-s}.
+    * @param dp The differential program.
+    * @return (cos variable, sin variable)
+    */
+  private def hasSinCos(dp: DifferentialProgram): Option[(Variable, Variable)] = {
+    val eqns = DifferentialHelper.atomicOdes(dp)
+
+    //Find all equations of the form {x'=-v} for any variable v. Returns a pair (cosVar, sinVar)
+    val candidates = eqns
+      .filter(p => p.e match {
+        case Neg(t) if(t.isInstanceOf[Variable]) => true
+        case _ => false
+      })
+      .map(ode => (ode.xp.x, ode.e.asInstanceOf[Neg].child.asInstanceOf[Variable]) )
+
+    //For each of the candidates try to find a corresponding equation of the form {v'=x}
+    candidates.find(p => {
+        val (cos,sin) = p
+        eqns.contains(AtomicODE(DifferentialSymbol(sin), cos))
+    })
+  }
+
   //endregion
 
   def expApproximation(e: Variable, n: Number) =
