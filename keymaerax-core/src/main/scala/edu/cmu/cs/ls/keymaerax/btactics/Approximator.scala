@@ -43,7 +43,10 @@ object Approximator {
 
         hasExp(system.ode) match {
           case Some(v) => expApproximation(v, n)(pos)
-          case None    => TactixLibrary.debug("Auto-Sin/Cos approximate is not implemented yet.")
+          case None    => hasSinCos(system.ode) match {
+            case Some((cos,sin)) => taylorCircular(sin, cos, n)(pos)
+            case None => throw new BelleFriendlyUserMessage("Could not find a system to approximate.")
+          }
         }
       }
       case _ => throw new BelleFriendlyUserMessage(s"approximate should only be called on positions of form [{ODE}]P")
