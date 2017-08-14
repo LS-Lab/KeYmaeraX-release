@@ -185,6 +185,16 @@ object DerivationInfo {
         (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
     , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
     , _ => ((fml: Formula) => TactixLibrary.dC(fml)): TypedFunc[Formula, BelleExpr]),
+    new InputPositionTacticInfo("autoApproximate",
+      RuleDisplayInfo("Approximate",
+        (List("&Gamma;"), List("[{X'=F & &Alpha;(n)}]", "&Delta;")),
+        List( (List("&Gamma;"), List("[{X'=F}]", "&Delta;")) )
+      ),
+      List(ExpressionArg("n", Nil)),
+      _ => ((n: Expression) => n match {
+        case n:Number => Approximator.autoApproximate(n)
+      }) : TypedFunc[Expression, BelleExpr] //@todo can I just say TypedFunc[Number,BelleExpr] here? Or no?
+    ),
     new InputPositionTacticInfo("dG",
       RuleDisplayInfo(
         "Differential Ghost",

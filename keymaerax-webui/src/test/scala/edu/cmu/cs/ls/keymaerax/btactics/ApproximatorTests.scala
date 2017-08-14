@@ -103,7 +103,13 @@ class ApproximatorTests extends TacticTestBase {
     //@todo check print of parse after patching DerivationInfo.
   }
 
-  "auto approximate" should "approximate exp" taggedAs(KeYmaeraXTestTags.DeploymentTest) in withMathematica(_ => {
+  it should "properly print and parse top-level approximation tactic" taggedAs(KeYmaeraXTestTags.DeploymentTest) in {
+    val t = Approximator.autoApproximate(Number(10))(1)
+    val print = t.prettyString
+    print shouldBe "autoApproximate({`10`},1)"
+    print.asTactic shouldBe t
+  }
+
   "autoApproximate" should "approximate exp" taggedAs(KeYmaeraXTestTags.DeploymentTest) in withMathematica(_ => {
     val f = "t=0 & e=1 -> [{e'=e,t'=1}](e>=1+t+t^2/2+t^3/6+t^4/24+t^5/120+t^6/720+t^7/5040+t^8/40320+t^9/362880)".asFormula
     val t = TactixLibrary.implyR(1) & Approximator.autoApproximate(Number(10))(1) & TactixLibrary.dW(1) & TactixLibrary.QE
