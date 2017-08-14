@@ -2293,6 +2293,239 @@ End.
 
 End.
 
+Theorem "Theorem 13: Passive safety with trajectory distance measurement".
+
+Functions.
+  R ep().      /* time limit for control decisions */
+  R b().       /* minimum braking capability of the robot */
+  R A().       /* maximum acceleration -b <= a <= A */
+  R W().       /* maximum steering */
+  R V().       /* maximum obstacle velocity */
+  R abs(R).    /* predefined function of absolute value */
+
+  R stopDist(R) = ((.)^2 / (2*b()) + V()*(.)/b()).
+  /*R accelComp(R) = ((a/b() + 1) * (a/2 * ep()^2 + ep()*((.)+V))).
+  R admissibleSeparationG(R) = (stopDist(.) + accelComp(.)).
+  R admissibleSeparationL(R) = (-(.)^2/(2*a)-V*(.)/a).*/
+
+  B isWellformedDir() <-> ( r!=0 & r^2 = (x-xc)^2 + (y-yc)^2 & dx^2 + dy^2 = 1 & dx = -(y-yc)/r & dy = (x-xc)/r & w*r=v ).
+
+  B bounds() <-> (                                                                     /* Bounds for global constants */
+      A() >= 0                                                                                      /* Working engine */
+    & b() > 0                                                                                       /* Working brakes */
+    & ep() > 0                                                                            /* Controller reaction time */
+    & V() >= 0
+  ).
+  B initialState() <-> (                                                          /* Stopped somewhere safe initially */
+    v = 0
+    & (x-xo)^2 + (y-yo)^2 > 0
+    & isWellformedDir()
+  ).
+  B assumptions() <-> (bounds() & initialState()).                     /* Under these assumptions we guarantee safety */
+
+  B loopinv() <-> (                                                /* Conditions that are true on each loop iteration */
+    v >= 0
+    & isWellformedDir()
+    & (v>0 -> abs(x-xo) > stopDist(v) | abs(y-yo) > stopDist(v) | abs(abs(r) - ((xo-xc)^2 + (yo-yc)^2)^(1/2)) > V*v/b)
+  ).
+End.
+
+ProgramVariables.
+  R x.    /* robot position: x */
+  R y.    /* robot position: y */
+  R v.    /* robot translational velocity */
+  R a.    /* robot translational acceleration */
+  R dx.   /* robot orientation: x */
+  R dy.   /* robot orientation: y */
+  R w.    /* robot rotational velocity */
+  R r.    /* robot curve radius */
+  R xc.
+  R yc.
+  R xo.   /* position of closest obstacle on curve */
+  R yo.
+  R vxo.  /* velocity vector of obstacle */
+  R vyo.
+  R t.    /* time */
+End.
+
+Problem.
+assumptions() ->
+  [
+    {
+      {
+        /* obstacle control */
+        {
+          vxo := *; vyo := *;
+          ?vxo^2+vyo^2<=V^2;
+        }
+        /* robot control */
+        {
+          /* brake on current curve or remain stopped */
+          { a := -b; }
+          ++
+          { ?v = 0; a := 0; w := 0; { dx:=-dx;dy:=-dy; ++ dx:=dx;dy:=dy; }; r := *; xc := *; yc := *;
+            ?(r!=0 & r^2 = (x-xc)^2+(y-yc)^2 & dx=-(y-yc)/r & dy=(x-xc)/r & r*w=v); }
+      	  ++
+          /* or choose a new safe curve */
+          { a := *; ?-b<=a & a<=A;
+            w := *; ?-W<=w & w<=W;       /* choose steering */
+            r := *;
+            xc := *; yc := *;
+
+            xo := *; yo := *;            /* measure closest obstacle on the curve */
+
+            /* admissible curve */
+            ?(r!=0 & r^2 = (x-xc)^2+(y-yc)^2 & dx=-(y-yc)/r & dy=(x-xc)/r & r*w=v);
+
+            /* use that curve, if it is a safe one (admissible velocities) */
+            if (v+a*ep>=0) { ?abs(x-xo) > stopDist(v) + (a/b+1)*(a/2*ep^2 + ep*(v+V)) | abs(y-yo) > stopDist(v) + (a/b+1)*(a/2*ep^2 + ep*(v+V)) | abs(abs(r) - ((xo-xc)^2 + (yo-yc)^2)^(1/2)) > V*(ep + (v+a*ep)/b); }
+            else           { ?abs(x-xo) > -v^2/(2*a)-V*v/a | abs(y-yo) > -v^2/(2*a)-V*v/a | abs(abs(r) - ((xo-xc)^2 + (yo-yc)^2)^(1/2)) > -V*v/a; }
+          }
+        };
+    	  t := 0;
+      }
+
+      /* dynamics */
+      { x' = v * dx, y' = v * dy, v' = a,        /* accelerate/decelerate and move */
+        dx' = -w * dy, dy' = w * dx, w' = a/r,   /* follow curve */
+        xo' = vxo, yo' = vyo,                    /* obstacle moves */
+        t' = 1 & t <= ep & v >= 0
+      }
+    }*@invariant(loopinv())
+  ](v>0 -> (x - xo)^2 + (y - yo)^2 > 0)
+End.
+
+Tactic "Proof Theorem 13: Passive safety with trajectory distance measurement".
+implyR(1) ; loop({`v>=0&(r!=0&r^2=(x-xc)^2+(y-yc)^2&dx^2+dy^2=1&dx=-(y-yc)/r&dy=(x-xc)/r&w*r=v)&(v>0->abs(x-xo)>v^2/(2*b())+V()*v/b()|abs(y-yo)>v^2/(2*b())+V()*v/b()|abs(abs(r)-((xo-xc)^2+(yo-yc)^2)^(1/2))>V()*v/b())`}, 1) ; <(
+  QE,
+  unfold ; fullSimplify ; hideL(-6) ; hideL(-7) ; hideL(-7) ; hideL(-7) ; hideL(-7) ; hideL(-3) ; hideL(-1) ; orL(-3) ; <(
+    QE,
+    orL(-3) ; <(
+      QE,
+      absExp(-3.0) ; absExp(-6.0.0.0.0) ; orL(-7) ; <(
+        QE,
+        QE
+        )
+      )
+    ),
+  unfold ; <(
+    dC({`t>=0&dx^2+dy^2=1&v=old(v)-b()*t&w*r=v`}, 1) ; <(
+      dC({`dx=-(y-yc)/r&dy=(x-xc)/r`}, 1) ; <(
+        dC({`xo=old(xo)+vxo*t&yo=old(yo)+vyo*t`}, 1) ; <(
+          dC({`-t*(v+b()/2*t)<=x-old(x)&x-old(x)<=t*(v+b()/2*t)`}, 1) ; <(
+            dC({`-t*(v+b()/2*t)<=y-old(y)&y-old(y)<=t*(v+b()/2*t)`}, 1) ; <(
+              dW(1) ; implyR(1) ; andL('L)* ; fullSimplify ; andR(1) ; <(
+                hideL(-6) ; QE,
+                implyR(1) ; orR(1) ; orR(2) ; hideL(-1) ; hideL(-6) ; hideL(-6) ; hideL(-13) ; hideL(-13) ; hideL(-16) ; hideL(-17) ; hideL(-13) ; hideL(-2) ; implyL(-4) ; <(
+                  hideR(1) ; hideR(1) ; hideR(1) ; QE,
+                  orL(-4) ; <(
+                    hideR(2) ; hideR(2) ; smartQE,
+                    orL(-4) ; <(
+                      hideR(1) ; hideR(2) ; smartQE,
+                      hideR(1) ; hideR(1) ; edit({`abs(abs(r)-abbrv((((xo_0-xc)^2+(yo_0-yc)^2)^(1/2),oldCDist)))>V()*v_0/b()`}, -4) ; edit({`abs(abs(r)-abbrv((((xo-xc)^2+(yo-yc)^2)^(1/2),cDist)))>V()*v/b()`}, 1) ; cut({`abs(cDist-oldCDist)<=t*V()`}) ; <(
+                        hideL(-16) ; hideL(-16) ; hideL(-5) ; hideL(-5) ; hideL(-5) ; hideL(-5) ; hideL(-5) ; hideL(-5) ; hideL(-5) ; smartQE,
+                        hideR(1) ; hideL(-4) ; hideL(-5) ; hideL(-5) ; hideL(-5) ; hideL(-5) ; hideL(-3) ; hideL(-6) ; hideL(-7) ; hideL(-7) ; cut({`abs(cDist-oldCDist)<=t*(vxo^2+vyo^2)^(1/2)`}) ; <(
+                          hideL(-7) ; hideL(-7) ; hideL(-4) ; hideL(-4) ; hideL(-1) ; QE,
+                          hideR(1) ; hideL(-3) ; hideL(-2) ; hideL(-1) ; smartQE
+                          )
+                        )
+                      )
+                    )
+                  )
+                ),
+              hideL(-6) ; dI(1)
+              ),
+            hideL(-6) ; dI(1)
+            ),
+          hideL(-6) ; dI(1)
+          ),
+        hideL(-6) ; dI(1)
+        ),
+      hideL(-6) ; dI(1)
+      ),
+    dC({`t>=0&dx^2+dy^2=1&v=old(v)&w*r=v`}, 1) ; <(
+      dC({`dx=-(y-yc)/r&dy=(x-xc)/r`}, 1) ; <(
+        dW(1) ; implyR(1) ; allL2R(-10) ; hideL(-10) ; andL('L)* ; fullSimplify ; QE,
+        hideL(-6) ; dI(1)
+        ),
+      hideL(-6) ; dI(1)
+      ),
+    hideL(-6) ; hideL(-6) ; hideL(-6) ; hideL(-7) ; hideL(-7) ; hideL(-7) ; hideL(-9) ; hideL(-9) ; hideL(-9) ; hideL(-1) ; dC({`t>=0&dx^2+dy^2=1&v=old(v)+a*t&w*r=v`}, 1) ; <(
+      dC({`dx=-(y-yc)/r&dy=(x-xc)/r`}, 1) ; <(
+        dC({`xo=old(xo)+vxo*t&yo=old(yo)+vyo*t`}, 1) ; <(
+          dC({`-t*(v-a/2*t)<=x-old(x)&x-old(x)<=t*(v-a/2*t)`}, 1) ; <(
+            dC({`-t*(v-a/2*t)<=y-old(y)&y-old(y)<=t*(v-a/2*t)`}, 1) ; <(
+              dW(1) ; implyR(1) ; andL('L)* ; fullSimplify ; andR(1) ; <(
+                hideL(-10) ; QE,
+                implyR(1) ; orR(1) ; orR(2) ; hideL(-7) ; hideL(-7) ; hideL(-15) ; hideL(-15) ; hideL(-18) ; hideL(-19) ; hideL(-19) ; orL(-8) ; <(
+                  hideR(2) ; hideR(2) ; edit({`abs(x_0-xo_0)>v_0^2/(2*b())+V()*v_0/b()+(a/b()+1)*(a/2*t^2+t*(v_0+V()))`}, -8) ; hideL(-7) ; hideL(-2) ; hideL(-13) ; smartQE,
+                  orL(-8) ; <(
+                    hideR(1) ; hideR(2) ; edit({`abs(y_0-yo_0)>v_0^2/(2*b())+V()*v_0/b()+(a/b()+1)*(a/2*t^2+t*(v_0+V()))`}, -8) ; hideL(-7) ; hideL(-2) ; hideL(-13) ; smartQE,
+                    hideR(1) ; hideR(1) ; hideL(-9) ; hideL(-9) ; hideL(-9) ; hideL(-9) ; edit({`abs(abs(r)-abbrv((((xo-xc)^2+(yo-yc)^2)^(1/2),cDist)))>V()*v/b()`}, 1) ; edit({`abs(abs(r)-abbrv((((xo_0-xc)^2+(yo_0-yc)^2)^(1/2),oldCDist)))>V()*(ep()+(v_0+a*ep())/b())`}, -8) ; cut({`abs(cDist-oldCDist)<=t*V()`}) ; <(
+                      hideL(-15) ; hideL(-15) ; edit({`abs(abs(r)-oldCDist)>V()*(t+(v_0+a*t)/b())`}, -8) ; hideL(-11) ; hideL(-7) ; hideL(-2) ; hideL(-4) ; hideL(-4) ; hideL(-5) ; hideL(-5) ; smartQE,
+                      hideR(1) ; hideL(-8) ; hideL(-7) ; hideL(-12) ; hideL(-9) ; hideL(-2) ; hideL(-5) ; hideL(-3) ; hideL(-6) ; cut({`abs(cDist-oldCDist)<=t*(vxo^2+vyo^2)^(1/2)`}) ; <(
+                        hideL(-7) ; hideL(-7) ; hideL(-4) ; hideL(-4) ; hideL(-1) ; edit({`abbrv((abs(cDist-oldCDist),X))<=t*V()`}, 1) ; hideL(-5) ; QE,
+                        hideR(1) ; hideL(-3) ; hideL(-2) ; hideL(-1) ; smartQE
+                        )
+                      )
+                    )
+                  )
+                ),
+              hideL(-14) ; dI(1)
+              ),
+            hideL(-14) ; dI(1)
+            ),
+          hideL(-14) ; dI(1)
+          ),
+        hideL(-14) ; dI(1)
+        ),
+      hideL(-14) ; dI(1)
+      ),
+    dC({`t>=0&dx^2+dy^2=1&v=old(v)&w*r=v`}, 1) ; <(
+      dC({`dx=-(y-yc)/r&dy=(x-xc)/r`}, 1) ; <(
+        dW(1) ; implyR(1) ; allL2R(-9) ; hideL(-9) ; andL('L)* ; fullSimplify ; QE,
+        hideL(-6) ; dI(1)
+        ),
+      hideL(-6) ; dI(1)
+      ),
+    edit({`!v+a*ep() < 0`}, 1) ; notR(1) ; hideL(-6) ; hideL(-6) ; hideL(-6) ; hideL(-7) ; hideL(-7) ; hideL(-7) ; hideL(-10) ; hideL(-10) ; hideL(-9) ; hideL(-1) ; cut({`a < 0`}) ; <(
+      dC({`t>=0&dx^2+dy^2=1&v=old(v)+a*t&w*r=v`}, 1) ; <(
+        dC({`dx=-(y-yc)/r&dy=(x-xc)/r`}, 1) ; <(
+          dC({`xo=old(xo)+vxo*t&yo=old(yo)+vyo*t`}, 1) ; <(
+            dC({`-t*(v-a/2*t)<=x-old(x)&x-old(x)<=t*(v-a/2*t)`}, 1) ; <(
+              dC({`-t*(v-a/2*t)<=y-old(y)&y-old(y)<=t*(v-a/2*t)`}, 1) ; <(
+                dW(1) ; implyR(1) ; andL('L)* ; fullSimplify ; andR(1) ; <(
+                  hideL(-9) ; QE,
+                  implyR(1) ; orR(1) ; orR(2) ; hideL(-26) ; hideL(-25) ; hideL(-23) ; hideL(-19) ; hideL(-18) ; hideL(-18) ; hideL(-10) ; hideL(-8) ; hideL(-7) ; hideL(-2) ; orL(-6) ; <(
+                    hideR(2) ; hideR(2) ; smartQE,
+                    orL(-6) ; <(
+                      hideR(1) ; hideR(2) ; smartQE,
+                      hideR(1) ; hideR(1) ; edit({`abs(abs(r)-abbrv((((xo-xc)^2+(yo-yc)^2)^(1/2),cDist)))>V()*v/b()`}, 1) ; edit({`abs(abs(r)-abbrv((((xo_0-xc)^2+(yo_0-yc)^2)^(1/2),oldCDist)))>-V()*v_0/a`}, -6) ; cut({`abs(cDist-oldCDist)<=t*V()`}) ; <(
+                        hideL(-17) ; hideL(-17) ; hideL(-8) ; hideL(-8) ; hideL(-8) ; hideL(-8) ; hideL(-8) ; hideL(-8) ; hideL(-4) ; smartQE,
+                        hideR(1) ; hideL(-8) ; hideL(-8) ; hideL(-8) ; hideL(-8) ; hideL(-6) ; hideL(-11) ; hideL(-9) ; hideL(-5) ; hideL(-5) ; hideL(-3) ; hideL(-1) ; cut({`abs(cDist-oldCDist)<=t*(vxo^2+vyo^2)^(1/2)`}) ; <(
+                          hideL(-6) ; hideL(-6) ; hideL(-3) ; hideL(-3) ; edit({`abbrv((abs(cDist-oldCDist),X))<=t*V()`}, 1) ; hideL(-5) ; QE,
+                          hideR(1) ; hideL(-2) ; hideL(-1) ; smartQE
+                          )
+                        )
+                      )
+                    )
+                  ),
+                hideL(-13) ; dI(1)
+                ),
+              hideL(-13) ; dI(1)
+              ),
+            hideL(-13) ; dI(1)
+            ),
+          hideL(-13) ; dI(1)
+          ),
+        hideL(-13) ; dI(1)
+        ),
+      hideR(1) ; hideL(-13) ; QE
+      )
+    )
+  )
+End.
+
 Theorem "Theorem 14: Reach waypoint with deadline".
 
 /*
