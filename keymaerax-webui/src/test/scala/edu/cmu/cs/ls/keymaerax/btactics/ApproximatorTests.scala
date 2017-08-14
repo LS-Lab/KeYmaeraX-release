@@ -89,11 +89,11 @@ class ApproximatorTests extends TacticTestBase {
     proveBy(f,t) shouldBe 'proved
   })
 
-  "Tactic pretty printer" should "properly print expApproximation tactics" taggedAs(KeYmaeraXTestTags.DeploymentTest) in {
+  "Tactic pretty printer" should "properly print expApproximate tactics" taggedAs(KeYmaeraXTestTags.DeploymentTest) in {
     val t = Approximator.expApproximate("e".asVariable, Number(10))(1)
     val print = t.prettyString
-    print shouldBe "expApproximation({`e`},{`10`},1)"
-    //@todo check print of parse after patching DerivationInfo.
+    print shouldBe "expApproximate({`e`},{`10`},1)"
+    print.asTactic shouldBe t
   }
 
   it should "properly print taylor approximation tactics" taggedAs(KeYmaeraXTestTags.DeploymentTest) in {
@@ -103,7 +103,7 @@ class ApproximatorTests extends TacticTestBase {
     //@todo check print of parse after patching DerivationInfo.
   }
 
-  it should "properly print and parse top-level approximation tactic" taggedAs(KeYmaeraXTestTags.DeploymentTest) in {
+  it should "properly print and parse top-level autoApproximate tactic" taggedAs(KeYmaeraXTestTags.DeploymentTest) in {
     val t = Approximator.autoApproximate(Number(10))(1)
     val print = t.prettyString
     print shouldBe "autoApproximate({`10`},1)"
