@@ -37,7 +37,7 @@ object Approximator {
     */
   def approximate(n: Number) = new DependentPositionWithAppliedInputTactic("approximate", n::Nil) {
     override def factory(pos: Position): DependentTactic = anon((sequent: Sequent) => sequent.sub(pos) match {
-      case m:Modal if(m.program.isInstanceOf[ODESystem]) => {
+      case Some(m:Modal) if(m.program.isInstanceOf[ODESystem]) => {
         val system = m.program.asInstanceOf[ODESystem]
         val t = timeVar(system.ode)
 
