@@ -100,12 +100,12 @@ object Approximator {
             cuts.map(cut =>
               TactixLibrary.dC(cut)(pos) < (
                 nil,
-                DebuggingTactics.debug("Trying to prove this by dI or by ODE", true) &
+                DebuggingTactics.debug("Trying to prove this by dI or by ODE", ADEBUG) &
                 //dI handles the normal case, ODE handles the base case.
                 (TactixLibrary.dI()(pos) | TactixLibrary.ODE(pos)) & DebuggingTactics.done("Expected dI to succeed.")
               ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
             )
-          cutTactics.reduce(_ & _)
+          DebuggingTactics.debug(s"Beginning expApproximation on ${e.prettyString}, ${n.prettyString}", ADEBUG) & cutTactics.reduce(_ & _)
         })
       }
     }
