@@ -28,8 +28,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
   * @author Nathan Fulton
   */
 object Approximator {
-  /** Debugging for the Approximator. */
-  val ADEBUG = true
+  /** Debugging flag for the Approximator. */
+  private val ADEBUG = false | System.getProperty("DEBUG", "false")=="true"
 
   //region The [[approximate]] tactic with helpers for figuring out which approximation to use.
 
