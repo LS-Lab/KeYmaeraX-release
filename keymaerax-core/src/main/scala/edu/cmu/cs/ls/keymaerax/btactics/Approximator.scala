@@ -26,6 +26,10 @@ object Approximator {
   /** Debugging for the Approximator. */
   val ADEBUG = true
 
+  //region The [[approximate]] tactic with helpers for figuring out which approximation to use.
+
+  //endregion
+
   def expApproximation(e: Variable, n: Number) =
     new DependentPositionWithAppliedInputTactic("expApproximation", e::n::Nil) {
       override def factory(pos: Position): DependentTactic = {
