@@ -102,7 +102,7 @@ object Approximator {
                 nil,
                 DebuggingTactics.debug("Trying to prove this by dI or by ODE", true) &
                 //dI handles the normal case, ODE handles the base case.
-                (TactixLibrary.dI()(pos) | TactixLibrary.ODE(1)) & DebuggingTactics.done("Expected dI to succeed.")
+                (TactixLibrary.dI()(pos) | TactixLibrary.ODE(pos)) & DebuggingTactics.done("Expected dI to succeed.")
               ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
             )
           cutTactics.reduce(_ & _)
@@ -134,7 +134,7 @@ object Approximator {
           )
 
           //Prove that (c,s) is a circle. @todo allow for any radius.
-          val isOnCircle = TactixLibrary.dC("s^2 + c^2 = 1".asFormula)(1) < (
+          val isOnCircle = TactixLibrary.dC("s^2 + c^2 = 1".asFormula)(pos) < (
             nil
             ,
             TactixLibrary.dI()(1) & DebuggingTactics.done("Expected dI to succeed")
