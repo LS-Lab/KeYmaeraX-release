@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 /**
   * Approximations
   * More Ideas:
+  *     - Allow approximations at non-top-level.
   *     - Pre-processing -- add time var w/ t_0=0, etc.
   *     - Post-processing -- after reducing the arithmetic, hide all approximate terms except the last one.
   *       It might even be possible to do this during the tactic by remving all but the most recent <= and >=, but I'm
@@ -218,8 +219,9 @@ object Approximator {
     }
   }
 
-  private def timeVarInModality(e:Expression) = e match {
-    case m:Modal => m.program match {
+  private def timeVarInModality(e:Option[Expression]) = e match {
+    case None => throw new BelleFriendlyUserMessage("Approximator was given a non-existent position.")
+    case Some(m) if m.isInstanceOf[Modal] => m.asInstanceOf[Modal].program match {
       case ODESystem(ode,child) => timeVar(ode) match {
         case Some(t) => t
         case None => throw new BelleFriendlyUserMessage("Approximation tactics require existence of an explicit time variable; i.e., expected to find t'=1 in the ODE but no such t was found.")
