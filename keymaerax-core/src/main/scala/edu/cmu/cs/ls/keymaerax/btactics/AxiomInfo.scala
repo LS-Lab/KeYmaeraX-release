@@ -208,7 +208,7 @@ object DerivationInfo {
           }) : TypedFunc[Expression, BelleExpr]
         ) : TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]
     ),
-    new InputPositionTacticInfo("taylorCircular",
+    new InputPositionTacticInfo("circularApproximate",
       RuleDisplayInfo("Circular Dynamics Approximation",
         (List("&Gamma;"), List("[{c1,s'=c,c2,c'=-s,c3 & approximate(n)}]", "&Delta;")),
         List( (List("&Gamma;"), List("[{c1,e'=c,c2}]", "&Delta;")) )
@@ -218,7 +218,7 @@ object DerivationInfo {
         ((s: Expression) =>
           ((c: Expression) =>
             ((n: Expression) => (s,c,n) match {
-              case (s:Variable,c:Variable,n:Number) => Approximator.taylorCircular(s,c,n)
+              case (s:Variable,c:Variable,n:Number) => Approximator.circularApproximate(s,c,n)
             }) : TypedFunc[Expression, BelleExpr]
           ) : TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]
         ) : TypedFunc[Expression, TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]]

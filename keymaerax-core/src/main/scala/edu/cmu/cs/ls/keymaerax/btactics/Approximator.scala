@@ -47,7 +47,7 @@ object Approximator {
         DifferentialHelper.hasExp(system.ode) match {
           case Some(v) => expApproximate(v, n)(pos)
           case None    => DifferentialHelper.hasSinCos(system.ode) match {
-            case Some((cos,sin)) => taylorCircular(sin, cos, n)(pos)
+            case Some((cos,sin)) => circularApproximate(sin, cos, n)(pos)
             case None => throw new BelleFriendlyUserMessage("Could not find a system to approximate.")
           }
         }
@@ -91,8 +91,8 @@ object Approximator {
 
   /** Cuts in Taylor approixmations for circular dynamics {{{x'=y,y'=-x}}}.
     * @todo Good error messages for when the first cut or two fail ==> "missing assumptions." */
-  def taylorCircular(s: Variable, c: Variable, n: Number) =
-    new DependentPositionWithAppliedInputTactic("taylorCircular", s::c::n::Nil) {
+  def circularApproximate(s: Variable, c: Variable, n: Number) =
+    new DependentPositionWithAppliedInputTactic("circularApproximate", s::c::n::Nil) {
       override def factory(pos: Position): DependentTactic = {
         anon((sequent: Sequent) => {
           val t = timeVarInModality(sequent.sub(pos))
