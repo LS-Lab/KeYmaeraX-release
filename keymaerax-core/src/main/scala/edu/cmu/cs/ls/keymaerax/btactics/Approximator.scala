@@ -50,13 +50,16 @@ object Approximator {
     })
   }
 
-  private def hasExp(dp: DifferentialProgram): Option[Variable] = dp match {
-    case DifferentialProduct(l,r) => hasExp(l) match {
-      case Some(v) => Some(v)
-      case None => hasExp(r)
+  private def hasExp(dp: DifferentialProgram): Option[Variable] = {
+    val expODE = DifferentialHelper.atomicOdes(dp).find(_ match {
+        case AtomicODE(DifferentialSymbol(x1), x2) if(x1.equals(x2)) => true //@todo QE-check x1=x2 instead of syntactic check.
+        case _ => false
+      })
+
+    expODE match {
+      case Some(ode) => Some(ode.xp.x)
+      case None => None
     }
-    case AtomicODE(xp, e) if(xp.x.equals(e)) => Some(xp.x) //@todo do a non-tactical QE and determine if x'=f(x), not just literal equality.
-    case _ => None
   }
 
   /**
