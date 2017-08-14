@@ -28,6 +28,34 @@ object Approximator {
 
   //region The [[approximate]] tactic with helpers for figuring out which approximation to use.
 
+  /**
+    * Approximates the variable {{{t}}} in the ODE up to the {{{n^th}}} term.
+    * @param n The number of terms to expand the series/
+    * @return
+    */
+  def approximate(n: Number) = new DependentPositionWithAppliedInputTactic("approximate", n::Nil) {
+    override def factory(pos: Position): DependentTactic = anon((sequent: Sequent) => sequent.sub(pos) match {
+      case m:Modal if(m.program.isInstanceOf[ODESystem]) => {
+        val system = m.program.asInstanceOf[ODESystem]
+        val t = timeVar(system.ode)
+
+        hasExp(system.ode) match {
+          case Some(v) => expApproximation(v, n)(pos)
+          case None    => TactixLibrary.debug("Auto-Sin/Cos approximate is not implemented yet.")
+        }
+      }
+      case _ => throw new BelleFriendlyUserMessage(s"${this.name} should only be called on positions of form [{ODE}]P")
+    })
+  }
+
+  private def hasExp(dp: DifferentialProgram): Option[Variable] = dp match {
+    case DifferentialProduct(l,r) => hasExp(l) match {
+      case Some(v) => Some(v)
+      case None => hasExp(r)
+    }
+    case AtomicODE(xp, e) if(xp.x.equals(e)) => Some(xp.x) //@todo do a non-tactical QE and determine if x'=f(x), not just literal equality.
+    case _ => None
+  }
   //endregion
 
   def expApproximation(e: Variable, n: Number) =
