@@ -93,7 +93,7 @@ object Approximator {
     new DependentPositionWithAppliedInputTactic("expApproximation", e::n::Nil) {
       override def factory(pos: Position): DependentTactic = {
         anon((sequent: Sequent) => {
-          val t = timeVarInModality(sequent.apply(pos.topLevel))
+          val t = timeVarInModality(sequent.sub(pos))
 
           val N = n.value.toInt
           assert(N >= 0, s"${this.name} expects a non-negative number as its 3rd argument (# of terms to expand the Taylor series.)")
@@ -123,7 +123,7 @@ object Approximator {
     new DependentPositionWithAppliedInputTactic("taylorCircular", s::c::n::Nil) {
       override def factory(pos: Position): DependentTactic = {
         anon((sequent: Sequent) => {
-          val t = timeVarInModality(sequent.apply(pos.topLevel))
+          val t = timeVarInModality(sequent.sub(pos))
 
           //Get the number of terms we should expand.
           val N = n.value.toInt
