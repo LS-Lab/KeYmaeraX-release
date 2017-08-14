@@ -15,13 +15,16 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 
 /**
   * Approximations
-  * More Ideas:
+  * @todo More Ideas:
   *     - Allow approximations at non-top-level.
   *     - Pre-processing -- add time var w/ t_0=0, etc.
   *     - Post-processing -- after reducing the arithmetic, hide all approximate terms except the last one.
   *       It might even be possible to do this during the tactic by remving all but the most recent <= and >=, but I'm
   *       not sure if that's true for any/all expansions.
   *     - Generalized tactics. Not sure this makes much sense though.
+  *     - Add an (efficient) tactic that tries to close the proof using successively longer approximations.
+  *       Maybe also a tactic that looks at an entire formula and tries to deduce how far to go based on pre/post-conditions
+  *       and statements in discrete fragments for programs or in ev dom constraints.
   * @author Nathan Fulton
   */
 object Approximator {
@@ -33,7 +36,7 @@ object Approximator {
   /**
     * Approximates the variable {{{t}}} in the ODE up to the {{{n^th}}} term.
     * @param n The number of terms to expand the series/
-    * @return
+    * @return The relevant tactic.
     */
   def approximate(n: Number) = new DependentPositionWithAppliedInputTactic("approximate", n::Nil) {
     override def factory(pos: Position): DependentTactic = anon((sequent: Sequent) => sequent.sub(pos) match {
@@ -87,7 +90,6 @@ object Approximator {
     }
 
   /** Cuts in Taylor approixmations for circular dynamics {{{x'=y,y'=-x}}}.
-    * @todo Handle the first two cuts
     * @todo Good error messages for when the first cut or two fail ==> "missing assumptions." */
   def taylorCircular(s: Variable, c: Variable, n: Number) =
     new DependentPositionWithAppliedInputTactic("taylorCircular", s::c::n::Nil) {

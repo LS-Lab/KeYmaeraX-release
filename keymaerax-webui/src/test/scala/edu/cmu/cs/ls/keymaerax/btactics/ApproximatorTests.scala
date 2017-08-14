@@ -37,7 +37,7 @@ class ApproximatorTests extends TacticTestBase {
               |s>=t+-t^3/6+t^5/120+-t^7/5040 &
               |c<=1+-t^2/2+t^4/24+-t^6/720+t^8/40320 &
               |s<=t+-t^3/6+t^5/120+-t^7/5040+t^9/362880)""".stripMargin.asFormula
-    val t = TactixLibrary.implyR(1) & Approximator.taylorCircular("s".asVariable, "c".asVariable, Number(5))(1) & TactixLibrary.dW(1) & TactixLibrary.QE //@todo the tactic that does this successively.
+    val t = TactixLibrary.implyR(1) & Approximator.taylorCircular("s".asVariable, "c".asVariable, Number(5))(1) & TactixLibrary.dW(1) & TactixLibrary.QE
     proveBy(f,t) shouldBe 'proved
   })
 
@@ -92,14 +92,14 @@ class ApproximatorTests extends TacticTestBase {
     val t = Approximator.expApproximation("e".asVariable, Number(10))(1)
     val print = t.prettyString
     print shouldBe "expApproximation({`e`},{`10`},1)"
-    //@todo check preint of parse after patching DerivationInfo.
+    //@todo check print of parse after patching DerivationInfo.
   }
 
   it should "properly print taylor approximation tactics" in {
     val t = Approximator.taylorCircular("s".asVariable, "c".asVariable, Number(5))(1)
     val print = t.prettyString
     print shouldBe "taylorCircular({`s`},{`c`},{`5`},1)"
-    //@todo check preint of parse after patching DerivationInfo.
+    //@todo check print of parse after patching DerivationInfo.
   }
 
   "auto approximate" should "approximate exp" in withMathematica(_ => {
