@@ -926,8 +926,8 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
     def replaceWithCexVals(fml: Formula, cex: Map[NamedSymbol, Expression]): Formula = {
       ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
         override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-          case v: Variable => Right(cex(v).asInstanceOf[Term])
-          case FuncOf(fn, _) => Right(cex(fn).asInstanceOf[Term])
+          case v: Variable if cex.contains(v) => Right(cex(v).asInstanceOf[Term])
+          case FuncOf(fn, _) if cex.contains(fn) => Right(cex(fn).asInstanceOf[Term])
           case _ => Left(None)
         }
 
@@ -938,7 +938,7 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
       }, fml).get
     }
 
-    if (cex.forall(_._2.isInstanceOf[Term])) {
+    if (cex.nonEmpty & cex.forall(_._2.isInstanceOf[Term])) {
       val Imply(assumptions, conclusion) = fml
 
       //@note flag false comparison formulas `cmp` with (cmp<->false)
