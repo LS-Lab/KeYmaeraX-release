@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core.Number
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import testHelper.KeYmaeraXTestTags
 
 /**
   * Tests the series expansion tactics.
@@ -88,27 +89,27 @@ class ApproximatorTests extends TacticTestBase {
     proveBy(f,t) shouldBe 'proved
   })
 
-  "Tactic pretty printer" should "properly print expApproximation tactics" in {
+  "Tactic pretty printer" should "properly print expApproximation tactics" taggedAs(KeYmaeraXTestTags.DeploymentTest) in {
     val t = Approximator.expApproximation("e".asVariable, Number(10))(1)
     val print = t.prettyString
     print shouldBe "expApproximation({`e`},{`10`},1)"
     //@todo check print of parse after patching DerivationInfo.
   }
 
-  it should "properly print taylor approximation tactics" in {
+  it should "properly print taylor approximation tactics" taggedAs(KeYmaeraXTestTags.DeploymentTest) in {
     val t = Approximator.taylorCircular("s".asVariable, "c".asVariable, Number(5))(1)
     val print = t.prettyString
     print shouldBe "taylorCircular({`s`},{`c`},{`5`},1)"
     //@todo check print of parse after patching DerivationInfo.
   }
 
-  "auto approximate" should "approximate exp" in withMathematica(_ => {
+  "auto approximate" should "approximate exp" taggedAs(KeYmaeraXTestTags.DeploymentTest) in withMathematica(_ => {
     val f = "t=0 & e=1 -> [{e'=e,t'=1}](e>=1+t+t^2/2+t^3/6+t^4/24+t^5/120+t^6/720+t^7/5040+t^8/40320+t^9/362880)".asFormula
     val t = TactixLibrary.implyR(1) & Approximator.approximate(Number(10))(1) & TactixLibrary.dW(1) & TactixLibrary.QE
     proveBy(f,t) shouldBe 'proved
   })
 
-  it should "approximate sin/cos" in withMathematica(_ => {
+  it should "approximate sin/cos" taggedAs(KeYmaeraXTestTags.DeploymentTest) in withMathematica(_ => {
     val f = """c=1 & s=0 & t=0->[{s'=c,c'=-s,t'=1}](c>=1+-t^2/2+t^4/24+-t^6/720 &
               |s>=t+-t^3/6+t^5/120+-t^7/5040 &
               |c<=1+-t^2/2+t^4/24+-t^6/720+t^8/40320 &
