@@ -61,9 +61,9 @@ class ApproximatorTests extends TacticTestBase {
     proveBy(f,t) shouldBe 'proved
   })
 
-  "expApproximation" should "approximate e'=e" in withMathematica(_ => {
+  "expApproximate" should "approximate e'=e" in withMathematica(_ => {
     val f = "t=0 & e=1 -> [{e'=e,t'=1 & e >= 1 & e >= 1 + t}]1=0".asFormula
-    val t = TactixLibrary.implyR(1) & Approximator.expApproximation("e".asVariable, Number(10))(1)
+    val t = TactixLibrary.implyR(1) & Approximator.expApproximate("e".asVariable, Number(10))(1)
 
     val result = proveBy(f,t)
     result.subgoals.length shouldBe 1
@@ -72,7 +72,7 @@ class ApproximatorTests extends TacticTestBase {
 
   it should "prove a bound on e'=e" in withMathematica(_ => {
     val f = "t=0 & e=1 -> [{e'=e,t'=1 & e >= 1}](e>=1+t+t^2/2+t^3/6+t^4/24+t^5/120+t^6/720+t^7/5040+t^8/40320+t^9/362880)".asFormula
-    val t = TactixLibrary.implyR(1) & Approximator.expApproximation("e".asVariable, Number(10))(1) & DebuggingTactics.debug("here",true) & TactixLibrary.dW(1) & TactixLibrary.QE
+    val t = TactixLibrary.implyR(1) & Approximator.expApproximate("e".asVariable, Number(10))(1) & DebuggingTactics.debug("here",true) & TactixLibrary.dW(1) & TactixLibrary.QE
     val result = proveBy(f,t)
     result shouldBe 'proved
   })
@@ -85,12 +85,12 @@ class ApproximatorTests extends TacticTestBase {
 
   it should "prove a bound on e'=e without initial term" in withMathematica(_ => {
     val f = "t=0 & e=1 -> [{e'=e,t'=1}](e>=1+t+t^2/2+t^3/6+t^4/24+t^5/120+t^6/720+t^7/5040+t^8/40320+t^9/362880)".asFormula
-    val t = TactixLibrary.implyR(1) & Approximator.expApproximation("e".asVariable, Number(10))(1) & TactixLibrary.dW(1) & TactixLibrary.QE
+    val t = TactixLibrary.implyR(1) & Approximator.expApproximate("e".asVariable, Number(10))(1) & TactixLibrary.dW(1) & TactixLibrary.QE
     proveBy(f,t) shouldBe 'proved
   })
 
   "Tactic pretty printer" should "properly print expApproximation tactics" taggedAs(KeYmaeraXTestTags.DeploymentTest) in {
-    val t = Approximator.expApproximation("e".asVariable, Number(10))(1)
+    val t = Approximator.expApproximate("e".asVariable, Number(10))(1)
     val print = t.prettyString
     print shouldBe "expApproximation({`e`},{`10`},1)"
     //@todo check print of parse after patching DerivationInfo.

@@ -45,7 +45,7 @@ object Approximator {
         val t = timeVar(system.ode)
 
         DifferentialHelper.hasExp(system.ode) match {
-          case Some(v) => expApproximation(v, n)(pos)
+          case Some(v) => expApproximate(v, n)(pos)
           case None    => DifferentialHelper.hasSinCos(system.ode) match {
             case Some((cos,sin)) => taylorCircular(sin, cos, n)(pos)
             case None => throw new BelleFriendlyUserMessage("Could not find a system to approximate.")
@@ -62,8 +62,8 @@ object Approximator {
 
   //region Approximation for {{{e'=e}}}
 
-  def expApproximation(e: Variable, n: Number) =
-    new DependentPositionWithAppliedInputTactic("expApproximation", e::n::Nil) {
+  def expApproximate(e: Variable, n: Number) =
+    new DependentPositionWithAppliedInputTactic("expApproximate", e::n::Nil) {
       override def factory(pos: Position): DependentTactic = {
         anon((sequent: Sequent) => {
           val t = timeVarInModality(sequent.sub(pos))
