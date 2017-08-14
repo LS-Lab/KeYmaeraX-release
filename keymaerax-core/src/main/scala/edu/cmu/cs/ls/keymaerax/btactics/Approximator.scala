@@ -83,6 +83,8 @@ object Approximator {
 
   //endregion
 
+  //region Approximation for {{{e'=e}}}
+
   def expApproximation(e: Variable, n: Number) =
     new DependentPositionWithAppliedInputTactic("expApproximation", e::n::Nil) {
       override def factory(pos: Position): DependentTactic = {
@@ -137,7 +139,7 @@ object Approximator {
           val isOnCircle = TactixLibrary.dC("s^2 + c^2 = 1".asFormula)(pos) < (
             nil
             ,
-            TactixLibrary.dI()(1) & DebuggingTactics.done("Expected dI to succeed")
+            TactixLibrary.dI()(pos) & DebuggingTactics.done("Expected dI to succeed")
           ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut isOnCircle", ADEBUG)
 
           val cuts = interleave(cosCuts, sinCuts)
@@ -192,6 +194,7 @@ object Approximator {
   //region Generic helper functions that should be replaced by library implementations.
 
   //@todo replace with built-in
+
   private def fac(n: Int):Int = {
     assert(n>0)
     if(n == 1) 1
