@@ -100,6 +100,7 @@ class ApproximatorTests extends TacticTestBase {
     val t = Approximator.taylorCircular("s".asVariable, "c".asVariable, Number(5))(1)
     val print = t.prettyString
     print shouldBe "taylorCircular({`s`},{`c`},{`5`},1)"
+    print.asTactic shouldBe t
     //@todo check print of parse after patching DerivationInfo.
   }
 

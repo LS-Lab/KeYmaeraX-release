@@ -191,9 +191,37 @@ object DerivationInfo {
         List( (List("&Gamma;"), List("[{X'=F}]", "&Delta;")) )
       ),
       List(ExpressionArg("n", Nil)),
-      _ => ((n: Expression) => n match {
+      _ => ((n: Number) => n match {
         case n:Number => Approximator.autoApproximate(n)
-      }) : TypedFunc[Expression, BelleExpr] //@todo can I just say TypedFunc[Number,BelleExpr] here? Or no?
+      }) : TypedFunc[Number, BelleExpr]
+    ),
+    new InputPositionTacticInfo("expApproximate",
+      RuleDisplayInfo("e'=e Approximation",
+        (List("&Gamma;"), List("[{c1,e'=e,c2 & approximate(n)}]", "&Delta;")),
+        List( (List("&Gamma;"), List("[{c1,e'=c,c2}]", "&Delta;")) )
+      ),
+      List(ExpressionArg("e", "e"::Nil), ExpressionArg("n", Nil)),
+      _ =>
+        ((e: Expression) =>
+          ((n: Expression) => (n,e) match {
+            case (n:Number,e:Variable) => Approximator.expApproximate(e,n)
+          }) : TypedFunc[Expression, BelleExpr]
+        ) : TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]
+    ),
+    new InputPositionTacticInfo("taylorCircular",
+      RuleDisplayInfo("Circular Dynamics Approximation",
+        (List("&Gamma;"), List("[{c1,s'=c,c2,c'=-s,c3 & approximate(n)}]", "&Delta;")),
+        List( (List("&Gamma;"), List("[{c1,e'=c,c2}]", "&Delta;")) )
+      ),
+      List(ExpressionArg("s", "s"::Nil), ExpressionArg("c", "c"::Nil), ExpressionArg("n", Nil)),
+      _ =>
+        ((s: Expression) =>
+          ((c: Expression) =>
+            ((n: Expression) => (s,c,n) match {
+              case (s:Variable,c:Variable,n:Number) => Approximator.taylorCircular(s,c,n)
+            }) : TypedFunc[Expression, BelleExpr]
+          ) : TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]
+        ) : TypedFunc[Expression, TypedFunc[Expression, TypedFunc[Expression, BelleExpr]]]
     ),
     new InputPositionTacticInfo("dG",
       RuleDisplayInfo(
