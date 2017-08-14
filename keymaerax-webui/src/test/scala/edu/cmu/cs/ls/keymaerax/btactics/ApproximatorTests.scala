@@ -41,6 +41,12 @@ class ApproximatorTests extends TacticTestBase {
     proveBy(f,t) shouldBe 'proved
   })
 
+  ignore should "prove a bound in context" in withMathematica(_ => {
+    val f = "c=1 & s=0 & t=0->[blah := something;][{s'=c,c'=-s,t'=1}](c>=1+-t^2/2+t^4/24+-t^6/720)".asFormula
+    val t = TactixLibrary.implyR(1) & Approximator.taylorCircular("s".asVariable, "c".asVariable, Number(5))(1,1::Nil) & TactixLibrary.dW(1,1::Nil) & TactixLibrary.assignb(1) & TactixLibrary.QE //@todo the tactic that does this successively.
+    proveBy(f,t) shouldBe 'proved
+  })
+
   it should "prove initial bounds for cos" in withMathematica(_ => {
     val f = "c=1&s=0&t=0 -> [{s'=c,c'=-s,t'=1 & s^2 + c^2 = 1}]c <= 1".asFormula
     val t = TactixLibrary.implyR(1) & TactixLibrary.dW(1) & TactixLibrary.QE
