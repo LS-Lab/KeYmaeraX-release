@@ -38,7 +38,7 @@ object Approximator {
     * @param n The number of terms to expand the series/
     * @return The relevant tactic.
     */
-  def approximate(n: Number) = new DependentPositionWithAppliedInputTactic("approximate", n::Nil) {
+  def autoApproximate(n: Number) = new DependentPositionWithAppliedInputTactic("autoApproximate", n::Nil) {
     override def factory(pos: Position): DependentTactic = anon((sequent: Sequent) => sequent.sub(pos) match {
       case Some(m:Modal) if(m.program.isInstanceOf[ODESystem]) => {
         val system = m.program.asInstanceOf[ODESystem]

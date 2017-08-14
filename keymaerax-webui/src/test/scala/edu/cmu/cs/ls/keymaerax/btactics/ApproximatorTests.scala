@@ -104,8 +104,9 @@ class ApproximatorTests extends TacticTestBase {
   }
 
   "auto approximate" should "approximate exp" taggedAs(KeYmaeraXTestTags.DeploymentTest) in withMathematica(_ => {
+  "autoApproximate" should "approximate exp" taggedAs(KeYmaeraXTestTags.DeploymentTest) in withMathematica(_ => {
     val f = "t=0 & e=1 -> [{e'=e,t'=1}](e>=1+t+t^2/2+t^3/6+t^4/24+t^5/120+t^6/720+t^7/5040+t^8/40320+t^9/362880)".asFormula
-    val t = TactixLibrary.implyR(1) & Approximator.approximate(Number(10))(1) & TactixLibrary.dW(1) & TactixLibrary.QE
+    val t = TactixLibrary.implyR(1) & Approximator.autoApproximate(Number(10))(1) & TactixLibrary.dW(1) & TactixLibrary.QE
     proveBy(f,t) shouldBe 'proved
   })
 
@@ -114,7 +115,7 @@ class ApproximatorTests extends TacticTestBase {
               |s>=t+-t^3/6+t^5/120+-t^7/5040 &
               |c<=1+-t^2/2+t^4/24+-t^6/720+t^8/40320 &
               |s<=t+-t^3/6+t^5/120+-t^7/5040+t^9/362880)""".stripMargin.asFormula
-    val t = TactixLibrary.implyR(1) & Approximator.approximate(Number(5))(1) & TactixLibrary.dW(1) & TactixLibrary.QE
+    val t = TactixLibrary.implyR(1) & Approximator.autoApproximate(Number(5))(1) & TactixLibrary.dW(1) & TactixLibrary.QE
     proveBy(f,t) shouldBe 'proved
 
   })
