@@ -45,7 +45,7 @@ object Approximator {
           case None    => TactixLibrary.debug("Auto-Sin/Cos approximate is not implemented yet.")
         }
       }
-      case _ => throw new BelleFriendlyUserMessage(s"${this.name} should only be called on positions of form [{ODE}]P")
+      case _ => throw new BelleFriendlyUserMessage(s"approximate should only be called on positions of form [{ODE}]P")
     })
   }
 
