@@ -5,6 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.Position
 import edu.cmu.cs.ls.keymaerax.core.Number
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.KeYmaeraXTestTags
@@ -61,7 +62,7 @@ class ApproximatorTests extends TacticTestBase {
     proveBy(f,t) shouldBe 'proved
   })
 
-  "expApproximate" should "approximate e'=e" in withMathematica(_ => {
+  "expApproximate" should "approximate e'=e restricted to e >= 1 & e >= 1 + t" in withMathematica(_ => {
     val f = "t=0 & e=1 -> [{e'=e,t'=1 & e >= 1 & e >= 1 + t}]1=0".asFormula
     val t = TactixLibrary.implyR(1) & Approximator.expApproximate("e".asVariable, Number(10))(1)
 
@@ -128,5 +129,35 @@ class ApproximatorTests extends TacticTestBase {
   })
 
 
+  //region In-context unit tests
+
+  "In-context proofs" should "prove cut in context using ceat" in withMathematica(_ => {
+    val f = "[{x'=v,v'=a&1=1}](false)".asFormula
+
+    val fact = Approximator.dcInCtx(f, "1+1=2".asFormula, TactixLibrary.dI()(1))
+
+    println(fact.prettyString)
+
+    val result = proveBy( "[{x'=v,v'=a&1=1}](false)".asFormula, TactixLibrary.CEat(fact)(1))
+    println(result)
+    result.subgoals.length shouldBe 1
+  })
+
+  it should "prove cut in context using ceat with helper method" in withMathematica(_ => {
+    val f = "[{x'=v,v'=a&1=1}](false)".asFormula
+    val cut = "1+1=2".asFormula
+    val cutProof = TactixLibrary.dI()(1)
+    proveBy(f, Approximator.extendEvDomAndProve(f,cut,cutProof)(1)).subgoals.length shouldBe 1
+  })
+
+
+  "dC" should "work in context" in withMathematica(_ => {
+    val f = "[z:=12;][{x'=v,v'=a&1=1}](false)".asFormula
+    val cut = "1+1=2".asFormula
+    println(
+      proveBy(f, TactixLibrary.dC(cut)(Position(1, 1::Nil)) <(TactixLibrary.nil, TactixLibrary.dI()(Position(1, 1::Nil)) & (TactixLibrary.QE | (TactixLibrary.G(1) & TactixLibrary.QE))))
+    )
+  })
+  //endregion
   //@todo test some actual proofs.
 }
