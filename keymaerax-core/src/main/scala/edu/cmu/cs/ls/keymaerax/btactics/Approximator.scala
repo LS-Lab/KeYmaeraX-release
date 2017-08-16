@@ -30,7 +30,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
   */
 object Approximator {
   /** Debugging flag for the Approximator. */
-  private val ADEBUG = true | System.getProperty("DEBUG", "false")=="true"
+  private val ADEBUG = System.getProperty("DEBUG", "false")=="true"
 
   //region The [[approximate]] tactic with helpers for figuring out which approximation to use.
 
@@ -82,18 +82,15 @@ object Approximator {
             (TactixLibrary.dI()(pos) | TactixLibrary.ODE(pos)) &
             DebuggingTactics.done("Expected dI to succeed.")
 
-          val cutTactics: Seq[BelleExpr] =
+          val cutTactics: Seq[BelleExpr] = {
             cuts.map(cut => {
-              DebuggingTactics.debug(s"Trying to cut ${cut}",ADEBUG) &
-              extendEvDomAndProve(sequent.sub(pos).get.asInstanceOf[Formula], cut, proofOfCut)(pos)
-//              DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
+              TactixLibrary.dC(cut)(pos) < (
+                nil,
+                DebuggingTactics.debug("Trying to prove this by dI or by ODE", ADEBUG) & proofOfCut
+              )
             })
-//            cuts.map(cut =>
-//              TactixLibrary.dC(cut)(pos) < (
-//                nil,
-//                DebuggingTactics.debug("Trying to prove this by dI or by ODE", ADEBUG) & proofOfCut
-//              )
-//            )
+          }
+
           DebuggingTactics.debug(s"Beginning expApproximation on ${e.prettyString}, ${n.prettyString}", ADEBUG) & cutTactics.reduce(_ & _)
         })
       }
@@ -200,7 +197,7 @@ object Approximator {
     */
   def dcInCtx(f: Formula, cut: Formula, cutProof: BelleExpr): ProvableSig = f match {
     case m:Modal if m.program.isInstanceOf[ODESystem] => {
-      val fact = Imply(Imply("e=1&t=0".asFormula, extendEvDom(m, cut)), f)
+      val fact = Imply(extendEvDom(m, cut), f)
 
       TactixLibrary.proveBy(fact,
         DebuggingTactics.debug(s"Trying to prove lemma ${fact}", ADEBUG) &
