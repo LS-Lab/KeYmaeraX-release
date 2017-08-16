@@ -77,7 +77,10 @@ object Approximator {
           if(ADEBUG) println(s"exp approximator performing these cuts:\n\t${cuts.mkString("\n\t")}")
 
           //dI handles the normal case, ODE handles the base case.
-          val proofOfCut = (TactixLibrary.dI()(pos) | TactixLibrary.ODE(pos)) & DebuggingTactics.done("Expected dI to succeed.")
+          val proofOfCut =
+            DebuggingTactics.debug("Trying to prove by proofOfCut", ADEBUG) &
+            (TactixLibrary.dI()(pos) | TactixLibrary.ODE(pos)) &
+            DebuggingTactics.done("Expected dI to succeed.")
 
           val cutTactics: Seq[BelleExpr] =
             cuts.map(cut => {
@@ -197,7 +200,7 @@ object Approximator {
     */
   def dcInCtx(f: Formula, cut: Formula, cutProof: BelleExpr): ProvableSig = f match {
     case m:Modal if m.program.isInstanceOf[ODESystem] => {
-      val fact = Imply(extendEvDom(m, cut), f)
+      val fact = Imply(Imply("e=1&t=0".asFormula, extendEvDom(m, cut)), f)
 
       TactixLibrary.proveBy(fact,
         DebuggingTactics.debug(s"Trying to prove lemma ${fact}", ADEBUG) &
@@ -213,7 +216,7 @@ object Approximator {
 
   /** Does a CEat with extendEvDomAndProve. */
   def extendEvDomAndProve(f: Formula, cut: Formula, cutProof: BelleExpr): DependentPositionTactic = {
-    TactixLibrary.CEat(dcInCtx(f,cut,cutProof))
+    TactixLibrary.CEat(dcInCtx(f,cut,cutProof)) //@todo this doesn't work because initial conditions are missing. Need a useAt
   }
 
   //endregion
