@@ -77,31 +77,15 @@ object Approximator {
           if(ADEBUG) println(s"exp approximator performing these cuts:\n\t${cuts.mkString("\n\t")}")
 
           //dI handles the normal case, ODE handles the base case.
-          val afterODE =
-            ( TactixLibrary.QE |
-              (TactixLibrary.G(pos.topLevel).* & DebuggingTactics.debug("[expApproximate] After G", ADEBUG) & TactixLibrary.QE) |
-              TactixLibrary.normalize & TactixLibrary.QE |
-              TactixLibrary.nil
-            )
-
-          val proofOfCut =
-            (
-              DifferentialTactics.dgDbxAuto(pos) &
-              DebuggingTactics.debug("[expApproximate] After dI, before qe|g&qe", ADEBUG) &
-              afterODE &
-              DebuggingTactics.done("[expApproximate] Could not prove an approximation is invairant.")
-            ) | (
-              DifferentialTactics.dgDbxAuto(pos) & //@todo generatize to diamond.
-              DebuggingTactics.debug("[expApproximate] After dgAuto, before qe|g&qe", ADEBUG) &
-              afterODE &
-              DebuggingTactics.done("[expApproximate] Could not prove an approximation is invairant.")
-            )
+          val proofOfCut = (TactixLibrary.dI()(pos) | TactixLibrary.ODE(pos)) & DebuggingTactics.done("Expected dI to succeed.")
 
           val cutTactics: Seq[BelleExpr] =
             cuts.map(cut =>
               TactixLibrary.dC(cut)(pos) < (
                 nil,
-                DebuggingTactics.debug("Trying to prove this by dI or by ODE", ADEBUG) & proofOfCut & DebuggingTactics.done("Expected dI to succeed.")
+                DebuggingTactics.debug("Trying to prove this by dI or by ODE", ADEBUG) &
+                  //dI handles the normal case, ODE handles the base case.
+                  (TactixLibrary.dI()(pos) | TactixLibrary.ODE(pos)) & DebuggingTactics.done("Expected dI to succeed.")
               ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
             )
 
