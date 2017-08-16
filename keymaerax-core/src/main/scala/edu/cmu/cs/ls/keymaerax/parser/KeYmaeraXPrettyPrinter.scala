@@ -26,7 +26,7 @@ import edu.cmu.cs.ls.keymaerax.core._
  */
 object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter {
   /** This default pretty printer. */
-  val pp = this
+  val pp: KeYmaeraXPrinter = this
 }
 
 /**

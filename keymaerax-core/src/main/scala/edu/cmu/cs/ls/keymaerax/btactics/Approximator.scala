@@ -80,17 +80,15 @@ object Approximator {
           val proofOfCut = (TactixLibrary.dI()(pos) | TactixLibrary.ODE(pos)) & DebuggingTactics.done("Expected dI to succeed.")
 
           val cutTactics: Seq[BelleExpr] =
-            cuts.map(cut => {
-              DebuggingTactics.debug(s"Trying to cut ${cut}",ADEBUG) &
-              extendEvDomAndProve(sequent.sub(pos).get.asInstanceOf[Formula], cut, proofOfCut)(pos)
-//              DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
-            })
-//            cuts.map(cut =>
-//              TactixLibrary.dC(cut)(pos) < (
-//                nil,
-//                DebuggingTactics.debug("Trying to prove this by dI or by ODE", ADEBUG) & proofOfCut
-//              )
-//            )
+            cuts.map(cut =>
+              TactixLibrary.dC(cut)(pos) < (
+                nil,
+                DebuggingTactics.debug("Trying to prove this by dI or by ODE", ADEBUG) &
+                  //dI handles the normal case, ODE handles the base case.
+                  (TactixLibrary.dI()(pos) | TactixLibrary.ODE(pos)) & DebuggingTactics.done("Expected dI to succeed.")
+              ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
+            )
+
           DebuggingTactics.debug(s"Beginning expApproximation on ${e.prettyString}, ${n.prettyString}", ADEBUG) & cutTactics.reduce(_ & _)
         })
       }
@@ -170,51 +168,6 @@ object Approximator {
     else Divide(Power(t, Number(n)), Number(fac(n)))
 
   private def sumTerms(t: Term, ithTerm : (Term,Int) => Term, N: Int) = Range(0,N+1).map(ithTerm(t,_)).reduce(Plus.apply)
-
-  //endregion
-
-
-  //region in-context helpers
-
-  /** If f == [{c & q}]p, this function returns [{c & q&cut}]p */
-  def extendEvDom(f: Modal, cut: Formula): Formula = {
-    require(f.program.isInstanceOf[ODESystem], s"Expected an ODE system but found ${f.prettyString}")
-
-    val evDomCtx = Context.at(f, PosInExpr(0::1::Nil))
-
-    evDomCtx._2 match {
-      case currentEvDom: Formula => evDomCtx._1.apply(And(currentEvDom, cut))
-      case _ => assert(false, "Should have failed prior assertion.");???
-    }
-  }
-
-  /**
-    * Produces a witness that [c&q]p -> [c&q&cut]p when cutProof proves that cut is an invariant.
-    * @param f The current goal [c&q]p
-    * @param cut The diff cut
-    * @param cutProof The proof that [c&q]cut
-    * @return A proved implication of the form [c&q]p -> [c&q&cut]p
-    */
-  def dcInCtx(f: Formula, cut: Formula, cutProof: BelleExpr): ProvableSig = f match {
-    case m:Modal if m.program.isInstanceOf[ODESystem] => {
-      val fact = Imply(extendEvDom(m, cut), f)
-
-      TactixLibrary.proveBy(fact,
-        DebuggingTactics.debug(s"Trying to prove lemma ${fact}", ADEBUG) &
-        TactixLibrary.implyR(1) & TactixLibrary.dC(cut)(1) <(
-          DebuggingTactics.debug("lemma branch 1: closeId", ADEBUG) & TactixLibrary.closeId & DebuggingTactics.done,
-          DebuggingTactics.debug("lemma branch 2: use provided tactic to prove cut", ADEBUG) & TactixLibrary.hideL(-1) & cutProof & DebuggingTactics.debug("should've been done",true) & DebuggingTactics.done
-        ) & DebuggingTactics.debug(s"Successfully proved lemma ${fact}", ADEBUG)
-      )
-
-    }
-    case _ => throw new BelleUserGeneratedError(s"Expected to find a modality containing an ODE, but found ${f.prettyString}")
-  }
-
-  /** Does a CEat with extendEvDomAndProve. */
-  def extendEvDomAndProve(f: Formula, cut: Formula, cutProof: BelleExpr): DependentPositionTactic = {
-    TactixLibrary.CEat(dcInCtx(f,cut,cutProof))
-  }
 
   //endregion
 

@@ -131,26 +131,6 @@ class ApproximatorTests extends TacticTestBase {
 
   //region In-context unit tests
 
-  "In-context proofs" should "prove cut in context using ceat" in withMathematica(_ => {
-    val f = "[{x'=v,v'=a&1=1}](false)".asFormula
-
-    val fact = Approximator.dcInCtx(f, "1+1=2".asFormula, TactixLibrary.dI()(1))
-
-    println(fact.prettyString)
-
-    val result = proveBy( "[{x'=v,v'=a&1=1}](false)".asFormula, TactixLibrary.CEat(fact)(1))
-    println(result)
-    result.subgoals.length shouldBe 1
-  })
-
-  it should "prove cut in context using ceat with helper method" in withMathematica(_ => {
-    val f = "[{x'=v,v'=a&1=1}](false)".asFormula
-    val cut = "1+1=2".asFormula
-    val cutProof = TactixLibrary.dI()(1)
-    proveBy(f, Approximator.extendEvDomAndProve(f,cut,cutProof)(1)).subgoals.length shouldBe 1
-  })
-
-
   "dC" should "work in context" in withMathematica(_ => {
     val f = "[z:=12;][{x'=v,v'=a&1=1}](false)".asFormula
     val cut = "1+1=2".asFormula
