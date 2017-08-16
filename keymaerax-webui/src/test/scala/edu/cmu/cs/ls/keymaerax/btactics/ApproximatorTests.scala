@@ -90,6 +90,12 @@ class ApproximatorTests extends TacticTestBase {
     proveBy(f,t) shouldBe 'proved
   })
 
+  it should "prove a bound in context without any bound variables." in withMathematica(_ => {
+    val f = "t=0 & e=1 -> [x:=12;][z:=0;][{e'=e,t'=1}](e>=1+t+t^2/2+t^3/6+t^4/24+t^5/120+t^6/720+t^7/5040+t^8/40320+t^9/362880)".asFormula
+    val t = TactixLibrary.implyR(1) & Approximator.expApproximate("e".asVariable, Number(10))(Position(1, 1::1::Nil)) & TactixLibrary.normalize & TactixLibrary.dW(1) & TactixLibrary.QE
+    proveBy(f,t) shouldBe 'proved
+  })
+
   "Tactic pretty printer" should "properly print expApproximate tactics" taggedAs(KeYmaeraXTestTags.DeploymentTest) in {
     val t = Approximator.expApproximate("e".asVariable, Number(10))(1)
     val print = t.prettyString
