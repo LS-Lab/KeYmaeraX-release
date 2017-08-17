@@ -199,41 +199,8 @@ private object ToolTactics {
       case _ => false
     }, "Edit only on arithmetic formulas and terms")
 
-    var nextAbbrvName: Variable = TacticHelper.freshNamedSymbol(Variable("abbrv"), sequent)
-    val abbrvs = scala.collection.mutable.Map[PosInExpr, Term]()
-    val abbrvTo: Expression =
-      //@todo support traverse expressions
-      if (to.kind == FormulaKind) ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-        override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
-          case FuncOf(Function("abbrv", None, _, _, _), abbrv@Pair(_, v: Variable)) =>
-            abbrvs(p) = abbrv
-            Right(v)
-          case FuncOf(Function("abbrv", None, _, _, _), t) =>
-            val abbrv = nextAbbrvName
-            nextAbbrvName = Variable(abbrv.name, Some(abbrv.index.getOrElse(-1) + 1))
-            abbrvs(p) = Pair(t, abbrv)
-            Right(abbrv)
-          case _ => Left(None)
-        }
-      }, to.asInstanceOf[Formula]).get
-      else ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-        override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
-          case FuncOf(Function("abbrv", None, _, _, _), abbrv@Pair(_, v: Variable)) =>
-            abbrvs(p) = abbrv
-            Right(v)
-          case FuncOf(Function("abbrv", None, _, _, _), t) =>
-            val abbrv = nextAbbrvName
-            nextAbbrvName = Variable(abbrv.name, Some(abbrv.index.getOrElse(-1) + 1))
-            abbrvs(p) = Pair(t, abbrv)
-            Right(abbrv)
-          case _ => Left(None)
-        }
-      }, to.asInstanceOf[Term]).get
-    //@todo unify to check whether abbrv is valid; may need reassociating, e.g. in x*y*z x*abbrv(y*z)
-
-    val abbrvTactic = abbrvs.values.map({
-      case Pair(t, v: Variable) => EqualityTactics.abbrv(t, Some(v))
-    }).reduceOption[BelleExpr](_&_).getOrElse(skip)
+    val (abbrvTo: Expression, abbrvTactic: BelleExpr) = createAbbrvTactic(to, sequent)
+    val (expandTo: Expression, expandTactic: BelleExpr) = createExpandTactic(abbrvTo, sequent, pos)
 
     val transformTactic = "ANON" by (sequent.sub(pos) match {
       case Some(e) =>
@@ -242,15 +209,88 @@ private object ToolTactics {
           //@todo find specific transform position based on diff (needs unification for terms like 2+3, 5)
           val diff = UnificationMatch(to, e)
           if (diff.usubst.subsDefsInput.forall(_.what match {
-            case FuncOf(Function("abbrv", None, _, _, _), _) => true case _ => false })) skip
-          else transform(abbrvTo)(pos)
+            case FuncOf(Function("abbrv", None, _, _, _), _) => true case _ => false
+            case FuncOf(Function("expand", None, _, _, _), _) => true case _ => false
+          })) skip
+          else transform(expandTo)(pos)
         } catch {
-          case _: UnificationException => transform(abbrvTo)(pos)
+          case _: UnificationException => transform(expandTo)(pos)
         }
     })
 
-    abbrvTactic & transformTactic
+    abbrvTactic & expandTactic & transformTactic
   })
+
+  /** Parses `to` for occurrences of `abbrv` to create a tactic. Returns `to` with `abbrv(...)` replaced by the
+    * abbreviations and the tactic to turn `to` into the returned expression by proof. */
+  private def createAbbrvTactic(to: Expression, sequent: Sequent): (Expression, BelleExpr) = {
+    var nextAbbrvName: Variable = TacticHelper.freshNamedSymbol(Variable("abbrv"), sequent)
+    val abbrvs = scala.collection.mutable.Map[PosInExpr, Term]()
+
+    val traverseFn = new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+        case FuncOf(Function("abbrv", None, _, _, _), abbrv@Pair(_, v: Variable)) =>
+          abbrvs(p) = abbrv
+          Right(v)
+        case FuncOf(Function("abbrv", None, _, _, _), t) =>
+          val abbrv = nextAbbrvName
+          nextAbbrvName = Variable(abbrv.name, Some(abbrv.index.getOrElse(-1) + 1))
+          abbrvs(p) = Pair(t, abbrv)
+          Right(abbrv)
+        case _ => Left(None)
+      }
+    }
+
+    val abbrvTo: Expression =
+      if (to.kind == FormulaKind) ExpressionTraversal.traverse(traverseFn, to.asInstanceOf[Formula]).get
+      else ExpressionTraversal.traverse(traverseFn, to.asInstanceOf[Term]).get
+    //@todo unify to check whether abbrv is valid; may need reassociating, e.g. in x*y*z x*abbrv(y*z)
+
+    val abbrvTactic = abbrvs.values.map({
+      case Pair(t, v: Variable) => EqualityTactics.abbrv(t, Some(v))
+    }).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+    (abbrvTo, abbrvTactic)
+  }
+
+  /** Parses `to` for occurrences of `expand` to create a tactic. Returns `to` with `expand(fn)` replaced by the
+    * variable corresponding to the expanded fn (abs,min,max) together with the tactic to turn `to` into the returned
+    * expression by proof. */
+  private def createExpandTactic(to: Expression, sequent: Sequent, pos: Position): (Expression, BelleExpr) = {
+    val nextName: scala.collection.mutable.Map[String, Variable] = scala.collection.mutable.Map(
+        "abs" -> TacticHelper.freshNamedSymbol(Variable("abs"), sequent),
+        "min" -> TacticHelper.freshNamedSymbol(Variable("min"), sequent),
+        "max" -> TacticHelper.freshNamedSymbol(Variable("max"), sequent))
+
+    val expandedVars = scala.collection.mutable.Map[PosInExpr, String]()
+
+    def getNextName(s: String, t: Term, p: PosInExpr): Term = {
+      val nn = nextName(s)
+      nextName.put(s, Variable(nn.name, Some(nn.index.getOrElse(-1) + 1)))
+      expandedVars(p) = s
+      nn
+    }
+
+    val traverseFn = new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = e match {
+        case FuncOf(Function("expand", None, _, _, _), t) => t match {
+          case FuncOf(Function("abs", _, _, _, _), _) => Right(getNextName("abs", t, p))
+          case FuncOf(Function("min", _, _, _, _), _) => Right(getNextName("min", t, p))
+          case FuncOf(Function("max", _, _, _, _), _) => Right(getNextName("max", t, p))
+        }
+        case _ => Left(None)
+      }
+    }
+
+    val expandTo: Expression =
+      if (to.kind == FormulaKind) ExpressionTraversal.traverse(traverseFn, to.asInstanceOf[Formula]).get
+      else ExpressionTraversal.traverse(traverseFn, to.asInstanceOf[Term]).get
+
+    val tactic = expandedVars.map({
+      case (p, "abs") => EqualityTactics.abs(pos.topLevel ++ p)
+      case (p, "min" | "max") => EqualityTactics.minmax(pos.topLevel ++ p)
+    }).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+    (expandTo, tactic)
+  }
 
   /** Transforms the formula at position `pos` into the formula `to`. */
   private def transformFormula(to: Formula, sequent: Sequent, pos: Position) = {
