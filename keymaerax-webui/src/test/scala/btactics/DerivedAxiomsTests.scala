@@ -117,6 +117,9 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove <*> iterate" in {check(iteratedAxiom)}
   it should "prove <*> approx" in {check(loopApproxd)}
   it should "prove [*] approx" in {check(loopApproxb)}
+  it should "prove II induction" in {check(iiinduction)}
+  it should "prove [*] merge" in {check(loopMergeb)}
+  it should "prove <*> merge" in {check(loopMerged)}
   it should "prove [d] dual" in {check(dualbAxiom)}
   it should "prove [d] dual direct" in {check(dualbDirectAxiom)}
   it should "prove <d> dual direct" in {check(dualdDirectAxiom)}

@@ -1125,6 +1125,54 @@ object DerivedAxioms {
         )
   )
 
+  /**
+    * {{{Axiom "II induction".
+    *    [{a;}*](p(||)->[a;]p(||)) -> (p(||)->[{a;}*]p(||))
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val iiinduction = derivedAxiom("II induction",
+    "==> [{a_{|^@|};}*](p_(||)->[a_{|^@|};]p_(||)) -> (p_(||)->[{a_{|^@|};}*]p_(||))".asSequent,
+    useAt("I induction")(1, 1::1::Nil) & prop & done
+  )
+
+
+  /**
+    * {{{Axiom "[*] merge".
+    *    [{a;}*][{a;}*]p(||) <-> [{a;}*]p(||)
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val loopMergeb = derivedAxiom("[*] merge",
+    "==> [{a_{|^@|};}*][{a_{|^@|};}*]p_(||) <-> [{a_{|^@|};}*]p_(||)".asSequent,
+    equivR(1) <(
+      useAt("[*] iterate")(-1) & prop & done,
+      implyRi & useAt("II induction", PosInExpr(1::Nil))(1) & G(1) & useAt("[*] iterate")(1, 0::Nil) & prop & done
+    )
+  )
+
+  /**
+    * {{{Axiom "<*> merge".
+    *    <{a;}*><{a;}*>p(||) <-> <{a;}*>p(||)
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val loopMerged = derivedAxiom("<*> merge",
+    "==> <{a_{|^@|};}*><{a_{|^@|};}*>p_(||) <-> <{a_{|^@|};}*>p_(||)".asSequent,
+    equivR(1) <(
+      useAt("<> diamond", PosInExpr(1::Nil))(1) & useAt("[*] merge", PosInExpr(1::Nil))(1, 0::Nil) &
+        useAt("[] box", PosInExpr(1::Nil))(1, 0::1::Nil) & useAt("<> diamond")(1) &
+        useAt("!! double negation")(1, 1::1::Nil) & closeId & done,
+      useAt("<*> iterate")(1) & prop & done
+    )
+  )
+
   //@todo this is somewhat indirect. Maybe it'd be better to represent derived axioms merely as Lemma and auto-wrap them within their ApplyRule[LookupLemma] tactics on demand.
   //private def useAt(lem: ApplyRule[LookupLemma]): PositionTactic = TactixLibrary.useAt(lem.rule.lemma.fact)
 
