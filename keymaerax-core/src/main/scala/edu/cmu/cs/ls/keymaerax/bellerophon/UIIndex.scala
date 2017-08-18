@@ -102,7 +102,7 @@ object UIIndex {
           }, fml)
           foundPrime
         }
-        val rules = maybeSplit ++ ("GV" :: "MR" :: "[]d box" :: Nil)
+        val rules = maybeSplit ++ ("GV" :: "MR" :: "boxd" :: Nil)
         a match {
           case Assign(_: DifferentialSymbol,_) => "[':=] differential assign" :: rules
           case Assign(_: BaseVariable, _) => "assignb" :: rules
@@ -111,7 +111,7 @@ object UIIndex {
           case _: Compose => "[;] compose" :: rules
           case _: Choice => "[++] choice" :: rules
           case _: Dual => "[d] dual direct" :: "[d] dual" :: Nil
-          case _: Loop => "loop" +: (maybeSplit ++ ("[*] iterate" :: "GV" :: "[]d box" :: Nil))
+          case _: Loop => "loop" +: (maybeSplit ++ ("[*] iterate" :: "GV" :: "boxd" :: Nil))
           //@note intermediate steps in dI
           case ODESystem(ode, _) if !post.isInstanceOf[Modal] && containsPrime(post) => ode match {
             case _: AtomicODE => "DE differential effect" :: "dW" :: "dC" :: rules

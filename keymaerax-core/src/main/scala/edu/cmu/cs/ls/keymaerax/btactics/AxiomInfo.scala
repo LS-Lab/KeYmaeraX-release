@@ -100,9 +100,9 @@ object DerivationInfo {
     new DerivedAxiomInfo("[] box"
       , AxiomDisplayInfo(("[·]", "[.]"), "<span class=\"k4-axiom-key\">&not;&langle;a&rangle;&not;P</span> ↔ &langle;a&rangle;P")
       , "box", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom)}),
-    new DerivedAxiomInfo("[]d box"
+    PositionTacticInfo("boxd"
       , AxiomDisplayInfo(("[·]d", "[.]d"), "<span class=\"k4-axiom-key\">[a]P</span> ↔ &not;&langle;a&rangle;&not;P")
-      , "boxd", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom, PosInExpr(1::Nil))}),
+      , {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom, PosInExpr(1::Nil))}),
     new PositionTacticInfo("assignb"
       , AxiomDisplayInfo("[:=]", "<span class=\"k4-axiom-key\">[x:=c]p(x)</span>↔p(c)")
       , {case () => TactixLibrary.assignb}),
