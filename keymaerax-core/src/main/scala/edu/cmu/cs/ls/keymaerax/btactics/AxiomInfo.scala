@@ -849,6 +849,14 @@ object DerivationInfo {
     //@todo universal closure may come with list of named symbols
     new PositionTacticInfo("universalClosure", "universalClosure", {case () => FOQuantifierTactics.universalClosure}),
 
+    InputPositionTacticInfo("useAt"
+      , "useAt"
+      , List(StringArg("axiom"), StringArg("key"))
+      , _ => ((axiom: String) => {
+        case None => TactixLibrary.useAt(axiom)
+        case Some(k: String) => TactixLibrary.useAt(axiom, PosInExpr(k.split(".").map(Integer.parseInt).toList))
+      }: TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
+
     // Differential tactics
     new PositionTacticInfo("splitWeakInequality", "splitWeakInequality", {case () => DifferentialTactics.splitWeakInequality}, needsTool = true),
     new PositionTacticInfo("ODE",

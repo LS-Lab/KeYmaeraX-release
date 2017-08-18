@@ -55,6 +55,15 @@
     </div>
 </script>
 
+<script type="text/ng-template" id="templates/lemmaDropdownTemplate.html">
+    <a>
+    <div>
+        <b><span ng-bind-html="match.model.name | uibTypeaheadHighlight:query"></span></b>
+    </div>
+    <small ng-if="match.model.displayInfo">Concludes: <span ng-bind-html="match.model.displayInfo"></span></small>
+    </a>
+</script>
+
 <div class="row">
     <div class="col-md-12">
         <a class="pull-right" ng-click="tacticPopover.close()"><span class="fa fa-close"></span>
@@ -66,6 +75,22 @@
     <div class="col-md-12">
         <div ng-repeat="tactic in formulaAxiomsMap[tacticPopover.formulaId()]" class="k4-tactic-popover-entry">
             <div ng-include="'templates/tacticPopoverEntry.html'"></div>
+        </div>
+        <div class="k4-tactic-popover-entry">
+            <div class="input-group">
+                <span class="input-group-addon">Search</span>
+                <input type="text" ng-model="lemma.selected" placeholder="Search for lemmas"
+                       uib-typeahead="lemmaInfo.name for lemmaInfo in lemma.allInfos(tacticPopover.formulaId(), $viewValue)"
+                       typeahead-template-url="templates/lemmaDropdownTemplate.html"
+                       typeahead-show-hint="true" typeahead-min-length="0"
+                       typeahead-loading="lemma.loading" typeahead-no-results="lemma.noResults"
+                       class="form-control">
+                <i class="input-group-addon" ng-if="lemma.loading" class="fa fa-refresh"></i>
+                <div class="input-group-addon" ng-if="lemma.noResults"><i class="fa fa-remove"></i> No Lemmas Found</div>
+                <!-- todo key selection -->
+                <a class="input-group-addon btn btn-default" ng-disabled="!lemma.selected"
+                   ng-click="lemma.apply(tacticPopover.formulaId())"><b>Apply Lemma</b></a>
+            </div>
         </div>
         <!-- TODO: link to switch to a modal dialog for expert mode: display an exhaustive list of axioms etc. there -->
     </div>

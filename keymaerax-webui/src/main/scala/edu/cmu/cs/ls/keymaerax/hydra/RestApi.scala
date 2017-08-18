@@ -537,6 +537,13 @@ trait RestApi extends HttpService with SLF4JLogging {
     }}
   }}
 
+  val searchLemmas: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "lemmas" / Segment) { (userId, proofId, nodeId, formulaId, partialLemmaName) => { pathEnd {
+    get {
+      val request = new GetLemmasRequest(database, userId, proofId, nodeId, parseFormulaId(formulaId), partialLemmaName)
+      completeRequest(request, t)
+    }}
+  }}
+
   val formulaPrettyString: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "prettyString") { (userId, proofId, nodeId, formulaId) => { pathEnd {
     get {
       val request = new GetFormulaPrettyStringRequest(database, userId, proofId, nodeId, parseFormulaId(formulaId))
@@ -1031,6 +1038,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     doCustomTactic        ::
     doSearch              ::
     getStep               ::
+    searchLemmas          ::
     formulaPrettyString   ::
     taskStatus            ::
     taskResult            ::

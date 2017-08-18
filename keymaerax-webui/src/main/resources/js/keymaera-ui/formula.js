@@ -111,6 +111,26 @@ angular.module('formula')
               return tacticResult.promise;
             }
 
+            scope.lemma = {
+              selected: undefined,
+              suggestions: undefined,
+              key: '0', // todo
+              allInfos: function(formulaId, partialLemmaName) {
+                var url = 'proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' +
+                          formulaId + '/lemmas/' + encodeURIComponent(partialLemmaName);
+                return $http.get(url).then(function(response) {
+                  scope.lemma.suggestions = response.data.lemmas;
+                  return response.data.lemmas;
+                });
+              },
+              apply: function(formulaId) {
+                scope.tacticPopover.close();
+                scope.onInputTactic({ formulaId: formulaId, tacticId: 'useAt',
+                                      input: [{param: 'axiom', value: scope.lemma.selected}/*,
+                                              {param: 'key', value: scope.lemma.key }*/] });
+              }
+            }
+
             scope.applyTactic = function(formulaId, tacticId) {
               scope.tacticPopover.close();
               scope.onTactic({formulaId: formulaId, tacticId: tacticId});

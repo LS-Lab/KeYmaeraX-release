@@ -1324,6 +1324,22 @@ class GetStepRequest(db: DBAbstraction, userId: String, proofId: String, nodeId:
   }
 }
 
+class GetLemmasRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, pos: Position,
+                        partialLemmaName: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
+  override protected def doResultingResponses(): List[Response] = {
+    val infos = ProvableInfo.allInfo.filter(i =>
+      (i.isInstanceOf[CoreAxiomInfo] || i.isInstanceOf[DerivedAxiomInfo]) && i.canonicalName.contains(partialLemmaName))
+    var json = infos.map(i =>
+      JsObject(
+        "name" -> JsString(i.canonicalName),
+        "displayInfo" -> (i.display match {
+          case AxiomDisplayInfo(_, f) => JsString(f)
+          case _ => JsNull
+        })))
+    new PlainResponse("lemmas" -> JsArray(json:_*)) :: Nil
+  }
+}
+
 class GetFormulaPrettyStringRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, pos: Position)
   extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
@@ -1444,6 +1460,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case BelleTermInput(value, Some(_:VariableArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:ExpressionArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(ListArg(_, "formula", _))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
+      case BelleTermInput(value, Some(_:StringArg)) => "{`"+value+"`}"
       case BelleTermInput(value, None) => value
     }
     //@note stepAt(pos) may refer to a search tactic without position (e.g, closeTrue, closeFalse)
