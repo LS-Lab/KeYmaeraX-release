@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, FixedGenerator, FormulaArg, TacticTestBase}
-import edu.cmu.cs.ls.keymaerax.core.Real
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Real}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
@@ -328,7 +328,10 @@ class ScriptedRequestTests extends TacticTestBase {
         case inner: DependentPositionWithAppliedInputTactic =>
           val info = DerivationInfo(t.pt.name)
           val expectedInputs = info.inputs
-          val inputs = inner.inputs.zipWithIndex.map({ case (in, i) => BelleTermInput(in.prettyString, Some(expectedInputs(i))) })
+          val inputs = inner.inputs.zipWithIndex.map({
+            case (in: Expression, i) => BelleTermInput(in.prettyString, Some(expectedInputs(i)))
+            case (in, i) => BelleTermInput(in.toString, Some(expectedInputs(i)))
+          })
           (inner.name, inputs, Some(t.locator), None)
         case _ => (t.pt.name, Nil, Some(t.locator), None)
       }

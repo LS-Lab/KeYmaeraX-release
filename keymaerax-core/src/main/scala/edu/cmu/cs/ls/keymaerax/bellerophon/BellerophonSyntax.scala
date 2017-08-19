@@ -459,22 +459,22 @@ abstract case class DependentPositionTactic(name: String) extends NamedBelleExpr
   /** Create the actual tactic to be applied at position pos */
   def factory(pos: Position): DependentTactic
 }
-abstract case class InputTactic(name: String, inputs: List[Expression]) extends BelleExpr with NamedBelleExpr {
+abstract case class InputTactic(name: String, inputs: List[Any]) extends BelleExpr with NamedBelleExpr {
   def computeExpr(): BelleExpr
   override def prettyString: String =
-    s"$name(${inputs.map(input => s"{`${input.prettyString}`}").mkString(",")})"
+    s"$name(${inputs.map({case input: Expression => s"{`${input.prettyString}`}" case input => s"{`${input.toString}`}"}).mkString(",")})"
 }
 abstract class StringInputTactic(override val name: String, val inputs: List[String]) extends BuiltInTactic(name) {
   override def prettyString: String =
     s"$name(${inputs.map(input => s"{`$input`}").mkString(",")})"
 }
 
-abstract class DependentPositionWithAppliedInputTactic(private val n: String, val inputs: List[Expression]) extends DependentPositionTactic(n) {
+abstract class DependentPositionWithAppliedInputTactic(private val n: String, val inputs: List[Any]) extends DependentPositionTactic(n) {
   override def apply(locator: PositionLocator): AppliedDependentPositionTacticWithAppliedInput = new AppliedDependentPositionTacticWithAppliedInput(this, locator)
 }
 class AppliedDependentPositionTacticWithAppliedInput(pt: DependentPositionWithAppliedInputTactic, locator: PositionLocator) extends AppliedDependentPositionTactic(pt, locator) {
   override def prettyString: String =
-    s"${pt.name}(${pt.inputs.map(input => s"{`${input.prettyString}`}").mkString(",")},${locator.prettyString})"
+    s"${pt.name}(${pt.inputs.map({ case input: Expression => s"{`${input.prettyString}`}" case input => s"{`${input.toString}`}"}).mkString(",")},${locator.prettyString})"
 }
 class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locator: PositionLocator) extends DependentTactic(pt.name) {
   import Augmentors._
