@@ -94,9 +94,9 @@ object DerivationInfo {
     new CoreAxiomInfo("<> diamond"
       , AxiomDisplayInfo(("<·>", "<.>"), "<span class=\"k4-axiom-key\">&not;[a]&not;P</span> ↔ &langle;a&rangle;P")
       , "diamond", {case () => HilbertCalculus.diamond}),
-    new DerivedAxiomInfo("<>d diamond"
+    PositionTacticInfo("diamondd"
       , AxiomDisplayInfo(("<·>d", "<.>d"), "<span class=\"k4-axiom-key\">&langle;a&rangle;P</span> ↔ &not;[a]&not;P")
-      , "diamondd", {case () => HilbertCalculus.useAt("<> diamond", PosInExpr(1::Nil))}),
+      , {case () => HilbertCalculus.useAt("<> diamond", PosInExpr(1::Nil))}),
     new DerivedAxiomInfo("[] box"
       , AxiomDisplayInfo(("[·]", "[.]"), "<span class=\"k4-axiom-key\">&not;&langle;a&rangle;&not;P</span> ↔ &langle;a&rangle;P")
       , "box", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom)}),

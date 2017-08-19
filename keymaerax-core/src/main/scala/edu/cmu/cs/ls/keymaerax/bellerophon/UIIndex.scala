@@ -124,7 +124,7 @@ object UIIndex {
 
       case Diamond(a, post) => 
         val maybeSplit = post match {case _ : Or => "<> split" :: Nil case _ => Nil }
-        val rules = maybeSplit ++ alwaysApplicable ++ ("<>d diamond" :: Nil)
+        val rules = maybeSplit ++ alwaysApplicable ++ ("diamondd" :: Nil)
         a match {
           case Assign(_: DifferentialSymbol, _) => "<':=> differential assign" :: rules
           case Assign(_: BaseVariable, _) => "<:=> assign" :: rules
@@ -133,7 +133,7 @@ object UIIndex {
           case _: Compose => "<;> compose" :: rules
           case _: Choice => "<++> choice" :: rules
           case _: Dual => "<d> dual direct" :: "<d> dual" :: rules
-          case _: Loop => "con" +: maybeSplit :+ "<*> iterate" :+ "<>d diamond"
+          case _: Loop => "con" +: maybeSplit :+ "<*> iterate" :+ "diamondd"
           case _: ODESystem => "solve" :: "dC" :: rules
           case _ => rules
         }
