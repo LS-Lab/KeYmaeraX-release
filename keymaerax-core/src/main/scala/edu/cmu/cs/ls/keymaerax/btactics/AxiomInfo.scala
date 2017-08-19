@@ -854,7 +854,7 @@ object DerivationInfo {
       , List(StringArg("axiom"), StringArg("key"))
       , _ => ((axiom: String) => {
         case None => TactixLibrary.useAt(axiom)
-        case Some(k: String) => TactixLibrary.useAt(axiom, PosInExpr(k.split(".").map(Integer.parseInt).toList))
+        case Some(k: String) => TactixLibrary.useAt(axiom, PosInExpr(k.split("\\.").map(Integer.parseInt).toList))
       }: TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
 
     // Differential tactics
