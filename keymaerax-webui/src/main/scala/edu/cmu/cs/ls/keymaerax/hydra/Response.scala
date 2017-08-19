@@ -778,6 +778,48 @@ class GetBranchRootResponse(node: ProofTreeNode) extends Response {
   def getJson: JsValue = nodeJson(node)._2
 }
 
+case class LemmasResponse(infos: List[ProvableInfo]) extends Response {
+  override def getJson: JsValue = {
+    def toDisplayInfoParts(pi: ProvableInfo): JsValue = {
+      val keyPos = AxiomIndex.axiomIndex(pi.canonicalName)._1
+      //@todo need more verbose axiom info
+      ProvableInfo.locate(pi.canonicalName) match {
+        case Some(i) =>
+          val (cond, op, key, conclusion) = i.provable.conclusion.succ.head match {
+            case Imply(c, eq@Equiv(l, r)) if keyPos == PosInExpr(1::0::Nil) => (Some(c), OpSpec.op(eq).opcode, l, r)
+            case Imply(c, eq@Equiv(l, r)) if keyPos == PosInExpr(1::1::Nil) => (Some(c), OpSpec.op(eq).opcode, r, l)
+            case bcf: BinaryCompositeFormula if keyPos == PosInExpr(0::Nil) => (None, OpSpec.op(bcf).opcode, bcf.left, bcf.right)
+            case bcf: BinaryCompositeFormula if keyPos == PosInExpr(1::Nil) => (None, OpSpec.op(bcf).opcode, bcf.right, bcf.left)
+            case f => (None, OpSpec.op(Equiv(f, True)).opcode, f, True)
+          }
+          JsObject(
+            "cond" -> (if (cond.isDefined) JsString(cond.get.prettyString) else JsNull),
+            "op" -> (if (op.nonEmpty) JsString(op) else JsNull),
+            "key" -> JsString(key.prettyString),
+            "conclusion" -> JsString(conclusion.prettyString)
+          )
+        case None => JsNull
+      }
+    }
+
+    var json = infos.map(i =>
+      JsObject(
+        "name" -> JsString(i.canonicalName),
+        "codeName" -> JsString(i.codeName),
+        "defaultKeyPos" -> {
+          var key = AxiomIndex.axiomIndex(i.canonicalName)._1
+          JsString(key.pos.mkString("."))
+        },
+        "displayInfo" -> (i.display match {
+          case AxiomDisplayInfo(_, f) => JsString(f)
+          case _ => JsNull
+        }),
+        "displayInfoParts" -> toDisplayInfoParts(i)))
+
+    JsObject("lemmas" -> JsArray(json:_*))
+  }
+}
+
 case class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Option[DerivationInfo])],
                                     suggestedInput: Map[ArgInfo, Expression],
                                     suggestedPosition: Option[PositionLocator] = None) extends Response {

@@ -1329,14 +1329,7 @@ class GetLemmasRequest(db: DBAbstraction, userId: String, proofId: String, nodeI
   override protected def doResultingResponses(): List[Response] = {
     val infos = ProvableInfo.allInfo.filter(i =>
       (i.isInstanceOf[CoreAxiomInfo] || i.isInstanceOf[DerivedAxiomInfo]) && i.canonicalName.contains(partialLemmaName))
-    var json = infos.map(i =>
-      JsObject(
-        "name" -> JsString(i.canonicalName),
-        "displayInfo" -> (i.display match {
-          case AxiomDisplayInfo(_, f) => JsString(f)
-          case _ => JsNull
-        })))
-    new PlainResponse("lemmas" -> JsArray(json:_*)) :: Nil
+    LemmasResponse(infos)::Nil
   }
 }
 
