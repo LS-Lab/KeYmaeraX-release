@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, UserPOJO}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.tools._
@@ -239,6 +239,53 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     theInterpreter(tactic, v) match {
       case BelleProvable(provable, _) => provable
       case r => fail("Unexpected tactic result " + r)
+    }
+  }
+
+  /** Checks a specific entry from a bundled archive. Uses the first tactic if tacticName is None. */
+  def checkArchiveEntry(archive: String, entryName: String, tacticName: Option[String] = None): Unit = {
+    val entry = KeYmaeraXArchiveParser.getEntry(entryName, io.Source.fromInputStream(
+      getClass.getResourceAsStream(archive)).mkString).get
+
+    val tactic = tacticName match {
+      case Some(tn) => entry.tactics.find(_._1 == tn).get._2
+      case None => entry.tactics.head._2
+    }
+
+    val start = System.currentTimeMillis()
+    val proof = proveBy(entry.model.asInstanceOf[Formula], tactic)
+    val end = System.currentTimeMillis()
+    proof shouldBe 'proved
+
+    println("Proof duration [ms]: " + (end-start))
+    println("Tactic size: " + TacticStatistics.size(tactic))
+    println("Tactic lines: " + TacticStatistics.lines(tactic))
+    println("Proof steps: " + proof.steps)
+  }
+
+  /** Checks all entries from a bundled archive. */
+  def checkArchiveEntries(archive: String): Unit = {
+    val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
+      getClass.getResourceAsStream(archive)).mkString)
+
+    var statistics = scala.collection.mutable.Map[String, (Long, Int, Int, Int)]()
+
+    for (entry <- entries) {
+      val tactic = entry.tactics.head._2
+
+      val start = System.currentTimeMillis()
+      val proof = proveBy(entry.model.asInstanceOf[Formula], tactic)
+      val end = System.currentTimeMillis()
+      proof shouldBe 'proved
+      statistics(entry.name) = (end-start, TacticStatistics.size(tactic), TacticStatistics.lines(tactic), proof.steps)
+    }
+
+    for ((k,v) <- statistics) {
+      println("Proof of " + k)
+      println("Proof duration [ms]: " + v._1)
+      println("Tactic size: " + v._2)
+      println("Tactic lines: " + v._3)
+      println("Proof steps: " + v._4)
     }
   }
 
