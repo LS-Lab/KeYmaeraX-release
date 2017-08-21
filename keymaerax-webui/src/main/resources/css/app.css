@@ -665,6 +665,25 @@ del {
   max-width: 40px;
 }
 
+.k4-cex-fml {
+  display: inline-block;
+}
+.k4-cex-highlight {
+  display: inline-block;
+  font-weight: bold;
+}
+.k4-cex-fml > ul:first-child {
+  margin: 0;
+  padding: 0;
+}
+.k4-cex-fml > ul:first-child li {
+  font-size: smaller;
+  border: none;
+  color: var(--lsmain);
+  display: inline-block;
+  white-space: nowrap;
+}
+
 .k4-sequentRulePremise {
   border-style: none;
 }

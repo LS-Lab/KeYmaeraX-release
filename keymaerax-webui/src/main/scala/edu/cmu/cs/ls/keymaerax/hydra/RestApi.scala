@@ -415,13 +415,6 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
-  val dashInfo: SessionToken=>Route = (t : SessionToken) => path("users" / Segment / "dashinfo") { userId => pathEnd {
-    get {
-      val request = new DashInfoRequest(database, userId)
-      completeRequest(request, t)
-    }
-  }}
-
   val browseProofRoot: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "browseagenda") { (userId, proofId) => { pathEnd {
     get {
       val request = new GetProofRootAgendaRequest(database, userId, proofId)
@@ -540,6 +533,13 @@ trait RestApi extends HttpService with SLF4JLogging {
   val getStep: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "whatStep") { (userId, proofId, nodeId, formulaId) => { pathEnd {
     get {
       val request = new GetStepRequest(database, userId, proofId, nodeId, parseFormulaId(formulaId))
+      completeRequest(request, t)
+    }}
+  }}
+
+  val searchLemmas: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "lemmas" / Segment) { (userId, proofId, nodeId, formulaId, partialLemmaName) => { pathEnd {
+    get {
+      val request = new GetLemmasRequest(database, userId, proofId, nodeId, parseFormulaId(formulaId), partialLemmaName)
       completeRequest(request, t)
     }}
   }}
@@ -1038,6 +1038,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     doCustomTactic        ::
     doSearch              ::
     getStep               ::
+    searchLemmas          ::
     formulaPrettyString   ::
     taskStatus            ::
     taskResult            ::
@@ -1050,7 +1051,6 @@ trait RestApi extends HttpService with SLF4JLogging {
     setupSimulation       ::
     simulate              ::
     pruneBelow            ::
-    dashInfo              ::
     modelplex             ::
     modelplexMandatoryVars::
     exportSequent         ::

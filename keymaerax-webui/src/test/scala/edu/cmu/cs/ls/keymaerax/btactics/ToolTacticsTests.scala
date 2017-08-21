@@ -1,10 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
-
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
 
@@ -167,8 +167,45 @@ class ToolTacticsTests extends TacticTestBase {
     //proveBy("2*g()*x=37".asFormula, edit("2*foo=37".asFormula)(1)).subgoals.loneElement shouldBe "foo=g()*x ==> 2*foo=37".asSequent
   }
 
-  it should "abbreviate and transform" in withMathematica { _ =>
-    proveBy("2*g()*x=37+4".asFormula, edit("abbrv(2*g())*x=41".asFormula)(1)).subgoals.loneElement shouldBe "abbrv=2*g() ==> abbrv*x=41".asSequent
+  it should "only abbreviate if no transformations are present" in withMathematica { _ => withDatabase { db =>
+    val (proofId, provable) = db.proveByWithProofId("x>=2+3", edit("x>=abbrv(2+3,y)".asFormula)(1))
+    provable.subgoals.loneElement shouldBe "y=2+3 ==> x>=y".asSequent
+    db.extractTactic(proofId) shouldBe BelleParser("edit({`x>=abbrv(2+3,y)`},1)")
+    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("abbrv({`2+3`},{`y`})")
+  }}
+
+  it should "abbreviate and transform" in withMathematica { _ => withDatabase { db =>
+    val (proofId, provable) = db.proveByWithProofId("2*g()*x=37+4", edit("abbrv(2*g())*x=41".asFormula)(1))
+    provable.subgoals.loneElement shouldBe "abbrv=2*g() ==> abbrv*x=41".asSequent
+    db.extractTactic(proofId) shouldBe BelleParser("edit({`abbrv(2*g())*x=41`},1)")
+    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("abbrv({`2*g()`},{`abbrv`}) & transform({`abbrv*x=41`},1)")
+  }}
+
+  it should "expand abs" in withMathematica { _ =>
+    proveBy("abs(x)>=0".asFormula, edit("expand(abs(x))>=1".asFormula)(1)).subgoals.loneElement shouldBe
+      "x>=0&abs_0=x | x<0&abs_0=-x ==> abs_0>=1".asSequent
   }
+
+  it should "expand min" in withMathematica { _ =>
+    proveBy("min(x,y)>=0".asFormula, edit("expand(min(x,y))>=1".asFormula)(1)).subgoals.loneElement shouldBe
+      "x<=y&min_0=x | x>y&min_0=y ==> min_0>=1".asSequent
+  }
+
+  it should "expand max" in withMathematica { _ =>
+    proveBy("max(x,y)>=0".asFormula, edit("expand(max(x,y))>=1".asFormula)(1)).subgoals.loneElement shouldBe
+      "x>=y&max_0=x | x<y&max_0=y ==> max_0>=1".asSequent
+  }
+
+  it should "abbreviate and expand" in withMathematica { _ =>
+    proveBy("max(x+5*2,y)>=0".asFormula, edit("expand(max(abbrv(x+5*2,z),y))>=1".asFormula)(1)).subgoals.loneElement shouldBe
+      "z=x+5*2, z>=y&max_0=z | z<y&max_0=y ==> max_0>=1".asSequent
+  }
+
+  it should "abbreviate and expand and transform" in withMathematica { _ => withDatabase { db =>
+    val (proofId, provable) = db.proveByWithProofId("2*g()*abs(x)=37+4", edit("abbrv(2*g())*expand(abs(x))=41".asFormula)(1))
+    provable.subgoals.loneElement shouldBe "abbrv=2*g(), x>=0&abs_0=x | x<0&abs_0=-x ==> abbrv*abs_0=41".asSequent
+    db.extractTactic(proofId) shouldBe BelleParser("edit({`abbrv(2*g())*expand(abs(x))=41`},1)")
+    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("abbrv({`2*g()`},{`abbrv`}) & absExp(1.0.1) & transform({`abbrv*abs_0=41`},1)")
+  }}
 
 }

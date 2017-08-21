@@ -2,13 +2,22 @@
     <!-- padding around content -->
     <div class="col-md-12">
         <div class="row" ng-if="tactic.selectedDerivation().derivation.type === 'axiom'">
-            <!-- TODO make executable with correct IDs, see axiomPopoverTemplate.html -->
-            <div class="col-md-2"><b ng-bind-html="tactic.selectedDerivation().name"></b></div>
+            <div class="col-md-2">
+                <a class="btn btn-link"
+                   ng-click="onTactic(tactic.positionSuggestion, tactic.selectedDerivation().id)">
+                    <b ng-bind-html="tactic.selectedDerivation().name"></b>
+                </a>
+            </div>
             <div class="col-md-10"
                  ng-bind-html="tactic.selectedDerivation().derivation.formula"></div>
         </div>
         <div class="row" ng-if="tactic.selectedDerivation().derivation.type === 'tactic'">
-            <div class="col-md-2"><b ng-bind-html="tactic.selectedDerivation().name"></b></div>
+            <div class="col-md-2">
+                <a class="btn btn-link"
+                   ng-click="onTactic(tactic.positionSuggestion, tactic.selectedDerivation().id)">
+                    <b ng-bind-html="tactic.selectedDerivation().name"></b>
+                </a>
+            </div>
             <div class="col-md-10"
                  ng-bind-html="tactic.selectedDerivation().derivation.formula"></div>
         </div>
@@ -17,10 +26,20 @@
             <div class="col-md-12">
                 <div class="panel panel-default panel-sm">
                     <div class="panel-heading panel-heading-compact">
-                        <b ng-bind-html="tactic.selectedDerivation().name"></b>
+                        <a ng-if="tactic.selectedDerivation().derivation.input.length === 0"
+                           class="btn btn-link"
+                           ng-click="onTactic(tactic.positionSuggestion, tactic.selectedDerivation().id)">
+                            <b ng-bind-html="tactic.selectedDerivation().name"></b>
+                        </a>
+                        <a ng-if="tactic.selectedDerivation().derivation.input.length > 0"
+                           ng-class="{'disabled':tactic.selectedDerivation().missingInputNames().length > 0, 'btn':true, 'btn-link':true}"
+                           ng-click="onInputTactic(tactic.positionSuggestion, tactic.selectedDerivation().id, tactic.selectedDerivation().derivation.input)">
+                            <b ng-bind-html="tactic.selectedDerivation().name"></b>
+                        </a>
                     </div>
                     <div class="panel-body">
-                        <div class="col-md-12" ng-repeat="tactic in [tactic.selectedDerivation()]"
+                        <div class="col-md-12"
+                             ng-repeat="tactic in [tactic.selectedDerivation()]"
                              ng-include="'templates/sequentRuleTemplate.html'"></div>
                     </div>
                 </div>

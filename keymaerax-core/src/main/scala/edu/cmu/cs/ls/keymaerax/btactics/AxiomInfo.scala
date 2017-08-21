@@ -94,15 +94,15 @@ object DerivationInfo {
     new CoreAxiomInfo("<> diamond"
       , AxiomDisplayInfo(("<·>", "<.>"), "<span class=\"k4-axiom-key\">&not;[a]&not;P</span> ↔ &langle;a&rangle;P")
       , "diamond", {case () => HilbertCalculus.diamond}),
-    new DerivedAxiomInfo("<>d diamond"
+    PositionTacticInfo("diamondd"
       , AxiomDisplayInfo(("<·>d", "<.>d"), "<span class=\"k4-axiom-key\">&langle;a&rangle;P</span> ↔ &not;[a]&not;P")
-      , "diamondd", {case () => HilbertCalculus.useAt("<> diamond", PosInExpr(1::Nil))}),
+      , {case () => HilbertCalculus.useAt("<> diamond", PosInExpr(1::Nil))}),
     new DerivedAxiomInfo("[] box"
       , AxiomDisplayInfo(("[·]", "[.]"), "<span class=\"k4-axiom-key\">&not;&langle;a&rangle;&not;P</span> ↔ &langle;a&rangle;P")
       , "box", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom)}),
-    new DerivedAxiomInfo("[]d box"
+    PositionTacticInfo("boxd"
       , AxiomDisplayInfo(("[·]d", "[.]d"), "<span class=\"k4-axiom-key\">[a]P</span> ↔ &not;&langle;a&rangle;&not;P")
-      , "boxd", {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom, PosInExpr(1::Nil))}),
+      , {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom, PosInExpr(1::Nil))}),
     new PositionTacticInfo("assignb"
       , AxiomDisplayInfo("[:=]", "<span class=\"k4-axiom-key\">[x:=c]p(x)</span>↔p(c)")
       , {case () => TactixLibrary.assignb}),
@@ -483,6 +483,9 @@ object DerivationInfo {
     new DerivedAxiomInfo("[:=] vacuous assign", "V[:=]", "vacuousAssignb", {case () => useAt(DerivedAxioms.vacuousAssignbAxiom)}),
     new DerivedAxiomInfo("<:=> vacuous assign", "V<:=>", "vacuousAssignd", {case () => useAt(DerivedAxioms.vacuousAssigndAxiom)}),
     new DerivedAxiomInfo("[*] approx", "[*] approx", "loopApproxb", {case () => useAt(DerivedAxioms.loopApproxb)}),
+    new DerivedAxiomInfo("[*] merge", "[*] merge", "loopMergeb", {case () => useAt(DerivedAxioms.loopMergeb)}),
+    new DerivedAxiomInfo("<*> merge", "<*> merge", "loopMerged", {case () => useAt(DerivedAxioms.loopMerged)}),
+    new DerivedAxiomInfo("II induction", "II induction", "IIinduction", {case () => useAt(DerivedAxioms.iiinduction)}),
   //@todo might have a better name
     new DerivedAxiomInfo("exists generalize", ("∃G","existsG"), "existsGeneralize", {case () => useAt(DerivedAxioms.existsGeneralize)}),
     new DerivedAxiomInfo("all substitute", ("∀S","allS"), "allSubstitute", {case () => useAt(DerivedAxioms.allSubstitute)}),
@@ -837,7 +840,10 @@ object DerivationInfo {
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
     new TacticInfo("master", "master", {case () => (gen:Generator.Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true),
-    new TacticInfo("QE", "QE",  {case () => TactixLibrary.QE}, needsTool = true),
+    InputTacticInfo("QE", "QE",
+      List(VariableArg("tool")),
+      _ => { case Some(toolName: Variable) => TactixLibrary.QE(Nil, Some(toolName.name))
+             case _ => TactixLibrary.QE }: TypedFunc[Option[Variable], BelleExpr], needsTool = true),
     new TacticInfo("rcf", "rcf",  {case () => TactixLibrary.RCF}, needsTool = true),
     //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),
@@ -845,6 +851,23 @@ object DerivationInfo {
     new TacticInfo("fullSimplify", "fullSimplify",  {case () => SimplifierV3.fullSimpTac()}, needsTool = true),
     //@todo universal closure may come with list of named symbols
     new PositionTacticInfo("universalClosure", "universalClosure", {case () => FOQuantifierTactics.universalClosure}),
+
+    InputPositionTacticInfo("useAt"
+      , "useAt"
+      , List(StringArg("axiom"), StringArg("key"))
+      , _ => ((axiomName: String) => {
+        case None => TactixLibrary.useAt(axiomName) //@note serializes as codeName
+        case Some(k: String) =>
+          val key = PosInExpr(k.split("\\.").map(Integer.parseInt).toList)
+          val defaultKey = AxiomIndex.axiomIndex(axiomName)._1
+          if (key != defaultKey) {
+            //@note serializes as useAt({`axiomName`},{`k`})
+            "useAt" byWithInputs (axiomName::k::Nil, (pos: Position, seq: Sequent) => {
+              val axiom = ProvableInfo(axiomName)
+              TactixLibrary.useAt(axiom.provable, key)(pos)
+            })
+          } else TactixLibrary.useAt(axiomName) //@note serializes as codeName
+      }: TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
 
     // Differential tactics
     new PositionTacticInfo("splitWeakInequality", "splitWeakInequality", {case () => DifferentialTactics.splitWeakInequality}, needsTool = true),

@@ -314,6 +314,10 @@ class DifferentialTests extends TacticTestBase {
     ) shouldBe 'proved
   }
 
+  it should "disregard other modalities when auto-proving x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { _ =>
+    proveBy("x>=5, [y:=3;]y<=3 ==> [{x'=2}]x>=5".asSequent, dI()(1)) shouldBe 'proved
+  }
+
   it should "behave as DI rule on x>=5 -> [{x'=2}]x>=5" taggedAs KeYmaeraXTestTags.SummaryTest in withMathematica { qeTool =>
     val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x'=2}]x>=5".asFormula)),
       implyR(1) & dI('none)(1)
@@ -1300,6 +1304,13 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> 2*t_+x>b)".asFormula)
   }
 
+  it should "disregard other modalities" in withMathematica { _ =>
+    val result = proveBy("x>b, [y:=3;]y>=3 ==> <z:=3;>z=3, [{x'=2}]x>b".asSequent, solve(2))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List("x>b".asFormula, "[y:=3;]y>=3".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("<z:=3;>z=3".asFormula, "\\forall t_ (t_>=0 -> 2*t_+x>b)".asFormula)
+  }
+
   it should "add time" in withMathematica { tool =>
     val result = proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)),
       solve(1))
@@ -1343,14 +1354,6 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
-  }
-
-  it should "open diff ind x>b() |- [{x'=2}]x>b()" in withMathematica { tool =>
-    proveBy(Sequent(IndexedSeq("x>b()".asFormula), IndexedSeq("[{x'=2}]x>b()".asFormula)), openDiffInd(1)) shouldBe 'proved
-  }
-
-  it should "open diff ind x>b |- [{x'=2}]x>b" in withMathematica { tool =>
-    proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)), openDiffInd(1)) shouldBe 'proved
   }
 
   it should "find solution for x'=v" in withMathematica { tool =>
@@ -1589,6 +1592,13 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.head.succ should contain theSameElementsAs "\\forall t_ (t_>=0->(s/2/3*t_^3+a/2*t_^2)/g()+v*t_+x>=0)".asFormula::Nil
   }
 
+  it should "solve double integrator with sum of constants" in withMathematica { _ =>
+    val result = proveBy("y<b, x<=0, Y()>=0, Z()<Y() ==> [{y'=x, x'=-Y()+Z()}]y<b".asSequent, solve(1))
+    result.subgoals should have size 1
+    result.subgoals.head.ante should contain theSameElementsAs List("y<b".asFormula, "x<=0".asFormula, "Y()>=0".asFormula, "Z()<Y()".asFormula)
+    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> (-Y()+Z())/2*t_^2+x*t_+y<b)".asFormula)
+  }
+
   "diffUnpackEvolutionDomainInitially" should "unpack the evolution domain of an ODE as fact at time zero" in {
     val result = proveBy("[{x'=3&x>=0}]x>=0".asFormula, DifferentialTactics.diffUnpackEvolutionDomainInitially(1))
     result.subgoals should have size 1
@@ -1688,6 +1698,18 @@ class DifferentialTests extends TacticTestBase {
 
   it should "prove 5<=x^3 -> [{x'=7*x^3+x^8}]5<=x^3" in withMathematica { qeTool =>
     proveBy("5<=x^3 -> [{x'=7*x^3+x^8}]5<=x^3".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
+  }
+
+  it should "open diff ind x>b() |- [{x'=2}]x>b()" in withMathematica { _ =>
+    proveBy(Sequent(IndexedSeq("x>b()".asFormula), IndexedSeq("[{x'=2}]x>b()".asFormula)), openDiffInd(1)) shouldBe 'proved
+  }
+
+  it should "open diff ind x>b |- [{x'=2}]x>b" in withMathematica { _ =>
+    proveBy(Sequent(IndexedSeq("x>b".asFormula), IndexedSeq("[{x'=2}]x>b".asFormula)), openDiffInd(1)) shouldBe 'proved
+  }
+
+  it should "disregard other modalities" in withMathematica { _ =>
+    proveBy("x>b, [y:=3;]y<=3 ==> <z:=2;>z=2, [{x'=2}]x>b".asSequent, openDiffInd(2)) shouldBe 'proved
   }
 
   "Differential Variant" should "diff var a()>0 |- <{x'=a()}>x>=b()" in withMathematica { tool =>

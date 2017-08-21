@@ -125,14 +125,14 @@ private object DifferentialTactics {
         if (pos.isTopLevel) {
           val t = DI(pos) &
             implyR(pos) & andR(pos) & Idioms.<(
-              if (auto == 'full) QE & done else skip,
+              if (auto == 'full) ToolTactics.hideNonFOL & QE & done else skip,
               if (auto != 'none) {
                 //@note derive before DE to keep positions easier
                 derive(pos ++ PosInExpr(1 :: Nil)) &
                 DE(pos) &
                 (if (auto == 'full) Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) &
                   //@note DW after DE to keep positions easier
-                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & QE & done
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & ToolTactics.hideNonFOL & QE & done
                  else {
                   assert(auto == 'diffInd)
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
@@ -196,7 +196,7 @@ private object DifferentialTactics {
         }
         if (pos.isTopLevel) {
           val t = useAt(axUse)(pos) <(
-              testb(pos) & QE & done,
+              testb(pos) & ToolTactics.hideNonFOL & QE & done,
               //@note derive before DE to keep positions easier
               implyR(pos) & (
                 if(der) derive(pos ++ PosInExpr(1::1::Nil))
@@ -205,7 +205,7 @@ private object DifferentialTactics {
                 DE(pos) &
                 (Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) &
                   //@note DW after DE to keep positions easier
-                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & QE & done
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & ToolTactics.hideNonFOL & QE & done
                   )
               )
           Dconstify(t)(pos)
@@ -380,7 +380,7 @@ private object DifferentialTactics {
     * @param ghost A differential program of the form y'=a*y+b or y'=a*y or y'=b.
     * @see [[dG()]]
     */
-  private def DG(ghost: DifferentialProgram): DependentPositionTactic = "ANON" byWithInputs (listifiedGhost(ghost), (pos: Position, sequent: Sequent) => {
+  private def DG(ghost: DifferentialProgram): DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => {
     val (y, a, b) = DifferentialHelper.parseGhost(ghost)
 
     sequent.sub(pos) match {
@@ -423,36 +423,13 @@ private object DifferentialTactics {
     }
   })
 
-  private def listifiedGhost(ghost: DifferentialProgram): List[Expression] = {
-    val ghostParts = try {
-      DifferentialHelper.parseGhost(ghost)
-    } catch {
-      case ex: CoreException => throw new BelleThrowable("Unable to parse ghost " + ghost.prettyString, ex)
-    }
-    List(ghostParts._1, ghostParts._2, ghostParts._3)
-  }
-
   /** @see [[TactixLibrary.dG]] */
-  def dG(ghost: DifferentialProgram, r: Option[Formula]): DependentPositionTactic = {
-    val finalTactic: DependentPositionWithAppliedInputTactic =
-          "dG" byWithInputs (r match { case Some(rr) => listifiedGhost(ghost) :+ rr case None => listifiedGhost(ghost) },
-            (pos: Position, sequent: Sequent) => r match {
+  def dG(ghost: DifferentialProgram, r: Option[Formula]): DependentPositionTactic = "dG" byWithInputs (
+      r match { case Some(rr) => ghost :: rr :: Nil case None => ghost :: Nil },
+      (pos: Position, sequent: Sequent) => r match {
         case Some(rr) if r != sequent.sub(pos ++ PosInExpr(1::Nil)) => DG(ghost)(pos) & transform(rr)(pos ++ PosInExpr(0::1::Nil))
         case _ => DG(ghost)(pos) //@note no r or r==p
       })
-
-    r match {
-      case Some(newPostcond) => new DependentPositionWithAppliedInputTactic("dG", ghost :: newPostcond :: Nil) {
-        /** Create the actual tactic to be applied at position pos */
-        override def factory(pos: Position): DependentTactic = finalTactic(pos)
-      }
-      case None => new DependentPositionWithAppliedInputTactic("dG", ghost :: r.get :: Nil) {
-        /** Create the actual tactic to be applied at position pos */
-        override def factory(pos: Position): DependentTactic = finalTactic(pos)
-      }
-    }
-  }
-
 
   /** @see [[HilbertCalculus.Derive.Dvar]] */
   //@todo could probably simplify implementation by picking atomic formula, using "x' derive var" and then embedding this equivalence into context by CE.

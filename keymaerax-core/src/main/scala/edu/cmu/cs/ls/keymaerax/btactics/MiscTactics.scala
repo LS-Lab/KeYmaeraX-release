@@ -332,7 +332,7 @@ object TacticFactory {
     }
 
     /** A position tactic with multiple inputs. */
-    def byWithInputs(inputs: List[Expression], t: ((Position, Sequent) => BelleExpr)): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic(name, inputs) {
+    def byWithInputs(inputs: List[Any], t: ((Position, Sequent) => BelleExpr)): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic(name, inputs) {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
@@ -342,12 +342,12 @@ object TacticFactory {
     }
 
     /** A named tactic with multiple inputs. */
-    def byWithInputs(inputs: List[Expression], t: BelleExpr): InputTactic = new InputTactic(name, inputs) {
+    def byWithInputs(inputs: List[Any], t: BelleExpr): InputTactic = new InputTactic(name, inputs) {
       override def computeExpr(): BelleExpr = t
     }
 
     /** A position tactic with a single input. */
-    def byWithInput(input: Expression, t: ((Position, Sequent) => BelleExpr)): DependentPositionWithAppliedInputTactic =
+    def byWithInput(input: Any, t: ((Position, Sequent) => BelleExpr)): DependentPositionWithAppliedInputTactic =
       byWithInputs(List(input), t)
 
     /** A named tactic with a single input. */

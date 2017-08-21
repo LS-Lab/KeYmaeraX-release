@@ -64,7 +64,7 @@
                                data-intro="Automatic search" data-position="top"><span class="fa fa-play"> Auto</span></a></li>
                         <li><a ng-click="doTactic(undefined, 'unfold')"
                                data-intro="Unfold all operators" data-position="top"><span class="fa fa-map-o"> Unfold</span></a></li>
-                        <li><a ng-click="onTacticScript('prop;done')"
+                        <li><a ng-click="onTacticScript('prop;done',false)"
                                data-intro="Automatic propositional search" data-position="top"><span class="fa fa-magic"> Prop-Auto</span></a></li>
                         <li><a ng-click="doTactic(undefined, 'fullSimplify')"
                                data-intro="Simplify formulas" data-position="top"><span class="fa fa-compress"> Simplify</span></a></li>
@@ -292,15 +292,24 @@
                                         <button class="btn btn-default" ng-click="rerunTactic()">Rerun</button>
                                     </span>
                                     <span class="input-group-addon">Fresh steps</span>
-                                    <input type="text" readonly class="form-control k4-abbreviate" placeholder="None"
+                                    <input type="text" class="form-control k4-abbreviate" placeholder="None"
+                                           ng-shift-enter="executeTacticDiff(false)"
                                            uib-tooltip="Edit tactic below (augment proof with fresh steps by pressing 'shift-enter' or clicking 'Execute')"
-                                           tooltip-placement="top-left" ng-model="tactic.tacticDiff">
+                                           tooltip-placement="auto top-left" ng-model="tactic.tacticDiff">
+                                    <span class="input-group-addon">Execute: </span>
                                     <span class="input-group-btn"
-                                          data-intro="Run changes in the tactic." data-position="left">
-                                        <button class="btn btn-default" ng-click="executeTacticDiff()"
-                                                uib-tooltip="Augment the derivation on the current tab with fresh steps"
-                                                tooltip-placement="top-left"
-                                                ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Execute</button>
+                                          uib-tooltip="Augment the derivation on the current tab with fresh steps (execute as one proof step)"
+                                          tooltip-placement="auto top-left"
+                                          data-intro="Run changes in the tactic as a single step." data-position="left">
+                                        <button class="btn btn-default" ng-click="executeTacticDiff(false)"
+                                                ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Atomic</button>
+                                    </span>
+                                    <span class="input-group-btn"
+                                          uib-tooltip="Augment the derivation on the current tab with fresh steps (execute step-by-step)"
+                                          tooltip-placement="auto top-left"
+                                          data-intro="Run changes in the tactic step-by-step." data-position="left">
+                                        <button class="btn btn-default" ng-click="executeTacticDiff(true)"
+                                                ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Step-by-Step</button>
                                     </span>
                                 </div>
                                 <div class="input-group col-md-10" ng-if="tactic.tacticDel !== ''">
@@ -311,20 +320,28 @@
                                     </span>
                                     <span class="input-group-addon">Replace {{tactic.tacticDel}} with </span>
                                     <input type="text" readonly class="form-control k4-abbreviate" placeholder="None"
+                                           ng-shift-enter="executeTacticDiff(false)"
                                            uib-tooltip="Edit tactic below (augment proof with fresh steps by pressing 'shift-enter' or clicking 'Execute')"
                                            tooltip-placement="top-left" ng-model="tactic.tacticDiff">
-                                    <span class="input-group-btn">
-                                        <button class="btn btn-default" ng-click="executeTacticDiff()"
-                                                uib-tooltip="Augment the derivation on the current tab with fresh steps"
-                                                tooltip-placement="top-left"
-                                                ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Execute</button>
+                                    <span class="input-group-addon">Execute: </span>
+                                    <span class="input-group-btn"
+                                          uib-tooltip="Augment the derivation on the current tab with fresh steps (execute as one step)"
+                                          tooltip-placement="auto top-left">
+                                        <button class="btn btn-default" ng-click="executeTacticDiff(false)"
+                                                ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Atomic</button>
+                                    </span>
+                                    <span class="input-group-btn"
+                                          uib-tooltip="Augment the derivation on the current tab with fresh steps (execute step-by-step)"
+                                          tooltip-placement="auto top-left">
+                                        <button class="btn btn-default" ng-click="executeTacticDiff(true)"
+                                                ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Step-by-Step</button>
                                     </span>
                                 </div>
                             </div>
                             <div class="panel-body" data-intro="Clicks are recorded here. Append to automate proof steps instead of clicking. <dl class='dl-horizontal'><dt><code>s ; t</code></dt><dd>Run t after s</dd><dt><code>s | t</code></dt><dd>Run t if s fails</dd><dt><code>t*</code></dt><dd>Repeat t exhaustively</dd><dt><code>t*n</code></dt><dd>Run t n times</dd><dt><code>&lt;(t1,...tn)</code></dt><dd>Run ti on subgoal i</dd><dt><code>doall(t)</code></dt><dd>Run t on every subgoal</dd><dt>t(j)</dt><dd>Apply t at position j</dd><dt>1, 2, 3, ..., 'Rlast</dt><dd>Succedent positions</dd><dt>-1, -2, -3, ..., 'Llast</dt><dd>Antecedent positions</dd><dt>4.0.1</dt><dd>Subposition, second child of first child of succedent 4</dd><dt>'L, 'R</dt><dd>Search left/right for first applicable formula</dd></dl>" data-position="bottom">
                             <k4-tactic-editor user-id="userId" proof-id="proofId" node-id="task.id"
                                               on-tactic="doTactic(formulaId, tacticId)"
-                                              on-tactic-script="onTacticScript(tacticText)">
+                                              on-tactic-script="onTacticScript(tacticText,stepwise)">
                             </k4-tactic-editor>
                             </div>
                         </div>

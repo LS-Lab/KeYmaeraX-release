@@ -3,6 +3,7 @@ package bellerophon.pptests
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.Real
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.{ParseException, UnknownLocation}
@@ -11,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 
 import scala.language.postfixOps
 import org.scalatest.Inside._
+import org.scalatest.matchers.MatchResult
 
 /**
   * Very simple positive unit tests for the Bellerophon parser. Useful for TDD and bug isolation but probably not
@@ -24,6 +26,34 @@ class SimpleBelleParserTests extends TacticTestBase {
   private object round {
     def trip(t: BelleExpr): BelleExpr = { roundTrip(t) shouldBe t; t }
     def roundTrip(t: BelleExpr): BelleExpr = BelleParser(BellePrettyPrinter(t))
+  }
+
+  private object print {
+    def as(right: String): org.scalatest.matchers.Matcher[BelleExpr] = new org.scalatest.matchers.Matcher[BelleExpr]() {
+      def apply(left: BelleExpr): MatchResult = {
+        MatchResult(
+          BellePrettyPrinter(left) == right,
+          "pretty-printing tactic failed", //@note can't print tactics since {} are reserved characters in match result message
+          "pretty-printing succeeded",
+          Vector(left, right)
+        )
+      }
+      override def toString: String = "Print as " + right
+    }
+  }
+
+  private object reparse {
+    def fromPrint: org.scalatest.matchers.Matcher[BelleExpr] = new org.scalatest.matchers.Matcher[BelleExpr]() {
+      def apply(left: BelleExpr): MatchResult = {
+        MatchResult(
+          BelleParser(BellePrettyPrinter(left)) == left,
+          "re-parsing pretty-printed tactic failed",
+          "re-parsing pretty-printed tactic succeeded",
+          Vector(left)
+        )
+      }
+      override def toString: String = "reparse"
+    }
   }
 
   //region Atomic tactics with arguments
@@ -510,7 +540,7 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse mixed arguments" in {
-    BelleParser("dG({`z`},{`-1`},{`0`},{`x*z^2=1`},1)") shouldBe (round trip TactixLibrary.dG("z'=-1*z+0".asDifferentialProgram, Some("x*z^2=1".asFormula))(1))
+    BelleParser("dG({`{z'=-1*z+0}`},{`x*z^2=1`},1)") shouldBe (round trip TactixLibrary.dG("z'=-1*z+0".asDifferentialProgram, Some("x*z^2=1".asFormula))(1))
   }
 
   it should "expand definitions when parsing arguments" in {
@@ -546,6 +576,15 @@ class SimpleBelleParserTests extends TacticTestBase {
   "new dG syntax" should "work" in {
     val f = "x>1 -> [{x'=-x}]x>0".asFormula
     val t = "implyR(1) ; dG({`y'=1/2*y`}, {`x*y^2=1`}, 1) ; dI(1.0) ".asTactic
+  }
+
+  it should "round trip ghosts" in {
+    //@todo should be on tactics is meaningless (compares names, but not arguments)
+    "dG({`y'=1`}, 1)".asTactic should (be (dG("y'=1".asDifferentialProgram, None)(1)) and (print as "dG({`{y'=1}`}, 1)") and (reparse fromPrint))
+    "dG({`y'=1`}, {`x*y=5`}, 1)".asTactic should (be (dG("y'=1".asDifferentialProgram, Some("x*y=5".asFormula))(1)) and (print as "dG({`{y'=1}`}, {`x*y=5`}, 1)") and (reparse fromPrint))
+    "dG({`y'=0*y+1`}, {`x*y^2=1`}, 1)".asTactic should (be (dG("y'=0*y+1".asDifferentialProgram, Some("x*y^2=1".asFormula))(1)) and (print as "dG({`{y'=0*y+1}`}, {`x*y^2=1`}, 1)") and (reparse fromPrint))
+    "dG({`y'=1/2*y`}, 1)".asTactic should (be (dG("y'=1/2*y".asDifferentialProgram, None)(1)) and (print as "dG({`{y'=1/2*y}`}, 1)") and (reparse fromPrint))
+    "dG({`y'=1/2*y`}, {`x*y^2=1`}, 1)".asTactic should (be (dG("y'=1/2*y".asDifferentialProgram, Some("x*y^2=1".asFormula))(1)) and (print as "dG({`{y'=1/2*y}`}, {`x*y^2=1`}, 1)") and (reparse fromPrint))
   }
 
   //endregion

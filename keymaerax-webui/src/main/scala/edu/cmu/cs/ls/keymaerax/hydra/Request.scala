@@ -178,22 +178,6 @@ class FailedRequest(userId: String, msg: String, cause: Throwable = null) extend
   def resultingResponses(): List[Response] = { new ErrorResponse(msg, cause) :: Nil }
 }
 
-/**
- * Returns an object containing all information necessary to fill out the global template (e.g., the "new events" bubble)
-  *
-  * @param db
- * @param userId
- */
-class DashInfoRequest(db : DBAbstraction, userId : String) extends UserRequest(userId) with ReadRequest {
-  override def resultingResponses() : List[Response] = {
-    val openProofCount : Int = db.openProofs(userId).length
-    val allModelsCount: Int = db.getModelList(userId).length
-    val provedModelsCount: Int = db.getModelList(userId).count(m => db.getProofsForModel(m.modelId).exists(_.closed))
-
-    new DashInfoResponse(openProofCount, allModelsCount, provedModelsCount) :: Nil
-  }
-}
-
 class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   def allFnToVar(fml: Formula, fn: Function): Formula = {
     fml.find(t => t match {
@@ -1266,7 +1250,7 @@ class GetSequentStepSuggestionRequest(db: DBAbstraction, userId: String, proofId
           } else {
             // find "largest" succedent formula with programs and suggest top-level popup content
             val pos = SuccPosition(1)
-            ApplicableAxiomsResponse(node.applicableTacticsAt(pos), node.tacticInputSuggestions(pos)) :: Nil
+            ApplicableAxiomsResponse(node.applicableTacticsAt(pos), node.tacticInputSuggestions(pos), Some(Fixed(1))) :: Nil
           }
       }
     }
@@ -1337,6 +1321,15 @@ class GetStepRequest(db: DBAbstraction, userId: String, proofId: String, nodeId:
           case _ => new ApplicableAxiomsResponse(Nil, Map.empty) :: Nil
         }
     }
+  }
+}
+
+class GetLemmasRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, pos: Position,
+                        partialLemmaName: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
+  override protected def doResultingResponses(): List[Response] = {
+    val infos = ProvableInfo.allInfo.filter(i =>
+      (i.isInstanceOf[CoreAxiomInfo] || i.isInstanceOf[DerivedAxiomInfo]) && i.canonicalName.contains(partialLemmaName))
+    LemmasResponse(infos)::Nil
   }
 }
 
@@ -1460,6 +1453,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case BelleTermInput(value, Some(_:VariableArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(_:ExpressionArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(ListArg(_, "formula", _))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
+      case BelleTermInput(value, Some(_:StringArg)) => "{`"+value+"`}"
       case BelleTermInput(value, None) => value
     }
     //@note stepAt(pos) may refer to a search tactic without position (e.g, closeTrue, closeFalse)
@@ -1533,20 +1527,22 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
             }
 
             if (stepwise) {
-              val localProvable = ProvableSig.startProof(sequent)
-              val localProofId = db.createProof(localProvable)
-              val executor = BellerophonTacticExecutor.defaultExecutor
-              val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter(localProofId, -1))
-              RunBelleTermResponse(localProofId.toString, "()", taskId) :: Nil
-            } else if (ruleName == "custom") {
-              //@note execute tactic scripts step-by-step for better browsing
-              val startStepIndex = node.id match {
-                case DbStepPathNodeId(id, _) => db.getExecutionSteps(proofId.toInt).indexWhere(_.stepId == id)
-                case _ => throw new Exception("Unexpected node ID shape " + node.id.toString
-                  + ". Expected step path ID of the form (node ID,branch index)")
+              if (ruleName == "custom") {
+                //@note execute tactic scripts step-by-step for better browsing
+                val startStepIndex = node.id match {
+                  case DbStepPathNodeId(id, _) => db.getExecutionSteps(proofId.toInt).indexWhere(_.stepId == id)
+                  case _ => throw new Exception("Unexpected node ID shape " + node.id.toString
+                    + ". Expected step path ID of the form (node ID,branch index)")
+                }
+                val taskId = node.stepTactic(userId, interpreter(proofId.toInt, startStepIndex), appliedExpr)
+                RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
+              } else {
+                val localProvable = ProvableSig.startProof(sequent)
+                val localProofId = db.createProof(localProvable)
+                val executor = BellerophonTacticExecutor.defaultExecutor
+                val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter(localProofId, -1))
+                RunBelleTermResponse(localProofId.toString, "()", taskId) :: Nil
               }
-              val taskId = node.stepTactic(userId, interpreter(proofId.toInt, startStepIndex), appliedExpr)
-              RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
             } else {
               //@note execute clicked single-step tactics on sequential interpreter right away
               val taskId = node.runTactic(userId, SequentialInterpreter, appliedExpr, ruleName)
