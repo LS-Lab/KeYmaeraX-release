@@ -2054,7 +2054,7 @@ Problem.
 		>(RAfterX(xr))
 End.
 
-Tactic "Proof Theorem 12: Cross intersection".
+Tactic "Proof Theorem 12: Cross intersection (single convergence condition)".
   implyR(1) ; andR(1) ; <(
   loop({`0<=vr&Vmin()<=vo&(xr>0|xo>0|xr+vr^2/(2*b()) < 0|vr>0&(xo+vo*(0-xr)/vr+A()/2*((0-xr)/vr)^2 < 0|0 < xo+Vmin()*(0-xr)/vr))`}, 1) ; <(
     QE,
@@ -2287,6 +2287,121 @@ Tactic "Proof Theorem 12: Cross intersection".
         )
       ),
     QE
+    )
+  )
+End.
+
+Tactic "Proof Theorem 12: Cross intersection (loop split and unroll)".
+implyR(1) ; andR(1) ; <(
+  loop({`0<=vr&Vmin()<=vo&(xr>0|xo>0|xr+vr^2/(2*b()) < 0|vr>0&(xo+vo*(0-xr)/vr+A()/2*((0-xr)/vr)^2 < 0|0 < xo+Vmin()*(0-xr)/vr))`}, 1) ; <(
+    QE,
+    QE,
+    composeb(1) ; composeb(1.1) ; solve(1.1.1) ; chase(1) ; allR(1) ; implyR(1) ; andL(-1) ; andL(-7) ; andR(1) ; <(
+      implyR(1) ; allR(1) ; implyR(1) ; allR(1) ; implyR(1) ; implyR(1) ; orL(-9) ; <(
+        fullSimplify ; andR(1) ; <(
+          QE,
+          andR(1) ; <(
+            QE,
+            orR(1) ; hideR(2) ; QE
+            )
+          ),
+        fullSimplify ; andR(1) ; <(
+          QE,
+          andR(1) ; <(
+            QE,
+            orR(1) ; orR(2) ; hideR(3) ; hideR(1) ; QE
+            )
+          )
+        ),
+      implyR(1) ; andR(1) ; <(
+        implyR(1) ; andL(-10) ; fullSimplify ; allR(1) ; implyR(1) ; allR(1) ; implyR(1) ; implyR(1) ; andR(1) ; <(
+          QE,
+          andR(1) ; <(
+            QE,
+            orR(1) ; orR(2) ; orR(3) ; hideL(-7) ; hideR(3) ; andR(3) ; <(
+              QE,
+              orR(3) ; orL(-9) ; <(
+                hideR(4) ; hideL(-7) ; hideR(2) ; QE,
+                hideL(-7) ; hideR(3) ; hideR(2) ; QE
+                )
+              )
+            )
+          ),
+        implyR(1) ; andR(1) ; <(
+          implyR(1) ; andL(-11) ; fullSimplify ; allR(1) ; implyR(1) ; implyR(1) ; andR(1) ; <(
+            QE,
+            orR(1) ; orR(2) ; orR(3) ; orR(4) ; hideR(4) ; hideR(3) ; hideL(-7) ; hideL(-7) ; hideL(-7) ; QE
+            ),
+          implyR(1) ; andR(1) ; <(
+            notOr(-9) ; andL(-9) ; notAnd(-9) ; notAnd(-10) ; fullSimplify ; allR(1) ; implyR(1) ; implyR(1) ; andR(1) ; <(
+              QE,
+              andR(1) ; <(
+                QE,
+                orR(1) ; orR(2) ; orR(3) ; orL(-8) ; <(
+                  hideR(4) ; hideR(1) ; hideR(1) ; hideL(-9) ; hideL(-9) ; QE,
+                  andL(-8) ; fullSimplify ; fullSimplify ; closeFalse
+                  )
+                )
+              ),
+            andR(1) ; <(
+              implyR(1) ; allR(1) ; implyR(1) ; implyR(1) ; fullSimplify ; andR(1) ; <(
+                QE,
+                QE
+                ),
+              implyR(1) ; allR(1) ; implyR(1) ; implyR(1) ; hideL(-10) ; hideL(-10) ; hideL(-9) ; hideL(-8) ; andR(1) ; <(
+                QE,
+                andR(1) ; <(
+                  QE,
+                  orR(1) ; orR(2) ; orR(3) ; hideR(4) ; hideR(1) ; hideR(1) ; QE
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    ),
+  andL('L)* ; useAt({`<*> merge`}, {`1`}, 1) ; con({`A()>0&b()>0&ep()>0&Vmin()>0&vo>=Vmin()&vr>=0&(xo>0|vr=0)&xo+v*ep()*Vmin()>0`}, 1) ; <(
+    QE,
+    andL('L)* ; composed(1) ; composed(1) ; randomd(1) ; existsR({`0`}, 1) ; testd(1) ; andR(1) ; <(
+      QE,
+      composed(1) ; solve(1.1) ; composed(1) ; choiced(1) ; orR(1) ; orL(-8) ; <(
+        hideR(2) ; composed(1) ; testd(1) ; simplify(1) ; composed(1) ; randomd(1) ; existsR({`0`}, 1) ; testd(1) ; andR(1) ; <(
+          QE,
+          assignd(1) ; existsR({`ep()`}, 1) ; simplify(1) ; QE
+          ),
+        composed(1) ; testd(1) ; andR(1) ; <(
+          composed(2) ; testd(2) ; andR(2) ; <(
+            QE,
+            choiced(2) ; orR(2) ; hideR(2) ; composed(2) ; testd(2) ; simplify(2) ; choiced(2) ; orR(2) ; hideR(2) ; composed(2) ; testd(2) ; simplify(2) ; choiced(2) ; orR(2) ; hideR(2) ; choiced(2) ; orR(2) ; hideR(3) ; composed(2) ; testd(2) ; simplify(2) ; assignd(2) ; assignd(2) ; existsR({`ep()`}, 2) ; simplify(2) ; QE
+            ),
+          hideR(2) ; composed(1) ; randomd(1) ; existsR({`0`}, 1) ; testd(1) ; andR(1) ; <(
+            QE,
+            assignd(1) ; existsR({`ep()`}, 1) ; simplify(1) ; QE
+            )
+          )
+        )
+      ),
+    andL('L)* ; edit({`xo>0`}, -9) ; hideL(-1) ; fullSimplify ; iterated(1) ; orR(1) ; composed(2) ; composed(2) ; randomd(2) ; existsR({`0`}, 2) ; testd(2) ; andR(2) ; <(
+      QE,
+      composed(2) ; composed(2) ; choiced(2) ; orR(2) ; hideR(3) ; composed(2) ; testd(2) ; simplify(2) ; composed(2) ; randomd(2) ; existsR({`A()`}, 2) ; testd(2) ; andR(2) ; <(
+        QE,
+        assignd(2) ; allR(2) ; implyR(2) ; solve(2) ; existsR({`ep()`}, 2) ; simplify(2) ; andR(2) ; <(
+          QE,
+          print({`Solved`}); existsR({`A()*ep()+vr_1`}, 2) ; simplify(2) ; existsR({`vo_1+0`}, 2) ; fullSimplify ; existsR({`A()/2*ep()^2+vr_1*ep()+xr_1`}, 2) ; simplify(2) ; existsR({`vo_1*ep()+xo_1`}, 2) ; simplify(2) ; edit({`vr>=A()*ep()`}, -9) ; edit({`xr>=xr_1`}, -11) ; edit({`xo>0`}, -12) ; hideL(-7) ; hideL(-6) ; con({`A()>0&b()>0&ep()>0&Vmin()>0&vo>=Vmin()&xo>0&vr>=A()*ep()&xr+v*ep()*(A()*ep())>0`}, 2) ; <(
+            QE,
+            andL('L)* ; composed(1) ; composed(1) ; randomd(1) ; existsR({`0`}, 1) ; testd(1) ; andR(1) ; <(
+              QE,
+              composed(1) ; solve(1.1) ; composed(1) ; choiced(1) ; orR(1) ; composed(1) ; testd(1) ; simplify(1) ; hideR(2) ; composed(1) ; randomd(1) ; existsR({`A()`}, 1) ; testd(1) ; andR(1) ; <(
+                QE,
+                assignd(1) ; existsR({`ep()`}, 1) ; simplify(1) ; QE
+                )
+              ),
+            QE
+            )
+          )
+        )
+      )
     )
   )
 End.
