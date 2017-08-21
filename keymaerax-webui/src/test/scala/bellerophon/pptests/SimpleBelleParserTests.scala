@@ -540,7 +540,7 @@ class SimpleBelleParserTests extends TacticTestBase {
   }
 
   it should "parse mixed arguments" in {
-    BelleParser("dG({`z`},{`-1`},{`0`},{`x*z^2=1`},1)") shouldBe (round trip TactixLibrary.dG("z'=-1*z+0".asDifferentialProgram, Some("x*z^2=1".asFormula))(1))
+    BelleParser("dG({`{z'=-1*z+0}`},{`x*z^2=1`},1)") shouldBe (round trip TactixLibrary.dG("z'=-1*z+0".asDifferentialProgram, Some("x*z^2=1".asFormula))(1))
   }
 
   it should "expand definitions when parsing arguments" in {

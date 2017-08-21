@@ -3,7 +3,7 @@ package bellerophon.pptests
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.{ArithmeticSimplification, Idioms, TacticTestBase, TactixLibrary}
-import edu.cmu.cs.ls.keymaerax.core.{AntePos, AtomicODE, DifferentialSymbol, SeqPos, SuccPos}
+import edu.cmu.cs.ls.keymaerax.core.{AtomicODE, DifferentialSymbol}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 
@@ -61,8 +61,8 @@ class RoundtripTests extends TacticTestBase {
   }
 
   it should "input tactic dG" in {
-    roundTrip(TactixLibrary.dG(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), None)(1), "dG({`x`}, {`5`}, {`2`}, 1)")
-    roundTrip(TactixLibrary.dG(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), Some("x>0".asFormula))(1), "dG({`x`}, {`5`}, {`2`}, {`x>0`}, 1)")
+    roundTrip(TactixLibrary.dG(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), None)(1), "dG({`{x'=5*x+2}`}, 1)")
+    roundTrip(TactixLibrary.dG(AtomicODE(DifferentialSymbol("x".asVariable), "5*x+2".asTerm), Some("x>0".asFormula))(1), "dG({`{x'=5*x+2}`}, {`x>0`}, 1)")
   }
 
   it should "input tactic cut, cutL, cutR" in {
