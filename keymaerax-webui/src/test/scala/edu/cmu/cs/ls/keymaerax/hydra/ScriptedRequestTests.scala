@@ -18,7 +18,7 @@ class ScriptedRequestTests extends TacticTestBase {
   "Model upload" should "work with a simple file" in withDatabase { db =>
     val modelContents = "ProgramVariables. R x. End.\n Problem. x=0->[x:=x+1;]x=1 End."
     val request = new CreateModelRequest(db.db, "guest", "Simple", modelContents)
-    request.resultingResponses() should contain theSameElementsAs BooleanResponse(flag=true)::Nil
+    request.resultingResponses() should contain theSameElementsAs ModelUploadResponse(Some("1"), None)::Nil
     db.db.getModelList("guest").loneElement should have(
       'name ("Simple"),
       'keyFile (modelContents))
@@ -166,7 +166,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val response = tacticRunner("()", dG("y'=0*y+2".asDifferentialProgram, None)(1, 1::Nil))
     response shouldBe a [ErrorResponse]
     //@note dG immediately calls an ANON tactic, which is the one that actually raises the error
-    response should have ('msg ("Tactic failed with error: [Bellerophon Runtime] Tactic ANON({`y`},{`0`},{`2`},1.1) may point to wrong position, found Some([v:=v;]<{x'=v&true}>x>=0) at position Fixed(1.1,None,true)"))
+    response should have ('msg ("Tactic failed with error: [Bellerophon Runtime] Tactic ANON(1.1) may point to wrong position, found Some([v:=v;]<{x'=v&true}>x>=0) at position Fixed(1.1,None,true)"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, leaves, _, _) =>
@@ -251,7 +251,7 @@ class ScriptedRequestTests extends TacticTestBase {
       getResultingResponses(t).loneElement
     response should have (
       'derivationInfos ((DerivationInfo("loop"), None)::(DerivationInfo("[*] iterate"), None)::
-        (DerivationInfo("GV"), None)::(DerivationInfo("MR"), None)::Nil),
+        (DerivationInfo("GV"), None)::(DerivationInfo("boxd"), None)::Nil),
       'suggestedInput (Map(FormulaArg("j(x)") -> "x>-1".asFormula)))
   }
 
