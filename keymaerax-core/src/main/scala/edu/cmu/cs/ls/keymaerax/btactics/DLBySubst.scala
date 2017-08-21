@@ -286,8 +286,8 @@ private object DLBySubst {
     * Loop convergence wiping all context.
     * {{{
     *   init:                     step:                      use:
-    *   G |- exists v. J(v), D    v>= 0,J(v) -> <a>J(v-1)    v<0, J(v) |- p
-    *   ------------------------------------------------------------------
+    *   G |- exists v. J(v), D    v>0,J(v) -> <a>J(v-1)      v<=0, J(v) |- p
+    *   --------------------------------------------------------------------
     *   G |- <{a}*>p, D
     * }}}
     * @param variantArg Which variable is treated as the argument of the variant property
