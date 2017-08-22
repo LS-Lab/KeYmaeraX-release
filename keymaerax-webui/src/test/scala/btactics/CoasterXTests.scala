@@ -1,7 +1,9 @@
 package btactics
 
+import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser
+import edu.cmu.cs.ls.keymaerax.btactics.coasterx.{CoasterXParser, CoasterXSpec}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 class CoasterXTests extends TacticTestBase {
   val exampleFile1:String = "([(40, 100), \n  (800, 100), \n  (1003, 292), \n  (1014.0703641303933, 490.6092116668379), \n  (1037.047741675357, 512.3415096403996),\n  (1060, 491), \n  (1074.5057163758297, 291.8183498791612), \n  (1198, 111)], \n [('straight', (None,), None), \n  ('straight', ((40, 500, 800, 500),), 0.0),\n  ('arc', ((596.6848958333333, 93.36979166666652, 1003.3151041666667, 500.0), -90.0, 86.80966720837762), 17.940621403912424), \n  ('straight', ((1003, 308, 1014.0703641303933, 109.3907883331621),), 17.940621403912424), \n  ('arc', ((1014.0346977885041, 87.6584903596004, 1060.0607855622097, 133.68457813330605), 176.80966720837756, -86.80966720837756), 0), \n  ('arc', ((1014.0346977885041, 87.6584903596004, 1060.0607855622097, 133.68457813330605), 90, -85.8346983689234), -13.7312522153492), \n  ('straight', ((1060, 109, 1074.5057163758297, 308.1816501208388),), -13.7312522153492), \n  ('arc', ((1073.9302486950965, 74.48837803692527, 1509.6673714837575, 510.2255008255863), -175.83469836892337, 60.33353966713379), -0.4770003569825235)], \n165, \n(1143.3888820234438, 306.5466392767369, 1335.184957771975, 498.342715025268))"
@@ -98,5 +100,25 @@ class CoasterXTests extends TacticTestBase {
 
   "newline" should "be whitespace" in {
     ' '.isWhitespace shouldBe true
+  }
+
+  "Spec Generator" should "generate a spec for example coaster" in {
+    val coaster = CoasterXParser.parseFile(exampleFile1)
+    val spec = CoasterXSpec(coaster.get)
+    println(spec.prettyString)
+  }
+
+  /* bigDecimal = {BigDecimal@2869} "0E+1"
+ intVal = {BigInteger@2872} "0"
+ scale = -1
+ precision = 1
+ stringCache = "0E+1"
+ intCompact = 0
+mc = {MathContext@2870} "precision=34 roundingMode=HALF_EVEN"
+computedHashCode = 1565550863*/
+  "Core Parser" should "not do funny scientific notation" in {
+    val x = Number(BigDecimal(1)/BigDecimal(10000000L))
+    val str = x.prettyString
+    str.asTerm shouldBe x
   }
 }

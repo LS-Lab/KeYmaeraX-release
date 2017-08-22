@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics.coasterx
 
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser.parseDoublePoint
+import edu.cmu.cs.ls.keymaerax.core._
 
 
 object CoasterXParser {
@@ -46,7 +47,7 @@ object CoasterXParser {
         peelPrefix(post4, ",").flatMap({case post5 =>
         parseNumber(post5).flatMap({case (theta2, post6) =>
         peelPrefix(post6,")").map({case post7 =>
-        (Some(ArcParam((x1,x3),(x2,x4),theta1,theta2)),post7)})})})})})})})}
+        (Some(ArcParam((x1,x2),(x3,x4),theta1,theta2)),post7)})})})})})})})}
   }
 
   def parseLineParam(str:String):Option[(Option[LineParam],String)] = {
@@ -56,7 +57,7 @@ object CoasterXParser {
         peelPrefix(str, "(").flatMap({case post1 =>
         parseDoublePoint(post1).flatMap({case ((x1,x2,x3,x4),post2) =>
         peelPrefix(post2,",)").map({case post3 =>
-        (Some(LineParam((x1,x3),(x2,x4))),post3)})})})}
+        (Some(LineParam((x1,x2),(x3,x4))),post3)})})})}
   }
 
   def parseSection(file:String):Option[(Section, String)] = {
@@ -153,7 +154,7 @@ object CoasterXParser {
   def parseNumber(str:String):Option[(Number,String)] = {
     val (pre,post) = str.span(c => c.isDigit || c == '.' || c == '-')
     try {
-      Some((BigDecimal(pre),post))
+      Some((Number(BigDecimal(pre)),post))
     } catch {
       case _:NumberFormatException => None
     }
