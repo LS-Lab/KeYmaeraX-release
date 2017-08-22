@@ -208,4 +208,9 @@ class ToolTacticsTests extends TacticTestBase {
     db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("abbrv({`2*g()`},{`abbrv`}) & absExp(1.0.1) & transform({`abbrv*abs_0=41`},1)")
   }}
 
+  it should "abbreviate in programs" in withMathematica { _ =>
+    proveBy("[x:=2+3;]x=5".asFormula, edit("[x:=abbrv(2+3,five);]x=5".asFormula)(1)).subgoals.loneElement shouldBe
+      "five=2+3 ==> [x:=five;]x=5".asSequent
+  }
+
 }

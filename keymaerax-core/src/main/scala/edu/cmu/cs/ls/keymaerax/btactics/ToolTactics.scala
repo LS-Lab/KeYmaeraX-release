@@ -193,11 +193,7 @@ private object ToolTactics {
   def edit(to: Expression): DependentPositionWithAppliedInputTactic = "edit" byWithInput (to, (pos: Position, sequent: Sequent) => {
     val srcExpr = sequent.sub(pos).getOrElse(throw new IllegalArgumentException("Edit does not point to a term or formula in the sequent"))
 
-    require(srcExpr match {
-      case fml: Formula => fml.isFOL && to.kind == fml.kind
-      case t: Term => to.kind == t.kind
-      case _ => false
-    }, "Edit only on arithmetic formulas and terms")
+    require(to.kind == srcExpr.kind, "Edit should result in same expression kind, but " + to.kind + " is not " + srcExpr.kind)
 
     val (abbrvTo: Expression, abbrvTactic: BelleExpr) = createAbbrvTactic(to, sequent)
     val (expandTo: Expression, expandTactic: BelleExpr) = createExpandTactic(abbrvTo, sequent, pos)
