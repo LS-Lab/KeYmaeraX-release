@@ -29,18 +29,19 @@ object CoasterXParser {
   val example:String = "([(40, 100), \n  (800, 100), \n  (1003, 292), \n  (1014.0703641303933, 490.6092116668379), \n  (1037.047741675357, 512.3415096403996),\n  (1060, 491), \n  (1074.5057163758297, 291.8183498791612), \n  (1198, 111)], \n [('straight', (None,), None), \n  ('straight', ((40, 500, 800, 500),), 0.0),\n  ('arc', ((596.6848958333333, 93.36979166666652, 1003.3151041666667, 500.0), -90.0, 86.80966720837762), 17.940621403912424), \n  ('straight', ((1003, 308, 1014.0703641303933, 109.3907883331621),), 17.940621403912424), \n  ('arc', ((1014.0346977885041, 87.6584903596004, 1060.0607855622097, 133.68457813330605), 176.80966720837756, -86.80966720837756), 0), \n  ('arc', ((1014.0346977885041, 87.6584903596004, 1060.0607855622097, 133.68457813330605), 90, -85.8346983689234), -13.7312522153492), \n  ('straight', ((1060, 109, 1074.5057163758297, 308.1816501208388),), -13.7312522153492), \n  ('arc', ((1073.9302486950965, 74.48837803692527, 1509.6673714837575, 510.2255008255863), -175.83469836892337, 60.33353966713379), -0.4770003569825235)], \n165, \n(1143.3888820234438, 306.5466392767369, 1335.184957771975, 498.342715025268))"
 
   sealed trait SectionParam {}
-  final case class ArcParam(bl:Point, tr:Point, theta1:Number, deltaTheta:Number) extends SectionParam {
+  final case class ArcParam(bl:TPoint, tr:TPoint, theta1:Number, deltaTheta:Number) extends SectionParam {
     def theta2:Number = {Number(theta1.value + deltaTheta.value)}
   }
-  final case class LineParam(bl:Point, tr:Point) extends SectionParam {}
+  final case class LineParam(bl:TPoint, tr:TPoint) extends SectionParam {}
 
   sealed trait Section {}
-  final case class ArcSection(param:Option[ArcParam], gradient:Option[Number]) extends Section {}
-  final case class LineSection(param:Option[LineParam], gradient:Option[Number]) extends Section {}
+  final case class ArcSection(param:Option[ArcParam], gradient:Option[Term]) extends Section {}
+  final case class LineSection(param:Option[LineParam], gradient:Option[Term]) extends Section {}
 
   type Point = (Number, Number)
+  type TPoint = (Term, Term)
 
-  type File = (List[Point], List[Section], Number, SectionParam)
+  type File = (List[TPoint], List[Section], Number, SectionParam)
 
   def parseArcParam(str:String):Option[(Option[ArcParam],String)] = {
     peelPrefix(str, "(None,)") match {
