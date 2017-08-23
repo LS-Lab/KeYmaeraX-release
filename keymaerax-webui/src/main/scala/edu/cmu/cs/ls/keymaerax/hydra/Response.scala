@@ -1220,7 +1220,7 @@ class NodeResponse(tree : String) extends Response {
 }
 
 
-class ExtractTacticResponse(tacticText: String) extends Response {
+case class ExtractTacticResponse(tacticText: String) extends Response {
   def getJson = JsObject(
     "tacticText" -> JsString(tacticText)
   )

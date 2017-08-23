@@ -1457,9 +1457,14 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case BelleTermInput(value, None) => value
     }
     //@note stepAt(pos) may refer to a search tactic without position (e.g, closeTrue, closeFalse)
-    val (specificTerm, adaptedPos, adaptedPos2) =
+    val (specificTerm: String, adaptedPos: Option[PositionLocator], adaptedPos2: Option[PositionLocator]) =
       if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2) match {
         case Left(s) => (s, pos, pos2)
+        //@note improve tactic maintainability by position search with formula shape on universally applicable tactics
+        case Right(t: PositionTacticInfo) if t.codeName == "hideL" || t.codeName == "hideR" => pos match {
+          case Some(Fixed(pp, None, _)) if pp.isTopLevel => (t.codeName, Some(Fixed(pp, Some(sequent(pp.top)))), None)
+          case _ => (t.codeName, pos, None)
+        }
         case Right(t: PositionTacticInfo) => (t.codeName, pos, None)
         case Right(t: InputPositionTacticInfo) => (t.codeName, pos, None)
         case Right(t: TwoPositionTacticInfo) => (t.codeName, pos, pos2)
@@ -1806,7 +1811,7 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest with RegisteredOnlyRequest
 
 class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    new ExtractTacticResponse(DbProofTree(db, proofIdStr).tacticString) :: Nil
+    ExtractTacticResponse(DbProofTree(db, proofIdStr).tacticString) :: Nil
   }
 }
 

@@ -90,6 +90,28 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
+  it should "record hiding with formula checks" in withDatabase { db => withMathematica { _ =>
+    val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> x>=0 End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", hideR(1)) should have (
+      'proofId (proofId.toString),
+      'parent (DbProofTree(db.db, proofId.toString).root),
+      'progress (true)
+    )
+    inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case AgendaAwesomeResponse(_, root, leaves, _, _) =>
+        root should have ('goal (Some("==> x>=0 -> x>=0".asSequent)))
+        leaves.loneElement should have ('goal (Some(" ==> ".asSequent)))
+    }
+    inside (new ExtractTacticRequest(db.db, proofId.toString).getResultingResponses(t).loneElement) {
+      case ExtractTacticResponse(tacticText) => tacticText shouldBe "hideR(1=={`x>=0->x>=0`})"
+    }
+  }}
+
   "Custom tactic execution" should "expand tactic definitions" in withDatabase { db =>
     val modelContents = "ProgramVariables. R x. End. Problem. x>=2 -> [{x:=x+1;}*]x>=0 End."
     val proofId = db.createProof(modelContents)
