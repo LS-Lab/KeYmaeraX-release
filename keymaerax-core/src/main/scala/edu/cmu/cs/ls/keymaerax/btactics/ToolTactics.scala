@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.toSingleFormula
@@ -23,6 +24,8 @@ import scala.collection.immutable._
  * @author Stefan Mitsch
  */
 private object ToolTactics {
+
+  private val namespace = "tooltactics"
 
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(order: List[NamedSymbol] = Nil)(qeTool: => QETool): BelleExpr = {
@@ -330,9 +333,9 @@ private object ToolTactics {
       proveBy(Imply(op(Imply(q, r), p), Imply(op(q, p), op(r, p))), prop & done)
     }
 
-    lazy val implyFact = proveBy("q_() -> (p_() -> p_()&q_())".asFormula, prop & done)
-    lazy val existsDistribute = proveBy("(\\forall x_ (p(x_)->q(x_))) -> ((\\exists x_ p(x_))->(\\exists x_ q(x_)))".asFormula,
-      implyR(1) & implyR(1) & existsL(-2) & allL(-1) & existsR(1) & prop & done)
+    lazy val implyFact = remember("q_() -> (p_() -> p_()&q_())".asFormula, prop & done, namespace).fact
+    lazy val existsDistribute = remember("(\\forall x_ (p(x_)->q(x_))) -> ((\\exists x_ p(x_))->(\\exists x_ q(x_)))".asFormula,
+      implyR(1) & implyR(1) & existsL(-2) & allL(-1) & existsR(1) & prop & done, namespace).fact
 
     def pushIn(remainder: PosInExpr): DependentPositionTactic = "ANON" by ((pp: Position, ss: Sequent) => (ss.sub(pp) match {
       case Some(Imply(left: BinaryCompositeFormula, right: BinaryCompositeFormula)) if left.getClass==right.getClass && left.left==right.left =>
