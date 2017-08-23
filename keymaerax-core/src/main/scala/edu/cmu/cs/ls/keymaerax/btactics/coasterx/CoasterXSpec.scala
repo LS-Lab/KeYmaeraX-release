@@ -7,6 +7,61 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 /* Generate dL specification for safety of CoasterX models from a file */
 object CoasterXSpec {
 
+  def foldMinus(t1:Term, t2:Term):Term = {
+    (t1,t2) match {
+      case (n1:Number,n2:Number) => Number(n1.value - n2.value)
+      case _ => Minus(t1,t2)
+    }
+  }
+
+  def foldPlus(t1:Term, t2:Term):Term = {
+    val candidate =
+      (t1,t2) match {
+        case (n1:Number,n2:Number) => Number(n1.value + n2.value)
+        case _ => Plus(t1,t2)
+      }
+    candidate match {
+      case (Plus(x,Neg(y))) => Minus(x,y)
+      case _ => candidate
+    }
+  }
+
+  def foldTimes(t1:Term, t2:Term):Term = {
+    (t1,t2) match {
+      case (n1:Number,n2:Number) => Number(n1.value * n2.value)
+      case _ => Times(t1,t2)
+    }
+  }
+
+  def foldDivide(t1:Term, t2:Term):Term = {
+    val candidate =
+      (t1,t2) match {
+      case (n1:Number,n2:Number) if n1.value.remainder(n2.value) == BigDecimal(0) => Number(n1.value / n2.value)
+      case _ => Divide(t1,t2)
+    }
+    candidate match {
+      case (Divide(Number(n), denom)) if n == BigDecimal(0) => denom
+      case _ => candidate
+    }
+  }
+
+  def foldPower(t1:Term, t2:Term):Term = {
+    (t1,t2) match {
+      case (n1:Number,n2:Number) if n2.value == BigDecimal(0)  => Number(1)
+      case (n1:Number,n2:Number) if n2.value.isValidInt && n2.value > 0  =>
+        val tail:Number = foldPower(n1,Number(n2.value-1)).asInstanceOf[Number]
+        Number(tail.value*n1.value)
+      case _ => Power(t1,t2)
+    }
+  }
+
+  def foldNeg(t1:Term):Term = {
+    t1 match {
+      case n:Number => Number(-n.value)
+      case _ => Neg(t1)
+    }
+  }
+
   /* @TODO (Major) #2: Maintain sanity of models by projecting all new straight line endpoints and arc control points
   *    so they are tangent to the previous section*/
   def degToRad(theta:Number):Number = {
@@ -18,11 +73,11 @@ object CoasterXSpec {
   }
 
   def vecScale(xy:(Term,Term), scale:Number):(Term,Term) = {
-    (Times(xy._1,scale), Times(xy._2,scale))
+    (foldTimes(xy._1,scale), foldTimes(xy._2,scale))
   }
 
   def vecPlus(xy1:(Term,Term), xy2:(Term,Term)):(Term,Term) = {
-    (Plus(xy1._1,xy2._1),Plus(xy1._2, xy2._2))
+    (foldPlus(xy1._1,xy2._1),foldPlus(xy1._2, xy2._2))
   }
 
   def min (x:Term,y:Term):Term = FuncOf(Function("min", domain = Tuple(Real,Real), interpreted = true, sort = Real), Pair(x,y))
@@ -49,7 +104,7 @@ object CoasterXSpec {
   }
 
   def arcCenter(xy1:Point, xy2:Point):(Term, Term) = {
-    (Divide(Plus(xy1._1,xy2._1),Number(2)), Divide(Plus(xy1._2,xy2._2),Number(2)))
+    (foldDivide(foldPlus(xy1._1,xy2._1),Number(2)), foldDivide(foldPlus(xy1._2,xy2._2),Number(2)))
   }
 
   def segmentOde(segBounds:(Section,(Point,Point))):Program = {
@@ -60,8 +115,8 @@ object CoasterXSpec {
       case LineSection(Some(LineParam((x1,y1),(x2,y2))), Some(gradient)) =>
         val v = Variable("v")
         val (dxval, dyval) = lineDir((x1, y1), (x2, y2))
-        val xOde = AtomicODE(DifferentialSymbol(Variable("x")), Times(v, dxval))
-        val yOde = AtomicODE(DifferentialSymbol(Variable("y")), Times(v, dyval))
+        val xOde = AtomicODE(DifferentialSymbol(Variable("x")), foldTimes(v, dxval))
+        val yOde = AtomicODE(DifferentialSymbol(Variable("y")), foldTimes(v, dyval))
         val vOde = "v' = -dy".asDifferentialProgram
         val sys = DifferentialProduct(DifferentialProduct(xOde,yOde),vOde)
         // val evol = And(LessEqual(x1,x),LessEqual(x,x2))
@@ -69,11 +124,11 @@ object CoasterXSpec {
       case ArcSection(Some(ArcParam((x1,y1),(x2,y2),theta1,deltaTheta)), Some(gradient)) =>
         //val ((x3,y3),(x4,y4)) = arcBounds((x1,y1),(x2,y2),theta1,Number(theta1.value+deltaTheta.value))
         //val r = Number((x4.value-x3.value)/2)
-        val r = Divide(Minus(end._1,start._1),Number(2))
+        val r = foldDivide(foldMinus(end._1,start._1),Number(2))
         val sysBase = "x' = dx*v, y' = dy*v, v' = -dy".asDifferentialProgram
         /* TODO: Set sign based on direction of arc */
-        val sys = DifferentialProduct(sysBase,DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("dx")), Divide("-dy*v".asTerm, r)),
-          AtomicODE(DifferentialSymbol(Variable("dy")), Divide("dx*v".asTerm, r))))
+        val sys = DifferentialProduct(sysBase,DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("dx")), foldDivide("-dy*v".asTerm, r)),
+          AtomicODE(DifferentialSymbol(Variable("dy")), foldDivide("dx*v".asTerm, r))))
         // val evol = And(LessEqual(x3,x),LessEqual(x,x4))
         ODESystem(sys, evol)
       case _ => Test(True)
@@ -89,9 +144,9 @@ object CoasterXSpec {
   }
 
   def lineDir(xy1:Point, xy2:Point):(Term,Term) = {
-    val mag:Term = Power(Plus(Power(Minus(xy2._1,xy1._1),Number(2)),Power(Minus(xy2._2,xy1._2),Number(2))),Divide(Number(1),Number(2)))
+    val mag:Term = foldPower(foldPlus(foldPower(foldMinus(xy2._1,xy1._1),Number(2)),foldPower(foldMinus(xy2._2,xy1._2),Number(2))),foldDivide(Number(1),Number(2)))
     //val mag = numSqrt(Number((xy2._1.value - xy1._1.value).pow(2) + (xy2._2.value - xy1._2.value).pow(2)))
-    (Divide(Minus(xy2._1,xy1._1),mag), Divide(Minus(xy2._2,xy1._2),mag))
+    (foldDivide(foldMinus(xy2._1,xy1._1),mag), foldDivide(foldMinus(xy2._2,xy1._2),mag))
   }
 
   def segmentPre(segBounds:(Section,(Point,Point)), v0:Number):Formula = {
@@ -140,8 +195,8 @@ object CoasterXSpec {
         val y = Variable("y")
         val v = Variable("v")
         val r = Variable("r")
-        val dxeq = Equal(dx,Divide(Neg(Minus(y,cy)),r))
-        val dyeq = Equal(dy,Divide(Minus(x,cy),r))
+        val dxeq = Equal(dx,foldDivide(foldNeg(foldMinus(y,cy)),r))
+        val dyeq = Equal(dy,foldDivide(foldMinus(x,cy),r))
         val xeq = Equal(x,x3)
         val yeq = Equal(y,y3)
         val veq = Equal(v, v0)
@@ -151,12 +206,12 @@ object CoasterXSpec {
   }
 
   def slope(xy1:Point, xy2:Point):Term = {
-    Divide(Minus(xy1._2, xy2._2),Minus(xy1._1, xy2._1))
+    foldDivide(foldMinus(xy1._2, xy2._2),foldMinus(xy1._1, xy2._1))
   }
 
   /* y-intercept of segment */
   def yOffset(xy1:Point, xy2:Point):Term = {
-    Minus(xy1._2,Times(slope(xy1,xy2), xy1._1))
+    foldMinus(xy1._2,foldTimes(slope(xy1,xy2), xy1._1))
   }
 
   def segmentPost(segBounds:(Section,(Point,Point))):Formula = {
@@ -167,17 +222,17 @@ object CoasterXSpec {
       case LineSection(Some(LineParam((x1, y1), (x2, y2))), Some(gradient)) =>
         val (dxval, dyval) = lineDir((x1, y1), (x2, y2))
         val inRange = And(LessEqual(x1, x), LessEqual(x, x2))
-        val onTrack = Equal(Times(dxval, y), Plus(Times(dyval, x), yOffset((x1, y1), (x2, y2))))
+        val onTrack = Equal(foldTimes(dxval, y), foldPlus(foldTimes(dyval, x), yOffset((x1, y1), (x2, y2))))
         Imply(inRange, onTrack)
       case ArcSection(Some(ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(gradient)) =>
         val ((x3, y3), (x4, y4)) = (start,end)
           //val ((x3, y3), (x4, y4)) =arcBounds((x1, y1), (x2, y2), theta1, Number(theta1.value+deltaTheta.value))
 
         val inRange = And(LessEqual(x3, x), LessEqual(x, x4))
-        val r = Divide(Minus(end._1,start._1),Number(2))
+        val r = foldDivide(foldMinus(end._1,start._1),Number(2))
         //  val r = Number((x4.value - x3.value) / 2)
         val (cx, cy) = arcCenter((x1, y1), (x2, y2))
-        val centered = Equal(Plus(Power(Minus(cx, x), Number(2)), Power(Minus(cy, y), Number(2))), Power(r,Number(2)))
+        val centered = Equal(foldPlus(foldPower(foldMinus(cx, x), Number(2)), foldPower(foldMinus(cy, y), Number(2))), foldPower(r,Number(2)))
         val outRange = And(LessEqual(x, cx), Less(cy, y))
         /* (x0 + l <= x & x <= xend) -> ((cx - x)^2 + (cy - y)^2 = r^2 & x <= cx & cy < y))*/
         Imply(inRange, And(centered, outRange))
