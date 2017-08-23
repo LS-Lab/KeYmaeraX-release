@@ -79,6 +79,28 @@ class ToolTacticsTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x=1&v=2 ==> \\forall t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->(v=2->v=2))&(v*t_+x)^3>=1)".asSequent
   }
 
+  it should "cohide other formulas in succ when proving a transformation in ante" in withMathematica { _ =>
+    val result = proveBy("x>0, y>0, z=x+y ==> [{x'=-x^y}]x>0".asSequent, transform("z>0".asFormula)(-3))
+    result.subgoals.loneElement shouldBe "x>0, y>0, z>0 ==> [{x'=-x^y}]x>0".asSequent
+  }
+
+  it should "cohide other formulas in succ when proving a transformation in succ" in withMathematica { _ =>
+    val result = proveBy("x>0, y>0 ==> [{x'=-x^y}]x>0, z>0, [{x:=x+1;}*]x>0".asSequent, transform("z>x+y".asFormula)(2))
+    result.subgoals.loneElement shouldBe "x>0, y>0 ==> [{x'=-x^y}]x>0, z>x+y, [{x:=x+1;}*]x>0".asSequent
+  }
+
+  //@todo missing feature
+  it should "cohide other formulas in succ when proving a transformation in negative polarity in ante" ignore withMathematica { _ =>
+    val result = proveBy("x>0, y>0, z>0->a=5 ==> [{x'=-x^y}]x>0".asSequent, transform("z>x+y".asFormula)(-3, 0::Nil))
+    result.subgoals.loneElement shouldBe "x>0, y>0, z>x+y->a=5 ==> [{x'=-x^y}]x>0".asSequent
+  }
+
+  //@todo missing feature
+  it should "cohide other formulas in succ when proving a transformation in negative polarity in succ" ignore withMathematica { _ =>
+    val result = proveBy("x>0, y>0 ==> [{x'=-x^y}]x>0, z>x+y->a=5, [{x:=x+1;}*]x>0".asSequent, transform("z>0".asFormula)(2, 0::Nil))
+    result.subgoals.loneElement shouldBe "x>0, y>0 ==> [{x'=-x^y}]x>0, z>0->a=5, [{x:=x+1;}*]x>0".asSequent
+  }
+
   "Transform in context" should "exploit equivalence" in withMathematica { _ =>
     val result = proveBy("[x:=4;]x>=v*v".asFormula, transform("x>=v^2".asFormula)(1, 1::Nil))
     result.subgoals.loneElement shouldBe "==> [x:=4;]x>=v^2".asSequent

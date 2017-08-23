@@ -350,10 +350,10 @@ private object ToolTactics {
 
     if (fact.isProved && ga.isEmpty) useAt(fact, key)(pos)
     else if (fact.isProved && ga.nonEmpty) useAt(fact, key)(pos) & (
-      if (polarity < 0) Idioms.<(skip, master())
+      if (polarity < 0) Idioms.<(skip, cohideOnlyR('Rlast) & master() & done | master())
       else cutAt(ga.reduce(And))(pos) & Idioms.<(
         //@todo ensureAt only closes branch when original conjecture is true
-        ensureAt(pos) & OnAll(master() & done),
+        ensureAt(pos) & OnAll(cohideOnlyR(pos) & master() & done | master() & done),
         pushIn(pos.inExpr)(pos.top)
       )
       )
