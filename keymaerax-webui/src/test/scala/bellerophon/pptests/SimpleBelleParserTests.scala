@@ -79,6 +79,22 @@ class SimpleBelleParserTests extends TacticTestBase {
     BelleParser("boxAnd('L)") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindL(0, None)))
   }
 
+  it should "parse a built-in argument with a searchy position locator" in {
+    BelleParser("boxAnd('L=={`[x:=2;](x>0&x>1)`})") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindL(0, Some("[x:=2;](x>0&x>1)".asFormula))))
+  }
+
+  it should "parse a built-in argument with a searchy unification position locator" in {
+    BelleParser("boxAnd('L~={`[x:=2;](x>0&x>1)`})") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindL(0, Some("[x:=2;](x>0&x>1)".asFormula), exact=false)))
+  }
+
+  it should "parse a built-in argument with a check position locator" in {
+    BelleParser("boxAnd(2=={`[x:=2;](x>0&x>1)`})") shouldBe (round trip HilbertCalculus.boxAnd(Fixed(2, Nil, Some("[x:=2;](x>0&x>1)".asFormula))))
+  }
+
+  it should "parse a built-in argument with a unification check position locator" in {
+    BelleParser("boxAnd(2~={`[x:=2;](x>0&x>1)`})") shouldBe (round trip HilbertCalculus.boxAnd(Fixed(2, Nil, Some("[x:=2;](x>0&x>1)".asFormula), exact=false)))
+  }
+
   it should "parse a built-in argument with a 'R position locator" in {
     BelleParser("boxAnd('R)") shouldBe (round trip HilbertCalculus.boxAnd(Find.FindR(0, None)))
   }
@@ -566,6 +582,17 @@ class SimpleBelleParserTests extends TacticTestBase {
     inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None,
         Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))))) {
       case apt: AppliedPositionTactic => apt.locator shouldBe Find.FindL(0, Some("s=y".asFormula))
+    }
+  }
+
+  it should "expand definitions when parsing position check locators" in {
+    inside(BelleParser.parseWithInvGen("hideL(-2=={`s=safeDist()`})", None, Declaration(Map()))) {
+      case apt: AppliedPositionTactic => apt.locator shouldBe Fixed(-2, Nil, Some("s=safeDist()".asFormula))
+    }
+
+    inside(BelleParser.parseWithInvGen("hideL(-2=={`s=safeDist()`})", None,
+      Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))))) {
+      case apt: AppliedPositionTactic => apt.locator shouldBe Fixed(-2, Nil, Some("s=y".asFormula))
     }
   }
 
