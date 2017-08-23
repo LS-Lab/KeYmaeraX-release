@@ -117,7 +117,8 @@ class CoasterXTests extends TacticTestBase {
 mc = {MathContext@2870} "precision=34 roundingMode=HALF_EVEN"
 computedHashCode = 1565550863*/
   "Core Parser" should "not do funny scientific notation" in {
-    val x = Number(BigDecimal(1)/BigDecimal(10000000L))
+    val x = "0.00000001".asTerm
+    //val x = Number(BigDecimal(1)/BigDecimal(10000000L))
     val str = x.prettyString
     str.asTerm shouldBe x
   }

@@ -22,10 +22,16 @@ object CoasterXParser {
 *   | float
 * */
 
+  // Parameters to sections are stored as (x, HEIGHT-y) so we will convert them to (x,y) (Quadrant I) to match the joints section
+  val WORLD_WIDTH = 1200
+  val WORLD_HEIGHT = 600
+
   val example:String = "([(40, 100), \n  (800, 100), \n  (1003, 292), \n  (1014.0703641303933, 490.6092116668379), \n  (1037.047741675357, 512.3415096403996),\n  (1060, 491), \n  (1074.5057163758297, 291.8183498791612), \n  (1198, 111)], \n [('straight', (None,), None), \n  ('straight', ((40, 500, 800, 500),), 0.0),\n  ('arc', ((596.6848958333333, 93.36979166666652, 1003.3151041666667, 500.0), -90.0, 86.80966720837762), 17.940621403912424), \n  ('straight', ((1003, 308, 1014.0703641303933, 109.3907883331621),), 17.940621403912424), \n  ('arc', ((1014.0346977885041, 87.6584903596004, 1060.0607855622097, 133.68457813330605), 176.80966720837756, -86.80966720837756), 0), \n  ('arc', ((1014.0346977885041, 87.6584903596004, 1060.0607855622097, 133.68457813330605), 90, -85.8346983689234), -13.7312522153492), \n  ('straight', ((1060, 109, 1074.5057163758297, 308.1816501208388),), -13.7312522153492), \n  ('arc', ((1073.9302486950965, 74.48837803692527, 1509.6673714837575, 510.2255008255863), -175.83469836892337, 60.33353966713379), -0.4770003569825235)], \n165, \n(1143.3888820234438, 306.5466392767369, 1335.184957771975, 498.342715025268))"
 
   sealed trait SectionParam {}
-  final case class ArcParam(bl:Point, tr:Point, theta1:Number, theta2:Number) extends SectionParam {}
+  final case class ArcParam(bl:Point, tr:Point, theta1:Number, deltaTheta:Number) extends SectionParam {
+    def theta2:Number = {Number(theta1.value + deltaTheta.value)}
+  }
   final case class LineParam(bl:Point, tr:Point) extends SectionParam {}
 
   sealed trait Section {}
@@ -47,7 +53,7 @@ object CoasterXParser {
         peelPrefix(post4, ",").flatMap({case post5 =>
         parseNumber(post5).flatMap({case (theta2, post6) =>
         peelPrefix(post6,")").map({case post7 =>
-        (Some(ArcParam((x1,x2),(x3,x4),theta1,theta2)),post7)})})})})})})})}
+        (Some(ArcParam((x1,Number(WORLD_HEIGHT-x2.value)),(x3,Number(WORLD_HEIGHT-x4.value)),theta1,theta2)),post7)})})})})})})})}
   }
 
   def parseLineParam(str:String):Option[(Option[LineParam],String)] = {
@@ -57,7 +63,7 @@ object CoasterXParser {
         peelPrefix(str, "(").flatMap({case post1 =>
         parseDoublePoint(post1).flatMap({case ((x1,x2,x3,x4),post2) =>
         peelPrefix(post2,",)").map({case post3 =>
-        (Some(LineParam((x1,x2),(x3,x4))),post3)})})})}
+        (Some(LineParam((x1,Number(WORLD_HEIGHT-x2.value)),(x3,Number(WORLD_HEIGHT-x4.value)))),post3)})})})}
   }
 
   def parseSection(file:String):Option[(Section, String)] = {
