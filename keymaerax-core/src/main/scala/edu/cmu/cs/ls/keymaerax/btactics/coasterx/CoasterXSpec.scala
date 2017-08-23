@@ -54,8 +54,10 @@ object CoasterXSpec {
     (Number((xy1._1.value+xy2._1.value)/2), Number((xy2._2.value+xy2._2.value)/2))
   }
 
-  def segmentOde(seg:Section):Program = {
+  def segmentOde(segBounds:(Section,(Point,Point))):Program = {
+    val (seg, (start,end)) = segBounds
     val x = Variable("x")
+    val evol = And(LessEqual(start._1, x),LessEqual(x,end._1))
     seg match {
       case LineSection(Some(LineParam((x1,y1),(x2,y2))), Some(gradient)) =>
         val v = Variable("v")
@@ -64,7 +66,8 @@ object CoasterXSpec {
         val yOde = AtomicODE(DifferentialSymbol(Variable("y")), Times(v, dyval))
         val vOde = "v' = -dy".asDifferentialProgram
         val sys = DifferentialProduct(DifferentialProduct(xOde,yOde),vOde)
-        ODESystem(sys, And(LessEqual(x1,x),LessEqual(x,x2)))
+        // val evol = And(LessEqual(x1,x),LessEqual(x,x2))
+        ODESystem(sys, evol)
       case ArcSection(Some(ArcParam((x1,y1),(x2,y2),theta1,deltaTheta)), Some(gradient)) =>
         val ((x3,y3),(x4,y4)) = arcBounds((x1,y1),(x2,y2),theta1,Number(theta1.value+deltaTheta.value))
         val r = Number((x4.value-x3.value)/2)
@@ -72,7 +75,8 @@ object CoasterXSpec {
         /* TODO: Set sign based on direction of arc */
         val sys = DifferentialProduct(sysBase,DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("dx")), Divide("-dy*v".asTerm, r)),
           AtomicODE(DifferentialSymbol(Variable("dy")), Divide("dx*v".asTerm, r))))
-        ODESystem(sys, And(LessEqual(x3,x),LessEqual(x,x4)))
+        // val evol = And(LessEqual(x3,x),LessEqual(x,x4))
+        ODESystem(sys, evol)
       case _ => Test(True)
     }
   }
@@ -153,7 +157,8 @@ object CoasterXSpec {
     Number(xy1._2.value - (slope(xy1,xy2).value*xy1._1.value))
   }
 
-  def segmentPost(seg:Section):Formula = {
+  def segmentPost(segBounds:(Section,(Point,Point))):Formula = {
+    val (seg, (start, end)) = segBounds
     val x = Variable("x")
     val y = Variable("y")
     seg match {
@@ -186,16 +191,26 @@ object CoasterXSpec {
     }
   }
 
+  // assumes ys.length = xs.length + 1
+  def zipConsecutive[A,B](xs:List[A],ys:List[B]):List[(A,(B,B))] = {
+    (xs, ys) match {
+      case (x1::xss, y1::y2::yss) =>  (x1,(y1,y2)) :: zipConsecutive(xss, y2::yss)
+      case (Nil, _::Nil) => Nil
+      case _ => ???
+    }
+  }
+
   def apply(file:CoasterXParser.File):Formula = {
     val ROUND_SCALE = 0
     val fileRounded = roundFile (ROUND_SCALE)(file)
     val (points, segments, v0, _) = fileRounded
     val nonemptySegs = segments.filter(!segmentEmpty(_))
+    val withBounds = zipConsecutive(nonemptySegs,points)
     val pre = segmentPre(nonemptySegs.head,v0)
-    val ode = nonemptySegs.map(segmentOde).reduceRight[Program]({case(x,y) => Choice(x,y)})
+    val ode = withBounds.map(segmentOde).reduceRight[Program]({case(x,y) => Choice(x,y)})
     val energyConserved = "v^2 + 2*y = v0^2 + 2*y0".asFormula
     val globalPost = And("v > 0".asFormula, energyConserved)
-    val post = And(globalPost, nonemptySegs.map(segmentPost).reduceRight[Formula]{case (x,y) => And(x,y)})
+    val post = And(globalPost, withBounds.map(segmentPost).reduceRight[Formula]{case (x,y) => And(x,y)})
     Imply(pre,Box(Loop(ode), post))
   }
 
