@@ -1201,6 +1201,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
           RequestHelper.listenerFactory(db), SequentialInterpreter, 1, strict=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(localProvable))
+        innerInterpreter.kill()
 
         val trace = db.getExecutionTrace(localProofId)
         if (trace.steps.size == 1 && trace.steps.head.rule == parentRule) {

@@ -180,13 +180,15 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
         val innerId = idProvider(in)
         innerProofId = Some(innerId)
         val innerFeeder = SpoonFeedingInterpreter(innerId, -1, idProvider, listeners, inner, descend, strict = strict)
-        innerFeeder.runTactic(innerMost, BelleProvable(in), level, DbAtomPointer(-1)) match {
+        val result = innerFeeder.runTactic(innerMost, BelleProvable(in), level, DbAtomPointer(-1)) match {
           case (BelleProvable(derivation, _), _) =>
             val backsubst: ProvableSig = derivation(us)
             //@todo store inner steps as part of this proof
             (BelleProvable(provable(backsubst, 0), lbl), ctx.store(Idioms.nil))
           case _ => throw new BelleThrowable("Let expected sub-derivation")
         }
+        innerFeeder.kill()
+        result
 
       case ChooseSome(options, e) =>
         val opts = options()

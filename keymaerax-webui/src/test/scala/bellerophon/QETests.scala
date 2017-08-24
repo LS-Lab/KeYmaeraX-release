@@ -109,10 +109,11 @@ class QETests extends TacticTestBase {
     ToolProvider.setProvider(provider)
     val modelContent = "Variables. R x. End. Problem. x>0 -> x>=0&\\exists s x*s^2>0 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter))
     interpreter(BelleParser("implyR(1); andR(1); <(QE({`Z3`}), QE({`Mathematica`}))"),
       BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("implyR(1); andR(1); <(QE({`Z3`}), QE({`Mathematica`}))")
+    interpreter.kill()
   }
 
   it should "use the default tool" in withDatabase { db =>
@@ -120,7 +121,7 @@ class QETests extends TacticTestBase {
     ToolProvider.setProvider(provider)
     val modelContent = "Variables. R x. End. Problem. x>0 -> x>=0&x>=-1 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter))
     interpreter(BelleParser("implyR(1); andR(1); <(QE, QE)"),
       BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("implyR(1); andR(1); <(QE, QE)")
