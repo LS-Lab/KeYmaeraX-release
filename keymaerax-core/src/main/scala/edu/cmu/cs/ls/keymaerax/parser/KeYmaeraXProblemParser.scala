@@ -201,8 +201,19 @@ object KeYmaeraXDeclarationsParser {
     /** Turns a function declaration (with defined body) into a substitution pair. */
     private def declAsSubstitutionPair(name: KeYmaeraXDeclarationsParser.Name, signature: KeYmaeraXDeclarationsParser.Signature): SubstitutionPair = {
       assert(signature._3.isDefined, "Substitution only for defined functions")
+
+      /** Converts sort `s` into nested pairs of DotTerms. Returns the nested dots and the next unused dot index. */
+      def toDots(s: Sort, idx: Int): (Term, Int) = s match {
+        case Real => (DotTerm(s, Some(idx)), idx+1)
+        case Tuple(l, r) =>
+          val (lDots, lNextIdx) = toDots(l, idx)
+          val (rDots, rNextIdx) = toDots(r, lNextIdx)
+          (Pair(lDots, rDots), rNextIdx)
+      }
+
       val (arg, sig) = signature._1 match {
         case Some(Unit) => (Nothing, Unit)
+        case Some(s@Tuple(_, _)) => (toDots(s, 0)._1, s)
         case Some(s) => (DotTerm(s), s)
         case None => (Nothing, Unit)
       }
@@ -410,25 +421,30 @@ object KeYmaeraXDeclarationsParser {
     checkInput(tokens.length > 1, "domain sort expected in declaration", if (tokens.isEmpty) UnknownLocation else tokens.head.loc, "parsing function domain sort")
     checkInput(tokens.head.tok.equals(LPAREN), "function argument parentheses expected", tokens.head.loc, "parsing function domain sorts")
 
-    val splitAtRparen = tokens.tail.span(x => !x.tok.equals(RPAREN))
+    def spanSorts(tokens: List[Token]): (List[Token], List[Token]) = {
+      var n = 1
+      tokens.tail.span(_.tok match { case LPAREN => n=n+1; true case RPAREN => n=n-1; n>0 case _ => true })
+    }
+
+    val splitAtRparen = spanSorts(tokens)
     val domainElements = splitAtRparen._1
 
     checkInput(splitAtRparen._2.head.tok.equals(RPAREN),
       "unmatched LPAREN at end of function declaration. Intead, found: " + splitAtRparen._2.head, splitAtRparen._2.head.loc, "parsing function domain sorts")
     val remainder = splitAtRparen._2.tail
 
-    val domain = domainElements.foldLeft(List[Sort]())((list: List[Sort], token: Token) =>
-      if(token.tok.equals(COMMA)) list
-      else list :+ parseSort(token, of)) //@todo clean up code and also support explicit association e.g. F((B, R), B)
+    def toSort(tokens: List[Token]): Sort = tokens.head match {
+        case Token(COMMA, _) => toSort(tokens.tail)
+        case Token(LPAREN, _) =>
+          val (nestedSort, sortRemainder) = spanSorts(tokens)
+          assert(sortRemainder.head.tok == RPAREN, "Expected a closing parenthesis, but got " + sortRemainder.head.tok)
+          if (sortRemainder.tail.isEmpty) toSort(nestedSort) else Tuple(toSort(nestedSort), toSort(sortRemainder.tail))
+        case st@Token(_, _) if tokens.tail.nonEmpty => Tuple(parseSort(st, of), toSort(tokens.tail))
+        case st@Token(_, _) if tokens.tail.isEmpty => parseSort(st, of)
+      }
 
-    if(domain.isEmpty) {
-      (Unit, remainder)
-    }
-    else {
-      val fstArgSort = domain.head
-      val domainSort = domain.tail.foldRight(fstArgSort)( (next, tuple) => Tuple(next, tuple) )
-      (domainSort, remainder)
-    }
+    val domain = if (domainElements.isEmpty) Unit else toSort(domainElements)
+    (domain, remainder)
   }
 
   /**

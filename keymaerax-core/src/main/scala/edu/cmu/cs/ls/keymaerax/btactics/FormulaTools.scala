@@ -202,7 +202,7 @@ object FormulaTools {
   }
 
   def singularities(term: Term): Set[Term] = term match {
-    case Nothing | DotTerm(_) | Number(_) => Set.empty
+    case Nothing | DotTerm(_, _) | Number(_) => Set.empty
     case _: Variable     => Set.empty
     case _: UnitFunctional => Set.empty
     case FuncOf(f,t)     => singularities(t)

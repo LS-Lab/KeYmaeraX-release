@@ -434,18 +434,18 @@ object KeYmaeraXParser extends Parser {
         reduceFuncOrPredOf(st, 4, tok, elaborate(st, optok, OpSpec.sFuncOf, TermKind, t1).asInstanceOf[Term], r)
 
       // DOT arity=0
-      case r :+ Token(DOT, _) =>
+      case r :+ Token(DOT(index), _) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        if (la == LPAREN) shift(st) else reduce(st, 1, DotTerm(), r)
+        if (la == LPAREN) shift(st) else reduce(st, 1, DotTerm(Real, index), r)
 
-      case r :+ Token(DOT, _) :+ (optok@Token(LPAREN, _)) :+ Token(RPAREN, _) =>
+      case r :+ Token(DOT(index), _) :+ (optok@Token(LPAREN, _)) :+ Token(RPAREN, _) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        reduce(st, 3, DotTerm(), r)
+        reduce(st, 3, DotTerm(Real, index), r)
 
       // DOT arity>0
-      case r :+ Token(DOT, _) :+ (optok@Token(LPAREN, _)) :+ Expr(t1: Term) :+ Token(RPAREN, _) =>
+      case r :+ Token(DOT(index), _) :+ (optok@Token(LPAREN, _)) :+ Expr(t1: Term) :+ Token(RPAREN, _) =>
         assert(isNoQuantifier(r), "Quantifier stack items handled above\n" + st)
-        reduce(st, 4, DotTerm(t1.sort), r)
+        reduce(st, 4, DotTerm(t1.sort, index), r)
 
       // predicational symbols arity>0
       case r :+ Token(IDENT(name, idx), _) :+ Token(LBRACE, _) :+ Expr(f1: Formula) :+ Token(RBRACE, _) =>
@@ -796,7 +796,7 @@ object KeYmaeraXParser extends Parser {
 
       // Help lexer convert PERIOD to DOT for convenience
       case r :+ Token(PERIOD,loc) =>
-        reduce(st, 1, Bottom :+ Token(DOT,loc), r)
+        reduce(st, 1, Bottom :+ Token(DOT(),loc), r)
 
       // small stack cases
       case Bottom :+ Expr(t) =>
@@ -956,7 +956,7 @@ object KeYmaeraXParser extends Parser {
 
   /** First(Term): Is la the beginning of a new term? */
   private def firstTerm(la: Terminal): Boolean = la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] ||
-    la==MINUS || la==LPAREN || la==DOT ||
+    la==MINUS || la==LPAREN || la.isInstanceOf[DOT] ||
     la==PERIOD      // from DotTerm
 
   /** First(Formula): Is la the beginning of a new formula? */

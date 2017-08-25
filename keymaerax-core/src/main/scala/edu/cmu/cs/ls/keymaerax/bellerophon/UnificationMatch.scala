@@ -611,8 +611,8 @@ class UnificationMatchUSubstAboveURen extends /*Insistent*/Matcher {
     //@note URename with TRANSPOSITION=true are their own inverses
     val inverseRename = (subst:RenUSubst) => RenUSubst(subst.subsDefsInput.map(sp =>
       (sp._1, sp._1 match {
-        case FuncOf(_, DotTerm(_)) => posthocDottify(sp._1, sp._2)
-        case PredOf(_, DotTerm(_)) => posthocDottify(sp._1, sp._2)
+        case FuncOf(_, DotTerm(_, _)) => posthocDottify(sp._1, sp._2)
+        case PredOf(_, DotTerm(_, _)) => posthocDottify(sp._1, sp._2)
         case _ => ren(sp._2)
       } )))
     val renamedSubst = inverseRename(subst)

@@ -4,7 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Number, Plus, Real, Times, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Number, Plus, Real, Times, Tuple, Unit}
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
@@ -159,5 +159,28 @@ class ExampleProblems extends FlatSpec with Matchers {
       interpretation shouldBe Plus(Number(5), Times(DotTerm(Real), DotTerm(Real)))
     }
     formula shouldBe KeYmaeraXParser("5+4*4>3")
+  }
+
+  it should "parse n-ary function declarations" in {
+    val problem =
+      """
+        |Functions.
+        |  R f(R,R,R) = (._0 + ._1*._2).
+        |End.
+        |
+        |Problem.
+        |  f(2,3,4)>3
+        |End.
+      """.stripMargin
+
+    val (d, formula) = KeYmaeraXProblemParser.parseProblem(problem)
+    d.decls should have size 1
+    d.decls should contain key ("f", None)
+    d.decls(("f", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Tuple(Real, Tuple(Real, Real))
+      codomain shouldBe Real
+      interpretation shouldBe Plus(DotTerm(Real, Some(0)), Times(DotTerm(Real, Some(1)), DotTerm(Real, Some(2))))
+    }
+    formula shouldBe KeYmaeraXParser("2+3*4>3")
   }
 }
