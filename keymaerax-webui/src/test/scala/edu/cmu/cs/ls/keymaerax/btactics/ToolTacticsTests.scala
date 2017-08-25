@@ -235,4 +235,11 @@ class ToolTacticsTests extends TacticTestBase {
       "five=2+3 ==> [x:=five;]x=5".asSequent
   }
 
+  it should "expand multiple at once" in withMathematica { _ =>
+    proveBy("abs(a)>0, abs(c)>3 ==> abs(a)>0 | abs(b)>1 | abs(c)>2".asSequent,
+      edit("expand(abs(a))>0 | expand(abs(b))>1 | expand(abs(c))>2".asFormula)(1)).
+      subgoals.loneElement shouldBe
+      "abs_0>0, abs_2>3, a>=0 & abs_0=a | a<0 & abs_0=-a, b>=0 & abs_1=b | b<0 & abs_1=-b, c>=0 & abs_2=c | c<0 & abs_2=-c ==> abs_0>0 | abs_1>1 | abs_2>2".asSequent
+  }
+
 }

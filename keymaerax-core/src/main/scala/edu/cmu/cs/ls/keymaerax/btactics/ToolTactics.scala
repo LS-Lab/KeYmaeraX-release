@@ -284,7 +284,7 @@ private object ToolTactics {
       if (to.kind == FormulaKind) ExpressionTraversal.traverse(traverseFn, to.asInstanceOf[Formula]).get
       else ExpressionTraversal.traverse(traverseFn, to.asInstanceOf[Term]).get
 
-    val tactic = expandedVars.map({
+    val tactic = expandedVars.toIndexedSeq.sortWith((a, b) => a._1.pos < b._1.pos).map({
       case (p, "abs") => EqualityTactics.abs(pos.topLevel ++ p)
       case (p, "min" | "max") => EqualityTactics.minmax(pos.topLevel ++ p)
     }).reduceOption[BelleExpr](_ & _).getOrElse(skip)
