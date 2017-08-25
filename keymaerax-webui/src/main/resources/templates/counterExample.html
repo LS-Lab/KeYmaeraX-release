@@ -4,16 +4,9 @@
 <div ng-if="result === 'cex.found'" class="modal-body">
     <div class="panel panel-default">
         <div class="panel-heading">
-            <h4 class="panel-title">Formula</h4>
-        </div>
-        <div class="panel-body">{{origFormula}}</div>
-    </div>
-
-    <div class="panel panel-default">
-        <div class="panel-heading">
             <h4 class="panel-title"><i class="fa fa-exclamation-circle"></i> Formula not valid, found a counter-example</h4>
         </div>
-        <div class="panel-body">{{cexFormula}}</div>
+        <div class="panel-body"><span ng-bind-html="cexFormula"></span></div>
     </div>
 
     <div class="panel panel-default">

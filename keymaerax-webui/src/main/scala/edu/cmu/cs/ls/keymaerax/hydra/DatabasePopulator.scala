@@ -125,6 +125,7 @@ object DatabasePopulator {
     val interpreter = prepareInterpreter(db, proofId)
     val parsedTactic = BelleParser(tactic)
     interpreter(parsedTactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(model))))
+    interpreter.kill()
   }
 
 }

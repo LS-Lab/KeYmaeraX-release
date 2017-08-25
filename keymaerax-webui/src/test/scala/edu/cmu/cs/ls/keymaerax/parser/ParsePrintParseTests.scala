@@ -113,6 +113,14 @@ class ParsePrintParseTests extends FlatSpec with Matchers {
     }
   }
 
+  it should "print and parse small decimals without scientific notation" in {
+    val expr = "0.00000001"
+    val expected = KeYmaeraXParser(expr)
+    val printed = KeYmaeraXPrettyPrinter(expected)
+    val reparsed = KeYmaeraXParser(printed)
+    reparsed shouldBe expected
+  }
+
   "Parsing pretty-printer output" should "be the same as the original expression (random)" in {
     for (i <- 1 to randomTrials) {
 		val expected = rand.nextFormula(randomComplexity)

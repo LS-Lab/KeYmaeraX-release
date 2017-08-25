@@ -84,6 +84,9 @@ class Z3DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBa
   it should "prove <*> iterate" in {check(iteratedAxiom)}
   it should "prove <*> approx" in {check(loopApproxd)}
   it should "prove [*] approx" in {check(loopApproxb)}
+  it should "prove II induction" in {check(iiinduction)}
+  it should "prove [*] merge" in {check(loopMergeb)}
+  it should "prove <*> merge" in {check(loopMerged)}
   it should "prove exists generalize" in {check(existsGeneralize)}
   it should "prove vacuous exists" in {check(vacuousExistsAxiom)}
   it should "prove V[:*] vacuous assign nondet" in {check(vacuousBoxAssignNondetAxiom)}

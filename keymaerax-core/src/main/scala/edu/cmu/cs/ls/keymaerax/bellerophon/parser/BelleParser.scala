@@ -511,6 +511,9 @@ object BelleParser extends (String => BelleExpr) {
           Right(Find.FindL(0, Some(definitions.exhaustiveSubst(expr.expression)), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
         case BelleToken(SEARCH_EVERYWHERE, _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, loc)::tail =>
           Right(new Find(0, Some(definitions.exhaustiveSubst(expr.expression)), AntePosition(1), exact = matchKind==EXACT_MATCH)) +: arguments(tail)
+        case BelleToken(ABSOLUTE_POSITION(posString), _)::BelleToken(matchKind, _)::BelleToken(expr: EXPRESSION, loc)::tail =>
+          val Fixed(pp, _, _) = parseAbsolutePosition(posString, loc)
+          Right(new Fixed(pp.top, Some(definitions.exhaustiveSubst(expr.expression).asInstanceOf[Formula]), exact=matchKind==EXACT_MATCH)) +: arguments(tail)
         case tok::tail => parseArgumentToken(None)(tok, UnknownLocation) +: arguments(tail)
       }
 
@@ -593,7 +596,7 @@ object BelleParser extends (String => BelleExpr) {
     *
     * @see [[parseArgumentToken]] */
   def parseAbsolutePosition(s : String, location: Location) : PositionLocator = {
-    if(!s.contains(".")) Fixed(Position(parseInt(s, location)))
+    if (!s.contains(".")) Fixed(Position(parseInt(s, location)))
     else {
       val subPositionStrings = s.split('.')
       val subPositions = subPositionStrings.tail.map(x => parseInt(x, location, nonZero=false))

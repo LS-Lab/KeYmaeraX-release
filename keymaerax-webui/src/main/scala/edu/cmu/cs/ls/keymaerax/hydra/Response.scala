@@ -26,8 +26,10 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import spray.httpx.marshalling.ToResponseMarshallable
 
 import scala.collection.mutable.ListBuffer
+import scala.collection.immutable
 import scala.util.Try
-import scala.xml.{Elem, XML}
+import scala.util.matching.Regex.Match
+import scala.xml.Elem
 
 
 /**
@@ -101,7 +103,7 @@ class ModelListResponse(models : List[ModelPOJO]) extends Response {
   def getJson = JsArray(objects:_*)
 }
 
-class ModelUploadResponse(modelId: Option[String], errorText: Option[String]) extends Response {
+case class ModelUploadResponse(modelId: Option[String], errorText: Option[String]) extends Response {
   def getJson = JsObject(
     "success" -> JsBoolean(modelId.isDefined),
     "errorText"->JsString(errorText.getOrElse("")),
@@ -703,7 +705,7 @@ object Helpers {
     val (name, codeName, asciiName, maker, derivation: JsValue) = Try(DerivationInfo.ofCodeName(belleTerm)).toOption match {
       case Some(di) =>
         (di.display.name, di.codeName, di.display.asciiName, ruleName,
-          ApplicableAxiomsResponse(Nil, Map.empty).derivationJson(di).fields.getOrElse("derivation", JsNull))
+          ApplicableAxiomsResponse(Nil, Map.empty, pos).derivationJson(di).fields.getOrElse("derivation", JsNull))
       case None => (ruleName, ruleName, ruleName, ruleName, JsNull)
     }
 
@@ -776,8 +778,51 @@ class GetBranchRootResponse(node: ProofTreeNode) extends Response {
   def getJson: JsValue = nodeJson(node)._2
 }
 
+case class LemmasResponse(infos: List[ProvableInfo]) extends Response {
+  override def getJson: JsValue = {
+    def toDisplayInfoParts(pi: ProvableInfo): JsValue = {
+      val keyPos = AxiomIndex.axiomIndex(pi.canonicalName)._1
+      //@todo need more verbose axiom info
+      ProvableInfo.locate(pi.canonicalName) match {
+        case Some(i) =>
+          val (cond, op, key, conclusion) = i.provable.conclusion.succ.head match {
+            case Imply(c, eq@Equiv(l, r)) if keyPos == PosInExpr(1::0::Nil) => (Some(c), OpSpec.op(eq).opcode, l, r)
+            case Imply(c, eq@Equiv(l, r)) if keyPos == PosInExpr(1::1::Nil) => (Some(c), OpSpec.op(eq).opcode, r, l)
+            case bcf: BinaryCompositeFormula if keyPos == PosInExpr(0::Nil) => (None, OpSpec.op(bcf).opcode, bcf.left, bcf.right)
+            case bcf: BinaryCompositeFormula if keyPos == PosInExpr(1::Nil) => (None, OpSpec.op(bcf).opcode, bcf.right, bcf.left)
+            case f => (None, OpSpec.op(Equiv(f, True)).opcode, f, True)
+          }
+          JsObject(
+            "cond" -> (if (cond.isDefined) JsString(cond.get.prettyString) else JsNull),
+            "op" -> (if (op.nonEmpty) JsString(op) else JsNull),
+            "key" -> JsString(key.prettyString),
+            "conclusion" -> JsString(conclusion.prettyString)
+          )
+        case None => JsNull
+      }
+    }
+
+    var json = infos.map(i =>
+      JsObject(
+        "name" -> JsString(i.canonicalName),
+        "codeName" -> JsString(i.codeName),
+        "defaultKeyPos" -> {
+          var key = AxiomIndex.axiomIndex(i.canonicalName)._1
+          JsString(key.pos.mkString("."))
+        },
+        "displayInfo" -> (i.display match {
+          case AxiomDisplayInfo(_, f) => JsString(f)
+          case _ => JsNull
+        }),
+        "displayInfoParts" -> toDisplayInfoParts(i)))
+
+    JsObject("lemmas" -> JsArray(json:_*))
+  }
+}
+
 case class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Option[DerivationInfo])],
-                                    suggestedInput: Map[ArgInfo, Expression]) extends Response {
+                                    suggestedInput: Map[ArgInfo, Expression],
+                                    suggestedPosition: Option[PositionLocator] = None) extends Response {
   def inputJson(input: ArgInfo): JsValue = {
     (suggestedInput.get(input), input) match {
       case (Some(e), FormulaArg(name, _)) =>
@@ -877,15 +922,24 @@ case class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Opti
     )
   }
 
+  private def posJson(pos: Option[PositionLocator]): JsValue = pos match {
+    case Some(Fixed(pos, _, _)) => new JsString(pos.toString)
+    case Some(Find(_, _, _: AntePosition, _)) => new JsString("L")
+    case Some(Find(_, _, _: SuccPosition, _)) => new JsString("R")
+    case _ => JsNull
+  }
+
   def derivationJson(info: (DerivationInfo, Option[DerivationInfo])): JsObject = info._2 match {
     case Some(comfort) =>
       JsObject(
         "standardDerivation" -> derivationJson(info._1),
-        "comfortDerivation" -> derivationJson(comfort)
+        "comfortDerivation" -> derivationJson(comfort),
+        "positionSuggestion" -> posJson(suggestedPosition)
       )
     case None =>
       JsObject(
-        "standardDerivation" -> derivationJson(info._1)
+        "standardDerivation" -> derivationJson(info._1),
+        "positionSuggestion" -> posJson(suggestedPosition)
       )
   }
 
@@ -901,7 +955,7 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
   def getJson = JsObject(
     "result" -> JsString(kind),
     "origFormula" -> JsString(fml.prettyString),
-    "cexFormula" -> JsString(createCexFormula(fml, cex).prettyString),
+    "cexFormula" -> JsString(createCexFormula(fml, cex)),
     "cexValues" -> JsArray(
       cex.map(e => JsObject(
         "symbol" -> JsString(e._1.prettyString),
@@ -910,18 +964,62 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
     )
   )
 
-  private def createCexFormula(fml: Formula, cex: Map[NamedSymbol, Expression]): Formula = {
-    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
-      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-        case v: Variable => Right(cex(v).asInstanceOf[Term])
-        case FuncOf(fn, _) => Right(cex(fn).asInstanceOf[Term])
-        case tt => Right(tt)
-      }
-      override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
-        case PredOf(fn, _) => Right(cex(fn).asInstanceOf[Formula])
-        case ff => Right(ff)
-      }
-    }, fml).get
+  private def createCexFormula(fml: Formula, cex: Map[NamedSymbol, Expression]): String = {
+    def replaceWithCexVals(fml: Formula, cex: Map[NamedSymbol, Expression]): Formula = {
+      ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+        override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+          case v: Variable if cex.contains(v) => Right(cex(v).asInstanceOf[Term])
+          case FuncOf(fn, _) if cex.contains(fn) => Right(cex(fn).asInstanceOf[Term])
+          case _ => Left(None)
+        }
+
+        override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
+          case PredOf(fn, _) => Right(cex(fn).asInstanceOf[Formula])
+          case _ => Left(None)
+        }
+      }, fml).get
+    }
+
+    if (cex.nonEmpty & cex.forall(_._2.isInstanceOf[Term])) {
+      val Imply(assumptions, conclusion) = fml
+
+      //@note flag false comparison formulas `cmp` with (cmp<->false)
+      val cexConclusion = ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+        private def makeSeq(fml: Formula): Sequent = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(fml))
+
+        override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
+          case cmp: ComparisonFormula =>
+            val cexCmp = TactixLibrary.proveBy(replaceWithCexVals(cmp, cex), TactixLibrary.RCF)
+            if (cexCmp.subgoals.size > 1 || cexCmp.subgoals.headOption.getOrElse(makeSeq(True)) == makeSeq(False)) {
+              Right(Equiv(cmp, False))
+            } else Right(cmp)
+          case _ => Left(None)
+        }
+      }, conclusion).get
+
+      val cexFml = UIKeYmaeraXPrettyPrinter.htmlEncode(Imply(assumptions, cexConclusion).prettyString)
+
+      //@note look for variables at word boundary (do not match in the middle of other words)
+      val symMatcher = s"(${cex.keySet.map(_.prettyString).mkString("|")})\\b".r("v")
+      val cexFmlWithVals = symMatcher.replaceAllIn(cexFml, (m: Match) => {
+        val cexSym = UIKeYmaeraXPrettyPrinter.htmlEncode(m.group("v"))
+        if ((m.before + cexSym).endsWith("false")) {
+          cexSym
+        } else {
+          val cexVal = UIKeYmaeraXPrettyPrinter.htmlEncode(cex.find(_._1.prettyString == cexSym).get._2.prettyString)
+          s"""<div class="k4-cex-fml"><ul><li>$cexVal</li></ul>$cexSym</div>"""
+        }
+      })
+
+      //@note look for (cexCmp<->false) groups and replace with boldface danger spans
+      val cexMatcher = "\\(([^\\)]+?)&#8596;false\\)".r("fml")
+      cexMatcher.replaceAllIn(cexFmlWithVals, (m: Match) => {
+        val cexCmp = m.group("fml")
+        s"""<div class="k4-cex-highlight text-danger">$cexCmp</div>"""
+      })
+    } else {
+      replaceWithCexVals(fml, cex).prettyString
+    }
   }
 }
 
@@ -1122,7 +1220,7 @@ class NodeResponse(tree : String) extends Response {
 }
 
 
-class ExtractTacticResponse(tacticText: String) extends Response {
+case class ExtractTacticResponse(tacticText: String) extends Response {
   def getJson = JsObject(
     "tacticText" -> JsString(tacticText)
   )

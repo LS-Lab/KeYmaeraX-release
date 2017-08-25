@@ -1,10 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
-
 import org.scalatest.Inside._
 import org.scalatest.LoneElement._
 
@@ -77,6 +77,28 @@ class ToolTacticsTests extends TacticTestBase {
       "x=1&v=2 ==> \\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->v=2)&(v*t_+x)^3>=1)".asSequent,
       transform("v=2->v=2".asFormula)(1, 0::1::0::0::1::Nil))
     result.subgoals.loneElement shouldBe "x=1&v=2 ==> \\forall t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->(v=2->v=2))&(v*t_+x)^3>=1)".asSequent
+  }
+
+  it should "cohide other formulas in succ when proving a transformation in ante" in withMathematica { _ =>
+    val result = proveBy("x>0, y>0, z=x+y ==> [{x'=-x^y}]x>0".asSequent, transform("z>0".asFormula)(-3))
+    result.subgoals.loneElement shouldBe "x>0, y>0, z>0 ==> [{x'=-x^y}]x>0".asSequent
+  }
+
+  it should "cohide other formulas in succ when proving a transformation in succ" in withMathematica { _ =>
+    val result = proveBy("x>0, y>0 ==> [{x'=-x^y}]x>0, z>0, [{x:=x+1;}*]x>0".asSequent, transform("z>x+y".asFormula)(2))
+    result.subgoals.loneElement shouldBe "x>0, y>0 ==> [{x'=-x^y}]x>0, z>x+y, [{x:=x+1;}*]x>0".asSequent
+  }
+
+  //@todo missing feature
+  it should "cohide other formulas in succ when proving a transformation in negative polarity in ante" ignore withMathematica { _ =>
+    val result = proveBy("x>0, y>0, z>0->a=5 ==> [{x'=-x^y}]x>0".asSequent, transform("z>x+y".asFormula)(-3, 0::Nil))
+    result.subgoals.loneElement shouldBe "x>0, y>0, z>x+y->a=5 ==> [{x'=-x^y}]x>0".asSequent
+  }
+
+  //@todo missing feature
+  it should "cohide other formulas in succ when proving a transformation in negative polarity in succ" ignore withMathematica { _ =>
+    val result = proveBy("x>0, y>0 ==> [{x'=-x^y}]x>0, z>x+y->a=5, [{x:=x+1;}*]x>0".asSequent, transform("z>0".asFormula)(2, 0::Nil))
+    result.subgoals.loneElement shouldBe "x>0, y>0 ==> [{x'=-x^y}]x>0, z>0->a=5, [{x:=x+1;}*]x>0".asSequent
   }
 
   "Transform in context" should "exploit equivalence" in withMathematica { _ =>
@@ -167,8 +189,57 @@ class ToolTacticsTests extends TacticTestBase {
     //proveBy("2*g()*x=37".asFormula, edit("2*foo=37".asFormula)(1)).subgoals.loneElement shouldBe "foo=g()*x ==> 2*foo=37".asSequent
   }
 
-  it should "abbreviate and transform" in withMathematica { _ =>
-    proveBy("2*g()*x=37+4".asFormula, edit("abbrv(2*g())*x=41".asFormula)(1)).subgoals.loneElement shouldBe "abbrv=2*g() ==> abbrv*x=41".asSequent
+  it should "only abbreviate if no transformations are present" in withMathematica { _ => withDatabase { db =>
+    val (proofId, provable) = db.proveByWithProofId("x>=2+3", edit("x>=abbrv(2+3,y)".asFormula)(1))
+    provable.subgoals.loneElement shouldBe "y=2+3 ==> x>=y".asSequent
+    db.extractTactic(proofId) shouldBe BelleParser("edit({`x>=abbrv(2+3,y)`},1)")
+    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("abbrv({`2+3`},{`y`})")
+  }}
+
+  it should "abbreviate and transform" in withMathematica { _ => withDatabase { db =>
+    val (proofId, provable) = db.proveByWithProofId("2*g()*x=37+4", edit("abbrv(2*g())*x=41".asFormula)(1))
+    provable.subgoals.loneElement shouldBe "abbrv=2*g() ==> abbrv*x=41".asSequent
+    db.extractTactic(proofId) shouldBe BelleParser("edit({`abbrv(2*g())*x=41`},1)")
+    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("abbrv({`2*g()`},{`abbrv`}) & transform({`abbrv*x=41`},1)")
+  }}
+
+  it should "expand abs" in withMathematica { _ =>
+    proveBy("abs(x)>=0".asFormula, edit("expand(abs(x))>=1".asFormula)(1)).subgoals.loneElement shouldBe
+      "x>=0&abs_0=x | x<0&abs_0=-x ==> abs_0>=1".asSequent
+  }
+
+  it should "expand min" in withMathematica { _ =>
+    proveBy("min(x,y)>=0".asFormula, edit("expand(min(x,y))>=1".asFormula)(1)).subgoals.loneElement shouldBe
+      "x<=y&min_0=x | x>y&min_0=y ==> min_0>=1".asSequent
+  }
+
+  it should "expand max" in withMathematica { _ =>
+    proveBy("max(x,y)>=0".asFormula, edit("expand(max(x,y))>=1".asFormula)(1)).subgoals.loneElement shouldBe
+      "x>=y&max_0=x | x<y&max_0=y ==> max_0>=1".asSequent
+  }
+
+  it should "abbreviate and expand" in withMathematica { _ =>
+    proveBy("max(x+5*2,y)>=0".asFormula, edit("expand(max(abbrv(x+5*2,z),y))>=1".asFormula)(1)).subgoals.loneElement shouldBe
+      "z=x+5*2, z>=y&max_0=z | z<y&max_0=y ==> max_0>=1".asSequent
+  }
+
+  it should "abbreviate and expand and transform" in withMathematica { _ => withDatabase { db =>
+    val (proofId, provable) = db.proveByWithProofId("2*g()*abs(x)=37+4", edit("abbrv(2*g())*expand(abs(x))=41".asFormula)(1))
+    provable.subgoals.loneElement shouldBe "abbrv=2*g(), x>=0&abs_0=x | x<0&abs_0=-x ==> abbrv*abs_0=41".asSequent
+    db.extractTactic(proofId) shouldBe BelleParser("edit({`abbrv(2*g())*expand(abs(x))=41`},1)")
+    db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("abbrv({`2*g()`},{`abbrv`}) & absExp(1.0.1) & transform({`abbrv*abs_0=41`},1)")
+  }}
+
+  it should "abbreviate in programs" in withMathematica { _ =>
+    proveBy("[x:=2+3;]x=5".asFormula, edit("[x:=abbrv(2+3,five);]x=5".asFormula)(1)).subgoals.loneElement shouldBe
+      "five=2+3 ==> [x:=five;]x=5".asSequent
+  }
+
+  it should "expand multiple at once" in withMathematica { _ =>
+    proveBy("abs(a)>0, abs(c)>3 ==> abs(a)>0 | abs(b)>1 | abs(c)>2".asSequent,
+      edit("expand(abs(a))>0 | expand(abs(b))>1 | expand(abs(c))>2".asFormula)(1)).
+      subgoals.loneElement shouldBe
+      "abs_0>0, abs_2>3, a>=0 & abs_0=a | a<0 & abs_0=-a, b>=0 & abs_1=b | b<0 & abs_1=-b, c>=0 & abs_2=c | c<0 & abs_2=-c ==> abs_0>0 | abs_1>1 | abs_2>2".asSequent
   }
 
 }

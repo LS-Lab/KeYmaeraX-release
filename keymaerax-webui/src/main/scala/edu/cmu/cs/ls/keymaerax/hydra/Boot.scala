@@ -4,18 +4,15 @@
 */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.launcher.{DefaultConfiguration, LoadingDialogFactory, SystemWebBrowser}
-import edu.cmu.cs.ls.keymaerax.tools._
-import akka.actor.{ActorSystem, Props}
+import akka.actor.{Actor, ActorSystem, Props}
 import akka.io.IO
-import edu.cmu.cs.ls.keymaerax.{btactics, lemma}
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
+import edu.cmu.cs.ls.keymaerax.hydra.HyDRAServerConfig.{host, port}
+import edu.cmu.cs.ls.keymaerax.launcher.{DefaultConfiguration, LoadingDialogFactory, SystemWebBrowser}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import spray.can.Http
-
-import scala.concurrent.duration.FiniteDuration
 
 /**
   * Creates a HyDRA server listening on a host and port specified in the database's config file under the configurations serverconfig.host and serverconfig.port.
@@ -29,39 +26,43 @@ import scala.concurrent.duration.FiniteDuration
   * @author Nathan Fulton
   */
 object NonSSLBoot extends App {
+  /** Actor notified when binding is finished */
+  class BindingFinishedActor extends Actor {
+    def receive: Actor.Receive = {
+      case _: Http.Bound =>
+        LoadingDialogFactory().addToStatus(15, Some("Finished loading"))
+
+        // Finally, print a message indicating that the server was started.
+        println(
+          "**********************************************************\n" +
+            "****                   KeYmaera X                     ****\n" +
+            "****                                                  ****\n" +
+            "**** OPEN YOUR WEB BROWSER AT  http://" + host + ":" + port + "/ ****\n" +
+            "****                                                  ****\n" +
+            "**** THE BROWSER MAY NEED RELOADS TILL THE PAGE SHOWS ****\n" +
+            "**********************************************************\n"
+        )
+
+        LoadingDialogFactory().close()
+        SystemWebBrowser(s"http://$host:$port/")
+      case _ =>
+        LoadingDialogFactory().addToStatus(0, Some("Loading failed..."))
+        System.exit(1)
+    }
+  }
+
+  LoadingDialogFactory() //@note show if not already started through Main.scala
+
   assert(!System.getenv().containsKey("HyDRA_SSL") || System.getenv("HyDRA_SSL").equals("off"),
     "A non-SSL server can only be booted when the environment var HyDRA_SSL is unset or is set to 'off'")
 
   import HyDRAServerConfig._
   implicit var system = ActorSystem("on-spray-can")
 
-  {
-    import scala.concurrent.ExecutionContext.Implicits.global
-
-    def someTime(x:Int) = new FiniteDuration(x, scala.concurrent.duration.SECONDS)
-
-    system.scheduler.scheduleOnce(someTime(1))(LoadingDialogFactory().addToStatus(25))
-    system.scheduler.scheduleOnce(someTime(2))(LoadingDialogFactory().addToStatus(25))
-    system.scheduler.scheduleOnce(someTime(3))(LoadingDialogFactory().addToStatus(25))
-    system.scheduler.scheduleOnce(someTime(4))(LoadingDialogFactory().addToStatus(20))
-    system.scheduler.scheduleOnce(someTime(4))({
-      // Finally, print a message indicating that the server was started.
-      println(
-        "**********************************************************\n" +
-          "****                   KeYmaera X                     ****\n" +
-          "****                                                  ****\n" +
-          "**** OPEN YOUR WEB BROWSER AT  http://"+host+":"+port+"/ ****\n" +
-          "****                                                  ****\n" +
-          "**** THE BROWSER MAY NEED RELOADS TILL THE PAGE SHOWS ****\n" +
-          "**********************************************************\n"
-      )
-      LoadingDialogFactory().close()
-      SystemWebBrowser(s"http://$host:$port/")
-    })
-  }
-
   HyDRAInitializer(args, database)
-  IO(Http) ! Http.Bind(service, interface = host, port = port)
+
+  val bindingFinished = system.actorOf(Props[BindingFinishedActor], "hydraloader")
+  IO(Http).tell(Http.Bind(service, interface = host, port = port), bindingFinished)
 }
 
 /**
@@ -120,7 +121,7 @@ object HyDRAInitializer {
     TactixLibrary.invGenerator = generator
     KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) => generator.products += (p->inv))
 
-
+    LoadingDialogFactory().addToStatus(15, Some("Connecting to arithmetic tools..."))
 
     try {
       val preferredTool = preferredToolFromDB(database)
@@ -135,6 +136,8 @@ object HyDRAInitializer {
         println("Current configuration:\n" + edu.cmu.cs.ls.keymaerax.tools.diagnostic)
         e.printStackTrace()
     }
+
+    LoadingDialogFactory().addToStatus(5, Some("Updating lemma caches..."))
 
     try {
       //Delete the lemma database if KeYmaera X has been updated since the last time the database was populated.

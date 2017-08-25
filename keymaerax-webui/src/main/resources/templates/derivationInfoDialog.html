@@ -21,9 +21,10 @@
     </div>
 </div>
 <div class="modal-footer">
-    <button class="btn btn-primary" ng-click="cancel()">Close</button>
     <button ng-class="{'disabled' : tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length > 0, 'btn': true, 'btn-primary': true}"
             ng-if="!readOnly"
             ng-click="applyInputTactic(tactic.selectedDerivation().derivation.input)"
+            focus-if="tactic.selectedDerivation().missingInputNames().length == 0"
             ng-bind-html="tactic.selectedDerivation().name"></button>
+    <button class="btn btn-default" ng-click="cancel()">Close</button>
 </div>

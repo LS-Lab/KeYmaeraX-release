@@ -10,6 +10,7 @@
   'angular-intro',
   'chart.js',
   'hljs',
+  'focus-if',
   'ui.bootstrap',
   'ui.bootstrap.tabs',
   'ui.bootstrap.tooltip',

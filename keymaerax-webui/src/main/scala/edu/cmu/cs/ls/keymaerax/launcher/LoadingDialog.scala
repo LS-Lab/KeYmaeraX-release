@@ -8,9 +8,14 @@ import edu.cmu.cs.ls.keymaerax.core
   * @author Nathan Fulton
   */
 trait LoadingDialog {
-  val msg: String
-  def addToStatus(x :  Int) : Unit
-  def close() : Unit
+  /** The initial message displayed in the dialog. */
+  val initialMsg: String
+
+  /** Updates the status with a `progress` indicator and a message `msg`. */
+  def addToStatus(progress: Int, msg: Option[String]): Unit
+
+  /** Closes the dialog. */
+  def close(): Unit
 }
 
 /**
@@ -19,7 +24,7 @@ trait LoadingDialog {
 object LoadingDialogFactory {
   var theDialog : Option[LoadingDialog] = None
 
-  def apply() = {
+  def apply(): LoadingDialog = {
     if (theDialog.isEmpty) {
       theDialog =
         if (java.awt.GraphicsEnvironment.isHeadless) Some(new CLILoadingDialog())
@@ -28,22 +33,22 @@ object LoadingDialogFactory {
     theDialog.get
   }
 
-  def closed() = {theDialog = None}
+  def close(): Unit = theDialog = None
 }
 
 class CLILoadingDialog() extends LoadingDialog {
-  private var status : Int = 0
-  override val msg = "Headless KeYmaera X Server " + core.VERSION + " is Loading... "
+  private var status: Int = 0
+  override val initialMsg: String = "Headless KeYmaera X Server " + core.VERSION + " is Loading... "
 
-  override def addToStatus(x: Int): Unit = {
+  override def addToStatus(x: Int, msg: Option[String]): Unit = {
     status = status + x
-    if(status >= 100) close()
-    else println(s"$msg ($status% complete)")
+    if (status >= 100) close()
+    else println(s"${msg.getOrElse(initialMsg)} ($status% complete)")
   }
 
   override def close(): Unit = {
     println("Loading Complete!")
-    LoadingDialogFactory.closed()
+    LoadingDialogFactory.close()
   }
 }
 
@@ -52,11 +57,11 @@ class CLILoadingDialog() extends LoadingDialog {
   */
 class GraphicalLoadingDialog() extends LoadingDialog {
   println("Starting GUI Loading Dialog.")
-  override val msg = "KeYmaera X User Interface " + core.VERSION + " is Loading..."
+  override val initialMsg: String = "KeYmaera X User Interface " + core.VERSION + " is Loading..."
 
   private val progressBar = new JProgressBar()
   //  val progressMonitor = new ProgressMonitor(progressBar, "Initializing HyDRA..", "Binding port 8090", 0, 100)
-  private val label = new JLabel(msg)
+  private val label = new JLabel(initialMsg)
   //@todo only show on first launch
   private val firstLaunch = new JLabel("The first two starts might take a while to populate the local lemma database.")
 
@@ -69,7 +74,8 @@ class GraphicalLoadingDialog() extends LoadingDialog {
   window.setLocationRelativeTo(null) //needs java 1.4 or newer
   window.setVisible(true)
 
-  override def addToStatus(x : Int) = {
+  override def addToStatus(x : Int, msg: Option[String]): Unit = {
+    label.setText(msg.getOrElse(initialMsg))
     val newValue = progressBar.getValue + x
     progressBar.setValue(newValue)
     //    progressMonitor.setProgress(newValue)
@@ -77,12 +83,12 @@ class GraphicalLoadingDialog() extends LoadingDialog {
     if (progressBar.getValue >= 100) close()
   }
 
-  override def close() = {
+  override def close(): Unit = {
     if (window != null) {
       window.setVisible(false)
       //window.dispose()  //@note might exit the JVM if no other window is showing up yet
       window = null
-      LoadingDialogFactory.closed()
+      LoadingDialogFactory.close()
     }
   }
 }

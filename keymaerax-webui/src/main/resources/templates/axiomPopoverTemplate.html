@@ -55,6 +55,18 @@
     </div>
 </script>
 
+<script type="text/ng-template" id="templates/lemmaDropdownTemplate.html">
+    <a>
+    <div>
+        <b><span ng-bind-html="match.model.name | uibTypeaheadHighlight:query"></span></b>
+    </div>
+        <small>
+            <kbd>{{match.model.codeName}}</kbd>
+            <span ng-if="match.model.displayInfo"> Concludes: <span ng-bind-html="match.model.displayInfo"></span></span>
+        </small>
+    </a>
+</script>
+
 <div class="row">
     <div class="col-md-12">
         <a class="pull-right" ng-click="tacticPopover.close()"><span class="fa fa-close"></span>
@@ -66,6 +78,33 @@
     <div class="col-md-12">
         <div ng-repeat="tactic in formulaAxiomsMap[tacticPopover.formulaId()]" class="k4-tactic-popover-entry">
             <div ng-include="'templates/tacticPopoverEntry.html'"></div>
+        </div>
+        <div class="k4-tactic-popover-entry">
+            <div class="input-group">
+                <span class="input-group-addon">Search</span>
+                <input type="text" ng-model="lemma.selectedName" placeholder="Search for lemmas"
+                       uib-typeahead="lemmaInfo.name for lemmaInfo in lemma.allInfos(tacticPopover.formulaId(), $viewValue)"
+                       typeahead-template-url="templates/lemmaDropdownTemplate.html"
+                       typeahead-show-hint="true" typeahead-min-length="0"
+                       typeahead-on-select="lemma.select($item, $model, $label, $event)"
+                       typeahead-loading="lemma.loading" typeahead-no-results="lemma.noResults"
+                       class="form-control">
+                <i class="input-group-addon" ng-if="lemma.loading" class="fa fa-refresh"></i>
+                <div class="input-group-addon" ng-if="lemma.noResults"><i class="fa fa-remove"></i> No Lemmas Found</div>
+                <div class="input-group-addon" ng-if="lemma.selected && lemma.selected.displayInfoParts"
+                     uib-tooltip="Unification with boldface lemma sub-formula. Click sub-formulas to change."
+                     tooltip-placement="auto top">
+                    <span ng-bind-html="{{lemma.selected.displayInfoParts.cond"></span>
+                    <span ng-if="lemma.selected.displayInfoParts.cond">&rarr;</span>
+                    <span ng-class="{'k4-axiom-key': lemma.keyEnd()=='0'}"
+                          ng-click="lemma.changeKeyEnd(0)"><span ng-bind-html="lemma.selected.displayInfoParts.key"></span></span>
+                    <span ng-bind-html="lemma.selected.displayInfoParts.op"></span>
+                    <span ng-class="{'k4-axiom-key': lemma.keyEnd()=='1'}"
+                          ng-click="lemma.changeKeyEnd(1)"><span ng-bind-html="lemma.selected.displayInfoParts.conclusion"></span></span>
+                </div>
+                <a class="input-group-addon btn btn-default" ng-disabled="!lemma.selected"
+                   ng-click="lemma.apply(tacticPopover.formulaId())"><b>Apply Lemma</b></a>
+            </div>
         </div>
         <!-- TODO: link to switch to a modal dialog for expert mode: display an exhaustive list of axioms etc. there -->
     </div>

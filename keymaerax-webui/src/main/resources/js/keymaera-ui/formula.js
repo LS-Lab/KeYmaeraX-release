@@ -111,6 +111,38 @@ angular.module('formula')
               return tacticResult.promise;
             }
 
+            scope.lemma = {
+              selectedName: undefined,
+              selected: undefined,
+              allInfos: function(formulaId, partialLemmaName) {
+                var url = 'proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' +
+                          formulaId + '/lemmas/' + encodeURIComponent(partialLemmaName);
+                return $http.get(url).then(function(response) { return response.data.lemmas; });
+              },
+              select: function(item, model, label, event) {
+                scope.lemma.selected = item;
+              },
+              apply: function(formulaId) {
+                scope.tacticPopover.close();
+                scope.onInputTactic({ formulaId: formulaId, tacticId: 'useAt',
+                                      input: [{param: 'axiom', value: scope.lemma.selected.name },
+                                              {param: 'key', value: '' + scope.lemma.keyPos() }] });
+              },
+              keyPos: function() {
+                var s = scope.lemma.selected;
+                return s.keyPos ? s.keyPos : s.defaultKeyPos;
+              },
+              keyEnd: function() {
+                var currentKeyPos = scope.lemma.keyPos();
+                return currentKeyPos.charAt(currentKeyPos.length-1);
+              },
+              changeKeyEnd: function(to) {
+                //@note assumes either equivalence/equality or conditional equivalence/equality
+                var currentKeyPos = scope.lemma.keyPos();
+                scope.lemma.selected.keyPos = currentKeyPos.slice(0, currentKeyPos.lastIndexOf('.')+1) + to;
+              }
+            }
+
             scope.applyTactic = function(formulaId, tacticId) {
               scope.tacticPopover.close();
               scope.onTactic({formulaId: formulaId, tacticId: tacticId});

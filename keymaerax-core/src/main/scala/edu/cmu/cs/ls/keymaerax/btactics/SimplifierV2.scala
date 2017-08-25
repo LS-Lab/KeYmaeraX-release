@@ -88,6 +88,7 @@ object SimplifierV2 {
         return Some(useFor(pr, PosInExpr(0 :: Nil),s=>mksubst(s))(SuccPosition(1, 1 :: Nil))(eq))
       } catch {
         case _: ProverException =>
+        case _: AssertionError => // raised by useFor if unification does not work out
       }
     None
   }

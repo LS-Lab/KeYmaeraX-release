@@ -11,7 +11,6 @@ import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.CounterExampleTool
 
 import scala.List
 import scala.collection.immutable._
@@ -558,7 +557,14 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @param order the order of variables to use during quantifier elimination
     * @see [[QE]]
     * @see [[RCF]] */
-  def QE(order: List[NamedSymbol] = Nil): BelleExpr = ToolTactics.fullQE(order)(ToolProvider.qeTool().getOrElse(throw new BelleThrowable("QE requires a QETool, but got None")))
+  def QE(order: List[NamedSymbol] = Nil, requiresTool: Option[String] = None): BelleExpr = {
+    val tactic = ToolTactics.fullQE(order)(ToolProvider.qeTool(requiresTool).getOrElse(
+      throw new BelleThrowable(s"QE requires ${requiresTool.getOrElse("a QETool")}, but got None")))
+    requiresTool match {
+      case Some(toolName) => "QE" byWithInput (Variable(toolName), tactic)
+      case _ => tactic
+    }
+  }
   def QE: BelleExpr = QE()
 
   /** Quantifier elimination returning equivalent result, irrespective of result being valid or not.

@@ -36,18 +36,6 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '
     $scope.toolConfig = response.data;
   });
 
-
-  $http.get('/users/' + sessionService.getUser() + '/dashinfo')
-      .success(function(data) {
-          if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Could not retrieve dashboard info for user " + sessionService.getUser())
-          else {
-              $scope.open_proof_count = data.open_proof_count;
-               $scope.all_models_count = data.all_models_count;
-              $scope.proved_models_count = data.proved_models_count;
-          }
-      });
-
-
   $scope.isLocal = false;
   $http.get('/isLocal')
       .success(function(data) {

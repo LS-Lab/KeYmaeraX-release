@@ -33,8 +33,6 @@ object UIIndex {
   def theStepAt(pos1: Position, pos2: Position, sequent: Sequent): Option[String] = allTwoPosSteps(pos1, pos2, sequent).
     find(DerivationInfo(_).inputs.isEmpty)
 
-  private val unknown = Nil
-
   /** Return ordered list of all canonical (derived) axiom names or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. */
   def allStepsAt(expr: Expression, pos: Option[Position] = None, sequent: Option[Sequent] = None): List[String] = autoPad(pos, sequent, {
     val isTop = pos.nonEmpty && pos.get.isTopLevel
@@ -89,7 +87,7 @@ object UIIndex {
           case _: And => "[] split" :: Nil
           case _ => Nil
         }
-        def containsPrime = {
+        def containsPrime(fml: Formula): Boolean = {
           var foundPrime = false
           ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
             override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
@@ -101,10 +99,10 @@ object UIIndex {
               case _: DifferentialSymbol => foundPrime = true; Left(Some(ExpressionTraversal.stop))
               case _ => Left(None)
             }
-          }, post)
+          }, fml)
           foundPrime
         }
-        val rules = maybeSplit ++ ("GV" :: "MR" :: "[]d box" :: Nil)
+        val rules = maybeSplit ++ ("GV" :: "MR" :: "boxd" :: Nil)
         a match {
           case Assign(_: DifferentialSymbol,_) => "[':=] differential assign" :: rules
           case Assign(_: BaseVariable, _) => "assignb" :: rules
@@ -113,8 +111,9 @@ object UIIndex {
           case _: Compose => "[;] compose" :: rules
           case _: Choice => "[++] choice" :: rules
           case _: Dual => "[d] dual direct" :: "[d] dual" :: Nil
-          case _: Loop => "loop" +: (maybeSplit ++ ("[*] iterate" :: "GV" :: "[]d box" :: Nil))
-          case ODESystem(ode, _) if containsPrime => ode match {
+          case _: Loop => "loop" +: (maybeSplit ++ ("[*] iterate" :: "GV" :: "boxd" :: Nil))
+          //@note intermediate steps in dI
+          case ODESystem(ode, _) if !post.isInstanceOf[Modal] && containsPrime(post) => ode match {
             case _: AtomicODE => "DE differential effect" :: "dW" :: "dC" :: rules
             case _: DifferentialProduct => "DE differential effect (system)" :: "dW" :: "dC" :: rules
             case _ => rules
@@ -125,7 +124,7 @@ object UIIndex {
 
       case Diamond(a, post) => 
         val maybeSplit = post match {case _ : Or => "<> split" :: Nil case _ => Nil }
-        val rules = maybeSplit ++ alwaysApplicable ++ ("<>d diamond" :: Nil)
+        val rules = maybeSplit ++ alwaysApplicable ++ ("diamondd" :: Nil)
         a match {
           case Assign(_: DifferentialSymbol, _) => "<':=> differential assign" :: rules
           case Assign(_: BaseVariable, _) => "<:=> assign" :: rules
@@ -134,7 +133,7 @@ object UIIndex {
           case _: Compose => "<;> compose" :: rules
           case _: Choice => "<++> choice" :: rules
           case _: Dual => "<d> dual direct" :: "<d> dual" :: rules
-          case _: Loop => "con" +: maybeSplit :+ "<*> iterate" :+ "<>d diamond"
+          case _: Loop => "con" +: maybeSplit :+ "<*> iterate" :+ "diamondd"
           case _: ODESystem => "solve" :: "dC" :: rules
           case _ => rules
         }
@@ -212,7 +211,7 @@ object UIIndex {
       case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel &&  p2.isTopLevel && e1 == e2 => "closeId" :: Nil
       case (p1: AntePosition, p2: SuccPosition, Some(e1), Some(e2)) if p1.isTopLevel && !p2.isTopLevel && e1 == e2 => /*@todo "knownR" ::*/ Nil
       case (_, _, Some(Equal(_, _)), _) => "L2R" :: Nil
-      case (_: AntePosition, _, Some(fa: Forall), Some(_:Formula)) if(bodyIsEquiv(fa)) => "equivRewriting" :: Nil
+      case (_: AntePosition, _, Some(fa: Forall), Some(_:Formula)) if bodyIsEquiv(fa) => "equivRewriting" :: Nil
       case (_: AntePosition, _, Some(_: Equiv), Some(_: Formula)) => "instantiatedEquivRewriting" :: Nil //@note for applying function definitions.
       case (_, _: AntePosition, Some(_: Term), Some(_: Forall)) => /*@todo "all instantiate pos" ::*/ Nil
       case (_, _: SuccPosition, Some(_: Term), Some(_: Exists)) => /*@todo "exists instantiate pos" ::*/ Nil

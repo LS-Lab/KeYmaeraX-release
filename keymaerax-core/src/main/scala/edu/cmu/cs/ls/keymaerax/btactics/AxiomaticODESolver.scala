@@ -96,7 +96,7 @@ object AxiomaticODESolver {
 
     val assumptions = if (pos.isAnte) s.ante.patch(pos.index0, Nil, 1) else s.ante
     val odeVars = StaticSemantics.boundVars(ode).toSet + DURATION + EVOL_DOM_TIME
-    val consts = assumptions.flatMap(FormulaTools.conjuncts).
+    val consts = assumptions.filter(_.isFOL).flatMap(FormulaTools.conjuncts).
       filter(StaticSemantics.freeVars(_).toSet.intersect(odeVars).isEmpty).
       map(SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), _, SimplifierV3.defaultFaxs, SimplifierV3.defaultTaxs)._1).
       filterNot(f => f==True || f==False). //@todo improve DI
