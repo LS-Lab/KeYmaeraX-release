@@ -8,11 +8,16 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 object CoasterXSpec {
 
   def foldMinus(t1:Term, t2:Term):Term = {
+    val candidate =
     (t1,t2) match {
       case (n1:Number,n2:Number) => Number(n1.value - n2.value)
       case (n1:Number, _) if n1 == Number(0) => foldNeg(t2)
       case (_, n2:Number) if n2 == Number(0) => t1
       case _ => Minus(t1,t2)
+    }
+    candidate match {
+      case (Minus(n1:Number, Minus(n2:Number, t3:Term))) if n1 == n2 => t3
+      case x => x
     }
   }
 
@@ -60,13 +65,21 @@ object CoasterXSpec {
   }
 
   def foldPower(t1:Term, t2:Term):Term = {
+    val candidate =
     (t1,t2) match {
       case (n1:Number,n2:Number) if n2.value == BigDecimal(0)  => Number(1)
       case (n1:Number,n2:Number) if n2.value.isValidInt && n2.value > 0  =>
         val tail:Number = foldPower(n1,Number(n2.value-1)).asInstanceOf[Number]
         Number(tail.value*n1.value)
       case (n1:Number, pow) if n1 == Number(1) && pow != Number(0) => n1
+      case (n1:Number, pow) if n1 == Number(0) && pow != Number(0) => n1
       case _ => Power(t1,t2)
+    }
+    // silly optimization because it happens in our models
+    candidate match {
+      case Power(Divide(Power(t1,Number(pow1)),t2),Number(pow2)) if pow1 * pow2 == 1 =>
+        Divide(t1,Power(t2,Number(pow2)))
+      case x => x
     }
   }
 
@@ -77,8 +90,6 @@ object CoasterXSpec {
     }
   }
 
-  /* @TODO (Major) #2: Maintain sanity of models by projecting all new straight line endpoints and arc control points
-  *    so they are tangent to the previous section*/
   def degToRad(theta:Number):Number = {
     Number(2*Math.PI*theta.value.doubleValue()/360.0)
   }
@@ -214,7 +225,8 @@ object CoasterXSpec {
         val y = Variable("y")
         val v = Variable("v")
         val r = Variable("r")
-        val dxeq = Equal(dx,foldDivide(foldNeg(foldMinus(y,cy)),r))
+        val dxeq = Equal(dx, foldDivide(foldMinus(cy,y), r))
+        //val dxeq = Equal(dx,foldDivide(foldNeg(foldMinus(y,cy)),r))
         val dyeq = Equal(dy,foldDivide(foldMinus(x,cy),r))
         val xeq = Equal(x,x3)
         val yeq = Equal(y,y3)
@@ -282,7 +294,7 @@ object CoasterXSpec {
   def apply(file:CoasterXParser.File):Formula = {
     val ROUND_SCALE = 0
     val fileRounded = roundFile (ROUND_SCALE)(file)
-    val fileAligned = alignFile(fileRounded)
+    val (fileAligned, segmentDefs) = alignFile(fileRounded)
     val (points, segments, v0, _) = fileAligned
     val nonemptySegs = segments.filter(!segmentEmpty(_))
     val withBounds = zipConsecutive(nonemptySegs,points)
@@ -291,7 +303,7 @@ object CoasterXSpec {
     val energyConserved = "v^2 + 2*y = v0^2 + 2*y0".asFormula
     val globalPost = And("v > 0".asFormula, energyConserved)
     val post = And(globalPost, withBounds.map(segmentPost).reduceRight[Formula]{case (x,y) => And(x,y)})
-    Imply(pre,Box(Loop(ode), post))
+    Imply(And(segmentDefs,pre),Box(Loop(ode), post))
   }
 
   def roundNumber(scale:Int)(n:Number):Number = {
@@ -338,7 +350,7 @@ object CoasterXSpec {
   }
 
 
-  type TPoint =(Term,Term)
+  type TPoint = (Term,Term)
 
   def setStartY(sections:List[(Section,(TPoint,TPoint))], y:Term) = {
     sections match {
@@ -351,17 +363,44 @@ object CoasterXSpec {
     }
   }
 
-  // @TODO MAJOR: New strategy for tomorrow: For arcs, keep all endpoints exactly, adjust center which should be uniquely defined by these constraints
-  // I hope. Otherwise the terms blow up greatly and everything gets impractical.
-  def alignZipped(zip:List[(Section,(TPoint,TPoint))], slope:Option[Term]):List[(Section,(TPoint,TPoint))] = {
+  /* @param zip is a list of sections annotated with their lower-left and upper-right boundaries
+  *  @param dL term (e.g. a variable m_i) representing the slope of the previous line segment, or None if this is the first segment.
+  *   (@TODO: use direction vectors instead of slopes in order to handle vertical sections)
+  *   (@TODO: Should basically-never truly need to introduce a new slope variable in the straight line segment case, but
+  *    currently always introduces a variable in ordr to make it easier to keep track of the variables)
+  *  @return List of rounded sections with their rounded bounding boxes, with a formula defining any new variables introduced
+  *    to define the segment, e.g. x_i, y_i, m_i
+  *    */
+  def alignZipped(zip:List[(Section,(TPoint,TPoint))], slope:Option[Term], index:Int):List[(Section,(TPoint,TPoint), Formula)] = {
     zip match {
       case Nil => Nil
       case (LineSection(Some(LineParam((x1,y1),(x2,y2))),Some(_)), ((xx1, yy1), (xx2, yy2))) :: rest =>
-        val slope2 = slope match {case Some(x) => x case None => foldDivide(foldMinus(yy2,yy1),foldMinus(xx2,xx1))}
-        val yend = slope match {case Some(x) => foldTimes(x, foldMinus(xx2,xx1)) case None => yy2}
-        val head = (LineSection(Some(LineParam((xx1,yy1),(xx2,yend))), Some(slope2)), ((xx1,yy1),(xx2,yend)))
-        head :: alignZipped(setStartY(rest,yend), Some(slope2))
+        val endY = Variable("y", Some(index))
+        val endM = Variable("m", Some(index)) // @TODO: Totally redundant but probably makesn life easier
+        val endMTerm = slope match {case Some(x) => x case None => foldDivide(foldMinus(yy2,yy1),foldMinus(xx2,xx1))}
+        val endYTerm = slope match {case Some(x) => foldPlus(foldTimes(x, foldMinus(xx2,xx1)),yy1) case None => yy2}
+        val endYDef:Formula = Equal(endY, endYTerm)
+        val endMDef:Formula = Equal(endM, endMTerm)
+        val head = (LineSection(Some(LineParam((xx1,yy1),(xx2,endY))), Some(endM)), ((xx1,yy1),(xx2,endY)), And(endYDef, endMDef))
+        head :: alignZipped(setStartY(rest,endY), Some(endM), index+1)
       case (ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(_)), ((xx1, yy1), (xx2, yy2))) :: rest =>
+        /* Nasty math provided by Mathematica: Compute center of circle using two points on circle and tangent vector*/
+        def centerFromStartSlope (dxy:TPoint)= {
+          // TODO: slope to direction means gross terms
+          val (a,b) = dxy
+          val cxnum= /*foldNeg(*/
+            foldPlus(foldPlus(foldPlus(foldNeg(a),foldPower(x1,Number(2))), foldPlus(foldPlus(a,foldPower(x2,Number(2))),foldMinus(foldMinus(foldTimes(Number(2),foldTimes(b,foldTimes(x1,y1))), foldTimes(Number(3),foldTimes(a,foldPower(y1,Number(2))))),foldTimes(Number(2),foldTimes(b,foldTimes(x1,y2)))))),
+              foldPlus(foldTimes(Number(2),foldTimes(a,foldTimes(y1,y2))), foldTimes(a,foldPower(y2,Number(2)))))
+          val cxden = foldTimes(Number(2), foldPlus(foldMinus(foldMinus(foldTimes(a,x1), foldTimes(a,x2)),foldTimes(b,y1)), foldTimes(b,y2)))
+          val cx = foldNeg(foldDivide(cxnum,cxden))
+          val cyterm = foldTimes(Number(2), foldTimes(a, foldTimes(foldPlus(foldNeg(x1),x2),y1)))
+          val cyfac = foldPlus(foldMinus(foldPlus(foldMinus(foldPower(x1,Number(2)),foldTimes(Number(2),foldTimes(x1,x2))), foldPower(x2,Number(2))), foldPower(y1,Number(2))),foldPower(y2,Number(2)))
+          val cynum = foldPlus(cyterm, foldTimes(b,cyfac))
+          val cyden =foldTimes(Number(2),foldPlus(foldTimes(a,foldMinus(x1,x2)),foldTimes(b,foldMinus(y2,y1))))
+          val cy = foldNeg(foldDivide(cynum,cyden))
+          (cx,cy)
+        }
+        // Compute direction-to-center vector using tangent vector and wiseness
         def centerFromTangent(dir:TPoint, angles:(Number,Number)) = {
           val isCw = angles._1.value > angles._2.value
           if (isCw) {
@@ -370,53 +409,84 @@ object CoasterXSpec {
             (foldNeg(dir._2), dir._1)
           }
         }
-        //TODO: Somewhere accidental exponential blowup
         def tangentFromCenter(dir:TPoint, angles:(Number,Number)) =
           centerFromTangent(dir, angles.swap)
+        val endY = Variable("y", Some(index))
+        val endM = Variable("m", Some(index)) // @TODO: Totally redundant but probably makesn life easier
         val (oldcx, oldcy) = arcCenter((x1,y1),(x2,y2))
         // TODO: Default is probably wrong
         val defaultSlope = foldDivide(foldNeg(foldMinus(oldcx,xx1)),foldMinus(oldcy,yy1))
         val slopeStart = slope match {case Some(x) => x case None => defaultSlope}
         val (dx,dy) = slopeDir(slopeStart)
-        val (dxC, dyC) = centerFromTangent((dx,dy), (param.theta1,param.theta2))
+        val (dcx,dcy) = centerFromTangent((dx,dy),(param.theta1, param.theta2))
+        val (newcx, newcy) = arcCenter((x1, y1), (x2, y2))
         val rad = foldDivide(foldMinus(x2,x1),Number(2))
-        val (newcx, newcy) = vecPlus((xx1,yy1), vecScale((dxC,dyC), rad))
         // @TODO: first need to correct center by projecting to where stuff is ok
         // by geometry, yend^2 = cy +- sqrt(r^2 - (cx-x)^2), which +- depends on quadrant
         val yendSign = if (param.theta2.value > 0) { Number(1) } else Number(-1)
         val xend = xx2
-        val yend =  foldPlus(newcy, foldTimes(yendSign, foldPower(foldMinus(foldPower(rad,Number(2)),foldPower(foldMinus(newcx,xend),Number(2))), foldDivide(Number(1),Number(2)))))
-        val slopeEnd = foldDivide(foldMinus(newcy,yend), foldMinus(xend,newcx))
-        //val centerSlope = foldDivide(Number(-1), slope2)
-        val cyy = foldPlus(yy1,foldTimes(dx,foldMinus(newcx,xx1)))
-        val head = (ArcSection(Some(ArcParam((x1, foldMinus(cyy,rad)), (x2, foldPlus(cyy,rad)), theta1, deltaTheta)), Some(slopeStart)), ((xx1, yy1), (xx2, yy2)))
-        // TODO: Do we have an actual y-coordinate here?
-        head :: alignZipped(setStartY(rest,yend), Some(slopeEnd))
+        // TODO: Double-check definition
+        val yEndTerm =  foldPlus(newcy, foldTimes(yendSign, foldPower(foldMinus(foldPower(rad,Number(2)),foldPower(foldMinus(newcx,xend),Number(2))), foldDivide(Number(1),Number(2)))))
+        val mEndTerm = foldDivide(foldMinus(newcy,endY), foldMinus(xend,newcx))
+        val endYDef:Formula = Equal(endY, yEndTerm)
+        val endMDef:Formula = Equal(endM, mEndTerm)
+        val head = (ArcSection(Some(ArcParam((foldMinus(newcx,rad), foldMinus(newcy,rad)), (foldPlus(newcx,rad), foldPlus(newcy,rad)), theta1, deltaTheta)), Some(slopeStart)),
+          ((xx1, yy1), (xx2, yy2)),
+          And(endYDef, endMDef))
+        // Note: Start slope for next line is variable, keeps size reasonable
+        head :: alignZipped(setStartY(rest, endY), Some(endM), index+1)
       case _ => ???
     }
+    //val (dxC, dyC) = centerFromTangent((dx,dy), (param.theta1,param.theta2))
+    //val (newcx, newcy) = vecPlus((xx1,yy1), vecScale((dxC,dyC), rad))
+    //val centerSlope = foldDivide(Number(-1), slope2)
+    //val cyy = foldPlus(yy1,foldTimes(dx,foldMinus(newcx,xx1)))
+    //((2 a (-x1 + x2) y1
+    //            + b (x1^2 - 2 x1 x2 + x2^2 - y1^2 + y2^2))/
+    //            (2 (a (x1 - x2) + b (-y1 + y2))))
+    /*foldMinus(foldPlus(foldMinus(foldPlus(foldNeg(foldTimes(b,foldPower(x1,Number(2)))),
+      // 2 b x1 x2
+      foldTimes(Number(2), foldTimes(b,foldTimes(x1,x2)))
+      // b x2^2
+    ),foldTimes(b,foldPower(x2,Number(2)))
+    ),foldTimes(Number(2),foldTimes(a,foldTimes(x1,y1)))
+    ),foldTimes(Number(2),foldTimes(a,foldTimes(x2,y1)))
+    )*/
+
   }
 
-  def unzipConsecutive(tuples: List[(CoasterXParser.Section, ((Term, Term), (Term, Term)))]):(List[TPoint], List[Section]) = {
+  def unzipConsecutive(tuples: List[(CoasterXParser.Section, ((Term, Term), (Term, Term)), Formula)]):(List[TPoint], List[Section], Formula) = {
     tuples match {
-      case Nil => (Nil, Nil)
-      case (sec,(start,end))::Nil =>
-        (start :: end :: Nil, sec :: Nil)
-      case (sec,(start,end))::rest =>
-        val (points, secs) = unzipConsecutive(rest)
-        (start :: points, sec :: secs)
+      case Nil => (Nil, Nil, True)
+      case (sec,(start,end), fml)::Nil =>
+        (start :: end :: Nil, sec :: Nil, fml)
+      case (sec,(start,end),fml)::rest =>
+        val (points, secs,fmls) = unzipConsecutive(rest)
+        (start :: points, sec :: secs, And(fml,fmls))
     }
   }
 
   // Adjust y-coordinates such that all adjacent track segments are tangent to each other, while leaving x-coordinates alone
   // Coasters exported from CoasterX typically satisfy this property modulo floatiness, but it becomes slightly false due to rounding.
-  // This should never be a "big" change
-  def alignFile(file:File):File = {
+  // This should never be a "big" change in terms of magnitude, but can be a huge change in the complexity of the term.
+  // There are a few different approaches to manage the size of the terms.
+  // The main difficulty arises from irrational points lying on circles.
+  // The oldly-implemented approach is to leave the (rational) endpoints and beginning slope of an arc fixed, from
+  // which nasty math (derived by Mathematica) derives an often-irrational point for the center of the circle.
+  // However this also makes the end slope nasty, so the current algorithm gives up on making the slopes on a track
+  // totally continuous here. The current approach could be incrementally improved by simplifying some the math.
+  // For a more serious improvement (i.e. getting full tangency), now trying to to introduce
+  // auxilliary variables standing for the new start/end coordinates for track sections, replacing exponential explosion
+  // in term size with linear increase in variable count.
+  // With a little luck, the increase in variables should not mean a big blowup in the number of variables seen by any one
+  // QE call.
+  def alignFile(file:File):(File,Formula) = {
     val (points, segments, v0, tent) = file
     val nonemptySegs = segments.filter(!segmentEmpty(_))
     val withBounds = zipConsecutive(nonemptySegs,points)
-    val alignedBounds = alignZipped(withBounds,None)
-    val (pointss, segmentss) = unzipConsecutive(alignedBounds)
-    (pointss, segments.head :: segmentss, v0, tent)
+    val alignedBounds = alignZipped(withBounds,None,1)
+    val (pointss, segmentss, fml) = unzipConsecutive(alignedBounds)
+    ((pointss, segments.head :: segmentss, v0, tent),fml)
   }
   /* x'  =  dx * v,  y' = dy * v,
 v'  =  -dy

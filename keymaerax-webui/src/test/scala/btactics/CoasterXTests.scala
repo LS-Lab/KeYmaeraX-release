@@ -1,8 +1,9 @@
-package btactics
+package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.{CoasterXParser, CoasterXSpec}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 class CoasterXTests extends TacticTestBase {
@@ -105,7 +106,10 @@ class CoasterXTests extends TacticTestBase {
   "Spec Generator" should "generate a spec for example coaster" in {
     val coaster = CoasterXParser.parseFile(exampleFile1)
     val spec = CoasterXSpec(coaster.get)
-    println(spec.prettyString)
+    //TODO: Should normally use plain prettyString, but sometimes I've been creating massive formulas where the fast printer helps
+    //val bigString = new KeYmaeraXPrinter().stringify(spec)
+    val bigString = spec.prettyString
+    println(bigString)
   }
 
   /* bigDecimal = {BigDecimal@2869} "0E+1"
