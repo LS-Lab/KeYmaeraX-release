@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import akka.actor.{Actor, ActorSystem, Props}
 import akka.io.IO
+import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
 import edu.cmu.cs.ls.keymaerax.hydra.HyDRAServerConfig.{host, port}
@@ -57,7 +58,10 @@ object NonSSLBoot extends App {
     "A non-SSL server can only be booted when the environment var HyDRA_SSL is unset or is set to 'off'")
 
   import HyDRAServerConfig._
-  implicit var system = ActorSystem("on-spray-can")
+  val config = ConfigFactory.load()
+    .withValue("akka.loglevel", ConfigValueFactory.fromAnyRef("OFF"))
+    .withValue("akka.stdout-loglevel", ConfigValueFactory.fromAnyRef("OFF"))
+  implicit var system = ActorSystem("on-spray-can", config)
 
   HyDRAInitializer(args, database)
 
