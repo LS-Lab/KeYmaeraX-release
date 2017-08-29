@@ -20,6 +20,15 @@ class CoasterXTests extends TacticTestBase {
   val seg7:String = "('straight',((1060,109,1074.5057163758297,308.1816501208388),),-13.7312522153492)"
   val seg8:String = "('arc',((1073.9302486950965,74.48837803692527,1509.6673714837575,510.2255008255863),-175.83469836892337,60.33353966713379),-0.4770003569825235)"
 
+  // More example files
+  val straightLine = "([(0, 100), (1000, 100)], [('straight', (None,), None), ('straight', ((0, 500, 1000, 500),), 0.0)], 1.0, (0, 0, 0, 0))"
+  val quarterArc = "([(100, 100), (171, 129)], [('straight', (None,), None),   ('arc', ((0, 300, 200, 500), -90, 45.0), 1.0)], 500.0, (171, 129, 171, 129))"
+  val halfArc = "([(0, 100), (100, 300)], [('straight', (None,), None),   ('arc', ((0, 300, 200, 500), -180, -90.0), 0.0)], 500.0, (100, 300, 100, 300))"
+  val fullArc = "([(0, 100), (100, 300), (200, 200)],  [('straight', (None,), None), ('arc', ((0, 300, 200, 500), -180, -90.0), 0.0),   ('arc', ((0, 300.0, 200, 500), 90.0, -90), -48.494845360825195)], 500.0, (-800, -94.31605562579006, 198.106405394016, 906.9587020648964))"
+  val simpleHill = "([(0, 100),  (100, 200),  (342, 300),   (579, 202),  (683, 102)],[('straight', (None,), None), ('straight', ((0, 500, 100, 400),), 1.0), ('arc', ((0, 300, 683, 983), 135.0, -45.0), 0), ('arc', ((0, 300, 683, 983), 90, -45.0), -1), ('straight', ((579, 398, 683, 497),), -1)], 500.0, (-2406.346757107975, -29.408888352737677, 1211.9531693319414, 3588.8910380871785))"
+  val simpleValley = "([(0, 500),  (100, 400),   (199, 359),   (299, 398),   (415, 505)], [('straight', (None,), None),  ('straight', ((0, 100, 100, 200),), -1.0),  ('arc', ((59, -39, 339, 241), -135, 45), 0),  ('arc', ((51, -55, 347, 241), -90,  43), 0.92), ('straight', ((299, 202, 415, 95),), 0.92)], 500.0, (415.37482499434077, 94.97095456951104, 253.3717788455165, 243.96392952765427))"
+
+
   "Joint Parser" should "parse first joint" in {
     val joint = CoasterXParser.parsePoint("(40,100)")
     joint shouldBe 'defined
@@ -103,13 +112,36 @@ class CoasterXTests extends TacticTestBase {
     ' '.isWhitespace shouldBe true
   }
 
+  def printFileSpec(s:String):Unit = println(CoasterXSpec(CoasterXParser.parseFile(s).get))
+
   "Spec Generator" should "generate a spec for example coaster" in {
-    val coaster = CoasterXParser.parseFile(exampleFile1)
-    val spec = CoasterXSpec(coaster.get)
-    //TODO: Should normally use plain prettyString, but sometimes I've been creating massive formulas where the fast printer helps
-    //val bigString = new KeYmaeraXPrinter().stringify(spec)
-    val bigString = spec.prettyString
-    println(bigString)
+    printFileSpec(exampleFile1)
+  }
+
+
+  it should "generate spec for straight line" in {
+    printFileSpec(straightLine)
+  }
+
+  // quarterArc, halfArc, fullArc, simpleHill, simpleValley
+  it should "generate spec for quarter arc" in {
+    printFileSpec(quarterArc)
+  }
+
+  it should "generate spec for halfArc" in {
+    printFileSpec(halfArc)
+  }
+
+  it should "generate spec for fullArc" in {
+    printFileSpec(fullArc)
+  }
+
+  it should "generate spec for simpleHill" in {
+    printFileSpec(simpleHill)
+  }
+
+  it should "generate spec for simpleValley" in {
+    printFileSpec(simpleValley)
   }
 
   /* bigDecimal = {BigDecimal@2869} "0E+1"

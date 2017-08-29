@@ -4,7 +4,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
-/* Generate dL specification for safety of CoasterX models from a file */
+/* Generate dL specification for safety of CoasterX models from a file
+* @TODO: Straight-line case: consider turning dx, dy into assignment instead of plugging directly into ODE
+* */
 object CoasterXSpec {
 
   def foldMinus(t1:Term, t2:Term):Term = {
@@ -154,7 +156,7 @@ object CoasterXSpec {
       case ArcSection(Some(ArcParam((x1,y1),(x2,y2),theta1,deltaTheta)), Some(gradient)) =>
         //val ((x3,y3),(x4,y4)) = arcBounds((x1,y1),(x2,y2),theta1,Number(theta1.value+deltaTheta.value))
         //val r = Number((x4.value-x3.value)/2)
-        val r = foldDivide(foldMinus(end._1,start._1),Number(2))
+        val r = foldDivide(foldMinus(x2,x1),Number(2))
         val sysBase = "x' = dx*v, y' = dy*v, v' = -dy".asDifferentialProgram
         /* TODO: Set sign based on direction of arc */
         val sys = DifferentialProduct(sysBase,DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("dx")), foldDivide("-dy*v".asTerm, r)),
@@ -178,6 +180,35 @@ object CoasterXSpec {
     //val mag = numSqrt(Number((xy2._1.value - xy1._1.value).pow(2) + (xy2._2.value - xy1._2.value).pow(2)))
     (foldDivide(foldMinus(xy2._1,xy1._1),mag), foldDivide(foldMinus(xy2._2,xy1._2),mag))
   }
+
+
+  /* Nasty math provided by Mathematica: Compute center of circle using two points on circle and tangent vector*/
+  def centerFromStartSlope (x1:Term, x2:Term, y1:Term, y2:Term, dxy:TPoint)= {
+    // TODO: slope to direction means gross terms
+    val (a,b) = dxy
+    val cxnum= /*foldNeg(*/
+      foldPlus(foldPlus(foldPlus(foldNeg(a),foldPower(x1,Number(2))), foldPlus(foldPlus(a,foldPower(x2,Number(2))),foldMinus(foldMinus(foldTimes(Number(2),foldTimes(b,foldTimes(x1,y1))), foldTimes(Number(3),foldTimes(a,foldPower(y1,Number(2))))),foldTimes(Number(2),foldTimes(b,foldTimes(x1,y2)))))),
+        foldPlus(foldTimes(Number(2),foldTimes(a,foldTimes(y1,y2))), foldTimes(a,foldPower(y2,Number(2)))))
+    val cxden = foldTimes(Number(2), foldPlus(foldMinus(foldMinus(foldTimes(a,x1), foldTimes(a,x2)),foldTimes(b,y1)), foldTimes(b,y2)))
+    val cx = foldNeg(foldDivide(cxnum,cxden))
+    val cyterm = foldTimes(Number(2), foldTimes(a, foldTimes(foldPlus(foldNeg(x1),x2),y1)))
+    val cyfac = foldPlus(foldMinus(foldPlus(foldMinus(foldPower(x1,Number(2)),foldTimes(Number(2),foldTimes(x1,x2))), foldPower(x2,Number(2))), foldPower(y1,Number(2))),foldPower(y2,Number(2)))
+    val cynum = foldPlus(cyterm, foldTimes(b,cyfac))
+    val cyden =foldTimes(Number(2),foldPlus(foldTimes(a,foldMinus(x1,x2)),foldTimes(b,foldMinus(y2,y1))))
+    val cy = foldNeg(foldDivide(cynum,cyden))
+    (cx,cy)
+  }
+  // Compute direction-to-center vector using tangent vector and wiseness
+  def centerFromTangent(dir:TPoint, angles:(Number,Number)) = {
+    val isCw = angles._1.value > angles._2.value
+    if (isCw) {
+      (dir._2, foldNeg(dir._1))
+    } else {
+      (foldNeg(dir._2), dir._1)
+    }
+  }
+  def tangentFromCenter(dir:TPoint, angles:(Number,Number)) =
+    centerFromTangent(dir, angles.swap)
 
   def segmentPre(segBounds:(Section,(TPoint,TPoint)), v0:Number):Formula = {
     val (seg, (start,end)) = segBounds
@@ -204,7 +235,7 @@ object CoasterXSpec {
         val yeq = Equal(y,y1)
         val veq = Equal(v, v0)
         And(dxeq,And(dyeq,And(xeq,And(yeq,veq))))
-      case ArcSection(Some(ArcParam((x1,y1),(x2,y2),theta1,deltaTheta)), Some(gradient)) =>
+      case ArcSection(Some(param@ArcParam((x1,y1),(x2,y2),theta1,deltaTheta)), Some(gradient)) =>
         /* TODO: Assert
         r > 0 &
         cy > y0 &
@@ -219,15 +250,19 @@ object CoasterXSpec {
         // ((x1,y1),(x2,y2),theta1,Number(theta1.value+deltaTheta.value))
         val ((x3,y3),(x4,y4)) = (start,end)
         val (cx, cy) = arcCenter((x1,y1),(x2,y2))
-        val dx = Variable("dx")
-        val dy = Variable("dy")
+
         val x = Variable("x")
         val y = Variable("y")
         val v = Variable("v")
         val r = Variable("r")
-        val dxeq = Equal(dx, foldDivide(foldMinus(cy,y), r))
+        val dcxTerm = foldDivide(foldMinus(cx,x), r)
+        val dcyTerm = foldDivide(foldMinus(cy,y),r)
+        val (dtx,dty) = tangentFromCenter((dcxTerm,dcyTerm),(param.theta1, param.theta2))
+        val dx = Variable("dx")
+        val dy = Variable("dy")
+        val dxeq = Equal(dx, dtx)
         //val dxeq = Equal(dx,foldDivide(foldNeg(foldMinus(y,cy)),r))
-        val dyeq = Equal(dy,foldDivide(foldMinus(x,cy),r))
+        val dyeq = Equal(dy,dty)
         val xeq = Equal(x,x3)
         val yeq = Equal(y,y3)
         val veq = Equal(v, v0)
@@ -255,16 +290,20 @@ object CoasterXSpec {
         val inRange = And(LessEqual(x1, x), LessEqual(x, x2))
         val onTrack = Equal(foldTimes(dxval, y), foldPlus(foldTimes(dyval, x), yOffset((x1, y1), (x2, y2))))
         Imply(inRange, onTrack)
-      case ArcSection(Some(ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(gradient)) =>
+      case ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(gradient)) =>
         val ((x3, y3), (x4, y4)) = (start,end)
           //val ((x3, y3), (x4, y4)) =arcBounds((x1, y1), (x2, y2), theta1, Number(theta1.value+deltaTheta.value))
 
         val inRange = And(LessEqual(x3, x), LessEqual(x, x4))
-        val r = foldDivide(foldMinus(end._1,start._1),Number(2))
+        val r = foldDivide(foldMinus(x2,x1),Number(2))
         //  val r = Number((x4.value - x3.value) / 2)
         val (cx, cy) = arcCenter((x1, y1), (x2, y2))
         val centered = Equal(foldPlus(foldPower(foldMinus(cx, x), Number(2)), foldPower(foldMinus(cy, y), Number(2))), foldPower(r,Number(2)))
-        val outRange = And(LessEqual(x, cx), Less(cy, y))
+        val isCw = param.theta1.value > param.theta2.value
+        val isLeft = start._1.asInstanceOf[Number].value < x1.asInstanceOf[Number].value
+        val outY = if(isCw) Less(cy,y) else Less(y,cy)
+        val outX = if(isLeft) LessEqual(x, cx) else LessEqual(cx, x)
+        val outRange = And(outX, outY)
         /* (x0 + l <= x & x <= xend) -> ((cx - x)^2 + (cy - y)^2 = r^2 & x <= cx & cy < y))*/
         Imply(inRange, And(centered, outRange))
       case _ => True
@@ -349,7 +388,6 @@ object CoasterXSpec {
     (points.map(roundPoint(scale)), segments.map(roundSegment(scale)), roundNumber(scale)(v0), roundParam(scale)(tent))
   }
 
-
   type TPoint = (Term,Term)
 
   def setStartY(sections:List[(Section,(TPoint,TPoint))], y:Term) = {
@@ -384,33 +422,6 @@ object CoasterXSpec {
         val head = (LineSection(Some(LineParam((xx1,yy1),(xx2,endY))), Some(endM)), ((xx1,yy1),(xx2,endY)), And(endYDef, endMDef))
         head :: alignZipped(setStartY(rest,endY), Some(endM), index+1)
       case (ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(_)), ((xx1, yy1), (xx2, yy2))) :: rest =>
-        /* Nasty math provided by Mathematica: Compute center of circle using two points on circle and tangent vector*/
-        def centerFromStartSlope (dxy:TPoint)= {
-          // TODO: slope to direction means gross terms
-          val (a,b) = dxy
-          val cxnum= /*foldNeg(*/
-            foldPlus(foldPlus(foldPlus(foldNeg(a),foldPower(x1,Number(2))), foldPlus(foldPlus(a,foldPower(x2,Number(2))),foldMinus(foldMinus(foldTimes(Number(2),foldTimes(b,foldTimes(x1,y1))), foldTimes(Number(3),foldTimes(a,foldPower(y1,Number(2))))),foldTimes(Number(2),foldTimes(b,foldTimes(x1,y2)))))),
-              foldPlus(foldTimes(Number(2),foldTimes(a,foldTimes(y1,y2))), foldTimes(a,foldPower(y2,Number(2)))))
-          val cxden = foldTimes(Number(2), foldPlus(foldMinus(foldMinus(foldTimes(a,x1), foldTimes(a,x2)),foldTimes(b,y1)), foldTimes(b,y2)))
-          val cx = foldNeg(foldDivide(cxnum,cxden))
-          val cyterm = foldTimes(Number(2), foldTimes(a, foldTimes(foldPlus(foldNeg(x1),x2),y1)))
-          val cyfac = foldPlus(foldMinus(foldPlus(foldMinus(foldPower(x1,Number(2)),foldTimes(Number(2),foldTimes(x1,x2))), foldPower(x2,Number(2))), foldPower(y1,Number(2))),foldPower(y2,Number(2)))
-          val cynum = foldPlus(cyterm, foldTimes(b,cyfac))
-          val cyden =foldTimes(Number(2),foldPlus(foldTimes(a,foldMinus(x1,x2)),foldTimes(b,foldMinus(y2,y1))))
-          val cy = foldNeg(foldDivide(cynum,cyden))
-          (cx,cy)
-        }
-        // Compute direction-to-center vector using tangent vector and wiseness
-        def centerFromTangent(dir:TPoint, angles:(Number,Number)) = {
-          val isCw = angles._1.value > angles._2.value
-          if (isCw) {
-            (dir._2, foldNeg(dir._1))
-          } else {
-            (foldNeg(dir._2), dir._1)
-          }
-        }
-        def tangentFromCenter(dir:TPoint, angles:(Number,Number)) =
-          centerFromTangent(dir, angles.swap)
         val endY = Variable("y", Some(index))
         val endM = Variable("m", Some(index)) // @TODO: Totally redundant but probably makesn life easier
         val (oldcx, oldcy) = arcCenter((x1,y1),(x2,y2))
