@@ -300,7 +300,7 @@ object CoasterXSpec {
         //  val r = Number((x4.value - x3.value) / 2)
         val (cx, cy) = arcCenter((x1, y1), (x2, y2))
         val centered = Equal(foldPlus(foldPower(foldMinus(cx, x), Number(2)), foldPower(foldMinus(cy, y), Number(2))), foldPower(r,Number(2)))
-        val isCw = param.theta1.value > param.theta2.value
+        val isCw = param.deltaTheta.value < 0
         val isLeft = start._1.asInstanceOf[Number].value < x1.asInstanceOf[Number].value
         val outY = if(isCw) LessEqual(cy,y) else LessEqual(y,cy)
         val outX = if(isLeft) LessEqual(x, cx) else LessEqual(cx, x)
