@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 /**
   * Approximations
@@ -29,7 +30,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
   */
 object Approximator {
   /** Debugging flag for the Approximator. */
-  private val ADEBUG = false | System.getProperty("DEBUG", "false")=="true"
+  private val ADEBUG = System.getProperty("DEBUG", "false")=="true"
 
   //region The [[approximate]] tactic with helpers for figuring out which approximation to use.
 
@@ -73,17 +74,23 @@ object Approximator {
 
           val cuts = Range(0,N).map(i => GreaterEqual(e, expExpansion(t,i)))
 
-          if(ADEBUG) println(s"exp approximator performing these cuts:\n\t ${cuts.mkString("\n\t")}")
+          if(ADEBUG) println(s"exp approximator performing these cuts:\n\t${cuts.mkString("\n\t")}")
 
-          val cutTactics: Seq[BelleExpr] =
-            cuts.map(cut =>
+          //dI handles the normal case, ODE handles the base case.
+          val proofOfCut =
+            DebuggingTactics.debug("Trying to prove by proofOfCut", ADEBUG) &
+            (TactixLibrary.dI()(pos) | TactixLibrary.ODE(pos)) &
+            DebuggingTactics.done("Expected dI to succeed.")
+
+          val cutTactics: Seq[BelleExpr] = {
+            cuts.map(cut => {
               TactixLibrary.dC(cut)(pos) < (
                 nil,
-                DebuggingTactics.debug("Trying to prove this by dI or by ODE", ADEBUG) &
-                //dI handles the normal case, ODE handles the base case.
-                (TactixLibrary.dI()(pos) | TactixLibrary.ODE(pos)) & DebuggingTactics.done("Expected dI to succeed.")
-              ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
-            )
+                DebuggingTactics.debug("Trying to prove this by dI or by ODE", ADEBUG) & proofOfCut
+              )
+            })
+          }
+
           DebuggingTactics.debug(s"Beginning expApproximation on ${e.prettyString}, ${n.prettyString}", ADEBUG) & cutTactics.reduce(_ & _)
         })
       }
@@ -166,6 +173,50 @@ object Approximator {
 
   //endregion
 
+
+  //region in-context helpers
+
+  /** If f == [{c & q}]p, this function returns [{c & q&cut}]p */
+  def extendEvDom(f: Modal, cut: Formula): Formula = {
+    require(f.program.isInstanceOf[ODESystem], s"Expected an ODE system but found ${f.prettyString}")
+
+    val evDomCtx = Context.at(f, PosInExpr(0::1::Nil))
+
+    evDomCtx._2 match {
+      case currentEvDom: Formula => evDomCtx._1.apply(And(currentEvDom, cut))
+      case _ => assert(false, "Should have failed prior assertion.");???
+    }
+  }
+
+  /**
+    * Produces a witness that [c&q]p -> [c&q&cut]p when cutProof proves that cut is an invariant.
+    * @param f The current goal [c&q]p
+    * @param cut The diff cut
+    * @param cutProof The proof that [c&q]cut
+    * @return A proved implication of the form [c&q]p -> [c&q&cut]p
+    */
+  def dcInCtx(f: Formula, cut: Formula, cutProof: BelleExpr): ProvableSig = f match {
+    case m:Modal if m.program.isInstanceOf[ODESystem] => {
+      val fact = Imply(extendEvDom(m, cut), f)
+
+      TactixLibrary.proveBy(fact,
+        DebuggingTactics.debug(s"Trying to prove lemma ${fact}", ADEBUG) &
+        TactixLibrary.implyR(1) & TactixLibrary.dC(cut)(1) <(
+          DebuggingTactics.debug("lemma branch 1: closeId", ADEBUG) & TactixLibrary.closeId & DebuggingTactics.done,
+          DebuggingTactics.debug("lemma branch 2: use provided tactic to prove cut", ADEBUG) & TactixLibrary.hideL(-1) & cutProof & DebuggingTactics.debug("should've been done",true) & DebuggingTactics.done
+        ) & DebuggingTactics.debug(s"Successfully proved lemma ${fact}", ADEBUG)
+      )
+
+    }
+    case _ => throw new BelleUserGeneratedError(s"Expected to find a modality containing an ODE, but found ${f.prettyString}")
+  }
+
+  /** Does a CEat with extendEvDomAndProve. */
+  def extendEvDomAndProve(f: Formula, cut: Formula, cutProof: BelleExpr): DependentPositionTactic = {
+    TactixLibrary.CEat(dcInCtx(f,cut,cutProof)) //@todo this doesn't work because initial conditions are missing. Need a useAt
+  }
+
+  //endregion
 
   //region Generic helper functions that should be replaced by library implementations.
 

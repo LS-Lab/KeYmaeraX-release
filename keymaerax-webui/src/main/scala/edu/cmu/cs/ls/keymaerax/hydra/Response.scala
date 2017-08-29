@@ -103,7 +103,7 @@ class ModelListResponse(models : List[ModelPOJO]) extends Response {
   def getJson = JsArray(objects:_*)
 }
 
-class ModelUploadResponse(modelId: Option[String], errorText: Option[String]) extends Response {
+case class ModelUploadResponse(modelId: Option[String], errorText: Option[String]) extends Response {
   def getJson = JsObject(
     "success" -> JsBoolean(modelId.isDefined),
     "errorText"->JsString(errorText.getOrElse("")),
@@ -1220,7 +1220,7 @@ class NodeResponse(tree : String) extends Response {
 }
 
 
-class ExtractTacticResponse(tacticText: String) extends Response {
+case class ExtractTacticResponse(tacticText: String) extends Response {
   def getJson = JsObject(
     "tacticText" -> JsString(tacticText)
   )

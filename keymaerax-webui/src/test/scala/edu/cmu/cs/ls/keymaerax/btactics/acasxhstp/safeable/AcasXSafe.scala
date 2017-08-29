@@ -84,7 +84,7 @@ class AcasXSafe extends AcasXBase {
 
     // reprove with spoon-feeding interpreter to create extractable tactic
     val proofId = db.createProof(createAcasXProblemFile(ucLoFormula))
-    val interpreter = SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter))
     interpreter(ucLoTac, BelleProvable(ProvableSig.startProof(ucLoFormula)))
 
     val tactic = db.extractTactic(proofId)

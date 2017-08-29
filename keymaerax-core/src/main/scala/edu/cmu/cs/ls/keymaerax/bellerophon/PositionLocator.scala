@@ -23,7 +23,11 @@ sealed trait PositionLocator {
 
 /** Locates the formula at the specified fixed position. Can optionally specify the expected formula or expected shape of formula at that position as contract. */
 case class Fixed private[keymaerax] (pos: Position, shape: Option[Formula] = None, exact: Boolean = true) extends PositionLocator {
-  override def prettyString: String = pos.prettyString
+  override def prettyString: String = pos.prettyString + ((shape, exact) match {
+    case (Some(fml), true) => s"=={`${fml.prettyString}`}"
+    case (Some(fml), false) => s"~={`${fml.prettyString}`}"
+    case (None, _) => ""
+  })
 }
 object Fixed {
   def apply(seqPos: Int, inExpr: List[Int], shape: Option[Formula], exact: Boolean): Fixed = new Fixed(Position(seqPos, inExpr), shape, exact)

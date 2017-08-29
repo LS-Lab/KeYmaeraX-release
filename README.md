@@ -108,8 +108,8 @@ ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, 
 In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. 
 
 4. Nathan Fulton, Stefan Mitsch, Brandon Bohrer and André Platzer. 
-Bellerophon: Tactical theorem proving for hybrid systems. 
-In Mauricio Ayala-Rincón and César Muñoz, editors, Interactive Theorem Proving, International Conference, ITP 2017, LNCS. Springer, 2017. 
+[Bellerophon: Tactical theorem proving for hybrid systems](http://dx.doi.org/10.1007/978-3-319-66107-0_14). 
+In Mauricio Ayala-Rincón and César Muñoz, editors, Interactive Theorem Proving, International Conference, ITP 2017, volume 10499 of LNCS. Springer, 2017. 
 
 5. André Platzer.
 [Differential dynamic logic for hybrid systems](http://dx.doi.org/10.1007/s10817-008-9103-8).

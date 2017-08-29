@@ -18,7 +18,7 @@ class ScriptedRequestTests extends TacticTestBase {
   "Model upload" should "work with a simple file" in withDatabase { db =>
     val modelContents = "ProgramVariables. R x. End.\n Problem. x=0->[x:=x+1;]x=1 End."
     val request = new CreateModelRequest(db.db, "guest", "Simple", modelContents)
-    request.resultingResponses() should contain theSameElementsAs BooleanResponse(flag=true)::Nil
+    request.resultingResponses() should contain theSameElementsAs ModelUploadResponse(Some("1"), None)::Nil
     db.db.getModelList("guest").loneElement should have(
       'name ("Simple"),
       'keyFile (modelContents))
@@ -87,6 +87,28 @@ class ScriptedRequestTests extends TacticTestBase {
         l1 should have ('goal (Some("x>=2 ==> x>=1".asSequent)))
         l2 should have ('goal (Some("x>=1 ==> x>=0".asSequent)))
         l3 should have ('goal (Some("x>=1 ==> [x:=x+1;]x>=1".asSequent)))
+    }
+  }}
+
+  it should "record hiding with formula checks" in withDatabase { db => withMathematica { _ =>
+    val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> x>=0 End."
+    val proofId = db.createProof(modelContents)
+    val t = SessionManager.token(SessionManager.add(db.user))
+    SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
+    val tacticRunner = runTactic(db, t, proofId) _
+
+    tacticRunner("()", hideR(1)) should have (
+      'proofId (proofId.toString),
+      'parent (DbProofTree(db.db, proofId.toString).root),
+      'progress (true)
+    )
+    inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
+      case AgendaAwesomeResponse(_, root, leaves, _, _) =>
+        root should have ('goal (Some("==> x>=0 -> x>=0".asSequent)))
+        leaves.loneElement should have ('goal (Some(" ==> ".asSequent)))
+    }
+    inside (new ExtractTacticRequest(db.db, proofId.toString).getResultingResponses(t).loneElement) {
+      case ExtractTacticResponse(tacticText) => tacticText shouldBe "hideR(1=={`x>=0->x>=0`})"
     }
   }}
 
@@ -166,7 +188,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val response = tacticRunner("()", dG("y'=0*y+2".asDifferentialProgram, None)(1, 1::Nil))
     response shouldBe a [ErrorResponse]
     //@note dG immediately calls an ANON tactic, which is the one that actually raises the error
-    response should have ('msg ("Tactic failed with error: [Bellerophon Runtime] Tactic ANON({`y`},{`0`},{`2`},1.1) may point to wrong position, found Some([v:=v;]<{x'=v&true}>x>=0) at position Fixed(1.1,None,true)"))
+    response should have ('msg ("Tactic failed with error: [Bellerophon Runtime] Tactic ANON(1.1) may point to wrong position, found Some([v:=v;]<{x'=v&true}>x>=0) at position Fixed(1.1,None,true)"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, leaves, _, _) =>
@@ -251,7 +273,7 @@ class ScriptedRequestTests extends TacticTestBase {
       getResultingResponses(t).loneElement
     response should have (
       'derivationInfos ((DerivationInfo("loop"), None)::(DerivationInfo("[*] iterate"), None)::
-        (DerivationInfo("GV"), None)::(DerivationInfo("MR"), None)::Nil),
+        (DerivationInfo("GV"), None)::(DerivationInfo("boxd"), None)::Nil),
       'suggestedInput (Map(FormulaArg("j(x)") -> "x>-1".asFormula)))
   }
 

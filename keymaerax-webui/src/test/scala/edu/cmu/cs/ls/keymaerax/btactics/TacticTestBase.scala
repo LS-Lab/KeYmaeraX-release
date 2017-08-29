@@ -22,6 +22,7 @@ import scala.collection.immutable._
  */
 class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   protected var theInterpreter: Interpreter = _
+  private var interpreters: List[Interpreter] = _
 
   /** Tests that want to record proofs in a database. */
   class DbTacticTester {
@@ -122,7 +123,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
         case Some(node) => node.maker match {
           case Some(tactic) =>
             val localProofId = db.createProof(node.localProvable)
-            val interpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, listener(db), SequentialInterpreter, level, strict=false)
+            val interpreter = registerInterpreter(SpoonFeedingInterpreter(localProofId, -1, db.createProof, listener(db), SequentialInterpreter, level, strict=false))
             interpreter(BelleParser(tactic), BelleProvable(ProvableSig.startProof(node.localProvable.conclusion)))
             extractTactic(localProofId)
         }
@@ -191,7 +192,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   /** Test setup */
   override def beforeEach(): Unit = {
-    theInterpreter = SequentialInterpreter()
+    interpreters = Nil
+    theInterpreter = registerInterpreter(SequentialInterpreter())
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[Formula]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
@@ -201,11 +203,21 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   /* Test teardown */
   override def afterEach(): Unit = {
-    theInterpreter = null
-    PrettyPrinter.setPrinter(e => e.getClass.getName)
-    ToolProvider.shutdown()
-    ToolProvider.setProvider(new NoneToolProvider())
-    TactixLibrary.invGenerator = FixedGenerator(Nil)
+    try {
+      interpreters.foreach(i => try { i.kill() } catch { case ex: Throwable => ex.printStackTrace() })
+      interpreters = Nil
+    } finally {
+      PrettyPrinter.setPrinter(e => e.getClass.getName)
+      ToolProvider.shutdown()
+      ToolProvider.setProvider(new NoneToolProvider())
+      TactixLibrary.invGenerator = FixedGenerator(Nil)
+    }
+  }
+
+  /** Registers an interpreter for cleanup after test. Returns the registered interpreter. */
+  protected def registerInterpreter[T <: Interpreter](i: T): T = {
+    interpreters = interpreters :+ i
+    i
   }
 
   /** Proves a formula using the specified tactic. Fails the test when tactic fails.

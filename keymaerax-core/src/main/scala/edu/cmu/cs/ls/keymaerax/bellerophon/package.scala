@@ -55,7 +55,8 @@ package edu.cmu.cs.ls.keymaerax
   * @author Nathan Fulton
   * @author Stefan Mitsch
   * @author Andre Platzer
-  * @see Nathan Fulton and Andre Platzer. Bellerophon: A Typed Language for Automated Deduction in a Uniform Substitution Calculus
-  *    To be published.
+  * @see Nathan Fulton, Stefan Mitsch, Brandon Bohrer and Andre Platzer. 
+[[http://dx.doi.org/10.1007/978-3-319-66107-0_14 Bellerophon: Tactical theorem proving for hybrid systems]]. 
+In Mauricio Ayala-Rincon and Cesar Munoz, editors, Interactive Theorem Proving, International Conference, ITP 2017, volume 10499 of LNCS. Springer, 2017.
  */
 package object bellerophon {}

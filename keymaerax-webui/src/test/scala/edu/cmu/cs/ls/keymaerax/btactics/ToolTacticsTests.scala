@@ -79,6 +79,28 @@ class ToolTacticsTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x=1&v=2 ==> \\forall t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->(v=2->v=2))&(v*t_+x)^3>=1)".asSequent
   }
 
+  it should "cohide other formulas in succ when proving a transformation in ante" in withMathematica { _ =>
+    val result = proveBy("x>0, y>0, z=x+y ==> [{x'=-x^y}]x>0".asSequent, transform("z>0".asFormula)(-3))
+    result.subgoals.loneElement shouldBe "x>0, y>0, z>0 ==> [{x'=-x^y}]x>0".asSequent
+  }
+
+  it should "cohide other formulas in succ when proving a transformation in succ" in withMathematica { _ =>
+    val result = proveBy("x>0, y>0 ==> [{x'=-x^y}]x>0, z>0, [{x:=x+1;}*]x>0".asSequent, transform("z>x+y".asFormula)(2))
+    result.subgoals.loneElement shouldBe "x>0, y>0 ==> [{x'=-x^y}]x>0, z>x+y, [{x:=x+1;}*]x>0".asSequent
+  }
+
+  //@todo missing feature
+  it should "cohide other formulas in succ when proving a transformation in negative polarity in ante" ignore withMathematica { _ =>
+    val result = proveBy("x>0, y>0, z>0->a=5 ==> [{x'=-x^y}]x>0".asSequent, transform("z>x+y".asFormula)(-3, 0::Nil))
+    result.subgoals.loneElement shouldBe "x>0, y>0, z>x+y->a=5 ==> [{x'=-x^y}]x>0".asSequent
+  }
+
+  //@todo missing feature
+  it should "cohide other formulas in succ when proving a transformation in negative polarity in succ" ignore withMathematica { _ =>
+    val result = proveBy("x>0, y>0 ==> [{x'=-x^y}]x>0, z>x+y->a=5, [{x:=x+1;}*]x>0".asSequent, transform("z>0".asFormula)(2, 0::Nil))
+    result.subgoals.loneElement shouldBe "x>0, y>0 ==> [{x'=-x^y}]x>0, z>0->a=5, [{x:=x+1;}*]x>0".asSequent
+  }
+
   "Transform in context" should "exploit equivalence" in withMathematica { _ =>
     val result = proveBy("[x:=4;]x>=v*v".asFormula, transform("x>=v^2".asFormula)(1, 1::Nil))
     result.subgoals.loneElement shouldBe "==> [x:=4;]x>=v^2".asSequent
@@ -207,5 +229,17 @@ class ToolTacticsTests extends TacticTestBase {
     db.extractTactic(proofId) shouldBe BelleParser("edit({`abbrv(2*g())*expand(abs(x))=41`},1)")
     db.extractStepDetails(proofId, "(1,0)") shouldBe BelleParser("abbrv({`2*g()`},{`abbrv`}) & absExp(1.0.1) & transform({`abbrv*abs_0=41`},1)")
   }}
+
+  it should "abbreviate in programs" in withMathematica { _ =>
+    proveBy("[x:=2+3;]x=5".asFormula, edit("[x:=abbrv(2+3,five);]x=5".asFormula)(1)).subgoals.loneElement shouldBe
+      "five=2+3 ==> [x:=five;]x=5".asSequent
+  }
+
+  it should "expand multiple at once" in withMathematica { _ =>
+    proveBy("abs(a)>0, abs(c)>3 ==> abs(a)>0 | abs(b)>1 | abs(c)>2".asSequent,
+      edit("expand(abs(a))>0 | expand(abs(b))>1 | expand(abs(c))>2".asFormula)(1)).
+      subgoals.loneElement shouldBe
+      "abs_0>0, abs_2>3, a>=0 & abs_0=a | a<0 & abs_0=-a, b>=0 & abs_1=b | b<0 & abs_1=-b, c>=0 & abs_2=c | c<0 & abs_2=-c ==> abs_0>0 | abs_1>1 | abs_2>2".asSequent
+  }
 
 }

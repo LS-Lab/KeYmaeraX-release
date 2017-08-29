@@ -1,33 +1,35 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import java.net.URL
-import javax.swing.JOptionPane
+import javax.swing.{JLabel, JOptionPane}
+import java.awt.GraphicsEnvironment._
+import java.awt.Desktop._
+import java.util.Locale
 
 /**
+ * Opens the default web browser pointed to the KeYmaera X URL.
  * Created by nfulton on 9/17/15.
  */
 object SystemWebBrowser {
   /** @note location is not a URL/URI because it could be stuff like about:config or whatever... */
-  def apply(location: String) = {
+  def apply(location: String): Unit = {
     // Try opening the web browser appropriately
     try {
-      if (!java.awt.GraphicsEnvironment.isHeadless() &&
-        java.awt.Desktop.isDesktopSupported() &&
-        java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.BROWSE))
-      {
-        java.awt.Desktop.getDesktop().browse(new java.net.URI(location))
-      }
-      else if (!java.awt.GraphicsEnvironment.isHeadless()) {
-        JOptionPane.showMessageDialog(null, s"Point your browser to ${location}")
-      }
-      else {
-        println(s"Launching server in headless mode.\nPoint your browser to ${location}")
+      val os = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
+      if (os != "linux" && !isHeadless && isDesktopSupported && getDesktop.isSupported(Action.BROWSE)) {
+        getDesktop.browse(new java.net.URI(location))
+      } else if (os == "linux" && !isHeadless) {
+        //@todo Runtime.exec open default browser
+        JOptionPane.showMessageDialog(null, new JLabel(s"""<html>Point your browser to <a href="$location">$location</a></html>"""))
+      } else if (!isHeadless) {
+        JOptionPane.showMessageDialog(null, new JLabel(s"""<html>Point your browser to <a href="$location">$location</a></html>"""))
+      } else {
+        println(s"Launching server in headless mode.\nPoint your browser to $location")
       }
     } catch {
-      case exc: java.awt.HeadlessException =>
-      case exc: java.lang.ClassNotFoundException =>
-      case exc: java.lang.NoSuchMethodError =>
-      case exc: Exception =>
+      case _: java.awt.HeadlessException =>
+      case _: java.lang.ClassNotFoundException =>
+      case _: java.lang.NoSuchMethodError =>
+      case _: Exception =>
     }
   }
 

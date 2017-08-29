@@ -41,10 +41,18 @@ object Main {
       val keymaeraxjar : String = jarLocation
       println("Restarting KeYmaera X with sufficient stack space")
       runCmd((java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch"  :: Nil) ++ args.toList ++ ("-ui" :: Nil))
-    }
-    else {
+    } else {
+      if (!(System.getenv().containsKey("HyDRA_SSL") && System.getenv("HyDRA_SSL").equals("on"))) {
+        // Initialize the loading dialog splash screen.
+        LoadingDialogFactory()
+      }
+
+      LoadingDialogFactory().addToStatus(25, Some("Checking database version..."))
       exitIfDeprecated()
+
+      LoadingDialogFactory().addToStatus(15, Some("Checking lemma caches..."))
       clearCacheIfDeprecated()
+
       assert(args.head.equals("-launch"))
       startServer(args.tail)
       //@todo use command line argument -mathkernel and -jlink from KeYmaeraX.main
@@ -53,6 +61,7 @@ object Main {
   }
 
   def startServer(args: Array[String]) : Unit = {
+    LoadingDialogFactory().addToStatus(25, Some("Obtaining locks..."))
     KeYmaeraXLock.obtainLockOrExit()
 
     launcherLog("-launch -- starting KeYmaera X Web UI server HyDRA.")
@@ -74,10 +83,7 @@ object Main {
     //@todo skip -ui -launch
     if(System.getenv().containsKey("HyDRA_SSL") && System.getenv("HyDRA_SSL").equals("on")) {
       edu.cmu.cs.ls.keymaerax.hydra.SSLBoot.main(args)
-    }
-    else {
-      // Initialize the loading dialog splash screen.
-      LoadingDialogFactory()
+    } else {
       edu.cmu.cs.ls.keymaerax.hydra.NonSSLBoot.main(args)
     }
   }
