@@ -431,7 +431,8 @@ object CoasterXSpec {
         val endYTerm = initD match {case Some((dx,dy)) => foldPlus(foldTimes(foldDivide(dy,dx), foldMinus(xx2,xx1)),yy1) case None => yy2}
         val endYDef:Formula = Equal(endY, endYTerm)
         val endMDef:Formula = Equal(endM, endMTerm)
-        val head = (LineSection(Some(LineParam((xx1,yy1),(xx2,endY))), Some(endM)), ((xx1,yy1),(xx2,endY)), And(endYDef, endMDef))
+        val allDefs = endYDef // Ignore slopes for now
+        val head = (LineSection(Some(LineParam((xx1,yy1),(xx2,endY))), Some(endM)), ((xx1,yy1),(xx2,endY)), allDefs)
         val endD:TPoint = initD.getOrElse(defaultD)
         head :: alignZipped(setStartY(rest,endY), Some(endD), index+1)
       case (ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(oldSlope)), ((xx1, yy1), (xx2, yy2))) :: rest =>
@@ -454,9 +455,10 @@ object CoasterXSpec {
         val mEndTerm = foldDivide(dtye,dtxe)
         val endYDef:Formula = Equal(endY, yEndTerm)
         val endMDef:Formula = Equal(endM, mEndTerm)
+        val allDefs = endYDef //Ignore slopes for now
         val head = (ArcSection(Some(ArcParam((foldMinus(cx,rad), foldMinus(cy,rad)), (foldPlus(cx,rad), foldPlus(cy,rad)), theta1, deltaTheta)), Some(oldSlope)),
           ((xx1, yy1), (xx2, yy2)),
-          And(endYDef, endMDef))
+          allDefs)
         // Note: Start slope for next line is variable, keeps size reasonable
         head :: alignZipped(setStartY(rest, endY), Some(dtxe,dtye), index+1)
       case _ => ???
