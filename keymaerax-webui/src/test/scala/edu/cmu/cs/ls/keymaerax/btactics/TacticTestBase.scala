@@ -4,6 +4,8 @@ import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, UserPOJO}
@@ -13,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalactic.{AbstractStringUniformity, Uniformity}
-import org.scalatest.{Assertions, BeforeAndAfterEach, FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 import scala.collection.immutable._
 
@@ -23,6 +25,33 @@ import scala.collection.immutable._
 class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   protected var theInterpreter: Interpreter = _
   private var interpreters: List[Interpreter] = _
+
+  private val LOG_EARLIEST_QE = System.getProperty("LOG_POTENTIAL_QE", "false")=="true"
+  private val LOG_QE = System.getProperty("LOG_QE", "false")=="true"
+
+  protected val qeLogPath: String = System.getProperty("user.home") + "/.keymaerax/logs/qe/"
+  private val allPotentialQEListener = new QELogListener("wantqe.txt", (p, _) => { p.subgoals.size == 1 && p.subgoals.head.isFOL })
+  private val qeListener = new QELogListener("haveqe.txt", (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
+
+  /** Interpreter listener that logs QE calls to `logFile` if condition `logCondition` is satisfied. */
+  class QELogListener(logFile: String, logCondition: (ProvableSig, BelleExpr) => Boolean) extends IOListener() {
+    private val logged: scala.collection.mutable.Set[Sequent] = scala.collection.mutable.Set()
+    private val logPath = qeLogPath + logFile
+    private def qeFml(s: Sequent): Formula =
+      if (s.ante.isEmpty && s.succ.size == 1) s.succ.head.universalClosure
+      else s.toFormula.universalClosure
+    override def begin(input: BelleValue, expr: BelleExpr): Unit = input match {
+      case BelleProvable(p, _) if logCondition(p, expr) =>
+        val logSeq = Sequent(IndexedSeq(), IndexedSeq(qeFml(p.subgoals.head)))
+        if (!logged.contains(logSeq)) {
+          QELogger.logSequent(p.conclusion, logSeq, s"QE ${logged.size}", logPath)
+          logged.add(logSeq)
+        }
+      case _ => // do nothing
+    }
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {}
+    override def kill(): Unit = {}
+  }
 
   /** Tests that want to record proofs in a database. */
   class DbTacticTester {
@@ -51,7 +80,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
           val fnDecls = symbols.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>
             if (fn.sort == Real) s"R ${fn.asString}(${printDomain(fn.domain)})."
             else if (fn.sort == Bool) s"B ${fn.asString}(${printDomain(fn.domain)})."
-            else ???
+            else throw new Exception("Unknown sort: " + fn.sort)
           ).mkString("\n  ")
           val varDecls = symbols.filter(_.isInstanceOf[BaseVariable]).map(v => s"R ${v.prettyString}.").mkString("\n  ")
           s"""Functions.
@@ -91,7 +120,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       val globalProvable = ProvableSig.startProof(s)
       val listener = new TraceRecordingListener(db, proofId, None,
         globalProvable, 0 /* start from single provable */, recursive = false, "custom")
-      SequentialInterpreter(listener :: Nil)(t, BelleProvable(ProvableSig.startProof(s))) match {
+      val listeners = listener::Nil ++ (if (LOG_QE) qeListener::Nil else Nil) ++ (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil)
+      SequentialInterpreter(listeners)(t, BelleProvable(ProvableSig.startProof(s))) match {
         case BelleProvable(provable, _) =>
           provable.conclusion shouldBe s
           //extractTactic(proofId) shouldBe t //@todo trim trailing branching nil
@@ -193,7 +223,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   /** Test setup */
   override def beforeEach(): Unit = {
     interpreters = Nil
-    theInterpreter = registerInterpreter(SequentialInterpreter())
+    val listeners = (if (LOG_QE) qeListener::Nil else Nil) ++ (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil)
+    theInterpreter = registerInterpreter(SequentialInterpreter(listeners))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[Formula]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
@@ -280,7 +311,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
       getClass.getResourceAsStream(archive)).mkString)
 
-    var statistics = scala.collection.mutable.Map[String, (Long, Int, Int, Int)]()
+    val statistics = scala.collection.mutable.Map[String, (Long, Int, Int, Int)]()
 
     for (entry <- entries) {
       val tactic = entry.tactics.head._2
