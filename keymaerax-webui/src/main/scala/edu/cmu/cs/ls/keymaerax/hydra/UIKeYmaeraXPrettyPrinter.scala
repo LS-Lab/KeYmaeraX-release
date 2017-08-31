@@ -17,10 +17,10 @@ object UIKeYmaeraXPrettyPrinter {
 
   //@todo custom OpSpec?
   private val rewritings = List(
-    "&" -> "&#8743;",
+    "&" -> "&and;",
     "!=" -> "&ne;",
     "!" -> "&not;",
-    "|" -> "&#8744;",
+    "|" -> "&or;",
     "<->" -> "&#8596;",
     "->" -> "&rarr;",
     "<=" -> "&leq;",
@@ -30,6 +30,14 @@ object UIKeYmaeraXPrettyPrinter {
     "[" -> "&#91;",
     "]" -> "&#93;",
     "++" -> "&#8746;",
+    "<" -> "&lt;",
+    ">" -> "&gt;",
+    HTML_OPEN -> "<",
+    HTML_CLOSE -> ">"
+  )
+
+  private val textTagRewritings = List(
+    "&" -> "&amp;",
     "<" -> "&lt;",
     ">" -> "&gt;",
     HTML_OPEN -> "<",
@@ -59,6 +67,11 @@ object UIKeYmaeraXPrettyPrinter {
     //@note single pass with regex matching is slower than multi-pass literal replacement
     //val mapper = (m: Match) => rewritings.get(m.group(1))
     //opPattern.replaceSomeIn(stringify(expr), mapper)
+  }
+
+  /** Encodes HTML tags <>& etc. that may occur in text. */
+  def htmlTagEncode(text: String): String = {
+    textTagRewritings.foldLeft(text)({ case (s, (key, repl)) => s.replaceAllLiterally(key, repl) })
   }
 }
 

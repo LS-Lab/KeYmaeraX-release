@@ -9,7 +9,8 @@ angular.module('keymaerax.ui.binding', ['ngSanitize']).directive('contenteditabl
       var savedSel = {};
 
       ngModel.$render = function() {
-        element.html($sce.getTrustedHtml(ngModel.$viewValue || ''));
+        element.text(ngModel.$viewValue || '');
+        //element.html($sce.getTrustedHtml(ngModel.$viewValue || ''));
         //@note set cursor
 //        if (savedSel.element !== undefined && savedSel.range !== undefined) {
 //          rangy.getSelection().restoreCharacterRanges(savedSel.element, savedSel.range);
