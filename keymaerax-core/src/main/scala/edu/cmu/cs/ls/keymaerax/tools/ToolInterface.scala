@@ -186,3 +186,23 @@ trait SimulationTool extends ToolInterface {
     */
   def simulateRun(initial: SimState, stateRelation: Formula, steps: Int = 10): SimRun
 }
+
+/** Manages how a tool's operations work (e.g., timeouts). */
+trait ToolOperationManagement extends ToolInterface {
+  /** Sets a maximum duration of this tool's operations (e.g., QE). */
+  def setOperationTimeout(timeout: Int)
+
+  /** Returns the timeout duration. */
+  def getOperationTimeout: Int
+}
+
+/** Base class for tool operation management */
+abstract class ToolOperationManagementBase extends ToolOperationManagement {
+  private var timeout = -1
+
+  /** Sets a maximum duration of this tool's operations (e.g., QE). */
+  override def setOperationTimeout(timeout: Int): Unit = this.timeout = timeout
+
+  /** Returns the timeout duration. */
+  override def getOperationTimeout: Int = timeout
+}

@@ -17,6 +17,8 @@ import org.scalatest.prop.TableDrivenPropertyChecks._
 @SlowTest
 class Z3BenchmarkTests extends TacticTestBase {
 
+  private val qeTimeout = Some(60)
+
   private val haveQeLogPath = qeLogPath + "haveqe.txt"
 
   "Z3" should "prove all recorded actual QE calls" in withZ3 { _ =>
@@ -24,8 +26,7 @@ class Z3BenchmarkTests extends TacticTestBase {
     val examples = Table(("Name", "Sequent"), logEntries:_*)
     forEvery(examples) { (name, seq) =>
       println(s"Proving $name with Z3 ${seq.prettyString}")
-      //@todo QE timeout
-      withClue(name) { proveBy(seq, TactixLibrary.QE) shouldBe 'proved }
+      proveBy(seq, TactixLibrary.QE(Nil, None, qeTimeout)) shouldBe 'proved
     }
   }
 
