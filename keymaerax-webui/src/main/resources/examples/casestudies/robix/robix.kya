@@ -2731,25 +2731,210 @@ Problem.
 				  {xr' = vr, vr' = ar, t' = 1, T'=-1 & t <= ep() & vr >= 0}
 			  }*@invariant(loopinv())
 		] (xr < waypointEndDist(xg) & (T <= 0 -> (waypointStartDist(xg) < xr & vr = 0)))
+		& <
+		  {	{
+        {
+           if (xr > waypointStartDist(xg)) {
+             /* in the goal area: brake or stay stopped */
+             ar := -b(); ++ ?vr = 0; ar := 0;
+           } else {
+             if (xr + stopDist(vr) + accComp(vr) < waypointEndDist(xg) & vr+A()*ep() <= Vmax()) {
+               /* if robot can stop from higher speed before leaving goal area then accelerate */
+               ar := A();
+             } else {
+               /* else coast until at goal */
+               ar := 0;
+             }
+           }
+        }
+        /* dynamics */
+        t := 0;
+        }
+        {xr' = vr, vr' = ar, t' = 1, T'=-1 & t <= ep() & vr >= 0}
+      }*
+		> (waypointStartDist(xg) < xr & vr = 0)
 End.
 
 Tactic "Proof Theorem 14: Reach waypoint with deadline".
-  /* Proves with Z3 */
-  implyR(1); (andL('L)*);
-  /* normalize else conditions */
-  notGreater(1.0.0.0.0.1.0.0) ;
-  notAnd(1.0.0.0.0.1.1.1.0.0) ; notLess(1.0.0.0.0.1.1.1.0.0.0) ; notLessEqual(1.0.0.0.0.1.1.1.0.0.1);
-  /* loop induction */
-  loop({`loopinv()`}, 1); <(
-    print({`Base case`}); QE; done
-    ,
-    print({`Use case`}); QE; done
-    ,
-    print({`Induction step`}); unfold;
-    doall(ODE('R); allR('R); (implyR('R)*2); allL({`t_`}, 'Llast); QE); done
-  );
-  done;
-  print({`Proof done`})
+  implyR(1) ; andR(1) ; <(
+    loop({`0<=vr&vr<=Vmax()&xr+vr^2/(2*b()) < xg+GDelta()&(xg-GDelta() < xr->vr=0|T>=vr/b())&(xr<=xg-GDelta()->vr>=A()*ep()&T>(xg-xr-GDelta())/(A()*ep())+ep()+Vmax()/b()|vr<=A()*ep()&T>ep()-vr/A()+(xg-xr-GDelta())/(A()*ep())+ep()+Vmax()/b())`}, 1) ; <(
+      QE,
+      andR(1) ; <(
+        andL('L)* ; hideL(-10=={`xr<=xg-GDelta()->vr>=A()*ep()&T>(xg-xr-GDelta())/(A()*ep())+ep()+Vmax()/b()|vr<=A()*ep()&T>ep()-vr/A()+(xg-xr-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; QE,
+        implyR(1) ; andL('L)* ; andR(1) ; <(
+          hideL(-10=={`xg-GDelta() < xr->vr=0|T>=vr/b()`}) ; implyL(-10) ; <(
+            QE,
+            QE
+            ),
+          implyL(-10) ; <(
+            implyL(-10) ; <(
+              QE,
+              QE
+              ),
+            hideL(-11=={`xr<=xg-GDelta()->vr>=A()*ep()&T>(xg-xr-GDelta())/(A()*ep())+ep()+Vmax()/b()|vr<=A()*ep()&T>ep()-vr/A()+(xg-xr-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; QE
+            )
+          )
+        ),
+      andL('L)* ; notGreater(1.0.0.0.1.0.0) ; notAnd(1.0.0.0.1.1.1.0.0) ; composeb(1) ; solve(1.1) ; chase(1) ; andR(1) ; <(
+        implyR(1) ; fullSimplify ; andR(1) ; <(
+          allR(1) ; implyR(1) ; implyR(1) ; andR(1) ; <(
+            QE,
+            andR(1) ; <(
+              QE,
+              andR(1) ; <(
+                QE,
+                andR(1) ; <(
+                  QE,
+                  implyR(1) ; orR(1) ; allL({`t_`}, -12) ; implyL(-12) ; <(
+                    hideR(1=={`(-b())*t_+vr>=A()*ep()&-t_+T>(xg-((-b())/2*t_^2+vr*t_+xr)-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; hideR(1=={`(-b())*t_+vr<=A()*ep()&-t_+T>ep()-((-b())*t_+vr)/A()+(xg-((-b())/2*t_^2+vr*t_+xr)-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; QE,
+                    hideR(1=={`(-b())*t_+vr>=A()*ep()&-t_+T>(xg-((-b())/2*t_^2+vr*t_+xr)-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; hideR(1=={`(-b())*t_+vr<=A()*ep()&-t_+T>ep()-((-b())*t_+vr)/A()+(xg-((-b())/2*t_^2+vr*t_+xr)-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; hideL(-5=={`GDelta()>Vmax()*ep()+Vmax()^2/(2*b())`}) ; hideL(-7=={`xr+vr^2/(2*b()) < xg+GDelta()`}) ; QE
+                    )
+                  )
+                )
+              )
+            ),
+          implyR(1) ; fullSimplify ; allR(1) ; implyR(1) ; implyR(1) ; QE
+          ),
+        implyR(1) ; fullSimplify ; andR(1) ; <(
+          implyR(1) ; andL(-11) ; allR(1) ; implyR(1) ; implyR(1) ; andR(1) ; <(
+            QE,
+            andR(1) ; <(
+              QE,
+              andR(1) ; <(
+                hideL(-9=={`vr>=A()*ep()&T>(xg-xr-GDelta())/(A()*ep())+ep()+Vmax()/b()|vr<=A()*ep()&T>ep()-vr/A()+(xg-xr-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; hideL(-9=={`xr<=xg-GDelta()`}) ; hideL(-8=={`xr+vr^2/(2*b()) < xg+GDelta()`}) ; hideL(-4=={`Vmax()>=2*A()*ep()`}) ; hideL(-4=={`GDelta()>Vmax()*ep()+Vmax()^2/(2*b())`}) ; hideL(-5=={`vr<=Vmax()`}) ; hideL(-6=={`vr+A()*ep()<=Vmax()`}) ; QE,
+                andR(1) ; <(
+                  hideL(-11=={`xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()`}) ; hideL(-8=={`xr+vr^2/(2*b()) < xg+GDelta()`}) ; implyR(1) ; orR(1) ; QE,
+                  implyR(1) ; orR(1) ; hideL(-11=={`xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()`}) ; hideL(-8=={`xr+vr^2/(2*b()) < xg+GDelta()`}) ; orL(-8) ; <(
+                    hideR(2=={`A()*t_+vr<=A()*ep()&-t_+T>ep()-(A()*t_+vr)/A()+(xg-(A()/2*t_^2+vr*t_+xr)-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; andL(-8) ; andR(1) ; <(
+                      QE,
+                      QE
+                      ),
+                    andL(-8) ; andR(1) ; <(
+                      andR(2) ; <(
+                        QE,
+                        QE
+                        ),
+                      andR(2) ; <(
+                        allL({`t_`}, -11) ; implyL(-11) ; <(
+                          hideR(1=={`-t_+T>(xg-(A()/2*t_^2+vr*t_+xr)-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; hideR(1=={`A()*t_+vr<=A()*ep()`}) ; QE,
+                          andL(-11) ; hideL(-11=={`A()/2*t_^2+vr*t_+xr<=xg-GDelta()`}) ; hideL(-5=={`GDelta()>Vmax()*ep()+Vmax()^2/(2*b())`}) ; edit({`-t_+T>(xg-(A()/2*t_^2+vr*t_+xr)-GDelta())/(A()*ep())+abbrv(ep()+Vmax()/b())`}, 1) ; edit({`T>ep()-vr/A()+(xg-xr-GDelta())/(A()*ep())+abbrv`}, -11) ; hideL(-14=={`abbrv=ep()+Vmax()/b()`}) ; edit({`vr+A()*t_<=Vmax()`}, -8) ; QE
+                          ),
+                        QE
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            ),
+          implyR(1) ; allR(1) ; implyR(1) ; implyR(1) ; notLess(-11.0) ; notLessEqual(-11.1) ; andR(1) ; <(
+            hideL(-9=={`vr>=A()*ep()&T>(xg-xr-GDelta())/(A()*ep())+ep()+Vmax()/b()|vr<=A()*ep()&T>ep()-vr/A()+(xg-xr-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; hideL(-10=={`xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr)>=xg+GDelta()|vr+A()*ep()>Vmax()`}) ; QE,
+            andR(1) ; <(
+              hideL(-8=={`xr+vr^2/(2*b()) < xg+GDelta()`}) ; allL({`t_`}, -12) ; implyL(-12) ; <(
+                hideR(1=={`xg-GDelta() < vr*t_+xr->vr=0|-t_+T>=vr/b()`}) ; QE,
+                orL(-8) ; <(
+                  orL(-10) ; <(
+                    QE,
+                    QE
+                    ),
+                  implyR(1) ; orR(1) ; orL(-10) ; <(
+                    QE,
+                    QE
+                    )
+                  )
+                ),
+              implyR(1) ; orR(1) ; fullSimplify ; orL(-9) ; <(
+                hideR(2=={`vr<=A()*ep()&-t_+T>ep()-vr/A()+(xg-(vr*t_+xr)-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; andL(-9) ; fullSimplify ; orL(-10) ; <(
+                  edit({`-t_+T>(xg-(vr*t_+xr)-GDelta())/(A()*ep())+abbrv(ep()+Vmax()/b())`}, 1) ; edit({`T>(xg-xr-GDelta())/(A()*ep())+abbrv`}, -15) ; hideL(-16=={`abbrv=ep()+Vmax()/b()`}) ; allL({`t_`}, -12) ; implyL(-12) ; <(
+                    QE,
+                    hideL(-10=={`xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr)>=xg+GDelta()`}) ; hideL(-5=={`GDelta()>Vmax()*ep()+Vmax()^2/(2*b())`}) ; QE
+                    ),
+                  allL({`t_`}, -12) ; implyL(-12) ; <(
+                    QE,
+                    edit({`-t_+T>(xg-(vr*t_+xr)-GDelta())/(A()*ep())+abbrv(ep()+Vmax()/b())`}, 1) ; edit({`T>(xg-xr-GDelta())/(A()*ep())+abbrv`}, -15) ; hideL(-16=={`abbrv=ep()+Vmax()/b()`}) ; hideL(-8=={`xr+vr^2/(2*b()) < xg+GDelta()`}) ; hideL(-5=={`GDelta()>Vmax()*ep()+Vmax()^2/(2*b())`}) ; QE
+                    )
+                  ),
+                allL({`t_`}, -13) ; implyL(-13) ; <(
+                  hideR(1=={`vr>=A()*ep()&-t_+T>(xg-(vr*t_+xr)-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; hideR(1=={`vr<=A()*ep()&-t_+T>ep()-vr/A()+(xg-(vr*t_+xr)-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; QE,
+                  andL(-9) ; fullSimplify ; hideR(1=={`vr>=A()*ep()&-t_+T>(xg-(vr*t_+xr)-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; hideR(1=={`-t_+T>ep()-vr/A()+(xg-(vr*t_+xr)-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; orL(-10) ; <(
+                    hideL(-15=={`T>ep()-vr/A()+(xg-xr-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; hideL(-9=={`xr<=xg-GDelta()`}) ; QE,
+                    hideL(-15=={`T>ep()-vr/A()+(xg-xr-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; QE
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      ),
+    notGreater(1.0.0.0.0.1.0.0) ; notAnd(1.0.0.0.0.1.1.1.0.0) ; iterated(1) ; orR(1) ; composed(2) ; solve(2.1) ; composed(2) ; choiced(2) ; orR(2) ; hideR(2=={`<?xr_1>xg-GDelta();{ar:=-b();++?vr_1=0;ar:=0;}><t:=0;>\exists t_ (t_>=0&\forall s_ (0<=s_&s_<=t_->s_+t<=ep()&ar*s_+vr_1>=0)&\exists vr (vr=ar*t_+vr_1&\exists T (T=-t_+T_1&\exists xr (xr=ar/2*t_^2+vr_1*t_+xr_1&<{{{?xr>xg-GDelta();{ar:=-b();++?vr=0;ar:=0;}++?xr<=xg-GDelta();{?xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()&vr+A()*ep()<=Vmax();ar:=A();++?!xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()|!vr+A()*ep()<=Vmax();ar:=0;}}t:=0;}{xr'=vr,vr'=ar,t'=1,T'=-1&t<=ep()&vr>=0}}*>(xg-GDelta() < xr&vr=0)))))`}) ; composed(2) ; andL('L)* ; testd(2) ; hideL(-8=={`T_1>ep()+(xg-xr_1-GDelta())/(A()*ep())+ep()+Vmax()/b()`}) ; simplify(2) ; choiced(2) ; orR(2) ; composed(2) ; testd(2) ; andR(2) ; <(
+      hideR(3=={`<?!xr_1+vr_1^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr_1) < xg+GDelta()|!vr_1+A()*ep()<=Vmax();ar:=0;><t:=0;>\exists t_ (t_>=0&\forall s_ (0<=s_&s_<=t_->s_+t<=ep()&ar*s_+vr_1>=0)&\exists vr (vr=ar*t_+vr_1&\exists T (T=-t_+T_1&\exists xr (xr=ar/2*t_^2+vr_1*t_+xr_1&<{{{?xr>xg-GDelta();{ar:=-b();++?vr=0;ar:=0;}++?xr<=xg-GDelta();{?xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()&vr+A()*ep()<=Vmax();ar:=A();++?!xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()|!vr+A()*ep()<=Vmax();ar:=0;}}t:=0;}{xr'=vr,vr'=ar,t'=1,T'=-1&t<=ep()&vr>=0}}*>(xg-GDelta() < xr&vr=0)))))`}) ; QE,
+      hideR(3=={`<?!xr_1+vr_1^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr_1) < xg+GDelta()|!vr_1+A()*ep()<=Vmax();ar:=0;><t:=0;>\exists t_ (t_>=0&\forall s_ (0<=s_&s_<=t_->s_+t<=ep()&ar*s_+vr_1>=0)&\exists vr (vr=ar*t_+vr_1&\exists T (T=-t_+T_1&\exists xr (xr=ar/2*t_^2+vr_1*t_+xr_1&<{{{?xr>xg-GDelta();{ar:=-b();++?vr=0;ar:=0;}++?xr<=xg-GDelta();{?xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()&vr+A()*ep()<=Vmax();ar:=A();++?!xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()|!vr+A()*ep()<=Vmax();ar:=0;}}t:=0;}{xr'=vr,vr'=ar,t'=1,T'=-1&t<=ep()&vr>=0}}*>(xg-GDelta() < xr&vr=0)))))`}) ; assignd(2) ; assignd(2) ; existsR({`ep()`}, 2) ; andR(2) ; <(
+        QE,
+        andR(2) ; <(
+          QE,
+          existsR({`A()*ep()+vr_1`}, 2) ; simplify(2) ; existsR({`-ep()+T_1`}, 2) ; simplify(2) ; existsR({`A()/2*ep()^2+vr_1*ep()+xr_1`}, 2) ; simplify(2) ; useAt({`<*> merge`}, {`1`}, 2) ; hideL(-9=={`T=-ep()+T_1`}) ; con({`Vmax()>0&A()>0&b()>0&ep()>0&0 < vr&vr<=Vmax()&(xg-GDelta() < xr|xg-GDelta() < xr+v*ep()*vr)`}, 2) ; <(
+            QE,
+            andL('L)* ; composed(1) ; solve(1.1) ; composed(1) ; choiced(1) ; orR(1) ; composed(1) ; testd(1) ; orL(-8) ; <(
+              simplify(1) ; hideR(2=={`<?xr<=xg-GDelta();{?xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()&vr+A()*ep()<=Vmax();ar:=A();++?!xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()|!vr+A()*ep()<=Vmax();ar:=0;}><t:=0;>\exists t_ (t_>=0&\forall s_ (0<=s_&s_<=t_->s_+t<=ep()&ar*s_+vr>=0)&Vmax()>0&A()>0&b()>0&ep()>0&0 < ar*t_+vr&ar*t_+vr<=Vmax()&(xg-GDelta() < ar/2*t_^2+vr*t_+xr|xg-GDelta() < ar/2*t_^2+vr*t_+xr+(v-1)*ep()*(ar*t_+vr)))`}) ; choiced(1) ; orR(1) ; hideR(2=={`<?vr=0;ar:=0;><t:=0;>\exists t_ (t_>=0&\forall s_ (0<=s_&s_<=t_->s_+t<=ep()&ar*s_+vr>=0)&Vmax()>0&A()>0&b()>0&ep()>0&0 < ar*t_+vr&ar*t_+vr<=Vmax()&(xg-GDelta() < ar/2*t_^2+vr*t_+xr|xg-GDelta() < ar/2*t_^2+vr*t_+xr+(v-1)*ep()*(ar*t_+vr)))`}) ; assignd(1) ; assignd(1) ; QE,
+              cut({`xr>xg-GDelta()&(xr>xg-GDelta()-><ar:=-b();++?vr=0;ar:=0;><t:=0;>\exists t_ (t_>=0&\forall s_ (0<=s_&s_<=t_->s_+t<=ep()&ar*s_+vr>=0)&Vmax()>0&A()>0&b()>0&ep()>0&0 < ar*t_+vr&ar*t_+vr<=Vmax()&(xg-GDelta() < ar/2*t_^2+vr*t_+xr|xg-GDelta() < ar/2*t_^2+vr*t_+xr+(v-1)*ep()*(ar*t_+vr))))`}) ; <(
+                hideR(2=={`<?xr<=xg-GDelta();{?xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()&vr+A()*ep()<=Vmax();ar:=A();++?!xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()|!vr+A()*ep()<=Vmax();ar:=0;}><t:=0;>\exists t_ (t_>=0&\forall s_ (0<=s_&s_<=t_->s_+t<=ep()&ar*s_+vr>=0)&Vmax()>0&A()>0&b()>0&ep()>0&0 < ar*t_+vr&ar*t_+vr<=Vmax()&(xg-GDelta() < ar/2*t_^2+vr*t_+xr|xg-GDelta() < ar/2*t_^2+vr*t_+xr+(v-1)*ep()*(ar*t_+vr)))`}) ; andL(-9) ; fullSimplify ; closeTrue,
+                hideR(1=={`xr>xg-GDelta()&<ar:=-b();++?vr=0;ar:=0;><t:=0;>\exists t_ (t_>=0&\forall s_ (0<=s_&s_<=t_->s_+t<=ep()&ar*s_+vr>=0)&Vmax()>0&A()>0&b()>0&ep()>0&0 < ar*t_+vr&ar*t_+vr<=Vmax()&(xg-GDelta() < ar/2*t_^2+vr*t_+xr|xg-GDelta() < ar/2*t_^2+vr*t_+xr+(v-1)*ep()*(ar*t_+vr)))`}) ; andR(2) ; <(
+                  composed(1) ; testd(1) ; andR(1) ; <(
+                    QE,
+                    choiced(1) ; orR(1) ; composed(2) ; testd(2) ; andR(2) ; <(
+                      composed(3) ; testd(3) ; andR(3) ; <(
+                        prop,
+                        assignd(3) ; assignd(3) ; existsR({`ep()`}, 3) ; fullSimplify ; QE
+                        ),
+                      assignd(2) ; assignd(2) ; composed(3) ; testd(3) ; andR(3) ; <(
+                        fullSimplify ; orR(3) ; notR(3) ; notR(3) ; existsR({`ep()`}, 2) ; andR(2) ; <(
+                          QE,
+                          andR(2) ; <(
+                            QE,
+                            andR(2) ; <(
+                              QE,
+                              andR(2) ; <(
+                                QE,
+                                orR(2) ; QE
+                                )
+                              )
+                            )
+                          ),
+                        assignd(3) ; assignd(3) ; existsR({`ep()`}, 3) ; hideR(2=={`\exists t_ (t_>=0&\forall s_ (0<=s_&s_<=t_->s_+0<=ep()&A()*s_+vr>=0)&Vmax()>0&A()>0&b()>0&ep()>0&0 < A()*t_+vr&A()*t_+vr<=Vmax()&(xg-GDelta() < A()/2*t_^2+vr*t_+xr|xg-GDelta() < A()/2*t_^2+vr*t_+xr+(v-1)*ep()*(A()*t_+vr)))`}) ; fullSimplify ; QE
+                        )
+                      )
+                    ),
+                  hideR(1=={`<?xr<=xg-GDelta();{?xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()&vr+A()*ep()<=Vmax();ar:=A();++?!xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()|!vr+A()*ep()<=Vmax();ar:=0;}><t:=0;>\exists t_ (t_>=0&\forall s_ (0<=s_&s_<=t_->s_+t<=ep()&ar*s_+vr>=0)&Vmax()>0&A()>0&b()>0&ep()>0&0 < ar*t_+vr&ar*t_+vr<=Vmax()&(xg-GDelta() < ar/2*t_^2+vr*t_+xr|xg-GDelta() < ar/2*t_^2+vr*t_+xr+(v-1)*ep()*(ar*t_+vr)))`}) ; implyR(1) ; choiced(1) ; orR(1) ; hideR(2=={`<?vr=0;ar:=0;><t:=0;>\exists t_ (t_>=0&\forall s_ (0<=s_&s_<=t_->s_+t<=ep()&ar*s_+vr>=0)&Vmax()>0&A()>0&b()>0&ep()>0&0 < ar*t_+vr&ar*t_+vr<=Vmax()&(xg-GDelta() < ar/2*t_^2+vr*t_+xr|xg-GDelta() < ar/2*t_^2+vr*t_+xr+(v-1)*ep()*(ar*t_+vr)))`}) ; assignd(1) ; assignd(1) ; QE
+                  )
+                )
+              ),
+            andL('L)* ; edit({`xg-GDelta() < xr`}, -8) ; hideL(-1=={`v<=0`}) ; useAt({`<*> merge`}, {`1`}, 1) ; con({`Vmax()>0&A()>0&b()>0&ep()>0&vr>=0&vr-v*ep()*b()<=b()*ep()&xg-GDelta() < xr`}, 1) ; <(
+              QE,
+              andL('L)* ; composed(1) ; solve(1.1) ; composed(1) ; choiced(1) ; orR(1) ; hideR(2=={`<?xr<=xg-GDelta();{?xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()&vr+A()*ep()<=Vmax();ar:=A();++?!xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()|!vr+A()*ep()<=Vmax();ar:=0;}><t:=0;>\exists t_ (t_>=0&\forall s_ (0<=s_&s_<=t_->s_+t<=ep()&ar*s_+vr>=0)&Vmax()>0&A()>0&b()>0&ep()>0&ar*t_+vr-(v-1)*ep()*b()<=b()*ep()&xg-GDelta() < ar/2*t_^2+vr*t_+xr)`}) ; composed(1) ; testd(1) ; simplify(1) ; choiced(1) ; orR(1) ; hideR(2=={`<?vr=0;ar:=0;><t:=0;>\exists t_ (t_>=0&\forall s_ (0<=s_&s_<=t_->s_+t<=ep()&ar*s_+vr>=0)&Vmax()>0&A()>0&b()>0&ep()>0&ar*t_+vr-(v-1)*ep()*b()<=b()*ep()&xg-GDelta() < ar/2*t_^2+vr*t_+xr)`}) ; assignd(1) ; assignd(1) ; QE,
+              andL('L)* ; edit({`vr<=b()*ep()`}, -7) ; hideL(-1=={`v<=0`}) ; iterated(1) ; orR(1) ; composed(2) ; solve(2.1) ; composed(2) ; choiced(2) ; orR(2) ; composed(2) ; testd(2) ; simplify(2) ; hideR(3=={`<?xr_1<=xg-GDelta();{?xr_1+vr_1^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr_1) < xg+GDelta()&vr_1+A()*ep()<=Vmax();ar:=A();++?!xr_1+vr_1^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr_1) < xg+GDelta()|!vr_1+A()*ep()<=Vmax();ar:=0;}><t:=0;>\exists t_ (t_>=0&\forall s_ (0<=s_&s_<=t_->s_+t<=ep()&ar*s_+vr_1>=0)&\exists vr (vr=ar*t_+vr_1&\exists T (T=-t_+T_1&\exists xr (xr=ar/2*t_^2+vr_1*t_+xr_1&<{{{?xr>xg-GDelta();{ar:=-b();++?vr=0;ar:=0;}++?xr<=xg-GDelta();{?xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()&vr+A()*ep()<=Vmax();ar:=A();++?!xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()|!vr+A()*ep()<=Vmax();ar:=0;}}t:=0;}{xr'=vr,vr'=ar,t'=1,T'=-1&t<=ep()&vr>=0}}*>(xg-GDelta() < xr&vr=0)))))`}) ; choiced(2) ; orR(2) ; hideR(3=={`<?vr_1=0;ar:=0;><t:=0;>\exists t_ (t_>=0&\forall s_ (0<=s_&s_<=t_->s_+t<=ep()&ar*s_+vr_1>=0)&\exists vr (vr=ar*t_+vr_1&\exists T (T=-t_+T_1&\exists xr (xr=ar/2*t_^2+vr_1*t_+xr_1&<{{{?xr>xg-GDelta();{ar:=-b();++?vr=0;ar:=0;}++?xr<=xg-GDelta();{?xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()&vr+A()*ep()<=Vmax();ar:=A();++?!xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()|!vr+A()*ep()<=Vmax();ar:=0;}}t:=0;}{xr'=vr,vr'=ar,t'=1,T'=-1&t<=ep()&vr>=0}}*>(xg-GDelta() < xr&vr=0)))))`}) ; assignd(2) ; assignd(2) ; existsR({`vr_1/b()`}, 2) ; andR(2) ; <(
+                QE,
+                andR(2) ; <(
+                  QE,
+                  existsR({`0`}, 2) ; andR(2) ; <(
+                    QE,
+                    existsR({`-vr_1/b()+T_1`}, 2) ; simplify(2) ; existsR({`vr_1^2/(2*b())+xr_1`}, 2) ; andR(2) ; <(
+                      QE,
+                      con({`Vmax()>0&A()>0&b()>0&ep()>0&vr=0&xg-GDelta() < xr`}, 2) ; <(
+                        QE,
+                        composed(1) ; solve(1.1) ; composed(1) ; andL('L)* ; choiced(1) ; orR(1) ; hideR(2=={`<?xr<=xg-GDelta();{?xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()&vr+A()*ep()<=Vmax();ar:=A();++?!xr+vr^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*vr) < xg+GDelta()|!vr+A()*ep()<=Vmax();ar:=0;}><t:=0;>\exists t_ (t_>=0&\forall s_ (0<=s_&s_<=t_->s_+t<=ep()&ar*s_+vr>=0)&Vmax()>0&A()>0&b()>0&ep()>0&ar*t_+vr=0&xg-GDelta() < ar/2*t_^2+vr*t_+xr)`}) ; composed(1) ; testd(1) ; simplify(1) ; choiced(1) ; orR(1) ; hideR(1=={`<ar:=-b();><t:=0;>\exists t_ (t_>=0&\forall s_ (0<=s_&s_<=t_->s_+t<=ep()&ar*s_+vr>=0)&Vmax()>0&A()>0&b()>0&ep()>0&ar*t_+vr=0&xg-GDelta() < ar/2*t_^2+vr*t_+xr)`}) ; composed(1) ; testd(1) ; simplify(1) ; assignd(1) ; assignd(1) ; fullSimplify ; QE,
+                        QE
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
 End.
 
 End.
