@@ -343,7 +343,8 @@ object CoasterXSpec {
     val withBounds = zipConsecutive(nonemptySegs,points)
     val pre = segmentPre(withBounds.head,v0)
     val ode = withBounds.map(segmentOde).reduceRight[Program]({case(x,y) => Choice(x,y)})
-    val energyConserved = "v^2 + 2*y = v0^2 + 2*y0".asFormula
+    val y0 = points.head._2
+    val energyConserved = s"v^2 + 2*y = ($v0)^2 + 2*($y0)".asFormula
     val globalPost = And("v > 0".asFormula, energyConserved)
     val post = And(globalPost, withBounds.map(segmentPost).reduceRight[Formula]{case (x,y) => And(x,y)})
     Imply(And(segmentDefs,pre),Box(Loop(ode), post))

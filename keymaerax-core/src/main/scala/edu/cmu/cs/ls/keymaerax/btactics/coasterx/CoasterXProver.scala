@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics.coasterx
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser.{TPoint => _, _}
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{dW, _}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXSpec._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -29,7 +29,8 @@ object CoasterXProver {
     val nonemptySegs = segments.filter(!segmentEmpty(_))
     val withBounds = zipConsecutive(nonemptySegs, points)
     val ode = withBounds.map(segmentOde).reduceRight[Program]({ case (x, y) => Choice(x, y) })
-    val energyConserved = "v^2 + 2*y = v0^2 + 2*y0".asFormula
+    val y0 = points.head._2
+    val energyConserved = s"v^2 + 2*y = ($v0)^2 + 2*($y0)".asFormula
     val globalPost = And("v > 0".asFormula, energyConserved)
     And(globalPost, withBounds.map(segmentPost).reduceRight[Formula] { case (x, y) => And(x, y) })
   }
@@ -131,12 +132,12 @@ object CoasterXProver {
   def sectionTactic(pr: Provable, p1: TPoint, p2: TPoint, v0:Number, section: Section):BelleExpr = {
     section match {
       case ArcSection(Some(ArcParam(bl,tr,theta1,deltaTheta)),Some(grad)) =>
-        (theta1.value < -90, theta1.value < 0, theta1.value < 90) match {
+        ((theta1.value < -90, theta1.value < 0, theta1.value < 90) match {
           case (true, _, _) => quad3Tactic(pr, p1, p2, bl, tr, v0, theta1, deltaTheta) // Quadrant 3
           case (_, true, _) => quad4Tactic(pr, p1, p2, bl, tr, v0, theta1, deltaTheta) // Quadrant 4
           case (_, _, true) => quad1Tactic(pr, p1, p2, bl, tr, v0, theta1, deltaTheta) // Quadrant 1
           case _ => quad2Tactic(pr, p1, p2, bl, tr, theta1, v0, deltaTheta) /// Quadrant 2
-        }
+        }) & dW(1) & QE
       case LineSection(Some(LineParam(bl,tr)), Some(grad)) =>
         master()
       case _ => ???
@@ -157,7 +158,7 @@ object CoasterXProver {
   }
 
   def componentTactic(pr:Provable, p1: TPoint, p2: TPoint, section: Section, v: Number, i: Int):BelleExpr = {
-    sectionTactic(pr, p1, p2, v, section) & dW(1) & QE
+    sectionTactic(pr, p1, p2, v, section)
   /*  val globalPost = ???
     val componentPost = provePosts(pr, pr.conclusion.succ.head, p1, p2, section, v, i, 0)
     andR(1) <(globalPost, componentPost)*/
@@ -186,7 +187,9 @@ object CoasterXProver {
     val spec = fromAligned(align)
     val pr = Provable.startProof(spec)
     val pr1 = interpret(implyR(1), pr)
-    val pr2 = interpret(loop(invariant(align))(1) <(QE, QE, nil), pr1)
+    val pr2 = interpret(loop(invariant(align))(1), pr1)
+    val pr3 = interpret(nil <(QE, nil, nil), pr2)
+    val pr4 = interpret(nil <(QE, nil), pr3)
     val es = componentTactics(pr2, points, segments.tail, v0, 0)
     val e = mapChoices(es)
     val prEnd = interpret(e, pr2)

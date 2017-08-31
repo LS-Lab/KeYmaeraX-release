@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.btactics.coasterx.{CoasterXParser, CoasterXSpec}
+import edu.cmu.cs.ls.keymaerax.btactics.coasterx.{CoasterXParser, CoasterXProver, CoasterXSpec}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -142,6 +142,12 @@ class CoasterXTests extends TacticTestBase {
 
   it should "generate spec for simpleValley" in {
     printFileSpec(simpleValley)
+  }
+
+  "Proof Generator" should "generate proof for straight line" in {withMathematica(qeTool => {
+    val pr = CoasterXProver(straightLine)
+    pr shouldBe 'proved
+    })
   }
 
   /* bigDecimal = {BigDecimal@2869} "0E+1"
