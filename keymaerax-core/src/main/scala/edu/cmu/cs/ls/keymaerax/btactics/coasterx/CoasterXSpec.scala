@@ -331,11 +331,14 @@ object CoasterXSpec {
     }
   }
 
-  def apply(file:CoasterXParser.File):Formula = {
+  def prepareFile(file:CoasterXParser.File):(File,Formula) = {
     val ROUND_SCALE = 0
     val fileRounded = roundFile (ROUND_SCALE)(file)
-    val (fileAligned, segmentDefs) = alignFile(fileRounded)
-    val (points, segments, v0, _) = fileAligned
+    alignFile(fileRounded)
+  }
+
+  def fromAligned(align:(File,Formula)):Formula = {
+    val (aligned@(points, segments, v0, _), segmentDefs) = align
     val nonemptySegs = segments.filter(!segmentEmpty(_))
     val withBounds = zipConsecutive(nonemptySegs,points)
     val pre = segmentPre(withBounds.head,v0)
@@ -344,6 +347,10 @@ object CoasterXSpec {
     val globalPost = And("v > 0".asFormula, energyConserved)
     val post = And(globalPost, withBounds.map(segmentPost).reduceRight[Formula]{case (x,y) => And(x,y)})
     Imply(And(segmentDefs,pre),Box(Loop(ode), post))
+  }
+
+  def apply(file:CoasterXParser.File):Formula = {
+    fromAligned(prepareFile(file))
   }
 
   def roundNumber(scale:Int)(n:Number):Number = {
