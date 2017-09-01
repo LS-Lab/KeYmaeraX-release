@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import akka.actor.{Actor, ActorSystem, Props}
 import akka.io.IO
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
 import edu.cmu.cs.ls.keymaerax.hydra.HyDRAServerConfig.{host, port}
@@ -118,6 +119,8 @@ object HyDRAInitializer {
   def apply(args : Array[String], database: DBAbstraction): Unit = {
     val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
 
+    //@note setup interpreter
+    BelleInterpreter.setInterpreter(SequentialInterpreter())
     //@note pretty printer setup must be first, otherwise derived axioms print wrong
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     // connect invariant generator to tactix library

@@ -427,7 +427,7 @@ object Kaisar {
   }
 
   def interpret(e:BelleExpr, pr:Provable):Provable = {
-    SequentialInterpreter()(e, BelleProvable(NoProofTermProvable(pr))) match {
+    BelleInterpreter(e, BelleProvable(NoProofTermProvable(pr))) match {
       case BelleProvable(result,_) => result.underlyingProvable
     }
   }

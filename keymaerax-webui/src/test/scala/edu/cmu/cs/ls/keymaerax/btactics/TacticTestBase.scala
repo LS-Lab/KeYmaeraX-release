@@ -23,15 +23,21 @@ import scala.collection.immutable._
  * Base class for tactic tests.
  */
 class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
-  protected var theInterpreter: Interpreter = _
+  protected def theInterpreter: Interpreter = BelleInterpreter.interpreter
   private var interpreters: List[Interpreter] = _
 
   private val LOG_EARLIEST_QE = System.getProperty("LOG_POTENTIAL_QE", "false")=="true"
   private val LOG_QE = System.getProperty("LOG_QE", "false")=="true"
+  private val LOG_QE_DURATION = System.getProperty("LOG_QE_DURATION", "true")=="true"
 
   protected val qeLogPath: String = System.getProperty("user.home") + "/.keymaerax/logs/qe/"
   private val allPotentialQEListener = new QELogListener("wantqe.txt", (p, _) => { p.subgoals.size == 1 && p.subgoals.head.isFOL })
   private val qeListener = new QELogListener("haveqe.txt", (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
+  protected val qeDurationListener = new StopwatchListener((_, t) => t match {
+    case DependentTactic("QE") => true
+    case DependentTactic("smartQE") => true
+    case _ => false
+  })
 
   /** Interpreter listener that logs QE calls to `logFile` if condition `logCondition` is satisfied. */
   class QELogListener(logFile: String, logCondition: (ProvableSig, BelleExpr) => Boolean) extends IOListener() {
@@ -50,6 +56,36 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       case _ => // do nothing
     }
     override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {}
+    override def kill(): Unit = {}
+  }
+
+  /** Interpreter listener that records the duration of tactics that satisfy condition `logCondition`. */
+  class StopwatchListener(logCondition: (ProvableSig, BelleExpr) => Boolean) extends IOListener() {
+    private var recordedDuration: Long = 0
+    private var start: Option[((ProvableSig, BelleExpr), Long)] = None
+
+    /** Returns the recorded duration. */
+    def duration: Long = recordedDuration
+
+    /** Resets the duration measurement. */
+    def reset(): Unit = recordedDuration = 0
+
+    override def begin(input: BelleValue, expr: BelleExpr): Unit = input match {
+      case BelleProvable(p, _) if logCondition(p, expr) && start.isEmpty =>
+        start = Some((p, expr), System.currentTimeMillis())
+        println("Starting " + start.get._2)
+      case _ => // do nothing
+    }
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = (input, start) match {
+      // do not record time in nested calls
+      case (BelleProvable(p, _), Some((begin, startTime))) if logCondition(p, expr) && begin == (p, expr) =>
+        recordedDuration += System.currentTimeMillis() - startTime
+        start = None
+        println("Done " + System.currentTimeMillis())
+        println("Accumulated " + recordedDuration)
+      case _ => // do nothing
+    }
+
     override def kill(): Unit = {}
   }
 
@@ -121,7 +157,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       val listener = new TraceRecordingListener(db, proofId, None,
         globalProvable, 0 /* start from single provable */, recursive = false, "custom")
       val listeners = listener::Nil ++ (if (LOG_QE) qeListener::Nil else Nil) ++ (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil)
-      SequentialInterpreter(listeners)(t, BelleProvable(ProvableSig.startProof(s))) match {
+      BelleInterpreter.setInterpreter(SequentialInterpreter(listeners))
+      BelleInterpreter(t, BelleProvable(ProvableSig.startProof(s))) match {
         case BelleProvable(provable, _) =>
           provable.conclusion shouldBe s
           //extractTactic(proofId) shouldBe t //@todo trim trailing branching nil
@@ -223,8 +260,10 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   /** Test setup */
   override def beforeEach(): Unit = {
     interpreters = Nil
-    val listeners = (if (LOG_QE) qeListener::Nil else Nil) ++ (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil)
-    theInterpreter = registerInterpreter(SequentialInterpreter(listeners))
+    val listeners = (if (LOG_QE) qeListener::Nil else Nil) ++
+      (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil) ++
+      (if (LOG_QE_DURATION) qeDurationListener::Nil else Nil)
+    BelleInterpreter.setInterpreter(registerInterpreter(SequentialInterpreter(listeners)))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[Formula]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
@@ -296,11 +335,13 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     }
 
     val start = System.currentTimeMillis()
+    qeDurationListener.reset()
     val proof = proveBy(entry.model.asInstanceOf[Formula], tactic)
     val end = System.currentTimeMillis()
     proof shouldBe 'proved
 
     println("Proof duration [ms]: " + (end-start))
+    println("QE duration [ms]: " + qeDurationListener.duration)
     println("Tactic size: " + TacticStatistics.size(tactic))
     println("Tactic lines: " + TacticStatistics.lines(tactic))
     println("Proof steps: " + proof.steps)
@@ -311,24 +352,36 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
       getClass.getResourceAsStream(archive)).mkString)
 
-    val statistics = scala.collection.mutable.Map[String, (Long, Int, Int, Int)]()
+    val statistics = scala.collection.mutable.Map[String, (Long, Long, Int, Int, Int)]()
+
+    def printStatistics(v: (Long, Long, Int, Int, Int)) = {
+      println("Proof duration [ms]: " + v._1)
+      println("QE duration [ms]: " + v._2)
+      println("Tactic size: " + v._3)
+      println("Tactic lines: " + v._4)
+      println("Proof steps: " + v._5)
+    }
 
     for (entry <- entries) {
       val tactic = entry.tactics.head._2
 
+      println("Proving entry " + entry.name)
+
+      qeDurationListener.reset()
       val start = System.currentTimeMillis()
       val proof = proveBy(entry.model.asInstanceOf[Formula], tactic)
       val end = System.currentTimeMillis()
+      val qeDuration = qeDurationListener.duration
       proof shouldBe 'proved
-      statistics(entry.name) = (end-start, TacticStatistics.size(tactic), TacticStatistics.lines(tactic), proof.steps)
+      statistics(entry.name) = (end-start, qeDuration, TacticStatistics.size(tactic), TacticStatistics.lines(tactic), proof.steps)
+
+      println("Done " + entry.name)
+      printStatistics(statistics(entry.name))
     }
 
     for ((k,v) <- statistics) {
       println("Proof of " + k)
-      println("Proof duration [ms]: " + v._1)
-      println("Tactic size: " + v._2)
-      println("Tactic lines: " + v._3)
-      println("Proof steps: " + v._4)
+      printStatistics(v)
     }
   }
 

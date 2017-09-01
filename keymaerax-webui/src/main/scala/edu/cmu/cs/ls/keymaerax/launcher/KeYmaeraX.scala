@@ -5,7 +5,7 @@ import java.lang.reflect.ReflectPermission
 import java.security.Permission
 
 import edu.cmu.cs.ls.keymaerax.api.ScalaTacticCompiler
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleInterpreter, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -279,6 +279,7 @@ object KeYmaeraX {
       case tool => throw new Exception("Unknown tool " + tool)
     }
 
+    BelleInterpreter.setInterpreter(SequentialInterpreter())
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
 
     val generator = new ConfigurableGenerator[Formula]()

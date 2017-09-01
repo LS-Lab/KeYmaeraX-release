@@ -67,7 +67,7 @@ class BelleREPL (val concl:Formula, val initTactic:Option[String], val initScala
   private class REPLParseException(err:String) extends Exception
 
   def interpret(e:BelleExpr, pr:Provable):ProvableSig = {
-    SequentialInterpreter()(e, BelleProvable(NoProofTermProvable(pr))) match {
+    BelleInterpreter(e, BelleProvable(NoProofTermProvable(pr))) match {
       case BelleProvable(result,_) => result
     }
   }
