@@ -289,12 +289,14 @@ object CoasterXSpec {
       case LineSection(Some(LineParam((x1, y1), (x2, y2))), Some(gradient)) =>
         val (dxval, dyval) = lineDir((x1, y1), (x2, y2))
         val inRange = And(LessEqual(x1, x), LessEqual(x, x2))
+        val dxInv = s"dx=($dxval)".asFormula
+        val dyInv = s"dy=($dyval)".asFormula
+        val dInv = And(dxInv, dyInv)
         val onTrack = Equal(foldTimes(dxval, y), foldPlus(foldTimes(dyval, x), yOffset((x1, y1), (x2, y2))))
-        Imply(inRange, onTrack)
+        Imply(inRange, And(dInv,onTrack))
       case ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(gradient)) =>
         val ((x3, y3), (x4, y4)) = (start,end)
           //val ((x3, y3), (x4, y4)) =arcBounds((x1, y1), (x2, y2), theta1, Number(theta1.value+deltaTheta.value))
-
         val inRange = And(LessEqual(x3, x), LessEqual(x, x4))
         val r = foldDivide(foldMinus(x2,x1),Number(2))
         //  val r = Number((x4.value - x3.value) / 2)
@@ -305,8 +307,11 @@ object CoasterXSpec {
         val outY = if(isCw) LessEqual(cy,y) else LessEqual(y,cy)
         val outX = if(isLeft) LessEqual(x, cx) else LessEqual(cx, x)
         val outRange = And(outX, outY)
+        val dxInv = s"dx=-(y-($cy))/($r)".asFormula
+        val dyInv = s"dy=(x-($cx))/($r)".asFormula
+        val dInv = And(dxInv, dyInv)
         /* (x0 + l <= x & x <= xend) -> ((cx - x)^2 + (cy - y)^2 = r^2 & x <= cx & cy < y))*/
-        Imply(inRange, And(centered, outRange))
+        Imply(inRange, And(dInv, And(centered, outRange)))
       case _ => True
     }
   }

@@ -144,11 +144,18 @@ class CoasterXTests extends TacticTestBase {
     printFileSpec(simpleValley)
   }
 
-  "Proof Generator" should "generate proof for straight line" in {withMathematica(qeTool => {
+  "Proof Generator" should "generate proof for straight line" in { withMathematica(qeTool => {
     val pr = CoasterXProver(straightLine)
     pr shouldBe 'proved
     })
   }
+
+  it should "generate proof for quarter arc" in { withMathematica(qeTool => {
+    val pr = CoasterXProver(quarterArc)
+    pr shouldBe 'proved
+    })
+  }
+
 
   /* bigDecimal = {BigDecimal@2869} "0E+1"
  intVal = {BigInteger@2872} "0"
