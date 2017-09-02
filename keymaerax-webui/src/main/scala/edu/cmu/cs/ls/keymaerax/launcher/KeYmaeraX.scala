@@ -400,6 +400,7 @@ object KeYmaeraX {
   private def prove(input: Formula, tactic: BelleExpr, outputFileName: String, options: OptionMap, storeWitness: Boolean): Unit = {
     val inputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(input))
 
+    Console.println("[start proof " + outputFileName + "]")
     //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
     val pw = new PrintWriter(outputFileName)
 
@@ -441,7 +442,7 @@ object KeYmaeraX {
         "reparse of printed lemma is not original lemma")
 
       println("==================================")
-      println("Tactic finished the proof")
+      println("Tactic finished the proof: " + outputFileName)
       println("==================================")
 
       if (storeWitness) {
@@ -456,7 +457,7 @@ object KeYmaeraX {
       //@note PrintWriter above has already emptied the output file
       pw.close()
       println("==================================")
-      println("Tactic did not finish the proof    open goals: " + witness.subgoals.size)
+      println("Tactic did NOT finish the proof: " + outputFileName + "\n    open goals: " + witness.subgoals.size)
       println("==================================")
       printOpenGoals(witness)
       println("==================================")
