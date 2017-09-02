@@ -40,8 +40,10 @@ object Main {
       val java : String = javaLocation
       val keymaeraxjar : String = jarLocation
       println("Restarting KeYmaera X with sufficient stack space")
-      runCmd((java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch"  :: Nil) ++ args.toList ++ ("-ui" :: Nil))
-    } else {
+      val cmd = (java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
+        (if (args.isEmpty) "-ui" :: Nil else Nil)
+      runCmd(cmd)
+    } else if (args.contains("-ui")) {
       if (!(System.getenv().containsKey("HyDRA_SSL") && System.getenv("HyDRA_SSL").equals("on"))) {
         // Initialize the loading dialog splash screen.
         LoadingDialogFactory()
@@ -57,6 +59,8 @@ object Main {
       startServer(args.tail)
       //@todo use command line argument -mathkernel and -jlink from KeYmaeraX.main
       //@todo use command line arguments as the file to load. And preferably a second argument as the tactic file to run.
+    } else {
+      KeYmaeraX.main(args)
     }
   }
 
