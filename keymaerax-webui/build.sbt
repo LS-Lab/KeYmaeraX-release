@@ -94,7 +94,7 @@ logBuffered := false
 ////////////////////////////////////////////////////////////////////////////////
 
 // command line UI
-mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX")
+mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.Main")
 // ACAS X: run sbt test:assembly to build assembly
 //mainClass in (Test, assembly) := Some("edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.AcasXRunner")
 

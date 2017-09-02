@@ -9,7 +9,7 @@ version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/
 lazy val core = (project in file("keymaerax-core"))
 
 lazy val keymaeraxAssemblySettings = AssemblyPlugin.assemblySettings ++ Seq(
-  mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX"),
+  mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.Main"),
   assemblyJarName in assembly := "keymaerax.jar",
   test in assembly := {},
   assemblyMergeStrategy in assembly := {
