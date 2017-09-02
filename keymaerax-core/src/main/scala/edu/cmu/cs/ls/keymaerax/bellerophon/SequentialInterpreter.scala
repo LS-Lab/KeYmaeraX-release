@@ -281,7 +281,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           } catch {
             case e: Throwable => throw new BelleThrowable("Unable to start inner proof in let: " + e.getMessage, e)
           }
-          println("INFO: " + expr + " considers\n" + in + "\nfor outer\n" + provable)
+          if (BelleExpr.DEBUG) println("INFO: " + expr + " considers\n" + in + "\nfor outer\n" + provable)
           //assert(us(in.conclusion) == provable.subgoals.head, "backsubstitution will ultimately succeed from\n" + in + "\nvia " + us + " to outer\n" + provable)
           apply(inner, BelleProvable(in)) match {
             case BelleProvable(derivation, _) =>
@@ -335,7 +335,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
                 // in contrast to .unifiable, this suppresses "Sequent un-unifiable Un-Unifiable" message, which clutter STDIO.
                 // fall back to user-provided substitution
                 case e: UnificationException =>
-                  //if (DEBUG) println("USubst Pattern Incomplete -- could not find a unifier for any option" + t)
+                  //if (BelleExpr.DEBUG) println("USubst Pattern Incomplete -- could not find a unifier for any option" + t)
                   (RenUSubst(Nil), expr)
               }
               case _ => throw new BelleThrowable("Cannot unify non-sequent types.").inContext(t, "")
