@@ -478,15 +478,15 @@ object KeYmaeraX {
   def check(options: OptionMap): Unit = {
     require(options.contains('in), usage)
     val inputFileName = options('in).toString
-    assert(inputFileName.endsWith(".kya"),
+    assert(inputFileName.endsWith(".kya") || inputFileName.endsWith(".kyx"),
       "\n[Error] Wrong file name " + inputFileName + " used for -check! KeYmaera X only checks .kya files. Please use: -check FILENAME.kya")
     val input = scala.io.Source.fromFile(inputFileName).mkString
     val archiveContent = KeYmaeraXArchiveParser.parse(input)
 
     archiveContent.foreach({case ParsedArchiveEntry(modelName, modelString, _, model: Formula, tactics) =>
       tactics.foreach({case (tacticName, tactic) =>
-        val witnessFileName = (modelName + "_" + tacticName).replaceAll("\\s", "") + ".kyp"
-        prove(model, tactic, witnessFileName, options, storeWitness=false)
+        val witnessFileName = (modelName + "_" + tacticName).replaceAll("\\s", "").replaceAll(":", "_") + ".kyp"
+        prove(model, tactic, witnessFileName, options, storeWitness=true)
       })
     })
   }
