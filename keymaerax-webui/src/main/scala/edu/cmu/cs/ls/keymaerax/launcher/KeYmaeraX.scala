@@ -483,10 +483,19 @@ object KeYmaeraX {
     val input = scala.io.Source.fromFile(inputFileName).mkString
     val archiveContent = KeYmaeraXArchiveParser.parse(input)
 
-    archiveContent.foreach({case ParsedArchiveEntry(modelName, modelString, _, model: Formula, tactics) =>
+    archiveContent.foreach({case ParsedArchiveEntry(modelName, _, _, model: Formula, tactics) =>
       tactics.foreach({case (tacticName, tactic) =>
         val witnessFileName = (modelName + "_" + tacticName).replaceAll("\\s", "").replaceAll(":", "_") + ".kyp"
-        prove(model, tactic, witnessFileName, options, storeWitness=true)
+        try {
+          prove(model, tactic, witnessFileName, options, storeWitness = true)
+        } catch {
+          case ex: Throwable =>
+            println("==================================================")
+            println(s"Error while checking $inputFileName: checking $modelName with tactic $tacticName failed")
+            println(s"Error details:")
+            ex.printStackTrace(System.out)
+            println("==================================================")
+        }
       })
     })
   }
