@@ -394,7 +394,18 @@ object KeYmaeraX {
         "\n[Error] Wrong file name " + outputFileName + " used for -out! KeYmaera X only produces proof evidence as .kyp file. Please use: -out FILENAME.kyp")
     }
 
-    prove(inputModel, tactic, outputFileName, options, storeWitness=true)
+    try {
+      prove(inputModel, tactic, outputFileName, options, storeWitness=true)
+    } catch {
+      case ex: Throwable =>
+        println("==================================================")
+        println(s"Error while checking $inputFileName failed")
+        println(s"Error details:")
+        ex.printStackTrace(System.out)
+        println(s"Error while checking $inputFileName")
+        println("==================================================")
+        throw ex
+    }
   }
 
   private def prove(input: Formula, tactic: BelleExpr, outputFileName: String, options: OptionMap, storeWitness: Boolean): Unit = {
@@ -462,6 +473,7 @@ object KeYmaeraX {
       println("Tactic did NOT finish the proof: " + outputFileName + "\n    open goals: " + witness.subgoals.size)
       println("==================================")
       printOpenGoals(witness)
+      println("NO completed proof: " + outputFileName)
       println("==================================")
       if (options.getOrElse('interactive,false)==true) {
         interactiveProver(witness)
@@ -494,9 +506,10 @@ object KeYmaeraX {
         } catch {
           case ex: Throwable =>
             println("==================================================")
-            println(s"Error while checking $inputFileName: checking $modelName with tactic $tacticName failed")
+            println(s"Error while checking $inputFileName: model $modelName with tactic $tacticName failed")
             println(s"Error details:")
             ex.printStackTrace(System.out)
+            println(s"Error while checking $inputFileName: model $modelName with tactic $tacticName")
             println("==================================================")
         }
       })
