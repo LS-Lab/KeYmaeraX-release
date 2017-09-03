@@ -198,21 +198,22 @@ object AxiomaticODESolver {
     }
   }
 
-  def dfsLoop(map: Map[Variable, Term], visited: Set[Variable], active: Set[Variable], curr: Variable, acc: List[Variable]): Option[(Set[Variable], List[Variable])] = {
+  private def dfsLoop(odes: List[AtomicODE], visited: Set[Variable], active: Set[Variable],
+                      curr: Variable, acc: List[Variable]): Option[(Set[Variable], List[Variable])] = {
     if (visited.contains(curr)) {
       None
+    } else if (acc.contains(curr)) {
+      Some(visited + curr, acc)
     } else {
-      val incoming = map.keys.filter(p => myFreeVars(map(curr)).contains(p) && map.contains(p))
-      val _ = incoming.foreach(v =>
-        if(active.contains(v)) {
-          throw new Cycle
-        })
-      val (vis, sorted) = incoming.foldLeft[(Set[Variable], List[Variable])]((visited.+(curr), acc))({case ((vis, acc2), x) => {
-          dfsLoop(map, vis, active.+(curr), x, acc2) match {
-            case Some(x)  => x
-            case _  => (vis, acc2)
-          }
-        }})
+      val currRhs = odes.find(_.xp.x == curr).get.e
+      val incoming = odes.filter(ode => myFreeVars(currRhs).contains(ode.xp.x)).map(_.xp.x)
+      if (incoming.exists(active.contains)) throw new Cycle
+      val (vis, sorted) = incoming.foldLeft[(Set[Variable], List[Variable])]((visited + curr, acc))({case ((vis2, acc2), x) =>
+        dfsLoop(odes, vis2, active + curr, x, acc2) match {
+          case Some(xx)  => xx
+          case _  => (vis2, acc2)
+        }
+      })
       Some(vis, curr :: sorted)
     }
   }
@@ -237,34 +238,32 @@ object AxiomaticODESolver {
     }
   }
 
-  def dfsOuterLoop(map: Map[Variable, Term], visited: Set[Variable], acc: List[Variable]): Option[(Set[Variable], List[Variable])] = {
-    if (visited.size == map.size) {
+  private def dfsOuterLoop(odes: List[AtomicODE], visited: Set[Variable], acc: List[Variable]): Option[(Set[Variable], List[Variable])] = {
+    if (visited.size == odes.size) {
       Some(visited, acc)
     } else {
-      val curr = map.keys.filter(v => !visited.contains(v)).head
-      dfsLoop(map, Set(), Set(curr), curr, acc) match {
+      val curr = odes.find(ode => !visited.contains(ode.xp.x)).get.xp.x
+      dfsLoop(odes, Set(), Set(curr), curr, acc) match {
         case None => None
-        case Some((vis, acc)) => dfsOuterLoop(map, vis ++ visited, acc)
+        case Some((vis, a)) => dfsOuterLoop(odes, vis ++ visited, a)
       }
     }
   }
 
   def dfs(ode: DifferentialProgram): Option[List[Variable]] = {
     try {
-      alist(ode).flatMap({ case (atom :: alist) =>
-        val m = (atom :: alist).foldLeft(Map[Variable, Term]())({ case (acc, ode:AtomicODE) => acc.+((ode.xp.x, ode.e))})
-        val vars = dfsOuterLoop(m, Set(),  Nil).map(_._2)
-        vars match {
+      alist(ode) match {
+        case Some(atomics) => dfsOuterLoop(atomics, Set(),  Nil).map(_._2) match {
           case None => None
           case Some(vs) =>
             // ODE solving tactic expects kyxtime variable to stay at the end. Let's keep it that way since it never depends on other variables
-            if(vs.contains(Variable("kyxtime"))) {
-              Some(vs.filter(_ != Variable("kyxtime")) ++ List(Variable("kyxtime")))
-            } else Some(vs)
+            if (vs.contains(Variable("kyxtime"))) Some(vs.filter(_ != Variable("kyxtime")) :+ Variable("kyxtime"))
+            else Some(vs)
         }
-      })
+        case None => None
+      }
     } catch  {
-      case _:Cycle => None
+      case _: Cycle => None
     }
   }
 
@@ -346,7 +345,7 @@ object AxiomaticODESolver {
   def makeCanonical(ode: DifferentialProgram, dom: Formula, post: Formula, pos: Position): BelleExpr = {
     dfs(ode) match {
       case None => DebuggingTactics.error("Expected ODE to be linear and in correct order.")
-      case Some(ord) => selectionSort(dom, post, ode, ord, pos)
+      case Some(ord) => DebuggingTactics.debug("Sorting to " + ord.mkString("::"), ODE_DEBUGGER) & selectionSort(dom, post, ode, ord, pos)
     }
   }
 

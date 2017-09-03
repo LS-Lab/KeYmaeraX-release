@@ -20,19 +20,19 @@ import testHelper.KeYmaeraXTestTags.{DeploymentTest, IgnoreInBuildTest, SummaryT
 import scala.collection.immutable._
 
 /**
-  * Tests the axioamtic ODE solver.
+  * Tests the axiomatic ODE solver.
   * @author Nathan Fulton
   * @author Stefan Mitsch
   */
 class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   private val dgc = PrivateMethod[DependentPositionTactic]('DGC)
 
-  "Selection sort" should "not have a match error" in withMathematica { qeTool =>
+  "Selection sort" should "not have a match error" in withMathematica { _ =>
     val ode = "[{posLead'=velLead,velLead'=A,posCtrl'=velCtrl,velCtrl'=a,t'=1}] true".asFormula
     proveBy(ode,TactixLibrary.solve(1) & TactixLibrary.unfoldProgramNormalize) shouldBe 'proved
   }
 
-  "Selection sort" should "achieve intended permutation" in withMathematica { qeTool =>
+  "Selection sort" should "achieve intended permutation" in withMathematica { _ =>
     val ode = "{w' = 2,  x' = 0, y' = 3, z' = 1}".asDifferentialProgram
     val goal = List(Variable("x"), Variable("z"), Variable("w"), Variable("y"))
     val e = selectionSort(True, True, ode, goal, Position(1, 0::Nil)) & HilbertCalculus.byUS("<-> reflexive")
@@ -41,21 +41,42 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   }
 
 
-  "dfs" should "order dependencies nicely" in withMathematica { qeTool =>
+  "dfs" should "order dependencies nicely" in {
     val ode  = "{x' = y + z, y' = 2, z' = y + w, w' = y}".asDifferentialProgram
     val res = dfs(ode)
     //res shouldBe Some(List(Variable("y"), Variable("w"), Variable("z"), Variable("x")))
     res shouldBe Some(List(Variable("x"), Variable("z"), Variable("w"), Variable("y")))
   }
 
-  it should "detect cycles" in withMathematica { qeTool =>
+  it should "favor reverse original order" in {
+    //@note not a hard requirement, just so that the result of solve has right-most ODEs outermost in its nested quantifier
+    //      which in the usual input order favors simpler solutions outermost, e.g., t=t_0+t_, v=v_0+a*t_, x=....
+    dfs("{a'=2, x'=a, b'=3}".asDifferentialProgram) shouldBe Some("b".asVariable :: "x".asVariable :: "a".asVariable :: Nil)
+    dfs("{b'=2, x'=a, a'=3}".asDifferentialProgram) shouldBe Some("x".asVariable :: "a".asVariable :: "b".asVariable :: Nil)
+    dfs("{b'=2, a'=3, x'=a}".asDifferentialProgram) shouldBe Some("x".asVariable :: "a".asVariable :: "b".asVariable :: Nil)
+  }
+
+  it should "detect cycles" in {
     val ode = "{x' = -y, y' = x}".asDifferentialProgram
     val res = dfs(ode)
     res shouldBe None
   }
 
+  it should "not duplicate variables in sorted result" in {
+    dfs("{v'=a, x'=v}".asDifferentialProgram) shouldBe Some("x".asVariable :: "v".asVariable :: Nil)
+    dfs("{y'=v+c, v'=a, x'=v}".asDifferentialProgram) shouldBe Some("x".asVariable :: "y".asVariable :: "v".asVariable :: Nil)
+  }
+
+  it should "sort dependencies stable" in {
+    //@note try triggering sort instabilities with many runs
+    for (i <- 1 to 10000) withClue(s"Sort run $i") {
+      AxiomaticODESolver.dfs("{vo'=ao,vr'=ar,xr'=vr,xo'=vo,t'=1,T'=1}".asDifferentialProgram) shouldBe
+        Some("T".asVariable :: "t".asVariable :: "xo".asVariable :: "xr".asVariable :: "vr".asVariable :: "vo".asVariable :: Nil)
+    }
+  }
+
   //region integration tests
-  "Axiomatic ODE solver" should "work on the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+  "Axiomatic ODE solver" should "work on the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x=1&v=2 -> [{x'=v}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
@@ -64,21 +85,21 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->(v*t_+x)^3>=1)".asFormula
   }
 
-  it should "retain initial evolution domain" in withMathematica { tool =>
+  it should "retain initial evolution domain" in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=1&x<0}]x>=0".asFormula)), solve(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
     result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> s_+x<0) -> t_+x>=0)".asFormula)
   }
 
-  it should "work on the single integrator x'=v in context" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+  it should "work on the single integrator x'=v in context" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val result = proveBy("x=1&v=2 -> [{x'=v}]x^3>=1".asFormula, AxiomaticODESolver()(1, 1::Nil))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "x=1&v=2 -> \\forall t_ (t_>=0->(v*t_+x)^3>=1)".asFormula
   }
 
-  it should "work on the single integrator x'=v with evolution domain" taggedAs(DeploymentTest, SummaryTest) in withMathematica { qeTool =>
+  it should "work on the single integrator x'=v with evolution domain" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val result = proveBy("x=1&v=2 -> [{x'=v&x>=0}]x^3>=1".asFormula, implyR(1) & AxiomaticODESolver()(1))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain theSameElementsAs "x=1&v=2".asFormula::Nil
