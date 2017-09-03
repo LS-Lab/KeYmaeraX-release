@@ -5,7 +5,7 @@ import java.lang.reflect.ReflectPermission
 import java.security.Permission
 
 import edu.cmu.cs.ls.keymaerax.api.ScalaTacticCompiler
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleInterpreter, SequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -485,7 +485,7 @@ object KeYmaeraX {
   }
 
   /**
-    * Check given archive file to produce lemmas.
+    * Checks the given archive file.
     * {{{KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))}}}
     *
     * @param options The prover options.
@@ -498,22 +498,70 @@ object KeYmaeraX {
     val input = scala.io.Source.fromFile(inputFileName).mkString
     val archiveContent = KeYmaeraXArchiveParser.parse(input)
 
+    val statistics = scala.collection.mutable.ListMap[String, Either[(Long, Long, Int, Int, Int), Throwable]]()
+
+    def printStatistics(v: Either[(Long, Long, Int, Int, Int), Throwable]) = v match {
+      case Left((duration, qeDuration, tacticSize, tacticLines, proofSteps)) =>
+        println(s"=============== Succeeded ===============")
+        println("Proof duration [ms]: " + duration)
+        println("QE duration [ms]: " + qeDuration)
+        println("Tactic size: " + tacticSize)
+        println("Tactic lines: " + tacticLines)
+        println("Proof steps: " + proofSteps)
+        println("==========================================")
+      case Right(ex) =>
+        println(s"================ Failed =================")
+        println(s"Error details:")
+        ex.printStackTrace(System.out)
+        println("==========================================")
+    }
+
+    val qeDurationListener = new IOListeners.StopwatchListener((_, t) => t match {
+      case DependentTactic("QE") => true
+      case DependentTactic("smartQE") => true
+      case _ => false
+    })
+
+    BelleInterpreter.setInterpreter(SequentialInterpreter(qeDurationListener::Nil))
+
     archiveContent.foreach({case ParsedArchiveEntry(modelName, _, _, model: Formula, tactics) =>
       tactics.foreach({case (tacticName, tactic) =>
-        val witnessFileName = (modelName + "_" + tacticName).replaceAll("\\s", "").replaceAll(":", "_") + ".kyp"
+        val statisticName = modelName + " with " + tacticName
         try {
-          prove(model, tactic, witnessFileName, options, storeWitness = true)
+          println("==========================================")
+          println(s"Proving $inputFileName: model $modelName with tactic $tacticName")
+          qeDurationListener.reset()
+          val start = System.currentTimeMillis()
+          val proof = TactixLibrary.proveBy(model, tactic)
+          val end = System.currentTimeMillis()
+          val qeDuration = qeDurationListener.duration
+          assert(proof.isProved, "Expected finished proof")
+
+          statistics(statisticName) = Left(end-start, qeDuration, TacticStatistics.size(tactic), TacticStatistics.lines(tactic), proof.steps)
+
+          println("==========================================")
+          println(s"Done $inputFileName: model $modelName with tactic $tacticName")
+          println("==========================================")
+          println(statisticName)
+          printStatistics(statistics(statisticName))
         } catch {
           case ex: Throwable =>
-            println("==================================================")
-            println(s"Error while checking $inputFileName: model $modelName with tactic $tacticName failed")
-            println(s"Error details:")
-            ex.printStackTrace(System.out)
+            println("==========================================")
+            println(s"Error while checking $inputFileName: model $modelName with tactic $tacticName")
+            statistics(statisticName) = Right(ex)
+            println(statisticName)
+            printStatistics(statistics(statisticName))
             println(s"Error while checking $inputFileName: model $modelName with tactic $tacticName")
             println("==================================================")
         }
       })
     })
+
+    for ((k,v) <- statistics) {
+      println("==========================================")
+      println("Proof of " + k)
+      printStatistics(v)
+    }
   }
 
   /**
