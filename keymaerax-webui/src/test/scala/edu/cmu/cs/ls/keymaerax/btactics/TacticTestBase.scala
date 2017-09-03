@@ -73,7 +73,6 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     override def begin(input: BelleValue, expr: BelleExpr): Unit = input match {
       case BelleProvable(p, _) if logCondition(p, expr) && start.isEmpty =>
         start = Some((p, expr), System.currentTimeMillis())
-        println("Starting " + start.get._2)
       case _ => // do nothing
     }
     override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = (input, start) match {
@@ -81,8 +80,6 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       case (BelleProvable(p, _), Some((begin, startTime))) if logCondition(p, expr) && begin == (p, expr) =>
         recordedDuration += System.currentTimeMillis() - startTime
         start = None
-        println("Done " + System.currentTimeMillis())
-        println("Accumulated " + recordedDuration)
       case _ => // do nothing
     }
 
