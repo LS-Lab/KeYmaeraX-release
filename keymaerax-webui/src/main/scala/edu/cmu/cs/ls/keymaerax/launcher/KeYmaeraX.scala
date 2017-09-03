@@ -452,10 +452,12 @@ object KeYmaeraX {
       }
       pw.close()
     } else {
+      // prove did not work
       assert(!witness.isProved)
       assert(witness.subgoals.nonEmpty)
       //@note PrintWriter above has already emptied the output file
       pw.close()
+      new File(outputFileName).delete()
       println("==================================")
       println("Tactic did NOT finish the proof: " + outputFileName + "\n    open goals: " + witness.subgoals.size)
       println("==================================")
