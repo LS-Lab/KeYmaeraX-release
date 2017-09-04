@@ -156,6 +156,11 @@ class CoasterXTests extends TacticTestBase {
     })
   }
 
+  it should "generate proof for half arc" in {  withMathematica(qeTool => {
+    val pr = CoasterXProver(halfArc)
+    pr shouldBe 'proved
+  })}
+
 
   /* bigDecimal = {BigDecimal@2869} "0E+1"
  intVal = {BigInteger@2872} "0"

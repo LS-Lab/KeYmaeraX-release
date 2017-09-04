@@ -143,7 +143,9 @@ object CoasterXSpec {
   def segmentOde(segBounds:(Section,(TPoint,TPoint))):Program = {
     val (seg, (start,end)) = segBounds
     val x = Variable("x")
-    val evol = And(LessEqual(start._1, x),LessEqual(x,end._1))
+    val y = Variable("y")
+    val evol = And(And(LessEqual(start._1, x),LessEqual(x,end._1)),
+      And(LessEqual(start._2, y),LessEqual(y,end._2)))
     seg match {
       case LineSection(Some(LineParam((x1,y1),(x2,y2))), Some(gradient)) =>
         val v = Variable("v")
@@ -159,9 +161,10 @@ object CoasterXSpec {
         //val r = Number((x4.value-x3.value)/2)
         val r = foldDivide(foldMinus(x2,x1),Number(2))
         val sysBase = "x' = dx*v, y' = dy*v, v' = -dy".asDifferentialProgram
-        /* TODO: Set sign based on direction of arc */
-        val sys = DifferentialProduct(sysBase,DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("dx")), foldDivide("-dy*v".asTerm, r)),
-          AtomicODE(DifferentialSymbol(Variable("dy")), foldDivide("dx*v".asTerm, r))))
+        val isCw = deltaTheta.value < 0
+        val (dxTerm, dyTerm) = if (isCw) {(foldDivide("dy*v".asTerm, r), foldDivide("-dx*v".asTerm, r))} else {(foldDivide("-dy*v".asTerm, r), foldDivide("dx*v".asTerm, r))}
+        val sys = DifferentialProduct(sysBase,DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("dx")), dxTerm),
+          AtomicODE(DifferentialSymbol(Variable("dy")), dyTerm)))
         // val evol = And(LessEqual(x3,x),LessEqual(x,x4))
         ODESystem(sys, evol)
       case _ => Test(True)
@@ -303,12 +306,16 @@ object CoasterXSpec {
         val (cx, cy) = arcCenter((x1, y1), (x2, y2))
         val centered = Equal(foldPlus(foldPower(foldMinus(cx, x), Number(2)), foldPower(foldMinus(cy, y), Number(2))), foldPower(r,Number(2)))
         val isCw = param.deltaTheta.value < 0
-        val isLeft = start._1.asInstanceOf[Number].value < x1.asInstanceOf[Number].value
+        val isLeft = start._1.asInstanceOf[Number].value < cx.asInstanceOf[Number].value
         val outY = if(isCw) LessEqual(cy,y) else LessEqual(y,cy)
         val outX = if(isLeft) LessEqual(x, cx) else LessEqual(cx, x)
         val outRange = And(outX, outY)
-        val dxInv = s"dx=-(y-($cy))/($r)".asFormula
-        val dyInv = s"dy=(x-($cx))/($r)".asFormula
+        val (dxInv, dyInv) =
+          if (isCw) {
+            (s"dx=-(($cy)-y)/($r)".asFormula, s"dy=(($cx)-x)/($r)".asFormula)
+          } else {
+            (s"dx=-(y-($cy))/($r)".asFormula, s"dy=(x-($cx))/($r)".asFormula)
+          }
         val dInv = And(dxInv, dyInv)
         /* (x0 + l <= x & x <= xend) -> ((cx - x)^2 + (cy - y)^2 = r^2 & x <= cx & cy < y))*/
         Imply(inRange, And(dInv, And(centered, outRange)))

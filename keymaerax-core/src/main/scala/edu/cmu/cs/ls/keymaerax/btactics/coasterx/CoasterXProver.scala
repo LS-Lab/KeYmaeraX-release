@@ -10,8 +10,9 @@ import edu.cmu.cs.ls.keymaerax.pt.NoProofTermProvable
 
 /*
 * Proves that CoasterX models meet their specs, by composing component proofs
-* @TODO: Generate loop invariant
-* @TODO: Split into branches
+* @TODO: The quadrants are wrong for quadrants 1 and 2. Rename them, inspect and clean up the component proofs, then import again
+* @TODO: Comute one v0 value and use it everywhere. Show that v0 is big enough to match all the heights
+* @TODO: Support all examples from test suite
 * @TODO: Function returning provable, with proof repeats
 * @TODO: Function returning provable, with proof reuse
 * @TODO: Function returning tactic with proof repeats
@@ -37,54 +38,81 @@ object CoasterXProver {
   }
 
   //@TODO: Add stuff from vector proof
-  def quad1Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, theta1: Number, deltaTheta: Number):Provable = {
-    val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
-    val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
-    val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
-    val y0 = p1._2
-    val yEnd = p2._2
-    val ECirc:Formula = s"v^2=($v0)^2+2*($y0)-2*y&(($cx)-x)^2+(($cy)-y)^2=($r)^2".asFormula
-    val xLim:Formula = s"x<=($cx)".asFormula
-    val yLim:Formula = s"y<=($yEnd)".asFormula
-    val cyLim:Formula = s"($cy) < ($yEnd)".asFormula
-    val dGDefined:Formula = s"2*v*($r)!=0".asFormula
-    val e:BelleExpr =
-      normalize &
-        dC(s"dx=-(y-($cy))/($r)".asFormula)(1)  <(nil, dI()(1)) &
-        dC(s"dy=(x-($cx))/($r)".asFormula)(1)  <(nil, dI()(1)) &
-        dC(ECirc)('R) <(nil, dI()(1)) &
-        dC(xLim)('R) <(nil, dW(1) & QE) &
-        dC(cyLim)('R) <(nil, dW(1) & QE) &
-        dC(yLim)('R) <(nil, dW(1) & QE) &
-        dC("v>0".asFormula)('R) <(nil,
-          dC(dGDefined)(1) <(
-            dG(AtomicODE(DifferentialSymbol(Variable("a")), s"((($cx)-x)/(2*v*($r))*a+0".asTerm), Some("a^2*v=1".asFormula))(1) &
-            existsR("(1/v)^(1/2)".asTerm)(1) & dI()(1),
-            ODE(1)
-          )
-        )
-    interpret(e,pr)
-  }
-
-  //@TODO: Add stuff from vector proof
   def quad2Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, theta1: Number, deltaTheta: Number):Provable = {
     val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
     val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
     val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
     val y0 = p1._2
     val yEnd = p2._2
-    val e =
-      dC(s"dx=-(y-($cy))/($r)".asFormula)(1)  <(nil, dI()(1)) &
-      dC(s"dy=(x-($cx))/($r)".asFormula)(1)  <(nil, dI()(1)) &
-      dC(s"(($cx)-x)^2+(($cy-y)^2=($r)^2".asFormula)(1) <(nil, dI()(1)) &
-      dC(s"($cx)<=x".asFormula)(1) <(nil,
-        dC(s"2*($cy-y)*($r)!=0".asFormula)(1) <(nil, ODE) &
+    val ECirc:Formula = s"v^2=($v0)^2+2*($y0)-2*y&(($cx)-x)^2+(($cy)-y)^2=($r)^2".asFormula
+    //val xLim:Formula = s"x<=($cx)".asFormula
+    //val yLim:Formula = s"y<=($yEnd)".asFormula
+    //val cyLim:Formula = s"($cy) < ($yEnd)".asFormula
+    val dGDefined:Formula = s"2*v*($r)!=0".asFormula
+    //val pr1:Provable = interpret(normalize, pr)
+    val pr2:Provable = interpret(dC(s"dx^2 + dy^2 = 1".asFormula)(1)    <(nil, dI()(1)), pr)
+    val pr3:Provable = interpret(dC(s"dx=(y-($cy))/($r)".asFormula)(1) <(nil, dI()(1)), pr2)
+    val pr4:Provable = interpret(dC(s"dy=-(x-($cx))/($r)".asFormula)(1)  <(nil, dI()(1)), pr3)
+    val pr5:Provable = interpret(dC(ECirc)('R) <(nil, dI()(1)), pr4)
+    val pr6:Provable = interpret(dC("v>0".asFormula)('R), pr5)
+    val pr7:Provable = interpret(nil <(nil, dC(dGDefined)(1)), pr6)
+    val pr8:Provable = interpret(nil <(nil, dG(AtomicODE(DifferentialSymbol(Variable("a")), s"((($cx)-x)/(2*v*($r)))*a+0".asTerm), Some("a^2*v=1".asFormula))(1), nil), pr7)
+    val pr9:Provable = interpret(nil <(nil, existsR("(1/v)^(1/2)".asTerm)(1), nil), pr8)
+    val pr10:Provable = interpret(nil <(nil, dI()(1), nil), pr9)
+    val pr11:Provable = interpret(nil <(nil, ODE(1)), pr10)
+    //val pr12:Provable = interpret(ODE(1), pr11)
+    pr11
+  }
+
+  //@TODO: Add stuff from vector proof
+  def quad1Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, theta1: Number, deltaTheta: Number):Provable = {
+    val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
+    val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
+    val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
+    val x0 = p1._1
+    val y0 = p1._2
+    val xEnd = p2._1
+    val yEnd = p2._2
+    //unfold ;
+    val pr1 = interpret(dC(s"dx^2+dy^2=1".asFormula)(1) <(nil, dI()(1)), pr)
+    val pr2 = interpret(dC(s"dx=(y-($cy))/($r)".asFormula)(1) <(nil, dI()(1)), pr1)
+    val pr3 = interpret(dC(s"dy=-(x-($cx))/($r)".asFormula)(1) <(nil, dI()(1)), pr2)
+    val pr3a= interpret(dC(s"(($cx) - x)^2   + (($cy) - y)^2   = ($r)^2".asFormula)(1) <(nil, ODE(1)), pr3)
+    val pr3b =interpret(dC(s"(($cx) - ($xEnd))^2 + (($cy) - ($yEnd))^2 = ($r)^2".asFormula)(1) <(nil, ODE(1)), pr3a)
+    val pr4 = interpret(dC(s"v^2=($v0)^2+2*($y0)-2*y".asFormula)(1) <(nil, dI()(1)), pr3b)
+    // @TODO: The ghost and whatnot depends on cy = y being impossible which is not the case because we allow vertical stuff
+  //  val pr4a = interpret(dC(s"(($v0)^2)/2 > ($yEnd) - ($y0)".asFormula)(1) <(nil, dI()(1)), pr4)
+//    val pr4b = interpret(dC(s"($cy) != y".asFormula)(1) <(nil, ODE(1)), pr4a)
+    //val pr5 = interpret(dC(s"2*(($cy)-y)*($r)!=0".asFormula)(1) <(nil, dW(1) & QE), pr4b)
+    val pr5 = interpret(cut(s"(v^2)/2 > ($yEnd) - ($y0) & x >= ($x0) & x <= ($xEnd) & ($y0) <= y & y <= ($yEnd)".asFormula) <(nil, hideR(1)), pr4)
+    val prA = interpret(nil <(dC(s"2*(cy()-y)*r()!=0".asFormula)(1), nil), pr5)
+    //val pr5 = interpret(dC(s"(v^2)/2 > ($yEnd) - ($y0)".asFormula)(1) <(nil, ODE(1)), pr4)
+    val pr6 = interpret(nil<(dC(s"v>0 ".asFormula)(1) <(nil, ODE(1)), nil, nil), prA)
+    //val pr7alt = interpret(dC(s"($cy)<=y".asFormula)(1), pr4)
+    //val pr7alt1 = interpret(nil<(nil,dG(s"{a'=0*a+(((dy*v)/2)*(y-($cy)^(1/2)))}".asDifferentialProgram, Some(s"a^2 + ($cy) = y".asFormula))(1)), pr7alt)
+    //val pr7alt2 = interpret(nil <(nil,existsR(s"(y-($cy))".asTerm)(1)), pr7alt1)
+    val pr7alt3 = interpret(ODE(1), pr6)
+    pr7alt3
+    /*val pr7 = interpret(dC(s"($cy)<=y".asFormula)(1) <(ODE(1),
+      dG(s"{a'=(($cx)-x)*v/(2*(($cy)-y)*($r))*a+0}".asDifferentialProgram, Some(s"a^2*(($cy)-y)=-1".asFormula))(1) & existsR(s"(-1/(($cy)-y))^(1/2)".asTerm)(1) & ODE(1)
+    ), pr6)*/
+    /*val pr1 = interpret(dC(s"dx=(y-($cy))/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
+    val pr2 = interpret(dC(s"dy=-(x-($cx))/($r)".asFormula)(1)  <(nil, dI()(1)), pr1)
+    val pr3 = interpret(dC(s"(($cx)-x)^2+(($cy)-y)^2=($r)^2".asFormula)(1) <(nil, dI()(1)), pr2)
+    val denomTac:BelleExpr =
+      dC(s"-($r) < ($cx)-x".asFormula)('R) <(
+        dC(s"($cx)-x < ($r)".asFormula)('R) <(ODE(1), ODE(1)),
+        ODE(1))
+    //ODE(1)
+
+    val pr4 = interpret(dC(s"($cx)<=x".asFormula)(1) <(nil,
+      dC(s"2*($cy-y)*($r)!=0".asFormula)(1) <(nil, denomTac) &
         dG(s"a' = ((($cx)-x)*v/(2*(($cy)-y)*($r)))*a + 0".asDifferentialProgram, Some(s"a^2*(($cy)-y) = -1".asFormula))(1) &
         existsR(s"(-1/(($cy)-y))^(1/2)".asTerm)(1) &
         dW(1) & QE
-      ) &
-      dC(s"-($r) < ($cx)-x&($cx)-x < ($r)".asFormula)(1) <(dW(1) & QE, dW(1) & QE)
-    interpret(e,pr)
+    ), pr3)
+    val pr5 = interpret(dC(s"-($r) < ($cx)-x&($cx)-x < ($r)".asFormula)(1) <(dW(1) & QE, dW(1) & QE), pr4)*/
+    //interpret(e,pr)
   }
   
   def quad3Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, theta1: Number, deltaTheta: Number):Provable = {
@@ -93,13 +121,13 @@ object CoasterXProver {
     val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
     val y0 = p1._2
     val yEnd = p2._2
-    val e =
-      dC(s"dx=-(y-($cy))/($r)".asFormula)(1)  <(nil, dI()(1)) &
-      dC(s"dy=(x-($cx))/($r)".asFormula)(1)  <(nil, dI()(1)) &
-      dC(s"v^2=($v0)^2+2*($y0)-2*y".asFormula)(1)  <(nil, dI()(1)) &
-      dC(s"v>0".asFormula)(1)  <(nil, ODE(1)) ;
-      dC(s"y < ($cy)".asFormula)(1)  <(nil, dI()(1))
-    interpret(e, pr)
+    val pr1 = interpret(dC(s"dx=-(($cy)-y)/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
+    val pr2 = interpret(dC(s"dy=(($cx)-x)/($r)".asFormula)(1)  <(nil, dI()(1)), pr1)
+    val pr3 = interpret(dC(s"v^2=($v0)^2+2*($y0)-2*y".asFormula)(1)  <(nil, dI()(1)), pr2)
+    val pr4 = interpret(dC(s"v>0".asFormula)(1)  <(nil, ODE(1)), pr3)
+    val pr5 = interpret(dC(s"y < ($cy)".asFormula)(1)  <(nil, dI()(1)), pr4)
+    pr5
+    //interpret(e, pr)
   }
   
   def quad4Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, theta1: Number, deltaTheta: Number):Provable = {
@@ -138,14 +166,19 @@ object CoasterXProver {
   
   def sectionTactic(pr: Provable, p1: TPoint, p2: TPoint, v0:Number, section: Section):Provable = {
     section match {
-      case ArcSection(Some(ArcParam(bl,tr,theta1,deltaTheta)),Some(grad)) => {
+      case ArcSection(Some(param@ArcParam(bl,tr,theta1,deltaTheta)),Some(grad)) => {
+        val (t1, t2) = (theta1.value, param.theta2.value)
+        val q3 = t1 <= -90 && t2 <= -90
+        val q4 = t1 >= -90 && t1 <= 0   && t2 <= 0
+        val q1 = t1 >= 0   && t1 <= 90  && t2 <= 90
         val pr1 =
-          ((theta1.value < -90, theta1.value < 0, theta1.value < 90) match {
-            case (true, _, _) => quad3Tactic(pr, p1, p2, bl, tr, v0, theta1, deltaTheta) // Quadrant 3
-            case (_, true, _) => quad4Tactic(pr, p1, p2, bl, tr, v0, theta1, deltaTheta) // Quadrant 4
-            case (_, _, true) => quad1Tactic(pr, p1, p2, bl, tr, v0, theta1, deltaTheta) // Quadrant 1
-            case _ => quad2Tactic(pr, p1, p2, bl, tr, theta1, v0, deltaTheta) /// Quadrant 2
-          })
+          (q3, q4, q1) match {
+            case (true, false, false) => quad3Tactic(pr, p1, p2, bl, tr, v0, theta1, deltaTheta) // Quadrant 3
+            case (false, true, false) => quad4Tactic(pr, p1, p2, bl, tr, v0, theta1, deltaTheta) // Quadrant 4
+            case (false, false, true) => quad1Tactic(pr, p1, p2, bl, tr, v0, theta1, deltaTheta) // Quadrant 1
+            case (false,false,false) => quad2Tactic(pr, p1, p2, bl, tr, v0, theta1, deltaTheta) /// Quadrant 2
+            case _ => ???
+          }
         interpret(dW(1) & QE, pr1)
       }
       case LineSection(Some(LineParam(bl,tr)), Some(grad)) =>
