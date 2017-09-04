@@ -78,41 +78,10 @@ object CoasterXProver {
     val pr2 = interpret(dC(s"dx=(y-($cy))/($r)".asFormula)(1) <(nil, dI()(1)), pr1)
     val pr3 = interpret(dC(s"dy=-(x-($cx))/($r)".asFormula)(1) <(nil, dI()(1)), pr2)
     val pr3a= interpret(dC(s"(($cx) - x)^2   + (($cy) - y)^2   = ($r)^2".asFormula)(1) <(nil, ODE(1)), pr3)
-    val pr3b =interpret(dC(s"(($cx) - ($xEnd))^2 + (($cy) - ($yEnd))^2 = ($r)^2".asFormula)(1) <(nil, ODE(1)), pr3a)
-    val pr4 = interpret(dC(s"v^2=($v0)^2+2*($y0)-2*y".asFormula)(1) <(nil, dI()(1)), pr3b)
-    // @TODO: The ghost and whatnot depends on cy = y being impossible which is not the case because we allow vertical stuff
-  //  val pr4a = interpret(dC(s"(($v0)^2)/2 > ($yEnd) - ($y0)".asFormula)(1) <(nil, dI()(1)), pr4)
-//    val pr4b = interpret(dC(s"($cy) != y".asFormula)(1) <(nil, ODE(1)), pr4a)
-    //val pr5 = interpret(dC(s"2*(($cy)-y)*($r)!=0".asFormula)(1) <(nil, dW(1) & QE), pr4b)
-    val pr5 = interpret(cut(s"(v^2)/2 > ($yEnd) - ($y0) & x >= ($x0) & x <= ($xEnd) & ($y0) <= y & y <= ($yEnd)".asFormula) <(nil, hideR(1)), pr4)
-    val prA = interpret(nil <(dC(s"2*(cy()-y)*r()!=0".asFormula)(1), nil), pr5)
-    //val pr5 = interpret(dC(s"(v^2)/2 > ($yEnd) - ($y0)".asFormula)(1) <(nil, ODE(1)), pr4)
-    val pr6 = interpret(nil<(dC(s"v>0 ".asFormula)(1) <(nil, ODE(1)), nil, nil), prA)
-    //val pr7alt = interpret(dC(s"($cy)<=y".asFormula)(1), pr4)
-    //val pr7alt1 = interpret(nil<(nil,dG(s"{a'=0*a+(((dy*v)/2)*(y-($cy)^(1/2)))}".asDifferentialProgram, Some(s"a^2 + ($cy) = y".asFormula))(1)), pr7alt)
-    //val pr7alt2 = interpret(nil <(nil,existsR(s"(y-($cy))".asTerm)(1)), pr7alt1)
-    val pr7alt3 = interpret(ODE(1), pr6)
-    pr7alt3
-    /*val pr7 = interpret(dC(s"($cy)<=y".asFormula)(1) <(ODE(1),
-      dG(s"{a'=(($cx)-x)*v/(2*(($cy)-y)*($r))*a+0}".asDifferentialProgram, Some(s"a^2*(($cy)-y)=-1".asFormula))(1) & existsR(s"(-1/(($cy)-y))^(1/2)".asTerm)(1) & ODE(1)
-    ), pr6)*/
-    /*val pr1 = interpret(dC(s"dx=(y-($cy))/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
-    val pr2 = interpret(dC(s"dy=-(x-($cx))/($r)".asFormula)(1)  <(nil, dI()(1)), pr1)
-    val pr3 = interpret(dC(s"(($cx)-x)^2+(($cy)-y)^2=($r)^2".asFormula)(1) <(nil, dI()(1)), pr2)
-    val denomTac:BelleExpr =
-      dC(s"-($r) < ($cx)-x".asFormula)('R) <(
-        dC(s"($cx)-x < ($r)".asFormula)('R) <(ODE(1), ODE(1)),
-        ODE(1))
-    //ODE(1)
-
-    val pr4 = interpret(dC(s"($cx)<=x".asFormula)(1) <(nil,
-      dC(s"2*($cy-y)*($r)!=0".asFormula)(1) <(nil, denomTac) &
-        dG(s"a' = ((($cx)-x)*v/(2*(($cy)-y)*($r)))*a + 0".asDifferentialProgram, Some(s"a^2*(($cy)-y) = -1".asFormula))(1) &
-        existsR(s"(-1/(($cy)-y))^(1/2)".asTerm)(1) &
-        dW(1) & QE
-    ), pr3)
-    val pr5 = interpret(dC(s"-($r) < ($cx)-x&($cx)-x < ($r)".asFormula)(1) <(dW(1) & QE, dW(1) & QE), pr4)*/
-    //interpret(e,pr)
+    //val pr3b =interpret(dC(s"(($cx) - ($xEnd))^2 + (($cy) - ($yEnd))^2 = ($r)^2".asFormula)(1) <(nil, ODE(1)), pr3a)
+    val pr4 = interpret(dC(s"v^2=($v0)^2+2*($y0)-2*y".asFormula)(1) <(nil, dI()(1)), pr3a)
+    val pr6 = interpret(dC(s"v>0 ".asFormula)(1) <(nil, ODE(1)), pr4)
+    pr6
   }
   
   def quad3Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, theta1: Number, deltaTheta: Number):Provable = {
@@ -171,6 +140,7 @@ object CoasterXProver {
         val q3 = t1 <= -90 && t2 <= -90
         val q4 = t1 >= -90 && t1 <= 0   && t2 <= 0
         val q1 = t1 >= 0   && t1 <= 90  && t2 <= 90
+        val x = 1 + 1
         val pr1 =
           (q3, q4, q1) match {
             case (true, false, false) => quad3Tactic(pr, p1, p2, bl, tr, v0, theta1, deltaTheta) // Quadrant 3
