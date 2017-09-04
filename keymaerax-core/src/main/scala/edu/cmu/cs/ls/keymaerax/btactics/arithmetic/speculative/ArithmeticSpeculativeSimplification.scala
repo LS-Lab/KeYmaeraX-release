@@ -8,7 +8,6 @@ package edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.btactics.{ExpressionTraversal, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
@@ -25,17 +24,19 @@ import scala.language.postfixOps
   */
 object ArithmeticSpeculativeSimplification {
 
+  private val DEBUG = false
+
   /** Tries decreasingly aggressive strategies of hiding formulas before QE, until finally falling back to full QE if none
     * of the simplifications work out. */
-  val speculativeQE: BelleExpr = "smartQE" by ((sequent: Sequent) => {
-    (print("Trying abs...") & proveOrRefuteAbs & print("...abs done")) | speculativeQENoAbs
+  lazy val speculativeQE: BelleExpr = "smartQE" by ((sequent: Sequent) => {
+    (debug("Trying abs...", DEBUG) & proveOrRefuteAbs & debug("...abs done", DEBUG)) | speculativeQENoAbs
   })
 
   /** QE without handling abs */
-  private val speculativeQENoAbs: BelleExpr = "QE" by ((sequent: Sequent) => {
-    (print("Trying orIntro and smart hiding...") & (orIntro((print("Bound") & hideNonmatchingBounds & smartHide & QE() & TactixLibrary.done) | (print("Non-Bound") & smartHide & QE() & TactixLibrary.done)) & print("... orIntro and smart hiding successful"))) |
-    (print("orIntro failed, trying smart hiding...") & ((hideNonmatchingBounds & smartHide & QE() & TactixLibrary.done) | (smartHide & QE()) & TactixLibrary.done) & print("...smart hiding successful")) |
-    (print("All simplifications failed, falling back to ordinary QE") & QE() & TactixLibrary.done)
+  private lazy val speculativeQENoAbs: BelleExpr = "QE" by ((sequent: Sequent) => {
+    (debug("Trying orIntro and smart hiding...", DEBUG) & (orIntro((debug("Bound", DEBUG) & hideNonmatchingBounds & smartHide & QE() & TactixLibrary.done) | (debug("Non-Bound", DEBUG) & smartHide & QE() & TactixLibrary.done)) & debug("... orIntro and smart hiding successful", DEBUG))) |
+    (debug("orIntro failed, trying smart hiding...", DEBUG) & ((hideNonmatchingBounds & smartHide & QE() & TactixLibrary.done) | (smartHide & QE()) & TactixLibrary.done) & debug("...smart hiding successful", DEBUG)) |
+    (debug("All simplifications failed, falling back to ordinary QE", DEBUG) & QE() & TactixLibrary.done)
   })
 
   /** Uses the disjunction introduction proof rule to prove a disjunctions by proving any 1 of the disjuncts. */
@@ -51,7 +52,7 @@ object ArithmeticSpeculativeSimplification {
   })
 
   /** Assert that there is no counter example. skip if none, error if there is. */
-  val assertNoCex: BelleExpr = "assertNoCEX" by ((sequent: Sequent) => {
+  lazy val assertNoCex: BelleExpr = "assertNoCEX" by ((sequent: Sequent) => {
     TactixLibrary.findCounterExample(sequent.toFormula) match {
       case Some(cex) => error("Found counterexample " + cex)
       case None => skip
@@ -59,7 +60,7 @@ object ArithmeticSpeculativeSimplification {
   })
 
   /** Proves abs by trying to find contradictions; falls back to QE if contradictions fail */
-  val proveOrRefuteAbs: BelleExpr = "proveOrRefuteAbs" by ((sequent: Sequent) => {
+  lazy val proveOrRefuteAbs: BelleExpr = "proveOrRefuteAbs" by ((sequent: Sequent) => {
     val symbols = (sequent.ante.flatMap(StaticSemantics.symbols) ++ sequent.succ.flatMap(StaticSemantics.symbols)).toSet
     if (symbols.exists(_.name == "abs")) exhaustiveAbsSplit & OnAll(((hideR('R)*) & assertNoCex & QE & TactixLibrary.done) | speculativeQENoAbs)
     else error("Sequent does not contain abs")
