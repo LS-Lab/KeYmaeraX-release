@@ -40,9 +40,8 @@ lemmadb/
 .settings/
 .worksheet/
 
-#bundled projects
-keymaerax-webui/src/main/resources/keymaerax-projects
 
+# IntelliJ
 .idea/libraries/SBT__org_scalaz_scalaz_effect_2_10_7_0_2.xml
 
 .idea/modules/keymaera4.iml
@@ -94,6 +93,8 @@ deploy.sh
 export/
 
 .DS_Store
+#bundled projects
+keymaerax-webui/src/main/resources/keymaerax-projects
 keymaerax-webui/src/test/resources/examples/course/labs/*
 release_scaladoc.pl
 redo

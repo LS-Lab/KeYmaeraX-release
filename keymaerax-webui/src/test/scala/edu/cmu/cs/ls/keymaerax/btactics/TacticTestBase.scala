@@ -2,8 +2,11 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QELogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, UserPOJO}
@@ -13,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalactic.{AbstractStringUniformity, Uniformity}
-import org.scalatest.{Assertions, BeforeAndAfterEach, FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 import scala.collection.immutable._
 
@@ -21,8 +24,21 @@ import scala.collection.immutable._
  * Base class for tactic tests.
  */
 class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
-  protected var theInterpreter: Interpreter = _
+  protected def theInterpreter: Interpreter = BelleInterpreter.interpreter
   private var interpreters: List[Interpreter] = _
+
+  private val LOG_EARLIEST_QE = System.getProperty("LOG_POTENTIAL_QE", "false")=="true"
+  private val LOG_QE = System.getProperty("LOG_QE", "false")=="true"
+  private val LOG_QE_DURATION = System.getProperty("LOG_QE_DURATION", "true")=="true"
+
+  protected val qeLogPath: String = System.getProperty("user.home") + "/.keymaerax/logs/qe/"
+  private val allPotentialQEListener = new QELogListener(qeLogPath + "wantqe.txt", (p, _) => { p.subgoals.size == 1 && p.subgoals.head.isFOL })
+  private val qeListener = new QELogListener(qeLogPath + "haveqe.txt", (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
+  protected val qeDurationListener = new StopwatchListener((_, t) => t match {
+    case DependentTactic("QE") => true
+    case DependentTactic("smartQE") => true
+    case _ => false
+  })
 
   /** Tests that want to record proofs in a database. */
   class DbTacticTester {
@@ -51,7 +67,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
           val fnDecls = symbols.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>
             if (fn.sort == Real) s"R ${fn.asString}(${printDomain(fn.domain)})."
             else if (fn.sort == Bool) s"B ${fn.asString}(${printDomain(fn.domain)})."
-            else ???
+            else throw new Exception("Unknown sort: " + fn.sort)
           ).mkString("\n  ")
           val varDecls = symbols.filter(_.isInstanceOf[BaseVariable]).map(v => s"R ${v.prettyString}.").mkString("\n  ")
           s"""Functions.
@@ -91,7 +107,9 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       val globalProvable = ProvableSig.startProof(s)
       val listener = new TraceRecordingListener(db, proofId, None,
         globalProvable, 0 /* start from single provable */, recursive = false, "custom")
-      SequentialInterpreter(listener :: Nil)(t, BelleProvable(ProvableSig.startProof(s))) match {
+      val listeners = listener::Nil ++ (if (LOG_QE) qeListener::Nil else Nil) ++ (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil)
+      BelleInterpreter.setInterpreter(SequentialInterpreter(listeners))
+      BelleInterpreter(t, BelleProvable(ProvableSig.startProof(s))) match {
         case BelleProvable(provable, _) =>
           provable.conclusion shouldBe s
           //extractTactic(proofId) shouldBe t //@todo trim trailing branching nil
@@ -193,7 +211,10 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   /** Test setup */
   override def beforeEach(): Unit = {
     interpreters = Nil
-    theInterpreter = registerInterpreter(SequentialInterpreter())
+    val listeners = (if (LOG_QE) qeListener::Nil else Nil) ++
+      (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil) ++
+      (if (LOG_QE_DURATION) qeDurationListener::Nil else Nil)
+    BelleInterpreter.setInterpreter(registerInterpreter(SequentialInterpreter(listeners)))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[Formula]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
@@ -265,11 +286,13 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     }
 
     val start = System.currentTimeMillis()
+    qeDurationListener.reset()
     val proof = proveBy(entry.model.asInstanceOf[Formula], tactic)
     val end = System.currentTimeMillis()
     proof shouldBe 'proved
 
     println("Proof duration [ms]: " + (end-start))
+    println("QE duration [ms]: " + qeDurationListener.duration)
     println("Tactic size: " + TacticStatistics.size(tactic))
     println("Tactic lines: " + TacticStatistics.lines(tactic))
     println("Proof steps: " + proof.steps)
@@ -280,24 +303,39 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
       getClass.getResourceAsStream(archive)).mkString)
 
-    var statistics = scala.collection.mutable.Map[String, (Long, Int, Int, Int)]()
+    val statistics = scala.collection.mutable.Map[String, (Long, Long, Int, Int, Int)]()
+
+    def printStatistics(v: (Long, Long, Int, Int, Int)) = {
+      println("Proof duration [ms]: " + v._1)
+      println("QE duration [ms]: " + v._2)
+      println("Tactic size: " + v._3)
+      println("Tactic lines: " + v._4)
+      println("Proof steps: " + v._5)
+    }
 
     for (entry <- entries) {
+      val tacticName = entry.tactics.head._1
       val tactic = entry.tactics.head._2
 
+      val statisticName = entry.name + " with " + tacticName
+      println("Proving " + statisticName)
+
+      qeDurationListener.reset()
       val start = System.currentTimeMillis()
       val proof = proveBy(entry.model.asInstanceOf[Formula], tactic)
       val end = System.currentTimeMillis()
+      val qeDuration = qeDurationListener.duration
       proof shouldBe 'proved
-      statistics(entry.name) = (end-start, TacticStatistics.size(tactic), TacticStatistics.lines(tactic), proof.steps)
+
+      statistics(statisticName) = (end-start, qeDuration, TacticStatistics.size(tactic), TacticStatistics.lines(tactic), proof.steps)
+
+      println("Done " + statisticName)
+      printStatistics(statistics(statisticName))
     }
 
     for ((k,v) <- statistics) {
       println("Proof of " + k)
-      println("Proof duration [ms]: " + v._1)
-      println("Tactic size: " + v._2)
-      println("Tactic lines: " + v._3)
-      println("Proof steps: " + v._4)
+      printStatistics(v)
     }
   }
 

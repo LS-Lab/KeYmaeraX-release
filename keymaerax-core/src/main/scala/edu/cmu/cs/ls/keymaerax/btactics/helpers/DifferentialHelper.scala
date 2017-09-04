@@ -28,29 +28,27 @@ object DifferentialHelper {
 
   /** Sorts ODEs in dependency order; so v'=a, x'=v is sorted into x'=v,v'=a. */
   def sortAtomicOdes(odes : List[AtomicODE], diffArg:Term) : List[AtomicODE] = {
-    val sorted = sortAtomicOdesHelper(odes).map(v => odes.find(_.xp.x.equals(v)).get)
+    val sorted = sortAtomicOdesHelper(odes).map(v => odes.find(_.xp.x == v).get)
     val (l1, l2) = sorted.partition(atom => atom.xp.x == diffArg)
     l2 ++ l1
   }
 
   //@todo check this implementation.
-  def sortAtomicOdesHelper(odes : List[AtomicODE], prevOdes : List[AtomicODE] = Nil) : List[Variable] = {
-    var primedVars = odes.map(_.xp.x)
+  def sortAtomicOdesHelper(odes: List[AtomicODE], prevOdes: List[AtomicODE] = Nil): List[Variable] = {
+    val primedVars = odes.map(_.xp.x)
 
-    def dependencies(v : Variable) : List[Variable] = {
-      val vTerm = odes.find(_.xp.x.equals(v)).get.e
+    def dependencies(v: Variable): List[Variable] = {
+      val vTerm = odes.find(_.xp.x == v).get.e
       //remove self-references to cope with the fact that t' = 0*t + 1, which is necessary due to DG.
-      primedVars.filter(StaticSemantics.freeVars(vTerm).contains(_)).filter(!_.equals(v))
+      primedVars.filter(StaticSemantics.freeVars(vTerm).contains(_)).filter(_ != v)
     }
 
-    var nonDependentSet : List[Variable] = primedVars.filter(dependencies(_).isEmpty)
+    val nonDependentSet : List[Variable] = primedVars.filter(dependencies(_).isEmpty)
     val possiblyDependentOdes = odes.filter(ode => !nonDependentSet.contains(ode.xp.x))
 
-    if(possiblyDependentOdes.isEmpty) nonDependentSet
-    else {
-      if(prevOdes.equals(possiblyDependentOdes)) throw new Exception("Cycle detected!")
-      nonDependentSet ++ sortAtomicOdesHelper(possiblyDependentOdes, odes)
-    }
+    if (possiblyDependentOdes.isEmpty) nonDependentSet
+    else if (prevOdes.equals(possiblyDependentOdes)) throw new Exception("Cycle detected!")
+    else nonDependentSet ++ sortAtomicOdesHelper(possiblyDependentOdes, odes)
   }
 
   /** Returns true iff v occurs primed in the ode. */
@@ -59,9 +57,9 @@ object DifferentialHelper {
     case None => true //over-approximate set of initial conditions if no ODE is provided.
   }
 
-  def containsPrimedVariables(vs: Set[Variable], system: ODESystem) =
+  /** Indicates whether the variables `vs` is primed in the ODE `system`. */
+  def containsPrimedVariables(vs: Set[Variable], system: ODESystem): Boolean =
     vs.exists(v => isPrimedVariable(v, Some(system.ode)))
-
 
   /**
     * Extracts all equalities that look like initial conditions from the formula f.
@@ -73,18 +71,18 @@ object DifferentialHelper {
   def extractInitialConditions(ode : Option[Program])(f : Formula) : List[Formula] =
     flattenAnds(f match {
       case And(l, r) => extractInitialConditions(ode)(l) ++ extractInitialConditions(ode)(r)
-      case Equal(v: Variable, _) => {if(isPrimedVariable(v, ode)) (f :: Nil) else Nil}
-      case Equal(_, v: Variable) => {if(isPrimedVariable(v, ode)) (f :: Nil) else Nil}
+      case Equal(v: Variable, _) => if (isPrimedVariable(v, ode)) f :: Nil else Nil
+      case Equal(_, v: Variable) => if (isPrimedVariable(v, ode)) f :: Nil else Nil
       case _ => Nil //@todo is it possible to allow set-valued initial conditiosn (e.g., inequalities, disjunctions, etc.)?
     })
 
   /** Returns the list of variables that have differential equations in an ODE. */
   def getPrimedVariables(ode: Program) : List[Variable] = ode match {
-    case AtomicODE(pv, term) => pv.x :: Nil
-    case ODESystem(ode, constraint) => getPrimedVariables(ode)
+    case AtomicODE(pv, _) => pv.x :: Nil
+    case ODESystem(odes, _) => getPrimedVariables(odes)
     case DifferentialProduct(l,r) => getPrimedVariables(l) ++ getPrimedVariables(r)
     case _: AtomicDifferentialProgram => ???
-    case _ => throw AxiomaticODESolverExn(s"Expected a differnetial program or ode system but found ${ode.getClass}")
+    case _ => throw AxiomaticODESolverExn(s"Expected a differential program or ODE system but found ${ode.getClass}")
   }
 
   /**

@@ -197,6 +197,12 @@ object Augmentors {
       result
     }
 
+    /** Returns the universal closure of formula `fml`. */
+    def universalClosure: Formula = {
+      assert(fml.isFOL, "Universal closure on FOL formulas only")
+      StaticSemantics.freeVars(fml).toSet[Variable].foldLeft(fml)((f,v) => Forall(v::Nil, f))
+    }
+
     /** The substitution pair `this~>other`. */
     def ~>(repl: Formula): SubstitutionPair = SubstitutionPair(fml,repl)
   }

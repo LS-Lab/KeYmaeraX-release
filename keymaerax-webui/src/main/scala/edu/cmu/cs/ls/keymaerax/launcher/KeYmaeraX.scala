@@ -5,7 +5,7 @@ import java.lang.reflect.ReflectPermission
 import java.security.Permission
 
 import edu.cmu.cs.ls.keymaerax.api.ScalaTacticCompiler
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -279,6 +279,7 @@ object KeYmaeraX {
       case tool => throw new Exception("Unknown tool " + tool)
     }
 
+    BelleInterpreter.setInterpreter(SequentialInterpreter())
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
 
     val generator = new ConfigurableGenerator[Formula]()
@@ -393,12 +394,24 @@ object KeYmaeraX {
         "\n[Error] Wrong file name " + outputFileName + " used for -out! KeYmaera X only produces proof evidence as .kyp file. Please use: -out FILENAME.kyp")
     }
 
-    prove(inputModel, tactic, outputFileName, options, storeWitness=true)
+    try {
+      prove(inputModel, tactic, outputFileName, options, storeWitness=true)
+    } catch {
+      case ex: Throwable =>
+        println("==================================================")
+        println(s"Error while checking $inputFileName failed")
+        println(s"Error details:")
+        ex.printStackTrace(System.out)
+        println(s"Error while checking $inputFileName")
+        println("==================================================")
+        throw ex
+    }
   }
 
   private def prove(input: Formula, tactic: BelleExpr, outputFileName: String, options: OptionMap, storeWitness: Boolean): Unit = {
     val inputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(input))
 
+    Console.println("[start proof " + outputFileName + "]")
     //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
     val pw = new PrintWriter(outputFileName)
 
@@ -440,7 +453,7 @@ object KeYmaeraX {
         "reparse of printed lemma is not original lemma")
 
       println("==================================")
-      println("Tactic finished the proof")
+      println("Tactic finished the proof: " + outputFileName)
       println("==================================")
 
       if (storeWitness) {
@@ -450,14 +463,17 @@ object KeYmaeraX {
       }
       pw.close()
     } else {
+      // prove did not work
       assert(!witness.isProved)
       assert(witness.subgoals.nonEmpty)
       //@note PrintWriter above has already emptied the output file
       pw.close()
+      new File(outputFileName).delete()
       println("==================================")
-      println("Tactic did not finish the proof    open goals: " + witness.subgoals.size)
+      println("Tactic did NOT finish the proof: " + outputFileName + "\n    open goals: " + witness.subgoals.size)
       println("==================================")
       printOpenGoals(witness)
+      println("NO completed proof: " + outputFileName)
       println("==================================")
       if (options.getOrElse('interactive,false)==true) {
         interactiveProver(witness)
@@ -469,7 +485,7 @@ object KeYmaeraX {
   }
 
   /**
-    * Check given archive file to produce lemmas.
+    * Checks the given archive file.
     * {{{KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))}}}
     *
     * @param options The prover options.
@@ -477,17 +493,65 @@ object KeYmaeraX {
   def check(options: OptionMap): Unit = {
     require(options.contains('in), usage)
     val inputFileName = options('in).toString
-    assert(inputFileName.endsWith(".kya"),
+    assert(inputFileName.endsWith(".kya") || inputFileName.endsWith(".kyx"),
       "\n[Error] Wrong file name " + inputFileName + " used for -check! KeYmaera X only checks .kya files. Please use: -check FILENAME.kya")
     val input = scala.io.Source.fromFile(inputFileName).mkString
     val archiveContent = KeYmaeraXArchiveParser.parse(input)
 
-    archiveContent.foreach({case ParsedArchiveEntry(modelName, modelString, _, model: Formula, tactics) =>
+    val statistics = scala.collection.mutable.ListMap[String, Either[(Long, Long, Int, Int, Int), Throwable]]()
+
+    def printStatistics(info: String, v: Either[(Long, Long, Int, Int, Int), Throwable]) = v match {
+      case Left((duration, qeDuration, tacticSize, tacticLines, proofSteps)) =>
+        println(s"=============== Succeeded ===============")
+        println(s"Proved $inputFileName: $info")
+        println("Proof duration [ms]: " + duration)
+        println("QE duration [ms]: " + qeDuration)
+        println("Tactic size: " + tacticSize)
+        println("Tactic lines: " + tacticLines)
+        println("Proof steps: " + proofSteps)
+        println("==========================================")
+      case Right(ex) =>
+        println(s"================ Failed =================")
+        println(s"Error while checking $inputFileName: $info")
+        println(s"Error details:")
+        ex.printStackTrace(System.out)
+        println(s"Error while checking $inputFileName: $info")
+        println("==========================================")
+    }
+
+    val qeDurationListener = new IOListeners.StopwatchListener((_, t) => t match {
+      case DependentTactic("QE") => true
+      case DependentTactic("smartQE") => true
+      case _ => false
+    })
+
+    BelleInterpreter.setInterpreter(SequentialInterpreter(qeDurationListener::Nil))
+
+    archiveContent.foreach({case ParsedArchiveEntry(modelName, _, _, model: Formula, tactics) =>
       tactics.foreach({case (tacticName, tactic) =>
-        val witnessFileName = (modelName + "_" + tacticName).replaceAll("\\s", "") + ".kyp"
-        prove(model, tactic, witnessFileName, options, storeWitness=false)
+        val statisticName = modelName + " with " + tacticName
+        try {
+          println("==========================================")
+          println(s"Proving $inputFileName: model $modelName with tactic $tacticName")
+          qeDurationListener.reset()
+          val start = System.currentTimeMillis()
+          val proof = TactixLibrary.proveBy(model, tactic)
+          val end = System.currentTimeMillis()
+          val qeDuration = qeDurationListener.duration
+          assert(proof.isProved, "Expected finished proof")
+
+          statistics(statisticName) = Left(end-start, qeDuration, TacticStatistics.size(tactic), TacticStatistics.lines(tactic), proof.steps)
+
+          printStatistics(statisticName, statistics(statisticName))
+        } catch {
+          case ex: Throwable =>
+            statistics(statisticName) = Right(ex)
+            printStatistics(statisticName, Right(ex))
+        }
       })
     })
+
+    statistics.foreach({ case (k, v) => printStatistics(k, v) })
   }
 
   /**

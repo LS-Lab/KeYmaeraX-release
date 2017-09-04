@@ -64,7 +64,7 @@ object KeYmaeraXArchiveParser {
     val archiveContent: String = ParserHelper.removeBOM(archiveContentBOM)
     // match ArchiveEntry, Lemma, Theorem, unless inside quotation marks
     val regex = s"(?=($ARCHIVE_ENTRY_BEGIN|$LEMMA_BEGIN|$THEOREM_BEGIN|$EXERCISE_BEGIN)" + "(?=([^\"]*\"[^\"]*\")*[^\"]*$))"
-    archiveContent.trim().split(regex).flatMap({s =>
+    archiveContent.trim().split(regex).filter(_.nonEmpty).flatMap({s =>
       val (entry, kind) =
         if (s.startsWith(ARCHIVE_ENTRY_BEGIN)) (s.stripPrefix(ARCHIVE_ENTRY_BEGIN), "theorem")
         else if (s.startsWith(THEOREM_BEGIN)) (s.stripPrefix(THEOREM_BEGIN), "theorem")

@@ -64,7 +64,7 @@ trait UnifyUSCalculus {
         if (sub.isEmpty) throw new BelleUserGeneratedError("ill-positioned " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
         axiomIndex(sub.get) match {
           case Some(axiom) =>
-            if (true || BelleExpr.DEBUG) println("stepAt " + axiom)
+            if (BelleExpr.DEBUG) println("stepAt " + axiom)
             DerivationInfo(axiom).belleExpr match {
               case ap:AtPosition[_] => ap(pos)
               case expr:BelleExpr => expr

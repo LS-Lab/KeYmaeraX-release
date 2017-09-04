@@ -121,7 +121,7 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
     val tactic = parser("implyR(1) & closeId")
 //    val tactic = ExposedTacticsLibrary.tactics("implyR") & ExposedTacticsLibrary.tactics("TrivialCloser")
     val value = BelleProvable(ProvableSig.startProof("p() -> p()".asFormula))
-    val result = SequentialInterpreter()(tactic, value)
+    val result = BelleInterpreter(tactic, value)
     result match {
       case BelleProvable(resultingProvable, _) => resultingProvable.isProved shouldBe true
       case _ => throw new Exception("Expected a BelleProvable.")

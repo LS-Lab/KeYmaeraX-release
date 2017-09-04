@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import StaticSemantics.freeVars
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleTacticFailure
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleTacticFailure}
 import edu.cmu.cs.ls.keymaerax.tools.{ODESolverTool, Tool, ToolBase}
 
 /**
@@ -79,7 +79,7 @@ object Integrator {
     solutions.foldLeft[Term](t)((newT, op) => {
       val v = op._1
       val t = op._2
-      println(s"Replacing ${v} with ${t} in ${newT}")
+      if (BelleExpr.DEBUG) println(s"Replacing ${v} with ${t} in ${newT}")
       SubstitutionHelper.replaceFree(newT)(v, t)
     })
   }

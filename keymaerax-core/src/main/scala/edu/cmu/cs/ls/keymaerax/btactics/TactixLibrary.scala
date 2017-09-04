@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 
 import scala.List
 import scala.collection.immutable._
@@ -557,11 +558,20 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @param order the order of variables to use during quantifier elimination
     * @see [[QE]]
     * @see [[RCF]] */
-  def QE(order: List[NamedSymbol] = Nil, requiresTool: Option[String] = None): BelleExpr = {
-    val tactic = ToolTactics.fullQE(order)(ToolProvider.qeTool(requiresTool).getOrElse(
-      throw new BelleThrowable(s"QE requires ${requiresTool.getOrElse("a QETool")}, but got None")))
-    requiresTool match {
-      case Some(toolName) => "QE" byWithInput (Variable(toolName), tactic)
+  def QE(order: List[NamedSymbol] = Nil, requiresTool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
+    //@todo implement as part of tools?
+    val tool = ToolProvider.qeTool(requiresTool).getOrElse(
+      throw new BelleThrowable(s"QE requires ${requiresTool.getOrElse("a QETool")}, but got None"))
+    (tool, timeout) match {
+      case (tom: ToolOperationManagement, Some(t)) => tom.setOperationTimeout(t)
+      case (_, Some(t)) => throw BelleUnsupportedFailure("Tool " + tool + " does not support timeouts")
+      case (_, None) => // do nothing
+    }
+    val tactic = ToolTactics.fullQE(order)(tool)
+    (requiresTool, timeout) match {
+      case (Some(toolName), Some(t)) => "QE" byWithInputs (Variable(toolName)::Number(t)::Nil, tactic)
+      case (Some(toolName), None) => "QE" byWithInputs (Variable(toolName)::Nil, tactic)
+      case (None, Some(t)) => "QE" byWithInputs (Number(t)::Nil, tactic)
       case _ => tactic
     }
   }
@@ -779,8 +789,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     */
   def proveBy(goal: ProvableSig, tactic: BelleExpr): ProvableSig = {
     val v = BelleProvable(goal)
-    //@todo fetch from some factory
-    SequentialInterpreter()(tactic, v) match {
+    BelleInterpreter(tactic, v) match {
       case BelleProvable(provable, _) => provable
 //      //@note there is no other case at the moment
 //      case r => throw BelleIllFormedError("Error in proveBy, goal\n" + goal + " was not provable but instead resulted in\n" + r)

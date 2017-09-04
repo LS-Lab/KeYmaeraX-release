@@ -150,6 +150,7 @@ abstract class SMTConverter extends (Formula=>String) {
         if (n.signum < 0) {
           //@note negative form has to be representable, in particular n cannot have been MIN_LONG
           assert((-n).isDecimalDouble || (-n).isValidLong, throw new SMTConversionException("Term contains illegal numbers: " + t))
+          //@todo Real literals should contain a dot in Z3 (integer without dot), check whether compatible with Polya
           "(- " + (-n).toString() + ")"
         } else n.toString()
       case t: Variable => PREFIX + nameIdentifier(t)
