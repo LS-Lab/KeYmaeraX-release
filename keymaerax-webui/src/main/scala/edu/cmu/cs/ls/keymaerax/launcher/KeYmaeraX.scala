@@ -500,9 +500,10 @@ object KeYmaeraX {
 
     val statistics = scala.collection.mutable.ListMap[String, Either[(Long, Long, Int, Int, Int), Throwable]]()
 
-    def printStatistics(v: Either[(Long, Long, Int, Int, Int), Throwable]) = v match {
+    def printStatistics(info: String, v: Either[(Long, Long, Int, Int, Int), Throwable]) = v match {
       case Left((duration, qeDuration, tacticSize, tacticLines, proofSteps)) =>
         println(s"=============== Succeeded ===============")
+        println(s"Proved $inputFileName: $info")
         println("Proof duration [ms]: " + duration)
         println("QE duration [ms]: " + qeDuration)
         println("Tactic size: " + tacticSize)
@@ -511,8 +512,10 @@ object KeYmaeraX {
         println("==========================================")
       case Right(ex) =>
         println(s"================ Failed =================")
+        println(s"Error while checking $inputFileName: $info")
         println(s"Error details:")
         ex.printStackTrace(System.out)
+        println(s"Error while checking $inputFileName: $info")
         println("==========================================")
     }
 
@@ -539,29 +542,16 @@ object KeYmaeraX {
 
           statistics(statisticName) = Left(end-start, qeDuration, TacticStatistics.size(tactic), TacticStatistics.lines(tactic), proof.steps)
 
-          println("==========================================")
-          println(s"Done $inputFileName: model $modelName with tactic $tacticName")
-          println("==========================================")
-          println(statisticName)
-          printStatistics(statistics(statisticName))
+          printStatistics(statisticName, statistics(statisticName))
         } catch {
           case ex: Throwable =>
-            println("==========================================")
-            println(s"Error while checking $inputFileName: model $modelName with tactic $tacticName")
             statistics(statisticName) = Right(ex)
-            println(statisticName)
-            printStatistics(statistics(statisticName))
-            println(s"Error while checking $inputFileName: model $modelName with tactic $tacticName")
-            println("==================================================")
+            printStatistics(statisticName, Right(ex))
         }
       })
     })
 
-    for ((k,v) <- statistics) {
-      println("==========================================")
-      println("Proof of " + k)
-      printStatistics(v)
-    }
+    statistics.foreach({ case (k, v) => printStatistics(k, v) })
   }
 
   /**
