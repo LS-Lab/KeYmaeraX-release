@@ -303,7 +303,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
       getClass.getResourceAsStream(archive)).mkString)
 
-    val statistics = scala.collection.mutable.Map[String, (Long, Long, Int, Int, Int)]()
+    val statistics = scala.collection.mutable.LinkedHashMap[String, (Long, Long, Int, Int, Int)]()
 
     def printStatistics(v: (Long, Long, Int, Int, Int)) = {
       println("Proof duration [ms]: " + v._1)

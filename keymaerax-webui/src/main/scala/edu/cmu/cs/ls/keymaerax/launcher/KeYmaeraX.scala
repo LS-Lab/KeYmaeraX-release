@@ -498,7 +498,7 @@ object KeYmaeraX {
     val input = scala.io.Source.fromFile(inputFileName).mkString
     val archiveContent = KeYmaeraXArchiveParser.parse(input)
 
-    val statistics = scala.collection.mutable.ListMap[String, Either[(Long, Long, Int, Int, Int), Throwable]]()
+    val statistics = scala.collection.mutable.LinkedHashMap[String, Either[(Long, Long, Int, Int, Int), Throwable]]()
 
     def printStatistics(info: String, v: Either[(Long, Long, Int, Int, Int), Throwable]) = v match {
       case Left((duration, qeDuration, tacticSize, tacticLines, proofSteps)) =>
