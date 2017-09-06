@@ -83,9 +83,16 @@ class CCodeGeneratorTests extends FlatSpec with Matchers {
         |} state;
         |
         |/* monitor */
-        |bool monitor (state& curr, parameters& params) {
-        |  static state pre = curr;
-        |  int result = (((pre.x)*(params.z)) - (params.y_1))>((1));
+        |bool monitor (state curr, parameters params) {
+        |  static state pre;
+        |  static bool isInitialized = false;
+        |  bool result = false;
+        |  if (!isInitialized) {
+        |    isInitialized = true;
+        |    result = true;
+        |  } else {
+        |    result = (((pre.x)*(params.z)) - (params.y_1))>((1));
+        |  }
         |  pre = curr;
         |  return result;
         |}
@@ -108,7 +115,7 @@ class CCodeGeneratorTests extends FlatSpec with Matchers {
         |} parameters;
         |
         |/* monitor */
-        |bool monitor (parameters& params) {
+        |bool monitor (parameters params) {
         |  return (params.x)>((1));
         |}
         |
@@ -130,7 +137,7 @@ class CCodeGeneratorTests extends FlatSpec with Matchers {
         |} parameters;
         |
         |/* monitor */
-        |bool monitor (parameters& params) {
+        |bool monitor (parameters params) {
         |  return (((params.x)*(params.x)*(params.x)))>((1));
         |}
         |
@@ -153,7 +160,7 @@ class CCodeGeneratorTests extends FlatSpec with Matchers {
         |} parameters;
         |
         |/* monitor */
-        |bool monitor (parameters& params) {
+        |bool monitor (parameters params) {
         |  return ((1.0/(((params.x) + (params.y))*((params.x) + (params.y))*((params.x) + (params.y)))))>((1));
         |}
         |
@@ -176,7 +183,7 @@ class CCodeGeneratorTests extends FlatSpec with Matchers {
         |} parameters;
         |
         |/* monitor */
-        |bool monitor (parameters& params) {
+        |bool monitor (parameters params) {
         |  return ((pow((params.x),(params.y))))>((1));
         |}
         |
@@ -199,7 +206,7 @@ class CCodeGeneratorTests extends FlatSpec with Matchers {
         |} parameters;
         |
         |/* monitor */
-        |bool monitor (parameters& params) {
+        |bool monitor (parameters params) {
         |  return (fabsl((params.x) - (params.y)))>((0));
         |}
         |
@@ -222,7 +229,7 @@ class CCodeGeneratorTests extends FlatSpec with Matchers {
         |} parameters;
         |
         |/* monitor */
-        |bool monitor (parameters& params) {
+        |bool monitor (parameters params) {
         |  return (fminl(params.x, params.y))<=(params.x);
         |}
         |
@@ -245,7 +252,7 @@ class CCodeGeneratorTests extends FlatSpec with Matchers {
         |} parameters;
         |
         |/* monitor */
-        |bool monitor (parameters& params) {
+        |bool monitor (parameters params) {
         |  return (fmaxl(params.x, params.y))>=(params.x);
         |}
         |
@@ -303,9 +310,16 @@ class CCodeGeneratorTests extends FlatSpec with Matchers {
         |} state;
         |
         |/* monitor */
-        |bool monitor (state& curr, parameters& params) {
-        |  static state pre = curr;
-        |  int result = (((((curr.dxo)*(curr.dxo))) + (((curr.dyo)*(curr.dyo))))<=(((params.V)*(params.V))))&&((((curr.a)==(-(params.B)))&&(((curr.w)==(pre.w))&&(((curr.r)==(pre.r))&&(((curr.xo)==(pre.xo))&&(((curr.yo)==(pre.yo))&&(((curr.dxo)==(curr.dxo))&&(((curr.dyo)==(curr.dyo))&&((curr.t)==((0))))))))))||((((params.v)==((0)))&&(((curr.a)==((0)))&&(((curr.w)==((0)))&&(((curr.r)==(pre.r))&&(((curr.xo)==(pre.xo))&&(((curr.yo)==(pre.yo))&&(((curr.dxo)==(curr.dxo))&&(((curr.dyo)==(curr.dyo))&&((curr.t)==((0)))))))))))||(((-(params.B))<=(curr.a))&&(((curr.a)<=(params.A))&&(((curr.r)!=((0)))&&((((curr.w)*(curr.r))==(params.v))&&(((((!(((params.x) - (curr.xo))>=((0))))||(((params.x) - (curr.xo))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.V)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V))))))))&&((!(((params.x) - (curr.xo))<=((0))))||(((curr.xo) - (params.x))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.V)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V)))))))))||(((!(((params.y) - (curr.yo))>=((0))))||(((params.y) - (curr.yo))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.V)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V))))))))&&((!(((params.y) - (curr.yo))<=((0))))||(((curr.yo) - (params.y))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.V)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V))))))))))&&(((curr.a)==(curr.a))&&(((curr.w)==(curr.w))&&(((curr.r)==(curr.r))&&(((curr.xo)==(curr.xo))&&(((curr.yo)==(curr.yo))&&(((curr.dxo)==(curr.dxo))&&(((curr.dyo)==(curr.dyo))&&((curr.t)==((0)))))))))))))))));
+        |bool monitor (state curr, parameters params) {
+        |  static state pre;
+        |  static bool isInitialized = false;
+        |  bool result = false;
+        |  if (!isInitialized) {
+        |    isInitialized = true;
+        |    result = true;
+        |  } else {
+        |    result = (((((curr.dxo)*(curr.dxo))) + (((curr.dyo)*(curr.dyo))))<=(((params.V)*(params.V))))&&((((curr.a)==(-(params.B)))&&(((curr.w)==(pre.w))&&(((curr.r)==(pre.r))&&(((curr.xo)==(pre.xo))&&(((curr.yo)==(pre.yo))&&(((curr.dxo)==(curr.dxo))&&(((curr.dyo)==(curr.dyo))&&((curr.t)==((0))))))))))||((((params.v)==((0)))&&(((curr.a)==((0)))&&(((curr.w)==((0)))&&(((curr.r)==(pre.r))&&(((curr.xo)==(pre.xo))&&(((curr.yo)==(pre.yo))&&(((curr.dxo)==(curr.dxo))&&(((curr.dyo)==(curr.dyo))&&((curr.t)==((0)))))))))))||(((-(params.B))<=(curr.a))&&(((curr.a)<=(params.A))&&(((curr.r)!=((0)))&&((((curr.w)*(curr.r))==(params.v))&&(((((!(((params.x) - (curr.xo))>=((0))))||(((params.x) - (curr.xo))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.V)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V))))))))&&((!(((params.x) - (curr.xo))<=((0))))||(((curr.xo) - (params.x))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.V)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V)))))))))||(((!(((params.y) - (curr.yo))>=((0))))||(((params.y) - (curr.yo))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.V)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V))))))))&&((!(((params.y) - (curr.yo))<=((0))))||(((curr.yo) - (params.y))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.V)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V))))))))))&&(((curr.a)==(curr.a))&&(((curr.w)==(curr.w))&&(((curr.r)==(curr.r))&&(((curr.xo)==(curr.xo))&&(((curr.yo)==(curr.yo))&&(((curr.dxo)==(curr.dxo))&&(((curr.dyo)==(curr.dyo))&&((curr.t)==((0)))))))))))))))));
+        |  }
         |  pre = curr;
         |  return result;
         |}
@@ -347,9 +361,16 @@ class CCodeGeneratorTests extends FlatSpec with Matchers {
         |} state;
         |
         |/* monitor */
-        |bool monitor (state& curr, parameters& params) {
-        |  static state pre = curr;
-        |  int result = (((((curr.dxo)*(curr.dxo))) + (((curr.dyo)*(curr.dyo))))<=(((params.Vo)*(params.Vo))))&&((((curr.a)==(-(params.B)))&&(((curr.om)==(pre.om))&&(((curr.r)==(pre.r))&&(((curr.xo)==(pre.xo))&&(((curr.yo)==(pre.yo))&&(((curr.dxo)==(curr.dxo))&&(((curr.dyo)==(curr.dyo))&&((curr.t)==((0))))))))))||((((params.v)==((0)))&&(((curr.a)==((0)))&&(((curr.om)==((0)))&&(((curr.r)==(pre.r))&&(((curr.xo)==(pre.xo))&&(((curr.yo)==(pre.yo))&&(((curr.dxo)==(curr.dxo))&&(((curr.dyo)==(curr.dyo))&&((curr.t)==((0)))))))))))||(((-(params.B))<=(curr.a))&&(((curr.a)<=(params.A))&&(((curr.r)!=((0)))&&((((curr.om)*(curr.r))==(params.v))&&(((((!(((params.x) - (curr.xo))>=((0))))||(((params.x) - (curr.xo))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.Vo)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.Vo))))))))&&((!(((params.x) - (curr.xo))<=((0))))||(((curr.xo) - (params.x))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.Vo)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.Vo)))))))))||(((!(((params.y) - (curr.yo))>=((0))))||(((params.y) - (curr.yo))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.Vo)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.Vo))))))))&&((!(((params.y) - (curr.yo))<=((0))))||(((curr.yo) - (params.y))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.Vo)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.Vo))))))))))&&(((curr.a)==(curr.a))&&(((curr.om)==(curr.om))&&(((curr.r)==(curr.r))&&(((curr.xo)==(curr.xo))&&(((curr.yo)==(curr.yo))&&(((curr.dxo)==(curr.dxo))&&(((curr.dyo)==(curr.dyo))&&((curr.t)==((0)))))))))))))))));
+        |bool monitor (state curr, parameters params) {
+        |  static state pre;
+        |  static bool isInitialized = false;
+        |  bool result = false;
+        |  if (!isInitialized) {
+        |    isInitialized = true;
+        |    result = true;
+        |  } else {
+        |    result = (((((curr.dxo)*(curr.dxo))) + (((curr.dyo)*(curr.dyo))))<=(((params.Vo)*(params.Vo))))&&((((curr.a)==(-(params.B)))&&(((curr.om)==(pre.om))&&(((curr.r)==(pre.r))&&(((curr.xo)==(pre.xo))&&(((curr.yo)==(pre.yo))&&(((curr.dxo)==(curr.dxo))&&(((curr.dyo)==(curr.dyo))&&((curr.t)==((0))))))))))||((((params.v)==((0)))&&(((curr.a)==((0)))&&(((curr.om)==((0)))&&(((curr.r)==(pre.r))&&(((curr.xo)==(pre.xo))&&(((curr.yo)==(pre.yo))&&(((curr.dxo)==(curr.dxo))&&(((curr.dyo)==(curr.dyo))&&((curr.t)==((0)))))))))))||(((-(params.B))<=(curr.a))&&(((curr.a)<=(params.A))&&(((curr.r)!=((0)))&&((((curr.om)*(curr.r))==(params.v))&&(((((!(((params.x) - (curr.xo))>=((0))))||(((params.x) - (curr.xo))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.Vo)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.Vo))))))))&&((!(((params.x) - (curr.xo))<=((0))))||(((curr.xo) - (params.x))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.Vo)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.Vo)))))))))||(((!(((params.y) - (curr.yo))>=((0))))||(((params.y) - (curr.yo))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.Vo)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.Vo))))))))&&((!(((params.y) - (curr.yo))<=((0))))||(((curr.yo) - (params.y))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.Vo)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.Vo))))))))))&&(((curr.a)==(curr.a))&&(((curr.om)==(curr.om))&&(((curr.r)==(curr.r))&&(((curr.xo)==(curr.xo))&&(((curr.yo)==(curr.yo))&&(((curr.dxo)==(curr.dxo))&&(((curr.dyo)==(curr.dyo))&&((curr.t)==((0)))))))))))))))));
+        |  }
         |  pre = curr;
         |  return result;
         |}
@@ -396,9 +417,16 @@ class CCodeGeneratorTests extends FlatSpec with Matchers {
         |} state;
         |
         |/* monitor */
-        |bool monitor (state& curr, parameters& params) {
-        |  static state pre = curr;
-        |  int result = (((((curr.dxo)*(curr.dxo))) + (((curr.dyo)*(curr.dyo))))<=(((params.V)*(params.V))))&&((((((0))<=(params.ep))&&((pre.v)>=((0))))&&((((((((((((((curr.xo)==(pre.xo))&&((curr.yo)==(pre.yo)))&&((curr.dxo)==(curr.dxo)))&&((curr.dyo)==(curr.dyo)))&&((curr.x)==(pre.x)))&&((curr.y)==(pre.y)))&&((curr.dx)==(pre.dx)))&&((curr.dy)==(pre.dy)))&&((curr.v)==(pre.v)))&&((curr.w)==(pre.w)))&&((curr.a)==(-(params.B))))&&((curr.r)==(pre.r)))&&((curr.t)==((0)))))||((((pre.v)==((0)))&&(((((0))<=(params.ep))&&((pre.v)>=((0))))&&((((((((((((((curr.xo)==(pre.xo))&&((curr.yo)==(pre.yo)))&&((curr.dxo)==(curr.dxo)))&&((curr.dyo)==(curr.dyo)))&&((curr.x)==(pre.x)))&&((curr.y)==(pre.y)))&&((curr.dx)==(pre.dx)))&&((curr.dy)==(pre.dy)))&&((curr.v)==(pre.v)))&&((curr.w)==((0))))&&((curr.a)==((0))))&&((curr.r)==(pre.r)))&&((curr.t)==((0))))))||((((-(params.B))<=(curr.a))&&((curr.a)<=(params.A)))&&(((curr.r)!=((0)))&&((((curr.w)*(curr.r))==(pre.v))&&((((fabsl((pre.x) - (curr.xo)))>((((((pre.v)*(pre.v)))/(((2))*(params.B))) + (((params.V)*(pre.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((pre.v) + (params.V)))))))||((fabsl((pre.y) - (curr.yo)))>((((((pre.v)*(pre.v)))/(((2))*(params.B))) + (((params.V)*(pre.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((pre.v) + (params.V))))))))&&(((((0))<=(params.ep))&&((pre.v)>=((0))))&&((((((((((((((curr.xo)==(curr.xo))&&((curr.yo)==(curr.yo)))&&((curr.dxo)==(curr.dxo)))&&((curr.dyo)==(curr.dyo)))&&((curr.x)==(pre.x)))&&((curr.y)==(pre.y)))&&((curr.dx)==(pre.dx)))&&((curr.dy)==(pre.dy)))&&((curr.v)==(pre.v)))&&((curr.w)==(curr.w)))&&((curr.a)==(curr.a)))&&((curr.r)==(curr.r)))&&((curr.t)==((0)))))))))));
+        |bool monitor (state curr, parameters params) {
+        |  static state pre;
+        |  static bool isInitialized = false;
+        |  bool result = false;
+        |  if (!isInitialized) {
+        |    isInitialized = true;
+        |    result = true;
+        |  } else {
+        |    result = (((((curr.dxo)*(curr.dxo))) + (((curr.dyo)*(curr.dyo))))<=(((params.V)*(params.V))))&&((((((0))<=(params.ep))&&((pre.v)>=((0))))&&((((((((((((((curr.xo)==(pre.xo))&&((curr.yo)==(pre.yo)))&&((curr.dxo)==(curr.dxo)))&&((curr.dyo)==(curr.dyo)))&&((curr.x)==(pre.x)))&&((curr.y)==(pre.y)))&&((curr.dx)==(pre.dx)))&&((curr.dy)==(pre.dy)))&&((curr.v)==(pre.v)))&&((curr.w)==(pre.w)))&&((curr.a)==(-(params.B))))&&((curr.r)==(pre.r)))&&((curr.t)==((0)))))||((((pre.v)==((0)))&&(((((0))<=(params.ep))&&((pre.v)>=((0))))&&((((((((((((((curr.xo)==(pre.xo))&&((curr.yo)==(pre.yo)))&&((curr.dxo)==(curr.dxo)))&&((curr.dyo)==(curr.dyo)))&&((curr.x)==(pre.x)))&&((curr.y)==(pre.y)))&&((curr.dx)==(pre.dx)))&&((curr.dy)==(pre.dy)))&&((curr.v)==(pre.v)))&&((curr.w)==((0))))&&((curr.a)==((0))))&&((curr.r)==(pre.r)))&&((curr.t)==((0))))))||((((-(params.B))<=(curr.a))&&((curr.a)<=(params.A)))&&(((curr.r)!=((0)))&&((((curr.w)*(curr.r))==(pre.v))&&((((fabsl((pre.x) - (curr.xo)))>((((((pre.v)*(pre.v)))/(((2))*(params.B))) + (((params.V)*(pre.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((pre.v) + (params.V)))))))||((fabsl((pre.y) - (curr.yo)))>((((((pre.v)*(pre.v)))/(((2))*(params.B))) + (((params.V)*(pre.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((pre.v) + (params.V))))))))&&(((((0))<=(params.ep))&&((pre.v)>=((0))))&&((((((((((((((curr.xo)==(curr.xo))&&((curr.yo)==(curr.yo)))&&((curr.dxo)==(curr.dxo)))&&((curr.dyo)==(curr.dyo)))&&((curr.x)==(pre.x)))&&((curr.y)==(pre.y)))&&((curr.dx)==(pre.dx)))&&((curr.dy)==(pre.dy)))&&((curr.v)==(pre.v)))&&((curr.w)==(curr.w)))&&((curr.a)==(curr.a)))&&((curr.r)==(curr.r)))&&((curr.t)==((0)))))))))));
+        |  }
         |  pre = curr;
         |  return result;
         |}
@@ -462,9 +490,16 @@ class CCodeGeneratorTests extends FlatSpec with Matchers {
         |} state;
         |
         |/* monitor */
-        |bool monitor (state& curr, parameters& params) {
-        |  static state pre = curr;
-        |  int result = (((((curr.odx)*(curr.odx))) + (((curr.ody)*(curr.ody))))<=(((params.V)*(params.V))))&&(((((curr.w)*(pre.r))==(params.v))&&(((curr.a)==(-(params.b)))&&(((curr.w)==(curr.w))&&(((curr.dx)==(pre.dx))&&(((curr.dy)==(pre.dy))&&(((curr.r)==(pre.r))&&(((curr.t)==((0)))&&(((curr.ox)==(pre.ox))&&(((curr.oy)==(pre.oy))&&(((curr.odx)==(curr.odx))&&(((curr.ody)==(curr.ody))&&(((curr.isVisible)==(pre.isVisible))&&((curr.talpha)==(pre.talpha))))))))))))))||((((params.v)==((0)))&&((((curr.w)*(pre.r))==(params.v))&&(((curr.a)==((0)))&&(((curr.w)==(curr.w))&&(((curr.dx)==(-(pre.dx)))&&(((curr.dy)==(-(pre.dy)))&&(((curr.r)==(pre.r))&&(((curr.t)==((0)))&&(((curr.ox)==(pre.ox))&&(((curr.oy)==(pre.oy))&&(((curr.odx)==(curr.odx))&&(((curr.ody)==(curr.ody))&&(((curr.isVisible)==(pre.isVisible))&&((curr.talpha)==(pre.talpha)))))))))))))))||(((-(params.b))<=(curr.a))&&(((curr.a)<=(params.A))&&(((curr.r)!=((0)))&&(((((params.v) + ((curr.a)*(params.ep)))<((0)))&&((((curr.isVisible)<((0)))||((((!(((params.x) - (curr.ox))>=((0))))||(((params.x) - (curr.ox))>(((((params.v)*(params.v)))/(((-2))*(curr.a))) + ((params.V)*((params.v)/(-(curr.a)))))))&&((!(((params.x) - (curr.ox))<=((0))))||(((curr.ox) - (params.x))>(((((params.v)*(params.v)))/(((-2))*(curr.a))) + ((params.V)*((params.v)/(-(curr.a))))))))||(((!(((params.y) - (curr.oy))>=((0))))||(((params.y) - (curr.oy))>(((((params.v)*(params.v)))/(((-2))*(curr.a))) + ((params.V)*((params.v)/(-(curr.a)))))))&&((!(((params.y) - (curr.oy))<=((0))))||(((curr.oy) - (params.y))>(((((params.v)*(params.v)))/(((-2))*(curr.a))) + ((params.V)*((params.v)/(-(curr.a))))))))))&&(((!((curr.r)>=((0))))||(((((params.v)*(params.v)))/(((-2))*(curr.a)))<((params.alpha)*(curr.r))))&&(((!((curr.r)<((0))))||(((((params.v)*(params.v)))/(((-2))*(curr.a)))<(-((params.alpha)*(curr.r)))))&&((((curr.w)*(curr.r))==(params.v))&&(((curr.a)==(curr.a))&&(((curr.w)==(curr.w))&&(((curr.dx)==(pre.dx))&&(((curr.dy)==(pre.dy))&&(((curr.r)==(curr.r))&&(((curr.t)==((0)))&&(((curr.ox)==(curr.ox))&&(((curr.oy)==(curr.oy))&&(((curr.odx)==(curr.odx))&&(((curr.ody)==(curr.ody))&&(((curr.isVisible)==(curr.isVisible))&&((curr.talpha)==((0)))))))))))))))))))||((((params.v) + ((curr.a)*(params.ep)))>=((0)))&&((((curr.isVisible)<((0)))||((((!(((params.x) - (curr.ox))>=((0))))||(((params.x) - (curr.ox))>((((((params.v)*(params.v)))/(((2))*(params.b))) + ((params.V)*((params.v)/(params.b)))) + ((((curr.a)/(params.b)) + ((1)))*((((curr.a)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V))))))))&&((!(((params.x) - (curr.ox))<=((0))))||(((curr.ox) - (params.x))>((((((params.v)*(params.v)))/(((2))*(params.b))) + ((params.V)*((params.v)/(params.b)))) + ((((curr.a)/(params.b)) + ((1)))*((((curr.a)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V)))))))))||(((!(((params.y) - (curr.oy))>=((0))))||(((params.y) - (curr.oy))>((((((params.v)*(params.v)))/(((2))*(params.b))) + ((params.V)*((params.v)/(params.b)))) + ((((curr.a)/(params.b)) + ((1)))*((((curr.a)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V))))))))&&((!(((params.y) - (curr.oy))<=((0))))||(((curr.oy) - (params.y))>((((((params.v)*(params.v)))/(((2))*(params.b))) + ((params.V)*((params.v)/(params.b)))) + ((((curr.a)/(params.b)) + ((1)))*((((curr.a)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V)))))))))))&&(((!((curr.r)>=((0))))||((((((params.v)*(params.v)))/(((2))*(params.b))) + ((((curr.a)/(params.b)) + ((1)))*((((curr.a)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*(params.v)))))<((params.alpha)*(curr.r))))&&(((!((curr.r)<((0))))||((((((params.v)*(params.v)))/(((2))*(params.b))) + ((((curr.a)/(params.b)) + ((1)))*((((curr.a)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*(params.v)))))<(-((params.alpha)*(curr.r)))))&&((((curr.w)*(curr.r))==(params.v))&&(((curr.a)==(curr.a))&&(((curr.w)==(curr.w))&&(((curr.dx)==(pre.dx))&&(((curr.dy)==(pre.dy))&&(((curr.r)==(curr.r))&&(((curr.t)==((0)))&&(((curr.ox)==(curr.ox))&&(((curr.oy)==(curr.oy))&&(((curr.odx)==(curr.odx))&&(((curr.ody)==(curr.ody))&&(((curr.isVisible)==(curr.isVisible))&&((curr.talpha)==((0)))))))))))))))))))))))));
+        |bool monitor (state curr, parameters params) {
+        |  static state pre;
+        |  static bool isInitialized = false;
+        |  bool result = false;
+        |  if (!isInitialized) {
+        |    isInitialized = true;
+        |    result = true;
+        |  } else {
+        |    result = (((((curr.odx)*(curr.odx))) + (((curr.ody)*(curr.ody))))<=(((params.V)*(params.V))))&&(((((curr.w)*(pre.r))==(params.v))&&(((curr.a)==(-(params.b)))&&(((curr.w)==(curr.w))&&(((curr.dx)==(pre.dx))&&(((curr.dy)==(pre.dy))&&(((curr.r)==(pre.r))&&(((curr.t)==((0)))&&(((curr.ox)==(pre.ox))&&(((curr.oy)==(pre.oy))&&(((curr.odx)==(curr.odx))&&(((curr.ody)==(curr.ody))&&(((curr.isVisible)==(pre.isVisible))&&((curr.talpha)==(pre.talpha))))))))))))))||((((params.v)==((0)))&&((((curr.w)*(pre.r))==(params.v))&&(((curr.a)==((0)))&&(((curr.w)==(curr.w))&&(((curr.dx)==(-(pre.dx)))&&(((curr.dy)==(-(pre.dy)))&&(((curr.r)==(pre.r))&&(((curr.t)==((0)))&&(((curr.ox)==(pre.ox))&&(((curr.oy)==(pre.oy))&&(((curr.odx)==(curr.odx))&&(((curr.ody)==(curr.ody))&&(((curr.isVisible)==(pre.isVisible))&&((curr.talpha)==(pre.talpha)))))))))))))))||(((-(params.b))<=(curr.a))&&(((curr.a)<=(params.A))&&(((curr.r)!=((0)))&&(((((params.v) + ((curr.a)*(params.ep)))<((0)))&&((((curr.isVisible)<((0)))||((((!(((params.x) - (curr.ox))>=((0))))||(((params.x) - (curr.ox))>(((((params.v)*(params.v)))/(((-2))*(curr.a))) + ((params.V)*((params.v)/(-(curr.a)))))))&&((!(((params.x) - (curr.ox))<=((0))))||(((curr.ox) - (params.x))>(((((params.v)*(params.v)))/(((-2))*(curr.a))) + ((params.V)*((params.v)/(-(curr.a))))))))||(((!(((params.y) - (curr.oy))>=((0))))||(((params.y) - (curr.oy))>(((((params.v)*(params.v)))/(((-2))*(curr.a))) + ((params.V)*((params.v)/(-(curr.a)))))))&&((!(((params.y) - (curr.oy))<=((0))))||(((curr.oy) - (params.y))>(((((params.v)*(params.v)))/(((-2))*(curr.a))) + ((params.V)*((params.v)/(-(curr.a))))))))))&&(((!((curr.r)>=((0))))||(((((params.v)*(params.v)))/(((-2))*(curr.a)))<((params.alpha)*(curr.r))))&&(((!((curr.r)<((0))))||(((((params.v)*(params.v)))/(((-2))*(curr.a)))<(-((params.alpha)*(curr.r)))))&&((((curr.w)*(curr.r))==(params.v))&&(((curr.a)==(curr.a))&&(((curr.w)==(curr.w))&&(((curr.dx)==(pre.dx))&&(((curr.dy)==(pre.dy))&&(((curr.r)==(curr.r))&&(((curr.t)==((0)))&&(((curr.ox)==(curr.ox))&&(((curr.oy)==(curr.oy))&&(((curr.odx)==(curr.odx))&&(((curr.ody)==(curr.ody))&&(((curr.isVisible)==(curr.isVisible))&&((curr.talpha)==((0)))))))))))))))))))||((((params.v) + ((curr.a)*(params.ep)))>=((0)))&&((((curr.isVisible)<((0)))||((((!(((params.x) - (curr.ox))>=((0))))||(((params.x) - (curr.ox))>((((((params.v)*(params.v)))/(((2))*(params.b))) + ((params.V)*((params.v)/(params.b)))) + ((((curr.a)/(params.b)) + ((1)))*((((curr.a)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V))))))))&&((!(((params.x) - (curr.ox))<=((0))))||(((curr.ox) - (params.x))>((((((params.v)*(params.v)))/(((2))*(params.b))) + ((params.V)*((params.v)/(params.b)))) + ((((curr.a)/(params.b)) + ((1)))*((((curr.a)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V)))))))))||(((!(((params.y) - (curr.oy))>=((0))))||(((params.y) - (curr.oy))>((((((params.v)*(params.v)))/(((2))*(params.b))) + ((params.V)*((params.v)/(params.b)))) + ((((curr.a)/(params.b)) + ((1)))*((((curr.a)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V))))))))&&((!(((params.y) - (curr.oy))<=((0))))||(((curr.oy) - (params.y))>((((((params.v)*(params.v)))/(((2))*(params.b))) + ((params.V)*((params.v)/(params.b)))) + ((((curr.a)/(params.b)) + ((1)))*((((curr.a)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V)))))))))))&&(((!((curr.r)>=((0))))||((((((params.v)*(params.v)))/(((2))*(params.b))) + ((((curr.a)/(params.b)) + ((1)))*((((curr.a)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*(params.v)))))<((params.alpha)*(curr.r))))&&(((!((curr.r)<((0))))||((((((params.v)*(params.v)))/(((2))*(params.b))) + ((((curr.a)/(params.b)) + ((1)))*((((curr.a)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*(params.v)))))<(-((params.alpha)*(curr.r)))))&&((((curr.w)*(curr.r))==(params.v))&&(((curr.a)==(curr.a))&&(((curr.w)==(curr.w))&&(((curr.dx)==(pre.dx))&&(((curr.dy)==(pre.dy))&&(((curr.r)==(curr.r))&&(((curr.t)==((0)))&&(((curr.ox)==(curr.ox))&&(((curr.oy)==(curr.oy))&&(((curr.odx)==(curr.odx))&&(((curr.ody)==(curr.ody))&&(((curr.isVisible)==(curr.isVisible))&&((curr.talpha)==((0)))))))))))))))))))))))));
+        |  }
         |  pre = curr;
         |  return result;
         |}
@@ -499,9 +534,16 @@ class CCodeGeneratorTests extends FlatSpec with Matchers {
         |} state;
         |
         |/* monitor */
-        |bool monitor (state& curr, parameters& params) {
-        |  static state pre = curr;
-        |  int result = ((params.h)>=(curr.href))&&(((curr.href)>((0)))&&(((((((params.kp)<((0)))&&(((params.v)==((0)))&&((curr.href)>=(params.h))))||((((params.kp)<((0)))&&(((params.v)>((0)))&&(((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))==((((2))*(curr.href))*(params.kp)))&&(((params.h)*(params.y))>(((params.h)*(params.kd)) + (((2))*(params.v)))))))||((((params.kp)<((0)))&&(((params.v)<((0)))&&(((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))==(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))&&(((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))>((0))))))||((((params.kp)>((0)))&&(((params.v)==((0)))&&((curr.href)==(params.h))))||((((params.kp)>((0)))&&(((params.v)>((0)))&&((((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))==((((2))*(curr.href))*(params.kp)))&&((((params.h)*(params.y))>(((params.h)*(params.kd)) + (((2))*(params.v))))&&(((params.kd) + (((2))*(params.sqrkp)))<=((0)))))||((((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))==((((2))*(curr.href))*(params.kp)))&&((((params.kd) + (((2))*(params.sqrkp)))<((0)))&&(((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))<((0)))))||((((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))==(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))&&((((params.kd) + (((2))*(params.sqrkp)))<((0)))&&(((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))<((0)))))||(((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))==((((2))*(curr.href))*(params.kp)))&&(((params.kd)>(((2))*(params.sqrkp)))&&((((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))>((0)))&&(((params.h)*(params.y))>=(((params.h)*(params.kd)) + (((2))*(params.v))))))))))))||(((params.kp)>((0)))&&(((params.v)<((0)))&&((((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))==((((2))*(curr.href))*(params.kp)))&&(((params.kd)>(((2))*(params.sqrkp)))&&(((params.h)*(params.y))<(((params.h)*(params.kd)) + (((2))*(params.v))))))||((((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))==(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))&&(((params.kd)>=(((2))*(params.sqrkp)))&&(((params.h)*(params.y))<(((params.h)*(params.kd)) + (((2))*(params.v))))))||((((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))==(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))&&(((params.kd)>(((2))*(params.sqrkp)))&&((((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))>((0)))&&(((params.h)*(params.y))>=(((params.h)*(params.kd)) + (((2))*(params.v)))))))||(((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))==(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))&&((((params.h)*(params.y))>(((params.h)*(params.kd)) + (((2))*(params.v))))&&((((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))>=((0)))&&(((params.kd) + (((2))*(params.sqrkp)))<((0))))))))))))))))&&((((((params.y)*(params.y)))==((((params.kd)*(params.kd))) - (((4))*(params.kp))))&&((params.y)>=((0))))&&((((((params.sqrkp)*(params.sqrkp)))==(params.kp))&&((params.sqrkp)>=((0))))&&((((((((((params.h)*(params.h)))*(((params.kp)*(params.kp)))) - (((((2))*(params.h))*(curr.href))*(((params.kp)*(params.kp))))) + ((((curr.href)*(curr.href)))*(((params.kp)*(params.kp))))) + ((((params.h)*(params.kd))*(params.kp))*(params.v))) - ((((curr.href)*(params.kd))*(params.kp))*(params.v))) + ((params.kp)*(((params.v)*(params.v)))))!=((0))))))||(((((params.kp)<((0)))&&(((params.v)==((0)))&&((((params.h)*(params.y))<=((params.h)*(params.kd)))||((((params.h)*((params.kd) + (params.y)))<=((0)))||((params.h)>(curr.href))))))||((((params.kp)<((0)))&&(((params.v)<((0)))&&((((params.h)*(params.y))<=(((params.h)*(params.kd)) + (((2))*(params.v))))||((((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))<=((0)))||((((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v)))!=(((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y))))))))||((((params.kp)<((0)))&&(((params.v)>((0)))&&((((params.h)*(params.y))<=(((params.h)*(params.kd)) + (((2))*(params.v))))||((((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))<=((0)))||((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))!=((((2))*(curr.href))*(params.kp)))))))||((((params.kp)>((0)))&&(((params.v)==((0)))&&((((params.h)!=(curr.href))&&((((params.kd)>=(((2))*(params.sqrkp)))&&(((params.h)*(params.y))>=((params.h)*(params.kd))))||((((params.h)*((params.kd) + (params.y)))>=((0)))&&(((params.kd) + (((2))*(params.sqrkp)))<((0))))))||((((params.kd)==(((2))*(params.sqrkp)))&&(((params.h)*(params.y))>=((params.h)*(params.kd))))||((((params.kd)<(((2))*(params.sqrkp)))&&(((params.kd) + (((2))*(params.sqrkp)))>((0))))||(((params.h)>(curr.href))||((((params.kd)>(((2))*(params.sqrkp)))&&(((params.h)*((params.kd) + (params.y)))<=((0))))||((((params.kd) + (((2))*(params.sqrkp)))<=((0)))&&(((params.h)*(params.y))<=((params.h)*(params.kd)))))))))))||((((params.kp)>((0)))&&(((params.v)<((0)))&&((((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))!=(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))&&((((params.h)*(params.y))>=(((params.h)*(params.kd)) + (((2))*(params.v))))||((params.kd)<=(((2))*(params.sqrkp)))))||(((params.kd)<(((2))*(params.sqrkp)))||((((params.kd)>(((2))*(params.sqrkp)))&&(((((params.h)*(params.y))<(((params.h)*(params.kd)) + (((2))*(params.v))))&&((((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))<(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))&&((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))<((((2))*(curr.href))*(params.kp))))||(((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))>(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))||((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))>((((2))*(curr.href))*(params.kp))))))||(((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))<=((0)))))||(((((params.h)*(params.y))>=(((params.h)*(params.kd)) + (((2))*(params.v))))&&((params.kd)<=(((2))*(params.sqrkp))))||(((params.kd) + (((2))*(params.sqrkp)))<=((0)))))))))||(((params.kp)>((0)))&&(((params.v)>((0)))&&((((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))!=((((2))*(curr.href))*(params.kp)))&&((((params.kd) + (((2))*(params.sqrkp)))>=((0)))||(((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))>=((0)))))||(((params.kd)>=(((2))*(params.sqrkp)))||(((((params.kd) + (((2))*(params.sqrkp)))<((0)))&&((((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))<((0)))&&(((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))<(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))||(((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))<((((2))*(curr.href))*(params.kp)))||(((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))>(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))&&((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))>((((2))*(curr.href))*(params.kp))))))))||((((params.kd) + (((2))*(params.sqrkp)))>((0)))||(((params.h)*(params.y))<=(((params.h)*(params.kd)) + (((2))*(params.v)))))))))))))))&&(((((params.y)*(params.y)))==((((params.kd)*(params.kd))) - (((4))*(params.kp))))&&(((params.y)>=((0)))&&(((((params.sqrkp)*(params.sqrkp)))==(params.kp))&&(((params.sqrkp)>=((0)))&&((((((((((params.h)*(params.h)))*(((params.kp)*(params.kp)))) - (((((2))*(params.h))*(curr.href))*(((params.kp)*(params.kp))))) + ((((curr.href)*(curr.href)))*(((params.kp)*(params.kp))))) + ((((params.h)*(params.kd))*(params.kp))*(params.v))) - ((((curr.href)*(params.kd))*(params.kp))*(params.v))) + ((params.kp)*(((params.v)*(params.v)))))==((0)))))))))&&((curr.href)==(curr.href))));
+        |bool monitor (state curr, parameters params) {
+        |  static state pre;
+        |  static bool isInitialized = false;
+        |  bool result = false;
+        |  if (!isInitialized) {
+        |    isInitialized = true;
+        |    result = true;
+        |  } else {
+        |    result = ((params.h)>=(curr.href))&&(((curr.href)>((0)))&&(((((((params.kp)<((0)))&&(((params.v)==((0)))&&((curr.href)>=(params.h))))||((((params.kp)<((0)))&&(((params.v)>((0)))&&(((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))==((((2))*(curr.href))*(params.kp)))&&(((params.h)*(params.y))>(((params.h)*(params.kd)) + (((2))*(params.v)))))))||((((params.kp)<((0)))&&(((params.v)<((0)))&&(((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))==(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))&&(((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))>((0))))))||((((params.kp)>((0)))&&(((params.v)==((0)))&&((curr.href)==(params.h))))||((((params.kp)>((0)))&&(((params.v)>((0)))&&((((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))==((((2))*(curr.href))*(params.kp)))&&((((params.h)*(params.y))>(((params.h)*(params.kd)) + (((2))*(params.v))))&&(((params.kd) + (((2))*(params.sqrkp)))<=((0)))))||((((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))==((((2))*(curr.href))*(params.kp)))&&((((params.kd) + (((2))*(params.sqrkp)))<((0)))&&(((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))<((0)))))||((((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))==(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))&&((((params.kd) + (((2))*(params.sqrkp)))<((0)))&&(((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))<((0)))))||(((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))==((((2))*(curr.href))*(params.kp)))&&(((params.kd)>(((2))*(params.sqrkp)))&&((((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))>((0)))&&(((params.h)*(params.y))>=(((params.h)*(params.kd)) + (((2))*(params.v))))))))))))||(((params.kp)>((0)))&&(((params.v)<((0)))&&((((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))==((((2))*(curr.href))*(params.kp)))&&(((params.kd)>(((2))*(params.sqrkp)))&&(((params.h)*(params.y))<(((params.h)*(params.kd)) + (((2))*(params.v))))))||((((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))==(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))&&(((params.kd)>=(((2))*(params.sqrkp)))&&(((params.h)*(params.y))<(((params.h)*(params.kd)) + (((2))*(params.v))))))||((((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))==(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))&&(((params.kd)>(((2))*(params.sqrkp)))&&((((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))>((0)))&&(((params.h)*(params.y))>=(((params.h)*(params.kd)) + (((2))*(params.v)))))))||(((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))==(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))&&((((params.h)*(params.y))>(((params.h)*(params.kd)) + (((2))*(params.v))))&&((((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))>=((0)))&&(((params.kd) + (((2))*(params.sqrkp)))<((0))))))))))))))))&&((((((params.y)*(params.y)))==((((params.kd)*(params.kd))) - (((4))*(params.kp))))&&((params.y)>=((0))))&&((((((params.sqrkp)*(params.sqrkp)))==(params.kp))&&((params.sqrkp)>=((0))))&&((((((((((params.h)*(params.h)))*(((params.kp)*(params.kp)))) - (((((2))*(params.h))*(curr.href))*(((params.kp)*(params.kp))))) + ((((curr.href)*(curr.href)))*(((params.kp)*(params.kp))))) + ((((params.h)*(params.kd))*(params.kp))*(params.v))) - ((((curr.href)*(params.kd))*(params.kp))*(params.v))) + ((params.kp)*(((params.v)*(params.v)))))!=((0))))))||(((((params.kp)<((0)))&&(((params.v)==((0)))&&((((params.h)*(params.y))<=((params.h)*(params.kd)))||((((params.h)*((params.kd) + (params.y)))<=((0)))||((params.h)>(curr.href))))))||((((params.kp)<((0)))&&(((params.v)<((0)))&&((((params.h)*(params.y))<=(((params.h)*(params.kd)) + (((2))*(params.v))))||((((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))<=((0)))||((((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v)))!=(((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y))))))))||((((params.kp)<((0)))&&(((params.v)>((0)))&&((((params.h)*(params.y))<=(((params.h)*(params.kd)) + (((2))*(params.v))))||((((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))<=((0)))||((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))!=((((2))*(curr.href))*(params.kp)))))))||((((params.kp)>((0)))&&(((params.v)==((0)))&&((((params.h)!=(curr.href))&&((((params.kd)>=(((2))*(params.sqrkp)))&&(((params.h)*(params.y))>=((params.h)*(params.kd))))||((((params.h)*((params.kd) + (params.y)))>=((0)))&&(((params.kd) + (((2))*(params.sqrkp)))<((0))))))||((((params.kd)==(((2))*(params.sqrkp)))&&(((params.h)*(params.y))>=((params.h)*(params.kd))))||((((params.kd)<(((2))*(params.sqrkp)))&&(((params.kd) + (((2))*(params.sqrkp)))>((0))))||(((params.h)>(curr.href))||((((params.kd)>(((2))*(params.sqrkp)))&&(((params.h)*((params.kd) + (params.y)))<=((0))))||((((params.kd) + (((2))*(params.sqrkp)))<=((0)))&&(((params.h)*(params.y))<=((params.h)*(params.kd)))))))))))||((((params.kp)>((0)))&&(((params.v)<((0)))&&((((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))!=(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))&&((((params.h)*(params.y))>=(((params.h)*(params.kd)) + (((2))*(params.v))))||((params.kd)<=(((2))*(params.sqrkp)))))||(((params.kd)<(((2))*(params.sqrkp)))||((((params.kd)>(((2))*(params.sqrkp)))&&(((((params.h)*(params.y))<(((params.h)*(params.kd)) + (((2))*(params.v))))&&((((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))<(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))&&((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))<((((2))*(curr.href))*(params.kp))))||(((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))>(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))||((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))>((((2))*(curr.href))*(params.kp))))))||(((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))<=((0)))))||(((((params.h)*(params.y))>=(((params.h)*(params.kd)) + (((2))*(params.v))))&&((params.kd)<=(((2))*(params.sqrkp))))||(((params.kd) + (((2))*(params.sqrkp)))<=((0)))))))))||(((params.kp)>((0)))&&(((params.v)>((0)))&&((((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))!=((((2))*(curr.href))*(params.kp)))&&((((params.kd) + (((2))*(params.sqrkp)))>=((0)))||(((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))>=((0)))))||(((params.kd)>=(((2))*(params.sqrkp)))||(((((params.kd) + (((2))*(params.sqrkp)))<((0)))&&((((((2))*(params.v)) + ((params.h)*((params.kd) + (params.y))))<((0)))&&(((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))<(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))||(((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))<((((2))*(curr.href))*(params.kp)))||(((((((2))*(curr.href))*(params.kp)) + ((params.v)*(params.y)))>(((((2))*(params.h))*(params.kp)) + ((params.kd)*(params.v))))&&((((((2))*(params.h))*(params.kp)) + ((params.v)*((params.kd) + (params.y))))>((((2))*(curr.href))*(params.kp))))))))||((((params.kd) + (((2))*(params.sqrkp)))>((0)))||(((params.h)*(params.y))<=(((params.h)*(params.kd)) + (((2))*(params.v)))))))))))))))&&(((((params.y)*(params.y)))==((((params.kd)*(params.kd))) - (((4))*(params.kp))))&&(((params.y)>=((0)))&&(((((params.sqrkp)*(params.sqrkp)))==(params.kp))&&(((params.sqrkp)>=((0)))&&((((((((((params.h)*(params.h)))*(((params.kp)*(params.kp)))) - (((((2))*(params.h))*(curr.href))*(((params.kp)*(params.kp))))) + ((((curr.href)*(curr.href)))*(((params.kp)*(params.kp))))) + ((((params.h)*(params.kd))*(params.kp))*(params.v))) - ((((curr.href)*(params.kd))*(params.kp))*(params.v))) + ((params.kp)*(((params.v)*(params.v)))))==((0)))))))))&&((curr.href)==(curr.href))));
+        |  }
         |  pre = curr;
         |  return result;
         |}
@@ -509,5 +551,38 @@ class CCodeGeneratorTests extends FlatSpec with Matchers {
         |""".stripMargin
 
     CodeGenTestTools.compileCpp(CodeGenTestTools.augmentMonitorMain(code))
+  }
+
+  "Compiled controller monitor" should "evaluate correctly" in {
+    val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
+    val monitorExp = KeYmaeraXParser(io.Source.fromInputStream(inputFile).mkString)
+    val vars =
+      List(Variable("a"),Variable("dx"),Variable("dy"),Variable("r"),Variable("v"),Variable("w"),Variable("x"),Variable("y"),
+        Variable("xo"),Variable("yo"),Variable("dxo"),Variable("dyo"),Variable("t"))
+    val monitorCode = CGenerator(monitorExp, vars)
+
+    // robot and obstacle drive straight towards each other
+    val code =
+      s"""
+        |#include <stdio.h>
+        |$monitorCode
+        |
+        |int main() {
+        |  state current = { .a=0.0, .dx=1.0, .dy=0.0, .r=12.5, .v=1.0, .w=0.08, .x=0.0, .y=0.0, .xo=10.0, .yo=0.0, .dxo=-1.0, .dyo=0.0 };
+        |  parameters params = { .A=1.0, .B=2.0, .V=3.0, .ep=0.05 };
+        |  printf("Current satisfied: %d\\n", monitor(current, params));
+        |  /* jump robot ahead and speed up, now unsafe */
+        |  state next = { .a=0.0, .dx=1.0, .dy=0.0, .r=12.5, .v=4.0, .w=0.08, .x=9.0, .y=0.0, .xo=10.0, .yo=0.0, .dxo=-1.0, .dyo=0.0 };
+        |  printf("Next satisfied: %d", monitor(next, params));
+        |  return 0;
+        |}
+        |""".stripMargin
+
+    val cmd = CodeGenTestTools.compileCpp(code)
+    val p = Runtime.getRuntime.exec(cmd)
+    withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
+      p.waitFor() shouldBe 0
+      scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe "Current satisfied: 1\nNext satisfied: 0"
+    }
   }
 }

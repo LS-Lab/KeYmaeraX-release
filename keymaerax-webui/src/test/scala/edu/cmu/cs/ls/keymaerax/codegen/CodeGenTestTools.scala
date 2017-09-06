@@ -18,9 +18,9 @@ object CodeGenTestTools {
   def augmentMonitorMain(code: String): String = {
     s"""$code
        |
-       |int main(int argc, char** argv) {
-       |  state current;
-       |  parameters params;
+       |int main() {
+       |  state current = { 0 }; /* compound literal initialization requires gcc -Wno-missing-field-initializers */
+       |  parameters params = { 0 };
        |  while (true) monitor(current, params);
        |  return 0;
        |}
@@ -28,16 +28,18 @@ object CodeGenTestTools {
        |""".stripMargin
   }
 
-  /** Compiles `code` with g++. */
-  def compileCpp(code: String): Unit = {
-    val file = File.createTempFile("kyxcode", ".cpp")
+  /** Compiles `code` with gcc and returns the path to the compiled result (temporary). */
+  def compileCpp(code: String): String = {
+    val file = File.createTempFile("kyxcode", ".c")
     val f = new FileWriter(file)
     f.write(code)
     f.flush()
     f.close()
-    val cmd = s"g++ ${file.getAbsolutePath}"
-    val p = Runtime.getRuntime.exec(cmd)
+    val compiledFile = file.getAbsolutePath.stripSuffix(".c") + ".o"
+    val cmd = s"gcc -Wall -Wextra -Werror -Wno-missing-field-initializers -std=c99 -pedantic ${file.getAbsolutePath} -o $compiledFile"
+    val p = Runtime.getRuntime.exec(cmd, null, file.getParentFile.getAbsoluteFile)
     withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) { p.waitFor() shouldBe 0 }
+    compiledFile
   }
 
 }

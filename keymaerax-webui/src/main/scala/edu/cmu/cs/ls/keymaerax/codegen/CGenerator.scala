@@ -68,8 +68,8 @@ object CGenerator extends CodeGenerator {
 
   /** Prints the monitor argument declarations. */
   private def printMonitorArgsDeclaration(hasState: Boolean, hasParams: Boolean): String =
-    ((if (hasState)  Some(s"state& $MONITOR_CURR_STATE_NAME")  else None) ::
-     (if (hasParams) Some(s"parameters& $MONITOR_PARAMS_NAME") else None) :: Nil).flatten.mkString(", ")
+    ((if (hasState)  Some(s"state $MONITOR_CURR_STATE_NAME")  else None) ::
+     (if (hasParams) Some(s"parameters $MONITOR_PARAMS_NAME") else None) :: Nil).flatten.mkString(", ")
 
   /** Returns the subset of variables in `vars` that represent state in the expression `e`. */
   private def getStateVars(e: Expression, vars: List[Variable]) : Set[NamedSymbol] =
@@ -198,8 +198,15 @@ object CGenerator extends CodeGenerator {
     }
 
     if (stateVars.nonEmpty) {
-      s"""  static state pre = curr;
-         |  int result = $compiledExpr;
+      s"""  static state pre;
+         |  static bool isInitialized = false;
+         |  bool result = false;
+         |  if (!isInitialized) {
+         |    isInitialized = true;
+         |    result = true;
+         |  } else {
+         |    result = $compiledExpr;
+         |  }
          |  pre = curr;
          |  return result;""".stripMargin
     } else {
