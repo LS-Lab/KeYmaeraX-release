@@ -1,34 +1,38 @@
 #include <math.h>
 #include <stdbool.h>
 
-/* function declaration */
-long double A();
-long double B();
-long double V();
-long double dx();
-long double dxpost();
-long double dy();
-long double dypost();
-long double ep();
-long double tpost();
-long double v();
-long double vpost();
-long double x();
-long double xpost();
-long double y();
-long double ypost();
+typedef struct parameters {
+  long double A;
+  long double B;
+  long double V;
+  long double dx;
+  long double dxpost;
+  long double dy;
+  long double dypost;
+  long double ep;
+  long double tpost;
+  long double v;
+  long double vpost;
+  long double x;
+  long double xpost;
+  long double y;
+  long double ypost;
+} parameters;
+
+typedef struct state {
+  long double a;
+  long double dxo;
+  long double dyo;
+  long double r;
+  long double w;
+  long double xo;
+  long double yo;
+} state;
 
 /* monitor */
-bool monitor (long double w, long double r, long double xo, long double yo, long double apost, long double wpost, long double rpost, long double xopost, long double yopost, long double dxopost, long double dyopost) {
-  /* Initial states for post variables */
-  long double apost_0 = apost;
-  long double wpost_0 = wpost;
-  long double rpost_0 = rpost;
-  long double xopost_0 = xopost;
-  long double yopost_0 = yopost;
-  long double dxopost_0 = dxopost;
-  long double dyopost_0 = dyopost;
-
-  return (((((dxopost_0)*(dxopost_0))) + (((dyopost_0)*(dyopost_0))))<=(((V())*(V()))))&&((((((0))<=(ep()))&&((v())>=((0))))&&((((((((((((((xopost)==(xo))&&((yopost)==(yo)))&&((dxopost)==(dxopost_0)))&&((dyopost)==(dyopost_0)))&&((xpost())==(x())))&&((ypost())==(y())))&&((dxpost())==(dx())))&&((dypost())==(dy())))&&((vpost())==(v())))&&((wpost)==(w)))&&((apost)==(-(B()))))&&((rpost)==(r)))&&((tpost())==((0)))))||((((v())==((0)))&&(((((0))<=(ep()))&&((v())>=((0))))&&((((((((((((((xopost)==(xo))&&((yopost)==(yo)))&&((dxopost)==(dxopost_0)))&&((dyopost)==(dyopost_0)))&&((xpost())==(x())))&&((ypost())==(y())))&&((dxpost())==(dx())))&&((dypost())==(dy())))&&((vpost())==(v())))&&((wpost)==((0))))&&((apost)==((0))))&&((rpost)==(r)))&&((tpost())==((0))))))||((((-(B()))<=(apost_0))&&((apost_0)<=(A())))&&(((rpost_0)!=((0)))&&((((wpost_0)*(rpost_0))==(v()))&&((((fabsl((x()) - (xopost_0)))>((((((v())*(v())))/(((2))*(B()))) + (((V())*(v()))/(B()))) + ((((A())/(B())) + ((1)))*((((A())/((2)))*(((ep())*(ep())))) + ((ep())*((v()) + (V())))))))||((fabsl((y()) - (yopost_0)))>((((((v())*(v())))/(((2))*(B()))) + (((V())*(v()))/(B()))) + ((((A())/(B())) + ((1)))*((((A())/((2)))*(((ep())*(ep())))) + ((ep())*((v()) + (V()))))))))&&(((((0))<=(ep()))&&((v())>=((0))))&&((((((((((((((xopost)==(xopost_0))&&((yopost)==(yopost_0)))&&((dxopost)==(dxopost_0)))&&((dyopost)==(dyopost_0)))&&((xpost())==(x())))&&((ypost())==(y())))&&((dxpost())==(dx())))&&((dypost())==(dy())))&&((vpost())==(v())))&&((wpost)==(wpost_0)))&&((apost)==(apost_0)))&&((rpost)==(rpost_0)))&&((tpost())==((0)))))))))));
+bool monitor (state& curr, parameters& params) {
+  static state pre = curr;
+  int result = (((((curr.dxo)*(curr.dxo))) + (((curr.dyo)*(curr.dyo))))<=(((params.V)*(params.V))))&&((((((0))<=(params.ep))&&((params.v)>=((0))))&&((((((((((((((curr.xo)==(pre.xo))&&((curr.yo)==(pre.yo)))&&((curr.dxo)==(curr.dxo)))&&((curr.dyo)==(curr.dyo)))&&((params.xpost)==(params.x)))&&((params.ypost)==(params.y)))&&((params.dxpost)==(params.dx)))&&((params.dypost)==(params.dy)))&&((params.vpost)==(params.v)))&&((curr.w)==(pre.w)))&&((curr.a)==(-(params.B))))&&((curr.r)==(pre.r)))&&((params.tpost)==((0)))))||((((params.v)==((0)))&&(((((0))<=(params.ep))&&((params.v)>=((0))))&&((((((((((((((curr.xo)==(pre.xo))&&((curr.yo)==(pre.yo)))&&((curr.dxo)==(curr.dxo)))&&((curr.dyo)==(curr.dyo)))&&((params.xpost)==(params.x)))&&((params.ypost)==(params.y)))&&((params.dxpost)==(params.dx)))&&((params.dypost)==(params.dy)))&&((params.vpost)==(params.v)))&&((curr.w)==((0))))&&((curr.a)==((0))))&&((curr.r)==(pre.r)))&&((params.tpost)==((0))))))||((((-(params.B))<=(curr.a))&&((curr.a)<=(params.A)))&&(((curr.r)!=((0)))&&((((curr.w)*(curr.r))==(params.v))&&((((fabsl((params.x) - (curr.xo)))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.V)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V)))))))||((fabsl((params.y) - (curr.yo)))>((((((params.v)*(params.v)))/(((2))*(params.B))) + (((params.V)*(params.v))/(params.B))) + ((((params.A)/(params.B)) + ((1)))*((((params.A)/((2)))*(((params.ep)*(params.ep)))) + ((params.ep)*((params.v) + (params.V))))))))&&(((((0))<=(params.ep))&&((params.v)>=((0))))&&((((((((((((((curr.xo)==(curr.xo))&&((curr.yo)==(curr.yo)))&&((curr.dxo)==(curr.dxo)))&&((curr.dyo)==(curr.dyo)))&&((params.xpost)==(params.x)))&&((params.ypost)==(params.y)))&&((params.dxpost)==(params.dx)))&&((params.dypost)==(params.dy)))&&((params.vpost)==(params.v)))&&((curr.w)==(curr.w)))&&((curr.a)==(curr.a)))&&((curr.r)==(curr.r)))&&((params.tpost)==((0)))))))))));
+  pre = curr;
+  return result;
 }
-
