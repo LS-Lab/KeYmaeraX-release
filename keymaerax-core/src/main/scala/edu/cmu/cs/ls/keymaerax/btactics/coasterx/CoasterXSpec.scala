@@ -149,10 +149,17 @@ object CoasterXSpec {
     seg match {
       case LineSection(Some(LineParam((x1,y1),(x2,y2))), Some(gradient)) =>
         val v = Variable("v")
+        val dx = Variable("dx")
+        val dy = Variable("dy")
         val (dxval, dyval) = lineDir((x1, y1), (x2, y2))
-        val xOde = AtomicODE(DifferentialSymbol(Variable("x")), foldTimes(v, dxval))
-        val yOde = AtomicODE(DifferentialSymbol(Variable("y")), foldTimes(v, dyval))
-        val vOde = "v' = -dy".asDifferentialProgram
+        // Inlined version of ODE not used right now but still experimenting
+        val xOdeInlined = AtomicODE(DifferentialSymbol(Variable("x")), foldTimes(v, dxval))
+        val yOdeInlined = AtomicODE(DifferentialSymbol(Variable("y")), foldTimes(v, dyval))
+        val vOdeInlined = s"v' = -($dyval)".asDifferentialProgram
+        val sysInlined = DifferentialProduct(DifferentialProduct(xOdeInlined,yOdeInlined),vOdeInlined)
+        val xOde = AtomicODE(DifferentialSymbol(Variable("x")), foldTimes(v,dx))
+        val yOde = AtomicODE(DifferentialSymbol(Variable("y")), foldTimes(v,dy))
+        val vOde = s"v' = -dy".asDifferentialProgram
         val sys = DifferentialProduct(DifferentialProduct(xOde,yOde),vOde)
         // val evol = And(LessEqual(x1,x),LessEqual(x,x2))
         ODESystem(sys, evol)
@@ -187,7 +194,7 @@ object CoasterXSpec {
 
 
   /* Nasty math provided by Mathematica: Compute center of circle using two points on circle and tangent vector*/
-  def centerFromStartSlope (x1:Term, x2:Term, y1:Term, y2:Term, dxy:TPoint)= {
+  def centerFromStartSlope (x1:Term, x2:Term, y1:Term, y2:Term, dxy:TPoint) = {
     // TODO: slope to direction means gross terms
     val (a,b) = dxy
     val cxnum= /*foldNeg(*/
@@ -213,6 +220,14 @@ object CoasterXSpec {
   }
   def tangentFromCenter(dir:TPoint, angles:(Number,Number), delta:Number) =
     centerFromTangent(dir, angles.swap, foldNeg(delta).asInstanceOf[Number])
+
+  def sqDist (p1:TPoint, p2:TPoint):Term = {
+    foldPlus(foldPower(foldMinus(p1._1,p2._1), Number(2)), foldPower(foldMinus(p1._2,p2._2),Number(2)))
+  }
+
+  def dist (p1:TPoint, p2:TPoint):Term = {
+    foldPower(sqDist(p1,p2),foldDivide(Number(1),Number(2)))
+  }
 
   def segmentPre(segBounds:(Section,(TPoint,TPoint)), v0:Number):Formula = {
     val (seg, (start,end)) = segBounds
@@ -295,16 +310,17 @@ object CoasterXSpec {
         val dxInv = s"dx=($dxval)".asFormula
         val dyInv = s"dy=($dyval)".asFormula
         val dInv = And(dxInv, dyInv)
-        val onTrack = Equal(foldTimes(dxval, y), foldPlus(foldTimes(dyval, x), yOffset((x1, y1), (x2, y2))))
+        val onTrack = Equal(foldTimes(dxval, y), foldPlus(foldTimes(dyval, x), foldTimes(dxval,yOffset((x1, y1), (x2, y2)))))
         Imply(inRange, And(dInv,onTrack))
       case ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(gradient)) =>
         val ((x3, y3), (x4, y4)) = (start,end)
           //val ((x3, y3), (x4, y4)) =arcBounds((x1, y1), (x2, y2), theta1, Number(theta1.value+deltaTheta.value))
         val inRange = And(LessEqual(x3, x), LessEqual(x, x4))
-        val r = foldDivide(foldMinus(x2,x1),Number(2))
+        //foldDivide(foldMinus(x2,x1),Number(2))
         //  val r = Number((x4.value - x3.value) / 2)
         val (cx, cy) = arcCenter((x1, y1), (x2, y2))
-        val centered = Equal(foldPlus(foldPower(foldMinus(cx, x), Number(2)), foldPower(foldMinus(cy, y), Number(2))), foldPower(r,Number(2)))
+        val r = dist(start, (cx,cy))
+        val centered = Equal(sqDist((x,y), (cx,cy)), foldPower(r,Number(2)))
         val isCw = param.deltaTheta.value < 0
         val isLeft = start._1.asInstanceOf[Number].value < cx.asInstanceOf[Number].value
         val outY = if(isCw) LessEqual(cy,y) else LessEqual(y,cy)
@@ -424,7 +440,7 @@ object CoasterXSpec {
 
   def magnitude(xy:TPoint):Term = {
     val (x,y) = xy
-    foldPower(foldPlus(foldPower(x,Number(2)), foldPower(y,Number(2))),Number(1/2))
+    foldPower(foldPlus(foldPower(x,Number(2)), foldPower(y,Number(2))),Divide(Number(1),Number(2)))
   }
 
   def normalizeVector(xy:TPoint):TPoint = {
@@ -456,6 +472,8 @@ object CoasterXSpec {
         val endD:TPoint = initD.getOrElse(defaultD)
         head :: alignZipped(setStartY(rest,endY), Some(endD), index+1)
       case (ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(oldSlope)), ((xx1, yy1), (xx2, yy2))) :: rest =>
+        // Algorithm: Take (x0, y1), (dx0, dy0), (cx, cy) as given (where cx, cy based on xx1,yy1,xx2,yy2).
+        // Pray the resulting circle still intersects (x1, ???) for some ??? and compute a new value of y1 to fill in ???
         val endY = Variable("y", Some(index))
         val endM = Variable("m", Some(index)) // @TODO: Totally redundant but probably makesn life easier
         // Compute default center, vector-to-center and tangent vector
@@ -477,7 +495,7 @@ object CoasterXSpec {
         val endMDef:Formula = Equal(endM, mEndTerm)
         val allDefs = endYDef //Ignore slopes for now
         val head = (ArcSection(Some(ArcParam((foldMinus(cx,rad), foldMinus(cy,rad)), (foldPlus(cx,rad), foldPlus(cy,rad)), theta1, deltaTheta)), Some(oldSlope)),
-          ((xx1, yy1), (xx2, yy2)),
+          ((xx1, yy1), (xx2, endY)),
           allDefs)
         // Note: Start slope for next line is variable, keeps size reasonable
         head :: alignZipped(setStartY(rest, endY), Some(dtxe,dtye), index+1)
