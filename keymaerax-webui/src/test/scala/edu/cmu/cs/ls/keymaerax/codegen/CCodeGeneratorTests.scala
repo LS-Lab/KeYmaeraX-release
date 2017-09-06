@@ -5,7 +5,7 @@ package edu.cmu.cs.ls.keymaerax.codegen
 * See LICENSE.txt for the conditions of this license.
 */
 
-import java.io.{File, FileWriter}
+import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.core.Variable
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
@@ -507,7 +507,7 @@ class CCodeGeneratorTests extends FlatSpec with Matchers {
         |}
         |
         |""".stripMargin
-    }
 
-
+    CodeGenTestTools.compileCpp(CodeGenTestTools.augmentMonitorMain(code))
+  }
 }
