@@ -19,18 +19,10 @@ object CGenerator extends CodeGenerator {
   def apply(expr: Expression, vars: List[Variable]): String = apply(expr, "long double", vars, "")
   def apply(expr: Expression, vars: List[Variable], fileName: String): String = apply(expr, "long double", vars, fileName)
   /** Generate C Code for given expression using the data type cDataType throughout and the input list of variables */
-  def apply(expr: Expression, cDataType: String, vars: List[Variable], fileName: String): String = generateCCode(expr, cDataType, vars, fileName)
+  def apply(expr: Expression, cDataType: String, vars: List[Variable], fileName: String): String = generateMonitoredCtrlCCode(expr, cDataType, vars, fileName)
 
-  /**
-   * Generate C code
-   *
-   * @param expr      KeYmaera X arithmetic expression got from ModelPlex
-   * @param cDataType data type
-   * @param vars      a list of input variables
-   * @param fileName  file name
-   * @return          generated C code
-   */
-  private def generateCCode(expr: Expression, cDataType: String, vars: List[Variable], fileName: String) : String = {
+  /** Generates a monitor `expr` that switches between a controller and a fallback controller depending on the monitor outcome. */
+  private def generateMonitoredCtrlCCode(expr: Expression, cDataType: String, vars: List[Variable], fileName: String) : String = {
     val names = StaticSemantics.symbols(expr).toList.map(s => nameIdentifier(s))
     require(names.distinct.size == names.size, "Expect unique name_index identifiers for code generation")
     if(names.toSet.intersect(reservedNames).nonEmpty)  println("[warn] Found reserved names: " + names.toSet.intersect(reservedNames).mkString(",") + ". This may cause error.")
@@ -40,11 +32,14 @@ object CGenerator extends CodeGenerator {
     if (stateVars.diff(vars.toSet).nonEmpty)
       println("[info] post variables {" + stateVars.diff(vars.toSet).map(v => KeYmaeraXPrettyPrinter(v)).mkString(",") + "} will be added as parameters")
     val parameters = getParameters(expr, stateVars)
-    val funcHead = "/* monitor */\n" + "bool monitor (" + printMonitorArgsDeclaration(stateVars.nonEmpty, parameters.nonEmpty) + ")"
-    val funcBody = compile(expr, stateVars, parameters, cDataType)
+    val funcHead = "/* Run controller `ctrl` monitored, return `fallback` if `ctrl` violates monitor */\n" + "state monitoredCtrl(" +
+      monitorArgsDeclaration + ", " +
+      "state (*ctrl)(state,parameters), " +
+      "state (*fallback)(state,parameters)" +
+      ")"
+    val funcBody = compileMonitoredCtrl(expr, stateVars, parameters, cDataType)
     infoC(fileName) + includeLib + printParameterDeclaration(parameters, cDataType) + printStateDeclaration(stateVars, cDataType) + funcHead + " {\n" +
       funcBody + "\n}\n\n"
-    //@note gcc -Wall -Wextra -Werror -std=c99 -pedantic absolutely wants "newline at end of file" -Wnewline-eof
   }
 
   /** printings for C */
@@ -67,9 +62,7 @@ object CGenerator extends CodeGenerator {
   private val MONITOR_PARAMS_NAME = "params"
 
   /** Prints the monitor argument declarations. */
-  private def printMonitorArgsDeclaration(hasState: Boolean, hasParams: Boolean): String =
-    ((if (hasState)  Some(s"state $MONITOR_CURR_STATE_NAME")  else None) ::
-     (if (hasParams) Some(s"parameters $MONITOR_PARAMS_NAME") else None) :: Nil).flatten.mkString(", ")
+  private lazy val monitorArgsDeclaration: String = s"state $MONITOR_CURR_STATE_NAME, parameters $MONITOR_PARAMS_NAME"
 
   /** Returns the subset of variables in `vars` that represent state in the expression `e`. */
   private def getStateVars(e: Expression, vars: List[Variable]) : Set[NamedSymbol] =
@@ -124,22 +117,20 @@ object CGenerator extends CodeGenerator {
 
   /** Prints a struct declaration named `structName` with a field for each of the names in `vars`. */
   private def printStructDeclaration(structName: String, cDataType: String, vars: Set[NamedSymbol]) = {
-    if (vars.nonEmpty) {
-      // stable ordering by NamedSymbol.compare
-      val parameterDecls = vars.toList.sorted.map({
-        case x: Variable => convertSorts(x.sort, cDataType) + " " + nameIdentifier(x)
-        case f: Function =>
-          assert(!isInterpretedFunc(f), "Parameter must not be an interpreted function")
-          assert(f.domain == Unit, "If declared as function, parameter must have domain Unit, but has " + f.domain)
-          convertSorts(f.sort, cDataType) + " " + nameIdentifier(f)
-        case _ => None
-      }).mkString(";\n  ")
-      s"""typedef struct $structName {
-         |  $parameterDecls;
-         |} $structName;
-         |
-        |""".stripMargin
-    } else ""
+    // stable ordering by NamedSymbol.compare
+    val parameterDecls = vars.toList.sorted.map({
+      case x: Variable => convertSorts(x.sort, cDataType) + " " + nameIdentifier(x) + ";"
+      case f: Function =>
+        assert(!isInterpretedFunc(f), "Parameter must not be an interpreted function")
+        assert(f.domain == Unit, "If declared as function, parameter must have domain Unit, but has " + f.domain)
+        convertSorts(f.sort, cDataType) + " " + nameIdentifier(f) + ";"
+      case _ => None
+    }).mkString("\n  ")
+    s"""typedef struct $structName {
+       |  $parameterDecls
+       |} $structName;
+       |
+       |""".stripMargin
   }
 
   /** convert to C Type for the given KeYmaera X Sort */
@@ -191,7 +182,7 @@ object CGenerator extends CodeGenerator {
     *                    which helps to determine whether a variable encountered in expression should be generated as a nullary function
     * @return            generated C code
     */
-  private def compile(e: Expression, stateVars: Set[NamedSymbol], parameters: Set[NamedSymbol], cDataType: String) = {
+  private def compileMonitor(e: Expression, stateVars: Set[NamedSymbol], parameters: Set[NamedSymbol], cDataType: String) = {
     val compiledExpr = e match {
       case f : Formula => compileFormula(f, parameters, cDataType)
       case _ => throw new CodeGenerationException("The input expression: \n" + KeYmaeraXPrettyPrinter(e) + "\nis expected to be formula.")
@@ -212,6 +203,19 @@ object CGenerator extends CodeGenerator {
     } else {
       s"  return $compiledExpr;"
     }
+  }
+
+  private def compileMonitoredCtrl(e: Expression, stateVars: Set[NamedSymbol], parameters: Set[NamedSymbol], cDataType: String) = {
+    val compiledExpr = e match {
+      case f : Formula => compileFormula(f, parameters, cDataType)
+      case _ => throw new CodeGenerationException("The input expression: \n" + KeYmaeraXPrettyPrinter(e) + "\nis expected to be formula.")
+    }
+
+    s"""  state pre = curr;
+       |  curr = (*ctrl)(pre,params);
+       |  bool monitorSatisfied = $compiledExpr;
+       |  if (!monitorSatisfied) curr = (*fallback)(pre,params);
+       |  return curr;""".stripMargin
   }
 
   /** Compile a term to a C expression evaluating it (in the same arithmetic) */

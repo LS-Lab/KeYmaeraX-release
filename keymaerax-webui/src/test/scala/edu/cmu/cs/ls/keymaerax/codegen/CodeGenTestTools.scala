@@ -18,10 +18,13 @@ object CodeGenTestTools {
   def augmentMonitorMain(code: String): String = {
     s"""$code
        |
+       |state ctrl(state curr, parameters params) { return curr; }
+       |state fallback(state curr, parameters params) { return curr; }
+       |
        |int main() {
        |  state current = { 0 }; /* compound literal initialization requires gcc -Wno-missing-field-initializers */
        |  parameters params = { 0 };
-       |  while (true) monitor(current, params);
+       |  while (true) monitoredCtrl(current, params, &ctrl, &fallback);
        |  return 0;
        |}
        |
@@ -36,7 +39,7 @@ object CodeGenTestTools {
     f.flush()
     f.close()
     val compiledFile = file.getAbsolutePath.stripSuffix(".c") + ".o"
-    val cmd = s"gcc -Wall -Wextra -Werror -Wno-missing-field-initializers -std=c99 -pedantic ${file.getAbsolutePath} -o $compiledFile"
+    val cmd = s"gcc -Wall -Wextra -Werror -Wno-unused-parameter -Wno-missing-field-initializers -std=c99 -pedantic ${file.getAbsolutePath} -o $compiledFile"
     val p = Runtime.getRuntime.exec(cmd, null, file.getParentFile.getAbsoluteFile)
     withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) { p.waitFor() shouldBe 0 }
     compiledFile
