@@ -86,7 +86,7 @@ object CoasterXProver {
     val pr3 = interpret(dC(s"dy=-(x-($cx))/($r)".asFormula)(1) <(nil, dI()(1)), pr2)
     val pr4= interpret(dC(s"(($cx) - x)^2   + (($cy) - y)^2   = ($r)^2".asFormula)(1) <(nil, ODE(1)), pr3)
     //val pr3b =interpret(dC(s"(($cx) - ($xEnd))^2 + (($cy) - ($yEnd))^2 = ($r)^2".asFormula)(1) <(nil, ODE(1)), pr3a)
-    val pr5 = interpret(dC(s"v^2=($v0)^2+2*($y0)-2*y".asFormula)(1) <(nil, dI()(1)), pr4)
+    val pr5 = interpret(dC(s"v^2=($v0)^2+2*($yInit)-2*y".asFormula)(1) <(nil, dI()(1)), pr4)
     val pr6 = interpret(dC(s"v>0 ".asFormula)(1) <(nil, ODE(1)), pr5)
     pr6
   }
@@ -100,7 +100,7 @@ object CoasterXProver {
     val yEnd = p2._2
     val pr1 = interpret(dC(s"dx=-(($cy)-y)/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
     val pr2 = interpret(dC(s"dy=(($cx)-x)/($r)".asFormula)(1)  <(nil, dI()(1)), pr1)
-    val pr3 = interpret(dC(s"v^2=($v0)^2+2*($y0)-2*y".asFormula)(1)  <(nil, dI()(1)), pr2)
+    val pr3 = interpret(dC(s"v^2=($v0)^2+2*($yInit)-2*y".asFormula)(1)  <(nil, dI()(1)), pr2)
     val pr4 = interpret(dC(s"v>0".asFormula)(1)  <(nil, ODE(1)), pr3)
     val pr5 = interpret(dC(s"y < ($cy)".asFormula)(1)  <(nil, dI()(1)), pr4)
     pr5
@@ -109,16 +109,15 @@ object CoasterXProver {
   
   def quad4Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number):Provable = {
     println("Proving Quadrant 4 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
-    val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
-    val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
-    val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
+    val (cx:Term, cy:Term) = arcCenter(bl, tr)
+    val r = CoasterXSpec.dist(p1, (cx,cy))
     val y0 = p1._2
     val yEnd = p2._2
     //val pr0 = interpret(implyR(1), pr)
     val pr1 = interpret(dC(s"dx=-(y-($cy))/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
     val pr2 = interpret(dC(s"dy=(x-($cx))/($r)".asFormula)( 1)  <(nil, ODE(1)), pr1)
     val pr3 = interpret(dC(s"($cx)<=x".asFormula)(1)  <(nil, ODE(1)), pr2)
-    val pr4 = interpret(dC(s"v^2=($v0)^2+2*($y0)-2*y".asFormula)(1) <(nil, ODE(1)), pr3)
+    val pr4 = interpret(dC(s"v^2=($v0)^2+2*($yInit)-2*y".asFormula)(1) <(nil, ODE(1)), pr3)
     val pr5 = interpret(dC(s"(($cx)-x)^2+(($cy)-y)^2=($r)^2".asFormula)(1) <(nil, ODE(1)), pr4)
     val pr6 = interpret(dC(s"y < ($cy)".asFormula)(1) <(nil,
       dC(s"2*(y-($cy))*($r)!=0".asFormula)(1)  <(
@@ -144,7 +143,7 @@ object CoasterXProver {
 
   def proveLineArith(pr: Provable, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):Provable = {
     val (hideYDefs, nYs) = {
-      val js = List.tabulate(nSections)(j => j + 2).filter(j => !(j == iSection + 2 || j == iSection + 1))
+      val js = List.tabulate(nSections)(j => j + 2).filter(j => !(j == iSection + 2 || j == iSection + 1 || j == iSection ))
       val e = js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
       (e, nSections - js.length)
     }

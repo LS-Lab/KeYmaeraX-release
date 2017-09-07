@@ -178,6 +178,11 @@ class CoasterXTests extends TacticTestBase {
     pr shouldBe 'proved
   })}
 
+  it should "generate proof for valley" in {  withMathematica(qeTool => {
+    val pr = CoasterXProver(simpleValley)
+    pr shouldBe 'proved
+  })}
+
 
   /* bigDecimal = {BigDecimal@2869} "0E+1"
  intVal = {BigInteger@2872} "0"
