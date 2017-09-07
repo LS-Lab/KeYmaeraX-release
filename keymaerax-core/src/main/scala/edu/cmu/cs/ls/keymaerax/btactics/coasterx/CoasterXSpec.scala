@@ -166,7 +166,9 @@ object CoasterXSpec {
       case ArcSection(Some(ArcParam((x1,y1),(x2,y2),theta1,deltaTheta)), Some(gradient)) =>
         //val ((x3,y3),(x4,y4)) = arcBounds((x1,y1),(x2,y2),theta1,Number(theta1.value+deltaTheta.value))
         //val r = Number((x4.value-x3.value)/2)
-        val r = foldDivide(foldMinus(x2,x1),Number(2))
+        val (cx:Term, cy:Term) = arcCenter((x1,y1), (x2,y2))
+        val r = CoasterXSpec.dist(start, (cx,cy))
+        //val r = foldDivide(foldMinus(x2,x1),Number(2))
         val sysBase = "x' = dx*v, y' = dy*v, v' = -dy".asDifferentialProgram
         val isCw = deltaTheta.value < 0
         val (dxTerm, dyTerm) = if (isCw) {(foldDivide("dy*v".asTerm, r), foldDivide("-dx*v".asTerm, r))} else {(foldDivide("-dy*v".asTerm, r), foldDivide("dx*v".asTerm, r))}
@@ -255,6 +257,7 @@ object CoasterXSpec {
         val veq = Equal(v, v0)
         And(dxeq,And(dyeq,And(xeq,And(yeq,veq))))
       case ArcSection(Some(param@ArcParam((x1,y1),(x2,y2),theta1,deltaTheta)), Some(gradient)) =>
+        // @TODO: Update radius computation
         /* TODO: Assert
         r > 0 &
         cy > y0 &

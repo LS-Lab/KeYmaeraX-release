@@ -38,7 +38,7 @@ object CoasterXProver {
     fml
   }
 
-  def quad2Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, theta1: Number, deltaTheta: Number):Provable = {
+  def quad2Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number):Provable = {
     //val xLim:Formula = s"x<=($cx)".asFormula
     //val yLim:Formula = s"y<=($yEnd)".asFormula
     //val cyLim:Formula = s"($cy) < ($yEnd)".asFormula
@@ -46,12 +46,15 @@ object CoasterXProver {
     println("Proving Quadrant 2 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     // @TODO: Set cx, cy to correct value as done in postcondition generator
     // @TODO: Hide preconditions and y-defs that you don't need
-    val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
-    val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
-    val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
+    val (cx:Term, cy:Term) = arcCenter(bl, tr)
+    val r = CoasterXSpec.dist(p1, (cx,cy))
+    //val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
+    //val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
+    //val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
     val y0 = p1._2
     val yEnd = p2._2
-    val ECirc:Formula = s"v^2=($v0)^2+2*($y0)-2*y&(($cx)-x)^2+(($cy)-y)^2=($r)^2".asFormula
+    // Note: Conservation of energy always uses the start of the ENTIRE track, not current section
+    val ECirc:Formula = s"v^2=($v0)^2+2*($yInit)-2*y&(($cx)-x)^2+(($cy)-y)^2=($r)^2".asFormula
     val dGDefined:Formula = s"2*v*($r)!=0".asFormula
     val pr2:Provable = interpret(dC(s"dx^2 + dy^2 = 1".asFormula)(1)    <(nil, dI()(1)), pr)
     val pr3:Provable = interpret(dC(s"dx=(y-($cy))/($r)".asFormula)(1) <(nil, dI()(1)), pr2)
@@ -68,7 +71,7 @@ object CoasterXProver {
   }
 
   //@TODO: Add stuff from vector proof
-  def quad1Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, theta1: Number, deltaTheta: Number):Provable = {
+  def quad1Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number):Provable = {
     println("Proving Quadrant 1 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
     val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
@@ -88,7 +91,7 @@ object CoasterXProver {
     pr6
   }
   
-  def quad3Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, theta1: Number, deltaTheta: Number):Provable = {
+  def quad3Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number):Provable = {
     println("Proving Quadrant 3 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
     val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
@@ -104,7 +107,7 @@ object CoasterXProver {
     //interpret(e, pr)
   }
   
-  def quad4Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, theta1: Number, deltaTheta: Number):Provable = {
+  def quad4Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number):Provable = {
     println("Proving Quadrant 4 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
     val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
@@ -188,6 +191,9 @@ object CoasterXProver {
     def provePost(iPost:Int, pr:Provable):Provable = {
       val e:BelleExpr =
         if(iPost == iSection || iPost == iSection + 1) QE
+        // For the - 1 case we don't have a contradiction argument (overlaps at one point), but
+        // splitting before QE seems to speed up vastly in the cases I've tested
+        else if(iPost == iSection - 1) {master()}
         else {coHideL(dcPos, pr) & implyR(1) & hideR(1) & QE}
       val pr1 = interpret(e, pr)
       pr1
@@ -197,7 +203,7 @@ object CoasterXProver {
     pr9
   }
 
-  def sectionTactic(pr: Provable, p1: TPoint, p2: TPoint, v0:Number, section: Section, iSection:Int, nSections: Int):Provable = {
+  def sectionTactic(pr: Provable, p1: TPoint, p2: TPoint, v0:Number, yInit:Term, section: Section, iSection:Int, nSections: Int):Provable = {
     section match {
       case ArcSection(Some(param@ArcParam(bl,tr,theta1,deltaTheta)),Some(grad)) => {
         val (t1, t2) = (theta1.value, param.theta2.value)
@@ -207,10 +213,10 @@ object CoasterXProver {
         val x = 1 + 1
         val pr1 =
           (q3, q4, q1) match {
-            case (true, false, false) => quad3Tactic(pr, p1, p2, bl, tr, v0, theta1, deltaTheta) // Quadrant 3
-            case (false, true, false) => quad4Tactic(pr, p1, p2, bl, tr, v0, theta1, deltaTheta) // Quadrant 4
-            case (false, false, true) => quad1Tactic(pr, p1, p2, bl, tr, v0, theta1, deltaTheta) // Quadrant 1
-            case (false,false,false)  => quad2Tactic(pr, p1, p2, bl, tr, v0, theta1, deltaTheta) // Quadrant 2
+            case (true, false, false) => quad3Tactic(pr, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta) // Quadrant 3
+            case (false, true, false) => quad4Tactic(pr, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta) // Quadrant 4
+            case (false, false, true) => quad1Tactic(pr, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta) // Quadrant 1
+            case (false,false,false)  => quad2Tactic(pr, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta) // Quadrant 2
             case _ => ???
           }
         interpret(dW(1) & QE, pr1)
@@ -235,34 +241,34 @@ object CoasterXProver {
     }
   }
 
-  def provePosts(pr:Provable, fml:Formula, p1: TPoint, p2: TPoint, section: Section, v: Number, i: Int, j:Int, nSections:Int):BelleExpr = {
+  def provePosts(pr:Provable, fml:Formula, p1: TPoint, p2: TPoint, section: Section, v: Number, yInit: Term, i: Int, j:Int, nSections:Int):BelleExpr = {
     val thisE =
       if(i == j) {
-        sectionTactic(pr, p1, p2, v, section, i, nSections)
+        sectionTactic(pr, p1, p2, v, yInit,section, i, nSections)
         //@TODO: fix
         nil
       } else {
         dW(1) & QE
       }
     fml match {
-      case And(p,q) => andR(1) <(thisE, provePosts(pr, q, p1, p2, section, v, i, j+1, nSections))
+      case And(p,q) => andR(1) <(thisE, provePosts(pr, q, p1, p2, section, v, yInit,i, j+1, nSections))
       case _ => thisE
     }
   }
 
-  def componentTactic(pr:Provable, p1: TPoint, p2: TPoint, section: Section, v: Number, i: Int, nSections:Int):Provable = {
-    sectionTactic(pr, p1, p2, v, section, i, nSections)
+  def componentTactic(pr:Provable, p1: TPoint, p2: TPoint, section: Section, v: Number, yInit: Term, i: Int, nSections:Int):Provable = {
+    sectionTactic(pr, p1, p2, v, yInit, section, i, nSections)
   /*  val globalPost = ???
     val componentPost = provePosts(pr, pr.conclusion.succ.head, p1, p2, section, v, i, 0)
     andR(1) <(globalPost, componentPost)*/
   }
 
-  def proveAllComponents(global:Provable, locals: List[Provable], points: List[(Term, Term)], segments: List[Section], v: Number, i: Int, nSections: Int):Provable = {
+  def proveAllComponents(global:Provable, locals: List[Provable], points: List[(Term, Term)], segments: List[Section], v: Number, yInit: Term, i: Int, nSections: Int):Provable = {
     (points, segments, locals) match {
-      case (p1 :: p2 :: Nil, s1 :: Nil, pr :: Nil) => componentTactic(pr, p1, p2, s1, v, i, nSections)
+      case (p1 :: p2 :: Nil, s1 :: Nil, pr :: Nil) => componentTactic(pr, p1, p2, s1, v, yInit, i, nSections)
       case (p1 :: p2 :: ps, s1 :: ss, pr :: prs) =>
-        val sg = componentTactic(pr, p1, p2, s1, v, i, nSections)
-        proveAllComponents(global(sg, 0), prs, p2::ps, ss, v, i+1, nSections)
+        val sg = componentTactic(pr, p1, p2, s1, v, yInit, i, nSections)
+        proveAllComponents(global(sg, 0), prs, p2::ps, ss, v, yInit, i+1, nSections)
       case _ => ???
     }
   }
@@ -293,7 +299,7 @@ object CoasterXProver {
     val pr4 = interpret(nil <(QE, nil), pr3)
     val (globalPr, localPrs) = splitComponents(pr4)
       //mapChoices(es)
-    val prEnd = proveAllComponents(globalPr, localPrs, points, segments.tail, v0, 0, segments.tail.length)
+    val prEnd = proveAllComponents(globalPr, localPrs, points, segments.tail, v0, points.head._2, 0, segments.tail.length)
     //val prs = localPrs.zip(es)
     //val prEnd = interpret(e, pr4)
     assert(prEnd.isProved, "CoasterX model not proved")
