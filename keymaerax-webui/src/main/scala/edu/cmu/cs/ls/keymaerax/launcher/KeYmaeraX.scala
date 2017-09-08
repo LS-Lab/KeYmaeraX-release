@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import edu.cmu.cs.ls.keymaerax.codegen.CGenerator
+import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.btactics.IsabelleSyntax._
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
@@ -147,9 +147,9 @@ object KeYmaeraX {
     }
   }
 
-  private def makeVariables(varNames: Array[String]): Array[Variable] = {
+  private def makeVariables(varNames: Array[String]): Array[BaseVariable] = {
     varNames.map(vn => KeYmaeraXParser(vn) match {
-      case v: Variable => v
+      case v: BaseVariable => v
       case v => throw new IllegalArgumentException("String " + v + " is not a valid variable name")
     })
   }
@@ -666,11 +666,11 @@ object KeYmaeraX {
         "\n[Error] Wrong file name " + outputFileNameDotC + " used for -out! C generator only generates .c file. Please use： -out FILENAME.c")
       outputFileName = outputFileNameDotC.dropRight(2)
     }
-    val vars: List[Variable] =
-      if(options.contains('vars)) options('vars).asInstanceOf[Array[Variable]].toList
-      else StaticSemantics.vars(inputFormula).symbols.map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList.sortWith((x, y)=>x<y)
+    val vars: Set[BaseVariable] =
+      if (options.contains('vars)) options('vars).asInstanceOf[Array[BaseVariable]].toSet
+      else StaticSemantics.vars(inputFormula).symbols.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
     val codegenStart = Platform.currentTime
-    val output = CGenerator(inputFormula, vars, outputFileName)
+    val output = (new CGenerator(new CMonitorGenerator()))(inputFormula, vars, outputFileName)
     Console.println("[codegen time " + (Platform.currentTime - codegenStart) + "ms]")
     val pw = new PrintWriter(outputFileName + ".c")
     pw.write(stampHead(options))

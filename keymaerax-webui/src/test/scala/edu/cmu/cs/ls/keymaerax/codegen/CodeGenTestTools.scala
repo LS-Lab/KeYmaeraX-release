@@ -18,13 +18,14 @@ object CodeGenTestTools {
   def augmentMonitorMain(code: String): String = {
     s"""$code
        |
-       |state ctrl(state curr, parameters params) { return curr; }
-       |state fallback(state curr, parameters params) { return curr; }
+       |state ctrl(state curr, parameters params, state input) { return curr; }
+       |state fallback(state curr, parameters params, state input) { return curr; }
        |
        |int main() {
        |  state current = { 0 }; /* compound literal initialization requires gcc -Wno-missing-field-initializers */
        |  parameters params = { 0 };
-       |  while (true) monitoredCtrl(current, params, &ctrl, &fallback);
+       |  state input = { 0 };
+       |  while (true) monitoredCtrl(current, params, input, &ctrl, &fallback);
        |  return 0;
        |}
        |
@@ -32,7 +33,7 @@ object CodeGenTestTools {
   }
 
   /** Compiles `code` with gcc and returns the path to the compiled result (temporary). */
-  def compileCpp(code: String): String = {
+  def compileC(code: String): String = {
     val file = File.createTempFile("kyxcode", ".c")
     val f = new FileWriter(file)
     f.write(code)

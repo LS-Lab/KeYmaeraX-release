@@ -792,9 +792,9 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
   def resultingResponses(): List[Response]  = {
     val model = db.getModel(modelId)
     val modelFml = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
-    val vars = (StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable])
-      ++ additionalVars.map(_.asVariable)).toList
-    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
+    val vars: Set[BaseVariable] = (StaticSemantics.boundVars(modelFml).symbols ++ additionalVars.map(_.asVariable)).
+      filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
+    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars.toList.sorted[NamedSymbol]:_*)
     val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
       case ("controller", tool) =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
@@ -808,12 +808,16 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
         ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) /*& SimplifierV2.simpTac(1)*/)
     }
 
-    if (monitorCond.subgoals.size == 1) (conditionKind, monitorShape) match {
-      case ("kym", "boolean") => new ModelPlexResponse(model, monitorCond.subgoals.head.toFormula) :: Nil
-      case ("kym", "metric") => new ModelPlexResponse(model, ModelPlex.toMetric(monitorCond.subgoals.head.toFormula)) :: Nil
-      case ("c", "boolean") => new ModelPlexCCodeResponse(model, monitorCond.subgoals.head.toFormula) :: Nil
-    }
-    else new ErrorResponse("ModelPlex failed") :: Nil
+    if (monitorCond.subgoals.size == 1) {
+      val monitorFml =  monitorShape match {
+        case "boolean" => monitorCond.subgoals.head.toFormula
+        case "metric" => ModelPlex.toMetric(monitorCond.subgoals.head.toFormula)
+      }
+      conditionKind match {
+        case "kym" => new ModelPlexResponse(model, monitorFml) :: Nil
+        case "c" => new ModelPlexCCodeResponse(model, monitorFml, monitorShape, vars) :: Nil
+      }
+    } else new ErrorResponse("ModelPlex failed: expected exactly 1 subgoal, but got " + monitorCond.prettyString) :: Nil
   }
 }
 

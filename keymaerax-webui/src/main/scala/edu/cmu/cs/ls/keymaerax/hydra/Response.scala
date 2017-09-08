@@ -21,7 +21,7 @@ import java.io.{PrintWriter, StringWriter}
 
 import Helpers._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.codegen.CGenerator
+import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import spray.httpx.marshalling.ToResponseMarshallable
 
@@ -277,11 +277,11 @@ class TestSynthesisResponse(model: ModelPOJO, metric: Formula,
   )
 }
 
-class ModelPlexCCodeResponse(model: ModelPOJO, monitor: Formula) extends Response {
+class ModelPlexCCodeResponse(model: ModelPOJO, monitor: Formula, kind: String, stateVars: Set[BaseVariable]) extends Response {
   def getJson = JsObject(
     "modelid" -> JsString(model.modelId.toString),
     "modelname" -> JsString(model.name),
-    "code" -> JsString(CGenerator(monitor))
+    "code" -> JsString((new CGenerator(new CMonitorGenerator(kind)))(monitor, stateVars, model.name))
   )
 }
 
