@@ -295,7 +295,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     var modalInstance = $uibModal.open({
       templateUrl: 'templates/modelplex.html',
       controller: 'ModelPlexCtrl',
-      size: 'lg',
+      size: 'fullscreen',
       resolve: {
         userid: function() { return $scope.userId; },
         modelid: function() { return modelid; }

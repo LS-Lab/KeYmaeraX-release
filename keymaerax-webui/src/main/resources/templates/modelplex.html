@@ -5,14 +5,14 @@
         <div class="spinner-double-bounce2"></div>
     </div>
     <div class="spinner-please-wait">
-        <p>ModelPlex is executing, please wait...</p>
+        <p>Code generator is executing, please wait...</p>
         <p><button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button></p>
     </div>
 </spinner>
 <div class="modal-header">
     <div class="row">
         <div class="col-md-11">
-            <h3>ModelPlex</h3>
+            <h3>Code synthesis</h3>
         </div>
         <div class="col-md-1">
             <a class="pull-right" ng-click="cancel()"><span class="fa fa-close"></span>
@@ -22,11 +22,29 @@
 </div>
 <div class="modal-body">
     <div class="well">
-        <form class="form-horizontal" ng-submit="modelplex()">
+        <form class="form-horizontal" ng-submit="synthesize()">
+            <div class="form-group">
+                <label for="monitorkind" class="col-md-2 control-label">Artifact</label>
+                <div class="col-md-10">
+                    <select class="form-control" id="artifact" ng-model="mxdata.artifact">
+                        <option value="controller">Controller</option>
+                        <option value="monitor">Monitor</option>
+                        <option value="sandbox">Sandbox</option>
+                    </select>
+                    <datalist id="artifactList"></datalist>
+                    <span id="artifactHelpBlock" class="help-block">
+                        A controller implements the modeled control algorithm, a monitor checks for deviation
+                        between model and reality, a sandbox uses the decisions of an unverified controller
+                        (if they agree with the model), and otherwise uses the decisions of a fallback controller.
+                    </span>
+                </div>
+            </div>
             <div class="form-group">
                 <label for="monitorkind" class="col-md-2 control-label">Monitor Kind</label>
                 <div class="col-md-10">
-                    <select class="form-control" id="monitorkind" ng-model="mxdata.monitorkind">
+                    <select class="form-control" id="monitorkind"
+                            ng-disabled="mxdata.artifact == 'controller'"
+                            ng-model="mxdata.monitorkind">
                         <option value="controller">Controller Monitor</option>
                         <option value="model">Model Monitor</option>
                         <!--<option value="prediction">Prediction Monitor</option>-->
@@ -42,7 +60,9 @@
             <div class="form-group">
                 <label for="monitorShape" class="col-md-2 control-label">Monitor Shape</label>
                 <div class="col-md-10">
-                    <select class="form-control" id="monitorShape" ng-model="mxdata.monitorShape">
+                    <select class="form-control" id="monitorShape"
+                            ng-disabled="mxdata.artifact == 'controller'"
+                            ng-model="mxdata.monitorShape">
                         <option value="boolean">Boolean</option>
                         <option value="metric">Metric</option>
                     </select>
@@ -56,7 +76,9 @@
             <div class="form-group">
                 <label for="additionalMonitorVars" class="col-md-2 control-label">Monitored Variables</label>
                 <div class="col-md-10">
-                    <input class="form-control" id="monitorVars" type="text" ng-model="mxdata.mandatoryMonitorVars" ng-list disabled/>
+                    <input class="form-control" id="monitorVars" type="text"
+                           ng-disabled="mxdata.artifact == 'controller'"
+                           ng-model="mxdata.mandatoryMonitorVars" ng-list disabled/>
                     <span id="mandatoryMonitorVarsHelpBlock" class="help-block">
                         Mandatory monitored variables.
                     </span>
@@ -65,7 +87,9 @@
             <div class="form-group">
                 <label for="additionalMonitorVars" class="col-md-2 control-label">Additional Variables</label>
                 <div class="col-md-10">
-                    <input class="form-control" id="additionalMonitorVars" type="text" ng-model="mxdata.additionalMonitorVars" ng-list/>
+                    <input class="form-control" id="additionalMonitorVars" type="text"
+                           ng-disabled="mxdata.artifact == 'controller'"
+                           ng-model="mxdata.additionalMonitorVars" ng-list/>
                     <span id="additionalMonitorVarsHelpBlock" class="help-block">
                         Additional variables/constants that should be monitored.
                     </span>
@@ -73,19 +97,19 @@
             </div>
             <div class="form-group">
                 <div class="col-md-offset-2 col-md-10">
-                    <button type="submit" class="btn btn-default">ModelPlex</button>
+                    <button type="submit" class="btn btn-default">Synthesize</button>
                 </div>
             </div>
 
         </form>
     </div>
-    <div class="well" ng-if="mxdata.monitor !== undefined">
-        <span class="k4-formula-preformat">{{mxdata.monitor.plainString}}</span>
+    <div class="well" ng-if="mxdata.generatedArtifact !== undefined">
+        <span class="k4-formula-preformat">{{mxdata.generatedArtifact.plainString}}</span>
     </div>
 </div>
 <div class="modal-footer">
     <button class="btn btn-default" ng-click="downloadCCode()"
-            ng-if="mxdata.monitor !== undefined && mxdata.monitorShape == 'boolean'">
+            ng-if="mxdata.generatedArtifact !== undefined">
         <i class="fa fa-download"></i> Download C code
     </button>
 </div>

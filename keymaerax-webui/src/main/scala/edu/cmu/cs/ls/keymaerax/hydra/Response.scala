@@ -186,14 +186,14 @@ class ModelPlexMandatoryVarsResponse(model: ModelPOJO, vars: Set[Variable]) exte
   )
 }
 
-class ModelPlexResponse(model: ModelPOJO, monitor: Formula) extends Response {
-  val fmlHtml = JsString(UIKeYmaeraXPrettyPrinter("", plainText=false)(monitor))
-  val fmlString = JsString(UIKeYmaeraXPrettyPrinter("", plainText=true)(monitor))
-  val fmlPlainString = JsString(KeYmaeraXPrettyPrinter(monitor))
+class ModelPlexArtifactResponse(model: ModelPOJO, artifact: Expression) extends Response {
+  val fmlHtml = JsString(UIKeYmaeraXPrettyPrinter("", plainText=false)(artifact))
+  val fmlString = JsString(UIKeYmaeraXPrettyPrinter("", plainText=true)(artifact))
+  val fmlPlainString = JsString(artifact.prettyString)
 
   def getJson = JsObject(
     "modelid" -> JsString(model.modelId.toString),
-    "monitor" -> JsObject(
+    "generatedArtifact" -> JsObject(
       "html" -> fmlHtml,
       "string" -> fmlString,
       "plainString" -> fmlPlainString
@@ -277,11 +277,11 @@ class TestSynthesisResponse(model: ModelPOJO, metric: Formula,
   )
 }
 
-class ModelPlexCCodeResponse(model: ModelPOJO, monitor: Formula, kind: String, stateVars: Set[BaseVariable]) extends Response {
+class ModelPlexArtifactCodeResponse(model: ModelPOJO, code: String) extends Response {
   def getJson = JsObject(
     "modelid" -> JsString(model.modelId.toString),
     "modelname" -> JsString(model.name),
-    "code" -> JsString((new CGenerator(new CMonitorGenerator(kind)))(monitor, stateVars, model.name))
+    "code" -> JsString(code)
   )
 }
 

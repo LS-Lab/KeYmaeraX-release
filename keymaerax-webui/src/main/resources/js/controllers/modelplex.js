@@ -5,7 +5,8 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
     modelid: modelid,
     monitorkind: 'controller',
     monitorShape: 'boolean',
-    monitor: undefined,
+    generatedArtifact: undefined,
+    artifact: 'sandbox',
     additionalMonitorVars: [],
     mandatoryMonitorVars: []
   }
@@ -15,14 +16,15 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
       $scope.mxdata.mandatoryMonitorVars = response.data.mandatoryVars;
     })
 
-  $scope.modelplex = function() {
+  $scope.synthesize = function() {
     spinnerService.show('modelplexExecutionSpinner')
     $http({method: 'GET',
            url: "user/" + userid + "/model/" + $scope.mxdata.modelid + "/modelplex/generate/" +
+                $scope.mxdata.artifact + "/" +
                 $scope.mxdata.monitorkind + "/" + $scope.mxdata.monitorShape + "/kym",
            params: {vars: JSON.stringify($scope.mxdata.additionalMonitorVars)}})
       .then(function(response) {
-        $scope.mxdata.monitor = response.data.monitor;
+        $scope.mxdata.generatedArtifact = response.data.generatedArtifact;
       })
       .finally(function() { spinnerService.hide('modelplexExecutionSpinner'); });
   }
@@ -31,6 +33,7 @@ angular.module('keymaerax.controllers').controller('ModelPlexCtrl',
     spinnerService.show('modelplexExecutionSpinner')
     $http({method: 'GET',
            url: "user/" + userid + "/model/" + $scope.mxdata.modelid + "/modelplex/generate/" +
+            $scope.mxdata.artifact + "/" +
             $scope.mxdata.monitorkind + "/" + $scope.mxdata.monitorShape + "/c",
            params: {vars: JSON.stringify($scope.mxdata.additionalMonitorVars)}})
       .then(function(response) {

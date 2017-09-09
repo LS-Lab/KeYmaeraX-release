@@ -36,6 +36,7 @@ import scala.collection.immutable._
 import scala.collection.mutable
 import edu.cmu.cs.ls.keymaerax.btactics.cexsearch
 import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, BreadthFirstSearch, ProgramSearchNode, SearchNode}
+import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 
 import scala.util.Try
@@ -787,13 +788,122 @@ class ModelPlexMandatoryVarsRequest(db: DBAbstraction, userId: String, modelId: 
   }
 }
 
-class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monitorKind: String, monitorShape: String,
+class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artifact: String, monitorKind: String, monitorShape: String,
                        conditionKind: String, additionalVars: List[String]) extends UserRequest(userId) with RegisteredOnlyRequest {
   def resultingResponses(): List[Response]  = {
     val model = db.getModel(modelId)
     val modelFml = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
     val vars: Set[BaseVariable] = (StaticSemantics.boundVars(modelFml).symbols ++ additionalVars.map(_.asVariable)).
       filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
+
+    artifact match {
+      case "controller" => createController(model, modelFml, vars)
+      case "monitor" => createMonitor(model, modelFml, vars)
+      case "sandbox" => createSandbox(model, modelFml, vars)
+    }
+  }
+
+  private def createController(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): List[Response] = modelFml match {
+    case Imply(_, Box(prg, _)) => conditionKind match {
+      case "kym" =>
+        val ctrlPrg = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+          override def preP(p: PosInExpr, prg: Program): Either[Option[StopTraversal], Program] = prg match {
+            case _: ODESystem => Right(Test("true".asFormula))
+            case _ => Left(None)
+          }
+        }, prg).get
+        new ModelPlexArtifactResponse(model, ctrlPrg) :: Nil
+      case "c" =>
+        val controller = (new CGenerator(new CControllerGenerator()))(prg, vars)
+
+        val code = s"""
+           |${CGenerator.printHeader(model.name)}
+           |$controller
+           |
+           |int main() {
+           |  /* control loop stub */
+           |  parameters params = { .A=1.0 };
+           |  while (true) {
+           |    state current; /* read sensor values, e.g., = { .x=0.0 }; */
+           |    state input;   /* resolve non-deterministic assignments, e.g., = { .x=0.5 }; */
+           |    state post = ctrlStep(current, params, input);
+           |    /* hand post actuator set values to actuators */
+           |  }
+           |  return 0;
+           |}
+           |""".stripMargin
+
+        new ModelPlexArtifactCodeResponse(model, code) :: Nil
+    }
+    case _ => new ErrorResponse("Unsupported shape, expected assumptions -> [{ctrl;ode}*]safe, but got " + modelFml.prettyString) :: Nil
+  }
+
+  private def createSandbox(model: ModelPOJO, modelFml: Formula, stateVars: Set[BaseVariable]): List[Response] = modelFml match {
+    case Imply(_, Box(prg, _)) =>
+      conditionKind match {
+        case "kym" =>
+          //@todo specific formula
+          new ModelPlexArtifactResponse(model, "pre := curr; ctrl; if (monitorSatisfied()) { skip; } else { fallback; } actuate;".asProgram) :: Nil
+        case "c" =>
+          val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, stateVars.toList.sorted[NamedSymbol]:_*)
+          val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
+            case ("controller", tool) =>
+              val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
+              try {
+                TactixLibrary.proveBy(foResult.subgoals.head,
+                  SaturateTactic(ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)))
+              } catch {
+                case _: Throwable => foResult
+              }
+            case ("model", tool) => ??? //@todo sandbox for model monitors
+//              TactixLibrary.proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
+//              ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) /*& SimplifierV2.simpTac(1)*/)
+          }
+
+          if (monitorCond.subgoals.size == 1 && monitorCond.subgoals.head.ante.isEmpty && monitorCond.subgoals.head.succ.size == 1) {
+            val monitorFml =  monitorShape match {
+              case "boolean" => monitorCond.subgoals.head.succ.head
+              case "metric" => ModelPlex.toMetric(monitorCond.subgoals.head.succ.head)
+            }
+
+            val params = CGenerator.getParameters(monitorFml, stateVars)
+            val declarations = CGenerator.printParameterDeclaration(params) + "\n" + CGenerator.printStateDeclaration(stateVars)
+            val fallbackCode = new CControllerGenerator()(prg, stateVars)
+            val monitorCode = new CMonitorGenerator()(monitorFml, stateVars)
+
+            val sandbox =
+              s"""
+                |${CGenerator.printHeader(model.name)}
+                |${CGenerator.INCLUDE_STATEMENTS}
+                |$declarations
+                |$fallbackCode
+                |$monitorCode
+                |
+                |state ctrl(state curr, parameters params, state input) {
+                |  /* controller implementation stub: modify curr to return actuator set values */
+                |  return curr;
+                |}
+                |
+                |int main() {
+                |  /* control loop stub */
+                |  parameters params; /* set system parameters, e.g., = { .A=1.0 }; */
+                |  while (true) {
+                |    state current; /* read sensor values, e.g., = { .x=0.2 }; */
+                |    state input;   /* resolve non-deterministic assignments in the model */
+                |    state post = monitoredCtrl(current, params, input, &ctrl, &ctrlStep);
+                |    /* hand post actuator set values to actuators */
+                |  }
+                |  return 0;
+                |}
+                |""".stripMargin
+
+            new ModelPlexArtifactCodeResponse(model, sandbox) :: Nil
+          } else new ErrorResponse("ModelPlex failed: expected exactly 1 subgoal, but got " + monitorCond.prettyString) :: Nil
+      }
+    case _ => new ErrorResponse("Unsupported shape, expected assumptions -> [{ctrl;ode}*]safe, but got " + modelFml.prettyString) :: Nil
+  }
+
+  private def createMonitor(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): List[Response] = {
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars.toList.sorted[NamedSymbol]:_*)
     val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
       case ("controller", tool) =>
@@ -808,14 +918,34 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
         ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) /*& SimplifierV2.simpTac(1)*/)
     }
 
-    if (monitorCond.subgoals.size == 1) {
+    if (monitorCond.subgoals.size == 1 && monitorCond.subgoals.head.ante.isEmpty && monitorCond.subgoals.head.succ.size == 1) {
       val monitorFml =  monitorShape match {
-        case "boolean" => monitorCond.subgoals.head.toFormula
-        case "metric" => ModelPlex.toMetric(monitorCond.subgoals.head.toFormula)
+        case "boolean" => monitorCond.subgoals.head.succ.head
+        case "metric" => ModelPlex.toMetric(monitorCond.subgoals.head.succ.head)
       }
       conditionKind match {
-        case "kym" => new ModelPlexResponse(model, monitorFml) :: Nil
-        case "c" => new ModelPlexCCodeResponse(model, monitorFml, monitorShape, vars) :: Nil
+        case "kym" => new ModelPlexArtifactResponse(model, monitorFml) :: Nil
+        case "c" =>
+          val monitor = (new CGenerator(new CMonitorGenerator(monitorShape)))(monitorFml, vars, model.name)
+          val code =
+            s"""
+              |${CGenerator.printHeader(model.name)}
+              |$monitor
+              |
+              |int main() {
+              |  /* sandbox stub, select 'sandbox' to auto-generate */
+              |  parameters params = { .A=1.0 };
+              |  while (true) {
+              |    state pre; /* read sensor values, e.g., = { .x=0.0 }; */
+              |    state post; /* run controller */
+              |    if (!monitorSatisfied(pre,post,params)) post = post; /* replace with fallback control output */
+              |    /* hand post actuator set values to actuators */
+              |  }
+              |  return 0;
+              |}
+              |""".stripMargin
+
+          new ModelPlexArtifactCodeResponse(model, code) :: Nil
       }
     } else new ErrorResponse("ModelPlex failed: expected exactly 1 subgoal, but got " + monitorCond.prettyString) :: Nil
   }
