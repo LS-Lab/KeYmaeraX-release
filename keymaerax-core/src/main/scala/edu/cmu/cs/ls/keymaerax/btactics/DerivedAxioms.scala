@@ -2855,6 +2855,15 @@ object DerivedAxioms {
   lazy val equalExpand: Lemma = derivedAxiom("= expand", Sequent(IndexedSeq(), IndexedSeq("f_()=g_() <-> f_()<=g_()&g_()<=f_()".asFormula)), QE & done)
 
   /**
+    * {{{Axiom "!= expand".
+    *   f_()!=g_() <-> f_()<g_()|g_()<f_()
+    * End.
+    * }}}
+    */
+  lazy val notEqualExpand: Lemma = derivedAxiom("!= expand", Sequent(IndexedSeq(), IndexedSeq("f_()!=g_() <-> f_()<g_()|g_()<f_()".asFormula)), QE & done)
+
+
+  /**
     * {{{Axiom "<= to <".
     *   f_()<=0 <- f_()<0
     * End.

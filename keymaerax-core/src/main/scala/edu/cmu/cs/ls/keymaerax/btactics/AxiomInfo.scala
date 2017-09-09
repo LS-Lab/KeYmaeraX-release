@@ -614,6 +614,7 @@ object DerivationInfo {
 
     // metric axioms
     new DerivedAxiomInfo("= expand", "equalExpand", "equalExpand", {case () => useAt(DerivedAxioms.equalExpand)}),
+    new DerivedAxiomInfo("!= expand", "notEqualExpand", "notEqualExpand", {case () => useAt(DerivedAxioms.notEqualExpand)}),
     new DerivedAxiomInfo("<= to <", "leApprox", "leApprox", {case () => useAt(DerivedAxioms.le2l)}),
     new DerivedAxiomInfo("metric <=", "metricLe", "metricLe", {case () => useAt(DerivedAxioms.metricLessEqual)}),
     new DerivedAxiomInfo("metric <", "metricLt", "metricLt", {case () => useAt(DerivedAxioms.metricLess)}),
