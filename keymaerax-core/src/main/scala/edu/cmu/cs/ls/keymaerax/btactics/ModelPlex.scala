@@ -500,6 +500,7 @@ object ModelPlex extends ModelPlexTrait {
   /** Turns the formula `fml` into a single inequality. */
   def toMetric(fml: Formula): Formula = {
     val cmpNF = chase(3, 3, (e: Expression) => e match {
+      case NotEqual(_, _) => "!= expand"::Nil
       case Equal(_, _) => "= expand"::Nil
       case And(_, _) => "& recursor"::Nil
       case Or(_, _) => "| recursor"::Nil

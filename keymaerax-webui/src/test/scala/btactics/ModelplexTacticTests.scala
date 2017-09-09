@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentPositionTactic, PosInExpr, TheType}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, DependentPositionTactic, PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex.createMonitorSpecificationConjecture
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
@@ -18,6 +18,7 @@ import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 import testHelper.ParserFactory._
 
 import scala.language.postfixOps
+import org.scalatest.LoneElement._
 
 /**
  * Created by smitsch on 3/8/15.
@@ -229,6 +230,27 @@ class ModelplexTacticTests extends TacticTestBase {
     result.subgoals.head.succ should contain only expected
 
     report(expected, result, "Watertank controller monitor (backward tactic)")
+  }
+
+  it should "find correct controller monitor condition by chase" in withMathematica { tool =>
+    val model = KeYmaeraXProblemParser(
+      io.Source.fromInputStream(
+        getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")).mkString)
+
+    val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
+      Variable("f"), Variable("l"), Variable("c"))
+    val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
+    val tactic = ModelPlex.controllerMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*) & simplifier(1)
+    val result = proveBy(modelplexInput, tactic)
+
+    // with ordinary diamond test
+    val expected = "(-1<=fpost()&fpost()<=(m()-l)/ep())&(0<=l&0<=ep())&lpost()=l&cpost()=0".asFormula
+
+    result.subgoals should have size 1
+    result.subgoals.head.ante shouldBe empty
+    result.subgoals.head.succ should contain only expected
+
+    report(expected, result, "Watertank controller monitor (chase)")
   }
 
   it should "find correct controller monitor condition from model file" ignore {
@@ -932,9 +954,25 @@ class ModelplexTacticTests extends TacticTestBase {
     tool.findCounterExample(metric)
   }
 
+  it should "convert inequalities" in withMathematica { _ =>
+    val fml = "x!=y | x>4&y!=3".asFormula
+    ModelPlex.toMetric(fml) shouldBe "min(min(y-x,x-y),max(4-x,min(3-y,y-3))) < 0".asFormula
+  }
+
   it should "convert mixed open/closed formula" in withMathematica { tool =>
     val fml = "x>=y & a<b".asFormula
     ModelPlex.toMetric(fml) shouldBe "max(y-x, a-b)<0".asFormula
+  }
+
+  it should "convert disjunctions of mixed open/closed formula" in withMathematica { tool =>
+    val fml = "x<5 & y>=2 | x>=y & a<b".asFormula
+    ModelPlex.toMetric(fml) shouldBe "min(max(x-5,2-y),max(y-x,a-b)) < 0".asFormula
+  }
+
+  it should "convert disjunction of mixed open/closed formula" in withMathematica { _ =>
+    val fml = "x<=5 | x>=y & a<b".asFormula
+    //@todo metric evaluates to false at the boundary, when x=5 and y>5
+    ModelPlex.toMetric(fml) shouldBe "min(x-5,max(y-x,a-b)) < 0".asFormula
   }
 
 //
