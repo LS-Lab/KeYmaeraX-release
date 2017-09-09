@@ -365,7 +365,8 @@ class CCodeGeneratorTests extends TacticTestBase {
   }
 
   it should "evaluate metric correctly" ignore withMathematica { _ =>
-    //@todo monitor distance on first run evaluates exactly to 0, but should be < 0
+    //@todo mixed open/closed can evaluate to false at the boundary (e.g., x<=5 | x>6 turns into min(x-5,6-x)<0 == false for x=5)
+    //      which is especially problematic when monitor contains equalities, e.g., x=5 | x>6
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
     val monitorExp = ModelPlex.toMetric(io.Source.fromInputStream(inputFile).mkString.asFormula)
     val vars =
@@ -441,6 +442,24 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  }
         |  if (!prg.success) {
         |    prg.state.x = (7); prg.success = 1;
+        |  }
+        |  return prg.state;
+        |}""".stripMargin
+  }
+
+  it should "skip ODEs and repeat loops until success" in {
+    val ctrlPrg = "{x:=2;{x'=4}}*".asProgram
+    val cPrg = new CControllerGenerator()(ctrlPrg)
+    cPrg shouldBe
+      """state ctrlStep(state curr, parameters params, state inputs) {
+        |  struct { state state; int success; } prg = { .state=curr, .success=0 };
+        |  while (!prg.success) {
+        |    {
+        |      prg.state.x = (2); prg.success = 1;
+        |    }
+        |    if (prg.success) {
+        |      prg.success = 1; /* done choosing actuator set values */
+        |    }
         |  }
         |  return prg.state;
         |}""".stripMargin

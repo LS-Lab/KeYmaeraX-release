@@ -40,11 +40,12 @@ class CControllerGenerator extends CodeGenerator {
     case _ => CURR_STATE_NAME + "."
   })
 
-  private def generateProgramBody(ctrl: Program, indent: String)(implicit exprGenerator: Expression => String): String = ctrl match {
+  private def generateProgramBody(prg: Program, indent: String)(implicit exprGenerator: Expression => String): String = prg match {
     case Assign(x, t) => indent + exprGenerator(x) + " = " + exprGenerator(t) + "; prg.success = 1;"
     case AssignAny(x) => indent + exprGenerator(x) + " = " + INPUTS_NAME + "." + nameIdentifier(x) + "; prg.success = 1;"
     case Test(f) => indent + "prg.success = " + exprGenerator(f) + ";"
-    case Loop(_) => ???
+    case Loop(c) => indent + "while (!prg.success) {\n" + generateProgramBody(c, indent + "  ") + "\n" + indent + "}"
+    case _: ODESystem => indent + "prg.success = 1; /* done choosing actuator set values */"
     case Compose(a, b) =>
       s"""$indent{
         |${generateProgramBody(a, indent + "  ")}

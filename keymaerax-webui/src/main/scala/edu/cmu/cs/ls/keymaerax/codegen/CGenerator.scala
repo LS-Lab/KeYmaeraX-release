@@ -32,6 +32,19 @@ object CGenerator {
   /** Prints the state variables struct declaration. */
   def printStateDeclaration(stateVars: Set[BaseVariable]): String =
     printStructDeclaration("state", stateVars)
+
+  /**
+    * Returns a set of names (excluding names in `exclude` and interpreted functions) that are immutable parameters of the
+    * expression `expr`. */
+  def getParameters(expr: Expression, exclude: Set[BaseVariable]): Set[NamedSymbol] =
+    StaticSemantics.symbols(expr)
+      .filter({
+        case Function("abs", None, Real, Real, true) => false
+        case Function("min" | "max", None, Tuple(Real, Real), Real, true) => false
+        case Function(name, _, Unit, _, _) => !exclude.exists(v => v.name == name.stripSuffix("post"))
+        case BaseVariable(name, _, _) => !exclude.exists(v => v.name == name.stripSuffix("post"))
+        case _ => false //@note any other function or differential symbol
+      })
 }
 
 /**
@@ -58,17 +71,4 @@ class CGenerator(bodyGenerator: CodeGenerator) extends CodeGenerator {
   }
 
   private val RESERVED_NAMES = Set("main", "Main")
-
-  /**
-    * Returns a set of names (excluding names in `vars` and interpreted functions) that are immutable parameters of the
-    * expression `expr`. */
-  private def getParameters(expr: Expression, exclude: Set[BaseVariable]): Set[NamedSymbol] =
-    StaticSemantics.symbols(expr)
-      .filter({
-        case Function("abs", None, Real, Real, true) => false
-        case Function("min" | "max", None, Tuple(Real, Real), Real, true) => false
-        case Function(name, _, Unit, _, _) => !exclude.exists(v => v.name == name.stripSuffix("post"))
-        case _: Function => false
-        case BaseVariable(name, _, _) => !exclude.exists(v => v.name == name.stripSuffix("post"))
-      })
 }
