@@ -20,14 +20,15 @@
         <div class="row">
             <div class="col-md-12">
                 <label for="modelName">Model name</label>
-                <div class="input-group">
+                <div ng-class="{'input-group':true,
+                                'has-success':(model.kind!='kyx' || model.modelName) && model.content && model.content.length > 0 && model.content.indexOf('__________') < 0}">
                     <input type="text" ng-model="model.modelName" class="form-control"
                            name="modelName" id="modelName" placeholder="Model Name"/>
-                    <a ng-class="{'input-group-addon':true, 'btn':true, 'btn-default':true,
-                                      'disabled':(model.kind=='kyx' && !model.modelName) || !model.content || model.content.length <= 0}"
+                    <a ng-class="{'btn':true, 'btn-default':true, 'input-group-addon':true,
+                                  'disabled':(model.kind=='kyx' && !model.modelName) || !model.content || model.content.length <= 0}"
                        ng-click="uploadContent(false)" ng-cloak>Save</a>
-                    <a ng-class="{'input-group-addon':true, 'btn':true, 'btn-default':true,
-                                      'disabled':!model.modelName || !model.content || model.content.length <= 0 || model.content.indexOf('__________') >= 0 || model.kind == 'kya'}"
+                    <a ng-class="{'btn':true, 'btn-default':true, 'input-group-addon':true,
+                                  'disabled':!model.modelName || !model.content || model.content.length <= 0 || model.content.indexOf('__________') >= 0 || model.kind == 'kya'}"
                        ng-click="uploadContent(true)" ng-cloak>Start Proof</a>
                 </div>
             </div>
@@ -38,7 +39,10 @@
                     <uib-tab index="0" heading="Edit">
                         <div class="row">
                             <div class="col-md-12">
-                                <textarea class="k4-modeleditor" rows="20" ng-model="model.content" />
+                                <span class="text-danger" ng-if="model.content.indexOf('__________')>=0">
+                                    Assignment: please fill in the __________ placeholders</span>
+                                <textarea class="k4-modeleditor" rows="20" ng-model="model.content">
+                                </textarea>
                             </div>
                         </div>
                     </uib-tab>
@@ -51,5 +55,5 @@
     </form>
 </div>
 <div class="modal-footer">
-    <button class="btn btn-primary" ng-click="close()">Cancel</button>
+    <button class="btn btn-default" ng-click="close()">Cancel</button>
 </div>
