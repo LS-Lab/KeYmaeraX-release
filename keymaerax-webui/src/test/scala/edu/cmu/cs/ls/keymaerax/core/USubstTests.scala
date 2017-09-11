@@ -111,6 +111,17 @@ class USubstTests extends SystemTestBase {
     s(prem) should be ("x^f(y,z)>=0 <-> !!(--x)^f(--y,z)>=0".asFormula)
   }
 
+  it should "treat pair associativity as different substitutions" in {
+    val premLeft = "p((x,y),z) <-> !!p((--x, --y),z)".asFormula
+    val premRight = "p(x,(y,z)) <-> !!p(--x, (--y,z))".asFormula
+    val sLeft = USubst(("p((._0,._1),._2)".asFormula ~> "._0^f(._1,._2)>=0".asFormula)::Nil)
+    val sRight = USubst(("p(._0,(._1,._2))".asFormula ~> "._0^f(._1,._2)>=0".asFormula)::Nil)
+    sLeft(premLeft) shouldBe "x^f(y,z)>=0 <-> !!(--x)^f(--y,z)>=0".asFormula
+    sLeft(premRight) shouldBe premRight
+    sRight(premLeft) shouldBe premLeft
+    sRight(premRight) shouldBe "x^f(y,z)>=0 <-> !!(--x)^f(--y,z)>=0".asFormula
+  }
+
   it should "substitute unary predicate with binary predicate" in {
     val s = USubst(
       SubstitutionPair("p(.)".asFormula, "r(.,g())".asFormula) ::

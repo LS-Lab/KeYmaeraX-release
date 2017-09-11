@@ -20,6 +20,17 @@ import SetLattice.bottom
 import SetLattice.allVars
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
+/** Admissibility conditions. */
+object SubstitutionAdmissibility {
+  /** Checks whether the term `t` used as a function/predicate argument is admissible for substitution, i.e., is
+    * Nothing, a DotTerm, or composed of only DotTerms. */
+  def isSubstitutableArg(t: Term): Boolean = t match {
+    case Nothing => true
+    case _: DotTerm => true
+    case Pair(l, r) => isSubstitutableArg(l) && isSubstitutableArg(r)
+    case _ => false
+  }
+}
 
 /**
   * Representation of a substitution replacing `what` with `repl` uniformly, everywhere.
@@ -130,20 +141,13 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case a: ProgramConst             => a
     case a: SystemConst              => a
     case a: DifferentialProgramConst => a
-    case PredOf(p: Function, arg) if !p.interpreted && (arg match { case Nothing => true case _ => isDots(arg) }) => p
-    case FuncOf(f: Function, arg) if !f.interpreted && (arg match { case Nothing => true case _ => isDots(arg) }) => f
+    case PredOf(p: Function, arg) if !p.interpreted && SubstitutionAdmissibility.isSubstitutableArg(arg) => p
+    case FuncOf(f: Function, arg) if !f.interpreted && SubstitutionAdmissibility.isSubstitutableArg(arg) => f
     case PredicationalOf(p: Function, DotFormula)  if !p.interpreted => p
     case d: DotTerm                  => d
     case DotFormula                  => DotFormula
     case Nothing => assert(repl == Nothing, "can replace Nothing only by Nothing, and nothing else"); Nothing // it makes no sense to substitute Nothing
     case _ => throw new CoreException("Nonsubstitutable expression " + this)
-  }
-
-  /** Checks whether the term `t` is a DotTerm or composed of only DotTerms. */
-  private def isDots(t: Term): Boolean = t match {
-    case _: DotTerm => true
-    case Pair(l, r) => isDots(l) && isDots(r)
-    case _ => false
   }
 
   /**
@@ -152,10 +156,10 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     */
   private[core] def sameHead(other: ApplicationOf): Boolean = what match {
     case FuncOf(lf, arg) =>
-      assert(arg match { case DotTerm(_, _) | Nothing => true case p: Pair => isDots(p) case _ => false }, "Only DotTerm/Nothing allowed as argument")
+      assert(SubstitutionAdmissibility.isSubstitutableArg(arg), "Only DotTerm/Nothing allowed as argument")
       other match { case FuncOf(rf, _) => lf == rf case _ => false }
     case PredOf(lf, arg) =>
-      assert(arg match { case DotTerm(_, _) | Nothing => true case p: Pair => isDots(p) case _ => false }, "Only DotTerm/Nothing allowed as argument")
+      assert(SubstitutionAdmissibility.isSubstitutableArg(arg), "Only DotTerm/Nothing allowed as argument")
       other match { case PredOf(rf, _) => lf == rf case _ => false }
     case PredicationalOf(lf, arg) =>
       assert(arg match { case DotFormula => true case _ => false }, "Only DotFormula allowed as argument")
@@ -352,7 +356,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[FuncOf] && sp.sameHead(app))
         val FuncOf(wf, wArg) = subs.what
         assert(wf == of, "match on same function heads")
-        assert(isDots(wArg) || wArg == Nothing)
+        assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
         USubst(toSubsPairs(wArg, theta)).usubst(subs.repl.asInstanceOf[Term])
@@ -389,7 +393,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[PredOf] && sp.sameHead(app))
         val PredOf(wp, wArg) = subs.what
         assert(wp == op, "match only if same head")
-        assert(isDots(wArg) || wArg == Nothing)
+        assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
         USubst(toSubsPairs(wArg, theta)).usubst(subs.repl.asInstanceOf[Formula])
@@ -507,13 +511,6 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   }
 
   // admissibility
-
-  /** Checks whether the term `t` is a DotTerm or composed of only DotTerms. */
-  private def isDots(t: Term): Boolean = t match {
-    case _: DotTerm => true
-    case Pair(l, r) => isDots(l) && isDots(r)
-    case _ => false
-  }
 
   /**
     * Is this uniform substitution U-admissible for expression e?
