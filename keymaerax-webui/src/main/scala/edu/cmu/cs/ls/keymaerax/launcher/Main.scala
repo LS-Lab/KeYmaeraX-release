@@ -84,7 +84,7 @@ object Main {
 ////        edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms.prepopulateDerivedLemmaDatabase()
 //      }
 //    }
-    //@todo skip -ui -launch
+
     if(System.getenv().containsKey("HyDRA_SSL") && System.getenv("HyDRA_SSL").equals("on")) {
       edu.cmu.cs.ls.keymaerax.hydra.SSLBoot.main(args)
     } else {

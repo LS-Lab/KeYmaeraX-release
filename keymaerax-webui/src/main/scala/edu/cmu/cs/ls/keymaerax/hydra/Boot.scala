@@ -164,7 +164,9 @@ object HyDRAInitializer {
   def nextOption(map: OptionMap, list: List[String]): OptionMap = list match {
     case Nil => map
     case "-tool" :: value :: tail => nextOption(map ++ Map('tool -> value), tail)
-    case option :: tail => println("[Error] Unknown option " + option + "\n\n" /*+ usage*/); sys.exit(1)
+    case "-ui" :: tail => nextOption(map, tail)
+    case "-launch" :: tail => nextOption(map, tail)
+    case option :: tail => println("[Warning] Unknown option " + option + "\n\n" /*+ usage*/); nextOption(map, tail)
   }
 
   private def createTool(options: OptionMap, config: ToolProvider.Configuration, preferredTool: String): Unit = {
