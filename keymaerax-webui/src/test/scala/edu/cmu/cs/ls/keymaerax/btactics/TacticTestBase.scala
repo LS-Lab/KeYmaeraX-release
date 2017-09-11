@@ -40,6 +40,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     case _ => false
   })
 
+  println("QE log path: " + qeLogPath + " (enabled: " + LOG_QE + ")")
+
   /** Tests that want to record proofs in a database. */
   class DbTacticTester {
     lazy val user: UserPOJO = db.getUser("guest").get
