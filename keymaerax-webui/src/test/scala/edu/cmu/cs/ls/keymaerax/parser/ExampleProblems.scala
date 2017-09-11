@@ -4,7 +4,8 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Number, Plus, PrettyPrinter, Real, Times, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Number, Plus, PrettyPrinter, Real, Times, Trafo, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
@@ -198,6 +199,63 @@ class ExampleProblems extends FlatSpec with Matchers {
       """.stripMargin
 
     val thrown = the [ParseException] thrownBy KeYmaeraXProblemParser.parseProblem(problem)
-    thrown.getMessage should include ("Function/predicate f defined using undeclared •_3")
+    thrown.getMessage should include ("Function/predicate f((•_0,(•_1,•_2))) defined using undeclared •_3")
+  }
+
+  it should "parse program definitions" in {
+    val problem =
+      """
+        |Functions.
+        |  CP a ::= { x:=*; ?x<=5; ++ x:=y; }.
+        |End.
+        |
+        |ProgramVariables.
+        |  R x.
+        |  R y.
+        |End.
+        |
+        |Problem.
+        |  y<=5 -> [a;]x<=5
+        |End.
+      """.stripMargin
+
+    val (d, formula) = KeYmaeraXProblemParser.parseProblem(problem)
+    d.decls should contain key ("a", None)
+    d.decls(("a", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Unit
+      codomain shouldBe Trafo
+      interpretation shouldBe "x:=*; ?x<=5; ++ x:=y;".asProgram
+    }
+    formula shouldBe "y<=5 -> [x:=*; ?x<=5; ++ x:=y;]x<=5".asFormula
+  }
+
+  it should "expand functions and predicates in program definitions" in {
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
+    val problem =
+      """
+        |Functions.
+        |  R f(R) = (.+2).
+        |  B p(R,R) <-> (._0<=._1).
+        |  CP a ::= { x:=*; ?p(x,5); ++ x:=f(y); }.
+        |End.
+        |
+        |ProgramVariables.
+        |  R x.
+        |  R y.
+        |End.
+        |
+        |Problem.
+        |  y<=5 -> [a;]x<=5
+        |End.
+      """.stripMargin
+
+    val (d, formula) = KeYmaeraXProblemParser.parseProblem(problem)
+    d.decls should contain key ("a", None)
+    d.decls(("a", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Unit
+      codomain shouldBe Trafo
+      interpretation shouldBe "x:=*; ?p(x,5); ++ x:=f(y);".asProgram
+    }
+    formula shouldBe "y<=5 -> [x:=*; ?x<=5; ++ x:=y+2;]x<=5".asFormula
   }
 }

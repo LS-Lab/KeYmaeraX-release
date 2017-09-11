@@ -109,6 +109,8 @@ private object RDIA    extends OPERATOR(">") {
   override def regexp = """\>""".r
 }
 
+private object PRG_DEF  extends OPERATOR("::=")
+
 private object COMMA   extends OPERATOR(",")
 
 private object PRIME   extends OPERATOR("'")
@@ -635,6 +637,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
 
       case LDIA.startPattern(_*) => consumeTerminalLength(LDIA, loc)
       case RDIA.startPattern(_*) => consumeTerminalLength(RDIA, loc)
+
+      case PRG_DEF.startPattern(_*) => consumeTerminalLength(PRG_DEF, loc)
 
       case _ if s.isEmpty => None
         //@todo should be LexException inheriting

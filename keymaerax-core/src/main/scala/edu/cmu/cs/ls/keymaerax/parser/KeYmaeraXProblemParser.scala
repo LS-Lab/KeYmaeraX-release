@@ -223,6 +223,7 @@ object KeYmaeraXDeclarationsParser {
         e match {
           case t: Term => ExpressionTraversal.traverse(traverseFn, t)
           case f: Formula => ExpressionTraversal.traverse(traverseFn, f)
+          case p: Program => ExpressionTraversal.traverse(traverseFn, p)
         }
         dots.toSet
       }
@@ -236,12 +237,16 @@ object KeYmaeraXDeclarationsParser {
       val what = signature._2 match {
         case Real => FuncOf(Function(name._1, name._2, sig, signature._2), arg)
         case Bool => PredOf(Function(name._1, name._2, sig, signature._2), arg)
+        case Trafo =>
+          assert(name._2.isEmpty, "Expected no index in program const name, but got " + name._2)
+          assert(signature._1.getOrElse(Unit) == Unit, "Expected domain Unit in program const signature, but got " + signature._1)
+          ProgramConst(name._1)
       }
       val repl = elaborateToFunctions(signature._3.get)
 
-      val undeclaredDots = dotsOf(repl) -- dotsOf(what.child)
+      val undeclaredDots = dotsOf(repl) -- dotsOf(arg)
       if (undeclaredDots.nonEmpty) throw ParseException(
-        "Function/predicate " + what.func.prettyString + " defined using undeclared " + undeclaredDots.map(_.prettyString).mkString(","),
+        "Function/predicate " + what.prettyString + " defined using undeclared " + undeclaredDots.map(_.prettyString).mkString(","),
         UnknownLocation)
 
       SubstitutionPair(what, repl)
@@ -249,12 +254,18 @@ object KeYmaeraXDeclarationsParser {
 
     /** Elaborates variable uses of declared functions. */
     private def elaborateToFunctions[T <: Expression](expr: T): T = {
-      val elaboratables = StaticSemantics.freeVars(expr).toSet[Variable].filter({
-        case BaseVariable(name, i, _) => decls.contains((name, i)) && decls((name, i))._1 == Some(Unit)
-        case _ => false
-      })
-      elaboratables.foldLeft(expr)((e, v) =>
-        SubstitutionHelper.replaceFree(e)(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing)))
+      val freeVars = StaticSemantics.freeVars(expr)
+      if (freeVars.isInfinite) {
+        //@note program constant occurs
+        expr
+      } else {
+        val elaboratables = StaticSemantics.freeVars(expr).toSet[Variable].filter({
+          case BaseVariable(name, i, _) => decls.contains((name, i)) && decls((name, i))._1 == Some(Unit)
+          case _ => false
+        })
+        elaboratables.foldLeft(expr)((e, v) =>
+          SubstitutionHelper.replaceFree(e)(v, FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing)))
+      }
     }
   }
 
@@ -413,7 +424,7 @@ object KeYmaeraXDeclarationsParser {
     }
 
     val afterName = ts.tail.tail //skip over IDENT and REAL/BOOL tokens.
-    if(afterName.head.tok.equals(LPAREN)) {
+    if (afterName.head.tok == LPAREN) {
       val (domainSort, domainSortRemainder) = parseFunctionDomainSort(afterName, nameToken)
 
       val (interpretation, remainder) = parseInterpretation(sort, domainSortRemainder, nameToken)
@@ -422,11 +433,16 @@ object KeYmaeraXDeclarationsParser {
         "Expected declaration to end with . but found " + remainder.last, remainder.last.loc, "Reading a declaration")
 
       (( (nameTerminal.name, nameTerminal.index), (Some(domainSort), sort, interpretation, nameToken)), remainder.tail)
-    }
-    else if(afterName.head.tok.equals(PERIOD)) {
+    } else if (afterName.head.tok == PRG_DEF) {
+      val (interpretation, remainder) = parseInterpretation(sort, afterName, nameToken)
+
+      checkInput(remainder.last.tok.equals(PERIOD),
+        "Expected declaration to end with . but found " + remainder.last, remainder.last.loc, "Reading a declaration")
+
+      (( (nameTerminal.name, nameTerminal.index), (None, sort, interpretation, nameToken)), remainder.tail)
+    } else if (afterName.head.tok == PERIOD) {
       (( (nameTerminal.name, nameTerminal.index) , (None, sort, None, nameToken) ), afterName.tail)
-    }
-    else {
+    } else {
       throw new ParseException("Variable declarations should end with a period.", afterName.head.loc, afterName.head.tok.img, ".", "", "declaration parse")
     }
   }
@@ -479,20 +495,25 @@ object KeYmaeraXDeclarationsParser {
     *          _2: The reamining tokens.
     */
   private def parseInterpretation(sort: Sort, tokens : List[Token], of: Token) : (Option[Expression], List[Token]) = {
+    /** Reads and parses a definition ending in `defDelim`PERIOD, and returns the remaining tokens after the definition. */
+    def parseDef(tokens: List[Token], defDelim: Terminal): (Option[Expression], List[Token]) = {
+      val decl = tokens.tail.sliding(2).toList.span({case Token(delim, _)::Token(PERIOD, _)::Nil => delim != defDelim case _ => true})
+      if (decl._2.isEmpty) throw new ParseException("Non-delimited definition",
+        tokens.head.loc.spanTo(decl._1.last.last.loc), decl._1.last.last.toString, ")", "", "parsing interpretation")
+      val (definition, remainder) = (decl._1.map(_.head) :+ decl._2.head.head, decl._2.map(_.last))
+      checkInput(remainder.head.tok == PERIOD,
+        "Non-delimited definition. Found: " + remainder.head, tokens.head.loc.spanTo(remainder.head.loc), "parsing interpretation")
+      val expr = KeYmaeraXParser.parse(definition :+ Token(EOF))
+      if (expr.sort != sort) throw new ParseException("Definition sort does not match declaration",
+        tokens.head.loc.spanTo(remainder.head.loc), "<" + expr.sort + ">", "<" + sort + ">", "", "parsing function interpretation")
+      else (Some(KeYmaeraXParser.parse(definition :+ Token(EOF))), remainder)
+    }
+
     (sort, tokens.head.tok) match {
-      case (Real, EQUIV) => throw new ParseException("Operator and sort mismatch", tokens.head.loc, EQUIV.img + " <" + EQUIV + ">", EQ.img + " <" + EQ + ">", "", "parsing function interpretation")
-      case (Bool, EQ)    => throw new ParseException("Operator and sort mismatch", tokens.head.loc, EQ.img + " <" + EQ + ">", EQUIV.img + " <" + EQUIV + ">", "", "parsing function interpretation")
-      case (_, EQUIV | EQ) =>
-        val decl = tokens.tail.sliding(2).toList.span({case Token(RPAREN, _)::Token(PERIOD, _)::Nil => false case _ => true})
-        if (decl._2.isEmpty) throw new ParseException("Non-delimited function definition",
-          tokens.head.loc.spanTo(decl._1.last.last.loc), decl._1.last.last.toString, ")", "", "parsing function interpretation")
-        val splitAtPeriod = (decl._1.map(_.head) :+ decl._2.head.head, decl._2.map(_.last))
-        checkInput(splitAtPeriod._2.head.tok == PERIOD,
-          "Non-delimited function definition. Found: " + splitAtPeriod._2.head, tokens.head.loc.spanTo(splitAtPeriod._2.head.loc), "parsing function interpretation")
-        val expr = KeYmaeraXParser.parse(splitAtPeriod._1 :+ Token(EOF))
-        if (expr.sort != sort) throw new ParseException("Definition sort does not match declaration",
-          tokens.head.loc.spanTo(splitAtPeriod._2.head.loc), "<" + expr.sort + ">", "<" + sort + ">", "", "parsing function interpretation")
-        else (Some(expr), splitAtPeriod._2)
+      case (Real|Trafo, EQUIV) => throw new ParseException("Operator and sort mismatch", tokens.head.loc, EQUIV.img + " <" + EQUIV + ">", EQ.img + " <" + EQ + ">", "", "parsing function interpretation")
+      case (Bool|Trafo, EQ)    => throw new ParseException("Operator and sort mismatch", tokens.head.loc, EQ.img + " <" + EQ + ">", EQUIV.img + " <" + EQUIV + ">", "", "parsing function interpretation")
+      case (_, EQUIV | EQ) => parseDef(tokens, RPAREN)
+      case (_, PRG_DEF) => parseDef(tokens, RBRACE)
       case _ => (None, tokens)
     }
   }
