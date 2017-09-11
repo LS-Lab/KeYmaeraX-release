@@ -4,6 +4,9 @@
  */
 package edu.cmu.cs.ls.keymaerax.codegen
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.codegen.CFormulaTermGenerator._
 import edu.cmu.cs.ls.keymaerax.codegen.CGenerator._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -26,12 +29,13 @@ object CGenerator {
       |""".stripMargin
 
   /** Prints the parameters struct declaration. */
-  def printParameterDeclaration(parameters: Set[NamedSymbol]): String =
-    printStructDeclaration("parameters", parameters)
+  def printParameterDeclaration(parameters: Set[NamedSymbol]): String = printStructDeclaration("parameters", parameters)
 
   /** Prints the state variables struct declaration. */
-  def printStateDeclaration(stateVars: Set[BaseVariable]): String =
-    printStructDeclaration("state", stateVars)
+  def printStateDeclaration(stateVars: Set[BaseVariable]): String = printStructDeclaration("state", stateVars)
+
+  /** Prints the input (non-deterministically assigned variables) struct declaration. */
+  def printInputDeclaration(inputs: Set[BaseVariable]): String = printStructDeclaration("input", inputs)
 
   /**
     * Returns a set of names (excluding names in `exclude` and interpreted functions) that are immutable parameters of the
@@ -45,6 +49,21 @@ object CGenerator {
         case BaseVariable(name, _, _) => !exclude.exists(v => v.name == name.stripSuffix("post"))
         case _ => false //@note any other function or differential symbol
       })
+
+  /** Returns a set of names whose values are chosen nondeterministically in the program `expr` (empty if `expr` is not
+    * a program). */
+  def getInputs(expr: Expression): Set[BaseVariable] = expr match {
+    case prg: Program =>
+      val inputs = scala.collection.mutable.Set[BaseVariable]()
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+        override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
+          case AssignAny(v: BaseVariable) => inputs += v; Left(None)
+          case _ => Left(None)
+        }
+      }, prg)
+      inputs.toSet
+    case _ => Set()
+  }
 }
 
 /**
@@ -62,11 +81,13 @@ class CGenerator(bodyGenerator: CodeGenerator) extends CodeGenerator {
     val names = StaticSemantics.symbols(expr).map(nameIdentifier)
     require(names.intersect(RESERVED_NAMES).isEmpty, "Unexpected reserved C names encountered: " + names.intersect(RESERVED_NAMES).mkString(","))
     val parameters = getParameters(expr, stateVars)
+    val inputVars = getInputs(expr)
 
     printHeader(fileName) +
       INCLUDE_STATEMENTS +
       printParameterDeclaration(parameters) +
       printStateDeclaration(stateVars) +
+      printInputDeclaration(inputVars) +
       bodyGenerator(expr, stateVars, fileName)
   }
 

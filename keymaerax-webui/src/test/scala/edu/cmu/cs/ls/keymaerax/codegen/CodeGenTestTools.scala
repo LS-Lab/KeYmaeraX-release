@@ -15,17 +15,20 @@ import org.scalatest.Matchers._
 object CodeGenTestTools {
 
   /** Augments ModelPlex monitor `code` with a sample main method calling the monitor (for compilation purposes). */
-  def augmentMonitorMain(code: String): String = {
+  def augmentMonitorMain(code: String, hasParams: Boolean, hasInputs: Boolean): String = {
+    val (defineParams, paramsArg) = if (hasParams) ("parameters params = { 0 };", "&params") else ("", "(const parameters* const)0")
+    val (defineInputs, inputsArg) = if (hasInputs) ("input in = { 0 };", "&in") else ("", "(const input* const)0")
+
     s"""$code
        |
-       |state ctrl(state curr, parameters params, state input) { return curr; }
-       |state fallback(state curr, parameters params, state input) { return curr; }
+       |state ctrl(state curr, const parameters* const params, const input* const in) { return curr; }
+       |state fallback(state curr, const parameters* const params, const input* const in) { return curr; }
        |
        |int main() {
        |  state current = { 0 }; /* compound literal initialization requires gcc -Wno-missing-field-initializers */
-       |  parameters params = { 0 };
-       |  state input = { 0 };
-       |  while (true) monitoredCtrl(current, params, input, &ctrl, &fallback);
+       |  $defineParams
+       |  $defineInputs
+       |  while (true) monitoredCtrl(current, $paramsArg, $inputsArg, &ctrl, &fallback);
        |  return 0;
        |}
        |

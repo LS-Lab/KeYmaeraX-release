@@ -28,22 +28,22 @@ class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
 
     val monitorDistFuncHead =
       s"""/* Computes distance to safety boundary on prior and current state (negative == safe, positive == unsafe) */
-         |long double boundaryDist(state pre, state curr, parameters params)""".stripMargin
+         |long double boundaryDist(state pre, state curr, const parameters* const params)""".stripMargin
 
     val monitorSatFuncHead =
       s"""/* Evaluates monitor condition in prior and current state */
-        |bool monitorSatisfied(state pre, state curr, parameters params)""".stripMargin
+        |bool monitorSatisfied(state pre, state curr, const parameters* const params)""".stripMargin
 
     val monitoredCtrlFuncHead =
       s"""/* Run controller `ctrl` monitored, return `fallback` if `ctrl` violates monitor */
-        |state monitoredCtrl(state $MONITOR_CURR_STATE_NAME, parameters $MONITOR_PARAMS_NAME, state $INPUT_NAME,
-        |                    state (*ctrl)(state,parameters,state), state (*fallback)(state,parameters,state))""".stripMargin
+        |state monitoredCtrl(state $MONITOR_CURR_STATE_NAME, const parameters* const $MONITOR_PARAMS_NAME, const input* const $INPUT_NAME,
+        |                    state (*ctrl)(state,const parameters* const,const input* const), state (*fallback)(state,const parameters* const,const input* const))""".stripMargin
 
     val monitoredCtrlFuncBody =
       s"""  state pre = curr;
-         |  state post = (*ctrl)(pre,params,input);
-         |  if (!monitorSatisfied(pre,post,params)) post = (*fallback)(pre,params,input);
-         |  return post;""".stripMargin
+         |  state post = (*ctrl)(pre,params,in);
+         |  if (!monitorSatisfied(pre,post,params)) return (*fallback)(pre,params,in);
+         |  else return post;""".stripMargin
 
     val (distBody, satBody) = kind match {
       case "boolean" => (printMonitor(expr, parameters) + " ? 0.0 : 1.0", "boundaryDist(pre,curr,params) <= 0.0")
@@ -73,7 +73,7 @@ class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
   /** The name of the monitor function argument representing monitor parameters. */
   private val MONITOR_PARAMS_NAME = "params"
   /** The name of the monitor function argument representing controller inputs. */
-  private val INPUT_NAME = "input"
+  private val INPUT_NAME = "in"
 
   /** Some reserved names, such as: main, Main */
   private val RESERVED_NAMES = Set("main", "Main")
@@ -93,9 +93,9 @@ class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
 
   /** Compiles primitive expressions with the appropriate params/curr/pre struct location. */
   private def primitiveExprGenerator(parameters: Set[NamedSymbol]) = new CFormulaTermGenerator({
-    case t: Variable if  parameters.contains(t) => "params."
+    case t: Variable if  parameters.contains(t) => "params->"
     case t: Variable if !parameters.contains(t) => "pre."
-    case FuncOf(fn, Nothing) if  parameters.contains(fn) => "params."
+    case FuncOf(fn, Nothing) if  parameters.contains(fn) => "params->"
     case FuncOf(fn@Function(fname, _, _, _, _), Nothing) if !parameters.contains(fn) && fname.endsWith("post") => "curr."
     case FuncOf(fn, Nothing) if !parameters.contains(fn) && !fn.name.endsWith("post") =>
       throw new CodeGenerationException("Non-posterior, non-parameter function symbol is not supported")
