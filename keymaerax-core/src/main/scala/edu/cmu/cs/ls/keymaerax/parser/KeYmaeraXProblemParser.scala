@@ -211,6 +211,22 @@ object KeYmaeraXDeclarationsParser {
           (Pair(lDots, rDots), rNextIdx)
       }
 
+      /** Returns the dots used in expression `e`. */
+      def dotsOf(e: Expression): Set[DotTerm] = {
+        val dots = scala.collection.mutable.Set[DotTerm]()
+        val traverseFn = new ExpressionTraversalFunction() {
+          override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
+            case d: DotTerm => dots += d; Left(None)
+            case _ => Left(None)
+          }
+        }
+        e match {
+          case t: Term => ExpressionTraversal.traverse(traverseFn, t)
+          case f: Formula => ExpressionTraversal.traverse(traverseFn, f)
+        }
+        dots.toSet
+      }
+
       val (arg, sig) = signature._1 match {
         case Some(Unit) => (Nothing, Unit)
         case Some(s@Tuple(_, _)) => (toDots(s, 0)._1, s)
@@ -221,7 +237,14 @@ object KeYmaeraXDeclarationsParser {
         case Real => FuncOf(Function(name._1, name._2, sig, signature._2), arg)
         case Bool => PredOf(Function(name._1, name._2, sig, signature._2), arg)
       }
-      SubstitutionPair(what, elaborateToFunctions(signature._3.get))
+      val repl = elaborateToFunctions(signature._3.get)
+
+      val undeclaredDots = dotsOf(repl) -- dotsOf(what.child)
+      if (undeclaredDots.nonEmpty) throw ParseException(
+        "Function/predicate " + what.func.prettyString + " defined using undeclared " + undeclaredDots.map(_.prettyString).mkString(","),
+        UnknownLocation)
+
+      SubstitutionPair(what, repl)
     }
 
     /** Elaborates variable uses of declared functions. */

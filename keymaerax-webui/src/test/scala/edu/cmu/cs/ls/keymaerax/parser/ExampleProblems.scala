@@ -4,7 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Number, Plus, Real, Times, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Number, Plus, PrettyPrinter, Real, Times, Tuple, Unit}
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
@@ -182,5 +182,22 @@ class ExampleProblems extends FlatSpec with Matchers {
       interpretation shouldBe Plus(DotTerm(Real, Some(0)), Times(DotTerm(Real, Some(1)), DotTerm(Real, Some(2))))
     }
     formula shouldBe KeYmaeraXParser("2+3*4>3")
+  }
+
+  it should "detect undeclared dots" in {
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
+    val problem =
+      """
+        |Functions.
+        |  R f(R,R,R) = (._1 + ._2*._3).
+        |End.
+        |
+        |Problem.
+        |  f(2,3,4)>3
+        |End.
+      """.stripMargin
+
+    val thrown = the [ParseException] thrownBy KeYmaeraXProblemParser.parseProblem(problem)
+    thrown.getMessage should include ("Function/predicate f defined using undeclared •_3")
   }
 }
