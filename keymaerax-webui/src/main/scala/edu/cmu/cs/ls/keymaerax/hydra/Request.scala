@@ -726,7 +726,7 @@ class ImportExampleRepoRequest(db: DBAbstraction, userId: String, repoUrl: Strin
       DatabasePopulator.importJson(db, userId, repoUrl, prove=false)
       BooleanResponse(flag=true) :: Nil
     } else if (repoUrl.endsWith(".kya")) {
-      DatabasePopulator.importKya(db, userId, repoUrl, prove=false)
+      DatabasePopulator.importKya(db, userId, repoUrl, prove=false, Nil)
       BooleanResponse(flag=true) :: Nil
     } else {
       new ErrorResponse("Unknown repository type " + repoUrl + ". Expected .json or .kya") :: Nil
@@ -1077,15 +1077,14 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
 class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: String) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
     try {
-      val userId = archiveName.stripPrefix("http://").stripPrefix("https://").replaceAll("/", "-")
+      val userId = uri
+      val sanitizedUserId = uri.replaceAllLiterally("/", "%2F").replaceAllLiterally(":", "%3A")
       val pwd = "guest"
       val userExists = db.userExists(userId)
       if (!userExists) db.createUser(userId, pwd, "3")
 
-      if (db.getModelList(userId).isEmpty) {
-        //@todo actually check model content (existing models might be outdated)
-        DatabasePopulator.importKya(db, userId, uri, prove=false)
-      }
+      val models = db.getModelList(userId)
+      DatabasePopulator.importKya(db, userId, uri, prove=false, models)
 
       //@todo template engine, e.g., twirl, or at least figure out how to parse from a string
       val html =
@@ -1123,7 +1122,7 @@ class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: Strin
             <script src="/js/controllers/login.js"></script>
             <script src="/js/controllers/serverinfo.js"></script>
 
-            <div ng-controller="LoginCtrl" ng-init={"login('" + userId + "','" + pwd + "',true);"}></div>
+            <div ng-controller="LoginCtrl" ng-init={"login('" + sanitizedUserId + "','" + pwd + "',true);"}></div>
           </body>
         </html>
 

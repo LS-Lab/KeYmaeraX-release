@@ -46,6 +46,8 @@ class InMemoryDB extends DBAbstraction {
 
   override def getUser(username: String): Option[UserPOJO] = Some(new UserPOJO(username, 1))
 
+  override def getTempUsers: List[UserPOJO] = Nil
+
   override def updateConfiguration(config: ConfigurationPOJO): Unit = { configs(config.name) = config }
 
   //Proofs and Proof Nodes

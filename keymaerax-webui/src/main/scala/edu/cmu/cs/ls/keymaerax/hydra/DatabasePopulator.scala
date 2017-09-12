@@ -30,13 +30,14 @@ object DatabasePopulator {
   }
 
   /** Imports an archive from URL. Optionally proves the models when tactics are present. */
-  def importKya(db: DBAbstraction, user: String, url: String, prove: Boolean = false): Unit = {
+  def importKya(db: DBAbstraction, user: String, url: String, prove: Boolean, exclude: List[ModelPOJO]): Unit = {
     //@note use tactic name as description if entry does not come with a description itself
     readKya(url)
       .map(e =>
         if (e.description.isDefined) e
         else TutorialEntry(e.name, e.model,
           e.tactic match { case Some((tname, _, _)) => Some(tname) case None => None }, e.title, e.link, e.tactic))
+      .filterNot(e => exclude.exists(_.name == e.name))
       .foreach(DatabasePopulator.importModel(db, user, prove = false))
   }
 

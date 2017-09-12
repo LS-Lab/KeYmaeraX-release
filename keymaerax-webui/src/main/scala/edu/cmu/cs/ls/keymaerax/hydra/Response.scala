@@ -290,7 +290,7 @@ class LoginResponse(flag:Boolean, user: UserPOJO, sessionToken : Option[String])
     "success" -> (if(flag) JsTrue else JsFalse),
     "sessionToken" -> (if(flag && sessionToken.isDefined) JsString(sessionToken.get) else JsFalse),
     "key" -> JsString("userId"),
-    "value" -> JsString(user.userName),
+    "value" -> JsString(user.userName.replaceAllLiterally("/", "%2F").replaceAllLiterally(":", "%3A")),
     "userAuthLevel" -> JsNumber(user.level),
     "type" -> JsString("LoginResponse")
   )
