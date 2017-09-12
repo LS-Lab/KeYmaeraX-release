@@ -4,7 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Number, Plus, PrettyPrinter, Real, Times, Trafo, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Formula, Number, Plus, PrettyPrinter, Program, Real, Times, Trafo, Tuple, Unit}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -206,7 +206,7 @@ class ExampleProblems extends FlatSpec with Matchers {
     val problem =
       """
         |Functions.
-        |  CP a ::= { x:=*; ?x<=5; ++ x:=y; }.
+        |  HP a ::= { x:=*; ?x<=5; ++ x:=y; }.
         |End.
         |
         |ProgramVariables.
@@ -236,7 +236,7 @@ class ExampleProblems extends FlatSpec with Matchers {
         |Functions.
         |  R f(R) = (.+2).
         |  B p(R,R) <-> (._0<=._1).
-        |  CP a ::= { x:=*; ?p(x,5); ++ x:=f(y); }.
+        |  HP a ::= { x:=*; ?p(x,5); ++ x:=f(y); }.
         |End.
         |
         |ProgramVariables.
@@ -257,5 +257,81 @@ class ExampleProblems extends FlatSpec with Matchers {
       interpretation shouldBe "x:=*; ?p(x,5); ++ x:=f(y);".asProgram
     }
     formula shouldBe "y<=5 -> [x:=*; ?x<=5; ++ x:=y+2;]x<=5".asFormula
+  }
+
+  it should "elaborate in annotations from declarations so far" in {
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
+    val problem =
+      """
+        |Functions.
+        |  B p(R,R) <-> (._0>=._1).
+        |  HP loopBody ::= { x:=x+2; }.
+        |  HP a ::= { x:=1; {loopBody;}*@invariant(p(x,1)) }.
+        |End.
+        |
+        |ProgramVariables.
+        |  R x.
+        |End.
+        |
+        |Problem.
+        |  [a;]x>=1
+        |End.
+      """.stripMargin
+
+    var annotation: Option[(Program, Formula)] = None
+    KeYmaeraXParser.setAnnotationListener((prg, fml) => annotation = Some(prg -> fml))
+    val (d, formula) = KeYmaeraXProblemParser.parseProblem(problem)
+    d.decls should contain key ("a", None)
+    d.decls(("a", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Unit
+      codomain shouldBe Trafo
+      interpretation shouldBe "x:=1; {loopBody;}*".asProgram
+    }
+    d.decls(("loopBody", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Unit
+      codomain shouldBe Trafo
+      interpretation shouldBe "x:=x+2;".asProgram
+    }
+    annotation shouldBe Some("{x:=x+2;}*".asProgram, "x>=1".asFormula)
+    formula shouldBe "[x:=1; {x:=x+2;}*]x>=1".asFormula
+  }
+
+  it should "be allowed to ignore later definitions when elaborating annotations" in {
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
+    val problem =
+      """
+        |Functions.
+        |  HP a ::= { x:=1; {loopBody;}*@invariant(p(x,1)) }.
+        |  B p(R,R) <-> (._0>=._1).
+        |  HP loopBody ::= { x:=x+2; }.
+        |End.
+        |
+        |ProgramVariables.
+        |  R x.
+        |End.
+        |
+        |Problem.
+        |  [a;]x>=1
+        |End.
+      """.stripMargin
+
+    var annotation: Option[(Program, Formula)] = None
+    KeYmaeraXParser.setAnnotationListener((prg, fml) => annotation = Some(prg -> fml))
+    val (d, formula) = KeYmaeraXProblemParser.parseProblem(problem)
+    d.decls should contain key ("a", None)
+    d.decls(("a", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Unit
+      codomain shouldBe Trafo
+      interpretation shouldBe "x:=1; {loopBody;}*".asProgram
+    }
+    d.decls(("loopBody", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Unit
+      codomain shouldBe Trafo
+      interpretation shouldBe "x:=x+2;".asProgram
+    }
+    annotation shouldBe 'defined
+    annotation.get._1 should (be ("{x:=x+2;}*".asProgram) or be ("{loopBody;}*".asProgram))
+    annotation.get._2 should (be ("x>=1".asFormula) or be ("p(x,1)".asFormula))
+    formula shouldBe "[x:=1; {x:=x+2;}*]x>=1".asFormula
   }
 }

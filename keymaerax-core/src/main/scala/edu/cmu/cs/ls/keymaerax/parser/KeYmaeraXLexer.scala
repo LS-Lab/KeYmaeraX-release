@@ -241,6 +241,7 @@ private object FUNCTIONS_BLOCK extends Terminal("Functions.") {
   //not totally necessary -- you'll still get the right behavior because . matches \. But also allows stuff like Functions: which maybe isn't terrible.
 //  override def regexp = """Functions\.""".r
 }
+private object DEFINITIONS_BLOCK extends Terminal("Definitions.")
 private object PROGRAM_VARIABLES_BLOCK extends Terminal("ProgramVariables.")
 private object VARIABLES_BLOCK extends Terminal("Variables.") //used in axioms file...
 private object PROBLEM_BLOCK extends Terminal("Problem.")
@@ -492,6 +493,10 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case FUNCTIONS_BLOCK.startPattern(_*) => mode match {
         case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(FUNCTIONS_BLOCK, loc)
         case _ => throw new Exception("Functions. should only occur when processing files.")
+      }
+      case DEFINITIONS_BLOCK.startPattern(_*) => mode match {
+        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(DEFINITIONS_BLOCK, loc)
+        case _ => throw new Exception("Definitions. should only occur when processing files.")
       }
       case PROGRAM_VARIABLES_BLOCK.startPattern(_*) => mode match {
         case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(PROGRAM_VARIABLES_BLOCK, loc)

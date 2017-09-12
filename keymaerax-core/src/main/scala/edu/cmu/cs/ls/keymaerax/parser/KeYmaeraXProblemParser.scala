@@ -153,6 +153,8 @@ object KeYmaeraXProblemParser {
       case expr : Expression => throw ParseException("problem block" + ":" + "Expected problem to parse to a Formula", expr)
     }
 
+    parser.setAnnotationListener(annotationListener)
+
     parser.semanticAnalysis(problem) match {
       case None =>
       case Some(error) => throw ParseException("Semantic analysis error\n" + error, problem)
@@ -282,21 +284,19 @@ object KeYmaeraXDeclarationsParser {
   def apply(tokens : List[Token]) : (Declaration, List[Token]) =
     parseDeclarations(tokens)
 
+  /** Parses declarations in Functions/Definitions/ProgramVariables/Variables blocks. */
   def parseDeclarations(tokens: List[Token]): (Declaration, List[Token]) = {
-    if(tokens.head.tok.equals(PROGRAM_VARIABLES_BLOCK)) {
+    if (tokens.head.tok == PROGRAM_VARIABLES_BLOCK) {
       val (programVariables, remainder) = processProgramVariables(tokens)
-      val (functions, finalRemainder) = processFunctionSymbols(remainder)
+      val (functions, finalRemainder) = processDefinitions(remainder)
       (programVariables ++ functions, finalRemainder)
-    }
-    else if(tokens.head.tok.equals(FUNCTIONS_BLOCK)) {
-      val (functions, remainder) = processFunctionSymbols(tokens)
+    } else if (tokens.head.tok == FUNCTIONS_BLOCK || tokens.head.tok == DEFINITIONS_BLOCK) {
+      val (functions, remainder) = processDefinitions(tokens)
       val (programVariables, finalRemainder) = processProgramVariables(remainder)
       (programVariables ++ functions, finalRemainder)
-    }
-    else if(tokens.head.tok.equals(VARIABLES_BLOCK)) {
+    } else if (tokens.head.tok == VARIABLES_BLOCK) {
       processVariables(tokens)
-    }
-    else {
+    } else {
       (Declaration(Map()), tokens)
     }
   }
@@ -376,16 +376,18 @@ object KeYmaeraXDeclarationsParser {
 
   }
 
-  def processFunctionSymbols(tokens: List[Token]) : (Declaration, List[Token]) = {
-    if(tokens.head.tok.equals(FUNCTIONS_BLOCK)) {
-      val(funSymbolsTokens, remainder) = tokens.span(x => !x.tok.equals(END_BLOCK))
+  /** Parses the declarations in a Functions/Definitions block. */
+  private def processDefinitions(tokens: List[Token]): (Declaration, List[Token]) = {
+    if (tokens.head.tok == FUNCTIONS_BLOCK || tokens.head.tok == DEFINITIONS_BLOCK) {
+      val(funSymbolsTokens, remainder) = tokens.span(_.tok != END_BLOCK)
       val funSymbolsSection = funSymbolsTokens.tail
-      (Declaration(processDeclarations(funSymbolsSection, Declaration(Map())).decls.map({case d@(i, (domain, sort, interpretation, token)) => domain match {
-        case None => (i, (Some(Unit), sort, interpretation, token)) //@note allow A() declared without parentheses
-        case Some(_) => d
-      }})), remainder.tail)
-    }
-    else (Declaration(Map()), tokens)
+      (Declaration(processDeclarations(funSymbolsSection, Declaration(Map())).decls.map({
+        case d@(i, (domain, sort, interpretation, token)) => domain match {
+          case None => (i, (Some(Unit), sort, interpretation, token)) //@note allow A() declared without parentheses
+          case Some(_) => d
+        }
+      })), remainder.tail)
+    } else (Declaration(Map()), tokens)
   }
 
   def processVariables(tokens: List[Token]) : (Declaration, List[Token]) = {
@@ -520,6 +522,7 @@ object KeYmaeraXDeclarationsParser {
 
   private def parseSort(sortToken : Token, of: Token) : Sort = sortToken.tok match {
     case edu.cmu.cs.ls.keymaerax.parser.IDENT("R", _) => edu.cmu.cs.ls.keymaerax.core.Real
+    case edu.cmu.cs.ls.keymaerax.parser.IDENT("HP", _) => edu.cmu.cs.ls.keymaerax.core.Trafo
     case edu.cmu.cs.ls.keymaerax.parser.IDENT("P", _) => edu.cmu.cs.ls.keymaerax.core.Trafo
     //@todo do we need a cont. trafo sort to do well-formedness checking?
     case edu.cmu.cs.ls.keymaerax.parser.IDENT("CP", _) => edu.cmu.cs.ls.keymaerax.core.Trafo
@@ -541,26 +544,21 @@ object KeYmaeraXDeclarationsParser {
     case _ => throw new Exception(s"Expected an IDENT terminal but found $terminal")
   }
 
-  private def isSort(terminal: Terminal) = terminal match {
-    case REAL => true
-    case BOOL => true
-    case _    => false
-  }
-
   /**
-   * Takes a list of tokens and produces a mapping form names to sorts.
+   * Takes a list of tokens and produces a mapping form names to signatures (domain, codomain, interpretation).
    * @param ts A list of tokens
-   * @return A map from variable names and indices to a pair of:
-   *          _1: The (optional) domain sort (if this is a function declaration
-   *          _2: The sort of the variable, or the codomain sort of a function.
+   * @param accumulated The declarations accumulated so far.
+   * @return Declarations [[Declaration]], i.e., a map from [[Name]] to [[Signature]].
    */
   @tailrec
-  private def processDeclarations(ts: List[Token], sortDeclarations: Declaration) : Declaration =
-    if(ts.nonEmpty) {
+  private def processDeclarations(ts: List[Token], accumulated: Declaration): Declaration =
+    if (ts.nonEmpty) {
+      //@note redirect annotation listener to elaborate products depending on declarations so far
+      val annotationListener = KeYmaeraXParser.annotationListener
+      KeYmaeraXParser.setAnnotationListener((prg, fml) =>
+        annotationListener(accumulated.exhaustiveSubst(prg), accumulated.exhaustiveSubst(fml)))
       val (nextDecl, remainders) = parseDeclaration(ts)
-      processDeclarations(remainders, Declaration(sortDeclarations.decls.updated(nextDecl._1, nextDecl._2)))
-    } else {
-      sortDeclarations
-    }
-
+      KeYmaeraXParser.setAnnotationListener(annotationListener)
+      processDeclarations(remainders, Declaration(accumulated.decls.updated(nextDecl._1, nextDecl._2)))
+    } else accumulated
 }
