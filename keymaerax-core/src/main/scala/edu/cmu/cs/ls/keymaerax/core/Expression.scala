@@ -261,10 +261,10 @@ sealed case class Function(name: String, index: Option[Int] = None, domain: Sort
 }
 
 /** •: Placeholder for terms in uniform substitutions of given sort. Reserved nullary function symbol \\cdot for uniform substitutions are unlike ordinary function symbols */
-sealed case class DotTerm(s: Sort = Real) extends Expression with NamedSymbol with AtomicTerm {
+sealed case class DotTerm(s: Sort = Real, idx: Option[Int] = None) extends Expression with NamedSymbol with AtomicTerm {
   final val sort: Sort = s
   final val name: String = "\\cdot"
-  final val index: Option[Int] = None
+  final val index: Option[Int] = idx
 }
 
 /** The empty argument of Unit sort (as argument for arity 0 function/predicate symbols) */

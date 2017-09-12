@@ -109,6 +109,8 @@ private object RDIA    extends OPERATOR(">") {
   override def regexp = """\>""".r
 }
 
+private object PRG_DEF  extends OPERATOR("::=")
+
 private object COMMA   extends OPERATOR(",")
 
 private object PRIME   extends OPERATOR("'")
@@ -193,7 +195,19 @@ private object DCHOICE  extends OPERATOR("--") {
 
 // pseudos: could probably demote so that some are not OPERATOR
 private object NOTHING extends Terminal("")
-private object DOT     extends OPERATOR("•") //(".")
+
+private case class DOT(index: Option[Int] = None) extends Terminal("•" + (index match {case Some(x) => "_"+x case None => ""})) {
+  override def toString: String = "DOT(\"" + (index match {
+    case None => ""
+    case Some(idx) => idx
+  }) + "\")"
+  override def regexp: Regex = DOT.regexp
+}
+private object DOT {
+  def regexp: Regex = """((?:•(?:\_[0-9]+)?)|(?:\.\_[0-9]+))""".r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
+}
+
 private object PLACE   extends OPERATOR("⎵") //("_")
 private object ANYTHING extends OPERATOR("??") {
   override def regexp = """\?\?""".r
@@ -467,6 +481,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
         case _ => throw new Exception("Encountered a formula begin symbol (Formula:) in a non-lemma file.")
       }
 
+      case DOT.startPattern(dot) => val (_, idx) = splitName(dot); consumeTerminalLength(DOT(idx), loc)
+
       // File cases
       case PERIOD.startPattern(_*) => consumeTerminalLength(PERIOD, loc) //swapOutFor(consumeTerminalLength(PERIOD, loc), DOT)
         /*mode match {
@@ -605,7 +621,6 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case SEMI.startPattern(_*) => consumeTerminalLength(SEMI, loc)
 
 
-      case DOT.startPattern(_*) => consumeTerminalLength(DOT, loc)
       case PLACE.startPattern(_*) => consumeTerminalLength(PLACE, loc)
       case PSEUDO.startPattern(_*) => consumeTerminalLength(PSEUDO, loc)
 
@@ -622,6 +637,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
 
       case LDIA.startPattern(_*) => consumeTerminalLength(LDIA, loc)
       case RDIA.startPattern(_*) => consumeTerminalLength(RDIA, loc)
+
+      case PRG_DEF.startPattern(_*) => consumeTerminalLength(PRG_DEF, loc)
 
       case _ if s.isEmpty => None
         //@todo should be LexException inheriting

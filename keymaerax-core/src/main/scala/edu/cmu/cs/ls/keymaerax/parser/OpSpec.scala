@@ -187,7 +187,7 @@ object OpSpec {
   // terms
   private val unterm = TermKind
   private val binterm = (TermKind,TermKind)
-  val sDotTerm      = UnaryOpSpec[Term](DOT,       0, PrefixFormat, unterm, (e:Term) => DotTerm(e.sort))
+  val sDotTerm      = UnitOpSpec (none,     0, _ => DotTerm())
   val sNothing      = UnitOpSpec (NOTHING,  0, Nothing)
   val sVariable     = UnitOpSpec (none,     0, name => Variable(name, None, Real))
   val sNumber       = UnitOpSpec (none,     0, number => Number(BigDecimal(number)))
@@ -282,7 +282,7 @@ object OpSpec {
       //@note could replace by reflection getField("s" + expr.getClass.getSimpleName)
       //@todo could add a contract ensuring that constructor applied to expressions's children indeed produces expr.
     // terms
-    case DotTerm(_)      => sDotTerm
+    case _: DotTerm      => sDotTerm
     case Nothing         => sNothing
     case t: DifferentialSymbol => sDifferentialSymbol
     case t: Variable     => sVariable

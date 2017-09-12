@@ -109,7 +109,9 @@ object FullPrettyPrinter extends BasePrettyPrinter {
 
   private def pp(term: Term): String = term match {
     case Nothing       => op(term).opcode
-    case DotTerm(sort) => op(term).opcode + (sort match { case Tuple(_, _) => sort.toString case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
+    case DotTerm(sort, idx) => "•" +
+      (idx match { case None => "" case Some(i) => "_" + i }) +
+      (sort match { case Tuple(_, _) => sort.toString case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
     case x: Variable            => x.asString
     case DifferentialSymbol(x)  => pp(x) + op(term).opcode
     case Differential(t)        => "(" + pp(t) + ")" + op(term).opcode
@@ -236,7 +238,9 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
   //@todo could add contract that TermAugmentor(original)(q) == term
   protected def pp(q: PosInExpr, term: Term): String = emit(q, term match {
     case Nothing       => ppOp(term)
-    case DotTerm(sort) => ppOp(term) + (sort match { case Tuple(_, _) => sort.toString case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
+    case DotTerm(sort, idx) => "•" +
+        (idx match { case None => "" case Some(i) => "_" + i }) +
+        (sort match { case Tuple(_, _) => sort.toString case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
     case x: Variable            => x.asString
     case DifferentialSymbol(x)  => x.asString + ppOp(term)
     case Differential(t)        => "(" + pp(q++0, t) + ")" + ppOp(term)

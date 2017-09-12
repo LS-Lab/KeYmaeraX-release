@@ -454,10 +454,10 @@ trait UnifyUSCalculus {
 
         case Equiv(other, DotFormula) => equivStep(other, if (p.isAnte) commuteFact(fact) else fact)
 
-        case Equal(DotTerm(_), other) =>
+        case Equal(DotTerm(_, _), other) =>
           equivStep(other, if (p.isSucc) commuteFact(fact) else fact)
 
-        case Equal(other, DotTerm(_)) =>
+        case Equal(other, DotTerm(_, _)) =>
           equivStep(other, if (p.isAnte) commuteFact(fact) else fact)
 
         case Imply(other, DotFormula) => implyStep(other)
@@ -1362,10 +1362,10 @@ trait UnifyUSCalculus {
 
         // in which context of the fact does the key occur
         K.ctx match {
-          case Equal(DotTerm(_), o) =>
+          case Equal(DotTerm(_, _), o) =>
             equivStep(o)
 
-          case Equal(o, DotTerm(_)) =>
+          case Equal(o, DotTerm(_, _)) =>
             equivStep(o)
 
           case Equiv(DotFormula, o) =>

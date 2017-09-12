@@ -25,16 +25,16 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach {
   val q = Function("q",None,Real,Bool)
   val r = Function("r",None,Real,Bool)
 
-  var parser: Parser = null
-  var pp: PrettyPrinter = null
+  var parser: Parser = _
+  var pp: PrettyPrinter = _
 
-  override def beforeEach() = {
+  override def beforeEach(): Unit = {
     KeYmaera.init(Map.empty)
     parser = KeYmaeraXParser
     pp = KeYmaeraXPrettyPrinter
   }
 
-  override def afterEach() = {
+  override def afterEach(): Unit = {
     pp = null
     parser = null
     KeYmaera.shutdown()
@@ -79,7 +79,7 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach {
     try {
       parser.programParser("x'=5&x>2&x>3") shouldBe ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), And(Greater(x, Number(2)), Greater(x, Number(3))))
     } catch {
-      case acceptable: ParseException =>
+      case _: ParseException => // acceptable
     }
   }
 
@@ -244,11 +244,25 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "round trip parse dot terms" in {
-    parser.termParser(parser.termParser(".").prettyString) shouldBe DotTerm()
     parser.termParser(parser.termParser("•").prettyString) shouldBe DotTerm()
+    parser.termParser(parser.termParser(".").prettyString) shouldBe DotTerm()
     parser.termParser(parser.termParser("•()").prettyString) shouldBe DotTerm()
+    parser.termParser(parser.termParser(".()").prettyString) shouldBe DotTerm()
     parser.termParser(parser.termParser("•(•,•)").prettyString) shouldBe DotTerm(Tuple(Real, Real))
+    parser.termParser(parser.termParser(".(.,.)").prettyString) shouldBe DotTerm(Tuple(Real, Real))
     parser.termParser(parser.termParser("•(•,•,•)").prettyString) shouldBe DotTerm(Tuple(Real, Tuple(Real, Real)))
+    parser.termParser(parser.termParser(".(.,.,.)").prettyString) shouldBe DotTerm(Tuple(Real, Tuple(Real, Real)))
+  }
+
+  it should "round trip parse colored dots" in {
+    parser.termParser(parser.termParser("•_1").prettyString) shouldBe DotTerm(Real, Some(1))
+    parser.termParser(parser.termParser("._1").prettyString) shouldBe DotTerm(Real, Some(1))
+    parser.termParser(parser.termParser("•_1()").prettyString) shouldBe DotTerm(Real, Some(1))
+    parser.termParser(parser.termParser("._1()").prettyString) shouldBe DotTerm(Real, Some(1))
+    parser.termParser(parser.termParser("•_1(•,•)").prettyString) shouldBe DotTerm(Tuple(Real, Real), Some(1))
+    parser.termParser(parser.termParser("._1(.,.)").prettyString) shouldBe DotTerm(Tuple(Real, Real), Some(1))
+    parser.termParser(parser.termParser("•_1(•,•,•)").prettyString) shouldBe DotTerm(Tuple(Real, Tuple(Real, Real)), Some(1))
+    parser.termParser(parser.termParser("._1(.,.,.)").prettyString) shouldBe DotTerm(Tuple(Real, Tuple(Real, Real)), Some(1))
   }
 
   it should "foo" in {
@@ -298,25 +312,25 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach {
                                 )))))))))))))))
   }
 
-  ignore should "bla" in  {
+  it should "parse a long chain of quantifiers" in {
     val parsed = parser("\\forall V \\forall dx_0 \\forall B \\forall dy_0 \\forall dx \\forall v \\forall yo_0 \\forall x_0 \\forall y_0 \\forall v_0 \\forall r \\forall xo_0 \\forall dy \\forall A \\forall t_3 (ep()>0&V>=0&B>0&A>=0&r!=0&v>=0&(v_0=0|(x_0-xo_0>=0->x_0-xo_0>v_0^2/(2*B)+V*(v_0/B))&(x_0-xo_0<=0->xo_0-x_0>v_0^2/(2*B)+V*(v_0/B))|(y_0-yo_0>=0->y_0-yo_0>v_0^2/(2*B)+V*(v_0/B))&(y_0-yo_0<=0->yo_0-y_0>v_0^2/(2*B)+V*(v_0/B)))&r_0()!=0&v_0>=0&dx^2+dy^2=1&dxo()^2+dyo()^2<=V^2&x0_1()=x_0&dx^2+dy^2=1&v_0>=0&dx_0^2+dy_0^2=1&t_3>=0&t_3<=ep()&0>=0&0<=ep()&v_0=v_0+-B*0&v_0+-B*t_3>=0->-(1)*(v_0+-B*t_3--B/2*t_3)+-t_3*(-B-((0*2--B*0)/2^2*t_3+-B/2*1))<=(v_0+-B*t_3)*dx_0-0&(v_0+-B*t_3)*dx_0-0<=1*(v_0+-B*t_3--B/2*t_3)+t_3*(-B-((0*2--B*0)/2^2*t_3+-B/2*1)))<->true")
     println("Parsed: " + parsed.prettyString)
-    parsed.prettyString shouldBe "\\forall V \\forall dx_0 \\forall B \\forall dy_0 \\forall dx \\forall v \\forall yo_0 \\forall x_0 \\forall y_0 \\forall v_0 \\forall r \\forall xo_0 \\forall dy \\forall A \\forall t_3 (ep()>0&V>=0&B>0&A>=0&r!=0&v>=0&(v_0=0|(x_0-xo_0>=0->x_0-xo_0>v_0^2/(2*B)+V*(v_0/B))&(x_0-xo_0<=0->xo_0-x_0>v_0^2/(2*B)+V*(v_0/B))|(y_0-yo_0>=0->y_0-yo_0>v_0^2/(2*B)+V*(v_0/B))&(y_0-yo_0<=0->yo_0-y_0>v_0^2/(2*B)+V*(v_0/B)))&r_0()!=0&v_0>=0&dx^2+dy^2=1&dxo()^2+dyo()^2<=V^2&x0_1()=x_0&dx^2+dy^2=1&v_0>=0&dx_0^2+dy_0^2=1&t_3>=0&t_3<=ep()&0>=0&0<=ep()&v_0=v_0+-B*0&v_0+-B*t_3>=0->-(1)*(v_0+-B*t_3--B/2*t_3)+-t_3*(-B-((0*2--B*0)/2^2*t_3+-B/2*1))<=(v_0+-B*t_3)*dx_0-0&(v_0+-B*t_3)*dx_0-0<=1*(v_0+-B*t_3--B/2*t_3)+t_3*(-B-((0*2--B*0)/2^2*t_3+-B/2*1)))<->true"
+    parsed.prettyString shouldBe "\\forall V \\forall dx_0 \\forall B \\forall dy_0 \\forall dx \\forall v \\forall yo_0 \\forall x_0 \\forall y_0 \\forall v_0 \\forall r \\forall xo_0 \\forall dy \\forall A \\forall t_3 (ep()>0&V>=0&B>0&A>=0&r!=0&v>=0&(v_0=0|(x_0-xo_0>=0->x_0-xo_0>v_0^2/(2*B)+V*(v_0/B))&(x_0-xo_0<=0->xo_0-x_0>v_0^2/(2*B)+V*(v_0/B))|(y_0-yo_0>=0->y_0-yo_0>v_0^2/(2*B)+V*(v_0/B))&(y_0-yo_0<=0->yo_0-y_0>v_0^2/(2*B)+V*(v_0/B)))&r_0()!=0&v_0>=0&dx^2+dy^2=1&dxo()^2+dyo()^2<=V^2&x0_1()=x_0&dx^2+dy^2=1&v_0>=0&dx_0^2+dy_0^2=1&t_3>=0&t_3<=ep()&0>=0&0<=ep()&v_0=v_0+-B*0&v_0+-B*t_3>=0->- 1*(v_0+-B*t_3--B/2*t_3)+-t_3*(-B-((0*2--B*0)/2^2*t_3+-B/2*1))<=(v_0+-B*t_3)*dx_0-0&(v_0+-B*t_3)*dx_0-0<=1*(v_0+-B*t_3--B/2*t_3)+t_3*(-B-((0*2--B*0)/2^2*t_3+-B/2*1)))<->true"
   }
 
 
   "Parsing state-dependents" should "parse (||) AnyArg" in {
-    parser("x>2&p(||)") shouldBe (And(Greater(Variable("x"),Number(2)), UnitPredicational("p",AnyArg)))
-    parser.formulaParser("p(||)") shouldBe (UnitPredicational("p",AnyArg))
-    parser("5<=f(||)") shouldBe (LessEqual(Number(5),UnitFunctional("f",AnyArg,Real)))
-    parser.termParser("f(||)") shouldBe (UnitFunctional("f",AnyArg,Real))
+    parser("x>2&p(||)") shouldBe And(Greater(Variable("x"),Number(2)), UnitPredicational("p",AnyArg))
+    parser.formulaParser("p(||)") shouldBe UnitPredicational("p",AnyArg)
+    parser("5<=f(||)") shouldBe LessEqual(Number(5),UnitFunctional("f",AnyArg,Real))
+    parser.termParser("f(||)") shouldBe UnitFunctional("f",AnyArg,Real)
   }
 
   it should "parse (|x|) Exception taboos" in {
-    parser("x>2&p(|x|)") shouldBe (And(Greater(Variable("x"),Number(2)), UnitPredicational("p",Except(Variable("x")))))
-    parser.formulaParser("p(|x|)") shouldBe (UnitPredicational("p",Except(Variable("x"))))
-    parser("5<=f(|x|)") shouldBe (LessEqual(Number(5),UnitFunctional("f",Except(Variable("x")),Real)))
-    parser.termParser("f(|x|)") shouldBe (UnitFunctional("f",Except(Variable("x")),Real))
+    parser("x>2&p(|x|)") shouldBe And(Greater(Variable("x"),Number(2)), UnitPredicational("p",Except(Variable("x"))))
+    parser.formulaParser("p(|x|)") shouldBe UnitPredicational("p",Except(Variable("x")))
+    parser("5<=f(|x|)") shouldBe LessEqual(Number(5),UnitFunctional("f",Except(Variable("x")),Real))
+    parser.termParser("f(|x|)") shouldBe UnitFunctional("f",Except(Variable("x")),Real)
     parser("[{x'=5,c{|x|}}]x>2") shouldBe Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")),Number(5)),
       DifferentialProgramConst("c",Except(Variable("x")))), True),
       Greater(Variable("x"),Number(2)))
