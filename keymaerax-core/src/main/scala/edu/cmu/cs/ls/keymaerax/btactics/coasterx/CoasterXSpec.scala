@@ -159,7 +159,7 @@ object CoasterXSpec {
         val sysInlined = DifferentialProduct(DifferentialProduct(xOdeInlined,yOdeInlined),vOdeInlined)
         val xOde = AtomicODE(DifferentialSymbol(Variable("x")), foldTimes(v,dx))
         val yOde = AtomicODE(DifferentialSymbol(Variable("y")), foldTimes(v,dy))
-        val vOde = s"v' = -dy".asDifferentialProgram
+        val vOde = s"v' = -dy*g()".asDifferentialProgram
         val sys = DifferentialProduct(DifferentialProduct(xOde,yOde),vOde)
         // val evol = And(LessEqual(x1,x),LessEqual(x,x2))
         ODESystem(sys, evol)
@@ -169,7 +169,7 @@ object CoasterXSpec {
         val (cx:Term, cy:Term) = arcCenter((x1,y1), (x2,y2))
         val r = CoasterXSpec.dist(start, (cx,cy))
         //val r = foldDivide(foldMinus(x2,x1),Number(2))
-        val sysBase = "x' = dx*v, y' = dy*v, v' = -dy".asDifferentialProgram
+        val sysBase = "x' = dx*v, y' = dy*v, v' = -dy*g()".asDifferentialProgram
         val isCw = deltaTheta.value < 0
         val (dxTerm, dyTerm) = if (isCw) {(foldDivide("dy*v".asTerm, r), foldDivide("-dx*v".asTerm, r))} else {(foldDivide("-dy*v".asTerm, r), foldDivide("dx*v".asTerm, r))}
         val sys = DifferentialProduct(sysBase,DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("dx")), dxTerm),
@@ -231,6 +231,9 @@ object CoasterXSpec {
     foldPower(sqDist(p1,p2),foldDivide(Number(1),Number(2)))
   }
 
+  val gconst = FuncOf(Function("g", None, Unit, Real), Nothing)
+  val gpos = Greater(gconst, Number(0))
+
   def segmentPre(segBounds:(Section,(TPoint,TPoint)), v0:Number):Formula = {
     val (seg, (start,end)) = segBounds
     seg match {
@@ -255,7 +258,7 @@ object CoasterXSpec {
         val xeq = Equal(x,x1)
         val yeq = Equal(y,y1)
         val veq = Equal(v, v0)
-        And(dxeq,And(dyeq,And(xeq,And(yeq,veq))))
+        And(gpos,And(dxeq,And(dyeq,And(xeq,And(yeq,veq)))))
       case ArcSection(Some(param@ArcParam((x1,y1),(x2,y2),theta1,deltaTheta)), Some(gradient)) =>
         // @TODO: Update radius computation
         /* TODO: Assert
@@ -288,7 +291,7 @@ object CoasterXSpec {
         val xeq = Equal(x,x3)
         val yeq = Equal(y,y3)
         val veq = Equal(v, v0)
-        And(dxeq,And(dyeq,And(xeq,And(yeq,veq))))
+        And(gpos,And(dxeq,And(dyeq,And(xeq,And(yeq,veq)))))
       case _ => True
     }
   }
@@ -375,7 +378,7 @@ object CoasterXSpec {
     val pre = segmentPre(withBounds.head,v0)
     val ode = withBounds.map(segmentOde).reduceRight[Program]({case(x,y) => Choice(x,y)})
     val y0 = points.head._2
-    val energyConserved = s"v^2 + 2*y = ($v0)^2 + 2*($y0)".asFormula
+    val energyConserved = s"v^2 + 2*y*g() = ($v0)^2 + 2*($y0)*g()".asFormula
     val globalPost = And("v > 0".asFormula, energyConserved)
     val post = And(globalPost, withBounds.map(segmentPost).reduceRight[Formula]{case (x,y) => And(x,y)})
     Imply(And(segmentDefs,pre),Box(Loop(ode), post))
