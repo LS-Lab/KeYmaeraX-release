@@ -1,14 +1,18 @@
 package edu.cmu.cs.ls.keymaerax.btactics.coasterx
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.{AxiomaticODESolver, DLBySubst, DebuggingTactics}
+import edu.cmu.cs.ls.keymaerax.btactics.{AxiomaticODESolver, DLBySubst, DebuggingTactics, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver.TIMEVAR
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser.{TPoint => _, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{dW, _}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXSpec._
+import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.NoProofTermProvable
+import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+
+import scala.collection.immutable
 
 /*
 * Proves that CoasterX models meet their specs, by composing component proofs
@@ -20,6 +24,15 @@ import edu.cmu.cs.ls.keymaerax.pt.NoProofTermProvable
 * @TODO: Function returning tactic with proof reuse
 * */
 object CoasterXProver {
+
+  def timeFn[T](msg:String,f:(()=>T)):T = {
+    val start = System.currentTimeMillis()
+    val e = f()
+    val end = System.currentTimeMillis()
+    println("TIME("+msg+") " + (end-start) + " millis")
+    e
+  }
+
   def interpret(e:BelleExpr, pr:Provable):Provable = {
     SequentialInterpreter()(e, BelleProvable(NoProofTermProvable(pr))) match {
       case BelleProvable(result,_) => result.underlyingProvable
@@ -90,7 +103,7 @@ object CoasterXProver {
     val pr6 = interpret(dC(s"v>0 ".asFormula)(1) <(nil, ODE(1)), pr5)
     pr6
   }
-  
+
   def quad3Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number):Provable = {
     println("Proving Quadrant 3 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
@@ -107,7 +120,7 @@ object CoasterXProver {
     pr5
     //interpret(e, pr)
   }
-  
+
   def quad4Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number):Provable = {
     println("Proving Quadrant 4 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val (cx:Term, cy:Term) = arcCenter(bl, tr)
@@ -208,6 +221,116 @@ object CoasterXProver {
     pr9
   }
 
+  def proveLineArithFromDW(pr: Provable, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):Provable = {
+    val yDefStart = 3
+    val (hideYDefs, nYs) = {
+      val js = List.tabulate(nSections)(j => j + yDefStart).filter(j => !(j == iSection + yDefStart || j == iSection + yDefStart - 1 || j == iSection + yDefStart - 2))
+      val e = js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
+      (e, nSections - js.length)
+    }
+    // J(0), const, y1 = _, ..., yn = _ |- \forall t t>= 0 ->(\forall s in [0,t] DC(s)) -> J(t)
+    val pr1 = interpret(hideYDefs, pr)
+    // J(0), const, yi |- " "
+    val pr2 = interpret(andL(-1), pr1)
+    val unpackPosts = andL('Llast)*(nSections - 1)
+    // const, yi=_, global(0), &_j in sections{bound_j(0) -> post_j(0)} |- " "
+    val pr3 = interpret(unpackPosts, pr2)
+    val Jstart = yDefStart + nYs + 4
+    val hideJs = {
+      val js = List.tabulate(nSections)(j => j + Jstart).filter(j => j != Jstart + iSection)
+      js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
+    }
+    // const, yi=_, global(0), (op,)_j in sections{bound_j(0) -> post_j(0)} |- " "
+    val pr4 = interpret(hideJs, pr3)
+    // const, yi=_, global(0), (bound_i(0) -> post_i(0)) |- \forall t  t>= 0 -> (\forall s in [0,t] DC(s)) -> J(t)
+    //val pr5 = interpret(allR(1) & implyR(1) & implyR(1), pr4)
+    // const, yi=_, global(0), (bound_i(0) -> post_i(0)), t >= 0, (\forall s in [0,t] DC) |- J(t)
+    val pr6 = interpret(implyL(-Jstart) <((hideL(-2)*(nYs+1)) & hideR(1) & QE, nil), pr4)
+    val proveGlobal = allL(Number(0))('Llast) & master()
+    // const,  yi=_, global(0), post_i(0), t>= 0, (\forall s in [0,t] DC) |- (global(t) & (&_j in sections{bound_j(t) -> post_j(t)})
+    //  & andR(1) <(proveGlobal, nil)
+    val pr7 = interpret(dW(1), pr6)
+    val dcPos = 6
+    def coHideL(i : Int, pr:Provable) = {
+      val anteSize = pr.subgoals.head.ante.length
+      List.tabulate(anteSize)(j => j + 1).filter(j => j != i).map(j => hideL(-j)).foldLeft(nil)((acc,e) => e & acc)
+    }
+    // const,  yi=_, global(0), post_i(0), t>= 0, (\forall s in [0,t] DC) |- (&_j in sections{bound_j(t) -> post_j(t)}
+    val pr8 = interpret(allL(Variable("t_"))(-dcPos) & implyL(-dcPos) <(coHideL(dcPos - 1, pr7) & hideR(1) & QE, nil), pr7)
+    def proveConjs(f:(Int,Provable)=>Provable, pr:Provable, conjDepth:Int, conjI:Int = 0):Provable = {
+      conjDepth match {
+        case 0 => f(conjI,pr)
+        case _ =>
+          val pr1 = interpret(andR(1), pr)
+          val prHead = Provable.startProof(pr1.subgoals.head)
+          val prHeadProved = f(conjI, prHead)
+          val prTail = pr1(prHeadProved,0)
+          proveConjs(f, prTail, conjDepth - 1, conjI + 1)
+      }
+    }
+    // const, yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
+    def provePost(iPost:Int, pr:Provable):Provable = {
+      val e:BelleExpr =
+        if(iPost == iSection || iPost == iSection + 1) QE
+        // For the - 1 case we don't have a contradiction argument (overlaps at one point), but
+        // splitting before QE seems to speed up vastly in the cases I've tested
+        else if(iPost == iSection - 1) {master()}
+        else {coHideL(dcPos, pr) & implyR(1) & hideR(1) & QE}
+      val pr1 = interpret(e, pr)
+      pr1
+    }
+    // yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
+    val pr9 = proveConjs(provePost, pr7, nSections-1)
+    pr9
+  }
+
+  val lemmaDB: LemmaDB = LemmaDBFactory.lemmaDB
+  def storeLemma(fact: ProvableSig, name: Option[String]): String = {
+    val evidence = ToolEvidence(immutable.List("input" -> fact.conclusion.prettyString, "output" -> "true")) :: Nil
+    // add lemma into DB, which creates an ID for it. use ID to apply the lemma
+    val id = lemmaDB.add(Lemma(fact, evidence, name))
+    println(s"Lemma ${name.getOrElse("")} stored as $id")
+    id
+  }
+
+  lazy val straightProof:Provable = {
+    val provableName = "coasterx_straightLineCase"
+    lemmaDB.get(provableName) match {
+      case Some(pr) => pr.fact.underlyingProvable
+      case None =>
+        val a1: Formula = "(g() > 0)".asFormula
+        val a2: Formula = "(v>0&v^2+2*y*g()=v0()^2+2*y0()*g())".asFormula
+        val a3: Formula = "(x0()<=x&x<=x1()->((dx = dx0() & dy = dy0())& dx0()*y=dy0()*x+dx0()*c()))".asFormula
+        val a5: Formula = "(dx0()*v^2 > 2*(x1()-x0())*dy0()*g())".asFormula
+        val a6: Formula = "(x1() > x0())".asFormula
+        val a7: Formula = "(dx0()^2 + dy0()^2 = 1)".asFormula
+        val a8: Formula = "dx0() > 0".asFormula
+        val c =
+          """  [{x'=v*dx,
+          |        y'=v*dy,
+          |        v'=-dy*g()
+          |        &(x0()<=x&x<=x1())
+          |        &(y0()<=y&y<=y1())}]
+          |     ((v>0&v^2+2*y*g()=v0()^2+2*y0()*g())&
+            |      x0()<=x&x<=x1()&
+            |        (dx=dx0()&dy=dy0())
+            |      &dx0()*y=dy0()*x+dx0()*c())""".stripMargin.asFormula
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1,a2,a3,a5, a6, a7, a8), immutable.IndexedSeq(c))
+        val e =
+           solve(1) & allR(1) & implyR(1) & implyR(1) &
+             implyL(-2)  <(
+               hideR(1) & QE,
+               master()
+             )
+
+        val pr = Provable.startProof(con)
+        val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
+        val pr2 = interpret(e, pr1)
+        storeLemma(NoProofTermProvable(pr2), Some(provableName))
+        pr2
+        }
+  }
+
   def sectionTactic(pr: Provable, p1: TPoint, p2: TPoint, v0:Number, yInit:Term, section: Section, iSection:Int, nSections: Int):Provable = {
     section match {
       case ArcSection(Some(param@ArcParam(bl,tr,theta1,deltaTheta)),Some(grad)) => {
@@ -218,22 +341,76 @@ object CoasterXProver {
         val x = 1 + 1
         val pr1 =
           (q3, q4, q1) match {
-            case (true, false, false) => quad3Tactic(pr, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta) // Quadrant 3
-            case (false, true, false) => quad4Tactic(pr, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta) // Quadrant 4
-            case (false, false, true) => quad1Tactic(pr, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta) // Quadrant 1
-            case (false,false,false)  => quad2Tactic(pr, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta) // Quadrant 2
+            case (true, false, false) =>
+              timeFn("Q3", () => {
+              quad3Tactic(pr, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta)}) // Quadrant 3
+            case (false, true, false) =>
+              timeFn("Q4", () => {
+              quad4Tactic(pr, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta)
+              }) // Quadrant 4
+            case (false, false, true) =>
+              timeFn("Q1", () => {
+                quad1Tactic(pr, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta)}) // Quadrant 1
+            case (false,false,false)  =>
+              timeFn("Q2", () => {
+              quad2Tactic(pr, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta)})
+               // Quadrant 2
             case _ => ???
           }
-        val prOut = interpret(dW(1) & QE, pr1)
+        val prOut =
+          timeFn("Arc QE", () => {
+            interpret(dW(1) & QE, pr1)})
        // assert(prOut.isProved)
         prOut
       }
-      case LineSection(Some(LineParam(bl,tr)), Some(grad)) =>
-        println("Proving Line Segment: " , bl,tr)
-        // @TODO: I am being bad and braking all the abstractions ever
+      case LineSection(Some(LineParam(bl,tr)), Some(grad)) => {
         val t = Variable("kyxtime")
-        val prSolved = interpret(solve(1), pr)
-        proveLineArith(prSolved, bl, tr, iSection, nSections)
+        def cutSolve() = {
+          val pr1 = interpret(AxiomaticODESolver.addTimeVar(1), pr)
+          val pr1a = interpret(assignb(1), pr1)
+          val pr2 = interpret(dC(s"v = old(v) - dy*($t)".asFormula)(1) <(nil, dI()(1)), pr1a)
+          //val pr3 = interpret(dC(s"y = old(y) + dy*($t)".asFormula)(1) <(nil, dI()(1)), pr2)
+          val pr3 = interpret(dC(s"y = old(y) + dy*(old(v)*($t) - dy*($t)^2/2)".asFormula)(1) <(nil, dI()(1)), pr2)
+          val pr4 = interpret(dC(s"x = old(x) + dx*(old(v)*($t) - dy*($t)^2/2)".asFormula)(1) <(nil, dI()(1)), pr3)
+          pr4
+        }
+        def doLineCase () = {
+          //@TODO: Generalize everything in this section
+          println("Proving Line Segment: ", bl, tr)
+          val pr1 = interpret(hideL(-4) * 3, pr)
+          val pr2 = interpret(andL(-1), pr1)
+          val pr3 = interpret(andL('Llast) * 3, pr2)
+          val pr4 = interpret(hideL('Llast) * 3, pr3)
+          val pr5 = interpret(dC("(v>0&v^2+2*y*g()=500^2+2*500*g())&(0<=x&x<=100&(dx=100/(10000+(y_1-500)^2)^0.5&dy=(y_1-500)/(10000+(y_1-500)^2)^0.5)&100/(10000+(y_1-500)^2)^0.5*y=(y_1-500)/(10000+(y_1-500)^2)^0.5*x+100/(10000+(y_1-500)^2)^0.5*500)".asFormula)(1), pr4)
+          val sproof = straightProof
+          val dx0 = "100/(10000+(y_1-500)^2)^0.5".asTerm
+          val dy0 = "(y_1-500)/(10000+(y_1-500)^2)^0.5".asTerm
+          val x1 = Number(100)
+          val x0 = Number(0)
+          val cut1 = s"($dx0)*v^2 > 2*(($x1)-($x0))*($dy0)*g()".asFormula
+          val cut2 = s"($x1) > ($x0)".asFormula
+          val cut3 = s"($dx0)^2 + ($dy0)^2 = 1".asFormula
+          val cut4 = s"($dx0) > 0".asFormula
+          val pr5a = interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & QE)), pr5)
+          val pr5b = interpret(nil < (nil, cut(cut2) < (nil, hideR(1) & QE)), pr5a)
+          val pr5c = interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & QE)), pr5b)
+          val pr5d = interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & QE)), pr5c)
+          val pr5e = interpret(nil < (nil, hideL(-2)), pr5d)
+          val tac = US(NoProofTermProvable(sproof))
+          val pr6 = interpret(nil < (nil, tac), pr5e)
+          val pr7 = interpret(dW(1) & master(), pr6)
+          //val pr5 = interpret(implyL('Llast) <(hideR(1) & QE, nil), pr4)
+          val 2 = 1 + 1
+          pr7
+        }
+        timeFn("Line QE", doLineCase)
+        // @TODO: I am being bad and braking all the abstractions ever
+        //val prSolved = //timeFn("Line Solve", () => {interpret(solve(1), pr)})
+//          timeFn("Line Solve", () => {interpret(nil <(nil, solve(1)), pr5)})
+//        timeFn("Line QE", () => {
+  //        proveLineArith(prSolved, bl, tr, iSection, nSections)
+    //    })
+        //  proveLineArith(prSolved, bl, tr, iSection, nSections)})
         /*val pr1 = interpret(AxiomaticODESolver.addTimeVar(1), pr)
         val pr1a = interpret(assignb(1), pr1)
         val pr2 = interpret(dC(s"v = old(v) - dy*($t)".asFormula)(1) <(nil, dI()(1)), pr1a)
@@ -244,6 +421,7 @@ object CoasterXProver {
         // @TODO: get the arithmetic to be faster
         //val pr5 = interpret(DebuggingTactics.debug("This QE is false", doPrint = true) & master(), prSolved)
         //pr5
+      }
       case _ => ???
     }
   }
@@ -302,6 +480,7 @@ object CoasterXProver {
     val pr = Provable.startProof(spec)
     val pr1 = interpret(implyR(1), pr)
     val pr1a = interpret(andL(-1), pr1)
+
     val pr1b = interpret(andL(-2), pr1a)
 
     val pr1c = interpret(andL(-1), pr1b)
