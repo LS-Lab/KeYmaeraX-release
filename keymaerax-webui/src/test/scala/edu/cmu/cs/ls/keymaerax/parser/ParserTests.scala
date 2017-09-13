@@ -363,7 +363,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "complain about non-delimited definitions" in {
     val input = "Functions. R y() = (3>2. End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
     the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
-      """1:18 Non-delimited function definition
+      """1:18 Non-delimited definition
         |Found:    NUM(2.) at 1:18 to 1:23
         |Expected: )""".stripMargin
   }
