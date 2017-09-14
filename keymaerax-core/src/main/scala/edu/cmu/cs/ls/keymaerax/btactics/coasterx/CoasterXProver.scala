@@ -375,52 +375,55 @@ object CoasterXProver {
           pr4
         }
         def doLineCase () = {
-          //@TODO: Generalize everything in this section
           println("Proving Line Segment: ", bl, tr)
-          val pr1 = interpret(hideL(-4) * 3, pr)
+          val yDefStart = 3
+          val (hideYDefs, nYs) = {
+            val js = List.tabulate(nSections)(j => j + yDefStart).filter(j => !(j == iSection + yDefStart || j == iSection + yDefStart - 1 || j == iSection + yDefStart - 2))
+            val e = js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
+            (e, nSections - js.length)
+          }
+          //J(0), const, y_1=_,...,y_n=_ |- _
+          val pr1 = interpret(hideYDefs, pr)
+          //J(0), const, y_i=_ |- _
           val pr2 = interpret(andL(-1), pr1)
-          val pr3 = interpret(andL('Llast) * 3, pr2)
-          val pr4 = interpret(hideL('Llast) * 3, pr3)
-          val pr5 = interpret(dC("(v>0&v^2+2*y*g()=500^2+2*500*g())&(0<=x&x<=100&(dx=100/(10000+(y_1-500)^2)^0.5&dy=(y_1-500)/(10000+(y_1-500)^2)^0.5)&100/(10000+(y_1-500)^2)^0.5*y=(y_1-500)/(10000+(y_1-500)^2)^0.5*x+100/(10000+(y_1-500)^2)^0.5*500)".asFormula)(1), pr4)
+          val unpackPosts = andL('Llast)*(nSections - 1)
+          //const, y_i=_, global(0), &(bound_i(0) -> post_i(0)) |- _
+          val pr3 = interpret(unpackPosts, pr2)
+          val Jstart = yDefStart + nYs
+          val hideJs = {
+            val js = List.tabulate(nSections)(j => j + Jstart).filter(j => j != Jstart + iSection)
+            js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
+          }
+          //const, y_i=_, global(0), (bound_0(0) -> post_0(0)), ...,  (bound_n(0) -> post_n(0)) |- _
+          val pr4 = interpret(hideJs, pr3)
+          //const, y_i=_, global(0), bound_i(0) -> post_i(0))|- _
+          val x1 = tr._1
+          val x0 = bl._1
+          val y0 = bl._2
+          val y1 = tr._2
+          val thisInv = segmentPost((section, (bl,tr)))
+          val Imply(_, And(And(Equal(BaseVariable("dx", None, Real), dx0), Equal(BaseVariable("dy", None, Real),dy0)),
+                           Equal(_, Plus(_, c)))) = thisInv
+          val cutMain = s"(v>0&v^2+2*y*g()=($v0)^2+2*($y0)*g())&(($x0)<=x&x<=($x1)&((dx=($dx0)&dy=($dy0))&($dx0)*y=($dy0)*x+($c)))".asFormula
+          val pr5 = interpret(dC(cutMain)(1), pr4)
           val sproof = straightProof
-          val dx0 = "100/(10000+(y_1-500)^2)^0.5".asTerm
-          val dy0 = "(y_1-500)/(10000+(y_1-500)^2)^0.5".asTerm
-          val x1 = Number(100)
-          val x0 = Number(0)
           val cut1 = s"($dx0)*v^2 > 2*(($x1)-($x0))*($dy0)*g()".asFormula
           val cut2 = s"($x1) > ($x0)".asFormula
           val cut3 = s"($dx0)^2 + ($dy0)^2 = 1".asFormula
           val cut4 = s"($dx0) > 0".asFormula
-          val pr5a = interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & QE)), pr5)
-          val pr5b = interpret(nil < (nil, cut(cut2) < (nil, hideR(1) & QE)), pr5a)
-          val pr5c = interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & QE)), pr5b)
-          val pr5d = interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & QE)), pr5c)
-          val pr5e = interpret(nil < (nil, hideL(-2)), pr5d)
+          val pr5a = timeFn("Line Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & QE)), pr5)})
+          val pr5b = timeFn("Line Case Step 2", {() => interpret(nil < (nil, cut(cut2) < (nil, hideR(1) & QE)), pr5a)})
+          val pr5c = timeFn("Line Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & QE)), pr5b)})
+          val pr5d = timeFn("Line Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & QE)), pr5c)})
+          val pr5e = timeFn("Line Case Step 5", {() => interpret(nil < (nil, hideL(-2)), pr5d)})
           val tac = US(NoProofTermProvable(sproof))
           val pr6 = interpret(nil < (nil, tac), pr5e)
-          val pr7 = interpret(dW(1) & master(), pr6)
-          //val pr5 = interpret(implyL('Llast) <(hideR(1) & QE, nil), pr4)
-          val 2 = 1 + 1
+          val pr6a = timeFn("Line Case Step 6", {() => interpret(dW(1), pr6)})
+          //@TODO: Currently the slowest step of the line case, will need optimized on bigger models.
+          val pr7 = timeFn("Line Case Step 7", {() => interpret(QE(), pr6a)})
           pr7
         }
-        timeFn("Line QE", doLineCase)
-        // @TODO: I am being bad and braking all the abstractions ever
-        //val prSolved = //timeFn("Line Solve", () => {interpret(solve(1), pr)})
-//          timeFn("Line Solve", () => {interpret(nil <(nil, solve(1)), pr5)})
-//        timeFn("Line QE", () => {
-  //        proveLineArith(prSolved, bl, tr, iSection, nSections)
-    //    })
-        //  proveLineArith(prSolved, bl, tr, iSection, nSections)})
-        /*val pr1 = interpret(AxiomaticODESolver.addTimeVar(1), pr)
-        val pr1a = interpret(assignb(1), pr1)
-        val pr2 = interpret(dC(s"v = old(v) - dy*($t)".asFormula)(1) <(nil, dI()(1)), pr1a)
-        //val pr3 = interpret(dC(s"y = old(y) + dy*($t)".asFormula)(1) <(nil, dI()(1)), pr2)
-        val pr3 = interpret(dC(s"y = old(y) + dy*(old(v)*($t) - dy*($t)^2/2)".asFormula)(1) <(nil, dI()(1)), pr2)
-        val pr4 = interpret(dC(s"x = old(x) + dx*(old(v)*($t) - dy*($t)^2/2)".asFormula)(1) <(nil, dI()(1)), pr3)*/
-        // @TODO: figure out why alignment between components is bad
-        // @TODO: get the arithmetic to be faster
-        //val pr5 = interpret(DebuggingTactics.debug("This QE is false", doPrint = true) & master(), prSolved)
-        //pr5
+        timeFn("Line Case", doLineCase)
       }
       case _ => ???
     }
