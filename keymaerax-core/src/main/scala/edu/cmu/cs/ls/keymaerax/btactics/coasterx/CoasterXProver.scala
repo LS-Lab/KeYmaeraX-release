@@ -106,17 +106,26 @@ object CoasterXProver {
 
   def quad3Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number):Provable = {
     println("Proving Quadrant 3 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
+    val aproof = arcProofQ3
     val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
     val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
-    val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
+    val r = "(9801+(y_1-499)^2)^0.5".asTerm
+    //val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
     val y0 = p1._2
     val yEnd = p2._2
-    val pr1 = interpret(dC(s"dx=-(($cy)-y)/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
-    val pr2 = interpret(dC(s"dy=(($cx)-x)/($r)".asFormula)(1)  <(nil, dI()(1)), pr1)
-    println("Proof One:" , s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)
-    val pr3 = interpret(dC(s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)(1)  <(nil, dI()(1)), pr2)
-    val pr4 = interpret(dC(s"v>0".asFormula)(1)  <(nil, ODE(1)), pr3)
-    val pr5 = interpret(dC(s"y < ($cy)".asFormula)(1)  <(nil, dI()(1)), pr4)
+    //dx=((cy())-y)/(r())
+    //dy=-((cx())-x)/(r())
+    //v^2=(v0())^2+2*(yInit())*g()-2*y*g()
+    //v>0".asFormula)(1)  <(nil, ODE(1)), pr3)})
+    //y < ($cy)
+    // @TODO: I think there's a contradiction here or something
+    //val pr1 = timeFn("quad3 Step 1", {() => interpret(dC(s"(dx=1)".asFormula)(1)  <(nil, dI()(1)), pr)})
+    val pr1 = timeFn("quad3 Step 1", {() => interpret(dC(s"dx=(($cy)-y)/($r)".asFormula)(1)  <(nil, dI()(1)), pr)})
+    val pr2 = timeFn("quad3 Step 2", {() => interpret(dC(s"dy=-(($cx)-x)/($r)".asFormula)(1)  <(nil, dI()(1)), pr1)})
+    //println("Proof One:" , s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)
+    val pr3 = timeFn("quad3 Step 3", {() => interpret(dC(s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)(1)  <(nil, dI()(1)), pr2)})
+    val pr4 = timeFn("quad3 Step 4", {() => interpret(dC(s"v>0".asFormula)(1)  <(nil, ODE(1)), pr3)})
+    val pr5 = timeFn("quad3 Step 5", {() => interpret(dC(s"y < ($cy)".asFormula)(1)  <(nil, dI()(1)), pr4)})
     pr5
     //interpret(e, pr)
   }
@@ -299,7 +308,7 @@ object CoasterXProver {
       case Some(pr) => pr.fact.underlyingProvable
       case None =>
         val a1: Formula = "(g() > 0)".asFormula
-        val a2: Formula = "(v>0&v^2+2*y*g()=v0()^2+2*y0()*g())".asFormula
+        val a2: Formula = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
         val a3: Formula = "(x0()<=x&x<=x1()->((dx = dx0() & dy = dy0())& dx0()*y=dy0()*x+dx0()*c()))".asFormula
         val a5: Formula = "(dx0()*v^2 > 2*(x1()-x0())*dy0()*g())".asFormula
         val a6: Formula = "(x1() > x0())".asFormula
@@ -311,7 +320,7 @@ object CoasterXProver {
           |        v'=-dy*g()
           |        &(x0()<=x&x<=x1())
           |        &(y0()<=y&y<=y1())}]
-          |     ((v>0&v^2+2*y*g()=v0()^2+2*y0()*g())&
+          |     ((v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())&
             |      x0()<=x&x<=x1()&
             |        (dx=dx0()&dy=dy0())
             |      &dx0()*y=dy0()*x+dx0()*c())""".stripMargin.asFormula
@@ -329,6 +338,51 @@ object CoasterXProver {
         storeLemma(NoProofTermProvable(pr2), Some(provableName))
         pr2
         }
+  }
+
+  lazy val arcProofQ3:Provable = {
+    val provableName = "coasterx_Q3ArcCase"
+    lemmaDB.get(provableName) match {
+      case Some(pr) => pr.fact.underlyingProvable
+      case None =>
+        val a1 = "g() > 0".asFormula
+        val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((dx=(cy()-y)/r()  & dy=-(cx()-x)/r()) & ((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy()))))".asFormula
+        val a4 = "x1() > x0()".asFormula
+        val a5 = "dx0()^2 + dy0()^2 = 1".asFormula
+        val a6 = "y0() > y1()".asFormula
+        val a7 = "cy() > y0()".asFormula
+        val a8 = "cx() >= x1()".asFormula
+        val a9 = "r() > 0".asFormula
+        val c =
+          """[{x'=dx*v,
+            |            y'=dy*v,
+            |            v'=-dy*g(),
+            |            dx' =  -dy*v/r(),
+            |            dy' =  dx*v/r()
+            |            &(x0()<=x&x<=x1())
+            |            &(y1()<=y&y<=y0())}]
+            |        ( dx=(cy()-y)/r()
+            |          & dy=-(cx()-x)/r()
+            |          & v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g()
+            |          & v>0
+            |          & y < cy()
+            |          )""".stripMargin.asFormula
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1,a2,a3,a4,a5, a6, a7, a8,a9), immutable.IndexedSeq(c))
+        val e =
+          dC("dx=-(y-cy())/r()".asFormula)(1) <(nil, dI()(1)) &
+          dC("dy=(x-cx())/r()".asFormula)(1) <(nil, dI()(1)) &
+          dC("v^2=v0()^2+2*yGlobal()*g()-2*y*g()".asFormula)( 1)  <(nil, dI()(1)) &
+          dC("v>0".asFormula)(1) <(nil, ODE(1)) &
+          ODE(1)
+
+
+        val pr = Provable.startProof(con)
+        val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
+        val pr2 = interpret(e, pr1)
+        storeLemma(NoProofTermProvable(pr2), Some(provableName))
+        pr2
+    }
   }
 
   def sectionTactic(pr: Provable, p1: TPoint, p2: TPoint, v0:Number, yInit:Term, section: Section, iSection:Int, nSections: Int):Provable = {
@@ -363,7 +417,8 @@ object CoasterXProver {
        // assert(prOut.isProved)
         prOut
       }
-      case LineSection(Some(LineParam(bl,tr)), Some(grad)) => {
+      case LineSection(Some(LineParam(bl,tr)), Some(grad), isUp) => {
+        println(isUp)
         val t = Variable("kyxtime")
         def cutSolve() = {
           val pr1 = interpret(AxiomaticODESolver.addTimeVar(1), pr)

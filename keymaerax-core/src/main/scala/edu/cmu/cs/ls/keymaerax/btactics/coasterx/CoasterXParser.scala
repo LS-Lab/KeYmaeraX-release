@@ -52,7 +52,7 @@ object CoasterXParser {
 
   sealed trait Section {}
   final case class ArcSection(param:Option[ArcParam], gradient:Option[Term]) extends Section {}
-  final case class LineSection(param:Option[LineParam], gradient:Option[Term]) extends Section {}
+  final case class LineSection(param:Option[LineParam], gradient:Option[Term], isUp:Boolean) extends Section {}
 
   type Point = (Number, Number)
   type TPoint = (Term, Term)
@@ -100,7 +100,13 @@ object CoasterXParser {
           peelPrefix(post3,",").flatMap({case post4 =>
           parseNumberOption(post4).flatMap({case (grad, post5) =>
           peelPrefix(post5, ")").map({case post6 =>
-          (LineSection(lineParam,grad),post6)})})})})})
+            lineParam match {
+              case None =>
+                (LineSection(lineParam, grad, false), post6)
+              case Some(LineParam((_, Number(y0)), (_, Number(y1)))) =>
+                (LineSection(lineParam,grad,y0 < y1),post6)
+            }
+          })})})})})
       }
     })
   }

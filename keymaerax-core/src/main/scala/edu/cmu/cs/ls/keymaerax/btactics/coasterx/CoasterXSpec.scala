@@ -144,10 +144,18 @@ object CoasterXSpec {
     val (seg, (start,end)) = segBounds
     val x = Variable("x")
     val y = Variable("y")
-    val evol = And(And(LessEqual(start._1, x),LessEqual(x,end._1)),
-      And(LessEqual(start._2, y),LessEqual(y,end._2)))
+    def evol(isUp:Boolean) = {
+      val ybound =
+        if(isUp) {
+          And(LessEqual(start._2, y), LessEqual(y, end._2))
+        } else {
+          And(LessEqual(end._2, y), LessEqual(y, start._2))
+        }
+      And(And(LessEqual(start._1, x), LessEqual(x, end._1)),
+        ybound)
+    }
     seg match {
-      case LineSection(Some(LineParam((x1,y1),(x2,y2))), Some(gradient)) =>
+      case LineSection(Some(LineParam((x1,y1),(x2,y2))), Some(gradient), isUp) =>
         val v = Variable("v")
         val dx = Variable("dx")
         val dy = Variable("dy")
@@ -162,7 +170,7 @@ object CoasterXSpec {
         val vOde = s"v' = -dy*g()".asDifferentialProgram
         val sys = DifferentialProduct(DifferentialProduct(xOde,yOde),vOde)
         // val evol = And(LessEqual(x1,x),LessEqual(x,x2))
-        ODESystem(sys, evol)
+        ODESystem(sys, evol(isUp))
       case ArcSection(Some(ArcParam((x1,y1),(x2,y2),theta1,deltaTheta)), Some(gradient)) =>
         //val ((x3,y3),(x4,y4)) = arcBounds((x1,y1),(x2,y2),theta1,Number(theta1.value+deltaTheta.value))
         //val r = Number((x4.value-x3.value)/2)
@@ -174,8 +182,10 @@ object CoasterXSpec {
         val (dxTerm, dyTerm) = if (isCw) {(foldDivide("dy*v".asTerm, r), foldDivide("-dx*v".asTerm, r))} else {(foldDivide("-dy*v".asTerm, r), foldDivide("dx*v".asTerm, r))}
         val sys = DifferentialProduct(sysBase,DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("dx")), dxTerm),
           AtomicODE(DifferentialSymbol(Variable("dy")), dyTerm)))
+        val isLeft = start._1.asInstanceOf[Number].value < cx.asInstanceOf[Number].value
+        val isUp = (isLeft && isCw) || (!isLeft && !isCw)
         // val evol = And(LessEqual(x3,x),LessEqual(x,x4))
-        ODESystem(sys, evol)
+        ODESystem(sys, evol(isUp))
       case _ => Test(True)
     }
   }
@@ -237,7 +247,7 @@ object CoasterXSpec {
   def segmentPre(segBounds:(Section,(TPoint,TPoint)), v0:Number):Formula = {
     val (seg, (start,end)) = segBounds
     seg match {
-      case LineSection(Some(LineParam((x1,y1),(x2,y2))), Some(gradient)) =>
+      case LineSection(Some(LineParam((x1,y1),(x2,y2))), Some(gradient),isUp) =>
         /* TODO: Assert
         v0 > 0 &   /* non-negative velocity initially */
         dx > 0 &    /* travelling rightwards initially */
@@ -310,7 +320,7 @@ object CoasterXSpec {
     val x = Variable("x")
     val y = Variable("y")
     seg match {
-      case LineSection(Some(LineParam((x1, y1), (x2, y2))), Some(gradient)) =>
+      case LineSection(Some(LineParam((x1, y1), (x2, y2))), Some(gradient), isUp) =>
         val (dxval, dyval) = lineDir((x1, y1), (x2, y2))
         val inRange = And(LessEqual(x1, x), LessEqual(x, x2))
         val dxInv = s"dx=($dxval)".asFormula
@@ -349,8 +359,8 @@ object CoasterXSpec {
 
   def segmentEmpty(seg:Section):Boolean = {
     seg match {
-      case LineSection(Some(_),Some(_)) => false
-      case LineSection(_, _) => true
+      case LineSection(Some(_),Some(_), _) => false
+      case LineSection(_, _, _) => true
       case ArcSection(Some(_), Some(_)) => false
       case ArcSection(_, _) => true
     }
@@ -421,7 +431,7 @@ object CoasterXSpec {
   def roundSegment(scale:Int)(seg:Section):Section = {
     seg match {
       case ArcSection(param, grad) => ArcSection(param.map(roundArcParam(scale)), grad.map(roundTerm(scale)))
-      case LineSection(param, grad) => LineSection(param.map(roundLineParam(scale)), grad.map(roundTerm(scale)))
+      case LineSection(param, grad, isUp) => LineSection(param.map(roundLineParam(scale)), grad.map(roundTerm(scale)), isUp)
     }
   }
 
@@ -435,8 +445,8 @@ object CoasterXSpec {
 
   def setStartY(sections:List[(Section,(TPoint,TPoint))], y:Term) = {
     sections match {
-      case (LineSection(Some(LineParam((x1,y1),(x2,y2))),Some(grad)), ((xx1, yy1), (xx2, yy2))) :: rest =>
-        (LineSection(Some(LineParam((x1,y),(x2,y2))),Some(grad)), ((xx1, y), (xx2, yy2))) :: rest
+      case (LineSection(Some(LineParam((x1,y1),(x2,y2))),Some(grad), isUp), ((xx1, yy1), (xx2, yy2))) :: rest =>
+        (LineSection(Some(LineParam((x1,y),(x2,y2))),Some(grad), isUp), ((xx1, y), (xx2, yy2))) :: rest
       case (ArcSection(Some(ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(gradient)), ((xx1, yy1), (xx2, yy2))) :: rest =>
         (ArcSection(Some(ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(gradient)), ((xx1, y), (xx2, yy2))) :: rest
       case _ => sections
@@ -465,7 +475,7 @@ object CoasterXSpec {
   def alignZipped(zip:List[(Section,(TPoint,TPoint))], initD:Option[TPoint], index:Int):List[(Section,(TPoint,TPoint), Formula)] = {
     zip match {
       case Nil => Nil
-      case (LineSection(Some(LineParam((x1,y1),(x2,y2))),Some(_)), ((xx1, yy1), (xx2, yy2))) :: rest =>
+      case (LineSection(Some(LineParam((x1,y1),(x2,y2))),Some(_), isUp), ((xx1, yy1), (xx2, yy2))) :: rest =>
         val endY = Variable("y", Some(index))
         val endM = Variable("m", Some(index)) // @TODO: Totally redundant but probably makesn life easier
         val defaultD = normalizeVector((foldMinus(xx2,xx1), foldMinus(yy2,xx1)))
@@ -474,7 +484,7 @@ object CoasterXSpec {
         val endYDef:Formula = Equal(endY, endYTerm)
         val endMDef:Formula = Equal(endM, endMTerm)
         val allDefs = endYDef // Ignore slopes for now
-        val head = (LineSection(Some(LineParam((xx1,yy1),(xx2,endY))), Some(endM)), ((xx1,yy1),(xx2,endY)), allDefs)
+        val head = (LineSection(Some(LineParam((xx1,yy1),(xx2,endY))), Some(endM), isUp), ((xx1,yy1),(xx2,endY)), allDefs)
         val endD:TPoint = initD.getOrElse(defaultD)
         head :: alignZipped(setStartY(rest,endY), Some(endD), index+1)
       case (ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(oldSlope)), ((xx1, yy1), (xx2, yy2))) :: rest =>
