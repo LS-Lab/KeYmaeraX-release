@@ -115,9 +115,11 @@ angular.module('formula')
               selectedName: undefined,
               selected: undefined,
               allInfos: function(formulaId, partialLemmaName) {
-                var url = 'proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' +
-                          formulaId + '/lemmas/' + encodeURIComponent(partialLemmaName);
-                return $http.get(url).then(function(response) { return response.data.lemmas; });
+                if (partialLemmaName && partialLemmaName.length > 0) {
+                  var url = 'proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' +
+                            formulaId + '/lemmas/' + encodeURIComponent(partialLemmaName);
+                  return $http.get(url).then(function(response) { return response.data.lemmas; });
+                } else return [];
               },
               select: function(item, model, label, event) {
                 scope.lemma.selected = item;
@@ -126,20 +128,16 @@ angular.module('formula')
                 scope.tacticPopover.close();
                 scope.onInputTactic({ formulaId: formulaId, tacticId: 'useAt',
                                       input: [{param: 'axiom', value: scope.lemma.selected.name },
-                                              {param: 'key', value: '' + scope.lemma.keyPos() }] });
+                                              {param: 'key', value: '' + scope.lemma.selectedKeyPos() }] });
               },
-              keyPos: function() {
+              selectedKeyPos: function() {
                 var s = scope.lemma.selected;
-                return s.keyPos ? s.keyPos : s.defaultKeyPos;
+                return s.selectedKeyPos ? s.selectedKeyPos : s.defaultKeyPos;
               },
-              keyEnd: function() {
-                var currentKeyPos = scope.lemma.keyPos();
-                return currentKeyPos.charAt(currentKeyPos.length-1);
-              },
-              changeKeyEnd: function(to) {
-                //@note assumes either equivalence/equality or conditional equivalence/equality
-                var currentKeyPos = scope.lemma.keyPos();
-                scope.lemma.selected.keyPos = currentKeyPos.slice(0, currentKeyPos.lastIndexOf('.')+1) + to;
+              selectKeyEnd: function(to) {
+                //@note assumes either implication/equivalence/equality or conditional equivalence/equality
+                var currentKeyPos = scope.lemma.selectedKeyPos();
+                scope.lemma.selected.selectedKeyPos = currentKeyPos.slice(0, currentKeyPos.lastIndexOf('.')+1) + to;
               }
             }
 
