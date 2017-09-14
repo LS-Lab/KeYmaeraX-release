@@ -30,6 +30,8 @@
                     <!-- proof rule -->
                     <span class="k4-withcontextmenu k4-proofrule"
                           tooltip-placement="right"
+                          ng-mouseover="highlightStepPosition(deductionPath.sections[0].path[0], true)"
+                          ng-mouseleave="highlightStepPosition(deductionPath.sections[0].path[0], false)"
                           uib-tooltip="{{deductionPath.sections[0].path[0] | maker:this}}">
                         {{deductionPath.sections[0].path[0] | ruleName:this}}
                     </span>
@@ -52,8 +54,8 @@
                     <span class="k4-withcontextmenu k4-proofrule"
                           tooltip-placement="right"
                           uib-tooltip="{{step | childMaker:this}}"
-                          ng-mouseover="highlightStepPosition(step, true)"
-                          ng-mouseleave="highlightStepPosition(step, false)"
+                          ng-mouseover="highlightStepPosition(proofStepChildren(step)[0], true)"
+                          ng-mouseleave="highlightStepPosition(proofStepChildren(step)[0], false)"
                           ng-right-click="proofStepRightClick($event)" tabindex="-1"
                           uib-popover-template="'proofStepPopover.html'"
                           popover-title="Proof step" popover-placement="auto bottom" popover-trigger="'rightClick'">
@@ -81,13 +83,13 @@
                     <span class="k4-withcontextmenu k4-proofrule"
                           tooltip-placement="right"
                           uib-tooltip="{{step | childMaker:this}}"
-                          ng-mouseover="highlightStepPosition(step, true)"
-                          ng-mouseleave="highlightStepPosition(step, false)"
+                          ng-mouseover="highlightStepPosition(proofStepChildren(step)[0], true)"
+                          ng-mouseleave="highlightStepPosition(proofStepChildren(step)[0], false)"
                           ng-right-click="proofStepRightClick($event)" tabindex="-1"
                           uib-popover-template="'proofStepPopoverPrev.html'"
                           popover-title="Proof step" popover-placement="auto bottom" popover-trigger="'rightClick'">
                     {{step | childRuleName:this}}
-                </span>
+                    </span>
                 </li>
             </ul>
             <!-- do not repeat if first==last, i.e., sole element in list fetched so far -->
