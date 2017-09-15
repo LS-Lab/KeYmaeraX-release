@@ -51,7 +51,7 @@ object CoasterXProver {
     fml
   }
 
-  def quad2Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number):Provable = {
+  def quad2Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int):Provable = {
     //val xLim:Formula = s"x<=($cx)".asFormula
     //val yLim:Formula = s"y<=($yEnd)".asFormula
     //val cyLim:Formula = s"($cy) < ($yEnd)".asFormula
@@ -84,7 +84,7 @@ object CoasterXProver {
   }
 
   //@TODO: Add stuff from vector proof
-  def quad1Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number):Provable = {
+  def quad1Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int):Provable = {
     println("Proving Quadrant 1 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
     val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
@@ -97,22 +97,44 @@ object CoasterXProver {
     val pr1 = interpret(dC(s"dx^2+dy^2=1".asFormula)(1) <(nil, dI()(1)), pr)
     val pr2 = interpret(dC(s"dx=(y-($cy))/($r)".asFormula)(1) <(nil, dI()(1)), pr1)
     val pr3 = interpret(dC(s"dy=-(x-($cx))/($r)".asFormula)(1) <(nil, dI()(1)), pr2)
-    val pr4= interpret(dC(s"(($cx) - x)^2   + (($cy) - y)^2   = ($r)^2".asFormula)(1) <(nil, ODE(1)), pr3)
+    val pr4 = interpret(dC(s"(($cx) - x)^2   + (($cy) - y)^2   = ($r)^2".asFormula)(1) <(nil, ODE(1)), pr3)
     //val pr3b =interpret(dC(s"(($cx) - ($xEnd))^2 + (($cy) - ($yEnd))^2 = ($r)^2".asFormula)(1) <(nil, ODE(1)), pr3a)
     val pr5 = interpret(dC(s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)(1) <(nil, dI()(1)), pr4)
     val pr6 = interpret(dC(s"v>0 ".asFormula)(1) <(nil, ODE(1)), pr5)
     pr6
   }
 
-  def quad3Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number):Provable = {
+  def quad3Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int):Provable = {
     println("Proving Quadrant 3 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ3
+    val ((x0:Term,y0:Term),(x1:Term,y1:Term)) = (p1,p2)
     val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
     val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
     val r = "(9801+(y_1-499)^2)^0.5".asTerm
+    val dx0 = s"(($cy)-y)/($r)".asTerm
+    val dy0 = s"-(($cx)-x)/($r)".asTerm
     //val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
-    val y0 = p1._2
-    val yEnd = p2._2
+    val mainCut = s"(dx=($dx0) & dy=-(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & v>0 & y < ($cy))".asFormula
+    val pr0 = interpret(dC(mainCut)(1), pr)
+    val cut1 = s"($x1) > ($x0)".asFormula
+    val pr1a = timeFn("ArcQ3 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & QE)), pr0)})
+    //val cut2 = s"($dx0)^2 + ($dy0)^2 = 1".asFormula
+    //val pr1b = timeFn("ArcQ3 Case Step 2", {() => interpret(nil < (nil, cut(cut2) < (nil, hideR(1) & QE)), pr1a)})
+    val cut3 = s"($y0) > ($y1)".asFormula
+    val pr1c = timeFn("ArcQ3 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & QE)), pr1a)})
+    val cut4 = s"($cy) > ($y0)".asFormula
+    val pr1d = timeFn("ArcQ3 Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & QE)), pr1c)})
+    val cut5 = s"($cx) >= ($x1)".asFormula
+    val pr1e = timeFn("ArcQ3 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & QE)), pr1d)})
+    val cut6 = s"($r) > 0".asFormula
+    val pr1f = timeFn("ArcQ3 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & QE)), pr1e)})
+    val pr1g = interpret(nil <(nil, hideL(-2)*nYs), pr1f)
+    val tac = US(NoProofTermProvable(aproof))
+    val pr6 = interpret(nil < (nil, tac), pr1g)
+    //val pr6a = timeFn("Line Case Step 6", {() => interpret(dW(1), pr6)})
+    //val pr7 = timeFn("Line Case Step 7", {() => interpret(QE(), pr6a)})
+    pr6
+    // @TODO: Prove 6 cuts, hide Ys, flawless victory by usubst
     //dx=((cy())-y)/(r())
     //dy=-((cx())-x)/(r())
     //v^2=(v0())^2+2*(yInit())*g()-2*y*g()
@@ -120,17 +142,17 @@ object CoasterXProver {
     //y < ($cy)
     // @TODO: I think there's a contradiction here or something
     //val pr1 = timeFn("quad3 Step 1", {() => interpret(dC(s"(dx=1)".asFormula)(1)  <(nil, dI()(1)), pr)})
-    val pr1 = timeFn("quad3 Step 1", {() => interpret(dC(s"dx=(($cy)-y)/($r)".asFormula)(1)  <(nil, dI()(1)), pr)})
-    val pr2 = timeFn("quad3 Step 2", {() => interpret(dC(s"dy=-(($cx)-x)/($r)".asFormula)(1)  <(nil, dI()(1)), pr1)})
-    //println("Proof One:" , s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)
-    val pr3 = timeFn("quad3 Step 3", {() => interpret(dC(s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)(1)  <(nil, dI()(1)), pr2)})
-    val pr4 = timeFn("quad3 Step 4", {() => interpret(dC(s"v>0".asFormula)(1)  <(nil, ODE(1)), pr3)})
-    val pr5 = timeFn("quad3 Step 5", {() => interpret(dC(s"y < ($cy)".asFormula)(1)  <(nil, dI()(1)), pr4)})
-    pr5
+    //val pr1 = timeFn("quad3 Step 1", {() => interpret(dC(s"dx=(($cy)-y)/($r)".asFormula)(1)  <(nil, dI()(1)), pr)})
+    //val pr2 = timeFn("quad3 Step 2", {() => interpret(dC(s"dy=-(($cx)-x)/($r)".asFormula)(1)  <(nil, dI()(1)), pr1)})
+    ////println("Proof One:" , s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)
+    //val pr3 = timeFn("quad3 Step 3", {() => interpret(dC(s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)(1)  <(nil, dI()(1)), pr2)})
+    //val pr4 = timeFn("quad3 Step 4", {() => interpret(dC(s"v>0".asFormula)(1)  <(nil, ODE(1)), pr3)})
+    //val pr5 = timeFn("quad3 Step 5", {() => interpret(dC(s"y < ($cy)".asFormula)(1)  <(nil, dI()(1)), pr4)})
+    //pr5
     //interpret(e, pr)
   }
 
-  def quad4Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number):Provable = {
+  def quad4Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int):Provable = {
     println("Proving Quadrant 4 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val (cx:Term, cy:Term) = arcCenter(bl, tr)
     val r = CoasterXSpec.dist(p1, (cx,cy))
@@ -170,25 +192,13 @@ object CoasterXProver {
 
   def proveLineArith(pr: Provable, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):Provable = {
     val yDefStart = 3
-    val (hideYDefs, nYs) = {
+    val nYs = {
       val js = List.tabulate(nSections)(j => j + yDefStart).filter(j => !(j == iSection + yDefStart || j == iSection + yDefStart - 1 || j == iSection + yDefStart - 2))
-      val e = js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
-      (e, nSections - js.length)
+      nSections - js.length
     }
-    // J(0), const, y1 = _, ..., yn = _ |- \forall t t>= 0 ->(\forall s in [0,t] DC(s)) -> J(t)
-    val pr1 = interpret(hideYDefs, pr)
-    // J(0), const, yi |- " "
-    val pr2 = interpret(andL(-1), pr1)
-    val unpackPosts = andL('Llast)*(nSections - 1)
-    // const, yi=_, global(0), &_j in sections{bound_j(0) -> post_j(0)} |- " "
-    val pr3 = interpret(unpackPosts, pr2)
-    val Jstart = yDefStart + nYs
-    val hideJs = {
-      val js = List.tabulate(nSections)(j => j + Jstart).filter(j => j != Jstart + iSection)
-      js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
-    }
-    // const, yi=_, global(0), (op,)_j in sections{bound_j(0) -> post_j(0)} |- " "
-    val pr4 = interpret(hideJs, pr3)
+    val Jstart = yDefStart + nYs + 4
+
+    val pr4 = selectSection(iSection,nSections,pr)
     // const, yi=_, global(0), (bound_i(0) -> post_i(0)) |- \forall t  t>= 0 -> (\forall s in [0,t] DC(s)) -> J(t)
     val pr5 = interpret(allR(1) & implyR(1) & implyR(1), pr4)
     // const, yi=_, global(0), (bound_i(0) -> post_i(0)), t >= 0, (\forall s in [0,t] DC) |- J(t)
@@ -232,25 +242,17 @@ object CoasterXProver {
 
   def proveLineArithFromDW(pr: Provable, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):Provable = {
     val yDefStart = 3
-    val (hideYDefs, nYs) = {
+    val nYs = {
       val js = List.tabulate(nSections)(j => j + yDefStart).filter(j => !(j == iSection + yDefStart || j == iSection + yDefStart - 1 || j == iSection + yDefStart - 2))
-      val e = js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
-      (e, nSections - js.length)
+      nSections - js.length
     }
-    // J(0), const, y1 = _, ..., yn = _ |- \forall t t>= 0 ->(\forall s in [0,t] DC(s)) -> J(t)
-    val pr1 = interpret(hideYDefs, pr)
-    // J(0), const, yi |- " "
-    val pr2 = interpret(andL(-1), pr1)
-    val unpackPosts = andL('Llast)*(nSections - 1)
-    // const, yi=_, global(0), &_j in sections{bound_j(0) -> post_j(0)} |- " "
-    val pr3 = interpret(unpackPosts, pr2)
     val Jstart = yDefStart + nYs + 4
     val hideJs = {
       val js = List.tabulate(nSections)(j => j + Jstart).filter(j => j != Jstart + iSection)
       js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
     }
     // const, yi=_, global(0), (op,)_j in sections{bound_j(0) -> post_j(0)} |- " "
-    val pr4 = interpret(hideJs, pr3)
+    val pr4 = selectSection(iSection,nSections,pr)
     // const, yi=_, global(0), (bound_i(0) -> post_i(0)) |- \forall t  t>= 0 -> (\forall s in [0,t] DC(s)) -> J(t)
     //val pr5 = interpret(allR(1) & implyR(1) & implyR(1), pr4)
     // const, yi=_, global(0), (bound_i(0) -> post_i(0)), t >= 0, (\forall s in [0,t] DC) |- J(t)
@@ -347,9 +349,9 @@ object CoasterXProver {
       case None =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((dx=(cy()-y)/r()  & dy=-(cx()-x)/r()) & ((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy()))))".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((dx=-(y-cy())/r()  & dy=(x-cx())/r()) & ((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy()))))".asFormula
         val a4 = "x1() > x0()".asFormula
-        val a5 = "dx0()^2 + dy0()^2 = 1".asFormula
+        //val a5 = "dx0()^2 + dy0()^2 = 1".asFormula
         val a6 = "y0() > y1()".asFormula
         val a7 = "cy() > y0()".asFormula
         val a8 = "cx() >= x1()".asFormula
@@ -358,7 +360,7 @@ object CoasterXProver {
           """[{x'=dx*v,
             |            y'=dy*v,
             |            v'=-dy*g(),
-            |            dx' =  -dy*v/r(),
+            |            dx' =  (-dy*v)/r(),
             |            dy' =  dx*v/r()
             |            &(x0()<=x&x<=x1())
             |            &(y1()<=y&y<=y0())}]
@@ -368,7 +370,7 @@ object CoasterXProver {
             |          & v>0
             |          & y < cy()
             |          )""".stripMargin.asFormula
-        val con:Sequent = Sequent(immutable.IndexedSeq(a1,a2,a3,a4,a5, a6, a7, a8,a9), immutable.IndexedSeq(c))
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a6, a7, a8,a9), immutable.IndexedSeq(c))
         val e =
           dC("dx=-(y-cy())/r()".asFormula)(1) <(nil, dI()(1)) &
           dC("dy=(x-cx())/r()".asFormula)(1) <(nil, dI()(1)) &
@@ -385,7 +387,35 @@ object CoasterXProver {
     }
   }
 
+  def hideYs(iSection:Int, nSections:Int):(BelleExpr, Int) = {
+    val yDefStart = 3
+    val js = List.tabulate(nSections)(j => j + yDefStart).filter(j => !(j == iSection + yDefStart || j == iSection + yDefStart - 1 || j == iSection + yDefStart - 2))
+    val e = js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
+    (e, nSections - js.length)
+  }
+
+  def selectSection(iSection:Int, nSections:Int, pr:Provable):Provable = {
+    val yDefStart = 3
+    val (hideYDefs, nYs) = hideYs(iSection,nSections)
+    //J(0), const, y_1=_,...,y_n=_ |- _
+    val pr1 = interpret(hideYDefs, pr)
+    //J(0), const, y_i=_ |- _
+    val pr2 = interpret(andL(-1), pr1)
+    val unpackPosts = andL('Llast)*(nSections - 1)
+    //const, y_i=_, global(0), &(bound_i(0) -> post_i(0)) |- _
+    val pr3 = interpret(unpackPosts, pr2)
+    val Jstart = yDefStart + nYs
+    val hideJs = {
+      val js = List.tabulate(nSections)(j => j + Jstart).filter(j => j != Jstart + iSection)
+      js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
+    }
+    //const, y_i=_, global(0), (bound_0(0) -> post_0(0)), ...,  (bound_n(0) -> post_n(0)) |- _
+    val pr4 = interpret(hideJs, pr3)
+    pr4
+  }
+
   def sectionTactic(pr: Provable, p1: TPoint, p2: TPoint, v0:Number, yInit:Term, section: Section, iSection:Int, nSections: Int):Provable = {
+    val nYs = hideYs(iSection, nSections)._2
     section match {
       case ArcSection(Some(param@ArcParam(bl,tr,theta1,deltaTheta)),Some(grad)) => {
         val (t1, t2) = (theta1.value, param.theta2.value)
@@ -393,28 +423,29 @@ object CoasterXProver {
         val q4 = t1 >= -90 && t1 <= 0   && t2 <= 0
         val q1 = t1 >= 0   && t1 <= 90  && t2 <= 90
         val x = 1 + 1
+        val prStart = selectSection(iSection,nSections, pr)
         val pr1 =
           (q3, q4, q1) match {
             case (true, false, false) =>
               timeFn("Q3", () => {
-              quad3Tactic(pr, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta)}) // Quadrant 3
+              quad3Tactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs)}) // Quadrant 3
             case (false, true, false) =>
               timeFn("Q4", () => {
-              quad4Tactic(pr, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta)
+              quad4Tactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs)
               }) // Quadrant 4
             case (false, false, true) =>
               timeFn("Q1", () => {
-                quad1Tactic(pr, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta)}) // Quadrant 1
+                quad1Tactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs)}) // Quadrant 1
             case (false,false,false)  =>
               timeFn("Q2", () => {
-              quad2Tactic(pr, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta)})
+              quad2Tactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs)})
                // Quadrant 2
             case _ => ???
           }
         val prOut =
           timeFn("Arc QE", () => {
             interpret(dW(1) & QE, pr1)})
-       // assert(prOut.isProved)
+        //assert(prOut.isProved)
         prOut
       }
       case LineSection(Some(LineParam(bl,tr)), Some(grad), isUp) => {
@@ -431,26 +462,8 @@ object CoasterXProver {
         }
         def doLineCase () = {
           println("Proving Line Segment: ", bl, tr)
-          val yDefStart = 3
-          val (hideYDefs, nYs) = {
-            val js = List.tabulate(nSections)(j => j + yDefStart).filter(j => !(j == iSection + yDefStart || j == iSection + yDefStart - 1 || j == iSection + yDefStart - 2))
-            val e = js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
-            (e, nSections - js.length)
-          }
-          //J(0), const, y_1=_,...,y_n=_ |- _
-          val pr1 = interpret(hideYDefs, pr)
-          //J(0), const, y_i=_ |- _
-          val pr2 = interpret(andL(-1), pr1)
-          val unpackPosts = andL('Llast)*(nSections - 1)
-          //const, y_i=_, global(0), &(bound_i(0) -> post_i(0)) |- _
-          val pr3 = interpret(unpackPosts, pr2)
-          val Jstart = yDefStart + nYs
-          val hideJs = {
-            val js = List.tabulate(nSections)(j => j + Jstart).filter(j => j != Jstart + iSection)
-            js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
-          }
           //const, y_i=_, global(0), (bound_0(0) -> post_0(0)), ...,  (bound_n(0) -> post_n(0)) |- _
-          val pr4 = interpret(hideJs, pr3)
+          val pr4 = selectSection(iSection,nSections,pr)
           //const, y_i=_, global(0), bound_i(0) -> post_i(0))|- _
           val x1 = tr._1
           val x0 = bl._1
@@ -470,7 +483,7 @@ object CoasterXProver {
           val pr5b = timeFn("Line Case Step 2", {() => interpret(nil < (nil, cut(cut2) < (nil, hideR(1) & QE)), pr5a)})
           val pr5c = timeFn("Line Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & QE)), pr5b)})
           val pr5d = timeFn("Line Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & QE)), pr5c)})
-          val pr5e = timeFn("Line Case Step 5", {() => interpret(nil < (nil, hideL(-2)), pr5d)})
+          val pr5e = timeFn("Line Case Step 5", {() => interpret(nil < (nil, hideL(-2)*nYs), pr5d)})
           val tac = US(NoProofTermProvable(sproof))
           val pr6 = interpret(nil < (nil, tac), pr5e)
           val pr6a = timeFn("Line Case Step 6", {() => interpret(dW(1), pr6)})
