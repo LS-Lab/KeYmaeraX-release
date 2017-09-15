@@ -41,13 +41,13 @@
                             <div class="col-md-12">
                                 <span class="text-danger" ng-if="model.content.indexOf('__________')>=0">
                                     Assignment: please fill in the __________ placeholders</span>
-                                <textarea class="k4-modeleditor" rows="20" ng-model="model.content">
+                                <textarea class="k4-modeleditor" rows="17" ng-model="model.content">
                                 </textarea>
                             </div>
                         </div>
                     </uib-tab>
                     <uib-tab index="1" heading="Preview">
-                        <div hljs hljs-language="dl" style="overflow: scroll; height: 500px" hljs-source="model.content"></div>
+                        <div hljs hljs-language="dl" style="overflow: scroll; height: 350px" hljs-source="model.content"></div>
                     </uib-tab>
                 </uib-tabset>
             </div>
