@@ -114,7 +114,7 @@ object CoasterXProver {
     val dx0 = s"(($cy)-y)/($r)".asTerm
     val dy0 = s"-(($cx)-x)/($r)".asTerm
     //val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
-    val mainCut = s"(dx=($dx0) & dy=-(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & v>0 & y < ($cy))".asFormula
+    val mainCut = s"(dx=($dx0) & dy=-(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & v>0 & y < ($cy) & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
     val pr0 = interpret(dC(mainCut)(1), pr)
     val cut1 = s"($x1) > ($x0)".asFormula
     val pr1a = timeFn("ArcQ3 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & QE)), pr0)})
@@ -134,13 +134,11 @@ object CoasterXProver {
     //val pr6a = timeFn("Line Case Step 6", {() => interpret(dW(1), pr6)})
     //val pr7 = timeFn("Line Case Step 7", {() => interpret(QE(), pr6a)})
     pr6
-    // @TODO: Prove 6 cuts, hide Ys, flawless victory by usubst
     //dx=((cy())-y)/(r())
     //dy=-((cx())-x)/(r())
     //v^2=(v0())^2+2*(yInit())*g()-2*y*g()
     //v>0".asFormula)(1)  <(nil, ODE(1)), pr3)})
     //y < ($cy)
-    // @TODO: I think there's a contradiction here or something
     //val pr1 = timeFn("quad3 Step 1", {() => interpret(dC(s"(dx=1)".asFormula)(1)  <(nil, dI()(1)), pr)})
     //val pr1 = timeFn("quad3 Step 1", {() => interpret(dC(s"dx=(($cy)-y)/($r)".asFormula)(1)  <(nil, dI()(1)), pr)})
     //val pr2 = timeFn("quad3 Step 2", {() => interpret(dC(s"dy=-(($cx)-x)/($r)".asFormula)(1)  <(nil, dI()(1)), pr1)})
@@ -369,6 +367,7 @@ object CoasterXProver {
             |          & v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g()
             |          & v>0
             |          & y < cy()
+            |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
         val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a6, a7, a8,a9), immutable.IndexedSeq(c))
         val e =
@@ -376,6 +375,7 @@ object CoasterXProver {
           dC("dy=(x-cx())/r()".asFormula)(1) <(nil, dI()(1)) &
           dC("v^2=v0()^2+2*yGlobal()*g()-2*y*g()".asFormula)( 1)  <(nil, dI()(1)) &
           dC("v>0".asFormula)(1) <(nil, ODE(1)) &
+          dC("(x-cx())^2 + (y-cy())^2 = r()^2".asFormula)(1) <(nil, ODE(1)) &
           ODE(1)
 
 
@@ -445,7 +445,7 @@ object CoasterXProver {
         val prOut =
           timeFn("Arc QE", () => {
             interpret(dW(1) & QE, pr1)})
-        //assert(prOut.isProved)
+        assert(prOut.isProved)
         prOut
       }
       case LineSection(Some(LineParam(bl,tr)), Some(grad), isUp) => {
