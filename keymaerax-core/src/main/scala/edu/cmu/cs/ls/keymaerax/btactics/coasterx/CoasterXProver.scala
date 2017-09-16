@@ -39,19 +39,20 @@ object CoasterXProver {
     }
   }
 
-  def invariant(align:(File,Formula)):Formula = {
-    val (aligned@(points, segments, v0, _), segmentDefs) = align
+  def invariant(align:(AFile,Formula)):Formula = {
+    val (aligned@(points, segments, v0, _, inits), segmentDefs) = align
     val nonemptySegs = segments.filter(!segmentEmpty(_))
-    val withBounds = zipConsecutive(nonemptySegs, points)
-    val ode = withBounds.map(segmentOde).reduceRight[Program]({ case (x, y) => Choice(x, y) })
+    val withBounds = zipConsecutive(nonemptySegs, points, inits)
+    val ode = withBounds.zipWithIndex.map(segmentOde).reduceRight[Program]({ case (x, y) => Choice(x, y) })
     val y0 = points.head._2
     val energyConserved = s"v^2 + 2*y*g() = ($v0)^2 + 2*($y0)*g()".asFormula
     val globalPost = And("v > 0".asFormula, energyConserved)
-    val fml = And(globalPost, withBounds.map(segmentPost).reduceRight[Formula] { case (x, y) => And(x, y) })
+    val fml = And(globalPost, withBounds.zipWithIndex.map(segmentPost).reduceRight[Formula] { case (x, y) => And(x, y) })
     fml
   }
 
-  def quad2Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int):Provable = {
+
+  def quad2Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):Provable = {
     //val xLim:Formula = s"x<=($cx)".asFormula
     //val yLim:Formula = s"y<=($yEnd)".asFormula
     //val cyLim:Formula = s"($cy) < ($yEnd)".asFormula
@@ -59,11 +60,11 @@ object CoasterXProver {
     println("Proving Quadrant 2 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     // @TODO: Set cx, cy to correct value as done in postcondition generator
     // @TODO: Hide preconditions and y-defs that you don't need
-    val (cx:Term, cy:Term) = arcCenter(bl, tr)
-    val r = CoasterXSpec.dist(p1, (cx,cy))
-    //val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
-    //val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
-    //val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
+    //val (cx:Term, cy:Term) = iCenter(iSection)
+    //val r = CoasterXSpec.dist(p1, (cx,cy))
+    val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
+    val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
+    val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
     val y0 = p1._2
     val yEnd = p2._2
     // Note: Conservation of energy always uses the start of the ENTIRE track, not current section
@@ -84,7 +85,7 @@ object CoasterXProver {
   }
 
   //@TODO: Add stuff from vector proof
-  def quad1Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int):Provable = {
+  def quad1Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):Provable = {
     println("Proving Quadrant 1 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
     val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
@@ -104,13 +105,12 @@ object CoasterXProver {
     pr6
   }
 
-  def quad3Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int):Provable = {
+  def quad3Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int, iSection:Int):Provable = {
     println("Proving Quadrant 3 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ3
     val ((x0:Term,y0:Term),(x1:Term,y1:Term)) = (p1,p2)
-    val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
-    val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
-    val r = "(9801+(y_1-499)^2)^0.5".asTerm
+    val (cx,cy) = iCenter(iSection)
+    val r = iRadius(iSection)
     val dx0 = s"(($cy)-y)/($r)".asTerm
     val dy0 = s"-(($cx)-x)/($r)".asTerm
     //val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
@@ -150,7 +150,7 @@ object CoasterXProver {
     //interpret(e, pr)
   }
 
-  def quad4Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int):Provable = {
+  def quad4Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):Provable = {
     println("Proving Quadrant 4 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val (cx:Term, cy:Term) = arcCenter(bl, tr)
     val r = CoasterXSpec.dist(p1, (cx,cy))
@@ -416,7 +416,7 @@ object CoasterXProver {
     pr4
   }
 
-  def sectionTactic(pr: Provable, p1: TPoint, p2: TPoint, v0:Number, yInit:Term, section: Section, iSection:Int, nSections: Int):Provable = {
+  def sectionTactic(pr: Provable, p1: TPoint, p2: TPoint, v0:Number, yInit:Term, section: Section, iSection:Int, nSections: Int, initD:TPoint):Provable = {
     val nYs = hideYs(iSection, nSections)._2
     section match {
       case ArcSection(Some(param@ArcParam(bl,tr,theta1,deltaTheta)),Some(grad)) => {
@@ -430,17 +430,17 @@ object CoasterXProver {
           (q3, q4, q1) match {
             case (true, false, false) =>
               timeFn("Q3", () => {
-              quad3Tactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs)}) // Quadrant 3
+              quad3Tactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)}) // Quadrant 3
             case (false, true, false) =>
               timeFn("Q4", () => {
-              quad4Tactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs)
+              quad4Tactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)
               }) // Quadrant 4
             case (false, false, true) =>
               timeFn("Q1", () => {
-                quad1Tactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs)}) // Quadrant 1
+                quad1Tactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)}) // Quadrant 1
             case (false,false,false)  =>
               timeFn("Q2", () => {
-              quad2Tactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs)})
+              quad2Tactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)})
                // Quadrant 2
             case _ => ???
           }
@@ -471,7 +471,7 @@ object CoasterXProver {
           val x0 = bl._1
           val y0 = bl._2
           val y1 = tr._2
-          val thisInv = segmentPost((section, (bl,tr)))
+          val thisInv = segmentPost((section, (bl,tr), initD),iSection)
           val Imply(_, And(And(Equal(BaseVariable("dx", None, Real), dx0), Equal(BaseVariable("dy", None, Real),dy0)),
                            Equal(_, Plus(_, c)))) = thisInv
           val cutMain = s"(v>0&v^2+2*y*g()=($v0)^2+2*($y0)*g())&(($x0)<=x&x<=($x1)&((dx=($dx0)&dy=($dy0))&($dx0)*y=($dy0)*x+($c)))".asFormula
@@ -499,34 +499,34 @@ object CoasterXProver {
     }
   }
 
-  def provePosts(pr:Provable, fml:Formula, p1: TPoint, p2: TPoint, section: Section, v: Number, yInit: Term, i: Int, j:Int, nSections:Int):BelleExpr = {
+  def provePosts(pr:Provable, fml:Formula, p1: TPoint, p2: TPoint, section: Section, v: Number, yInit: Term, i: Int, j:Int, nSections:Int, initD:TPoint):BelleExpr = {
     val thisE =
       if(i == j) {
-        sectionTactic(pr, p1, p2, v, yInit,section, i, nSections)
+        sectionTactic(pr, p1, p2, v, yInit,section, i, nSections, initD)
         //@TODO: fix
         nil
       } else {
         dW(1) & QE
       }
     fml match {
-      case And(p,q) => andR(1) <(thisE, provePosts(pr, q, p1, p2, section, v, yInit,i, j+1, nSections))
+      case And(p,q) => andR(1) <(thisE, provePosts(pr, q, p1, p2, section, v, yInit,i, j+1, nSections, initD))
       case _ => thisE
     }
   }
 
-  def componentTactic(pr:Provable, p1: TPoint, p2: TPoint, section: Section, v: Number, yInit: Term, i: Int, nSections:Int):Provable = {
-    sectionTactic(pr, p1, p2, v, yInit, section, i, nSections)
+  def componentTactic(pr:Provable, p1: TPoint, p2: TPoint, section: Section, v: Number, yInit: Term, i: Int, nSections:Int, initD:TPoint):Provable = {
+    sectionTactic(pr, p1, p2, v, yInit, section, i, nSections, initD)
   /*  val globalPost = ???
     val componentPost = provePosts(pr, pr.conclusion.succ.head, p1, p2, section, v, i, 0)
     andR(1) <(globalPost, componentPost)*/
   }
 
-  def proveAllComponents(global:Provable, locals: List[Provable], points: List[(Term, Term)], segments: List[Section], v: Number, yInit: Term, i: Int, nSections: Int):Provable = {
-    (points, segments, locals) match {
-      case (p1 :: p2 :: Nil, s1 :: Nil, pr :: Nil) => componentTactic(pr, p1, p2, s1, v, yInit, i, nSections)
-      case (p1 :: p2 :: ps, s1 :: ss, pr :: prs) =>
-        val sg = componentTactic(pr, p1, p2, s1, v, yInit, i, nSections)
-        proveAllComponents(global(sg, 0), prs, p2::ps, ss, v, yInit, i+1, nSections)
+  def proveAllComponents(global:Provable, locals: List[Provable], points: List[(Term, Term)], segments: List[Section], v: Number, yInit: Term, i: Int, nSections: Int, initsD:List[TPoint]):Provable = {
+    (points, segments, locals, initsD) match {
+      case (p1 :: p2 :: Nil, s1 :: Nil, pr :: Nil, d :: Nil) => componentTactic(pr, p1, p2, s1, v, yInit, i, nSections, d)
+      case (p1 :: p2 :: ps, s1 :: ss, pr :: prs, d::ds) =>
+        val sg = componentTactic(pr, p1, p2, s1, v, yInit, i, nSections,d)
+        proveAllComponents(global(sg, 0), prs, p2::ps, ss, v, yInit, i+1, nSections,ds)
       case _ => ???
     }
   }
@@ -548,7 +548,7 @@ object CoasterXProver {
 
   def apply(fileName:String):Provable = {
     val parsed = CoasterXParser.parseFile(fileName).get
-    val align@(aligned@(points, segments, v0, _), segmentDefs) = prepareFile(parsed)
+    val align@(aligned@(points, segments, v0, _, ds), segmentDefs) = prepareFile(parsed)
     val spec = fromAligned(align)
     val pr = Provable.startProof(spec)
     val pr1 = interpret(implyR(1), pr)
@@ -567,7 +567,7 @@ object CoasterXProver {
     val pr4 = interpret(nil <(master(), nil), pr3a)
     val (globalPr, localPrs) = splitComponents(pr4)
       //mapChoices(es)
-    val prEnd = proveAllComponents(globalPr, localPrs, points, segments.tail, v0, points.head._2, 0, segments.tail.length)
+    val prEnd = proveAllComponents(globalPr, localPrs, points, segments.tail, v0, points.head._2, 0, segments.tail.length, ds)
     //val prs = localPrs.zip(es)
     //val prEnd = interpret(e, pr4)
     assert(prEnd.isProved, "CoasterX model not proved")

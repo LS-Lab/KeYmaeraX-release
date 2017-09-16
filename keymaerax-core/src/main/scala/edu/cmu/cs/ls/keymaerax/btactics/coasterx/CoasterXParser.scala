@@ -58,6 +58,7 @@ object CoasterXParser {
   type TPoint = (Term, Term)
 
   type File = (List[TPoint], List[Section], Number, SectionParam)
+  type AFile = (List[TPoint], List[Section], Number, SectionParam, List[TPoint])
 
   def parseArcParam(str:String):Option[(Option[ArcParam],String)] = {
     peelPrefix(str, "(None,)") match {
