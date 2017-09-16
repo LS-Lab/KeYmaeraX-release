@@ -388,10 +388,12 @@ object CoasterXProver {
   }
 
   def hideYs(iSection:Int, nSections:Int):(BelleExpr, Int) = {
-    val yDefStart = 3
+    /*val yDefStart = 3
     val js = List.tabulate(nSections)(j => j + yDefStart).filter(j => !(j == iSection + yDefStart || j == iSection + yDefStart - 1 || j == iSection + yDefStart - 2))
     val e = js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
-    (e, nSections - js.length)
+    (e, nSections - js.length)*/
+    //@TODO: This hid too much, so now hiding notihng
+    (nil, nSections)
   }
 
   def selectSection(iSection:Int, nSections:Int, pr:Provable):Provable = {
