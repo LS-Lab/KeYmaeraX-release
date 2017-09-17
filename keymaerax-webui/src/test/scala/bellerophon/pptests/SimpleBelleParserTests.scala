@@ -4,7 +4,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.Real
+import edu.cmu.cs.ls.keymaerax.core.{Lemma, Real}
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.{ParseException, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -594,6 +595,24 @@ class SimpleBelleParserTests extends TacticTestBase {
       Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))))) {
       case apt: AppliedPositionTactic => apt.locator shouldBe Fixed(-2, Nil, Some("s=y".asFormula))
     }
+  }
+
+  //endregion
+
+  //region Lemmas
+
+  "Using lemmas" should "work in exactly matching open goal" in {
+    val f = "x>0&y>1 -> y>1&x>0".asFormula
+    val lemma = proveBy(f, TactixLibrary.prop)
+    LemmaDBFactory.lemmaDB.add(new Lemma(lemma, Lemma.requiredEvidence(lemma, Nil), Some("testPropLemma")))
+    proveBy(f, "useLemma({`testPropLemma`})".asTactic) shouldBe 'proved
+  }
+
+  it should "work with tactic adaptation" in {
+    val f = "x>0&y>1 -> y>1&x>0".asFormula
+    val lemma = proveBy(f, TactixLibrary.prop)
+    LemmaDBFactory.lemmaDB.add(new Lemma(lemma, Lemma.requiredEvidence(lemma, Nil), Some("testPropLemma")))
+    proveBy("x>0, y>1, z>2 ==> y>1&x>0".asSequent, "useLemma({`testPropLemma`}, {`prop`})".asTactic) shouldBe 'proved
   }
 
   //endregion

@@ -10,9 +10,6 @@ package edu.cmu.cs.ls.keymaerax.lemma
 
 import java.io.{File, IOException, PrintWriter}
 
-import edu.cmu.cs.ls.keymaerax.core.Lemma
-import edu.cmu.cs.ls.keymaerax.parser._
-
 /**
  * File-based lemma DB implementation. Stores one lemma per file in the user's KeYmaera X home directory under
  * cache/lemmadb/. Lemma file names are created automatically and in a thread-safe manner.
@@ -34,9 +31,14 @@ class FileLemmaDB extends LemmaDBBase {
     file
   }
 
-  private def file(id:LemmaID):File = new File(lemmadbpath, id + ".alp")
+  /** Replaces special file characters with _. */
+  private def sanitize(id: LemmaID): LemmaID = id.replaceAll(s"[^\\w\\-${File.separator}]", "_")
 
-  def readLemmas(ids: List[LemmaID]):Option[List[String]] = {
+  /** Returns the File representing lemma `id`. */
+  private def file(id: LemmaID): File = new File(lemmadbpath, sanitize(id) + ".alp")
+
+  /** Reads the lemma content of the lemmas `ids`. None if any of the `ids` does not exist. */
+  def readLemmas(ids: List[LemmaID]): Option[List[String]] = {
     flatOpt(ids.map{lemmaID =>
       val f = file(lemmaID)
       if (f.exists()) {
@@ -52,7 +54,7 @@ class FileLemmaDB extends LemmaDBBase {
     pw.close()
   }
 
-  def createLemma():LemmaID = {
+  def createLemma(): LemmaID = {
     val f = File.createTempFile("lemma",".alp",lemmadbpath)
     f.getName.substring(0, f.getName.length-".alp".length)
   }
@@ -69,10 +71,9 @@ class FileLemmaDB extends LemmaDBBase {
 
   override def version(): String = {
     val file = new File(cachePath + File.separator + "VERSION")
-    if(!file.exists()) {
+    if (!file.exists()) {
       "0.0"
-    }
-    else {
+    } else {
       assert(file.canRead, s"Cache VERSION file exists but is not readable: ${file.getAbsolutePath}")
       scala.io.Source.fromFile(file).mkString
     }

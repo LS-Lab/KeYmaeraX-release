@@ -4,12 +4,15 @@
  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import java.io.File
+
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 
@@ -820,6 +823,22 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
    * }}}
    */
   def proveBy(goal: Formula, tactic: BelleExpr): ProvableSig = proveBy(Sequent(IndexedSeq(), IndexedSeq(goal)), tactic)
+
+  /** useLemma(lemmaName, tactic) applies the lemma identified by `lemmaName`, optionally adapting the lemma formula to
+    * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */
+  def useLemma(lemmaName: String, adapt: Option[BelleExpr]): BelleExpr = "useLemma" byWithInputs(
+    if (adapt.isDefined) lemmaName::adapt.get.prettyString::Nil else lemmaName::Nil,
+    anon { _ =>
+      val userLemmaName = "user" + File.separator + lemmaName //@todo FileLemmaDB + multi-user environment
+      if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {
+        val lemma = LemmaDBFactory.lemmaDB.get(userLemmaName).get
+        adapt match {
+          case Some(t) => cut(lemma.fact.conclusion.succ.head) <(t, cohideR('Rlast) & by(lemma))
+          case None => by(lemma)
+        }
+      } else throw new BelleAbort("Missing lemma " + lemmaName, "Please prove lemma " + lemmaName + " first")
+    }
+  )
 
   /** Finds a counter example, indicating that the specified formula is not valid. */
   def findCounterExample(formula: Formula) = ToolProvider.cexTool().getOrElse(throw new BelleThrowable("findCounterExample requires a CounterExampleTool, but got None")).findCounterExample(formula)

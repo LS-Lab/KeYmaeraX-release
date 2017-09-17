@@ -38,6 +38,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.cexsearch
 import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, BreadthFirstSearch, ProgramSearchNode, SearchNode}
 import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 
 import scala.util.Try
 
@@ -1837,14 +1838,25 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     else {
       assert(provable.isProved, "Provable " + provable + " must be proved")
       assert(provable.conclusion == conclusion, "Conclusion of provable " + provable + " must match problem " + conclusion)
+      val tactic = tree.tacticString
       tree.info.tactic match {
         case None =>
           // remember tactic string
           val newInfo = new ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
             tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
-            Some(tree.tacticString))
+            Some(tactic))
           db.updateProofInfo(newInfo)
         case Some(_) => // already have a tactic, so do nothing
+      }
+      // remember lemma
+      val lemmaName = "user" + File.separator + model.name
+      if (!LemmaDBFactory.lemmaDB.contains(lemmaName)) {
+        val evidence = Lemma.requiredEvidence(provable, ToolEvidence(List(
+          "tool" -> "KeYmaera X",
+          "model" -> model.keyFile,
+          "tactic" -> tactic
+        )) :: Nil)
+        LemmaDBFactory.lemmaDB.add(new Lemma(provable, evidence, Some(lemmaName)))
       }
       new ProofVerificationResponse(proofId, provable, tree.tacticString) :: Nil
     }
