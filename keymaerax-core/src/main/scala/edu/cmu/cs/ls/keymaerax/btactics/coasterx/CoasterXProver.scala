@@ -405,12 +405,14 @@ class CoasterXProver (spec:CoasterXSpec){
   }
 
   def selectSection(iSection:Int, nSections:Int, pr:Provable):Provable = {
+    val gStart = 2
+    val JStart = 1
     val yDefStart = 3
     val (hideYDefs, nYs) = hideYs(iSection,nSections)
-    //J(0), const, y_1=_,...,y_n=_ |- _
+    // J(0),const, y_1=_,...,y_n=_ |- _
     val pr1 = interpret(hideYDefs, pr)
-    //J(0), const, y_i=_ |- _
-    val pr2 = interpret(andL(-1), pr1)
+    // J(0), const,y_i=_ |- _
+    val pr2 = interpret(andL(-JStart), pr1)
     val unpackPosts = andL('Llast)*(nSections - 1)
     //const, y_i=_, global(0), &(bound_i(0) -> post_i(0)) |- _
     val pr3 = interpret(unpackPosts, pr2)
@@ -432,7 +434,6 @@ class CoasterXProver (spec:CoasterXSpec){
         val q3 = t1 <= -90 && t2 <= -90
         val q4 = t1 >= -90 && t1 <= 0   && t2 <= 0
         val q1 = t1 >= 0   && t1 <= 90  && t2 <= 90
-        val x = 1 + 1
         val prStart = selectSection(iSection,nSections, pr)
         val pr1 =
           (q3, q4, q1) match {
@@ -561,17 +562,20 @@ class CoasterXProver (spec:CoasterXSpec){
     val parsed = CoasterXParser.parseFile(fileName).get
     val align@(aligned@(points, segments, v0, _, ds), segmentDefs) = spec.prepareFile(parsed)
     val specc = spec.fromAligned(align)
+    val nSections = segments.length-1
     val pr = Provable.startProof(specc)
     val pr1 = interpret(implyR(1), pr)
+    // _ |- [a]post
     val pr1a = interpret(andL(-1), pr1)
-
+    // localConsts,(globalConst&initState) |-
     val pr1b = interpret(andL(-2), pr1a)
-
+    // localConsts,globalConst,initState   |-
     val pr1c = interpret(andL(-1), pr1b)
-    //val pr1c = interpret(andL(-3), pr1b)
-    val pr1d = interpret(andL(-4), pr1c)
-    val pr1e = interpret(andL(-5), pr1d)
-    //val pr1f = interpret(andL(-1), pr1e)
+    // globalConst,initState, lc1, &_2^n {lc_i}   |-
+    val unpackLocalConsts = List.tabulate(nSections-2){case i => andL(-(i+4))}.foldLeft(nil)((acc,e) => acc & e)
+    val pr1e = interpret(unpackLocalConsts, pr1c)
+    //val pr1d = interpret(andL(-4), pr1c)
+    //val pr1e = interpret(andL(-5), pr1d)
     val pr2 = interpret(DLBySubst.loop(invariant(align), pre = nil)(1), pr1e)
     val pr3 = interpret(nil <((alphaRule*) & QE, nil, nil), pr2)
     val pr3a = interpret(nil <((alphaRule*), nil), pr3)

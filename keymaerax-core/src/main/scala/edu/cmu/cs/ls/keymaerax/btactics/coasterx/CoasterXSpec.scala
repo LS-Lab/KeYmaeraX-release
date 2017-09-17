@@ -23,7 +23,9 @@ class CoasterXSpec {
     t match {
       case x:BaseVariable => evalTerm(ctx(x))
       case n:Number => n
+      case Neg(x) => Number(-evalTerm(x).value)
       case Plus(x,y) => Number(evalTerm(x).value + evalTerm(y).value)
+      case Minus(x,y) => Number(evalTerm(x).value - evalTerm(y).value)
       case Times(x,y) => Number(evalTerm(x).value * evalTerm(y).value)
       case Divide(x,y) => Number(evalTerm(x).value / evalTerm(y).value)
       case Power(x,y:Number) if y.value == 0 => Number(1)
@@ -556,7 +558,7 @@ class CoasterXSpec {
     val (ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(oldSlope)), ((xx1, yy1), (xx2, yy2))) :: rest = secs
     // Algorithm: Take (x0, y1), (dx0, dy0), (cx, cy) as given (where cx, cy based on xx1,yy1,xx2,yy2).
     // Pray the resulting circle still intersects (x1, ???) for some ??? and compute a new value of y1 to fill in ???
-    val endY = Variable("y", Some(index))
+    //val endY = Variable("y", Some(index))
     val endDX = Variable("dx", Some(index))
     val endDY = Variable("dy", Some(index))
     val cx = Variable("cx", Some(index))
@@ -574,7 +576,7 @@ class CoasterXSpec {
     val xend = xx2
     // TODO: Double-check definition
     //val yEndTerm =  foldPlus(cy, foldTimes(yendSign, foldPower(foldMinus(foldPower(rad,Number(2)),foldPower(foldMinus(cx,xend),Number(2))), foldDivide(Number(1),Number(2)))))
-    val (dcxe, dcye) = (foldMinus(cx, xend), foldMinus(cy, endY))
+    val (dcxe, dcye) = (foldMinus(cx, xend), foldMinus(cy, yy2))
     val (dtxe, dtye) = normalizeVector(tangentFromCenter((dcxe,dcye), (param.theta1, param.theta2), param.deltaTheta))
     //val endYDef:Formula = Equal(endY, yEndTerm)
     val cxDef:Formula = Equal(cx, cxe)
@@ -584,13 +586,49 @@ class CoasterXSpec {
     val rDef = Equal(r, re)
     val allDefs = And(rDef, And(And(cxDef, cyDef),And(endDXDef, endDYDef)))
     ctx = ctx.+(r -> re, cx -> cxe, cy -> cye, endDX -> dtxe, endDY -> dtye)
-    // If we accidentally made this into a two-quadrant arc, then adjust again:
-    //if ()
-    val head = (ArcSection(Some(ArcParam((foldMinus(cx,r), foldMinus(cy,r)), (foldPlus(cx,r), foldPlus(cy,r)), theta1, deltaTheta)), Some(oldSlope)),
-      ((xx1, yy1), (xx2, endY)),
-      allDefs,
-    (endDX, endDY))
-    head :: alignZipped(rest, Some((endDX,endDY)), index+1)
+    // If we accidentally made this into a two-quadrant arc, then adjust again.
+    // Yes, this is super nasty and could use some work
+    val (t1,t2) = (theta1.value, normalizeAngle(theta1.value + deltaTheta.value))
+    val q3 = t1 <= -90 && t2 <= -90
+    val q4 = t1 >= -90 && t1 <= 0   && t2 <= 0
+    val q1 = t1 >= 0   && t1 <= 90  && t2 <= 90
+    val q2 = !(q1 || q3 || q4)
+    val cxapprox = evalTerm(cxe).value
+    val xx2approx = evalTerm(xx2).value
+    println("Comparing values ", cxapprox, " and ", xx2approx," to decide quadrant splitting for quads ", q1, q2, q3, q4)
+    if (cxapprox < xx2approx && q3) {
+      // @TODO: This assumes it's a Q3-Q4 arc, but gotta start somewhere
+      val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, deltaTheta)), Some(oldSlope)),
+        ((xx1, yy1), (cx, foldMinus(cy,r))),
+        allDefs,
+        (endDX, endDY))
+      // TODO: Need to set dx and such intermediately for those components
+      // TODO: Not an obvious value for the deltatheta dude
+      // TODO: Need to figure out definition numbering and stuff
+      val endDX2 = Variable("dx", Some(index+1))
+      val endDY2 = Variable("dy", Some(index+1))
+      val cx2 = Variable("cx", Some(index+1))
+      val cy2 = Variable("cy", Some(index+1))
+      val r2 = Variable("r", Some(index+1))
+      val cxDef2:Formula = Equal(cx2, cxe)
+      val cyDef2:Formula = Equal(cy2, cye)
+      val endDXDef2:Formula = Equal(endDX2, dtxe)
+      val endDYDef2:Formula = Equal(endDY2, dtye)
+      val rDef2 = Equal(r, re)
+      val allDefs2 = And(rDef2, And(And(cxDef2, cyDef2),And(endDXDef2, endDYDef2)))
+      ctx = ctx.+(r2 -> re, cx2 -> cxe, cy2 -> cye, endDX2 -> dtxe, endDY2 -> dtye)
+      val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), Number(theta1.value + deltaTheta.value), deltaTheta)), Some(oldSlope)),
+        ((cx, foldMinus(cy,r)), (xx2, yy2)),
+        allDefs2,
+        (endDX, endDY))
+      sec1 :: sec2 :: alignZipped(rest, Some((endDX, endDY)), index + 2)
+    } else {
+      val head = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, deltaTheta)), Some(oldSlope)),
+        ((xx1, yy1), (xx2, yy2)),
+        allDefs,
+        (endDX, endDY))
+      head :: alignZipped(rest, Some((endDX, endDY)), index + 1)
+    }
   }
 
   def alignArcFromCenter(secs:List[(Section,(TPoint,TPoint))], index:Int):List[(Section,(TPoint,TPoint), Formula, TPoint)] = {
@@ -622,7 +660,7 @@ class CoasterXSpec {
     val cyDef:Formula = Equal(cy, cye)
     val rDef = Equal(r, re)
     val allDefs = And(rDef, And(And(cxDef, cyDef),And(endDXDef, endDYDef)))
-    ctx = ctx.+(r -> re, cx -> cxe, cy -> cye, endDX -> dtxe, endDY -> dtye)
+    ctx = ctx.+(r -> re, cx -> cxe, cy -> cye, endDX -> dtxe, endDY -> dtye, endY -> yEndTerm)
     val head = (ArcSection(Some(ArcParam((foldMinus(cx,r), foldMinus(cy,r)), (foldPlus(cx,r), foldPlus(cy,r)), theta1, deltaTheta)), Some(oldSlope)),
       ((xx1, yy1), (xx2, endY)),
       allDefs,
