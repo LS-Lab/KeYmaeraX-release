@@ -396,6 +396,13 @@ object CoasterXProver {
     (nil, nSections)
   }
 
+  def hideMoreYs(iSection:Int, nSections:Int):(BelleExpr, Int) = {
+    val yDefStart = 3
+    val js = List.tabulate(nSections)(j => j + yDefStart).filter(j => !(j == iSection + yDefStart || j == iSection + yDefStart - 1 || j == iSection + yDefStart - 2))
+    val e = js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
+    (e, nSections - js.length)
+  }
+
   def selectSection(iSection:Int, nSections:Int, pr:Provable):Provable = {
     val yDefStart = 3
     val (hideYDefs, nYs) = hideYs(iSection,nSections)
@@ -490,8 +497,11 @@ object CoasterXProver {
           val pr6 = interpret(nil < (nil, tac), pr5e)
           val pr6a = timeFn("Line Case Step 6", {() => interpret(dW(1), pr6)})
           //@TODO: Currently the slowest step of the line case, will need optimized on bigger models.
-          val pr7 = timeFn("Line Case Step 7", {() => interpret(QE(), pr6a)})
-          pr7
+          // So slow that it stops any progress at all! Start with hiding defs for later lines.
+          val (eHide,_) = hideMoreYs(iSection, nSections)
+          val pr7 = timeFn("Line Case Step 7", {() => interpret(eHide , pr6a)})
+          val pr8 = timeFn("Line Case Step 8", {() => interpret(QE(), pr7)})
+          pr8
         }
         timeFn("Line Case", doLineCase)
       }

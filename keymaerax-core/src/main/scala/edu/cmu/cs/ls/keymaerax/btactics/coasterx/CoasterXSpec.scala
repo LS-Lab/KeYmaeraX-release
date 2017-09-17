@@ -235,10 +235,39 @@ object CoasterXSpec {
   }
 
 
-  /* Nasty math provided by Mathematica: Compute center of circle using two points on circle and tangent vector*/
-  def centerFromStartSlope (x1:Term, x2:Term, y1:Term, y2:Term, dxy:TPoint) = {
-    val (a,b) = dxy
-    val cxnum= /*foldNeg(*/
+  /* Nasty math provided by Mathematica: Compute center of circle using two points on circle and tangent vector:
+  * Given two points (x1,y1) and (x2,y2) find the passing through them tangent
+  * to the line ax + by = c at (x1, y1)
+
+  * Eq (1)  b x - a y = b x1 - a y1
+  * Eq (2)  (x1-x2)x + (y1-y2)y = (1/2)(x1^2 - x2^2 + y1^2 - y2^2)
+
+  * Note that we have (x1,y1), (dx,dy) representation, from which we can derived a,b,c representation:
+  * a = (-dy)
+  * b = (dx)
+  * c = (dx y1 - x1 dy)
+======================================== Final solution for x ======================================
+(2 dx x1 (-y1 + y2) +
+ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
+   dx (-y1 + Example)))
+====================================================================================================
+====================================== Final solution for y =======================================
+((x1 + x2) (2 dy (x1 - x2) y1 +
+   dx (x1^2 - 2 x1 x2 - x2^2 - y1^2 - y2^2)))/(2 (x1 -
+   x2) (dy (x1 + x2) + dx (y1 - y2)))
+===================================================================================================
+
+
+y2
+*/
+  def centerFromStartSlope (x1:Term, y1:Term, x2:Term, y2:Term, dxy:TPoint):TPoint = {
+    val (a,b) = (foldNeg(dxy._2), dxy._1)
+    //val (dx, dy) = dxy
+    //val cx = s"-(2*($dx)*($x1)*(-($y1) + ($y2)) + ($dy)*(($x1)^2 + ($x2)^2 - ($y1)^2 + 2 *($y1)*($y2) + ($y2)^2))/(2*(($dy)*(($x1) - ($x2)) +  ($dx)*(-($y1) + ($y2))))".asTerm
+    val cx = s"(($a)*(($x1)^2 - ($x2)^2 - (($y1) - ($y2))^2) + 2*($b)*($x1)*(($y1) - ($y2)))/(2*(($a)*(($x1) - ($x2)) + ($b)*(($y1) - ($y2))))".asTerm
+    val cy = s"(2*($a)*(($x1) - ($x2))*($y1) - ($b)*((($x1) - ($x2))^2 - ($y1)^2 + ($y2)^2))/(2*(($a)*(($x1) - ($x2)) + ($b)*(($y1) - ($y2))))".asTerm
+    //val cy = s"-(($x1 + $x2)*(2*($dy)*(($x1)-($x2))*($y1) + ($dx)*(($x1)^2 - 2*($x1)*($x2) - ($x2)^2 - ($y1)^2 - ($y2)^2)))/(2*(($x1) - ($x2))*(($dy)*(($x1)+($x2)) + ($dx)*(($y1) - ($y2))))".asTerm
+/*    val cxnum= /*foldNeg(*/
       foldPlus(foldPlus(foldPlus(foldNeg(a),foldPower(x1,Number(2))), foldPlus(foldPlus(a,foldPower(x2,Number(2))),foldMinus(foldMinus(foldTimes(Number(2),foldTimes(b,foldTimes(x1,y1))), foldTimes(Number(3),foldTimes(a,foldPower(y1,Number(2))))),foldTimes(Number(2),foldTimes(b,foldTimes(x1,y2)))))),
         foldPlus(foldTimes(Number(2),foldTimes(a,foldTimes(y1,y2))), foldTimes(a,foldPower(y2,Number(2)))))
     val cxden = foldTimes(Number(2), foldPlus(foldMinus(foldMinus(foldTimes(a,x1), foldTimes(a,x2)),foldTimes(b,y1)), foldTimes(b,y2)))
@@ -247,7 +276,7 @@ object CoasterXSpec {
     val cyfac = foldPlus(foldMinus(foldPlus(foldMinus(foldPower(x1,Number(2)),foldTimes(Number(2),foldTimes(x1,x2))), foldPower(x2,Number(2))), foldPower(y1,Number(2))),foldPower(y2,Number(2)))
     val cynum = foldPlus(cyterm, foldTimes(b,cyfac))
     val cyden =foldTimes(Number(2),foldPlus(foldTimes(a,foldMinus(x1,x2)),foldTimes(b,foldMinus(y2,y1))))
-    val cy = foldNeg(foldDivide(cynum,cyden))
+    val cy = foldNeg(foldDivide(cynum,cyden))*/
     (cx,cy)
   }
   // Compute direction-to-center vector using tangent vector and wiseness
