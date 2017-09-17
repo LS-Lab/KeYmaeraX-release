@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics.coasterx
 
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser.{Section, _}
-import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXSpec.TPoint
+import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXSpec._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -9,6 +9,28 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 * @TODO: Straight-line case: consider turning dx, dy into assignment instead of plugging directly into ODE
 * */
 object CoasterXSpec {
+  type TPoint = (Term, Term)
+  type Context = Map[BaseVariable, Term]
+}
+class CoasterXSpec {
+
+  var ctx:Context = Map.empty
+
+  /* Approximate term evaluator, with limited range especially for square roots.
+   * Thus it's not suitable for rigorous proof purposes, but can be used both (a) for guiding spec+proof strategy when we need to compare irrational terms to
+   * make a decision and (b) for general debugging purposes when we want a quantitative view on complicated terms */
+  def evalTerm(t:Term):Number = {
+    t match {
+      case x:BaseVariable => evalTerm(ctx(x))
+      case n:Number => n
+      case Plus(x,y) => Number(evalTerm(x).value + evalTerm(y).value)
+      case Times(x,y) => Number(evalTerm(x).value * evalTerm(y).value)
+      case Divide(x,y) => Number(evalTerm(x).value / evalTerm(y).value)
+      case Power(x,y:Number) if y.value == 0 => Number(1)
+      case Power(x,y:Number) if y.value.isValidInt && y.value > 0 => Number(evalTerm(x).value*evalTerm(Power(x,Number(y.value-1))).value)
+      case Power(x,y) => Number(Math.pow(evalTerm(x).value.toDouble, evalTerm(y).value.toDouble))
+    }
+  }
 
   def foldMinus(t1:Term, t2:Term):Term = {
     val candidate =
@@ -256,27 +278,13 @@ object CoasterXSpec {
    dx (x1^2 - 2 x1 x2 - x2^2 - y1^2 - y2^2)))/(2 (x1 -
    x2) (dy (x1 + x2) + dx (y1 - y2)))
 ===================================================================================================
+@TODO: Use the constant-folding versions of arithmetic operate
 
-
-y2
 */
   def centerFromStartSlope (x1:Term, y1:Term, x2:Term, y2:Term, dxy:TPoint):TPoint = {
     val (a,b) = (foldNeg(dxy._2), dxy._1)
-    //val (dx, dy) = dxy
-    //val cx = s"-(2*($dx)*($x1)*(-($y1) + ($y2)) + ($dy)*(($x1)^2 + ($x2)^2 - ($y1)^2 + 2 *($y1)*($y2) + ($y2)^2))/(2*(($dy)*(($x1) - ($x2)) +  ($dx)*(-($y1) + ($y2))))".asTerm
     val cx = s"(($a)*(($x1)^2 - ($x2)^2 - (($y1) - ($y2))^2) + 2*($b)*($x1)*(($y1) - ($y2)))/(2*(($a)*(($x1) - ($x2)) + ($b)*(($y1) - ($y2))))".asTerm
     val cy = s"(2*($a)*(($x1) - ($x2))*($y1) - ($b)*((($x1) - ($x2))^2 - ($y1)^2 + ($y2)^2))/(2*(($a)*(($x1) - ($x2)) + ($b)*(($y1) - ($y2))))".asTerm
-    //val cy = s"-(($x1 + $x2)*(2*($dy)*(($x1)-($x2))*($y1) + ($dx)*(($x1)^2 - 2*($x1)*($x2) - ($x2)^2 - ($y1)^2 - ($y2)^2)))/(2*(($x1) - ($x2))*(($dy)*(($x1)+($x2)) + ($dx)*(($y1) - ($y2))))".asTerm
-/*    val cxnum= /*foldNeg(*/
-      foldPlus(foldPlus(foldPlus(foldNeg(a),foldPower(x1,Number(2))), foldPlus(foldPlus(a,foldPower(x2,Number(2))),foldMinus(foldMinus(foldTimes(Number(2),foldTimes(b,foldTimes(x1,y1))), foldTimes(Number(3),foldTimes(a,foldPower(y1,Number(2))))),foldTimes(Number(2),foldTimes(b,foldTimes(x1,y2)))))),
-        foldPlus(foldTimes(Number(2),foldTimes(a,foldTimes(y1,y2))), foldTimes(a,foldPower(y2,Number(2)))))
-    val cxden = foldTimes(Number(2), foldPlus(foldMinus(foldMinus(foldTimes(a,x1), foldTimes(a,x2)),foldTimes(b,y1)), foldTimes(b,y2)))
-    val cx = foldNeg(foldDivide(cxnum,cxden))
-    val cyterm = foldTimes(Number(2), foldTimes(a, foldTimes(foldPlus(foldNeg(x1),x2),y1)))
-    val cyfac = foldPlus(foldMinus(foldPlus(foldMinus(foldPower(x1,Number(2)),foldTimes(Number(2),foldTimes(x1,x2))), foldPower(x2,Number(2))), foldPower(y1,Number(2))),foldPower(y2,Number(2)))
-    val cynum = foldPlus(cyterm, foldTimes(b,cyfac))
-    val cyden =foldTimes(Number(2),foldPlus(foldTimes(a,foldMinus(x1,x2)),foldTimes(b,foldMinus(y2,y1))))
-    val cy = foldNeg(foldDivide(cynum,cyden))*/
     (cx,cy)
   }
   // Compute direction-to-center vector using tangent vector and wiseness
@@ -514,7 +522,6 @@ y2
     (points.map(roundPoint(scale)), segments.map(roundSegment(scale)), roundNumber(scale)(v0), roundParam(scale)(tent))
   }
 
-  type TPoint = (Term,Term)
 
   def setStartY(sections:List[(Section,(TPoint,TPoint))], y:Term) = {
     sections match {
@@ -576,6 +583,9 @@ y2
     val endDYDef:Formula = Equal(endDY, dtye)
     val rDef = Equal(r, re)
     val allDefs = And(rDef, And(And(cxDef, cyDef),And(endDXDef, endDYDef)))
+    ctx = ctx.+(r -> re, cx -> cxe, cy -> cye, endDX -> dtxe, endDY -> dtye)
+    // If we accidentally made this into a two-quadrant arc, then adjust again:
+    //if ()
     val head = (ArcSection(Some(ArcParam((foldMinus(cx,r), foldMinus(cy,r)), (foldPlus(cx,r), foldPlus(cy,r)), theta1, deltaTheta)), Some(oldSlope)),
       ((xx1, yy1), (xx2, endY)),
       allDefs,
@@ -612,6 +622,7 @@ y2
     val cyDef:Formula = Equal(cy, cye)
     val rDef = Equal(r, re)
     val allDefs = And(rDef, And(And(cxDef, cyDef),And(endDXDef, endDYDef)))
+    ctx = ctx.+(r -> re, cx -> cxe, cy -> cye, endDX -> dtxe, endDY -> dtye)
     val head = (ArcSection(Some(ArcParam((foldMinus(cx,r), foldMinus(cy,r)), (foldPlus(cx,r), foldPlus(cy,r)), theta1, deltaTheta)), Some(oldSlope)),
       ((xx1, yy1), (xx2, endY)),
       allDefs,
@@ -643,6 +654,7 @@ y2
         val endDXDef = Equal(endDX, endD._1)
         val endDYDef = Equal(endDY, endD._2)
         val allDefs = And(endYDef, And(endDXDef, endDYDef))
+        ctx = ctx.+(endY -> endYTerm, endDX -> endD._1, endDY -> endD._2)
         val head = (LineSection(Some(LineParam((xx1,yy1),(xx2,endY))), Some(endMTerm), isUp), ((xx1,yy1),(xx2,endY)), allDefs, endD)
         head :: alignZipped(setStartY(rest,endY), Some(endD), index+1)
       case (ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(oldSlope)), ((xx1, yy1), (xx2, yy2))) :: rest =>

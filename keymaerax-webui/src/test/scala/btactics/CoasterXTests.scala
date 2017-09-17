@@ -115,7 +115,7 @@ class CoasterXTests extends TacticTestBase {
     ' '.isWhitespace shouldBe true
   }
 
-  def printFileSpec(s:String):Unit = println(CoasterXSpec(CoasterXParser.parseFile(s).get))
+  def printFileSpec(s:String):Unit = println(new CoasterXSpec()(CoasterXParser.parseFile(s).get))
 
   "Spec Generator" should "generate a spec for example coaster" in {
     printFileSpec(exampleFile1)
@@ -147,39 +147,40 @@ class CoasterXTests extends TacticTestBase {
     printFileSpec(simpleValley)
   }
 
+  def prover() = new CoasterXProver(new CoasterXSpec())
   "Proof Generator" should "generate proof for straight line" in { withMathematica(qeTool => {
-    val pr = CoasterXProver(straightLine)
+    val pr = prover()(straightLine)
     pr shouldBe 'proved
     })
   }
 
   it should "generate proof for quarter arc" in { withMathematica(qeTool => {
-    val pr = CoasterXProver(quarterArc)
+    val pr = prover()(quarterArc)
     pr shouldBe 'proved
   })}
 
   it should "generate proof for half arc" in {  withMathematica(qeTool => {
-    val pr = CoasterXProver(halfArc)
+    val pr = prover()(halfArc)
     pr shouldBe 'proved
   })}
 
   it should "generate proof for second half arc" in {  withMathematica(qeTool => {
-    val pr = CoasterXProver(secondHalfArc)
+    val pr = prover()(secondHalfArc)
     pr shouldBe 'proved
   })}
 
   it should "generate proof for full arc" in {  withMathematica(qeTool => {
-    val pr = CoasterXProver(fullArc)
+    val pr = prover()(fullArc)
     pr shouldBe 'proved
   })}
 
   it should "generate proof for hill" in {  withMathematica(qeTool => {
-    val pr = CoasterXProver(simpleHill)
+    val pr = prover()(simpleHill)
     pr shouldBe 'proved
   })}
 
   it should "generate proof for valley" in {  withMathematica(qeTool => {
-    val pr = CoasterXProver(simpleValley)
+    val pr = prover()(simpleValley)
     pr shouldBe 'proved
   })}
 

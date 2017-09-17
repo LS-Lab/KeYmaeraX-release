@@ -5,8 +5,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.{AxiomaticODESolver, DLBySubst, Debuggin
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver.TIMEVAR
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser.{TPoint => _, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{dW, _}
+import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXSpec.TPoint
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXSpec._
+import edu.cmu.cs.ls.keymaerax.btactics.coasterx._
 import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
@@ -23,7 +24,7 @@ import scala.collection.immutable
 * @TODO: Function returning tactic with proof repeats
 * @TODO: Function returning tactic with proof reuse
 * */
-object CoasterXProver {
+class CoasterXProver (spec:CoasterXSpec){
 
   def timeFn[T](msg:String,f:(()=>T)):T = {
     val start = System.currentTimeMillis()
@@ -41,13 +42,13 @@ object CoasterXProver {
 
   def invariant(align:(AFile,Formula)):Formula = {
     val (aligned@(points, segments, v0, _, inits), segmentDefs) = align
-    val nonemptySegs = segments.filter(!segmentEmpty(_))
-    val withBounds = zipConsecutive(nonemptySegs, points, inits)
-    val ode = withBounds.zipWithIndex.map(segmentOde).reduceRight[Program]({ case (x, y) => Choice(x, y) })
+    val nonemptySegs = segments.filter(!spec.segmentEmpty(_))
+    val withBounds = spec.zipConsecutive(nonemptySegs, points, inits)
+    val ode = withBounds.zipWithIndex.map(spec.segmentOde).reduceRight[Program]({ case (x, y) => Choice(x, y) })
     val y0 = points.head._2
     val energyConserved = s"v^2 + 2*y*g() = ($v0)^2 + 2*($y0)*g()".asFormula
     val globalPost = And("v > 0".asFormula, energyConserved)
-    val fml = And(globalPost, withBounds.zipWithIndex.map(segmentPost).reduceRight[Formula] { case (x, y) => And(x, y) })
+    val fml = And(globalPost, withBounds.zipWithIndex.map(spec.segmentPost).reduceRight[Formula] { case (x, y) => And(x, y) })
     fml
   }
 
@@ -62,9 +63,9 @@ object CoasterXProver {
     // @TODO: Hide preconditions and y-defs that you don't need
     //val (cx:Term, cy:Term) = iCenter(iSection)
     //val r = CoasterXSpec.dist(p1, (cx,cy))
-    val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
-    val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
-    val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
+    val cx = spec.foldDivide(spec.foldPlus(tr._1,bl._1),Number(2))
+    val cy = spec.foldDivide(spec.foldPlus(tr._2,bl._2),Number(2))
+    val r = spec.foldDivide(spec.foldMinus(tr._1,bl._1),Number(2))
     val y0 = p1._2
     val yEnd = p2._2
     // Note: Conservation of energy always uses the start of the ENTIRE track, not current section
@@ -87,9 +88,9 @@ object CoasterXProver {
   //@TODO: Add stuff from vector proof
   def quad1Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):Provable = {
     println("Proving Quadrant 1 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
-    val cx = foldDivide(foldPlus(tr._1,bl._1),Number(2))
-    val cy = foldDivide(foldPlus(tr._2,bl._2),Number(2))
-    val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
+    val cx = spec.foldDivide(spec.foldPlus(tr._1,bl._1),Number(2))
+    val cy = spec.foldDivide(spec.foldPlus(tr._2,bl._2),Number(2))
+    val r = spec.foldDivide(spec.foldMinus(tr._1,bl._1),Number(2))
     val x0 = p1._1
     val y0 = p1._2
     val xEnd = p2._1
@@ -109,8 +110,8 @@ object CoasterXProver {
     println("Proving Quadrant 3 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ3
     val ((x0:Term,y0:Term),(x1:Term,y1:Term)) = (p1,p2)
-    val (cx,cy) = iCenter(iSection)
-    val r = iRadius(iSection)
+    val (cx,cy) = spec.iCenter(iSection)
+    val r = spec.iRadius(iSection)
     val dx0 = s"(($cy)-y)/($r)".asTerm
     val dy0 = s"-(($cx)-x)/($r)".asTerm
     //val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
@@ -152,8 +153,8 @@ object CoasterXProver {
 
   def quad4Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):Provable = {
     println("Proving Quadrant 4 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
-    val (cx:Term, cy:Term) = arcCenter(bl, tr)
-    val r = CoasterXSpec.dist(p1, (cx,cy))
+    val (cx:Term, cy:Term) = spec.arcCenter(bl, tr)
+    val r = spec.dist(p1, (cx,cy))
     val y0 = p1._2
     val yEnd = p2._2
     //val pr0 = interpret(implyR(1), pr)
@@ -478,7 +479,7 @@ object CoasterXProver {
           val x0 = bl._1
           val y0 = bl._2
           val y1 = tr._2
-          val thisInv = segmentPost((section, (bl,tr), initD),iSection)
+          val thisInv = spec.segmentPost((section, (bl,tr), initD),iSection)
           val Imply(_, And(And(Equal(BaseVariable("dx", None, Real), dx0), Equal(BaseVariable("dy", None, Real),dy0)),
                            Equal(_, Plus(_, c)))) = thisInv
           val cutMain = s"(v>0&v^2+2*y*g()=($v0)^2+2*($y0)*g())&(($x0)<=x&x<=($x1)&((dx=($dx0)&dy=($dy0))&($dx0)*y=($dy0)*x+($c)))".asFormula
@@ -558,9 +559,9 @@ object CoasterXProver {
 
   def apply(fileName:String):Provable = {
     val parsed = CoasterXParser.parseFile(fileName).get
-    val align@(aligned@(points, segments, v0, _, ds), segmentDefs) = prepareFile(parsed)
-    val spec = fromAligned(align)
-    val pr = Provable.startProof(spec)
+    val align@(aligned@(points, segments, v0, _, ds), segmentDefs) = spec.prepareFile(parsed)
+    val specc = spec.fromAligned(align)
+    val pr = Provable.startProof(specc)
     val pr1 = interpret(implyR(1), pr)
     val pr1a = interpret(andL(-1), pr1)
 
