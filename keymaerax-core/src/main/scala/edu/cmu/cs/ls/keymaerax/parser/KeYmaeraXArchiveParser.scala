@@ -33,6 +33,7 @@ object KeYmaeraXArchiveParser {
   private val THEOREM_BEGIN: String = "Theorem"
   private val TACTIC_BEGIN: String = "Tactic"
   private val EXERCISE_BEGIN: String = "Exercise"
+  private val DEFINITIONS_BEGIN: String = "SharedDefinitions."
   private val END_BLOCK: String = "End."
 
   /** Two groups: entry name, model+optional tactic */
@@ -40,7 +41,7 @@ object KeYmaeraXArchiveParser {
 
   /** The entry name, kyx file content (model), parsed model, and parsed name+tactic. */
   case class ParsedArchiveEntry(name: String, kind: String, fileContent: String, model: Expression, tactics: List[(String, BelleExpr)])
-  /** The entry name, kyx file content, and list of name+tactic text. */
+  /** The entry name, kyx file content, entry kind (theorem, lemma, etc.), and list of name+tactic text. */
   type ArchiveEntry = (String, String, String, List[(String, String)])
 
   /** Parses the archive content into archive entries with parsed model and tactics. */
@@ -63,26 +64,44 @@ object KeYmaeraXArchiveParser {
   def read(archiveContentBOM: String): List[ArchiveEntry] = {
     val archiveContent: String = ParserHelper.removeBOM(archiveContentBOM)
     // match ArchiveEntry, Lemma, Theorem, unless inside quotation marks
-    val regex = s"\\b(?=($ARCHIVE_ENTRY_BEGIN|$LEMMA_BEGIN|$THEOREM_BEGIN|$EXERCISE_BEGIN)\\b" + "(?=([^\"]*\"[^\"]*\")*[^\"]*$))"
+    val regex = s"\\b(?=($DEFINITIONS_BEGIN|$ARCHIVE_ENTRY_BEGIN|$LEMMA_BEGIN|$THEOREM_BEGIN|$EXERCISE_BEGIN)\\b" + "(?=([^\"]*\"[^\"]*\")*[^\"]*$))"
+
+    var globalDefs: Option[String] = None
+
     archiveContent.trim().split(regex).filter(_.nonEmpty).flatMap({s =>
       val (entry, kind) =
-        if (s.startsWith(ARCHIVE_ENTRY_BEGIN)) (s.stripPrefix(ARCHIVE_ENTRY_BEGIN), "theorem")
+        if (s.startsWith(DEFINITIONS_BEGIN)) (s.stripPrefix(DEFINITIONS_BEGIN), "definitions")
+        else if (s.startsWith(ARCHIVE_ENTRY_BEGIN)) (s.stripPrefix(ARCHIVE_ENTRY_BEGIN), "theorem")
         else if (s.startsWith(THEOREM_BEGIN)) (s.stripPrefix(THEOREM_BEGIN), "theorem")
         else if (s.startsWith(LEMMA_BEGIN)) (s.stripPrefix(LEMMA_BEGIN), "lemma")
         else if (s.startsWith(EXERCISE_BEGIN)) (s.stripPrefix(EXERCISE_BEGIN), "exercise")
-        else throw new IllegalArgumentException("Expected either ArchiveEntry, Lemma, Theorem, but got unknown entry kind " + s)
-      NAME_REGEX.findAllMatchIn(entry.trim().stripSuffix(END_BLOCK)).map(
-        { m =>
-          val modelName = m.group(1)
-          val (model: String, tactics: List[(String, String)]) = m.group(2).split(TACTIC_BEGIN).toList match {
-            case modelText :: ts => (modelText.trim(), ts.flatMap(tacticText => {
-              NAME_REGEX.findAllMatchIn(tacticText.trim().stripSuffix(END_BLOCK)).map({
-                tm => (tm.group(1), tm.group(2))
-              })
-            }))
-          }
-          (modelName, model, kind, tactics)
-        })
+        else throw new IllegalArgumentException(s"Expected either $DEFINITIONS_BEGIN, $ARCHIVE_ENTRY_BEGIN, $LEMMA_BEGIN, $THEOREM_BEGIN, but got unknown entry kind $s")
+
+        kind match {
+          case "definitions" =>
+            globalDefs = Some(entry.trim().stripSuffix(END_BLOCK).trim())
+            Nil
+          case _ =>
+            NAME_REGEX.findAllMatchIn(entry.trim().stripSuffix(END_BLOCK)).map({ m =>
+              val modelName = m.group(1)
+              val (model: String, tactics: List[(String, String)]) = m.group(2).split(TACTIC_BEGIN).toList match {
+                case modelText :: ts => (modelText.trim(), ts.flatMap(tacticText => {
+                  NAME_REGEX.findAllMatchIn(tacticText.trim().stripSuffix(END_BLOCK)).map({
+                    tm => (tm.group(1), tm.group(2))
+                  })
+                }))
+              }
+              //@note copies shared definitions into each Functions/Definitions block.
+              val augmentedModel = globalDefs match {
+                case Some(d) if model.contains("Functions.") || model.contains("Definitions.") =>
+                    "(Functions\\.)|(Definitions\\.)".r.replaceFirstIn(model, "Definitions.\n" + d + "\n")
+                case Some(d) if !(model.contains("Functions.") || model.contains("Definitions.")) =>
+                  "Definitions.\n" + d + "\nEnd.\n" + model
+                case None => model
+              }
+              (modelName, augmentedModel, kind, tactics)
+            })
+        }
     }).toList
   }
 }
