@@ -21,7 +21,7 @@ import java.io.{PrintWriter, StringWriter}
 
 import Helpers._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.codegen.CGenerator
+import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import spray.httpx.marshalling.ToResponseMarshallable
 
@@ -186,14 +186,14 @@ class ModelPlexMandatoryVarsResponse(model: ModelPOJO, vars: Set[Variable]) exte
   )
 }
 
-class ModelPlexResponse(model: ModelPOJO, monitor: Formula) extends Response {
-  val fmlHtml = JsString(UIKeYmaeraXPrettyPrinter("", plainText=false)(monitor))
-  val fmlString = JsString(UIKeYmaeraXPrettyPrinter("", plainText=true)(monitor))
-  val fmlPlainString = JsString(KeYmaeraXPrettyPrinter(monitor))
+class ModelPlexArtifactResponse(model: ModelPOJO, artifact: Expression) extends Response {
+  val fmlHtml = JsString(UIKeYmaeraXPrettyPrinter("", plainText=false)(artifact))
+  val fmlString = JsString(UIKeYmaeraXPrettyPrinter("", plainText=true)(artifact))
+  val fmlPlainString = JsString(artifact.prettyString)
 
   def getJson = JsObject(
     "modelid" -> JsString(model.modelId.toString),
-    "monitor" -> JsObject(
+    "generatedArtifact" -> JsObject(
       "html" -> fmlHtml,
       "string" -> fmlString,
       "plainString" -> fmlPlainString
@@ -277,11 +277,11 @@ class TestSynthesisResponse(model: ModelPOJO, metric: Formula,
   )
 }
 
-class ModelPlexCCodeResponse(model: ModelPOJO, monitor: Formula) extends Response {
+class ModelPlexArtifactCodeResponse(model: ModelPOJO, code: String) extends Response {
   def getJson = JsObject(
     "modelid" -> JsString(model.modelId.toString),
     "modelname" -> JsString(model.name),
-    "code" -> JsString(CGenerator(monitor))
+    "code" -> JsString(code)
   )
 }
 
@@ -290,7 +290,7 @@ class LoginResponse(flag:Boolean, user: UserPOJO, sessionToken : Option[String])
     "success" -> (if(flag) JsTrue else JsFalse),
     "sessionToken" -> (if(flag && sessionToken.isDefined) JsString(sessionToken.get) else JsFalse),
     "key" -> JsString("userId"),
-    "value" -> JsString(user.userName),
+    "value" -> JsString(user.userName.replaceAllLiterally("/", "%2F").replaceAllLiterally(":", "%3A")),
     "userAuthLevel" -> JsNumber(user.level),
     "type" -> JsString("LoginResponse")
   )
@@ -782,21 +782,30 @@ case class LemmasResponse(infos: List[ProvableInfo]) extends Response {
   override def getJson: JsValue = {
     def toDisplayInfoParts(pi: ProvableInfo): JsValue = {
       val keyPos = AxiomIndex.axiomIndex(pi.canonicalName)._1
+
+      def prettyPrint(s: String): String = {
+        val p = """([a-zA-Z]+)\(\|\|\)""".r("name")
+        val pretty = p.replaceAllIn(s.replaceAll("_", ""), _.group("name").toUpperCase).replaceAll("""\(\|\|\)""", "")
+        UIKeYmaeraXPrettyPrinter.htmlEncode(pretty)
+      }
+
       //@todo need more verbose axiom info
       ProvableInfo.locate(pi.canonicalName) match {
         case Some(i) =>
-          val (cond, op, key, conclusion) = i.provable.conclusion.succ.head match {
-            case Imply(c, eq@Equiv(l, r)) if keyPos == PosInExpr(1::0::Nil) => (Some(c), OpSpec.op(eq).opcode, l, r)
-            case Imply(c, eq@Equiv(l, r)) if keyPos == PosInExpr(1::1::Nil) => (Some(c), OpSpec.op(eq).opcode, r, l)
-            case bcf: BinaryCompositeFormula if keyPos == PosInExpr(0::Nil) => (None, OpSpec.op(bcf).opcode, bcf.left, bcf.right)
-            case bcf: BinaryCompositeFormula if keyPos == PosInExpr(1::Nil) => (None, OpSpec.op(bcf).opcode, bcf.right, bcf.left)
-            case f => (None, OpSpec.op(Equiv(f, True)).opcode, f, True)
+          val (cond, op, key, keyPosString, conclusion, conclusionPos) = i.provable.conclusion.succ.head match {
+            case Imply(c, eq@Equiv(l, r)) if keyPos == PosInExpr(1::0::Nil) => (Some(c), OpSpec.op(eq).opcode, l, "1.0", r, "1.1")
+            case Imply(c, eq@Equiv(l, r)) if keyPos == PosInExpr(1::1::Nil) => (Some(c), OpSpec.op(eq).opcode, r, "1.1", l, "1.0")
+            case bcf: BinaryCompositeFormula if keyPos == PosInExpr(0::Nil) => (None, OpSpec.op(bcf).opcode, bcf.left, "0", bcf.right, "1")
+            case bcf: BinaryCompositeFormula if keyPos == PosInExpr(1::Nil) => (None, OpSpec.op(bcf).opcode, bcf.right, "1", bcf.left, "0")
+            case f => (None, OpSpec.op(Equiv(f, True)).opcode, f, "0", True, "1")
           }
           JsObject(
-            "cond" -> (if (cond.isDefined) JsString(cond.get.prettyString) else JsNull),
-            "op" -> (if (op.nonEmpty) JsString(op) else JsNull),
-            "key" -> JsString(key.prettyString),
-            "conclusion" -> JsString(conclusion.prettyString)
+            "cond" -> (if (cond.isDefined) JsString(prettyPrint(cond.get.prettyString)) else JsNull),
+            "op" -> (if (op.nonEmpty) JsString(prettyPrint(op)) else JsNull),
+            "key" -> JsString(prettyPrint(key.prettyString)),
+            "keyPos" -> JsString(keyPosString),
+            "conclusion" -> JsString(prettyPrint(conclusion.prettyString)),
+            "conclusionPos" -> JsString(conclusionPos)
           )
         case None => JsNull
       }

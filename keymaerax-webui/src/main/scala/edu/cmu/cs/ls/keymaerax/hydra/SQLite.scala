@@ -235,6 +235,11 @@ object SQLite {
       else throw new Exception("Primary keys aren't unique in models table.")
     })
 
+    override def getTempUsers: List[UserPOJO] = synchronizedTransaction({
+      nSelects = nSelects + 1
+      Users.filter(_.level === 3).list.map(m => new UserPOJO(m.email.get, m.level.get))
+    })
+
     /**
       * Poorly named -- either update the config, or else insert an existing key.
       * But in Mongo it was just update, because of the nested documents thing.

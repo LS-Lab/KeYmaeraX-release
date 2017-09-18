@@ -36,7 +36,9 @@ import scala.collection.immutable._
 import scala.collection.mutable
 import edu.cmu.cs.ls.keymaerax.btactics.cexsearch
 import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, BreadthFirstSearch, ProgramSearchNode, SearchNode}
+import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 
 import scala.util.Try
 
@@ -725,7 +727,7 @@ class ImportExampleRepoRequest(db: DBAbstraction, userId: String, repoUrl: Strin
       DatabasePopulator.importJson(db, userId, repoUrl, prove=false)
       BooleanResponse(flag=true) :: Nil
     } else if (repoUrl.endsWith(".kya")) {
-      DatabasePopulator.importKya(db, userId, repoUrl, prove=false)
+      DatabasePopulator.importKya(db, userId, repoUrl, prove=false, Nil)
       BooleanResponse(flag=true) :: Nil
     } else {
       new ErrorResponse("Unknown repository type " + repoUrl + ". Expected .json or .kya") :: Nil
@@ -787,14 +789,123 @@ class ModelPlexMandatoryVarsRequest(db: DBAbstraction, userId: String, modelId: 
   }
 }
 
-class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monitorKind: String, monitorShape: String,
+class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artifact: String, monitorKind: String, monitorShape: String,
                        conditionKind: String, additionalVars: List[String]) extends UserRequest(userId) with RegisteredOnlyRequest {
   def resultingResponses(): List[Response]  = {
     val model = db.getModel(modelId)
     val modelFml = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
-    val vars = (StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable])
-      ++ additionalVars.map(_.asVariable)).toList
-    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
+    val vars: Set[BaseVariable] = (StaticSemantics.boundVars(modelFml).symbols ++ additionalVars.map(_.asVariable)).
+      filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
+
+    artifact match {
+      case "controller" => createController(model, modelFml, vars)
+      case "monitor" => createMonitor(model, modelFml, vars)
+      case "sandbox" => createSandbox(model, modelFml, vars)
+    }
+  }
+
+  private def createController(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): List[Response] = modelFml match {
+    case Imply(_, Box(prg, _)) => conditionKind match {
+      case "kym" =>
+        val ctrlPrg = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+          override def preP(p: PosInExpr, prg: Program): Either[Option[StopTraversal], Program] = prg match {
+            case _: ODESystem => Right(Test("true".asFormula))
+            case _ => Left(None)
+          }
+        }, prg).get
+        new ModelPlexArtifactResponse(model, ctrlPrg) :: Nil
+      case "c" =>
+        val controller = (new CGenerator(new CControllerGenerator()))(prg, vars)
+
+        val code = s"""
+           |${CGenerator.printHeader(model.name)}
+           |$controller
+           |
+           |int main() {
+           |  /* control loop stub */
+           |  parameters params = { .A=1.0 };
+           |  while (true) {
+           |    state current; /* read sensor values, e.g., = { .x=0.0 }; */
+           |    state input;   /* resolve non-deterministic assignments, e.g., = { .x=0.5 }; */
+           |    state post = ctrlStep(current, params, input);
+           |    /* hand post actuator set values to actuators */
+           |  }
+           |  return 0;
+           |}
+           |""".stripMargin
+
+        new ModelPlexArtifactCodeResponse(model, code) :: Nil
+    }
+    case _ => new ErrorResponse("Unsupported shape, expected assumptions -> [{ctrl;ode}*]safe, but got " + modelFml.prettyString) :: Nil
+  }
+
+  private def createSandbox(model: ModelPOJO, modelFml: Formula, stateVars: Set[BaseVariable]): List[Response] = modelFml match {
+    case Imply(_, Box(prg, _)) =>
+      conditionKind match {
+        case "kym" =>
+          //@todo specific formula
+          new ModelPlexArtifactResponse(model, "pre := curr; ctrl; if (monitorSatisfied()) { skip; } else { fallback; } actuate;".asProgram) :: Nil
+        case "c" =>
+          val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, stateVars.toList.sorted[NamedSymbol]:_*)
+          val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
+            case ("controller", tool) =>
+              val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
+              try {
+                TactixLibrary.proveBy(foResult.subgoals.head,
+                  SaturateTactic(ModelPlex.optimizationOneWithSearch(tool, assumptions)(1)))
+              } catch {
+                case _: Throwable => foResult
+              }
+            case ("model", tool) => ??? //@todo sandbox for model monitors
+//              TactixLibrary.proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
+//              ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) /*& SimplifierV2.simpTac(1)*/)
+          }
+
+          if (monitorCond.subgoals.size == 1 && monitorCond.subgoals.head.ante.isEmpty && monitorCond.subgoals.head.succ.size == 1) {
+            val monitorFml =  monitorShape match {
+              case "boolean" => monitorCond.subgoals.head.succ.head
+              case "metric" => ModelPlex.toMetric(monitorCond.subgoals.head.succ.head)
+            }
+
+            val params = CGenerator.getParameters(monitorFml, stateVars)
+            val declarations = CGenerator.printParameterDeclaration(params) + "\n" + CGenerator.printStateDeclaration(stateVars)
+            val fallbackCode = new CControllerGenerator()(prg, stateVars)
+            val monitorCode = new CMonitorGenerator()(monitorFml, stateVars)
+
+            val sandbox =
+              s"""
+                |${CGenerator.printHeader(model.name)}
+                |${CGenerator.INCLUDE_STATEMENTS}
+                |$declarations
+                |$fallbackCode
+                |$monitorCode
+                |
+                |state ctrl(state curr, parameters params, state input) {
+                |  /* controller implementation stub: modify curr to return actuator set values */
+                |  return curr;
+                |}
+                |
+                |int main() {
+                |  /* control loop stub */
+                |  parameters params; /* set system parameters, e.g., = { .A=1.0 }; */
+                |  while (true) {
+                |    state current; /* read sensor values, e.g., = { .x=0.2 }; */
+                |    state input;   /* resolve non-deterministic assignments in the model */
+                |    state post = monitoredCtrl(current, params, input, &ctrl, &ctrlStep);
+                |    /* hand post actuator set values to actuators */
+                |  }
+                |  return 0;
+                |}
+                |""".stripMargin
+
+            new ModelPlexArtifactCodeResponse(model, sandbox) :: Nil
+          } else new ErrorResponse("ModelPlex failed: expected exactly 1 subgoal, but got " + monitorCond.prettyString) :: Nil
+      }
+    case _ => new ErrorResponse("Unsupported shape, expected assumptions -> [{ctrl;ode}*]safe, but got " + modelFml.prettyString) :: Nil
+  }
+
+  private def createMonitor(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): List[Response] = {
+    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars.toList.sorted[NamedSymbol]:_*)
     val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
       case ("controller", tool) =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
@@ -808,12 +919,36 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, monit
         ModelPlex.optimizationOneWithSearch(tool, assumptions)(1) /*& SimplifierV2.simpTac(1)*/)
     }
 
-    if (monitorCond.subgoals.size == 1) (conditionKind, monitorShape) match {
-      case ("kym", "boolean") => new ModelPlexResponse(model, monitorCond.subgoals.head.toFormula) :: Nil
-      case ("kym", "metric") => new ModelPlexResponse(model, ModelPlex.toMetric(monitorCond.subgoals.head.toFormula)) :: Nil
-      case ("c", "boolean") => new ModelPlexCCodeResponse(model, monitorCond.subgoals.head.toFormula) :: Nil
-    }
-    else new ErrorResponse("ModelPlex failed") :: Nil
+    if (monitorCond.subgoals.size == 1 && monitorCond.subgoals.head.ante.isEmpty && monitorCond.subgoals.head.succ.size == 1) {
+      val monitorFml =  monitorShape match {
+        case "boolean" => monitorCond.subgoals.head.succ.head
+        case "metric" => ModelPlex.toMetric(monitorCond.subgoals.head.succ.head)
+      }
+      conditionKind match {
+        case "kym" => new ModelPlexArtifactResponse(model, monitorFml) :: Nil
+        case "c" =>
+          val monitor = (new CGenerator(new CMonitorGenerator(monitorShape)))(monitorFml, vars, model.name)
+          val code =
+            s"""
+              |${CGenerator.printHeader(model.name)}
+              |$monitor
+              |
+              |int main() {
+              |  /* sandbox stub, select 'sandbox' to auto-generate */
+              |  parameters params = { .A=1.0 };
+              |  while (true) {
+              |    state pre; /* read sensor values, e.g., = { .x=0.0 }; */
+              |    state post; /* run controller */
+              |    if (!monitorSatisfied(pre,post,params)) post = post; /* replace with fallback control output */
+              |    /* hand post actuator set values to actuators */
+              |  }
+              |  return 0;
+              |}
+              |""".stripMargin
+
+          new ModelPlexArtifactCodeResponse(model, code) :: Nil
+      }
+    } else new ErrorResponse("ModelPlex failed: expected exactly 1 subgoal, but got " + monitorCond.prettyString) :: Nil
   }
 }
 
@@ -943,15 +1078,14 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
 class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: String) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
     try {
-      val userId = archiveName.stripPrefix("http://").stripPrefix("https://").replaceAll("/", "-")
+      val userId = uri
+      val sanitizedUserId = uri.replaceAllLiterally("/", "%2F").replaceAllLiterally(":", "%3A")
       val pwd = "guest"
       val userExists = db.userExists(userId)
       if (!userExists) db.createUser(userId, pwd, "3")
 
-      if (db.getModelList(userId).isEmpty) {
-        //@todo actually check model content (existing models might be outdated)
-        DatabasePopulator.importKya(db, userId, uri, prove=false)
-      }
+      val models = db.getModelList(userId)
+      DatabasePopulator.importKya(db, userId, uri, prove=false, models)
 
       //@todo template engine, e.g., twirl, or at least figure out how to parse from a string
       val html =
@@ -989,7 +1123,7 @@ class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: Strin
             <script src="/js/controllers/login.js"></script>
             <script src="/js/controllers/serverinfo.js"></script>
 
-            <div ng-controller="LoginCtrl" ng-init={"login('" + userId + "','" + pwd + "',true);"}></div>
+            <div ng-controller="LoginCtrl" ng-init={"login('" + sanitizedUserId + "','" + pwd + "',true);"}></div>
           </body>
         </html>
 
@@ -1704,14 +1838,25 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     else {
       assert(provable.isProved, "Provable " + provable + " must be proved")
       assert(provable.conclusion == conclusion, "Conclusion of provable " + provable + " must match problem " + conclusion)
+      val tactic = tree.tacticString
       tree.info.tactic match {
         case None =>
           // remember tactic string
           val newInfo = new ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
             tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
-            Some(tree.tacticString))
+            Some(tactic))
           db.updateProofInfo(newInfo)
         case Some(_) => // already have a tactic, so do nothing
+      }
+      // remember lemma
+      val lemmaName = "user" + File.separator + model.name
+      if (!LemmaDBFactory.lemmaDB.contains(lemmaName)) {
+        val evidence = Lemma.requiredEvidence(provable, ToolEvidence(List(
+          "tool" -> "KeYmaera X",
+          "model" -> model.keyFile,
+          "tactic" -> tactic
+        )) :: Nil)
+        LemmaDBFactory.lemmaDB.add(new Lemma(provable, evidence, Some(lemmaName)))
       }
       new ProofVerificationResponse(proofId, provable, tree.tacticString) :: Nil
     }

@@ -123,11 +123,14 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         return parent;
       }
 
+      scope.proofStepChildren = function(parentId) {
+        return sequentProofData.proofTree.node(parentId).children;
+      }
+
       scope.stepAxiom = function() {
         if (scope.explanationNodeId) {
-          var parent = sequentProofData.proofTree.node(scope.explanationNodeId);
-          var fstChild = sequentProofData.proofTree.node(parent.children[0]);
-          return [fstChild.rule];
+          var node = sequentProofData.proofTree.node(scope.explanationNodeId)
+          return [node.rule];
         } else [];
       }
 
@@ -292,15 +295,18 @@ angular.module('sequentproof', ['ngSanitize','sequent','formula','angularSpinner
         return (candidates != null ? candidates.filter(function(e) { return fp.indexOf(e) < 0 && scope.agenda.itemsByProofStep(e).length > 0; }) : []);
       }
 
+      scope.proofStepChildren = function(parentId) {
+        return sequentProofData.proofTree.node(parentId).children;
+      }
+
       scope.explainStep = function(nodeId, highlight) {
         scope.explanationNodeId = highlight ? nodeId : undefined;
       }
 
       scope.stepAxiom = function() {
         if (scope.explanationNodeId) {
-          var parent = sequentProofData.proofTree.node(scope.explanationNodeId);
-          var fstChild = sequentProofData.proofTree.node(parent.children[0]);
-          return [fstChild.rule];
+          var node = sequentProofData.proofTree.node(scope.explanationNodeId)
+          return [node.rule];
         } else [];
       }
 

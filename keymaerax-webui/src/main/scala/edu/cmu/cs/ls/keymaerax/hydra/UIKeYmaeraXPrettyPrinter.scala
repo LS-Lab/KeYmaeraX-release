@@ -96,10 +96,10 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
     val hasStep = plainText || (topExpr match {
       case t: Term => UIIndex.allStepsAt(t.sub(q).get, Some(pos++q), None).isEmpty
       case f: Formula => UIIndex.allStepsAt(f.sub(q).get, Some(pos++q), None).isEmpty
+      case _ => false
     })
 
     val editable = !plainText && (topExpr match {
-      case _: Term => false
       case f: Formula => f.sub(q).get match {
         case fml: Formula => fml.isFOL
         case _: Variable => false
@@ -107,6 +107,7 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
         case _: Term => true
         case _ => false
       }
+      case _ => false
     })
 
     //@note base pretty printer emits a quantifier and its variable with same ID -> avoid spans with same ID

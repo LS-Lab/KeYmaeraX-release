@@ -7,12 +7,10 @@ package edu.cmu.cs.ls.keymaerax.launcher
 import java.io._
 import javax.swing.JOptionPane
 
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstractionObj, SQLite, StringToVersion, UpdateChecker}
-import edu.cmu.cs.ls.keymaerax.hydra.{SQLite, StringToVersion, UpdateChecker}
+import edu.cmu.cs.ls.keymaerax.hydra._
 import spray.json.JsArray
 
 import scala.collection.JavaConversions._
-
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 
@@ -84,7 +82,7 @@ object Main {
 ////        edu.cmu.cs.ls.keymaerax.tactics.DerivedAxioms.prepopulateDerivedLemmaDatabase()
 //      }
 //    }
-    //@todo skip -ui -launch
+
     if(System.getenv().containsKey("HyDRA_SSL") && System.getenv("HyDRA_SSL").equals("on")) {
       edu.cmu.cs.ls.keymaerax.hydra.SSLBoot.main(args)
     } else {
@@ -266,23 +264,55 @@ object Main {
     SQLite.ProdDB.getConfiguration("version").config("version")
   }
 
+  /** Returns a list of outdated guest-user created models (literal model content comparison) */
+  private def listOutdatedModels(): List[ModelPOJO] = {
+    val db = DBAbstractionObj.defaultDatabase
+    val tempUsers = db.getTempUsers
+    val tempUrlsAndModels: List[(String, List[ModelPOJO])] = tempUsers.map(u => {
+      launcherLog("Updating guest " + u.userName + "...")
+      val models = db.getModelList(u.userName)
+      launcherLog("...with " + models.size + " guest models")
+      (u.userName, models)
+    })
+
+    tempUrlsAndModels.flatMap({ case (url, models) =>
+      try {
+        if (models.nonEmpty) {
+          launcherLog("Reading guest source " + url)
+          val content = DatabasePopulator.readKya(url)
+          launcherLog("Comparing cached and source content")
+          models.flatMap(m => content.find(_.name == m.name) match {
+            case Some(DatabasePopulator.TutorialEntry(_, model, _, _, _, _)) if model == m.keyFile => None
+            case Some(DatabasePopulator.TutorialEntry(_, model, _, _, _, _)) if model != m.keyFile => Some(m)
+            case _ => /*@note model was deleted/renamed in original file, so delete*/ Some(m)
+          })
+        } else List()
+      } catch {
+        case _: Throwable => List() //@note original file inaccessible, so keep temporary model
+      }
+    })
+  }
+
   private def cleanupGuestData() = {
     launcherLog("Cleaning up guest data...")
-    val script = io.Source.fromInputStream(getClass.getResourceAsStream("/sql/deleteguestdata.sql")).mkString
-    val statements = script.replaceAll("\n", "").split(";")
-    val conn = SQLite.ProdDB.sqldb.createConnection()
-    conn.createStatement().executeUpdate("PRAGMA journal_mode = WAL")
-    conn.createStatement().executeUpdate("PRAGMA foreign_keys = ON")
-    conn.createStatement().executeUpdate("PRAGMA synchronous = NORMAL")
-    conn.createStatement().executeUpdate("VACUUM")
-    try {
-      val stmt = conn.createStatement()
-      statements.foreach(stmt.addBatch)
-      stmt.executeBatch()
-    } catch {
-      case e: Throwable => launcherLog("Error cleaning up guest data"); throw e
-    } finally {
-      conn.close()
+    val deleteModels = listOutdatedModels()
+    val deleteModelsStatements = deleteModels.map("delete from models where _id = " + _.modelId)
+    launcherLog("...deleting " + deleteModels.size + " guest models")
+    if (deleteModels.nonEmpty) {
+      val conn = SQLite.ProdDB.sqldb.createConnection()
+      conn.createStatement().executeUpdate("PRAGMA journal_mode = WAL")
+      conn.createStatement().executeUpdate("PRAGMA foreign_keys = ON")
+      conn.createStatement().executeUpdate("PRAGMA synchronous = NORMAL")
+      conn.createStatement().executeUpdate("VACUUM")
+      try {
+        val stmt = conn.createStatement()
+        deleteModelsStatements.foreach(stmt.addBatch)
+        stmt.executeBatch()
+      } catch {
+        case e: Throwable => launcherLog("Error cleaning up guest data"); throw e
+      } finally {
+        conn.close()
+      }
     }
     launcherLog("done.")
   }

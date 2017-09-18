@@ -63,7 +63,7 @@ object KeYmaeraXArchiveParser {
   def read(archiveContentBOM: String): List[ArchiveEntry] = {
     val archiveContent: String = ParserHelper.removeBOM(archiveContentBOM)
     // match ArchiveEntry, Lemma, Theorem, unless inside quotation marks
-    val regex = s"(?=($ARCHIVE_ENTRY_BEGIN|$LEMMA_BEGIN|$THEOREM_BEGIN|$EXERCISE_BEGIN)" + "(?=([^\"]*\"[^\"]*\")*[^\"]*$))"
+    val regex = s"\\b(?=($ARCHIVE_ENTRY_BEGIN|$LEMMA_BEGIN|$THEOREM_BEGIN|$EXERCISE_BEGIN)\\b" + "(?=([^\"]*\"[^\"]*\")*[^\"]*$))"
     archiveContent.trim().split(regex).filter(_.nonEmpty).flatMap({s =>
       val (entry, kind) =
         if (s.startsWith(ARCHIVE_ENTRY_BEGIN)) (s.stripPrefix(ARCHIVE_ENTRY_BEGIN), "theorem")

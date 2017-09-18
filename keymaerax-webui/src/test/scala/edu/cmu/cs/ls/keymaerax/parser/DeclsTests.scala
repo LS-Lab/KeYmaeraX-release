@@ -1,8 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.LoneElement._
 
 /**
   * Tests the declarations parser.
@@ -55,8 +57,8 @@ class DeclsTests extends FlatSpec with Matchers {
 
     val (problem, solution) = KeYmaeraXProblemParser.parseProblemAndTactic(input)
 
-    println(problem)
-    println(solution)
+    problem shouldBe "!(A() | !A()) -> !!(A() | !A())".asFormula
+    solution shouldBe TactixLibrary.implyR(1)
   }
 
   "function domain" should "parse correctly" in {
@@ -103,7 +105,7 @@ class DeclsTests extends FlatSpec with Matchers {
     a [ParseException] shouldBe thrownBy(KeYmaeraXProblemParser(input))
   }
 
-  it should "parse correctly when fully explicit" ignore {
+  it should "parse correctly when fully explicit" in {
     val input =
       """
         |Functions.
@@ -124,8 +126,28 @@ class DeclsTests extends FlatSpec with Matchers {
         |End.
       """.stripMargin
 
-    KeYmaeraXProblemParser(input)
-    KeYmaeraXProblemParser(input2)
+    KeYmaeraXProblemParser(input) shouldBe "Cimpl((0,1),2) <-> true".asFormula
+    KeYmaeraXProblemParser(input2) shouldBe "Cimpl(0,(1,2)) <-> true".asFormula
+  }
+
+  it should "substitute in definitions" in {
+    val input =
+      """
+        |Functions.
+        |  B Pred(R, R, R) <-> ( (._0) + (._1) <= (._2) ).
+        |End.
+        |Problem.
+        |  Pred(0,1,2) <-> true
+        |End.
+      """.stripMargin
+
+    val (decls, formula) = KeYmaeraXProblemParser.parseProblem(input)
+    decls.decls.loneElement._2 match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Tuple(Real, Tuple(Real, Real))
+      codomain shouldBe Bool
+      interpretation shouldBe "(._0) + (._1) <= (._2)".asFormula
+    }
+    formula shouldBe "0+1 <= 2 <-> true".asFormula
   }
 
   "Declarations type analysis" should "elaborate variables to no-arg functions per declaration" in {
@@ -189,7 +211,7 @@ class DeclsTests extends FlatSpec with Matchers {
                   |  x<=m() & b()>0 -> [a:=-b(); {x'=v,v'=a & v>=0}]x<=m()
                   |End.
                   |""".stripMargin
-    KeYmaeraXProblemParser(model)
+    KeYmaeraXProblemParser(model) shouldBe "x<=m() & b()>0 -> [a:=-b(); {x'=v,v'=a & v>=0}]x<=m()".asFormula
   }
 
   it should "detect and print undeclared symbols" in {

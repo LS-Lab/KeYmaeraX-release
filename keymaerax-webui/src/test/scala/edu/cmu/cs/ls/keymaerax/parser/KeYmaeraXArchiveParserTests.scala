@@ -5,11 +5,10 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
+import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-
 import org.scalatest.LoneElement._
 
 /**
@@ -274,6 +273,40 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       "theorem",
       "x>y -> x>=y".asFormula,
       Nil
+    )
+  }
+
+  it should "split blocks by whole word only (lemma used in tactic)" in {
+    val input =
+      """
+        |Lemma "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.
+        |End.
+        |
+        |Theorem "Entry 2".
+        | ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.
+        | Tactic "Proof Entry 2". useLemma({`Entry 1`}) End.
+        |End.
+      """.stripMargin
+    val entries = KeYmaeraXArchiveParser.parse(input)
+    entries should have size 2
+    entries.head shouldBe ParsedArchiveEntry(
+      "Entry 1",
+      """ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.""".stripMargin,
+      "lemma",
+      "x>y -> x>=y".asFormula,
+      Nil
+    )
+    entries(1) shouldBe ParsedArchiveEntry(
+      "Entry 2",
+      """ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.""".stripMargin,
+      "theorem",
+      "x>y -> x>=y".asFormula,
+      ("Proof Entry 2", TactixLibrary.useLemma("Entry 1", None))::Nil
     )
   }
 

@@ -428,8 +428,14 @@ del {
   color: white;
 }
 
+.k4-axiom-cond {
+  font-style: italic;
+}
 .k4-axiom-key {
   font-weight: bold;
+}
+.k4-axiom-repl {
+  border-bottom: 1px dashed var(--lsmain);
 }
 
 .k4-tacticeditor, .k4-tacticeditor:focus {

@@ -119,16 +119,14 @@ angular.module('keymaerax.services').factory('ProofTree', function() {
         htmlNodeId: function(nodeId) { return nodeId.replace(/\(|\)/g, "").replace(/,/g, "-"); },
         /** Highlights the operator where the step that created sequent/node `nodeId` was applied. */
         highlightNodeStep: function(nodeId, highlight) {
-          var parent = this.node(nodeId);
-          parent.isExplanationVisible = highlight;
-          var fstChild = this.node(parent.children[0]);
-          var pos = fstChild.rule.pos.replace(/\./g, "\\,");
-          var element = $("#seq_"+this.htmlNodeId(nodeId) + " #fml_"+pos);
+          var node = this.node(nodeId);
+          var pos = node.rule.pos.replace(/\./g, "\\,");
+          var element = $("#seq_"+this.htmlNodeId(node.parent) + " #fml_"+pos);
           if (highlight) {
-            if (fstChild.rule.asciiName == "WL" || fstChild.rule.asciiName == "WR") element.addClass("k4-highlight-steppos-full");
+            if (node.rule.asciiName == "WL" || node.rule.asciiName == "WR") element.addClass("k4-highlight-steppos-full");
             else element.addClass("k4-highlight-steppos");
             if (element.text().startsWith("[") || element.text().startsWith("<")) {
-              if (fstChild.rule.asciiName == "[]^" || fstChild.rule.asciiName == "<>|") element.addClass("k4-highlight-steppos-modality-post");
+              if (node.rule.asciiName == "[]^" || node.rule.asciiName == "<>|") element.addClass("k4-highlight-steppos-modality-post");
               else element.addClass("k4-highlight-steppos-modality-prg");
             }
           } else element.removeClass("k4-highlight-steppos k4-highlight-steppos-full k4-highlight-steppos-modality-prg k4-highlight-steppos-modality-post");

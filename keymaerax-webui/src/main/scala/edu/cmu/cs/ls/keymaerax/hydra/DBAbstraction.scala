@@ -188,9 +188,14 @@ trait DBAbstraction {
   // Users
   def userExists(username: String): Boolean
 
-  def createUser(username: String, password: String, mode: String): Unit
+  /** Creates a new user, identified by the unique `username` with `password`. The user belongs to group `group`. */
+  def createUser(username: String, password: String, group: String): Unit
 
+  /** Returns the user identified by `username`, if any.  */
   def getUser(username: String): Option[UserPOJO]
+
+  /** Returns all temporary users (group 3). */
+  def getTempUsers: List[UserPOJO]
 
   def checkPassword(username: String, password: String): Boolean
 

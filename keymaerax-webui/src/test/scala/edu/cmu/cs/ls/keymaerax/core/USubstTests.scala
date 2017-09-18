@@ -6,12 +6,11 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable
 import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, SystemTestBase}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, USubstTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
-import org.scalatest._
 import testHelper.KeYmaeraXTestTags
 import testHelper.CustomAssertions.withSafeClue
 import testHelper.KeYmaeraXTestTags.{AdvocatusTest, CoverageTest}
@@ -94,31 +93,33 @@ class USubstTests extends SystemTestBase {
     s(prem) should be ("x^5>=0 <-> !(!((-(-x))^5>=0))".asFormula)
   }
 
-  it should "substitute with dot projection" ignore {
-    val p = Function("p", None, Tuple(Real, Real), Bool)
-    val x = Variable("x", None, Real)
-    val y = Variable("y", None, Real)
-    val dot = DotTerm(Tuple(Real, Real))
-    // p(x,y) <-> ! ! p(- - x, - -y)
-    val prem = Equiv(PredOf(p, Pair(x, y)), Not(Not(PredOf(p, Pair(Neg(Neg(x)), Neg(Neg(y)))))))
-    //@todo fst/snd not yet available
-    val s = USubst(Seq(SubstitutionPair(PredOf(p, dot), GreaterEqual(Power("fst(.(.,.))".asTerm, "snd(.(.,.))".asTerm), Number(0)))))
-    s(prem) should be ("x^y>=0 <-> !(!((-(-x))^(-(-(y)))>=0))".asFormula)
+  it should "substitute predicates with colored dots" in {
+    val prem = "p(x,y) <-> !!p(--x, --y)".asFormula
+    val s = USubst(("p(._0,._1)".asFormula ~> "._0 >= ._1".asFormula)::Nil)
+    s(prem) should be ("x>=y <-> !!(--x >= --y)".asFormula)
   }
 
-  it should "substitute with more complicated dot projection" ignore {
-    val p = Function("p", None, Tuple(Real, Tuple(Real, Real)), Bool)
-    val x = Variable("x", None, Real)
-    val y = Variable("y", None, Real)
-    val z = Variable("z", None, Real)
-    val f = Function("f", None, Tuple(Real, Real), Real)
-    val dot = DotTerm(Tuple(Real, Tuple(Real, Real)))
-    // p(x,y,z) <-> ! ! p(- - x, - -y,z)
-    val prem = Equiv(PredOf(p, Pair(x, Pair(y, z))), Not(Not(PredOf(p, Pair(Neg(Neg(x)), Pair(Neg(Neg(y)), z))))))
-    //@todo fst/snd not yet available
-    val s = USubst(Seq(SubstitutionPair(PredOf(p, dot),
-      GreaterEqual(Power("fst(.(.,.))".asTerm, FuncOf(f, Pair("fst(snd(.(.,(.,.))))".asTerm, "snd(snd(.(.,(.,.))))".asTerm))), Number(0)))))
-    s(prem) should be ("x^f(y,z)>=0 <-> !(!((-(-x))^f(-(-(y)),z)>=0))".asFormula)
+  it should "substitute functions with colored dots" in {
+    val prem = "f(x,y) = --f(--x, --y)".asFormula
+    val s = USubst(("f(._0, ._1)".asTerm ~> "._0^._1".asTerm)::Nil)
+    s(prem) should be ("x^y = --(--x)^(--y)".asFormula)
+  }
+
+  it should "substitute predicates with nested colored dots" in {
+    val prem = "p(x,y,z) <-> !!p(--x, --y,z)".asFormula
+    val s = USubst(("p(._0,._1,._2)".asFormula ~> "._0^f(._1,._2)>=0".asFormula)::Nil)
+    s(prem) should be ("x^f(y,z)>=0 <-> !!(--x)^f(--y,z)>=0".asFormula)
+  }
+
+  it should "treat pair associativity as different substitutions" in {
+    val premLeft = "p((x,y),z) <-> !!p((--x, --y),z)".asFormula
+    val premRight = "p(x,(y,z)) <-> !!p(--x, (--y,z))".asFormula
+    val sLeft = USubst(("p((._0,._1),._2)".asFormula ~> "._0^f(._1,._2)>=0".asFormula)::Nil)
+    val sRight = USubst(("p(._0,(._1,._2))".asFormula ~> "._0^f(._1,._2)>=0".asFormula)::Nil)
+    sLeft(premLeft) shouldBe "x^f(y,z)>=0 <-> !!(--x)^f(--y,z)>=0".asFormula
+    sLeft(premRight) shouldBe premRight
+    sRight(premLeft) shouldBe premLeft
+    sRight(premRight) shouldBe "x^f(y,z)>=0 <-> !!(--x)^f(--y,z)>=0".asFormula
   }
 
   it should "substitute unary predicate with binary predicate" in {
