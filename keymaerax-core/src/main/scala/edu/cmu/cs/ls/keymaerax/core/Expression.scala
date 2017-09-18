@@ -15,8 +15,6 @@ package edu.cmu.cs.ls.keymaerax.core
 
 // require favoring immutable Seqs for soundness
 
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
-
 import scala.collection.immutable
 import scala.math._
 
@@ -93,7 +91,7 @@ sealed trait Expression {
   //override def toString : String = "(" + prettyString + ")@" + canonicalString
   override def toString : String = prettyString
   /** Pretty-printed string representing this expression */
-  def prettyString : String = KeYmaeraXPrettyPrinter.stringify(this)
+  def prettyString : String = PrettyPrinter.printer(this)
 }
 
 /** Atomic expressions */
