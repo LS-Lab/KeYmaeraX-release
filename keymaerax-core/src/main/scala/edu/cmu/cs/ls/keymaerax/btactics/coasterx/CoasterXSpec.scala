@@ -312,7 +312,7 @@ class CoasterXSpec {
   val gconst = FuncOf(Function("g", None, Unit, Real), Nothing)
   val gpos = Greater(gconst, Number(0))
 
-  def segmentPre(segBounds:(Section,(TPoint,TPoint),TPoint), v0:Number):Formula = {
+  def segmentPre(segBounds:(Section,(TPoint,TPoint),TPoint), v0:Term):Formula = {
     val (seg, (start,end), initD) = segBounds
     seg match {
       case LineSection(Some(LineParam((x1,y1),(x2,y2))), Some(gradient),isUp) =>
@@ -465,7 +465,8 @@ class CoasterXSpec {
   def iRadius(i:Int):Term = { Variable("r", Some(i))}
 
   def fromAligned(align:(AFile,Formula)):Formula = {
-    val (aligned@(points, segments, v0, _, dirs), segmentDefs) = align
+    val (aligned@(points, segments, v0pre, _, dirs), segmentDefs) = align
+    val v0 = s"($v0pre)*(g()^(1/2))".asTerm
     val nonemptySegs = segments.filter(!segmentEmpty(_))
     val withBounds = zipConsecutive(nonemptySegs,points,dirs)
     val pre = segmentPre(withBounds.head,v0)
@@ -474,6 +475,10 @@ class CoasterXSpec {
     val energyConserved = s"v^2 + 2*y*g() = ($v0)^2 + 2*($y0)*g()".asFormula
     val globalPost = And("v > 0".asFormula, energyConserved)
     val post = And(globalPost, withBounds.zipWithIndex.map(segmentPost).reduceRight[Formula]{case (x,y) => And(x,y)})
+    // @TODO: Delete, just some debug code
+    //ctx = ctx.+(Variable("x") -> Number(299), Variable("y") -> Number(398))
+    // dx_4*y = dy_4*x+dx_4*(398-(398-y_4)/-116*299)
+    //println("LHS: " + evalTerm("dx_4*y".asTerm) + ", RHS: " + evalTerm("dy_4*x+dx_4*(398-(398-y_4)/-116*299)".asTerm))
     Imply(And(segmentDefs,pre),Box(Loop(ode), post))
   }
 
@@ -621,8 +626,10 @@ class CoasterXSpec {
         ((cx, foldMinus(cy,r)), (xx2, yy2)),
         allDefs2,
         (endDX, endDY))
+      println("Split guy in quadrants ", q1,q2,q3,q4, " has start direction ", evalTerm(dx).value," ",evalTerm(dy).value, " and end direction dx: ", evalTerm(dtxe).value, " and dy: ", evalTerm(dtye).value)
       sec1 :: sec2 :: alignZipped(rest, Some((endDX, endDY)), index + 2)
     } else {
+      println("Non-split guy in quadrants ", q1,q2,q3,q4, " has direction dx: ", evalTerm(dtxe).value, " and dy: ", evalTerm(dtye).value)
       val head = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, deltaTheta)), Some(oldSlope)),
         ((xx1, yy1), (xx2, yy2)),
         allDefs,
@@ -687,7 +694,7 @@ class CoasterXSpec {
         val defaultD = normalizeVector((foldMinus(xx2,xx1), foldMinus(yy2,yy1)))
         val endD:TPoint = initD.getOrElse(defaultD)
         val endMTerm = initD match {case Some((dx,dy)) => foldDivide(dy,dx) case None => foldDivide(foldMinus(yy2,yy1),foldMinus(xx2,xx1))}
-        val endYTerm = initD match {case Some((dx,dy)) => foldPlus(foldTimes(foldDivide(endDX,endDY), foldMinus(xx2,xx1)),yy1) case None => yy2}
+        val endYTerm = initD match {case Some((dx,dy)) => foldPlus(foldTimes(foldDivide(endDY,endDX), foldMinus(xx2,xx1)),yy1) case None => yy2}
         val endYDef:Formula = Equal(endY, endYTerm)
         val endDXDef = Equal(endDX, endD._1)
         val endDYDef = Equal(endDY, endD._2)
