@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics.coasterx
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.{AxiomaticODESolver, DLBySubst, DebuggingTactics, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver.TIMEVAR
+import edu.cmu.cs.ls.keymaerax.btactics.Kaisar.interpret
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser.{TPoint => _, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{dW, _}
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXSpec.TPoint
@@ -630,6 +631,11 @@ class CoasterXProver (spec:CoasterXSpec){
     }
   }
 
+  def rotAnte(pr:Provable):Provable = {
+    val fml = pr.subgoals.head.ante.head
+    interpret(cut(fml) <(hideL(-1), close), pr)
+  }
+
   def apply(fileName:String):Provable = {
     val parsed = CoasterXParser.parseFile(fileName).get
     val align@(aligned@(points, segments, v0pre, _, ds), segmentDefs) = spec.prepareFile(parsed)
@@ -643,7 +649,7 @@ class CoasterXProver (spec:CoasterXSpec){
     // localConsts,(globalConst&initState) |-
     val pr1b = interpret(andL(-2), pr1a)
     // localConsts,globalConst,initState   |-
-    val pr1c = interpret(andL(-1), pr1b)
+    val pr1c = if (nSections > 1) interpret(andL(-1), pr1b) else rotAnte(pr1b)
     // globalConst,initState, lc1, &_2^n {lc_i}   |-
     val unpackLocalConsts = List.tabulate(nSections-2){case i => andL(-(i+4))}.foldLeft(nil)((acc,e) => acc & e)
     val pr1e = interpret(unpackLocalConsts, pr1c)
