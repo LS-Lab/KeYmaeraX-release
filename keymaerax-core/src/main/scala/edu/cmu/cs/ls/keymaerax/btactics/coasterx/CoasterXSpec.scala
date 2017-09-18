@@ -290,7 +290,7 @@ class CoasterXSpec {
     (cx,cy)
   }
   // Compute direction-to-center vector using tangent vector and wiseness
-  def centerFromTangent(dir:TPoint, angles:(Number,Number), delta:Number) = {
+  def centerFromTangent(dir:TPoint, angles:(Number,Number), delta:Number):(Term,Term) = {
     val isCw = delta.value < 0
     if (isCw) {
       (dir._2, foldNeg(dir._1))
@@ -298,7 +298,7 @@ class CoasterXSpec {
       (foldNeg(dir._2), dir._1)
     }
   }
-  def tangentFromCenter(dir:TPoint, angles:(Number,Number), delta:Number) =
+  def tangentFromCenter(dir:TPoint, angles:(Number,Number), delta:Number):(Term,Term) =
     centerFromTangent(dir, angles.swap, foldNeg(delta).asInstanceOf[Number])
 
   def sqDist (p1:TPoint, p2:TPoint):Term = {
@@ -642,17 +642,12 @@ class CoasterXSpec {
     val (ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(oldSlope)), ((xx1, yy1), (xx2, yy2))) :: rest = secs
     // Algorithm: Take (x0, y1), (dx0, dy0), (cx, cy) as given (where cx, cy based on xx1,yy1,xx2,yy2).
     // Pray the resulting circle still intersects (x1, ???) for some ??? and compute a new value of y1 to fill in ???
-    val endY = Variable("y", Some(index))
-    val r = Variable("r", Some(index))
-    val cx = Variable("cx", Some(index))
-    val cy = Variable("cy", Some(index))
-    val endDX = Variable("dx", Some(index))
-    val endDY = Variable("dy", Some(index))
     // Compute default center, vector-to-center and tangent vector
     val (cxe,cye) = arcCenter((x1,y1),(x2,y2))
-    val (dcxD, dcyD) = (foldMinus(cx, xx1), foldMinus(cy, yy1))
-    val directionD = tangentFromCenter((dcxD,dcyD), (param.theta1, param.theta2), param.deltaTheta)
-    val re = foldDivide(foldMinus(x2,x1),Number(2))
+    val (dcxD, dcyD) = (foldMinus(cxe, xx1), foldMinus(cye, yy1))
+    val directionD = normalizeVector(tangentFromCenter((dcxD,dcyD), (param.theta1, param.theta2), param.deltaTheta))
+    alignArcFromDirection(secs, index, directionD._1, directionD._2)
+    /*val re = foldDivide(foldMinus(x2,x1),Number(2))
     // by geometry, yend^2 = cy +- sqrt(r^2 - (cx-x)^2), which +- depends on quadrant
     val yendSign = if (param.theta2.value > 0) { Number(1) } else Number(-1)
     val xend = xx2
@@ -672,8 +667,8 @@ class CoasterXSpec {
       ((xx1, yy1), (xx2, endY)),
       allDefs,
       (endDX,endDY) // @TODO: Supposed to be start not end
-    )
-    head :: alignZipped(setStartY(rest, endY), Some((endDX,endDY)), index+1)
+
+    head :: alignZipped(setStartY(rest, endY), Some((endDX,endDY)), index+1)*/
   }
 
   /* @param zip is a list of sections annotated with their lower-left and upper-right boundaries

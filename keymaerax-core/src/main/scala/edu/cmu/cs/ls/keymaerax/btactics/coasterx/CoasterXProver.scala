@@ -162,12 +162,14 @@ class CoasterXProver (spec:CoasterXSpec){
     val dx0 = s"(($cy)-y)/($r)".asTerm
     val dy0 = s"-(($cx)-x)/($r)".asTerm
     //val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
+    val Box(ODESystem(_,evol),_) = pr.conclusion.succ.head
     val mainCut = s"(dx=($dx0) & dy=-(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & v>0 & y < ($cy) & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
     val pr0 = interpret(dC(mainCut)(1), pr)
     val cut1 = s"($x1) > ($x0)".asFormula
     val pr1a = timeFn("ArcQ4 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & QE)), pr0)})
     //val cut2 = s"($dx0)^2 + ($dy0)^2 = 1".asFormula
     //val pr1b = timeFn("ArcQ3 Case Step 2", {() => interpret(nil < (nil, cut(cut2) < (nil, hideR(1) & QE)), pr1a)})
+    println("Q4: y0 is "+ spec.evalTerm(y0).value + ", y1 is " + spec.evalTerm(y1).value)
     val cut3 = s"($y1) > ($y0)".asFormula
     val pr1c = timeFn("ArcQ4 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & QE)), pr1a)})
     val cut4 = s"($cy) > ($y1)".asFormula
@@ -177,11 +179,11 @@ class CoasterXProver (spec:CoasterXSpec){
     val cut6 = s"($r) > 0".asFormula
     val pr1f = timeFn("ArcQ4 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & QE)), pr1e)})
 
-    val cut7 = s"(($v0)^2)/2 > g()*(($y1) - ($y0))".asFormula
+    val cut7 = s"($evol) -> ((v^2)/2 > g()*(($y1) - ($y0)))".asFormula
     val pr1g = timeFn("ArcQ4 Case Step 7", {() => interpret(nil < (nil, cut(cut7) < (nil, hideR(1) & QE)), pr1f)})
-    val cut8 = s"($y1) <= ($yInit)".asFormula
-    val pr1h = timeFn("ArcQ4 Case Step 8", {() => interpret(nil < (nil, cut(cut8) < (nil, hideR(1) & QE)), pr1g)})
-    val pr1i = interpret(nil <(nil, hideL(-2)*nYs), pr1h)
+    //val cut8 = s"($y1) <= ($yInit)".asFormula
+    //val pr1h = timeFn("ArcQ4 Case Step 8", {() => interpret(nil < (nil, cut(cut8) < (nil, hideR(1) & QE)), pr1g)})
+    val pr1i = interpret(nil <(nil, hideL(-2)*nYs), pr1g)
     val tac = US(NoProofTermProvable(aproof))
     val pr6 = interpret(nil < (nil, tac), pr1i)
     pr6
@@ -398,8 +400,8 @@ class CoasterXProver (spec:CoasterXSpec){
         val a7 = "cy() > y1()".asFormula
         val a8 = "x0() >= cx()".asFormula
         val a9 = "r() > 0".asFormula
-        val a10 = "(v0()^2)/2 > g()*(y1() - y0())".asFormula
-        val a11 = "y1() <= yGlobal()".asFormula
+        val a10 = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1()))->(v^2)/2 > g()*(y1() - y0())".asFormula
+        //val a11 = "y1() <= yGlobal()".asFormula
         val c =
           """[{x'=dx*v,
             |            y'=dy*v,
@@ -415,7 +417,7 @@ class CoasterXProver (spec:CoasterXSpec){
             |          & y < cy()
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
-        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a6, a7, a8,a9, a10,a11), immutable.IndexedSeq(c))
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a6, a7, a8,a9, a10), immutable.IndexedSeq(c))
         val pr = Provable.startProof(con)
         val cy = "cy()".asTerm
         val v0 = "v0()".asTerm
@@ -440,7 +442,7 @@ class CoasterXProver (spec:CoasterXSpec){
             ODE(1)
           )
         ), pr5)
-        val pr6a = interpret(dC(s"(v0()^2)/2 > g()*(y1() - y0())".asFormula)(1) <(nil, ODE(1)), pr6)
+        val pr6a = interpret(dC(s"(v^2)/2 > g()*(y1() - y)".asFormula)(1) <(nil, ODE(1)), pr6)
         val pr7 = interpret(dC(s"v>0".asFormula)(1)  <(nil,
           DebuggingTactics.debug("foo", doPrint = true) &
           dC(s"2*v!=0".asFormula)(1)  <(
