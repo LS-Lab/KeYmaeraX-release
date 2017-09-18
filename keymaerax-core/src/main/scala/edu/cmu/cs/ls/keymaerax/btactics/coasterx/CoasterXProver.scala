@@ -23,6 +23,7 @@ import scala.collection.immutable
 * */
 class CoasterXProver (spec:CoasterXSpec){
 
+  // Record timing information for a function call so we can measure optimizations to the CoasterX prover
   val MAX_TIMEFN_DEPTH = 10
   var currTimefnDepth = 0
   def timeFn[T](msg:String,f:(()=>T)):T = {
@@ -37,12 +38,14 @@ class CoasterXProver (spec:CoasterXSpec){
     e
   }
 
+  // Evaluate a Bellerophon snippet, used to get reasonable IntelliJ debugging
   def interpret(e:BelleExpr, pr:Provable):Provable = {
     SequentialInterpreter()(e, BelleProvable(NoProofTermProvable(pr))) match {
       case BelleProvable(result,_) => result.underlyingProvable
     }
   }
 
+  // The main loop invariant for a full model
   def invariant(align:(AFile,Formula)):Formula = {
     val (aligned@(points, segments, v0pre, _, inits), segmentDefs) = align
     val v0 = s"($v0pre)*(g()^(1/2))".asTerm
@@ -57,6 +60,7 @@ class CoasterXProver (spec:CoasterXSpec){
   }
 
 
+  // Establishes differential invariants for a single quadrant-2 arc
   def quad2Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):Provable = {
     println("Proving Quadrant 2 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ2
@@ -84,6 +88,7 @@ class CoasterXProver (spec:CoasterXSpec){
     pr6
   }
 
+  // Establishes differential invariants for a single quadrant-1 arc
   def quad1Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):Provable = {
     println("Proving Quadrant 1 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ1
@@ -108,6 +113,7 @@ class CoasterXProver (spec:CoasterXSpec){
     pr6
   }
 
+  // Establishes differential invariants for a single quadrant-3 arc
   def quad3Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int, iSection:Int):Provable = {
     println("Proving Quadrant 3 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ3
@@ -134,6 +140,7 @@ class CoasterXProver (spec:CoasterXSpec){
     pr6
   }
 
+  // Establishes differential invariants for a single quadrant-4 arc
   def quad4Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):Provable = {
     println("Proving Quadrant 4 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ4
@@ -163,6 +170,8 @@ class CoasterXProver (spec:CoasterXSpec){
     pr6
   }
 
+  // Finish off the arithmetic at the end of a line segment proof more effeciently than a big blind QE
+  // @TODO: Everything has changed since this was first implemented - revisit and adjust
   def proveLineArith(pr: Provable, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):Provable = {
     val yDefStart = 3
     val nYs = {
@@ -213,6 +222,8 @@ class CoasterXProver (spec:CoasterXSpec){
     pr9
   }
 
+  // Finish off the arithmetic at the end of a line segment proof more effeciently than a big blind QE, assuming the
+  // solvable ODE was proved using dI and dW instead of solve()
   def proveLineArithFromDW(pr: Provable, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):Provable = {
     val yDefStart = 3
     val nYs = {
@@ -265,6 +276,7 @@ class CoasterXProver (spec:CoasterXSpec){
     pr9
   }
 
+  // Storage for component proofs
   val lemmaDB: LemmaDB = LemmaDBFactory.lemmaDB
   def storeLemma(fact: ProvableSig, name: Option[String]): String = {
     val evidence = ToolEvidence(immutable.List("input" -> fact.conclusion.prettyString, "output" -> "true")) :: Nil
@@ -274,6 +286,7 @@ class CoasterXProver (spec:CoasterXSpec){
     id
   }
 
+  // Proof of generic straight component
   lazy val straightProof:Provable = {
     val provableName = "coasterx_straightLineCase"
     lemmaDB.get(provableName) match {
@@ -312,6 +325,7 @@ class CoasterXProver (spec:CoasterXSpec){
         }
   }
 
+  // Proof of generic quadrant-1 arc
   lazy val arcProofQ1:Provable = {
     val provableName = "coasterx_Q1ArcCase"
     lemmaDB.get(provableName) match {
@@ -354,6 +368,7 @@ class CoasterXProver (spec:CoasterXSpec){
   }
 
 
+  // Proof of generic quadrant-2 arc
   lazy val arcProofQ2:Provable = {
     val provableName = "coasterx_Q2ArcCase"
     lemmaDB.get(provableName) match {
@@ -411,6 +426,7 @@ class CoasterXProver (spec:CoasterXSpec){
     }
   }
 
+  // Proof of generic quadrant-3 arc
   lazy val arcProofQ3:Provable = {
     val provableName = "coasterx_Q3ArcCase"
     lemmaDB.get(provableName) match {
@@ -455,6 +471,7 @@ class CoasterXProver (spec:CoasterXSpec){
     }
   }
 
+  // Proof of generic quadrant-4 arc
   lazy val arcProofQ4:Provable = {
     val provableName = "coasterx_Q4ArcCase"
     lemmaDB.get(provableName) match {
@@ -528,6 +545,7 @@ class CoasterXProver (spec:CoasterXSpec){
   def hideYs(iSection:Int, nSections:Int):(BelleExpr, Int) = {
     //@TODO: This hid too much, so now hiding notihng
     (nil, nSections)
+
   }
 
   def hideMoreYs(iSection:Int, nSections:Int):(BelleExpr, Int) = {
@@ -559,6 +577,7 @@ class CoasterXProver (spec:CoasterXSpec){
     pr4
   }
 
+  // Proves any one section
   def sectionTactic(pr: Provable, p1: TPoint, p2: TPoint, v0:Term, yInit:Term, section: Section, iSection:Int, nSections: Int, initD:TPoint):Provable = {
     val nYs = hideYs(iSection, nSections)._2
     section match {
@@ -685,11 +704,13 @@ class CoasterXProver (spec:CoasterXSpec){
     }
   }
 
+  // Rotate all antecedent formulas to the left by 1
   def rotAnte(pr:Provable):Provable = {
     val fml = pr.subgoals.head.ante.head
     interpret(cut(fml) <(hideL(-1), close), pr)
   }
 
+  // Prove an entire CoasterX model from scratch
   def apply(fileName:String):Provable = {
     val parsed = CoasterXParser.parseFile(fileName).get
     val align@(aligned@(points, segments, v0pre, _, ds), segmentDefs) = spec.prepareFile(parsed)
