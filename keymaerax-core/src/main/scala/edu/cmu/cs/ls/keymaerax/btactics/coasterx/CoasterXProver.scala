@@ -61,33 +61,38 @@ class CoasterXProver (spec:CoasterXSpec){
     //val cyLim:Formula = s"($cy) < ($yEnd)".asFormula
     //val pr1:Provable = interpret(normalize, pr)
     println("Proving Quadrant 2 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
+    val aproof = arcProofQ2
     // @TODO: Set cx, cy to correct value as done in postcondition generator
     // @TODO: Hide preconditions and y-defs that you don't need
     //val (cx:Term, cy:Term) = iCenter(iSection)
     //val r = CoasterXSpec.dist(p1, (cx,cy))
-    val cx = spec.foldDivide(spec.foldPlus(tr._1,bl._1),Number(2))
-    val cy = spec.foldDivide(spec.foldPlus(tr._2,bl._2),Number(2))
-    val r = spec.foldDivide(spec.foldMinus(tr._1,bl._1),Number(2))
-    val y0 = p1._2
-    val yEnd = p2._2
-    // Note: Conservation of energy always uses the start of the ENTIRE track, not current section
-    val ECirc:Formula = s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()&(($cx)-x)^2+(($cy)-y)^2=($r)^2".asFormula
-    val dGDefined:Formula = s"2*v!=0".asFormula
-    val pr2:Provable = interpret(dC(s"dx^2 + dy^2 = 1".asFormula)(1)    <(nil, dI()(1)), pr)
-    val pr3:Provable = interpret(dC(s"dx=(y-($cy))/($r)".asFormula)(1) <(nil, dI()(1)), pr2)
-    val pr4:Provable = interpret(dC(s"dy=-(x-($cx))/($r)".asFormula)(1)  <(nil, dI()(1)), pr3)
-    val pr5:Provable = interpret(dC(ECirc)('R) <(nil, dI()(1)), pr4)
-    val pr6:Provable = interpret(dC("v>0".asFormula)('R), pr5)
-    val pr7:Provable = interpret(nil <(nil, dC(dGDefined)(1)), pr6)
-    // dG(s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) &
-//s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram
-    //val pr8:Provable = interpret(nil <(nil, dG(AtomicODE(DifferentialSymbol(Variable("a")), s"((($cx)-x)/(2*v*($r)))*a+0".asTerm), Some("a^2*v=1".asFormula))(1), nil), pr7)
-    val pr8:Provable = interpret(nil <(nil, dG(s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1), nil), pr7)
-    val pr9:Provable = interpret(nil <(nil, existsR("(1/v)^(1/2)".asTerm)(1), nil), pr8)
-    val pr10:Provable = interpret(nil <(nil, dI()(1), nil), pr9)
-    val pr11:Provable = interpret(nil <(nil, ODE(1)), pr10)
-    //val pr12:Provable = interpret(ODE(1), pr11)
-    pr11
+    val (cx,cy) = spec.iCenter(iSection)
+    val r = spec.iRadius(iSection)
+    //spec.foldDivide(spec.foldMinus(tr._1,bl._1),Number(2))
+    val ((x0,y0),(x1,y1)) = (p1,p2)
+      val a1 = "g() > 0".asFormula
+//    val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
+//    val a3 = "(x0()<=x&x<=x1()->((dx=(y-cy())/r()  & dy=-(x-cx())/r()) & ((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & y<=cy()))))".asFormula
+    val mainCut = s"(dx=-(($cy)-y)/($r) & dy=(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & x <= ($cx) & ($cy) <= y & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
+    val pr0 = interpret(dC(mainCut)(1), pr)
+    val cut1 = s"($x1) > ($x0)".asFormula
+    val pr1a = timeFn("ArcQ2 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & QE)), pr0)})
+    //val cut2 = s"($dx0)^2 + ($dy0)^2 = 1".asFormula
+    //val pr1b = timeFn("ArcQ3 Case Step 2", {() => interpret(nil < (nil, cut(cut2) < (nil, hideR(1) & QE)), pr1a)})
+    val cut3 = s"($y1) > ($y0)".asFormula
+    val pr1c = timeFn("ArcQ2 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & QE)), pr1a)})
+    val cut4 = s"($cy) <= ($y0)".asFormula
+    val pr1d = timeFn("ArcQ2 Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & QE)), pr1c)})
+    val cut5 = s"($x1) <= ($cx)".asFormula
+    val pr1e = timeFn("ArcQ2 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & QE)), pr1d)})
+    val cut6 = s"($r) > 0".asFormula
+    val pr1f = timeFn("ArcQ2 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & QE)), pr1e)})
+    val cut7 = s"((($x0)<=x&x<=($x1)) & (($y0) <= y & y <= ($y1)))->(v^2)/2 > g()*(($y1) - ($y0))".asFormula
+    val pr1fa = timeFn("ArcQ2 Case Step 6", {() => interpret(nil < (nil, cut(cut7) < (nil, hideR(1) & QE)), pr1f)})
+    val pr1g = interpret(nil <(nil, hideL(-2)*nYs), pr1fa)
+    val tac = US(NoProofTermProvable(aproof))
+    val pr6 = interpret(nil < (nil, tac), pr1g)
+    pr6
   }
 
   //@TODO: Add stuff from vector proof
@@ -342,6 +347,105 @@ class CoasterXProver (spec:CoasterXSpec){
         storeLemma(NoProofTermProvable(pr2), Some(provableName))
         pr2
         }
+  }
+
+  lazy val arcProofQ2:Provable = {
+    val provableName = "coasterx_Q2ArcCase"
+    lemmaDB.get(provableName) match {
+      case Some(pr) => pr.fact.underlyingProvable
+      case None =>
+        val a1 = "g() > 0".asFormula
+        val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((dx=-(cy()-y)/r()  & dy=(cx()-x)/r()) & ((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & cy()<=y))))".asFormula
+        val a4 = "x1() > x0()".asFormula
+        //val a5 = "dx0()^2 + dy0()^2 = 1".asFormula
+        val a6 = "y1() > y0()".asFormula
+        val a7 = "cy() <= y0()".asFormula
+        val a8 = "x1() <= cx() ".asFormula
+        val a9 = "r() > 0".asFormula
+        val a10 = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1()))->(v^2)/2 > g()*(y1() - y0())".asFormula
+        //val a11 = "y1() <= yGlobal()".asFormula
+        val c =
+          """[{x'=dx*v,
+            |            y'=dy*v,
+            |            v'=-dy*g(),
+            |            dx' =  (dy*v)/r(),
+            |            dy' =  (-dx*v)/r()
+            |            &(x0()<=x&x<=x1())
+            |            &(y0()<=y&y<=y1())}]
+            |          ( dx=-(cy()-y)/r()
+            |          & dy=(cx()-x)/r()
+            |          & v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g()
+            |          & x <= cx()
+            |          & cy() <= y
+            |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
+            |          )""".stripMargin.asFormula
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a6, a7, a8,a9, a10), immutable.IndexedSeq(c))
+        val pr = Provable.startProof(con)
+        val cy = "cy()".asTerm
+        val v0 = "v0()".asTerm
+        val r = "r()".asTerm
+        val cx = "cx()".asTerm
+        val yInit = "yGlobal()".asTerm
+
+        // Note: Conservation of energy always uses the start of the ENTIRE track, not current section
+        val ECirc:Formula = s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula
+        val dGDefined:Formula = s"2*v!=0".asFormula
+        val pr2:Provable = interpret(dC(s"dx^2 + dy^2 = 1".asFormula)(1)    <(nil, dI()(1)), pr)
+        val pr3:Provable = interpret(dC(s"dx=(y-($cy))/($r)".asFormula)(1) <(nil, dI()(1)), pr2)
+        val pr4:Provable = interpret(dC(s"dy=-(x-($cx))/($r)".asFormula)(1)  <(nil, dI()(1)), pr3)
+        val pr5:Provable = interpret(dC(ECirc)('R) <(nil, dI()(1)), pr4)
+        val pr5a:Provable = interpret(dC(s"(v^2)/2 > g()*(y1() - y)".asFormula)(1) <(nil, dI()(1)), pr5)
+        val pr6:Provable = interpret(dC("v>0".asFormula)('R), pr5a)
+        val pr7:Provable = interpret(nil <(nil, dC(dGDefined)(1)), pr6)
+        // dG(s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) &
+        //s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram
+        //val pr8:Provable = interpret(nil <(nil, dG(AtomicODE(DifferentialSymbol(Variable("a")), s"((($cx)-x)/(2*v*($r)))*a+0".asTerm), Some("a^2*v=1".asFormula))(1), nil), pr7)
+        val pr8:Provable = interpret(nil <(nil, dG(s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1), nil), pr7)
+        val pr9:Provable = interpret(nil <(nil, existsR("(1/v)^(1/2)".asTerm)(1), nil), pr8)
+        val pr10:Provable = interpret(nil <(nil, dI()(1), nil), pr9)
+        val pr11:Provable = interpret(nil <(nil, ODE(1)), pr10)
+        val pr12 = interpret(ODE(1), pr11)
+        storeLemma(NoProofTermProvable(pr12), Some(provableName))
+        //val pr12:Provable = interpret(ODE(1), pr11)
+        pr12
+
+/*
+        val pr1 = interpret(dC(s"dx=-(y-($cy))/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
+        val pr2 = interpret(dC(s"dy=(x-($cx))/($r)".asFormula)( 1)  <(nil, ODE(1)), pr1)
+        val pr3 = interpret(dC(s"($cx)<=x".asFormula)(1)  <(nil, ODE(1)), pr2)
+        // val pr1 = interpret(dC(s"dx=-(($cy)-y)/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
+        //    val pr2 = interpret(dC(s"dy=(($cx)-x)/($r)".asFormula)(1)  <(nil, dI()(1)), pr1)
+        val pr3a = interpret(dC(s"g() > 0".asFormula)(1) <(nil, dI()(1)), pr3)
+        println("Proof Two:" , s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)
+        val pr4 = interpret(dC(s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)(1) <(nil, dI()(1)), pr3a)
+        // @TODO: This is too slow
+        val pr5 = interpret(dC(s"(($cx)-x)^2+(($cy)-y)^2=($r)^2".asFormula)(1) <(nil, DebuggingTactics.debug("This dI is slow", doPrint = true) & dI()(1)), pr4)
+        val pr6 = interpret(dC(s"y < ($cy)".asFormula)(1) <(nil,
+          dC(s"2*(y-($cy))*($r)!=0".asFormula)(1)  <(
+            dG(s"{a'=(($cx)-x)*v/(2*(y-($cy))*($r))*a+0}".asDifferentialProgram, Some(s"a^2*(y-($cy))=-1".asFormula))(1) &
+              existsR(s"(-1/(y-($cy)))^(1/2)".asTerm)(1) &
+              ODE(1),
+            ODE(1)
+          )
+        ), pr5)
+        val pr6a = interpret(dC(s"(v^2)/2 > g()*(y1() - y)".asFormula)(1) <(nil, ODE(1)), pr6)
+        val pr7 = interpret(dC(s"v>0".asFormula)(1)  <(nil,
+          DebuggingTactics.debug("foo", doPrint = true) &
+            dC(s"2*v!=0".asFormula)(1)  <(
+              DebuggingTactics.debug("bar", doPrint = true) &
+                //dG(s"{a'=(x-($cx))/(2*v*($r))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) &
+                dG(s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) &
+                existsR("(1/v)^(1/2)".asTerm)(1) &
+                DebuggingTactics.debug("This dI doesn't prove", doPrint = true) &
+                DebuggingTactics.debug("bat", doPrint = true) &
+                dI()(1),
+              DebuggingTactics.debug("baz", doPrint = true) &
+                ODE(1)
+            )
+        ), pr6a)*/
+        //pr8
+    }
   }
 
   lazy val arcProofQ3:Provable = {
