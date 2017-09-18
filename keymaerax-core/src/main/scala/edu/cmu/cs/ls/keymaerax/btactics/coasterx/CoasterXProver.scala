@@ -308,7 +308,7 @@ class CoasterXProver (spec:CoasterXSpec){
         val a1: Formula = "(g() > 0)".asFormula
         val a2: Formula = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
         val a3: Formula = "(x0()<=x&x<=x1()->((dx = dx0() & dy = dy0())& dx0()*y=dy0()*x+dx0()*c()))".asFormula
-        val a5: Formula = "(dx0()*v^2 > 2*(x1()-x0())*dy0()*g())".asFormula
+        val a5: Formula = "(((x0()<=x&x<=x1()) & (y0() <= y & y <= y1())) ->dx0()*v^2 > 2*(x1()-x0())*dy0()*g())".asFormula
         val a6: Formula = "(x1() > x0())".asFormula
         val a7: Formula = "(dx0()^2 + dy0()^2 = 1)".asFormula
         val a8: Formula = "dx0() > 0".asFormula
@@ -552,13 +552,14 @@ class CoasterXProver (spec:CoasterXSpec){
           val x0 = bl._1
           val y0 = bl._2
           val y1 = tr._2
+          val Box(ODESystem(_, constr),_) = pr.conclusion.succ.head//s"(($x0) <= x & x <= ($x1))&(($y0) <= y & y <= ($y1))".asFormula
           val thisInv = spec.segmentPost((section, (bl,tr), initD),iSection)
           val Imply(_, And(And(Equal(BaseVariable("dx", None, Real), dx0), Equal(BaseVariable("dy", None, Real),dy0)),
                            Equal(_, Plus(_, c)))) = thisInv
-          val cutMain = s"(v>0&v^2+2*y*g()=($v0)^2+2*($y0)*g())&(($x0)<=x&x<=($x1)&((dx=($dx0)&dy=($dy0))&($dx0)*y=($dy0)*x+($c)))".asFormula
+          val cutMain = s"(v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g())&(($x0)<=x&x<=($x1)&((dx=($dx0)&dy=($dy0))&($dx0)*y=($dy0)*x+($c)))".asFormula
           val pr5 = interpret(dC(cutMain)(1), pr4)
           val sproof = straightProof
-          val cut1 = s"($dx0)*v^2 > 2*(($x1)-($x0))*($dy0)*g()".asFormula
+          val cut1 = s"($constr) -> (($dx0)*v^2 > 2*(($x1)-($x0))*($dy0)*g())".asFormula
           val cut2 = s"($x1) > ($x0)".asFormula
           val cut3 = s"($dx0)^2 + ($dy0)^2 = 1".asFormula
           val cut4 = s"($dx0) > 0".asFormula
@@ -570,9 +571,8 @@ class CoasterXProver (spec:CoasterXSpec){
           val tac = US(NoProofTermProvable(sproof))
           val pr6 = interpret(nil < (nil, tac), pr5e)
           val pr6a = timeFn("Line Case Step 6", {() => interpret(dW(1), pr6)})
-          //@TODO: Currently the slowest step of the line case, will need optimized on bigger models.
-          // So slow that it stops any progress at all! Start with hiding defs for later lines.
-          val (eHide,_) = hideMoreYs(iSection, nSections)
+          //@TODO: Don't think need to hide anything because case selection already hides
+          val (eHide,_) = hideYs(iSection, nSections)
           val pr7 = timeFn("Line Case Step 7", {() => interpret(eHide , pr6a)})
           val pr8 = timeFn("Line Case Step 8", {() => interpret(QE(), pr7)})
           pr8
@@ -649,7 +649,8 @@ class CoasterXProver (spec:CoasterXSpec){
     val pr1e = interpret(unpackLocalConsts, pr1c)
     //val pr1d = interpret(andL(-4), pr1c)
     //val pr1e = interpret(andL(-5), pr1d)
-    val pr2 = interpret(DLBySubst.loop(invariant(align), pre = nil)(1), pr1e)
+    val inv = invariant(align)
+    val pr2 = interpret(DLBySubst.loop(inv, pre = nil)(1), pr1e)
     val pr3 = interpret(nil <((alphaRule*) & QE, nil, nil), pr2)
     val pr3a = interpret(nil <((alphaRule*), nil), pr3)
     val pr4 = interpret(nil <(master(), nil), pr3a)
