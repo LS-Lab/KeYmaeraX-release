@@ -23,11 +23,17 @@ import scala.collection.immutable
 * */
 class CoasterXProver (spec:CoasterXSpec){
 
+  val MAX_TIMEFN_DEPTH = 10
+  var currTimefnDepth = 0
   def timeFn[T](msg:String,f:(()=>T)):T = {
     val start = System.currentTimeMillis()
+    currTimefnDepth = currTimefnDepth + 1
     val e = f()
+    currTimefnDepth = currTimefnDepth - 1
     val end = System.currentTimeMillis()
-    println("TIME("+msg+") " + (end-start) + " millis")
+    if (currTimefnDepth < MAX_TIMEFN_DEPTH) {
+      println("TIME(" + msg + ") " + (end - start) + " millis")
+    }
     e
   }
 
