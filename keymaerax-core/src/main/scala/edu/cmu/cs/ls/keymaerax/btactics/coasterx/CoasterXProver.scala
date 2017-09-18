@@ -72,14 +72,17 @@ class CoasterXProver (spec:CoasterXSpec){
     val yEnd = p2._2
     // Note: Conservation of energy always uses the start of the ENTIRE track, not current section
     val ECirc:Formula = s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()&(($cx)-x)^2+(($cy)-y)^2=($r)^2".asFormula
-    val dGDefined:Formula = s"2*v*($r)!=0".asFormula
+    val dGDefined:Formula = s"2*v!=0".asFormula
     val pr2:Provable = interpret(dC(s"dx^2 + dy^2 = 1".asFormula)(1)    <(nil, dI()(1)), pr)
     val pr3:Provable = interpret(dC(s"dx=(y-($cy))/($r)".asFormula)(1) <(nil, dI()(1)), pr2)
     val pr4:Provable = interpret(dC(s"dy=-(x-($cx))/($r)".asFormula)(1)  <(nil, dI()(1)), pr3)
     val pr5:Provable = interpret(dC(ECirc)('R) <(nil, dI()(1)), pr4)
     val pr6:Provable = interpret(dC("v>0".asFormula)('R), pr5)
     val pr7:Provable = interpret(nil <(nil, dC(dGDefined)(1)), pr6)
-    val pr8:Provable = interpret(nil <(nil, dG(AtomicODE(DifferentialSymbol(Variable("a")), s"((($cx)-x)/(2*v*($r)))*a+0".asTerm), Some("a^2*v=1".asFormula))(1), nil), pr7)
+    // dG(s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) &
+//s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram
+    //val pr8:Provable = interpret(nil <(nil, dG(AtomicODE(DifferentialSymbol(Variable("a")), s"((($cx)-x)/(2*v*($r)))*a+0".asTerm), Some("a^2*v=1".asFormula))(1), nil), pr7)
+    val pr8:Provable = interpret(nil <(nil, dG(s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1), nil), pr7)
     val pr9:Provable = interpret(nil <(nil, existsR("(1/v)^(1/2)".asTerm)(1), nil), pr8)
     val pr10:Provable = interpret(nil <(nil, dI()(1), nil), pr9)
     val pr11:Provable = interpret(nil <(nil, ODE(1)), pr10)
