@@ -51,6 +51,10 @@ class CoasterXSpec {
     }
   }
 
+/* START CONSTANT-FOLDING IMPLEMENTATION
+ * This is used to help produce smaller specifications.
+ * In the best of conditions our specifications are already quite large and stress the parser, UI, etc.
+ * So it helps to eliminate the many silly operations and constants that arise */
   def foldMinus(t1:Term, t2:Term):Term = {
     val candidate =
     (t1,t2) match {
@@ -161,18 +165,23 @@ class CoasterXSpec {
     }
   }
 
-  def degToRad(theta:Number):Number = {
-    Number(2*Math.PI*theta.value.doubleValue()/360.0)
+  // Arbitrary term constant folding.
+  // Use sparingly because it's much slower than just using an individual folding operation.
+  def compact(t:Term):Term = {
+    t match {
+      case Plus(t1,t2) => foldPlus(compact(t1),compact(t2))
+      case Times(t1,t2) => foldTimes(compact(t1),compact(t2))
+      case Divide(t1,t2) => foldDivide(compact(t1),compact(t2))
+      case Minus(t1,t2) => foldMinus(compact(t1),compact(t2))
+      case Neg(t) => foldNeg(compact(t))
+      case Power(t1,t2) => foldPower(compact(t1),compact(t2))
+      case Differential(t) => Differential(compact(t))
+      case Pair(t1,t2) => Pair(compact(t1),compact(t2))
+      case t => t
+    }
   }
 
-  def radDir(rad:Number):Point = {
-    (Number(Math.cos(rad.value.doubleValue())), Number(Math.sin(rad.value.doubleValue())))
-  }
-
-  def slopeDir(t:Term):TPoint = {
-    (foldDivide(Number(1), foldPower(foldPlus(Number(1),foldPower(t,Number(2))),foldDivide(Number(1),Number(2)))),
-     foldDivide(t, foldPower(foldPlus(Number(1),foldPower(t,Number(2))),foldDivide(Number(1),Number(2)))))
-  }
+// BEGIN GEOMETRIC HELPERS
   def vecScale(xy:(Term,Term), scale:Term):(Term,Term) = {
     (foldTimes(xy._1,scale), foldTimes(xy._2,scale))
   }
@@ -181,33 +190,86 @@ class CoasterXSpec {
     (foldPlus(xy1._1,xy2._1),foldPlus(xy1._2, xy2._2))
   }
 
-  def min (x:Term,y:Term):Term = FuncOf(Function("min", domain = Tuple(Real,Real), interpreted = true, sort = Real), Pair(x,y))
-
-  def max (x:Term,y:Term):Term = FuncOf(Function("max", domain = Tuple(Real,Real), interpreted = true, sort = Real), Pair(x,y))
-
-  def boundingBox(points:List[(Term,Term)]):((Term,Term),(Term,Term)) = {
-    points.foldLeft((points.head,points.head))({case ((accbl,acctr),(x,y)) =>  ((min(accbl._1,x),min(accbl._2,y)),(max(acctr._1,x),max(acctr._2,y)))})
-  }
-
-  def arcBounds(xy1:Point, xy2:Point, theta1:Number, theta2:Number):((Term,Term),(Term,Term)) = {
-    val rad1 = degToRad(theta1)
-    val rad2 = degToRad(theta2)
-    val (cx, cy) = arcCenter((xy1),(xy2))
-    val r = Number((xy2._1.value-xy1._1.value)/2)
-    val dir1 = radDir(rad1)
-    val dir2 = radDir(rad2)
-    val scale1 = vecScale(dir1,r)
-    val scale2 =vecScale(dir2,r)
-    val sum1 = vecPlus((cx,cy),scale1)
-    val sum2 = vecPlus((cx,cy),scale2)
-    val box = boundingBox(List(sum1, sum2))
-    box
-  }
-
   def arcCenter(xy1:TPoint, xy2:TPoint):(Term, Term) = {
     (foldDivide(foldPlus(xy1._1,xy2._1),Number(2)), foldDivide(foldPlus(xy1._2,xy2._2),Number(2)))
   }
 
+  def lineDir(xy1:TPoint, xy2:TPoint):(Term,Term) = {
+    val mag:Term = foldPower(foldPlus(foldPower(foldMinus(xy2._1,xy1._1),Number(2)),foldPower(foldMinus(xy2._2,xy1._2),Number(2))),foldDivide(Number(1),Number(2)))
+    (foldDivide(foldMinus(xy2._1,xy1._1),mag), foldDivide(foldMinus(xy2._2,xy1._2),mag))
+  }
+
+  /* Nasty math provided by Mathematica: Compute center of circle using two points on circle and tangent vector:
+* Given two points (x1,y1) and (x2,y2) find the passing through them tangent
+* to the line ax + by = c at (x1, y1)
+
+* Eq (1)  b x - a y = b x1 - a y1
+* Eq (2)  (x1-x2)x + (y1-y2)y = (1/2)(x1^2 - x2^2 + y1^2 - y2^2)
+
+* Note that we have (x1,y1), (dx,dy) representation, from which we can derived a,b,c representation:
+* a = (-dy)
+* b = (dx)
+* c = (dx y1 - x1 dy)
+======================================== Final solution for x ======================================
+(2 dx x1 (-y1 + y2) +
+dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
+ dx (-y1 + Example)))
+====================================================================================================
+====================================== Final solution for y =======================================
+((x1 + x2) (2 dy (x1 - x2) y1 +
+ dx (x1^2 - 2 x1 x2 - x2^2 - y1^2 - y2^2)))/(2 (x1 -
+ x2) (dy (x1 + x2) + dx (y1 - y2)))
+===================================================================================================
+@TODO: Use the constant-folding versions of arithmetic operate
+
+*/
+  def centerFromStartSlope (x1:Term, y1:Term, x2:Term, y2:Term, dxy:TPoint):TPoint = {
+    val (a,b) = (foldNeg(dxy._2), dxy._1)
+    val cx = s"(($a)*(($x1)^2 - ($x2)^2 - (($y1) - ($y2))^2) + 2*($b)*($x1)*(($y1) - ($y2)))/(2*(($a)*(($x1) - ($x2)) + ($b)*(($y1) - ($y2))))".asTerm
+    val cy = s"(2*($a)*(($x1) - ($x2))*($y1) - ($b)*((($x1) - ($x2))^2 - ($y1)^2 + ($y2)^2))/(2*(($a)*(($x1) - ($x2)) + ($b)*(($y1) - ($y2))))".asTerm
+    (cx,cy)
+  }
+  // Compute direction-to-center vector using tangent vector and wiseness
+  def centerFromTangent(dir:TPoint, angles:(Number,Number), delta:Number):(Term,Term) = {
+    val isCw = delta.value < 0
+    if (isCw) {
+      (dir._2, foldNeg(dir._1))
+    } else {
+      (foldNeg(dir._2), dir._1)
+    }
+  }
+
+  def tangentFromCenter(dir:TPoint, angles:(Number,Number), delta:Number):(Term,Term) =
+    centerFromTangent(dir, angles.swap, foldNeg(delta).asInstanceOf[Number])
+
+  def sqDist (p1:TPoint, p2:TPoint):Term = {
+    foldPlus(foldPower(foldMinus(p1._1,p2._1), Number(2)), foldPower(foldMinus(p1._2,p2._2),Number(2)))
+  }
+
+  def dist (p1:TPoint, p2:TPoint):Term = {
+    foldPower(sqDist(p1,p2),foldDivide(Number(1),Number(2)))
+  }
+
+  def magnitude(xy:TPoint):Term = {
+    val (x,y) = xy
+    foldPower(foldPlus(foldPower(x,Number(2)), foldPower(y,Number(2))),Divide(Number(1),Number(2)))
+  }
+
+  def normalizeVector(xy:TPoint):TPoint = {
+    val (x,y) = xy
+    (foldDivide(x,magnitude(xy)), foldDivide(y,magnitude(xy)))
+  }
+
+  def slope(xy1:TPoint, xy2:TPoint):Term = {
+    foldDivide(foldMinus(xy1._2, xy2._2),foldMinus(xy1._1, xy2._1))
+  }
+
+  /* y-intercept of segment */
+  def yOffset(xy1:TPoint, xy2:TPoint):Term = {
+    foldMinus(xy1._2,foldTimes(slope(xy1,xy2), xy1._1))
+  }
+
+  // BEGIN SPEC GENERATION PROPER
   def segmentOde(segBounds:((Section,(TPoint,TPoint),TPoint),Int)):Program = {
     val ((seg, (start,end), initD), iSection) = segBounds
     val x = Variable("x")
@@ -249,74 +311,9 @@ class CoasterXSpec {
         val dt = deltaTheta.value
         val isLeft = t1 < -90 || t1 > 90 || (t1 == -90 && dt < 0) || (t1 == 90 && dt > 0)
         val isUp = (isLeft && isCw) || (!isLeft && !isCw)
-        // val evol = And(LessEqual(x3,x),LessEqual(x,x4))
         ODESystem(sys, evol(isUp))
       case _ => Test(True)
     }
-  }
-
-  /* This is evidently not part of the standard library for BigDecimal, but I also haven't decided what number
-   * representation to go with yet...
-   */
-  def numSqrt(n:Number):Number = {
-    // TODO: Real bad implementation
-    Number(Math.sqrt(n.value.doubleValue()))
-  }
-
-  def lineDir(xy1:TPoint, xy2:TPoint):(Term,Term) = {
-    val mag:Term = foldPower(foldPlus(foldPower(foldMinus(xy2._1,xy1._1),Number(2)),foldPower(foldMinus(xy2._2,xy1._2),Number(2))),foldDivide(Number(1),Number(2)))
-    (foldDivide(foldMinus(xy2._1,xy1._1),mag), foldDivide(foldMinus(xy2._2,xy1._2),mag))
-  }
-
-
-  /* Nasty math provided by Mathematica: Compute center of circle using two points on circle and tangent vector:
-  * Given two points (x1,y1) and (x2,y2) find the passing through them tangent
-  * to the line ax + by = c at (x1, y1)
-
-  * Eq (1)  b x - a y = b x1 - a y1
-  * Eq (2)  (x1-x2)x + (y1-y2)y = (1/2)(x1^2 - x2^2 + y1^2 - y2^2)
-
-  * Note that we have (x1,y1), (dx,dy) representation, from which we can derived a,b,c representation:
-  * a = (-dy)
-  * b = (dx)
-  * c = (dx y1 - x1 dy)
-======================================== Final solution for x ======================================
-(2 dx x1 (-y1 + y2) +
- dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
-   dx (-y1 + Example)))
-====================================================================================================
-====================================== Final solution for y =======================================
-((x1 + x2) (2 dy (x1 - x2) y1 +
-   dx (x1^2 - 2 x1 x2 - x2^2 - y1^2 - y2^2)))/(2 (x1 -
-   x2) (dy (x1 + x2) + dx (y1 - y2)))
-===================================================================================================
-@TODO: Use the constant-folding versions of arithmetic operate
-
-*/
-  def centerFromStartSlope (x1:Term, y1:Term, x2:Term, y2:Term, dxy:TPoint):TPoint = {
-    val (a,b) = (foldNeg(dxy._2), dxy._1)
-    val cx = s"(($a)*(($x1)^2 - ($x2)^2 - (($y1) - ($y2))^2) + 2*($b)*($x1)*(($y1) - ($y2)))/(2*(($a)*(($x1) - ($x2)) + ($b)*(($y1) - ($y2))))".asTerm
-    val cy = s"(2*($a)*(($x1) - ($x2))*($y1) - ($b)*((($x1) - ($x2))^2 - ($y1)^2 + ($y2)^2))/(2*(($a)*(($x1) - ($x2)) + ($b)*(($y1) - ($y2))))".asTerm
-    (cx,cy)
-  }
-  // Compute direction-to-center vector using tangent vector and wiseness
-  def centerFromTangent(dir:TPoint, angles:(Number,Number), delta:Number):(Term,Term) = {
-    val isCw = delta.value < 0
-    if (isCw) {
-      (dir._2, foldNeg(dir._1))
-    } else {
-      (foldNeg(dir._2), dir._1)
-    }
-  }
-  def tangentFromCenter(dir:TPoint, angles:(Number,Number), delta:Number):(Term,Term) =
-    centerFromTangent(dir, angles.swap, foldNeg(delta).asInstanceOf[Number])
-
-  def sqDist (p1:TPoint, p2:TPoint):Term = {
-    foldPlus(foldPower(foldMinus(p1._1,p2._1), Number(2)), foldPower(foldMinus(p1._2,p2._2),Number(2)))
-  }
-
-  def dist (p1:TPoint, p2:TPoint):Term = {
-    foldPower(sqDist(p1,p2),foldDivide(Number(1),Number(2)))
   }
 
   val gconst = FuncOf(Function("g", None, Unit, Real), Nothing)
@@ -380,15 +377,6 @@ class CoasterXSpec {
         And(gpos,And(dxeq,And(dyeq,And(xeq,And(yeq,veq)))))
       case _ => True
     }
-  }
-
-  def slope(xy1:TPoint, xy2:TPoint):Term = {
-    foldDivide(foldMinus(xy1._2, xy2._2),foldMinus(xy1._1, xy2._1))
-  }
-
-  /* y-intercept of segment */
-  def yOffset(xy1:TPoint, xy2:TPoint):Term = {
-    foldMinus(xy1._2,foldTimes(slope(xy1,xy2), xy1._1))
   }
 
   def segmentPost(segBounds:((Section,(TPoint,TPoint), TPoint), Int)):Formula = {
@@ -483,6 +471,7 @@ class CoasterXSpec {
     fromAligned(prepareFile(file))
   }
 
+// BEGIN ROUNDING OF FLOATY MODELS TO INTEGER PRECISION
   def roundNumber(scale:Int)(n:Number):Number = {
     Number(new BigDecimal(n.value.bigDecimal).setScale(scale, BigDecimal.RoundingMode.DOWN))
   }
@@ -538,16 +527,8 @@ class CoasterXSpec {
     }
   }
 
-  def magnitude(xy:TPoint):Term = {
-    val (x,y) = xy
-    foldPower(foldPlus(foldPower(x,Number(2)), foldPower(y,Number(2))),Divide(Number(1),Number(2)))
-  }
 
-  def normalizeVector(xy:TPoint):TPoint = {
-    val (x,y) = xy
-    (foldDivide(x,magnitude(xy)), foldDivide(y,magnitude(xy)))
-  }
-
+// BEGIN ALIGNMENT OF ROUNDED MODELS -- MAKES ALL SECTIONS MEET AT TANGENTS
   /*
   * Solve these equations:
   * (cx-x1)^2 + (cy-y1)^2 = (cx-x2)^2 + (cy-y2)^2
@@ -583,7 +564,6 @@ class CoasterXSpec {
     val q2 = !(q1 || q3 || q4)
     val cxapprox = evalTerm(cxe).value
     val xx2approx = evalTerm(xx2).value
-    println("Comparing values ", cxapprox, " and ", xx2approx," to decide quadrant splitting for quads ", q1, q2, q3, q4)
     if (cxapprox < xx2approx && q3) {
       // @TODO: This assumes it's a Q3-Q4 arc, but gotta start somewhere
       val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, deltaTheta)), Some(oldSlope)),
@@ -609,7 +589,6 @@ class CoasterXSpec {
         ((cx, foldMinus(cy,r)), (xx2, yy2)),
         allDefs2,
         (endDX, endDY))
-      println("Split guy in quadrants ", q1,q2,q3,q4, " has start direction ", evalTerm(dx).value," ",evalTerm(dy).value, " and end direction dx: ", evalTerm(dtxe).value, " and dy: ", evalTerm(dtye).value)
       sec1 :: sec2 :: alignZipped(rest, Some((endDX, endDY)), index + 2)
     } else if (cxapprox < xx2approx && q2) {
       // @TODO: This assumes it's a Q2-Q1 arc, but gotta start somewhere
@@ -700,20 +679,15 @@ class CoasterXSpec {
     }
   }
 
-  // Adjust y-coordinates such that all adjacent track segments are tangent to each other, while leaving x-coordinates alone
-  // Coasters exported from CoasterX typically satisfy this property modulo floatiness, but it becomes slightly false due to rounding.
-  // This should never be a "big" change in terms of magnitude, but can be a huge change in the complexity of the term.
-  // There are a few different approaches to manage the size of the terms.
-  // The main difficulty arises from irrational points lying on circles.
-  // The oldly-implemented approach is to leave the (rational) endpoints and beginning slope of an arc fixed, from
-  // which nasty math (derived by Mathematica) derives an often-irrational point for the center of the circle.
-  // However this also makes the end slope nasty, so the current algorithm gives up on making the slopes on a track
-  // totally continuous here. The current approach could be incrementally improved by simplifying some the math.
-  // For a more serious improvement (i.e. getting full tangency), now trying to to introduce
-  // auxilliary variables standing for the new start/end coordinates for track sections, replacing exponential explosion
-  // in term size with linear increase in variable count.
-  // With a little luck, the increase in variables should not mean a big blowup in the number of variables seen by any one
-  // QE call.
+  /* Adjust y-coordinates such that all adjacent track segments are tangent to each other, while leaving x-coordinates alone
+  * Coasters exported from CoasterX typically satisfy this property modulo floatiness, but it becomes slightly false due to rounding.
+  * This should never be a "big" change in terms of magnitude, but can be a huge change in the complexity of the term.
+  * There are a few different approaches to manage the size of the terms.
+  * The main difficulty arises from irrational points lying on circles.
+  * We leave the (rational) endpoints and beginning slope of an arc fixed, from
+  * which nasty math (derived by Mathematica) derives an often-irrational point for the center of the circle.
+  * However this also makes the end slope nasty, so we introduce extra variables for the center and radius to keep formula
+  * size down. This can be hidden for sections where they are not relevant, keeping QE time under control. */
   def alignFile(file:File):(AFile,Formula) = {
     val (points, segments, v0, tent) = file
     val nonemptySegs = segments.filter(!segmentEmpty(_))
