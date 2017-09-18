@@ -628,6 +628,33 @@ class CoasterXSpec {
         (endDX, endDY))
       println("Split guy in quadrants ", q1,q2,q3,q4, " has start direction ", evalTerm(dx).value," ",evalTerm(dy).value, " and end direction dx: ", evalTerm(dtxe).value, " and dy: ", evalTerm(dtye).value)
       sec1 :: sec2 :: alignZipped(rest, Some((endDX, endDY)), index + 2)
+    } else if (cxapprox < xx2approx && q2) {
+      // @TODO: This assumes it's a Q2-Q1 arc, but gotta start somewhere
+      val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, deltaTheta)), Some(oldSlope)),
+        ((xx1, yy1), (cx, foldPlus(cy,r))),
+        allDefs,
+        (endDX, endDY))
+      // TODO: Need to set dx and such intermediately for those components
+      // TODO: Not an obvious value for the deltatheta dude
+      // TODO: Need to figure out definition numbering and stuff
+      val endDX2 = Variable("dx", Some(index+1))
+      val endDY2 = Variable("dy", Some(index+1))
+      val cx2 = Variable("cx", Some(index+1))
+      val cy2 = Variable("cy", Some(index+1))
+      val r2 = Variable("r", Some(index+1))
+      val cxDef2:Formula = Equal(cx2, cxe)
+      val cyDef2:Formula = Equal(cy2, cye)
+      val endDXDef2:Formula = Equal(endDX2, dtxe)
+      val endDYDef2:Formula = Equal(endDY2, dtye)
+      val rDef2 = Equal(r2, re)
+      val allDefs2 = And(rDef2, And(And(cxDef2, cyDef2),And(endDXDef2, endDYDef2)))
+      ctx = ctx.+(r2 -> re, cx2 -> cxe, cy2 -> cye, endDX2 -> dtxe, endDY2 -> dtye)
+      val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), Number(theta1.value + deltaTheta.value), deltaTheta)), Some(oldSlope)),
+        ((cx, foldPlus(cy,r)), (xx2, yy2)),
+        allDefs2,
+        (endDX, endDY))
+      println("Split guy in quadrants ", q1,q2,q3,q4, " has start direction ", evalTerm(dx).value," ",evalTerm(dy).value, " and end direction dx: ", evalTerm(dtxe).value, " and dy: ", evalTerm(dtye).value)
+      sec1 :: sec2 :: alignZipped(rest, Some((endDX, endDY)), index + 2)
     } else {
       println("Non-split guy in quadrants ", q1,q2,q3,q4, " has direction dx: ", evalTerm(dtxe).value, " and dy: ", evalTerm(dtye).value)
       val head = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, deltaTheta)), Some(oldSlope)),
