@@ -153,6 +153,7 @@ class CoasterXProver (spec:CoasterXSpec){
 
   def quad4Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Number, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):Provable = {
     println("Proving Quadrant 4 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
+    val aproof = arcProofQ4
     val (cx:Term, cy:Term) = spec.arcCenter(bl, tr)
     val r = spec.dist(p1, (cx,cy))
     val y0 = p1._2
@@ -378,13 +379,88 @@ class CoasterXProver (spec:CoasterXSpec){
           dC("v>0".asFormula)(1) <(nil, ODE(1)) &
           dC("(x-cx())^2 + (y-cy())^2 = r()^2".asFormula)(1) <(nil, ODE(1)) &
           ODE(1)
-
-
         val pr = Provable.startProof(con)
         val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
         val pr2 = interpret(e, pr1)
         storeLemma(NoProofTermProvable(pr2), Some(provableName))
         pr2
+    }
+  }
+
+  lazy val arcProofQ4:Provable = {
+    val provableName = "coasterx_Q4ArcCase"
+    lemmaDB.get(provableName) match {
+      case Some(pr) => pr.fact.underlyingProvable
+      case None =>
+        val a1 = "g() > 0".asFormula
+        val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((dx=-(y-cy())/r()  & dy=(x-cx())/r()) & ((x-cx())^2 + (y-cy())^2 = r()^2 &(x>=cx() & y<=cy()))))".asFormula
+        val a4 = "x1() > x0()".asFormula
+        //val a5 = "dx0()^2 + dy0()^2 = 1".asFormula
+        val a6 = "y1() > y0()".asFormula
+        val a7 = "cy() > y1()".asFormula
+        val a8 = "x0() >= cx()".asFormula
+        val a9 = "r() > 0".asFormula
+        val a10 = "(v0()^2)/2 > g()*(y1() - y0())".asFormula
+        val a11 = "y1() <= yGlobal()".asFormula
+        val c =
+          """[{x'=dx*v,
+            |            y'=dy*v,
+            |            v'=-dy*g(),
+            |            dx' =  (-dy*v)/r(),
+            |            dy' =  dx*v/r()
+            |            &(x0()<=x&x<=x1())
+            |            &(y0()<=y&y<=y1())}]
+            |        ( dx=(cy()-y)/r()
+            |          & dy=-(cx()-x)/r()
+            |          & v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g()
+            |          & v>0
+            |          & y < cy()
+            |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
+            |          )""".stripMargin.asFormula
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a6, a7, a8,a9, a10,a11), immutable.IndexedSeq(c))
+        val pr = Provable.startProof(con)
+        val cy = "cy()".asTerm
+        val v0 = "v0()".asTerm
+        val r = "r()".asTerm
+        val cx = "cx()".asTerm
+        val yInit = "yGlobal()".asTerm
+        val pr1 = interpret(dC(s"dx=-(y-($cy))/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
+        val pr2 = interpret(dC(s"dy=(x-($cx))/($r)".asFormula)( 1)  <(nil, ODE(1)), pr1)
+        val pr3 = interpret(dC(s"($cx)<=x".asFormula)(1)  <(nil, ODE(1)), pr2)
+        // val pr1 = interpret(dC(s"dx=-(($cy)-y)/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
+        //    val pr2 = interpret(dC(s"dy=(($cx)-x)/($r)".asFormula)(1)  <(nil, dI()(1)), pr1)
+        val pr3a = interpret(dC(s"g() > 0".asFormula)(1) <(nil, dI()(1)), pr3)
+        println("Proof Two:" , s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)
+        val pr4 = interpret(dC(s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)(1) <(nil, dI()(1)), pr3a)
+        // @TODO: This is too slow
+        val pr5 = interpret(dC(s"(($cx)-x)^2+(($cy)-y)^2=($r)^2".asFormula)(1) <(nil, DebuggingTactics.debug("This dI is slow", doPrint = true) & dI()(1)), pr4)
+        val pr6 = interpret(dC(s"y < ($cy)".asFormula)(1) <(nil,
+          dC(s"2*(y-($cy))*($r)!=0".asFormula)(1)  <(
+            dG(s"{a'=(($cx)-x)*v/(2*(y-($cy))*($r))*a+0}".asDifferentialProgram, Some(s"a^2*(y-($cy))=-1".asFormula))(1) &
+              existsR(s"(-1/(y-($cy)))^(1/2)".asTerm)(1) &
+              ODE(1),
+            ODE(1)
+          )
+        ), pr5)
+        val pr6a = interpret(dC(s"(v0()^2)/2 > g()*(y1() - y0())".asFormula)(1) <(nil, ODE(1)), pr6)
+        val pr7 = interpret(dC(s"v>0".asFormula)(1)  <(nil,
+          DebuggingTactics.debug("foo", doPrint = true) &
+          dC(s"2*v!=0".asFormula)(1)  <(
+            DebuggingTactics.debug("bar", doPrint = true) &
+              //dG(s"{a'=(x-($cx))/(2*v*($r))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) &
+            dG(s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) &
+              existsR("(1/v)^(1/2)".asTerm)(1) &
+              DebuggingTactics.debug("This dI doesn't prove", doPrint = true) &
+              DebuggingTactics.debug("bat", doPrint = true) &
+              dI()(1),
+            DebuggingTactics.debug("baz", doPrint = true) &
+            ODE(1)
+          )
+        ), pr6a)
+        pr7
+        storeLemma(NoProofTermProvable(pr7), Some(provableName))
+        pr7
     }
   }
 
