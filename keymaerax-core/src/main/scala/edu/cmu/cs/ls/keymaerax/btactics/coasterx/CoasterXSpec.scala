@@ -614,7 +614,7 @@ class CoasterXSpec {
       val cyDef2:Formula = Equal(cy2, cye)
       val endDXDef2:Formula = Equal(endDX2, dtxe)
       val endDYDef2:Formula = Equal(endDY2, dtye)
-      val rDef2 = Equal(r, re)
+      val rDef2 = Equal(r2, re)
       val allDefs2 = And(rDef2, And(And(cxDef2, cyDef2),And(endDXDef2, endDYDef2)))
       ctx = ctx.+(r2 -> re, cx2 -> cxe, cy2 -> cye, endDX2 -> dtxe, endDY2 -> dtye)
       val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), Number(theta1.value + deltaTheta.value), deltaTheta)), Some(oldSlope)),
