@@ -33,6 +33,24 @@ class CoasterXSpec {
     }
   }
 
+  /* Approximate formula evaluator, useful for similar purposes as above, e.g. to debug whether coasters are reasonable before formal proof */
+  def evalFml(f:Formula):Boolean = {
+    val cmpDelta = 1.0E-10
+    f match {
+      case Equal(t1,t2) => Math.abs(evalTerm(t1).value.toDouble - evalTerm(t2).value.toDouble) < cmpDelta
+      case NotEqual(t1,t2) => Math.abs(evalTerm(t1).value.toDouble - evalTerm(t2).value.toDouble) >= cmpDelta
+      case LessEqual(t1, t2) => evalTerm(t1).value < evalTerm(t2).value + cmpDelta
+      case Less(t1,t2) => evalTerm(t1).value < evalTerm(t2).value
+      case GreaterEqual(t1, t2) => evalTerm(t1).value > evalTerm(t2).value - cmpDelta
+      case Greater(t1,t2) => evalTerm(t1).value > evalTerm(t2).value
+      case And(p,q)  => evalFml(p) && evalFml(q)
+      case Or(p,q)  => evalFml(p) || evalFml(q)
+      case Imply(p,q)  => !evalFml(p) || evalFml(q)
+      case Equiv(p,q) => evalFml(p) == evalFml(q)
+      case Not(p) => !evalFml(p)
+    }
+  }
+
   def foldMinus(t1:Term, t2:Term):Term = {
     val candidate =
     (t1,t2) match {
