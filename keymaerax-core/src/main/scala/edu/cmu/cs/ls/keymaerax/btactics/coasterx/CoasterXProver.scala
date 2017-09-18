@@ -18,10 +18,6 @@ import scala.collection.immutable
 
 /*
 * Proves that CoasterX models meet their specs, by composing component proofs
-* @TODO: Comute one v0 value and use it everywhere. Show that v0 is big enough to match all the heights
-* @TODO: Support all examples from test suite
-* @TODO: Function returning provable, with proof repeats
-* @TODO: Function returning provable, with proof reuse
 * @TODO: Function returning tactic with proof repeats
 * @TODO: Function returning tactic with proof reuse
 * */
@@ -56,16 +52,9 @@ class CoasterXProver (spec:CoasterXSpec){
 
 
   def quad2Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):Provable = {
-    //val xLim:Formula = s"x<=($cx)".asFormula
-    //val yLim:Formula = s"y<=($yEnd)".asFormula
-    //val cyLim:Formula = s"($cy) < ($yEnd)".asFormula
-    //val pr1:Provable = interpret(normalize, pr)
     println("Proving Quadrant 2 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ2
-    // @TODO: Set cx, cy to correct value as done in postcondition generator
     // @TODO: Hide preconditions and y-defs that you don't need
-    //val (cx:Term, cy:Term) = iCenter(iSection)
-    //val r = CoasterXSpec.dist(p1, (cx,cy))
     val (cx,cy) = spec.iCenter(iSection)
     val r = spec.iRadius(iSection)
     val ((x0,y0),(x1,y1)) = (p1,p2)
@@ -89,7 +78,6 @@ class CoasterXProver (spec:CoasterXSpec){
     pr6
   }
 
-  //@TODO: Add stuff from vector proof
   def quad1Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):Provable = {
     println("Proving Quadrant 1 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ1
@@ -112,23 +100,6 @@ class CoasterXProver (spec:CoasterXSpec){
     val tac = US(NoProofTermProvable(aproof))
     val pr6 = interpret(nil < (nil, tac), pr1g)
     pr6
-
-    /*val cx = spec.foldDivide(spec.foldPlus(tr._1,bl._1),Number(2))
-    val cy = spec.foldDivide(spec.foldPlus(tr._2,bl._2),Number(2))
-    val r = spec.foldDivide(spec.foldMinus(tr._1,bl._1),Number(2))
-    val x0 = p1._1
-    val y0 = p1._2
-    val xEnd = p2._1
-    val yEnd = p2._2
-    //unfold ;
-    val pr1 = interpret(dC(s"dx^2+dy^2=1".asFormula)(1) <(nil, dI()(1)), pr)
-    val pr2 = interpret(dC(s"dx=(y-($cy))/($r)".asFormula)(1) <(nil, dI()(1)), pr1)
-    val pr3 = interpret(dC(s"dy=-(x-($cx))/($r)".asFormula)(1) <(nil, dI()(1)), pr2)
-    val pr4 = interpret(dC(s"(($cx) - x)^2   + (($cy) - y)^2   = ($r)^2".asFormula)(1) <(nil, ODE(1)), pr3)
-    //val pr3b =interpret(dC(s"(($cx) - ($xEnd))^2 + (($cy) - ($yEnd))^2 = ($r)^2".asFormula)(1) <(nil, ODE(1)), pr3a)
-    val pr5 = interpret(dC(s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)(1) <(nil, dI()(1)), pr4)
-    val pr6 = interpret(dC(s"v>0 ".asFormula)(1) <(nil, ODE(1)), pr5)
-    pr6*/
   }
 
   def quad3Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int, iSection:Int):Provable = {
@@ -139,13 +110,10 @@ class CoasterXProver (spec:CoasterXSpec){
     val r = spec.iRadius(iSection)
     val dx0 = s"(($cy)-y)/($r)".asTerm
     val dy0 = s"-(($cx)-x)/($r)".asTerm
-    //val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
     val mainCut = s"(dx=($dx0) & dy=-(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & v>0 & y < ($cy) & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
     val pr0 = interpret(dC(mainCut)(1), pr)
     val cut1 = s"($x1) > ($x0)".asFormula
     val pr1a = timeFn("ArcQ3 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & QE)), pr0)})
-    //val cut2 = s"($dx0)^2 + ($dy0)^2 = 1".asFormula
-    //val pr1b = timeFn("ArcQ3 Case Step 2", {() => interpret(nil < (nil, cut(cut2) < (nil, hideR(1) & QE)), pr1a)})
     val cut3 = s"($y0) > ($y1)".asFormula
     val pr1c = timeFn("ArcQ3 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & QE)), pr1a)})
     val cut4 = s"($cy) > ($y0)".asFormula
@@ -157,23 +125,7 @@ class CoasterXProver (spec:CoasterXSpec){
     val pr1g = interpret(nil <(nil, hideL(-2)*nYs), pr1f)
     val tac = US(NoProofTermProvable(aproof))
     val pr6 = interpret(nil < (nil, tac), pr1g)
-    //val pr6a = timeFn("Line Case Step 6", {() => interpret(dW(1), pr6)})
-    //val pr7 = timeFn("Line Case Step 7", {() => interpret(QE(), pr6a)})
     pr6
-    //dx=((cy())-y)/(r())
-    //dy=-((cx())-x)/(r())
-    //v^2=(v0())^2+2*(yInit())*g()-2*y*g()
-    //v>0".asFormula)(1)  <(nil, ODE(1)), pr3)})
-    //y < ($cy)
-    //val pr1 = timeFn("quad3 Step 1", {() => interpret(dC(s"(dx=1)".asFormula)(1)  <(nil, dI()(1)), pr)})
-    //val pr1 = timeFn("quad3 Step 1", {() => interpret(dC(s"dx=(($cy)-y)/($r)".asFormula)(1)  <(nil, dI()(1)), pr)})
-    //val pr2 = timeFn("quad3 Step 2", {() => interpret(dC(s"dy=-(($cx)-x)/($r)".asFormula)(1)  <(nil, dI()(1)), pr1)})
-    ////println("Proof One:" , s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)
-    //val pr3 = timeFn("quad3 Step 3", {() => interpret(dC(s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)(1)  <(nil, dI()(1)), pr2)})
-    //val pr4 = timeFn("quad3 Step 4", {() => interpret(dC(s"v>0".asFormula)(1)  <(nil, ODE(1)), pr3)})
-    //val pr5 = timeFn("quad3 Step 5", {() => interpret(dC(s"y < ($cy)".asFormula)(1)  <(nil, dI()(1)), pr4)})
-    //pr5
-    //interpret(e, pr)
   }
 
   def quad4Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):Provable = {
@@ -184,15 +136,11 @@ class CoasterXProver (spec:CoasterXSpec){
     val r = spec.iRadius(iSection)
     val dx0 = s"(($cy)-y)/($r)".asTerm
     val dy0 = s"-(($cx)-x)/($r)".asTerm
-    //val r = foldDivide(foldMinus(tr._1,bl._1),Number(2))
     val Box(ODESystem(_,evol),_) = pr.conclusion.succ.head
     val mainCut = s"(dx=($dx0) & dy=-(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & v>0 & y < ($cy) & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
     val pr0 = interpret(dC(mainCut)(1), pr)
     val cut1 = s"($x1) > ($x0)".asFormula
     val pr1a = timeFn("ArcQ4 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & QE)), pr0)})
-    //val cut2 = s"($dx0)^2 + ($dy0)^2 = 1".asFormula
-    //val pr1b = timeFn("ArcQ3 Case Step 2", {() => interpret(nil < (nil, cut(cut2) < (nil, hideR(1) & QE)), pr1a)})
-    println("Q4: y0 is "+ spec.evalTerm(y0).value + ", y1 is " + spec.evalTerm(y1).value)
     val cut3 = s"($y1) > ($y0)".asFormula
     val pr1c = timeFn("ArcQ4 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & QE)), pr1a)})
     val cut4 = s"($cy) > ($y1)".asFormula
@@ -201,11 +149,8 @@ class CoasterXProver (spec:CoasterXSpec){
     val pr1e = timeFn("ArcQ4 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & QE)), pr1d)})
     val cut6 = s"($r) > 0".asFormula
     val pr1f = timeFn("ArcQ4 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & QE)), pr1e)})
-
     val cut7 = s"($evol) -> ((v^2)/2 > g()*(($y1) - ($y0)))".asFormula
     val pr1g = timeFn("ArcQ4 Case Step 7", {() => interpret(nil < (nil, cut(cut7) < (nil, hideR(1) & QE)), pr1f)})
-    //val cut8 = s"($y1) <= ($yInit)".asFormula
-    //val pr1h = timeFn("ArcQ4 Case Step 8", {() => interpret(nil < (nil, cut(cut8) < (nil, hideR(1) & QE)), pr1g)})
     val pr1i = interpret(nil <(nil, hideL(-2)*nYs), pr1g)
     val tac = US(NoProofTermProvable(aproof))
     val pr6 = interpret(nil < (nil, tac), pr1i)
@@ -275,13 +220,10 @@ class CoasterXProver (spec:CoasterXSpec){
     }
     // const, yi=_, global(0), (op,)_j in sections{bound_j(0) -> post_j(0)} |- " "
     val pr4 = selectSection(iSection,nSections,pr)
-    // const, yi=_, global(0), (bound_i(0) -> post_i(0)) |- \forall t  t>= 0 -> (\forall s in [0,t] DC(s)) -> J(t)
-    //val pr5 = interpret(allR(1) & implyR(1) & implyR(1), pr4)
     // const, yi=_, global(0), (bound_i(0) -> post_i(0)), t >= 0, (\forall s in [0,t] DC) |- J(t)
     val pr6 = interpret(implyL(-Jstart) <((hideL(-2)*(nYs+1)) & hideR(1) & QE, nil), pr4)
     val proveGlobal = allL(Number(0))('Llast) & master()
     // const,  yi=_, global(0), post_i(0), t>= 0, (\forall s in [0,t] DC) |- (global(t) & (&_j in sections{bound_j(t) -> post_j(t)})
-    //  & andR(1) <(proveGlobal, nil)
     val pr7 = interpret(dW(1), pr6)
     val dcPos = 6
     def coHideL(i : Int, pr:Provable) = {
@@ -373,7 +315,6 @@ class CoasterXProver (spec:CoasterXSpec){
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
         val a3 = "(x0()<=x&x<=x1()->((dx=-(cy()-y)/r()  & dy=(cx()-x)/r()) & ((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & cy()<=y))))".asFormula
         val a4 = "x1() > x0()".asFormula
-        //val a5 = "dx0()^2 + dy0()^2 = 1".asFormula
         val a6 = "y1() < y0()".asFormula
         val a7 = "cy() <= y1()".asFormula
         val a8 = "cx() <= x0()".asFormula
@@ -401,7 +342,6 @@ class CoasterXProver (spec:CoasterXSpec){
         val pr5 = interpret(dC("v>0".asFormula)(1) <(nil, ODE(1)), pr4)
         val pr6 = interpret(dC("(x-cx())^2 + (y-cy())^2 = r()^2".asFormula)(1) <(nil, ODE(1)), pr5)
         val pr7 = interpret(ODE(1), pr6)
-        //val pr2 = interpret(e, pr1)
         storeLemma(NoProofTermProvable(pr7), Some(provableName))
         pr7
     }
@@ -417,13 +357,11 @@ class CoasterXProver (spec:CoasterXSpec){
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
         val a3 = "(x0()<=x&x<=x1()->((dx=-(cy()-y)/r()  & dy=(cx()-x)/r()) & ((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & cy()<=y))))".asFormula
         val a4 = "x1() > x0()".asFormula
-        //val a5 = "dx0()^2 + dy0()^2 = 1".asFormula
         val a6 = "y1() > y0()".asFormula
         val a7 = "cy() <= y0()".asFormula
         val a8 = "x1() <= cx() ".asFormula
         val a9 = "r() > 0".asFormula
         val a10 = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1()))->(v^2)/2 > g()*(y1() - y0())".asFormula
-        //val a11 = "y1() <= yGlobal()".asFormula
         val c =
           """[{x'=dx*v,
             |            y'=dy*v,
@@ -457,53 +395,13 @@ class CoasterXProver (spec:CoasterXSpec){
         val pr5a:Provable = interpret(dC(s"(v^2)/2 > g()*(y1() - y)".asFormula)(1) <(nil, dI()(1)), pr5)
         val pr6:Provable = interpret(dC("v>0".asFormula)('R), pr5a)
         val pr7:Provable = interpret(nil <(nil, dC(dGDefined)(1)), pr6)
-        // dG(s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) &
-        //s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram
-        //val pr8:Provable = interpret(nil <(nil, dG(AtomicODE(DifferentialSymbol(Variable("a")), s"((($cx)-x)/(2*v*($r)))*a+0".asTerm), Some("a^2*v=1".asFormula))(1), nil), pr7)
         val pr8:Provable = interpret(nil <(nil, dG(s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1), nil), pr7)
         val pr9:Provable = interpret(nil <(nil, existsR("(1/v)^(1/2)".asTerm)(1), nil), pr8)
         val pr10:Provable = interpret(nil <(nil, dI()(1), nil), pr9)
         val pr11:Provable = interpret(nil <(nil, ODE(1)), pr10)
         val pr12 = interpret(ODE(1), pr11)
         storeLemma(NoProofTermProvable(pr12), Some(provableName))
-        //val pr12:Provable = interpret(ODE(1), pr11)
         pr12
-
-/*
-        val pr1 = interpret(dC(s"dx=-(y-($cy))/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
-        val pr2 = interpret(dC(s"dy=(x-($cx))/($r)".asFormula)( 1)  <(nil, ODE(1)), pr1)
-        val pr3 = interpret(dC(s"($cx)<=x".asFormula)(1)  <(nil, ODE(1)), pr2)
-        // val pr1 = interpret(dC(s"dx=-(($cy)-y)/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
-        //    val pr2 = interpret(dC(s"dy=(($cx)-x)/($r)".asFormula)(1)  <(nil, dI()(1)), pr1)
-        val pr3a = interpret(dC(s"g() > 0".asFormula)(1) <(nil, dI()(1)), pr3)
-        println("Proof Two:" , s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)
-        val pr4 = interpret(dC(s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)(1) <(nil, dI()(1)), pr3a)
-        // @TODO: This is too slow
-        val pr5 = interpret(dC(s"(($cx)-x)^2+(($cy)-y)^2=($r)^2".asFormula)(1) <(nil, DebuggingTactics.debug("This dI is slow", doPrint = true) & dI()(1)), pr4)
-        val pr6 = interpret(dC(s"y < ($cy)".asFormula)(1) <(nil,
-          dC(s"2*(y-($cy))*($r)!=0".asFormula)(1)  <(
-            dG(s"{a'=(($cx)-x)*v/(2*(y-($cy))*($r))*a+0}".asDifferentialProgram, Some(s"a^2*(y-($cy))=-1".asFormula))(1) &
-              existsR(s"(-1/(y-($cy)))^(1/2)".asTerm)(1) &
-              ODE(1),
-            ODE(1)
-          )
-        ), pr5)
-        val pr6a = interpret(dC(s"(v^2)/2 > g()*(y1() - y)".asFormula)(1) <(nil, ODE(1)), pr6)
-        val pr7 = interpret(dC(s"v>0".asFormula)(1)  <(nil,
-          DebuggingTactics.debug("foo", doPrint = true) &
-            dC(s"2*v!=0".asFormula)(1)  <(
-              DebuggingTactics.debug("bar", doPrint = true) &
-                //dG(s"{a'=(x-($cx))/(2*v*($r))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) &
-                dG(s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) &
-                existsR("(1/v)^(1/2)".asTerm)(1) &
-                DebuggingTactics.debug("This dI doesn't prove", doPrint = true) &
-                DebuggingTactics.debug("bat", doPrint = true) &
-                dI()(1),
-              DebuggingTactics.debug("baz", doPrint = true) &
-                ODE(1)
-            )
-        ), pr6a)*/
-        //pr8
     }
   }
 
@@ -516,7 +414,6 @@ class CoasterXProver (spec:CoasterXSpec){
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
         val a3 = "(x0()<=x&x<=x1()->((dx=-(y-cy())/r()  & dy=(x-cx())/r()) & ((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy()))))".asFormula
         val a4 = "x1() > x0()".asFormula
-        //val a5 = "dx0()^2 + dy0()^2 = 1".asFormula
         val a6 = "y0() > y1()".asFormula
         val a7 = "cy() > y0()".asFormula
         val a8 = "cx() >= x1()".asFormula
@@ -561,13 +458,11 @@ class CoasterXProver (spec:CoasterXSpec){
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
         val a3 = "(x0()<=x&x<=x1()->((dx=-(y-cy())/r()  & dy=(x-cx())/r()) & ((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & y<=cy()))))".asFormula
         val a4 = "x1() > x0()".asFormula
-        //val a5 = "dx0()^2 + dy0()^2 = 1".asFormula
         val a6 = "y1() > y0()".asFormula
         val a7 = "cy() > y1()".asFormula
         val a8 = "x0() >= cx()".asFormula
         val a9 = "r() > 0".asFormula
         val a10 = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1()))->(v^2)/2 > g()*(y1() - y0())".asFormula
-        //val a11 = "y1() <= yGlobal()".asFormula
         val c =
           """[{x'=dx*v,
             |            y'=dy*v,
@@ -593,12 +488,8 @@ class CoasterXProver (spec:CoasterXSpec){
         val pr1 = interpret(dC(s"dx=-(y-($cy))/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
         val pr2 = interpret(dC(s"dy=(x-($cx))/($r)".asFormula)( 1)  <(nil, ODE(1)), pr1)
         val pr3 = interpret(dC(s"($cx)<=x".asFormula)(1)  <(nil, ODE(1)), pr2)
-        // val pr1 = interpret(dC(s"dx=-(($cy)-y)/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
-        //    val pr2 = interpret(dC(s"dy=(($cx)-x)/($r)".asFormula)(1)  <(nil, dI()(1)), pr1)
         val pr3a = interpret(dC(s"g() > 0".asFormula)(1) <(nil, dI()(1)), pr3)
-        println("Proof Two:" , s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)
         val pr4 = interpret(dC(s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)(1) <(nil, dI()(1)), pr3a)
-        // @TODO: This is too slow
         val pr5 = interpret(dC(s"(($cx)-x)^2+(($cy)-y)^2=($r)^2".asFormula)(1) <(nil, DebuggingTactics.debug("This dI is slow", doPrint = true) & dI()(1)), pr4)
         val pr6 = interpret(dC(s"y < ($cy)".asFormula)(1) <(nil,
           dC(s"2*(y-($cy))*($r)!=0".asFormula)(1)  <(
@@ -613,7 +504,6 @@ class CoasterXProver (spec:CoasterXSpec){
           DebuggingTactics.debug("foo", doPrint = true) &
           dC(s"2*v!=0".asFormula)(1)  <(
             DebuggingTactics.debug("bar", doPrint = true) &
-              //dG(s"{a'=(x-($cx))/(2*v*($r))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) &
             dG(s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) &
               existsR("(1/v)^(1/2)".asTerm)(1) &
               DebuggingTactics.debug("This dI doesn't prove", doPrint = true) &
@@ -630,10 +520,6 @@ class CoasterXProver (spec:CoasterXSpec){
   }
 
   def hideYs(iSection:Int, nSections:Int):(BelleExpr, Int) = {
-    /*val yDefStart = 3
-    val js = List.tabulate(nSections)(j => j + yDefStart).filter(j => !(j == iSection + yDefStart || j == iSection + yDefStart - 1 || j == iSection + yDefStart - 2))
-    val e = js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
-    (e, nSections - js.length)*/
     //@TODO: This hid too much, so now hiding notihng
     (nil, nSections)
   }
@@ -707,7 +593,6 @@ class CoasterXProver (spec:CoasterXSpec){
           val pr1 = interpret(AxiomaticODESolver.addTimeVar(1), pr)
           val pr1a = interpret(assignb(1), pr1)
           val pr2 = interpret(dC(s"v = old(v) - dy*($t)".asFormula)(1) <(nil, dI()(1)), pr1a)
-          //val pr3 = interpret(dC(s"y = old(y) + dy*($t)".asFormula)(1) <(nil, dI()(1)), pr2)
           val pr3 = interpret(dC(s"y = old(y) + dy*(old(v)*($t) - dy*($t)^2/2)".asFormula)(1) <(nil, dI()(1)), pr2)
           val pr4 = interpret(dC(s"x = old(x) + dx*(old(v)*($t) - dy*($t)^2/2)".asFormula)(1) <(nil, dI()(1)), pr3)
           pr4
@@ -769,9 +654,6 @@ class CoasterXProver (spec:CoasterXSpec){
 
   def componentTactic(pr:Provable, p1: TPoint, p2: TPoint, section: Section, v: Term, yInit: Term, i: Int, nSections:Int, initD:TPoint):Provable = {
     sectionTactic(pr, p1, p2, v, yInit, section, i, nSections, initD)
-  /*  val globalPost = ???
-    val componentPost = provePosts(pr, pr.conclusion.succ.head, p1, p2, section, v, i, 0)
-    andR(1) <(globalPost, componentPost)*/
   }
 
   def proveAllComponents(global:Provable, locals: List[Provable], points: List[(Term, Term)], segments: List[Section], v: Term, yInit: Term, i: Int, nSections: Int, initsD:List[TPoint]):Provable = {
@@ -787,7 +669,6 @@ class CoasterXProver (spec:CoasterXSpec){
   def splitComponents(pr:Provable,i:Int = 0):(Provable, List[Provable]) = {
     pr.subgoals.head.succ.head match {
       case (Box(Choice(_,_), _)) =>
-        //@TODO: Split off separate provable and merge back in
         val pr1 = interpret(choiceb(1) & andR(1), pr)
         val sgHead = Provable.startProof(pr1.subgoals(0))
         val sgTail = Provable.startProof(pr1.subgoals(1))
@@ -795,7 +676,6 @@ class CoasterXProver (spec:CoasterXSpec){
         (pr1(global,1), sgHead::locals)
       case  _ =>
         (pr, Provable.startProof(pr.subgoals.last) :: Nil)
-//      case Nil => ???
     }
   }
 
@@ -821,18 +701,13 @@ class CoasterXProver (spec:CoasterXSpec){
     // globalConst,initState, lc1, &_2^n {lc_i}   |-
     val unpackLocalConsts = List.tabulate(nSections-2){case i => andL(-(i+4))}.foldLeft(nil)((acc,e) => acc & e)
     val pr1e = interpret(unpackLocalConsts, pr1c)
-    //val pr1d = interpret(andL(-4), pr1c)
-    //val pr1e = interpret(andL(-5), pr1d)
     val inv = invariant(align)
     val pr2 = interpret(DLBySubst.loop(inv, pre = nil)(1), pr1e)
     val pr3 = interpret(nil <((alphaRule*) & QE, nil, nil), pr2)
     val pr3a = interpret(nil <((alphaRule*), nil), pr3)
     val pr4 = interpret(nil <(master(), nil), pr3a)
     val (globalPr, localPrs) = splitComponents(pr4)
-      //mapChoices(es)
     val prEnd = proveAllComponents(globalPr, localPrs, points, segments.tail, v0, points.head._2, 0, segments.tail.length, ds)
-    //val prs = localPrs.zip(es)
-    //val prEnd = interpret(e, pr4)
     assert(prEnd.isProved, "CoasterX model not proved")
     prEnd
   }

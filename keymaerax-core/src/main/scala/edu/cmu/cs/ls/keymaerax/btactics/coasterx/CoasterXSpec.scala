@@ -6,7 +6,6 @@ import edu.cmu.cs.ls.keymaerax.core.{Formula, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 /* Generate dL specification for safety of CoasterX models from a file
-* @TODO: Straight-line case: consider turning dx, dy into assignment instead of plugging directly into ODE
 * */
 object CoasterXSpec {
   type TPoint = (Term, Term)
@@ -100,7 +99,6 @@ class CoasterXSpec {
         val root:Int = Math.sqrt(i).toInt
         val j = root*root
         if (i == j) {
-          println("Optimization success", root)
           Number(root)
         } else {
           Power(t1,t2)
@@ -221,14 +219,9 @@ class CoasterXSpec {
         val yOde = AtomicODE(DifferentialSymbol(Variable("y")), foldTimes(v,dy))
         val vOde = s"v' = -dy*g()".asDifferentialProgram
         val sys = DifferentialProduct(DifferentialProduct(xOde,yOde),vOde)
-        // val evol = And(LessEqual(x1,x),LessEqual(x,x2))
         ODESystem(sys, evol(isUp))
       case ArcSection(Some(ArcParam((x1,y1),(x2,y2),theta1,deltaTheta)), Some(gradient)) =>
-        //val ((x3,y3),(x4,y4)) = arcBounds((x1,y1),(x2,y2),theta1,Number(theta1.value+deltaTheta.value))
-        //val r = Number((x4.value-x3.value)/2)
-        //val (cx:Term, cy:Term) = arcCenter((x1,y1), (x2,y2))
         val r = iRadius(iSection)  //CoasterXSpec.dist(start, (cx,cy))
-        //val r = foldDivide(foldMinus(x2,x1),Number(2))
         val sysBase = "x' = dx*v, y' = dy*v, v' = -dy*g()".asDifferentialProgram
         val isCw = deltaTheta.value < 0
         val (dxTerm, dyTerm) = if (isCw) {(foldDivide("dy*v".asTerm, r), foldDivide("-dx*v".asTerm, r))} else {(foldDivide("-dy*v".asTerm, r), foldDivide("dx*v".asTerm, r))}
@@ -254,7 +247,6 @@ class CoasterXSpec {
 
   def lineDir(xy1:TPoint, xy2:TPoint):(Term,Term) = {
     val mag:Term = foldPower(foldPlus(foldPower(foldMinus(xy2._1,xy1._1),Number(2)),foldPower(foldMinus(xy2._2,xy1._2),Number(2))),foldDivide(Number(1),Number(2)))
-    //val mag = numSqrt(Number((xy2._1.value - xy1._1.value).pow(2) + (xy2._2.value - xy1._2.value).pow(2)))
     (foldDivide(foldMinus(xy2._1,xy1._1),mag), foldDivide(foldMinus(xy2._2,xy1._2),mag))
   }
 
@@ -350,7 +342,6 @@ class CoasterXSpec {
         (cx - xend)^2 + (cy - yend)^2 = r^2
         v0 > 0      /* positive velocity initially */
         */
-        // ((x1,y1),(x2,y2),theta1,Number(theta1.value+deltaTheta.value))
         val ((x3,y3),(x4,y4)) = (start,end)
         val (cx, cy) = arcCenter((x1,y1),(x2,y2))
 
@@ -364,7 +355,6 @@ class CoasterXSpec {
         val dx = Variable("dx")
         val dy = Variable("dy")
         val dxeq = Equal(dx, dtx)
-        //val dxeq = Equal(dx,foldDivide(foldNeg(foldMinus(y,cy)),r))
         val dyeq = Equal(dy,dty)
         val xeq = Equal(x,x3)
         val yeq = Equal(y,y3)
@@ -398,12 +388,8 @@ class CoasterXSpec {
         Imply(inRange, And(dInv,onTrack))
       case ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(gradient)) =>
         val ((x3, y3), (x4, y4)) = (start,end)
-          //val ((x3, y3), (x4, y4)) =arcBounds((x1, y1), (x2, y2), theta1, Number(theta1.value+deltaTheta.value))
         val inRange = And(LessEqual(x3, x), LessEqual(x, x4))
-        //foldDivide(foldMinus(x2,x1),Number(2))
-        //  val r = Number((x4.value - x3.value) / 2)
         val (cx, cy) = iCenter(i)
-        //arcCenter((x1, y1), (x2, y2))
         val r = iRadius(i)
         val centered = Equal(sqDist((x,y), (cx,cy)), foldPower(r,Number(2)))
         val isCw = param.deltaTheta.value < 0
@@ -420,13 +406,10 @@ class CoasterXSpec {
             (s"dx=-(y-($cy))/($r)".asFormula, s"dy=(x-($cx))/($r)".asFormula)
           }
         val dInv = And(dxInv, dyInv)
-        /* (x0 + l <= x & x <= xend) -> ((cx - x)^2 + (cy - y)^2 = r^2 & x <= cx & cy < y))*/
         Imply(inRange, And(dInv, And(centered, outRange)))
       case _ => True
     }
   }
-  /* (x0 <= x & x <= x0 + l) -> y = m*x + c) */
-  /*((x0 + l <= x & x <= xend) -> ((cx - x)^2 + (cy - y)^2 = r^2 & x <= cx & cy < y))*/
 
   def segmentEmpty(seg:Section):Boolean = {
     seg match {
@@ -475,10 +458,6 @@ class CoasterXSpec {
     val energyConserved = s"v^2 + 2*y*g() = ($v0)^2 + 2*($y0)*g()".asFormula
     val globalPost = And("v > 0".asFormula, energyConserved)
     val post = And(globalPost, withBounds.zipWithIndex.map(segmentPost).reduceRight[Formula]{case (x,y) => And(x,y)})
-    // @TODO: Delete, just some debug code
-    //ctx = ctx.+(Variable("x") -> Number(299), Variable("y") -> Number(398))
-    // dx_4*y = dy_4*x+dx_4*(398-(398-y_4)/-116*299)
-    //println("LHS: " + evalTerm("dx_4*y".asTerm) + ", RHS: " + evalTerm("dy_4*x+dx_4*(398-(398-y_4)/-116*299)".asTerm))
     Imply(And(segmentDefs,pre),Box(Loop(ode), post))
   }
 
@@ -551,9 +530,7 @@ class CoasterXSpec {
     (foldDivide(x,magnitude(xy)), foldDivide(y,magnitude(xy)))
   }
 
-  //@TODO: Check (dx,dy) is
   /*
-  * Another way to do it:
   * Solve these equations:
   * (cx-x1)^2 + (cy-y1)^2 = (cx-x2)^2 + (cy-y2)^2
   * (dx^2 + dy^2)*((cx-x1)^2 + (cy-y1)^2) = (dy*x -dx*y + c)^2
@@ -561,9 +538,6 @@ class CoasterXSpec {
   * */
   def alignArcFromDirection(secs: List[(Section, (TPoint, TPoint))], index: Int, dx: Term, dy: Term):List[(Section,(TPoint,TPoint), Formula, TPoint)] = {
     val (ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(oldSlope)), ((xx1, yy1), (xx2, yy2))) :: rest = secs
-    // Algorithm: Take (x0, y1), (dx0, dy0), (cx, cy) as given (where cx, cy based on xx1,yy1,xx2,yy2).
-    // Pray the resulting circle still intersects (x1, ???) for some ??? and compute a new value of y1 to fill in ???
-    //val endY = Variable("y", Some(index))
     val endDX = Variable("dx", Some(index))
     val endDY = Variable("dy", Some(index))
     val cx = Variable("cx", Some(index))
@@ -571,19 +545,10 @@ class CoasterXSpec {
     val r = Variable("r", Some(index))
     val (cxe, cye) = centerFromStartSlope(xx1,yy1,xx2,yy2,(dx,dy))
     val re = dist((cx,cy),(xx1,yy1))
-    // Compute default center, vector-to-center and tangent vector
-    //val (dcxD, dcyD) = (foldMinus(cx, xx1), foldMinus(cy, yy1))
-    //val rad = foldDivide(foldMinus(x2,x1),Number(2))
-    //val (dcxD,dcyD) = centerFromTangent((dx,dy), (param.theta1, param.theta2), param.deltaTheta)
-    //val (cx,cy) = vecPlus((xx1,yy1), vecScale((dcxD,dcyD), rad))
-    // by geometry, yend^2 = cy +- sqrt(r^2 - (cx-x)^2), which +- depends on quadrant
     val yendSign = if (param.theta2.value > 0) { Number(1) } else Number(-1)
     val xend = xx2
-    // TODO: Double-check definition
-    //val yEndTerm =  foldPlus(cy, foldTimes(yendSign, foldPower(foldMinus(foldPower(rad,Number(2)),foldPower(foldMinus(cx,xend),Number(2))), foldDivide(Number(1),Number(2)))))
     val (dcxe, dcye) = (foldMinus(cx, xend), foldMinus(cy, yy2))
     val (dtxe, dtye) = normalizeVector(tangentFromCenter((dcxe,dcye), (param.theta1, param.theta2), param.deltaTheta))
-    //val endYDef:Formula = Equal(endY, yEndTerm)
     val cxDef:Formula = Equal(cx, cxe)
     val cyDef:Formula = Equal(cy, cye)
     val endDXDef:Formula = Equal(endDX, dtxe)
@@ -653,10 +618,8 @@ class CoasterXSpec {
         ((cx, foldPlus(cy,r)), (xx2, yy2)),
         allDefs2,
         (endDX, endDY))
-      println("Split guy in quadrants ", q1,q2,q3,q4, " has start direction ", evalTerm(dx).value," ",evalTerm(dy).value, " and end direction dx: ", evalTerm(dtxe).value, " and dy: ", evalTerm(dtye).value)
       sec1 :: sec2 :: alignZipped(rest, Some((endDX, endDY)), index + 2)
     } else {
-      println("Non-split guy in quadrants ", q1,q2,q3,q4, " has direction dx: ", evalTerm(dtxe).value, " and dy: ", evalTerm(dtye).value)
       val head = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, deltaTheta)), Some(oldSlope)),
         ((xx1, yy1), (xx2, yy2)),
         allDefs,
@@ -667,40 +630,15 @@ class CoasterXSpec {
 
   def alignArcFromCenter(secs:List[(Section,(TPoint,TPoint))], index:Int):List[(Section,(TPoint,TPoint), Formula, TPoint)] = {
     val (ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(oldSlope)), ((xx1, yy1), (xx2, yy2))) :: rest = secs
-    // Algorithm: Take (x0, y1), (dx0, dy0), (cx, cy) as given (where cx, cy based on xx1,yy1,xx2,yy2).
-    // Pray the resulting circle still intersects (x1, ???) for some ??? and compute a new value of y1 to fill in ???
-    // Compute default center, vector-to-center and tangent vector
+    // Approach: Take (x0, y0), (x1,y1), (dx0, dy0)  as given and compute (cx,cy).
     val (cxe,cye) = arcCenter((x1,y1),(x2,y2))
     val (dcxD, dcyD) = (foldMinus(cxe, xx1), foldMinus(cye, yy1))
     val directionD = normalizeVector(tangentFromCenter((dcxD,dcyD), (param.theta1, param.theta2), param.deltaTheta))
     alignArcFromDirection(secs, index, directionD._1, directionD._2)
-    /*val re = foldDivide(foldMinus(x2,x1),Number(2))
-    // by geometry, yend^2 = cy +- sqrt(r^2 - (cx-x)^2), which +- depends on quadrant
-    val yendSign = if (param.theta2.value > 0) { Number(1) } else Number(-1)
-    val xend = xx2
-    // TODO: Double-check definition
-    val yEndTerm =  foldPlus(cy, foldTimes(yendSign, foldPower(foldMinus(foldPower(r,Number(2)),foldPower(foldMinus(cx,xend),Number(2))), foldDivide(Number(1),Number(2)))))
-    val (dcxe, dcye) = (foldMinus(cx, xend), foldMinus(cy, endY))
-    val (dtxe, dtye) = tangentFromCenter((dcxe,dcye), (param.theta1, param.theta2), param.deltaTheta)
-    val endDXDef:Formula = Equal(endDX, dtxe)
-    val endDYDef:Formula = Equal(endDY, dtye)
-    val endYDef:Formula = Equal(endY, yEndTerm)
-    val cxDef:Formula = Equal(cx, cxe)
-    val cyDef:Formula = Equal(cy, cye)
-    val rDef = Equal(r, re)
-    val allDefs = And(rDef, And(And(cxDef, cyDef),And(endDXDef, endDYDef)))
-    ctx = ctx.+(r -> re, cx -> cxe, cy -> cye, endDX -> dtxe, endDY -> dtye, endY -> yEndTerm)
-    val head = (ArcSection(Some(ArcParam((foldMinus(cx,r), foldMinus(cy,r)), (foldPlus(cx,r), foldPlus(cy,r)), theta1, deltaTheta)), Some(oldSlope)),
-      ((xx1, yy1), (xx2, endY)),
-      allDefs,
-      (endDX,endDY) // @TODO: Supposed to be start not end
-
-    head :: alignZipped(setStartY(rest, endY), Some((endDX,endDY)), index+1)*/
   }
 
   /* @param zip is a list of sections annotated with their lower-left and upper-right boundaries
   *  @param dL term (e.g. a variable m_i) representing the slope of the previous line segment, or None if this is the first segment.
-  *   (@TODO: use direction vectors instead of slopes in order to handle vertical sections)
   *   (@TODO: Should basically-never truly need to introduce a new slope variable in the straight line segment case, but
   *    currently always introduces a variable in ordr to make it easier to keep track of the variables)
   *  @return List of rounded sections with their rounded bounding boxes, with a formula defining any new variables introduced
@@ -731,22 +669,6 @@ class CoasterXSpec {
         }
       case _ => ???
     }
-    //val (dxC, dyC) = centerFromTangent((dx,dy), (param.theta1,param.theta2))
-    //val (newcx, newcy) = vecPlus((xx1,yy1), vecScale((dxC,dyC), rad))
-    //val centerSlope = foldDivide(Number(-1), slope2)
-    //val cyy = foldPlus(yy1,foldTimes(dx,foldMinus(newcx,xx1)))
-    //((2 a (-x1 + x2) y1
-    //            + b (x1^2 - 2 x1 x2 + x2^2 - y1^2 + y2^2))/
-    //            (2 (a (x1 - x2) + b (-y1 + y2))))
-    /*foldMinus(foldPlus(foldMinus(foldPlus(foldNeg(foldTimes(b,foldPower(x1,Number(2)))),
-      // 2 b x1 x2
-      foldTimes(Number(2), foldTimes(b,foldTimes(x1,x2)))
-      // b x2^2
-    ),foldTimes(b,foldPower(x2,Number(2)))
-    ),foldTimes(Number(2),foldTimes(a,foldTimes(x1,y1)))
-    ),foldTimes(Number(2),foldTimes(a,foldTimes(x2,y1)))
-    )*/
-
   }
 
   def unzipConsecutive(tuples: List[(CoasterXParser.Section, ((Term, Term), (Term, Term)), Formula, TPoint)]):(List[TPoint], List[Section], Formula, List[TPoint]) = {
@@ -782,9 +704,4 @@ class CoasterXSpec {
     val (pointss, segmentss, fml, dirs) = unzipConsecutive(alignedBounds)
     ((pointss, segments.head :: segmentss, v0, tent, dirs),fml)
   }
-  /* x'  =  dx * v,  y' = dy * v,
-v'  =  -dy
-dx' =  -dy*v/r,
-dy' =  dx*v/r,*/
-
 }
