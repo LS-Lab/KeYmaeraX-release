@@ -79,15 +79,18 @@ class CoasterXProver (spec:CoasterXSpec){
       NoProofTermProvable(coHideLPr(pos.index0+1, pr.underlyingProvable))
       )
     // definition of r() depends of cx,cy so keep them around too.
-    def selectR = selectDefs(-2) & andL(-1) & andL(-2) & hideL(-3)
+    /*def selectR = selectDefs(-2) & andL(-1) & andL(-2) & hideL(-3)
     def selectCx = selectDefs(-2) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-2)
-    def selectCy = selectDefs(-2) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-1)
+    def selectCy = selectDefs(-2) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-1)*/
+    val (selectR, selectCx, selectCy) = (nil,nil,nil)
     val mainCut = s"(dx=-(($cy)-y)/($r) & dy=(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & x <= ($cx) & ($cy) <= y & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
     val pr0 = interpret(dC(mainCut)(1), pr)
+    val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
     val cut1 = s"($x1) > ($x0)".asFormula
-    val pr1a = timeFn("ArcQ2 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & cohideR(1) & QE)), pr0)})
+    val pr1a = timeFn("ArcQ2 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & hide1 & QE)), pr0)})
+    val hide2 = (y0, y1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
     val cut3 = s"($y1) > ($y0)".asFormula
-    val pr1c = timeFn("ArcQ2 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & cohideR(1) & QE)), pr1a)})
+    val pr1c = timeFn("ArcQ2 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & hide2 & QE)), pr1a)})
     val cut4 = s"($cy) <= ($y0)".asFormula
     val pr1d = timeFn("ArcQ2 Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & selectCy & QE)), pr1c)})
     val cut5 = s"($x1) <= ($cx)".asFormula
@@ -109,18 +112,28 @@ class CoasterXProver (spec:CoasterXSpec){
     val (cx,cy) = spec.iCenter(iSection)
     val r = spec.iRadius(iSection)
     val ((x0,y0),(x1,y1)) = (p1,p2)
+    def selectDefs:PositionalTactic = "selectDefs" by ((pr:ProvableSig,pos:AntePosition) =>
+      NoProofTermProvable(coHideLPr(pos.index0+1, pr.underlyingProvable))
+      )
+    // definition of r() depends of cx,cy so keep them around too.
+    /*def selectR = selectDefs(-3) & andL(-1) & andL(-2) & hideL(-3)
+    def selectCx = selectDefs(-3) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-2)
+    def selectCy = selectDefs(-3) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-1)*/
+    val (selectR, selectCx, selectCy) = (nil,nil,nil)
     val mainCut = s"(dx=-(($cy)-y)/($r) & dy=(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & y >= ($cy)  & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
     val pr0 = interpret(dC(mainCut)(1), pr)
     val cut1 = s"($x1) > ($x0)".asFormula
-    val pr1a = timeFn("ArcQ1 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & QE)), pr0)})
+    val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
+    val pr1a = timeFn("ArcQ1 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & hide1 & QE)), pr0)})
     val cut3 = s"($y1) < ($y0)".asFormula
-    val pr1c = timeFn("ArcQ1 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & QE)), pr1a)})
+    val hide2 = (y0, y1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
+    val pr1c = timeFn("ArcQ1 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & hide2 & QE)), pr1a)})
     val cut4 = s"($cy) <= ($y1)".asFormula
-    val pr1d = timeFn("ArcQ1 Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & QE)), pr1c)})
+    val pr1d = timeFn("ArcQ1 Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & selectCy & QE)), pr1c)})
     val cut5 = s"($cx) <= ($x0)".asFormula
-    val pr1e = timeFn("ArcQ1 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & QE)), pr1d)})
+    val pr1e = timeFn("ArcQ1 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & selectCx & QE)), pr1d)})
     val cut6 = s"($r) > 0".asFormula
-    val pr1f = timeFn("ArcQ1 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & QE)), pr1e)})
+    val pr1f = timeFn("ArcQ1 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & selectR & QE)), pr1e)})
     val pr1g = interpret(nil <(nil, hideL(-2)*nYs), pr1f)
     val tac = US(NoProofTermProvable(aproof))
     val pr6 = interpret(nil < (nil, tac), pr1g)
@@ -139,9 +152,11 @@ class CoasterXProver (spec:CoasterXSpec){
     val mainCut = s"(dx=($dx0) & dy=-(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & v>0 & y < ($cy) & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
     val pr0 = interpret(dC(mainCut)(1), pr)
     val cut1 = s"($x1) > ($x0)".asFormula
-    val pr1a = timeFn("ArcQ3 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & QE)), pr0)})
+    val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
+    val pr1a = timeFn("ArcQ3 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & hide1 & QE)), pr0)})
     val cut3 = s"($y0) > ($y1)".asFormula
-    val pr1c = timeFn("ArcQ3 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & QE)), pr1a)})
+    val hide2 = (y0, y1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
+    val pr1c = timeFn("ArcQ3 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & hide2 & QE)), pr1a)})
     val cut4 = s"($cy) > ($y0)".asFormula
     val pr1d = timeFn("ArcQ3 Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & QE)), pr1c)})
     val cut5 = s"($cx) >= ($x1)".asFormula
@@ -167,9 +182,11 @@ class CoasterXProver (spec:CoasterXSpec){
     val mainCut = s"(dx=($dx0) & dy=-(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & v>0 & y < ($cy) & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
     val pr0 = interpret(dC(mainCut)(1), pr)
     val cut1 = s"($x1) > ($x0)".asFormula
-    val pr1a = timeFn("ArcQ4 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & QE)), pr0)})
+    val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
+    val pr1a = timeFn("ArcQ4 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & hide1 & QE)), pr0)})
     val cut3 = s"($y1) > ($y0)".asFormula
-    val pr1c = timeFn("ArcQ4 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & QE)), pr1a)})
+    val hide2 = (y0, y1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
+    val pr1c = timeFn("ArcQ4 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & hide2 & QE)), pr1a)})
     val cut4 = s"($cy) > ($y1)".asFormula
     val pr1d = timeFn("ArcQ4 Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & QE)), pr1c)})
     val cut5 = s"($x0) >= ($cx) ".asFormula
@@ -567,9 +584,8 @@ class CoasterXProver (spec:CoasterXSpec){
 
   }
 
-  def hideMoreYs(iSection:Int, nSections:Int):(BelleExpr, Int) = {
-    val yDefStart = 3
-    val js = List.tabulate(nSections)(j => j + yDefStart).filter(j => !(j == iSection + yDefStart || j == iSection + yDefStart - 1 || j == iSection + yDefStart - 2))
+  def hideYsAfter(iSection:Int, nSections:Int, yDefStart:Int = 2):(BelleExpr, Int) = {
+    val js = List.tabulate(nSections)(j => j + yDefStart).filter(j => j == iSection + yDefStart + 1)
     val e = js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
     (e, nSections - js.length)
   }
@@ -654,17 +670,19 @@ class CoasterXProver (spec:CoasterXSpec){
           val thisInv = spec.segmentPost((section, (bl,tr), initD),iSection)
           val Imply(_, And(And(Equal(BaseVariable("dx", None, Real), dx0), Equal(BaseVariable("dy", None, Real),dy0)),
                            Equal(_, Plus(_, c)))) = thisInv
+          val HY = hideYsAfter(iSection, nSections)._1
           val cutMain = s"(v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g())&(($x0)<=x&x<=($x1)&((dx=($dx0)&dy=($dy0))&($dx0)*y=($dy0)*x+($c)))".asFormula
           val pr5 = interpret(dC(cutMain)(1), pr4)
           val sproof = straightProof
           val cut1 = s"($constr) -> (($dx0)*v^2 > 2*(($x1)-($x0))*($dy0)*g())".asFormula
+          val pr5a = timeFn("Line Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & HY & QE)), pr5)})
           val cut2 = s"($x1) > ($x0)".asFormula
+          val hide2 = (x0, x1) match {case (_:Number, _:Number) => cohideR(1) case _ => nil}
+          val pr5b = timeFn("Line Case Step 2", {() => interpret(nil < (nil, cut(cut2) < (nil, hideR(1) & hide2 & QE)), pr5a)})
           val cut3 = s"($dx0)^2 + ($dy0)^2 = 1".asFormula
+          val pr5c = timeFn("Line Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & HY & QE)), pr5b)})
           val cut4 = s"($dx0) > 0".asFormula
-          val pr5a = timeFn("Line Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & QE)), pr5)})
-          val pr5b = timeFn("Line Case Step 2", {() => interpret(nil < (nil, cut(cut2) < (nil, hideR(1) & QE)), pr5a)})
-          val pr5c = timeFn("Line Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & QE)), pr5b)})
-          val pr5d = timeFn("Line Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & QE)), pr5c)})
+          val pr5d = timeFn("Line Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & HY & QE)), pr5c)})
           val pr5e = timeFn("Line Case Step 5", {() => interpret(nil < (nil, hideL(-2)*nYs), pr5d)})
           val tac = US(NoProofTermProvable(sproof))
           val pr6 = interpret(nil < (nil, tac), pr5e)
