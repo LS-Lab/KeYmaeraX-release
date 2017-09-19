@@ -1,12 +1,16 @@
 package edu.cmu.cs.ls.keymaerax.btactics.coasterx
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.{AxiomaticODESolver, DLBySubst, DebuggingTactics, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver.TIMEVAR
 import edu.cmu.cs.ls.keymaerax.btactics.Kaisar.interpret
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser.{TPoint => _, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{dW, _}
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXSpec.TPoint
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import Augmentors._
+
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx._
 import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
@@ -68,18 +72,28 @@ class CoasterXProver (spec:CoasterXSpec){
     val (cx,cy) = spec.iCenter(iSection)
     val r = spec.iRadius(iSection)
     val ((x0,y0),(x1,y1)) = (p1,p2)
+    // Sequent is
+    // gConst, defs0, defs1, global, J_i |- post
+    // where defs_i = r_i & (cx_i & cy_i) & (dx_i & dy_i)
+    def selectDefs:PositionalTactic = "selectDefs" by ((pr:ProvableSig,pos:AntePosition) =>
+      NoProofTermProvable(coHideLPr(pos.index0+1, pr.underlyingProvable))
+      )
+    // definition of r() depends of cx,cy so keep them around too.
+    def selectR = selectDefs(-2) & andL(-1) & andL(-2) & hideL(-3)
+    def selectCx = selectDefs(-2) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-2)
+    def selectCy = selectDefs(-2) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-1)
     val mainCut = s"(dx=-(($cy)-y)/($r) & dy=(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & x <= ($cx) & ($cy) <= y & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
     val pr0 = interpret(dC(mainCut)(1), pr)
     val cut1 = s"($x1) > ($x0)".asFormula
-    val pr1a = timeFn("ArcQ2 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & QE)), pr0)})
+    val pr1a = timeFn("ArcQ2 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & cohideR(1) & QE)), pr0)})
     val cut3 = s"($y1) > ($y0)".asFormula
-    val pr1c = timeFn("ArcQ2 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & QE)), pr1a)})
+    val pr1c = timeFn("ArcQ2 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & cohideR(1) & QE)), pr1a)})
     val cut4 = s"($cy) <= ($y0)".asFormula
-    val pr1d = timeFn("ArcQ2 Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & QE)), pr1c)})
+    val pr1d = timeFn("ArcQ2 Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & selectCy & QE)), pr1c)})
     val cut5 = s"($x1) <= ($cx)".asFormula
-    val pr1e = timeFn("ArcQ2 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & QE)), pr1d)})
+    val pr1e = timeFn("ArcQ2 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & selectCx & QE)), pr1d)})
     val cut6 = s"($r) > 0".asFormula
-    val pr1f = timeFn("ArcQ2 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & QE)), pr1e)})
+    val pr1f = timeFn("ArcQ2 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & selectR & QE)), pr1e)})
     val cut7 = s"((($x0)<=x&x<=($x1)) & (($y0) <= y & y <= ($y1)))->(v^2)/2 > g()*(($y1) - ($y0))".asFormula
     val pr1fa = timeFn("ArcQ2 Case Step 6", {() => interpret(nil < (nil, cut(cut7) < (nil, hideR(1) & QE)), pr1f)})
     val pr1g = interpret(nil <(nil, hideL(-2)*nYs), pr1fa)
@@ -98,15 +112,15 @@ class CoasterXProver (spec:CoasterXSpec){
     val mainCut = s"(dx=-(($cy)-y)/($r) & dy=(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & y >= ($cy)  & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
     val pr0 = interpret(dC(mainCut)(1), pr)
     val cut1 = s"($x1) > ($x0)".asFormula
-    val pr1a = timeFn("ArcQ2 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & QE)), pr0)})
+    val pr1a = timeFn("ArcQ1 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & QE)), pr0)})
     val cut3 = s"($y1) < ($y0)".asFormula
-    val pr1c = timeFn("ArcQ2 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & QE)), pr1a)})
+    val pr1c = timeFn("ArcQ1 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & QE)), pr1a)})
     val cut4 = s"($cy) <= ($y1)".asFormula
-    val pr1d = timeFn("ArcQ2 Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & QE)), pr1c)})
+    val pr1d = timeFn("ArcQ1 Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & QE)), pr1c)})
     val cut5 = s"($cx) <= ($x0)".asFormula
-    val pr1e = timeFn("ArcQ2 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & QE)), pr1d)})
+    val pr1e = timeFn("ArcQ1 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & QE)), pr1d)})
     val cut6 = s"($r) > 0".asFormula
-    val pr1f = timeFn("ArcQ2 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & QE)), pr1e)})
+    val pr1f = timeFn("ArcQ1 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & QE)), pr1e)})
     val pr1g = interpret(nil <(nil, hideL(-2)*nYs), pr1f)
     val tac = US(NoProofTermProvable(aproof))
     val pr6 = interpret(nil < (nil, tac), pr1g)
@@ -170,6 +184,15 @@ class CoasterXProver (spec:CoasterXSpec){
     pr6
   }
 
+  def coHideL(i : Int, pr:Provable):BelleExpr = {
+    val anteSize = pr.subgoals.head.ante.length
+    List.tabulate(anteSize)(j => j + 1).filter(j => j != i).map(j => hideL(-j)).foldLeft(nil)((acc,e) => e & acc)
+  }
+
+  def coHideLPr(i : Int, pr:Provable):Provable = {
+    interpret(coHideL(i,pr), pr)
+  }
+
   // Finish off the arithmetic at the end of a line segment proof more effeciently than a big blind QE
   // @TODO: Everything has changed since this was first implemented - revisit and adjust
   def proveLineArith(pr: Provable, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):Provable = {
@@ -189,10 +212,6 @@ class CoasterXProver (spec:CoasterXSpec){
     // const,  yi=_, global(0), post_i(0), t>= 0, (\forall s in [0,t] DC) |- (global(t) & (&_j in sections{bound_j(t) -> post_j(t)})
     val pr7 = interpret(andR(1) <(proveGlobal, nil) , pr6)
     val dcPos = 6
-    def coHideL(i : Int, pr:Provable) = {
-      val anteSize = pr.subgoals.head.ante.length
-      List.tabulate(anteSize)(j => j + 1).filter(j => j != i).map(j => hideL(-j)).foldLeft(nil)((acc,e) => e & acc)
-    }
     // const,  yi=_, global(0), post_i(0), t>= 0, (\forall s in [0,t] DC) |- (&_j in sections{bound_j(t) -> post_j(t)}
     val pr8 = interpret(allL(Variable("t_"))(-dcPos) & implyL(-dcPos) <(coHideL(dcPos - 1, pr7) & hideR(1) & QE, nil), pr7)
     def proveConjs(f:(Int,Provable)=>Provable, pr:Provable, conjDepth:Int, conjI:Int = 0):Provable = {
