@@ -47,17 +47,22 @@ object KeYmaeraXArchiveParser {
   /** Parses the archive content into archive entries with parsed model and tactics. */
   def parse(archiveContentBOM: String): List[ParsedArchiveEntry] = {
     val archiveContents: List[ArchiveEntry] = read(archiveContentBOM)
-    archiveContents.map({case (name, modelText, kind, tactics) =>
-      val (defs, formula) = KeYmaeraXProblemParser.parseProblem(modelText)
-      val parsedTactics = tactics.map({
-        case (tacticName, tacticText) => (tacticName, BelleParser.parseWithInvGen(tacticText, None, defs)) })
-      ParsedArchiveEntry(name, kind, modelText, formula, parsedTactics)
-    })
+    archiveContents.map(parseEntry)
   }
 
   /** Reads a specific entry from the archive. */
   def getEntry(entryName: String, archiveContentBOM: String): Option[ParsedArchiveEntry] = {
-    parse(archiveContentBOM).find(_.name == entryName)
+    val archiveContents: List[ArchiveEntry] = read(archiveContentBOM)
+    archiveContents.find(_._1 == entryName).map(parseEntry)
+  }
+
+  /** Parses an entry (model and tactic). */
+  private def parseEntry(entry: ArchiveEntry): ParsedArchiveEntry = {
+    val (name, modelText, kind, tactics) = entry
+    val (defs, formula) = KeYmaeraXProblemParser.parseProblem(modelText)
+    val parsedTactics = tactics.map({
+      case (tacticName, tacticText) => (tacticName, BelleParser.parseWithInvGen(tacticText, None, defs)) })
+    ParsedArchiveEntry(name, kind, modelText, formula, parsedTactics)
   }
 
   /** Reads the archive content into string-only archive entries. */
