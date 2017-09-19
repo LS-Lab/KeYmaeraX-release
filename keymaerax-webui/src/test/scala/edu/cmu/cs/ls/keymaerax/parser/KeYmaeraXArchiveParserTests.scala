@@ -440,4 +440,31 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     ex.msg should include ("Duplicate symbol 'gt'")
   }
 
+  it should "not swallow backslashes, for example \\exists" in {
+    val input =
+      """
+        |SharedDefinitions.
+        | B gt(R,R) <-> ( \exists t (t=1 & ._0*t > ._1) ).
+        |End.
+        |
+        |Lemma "Entry 1".
+        | Definitions. B geq(R,R) <-> ( ._0 >= ._1 ). End.
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> geq(x,y) End.
+        |End.
+      """.stripMargin
+    val entries = KeYmaeraXArchiveParser.parse(input)
+    entries.loneElement shouldBe ParsedArchiveEntry(
+      "Entry 1",
+      "lemma",
+      """Definitions.
+        |B gt(R,R) <-> ( \exists t (t=1 & ._0*t > ._1) ).
+        | B geq(R,R) <-> ( ._0 >= ._1 ). End.
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> geq(x,y) End.""".stripMargin,
+      "\\exists t (t=1 & x*t>y) -> x>=y".asFormula,
+      Nil
+    )
+  }
+
 }

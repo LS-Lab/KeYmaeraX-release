@@ -94,7 +94,8 @@ object KeYmaeraXArchiveParser {
               //@note copies shared definitions into each Functions/Definitions block.
               val augmentedModel = globalDefs match {
                 case Some(d) if model.contains("Functions.") || model.contains("Definitions.") =>
-                    "(Functions\\.)|(Definitions\\.)".r.replaceFirstIn(model, "Definitions.\n" + d + "\n")
+                  "(Functions\\.)|(Definitions\\.)".r.replaceFirstIn(model,
+                    "Definitions.\n" + d.replaceAllLiterally("\\", "\\\\") + "\n")
                 case Some(d) if !(model.contains("Functions.") || model.contains("Definitions.")) =>
                   "Definitions.\n" + d + "\nEnd.\n" + model
                 case None => model
