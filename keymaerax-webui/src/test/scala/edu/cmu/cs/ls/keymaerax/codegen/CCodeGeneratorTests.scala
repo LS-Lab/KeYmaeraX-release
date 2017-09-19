@@ -481,7 +481,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   it should "compile and run a controller" in {
     val ctrlPrg = "x:=*;?x<=A; ++ x:=7;".asProgram
-    val code = (new CGenerator(new CControllerGenerator()))(ctrlPrg, Set(Variable("x")))
+    val code = (new CGenerator(new CControllerGenerator()))(ctrlPrg, Set(Variable("x")), Set(Variable("x")))
 
     val mainCode =
       s"""

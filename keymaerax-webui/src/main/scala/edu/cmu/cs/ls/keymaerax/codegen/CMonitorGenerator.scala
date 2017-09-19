@@ -14,11 +14,12 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
   * @author Stefan Mitsch
   */
 class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
-  override def apply(expr: Expression, stateVars: Set[BaseVariable], modelName: String): String =
+  override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
+                     modelName: String): String =
     generateMonitoredCtrlCCode(expr, stateVars)
 
   /** Generates a monitor `expr` that switches between a controller and a fallback controller depending on the monitor outcome. */
-  private def generateMonitoredCtrlCCode(expr: Expression, stateVars: Set[BaseVariable]) : String = {
+  private def generateMonitoredCtrlCCode(expr: Expression, stateVars: Set[BaseVariable]): String = {
     val symbols = StaticSemantics.symbols(expr)
     val names = symbols.map(nameIdentifier)
     require(names.size == symbols.size, "Expect unique name_index identifiers for code generation")

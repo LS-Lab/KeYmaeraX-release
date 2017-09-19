@@ -670,7 +670,8 @@ object KeYmaeraX {
       if (options.contains('vars)) options('vars).asInstanceOf[Array[BaseVariable]].toSet
       else StaticSemantics.vars(inputFormula).symbols.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
     val codegenStart = Platform.currentTime
-    val output = (new CGenerator(new CMonitorGenerator()))(inputFormula, vars, outputFileName)
+    //@todo input variables (nondeterministically assigned in original program)
+    val output = (new CGenerator(new CMonitorGenerator()))(inputFormula, vars, Set(), outputFileName)
     Console.println("[codegen time " + (Platform.currentTime - codegenStart) + "ms]")
     val pw = new PrintWriter(outputFileName + ".c")
     pw.write(stampHead(options))

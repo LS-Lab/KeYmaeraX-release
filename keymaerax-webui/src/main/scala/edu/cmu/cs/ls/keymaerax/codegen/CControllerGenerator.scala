@@ -13,7 +13,8 @@ import edu.cmu.cs.ls.keymaerax.core._
   * @author Stefan Mitsch
   */
 class CControllerGenerator extends CodeGenerator {
-  override def apply(expr: Expression, stateVars: Set[BaseVariable], modelName: String): String = expr match {
+  override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
+                     modelName: String): String = expr match {
     case ctrl: Program =>
       implicit val exprGenerator = createExprGenerator(getParams(ctrl))
       //@todo check success before returning result
@@ -36,7 +37,7 @@ class CControllerGenerator extends CodeGenerator {
 
   /** Compiles expressions with the appropriate params/curr/pre struct location. */
   private def createExprGenerator(parameters: Set[NamedSymbol]) = new CFormulaTermGenerator({
-    case t: NamedSymbol if  parameters.contains(t) => PARAMS_NAME + "->"
+    case t: NamedSymbol if parameters.contains(t) => PARAMS_NAME + "->"
     case _ => CURR_STATE_NAME + "."
   })
 
