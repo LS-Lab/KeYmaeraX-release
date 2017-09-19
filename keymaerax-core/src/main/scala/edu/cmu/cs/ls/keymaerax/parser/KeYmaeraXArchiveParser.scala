@@ -51,7 +51,7 @@ object KeYmaeraXArchiveParser {
       val (defs, formula) = KeYmaeraXProblemParser.parseProblem(modelText)
       val parsedTactics = tactics.map({
         case (tacticName, tacticText) => (tacticName, BelleParser.parseWithInvGen(tacticText, None, defs)) })
-      ParsedArchiveEntry(name, modelText, kind, formula, parsedTactics)
+      ParsedArchiveEntry(name, kind, modelText, formula, parsedTactics)
     })
   }
 
