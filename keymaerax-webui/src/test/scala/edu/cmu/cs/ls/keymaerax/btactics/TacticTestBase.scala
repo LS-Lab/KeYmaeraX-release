@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, UserPOJO}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalactic.{AbstractStringUniformity, Uniformity}
@@ -262,6 +262,14 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   //@deprecated("TactixLibrary.proveBy should probably be used instead of TacticTestBase")
   def proveBy(s: Sequent, tactic: BelleExpr): ProvableSig = {
     val v = BelleProvable(ProvableSig.startProof(s))
+    theInterpreter(tactic, v) match {
+      case BelleProvable(provable, _) => provable
+      case r => fail("Unexpected tactic result " + r)
+    }
+  }
+
+  def proveBy(p: Provable, tactic: BelleExpr): ProvableSig = {
+    val v = BelleProvable(NoProofTermProvable(p))
     theInterpreter(tactic, v) match {
       case BelleProvable(provable, _) => provable
       case r => fail("Unexpected tactic result " + r)
