@@ -27,7 +27,7 @@ class CControllerGenerator extends CodeGenerator {
   private val INPUTS_NAME = "in"
 
   /** Determines parameters of the program `prg`. */
-  private def getParams(prg: Program): Set[NamedSymbol] = (StaticSemantics.freeVars(prg) -- StaticSemantics.boundVars(prg)).toSet
+  private def getParams(prg: Program): Set[NamedSymbol] = StaticSemantics.symbols(prg) -- StaticSemantics.boundVars(prg).toSet
 
   private lazy val programHeader: String = {
     "state ctrlStep(state curr, const parameters* const params, const input* const in)"
@@ -37,14 +37,15 @@ class CControllerGenerator extends CodeGenerator {
 
   /** Compiles expressions with the appropriate params/curr/pre struct location. */
   private def createExprGenerator(parameters: Set[NamedSymbol]) = new CFormulaTermGenerator({
-    case t: NamedSymbol if parameters.contains(t) => PARAMS_NAME + "->"
+    case FuncOf(Function(name, idx, _, _, _), Nothing) if parameters.exists(p => p.name == name && p.index == idx) => PARAMS_NAME + "->"
+    case t: NamedSymbol if parameters.exists(p => p.name == t.name && p.index == t.index) => PARAMS_NAME + "->"
     case _ => CURR_STATE_NAME + "."
   })
 
   private def generateProgramBody(prg: Program, indent: String)(implicit exprGenerator: Expression => String): String = prg match {
     case Assign(x, t) => indent + exprGenerator(x) + " = " + exprGenerator(t) + "; prg.success = 1;"
     case AssignAny(x) => indent + exprGenerator(x) + " = " + INPUTS_NAME + "->" + nameIdentifier(x) + "; prg.success = 1;"
-    case Test(f) => indent + "prg.success = " + exprGenerator(f) + ";"
+    case Test(f) => indent + "prg.success = (" + exprGenerator(f) + ");"
     case Loop(c) => indent + "while (!prg.success) {\n" + generateProgramBody(c, indent + "  ") + "\n" + indent + "}"
     case _: ODESystem => indent + "prg.success = 1; /* done choosing actuator set values */"
     case Compose(a, b) =>
