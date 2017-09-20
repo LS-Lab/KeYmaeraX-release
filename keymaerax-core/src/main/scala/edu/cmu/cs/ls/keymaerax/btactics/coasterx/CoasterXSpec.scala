@@ -284,11 +284,12 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
       And(And(LessEqual(start._1, x), LessEqual(x, end._1)),
         ybound)
     }
+    val dx = Variable("dx")
+    val dy = Variable("dy")
+    val (dxi:Variable, dyi:Variable) = iDirection(iSection)
     seg match {
       case LineSection(Some(LineParam((x1,y1),(x2,y2))), Some(gradient), isUp) =>
         val v = Variable("v")
-        val dx = Variable("dx")
-        val dy = Variable("dy")
         val (dxval, dyval) = lineDir((x1, y1), (x2, y2))
         // Inlined version of ODE not used right now but still experimenting
         val xOdeInlined = AtomicODE(DifferentialSymbol(Variable("x")), foldTimes(v, dxval))
@@ -299,7 +300,9 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
         val yOde = AtomicODE(DifferentialSymbol(Variable("y")), foldTimes(v,dy))
         val vOde = s"v' = -dy*g()".asDifferentialProgram
         val sys = DifferentialProduct(DifferentialProduct(xOde,yOde),vOde)
-        ODESystem(sys, evol(isUp))
+        val ode = ODESystem(sys, evol(isUp))
+        val (setx,sety) = (Assign(dx,dxi), Assign(dy,dyi))
+        Compose(setx,Compose(sety, ode))
       case ArcSection(Some(ArcParam((x1,y1),(x2,y2),theta1,deltaTheta)), Some(gradient)) =>
         val r = iRadius(iSection)  //CoasterXSpec.dist(start, (cx,cy))
         val sysBase = "x' = dx*v, y' = dy*v, v' = -dy*g()".asDifferentialProgram
@@ -311,7 +314,12 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
         val dt = deltaTheta.value
         val isLeft = t1 < -90 || t1 > 90 || (t1 == -90 && dt < 0) || (t1 == 90 && dt > 0)
         val isUp = (isLeft && isCw) || (!isLeft && !isCw)
-        ODESystem(sys, evol(isUp))
+        val (cx,cy) = iCenter(iSection)
+        val (setx,sety) =
+          if (isCw) {(s"-(($cy)-y)/($r)".asTerm, s"(($cx)-x)/($r)".asTerm)}
+          else {(s"(($cy)-y)/($r)".asTerm, s"-(($cx)-x)/($r)".asTerm)}
+        val ode = ODESystem(sys, evol(isUp))
+        Compose(Assign(dx,setx),Compose(Assign(dy,sety), ode))
       case _ => Test(True)
     }
   }
@@ -389,9 +397,9 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
         val inRange = And(LessEqual(x1, x), LessEqual(x, x2))
         val dxInv = s"dx=($dxval)".asFormula
         val dyInv = s"dy=($dyval)".asFormula
-        val dInv = And(dxInv, dyInv)
+        //val dInv = And(dxInv, dyInv)
         val onTrack = Equal(foldTimes(dxval, y), foldPlus(foldTimes(dyval, x), foldTimes(dxval,yOffset((x1, y1), (x2, y2)))))
-        Imply(inRange, And(dInv,onTrack))
+        Imply(inRange, onTrack)
       case ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(gradient)) =>
         val ((x3, y3), (x4, y4)) = (start,end)
         val inRange = And(LessEqual(x3, x), LessEqual(x, x4))
@@ -411,8 +419,8 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
           } else {
             (s"dx=-(y-($cy))/($r)".asFormula, s"dy=(x-($cx))/($r)".asFormula)
           }
-        val dInv = And(dxInv, dyInv)
-        Imply(inRange, And(dInv, And(centered, outRange)))
+        //val dInv = And(dxInv, dyInv)
+        Imply(inRange, And(centered, outRange))
       case _ => True
     }
   }
@@ -641,7 +649,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
   *  @return List of rounded sections with their rounded bounding boxes, with a formula defining any new variables introduced
   *    to define the segment, e.g. x_i, y_i, m_i
   *    */
-  def alignZipped(zip:List[(Section,(TPoint,TPoint))], initD:Option[TPoint], index:Int):List[(Section,(TPoint,TPoint), Formula, TPoint)] = {
+  def alignZipped(zip:List[(Section,(TPoint,TPoint))], _initD:Option[TPoint], index:Int):List[(Section,(TPoint,TPoint), Formula, TPoint)] = {
     zip match {
       case Nil => Nil
       case (LineSection(Some(LineParam((x1,y1),(x2,y2))),Some(_), isUp), ((xx1, yy1), (xx2, yy2))) :: rest =>
@@ -649,9 +657,9 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
         val endDX = Variable("dx", Some(index)) // Redundant but simplifies design
         val endDY = Variable("dy", Some(index)) // Redundant but simplifies design
         val defaultD = normalizeVector((foldMinus(xx2,xx1), foldMinus(yy2,yy1)))
-        val endD:TPoint = initD.getOrElse(defaultD)
-        val endMTerm = initD match {case Some((dx,dy)) => foldDivide(dy,dx) case None => foldDivide(foldMinus(yy2,yy1),foldMinus(xx2,xx1))}
-        val endYTerm = initD match {case Some((dx,dy)) => foldPlus(foldTimes(foldDivide(endDY,endDX), foldMinus(xx2,xx1)),yy1) case None => yy2}
+        val endD:TPoint = defaultD //initD.getOrElse(defaultD)
+        val endMTerm = foldDivide(foldMinus(yy2,yy1),foldMinus(xx2,xx1))
+        val endYTerm = yy2
         val endYDef:Formula = Equal(endY, endYTerm)
         val endDXDef = Equal(endDX, endD._1)
         val endDYDef = Equal(endDY, endD._2)
@@ -660,10 +668,10 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
         val head = (LineSection(Some(LineParam((xx1,yy1),(xx2,endY))), Some(endMTerm), isUp), ((xx1,yy1),(xx2,endY)), allDefs, endD)
         head :: alignZipped(setStartY(rest,endY), Some(endD), index+1)
       case (ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(oldSlope)), ((xx1, yy1), (xx2, yy2))) :: rest =>
-        initD match {
-          case None => alignArcFromCenter(zip, index)
-          case Some((dx,dy)) => alignArcFromDirection(zip, index, dx, dy)
-        }
+        //initD match {
+          /*case None => */alignArcFromCenter(zip, index)
+          /*case Some((dx,dy)) => alignArcFromDirection(zip, index, dx, dy)
+        }*/
       case _ => ???
     }
   }
