@@ -894,8 +894,8 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
                 |  parameters params; /* set system parameters, e.g., = { .A=1.0 }; */
                 |  while (true) {
                 |    state current; /* read sensor values, e.g., = { .x=0.2 }; */
-                |    state input;   /* resolve non-deterministic assignments in the model */
-                |    state post = monitoredCtrl(current, &params, &input, &ctrl, &ctrlStep);
+                |    input in;   /* resolve non-deterministic assignments in the model */
+                |    state post = monitoredCtrl(current, &params, &in, &ctrl, &ctrlStep);
                 |    /* hand post actuator set values to actuators */
                 |  }
                 |  return 0;
