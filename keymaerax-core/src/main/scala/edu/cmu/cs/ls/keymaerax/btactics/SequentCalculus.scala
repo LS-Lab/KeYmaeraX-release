@@ -162,9 +162,17 @@ trait SequentCalculus {
 
   /** close: closes the branch when the same formula is in the antecedent and succedent or true or false close */
   lazy val close: BelleExpr = "close" by ((seq: Sequent) => {
-    seq.succ.zipWithIndex.find({ case (True, _) => true case (fml, _) => seq.ante.contains(fml) }) match {
-      case Some((True, i)) => ProofRuleTactics.closeTrue(SuccPos(i))
-      case Some((fml, i)) => close(AntePos(seq.ante.indexOf(fml)), SuccPos(i))
+    seq.succ.zipWithIndex.find({
+      case (True, _) => true
+      case (fml, _) =>
+       val x = seq.ante.contains(fml)
+        x
+    })
+    match {
+      case Some((True, i)) =>
+        ProofRuleTactics.closeTrue(SuccPos(i))
+      case Some((fml, i)) =>
+        close(AntePos(seq.ante.indexOf(fml)), SuccPos(i))
       case None => seq.ante.zipWithIndex.find({ case (False, _) => true case _ => false }) match {
         case Some((False, i)) => ProofRuleTactics.closeFalse(AntePos(i))
         case _ => DebuggingTactics.error("Inapplicable close")

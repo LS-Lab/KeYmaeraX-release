@@ -201,6 +201,7 @@ class CoasterXProver (spec:CoasterXSpec){
     pr6
   }
 
+
   def coHideL(i : Int, pr:Provable):BelleExpr = {
     val anteSize = pr.subgoals.head.ante.length
     List.tabulate(anteSize)(j => j + 1).filter(j => j != i).map(j => hideL(-j)).foldLeft(nil)((acc,e) => e & acc)
@@ -213,24 +214,17 @@ class CoasterXProver (spec:CoasterXSpec){
   // Finish off the arithmetic at the end of a line segment proof more effeciently than a big blind QE
   // @TODO: Everything has changed since this was first implemented - revisit and adjust
   def proveLineArith(pr: Provable, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):Provable = {
+    val (eHide, nYs) = hideYsAfter(iSection, nSections)
+    val pr1 = interpret(eHide, pr)
+    val pr2 = interpret (implyR(1), pr1)
     val yDefStart = 3
-    val nYs = {
-      val js = List.tabulate(nSections)(j => j + yDefStart).filter(j => !(j == iSection + yDefStart || j == iSection + yDefStart - 1 || j == iSection + yDefStart - 2))
-      nSections - js.length
-    }
     val Jstart = yDefStart + nYs + 4
+    //gConst, defs0, ..., defsn |- rect&glob&post_i
+    val dcPos = nYs + 2
+    val andPos = nYs + 2
+    val pr3 = interpret(andL(-andPos) & andL(-andPos) & andL('Llast) & andL(-andPos) , pr2)
+    val pr4 = interpret(andR(1) <(close, nil), pr3)
 
-    val pr4 = selectSection(iSection,nSections,pr)
-    // const, yi=_, global(0), (bound_i(0) -> post_i(0)) |- \forall t  t>= 0 -> (\forall s in [0,t] DC(s)) -> J(t)
-    val pr5 = interpret(allR(1) & implyR(1) & implyR(1), pr4)
-    // const, yi=_, global(0), (bound_i(0) -> post_i(0)), t >= 0, (\forall s in [0,t] DC) |- J(t)
-    val pr6 = interpret(implyL(-Jstart) <((hideL(-2)*(nYs+1)) & hideR(1) & QE, nil), pr5)
-    val proveGlobal = allL(Number(0))('Llast) & master()
-    // const,  yi=_, global(0), post_i(0), t>= 0, (\forall s in [0,t] DC) |- (global(t) & (&_j in sections{bound_j(t) -> post_j(t)})
-    val pr7 = interpret(andR(1) <(proveGlobal, nil) , pr6)
-    val dcPos = 6
-    // const,  yi=_, global(0), post_i(0), t>= 0, (\forall s in [0,t] DC) |- (&_j in sections{bound_j(t) -> post_j(t)}
-    val pr8 = interpret(allL(Variable("t_"))(-dcPos) & implyL(-dcPos) <(coHideL(dcPos - 1, pr7) & hideR(1) & QE, nil), pr7)
     def proveConjs(f:(Int,Provable)=>Provable, pr:Provable, conjDepth:Int, conjI:Int = 0):Provable = {
       conjDepth match {
         case 0 => f(conjI,pr)
@@ -244,17 +238,76 @@ class CoasterXProver (spec:CoasterXSpec){
     }
     // const, yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
     def provePost(iPost:Int, pr:Provable):Provable = {
+      val Imply(And(LessEqual(x0,_),LessEqual(_,x1)),_) = pr.subgoals.head.succ.head
+      val constRange = (x0,x1) match {case(_:Number,_:Number) => true case _ => false}
+      val eAggressive = coHideL(dcPos, pr) & implyR(1) & hideR(1) & master()
+      val eConservative = {
+        val nHides = pr.subgoals.head.ante.length-dcPos
+        // gConst, global, ydefs, range, ... |- contradictory_range -> ...
+        hideL(-(dcPos+1))*nHides & implyR(1) & hideL(-1) & hideR(1) & master()
+      }
       val e:BelleExpr =
-        if(iPost == iSection || iPost == iSection + 1) QE
+        if(iPost == iSection || iPost == iSection + 1) master()
         // For the - 1 case we don't have a contradiction argument (overlaps at one point), but
         // splitting before QE seems to speed up vastly in the cases I've tested
         else if(iPost == iSection - 1) {master()}
-        else {coHideL(dcPos, pr) & implyR(1) & hideR(1) & QE}
+        else if(constRange) eAggressive
+        else eConservative
       val pr1 = interpret(e, pr)
       pr1
     }
     // yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
-    val pr9 = proveConjs(provePost, pr8, nSections-1)
+    val pr9 = proveConjs(provePost, pr4, nSections-1)
+    pr9
+  }
+
+  def proveArcArith(pr: Provable, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):Provable = {
+    val (eHide, nYs) = hideYsAfter(iSection, nSections)
+    val pr1 = interpret(eHide, pr)
+    val pr2 = interpret (implyR(1), pr1)
+    val yDefStart = 3
+    val Jstart = yDefStart + nYs + 4
+    //gConst, defs0, ..., defsn |- rect&glob&post_i
+    val dcPos = nYs + 2
+    val andPos = nYs + 2
+    val pr3 = interpret(andL(-andPos) & andL(-andPos) & andL('Llast) & andL(-andPos) & andL('Llast)*4 , pr2)
+    val pr4 = interpret(andR(1) <(andR(1)<(close, close), nil), pr3)
+
+    def proveConjs(f:(Int,Provable)=>Provable, pr:Provable, conjDepth:Int, conjI:Int = 0):Provable = {
+      conjDepth match {
+        case 0 => f(conjI,pr)
+        case _ =>
+          val pr1 = interpret(andR(1), pr)
+          val prHead = Provable.startProof(pr1.subgoals.head)
+          val prHeadProved = f(conjI, prHead)
+          val prTail = pr1(prHeadProved,0)
+          proveConjs(f, prTail, conjDepth - 1, conjI + 1)
+      }
+    }
+    // const, yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
+    def provePost(iPost:Int, pr:Provable):Provable = {
+      val Imply(And(LessEqual(x0,_),LessEqual(_,x1)),_) = pr.subgoals.head.succ.head
+      val And(LessEqual(x2,_),LessEqual(_,x3)) = pr.subgoals.head.ante(dcPos-1)
+      // @TODO: Fix in lines as well
+      val constRange = (x0,x1,x2,x3) match {case(_:Number,_:Number, _:Number, _:Number) => true case _ => false}
+      val eAggressive = coHideL(dcPos, pr) & implyR(1) & hideR(1) & master()
+      val eConservative = {
+        val nHides = pr.subgoals.head.ante.length-dcPos
+        // gConst, global, ydefs, range, ... |- contradictory_range -> ...
+        hideL(-(dcPos+1))*nHides & implyR(1) & hideL(-1) & hideR(1) & master()
+      }
+      val e:BelleExpr =
+        if(iPost == iSection || iPost == iSection + 1) master()
+        // For the - 1 case we don't have a contradiction argument (overlaps at one point), but
+        // splitting before QE seems to speed up vastly in the cases I've tested
+        else if(iPost == iSection - 1) {master()}
+        else if(constRange) eAggressive
+        else eConservative
+      val pr1 = interpret(e, pr)
+      pr1
+    }
+    // yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
+    val pr9 = proveConjs(provePost, pr4, nSections-1)
     pr9
   }
 
@@ -274,7 +327,7 @@ class CoasterXProver (spec:CoasterXSpec){
     // const, yi=_, global(0), (op,)_j in sections{bound_j(0) -> post_j(0)} |- " "
     val pr4 = selectSection(iSection,nSections,pr)
     // const, yi=_, global(0), (bound_i(0) -> post_i(0)), t >= 0, (\forall s in [0,t] DC) |- J(t)
-    val pr6 = interpret(implyL(-Jstart) <((hideL(-2)*(nYs+1)) & hideR(1) & QE, nil), pr4)
+    val pr6 = interpret(implyL(-Jstart) <((hideL(-2)*(nYs+1)) & hideR(1) & master(), nil), pr4)
     val proveGlobal = allL(Number(0))('Llast) & master()
     // const,  yi=_, global(0), post_i(0), t>= 0, (\forall s in [0,t] DC) |- (global(t) & (&_j in sections{bound_j(t) -> post_j(t)})
     val pr7 = interpret(dW(1), pr6)
@@ -585,11 +638,12 @@ class CoasterXProver (spec:CoasterXSpec){
   }
 
   def hideYsAfter(iSection:Int, nSections:Int, yDefStart:Int = 2):(BelleExpr, Int) = {
-    val js = List.tabulate(nSections)(j => j + yDefStart).filter(j => j == iSection + yDefStart + 1)
+    val js = List.tabulate(nSections)(j => j + yDefStart).filter(j => j > iSection + yDefStart + 1)
     val e = js.map(i => hideL(-i)).foldLeft(nil)((acc, e) => e & acc)
     (e, nSections - js.length)
   }
 
+  // TODO: document
   def selectSection(iSection:Int, nSections:Int, pr:Provable):Provable = {
     val gStart = 2
     val JStart = 1
@@ -642,9 +696,10 @@ class CoasterXProver (spec:CoasterXSpec){
           }
         val prOut =
           timeFn("Arc QE", () => {
-            interpret(dW(1) & QE, pr1)})
-        assert(prOut.isProved)
-        prOut
+            interpret(dW(1), pr1)})
+        val prOut2 = proveArcArith(prOut,bl,tr,iSection,nSections)
+        assert(prOut2.isProved)
+        prOut2
       }
       case LineSection(Some(LineParam(bl,tr)), Some(grad), isUp) => {
         println(isUp)
@@ -690,7 +745,10 @@ class CoasterXProver (spec:CoasterXSpec){
           //@TODO: Don't think need to hide anything because case selection already hides
           val (eHide,_) = hideYs(iSection, nSections)
           val pr7 = timeFn("Line Case Step 7", {() => interpret(eHide , pr6a)})
-          val pr8 = timeFn("Line Case Step 8", {() => interpret(QE(), pr7)})
+          val pr8 = timeFn("Line Case Step 8", {() =>
+            //interpret(master(), pr7)
+            proveLineArith(pr7,bl,tr,iSection,nSections)
+            })
           pr8
         }
         timeFn("Line Case", doLineCase)
@@ -723,7 +781,8 @@ class CoasterXProver (spec:CoasterXSpec){
       case (p1 :: p2 :: Nil, s1 :: Nil, pr :: Nil, d :: Nil) => componentTactic(pr, p1, p2, s1, v, yInit, i, nSections, d)
       case (p1 :: p2 :: ps, s1 :: ss, pr :: prs, d::ds) =>
         val sg = componentTactic(pr, p1, p2, s1, v, yInit, i, nSections,d)
-        proveAllComponents(global(sg, 0), prs, p2::ps, ss, v, yInit, i+1, nSections,ds)
+        val plugged = global(sg, 0)
+        proveAllComponents(plugged, prs, p2::ps, ss, v, yInit, i+1, nSections,ds)
       case _ => ???
     }
   }
