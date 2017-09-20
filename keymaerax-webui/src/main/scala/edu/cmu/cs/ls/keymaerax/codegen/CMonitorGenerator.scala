@@ -87,9 +87,9 @@ class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
       .filter({
         case Function("abs", None, Real, Real, true) => false
         case Function("min" | "max", None, Tuple(Real, Real), Real, true) => false
-        case Function(name, _, Unit, _, _) => !exclude.exists(v => v.name == name.stripSuffix("post"))
+        case Function(name, _, Unit, _, _) => !exclude.exists(_.name == name.stripSuffix("post"))
         case _: Function => false
-        case BaseVariable(name, _, _) => !exclude.exists(v => v.name == name.stripSuffix("post"))
+        case BaseVariable(name, _, _) => !exclude.exists(_.name == name.stripSuffix("post"))
       })
 
   /** Compiles primitive expressions with the appropriate params/curr/pre struct location. */
