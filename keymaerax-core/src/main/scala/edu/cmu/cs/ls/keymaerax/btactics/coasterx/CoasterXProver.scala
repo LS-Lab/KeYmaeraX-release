@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver.TIMEVAR
 import edu.cmu.cs.ls.keymaerax.btactics.Kaisar.interpret
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser.{TPoint => _, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{dW, _}
-import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXSpec.TPoint
+import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXSpec.{TPoint}
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import Augmentors._
@@ -24,7 +24,7 @@ import scala.collection.immutable
 * @TODO: Function returning tactic with proof repeats
 * @TODO: Function returning tactic with proof reuse
 * */
-class CoasterXProver (spec:CoasterXSpec){
+class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
 
   // Record timing information for a function call so we can measure optimizations to the CoasterX prover
   val MAX_TIMEFN_DEPTH = 10
@@ -49,7 +49,7 @@ class CoasterXProver (spec:CoasterXSpec){
   }
 
   // The main loop invariant for a full model
-  def invariant(align:(AFile,Formula)):Formula = {
+  def invariant(align:(AFile,Formula),env:AccelEnvelope):Formula = {
     val (aligned@(points, segments, v0pre, _, inits), segmentDefs) = align
     val v0 = s"($v0pre)*(g()^(1/2))".asTerm
     val nonemptySegs = segments.filter(!spec.segmentEmpty(_))
@@ -58,7 +58,7 @@ class CoasterXProver (spec:CoasterXSpec){
     val y0 = points.head._2
     val energyConserved = s"v^2 + 2*y*g() = ($v0)^2 + 2*($y0)*g()".asFormula
     val globalPost = And("v > 0".asFormula, energyConserved)
-    val fml = And(globalPost, withBounds.zipWithIndex.map(spec.segmentPost).reduceRight[Formula] { case (x, y) => And(x, y) })
+    val fml = And(globalPost, withBounds.zipWithIndex.map(spec.segmentPost(env)).reduceRight[Formula] { case (x, y) => And(x, y) })
     fml
   }
 
@@ -410,8 +410,8 @@ class CoasterXProver (spec:CoasterXSpec){
       case None =>
         val a1: Formula = "(g() > 0)".asFormula
         val a2: Formula = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3: Formula = "(x0()<=x&x<=x1()->(dx0()*y=dy0()*x+dx0()*c()))".asFormula
-        val a5: Formula = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1())) -> dx0()*v^2 > 2*(x1()-x0())*dy0()*g()".asFormula
+        val a3: Formula = "(x0()<=x&x<=x1()->((dyLo()*g()<=-dy0()*g()&-dy0()*g()<=dyHi()*g())&dx0()*y=dy0()*x+dx0()*c()))".asFormula
+        val a5: Formula = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1())) ->  dx0()*v^2 > 2*(x1()-x0())*dy0()*g()".asFormula
         val a6: Formula = "(x1() > x0())".asFormula
         val a7: Formula = "(dx0()^2 + dy0()^2 = 1)".asFormula
         val a8: Formula = "dx0() > 0".asFormula
@@ -763,8 +763,8 @@ class CoasterXProver (spec:CoasterXSpec){
           val y0 = bl._2
           val y1 = tr._2
           val Box(Compose(Assign(BaseVariable("dx", None, Real), dx0),Compose(Assign(BaseVariable("dy", None, Real),dy0),ODESystem(_, constr))),_) = pr.conclusion.succ.head//s"(($x0) <= x & x <= ($x1))&(($y0) <= y & y <= ($y1))".asFormula
-          val thisInv = spec.segmentPost((section, (bl,tr), initD),iSection)
-          val Imply(_, Equal(_, Plus(_, c))) = thisInv
+          val thisInv = spec.segmentPost(env)((section, (bl,tr), initD),iSection)
+          val Imply(_, And(And(_accLo,_accHi),Equal(_, Plus(_, c)))) = thisInv
           val HY = hideYsAfter(iSection, nSections)._1
           //val asgn = DLBySubst.assignEquality
           val asgn = assignb
@@ -903,7 +903,7 @@ class CoasterXProver (spec:CoasterXSpec){
     val parsed = CoasterXParser.parseFile(fileName).get
     val align@(aligned@(points, segments, v0pre, _, ds), segmentDefs) = spec.prepareFile(parsed)
     val v0 = s"($v0pre)*(g()^(1/2))".asTerm
-    val specc = spec.fromAligned(align)
+    val specc = spec.fromAligned(align,env)
     val nSections = segments.length-1
     val pr = Provable.startProof(specc)
     val pr1 = interpret(implyR(1), pr)
@@ -916,7 +916,7 @@ class CoasterXProver (spec:CoasterXSpec){
     // globalConst,initState, lc1, &_2^n {lc_i}   |-
     val unpackLocalConsts = List.tabulate(nSections-2){case i => andL(-(i+4))}.foldLeft(nil)((acc,e) => acc & e)
     val pr1e = interpret(unpackLocalConsts, pr1c)
-    val inv = invariant(align)
+    val inv = invariant(align,env)
     val pr2 = interpret(DLBySubst.loop(inv, pre = nil)(1), pr1e)
     val firstBranch = Provable.startProof(pr2.subgoals.head)
     val firstResult = preImpliesInv(firstBranch, nSections)

@@ -1,9 +1,78 @@
 package edu.cmu.cs.ls.keymaerax.btactics.coasterx
 
+import edu.cmu.cs.ls.keymaerax.btactics.coasterx.AccelEnvelope.EnvScalar
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser.{Section, _}
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXSpec._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+
+object AccelEnvelope {
+  type EnvScalar = Number
+  def scalarLeq(x:EnvScalar,y:EnvScalar):Boolean = x.value <= y.value
+  def scalarGeq(x:EnvScalar,y:EnvScalar):Boolean = x.value >= y.value
+  def scalarMin(x:EnvScalar, y:EnvScalar):EnvScalar = if(scalarLeq(x,y)) x else y
+  def scalarMax(x:EnvScalar, y:EnvScalar):EnvScalar = if(scalarLeq(x,y)) y else x
+  val NEG_INF = Number(-1000.0)
+  val POS_INF = Number(1000.0)
+  // Based on ASTM F2291-17 limits for SUSTAINED acceleration >= 40s, making this conservative
+  // For short ranges smaller numbers are OK.
+  val MIN_RAD:EnvScalar = Number(-1.1)
+  val MAX_RAD:EnvScalar = Number(2.0)
+  // Ranges for 0 seconds
+  val MINN_RAD:EnvScalar = Number(-2.0)
+  val MAXX_RAD:EnvScalar = Number(6.0)
+
+  // Same for tangential acceleration, should always be in [-1,1] range for pure gravity coaster
+  val MIN_TAN:EnvScalar = Number(-1.5)
+  val MAX_TAN:EnvScalar = Number(2.5)
+  val MINN_TAN:EnvScalar = Number(-3.5)
+  val MAXX_TAN:EnvScalar = Number(6.0)
+  val empty = AccelEnvelope(POS_INF, NEG_INF, POS_INF, NEG_INF)
+}
+case class AccelEnvelope(rMin:EnvScalar, rMax:EnvScalar, tMin:EnvScalar, tMax:EnvScalar) {
+  import AccelEnvelope._
+  def extendR(r:EnvScalar):AccelEnvelope = {
+    AccelEnvelope(scalarMin(rMin,r), scalarMax(rMax,r), tMin, tMax)
+  }
+
+  def extendT(t:EnvScalar):AccelEnvelope = {
+    AccelEnvelope(rMin,rMax,scalarMin(t,tMin),scalarMax(t,tMax))
+  }
+
+  // Ratio of model units to meters
+  val scale = 100.0
+  val g = 9.80665
+  // @TODO: Probably wrong
+  private def scaleAccel(t:EnvScalar):EnvScalar = {
+    Number(t.value/(scale*scale*g))
+  }
+  // Not intended for soundness criticality, but as a check during spec generation to ensure there's some chance of the
+  // spec being useful
+  def isSafe:Boolean = {
+    scalarLeq(AccelEnvelope.MIN_TAN,tMin) && scalarLeq(tMax,AccelEnvelope.MAX_TAN) && scalarLeq(AccelEnvelope.MIN_RAD,rMin) && scalarLeq(rMax, AccelEnvelope.MAX_RAD)
+  }
+
+  val DEFAULT_TOLERANCE = Number(0.001)
+
+  def relaxBy(tolerance:EnvScalar=DEFAULT_TOLERANCE):AccelEnvelope = {
+    AccelEnvelope(Number(rMin.value-tolerance.value), Number(rMax.value+tolerance.value),Number(tMin.value-tolerance.value),Number(tMax.value+tolerance.value))
+  }
+
+  private def tanSpec(dy:Term):Formula = {
+    s"($tMin)*g() <= -($dy)*g() & -($dy)*g() <= ($tMax)*g()".asFormula
+  }
+
+  def lineSpec(dy:Term):Formula = tanSpec(dy)
+
+  def radSpec(r:Term, isCw:Boolean):Formula = {
+    val a = if(isCw) s"v^2/($r)".asTerm else s"-v^2/($r)".asTerm
+    s"($rMin)<=($a)&($a)<=($rMax)".asFormula
+  }
+
+  def arcSpec(dy:Term, r:Term, isCw:Boolean):Formula = {
+    And(radSpec(r, isCw), tanSpec(dy))
+  }
+}
 
 /* Generate dL specification for safety of CoasterX models from a file
 * */
@@ -387,19 +456,19 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
     }
   }
 
-  def segmentPost(segBounds:((Section,(TPoint,TPoint), TPoint), Int)):Formula = {
+  def segmentPost(env:AccelEnvelope)(segBounds:((Section,(TPoint,TPoint), TPoint), Int)):Formula = {
     val ((seg, (start, end), initD), i) = segBounds
     val x = Variable("x")
     val y = Variable("y")
+    val (dxval, dyval) = iDirection(i)
     seg match {
       case LineSection(Some(LineParam((x1, y1), (x2, y2))), Some(gradient), isUp) =>
-        val (dxval, dyval) = iDirection(i)
         val inRange = And(LessEqual(x1, x), LessEqual(x, x2))
         val dxInv = s"dx=($dxval)".asFormula
         val dyInv = s"dy=($dyval)".asFormula
         //val dInv = And(dxInv, dyInv)
         val onTrack = Equal(foldTimes(dxval, y), foldPlus(foldTimes(dyval, x), foldTimes(dxval,yOffset((x1, y1), (x2, y2)))))
-        Imply(inRange, onTrack)
+        Imply(inRange, And(env.lineSpec(dyval),onTrack))
       case ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(gradient)) =>
         val ((x3, y3), (x4, y4)) = (start,end)
         val inRange = And(LessEqual(x3, x), LessEqual(x, x4))
@@ -420,7 +489,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
             (s"dx=-(y-($cy))/($r)".asFormula, s"dy=(x-($cx))/($r)".asFormula)
           }
         //val dInv = And(dxInv, dyInv)
-        Imply(inRange, And(centered, outRange))
+        Imply(inRange, And(centered, And(outRange,env.arcSpec(dyval,r,isCw))))
       case _ => True
     }
   }
@@ -461,7 +530,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
   def iDirection(i:Int):TPoint = { (Variable("dx", Some(i)), Variable("dy",Some(i))) }
   def iRadius(i:Int):Term = { Variable("r", Some(i))}
 
-  def fromAligned(align:(AFile,Formula)):Formula = {
+  def fromAligned(align:(AFile,Formula),env:AccelEnvelope):Formula = {
     val (aligned@(points, segments, v0pre, _, dirs), segmentDefs) = align
     val v0 = s"($v0pre)*(g()^(1/2))".asTerm
     val nonemptySegs = segments.filter(!segmentEmpty(_))
@@ -471,12 +540,12 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
     val y0 = points.head._2
     val energyConserved = s"v^2 + 2*y*g() = ($v0)^2 + 2*($y0)*g()".asFormula
     val globalPost = And("v > 0".asFormula, energyConserved)
-    val post = And(globalPost, withBounds.zipWithIndex.map(segmentPost).reduceRight[Formula]{case (x,y) => And(x,y)})
+    val post = And(globalPost, withBounds.zipWithIndex.map(segmentPost(env)).reduceRight[Formula]{case (x,y) => And(x,y)})
     Imply(And(segmentDefs,pre),Box(Loop(ode), post))
   }
 
   def apply(file:CoasterXParser.File):Formula = {
-    fromAligned(prepareFile(file))
+    fromAligned(prepareFile(file), envelope(file))
   }
 
 // BEGIN ROUNDING OF FLOATY MODELS TO INTEGER PRECISION
@@ -685,6 +754,48 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
         val (points, secs,fmls,xs) = unzipConsecutive(rest)
         (start :: points, sec :: secs, And(fml,fmls), x :: xs)
     }
+  }
+
+
+
+
+  def envelope(y0:Number, v0:Number, segs:List[(Section,(TPoint,TPoint))]):AccelEnvelope = {
+    //val g = 9.80665
+    segs.foldRight(AccelEnvelope.empty){case((sec,((x1:Number,y1:Number),(x2:Number,y2:Number))), env) =>
+      sec match {
+        case (LineSection(Some(LineParam(bl,tr)),Some(grad), isUp)) =>
+          // Line sections - no centripetal acceleration
+          val (dx,dy) = lineDir(bl,tr)
+          env.extendT(Number(-dy.asInstanceOf[Number].value))
+        case (ArcSection(Some(ArcParam(bl,tr,theta1,deltaTheta)), Some(grad))) =>
+          val rad = (tr._2.asInstanceOf[Number].value-bl._2.asInstanceOf[Number].value)/2
+          val cx = (tr._1.asInstanceOf[Number].value + bl._1.asInstanceOf[Number].value)/2
+          /* Centripetal acceleration perpendicular to track */
+          def radialAt(y:Number):Number = {
+            val yy = y.value
+            Number((v0.value*v0.value + 2*y0.value + 2*yy)/rad)
+          }
+          /* Acceleration tangential to track */
+          def tangentialAt(x:Number):Number = {
+            val isCw = deltaTheta.value < 0
+            val dy =
+              if (isCw) {
+                (cx-x.value)/rad
+              } else {
+                (x.value-cx)/rad
+              }
+            // Leave out factor of g()
+            Number(-dy)
+          }
+          env.extendR(radialAt(y2)).extendR(radialAt(y1)).extendT(tangentialAt(x2)).extendT(tangentialAt(x1))
+      }}
+  }
+
+  def envelope(file:File):AccelEnvelope = {
+    val (points, segments, v0, tent) = file
+    val nonemptySegs = segments.filter(!segmentEmpty(_))
+    val withBounds = zipConsecutive2(nonemptySegs,points)
+    envelope(withBounds.head._2._1._2.asInstanceOf[Number], v0, withBounds)
   }
 
   /* Adjust y-coordinates such that all adjacent track segments are tangent to each other, while leaving x-coordinates alone

@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
+import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser.File
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.{CoasterXParser, CoasterXProver, CoasterXSpec}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -157,45 +158,50 @@ class CoasterXTests extends TacticTestBase {
     printFileSpec(simpleValley)
   }
 
-  def prover() = new CoasterXProver(new CoasterXSpec())
+  def prover(file:String) = {
+    val spec = new CoasterXSpec()
+    val parsed = CoasterXParser.parseFile(file).get
+    new CoasterXProver(spec,spec.envelope(parsed))(file)
+  }
+
   "Proof Generator" should "generate proof for straight line" in { withMathematica(qeTool => {
-    val pr = prover()(straightLine)
+    val pr = prover(straightLine)
     pr shouldBe 'proved
     })
   }
 
   it should "generate proof for quarter arc" in { withMathematica(qeTool => {
-    val pr = prover()(quarterArc)
+    val pr = prover(quarterArc)
     pr shouldBe 'proved
   })}
 
   it should "generate proof for half arc" in {  withMathematica(qeTool => {
-    val pr = prover()(halfArc)
+    val pr = prover(halfArc)
     pr shouldBe 'proved
   })}
 
   it should "generate proof for second half arc" in {  withMathematica(qeTool => {
-    val pr = prover()(secondHalfArc)
+    val pr = prover(secondHalfArc)
     pr shouldBe 'proved
   })}
 
   it should "generate proof for full arc" in {  withMathematica(qeTool => {
-    val pr = prover()(fullArc)
+    val pr = prover(fullArc)
     pr shouldBe 'proved
   })}
 
   it should "generate proof for hill" in {  withMathematica(qeTool => {
-    val pr = prover()(simpleHill)
+    val pr = prover(simpleHill)
     pr shouldBe 'proved
   })}
 
   it should "generate proof for valley" in {  withMathematica(qeTool => {
-    val pr = prover()(simpleValley)
+    val pr = prover(simpleValley)
     pr shouldBe 'proved
   })}
 
   it should "generate proof for example coaster" in { withMathematica(qeTool => {
-    val pr = prover()(exampleFile1)
+    val pr = prover(exampleFile1)
     pr shouldBe 'proved
   })
   }
