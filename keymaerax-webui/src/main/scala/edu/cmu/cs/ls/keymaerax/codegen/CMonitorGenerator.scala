@@ -47,11 +47,18 @@ class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
          |  else return post;""".stripMargin
 
     val (distBody, satBody) = kind match {
+      //@note unlike C convention, distance is 0.0 means monitor is satisfied (<=0 is satisfied, >0 is not satisfied)
       case "boolean" => (printMonitor(expr, parameters) + " ? 0.0 : 1.0", "boundaryDist(pre,curr,params) <= 0.0")
-      case "metric" =>
-        assert(expr.isInstanceOf[LessEqual] || expr.isInstanceOf[Less], "Expected <= or < expression as monitor, but got " + expr.prettyString)
-        val monitor = printMonitor(expr, parameters)
-        (monitor.substring(0, monitor.indexOf("<")), "boundaryDist(pre,curr,params)" + monitor.substring(monitor.indexOf("<")))
+      case "metric" => expr match {
+        case LessEqual(l, r) =>
+          val lhs = printMonitor(l, parameters)
+          val rhs = printMonitor(r, parameters)
+          (lhs, "boundaryDist(pre,curr,params) < " + rhs)
+        case Less(l, r) =>
+          val lhs = printMonitor(l, parameters)
+          val rhs = printMonitor(r, parameters)
+          (lhs, "boundaryDist(pre,curr,params) <= " + rhs)
+      }
     }
 
     s"""$monitorDistFuncHead {
@@ -109,6 +116,7 @@ class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
     */
   private def printMonitor(e: Expression, parameters: Set[NamedSymbol]): String = e match {
     case f: Formula if f.isFOL => primitiveExprGenerator(parameters)(f)
+    case t: Term => primitiveExprGenerator(parameters)(t)
     case _ => throw new CodeGenerationException("The input expression: \n" + KeYmaeraXPrettyPrinter(e) + "\nis expected to be a FOL formula.")
   }
 }

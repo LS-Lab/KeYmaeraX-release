@@ -21,6 +21,16 @@ import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
  */
 class CCodeGeneratorTests extends TacticTestBase {
 
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter()
+  }
+
+  override def afterEach(): Unit = {
+    CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter()
+    super.afterEach()
+  }
+
   // terms
 
   /** Wraps the monitor expression in the monitor boilerplate code. */
@@ -30,8 +40,8 @@ class CCodeGeneratorTests extends TacticTestBase {
     val (safetyDistBody, monitorSatisfiedBody) = kind match {
       case "boolean" => (compiledMonitorExpr + " ? 0.0 : 1.0", "boundaryDist(pre,curr,params) <= 0.0")
       case "metric" => (
-        compiledMonitorExpr.substring(0, compiledMonitorExpr.indexOf("<")),
-        "boundaryDist(pre,curr,params)" + compiledMonitorExpr.substring(compiledMonitorExpr.indexOf("<")))
+        compiledMonitorExpr.substring(0, compiledMonitorExpr.indexOf(" <")),
+        "boundaryDist(pre,curr,params)" + compiledMonitorExpr.substring(compiledMonitorExpr.indexOf(" <")))
     }
 
     def structBody(body: String) = if (body.isEmpty) "" else "{\n  " + body + "\n} "
@@ -95,6 +105,19 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   "nullary functions" should "compile to parameters" in {
     (new CGenerator(new CMonitorGenerator()))("x()>1".asFormula) shouldBe expectedMonitor("params->x > 1", "long double x;")
+  }
+
+  "terms" should "compile plain" in {
+    (new CGenerator(new CMonitorGenerator()))("x+3*y > 1".asFormula, Set(Variable("x"))) shouldBe
+      expectedMonitor("(pre.x)+((3)*(params->y)) > 1", "long double y;", "long double x;")
+  }
+
+  it should "compile with log" in {
+    CPrettyPrinter.printer = new CExpressionLogPrettyPrinter()
+    (new CGenerator(new CMonitorGenerator()))("x+3*y > 1".asFormula, Set(Variable("x"))) shouldBe
+      expectedMonitor(
+        """eval(gt(plus(variable(pre.x, "pre.x"), times(number(3), variable(params->y, "params->y"))), number(1)))""",
+        "long double y;", "long double x;")
   }
 
   "power" should "compile int exp" in {
@@ -279,7 +302,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val genCode = (new CGenerator(new CMonitorGenerator("metric")))(monitorExp, vars)
     genCode shouldBe
       expectedMonitor(
-        "fmaxl((((curr.dxo)*(curr.dxo))+((curr.dyo)*(curr.dyo)))-((params->V)*(params->V)), fminl(fmaxl(fmaxl((0)-(params->ep), (0)-(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(pre.xo), (pre.xo)-(curr.xo)), fmaxl((curr.yo)-(pre.yo), (pre.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo), (curr.dxo)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo), (curr.dyo)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl((curr.w)-(pre.w), (pre.w)-(curr.w))), fmaxl((curr.a)-(-(params->B)), (-(params->B))-(curr.a))), fmaxl((curr.r)-(pre.r), (pre.r)-(curr.r))), fmaxl(curr.t, (0)-(curr.t)))), fminl(fmaxl(fmaxl(pre.v, (0)-(pre.v)), fmaxl(fmaxl((0)-(params->ep), (0)-(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(pre.xo), (pre.xo)-(curr.xo)), fmaxl((curr.yo)-(pre.yo), (pre.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo), (curr.dxo)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo), (curr.dyo)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl(curr.w, (0)-(curr.w))), fmaxl(curr.a, (0)-(curr.a))), fmaxl((curr.r)-(pre.r), (pre.r)-(curr.r))), fmaxl(curr.t, (0)-(curr.t))))), fmaxl(fmaxl((-(params->B))-(curr.a), (curr.a)-(params->A)), fmaxl(fminl((0)-(curr.r), curr.r), fmaxl(fmaxl(((curr.w)*(curr.r))-(pre.v), (pre.v)-((curr.w)*(curr.r))), fmaxl(fminl((((((pre.v)*(pre.v))/((2)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1))*((((params->A)/(2))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))-(fabsl((pre.x)+(-(curr.xo)))), (((((pre.v)*(pre.v))/((2)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1))*((((params->A)/(2))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))-(fabsl((pre.y)+(-(curr.yo))))), fmaxl(fmaxl((0)-(params->ep), (0)-(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(curr.xo), (curr.xo)-(curr.xo)), fmaxl((curr.yo)-(curr.yo), (curr.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo), (curr.dxo)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo), (curr.dyo)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl((curr.w)-(curr.w), (curr.w)-(curr.w))), fmaxl((curr.a)-(curr.a), (curr.a)-(curr.a))), fmaxl((curr.r)-(curr.r), (curr.r)-(curr.r))), fmaxl(curr.t, (0)-(curr.t))))))))))) < 0",
+        "fmaxl((((curr.dxo)*(curr.dxo))+((curr.dyo)*(curr.dyo)))-((params->V)*(params->V)), fminl(fmaxl(fmaxl((0)-(params->ep), (0)-(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(pre.xo), (pre.xo)-(curr.xo)), fmaxl((curr.yo)-(pre.yo), (pre.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo), (curr.dxo)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo), (curr.dyo)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl((curr.w)-(pre.w), (pre.w)-(curr.w))), fmaxl((curr.a)-(-(params->B)), (-(params->B))-(curr.a))), fmaxl((curr.r)-(pre.r), (pre.r)-(curr.r))), fmaxl(curr.t, (0)-(curr.t)))), fminl(fmaxl(fmaxl(pre.v, (0)-(pre.v)), fmaxl(fmaxl((0)-(params->ep), (0)-(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(pre.xo), (pre.xo)-(curr.xo)), fmaxl((curr.yo)-(pre.yo), (pre.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo), (curr.dxo)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo), (curr.dyo)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl(curr.w, (0)-(curr.w))), fmaxl(curr.a, (0)-(curr.a))), fmaxl((curr.r)-(pre.r), (pre.r)-(curr.r))), fmaxl(curr.t, (0)-(curr.t))))), fmaxl(fmaxl((-(params->B))-(curr.a), (curr.a)-(params->A)), fmaxl(fminl((0)-(curr.r), curr.r), fmaxl(fmaxl(((curr.w)*(curr.r))-(pre.v), (pre.v)-((curr.w)*(curr.r))), fmaxl(fminl((((((pre.v)*(pre.v))/((2)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1))*((((params->A)/(2))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))-(fabsl((pre.x)+(-(curr.xo)))), (((((pre.v)*(pre.v))/((2)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1))*((((params->A)/(2))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))-(fabsl((pre.y)+(-(curr.yo))))), fmaxl(fmaxl((0)-(params->ep), (0)-(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(curr.xo), (curr.xo)-(curr.xo)), fmaxl((curr.yo)-(curr.yo), (curr.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo), (curr.dxo)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo), (curr.dyo)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl((curr.w)-(curr.w), (curr.w)-(curr.w))), fmaxl((curr.a)-(curr.a), (curr.a)-(curr.a))), fmaxl((curr.r)-(curr.r), (curr.r)-(curr.r))), fmaxl(curr.t, (0)-(curr.t))))))))))) <= 0",
         paramDecls, stateDecls, "",
         "metric")
   }
