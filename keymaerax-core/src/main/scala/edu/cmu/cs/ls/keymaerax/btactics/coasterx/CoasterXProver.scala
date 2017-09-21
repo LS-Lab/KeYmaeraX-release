@@ -10,8 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXSpec.TPoint
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import Augmentors._
-
-import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.core.{And, _}
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx._
 import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -84,7 +83,9 @@ class CoasterXProver (spec:CoasterXSpec){
     def selectCy = selectDefs(-2) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-1)*/
     val (selectR, selectCx, selectCy) = (nil,nil,nil)
     val mainCut = s"(dx=-(($cy)-y)/($r) & dy=(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & x <= ($cx) & ($cy) <= y & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
-    val pr0 = interpret(dC(mainCut)(1), pr)
+    //val odePos = Position(1, 1::1::Nil)
+    val pr00 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
+    val pr0 = interpret(dC(mainCut)(1), pr00)
     val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
     val cut1 = s"($x1) > ($x0)".asFormula
     val pr1a = timeFn("ArcQ2 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & hide1 & QE)), pr0)})
@@ -121,7 +122,8 @@ class CoasterXProver (spec:CoasterXSpec){
     def selectCy = selectDefs(-3) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-1)*/
     val (selectR, selectCx, selectCy) = (nil,nil,nil)
     val mainCut = s"(dx=-(($cy)-y)/($r) & dy=(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & y >= ($cy)  & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
-    val pr0 = interpret(dC(mainCut)(1), pr)
+    val pr00 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
+    val pr0 = interpret(dC(mainCut)(1), pr00)
     val cut1 = s"($x1) > ($x0)".asFormula
     val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
     val pr1a = timeFn("ArcQ1 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & hide1 & QE)), pr0)})
@@ -150,7 +152,8 @@ class CoasterXProver (spec:CoasterXSpec){
     val dx0 = s"(($cy)-y)/($r)".asTerm
     val dy0 = s"-(($cx)-x)/($r)".asTerm
     val mainCut = s"(dx=($dx0) & dy=-(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & v>0 & y < ($cy) & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
-    val pr0 = interpret(dC(mainCut)(1), pr)
+    val pr00 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
+    val pr0 = interpret(dC(mainCut)(1), pr00)
     val cut1 = s"($x1) > ($x0)".asFormula
     val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
     val pr1a = timeFn("ArcQ3 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & hide1 & QE)), pr0)})
@@ -178,9 +181,10 @@ class CoasterXProver (spec:CoasterXSpec){
     val r = spec.iRadius(iSection)
     val dx0 = s"(($cy)-y)/($r)".asTerm
     val dy0 = s"-(($cx)-x)/($r)".asTerm
-    val Box(ODESystem(_,evol),_) = pr.conclusion.succ.head
+    val Box(Compose(_,Compose(_,ODESystem(_,evol))),_) = pr.conclusion.succ.head
     val mainCut = s"(dx=($dx0) & dy=-(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & v>0 & y < ($cy) & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
-    val pr0 = interpret(dC(mainCut)(1), pr)
+    val pr00 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
+    val pr0 = interpret(dC(mainCut)(1), pr00)
     val cut1 = s"($x1) > ($x0)".asFormula
     val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
     val pr1a = timeFn("ArcQ4 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & hide1 & QE)), pr0)})
@@ -203,56 +207,74 @@ class CoasterXProver (spec:CoasterXSpec){
 
 
   def coHideL(i : Int, pr:Provable):BelleExpr = {
-    val anteSize = pr.subgoals.head.ante.length
-    List.tabulate(anteSize)(j => j + 1).filter(j => j != i).map(j => hideL(-j)).foldLeft(nil)((acc,e) => e & acc)
+    coHideL(List(i),pr)
+  }
+
+  def coHideL(is:List[Int], pr:Provable):BelleExpr = {val anteSize = pr.subgoals.head.ante.length
+    List.tabulate(anteSize)(j => j + 1).filter(j => !is.contains(j)).map(j => hideL(-j)).foldLeft(nil)((acc,e) => e & acc)
   }
 
   def coHideLPr(i : Int, pr:Provable):Provable = {
     interpret(coHideL(i,pr), pr)
   }
 
+  def proveConjs(f:(Int,Provable)=>Provable, pr:Provable, conjDepth:Int, conjI:Int = 0):Provable = {
+    conjDepth match {
+      case 0 => f(conjI,pr)
+      case _ =>
+        val pr1 = interpret(andR(1), pr)
+        val prHead = Provable.startProof(pr1.subgoals.head)
+        val prHeadProved = f(conjI, prHead)
+        val prTail = pr1(prHeadProved,0)
+        proveConjs(f, prTail, conjDepth - 1, conjI + 1)
+    }
+  }
+
   // Finish off the arithmetic at the end of a line segment proof more effeciently than a big blind QE
   // @TODO: Everything has changed since this was first implemented - revisit and adjust
   def proveLineArith(pr: Provable, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):Provable = {
-    val (eHide, nYs) = hideYsAfter(iSection, nSections)
-    val pr1 = interpret(eHide, pr)
-    val pr2 = interpret (implyR(1), pr1)
+    //val (_, nYs) = hideYsAfter(iSection, nSections)
+    //val pr1 = interpret(eHide, pr)
+    val pr2 = interpret (implyR(1), pr)
     val yDefStart = 3
-    val Jstart = yDefStart + nYs + 4
+    //val Jstart = yDefStart + nYs + 4
     //gConst, defs0, ..., defsn |- rect&glob&post_i
-    val dcPos = nYs + 2
-    val andPos = nYs + 2
+    val dcPos = nSections + 2
+    val andPos = nSections + 2
     val pr3 = interpret(andL(-andPos) & andL(-andPos) & andL('Llast) & andL(-andPos) , pr2)
     val pr4 = interpret(andR(1) <(close, nil), pr3)
 
-    def proveConjs(f:(Int,Provable)=>Provable, pr:Provable, conjDepth:Int, conjI:Int = 0):Provable = {
-      conjDepth match {
-        case 0 => f(conjI,pr)
-        case _ =>
-          val pr1 = interpret(andR(1), pr)
-          val prHead = Provable.startProof(pr1.subgoals.head)
-          val prHeadProved = f(conjI, prHead)
-          val prTail = pr1(prHeadProved,0)
-          proveConjs(f, prTail, conjDepth - 1, conjI + 1)
-      }
-    }
+
     // const, yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
-    def provePost(iPost:Int, pr:Provable):Provable = {
+    def provePost(i:Int, pr:Provable):Provable = {
+      //g, defs1,...,defsN, xBounds,yLow,yUp,global,cutsHold
       val Imply(And(LessEqual(x0,_),LessEqual(_,x1)),_) = pr.subgoals.head.succ.head
-      val constRange = (x0,x1) match {case(_:Number,_:Number) => true case _ => false}
-      val eAggressive = coHideL(dcPos, pr) & implyR(1) & hideR(1) & master()
+      val (preCx,nextCx) = (x0,x1) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
+      def localDefsPos(j:Int):List[Int] = List(2+j)
+      val preKept:List[Int] = if(preCx) localDefsPos(i-1) else Nil
+      // TODO: Only do this when next dude is arc
+      val nextKept = if(nextCx || true) localDefsPos(i) else Nil
+      val cutsPos = pr.subgoals.head.ante.length
+      val allPoses:List[Int] = cutsPos :: (preKept ++ nextKept)
+      val eProve = {
+        coHideL(cutsPos::cutsPos-1::cutsPos-2::cutsPos-3::localDefsPos(i)++localDefsPos(iSection)++allPoses, pr) & implyR(1) & master()
+      }
+      val eContra = {
+        coHideL(allPoses, pr) & implyR(1) & hideR(1) & master()
+      }
+      /*val eAggressive = coHideL(dcPos, pr) & implyR(1) & hideR(1) & master()
       val eConservative = {
         val nHides = pr.subgoals.head.ante.length-dcPos
         // gConst, global, ydefs, range, ... |- contradictory_range -> ...
         hideL(-(dcPos+1))*nHides & implyR(1) & hideL(-1) & hideR(1) & master()
-      }
+      }*/
       val e:BelleExpr =
-        if(iPost == iSection || iPost == iSection + 1) master()
+        if(i == iSection || i == iSection + 1 || i == iSection - 1) eProve
         // For the - 1 case we don't have a contradiction argument (overlaps at one point), but
         // splitting before QE seems to speed up vastly in the cases I've tested
-        else if(iPost == iSection - 1) {master()}
-        else if(constRange) eAggressive
-        else eConservative
+        //else if(i == iSection - 1) {master()}
+        //else if(constRange) eAggressive
+        else eContra
       val pr1 = interpret(e, pr)
       pr1
     }
@@ -262,47 +284,52 @@ class CoasterXProver (spec:CoasterXSpec){
   }
 
   def proveArcArith(pr: Provable, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):Provable = {
-    val (eHide, nYs) = hideYsAfter(iSection, nSections)
-    val pr1 = interpret(eHide, pr)
-    val pr2 = interpret (implyR(1), pr1)
+    //val (eHide, nYs) = hideYsAfter(iSection, nSections)
+    //val pr1 = interpret(eHide, pr)
+    val pr2 = interpret (implyR(1), pr)
     val yDefStart = 3
-    val Jstart = yDefStart + nYs + 4
+    //val Jstart = yDefStart + nYs + 4
     //gConst, defs0, ..., defsn |- rect&glob&post_i
-    val dcPos = nYs + 2
-    val andPos = nYs + 2
+    val dcPos = nSections + 2
+    val andPos = nSections + 2
     val pr3 = interpret(andL(-andPos) & andL(-andPos) & andL('Llast) & andL(-andPos) & andL('Llast)*4 , pr2)
     val pr4 = interpret(andR(1) <(andR(1)<(close, close), nil), pr3)
-
-    def proveConjs(f:(Int,Provable)=>Provable, pr:Provable, conjDepth:Int, conjI:Int = 0):Provable = {
-      conjDepth match {
-        case 0 => f(conjI,pr)
-        case _ =>
-          val pr1 = interpret(andR(1), pr)
-          val prHead = Provable.startProof(pr1.subgoals.head)
-          val prHeadProved = f(conjI, prHead)
-          val prTail = pr1(prHeadProved,0)
-          proveConjs(f, prTail, conjDepth - 1, conjI + 1)
-      }
-    }
     // const, yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
-    def provePost(iPost:Int, pr:Provable):Provable = {
-      val Imply(And(LessEqual(x0,_),LessEqual(_,x1)),_) = pr.subgoals.head.succ.head
-      val And(LessEqual(x2,_),LessEqual(_,x3)) = pr.subgoals.head.ante(dcPos-1)
-      // @TODO: Fix in lines as well
-      val constRange = (x0,x1,x2,x3) match {case(_:Number,_:Number, _:Number, _:Number) => true case _ => false}
-      val eAggressive = coHideL(dcPos, pr) & implyR(1) & hideR(1) & master()
+    def provePost(i:Int, pr:Provable):Provable = {
+      /*val eAggressive = coHideL(dcPos, pr) & implyR(1) & hideR(1) & master()
       val eConservative = {
         val nHides = pr.subgoals.head.ante.length-dcPos
         // gConst, global, ydefs, range, ... |- contradictory_range -> ...
         hideL(-(dcPos+1))*nHides & implyR(1) & hideL(-1) & hideR(1) & master()
+      }*/
+      // For the - 1 case we don't have a contradiction argument (overlaps at one point), but
+      // splitting before QE seems to speed up vastly in the cases I've tested
+      //else if(i == iSection - 1) {master()}
+      //else if(constRange) eAggressive
+      // g, defs0, ..., defsN, <<9 cuts>> |- (bounds -> post)
+      val Imply(And(LessEqual(x0,_),LessEqual(_,x1)),_) = pr.subgoals.head.succ.head
+      val (preCx,nextCx) = (x0,x1) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
+      val inBounds = nSections + 2
+      val And(LessEqual(x2,_),LessEqual(_,x3)) = pr.subgoals.head.ante(inBounds-1)
+      val (preCxB,nextCxB) = (x2,x3) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
+      def localDefsPos(j:Int):List[Int] = List(2+j)
+      val preKept:List[Int] = if(preCx) localDefsPos(i-1) else Nil
+      val nextKept = if(nextCx) localDefsPos(i) else Nil
+      val preKeptB:List[Int] = if(preCxB) localDefsPos(iSection-1) else Nil
+      val nextKeptB = if(nextCxB) localDefsPos(iSection) else Nil
+      val keepBranch = localDefsPos(iSection)
+      val cutsPos = pr.subgoals.head.ante.length
+      val allPoses:List[Int] = cutsPos :: (preKept ++ nextKept ++ preKeptB ++ nextKeptB)
+      val allCuts = cutsPos::cutsPos-1::cutsPos-2::cutsPos-3::cutsPos-4::cutsPos-5::cutsPos-6::cutsPos-7::cutsPos-8::Nil
+      val eProve = {
+        coHideL(allCuts++localDefsPos(i)++keepBranch++allPoses, pr) & implyR(1) & DebuggingTactics.debug("Whatt", doPrint = true) & master()
+      }
+      val eContra = {
+        coHideL(inBounds::allPoses, pr) & implyR(1) & hideR(1) & master()
       }
       val e:BelleExpr =
-        if(iPost == iSection || iPost == iSection + 1) master()
-        // For the - 1 case we don't have a contradiction argument (overlaps at one point), but
-        // splitting before QE seems to speed up vastly in the cases I've tested
-        else if(iPost == iSection - 1) {master()}
-        else if(constRange) eAggressive
-        else eConservative
+        if(i == iSection || i == iSection + 1 || i == iSection - 1) eProve
+        else eContra
       val pr1 = interpret(e, pr)
       pr1
     }
@@ -423,14 +450,16 @@ class CoasterXProver (spec:CoasterXSpec){
       case None =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & cy()<=y))))".asFormula
-        val a4 = "x1() > x0()".asFormula
-        val a6 = "y1() < y0()".asFormula
-        val a7 = "cy() <= y1()".asFormula
-        val a8 = "cx() <= x0()".asFormula
-        val a9 = "r() > 0".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &cx()<=x & cy()<=y))".asFormula
+        val a4 = "dx=-(cy()-y)/r()".asFormula
+        val a5 = "dy=(cx()-x)/r()".asFormula
+        val a6 = "x1() > x0()".asFormula
+        val a7 = "y1() < y0()".asFormula
+        val a8 = "cy() <= y1()".asFormula
+        val a9 = "cx() <= x0()".asFormula
+        val a10 = "r() > 0".asFormula
         val c =
-          """[dx:=-(cy()-y)/r(); dy:=(cx()-x)/r()) ;{x'=dx*v,
+          """[{x'=dx*v,
             |            y'=dy*v,
             |            v'=-dy*g(),
             |            dx' =  dy*v/r(),
@@ -443,12 +472,12 @@ class CoasterXProver (spec:CoasterXSpec){
             |          & y >= cy()
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
-        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a6, a7, a8,a9), immutable.IndexedSeq(c))
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9,a10), immutable.IndexedSeq(c))
         val pr = Provable.startProof(con)
         val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
-        val pr1a = interpret((composeb(1) & assignb(1)) &
-            (composeb(1) & assignb(1)), pr1)
-        val pr2 = interpret(dC("dx=-(cy()-y)/r()".asFormula)(1) <(nil, dI()(1)), pr1a)
+        //val pr1a = interpret((composeb(1) & assignb(1)) &
+//            (composeb(1) & assignb(1)), pr1)
+        val pr2 = interpret(dC("dx=-(cy()-y)/r()".asFormula)(1) <(nil, dI()(1)), pr1)
         val pr3 = interpret(dC("dy=(cx()-x)/r()".asFormula)(1) <(nil, dI()(1)), pr2)
         val pr4 = interpret(dC("v^2=v0()^2+2*yGlobal()*g()-2*y*g()".asFormula)( 1)  <(nil, dI()(1)), pr3)
         val pr5 = interpret(dC("v>0".asFormula)(1) <(nil, ODE(1)), pr4)
@@ -468,15 +497,17 @@ class CoasterXProver (spec:CoasterXSpec){
       case None =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & cy()<=y))))".asFormula
-        val a4 = "x1() > x0()".asFormula
-        val a6 = "y1() > y0()".asFormula
-        val a7 = "cy() <= y0()".asFormula
-        val a8 = "x1() <= cx() ".asFormula
-        val a9 = "r() > 0".asFormula
-        val a10 = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1()))->(v^2)/2 > g()*(y1() - y0())".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & x<=cx() & cy()<=y))".asFormula
+        val a4 = "dx=-(cy()-y)/r()".asFormula
+        val a5 = "dy=(cx()-x)/r()".asFormula
+        val a6 = "x1() > x0()".asFormula
+        val a7 = "y1() > y0()".asFormula
+        val a8 = "cy() <= y0()".asFormula
+        val a9 = "x1() <= cx() ".asFormula
+        val a10 = "r() > 0".asFormula
+        val a11 = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1()))->(v^2)/2 > g()*(y1() - y0())".asFormula
         val c =
-          """[dx:=-(cy()-y)/r() ; dy:=(cx()-x)/r()) ;{x'=dx*v,
+          """[{x'=dx*v,
             |            y'=dy*v,
             |            v'=-dy*g(),
             |            dx' =  (dy*v)/r(),
@@ -490,7 +521,7 @@ class CoasterXProver (spec:CoasterXSpec){
             |          & cy() <= y
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
-        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a6, a7, a8,a9, a10), immutable.IndexedSeq(c))
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10, a11), immutable.IndexedSeq(c))
         val pr = Provable.startProof(con)
         val cy = "cy()".asTerm
         val v0 = "v0()".asTerm
@@ -501,8 +532,8 @@ class CoasterXProver (spec:CoasterXSpec){
         // Note: Conservation of energy always uses the start of the ENTIRE track, not current section
         val ECirc:Formula = s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula
         val dGDefined:Formula = s"2*v!=0".asFormula
-        val pr1:Provable = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
-        val pr2:Provable = interpret(dC(s"dx^2 + dy^2 = 1".asFormula)(1)    <(nil, dI()(1)), pr1)
+        //val pr1:Provable = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
+        val pr2:Provable = interpret(dC(s"dx^2 + dy^2 = 1".asFormula)(1)    <(nil, dI()(1)), pr)
         val pr3:Provable = interpret(dC(s"dx=(y-($cy))/($r)".asFormula)(1) <(nil, dI()(1)), pr2)
         val pr4:Provable = interpret(dC(s"dy=-(x-($cx))/($r)".asFormula)(1)  <(nil, dI()(1)), pr3)
         val pr5:Provable = interpret(dC(ECirc)('R) <(nil, dI()(1)), pr4)
@@ -527,14 +558,16 @@ class CoasterXProver (spec:CoasterXSpec){
       case None =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->(( ((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy()))))".asFormula
-        val a4 = "x1() > x0()".asFormula
-        val a6 = "y0() > y1()".asFormula
-        val a7 = "cy() > y0()".asFormula
-        val a8 = "cx() >= x1()".asFormula
-        val a9 = "r() > 0".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &x<=cx() & y<=cy()))".asFormula
+        val a4 = "dx=(cy()-y)/r()".asFormula
+        val a5 = "dy=-(cx()-x)/r()".asFormula
+        val a6 = "x1() > x0()".asFormula
+        val a7 = "y0() > y1()".asFormula
+        val a8 = "cy() > y0()".asFormula
+        val a9 = "cx() >= x1()".asFormula
+        val a10 = "r() > 0".asFormula
         val c =
-          """[dx:=-(y-cy())/r()  ; dy:=(x-cx())/r()) ;{x'=dx*v,
+          """[{x'=dx*v,
             |            y'=dy*v,
             |            v'=-dy*g(),
             |            dx' =  (-dy*v)/r(),
@@ -548,9 +581,9 @@ class CoasterXProver (spec:CoasterXSpec){
             |          & y < cy()
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
-        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a6, a7, a8,a9), immutable.IndexedSeq(c))
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10), immutable.IndexedSeq(c))
         val e =
-          composeb(1) & assignb(1) & composeb(1) & assignb(1) &
+          //composeb(1) & assignb(1) & composeb(1) & assignb(1) &
           dC("dx=-(y-cy())/r()".asFormula)(1) <(nil, dI()(1)) &
           dC("dy=(x-cx())/r()".asFormula)(1) <(nil, dI()(1)) &
           dC("v^2=v0()^2+2*yGlobal()*g()-2*y*g()".asFormula)( 1)  <(nil, dI()(1)) &
@@ -573,15 +606,17 @@ class CoasterXProver (spec:CoasterXSpec){
       case None =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & y<=cy()))))".asFormula
-        val a4 = "x1() > x0()".asFormula
-        val a6 = "y1() > y0()".asFormula
-        val a7 = "cy() > y1()".asFormula
-        val a8 = "x0() >= cx()".asFormula
-        val a9 = "r() > 0".asFormula
-        val a10 = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1()))->(v^2)/2 > g()*(y1() - y0())".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & cx()<=x & y<=cy()))".asFormula
+        val a4 = "dx=(cy()-y)/r()".asFormula
+        val a5 = "dy=-(cx()-x)/r()".asFormula
+        val a6 = "x1() > x0()".asFormula
+        val a7 = "y1() > y0()".asFormula
+        val a8 = "cy() > y1()".asFormula
+        val a9 = "x0() >= cx()".asFormula
+        val a10 = "r() > 0".asFormula
+        val a11 = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1()))->(v^2)/2 > g()*(y1() - y0())".asFormula
         val c =
-          """[dx:=-(y-cy())/r(); dy:=(x-cx())/r()); {x'=dx*v,
+          """[{x'=dx*v,
             |            y'=dy*v,
             |            v'=-dy*g(),
             |            dx' =  (-dy*v)/r(),
@@ -595,15 +630,15 @@ class CoasterXProver (spec:CoasterXSpec){
             |          & y < cy()
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
-        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a6, a7, a8,a9, a10), immutable.IndexedSeq(c))
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10, a11), immutable.IndexedSeq(c))
         val pr = Provable.startProof(con)
         val cy = "cy()".asTerm
         val v0 = "v0()".asTerm
         val r = "r()".asTerm
         val cx = "cx()".asTerm
         val yInit = "yGlobal()".asTerm
-        val pr0 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
-        val pr1 = interpret(dC(s"dx=-(y-($cy))/($r)".asFormula)(1)  <(nil, dI()(1)), pr0)
+        //val pr0 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
+        val pr1 = interpret(dC(s"dx=-(y-($cy))/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
         val pr2 = interpret(dC(s"dy=(x-($cx))/($r)".asFormula)( 1)  <(nil, ODE(1)), pr1)
         val pr3 = interpret(dC(s"($cx)<=x".asFormula)(1)  <(nil, ODE(1)), pr2)
         val pr3a = interpret(dC(s"g() > 0".asFormula)(1) <(nil, dI()(1)), pr3)
@@ -818,6 +853,51 @@ class CoasterXProver (spec:CoasterXSpec){
     interpret(cut(fml) <(hideL(-1), close), pr)
   }
 
+  /*     def proveConjs(f:(Int,Provable)=>Provable, pr:Provable, conjDepth:Int, conjI:Int = 0):Provable = {
+      conjDepth match {
+        case 0 => f(conjI,pr)
+        case _ =>
+          val pr1 = interpret(andR(1), pr)
+          val prHead = Provable.startProof(pr1.subgoals.head)
+          val prHeadProved = f(conjI, prHead)
+          val prTail = pr1(prHeadProved,0)
+          proveConjs(f, prTail, conjDepth - 1, conjI + 1)
+      }
+    }
+*/
+  def preImpliesInv(pr:Provable, nSections:Int):Provable = {
+    val proveVStuff = hideL('Llast)*nSections & QE
+    // g, (dx&dy&x&y&v), seg1,...,segn |- (vStuff)&(imp1&( ... &impN))
+    val pr0 = interpret(andR(1) <(proveVStuff, nil), pr)
+    def proveBranch(i:Int, pr:Provable):Provable = {
+      val Imply(And(LessEqual(x0,_),LessEqual(_,x1)),_) = pr.subgoals.head.succ.head
+      val (preCx,nextCx) = (x0,x1) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
+      def localDefsPos(j:Int):List[Int] = List(3+j)
+      val preKept:List[Int] = if(preCx) localDefsPos(i-1) else Nil
+      val nextKept = if(nextCx) localDefsPos(i) else Nil
+      val posPos = 2
+      val allPoses:List[Int] = posPos :: (preKept ++ nextKept)
+      val eInit = {
+        coHideL(posPos::localDefsPos(i), pr) & implyR(1) & master()
+      }
+      val eContra = {
+        coHideL(allPoses, pr) & implyR(1) & hideR(1) & master()
+      }
+      val e:BelleExpr =
+        if (i == 0) eInit
+        else eContra
+      val pr1 = interpret(e, pr)
+      pr1
+    }
+    // g, (dx&dy&x&y&v), seg1,...,segn |- (imp1&( ... &impN))
+    val res = proveConjs(proveBranch, pr0, nSections-1)
+    res
+  }
+
+  def invImpliesPost(pr:Provable, nSections:Int):Provable = {
+    interpret(close(-1,1), pr)
+  }
+
   // Prove an entire CoasterX model from scratch
   def apply(fileName:String):Provable = {
     val parsed = CoasterXParser.parseFile(fileName).get
@@ -838,9 +918,14 @@ class CoasterXProver (spec:CoasterXSpec){
     val pr1e = interpret(unpackLocalConsts, pr1c)
     val inv = invariant(align)
     val pr2 = interpret(DLBySubst.loop(inv, pre = nil)(1), pr1e)
-    val pr3 = interpret(nil <((alphaRule*) & QE, nil, nil), pr2)
-    val pr3a = interpret(nil <((alphaRule*), nil), pr3)
-    val pr4 = interpret(nil <(master(), nil), pr3a)
+    val firstBranch = Provable.startProof(pr2.subgoals.head)
+    val firstResult = preImpliesInv(firstBranch, nSections)
+    val pr3 = pr2(firstResult, 0)
+    val secondBranch = Provable.startProof(pr3.subgoals.head)
+    val pr4 = pr3(invImpliesPost(secondBranch, nSections), 0)
+//    val pr3 = interpret(nil <((alphaRule*) & QE, nil, nil), pr2)
+    //val pr3a = interpret(nil <((alphaRule*), nil), pr3)
+    //val pr4 = interpret(nil <(master(), nil), pr3a)
     val (globalPr, localPrs) = splitComponents(pr4)
     val prEnd = proveAllComponents(globalPr, localPrs, points, segments.tail, v0, points.head._2, 0, segments.tail.length, ds)
     assert(prEnd.isProved, "CoasterX model not proved")

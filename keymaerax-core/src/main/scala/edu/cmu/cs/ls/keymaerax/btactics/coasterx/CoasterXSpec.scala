@@ -653,20 +653,20 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
     zip match {
       case Nil => Nil
       case (LineSection(Some(LineParam((x1,y1),(x2,y2))),Some(_), isUp), ((xx1, yy1), (xx2, yy2))) :: rest =>
-        val endY = Variable("y", Some(index))
+      //  val endY = Variable("y", Some(index))
         val endDX = Variable("dx", Some(index)) // Redundant but simplifies design
         val endDY = Variable("dy", Some(index)) // Redundant but simplifies design
         val defaultD = normalizeVector((foldMinus(xx2,xx1), foldMinus(yy2,yy1)))
         val endD:TPoint = defaultD //initD.getOrElse(defaultD)
         val endMTerm = foldDivide(foldMinus(yy2,yy1),foldMinus(xx2,xx1))
         val endYTerm = yy2
-        val endYDef:Formula = Equal(endY, endYTerm)
+        //val endYDef:Formula = Equal(endY, endYTerm)
         val endDXDef = Equal(endDX, endD._1)
         val endDYDef = Equal(endDY, endD._2)
-        val allDefs = And(endYDef, And(endDXDef, endDYDef))
-        ctx = ctx.+(endY -> endYTerm, endDX -> endD._1, endDY -> endD._2)
-        val head = (LineSection(Some(LineParam((xx1,yy1),(xx2,endY))), Some(endMTerm), isUp), ((xx1,yy1),(xx2,endY)), allDefs, endD)
-        head :: alignZipped(setStartY(rest,endY), Some(endD), index+1)
+        val allDefs = And(endDXDef, endDYDef)
+        ctx = ctx.+(endDX -> endD._1, endDY -> endD._2)
+        val head = (LineSection(Some(LineParam((xx1,yy1),(xx2,yy2))), Some(endMTerm), isUp), ((xx1,yy1),(xx2,yy2)), allDefs, endD)
+        head :: alignZipped(setStartY(rest,yy2), Some(endD), index+1)
       case (ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(oldSlope)), ((xx1, yy1), (xx2, yy2))) :: rest =>
         //initD match {
           /*case None => */alignArcFromCenter(zip, index)
