@@ -774,12 +774,12 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
   def envelope(y0:Number, v0:Number, segs:List[(Section,(TPoint,TPoint))]):AccelEnvelope = {
     //val g = 9.80665
     val res =
-    segs.foldRight(AccelEnvelope.empty){case((sec,((x1:Number,y1:Number),(x2:Number,y2:Number))), env) =>
+    segs.foldRight(AccelEnvelope.empty){case((sec,((x1:Term,y1:Term),(x2:Term,y2:Term))), env) =>
       sec match {
         case (LineSection(Some(LineParam(bl,tr)),Some(grad), isUp)) =>
           // Line sections - no centripetal acceleration
           val (dx,dy) = lineDir(bl,tr)
-          env.extendT(Number(-dy.asInstanceOf[Number].value))
+          env.extendT(Number(evalTerm(Neg(dy)).value))
         case (ArcSection(Some(ArcParam(bl,tr,theta1,deltaTheta)), Some(grad))) =>
           val rad = (evalTerm(bl._1).value-evalTerm(tr._1).value).abs/2
           val cx = (evalTerm(bl._1).value + evalTerm(tr._1).value) /2
@@ -802,10 +802,10 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
             // Leave out factor of g()
             Number(-dy)
           }
-          val r1 = radialAt(y1)
-          val r2 = radialAt(y2)
-          val t1 = tangentialAt(x1)
-          val t2 = tangentialAt(x2)
+          val r1 = radialAt(evalTerm(y1))
+          val r2 = radialAt(evalTerm(y2))
+          val t1 = tangentialAt(evalTerm(x1))
+          val t2 = tangentialAt(evalTerm(x2))
           env.extendR(r2).extendR(r1).extendT(t2).extendT(t1)
       }}
     res.relaxBy()
