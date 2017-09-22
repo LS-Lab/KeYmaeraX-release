@@ -255,12 +255,13 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
       // TODO: Only do this when next dude is arc
       val nextKept = if(nextCx || true) localDefsPos(i) else Nil
       val cutsPos = pr.subgoals.head.ante.length
-      val allPoses:List[Int] = cutsPos :: (preKept ++ nextKept)
+      val gPos = 1
+      val allPoses:List[Int] = gPos :: cutsPos :: (preKept ++ nextKept)
       val eProve = {
-        coHideL(cutsPos::cutsPos-1::cutsPos-2::cutsPos-3::localDefsPos(i)++localDefsPos(iSection)++allPoses, pr) & implyR(1) & master()
+        coHideL(cutsPos::cutsPos-1::cutsPos-2::cutsPos-3::localDefsPos(i)++localDefsPos(iSection)++allPoses, pr) & implyR(1)
       }
       val eContra = {
-        coHideL(allPoses, pr) & implyR(1) & hideR(1) & master()
+        coHideL(allPoses, pr) & implyR(1) & hideR(1)
       }
       /*val eAggressive = coHideL(dcPos, pr) & implyR(1) & hideR(1) & master()
       val eConservative = {
@@ -276,7 +277,8 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
         //else if(constRange) eAggressive
         else eContra
       val pr1 = interpret(e, pr)
-      pr1
+      val pr2 = interpret(master(), pr1)
+      pr2
     }
     // yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
     val pr9 = proveConjs(provePost, pr4, nSections-1)

@@ -34,7 +34,7 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
 
   private def round(x:Number):Number = {
     val MAX_SCALE = 4
-    Number(x.value.setScale(MAX_SCALE,BigDecimal.RoundingMode.DOWN))
+    Number(x.value.setScale(MAX_SCALE,BigDecimal.RoundingMode.UP))
   }
 
   def radMin:Term = { round(rMin) }
@@ -562,7 +562,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
 
 // BEGIN ROUNDING OF FLOATY MODELS TO INTEGER PRECISION
   def roundNumber(scale:Int)(n:Number):Number = {
-    Number(new BigDecimal(n.value.bigDecimal).setScale(scale, BigDecimal.RoundingMode.UP))
+    Number(new BigDecimal(n.value.bigDecimal).setScale(scale, BigDecimal.RoundingMode.DOWN))
   }
 
   def roundTerm(scale:Int)(n:Term):Term = {
@@ -827,7 +827,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
   * which nasty math (derived by Mathematica) derives an often-irrational point for the center of the circle.
   * However this also makes the end slope nasty, so we introduce extra variables for the center and radius to keep formula
   * size down. This can be hidden for sections where they are not relevant, keeping QE time under control. */
-  def alignFile(file:File):(AFile,Formula) = {
+  private def alignFile(file:File):(AFile,Formula) = {
     val (points, segments, v0, tent) = file
     val nonemptySegs = segments.filter(!segmentEmpty(_))
     val withBounds = zipConsecutive2(nonemptySegs,points)

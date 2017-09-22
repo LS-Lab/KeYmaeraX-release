@@ -161,7 +161,7 @@ class CoasterXTests extends TacticTestBase {
   def prover(file:String) = {
     val spec = new CoasterXSpec()
     val parsed = CoasterXParser.parseFile(file).get
-    val (align,_) = spec.alignFile(parsed)
+    val (align,_) = spec.prepareFile(parsed)
     new CoasterXProver(spec,spec.envelope(align))(file)
   }
 
