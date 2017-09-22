@@ -654,15 +654,10 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
         ), pr5)
         val pr6a = interpret(dC(s"(v^2)/2 > g()*(y1() - y)".asFormula)(1) <(nil, ODE(1)), pr6)
         val pr7 = interpret(dC(s"v>0".asFormula)(1)  <(nil,
-          DebuggingTactics.debug("foo", doPrint = true) &
           dC(s"2*v!=0".asFormula)(1)  <(
-            DebuggingTactics.debug("bar", doPrint = true) &
             dG(s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) &
               existsR("(1/v)^(1/2)".asTerm)(1) &
-              DebuggingTactics.debug("This dI doesn't prove", doPrint = true) &
-              DebuggingTactics.debug("bat", doPrint = true) &
               dI()(1),
-            DebuggingTactics.debug("baz", doPrint = true) &
             ODE(1)
           )
         ), pr6a)
@@ -853,18 +848,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
     interpret(cut(fml) <(hideL(-1), close), pr)
   }
 
-  /*     def proveConjs(f:(Int,Provable)=>Provable, pr:Provable, conjDepth:Int, conjI:Int = 0):Provable = {
-      conjDepth match {
-        case 0 => f(conjI,pr)
-        case _ =>
-          val pr1 = interpret(andR(1), pr)
-          val prHead = Provable.startProof(pr1.subgoals.head)
-          val prHeadProved = f(conjI, prHead)
-          val prTail = pr1(prHeadProved,0)
-          proveConjs(f, prTail, conjDepth - 1, conjI + 1)
-      }
-    }
-*/
   def preImpliesInv(pr:Provable, nSections:Int):Provable = {
     val proveVStuff = hideL('Llast)*nSections & QE
     // g, (dx&dy&x&y&v), seg1,...,segn |- (vStuff)&(imp1&( ... &impN))
@@ -876,9 +859,10 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
       val preKept:List[Int] = if(preCx) localDefsPos(i-1) else Nil
       val nextKept = if(nextCx) localDefsPos(i) else Nil
       val posPos = 2
-      val allPoses:List[Int] = posPos :: (preKept ++ nextKept)
+      val gravPos =1
+      val allPoses:List[Int] = gravPos :: posPos :: (preKept ++ nextKept)
       val eInit = {
-        coHideL(posPos::localDefsPos(i), pr) & implyR(1) & master()
+        coHideL(gravPos::posPos::localDefsPos(i), pr) & implyR(1) & master()
       }
       val eContra = {
         coHideL(allPoses, pr) & implyR(1) & hideR(1) & master()
@@ -921,6 +905,14 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
     val firstBranch = Provable.startProof(pr2.subgoals.head)
     val firstResult = preImpliesInv(firstBranch, nSections)
     val pr3 = pr2(firstResult, 0)
+    println("dx = ", spec.evalTerm("dx_0".asTerm))
+    println("dy = ", spec.evalTerm("dy_0".asTerm))
+    println("cx = ", spec.evalTerm("cx_0".asTerm))
+    println("cy = ", spec.evalTerm("cy_0".asTerm))
+    println("r = ", spec.evalTerm("r_0".asTerm))
+    //println("centrip = ", spec.evalTerm(s"($v0)^2/r_0".asTerm))
+    //println("tangent = ", spec.evalTerm("-dy_0*9.8".asTerm))
+    assert(pr3.subgoals.length == 2, "Precondition step of loop induction failed")
     val secondBranch = Provable.startProof(pr3.subgoals.head)
     val pr4 = pr3(invImpliesPost(secondBranch, nSections), 0)
 //    val pr3 = interpret(nil <((alphaRule*) & QE, nil, nil), pr2)

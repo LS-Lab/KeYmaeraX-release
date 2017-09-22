@@ -161,7 +161,8 @@ class CoasterXTests extends TacticTestBase {
   def prover(file:String) = {
     val spec = new CoasterXSpec()
     val parsed = CoasterXParser.parseFile(file).get
-    new CoasterXProver(spec,spec.envelope(parsed))(file)
+    val (align,_) = spec.alignFile(parsed)
+    new CoasterXProver(spec,spec.envelope(align))(file)
   }
 
   "Proof Generator" should "generate proof for straight line" in { withMathematica(qeTool => {
