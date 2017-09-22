@@ -606,7 +606,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
       case None =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & cx()<=x & y<=cy()))".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & (cx()<=x & y<=cy())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=(cy()-y)/r()".asFormula
         val a5 = "dy=-(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
