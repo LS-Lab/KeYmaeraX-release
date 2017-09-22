@@ -450,7 +450,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
       case None =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &cx()<=x & cy()<=y))".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & cy()<=y)&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=-(cy()-y)/r()".asFormula
         val a5 = "dy=(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -497,7 +497,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
       case None =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & x<=cx() & cy()<=y))".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & (x<=cx() & cy()<=y)&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=-(cy()-y)/r()".asFormula
         val a5 = "dy=(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -558,7 +558,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
       case None =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &x<=cx() & y<=cy()))".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=(cy()-y)/r()".asFormula
         val a5 = "dy=-(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -905,11 +905,11 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
     val firstBranch = Provable.startProof(pr2.subgoals.head)
     val firstResult = preImpliesInv(firstBranch, nSections)
     val pr3 = pr2(firstResult, 0)
-    println("dx = ", spec.evalTerm("dx_0".asTerm))
+    /*println("dx = ", spec.evalTerm("dx_0".asTerm))
     println("dy = ", spec.evalTerm("dy_0".asTerm))
     println("cx = ", spec.evalTerm("cx_0".asTerm))
     println("cy = ", spec.evalTerm("cy_0".asTerm))
-    println("r = ", spec.evalTerm("r_0".asTerm))
+    println("r = ", spec.evalTerm("r_0".asTerm))*/
     //println("centrip = ", spec.evalTerm(s"($v0)^2/r_0".asTerm))
     //println("tangent = ", spec.evalTerm("-dy_0*9.8".asTerm))
     assert(pr3.subgoals.length == 2, "Precondition step of loop induction failed")
