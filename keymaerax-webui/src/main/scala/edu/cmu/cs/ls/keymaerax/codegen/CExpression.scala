@@ -54,10 +54,17 @@ object CPrettyPrinter extends (CExpression => String) {
 /** Prints expressions in plain C. */
 class CExpressionPlainPrettyPrinter extends (CExpression => String) {
 
+  /** Ensure to print literals as long double literals to avoid truncation. */
+  private def longDoubleLiteral(n: BigDecimal): String = {
+    val string = n.underlying().toString
+    if (string.contains(".")) string + "L"
+    else string + ".0L"
+  }
+
   //@todo print only necessary parentheses
   override def apply(e: CExpression): String = e match {
-    case CNumber(n) if n>=0 => n.underlying().toString
-    case CNumber(n) if n<0 => "(" + n.underlying().toString + ")"
+    case CNumber(n) if n>=0 => longDoubleLiteral(n)
+    case CNumber(n) if n<0 => "(" + longDoubleLiteral(n) + ")"
     case CVariable(n) => n
     case CUnaryFunction(n, arg) => n + "(" + apply(arg) + ")"
     case CPair(l, r) => apply(l) + "," + apply(r)
