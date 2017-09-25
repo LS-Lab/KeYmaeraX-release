@@ -138,7 +138,7 @@ object DerivedAxioms {
     val fieldMirrors = fields.map(im.reflectMethod)
 
     var failures: mutable.Buffer[String] = mutable.Buffer()
-    Range(0, fieldMirrors.length-1).foreach(idx => {
+    fieldMirrors.indices.foreach(idx => {
       try {
         fieldMirrors(idx)()
       } catch {

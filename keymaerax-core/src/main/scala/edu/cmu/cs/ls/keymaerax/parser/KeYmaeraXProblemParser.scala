@@ -559,6 +559,14 @@ object KeYmaeraXDeclarationsParser {
         annotationListener(accumulated.exhaustiveSubst(prg), accumulated.exhaustiveSubst(fml)))
       val (nextDecl, remainders) = parseDeclaration(ts)
       KeYmaeraXParser.setAnnotationListener(annotationListener)
+      if (accumulated.decls.contains(nextDecl._1)) {
+        val name = nextDecl._1._2 match {
+          case Some(i) => nextDecl._1._1 + "_" + i
+          case None => nextDecl._1._1
+        }
+        throw new ParseException("Duplicate symbol '" + name + "'",
+          UnknownLocation, "", "", "", "")
+      }
       processDeclarations(remainders, Declaration(accumulated.decls.updated(nextDecl._1, nextDecl._2)))
     } else accumulated
 }

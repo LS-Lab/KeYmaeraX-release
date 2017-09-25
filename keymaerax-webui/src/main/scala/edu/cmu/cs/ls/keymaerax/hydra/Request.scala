@@ -789,8 +789,9 @@ class ModelPlexMandatoryVarsRequest(db: DBAbstraction, userId: String, modelId: 
   }
 }
 
-class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artifact: String, monitorKind: String, monitorShape: String,
-                       conditionKind: String, additionalVars: List[String]) extends UserRequest(userId) with RegisteredOnlyRequest {
+class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artifact: String, monitorKind: String,
+                       monitorShape: String, conditionKind: String,
+                       additionalVars: List[String]) extends UserRequest(userId) with RegisteredOnlyRequest {
   def resultingResponses(): List[Response]  = {
     val model = db.getModel(modelId)
     val modelFml = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
@@ -815,7 +816,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
         }, prg).get
         new ModelPlexArtifactResponse(model, ctrlPrg) :: Nil
       case "c" =>
-        val controller = (new CGenerator(new CControllerGenerator()))(prg, vars)
+        val controller = (new CGenerator(new CControllerGenerator()))(prg, vars, CGenerator.getInputs(prg))
 
         val code = s"""
            |${CGenerator.printHeader(model.name)}
@@ -868,9 +869,12 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
             }
 
             val params = CGenerator.getParameters(monitorFml, stateVars)
-            val declarations = CGenerator.printParameterDeclaration(params) + "\n" + CGenerator.printStateDeclaration(stateVars)
-            val fallbackCode = new CControllerGenerator()(prg, stateVars)
-            val monitorCode = new CMonitorGenerator()(monitorFml, stateVars)
+            val inputs = CGenerator.getInputs(prg)
+            val declarations = CGenerator.printParameterDeclaration(params) + "\n" +
+              CGenerator.printStateDeclaration(stateVars) + "\n" +
+              CGenerator.printInputDeclaration(inputs)
+            val fallbackCode = new CControllerGenerator()(prg, stateVars, inputs)
+            val monitorCode = new CMonitorGenerator(monitorShape)(monitorFml, stateVars, inputs)
 
             val sandbox =
               s"""
@@ -880,7 +884,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
                 |$fallbackCode
                 |$monitorCode
                 |
-                |state ctrl(state curr, parameters params, state input) {
+                |state ctrl(state curr, const parameters* const params, const input* const in) {
                 |  /* controller implementation stub: modify curr to return actuator set values */
                 |  return curr;
                 |}
@@ -890,8 +894,8 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
                 |  parameters params; /* set system parameters, e.g., = { .A=1.0 }; */
                 |  while (true) {
                 |    state current; /* read sensor values, e.g., = { .x=0.2 }; */
-                |    state input;   /* resolve non-deterministic assignments in the model */
-                |    state post = monitoredCtrl(current, params, input, &ctrl, &ctrlStep);
+                |    input in;   /* resolve non-deterministic assignments in the model */
+                |    state post = monitoredCtrl(current, &params, &in, &ctrl, &ctrlStep);
                 |    /* hand post actuator set values to actuators */
                 |  }
                 |  return 0;
@@ -906,6 +910,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
 
   private def createMonitor(model: ModelPOJO, modelFml: Formula, vars: Set[BaseVariable]): List[Response] = {
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars.toList.sorted[NamedSymbol]:_*)
+    val Imply(_, Box(prg, _)) = modelFml
     val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
       case ("controller", tool) =>
         val foResult = TactixLibrary.proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
@@ -927,7 +932,8 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
       conditionKind match {
         case "kym" => new ModelPlexArtifactResponse(model, monitorFml) :: Nil
         case "c" =>
-          val monitor = (new CGenerator(new CMonitorGenerator(monitorShape)))(monitorFml, vars, model.name)
+          val inputs = CGenerator.getInputs(prg)
+          val monitor = (new CGenerator(new CMonitorGenerator(monitorShape)))(monitorFml, vars, inputs, model.name)
           val code =
             s"""
               |${CGenerator.printHeader(model.name)}

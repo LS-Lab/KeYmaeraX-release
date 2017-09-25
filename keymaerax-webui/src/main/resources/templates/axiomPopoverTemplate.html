@@ -3,8 +3,8 @@
     <div>
     <div class="well well-compact" ng-if="tactic.selectedDerivation().derivation.type === 'axiom'">
         <div class="row">
-            <div class="col-md-3 k4-abbreviate" uib-tooltip-template="'nameAndCodeName.html'" tooltip-placement="top"
-                 tooltip-popup-delay="1000">
+            <div class="col-md-3 k4-abbreviate" uib-tooltip-template="'nameAndCodeNameTooltip.html'"
+                 tooltip-placement="auto top" tooltip-popup-delay="1000">
                 <a class="btn btn-link" ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)">
                     <b ng-include="'nameAndCodeName.html'"></b>
                 </a>
@@ -14,8 +14,8 @@
     </div>
     <div class="well well-compact" ng-if="tactic.selectedDerivation().derivation.type === 'tactic'">
         <div class="row">
-            <div class="col-md-3 k4-abbreviate" uib-tooltip-template="'nameAndCodeName.html'" tooltip-placement="top"
-                 tooltip-popup-delay="1000">
+            <div class="col-md-3 k4-abbreviate" uib-tooltip-template="'nameAndCodeNameTooltip.html'"
+                 tooltip-placement="auto top" tooltip-popup-delay="1000">
                 <a class="btn btn-link" ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)">
                     <b ng-include="'nameAndCodeName.html'"></b>
                 </a>
@@ -27,6 +27,8 @@
         <div class="panel-heading panel-heading-compact">
             <a ng-if="tactic.selectedDerivation().derivation.input.length === 0"
                ng-class="{'disabled' : tacticForm.$invalid, 'btn': true, 'btn-link': true}"
+               uib-tooltip-template="'nameAndCodeNameTooltip.html'" tooltip-placement="auto top"
+               tooltip-popup-delay="1000"
                ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b ng-include="'nameAndCodeName.html'"></b></a>
             <!-- Rule link: execute if form is valid, otherwise open details -->
             <a ng-if="tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length <= 0"
@@ -122,4 +124,10 @@
 </div>
 <script type="text/ng-template" id="nameAndCodeName.html">
     <span><span ng-bind-html="tactic.selectedDerivation().name"></span> <code>{{tactic.selectedDerivation().codeName}}</code></span>
+</script>
+<script type="text/ng-template" id="nameAndCodeNameTooltip.html">
+    <span>Refer to <span ng-bind-html="tactic.selectedDerivation().name"></span> in proof programming by
+        <code>{{tactic.selectedDerivation().codeName}}(pos)</code> with position locator <code>pos</code>.
+        For example, with absolute position <samp>{{tactic.selectedDerivation().codeName}}(1)</samp> or
+        using a search locator <samp>{{tactic.selectedDerivation().codeName}}('L)</samp>.</span>
 </script>
