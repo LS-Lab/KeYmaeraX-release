@@ -42,6 +42,16 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
   def tanMin:Term = { round(tMin) }
   def tanMax:Term = { round(tMax) }
 
+  def printLoudly():Unit = {
+    println("*************************************************************")
+    println("*    ACCELERATION ENVELOPE                                  *")
+    println("*************************************************************")
+    println("MINIMUM RADIAL: " + radMin)
+    println("MAXIMUM RADIAL: " + radMax)
+    println("MINIMUM TANGENTIAL: " + tanMin)
+    println("MAXIMUM TANGENTIAL: " + tanMax)
+  }
+
   def extendR(r:EnvScalar):AccelEnvelope = {
     AccelEnvelope(scalarMin(rMin,r), scalarMax(rMax,r), tMin, tMax)
   }
@@ -557,7 +567,9 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
 
   def apply(file:CoasterXParser.File):Formula = {
     val (aligned, fml)= prepareFile(file)
-    fromAligned((aligned,fml), envelope(aligned))
+    val env = envelope(aligned)
+    env.printLoudly()
+    fromAligned((aligned,fml), env)
   }
 
 // BEGIN ROUNDING OF FLOATY MODELS TO INTEGER PRECISION
@@ -617,7 +629,23 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
   }
 
 
-// BEGIN ALIGNMENT OF ROUNDED MODELS -- MAKES ALL SECTIONS MEET AT TANGENTS
+// BEGIN ALIGNMENT OF ROUNDED MODELS
+
+  def unsplitZipped(sections: List[(Section, (TPoint, TPoint))]):List[(Section, (TPoint, TPoint))] = {
+    sections match {
+      case Nil => Nil
+      case (ArcSection(Some(ArcParam((x1,y1),(x2,y2), theta1, deltaTheta1)), slope1), ((xx1,yy1),(xx2,yy2))) ::
+        (ArcSection(Some(ArcParam((x3,y3),(x4,y4), theta2, deltaTheta2)), _slope2), ((xx3,yy3),(xx4,yy4))) ::
+            tail
+      if x1 == x3 && x2 == x4 && y1 == y3 && y2 == y4 =>
+        val combinedSec = ArcSection(Some(ArcParam((x1,y1),(x2,y2), theta1, Number(deltaTheta1.value+deltaTheta2.value))),slope1)
+        val combined = (combinedSec, ((xx1,yy1),(xx4,yy4)))
+        // In typical use case combined will not need to get unsplit again, but might as well since this is already well-founded
+        unsplitZipped(combined::tail)
+      case sec1 :: tail => sec1 :: unsplitZipped(tail)
+    }
+  }
+
   /*
   * Solve these equations:
   * (cx-x1)^2 + (cy-y1)^2 = (cx-x2)^2 + (cy-y2)^2
@@ -647,15 +675,17 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
     // If we accidentally made this into a two-quadrant arc, then adjust again.
     // Yes, this is super nasty and could use some work
     val (t1,t2) = (theta1.value, normalizeAngle(theta1.value + deltaTheta.value))
-    val q3 = t1 <= -90 && t2 <= -90
-    val q4 = t1 >= -90 && t1 <= 0   && t2 <= 0
-    val q1 = t1 >= 0   && t1 <= 90  && t2 <= 90
-    val q2 = !(q1 || q3 || q4)
+    val q1 = t1 >= 0    && t1 <= 90  //&& t2 <= 90
+    val q2 = t1 >= 90   && t1 <= 180 //!(q1 || q3 || q4)
+    val q3 = t1 >= -180 && t1 <= -90 //&& t2 <= -90
+    val q4 = t1 >= -90  && t1 <= 0   //&& t2 <= 0
+    println("Attempting split maybe")
     val cxapprox = evalTerm(cxe).value
     val xx2approx = evalTerm(xx2).value
     if (cxapprox < xx2approx && q3) {
+      assert(theta1.value <= -90 && param.theta2.value >= -90)
       // @TODO: This assumes it's a Q3-Q4 arc, but gotta start somewhere
-      val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, deltaTheta)), Some(oldSlope)),
+      val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, Number(-90 - theta1.value))), Some(oldSlope)),
         ((xx1, yy1), (cx, foldMinus(cy,r))),
         allDefs,
         (endDX, endDY))
@@ -674,14 +704,17 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
       val rDef2 = Equal(r2, re)
       val allDefs2 = And(rDef2, And(And(cxDef2, cyDef2),And(endDXDef2, endDYDef2)))
       ctx = ctx.+(r2 -> re, cx2 -> cxe, cy2 -> cye, endDX2 -> dtxe, endDY2 -> dtye)
-      val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), Number(theta1.value + deltaTheta.value), deltaTheta)), Some(oldSlope)),
+      val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
+        Number(-90), Number((param.theta2.value - (-90)).max(1)))), Some(oldSlope)),
         ((cx, foldMinus(cy,r)), (xx2, yy2)),
         allDefs2,
         (endDX, endDY))
       sec1 :: sec2 :: alignZipped(rest, Some((endDX, endDY)), index + 2)
     } else if (cxapprox < xx2approx && q2) {
       // @TODO: This assumes it's a Q2-Q1 arc, but gotta start somewhere
-      val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, deltaTheta)), Some(oldSlope)),
+      assert(param.theta1.value >= 90 && param.theta2.value <= 90)
+      val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, Number(90-param.theta1.value))),
+        Some(oldSlope)),
         ((xx1, yy1), (cx, foldPlus(cy,r))),
         allDefs,
         (endDX, endDY))
@@ -700,7 +733,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
       val rDef2 = Equal(r2, re)
       val allDefs2 = And(rDef2, And(And(cxDef2, cyDef2),And(endDXDef2, endDYDef2)))
       ctx = ctx.+(r2 -> re, cx2 -> cxe, cy2 -> cye, endDX2 -> dtxe, endDY2 -> dtye)
-      val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), Number(theta1.value + deltaTheta.value), deltaTheta)), Some(oldSlope)),
+      val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), Number(90), Number((param.theta2.value-90).min(-1)))), Some(oldSlope)),
         ((cx, foldPlus(cy,r)), (xx2, yy2)),
         allDefs2,
         (endDX, endDY))
@@ -831,7 +864,8 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
     val (points, segments, v0, tent) = file
     val nonemptySegs = segments.filter(!segmentEmpty(_))
     val withBounds = zipConsecutive2(nonemptySegs,points)
-    val alignedBounds = alignZipped(withBounds,None,0)
+    val withoutSplits = unsplitZipped(withBounds)
+    val alignedBounds = alignZipped(withoutSplits,None,0)
     val (pointss, segmentss, fml, dirs) = unzipConsecutive(alignedBounds)
     ((pointss, segments.head :: segmentss, v0, tent, dirs),fml)
   }

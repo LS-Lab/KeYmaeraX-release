@@ -244,6 +244,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
     val pr3 = interpret(andL(-andPos) & andL(-andPos) & andL('Llast) & andL(-andPos) , pr2)
     val pr4 = interpret(andR(1) <(close, nil), pr3)
 
+    val DEBUG_CONJ:Option[Int] = Some(8)
 
     // const, yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
     def provePost(i:Int, pr:Provable):Provable = {
@@ -297,7 +298,13 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
     val pr3 = interpret(andL(-andPos) & andL(-andPos) & andL('Llast) & andL(-andPos) & andL('Llast)*4 , pr2)
     val pr4 = interpret(andR(1) <(andR(1)<(close, close), nil), pr3)
     // const, yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
+    val DEBUG_POST:Option[Int] = Some(8)
     def provePost(i:Int, pr:Provable):Provable = {
+      val _ = DEBUG_POST match {
+        case Some(j) if i == j =>
+          0
+        case _ => 0
+      }
       /*val eAggressive = coHideL(dcPos, pr) & implyR(1) & hideR(1) & master()
       val eConservative = {
         val nHides = pr.subgoals.head.ante.length-dcPos
@@ -323,16 +330,25 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
       val cutsPos = pr.subgoals.head.ante.length
       val allPoses:List[Int] = cutsPos :: (preKept ++ nextKept ++ preKeptB ++ nextKeptB)
       val allCuts = cutsPos::cutsPos-1::cutsPos-2::cutsPos-3::cutsPos-4::cutsPos-5::cutsPos-6::cutsPos-7::cutsPos-8::Nil
+      val gravPos = 1
+      val provePoses = gravPos::allCuts++localDefsPos(i)++keepBranch++allPoses
       val eProve = {
-        coHideL(allCuts++localDefsPos(i)++keepBranch++allPoses, pr) & implyR(1) & DebuggingTactics.debug("Whatt", doPrint = true) & master()
+        coHideL(provePoses, pr) & implyR(1) & DebuggingTactics.debug("Whatt", doPrint = true) & master()
       }
+      val contraPoses = inBounds::allPoses
       val eContra = {
-        coHideL(inBounds::allPoses, pr) & implyR(1) & hideR(1) & master()
+        coHideL(contraPoses, pr) & implyR(1) & hideR(1) & master()
       }
       val e:BelleExpr =
         if(i == iSection || i == iSection + 1 || i == iSection - 1) eProve
         else eContra
       val pr1 = interpret(e, pr)
+      val _foo =
+        if(!pr1.isProved) {
+          0
+        } else {
+          0
+        }
       pr1
     }
     // yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
@@ -704,9 +720,19 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
     pr4
   }
 
+  val DEBUG_SECTION:Option[Int] = Some(5)
+
   // Proves any one section
   def sectionTactic(pr: Provable, p1: TPoint, p2: TPoint, v0:Term, yInit:Term, section: Section, iSection:Int, nSections: Int, initD:TPoint):Provable = {
     val nYs = hideYs(iSection, nSections)._2
+    // For placing breakpoints on problematic sections
+    val _ = DEBUG_SECTION match {
+      case None => 0
+      case Some(i) if i == iSection =>
+        // place breakpoint here
+        0
+      case _ => 0
+    }
     section match {
       case ArcSection(Some(param@ArcParam(bl,tr,theta1,deltaTheta)),Some(grad)) => {
         val (t1, t2) = (theta1.value, param.theta2.value)
@@ -730,7 +756,9 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
               timeFn("Q2", () => {
               quad2Tactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)})
                // Quadrant 2
-            case _ => ???
+            case _ =>
+              val 2 = 1 + 1
+              ???
           }
         val prOut =
           timeFn("Arc QE", () => {
