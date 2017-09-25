@@ -202,6 +202,29 @@ class ExampleProblems extends FlatSpec with Matchers {
     thrown.getMessage should include ("Function/predicate f((•_0,(•_1,•_2))) defined using undeclared •_3")
   }
 
+  it should "replace names with the appropriate dots" in {
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
+    val problem =
+      """Functions.
+        |  R f(R x, R y, R z) = (x + y*z).
+        |End.
+        |
+        |Problem.
+        |  f(2,3,4)>3
+        |End.
+      """.stripMargin
+
+    val (d, formula) = KeYmaeraXProblemParser.parseProblem(problem)
+    d.decls should have size 1
+    d.decls should contain key ("f", None)
+    d.decls(("f", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Tuple(Real, Tuple(Real, Real))
+      codomain shouldBe Real
+      interpretation shouldBe Plus(DotTerm(Real, Some(0)), Times(DotTerm(Real, Some(1)), DotTerm(Real, Some(2))))
+    }
+    formula shouldBe KeYmaeraXParser("2+3*4>3")
+  }
+
   it should "parse program definitions" in {
     val problem =
       """
