@@ -238,7 +238,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         |  Functions. R x(). End.
         |  ProgramVariables R y. End.
         |  Problem. x()>=y -> x()>=y End.
-        |  Tactic "Prop Proof". prop End.
+        |  Tactic "Prop Proof of Lemma 2". prop End.
         |End.
         |
         |Theorem "Theorem 1: Some Entry".
@@ -269,7 +269,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
             |  ProgramVariables R y. End.
             |  Problem. x()>=y -> x()>=y End.""".stripMargin,
           "x()>=y -> x()>=y".asFormula,
-          ("Prop Proof", prop) :: Nil
+          ("Prop Proof of Lemma 2", prop) :: Nil
         ) ::
         ParsedArchiveEntry(
           "Theorem 1: Some Entry",
