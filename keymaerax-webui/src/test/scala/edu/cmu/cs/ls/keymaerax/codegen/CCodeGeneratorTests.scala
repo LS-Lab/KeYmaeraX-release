@@ -457,17 +457,43 @@ class CCodeGeneratorTests extends TacticTestBase {
     val ctrlPrg = "x:=2;".asProgram
     val cPrg = new CControllerGenerator()(ctrlPrg)
     cPrg shouldBe
-      """/* Replace with your favorite correct(!) stack implementation. */
-        |typedef struct stateStack {
-        |  int top;
-        |  state items[10];
-        |} stateStack;
-        |stateStack initStack() { return (stateStack) { .top = -1 }; }
-        |void push(stateStack* const s, state item) { s->items[++s->top] = item; }
-        |state pop(stateStack* const s) { return s->items[s->top--]; }
-        |state ctrlStep(state curr, const parameters* const params, const input* const in) {
-        |  struct { state state; stateStack reset; int success; } prg = { .state=curr, .reset=initStack(), .success=0 };
+      """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+        |  struct { state state; int success; } prg = { .state=curr, .success=0 };
         |  prg.state.x = 2.0L; prg.success = 1;
+        |  return prg.state;
+        |}""".stripMargin
+  }
+
+  it should "translate nested choices" in {
+    val ctrlPrg = "x:=2;++x:=3;{x:=4;++x:=5;}".asProgram
+    val cPrg = new CControllerGenerator()(ctrlPrg)
+    cPrg shouldBe
+      """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+        |  struct { state state; int success; } prg = { .state=curr, .success=0 };
+        |  {
+        |    state reset = prg.state;
+        |    prg.state.x = 2.0L; prg.success = 1;
+        |    if (!prg.success) prg.state = reset;
+        |  }
+        |  if (!prg.success) {
+        |    state reset = prg.state;
+        |    {
+        |      prg.state.x = 3.0L; prg.success = 1;
+        |    }
+        |    if (prg.success) {
+        |      {
+        |        state reset = prg.state;
+        |        prg.state.x = 4.0L; prg.success = 1;
+        |        if (!prg.success) prg.state = reset;
+        |      }
+        |      if (!prg.success) {
+        |        state reset = prg.state;
+        |        prg.state.x = 5.0L; prg.success = 1;
+        |        if (!prg.success) prg.state = reset;
+        |      }
+        |    }
+        |    if (!prg.success) prg.state = reset;
+        |  }
         |  return prg.state;
         |}""".stripMargin
   }
@@ -475,69 +501,67 @@ class CCodeGeneratorTests extends TacticTestBase {
   it should "translate a nondeterministic assignment into an input lookup" in {
     val ctrlPrg = "x:=*;".asProgram
     val cPrg = new CControllerGenerator()(ctrlPrg)
-    cPrg should (endWith (
+    cPrg shouldBe
       """state ctrlStep(state curr, const parameters* const params, const input* const in) {
-        |  struct { state state; stateStack reset; int success; } prg = { .state=curr, .reset=initStack(), .success=0 };
+        |  struct { state state; int success; } prg = { .state=curr, .success=0 };
         |  prg.state.x = in->x; prg.success = 1;
         |  return prg.state;
-        |}""".stripMargin))
+        |}""".stripMargin
   }
 
   it should "translate sequential compositions, tests, and nondeterministic choices" in {
     val ctrlPrg = "x:=*;?x<=5; ++ x:=7;".asProgram
     val cPrg = new CControllerGenerator()(ctrlPrg)
-    cPrg should (endWith (
+    cPrg shouldBe
       """state ctrlStep(state curr, const parameters* const params, const input* const in) {
-        |  struct { state state; stateStack reset; int success; } prg = { .state=curr, .reset=initStack(), .success=0 };
+        |  struct { state state; int success; } prg = { .state=curr, .success=0 };
         |  {
-        |    push(&prg.reset, prg.state);
+        |    state reset = prg.state;
         |    {
         |      prg.state.x = in->x; prg.success = 1;
         |    }
         |    if (prg.success) {
         |      prg.success = (prg.state.x <= 5.0L);
         |    }
-        |    if (!prg.success) prg.state = pop(&prg.reset);
-        |    else pop(&prg.reset);
+        |    if (!prg.success) prg.state = reset;
         |  }
         |  if (!prg.success) {
-        |    push(&prg.reset, prg.state);
+        |    state reset = prg.state;
         |    prg.state.x = 7.0L; prg.success = 1;
-        |    if (!prg.success) prg.state = pop(&prg.reset);
-        |    else pop(&prg.reset);
+        |    if (!prg.success) prg.state = reset;
         |  }
         |  return prg.state;
-        |}""".stripMargin))
+        |}""".stripMargin
   }
 
   it should "look up parameters" in {
     val ctrlPrg = "x:=A;".asProgram
     val cPrg = new CControllerGenerator()(ctrlPrg, Set(Variable("x")))
-    cPrg should (endWith (
+    cPrg shouldBe
       """state ctrlStep(state curr, const parameters* const params, const input* const in) {
-        |  struct { state state; stateStack reset; int success; } prg = { .state=curr, .reset=initStack(), .success=0 };
+        |  struct { state state; int success; } prg = { .state=curr, .success=0 };
         |  prg.state.x = params->A; prg.success = 1;
         |  return prg.state;
-        |}""".stripMargin))
+        |}""".stripMargin
   }
 
   it should "look up function parameters" in {
     val ctrlPrg = "x:=A();".asProgram
     val cPrg = new CControllerGenerator()(ctrlPrg, Set(Variable("x")))
-    cPrg should (endWith (
+    cPrg shouldBe
       """state ctrlStep(state curr, const parameters* const params, const input* const in) {
-        |  struct { state state; stateStack reset; int success; } prg = { .state=curr, .reset=initStack(), .success=0 };
+        |  struct { state state; int success; } prg = { .state=curr, .success=0 };
         |  prg.state.x = params->A; prg.success = 1;
         |  return prg.state;
-        |}""".stripMargin))
+        |}""".stripMargin
   }
 
   it should "skip ODEs and repeat loops until success" in {
     val ctrlPrg = "{x:=2;{x'=4}}*".asProgram
     val cPrg = new CControllerGenerator()(ctrlPrg)
-    cPrg should (endWith (
+    cPrg shouldBe
       """state ctrlStep(state curr, const parameters* const params, const input* const in) {
-        |  struct { state state; stateStack reset; int success; } prg = { .state=curr, .reset=initStack(), .success=0 };
+        |  struct { state state; int success; } prg = { .state=curr, .success=0 };
         |  while (!prg.success) {
         |    {
         |      prg.state.x = 2.0L; prg.success = 1;
@@ -547,7 +571,7 @@ class CCodeGeneratorTests extends TacticTestBase {
         |    }
         |  }
         |  return prg.state;
-        |}""".stripMargin))
+        |}""".stripMargin
   }
 
   it should "compile and run a controller" in {
