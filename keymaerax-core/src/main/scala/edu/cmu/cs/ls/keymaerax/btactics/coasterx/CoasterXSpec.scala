@@ -537,7 +537,9 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
     (xs, ys) match {
       case (x1::xss, y1::y2::yss) =>  (x1,(y1,y2)) :: zipConsecutive2(xss, y2::yss)
       case (Nil, _::Nil) => Nil
-      case _ => ???
+      case _ =>
+        val 2 = 1 + 1
+        ???
     }
   }
 
@@ -674,15 +676,46 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
     ctx = ctx.+(r -> re, cx -> cxe, cy -> cye, endDX -> dtxe, endDY -> dtye)
     // If we accidentally made this into a two-quadrant arc, then adjust again.
     // Yes, this is super nasty and could use some work
+    val dT = deltaTheta.value
     val (t1,t2) = (theta1.value, normalizeAngle(theta1.value + deltaTheta.value))
-    val q1 = t1 >= 0    && t1 <= 90  //&& t2 <= 90
-    val q2 = t1 >= 90   && t1 <= 180 //!(q1 || q3 || q4)
-    val q3 = t1 >= -180 && t1 <= -90 //&& t2 <= -90
-    val q4 = t1 >= -90  && t1 <= 0   //&& t2 <= 0
+    val q1 = (t1 == 0 && dT > 0)   || (t1 > 0    && t1 < 90)  || (t1 == 90 && dT < 0) //&& t2 <= 90
+    val q2 = (t1 == 90 && dT > 0)  || (t1 > 90   && t1 < 180) || (t1 == 180 && dT < 0) //!(q1 || q3 || q4)
+    val q3 = ((t1 == 180 || t1 == -180) && dT > 0)|| (t1 > -180 && t1 < -90) || (t1 == -90 && dT < 0) //&& t2 <= -90
+    val q4 = (t1 == -90 && dT > 0) || (t1 > -90  && t1 < 0) || (t1 == 0 && dT < 0)   //&& t2 <= 0
     println("Attempting split maybe")
     val cxapprox = evalTerm(cxe).value
+    val xx1approx = evalTerm(xx1).value
     val xx2approx = evalTerm(xx2).value
-    if (cxapprox < xx2approx && q3) {
+
+    // Insert a 3rdq arc because hmm whoops turns out we're not so q4 after all
+    if (cxapprox > xx1approx && q4) {
+      val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), Number(-91), Number(1))), Some(oldSlope)),
+        ((xx1, yy1), (cx, foldMinus(cy,r))),
+        allDefs,
+        (endDX, endDY))
+      // TODO: Need to set dx and such intermediately for those components
+      // TODO: Not an obvious value for the deltatheta dude
+      // TODO: Need to figure out definition numbering and stuff
+      val endDX2 = Variable("dx", Some(index+1))
+      val endDY2 = Variable("dy", Some(index+1))
+      val cx2 = Variable("cx", Some(index+1))
+      val cy2 = Variable("cy", Some(index+1))
+      val r2 = Variable("r", Some(index+1))
+      val cxDef2:Formula = Equal(cx2, cxe)
+      val cyDef2:Formula = Equal(cy2, cye)
+      val endDXDef2:Formula = Equal(endDX2, dtxe)
+      val endDYDef2:Formula = Equal(endDY2, dtye)
+      val rDef2 = Equal(r2, re)
+      val allDefs2 = And(rDef2, And(And(cxDef2, cyDef2),And(endDXDef2, endDYDef2)))
+      ctx = ctx.+(r2 -> re, cx2 -> cxe, cy2 -> cye, endDX2 -> dtxe, endDY2 -> dtye)
+      val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
+        Number(-90), Number((param.theta2.value - (-90)).max(1)))), Some(oldSlope)),
+        ((cx, foldMinus(cy,r)), (xx2, yy2)),
+        allDefs2,
+        (endDX, endDY))
+      sec1 :: sec2 :: alignZipped(rest, Some((endDX, endDY)), index + 2)
+    }
+    else if (cxapprox < xx2approx && q3) {
       assert(theta1.value <= -90 && param.theta2.value >= -90)
       // @TODO: This assumes it's a Q3-Q4 arc, but gotta start somewhere
       val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, Number(-90 - theta1.value))), Some(oldSlope)),
@@ -712,7 +745,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
       sec1 :: sec2 :: alignZipped(rest, Some((endDX, endDY)), index + 2)
     } else if (cxapprox < xx2approx && q2) {
       // @TODO: This assumes it's a Q2-Q1 arc, but gotta start somewhere
-      assert(param.theta1.value >= 90 && param.theta2.value <= 90)
+      //assert(param.theta1.value >= 90 && param.theta2.value <= 90)
       val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, Number(90-param.theta1.value))),
         Some(oldSlope)),
         ((xx1, yy1), (cx, foldPlus(cy,r))),
