@@ -736,9 +736,15 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
     section match {
       case ArcSection(Some(param@ArcParam(bl,tr,theta1,deltaTheta)),Some(grad)) => {
         val (t1, t2) = (theta1.value, param.theta2.value)
-        val q3 = t1 <= -90 && t2 <= -90
-        val q4 = t1 >= -90 && t1 <= 0   && t2 <= 0
-        val q1 = t1 >= 0   && t1 <= 90  && t2 <= 90
+        // @TODO: Quadrant checks are too subtle, should factor this out
+        val dT = param.deltaTheta.value
+        val q1 = (t1 == 0 && dT > 0)   || (t1 > 0    && t1 < 90)  || (t1 == 90 && dT < 0) //&& t2 <= 90
+        val q2 = (t1 == 90 && dT > 0)  || (t1 > 90   && t1 < 180) || (t1 == 180 && dT < 0) //!(q1 || q3 || q4)
+        val q3 = ((t1 == 180 || t1 == -180) && dT > 0)|| (t1 > -180 && t1 < -90) || (t1 == -90 && dT < 0) //&& t2 <= -90
+        val q4 = (t1 == -90 && dT > 0) || (t1 > -90  && t1 < 0) || (t1 == 0 && dT < 0)   //&& t2 <= 0
+        //val q1 = t1 >= 0   && t1 <= 90  && t2 <= 90
+        //val q3 = t1 <= -90 && t2 <= -90
+        //val q4 = t1 >= -90 && t1 <= 0   && t2 <= 0
         val prStart = selectSection(iSection,nSections, pr)
         val pr1 =
           (q3, q4, q1) match {
