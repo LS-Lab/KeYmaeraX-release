@@ -1,5 +1,7 @@
 package bellerophon.pptests
 
+import java.io.File
+
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -613,14 +615,14 @@ class SimpleBelleParserTests extends TacticTestBase {
   "Using lemmas" should "work in exactly matching open goal" in {
     val f = "x>0&y>1 -> y>1&x>0".asFormula
     val lemma = proveBy(f, TactixLibrary.prop)
-    LemmaDBFactory.lemmaDB.add(new Lemma(lemma, Lemma.requiredEvidence(lemma, Nil), Some("user/testPropLemma")))
+    LemmaDBFactory.lemmaDB.add(new Lemma(lemma, Lemma.requiredEvidence(lemma, Nil), Some(s"user${File.separator}testPropLemma")))
     proveBy(f, "useLemma({`testPropLemma`})".asTactic) shouldBe 'proved
   }
 
   it should "work with tactic adaptation" in {
     val f = "x>0&y>1 -> y>1&x>0".asFormula
     val lemma = proveBy(f, TactixLibrary.prop)
-    LemmaDBFactory.lemmaDB.add(new Lemma(lemma, Lemma.requiredEvidence(lemma, Nil), Some("user/testPropLemma")))
+    LemmaDBFactory.lemmaDB.add(new Lemma(lemma, Lemma.requiredEvidence(lemma, Nil), Some(s"user${File.separator}testPropLemma")))
     proveBy("x>0, y>1, z>2 ==> y>1&x>0".asSequent, "useLemma({`testPropLemma`}, {`prop`})".asTactic) shouldBe 'proved
   }
 
