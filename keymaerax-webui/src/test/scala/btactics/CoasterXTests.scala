@@ -197,7 +197,12 @@ class CoasterXTests extends TacticTestBase {
     theSet.size
   }
 
+  def mean(xs:List[Double]):Double = {
+    (xs.foldLeft(0.0){(x,y) => x+y})/xs.length
+  }
+
   def prover(file:String, name:String) = {
+    val NUM_RUNS = 5
     val spec = new CoasterXSpec()
     val parsed = CoasterXParser.parseFile(file).get
     val (align,alignFml) = spec.prepareFile(parsed)
@@ -211,15 +216,21 @@ class CoasterXTests extends TacticTestBase {
 
     var resFast:Option[ProvableSig] = None
     var resSlo:Option[ProvableSig] = None
-    val fastTime = timeSecs{case () => resFast = Some(prFast(file))}
-    val sloTime = timeSecs{case () => resSlo = Some(prSlo(file))}
+    var sloTimes:List[Double] = Nil
+    var fastTimes:List[Double] = Nil
+    for(i <- 0 to NUM_RUNS) {
+       fastTimes = timeSecs { case () => resFast = Some(prFast(file)) } :: fastTimes
+       sloTimes = timeSecs { case () => resSlo = Some(prSlo(file)) } :: sloTimes
+    }
 
     println("********** TEST RESULTS FOR " + name + " ***************")
     env.printLoudly()
     println("Sections: " + nSections)
     println("Vars: " + nVars)
-    println("Time with Reuse: " + fastTime)
-    println("Time without Reuse: " + sloTime)
+    println("All Times with Reuse: " + fastTimes)
+    println("Avg Time with Reuse: " + mean(fastTimes))
+    println("All Times without Reuse: " + sloTimes)
+    println("Avg Time without Reuse: " + mean(sloTimes))
     println("Number of steps with Reuse: " + resFast.get.steps)
     println("Number of steps without Reuse: " + resSlo.get.steps)
     resFast.get
