@@ -42,9 +42,9 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
   }
 
   // Evaluate a Bellerophon snippet, used to get reasonable IntelliJ debugging
-  def interpret(e:BelleExpr, pr:Provable):Provable = {
-    SequentialInterpreter()(e, BelleProvable(NoProofTermProvable(pr))) match {
-      case BelleProvable(result,_) => result.underlyingProvable
+  def interpret(e:BelleExpr, pr:ProvableSig):ProvableSig = {
+    SequentialInterpreter()(e, BelleProvable(pr)) match {
+      case BelleProvable(result,_) => result
     }
   }
 
@@ -64,7 +64,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
 
 
   // Establishes differential invariants for a single quadrant-2 arc
-  def quad2Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):Provable = {
+  def quad2Tactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):ProvableSig = {
     println("Proving Quadrant 2 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ2
     // @TODO: Hide preconditions and y-defs that you don't need
@@ -75,7 +75,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     // gConst, defs0, defs1, global, J_i |- post
     // where defs_i = r_i & (cx_i & cy_i) & (dx_i & dy_i)
     def selectDefs:PositionalTactic = "selectDefs" by ((pr:ProvableSig,pos:AntePosition) =>
-      NoProofTermProvable(coHideLPr(pos.index0+1, pr.underlyingProvable))
+      coHideLPr(pos.index0+1, pr)
       )
     // definition of r() depends of cx,cy so keep them around too.
     /*def selectR = selectDefs(-2) & andL(-1) & andL(-2) & hideL(-3)
@@ -101,20 +101,20 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val cut7 = s"((($x0)<=x&x<=($x1)) & (($y0) <= y & y <= ($y1)))->(v^2)/2 > g()*(($y1) - ($y0))".asFormula
     val pr1fa = timeFn("ArcQ2 Case Step 6", {() => interpret(nil < (nil, cut(cut7) < (nil, hideR(1) & QE)), pr1f)})
     val pr1g = interpret(nil <(nil, hideL(-2)*nYs), pr1fa)
-    val tac = US(NoProofTermProvable(aproof))
+    val tac = US(aproof)
     val pr6 = interpret(nil < (nil, tac), pr1g)
     pr6
   }
 
   // Establishes differential invariants for a single quadrant-1 arc
-  def quad1Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):Provable = {
+  def quad1Tactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):ProvableSig = {
     println("Proving Quadrant 1 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ1
     val (cx,cy) = spec.iCenter(iSection)
     val r = spec.iRadius(iSection)
     val ((x0,y0),(x1,y1)) = (p1,p2)
     def selectDefs:PositionalTactic = "selectDefs" by ((pr:ProvableSig,pos:AntePosition) =>
-      NoProofTermProvable(coHideLPr(pos.index0+1, pr.underlyingProvable))
+      coHideLPr(pos.index0+1, pr)
       )
     // definition of r() depends of cx,cy so keep them around too.
     /*def selectR = selectDefs(-3) & andL(-1) & andL(-2) & hideL(-3)
@@ -137,13 +137,13 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val cut6 = s"($r) > 0".asFormula
     val pr1f = timeFn("ArcQ1 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & selectR & QE)), pr1e)})
     val pr1g = interpret(nil <(nil, hideL(-2)*nYs), pr1f)
-    val tac = US(NoProofTermProvable(aproof))
+    val tac = US(aproof)
     val pr6 = interpret(nil < (nil, tac), pr1g)
     pr6
   }
 
   // Establishes differential invariants for a single quadrant-3 arc
-  def quad3Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int, iSection:Int):Provable = {
+  def quad3Tactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int, iSection:Int):ProvableSig = {
     println("Proving Quadrant 3 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ3
     val ((x0:Term,y0:Term),(x1:Term,y1:Term)) = (p1,p2)
@@ -167,13 +167,13 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val cut6 = s"($r) > 0".asFormula
     val pr1f = timeFn("ArcQ3 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & QE)), pr1e)})
     val pr1g = interpret(nil <(nil, hideL(-2)*nYs), pr1f)
-    val tac = US(NoProofTermProvable(aproof))
+    val tac = US(aproof)
     val pr6 = interpret(nil < (nil, tac), pr1g)
     pr6
   }
 
   // Establishes differential invariants for a single quadrant-4 arc
-  def quad4Tactic(pr: Provable, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):Provable = {
+  def quad4Tactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):ProvableSig = {
     println("Proving Quadrant 4 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ4
     val ((x0:Term,y0:Term),(x1:Term,y1:Term)) = (p1,p2)
@@ -200,30 +200,30 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val cut7 = s"($evol) -> ((v^2)/2 > g()*(($y1) - ($y0)))".asFormula
     val pr1g = timeFn("ArcQ4 Case Step 7", {() => interpret(nil < (nil, cut(cut7) < (nil, hideR(1) & QE)), pr1f)})
     val pr1i = interpret(nil <(nil, hideL(-2)*nYs), pr1g)
-    val tac = US(NoProofTermProvable(aproof))
+    val tac = US(aproof)
     val pr6 = interpret(nil < (nil, tac), pr1i)
     pr6
   }
 
 
-  def coHideL(i : Int, pr:Provable):BelleExpr = {
+  def coHideL(i : Int, pr:ProvableSig):BelleExpr = {
     coHideL(List(i),pr)
   }
 
-  def coHideL(is:List[Int], pr:Provable):BelleExpr = {val anteSize = pr.subgoals.head.ante.length
+  def coHideL(is:List[Int], pr:ProvableSig):BelleExpr = {val anteSize = pr.subgoals.head.ante.length
     List.tabulate(anteSize)(j => j + 1).filter(j => !is.contains(j)).map(j => hideL(-j)).foldLeft(nil)((acc,e) => e & acc)
   }
 
-  def coHideLPr(i : Int, pr:Provable):Provable = {
+  def coHideLPr(i : Int, pr:ProvableSig):ProvableSig = {
     interpret(coHideL(i,pr), pr)
   }
 
-  def proveConjs(f:(Int,Provable)=>Provable, pr:Provable, conjDepth:Int, conjI:Int = 0):Provable = {
+  def proveConjs(f:(Int,ProvableSig)=>ProvableSig, pr:ProvableSig, conjDepth:Int, conjI:Int = 0):ProvableSig = {
     conjDepth match {
       case 0 => f(conjI,pr)
       case _ =>
         val pr1 = interpret(andR(1), pr)
-        val prHead = Provable.startProof(pr1.subgoals.head)
+        val prHead = NoProofTermProvable.startProof(pr1.subgoals.head)
         val prHeadProved = f(conjI, prHead)
         val prTail = pr1(prHeadProved,0)
         proveConjs(f, prTail, conjDepth - 1, conjI + 1)
@@ -232,7 +232,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
 
   // Finish off the arithmetic at the end of a line segment proof more effeciently than a big blind QE
   // @TODO: Everything has changed since this was first implemented - revisit and adjust
-  def proveLineArith(pr: Provable, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):Provable = {
+  def proveLineArith(pr: ProvableSig, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):ProvableSig = {
     //val (_, nYs) = hideYsAfter(iSection, nSections)
     //val pr1 = interpret(eHide, pr)
     val pr2 = interpret (implyR(1), pr)
@@ -247,7 +247,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val DEBUG_CONJ:Option[Int] = Some(8)
 
     // const, yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
-    def provePost(i:Int, pr:Provable):Provable = {
+    def provePost(i:Int, pr:ProvableSig):ProvableSig = {
       //g, defs1,...,defsN, xBounds,yLow,yUp,global,cutsHold
       val Imply(And(LessEqual(x0,_),LessEqual(_,x1)),_) = pr.subgoals.head.succ.head
       val (preCx,nextCx) = (x0,x1) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
@@ -286,7 +286,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     pr9
   }
 
-  def proveArcArith(pr: Provable, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):Provable = {
+  def proveArcArith(pr: ProvableSig, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):ProvableSig = {
     //val (eHide, nYs) = hideYsAfter(iSection, nSections)
     //val pr1 = interpret(eHide, pr)
     val pr2 = interpret (implyR(1), pr)
@@ -299,7 +299,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val pr4 = interpret(andR(1) <(andR(1)<(close, close), nil), pr3)
     // const, yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
     val DEBUG_POST:Option[Int] = Some(8)
-    def provePost(i:Int, pr:Provable):Provable = {
+    def provePost(i:Int, pr:ProvableSig):ProvableSig = {
       val _ = DEBUG_POST match {
         case Some(j) if i == j =>
           0
@@ -358,7 +358,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
 
   // Finish off the arithmetic at the end of a line segment proof more effeciently than a big blind QE, assuming the
   // solvable ODE was proved using dI and dW instead of solve()
-  def proveLineArithFromDW(pr: Provable, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):Provable = {
+  def proveLineArithFromDW(pr: ProvableSig, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):ProvableSig = {
     val yDefStart = 3
     val nYs = {
       val js = List.tabulate(nSections)(j => j + yDefStart).filter(j => !(j == iSection + yDefStart || j == iSection + yDefStart - 1 || j == iSection + yDefStart - 2))
@@ -377,25 +377,25 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     // const,  yi=_, global(0), post_i(0), t>= 0, (\forall s in [0,t] DC) |- (global(t) & (&_j in sections{bound_j(t) -> post_j(t)})
     val pr7 = interpret(dW(1), pr6)
     val dcPos = 6
-    def coHideL(i : Int, pr:Provable) = {
+    def coHideL(i : Int, pr:ProvableSig) = {
       val anteSize = pr.subgoals.head.ante.length
       List.tabulate(anteSize)(j => j + 1).filter(j => j != i).map(j => hideL(-j)).foldLeft(nil)((acc,e) => e & acc)
     }
     // const,  yi=_, global(0), post_i(0), t>= 0, (\forall s in [0,t] DC) |- (&_j in sections{bound_j(t) -> post_j(t)}
     val pr8 = interpret(allL(Variable("t_"))(-dcPos) & implyL(-dcPos) <(coHideL(dcPos - 1, pr7) & hideR(1) & QE, nil), pr7)
-    def proveConjs(f:(Int,Provable)=>Provable, pr:Provable, conjDepth:Int, conjI:Int = 0):Provable = {
+    def proveConjs(f:(Int,ProvableSig)=>ProvableSig, pr:ProvableSig, conjDepth:Int, conjI:Int = 0):ProvableSig = {
       conjDepth match {
         case 0 => f(conjI,pr)
         case _ =>
           val pr1 = interpret(andR(1), pr)
-          val prHead = Provable.startProof(pr1.subgoals.head)
+          val prHead = NoProofTermProvable.startProof(pr1.subgoals.head)
           val prHeadProved = f(conjI, prHead)
           val prTail = pr1(prHeadProved,0)
           proveConjs(f, prTail, conjDepth - 1, conjI + 1)
       }
     }
     // const, yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
-    def provePost(iPost:Int, pr:Provable):Provable = {
+    def provePost(iPost:Int, pr:ProvableSig):ProvableSig = {
       val e:BelleExpr =
         if(iPost == iSection || iPost == iSection + 1) QE
         // For the - 1 case we don't have a contradiction argument (overlaps at one point), but
@@ -421,10 +421,10 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
   }
 
   // Proof of generic straight component
-  lazy val straightProof:Provable = {
+  lazy val straightProof:ProvableSig = {
     val provableName = "coasterx_straightLineCase"
     (lemmaDB.get(provableName), reuseComponents) match {
-      case (Some(pr),true) => pr.fact.underlyingProvable
+      case (Some(pr),true) => pr.fact
       case _ =>
         val a1: Formula = "(g() > 0)".asFormula
         val a2: Formula = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
@@ -452,19 +452,19 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
                master()
              )
 
-        val pr = Provable.startProof(con)
+        val pr = NoProofTermProvable.startProof(con)
         val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
         val pr2 = interpret(e, pr1)
-        storeLemma(NoProofTermProvable(pr2), Some(provableName))
+        storeLemma(pr2, Some(provableName))
         pr2
         }
   }
 
   // Proof of generic quadrant-1 arc
-  lazy val arcProofQ1:Provable = {
+  lazy val arcProofQ1:ProvableSig = {
     val provableName = "coasterx_Q1ArcCase"
     (lemmaDB.get(provableName), reuseComponents) match {
-      case (Some(pr), true) => pr.fact.underlyingProvable
+      case (Some(pr), true) => pr.fact
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
@@ -491,7 +491,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
         val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9,a10), immutable.IndexedSeq(c))
-        val pr = Provable.startProof(con)
+        val pr = NoProofTermProvable.startProof(con)
         val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
         //val pr1a = interpret((composeb(1) & assignb(1)) &
 //            (composeb(1) & assignb(1)), pr1)
@@ -501,17 +501,17 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         val pr5 = interpret(dC("v>0".asFormula)(1) <(nil, ODE(1)), pr4)
         val pr6 = interpret(dC("(x-cx())^2 + (y-cy())^2 = r()^2".asFormula)(1) <(nil, ODE(1)), pr5)
         val pr7 = interpret(ODE(1), pr6)
-        storeLemma(NoProofTermProvable(pr7), Some(provableName))
+        storeLemma(pr7, Some(provableName))
         pr7
     }
   }
 
 
   // Proof of generic quadrant-2 arc
-  lazy val arcProofQ2:Provable = {
+  lazy val arcProofQ2:ProvableSig = {
     val provableName = "coasterx_Q2ArcCase"
     (lemmaDB.get(provableName), reuseComponents) match {
-      case (Some(pr), true) => pr.fact.underlyingProvable
+      case (Some(pr), true) => pr.fact
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
@@ -540,7 +540,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
         val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10, a11), immutable.IndexedSeq(c))
-        val pr = Provable.startProof(con)
+        val pr = NoProofTermProvable.startProof(con)
         val cy = "cy()".asTerm
         val v0 = "v0()".asTerm
         val r = "r()".asTerm
@@ -551,28 +551,28 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         val ECirc:Formula = s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula
         val dGDefined:Formula = s"2*v!=0".asFormula
         //val pr1:Provable = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
-        val pr2:Provable = interpret(dC(s"dx^2 + dy^2 = 1".asFormula)(1)    <(nil, dI()(1)), pr)
-        val pr3:Provable = interpret(dC(s"dx=(y-($cy))/($r)".asFormula)(1) <(nil, dI()(1)), pr2)
-        val pr4:Provable = interpret(dC(s"dy=-(x-($cx))/($r)".asFormula)(1)  <(nil, dI()(1)), pr3)
-        val pr5:Provable = interpret(dC(ECirc)('R) <(nil, dI()(1)), pr4)
-        val pr5a:Provable = interpret(dC(s"(v^2)/2 > g()*(y1() - y)".asFormula)(1) <(nil, dI()(1)), pr5)
-        val pr6:Provable = interpret(dC("v>0".asFormula)('R), pr5a)
-        val pr7:Provable = interpret(nil <(nil, dC(dGDefined)(1)), pr6)
-        val pr8:Provable = interpret(nil <(nil, dG(s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1), nil), pr7)
-        val pr9:Provable = interpret(nil <(nil, existsR("(1/v)^(1/2)".asTerm)(1), nil), pr8)
-        val pr10:Provable = interpret(nil <(nil, dI()(1), nil), pr9)
-        val pr11:Provable = interpret(nil <(nil, ODE(1)), pr10)
+        val pr2:ProvableSig = interpret(dC(s"dx^2 + dy^2 = 1".asFormula)(1)    <(nil, dI()(1)), pr)
+        val pr3:ProvableSig = interpret(dC(s"dx=(y-($cy))/($r)".asFormula)(1) <(nil, dI()(1)), pr2)
+        val pr4:ProvableSig = interpret(dC(s"dy=-(x-($cx))/($r)".asFormula)(1)  <(nil, dI()(1)), pr3)
+        val pr5:ProvableSig = interpret(dC(ECirc)('R) <(nil, dI()(1)), pr4)
+        val pr5a:ProvableSig = interpret(dC(s"(v^2)/2 > g()*(y1() - y)".asFormula)(1) <(nil, dI()(1)), pr5)
+        val pr6:ProvableSig = interpret(dC("v>0".asFormula)('R), pr5a)
+        val pr7:ProvableSig = interpret(nil <(nil, dC(dGDefined)(1)), pr6)
+        val pr8:ProvableSig = interpret(nil <(nil, dG(s"{a'=((dy*g())/(2*v))*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1), nil), pr7)
+        val pr9:ProvableSig = interpret(nil <(nil, existsR("(1/v)^(1/2)".asTerm)(1), nil), pr8)
+        val pr10:ProvableSig = interpret(nil <(nil, dI()(1), nil), pr9)
+        val pr11:ProvableSig = interpret(nil <(nil, ODE(1)), pr10)
         val pr12 = interpret(ODE(1), pr11)
-        storeLemma(NoProofTermProvable(pr12), Some(provableName))
+        storeLemma(pr12, Some(provableName))
         pr12
     }
   }
 
   // Proof of generic quadrant-3 arc
-  lazy val arcProofQ3:Provable = {
+  lazy val arcProofQ3:ProvableSig = {
     val provableName = "coasterx_Q3ArcCase"
     (lemmaDB.get(provableName), reuseComponents) match {
-      case (Some(pr), true) => pr.fact.underlyingProvable
+      case (Some(pr), true) => pr.fact
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
@@ -608,19 +608,19 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
           dC("v>0".asFormula)(1) <(nil, ODE(1)) &
           dC("(x-cx())^2 + (y-cy())^2 = r()^2".asFormula)(1) <(nil, ODE(1)) &
           ODE(1)
-        val pr = Provable.startProof(con)
+        val pr = NoProofTermProvable.startProof(con)
         val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
         val pr2 = interpret(e, pr1)
-        storeLemma(NoProofTermProvable(pr2), Some(provableName))
+        storeLemma(pr2, Some(provableName))
         pr2
     }
   }
 
   // Proof of generic quadrant-4 arc
-  lazy val arcProofQ4:Provable = {
+  lazy val arcProofQ4:ProvableSig = {
     val provableName = "coasterx_Q4ArcCase"
     (lemmaDB.get(provableName), reuseComponents) match {
-      case (Some(pr), true) => pr.fact.underlyingProvable
+      case (Some(pr), true) => pr.fact
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
@@ -649,7 +649,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
         val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10, a11), immutable.IndexedSeq(c))
-        val pr = Provable.startProof(con)
+        val pr = NoProofTermProvable.startProof(con)
         val cy = "cy()".asTerm
         val v0 = "v0()".asTerm
         val r = "r()".asTerm
@@ -680,7 +680,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
           )
         ), pr6a)
         val pr8 = interpret(ODE(1), pr7)
-        storeLemma(NoProofTermProvable(pr8), Some(provableName))
+        storeLemma(pr8, Some(provableName))
         pr8
     }
   }
@@ -698,7 +698,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
   }
 
   // TODO: document
-  def selectSection(iSection:Int, nSections:Int, pr:Provable):Provable = {
+  def selectSection(iSection:Int, nSections:Int, pr:ProvableSig):ProvableSig = {
     val gStart = 2
     val JStart = 1
     val yDefStart = 3
@@ -723,7 +723,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
   val DEBUG_SECTION:Option[Int] = Some(5)
 
   // Proves any one section
-  def sectionTactic(pr: Provable, p1: TPoint, p2: TPoint, v0:Term, yInit:Term, section: Section, iSection:Int, nSections: Int, initD:TPoint):Provable = {
+  def sectionTactic(pr: ProvableSig, p1: TPoint, p2: TPoint, v0:Term, yInit:Term, section: Section, iSection:Int, nSections: Int, initD:TPoint):ProvableSig = {
     val nYs = hideYs(iSection, nSections)._2
     // For placing breakpoints on problematic sections
     val _ = DEBUG_SECTION match {
@@ -817,7 +817,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
           val pr5e = timeFn("Line Case Step 5", {() => interpret(nil < (nil, hideL(-2)*nYs), pr5d)})
           val dxDefPos2 = dxDefPos1 - nYs
           //val pr5f = timeFn("Line Case Step 5a", {() => interpret(nil < (nil, hideL(-dxDefPos2)*2), pr5e)})
-          val tac = US(NoProofTermProvable(sproof))
+          val tac = US(sproof)
           val pr6 = interpret(nil < (nil, tac), pr5e)
           val pr6a = timeFn("Line Case Step 6", {() => interpret(dW(1), pr6)})
           //@TODO: Don't think need to hide anything because case selection already hides
@@ -835,7 +835,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     }
   }
 
-  def provePosts(pr:Provable, fml:Formula, p1: TPoint, p2: TPoint, section: Section, v: Number, yInit: Term, i: Int, j:Int, nSections:Int, initD:TPoint):BelleExpr = {
+  def provePosts(pr:ProvableSig, fml:Formula, p1: TPoint, p2: TPoint, section: Section, v: Number, yInit: Term, i: Int, j:Int, nSections:Int, initD:TPoint):BelleExpr = {
     val thisE =
       if(i == j) {
         sectionTactic(pr, p1, p2, v, yInit,section, i, nSections, initD)
@@ -850,11 +850,11 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     }
   }
 
-  def componentTactic(pr:Provable, p1: TPoint, p2: TPoint, section: Section, v: Term, yInit: Term, i: Int, nSections:Int, initD:TPoint):Provable = {
+  def componentTactic(pr:ProvableSig, p1: TPoint, p2: TPoint, section: Section, v: Term, yInit: Term, i: Int, nSections:Int, initD:TPoint):ProvableSig = {
     sectionTactic(pr, p1, p2, v, yInit, section, i, nSections, initD)
   }
 
-  def proveAllComponents(global:Provable, locals: List[Provable], points: List[(Term, Term)], segments: List[Section], v: Term, yInit: Term, i: Int, nSections: Int, initsD:List[TPoint]):Provable = {
+  def proveAllComponents(global:ProvableSig, locals: List[ProvableSig], points: List[(Term, Term)], segments: List[Section], v: Term, yInit: Term, i: Int, nSections: Int, initsD:List[TPoint]):ProvableSig = {
     (points, segments, locals, initsD) match {
       case (p1 :: p2 :: Nil, s1 :: Nil, pr :: Nil, d :: Nil) => componentTactic(pr, p1, p2, s1, v, yInit, i, nSections, d)
       case (p1 :: p2 :: ps, s1 :: ss, pr :: prs, d::ds) =>
@@ -865,30 +865,30 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     }
   }
 
-  def splitComponents(pr:Provable,i:Int = 0):(Provable, List[Provable]) = {
+  def splitComponents(pr:ProvableSig,i:Int = 0):(ProvableSig, List[ProvableSig]) = {
     pr.subgoals.head.succ.head match {
       case (Box(Choice(_,_), _)) =>
         val pr1 = interpret(choiceb(1) & andR(1), pr)
-        val sgHead = Provable.startProof(pr1.subgoals(0))
-        val sgTail = Provable.startProof(pr1.subgoals(1))
+        val sgHead = NoProofTermProvable.startProof(pr1.subgoals(0))
+        val sgTail = NoProofTermProvable.startProof(pr1.subgoals(1))
         val (global, locals) = splitComponents(sgTail, i+1)
         (pr1(global,1), sgHead::locals)
       case  _ =>
-        (pr, Provable.startProof(pr.subgoals.last) :: Nil)
+        (pr, NoProofTermProvable.startProof(pr.subgoals.last) :: Nil)
     }
   }
 
   // Rotate all antecedent formulas to the left by 1
-  def rotAnte(pr:Provable):Provable = {
+  def rotAnte(pr:ProvableSig):ProvableSig = {
     val fml = pr.subgoals.head.ante.head
     interpret(cut(fml) <(hideL(-1), close), pr)
   }
 
-  def preImpliesInv(pr:Provable, nSections:Int):Provable = {
+  def preImpliesInv(pr:ProvableSig, nSections:Int):ProvableSig = {
     val proveVStuff = hideL('Llast)*nSections & QE
     // g, (dx&dy&x&y&v), seg1,...,segn |- (vStuff)&(imp1&( ... &impN))
     val pr0 = interpret(andR(1) <(proveVStuff, nil), pr)
-    def proveBranch(i:Int, pr:Provable):Provable = {
+    def proveBranch(i:Int, pr:ProvableSig):ProvableSig = {
       val Imply(And(LessEqual(x0,_),LessEqual(_,x1)),_) = pr.subgoals.head.succ.head
       val (preCx,nextCx) = (x0,x1) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
       def localDefsPos(j:Int):List[Int] = List(3+j)
@@ -914,18 +914,18 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     res
   }
 
-  def invImpliesPost(pr:Provable, nSections:Int):Provable = {
+  def invImpliesPost(pr:ProvableSig, nSections:Int):ProvableSig = {
     interpret(close(-1,1), pr)
   }
 
   // Prove an entire CoasterX model from scratch
-  def apply(fileName:String):Provable = {
+  def apply(fileName:String):ProvableSig = {
     val parsed = CoasterXParser.parseFile(fileName).get
     val align@(aligned@(points, segments, v0pre, _, ds), segmentDefs) = spec.prepareFile(parsed)
     val v0 = s"($v0pre)*(g()^(1/2))".asTerm
     val specc = spec.fromAligned(align,env)
     val nSections = segments.length-1
-    val pr = Provable.startProof(specc)
+    val pr = NoProofTermProvable.startProof(specc)
     val pr1 = interpret(implyR(1), pr)
     // _ |- [a]post
     val pr1a = interpret(andL(-1), pr1)
@@ -938,7 +938,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val pr1e = interpret(unpackLocalConsts, pr1c)
     val inv = invariant(align,env)
     val pr2 = interpret(DLBySubst.loop(inv, pre = nil)(1), pr1e)
-    val firstBranch = Provable.startProof(pr2.subgoals.head)
+    val firstBranch = NoProofTermProvable.startProof(pr2.subgoals.head)
     val firstResult = preImpliesInv(firstBranch, nSections)
     val pr3 = pr2(firstResult, 0)
     /*println("dx = ", spec.evalTerm("dx_0".asTerm))
@@ -949,7 +949,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     //println("centrip = ", spec.evalTerm(s"($v0)^2/r_0".asTerm))
     //println("tangent = ", spec.evalTerm("-dy_0*9.8".asTerm))
     assert(pr3.subgoals.length == 2, "Precondition step of loop induction failed")
-    val secondBranch = Provable.startProof(pr3.subgoals.head)
+    val secondBranch = NoProofTermProvable.startProof(pr3.subgoals.head)
     val pr4 = pr3(invImpliesPost(secondBranch, nSections), 0)
 //    val pr3 = interpret(nil <((alphaRule*) & QE, nil, nil), pr2)
     //val pr3a = interpret(nil <((alphaRule*), nil), pr3)

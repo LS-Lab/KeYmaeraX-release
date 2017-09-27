@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser.File
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.{CoasterXParser, CoasterXProver, CoasterXSpec}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 
 @SlowTest
@@ -208,9 +209,10 @@ class CoasterXTests extends TacticTestBase {
     val prFast = new CoasterXProver(spec,env, reuseComponents = true)
     val prSlo = new CoasterXProver(spec,env, reuseComponents = false)
 
-    var res:Option[Provable] = None
-    val fastTime = timeSecs{case () => res = Some(prFast(file))}
-    val sloTime = timeSecs{case () => prSlo(file)}
+    var resFast:Option[ProvableSig] = None
+    var resSlo:Option[ProvableSig] = None
+    val fastTime = timeSecs{case () => resFast = Some(prFast(file))}
+    val sloTime = timeSecs{case () => resSlo = Some(prSlo(file))}
 
     println("********** TEST RESULTS FOR " + name + " ***************")
     env.printLoudly()
@@ -218,8 +220,9 @@ class CoasterXTests extends TacticTestBase {
     println("Vars: " + nVars)
     println("Time with Reuse: " + fastTime)
     println("Time without Reuse: " + sloTime)
-    println("Number of steps: TODO")
-    res.get
+    println("Number of steps with Reuse: " + resFast.get.steps)
+    println("Number of steps without Reuse: " + resSlo.get.steps)
+    resFast.get
   }
 
   "Proof Generator" should "generate proof for straight line" in { withMathematica(qeTool => {
