@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics.coasterx
 
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.AccelEnvelope.EnvScalar
-import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser.{Section, _}
+import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser.{AFile, Section, _}
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXSpec._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -541,6 +541,11 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
         val 2 = 1 + 1
         ???
     }
+  }
+
+  def countSections(in:AFile):Int = {
+    val (_,secs,_,_,_)= in
+    secs.length
   }
 
   def prepareFile(file:CoasterXParser.File):(AFile,Formula) = {

@@ -183,100 +183,128 @@ class CoasterXTests extends TacticTestBase {
     printFileSpec(simpleValley)
   }
 
-  def prover(file:String) = {
+  def timeSecs[T](f:(() => T)):Double = {
+    val early = System.currentTimeMillis()
+    val res = f()
+    val late = System.currentTimeMillis()
+    (late - early) / 1000.0
+  }
+
+  private def countVars(fml:Formula):Int = {
+    val ss = StaticSemantics(fml)
+    val theSet = (ss.bv ++ ss.fv).toSet ++ StaticSemantics.symbols(fml)
+    theSet.size
+  }
+
+  def prover(file:String, name:String) = {
     val spec = new CoasterXSpec()
     val parsed = CoasterXParser.parseFile(file).get
-    val (align,_) = spec.prepareFile(parsed)
+    val (align,alignFml) = spec.prepareFile(parsed)
     val env = spec.envelope(align)
+    val specc = spec.fromAligned((align,alignFml),env)
+    val nSections = spec.countSections(align)
+    val nVars = countVars(specc)
+
+    val prFast = new CoasterXProver(spec,env, reuseComponents = true)
+    val prSlo = new CoasterXProver(spec,env, reuseComponents = false)
+
+    var res:Option[Provable] = None
+    val fastTime = timeSecs{case () => res = Some(prFast(file))}
+    val sloTime = timeSecs{case () => prSlo(file)}
+
+    println("********** TEST RESULTS FOR " + name + " ***************")
     env.printLoudly()
-    new CoasterXProver(spec,env)(file)
+    println("Sections: " + nSections)
+    println("Vars: " + nVars)
+    println("Time with Reuse: " + fastTime)
+    println("Time without Reuse: " + sloTime)
+    println("Number of steps: TODO")
+    res.get
   }
 
   "Proof Generator" should "generate proof for straight line" in { withMathematica(qeTool => {
-    val pr = prover(straightLine)
+    val pr = prover(straightLine, "Straight Line")
     pr shouldBe 'proved
     })
   }
 
   it should "generate proof for quarter arc" in { withMathematica(qeTool => {
-    val pr = prover(quarterArc)
+    val pr = prover(quarterArc, "Quarter Arc")
     pr shouldBe 'proved
   })}
 
   it should "generate proof for half arc" in {  withMathematica(qeTool => {
-    val pr = prover(halfArc)
+    val pr = prover(halfArc, "Half Arc 1")
     pr shouldBe 'proved
   })}
 
   it should "generate proof for second half arc" in {  withMathematica(qeTool => {
-    val pr = prover(secondHalfArc)
+    val pr = prover(secondHalfArc, "Half Arc 2")
     pr shouldBe 'proved
   })}
 
   it should "generate proof for full arc" in {  withMathematica(qeTool => {
-    val pr = prover(fullArc)
+    val pr = prover(fullArc, "Full Arc")
     pr shouldBe 'proved
   })}
 
   it should "generate proof for hill" in {  withMathematica(qeTool => {
-    val pr = prover(simpleHill)
+    val pr = prover(simpleHill, "Simple Hill")
     pr shouldBe 'proved
   })}
 
   it should "generate proof for valley" in {  withMathematica(qeTool => {
-    val pr = prover(simpleValley)
+    val pr = prover(simpleValley, "Simple Valley")
     pr shouldBe 'proved
   })}
 
   it should "generate proof for example coaster" in { withMathematica(qeTool => {
-    val pr = prover(exampleFile1)
+    val pr = prover(exampleFile1, "Example (Top Thrill?)")
     pr shouldBe 'proved
   })
   }
 
   it should "generate proof for extreme envelope" in { withMathematica(qeTool => {
-    val pr = prover(extremeEnv)
+    val pr = prover(extremeEnv, "Extreme Envelope")
     pr shouldBe 'proved
   })}
 
   it should "generate proof for many arc sizes" in { withMathematica(qeTool => {
-    val pr = prover(multiSizeArcs)
+    val pr = prover(multiSizeArcs, "ManyArcSizes")
     pr shouldBe 'proved
   })}
 
   it should "generate proof for shrinking Q3" in { withMathematica(qeTool => {
-    val pr = prover(q3Shrinks)
+    val pr = prover(q3Shrinks, "Shrinking Q3")
     pr shouldBe 'proved
   })}
 
   it should "generate proof for growing Q3" in { withMathematica(qeTool => {
-    val pr = prover(q3Grows)
+    val pr = prover(q3Grows, "Growing Q3")
     pr shouldBe 'proved
   })}
 
   it should "generate proof for The Phantom's Revenge" in { withMathematica(qeTool => {
-    val pr = prover(phantomsRevenge)
+    val pr = prover(phantomsRevenge, "Phantom's Revenge")
     pr shouldBe 'proved
   })
   }
 
   it should "generate proof for Paul Gregg's backyard coaster" in { withMathematica(qeTool => {
-    val pr = prover(byrc)
+    val pr = prover(byrc, "BYRC")
     pr shouldBe 'proved
   })
   }
 
   it should "generate proof for part of El Toro" in { withMathematica(qeTool => {
-    val pr = prover(smallToro)
+    val pr = prover(smallToro, "El Toro Mini")
     pr shouldBe 'proved
   })}
-
 
   it should "generate proof for El Toro" in { withMathematica(qeTool => {
-    val pr = prover(elToro)
+    val pr = prover(elToro, "El Toro Full")
     pr shouldBe 'proved
   })}
-
 
   "Core Parser" should "not do funny scientific notation" in {
     val x = "0.00000001".asTerm

@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver.TIMEVAR
 import edu.cmu.cs.ls.keymaerax.btactics.Kaisar.interpret
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser.{TPoint => _, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{dW, _}
-import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXSpec.{TPoint}
+import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXSpec.TPoint
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import Augmentors._
@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.core.{And, _}
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx._
 import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{NoProof, NoProofTermProvable, PTProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 import scala.collection.immutable
@@ -24,7 +24,7 @@ import scala.collection.immutable
 * @TODO: Function returning tactic with proof repeats
 * @TODO: Function returning tactic with proof reuse
 * */
-class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
+class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boolean = true, countSteps:Boolean=false){
 
   // Record timing information for a function call so we can measure optimizations to the CoasterX prover
   val MAX_TIMEFN_DEPTH = 10
@@ -423,9 +423,9 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
   // Proof of generic straight component
   lazy val straightProof:Provable = {
     val provableName = "coasterx_straightLineCase"
-    lemmaDB.get(provableName) match {
-      case Some(pr) => pr.fact.underlyingProvable
-      case None =>
+    (lemmaDB.get(provableName), reuseComponents) match {
+      case (Some(pr),true) => pr.fact.underlyingProvable
+      case _ =>
         val a1: Formula = "(g() > 0)".asFormula
         val a2: Formula = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
         val a3: Formula = "(x0()<=x&x<=x1()->((dyLo()*g()<=-dy0()*g()&-dy0()*g()<=dyHi()*g())&dx0()*y=dy0()*x+dx0()*c()))".asFormula
@@ -463,9 +463,9 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
   // Proof of generic quadrant-1 arc
   lazy val arcProofQ1:Provable = {
     val provableName = "coasterx_Q1ArcCase"
-    lemmaDB.get(provableName) match {
-      case Some(pr) => pr.fact.underlyingProvable
-      case None =>
+    (lemmaDB.get(provableName), reuseComponents) match {
+      case (Some(pr), true) => pr.fact.underlyingProvable
+      case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
         val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & cy()<=y)&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
@@ -510,9 +510,9 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
   // Proof of generic quadrant-2 arc
   lazy val arcProofQ2:Provable = {
     val provableName = "coasterx_Q2ArcCase"
-    lemmaDB.get(provableName) match {
-      case Some(pr) => pr.fact.underlyingProvable
-      case None =>
+    (lemmaDB.get(provableName), reuseComponents) match {
+      case (Some(pr), true) => pr.fact.underlyingProvable
+      case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
         val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & (x<=cx() & cy()<=y)&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
@@ -571,9 +571,9 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
   // Proof of generic quadrant-3 arc
   lazy val arcProofQ3:Provable = {
     val provableName = "coasterx_Q3ArcCase"
-    lemmaDB.get(provableName) match {
-      case Some(pr) => pr.fact.underlyingProvable
-      case None =>
+    (lemmaDB.get(provableName), reuseComponents) match {
+      case (Some(pr), true) => pr.fact.underlyingProvable
+      case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
         val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
@@ -619,9 +619,9 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope){
   // Proof of generic quadrant-4 arc
   lazy val arcProofQ4:Provable = {
     val provableName = "coasterx_Q4ArcCase"
-    lemmaDB.get(provableName) match {
-      case Some(pr) => pr.fact.underlyingProvable
-      case None =>
+    (lemmaDB.get(provableName), reuseComponents) match {
+      case (Some(pr), true) => pr.fact.underlyingProvable
+      case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
         val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & (cx()<=x & y<=cy())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
