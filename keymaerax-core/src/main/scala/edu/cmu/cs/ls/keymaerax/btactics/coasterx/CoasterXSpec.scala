@@ -239,10 +239,9 @@ class CoasterXSpec {
     // silly optimization because it happens in our models
     candidate match {
       case Power(Divide(Power(t1,Number(pow1)),t2),Number(pow2)) if pow1 * pow2 == 1 =>
-        println("doin a thing")
         val a = Divide(t1,Power(t2,Number(pow2)))
         val b = Divide(t1,foldPower(t2,Number(pow2)))
-        if (a != b) {println("Oh interesting", a, b)}
+        if (a != b) {}
         a
       case x => x
     }
@@ -687,7 +686,6 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
     val q2 = (t1 == 90 && dT > 0)  || (t1 > 90   && t1 < 180) || (t1 == 180 && dT < 0) //!(q1 || q3 || q4)
     val q3 = ((t1 == 180 || t1 == -180) && dT > 0)|| (t1 > -180 && t1 < -90) || (t1 == -90 && dT < 0) //&& t2 <= -90
     val q4 = (t1 == -90 && dT > 0) || (t1 > -90  && t1 < 0) || (t1 == 0 && dT < 0)   //&& t2 <= 0
-    println("Attempting split maybe")
     val cxapprox = evalTerm(cxe).value
     val xx1approx = evalTerm(xx1).value
     val xx2approx = evalTerm(xx2).value

@@ -26,6 +26,7 @@ import scala.collection.immutable
 * */
 class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boolean = true, countSteps:Boolean=false){
 
+  val DEBUG = false
   // Record timing information for a function call so we can measure optimizations to the CoasterX prover
   val MAX_TIMEFN_DEPTH = 10
   var currTimefnDepth = 0
@@ -35,7 +36,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val e = f()
     currTimefnDepth = currTimefnDepth - 1
     val end = System.currentTimeMillis()
-    if (currTimefnDepth < MAX_TIMEFN_DEPTH) {
+    if (currTimefnDepth < MAX_TIMEFN_DEPTH && DEBUG) {
       println("TIME(" + msg + ") " + (end - start) + " millis")
     }
     e
@@ -65,7 +66,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
 
   // Establishes differential invariants for a single quadrant-2 arc
   def quad2Tactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):ProvableSig = {
-    println("Proving Quadrant 2 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
+    if(DEBUG)println("Proving Quadrant 2 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ2
     // @TODO: Hide preconditions and y-defs that you don't need
     val (cx,cy) = spec.iCenter(iSection)
@@ -108,7 +109,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
 
   // Establishes differential invariants for a single quadrant-1 arc
   def quad1Tactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):ProvableSig = {
-    println("Proving Quadrant 1 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
+    if(DEBUG)println("Proving Quadrant 1 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ1
     val (cx,cy) = spec.iCenter(iSection)
     val r = spec.iRadius(iSection)
@@ -144,7 +145,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
 
   // Establishes differential invariants for a single quadrant-3 arc
   def quad3Tactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int, iSection:Int):ProvableSig = {
-    println("Proving Quadrant 3 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
+    if(DEBUG)println("Proving Quadrant 3 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ3
     val ((x0:Term,y0:Term),(x1:Term,y1:Term)) = (p1,p2)
     val (cx,cy) = spec.iCenter(iSection)
@@ -174,7 +175,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
 
   // Establishes differential invariants for a single quadrant-4 arc
   def quad4Tactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):ProvableSig = {
-    println("Proving Quadrant 4 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
+    if(DEBUG)println("Proving Quadrant 4 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ4
     val ((x0:Term,y0:Term),(x1:Term,y1:Term)) = (p1,p2)
     val (cx,cy) = spec.iCenter(iSection)
@@ -333,7 +334,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       val gravPos = 1
       val provePoses = gravPos::allCuts++localDefsPos(i)++keepBranch++allPoses
       val eProve = {
-        coHideL(provePoses, pr) & implyR(1) & DebuggingTactics.debug("Whatt", doPrint = true) & master()
+        coHideL(provePoses, pr) & implyR(1) & DebuggingTactics.debug("Whatt", doPrint = DEBUG) & master()
       }
       val contraPoses = inBounds::allPoses
       val eContra = {
@@ -416,7 +417,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val evidence = ToolEvidence(immutable.List("input" -> fact.conclusion.prettyString, "output" -> "true")) :: Nil
     // add lemma into DB, which creates an ID for it. use ID to apply the lemma
     val id = lemmaDB.add(Lemma(fact, evidence, name))
-    println(s"Lemma ${name.getOrElse("")} stored as $id")
+    if(DEBUG)println(s"Lemma ${name.getOrElse("")} stored as $id")
     id
   }
 
@@ -661,7 +662,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         val pr3 = interpret(dC(s"($cx)<=x".asFormula)(1)  <(nil, ODE(1)), pr2)
         val pr3a = interpret(dC(s"g() > 0".asFormula)(1) <(nil, dI()(1)), pr3)
         val pr4 = interpret(dC(s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)(1) <(nil, dI()(1)), pr3a)
-        val pr5 = interpret(dC(s"(($cx)-x)^2+(($cy)-y)^2=($r)^2".asFormula)(1) <(nil, DebuggingTactics.debug("This dI is slow", doPrint = true) & dI()(1)), pr4)
+        val pr5 = interpret(dC(s"(($cx)-x)^2+(($cy)-y)^2=($r)^2".asFormula)(1) <(nil, DebuggingTactics.debug("This dI is slow", doPrint = DEBUG) & dI()(1)), pr4)
         val pr6 = interpret(dC(s"y < ($cy)".asFormula)(1) <(nil,
           dC(s"2*(y-($cy))*($r)!=0".asFormula)(1)  <(
             dG(s"{a'=(($cx)-x)*v/(2*(y-($cy))*($r))*a+0}".asDifferentialProgram, Some(s"a^2*(y-($cy))=-1".asFormula))(1) &
@@ -774,7 +775,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         prOut2
       }
       case LineSection(Some(LineParam(bl,tr)), Some(grad), isUp) => {
-        println(isUp)
+        if(DEBUG)println("Is line up?", isUp)
         val t = Variable("kyxtime")
         def cutSolve() = {
           val pr1 = interpret(AxiomaticODESolver.addTimeVar(1), pr)
@@ -785,7 +786,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
           pr4
         }
         def doLineCase () = {
-          println("Proving Line Segment: ", bl, tr)
+          if(DEBUG)println("Proving Line Segment: ", bl, tr)
           //const, y_i=_, global(0), (bound_0(0) -> post_0(0)), ...,  (bound_n(0) -> post_n(0)) |- _
           val pr4 = selectSection(iSection,nSections,pr)
           //const, y_i=_, global(0), bound_i(0) -> post_i(0))|- _
