@@ -19,7 +19,7 @@ Problem.
       ++ v := 0; c := 0; d := 0;
      }
      t := 0;
-     { x'=0*x+(v+c+d), t'=0*t+1 & t <= ep }
+     { x'=v+c+d, t'=1 & t <= ep }
    }*@invariant(x <= S)
   ]x <= S
 End.
