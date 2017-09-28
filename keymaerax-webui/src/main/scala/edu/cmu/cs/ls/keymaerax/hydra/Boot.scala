@@ -193,7 +193,7 @@ object HyDRAInitializer {
     db.getConfiguration("tool").config.getOrElse("qe", throw new Exception("No preferred tool"))
   }
 
-  private def mathematicaConfigFromDB(db: DBAbstraction): ToolProvider.Configuration = {
+  def mathematicaConfigFromDB(db: DBAbstraction): ToolProvider.Configuration = {
     getMathematicaLinkName(db) match {
       case Some(l) => getMathematicaLibDir(db) match {
         case Some(libDir) => Map("linkName" -> l, "libDir" -> libDir)
