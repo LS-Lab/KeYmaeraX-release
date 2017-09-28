@@ -434,16 +434,45 @@ object ModelPlex extends ModelPlexTrait {
     * somewhere in the quantified formula. */
   private def optimizationOneWithSearchAt: DependentPositionTactic = "Optimization 1 with instance search at" by ((pos: Position, sequent: Sequent) => {
     sequent.sub(pos) match {
+      case Some(Exists(vars, And(Equal(l, r), _))) if pos.isSucc && vars.contains(l) =>
+        // case from deterministic assignments
+        val equality: Option[(Variable, Term)] = Some(l.asInstanceOf[BaseVariable] -> r)
+        debug("Running optimization 1 at " + pos + " using equality " + equality) & optimizationOneAt(equality)(pos)
       case Some(Exists(vars, phi)) if pos.isSucc =>
-          var equality: Option[(Variable, Term)] = None
-          ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-            override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-              case Equal(l, r) if vars.contains(l) => equality = Some(l.asInstanceOf[Variable], r); Left(Some(ExpressionTraversal.stop))
-              case Equal(l, r) if vars.contains(r) => equality = Some(r.asInstanceOf[Variable], l); Left(Some(ExpressionTraversal.stop))
-              case _ => Left(None)
-            }
-          }, phi)
-          debug("Running optimization 1 at " + pos + " using equality " + equality) & optimizationOneAt(equality)(pos)
+        // case from nondeterministic assignments
+
+        class SynonymFinder(v: NamedSymbol) extends ExpressionTraversalFunction {
+          var synonyms: Set[Term] = Set()
+          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+            case Equal(l, r) if v==l => synonyms = synonyms + r; Left(None)
+            case Equal(l, r) if v==r => synonyms = synonyms + l; Left(None)
+            case Or(l, r) =>
+              val lFinder = new SynonymFinder(v)
+              val rFinder = new SynonymFinder(v)
+              ExpressionTraversal.traverse(lFinder, l)
+              ExpressionTraversal.traverse(rFinder, r)
+              synonyms = synonyms ++
+                (if (lFinder.synonyms.nonEmpty && rFinder.synonyms.nonEmpty) lFinder.synonyms & rFinder.synonyms
+                 else lFinder.synonyms | rFinder.synonyms)
+              Right(e)
+            case _ => Left(None)
+          }
+        }
+
+        val v = vars.head
+        val vFinder = new SynonymFinder(v)
+        ExpressionTraversal.traverse(vFinder, phi)
+
+        //@note use synonym if all equalities (except x=xpost) agree across branches, otherwise instantiate with "xpost"
+        val postEquality = vFinder.synonyms.find({
+          case r: Variable => v.name + "post" == r.name
+          case FuncOf(r: Function, _) => v.name + "post" == r.name
+          case _ => false})
+        val remainingEqs = vFinder.synonyms.filter(Some(_) != postEquality)
+        val equality: Option[Term] =
+          if (remainingEqs.size == 1) Some(remainingEqs.head)
+          else postEquality
+        optimizationOneAt(equality.map(v -> _))(pos)
     }
   })
 
