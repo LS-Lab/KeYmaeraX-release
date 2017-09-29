@@ -225,6 +225,62 @@ class ExampleProblems extends FlatSpec with Matchers {
     formula shouldBe KeYmaeraXParser("2+3*4>3")
   }
 
+  it should "replace argument name of unary function with non-indexed dot (for backwards compatibility)" in {
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
+    val problem =
+      """Functions.
+        |  R f(R x) = (x + 2).
+        |End.
+        |
+        |Problem.
+        |  f(2)>3
+        |End.
+      """.stripMargin
+
+    val (d, formula) = KeYmaeraXProblemParser.parseProblem(problem)
+    d.decls should have size 1
+    d.decls should contain key ("f", None)
+    d.decls(("f", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Real
+      codomain shouldBe Real
+      interpretation shouldBe Plus(DotTerm(Real), Number(2))
+    }
+    formula shouldBe KeYmaeraXParser("2+2>3")
+  }
+
+  it should "allow both . and explicit ._0 in unary function definition" in {
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
+    def problem(dot: String): String =
+      s"""Functions.
+        |  R f(R) = ($dot + 2).
+        |End.
+        |
+        |Problem.
+        |  f(2)>3
+        |End.
+      """.stripMargin
+
+    val (d, f) = KeYmaeraXProblemParser.parseProblem(problem("._0"))
+    d.decls should have size 1
+    d.decls should contain key ("f", None)
+    d.decls(("f", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Real
+      codomain shouldBe Real
+      interpretation shouldBe Plus(DotTerm(Real), Number(2))
+    }
+    f shouldBe KeYmaeraXParser("2+2>3")
+
+    val (e, g) = KeYmaeraXProblemParser.parseProblem(problem("."))
+    e.decls should have size 1
+    e.decls should contain key ("f", None)
+    e.decls(("f", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Real
+      codomain shouldBe Real
+      interpretation shouldBe Plus(DotTerm(Real), Number(2))
+    }
+    g shouldBe KeYmaeraXParser("2+2>3")
+  }
+
   it should "parse program definitions" in {
     val problem =
       """

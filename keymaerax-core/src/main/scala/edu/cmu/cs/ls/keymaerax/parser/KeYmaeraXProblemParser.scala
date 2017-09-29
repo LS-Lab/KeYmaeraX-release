@@ -506,7 +506,18 @@ object KeYmaeraXDeclarationsParser {
       case (st@Token(_, _))::Nil => (parseSort(st, of), body)
     }
 
-    toSort(domainElements, remainder)
+    //@note backwards compatibility with f(R) = (. + 2).
+    toSort(domainElements, remainder) match {
+      case (Real, body) if body.forall(_.tok match {
+        case DOT(Some(0)) => true
+        case DOT(_) => false
+        case _ => true
+      }) => (Real, body.map(x => x.tok match {
+        case DOT(Some(0)) => Token(DOT(), x.loc)
+        case _ => x
+      }))
+      case x => x
+    }
   }
 
   /**
