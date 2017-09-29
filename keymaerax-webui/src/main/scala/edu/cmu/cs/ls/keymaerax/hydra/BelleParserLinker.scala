@@ -62,7 +62,7 @@ object BelleParserLinker {
         BelleParser(result) //will result in exn if not parsed
         result
       }
-      case None => throw new Exception("Did not find a tactic named 'main'")
+      case None => throw new Exception(s"Did not find a tactic named '${mainTacticName}'")
     }
   }
 }
