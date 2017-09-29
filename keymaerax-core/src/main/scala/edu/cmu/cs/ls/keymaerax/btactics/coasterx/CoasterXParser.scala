@@ -71,7 +71,8 @@ object CoasterXParser {
         peelPrefix(post4, ",").flatMap({case post5 =>
         parseNumber(post5).flatMap({case (theta2, post6) =>
         peelPrefix(post6,")").map({case post7 =>
-        (Some(ArcParam((x1,Number(WORLD_HEIGHT-x2.value)),(x3,Number(WORLD_HEIGHT-x4.value)),theta1,theta2)),post7)})})})})})})})}
+          //NOTE: Swaps x2 vs x4 to maintain "greater coord on right" after subtracting...
+        (Some(ArcParam((x1,Number(WORLD_HEIGHT-x4.value)),(x3,Number(WORLD_HEIGHT-x2.value)),theta1,theta2)),post7)})})})})})})})}
   }
 
   def parseLineParam(str:String):Option[(Option[LineParam],String)] = {

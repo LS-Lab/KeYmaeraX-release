@@ -15,7 +15,7 @@ object AccelEnvelope {
   val NEG_INF = Number(-1000000.0)
   val POS_INF = Number(1000000.0)
   // Based on ASTM F2291-17 limits for SUSTAINED acceleration >= 40s, making this conservative
-  // For short ranges smaller numbers are OK.
+  // For short ranges bigger numbers are OK.
   val MIN_RAD:EnvScalar = Number(-1.1)
   val MAX_RAD:EnvScalar = Number(2.0)
   // Ranges for 0 seconds
@@ -27,9 +27,12 @@ object AccelEnvelope {
   val MAX_TAN:EnvScalar = Number(2.5)
   val MINN_TAN:EnvScalar = Number(-3.5)
   val MAXX_TAN:EnvScalar = Number(6.0)
-  val empty = AccelEnvelope(POS_INF, NEG_INF, POS_INF, NEG_INF)
+  val empty = AccelEnvelope(POS_INF, NEG_INF, POS_INF, NEG_INF, POS_INF, NEG_INF)
 }
-case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar, private val tMin:EnvScalar, private val tMax:EnvScalar) {
+case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
+                         private val tMin:EnvScalar, private val tMax:EnvScalar,
+                        /* Note: vMin, vMax are bounds on v^2 to avoid arbitrary-precision square roots */
+                         private val vMin:EnvScalar, private val vMax:EnvScalar) {
   import AccelEnvelope._
 
   private def round(x:Number):Number = {
@@ -37,27 +40,35 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
     Number(x.value.setScale(MAX_SCALE,BigDecimal.RoundingMode.UP))
   }
 
-  def radMin:Term = { round(rMin) }
-  def radMax:Term = { round(rMax) }
-  def tanMin:Term = { round(tMin) }
-  def tanMax:Term = { round(tMax) }
+  def radMin:EnvScalar = { round(rMin) }
+  def radMax:EnvScalar = { round(rMax) }
+  def tanMin:EnvScalar = { round(tMin) }
+  def tanMax:EnvScalar = { round(tMax) }
+  def velMin:EnvScalar = { round(vMin) }
+  def velMax:EnvScalar = { round(vMax) }
 
   def printLoudly():Unit = {
     println("*************************************************************")
-    println("*    ACCELERATION ENVELOPE                                  *")
+    println("*    ACCELERATION+VELOCITY ENVELOPE                         *")
     println("*************************************************************")
     println("MINIMUM RADIAL: " + radMin)
     println("MAXIMUM RADIAL: " + radMax)
     println("MINIMUM TANGENTIAL: " + tanMin)
     println("MAXIMUM TANGENTIAL: " + tanMax)
+    println("MINIMUM VELOCITY:" + round(Number(Math.sqrt(velMin.value.toDouble))))
+    println("MAXIMUM VELOCITY:" + round(Number(Math.sqrt(velMax.value.toDouble))))
   }
 
   def extendR(r:EnvScalar):AccelEnvelope = {
-    AccelEnvelope(scalarMin(rMin,r), scalarMax(rMax,r), tMin, tMax)
+    AccelEnvelope(scalarMin(rMin,r), scalarMax(rMax,r), tMin, tMax, vMin, vMax)
   }
 
   def extendT(t:EnvScalar):AccelEnvelope = {
-    AccelEnvelope(rMin,rMax,scalarMin(t,tMin),scalarMax(t,tMax))
+    AccelEnvelope(rMin,rMax,scalarMin(t,tMin),scalarMax(t,tMax), vMin, vMax)
+  }
+
+  def extendV(v:EnvScalar):AccelEnvelope = {
+    AccelEnvelope(rMin,rMax,tMin,tMax,scalarMin(v,vMin),scalarMax(v,vMax))
   }
 
   // Ratio of model units to meters
@@ -76,14 +87,19 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
   val DEFAULT_TOLERANCE = Number(0.001)
 
   def relaxBy(tolerance:EnvScalar=DEFAULT_TOLERANCE):AccelEnvelope = {
-    AccelEnvelope(Number(rMin.value-tolerance.value), Number(rMax.value+tolerance.value),Number(tMin.value-tolerance.value),Number(tMax.value+tolerance.value))
+    AccelEnvelope(Number(rMin.value-tolerance.value), Number(rMax.value+tolerance.value),Number(tMin.value-tolerance.value),Number(tMax.value+tolerance.value), Number(vMin.value-tolerance.value), Number(vMax.value+tolerance.value))
   }
 
   private def tanSpec(dy:Term):Formula = {
     s"($tanMin)*g() <= -($dy)*g() & -($dy)*g() <= ($tanMax)*g()".asFormula
   }
 
-  def lineSpec(dy:Term):Formula = tanSpec(dy)
+  private def velSpec:Formula = {
+    s"v^2 <= v^2 & v^2 <= v^2".asFormula
+    //s"($velMin) <= v^2 & v^2 <= ($velMax)".asFormula
+  }
+
+  def lineSpec(dy:Term):Formula = And(velSpec,tanSpec(dy))
 
   def radSpec(r:Term, isCw:Boolean):Formula = {
     val a = s"v^2/($r)".asTerm //if(isCw) s"v^2/($r)".asTerm else s"-v^2/($r)".asTerm
@@ -91,7 +107,7 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
   }
 
   def arcSpec(dy:Term, r:Term, isCw:Boolean):Formula = {
-    And(radSpec(r, isCw), tanSpec(dy))
+    And(velSpec,And(radSpec(r, isCw), tanSpec(dy)))
   }
 }
 
@@ -669,7 +685,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
     val re = dist((cx,cy),(xx1,yy1))
     val yendSign = if (param.theta2.value > 0) { Number(1) } else Number(-1)
     val xend = xx2
-    val (dcxe, dcye) = (foldMinus(cx, xend), foldMinus(cy, yy2))
+    val (dcxe, dcye) = (foldMinus(cxe, xend), foldMinus(cye, yy2))
     val (dtxe, dtye) = normalizeVector(tangentFromCenter((dcxe,dcye), (param.theta1, param.theta2), param.deltaTheta))
     val cxDef:Formula = Equal(cx, cxe)
     val cyDef:Formula = Equal(cy, cye)
@@ -722,7 +738,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
       assert(theta1.value <= -90 && param.theta2.value >= -90)
       // @TODO: This assumes it's a Q3-Q4 arc, but gotta start somewhere
       val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, Number(-90 - theta1.value))), Some(oldSlope)),
-        ((xx1, yy1), (cx, foldMinus(cy,r))),
+        ((xx1, yy1), (cx, foldMinus(cy,re))),
         allDefs,
         (endDX, endDY))
       // TODO: Need to set dx and such intermediately for those components
@@ -742,7 +758,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
       ctx = ctx.+(r2 -> re, cx2 -> cxe, cy2 -> cye, endDX2 -> dtxe, endDY2 -> dtye)
       val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
         Number(-90), Number((param.theta2.value - (-90)).max(1)))), Some(oldSlope)),
-        ((cx, foldMinus(cy,r)), (xx2, yy2)),
+        ((cxe, foldMinus(cy,r)), (xx2, yy2)),
         allDefs2,
         (endDX, endDY))
       sec1 :: sec2 :: alignZipped(rest, Some((endDX, endDY)), index + 2)
@@ -770,7 +786,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
       val allDefs2 = And(rDef2, And(And(cxDef2, cyDef2),And(endDXDef2, endDYDef2)))
       ctx = ctx.+(r2 -> re, cx2 -> cxe, cy2 -> cye, endDX2 -> dtxe, endDY2 -> dtye)
       val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), Number(90), Number((param.theta2.value-90).min(-1)))), Some(oldSlope)),
-        ((cx, foldPlus(cy,r)), (xx2, yy2)),
+        ((cxe, foldPlus(cy,r)), (xx2, yy2)),
         allDefs2,
         (endDX, endDY))
       sec1 :: sec2 :: alignZipped(rest, Some((endDX, endDY)), index + 2)
@@ -842,6 +858,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
 
   def envelope(y0:Number, v0:Number, segs:List[(Section,(TPoint,TPoint))]):AccelEnvelope = {
     //val g = 9.80665
+    def velSquaredAt(y:Number):Number = Number(v0.value*v0.value + (2*y0.value) - (2*y.value))
     val res =
     segs.foldRight(AccelEnvelope.empty){case((sec,((x1:Term,y1:Term),(x2:Term,y2:Term))), env) =>
       sec match {
@@ -849,14 +866,13 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
           // Line sections - no centripetal acceleration
           val (dx,dy) = lineDir(bl,tr)
           env.extendT(Number(evalTerm(Neg(dy)).value))
+            .extendV(velSquaredAt(evalTerm(y1))).extendV(velSquaredAt(evalTerm(y2)))
         case (ArcSection(Some(ArcParam(bl,tr,theta1,deltaTheta)), Some(grad))) =>
           val rad = (evalTerm(bl._1).value-evalTerm(tr._1).value).abs/2
           val cx = (evalTerm(bl._1).value + evalTerm(tr._1).value) /2
           /* Centripetal acceleration perpendicular to track */
           def radialAt(y:Number):Number = {
-            val yy = y.value
-            val KE = v0.value*v0.value + (2*y0.value) - (2*yy)
-            val cent = KE/rad
+            val cent = velSquaredAt(y).value/rad
             Number(cent)
           }
           /* Acceleration tangential to track */
@@ -876,6 +892,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
           val t1 = tangentialAt(evalTerm(x1))
           val t2 = tangentialAt(evalTerm(x2))
           env.extendR(r2).extendR(r1).extendT(t2).extendT(t1)
+            .extendV(velSquaredAt(evalTerm(y1))).extendV(velSquaredAt(evalTerm(y2)))
       }}
     res.relaxBy()
   }

@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{And, _}
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx._
-import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
+import edu.cmu.cs.ls.keymaerax.lemma.{CachedLemmaDB, FileLemmaDB, LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.{NoProof, NoProofTermProvable, PTProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
@@ -412,7 +412,12 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
   }
 
   // Storage for component proofs
-  val lemmaDB: LemmaDB = LemmaDBFactory.lemmaDB
+  var lemmaDB: LemmaDB = new CachedLemmaDB(new FileLemmaDB())
+
+  def resetLemmaDB():Unit = {
+    lemmaDB = new CachedLemmaDB(new FileLemmaDB())
+  }
+
   def storeLemma(fact: ProvableSig, name: Option[String]): String = {
     val evidence = ToolEvidence(immutable.List("input" -> fact.conclusion.prettyString, "output" -> "true")) :: Nil
     // add lemma into DB, which creates an ID for it. use ID to apply the lemma
@@ -422,14 +427,14 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
   }
 
   // Proof of generic straight component
-  lazy val straightProof:ProvableSig = {
+  def straightProof:ProvableSig = {
     val provableName = "coasterx_straightLineCase"
     (lemmaDB.get(provableName), reuseComponents) match {
       case (Some(pr),true) => pr.fact
       case _ =>
         val a1: Formula = "(g() > 0)".asFormula
         val a2: Formula = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3: Formula = "(x0()<=x&x<=x1()->((dyLo()*g()<=-dy0()*g()&-dy0()*g()<=dyHi()*g())&dx0()*y=dy0()*x+dx0()*c()))".asFormula
+        val a3: Formula = "(x0()<=x&x<=x1()->( (vLo() <= v^2 & v^2 <= vHi())  &  (dyLo()*g()<=-dy0()*g() & -dy0()*g()<=dyHi()*g()))   &  (dx0()*y=dy0()*x+dx0()*c()) )".asFormula
         val a5: Formula = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1())) ->  dx0()*v^2 > 2*(x1()-x0())*dy0()*g()".asFormula
         val a6: Formula = "(x1() > x0())".asFormula
         val a7: Formula = "(dx0()^2 + dy0()^2 = 1)".asFormula
@@ -462,14 +467,14 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
   }
 
   // Proof of generic quadrant-1 arc
-  lazy val arcProofQ1:ProvableSig = {
+  def arcProofQ1:ProvableSig = {
     val provableName = "coasterx_Q1ArcCase"
     (lemmaDB.get(provableName), reuseComponents) match {
       case (Some(pr), true) => pr.fact
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & cy()<=y)&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=-(cy()-y)/r()".asFormula
         val a5 = "dy=(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -502,21 +507,21 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         val pr5 = interpret(dC("v>0".asFormula)(1) <(nil, ODE(1)), pr4)
         val pr6 = interpret(dC("(x-cx())^2 + (y-cy())^2 = r()^2".asFormula)(1) <(nil, ODE(1)), pr5)
         val pr7 = interpret(ODE(1), pr6)
-        storeLemma(pr7, Some(provableName))
+        if(reuseComponents) {storeLemma(pr7, Some(provableName))}
         pr7
     }
   }
 
 
   // Proof of generic quadrant-2 arc
-  lazy val arcProofQ2:ProvableSig = {
+  def arcProofQ2:ProvableSig = {
     val provableName = "coasterx_Q2ArcCase"
     (lemmaDB.get(provableName), reuseComponents) match {
       case (Some(pr), true) => pr.fact
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & (x<=cx() & cy()<=y)&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & (x<=cx() & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=-(cy()-y)/r()".asFormula
         val a5 = "dy=(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -570,14 +575,14 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
   }
 
   // Proof of generic quadrant-3 arc
-  lazy val arcProofQ3:ProvableSig = {
+  def arcProofQ3:ProvableSig = {
     val provableName = "coasterx_Q3ArcCase"
     (lemmaDB.get(provableName), reuseComponents) match {
       case (Some(pr), true) => pr.fact
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=(cy()-y)/r()".asFormula
         val a5 = "dy=-(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -618,14 +623,14 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
   }
 
   // Proof of generic quadrant-4 arc
-  lazy val arcProofQ4:ProvableSig = {
+  def arcProofQ4:ProvableSig = {
     val provableName = "coasterx_Q4ArcCase"
     (lemmaDB.get(provableName), reuseComponents) match {
       case (Some(pr), true) => pr.fact
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & (cx()<=x & y<=cy())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & (cx()<=x & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=(cy()-y)/r()".asFormula
         val a5 = "dy=-(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
