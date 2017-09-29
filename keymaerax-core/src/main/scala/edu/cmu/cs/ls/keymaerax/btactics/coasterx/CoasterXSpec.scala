@@ -95,8 +95,8 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
   }
 
   private def velSpec:Formula = {
-    s"v^2 <= v^2 & v^2 <= v^2".asFormula
-    //s"($velMin) <= v^2 & v^2 <= ($velMax)".asFormula
+    //s"v^2 <= v^2 & v^2 <= v^2".asFormula
+    s"($velMin)*g() <= v^2 & v^2 <= ($velMax)*g()".asFormula
   }
 
   def lineSpec(dy:Term):Formula = And(velSpec,tanSpec(dy))
