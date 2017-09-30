@@ -64,14 +64,14 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
     println("*************************************************************")
     println("*    ACCELERATION+VELOCITY ENVELOPE                         *")
     println("*************************************************************")
-    println("MINIMUM RADIAL: " + radMin.value*metersPerUnit)
-    println("MAXIMUM RADIAL: " + radMax.value*metersPerUnit)
-    println("MINIMUM TANGENTIAL: " + tanMin.value*metersPerUnit)
-    println("MAXIMUM TANGENTIAL: " + tanMax.value*metersPerUnit)
+    println("MINIMUM RADIAL: " + radMin.value)
+    println("MAXIMUM RADIAL: " + radMax.value)
+    println("MINIMUM TANGENTIAL: " + tanMin.value)
+    println("MAXIMUM TANGENTIAL: " + tanMax.value)
     //velocity in m/s = sqrt(2*deltaH*unitsPerMeter*gravity)/unitsPerMeter39.3701
     // @TODO: I think this calculation is correct... and the ones above need fixed.
-    println("MINIMUM VELOCITY:" + round(Number(Math.sqrt(velMin.value.toDouble*unitsPerMeter*g)*metersPerUnit)))
-    println("MAXIMUM VELOCITY:" + round(Number(Math.sqrt(velMax.value.toDouble*unitsPerMeter*g)*metersPerUnit)))
+    println("MINIMUM VELOCITY:" + round(Number(Math.sqrt(velMin.value.toDouble*metersPerUnit*g))))
+    println("MAXIMUM VELOCITY:" + round(Number(Math.sqrt(velMax.value.toDouble*metersPerUnit*g))))
   }
 
   def extendR(r:EnvScalar):AccelEnvelope = {
