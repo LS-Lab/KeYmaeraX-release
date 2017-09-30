@@ -99,7 +99,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val pr1e = timeFn("ArcQ2 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & selectCx & QE)), pr1d)})
     val cut6 = s"($r) > 0".asFormula
     val pr1f = timeFn("ArcQ2 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & selectR & QE)), pr1e)})
-    val cut7 = s"((($x0)<=x&x<=($x1)) & (($y0) <= y & y <= ($y1)))->(v^2)/2 > g()*(($y1) - ($y0))".asFormula
+    val cut7 = s"((($x0)<=x&x<=($x1)) & (($y0) <= y & y <= ($y1)))->(v^2)/2 > g()*(($y1) - y)".asFormula
     val pr1fa = timeFn("ArcQ2 Case Step 6", {() => interpret(nil < (nil, cut(cut7) < (nil, hideR(1) & QE)), pr1f)})
     val pr1g = interpret(nil <(nil, hideL(-2)*nYs), pr1fa)
     val tac = US(aproof)
@@ -198,7 +198,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val pr1e = timeFn("ArcQ4 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & QE)), pr1d)})
     val cut6 = s"($r) > 0".asFormula
     val pr1f = timeFn("ArcQ4 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & QE)), pr1e)})
-    val cut7 = s"($evol) -> ((v^2)/2 > g()*(($y1) - ($y0)))".asFormula
+    val cut7 = s"($evol) -> ((v^2)/2 > g()*(($y1) - y))".asFormula
     val pr1g = timeFn("ArcQ4 Case Step 7", {() => interpret(nil < (nil, cut(cut7) < (nil, hideR(1) & QE)), pr1f)})
     val pr1i = interpret(nil <(nil, hideL(-2)*nYs), pr1g)
     val tac = US(aproof)
@@ -529,7 +529,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         val a8 = "cy() <= y0()".asFormula
         val a9 = "x1() <= cx() ".asFormula
         val a10 = "r() > 0".asFormula
-        val a11 = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1()))->(v^2)/2 > g()*(y1() - y0())".asFormula
+        val a11 = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1()))->(v^2)/2 > g()*(y1() - y)".asFormula
         val c =
           """[{x'=dx*v,
             |            y'=dy*v,
@@ -638,7 +638,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         val a8 = "cy() > y1()".asFormula
         val a9 = "x0() >= cx()".asFormula
         val a10 = "r() > 0".asFormula
-        val a11 = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1()))->(v^2)/2 > g()*(y1() - y0())".asFormula
+        val a11 = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1()))->(v^2)/2 > g()*(y1() - y)".asFormula
         val c =
           """[{x'=dx*v,
             |            y'=dy*v,

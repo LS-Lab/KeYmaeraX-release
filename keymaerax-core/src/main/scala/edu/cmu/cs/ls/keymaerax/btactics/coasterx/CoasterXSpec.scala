@@ -32,8 +32,14 @@ object AccelEnvelope {
 case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
                          private val tMin:EnvScalar, private val tMax:EnvScalar,
                         /* Note: vMin, vMax are bounds on v^2 to avoid arbitrary-precision square roots */
-                         private val vMin:EnvScalar, private val vMax:EnvScalar) {
+                         private val vMin:EnvScalar, private val vMax:EnvScalar,
+                         // Using inches right now
+                         feetPerUnit:Double = 0.0833) {
   import AccelEnvelope._
+
+  val METERS_PER_FOOT = 0.3048
+  val metersPerUnit = METERS_PER_FOOT * feetPerUnit
+  val unitsPerMeter = 1.0/metersPerUnit
 
   private def round(x:Number):Number = {
     val MAX_SCALE = 4
@@ -47,16 +53,25 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
   def velMin:EnvScalar = { round(vMin) }
   def velMax:EnvScalar = { round(vMax) }
 
+  // Ratio of model units to meters
+  val g = 9.80665
+  val sqrtG = 3.13155712067
+  // @TODO: Probably wrong
+  private def scaleAccel(t:EnvScalar):EnvScalar = {
+    Number(t.value/(metersPerUnit*metersPerUnit*g))
+  }
   def printLoudly():Unit = {
     println("*************************************************************")
     println("*    ACCELERATION+VELOCITY ENVELOPE                         *")
     println("*************************************************************")
-    println("MINIMUM RADIAL: " + radMin)
-    println("MAXIMUM RADIAL: " + radMax)
-    println("MINIMUM TANGENTIAL: " + tanMin)
-    println("MAXIMUM TANGENTIAL: " + tanMax)
-    println("MINIMUM VELOCITY:" + round(Number(Math.sqrt(velMin.value.toDouble))))
-    println("MAXIMUM VELOCITY:" + round(Number(Math.sqrt(velMax.value.toDouble))))
+    println("MINIMUM RADIAL: " + radMin.value*metersPerUnit)
+    println("MAXIMUM RADIAL: " + radMax.value*metersPerUnit)
+    println("MINIMUM TANGENTIAL: " + tanMin.value*metersPerUnit)
+    println("MAXIMUM TANGENTIAL: " + tanMax.value*metersPerUnit)
+    //velocity in m/s = sqrt(2*deltaH*unitsPerMeter*gravity)/unitsPerMeter39.3701
+    // @TODO: I think this calculation is correct... and the ones above need fixed.
+    println("MINIMUM VELOCITY:" + round(Number(Math.sqrt(velMin.value.toDouble*unitsPerMeter*g)*metersPerUnit)))
+    println("MAXIMUM VELOCITY:" + round(Number(Math.sqrt(velMax.value.toDouble*unitsPerMeter*g)*metersPerUnit)))
   }
 
   def extendR(r:EnvScalar):AccelEnvelope = {
@@ -71,13 +86,6 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
     AccelEnvelope(rMin,rMax,tMin,tMax,scalarMin(v,vMin),scalarMax(v,vMax))
   }
 
-  // Ratio of model units to meters
-  val scale = 100.0
-  val g = 9.80665
-  // @TODO: Probably wrong
-  private def scaleAccel(t:EnvScalar):EnvScalar = {
-    Number(t.value/(scale*scale*g))
-  }
   // Not intended for soundness criticality, but as a check during spec generation to ensure there's some chance of the
   // spec being useful
   def isSafe:Boolean = {
