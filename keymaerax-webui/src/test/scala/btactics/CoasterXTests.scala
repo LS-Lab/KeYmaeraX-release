@@ -3,11 +3,13 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser.File
-import edu.cmu.cs.ls.keymaerax.btactics.coasterx.{CoasterXParser, CoasterXProver, CoasterXSpec}
+import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXTestLib._
+import edu.cmu.cs.ls.keymaerax.btactics.coasterx.{CoasterXParser, CoasterXProver, CoasterXSpec, CoasterXTestLib}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 
 @SlowTest
 class CoasterXTests extends TacticTestBase {
@@ -157,7 +159,7 @@ class CoasterXTests extends TacticTestBase {
     ' '.isWhitespace shouldBe true
   }
 
-  def printFileSpec(s:String):Unit = println(new CoasterXSpec()(CoasterXParser.parseFile(s).get))
+  def printFileSpec(s:String):Unit = println(new CoasterXSpec(1.0)(CoasterXParser.parseFile(s).get))
 
   "Spec Generator" should "generate a spec for example coaster" in {
     printFileSpec(exampleFile1)
@@ -189,81 +191,8 @@ class CoasterXTests extends TacticTestBase {
     printFileSpec(simpleValley)
   }
 
-  def timeSecs[T](f:(() => T)):Double = {
-    val early = System.currentTimeMillis()
-    val res = f()
-    val late = System.currentTimeMillis()
-    (late - early) / 1000.0
-  }
-
-  private def countVars(fml:Formula):Int = {
-    val ss = StaticSemantics(fml)
-    val theSet = (ss.bv ++ ss.fv).toSet ++ StaticSemantics.symbols(fml)
-    theSet.size
-  }
-
-  def mean(xs:List[Double]):Double = {
-    xs match {
-      case Nil => 0.0
-      case _ => (xs.foldLeft(0.0){(x,y) => x+y})/xs.length
-    }
-  }
-
-  def prover(file:String, name:String, doFast:Boolean = false, NUM_RUNS:Int = 1) = {
-    val spec = new CoasterXSpec()
-    val parsed = CoasterXParser.parseFile(file).get
-    val (align,alignFml) = spec.prepareFile(parsed)
-    val env = spec.envelope(align)
-    val specc = spec.fromAligned((align,alignFml),env)
-    val specStr = KeYmaeraXPrettyPrinter.stringify(specc)
-    val specLenKB = specStr.length / 1000.0
-    println("SPEC SIZE KB: " + specLenKB)
-    val nSections = spec.countSections(align)
-    val nVars = countVars(specc)
-
-    val prFast = new CoasterXProver(spec,env, reuseComponents = true)
-    val prSlo = new CoasterXProver(spec,env, reuseComponents = false)
-
-    var resFast:Option[ProvableSig] = None
-    var resSlo:Option[ProvableSig] = None
-    var sloTimes:List[Double] = Nil
-    var fastTimes:List[Double] = Nil
-    for(i <- 0 until NUM_RUNS) {
-       fastTimes = timeSecs { case () => resFast = Some(prFast(file)) } :: fastTimes
-        prFast.resetLemmaDB()
-       if(!doFast){
-         sloTimes = timeSecs { case () => resSlo = Some(prSlo(file)) } :: sloTimes
-         prSlo.resetLemmaDB()
-       }
-    }
-
-    val fastMean = mean(fastTimes)
-    val sloMean = mean(sloTimes)
-    val percentDiffAvg = (fastMean/(sloMean-fastMean))*100.0
-    val speedUpText =
-      if(percentDiffAvg > 0) {
-        s"PAPER ACCEPTED: SPEEDUP $percentDiffAvg"
-      } else {
-        s"PAPER REJECTED: SLOWDOWN $percentDiffAvg"
-      }
-    println("********** TEST RESULTS FOR " + name + " ***************")
-    env.printLoudly()
-    println("Sections: " + nSections)
-    println("Vars: " + nVars)
-    println("All Times with Reuse: " + fastTimes)
-    println("Avg Time with Reuse: " + fastMean)
-    println("All Times without Reuse: " + sloTimes)
-    println("Avg Time without Reuse: " + sloMean)
-    println("Number of steps with Reuse: " + resFast.get.steps)
-    println("Number of steps without Reuse: " + resSlo.getOrElse(resFast.get).steps)
-    println(speedUpText)
-    resFast.get
-  }
-
-  import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-
   "All components " should "prove and produce statistics" in { withMathematica(qeTool => {
-    val spec = new CoasterXSpec()
+    val spec = new CoasterXSpec(1.0)
     // file shouldnt matter
     val file = straightLine
     val parsed = CoasterXParser.parseFile(file).get
@@ -272,23 +201,9 @@ class CoasterXTests extends TacticTestBase {
     val specc = spec.fromAligned((align,alignFml),env)
     val specStr = KeYmaeraXPrettyPrinter.stringify(specc)
     val specLenKB = specStr.length / 1000.0
-    println("SPEC SIZE KB: " + specLenKB)
     val nVars = countVars(specc)
 
     val prFast = new CoasterXProver(spec,env, reuseComponents = false)
-
-    def doStats(name:String, f:()=>ProvableSig) = {
-      var res:Option[ProvableSig] = None
-      val theTime = timeSecs({case () => res = Some(f())})
-      val steps = res.get.steps
-      val vars = countVars(res.get.conclusion.toFormula)
-      val size = KeYmaeraXPrettyPrinter.stringify(res.get.conclusion.toFormula).length/1000.0
-      println("**** Stats for " + name + "****")
-      println("Time (secs): " + theTime)
-      println("Proof steps: " + steps)
-      println("Total vars: " + vars)
-      println("Fml size: " + size)
-    }
 
     val s = doStats("Straight", () => prFast.straightProof)
     val q1 = doStats("Q1", () => prFast.arcProofQ1)
@@ -298,6 +213,10 @@ class CoasterXTests extends TacticTestBase {
 
   })}
 
+
+  def prover(fileContents:String, modelName:String):ProvableSig = {
+    CoasterXTestLib.prover(fileContents, modelName, doFast = false, NUM_RUNS = 1, feetPerUnit = 1.0, velocity = None, doFormula = true, doStats = true)
+  }
 
   "Proof Generator" should "generate proof for straight line" in { withMathematica(qeTool => {
     val pr = prover(straightLine, "Straight Line")

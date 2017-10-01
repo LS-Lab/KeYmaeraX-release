@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.btactics.IsabelleSyntax._
+import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXMain
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -49,6 +50,11 @@ object KeYmaeraX {
       |  -parse filename.kyx |
       |  -bparse filename.kyt |
       |  -repl filename.kyx [filename.kyt] [scaladefs]
+      |  -coasterx ( -component component-name [-formula] [-tactic] [-stats]
+      |                [-num-runs N]
+      |            | -coaster filename.rctx -feet-per-unit X [-num-runs N]
+      |              [-velocityFPS V] [-formula] [-stats] [-compare-reuse]
+      |            | -table2)
       |
       |Actions:
       |  -prove     run KeYmaera X prover on given problem file with given tactic
@@ -59,6 +65,7 @@ object KeYmaeraX {
       |  -parse     return error code !=0 if the input problem file does not parse
       |  -bparse    return error code !=0 if bellerophon tactic file does not parse
       |  -repl      prove interactively from command line
+      |  -coasterx  verify roller coasters
       |
       |Additional options:
       |  -tool mathematica|z3 choose which tool to use for arithmetic
@@ -104,6 +111,8 @@ object KeYmaeraX {
       else if (options.get('mode).contains("codegen"))
       //@note no MathKernel initialization needed for C generation
         codegen(options)
+      else if (options.get('mode).contains("coasterx"))
+        CoasterXMain.main(options)
       else if (!options.get('mode).contains("ui") ) {
         try {
           initializeProver(
@@ -154,6 +163,34 @@ object KeYmaeraX {
     })
   }
 
+  // Separate argument parsing function so that options (e.g. the -tactic option) can be different for coasterx vs.
+  // regular usage
+  private def nextCoasterOption(map: OptionMap, list: List[String]): OptionMap = {
+    //-coasterx (-component component-name [-formula] [-tactic] [-stats] | -coaster filename.rctx -feet-per-unit X [-velocity V] [-formula] [-stats] | -table2)
+    list match {
+      case "-component" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('coasterxMode -> "component", 'in -> value), tail)
+        else optionErrorReporter("-component")
+      case "-table2" :: tail => nextCoasterOption(map ++ Map('coasterxMode -> "table2"), tail)
+      case "-formula" :: tail => nextCoasterOption(map ++ Map('doFormula -> "true"), tail)
+      case "-tactic" :: tail => nextCoasterOption(map ++ Map('doTactic -> "true"), tail)
+      case "-stats" :: tail => nextCoasterOption(map ++ Map('doStats -> "true"), tail)
+      case "-compare-reuse" :: tail => nextCoasterOption(map ++ Map('compareReuse -> "true"), tail)
+      case "-num-runs" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('numRuns -> value), tail)
+        else optionErrorReporter("-num-runs")
+      case "-coaster" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('coasterxMode -> "coaster", 'in -> value), tail)
+        else optionErrorReporter("-coaster")
+      case "-feet-per-unit" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('feetPerUnit -> value), tail)
+        else optionErrorReporter("-feet-per-unit")
+      case "-velocityFPS" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('velocity -> value), tail)
+        else optionErrorReporter("-velocityFPS")
+    }
+  }
+
   private def nextOption(map: OptionMap, list: List[String]): OptionMap = {
     list match {
       case Nil => map
@@ -177,6 +214,8 @@ object KeYmaeraX {
       case "-codegen" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
         else optionErrorReporter("-codegen")
+      case "-coasterx" :: tail =>
+        nextCoasterOption(map ++ Map('mode -> "coasterx"), tail)
       case "-repl" :: model :: tactic_and_scala_and_tail =>
         val posArgs = tactic_and_scala_and_tail.takeWhile(x => !x.startsWith("-"))
         val restArgs = tactic_and_scala_and_tail.dropWhile(x => !x.startsWith("-"))

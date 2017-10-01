@@ -27,14 +27,14 @@ object AccelEnvelope {
   val MAX_TAN:EnvScalar = Number(2.5)
   val MINN_TAN:EnvScalar = Number(-3.5)
   val MAXX_TAN:EnvScalar = Number(6.0)
-  val empty = AccelEnvelope(POS_INF, NEG_INF, POS_INF, NEG_INF, POS_INF, NEG_INF)
+  val empty = AccelEnvelope(POS_INF, POS_INF, NEG_INF, NEG_INF, POS_INF, NEG_INF, POS_INF, NEG_INF, 1.0)
 }
-case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
+case class AccelEnvelope(private val rMin:EnvScalar, private val rMinAbs:EnvScalar,
+                         private val rMax:EnvScalar, private val rMaxAbs:EnvScalar,
                          private val tMin:EnvScalar, private val tMax:EnvScalar,
                         /* Note: vMin, vMax are bounds on v^2 to avoid arbitrary-precision square roots */
                          private val vMin:EnvScalar, private val vMax:EnvScalar,
-                         // phantom uses 2ft per pixel
-                         feetPerUnit:Double = 0.5) {
+                         private val feetPerUnit:Double) {
   import AccelEnvelope._
 
   var centrips:Map[(Int,TPoint), EnvScalar] = Map()
@@ -48,6 +48,8 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
     Number(x.value.setScale(MAX_SCALE,BigDecimal.RoundingMode.UP))
   }
 
+  def radMinAbs:EnvScalar = { round(rMinAbs) }
+  def radMaxAbs:EnvScalar = { round(rMaxAbs) }
   def radMin:EnvScalar = { round(rMin) }
   def radMax:EnvScalar = { round(rMax) }
   def tanMin:EnvScalar = { round(tMin) }
@@ -75,8 +77,9 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
     println("MAXIMUM VELOCITY:" + round(Number(Math.sqrt(velMax.value.toDouble*metersPerUnit*g))))
   }
 
-  def extendR(r:EnvScalar, debugInfo:Option[(Int,TPoint)]):AccelEnvelope = {
-    val env = AccelEnvelope(scalarMin(rMin,r), scalarMax(rMax,r), tMin, tMax, vMin, vMax)
+  def extendR(r:EnvScalar, isCw:Boolean, debugInfo:Option[(Int,TPoint)]):AccelEnvelope = {
+    val signed = if (isCw) r else {Number(-r.value)}
+    val env = AccelEnvelope(scalarMin(rMin,signed), scalarMin(rMinAbs,r), scalarMax(rMax,signed), scalarMax(rMaxAbs,r), tMin, tMax, vMin, vMax,feetPerUnit)
     val map =
     debugInfo match {
       case None => centrips
@@ -88,13 +91,13 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
   }
 
   def extendT(t:EnvScalar):AccelEnvelope = {
-    val env = AccelEnvelope(rMin,rMax,scalarMin(t,tMin),scalarMax(t,tMax), vMin, vMax)
+    val env = AccelEnvelope(rMin,rMinAbs,rMax,rMaxAbs,scalarMin(t,tMin),scalarMax(t,tMax), vMin, vMax,feetPerUnit)
     env.centrips = centrips
     env
   }
 
   def extendV(v:EnvScalar):AccelEnvelope = {
-    val env = AccelEnvelope(rMin,rMax,tMin,tMax,scalarMin(v,vMin),scalarMax(v,vMax))
+    val env = AccelEnvelope(rMin,rMinAbs,rMax,rMaxAbs,tMin,tMax,scalarMin(v,vMin),scalarMax(v,vMax),feetPerUnit)
     env.centrips = centrips
     env
   }
@@ -108,7 +111,10 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
   val DEFAULT_TOLERANCE = Number(0.001)
 
   def relaxBy(tolerance:EnvScalar=DEFAULT_TOLERANCE):AccelEnvelope = {
-    AccelEnvelope(Number(rMin.value-tolerance.value), Number(rMax.value+tolerance.value),Number(tMin.value-tolerance.value),Number(tMax.value+tolerance.value), Number(vMin.value-tolerance.value), Number(vMax.value+tolerance.value))
+    AccelEnvelope(Number(rMin.value-tolerance.value), Number(rMinAbs.value-tolerance.value),
+      Number(rMax.value+tolerance.value), Number(rMaxAbs.value+tolerance.value),
+      Number(tMin.value-tolerance.value),Number(tMax.value+tolerance.value),
+      Number(vMin.value-tolerance.value), Number(vMax.value+tolerance.value),feetPerUnit)
   }
 
   private def tanSpec(dy:Term):Formula = {
@@ -124,7 +130,7 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
 
   def radSpec(r:Term, isCw:Boolean):Formula = {
     val a = s"v^2/($r)".asTerm //if(isCw) s"v^2/($r)".asTerm else s"-v^2/($r)".asTerm
-    s"($radMin)*g()<=($a)&($a)<=($radMax)*g()".asFormula
+    s"($radMinAbs)*g()<=($a)&($a)<=($radMaxAbs)*g()".asFormula
   }
 
   def arcSpec(dy:Term, r:Term, isCw:Boolean):Formula = {
@@ -138,7 +144,7 @@ object CoasterXSpec {
   type TPoint = (Term, Term)
   type Context = Map[BaseVariable, Term]
 }
-class CoasterXSpec {
+class CoasterXSpec(feetPerUnit:Double) {
 
   var ctx:Context = Map.empty
 
@@ -891,6 +897,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
         case (ArcSection(Some(ArcParam(bl,tr,theta1,deltaTheta)), Some(grad))) =>
           val rad = (evalTerm(bl._1).value-evalTerm(tr._1).value).abs/2
           val cx = (evalTerm(bl._1).value + evalTerm(tr._1).value) /2
+          val isCw = deltaTheta.value < 0
           /* Centripetal acceleration perpendicular to track */
           def radialAt(y:Number):Number = {
             val cent = velSquaredAt(y).value/rad
@@ -898,7 +905,6 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
           }
           /* Acceleration tangential to track */
           def tangentialAt(x:Number):Number = {
-            val isCw = deltaTheta.value < 0
             val dy =
               if (isCw) {
                 (cx-x.value)/rad
@@ -914,7 +920,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
           val t2 = tangentialAt(evalTerm(x2))
           val debugInfo1 = (iSection, (evalTerm(x1),evalTerm(y1)))
           val debugInfo2 = (iSection, (evalTerm(x2),evalTerm(y2)))
-          env.extendR(r2, Some(debugInfo2)).extendR(r1, Some(debugInfo1)).extendT(t2).extendT(t1)
+          env.extendR(r2, isCw, Some(debugInfo2)).extendR(r1, isCw, Some(debugInfo1)).extendT(t2).extendT(t1)
             .extendV(velSquaredAt(evalTerm(y1))).extendV(velSquaredAt(evalTerm(y2)))
       }}
     res.relaxBy()
