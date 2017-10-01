@@ -284,6 +284,9 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     }
     // yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
     val pr9 = proveConjs(provePost, pr4, nSections-1)
+    if (!pr9.isProved) {
+      val 2 = 1 + 1
+    }
     pr9
   }
 
@@ -435,7 +438,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         val a1: Formula = "(g() > 0)".asFormula
         val a2: Formula = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
         val a3: Formula = "(x0()<=x&x<=x1()->( (vLo() <= v^2 & v^2 <= vHi())  &  (dyLo()*g()<=-dy0()*g() & -dy0()*g()<=dyHi()*g()))   &  (dx0()*y=dy0()*x+dx0()*c()) )".asFormula
-        val a5: Formula = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1())) ->  dx0()*v^2 > 2*(x1()-x0())*dy0()*g()".asFormula
+        val a5: Formula = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1())) ->  dx0()*v^2 > 2*(x1()-x)*dy0()*g()".asFormula
         val a6: Formula = "(x1() > x0())".asFormula
         val a7: Formula = "(dx0()^2 + dy0()^2 = 1)".asFormula
         val a8: Formula = "dx0() > 0".asFormula
@@ -811,7 +814,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
           val dxDefPos1 = pr4b.subgoals.head.ante.length-1
           val pr5 = interpret(dC(cutMain)(1), pr4b)
           val sproof = straightProof
-          val cut1 = s"($constr) -> (($dx0)*v^2 > 2*(($x1)-($x0))*($dy0)*g())".asFormula
+          val cut1 = s"($constr) -> (($dx0)*v^2 > 2*(($x1)-x)*($dy0)*g())".asFormula
           val pr5a = timeFn("Line Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & HY & QE)), pr5)})
           val cut2 = s"($x1) > ($x0)".asFormula
           val hide2 = (x0, x1) match {case (_:Number, _:Number) => cohideR(1) case _ => nil}

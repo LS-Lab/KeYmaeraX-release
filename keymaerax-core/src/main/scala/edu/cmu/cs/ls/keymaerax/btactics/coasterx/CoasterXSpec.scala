@@ -33,10 +33,12 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
                          private val tMin:EnvScalar, private val tMax:EnvScalar,
                         /* Note: vMin, vMax are bounds on v^2 to avoid arbitrary-precision square roots */
                          private val vMin:EnvScalar, private val vMax:EnvScalar,
-                         // Using inches right now
-                         feetPerUnit:Double = 0.0833) {
+                         // phantom uses 2ft per pixel
+                         feetPerUnit:Double = 0.5) {
   import AccelEnvelope._
 
+  var centrips:Map[(Int,TPoint), EnvScalar] = Map()
+  val FEET_PER_INCH =  0.0833
   val METERS_PER_FOOT = 0.3048
   val metersPerUnit = METERS_PER_FOOT * feetPerUnit
   val unitsPerMeter = 1.0/metersPerUnit
@@ -69,21 +71,32 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMax:EnvScalar,
     println("MINIMUM TANGENTIAL: " + tanMin.value)
     println("MAXIMUM TANGENTIAL: " + tanMax.value)
     //velocity in m/s = sqrt(2*deltaH*unitsPerMeter*gravity)/unitsPerMeter39.3701
-    // @TODO: I think this calculation is correct... and the ones above need fixed.
     println("MINIMUM VELOCITY:" + round(Number(Math.sqrt(velMin.value.toDouble*metersPerUnit*g))))
     println("MAXIMUM VELOCITY:" + round(Number(Math.sqrt(velMax.value.toDouble*metersPerUnit*g))))
   }
 
-  def extendR(r:EnvScalar):AccelEnvelope = {
-    AccelEnvelope(scalarMin(rMin,r), scalarMax(rMax,r), tMin, tMax, vMin, vMax)
+  def extendR(r:EnvScalar, debugInfo:Option[(Int,TPoint)]):AccelEnvelope = {
+    val env = AccelEnvelope(scalarMin(rMin,r), scalarMax(rMax,r), tMin, tMax, vMin, vMax)
+    val map =
+    debugInfo match {
+      case None => centrips
+      case Some(info) => centrips.+((info, r))
+    }
+    centrips = map
+    env.centrips = map
+    env
   }
 
   def extendT(t:EnvScalar):AccelEnvelope = {
-    AccelEnvelope(rMin,rMax,scalarMin(t,tMin),scalarMax(t,tMax), vMin, vMax)
+    val env = AccelEnvelope(rMin,rMax,scalarMin(t,tMin),scalarMax(t,tMax), vMin, vMax)
+    env.centrips = centrips
+    env
   }
 
   def extendV(v:EnvScalar):AccelEnvelope = {
-    AccelEnvelope(rMin,rMax,tMin,tMax,scalarMin(v,vMin),scalarMax(v,vMax))
+    val env = AccelEnvelope(rMin,rMax,tMin,tMax,scalarMin(v,vMin),scalarMax(v,vMax))
+    env.centrips = centrips
+    env
   }
 
   // Not intended for soundness criticality, but as a check during spec generation to ensure there's some chance of the
@@ -868,7 +881,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
     //val g = 9.80665
     def velSquaredAt(y:Number):Number = Number(v0.value*v0.value + (2*y0.value) - (2*y.value))
     val res =
-    segs.foldRight(AccelEnvelope.empty){case((sec,((x1:Term,y1:Term),(x2:Term,y2:Term))), env) =>
+    segs.zipWithIndex.foldRight(AccelEnvelope.empty){case(((sec,((x1:Term,y1:Term),(x2:Term,y2:Term))),iSection), env) =>
       sec match {
         case (LineSection(Some(LineParam(bl,tr)),Some(grad), isUp)) =>
           // Line sections - no centripetal acceleration
@@ -899,7 +912,9 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
           val r2 = radialAt(evalTerm(y2))
           val t1 = tangentialAt(evalTerm(x1))
           val t2 = tangentialAt(evalTerm(x2))
-          env.extendR(r2).extendR(r1).extendT(t2).extendT(t1)
+          val debugInfo1 = (iSection, (evalTerm(x1),evalTerm(y1)))
+          val debugInfo2 = (iSection, (evalTerm(x2),evalTerm(y2)))
+          env.extendR(r2, Some(debugInfo2)).extendR(r1, Some(debugInfo1)).extendT(t2).extendT(t1)
             .extendV(velSquaredAt(evalTerm(y1))).extendV(velSquaredAt(evalTerm(y2)))
       }}
     res.relaxBy()
