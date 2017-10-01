@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.{CachedLemmaDB, FileLemmaDB, LemmaDB, Lemma
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.{NoProof, NoProofTermProvable, PTProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable
 
@@ -453,8 +454,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |      &dx0()*y=dy0()*x+dx0()*c())""".stripMargin.asFormula
         val con:Sequent = Sequent(immutable.IndexedSeq(a1,a2,a3,a5, a6, a7, a8), immutable.IndexedSeq(c))
         val e =
-          //(composeb(1) & assignb(1)) &
-          //(composeb(1) & assignb(1)) &
            solve(1) & allR(1) & implyR(1) & implyR(1) &
              implyL(-2)  <(
                hideR(1) & QE,
