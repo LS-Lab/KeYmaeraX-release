@@ -406,15 +406,20 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
     val ((seg, (start,end), initD), iSection) = segBounds
     val x = Variable("x")
     val y = Variable("y")
-    def evol(isUp:Boolean) = {
+    def evol(isUp:Boolean,movesLeft:Boolean) = {
       val ybound =
         if(isUp) {
           And(LessEqual(start._2, y), LessEqual(y, end._2))
         } else {
           And(LessEqual(end._2, y), LessEqual(y, start._2))
         }
-      And(And(LessEqual(start._1, x), LessEqual(x, end._1)),
-        ybound)
+      val xbound =
+        if(movesLeft) {
+          And(LessEqual(end._1, x), LessEqual(x, start._1))
+        } else {
+          And(LessEqual(start._1, x), LessEqual(x, end._1))
+        }
+      And(xbound, ybound)
     }
     val dx = Variable("dx")
     val dy = Variable("dy")
@@ -432,7 +437,8 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
         val yOde = AtomicODE(DifferentialSymbol(Variable("y")), foldTimes(v,dy))
         val vOde = s"v' = -dy*g()".asDifferentialProgram
         val sys = DifferentialProduct(DifferentialProduct(xOde,yOde),vOde)
-        val ode = ODESystem(sys, evol(isUp))
+        //@TODO: Left-going straight lines too
+        val ode = ODESystem(sys, evol(isUp, movesLeft = false))
         val (setx,sety) = (Assign(dx,dxi), Assign(dy,dyi))
         Compose(setx,Compose(sety, ode))
       case ArcSection(Some(ArcParam((x1,y1),(x2,y2),theta1,deltaTheta)), Some(gradient)) =>
@@ -444,13 +450,14 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
           AtomicODE(DifferentialSymbol(Variable("dy")), dyTerm)))
         val t1 = theta1.value
         val dt = deltaTheta.value
-        val isLeft = t1 < -90 || t1 > 90 || (t1 == -90 && dt < 0) || (t1 == 90 && dt > 0)
-        val isUp = (isLeft && isCw) || (!isLeft && !isCw)
+        val startsLeft = t1 < -90 || t1 > 90 || (t1 == -90 && dt < 0) || (t1 == 90 && dt > 0)
+        val movesLeft = (t1 <= 0 && dt < 0) || (t1 >= 0 && dt > 0)
+        val isUp = (startsLeft && isCw) || (!startsLeft && !isCw)
         val (cx,cy) = iCenter(iSection)
         val (setx,sety) =
           if (isCw) {(s"-(($cy)-y)/($r)".asTerm, s"(($cx)-x)/($r)".asTerm)}
           else {(s"(($cy)-y)/($r)".asTerm, s"-(($cx)-x)/($r)".asTerm)}
-        val ode = ODESystem(sys, evol(isUp))
+        val ode = ODESystem(sys, evol(isUp, movesLeft))
         Compose(Assign(dx,setx),Compose(Assign(dy,sety), ode))
       case _ => Test(True)
     }
@@ -523,7 +530,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
     val ((seg, (start, end), initD), i) = segBounds
     val x = Variable("x")
     val y = Variable("y")
-    val (dxval, dyval) = iDirection(i)
+    val (dxval:Term, dyval:Term) = iDirection(i)
     seg match {
       case LineSection(Some(LineParam((x1, y1), (x2, y2))), Some(gradient), isUp) =>
         val inRange = And(LessEqual(x1, x), LessEqual(x, x2))
@@ -533,17 +540,32 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
         val onTrack = Equal(foldTimes(dxval, y), foldPlus(foldTimes(dyval, x), foldTimes(dxval,yOffset((x1, y1), (x2, y2)))))
         Imply(inRange, And(env.lineSpec(dyval),onTrack))
       case ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(gradient)) =>
-        val ((x3, y3), (x4, y4)) = (start,end)
-        val inRange = And(LessEqual(x3, x), LessEqual(x, x4))
-        val (cx, cy) = iCenter(i)
-        val r = iRadius(i)
-        val centered = Equal(sqDist((x,y), (cx,cy)), foldPower(r,Number(2)))
-        val isCw = param.deltaTheta.value < 0
+        val ((x3:Term, y3:Term), (x4:Term, y4:Term)) = (start,end)
         val t1 = theta1.value
         val dt = deltaTheta.value
-        val isLeft = t1 < -90 || t1 > 90 || (t1 == -90 && dt < 0) || (t1 == 90 && dt > 0)
-        val outY = if(isCw) LessEqual(cy,y) else LessEqual(y,cy)
-        val outX = if(isLeft) LessEqual(x, cx) else LessEqual(cx, x)
+        val startsLeft = t1 < -90 || t1 > 90 || (t1 == -90 && dt < 0) || (t1 == 90 && dt > 0)
+        val startsTop = (t1 == 180 && dt < 0) || (t1 < 180 && t1 > 0) || (t1 == 0 && dt > 0)
+        val movesLeft = (t1 <= 0 && dt < 0) || (t1 >= 0 && dt > 0)
+        val isCw = param.deltaTheta.value < 0
+        val isUp = (startsLeft && isCw) || (!startsLeft && !isCw)
+        val xRange =
+          if (movesLeft) {
+            And(LessEqual(x4, x), LessEqual(x, x3))
+          } else {
+            And(LessEqual(x3, x), LessEqual(x, x4))
+          }
+        val yRange =
+          if (isUp) {
+            And(LessEqual(y3, y), LessEqual(y,y4))
+          } else {
+            And(LessEqual(y4, y), LessEqual(y,y3))
+          }
+        val inRange = And(xRange,yRange)
+        val (cx:Term, cy:Term) = iCenter(i)
+        val r = iRadius(i)
+        val centered = Equal(sqDist((x,y), (cx,cy)), foldPower(r,Number(2)))
+        val outY = if(startsTop) LessEqual(cy,y) else LessEqual(y,cy)
+        val outX = if(startsLeft) LessEqual(x, cx) else LessEqual(cx, x)
         val outRange = And(outX, outY)
         val (dxInv, dyInv) =
           if (isCw) {

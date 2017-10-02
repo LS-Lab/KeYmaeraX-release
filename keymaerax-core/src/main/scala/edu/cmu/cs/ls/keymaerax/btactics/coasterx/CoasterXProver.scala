@@ -64,9 +64,83 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     fml
   }
 
+  // Establishes differential invariants for a single quadrant-1 arc
+  def quad1CWTactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int, iSection:Int):ProvableSig = {
+    if(DEBUG)println("Proving Quadrant 1 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
+    val aproof = arcProofQ1
+    val (cx,cy) = spec.iCenter(iSection)
+    val r = spec.iRadius(iSection)
+    val ((x0,y0),(x1,y1)) = (p1,p2)
+    def selectDefs:PositionalTactic = "selectDefs" by ((pr:ProvableSig,pos:AntePosition) =>
+      coHideLPr(pos.index0+1, pr)
+      )
+    // definition of r() depends of cx,cy so keep them around too.
+    /*def selectR = selectDefs(-3) & andL(-1) & andL(-2) & hideL(-3)
+    def selectCx = selectDefs(-3) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-2)
+    def selectCy = selectDefs(-3) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-1)*/
+    val (selectR, selectCx, selectCy) = (nil,nil,nil)
+    val mainCut = s"(dx=-(($cy)-y)/($r) & dy=(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & y >= ($cy)  & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
+    val pr00 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
+    val pr0 = interpret(dC(mainCut)(1), pr00)
+    val cut1 = s"($x1) > ($x0)".asFormula
+    val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
+    val pr1a = timeFn("ArcQ1 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & hide1 & QE)), pr0)})
+    val cut3 = s"($y1) < ($y0)".asFormula
+    val hide2 = (y0, y1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
+    val pr1c = timeFn("ArcQ1 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & hide2 & QE)), pr1a)})
+    val cut4 = s"($cy) <= ($y1)".asFormula
+    val pr1d = timeFn("ArcQ1 Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & selectCy & QE)), pr1c)})
+    val cut5 = s"($cx) <= ($x0)".asFormula
+    val pr1e = timeFn("ArcQ1 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & selectCx & QE)), pr1d)})
+    val cut6 = s"($r) > 0".asFormula
+    val pr1f = timeFn("ArcQ1 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & selectR & QE)), pr1e)})
+    val pr1g = interpret(nil <(nil, hideL(-2)*nYs), pr1f)
+    val tac = US(aproof)
+    val pr6 = interpret(nil < (nil, tac), pr1g)
+    pr6
+  }
+
+
+  // Establishes differential invariants for a single quadrant-1 arc
+  def quad1CCWTactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int, iSection:Int):ProvableSig = {
+    if(DEBUG)println("Proving Quadrant 1 Arc, counter-clockwise: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
+    val aproof = arcProofQ1CCW
+    val (cx,cy) = spec.iCenter(iSection)
+    val r = spec.iRadius(iSection)
+    val ((x0,y0),(x1,y1)) = (p1,p2)
+    def selectDefs:PositionalTactic = "selectDefs" by ((pr:ProvableSig,pos:AntePosition) =>
+      coHideLPr(pos.index0+1, pr)
+      )
+    // definition of r() depends of cx,cy so keep them around too.
+    /*def selectR = selectDefs(-3) & andL(-1) & andL(-2) & hideL(-3)
+    def selectCx = selectDefs(-3) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-2)
+    def selectCy = selectDefs(-3) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-1)*/
+    val (selectR, selectCx, selectCy) = (nil,nil,nil)
+    val mainCut = s"(dx=(($cy)-y)/($r) & dy=-(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & y >= ($cy)  & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
+    val pr00 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
+    val pr0 = interpret(dC(mainCut)(1), pr00)
+    val cut1 = s"($x0) > ($x1)".asFormula
+    val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
+    val pr1a = timeFn("ArcQ1 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & hide1 & QE)), pr0)})
+    val cut3 = s"($y0) < ($y1)".asFormula
+    val hide2 = (y0, y1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
+    val pr1c = timeFn("ArcQ1 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & hide2 & QE)), pr1a)})
+    val cut4 = s"($cy) <= ($y0)".asFormula
+    val pr1d = timeFn("ArcQ1 Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & selectCy & QE)), pr1c)})
+    val cut5 = s"($cx) <= ($x1)".asFormula
+    val pr1e = timeFn("ArcQ1 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & selectCx & QE)), pr1d)})
+    val cut6 = s"($r) > 0".asFormula
+    val pr1f = timeFn("ArcQ1 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & selectR & QE)), pr1e)})
+    val cut7 = s"((($x1)<=x&x<=($x0)) & (($y0) <= y & y <= ($y1)))->(v^2)/2 > g()*(($y1) - y)".asFormula
+    val pr1fa = timeFn("ArcQ1 Case Step 7", {() => interpret(nil < (nil, cut(cut7) < (nil, hideR(1) & QE)), pr1f)})
+    val pr1g = interpret(nil <(nil, hideL(-2)*nYs), pr1fa)
+    val tac = US(aproof)
+    val pr6 = interpret(nil < (nil, tac), pr1g)
+    pr6
+  }
 
   // Establishes differential invariants for a single quadrant-2 arc
-  def quad2Tactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):ProvableSig = {
+  def quad2CWTactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int, iSection:Int):ProvableSig = {
     if(DEBUG)println("Proving Quadrant 2 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ2
     // @TODO: Hide preconditions and y-defs that you don't need
@@ -108,44 +182,8 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     pr6
   }
 
-  // Establishes differential invariants for a single quadrant-1 arc
-  def quad1Tactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):ProvableSig = {
-    if(DEBUG)println("Proving Quadrant 1 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
-    val aproof = arcProofQ1
-    val (cx,cy) = spec.iCenter(iSection)
-    val r = spec.iRadius(iSection)
-    val ((x0,y0),(x1,y1)) = (p1,p2)
-    def selectDefs:PositionalTactic = "selectDefs" by ((pr:ProvableSig,pos:AntePosition) =>
-      coHideLPr(pos.index0+1, pr)
-      )
-    // definition of r() depends of cx,cy so keep them around too.
-    /*def selectR = selectDefs(-3) & andL(-1) & andL(-2) & hideL(-3)
-    def selectCx = selectDefs(-3) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-2)
-    def selectCy = selectDefs(-3) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-1)*/
-    val (selectR, selectCx, selectCy) = (nil,nil,nil)
-    val mainCut = s"(dx=-(($cy)-y)/($r) & dy=(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & y >= ($cy)  & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
-    val pr00 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
-    val pr0 = interpret(dC(mainCut)(1), pr00)
-    val cut1 = s"($x1) > ($x0)".asFormula
-    val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
-    val pr1a = timeFn("ArcQ1 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & hide1 & QE)), pr0)})
-    val cut3 = s"($y1) < ($y0)".asFormula
-    val hide2 = (y0, y1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
-    val pr1c = timeFn("ArcQ1 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & hide2 & QE)), pr1a)})
-    val cut4 = s"($cy) <= ($y1)".asFormula
-    val pr1d = timeFn("ArcQ1 Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & selectCy & QE)), pr1c)})
-    val cut5 = s"($cx) <= ($x0)".asFormula
-    val pr1e = timeFn("ArcQ1 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & selectCx & QE)), pr1d)})
-    val cut6 = s"($r) > 0".asFormula
-    val pr1f = timeFn("ArcQ1 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & selectR & QE)), pr1e)})
-    val pr1g = interpret(nil <(nil, hideL(-2)*nYs), pr1f)
-    val tac = US(aproof)
-    val pr6 = interpret(nil < (nil, tac), pr1g)
-    pr6
-  }
-
   // Establishes differential invariants for a single quadrant-3 arc
-  def quad3Tactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int, iSection:Int):ProvableSig = {
+  def quad3CCWTactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int, iSection:Int):ProvableSig = {
     if(DEBUG)println("Proving Quadrant 3 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ3
     val ((x0:Term,y0:Term),(x1:Term,y1:Term)) = (p1,p2)
@@ -175,7 +213,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
   }
 
   // Establishes differential invariants for a single quadrant-4 arc
-  def quad4Tactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number,nYs:Int, iSection:Int):ProvableSig = {
+  def quad4CCWTactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int, iSection:Int):ProvableSig = {
     if(DEBUG)println("Proving Quadrant 4 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
     val aproof = arcProofQ4
     val ((x0:Term,y0:Term),(x1:Term,y1:Term)) = (p1,p2)
@@ -321,7 +359,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       //else if(i == iSection - 1) {master()}
       //else if(constRange) eAggressive
       // g, defs0, ..., defsN, <<9 cuts>> |- (bounds -> post)
-      val Imply(And(LessEqual(x0,_),LessEqual(_,x1)),_) = pr.subgoals.head.succ.head
+      val Imply(And(And(LessEqual(x0,_),LessEqual(_,x1)),And(LessEqual(y0,_),LessEqual(_,y1))),_) = pr.subgoals.head.succ.head
       val (preCx,nextCx) = (x0,x1) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
       val inBounds = nSections + 2
       val And(LessEqual(x2,_),LessEqual(_,x3)) = pr.subgoals.head.ante(inBounds-1)
@@ -520,7 +558,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a3 = "((x0()<=x&x<=x1())&(y1()<=y&y<=y0())->((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=(cy()-y)/r()".asFormula
         val a5 = "dy=-(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -968,26 +1006,29 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         val q2 = (t1 == 90 && dT > 0)  || (t1 > 90   && t1 < 180) || (t1 == 180 && dT < 0) //!(q1 || q3 || q4)
         val q3 = ((t1 == 180 || t1 == -180) && dT > 0)|| (t1 > -180 && t1 < -90) || (t1 == -90 && dT < 0) //&& t2 <= -90
         val q4 = (t1 == -90 && dT > 0) || (t1 > -90  && t1 < 0) || (t1 == 0 && dT < 0)   //&& t2 <= 0
+        val isCw = deltaTheta.value < 0
         //val q1 = t1 >= 0   && t1 <= 90  && t2 <= 90
         //val q3 = t1 <= -90 && t2 <= -90
         //val q4 = t1 >= -90 && t1 <= 0   && t2 <= 0
         val prStart = selectSection(iSection,nSections, pr)
         val pr1 =
-          (q3, q4, q1) match {
-            case (true, false, false) =>
-              timeFn("Q3", () => {
-              quad3Tactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)}) // Quadrant 3
-            case (false, true, false) =>
-              timeFn("Q4", () => {
-              quad4Tactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)
+          (q3, q4, q1, isCw) match {
+            case (false, false, true, true) =>
+              timeFn("Q1CW", () => {
+                quad1CWTactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)}) // Quadrant 1
+            case (false, false, true, false) =>
+              timeFn("Q1CCW", () => {
+                quad1CCWTactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)}) // Quadrant 1
+            case (false,false,false, true)  =>
+              timeFn("Q2CW", () => {
+                quad2CWTactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)})
+            case (true, false, false, false) =>
+              timeFn("Q3CCW", () => {
+              quad3CCWTactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)}) // Quadrant 3
+            case (false, true, false, false) =>
+              timeFn("Q4CCW", () => {
+              quad4CCWTactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)
               }) // Quadrant 4
-            case (false, false, true) =>
-              timeFn("Q1", () => {
-                quad1Tactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)}) // Quadrant 1
-            case (false,false,false)  =>
-              timeFn("Q2", () => {
-              quad2Tactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)})
-               // Quadrant 2
             case _ =>
               val 2 = 1 + 1
               ???
@@ -1115,7 +1156,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     // g, (dx&dy&x&y&v), seg1,...,segn |- (vStuff)&(imp1&( ... &impN))
     val pr0 = interpret(andR(1) <(proveVStuff, nil), pr)
     def proveBranch(i:Int, pr:ProvableSig):ProvableSig = {
-      val Imply(And(LessEqual(x0,_),LessEqual(_,x1)),_) = pr.subgoals.head.succ.head
+      val Imply(And(And(LessEqual(x0,_),LessEqual(_,x1)),And(LessEqual(y0,_),LessEqual(_,y1))),_) = pr.subgoals.head.succ.head
       val (preCx,nextCx) = (x0,x1) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
       def localDefsPos(j:Int):List[Int] = List(3+j)
       val preKept:List[Int] = if(preCx) localDefsPos(i-1) else Nil
