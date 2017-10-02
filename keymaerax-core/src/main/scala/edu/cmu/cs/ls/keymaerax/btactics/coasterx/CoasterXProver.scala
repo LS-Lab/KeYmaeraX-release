@@ -153,13 +153,8 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     def selectDefs:PositionalTactic = "selectDefs" by ((pr:ProvableSig,pos:AntePosition) =>
       coHideLPr(pos.index0+1, pr)
       )
-    // definition of r() depends of cx,cy so keep them around too.
-    /*def selectR = selectDefs(-2) & andL(-1) & andL(-2) & hideL(-3)
-    def selectCx = selectDefs(-2) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-2)
-    def selectCy = selectDefs(-2) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-1)*/
     val (selectR, selectCx, selectCy) = (nil,nil,nil)
     val mainCut = s"(dx=-(($cy)-y)/($r) & dy=(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & x <= ($cx) & ($cy) <= y & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
-    //val odePos = Position(1, 1::1::Nil)
     val pr00 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
     val pr0 = interpret(dC(mainCut)(1), pr00)
     val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
@@ -177,6 +172,44 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val cut7 = s"((($x0)<=x&x<=($x1)) & (($y0) <= y & y <= ($y1)))->(v^2)/2 > g()*(($y1) - y)".asFormula
     val pr1fa = timeFn("ArcQ2 Case Step 6", {() => interpret(nil < (nil, cut(cut7) < (nil, hideR(1) & QE)), pr1f)})
     val pr1g = interpret(nil <(nil, hideL(-2)*nYs), pr1fa)
+    val tac = US(aproof)
+    val pr6 = interpret(nil < (nil, tac), pr1g)
+    pr6
+  }
+
+  // Establishes differential invariants for a single quadrant-2 arc
+  def quad2CCWTactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int, iSection:Int):ProvableSig = {
+    if(DEBUG)println("Proving Quadrant 2 CCW Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
+    val aproof = arcProofQ2CCW
+    // @TODO: Hide preconditions and y-defs that you don't need
+    val (cx,cy) = spec.iCenter(iSection)
+    val r = spec.iRadius(iSection)
+    val ((x0,y0),(x1,y1)) = (p1,p2)
+    // Sequent is
+    // gConst, defs0, defs1, global, J_i |- post
+    // where defs_i = r_i & (cx_i & cy_i) & (dx_i & dy_i)
+    def selectDefs:PositionalTactic = "selectDefs" by ((pr:ProvableSig,pos:AntePosition) =>
+      coHideLPr(pos.index0+1, pr)
+      )
+    val (selectR, selectCx, selectCy) = (nil,nil,nil)
+    val mainCut = s"(dx=(($cy)-y)/($r) & dy=-(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & x <= ($cx) & ($cy) <= y & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
+    val pr00 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
+    val pr0 = interpret(dC(mainCut)(1), pr00)
+    val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
+    val cut1 = s"($x0) > ($x1)".asFormula
+    val pr1a = timeFn("ArcQ2 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & hide1 & QE)), pr0)})
+    val hide2 = (y0, y1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
+    val cut3 = s"($y1) < ($y0)".asFormula
+    val pr1c = timeFn("ArcQ2 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & hide2 & QE)), pr1a)})
+    val cut4 = s"($cy) <= ($y1)".asFormula
+    val pr1d = timeFn("ArcQ2 Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & selectCy & QE)), pr1c)})
+    val cut5 = s"($x0) <= ($cx)".asFormula
+    val pr1e = timeFn("ArcQ2 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & selectCx & QE)), pr1d)})
+    val cut6 = s"($r) > 0".asFormula
+    val pr1f = timeFn("ArcQ2 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & selectR & QE)), pr1e)})
+    /*val cut7 = s"((($x0)<=x&x<=($x1)) & (($y0) <= y & y <= ($y1)))->(v^2)/2 > g()*(($y1) - y)".asFormula
+    val pr1fa = timeFn("ArcQ2 Case Step 6", {() => interpret(nil < (nil, cut(cut7) < (nil, hideR(1) & QE)), pr1f)})*/
+    val pr1g = interpret(nil <(nil, hideL(-2)*nYs), pr1f)
     val tac = US(aproof)
     val pr6 = interpret(nil < (nil, tac), pr1g)
     pr6
@@ -681,7 +714,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & (x<=cx() & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a3 = "((x0()<=x&x<=x1())&(y1()<=y&y<=y0())->((x-cx())^2 + (y-cy())^2 = r()^2 & (x<=cx() & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=(cy()-y)/r()".asFormula
         val a5 = "dy=-(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -1022,6 +1055,9 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             case (false,false,false, true)  =>
               timeFn("Q2CW", () => {
                 quad2CWTactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)})
+            case (false,false,false, false)  =>
+              timeFn("Q2CCW", () => {
+                quad2CCWTactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)})
             case (true, false, false, false) =>
               timeFn("Q3CCW", () => {
               quad3CCWTactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)}) // Quadrant 3
