@@ -178,7 +178,8 @@ object CoasterXTestLib {
 
   val DEBUG = false
   // @TODO: Implement
-  val tacticMap:Map[String,BelleExpr] = Map(
+  // NOTE IMPORTANT: Must be evaluated after mathematica initialized
+  lazy val tacticMap:Map[String,BelleExpr] = Map(
     "q1" -> {
       TactixLibrary.unfoldProgramNormalize &
       dC("dx=-(cy()-y)/r()".asFormula)(1) <(nil, dI()(1)) &
@@ -239,7 +240,7 @@ object CoasterXTestLib {
       ODE(1)
     },
     //@TODO: Replace with "master" and see what happens
-    "straight" -> {
+    "line" -> {
       solve(1) & allR(1) & implyR(1) & implyR(1) &
       implyL(-2)  <(
         hideR(1) & QE,
@@ -255,21 +256,21 @@ object CoasterXTestLib {
     println("**** Test results for component " + name + "****")
     if(willDoStats) {
       println("All Times (secs): " + allTimes)
-      println("Average time" + mean(allTimes))
+      println("Average time: " + mean(allTimes))
       println("Proof steps: " + steps)
       println("Total vars: " + vars)
       println("Fml size (KB): " + size)
     }
     //@TODO: Actually use these in the prover implementation
     if(doTactic) {
-      println("Component tactic: " + tacticMap(name))
+      println("Component tactic: " + tacticMap(name.toLowerCase))
     }
     if(doFormula) {
       println("Component formula (sequent): " + seq)
     }
   }
 
-  def doStats(name:String, f:()=>ProvableSig, doFormula:Boolean, doTactic:Boolean, willDoStats:Boolean, numRuns:Int, callback:Option[(ComponentStats => Unit)]):Unit = {
+  def doStats(name:String, f:()=>ProvableSig, doFormula:Boolean, doTactic:Boolean, willDoStats:Boolean, numRuns:Int, callback:Option[(ComponentStats => Unit)]=None):Unit = {
     val cb = callback.getOrElse(defaultStatPrinter(doFormula,doTactic,willDoStats,numRuns))
     var res:Option[ProvableSig] = None
     var allTimes:List[Double] = List()
@@ -279,7 +280,7 @@ object CoasterXTestLib {
     val steps = res.get.steps
     val vars = countVars(res.get.conclusion.toFormula)
     val size = KeYmaeraXPrettyPrinter.stringify(res.get.conclusion.toFormula).length/1000.0
-    val cs = ComponentStats(name,allTimes,mean(allTimes), steps, vars, size, tacticMap(name), res.get.conclusion)
+    val cs = ComponentStats(name,allTimes,mean(allTimes), steps, vars, size, tacticMap(name.toLowerCase), res.get.conclusion)
     cb(cs)
   }
 }

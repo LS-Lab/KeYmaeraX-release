@@ -53,7 +53,7 @@ object KeYmaeraX {
       |                [-num-runs N]
       |            | -coaster filename.rctx -feet-per-unit X [-num-runs N]
       |              [-velocityFPS V] [-formula] [-stats] [-compare-reuse]
-      |            | -table2)
+      |            | -table2 [-num-runs N])
       |
       |Actions:
       |  -prove     run KeYmaera X prover on given problem file with given tactic
@@ -110,8 +110,10 @@ object KeYmaeraX {
       else if (options.get('mode).contains("codegen"))
       //@note no MathKernel initialization needed for C generation
         codegen(options)
-      else if (options.get('mode).contains("coasterx"))
+      else if (options.get('mode).contains("coasterx")) {
         CoasterXMain.main(options)
+        shutdownProver()
+      }
       else if (!options.get('mode).contains("ui") ) {
         try {
           initializeProver(
@@ -187,6 +189,7 @@ object KeYmaeraX {
       case "-velocityFPS" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('velocity -> value), tail)
         else optionErrorReporter("-velocityFPS")
+      case _ => map
     }
   }
 
