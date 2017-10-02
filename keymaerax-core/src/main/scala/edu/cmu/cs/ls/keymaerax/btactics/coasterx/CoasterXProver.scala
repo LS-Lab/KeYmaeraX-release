@@ -245,6 +245,39 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     pr6
   }
 
+  // Establishes differential invariants for a single quadrant-3 arc
+  def quad3CWTactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int, iSection:Int):ProvableSig = {
+    if(DEBUG)println("Proving Quadrant 3 Arc CW: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
+    val aproof = arcProofQ3CW
+    val ((x0:Term,y0:Term),(x1:Term,y1:Term)) = (p1,p2)
+    val (cx,cy) = spec.iCenter(iSection)
+    val r = spec.iRadius(iSection)
+    val dx0 = s"-(($cy)-y)/($r)".asTerm
+    val dy0 = s"(($cx)-x)/($r)".asTerm
+    val Box(Compose(_,Compose(_,ODESystem(_,evol))),_) = pr.conclusion.succ.head
+    val mainCut = s"(dx=($dx0) & dy=($dy0) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & v>0 & y <= ($cy) & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
+    val pr00 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
+    val pr0 = interpret(dC(mainCut)(1), pr00)
+    val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
+    val cut1 = s"($x0) > ($x1)".asFormula
+    val pr1a = timeFn("ArcQ3 Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & hide1 & QE)), pr0)})
+    val cut3 = s"($y0) < ($y1)".asFormula
+    val hide2 = (y0, y1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
+    val pr1c = timeFn("ArcQ3 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & hide2 & QE)), pr1a)})
+    val cut4 = s"($cy) >= ($y1)".asFormula
+    val pr1d = timeFn("ArcQ3 Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & QE)), pr1c)})
+    val cut5 = s"($cx) >= ($x0)".asFormula
+    val pr1e = timeFn("ArcQ3 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & QE)), pr1d)})
+    val cut6 = s"($r) > 0".asFormula
+    val pr1f = timeFn("ArcQ3 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & QE)), pr1e)})
+    val cut7 = s"($evol) -> ((v^2)/2 > g()*(($y1) - y))".asFormula
+    val pr1g = timeFn("ArcQ4 Case Step 7", {() => interpret(nil < (nil, cut(cut7) < (nil, hideR(1) & QE)), pr1f)})
+    val pr1h = interpret(nil <(nil, hideL(-2)*nYs), pr1g)
+    val tac = US(aproof)
+    val pr6 = interpret(nil < (nil, tac), pr1h)
+    pr6
+  }
+
   // Establishes differential invariants for a single quadrant-4 arc
   def quad4CCWTactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int, iSection:Int):ProvableSig = {
     if(DEBUG)println("Proving Quadrant 4 Arc: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
@@ -816,7 +849,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a3 = "((x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=-(cy()-y)/r()".asFormula
         val a5 = "dy=(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -1061,6 +1094,9 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             case (true, false, false, false) =>
               timeFn("Q3CCW", () => {
               quad3CCWTactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)}) // Quadrant 3
+            case (true, false, false, true) =>
+              timeFn("Q3CC", () => {
+              quad3CWTactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)}) // Quadrant 3
             case (false, true, false, false) =>
               timeFn("Q4CCW", () => {
               quad4CCWTactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)

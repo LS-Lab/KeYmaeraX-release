@@ -197,6 +197,11 @@ class CoasterXTests extends TacticTestBase {
     pr shouldBe 'proved
   })}
 
+  it should "generate proof for Q3 CW" in { withMathematica(qeTool => {
+    val pr = prover(q3arcCW, "Q3 CW")
+    pr shouldBe 'proved
+  })}
+
   it should "generate proof for Q4 CW" in { withMathematica(qeTool => {
     val pr = prover(q4arcCW, "Q4 CW")
     pr shouldBe 'proved
