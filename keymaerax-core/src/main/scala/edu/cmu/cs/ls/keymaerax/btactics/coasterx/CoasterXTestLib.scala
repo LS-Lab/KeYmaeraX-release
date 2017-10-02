@@ -180,6 +180,54 @@ object CoasterXTestLib {
   // @TODO: Implement
   // NOTE IMPORTANT: Must be evaluated after mathematica initialized
   lazy val tacticMap:Map[String,BelleExpr] = Map(
+    "q1ccw" -> {
+      TactixLibrary.unfoldProgramNormalize &
+      dC("dx=(cy()-y)/r()".asFormula)(1) <(nil, dI()(1)) &
+      dC("dy=-(cx()-x)/r()".asFormula)(1) <(nil, dI()(1)) &
+      dC("v^2/2>g()*(y1()-y)".asFormula)( 1)  <(nil, dI()(1)) &
+      dC("v>0".asFormula)(1)  <(
+        ODE(1),
+        dC("2*v!=0".asFormula)(1)  <(
+          dG("{a'=dy*g()/(2*v)*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) & existsR("(1/v)^(1/2)".asTerm)(1) & dI()(1),
+          ODE(1)
+        )
+      ) &
+      ODE(1)
+    },
+    "q2ccw" -> {
+      val ECirc:Formula = s"v^2=v0()^2+2*yInit()*g()-2*y*g()".asFormula
+      val dGDefined:Formula = s"2*v!=0".asFormula
+      dC(s"dx=(cy()-y)/r()".asFormula)(1) <(nil, dI()(1)) &
+      dC(s"dy=-(cx()-x)/r()".asFormula)(1)  <(nil, dI()(1)) &
+      dC(ECirc)('R) <(nil, dI()(1)) &
+      dC(s"v^2=v0()^2+2*yGlobal()*g()-2*y*g()".asFormula)(1) <(nil, dI()(1)) &
+      dC("v>0".asFormula)('R) <(nil, ODE(1)) &
+      dC("(x-cx())^2+(y-cy())^2=r()^2".asFormula)('R) <(ODE(1), dI()(1)) &
+      ODE(1)
+
+    },
+    "q3cw" -> {
+      dC("dx=-(cy()-y)/r()".asFormula)(1) <(nil, dI()(1)) &
+      dC("dy=(cx()-x)/r()".asFormula)(1) <(nil, dI()(1)) &
+      dC("v^2=v0()^2+2*yGlobal()*g()-2*y*g()".asFormula)( 1)  <(nil, dI()(1)) &
+      dC("v^2/2>g()*(y1()-y)".asFormula)( 1)  <(nil, dI()(1)) &
+      dC("v>0".asFormula)(1) <(nil,
+        dC("2*v!=0".asFormula)(1) <(
+          dG("{a'=dy*g()/(2*v)*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) & existsR("(1/v)^(1/2)".asTerm)(1) & dI()(1),
+          ODE(1)
+        )
+      ) &
+      dC("(x-cx())^2 + (y-cy())^2 = r()^2".asFormula)(1) <(nil, dI()(1)) &
+      ODE(1)
+    },
+    "q4cw" -> {
+      dC(s"dx=-(cy()-y)/r()".asFormula)(1)  <(nil, dI()(1)) &
+      dC(s"dy=(cx()-x)/r()".asFormula)( 1)  <(nil, ODE(1)) &
+      dC(s"v^2=v0()^2+2*yGlobal()*g()-2*y*g()".asFormula)(1) <(nil, dI()(1)) &
+      dC(s"v>0".asFormula)(1) <(nil, ODE(1)) &
+      dC(s"(cx()-x)^2+(cy()-y)^2=r()^2".asFormula)(1) <(nil, dI()(1)) &
+      ODE(1)
+    },
     "q1" -> {
       TactixLibrary.unfoldProgramNormalize &
       dC("dx=-(cy()-y)/r()".asFormula)(1) <(nil, dI()(1)) &

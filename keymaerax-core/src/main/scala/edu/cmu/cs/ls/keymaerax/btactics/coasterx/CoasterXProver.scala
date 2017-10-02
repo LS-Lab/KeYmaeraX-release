@@ -501,8 +501,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9,a10), immutable.IndexedSeq(c))
         val pr = NoProofTermProvable.startProof(con)
         val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
-        //val pr1a = interpret((composeb(1) & assignb(1)) &
-//            (composeb(1) & assignb(1)), pr1)
         val pr2 = interpret(dC("dx=-(cy()-y)/r()".asFormula)(1) <(nil, dI()(1)), pr1)
         val pr3 = interpret(dC("dy=(cx()-x)/r()".asFormula)(1) <(nil, dI()(1)), pr2)
         val pr4 = interpret(dC("v^2=v0()^2+2*yGlobal()*g()-2*y*g()".asFormula)( 1)  <(nil, dI()(1)), pr3)
@@ -511,6 +509,67 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         val pr7 = interpret(ODE(1), pr6)
         if(reuseComponents) {storeLemma(pr7, Some(provableName))}
         pr7
+    }
+  }
+
+  // Proof of generic quadrant-1 arc
+  def arcProofQ1CCW:ProvableSig = {
+    val provableName = "coasterx_Q1ArcCaseCCW"
+    (lemmaDB.get(provableName), reuseComponents) match {
+      case (Some(pr), true) => pr.fact
+      case _ =>
+        val a1 = "g() > 0".asFormula
+        val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a4 = "dx=(cy()-y)/r()".asFormula
+        val a5 = "dy=-(cx()-x)/r()".asFormula
+        val a6 = "x1() > x0()".asFormula
+        val a7 = "y1() < y0()".asFormula
+        val a8 = "cy() <= y1()".asFormula
+        val a9 = "cx() <= x0()".asFormula
+        val a10 = "r() > 0".asFormula
+        val a11 = "((x0()<=x&x<=x1()) & (y1() <= y & y <= y0()))->(v^2)/2 > g()*(y0() - y)".asFormula
+        val c =
+          """[{x'=dx*v,
+            |            y'=dy*v,
+            |            v'=-dy*g(),
+            |            dx' =  (-dy*v)/r(),
+            |            dy' =  dx*v/r()
+            |            &(x0()<=x&x<=x1())
+            |            &(y1()<=y&y<=y0())}]
+            |        ( dx=(cy()-y)/r()
+            |          & dy=-(cx()-x)/r()
+            |          & v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g()
+            |          & y >= cy()
+            |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
+            |          )""".stripMargin.asFormula
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9,a10,a11), immutable.IndexedSeq(c))
+        val pr = NoProofTermProvable.startProof(con)
+        val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
+        val pr2 = interpret(dC("dx=(cy()-y)/r()".asFormula)(1) <(nil, dI()(1)), pr1)
+        val pr3 = interpret(dC("dy=-(cx()-x)/r()".asFormula)(1) <(nil, dI()(1)), pr2)
+        val pr3a = interpret(dC("v^2=v0()^2+2*yGlobal()*g()-2*y*g()".asFormula)( 1)  <(nil, dI()(1)), pr3)
+        val pr4 = interpret(dC("v^2/2>g()*(y0()-y)".asFormula)( 1)  <(nil, dI()(1)), pr3a)
+        val pr4a = interpret(dC("v>0".asFormula)(1), pr4)
+        val pr4b = interpret(nil <(nil, dC("2*v!=0".asFormula)(1)), pr4a)
+        val pr4c = interpret(nil <(nil, nil, ODE(1)), pr4b)
+        val pr4d = interpret(nil <(nil, dG("{a'=dy*g()/(2*v)*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) & existsR("(1/v)^(1/2)".asTerm)(1)), pr4c)
+        val pr4e = interpret(nil <(nil, dI()(1)), pr4d)
+        val pr5 = interpret(dC("((x-cx())^2 + (y-cy())^2 = r()^2)".asFormula)( 1)  <(nil, dI()(1)), pr4e)
+        val pr6 = interpret(ODE(1), pr5)
+
+        /*val pr5 = interpret(
+          dC("v>0".asFormula)(1)  <(
+            ODE(1),
+            dC("2*v!=0".asFormula)(1)  <(
+              dG("{a'=dy*g()/(2*v)*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) & existsR("(1/v)^(1/2)".asTerm)(1) & dI()(1),
+              ODE(1)
+            )
+          ), pr4)*/
+        //val pr6 = interpret(dC("(x-cx())^2 + (y-cy())^2 = r()^2".asFormula)(1) <(nil, ODE(1)), pr5)
+        //val pr7 = interpret(ODE(1), pr5)
+        if(reuseComponents) {storeLemma(pr6, Some(provableName))}
+        pr6
     }
   }
 
@@ -576,6 +635,60 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     }
   }
 
+  // Proof of generic quadrant-2 arc
+  def arcProofQ2CCW:ProvableSig = {
+    val provableName = "coasterx_Q2ArcCaseCCW"
+    (lemmaDB.get(provableName), reuseComponents) match {
+      case (Some(pr), true) => pr.fact
+      case _ =>
+        val a1 = "g() > 0".asFormula
+        val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & (x<=cx() & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a4 = "dx=(cy()-y)/r()".asFormula
+        val a5 = "dy=-(cx()-x)/r()".asFormula
+        val a6 = "x1() > x0()".asFormula
+        val a7 = "y1() < y0()".asFormula
+        val a8 = "cy() <= y1()".asFormula
+        val a9 = "x1() <= cx() ".asFormula
+        val a10 = "r() > 0".asFormula
+        val c =
+          """[{x'=dx*v,
+            |            y'=dy*v,
+            |            v'=-dy*g(),
+            |            dx' =  (-dy*v)/r(),
+            |            dy' =  (dx*v)/r()
+            |            &(x0()<=x&x<=x1())
+            |            &(y1()<=y&y<=y0())}]
+            |          ( dx=(cy()-y)/r()
+            |          & dy=-(cx()-x)/r()
+            |          & v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g()
+            |          & x <= cx()
+            |          & cy() <= y
+            |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
+            |          )""".stripMargin.asFormula
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10), immutable.IndexedSeq(c))
+        val pr = NoProofTermProvable.startProof(con)
+        val cy = "cy()".asTerm
+        val v0 = "v0()".asTerm
+        val r = "r()".asTerm
+        val cx = "cx()".asTerm
+        val yInit = "yGlobal()".asTerm
+
+        // Note: Conservation of energy always uses the start of the ENTIRE track, not current section
+        val ECirc:Formula = s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula
+        val dGDefined:Formula = s"2*v!=0".asFormula
+        //val pr1:Provable = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
+        val pr3:ProvableSig = interpret(dC(s"dx=(($cy)-y)/($r)".asFormula)(1) <(nil, dI()(1)), pr)
+        val pr4:ProvableSig = interpret(dC(s"dy=-(($cx)-x)/($r)".asFormula)(1)  <(nil, dI()(1)), pr3)
+        val pr5:ProvableSig = interpret(dC(ECirc)('R) <(nil, dI()(1)), pr4)
+        val pr5a:ProvableSig = interpret(dC(s"v^2=v0()^2+2*yGlobal()*g()-2*y*g()".asFormula)(1) <(nil, dI()(1)), pr5)
+        val pr6:ProvableSig = interpret(dC("v>0".asFormula)('R) <(nil, ODE(1)), pr5a)
+        val pr12:ProvableSig = interpret(dC("(x-cx())^2+(y-cy())^2=r()^2".asFormula)('R) <(ODE(1), dI()(1)), pr6)
+        storeLemma(pr12, Some(provableName))
+        pr12
+    }
+  }
+
   // Proof of generic quadrant-3 arc
   def arcProofQ3:ProvableSig = {
     val provableName = "coasterx_Q3ArcCase"
@@ -624,6 +737,61 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     }
   }
 
+  // Proof of generic quadrant-3 arc
+  def arcProofQ3CW:ProvableSig = {
+    val provableName = "coasterx_Q3ArcCaseCW"
+    (lemmaDB.get(provableName), reuseComponents) match {
+      case (Some(pr), true) => pr.fact
+      case _ =>
+        val a1 = "g() > 0".asFormula
+        val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a4 = "dx=-(cy()-y)/r()".asFormula
+        val a5 = "dy=(cx()-x)/r()".asFormula
+        val a6 = "x1() > x0()".asFormula
+        val a7 = "y0() < y1()".asFormula
+        val a8 = "cy() >= y1()".asFormula
+        val a9 = "cx() >= x1()".asFormula
+        val a10 = "r() > 0".asFormula
+        val a11 = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1()))->(v^2)/2 > g()*(y1() - y)".asFormula
+        val c =
+          """[{x'=dx*v,
+            |            y'=dy*v,
+            |            v'=-dy*g(),
+            |            dx' =  (dy*v)/r(),
+            |            dy' =  (-dx*v)/r()
+            |            &(x0()<=x&x<=x1())
+            |            &(y0()<=y&y<=y1())}]
+            |        ( dx=-(cy()-y)/r()
+            |          & dy=(cx()-x)/r()
+            |          & v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g()
+            |          & v>0
+            |          & y <= cy()
+            |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
+            |          )""".stripMargin.asFormula
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10,a11), immutable.IndexedSeq(c))
+        val e =
+        //composeb(1) & assignb(1) & composeb(1) & assignb(1) &
+            dC("dx=-(cy()-y)/r()".asFormula)(1) <(nil, dI()(1)) &
+            dC("dy=(cx()-x)/r()".asFormula)(1) <(nil, dI()(1)) &
+            dC("v^2=v0()^2+2*yGlobal()*g()-2*y*g()".asFormula)( 1)  <(nil, dI()(1)) &
+            dC("v^2/2>g()*(y1()-y)".asFormula)( 1)  <(nil, dI()(1)) &
+            dC("v>0".asFormula)(1) <(nil,
+              dC("2*v!=0".asFormula)(1) <(
+                dG("{a'=dy*g()/(2*v)*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) & existsR("(1/v)^(1/2)".asTerm)(1) & dI()(1),
+                ODE(1)
+              )
+            ) &
+            dC("(x-cx())^2 + (y-cy())^2 = r()^2".asFormula)(1) <(nil, dI()(1)) &
+            ODE(1)
+        val pr = NoProofTermProvable.startProof(con)
+        val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
+        val pr2 = interpret(e, pr1)
+        storeLemma(pr2, Some(provableName))
+        pr2
+    }
+  }
+
   // Proof of generic quadrant-4 arc
   def arcProofQ4:ProvableSig = {
     val provableName = "coasterx_Q4ArcCase"
@@ -656,7 +824,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |          & y < cy()
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
-        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10, a11), immutable.IndexedSeq(c))
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10,a11), immutable.IndexedSeq(c))
         val pr = NoProofTermProvable.startProof(con)
         val cy = "cy()".asTerm
         val v0 = "v0()".asTerm
@@ -690,6 +858,56 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         val pr8 = interpret(ODE(1), pr7)
         storeLemma(pr8, Some(provableName))
         pr8
+    }
+  }
+
+  // Proof of generic quadrant-4 arc
+  def arcProofQ4CW:ProvableSig = {
+    val provableName = "coasterx_Q4ArcCaseCW"
+    (lemmaDB.get(provableName), reuseComponents) match {
+      case (Some(pr), true) => pr.fact
+      case _ =>
+        val a1 = "g() > 0".asFormula
+        val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
+        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & (cx()<=x & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a4 = "dx=-(cy()-y)/r()".asFormula
+        val a5 = "dy=(cx()-x)/r()".asFormula
+        val a6 = "x1() > x0()".asFormula
+        val a7 = "y1() > y0()".asFormula
+        val a8 = "cy() > y1()".asFormula
+        val a9 = "x0() >= cx()".asFormula
+        val a10 = "r() > 0".asFormula
+        val c =
+          """[{x'=dx*v,
+            |            y'=dy*v,
+            |            v'=-dy*g(),
+            |            dx' =  (dy*v)/r(),
+            |            dy' =  (-dx*v)/r()
+            |            &(x0()<=x&x<=x1())
+            |            &(y0()<=y&y<=y1())}]
+            |        ( dx=-(cy()-y)/r()
+            |          & dy=(cx()-x)/r()
+            |          & v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g()
+            |          & v>0
+            |          & y <= cy()
+            |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
+            |          )""".stripMargin.asFormula
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10), immutable.IndexedSeq(c))
+        val pr = NoProofTermProvable.startProof(con)
+        val cy = "cy()".asTerm
+        val v0 = "v0()".asTerm
+        val r = "r()".asTerm
+        val cx = "cx()".asTerm
+        val yInit = "yGlobal()".asTerm
+        //val pr0 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
+        val pr1 = interpret(dC(s"dx=-(($cy)-y)/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
+        val pr2 = interpret(dC(s"dy=(($cx)-x)/($r)".asFormula)( 1)  <(nil, ODE(1)), pr1)
+        val pr4 = interpret(dC(s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)(1) <(nil, dI()(1)), pr2)
+        val pr5 = interpret(dC(s"v>0".asFormula)(1) <(nil, ODE(1)), pr4)
+        val pr6 = interpret(dC(s"(($cx)-x)^2+(($cy)-y)^2=($r)^2".asFormula)(1) <(nil, dI()(1)), pr5)
+        val pr7 = interpret(ODE(1), pr6)
+        storeLemma(pr7, Some(provableName))
+        pr7
     }
   }
 
