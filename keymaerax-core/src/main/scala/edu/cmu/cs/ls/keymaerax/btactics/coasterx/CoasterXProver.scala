@@ -311,6 +311,39 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     pr6
   }
 
+  // Establishes differential invariants for a single quadrant-4 arc
+  def quad4CWTactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int, iSection:Int):ProvableSig = {
+    if(DEBUG)println("Proving Quadrant 4 Arc CW: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
+    val aproof = arcProofQ4CW
+    val ((x0:Term,y0:Term),(x1:Term,y1:Term)) = (p1,p2)
+    val (cx,cy) = spec.iCenter(iSection)
+    val r = spec.iRadius(iSection)
+    val dx0 = s"-(($cy)-y)/($r)".asTerm
+    val dy0 = s"(($cx)-x)/($r)".asTerm
+    val Box(Compose(_,Compose(_,ODESystem(_,evol))),_) = pr.conclusion.succ.head
+    val mainCut = s"(dx=($dx0) & dy=($dy0) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & v>0 & y <= ($cy) & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
+    val pr00 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
+    val pr0 = interpret(dC(mainCut)(1), pr00)
+    val cut1 = s"($x0) > ($x1)".asFormula
+    val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
+    val pr1a = timeFn("ArcQ4CW Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & hide1 & QE)), pr0)})
+    val cut3 = s"($y0) > ($y1)".asFormula
+    val hide2 = (y0, y1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
+    val pr1c = timeFn("ArcQ4CW Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & hide2 & QE)), pr1a)})
+    val cut4 = s"($cy) > ($y0)".asFormula
+    val pr1d = timeFn("ArcQ4Cw Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & QE)), pr1c)})
+    val cut5 = s"($x1) >= ($cx) ".asFormula
+    val pr1e = timeFn("ArcQ4CW Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & QE)), pr1d)})
+    val cut6 = s"($r) > 0".asFormula
+    val pr1f = timeFn("ArcQ4CW Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & QE)), pr1e)})
+   // val cut7 = s"($evol) -> ((v^2)/2 > g()*(($y0) - y))".asFormula
+    //al pr1g = timeFn("ArcQ4CW Case Step 7", {() => interpret(nil < (nil, cut(cut7) < (nil, hideR(1) & QE)), pr1f)})
+    val pr1i = interpret(nil <(nil, hideL(-2)*nYs), pr1f)
+    val tac = US(aproof)
+    val pr6 = interpret(nil < (nil, tac), pr1i)
+    pr6
+  }
+
 
   def coHideL(i : Int, pr:ProvableSig):BelleExpr = {
     coHideL(List(i),pr)
@@ -395,7 +428,8 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     pr9
   }
 
-  def proveArcArith(pr: ProvableSig, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):ProvableSig = {
+  def proveArcArith(pr: ProvableSig, theta1:Number, deltaTheta:Number,
+                    bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):ProvableSig = {
     //val (eHide, nYs) = hideYsAfter(iSection, nSections)
     //val pr1 = interpret(eHide, pr)
     val pr2 = interpret (implyR(1), pr)
@@ -426,15 +460,21 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       //else if(constRange) eAggressive
       // g, defs0, ..., defsN, <<9 cuts>> |- (bounds -> post)
       val Imply(And(And(LessEqual(x0,_),LessEqual(_,x1)),And(LessEqual(y0,_),LessEqual(_,y1))),_) = pr.subgoals.head.succ.head
-      val (preCx,nextCx) = (x0,x1) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
+      val t1 = theta1.value
+      val dt = deltaTheta.value
+      val movesLeft = (t1 <= 0 && dt < 0) || (t1 >= 0 && dt > 0)
+      val (leftNum,rightNum) = if(movesLeft) {(x1,x0)} else {(x0,x1)}
+      val (preCx,nextCx) = (leftNum,rightNum) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
       val inBounds = nSections + 2
       val And(LessEqual(x2,_),LessEqual(_,x3)) = pr.subgoals.head.ante(inBounds-1)
       val (preCxB,nextCxB) = (x2,x3) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
       def localDefsPos(j:Int):List[Int] = List(2+j)
       val preKept:List[Int] = if(preCx) localDefsPos(i-1) else Nil
       val nextKept = if(nextCx) localDefsPos(i) else Nil
+
       val preKeptB:List[Int] = if(preCxB) localDefsPos(iSection-1) else Nil
       val nextKeptB = if(nextCxB) localDefsPos(iSection) else Nil
+
       val keepBranch = localDefsPos(iSection)
       val cutsPos = pr.subgoals.head.ante.length
       val allPoses:List[Int] = cutsPos :: (preKept ++ nextKept ++ preKeptB ++ nextKeptB)
@@ -973,7 +1013,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & (cx()<=x & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a3 = "((x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((x-cx())^2 + (y-cy())^2 = r()^2 & (cx()<=x & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=-(cy()-y)/r()".asFormula
         val a5 = "dy=(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -1101,14 +1141,15 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
               timeFn("Q4CCW", () => {
               quad4CCWTactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)
               }) // Quadrant 4
-            case _ =>
-              val 2 = 1 + 1
-              ???
+            case (false, true, false, true) =>
+              timeFn("Q4CW", () => {
+              quad4CWTactic(prStart, p1, p2, bl, tr, v0, yInit, theta1, deltaTheta,nYs, iSection)
+              }) // Quadrant 4
           }
         val prOut =
           timeFn("Arc QE", () => {
             interpret(dW(1), pr1)})
-        val prOut2 = proveArcArith(prOut,bl,tr,iSection,nSections)
+        val prOut2 = proveArcArith(prOut,theta1,deltaTheta,bl,tr,iSection,nSections)
         assert(prOut2.isProved)
         prOut2
       }

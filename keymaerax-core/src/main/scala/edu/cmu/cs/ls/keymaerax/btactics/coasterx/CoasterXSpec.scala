@@ -751,12 +751,41 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
     val q2 = (t1 == 90 && dT > 0)  || (t1 > 90   && t1 < 180) || (t1 == 180 && dT < 0) //!(q1 || q3 || q4)
     val q3 = ((t1 == 180 || t1 == -180) && dT > 0)|| (t1 > -180 && t1 < -90) || (t1 == -90 && dT < 0) //&& t2 <= -90
     val q4 = (t1 == -90 && dT > 0) || (t1 > -90  && t1 < 0) || (t1 == 0 && dT < 0)   //&& t2 <= 0
+    val isCw = (dT < 0)
     val cxapprox = evalTerm(cxe).value
     val xx1approx = evalTerm(xx1).value
     val xx2approx = evalTerm(xx2).value
 
+    if (cxapprox > xx2approx && q4 && isCw) {
+      val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
+        Number(BigDecimal(-89).max(t1)), Number(BigDecimal(-1).min(-90-t1)))), Some(oldSlope)),
+        ((xx1, yy1), (cx, foldMinus(cy,r))),
+        allDefs,
+        (endDX, endDY))
+      // TODO: Need to set dx and such intermediately for those components
+      // TODO: Not an obvious value for the deltatheta dude
+      // TODO: Need to figure out definition numbering and stuff
+      val endDX2 = Variable("dx", Some(index+1))
+      val endDY2 = Variable("dy", Some(index+1))
+      val cx2 = Variable("cx", Some(index+1))
+      val cy2 = Variable("cy", Some(index+1))
+      val r2 = Variable("r", Some(index+1))
+      val cxDef2:Formula = Equal(cx2, cxe)
+      val cyDef2:Formula = Equal(cy2, cye)
+      val endDXDef2:Formula = Equal(endDX2, dtxe)
+      val endDYDef2:Formula = Equal(endDY2, dtye)
+      val rDef2 = Equal(r2, re)
+      val allDefs2 = And(rDef2, And(And(cxDef2, cyDef2),And(endDXDef2, endDYDef2)))
+      ctx = ctx.+(r2 -> re, cx2 -> cxe, cy2 -> cye, endDX2 -> dtxe, endDY2 -> dtye)
+      val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
+        Number(-90), Number((param.theta2.value - (-90)).min(-1)))), Some(oldSlope)),
+        ((cx, foldMinus(cy,r)), (xx2, yy2)),
+        allDefs2,
+        (endDX, endDY))
+      sec1 :: sec2 :: alignZipped(rest, Some((endDX, endDY)), index + 2)
+    }
     // Insert a 3rdq arc because hmm whoops turns out we're not so q4 after all
-    if (cxapprox > xx1approx && q4) {
+    else if (cxapprox > xx1approx && q4 && !isCw) {
       val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), Number(-91), Number(1))), Some(oldSlope)),
         ((xx1, yy1), (cx, foldMinus(cy,r))),
         allDefs,
