@@ -217,6 +217,11 @@ class CoasterXTests extends TacticTestBase {
     pr shouldBe 'proved
   })}
 
+  it should "generate proof for simple inversion" in {  withMathematica(qeTool => {
+    val pr = prover(simpleInversion, "Simple Inversion")
+    pr shouldBe 'proved
+  })}
+
   it should "generate proof for example coaster" in { withMathematica(qeTool => {
     val pr = prover(exampleFile1, "Example (Top Thrill?)")
     pr shouldBe 'proved

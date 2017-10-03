@@ -27,7 +27,7 @@ import scala.collection.immutable
 * */
 class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boolean = true, countSteps:Boolean=false){
 
-  val DEBUG = false
+  val DEBUG = true
   // Record timing information for a function call so we can measure optimizations to the CoasterX prover
   val MAX_TIMEFN_DEPTH = 10
   var currTimefnDepth = 0
@@ -388,7 +388,11 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     // const, yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
     def provePost(i:Int, pr:ProvableSig):ProvableSig = {
       //g, defs1,...,defsN, xBounds,yLow,yUp,global,cutsHold
-      val Imply(And(LessEqual(x0,_),LessEqual(_,x1)),_) = pr.subgoals.head.succ.head
+      val (x0,x1) =
+        pr.subgoals.head.succ.head match {
+          case Imply(And(LessEqual(x0,_),LessEqual(_,x1)),_) => (x0,x1)
+          case Imply(And(And(LessEqual(x0,_),LessEqual(_,x1)),And(LessEqual(y0,_),LessEqual(_,y1))),_) => (x0,x1)
+        }
       val (preCx,nextCx) = (x0,x1) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
       def localDefsPos(j:Int):List[Int] = List(2+j)
       val preKept:List[Int] = if(preCx) localDefsPos(i-1) else Nil
@@ -1269,7 +1273,12 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     // g, (dx&dy&x&y&v), seg1,...,segn |- (vStuff)&(imp1&( ... &impN))
     val pr0 = interpret(andR(1) <(proveVStuff, nil), pr)
     def proveBranch(i:Int, pr:ProvableSig):ProvableSig = {
-      val Imply(And(And(LessEqual(x0,_),LessEqual(_,x1)),And(LessEqual(y0,_),LessEqual(_,y1))),_) = pr.subgoals.head.succ.head
+      println("Tryna prove postcondition step branch " + i)
+      val (x0,x1) =
+        pr.subgoals.head.succ.head match {
+          case Imply (And (And (LessEqual (x0, _), LessEqual (_, x1) ), And (LessEqual (_, _), LessEqual (_, _) ) ), _) => (x0,x1)
+          case Imply (And (LessEqual (x0, _), LessEqual (_, x1) ), _) => (x0,x1)
+        }
       val (preCx,nextCx) = (x0,x1) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
       def localDefsPos(j:Int):List[Int] = List(3+j)
       val preKept:List[Int] = if(preCx) localDefsPos(i-1) else Nil
@@ -1281,7 +1290,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         coHideL(gravPos::posPos::localDefsPos(i), pr) & implyR(1) & master()
       }
       val eContra = {
-        coHideL(allPoses, pr) & implyR(1) & hideR(1) & master()
+        coHideL(allPoses, pr) & implyR(1) & hideR(1) & DebuggingTactics.debug("Why this no prove", doPrint = true) &  master()
       }
       val e:BelleExpr =
         if (i == 0) eInit

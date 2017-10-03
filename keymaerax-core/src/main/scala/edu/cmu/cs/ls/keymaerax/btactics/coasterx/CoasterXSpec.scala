@@ -142,7 +142,7 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMinAbs:EnvScal
 * */
 object CoasterXSpec {
   type TPoint = (Term, Term)
-  type Context = Map[BaseVariable, Term]
+  type Context = Map[BaseVariable, Double]
 }
 class CoasterXSpec(feetPerUnit:Double) {
 
@@ -151,18 +151,19 @@ class CoasterXSpec(feetPerUnit:Double) {
   /* Approximate term evaluator, with limited range especially for square roots.
    * Thus it's not suitable for rigorous proof purposes, but can be used both (a) for guiding spec+proof strategy when we need to compare irrational terms to
    * make a decision and (b) for general debugging purposes when we want a quantitative view on complicated terms */
-  def evalTerm(t:Term):Number = {
+  def evalTerm(t:Term):Number = Number(evalTermFast(t))
+  def evalTermFast(t:Term):Double = {
     t match {
-      case x:BaseVariable => evalTerm(ctx(x))
-      case n:Number => n
-      case Neg(x) => Number(-evalTerm(x).value)
-      case Plus(x,y) => Number(evalTerm(x).value + evalTerm(y).value)
-      case Minus(x,y) => Number(evalTerm(x).value - evalTerm(y).value)
-      case Times(x,y) => Number(evalTerm(x).value * evalTerm(y).value)
-      case Divide(x,y) => Number(evalTerm(x).value / evalTerm(y).value)
-      case Power(x,y:Number) if y.value == 0 => Number(1)
-      case Power(x,y:Number) if y.value.isValidInt && y.value > 0 => Number(evalTerm(x).value*evalTerm(Power(x,Number(y.value-1))).value)
-      case Power(x,y) => Number(Math.pow(evalTerm(x).value.toDouble, evalTerm(y).value.toDouble))
+      case x:BaseVariable => ctx(x)
+      case n:Number => n.value.toDouble
+      case Neg(x) => (-evalTermFast(x))
+      case Plus(x,y) => (evalTermFast(x) + evalTermFast(y))
+      case Minus(x,y) => (evalTermFast(x) - evalTermFast(y))
+      case Times(x,y) => (evalTermFast(x) * evalTermFast(y))
+      case Divide(x,y) => (evalTermFast(x) / evalTermFast(y))
+      case Power(x,y:Number) if y == 0 => (1)
+      case Power(x,y:Number) if y.value.isValidInt && y.value > 0 => (evalTermFast(x)*evalTermFast(Power(x,Number(y.value-1))))
+      case Power(x,y) => (Math.pow(evalTermFast(x).toDouble, evalTermFast(y).toDouble))
     }
   }
 
@@ -303,9 +304,30 @@ class CoasterXSpec(feetPerUnit:Double) {
     t match {
       case Plus(t1,t2) => foldPlus(compact(t1),compact(t2))
       case Times(t1,t2) => foldTimes(compact(t1),compact(t2))
-      case Divide(t1,t2) => foldDivide(compact(t1),compact(t2))
-      case Minus(t1,t2) => foldMinus(compact(t1),compact(t2))
-      case Neg(t) => foldNeg(compact(t))
+      case Divide(t1,t2) =>
+        val div = foldDivide(compact(t1),compact(t2))
+        div match {
+          case Divide(Plus(Minus(x1:Variable,y1:Variable),Plus(x2:Variable,y2:Variable)),Number(n)) if x1 == x2 && y1 == y2 && n == 2 =>
+            x1
+          case x => x
+        }
+      case Minus(t1,t2) =>
+        val minus = foldMinus(compact(t1),compact(t2))
+        val minus2 = minus match {
+          case (Minus(x1:Variable, Plus(x2:Variable, t:Term))) if x1 == x2 => Neg(t)
+          case (Minus(x1:Variable, Minus(x2:Variable, t:Term))) if x1 == x2 => t
+          case x => x
+        }
+        minus2 match {
+          case Minus(x1:Variable,x2:Variable) if x1 == x2 => Number(0)
+          case x => x
+        }
+      case Neg(t) =>
+        val neg = foldNeg(compact(t))
+        neg match {
+          case Neg(Neg(t)) => t
+          case x => x
+        }
       case Power(t1,t2) => foldPower(compact(t1),compact(t2))
       case Differential(t) => Differential(compact(t))
       case Pair(t1,t2) => Pair(compact(t1),compact(t2))
@@ -359,7 +381,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
     val (a,b) = (foldNeg(dxy._2), dxy._1)
     val cx = s"(($a)*(($x1)^2 - ($x2)^2 - (($y1) - ($y2))^2) + 2*($b)*($x1)*(($y1) - ($y2)))/(2*(($a)*(($x1) - ($x2)) + ($b)*(($y1) - ($y2))))".asTerm
     val cy = s"(2*($a)*(($x1) - ($x2))*($y1) - ($b)*((($x1) - ($x2))^2 - ($y1)^2 + ($y2)^2))/(2*(($a)*(($x1) - ($x2)) + ($b)*(($y1) - ($y2))))".asTerm
-    (cx,cy)
+    (compact(cx),compact(cy))
   }
   // Compute direction-to-center vector using tangent vector and wiseness
   def centerFromTangent(dir:TPoint, angles:(Number,Number), delta:Number):(Term,Term) = {
@@ -724,157 +746,206 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
   * dx*y >= dy*x+c
   * */
   def alignArcFromDirection(secs: List[(Section, (TPoint, TPoint))], index: Int, dx: Term, dy: Term):List[(Section,(TPoint,TPoint), Formula, TPoint)] = {
-    val (ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(oldSlope)), ((xx1, yy1), (xx2, yy2))) :: rest = secs
-    val endDX = Variable("dx", Some(index))
-    val endDY = Variable("dy", Some(index))
-    val cx = Variable("cx", Some(index))
-    val cy = Variable("cy", Some(index))
-    val r = Variable("r", Some(index))
-    val (cxe, cye) = centerFromStartSlope(xx1,yy1,xx2,yy2,(dx,dy))
-    val re = dist((cx,cy),(xx1,yy1))
-    val yendSign = if (param.theta2.value > 0) { Number(1) } else Number(-1)
-    val xend = xx2
-    val (dcxe, dcye) = (foldMinus(cxe, xend), foldMinus(cye, yy2))
-    val (dtxe, dtye) = normalizeVector(tangentFromCenter((dcxe,dcye), (param.theta1, param.theta2), param.deltaTheta))
-    val cxDef:Formula = Equal(cx, cxe)
-    val cyDef:Formula = Equal(cy, cye)
-    val endDXDef:Formula = Equal(endDX, dtxe)
-    val endDYDef:Formula = Equal(endDY, dtye)
-    val rDef = Equal(r, re)
-    val allDefs = And(rDef, And(And(cxDef, cyDef),And(endDXDef, endDYDef)))
-    ctx = ctx.+(r -> re, cx -> cxe, cy -> cye, endDX -> dtxe, endDY -> dtye)
-    // If we accidentally made this into a two-quadrant arc, then adjust again.
-    // Yes, this is super nasty and could use some work
-    val dT = deltaTheta.value
-    val (t1,t2) = (theta1.value, normalizeAngle(theta1.value + deltaTheta.value))
-    val q1 = (t1 == 0 && dT > 0)   || (t1 > 0    && t1 < 90)  || (t1 == 90 && dT < 0) //&& t2 <= 90
-    val q2 = (t1 == 90 && dT > 0)  || (t1 > 90   && t1 < 180) || (t1 == 180 && dT < 0) //!(q1 || q3 || q4)
-    val q3 = ((t1 == 180 || t1 == -180) && dT > 0)|| (t1 > -180 && t1 < -90) || (t1 == -90 && dT < 0) //&& t2 <= -90
-    val q4 = (t1 == -90 && dT > 0) || (t1 > -90  && t1 < 0) || (t1 == 0 && dT < 0)   //&& t2 <= 0
-    val isCw = (dT < 0)
+    val (ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(oldSlope)), ((xx1:Term, yy1:Term), (xx2:Term, yy2:Term))) :: rest = secs
+    val (cxe:Term, cye:Term) = centerFromStartSlope(xx1,yy1,xx2,yy2,(dx,dy))
     val cxapprox = evalTerm(cxe).value
-    val xx1approx = evalTerm(xx1).value
-    val xx2approx = evalTerm(xx2).value
+    val cyapprox = evalTerm(cye).value
 
-    if (cxapprox > xx2approx && q4 && isCw) {
-      val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
-        Number(BigDecimal(-89).max(t1)), Number(BigDecimal(-1).min(-90-t1)))), Some(oldSlope)),
-        ((xx1, yy1), (cx, foldMinus(cy,r))),
-        allDefs,
-        (endDX, endDY))
-      // TODO: Need to set dx and such intermediately for those components
-      // TODO: Not an obvious value for the deltatheta dude
-      // TODO: Need to figure out definition numbering and stuff
-      val endDX2 = Variable("dx", Some(index+1))
-      val endDY2 = Variable("dy", Some(index+1))
-      val cx2 = Variable("cx", Some(index+1))
-      val cy2 = Variable("cy", Some(index+1))
-      val r2 = Variable("r", Some(index+1))
-      val cxDef2:Formula = Equal(cx2, cxe)
-      val cyDef2:Formula = Equal(cy2, cye)
-      val endDXDef2:Formula = Equal(endDX2, dtxe)
-      val endDYDef2:Formula = Equal(endDY2, dtye)
-      val rDef2 = Equal(r2, re)
-      val allDefs2 = And(rDef2, And(And(cxDef2, cyDef2),And(endDXDef2, endDYDef2)))
-      ctx = ctx.+(r2 -> re, cx2 -> cxe, cy2 -> cye, endDX2 -> dtxe, endDY2 -> dtye)
-      val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
-        Number(-90), Number((param.theta2.value - (-90)).min(-1)))), Some(oldSlope)),
-        ((cx, foldMinus(cy,r)), (xx2, yy2)),
-        allDefs2,
-        (endDX, endDY))
-      sec1 :: sec2 :: alignZipped(rest, Some((endDX, endDY)), index + 2)
+    def q1approx(x: BigDecimal, y: BigDecimal): Boolean = {
+      x >= cxapprox && y >= cyapprox
     }
-    // Insert a 3rdq arc because hmm whoops turns out we're not so q4 after all
-    else if (cxapprox > xx1approx && q4 && !isCw) {
-      val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), Number(-91), Number(1))), Some(oldSlope)),
-        ((xx1, yy1), (cx, foldMinus(cy,r))),
-        allDefs,
-        (endDX, endDY))
-      // TODO: Need to set dx and such intermediately for those components
-      // TODO: Not an obvious value for the deltatheta dude
-      // TODO: Need to figure out definition numbering and stuff
-      val endDX2 = Variable("dx", Some(index+1))
-      val endDY2 = Variable("dy", Some(index+1))
-      val cx2 = Variable("cx", Some(index+1))
-      val cy2 = Variable("cy", Some(index+1))
-      val r2 = Variable("r", Some(index+1))
-      val cxDef2:Formula = Equal(cx2, cxe)
-      val cyDef2:Formula = Equal(cy2, cye)
-      val endDXDef2:Formula = Equal(endDX2, dtxe)
-      val endDYDef2:Formula = Equal(endDY2, dtye)
-      val rDef2 = Equal(r2, re)
-      val allDefs2 = And(rDef2, And(And(cxDef2, cyDef2),And(endDXDef2, endDYDef2)))
-      ctx = ctx.+(r2 -> re, cx2 -> cxe, cy2 -> cye, endDX2 -> dtxe, endDY2 -> dtye)
-      val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
-        Number(-90), Number((param.theta2.value - (-90)).max(1)))), Some(oldSlope)),
-        ((cx, foldMinus(cy,r)), (xx2, yy2)),
-        allDefs2,
-        (endDX, endDY))
-      sec1 :: sec2 :: alignZipped(rest, Some((endDX, endDY)), index + 2)
+
+    def q2approx(x: BigDecimal, y: BigDecimal): Boolean = {
+      x <= cxapprox && y >= cyapprox
     }
-    else if (cxapprox < xx2approx && q3) {
-      assert(theta1.value <= -90 && param.theta2.value >= -90)
-      // @TODO: This assumes it's a Q3-Q4 arc, but gotta start somewhere
-      val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, Number(-90 - theta1.value))), Some(oldSlope)),
-        ((xx1, yy1), (cx, foldMinus(cy,re))),
-        allDefs,
-        (endDX, endDY))
-      // TODO: Need to set dx and such intermediately for those components
-      // TODO: Not an obvious value for the deltatheta dude
-      // TODO: Need to figure out definition numbering and stuff
-      val endDX2 = Variable("dx", Some(index+1))
-      val endDY2 = Variable("dy", Some(index+1))
-      val cx2 = Variable("cx", Some(index+1))
-      val cy2 = Variable("cy", Some(index+1))
-      val r2 = Variable("r", Some(index+1))
-      val cxDef2:Formula = Equal(cx2, cxe)
-      val cyDef2:Formula = Equal(cy2, cye)
-      val endDXDef2:Formula = Equal(endDX2, dtxe)
-      val endDYDef2:Formula = Equal(endDY2, dtye)
-      val rDef2 = Equal(r2, re)
-      val allDefs2 = And(rDef2, And(And(cxDef2, cyDef2),And(endDXDef2, endDYDef2)))
-      ctx = ctx.+(r2 -> re, cx2 -> cxe, cy2 -> cye, endDX2 -> dtxe, endDY2 -> dtye)
-      val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
-        Number(-90), Number((param.theta2.value - (-90)).max(1)))), Some(oldSlope)),
-        ((cxe, foldMinus(cy,r)), (xx2, yy2)),
-        allDefs2,
-        (endDX, endDY))
-      sec1 :: sec2 :: alignZipped(rest, Some((endDX, endDY)), index + 2)
-    } else if (cxapprox < xx2approx && q2) {
-      // @TODO: This assumes it's a Q2-Q1 arc, but gotta start somewhere
-      //assert(param.theta1.value >= 90 && param.theta2.value <= 90)
-      val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, Number(90-param.theta1.value))),
-        Some(oldSlope)),
-        ((xx1, yy1), (cx, foldPlus(cy,r))),
-        allDefs,
-        (endDX, endDY))
-      // TODO: Need to set dx and such intermediately for those components
-      // TODO: Not an obvious value for the deltatheta dude
-      // TODO: Need to figure out definition numbering and stuff
-      val endDX2 = Variable("dx", Some(index+1))
-      val endDY2 = Variable("dy", Some(index+1))
-      val cx2 = Variable("cx", Some(index+1))
-      val cy2 = Variable("cy", Some(index+1))
-      val r2 = Variable("r", Some(index+1))
-      val cxDef2:Formula = Equal(cx2, cxe)
-      val cyDef2:Formula = Equal(cy2, cye)
-      val endDXDef2:Formula = Equal(endDX2, dtxe)
-      val endDYDef2:Formula = Equal(endDY2, dtye)
-      val rDef2 = Equal(r2, re)
-      val allDefs2 = And(rDef2, And(And(cxDef2, cyDef2),And(endDXDef2, endDYDef2)))
-      ctx = ctx.+(r2 -> re, cx2 -> cxe, cy2 -> cye, endDX2 -> dtxe, endDY2 -> dtye)
-      val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), Number(90), Number((param.theta2.value-90).min(-1)))), Some(oldSlope)),
-        ((cxe, foldPlus(cy,r)), (xx2, yy2)),
-        allDefs2,
-        (endDX, endDY))
-      sec1 :: sec2 :: alignZipped(rest, Some((endDX, endDY)), index + 2)
-    } else {
-      val head = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, deltaTheta)), Some(oldSlope)),
-        ((xx1, yy1), (xx2, yy2)),
-        allDefs,
-        (endDX, endDY))
-      head :: alignZipped(rest, Some((endDX, endDY)), index + 1)
+
+    def q3approx(x: BigDecimal, y: BigDecimal): Boolean = {
+      x <= cxapprox && y <= cyapprox
     }
+
+    def q4approx(x: BigDecimal, y: BigDecimal): Boolean = {
+      x >= cxapprox && y <= cyapprox
+    }
+
+    def q1approxccw(x: BigDecimal, y: BigDecimal): Boolean = {
+      q1approx(x, y) && !q2approx(x, y)
+    }
+
+    def q2approxccw(x: BigDecimal, y: BigDecimal): Boolean = {
+      q2approx(x, y) && !q3approx(x, y)
+    }
+
+    def q3approxccw(x: BigDecimal, y: BigDecimal): Boolean = {
+      q3approx(x, y) && !q4approx(x, y)
+    }
+
+    def q4approxccw(x: BigDecimal, y: BigDecimal): Boolean = {
+      q4approx(x, y) && !q1approx(x, y)
+    }
+
+    def splitArcRecursively(secs: List[(Section, (TPoint, TPoint))], index: Int, dx: Term, dy: Term):List[(Section,(TPoint,TPoint), Formula, TPoint)] = {
+      secs match {
+        case (ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(oldSlope)), ((xx1:Term, yy1:Term), (xx2:Term, yy2:Term))) :: rest
+          =>
+      val (ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(oldSlope)), ((xx1:Term, yy1:Term), (xx2:Term, yy2:Term))) :: rest = secs
+      val xx1approx = evalTerm(xx1).value
+      val xx2approx = evalTerm(xx2).value
+      val yy1approx = evalTerm(yy1).value
+      val yy2approx = evalTerm(yy2).value
+      val endDX = Variable("dx", Some(index))
+      val endDY = Variable("dy", Some(index))
+      val cx = Variable("cx", Some(index))
+      val cy = Variable("cy", Some(index))
+      val r = Variable("r", Some(index))
+      val re = dist((cx, cy), (xx1, yy1))
+      val yendSign = if (param.theta2.value > 0) {
+        Number(1)
+      } else Number(-1)
+      val xend = xx2
+      val (dcxe, dcye) = (foldMinus(cx, xend), foldMinus(cy, yy2))
+      val (dtxe: Term, dtye: Term) = normalizeVector(tangentFromCenter((dcxe, dcye), (param.theta1, param.theta2), param.deltaTheta))
+      val cxDef: Formula = Equal(cx, cxe)
+      val cyDef: Formula = Equal(cy, cye)
+      val endDXDef: Formula = Equal(endDX, dtxe)
+      val endDYDef: Formula = Equal(endDY, dtye)
+      val rDef = Equal(r, re)
+      val allDefs = And(rDef, And(And(cxDef, cyDef), And(endDXDef, endDYDef)))
+      ctx = ctx.+(cx -> evalTermFast(cxe), cy -> evalTermFast(cye))
+      ctx = ctx.+(r -> evalTermFast(re))
+      ctx = ctx.+(endDX -> evalTermFast(dtxe), endDY -> evalTermFast(dtye))
+      // If we accidentally made this into a two-quadrant arc, then adjust again.
+      // Yes, this is super nasty and could use some work
+      val dT = deltaTheta.value
+      val isCw = (dT < 0)
+      val (t1, t2) = (theta1.value, normalizeAngle(theta1.value + deltaTheta.value))
+      val q1 = (t1 == 0 && dT > 0) || (t1 > 0 && t1 < 90) || (t1 == 90 && dT < 0) //&& t2 <= 90
+      val q2 = (t1 == 90 && dT > 0) || (t1 > 90 && t1 < 180) || (t1 == 180 && dT < 0) //!(q1 || q3 || q4)
+      val q3 = ((t1 == 180 || t1 == -180) && dT > 0) || (t1 > -180 && t1 < -90) || (t1 == -90 && dT < 0) //&& t2 <= -90
+      val q4 = (t1 == -90 && dT > 0) || (t1 > -90 && t1 < 0) || (t1 == 0 && dT < 0) //&& t2 <= 0
+
+      val endDX2 = Variable("dx", Some(index + 1))
+      val endDY2 = Variable("dy", Some(index + 1))
+      val cx2 = Variable("cx", Some(index + 1))
+      val cy2 = Variable("cy", Some(index + 1))
+      val r2 = Variable("r", Some(index + 1))
+      val cxDef2: Formula = Equal(cx2, cxe)
+      val cyDef2: Formula = Equal(cy2, cye)
+      val endDXDef2: Formula = Equal(endDX2, dtxe)
+      val endDYDef2: Formula = Equal(endDY2, dtye)
+      val rDef2 = Equal(r2, re)
+      val allDefs2 = And(rDef2, And(And(cxDef2, cyDef2), And(endDXDef2, endDYDef2)))
+      ctx = ctx.+(r2 -> evalTermFast(re), cx2 -> evalTermFast(cxe), cy2 -> evalTermFast(cye), endDX2 -> evalTermFast(dtxe), endDY2 -> evalTermFast(dtye))
+      if (cxapprox > xx1approx && q4 && !isCw) {
+        println("PRE-SPLITTING Q4CCW -> (Q3,Q4)CCW")
+        val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), Number(-91), Number(1))), Some(oldSlope)),
+          ((xx1, yy1), (cx, foldMinus(cy, r))),
+          allDefs,
+          (endDX, endDY))
+        val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
+          Number(-90), Number((param.theta2.value - (-90)).max(1)))), Some(oldSlope)),
+          ((cx, foldMinus(cy, r)), (xx2, yy2)),
+          allDefs2,
+          (endDX, endDY))
+        sec1 :: sec2 :: splitArcRecursively(rest,index+2,dx,dy)
+      }
+      else if (q2approxccw(xx1approx, yy1approx) && !q2approx(xx2approx, yy2approx) && !isCw) {
+        println("SPLITTING Q2CCW -> (Q2,Q3)CCW")
+        val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
+          Number(BigDecimal(90).max(t1)), Number(BigDecimal(1).max(180 - t1).min(90)))), Some(oldSlope)),
+          ((xx1, yy1), (foldMinus(cx, r), cy)),
+          allDefs,
+          (endDX, endDY))
+        val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
+          // Intentially avoid normalizing, e.g. 270 degrees -> -90 Degrees when adding t1 + dT in order to support inversions
+          Number(180), Number(((theta1.value + deltaTheta.value) - 180).max(1)))), Some(oldSlope)),
+          ((foldMinus(cx, r), cy), (xx2, yy2))
+        )
+        // @TODO: Figure out what to do with formulas generated by recursive call
+        sec1 :: splitArcRecursively(sec2:: rest,index+1,endDX,endDY)
+      } else if (q1approxccw(xx1approx, yy1approx) && !q1approx(xx2approx, yy2approx) && !isCw) {
+        println("SPLITTING Q1CCW -> (Q1,Q2)CCW")
+        val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
+          Number(BigDecimal(0).max(t1)), Number(BigDecimal(1).max(90 - t1).min(90)))), Some(oldSlope)),
+          ((xx1, yy1), (cx, foldPlus(cy, r))),
+          allDefs,
+          (endDX, endDY))
+        val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
+          // Intentially avoid normalizing, e.g. 270 degrees -> -90 Degrees when adding t1 + dT in order to support inversions
+          Number(90), Number(((theta1.value + deltaTheta.value) - 90).max(1)))), Some(oldSlope)),
+          ((cx, foldPlus(cy, r)), (xx2, yy2))
+        )
+        // @TODO: Figure out what to do with formulas generated by recursive call
+        sec1 :: alignZipped(sec2 :: rest, Some((endDX, endDY)), index + 1)
+      } else if (q4approxccw(xx1approx, yy1approx) && !q4approx(xx2approx, yy2approx) && !isCw) {
+        println("SPLITTING Q4CCW -> (Q4,Q1) CCW")
+        val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
+          Number(BigDecimal(-1).min(t1)), Number(BigDecimal(1).max(0 - t1).min(90)))), Some(oldSlope)),
+          ((xx1, yy1), (foldPlus(cx, r), cy)),
+          allDefs,
+          (endDX, endDY))
+        val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
+          // Intentially avoid normalizing, e.g. 270 degrees -> -90 Degrees when adding t1 + dT in order to support inversions
+          Number(0), Number(((theta1.value + deltaTheta.value) - 0).max(1)))), Some(oldSlope)),
+          ((foldPlus(cx, r), cy), (xx2, yy2)))
+        // @TODO: Figure out what to do with formulas generated by recursive call
+        sec1 :: splitArcRecursively(sec2:: rest,index+1,endDX,endDY)
+      } else if (cxapprox > xx2approx && q4 && isCw) {
+        println("SPLITTING Q4CW -> (Q4,Q3)CW")
+        val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
+          Number(BigDecimal(-89).max(t1)), Number(BigDecimal(-1).min(-90 - t1)))), Some(oldSlope)),
+          ((xx1, yy1), (cx, foldMinus(cy, r))),
+          allDefs,
+          (endDX, endDY))
+        // TODO: Need to set dx and such intermediately for those components
+        // TODO: Not an obvious value for the deltatheta dude
+        // TODO: Need to figure out definition numbering and stuff
+        val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
+          Number(-90), Number((param.theta2.value - (-90)).min(-1)))), Some(oldSlope)),
+          ((cx, foldMinus(cy, r)), (xx2, yy2)),
+          allDefs2,
+          (endDX, endDY))
+        sec1 :: sec2 :: splitArcRecursively(rest,index+2,endDX,endDY)
+      }
+      // Insert a 3rdq arc because hmm whoops turns out we're not so q4 after all
+      else if (cxapprox < xx2approx && q3) {
+        println("SPLITTING Q3CCW -> (Q3,Q4)CCW")
+        assert(theta1.value <= -90 && param.theta2.value >= -90)
+        // @TODO: This assumes it's a Q3-Q4 arc, but gotta start somewhere
+        val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, Number(-90 - theta1.value))), Some(oldSlope)),
+          ((xx1, yy1), (cx, foldMinus(cy, re))),
+          allDefs,
+          (endDX, endDY))
+        val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
+          Number(-90), Number((param.theta2.value - (-90)).max(1)))), Some(oldSlope)),
+          ((cxe, foldMinus(cy, r)), (xx2, yy2)),
+          allDefs2,
+          (endDX, endDY))
+        sec1 :: sec2 :: splitArcRecursively(rest,index+2,endDX,endDY)
+      } else if (cxapprox < xx2approx && q2) {
+        println("SPLITTING Q2CCW -> (Q2,Q1)CCW")
+        // @TODO: This assumes it's a Q2-Q1 arc, but gotta start somewhere
+        //assert(param.theta1.value >= 90 && param.theta2.value <= 90)
+        val sec1 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, Number(90 - param.theta1.value))),
+          Some(oldSlope)),
+          ((xx1, yy1), (cx, foldPlus(cy, r))),
+          allDefs,
+          (endDX, endDY))
+        val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), Number(90), Number((param.theta2.value - 90).min(-1)))), Some(oldSlope)),
+          ((cxe, foldPlus(cy, r)), (xx2, yy2)),
+          allDefs2,
+          (endDX, endDY))
+        sec1 :: sec2 :: splitArcRecursively(rest,index+2,endDX,endDY)
+      } else {
+        val head = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)), theta1, deltaTheta)), Some(oldSlope)),
+          ((xx1, yy1), (xx2, yy2)),
+          allDefs,
+          (endDX, endDY))
+        head :: splitArcRecursively(rest,index+1,endDX,endDY)
+      }
+        case _ => alignZipped(secs,Some(dx,dy),index)
+      }
+    }
+    splitArcRecursively(secs, index, dx, dy)
   }
 
   def alignArcFromCenter(secs:List[(Section,(TPoint,TPoint))], index:Int):List[(Section,(TPoint,TPoint), Formula, TPoint)] = {
@@ -894,6 +965,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
   *    to define the segment, e.g. x_i, y_i, m_i
   *    */
   def alignZipped(zip:List[(Section,(TPoint,TPoint))], _initD:Option[TPoint], index:Int):List[(Section,(TPoint,TPoint), Formula, TPoint)] = {
+    println("DOING ALIGN-ZIP")
     zip match {
       case Nil => Nil
       case (LineSection(Some(LineParam((x1,y1),(x2,y2))),Some(_), isUp), ((xx1, yy1), (xx2, yy2))) :: rest =>
@@ -908,7 +980,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
         val endDXDef = Equal(endDX, endD._1)
         val endDYDef = Equal(endDY, endD._2)
         val allDefs = And(endDXDef, endDYDef)
-        ctx = ctx.+(endDX -> endD._1, endDY -> endD._2)
+        ctx = ctx.+(endDX -> evalTermFast(endD._1), endDY -> evalTermFast(endD._2))
         val head = (LineSection(Some(LineParam((xx1,yy1),(xx2,yy2))), Some(endMTerm), isUp), ((xx1,yy1),(xx2,yy2)), allDefs, endD)
         head :: alignZipped(setStartY(rest,yy2), Some(endD), index+1)
       case (ArcSection(Some(param@ArcParam((x1, y1), (x2, y2), theta1, deltaTheta)), Some(oldSlope)), ((xx1, yy1), (xx2, yy2))) :: rest =>
