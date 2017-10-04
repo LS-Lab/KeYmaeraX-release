@@ -117,7 +117,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     def selectCy = selectDefs(-3) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-1)*/
     val (selectR, selectCx, selectCy) = (nil,nil,nil)
     val mainCut = s"(dx=(($cy)-y)/($r) & dy=-(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & y >= ($cy)  & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
-    val pr00 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
+    val pr00 = interpret(composeb(1) & testb(1) & implyR(1) & composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
     val pr0 = interpret(dC(mainCut)(1), pr00)
     val cut1 = s"($x0) > ($x1)".asFormula
     val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
@@ -477,8 +477,8 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       val movesLeft = (t1 <= 0 && dt < 0) || (t1 >= 0 && dt > 0)
       val (leftNum,rightNum) = if(movesLeft) {(x1,x0)} else {(x0,x1)}
       val (preCx,nextCx) = (leftNum,rightNum) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
-      val inBounds = nSections + 3
-      val And(LessEqual(x2,_),LessEqual(_,x3)) = pr.subgoals.head.ante(inBounds-1)
+      val inBoundses = List(nSections + 3, nSections + 4, nSections + 5)
+      val And(LessEqual(x2,_),LessEqual(_,x3)) = pr.subgoals.head.ante(inBoundses.head-1)
       val (preCxB,nextCxB) = (x2,x3) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
       def localDefsPos(j:Int):List[Int] = List(2+j)
       val preKept:List[Int] = if(preCx) localDefsPos(i-1) else Nil
@@ -494,11 +494,11 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       val gravPos = 1
       val provePoses = gravPos::allCuts++localDefsPos(i)++keepBranch++allPoses
       val eProve = {
-        coHideL(provePoses, pr) & implyR(1) & DebuggingTactics.debug("Whatt", doPrint = DEBUG) & master()
+        coHideL(provePoses, pr) & implyR(1) & DebuggingTactics.debug("Whattest", doPrint = DEBUG) & master()
       }
-      val contraPoses = inBounds::allPoses
+      val contraPoses = inBoundses++allPoses
       val eContra = {
-        coHideL(contraPoses, pr) & implyR(1) & hideR(1) & master()
+        coHideL(contraPoses, pr) & implyR(1) & hideR(1) & DebuggingTactics.debug("Whattest", doPrint = DEBUG) & master()
       }
       val e:BelleExpr =
         if(i == iSection || i == iSection + 1 || i == iSection - 1) eProve
@@ -715,15 +715,16 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "((dyyHi() >= dyyLo())&(x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
-        val a4 = "dx=(cy()-y)/r()".asFormula
-        val a5 = "dy=-(cx()-x)/r()".asFormula
-        val a6 = "x1() > x0()".asFormula
-        val a7 = "y1() < y0()".asFormula
-        val a8 = "cy() <= y1()".asFormula
-        val a9 = "cx() <= x0()".asFormula
-        val a10 = "r() > 0".asFormula
-        val a11 = "((x0()<=x&x<=x1()) & (y1() <= y & y <= y0()))->(v^2)/2 > g()*(y0() - y)".asFormula
+        val a3 = "((dy0() >= 0)&(x0()<=x&x<=x1())&(y1()<=y&y<=y0())->((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a4 = "dy0() >= 0".asFormula
+        val a5 = "dx=(cy()-y)/r()".asFormula
+        val a6 = "dy=-(cx()-x)/r()".asFormula
+        val a7 = "x1() > x0()".asFormula
+        val a8 = "y1() < y0()".asFormula
+        val a9 = "cy() <= y1()".asFormula
+        val a10 = "cx() <= x0()".asFormula
+        val a11 = "r() > 0".asFormula
+        val a12 = "((x0()<=x&x<=x1()) & (y1() <= y & y <= y0()))->(v^2)/2 > g()*(y0() - y)".asFormula
         val c =
           """[{x'=dx*v,
             |            y'=dy*v,
@@ -738,7 +739,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |          & y >= cy()
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
-        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9,a10,a11), immutable.IndexedSeq(c))
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9,a10,a11,a12), immutable.IndexedSeq(c))
         val pr = NoProofTermProvable.startProof(con)
         val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
         val pr2 = interpret(dC("dx=(cy()-y)/r()".asFormula)(1) <(nil, dI()(1)), pr1)
