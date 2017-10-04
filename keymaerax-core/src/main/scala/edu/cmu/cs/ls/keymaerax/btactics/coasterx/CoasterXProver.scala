@@ -409,8 +409,10 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       val eProve = {
         coHideL(cutsPos::cutsPos-1::cutsPos-2::cutsPos-3::localDefsPos(i)++localDefsPos(iSection)++allPoses, pr) & implyR(1)
       }
+      // @TODO: Could be optimized by splitting into dy-contra vs. (x1,x2) contra vs (y1,y2) contra.
+      // e.g. localDefs(iSection) only used for dy argument
       val eContra = {
-        coHideL(cutsPos-2::cutsPos-3::allPoses, pr) & implyR(1) & hideR(1)
+        coHideL(localDefsPos(iSection)++(cutsPos-2::cutsPos-3::allPoses), pr) & implyR(1) & hideR(1)
       }
       /*val eAggressive = coHideL(dcPos, pr) & implyR(1) & hideR(1) & master()
       val eConservative = {
