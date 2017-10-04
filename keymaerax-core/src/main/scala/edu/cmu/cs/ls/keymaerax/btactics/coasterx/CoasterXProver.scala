@@ -224,8 +224,8 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val r = spec.iRadius(iSection)
     val dx0 = s"(($cy)-y)/($r)".asTerm
     val dy0 = s"-(($cx)-x)/($r)".asTerm
-    val mainCut = s"(dx=($dx0) & dy=-(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & v>0 & y < ($cy) & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
-    val pr00 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
+    val mainCut = s"(dx=($dx0) & dy=-(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & v>0 & y <= ($cy) & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
+    val pr00 = interpret(composeb(1) & testb(1) & implyR(1) & composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
     val pr0 = interpret(dC(mainCut)(1), pr00)
     val cut1 = s"($x1) > ($x0)".asFormula
     val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
@@ -233,7 +233,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val cut3 = s"($y0) > ($y1)".asFormula
     val hide2 = (y0, y1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
     val pr1c = timeFn("ArcQ3 Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & hide2 & QE)), pr1a)})
-    val cut4 = s"($cy) > ($y0)".asFormula
+    val cut4 = s"($cy) >= ($y0)".asFormula
     val pr1d = timeFn("ArcQ3 Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & QE)), pr1c)})
     val cut5 = s"($cx) >= ($x1)".asFormula
     val pr1e = timeFn("ArcQ3 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & QE)), pr1d)})
@@ -894,14 +894,15 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "((dyyHi() >= dyyLo())&(x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
-        val a4 = "dx=(cy()-y)/r()".asFormula
-        val a5 = "dy=-(cx()-x)/r()".asFormula
-        val a6 = "x1() > x0()".asFormula
-        val a7 = "y0() > y1()".asFormula
-        val a8 = "cy() > y0()".asFormula
-        val a9 = "cx() >= x1()".asFormula
-        val a10 = "r() > 0".asFormula
+        val a3 = "((0 >= dy0())&(x0()<=x&x<=x1())&(y1()<=y&y<=y0())->((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a4 = "0 >= dy0()".asFormula
+        val a5 = "dx=(cy()-y)/r()".asFormula
+        val a6 = "dy=-(cx()-x)/r()".asFormula
+        val a7 = "x1() > x0()".asFormula
+        val a8 = "y0() > y1()".asFormula
+        val a9 = "cy() >= y0()".asFormula
+        val a10 = "cx() >= x1()".asFormula
+        val a11 = "r() > 0".asFormula
         val c =
           """[{x'=dx*v,
             |            y'=dy*v,
@@ -914,10 +915,10 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |          & dy=-(cx()-x)/r()
             |          & v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g()
             |          & v>0
-            |          & y < cy()
+            |          & y <= cy()
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
-        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10), immutable.IndexedSeq(c))
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10, a11), immutable.IndexedSeq(c))
         val e =
           //composeb(1) & assignb(1) & composeb(1) & assignb(1) &
           dC("dx=-(y-cy())/r()".asFormula)(1) <(nil, dI()(1)) &
