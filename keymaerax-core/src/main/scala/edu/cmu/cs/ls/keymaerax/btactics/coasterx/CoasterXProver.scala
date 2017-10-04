@@ -632,12 +632,12 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       case _ =>
         val a1: Formula = "(g() > 0)".asFormula
         val a2: Formula = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3: Formula = "((0 >= dy0())&(x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((vLo() <= v^2 & v^2 <= vHi())  &  (dyLo()*g()<=-dy0()*g() & -dy0()*g()<=dyHi()*g()))   &  (dx0()*y=dy0()*x+dx0()*c()) )".asFormula
+        val a3: Formula = "((0 >= dy)&(x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((vLo() <= v^2 & v^2 <= vHi())  &  (dyLo()*g()<=-dy0()*g() & -dy0()*g()<=dyHi()*g()))   &  (dx0()*y=dy0()*x+dx0()*c()) )".asFormula
+        val a4: Formula = "0 >= dy".asFormula
         val a5: Formula = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1())) ->  dx0()*v^2 > 2*(x1()-x)*dy0()*g()".asFormula
         val a6: Formula = "(x1() > x0())".asFormula
         val a7: Formula = "(dx0()^2 + dy0()^2 = 1)".asFormula
         val a8: Formula = "dx0() > 0".asFormula
-        val a9: Formula = "0 >= dy0()".asFormula
         val c =
           """  [{x'=v*dx0(),
             |        y'=v*dy0(),
@@ -647,7 +647,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |     ((v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())&
             |      x0()<=x&x<=x1()
             |      &dx0()*y=dy0()*x+dx0()*c())""".stripMargin.asFormula
-        val con:Sequent = Sequent(immutable.IndexedSeq(a1,a2,a3,a5, a6, a7, a8,a9), immutable.IndexedSeq(c))
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1,a2,a3,a4,a5, a6, a7, a8), immutable.IndexedSeq(c))
         val e =
           solve(1) & allR(1) & implyR(1) & implyR(1) &
             implyL(-2)  <(
