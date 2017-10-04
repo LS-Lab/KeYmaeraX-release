@@ -471,44 +471,46 @@ object KeYmaeraXDeclarationsParser {
       "unmatched LPAREN at end of function declaration. Intead, found: " + splitAtRparen._2.head, splitAtRparen._2.head.loc, "parsing function domain sorts")
     val remainder = splitAtRparen._2.tail
 
-    def dottify(body: List[Token], id: IDENT): List[Token] = {
-      val DOT(Some(max)) = (body.filter(_.tok.isInstanceOf[DOT]).map(_.tok) :+ DOT(Some(-1))).maxBy({ case DOT(i) => i})
-      val nextDot = DOT(Some(max+1))
-      body.map(t => if (t.tok==id) Token(nextDot, t.loc) else t)
+    def dottify(body: List[Token], id: IDENT, nextDot: DOT): (List[Token], DOT) = {
+      val nextIdx = nextDot.index match {
+        case Some(i) => i+1
+        case None => 0
+      }
+      (body.map(t => if (t.tok==id) Token(nextDot, t.loc) else t), DOT(Some(nextIdx)))
     }
 
-    def toSort(tokens: List[Token], body: List[Token]): (Sort, List[Token]) = tokens match {
-      case Nil => (Unit, body)
-      case Token(COMMA, _)::tail => toSort(tail, body)
+    def toSort(tokens: List[Token], body: List[Token], nextDot: DOT): (Sort, List[Token], DOT) = tokens match {
+      case Nil => (Unit, body, nextDot)
+      case Token(COMMA, _)::tail => toSort(tail, body, nextDot)
       case Token(LPAREN, _)::_ =>
         val (nestedSort, sortRemainder) = spanSorts(tokens)
         assert(sortRemainder.head.tok == RPAREN, "Expected a closing parenthesis, but got " + sortRemainder.head.tok)
         if (sortRemainder.tail.isEmpty) {
-          toSort(nestedSort, body)
+          toSort(nestedSort, body, nextDot)
         } else {
-          val (s1, b1) = toSort(nestedSort, body)
-          val (s2, b2) = toSort(sortRemainder.tail, b1)
-          (Tuple(s1, s2), b2)
+          val (s1, b1, d1) = toSort(nestedSort, body, nextDot)
+          val (s2, b2, d2) = toSort(sortRemainder.tail, b1, d1)
+          (Tuple(s1, s2), b2, d2)
         }
       case (st@Token(_, _))::Token(id: IDENT, _)::tail if tail.nonEmpty =>
         val s1 = parseSort(st, of)
-        val b1 = dottify(body, id)
-        val (s2, b2) = toSort(tail, b1)
-        (Tuple(s1, s2), b2)
+        val (b1, d1) = dottify(body, id, nextDot)
+        val (s2, b2, d2) = toSort(tail, b1, d1)
+        (Tuple(s1, s2), b2, d2)
       case (st@Token(_, _))::Token(id: IDENT, _)::Nil =>
         val s1 = parseSort(st, of)
-        val b1 = dottify(body, id)
-        (s1, b1)
+        val (b1, d1) = dottify(body, id, nextDot)
+        (s1, b1, d1)
       case (st@Token(_, _))::tail if tail.nonEmpty =>
         val s1 = parseSort(st, of)
-        val (s2, b2) = toSort(tail, body)
-        (Tuple(s1, s2), b2)
-      case (st@Token(_, _))::Nil => (parseSort(st, of), body)
+        val (s2, b2, d2) = toSort(tail, body, nextDot)
+        (Tuple(s1, s2), b2, d2)
+      case (st@Token(_, _))::Nil => (parseSort(st, of), body, nextDot)
     }
 
     //@note backwards compatibility with f(R) = (. + 2).
-    toSort(domainElements, remainder) match {
-      case (Real, body) if body.forall(_.tok match {
+    toSort(domainElements, remainder, DOT(Some(0))) match {
+      case (Real, body, _) if body.forall(_.tok match {
         case DOT(Some(0)) => true
         case DOT(_) => false
         case _ => true
@@ -516,7 +518,7 @@ object KeYmaeraXDeclarationsParser {
         case DOT(Some(0)) => Token(DOT(), x.loc)
         case _ => x
       }))
-      case x => x
+      case (s, b, _) => (s, b)
     }
   }
 
