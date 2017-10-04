@@ -429,6 +429,9 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         else eContra
       val pr1 = interpret(e, pr)
       val pr2 = interpret(master(), pr1)
+      if(!pr2.isProved) {
+        val 2 = 1 + 1
+      }
       pr2
     }
     // yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}

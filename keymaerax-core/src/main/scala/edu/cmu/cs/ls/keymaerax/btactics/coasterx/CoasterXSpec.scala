@@ -892,10 +892,10 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
           (endDX, endDY))
         val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
           Number(-90), Number((param.theta2.value - (-90)).max(1)))), Some(oldSlope)),
-          ((cx, foldMinus(cy, r)), (xx2, yy2)),
-          allDefs2,
-          (endDX, endDY))
-        sec1 :: sec2 :: splitArcRecursively(rest,index+2,dx,dy)
+          ((cx, foldMinus(cy, r)), (xx2, yy2)))//,
+          //allDefs2,
+          //(endDX, endDY))
+        sec1 :: splitArcRecursively(sec2 :: rest,index+1,dx,dy)
       }
       else if (q2approxccw(xx1approx, yy1approx) && !q2approx(xx2approx, yy2approx) && !isCw) {
         println("SPLITTING Q2CCW -> (Q2,Q3)CCW")
@@ -951,10 +951,10 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
         // TODO: Need to figure out definition numbering and stuff
         val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
           Number(-90), Number((param.theta2.value - (-90)).min(-1)))), Some(oldSlope)),
-          ((cx, foldMinus(cy, r)), (xx2, yy2)),
-          allDefs2,
-          (endDX, endDY))
-        sec1 :: sec2 :: splitArcRecursively(rest,index+2,endDX,endDY)
+          ((cx, foldMinus(cy, r)), (xx2, yy2)))//,
+          //allDefs2,
+          //(endDX, endDY))
+        sec1 :: splitArcRecursively(sec2 :: rest,index+1,endDX,endDY)
       }
       // Insert a 3rdq arc because hmm whoops turns out we're not so q4 after all
 //      else if (cxapprox < xx2approx && q3) {
@@ -968,10 +968,10 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
           (endDX, endDY))
         val sec2 = (ArcSection(Some(ArcParam((foldMinus(cx, r), foldMinus(cy, r)), (foldPlus(cx, r), foldPlus(cy, r)),
           Number(-90), Number((param.theta2.value - (-90)).max(1)))), Some(oldSlope)),
-          ((cxe, foldMinus(cy, r)), (xx2, yy2)),
-          allDefs2,
-          (endDX, endDY))
-        sec1 :: sec2 :: splitArcRecursively(rest,index+2,endDX,endDY)
+          ((cxe, foldMinus(cy, r)), (xx2, yy2)))//,
+          //allDefs2,
+          //(endDX, endDY))
+        sec1 :: splitArcRecursively(sec2 :: rest,index+1,endDX,endDY)
       } else if (q2approxcw(xx1approx,yy1approx) && !q2approx(xx2approx,yy2approx) && isCw) {
 //      } else if (cxapprox < xx2approx && q2) {
         println("SPLITTING Q2CW -> (Q2,Q1)CW")
