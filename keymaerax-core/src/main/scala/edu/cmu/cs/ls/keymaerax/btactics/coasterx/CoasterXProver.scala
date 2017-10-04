@@ -1213,7 +1213,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         assert(prOut2.isProved)
         prOut2
       }
-      case LineSection(Some(LineParam(bl,tr)), Some(grad), isUp) => {
+      case LineSection(Some(LineParam(bl:(Number,Number),tr:(Number,Number))), Some(grad), isUp) => {
         if(DEBUG)println("Is line up?", isUp)
         val t = Variable("kyxtime")
         def cutSolve() = {
@@ -1240,8 +1240,10 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
           //val asgn = DLBySubst.assignEquality
           val asgn = assignb
           val cutMain = s"(v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g())&(($x0)<=x&x<=($x1)&($dx0)*y=($dy0)*x+($c))".asFormula
+          //val dy0approx = spec.evalTerm(dy0).value
+          val isUp = y1.value > y0.value
           val (lemma) =
-            if(spec.evalTerm(dy0).value >= 0) {
+            if(isUp) {
               straightProofUp
             } else {
               straightProofDown
