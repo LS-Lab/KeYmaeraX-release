@@ -193,7 +193,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       )
     val (selectR, selectCx, selectCy) = (nil,nil,nil)
     val mainCut = s"(dx=(($cy)-y)/($r) & dy=-(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & x <= ($cx) & ($cy) <= y & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
-    val pr00 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
+    val pr00 = interpret(composeb(1) & testb(1) & implyR(1) & composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
     val pr0 = interpret(dC(mainCut)(1), pr00)
     val hide1 = (x0, x1) match { case (_:Number, _:Number) => cohideR(1) case _ => nil}
     val cut1 = s"($x0) > ($x1)".asFormula
@@ -839,14 +839,15 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "((dyyHi() >= dyyLo())&(x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((x-cx())^2 + (y-cy())^2 = r()^2 & (x<=cx() & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
-        val a4 = "dx=(cy()-y)/r()".asFormula
-        val a5 = "dy=-(cx()-x)/r()".asFormula
-        val a6 = "x1() > x0()".asFormula
-        val a7 = "y1() < y0()".asFormula
-        val a8 = "cy() <= y1()".asFormula
-        val a9 = "x1() <= cx() ".asFormula
-        val a10 = "r() > 0".asFormula
+        val a3 = "((0 >= dy0())&(x0()<=x&x<=x1())&(y1()<=y&y<=y0())->((x-cx())^2 + (y-cy())^2 = r()^2 & (x<=cx() & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a4 = "0 >= dy0()".asFormula
+        val a5 = "dx=(cy()-y)/r()".asFormula
+        val a6 = "dy=-(cx()-x)/r()".asFormula
+        val a7 = "x1() > x0()".asFormula
+        val a8 = "y1() < y0()".asFormula
+        val a9 = "cy() <= y1()".asFormula
+        val a10 = "x1() <= cx() ".asFormula
+        val a11 = "r() > 0".asFormula
         val c =
           """[{x'=dx*v,
             |            y'=dy*v,
@@ -862,7 +863,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |          & cy() <= y
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
-        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10), immutable.IndexedSeq(c))
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10,a11), immutable.IndexedSeq(c))
         val pr = NoProofTermProvable.startProof(con)
         val cy = "cy()".asTerm
         val v0 = "v0()".asTerm
