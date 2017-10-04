@@ -443,6 +443,13 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
         }
       And(xbound, ybound)
     }
+    def preTest(isUp:Boolean) = {
+      if (isUp) {
+        Test("dy >= 0".asFormula)
+      } else {
+        Test("0 >= dy".asFormula)
+      }
+    }
     val dx = Variable("dx")
     val dy = Variable("dy")
     val (dxi:Variable, dyi:Variable) = iDirection(iSection)
@@ -462,7 +469,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
         //@TODO: Left-going straight lines too
         val ode = ODESystem(sys, evol(isUp, movesLeft = false))
         val (setx,sety) = (Assign(dx,dxi), Assign(dy,dyi))
-        Compose(setx,Compose(sety, ode))
+        Compose(preTest(isUp),Compose(setx,Compose(sety, ode)))
       case ArcSection(Some(ArcParam((x1,y1),(x2,y2),theta1,deltaTheta)), Some(gradient)) =>
         val r = iRadius(iSection)  //CoasterXSpec.dist(start, (cx,cy))
         val sysBase = "x' = dx*v, y' = dy*v, v' = -dy*g()".asDifferentialProgram
@@ -480,7 +487,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
           if (isCw) {(s"-(($cy)-y)/($r)".asTerm, s"(($cx)-x)/($r)".asTerm)}
           else {(s"(($cy)-y)/($r)".asTerm, s"-(($cx)-x)/($r)".asTerm)}
         val ode = ODESystem(sys, evol(isUp, movesLeft))
-        Compose(Assign(dx,setx),Compose(Assign(dy,sety), ode))
+        Compose(preTest(isUp),Compose(Assign(dx,setx),Compose(Assign(dy,sety), ode)))
       case _ => Test(True)
     }
   }
@@ -552,10 +559,31 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
     val ((seg, (start, end), initD), i) = segBounds
     val x = Variable("x")
     val y = Variable("y")
+    val dy = Variable("dy")
     val (dxval:Term, dyval:Term) = iDirection(i)
     seg match {
-      case LineSection(Some(LineParam((x1, y1), (x2, y2))), Some(gradient), isUp) =>
-        val inRange = And(LessEqual(x1, x), LessEqual(x, x2))
+      case LineSection(Some(LineParam((x1:Number, y1:Number), (x2:Number, y2:Number))), Some(gradient), isUp) =>
+        val isUp = y2.value > y1.value
+        val isRight = x2.value > x1.value
+        val xRange =
+          if(isRight) {
+            And(LessEqual(x1, x), LessEqual(x, x2))
+          } else {
+            And(LessEqual(x2, x), LessEqual(x, x1))
+          }
+        val yRange =
+          if(isUp) {
+            And(LessEqual(y1, y), LessEqual(y, y2))
+          } else {
+            And(LessEqual(y2, y), LessEqual(y, y1))
+          }
+        val dyRange =
+          if(isUp) {
+            GreaterEqual(dy, Number(0))
+          } else {
+            GreaterEqual(Number(0),dy)
+          }
+        val inRange = And(dyRange,And(xRange,yRange))
         val dxInv = s"dx=($dxval)".asFormula
         val dyInv = s"dy=($dyval)".asFormula
         //val dInv = And(dxInv, dyInv)
@@ -582,7 +610,13 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
           } else {
             And(LessEqual(y4, y), LessEqual(y,y3))
           }
-        val inRange = And(xRange,yRange)
+        val dyRange =
+          if(isUp) {
+            GreaterEqual(dy, Number(0))
+          } else {
+            GreaterEqual(Number(0),dy)
+          }
+        val inRange = And(dyRange,And(xRange,yRange))
         val (cx:Term, cy:Term) = iCenter(i)
         val r = iRadius(i)
         val centered = Equal(sqDist((x,y), (cx,cy)), foldPower(r,Number(2)))

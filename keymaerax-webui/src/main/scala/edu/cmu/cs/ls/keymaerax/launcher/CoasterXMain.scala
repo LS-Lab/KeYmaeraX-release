@@ -76,13 +76,16 @@ object CoasterXMain {
     val prFast = new CoasterXProver(spec,env, reuseComponents = false)
     val components =
       name match {
-        case "line" => List(("line", () => prFast.straightProof))
+        case "lineup" => List(("lineup", () => prFast.straightProofUp))
+          // @TODO Reverse-direction components
+        case "linedown" => List(("linedown", () => prFast.straightProofDown))
         case "q1" => List(("Q1", () => prFast.arcProofQ1))
         case "q2" => List(("Q2", () => prFast.arcProofQ2))
         case "q3" => List(("Q3", () => prFast.arcProofQ3))
         case "q4" => List(("Q4", () => prFast.arcProofQ4))
         case "all" =>
-          List(("line", () => prFast.straightProof),
+          List(("lineup", () => prFast.straightProofUp),
+            ("linedown", () => prFast.straightProofDown),
             ("Q1", () => prFast.arcProofQ1),
             ("Q2", () => prFast.arcProofQ2),
             ("Q3", () => prFast.arcProofQ3),
@@ -130,7 +133,8 @@ object CoasterXMain {
     val env = spec.envelope(align)
     val prFast = new CoasterXProver(spec,env, reuseComponents = false)
     val componentsToTest:List[(String, (() => ProvableSig))] = List(
-      ("line", () => prFast.straightProof),
+      ("lineup", () => prFast.straightProofUp),
+      ("linedown", () => prFast.straightProofDown),
       ("Q1", () => prFast.arcProofQ1),
       ("Q2", () => prFast.arcProofQ2),
       ("Q3", () => prFast.arcProofQ3),

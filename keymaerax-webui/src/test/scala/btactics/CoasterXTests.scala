@@ -153,7 +153,8 @@ class CoasterXTests extends TacticTestBase {
     val q2 = doStats("Q2", () => prFast.arcProofQ2, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)
     val q3 = doStats("Q3", () => prFast.arcProofQ3, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)
     val q4 = doStats("Q4", () => prFast.arcProofQ4, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)
-    val s = doStats("Line", () => prFast.straightProof, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)
+    val s = doStats("Lineup", () => prFast.straightProofUp, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)
+    val ss = doStats("Linedown", () => prFast.straightProofDown, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)
   })}
 
 

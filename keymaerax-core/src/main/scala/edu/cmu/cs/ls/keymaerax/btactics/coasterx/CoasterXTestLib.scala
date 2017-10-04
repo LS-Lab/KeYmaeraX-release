@@ -319,12 +319,19 @@ object CoasterXTestLib {
       ODE(1)
     },
     //@TODO: Replace with "master" and see what happens
-    "line" -> {
+    "lineup" -> {
       solve(1) & allR(1) & implyR(1) & implyR(1) &
       implyL(-2)  <(
         hideR(1) & QE,
         master()
       )
+    },
+    "linedown" -> {
+      solve(1) & allR(1) & implyR(1) & implyR(1) &
+        implyL(-2)  <(
+          hideR(1) & QE,
+          master()
+        )
     }
   )
 

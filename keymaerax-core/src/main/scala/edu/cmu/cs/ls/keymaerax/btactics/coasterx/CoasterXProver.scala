@@ -378,8 +378,9 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val yDefStart = 3
     //val Jstart = yDefStart + nYs + 4
     //gConst, defs0, ..., defsn |- rect&glob&post_i
-    val dcPos = nSections + 2
-    val andPos = nSections + 2
+    val dyPosPos = nSections + 2
+    val dcPos = nSections + 3
+    val andPos = nSections + 3
     val pr3 = interpret(andL(-andPos) & andL(-andPos) & andL('Llast) & andL(-andPos) , pr2)
     val pr4 = interpret(andR(1) <(close, nil), pr3)
 
@@ -390,8 +391,12 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       //g, defs1,...,defsN, xBounds,yLow,yUp,global,cutsHold
       val (x0,x1) =
         pr.subgoals.head.succ.head match {
-          case Imply(And(LessEqual(x0,_),LessEqual(_,x1)),_) => (x0,x1)
-          case Imply(And(And(LessEqual(x0,_),LessEqual(_,x1)),And(LessEqual(y0,_),LessEqual(_,y1))),_) => (x0,x1)
+          case Imply (And(_,And (And (LessEqual (x0, _), LessEqual (_, x1) ), _ )), _) =>
+            (x0,x1)
+          case Imply (And (And (LessEqual (x0, _), LessEqual (_, x1) ), _ ), _) =>
+            throw new Exception("I think you've got outdated specs for your components somewhere ")
+          case Imply (And (LessEqual (x0, _), LessEqual (_, x1) ), _) =>
+            throw new Exception("I think you've got outdated specs for your components somewhere ")
         }
       val (preCx,nextCx) = (x0,x1) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
       def localDefsPos(j:Int):List[Int] = List(2+j)
@@ -400,12 +405,12 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       val nextKept = if(nextCx || true) localDefsPos(i) else Nil
       val cutsPos = pr.subgoals.head.ante.length
       val gPos = 1
-      val allPoses:List[Int] = gPos :: cutsPos :: (preKept ++ nextKept)
+      val allPoses:List[Int] = dyPosPos :: gPos :: cutsPos :: (preKept ++ nextKept)
       val eProve = {
         coHideL(cutsPos::cutsPos-1::cutsPos-2::cutsPos-3::localDefsPos(i)++localDefsPos(iSection)++allPoses, pr) & implyR(1)
       }
       val eContra = {
-        coHideL(allPoses, pr) & implyR(1) & hideR(1)
+        coHideL(cutsPos-2::cutsPos-3::allPoses, pr) & implyR(1) & hideR(1)
       }
       /*val eAggressive = coHideL(dcPos, pr) & implyR(1) & hideR(1) & master()
       val eConservative = {
@@ -579,18 +584,19 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
   }
 
   // Proof of generic straight component
-  def straightProof:ProvableSig = {
-    val provableName = "coasterx_straightLineCase"
+  def straightProofUp:ProvableSig = {
+    val provableName = "coasterx_straightLineCaseUp"
     (lemmaDB.get(provableName), reuseComponents) match {
       case (Some(pr),true) => pr.fact
       case _ =>
         val a1: Formula = "(g() > 0)".asFormula
         val a2: Formula = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3: Formula = "(x0()<=x&x<=x1()->( (vLo() <= v^2 & v^2 <= vHi())  &  (dyLo()*g()<=-dy0()*g() & -dy0()*g()<=dyHi()*g()))   &  (dx0()*y=dy0()*x+dx0()*c()) )".asFormula
-        val a5: Formula = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1())) ->  dx0()*v^2 > 2*(x1()-x)*dy0()*g()".asFormula
-        val a6: Formula = "(x1() > x0())".asFormula
-        val a7: Formula = "(dx0()^2 + dy0()^2 = 1)".asFormula
-        val a8: Formula = "dx0() > 0".asFormula
+        val a3: Formula = "((dy >= 0)&(x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((vLo() <= v^2 & v^2 <= vHi())  &  (dyLo()*g()<=-dy0()*g() & -dy0()*g()<=dyHi()*g()))   &  (dx0()*y=dy0()*x+dx0()*c()) )".asFormula
+        val a5: Formula = "dy >= 0".asFormula
+        val a6: Formula = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1())) ->  dx0()*v^2 > 2*(x1()-x)*dy0()*g()".asFormula
+        val a7: Formula = "(x1() > x0())".asFormula
+        val a8: Formula = "(dx0()^2 + dy0()^2 = 1)".asFormula
+        val a9: Formula = "dx0() > 0".asFormula
         val c =
           """  [{x'=v*dx0(),
           |        y'=v*dy0(),
@@ -600,14 +606,13 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
           |     ((v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())&
             |      x0()<=x&x<=x1()
             |      &dx0()*y=dy0()*x+dx0()*c())""".stripMargin.asFormula
-        val con:Sequent = Sequent(immutable.IndexedSeq(a1,a2,a3,a5, a6, a7, a8), immutable.IndexedSeq(c))
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1,a2,a3,a5, a6, a7, a8,a9), immutable.IndexedSeq(c))
         val e =
            solve(1) & allR(1) & implyR(1) & implyR(1) &
              implyL(-2)  <(
                hideR(1) & QE,
                master()
              )
-
         val pr = NoProofTermProvable.startProof(con)
         val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
         val pr2 = interpret(e, pr1)
@@ -615,6 +620,45 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         pr2
         }
   }
+
+  // Proof of generic straight component
+  def straightProofDown:ProvableSig = {
+    val provableName = "coasterx_straightLineCaseDown"
+    (lemmaDB.get(provableName), reuseComponents) match {
+      case (Some(pr),true) => pr.fact
+      case _ =>
+        val a1: Formula = "(g() > 0)".asFormula
+        val a2: Formula = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
+        val a3: Formula = "((0 >= dy0())&(x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((vLo() <= v^2 & v^2 <= vHi())  &  (dyLo()*g()<=-dy0()*g() & -dy0()*g()<=dyHi()*g()))   &  (dx0()*y=dy0()*x+dx0()*c()) )".asFormula
+        val a5: Formula = "((x0()<=x&x<=x1()) & (y0() <= y & y <= y1())) ->  dx0()*v^2 > 2*(x1()-x)*dy0()*g()".asFormula
+        val a6: Formula = "(x1() > x0())".asFormula
+        val a7: Formula = "(dx0()^2 + dy0()^2 = 1)".asFormula
+        val a8: Formula = "dx0() > 0".asFormula
+        val a9: Formula = "0 >= dy0()".asFormula
+        val c =
+          """  [{x'=v*dx0(),
+            |        y'=v*dy0(),
+            |        v'=-dy0()*g()
+            |        &(x0()<=x&x<=x1())
+            |        &(y0()<=y&y<=y1())}]
+            |     ((v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())&
+            |      x0()<=x&x<=x1()
+            |      &dx0()*y=dy0()*x+dx0()*c())""".stripMargin.asFormula
+        val con:Sequent = Sequent(immutable.IndexedSeq(a1,a2,a3,a5, a6, a7, a8,a9), immutable.IndexedSeq(c))
+        val e =
+          solve(1) & allR(1) & implyR(1) & implyR(1) &
+            implyL(-2)  <(
+              hideR(1) & QE,
+              master()
+            )
+        val pr = NoProofTermProvable.startProof(con)
+        val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
+        val pr2 = interpret(e, pr1)
+        storeLemma(pr2, Some(provableName))
+        pr2
+    }
+  }
+
 
   // Proof of generic quadrant-1 arc
   def arcProofQ1:ProvableSig = {
@@ -624,7 +668,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a3 = "((dyyHi() >= dyyLo())&(x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=-(cy()-y)/r()".asFormula
         val a5 = "dy=(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -668,7 +712,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "((x0()<=x&x<=x1())&(y1()<=y&y<=y0())->((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a3 = "((dyyHi() >= dyyLo())&(x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((x-cx())^2 + (y-cy())^2 = r()^2 &(cx()<=x & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=(cy()-y)/r()".asFormula
         val a5 = "dy=-(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -730,7 +774,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & (x<=cx() & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a3 = "((dyyHi() >= dyyLo())&(x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((x-cx())^2 + (y-cy())^2 = r()^2 & (x<=cx() & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=-(cy()-y)/r()".asFormula
         val a5 = "dy=(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -791,7 +835,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "((x0()<=x&x<=x1())&(y1()<=y&y<=y0())->((x-cx())^2 + (y-cy())^2 = r()^2 & (x<=cx() & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a3 = "((dyyHi() >= dyyLo())&(x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((x-cx())^2 + (y-cy())^2 = r()^2 & (x<=cx() & cy()<=y)&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=(cy()-y)/r()".asFormula
         val a5 = "dy=-(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -845,7 +889,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a3 = "((dyyHi() >= dyyLo())&(x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=(cy()-y)/r()".asFormula
         val a5 = "dy=-(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -893,7 +937,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "((x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a3 = "((dyyHi() >= dyyLo())&(x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((x-cx())^2 + (y-cy())^2 = r()^2 &(x<=cx() & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=-(cy()-y)/r()".asFormula
         val a5 = "dy=(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -948,7 +992,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "(x0()<=x&x<=x1()->((x-cx())^2 + (y-cy())^2 = r()^2 & (cx()<=x & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a3 = "((dyyHi() >= dyyLo())&(x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((x-cx())^2 + (y-cy())^2 = r()^2 & (cx()<=x & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=(cy()-y)/r()".asFormula
         val a5 = "dy=-(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -1017,7 +1061,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       case _ =>
         val a1 = "g() > 0".asFormula
         val a2 = "(v>0&v^2+2*y*g()=v0()^2+2*yGlobal()*g())".asFormula
-        val a3 = "((x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((x-cx())^2 + (y-cy())^2 = r()^2 & (cx()<=x & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
+        val a3 = "((dyyHi() >= dyyLo())&(x0()<=x&x<=x1())&(y0()<=y&y<=y1())->((x-cx())^2 + (y-cy())^2 = r()^2 & (cx()<=x & y<=cy())&(vLo() <= v^2 & v^2 <= vHi())&(centLo() <= cent() & cent() <= centHi())&(tanLo() <= tan() & tan() <= tanHi())))".asFormula
         val a4 = "dx=-(cy()-y)/r()".asFormula
         val a5 = "dy=(cx()-x)/r()".asFormula
         val a6 = "x1() > x0()".asFormula
@@ -1171,24 +1215,32 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         def doLineCase () = {
           if(DEBUG)println("Proving Line Segment: ", bl, tr)
           //const, y_i=_, global(0), (bound_0(0) -> post_0(0)), ...,  (bound_n(0) -> post_n(0)) |- _
-          val pr4 = selectSection(iSection,nSections,pr)
+          val pr2 = selectSection(iSection,nSections,pr)
           //const, y_i=_, global(0), bound_i(0) -> post_i(0))|- _
           val x1 = tr._1
           val x0 = bl._1
           val y0 = bl._2
           val y1 = tr._2
-          val Box(Compose(Assign(BaseVariable("dx", None, Real), dx0),Compose(Assign(BaseVariable("dy", None, Real),dy0),ODESystem(_, constr))),_) = pr.conclusion.succ.head//s"(($x0) <= x & x <= ($x1))&(($y0) <= y & y <= ($y1))".asFormula
+          val Box(Compose(_test,Compose(Assign(BaseVariable("dx", None, Real), dx0),Compose(Assign(BaseVariable("dy", None, Real),dy0),ODESystem(_, constr)))),_) = pr.conclusion.succ.head//s"(($x0) <= x & x <= ($x1))&(($y0) <= y & y <= ($y1))".asFormula
           val thisInv = spec.segmentPost(env)((section, (bl,tr), initD),iSection)
           val Imply(_, And(And(_accLo,_accHi),Equal(_, Plus(_, c)))) = thisInv
           val HY = hideYsAfter(iSection, nSections)._1
           //val asgn = DLBySubst.assignEquality
           val asgn = assignb
           val cutMain = s"(v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g())&(($x0)<=x&x<=($x1)&($dx0)*y=($dy0)*x+($c))".asFormula
-          val pr4a = interpret(composeb(1) & asgn(1), pr4)
-          val pr4b = interpret(composeb(1) & asgn(1), pr4a)
+          val (lemma) =
+            if(spec.evalTerm(dy0).value >= 0) {
+              straightProofUp
+            } else {
+              straightProofDown
+            }
+          val pr3b = interpret(composeb(1) & testb(1) & implyR(1) & composeb(1) & composeb(1,1::Nil) , pr2)
+          //val pr3 = interpret(dC(cut5)(1,1::1::Nil), pr3b)
+          //val pr3a = interpret(nil <(nil, asgn(1) & asgn(1) & dW(1) & master()), pr3)
+          val pr4a = interpret(asgn(1), pr3b)
+          val pr4b = interpret(asgn(1), pr4a)
           val dxDefPos1 = pr4b.subgoals.head.ante.length-1
           val pr5 = interpret(dC(cutMain)(1), pr4b)
-          val sproof = straightProof
           val cut1 = s"($constr) -> (($dx0)*v^2 > 2*(($x1)-x)*($dy0)*g())".asFormula
           val pr5a = timeFn("Line Case Step 1", {() => interpret(nil < (nil, cut(cut1) < (nil, hideR(1) & HY & QE)), pr5)})
           val cut2 = s"($x1) > ($x0)".asFormula
@@ -1198,11 +1250,13 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
           val pr5c = timeFn("Line Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & HY & QE)), pr5b)})
           val cut4 = s"($dx0) > 0".asFormula
           val pr5d = timeFn("Line Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & HY & QE)), pr5c)})
-          val pr5e = timeFn("Line Case Step 5", {() => interpret(nil < (nil, hideL(-2)*nYs), pr5d)})
+
+//          val pr5e = timeFn("Line Case Step 5", {() => interpret(nil < (nil, cut(cut5) <(nil, hideR(1) & HY & QE)), pr5d)})
+          val pr5f = timeFn("Line Case Step 5", {() => interpret(nil < (nil, hideL(-2)*nYs), pr5d)})
           val dxDefPos2 = dxDefPos1 - nYs
           //val pr5f = timeFn("Line Case Step 5a", {() => interpret(nil < (nil, hideL(-dxDefPos2)*2), pr5e)})
-          val tac = US(sproof)
-          val pr6 = interpret(nil < (nil, tac), pr5e)
+          val tac = US(lemma)
+          val pr6 = interpret(nil < (nil, tac), pr5f)
           val pr6a = timeFn("Line Case Step 6", {() => interpret(dW(1), pr6)})
           //@TODO: Don't think need to hide anything because case selection already hides
           val (eHide,_) = hideYs(iSection, nSections)
@@ -1276,8 +1330,12 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       println("Tryna prove postcondition step branch " + i)
       val (x0,x1) =
         pr.subgoals.head.succ.head match {
-          case Imply (And (And (LessEqual (x0, _), LessEqual (_, x1) ), And (LessEqual (_, _), LessEqual (_, _) ) ), _) => (x0,x1)
-          case Imply (And (LessEqual (x0, _), LessEqual (_, x1) ), _) => (x0,x1)
+          case Imply (And(_,And (And (LessEqual (x0, _), LessEqual (_, x1) ), _)), _) =>
+            (x0,x1)
+          case Imply (And (And (LessEqual (x0, _), LessEqual (_, x1) ), _ ), _) =>
+            throw new Exception("I think you've got outdated specs for your components somewhere ")
+          case Imply (And (LessEqual (x0, _), LessEqual (_, x1) ), _) =>
+            throw new Exception("I think you've got outdated specs for your components somewhere ")
         }
       val (preCx,nextCx) = (x0,x1) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
       def localDefsPos(j:Int):List[Int] = List(3+j)
@@ -1330,22 +1388,13 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val firstBranch = NoProofTermProvable.startProof(pr2.subgoals.head)
     val firstResult = preImpliesInv(firstBranch, nSections)
     val pr3 = pr2(firstResult, 0)
-    /*println("dx = ", spec.evalTerm("dx_0".asTerm))
-    println("dy = ", spec.evalTerm("dy_0".asTerm))
-    println("cx = ", spec.evalTerm("cx_0".asTerm))
-    println("cy = ", spec.evalTerm("cy_0".asTerm))
-    println("r = ", spec.evalTerm("r_0".asTerm))*/
-    //println("centrip = ", spec.evalTerm(s"($v0)^2/r_0".asTerm))
-    //println("tangent = ", spec.evalTerm("-dy_0*9.8".asTerm))
     assert(pr3.subgoals.length == 2, "Precondition step of loop induction failed")
     val secondBranch = NoProofTermProvable.startProof(pr3.subgoals.head)
     val pr4 = pr3(invImpliesPost(secondBranch, nSections), 0)
-//    val pr3 = interpret(nil <((alphaRule*) & QE, nil, nil), pr2)
-    //val pr3a = interpret(nil <((alphaRule*), nil), pr3)
-    //val pr4 = interpret(nil <(master(), nil), pr3a)
     val (globalPr, localPrs) = splitComponents(pr4)
     val prEnd = proveAllComponents(globalPr, localPrs, points, segments.tail, v0, points.head._2, 0, segments.tail.length, ds)
     assert(prEnd.isProved, "CoasterX model not proved")
     prEnd
   }
 }
+
