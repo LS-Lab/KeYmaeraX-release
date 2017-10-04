@@ -594,7 +594,7 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
         val t1 = theta1.value
         val dt = deltaTheta.value
         val startsLeft = t1 < -90 || t1 > 90 || (t1 == -90 && dt < 0) || (t1 == 90 && dt > 0)
-        val startsTop = (t1 == 180 && dt < 0) || (t1 < 180 && t1 > 0) || (t1 == 0 && dt > 0)
+        val startsTop = ((t1 == -180 || t1 == 180) && dt < 0) || (t1 < 180 && t1 > 0) || (t1 == 0 && dt > 0)
         val movesLeft = (-180 < t1 && t1 <= 0 && dt < 0) || (0 <= t1 && t1 < 180 && dt > 0)
         val isCw = param.deltaTheta.value < 0
         val isUp = (startsLeft && isCw) || (!startsLeft && !isCw)
