@@ -159,7 +159,7 @@ class CoasterXTests extends TacticTestBase {
 
 
   def prover(fileContents:String, modelName:String):ProvableSig = {
-    CoasterXTestLib.prover(fileContents, modelName, doFast = false, NUM_RUNS = 1, feetPerUnit = 1.0, velocity = None, doFormula = true, doStats = true)
+    CoasterXTestLib.prover(fileContents, modelName, doFast = true, NUM_RUNS = 1, feetPerUnit = 1.0, velocity = None, doFormula = true, doStats = true)
   }
 
   "Proof Generator" should "generate proof for straight line" in { withMathematica(qeTool => {
@@ -260,12 +260,27 @@ class CoasterXTests extends TacticTestBase {
     pr shouldBe 'proved
   })}
 
+
   it should "generate proof for  The Phantom's Revenge" in { withMathematica(qeTool => {
     val pr = prover(phantomsRevenge, "Phantom's Revenge")
     pr shouldBe 'proved
   })
   }
 
+  it should "generate proof for single loop" in { withMathematica(qeTool => {
+    val pr = prover(singleLoopByGUI, "Single loops")
+    pr shouldBe 'proved
+  })}
+
+  it should "generate proof for Steel Phantom's Loops" in { withMathematica(qeTool => {
+    val pr = prover(phantomJustLoops, "Just the loops")
+    pr shouldBe 'proved
+  })}
+
+  it should "generate proof for The Steel Phantom" in { withMathematica(qeTool => {
+    val pr = prover(steelPhantom, "Steel Phantom")
+    pr shouldBe 'proved
+  })}
   /*  it should "generate proof for part of El Toro" in { withMathematica(qeTool => {
     val pr = prover(smallToro, "El Toro Mini")
     pr shouldBe 'proved

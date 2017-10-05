@@ -484,8 +484,10 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       val And(LessEqual(x2,_),LessEqual(_,x3)) = pr.subgoals.head.ante(inBoundses.head-1)
       val (preCxB,nextCxB) = (x2,x3) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
       def localDefsPos(j:Int):List[Int] = List(2+j)
-      val preKept:List[Int] = if(preCx) localDefsPos(i-1) else Nil
-      val nextKept = if(nextCx) localDefsPos(i) else Nil
+      // TODO: Debug when and whether we need this exactly
+      val keepExtra = preCx || nextCx
+      val preKept:List[Int] = if(preCx || keepExtra) localDefsPos(i-1) else Nil
+      val nextKept = if(nextCx || keepExtra) localDefsPos(i) else Nil
 
       val preKeptB:List[Int] = if(preCxB) localDefsPos(iSection-1) else Nil
       val nextKeptB = if(nextCxB) localDefsPos(iSection) else Nil
@@ -497,23 +499,26 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       val gravPos = 1
       val provePoses = gravPos::allCuts++localDefsPos(i)++keepBranch++allPoses
       val eProve = {
-        coHideL(provePoses, pr) & implyR(1) & DebuggingTactics.debug("Whattest", doPrint = DEBUG) & master()
+        coHideL(provePoses, pr) & implyR(1)// & DebuggingTactics.debug("Whattest", doPrint = DEBUG) & master()
       }
       val contraPoses = inBoundses++allPoses
+      // dySign, dxDef, dyDef, defs for dy, sign of dy
+      val inversionContraPoses = List(nSections + 1, cutsPos-5,cutsPos-6)
       val eContra = {
-        coHideL(contraPoses, pr) & implyR(1) & hideR(1) & DebuggingTactics.debug("Whattest", doPrint = DEBUG) & master()
+        coHideL(inversionContraPoses ++ contraPoses, pr) & implyR(1) & hideR(1)// & DebuggingTactics.debug("Whattest", doPrint = DEBUG) & master()
       }
       val e:BelleExpr =
         if(i == iSection || i == iSection + 1 || i == iSection - 1) eProve
         else eContra
       val pr1 = interpret(e, pr)
+      val pr2 = interpret(master(), pr1)
       val _foo =
-        if(!pr1.isProved) {
+        if(!pr2.isProved) {
           0
         } else {
           0
         }
-      pr1
+      pr2
     }
     // yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
     val pr9 = proveConjs(provePost, pr4, nSections-1)
@@ -1362,16 +1367,20 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       val gravPos =1
       val allPoses:List[Int] = gravPos :: posPos :: (preKept ++ nextKept)
       val eInit = {
-        coHideL(gravPos::posPos::localDefsPos(i), pr) & implyR(1) & master()
+        coHideL(gravPos::posPos::localDefsPos(i)++localDefsPos(0), pr) & implyR(1)
       }
       val eContra = {
-        coHideL(allPoses, pr) & implyR(1) & hideR(1) & DebuggingTactics.debug("Why this no prove", doPrint = true) &  master()
+        coHideL(allPoses++localDefsPos(0), pr) & implyR(1) & hideR(1) & DebuggingTactics.debug("Why this no prove", doPrint = true)
       }
       val e:BelleExpr =
         if (i == 0) eInit
         else eContra
       val pr1 = interpret(e, pr)
-      pr1
+      val pr2 = interpret(master(), pr1)
+      if(!pr2.isProved) {
+        val 2 = 1 + 1
+      }
+      pr2
     }
     // g, (dx&dy&x&y&v), seg1,...,segn |- (imp1&( ... &impN))
     val res = proveConjs(proveBranch, pr0, nSections-1)
