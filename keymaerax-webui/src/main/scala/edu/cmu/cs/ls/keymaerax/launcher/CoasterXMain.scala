@@ -116,7 +116,8 @@ object CoasterXMain {
       (CoasterXTestLib.exampleFile1, 1.0,"topp"),
       (CoasterXTestLib.byrc, 0.08333333333,"byrc"),
       (CoasterXTestLib.lilPhantom, 1.0, "lilP"),
-      (CoasterXTestLib.phantomsRevenge, 2.0, "phan"),
+      (CoasterXTestLib.phantomsRevenge, 2.0, "phrv"),
+      (CoasterXTestLib.steelPhantom, 2.0, "stph"),
       (CoasterXTestLib.elToro,1.0, "toro")
     )
     var coasterStats:List[CoasterStats] = Nil

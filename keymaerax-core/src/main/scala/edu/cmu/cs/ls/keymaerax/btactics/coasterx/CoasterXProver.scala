@@ -74,10 +74,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     def selectDefs:PositionalTactic = "selectDefs" by ((pr:ProvableSig,pos:AntePosition) =>
       coHideLPr(pos.index0+1, pr)
       )
-    // definition of r() depends of cx,cy so keep them around too.
-    /*def selectR = selectDefs(-3) & andL(-1) & andL(-2) & hideL(-3)
-    def selectCx = selectDefs(-3) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-2)
-    def selectCy = selectDefs(-3) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-1)*/
     val (selectR, selectCx, selectCy) = (nil,nil,nil)
     val mainCut = s"(dx=-(($cy)-y)/($r) & dy=(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & y >= ($cy)  & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
     val pr00 = interpret(composeb(1) & testb(1) & implyR(1) & composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
@@ -100,7 +96,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     pr6
   }
 
-
   // Establishes differential invariants for a single quadrant-1 arc
   def quad1CCWTactic(pr: ProvableSig, p1: TPoint, p2: TPoint, bl: TPoint, tr: TPoint, v0: Term, yInit: Term, theta1: Number, deltaTheta: Number, nYs:Int, iSection:Int):ProvableSig = {
     if(DEBUG)println("Proving Quadrant 1 Arc, counter-clockwise: " , p1,p2,bl,tr,v0,theta1,deltaTheta)
@@ -111,10 +106,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     def selectDefs:PositionalTactic = "selectDefs" by ((pr:ProvableSig,pos:AntePosition) =>
       coHideLPr(pos.index0+1, pr)
       )
-    // definition of r() depends of cx,cy so keep them around too.
-    /*def selectR = selectDefs(-3) & andL(-1) & andL(-2) & hideL(-3)
-    def selectCx = selectDefs(-3) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-2)
-    def selectCy = selectDefs(-3) & andL(-1) & hideL(-1) & andL(-1) & hideL(-2) & andL(-1) & hideL(-1)*/
     val (selectR, selectCx, selectCy) = (nil,nil,nil)
     val mainCut = s"(dx=(($cy)-y)/($r) & dy=-(($cx)-x)/($r) & v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g() & y >= ($cy)  & ((x-($cx))^2 + (y-($cy))^2 = ($r)^2))".asFormula
     val pr00 = interpret(composeb(1) & testb(1) & implyR(1) & composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
@@ -207,8 +198,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val pr1e = timeFn("ArcQ2 Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & selectCx & QE)), pr1d)})
     val cut6 = s"($r) > 0".asFormula
     val pr1f = timeFn("ArcQ2 Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & selectR & QE)), pr1e)})
-    /*val cut7 = s"((($x0)<=x&x<=($x1)) & (($y0) <= y & y <= ($y1)))->(v^2)/2 > g()*(($y1) - y)".asFormula
-    val pr1fa = timeFn("ArcQ2 Case Step 6", {() => interpret(nil < (nil, cut(cut7) < (nil, hideR(1) & QE)), pr1f)})*/
     val pr1g = interpret(nil <(nil, hideL(-2)*nYs), pr1f)
     val tac = US(aproof)
     val pr6 = interpret(nil < (nil, tac), pr1g)
@@ -336,8 +325,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val pr1e = timeFn("ArcQ4CW Case Step 5", {() => interpret(nil < (nil, cut(cut5) < (nil, hideR(1) & QE)), pr1d)})
     val cut6 = s"($r) > 0".asFormula
     val pr1f = timeFn("ArcQ4CW Case Step 6", {() => interpret(nil < (nil, cut(cut6) < (nil, hideR(1) & QE)), pr1e)})
-   // val cut7 = s"($evol) -> ((v^2)/2 > g()*(($y0) - y))".asFormula
-    //al pr1g = timeFn("ArcQ4CW Case Step 7", {() => interpret(nil < (nil, cut(cut7) < (nil, hideR(1) & QE)), pr1f)})
     val pr1i = interpret(nil <(nil, hideL(-2)*nYs), pr1f)
     val tac = US(aproof)
     val pr6 = interpret(nil < (nil, tac), pr1i)
@@ -372,11 +359,8 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
   // Finish off the arithmetic at the end of a line segment proof more effeciently than a big blind QE
   // @TODO: Everything has changed since this was first implemented - revisit and adjust
   def proveLineArith(pr: ProvableSig, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):ProvableSig = {
-    //val (_, nYs) = hideYsAfter(iSection, nSections)
-    //val pr1 = interpret(eHide, pr)
     val pr2 = interpret (implyR(1), pr)
     val yDefStart = 3
-    //val Jstart = yDefStart + nYs + 4
     //gConst, defs0, ..., defsn |- rect&glob&post_i
     val dyPosPos = nSections + 2
     val dcPos = nSections + 3
@@ -414,18 +398,10 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       val eContra = {
         coHideL(localDefsPos(iSection)++(cutsPos-2::cutsPos-3::allPoses), pr) & implyR(1) & hideR(1)
       }
-      /*val eAggressive = coHideL(dcPos, pr) & implyR(1) & hideR(1) & master()
-      val eConservative = {
-        val nHides = pr.subgoals.head.ante.length-dcPos
-        // gConst, global, ydefs, range, ... |- contradictory_range -> ...
-        hideL(-(dcPos+1))*nHides & implyR(1) & hideL(-1) & hideR(1) & master()
-      }*/
       val e:BelleExpr =
         if(i == iSection || i == iSection + 1 || i == iSection - 1) eProve
         // For the - 1 case we don't have a contradiction argument (overlaps at one point), but
         // splitting before QE seems to speed up vastly in the cases I've tested
-        //else if(i == iSection - 1) {master()}
-        //else if(constRange) eAggressive
         else eContra
       val pr1 = interpret(e, pr)
       val pr2 = interpret(master(), pr1)
@@ -444,12 +420,8 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
 
   def proveArcArith(pr: ProvableSig, theta1:Number, deltaTheta:Number,
                     bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):ProvableSig = {
-    //val (eHide, nYs) = hideYsAfter(iSection, nSections)
-    //val pr1 = interpret(eHide, pr)
     val pr2 = interpret (implyR(1), pr)
     val yDefStart = 3
-    //val Jstart = yDefStart + nYs + 4
-    //gConst, defs0, ..., defsn |- rect&glob&post_i
     val dyPosPos = nSections + 2
     val dcPos = nSections + 3
     val andPos = nSections + 3
@@ -463,16 +435,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
           0
         case _ => 0
       }
-      /*val eAggressive = coHideL(dcPos, pr) & implyR(1) & hideR(1) & master()
-      val eConservative = {
-        val nHides = pr.subgoals.head.ante.length-dcPos
-        // gConst, global, ydefs, range, ... |- contradictory_range -> ...
-        hideL(-(dcPos+1))*nHides & implyR(1) & hideL(-1) & hideR(1) & master()
-      }*/
       // For the - 1 case we don't have a contradiction argument (overlaps at one point), but
-      // splitting before QE seems to speed up vastly in the cases I've tested
-      //else if(i == iSection - 1) {master()}
-      //else if(constRange) eAggressive
       // g, defs0, ..., defsN, <<9 cuts>> |- (bounds -> post)
       val Imply(And(dyCon,And(And(LessEqual(x0,_),LessEqual(_,x1)),And(LessEqual(y0,_),LessEqual(_,y1)))),_) = pr.subgoals.head.succ.head
       val t1 = theta1.value
@@ -499,19 +462,20 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       val gravPos = 1
       val provePoses = gravPos::allCuts++localDefsPos(i)++keepBranch++allPoses
       val eProve = {
-        coHideL(provePoses, pr) & implyR(1)// & DebuggingTactics.debug("Whattest", doPrint = DEBUG) & master()
+        coHideL(provePoses, pr) & implyR(1)
       }
       val contraPoses = inBoundses++allPoses
       // dySign, dxDef, dyDef, defs for dy, sign of dy
       val inversionContraPoses = List(nSections + 1, cutsPos-5,cutsPos-6)
       val eContra = {
-        coHideL(inversionContraPoses ++ contraPoses, pr) & implyR(1) & hideR(1)// & DebuggingTactics.debug("Whattest", doPrint = DEBUG) & master()
+        coHideL(inversionContraPoses ++ contraPoses, pr) & implyR(1) & hideR(1)
       }
       val e:BelleExpr =
         if(i == iSection || i == iSection + 1 || i == iSection - 1) eProve
         else eContra
       val pr1 = interpret(e, pr)
       val pr2 = interpret(master(), pr1)
+      // Just a place to put breakpoints
       val _foo =
         if(!pr2.isProved) {
           0
@@ -762,17 +726,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         val pr4e = interpret(nil <(nil, dI()(1)), pr4d)
         val pr5 = interpret(dC("((x-cx())^2 + (y-cy())^2 = r()^2)".asFormula)( 1)  <(nil, dI()(1)), pr4e)
         val pr6 = interpret(ODE(1), pr5)
-
-        /*val pr5 = interpret(
-          dC("v>0".asFormula)(1)  <(
-            ODE(1),
-            dC("2*v!=0".asFormula)(1)  <(
-              dG("{a'=dy*g()/(2*v)*a+0}".asDifferentialProgram, Some("a^2*v=1".asFormula))(1) & existsR("(1/v)^(1/2)".asTerm)(1) & dI()(1),
-              ODE(1)
-            )
-          ), pr4)*/
-        //val pr6 = interpret(dC("(x-cx())^2 + (y-cy())^2 = r()^2".asFormula)(1) <(nil, ODE(1)), pr5)
-        //val pr7 = interpret(ODE(1), pr5)
         if(reuseComponents) {storeLemma(pr6, Some(provableName))}
         pr6
     }
@@ -823,8 +776,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         // Note: Conservation of energy always uses the start of the ENTIRE track, not current section
         val ECirc:Formula = s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula
         val dGDefined:Formula = s"2*v!=0".asFormula
-        //val pr1:Provable = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
-        //val pr2:ProvableSig = interpret(dC(s"dx^2 + dy^2 = 1".asFormula)(1)    <(nil, dI()(1)), pr)
         val pr3:ProvableSig = interpret(dC(s"dx=(y-($cy))/($r)".asFormula)(1) <(nil, dI()(1)), pr)
         val pr4:ProvableSig = interpret(dC(s"dy=-(x-($cx))/($r)".asFormula)(1)  <(nil, dI()(1)), pr3)
         val pr5:ProvableSig = interpret(dC(ECirc)('R) <(nil, dI()(1)), pr4)
@@ -931,7 +882,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |          )""".stripMargin.asFormula
         val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10, a11), immutable.IndexedSeq(c))
         val e =
-          //composeb(1) & assignb(1) & composeb(1) & assignb(1) &
           dC("dx=-(y-cy())/r()".asFormula)(1) <(nil, dI()(1)) &
           dC("dy=(x-cx())/r()".asFormula)(1) <(nil, dI()(1)) &
           dC("v^2=v0()^2+2*yGlobal()*g()-2*y*g()".asFormula)( 1)  <(nil, dI()(1)) &
@@ -981,7 +931,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |          )""".stripMargin.asFormula
         val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10,a11,a12), immutable.IndexedSeq(c))
         val e =
-        //composeb(1) & assignb(1) & composeb(1) & assignb(1) &
             dC("dx=-(cy()-y)/r()".asFormula)(1) <(nil, dI()(1)) &
             dC("dy=(cx()-x)/r()".asFormula)(1) <(nil, dI()(1)) &
             dC("v^2=v0()^2+2*yGlobal()*g()-2*y*g()".asFormula)( 1)  <(nil, dI()(1)) &
@@ -1042,7 +991,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         val r = "r()".asTerm
         val cx = "cx()".asTerm
         val yInit = "yGlobal()".asTerm
-        //val pr0 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
         val pr1 = interpret(dC(s"dx=-(y-($cy))/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
         val pr2 = interpret(dC(s"dy=(x-($cx))/($r)".asFormula)( 1)  <(nil, ODE(1)), pr1)
         val pr3 = interpret(dC(s"($cx)<=x".asFormula)(1)  <(nil, ODE(1)), pr2)
@@ -1050,13 +998,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         val pr4 = interpret(dC(s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)(1) <(nil, dI()(1)), pr3a)
         val pr5 = interpret(dC(s"(($cx)-x)^2+(($cy)-y)^2=($r)^2".asFormula)(1) <(nil, DebuggingTactics.debug("This dI is slow", doPrint = DEBUG) & dI()(1)), pr4)
         val pr6 = interpret(dC(s"y <= ($cy)".asFormula)(1) <(nil, dW(1) & QE), pr5)
-          /*dC(s"2*(y-($cy))*($r)!=0".asFormula)(1)  <(
-            dG(s"{a'=(($cx)-x)*v/(2*(y-($cy))*($r))*a+0}".asDifferentialProgram, Some(s"a^2*(y-($cy))=-1".asFormula))(1) &
-              existsR(s"(-1/(y-($cy)))^(1/2)".asTerm)(1) &
-              ODE(1),
-            ODE(1)
-          )
-        ), pr5)*/
         val pr6a = interpret(dC(s"(v^2)/2 > g()*(y1() - y)".asFormula)(1) <(nil, ODE(1)), pr6)
         val pr7 = interpret(dC(s"v>0".asFormula)(1)  <(nil,
           dC(s"2*v!=0".asFormula)(1)  <(
@@ -1111,7 +1052,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         val r = "r()".asTerm
         val cx = "cx()".asTerm
         val yInit = "yGlobal()".asTerm
-        //val pr0 = interpret(composeb(1) & assignb(1) & composeb(1) & assignb(1), pr)
         val pr1 = interpret(dC(s"dx=-(($cy)-y)/($r)".asFormula)(1)  <(nil, dI()(1)), pr)
         val pr2 = interpret(dC(s"dy=(($cx)-x)/($r)".asFormula)( 1)  <(nil, ODE(1)), pr1)
         val pr4 = interpret(dC(s"v^2=($v0)^2+2*($yInit)*g()-2*y*g()".asFormula)(1) <(nil, dI()(1)), pr2)
@@ -1181,9 +1121,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         val q3 = ((t1 == 180 || t1 == -180) && dT > 0)|| (t1 > -180 && t1 < -90) || (t1 == -90 && dT < 0) //&& t2 <= -90
         val q4 = (t1 == -90 && dT > 0) || (t1 > -90  && t1 < 0) || (t1 == 0 && dT < 0)   //&& t2 <= 0
         val isCw = deltaTheta.value < 0
-        //val q1 = t1 >= 0   && t1 <= 90  && t2 <= 90
-        //val q3 = t1 <= -90 && t2 <= -90
-        //val q4 = t1 >= -90 && t1 <= 0   && t2 <= 0
         val prStart = selectSection(iSection,nSections, pr)
         val pr1 =
           (q3, q4, q1, isCw) match {
@@ -1245,10 +1182,8 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
           val thisInv = spec.segmentPost(env)((section, (bl,tr), initD),iSection)
           val Imply(_, And(And(_accLo,_accHi),Equal(_, Plus(_, c)))) = thisInv
           val HY = hideYsAfter(iSection, nSections)._1
-          //val asgn = DLBySubst.assignEquality
           val asgn = assignb
           val cutMain = s"(v>0&v^2+2*y*g()=($v0)^2+2*($yInit)*g())&(($x0)<=x&x<=($x1)&($dx0)*y=($dy0)*x+($c))".asFormula
-          //val dy0approx = spec.evalTerm(dy0).value
           val isUp = y1.value > y0.value
           val (lemma) =
             if(isUp) {
@@ -1257,8 +1192,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
               straightProofDown
             }
           val pr3b = interpret(composeb(1) & testb(1) & implyR(1) & composeb(1) & composeb(1,1::Nil) , pr2)
-          //val pr3 = interpret(dC(cut5)(1,1::1::Nil), pr3b)
-          //val pr3a = interpret(nil <(nil, asgn(1) & asgn(1) & dW(1) & master()), pr3)
           val pr4a = interpret(asgn(1), pr3b)
           val pr4b = interpret(asgn(1), pr4a)
           val dxDefPos1 = pr4b.subgoals.head.ante.length-1
@@ -1272,11 +1205,8 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
           val pr5c = timeFn("Line Case Step 3", {() => interpret(nil < (nil, cut(cut3) < (nil, hideR(1) & HY & QE)), pr5b)})
           val cut4 = s"($dx0) > 0".asFormula
           val pr5d = timeFn("Line Case Step 4", {() => interpret(nil < (nil, cut(cut4) < (nil, hideR(1) & HY & QE)), pr5c)})
-
-//          val pr5e = timeFn("Line Case Step 5", {() => interpret(nil < (nil, cut(cut5) <(nil, hideR(1) & HY & QE)), pr5d)})
           val pr5f = timeFn("Line Case Step 5", {() => interpret(nil < (nil, hideL(-2)*nYs), pr5d)})
           val dxDefPos2 = dxDefPos1 - nYs
-          //val pr5f = timeFn("Line Case Step 5a", {() => interpret(nil < (nil, hideL(-dxDefPos2)*2), pr5e)})
           val tac = US(lemma)
           val pr6 = interpret(nil < (nil, tac), pr5f)
           val pr6a = timeFn("Line Case Step 6", {() => interpret(dW(1), pr6)})
@@ -1284,7 +1214,6 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
           val (eHide,_) = hideYs(iSection, nSections)
           val pr7 = timeFn("Line Case Step 7", {() => interpret(eHide , pr6a)})
           val pr8 = timeFn("Line Case Step 8", {() =>
-            //interpret(master(), pr7)
             proveLineArith(pr7,bl,tr,iSection,nSections)
             })
           pr8

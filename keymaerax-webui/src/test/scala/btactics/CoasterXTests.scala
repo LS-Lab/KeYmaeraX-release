@@ -159,7 +159,7 @@ class CoasterXTests extends TacticTestBase {
 
 
   def prover(fileContents:String, modelName:String):ProvableSig = {
-    CoasterXTestLib.prover(fileContents, modelName, doFast = true, NUM_RUNS = 1, feetPerUnit = 1.0, velocity = None, doFormula = true, doStats = true)
+    CoasterXTestLib.prover(fileContents, modelName, doFast = false, NUM_RUNS = 1, feetPerUnit = 1.0, velocity = None, doFormula = true, doStats = true)
   }
 
   "Proof Generator" should "generate proof for straight line" in { withMathematica(qeTool => {
@@ -182,12 +182,6 @@ class CoasterXTests extends TacticTestBase {
     val pr = prover(secondHalfArc, "Half Arc 2")
     pr shouldBe 'proved
   })}
-
-  // Would be interesting to debug but not so important, seems like some very rare edge case.
-/*  it should "generate proof for full arc" in {  withMathematica(qeTool => {
-    val pr = prover(fullArc, "Full Arc")
-    pr shouldBe 'proved
-  })}*/
 
   it should "generate proof for Q1 CCW" in { withMathematica(qeTool => {
     val pr = prover(q1arcCCW, "Q1 CCW")
@@ -282,11 +276,7 @@ class CoasterXTests extends TacticTestBase {
     val pr = prover(steelPhantom, "Steel Phantom")
     pr shouldBe 'proved
   })}
-  /*  it should "generate proof for part of El Toro" in { withMathematica(qeTool => {
-    val pr = prover(smallToro, "El Toro Mini")
-    pr shouldBe 'proved
-  })}
-*/
+
   it should "generate proof for El Toro" in { withMathematica(qeTool => {
     val pr = prover(elToro, "El Toro Full")
     pr shouldBe 'proved
