@@ -50,10 +50,11 @@ object KeYmaeraX {
       |  -bparse filename.kyt |
       |  -repl filename.kyx [filename.kyt] [scaladefs]
       |  -coasterx ( -component component-name [-formula] [-tactic] [-stats]
-      |                [-num-runs N]
+      |                [-num-runs N] [-debug-level (0|1|2)]
       |            | -coaster filename.rctx -feet-per-unit X [-num-runs N]
       |              [-velocityFPS V] [-formula] [-stats] [-compare-reuse]
-      |            | -table2 [-num-runs N])
+      |              [-debug-level (0|1|2)]
+      |            | -table2 [-num-runs N] [-debug-level (0|1|2)])
       |
       |Actions:
       |  -prove     run KeYmaera X prover on given problem file with given tactic
@@ -169,6 +170,9 @@ object KeYmaeraX {
   private def nextCoasterOption(map: OptionMap, list: List[String]): OptionMap = {
     //-coasterx (-component component-name [-formula] [-tactic] [-stats] | -coaster filename.rctx -feet-per-unit X [-velocity V] [-formula] [-stats] | -table2)
     list match {
+      case "-debug-level" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('debugLevel -> value), tail)
+        else optionErrorReporter("-debug-level")
       case "-component" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('coasterxMode -> "component", 'in -> value), tail)
         else optionErrorReporter("-component")

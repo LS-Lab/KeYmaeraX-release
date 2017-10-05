@@ -165,7 +165,7 @@ object CoasterXTestLib {
 
   // feetPerUnit = feetPerUnit, velocity = velocity, doFormula = doFormula, doTactic = doTactic, doStats = doStats)
   def prover(file:String, name:String, doFast:Boolean = true, NUM_RUNS:Int = 1, feetPerUnit:Double,
-             velocity:Option[Double], doFormula:Boolean, doStats:Boolean, callback:Option[(CoasterStats => ProvableSig)] = None):ProvableSig = {
+             velocity:Option[Double], doFormula:Boolean, doStats:Boolean, callback:Option[(CoasterStats => ProvableSig)] = None, debugLevel:Int = 1):ProvableSig = {
     val cb = callback.getOrElse(defaultPrinter(doFast,doFormula,doStats))
     val spec = new CoasterXSpec(feetPerUnit)
     val parsedRaw = CoasterXParser.parseFile(file).get
@@ -179,12 +179,12 @@ object CoasterXTestLib {
     val specc = spec.fromAligned((align,alignFml),env)
     val specStr = KeYmaeraXPrettyPrinter.stringify(specc)
     val specLenKB = specStr.length / 1000.0
-    println("DEBUG: PRinting formula size: " + specLenKB)
+    println("Formula size (KB): " + specLenKB)
     val nSections = spec.countSections(align)
     val nVars = countVars(specc)
 
-    val prFast = new CoasterXProver(spec,env, reuseComponents = true)
-    val prSlo = new CoasterXProver(spec,env, reuseComponents = false)
+    val prFast = new CoasterXProver(spec,env, reuseComponents = true, debugLevel = debugLevel)
+    val prSlo = new CoasterXProver(spec,env, reuseComponents = false, debugLevel = debugLevel)
     var resFast:Option[ProvableSig] = None
     var resSlo:Option[ProvableSig] = None
     var sloTimes:List[Double] = Nil
