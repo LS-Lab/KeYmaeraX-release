@@ -454,9 +454,11 @@ dy (x1^2 + x2^2 - y1^2 + 2 y1 y2 + y2^2))/(2 (dy (x1 - x2) +
     val dy = Variable("dy")
     val (dxi:Variable, dyi:Variable) = iDirection(iSection)
     seg match {
-      case LineSection(Some(LineParam((x1,y1),(x2,y2))), Some(gradient), isUp) =>
+      case LineSection(Some(LineParam((x1,y1),(x2,y2))), Some(gradient), _) =>
         val v = Variable("v")
         val (dxval, dyval) = lineDir((x1, y1), (x2, y2))
+        val isUp = evalTerm(y2).value > evalTerm(y1).value
+
         // Inlined version of ODE not used right now but still experimenting
         val xOdeInlined = AtomicODE(DifferentialSymbol(Variable("x")), foldTimes(v, dxval))
         val yOdeInlined = AtomicODE(DifferentialSymbol(Variable("y")), foldTimes(v, dyval))
