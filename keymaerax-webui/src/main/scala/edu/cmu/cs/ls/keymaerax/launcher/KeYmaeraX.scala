@@ -39,7 +39,7 @@ object KeYmaeraX {
   val usage: String = "KeYmaera X Prover" + " " + VERSION +
     """
       |
-      |Usage: java -Xss20M -jar keymaerax.jar
+      |Usage: java -jar keymaerax.jar
       |  -prove file.kyx -tactic file.kyt [-out file.kyp] |
       |  -check file.kya |
       |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar] |
