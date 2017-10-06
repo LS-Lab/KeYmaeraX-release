@@ -11,7 +11,10 @@ import edu.cmu.cs.ls.keymaerax.launcher._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.hydra.HyDRAInitializer._
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj, HyDRAInitializer, StringToVersion}
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX.shutdownProver
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 
 import scala.collection.immutable.Nil
 
@@ -19,6 +22,7 @@ import scala.collection.immutable.Nil
  *
   * @author Brandon Bohrer */
 object CoasterXMain {
+  private type OptionMap = Map[Symbol, Any]
   private var interpreters: List[Interpreter] = _
 
   private val LOG_EARLIEST_QE = System.getProperty("LOG_POTENTIAL_QE", "false")=="true"
@@ -173,7 +177,109 @@ object CoasterXMain {
     }
   }
 
+  def init(): Unit = {
+    val database = DBAbstractionObj.defaultDatabase
+    val args = Array[String]()
+    val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
+
+    //@note setup interpreter
+    BelleInterpreter.setInterpreter(SequentialInterpreter())
+    //@note pretty printer setup must be first, otherwise derived axioms print wrong
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+    // connect invariant generator to tactix library
+    val generator = new ConfigurableGenerator[Formula]()
+    TactixLibrary.invGenerator = generator
+    KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) => generator.products += (p->inv))
+
+    println("Connecting to arithmetic tools...")
+
+    try {
+      val preferredTool = preferredToolFromDB(database)
+      val config = configFromDB(options, database, preferredTool)
+      createTool(options, config, preferredTool)
+    } catch {
+      //@todo add e to log here and in other places
+      case e:Throwable => println("===> WARNING: Failed to initialize Mathematica. " + e)
+        println("You should configure settings in the UI and restart KeYmaera X.")
+        println("Or specify the paths to the libraries for your system explicitly from command line by running\n" +
+          "  java -jar keymaerax.jar -mathkernel pathtokernel -jlink pathtojlink")
+        println("Current configuration:\n" + edu.cmu.cs.ls.keymaerax.tools.diagnostic)
+        e.printStackTrace()
+    }
+
+    println("Updating lemma caches...")
+
+    try {
+      //Delete the lemma database if KeYmaera X has been updated since the last time the database was populated.
+      val cacheVersion = LemmaDBFactory.lemmaDB.version()
+      if(StringToVersion(cacheVersion) < StringToVersion(edu.cmu.cs.ls.keymaerax.core.VERSION))
+        LemmaDBFactory.lemmaDB.deleteDatabase()
+      //Populate the derived axioms database.
+      DerivedAxioms.prepopulateDerivedLemmaDatabase()
+    } catch {
+      case e : Exception =>
+        println("===> WARNING: Could not prepopulate the derived lemma database. This is a critical error -- the UI will fail to work! <===")
+        println("You should configure settings in the UI and restart KeYmaera X")
+        e.printStackTrace()
+    }
+
+  }
+
+  def nextOption(map: OptionMap, list: List[String]): OptionMap = list match {
+    case Nil => map
+    case "-tool" :: value :: tail => nextOption(map ++ Map('tool -> value), tail)
+    case "-ui" :: tail => nextOption(map, tail)
+    case "-launch" :: tail => nextOption(map, tail)
+    case option :: tail => println("[Warning] Unknown option " + option + "\n\n" /*+ usage*/); nextOption(map, tail)
+  }
+
+  private def createTool(options: OptionMap, config: ToolProvider.Configuration, preferredTool: String): Unit = {
+    val tool: String = options.getOrElse('tool, preferredTool).toString
+    val provider = tool.toLowerCase() match {
+      case "mathematica" => new MathematicaToolProvider(config)
+      case "z3" => new Z3ToolProvider
+      case t => throw new Exception("Unknown tool '" + t + "'")
+    }
+    ToolProvider.setProvider(provider)
+    assert(provider.tools().forall(_.isInitialized), "Tools should be initialized after init()")
+  }
+
+  private def configFromDB(options: OptionMap, db: DBAbstraction, preferredTool: String): ToolProvider.Configuration = {
+    val tool: String = options.getOrElse('tool, preferredTool).toString
+    tool.toLowerCase() match {
+      case "mathematica" => mathematicaConfigFromDB(db)
+      case "z3" => Map.empty
+      case t => throw new Exception("Unknown tool '" + t + "'")
+    }
+  }
+
+  private def preferredToolFromDB(db: DBAbstraction): String = {
+    db.getConfiguration("tool").config.getOrElse("qe", throw new Exception("No preferred tool"))
+  }
+
+  private def mathematicaConfigFromDB(db: DBAbstraction): ToolProvider.Configuration = {
+    getMathematicaLinkName(db) match {
+      case Some(l) => getMathematicaLibDir(db) match {
+        case Some(libDir) => Map("linkName" -> l, "libDir" -> libDir)
+        case None => Map("linkName" -> l)
+      }
+      case None => DefaultConfiguration.defaultMathematicaConfig
+    }
+  }
+
+  private def getMathematicaLinkName(db: DBAbstraction): Option[String] = {
+    db.getConfiguration("mathematica").config.get("linkName")
+  }
+
+  private def getMathematicaLibDir(db: DBAbstraction): Option[String] = {
+    val config = db.getConfiguration("mathematica").config
+    if (config.contains("jlinkLibDir")) Some(config("jlinkLibDir"))
+    else None
+  }
+
+
   def main(options:Map[Symbol,Any]):Unit = {
+    init()
     withMathematica(qeTool => {
     options('coasterxMode) match {
       case "component" =>
