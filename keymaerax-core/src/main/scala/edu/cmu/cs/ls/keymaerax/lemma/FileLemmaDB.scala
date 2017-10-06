@@ -31,8 +31,10 @@ class FileLemmaDB extends LemmaDBBase {
     file
   }
 
+  def escapeSeparator(str:String):String = if(str == "\\") {"\\\\"} else str
+
   /** Replaces special file characters with _. */
-  private def sanitize(id: LemmaID): LemmaID = id.replaceAll(s"[^\\w\\-${File.separator}]", "_")
+  private def sanitize(id: LemmaID): LemmaID = id.replaceAll(s"[^\\w\\-${escapeSeparator(File.separator)}]", "_")
 
   /** Returns the File representing lemma `id`. */
   private def file(id: LemmaID): File = new File(lemmadbpath, sanitize(id) + ".alp")
