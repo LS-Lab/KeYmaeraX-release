@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.UIKeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import org.scalatest.{FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags
 
@@ -24,7 +24,7 @@ class PairParserTests extends FlatSpec with Matchers {
   val pp = if (true) KeYmaeraXPrettyPrinter
   else new edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXWeightedPrettyPrinter
   val parser = KeYmaeraXParser
-  KeYmaera.init(Map.empty)
+  KeYmaeraXTool.init(Map.empty)
   val uipp = if (true) None else Some(new UIKeYmaeraXPrettyPrinter("-7",true))
 
   def parseShouldBe(input: String, expr: Expression) = {

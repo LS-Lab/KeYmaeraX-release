@@ -30,6 +30,18 @@ object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter {
 }
 
 /**
+  * KeYmaera X Pretty Printer without contract checking
+  *
+  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrecedencePrinter]]
+  */
+object KeYmaeraXNoContractPrettyPrinter extends KeYmaeraXPrecedencePrinter {
+  /** This default pretty printer without contract checking. */
+  val pp = this
+
+  override def apply(expr: Expression): String = stringify(expr)
+}
+
+/**
   * Common base functionality for KeYmaera X Pretty Printers.
   */
 trait BasePrettyPrinter extends PrettyPrinter {

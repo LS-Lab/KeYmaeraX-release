@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core.{AnyArg, Formula, UnitPredicational}
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, Suite}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor

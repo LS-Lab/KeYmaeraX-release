@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser.SystemTestBase
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import org.scalatest.{FlatSpec, Matchers}
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, OptimisticTest, TodoTest}
 

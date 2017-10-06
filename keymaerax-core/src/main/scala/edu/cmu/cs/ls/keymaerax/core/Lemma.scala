@@ -64,8 +64,7 @@ object Lemma {
         assert(hash == checksum(sequents.to),
           "Expected hashed evidence to match hash of conclusion + subgoals: " + name + "\n" + lemma)
       case None =>
-        if(LEMMA_COMPAT_MODE) println(s"INFO: ${name.getOrElse("An unnamed lemma")} was reloaded without a hash confirmation.")
-        else throw new CoreException("Cannot reload a lemma without some Hash evidence: " + name)
+        if(!LEMMA_COMPAT_MODE) throw new CoreException("Cannot reload a lemma without Hash evidence: " + name)
     }
     //@note soundness-critical
     val fact = Provable.oracle(sequents.head, sequents.tail.toIndexedSeq)
