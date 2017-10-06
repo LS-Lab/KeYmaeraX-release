@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.btactics.Context
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import testHelper.KeYmaeraXTestTags.{SlowTest, UsualTest, SummaryTest, CheckinTest}
 
 import scala.collection.immutable._
@@ -20,7 +20,7 @@ import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
  * @author Andre Platzer
  */
 class RandomContextTests extends FlatSpec with Matchers {
-  KeYmaera.init(Map.empty)
+  KeYmaeraXTool.init(Map.empty)
   val randomTrials = 400
   val randomReps = 10
   val randomComplexity = 6
