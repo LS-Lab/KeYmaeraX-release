@@ -267,11 +267,11 @@ class CoasterXTests extends TacticTestBase {
     pr shouldBe 'proved
   })}
 
-  it should "generate proof for Steel Phantom's Loops" in { withMathematica(qeTool => {
+/*  it should "generate proof for Steel Phantom's Loops" in { withMathematica(qeTool => {
     val pr = prover(phantomJustLoops, "Just the loops")
     pr shouldBe 'proved
   })}
-
+*/
   it should "generate proof for The Steel Phantom" in { withMathematica(qeTool => {
     val pr = prover(steelPhantom, "Steel Phantom")
     pr shouldBe 'proved

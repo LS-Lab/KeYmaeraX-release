@@ -83,13 +83,22 @@ object CoasterXMain {
         case "q2" => List(("Q2", () => prFast.arcProofQ2))
         case "q3" => List(("Q3", () => prFast.arcProofQ3))
         case "q4" => List(("Q4", () => prFast.arcProofQ4))
+        case "q1ccw" => List(("Q1ccw", () => prFast.arcProofQ1CCW))
+        case "q2ccw" => List(("Q2ccw", () => prFast.arcProofQ2CCW))
+        case "q3cw" => List(("Q3cw", () => prFast.arcProofQ3CW))
+        case "q4cw" => List(("Q4cw", () => prFast.arcProofQ4CW))
         case "all" =>
           List(("lineup", () => prFast.straightProofUp),
             ("linedown", () => prFast.straightProofDown),
             ("Q1", () => prFast.arcProofQ1),
             ("Q2", () => prFast.arcProofQ2),
             ("Q3", () => prFast.arcProofQ3),
-            ("Q4", () => prFast.arcProofQ4))
+            ("Q4", () => prFast.arcProofQ4),
+            ("Q1CCW", () => prFast.arcProofQ1CCW),
+            ("Q2CCW", () => prFast.arcProofQ2CCW),
+            ("Q3CW", () => prFast.arcProofQ3CW),
+            ("Q4CW", () => prFast.arcProofQ4CW)
+          )
         case _ =>
           println("USAGE: You did not specify a valid component name after -component. Please specify q1,q2,q3,q4,line, or all.")
           return
