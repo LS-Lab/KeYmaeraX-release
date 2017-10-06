@@ -17,7 +17,6 @@ import scala.collection.immutable.Map
  *
  * Created by smitsch on 4/27/15.
  * @author Stefan Mitsch
- * @todo Rename to KeYmaeraX to avoid confusion.
  */
 object KeYmaeraXTool extends ToolBase("KeYmaera") {
   override def init(config : Map[String,String]) = {
