@@ -40,38 +40,37 @@ object KeYmaeraX {
     """
       |
       |Usage: java -Xss20M -jar keymaerax.jar
-      |  -prove filename.kyx -tactic filename.kyt [-out filename.kyp] |
-      |  -check filename.kya |
-      |  -modelplex filename.kyx [-monitorKind ctrl|model] [-out filename.kym]
-      |             [-isar] |
-      |  -codegen filename.kyx [-vars var1,var2,..,varn] [-out file.c] |
+      |  -prove file.kyx -tactic file.kyt [-out file.kyp] |
+      |  -check file.kya |
+      |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar] |
+      |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c] |
       |  -ui [web server options] |
-      |  -parse filename.kyx |
-      |  -bparse filename.kyt |
-      |  -repl filename.kyx [filename.kyt] [scaladefs]
+      |  -parse file.kyx |
+      |  -bparse file.kyt |
+      |  -repl file.kyx [file.kyt] [scaladefs]
       |  -coasterx ( -component component-name [-formula] [-tactic] [-stats]
       |                [-num-runs N] [-debug-level (0|1|2)]
-      |            | -coaster filename.rctx -feet-per-unit X [-num-runs N]
+      |            | -coaster file.rctx -feet-per-unit X [-num-runs N]
       |              [-velocityFPS V] [-formula] [-stats] [-compare-reuse]
       |              [-debug-level (0|1|2)]
       |            | -table2 [-num-runs N] [-debug-level (0|1|2)])
       |
       |Actions:
-      |  -prove     run KeYmaera X prover on given problem file with given tactic
-      |  -check     run KeYmaera X prover on an archive of problems with tactics
+      |  -prove     run KeYmaera X prover on given model file with given tactic
+      |  -check     run KeYmaera X prover on an archive of models and tactics
       |  -modelplex synthesize monitor from given file by proof with ModelPlex tactic
-      |  -codegen   generate executable code from given file
-      |  -ui        start web user interface with optional arguments
-      |  -parse     return error code !=0 if the input problem file does not parse
+      |  -codegen   generate executable code from given model file
+      |  -ui        start web user interface with optional server arguments
+      |  -parse     return error code !=0 if the input model file does not parse
       |  -bparse    return error code !=0 if bellerophon tactic file does not parse
-      |  -repl      prove interactively from command line
+      |  -repl      prove interactively from REPL command line
       |  -coasterx  verify roller coasters
       |
       |Additional options:
       |  -tool mathematica|z3 choose which tool to use for arithmetic
       |  -mathkernel MathKernel(.exe) path to the Mathematica kernel executable
       |  -jlink path/to/jlinkNativeLib path to the J/Link native library directory
-      |  -monitorKind ctrl|model what kind of monitor to generate with ModelPlex
+      |  -monitor  ctrl|model what kind of monitor to generate with ModelPlex
       |  -vars     use ordered list of variables, treating others as constant functions
       |  -interval guard reals by interval arithmetic in floating point (recommended)
       |  -nointerval skip interval arithmetic presuming no floating point errors
@@ -237,9 +236,9 @@ object KeYmaeraX {
       case "-vars" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
         else optionErrorReporter("-vars")
-      case "-monitorKind" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('monitorKind -> Symbol(value)), tail)
-        else optionErrorReporter("-monitorKind")
+      case "-monitor" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('monitor -> Symbol(value)), tail)
+        else optionErrorReporter("-monitor")
       case "-tactic" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tactic -> value), tail)
         else optionErrorReporter("-tactic")
@@ -628,7 +627,7 @@ object KeYmaeraX {
     val pw = new PrintWriter(outputFileName + ".kym")
 
     val kind =
-      if (options.contains('monitorKind)) options('monitorKind).asInstanceOf[Symbol]
+      if (options.contains('monitor)) options('monitor).asInstanceOf[Symbol]
       else 'model
 
     val outputFml = if (options.contains('vars))
