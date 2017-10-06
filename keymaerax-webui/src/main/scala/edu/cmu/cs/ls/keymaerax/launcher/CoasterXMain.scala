@@ -123,12 +123,12 @@ object CoasterXMain {
 
   def printTable2(numRuns:Int, debugLevel:Int):Unit = {
     val coastersToTest:List[(String, Double,String)] = List(
-      (CoasterXTestLib.exampleFile1, 1.0,"topp"),
-      (CoasterXTestLib.byrc, 0.08333333333,"byrc"),
-      (CoasterXTestLib.lilPhantom, 1.0, "lilP"),
-      (CoasterXTestLib.phantomsRevenge, 2.0, "phrv"),
-      (CoasterXTestLib.steelPhantom, 2.0, "stph"),
-      (CoasterXTestLib.elToro,1.0, "toro")
+      (CoasterXTestLib.exampleFile1, 1.0,    "top thrill drag "),
+      (CoasterXTestLib.byrc, 0.08333333333,  "gregg backyard  "),
+      (CoasterXTestLib.lilPhantom, 1.0,      "lil' phantom    "),
+      (CoasterXTestLib.phantomsRevenge, 2.0, "phantoms revenge"),
+      (CoasterXTestLib.steelPhantom, 2.0,    "steel phantom   "),
+      (CoasterXTestLib.elToro,1.0,           "el toro         ")
     )
     var coasterStats:List[CoasterStats] = Nil
     var componentStats:List[ComponentStats] = Nil
@@ -150,7 +150,12 @@ object CoasterXMain {
       ("Q1", () => prFast.arcProofQ1),
       ("Q2", () => prFast.arcProofQ2),
       ("Q3", () => prFast.arcProofQ3),
-      ("Q4", () => prFast.arcProofQ4)
+      ("Q4", () => prFast.arcProofQ4),
+      ("Q1CCW", () => prFast.arcProofQ1CCW),
+      ("Q2CCW", () => prFast.arcProofQ2CCW),
+      ("Q3CW", () => prFast.arcProofQ3CW),
+      ("Q4CW", () => prFast.arcProofQ4CW)
+
     )
     componentsToTest.foreach({case (name, f) =>
         doStats(name, f, doFormula = true, doTactic = true, willDoStats = true, numRuns = numRuns, Some({case cs => componentStats = cs :: componentStats}))
@@ -159,12 +164,12 @@ object CoasterXMain {
     // Begin printing
     println("Model\tSections\tVars\tTime(s)\tNoReuse(s)\tSpeedup(%)\t\t\tSteps\tSize(KB)")
     coasterStats.foreach{case CoasterStats(name,env,nSections,nVars,fastTimes,fastMean,slowTimes,slowMean,stepsFast,stepsSlow,speedupPercent,proof,size) =>
-      println(s"$name\t$nSections\t$nVars\t$fastMean\t$slowMean\t$speedupPercent\t$stepsFast\t$size")
+      println(s"$name\t$nSections\t$nVars\t$fastMean%1.2f\t$slowMean%1.2f\t$speedupPercent%1.2f\t$stepsFast\t$size%1.1f")
     }
     println("")
     println("Comp.\tVars\tTime(s)\tSteps\tSize(KB)")
     componentStats.foreach{case ComponentStats(name,alltimes,meantime,steps,vars,size,tac,seq) =>
-      println(s"$name\t$vars\t$meantime\t$steps\t$size")
+      println(s"$name\t$vars%1.2f\t$meantime\t$steps\t$size%1.1f")
     }
   }
 
