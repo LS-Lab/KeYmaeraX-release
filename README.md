@@ -26,7 +26,7 @@ First ensure that the following software is installed
 #### FAQ: Run Problems
 
 If running `java -jar keymaerax.jar` results in the error `Invalid or corrupt jarfile` then update to Java 1.8 and to Mathematic 10+.
-Instead you can also run KeYmaera X via
+If you need to use an earlier version of Java or Mathematica, you can also run KeYmaera X via
 
     java -Xss20M -cp keymaerax.jar KeYmaeraX
 
