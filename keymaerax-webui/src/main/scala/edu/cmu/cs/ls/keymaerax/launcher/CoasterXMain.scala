@@ -129,10 +129,10 @@ object CoasterXMain {
     val coastersToTest:List[(String, Double,String)] = List(
       (CoasterXTestLib.exampleFile1, 1.0,    "top thrill drag "),
       (CoasterXTestLib.byrc, 0.08333333333,  "gregg backyard  "),
-      (CoasterXTestLib.lilPhantom, 1.0,      "lil' phantom    "),
+      (CoasterXTestLib.lilPhantom, 0.04177777777,      "lil' phantom    "),
       (CoasterXTestLib.phantomsRevenge, 2.0, "phantoms revenge"),
       (CoasterXTestLib.steelPhantom, 2.0,    "steel phantom   "),
-      (CoasterXTestLib.elToro,1.0,           "el toro         ")
+      (CoasterXTestLib.elToro,2.0,           "el toro         ")
     )
     var coasterStats:List[CoasterStats] = Nil
     var componentStats:List[ComponentStats] = Nil
@@ -300,7 +300,7 @@ object CoasterXMain {
         val numRuns = options.getOrElse('numRuns, "1").asInstanceOf[String].toInt
         val debugLevel = options.getOrElse('debugLevel, "1").asInstanceOf[String].toInt
         proveCoaster(fileName, doFormula = doFormula, doStats = doStats, compareReuse = compareReuse, feetPerUnit.toDouble, velocity.map(_.toDouble), numRuns, debugLevel = debugLevel)
-      case "table1" =>
+      case "table" =>
         val numRuns = options.getOrElse('numRuns, "1").asInstanceOf[String].toInt
         val debugLevel = options.getOrElse('debugLevel, "1").asInstanceOf[String].toInt
         printTable2(numRuns, debugLevel)

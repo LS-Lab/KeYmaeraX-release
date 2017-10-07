@@ -582,11 +582,12 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |      &dx0()*y=dy0()*x+dx0()*c())""".stripMargin.asFormula
         val con:Sequent = Sequent(immutable.IndexedSeq(a1,a2,a3,a5, a6, a7, a8,a9), immutable.IndexedSeq(c))
         val e =
-           solve(1) & allR(1) & implyR(1) & implyR(1) &
+          master()
+           /*solve(1) & allR(1) & implyR(1) & implyR(1) &
              implyL(-2)  <(
                hideR(1) & QE,
                master()
-             )
+             )*/
         val pr = NoProofTermProvable.startProof(con)
         val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
         val pr2 = interpret(e, pr1)
@@ -619,12 +620,12 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |      x0()<=x&x<=x1()
             |      &dx0()*y=dy0()*x+dx0()*c())""".stripMargin.asFormula
         val con:Sequent = Sequent(immutable.IndexedSeq(a1,a2,a3,a4,a5, a6, a7, a8), immutable.IndexedSeq(c))
-        val e =
-          solve(1) & allR(1) & implyR(1) & implyR(1) &
+        val e = master()
+          /*solve(1) & allR(1) & implyR(1) & implyR(1) &
             implyL(-2)  <(
               hideR(1) & QE,
               master()
-            )
+            )*/
         val pr = NoProofTermProvable.startProof(con)
         val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
         val pr2 = interpret(e, pr1)

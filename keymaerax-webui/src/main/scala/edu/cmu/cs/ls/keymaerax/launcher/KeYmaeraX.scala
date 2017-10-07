@@ -53,7 +53,7 @@ object KeYmaeraX {
       |            | -coaster file.rctx -feet-per-unit X [-num-runs N]
       |              [-velocityFPS V] [-formula] [-stats] [-compare-reuse]
       |              [-debug-level (0|1|2)]
-      |            | -table1 [-num-runs N] [-debug-level (0|1|2)])
+      |            | -table [-num-runs N] [-debug-level (0|1|2)])
       |
       |Actions:
       |  -prove     run KeYmaera X prover on given model file with given tactic
@@ -175,7 +175,7 @@ object KeYmaeraX {
       case "-component" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('coasterxMode -> "component", 'in -> value), tail)
         else optionErrorReporter("-component")
-      case "-table1" :: tail => nextCoasterOption(map ++ Map('coasterxMode -> "table1"), tail)
+      case "-table" :: tail => nextCoasterOption(map ++ Map('coasterxMode -> "table"), tail)
       case "-formula" :: tail => nextCoasterOption(map ++ Map('doFormula -> "true"), tail)
       case "-tactic" :: tail => nextCoasterOption(map ++ Map('doTactic -> "true"), tail)
       case "-stats" :: tail => nextCoasterOption(map ++ Map('doStats -> "true"), tail)
