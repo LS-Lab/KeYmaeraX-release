@@ -172,7 +172,7 @@ object CoasterXTestLib {
 
   // feetPerUnit = feetPerUnit, velocity = velocity, doFormula = doFormula, doTactic = doTactic, doStats = doStats)
   def prover(file:String, name:String, doFast:Boolean = true, NUM_RUNS:Int = 1, feetPerUnit:Double,
-             velocity:Option[Double], doFormula:Boolean, doStats:Boolean, callback:Option[(CoasterStats => ProvableSig)] = None, debugLevel:Int = 1):ProvableSig = {
+             velocity:Option[Double], doFormula:Boolean, doStats:Boolean, callback:Option[(CoasterStats => ProvableSig)] = None, debugLevel:Int = 1, useNaive:Boolean = false):ProvableSig = {
     val cb = callback.getOrElse(defaultPrinter(doFast,doFormula,doStats))
     val spec = new CoasterXSpec(feetPerUnit)
     val parsedRaw = CoasterXParser.parseFile(file).get
@@ -190,8 +190,8 @@ object CoasterXTestLib {
     val nSections = spec.countSections(align)
     val nVars = countVars(specc)
 
-    val prFast = new CoasterXProver(spec,env, reuseComponents = true, debugLevel = debugLevel)
-    val prSlo = new CoasterXProver(spec,env, reuseComponents = false, debugLevel = debugLevel)
+    val prFast = new CoasterXProver(spec,env, reuseComponents = true, debugLevel = debugLevel, useNaive = useNaive)
+    val prSlo = new CoasterXProver(spec,env, reuseComponents = false, debugLevel = debugLevel, useNaive = useNaive)
     var resFast:Option[ProvableSig] = None
     var resSlo:Option[ProvableSig] = None
     var sloTimes:List[Double] = Nil

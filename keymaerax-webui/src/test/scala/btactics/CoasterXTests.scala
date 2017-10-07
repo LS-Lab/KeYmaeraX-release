@@ -143,7 +143,7 @@ class CoasterXTests extends TacticTestBase {
     val specLenKB = specStr.length / 1000.0
     val nVars = countVars(specc)
 
-    val prFast = new CoasterXProver(spec,env, reuseComponents = false)
+    val prFast = new CoasterXProver(spec,env, reuseComponents = false, useNaive = false)
 
     val q1ccw = doStats("Q1CCW", () => prFast.arcProofQ1CCW, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)
     val q2ccw = doStats("Q2CCW", () => prFast.arcProofQ2CCW, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)

@@ -25,7 +25,7 @@ import scala.collection.immutable
 * @TODO: Function returning tactic with proof repeats
 * @TODO: Function returning tactic with proof reuse
 * */
-class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boolean = true, countSteps:Boolean=false, debugLevel:Int = 1){
+class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boolean = true, countSteps:Boolean=false, debugLevel:Int = 1, useNaive:Boolean){
 
   // Record timing information for a function call so we can measure optimizations to the CoasterX prover
   val MAX_TIMEFN_DEPTH = 10
@@ -358,134 +358,167 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
   // Finish off the arithmetic at the end of a line segment proof more effeciently than a big blind QE
   // @TODO: Everything has changed since this was first implemented - revisit and adjust
   def proveLineArith(pr: ProvableSig, bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):ProvableSig = {
-    val pr2 = interpret (implyR(1), pr)
-    val yDefStart = 3
-    //gConst, defs0, ..., defsn |- rect&glob&post_i
-    val dyPosPos = nSections + 2
-    val dcPos = nSections + 3
-    val andPos = nSections + 3
-    val pr3 = interpret(andL(-andPos) & andL(-andPos) & andL('Llast) & andL(-andPos) , pr2)
-    val pr4 = interpret(andR(1) <(close, nil), pr3)
+    if (useNaive) {
+      return interpret(master(), pr)
+    } else {
+      val pr2 = interpret(implyR(1), pr)
+      val yDefStart = 3
+      //gConst, defs0, ..., defsn |- rect&glob&post_i
+      val dyPosPos = nSections + 2
+      val dcPos = nSections + 3
+      val andPos = nSections + 3
+      val pr3 = interpret(andL(-andPos) & andL(-andPos) & andL('Llast) & andL(-andPos), pr2)
+      val pr4 = interpret(andR(1) < (close, nil), pr3)
 
-    val DEBUG_CONJ:Option[Int] = Some(8)
+      val DEBUG_CONJ: Option[Int] = Some(8)
 
-    // const, yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
-    def provePost(i:Int, pr:ProvableSig):ProvableSig = {
-      //g, defs1,...,defsN, xBounds,yLow,yUp,global,cutsHold
-      val (x0,x1) =
-        pr.subgoals.head.succ.head match {
-          case Imply (And(_,And (And (LessEqual (x0, _), LessEqual (_, x1) ), _ )), _) =>
-            (x0,x1)
-          case Imply (And (And (LessEqual (x0, _), LessEqual (_, x1) ), _ ), _) =>
-            throw new Exception("I think you've got outdated specs for your components somewhere ")
-          case Imply (And (LessEqual (x0, _), LessEqual (_, x1) ), _) =>
-            throw new Exception("I think you've got outdated specs for your components somewhere ")
+      // const, yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
+      def provePost(i: Int, pr: ProvableSig): ProvableSig = {
+        //g, defs1,...,defsN, xBounds,yLow,yUp,global,cutsHold
+        val (x0, x1) =
+          pr.subgoals.head.succ.head match {
+            case Imply(And(_, And(And(LessEqual(x0, _), LessEqual(_, x1)), _)), _) =>
+              (x0, x1)
+            case Imply(And(And(LessEqual(x0, _), LessEqual(_, x1)), _), _) =>
+              throw new Exception("I think you've got outdated specs for your components somewhere ")
+            case Imply(And(LessEqual(x0, _), LessEqual(_, x1)), _) =>
+              throw new Exception("I think you've got outdated specs for your components somewhere ")
+          }
+        val (preCx, nextCx) = (x0, x1) match {
+          case (_: Number, _: Number) => (false, false)
+          case (_: Number, _) => (false, true)
+          case (_, _: Number) => (true, false)
+          case _ => (true, true)
         }
-      val (preCx,nextCx) = (x0,x1) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
-      def localDefsPos(j:Int):List[Int] = List(2+j)
-      val preKept:List[Int] = if(preCx) localDefsPos(i-1) else Nil
-      // TODO: Only do this when next dude is arc
-      val nextKept = if(nextCx || true) localDefsPos(i) else Nil
-      val cutsPos = pr.subgoals.head.ante.length
-      val gPos = 1
-      val allPoses:List[Int] = dyPosPos :: gPos :: cutsPos :: (preKept ++ nextKept)
-      val eProve = {
-        coHideL(cutsPos::cutsPos-1::cutsPos-2::cutsPos-3::localDefsPos(i)++localDefsPos(iSection)++allPoses, pr) & implyR(1)
+
+        def localDefsPos(j: Int): List[Int] = List(2 + j)
+
+        val preKept: List[Int] = if (preCx) localDefsPos(i - 1) else Nil
+        // TODO: Only do this when next dude is arc
+        val nextKept = if (nextCx || true) localDefsPos(i) else Nil
+        val cutsPos = pr.subgoals.head.ante.length
+        val gPos = 1
+        val allPoses: List[Int] = dyPosPos :: gPos :: cutsPos :: (preKept ++ nextKept)
+        val eProve = {
+          coHideL(cutsPos :: cutsPos - 1 :: cutsPos - 2 :: cutsPos - 3 :: localDefsPos(i) ++ localDefsPos(iSection) ++ allPoses, pr) & implyR(1)
+        }
+        // @TODO: Could be optimized by splitting into dy-contra vs. (x1,x2) contra vs (y1,y2) contra.
+        // e.g. localDefs(iSection) only used for dy argument
+        val eContra = {
+          coHideL(localDefsPos(iSection) ++ (cutsPos - 2 :: cutsPos - 3 :: allPoses), pr) & implyR(1) & hideR(1)
+        }
+        val e: BelleExpr =
+          if (i == iSection || i == iSection + 1 || i == iSection - 1) eProve
+          // For the - 1 case we don't have a contradiction argument (overlaps at one point), but
+          // splitting before QE seems to speed up vastly in the cases I've tested
+          else eContra
+        val pr1 = interpret(e, pr)
+        val pr2 = interpret(master(), pr1)
+        if (!pr2.isProved) {
+          val 2 = 1 + 1
+        }
+        pr2
       }
-      // @TODO: Could be optimized by splitting into dy-contra vs. (x1,x2) contra vs (y1,y2) contra.
-      // e.g. localDefs(iSection) only used for dy argument
-      val eContra = {
-        coHideL(localDefsPos(iSection)++(cutsPos-2::cutsPos-3::allPoses), pr) & implyR(1) & hideR(1)
-      }
-      val e:BelleExpr =
-        if(i == iSection || i == iSection + 1 || i == iSection - 1) eProve
-        // For the - 1 case we don't have a contradiction argument (overlaps at one point), but
-        // splitting before QE seems to speed up vastly in the cases I've tested
-        else eContra
-      val pr1 = interpret(e, pr)
-      val pr2 = interpret(master(), pr1)
-      if(!pr2.isProved) {
+
+      // yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
+      val pr9 = proveConjs(provePost, pr4, nSections - 1)
+      if (!pr9.isProved) {
         val 2 = 1 + 1
       }
-      pr2
+      pr9
     }
-    // yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
-    val pr9 = proveConjs(provePost, pr4, nSections-1)
-    if (!pr9.isProved) {
-      val 2 = 1 + 1
-    }
-    pr9
   }
-
   def proveArcArith(pr: ProvableSig, theta1:Number, deltaTheta:Number,
                     bl:TPoint, tr:TPoint, iSection:Int, nSections:Int):ProvableSig = {
-    val pr2 = interpret (implyR(1), pr)
-    val yDefStart = 3
-    val dyPosPos = nSections + 2
-    val dcPos = nSections + 3
-    val andPos = nSections + 3
-    val pr3 = interpret(andL(-andPos) & andL(-andPos) & andL('Llast) & andL(-andPos) & andL('Llast)*4 , pr2)
-    val pr4 = interpret(andR(1) <(andR(1)<(close, close), nil), pr3)
-    // const, yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
-    val DEBUG_POST:Option[Int] = Some(8)
-    def provePost(i:Int, pr:ProvableSig):ProvableSig = {
-      val _ = DEBUG_POST match {
-        case Some(j) if i == j =>
-          0
-        case _ => 0
-      }
-      // For the - 1 case we don't have a contradiction argument (overlaps at one point), but
-      // g, defs0, ..., defsN, <<9 cuts>> |- (bounds -> post)
-      val Imply(And(dyCon,And(And(LessEqual(x0,_),LessEqual(_,x1)),And(LessEqual(y0,_),LessEqual(_,y1)))),_) = pr.subgoals.head.succ.head
-      val t1 = theta1.value
-      val dt = deltaTheta.value
-      val movesLeft = (t1 <= 0 && dt < 0) || (t1 >= 0 && dt > 0)
-      val (leftNum,rightNum) = if(movesLeft) {(x1,x0)} else {(x0,x1)}
-      val (preCx,nextCx) = (leftNum,rightNum) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
-      val inBoundses = List(nSections + 3, nSections + 4, nSections + 5)
-      val And(LessEqual(x2,_),LessEqual(_,x3)) = pr.subgoals.head.ante(inBoundses.head-1)
-      val (preCxB,nextCxB) = (x2,x3) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
-      def localDefsPos(j:Int):List[Int] = List(2+j)
-      // TODO: Debug when and whether we need this exactly
-      val keepExtra = preCx || nextCx
-      val preKept:List[Int] = if(preCx || keepExtra) localDefsPos(i-1) else Nil
-      val nextKept = if(nextCx || keepExtra) localDefsPos(i) else Nil
+    if(useNaive) {
+      return interpret(master(), pr)
+    } else {
+      val pr2 = interpret(implyR(1), pr)
+      val yDefStart = 3
+      val dyPosPos = nSections + 2
+      val dcPos = nSections + 3
+      val andPos = nSections + 3
+      val pr3 = interpret(andL(-andPos) & andL(-andPos) & andL('Llast) & andL(-andPos) & andL('Llast) * 4, pr2)
+      val pr4 = interpret(andR(1) < (andR(1) < (close, close), nil), pr3)
+      // const, yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
+      val DEBUG_POST: Option[Int] = Some(8)
 
-      val preKeptB:List[Int] = if(preCxB) localDefsPos(iSection-1) else Nil
-      val nextKeptB = if(nextCxB) localDefsPos(iSection) else Nil
-
-      val keepBranch = localDefsPos(iSection)
-      val cutsPos = pr.subgoals.head.ante.length
-      val allPoses:List[Int] = cutsPos :: (preKept ++ nextKept ++ preKeptB ++ nextKeptB)
-      val allCuts = cutsPos::cutsPos-1::cutsPos-2::cutsPos-3::cutsPos-4::cutsPos-5::cutsPos-6::cutsPos-7::cutsPos-8::Nil
-      val gravPos = 1
-      val provePoses = gravPos::allCuts++localDefsPos(i)++keepBranch++allPoses
-      val eProve = {
-        coHideL(provePoses, pr) & implyR(1)
-      }
-      val contraPoses = inBoundses++allPoses
-      // dySign, dxDef, dyDef, defs for dy, sign of dy
-      val inversionContraPoses = List(nSections + 1, cutsPos-5,cutsPos-6)
-      val eContra = {
-        coHideL(inversionContraPoses ++ contraPoses, pr) & implyR(1) & hideR(1)
-      }
-      val e:BelleExpr =
-        if(i == iSection || i == iSection + 1 || i == iSection - 1) eProve
-        else eContra
-      val pr1 = interpret(e, pr)
-      val pr2 = interpret(master(), pr1)
-      // Just a place to put breakpoints
-      val _foo =
-        if(!pr2.isProved) {
-          0
-        } else {
-          0
+      def provePost(i: Int, pr: ProvableSig): ProvableSig = {
+        val _ = DEBUG_POST match {
+          case Some(j) if i == j =>
+            0
+          case _ => 0
         }
-      pr2
+        // For the - 1 case we don't have a contradiction argument (overlaps at one point), but
+        // g, defs0, ..., defsN, <<9 cuts>> |- (bounds -> post)
+        val Imply(And(dyCon, And(And(LessEqual(x0, _), LessEqual(_, x1)), And(LessEqual(y0, _), LessEqual(_, y1)))), _) = pr.subgoals.head.succ.head
+        val t1 = theta1.value
+        val dt = deltaTheta.value
+        val movesLeft = (t1 <= 0 && dt < 0) || (t1 >= 0 && dt > 0)
+        val (leftNum, rightNum) = if (movesLeft) {
+          (x1, x0)
+        } else {
+          (x0, x1)
+        }
+        val (preCx, nextCx) = (leftNum, rightNum) match {
+          case (_: Number, _: Number) => (false, false)
+          case (_: Number, _) => (false, true)
+          case (_, _: Number) => (true, false)
+          case _ => (true, true)
+        }
+        val inBoundses = List(nSections + 3, nSections + 4, nSections + 5)
+        val And(LessEqual(x2, _), LessEqual(_, x3)) = pr.subgoals.head.ante(inBoundses.head - 1)
+        val (preCxB, nextCxB) = (x2, x3) match {
+          case (_: Number, _: Number) => (false, false)
+          case (_: Number, _) => (false, true)
+          case (_, _: Number) => (true, false)
+          case _ => (true, true)
+        }
+
+        def localDefsPos(j: Int): List[Int] = List(2 + j)
+
+        // TODO: Debug when and whether we need this exactly
+        val keepExtra = preCx || nextCx
+        val preKept: List[Int] = if (preCx || keepExtra) localDefsPos(i - 1) else Nil
+        val nextKept = if (nextCx || keepExtra) localDefsPos(i) else Nil
+
+        val preKeptB: List[Int] = if (preCxB) localDefsPos(iSection - 1) else Nil
+        val nextKeptB = if (nextCxB) localDefsPos(iSection) else Nil
+
+        val keepBranch = localDefsPos(iSection)
+        val cutsPos = pr.subgoals.head.ante.length
+        val allPoses: List[Int] = cutsPos :: (preKept ++ nextKept ++ preKeptB ++ nextKeptB)
+        val allCuts = cutsPos :: cutsPos - 1 :: cutsPos - 2 :: cutsPos - 3 :: cutsPos - 4 :: cutsPos - 5 :: cutsPos - 6 :: cutsPos - 7 :: cutsPos - 8 :: Nil
+        val gravPos = 1
+        val provePoses = gravPos :: allCuts ++ localDefsPos(i) ++ keepBranch ++ allPoses
+        val eProve = {
+          coHideL(provePoses, pr) & implyR(1)
+        }
+        val contraPoses = inBoundses ++ allPoses
+        // dySign, dxDef, dyDef, defs for dy, sign of dy
+        val inversionContraPoses = List(nSections + 1, cutsPos - 5, cutsPos - 6)
+        val eContra = {
+          coHideL(inversionContraPoses ++ contraPoses, pr) & implyR(1) & hideR(1)
+        }
+        val e: BelleExpr =
+          if (i == iSection || i == iSection + 1 || i == iSection - 1) eProve
+          else eContra
+        val pr1 = interpret(e, pr)
+        val pr2 = interpret(master(), pr1)
+        // Just a place to put breakpoints
+        val _foo =
+          if (!pr2.isProved) {
+            0
+          } else {
+            0
+          }
+        pr2
+      }
+
+      // yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
+      val pr9 = proveConjs(provePost, pr4, nSections - 1)
+      pr9
     }
-    // yi=_, global(0), post_i(0), t>= 0, DC(t) |- (&_j in sections{bound_j(t) -> post_j(t)}
-    val pr9 = proveConjs(provePost, pr4, nSections-1)
-    pr9
   }
 
   // Finish off the arithmetic at the end of a line segment proof more effeciently than a big blind QE, assuming the
@@ -1274,50 +1307,67 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
   }
 
   def preImpliesInv(pr:ProvableSig, nSections:Int):ProvableSig = {
-    val proveVStuff = hideL('Llast)*nSections & QE
-    // g, (dx&dy&x&y&v), seg1,...,segn |- (vStuff)&(imp1&( ... &impN))
-    val pr0 = interpret(andR(1) <(proveVStuff, nil), pr)
-    def proveBranch(i:Int, pr:ProvableSig):ProvableSig = {
-      if(debugLevel >= 2) println("Proving precondition -> invariant, branch #" + i)
-      val (x0,x1) =
-        pr.subgoals.head.succ.head match {
-          case Imply (And(_,And (And (LessEqual (x0, _), LessEqual (_, x1) ), _)), _) =>
-            (x0,x1)
-          case Imply (And (And (LessEqual (x0, _), LessEqual (_, x1) ), _ ), _) =>
-            throw new Exception("I think you've got outdated specs for your components somewhere ")
-          case Imply (And (LessEqual (x0, _), LessEqual (_, x1) ), _) =>
-            throw new Exception("I think you've got outdated specs for your components somewhere ")
+    if(useNaive) {
+      return interpret(master(), pr)
+    } else {
+      val proveVStuff = hideL('Llast) * nSections & QE
+      // g, (dx&dy&x&y&v), seg1,...,segn |- (vStuff)&(imp1&( ... &impN))
+      val pr0 = interpret(andR(1) < (proveVStuff, nil), pr)
+
+      def proveBranch(i: Int, pr: ProvableSig): ProvableSig = {
+        if (debugLevel >= 2) println("Proving precondition -> invariant, branch #" + i)
+        val (x0, x1) =
+          pr.subgoals.head.succ.head match {
+            case Imply(And(_, And(And(LessEqual(x0, _), LessEqual(_, x1)), _)), _) =>
+              (x0, x1)
+            case Imply(And(And(LessEqual(x0, _), LessEqual(_, x1)), _), _) =>
+              throw new Exception("I think you've got outdated specs for your components somewhere ")
+            case Imply(And(LessEqual(x0, _), LessEqual(_, x1)), _) =>
+              throw new Exception("I think you've got outdated specs for your components somewhere ")
+          }
+        val (preCx, nextCx) = (x0, x1) match {
+          case (_: Number, _: Number) => (false, false)
+          case (_: Number, _) => (false, true)
+          case (_, _: Number) => (true, false)
+          case _ => (true, true)
         }
-      val (preCx,nextCx) = (x0,x1) match {case(_:Number,_:Number) => (false,false) case (_:Number,_) => (false,true) case (_,_:Number) => (true,false) case _ => (true,true)}
-      def localDefsPos(j:Int):List[Int] = List(3+j)
-      val preKept:List[Int] = if(preCx) localDefsPos(i-1) else Nil
-      val nextKept = if(nextCx) localDefsPos(i) else Nil
-      val posPos = 2
-      val gravPos =1
-      val allPoses:List[Int] = gravPos :: posPos :: (preKept ++ nextKept)
-      val eInit = {
-        coHideL(gravPos::posPos::localDefsPos(i)++localDefsPos(0), pr) & implyR(1)
+
+        def localDefsPos(j: Int): List[Int] = List(3 + j)
+
+        val preKept: List[Int] = if (preCx) localDefsPos(i - 1) else Nil
+        val nextKept = if (nextCx) localDefsPos(i) else Nil
+        val posPos = 2
+        val gravPos = 1
+        val allPoses: List[Int] = gravPos :: posPos :: (preKept ++ nextKept)
+        val eInit = {
+          coHideL(gravPos :: posPos :: localDefsPos(i) ++ localDefsPos(0), pr) & implyR(1)
+        }
+        val eContra = {
+          coHideL(allPoses ++ localDefsPos(0), pr) & implyR(1) & hideR(1)
+        }
+        val e: BelleExpr =
+          if (i == 0) eInit
+          else eContra
+        val pr1 = interpret(e, pr)
+        val pr2 = interpret(master(), pr1)
+        if (!pr2.isProved) {
+          val 2 = 1 + 1
+        }
+        pr2
       }
-      val eContra = {
-        coHideL(allPoses++localDefsPos(0), pr) & implyR(1) & hideR(1)
-      }
-      val e:BelleExpr =
-        if (i == 0) eInit
-        else eContra
-      val pr1 = interpret(e, pr)
-      val pr2 = interpret(master(), pr1)
-      if(!pr2.isProved) {
-        val 2 = 1 + 1
-      }
-      pr2
+
+      // g, (dx&dy&x&y&v), seg1,...,segn |- (imp1&( ... &impN))
+      val res = proveConjs(proveBranch, pr0, nSections - 1)
+      res
     }
-    // g, (dx&dy&x&y&v), seg1,...,segn |- (imp1&( ... &impN))
-    val res = proveConjs(proveBranch, pr0, nSections-1)
-    res
   }
 
   def invImpliesPost(pr:ProvableSig, nSections:Int):ProvableSig = {
-    interpret(close(-1,1), pr)
+    if(useNaive) {
+      return interpret(master(), pr)
+    } else {
+      interpret(close(-1, 1), pr)
+    }
   }
 
   // Prove an entire CoasterX model from scratch

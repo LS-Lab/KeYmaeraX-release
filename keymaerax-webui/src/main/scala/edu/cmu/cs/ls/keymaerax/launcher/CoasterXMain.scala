@@ -77,7 +77,7 @@ object CoasterXMain {
     val specLenKB = specStr.length / 1000.0
     val nVars = countVars(specc)
 
-    val prFast = new CoasterXProver(spec,env, reuseComponents = false, debugLevel = debugLevel)
+    val prFast = new CoasterXProver(spec,env, reuseComponents = false, debugLevel = debugLevel, useNaive = false)
     val components =
       name match {
         case "lineup" => List(("lineup", () => prFast.straightProofUp))
@@ -118,10 +118,11 @@ object CoasterXMain {
                    feetPerUnit:Double,
                    velocity: Option[Double],
                    numRuns:Int,
-                   debugLevel:Int):Unit = {
+                   debugLevel:Int,
+                   useNaive:Boolean):Unit = {
     val fileContents = scala.io.Source.fromFile(filename).getLines().mkString("\n")
     val proof = CoasterXTestLib.prover(fileContents, "Coaster From Command Line", doFast = !compareReuse,NUM_RUNS = numRuns, feetPerUnit = feetPerUnit, velocity = velocity,
-      doFormula = doFormula,  doStats = doStats, debugLevel = debugLevel)
+      doFormula = doFormula,  doStats = doStats, debugLevel = debugLevel, useNaive = useNaive)
     assert(proof.isProved, "CoasterX prover did not prove model :'( ")
   }
 
@@ -137,17 +138,11 @@ object CoasterXMain {
     var coasterStats:List[CoasterStats] = Nil
     var componentStats:List[ComponentStats] = Nil
 
-    coastersToTest.foreach { case (coast:String, feetPerUnit,name) =>
-      val proof = CoasterXTestLib.prover(coast, name, doFast = false, NUM_RUNS = numRuns,
-        feetPerUnit = feetPerUnit, velocity = None, doFormula = true, doStats = true, Some({case cs => coasterStats = cs :: coasterStats; cs.proof}),
-        debugLevel = debugLevel)
-      assert(proof.isProved, "CoasterX prover did not prove model :'( ")
-    }
     val spec = new CoasterXSpec(1.0, debugLevel)
     val parsed = CoasterXParser.parseFile(CoasterXTestLib.straightLine).get
     val (align,alignFml) = spec.prepareFile(parsed)
     val env = spec.envelope(align)
-    val prFast = new CoasterXProver(spec,env, reuseComponents = false, debugLevel = debugLevel)
+    val prFast = new CoasterXProver(spec,env, reuseComponents = false, debugLevel = debugLevel, useNaive = false)
     val componentsToTest:List[(String, (() => ProvableSig))] = List(
       ("lineup", () => prFast.straightProofUp),
       ("linedown", () => prFast.straightProofDown),
@@ -164,6 +159,13 @@ object CoasterXMain {
     componentsToTest.foreach({case (name, f) =>
         doStats(name, f, doFormula = true, doTactic = true, willDoStats = true, numRuns = numRuns, Some({case cs => componentStats = cs :: componentStats}))
     })
+
+    coastersToTest.foreach { case (coast:String, feetPerUnit,name) =>
+      val proof = CoasterXTestLib.prover(coast, name, doFast = false, NUM_RUNS = numRuns,
+        feetPerUnit = feetPerUnit, velocity = None, doFormula = true, doStats = true, Some({case cs => coasterStats = cs :: coasterStats; cs.proof}),
+        debugLevel = debugLevel)
+      assert(proof.isProved, "CoasterX prover did not prove model :'( ")
+    }
 
     // Begin printing
     println("Model\tSections\tVars\tTime(s)\tNoReuse(s)\tSpeedup(%)\t\t\tSteps\tSize(KB)")
@@ -294,12 +296,13 @@ object CoasterXMain {
         val fileName:String = options('in).asInstanceOf[String]
         val doFormula = options.get('doFormula).nonEmpty
         val doStats = options.get('doStats).nonEmpty
+        val useNaive = options.get('naiveArith).nonEmpty
         val feetPerUnit = options('feetPerUnit).asInstanceOf[String]
         val compareReuse = options.get('compareReuse).nonEmpty
         val velocity = options.get('velocity).asInstanceOf[Option[String]]
         val numRuns = options.getOrElse('numRuns, "1").asInstanceOf[String].toInt
         val debugLevel = options.getOrElse('debugLevel, "1").asInstanceOf[String].toInt
-        proveCoaster(fileName, doFormula = doFormula, doStats = doStats, compareReuse = compareReuse, feetPerUnit.toDouble, velocity.map(_.toDouble), numRuns, debugLevel = debugLevel)
+        proveCoaster(fileName, doFormula = doFormula, doStats = doStats, compareReuse = compareReuse, feetPerUnit.toDouble, velocity.map(_.toDouble), numRuns, debugLevel = debugLevel, useNaive = useNaive)
       case "table" =>
         val numRuns = options.getOrElse('numRuns, "1").asInstanceOf[String].toInt
         val debugLevel = options.getOrElse('debugLevel, "1").asInstanceOf[String].toInt

@@ -52,7 +52,7 @@ object KeYmaeraX {
       |                [-num-runs N] [-debug-level (0|1|2)]
       |            | -coaster file.rctx -feet-per-unit X [-num-runs N]
       |              [-velocityFPS V] [-formula] [-stats] [-compare-reuse]
-      |              [-debug-level (0|1|2)]
+      |              [-debug-level (0|1|2)]  [-naive-arith]
       |            | -table [-num-runs N] [-debug-level (0|1|2)])
       |
       |Actions:
@@ -186,6 +186,8 @@ object KeYmaeraX {
       case "-coaster" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('coasterxMode -> "coaster", 'in -> value), tail)
         else optionErrorReporter("-coaster")
+      case "-naive-arith" :: tail =>
+        nextCoasterOption(map ++ Map('naiveArith -> "true"), tail)
       case "-feet-per-unit" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('feetPerUnit -> value), tail)
         else optionErrorReporter("-feet-per-unit")
