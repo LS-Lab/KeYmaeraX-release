@@ -49,7 +49,7 @@ object CoasterXMain {
       (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil) ++
       (if (LOG_QE_DURATION) qeDurationListener::Nil else Nil)
     BelleInterpreter.setInterpreter(registerInterpreter(SequentialInterpreter(listeners)))
-    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+    PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXNoContractPrettyPrinter)
     val generator = new ConfigurableGenerator[Formula]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
     TactixLibrary.invGenerator = generator
@@ -185,7 +185,7 @@ object CoasterXMain {
     //@note setup interpreter
     BelleInterpreter.setInterpreter(SequentialInterpreter())
     //@note pretty printer setup must be first, otherwise derived axioms print wrong
-    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+    PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXNoContractPrettyPrinter)
     // connect invariant generator to tactix library
     val generator = new ConfigurableGenerator[Formula]()
     TactixLibrary.invGenerator = generator
@@ -300,7 +300,7 @@ object CoasterXMain {
         val numRuns = options.getOrElse('numRuns, "1").asInstanceOf[String].toInt
         val debugLevel = options.getOrElse('debugLevel, "1").asInstanceOf[String].toInt
         proveCoaster(fileName, doFormula = doFormula, doStats = doStats, compareReuse = compareReuse, feetPerUnit.toDouble, velocity.map(_.toDouble), numRuns, debugLevel = debugLevel)
-      case "table2" =>
+      case "table1" =>
         val numRuns = options.getOrElse('numRuns, "1").asInstanceOf[String].toInt
         val debugLevel = options.getOrElse('debugLevel, "1").asInstanceOf[String].toInt
         printTable2(numRuns, debugLevel)
