@@ -159,7 +159,7 @@ class CoasterXTests extends TacticTestBase {
 
 
   def prover(fileContents:String, modelName:String):ProvableSig = {
-    CoasterXTestLib.prover(fileContents, modelName, doFast = false, NUM_RUNS = 6, feetPerUnit = 1.0, velocity = None, doFormula = true, doStats = true)
+    CoasterXTestLib.prover(fileContents, modelName, doFast = false, NUM_RUNS = 1, feetPerUnit = 1.0, velocity = None, doFormula = true, doStats = true)
   }
 
   "Proof Generator" should "generate proof for straight line" in { withMathematica(qeTool => {

@@ -78,7 +78,7 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMinAbs:EnvScal
   }
 
   def extendR(r:EnvScalar, isCw:Boolean, debugInfo:Option[(Int,TPoint)]):AccelEnvelope = {
-    val signed = if (isCw) r else {Number(-r.value)}
+    val signed = if (!isCw) r else {Number(-r.value)}
     val env = AccelEnvelope(scalarMin(rMin,signed), scalarMin(rMinAbs,r), scalarMax(rMax,signed), scalarMax(rMaxAbs,r), tMin, tMax, vMin, vMax,feetPerUnit)
     val map =
     debugInfo match {
@@ -111,10 +111,13 @@ case class AccelEnvelope(private val rMin:EnvScalar, private val rMinAbs:EnvScal
   val DEFAULT_TOLERANCE = Number(0.001)
 
   def relaxBy(tolerance:EnvScalar=DEFAULT_TOLERANCE):AccelEnvelope = {
+    val e =
     AccelEnvelope(Number(rMin.value-tolerance.value), Number(rMinAbs.value-tolerance.value),
       Number(rMax.value+tolerance.value), Number(rMaxAbs.value+tolerance.value),
       Number(tMin.value-tolerance.value),Number(tMax.value+tolerance.value),
       Number(vMin.value-tolerance.value), Number(vMax.value+tolerance.value),feetPerUnit)
+    e.centrips = centrips
+    e
   }
 
   private def tanSpec(dy:Term):Formula = {
