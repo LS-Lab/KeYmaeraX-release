@@ -8,6 +8,6 @@
   */
 object KeYmaeraX {
   def main (args: Array[String]): Unit = {
-    edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX.main(args ++ ("-launch" :: "-ui" :: Nil))
+    edu.cmu.cs.ls.keymaerax.launcher.Main.main(args ++ ("-launch" :: "-ui" :: Nil))
   }
 }
