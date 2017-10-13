@@ -30,7 +30,7 @@ case class RuleTerm(name: String) extends ProofTerm
 
 /** @todo replace this with a proof term construction. */
 case class ForwardNewConsequenceTerm(child: ProofTerm, newConsequence: Sequent, rule: Rule) extends ProofTerm
-\
+
 /** @todo replace this with a proof term construction. */
 case class ProlongationTerm(child: ProofTerm, prolongation: PTProvable) extends ProofTerm
 
