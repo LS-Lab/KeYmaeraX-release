@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.pt
 
 import edu.cmu.cs.ls.keymaerax.btactics.DerivedRuleInfo
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{US, _}
 
 import scala.collection.immutable
 
@@ -41,7 +41,8 @@ object ProofChecker {
 
         case AxiomTerm(axiomName) => {
           val node = proofNode(phi)
-          Some(proveBy(node, useAt(axiomName)(1)))
+          //Just do an empty uniform substitution...
+          Some(proveBy(node, US(USubst.apply(scala.collection.immutable.Seq()), axiomName)))
         }
 
         case UsubstTerm(proofOfPremise, premise, substitution) => {

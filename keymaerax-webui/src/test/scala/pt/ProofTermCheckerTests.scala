@@ -23,10 +23,10 @@ class ProofTermCheckerTests extends TacticTestBase {
   "Axiom checker" should "check i_{[:=] assign} : [v:=t();]p(v) <-> p(t())" in {
     val label = "[:=] assign"
     val f = "[x_:=f();]p(x_) <-> p(f())".asFormula
-    proveBy(f, useAt(label)(1)) shouldBe 'proved
-//    val certificate = ProofChecker(AxiomTerm(label), f)
-//    certificate.isDefined shouldBe true
-//    proves(certificate.get, f) shouldBe true
+    val t = US(USubst.apply(scala.collection.immutable.Seq()), label)
+    val certificate = ProofChecker(AxiomTerm(label), f)
+    certificate.isDefined shouldBe true
+    proves(certificate.get, f) shouldBe true
   }
 
   "\\FOLR Tautology checker" should "check j_{0=0} : 0=0" ignore {
