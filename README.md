@@ -37,15 +37,15 @@ Errors related to `com.wolfram.jlink` or `JLinkNativeLibrary` are caused by inco
 
 #### Configuration
 KeYmaera X requires a decision procedure for real arithmetic to finalize proofs. It is tested best with Mathematica.
-After starting KeYmaera X you can configure arithmetic tools in _Help->Tool Configuration_.
+After starting KeYmaera X you can configure arithmetic tools in the _Help->Tool Configuration_ menu.
 
 Depending on the operating system, Mathematica is installed in different locations. 
 Alternatively, you can also specify which arithmetic tools to use from command line with
-parameters -mathkernel and -jlink. Parameters that are appropriate when
+parameters `-mathkernel` and `-jlink`. Parameters that are appropriate when
 Mathematica is installed in the default location are provided below.
 
 #### Default Configuration Parameters per Operating System
-MacOS, 64bit, Mathematica 10.4+
+Mac OS, 64bit, Mathematica 10.4+
 * `-mathkernel /Applications/Mathematica.app/Contents/MacOS/MathKernel`
 * `-jlink /Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/SystemFiles/Libraries/MacOSX-x86-64`
 
