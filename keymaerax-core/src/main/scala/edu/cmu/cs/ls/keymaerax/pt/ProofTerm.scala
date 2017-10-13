@@ -20,7 +20,7 @@ case class UsubstTerm(child: ProofTerm, premise: Formula, substitution: USubst) 
 case class RenamingTerm(child: ProofTerm, premise: Formula, what: Variable, repl: Variable) extends ProofTerm
 
 /** Witness for rule application. */
-case class RuleApplication(child: ProofTerm, ruleName: String, subgoal: Int) extends ProofTerm //@todo add to theory.
+case class RuleApplication(child: ProofTerm, ruleName: String, subgoal: Int, sequentPositions: Seq[Int]) extends ProofTerm //@todo add to theory.
 
 case class UsubstProvableTerm(child: ProofTerm, substitution: USubst) extends ProofTerm
 
