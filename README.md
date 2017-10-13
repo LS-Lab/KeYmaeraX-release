@@ -11,7 +11,7 @@ More information and precompiled binaries are available at:
 Installation
 ============
 The easiest way to run KeYmaera X is to download binaries 
-[keymaerax.jar](http://keymaerax.org/keymaerax.jar) and run via
+[keymaerax.jar](http://keymaerax.org/keymaerax.jar) and start from command line
 
     java -jar keymaerax.jar
 
@@ -25,7 +25,7 @@ First ensure that the following software is installed
 
 #### FAQ: Run Problems
 
-If running `java -jar keymaerax.jar` results in the error `Invalid or corrupt jarfile` then update to Java 1.8 and to Mathematic 10+.
+If running `java -jar keymaerax.jar` results in the error `Invalid or corrupt jarfile` then update to Java 1.8 and to Mathematica 10+.
 If you need to use an earlier version of Java or Mathematica, you can also run KeYmaera X via
 
     java -Xss20M -cp keymaerax.jar KeYmaeraX
@@ -33,12 +33,15 @@ If you need to use an earlier version of Java or Mathematica, you can also run K
 If KeYmaera X acts weird after an update, clean your local cache of lemmas by removing (or renaming) the directory `~/.keymaerax/cache`.
 You could also try renaming the model and proof database `~/.keymaerax/keymaerax.sqlite` (if this file has become corrupt, it may prevent KeYmaera X from working properly).
 
-Errors related to JLinkNative Library are caused by incompatibilities of Java 1.8 in combination with Mathematica 9. It is recommended to use Mathematica 10. Or they may be caused by some operating system configuration issues.
+Errors related to `com.wolfram.jlink` or `JLinkNativeLibrary` are caused by incompatibilities of Java 1.8 in combination with Mathematica 9. It is recommended to use Mathematica 10. Or they may be caused by some operating system configuration issues.
 
 #### Configuration
 KeYmaera X requires a decision procedure for real arithmetic to finalize proofs. It is tested best with Mathematica.
-Depending on the operating system, Mathematica is installed in different locations. Adapt prove.sh to specify the
-parameters -mathkernel and -jlink according to the local Mathematica setup. Parameters that are appropriate when
+After starting KeYmaera X you can configure arithmetic tools in _Help->Tool Configuration_.
+
+Depending on the operating system, Mathematica is installed in different locations. 
+Alternatively, you can also specify which arithmetic tools to use from command line with
+parameters -mathkernel and -jlink. Parameters that are appropriate when
 Mathematica is installed in the default location are provided below.
 
 #### Default Configuration Parameters per Operating System
