@@ -196,9 +196,11 @@ private object DLBySubst {
     "MR" byWithInput(c, (pos: Position, sequent: Sequent) => sequent.at(pos) match {
       case (ctx, Box(a, p)) =>
         val (q, useCleanup, showCleanup) = {
+          val aBVs = StaticSemantics.boundVars(a)
           val constConjuncts =
-            sequent.ante.flatMap(FormulaTools.conjuncts).
-              filter(StaticSemantics.symbols(_).intersect(StaticSemantics.boundVars(a).toSet).isEmpty).toList
+            if (aBVs.isInfinite) Nil
+            else sequent.ante.flatMap(FormulaTools.conjuncts).
+              filter(StaticSemantics.symbols(_).intersect(aBVs.toSet).isEmpty).toList
           (constConjuncts, isGame) match {
             case ((Nil, _) | (_, true)) => (c, skip, implyR(pos.top))
             case (consts, false) => (And(consts.reduceRight(And), c),
@@ -224,7 +226,7 @@ private object DLBySubst {
   def postCut(C: Formula): DependentPositionTactic = useAt("K modal modus ponens &", PosInExpr(1::Nil),
     (us: Option[Subst]) => us.getOrElse(throw BelleUserGeneratedError("Unexpected missing substitution in postCut")) ++ RenUSubst(("p_(||)".asFormula, C)::Nil))
 
-  private def constAnteConditions(sequent: Sequent, taboo: Set[Variable]): IndexedSeq[Formula] = {
+  private def constAnteConditions(sequent: Sequent, taboo: SetLattice[Variable]): IndexedSeq[Formula] = {
     sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)
   }
 
@@ -236,7 +238,7 @@ private object DLBySubst {
           case Some(b@Box(Loop(a), p)) =>
             if (!FormulaTools.dualFree(a)) loopRule(invariant)(pos)
             else {
-              val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)
+              val consts = constAnteConditions(sequent, StaticSemantics(a).bv)
               val q =
                 if (consts.size > 1) And(invariant, consts.reduceRight(And))
                 else if (consts.size == 1) And(invariant, consts.head)
@@ -267,7 +269,7 @@ private object DLBySubst {
     * @param invariant The invariant.
     */
 
-  def loopRule(invariant: Formula) = "loopRule" byWithInput(invariant, (pos, sequent) => {
+  def loopRule(invariant: Formula): DependentPositionWithAppliedInputTactic = "loopRule" byWithInput(invariant, (pos, sequent) => {
     //@todo maybe augment with constant conditions?
     require(pos.isTopLevel && pos.isSucc, "loopRule only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(||)")

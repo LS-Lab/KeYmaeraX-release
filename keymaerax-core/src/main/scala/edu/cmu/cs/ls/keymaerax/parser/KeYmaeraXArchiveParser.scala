@@ -68,8 +68,9 @@ object KeYmaeraXArchiveParser {
   /** Reads the archive content into string-only archive entries. */
   def read(archiveContentBOM: String): List[ArchiveEntry] = {
     val archiveContent: String = ParserHelper.removeBOM(archiveContentBOM)
-    // match ArchiveEntry, Lemma, Theorem, unless inside quotation marks
-    val regex = s"\\b(?=($DEFINITIONS_BEGIN|$ARCHIVE_ENTRY_BEGIN|$LEMMA_BEGIN|$THEOREM_BEGIN|$EXERCISE_BEGIN)\\b" + "(?=([^\"]*\"[^\"]*\")*[^\"]*$))"
+    // match the word boundary before ArchiveEntry etc. followed by "Name".
+    val regex = s"(?s)\\b(?=$DEFINITIONS_BEGIN)|\\b(?=($ARCHIVE_ENTRY_BEGIN|$LEMMA_BEGIN|$THEOREM_BEGIN|$EXERCISE_BEGIN)" +
+      "(?=(\\W*)\"([^\"]*)\"\\.(.*)$))"
 
     var globalDefs: Option[String] = None
 

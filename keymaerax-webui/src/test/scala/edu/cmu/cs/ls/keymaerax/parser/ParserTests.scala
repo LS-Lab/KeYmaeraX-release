@@ -303,7 +303,6 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "expand properties to their definition" in {
-    //@todo support for n-ary functions/predicates
     val input = "Functions. B init() <-> (x>=2). B safe(R) <-> (.>=0). End. ProgramVariables. R x. End. Problem. init() -> [{x:=x+1;}*]safe(x) End."
     KeYmaeraXProblemParser(input) shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
   }

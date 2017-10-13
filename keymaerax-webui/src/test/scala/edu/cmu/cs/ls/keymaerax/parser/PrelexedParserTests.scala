@@ -884,31 +884,31 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   }
 
   "Predicate/function parser (unless LAX mode)" should "parse" in {
-    if (!KeYmaeraXParser.LAX) parser("p(x,y)->f(x,y)>g(x)") shouldBe Imply(PredOf(p2, Pair(x,y)), Greater(FuncOf(f2,Pair(x,y)), FuncOf(g,x)))
+    if (!KeYmaeraXParser.LAX_MODE) parser("p(x,y)->f(x,y)>g(x)") shouldBe Imply(PredOf(p2, Pair(x,y)), Greater(FuncOf(f2,Pair(x,y)), FuncOf(g,x)))
   }
 
   it should "refuse to parse type mess p(x,y)->f(x,y)>p(x)" in {
-    if (!KeYmaeraXParser.LAX) a [ParseException] should be thrownBy parser("p(x,y)->f(x,y)>p(x)")
+    if (!KeYmaeraXParser.LAX_MODE) a [ParseException] should be thrownBy parser("p(x,y)->f(x,y)>p(x)")
   }
 
   it should "refuse to parse type mess p(x,y)->!p(x)" in {
-    if (!KeYmaeraXParser.LAX) a [ParseException] should be thrownBy parser("p(x,y)->!p(x)")
+    if (!KeYmaeraXParser.LAX_MODE) a [ParseException] should be thrownBy parser("p(x,y)->!p(x)")
   }
 
   it should "refuse to parse type mess p()->!p(x)" in {
-    if (!KeYmaeraXParser.LAX) a [ParseException] should be thrownBy parser("p()->!p(x)")
+    if (!KeYmaeraXParser.LAX_MODE) a [ParseException] should be thrownBy parser("p()->!p(x)")
   }
 
   it should "refuse to parse type mess p() -> [x:=p();]true" in {
-    if (!KeYmaeraXParser.LAX) a [ParseException] should be thrownBy parser("p() -> [x:=p();]true")
+    if (!KeYmaeraXParser.LAX_MODE) a [ParseException] should be thrownBy parser("p() -> [x:=p();]true")
   }
 
   it should "refuse to parse type mess p() -> [{x'=p()}]true" in {
-    if (!KeYmaeraXParser.LAX) a [ParseException] should be thrownBy parser("p() -> [{x'=p()}]true")
+    if (!KeYmaeraXParser.LAX_MODE) a [ParseException] should be thrownBy parser("p() -> [{x'=p()}]true")
   }
 
   it should "refuse to parse type mess x() -> [x:=x(x);]x()>x(x,x())" in {
-    if (!KeYmaeraXParser.LAX) a [ParseException] should be thrownBy parser("x() -> [x:=x(x);]x()>x(x,x())")
+    if (!KeYmaeraXParser.LAX_MODE) a [ParseException] should be thrownBy parser("x() -> [x:=x(x);]x()>x(x,x())")
   }
 
   "Annotation parser" should "parse x>0 -> [{x:=x+1;}*@invariant(x>0)]x>0" in {

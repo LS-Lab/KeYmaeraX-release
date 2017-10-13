@@ -30,19 +30,11 @@ class CControllerGenerator extends CodeGenerator {
   private def getParams(prg: Program): Set[NamedSymbol] = StaticSemantics.symbols(prg) -- StaticSemantics.boundVars(prg).toSet
 
   private lazy val programHeader: String = {
-    """/* Replace with your favorite correct(!) stack implementation. */
-      |typedef struct stateStack {
-      |  int top;
-      |  state items[10];
-      |} stateStack;
-      |stateStack initStack() { return (stateStack) { .top = -1 }; }
-      |void push(stateStack* const s, state item) { s->items[++s->top] = item; }
-      |state pop(stateStack* const s) { return s->items[s->top--]; }
-      |state ctrlStep(state curr, const parameters* const params, const input* const in)""".stripMargin
+    "state ctrlStep(state curr, const parameters* const params, const input* const in)"
   }
 
   private lazy val programBodySetup: String =
-    "struct { state state; stateStack reset; int success; } prg = { .state=curr, .reset=initStack(), .success=0 };"
+    "struct { state state; int success; } prg = { .state=curr, .success=0 };"
 
   /** Compiles expressions with the appropriate params/curr/pre struct location. */
   private def createExprGenerator(parameters: Set[NamedSymbol]) = new CFormulaTermGenerator({
@@ -66,16 +58,14 @@ class CControllerGenerator extends CodeGenerator {
         |$indent}""".stripMargin
     case Choice(a, b) =>
       s"""$indent{
-         |$indent  push(&prg.reset, prg.state);
+         |$indent  state reset = prg.state;
          |${generateProgramBody(a, indent + "  ")}
-         |$indent  if (!prg.success) prg.state = pop(&prg.reset);
-         |$indent  else pop(&prg.reset);
+         |$indent  if (!prg.success) prg.state = reset;
          |$indent}
          |${indent}if (!prg.success) {
-         |$indent  push(&prg.reset, prg.state);
+         |$indent  state reset = prg.state;
          |${generateProgramBody(b, indent + "  ")}
-         |$indent  if (!prg.success) prg.state = pop(&prg.reset);
-         |$indent  else pop(&prg.reset);
+         |$indent  if (!prg.success) prg.state = reset;
          |$indent}""".stripMargin
   }
 }

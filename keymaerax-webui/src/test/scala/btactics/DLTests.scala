@@ -592,7 +592,7 @@ class DLTests extends TacticTestBase {
     (finalTree.nodes.toSet - finalTree.root).foreach(_.maker shouldBe 'defined)
   }
 
-  ignore should "work with multi-variate abstract invariant" in {
+  it should "work with multi-variate abstract invariant" ignore {
     val fml = "x>1 & y < -1 -> [{x:=x+1;y:=y-1;}*](x>0&y<0)".asFormula
     val tactic = implyR('R) & loop("J(x,y)".asFormula)('R) <(skip, skip, normalize partial)
     val result = proveBy(fml, tactic)
@@ -642,6 +642,21 @@ class DLTests extends TacticTestBase {
     // step
     result.subgoals(2).ante should contain only ("A>0".asFormula, "x>1".asFormula, "B>0".asFormula)
     result.subgoals(2).succ should contain only "[x:=A+B+1;]x>1".asFormula
+  }
+
+  it should "not fail on program constants" in {
+    val result = proveBy(s"A>0 ==> C<1, [{a_;}*]x>0".asSequent, loop("x>1".asFormula)(2))
+
+    result.subgoals should have size 3
+    // init
+    result.subgoals.head.ante should contain theSameElementsAs "A>0".asFormula::Nil
+    result.subgoals.head.succ should contain theSameElementsAs "C<1".asFormula::"x>1".asFormula::Nil
+    // step
+    result.subgoals(1).ante should contain theSameElementsAs "x>1".asFormula::Nil
+    result.subgoals(1).succ should contain theSameElementsAs "[a_;]x>1".asFormula::Nil
+    // use case
+    result.subgoals(2).ante should contain theSameElementsAs "x>1".asFormula::Nil
+    result.subgoals(2).succ should contain theSameElementsAs "x>0".asFormula::Nil
   }
 
   "Discrete ghost" should "introduce assignment to fresh variable" in {
