@@ -81,6 +81,9 @@ object ProvableSig {
     if(PROOF_TERMS_ENABLED) PTProvable.proveArithmetic(t,f) else Provable.proveArithmetic(t,f)
 }
 
+/**
+ * A direct [[Provable]] straight from the core that does not keep track of its proof term.
+ */
 case class NoProofTermProvable(provable: Provable) extends ProvableSig {
   override val conclusion: Sequent = provable.conclusion
   override val subgoals: IndexedSeq[Sequent] = provable.subgoals
@@ -109,7 +112,8 @@ case class NoProofTermProvable(provable: Provable) extends ProvableSig {
 
   override def proveArithmetic(t: QETool, f: Formula): Lemma = Provable.proveArithmetic(t,f)
 
-  override def prettyString: String = s"NoProofTermProvable(${provable.prettyString})"
+  override def prettyString: String = provable.prettyString
+  //s"NoProofTermProvable(${provable.prettyString})"
 }
 object NoProofTermProvable {
   val axioms: Map[String, ProvableSig] = Provable.axioms.map(kvp => (kvp._1, NoProofTermProvable(kvp._2, 0)))
