@@ -136,7 +136,7 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
   override val conclusion: Sequent = provable.conclusion
   override val subgoals: IndexedSeq[Sequent] = provable.subgoals
 
-  override def proved: Sequent = provable.proved //@todo should we also check whether pt proof-checks?
+  override def proved: Sequent = provable.proved
 
   override def apply(rule: Rule, subgoal: Subgoal): ProvableSig =
     PTProvable(provable(rule, subgoal), RuleApplication(pt, rule.name, subgoal))
