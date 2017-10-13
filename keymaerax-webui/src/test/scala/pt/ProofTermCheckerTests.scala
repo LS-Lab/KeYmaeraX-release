@@ -1,7 +1,7 @@
 package pt
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, BelleProvable}
-import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
+import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt._
@@ -43,6 +43,15 @@ class ProofTermCheckerTests extends TacticTestBase {
     val tacticResult = proveBy(provable, t)
     println(tacticResult.prettyString)
   }
+
+  it should "work for prop tautologies" in withMathematica(_ => {
+    val f = "A() -> A()".asFormula
+    val provable = PTProvable.startProof(f)
+    val t = TactixLibrary.implyR(1) & TactixLibrary.close(-1,1)
+
+    val tacticResult = proveBy(provable, t)
+    println(tacticResult)
+  })
 
   "\\FOLR Tautology checker" should "check j_{0=0} : 0=0" ignore {
     val zEz : Formula = "0=0".asFormula
