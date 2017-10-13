@@ -138,8 +138,8 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
     PTProvable(provable(rule, subgoal), RuleApplication(pt, rule.name, subgoal))
 
   override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig = subderivation match {
-    case subprovable: ProvableSig => ???
     case PTProvable(subProvable, subPT) => PTProvable(provable(subProvable, subgoal), subPT)
+    case subprovable: ProvableSig => ???
   }
 
   override def apply(subst: USubst): ProvableSig =
@@ -149,8 +149,8 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
     PTProvable(provable(newConsequence, rule), ForwardNewConsequenceTerm(pt, newConsequence, rule))
 
   override def apply(prolongation: ProvableSig): ProvableSig = prolongation match {
-    case subProvable: ProvableSig => ???
     case prolongationProof: PTProvable => PTProvable(prolongationProof.provable(prolongation), ProlongationTerm(pt, prolongationProof))
+    case subProvable: ProvableSig => ???
   }
 
   override def sub(subgoal: Subgoal): ProvableSig =
@@ -182,3 +182,4 @@ object PTProvable {
 
   def proveArithmetic(t: QETool, f: Formula): Lemma = ??? //@todo after changing everything to ProvableSig's, then create a lemma with an PTProvable.
 }
+
