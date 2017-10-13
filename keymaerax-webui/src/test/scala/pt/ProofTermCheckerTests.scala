@@ -1,5 +1,6 @@
 package pt
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, BelleProvable}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
@@ -24,9 +25,23 @@ class ProofTermCheckerTests extends TacticTestBase {
     val label = "[:=] assign"
     val f = "[x_:=f();]p(x_) <-> p(f())".asFormula
     val t = US(USubst.apply(scala.collection.immutable.Seq()), label)
-    val certificate = ProofChecker(AxiomTerm(label), f)
-    certificate.isDefined shouldBe true
-    proves(certificate.get, f) shouldBe true
+
+    val proofTerm = AxiomTerm(label)
+
+    //Get the certificate
+    val checkResult = ProofChecker(proofTerm, f)
+    checkResult.isDefined shouldBe true
+    proves(checkResult.get, f) shouldBe true
+  }
+
+  "Belle interpreter" should "generate proof terms when supplied with the PTProvable as input" in {
+    val label = "[:=] assign"
+    val f = "[x_:=f();]p(x_) <-> p(f())".asFormula
+    val t = US(USubst.apply(scala.collection.immutable.Seq()), label)
+
+    val provable = PTProvable.startProof(f)
+    val tacticResult = proveBy(provable, t)
+    println(tacticResult.prettyString)
   }
 
   "\\FOLR Tautology checker" should "check j_{0=0} : 0=0" ignore {

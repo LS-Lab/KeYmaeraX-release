@@ -143,7 +143,26 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
 
   override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig = subderivation match {
     case PTProvable(subProvable, subPT) => PTProvable(provable(subProvable, subgoal), subPT)
-    case subprovable: ProvableSig => ???
+    case subprovable: ProvableSig => {
+      //Find an axiom or rule with the same name.
+      val axiom = PTProvable.axioms.find(p => p._2.underlyingProvable == subprovable.underlyingProvable)
+      val rule = PTProvable.rules.find(p => p._2.underlyingProvable == subprovable.underlyingProvable)
+
+      //If such an axiom exists, create evidence using the axiom's associated proof certificate.
+      if(axiom.isDefined) {
+        val PTProvable(subProvable, subPT) = PTProvable.axioms(axiom.get._1)
+        PTProvable(provable(subProvable, subgoal), subPT)
+      }
+      //And ditto for rules.
+      else if(rule.isDefined) {
+        val PTProvable(subProvable, subPT) = PTProvable.rules(axiom.get._1)
+        PTProvable(provable(subProvable, subgoal), subPT)
+      }
+      else {
+        //For more complicated uses of useAt, by, etc. it's unclear what to do (and indeed the general architecture is problematic -- same reason that extraction works by the miracle of hard work aone).
+        throw new Exception(s"Cannot construct a proof term for ${subderivation} because it has no associated proof term.")
+      }
+    }
   }
 
   override def apply(subst: USubst): ProvableSig =
@@ -176,9 +195,9 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
 }
 
 object PTProvable {
-  val axioms: immutable.Map[String, ProvableSig] = Provable.axioms.map(x => (x._1, PTProvable(x._2.asInstanceOf[ProvableSig], AxiomTerm(x._1))))
+  val axioms: immutable.Map[String, ProvableSig] = Provable.axioms.map(x => (x._1, PTProvable(NoProofTermProvable.axioms.apply(x._1), AxiomTerm(x._1))))
 
-  val rules: immutable.Map[String, ProvableSig] = Provable.rules.map(x => (x._1, PTProvable(x._2.asInstanceOf[ProvableSig], RuleTerm(x._1))))
+  val rules: immutable.Map[String, ProvableSig] = Provable.rules.map(x => (x._1, PTProvable(NoProofTermProvable.rules.apply(x._1), RuleTerm(x._1))))
 
   def startProof(goal : Sequent): ProvableSig = PTProvable(NoProofTermProvable.startProof(goal), NoProof())
 
