@@ -30,6 +30,15 @@ angular.module('keymaerax.controllers').controller('ServerInfoCtrl', ['$scope', 
             $scope.isLocal = data.success;
         });
 
+  $http.get('/licenses')
+    .success(function(data) {
+      if(data.errorThrown) {
+        $scope.licenses = [];
+        showCaughtErrorMessage($uibModal, data, "Unable to retrieve third-party licenses")
+      }
+      $scope.licenses = data.licenses;
+    });
+
   $scope.$emit('routeLoaded', {theview: 'dashboard'});
 }]);
 
