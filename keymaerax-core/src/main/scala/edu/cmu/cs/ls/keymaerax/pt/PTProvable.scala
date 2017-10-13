@@ -138,8 +138,18 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
 
   override def proved: Sequent = provable.proved
 
-  override def apply(rule: Rule, subgoal: Subgoal): ProvableSig =
-    PTProvable(provable(rule, subgoal), RuleApplication(pt, rule.name, subgoal))
+  override def apply(rule: Rule, subgoal: Subgoal): ProvableSig = {
+    //@todo do a total pattern match on all rules in the core and produce individualized proof terms for each of them.
+    //This is necessary because we need positions where the rule should be applied within the *sequent* in addition to subgoal,
+    //which is the position within the *provable*. Alternatively a subtype heirarchy for Rule would do the trick...
+    val sequentPositions = rule match {
+      case Close(ante,succ) => -(ante.getIndex - 1) :: (succ.getIndex + 1) :: Nil
+      case ImplyRight(succ) => succ.getIndex + 1 :: Nil
+      case _ => throw new Exception(s"PTProvable.apply(Rule,provable pos) is not completely implemented. Missing case: ${rule.name}") //See @todo above add cases as necessary...
+    }
+    PTProvable(provable(rule, subgoal), RuleApplication(pt, rule.name, subgoal, sequentPositions))
+  }
+
 
   override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig = subderivation match {
     case PTProvable(subProvable, subPT) => PTProvable(provable(subProvable, subgoal), subPT)
