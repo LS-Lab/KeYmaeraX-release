@@ -5,13 +5,12 @@ import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 
 /**
- * Tests of the proof term checker from
- * "A Logic of Proofs for Differential Dynamic Logic: Twoard Independently Checkable Proof Certificates for Dynamic Logics"
- * Nathan Fulton and Andre Platzer
- * In Submission to CPP'16
- *
+ * Tests of the proof term checker <strike>from</strike> inspired by
+ * Nathan Fulton and Andre Platzer, "A Logic of Proofs for Differential Dynamic Logic: Twoard Independently Checkable Proof Certificates for Dynamic Logics", CPP 16
+ * @todo update description of proof terms.
  * @author Nathan Fulton
  */
 class ProofTermCheckerTests extends TacticTestBase {
@@ -21,12 +20,13 @@ class ProofTermCheckerTests extends TacticTestBase {
   }
   private def debugCert(cert: ProvableSig) = println(cert.subgoals.mkString("\n --- \n"))
 
-  "Axiom checker" should "check i_{[:=] assign} : [v:=t();]p(v) <-> p(t())" ignore {
+  "Axiom checker" should "check i_{[:=] assign} : [v:=t();]p(v) <-> p(t())" in {
     val label = "[:=] assign"
-    val f = "[v:=t();]p(v) <-> p(t())".asFormula
-    val certificate = ProofChecker(dLConstant(label), f)
-    certificate.isDefined shouldBe true
-    proves(certificate.get, f) shouldBe true
+    val f = "[x_:=f();]p(x_) <-> p(f())".asFormula
+    proveBy(f, useAt(label)(1)) shouldBe 'proved
+//    val certificate = ProofChecker(AxiomTerm(label), f)
+//    certificate.isDefined shouldBe true
+//    proves(certificate.get, f) shouldBe true
   }
 
   "\\FOLR Tautology checker" should "check j_{0=0} : 0=0" ignore {
@@ -43,46 +43,6 @@ class ProofTermCheckerTests extends TacticTestBase {
     proves(certificate.get, f) shouldBe true
   }
 
-  "e ^ d term checker" should "check j_{0=0} ^ j_{1=1} : 0=0 & 1=1" ignore {
-    val f = "0=0 & 1=1".asFormula
-    val certificate = ProofChecker(AndTerm(FOLRConstant("0=0".asFormula), FOLRConstant("1=1".asFormula)), f)
-    certificate.isDefined shouldBe true
-    proves(certificate.get, f) shouldBe true
-  }
-
-  "e * d term checker" should "check j_{0=0 -> 1=1} * j_{0=0} : 1=1" ignore {
-    val oEo      = "1=1".asFormula
-    val zEz      = "0=0".asFormula
-    val zEzTerm  = FOLRConstant(zEz)
-    val implTerm = FOLRConstant(Imply(zEz, oEo))
-    val certificate = ProofChecker(ApplicationTerm(implTerm, zEz, zEzTerm), oEo)
-    certificate.isDefined shouldBe true
-    proves(certificate.get, oEo) shouldBe true
-
-  }
-
-  "e *<- d term checker" should "check j_{1=1 <-> 0=0} *-> j_{0=0} : 1=1" ignore {
-    val oEo      = "1=1".asFormula
-    val zEz      = "0=0".asFormula
-    val zEzTerm  = FOLRConstant(zEz)
-    val equivTerm = FOLRConstant(core.Equiv(oEo, zEz))
-    val certificate = ProofChecker(LeftEquivalence(equivTerm, zEz, zEzTerm), oEo)
-    certificate.isDefined shouldBe true
-    debugCert(certificate.get)
-    proves(certificate.get, oEo) shouldBe true
-  }
-
-  "e *-> d term checker" should "check j_{1=1 <-> 0=0} *<- j_{1=1} : 0=0" ignore {
-    val oEo      = "1=1".asFormula
-    val zEz      = "0=0".asFormula
-    val oEoTerm  = FOLRConstant(oEo)
-    val equivTerm = FOLRConstant(core.Equiv(oEo, zEz))
-    val certificate = ProofChecker(RightEquivalence(equivTerm, oEo, oEoTerm), zEz)
-    certificate.isDefined shouldBe true
-    debugCert(certificate.get)
-    proves(certificate.get, zEz) shouldBe true
-  }
-
 
   //[v:=t();]p(v) <-> p(t())
   "usubst term checker" should "check \\sigma i_{[:=] assign} : [v:=1;]v=v <-> 1=1 for appropriate usubst" ignore {
@@ -95,33 +55,10 @@ class ProofTermCheckerTests extends TacticTestBase {
       Nil
     )
 
-    val instanceTerm = dLConstant(axiomName)
+    val instanceTerm = AxiomTerm(axiomName)
     val sigma = USubst(SubstitutionPair("f()".asTerm, "1".asTerm) :: Nil)
     val certificate = ProofChecker(UsubstTerm(instanceTerm, axiom, usubst), instance)
     certificate shouldBe defined
     proves(certificate.get, instance) shouldBe true
-  }
-
-  "CT term checker" should "check CT_\\sigma 1+1+1 = 1+2" ignore {
-    val goal = "1+1+1=2+1".asFormula
-
-    val premise = Equal("1+1".asTerm, "2".asTerm)
-    val premiseTerm = FOLRConstant(premise)
-
-    val c = Function("ctx_", None, Real, Real)
-    val cApp = FuncOf(c, DotTerm())
-    val fApp = UnitFunctional("f_", AnyArg, Real)
-    val gApp = UnitFunctional("g_", AnyArg, Real)
-
-    val usubst = USubst(
-      SubstitutionPair(fApp, "1+1".asTerm) ::
-      SubstitutionPair(gApp, "2".asTerm) ::
-      SubstitutionPair(cApp, Plus(DotTerm(), Number(1))) ::
-      Nil
-    )
-
-    val certificate = ProofChecker(CTTerm(premiseTerm, premise, usubst), goal)
-    certificate shouldBe defined
-    proves(certificate.get, goal) shouldBe true
   }
 }
