@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, USubstTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import org.scalatest._
 import testHelper.KeYmaeraXTestTags
 import testHelper.CustomAssertions.withSafeClue
@@ -29,7 +29,7 @@ import scala.collection.immutable.IndexedSeq
 @SummaryTest
 @USubstTest
 class URenameTests extends TacticTestBase {
-  KeYmaera.init(Map.empty)
+  KeYmaeraXTool.init(Map.empty)
 
   "Bound renaming" should "refuse semantic renaming on p(||) UnitPredicationals" taggedAs(AdvocatusTest) in {
     /** {{{

@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, UserPOJO}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
@@ -336,6 +337,18 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       val end = System.currentTimeMillis()
       val qeDuration = qeDurationListener.duration
       proof shouldBe 'proved
+
+      if (entry.kind == "lemma") {
+        val lemmaName = "user" + File.separator + entry.name
+        if (!LemmaDBFactory.lemmaDB.contains(lemmaName)) {
+          val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
+            "tool" -> "KeYmaera X",
+            "model" -> entry.fileContent,
+            "tactic" -> entry.tactics.head._2.prettyString
+          )) :: Nil)
+          LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
+        }
+      }
 
       statistics(statisticName) = (end-start, qeDuration, TacticStatistics.size(tactic), TacticStatistics.lines(tactic), proof.steps)
 

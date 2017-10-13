@@ -39,32 +39,38 @@ object KeYmaeraX {
   val usage: String = "KeYmaera X Prover" + " " + VERSION +
     """
       |
-      |Usage: java -Xss20M -jar keymaerax.jar
-      |  -prove filename.kyx -tactic filename.kyt [-out filename.kyp] |
-      |  -check filename.kya |
-      |  -modelplex filename.kyx [-monitorKind ctrl|model] [-out filename.kym]
-      |             [-isar] |
-      |  -codegen filename.kyx [-vars var1,var2,..,varn] [-out file.c] |
+      |Usage: java -jar keymaerax.jar
+      |  -prove file.kyx -tactic file.kyt [-out file.kyp] |
+      |  -check file.kya |
+      |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar] |
+      |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c] |
       |  -ui [web server options] |
-      |  -parse filename.kyx |
-      |  -bparse filename.kyt |
-      |  -repl filename.kyx [filename.kyt] [scaladefs]
+      |  -parse file.kyx |
+      |  -bparse file.kyt |
+      |  -repl file.kyx [file.kyt] [scaladefs]
+      |  -coasterx ( -component component-name [-formula] [-tactic] [-stats]
+      |                [-num-runs N] [-debug-level (0|1|2)]
+      |            | -coaster file.rctx -feet-per-unit X [-num-runs N]
+      |              [-velocityFPS V] [-formula] [-stats] [-compare-reuse]
+      |              [-debug-level (0|1|2)]  [-naive-arith]
+      |            | -table [-num-runs N] [-debug-level (0|1|2)])
       |
       |Actions:
-      |  -prove     run KeYmaera X prover on given problem file with given tactic
-      |  -check     run KeYmaera X prover on an archive of problems with tactics
+      |  -prove     run KeYmaera X prover on given model file with given tactic
+      |  -check     run KeYmaera X prover on an archive of models and tactics
       |  -modelplex synthesize monitor from given file by proof with ModelPlex tactic
-      |  -codegen   generate executable code from given file
-      |  -ui        start web user interface with optional arguments
-      |  -parse     return error code !=0 if the input problem file does not parse
+      |  -codegen   generate executable code from given model file
+      |  -ui        start web user interface with optional server arguments
+      |  -parse     return error code !=0 if the input model file does not parse
       |  -bparse    return error code !=0 if bellerophon tactic file does not parse
-      |  -repl      prove interactively from command line
+      |  -repl      prove interactively from REPL command line
+      |  -coasterx  verify roller coasters
       |
       |Additional options:
       |  -tool mathematica|z3 choose which tool to use for arithmetic
       |  -mathkernel MathKernel(.exe) path to the Mathematica kernel executable
       |  -jlink path/to/jlinkNativeLib path to the J/Link native library directory
-      |  -monitorKind ctrl|model what kind of monitor to generate with ModelPlex
+      |  -monitor  ctrl|model what kind of monitor to generate with ModelPlex
       |  -vars     use ordered list of variables, treating others as constant functions
       |  -interval guard reals by interval arithmetic in floating point (recommended)
       |  -nointerval skip interval arithmetic presuming no floating point errors
@@ -104,6 +110,10 @@ object KeYmaeraX {
       else if (options.get('mode).contains("codegen"))
       //@note no MathKernel initialization needed for C generation
         codegen(options)
+      else if (options.get('mode).contains("coasterx")) {
+        CoasterXMain.main(options)
+        shutdownProver()
+      }
       else if (!options.get('mode).contains("ui") ) {
         try {
           initializeProver(
@@ -154,6 +164,40 @@ object KeYmaeraX {
     })
   }
 
+  // Separate argument parsing function so that options (e.g. the -tactic option) can be different for coasterx vs.
+  // regular usage
+  private def nextCoasterOption(map: OptionMap, list: List[String]): OptionMap = {
+    //-coasterx (-component component-name [-formula] [-tactic] [-stats] | -coaster filename.rctx -feet-per-unit X [-velocity V] [-formula] [-stats] | -table2)
+    list match {
+      case "-debug-level" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('debugLevel -> value), tail)
+        else optionErrorReporter("-debug-level")
+      case "-component" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('coasterxMode -> "component", 'in -> value), tail)
+        else optionErrorReporter("-component")
+      case "-table" :: tail => nextCoasterOption(map ++ Map('coasterxMode -> "table"), tail)
+      case "-formula" :: tail => nextCoasterOption(map ++ Map('doFormula -> "true"), tail)
+      case "-tactic" :: tail => nextCoasterOption(map ++ Map('doTactic -> "true"), tail)
+      case "-stats" :: tail => nextCoasterOption(map ++ Map('doStats -> "true"), tail)
+      case "-compare-reuse" :: tail => nextCoasterOption(map ++ Map('compareReuse -> "true"), tail)
+      case "-num-runs" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('numRuns -> value), tail)
+        else optionErrorReporter("-num-runs")
+      case "-coaster" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('coasterxMode -> "coaster", 'in -> value), tail)
+        else optionErrorReporter("-coaster")
+      case "-naive-arith" :: tail =>
+        nextCoasterOption(map ++ Map('naiveArith -> "true"), tail)
+      case "-feet-per-unit" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('feetPerUnit -> value), tail)
+        else optionErrorReporter("-feet-per-unit")
+      case "-velocityFPS" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextCoasterOption(map ++ Map('velocity -> value), tail)
+        else optionErrorReporter("-velocityFPS")
+      case _ => map
+    }
+  }
+
   private def nextOption(map: OptionMap, list: List[String]): OptionMap = {
     list match {
       case Nil => map
@@ -177,6 +221,8 @@ object KeYmaeraX {
       case "-codegen" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
         else optionErrorReporter("-codegen")
+      case "-coasterx" :: tail =>
+        nextCoasterOption(map ++ Map('mode -> "coasterx"), tail)
       case "-repl" :: model :: tactic_and_scala_and_tail =>
         val posArgs = tactic_and_scala_and_tail.takeWhile(x => !x.startsWith("-"))
         val restArgs = tactic_and_scala_and_tail.dropWhile(x => !x.startsWith("-"))
@@ -192,9 +238,9 @@ object KeYmaeraX {
       case "-vars" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
         else optionErrorReporter("-vars")
-      case "-monitorKind" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('monitorKind -> Symbol(value)), tail)
-        else optionErrorReporter("-monitorKind")
+      case "-monitor" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('monitor -> Symbol(value)), tail)
+        else optionErrorReporter("-monitor")
       case "-tactic" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tactic -> value), tail)
         else optionErrorReporter("-tactic")
@@ -583,7 +629,7 @@ object KeYmaeraX {
     val pw = new PrintWriter(outputFileName + ".kym")
 
     val kind =
-      if (options.contains('monitorKind)) options('monitorKind).asInstanceOf[Symbol]
+      if (options.contains('monitor)) options('monitor).asInstanceOf[Symbol]
       else 'model
 
     val outputFml = if (options.contains('vars))
@@ -670,7 +716,8 @@ object KeYmaeraX {
       if (options.contains('vars)) options('vars).asInstanceOf[Array[BaseVariable]].toSet
       else StaticSemantics.vars(inputFormula).symbols.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
     val codegenStart = Platform.currentTime
-    val output = (new CGenerator(new CMonitorGenerator()))(inputFormula, vars, outputFileName)
+    //@todo input variables (nondeterministically assigned in original program)
+    val output = (new CGenerator(new CMonitorGenerator()))(inputFormula, vars, Set(), outputFileName)
     Console.println("[codegen time " + (Platform.currentTime - codegenStart) + "ms]")
     val pw = new PrintWriter(outputFileName + ".c")
     pw.write(stampHead(options))

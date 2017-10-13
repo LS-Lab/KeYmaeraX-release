@@ -52,12 +52,13 @@ object CoasterXParser {
 
   sealed trait Section {}
   final case class ArcSection(param:Option[ArcParam], gradient:Option[Term]) extends Section {}
-  final case class LineSection(param:Option[LineParam], gradient:Option[Term]) extends Section {}
+  final case class LineSection(param:Option[LineParam], gradient:Option[Term], isUp:Boolean) extends Section {}
 
   type Point = (Number, Number)
   type TPoint = (Term, Term)
 
   type File = (List[TPoint], List[Section], Number, SectionParam)
+  type AFile = (List[TPoint], List[Section], Number, SectionParam, List[TPoint])
 
   def parseArcParam(str:String):Option[(Option[ArcParam],String)] = {
     peelPrefix(str, "(None,)") match {
@@ -70,7 +71,8 @@ object CoasterXParser {
         peelPrefix(post4, ",").flatMap({case post5 =>
         parseNumber(post5).flatMap({case (theta2, post6) =>
         peelPrefix(post6,")").map({case post7 =>
-        (Some(ArcParam((x1,Number(WORLD_HEIGHT-x2.value)),(x3,Number(WORLD_HEIGHT-x4.value)),theta1,theta2)),post7)})})})})})})})}
+          //NOTE: Swaps x2 vs x4 to maintain "greater coord on right" after subtracting...
+        (Some(ArcParam((x1,Number(WORLD_HEIGHT-x4.value)),(x3,Number(WORLD_HEIGHT-x2.value)),theta1,theta2)),post7)})})})})})})})}
   }
 
   def parseLineParam(str:String):Option[(Option[LineParam],String)] = {
@@ -100,7 +102,13 @@ object CoasterXParser {
           peelPrefix(post3,",").flatMap({case post4 =>
           parseNumberOption(post4).flatMap({case (grad, post5) =>
           peelPrefix(post5, ")").map({case post6 =>
-          (LineSection(lineParam,grad),post6)})})})})})
+            lineParam match {
+              case None =>
+                (LineSection(lineParam, grad, false), post6)
+              case Some(LineParam((_, Number(y0)), (_, Number(y1)))) =>
+                (LineSection(lineParam,grad,y0 < y1),post6)
+            }
+          })})})})})
       }
     })
   }

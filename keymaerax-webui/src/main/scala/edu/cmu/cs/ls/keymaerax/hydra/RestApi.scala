@@ -867,6 +867,14 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }
 
+  val licenses: Route = path("licenses") {
+    pathEnd {
+      get {
+        completeRequest(new LicensesRequest(), EmptyToken())
+      }
+    }
+  }
+
   val examples: SessionToken=>Route = (t : SessionToken) => path("examples" / "user" / Segment / "all") { userId =>
     pathEnd {
       get {
@@ -991,7 +999,8 @@ trait RestApi extends HttpService with SLF4JLogging {
     mathConfSuggestion ::
     devAction          ::
     checkProofValidation ::
-    validateProof ::
+    validateProof      ::
+    licenses           ::
     Nil
 
   /** Requests that need a session token parameter.

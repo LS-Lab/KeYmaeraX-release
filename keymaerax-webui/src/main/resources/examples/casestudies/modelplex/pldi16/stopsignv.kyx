@@ -15,7 +15,7 @@ Problem.
       ++ v := 0;
      }
      t := 0;
-     { x'=0*x+v, t'=0*t+1 & t <= ep }
+     { x'=v, t'=1 & t <= ep }
    }*@invariant(x <= S)
   ]x <= S
 End.

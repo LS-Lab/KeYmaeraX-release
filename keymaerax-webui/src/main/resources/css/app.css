@@ -662,6 +662,45 @@ del {
   height: 95%;
 }
 
+.modal-fullscreen .modal-content {
+  height: 100%;
+}
+
+.modal-fullscreen .modal-body {
+  height: calc(100% - 65px);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-fullscreen .modal-header~.modal-body {
+  height: calc(100% - 130px);
+}
+
+.k4-vertical-fill-flex {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.k4-vertical-fill {
+  height: 100%;
+}
+/* first uib-tabset div */
+.k4-vertical-fill > div {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.k4-vertical-fill .tab-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.k4-vertical-fill .tab-content>.active {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .tacticalert-popover {
    width: 90%;
    left: 5% !important;

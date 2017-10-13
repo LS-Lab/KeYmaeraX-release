@@ -2,36 +2,20 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-import edu.cmu.cs.ls.keymaerax.btactics.coasterx.{CoasterXParser, CoasterXProver, CoasterXSpec}
+import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXParser.File
+import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXTestLib._
+import edu.cmu.cs.ls.keymaerax.btactics.coasterx.{CoasterXParser, CoasterXProver, CoasterXSpec, CoasterXTestLib}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 
+@SlowTest
+object CoasterXTests {
+
+}
 class CoasterXTests extends TacticTestBase {
-  val exampleFile1:String = "([(40, 100), \n  (800, 100), \n  (1003, 292), \n  (1014.0703641303933, 490.6092116668379), \n  (1037.047741675357, 512.3415096403996),\n  (1060, 491), \n  (1074.5057163758297, 291.8183498791612), \n  (1198, 111)], \n [('straight', (None,), None), \n  ('straight', ((40, 500, 800, 500),), 0.0),\n  ('arc', ((596.6848958333333, 93.36979166666652, 1003.3151041666667, 500.0), -90.0, 86.80966720837762), 17.940621403912424), \n  ('straight', ((1003, 308, 1014.0703641303933, 109.3907883331621),), 17.940621403912424), \n  ('arc', ((1014.0346977885041, 87.6584903596004, 1060.0607855622097, 133.68457813330605), 176.80966720837756, -86.80966720837756), 0), \n  ('arc', ((1014.0346977885041, 87.6584903596004, 1060.0607855622097, 133.68457813330605), 90, -85.8346983689234), -13.7312522153492), \n  ('straight', ((1060, 109, 1074.5057163758297, 308.1816501208388),), -13.7312522153492), \n  ('arc', ((1073.9302486950965, 74.48837803692527, 1509.6673714837575, 510.2255008255863), -175.83469836892337, 60.33353966713379), -0.4770003569825235)], \n165, \n(1143.3888820234438, 306.5466392767369, 1335.184957771975, 498.342715025268))"
-  val joints:String = "(40,100),(800,100),(1003,292),(1014.0703641303933,490.6092116668379),(1037.047741675357,512.3415096403996),(1060,491),(1074.5057163758297,291.8183498791612),(1198,111)"
-  val segments:String = "('straight',(None,),None),('straight',((40,500,800,500),),0.0),('arc',((596.6848958333333,93.36979166666652,1003.3151041666667,500.0),-90.0,86.80966720837762),17.940621403912424),('straight',((1003,308,1014.0703641303933,109.3907883331621),),17.940621403912424),('arc',((1014.0346977885041,87.6584903596004,1060.0607855622097,133.68457813330605),176.80966720837756,-86.80966720837756),0),('arc',((1014.0346977885041,87.6584903596004,1060.0607855622097,133.68457813330605),90,-85.8346983689234),-13.7312522153492),('straight',((1060,109,1074.5057163758297,308.1816501208388),),-13.7312522153492),('arc',((1073.9302486950965,74.48837803692527,1509.6673714837575,510.2255008255863),-175.83469836892337,60.33353966713379),-0.4770003569825235)"
-  val full:String = "([" + joints + "], [" + segments + "], 165, \n(1143.3888820234438, 306.5466392767369, 1335.184957771975, 498.342715025268))"
-  val seg1:String = "('straight',(None,),None)"
-  val seg2:String = "('straight',((40,500,800,500),),0.0)"
-  val seg3:String = "('arc',((596.6848958333333,93.36979166666652,1003.3151041666667,500.0),-90.0,86.80966720837762),17.940621403912424)"
-  val seg4:String = "('straight',((1003,308,1014.0703641303933,109.3907883331621),),17.940621403912424)"
-  val seg5:String = "('arc',((1014.0346977885041,87.6584903596004,1060.0607855622097,133.68457813330605),176.80966720837756,-86.80966720837756),0)"
-  val seg6:String = "('arc',((1014.0346977885041,87.6584903596004,1060.0607855622097,133.68457813330605),90,-85.8346983689234),-13.7312522153492)"
-  val seg7:String = "('straight',((1060,109,1074.5057163758297,308.1816501208388),),-13.7312522153492)"
-  val seg8:String = "('arc',((1073.9302486950965,74.48837803692527,1509.6673714837575,510.2255008255863),-175.83469836892337,60.33353966713379),-0.4770003569825235)"
-
-  // More example files
-  val straightLine = "([(0, 100), (1000, 100)], [('straight', (None,), None), ('straight', ((0, 500, 1000, 500),), 0.0)], 1.0, (0, 0, 0, 0))"
-  val quarterArc = "([(100, 100), (171, 129)], [('straight', (None,), None),   ('arc', ((0, 300, 200, 500), -90, 45.0), 1.0)], 500.0, (171, 129, 171, 129))"
-
-  val halfArc = "([(0, 200), (100, 300)], [('straight', (None,), None),   ('arc', ((0, 300, 200, 500), -180, -90.0), 0.0)], 500.0, (100, 300, 100, 300))"
-  val secondHalfArc = "([(100, 300), (200, 200)], [('straight', (None,), None),  ('arc', ((0, 300.0, 200, 500), 90.0, -90), -48.494845360825195)], 500.0, (100, 300, 100, 300))"
-
-  val fullArc = "([(0, 200), (100, 300), (200, 200)],  [('straight', (None,), None), ('arc', ((0, 300, 200, 500), -180, -90.0), 0.0),   ('arc', ((0, 300.0, 200, 500), 90.0, -90), -48.494845360825195)], 500.0, (-800, -94.31605562579006, 198.106405394016, 906.9587020648964))"
-  val simpleHill = "([(0, 100),  (100, 200),  (342, 300),   (579, 202),  (683, 102)],[('straight', (None,), None), ('straight', ((0, 500, 100, 400),), 1.0), ('arc', ((0, 300, 683, 983), 135.0, -45.0), 0), ('arc', ((0, 300, 683, 983), 90, -45.0), -1), ('straight', ((579, 398, 683, 497),), -1)], 500.0, (-2406.346757107975, -29.408888352737677, 1211.9531693319414, 3588.8910380871785))"
-  val simpleValley = "([(0, 500),  (100, 400),   (199, 359),   (299, 398),   (415, 505)], [('straight', (None,), None),  ('straight', ((0, 100, 100, 200),), -1.0),  ('arc', ((59, -39, 339, 241), -135, 45), 0),  ('arc', ((51, -55, 347, 241), -90,  43), 0.92), ('straight', ((299, 202, 415, 95),), 0.92)], 500.0, (415.37482499434077, 94.97095456951104, 253.3717788455165, 243.96392952765427))"
-
-
   "Joint Parser" should "parse first joint" in {
     val joint = CoasterXParser.parsePoint("(40,100)")
     joint shouldBe 'defined
@@ -115,7 +99,7 @@ class CoasterXTests extends TacticTestBase {
     ' '.isWhitespace shouldBe true
   }
 
-  def printFileSpec(s:String):Unit = println(CoasterXSpec(CoasterXParser.parseFile(s).get))
+  def printFileSpec(s:String):Unit = println(new CoasterXSpec(1.0)(CoasterXParser.parseFile(s).get))
 
   "Spec Generator" should "generate a spec for example coaster" in {
     printFileSpec(exampleFile1)
@@ -147,54 +131,160 @@ class CoasterXTests extends TacticTestBase {
     printFileSpec(simpleValley)
   }
 
+  "All components " should "prove and produce statistics" in { withMathematica(qeTool => {
+    val spec = new CoasterXSpec(1.0)
+    // file shouldnt matter
+    val file = straightLine
+    val parsed = CoasterXParser.parseFile(file).get
+    val (align,alignFml) = spec.prepareFile(parsed)
+    val env = spec.envelope(align)
+    val specc = spec.fromAligned((align,alignFml),env)
+    val specStr = KeYmaeraXPrettyPrinter.stringify(specc)
+    val specLenKB = specStr.length / 1000.0
+    val nVars = countVars(specc)
+
+    val prFast = new CoasterXProver(spec,env, reuseComponents = false, useNaive = false)
+
+    val q1ccw = doStats("Q1CCW", () => prFast.arcProofQ1CCW, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)
+    val q2ccw = doStats("Q2CCW", () => prFast.arcProofQ2CCW, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)
+    val q3cw  = doStats("Q3CW", () => prFast.arcProofQ3CW, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)
+    val q4cw  = doStats("Q4CW", () => prFast.arcProofQ4CW, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)
+    val q1 = doStats("Q1", () => prFast.arcProofQ1, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)
+    val q2 = doStats("Q2", () => prFast.arcProofQ2, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)
+    val q3 = doStats("Q3", () => prFast.arcProofQ3, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)
+    val q4 = doStats("Q4", () => prFast.arcProofQ4, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)
+    val s = doStats("Lineup", () => prFast.straightProofUp, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)
+    val ss = doStats("Linedown", () => prFast.straightProofDown, doFormula = true, doTactic = true, willDoStats = true, numRuns = 1)
+  })}
+
+
+  def prover(fileContents:String, modelName:String):ProvableSig = {
+    CoasterXTestLib.prover(fileContents, modelName, doFast = false, NUM_RUNS = 1, feetPerUnit = 1.0, velocity = None, doFormula = true, doStats = true)
+  }
+
   "Proof Generator" should "generate proof for straight line" in { withMathematica(qeTool => {
-    val pr = CoasterXProver(straightLine)
+    val pr = prover(straightLine, "Straight Line")
     pr shouldBe 'proved
     })
   }
 
   it should "generate proof for quarter arc" in { withMathematica(qeTool => {
-    val pr = CoasterXProver(quarterArc)
+    val pr = prover(quarterArc, "Quarter Arc")
     pr shouldBe 'proved
   })}
 
   it should "generate proof for half arc" in {  withMathematica(qeTool => {
-    val pr = CoasterXProver(halfArc)
+    val pr = prover(halfArc, "Half Arc 1")
     pr shouldBe 'proved
   })}
 
   it should "generate proof for second half arc" in {  withMathematica(qeTool => {
-    val pr = CoasterXProver(secondHalfArc)
+    val pr = prover(secondHalfArc, "Half Arc 2")
     pr shouldBe 'proved
   })}
 
-  it should "generate proof for full arc" in {  withMathematica(qeTool => {
-    val pr = CoasterXProver(fullArc)
+  it should "generate proof for Q1 CCW" in { withMathematica(qeTool => {
+    val pr = prover(q1arcCCW, "Q1 CCW")
+    pr shouldBe 'proved
+  })}
+
+  it should "generate proof for Q2 CCW" in { withMathematica(qeTool => {
+    val pr = prover(q2arcCCW, "Q2 CCW")
+    pr shouldBe 'proved
+  })}
+
+  it should "generate proof for Q3 CW" in { withMathematica(qeTool => {
+    val pr = prover(q3arcCW, "Q3 CW")
+    pr shouldBe 'proved
+  })}
+
+  it should "generate proof for Q4 CW" in { withMathematica(qeTool => {
+    val pr = prover(q4arcCW, "Q4 CW")
     pr shouldBe 'proved
   })}
 
   it should "generate proof for hill" in {  withMathematica(qeTool => {
-    val pr = CoasterXProver(simpleHill)
+    val pr = prover(simpleHill, "Simple Hill")
     pr shouldBe 'proved
   })}
 
   it should "generate proof for valley" in {  withMathematica(qeTool => {
-    val pr = CoasterXProver(simpleValley)
+    val pr = prover(simpleValley, "Simple Valley")
+    pr shouldBe 'proved
+  })}
+
+  it should "generate proof for simple inversion" in {  withMathematica(qeTool => {
+    val pr = prover(simpleInversion, "Simple Inversion")
+    pr shouldBe 'proved
+  })}
+
+  it should "generate proof for example coaster" in { withMathematica(qeTool => {
+    val pr = prover(exampleFile1, "Example (Top Thrill?)")
+    pr shouldBe 'proved
+  })
+  }
+
+  it should "generate proof for extreme envelope" in { withMathematica(qeTool => {
+    val pr = prover(extremeEnv, "Extreme Envelope")
+    pr shouldBe 'proved
+  })}
+
+  it should "generate proof for many arc sizes" in { withMathematica(qeTool => {
+    val pr = prover(multiSizeArcs, "ManyArcSizes")
+    pr shouldBe 'proved
+  })}
+
+  it should "generate proof for shrinking Q3" in { withMathematica(qeTool => {
+    val pr = prover(q3Shrinks, "Shrinking Q3")
+    pr shouldBe 'proved
+  })}
+
+  it should "generate proof for growing Q3" in { withMathematica(qeTool => {
+    val pr = prover(q3Grows, "Growing Q3")
+    pr shouldBe 'proved
+  })}
+
+  it should "generate proof for Paul Gregg's backyard coaster" in { withMathematica(qeTool => {
+    val pr = prover(byrc, "BYRC")
+    pr shouldBe 'proved
+  })
+  }
+
+  it should "generate proof for Lil' Phantom" in { withMathematica(qeTool => {
+    val pr = prover(lilPhantom, "Lil' Phantom")
     pr shouldBe 'proved
   })}
 
 
-  /* bigDecimal = {BigDecimal@2869} "0E+1"
- intVal = {BigInteger@2872} "0"
- scale = -1
- precision = 1
- stringCache = "0E+1"
- intCompact = 0
-mc = {MathContext@2870} "precision=34 roundingMode=HALF_EVEN"
-computedHashCode = 1565550863*/
+  it should "generate proof for  The Phantom's Revenge" in { withMathematica(qeTool => {
+    val pr = prover(phantomsRevenge, "Phantom's Revenge")
+    pr shouldBe 'proved
+  })
+  }
+
+  it should "generate proof for single loop" in { withMathematica(qeTool => {
+    val pr = prover(singleLoopByGUI, "Single loops")
+    pr shouldBe 'proved
+  })}
+
+/*  it should "generate proof for Steel Phantom's Loops" in { withMathematica(qeTool => {
+    val pr = prover(phantomJustLoops, "Just the loops")
+    pr shouldBe 'proved
+  })}
+*/
+  it should "generate proof for The Steel Phantom" in { withMathematica(qeTool => {
+    val pr = prover(steelPhantom, "Steel Phantom")
+    pr shouldBe 'proved
+  })}
+
+  it should "generate proof for El Toro" in { withMathematica(qeTool => {
+    val pr = prover(elToro, "El Toro Full")
+    pr shouldBe 'proved
+  })}
+
+
   "Core Parser" should "not do funny scientific notation" in {
     val x = "0.00000001".asTerm
-    //val x = Number(BigDecimal(1)/BigDecimal(10000000L))
     val str = x.prettyString
     str.asTerm shouldBe x
   }

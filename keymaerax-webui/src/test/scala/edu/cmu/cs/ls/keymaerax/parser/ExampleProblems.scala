@@ -4,7 +4,8 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Formula, Number, Plus, PrettyPrinter, Program, Real, Times, Trafo, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Formula, FuncOf, Function, Number, Pair, Plus, PrettyPrinter, Program,
+Real, Times, Trafo, Tuple, Unit}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -200,6 +201,139 @@ class ExampleProblems extends FlatSpec with Matchers {
 
     val thrown = the [ParseException] thrownBy KeYmaeraXProblemParser.parseProblem(problem)
     thrown.getMessage should include ("Function/predicate f((•_0,(•_1,•_2))) defined using undeclared •_3")
+  }
+
+  it should "replace names with the appropriate dots" in {
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
+    val problem =
+      """Functions.
+        |  R f(R x, R y, R z) = (x + y*z).
+        |End.
+        |
+        |Problem.
+        |  f(2,3,4)>3
+        |End.
+      """.stripMargin
+
+    val (d, formula) = KeYmaeraXProblemParser.parseProblem(problem)
+    d.decls should have size 1
+    d.decls should contain key ("f", None)
+    d.decls(("f", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Tuple(Real, Tuple(Real, Real))
+      codomain shouldBe Real
+      interpretation shouldBe Plus(DotTerm(Real, Some(0)), Times(DotTerm(Real, Some(1)), DotTerm(Real, Some(2))))
+    }
+    formula shouldBe KeYmaeraXParser("2+3*4>3")
+  }
+
+  it should "not confuse arguments of same name across definitions" in {
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
+    val problem =
+      """Definitions.
+        |  R f(R x, R y, R z) = (x+y*z).
+        |  R g(R a, R x, R y) = (f(x,y,a)).
+        |End.
+        |
+        |Problem.
+        |  f(1,2,3)>0 -> g(3,1,2)>0
+        |End.
+      """.stripMargin
+
+    val (d, formula) = KeYmaeraXProblemParser.parseProblem(problem)
+    d.decls should have size 2
+    d.decls should contain key ("f", None)
+    d.decls(("f", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Tuple(Real, Tuple(Real, Real))
+      codomain shouldBe Real
+      interpretation shouldBe Plus(DotTerm(Real, Some(0)), Times(DotTerm(Real, Some(1)), DotTerm(Real, Some(2))))
+    }
+    d.decls should contain key ("g", None)
+    d.decls(("g", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Tuple(Real, Tuple(Real,Real))
+      codomain shouldBe Real
+      interpretation shouldBe FuncOf(Function("f", None, Tuple(Real, Tuple(Real, Real)), Real),
+        Pair(DotTerm(Real, Some(1)), Pair(DotTerm(Real, Some(2)), DotTerm(Real, Some(0)))))
+    }
+    formula shouldBe KeYmaeraXParser("1+2*3>0 -> 1+2*3>0")
+  }
+
+  it should "correctly dottify in the presence of unused arguments" in {
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
+    val problem =
+      """Definitions.
+        |  R f(R x, R y) = (y+3).
+        |End.
+        |
+        |Problem.
+        |  f(1,2)>0
+        |End.
+      """.stripMargin
+
+    val (d, formula) = KeYmaeraXProblemParser.parseProblem(problem)
+    d.decls should have size 1
+    d.decls should contain key ("f", None)
+    d.decls(("f", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Tuple(Real, Real)
+      codomain shouldBe Real
+      interpretation shouldBe Plus(DotTerm(Real, Some(1)), Number(3))
+    }
+    formula shouldBe KeYmaeraXParser("2+3>0")
+  }
+
+  it should "replace argument name of unary function with non-indexed dot (for backwards compatibility)" in {
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
+    val problem =
+      """Functions.
+        |  R f(R x) = (x + 2).
+        |End.
+        |
+        |Problem.
+        |  f(2)>3
+        |End.
+      """.stripMargin
+
+    val (d, formula) = KeYmaeraXProblemParser.parseProblem(problem)
+    d.decls should have size 1
+    d.decls should contain key ("f", None)
+    d.decls(("f", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Real
+      codomain shouldBe Real
+      interpretation shouldBe Plus(DotTerm(Real), Number(2))
+    }
+    formula shouldBe KeYmaeraXParser("2+2>3")
+  }
+
+  it should "allow both . and explicit ._0 in unary function definition" in {
+    PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
+    def problem(dot: String): String =
+      s"""Functions.
+        |  R f(R) = ($dot + 2).
+        |End.
+        |
+        |Problem.
+        |  f(2)>3
+        |End.
+      """.stripMargin
+
+    val (d, f) = KeYmaeraXProblemParser.parseProblem(problem("._0"))
+    d.decls should have size 1
+    d.decls should contain key ("f", None)
+    d.decls(("f", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Real
+      codomain shouldBe Real
+      interpretation shouldBe Plus(DotTerm(Real), Number(2))
+    }
+    f shouldBe KeYmaeraXParser("2+2>3")
+
+    val (e, g) = KeYmaeraXProblemParser.parseProblem(problem("."))
+    e.decls should have size 1
+    e.decls should contain key ("f", None)
+    e.decls(("f", None)) match { case (Some(domain), codomain, Some(interpretation), _) =>
+      domain shouldBe Real
+      codomain shouldBe Real
+      interpretation shouldBe Plus(DotTerm(Real), Number(2))
+    }
+    g shouldBe KeYmaeraXParser("2+2>3")
   }
 
   it should "parse program definitions" in {

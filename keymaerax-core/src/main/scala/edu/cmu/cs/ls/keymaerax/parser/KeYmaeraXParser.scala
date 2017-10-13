@@ -105,7 +105,7 @@ object KeYmaeraXParser extends Parser {
   val parser = this
 
   /** Lax mode where the parser is a little flexible about accepting input. */
-  private[parser] val LAX = System.getProperty("LAX", "true")=="true"
+  private[keymaerax] val LAX_MODE = System.getProperty("LAX", "true")=="true"
 
   private[parser] val DEBUG = System.getProperty("DEBUG", "false")=="true"
 
@@ -178,7 +178,7 @@ object KeYmaeraXParser extends Parser {
     }
     semanticAnalysis(parse) match {
       case None => parse
-      case Some(error) => if (LAX) {if (false) println("WARNING: " + "Semantic analysis" + "\nin " + "parsed: " + printer.stringify(parse) + "\n" + error); parse}
+      case Some(error) => if (LAX_MODE) {if (false) println("WARNING: " + "Semantic analysis" + "\nin " + "parsed: " + printer.stringify(parse) + "\n" + error); parse}
       else throw ParseException("Semantic analysis error " + error, parse).inInput("<unknown>", Some(input))
     }
   }

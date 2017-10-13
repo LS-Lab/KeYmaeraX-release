@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaera
+import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 
 import scala.collection.immutable._
@@ -29,7 +29,7 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach {
   var pp: PrettyPrinter = _
 
   override def beforeEach(): Unit = {
-    KeYmaera.init(Map.empty)
+    KeYmaeraXTool.init(Map.empty)
     parser = KeYmaeraXParser
     pp = KeYmaeraXPrettyPrinter
   }
@@ -37,7 +37,7 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach {
   override def afterEach(): Unit = {
     pp = null
     parser = null
-    KeYmaera.shutdown()
+    KeYmaeraXTool.shutdown()
   }
 
   "The parser" should "parse a*(-b-c)" in {

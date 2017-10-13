@@ -427,21 +427,18 @@ object KeYmaeraXDeclarationsParser {
 
     val afterName = ts.tail.tail //skip over IDENT and REAL/BOOL tokens.
     if (afterName.head.tok == LPAREN) {
-      val (domainSort, domainSortRemainder) = parseFunctionDomainSort(afterName, nameToken)
-
-      val (interpretation, remainder) = parseInterpretation(sort, domainSortRemainder, nameToken)
-
-      checkInput(remainder.last.tok.equals(PERIOD),
-        "Expected declaration to end with . but found " + remainder.last, remainder.last.loc, "Reading a declaration")
-
-      (( (nameTerminal.name, nameTerminal.index), (Some(domainSort), sort, interpretation, nameToken)), remainder.tail)
+      val (fnDef, remainder) = splitDef(ts, RPAREN)
+      checkInput(fnDef.last.tok == PERIOD,
+        "Expected declaration to end with . but found " + fnDef.last, fnDef.last.loc, "Reading a declaration")
+      val (domainSort, domainSortRemainder) = parseFunctionDomainSort(fnDef.tail.tail, nameToken)
+      val interpretation = parseInterpretation(sort, domainSortRemainder, nameToken)
+      (( (nameTerminal.name, nameTerminal.index), (Some(domainSort), sort, interpretation, nameToken)), remainder)
     } else if (afterName.head.tok == PRG_DEF) {
-      val (interpretation, remainder) = parseInterpretation(sort, afterName, nameToken)
-
-      checkInput(remainder.last.tok.equals(PERIOD),
-        "Expected declaration to end with . but found " + remainder.last, remainder.last.loc, "Reading a declaration")
-
-      (( (nameTerminal.name, nameTerminal.index), (None, sort, interpretation, nameToken)), remainder.tail)
+      val (fnDef, remainder) = splitDef(ts, RBRACE)
+      checkInput(fnDef.last.tok == PERIOD,
+        "Expected declaration to end with . but found " + fnDef.last, fnDef.last.loc, "Reading a declaration")
+      val interpretation = parseInterpretation(sort, fnDef.tail.tail, nameToken)
+      (( (nameTerminal.name, nameTerminal.index), (None, sort, interpretation, nameToken)), remainder)
     } else if (afterName.head.tok == PERIOD) {
       (( (nameTerminal.name, nameTerminal.index) , (None, sort, None, nameToken) ), afterName.tail)
     } else {
@@ -457,7 +454,7 @@ object KeYmaeraXDeclarationsParser {
    *          _1: The sort of the entire function,
    *          _2: The reamining tokens.
    */
-  private def parseFunctionDomainSort(tokens : List[Token], of: Token) : (Sort, List[Token]) = {
+  private def parseFunctionDomainSort(tokens: List[Token], of: Token): (Sort, List[Token]) = {
     // Parse the domain sort.
     checkInput(tokens.length > 1, "domain sort expected in declaration", if (tokens.isEmpty) UnknownLocation else tokens.head.loc, "parsing function domain sort")
     checkInput(tokens.head.tok.equals(LPAREN), "function argument parentheses expected", tokens.head.loc, "parsing function domain sorts")
@@ -474,18 +471,55 @@ object KeYmaeraXDeclarationsParser {
       "unmatched LPAREN at end of function declaration. Intead, found: " + splitAtRparen._2.head, splitAtRparen._2.head.loc, "parsing function domain sorts")
     val remainder = splitAtRparen._2.tail
 
-    def toSort(tokens: List[Token]): Sort = tokens.head match {
-        case Token(COMMA, _) => toSort(tokens.tail)
-        case Token(LPAREN, _) =>
-          val (nestedSort, sortRemainder) = spanSorts(tokens)
-          assert(sortRemainder.head.tok == RPAREN, "Expected a closing parenthesis, but got " + sortRemainder.head.tok)
-          if (sortRemainder.tail.isEmpty) toSort(nestedSort) else Tuple(toSort(nestedSort), toSort(sortRemainder.tail))
-        case st@Token(_, _) if tokens.tail.nonEmpty => Tuple(parseSort(st, of), toSort(tokens.tail))
-        case st@Token(_, _) if tokens.tail.isEmpty => parseSort(st, of)
+    def dottify(body: List[Token], id: IDENT, nextDot: DOT): (List[Token], DOT) = {
+      val nextIdx = nextDot.index match {
+        case Some(i) => i+1
+        case None => 0
       }
+      (body.map(t => if (t.tok==id) Token(nextDot, t.loc) else t), DOT(Some(nextIdx)))
+    }
 
-    val domain = if (domainElements.isEmpty) Unit else toSort(domainElements)
-    (domain, remainder)
+    def toSort(tokens: List[Token], body: List[Token], nextDot: DOT): (Sort, List[Token], DOT) = tokens match {
+      case Nil => (Unit, body, nextDot)
+      case Token(COMMA, _)::tail => toSort(tail, body, nextDot)
+      case Token(LPAREN, _)::_ =>
+        val (nestedSort, sortRemainder) = spanSorts(tokens)
+        assert(sortRemainder.head.tok == RPAREN, "Expected a closing parenthesis, but got " + sortRemainder.head.tok)
+        if (sortRemainder.tail.isEmpty) {
+          toSort(nestedSort, body, nextDot)
+        } else {
+          val (s1, b1, d1) = toSort(nestedSort, body, nextDot)
+          val (s2, b2, d2) = toSort(sortRemainder.tail, b1, d1)
+          (Tuple(s1, s2), b2, d2)
+        }
+      case (st@Token(_, _))::Token(id: IDENT, _)::tail if tail.nonEmpty =>
+        val s1 = parseSort(st, of)
+        val (b1, d1) = dottify(body, id, nextDot)
+        val (s2, b2, d2) = toSort(tail, b1, d1)
+        (Tuple(s1, s2), b2, d2)
+      case (st@Token(_, _))::Token(id: IDENT, _)::Nil =>
+        val s1 = parseSort(st, of)
+        val (b1, d1) = dottify(body, id, nextDot)
+        (s1, b1, d1)
+      case (st@Token(_, _))::tail if tail.nonEmpty =>
+        val s1 = parseSort(st, of)
+        val (s2, b2, d2) = toSort(tail, body, nextDot)
+        (Tuple(s1, s2), b2, d2)
+      case (st@Token(_, _))::Nil => (parseSort(st, of), body, nextDot)
+    }
+
+    //@note backwards compatibility with f(R) = (. + 2).
+    toSort(domainElements, remainder, DOT(Some(0))) match {
+      case (Real, body, _) if body.forall(_.tok match {
+        case DOT(Some(0)) => true
+        case DOT(_) => false
+        case _ => true
+      }) => (Real, body.map(x => x.tok match {
+        case DOT(Some(0)) => Token(DOT(), x.loc)
+        case _ => x
+      }))
+      case (s, b, _) => (s, b)
+    }
   }
 
   /**
@@ -496,28 +530,34 @@ object KeYmaeraXDeclarationsParser {
     *          _1: The interpretation,
     *          _2: The reamining tokens.
     */
-  private def parseInterpretation(sort: Sort, tokens : List[Token], of: Token) : (Option[Expression], List[Token]) = {
+  private def parseInterpretation(sort: Sort, tokens: List[Token], of: Token): Option[Expression] = {
     /** Reads and parses a definition ending in `defDelim`PERIOD, and returns the remaining tokens after the definition. */
-    def parseDef(tokens: List[Token], defDelim: Terminal): (Option[Expression], List[Token]) = {
-      val decl = tokens.tail.sliding(2).toList.span({case Token(delim, _)::Token(PERIOD, _)::Nil => delim != defDelim case _ => true})
-      if (decl._2.isEmpty) throw new ParseException("Non-delimited definition",
-        tokens.head.loc.spanTo(decl._1.last.last.loc), decl._1.last.last.toString, ")", "", "parsing interpretation")
-      val (definition, remainder) = (decl._1.map(_.head) :+ decl._2.head.head, decl._2.map(_.last))
-      checkInput(remainder.head.tok == PERIOD,
-        "Non-delimited definition. Found: " + remainder.head, tokens.head.loc.spanTo(remainder.head.loc), "parsing interpretation")
+    def parseDef(tokens: List[Token], defDelim: Terminal): Option[Expression] = {
+      val definition = tokens.dropRight(1) //splitDef(tokens, defDelim)
       val expr = KeYmaeraXParser.parse(definition :+ Token(EOF))
       if (expr.sort != sort) throw new ParseException("Definition sort does not match declaration",
-        tokens.head.loc.spanTo(remainder.head.loc), "<" + expr.sort + ">", "<" + sort + ">", "", "parsing function interpretation")
-      else (Some(KeYmaeraXParser.parse(definition :+ Token(EOF))), remainder)
+        tokens.head.loc.spanTo(tokens.last.loc), "<" + expr.sort + ">", "<" + sort + ">", "", "parsing function interpretation")
+      else Some(expr)
     }
 
     (sort, tokens.head.tok) match {
       case (Real|Trafo, EQUIV) => throw new ParseException("Operator and sort mismatch", tokens.head.loc, EQUIV.img + " <" + EQUIV + ">", EQ.img + " <" + EQ + ">", "", "parsing function interpretation")
       case (Bool|Trafo, EQ)    => throw new ParseException("Operator and sort mismatch", tokens.head.loc, EQ.img + " <" + EQ + ">", EQUIV.img + " <" + EQUIV + ">", "", "parsing function interpretation")
-      case (_, EQUIV | EQ) => parseDef(tokens, RPAREN)
-      case (_, PRG_DEF) => parseDef(tokens, RBRACE)
-      case _ => (None, tokens)
+      case (_, EQUIV | EQ) => parseDef(tokens.tail, RPAREN)
+      case (_, PRG_DEF) => parseDef(tokens.tail, RBRACE)
+      case _ => None
     }
+  }
+
+  /** Splits a token stream at said definition delimiter followed by PERIOD. */
+  private def splitDef(tokens: List[Token], defDelim: Terminal): (List[Token], List[Token]) = {
+    val decl = tokens.sliding(2).toList.span({case Token(delim, _)::Token(PERIOD, _)::Nil => delim != defDelim case _ => true})
+    if (decl._2.isEmpty) throw new ParseException("Non-delimited definition",
+      tokens.head.loc.spanTo(decl._1.last.last.loc), decl._1.last.last.toString, ")", "", "parsing interpretation")
+    val (definition, remainder) = (decl._1.map(_.head) :+ decl._2.head.head, decl._2.map(_.last))
+    checkInput(remainder.head.tok == PERIOD,
+      "Non-delimited definition. Found: " + remainder.head, tokens.head.loc.spanTo(remainder.head.loc), "parsing interpretation")
+    (definition :+ remainder.head, remainder.tail)
   }
 
   private def parseSort(sortToken : Token, of: Token) : Sort = sortToken.tok match {
@@ -559,6 +599,14 @@ object KeYmaeraXDeclarationsParser {
         annotationListener(accumulated.exhaustiveSubst(prg), accumulated.exhaustiveSubst(fml)))
       val (nextDecl, remainders) = parseDeclaration(ts)
       KeYmaeraXParser.setAnnotationListener(annotationListener)
+      if (accumulated.decls.contains(nextDecl._1)) {
+        val name = nextDecl._1._2 match {
+          case Some(i) => nextDecl._1._1 + "_" + i
+          case None => nextDecl._1._1
+        }
+        throw new ParseException("Duplicate symbol '" + name + "'",
+          UnknownLocation, "", "", "", "")
+      }
       processDeclarations(remainders, Declaration(accumulated.decls.updated(nextDecl._1, nextDecl._2)))
     } else accumulated
 }

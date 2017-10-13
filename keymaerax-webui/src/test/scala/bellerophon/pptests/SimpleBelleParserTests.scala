@@ -1,5 +1,7 @@
 package bellerophon.pptests
 
+import java.io.File
+
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -575,6 +577,15 @@ class SimpleBelleParserTests extends TacticTestBase {
     }
   }
 
+  it should "not forget definitions in the middle of parsing" in {
+    inside(BelleParser.parseWithInvGen("useLemma({`Lemma`},{`prop`}); MR({`safeDist()>0`},1)", None,
+      Declaration(Map(("safeDist", None) -> (None, Real, Some("y".asTerm), null))))) {
+      case SeqTactic(_, adpt: AppliedDependentPositionTactic) => adpt.pt should have (
+        'inputs ("y>0".asFormula::Nil)
+      )
+    }
+  }
+
   it should "expand definitions when parsing locators" in {
     inside(BelleParser.parseWithInvGen("hideL('L=={`s=safeDist()`})", None, Declaration(Map()))) {
       case apt: AppliedPositionTactic => apt.locator shouldBe Find.FindL(0, Some("s=safeDist()".asFormula))
@@ -604,14 +615,14 @@ class SimpleBelleParserTests extends TacticTestBase {
   "Using lemmas" should "work in exactly matching open goal" in {
     val f = "x>0&y>1 -> y>1&x>0".asFormula
     val lemma = proveBy(f, TactixLibrary.prop)
-    LemmaDBFactory.lemmaDB.add(new Lemma(lemma, Lemma.requiredEvidence(lemma, Nil), Some("testPropLemma")))
+    LemmaDBFactory.lemmaDB.add(new Lemma(lemma, Lemma.requiredEvidence(lemma, Nil), Some(s"user${File.separator}testPropLemma")))
     proveBy(f, "useLemma({`testPropLemma`})".asTactic) shouldBe 'proved
   }
 
   it should "work with tactic adaptation" in {
     val f = "x>0&y>1 -> y>1&x>0".asFormula
     val lemma = proveBy(f, TactixLibrary.prop)
-    LemmaDBFactory.lemmaDB.add(new Lemma(lemma, Lemma.requiredEvidence(lemma, Nil), Some("testPropLemma")))
+    LemmaDBFactory.lemmaDB.add(new Lemma(lemma, Lemma.requiredEvidence(lemma, Nil), Some(s"user${File.separator}testPropLemma")))
     proveBy("x>0, y>1, z>2 ==> y>1&x>0".asSequent, "useLemma({`testPropLemma`}, {`prop`})".asTactic) shouldBe 'proved
   }
 
