@@ -85,38 +85,44 @@ In Mauricio Ayala-Rincón and César Muñoz, editors, Interactive Theorem Provin
 
 5. André Platzer.
 [Logical Foundations of Cyber-Physical Systems](http://lfcps.org/lfcps/).
-Springer, 2017. 
+Springer, 2017.
+
+The soundness assurances provided by a small LCF-style kernel are further strengthened by a cross-verification of the soundness theorem for the uniform substitution calculus in [Isabelle/HOL](https://github.com/LS-Lab/Isabelle-dL) and [Coq](https://github.com/LS-Lab/Coq-dL).
+
+6. Brandon Bohrer, Vincent Rahli, Ivana Vukotic, Marcus Völp and André Platzer.
+[Formally verified differential dynamic logic](http://dx.doi.org/10.1145/3018610.3018616).
+ACM SIGPLAN Conference on Certified Programs and Proofs, CPP 2017, Jan 16-17, 2017, Paris, France, pages 208-221, ACM, 2017.
 
 
 Further background information can be found in:
 
-6. André Platzer.
+7. André Platzer.
 [Differential dynamic logic for hybrid systems](http://dx.doi.org/10.1007/s10817-008-9103-8).
 Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
 
-7. André Platzer.
+8. André Platzer.
 [Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics](http://dx.doi.org/10.1007/978-3-642-14509-4).
 Springer, 2010. ISBN 978-3-642-14508-7. 
 
-8. André Platzer.
+9. André Platzer.
 [The structure of differential invariants and differential cut elimination](http://dx.doi.org/10.2168/LMCS-8(4:16)2012).
 Logical Methods in Computer Science, 8(4), pages 1-38, 2012. 
 
 A secondary goal of KeYmaera X is to also make it possible to implement extensions of differential dynamic logic, such as differential game logic for hybrid games as well as quantified differential dynamic logic for distributed hybrid systems:
 
-9. André Platzer. 
+10. André Platzer. 
 [Differential game logic](http://dx.doi.org/10.1145/2817824). 
 ACM Trans. Comput. Log., 17(1), 2015.
 
-10. André Platzer. 
+11. André Platzer. 
 [Differential hybrid games](http://dx.doi.org/10.1145/3091123). 
 ACM Trans. Comput. Log., 18(3), 2017.
 
-11. André Platzer.
+12. André Platzer.
 [A complete axiomatization of quantified differential dynamic logic for distributed hybrid systems](http://dx.doi.org/10.2168/LMCS-8(4:17)2012).
 Logical Methods in Computer Science, 8(4), pages 1-44, 2012.
 
-12. André Platzer.
+13. André Platzer.
 [Dynamic logics of dynamical systems](http://arxiv.org/abs/1205.4788).
 May 2012.
 arXiv:1205.4788
