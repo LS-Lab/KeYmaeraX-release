@@ -61,7 +61,7 @@ trait ProvableSig {
   def prettyString: String
 }
 object ProvableSig {
-  var PROOF_TERMS_ENABLED = false
+  var PROOF_TERMS_ENABLED = true
 
   val axiom: immutable.Map[String, Formula] = Provable.axiom
 
@@ -143,8 +143,28 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
     //This is necessary because we need positions where the rule should be applied within the *sequent* in addition to subgoal,
     //which is the position within the *provable*. Alternatively a subtype heirarchy for Rule would do the trick...
     val sequentPositions = rule match {
-      case Close(ante,succ) => -(ante.getIndex - 1) :: (succ.getIndex + 1) :: Nil
+        // @TODO: double-check index funtimes
+      case Close(ante,succ) => -(ante.getIndex + 1) :: (succ.getIndex + 1) :: Nil
+      case CutRight(fml, succ) => succ.getIndex + 1 :: Nil
       case ImplyRight(succ) => succ.getIndex + 1 :: Nil
+      case AndRight(succ) => succ.getIndex + 1 :: Nil
+      case CoHideRight(succ) => succ.getIndex + 1 :: Nil
+      case CommuteEquivRight(succ) => succ.getIndex + 1 :: Nil
+      case EquivifyRight(succ) => succ.getIndex + 1 :: Nil
+
+      case AndLeft(ante) => -(ante.getIndex + 1) :: Nil
+      case HideLeft(ante) => -(ante.getIndex + 1) :: Nil
+      case CutLeft(fml,ante) => -(ante.getIndex + 1) :: Nil
+      case ImplyLeft(ante) => -(ante.getIndex + 1) :: Nil
+
+      case BoundRenaming(what, repl, ante:AntePos) => -(ante.getIndex + 1) :: Nil
+      case BoundRenaming(what, repl, succ:SuccPos) => -(succ.getIndex + 1) :: Nil
+      case Skolemize(ante:AntePos) => -(ante.getIndex + 1) :: Nil
+      case Skolemize(succ:SuccPos) => -(succ.getIndex + 1) :: Nil
+
+      case UniformRenaming(what, repl) => Nil
+      case Cut(fml) => Nil
+
       case _ => throw new Exception(s"PTProvable.apply(Rule,provable pos) is not completely implemented. Missing case: ${rule.name}") //See @todo above add cases as necessary...
     }
     PTProvable(provable(rule, subgoal), RuleApplication(pt, rule.name, subgoal, sequentPositions))
