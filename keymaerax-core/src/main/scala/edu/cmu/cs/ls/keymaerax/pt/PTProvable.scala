@@ -5,6 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.pt
 
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, ProvableInfo}
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable
@@ -145,17 +146,25 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
     val sequentPositions = rule match {
         // @TODO: double-check index funtimes
       case Close(ante,succ) => -(ante.getIndex + 1) :: (succ.getIndex + 1) :: Nil
+      case CoHide2(ante, succ)  => -(ante.getIndex + 1) :: (succ.getIndex + 1) :: Nil
       case CutRight(fml, succ) => succ.getIndex + 1 :: Nil
       case ImplyRight(succ) => succ.getIndex + 1 :: Nil
       case AndRight(succ) => succ.getIndex + 1 :: Nil
       case CoHideRight(succ) => succ.getIndex + 1 :: Nil
       case CommuteEquivRight(succ) => succ.getIndex + 1 :: Nil
       case EquivifyRight(succ) => succ.getIndex + 1 :: Nil
+      case EquivRight(succ) => succ.getIndex + 1 :: Nil
+      case NotRight(succ) => succ.getIndex + 1 :: Nil
+      case CloseTrue(succ) => succ.getIndex + 1 :: Nil
+      case HideRight(succ) => succ.getIndex + 1 :: Nil
+      case OrRight(succ) => succ.getIndex + 1 :: Nil
 
       case AndLeft(ante) => -(ante.getIndex + 1) :: Nil
       case HideLeft(ante) => -(ante.getIndex + 1) :: Nil
       case CutLeft(fml,ante) => -(ante.getIndex + 1) :: Nil
       case ImplyLeft(ante) => -(ante.getIndex + 1) :: Nil
+      case NotLeft(ante) => -(ante.getIndex + 1) :: Nil
+      case EquivLeft(ante) => -(ante.getIndex + 1) :: Nil
 
       case BoundRenaming(what, repl, ante:AntePos) => -(ante.getIndex + 1) :: Nil
       case BoundRenaming(what, repl, succ:SuccPos) => -(succ.getIndex + 1) :: Nil
@@ -165,7 +174,8 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
       case UniformRenaming(what, repl) => Nil
       case Cut(fml) => Nil
 
-      case _ => throw new Exception(s"PTProvable.apply(Rule,provable pos) is not completely implemented. Missing case: ${rule.name}") //See @todo above add cases as necessary...
+      case _ =>
+        throw new Exception(s"PTProvable.apply(Rule,provable pos) is not completely implemented. Missing case: ${rule.name}") //See @todo above add cases as necessary...
     }
     PTProvable(provable(rule, subgoal), RuleApplication(pt, rule.name, subgoal, sequentPositions))
   }
@@ -175,17 +185,24 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
     case PTProvable(subProvable, subPT) => PTProvable(provable(subProvable, subgoal), subPT)
     case subprovable: ProvableSig => {
       //Find an axiom or rule with the same name.
-      val axiom = PTProvable.axioms.find(p => p._2.underlyingProvable == subprovable.underlyingProvable)
+      // @TODO: Add derived axioms
+      val coreAxiom = PTProvable.axioms.find(p => p._2.underlyingProvable == subprovable.underlyingProvable)
+      val infos = ProvableInfo.allInfo
+      val derivedAxiom = infos.find(info => info.provable.underlyingProvable == subprovable.underlyingProvable)
       val rule = PTProvable.rules.find(p => p._2.underlyingProvable == subprovable.underlyingProvable)
 
       //If such an axiom exists, create evidence using the axiom's associated proof certificate.
-      if(axiom.isDefined) {
-        val PTProvable(subProvable, subPT) = PTProvable.axioms(axiom.get._1)
+      if(coreAxiom.isDefined) {
+        val PTProvable(subProvable, subPT) = PTProvable.axioms(coreAxiom.get._1)
         PTProvable(provable(subProvable, subgoal), subPT)
+      } else if (derivedAxiom.isDefined) {
+        val term = AxiomTerm(derivedAxiom.get.codeName)
+        val axiomPT = PTProvable(NoProofTermProvable(derivedAxiom.get.provable.underlyingProvable), term)
+        PTProvable(provable(subprovable, subgoal), term)
       }
       //And ditto for rules.
       else if(rule.isDefined) {
-        val PTProvable(subProvable, subPT) = PTProvable.rules(axiom.get._1)
+        val PTProvable(subProvable, subPT) = PTProvable.rules(rule.get._1)
         PTProvable(provable(subProvable, subgoal), subPT)
       }
       else {
@@ -233,6 +250,13 @@ object PTProvable {
 
   def startProof(goal : Formula): ProvableSig = PTProvable(NoProofTermProvable.startProof(goal), NoProof())
 
-  def proveArithmetic(t: QETool, f: Formula): Lemma = ??? //@todo after changing everything to ProvableSig's, then create a lemma with an PTProvable.
+  def proveArithmetic(t: QETool, f: Formula): Lemma = {
+    //@todo after changing everything to ProvableSig's, then create a lemma with an PTProvable.
+    //@TODO Does this work at all
+    //???
+    val lem = NoProofTermProvable.proveArithmetic(t,f)
+    Lemma(PTProvable(lem.fact, FOLRConstant(f)), lem.evidence, lem.name)
+  }
+
 }
 

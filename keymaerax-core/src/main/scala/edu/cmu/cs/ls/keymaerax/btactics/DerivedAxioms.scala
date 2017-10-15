@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allInstantiateInvers
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.pt.{AxiomTerm, NoProofTermProvable, PTProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 import scala.collection.{immutable, mutable}
@@ -29,8 +29,11 @@ import scala.reflect.runtime.{universe => ru}
  * @note Lemmas are lazy vals, since their proofs may need a fully setup prover with QE
   * @note Derived axioms use the Provable facts of other derived axioms in order to avoid initialization cycles with AxiomInfo's contract checking.
  */
+
+
 object DerivedAxioms {
 
+  val DerivedAxiomProvableSig = ProvableSig//NoProofTermProvable
   /** Database for derived axioms */
   val derivedAxiomDB = LemmaDBFactory.lemmaDB
 
@@ -51,10 +54,12 @@ object DerivedAxioms {
   /** Derive an axiom from the given provable, package it up as a Lemma and make it available */
   private[btactics] def derivedAxiom(name: String, fact: ProvableSig): Lemma = {
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
-    // create evidence (traces input into tool and output from tool)
-    val evidence = ToolEvidence(immutable.List("input" -> fact.toString, "output" -> "true")) :: Nil
     val lemmaName = DerivedAxiomInfo(name).storedName
-    val lemma = Lemma(fact, Lemma.requiredEvidence(fact, evidence), Some(lemmaName))
+    val alternativeFact = PTProvable(NoProofTermProvable(fact.underlyingProvable), AxiomTerm(lemmaName))
+    // create evidence (traces input into tool and output from tool)
+    val evidence = ToolEvidence(immutable.List("input" -> alternativeFact.provable.toString, "output" -> "true")) :: Nil
+    // Makes it so we have the same provablesig when loading vs. storing
+    val lemma = Lemma(alternativeFact, Lemma.requiredEvidence(alternativeFact, evidence), Some(lemmaName))
     if (!AUTO_INSERT) {
       lemma
     } else {
@@ -63,8 +68,15 @@ object DerivedAxioms {
       // first check whether the lemma DB already contains identical lemma name
       val lemmaID = if (derivedAxiomDB.contains(lemmaName)) {
         // identical lemma contents with identical name, so reuse ID
-        if (derivedAxiomDB.get(lemmaName).contains(lemma)) lemma.name.get
-        else throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(lemmaName) + " (lemma " + name + " stored in file name " + lemmaName + ") instead of " + lemma )
+        derivedAxiomDB.get(lemmaName) match {
+          case Some(storedLemma) =>
+            if(storedLemma != lemma) {
+              throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(lemmaName) + " (lemma " + name + " stored in file name " + lemmaName + ") instead of " + lemma )
+            } else {
+              lemma.name.get
+            }
+          case None => lemma.name.get
+        }
       } else {
         derivedAxiomDB.add(lemma)
       }
@@ -84,7 +96,9 @@ object DerivedAxioms {
       val lemmaID = if (derivedAxiomDB.contains(lemmaName)) {
         // identical lemma contents with identical name, so reuse ID
         if (derivedAxiomDB.get(lemmaName).contains(lemma)) lemma.name.get
-        else throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(lemmaName) + " (lemma " + name + " stored in file name " + lemmaName + ") instnead of " + lemma )
+        else {
+           throw new IllegalStateException("Prover already has a different lemma filed under the same name " + derivedAxiomDB.get(lemmaName) + " (lemma " + name + " stored in file name " + lemmaName + ") instnead of " + lemma )
+        }
       } else {
         derivedAxiomDB.add(lemma)
       }
@@ -289,7 +303,7 @@ object DerivedAxioms {
     * @Derived
     */
   lazy val equivReflexiveAxiom = derivedAxiom("<-> reflexive",
-    ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p_() <-> p_()".asFormula)))
+    DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("p_() <-> p_()".asFormula)))
     (EquivRight(SuccPos(0)), 0)
       // right branch
       (Close(AntePos(0),SuccPos(0)), 1)
@@ -345,7 +359,7 @@ object DerivedAxioms {
     * @Derived
     */
   lazy val doubleNegationAxiom = derivedAxiom("!! double negation",
-    ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("(!(!p_())) <-> p_()".asFormula)))
+    DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("(!(!p_())) <-> p_()".asFormula)))
     (EquivRight(SuccPos(0)), 0)
       // right branch
       (NotRight(SuccPos(0)), 1)
@@ -975,7 +989,7 @@ object DerivedAxioms {
     *
     * @Derived
     */
-  lazy val assignDAxiomb = ProvableSig.axioms("[':=] differential assign")
+  lazy val assignDAxiomb = DerivedAxiomProvableSig.axioms("[':=] differential assign")
   //@note the following derivation works if uniform renaming can mix BaseVariable with DifferentialSymbols.
   /*derivedAxiom("[':=] differential assign",
     Sequent(IndexedSeq(), IndexedSeq("[x_':=f();]p(x_') <-> p(f())".asFormula)),
@@ -1635,7 +1649,7 @@ object DerivedAxioms {
     * @Derived
     */
   private lazy val DIinvarianceF = "([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}]((p(||))'))".asFormula
-  lazy val DIinvariance = ProvableSig.axioms("DI differential invariance") /*derivedAxiom("DI differential invariance",
+  lazy val DIinvariance = DerivedAxiomProvableSig.axioms("DI differential invariance") /*derivedAxiom("DI differential invariance",
     Sequent(IndexedSeq(), IndexedSeq(DIinvarianceF)),
     implyR(1) & equivR(1) <(
       testb(1) &
@@ -2030,9 +2044,9 @@ object DerivedAxioms {
     * }}}
     */
   lazy val Dvariable = derivedAxiom("x' derive variable",
-    ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("\\forall x_ ((x_)' = x_')".asFormula)))
+    DerivedAxiomProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq("\\forall x_ ((x_)' = x_')".asFormula)))
     (Skolemize(SuccPos(0)), 0)
-    (ProvableSig.axioms("x' derive var"), 0)
+    (DerivedAxiomProvableSig.axioms("x' derive var"), 0)
   )
   //  /**
   //   * {{{Axiom "x' derive var".
