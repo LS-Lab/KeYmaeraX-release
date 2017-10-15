@@ -55,9 +55,15 @@ object DerivedAxioms {
   private[btactics] def derivedAxiom(name: String, fact: ProvableSig): Lemma = {
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
     val lemmaName = DerivedAxiomInfo(name).storedName
-    val alternativeFact = PTProvable(NoProofTermProvable(fact.underlyingProvable), AxiomTerm(lemmaName))
+    val npt = NoProofTermProvable(fact.underlyingProvable)
+    val alternativeFact =
+      if (ProvableSig.PROOF_TERMS_ENABLED) {
+        PTProvable(npt, AxiomTerm(lemmaName))
+      } else {
+        npt
+      }
     // create evidence (traces input into tool and output from tool)
-    val evidence = ToolEvidence(immutable.List("input" -> alternativeFact.provable.toString, "output" -> "true")) :: Nil
+    val evidence = ToolEvidence(immutable.List("input" -> npt.toString, "output" -> "true")) :: Nil
     // Makes it so we have the same provablesig when loading vs. storing
     val lemma = Lemma(alternativeFact, Lemma.requiredEvidence(alternativeFact, evidence), Some(lemmaName))
     if (!AUTO_INSERT) {

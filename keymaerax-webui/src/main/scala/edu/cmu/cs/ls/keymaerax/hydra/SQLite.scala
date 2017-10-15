@@ -46,7 +46,13 @@ object SQLite {
     }
 
     override def get(ids: List[LemmaID]): Option[List[Lemma]] = {
-      readLemmas(ids).map(_.map(Lemma.fromString)).map(_.map((lemma:Lemma) => Lemma(PTProvable(NoProofTermProvable(lemma.fact.underlyingProvable), NoProof()), lemma.evidence, lemma.name)))
+      readLemmas(ids).map(_.map(Lemma.fromString)).map(_.map((lemma:Lemma) =>
+        if (ProvableSig.PROOF_TERMS_ENABLED) {
+          Lemma(PTProvable(NoProofTermProvable(lemma.fact.underlyingProvable), NoProof()), lemma.evidence, lemma.name)
+        } else {
+          lemma
+        }
+      ))
     }
 
 

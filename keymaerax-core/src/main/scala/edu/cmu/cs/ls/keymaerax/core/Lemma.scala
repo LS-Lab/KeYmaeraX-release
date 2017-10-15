@@ -12,7 +12,7 @@ import java.security.MessageDigest
 
 import edu.cmu.cs.ls.keymaerax.btactics.{AxiomInfo, DerivationInfo}
 import edu.cmu.cs.ls.keymaerax.parser.{FullPrettyPrinter, KeYmaeraXExtendedLemmaParser}
-import edu.cmu.cs.ls.keymaerax.pt.{AxiomTerm, NoProofTermProvable, PTProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
 
 // require favoring immutable Seqs for unmodifiable Lemma evidence
@@ -69,7 +69,13 @@ object Lemma {
     }
     //@note soundness-critical
     val fact = Provable.oracle(sequents.head, sequents.tail.toIndexedSeq)
-    val ptProvable = PTProvable(NoProofTermProvable(fact), AxiomTerm(name.get))
+
+    val ptProvable =
+      if (ProvableSig.PROOF_TERMS_ENABLED) {
+        PTProvable(NoProofTermProvable(fact), name match { case Some(n) => AxiomTerm(n) case None => FOLRConstant(sequents.head.succ.head) })
+      } else {
+        NoProofTermProvable(fact)
+      }
     Lemma(ptProvable, evidence, name) //@todo also load proof terms.
   }
 
@@ -160,7 +166,13 @@ final case class Lemma(fact: ProvableSig, evidence: immutable.List[Evidence], na
   override def toString: String = {
     toStringInternal
     //@note soundness-critical check that reparse succeeds as expected
-  } ensuring(r => Lemma.fromStringInternal(r) == this, "Printed lemma should reparse to this original lemma\n\n" + toStringInternal)
+  } ensuring(r =>  {
+    val reparsed = Lemma.fromStringInternal(r)
+    reparsed.fact.underlyingProvable == fact.underlyingProvable &&
+    reparsed.evidence == evidence &&
+    reparsed.name == name
+    },
+    "Printed lemma should reparse to this original lemma\n\n" + toStringInternal)
 
   /** Produces a string representation of this lemma that is speculated to reparse as this lemma
     * and will be checked to do so in [[toString]]. */

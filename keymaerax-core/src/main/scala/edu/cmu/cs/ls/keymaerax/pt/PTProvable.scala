@@ -62,7 +62,7 @@ trait ProvableSig {
   def prettyString: String
 }
 object ProvableSig {
-  var PROOF_TERMS_ENABLED = true
+  var PROOF_TERMS_ENABLED = false
 
   val axiom: immutable.Map[String, Formula] = Provable.axiom
 
@@ -165,6 +165,7 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
       case ImplyLeft(ante) => -(ante.getIndex + 1) :: Nil
       case NotLeft(ante) => -(ante.getIndex + 1) :: Nil
       case EquivLeft(ante) => -(ante.getIndex + 1) :: Nil
+      case CloseFalse(ante) => -(ante.getIndex + 1) :: Nil
 
       case BoundRenaming(what, repl, ante:AntePos) => -(ante.getIndex + 1) :: Nil
       case BoundRenaming(what, repl, succ:SuccPos) => -(succ.getIndex + 1) :: Nil
@@ -219,8 +220,11 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
     PTProvable(provable(newConsequence, rule), ForwardNewConsequenceTerm(pt, newConsequence, rule))
 
   override def apply(prolongation: ProvableSig): ProvableSig = prolongation match {
-    case prolongationProof: PTProvable => PTProvable(prolongationProof.provable(prolongation), ProlongationTerm(pt, prolongationProof))
-    case subProvable: ProvableSig => ???
+    case prolongationProof: PTProvable =>
+      PTProvable(prolongationProof.provable(prolongation), ProlongationTerm(pt, prolongationProof))
+    case subProvable: ProvableSig =>
+      val 2 = 1 + 1
+      ???
   }
 
   override def sub(subgoal: Subgoal): ProvableSig =

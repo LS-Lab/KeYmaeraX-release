@@ -9,6 +9,7 @@ package edu.cmu.cs.ls.keymaerax.lemma
 
 import edu.cmu.cs.ls.keymaerax.core.Lemma
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXExtendedLemmaParser
+import edu.cmu.cs.ls.keymaerax.pt.{NoProof, NoProofTermProvable, PTProvable, ProvableSig}
 
 /**
   * Common Lemma Database implemented from string-based storage primitives.
@@ -33,22 +34,35 @@ abstract class LemmaDBBase extends LemmaDB {
   /** Performance */
   private val REDUNDANT_CHECKS = false
   private def saveLemma(lemma:Lemma, id:LemmaID): Unit = {
+    val alternativeFact =
+      if(ProvableSig.PROOF_TERMS_ENABLED) {
+        PTProvable(NoProofTermProvable(lemma.fact.underlyingProvable), NoProof())
+      } else {
+        lemma.fact
+      }
+    val alternativeLemma = Lemma(alternativeFact, lemma.evidence, lemma.name)
     if (REDUNDANT_CHECKS) {
-      //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
-      val parse = KeYmaeraXExtendedLemmaParser(lemma.toString)
-      assert(parse._1 == lemma.name, "reparse of printed lemma's name should be identical to original lemma")
-      assert(parse._2 == lemma.fact.conclusion +: lemma.fact.subgoals, s"reparse of printed lemma's fact ${lemma.fact.conclusion +: lemma.fact.subgoals}should be identical to original lemma ${parse._2}")
-      assert(parse._3 == lemma.evidence, "reparse of printed lemma's evidence should be identical to original lemma")
+      //@see[[edu.cmu.cs.ls.keymaerax.core.alternativeLemma]]
+      val parse = KeYmaeraXExtendedLemmaParser(alternativeLemma.toString)
+      assert(parse._1 == alternativeLemma.name, "reparse of printed alternativeLemma's name should be identical to original alternativeLemma")
+      assert(parse._2 == alternativeLemma.fact.conclusion +: alternativeLemma.fact.subgoals, s"reparse of printed alternativeLemma's fact ${alternativeLemma.fact.conclusion +: alternativeLemma.fact.subgoals}should be identical to original alternativeLemma ${parse._2}")
+      assert(parse._3 == alternativeLemma.evidence, "reparse of printed alternativeLemma's evidence should be identical to original alternativeLemma")
     }
 
-    writeLemma(id, lemma.toString)
-    // read again to make sure we will get the lemma we just stored
+    writeLemma(id, alternativeLemma.toString)
+    // read again to make sure we will get the alternativeLemma we just stored
     get(id) match {
-      case None => throw new IllegalStateException("Lemma " + id + " was not successfully inserted in database.")
+      case None =>
+        throw new IllegalStateException("alternativeLemma " + id + " was not successfully inserted in database.")
       case Some(got) =>
-        if (got != lemma) {
+        if (got != alternativeLemma) {
+          val b1 = got.fact == alternativeLemma.fact
+          val b1a = got.fact.underlyingProvable == alternativeLemma.fact.underlyingProvable
+          val b1b = got.fact.asInstanceOf[PTProvable].pt == alternativeLemma.fact.asInstanceOf[PTProvable].pt
+          val b2 = got.evidence == alternativeLemma.evidence
+          val b3 = got.name == alternativeLemma.name
           remove(id)
-          throw new IllegalStateException(s"Lemma retrieved back from DB after storing it differed from lemma in memory -> deleted\n\tOriginal: ${lemma.toString}\n\tReloaded: ${got.toString}")
+          throw new IllegalStateException(s"alternativeLemma retrieved back from DB after storing it differed from alternativeLemma in memory -> deleted\n\tOriginal: ${alternativeLemma.toString}\n\tReloaded: ${got.toString}")
         }
     }
   }
@@ -59,8 +73,11 @@ abstract class LemmaDBBase extends LemmaDB {
       lemma.name match {
         case Some(n) =>
           val got = get(n)
-          require(got == None || got == Some(lemma),
-            "Lemma name " + n + " must be unique, or DB content must already have stored the identical lemma: \n" + lemma)
+          val isOk = got == None || got == Some(lemma)
+          if(!isOk) {
+            require(isOk,
+              "Lemma name " + n + " must be unique, or DB content must already have stored the identical lemma: \n" + lemma)
+          }
           n
         case None => createLemma()
       }
