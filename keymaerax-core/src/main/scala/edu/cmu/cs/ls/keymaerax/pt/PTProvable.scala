@@ -115,9 +115,9 @@ case class NoProofTermProvable(provable: Provable) extends ProvableSig {
 
   override def proveArithmetic(t: QETool, f: Formula): Lemma = Provable.proveArithmetic(t,f)
 
-  override def prettyString: String = provable.prettyString
-  //s"NoProofTermProvable(${provable.prettyString})"
+  override def prettyString: String = s"NoProofTermProvable(${provable.prettyString})"
 }
+
 object NoProofTermProvable {
   val axioms: Map[String, ProvableSig] = Provable.axioms.map(kvp => (kvp._1, NoProofTermProvable(kvp._2, 0)))
   val rules: Map[String, ProvableSig] = Provable.rules.map(kvp => (kvp._1, NoProofTermProvable(kvp._2, 0)))
@@ -132,9 +132,6 @@ object NoProofTermProvable {
 }
 
 object PTProvable {
-  var curSize = 10000
-  var nCalls = 0
-  var depth = 0
 
   val axioms: immutable.Map[String, ProvableSig] = Provable.axioms.map(x => (x._1, PTProvable(NoProofTermProvable.axioms.apply(x._1), AxiomTerm(x._1))))
 
@@ -147,7 +144,6 @@ object PTProvable {
   def proveArithmetic(t: QETool, f: Formula): Lemma = {
     //@todo after changing everything to ProvableSig's, then create a lemma with an PTProvable.
     //@TODO Does this work at all
-    //???
     val lem = NoProofTermProvable.proveArithmetic(t,f)
     Lemma(PTProvable(lem.fact, FOLRConstant(f)), lem.evidence, lem.name)
   }
@@ -203,42 +199,18 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
       case Cut(fml) => Nil
 
       case _ =>
-        println("Uhoh no case")
         throw new Exception(s"PTProvable.apply(Rule,provable pos) is not completely implemented. Missing case: ${rule.name}") //See @todo above add cases as necessary...
     }
     PTProvable(provable(rule, subgoal), RuleApplication(pt, rule.name, subgoal, sequentPositions))
   }
 
 
-  val doBigProof = true
-
-  def printSize(size:Int) = {
-    if(size >= PTProvable.curSize*1.3) {
-      println("New biggest size: " + size)
-      PTProvable.curSize = size
-      if(size >= 396539) {
-        println("Very large term found, printing size estimate:")
-        println(pt.bytesEstimate)
-
-      }
-    }
-  }
-
   // @TODO: This makes no sense needs new proof term class probably
   override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig = {
-    PTProvable.nCalls = PTProvable.nCalls + 1
-    PTProvable.depth = PTProvable.depth + 1
-    if (PTProvable.nCalls % 1000 == 0) {
-      println("Calls: " + PTProvable.nCalls + " at depth " + PTProvable.depth)
-    }
-    val res =
     subderivation match {
       case PTProvable (subProvable, subPT) => {
-        val thePt = if (doBigProof) Sub(pt, subPT, subgoal) else subPT
-        //printSize(thePt.size)
-        val res = PTProvable(NoProofTermProvable(underlyingProvable(subProvable.underlyingProvable,subgoal)), thePt)
-        val 2 = 1 + 1
-        res
+        val thePt = Sub(pt, subPT, subgoal)
+        PTProvable(NoProofTermProvable(underlyingProvable(subProvable.underlyingProvable,subgoal)), thePt)
       }
 
       case subprovable: ProvableSig => {
@@ -252,45 +224,29 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
         //If such an axiom exists, create evidence using the axiom's associated proof certificate.
         if (coreAxiom.isDefined) {
           val PTProvable(subProvable, subPT) = PTProvable.axioms(coreAxiom.get._1)
-          val thePt = if (doBigProof && false) Sub(pt, subPT, subgoal) else subPT
-          //printSize(thePt.size)
+          val thePt = Sub(pt, subPT, subgoal)
           PTProvable(provable(subProvable, subgoal), thePt)
         } else if (derivedAxiom.isDefined) {
-          val term = if (doBigProof && false) {
-            Sub(pt, AxiomTerm(derivedAxiom.get.codeName), subgoal)
-          } else {
-            pt
-          }
+          val term = Sub(pt, AxiomTerm(derivedAxiom.get.codeName), subgoal)
           val axiomPT = PTProvable(NoProofTermProvable(derivedAxiom.get.provable.underlyingProvable), term)
-          //printSize(term.size)
           PTProvable(provable(subprovable, subgoal), term)
         }
         //And ditto for rules.
         else if (rule.isDefined) {
           val PTProvable(subProvable, subPT) = PTProvable.rules(rule.get._1)
-          val thePt = if (doBigProof && false) new Sub(pt, subPT, subgoal) else subPT
-          //printSize(thePt.size)
+          val thePt = Sub(pt, subPT, subgoal)
           PTProvable(provable(subProvable, subgoal), thePt)
         }
         else {
           //For more complicated uses of useAt, by, etc. it's unclear what to do (and indeed the general architecture is problematic -- same reason that extraction works by the miracle of hard work aone).
-          println("Uhoh no proofterm")
           throw new Exception(s"Cannot construct a proof term for ${subderivation} because it has no associated proof term.")
         }
       }
     }
-    PTProvable.depth = PTProvable.depth - 1
-    res
   }
 
-  import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
   override def apply(subst: USubst): ProvableSig = {
-    /*val test = FOLRConstant("\\forall velLead_0 \\forall velCtrl_0 \\forall posLead_0 \\forall posCtrl_0 \\forall T_0 \\forall B_0 \\forall A_0 (A_0>0&B_0>0&T_0>0&velLead_0>=0&0 < T_0&velCtrl_0>=0&velCtrl_0>=0&velLead_0>=0&(posLead_0-posCtrl_0)*B_0>=velCtrl_0*velCtrl_0-velLead_0*velCtrl_0&posLead_0>=posCtrl_0->\\forall t \\forall velCtrl \\forall velLead (t < T_0&velCtrl>=0&velLead>=0->-B_0=0+-B_0*1))".asFormula)
-    if(todoRenameMeBackToPt == test) {
-      val 2 = 1 + 1
-    }*/
     PTProvable(provable(subst), UsubstProvableTerm(pt, subst))
-
   }
 
   override def apply(newConsequence: Sequent, rule: Rule): ProvableSig =
