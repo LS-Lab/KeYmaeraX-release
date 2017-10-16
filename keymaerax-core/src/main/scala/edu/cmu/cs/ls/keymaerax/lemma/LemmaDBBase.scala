@@ -55,14 +55,19 @@ abstract class LemmaDBBase extends LemmaDB {
       case None =>
         throw new IllegalStateException("alternativeLemma " + id + " was not successfully inserted in database.")
       case Some(got) =>
-        if (got != alternativeLemma) {
+        val alternativeGot =
+          got.fact match {
+            case PTProvable(pr, pt) => Lemma(PTProvable(pr, NoProof()), got.evidence, got.name)
+            case _ => got
+          }
+        if (alternativeGot != alternativeLemma) {
           val b1 = got.fact == alternativeLemma.fact
           val b1a = got.fact.underlyingProvable == alternativeLemma.fact.underlyingProvable
           val b1b = got.fact.asInstanceOf[PTProvable].pt == alternativeLemma.fact.asInstanceOf[PTProvable].pt
           val b2 = got.evidence == alternativeLemma.evidence
           val b3 = got.name == alternativeLemma.name
           remove(id)
-          throw new IllegalStateException(s"alternativeLemma retrieved back from DB after storing it differed from alternativeLemma in memory -> deleted\n\tOriginal: ${alternativeLemma.toString}\n\tReloaded: ${got.toString}")
+          throw new IllegalStateException(s"lemma retrieved back from DB after storing it differed from lemma in memory -> deleted\n\tOriginal: ${alternativeLemma.toString}\n\tReloaded: ${got.toString}")
         }
     }
   }

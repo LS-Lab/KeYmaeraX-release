@@ -16,6 +16,7 @@ import scala.collection.immutable.IndexedSeq
   * This allows for tactics to construct proof terms or not.
   *
   * @author Nathan Fulton
+  * @author Brandon Bohrer
   */
 trait ProvableSig {
   val underlyingProvable : Provable = this match {
@@ -62,7 +63,7 @@ trait ProvableSig {
   def prettyString: String
 }
 object ProvableSig {
-  var PROOF_TERMS_ENABLED = false
+  var PROOF_TERMS_ENABLED = true
 
   val axiom: immutable.Map[String, Formula] = Provable.axiom
 
@@ -103,7 +104,8 @@ case class NoProofTermProvable(provable: Provable) extends ProvableSig {
 
   override def apply(newConsequence: Sequent, rule: Rule): ProvableSig = NoProofTermProvable(provable(newConsequence, rule), steps+1)
 
-  override def apply(prolongation: ProvableSig): ProvableSig = NoProofTermProvable(provable(prolongation.underlyingProvable), steps+prolongation.steps)
+  override def apply(prolongation: ProvableSig): ProvableSig =
+    NoProofTermProvable(provable(prolongation.underlyingProvable), steps+prolongation.steps)
 
   override def sub(subgoal: Subgoal): ProvableSig = NoProofTermProvable(provable.sub(subgoal), steps)
 
@@ -159,6 +161,7 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
       case HideRight(succ) => succ.getIndex + 1 :: Nil
       case OrRight(succ) => succ.getIndex + 1 :: Nil
 
+      case OrLeft(ante) => -(ante.getIndex + 1) :: Nil
       case AndLeft(ante) => -(ante.getIndex + 1) :: Nil
       case HideLeft(ante) => -(ante.getIndex + 1) :: Nil
       case CutLeft(fml,ante) => -(ante.getIndex + 1) :: Nil
@@ -221,10 +224,10 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
 
   override def apply(prolongation: ProvableSig): ProvableSig = prolongation match {
     case prolongationProof: PTProvable =>
-      PTProvable(prolongationProof.provable(prolongation), ProlongationTerm(pt, prolongationProof))
+      PTProvable(provable(prolongationProof), ProlongationTerm(pt, prolongationProof))
     case subProvable: ProvableSig =>
-      val 2 = 1 + 1
-      ???
+      /* @TODO: Arguable this should just not be allowed and represents a bug elsewhere */
+      PTProvable(NoProofTermProvable(provable.underlyingProvable(subProvable.underlyingProvable)), ProlongationTerm(pt, PTProvable(subProvable, NoProof())))
   }
 
   override def sub(subgoal: Subgoal): ProvableSig =
