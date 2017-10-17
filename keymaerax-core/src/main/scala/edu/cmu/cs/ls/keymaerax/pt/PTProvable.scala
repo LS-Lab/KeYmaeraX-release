@@ -137,9 +137,11 @@ object PTProvable {
 
   val rules: immutable.Map[String, ProvableSig] = Provable.rules.map(x => (x._1, PTProvable(NoProofTermProvable.rules.apply(x._1), RuleTerm(x._1))))
 
-  def startProof(goal : Sequent): ProvableSig = PTProvable(NoProofTermProvable.startProof(goal), NoProof())
+  def startProof(goal : Sequent): ProvableSig = PTProvable(NoProofTermProvable.startProof(goal), StartProof(goal))
 
-  def startProof(goal : Formula): ProvableSig = PTProvable(NoProofTermProvable.startProof(goal), NoProof())
+  private def fml2Seq(f:Formula):Sequent = Sequent(IndexedSeq(), IndexedSeq(f))
+
+  def startProof(goal : Formula): ProvableSig = PTProvable(NoProofTermProvable.startProof(goal), StartProof(fml2Seq(goal)))
 
   def proveArithmetic(t: QETool, f: Formula): Lemma = {
     //@todo after changing everything to ProvableSig's, then create a lemma with an PTProvable.
@@ -165,43 +167,40 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
     //@todo do a total pattern match on all rules in the core and produce individualized proof terms for each of them.
     //This is necessary because we need positions where the rule should be applied within the *sequent* in addition to subgoal,
     //which is the position within the *provable*. Alternatively a subtype heirarchy for Rule would do the trick...
-    val sequentPositions = rule match {
-        // @TODO: double-check index funtimes
-      case Close(ante,succ) => -(ante.getIndex + 1) :: (succ.getIndex + 1) :: Nil
-      case CoHide2(ante, succ)  => -(ante.getIndex + 1) :: (succ.getIndex + 1) :: Nil
-      case CutRight(fml, succ) => succ.getIndex + 1 :: Nil
-      case ImplyRight(succ) => succ.getIndex + 1 :: Nil
-      case AndRight(succ) => succ.getIndex + 1 :: Nil
-      case CoHideRight(succ) => succ.getIndex + 1 :: Nil
-      case CommuteEquivRight(succ) => succ.getIndex + 1 :: Nil
-      case EquivifyRight(succ) => succ.getIndex + 1 :: Nil
-      case EquivRight(succ) => succ.getIndex + 1 :: Nil
-      case NotRight(succ) => succ.getIndex + 1 :: Nil
-      case CloseTrue(succ) => succ.getIndex + 1 :: Nil
-      case HideRight(succ) => succ.getIndex + 1 :: Nil
-      case OrRight(succ) => succ.getIndex + 1 :: Nil
+    val (sequentPositions,expArgs) = rule match {
+      case Close(ante,succ) => (ante :: succ :: Nil, Nil)
+      case CoHide2(ante, succ)  => (ante :: succ :: Nil, Nil)
+      case CutRight(fml, succ) => (succ :: Nil, fml:: Nil)
+      case ImplyRight(succ) => (succ :: Nil, Nil)
+      case AndRight(succ) => (succ :: Nil, Nil)
+      case CoHideRight(succ) => (succ :: Nil, Nil)
+      case CommuteEquivRight(succ) => (succ :: Nil, Nil)
+      case EquivifyRight(succ) => (succ :: Nil, Nil)
+      case EquivRight(succ) => (succ :: Nil, Nil)
+      case NotRight(succ) => (succ :: Nil, Nil)
+      case CloseTrue(succ) => (succ :: Nil, Nil)
+      case HideRight(succ) => (succ :: Nil, Nil)
+      case OrRight(succ) => (succ :: Nil, Nil)
 
-      case OrLeft(ante) => -(ante.getIndex + 1) :: Nil
-      case AndLeft(ante) => -(ante.getIndex + 1) :: Nil
-      case HideLeft(ante) => -(ante.getIndex + 1) :: Nil
-      case CutLeft(fml,ante) => -(ante.getIndex + 1) :: Nil
-      case ImplyLeft(ante) => -(ante.getIndex + 1) :: Nil
-      case NotLeft(ante) => -(ante.getIndex + 1) :: Nil
-      case EquivLeft(ante) => -(ante.getIndex + 1) :: Nil
-      case CloseFalse(ante) => -(ante.getIndex + 1) :: Nil
+      case OrLeft(ante) => (ante :: Nil, Nil)
+      case AndLeft(ante) => (ante :: Nil, Nil)
+      case HideLeft(ante) => (ante :: Nil, Nil)
+      case CutLeft(fml,ante) => (ante :: Nil, fml :: Nil)
+      case ImplyLeft(ante) => (ante :: Nil, Nil)
+      case NotLeft(ante) => (ante :: Nil, Nil)
+      case EquivLeft(ante) => (ante :: Nil, Nil)
+      case CloseFalse(ante) => (ante :: Nil, Nil)
 
-      case BoundRenaming(what, repl, ante:AntePos) => -(ante.getIndex + 1) :: Nil
-      case BoundRenaming(what, repl, succ:SuccPos) => -(succ.getIndex + 1) :: Nil
-      case Skolemize(ante:AntePos) => -(ante.getIndex + 1) :: Nil
-      case Skolemize(succ:SuccPos) => -(succ.getIndex + 1) :: Nil
+      case BoundRenaming(what, repl, seq:SeqPos) => (seq :: Nil, what :: repl :: Nil)
+      case Skolemize(seq:SeqPos) => (seq :: Nil, Nil)
 
-      case UniformRenaming(what, repl) => Nil
-      case Cut(fml) => Nil
+      case UniformRenaming(what, repl) => (Nil, what :: repl :: Nil)
+      case Cut(fml) => (Nil, fml :: Nil)
 
       case _ =>
         throw new Exception(s"PTProvable.apply(Rule,provable pos) is not completely implemented. Missing case: ${rule.name}") //See @todo above add cases as necessary...
     }
-    PTProvable(provable(rule, subgoal), RuleApplication(pt, rule.name, subgoal, sequentPositions))
+    PTProvable(provable(rule, subgoal), RuleApplication(pt, rule.name, subgoal, sequentPositions,expArgs))
   }
 
 
@@ -254,10 +253,10 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
 
   override def apply(prolongation: ProvableSig): ProvableSig = prolongation match {
     case prolongationProof: PTProvable =>
-      PTProvable(provable(prolongationProof), ProlongationTerm(pt, prolongationProof))
+      PTProvable(provable(prolongationProof), ProlongationTerm(pt, prolongationProof.pt))
     case subProvable: ProvableSig =>
       /* @TODO: Arguable this should just not be allowed and represents a bug elsewhere */
-      PTProvable(NoProofTermProvable(provable.underlyingProvable(subProvable.underlyingProvable)), ProlongationTerm(pt, PTProvable(subProvable, NoProof())))
+      PTProvable(NoProofTermProvable(provable.underlyingProvable(subProvable.underlyingProvable)), ProlongationTerm(pt, NoProof()))
   }
 
   override def sub(subgoal: Subgoal): ProvableSig =
