@@ -10,7 +10,7 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import java.security.MessageDigest
 
-import edu.cmu.cs.ls.keymaerax.btactics.{AxiomInfo, DerivationInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.{AxiomInfo, DerivationInfo, DerivedAxiomInfo, DerivedRuleInfo}
 import edu.cmu.cs.ls.keymaerax.parser.{FullPrettyPrinter, KeYmaeraXExtendedLemmaParser}
 import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
@@ -72,7 +72,14 @@ object Lemma {
 
     val ptProvable =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
-        PTProvable(NoProofTermProvable(fact), name match { case Some(n) => AxiomTerm(n) case None => FOLRConstant(sequents.head.succ.head) })
+        PTProvable(NoProofTermProvable(fact), name match { case Some(n) =>
+          if(DerivedAxiomInfo.allInfo.exists(info => info.storedName == n))
+            AxiomTerm(n)
+          else if(DerivedRuleInfo.allInfo.exists(info => info.storedName == n))
+            RuleTerm(n)
+          else
+            NoProof()
+        case None => FOLRConstant(sequents.head.succ.head) })
       } else {
         NoProofTermProvable(fact)
       }

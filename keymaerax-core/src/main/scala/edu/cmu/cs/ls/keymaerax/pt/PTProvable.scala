@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.pt
 
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, ProvableInfo}
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, DerivedAxiomInfo, DerivedRuleInfo, ProvableInfo}
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable
@@ -63,7 +63,7 @@ trait ProvableSig {
   def prettyString: String
 }
 object ProvableSig {
-  var PROOF_TERMS_ENABLED = true
+  var PROOF_TERMS_ENABLED = false
 
   val axiom: immutable.Map[String, Formula] = Provable.axiom
 
@@ -147,7 +147,7 @@ object PTProvable {
     //@todo after changing everything to ProvableSig's, then create a lemma with an PTProvable.
     //@TODO Does this work at all
     val lem = NoProofTermProvable.proveArithmetic(t,f)
-    Lemma(PTProvable(lem.fact, FOLRConstant(f)), lem.evidence, lem.name)
+    Lemma(PTProvable(lem.fact, FOLRConstant(lem.fact.underlyingProvable.conclusion.succ.head)), lem.evidence, lem.name)
   }
 
 }
@@ -216,9 +216,11 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
         //Find an axiom or rule with the same name.
         // @TODO: Add derived axioms
         val coreAxiom = PTProvable.axioms.find(p => p._2.underlyingProvable == subprovable.underlyingProvable)
-        val infos = ProvableInfo.allInfo
-        val derivedAxiom = infos.find(info => info.provable.underlyingProvable == subprovable.underlyingProvable)
+        val axinfos = DerivedAxiomInfo.allInfo
+        val derivedAxiom = axinfos.find(info => info.provable.underlyingProvable == subprovable.underlyingProvable)
         val rule = PTProvable.rules.find(p => p._2.underlyingProvable == subprovable.underlyingProvable)
+        val ruleInfos = DerivedRuleInfo.allInfo
+        val derivedRule = ruleInfos.find(info => info.provable.underlyingProvable == subprovable.underlyingProvable)
 
         //If such an axiom exists, create evidence using the axiom's associated proof certificate.
         if (coreAxiom.isDefined) {
@@ -235,6 +237,10 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
           val PTProvable(subProvable, subPT) = PTProvable.rules(rule.get._1)
           val thePt = Sub(pt, subPT, subgoal)
           PTProvable(provable(subProvable, subgoal), thePt)
+        } else if (derivedRule.isDefined) {
+          val term = Sub(pt, RuleTerm(derivedRule.get.codeName), subgoal)
+          val axiomPT = PTProvable(NoProofTermProvable(derivedRule.get.provable.underlyingProvable), term)
+          PTProvable(provable(subprovable, subgoal), term)
         }
         else {
           //For more complicated uses of useAt, by, etc. it's unclear what to do (and indeed the general architecture is problematic -- same reason that extraction works by the miracle of hard work aone).
@@ -270,7 +276,9 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
 
   def startProof(goal : Formula): ProvableSig = PTProvable.startProof(goal)
 
-  def proveArithmetic(t: QETool, f: Formula): Lemma = PTProvable.proveArithmetic(t,f)
+  def proveArithmetic(t: QETool, f: Formula): Lemma =
+    PTProvable.proveArithmetic(t,f)
+
 
   override def toString: String = s"PTProvable(${provable.toString}, ${pt.toString})"
 

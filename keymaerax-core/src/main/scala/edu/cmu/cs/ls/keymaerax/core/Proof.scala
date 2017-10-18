@@ -671,7 +671,6 @@ object Provable {
     //@note soundness-critical
     val fact = Provable.oracle(new Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(f, equivalent))),
       immutable.IndexedSeq())
-    val ptProvable = PTProvable(NoProofTermProvable(fact), FOLRConstant(Equiv(f, equivalent)))
     Lemma(NoProofTermProvable(fact), Lemma.requiredEvidence(NoProofTermProvable(fact), evidence :: Nil), None)
   }
 

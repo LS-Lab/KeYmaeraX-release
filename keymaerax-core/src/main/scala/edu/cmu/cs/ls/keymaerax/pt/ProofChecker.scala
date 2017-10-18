@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.pt
 
-import edu.cmu.cs.ls.keymaerax.btactics.DerivedRuleInfo
+import edu.cmu.cs.ls.keymaerax.btactics.{AxiomInfo, DerivedAxiomInfo, DerivedRuleInfo, ProvableInfo}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{US, _}
 
@@ -44,11 +44,20 @@ object ProofChecker {
         }
 
         case AxiomTerm(axiomName) => {
-          val axiomFml = ProvableSig.axioms(axiomName).conclusion
-          val node = proofNode(axiomFml)
-          //@TODO: Why?
-          //Just do an empty uniform substitution...
-          proveBy(node, US(USubst.apply(scala.collection.immutable.Seq()), axiomName))
+          try {
+            val info = ProvableInfo.ofStoredName(axiomName)
+            val axiomFml = info.provable.conclusion
+            val node = proofNode(axiomFml)
+            //@TODO: Why?
+            //Just do an empty uniform substitution...
+            proveBy(node, US(USubst.apply(scala.collection.immutable.Seq()), info.canonicalName))
+          } catch {
+            // If derived axioms didn't do it, try core axioms too
+            case e:Exception =>
+              val axiomFml = AxiomInfo(axiomName).provable.conclusion
+              val node = proofNode(axiomFml)
+              proveBy(node, US(USubst.apply(scala.collection.immutable.Seq()), axiomName))
+          }
         }
 
         case RuleApplication(child, ruleName, subgoal, sequentPositions, expArgs) =>
@@ -59,7 +68,6 @@ object ProofChecker {
           def f(i:Int):Formula = expArgs(i).asInstanceOf[Formula]
           def v(i:Int):Variable = expArgs(i).asInstanceOf[Variable]
           def pr(r:Rule):ProvableSig = ps(r, subgoal)
-          val foo = ps(Close(apos(0),spos(1)),subgoal)
           ruleName match {
             case "Close" => pr(Close(apos(0),spos(1)))
             case "CoHide2"  => pr(CoHide2(apos(0),spos(1)))
@@ -92,7 +100,11 @@ object ProofChecker {
             case name => throw ProofCheckException("Unsupported rule \"" + name + "\" found during proof replay")
           }
 
-        case RuleTerm(name) => ProvableSig.rules(name)
+        case RuleTerm(name) =>
+          if(ProvableSig.rules.contains(name))
+            ProvableSig.rules(name)
+         else
+            DerivedRuleInfo.allInfo.find(info => info.storedName == name).get.provable
 
         case ForwardNewConsequenceTerm(child, con, rule) =>
           val pschild = apply(child)

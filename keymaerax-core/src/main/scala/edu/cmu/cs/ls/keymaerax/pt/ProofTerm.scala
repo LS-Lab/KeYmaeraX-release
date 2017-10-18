@@ -32,13 +32,12 @@ sealed abstract class ProofTerm() {
       case _: AxiomTerm => 1
       case _: RuleTerm => 1
       case _: NoProof => 1
-      //case UsubstTerm(child, _, _) => child.numCons + 1
-      //case RenamingTerm(child, _, _, _) => child.numCons + 1
       case UsubstProvableTerm(child, _) => child.numCons + 1
       case RuleApplication(child, _, _, _, _) => child.numCons + 1
       case ProlongationTerm(child, pro) => child.numCons + pro.numCons + 1
       case ForwardNewConsequenceTerm(child, _, _) => child.numCons + 1
       case Sub(child, sub, _) => child.numCons + sub.numCons + 1
+      case StartProof(phi) => 1
     }
   }
 
@@ -49,13 +48,13 @@ sealed abstract class ProofTerm() {
       case _ : FOLRConstant => Set()
       case _ : RuleTerm => Set()
       case _ : NoProof => Set()
-    //  case UsubstTerm(child, _, _) => child.axiomsUsed
-      //case RenamingTerm(child, _, _, _) => child.axiomsUsed
+      case _ : StartProof => Set()
       case UsubstProvableTerm(child, _) => child.axiomsUsed
       case RuleApplication(child, _, _, _, _) => child.axiomsUsed
       case ProlongationTerm(child, pro) => child.axiomsUsed ++ pro.axiomsUsed
       case ForwardNewConsequenceTerm(child, _, _) => child.axiomsUsed
       case Sub(child, sub, _) => child.axiomsUsed ++ sub.axiomsUsed
+
     }
   }
 
@@ -67,8 +66,7 @@ sealed abstract class ProofTerm() {
       case _ : AxiomTerm => Set()
       case _ : FOLRConstant => Set()
       case _ : NoProof => Set()
-  //    case UsubstTerm(child, _, _) => child.rulesUsed
-      //case RenamingTerm(child, _, _, _) => child.rulesUsed
+      case _ : StartProof => Set()
       case UsubstProvableTerm(child, _) => child.rulesUsed
       case ProlongationTerm(child, pro) => child.rulesUsed ++ pro.rulesUsed
       case ForwardNewConsequenceTerm(child, _, _) => child.rulesUsed
@@ -84,8 +82,7 @@ sealed abstract class ProofTerm() {
       case _ : RuleTerm => Set()
       case _ : AxiomTerm => Set()
       case _ : NoProof => Set()
-//      case UsubstTerm(child, _, _) => child.arithmeticGoals
-      //case RenamingTerm(child, _, _, _) => child.arithmeticGoals
+      case _ : StartProof => Set()
       case UsubstProvableTerm(child, _) => child.arithmeticGoals
       case ProlongationTerm(child, pro) => child.arithmeticGoals ++ pro.arithmeticGoals
       case ForwardNewConsequenceTerm(child, _, _) => child.arithmeticGoals
@@ -135,8 +132,7 @@ sealed abstract class ProofTerm() {
       case RuleTerm(_) => 2*wordSize // Assume names are interned
       case AxiomTerm(_) => 2*wordSize
       case _ : NoProof => wordSize
-      //case UsubstTerm(child, premise, sub) => 4*wordSize + child.bytesEstimate + expBytesEstimate(premise) + subBytesEstimate(sub)
-      //case RenamingTerm(child,premise,what,repl)=> 5*wordSize + child.bytesEstimate + expBytesEstimate(premise) + expBytesEstimate(what) + expBytesEstimate(repl)
+      case StartProof(seq) => 2*wordSize + sequentBytesEstimate(seq)
       case UsubstProvableTerm(child, sub) => 3*wordSize + child.bytesEstimate + subBytesEstimate(sub)
       case ProlongationTerm(child, pro) => 3*wordSize + child.bytesEstimate + pro.bytesEstimate
       case ForwardNewConsequenceTerm(child, con, rule) => 4*wordSize + child.bytesEstimate + sequentBytesEstimate(con) + ruleBytesEstimate(rule)
@@ -146,20 +142,11 @@ sealed abstract class ProofTerm() {
   }
 }
 
-//@todo support also positional stuff and proof terms for entire provables...
 case class FOLRConstant(f : Formula) extends ProofTerm
-
-// @todo: This shouldn't exist
-//case class UsubstTerm(child: ProofTerm, premise: Formula, substitution: USubst) extends ProofTerm
-
-// @todo: This shouldn't even exist as its own case
-//@todo: add term for bound renaming
-//@todo eisegesis theory alllows a set of renamings. Also, make sure UniformRenamings are sufficient for all proofs.
-//case class RenamingTerm(child: ProofTerm, premise: Formula, what: Variable, repl: Variable) extends ProofTerm
 
 /** Witness for rule application. */
 case class RuleApplication(child: ProofTerm, ruleName: String, subgoal: Int, sequentPositions: Seq[SeqPos], expArgs:Seq[Expression]) extends ProofTerm //@todo add to theory.
-/* @todo: probably needs unified with the above */
+/* @todo: could unify RuleTerm and AxiomTerm */
 case class RuleTerm(name: String) extends ProofTerm
 
 case class UsubstProvableTerm(child: ProofTerm, substitution: USubst) extends ProofTerm
@@ -167,10 +154,8 @@ case class UsubstProvableTerm(child: ProofTerm, substitution: USubst) extends Pr
 case class AxiomTerm(name: String) extends ProofTerm
 
 
-/** @todo replace this with a proof term construction. */
 case class ForwardNewConsequenceTerm(child: ProofTerm, newConsequence: Sequent, rule: Rule) extends ProofTerm
 
-/** @todo replace this with a proof term construction. */
 case class ProlongationTerm(child: ProofTerm, prolongation: ProofTerm) extends ProofTerm
 
 case class StartProof(phi:Sequent) extends ProofTerm
