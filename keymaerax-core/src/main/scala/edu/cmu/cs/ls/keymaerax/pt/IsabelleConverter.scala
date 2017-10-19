@@ -2,27 +2,41 @@ package edu.cmu.cs.ls.keymaerax.pt
 
 import edu.cmu.cs.ls.keymaerax.core._
 
-
+/**
+  * Convert proof terms to sublanguage + syntax used by Isabelle formalization
+  * Created by bbohrer on 10/19/17.
+  * @see [[ProofChecker]]
+  * @author Brandon Bohrer
+  */
 class IsabelleConverter {
   type ID = String
   type Isequent = (List[Iformula],List[Iformula])
   type Irule = (List[Isequent],Isequent)
 
-  case class IRat(num:Number,den:Number)
+  // @TODO: more maps for more identifier types -> more efficient code
+  // @TODO: automatically consider both arity and number of symbols for determining type size
+  case class IDMap(varMap:Map[(String,Option[Int]),String],
+                   funMap:Map[String,String],
+                   conMap:Map[String,String],
+                   fArity:Int,
+                   pArity:Int)
+  //case class IRat(num:Number,den:Number)
+
+  case class ConversionException(msg:String) extends Exception {}
 
   sealed trait Itrm {}
   case class IVar(id:ID) extends Itrm {}
-  case class IConstr(rat:IRat) extends Itrm {}
+  case class IDiffVar(id:ID) extends Itrm {}
+  case class IConst(int:Int) extends Itrm {}
   case class IFunction(f:ID, args:List[Itrm]) extends Itrm {}
   case class IPlus(left:Itrm, right:Itrm) extends Itrm {}
   case class ITimes(left:Itrm, right:Itrm) extends Itrm {}
-  case class IDiffVar(child:Itrm, right:Itrm) extends Itrm {}
-  case class IDifferential(child:Itrm, right:Itrm) extends Itrm {}
+  case class IDifferential(child:Itrm) extends Itrm {}
 
   sealed trait IODE {}
   case class IOVar(id:ID) extends IODE {}
   case class IOSing(x:ID, t:Itrm) extends IODE {}
-  case class OProd(left:IODE,right:IODE) extends IODE {}
+  case class IOProd(left:IODE,right:IODE) extends IODE {}
 
   sealed trait Ihp {}
   case class IPvar(id:ID) extends Ihp {}
@@ -43,27 +57,119 @@ class IsabelleConverter {
   case class IDiamond(prog:Ihp, post:Iformula) extends Iformula {}
   case class IInContext(id:ID, child:Iformula) extends Iformula {}
 
-  def apply(t:Term):Itrm = {
-    ???
+  private def detuple(t:Term):List[Term] = {
+    t match {
+      case Pair(l,r) => detuple(l) ++ detuple(r)
+      case _ => List(t)
+    }
   }
 
-  def apply(f:Formula):Iformula = {
-   ???
+  private def padArgs(terms: List[Term], n: Int):List[Term] = {
+    val length = terms.length
+    List.tabulate(n)(i => if(i < length) {terms(i)} else Number(0))
   }
 
-  def apply(o:DifferentialProgram):IODE = {
-    ???
+  def apply(f:Formula,m:IDMap):Iformula = {
+    f match {
+      case GreaterEqual(l,r) => IGeq(apply(l,m), apply(r,m))
+      case Greater(l,r) =>
+        val (al,ar) = (apply(l,m), apply(r,m))
+        IAnd(IGeq(al,ar), INot(IGeq(ar,al)))
+      case LessEqual(l,r) => IGeq(apply(r,m), apply(l,m))
+      case Less(l,r) =>
+        val (al,ar) = (apply(l,m), apply(r,m))
+        IAnd(IGeq(ar,al), INot(IGeq(al,ar)))
+      case Equal(l,r) =>
+        val (al,ar) = (apply(l,m), apply(r,m))
+        IAnd(IGeq(al,ar),IGeq(ar,al))
+      case NotEqual(l,r) =>
+        val (al,ar) = (apply(l,m), apply(r,m))
+        INot(IAnd(IGeq(al,ar),IGeq(ar,al)))
+      case PredOf(Function(name,_,_,_,_), arg) =>
+        val args = detuple(arg)
+        val allArgs = padArgs(args, m.pArity)
+        IProp(m.varMap(name), allArgs.map(apply(_, m)))
+      case PredicationalOf(Function(name,_,_,_,_),child) =>
+        IInContext(m.conMap(name), apply(child,m))
+      case UnitPredicational(name,_) => IInContext(m.conMap(name),IGeq(IConst(0),IConst(0)))
+      case Not(f) => INot(apply(f,m))
+      case And(l,r) => IAnd(apply(l,m),apply(r,m))
+      case Or(l,r) => INot(IAnd(INot(apply(l,m)),INot(apply(r,m))))
+      // @TODO: Double-negation eliminate, but need to do that in isabelle land too
+      case Imply(l,r) => INot(IAnd(INot(apply(r,m)),INot(INot(apply(l,m)))))
+      // @TODO: Double-negation eliminate, but need to do that in isabelle land too
+      case Equiv(l,r) =>
+        val (al,ar) = (apply(l,m), apply(r,m))
+        INot(IAnd(INot(IAnd(al,ar)),INot(IAnd(INot(al),INot(ar)))))
+      case Exists(vars,child) =>
+        val x = vars.head
+        IExists(m.varMap(x),apply(child,m))
+      case Forall(vars,child) =>
+        val x = vars.head
+        INot(IExists(m.varMap(x),INot(apply(child,m))))
+      case Diamond(a,p) => IDiamond(apply(a,m),apply(p,m))
+      case Box(a,p) => INot(IDiamond(apply(a,m),INot(apply(p,m))))
+      case True => IGeq(IConst(0),IConst(0))
+      case False => IGeq(IConst(0),IConst(1))
+      case _ : UnitFunctional => throw ConversionException("Functionals not supported yet")
+    }
   }
 
-  def apply(hp:Program):Ihp = {
-    ???
+  def apply(t:Term, m:IDMap):Itrm = {
+    t match {
+      case BaseVariable(x,ind,_) => IVar(m.varMap((x,ind)))
+      case DifferentialSymbol(BaseVariable(x,ind,_)) => IDiffVar(m.varMap((x,ind)))
+      case Number(n) =>
+        if(n.isValidInt) {
+          IConst(n.intValue())
+        } else {
+          throw ConversionException("Can't convert non-integer literal: " + n)
+        }
+      case FuncOf(Function(name,_,_,_,_), arg) =>
+        val args = detuple(arg)
+        val allArgs = padArgs(args, m.fArity)
+        IFunction(name, allArgs.map(apply(_, m)))
+
+      case Plus(l,r) => IPlus(apply(l,m),apply(r,m))
+      case Minus(l,r) => IPlus(apply(l,m),ITimes(IConst(-1),apply(r,m)))
+      case Neg(t) => ITimes(IConst(-1),apply(t,m))
+      case Times(l,r) => ITimes(apply(l,m),apply(r,m))
+      case Differential(t) => IDifferential(apply(t,m))
+      case Divide(l,r) => throw ConversionException("Converter currently does not support conversion of divisions")
+      case Power(l,r) => throw ConversionException("Converter currently does not support conversion of powers")
+
+    }
   }
 
-  def apply(seq:Sequent):Isequent = {
-    ???
+
+  def apply(o:DifferentialProgram, m:IDMap):IODE = {
+    o match {
+      case AtomicODE(DifferentialSymbol(BaseVariable(x,ind,_)),e) =>
+        IOSing(m.varMap(x,ind), apply(e,m))
+      case DifferentialProduct(l,r) => IOProd(apply(l,m),apply(r,m))
+      case DifferentialProgramConst(c,_) => IOVar(m.varMap(c))
+    }
   }
 
-  def apply(pr:Provable):Irule = {
-    ???
+  def apply(hp:Program, m:IDMap):Ihp = {
+    hp match {
+      case ProgramConst(name) => IPvar(m.varMap())
+      case Assign(BaseVariable(x,ind,_),e) => IAssign(m.varMap((x,ind)),apply(e,m))
+      case Assign(DifferentialSymbol(BaseVariable(x,ind,_)),e) => IDiffAssign(m.varMap((x,ind)),apply(e,m))
+      case Test(p) => ITest(apply(p,m))
+      case ODESystem(ode,con) => IEvolveODE(apply(ode,m),apply(con,m))
+      case Choice(a,b) => IChoice(apply(a,m),apply(b,m))
+      case Compose(a,b) => ISequence(apply(a,m),apply(b,m))
+      case Loop(a) => ILoop(apply(a,m))
+      case _ : AssignAny => throw ConversionException("Nondeterministic assignment not supported yet")
+    }
+  }
+
+  def apply(seq:Sequent, m:IDMap):Isequent = {
+    (seq.ante.map(apply(_,m)).toList,seq.succ.map(apply(_,m)).toList)
+  }
+
+  def apply(pr:Provable, m:IDMap):Irule = {
+    (pr.subgoals.map(apply(_,m)).toList, apply(pr.conclusion,m))
   }
 }
