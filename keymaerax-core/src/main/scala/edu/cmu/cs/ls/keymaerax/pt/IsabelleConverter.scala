@@ -57,6 +57,79 @@ class IsabelleConverter {
   case class IDiamond(prog:Ihp, post:Iformula) extends Iformula {}
   case class IInContext(id:ID, child:Iformula) extends Iformula {}
 
+  sealed trait IaxRule {}
+  case class ICT() extends IaxRule {}
+  case class ICQ() extends IaxRule {}
+  case class ICE() extends IaxRule {}
+  case class IG() extends IaxRule {}
+
+  sealed trait IruleApp {}
+  case class IURename(what:ID,repl:ID) extends IruleApp {}
+  case class IBRename(what:ID,repl:ID) extends IruleApp {}
+  case class IRrule(r:Irrule, i:Int) extends IruleApp {}
+  case class ILrule(r:Ilrule, i:Int) extends IruleApp {}
+  case class ICloseId(i:Int,j:Int) extends IruleApp {}
+  case class ICut(f:Iformula) extends IruleApp {}
+
+  sealed trait Ilrule {}
+  case class IImplyL() extends Ilrule {}
+  case class IAndL() extends Ilrule {}
+  //@TODO: These are different from the KyX rule
+  case class IEquivForwardL() extends Ilrule{}
+  case class IEquivBackwardL() extends Ilrule{}
+
+  sealed trait Irrule {}
+  case class IImplyR() extends Irrule {}
+  case class IAndR() extends Irrule {}
+  // @TODO: One of these is not in KyX rules
+  case class ICohideR() extends Irrule {}
+  case class ICohideRR() extends Irrule {}
+  case class ITrueR() extends Irrule {}
+  case class IEquivR() extends Irrule {}
+  case class ISkolem() extends Irrule {}
+
+  sealed trait Iaxiom {}
+  case class IAloopIter() extends Iaxiom {}
+  case class IAI() extends Iaxiom {}
+  case class IAtest() extends Iaxiom {}
+  case class IAbox() extends Iaxiom {}
+  case class IAchoice() extends Iaxiom {}
+  case class IAK() extends Iaxiom {}
+  case class IAV() extends Iaxiom {}
+  case class IAassign() extends Iaxiom {}
+  case class IAdassign() extends Iaxiom {}
+  case class IAdConst() extends Iaxiom {}
+  case class IAdPlus() extends Iaxiom {}
+  case class IAdMult() extends Iaxiom {}
+  case class IADW() extends Iaxiom {}
+  case class IADE() extends Iaxiom {}
+  case class IADC() extends Iaxiom {}
+  case class IADS() extends Iaxiom {}
+  case class IADIGeq() extends Iaxiom {}
+  case class IADIGr() extends Iaxiom {}
+  case class IADG() extends Iaxiom {}
+
+  /* @TODO: Represent this type magic in Scala or in generated code as necessary
+    SFunctions       :: "'a ⇀ ('a + 'c, 'c) trm"
+    SPredicates      :: "'c ⇀ ('a + 'c, 'b, 'c) formula"
+    SContexts        :: "'b ⇀ ('a, 'b + unit, 'c) formula"
+    SPrograms        :: "'c ⇀ ('a, 'b, 'c) hp"
+    SODEs            :: "'c ⇀ ('a, 'c) ODE"
+  */
+  case class Isubst(SFunctions:List[Itrm], SPredicates:List[Iformula], SContexts:List[Iformula], SPrograms:List[Ihp], SODEs:List[IODE])
+
+  sealed trait Ipt {}
+  case class IFOLRConstant(f:Iformula) extends Ipt {}
+  case class IRuleApp (child:Ipt, ra:IruleApp,branch:Int) extends Ipt {}
+  case class IAxRule(ar:IaxRule) extends Ipt {}
+  case class IPrUSubst(child:Ipt, sub:Isubst) extends Ipt {}
+  case class IAx(ax:Iaxiom) extends Ipt {}
+  case class IFNC(child:Ipt, seq:Isequent,ra:IruleApp) extends Ipt {}
+  case class IPro(child:Ipt,pro:Ipt) extends Ipt {}
+  case class IStart(seq:Sequent) extends Ipt {}
+  case class ISub(child:Ipt, sub:Ipt, branch:Int) extends Ipt {}
+
+
   private def detuple(t:Term):List[Term] = {
     t match {
       case Pair(l,r) => detuple(l) ++ detuple(r)
@@ -129,7 +202,6 @@ class IsabelleConverter {
         val args = detuple(arg)
         val allArgs = padArgs(args, m.fArity)
         IFunction(name, allArgs.map(apply(_, m)))
-
       case Plus(l,r) => IPlus(apply(l,m),apply(r,m))
       case Minus(l,r) => IPlus(apply(l,m),ITimes(IConst(-1),apply(r,m)))
       case Neg(t) => ITimes(IConst(-1),apply(t,m))
@@ -137,11 +209,9 @@ class IsabelleConverter {
       case Differential(t) => IDifferential(apply(t,m))
       case Divide(l,r) => throw ConversionException("Converter currently does not support conversion of divisions")
       case Power(l,r) => throw ConversionException("Converter currently does not support conversion of powers")
-
     }
   }
-
-
+  
   def apply(o:DifferentialProgram, m:IDMap):IODE = {
     o match {
       case AtomicODE(DifferentialSymbol(BaseVariable(x,ind,_)),e) =>
