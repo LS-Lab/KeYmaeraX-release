@@ -13,6 +13,8 @@ class IsabelleConverter {
   type Isequent = (List[Iformula],List[Iformula])
   type Irule = (List[Isequent],Isequent)
 
+  val m:IDMap = ???
+
   // @TODO: more maps for more identifier types -> more efficient code
   // @TODO: automatically consider both arity and number of symbols for determining type size
   case class IDMap(varMap:Map[(String,Option[Int]),String],
@@ -57,12 +59,25 @@ class IsabelleConverter {
   case class IDiamond(prog:Ihp, post:Iformula) extends Iformula {}
   case class IInContext(id:ID, child:Iformula) extends Iformula {}
 
+  object IaxRule {
+    def apply(n:String):IaxRule = {
+      n match {
+        case "CT" => ICT()
+        case "CQ" => ICQ()
+        case "CE" => ICE()
+        case "G" => IG()
+        case _ =>
+          throw ConversionException("Unrecognized axiomatic rule: " + n)
+      }
+    }
+  }
   sealed trait IaxRule {}
   case class ICT() extends IaxRule {}
   case class ICQ() extends IaxRule {}
   case class ICE() extends IaxRule {}
   case class IG() extends IaxRule {}
 
+  //object IruleApp {}
   sealed trait IruleApp {}
   case class IURename(what:ID,repl:ID) extends IruleApp {}
   case class IBRename(what:ID,repl:ID) extends IruleApp {}
@@ -88,6 +103,34 @@ class IsabelleConverter {
   case class IEquivR() extends Irrule {}
   case class ISkolem() extends Irrule {}
 
+  object Iaxiom {
+    def apply(n:String):Iaxiom = {
+      n match {
+          //@TODO: These names are all wrong; update them
+        case "[*]" => IAloopIter()
+        case "I induction" => IAI()
+        case "[?] test" => IAtest()
+        case "[] box" => IAbox()
+        case "[++] choice" => IAchoice()
+        case "K modal modus ponens" => IAK()
+        case "V vacuous" => IAV()
+        case "[:=] assign" => IAassign()
+        //@TODO: These are probably collapsed on kyx side, need to re-split based on context
+        case "[:='] assign" => IAdassign()
+        case "(c())'" => IAdConst()
+        case "(+)'" => IAdPlus()
+        case "(*)'" => IAdMult()
+        case "DW differential weakening" => IADW()
+        case "DE differential effect" => IADE()
+        case "DC differential cut" => IADC()
+        case "DS differential solve" => IADS()
+        //@TODO: specialize based on shape of differential formula
+        case "DI differential invariant" => IADIGeq() // e.g. IADIGr()
+        case "G goedel" => IADG()
+      }
+    }
+  }
+
   sealed trait Iaxiom {}
   case class IAloopIter() extends Iaxiom {}
   case class IAI() extends Iaxiom {}
@@ -98,6 +141,7 @@ class IsabelleConverter {
   case class IAV() extends Iaxiom {}
   case class IAassign() extends Iaxiom {}
   case class IAdassign() extends Iaxiom {}
+
   case class IAdConst() extends Iaxiom {}
   case class IAdPlus() extends Iaxiom {}
   case class IAdMult() extends Iaxiom {}
@@ -126,7 +170,7 @@ class IsabelleConverter {
   case class IAx(ax:Iaxiom) extends Ipt {}
   case class IFNC(child:Ipt, seq:Isequent,ra:IruleApp) extends Ipt {}
   case class IPro(child:Ipt,pro:Ipt) extends Ipt {}
-  case class IStart(seq:Sequent) extends Ipt {}
+  case class IStart(seq:Isequent) extends Ipt {}
   case class ISub(child:Ipt, sub:Ipt, branch:Int) extends Ipt {}
 
 
@@ -142,7 +186,56 @@ class IsabelleConverter {
     List.tabulate(n)(i => if(i < length) {terms(i)} else Number(0))
   }
 
-  def apply(f:Formula,m:IDMap):Iformula = {
+  def apply(name:String,seqPos:Seq[SeqPos],expArgs:Seq[Expression]):IruleApp = {
+    (name, seqPos.toList, expArgs.toList) match {
+      // @TODO: Get the names for everything
+      case ("uniform renaming", _, BaseVariable(n1,ind1,_) :: BaseVariable(n2,ind2,_) :: Nil) =>
+        IURename(m.varMap((n1,ind1)),m.varMap((n2,ind2)))
+      case ("bound renaming", _, BaseVariable(n1,ind1,_) :: BaseVariable(n2,ind2,_) :: Nil) =>
+        IBRename(m.varMap((n1,ind1)),m.varMap((n2,ind2)))
+      case ("closeId", (a:AntePos)::(s:SeqPos)::Nil, _) => ICloseId(a.getIndex,s.getIndex)
+      case ("cut", _, (f:Formula) :: Nil) => ICut(apply(f))
+      case ("Imply Left", (a:AntePos)::Nil, _) => ILrule(IImplyL(),a.getIndex)
+      case ("And Left", (a:AntePos)::Nil, _) => ILrule(IAndL(),a.getIndex)
+      case ("Equiv Left1", (a:AntePos)::Nil, _) => ILrule(IEquivForwardL(),a.getIndex)
+      case ("Equiv Left2", (a:AntePos)::Nil, _) => ILrule(IEquivBackwardL(),a.getIndex)
+
+      case ("Imply Right", (s:SuccPos)::Nil, _) => IRrule(IImplyR(), s.getIndex)
+      case ("Cohide Right", (s:SuccPos)::Nil, _) => IRrule(ICohideR(), s.getIndex)
+      case ("Cohide Right 2", (s:SuccPos)::Nil, _) => IRrule(ICohideRR(), s.getIndex)
+      case ("closeTrue", (s:SuccPos)::Nil, _) => IRrule(ITrueR(), s.getIndex)
+      case ("Equiv Right", (s:SuccPos)::Nil, _) => IRrule(IEquivR(), s.getIndex)
+      case ("All Right", (s:SuccPos)::Nil, _) => IRrule(ISkolem(), s.getIndex)
+      case ("And Right", (s:SuccPos)::Nil, _) => IRrule(IAndR(), s.getIndex)
+      case _ =>
+        throw ConversionException("Unrecognized non-axiomatic rule: " + name)
+    }
+  }
+
+  def apply(sub:USubst):Isubst = {
+    ???
+  }
+
+  def apply(pt:ProofTerm):Ipt = {
+    pt match {
+      case FOLRConstant(f) => IFOLRConstant(apply(f))
+      case RuleTerm(name) => IAxRule(IaxRule(name))
+      case AxiomTerm(name) => IAx(Iaxiom(name))
+      case RuleApplication(child, name, sub, seqPos, expArgs) =>
+        IRuleApp(apply(child), apply(name,seqPos,expArgs),sub)
+      case UsubstProvableTerm(child,subst) =>
+        IPrUSubst(apply(child), apply(subst))
+      case ForwardNewConsequenceTerm(child,con,r) =>
+        IFNC(apply(child),apply(con),apply(r.name, Seq(AntePos(0)), Seq()))
+      case ProlongationTerm(sub,pro) =>
+        IPro(apply(sub),apply(pro))
+      case Sub(child,sub,idx)=> ISub(apply(child),apply(sub),idx)
+      case StartProof(seq) => IStart(apply(seq))
+      case NoProof () => throw ConversionException("Encountered unproven subproof")
+    }
+  }
+
+  def apply(f:Formula,m:IDMap = m):Iformula = {
     f match {
       case GreaterEqual(l,r) => IGeq(apply(l,m), apply(r,m))
       case Greater(l,r) =>
@@ -188,7 +281,7 @@ class IsabelleConverter {
     }
   }
 
-  def apply(t:Term, m:IDMap):Itrm = {
+  def apply(t:Term, m:IDMap = m):Itrm = {
     t match {
       case BaseVariable(x,ind,_) => IVar(m.varMap((x,ind)))
       case DifferentialSymbol(BaseVariable(x,ind,_)) => IDiffVar(m.varMap((x,ind)))
@@ -211,8 +304,8 @@ class IsabelleConverter {
       case Power(l,r) => throw ConversionException("Converter currently does not support conversion of powers")
     }
   }
-  
-  def apply(o:DifferentialProgram, m:IDMap):IODE = {
+
+  def apply(o:DifferentialProgram, m:IDMap = m):IODE = {
     o match {
       case AtomicODE(DifferentialSymbol(BaseVariable(x,ind,_)),e) =>
         IOSing(m.varMap(x,ind), apply(e,m))
@@ -221,7 +314,7 @@ class IsabelleConverter {
     }
   }
 
-  def apply(hp:Program, m:IDMap):Ihp = {
+  def apply(hp:Program, m:IDMap = m):Ihp = {
     hp match {
       case ProgramConst(name) => IPvar(m.varMap())
       case Assign(BaseVariable(x,ind,_),e) => IAssign(m.varMap((x,ind)),apply(e,m))
@@ -235,11 +328,11 @@ class IsabelleConverter {
     }
   }
 
-  def apply(seq:Sequent, m:IDMap):Isequent = {
+  def apply(seq:Sequent, m:IDMap = m):Isequent = {
     (seq.ante.map(apply(_,m)).toList,seq.succ.map(apply(_,m)).toList)
   }
 
-  def apply(pr:Provable, m:IDMap):Irule = {
+  def apply(pr:Provable, m:IDMap = m):Irule = {
     (pr.subgoals.map(apply(_,m)).toList, apply(pr.conclusion,m))
   }
 }
