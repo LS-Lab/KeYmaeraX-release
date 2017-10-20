@@ -212,8 +212,26 @@ class IsabelleConverter {
     }
   }
 
+  private def sortSubs[T](seq:Seq[(Expression,Expression)], f:(Expression => String), g:(Expression => T)):List[T] = {
+    val withKeys = seq.map({case (ns,e) => (ns,e,f(ns))})
+    withKeys.sortBy({case (ns,e,key) => key}).map{case (_,e,_) => e}.map(g).toList
+  }
+
+  // @TODO: Surely has type issues
   def apply(sub:USubst):Isubst = {
-    ???
+    val pairs = sub.subsDefsInput.map({case SubstitutionPair(what,repl) => (what,repl)})
+    val (fun, t1) = pairs.partition({case (_: FuncOf, _) => true case _ => false})
+    val (pred, t2) = t1.partition({case (_: PredOf, _) => true case _ => false})
+    val (con, t3) = t2.partition({case (_: PredicationalOf, _) => true case (_: UnitPredicational, _) => true case _ => false})
+    val (prog, t4) = t3.partition({case (_: ProgramConst, _) => true case _ => false})
+    val (ode, t5) = t4.partition({case (_: DifferentialProgramConst, _) => true case _ => false})
+    assert(t5.isEmpty, "Forgot to handle symbols in substitution: " + t5)
+    Isubst(sortSubs(fun, {case Function(name,_,_,_,_) => m.funMap(name)}, {case e:Term => apply(e)}),
+      sortSubs(pred, {case PredOf(Function(name,_,_,_,_),_) => m.funMap(name)}, {case e:Formula => apply(e)}),
+      sortSubs(con, {case PredicationalOf(Function(name,_,_,_,_),_) => m.conMap(name) case UnitPredicational(name, _) => m.conMap(name)}, {case e:Formula => apply(e)}),
+      //@todo: need program map and stuff
+      sortSubs(prog, {case ProgramConst(name) =>  m.varMap((name,None))}, {case e:Program => apply(e)}),
+      sortSubs(ode, {case DifferentialProgramConst(name,_) =>  m.varMap((name,None))}, {case e:DifferentialProgram => apply(e)}))
   }
 
   def apply(pt:ProofTerm):Ipt = {
