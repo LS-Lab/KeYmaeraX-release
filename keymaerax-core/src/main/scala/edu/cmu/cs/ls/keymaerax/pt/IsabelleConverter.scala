@@ -1,5 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.pt
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.btactics.{AxiomInfo, ExpressionTraversal}
 import edu.cmu.cs.ls.keymaerax.core._
 
 /**
@@ -8,25 +11,218 @@ import edu.cmu.cs.ls.keymaerax.core._
   * @see [[ProofChecker]]
   * @author Brandon Bohrer
   */
-class IsabelleConverter {
+object IsabelleConverter {
+  private def detuple(t:Term):List[Term] = {
+    t match {
+      case Pair(l,r) => detuple(l) ++ detuple(r)
+      case _ => List(t)
+    }
+  }
+}
+
+class IsabelleConverter(pt:ProofTerm) {
   type ID = String
   type Isequent = (List[Iformula],List[Iformula])
   type Irule = (List[Isequent],Isequent)
 
-  val m:IDMap = ???
+  // Keep this in sync with the code generation in Isabelle proof. If the number of IDs is too small then we can't export
+  // the proof term, if it's too big then proof checking gets progressively slower
+  val ISABELLE_IDS:Seq[String] = Seq("i1","i2","i3","i4","i5")
 
-  // @TODO: more maps for more identifier types -> more efficient code
+  val m:IDMap = IDMap.ofProofTerm(pt, IDMap.empty)
+
+  object IDMap {
+    val empty:IDMap = IDMap(Map(),Map(),Map(),Map(),Map(),Map(),0,0)
+
+    def ofFormula(f:Formula,acc:IDMap):IDMap = {
+      ofExp(f,acc)
+    }
+
+    def ofSequent(seq:Sequent,acc:IDMap):IDMap = {
+      seq.succ.foldLeft(seq.ante.foldLeft(acc)((acc,f) => ofFormula(f,acc)))((acc,f) => ofFormula(f,acc))
+    }
+
+    def ofProvable(pr:Provable,acc:IDMap):IDMap = {
+      pr.subgoals.foldLeft(ofSequent(pr.conclusion,acc))((acc,seq) => ofSequent(seq,acc))
+    }
+
+    def ofExp(e:Expression,acc:IDMap):IDMap = {
+      var pos: IDMap = acc
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+
+        override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
+          e match {
+            case ProgramConst(name) => pos = pos.addProg(name)
+            case DifferentialProgramConst(name,_) => pos = pos.addDiffProg(name)
+            case _ =>
+          }
+          Left(None)
+        }
+        
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+          e match {
+            case FuncOf(Function(name,_,_,_,_),arg) => pos = pos.addFunc(name,IsabelleConverter.detuple(arg).length)
+            case BaseVariable(name,ind,_) => pos = pos.addVar(name,ind)
+            case DifferentialSymbol(BaseVariable(name,ind,_)) => pos.addVar(name,ind)
+            case _ =>
+          }
+          Left(None)
+        }
+        
+        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+          e match {
+            case PredOf(Function(name, _, _, _, _), arg) => pos = pos.addPred(name,IsabelleConverter.detuple(arg).length)
+            case PredicationalOf(Function(name, _, _, _, _), arg) => pos.addCon(name)
+            case UnitPredicational(name, _) => pos.addUnitPred(name)
+            case _ =>
+          }
+          Left(None)
+        }
+      }, e)
+      pos
+      acc
+    }
+
+    def ofFunc(name:String, arg:Term, repl:Expression, acc:IDMap):IDMap = {
+      val arity = IsabelleConverter.detuple(arg).length
+      ofExp(repl,ofExp(arg,acc)).addFunc(name,arity)
+    }
+
+    def ofPred(name:String, arg:Term, repl:Expression, acc:IDMap):IDMap = {
+      val arity = IsabelleConverter.detuple(arg).length
+      ofExp(repl,ofExp(arg,acc)).addPred(name,arity)
+    }
+
+    def ofUnitPred(name:String,  repl:Expression, acc:IDMap):IDMap = {
+      ofExp(repl,acc).addUnitPred(name)
+    }
+
+    def ofCon(name:String, arg:Formula, repl:Expression, acc:IDMap):IDMap = {
+      ofExp(repl,ofExp(arg,acc)).addCon(name)
+    }
+
+    def ofProg(name:String, repl:Expression, acc:IDMap):IDMap = {
+      ofExp(repl,acc).addProg(name)
+    }
+
+    def ofDiffConst(name:String, repl:Expression, acc:IDMap):IDMap = {
+      ofExp(repl,acc).addDiffProg(name)
+    }
+
+    def ofSubst(us:USubst,acc:IDMap):IDMap = {
+      us.subsDefsInput.map({case SubstitutionPair(what,repl) => (what,repl)}).foldLeft(acc){
+        case (acc,(FuncOf(Function(name,_,_,_,_),arg),repl)) => ofFunc(name,arg,repl,acc)
+        case (acc,(PredOf(Function(name,_,_,_,_),arg),repl)) => ofPred(name,arg,repl,acc)
+        case (acc,(PredicationalOf(Function(name,_,_,_,_),arg),repl)) => ofCon(name,arg,repl,acc)
+        case (acc,(UnitPredicational(name,arg),repl)) => ofUnitPred(name,repl,acc)
+        case (acc,(ProgramConst(name),repl)) => ofProg(name,repl,acc)
+        case (acc,(DifferentialProgramConst(name,_),repl)) => ofDiffConst(name,repl,acc)
+      }
+    }
+
+    def ofProofTerm(pt:ProofTerm, acc:IDMap):IDMap = {
+      pt match {
+        case FOLRConstant(f) => ofFormula(f,acc)
+        case RuleApplication(child, ruleName, subgoal, sequentPositions, expArgs) =>
+          expArgs.foldLeft(ofProofTerm(child,acc))((acc,exp) => ofExp(exp,acc))
+        case RuleTerm(name: String) => ofProvable(Provable.rules(name),acc)
+        case UsubstProvableTerm(child: ProofTerm, substitution: USubst) =>
+          ofSubst(substitution,ofProofTerm(child,acc))
+        case AxiomTerm(name: String) => ofFormula(AxiomInfo(name).formula,acc)
+        case ForwardNewConsequenceTerm(child: ProofTerm, newConsequence: Sequent, rule: Rule) =>
+          ofSequent(newConsequence,ofProofTerm(child,acc))
+        case ProlongationTerm(child: ProofTerm, prolongation: ProofTerm) =>
+          ofProofTerm(child,ofProofTerm(prolongation,acc))
+        case StartProof(phi:Sequent) => ofSequent(phi,acc)
+        case Sub(child:ProofTerm, sub:ProofTerm, idx: Int) =>
+          ofProofTerm(child,ofProofTerm(sub,acc))
+        case NoProof() => throw ConversionException("Found subterm with NoProof()")
+      }
+    }
+  }
+
+  // @TODO: use detailed maps correctly throughout rest of ocode
+  // @TODO: Minimize size of types used
   // @TODO: automatically consider both arity and number of symbols for determining type size
   case class IDMap(varMap:Map[(String,Option[Int]),String],
                    funMap:Map[String,String],
-                   conMap:Map[String,String],
+                   predMap:Map[String,String],
+                   conMap:Map[Either[String,String],String],
+                   progMap:Map[String,String],
+                   odeMap:Map[String,String],
                    fArity:Int,
-                   pArity:Int)
+                   pArity:Int) {
+    def addVar(name:String, ind:Option[Int]):IDMap = {
+      if(varMap.contains((name,ind))) { this }
+      else if(varMap.size < ISABELLE_IDS.size) {
+        IDMap(varMap.+(((name,ind),ISABELLE_IDS(varMap.size))),funMap,predMap,conMap,progMap,odeMap,fArity,pArity)
+      } else {
+        throw ConversionException("Need more Isabelle identifiers, not enough to convert variable identifier: " + name)
+      }
+    }
+
+    def addProg(name:String):IDMap = {
+      if(progMap.contains(name)) { this }
+      else if(progMap.size < ISABELLE_IDS.size) {
+        IDMap(varMap,funMap,predMap,conMap,progMap.+((name,ISABELLE_IDS(progMap.size))),odeMap,fArity,pArity)
+      } else {
+        throw ConversionException("Need more Isabelle identifiers, not enough to convert program identifier: " + name)
+      }
+    }
+
+    def addDiffProg(name:String):IDMap = {
+      if(odeMap.contains(name)) { this }
+      else if(odeMap.size < ISABELLE_IDS.size) {
+        IDMap(varMap,funMap,predMap,conMap,progMap,odeMap.+((name,ISABELLE_IDS(odeMap.size))),fArity,pArity)
+      } else {
+        throw ConversionException("Need more Isabelle identifiers, not enough to convert differential program identifier: " + name)
+      }
+    }
+
+    def addUnitPred(name:String):IDMap = {
+      if(conMap.contains(Right(name))) { this }
+      else if(conMap.size < ISABELLE_IDS.size) {
+        IDMap(varMap,funMap,predMap,conMap.+((Right(name),ISABELLE_IDS(conMap.size))),progMap,odeMap,fArity,pArity)
+      } else {
+        throw ConversionException("Need more Isabelle identifiers, not enough to convert nullary predicational identifier: " + name)
+      }
+    }
+
+    def addCon(name:String):IDMap = {
+      if(conMap.contains(Left(name))) { this }
+      else if(conMap.size < ISABELLE_IDS.size) {
+        IDMap(varMap,funMap,predMap,conMap.+((Left(name),ISABELLE_IDS(conMap.size))),progMap,odeMap,fArity,pArity)
+      } else {
+        throw ConversionException("Need more Isabelle identifiers, not enough to convert unary predicational identifier: " + name)
+      }
+    }
+
+    def addFunc(name:String, arity:Int):IDMap = {
+      if(funMap.contains(name)) {
+        this
+      } else if(funMap.size < ISABELLE_IDS.size) {
+        IDMap(varMap,funMap.+((name,ISABELLE_IDS(funMap.size))),predMap,conMap,progMap,odeMap,fArity.max(arity),pArity)
+      } else {
+        throw ConversionException("Need more Isabelle identifiers, not enough to convert function identifier: " + name)
+      }
+    }
+
+    def addPred(name:String, arity:Int):IDMap = {
+      if(predMap.contains(name)) {
+        this
+      } else if(predMap.size < ISABELLE_IDS.size) {
+        IDMap(varMap,funMap,predMap.+((name,ISABELLE_IDS(predMap.size))),conMap,progMap,odeMap,fArity,pArity.max(arity))
+      } else {
+        throw ConversionException("Need more Isabelle identifiers, not enough to convert predicate identifier: " + name)
+      }
+    }
+  }
   //case class IRat(num:Number,den:Number)
 
   case class ConversionException(msg:String) extends Exception {}
 
   sealed trait Itrm {}
+
   case class IVar(id:ID) extends Itrm {}
   case class IDiffVar(id:ID) extends Itrm {}
   case class IConst(int:Int) extends Itrm {}
@@ -174,12 +370,6 @@ class IsabelleConverter {
   case class ISub(child:Ipt, sub:Ipt, branch:Int) extends Ipt {}
 
 
-  private def detuple(t:Term):List[Term] = {
-    t match {
-      case Pair(l,r) => detuple(l) ++ detuple(r)
-      case _ => List(t)
-    }
-  }
 
   private def padArgs(terms: List[Term], n: Int):List[Term] = {
     val length = terms.length
@@ -218,6 +408,7 @@ class IsabelleConverter {
   }
 
   // @TODO: Surely has type issues
+  // @TODO: Have to ensure identifier renaming preserves choice of reserved identifiers in axioms/axiomatic rules
   def apply(sub:USubst):Isubst = {
     val pairs = sub.subsDefsInput.map({case SubstitutionPair(what,repl) => (what,repl)})
     val (fun, t1) = pairs.partition({case (_: FuncOf, _) => true case _ => false})
@@ -270,7 +461,7 @@ class IsabelleConverter {
         val (al,ar) = (apply(l), apply(r))
         INot(IAnd(IGeq(al,ar),IGeq(ar,al)))
       case PredOf(Function(name,_,_,_,_), arg) =>
-        val args = detuple(arg)
+        val args = IsabelleConverter.detuple(arg)
         val allArgs = padArgs(args, m.pArity)
         IProp(m.varMap((name,None)), allArgs.map(apply))
       case PredicationalOf(Function(name,_,_,_,_),child) =>
@@ -310,7 +501,7 @@ class IsabelleConverter {
           throw ConversionException("Can't convert non-integer literal: " + n)
         }
       case FuncOf(Function(name,_,_,_,_), arg) =>
-        val args = detuple(arg)
+        val args = IsabelleConverter.detuple(arg)
         val allArgs = padArgs(args, m.fArity)
         IFunction(name, allArgs.map(apply(_)))
       case Plus(l,r) => IPlus(apply(l),apply(r))
