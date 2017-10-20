@@ -576,24 +576,28 @@ class IsabelleConverter(pt:ProofTerm) {
     sb.toString()
   }
 
-  private def writeObject(sb:StringBuilder,objName:String, fieldName:String):Unit = {
+  private def writeObjects(sb:StringBuilder,objName:String, fieldName:String,mainName:String):Unit = {
+    val imports = List("Real","Rat","Int","Proof_Checker","Syntax","Scratch")
     sb.++=("object "); sb.++=(objName);sb.++=(" {\n")
-    sb.++=("  val ");sb.++=(fieldName);sb.++=(" = \n");
+    imports.foreach({case s => sb.++=("  import ");sb.++=(s);sb.++=("._\n")})
+    sb.++=("  val ");sb.++=(fieldName);sb.++=(":pt[myvars,myvars,myvars] = \n");
     new ScalaBuilder(sb)(apply(pt))
-    sb.++=("\n}")
-
+    sb.++=("\n}\n\n")
+    sb.++=("object "); sb.++=(mainName);sb.++=(" {\n")
+    imports.foreach({case s => sb.++=("  import ");sb.++=(s);sb.++=("._\n")})
+    sb.++=("  def main(input : Array[String]) = {\n    val pred = ddl_pt_ok_i("+objName+"."+fieldName+")\n    val res = Predicate.eval(pred)\n    println(res())\n  }}")
   }
 
-  def scalaObject(objName:String, fieldName:String):String = {
+  def scalaObjects(objName:String, fieldName:String,mainName:String):String = {
     val sb = new StringBuilder(INIT_CAPACITY)
-    writeObject(sb,objName,fieldName)
+    writeObjects(sb,objName,fieldName,mainName)
     sb.toString()
   }
 
-  def exportScalaObject(fileName:String,objName:String, fieldName:String):Unit = {
+  def exportScalaObjects(fileName:String,objName:String, fieldName:String,mainName:String):Unit = {
     val writer = new BufferedWriter(new FileWriter(fileName))
     val sb = new StringBuilder(INIT_CAPACITY)
-    writeObject(sb,objName,fieldName)
+    writeObjects(sb,objName,fieldName,mainName)
     writer.append(sb)
     writer.close()
   }
@@ -601,36 +605,36 @@ class IsabelleConverter(pt:ProofTerm) {
 
 class ScalaBuilder(sb:StringBuilder) {
   private def b0(name:String):Unit = {
-    sb.++(name)
-    sb.++("()")
+    sb.++=(name)
+    sb.++=("()")
   }
 
   def b1(name:String,f:(() => Unit)):Unit = {
-    sb.++(name)
-    sb.++("(")
-    f
-    sb.++(")")
+    sb.++=(name)
+    sb.++=("(")
+    f()
+    sb.++=(")")
   }
 
   private def b2(name:String,f:(()=> Unit),g:(()=> Unit)):Unit = {
-    sb.++(name)
-    sb.++("(")
-    f
-    sb.++(",")
-    g
-    sb.++(")")
+    sb.++=(name)
+    sb.++=("(")
+    f()
+    sb.++=(",")
+    g()
+    sb.++=(")")
   }
 
   private def b3(name:String,f:(()=> Unit),g:(()=> Unit),h:(()=> Unit)):Unit = {
-    sb.++(name);sb.++("(");f;sb.++(",");g;sb.++(",");h;sb.++(")")
+    sb.++=(name);sb.++=("(");f();sb.++=(",");g();sb.++=(",");h();sb.++=(")")
   }
 
   private def b6(name:String,f1:(()=> Unit),f2:(()=> Unit),f3:(()=> Unit),f4:(()=> Unit),f5:(()=> Unit),f6:(()=> Unit)):Unit = {
-    sb.++(name);sb.++("(");f1;sb.++(",");f2;sb.++(",");f3;sb.++(",");f4;sb.++(",");f5;sb.++(",");f6;sb.++(")")
+    sb.++=(name);sb.++=("(");f1();sb.++=(",");f2();sb.++=(",");f3();sb.++=(",");f4();sb.++=(",");f5();sb.++=(",");f6();sb.++=(")")
   }
 
   private def btup(f:(()=>Unit),g:(()=>Unit)):Unit = {
-    sb.++=("(");f;sb.++=(",");g;sb.++=(")")
+    sb.++=("(");f();sb.++=(",");g();sb.++=(")")
   }
 
   private def blist[T](l:List[T],f:(T=>Unit)):Unit = {
@@ -661,7 +665,7 @@ class ScalaBuilder(sb:StringBuilder) {
   def apply(t:Itrm):Unit = {
     t match {
       case IVar(x) => b1("Var", () => b0(x))
-      case IConst(n) => brat(n)
+      case IConst(n) => b1("Const",()=>brat(n))
       case IFunction(n,args) => b2("Function",()=>b0(n),()=>bff(args,apply(_:Itrm)))
       case IPlus(a,b) => b2("Plus",()=>apply(a),()=>apply(b))
       case ITimes(a,b) => b2("Times",()=>apply(a),()=>apply(b))
@@ -736,7 +740,8 @@ class ScalaBuilder(sb:StringBuilder) {
   }
 
   def apply(br:Int):Unit = {
-    sb.++=(br.toString)
+    val s = br.toString
+    sb.++=("int_of_integer(");sb.++=(s);sb.++=(")")
   }
 
   def apply(ar:IaxRule):Unit = {
