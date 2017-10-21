@@ -26,6 +26,7 @@ object IsabelleConverter {
   def detuple(t:Term):List[Term] = {
     t match {
       case Pair(l,r) => detuple(l) ++ detuple(r)
+      case Nothing => List()
       case _ => List(t)
     }
   }
@@ -33,7 +34,7 @@ object IsabelleConverter {
 
 
 object IDMap {
-  val empty:IDMap = IDMap(Map(),Map(),Map(),Map(),Map(),Map(),0,0)
+  val empty:IDMap = IDMap(Map(),Map(),Map(),Map(),Map(),Map(),ISABELLE_IDS.length,ISABELLE_IDS.length)
 
   def ofSequent(seq:Sequent,acc:IDMap):IDMap = {
     seq.succ.foldLeft(seq.ante.foldLeft(acc)((acc,f) => ofFormula(f,acc)))((acc,f) => ofFormula(f,acc))
@@ -374,7 +375,7 @@ case class IADG() extends Iaxiom {}
   SPrograms        :: "'c ⇀ ('a, 'b, 'c) hp"
   SODEs            :: "'c ⇀ ('a, 'c) ODE"
 */
-case class Isubst(SFunctions:List[Itrm], SPredicates:List[Iformula], SContexts:List[Iformula], SPrograms:List[Ihp], SODEs:List[IODE])
+case class Isubst(SFunctions:List[Option[Itrm]], SPredicates:List[Option[Iformula]], SContexts:List[Option[Iformula]], SPrograms:List[Option[Ihp]], SODEs:List[Option[IODE]])
 
 sealed trait Ipt {}
 case class IFOLRConstant(f:Iformula) extends Ipt {}
@@ -433,6 +434,11 @@ class IsabelleConverter(pt:ProofTerm) {
   // @TODO: Surely has type issues
   // @TODO: Have to ensure identifier renaming preserves choice of reserved identifiers in axioms/axiomatic rules
   def apply(sub:USubst):Isubst = {
+    def extendSub[T](l:List[T]):List[Option[T]] = {
+      val somes = l.map(Some(_))
+      val numSomes = somes.length
+      List.tabulate(ISABELLE_IDS.length)({case i => if(i < numSomes) {somes(i)} else None})
+    }
     val pairs = sub.subsDefsInput.map({case SubstitutionPair(what,repl) => (what,repl)})
     val (fun, t1) = pairs.partition({case (_: FuncOf, _) => true case _ => false})
     val (pred, t2) = t1.partition({case (_: PredOf, _) => true case _ => false})
@@ -440,12 +446,13 @@ class IsabelleConverter(pt:ProofTerm) {
     val (prog, t4) = t3.partition({case (_: ProgramConst, _) => true case _ => false})
     val (ode, t5) = t4.partition({case (_: DifferentialProgramConst, _) => true case _ => false})
     assert(t5.isEmpty, "Forgot to handle symbols in substitution: " + t5)
-    Isubst(sortSubs(fun, {case Function(name,_,_,_,_) => m.funMap(name)}, {case e:Term => apply(e)}),
-      sortSubs(pred, {case PredOf(Function(name,_,_,_,_),_) => m.funMap(name)}, {case e:Formula => apply(e)}),
-      sortSubs(con, {case PredicationalOf(Function(name,_,_,_,_),_) => m.conMap(Left(name)) case UnitPredicational(name, _) => m.conMap(Right(name))}, {case e:Formula => apply(e)}),
+    Isubst(
+      extendSub(sortSubs(fun, {case Function(name,_,_,_,_) => m.funMap(name)}, {case e:Term => apply(e)})),
+      extendSub(sortSubs(pred, {case PredOf(Function(name,_,_,_,_),_) => m.funMap(name)}, {case e:Formula => apply(e)})),
+      extendSub(sortSubs(con, {case PredicationalOf(Function(name,_,_,_,_),_) => m.conMap(Left(name)) case UnitPredicational(name, _) => m.conMap(Right(name))}, {case e:Formula => apply(e)})),
       //@todo: need program map and stuff
-      sortSubs(prog, {case ProgramConst(name) =>  m.varMap((name,None))}, {case e:Program => apply(e)}),
-      sortSubs(ode, {case DifferentialProgramConst(name,_) =>  m.varMap((name,None))}, {case e:DifferentialProgram => apply(e)}))
+      extendSub(sortSubs(prog, {case ProgramConst(name) =>  m.varMap((name,None))}, {case e:Program => apply(e)})),
+      extendSub(sortSubs(ode, {case DifferentialProgramConst(name,_) =>  m.varMap((name,None))}, {case e:DifferentialProgram => apply(e)})))
   }
 
   def apply(pt:ProofTerm):Ipt = {
@@ -486,7 +493,7 @@ class IsabelleConverter(pt:ProofTerm) {
       case PredOf(Function(name,_,_,_,_), arg) =>
         val args = IsabelleConverter.detuple(arg)
         val allArgs = padArgs(args, m.pArity)
-        IProp(m.varMap((name,None)), allArgs.map(apply))
+        IProp(m.predMap(name), allArgs.map(apply))
       case PredicationalOf(Function(name,_,_,_,_),child) =>
         IInContext(m.conMap(Right(name)), apply(child))
       case UnitPredicational(name,_) => IInContext(m.conMap(Left(name)),IGeq(IConst(0),IConst(0)))
@@ -515,6 +522,9 @@ class IsabelleConverter(pt:ProofTerm) {
 
   def apply(t:Term):Itrm = {
     t match {
+      case Nothing =>
+        val 2 = 1 + 1
+        ???
       case BaseVariable(x,ind,_) => IVar(m.varMap((x,ind)))
       case DifferentialSymbol(BaseVariable(x,ind,_)) => IDiffVar(m.varMap((x,ind)))
       case Number(n) =>
@@ -526,11 +536,10 @@ class IsabelleConverter(pt:ProofTerm) {
       case FuncOf(Function(name,_,_,_,_), arg) =>
         val args = IsabelleConverter.detuple(arg)
         val allArgs = padArgs(args, m.fArity)
-        IFunction(name, allArgs.map(apply(_)))
+        IFunction(m.funMap(name), allArgs.map(apply(_)))
       case Plus(l,r) => IPlus(apply(l),apply(r))
       case Minus(l,r) => IPlus(apply(l),ITimes(IConst(-1),apply(r)))
       case Neg(t) => ITimes(IConst(-1),apply(t))
-      case Times(l,r) => ITimes(apply(l),apply(r))
       case Differential(t) => IDifferential(apply(t))
       case Divide(l,r) => throw ConversionException("Converter currently does not support conversion of divisions")
       case Power(l,r) => throw ConversionException("Converter currently does not support conversion of powers")
@@ -577,7 +586,7 @@ class IsabelleConverter(pt:ProofTerm) {
   }
 
   private def writeObjects(sb:StringBuilder,objName:String, fieldName:String,mainName:String):Unit = {
-    val imports = List("Real","Rat","Int","Proof_Checker","Syntax","Scratch")
+    val imports = List("Real","Rat","Int","Proof_Checker","Syntax", "Nat", "USubst","Scratch")
     sb.++=("object "); sb.++=(objName);sb.++=(" {\n")
     imports.foreach({case s => sb.++=("  import ");sb.++=(s);sb.++=("._\n")})
     sb.++=("  val ");sb.++=(fieldName);sb.++=(":pt[myvars,myvars,myvars] = \n");
@@ -657,7 +666,7 @@ class ScalaBuilder(sb:StringBuilder) {
     val cases = l.zip(ISABELLE_IDS)
     sb.++=("{")
     cases.foreach({case(v,id) =>
-      sb.++=("case "); sb.++=(id); sb.++=(" => ");f(v)
+      sb.++=("case "); sb.++=(id); sb.++=("() => ");f(v);sb.++=(" ")
     })
     sb.++=("}")
   }
@@ -732,11 +741,16 @@ class ScalaBuilder(sb:StringBuilder) {
     ra match {
       case IURename(w,r) => b2("URename",()=>b0(w),()=>b0(r))
       case IBRename(w,r) => b2("BRename",()=>b0(w),()=>b0(r))
-      case IRrule(rr,n) => b2("Rrule", ()=>apply(rr), ()=>apply(n))
-      case ILrule(lr,n) => b2("Lrule", ()=>apply(lr), ()=>apply(n))
-      case ICloseId(i,j) => b2("CloseId",()=>apply(i),()=>apply(j))
+      case IRrule(rr,n) => b2("Rrule", ()=>apply(rr), ()=>nat(n))
+      case ILrule(lr,n) => b2("Lrule", ()=>apply(lr), ()=>nat(n))
+      case ICloseId(i,j) => b2("CloseId",()=>nat(i),()=>nat(j))
       case ICut(f) => b1("Cut",()=>apply(f))
     }
+  }
+
+  def nat(i:Int):Unit = {
+    val s = i.toString
+    sb.++=("Nata(");sb.++=(s);sb.++=(")")
   }
 
   def apply(br:Int):Unit = {
@@ -781,8 +795,20 @@ class ScalaBuilder(sb:StringBuilder) {
   def apply(subst:Isubst):Unit = {
     val Isubst(fun,pred,con,prog,ode) = subst
     //Isubst(SFunctions:List[Itrm], SPredicates:List[Iformula], SContexts:List[Iformula], SPrograms:List[Ihp], SODEs:List[IODE])
-    b6("subst_eqta",()=>bff(fun,apply(_:Itrm)),()=>bff(pred,apply(_:Iformula)),()=>bff(con,apply(_:Iformula)),()=>bff(prog,apply(_:Ihp)),()=>bff(ode,apply(_:IODE)),{() => sb.++=("()")})
+    b6("subst_exta",()=>bff(fun,apply(_:Option[Itrm])),()=>bff(pred,apply(_:Option[Iformula])),()=>bff(con,apply(_:Option[Iformula])),()=>bff(prog,apply(_:Option[Ihp])),()=>bff(ode,apply(_:Option[IODE])),{() => sb.++=("()")})
   }
+
+  def apply[T](t:Option[T]):Unit = {
+    t match {
+      case None => sb.++=("None")
+      case Some(x:Itrm) => b1("Some", ()=> apply(x))
+      case Some(x:Iformula) => b1("Some", ()=> apply(x))
+      case Some(x:Ihp) => b1("Some", ()=> apply(x))
+      case Some(x:IODE) => b1("Some", ()=> apply(x))
+      case _ => throw ConversionException("Need extra case in option conversion")
+    }
+  }
+
 
   def apply(seq:Isequent):Unit = {
     btup(()=>blist(seq._1,apply(_:Iformula)),()=>blist(seq._2,apply(_:Iformula)))
@@ -792,14 +818,14 @@ class ScalaBuilder(sb:StringBuilder) {
   def apply(pt:Ipt):Unit = {
     pt match {
       case IFOLRConstant(f) => b1("FOLRConstant",()=>apply(f))
-      case IRuleApp (child, ra,branch) => b3("RuleApp",()=>apply(child),()=>apply(ra),()=>apply(branch))
+      case IRuleApp (child, ra,branch) => b3("RuleApp",()=>apply(child),()=>apply(ra),()=>nat(branch))
       case IAxRule(ar) => b1("AxRule", ()=>apply(ar))
       case IPrUSubst(child, subst) => b2("PrUSubst",()=>apply(child),()=>apply(subst))
       case IAx(ax) => b1("Ax", ()=>apply(ax))
       case IFNC(child, seq,ra) => b3("FNC",()=>apply(child),()=>apply(seq),()=>apply(ra))
       case IPro(child,pro) => b2("Pro",()=>apply(child),()=>apply(pro))
       case IStart(seq) => b1("Start",()=>apply(seq))
-      case ISub(child, sub, branch) => b3("Sub",()=>apply(child),()=>apply(sub),()=>apply(branch))
+      case ISub(child, sub, branch) => b3("Sub",()=>apply(child),()=>apply(sub),()=>nat(branch))
     }
   }
 }
