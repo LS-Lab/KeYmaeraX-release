@@ -587,8 +587,16 @@ class IsabelleConverter(pt:ProofTerm) {
 
   private def writeObjects(sb:StringBuilder,objName:String, fieldName:String,mainName:String):Unit = {
     val imports = List("Real","Rat","Int","Proof_Checker","Syntax", "Nat", "USubst","Scratch")
+    // Writing everything out in full detail is quite verbose. Let's give the Scala parser (and anyone debugging) a break by using some abbreviations
+    val defs = List(
+      "val z:trm[myvars,myvars] = Const(Ratreal(Frct((int_of_integer(0),int_of_integer(1)))))",
+      s"val e:(myvars => trm[myvars,myvars]) = {${ISABELLE_IDS.map(i => s"case $i() => z").mkString(" ")}}",
+      s"def ns[T]:(myvars => Option[T]) =   {${ISABELLE_IDS.map(i => s"case $i() => None").mkString(" ")}}",
+      s"def s(t:trm[myvars,myvars]):(myvars =>trm[myvars,myvars]) = {case ${ISABELLE_IDS.head}() => t ${ISABELLE_IDS.tail.map(i => s"case $i() => z").mkString(" ")}}"
+    )
     sb.++=("object "); sb.++=(objName);sb.++=(" {\n")
     imports.foreach({case s => sb.++=("  import ");sb.++=(s);sb.++=("._\n")})
+    defs.foreach({case d => sb.++=("  ");sb++=(d);sb.++=("\n")})
     sb.++=("  val ");sb.++=(fieldName);sb.++=(":pt[myvars,myvars,myvars] = \n");
     new ScalaBuilder(sb)(apply(pt))
     sb.++=("\n}\n\n")
@@ -671,11 +679,30 @@ class ScalaBuilder(sb:StringBuilder) {
     sb.++=("}")
   }
 
+  private def emptyElse(args:List[Itrm], f:(() => Unit)):Unit = {
+    if(args.forall({case IConst(0) => true case _ => false})) {
+      sb.++=("e")
+    } else if (args.length >= 1 && args.tail.forall({case IConst(0) => true case _ => false})) {
+      b1("s", ()=> apply(args.head))
+    } else {
+      f()
+    }
+  }
+
+  private def noneElse[T](args:List[Option[T]], f:(() => Unit)):Unit = {
+    if(args.forall({case None => true case _ => false})) {
+      sb.++=("ns")
+    } else {
+      f()
+    }
+  }
+
   def apply(t:Itrm):Unit = {
     t match {
       case IVar(x) => b1("Var", () => b0(x))
-      case IConst(n) => b1("Const",()=>brat(n))
-      case IFunction(n,args) => b2("Function",()=>b0(n),()=>bff(args,apply(_:Itrm)))
+      case IConst(n) if n == 0 => sb.++=("z")
+      case IConst(n) =>  b1("Const",()=>brat(n))
+      case IFunction(n,args) => b2("Function",()=>b0(n),()=> emptyElse(args,()=>bff(args,apply(_:Itrm))))
       case IPlus(a,b) => b2("Plus",()=>apply(a),()=>apply(b))
       case ITimes(a,b) => b2("Times",()=>apply(a),()=>apply(b))
       case IDiffVar(x) => b1("DiffVar", ()=>b0(x))
@@ -707,7 +734,7 @@ class ScalaBuilder(sb:StringBuilder) {
   def apply(f:Iformula):Unit = {
     f match {
       case IGeq(t1,t2) => b2("Geq",()=>apply(t1),()=>apply(t2))
-      case IProp(name,args) => b2("Prop",()=>b0(name),()=>bff(args,apply(_:Itrm)))
+      case IProp(name,args) => b2("Prop",()=>b0(name),()=>emptyElse(args,()=>bff(args,apply(_:Itrm))))
       case INot(f) => b1("Not",()=>apply(f))
       case IAnd(p,q) => b2("And",()=>apply(p),()=>apply(q))
       case IExists(x,p) => b2("Exists",()=>b0(x),()=>apply(p))
@@ -731,7 +758,7 @@ class ScalaBuilder(sb:StringBuilder) {
   def apply(lr:Ilrule):Unit = {
     lr match {
       case IImplyL() => b0("ImplyL")
-      case IAndL() => b0("IAndL")
+      case IAndL() => b0("AndL")
       case IEquivBackwardL() => b0("EquivBackwardL")
       case IEquivForwardL() => b0("EquivForwardL")
     }
@@ -795,7 +822,11 @@ class ScalaBuilder(sb:StringBuilder) {
   def apply(subst:Isubst):Unit = {
     val Isubst(fun,pred,con,prog,ode) = subst
     //Isubst(SFunctions:List[Itrm], SPredicates:List[Iformula], SContexts:List[Iformula], SPrograms:List[Ihp], SODEs:List[IODE])
-    b6("subst_exta",()=>bff(fun,apply(_:Option[Itrm])),()=>bff(pred,apply(_:Option[Iformula])),()=>bff(con,apply(_:Option[Iformula])),()=>bff(prog,apply(_:Option[Ihp])),()=>bff(ode,apply(_:Option[IODE])),{() => sb.++=("()")})
+    b6("subst_exta",()=>noneElse(fun,()=>bff(fun,apply(_:Option[Itrm]))),
+       ()=>noneElse(fun,()=>bff(pred,apply(_:Option[Iformula]))),
+       ()=>noneElse(fun,()=>bff(con,apply(_:Option[Iformula]))),
+       ()=>noneElse(fun,()=>bff(prog,apply(_:Option[Ihp]))),
+       ()=>noneElse(fun,()=>bff(ode,apply(_:Option[IODE]))),{() => sb.++=("()")})
   }
 
   def apply[T](t:Option[T]):Unit = {
