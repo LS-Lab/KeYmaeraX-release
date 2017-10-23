@@ -88,6 +88,7 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
  */
 class JLinkMathematicaLink extends MathematicaLink {
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  private val TCPIP = System.getProperty("MATH_LINK_TCPIP", "false")=="true"
 
   //@todo really should be private -> fix SpiralGenerator
   //@todo concurrent access to ml needs ml access to be synchronized everywhere or pooled or
@@ -114,9 +115,10 @@ class JLinkMathematicaLink extends MathematicaLink {
       System.setProperty("com.wolfram.jlink.libdir", jlinkLibDir.get) //e.g., "/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink"
     }
     try {
-      ml = MathLinkFactory.createKernelLink(Array[String](
-        "-linkmode", "launch",
-        "-linkname", linkName + " -mathlink"))
+      val args = ("-linkmode"::"launch"::"-linkname"::linkName + " -mathlink"::Nil ++
+        (if (TCPIP) "-linkprotocol"::"tcpip"::Nil else Nil)).toArray
+
+      ml = MathLinkFactory.createKernelLink(args)
       ml.connect()
       ml.discardAnswer()
         //@todo How to gracefully shutdown an unsuccessfully initialized math link again without causing follow-up problems?
