@@ -21,7 +21,7 @@ object IsabelleConverter {
 
   // Keep this in sync with the code generation in Isabelle proof. If the number of IDs is too small then we can't export
   // the proof term, if it's too big then proof checking gets progressively slower
-  val ISABELLE_IDS:Seq[String] = Seq("i1","i2","i3","i4","i5")
+  val ISABELLE_IDS:Seq[String] = Seq("i1","i2","i3","i4","i5","i6","i7","i8","i9","i10")
 
   def detuple(t:Term):List[Term] = {
     t match {
@@ -32,9 +32,26 @@ object IsabelleConverter {
   }
 }
 
-
 object IDMap {
-  val empty:IDMap = IDMap(Map(),Map(),Map(),Map(),Map(),Map(),ISABELLE_IDS.length,ISABELLE_IDS.length)
+  val axiomIds = IDMap(
+    // next Id for vars
+    Map((("x_",None), "i1"), (("y_",None), "i2"), (("v",None), "i1"), (("t_",None),"i2"), (("s_",None),"i3")),
+    Map(("f","i1"), ("g","i2"),("s","i1"),("t","i2"),("ctxT","i3"), ("c","i1")),
+    Map(("p","i1"),("q","i2"),("ctxF","i1")),
+    Map((Left("p_"),"i1"),(Left("q_"),"i2"),(Right("P"),"i1"),(Left("J"),"i1")),
+    Map(("a","i1"),("b","i2"),("a_","i1"),("b_","i2")),
+    Map(("c","i1"),("d","i2"),("c","i3"),("a_","i1"), ("a","i1")),
+    ISABELLE_IDS.length,
+    ISABELLE_IDS.length,
+    3, // next Id for var
+    3,// next Id for fun
+    2,// next Id for pred
+    2,// next Id for con
+    2,// next Id for prog
+    3// next Id for ode
+  )
+
+  val empty:IDMap = axiomIds
 
   def ofSequent(seq:Sequent,acc:IDMap):IDMap = {
     seq.succ.foldLeft(seq.ante.foldLeft(acc)((acc,f) => ofFormula(f,acc)))((acc,f) => ofFormula(f,acc))
@@ -170,11 +187,17 @@ case class IDMap(varMap:Map[(String,Option[Int]),String],
                  progMap:Map[String,String],
                  odeMap:Map[String,String],
                  fArity:Int,
-                 pArity:Int) {
+                 pArity:Int,
+                 maxVar:Int,
+                 maxFun:Int,
+                 maxPred:Int,
+                 maxCon:Int,
+                 maxProg:Int,
+                 maxOde:Int) {
   def addVar(name:String, ind:Option[Int]):IDMap = {
     if(varMap.contains((name,ind))) { this }
     else if(varMap.size < ISABELLE_IDS.size) {
-      IDMap(varMap.+(((name,ind),ISABELLE_IDS(varMap.size))),funMap,predMap,conMap,progMap,odeMap,fArity,pArity)
+      IDMap(varMap.+(((name,ind),ISABELLE_IDS(maxVar))),funMap,predMap,conMap,progMap,odeMap,fArity,pArity,maxVar+1,maxFun,maxPred,maxCon,maxProg,maxOde)
     } else {
       throw ConversionException("Need more Isabelle identifiers, not enough to convert variable identifier: " + name)
     }
@@ -183,7 +206,7 @@ case class IDMap(varMap:Map[(String,Option[Int]),String],
   def addProg(name:String):IDMap = {
     if(progMap.contains(name)) { this }
     else if(progMap.size < ISABELLE_IDS.size) {
-      IDMap(varMap,funMap,predMap,conMap,progMap.+((name,ISABELLE_IDS(progMap.size))),odeMap,fArity,pArity)
+      IDMap(varMap,funMap,predMap,conMap,progMap.+((name,ISABELLE_IDS(maxProg))),odeMap,fArity,pArity,maxVar,maxFun,maxPred,maxCon,maxProg+1,maxOde)
     } else {
       throw ConversionException("Need more Isabelle identifiers, not enough to convert program identifier: " + name)
     }
@@ -192,7 +215,7 @@ case class IDMap(varMap:Map[(String,Option[Int]),String],
   def addDiffProg(name:String):IDMap = {
     if(odeMap.contains(name)) { this }
     else if(odeMap.size < ISABELLE_IDS.size) {
-      IDMap(varMap,funMap,predMap,conMap,progMap,odeMap.+((name,ISABELLE_IDS(odeMap.size))),fArity,pArity)
+      IDMap(varMap,funMap,predMap,conMap,progMap,odeMap.+((name,ISABELLE_IDS(maxOde))),fArity,pArity,maxVar,maxFun,maxPred,maxCon,maxProg,maxOde+1)
     } else {
       throw ConversionException("Need more Isabelle identifiers, not enough to convert differential program identifier: " + name)
     }
@@ -201,7 +224,7 @@ case class IDMap(varMap:Map[(String,Option[Int]),String],
   def addUnitPred(name:String):IDMap = {
     if(conMap.contains(Right(name))) { this }
     else if(conMap.size < ISABELLE_IDS.size) {
-      IDMap(varMap,funMap,predMap,conMap.+((Right(name),ISABELLE_IDS(conMap.size))),progMap,odeMap,fArity,pArity)
+      IDMap(varMap,funMap,predMap,conMap.+((Right(name),ISABELLE_IDS(maxCon))),progMap,odeMap,fArity,pArity,maxVar,maxFun,maxPred,maxCon+1,maxProg,maxOde)
     } else {
       throw ConversionException("Need more Isabelle identifiers, not enough to convert nullary predicational identifier: " + name)
     }
@@ -210,7 +233,7 @@ case class IDMap(varMap:Map[(String,Option[Int]),String],
   def addCon(name:String):IDMap = {
     if(conMap.contains(Left(name))) { this }
     else if(conMap.size < ISABELLE_IDS.size) {
-      IDMap(varMap,funMap,predMap,conMap.+((Left(name),ISABELLE_IDS(conMap.size))),progMap,odeMap,fArity,pArity)
+      IDMap(varMap,funMap,predMap,conMap.+((Left(name),ISABELLE_IDS(maxCon))),progMap,odeMap,fArity,pArity,maxVar,maxFun,maxPred,maxCon+1,maxProg,maxOde)
     } else {
       throw ConversionException("Need more Isabelle identifiers, not enough to convert unary predicational identifier: " + name)
     }
@@ -220,7 +243,7 @@ case class IDMap(varMap:Map[(String,Option[Int]),String],
     if(funMap.contains(name)) {
       this
     } else if(funMap.size < ISABELLE_IDS.size) {
-      IDMap(varMap,funMap.+((name,ISABELLE_IDS(funMap.size))),predMap,conMap,progMap,odeMap,fArity.max(arity),pArity)
+      IDMap(varMap,funMap.+((name,ISABELLE_IDS(maxFun))),predMap,conMap,progMap,odeMap,fArity.max(arity),pArity,maxVar,maxFun+1,maxPred,maxCon,maxProg,maxOde)
     } else {
       throw ConversionException("Need more Isabelle identifiers, not enough to convert function identifier: " + name)
     }
@@ -230,7 +253,7 @@ case class IDMap(varMap:Map[(String,Option[Int]),String],
     if(predMap.contains(name)) {
       this
     } else if(predMap.size < ISABELLE_IDS.size) {
-      IDMap(varMap,funMap,predMap.+((name,ISABELLE_IDS(predMap.size))),conMap,progMap,odeMap,fArity,pArity.max(arity))
+      IDMap(varMap,funMap,predMap.+((name,ISABELLE_IDS(maxPred))),conMap,progMap,odeMap,fArity,pArity.max(arity),maxVar,maxFun,maxPred+1,maxCon,maxProg,maxOde)
     } else {
       throw ConversionException("Need more Isabelle identifiers, not enough to convert predicate identifier: " + name)
     }
