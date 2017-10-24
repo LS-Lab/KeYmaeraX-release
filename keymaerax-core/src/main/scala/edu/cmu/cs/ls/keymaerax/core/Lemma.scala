@@ -73,12 +73,15 @@ object Lemma {
     val ptProvable =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
         PTProvable(NoProofTermProvable(fact), name match { case Some(n) =>
-          if(DerivedAxiomInfo.allInfo.exists(info => info.storedName == n))
-            AxiomTerm(n)
-          else if(DerivedRuleInfo.allInfo.exists(info => info.storedName == n))
-            RuleTerm(n)
-          else
-            NoProof()
+          DerivedAxiomInfo.allInfo.find(info => info.storedName == n) match {
+            case Some(info) =>
+            AxiomTerm(info.canonicalName)
+            case None =>
+              if(DerivedRuleInfo.allInfo.exists(info => info.storedName == n))
+                RuleTerm(n)
+              else
+                NoProof()
+          }
         case None => FOLRConstant(sequents.head.succ.head) })
       } else {
         NoProofTermProvable(fact)
