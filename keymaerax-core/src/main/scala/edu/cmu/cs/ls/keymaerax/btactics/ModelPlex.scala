@@ -167,12 +167,21 @@ object ModelPlex extends ModelPlexTrait {
     */
   lazy val modelMonitorByChase: DependentPositionTactic = modelMonitorByChase()
   def modelMonitorByChase(ode: DependentPositionTactic = AxiomaticODESolver.axiomaticSolve()): DependentPositionTactic = "modelMonitor" by ((pos: Position, seq: Sequent) => chase(3,3, (e:Expression) => e match {
+    // remove loops and split compositions to isolate differential equations before splitting choices
+    case Diamond(Loop(_), _) => "<*> approx" :: Nil
+    case Diamond(Compose(_, _), _) => AxiomIndex.axiomsFor(e)
+    case _ => Nil
+  })(pos) &
+    applyAtAllODEs(ode)(pos) & // solve isolated ODEs once before splitting choices
+    // chase and solve remaining
+    chase(3,3, (e:Expression) => e match {
     // remove loops
     case Diamond(Loop(_), _) => "<*> approx" :: Nil
     // keep ODEs, solve later
     case Diamond(ODESystem(_, _), _) => Nil
     case _ => println("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
-  })(pos) & applyAtAllODEs(ode)(pos))
+  })(pos) &
+    applyAtAllODEs(ode)(pos))
 
   /** Applies tatic `t` at all ODEs underneath this tactic's position. */
   def applyAtAllODEs(t: DependentPositionTactic): DependentPositionTactic = TacticFactory.anon((pos: Position, sequent: Sequent) => {
