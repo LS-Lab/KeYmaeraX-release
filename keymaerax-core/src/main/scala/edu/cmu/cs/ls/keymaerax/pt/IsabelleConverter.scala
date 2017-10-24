@@ -261,7 +261,9 @@ case class IDMap(varMap:Map[(String,Option[Int]),String],
 }
 //case class IRat(num:Number,den:Number)
 
-case class ConversionException(msg:String) extends Exception {}
+case class ConversionException(msg:String) extends Exception {
+  override def toString:String = {"ConversionException: " + msg}
+}
 
 sealed trait Itrm {}
 
@@ -426,11 +428,11 @@ class IsabelleConverter(pt:ProofTerm) {
   def apply(name:String,seqPos:Seq[SeqPos],expArgs:Seq[Expression]):IruleApp = {
     (name, seqPos.toList, expArgs.toList) match {
       // @TODO: Get the names for everything
-      case ("uniform renaming", _, BaseVariable(n1,ind1,_) :: BaseVariable(n2,ind2,_) :: Nil) =>
+      case ("Uniform Renaming", _, BaseVariable(n1,ind1,_) :: BaseVariable(n2,ind2,_) :: Nil) =>
         IURename(m.varMap((n1,ind1)),m.varMap((n2,ind2)))
-      case ("bound renaming", _, BaseVariable(n1,ind1,_) :: BaseVariable(n2,ind2,_) :: Nil) =>
+      case ("Bound Renaming", _, BaseVariable(n1,ind1,_) :: BaseVariable(n2,ind2,_) :: Nil) =>
         IBRename(m.varMap((n1,ind1)),m.varMap((n2,ind2)))
-      case ("closeId", (a:AntePos)::(s:SeqPos)::Nil, _) => ICloseId(a.getIndex,s.getIndex)
+      case ("Close", (a:AntePos)::(s:SeqPos)::Nil, _) => ICloseId(a.getIndex,s.getIndex)
       case ("cut", _, (f:Formula) :: Nil) => ICut(apply(f))
       case ("Imply Left", (a:AntePos)::Nil, _) => ILrule(IImplyL(),a.getIndex)
       case ("And Left", (a:AntePos)::Nil, _) => ILrule(IAndL(),a.getIndex)
