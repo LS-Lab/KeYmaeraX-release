@@ -41,7 +41,9 @@ object IDMap {
   val axiomIds = IDMap(
     // next Id for vars
     Map((("x_",None), "i1"), (("y_",None), "i2"), (("v",None), "i1"), (("t_",None),"i2"), (("s_",None),"i3")),
-    Map(("f","i1"), ("g","i2"),("s","i1"),("t","i2"),("ctxT","i3"), ("c","i1")),
+    // @TODO: Preload with some functionals too
+    Map((Left("f"),"i1"), (Left("g"),"i2"),(Left("s"),"i1"),(Left("t"),"i2"),(Left("ctxT"),"i3"), (Left("c"),"i1"),
+      (Right("f"),"i1"), (Right("g"),"i2"), (Right("f_"),"i1"), (Right("g_"),"i2")),
     Map(("p","i1"),("q","i2"),("ctxF","i1")),
     //@TODO: Left is argumented, right is unit, double-check please
     Map((Left("p_"),"i1"),(Left("q_"),"i2"),(Right("P"),"i1"),(Left("J"),"i1")),
@@ -130,6 +132,10 @@ object IDMap {
     ofExp(repl,ofExp(arg,acc)).addFunc(name,arity)
   }
 
+  def ofFuncl(name:String, repl:Expression, acc:IDMap):IDMap = {
+    ofExp(repl,acc).addFuncl(name)
+  }
+
   def ofPred(name:String, arg:Term, repl:Expression, acc:IDMap):IDMap = {
     val arity = IsabelleConverter.detuple(arg).length
     ofExp(repl,ofExp(arg,acc)).addPred(name,arity)
@@ -161,8 +167,9 @@ object IDMap {
       // Isabelle formalization doesn't have games, so collapse it all to systems anyway
       case (acc,(SystemConst(name),repl)) => ofProg(name,repl,acc)
       case (acc,(DifferentialProgramConst(name,_),repl)) => ofDiffConst(name,repl,acc)
-        // TODO: Isabelle formalization needs unitfunctional support
-      case (acc,(UnitFunctional(name,_,_),repl)) =>ofFunc(name,Number(0),repl,acc)
+      case (acc,(UnitFunctional(name,_,_),repl)) =>
+//        println("Translating functional replaced with: " + repl)
+        ofFuncl(name,repl,acc)
       case (x,y) => {
         println(x,y)
         val 2 = 1 + 1
@@ -203,8 +210,10 @@ object IDMap {
 // @TODO: Minimize size of types used
 // @TODO: automatically consider both arity and number of symbols for determining type size
 case class IDMap(varMap:Map[(String,Option[Int]),String],
-                 funMap:Map[String,String],
+                 /* Functions, Functionals */
+                 funMap:Map[Either[String,String],String],
                  predMap:Map[String,String],
+                 /* Contexts, Predicationals? */
                  conMap:Map[Either[String,String],String],
                  progMap:Map[String,String],
                  odeMap:Map[String,String],
@@ -218,7 +227,7 @@ case class IDMap(varMap:Map[(String,Option[Int]),String],
                  maxOde:Int) {
   def addVar(name:String, ind:Option[Int]):IDMap = {
     if(varMap.contains((name,ind))) { this }
-    else if(varMap.size < ISABELLE_IDS.size) {
+    else if(maxVar < ISABELLE_IDS.size) {
       IDMap(varMap.+(((name,ind),ISABELLE_IDS(maxVar))),funMap,predMap,conMap,progMap,odeMap,fArity,pArity,maxVar+1,maxFun,maxPred,maxCon,maxProg,maxOde)
     } else {
       throw ConversionException("Need more Isabelle identifiers, not enough to convert variable identifier: " + name)
@@ -227,7 +236,7 @@ case class IDMap(varMap:Map[(String,Option[Int]),String],
 
   def addProg(name:String):IDMap = {
     if(progMap.contains(name)) { this }
-    else if(progMap.size < ISABELLE_IDS.size) {
+    else if(maxProg < ISABELLE_IDS.size) {
       IDMap(varMap,funMap,predMap,conMap,progMap.+((name,ISABELLE_IDS(maxProg))),odeMap,fArity,pArity,maxVar,maxFun,maxPred,maxCon,maxProg+1,maxOde)
     } else {
       throw ConversionException("Need more Isabelle identifiers, not enough to convert program identifier: " + name)
@@ -236,7 +245,7 @@ case class IDMap(varMap:Map[(String,Option[Int]),String],
 
   def addDiffProg(name:String):IDMap = {
     if(odeMap.contains(name)) { this }
-    else if(odeMap.size < ISABELLE_IDS.size) {
+    else if(maxOde < ISABELLE_IDS.size) {
       IDMap(varMap,funMap,predMap,conMap,progMap,odeMap.+((name,ISABELLE_IDS(maxOde))),fArity,pArity,maxVar,maxFun,maxPred,maxCon,maxProg,maxOde+1)
     } else {
       throw ConversionException("Need more Isabelle identifiers, not enough to convert differential program identifier: " + name)
@@ -245,7 +254,7 @@ case class IDMap(varMap:Map[(String,Option[Int]),String],
 
   def addUnitPred(name:String):IDMap = {
     if(conMap.contains(Right(name))) { this }
-    else if(conMap.size < ISABELLE_IDS.size) {
+    else if(maxCon < ISABELLE_IDS.size) {
       IDMap(varMap,funMap,predMap,conMap.+((Right(name),ISABELLE_IDS(maxCon))),progMap,odeMap,fArity,pArity,maxVar,maxFun,maxPred,maxCon+1,maxProg,maxOde)
     } else {
       throw ConversionException("Need more Isabelle identifiers, not enough to convert nullary predicational identifier: " + name)
@@ -254,7 +263,7 @@ case class IDMap(varMap:Map[(String,Option[Int]),String],
 
   def addCon(name:String):IDMap = {
     if(conMap.contains(Left(name))) { this }
-    else if(conMap.size < ISABELLE_IDS.size) {
+    else if(maxCon  < ISABELLE_IDS.size) {
       IDMap(varMap,funMap,predMap,conMap.+((Left(name),ISABELLE_IDS(maxCon))),progMap,odeMap,fArity,pArity,maxVar,maxFun,maxPred,maxCon+1,maxProg,maxOde)
     } else {
       throw ConversionException("Need more Isabelle identifiers, not enough to convert unary predicational identifier: " + name)
@@ -262,12 +271,22 @@ case class IDMap(varMap:Map[(String,Option[Int]),String],
   }
 
   def addFunc(name:String, arity:Int):IDMap = {
-    if(funMap.contains(name)) {
+    if(funMap.contains(Left(name))) {
       this
-    } else if(funMap.size < ISABELLE_IDS.size) {
-      IDMap(varMap,funMap.+((name,ISABELLE_IDS(maxFun))),predMap,conMap,progMap,odeMap,fArity.max(arity),pArity,maxVar,maxFun+1,maxPred,maxCon,maxProg,maxOde)
+    } else if(maxFun < ISABELLE_IDS.size) {
+      IDMap(varMap,funMap.+((Left(name),ISABELLE_IDS(maxFun))),predMap,conMap,progMap,odeMap,fArity.max(arity),pArity,maxVar,maxFun+1,maxPred,maxCon,maxProg,maxOde)
     } else {
       throw ConversionException("Need more Isabelle identifiers, not enough to convert function identifier: " + name)
+    }
+  }
+
+  def addFuncl(name:String):IDMap = {
+    if(funMap.contains(Right(name))) {
+      this
+    } else if(maxFun < ISABELLE_IDS.size) {
+      IDMap(varMap,funMap.+((Right(name),ISABELLE_IDS(maxFun))),predMap,conMap,progMap,odeMap,fArity,pArity,maxVar,maxFun+1,maxPred,maxCon,maxProg,maxOde)
+    } else {
+      throw ConversionException("Need more Isabelle identifiers, not enough to convert functional identifier: " + name)
     }
   }
 
@@ -293,6 +312,7 @@ case class IVar(id:ID) extends Itrm {}
 case class IDiffVar(id:ID) extends Itrm {}
 case class IConst(int:Int) extends Itrm {}
 case class IFunction(f:ID, args:List[Itrm]) extends Itrm {}
+case class IFunctional(f:ID) extends Itrm {}
 case class IPlus(left:Itrm, right:Itrm) extends Itrm {}
 case class ITimes(left:Itrm, right:Itrm) extends Itrm {}
 case class IDifferential(child:Itrm) extends Itrm {}
@@ -396,7 +416,11 @@ object Iaxiom {
       case "DS differential solve" => IADS()
       //@TODO: specialize based on shape of differential formula
       case "DI differential invariant" => IADIGeq() // e.g. IADIGr()
-      case "G goedel" => IADG()
+      case "G goedel" => {
+        val 2 = 1 + 1
+        println("Encountered goedel axiom, thought it should be rule")
+        ???
+      }
       case "<-> reflexive" => IAEquivReflexive()
       case "DE differential effect (system)" => IADiffEffectSys()
       case ">=' derive >=" => {
@@ -435,12 +459,18 @@ case class IADiffEffectSys() extends Iaxiom {}
 
 /* @TODO: Represent this type magic in Scala or in generated code as necessary
   SFunctions       :: "'a ⇀ ('a + 'c, 'c) trm"
+  SFuncls          :: "'a ⇀ ('a, 'c) trm"
   SPredicates      :: "'c ⇀ ('a + 'c, 'b, 'c) formula"
   SContexts        :: "'b ⇀ ('a, 'b + unit, 'c) formula"
   SPrograms        :: "'c ⇀ ('a, 'b, 'c) hp"
   SODEs            :: "'c ⇀ ('a, 'c) ODE"
 */
-case class Isubst(SFunctions:List[Option[Itrm]], SPredicates:List[Option[Iformula]], SContexts:List[Option[Iformula]], SPrograms:List[Option[Ihp]], SODEs:List[Option[IODE]])
+case class Isubst(
+SFunctions:List[Option[Itrm]],
+SFuncls:List[Option[Itrm]],
+SPredicates:List[Option[Iformula]],
+SContexts:List[Option[Iformula]], SPrograms:List[Option[Ihp]],
+SODEs:List[Option[IODE]])
 
 sealed trait Ipt {}
 case class IFOLRConstant(f:Iformula) extends Ipt {}
@@ -518,15 +548,14 @@ class IsabelleConverter(pt:ProofTerm) {
     val (con, t3) = t2.partition({case (_: PredicationalOf, _) => true case (_: UnitPredicational, _) => true case _ => false})
     val (prog, t4) = t3.partition({case (_: ProgramConst, _) => true case (_:SystemConst, _) => true case _ => false})
     val (ode, t5) = t4.partition({case (_: DifferentialProgramConst, _) => true case _ => false})
-    //@TODO: Need unitfuns in isabelles
     val (unitFun, t6) = t5.partition({case (_: UnitFunctional, _) => true case _ => false})
     assert(t6.isEmpty, "Forgot to handle symbols in substitution: " + t6)
     // @TODO: Need to insert lefts/rights in ids on RHS
     Isubst(
-      extendSub(sortSubs(fun, {case FuncOf(Function(name,_,_,_,_),_) => m.funMap(name)}, {case e:Term => apply(e)})),
+      extendSub(sortSubs(fun, {case FuncOf(Function(name,_,_,_,_),_) => m.funMap(Left(name))}, {case e:Term => apply(e)})),
+      extendSub(sortSubs(unitFun, {case UnitFunctional(name,_,_) => m.funMap(Right(name))}, {case e:Term => apply(e)})),
       extendSub(sortSubs(pred, {case PredOf(Function(name,_,_,_,_),_) => m.predMap(name)}, {case e:Formula => apply(e)})),
       extendSub(sortSubs(con, {case PredicationalOf(Function(name,_,_,_,_),_) => m.conMap(Left(name)) case UnitPredicational(name, _) => m.conMap(Right(name))}, {case e:Formula => apply(e)})),
-      //@todo: need program map and stuff
       extendSub(sortSubs(prog, {case ProgramConst(name) =>  m.progMap(name) case SystemConst(name) =>  m.progMap(name)}, {case e:Program => apply(e)})),
       extendSub(sortSubs(ode, {case DifferentialProgramConst(name,_) =>  m.odeMap(name)}, {case e:DifferentialProgram => apply(e)})))
   }
@@ -701,8 +730,7 @@ class IsabelleConverter(pt:ProofTerm) {
       case Nothing =>
         val 2 = 1 + 1
         ???
-        //@TODO Please add unit functionals, this is just bogus so I can see what else is out there
-      case UnitFunctional(name, _space, _sort) => IFunction(IDEnum("i5"), emptyArgs)
+      case UnitFunctional(name, _space, _sort) => IFunctional(IDEnum(m.funMap(Right(name))))
       case DotTerm(s,None) => IFunction(IDRight(IDEnum("i1")), emptyArgs)
       case DotTerm(s,Some(n)) => IFunction(IDRight(IDEnum("i"+n)), emptyArgs)
       case BaseVariable(x,ind,_) => IVar(IDEnum(m.varMap((x,ind))))
@@ -716,7 +744,7 @@ class IsabelleConverter(pt:ProofTerm) {
       case FuncOf(Function(name,_,_,_,_), arg) =>
         val args = IsabelleConverter.detuple(arg)
         val allArgs = padArgs(args, m.fArity)
-        IFunction(IDEnum(m.funMap(name)), allArgs.map(apply(_)))
+        IFunction(IDEnum(m.funMap(Left(name))), allArgs.map(apply(_)))
       case Plus(l,r) => IPlus(apply(l),apply(r))
       case Minus(l,r) => IPlus(apply(l),ITimes(IConst(-1),apply(r)))
       case Neg(t) => ITimes(IConst(-1),apply(t))
@@ -826,8 +854,8 @@ class ScalaBuilder(sb:StringBuilder) {
     sb.++=(name);sb.++=("(");f();sb.++=(",");g();sb.++=(",");h();sb.++=(")")
   }
 
-  private def b6(name:String,f1:(()=> Unit),f2:(()=> Unit),f3:(()=> Unit),f4:(()=> Unit),f5:(()=> Unit),f6:(()=> Unit)):Unit = {
-    sb.++=(name);sb.++=("(");f1();sb.++=(",");f2();sb.++=(",");f3();sb.++=(",");f4();sb.++=(",");f5();sb.++=(",");f6();sb.++=(")")
+  private def b7(name:String,f1:(()=> Unit),f2:(()=> Unit),f3:(()=> Unit),f4:(()=> Unit),f5:(()=> Unit),f6:(()=> Unit),f7:(()=>Unit)):Unit = {
+    sb.++=(name);sb.++=("(");f1();sb.++=(",");f2();sb.++=(",");f3();sb.++=(",");f4();sb.++=(",");f5();sb.++=(",");f6();sb.++=(",");f7();sb.++=(")")
   }
 
   private def btup(f:(()=>Unit),g:(()=>Unit)):Unit = {
@@ -892,6 +920,7 @@ class ScalaBuilder(sb:StringBuilder) {
       case IConst(n) if n == 0 => sb.++=("z")
       case IConst(n) =>  b1("Const",()=>brat(n))
       case IFunction(n,args) => b2("Function",()=>apply(n),()=> emptyElse(args,()=>bff(args,apply(_:Itrm))))
+      case IFunctional(n) => b1("Functional",()=>apply(n))
       case IPlus(a,b) => b2("Plus",()=>apply(a),()=>apply(b))
       case ITimes(a,b) => b2("Times",()=>apply(a),()=>apply(b))
       case IDiffVar(x) => b1("DiffVar", ()=>apply(x))
@@ -1019,9 +1048,11 @@ class ScalaBuilder(sb:StringBuilder) {
 
 
   def apply(subst:Isubst):Unit = {
-    val Isubst(fun,pred,con,prog,ode) = subst
+    val Isubst(fun,funcl,pred,con,prog,ode) = subst
     //Isubst(SFunctions:List[Itrm], SPredicates:List[Iformula], SContexts:List[Iformula], SPrograms:List[Ihp], SODEs:List[IODE])
-    b6("subst_exta",()=>noneElse(fun,()=>bff(fun,apply(_:Option[Itrm]))),
+    b7("subst_exta",
+       ()=>noneElse(fun,()=>bff(fun,apply(_:Option[Itrm]))),
+       ()=>noneElse(fun,()=>bff(funcl,apply(_:Option[Itrm]))),
        ()=>noneElse(fun,()=>bff(pred,apply(_:Option[Iformula]))),
        ()=>noneElse(fun,()=>bff(con,apply(_:Option[Iformula]))),
        ()=>noneElse(fun,()=>bff(prog,apply(_:Option[Ihp]))),
