@@ -15,11 +15,14 @@ import edu.cmu.cs.ls.keymaerax.pt.IsabelleConverter._
   * @author Brandon Bohrer
   */
 object IsabelleConverter {
+  val idtype = "myvars"
+  val unittype = "Unit"
+
   sealed abstract class ID {}
   case class IDEnum(x:String) extends ID
   case class IDUnit() extends ID
-  case class IDLeft(child:ID) extends ID
-  case class IDRight(child:ID) extends ID
+  case class IDLeft(child:ID, ltype:String = idtype, rtype:String = idtype) extends ID
+  case class IDRight(child:ID, ltype:String = idtype, rtype:String = idtype) extends ID
 
   type Isequent = (List[Iformula],List[Iformula])
   type Irule = (List[Isequent],Isequent)
@@ -310,7 +313,7 @@ sealed trait Itrm {}
 
 case class IVar(id:ID) extends Itrm {}
 case class IDiffVar(id:ID) extends Itrm {}
-case class IConst(int:Int) extends Itrm {}
+case class IConst(int:Int,sm:SymMode=NonSubst()) extends Itrm {}
 case class IFunction(f:ID, args:List[Itrm]) extends Itrm {}
 case class IFunctional(f:ID) extends Itrm {}
 case class IPlus(left:Itrm, right:Itrm) extends Itrm {}
@@ -483,6 +486,12 @@ case class IPro(child:Ipt,pro:Ipt) extends Ipt {}
 case class IStart(seq:Isequent) extends Ipt {}
 case class ISub(child:Ipt, sub:Ipt, branch:Int) extends Ipt {}
 
+
+abstract sealed class SymMode {}
+case class NonSubst() extends SymMode {}
+case class FunSubst() extends SymMode {}
+case class ConSubst() extends SymMode {}
+
 class IsabelleConverter(pt:ProofTerm) {
 
 
@@ -503,7 +512,7 @@ class IsabelleConverter(pt:ProofTerm) {
       case ("Bound Renaming", _, BaseVariable(n1,ind1,_) :: BaseVariable(n2,ind2,_) :: Nil) =>
         IBRename(IDEnum(m.varMap((n1,ind1))),IDEnum(m.varMap((n2,ind2))))
       case ("Close", (a:AntePos)::(s:SeqPos)::Nil, _) => ICloseId(a.getIndex,s.getIndex)
-      case ("cut", _, (f:Formula) :: Nil) => ICut(apply(f))
+      case ("cut", _, (f:Formula) :: Nil) => ICut(apply(f,NonSubst()))
       case ("CoHide2", (a:AntePos) :: (s:SuccPos) :: Nil, _) => ICohide2(a.getIndex,s.getIndex)
 
 
@@ -513,7 +522,7 @@ class IsabelleConverter(pt:ProofTerm) {
       case ("Equiv Left2", (a:AntePos)::Nil, _) => ILrule(IEquivBackwardL(),a.getIndex)
       case ("HideLeft", (a:AntePos)::Nil, _) => ILrule(IHideL(),a.getIndex)
 
-      case ("cut Right", (s:SuccPos) :: Nil, (f:Formula) :: Nil) => IRrule(ICutRight(apply(f)), s.getIndex)
+      case ("cut Right", (s:SuccPos) :: Nil, (f:Formula) :: Nil) => IRrule(ICutRight(apply(f,NonSubst())), s.getIndex)
       case ("Imply Right", (s:SuccPos)::Nil, _) => IRrule(IImplyR(), s.getIndex)
       case ("CoHideRight", (s:SuccPos)::Nil, _) => IRrule(ICohideR(), s.getIndex)
       case ("Cohide Right 2", (s:SuccPos)::Nil, _) => IRrule(ICohideRR(), s.getIndex)
@@ -552,12 +561,12 @@ class IsabelleConverter(pt:ProofTerm) {
     assert(t6.isEmpty, "Forgot to handle symbols in substitution: " + t6)
     // @TODO: Need to insert lefts/rights in ids on RHS
     Isubst(
-      extendSub(sortSubs(fun, {case FuncOf(Function(name,_,_,_,_),_) => m.funMap(Left(name))}, {case e:Term => apply(e)})),
-      extendSub(sortSubs(unitFun, {case UnitFunctional(name,_,_) => m.funMap(Right(name))}, {case e:Term => apply(e)})),
-      extendSub(sortSubs(pred, {case PredOf(Function(name,_,_,_,_),_) => m.predMap(name)}, {case e:Formula => apply(e)})),
-      extendSub(sortSubs(con, {case PredicationalOf(Function(name,_,_,_,_),_) => m.conMap(Left(name)) case UnitPredicational(name, _) => m.conMap(Right(name))}, {case e:Formula => apply(e)})),
-      extendSub(sortSubs(prog, {case ProgramConst(name) =>  m.progMap(name) case SystemConst(name) =>  m.progMap(name)}, {case e:Program => apply(e)})),
-      extendSub(sortSubs(ode, {case DifferentialProgramConst(name,_) =>  m.odeMap(name)}, {case e:DifferentialProgram => apply(e)})))
+      extendSub(sortSubs(fun, {case FuncOf(Function(name,_,_,_,_),_) => m.funMap(Left(name))}, {case e:Term => apply(e, sm = FunSubst())})),
+      extendSub(sortSubs(unitFun, {case UnitFunctional(name,_,_) => m.funMap(Right(name))}, {case e:Term => apply(e,NonSubst())})),
+      extendSub(sortSubs(pred, {case PredOf(Function(name,_,_,_,_),_) => m.predMap(name)}, {case e:Formula => apply(e, sm = FunSubst())})),
+      extendSub(sortSubs(con, {case PredicationalOf(Function(name,_,_,_,_),_) => m.conMap(Left(name)) case UnitPredicational(name, _) => m.conMap(Right(name))}, {case e:Formula => apply(e, sm=ConSubst())})),
+      extendSub(sortSubs(prog, {case ProgramConst(name) =>  m.progMap(name) case SystemConst(name) =>  m.progMap(name)}, {case e:Program => apply(e,NonSubst())})),
+      extendSub(sortSubs(ode, {case DifferentialProgramConst(name,_) =>  m.odeMap(name)}, {case e:DifferentialProgram => apply(e,NonSubst())})))
   }
 
   private def rulePoses(r:Rule):List[SeqPos] = {
@@ -635,7 +644,7 @@ class IsabelleConverter(pt:ProofTerm) {
       translateDiffFormulaChase(pt)
     } else {
       pt match {
-        case FOLRConstant(f) => IFOLRConstant(apply(f))
+        case FOLRConstant(f) => IFOLRConstant(apply(f,NonSubst()))
         case RuleTerm(name) => IAxRule(IaxRule(name))
         case AxiomTerm(name) => IAx(Iaxiom(name))
         case RuleApplication(child, name, sub, seqPos, expArgs) =>
@@ -653,71 +662,73 @@ class IsabelleConverter(pt:ProofTerm) {
     }
   }
 
-  def apply(f:Formula):Iformula = {
+
+  def apply(f:Formula,sm:SymMode):Iformula = {
     f match {
       case DotFormula => IInContext(IDRight(IDUnit()), IGeq(IConst(0),IConst(0)))
-      case GreaterEqual(l,r) => IGeq(apply(l), apply(r))
+      case GreaterEqual(l,r) => IGeq(apply(l,sm), apply(r,sm))
       case Greater(l,r) =>
-        val (al,ar) = (apply(l), apply(r))
+        val (al,ar) = (apply(l,sm), apply(r,sm))
         IAnd(IGeq(al,ar), INot(IGeq(ar,al)))
-      case LessEqual(l,r) => IGeq(apply(r), apply(l))
+      case LessEqual(l,r) => IGeq(apply(r,sm), apply(l,sm))
       case Less(l,r) =>
-        val (al,ar) = (apply(l), apply(r))
+        val (al,ar) = (apply(l,sm), apply(r,sm))
         IAnd(IGeq(ar,al), INot(IGeq(al,ar)))
       case Equal(l,r) =>
-        val (al,ar) = (apply(l), apply(r))
+        val (al,ar) = (apply(l,sm), apply(r,sm))
         IAnd(IGeq(al,ar),IGeq(ar,al))
       case NotEqual(l,r) =>
-        val (al,ar) = (apply(l), apply(r))
+        val (al,ar) = (apply(l,sm), apply(r,sm))
         IAnd(IGeq(al,ar),IGeq(ar,al))
       case PredOf(Function(name,_,_,_,_), arg) =>
+        val propId = if(sm == FunSubst()) {IDLeft(IDEnum(m.predMap(name)))} else {IDEnum(m.predMap(name))}
         val args = IsabelleConverter.detuple(arg)
         val allArgs = padArgs(args, m.pArity)
-        IProp(IDEnum(m.predMap(name)), allArgs.map(apply))
+        IProp(propId, allArgs.map(apply(_,sm)))
       case PredicationalOf(Function(name,_,_,_,_),child) =>
-        IInContext(IDEnum(m.conMap(Left(name))), apply(child))
+        val predId = if(sm == ConSubst()) {IDLeft(IDEnum(m.conMap(Left(name))))} else {IDEnum(m.conMap(Left(name)))}
+        IInContext(predId, apply(child,sm))
       case UnitPredicational(name,_) => {
-        val 2 = 1 + 1
-        IInContext(IDEnum(m.conMap(Right(name))), IGeq(IConst(0), IConst(0)))
-
+        val predId = if(sm == ConSubst()) {IDLeft(IDEnum(m.conMap(Right(name))))} else {IDEnum(m.conMap(Right(name)))}
+        IInContext(predId, IGeq(IConst(0), IConst(0)))
       }
-      case Not(f) => INot(apply(f))
+      case Not(f) => INot(apply(f,sm))
         //INot(IAnd(IGeq(al,ar),IGeq(ar
-      case And(l,r) => IAnd(apply(l),apply(r))
-      case Or(l,r) => INot(IAnd(INot(apply(l)),INot(apply(r))))
+      case And(l,r) => IAnd(apply(l,sm),apply(r,sm))
+      case Or(l,r) => INot(IAnd(INot(apply(l,sm)),INot(apply(r,sm))))
       // @TODO: Double-negation eliminate, but need to do that in isabelle land too
-      case Imply(l,r) => INot(IAnd(INot(apply(r)),INot(INot(apply(l)))))
+      case Imply(l,r) => INot(IAnd(INot(apply(r,sm)),INot(INot(apply(l,sm)))))
       // @TODO: Double-negation eliminate, but need to do that in isabelle land too
       case Equiv(l,r) =>
-        val (al,ar) = (apply(l), apply(r))
+        val (al,ar) = (apply(l,sm), apply(r,sm))
         INot(IAnd(INot(IAnd(al,ar)),INot(IAnd(INot(al),INot(ar)))))
       case Exists(vars,child) =>
         val BaseVariable(x,ind,_) = vars.head
-        IExists(IDEnum(m.varMap((x,ind))),apply(child))
+        IExists(IDEnum(m.varMap((x,ind))),apply(child,sm))
       case Forall(vars,child) =>
         val BaseVariable(x,ind,_) = vars.head
-        INot(IExists(IDEnum(m.varMap((x,ind))),INot(apply(child))))
-      case Diamond(a,p) => IDiamond(apply(a),apply(p))
-      case Box(a,p) => INot(IDiamond(apply(a),INot(apply(p))))
+        INot(IExists(IDEnum(m.varMap((x,ind))),INot(apply(child,sm))))
+      case Diamond(a,p) => IDiamond(apply(a,sm),apply(p,sm))
+      case Box(a,p) => INot(IDiamond(apply(a,sm),INot(apply(p,sm))))
       case True => IGeq(IConst(0),IConst(0))
       case False => IGeq(IConst(0),IConst(1))
       case DifferentialFormula(GreaterEqual(t1,t2)) =>
-        IGeq(IDifferential(apply(t1)),IDifferential(apply(t2)))
+        IGeq(IDifferential(apply(t1,sm)),IDifferential(apply(t2,sm)))
       case DifferentialFormula(Greater(t1,t2)) =>
-        IGeq(IDifferential(apply(t1)),IDifferential(apply(t2)))
-      case DifferentialFormula(LessEqual(l,r)) => IGeq(IDifferential(apply(r)), IDifferential(apply(l)))
-      case DifferentialFormula(Less(l,r)) => IGeq(IDifferential(apply(r)), IDifferential(apply(l)))
+        IGeq(IDifferential(apply(t1,sm)),IDifferential(apply(t2,sm)))
+      case DifferentialFormula(LessEqual(l,r)) => IGeq(IDifferential(apply(r,sm)), IDifferential(apply(l,sm)))
+      case DifferentialFormula(Less(l,r)) => IGeq(IDifferential(apply(r,sm)), IDifferential(apply(l,sm)))
       case DifferentialFormula(Equal(l,r)) =>
-        val (al,ar) = (IDifferential(apply(l)), IDifferential(apply(r)))
+        val (al,ar) = (IDifferential(apply(l,sm)), IDifferential(apply(r,sm)))
         IAnd(IGeq(al,ar),IGeq(ar,al))
       case DifferentialFormula(NotEqual(l,r)) =>
-        val (al,ar) = (IDifferential(apply(l)), IDifferential(apply(r)))
+        val (al,ar) = (IDifferential(apply(l,sm)), IDifferential(apply(r,sm)))
         IAnd(IGeq(al,ar),IGeq(ar,al))
       case DifferentialFormula(And(p,q)) =>
-        val (al,ar) = (apply(DifferentialFormula(p)), apply(DifferentialFormula(q)))
+        val (al,ar) = (apply(DifferentialFormula(p),sm), apply(DifferentialFormula(q),sm))
         IAnd(al,ar)
       case DifferentialFormula(Or(p,q)) =>
-        val (al,ar) = (apply(DifferentialFormula(p)), apply(DifferentialFormula(q)))
+        val (al,ar) = (apply(DifferentialFormula(p),sm), apply(DifferentialFormula(q),sm))
         IAnd(al,ar)
       case _ : UnitFunctional => throw ConversionException("Functionals not supported yet")
     }
@@ -725,7 +736,7 @@ class IsabelleConverter(pt:ProofTerm) {
 
   val emptyArgs:List[Itrm] = List.tabulate(m.fArity)(_ =>IConst(0))
 
-  def apply(t:Term):Itrm = {
+  def apply(t:Term,sm:SymMode):Itrm = {
     t match {
       case Nothing =>
         val 2 = 1 + 1
@@ -737,48 +748,53 @@ class IsabelleConverter(pt:ProofTerm) {
       case DifferentialSymbol(BaseVariable(x,ind,_)) => IDiffVar(IDEnum(m.varMap((x,ind))))
       case Number(n) =>
         if(n.isValidInt) {
-          IConst(n.intValue())
+          IConst(n.intValue(),sm)
         } else {
           throw ConversionException("Can't convert non-integer literal: " + n)
         }
       case FuncOf(Function(name,_,_,_,_), arg) =>
         val args = IsabelleConverter.detuple(arg)
         val allArgs = padArgs(args, m.fArity)
-        IFunction(IDEnum(m.funMap(Left(name))), allArgs.map(apply(_)))
-      case Plus(l,r) => IPlus(apply(l),apply(r))
-      case Minus(l,r) => IPlus(apply(l),ITimes(IConst(-1),apply(r)))
-      case Neg(t) => ITimes(IConst(-1),apply(t))
-      case Differential(t) => IDifferential(apply(t))
+        val funId = if(sm == FunSubst()) {
+          println("FunSubst: " + name, arg)
+          IDLeft(IDEnum(m.funMap(Left(name))))} else {
+          println("Nah" + sm + name, arg)
+          IDEnum(m.funMap(Left(name)))}
+        IFunction(funId, allArgs.map(apply(_,sm)))
+      case Plus(l,r) => IPlus(apply(l,sm),apply(r,sm))
+      case Minus(l,r) => IPlus(apply(l,sm),ITimes(IConst(-1),apply(r,sm)))
+      case Neg(t) => ITimes(IConst(-1),apply(t,sm))
+      case Differential(t) => IDifferential(apply(t,sm))
       case Divide(l,r) => throw ConversionException("Converter currently does not support conversion of divisions")
       case Power(l,r) => throw ConversionException("Converter currently does not support conversion of powers")
     }
   }
 
-  def apply(o:DifferentialProgram):IODE = {
+  def apply(o:DifferentialProgram,sm:SymMode):IODE = {
     o match {
       case AtomicODE(DifferentialSymbol(BaseVariable(x,ind,_)),e) =>
-        IOSing(IDEnum(m.varMap(x,ind)), apply(e))
-      case DifferentialProduct(l,r) => IOProd(apply(l),apply(r))
+        IOSing(IDEnum(m.varMap(x,ind)), apply(e,sm))
+      case DifferentialProduct(l,r) => IOProd(apply(l,sm),apply(r,sm))
       case DifferentialProgramConst(c,_) => IOVar(IDEnum(m.odeMap(c)))
     }
   }
 
-  def apply(hp:Program):Ihp = {
+  def apply(hp:Program,sm:SymMode):Ihp = {
     hp match {
       case ProgramConst(name) => IPvar(IDEnum(m.varMap((name,None))))
-      case Assign(BaseVariable(x,ind,_),e) => IAssign(IDEnum(m.varMap((x,ind))),apply(e))
-      case Assign(DifferentialSymbol(BaseVariable(x,ind,_)),e) => IDiffAssign(IDEnum(m.varMap((x,ind))),apply(e))
-      case Test(p) => ITest(apply(p))
-      case ODESystem(ode,con) => IEvolveODE(apply(ode),apply(con))
-      case Choice(a,b) => IChoice(apply(a),apply(b))
-      case Compose(a,b) => ISequence(apply(a),apply(b))
-      case Loop(a) => ILoop(apply(a))
+      case Assign(BaseVariable(x,ind,_),e) => IAssign(IDEnum(m.varMap((x,ind))),apply(e,sm))
+      case Assign(DifferentialSymbol(BaseVariable(x,ind,_)),e) => IDiffAssign(IDEnum(m.varMap((x,ind))),apply(e,sm))
+      case Test(p) => ITest(apply(p,sm))
+      case ODESystem(ode,con) => IEvolveODE(apply(ode,sm),apply(con,sm))
+      case Choice(a,b) => IChoice(apply(a,sm),apply(b,sm))
+      case Compose(a,b) => ISequence(apply(a,sm),apply(b,sm))
+      case Loop(a) => ILoop(apply(a,sm))
       case _ : AssignAny => throw ConversionException("Nondeterministic assignment not supported yet")
     }
   }
 
   def apply(seq:Sequent):Isequent = {
-    (seq.ante.map(apply(_)).toList,seq.succ.map(apply(_)).toList)
+    (seq.ante.map(apply(_,NonSubst())).toList,seq.succ.map(apply(_,NonSubst())).toList)
   }
 
   def apply(pr:Provable):Irule = {
@@ -794,14 +810,19 @@ class IsabelleConverter(pt:ProofTerm) {
   }
 
   private def writeObjects(sb:StringBuilder,objName:String, fieldName:String,mainName:String):Unit = {
-    val imports = List("Real","Rat","Int","Proof_Checker","Syntax", "Nat", "USubst","Scratch")
+    val imports = List("Real","Rat","Int","Proof_Checker","Syntax", "Nat", "USubst","Scratch", "Sum_Type")
     // Writing everything out in full detail is quite verbose. Let's give the Scala parser (and anyone debugging) a break by using some abbreviations
     val defs = List(
       "val z:trm[myvars,myvars] = Const(Ratreal(Frct((int_of_integer(0),int_of_integer(1)))))",
       s"val e:(myvars => trm[myvars,myvars]) = {${ISABELLE_IDS.map(i => s"case $i() => z").mkString(" ")}}",
+      "val zst:trm[sum[myvars,myvars],myvars] = Const(Ratreal(Frct((int_of_integer(0),int_of_integer(1)))))",
+      s"val est:(myvars => trm[sum[myvars,myvars],myvars]) = {${ISABELLE_IDS.map(i => s"case $i() => zst").mkString(" ")}}",
+      //trm[sum[myvars,myvars],myvars]
       s"def ns[T]:(myvars => Option[T]) =   {${ISABELLE_IDS.map(i => s"case $i() => None").mkString(" ")}}",
-      s"def s(t:trm[myvars,myvars]):(myvars =>trm[myvars,myvars]) = {case ${ISABELLE_IDS.head}() => t ${ISABELLE_IDS.tail.map(i => s"case $i() => z").mkString(" ")}}"
-    )
+      s"def s(t:trm[myvars,myvars]):(myvars =>trm[myvars,myvars]) = {case ${ISABELLE_IDS.head}() => t ${ISABELLE_IDS.tail.map(i => s"case $i() => z").mkString(" ")}}",
+      s"def sst(t:trm[sum[myvars,myvars],myvars]):(myvars =>trm[sum[myvars,myvars],myvars]) = {case ${ISABELLE_IDS.head}() => t ${ISABELLE_IDS.tail.map(i => s"case $i() => zst").mkString(" ")}}"
+    )++
+    ISABELLE_IDS.map{case id => s"val ${id}mv:myvars = ${id}()"}
     sb.++=("object "); sb.++=(objName);sb.++=(" {\n")
     imports.foreach({case s => sb.++=("  import ");sb.++=(s);sb.++=("._\n")})
     defs.foreach({case d => sb.++=("  ");sb++=(d);sb.++=("\n")})
@@ -829,13 +850,27 @@ class IsabelleConverter(pt:ProofTerm) {
 }
 
 class ScalaBuilder(sb:StringBuilder) {
-  private def b0(name:String):Unit = {
+  private def b0(name:String, tparam:Option[String]=None):Unit = {
     sb.++=(name)
+    tparam match {
+      case None => ()
+      case Some(tp) =>
+        sb.++=("[")
+        sb.++=(tp)
+        sb.++=("]")
+    }
     sb.++=("()")
   }
 
-  def b1(name:String,f:(() => Unit)):Unit = {
+  def b1(name:String,f:(() => Unit),tparam:Option[String]=None):Unit = {
     sb.++=(name)
+    tparam match {
+      case None => ()
+      case Some(tp) =>
+        sb.++=("[")
+        sb.++=(tp)
+        sb.++=("]")
+    }
     sb.++=("(")
     f()
     sb.++=(")")
@@ -887,11 +922,12 @@ class ScalaBuilder(sb:StringBuilder) {
     sb.++=("}")
   }
 
-  private def emptyElse(args:List[Itrm], f:(() => Unit)):Unit = {
-    if(args.forall({case IConst(0) => true case _ => false})) {
-      sb.++=("e")
-    } else if (args.length >= 1 && args.tail.forall({case IConst(0) => true case _ => false})) {
-      b1("s", ()=> apply(args.head))
+  private def emptyElse(args:List[Itrm], f:(() => Unit), sm:SymMode):Unit = {
+    if(args.forall({case IConst(0,sm) => true case _ => false})) {
+      sm match {case _:FunSubst => sb.++=("est") case _ => sb.++=("e")}
+    } else if (args.length >= 1 && args.tail.forall({case IConst(0,sm) => true case _ => false})) {
+      val name = sm match {case _:FunSubst => "sst" case _ => "s"}
+      b1(name, ()=> apply(args.head))
     } else {
       f()
     }
@@ -907,9 +943,11 @@ class ScalaBuilder(sb:StringBuilder) {
 
   def apply(id:ID):Unit = {
     id match {
-      case IDEnum(n) => b0(n)
-      case IDLeft(id) => b1("Left", ()=>apply(id))
-      case IDRight(id) => b1("Right", ()=>apply(id))
+      case IDEnum(n) => sb.++=(n+"mv")
+      // final case class Inl[A, B](a: A) extends sum[A, B]
+      // final case class Inr[B, A](a: B) extends sum[A, B]
+      case IDLeft(id,ltype,rtype) => b1("Inl", ()=>apply(id), Some(ltype+","+rtype))
+      case IDRight(id,ltype,rtype) => b1("Inr", ()=>apply(id), Some(rtype+","+ltype))
       case IDUnit() => b0("")
     }
   }
@@ -917,9 +955,12 @@ class ScalaBuilder(sb:StringBuilder) {
   def apply(t:Itrm):Unit = {
     t match {
       case IVar(x) => b1("Var", () => apply(x))
-      case IConst(n) if n == 0 => sb.++=("z")
-      case IConst(n) =>  b1("Const",()=>brat(n))
-      case IFunction(n,args) => b2("Function",()=>apply(n),()=> emptyElse(args,()=>bff(args,apply(_:Itrm))))
+      case IConst(n,sm:NonSubst) if n == 0 => sb.++=("z")
+      case IConst(n,sm) if n == 0 => sb.++=("zst")
+      case IConst(n,sm) =>  b1("Const",()=>brat(n))
+      case IFunction(n,args) =>
+        val sm = n match {case _:IDEnum => NonSubst() case _ => FunSubst()}
+        b2("Function",()=>apply(n),()=> emptyElse(args,()=>bff(args,apply(_:Itrm)),sm))
       case IFunctional(n) => b1("Functional",()=>apply(n))
       case IPlus(a,b) => b2("Plus",()=>apply(a),()=>apply(b))
       case ITimes(a,b) => b2("Times",()=>apply(a),()=>apply(b))
@@ -952,7 +993,9 @@ class ScalaBuilder(sb:StringBuilder) {
   def apply(f:Iformula):Unit = {
     f match {
       case IGeq(t1,t2) => b2("Geq",()=>apply(t1),()=>apply(t2))
-      case IProp(name,args) => b2("Prop",()=>apply(name),()=>emptyElse(args,()=>bff(args,apply(_:Itrm))))
+      case IProp(name,args) =>
+        val sm = name match {case _:IDEnum => NonSubst() case _ => FunSubst()}
+        b2("Prop",()=>apply(name),()=>emptyElse(args,()=>bff(args,apply(_:Itrm)),sm))
       case INot(f) => b1("Not",()=>apply(f))
       case IAnd(p,q) => b2("And",()=>apply(p),()=>apply(q))
       case IExists(x,p) => b2("Exists",()=>apply(x),()=>apply(p))
@@ -1051,12 +1094,13 @@ class ScalaBuilder(sb:StringBuilder) {
     val Isubst(fun,funcl,pred,con,prog,ode) = subst
     //Isubst(SFunctions:List[Itrm], SPredicates:List[Iformula], SContexts:List[Iformula], SPrograms:List[Ihp], SODEs:List[IODE])
     b7("subst_exta",
-       ()=>noneElse(fun,()=>bff(fun,apply(_:Option[Itrm]))),
-       ()=>noneElse(fun,()=>bff(funcl,apply(_:Option[Itrm]))),
-       ()=>noneElse(fun,()=>bff(pred,apply(_:Option[Iformula]))),
-       ()=>noneElse(fun,()=>bff(con,apply(_:Option[Iformula]))),
-       ()=>noneElse(fun,()=>bff(prog,apply(_:Option[Ihp]))),
-       ()=>noneElse(fun,()=>bff(ode,apply(_:Option[IODE]))),{() => sb.++=("()")})
+       {()=>{noneElse(fun,()=>bff(fun,apply(_:Option[Itrm])));sb.++=("\n")}},
+       {()=>noneElse(fun,()=>bff(funcl,apply(_:Option[Itrm])));sb.++=("\n")},
+       {()=>noneElse(fun,()=>bff(pred,apply(_:Option[Iformula])));sb.++=("\n")},
+       {()=>noneElse(fun,()=>bff(con,apply(_:Option[Iformula])));sb.++=("\n")},
+       {()=>noneElse(fun,()=>bff(prog,apply(_:Option[Ihp])));sb.++=("\n")},
+       {()=>noneElse(fun,()=>bff(ode,apply(_:Option[IODE])));sb.++=("\n")},
+       {() => sb.++=("()")})
   }
 
   def apply[T](t:Option[T]):Unit = {
@@ -1086,7 +1130,7 @@ class ScalaBuilder(sb:StringBuilder) {
       case IFNC(child, seq,ra) => b3("FNC",()=>apply(child),()=>apply(seq),()=>apply(ra))
       case IPro(child,pro) => b2("Pro",()=>apply(child),()=>apply(pro))
       case IStart(seq) => b1("Start",()=>apply(seq))
-      case ISub(child, sub, branch) => b3("Sub",()=>apply(child),()=>apply(sub),()=>nat(branch))
+      case ISub(child, sub, branch) => b3("Sub",()=>apply(child),()=>apply(sub),()=>nat(branch));sb.++=("\n")
     }
   }
 }
