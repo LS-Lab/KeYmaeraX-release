@@ -896,16 +896,11 @@ trait UnifyUSCalculus {
     *
     * @see [[UnifyUSCalculus.CEat(Provable)]]
     */
-  def cutAt(repl: Expression): DependentPositionTactic = new DependentPositionTactic("cutAt") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = {
-        require(sequent.sub(pos).isDefined, "Position " + pos + " not defined in sequent " + sequent)
-        val (ctx, _) = sequent.at(pos)
-        cutLR(ctx(repl))(pos.top)
-      }
-    }
-  }
-
+  def cutAt(repl: Expression): DependentPositionTactic = "cutAt" byWithInput(repl, (pos, sequent) => {
+    require(sequent.sub(pos).isDefined, "Position " + pos + " not defined in sequent " + sequent)
+    val (ctx, _) = sequent.at(pos)
+    cutLR(ctx(repl))(pos.top)
+  })
 
   /*******************************************************************
     * unification and matching based auto-tactics (forward Hilbert)
