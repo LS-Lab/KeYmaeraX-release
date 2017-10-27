@@ -432,7 +432,10 @@ object PolynomialArith {
 
 
   private lazy val divNormalise = proveBy(" P_() / Q_()  = (1/Q_()) *P_() ".asFormula,QE & done)
-  private lazy val varNormalise = proveBy("P_() = 0 + (1/1) * (1 * P_() ^ 1)".asFormula,QE & done)
+  //Add ^1 for a variable
+  private lazy val var1Normalise = proveBy("P_() = 0 + (1/1) * (1 * P_()^1)".asFormula,QE & done)
+  //Normalization for any variable (or power of variable)
+  private lazy val varNormalise = proveBy("P_() = 0 + (1/1) * (1 * P_())".asFormula,QE & done)
 
   //Normalizes an otherwise un-normalized term
   def normalise(l:Term,skip_proofs:Boolean = false) : (Term,ProvableSig) = {
@@ -445,8 +448,9 @@ object PolynomialArith {
         (res,prover(Equal(l,res), RCF ))
       case v if isVar(v) =>
         //0 + 1/1 * (1 * v^1)
-        val res = Plus(Number(0),Times(Divide(Number(1),Number(1)), Times(Number(1),Power(v,Number(1))) ))
-        (res,prover(Equal(l,res), byUS(varNormalise) ))
+        val pow1 = Power(v,Number(1))
+        val res = Plus(Number(0),Times(Divide(Number(1),Number(1)), Times(Number(1),pow1) ))
+        (res,prover(Equal(l,res), byUS(var1Normalise) ))
       case Plus(ln,rn) =>
         val (rec1,pr1) = normalise(ln,skip_proofs)
         val (rec2,pr2) = normalise(rn,skip_proofs)
@@ -464,7 +468,7 @@ object PolynomialArith {
       case Power(_:Variable,_:Number) =>
         //0 + 1 * (1 * v^n)
         val res = Plus(Number(0),Times(Divide(Number(1),Number(1)), Times(Number(1),l) ))
-        (res,prover(Equal(l,res),RCF))
+        (res,prover(Equal(l,res),byUS(varNormalise)))
       case Power(ln,n:Number) if n.value == 2 =>
         val (rec1,pr1) = normalise(ln,skip_proofs)
         //Square the polynomial by hand
@@ -801,7 +805,7 @@ object PolynomialArith {
           case NotEqual(_,_) => useAt(neSucc)(ind) & notR(ind)
           case Less(f, g) => useAt(ltSucc)(ind) & notR(ind)
           case LessEqual(f, g) => useAt(leSucc)(ind) & notR(ind)
-          case _ => hideR(ind)
+          case _ => DebuggingTactics.print("Hiding: "+fi._1) & hideR(ind)
         }) & tac
       }
     }
@@ -818,7 +822,7 @@ object PolynomialArith {
           case NotEqual(_, _) => useAt(neAnte)(ind) & existsL(ind)
           case Less(f, g) => useAt(ltAnte)(ind) & existsL(ind)
           case LessEqual(f, g) => useAt(leAnte)(ind) & existsL(ind)
-          case _ => hideL(ind)
+          case _ => DebuggingTactics.print("Hiding: "+fi._1) & hideL(ind)
         }) & tac
       }
     }
@@ -854,7 +858,7 @@ object PolynomialArith {
           //case Less(f, g) => useAt(ltAnte)(ind) & existsL(ind)
           //case Less(f, g) => useAt(ltAnteZ)(ind) & andL(ind) & existsL(ind)
           case LessEqual(f, g) => useAt(leAnte)(ind) & existsL(ind)
-          case _ => hideL(ind)
+          case _ => DebuggingTactics.print("Hiding: "+fi._1) & hideL(ind)
         }) & tac
       } & ((notR('R))*)
     }
