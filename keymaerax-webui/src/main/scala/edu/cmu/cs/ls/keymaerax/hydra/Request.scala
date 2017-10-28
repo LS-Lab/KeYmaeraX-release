@@ -111,6 +111,16 @@ abstract class UserRequest(username: String) extends Request {
 /** A proof session storing information between requests. */
 case class ProofSession(proofId: String, invGenerator: Generator[Formula], defs: KeYmaeraXDeclarationsParser.Declaration)
 
+abstract class UserModelRequest(db: DBAbstraction, username: String, modelId: String) extends UserRequest(username) {
+  override final def resultingResponses(): List[Response] = {
+    //@todo faster query for existence
+    if (db.getModel(modelId).userId != username) new PossibleAttackResponse("Permission denied") :: Nil
+    else doResultingResponses()
+  }
+
+  protected def doResultingResponses(): List[Response]
+}
+
 abstract class UserProofRequest(db: DBAbstraction, username: String, proofId: String) extends UserRequest(username) {
   override final def resultingResponses(): List[Response] = {
     if (proofId == "undefined" || proofId == "null") throw new Exception("The user interface lost track of the proof, please try reloading the page.") //@note Web UI bug
@@ -686,20 +696,23 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
   private def emptyToOption(s: String): Option[String] = if (s.isEmpty) None else Some(s)
 
   def resultingResponses(): List[Response] = {
-    if (KeYmaeraXProblemParser.isExercise(content)) {
-      db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(content))
-      BooleanResponse(flag=true) :: Nil
-    } else try {
-      KeYmaeraXProblemParser.parseAsProblemOrFormula(content) match {
-        case fml: Formula =>
-          val newContent = RequestHelper.augmentDeclarations(content, fml)
-          db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(newContent))
-          BooleanResponse(flag = true) :: Nil
-        case t => new ErrorResponse("Expected a model formula, but got a file with a " + t.kind) :: Nil
+    val modelInfo = db.getModel(modelId)
+    if (modelInfo.numProofs <= 0) {
+      if (KeYmaeraXProblemParser.isExercise(content)) {
+        db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(content))
+        BooleanResponse(flag = true) :: Nil
+      } else try {
+        KeYmaeraXProblemParser.parseAsProblemOrFormula(content) match {
+          case fml: Formula =>
+            val newContent = RequestHelper.augmentDeclarations(content, fml)
+            db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(newContent))
+            BooleanResponse(flag = true) :: Nil
+          case t => new ErrorResponse("Expected a model formula, but got a file with a " + t.kind) :: Nil
+        }
+      } catch {
+        case e: ParseException => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
       }
-    } catch {
-      case e: ParseException => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
-    }
+    } else new ErrorResponse("Unable to update model " + modelId + " because it has " + modelInfo.numProofs + " proofs") :: Nil
   }
 }
 
@@ -751,13 +764,19 @@ class ImportExampleRepoRequest(db: DBAbstraction, userId: String, repoUrl: Strin
   }
 }
 
-class DeleteModelRequest(db: DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) with WriteRequest {
-  //@todo check the model belongs to the user.
-  override def resultingResponses(): List[Response] = {
+class DeleteModelRequest(db: DBAbstraction, userId: String, modelId: String) extends UserModelRequest(db, userId, modelId) with WriteRequest {
+  override def doResultingResponses(): List[Response] = {
     val id = Integer.parseInt(modelId)
     //db.getProofsForModel(id).foreach(proof => TaskManagement.forceDeleteTask(proof.proofId.toString))
     val success = db.deleteModel(id)
-    new BooleanResponse(success) :: Nil
+    BooleanResponse(success) :: Nil
+  }
+}
+
+class DeleteModelProofsRequest(db: DBAbstraction, userId: String, modelId: String) extends UserModelRequest(db, userId, modelId) with WriteRequest {
+  override def doResultingResponses(): List[Response] = {
+    val success = db.getProofsForModel(modelId).map(p => db.deleteProof(p.proofId)).reduce(_&&_)
+    BooleanResponse(success) :: Nil
   }
 }
 
