@@ -190,20 +190,19 @@ trait UnifyUSCalculus {
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting).
     * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
-  def useAt(lem: Lemma, key:PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic = {
-    if (lem.name.isDefined) {
-      val info = ProvableInfo.ofStoredName(lem.name.get)
-      if (info.provable == lem.fact)
-        useAt(info, key, inst)
+  def useAt(lem: Lemma, key:PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic = lem.name match {
+    case Some(name) if ProvableInfo.existsStoredName(name) =>
+      val info = ProvableInfo.ofStoredName(name)
+      if (info.provable == lem.fact) useAt(info, key, inst)
       else {
-        println("INFO: useAt(" + lem.name.get + ") has an incompatible lemma name, which may disable tactic extraction")
+        println("INFO: useAt(" + name + ") has an incompatible lemma name, which may disable tactic extraction")
         useAt("useAt", lem.fact, key, inst)
       }
-    }
-    else {
+    case Some(name) if !ProvableInfo.existsStoredName(name) =>
+      useAt("useAt", lem.fact, key, inst)
+    case None =>
       println("INFO: useAt of an anonymous lemma may disable tactic extraction")
       useAt("useAt", lem.fact, key, inst)
-    }
   }
   def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem, key, (us:Option[Subst])=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
   /** useAt(lem)(pos) uses the given lemma at the given position in the sequent (by unifying and equivalence rewriting). */

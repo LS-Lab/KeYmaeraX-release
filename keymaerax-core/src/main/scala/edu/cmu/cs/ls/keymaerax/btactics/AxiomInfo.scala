@@ -872,6 +872,12 @@ object DerivationInfo {
       , _ => ((lemmaName: String) => ((tactic: Option[String]) =>
         TactixLibrary.useLemma(lemmaName, tactic.map(_.asTactic))): TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
 
+    InputPositionTacticInfo("useLemmaAt"
+      , "useLemmaAt"
+      , List(StringArg("lemma"), StringArg("key"))
+      , _ => ((lemmaName: String) => ((key: Option[String]) =>
+        TactixLibrary.useLemmaAt(lemmaName, key.map(k => PosInExpr(k.split("\\.").map(Integer.parseInt).toList)))): TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
+
     InputPositionTacticInfo("cutAt"
       , "cutAt"
       , List(FormulaArg("fml"))
@@ -1096,6 +1102,10 @@ object ProvableInfo {
       case info: ProvableInfo => info
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom or axiomatic rule, whether derived or not.")
     }
+
+  /** True if ProvableInfo with `storedName` exists, false otherwise. */
+  def existsStoredName(storedName: String): Boolean =
+    DerivationInfo.allInfo.exists({case si: StorableInfo => si.storedName == storedName case _ => false})
 
   /** Retrieve meta-information on an inference by the given stored name `storedName` */
   def ofStoredName(storedName: String): ProvableInfo = {

@@ -840,6 +840,17 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     }
   )
 
+  /** Applies the lemma by matching `key` in the lemma with the tactic position. */
+  def useLemmaAt(lemmaName: String, key: Option[PosInExpr]): DependentPositionWithAppliedInputTactic = "useLemmaAt" byWithInputs(
+    if (key.isDefined) lemmaName::key.get.prettyString::Nil else lemmaName::Nil,
+    (pos: Position, _: Sequent) => {
+      val userLemmaName = "user" + File.separator + lemmaName //@todo FileLemmaDB + multi-user environment
+      if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {
+        val lemma = LemmaDBFactory.lemmaDB.get(userLemmaName).get
+        useAt(lemma, key.getOrElse(PosInExpr(0::Nil)))(pos)
+      } else throw new BelleAbort("Missing lemma " + lemmaName, "Please prove lemma " + lemmaName + " first")
+    })
+
   /** Finds a counter example, indicating that the specified formula is not valid. */
   def findCounterExample(formula: Formula) = ToolProvider.cexTool().getOrElse(throw new BelleThrowable("findCounterExample requires a CounterExampleTool, but got None")).findCounterExample(formula)
 
