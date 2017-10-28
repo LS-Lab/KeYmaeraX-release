@@ -53,7 +53,7 @@ private[core] object AxiomBase {
     val context = Function("ctx_", None, Bool, Bool) // predicational symbol
     val a = ProgramConst("a_")
     val sys = SystemConst("a_")
-    val v = Variable("v", None, Real)
+    val v = Variable("v_", None, Real)
     val Jany = UnitPredicational("J", AnyArg)
     Map(
       /**
