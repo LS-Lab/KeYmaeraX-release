@@ -1,4 +1,4 @@
-package pt
+package edu.cmu.cs.ls.pt
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
@@ -24,7 +24,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     s.succ.length == 1 && s.ante.length == 0 && s.succ.last.equals(f) && cert.isProved
   }
   private def debugCert(cert: ProvableSig) = println(cert.subgoals.mkString("\n --- \n"))
-
+/*
   "Axiom checker" should "check i_{[:=] assign} : [v:=t();]p(v) <-> p(t())" in {
     val label = "[:=] assign"
     val f = "[x_:=f();]p(x_) <-> p(f())".asFormula
@@ -36,7 +36,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     val checkResult = ProofChecker(proofTerm, Some(f))
     proves(checkResult, f) shouldBe true
   }
-
+*/
   private def checkIfPT(p:ProvableSig,f:Formula):Unit = {
     p match {
       case _ : NoProofTermProvable => ()
@@ -49,7 +49,7 @@ class ProofTermCheckerTests extends TacticTestBase {
   "Belle interpreter" should "generate proof terms when supplied with the PTProvable as input" in {
     val label = "[:=] assign"
     val f = "[x_:=f();]p(x_) <-> p(f())".asFormula
-    val t = US(USubst.apply(scala.collection.immutable.Seq()), label)
+    val t = ??? //US(USubst.apply(scala.collection.immutable.Seq()), label)
 
     val provable = PTProvable.startProof(f)
     val tacticResult = proveBy(provable, t)
@@ -115,7 +115,7 @@ class ProofTermCheckerTests extends TacticTestBase {
   it should "convert simple axiom usage" in withMathematica(_ => {
     val label = "[:=] assign"
     val f = "[x_:=f();]p(x_) <-> p(f())".asFormula
-    val t = US(USubst.apply(scala.collection.immutable.Seq()), label)
+    val t = ??? ///US(USubst.apply(scala.collection.immutable.Seq()), label)
     proveBy(ProvableSig.startProof(f), t) match {
       case ptp: PTProvable =>
         val conv = new IsabelleConverter(ptp.pt)
@@ -157,6 +157,23 @@ class ProofTermCheckerTests extends TacticTestBase {
         println("Rules: " + rules + "\n\n\n")
         println("Arithmetic Goals: " + goals + "\n\n\n")
         println("END OF STATS\n\n\n\n\n\n\n\n\n\n\n")
+        val is = collection.immutable.IndexedSeq
+        val subPt =
+          Sub(
+            Sub(
+              RuleApplication(
+                RuleApplication(
+                  StartProof(Sequent(is("A()>=0".asFormula, "v>=0".asFormula),is("(true->v>=0&[{v'=A(),x'=v&true}](v>=0)')->[{v'=A(),x'=v&true}]v>=0".asFormula))),
+                  "CoHideRight",0,List(core.SuccPos(0)),List()),
+                "Imply Right",0,List(core.SuccPos(0)),List()),
+              StartProof(Sequent(is("true->v>=0&[{v'=A(),x'=v&true}](v>=0)'".asFormula), is("[{v'=A(),x'=v&true}]v>=0".asFormula))),0),
+          Sub(RuleApplication(RuleApplication(RuleApplication(
+                 StartProof(Sequent(is("true->v>=0&[{v'=A(),x'=v&true}](v>=0)'".asFormula),is("[{v'=A(),x'=v&true}]v>=0".asFormula))),
+                   "cut Right",0,List(core.SuccPos(0)),List("true->v>=0&[{v'=A(),x'=v&true}](v>=0)'".asFormula))
+              ,"Close",0,List(core.AntePos(0), core.SuccPos(0)),List()),"HideLeft",0,List(AntePos(0)),List()),
+            StartProof(Sequent(is(),is("(true->v>=0&[{v'=A(),x'=v&true}](v>=0)')->[{v'=A(),x'=v&true}]v>=0".asFormula))),0),0)
+
+        val recheck = ProofChecker(ptp.pt)
         val conv = new IsabelleConverter(ptp.pt)
         val source = conv.scalaObjects("ProofTerm", "proofTerm", "GeneratedProofChecker")
         println(source)

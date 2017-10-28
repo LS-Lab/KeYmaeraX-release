@@ -42,16 +42,21 @@ object IsabelleConverter {
 
 object IDMap {
   val axiomIds = IDMap(
-    // next Id for vars
-    Map((("x_",None), "i1"), (("y_",None), "i2"), (("v",None), "i1"), (("t_",None),"i2"), (("s_",None),"i3")),
+    // VAR MAP
+    Map((("x_",None), "i1"), (("y_",None), "i2"), (("v_",None), "i1"), (("t_",None),"i2"), (("s_",None),"i3")),
+
+    // FUN FUNL MAP
     // @TODO: Preload with some functionals too
-    Map((Left("f"),"i1"), (Left("g"),"i2"),(Left("s"),"i1"),(Left("t"),"i2"),(Left("ctxT"),"i3"), (Left("c"),"i1"),
+    Map((Left("f"),"i1"), (Left("g"),"i2"),(Left("s"),"i1"),(Left("t"),"i2"),(Left("ctxT"),"i3"),(Left("ctx_"),"i3"), (Left("c"),"i1"),
       (Right("f"),"i1"), (Right("g"),"i2"), (Right("f_"),"i1"), (Right("g_"),"i2")),
-    Map(("p","i1"),("q","i2"),("ctxF","i1")),
+
+    // PROP MAP
+    Map(("p","i1"),("q","i2"),("ctxF","i1"),("ctx_","i3"),("p_","i1"),("q_","i2")),
     //@TODO: Left is argumented, right is unit, double-check please
-    Map((Left("p_"),"i1"),(Left("q_"),"i2"),(Right("P"),"i1"),(Left("J"),"i1")),
+    // CON PRED MAP
+    Map((Left("p_"),"i1"),(Left("q_"),"i2"),(Right("p_"),"i1"),(Right("q_"),"i2"),(Right("P"),"i1"),(Left("J"),"i1"), (Right("p"),"i1"), (Right("q"),"i2"), (Left("ctx_"),"i3")),
     Map(("a","i1"),("b","i2"),("a_","i1"),("b_","i2")),
-    Map(("c","i1"),("d","i2"),("c","i3"),("a_","i1"), ("a","i1")),
+    Map(("c","i1"),("d","i2"),("e","i3"),("a_","i1"), ("a","i1")),
     ISABELLE_IDS.length,
     ISABELLE_IDS.length,
     3, // next Id for var
@@ -418,7 +423,8 @@ object Iaxiom {
       case "DC differential cut" => IADC()
       case "DS differential solve" => IADS()
       //@TODO: specialize based on shape of differential formula
-      case "DI differential invariant" => IADIGeq() // e.g. IADIGr()
+      case "DI differential invariant" =>
+        IADIGeq() // e.g. IADIGr()
       case "G goedel" => {
         val 2 = 1 + 1
         println("Encountered goedel axiom, thought it should be rule")
@@ -524,8 +530,8 @@ class IsabelleConverter(pt:ProofTerm) {
 
       case ("cut Right", (s:SuccPos) :: Nil, (f:Formula) :: Nil) => IRrule(ICutRight(apply(f,NonSubst())), s.getIndex)
       case ("Imply Right", (s:SuccPos)::Nil, _) => IRrule(IImplyR(), s.getIndex)
-      case ("CoHideRight", (s:SuccPos)::Nil, _) => IRrule(ICohideR(), s.getIndex)
-      case ("Cohide Right 2", (s:SuccPos)::Nil, _) => IRrule(ICohideRR(), s.getIndex)
+      case ("CoHideRight", (s:SuccPos)::Nil, _) => IRrule(ICohideRR(), s.getIndex)
+      case ("Cohide Right 2", (s:SuccPos)::Nil, _) => IRrule(ICohideR(), s.getIndex)
       case ("closeTrue", (s:SuccPos)::Nil, _) => IRrule(ITrueR(), s.getIndex)
       case ("Equiv Right", (s:SuccPos)::Nil, _) => IRrule(IEquivR(), s.getIndex)
       case ("EquivifyRight", (s:SuccPos)::Nil, _) => IRrule(IEquivifyR(), s.getIndex)
@@ -538,18 +544,39 @@ class IsabelleConverter(pt:ProofTerm) {
     }
   }
 
-  private def sortSubs[T](seq:Seq[(Expression,Expression)], f:(Expression => String), g:(Expression => T)):List[T] = {
+  private def sortSubs[T](seq:Seq[(Expression,Expression)], f:(Expression => String), g:(Expression => T)):List[(String,T)] = {
+    /*def undentify(xs:List[(Expression,Expression,String)],ys:List[String]):List[(String,Expression] = {
+      (xs,ys) match {
+        case ((_,rep,where)::xss,here::yss) if (where == here) =>
+          rep::undentify(xss,yss)
+        case ((_,rep,where)::xss,here::yss) if (where != here) =>
+          Number(0)::undentify(xs,yss)
+        case (Nil,x::xs) => Number(0)::undentify(Nil,xs)
+        case (Nil,Nil) => Nil
+      }
+    }*/
     val withKeys = seq.map({case (ns,e) => (ns,e,f(ns))})
-    withKeys.sortBy({case (ns,e,key) => key}).map{case (_,e,_) => e}.map(g).toList
+    val s1 = withKeys.sortBy({case (ns,e,key) => key})
+    //val s2 = undentify(s1.toList, ISABELLE_IDS.toList)
+    val s2 = s1.map{case (_,e,i) => (i,g(e))}.toList
+    //val s3 = s2.map(g)
+    s2
   }
 
   // @TODO: Surely has type issues
   // @TODO: Have to ensure identifier renaming preserves choice of reserved identifiers in axioms/axiomatic rules
   def apply(sub:USubst):Isubst = {
-    def extendSub[T](l:List[T]):List[Option[T]] = {
-      val somes = l.map(Some(_))
-      val numSomes = somes.length
-      List.tabulate(ISABELLE_IDS.length)({case i => if(i < numSomes) {somes(i)} else None})
+    def extendSub[T](l:List[(String,T)],ids:List[String] = ISABELLE_IDS.toList):List[Option[T]] = {
+      (l, ids) match {
+        case ((i,x)::ls,id::idss) =>
+          if(i == id) { Some(x) :: extendSub(ls,idss)}
+          else { None :: extendSub(l, idss)}
+        case (Nil, id::idss) => None :: extendSub(Nil,idss)
+        case (Nil, Nil) => Nil
+        case (a::b, Nil) =>
+          println("wot")
+          ???
+      }
     }
     val pairs = sub.subsDefsInput.map({case SubstitutionPair(what,repl) => (what,repl)})
     val (fun, t1) = pairs.partition({case (_: FuncOf, _) => true case _ => false})
@@ -563,7 +590,8 @@ class IsabelleConverter(pt:ProofTerm) {
     Isubst(
       extendSub(sortSubs(fun, {case FuncOf(Function(name,_,_,_,_),_) => m.funMap(Left(name))}, {case e:Term => apply(e, sm = FunSubst())})),
       extendSub(sortSubs(unitFun, {case UnitFunctional(name,_,_) => m.funMap(Right(name))}, {case e:Term => apply(e,NonSubst())})),
-      extendSub(sortSubs(pred, {case PredOf(Function(name,_,_,_,_),_) => m.predMap(name)}, {case e:Formula => apply(e, sm = FunSubst())})),
+      // @TODO: Not clear what mode
+      extendSub(sortSubs(pred, {case PredOf(Function(name,_,_,_,_),_) => m.predMap(name)}, {case e:Formula => apply(e, FunSubst())})),
       extendSub(sortSubs(con, {case PredicationalOf(Function(name,_,_,_,_),_) => m.conMap(Left(name)) case UnitPredicational(name, _) => m.conMap(Right(name))}, {case e:Formula => apply(e, sm=ConSubst())})),
       extendSub(sortSubs(prog, {case ProgramConst(name) =>  m.progMap(name) case SystemConst(name) =>  m.progMap(name)}, {case e:Program => apply(e,NonSubst())})),
       extendSub(sortSubs(ode, {case DifferentialProgramConst(name,_) =>  m.odeMap(name)}, {case e:DifferentialProgram => apply(e,NonSubst())})))
@@ -639,8 +667,43 @@ class IsabelleConverter(pt:ProofTerm) {
     }
   }
 
+  private def translateDiffTermChase(pttt: ProofTerm):Ipt = {
+    pttt match {
+      case RuleApplication(Sub(a,Sub(b,UsubstProvableTerm(AxiomTerm("DI differential invariant"),sub),c),d),e,f,g,h)    =>
+        val csym = DifferentialProgramConst("c")
+        val cc = sub(csym)
+        val psym = UnitPredicational("p",AnyArg)
+        val p = sub(psym)
+        val qsym = UnitPredicational("q",AnyArg)
+        val q = sub(qsym)
+        p match {
+          case GreaterEqual(l,r) =>
+            val fsym = UnitFunctional("f", AnyArg, Real)
+            val gsym = UnitFunctional("g", AnyArg, Real)
+            val subst = USubst(collection.immutable.Seq(SubstitutionPair(csym,cc),SubstitutionPair(qsym,q),SubstitutionPair(fsym,l),SubstitutionPair(gsym,r)))
+            val theapp = apply(subst)
+            val ax = IADIGeq()
+            val result = IPrUSubst(IAx(ax),theapp)
+            val foo = ProofChecker(pttt)
+            IRuleApp(ISub(apply(a),ISub(apply(b),result,c),d),apply(e,g,h),f)
+            //result
+          case _ => throw ConversionException("Unsupported differential invariant type: " + p)
+        }
+      case _ => ???
+    }
+  }
+
+  private def isDiffTermChase(pt:ProofTerm):Boolean = {
+    pt match {
+      case RuleApplication(Sub(a,Sub(b,UsubstProvableTerm(AxiomTerm("DI differential invariant"),sub),c),d),e,f,g,h) => true
+      case _ => false
+    }
+  }
+
   def apply(pt:ProofTerm):Ipt = {
-    if(isDiffFormulaChase(pt)) {
+    if(isDiffTermChase(pt)) {
+      translateDiffTermChase(pt)
+    } else if(isDiffFormulaChase(pt)) {
       translateDiffFormulaChase(pt)
     } else {
       pt match {
@@ -650,12 +713,20 @@ class IsabelleConverter(pt:ProofTerm) {
         case RuleApplication(child, name, sub, seqPos, expArgs) =>
           IRuleApp(apply(child), apply(name, seqPos, expArgs), sub)
         case UsubstProvableTerm(child, subst) =>
-          IPrUSubst(apply(child), apply(subst))
+          val kid = apply(child)
+          val sub = apply(subst)
+          IPrUSubst(kid,sub)
         case ForwardNewConsequenceTerm(child, con, r) =>
-          IFNC(apply(child), apply(con), apply(r.name, rulePoses(r), ruleExps(r)))
+          val kid = apply(child)
+          IFNC(kid, apply(con), apply(r.name, rulePoses(r), ruleExps(r)))
         case ProlongationTerm(sub, pro) =>
-          IPro(apply(sub), apply(pro))
-        case Sub(child, sub, idx) => ISub(apply(child), apply(sub), idx)
+          val left = apply(sub)
+          val right = apply(pro)
+          IPro(left, right)
+        case Sub(child, sub, idx) =>
+          val left = apply(child)
+          val right = apply(sub)
+          ISub(left, right, idx)
         case StartProof(seq) => IStart(apply(seq))
         case NoProof() => throw ConversionException("Encountered unproven subproof")
       }
@@ -665,7 +736,7 @@ class IsabelleConverter(pt:ProofTerm) {
 
   def apply(f:Formula,sm:SymMode):Iformula = {
     f match {
-      case DotFormula => IInContext(IDRight(IDUnit()), IGeq(IConst(0),IConst(0)))
+      case DotFormula => IInContext(IDRight(IDUnit(),"myvars","Unit"), IGeq(IConst(0),IConst(0)))
       case GreaterEqual(l,r) => IGeq(apply(l,sm), apply(r,sm))
       case Greater(l,r) =>
         val (al,ar) = (apply(l,sm), apply(r,sm))
@@ -686,10 +757,10 @@ class IsabelleConverter(pt:ProofTerm) {
         val allArgs = padArgs(args, m.pArity)
         IProp(propId, allArgs.map(apply(_,sm)))
       case PredicationalOf(Function(name,_,_,_,_),child) =>
-        val predId = if(sm == ConSubst()) {IDLeft(IDEnum(m.conMap(Left(name))))} else {IDEnum(m.conMap(Left(name)))}
+        val predId = if(sm == ConSubst()) {IDLeft(IDEnum(m.conMap(Left(name))),"myvars","Unit")} else {IDEnum(m.conMap(Left(name)))}
         IInContext(predId, apply(child,sm))
       case UnitPredicational(name,_) => {
-        val predId = if(sm == ConSubst()) {IDLeft(IDEnum(m.conMap(Right(name))))} else {IDEnum(m.conMap(Right(name)))}
+        val predId = if(sm == ConSubst()) {IDLeft(IDEnum(m.conMap(Right(name))),"myvars","Unit")} else {IDEnum(m.conMap(Right(name)))}
         IInContext(predId, IGeq(IConst(0), IConst(0)))
       }
       case Not(f) => INot(apply(f,sm))
@@ -755,11 +826,12 @@ class IsabelleConverter(pt:ProofTerm) {
       case FuncOf(Function(name,_,_,_,_), arg) =>
         val args = IsabelleConverter.detuple(arg)
         val allArgs = padArgs(args, m.fArity)
-        val funId = if(sm == FunSubst()) {
-          println("FunSubst: " + name, arg)
-          IDLeft(IDEnum(m.funMap(Left(name))))} else {
-          println("Nah" + sm + name, arg)
-          IDEnum(m.funMap(Left(name)))}
+        val funId =
+          if(sm == FunSubst()) {
+            IDLeft(IDEnum(m.funMap(Left(name))))
+          } else {
+            IDEnum(m.funMap(Left(name)))
+          }
         IFunction(funId, allArgs.map(apply(_,sm)))
       case Plus(l,r) => IPlus(apply(l,sm),apply(r,sm))
       case Minus(l,r) => IPlus(apply(l,sm),ITimes(IConst(-1),apply(r,sm)))
@@ -956,6 +1028,7 @@ class ScalaBuilder(sb:StringBuilder) {
     t match {
       case IVar(x) => b1("Var", () => apply(x))
       case IConst(n,sm:NonSubst) if n == 0 => sb.++=("z")
+      case IConst(n,sm:ConSubst) if n == 0 => sb.++=("z")
       case IConst(n,sm) if n == 0 => sb.++=("zst")
       case IConst(n,sm) =>  b1("Const",()=>brat(n))
       case IFunction(n,args) =>
@@ -1095,12 +1168,12 @@ class ScalaBuilder(sb:StringBuilder) {
     //Isubst(SFunctions:List[Itrm], SPredicates:List[Iformula], SContexts:List[Iformula], SPrograms:List[Ihp], SODEs:List[IODE])
     b7("subst_exta",
        {()=>{noneElse(fun,()=>bff(fun,apply(_:Option[Itrm])));sb.++=("\n")}},
-       {()=>noneElse(fun,()=>bff(funcl,apply(_:Option[Itrm])));sb.++=("\n")},
-       {()=>noneElse(fun,()=>bff(pred,apply(_:Option[Iformula])));sb.++=("\n")},
-       {()=>noneElse(fun,()=>bff(con,apply(_:Option[Iformula])));sb.++=("\n")},
-       {()=>noneElse(fun,()=>bff(prog,apply(_:Option[Ihp])));sb.++=("\n")},
-       {()=>noneElse(fun,()=>bff(ode,apply(_:Option[IODE])));sb.++=("\n")},
-       {() => sb.++=("()")})
+       {()=>{noneElse(funcl,()=>bff(funcl,apply(_:Option[Itrm])));sb.++=("\n")}},
+       {()=>{noneElse(pred,()=>bff(pred,apply(_:Option[Iformula])));sb.++=("\n")}},
+       {()=>{noneElse(con,()=>bff(con,apply(_:Option[Iformula])));sb.++=("\n")}},
+       {()=>{noneElse(prog,()=>bff(prog,apply(_:Option[Ihp])));sb.++=("\n")}},
+       {()=>{noneElse(ode,()=>bff(ode,apply(_:Option[IODE])));sb.++=("\n")}},
+       {() =>{sb.++=("()")}})
   }
 
   def apply[T](t:Option[T]):Unit = {

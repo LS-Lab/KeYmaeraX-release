@@ -68,6 +68,7 @@ object ProofChecker {
           def f(i:Int):Formula = expArgs(i).asInstanceOf[Formula]
           def v(i:Int):Variable = expArgs(i).asInstanceOf[Variable]
           def pr(r:Rule):ProvableSig = ps(r, subgoal)
+          val res =
           ruleName match {
             case "Close" => pr(Close(apos(0),spos(1)))
             case "CoHide2"  => pr(CoHide2(apos(0),spos(1)))
@@ -99,6 +100,7 @@ object ProofChecker {
 
             case name => throw ProofCheckException("Unsupported rule \"" + name + "\" found during proof replay")
           }
+          res
 
         case RuleTerm(name) =>
           if(ProvableSig.rules.contains(name))
@@ -118,9 +120,12 @@ object ProofChecker {
         case Sub(child,sub,i) =>
           val pschild = apply(child)
           val pssub = apply(sub)
-          pschild(pssub,i)
+          val res = pschild(pssub,i)
+          res
 
-        case StartProof(goal) => ProvableSig.startProof(goal)
+        case StartProof(goal) =>
+          val res =  ProvableSig.startProof(goal)
+          res
 
         case NoProof() => throw ProofCheckException("Tried to check proof of " + phi + ", but it has NoProof()")
 
