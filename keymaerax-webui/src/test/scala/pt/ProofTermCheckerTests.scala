@@ -139,6 +139,39 @@ class ProofTermCheckerTests extends TacticTestBase {
     }
   })
 
+  it should "convert VelocityCar" in withMathematica(_ => {
+    val f = "x<=m() & V()>=0 -> [{{?x<=m()-V()*ep(); v:=V(); ++ v:=0;} t := 0; {x'=v, t'=1 & t<=ep()}}*@invariant(x<=m())] x <= m()".asFormula
+    val t =
+      implyR(1) & loop("x<=m()".asFormula)(1) <(
+        closeId,
+        closeId,
+        composeb(1) & composeb(1, 1::Nil) & choiceb(1) & andR(1) <(
+        composeb(1) & testb(1) & implyR(1) & assignb(1) & assignb(1) & dC("x<=m()-V()*(ep()-t)".asFormula)(1) <(
+          dW(1) & QE,
+          dI()(1)
+        ),
+        assignb(1) & assignb(1) & dI()(1)
+      )
+    )
+    val provable = PTProvable.startProof(f)
+    proveBy(provable, t) match {
+      case ptp: PTProvable =>
+        val size = ptp.pt.numCons
+        val bytes = ptp.pt.bytesEstimate
+        val axioms = ptp.pt.axiomsUsed
+        val rules = ptp.pt.rulesUsed
+        val goals = ptp.pt.arithmeticGoals
+
+        println("Size: " + size + "\n\n\n")
+        println("Axioms: " + axioms + "\n\n\n")
+        println("Rules: " + rules + "\n\n\n")
+        println("Arithmetic Goals: " + goals + "\n\n\n")
+        println("END OF STATS\n\n\n\n\n\n\n\n\n\n\n")
+        val conv = new IsabelleConverter(ptp.pt)
+        val source = conv.scalaObjects("ProofTerm", "proofTerm", "GeneratedProofChecker")
+        println(source)
+    }})
+
   it should "convert CPP'17 example" in withMathematica(_ => {
     val f = "A() >= 0 & v >= 0 -> [{v' = A(), x' = v & true}] v >= 0".asFormula
     val provable = PTProvable.startProof(f)

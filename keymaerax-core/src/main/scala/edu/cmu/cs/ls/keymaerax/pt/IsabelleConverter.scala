@@ -29,7 +29,7 @@ object IsabelleConverter {
 
   // Keep this in sync with the code generation in Isabelle proof. If the number of IDs is too small then we can't export
   // the proof term, if it's too big then proof checking gets progressively slower
-  val ISABELLE_IDS:Seq[String] = Seq("i1","i2","i3","i4","i5","i6","i7","i8","i9","i10")
+  val ISABELLE_IDS:Seq[String] = Seq("i1","i2","i3","i4","i5","i6","i7","i8","i9","i10","i11")
 
   def detuple(t:Term):List[Term] = {
     t match {
@@ -47,14 +47,15 @@ object IDMap {
 
     // FUN FUNL MAP
     // @TODO: Preload with some functionals too
-    Map((Left("f"),"i1"), (Left("g"),"i2"),(Left("s"),"i1"),(Left("t"),"i2"),(Left("ctxT"),"i3"),(Left("ctx_"),"i3"), (Left("c"),"i1"),
+    Map((Left("f"),"i1"), (Left("g"),"i2"),(Left("s"),"i1"),(Left("t"),"i2"),(Left("ctxT"),"i3"),(Left("ctx_"),"i3"), (Left("c"),"i1"), (Left("c_"),"i2"),
       (Right("f"),"i1"), (Right("g"),"i2"), (Right("f_"),"i1"), (Right("g_"),"i2")),
 
     // PROP MAP
-    Map(("p","i1"),("q","i2"),("ctxF","i1"),("ctx_","i3"),("p_","i1"),("q_","i2")),
+    Map(("p","i1"),("q","i2"),("ctxF_","i1"),("ctx_","i3"),("p_","i1"),("q_","i2")),
     //@TODO: Left is argumented, right is unit, double-check please
     // CON PRED MAP
-    Map((Left("p_"),"i1"),(Left("q_"),"i2"),(Right("p_"),"i1"),(Right("q_"),"i2"),(Right("P"),"i1"),(Left("J"),"i1"), (Right("p"),"i1"), (Right("q"),"i2"), (Left("ctx_"),"i3")),
+    Map((Left("p_"),"i1"),(Left("q_"),"i2"),(Left("J"),"i1"), (Left("ctx_"),"i3"),
+      (Right("p_"),"i1"),(Right("q_"),"i2"),(Right("P"),"i1"),(Right("p"),"i1"), (Right("q"),"i2")),
     Map(("a","i1"),("b","i2"),("a_","i1"),("b_","i2")),
     Map(("c","i1"),("d","i2"),("e","i3"),("a_","i1"), ("a","i1")),
     ISABELLE_IDS.length,
@@ -196,7 +197,12 @@ object IDMap {
           try { Provable.rules(name) }
           catch {
             case _ : NoSuchElementException =>
-              DerivedRuleInfo.allInfo.find(info => info.codeName == name).get.provable.underlyingProvable
+              try {
+                DerivedRuleInfo.allInfo.find(info => info.codeName.toLowerCase() == name.toLowerCase()).get.provable.underlyingProvable
+              } catch {
+                case e : NoSuchElementException => println("Couldn't find rule: " + name)
+                  throw e
+              }
           }
         ofProvable(r,acc)
       case UsubstProvableTerm(child: ProofTerm, substitution: USubst) =>
@@ -355,7 +361,7 @@ object IaxRule {
       case "CT" => ICT()
       case "CQ equation congruence" => ICQ()
       case "CE congruence" => ICE()
-      case "G" => IG()
+      case "goedel" => IG()
       case "monb" => Imonb()
       case _ =>
         throw ConversionException("Unrecognized axiomatic rule: " + n)
@@ -386,6 +392,10 @@ case class IAndL() extends Ilrule {}
 //@TODO: These are different from the KyX rule
 case class IEquivForwardL() extends Ilrule{}
 case class IEquivBackwardL() extends Ilrule{}
+
+case class IEquivL() extends Ilrule{}
+case class INotL() extends Ilrule {}
+case class ICutLeft(f:Iformula) extends Ilrule {}
 
 sealed trait Irrule {}
 case class ICutRight(f:Iformula)   extends Irrule {}
@@ -432,6 +442,15 @@ object Iaxiom {
       }
       case "<-> reflexive" => IAEquivReflexive()
       case "DE differential effect (system)" => IADiffEffectSys()
+      case "all instantiate" => IAallInst()
+      case "[:=] assign equality" => IAassignEq()
+      case "-' derive minus" => IAdMinus()
+      case "const formula congruence" => IAconstFcong()
+      case "[;] compose" => IAcompose()
+      case "-> self" => IAImpSelf()
+      case "[] split" => IABoxSplit()
+      case "' linear" => IADiffLinear()
+      case "all eliminate" => IAAllElim()
       case ">=' derive >=" => {
         val 2 = 1 + 1
         throw ConversionException("Needed to convert proof using DifferentialFormula to one that doesn't, but didn't")
@@ -464,6 +483,17 @@ case class IADIGr() extends Iaxiom {}
 case class IADG() extends Iaxiom {}
 case class IAEquivReflexive() extends Iaxiom {}
 case class IADiffEffectSys() extends Iaxiom {}
+
+//case class IADILeq() extends Iaxiom {}
+case class IAAllElim() extends Iaxiom {}
+case class IADiffLinear() extends Iaxiom {}
+case class IABoxSplit() extends Iaxiom {}
+case class IAImpSelf() extends Iaxiom {}
+case class IAcompose() extends Iaxiom {}
+case class IAconstFcong() extends Iaxiom {}
+case class IAassignEq() extends Iaxiom {}
+case class IAdMinus() extends Iaxiom {}
+case class IAallInst() extends Iaxiom {}
 
 
 /* @TODO: Represent this type magic in Scala or in generated code as necessary
@@ -522,8 +552,11 @@ class IsabelleConverter(pt:ProofTerm) {
       case ("CoHide2", (a:AntePos) :: (s:SuccPos) :: Nil, _) => ICohide2(a.getIndex,s.getIndex)
 
 
+      case ("cut Left", (a:AntePos) :: Nil, (f:Formula) :: Nil) => ILrule(ICutLeft(apply(f,NonSubst())), a.getIndex)
+      case ("Not Left", (a:AntePos)::Nil, _) => ILrule(INotL(),a.getIndex)
       case ("Imply Left", (a:AntePos)::Nil, _) => ILrule(IImplyL(),a.getIndex)
       case ("And Left", (a:AntePos)::Nil, _) => ILrule(IAndL(),a.getIndex)
+      case ("Equiv Left", (a:AntePos)::Nil, _) => ILrule(IEquivL(),a.getIndex)
       case ("Equiv Left1", (a:AntePos)::Nil, _) => ILrule(IEquivForwardL(),a.getIndex)
       case ("Equiv Left2", (a:AntePos)::Nil, _) => ILrule(IEquivBackwardL(),a.getIndex)
       case ("HideLeft", (a:AntePos)::Nil, _) => ILrule(IHideL(),a.getIndex)
@@ -532,13 +565,14 @@ class IsabelleConverter(pt:ProofTerm) {
       case ("Imply Right", (s:SuccPos)::Nil, _) => IRrule(IImplyR(), s.getIndex)
       case ("CoHideRight", (s:SuccPos)::Nil, _) => IRrule(ICohideRR(), s.getIndex)
       case ("Cohide Right 2", (s:SuccPos)::Nil, _) => IRrule(ICohideR(), s.getIndex)
-      case ("closeTrue", (s:SuccPos)::Nil, _) => IRrule(ITrueR(), s.getIndex)
+      case ("CloseTrue", (s:SuccPos)::Nil, _) => IRrule(ITrueR(), s.getIndex)
       case ("Equiv Right", (s:SuccPos)::Nil, _) => IRrule(IEquivR(), s.getIndex)
       case ("EquivifyRight", (s:SuccPos)::Nil, _) => IRrule(IEquivifyR(), s.getIndex)
       case ("CommuteEquivRight", (s:SuccPos)::Nil, _) => IRrule(ICommuteEquivR(), s.getIndex)
       case ("All Right", (s:SuccPos)::Nil, _) => IRrule(ISkolem(), s.getIndex)
       case ("And Right", (s:SuccPos)::Nil, _) => IRrule(IAndR(), s.getIndex)
       case ("HideRight", (s:SuccPos)::Nil, _) => IRrule(IHideR(), s.getIndex)
+      case ("Skolemize", (s:SuccPos)::Nil, _) => IRrule(ISkolem(), s.getIndex)
       case _ =>
         throw ConversionException("Unrecognized non-axiomatic rule: " + name + ","  + seqPos.toList +", " + expArgs.toList)
     }
@@ -648,22 +682,25 @@ class IsabelleConverter(pt:ProofTerm) {
   private def translateDiffFormulaChase(pt:ProofTerm):Ipt = {
     pt match {
       case Sub(Sub(RuleApplication(StartProof(reflFml), "cut Right", _, _, _),
-      ForwardNewConsequenceTerm(
-      ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm(">=' derive >="), _),
-      UsubstProvableTerm(RuleTerm("CE congruence"), _)), _, _: EquivifyRight), _, _: CoHideRight), _),
-      UsubstProvableTerm(AxiomTerm("<-> reflexive"), equivReflSubst), where) =>
-        //reflFml = {Sequent@3669} "  ==>  (v)'>=(0)'<->(v>=0)'"
-        //equivReflSubst = {USubst@3670} "USubst{(p_()~>(v>=0)')}"
-        /*
-        cut Right
-        CoHideRight
-        EquivifyRight
-        >=' derive >=
-        CE congruence
-        <-> reflexive
-         */
-        println(reflFml+"\n\n\n"+equivReflSubst)
-        ISub(IStart(apply(reflFml)),IPrUSubst(IAx(Iaxiom("<-> reflexive")),apply(equivReflSubst)), where)
+          ForwardNewConsequenceTerm(
+          ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm(">=' derive >="), _),
+          UsubstProvableTerm(RuleTerm("CE congruence"), _)), _, _: EquivifyRight), _, _: CoHideRight), _),
+          UsubstProvableTerm(AxiomTerm("<-> reflexive"), equivReflSubst), where) =>
+            println(reflFml+"\n\n\n"+equivReflSubst)
+            ISub(IStart(apply(reflFml)),IPrUSubst(IAx(Iaxiom("<-> reflexive")),apply(equivReflSubst)), where)
+/*      case Sub(Sub(RuleApplication(StartProof(reflFml),"cut Right",_,_,_),
+          ForwardNewConsequenceTerm(
+          ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm(<=' derive <=),USubst{(f(||)~>x), (g(||)~>m()-V()*(ep()-t))}),UsubstProvableTerm(RuleTerm(CE congruence),USubst{(ctx_{⎵}~>⎵<->(x<=m()-V()*(ep()-t))'), (p_(||)~>(x<=m()-V()*(ep()-t))'), (q_(||)~>(x)'<=(m()-V()*(ep()-t))')})),  ==>  ((x<=m()-V()*(ep()-t))'<->(x<=m()-V()*(ep()-t))')->((x)'<=(m()-V()*(ep()-t))'<->(x<=m()-V()*(ep()-t))'),EquivifyRight at 1),  ==>  ((x<=m()-V()*(ep()-t))'<->(x<=m()-V()*(ep()-t))')->((x)'<=(m()-V()*(ep()-t))'<->(x<=m()-V()*(ep()-t))'),CoHideRight at 1),1),UsubstProvableTerm(AxiomTerm(<-> reflexive),USubst{(p_()~>(x<=m()-V()*(ep()-t))')}),0)*/
+      case Sub(Sub(RuleApplication(StartProof(reflFml), "cut Right", _, _, _),
+          ForwardNewConsequenceTerm(
+          ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm("<=' derive <="), _),
+          UsubstProvableTerm(RuleTerm("CE congruence"), _)), _, _: EquivifyRight), _, _: CoHideRight), _),
+          UsubstProvableTerm(AxiomTerm("<-> reflexive"), equivReflSubst), where) =>
+            println(reflFml+"\n\n\n"+equivReflSubst)
+            ISub(IStart(apply(reflFml)),IPrUSubst(IAx(Iaxiom("<-> reflexive")),apply(equivReflSubst)), where)
+      case _ =>
+        val 2 = 1 + 1
+        ???
     }
   }
 
@@ -678,6 +715,15 @@ class IsabelleConverter(pt:ProofTerm) {
         val q = sub(qsym)
         p match {
           case GreaterEqual(l,r) =>
+            val fsym = UnitFunctional("f", AnyArg, Real)
+            val gsym = UnitFunctional("g", AnyArg, Real)
+            val subst = USubst(collection.immutable.Seq(SubstitutionPair(csym,cc),SubstitutionPair(qsym,q),SubstitutionPair(fsym,l),SubstitutionPair(gsym,r)))
+            val theapp = apply(subst)
+            val ax = IADIGeq()
+            val result = IPrUSubst(IAx(ax),theapp)
+            val foo = ProofChecker(pttt)
+            IRuleApp(ISub(apply(a),ISub(apply(b),result,c),d),apply(e,g,h),f)
+          case LessEqual(r,l) =>
             val fsym = UnitFunctional("f", AnyArg, Real)
             val gsym = UnitFunctional("g", AnyArg, Real)
             val subst = USubst(collection.immutable.Seq(SubstitutionPair(csym,cc),SubstitutionPair(qsym,q),SubstitutionPair(fsym,l),SubstitutionPair(gsym,r)))
@@ -833,9 +879,10 @@ class IsabelleConverter(pt:ProofTerm) {
             IDEnum(m.funMap(Left(name)))
           }
         IFunction(funId, allArgs.map(apply(_,sm)))
+      case Times(l,r) => ITimes(apply(l,sm),apply(r,sm))
       case Plus(l,r) => IPlus(apply(l,sm),apply(r,sm))
-      case Minus(l,r) => IPlus(apply(l,sm),ITimes(IConst(-1),apply(r,sm)))
-      case Neg(t) => ITimes(IConst(-1),apply(t,sm))
+      case Minus(l,r) => IPlus(apply(l,sm),ITimes(apply(r,sm),IConst(-1)))
+      case Neg(t) => ITimes(apply(t,sm),IConst(-1))
       case Differential(t) => IDifferential(apply(t,sm))
       case Divide(l,r) => throw ConversionException("Converter currently does not support conversion of divisions")
       case Power(l,r) => throw ConversionException("Converter currently does not support conversion of powers")
@@ -853,7 +900,8 @@ class IsabelleConverter(pt:ProofTerm) {
 
   def apply(hp:Program,sm:SymMode):Ihp = {
     hp match {
-      case ProgramConst(name) => IPvar(IDEnum(m.varMap((name,None))))
+      case SystemConst(name) => IPvar(IDEnum(m.progMap((name))))
+      case ProgramConst(name) => IPvar(IDEnum(m.progMap((name))))
       case Assign(BaseVariable(x,ind,_),e) => IAssign(IDEnum(m.varMap((x,ind))),apply(e,sm))
       case Assign(DifferentialSymbol(BaseVariable(x,ind,_)),e) => IDiffAssign(IDEnum(m.varMap((x,ind))),apply(e,sm))
       case Test(p) => ITest(apply(p,sm))
@@ -1051,7 +1099,7 @@ class ScalaBuilder(sb:StringBuilder) {
       case IEvolveODE(ode,con) => b2("EvolveODE",()=>apply(ode),()=>apply(con))
       case IChoice(a,b) => b2("Choice", ()=>apply(a),()=>apply(b))
       case ISequence(a,b) => b2("Sequence", ()=>apply(a),()=>apply(b))
-      case ILoop(a) => b1("Loop",()=>a)
+      case ILoop(a) => b1("Loop",()=>apply(a))
     }
   }
 
@@ -1098,8 +1146,11 @@ class ScalaBuilder(sb:StringBuilder) {
       case IHideL() => b0("HideL")
       case IImplyL() => b0("ImplyL")
       case IAndL() => b0("AndL")
+      case INotL() => b0("NotL")
       case IEquivBackwardL() => b0("EquivBackwardL")
       case IEquivForwardL() => b0("EquivForwardL")
+      case IEquivL() => b0("EquivL")
+      case ICutLeft(fml) => b1("CutLeft", ()=> apply(fml))
     }
   }
 
@@ -1130,7 +1181,7 @@ class ScalaBuilder(sb:StringBuilder) {
       case ICT() => b0("CT")
       case ICQ() => b0("CQ")
       case ICE() => b0("CE")
-      case IG() => b0("CG")
+      case IG() => b0("G")
       case Imonb() => b0("monb")
     }
   }
@@ -1159,6 +1210,16 @@ class ScalaBuilder(sb:StringBuilder) {
       case IADiffEffectSys() => b0("ADiffEffectSys")
       case IADIGr() => b0("ADIGr")
       case IADG() => b0("ADG")
+      case IAAllElim() => b0("AAllElim")
+      case IADiffLinear()  => b0("ADiffLinear")
+      case IABoxSplit() => b0("ABoxSplit")
+      case IAImpSelf() => b0("AImpSelf")
+      case IAcompose() => b0("Acompose")
+      case IAconstFcong() => b0("AconstFcong")
+      case IAassignEq() => b0("AassignEq")
+      case IAdMinus() => b0("AdMinus")
+      case IAallInst()  => b0("AallInst")
+
     }
   }
 
