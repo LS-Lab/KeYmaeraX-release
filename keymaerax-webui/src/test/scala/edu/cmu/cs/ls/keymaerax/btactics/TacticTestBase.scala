@@ -2,11 +2,10 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QELogListener, StopwatchListener}
+import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, UserPOJO}
@@ -31,10 +30,12 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   private val LOG_EARLIEST_QE = System.getProperty("LOG_POTENTIAL_QE", "false")=="true"
   private val LOG_QE = System.getProperty("LOG_QE", "false")=="true"
   private val LOG_QE_DURATION = System.getProperty("LOG_QE_DURATION", "true")=="true"
+  private val LOG_QE_STDOUT = System.getProperty("LOG_QE_STDOUT", "false")=="true"
 
   protected val qeLogPath: String = System.getProperty("user.home") + "/.keymaerax/logs/qe/"
-  private val allPotentialQEListener = new QELogListener(qeLogPath + "wantqe.txt", (p, _) => { p.subgoals.size == 1 && p.subgoals.head.isFOL })
-  private val qeListener = new QELogListener(qeLogPath + "haveqe.txt", (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
+  private val allPotentialQEListener = new QEFileLogListener(qeLogPath + "wantqe.txt", (p, _) => { p.subgoals.size == 1 && p.subgoals.head.isFOL })
+  private val qeListener = new QEFileLogListener(qeLogPath + "haveqe.txt", (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
+  private val qeStdOutListener = new QELogListener((c: Sequent, g: Sequent, s: String) => println(s"$s: ${g.prettyString}"), (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
   protected val qeDurationListener = new StopwatchListener((_, t) => t match {
     case DependentTactic("QE") => true
     case DependentTactic("smartQE") => true
@@ -110,7 +111,10 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       val globalProvable = ProvableSig.startProof(s)
       val listener = new TraceRecordingListener(db, proofId, None,
         globalProvable, 0 /* start from single provable */, recursive = false, "custom")
-      val listeners = listener::Nil ++ (if (LOG_QE) qeListener::Nil else Nil) ++ (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil)
+      val listeners = listener::Nil ++
+        (if (LOG_QE) qeListener::Nil else Nil) ++
+        (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil) ++
+        (if (LOG_QE_STDOUT) qeStdOutListener::Nil else Nil)
       BelleInterpreter.setInterpreter(SequentialInterpreter(listeners))
       BelleInterpreter(t, BelleProvable(ProvableSig.startProof(s))) match {
         case BelleProvable(provable, _) =>
@@ -216,7 +220,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     interpreters = Nil
     val listeners = (if (LOG_QE) qeListener::Nil else Nil) ++
       (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil) ++
-      (if (LOG_QE_DURATION) qeDurationListener::Nil else Nil)
+      (if (LOG_QE_DURATION) qeDurationListener::Nil else Nil) ++
+      (if (LOG_QE_STDOUT) qeStdOutListener::Nil else Nil)
     BelleInterpreter.setInterpreter(registerInterpreter(SequentialInterpreter(listeners)))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[Formula]()
@@ -302,6 +307,17 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     val end = System.currentTimeMillis()
     proof shouldBe 'proved
 
+    if (entry.kind == "lemma") {
+      val lemmaName = "user" + File.separator + entry.name
+      if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
+      val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
+        "tool" -> "KeYmaera X",
+        "model" -> entry.fileContent,
+        "tactic" -> entry.tactics.head._2.prettyString
+      )) :: Nil)
+      LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
+    }
+
     println("Proof duration [ms]: " + (end-start))
     println("QE duration [ms]: " + qeDurationListener.duration)
     println("Tactic size: " + TacticStatistics.size(tactic))
@@ -340,14 +356,13 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
 
       if (entry.kind == "lemma") {
         val lemmaName = "user" + File.separator + entry.name
-        if (!LemmaDBFactory.lemmaDB.contains(lemmaName)) {
-          val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
-            "tool" -> "KeYmaera X",
-            "model" -> entry.fileContent,
-            "tactic" -> entry.tactics.head._2.prettyString
-          )) :: Nil)
-          LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
-        }
+        if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
+        val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
+          "tool" -> "KeYmaera X",
+          "model" -> entry.fileContent,
+          "tactic" -> entry.tactics.head._2.prettyString
+        )) :: Nil)
+        LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
       }
 
       statistics(statisticName) = (end-start, qeDuration, TacticStatistics.size(tactic), TacticStatistics.lines(tactic), proof.steps)
