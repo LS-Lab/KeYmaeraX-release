@@ -929,6 +929,12 @@ class IsabelleConverter(pt:ProofTerm) {
     sb.toString()
   }
 
+  def sexp:String = {
+    val sb = new StringBuilder(INIT_CAPACITY)
+    new SexpBuilder(sb)(apply(pt))
+    sb.toString()
+  }
+
   private def writeObjects(sb:StringBuilder,objName:String, fieldName:String,mainName:String):Unit = {
     val imports = List("Real","Rat","Int","Proof_Checker","Syntax", "Nat", "USubst","Scratch", "Sum_Type")
     // Writing everything out in full detail is quite verbose. Let's give the Scala parser (and anyone debugging) a break by using some abbreviations
@@ -969,78 +975,17 @@ class IsabelleConverter(pt:ProofTerm) {
   }
 }
 
-class ScalaBuilder(sb:StringBuilder) {
-  private def b0(name:String, tparam:Option[String]=None):Unit = {
-    sb.++=(name)
-    tparam match {
-      case None => ()
-      case Some(tp) =>
-        sb.++=("[")
-        sb.++=(tp)
-        sb.++=("]")
-    }
-    sb.++=("()")
-  }
+abstract class SourceBuilder(sb:StringBuilder) {
+  def b0(name:String, tparam:Option[String]=None):Unit
+  def b1(name:String,f:(() => Unit),tparam:Option[String]=None):Unit
+  def b2(name:String,f:(()=> Unit),g:(()=> Unit)):Unit
+  def b3(name:String,f:(()=> Unit),g:(()=> Unit),h:(()=> Unit)):Unit
+  def b6(name:String,f1:(()=> Unit),f2:(()=> Unit),f3:(()=> Unit),f4:(()=> Unit),f5:(()=> Unit),f6:(()=> Unit)):Unit
+  def btup(f:(()=>Unit),g:(()=>Unit)):Unit
+  def blist[T](l:List[T],f:(T=>Unit)):Unit
+  def brat(n:Int):Unit
+  def bff[T](l:List[T],f:(T=>Unit)):Unit
 
-  def b1(name:String,f:(() => Unit),tparam:Option[String]=None):Unit = {
-    sb.++=(name)
-    tparam match {
-      case None => ()
-      case Some(tp) =>
-        sb.++=("[")
-        sb.++=(tp)
-        sb.++=("]")
-    }
-    sb.++=("(")
-    f()
-    sb.++=(")")
-  }
-
-  private def b2(name:String,f:(()=> Unit),g:(()=> Unit)):Unit = {
-    sb.++=(name)
-    sb.++=("(")
-    f()
-    sb.++=(",")
-    g()
-    sb.++=(")")
-  }
-
-  private def b3(name:String,f:(()=> Unit),g:(()=> Unit),h:(()=> Unit)):Unit = {
-    sb.++=(name);sb.++=("(");f();sb.++=(",");g();sb.++=(",");h();sb.++=(")")
-  }
-
-  private def b7(name:String,f1:(()=> Unit),f2:(()=> Unit),f3:(()=> Unit),f4:(()=> Unit),f5:(()=> Unit),f6:(()=> Unit),f7:(()=>Unit)):Unit = {
-    sb.++=(name);sb.++=("(");f1();sb.++=(",");f2();sb.++=(",");f3();sb.++=(",");f4();sb.++=(",");f5();sb.++=(",");f6();sb.++=(",");f7();sb.++=(")")
-  }
-
-  private def btup(f:(()=>Unit),g:(()=>Unit)):Unit = {
-    sb.++=("(");f();sb.++=(",");g();sb.++=(")")
-  }
-
-  private def blist[T](l:List[T],f:(T=>Unit)):Unit = {
-    sb.++=("List(")
-    l match {
-      case Nil => ()
-      case x::xs =>
-        f(x)
-        xs.foreach({case y => sb.++=(","); f(y)})
-    }
-    sb.++=(")")
-  }
-
-  private def brat(n:Int):Unit = {
-    b1("Ratreal",{()=>b1("Frct",{()=>btup({()=>apply(n)},{()=>apply(1)})})})
-  }
-
-  // finite functions over identifiers
-  private def bff[T](l:List[T],f:(T=>Unit)):Unit = {
-    val cases = l.zip(ISABELLE_IDS)
-    sb.++=("{")
-    cases.foreach({case(v,id) =>
-      sb.++=("case "); sb.++=(id); sb.++=("() => ");f(v);sb.++=(" ")
-    })
-    sb.++=("}")
-  }
 
   private def emptyElse(args:List[Itrm], f:(() => Unit), sm:SymMode):Unit = {
     if(args.forall({case IConst(0,sm) => true case _ => false})) {
@@ -1167,13 +1112,11 @@ class ScalaBuilder(sb:StringBuilder) {
   }
 
   def nat(i:Int):Unit = {
-    val s = i.toString
-    sb.++=("Nata(");sb.++=(s);sb.++=(")")
+    b1("Nata", ()=>sb.++=(i.toString))
   }
 
   def apply(br:Int):Unit = {
-    val s = br.toString
-    sb.++=("int_of_integer(");sb.++=(s);sb.++=(")")
+    b1("int_of_integer", ()=>sb.++=(br.toString))
   }
 
   def apply(ar:IaxRule):Unit = {
@@ -1227,14 +1170,13 @@ class ScalaBuilder(sb:StringBuilder) {
   def apply(subst:Isubst):Unit = {
     val Isubst(fun,funcl,pred,con,prog,ode) = subst
     //Isubst(SFunctions:List[Itrm], SPredicates:List[Iformula], SContexts:List[Iformula], SPrograms:List[Ihp], SODEs:List[IODE])
-    b7("subst_exta",
-       {()=>{noneElse(fun,()=>bff(fun,apply(_:Option[Itrm])));sb.++=("\n")}},
-       {()=>{noneElse(funcl,()=>bff(funcl,apply(_:Option[Itrm])));sb.++=("\n")}},
-       {()=>{noneElse(pred,()=>bff(pred,apply(_:Option[Iformula])));sb.++=("\n")}},
-       {()=>{noneElse(con,()=>bff(con,apply(_:Option[Iformula])));sb.++=("\n")}},
-       {()=>{noneElse(prog,()=>bff(prog,apply(_:Option[Ihp])));sb.++=("\n")}},
-       {()=>{noneElse(ode,()=>bff(ode,apply(_:Option[IODE])));sb.++=("\n")}},
-       {() =>{sb.++=("()")}})
+    b6("subst_exta",
+      {()=>{noneElse(fun,()=>bff(fun,apply(_:Option[Itrm])))/*;sb.++=("\n")*/}},
+      {()=>{noneElse(funcl,()=>bff(funcl,apply(_:Option[Itrm])));/*sb.++=("\n")*/}},
+      {()=>{noneElse(pred,()=>bff(pred,apply(_:Option[Iformula])));/*sb.++=("\n")*/}},
+      {()=>{noneElse(con,()=>bff(con,apply(_:Option[Iformula])));/*sb.++=("\n")*/}},
+      {()=>{noneElse(prog,()=>bff(prog,apply(_:Option[Ihp])));/*sb.++=("\n")*/}},
+      {()=>{noneElse(ode,()=>bff(ode,apply(_:Option[IODE])));/*sb.++=("\n")*/}})
   }
 
   def apply[T](t:Option[T]):Unit = {
@@ -1264,7 +1206,161 @@ class ScalaBuilder(sb:StringBuilder) {
       case IFNC(child, seq,ra) => b3("FNC",()=>apply(child),()=>apply(seq),()=>apply(ra))
       case IPro(child,pro) => b2("Pro",()=>apply(child),()=>apply(pro))
       case IStart(seq) => b1("Start",()=>apply(seq))
-      case ISub(child, sub, branch) => b3("Sub",()=>apply(child),()=>apply(sub),()=>nat(branch));sb.++=("\n")
+      case ISub(child, sub, branch) => b3("Sub",()=>apply(child),()=>apply(sub),()=>nat(branch))/*;sb.++=("\n")*/
     }
   }
+  }
+
+class ScalaBuilder(sb:StringBuilder) extends SourceBuilder(sb) {
+  override def b0(name:String, tparam:Option[String]=None):Unit = {
+    sb.++=(name)
+    tparam match {
+      case None => ()
+      case Some(tp) =>
+        sb.++=("[")
+        sb.++=(tp)
+        sb.++=("]")
+    }
+    sb.++=("()")
+  }
+
+  override def b1(name:String,f:(() => Unit),tparam:Option[String]=None):Unit = {
+    sb.++=(name)
+    tparam match {
+      case None => ()
+      case Some(tp) =>
+        sb.++=("[")
+        sb.++=(tp)
+        sb.++=("]")
+    }
+    sb.++=("(")
+    f()
+    sb.++=(")")
+  }
+
+  override  def b2(name:String,f:(()=> Unit),g:(()=> Unit)):Unit = {
+    sb.++=(name)
+    sb.++=("(")
+    f()
+    sb.++=(",")
+    g()
+    sb.++=(")")
+  }
+
+  override def b3(name:String,f:(()=> Unit),g:(()=> Unit),h:(()=> Unit)):Unit = {
+    sb.++=(name);sb.++=("(");f();sb.++=(",");g();sb.++=(",");h();sb.++=(")")
+  }
+
+  override def b6(name:String,f1:(()=> Unit),f2:(()=> Unit),f3:(()=> Unit),f4:(()=> Unit),f5:(()=> Unit),f6:(()=> Unit)/*,f7:(()=>Unit)*/):Unit = {
+    sb.++=(name);sb.++=("(");f1();sb.++=(",");f2();sb.++=(",");f3();sb.++=(",");f4();sb.++=(",");f5();sb.++=(",");f6();sb.++=(",())")
+  }
+
+  override def btup(f:(()=>Unit),g:(()=>Unit)):Unit = {
+    sb.++=("(");f();sb.++=(",");g();sb.++=(")")
+  }
+
+  override def blist[T](l:List[T],f:(T=>Unit)):Unit = {
+    sb.++=("List(")
+    l match {
+      case Nil => ()
+      case x::xs =>
+        f(x)
+        xs.foreach({case y => sb.++=(","); f(y)})
+    }
+    sb.++=(")")
+  }
+
+  override def brat(n:Int):Unit = {
+    b1("Ratreal",{()=>b1("Frct",{()=>btup({()=>apply(n)},{()=>apply(1)})})})
+  }
+
+  // finite functions over identifiers
+  override def bff[T](l:List[T],f:(T=>Unit)):Unit = {
+    val cases = l.zip(ISABELLE_IDS)
+    sb.++=("{")
+    cases.foreach({case(v,id) =>
+      sb.++=("case "); sb.++=(id); sb.++=("() => ");f(v);sb.++=(" ")
+    })
+    sb.++=("}")
+  }
+
+}
+
+class SexpBuilder(sb:StringBuilder) extends SourceBuilder(sb) {
+  override def b0(name:String, tparam:Option[String]=None):Unit = {
+    sb.++=("(")
+    sb.++=(name)
+    /*tparam match {
+      case None => ()
+      case Some(tp) =>
+        sb.++=("[")
+        sb.++=(tp)
+        sb.++=("]")
+    }*/
+    sb.++=(")")
+  }
+
+  override def b1(name:String,f:(() => Unit),tparam:Option[String]=None):Unit = {
+    sb.++=("(")
+    sb.++=(name)
+    /*tparam match {
+      case None => ()
+      case Some(tp) =>
+        sb.++=("[")
+        sb.++=(tp)
+        sb.++=("]")
+    }*/
+    sb.++=(" ")
+    f()
+    sb.++=(")")
+  }
+
+  override  def b2(name:String,f:(()=> Unit),g:(()=> Unit)):Unit = {
+    sb.++=("(")
+    sb.++=(name)
+    sb.++=(" ")
+    f()
+    sb.++=(" ")
+    g()
+    sb.++=(")")
+  }
+
+  override def b3(name:String,f:(()=> Unit),g:(()=> Unit),h:(()=> Unit)):Unit = {
+    sb.++=("(");sb.++=(name);sb.++=(" ");f();sb.++=(" ");g();sb.++=(" ");h();sb.++=(")")
+  }
+
+  override def b6(name:String,f1:(()=> Unit),f2:(()=> Unit),f3:(()=> Unit),f4:(()=> Unit),f5:(()=> Unit),f6:(()=> Unit)/*,f7:(()=>Unit)*/):Unit = {
+    sb.++=("(");sb.++=(name);sb.++=(" ");f1();sb.++=(" ");f2();sb.++=(" ");f3();sb.++=(" ");f4();sb.++=(" ");f5();sb.++=(" ");f6();sb.++=(")")
+  }
+
+  override def btup(f:(()=>Unit),g:(()=>Unit)):Unit = {
+    sb.++=("(");f();sb.++=(" ");g();sb.++=(")")
+  }
+
+  override def blist[T](l:List[T],f:(T=>Unit)):Unit = {
+    sb.++=("(")
+    l match {
+      case Nil => ()
+      case x::xs =>
+        f(x)
+        xs.foreach({case y => sb.++=(" "); f(y)})
+    }
+    sb.++=(")")
+  }
+
+  override def brat(n:Int):Unit = {
+    b0(n.toString)
+  }
+
+  // finite functions over identifiers
+  override def bff[T](l:List[T],f:(T=>Unit)):Unit = {
+    blist(l,f)
+    /*val cases = l.zip(ISABELLE_IDS)
+    sb.++=("{")
+    cases.foreach({case(v,id) =>
+      sb.++=("case "); sb.++=(id); sb.++=("() => ");f(v);sb.++=(" ")
+    })
+    sb.++=("}")*/
+  }
+
 }

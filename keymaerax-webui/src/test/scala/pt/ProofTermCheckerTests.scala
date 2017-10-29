@@ -168,7 +168,8 @@ class ProofTermCheckerTests extends TacticTestBase {
         println("Arithmetic Goals: " + goals + "\n\n\n")
         println("END OF STATS\n\n\n\n\n\n\n\n\n\n\n")
         val conv = new IsabelleConverter(ptp.pt)
-        val source = conv.scalaObjects("ProofTerm", "proofTerm", "GeneratedProofChecker")
+        //val source = conv.scalaObjects("ProofTerm", "proofTerm", "GeneratedProofChecker")
+        val source = conv.sexp
         println(source)
     }})
 
@@ -191,7 +192,7 @@ class ProofTermCheckerTests extends TacticTestBase {
         println("Arithmetic Goals: " + goals + "\n\n\n")
         println("END OF STATS\n\n\n\n\n\n\n\n\n\n\n")
         val is = collection.immutable.IndexedSeq
-        val subPt =
+        /*val subPt =
           Sub(
             Sub(
               RuleApplication(
@@ -204,11 +205,11 @@ class ProofTermCheckerTests extends TacticTestBase {
                  StartProof(Sequent(is("true->v>=0&[{v'=A(),x'=v&true}](v>=0)'".asFormula),is("[{v'=A(),x'=v&true}]v>=0".asFormula))),
                    "cut Right",0,List(core.SuccPos(0)),List("true->v>=0&[{v'=A(),x'=v&true}](v>=0)'".asFormula))
               ,"Close",0,List(core.AntePos(0), core.SuccPos(0)),List()),"HideLeft",0,List(AntePos(0)),List()),
-            StartProof(Sequent(is(),is("(true->v>=0&[{v'=A(),x'=v&true}](v>=0)')->[{v'=A(),x'=v&true}]v>=0".asFormula))),0),0)
+            StartProof(Sequent(is(),is("(true->v>=0&[{v'=A(),x'=v&true}](v>=0)')->[{v'=A(),x'=v&true}]v>=0".asFormula))),0),0)*/
 
         val recheck = ProofChecker(ptp.pt)
         val conv = new IsabelleConverter(ptp.pt)
-        val source = conv.scalaObjects("ProofTerm", "proofTerm", "GeneratedProofChecker")
+        val source = conv.sexp//conv.scalaObjects("ProofTerm", "proofTerm", "GeneratedProofChecker")
         println(source)
       case _  =>
     }
