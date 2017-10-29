@@ -18,10 +18,4 @@ class BelleParserRegressionTest extends TacticTestBase {
       case _ => fail("Expected EXPRESSION2 to match the current input")
     }
   }
-
-  //@todo Not sure what bug this was supposed to expose. dG syntax is now changed so this can probably be deleted.
-  "DG" should "parse" ignore {
-    BelleParser("dG({`t`}, {`0`}, {`1`}, 1)") shouldBe DifferentialTactics.dG("{t'=0*t+1}".asDifferentialProgram, None)(1)
-    BelleParser("dG({`t`}, {`0`}, {`1`}, {`x>0`}, 1)") shouldBe DifferentialTactics.dG("{t'=0*t+1}".asDifferentialProgram, Some("x>0".asFormula))(1)
-  }
 }
