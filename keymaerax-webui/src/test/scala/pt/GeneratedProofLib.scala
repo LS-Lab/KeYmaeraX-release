@@ -1,6 +1,8 @@
 package pt.lib
 
+import pt.lib._
 import pt.lib.Scratch.myvars
+import pt.lib.Sum_Type._
 
 object Failure {
   def fail[T]():T = {
@@ -891,13 +893,15 @@ object Syntax {
 
 object Parser {
 
-  import Scratch._
-  import Int._
-  import Nat._
-  import Rat._
-  import Real._
-  import Proof_Checker._
-  import Syntax._
+  import pt.lib.Int._
+  import pt.lib.Nat._
+  import pt.lib.Rat._
+  import pt.lib.Real._
+  import pt.lib.Proof_Checker._
+  import pt.lib.Syntax._
+  import pt.lib.Scratch._
+
+  type myvars = pt.lib.Scratch.myvars
 
   case class ParseException(pos:Int) extends Exception {}
 
@@ -950,9 +954,60 @@ object Parser {
     ("i10",i10()),
     ("i11",i11())
   )
-  val myvars:Parse[myvars] = {(str,i) =>
+
+  val intOfId:Map[myvars,Int] = Map(
+    (i1(),0),
+    (i2(),1),
+    (i3(),2),
+    (i4(),3),
+    (i5(),4),
+    (i6(),5),
+    (i7(),6),
+    (i8(),7),
+    (i9(),8),
+    (i10(),9),
+    (i11(),10)
+
+  )
+
+  @inline
+  val mv:Parse[myvars] = {(str,i) =>
     val (ident,j) = alphanum(str,i)
     (idMap(ident),j)
+  }
+
+  @inline
+  val unit:Parse[Unit] = {(str,i) =>
+    eatSym("()")(str,i)
+  }
+
+  @inline
+  def sum[T1,T2](l:Parse[T1],r:Parse[T2]):Parse[sum[T1,T2]] = {(str,i) =>
+    val i2 = eatChar(str,i,'(')
+    val (ident,i3) = alphanum(str,i2)
+    val i4 = eatChar(str,i3,' ')
+    val (res:sum[T1,T2], beforeParen) =
+      ident match {
+        case "Inl" =>
+          val (lres, i5) = l(str,i4)
+          (Inl(lres),i5)
+        case "Inr" =>
+          val (rres, i5) = r(str,i4)
+          (Inr(rres),i5)
+      }
+    val i6 = eatChar(str,beforeParen,')')
+    (res,i6)
+  }
+
+  @inline
+  def option[T](t:Parse[T]):Parse[Option[T]] = { (str, i) =>
+    if(str(i) == '(') { // some case
+      val ((_id, elem), i2) = p1(eatSym("Some"), t)(str,i)
+      (Some(elem),i2+1)
+    } else {
+      val (ident, i2) = eatSym("None")(str,i)
+      (None,i2)
+    }
   }
 
   @inline
@@ -1132,8 +1187,8 @@ object Parser {
   @inline
   def list[T](p:Parse[T]):Parse[List[T]] = { (str, i) =>
     var elems:List[T] = List()
-    val i1 = eatChar(str,i1,'(')
-    var j = i1
+    val i2 = eatChar(str,i,'(')
+    var j = i2
     while(str(j) != ')') {
       val (elem,j1) = p(str,j)
       elems = elem :: elems
@@ -1144,73 +1199,370 @@ object Parser {
   }
 
   @inline
-  def bff[T](p:Parse[T]):Parse[List[T]] = list(p)
+  def noneElse[T](p:Parse[(myvars => Option[T])]):Parse[(myvars => Option[T])] = {(str,i) =>
+    if(str(i) == 'n' && str(i+1) == 's') {
+      ({_ => None}, i+2)
+    } else {
+      p(str,i)
+    }
+  }
 
-  def emptyElse[T](p:Parse[T],l:Parse[List[T]]):Parse[List[T]] = {(str,i) =>
+  @inline
+  def bff[T](p:Parse[T]):Parse[(myvars => T)] = {(str,i) =>
+    val (l:List[T],i1) = list(p)(str,i)
+    val arr:IndexedSeq[T] = l.toIndexedSeq
+    ({case e => arr(intOfId(e))}, i1)
+  }
+
+
+  def emptyElse[T](base:T, p:Parse[T],l:Parse[(myvars => T)]):Parse[(myvars => T)] = {(str,i) =>
     if(str(i) == 'e') {
       if(str(i+1) == 's' && str(i+2) == 't') {
-        (List(), i+3)
-      } else (List(),i+1)
+        ({j => base}, i+3)
+      } else ({j => base},i+1)
     } else if (str(i)=='s') {
-      val j1 =  if(str(i+1) == 's' && str(i+2) == 't) (i+3) else i+1
+      val j1 =  if(str(i+1) == 's' && str(i+2) == 't') (i+3) else i+1
       val j2 = eatChar(str,j1,' ')
       val (elem,j3) = p(str,j2)
       val j4 = eatChar(str,j3,')')
-      (List(elem),j4)
+      ({case i1() => elem case _ => base},j4)
     } else {
       l(str,i)
     }
   }
 
+  def ode[F](fid:Parse[F]):Parse[ODE[F,myvars]] = { (str,i) =>
+    val i1 = eatChar(str,i,'(')
+    val(con,i2) = alphanum(str,i1)
+    val i3 = eatChar(str, i2, ' ')
+    val (res:ODE[F,myvars], beforeParen:Int) =
+      con match {
+        case "OVar" =>
+          val (c,i4) = mv(str,i3)
+          (OVar[myvars,F](c),i4)
+        case "OSing" =>
+          val (x,i4) = mv(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (t, i6) = trm(fid)(str,i5)
+          (OSing[myvars,F](x,t),i6)
+        case "OProd" =>
+          val (ode1,i4) = ode(fid)(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (ode2,i6) = ode(fid)(str,i5)
+          (OProd[F,myvars](ode1,ode2),i6)
+      }
+    val iEnd = eatChar(str,beforeParen,')')
+    (res,iEnd)
+  }
 
-  @inline
+  def hp[F,P](fid:Parse[F],pid:Parse[P]):Parse[hp[F,P,myvars]] = { (str, i) =>
+    val i1 = eatChar(str,i,'(')
+    val(con,i2) = alphanum(str,i1)
+    val i3 = eatChar(str, i2, ' ')
+    val (res:hp[F,P,myvars], beforeParen:Int) =
+      con match {
+        case "Pvar" =>
+          val (a, i4) = mv(str,i3)
+          (Pvar(a),i4)
+        case "Assign" =>
+          val (x, i4) = mv(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (t, i6) = trm(fid)(str,i5)
+          (Assign(x,t),i6)
+        case "DiffAssign" =>
+          val (x, i4) = mv(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (t, i6) = trm(fid)(str,i5)
+          (DiffAssign(x,t),i6)
+        case "Test" =>
+          val (p, i4) = formula(fid,pid)(str,i3)
+          (Test(p), i4)
+        case "EvolveODE" =>
+          val (o, i4) = ode(fid)(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (p,i6) = formula(fid,pid)(str,i5)
+          (EvolveODE(o,p),i6)
+        case "Choice" =>
+          val (a, i4) = hp(fid,pid)(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (b, i6) = hp(fid,pid)(str,i5)
+          (Choice(a,b),i6)
+        case "Sequence" =>
+          val (a, i4) = hp(fid,pid)(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (b, i6) = hp(fid,pid)(str,i5)
+          (Sequence(a,b),i6)
+        case "Loop" =>
+          val (a, i4) = hp(fid,pid)(str,i3)
+          (Loop(a),i4)
+      }
+    val iEnd = eatChar(str,beforeParen,')')
+    (res,iEnd)
+  }
+
+  def formula[F,P](fid:Parse[F],pid:Parse[P]):Parse[formula[F,P,myvars]] = { (str, i) =>
+    val i1 = eatChar(str,i,'(')
+    val(con,i2) = alphanum(str,i1)
+    val i3 = eatChar(str, i2, ' ')
+    val (res:formula[F,P,myvars], beforeParen:Int) =
+      con match {
+        case "Geq" =>
+          val(t1, i4) = trm[F](fid)(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val(t2, i6) = trm[F](fid)(str,i5)
+          (Geq[F,myvars,P](t1,t2),i6)
+        case "Prop" =>
+          val (name, i4) = mv(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (args,i6) = emptyElse[trm[F,myvars]](Const(Real.zero_real), trm(fid),bff(trm(fid)))(str,i5)
+          (Prop[myvars,F,P](name,args), i6)
+        case "Not" =>
+          val (f,i4) = formula[F,P](fid,pid)(str,i3)
+          (Not[F,P,myvars](f),i4)
+        case "And" =>
+          val (p,i4) = formula[F,P](fid,pid)(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (q,i6) = formula[F,P](fid,pid)(str,i5)
+          (And[F,P,myvars](p,q),i6)
+        case "Exists" =>
+          val (name, i4) = mv(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (q,i6) = formula[F,P](fid,pid)(str,i5)
+          (Exists[myvars,F,P](name,q),i6)
+        case "Diamond" =>
+          val (a, i4) = hp[F,P](fid,pid)(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (q,i6) = formula[F,P](fid,pid)(str,i5)
+          (Diamond[F,P,myvars](a,q), i6)
+        case "InContext" =>
+          val (name, i4) = pid(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (q,i6) = formula[F,P](fid,pid)(str,i5)
+          (InContext[P,F,myvars](name,q),i6)
+      }
+    val iEnd = eatChar(str,beforeParen,')')
+    (res,iEnd)
+  }
+
+  /* D](a: A => Option[Syntax.trm[Sum_Type.sum[A, C], C]],
+     b: A => Option[Syntax.trm[A, C]],
+     c: C => Option[Syntax.formula[Sum_Type.sum[A, C], B, C]],
+     d: B => Option[Syntax.formula[A, Sum_Type.sum[B, Unit], C]],
+     e: C => Option[Syntax.hp[A, B, C]],
+     f: C => Option[Syntax.ODE[A, C]], g: D)
+    extends subst_ext[A, B, C, D]
+*/
+  val subst:Parse[USubst.subst_ext[myvars,myvars,myvars,Unit]] = {(str,i) =>
+    val ((_id, fun,funl,pred,con,hpp,oode), i1:Int) = p6(eatSym("subst_exta"),
+      noneElse(bff(option(trm(sum(mv,mv))))),
+      noneElse(bff(option(trm(mv)))),
+      noneElse(bff(option(formula(sum(mv,mv),mv)))),
+      noneElse(bff(option(formula(mv,sum(mv,unit))))),
+      noneElse(bff(option(hp(mv,mv)))),
+      noneElse(bff(option(ode(mv))))
+    )(str,i)
+    (USubst.subst_exta[myvars,myvars,myvars,Unit](fun,funl,pred,con,hpp,oode,()),i1)
+  }
+
   def trm[ID](id:Parse[ID]):Parse[trm[ID,myvars]] = {(str,i) =>
     if (str(i) == 'z') {
       if(str(i+1) == 's' && str(i+2) == 't') {
-        (zc,i+3)
+        (zc[ID,myvars],i+3)
       } else {
-        (zc,i+1)
+        (zc[ID,myvars],i+1)
       }
     } else {
       val i1 = eatChar(str, i, '(')
       val (con, i2) = alphanum(str, i1)
       val i3 = eatChar(str, i2, ' ')
-      val (res:trm[ID,Scratch.myvars], beforeParen:Int) =
+      val (res:trm[ID,Parser.myvars], beforeParen:Int) =
         con match {
-          case "Var" => myvars(str,i3)
+          case "Var" =>
+            val (r,i4) = mv(str,i3)
+            (Var[myvars,ID](r),i4)
           case "Const" =>
             val (r,i4) = real(str,i3)
-            (Const(r),i4)
+            (Const[ID,myvars](r),i4)
           case "z" => zc
           case "Function" =>
             val (name, i4) = id(str,i3)
             val i5 = eatChar(str,i4,' ')
-            val (args,i6) = emptyElse(trm(id),bff(trm(id)))(str,i5)
+            val (args,i6) = emptyElse[trm[ID,myvars]](Const(Real.zero_real),trm(id),bff(trm(id)))(str,i5)
             //val i7 = eatChar(str,i6,')')
-            (Function(name,args), i6)
+            (Function[ID,myvars](name,args), i6)
           case "Functional" =>
             val (name, i4) = id(str,i3)
-            (Functional(name),i4)
+            (Functional[ID,myvars](name),i4)
           case "Plus" =>
-            val (left, i4) = trm(id)(str,i3)
+            val (left, i4) = trm[ID](id)(str,i3)
             val i5 = eatChar(str,i4,' ')
-            val (right, i6) = trm(id)(str,i5)
-            (Plus(left,right),i6)
+            val (right, i6) = trm[ID](id)(str,i5)
+            (Plus[ID,myvars](left,right),i6)
           case "Times" =>
-            val (left, i4) = trm(id)(str,i3)
+            val (left, i4) = trm[ID](id)(str,i3)
             val i5 = eatChar(str,i4,' ')
-            val (right, i6) = trm(id)(str,i5)
-            (Times(left,right),i6)
+            val (right, i6) = trm[ID](id)(str,i5)
+            (Times[ID,myvars](left,right),i6)
           case "Differential" =>
-            val (child, i4) = trm(id)(str,i3)
-            (Differential(child),i4)
+            val (child, i4) = trm[ID](id)(str,i3)
+            (Differential[ID,myvars](child),i4)
           case "DiffVar" =>
-            val (name, i4) = myvars(str,i3)
-            (DiffVar(name),i4)
+            val (name, i4) = mv(str,i3)
+            (DiffVar[myvars,ID](name),i4)
         }
       val iEnd = eatChar(str,beforeParen,')')
       (res,iEnd)
     }
   }
+
+  @inline
+  val sequent:Parse[(List[formula[myvars,myvars,myvars]],List[formula[myvars,myvars,myvars]])] = {(str,i) =>
+    ptup(list(formula(mv,mv)),list(formula(mv,mv)))(str,i)
+  }
+
+  val leftRule:Parse[lrule[myvars,myvars,myvars]] = {(str,i) =>
+    val i1 = eatChar(str, i, '(')
+    val (con, i2) = alphanum(str, i1)
+    val (res:lrule[Scratch.myvars,Scratch.myvars,Scratch.myvars], beforeParen:Int) =
+      con match {
+        case "HideL" => (HideL(), i2)
+        case "ImplyL" => (ImplyL(), i2)
+        case "AndL" => (AndL(), i2)
+        case "NotL" => (NotL(), i2)
+        case "EquivBackwardL" => (EquivBackwardL(), i2)
+        case "EquivForwardL" => (EquivForwardL(), i2)
+        case "EquivL" => (EquivL(), i2)
+        case "CutLeft" =>
+          val i3 = eatChar(str, i2, ' ')
+          val (f,i4) = formula(mv,mv)(str,i3)
+          (CutLeft(f),i4)
+      }
+    val iEnd = eatChar(str,beforeParen,')')
+    (res,iEnd)
+  }
+
+  val rightRule:Parse[rrule[myvars,myvars,myvars]] = {(str,i) =>
+    val i1 = eatChar(str, i, '(')
+    val (con, i2) = alphanum(str, i1)
+    val (res:rrule[Scratch.myvars,Scratch.myvars,Scratch.myvars], beforeParen:Int) =
+      con match {
+        case "CutRight" =>
+          val i3 = eatChar(str, i2, ' ')
+          val (f,i4) = formula(mv,mv)(str,i3)
+          (CutRight(f),i4)
+        case "ImplyR" => (ImplyR(),i2)
+        case "AndR" =>(AndR(), i2)
+        case "HideR" => (HideR(),i2)
+        case "CohideR" => (CohideR(),i2)
+        case "CohideRR" => (CohideRR(), i2)
+        case "TrueR" => (TrueR(),i2)
+        case "EquivR" => (EquivR(),i2)
+        case "EquivifyR" => (EquivifyR(),i2)
+        case "CommuteEquivR" => (CommuteEquivR(),i2)
+        case "Skolem" => (Skolem(),i2)
+      }
+    val iEnd = eatChar(str,beforeParen,')')
+    (res,iEnd)
+  }
+
+
+    val ruleAppl:Parse[ruleApp[myvars,myvars,myvars]] = {(str,i) =>
+    val i1 = eatChar(str, i, '(')
+    val (con, i2) = alphanum(str, i1)
+    val i3 = eatChar(str, i2, ' ')
+    val (res:ruleApp[Scratch.myvars,Scratch.myvars,Scratch.myvars], beforeParen:Int) =
+      con match {
+        case "URename" =>
+          val (w,i4) = nat(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (r,i6) = nat(str,i5)
+          (URename(w,r),i6)
+        case "BRename" =>
+          val (w,i4) = nat(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (r,i6) = nat(str,i5)
+          (BRename(w,r),i6)
+        case "Rrule" =>
+          val (rule, i4) = rightRule(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (n,i6) = nat(str,i5)
+          (Rrule(rule,n),i6)
+        case "Lrule" =>
+          val (rule, i4) = leftRule(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (n,i6) = nat(str,i5)
+          (Lrule(rule,n),i6)
+        case "CloseId" =>
+          val (w,i4) = nat(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (r,i6) = nat(str,i5)
+          (CloseId(w,r),i6)
+        case "Cohide2" =>
+          val (w,i4) = nat(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (r,i6) = nat(str,i5)
+          (Cohide2(w,r),i6)
+        case "Cut" =>
+          val (f,i4) = formula(mv,mv)(str,i3)
+          (Cut(f),i4)
+      }
+    val iEnd = eatChar(str,beforeParen,')')
+    (res,iEnd)
+  }
+
+  val proofTerm:Parse[pt[myvars,myvars,myvars]] = {(str,i) =>
+    val i1 = eatChar(str, i, '(')
+    val (con, i2) = alphanum(str, i1)
+    val i3 = eatChar(str, i2, ' ')
+    val (res:pt[Scratch.myvars,Scratch.myvars,Scratch.myvars], beforeParen:Int) =
+      con match {
+        case "FOLRConstant" =>
+          val (f,i4) = formula(mv,mv)(str,i3)
+          (FOLRConstant(f),i4)
+        case "RuleApp" =>
+          val (child,i4) = proofTerm(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (rApp,i6) = ruleAppl(str,i5)
+          val i7 = eatChar(str,i6,' ')
+          val (n, i8) = nat(str,i7)
+          (RuleApp(child,rApp,n),i8)
+        case "AxRule" =>
+          val (ar,i4) = axrule(str,i3)
+          (AxRule(ar),i4)
+        case "PrUSubst" =>
+          val (pterm,i4) = proofTerm(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (sub,i6) = subst(str,i5)
+          (PrUSubst(pterm,sub),i6)
+        case "Ax" =>
+          val (a,i4) = axiom(str,i3)
+          (Ax(a),i4)
+        case "FNC" =>
+          val (child,i4) = proofTerm(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (newCon,i6) = sequent(str,i5)
+          val i7 = eatChar(str,i6,' ')
+          val (rApp, i8) = ruleAppl(str,i7)
+          (FNC(child,newCon,rApp),i8)
+        case "Pro" =>
+          val (pterm1,i4) = proofTerm(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (pterm2,i6) = proofTerm(str,i5)
+          (Pro(pterm1,pterm2),i6)
+        case "Start" =>
+          val (seq,i4) = sequent(str,i3)
+          (Start(seq),i4)
+        case "Sub" =>
+          val (pterm1,i4) = proofTerm(str,i3)
+          val i5 = eatChar(str,i4,' ')
+          val (pterm2,i6) = proofTerm(str,i5)
+          val i7 = eatChar(str,i6,' ')
+          val (n,i8) = nat(str,i7)
+          (Sub(pterm1,pterm2,n),i8)
+      }
+    val iEnd = eatChar(str,beforeParen,')')
+    (res,iEnd)
+  }
+
 
 }
