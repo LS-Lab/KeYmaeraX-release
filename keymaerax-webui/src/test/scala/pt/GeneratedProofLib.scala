@@ -903,7 +903,9 @@ object Parser {
 
   type myvars = pt.lib.Scratch.myvars
 
-  case class ParseException(pos:Int) extends Exception {}
+  case class ParseException(pos:Int) extends Exception {
+    override def toString:String = {s"ParseException(${pos})"}
+  }
 
   type Parse[T] = ((String, Int) => (T, Int))
   val TOKEN_CAPACITY = 20
@@ -913,8 +915,9 @@ object Parser {
   var sbAlphaNum = newSB
 
   def alphanum(str: String, i: Int): (String, Int) = {
+    val len = str.length
     var j = i
-    while (true) {
+    while (j < len) {
       var c = str(j)
       if (c.isLetterOrDigit) {
         sbAlphaNum.+=(c)
@@ -925,13 +928,16 @@ object Parser {
         return (res, j)
       }
     }
-    ???
+    val res = sbAlphaNum.toString()
+    sbAlphaNum = newSB
+    (res, j)
   }
 
   def eatSym(lit:String):Parse[Unit]= {(str:String,i:Int) =>
     val len = lit.length
+    val len2 = str.length
     var j = 0
-    while(j < len)
+    while(j < len && i+j < len2)
     {
       if(str(i+j) != lit(j)) {
         throw ParseException(i + j)
@@ -1001,10 +1007,13 @@ object Parser {
 
   @inline
   def option[T](t:Parse[T]):Parse[Option[T]] = { (str, i) =>
+    //println("The i'th char is:" + str(i))
     if(str(i) == '(') { // some case
+      //println("Checking someness-ness: " + str + " " + i)
       val ((_id, elem), i2) = p1(eatSym("Some"), t)(str,i)
-      (Some(elem),i2+1)
+      (Some(elem),i2)
     } else {
+      //println("Checking non-ness: " + str + " " + i)
       val (ident, i2) = eatSym("None")(str,i)
       (None,i2)
     }
@@ -1149,7 +1158,7 @@ object Parser {
 
   @inline
   val nat:Parse[nat] = {(str,i) =>
-    val (n,j) = p0(natLit)(str,i)
+    val ((_,n),j) = p1(eatSym("Nata"),natLit)(str,i)
     (Nata(n), j)
   }
 
@@ -1165,7 +1174,7 @@ object Parser {
 
   @inline
   val int:Parse[int] = {(str,i) =>
-    val (n,j) = p0(intLit)(str,i)
+    val ((_,n),j) = p1(eatSym("int_of_integer"),intLit)(str,i)
     (int_of_integer(n), j)
   }
 
@@ -1200,7 +1209,7 @@ object Parser {
 
   @inline
   def noneElse[T](p:Parse[(myvars => Option[T])]):Parse[(myvars => Option[T])] = {(str,i) =>
-    if(str(i) == 'n' && str(i+1) == 's') {
+    if(i+1 < str.length && str(i) == 'n' && str(i+1) == 's') {
       ({_ => None}, i+2)
     } else {
       p(str,i)
@@ -1217,11 +1226,11 @@ object Parser {
 
   def emptyElse[T](base:T, p:Parse[T],l:Parse[(myvars => T)]):Parse[(myvars => T)] = {(str,i) =>
     if(str(i) == 'e') {
-      if(str(i+1) == 's' && str(i+2) == 't') {
+      if(i+2 < str.length && str(i+1) == 's' && str(i+2) == 't') {
         ({j => base}, i+3)
       } else ({j => base},i+1)
-    } else if (str(i)=='s') {
-      val j1 =  if(str(i+1) == 's' && str(i+2) == 't') (i+3) else i+1
+    } else if (i+1 < str.length && str(i)=='(' && str(i+1) == 's') {
+      val j1 =  if(i+3 < str.length && str(i+2) == 's' && str(i+3) == 't') (i+4) else i+2
       val j2 = eatChar(str,j1,' ')
       val (elem,j3) = p(str,j2)
       val j4 = eatChar(str,j3,')')
@@ -1366,7 +1375,7 @@ object Parser {
 
   def trm[ID](id:Parse[ID]):Parse[trm[ID,myvars]] = {(str,i) =>
     if (str(i) == 'z') {
-      if(str(i+1) == 's' && str(i+2) == 't') {
+      if(i+2 < str.length && str(i+1) == 's' && str(i+2) == 't') {
         (zc[ID,myvars],i+3)
       } else {
         (zc[ID,myvars],i+1)
@@ -1473,14 +1482,14 @@ object Parser {
     val (res:ruleApp[Scratch.myvars,Scratch.myvars,Scratch.myvars], beforeParen:Int) =
       con match {
         case "URename" =>
-          val (w,i4) = nat(str,i3)
+          val (w,i4) = mv(str,i3)
           val i5 = eatChar(str,i4,' ')
-          val (r,i6) = nat(str,i5)
+          val (r,i6) = mv(str,i5)
           (URename(w,r),i6)
         case "BRename" =>
-          val (w,i4) = nat(str,i3)
+          val (w,i4) = mv(str,i3)
           val i5 = eatChar(str,i4,' ')
-          val (r,i6) = nat(str,i5)
+          val (r,i6) = mv(str,i5)
           (BRename(w,r),i6)
         case "Rrule" =>
           val (rule, i4) = rightRule(str,i3)
