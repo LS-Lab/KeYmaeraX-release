@@ -153,12 +153,11 @@ private object ToolTactics {
   /** Performs QE and allows the goal to be reduced to something that isn't necessarily true.
     * @note You probably want to use fullQE most of the time, because partialQE will destroy the structure of the sequent
     */
-  def partialQE(qeTool: => QETool): BelleExpr = {
+  def partialQE(qeTool: => QETool): BelleExpr = "pQE" by ((_: Sequent) => {
+    // dependent tactic so that qeTool is evaluated only when tactic is executed, but not when tactic is instantiated
     require(qeTool != null, "No QE tool available. Use parameter 'qeTool' to provide an instance (e.g., use withMathematica in unit tests)")
-    Idioms.NamedTactic("pQE",
-      toSingleFormula & rcf(qeTool)
-    )
-  }
+    toSingleFormula & rcf(qeTool)
+  })
 
   /** Performs Quantifier Elimination on a provable containing a single formula with a single succedent. */
   def rcf(qeTool: => QETool): BelleExpr = "rcf" by ((sequent: Sequent) => {
