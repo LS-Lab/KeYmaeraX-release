@@ -352,7 +352,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     println("Time taken(seconds): "+ (end-start)/1000.0)
   }
 
-  it should "parse velocityCar" in {
+  /*it should "parse velocityCar" in {
     val path = "/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"
     val str = Source.fromFile(path).mkString
     val start = System.currentTimeMillis()
@@ -360,5 +360,5 @@ class ProofTermCheckerTests extends TacticTestBase {
     val end = System.currentTimeMillis()
     println("Time taken(seconds): "+ (end-start)/1000.0)
 
-  }
+  }*/
 }
