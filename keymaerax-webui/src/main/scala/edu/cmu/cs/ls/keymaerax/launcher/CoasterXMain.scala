@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QELogListener, StopwatchListener}
+import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, DependentTactic, Interpreter, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXTestLib.{CoasterStats, ComponentStats, countVars, doStats}
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.{CoasterXParser, CoasterXProver, CoasterXSpec, CoasterXTestLib}
@@ -30,8 +30,8 @@ object CoasterXMain {
   private val LOG_QE_DURATION = System.getProperty("LOG_QE_DURATION", "true")=="true"
 
   protected val qeLogPath: String = System.getProperty("user.home") + "/.keymaerax/logs/qe/"
-  private val allPotentialQEListener = new QELogListener(qeLogPath + "wantqe.txt", (p, _) => { p.subgoals.size == 1 && p.subgoals.head.isFOL })
-    private val qeListener = new QELogListener(qeLogPath + "haveqe.txt", (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
+  private val allPotentialQEListener = new QEFileLogListener(qeLogPath + "wantqe.txt", (p, _) => { p.subgoals.size == 1 && p.subgoals.head.isFOL })
+    private val qeListener = new QEFileLogListener(qeLogPath + "haveqe.txt", (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
     protected val qeDurationListener = new StopwatchListener((_, t) => t match {
     case DependentTactic("QE") => true
     case DependentTactic("smartQE") => true
