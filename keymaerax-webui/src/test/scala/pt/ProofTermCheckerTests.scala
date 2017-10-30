@@ -1,5 +1,7 @@
 package edu.cmu.cs.ls.pt
 
+import java.io.PrintWriter
+
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -10,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 
 import scala.collection.immutable
+import scala.io.Source
 
 /**
  * Tests of the proof term checker <strike>from</strike> inspired by
@@ -170,6 +173,9 @@ class ProofTermCheckerTests extends TacticTestBase {
         val conv = new IsabelleConverter(ptp.pt)
         //val source = conv.scalaObjects("ProofTerm", "proofTerm", "GeneratedProofChecker")
         val source = conv.sexp
+        val writer = new PrintWriter("velocityCar.pt")
+        writer.write(source)
+        writer.close()
         println(source)
     }})
 
@@ -346,4 +352,13 @@ class ProofTermCheckerTests extends TacticTestBase {
     println("Time taken(seconds): "+ (end-start)/1000.0)
   }
 
+  it should "parse velocityCar" in {
+    val path = "/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"
+    val str = Source.fromFile(path).mkString
+    val start = System.currentTimeMillis()
+    val (_,_) = proofTerm(str,0)
+    val end = System.currentTimeMillis()
+    println("Time taken(seconds): "+ (end-start)/1000.0)
+
+  }
 }

@@ -1349,8 +1349,12 @@ class SexpBuilder(sb:StringBuilder) extends SourceBuilder(sb) {
   }
 
   override def brat(n:Int):Unit = {
-    b0(n.toString)
+    b1("Ratreal",{()=>b1("Frct",{()=>btup({()=>apply(n)},{()=>apply(1)})})})
   }
+
+  /*override def brat(n:Int):Unit = {
+    b0(n.toString)
+  }*/
 
   // finite functions over identifiers
   override def bff[T](l:List[T],f:(T=>Unit)):Unit = {
@@ -1361,6 +1365,17 @@ class SexpBuilder(sb:StringBuilder) extends SourceBuilder(sb) {
       sb.++=("case "); sb.++=(id); sb.++=("() => ");f(v);sb.++=(" ")
     })
     sb.++=("}")*/
+  }
+
+  override def apply(id:ID):Unit = {
+    id match {
+      case IDEnum(n) => sb.++=(n)
+      // final case class Inl[A, B](a: A) extends sum[A, B]
+      // final case class Inr[B, A](a: B) extends sum[A, B]
+      case IDLeft(id,ltype,rtype) => b1("Inl", ()=>apply(id), Some(ltype+","+rtype))
+      case IDRight(id,ltype,rtype) => b1("Inr", ()=>apply(id), Some(rtype+","+ltype))
+      case IDUnit() => b0("")
+    }
   }
 
 }
