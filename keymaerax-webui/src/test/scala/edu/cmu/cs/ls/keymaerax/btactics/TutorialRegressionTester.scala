@@ -4,7 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.TacticStatistics
+import edu.cmu.cs.ls.keymaerax.bellerophon.{PartialTactic, TacticStatistics}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Program}
@@ -67,24 +67,29 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
         qeFinder.findAllMatchIn(e.tactic.get._2).forall(p => p.group("toolName") == tool)).
       map(e => (e.name, e.model, parseProblem(e.model), e.tactic.get))
        .foreach({case (name, model, (decls, invGen), tactic) =>
-        println(s"Proving $name with ${tactic._1}")
-        (try {
-          val start = System.currentTimeMillis()
+          println(s"Proving $name with ${tactic._1}")
           val t = BelleParser.parseWithInvGen(tactic._2, Some(invGen), decls)
-          val proof = db.proveBy(model, t, name)
-          val end = System.currentTimeMillis()
-          println("Proof Statistics")
-          println(s"Model $name, tactic ${tactic._1}")
-          println(s"Duration [ms]: ${end-start}")
-          println("Tactic LOC/normalized LOC/steps: " +
-            Source.fromString(tactic._2).getLines.size + "/" +
-            TacticStatistics.lines(t) + "/" +
-            TacticStatistics.size(t))
-          println("Proof steps: " + proof.steps)
-          proof
-        } catch {
-          case ex: Throwable => fail(s"Exception while proving $name", ex)
-        }) shouldBe 'proved withClue name + "/" + tactic._1})
+          val result = try {
+            val start = System.currentTimeMillis()
+            val proof = db.proveBy(model, t, name)
+            val end = System.currentTimeMillis()
+            println("Proof Statistics")
+            println(s"Model $name, tactic ${tactic._1}")
+            println(s"Duration [ms]: ${end-start}")
+            println("Tactic LOC/normalized LOC/steps: " +
+              Source.fromString(tactic._2).getLines.size + "/" +
+              TacticStatistics.lines(t) + "/" +
+              TacticStatistics.size(t))
+            println("Proof steps: " + proof.steps)
+            proof
+          } catch {
+            case ex: Throwable => fail(s"Exception while proving $name", ex)
+          }
+          t match {
+            case _: PartialTactic => // nothing to do, tactic deliberately allowed to result in a non-proof
+            case _ => result shouldBe 'proved withClue name + "/" + tactic._1
+          }
+       })
   }
 
   /** Parse a problem file to find declarations and invariant annotations */
