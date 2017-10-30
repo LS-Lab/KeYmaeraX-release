@@ -55,9 +55,9 @@ object IDMap {
     //@TODO: Left is argumented, right is unit, double-check please
     // CON PRED MAP
     Map((Left("p_"),"i1"),(Left("q_"),"i2"),(Left("J"),"i1"), (Left("ctx_"),"i3"),
-      (Right("p_"),"i1"),(Right("q_"),"i2"),(Right("P"),"i1"),(Right("p"),"i1"), (Right("q"),"i2")),
+      (Right("p_"),"i1"),(Right("q_"),"i2"),(Right("P"),"i1"),(Right("p"),"i1"), (Right("q"),"i2") , (Right("r"),"i3")),
     Map(("a","i1"),("b","i2"),("a_","i1"),("b_","i2")),
-    Map(("c","i1"),("d","i2"),("e","i3"),("a_","i1"), ("a","i1")),
+    Map(("c","i1"),("c_","i1"),("d","i2"),("e","i3"),("a_","i1"), ("a","i1")),
     ISABELLE_IDS.length,
     ISABELLE_IDS.length,
     3, // next Id for var
@@ -378,7 +378,6 @@ case class Imonb() extends IaxRule {}
 //object IruleApp {}
 sealed trait IruleApp {}
 case class IURename(what:ID,repl:ID) extends IruleApp {}
-case class IBRename(what:ID,repl:ID) extends IruleApp {}
 case class IRrule(r:Irrule, i:Int) extends IruleApp {}
 case class ILrule(r:Ilrule, i:Int) extends IruleApp {}
 case class ICloseId(i:Int,j:Int) extends IruleApp {}
@@ -396,6 +395,7 @@ case class IEquivBackwardL() extends Ilrule{}
 case class IEquivL() extends Ilrule{}
 case class INotL() extends Ilrule {}
 case class ICutLeft(f:Iformula) extends Ilrule {}
+case class IBRenameL(what:ID,repl:ID) extends Ilrule {}
 
 sealed trait Irrule {}
 case class ICutRight(f:Iformula)   extends Irrule {}
@@ -410,6 +410,7 @@ case class IEquivR() extends Irrule {}
 case class IEquivifyR() extends Irrule {}
 case class ICommuteEquivR() extends Irrule {}
 case class ISkolem() extends Irrule {}
+case class IBRenameR(what:ID,repl:ID) extends Irrule {}
 
 object Iaxiom {
   def apply(n:String):Iaxiom = {
@@ -545,8 +546,6 @@ class IsabelleConverter(pt:ProofTerm) {
       // @TODO: Get the names for everything
       case ("Uniform Renaming", _, BaseVariable(n1,ind1,_) :: BaseVariable(n2,ind2,_) :: Nil) =>
         IURename(IDEnum(m.varMap((n1,ind1))),IDEnum(m.varMap((n2,ind2))))
-      case ("Bound Renaming", _, BaseVariable(n1,ind1,_) :: BaseVariable(n2,ind2,_) :: Nil) =>
-        IBRename(IDEnum(m.varMap((n1,ind1))),IDEnum(m.varMap((n2,ind2))))
       case ("Close", (a:AntePos)::(s:SeqPos)::Nil, _) => ICloseId(a.getIndex,s.getIndex)
       case ("cut", _, (f:Formula) :: Nil) => ICut(apply(f,NonSubst()))
       case ("CoHide2", (a:AntePos) :: (s:SuccPos) :: Nil, _) => ICohide2(a.getIndex,s.getIndex)
@@ -560,6 +559,8 @@ class IsabelleConverter(pt:ProofTerm) {
       case ("Equiv Left1", (a:AntePos)::Nil, _) => ILrule(IEquivForwardL(),a.getIndex)
       case ("Equiv Left2", (a:AntePos)::Nil, _) => ILrule(IEquivBackwardL(),a.getIndex)
       case ("HideLeft", (a:AntePos)::Nil, _) => ILrule(IHideL(),a.getIndex)
+      case ("Bound Renaming", (a:AntePos) :: Nil, BaseVariable(n1,ind1,_) :: BaseVariable(n2,ind2,_) :: Nil) =>
+        ILrule(IBRenameL(IDEnum(m.varMap((n1,ind1))),IDEnum(m.varMap((n2,ind2)))), a.getIndex)
 
       case ("cut Right", (s:SuccPos) :: Nil, (f:Formula) :: Nil) => IRrule(ICutRight(apply(f,NonSubst())), s.getIndex)
       case ("Imply Right", (s:SuccPos)::Nil, _) => IRrule(IImplyR(), s.getIndex)
@@ -573,6 +574,8 @@ class IsabelleConverter(pt:ProofTerm) {
       case ("And Right", (s:SuccPos)::Nil, _) => IRrule(IAndR(), s.getIndex)
       case ("HideRight", (s:SuccPos)::Nil, _) => IRrule(IHideR(), s.getIndex)
       case ("Skolemize", (s:SuccPos)::Nil, _) => IRrule(ISkolem(), s.getIndex)
+      case ("Bound Renaming", (s:SuccPos) :: Nil, BaseVariable(n1,ind1,_) :: BaseVariable(n2,ind2,_) :: Nil) =>
+        IRrule(IBRenameR(IDEnum(m.varMap((n1,ind1))),IDEnum(m.varMap((n2,ind2)))), s.getIndex)
       case _ =>
         throw ConversionException("Unrecognized non-axiomatic rule: " + name + ","  + seqPos.toList +", " + expArgs.toList)
     }
@@ -1083,6 +1086,7 @@ abstract class SourceBuilder(sb:StringBuilder) {
       case IEquivifyR() => b0("EquivifyR")
       case ICommuteEquivR() => b0("CommuteEquivR")
       case ISkolem() => b0("Skolem")
+      case IBRenameR(w,r) => b2("BRenameR",()=>apply(w),()=>apply(r))
     }
   }
 
@@ -1096,13 +1100,13 @@ abstract class SourceBuilder(sb:StringBuilder) {
       case IEquivForwardL() => b0("EquivForwardL")
       case IEquivL() => b0("EquivL")
       case ICutLeft(fml) => b1("CutLeft", ()=> apply(fml))
+      case IBRenameL(w,r) => b2("BRenameL",()=>apply(w),()=>apply(r))
     }
   }
 
   def apply(ra:IruleApp):Unit = {
     ra match {
       case IURename(w,r) => b2("URename",()=>apply(w),()=>apply(r))
-      case IBRename(w,r) => b2("BRename",()=>apply(w),()=>apply(r))
       case IRrule(rr,n) => b2("Rrule", ()=>apply(rr), ()=>nat(n))
       case ILrule(lr,n) => b2("Lrule", ()=>apply(lr), ()=>nat(n))
       case ICloseId(i,j) => b2("CloseId",()=>nat(i),()=>nat(j))
