@@ -130,6 +130,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     println(tacticResult)
   })
 
+
   it should "work for ETCS dI-ified proof" in withMathematica (_ => {
     val fml = "    v^2<=2*b()*(m-x) & v>=0  & A()>=0 & b()>0-> [{{?(2*b()*(m-x) >= v^2+(A()+b())*(A()*ep()^2+2*ep()*v)); a:=A(); ++ a:=-b(); } t := 0;{x'=v, v'=a, t'=1 & v>=0 & t<=ep()}}*@invariant(v^2<=2*b()*(m-x))] x <= m".asFormula
     val tac = BelleParser("implyR(1) ; loop({`v^2<=2*b()*(m-x)`}, 1) ; <(closeId, QE,composeb(1) ; choiceb(1) ;andR(1) ; <(composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; composeb(1) ; assignb(1) ; dC({`2*b()*(m-x)>=v^2+(A()+b())*(A()*(ep()-t)^2+2*(ep()-t)*v)`}, 1) ; <(dW(1) ; QE,dI(1)), assignb(1) ; composeb(1) ; assignb(1) ; dI(1)))")
@@ -411,7 +412,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     val end = System.currentTimeMillis()
     println("Time taken(seconds): "+ (end-start)/1000.0)
   }
-
+/*
   it should "parse velocityCar" in {
     val path = "/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"
     val str = Source.fromFile(path).mkString
@@ -420,5 +421,5 @@ class ProofTermCheckerTests extends TacticTestBase {
     val end = System.currentTimeMillis()
     println("Time taken(seconds): "+ (end-start)/1000.0)
 
-  }
+  }*/
 }
