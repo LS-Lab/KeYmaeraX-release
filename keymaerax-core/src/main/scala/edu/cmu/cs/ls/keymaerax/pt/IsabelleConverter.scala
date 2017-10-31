@@ -29,7 +29,10 @@ object IsabelleConverter {
 
   // Keep this in sync with the code generation in Isabelle proof. If the number of IDs is too small then we can't export
   // the proof term, if it's too big then proof checking gets progressively slower
-  val ISABELLE_IDS:Seq[String] = Seq("i1","i2","i3","i4","i5","i6","i7","i8","i9","i10","i11")
+  val ISABELLE_IDS:Seq[String] = Seq(
+    "i1","i2","i3","i4","i5","i6","i7","i8","i9","i10","i11","i12","i13","i14","i15","i16","i17","i18","i19","i20",
+    "i21","i22","i23","i24","i25","i26","i27","i28","i29","i30","i31","i32","i33","i34","i35","i36","i37","i38","i40"
+  )
 
   def detuple(t:Term):List[Term] = {
     t match {
@@ -452,6 +455,7 @@ object Iaxiom {
       case "[] split" => IABoxSplit()
       case "' linear" => IADiffLinear()
       case "all eliminate" => IAAllElim()
+      case "= commute" => IAEqualCommute()
       case ">=' derive >=" => {
         val 2 = 1 + 1
         throw ConversionException("Needed to convert proof using DifferentialFormula to one that doesn't, but didn't")
@@ -479,6 +483,7 @@ case class IADW() extends Iaxiom {}
 case class IADE() extends Iaxiom {}
 case class IADC() extends Iaxiom {}
 case class IADS() extends Iaxiom {}
+case class IADIEq() extends Iaxiom {}
 case class IADIGeq() extends Iaxiom {}
 case class IADIGr() extends Iaxiom {}
 case class IADG() extends Iaxiom {}
@@ -495,6 +500,7 @@ case class IAconstFcong() extends Iaxiom {}
 case class IAassignEq() extends Iaxiom {}
 case class IAdMinus() extends Iaxiom {}
 case class IAallInst() extends Iaxiom {}
+case class IAEqualCommute() extends Iaxiom {}
 
 
 /* @TODO: Represent this type magic in Scala or in generated code as necessary
@@ -701,6 +707,13 @@ class IsabelleConverter(pt:ProofTerm) {
           UsubstProvableTerm(AxiomTerm("<-> reflexive"), equivReflSubst), where) =>
             println(reflFml+"\n\n\n"+equivReflSubst)
             ISub(IStart(apply(reflFml)),IPrUSubst(IAx(Iaxiom("<-> reflexive")),apply(equivReflSubst)), where)
+      case Sub(Sub(RuleApplication(StartProof(reflFml), "cut Right", _, _, _),
+      ForwardNewConsequenceTerm(
+      ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm("=' derive ="), _),
+      UsubstProvableTerm(RuleTerm("CE congruence"), _)), _, _: EquivifyRight), _, _: CoHideRight), _),
+      UsubstProvableTerm(AxiomTerm("<-> reflexive"), equivReflSubst), where) =>
+        println(reflFml+"\n\n\n"+equivReflSubst)
+        ISub(IStart(apply(reflFml)),IPrUSubst(IAx(Iaxiom("<-> reflexive")),apply(equivReflSubst)), where)
       case _ =>
         val 2 = 1 + 1
         ???
@@ -732,6 +745,15 @@ class IsabelleConverter(pt:ProofTerm) {
             val subst = USubst(collection.immutable.Seq(SubstitutionPair(csym,cc),SubstitutionPair(qsym,q),SubstitutionPair(fsym,l),SubstitutionPair(gsym,r)))
             val theapp = apply(subst)
             val ax = IADIGeq()
+            val result = IPrUSubst(IAx(ax),theapp)
+            val foo = ProofChecker(pttt)
+            IRuleApp(ISub(apply(a),ISub(apply(b),result,c),d),apply(e,g,h),f)
+          case Equal(r,l) =>
+            val fsym = UnitFunctional("f", AnyArg, Real)
+            val gsym = UnitFunctional("g", AnyArg, Real)
+            val subst = USubst(collection.immutable.Seq(SubstitutionPair(csym,cc),SubstitutionPair(qsym,q),SubstitutionPair(fsym,l),SubstitutionPair(gsym,r)))
+            val theapp = apply(subst)
+            val ax = IADIEq()
             val result = IPrUSubst(IAx(ax),theapp)
             val foo = ProofChecker(pttt)
             IRuleApp(ISub(apply(a),ISub(apply(b),result,c),d),apply(e,g,h),f)

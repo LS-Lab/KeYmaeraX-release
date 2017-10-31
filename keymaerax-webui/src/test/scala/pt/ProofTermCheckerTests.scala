@@ -70,6 +70,66 @@ class ProofTermCheckerTests extends TacticTestBase {
     checkIfPT(tacticResult,f)
   })
 
+  it should "work for monoCars" in withMathematica(_ => {
+    val fml =
+    "velLead >= velCtrl & velCtrl >= 0 &  A() > 0 &  B() > 0 &  posLead >= posCtrl & T() > 0     ->      [{{      {?((velLead-velCtrl) >= T()*(A()+B())); accCtrl := A(); }        ++        accCtrl:= -B();}        ;      {accLead := A() ;++ accLead := -B(); };        t := 0;      { velCtrl' = accCtrl, velLead' = accLead, posCtrl' = velCtrl, posLead' = velLead, t' = 1 & t < T() & velCtrl>= 0 & velLead >= 0}      }*@invariant(velLead >= velCtrl & velCtrl >= 0 & posLead >= posCtrl)     ]posLead >= posCtrl".asFormula
+    val tac = BelleParser("  unfold ; loop({`velLead>=velCtrl&velCtrl>=0&posLead>=posCtrl`}, 1) ; <(\n  unfold,\n  unfold,\n  unfold ; <(\n    dC({`velLead>=velCtrl`}, 1) ; <(\n      dC({`posLead>=posCtrl`}, 1) ; <(\n        dW(1) ; unfold,\n        dI(1)\n        ),\n      dI(1)\n      ),\n    dC({`velLead>=velCtrl`}, 1) ; <(\n      dC({`posLead>=posCtrl`}, 1) ; <(\n        dW(1) ; unfold,\n        dI(1)\n        ),\n      dI(1)\n      ),\n    dC({`velLead-velCtrl>=(A()+B())*(T()-t)`}, 1) ; <(\n      dC({`posLead>=posCtrl`}, 1) ; <(\n        dW(1) ; unfold ; QE,\n        dI(1)\n        ),\n      dI(1)\n      ),\n    dC({`velLead>=velCtrl`}, 1) ; <(\n      dC({`posLead>=posCtrl`}, 1) ; <(\n        dW(1) ; unfold,\n        dI(1)\n        ),\n      dI(1)\n      )\n    )\n  )")
+    val provable = ProvableSig.startProof(fml)
+    val tacticResult = proveBy(provable,tac)
+    tacticResult match {
+      case pr:PTProvable =>
+        val size = pr.pt.numCons
+        val bytes = pr.pt.bytesEstimate
+        val axioms = pr.pt.axiomsUsed
+        val rules = pr.pt.rulesUsed
+        val goals = pr.pt.arithmeticGoals
+
+        println("Size: " + size + "\n\n\n")
+        println("Axioms: " + axioms + "\n\n\n")
+        println("Rules: " + rules + "\n\n\n")
+        println("Arithmetic Goals: " + goals + "\n\n\n")
+        println("END OF STATS\n\n\n\n\n\n\n\n\n\n\n")
+        val conv = new IsabelleConverter(pr.pt)
+        //val source = conv.scalaObjects("ProofTerm", "proofTerm", "GeneratedProofChecker")
+        val source = conv.sexp
+        val writer = new PrintWriter("monocars.pt")
+        writer.write(source)
+        writer.close()
+      case _ => ()
+    }
+    println(tacticResult)
+
+  })
+
+  it should "work for double velCar" in withMathematica(_ => {
+    val velCar2Fml = "    xc<=xl & V>=0\n -> [\n      {\n        {?(xl-xc)>=V*ep; vc:=V; ++ vc:=0;};\n        {vl := V; ++ vl:=0;}\n        t := 0;\n        {xl'=vl, xc'=vc, t'=1 & t<=ep}\n      }*@invariant(xc<=xl)\n    ] xc <= xl".asFormula
+    val tac = BelleParser("  unfold ; loop({`xc<=xl`}, 1) ; <(\n  unfold,\n  unfold,\n  unfold ; <(\n    dI(1),\n    dI(1),\n    dC({`xl-xc>=V*(ep-t)`}, 1) ; <(\n      dW(1) ; unfold ; master,\n      dI(1)\n      ),\n    dI(1)\n    )\n  )")
+    val provable = ProvableSig.startProof(velCar2Fml)
+    val tacticResult = proveBy(provable,tac)
+    tacticResult match {
+      case pr:PTProvable =>
+        val size = pr.pt.numCons
+        val bytes = pr.pt.bytesEstimate
+        val axioms = pr.pt.axiomsUsed
+        val rules = pr.pt.rulesUsed
+        val goals = pr.pt.arithmeticGoals
+
+        println("Size: " + size + "\n\n\n")
+        println("Axioms: " + axioms + "\n\n\n")
+        println("Rules: " + rules + "\n\n\n")
+        println("Arithmetic Goals: " + goals + "\n\n\n")
+        println("END OF STATS\n\n\n\n\n\n\n\n\n\n\n")
+        val conv = new IsabelleConverter(pr.pt)
+        //val source = conv.scalaObjects("ProofTerm", "proofTerm", "GeneratedProofChecker")
+        val source = conv.sexp
+        val writer = new PrintWriter("doubleCar.pt")
+        writer.write(source)
+        writer.close()
+      case _ => ()
+    }
+    println(tacticResult)
+  })
+
   it should "work for ETCS dI-ified proof" in withMathematica (_ => {
     val fml = "    v^2<=2*b()*(m-x) & v>=0  & A()>=0 & b()>0-> [{{?(2*b()*(m-x) >= v^2+(A()+b())*(A()*ep()^2+2*ep()*v)); a:=A(); ++ a:=-b(); } t := 0;{x'=v, v'=a, t'=1 & v>=0 & t<=ep()}}*@invariant(v^2<=2*b()*(m-x))] x <= m".asFormula
     val tac = BelleParser("implyR(1) ; loop({`v^2<=2*b()*(m-x)`}, 1) ; <(closeId, QE,composeb(1) ; choiceb(1) ;andR(1) ; <(composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; composeb(1) ; assignb(1) ; dC({`2*b()*(m-x)>=v^2+(A()+b())*(A()*(ep()-t)^2+2*(ep()-t)*v)`}, 1) ; <(dW(1) ; QE,dI(1)), assignb(1) ; composeb(1) ; assignb(1) ; dI(1)))")
@@ -176,7 +236,7 @@ class ProofTermCheckerTests extends TacticTestBase {
         val writer = new PrintWriter("velocityCar.pt")
         writer.write(source)
         writer.close()
-        println(source)
+        //println(source)
     }})
 
   it should "convert CPP'17 example" in withMathematica(_ => {
@@ -352,7 +412,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     println("Time taken(seconds): "+ (end-start)/1000.0)
   }
 
-  /*it should "parse velocityCar" in {
+  it should "parse velocityCar" in {
     val path = "/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"
     val str = Source.fromFile(path).mkString
     val start = System.currentTimeMillis()
@@ -360,5 +420,5 @@ class ProofTermCheckerTests extends TacticTestBase {
     val end = System.currentTimeMillis()
     println("Time taken(seconds): "+ (end-start)/1000.0)
 
-  }*/
+  }
 }

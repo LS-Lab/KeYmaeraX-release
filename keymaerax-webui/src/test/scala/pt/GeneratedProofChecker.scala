@@ -928,7 +928,7 @@ object USubst {
       case (Syntax.OSing(x, theta), sigma) =>
         Syntax.OSing[C, A](x, TsubstFO[A, B, C](theta, sigma))
       case (Syntax.OProd(oDE1, oDE2), sigma) =>
-        Syntax.OProd[A, C](OsubstFO[A, B, C](oDE1, sigma),
+        Syntax.oprod[A, C](OsubstFO[A, B, C](oDE1, sigma),
           OsubstFO[A, B, C](oDE2, sigma))
     }
 
@@ -1094,7 +1094,7 @@ object USubst {
       case (Syntax.OSing(x, theta), sigma) =>
         Syntax.OSing[B, A](x, Tsubst[A, B, C](theta, sigma))
       case (Syntax.OProd(oDE1, oDE2), sigma) =>
-        Syntax.OProd[A, B](Osubst[A, B, C](oDE1, sigma),
+        Syntax.oprod[A, B](Osubst[A, B, C](oDE1, sigma),
           Osubst[A, B, C](oDE2, sigma))
     }
 
@@ -1363,31 +1363,207 @@ object Scratch {
   final case class i9() extends myvars
   final case class i10() extends myvars
   final case class i11() extends myvars
+  final case class i12() extends myvars
+  final case class i13() extends myvars
+  final case class i14() extends myvars
+  final case class i15() extends myvars
+  final case class i16() extends myvars
+  final case class i17() extends myvars
+  final case class i18() extends myvars
+  final case class i19() extends myvars
+  final case class i20() extends myvars
+
 
   def enum_all_myvars(p: myvars => Boolean): Boolean =
     Lista.list_all[myvars](p, List(i1(), i2(), i3(), i4(), i5(), i6(), i7(), i8(),
-      i9(), i10(), i11()))
+      i9(), i10(), i11(), i12(), i13(), i14(),
+      i15(), i16(), i17(), i18(), i19(), i20()))
 
   def enum_ex_myvars(p: myvars => Boolean): Boolean =
     Lista.list_ex[myvars](p, List(i1(), i2(), i3(), i4(), i5(), i6(), i7(), i8(),
-      i9(), i10(), i11()))
+      i9(), i10(), i11(), i12(), i13(), i14(), i15(),
+      i16(), i17(), i18(), i19(), i20()))
 
   def enum_myvarsa: List[myvars] =
-    List(i1(), i2(), i3(), i4(), i5(), i6(), i7(), i8(), i9(), i10(), i11())
+    List(i1(), i2(), i3(), i4(), i5(), i6(), i7(), i8(), i9(), i10(), i11(),
+      i12(), i13(), i14(), i15(), i16(), i17(), i18(), i19(), i20())
+
 
   def equal_myvarsa(x0: myvars, x1: myvars): Boolean = (x0, x1) match {
+    case (i19(), i20()) => false
+    case (i20(), i19()) => false
+    case (i18(), i20()) => false
+    case (i20(), i18()) => false
+    case (i18(), i19()) => false
+    case (i19(), i18()) => false
+    case (i17(), i20()) => false
+    case (i20(), i17()) => false
+    case (i17(), i19()) => false
+    case (i19(), i17()) => false
+    case (i17(), i18()) => false
+    case (i18(), i17()) => false
+    case (i16(), i20()) => false
+    case (i20(), i16()) => false
+    case (i16(), i19()) => false
+    case (i19(), i16()) => false
+    case (i16(), i18()) => false
+    case (i18(), i16()) => false
+    case (i16(), i17()) => false
+    case (i17(), i16()) => false
+    case (i15(), i20()) => false
+    case (i20(), i15()) => false
+    case (i15(), i19()) => false
+    case (i19(), i15()) => false
+    case (i15(), i18()) => false
+    case (i18(), i15()) => false
+    case (i15(), i17()) => false
+    case (i17(), i15()) => false
+    case (i15(), i16()) => false
+    case (i16(), i15()) => false
+    case (i14(), i20()) => false
+    case (i20(), i14()) => false
+    case (i14(), i19()) => false
+    case (i19(), i14()) => false
+    case (i14(), i18()) => false
+    case (i18(), i14()) => false
+    case (i14(), i17()) => false
+    case (i17(), i14()) => false
+    case (i14(), i16()) => false
+    case (i16(), i14()) => false
+    case (i14(), i15()) => false
+    case (i15(), i14()) => false
+    case (i13(), i20()) => false
+    case (i20(), i13()) => false
+    case (i13(), i19()) => false
+    case (i19(), i13()) => false
+    case (i13(), i18()) => false
+    case (i18(), i13()) => false
+    case (i13(), i17()) => false
+    case (i17(), i13()) => false
+    case (i13(), i16()) => false
+    case (i16(), i13()) => false
+    case (i13(), i15()) => false
+    case (i15(), i13()) => false
+    case (i13(), i14()) => false
+    case (i14(), i13()) => false
+    case (i12(), i20()) => false
+    case (i20(), i12()) => false
+    case (i12(), i19()) => false
+    case (i19(), i12()) => false
+    case (i12(), i18()) => false
+    case (i18(), i12()) => false
+    case (i12(), i17()) => false
+    case (i17(), i12()) => false
+    case (i12(), i16()) => false
+    case (i16(), i12()) => false
+    case (i12(), i15()) => false
+    case (i15(), i12()) => false
+    case (i12(), i14()) => false
+    case (i14(), i12()) => false
+    case (i12(), i13()) => false
+    case (i13(), i12()) => false
+    case (i11(), i20()) => false
+    case (i20(), i11()) => false
+    case (i11(), i19()) => false
+    case (i19(), i11()) => false
+    case (i11(), i18()) => false
+    case (i18(), i11()) => false
+    case (i11(), i17()) => false
+    case (i17(), i11()) => false
+    case (i11(), i16()) => false
+    case (i16(), i11()) => false
+    case (i11(), i15()) => false
+    case (i15(), i11()) => false
+    case (i11(), i14()) => false
+    case (i14(), i11()) => false
+    case (i11(), i13()) => false
+    case (i13(), i11()) => false
+    case (i11(), i12()) => false
+    case (i12(), i11()) => false
+    case (i10(), i20()) => false
+    case (i20(), i10()) => false
+    case (i10(), i19()) => false
+    case (i19(), i10()) => false
+    case (i10(), i18()) => false
+    case (i18(), i10()) => false
+    case (i10(), i17()) => false
+    case (i17(), i10()) => false
+    case (i10(), i16()) => false
+    case (i16(), i10()) => false
+    case (i10(), i15()) => false
+    case (i15(), i10()) => false
+    case (i10(), i14()) => false
+    case (i14(), i10()) => false
+    case (i10(), i13()) => false
+    case (i13(), i10()) => false
+    case (i10(), i12()) => false
+    case (i12(), i10()) => false
     case (i10(), i11()) => false
     case (i11(), i10()) => false
+    case (i9(), i20()) => false
+    case (i20(), i9()) => false
+    case (i9(), i19()) => false
+    case (i19(), i9()) => false
+    case (i9(), i18()) => false
+    case (i18(), i9()) => false
+    case (i9(), i17()) => false
+    case (i17(), i9()) => false
+    case (i9(), i16()) => false
+    case (i16(), i9()) => false
+    case (i9(), i15()) => false
+    case (i15(), i9()) => false
+    case (i9(), i14()) => false
+    case (i14(), i9()) => false
+    case (i9(), i13()) => false
+    case (i13(), i9()) => false
+    case (i9(), i12()) => false
+    case (i12(), i9()) => false
     case (i9(), i11()) => false
     case (i11(), i9()) => false
     case (i9(), i10()) => false
     case (i10(), i9()) => false
+    case (i8(), i20()) => false
+    case (i20(), i8()) => false
+    case (i8(), i19()) => false
+    case (i19(), i8()) => false
+    case (i8(), i18()) => false
+    case (i18(), i8()) => false
+    case (i8(), i17()) => false
+    case (i17(), i8()) => false
+    case (i8(), i16()) => false
+    case (i16(), i8()) => false
+    case (i8(), i15()) => false
+    case (i15(), i8()) => false
+    case (i8(), i14()) => false
+    case (i14(), i8()) => false
+    case (i8(), i13()) => false
+    case (i13(), i8()) => false
+    case (i8(), i12()) => false
+    case (i12(), i8()) => false
     case (i8(), i11()) => false
     case (i11(), i8()) => false
     case (i8(), i10()) => false
     case (i10(), i8()) => false
     case (i8(), i9()) => false
     case (i9(), i8()) => false
+    case (i7(), i20()) => false
+    case (i20(), i7()) => false
+    case (i7(), i19()) => false
+    case (i19(), i7()) => false
+    case (i7(), i18()) => false
+    case (i18(), i7()) => false
+    case (i7(), i17()) => false
+    case (i17(), i7()) => false
+    case (i7(), i16()) => false
+    case (i16(), i7()) => false
+    case (i7(), i15()) => false
+    case (i15(), i7()) => false
+    case (i7(), i14()) => false
+    case (i14(), i7()) => false
+    case (i7(), i13()) => false
+    case (i13(), i7()) => false
+    case (i7(), i12()) => false
+    case (i12(), i7()) => false
     case (i7(), i11()) => false
     case (i11(), i7()) => false
     case (i7(), i10()) => false
@@ -1396,6 +1572,24 @@ object Scratch {
     case (i9(), i7()) => false
     case (i7(), i8()) => false
     case (i8(), i7()) => false
+    case (i6(), i20()) => false
+    case (i20(), i6()) => false
+    case (i6(), i19()) => false
+    case (i19(), i6()) => false
+    case (i6(), i18()) => false
+    case (i18(), i6()) => false
+    case (i6(), i17()) => false
+    case (i17(), i6()) => false
+    case (i6(), i16()) => false
+    case (i16(), i6()) => false
+    case (i6(), i15()) => false
+    case (i15(), i6()) => false
+    case (i6(), i14()) => false
+    case (i14(), i6()) => false
+    case (i6(), i13()) => false
+    case (i13(), i6()) => false
+    case (i6(), i12()) => false
+    case (i12(), i6()) => false
     case (i6(), i11()) => false
     case (i11(), i6()) => false
     case (i6(), i10()) => false
@@ -1406,6 +1600,24 @@ object Scratch {
     case (i8(), i6()) => false
     case (i6(), i7()) => false
     case (i7(), i6()) => false
+    case (i5(), i20()) => false
+    case (i20(), i5()) => false
+    case (i5(), i19()) => false
+    case (i19(), i5()) => false
+    case (i5(), i18()) => false
+    case (i18(), i5()) => false
+    case (i5(), i17()) => false
+    case (i17(), i5()) => false
+    case (i5(), i16()) => false
+    case (i16(), i5()) => false
+    case (i5(), i15()) => false
+    case (i15(), i5()) => false
+    case (i5(), i14()) => false
+    case (i14(), i5()) => false
+    case (i5(), i13()) => false
+    case (i13(), i5()) => false
+    case (i5(), i12()) => false
+    case (i12(), i5()) => false
     case (i5(), i11()) => false
     case (i11(), i5()) => false
     case (i5(), i10()) => false
@@ -1418,6 +1630,24 @@ object Scratch {
     case (i7(), i5()) => false
     case (i5(), i6()) => false
     case (i6(), i5()) => false
+    case (i4(), i20()) => false
+    case (i20(), i4()) => false
+    case (i4(), i19()) => false
+    case (i19(), i4()) => false
+    case (i4(), i18()) => false
+    case (i18(), i4()) => false
+    case (i4(), i17()) => false
+    case (i17(), i4()) => false
+    case (i4(), i16()) => false
+    case (i16(), i4()) => false
+    case (i4(), i15()) => false
+    case (i15(), i4()) => false
+    case (i4(), i14()) => false
+    case (i14(), i4()) => false
+    case (i4(), i13()) => false
+    case (i13(), i4()) => false
+    case (i4(), i12()) => false
+    case (i12(), i4()) => false
     case (i4(), i11()) => false
     case (i11(), i4()) => false
     case (i4(), i10()) => false
@@ -1432,6 +1662,24 @@ object Scratch {
     case (i6(), i4()) => false
     case (i4(), i5()) => false
     case (i5(), i4()) => false
+    case (i3(), i20()) => false
+    case (i20(), i3()) => false
+    case (i3(), i19()) => false
+    case (i19(), i3()) => false
+    case (i3(), i18()) => false
+    case (i18(), i3()) => false
+    case (i3(), i17()) => false
+    case (i17(), i3()) => false
+    case (i3(), i16()) => false
+    case (i16(), i3()) => false
+    case (i3(), i15()) => false
+    case (i15(), i3()) => false
+    case (i3(), i14()) => false
+    case (i14(), i3()) => false
+    case (i3(), i13()) => false
+    case (i13(), i3()) => false
+    case (i3(), i12()) => false
+    case (i12(), i3()) => false
     case (i3(), i11()) => false
     case (i11(), i3()) => false
     case (i3(), i10()) => false
@@ -1448,6 +1696,24 @@ object Scratch {
     case (i5(), i3()) => false
     case (i3(), i4()) => false
     case (i4(), i3()) => false
+    case (i2(), i20()) => false
+    case (i20(), i2()) => false
+    case (i2(), i19()) => false
+    case (i19(), i2()) => false
+    case (i2(), i18()) => false
+    case (i18(), i2()) => false
+    case (i2(), i17()) => false
+    case (i17(), i2()) => false
+    case (i2(), i16()) => false
+    case (i16(), i2()) => false
+    case (i2(), i15()) => false
+    case (i15(), i2()) => false
+    case (i2(), i14()) => false
+    case (i14(), i2()) => false
+    case (i2(), i13()) => false
+    case (i13(), i2()) => false
+    case (i2(), i12()) => false
+    case (i12(), i2()) => false
     case (i2(), i11()) => false
     case (i11(), i2()) => false
     case (i2(), i10()) => false
@@ -1466,6 +1732,24 @@ object Scratch {
     case (i4(), i2()) => false
     case (i2(), i3()) => false
     case (i3(), i2()) => false
+    case (i1(), i20()) => false
+    case (i20(), i1()) => false
+    case (i1(), i19()) => false
+    case (i19(), i1()) => false
+    case (i1(), i18()) => false
+    case (i18(), i1()) => false
+    case (i1(), i17()) => false
+    case (i17(), i1()) => false
+    case (i1(), i16()) => false
+    case (i16(), i1()) => false
+    case (i1(), i15()) => false
+    case (i15(), i1()) => false
+    case (i1(), i14()) => false
+    case (i14(), i1()) => false
+    case (i1(), i13()) => false
+    case (i13(), i1()) => false
+    case (i1(), i12()) => false
+    case (i12(), i1()) => false
     case (i1(), i11()) => false
     case (i11(), i1()) => false
     case (i1(), i10()) => false
@@ -1486,6 +1770,15 @@ object Scratch {
     case (i3(), i1()) => false
     case (i1(), i2()) => false
     case (i2(), i1()) => false
+    case (i20(), i20()) => true
+    case (i19(), i19()) => true
+    case (i18(), i18()) => true
+    case (i17(), i17()) => true
+    case (i16(), i16()) => true
+    case (i15(), i15()) => true
+    case (i14(), i14()) => true
+    case (i13(), i13()) => true
+    case (i12(), i12()) => true
     case (i11(), i11()) => true
     case (i10(), i10()) => true
     case (i9(), i9()) => true
@@ -1584,6 +1877,8 @@ object Scratch {
     else List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))),
       String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.One()))))))))))
 
+  val PRINT_ASSOC = true
+
   def ddl_ode_to_string(x0: Syntax.ODE[myvars, myvars]): List[String.char] = x0
   match {
     case Syntax.OVar(x) => ddl_oid_to_string(x)
@@ -1593,10 +1888,12 @@ object Scratch {
           (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
             ddl_trm_to_string(t)))
     case Syntax.OProd(oDE1, oDE2) =>
+      (if(PRINT_ASSOC) "{" else "").toList.map(String.Char.ofChar) ++
       ddl_ode_to_string(oDE1) ++
         (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
           String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
-          ddl_ode_to_string(oDE2))
+          ddl_ode_to_string(oDE2)) ++
+      (if(PRINT_ASSOC) "}" else "").toList.map(String.Char.ofChar)
   }
 
   def ddl_ppid_to_string(vid: myvars): List[String.char] =
@@ -4798,7 +5095,7 @@ object Scratch {
       case (x, y, Syntax.OSing(z, theta)) =>
         Syntax.OSing[myvars, myvars](ddl_swap(x, y, z), ddl_TUrename(x, y, theta))
       case (x, y, Syntax.OProd(oDE1, oDE2)) =>
-        Syntax.OProd[myvars,
+        Syntax.oprod[myvars,
           myvars](ddl_OUrename(x, y, oDE1), ddl_OUrename(x, y, oDE2))
     }
 
@@ -9772,6 +10069,7 @@ object Scratch {
           myvars](x, ddl_f1(i1(), x)),
           ddl_P(i1()))))
 
+
   def ddl_DGaxiom: Syntax.formula[myvars, myvars, myvars] =
     Syntax.Equiv[myvars, myvars,
       myvars](Syntax.Box[myvars, myvars,
@@ -9782,7 +10080,7 @@ object Scratch {
       Syntax.Exists[myvars, myvars,
         myvars](y, Syntax.Box[myvars, myvars,
         myvars](Syntax.EvolveODE[myvars, myvars,
-        myvars](Syntax.OProd[myvars,
+        myvars](Syntax.oprod[myvars,
         myvars](Syntax.OSing[myvars,
         myvars](x, ddl_f1(i1(), x)),
         Syntax.OSing[myvars,
@@ -10121,11 +10419,12 @@ object Scratch {
       Syntax.Prop[myvars, myvars, myvars](x, Syntax.empty[myvars, myvars])),
       Syntax.TT[myvars, myvars, myvars])
 
+
   def ddl_DiffEffectSysAxiom: Syntax.formula[myvars, myvars, myvars] =
     Syntax.Equiv[myvars, myvars,
       myvars](Syntax.Box[myvars, myvars,
       myvars](Syntax.EvolveODE[myvars, myvars,
-      myvars](Syntax.OProd[myvars,
+      myvars](Syntax.oprod[myvars,
       myvars](Syntax.OSing[myvars,
       myvars](x, Syntax.Functional[myvars, myvars](i1())),
       Syntax.OVar[myvars, myvars](x)),
@@ -10133,7 +10432,7 @@ object Scratch {
       ddl_P(i1())),
       Syntax.Box[myvars, myvars,
         myvars](Syntax.EvolveODE[myvars, myvars,
-        myvars](Syntax.OProd[myvars,
+        myvars](Syntax.oprod[myvars,
         myvars](Syntax.OVar[myvars, myvars](x),
         Syntax.OSing[myvars,
           myvars](x, Syntax.Functional[myvars,
@@ -10414,14 +10713,14 @@ object Scratch {
               i))
               fail() else
               {val ress = ddl_rule_result(res, (i, ra))
-                ress match {case None => () case Some(rule) => println("Rule app result: ("+ra+"): "  + ddl_rule_to_string(rule).mkString)}
+                ress match {case None => () case Some(rule) => if(PRINT_ALL_RESULTS) { println("Rule app result: ("+ra+"): "  + ddl_rule_to_string(rule).mkString)}}
                 ress
               }
                 )
         })
       case Proof_Checker.AxRule(ar) =>
       {val res = ddl_get_axrule(ar)
-        println("Rule app result:" + ddl_rule_to_string(res).mkString)
+        if(PRINT_ALL_RESULTS) {println("Rule app result:" + ddl_rule_to_string(res).mkString)}
         Some[(List[(List[Syntax.formula[myvars, myvars, myvars]],
           List[Syntax.formula[myvars, myvars, myvars]])],
           (List[Syntax.formula[myvars, myvars, myvars]],
@@ -10433,7 +10732,7 @@ object Scratch {
           case Some(res) =>
             (if ((ddl_ssafe(sub) && ddl_Radmit(sub, res))|| true) {
               val ress = ddl_Rsubst(res, sub)
-              println("USubst result:" + ddl_rule_to_string(ress).mkString)
+              if(PRINT_ALL_RESULTS) {println("USubst result:" + ddl_rule_to_string(ress).mkString)}
               Some[(List[(List[Syntax.formula[myvars, myvars, myvars]],
                 List[Syntax.formula[myvars, myvars, myvars]])],
                 (List[Syntax.formula[myvars, myvars, myvars]],
@@ -10444,7 +10743,7 @@ object Scratch {
         })
       case Proof_Checker.Ax(a) => {
         val res = ddl_get_axiom(a)
-        println(s"Ax ($a):" + ddl_rule_to_string((Nil,(Nil,List(res)))).mkString)
+        if(PRINT_ALL_RESULTS) {println(s"Ax ($a):" + ddl_rule_to_string((Nil,(Nil,List(res)))).mkString)}
         Some[(List[(List[Syntax.formula[myvars, myvars, myvars]],
           List[Syntax.formula[myvars, myvars, myvars]])],
           (List[Syntax.formula[myvars, myvars, myvars]],
@@ -10457,7 +10756,7 @@ object Scratch {
           case None => fail()
           case Some(res) => {
             val ress = ddl_fnc(res, seq, ra)
-            ress match {case Some(ress) => println("FNC:" + ddl_rule_to_string(ress).mkString) case None => ()}
+            ress match {case Some(ress) => if(PRINT_ALL_RESULTS) {println("FNC:" + ddl_rule_to_string(ress).mkString)} case None => ()}
             ress
           }
         })
@@ -10479,14 +10778,14 @@ object Scratch {
               case None => fail()
               case Some(res1) => {
                 val res = ddl_pro(res1, res2)
-                res match {case Some(ress) => println("Pro:" + ddl_rule_to_string(ress).mkString) case None => ()}
+                res match {case Some(ress) => if(PRINT_ALL_RESULTS) {println("Pro:" + ddl_rule_to_string(ress).mkString)} case None => ()}
                 res
               }
             }))
         })
       case Proof_Checker.Start(f) => {
         val res = ddl_start_proof(f)
-        println("Start:" + ddl_rule_to_string(res).mkString)
+        if(PRINT_ALL_RESULTS) {println("Start:" + ddl_rule_to_string(res).mkString)}
         Some[(List[(List[Syntax.formula[myvars, myvars, myvars]],
           List[Syntax.formula[myvars, myvars, myvars]])],
           (List[Syntax.formula[myvars, myvars, myvars]],
@@ -10508,11 +10807,11 @@ object Scratch {
               fail() else (ddl_pt_result(pt2) match {
               case None => fail()
               case Some(res2) => {
-                println("SubL:" + ddl_rule_to_string(res1).mkString)
-                println("SubR:" + ddl_rule_to_string(res2).mkString)
-                println("Merge index:" + i)
+                if(PRINT_ALL_RESULTS) {println("SubL:" + ddl_rule_to_string(res1).mkString)}
+                if(PRINT_ALL_RESULTS) {println("SubR:" + ddl_rule_to_string(res2).mkString)}
+                if(PRINT_ALL_RESULTS) {println("Merge index:" + i)}
                 val res = ddl_merge_rules(res1, res2, i)
-                res match {case Some(ress) => println("Sub:" + ddl_rule_to_string(ress).mkString) case None => ()}
+                res match {case Some(ress) => if(PRINT_ALL_RESULTS) {println("Sub:" + ddl_rule_to_string(ress).mkString)} case None => ()}
                 res
 
               }
@@ -11108,6 +11407,12 @@ object Syntax {
   def fsafe[A, B, C : Enum.enum : HOL.equal](x1: formula[A, B, C]): Boolean =
     Predicate.holds(Scratch.fsafe_i[A, B, C](x1))
 
+  def oprod[A, B](x0: ODE[A, B], oDE2: ODE[A, B]): ODE[A, B] = (x0, oDE2) match {
+    case (OSing(x, t), oDE2) => OProd[A, B](OSing[B, A](x, t), oDE2)
+    case (OVar(c), oDE2) => OProd[A, B](OVar[B, A](c), oDE2)
+    case (OProd(ll, lr), oDE2) => oprod[A, B](ll, oprod[A, B](lr, oDE2))
+  }
+
   def osafe[A, B : Enum.enum : HOL.equal](x1: ODE[A, B]): Boolean =
     Predicate.holds(Scratch.osafe_i[A, B](x1))
 
@@ -11246,7 +11551,16 @@ object Parser {
     ("i8",i8()),
     ("i9",i9()),
     ("i10",i10()),
-    ("i11",i11())
+    ("i11",i11()),
+    ("i12",i12()),
+    ("i13",i13()),
+    ("i14",i14()),
+    ("i15",i15()),
+    ("i16",i16()),
+    ("i17",i17()),
+    ("i18",i18()),
+    ("i19",i19()),
+    ("i20",i20())
   )
 
   val intOfId:Map[myvars,Int] = Map(
@@ -11260,7 +11574,16 @@ object Parser {
     (i8(),7),
     (i9(),8),
     (i10(),9),
-    (i11(),10)
+    (i11(),10),
+    (i12(),11),
+    (i13(),12),
+    (i14(),13),
+    (i15(),14),
+    (i16(),15),
+    (i17(),16),
+    (i18(),17),
+    (i19(),18),
+    (i20(),19)
 
   )
 
@@ -11887,7 +12210,7 @@ object GeneratedProofChecker {
   import Scratch._
   import Sum_Type._
   def main(input : Array[String]) = {
-    val path = if(input.isEmpty) {"/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"}  else input(0) //e.g. "/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"
+    val path = if(input.isEmpty) {"/usr0/home/bbohrer/KeYmaeraX/monocars.pt"  /*"/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"*/}  else input(0) //e.g. "/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"
     val str = Source.fromFile(path).mkString
     val start = System.currentTimeMillis()
     val (term,_) = Parser.proofTerm(str,0)
