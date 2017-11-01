@@ -10293,14 +10293,12 @@ object Scratch {
     Syntax.Equals[myvars, myvars,
       myvars](Syntax.Differential[myvars,
       myvars](Syntax.Minus[myvars,
-      myvars](Syntax.Functional[myvars, myvars](i1()),
-      Syntax.Functional[myvars, myvars](i2()))),
+      myvars](Syntax.DFunl[myvars, myvars](i1()),
+      Syntax.DFunl[myvars, myvars](i2()))),
       Syntax.Minus[myvars,
-        myvars](Syntax.Differential[myvars,
-        myvars](Syntax.Functional[myvars, myvars](i1())),
+        myvars](Syntax.Differential[myvars, myvars](Syntax.DFunl[myvars, myvars](i1())),
         Syntax.Differential[myvars,
-          myvars](Syntax.Functional[myvars, myvars](i2()))))
-
+          myvars](Syntax.DFunl[myvars, myvars](i2()))))
 
   def ddl_constFcongAxiom: Syntax.formula[myvars, myvars, myvars] =
     Syntax.Implies[myvars, myvars,
@@ -10325,11 +10323,11 @@ object Scratch {
       myvars](Syntax.Times[myvars,
       myvars](Syntax.Function[myvars,
       myvars](i2(), Syntax.empty[myvars, myvars]),
-      Syntax.Functional[myvars, myvars](i1()))),
+      Syntax.DFunl[myvars, myvars](i1()))),
       Syntax.Times[myvars,
         myvars](Syntax.Function[myvars, myvars](i2(), Syntax.empty[myvars, myvars]),
         Syntax.Differential[myvars,
-          myvars](Syntax.Functional[myvars, myvars](i1()))))
+          myvars](Syntax.DFunl[myvars, myvars](i1()))))
 
   def ddl_diff_var_axiom: Syntax.formula[myvars, myvars, myvars] =
     Syntax.Equals[myvars, myvars,
@@ -10425,8 +10423,7 @@ object Scratch {
       myvars](Syntax.Box[myvars, myvars,
       myvars](Syntax.EvolveODE[myvars, myvars,
       myvars](Syntax.oprod[myvars,
-      myvars](Syntax.OSing[myvars,
-      myvars](x, Syntax.Functional[myvars, myvars](i1())),
+      myvars](Syntax.OSing[myvars, myvars](x, Syntax.DFunl[myvars, myvars](i1())),
       Syntax.OVar[myvars, myvars](x)),
       ddl_P(i2())),
       ddl_P(i1())),
@@ -10435,12 +10432,11 @@ object Scratch {
         myvars](Syntax.oprod[myvars,
         myvars](Syntax.OVar[myvars, myvars](x),
         Syntax.OSing[myvars,
-          myvars](x, Syntax.Functional[myvars,
-          myvars](i1()))),
+          myvars](x, Syntax.DFunl[myvars, myvars](i1()))),
         ddl_P(i2())),
         Syntax.Box[myvars, myvars,
           myvars](Syntax.DiffAssign[myvars, myvars,
-          myvars](x, Syntax.Functional[myvars, myvars](i1())),
+          myvars](x, Syntax.DFunl[myvars, myvars](i1())),
           ddl_P(i1()))))
 
   def ddl_diff_assign_axiom: Syntax.formula[myvars, myvars, myvars] =
@@ -10685,12 +10681,17 @@ object Scratch {
       case Proof_Checker.monb() => ddl_monbrule
     }
 
+
+  var which_subst = 0
+  var stepsStarted = 0
   def ddl_pt_result(x0: Proof_Checker.pt[myvars, myvars, myvars]):
   Option[(List[(List[Syntax.formula[myvars, myvars, myvars]],
     List[Syntax.formula[myvars, myvars, myvars]])],
     (List[Syntax.formula[myvars, myvars, myvars]],
       List[Syntax.formula[myvars, myvars, myvars]]))]
-  =
+  = {
+    stepsStarted = stepsStarted + 1
+    if(stepsStarted % 25 == 0) println("Step count: " + stepsStarted)
     x0 match {
       case Proof_Checker.FOLRConstant(f) =>
         Some[(List[(List[Syntax.formula[myvars, myvars, myvars]],
@@ -10711,16 +10712,23 @@ object Scratch {
               (List[Syntax.formula[myvars, myvars, myvars]],
                 List[Syntax.formula[myvars, myvars, myvars]])](res)),
               i))
-              fail() else
-              {val ress = ddl_rule_result(res, (i, ra))
-                ress match {case None => () case Some(rule) => if(PRINT_ALL_RESULTS) { println("Rule app result: ("+ra+"): "  + ddl_rule_to_string(rule).mkString)}}
-                ress
+              fail() else {
+              val ress = ddl_rule_result(res, (i, ra))
+              ress match {
+                case None => ()
+                case Some(rule) => if (PRINT_ALL_RESULTS) {
+                  println("Rule app result: (" + ra + "): " + ddl_rule_to_string(rule).mkString)
+                }
               }
-                )
+              ress
+            }
+              )
         })
-      case Proof_Checker.AxRule(ar) =>
-      {val res = ddl_get_axrule(ar)
-        if(PRINT_ALL_RESULTS) {println("Rule app result:" + ddl_rule_to_string(res).mkString)}
+      case Proof_Checker.AxRule(ar) => {
+        val res = ddl_get_axrule(ar)
+        if (PRINT_ALL_RESULTS) {
+          println("Rule app result:" + ddl_rule_to_string(res).mkString)
+        }
         Some[(List[(List[Syntax.formula[myvars, myvars, myvars]],
           List[Syntax.formula[myvars, myvars, myvars]])],
           (List[Syntax.formula[myvars, myvars, myvars]],
@@ -10730,20 +10738,29 @@ object Scratch {
         (ddl_pt_result(pt) match {
           case None => fail()
           case Some(res) =>
-            (if ((ddl_ssafe(sub) && ddl_Radmit(sub, res))|| true) {
+            (if ((ddl_ssafe(sub) && ddl_Radmit(sub, res)) || true) {
               val ress = ddl_Rsubst(res, sub)
-              if(PRINT_ALL_RESULTS) {println("USubst result:" + ddl_rule_to_string(ress).mkString)}
+              if(which_subst == 57) {
+                val 2 = 1 + 1
+              }
+              if (PRINT_ALL_RESULTS) {
+                println(s"USubst ($which_subst) result:" + ddl_rule_to_string(ress).mkString)
+                which_subst = which_subst + 1
+              }
               Some[(List[(List[Syntax.formula[myvars, myvars, myvars]],
                 List[Syntax.formula[myvars, myvars, myvars]])],
                 (List[Syntax.formula[myvars, myvars, myvars]],
                   List[Syntax.formula[myvars, myvars,
-                    myvars]]))](ress)}
+                    myvars]]))](ress)
+            }
             else
               fail())
         })
       case Proof_Checker.Ax(a) => {
         val res = ddl_get_axiom(a)
-        if(PRINT_ALL_RESULTS) {println(s"Ax ($a):" + ddl_rule_to_string((Nil,(Nil,List(res)))).mkString)}
+        if (PRINT_ALL_RESULTS) {
+          println(s"Ax ($a):" + ddl_rule_to_string((Nil, (Nil, List(res)))).mkString)
+        }
         Some[(List[(List[Syntax.formula[myvars, myvars, myvars]],
           List[Syntax.formula[myvars, myvars, myvars]])],
           (List[Syntax.formula[myvars, myvars, myvars]],
@@ -10756,7 +10773,12 @@ object Scratch {
           case None => fail()
           case Some(res) => {
             val ress = ddl_fnc(res, seq, ra)
-            ress match {case Some(ress) => if(PRINT_ALL_RESULTS) {println("FNC:" + ddl_rule_to_string(ress).mkString)} case None => ()}
+            ress match {
+              case Some(ress) => if (PRINT_ALL_RESULTS) {
+                println("FNC:" + ddl_rule_to_string(ress).mkString)
+              }
+              case None => ()
+            }
             ress
           }
         })
@@ -10764,7 +10786,7 @@ object Scratch {
         (ddl_pt_result(pt2) match {
           case None => fail()
           case Some(res2) =>
-            (if (! (Nat.equal_nat(Nat.one_nat,
+            (if (!(Nat.equal_nat(Nat.one_nat,
               Lista.size_list[(List[Syntax.formula[myvars,
                 myvars, myvars]],
                 List[Syntax.formula[myvars, myvars,
@@ -10778,14 +10800,21 @@ object Scratch {
               case None => fail()
               case Some(res1) => {
                 val res = ddl_pro(res1, res2)
-                res match {case Some(ress) => if(PRINT_ALL_RESULTS) {println("Pro:" + ddl_rule_to_string(ress).mkString)} case None => ()}
+                res match {
+                  case Some(ress) => if (PRINT_ALL_RESULTS) {
+                    println("Pro:" + ddl_rule_to_string(ress).mkString)
+                  }
+                  case None => ()
+                }
                 res
               }
             }))
         })
       case Proof_Checker.Start(f) => {
         val res = ddl_start_proof(f)
-        if(PRINT_ALL_RESULTS) {println("Start:" + ddl_rule_to_string(res).mkString)}
+        if (PRINT_ALL_RESULTS) {
+          println("Start:" + ddl_rule_to_string(res).mkString)
+        }
         Some[(List[(List[Syntax.formula[myvars, myvars, myvars]],
           List[Syntax.formula[myvars, myvars, myvars]])],
           (List[Syntax.formula[myvars, myvars, myvars]],
@@ -10807,18 +10836,29 @@ object Scratch {
               fail() else (ddl_pt_result(pt2) match {
               case None => fail()
               case Some(res2) => {
-                if(PRINT_ALL_RESULTS) {println("SubL:" + ddl_rule_to_string(res1).mkString)}
-                if(PRINT_ALL_RESULTS) {println("SubR:" + ddl_rule_to_string(res2).mkString)}
-                if(PRINT_ALL_RESULTS) {println("Merge index:" + i)}
+                if (PRINT_ALL_RESULTS) {
+                  println("SubL:" + ddl_rule_to_string(res1).mkString)
+                }
+                if (PRINT_ALL_RESULTS) {
+                  println("SubR:" + ddl_rule_to_string(res2).mkString)
+                }
+                if (PRINT_ALL_RESULTS) {
+                  println("Merge index:" + i)
+                }
                 val res = ddl_merge_rules(res1, res2, i)
-                res match {case Some(ress) => if(PRINT_ALL_RESULTS) {println("Sub:" + ddl_rule_to_string(ress).mkString)} case None => ()}
+                res match {
+                  case Some(ress) => if (PRINT_ALL_RESULTS) {
+                    println("Sub:" + ddl_rule_to_string(ress).mkString)
+                  }
+                  case None => ()
+                }
                 res
 
               }
             }))
         })
     }
-
+  }
 } /* object Scratch */
 
 object Static_Semantics {
@@ -11110,6 +11150,16 @@ object Syntax {
   abstract sealed class trm[A, B]
   final case class Var[B, A](a: B) extends trm[A, B]
   final case class Const[A, B](a: Real.real) extends trm[A, B]
+  {
+    override def toString():String = {
+      val Real.Ratreal(Rat.Frct((Int.int_of_integer(n),Int.int_of_integer(d)))) = a
+      if(d.intValue() == 1) {
+        n.toString
+      } else {
+        n.toString + "/" + d.toString
+      }
+    }
+  }
   final case class Function[A, B](a: A, b: B => trm[A, B]) extends trm[A, B]
   final case class Functional[A, B](a: A) extends trm[A, B]
   final case class Plus[A, B](a: trm[A, B], b: trm[A, B]) extends trm[A, B]
@@ -11388,6 +11438,9 @@ object Syntax {
 
   def Box[A, B, C](alpha: hp[A, B, C], p: formula[A, B, C]): formula[A, B, C] =
     Not[A, B, C](Diamond[A, B, C](alpha, Not[A, B, C](p)))
+
+  def DFunl[A, B](fid: A): trm[A, B] =
+    Function[A, B](fid, ((a: B) => Var[B, A](a)))
 
   def Equiv[A, B, C](p: formula[A, B, C], q: formula[A, B, C]): formula[A, B, C] =
     Or[A, B,
@@ -12210,7 +12263,7 @@ object GeneratedProofChecker {
   import Scratch._
   import Sum_Type._
   def main(input : Array[String]) = {
-    val path = if(input.isEmpty) {"/usr0/home/bbohrer/KeYmaeraX/monocars.pt"  /*"/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"*/}  else input(0) //e.g. "/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"
+    val path = if(input.isEmpty) {"/usr0/home/bbohrer/KeYmaeraX/velocityCar-defun.pt"  /*"/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"*/}  else input(0) //e.g. "/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"
     val str = Source.fromFile(path).mkString
     val start = System.currentTimeMillis()
     val (term,_) = Parser.proofTerm(str,0)
