@@ -41,8 +41,161 @@ object PolynomialArith {
     *
     * The units are included for now to get a nicer definition??
     *
-    * todo: Add ability to turn off proof generation everywhere
     */
+
+  // Collection of all the axioms used
+  // This should use the basic simplifier that does not do any QE arithmetic
+  private lazy val simp = SimplifierV3.simpTac()
+
+  //These are all basic re-association lemmas for the polynomial normalization
+  private lazy val plusAssoc1 = proveBy("(F_() + G_()) + (A_() + B_()) = ((F_()+G_())+A_())+B_()".asFormula, useAt("= commute")(1) & byUS("+ associative"))
+  //todo: we might get this if the simplifier understood AC rewriting..
+  private lazy val plusAssoc2 = proveBy("(F_() + K_()*M_()) + (A_() + L_()*M_()) = (F_()+A_())+(K_()+L_())*M_()".asFormula,QE & done)
+
+  private lazy val plusCoeff1 = proveBy("K_() = 0 -> (F_() + K_()*M_() = F_())".asFormula, prop & exhaustiveEqL2R(-1) & simp(1) & close)
+  private lazy val plusCoeff2 = proveBy("K_() = L_() -> (F_() + K_()*M_() = F_() + L_()*M_())".asFormula, byUS("const congruence"))
+
+  private lazy val onetimes = useFor(DerivedAxioms.timesCommute.fact, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(DerivedAxioms.timesIdentity.fact)
+  private lazy val timesone = DerivedAxioms.timesIdentity
+
+  private lazy val timesAssoc1 = proveBy("(F_() * G_()) * (A_() * B_()) = ((F_()*G_())*A_())*B_()".asFormula,
+    useAt("= commute")(1) & byUS("* associative"))
+  //todo: we might get this if the simplifier understood AC rewriting..
+  private lazy val timesAssoc2 = proveBy("(F_() * M_()^K_()) * (A_() * M_()^L_()) = (F_()*A_())*M_()^(K_()+L_())".asFormula,QE & done)
+  private lazy val timesAssoc3 = proveBy(("(P_() + C_() * M_()) * (D_() * N_()) = " +
+    "P_() * (D_() * N_()) + (C_() * D_()) * (M_() * N_())").asFormula,QE & done)
+
+  //QE has interesting ideas about X^0
+  private lazy val timesCoeff1Lem = proveBy("F_() = F_() * M_() ^ 0".asFormula,QE & done)
+  private lazy val timesCoeff1 = proveBy("K_() = 0 -> (F_() * M_()^K_() = F_() )".asFormula,
+    useAt(timesCoeff1Lem)(SuccPosition(1,1::1::Nil)) & byUS("const congruence"))
+  private lazy val timesCoeff2 = proveBy("K_() = L_() -> (F_() * M_()^K_() = F_() * M_()^L_())".asFormula,
+    byUS("const congruence"))
+
+  //These are used for iterated squaring
+  private lazy val powLem1 = proveBy("F_()^0 = 1".asFormula,QE & done)
+  private lazy val powLem2 = DerivedAxioms.powOne
+  private lazy val powLem3 = proveBy("(F_()^K_())^2 = F_()^(2*K_())".asFormula,QE & done)
+  private lazy val powLem4 = proveBy("(F_()^K_())^2 * F_() = F_()^(2*K_()+1)".asFormula,QE & done)
+  private lazy val powLem5 = proveBy("K_() = L_() -> (M_()^K_() = M_()^L_())".asFormula,
+    byUS("const congruence"))
+
+  private lazy val negNormalise = proveBy("-P_() = P_() * (-1/1 * 1)".asFormula,SimplifierV3.simpTac()(1) & close)
+  //todo: this could be added to simplifier
+  private lazy val minusNormalise = proveBy("P_()-Q_() = P_() + -(Q_())".asFormula, QE & done)
+  private lazy val powNormalise = proveBy("P_()^2 = P_() * P_()".asFormula, QE & done)
+
+  //todo: this could be added to simplifier
+  private lazy val divNormalise = proveBy(" P_() / Q_()  = (1/Q_()) *P_() ".asFormula,QE & done)
+  //Add ^1 for a variable
+  private lazy val var1Normalise = proveBy("P_() = 0 + (1/1) * (1 * P_()^1)".asFormula, SimplifierV3.simpTac()(1) & close)
+  //Normalization for any variable (or power of variable)
+  private lazy val varNormalise = proveBy("P_() = 0 + (1/1) * (1 * P_())".asFormula,  SimplifierV3.simpTac()(1) & close)
+
+  //todo: These are the key axioms, but they can probably be derived from simplifer things
+  private lazy val zeroGeZero:ProvableSig = proveBy("0>=0".asFormula,RCF)
+  private lazy val plusGeMono: ProvableSig = proveBy("(f_() >= k_() & g_() >= 0) -> f_() + g_() >= k_()".asFormula,QE)
+  private lazy val timesPos: ProvableSig = proveBy("(f_() >= 0 & g_() >= 0) -> f_() * g_() >= 0".asFormula,QE)
+
+  private lazy val neGtSquared : ProvableSig = proveBy(" f_() != 0 & g_() > 0 -> f_()^2 * g_() > 0 ".asFormula,QE )
+  private lazy val plusGtMono: ProvableSig = proveBy("(f_() > k_() & g_() >= 0) -> f_() + g_() > k_()".asFormula,QE)
+
+  private lazy val gtNotZero: ProvableSig = proveBy("f_() > 0 -> !(f_() = 0)".asFormula,
+    prop & exhaustiveEqL2R(-2) & simp(-1) & close)
+  private lazy val axMov: ProvableSig = proveBy("f_() + a_() * g_() = k_() -> (a_() = 0 -> f_() = k_())".asFormula,
+    prop & exhaustiveEqL2R(-2) & simp(-1) & close)
+
+  /**
+    * The rest of the axiomatization
+    */
+
+  // Succedent to antecedent for inequations (rewrite left to right followed by notR)
+  // todo: These can all go into the simplifier
+  private lazy val ltSucc: ProvableSig = proveBy(" f_() < g_() <-> !(f_()>=g_())".asFormula,QE)
+  private lazy val leSucc: ProvableSig = proveBy(" f_() <= g_() <-> !(f_()>g_())".asFormula,QE)
+  private lazy val gtSucc: ProvableSig = proveBy(" f_() > g_() <-> !g_()>=f_()".asFormula,QE)
+  private lazy val geSucc: ProvableSig = proveBy(" f_() >= g_() <-> !g_()>f_()".asFormula,QE)
+  private lazy val eqSucc: ProvableSig = proveBy(" f_() = g_() <-> !g_()!=f_()".asFormula,QE) //Convenient rule for A3
+  private lazy val neSucc: ProvableSig = proveBy(" f_() != g_() <-> !g_()=f_()".asFormula,QE) //Convenient rule for A3
+
+  //(based on note in DerivedAxioms) These require Mathematica QE to prove, will be asserted as axioms
+  //note: these fold = 0 normalisation in as well
+  //todo: do the existsL naming properly
+
+  private lazy val doubleNeg = proveBy("P_() <-> !(!P_())".asFormula,prop)
+
+  private lazy val ltAnte: ProvableSig = proveBy("f_() < g_() <-> \\exists wit_ (f_()-g_())*wit_^2 + 1 = 0".asFormula,QE)
+  private lazy val leAnte: ProvableSig = proveBy("f_() <= g_() <-> \\exists wit_ (f_()-g_()) + wit_^2 = 0".asFormula,QE)
+  private lazy val gtAnte: ProvableSig = proveBy("f_() > g_() <-> \\exists wit_ (f_()-g_())*wit_^2 - 1 = 0".asFormula,QE)
+  private lazy val geAnte: ProvableSig = proveBy("f_() >= g_() <-> \\exists wit_ (f_()-g_()) - wit_^2 = 0".asFormula,QE)
+
+  private lazy val eqAnte: ProvableSig = proveBy("f_() = g_() <-> f_() - g_() = 0".asFormula,QE & done)
+  private lazy val neAnte: ProvableSig = proveBy("f_() != g_() <-> \\exists wit_ (f_()-g_())*wit_ - 1 = 0".asFormula,QE & done)
+
+  //This just makes sorting the assumptions a bit easier
+  private lazy val neAnteZ: ProvableSig = proveBy("f_() != g_() <-> !!(f_()-g_() !=0)".asFormula,QE & done)
+  private lazy val ltAnteZ: ProvableSig = proveBy("f_() < g_() <-> f_() <= g_() & f_() - g_() != 0 ".asFormula,QE)
+  private lazy val gtAnteZ: ProvableSig = proveBy("f_() > g_() <-> f_() >= g_() & f_() - g_() != 0 ".asFormula,QE)
+
+  private lazy val mulZero: ProvableSig = proveBy("g_() != 0 -> (f_() = 0 <-> g_() * f_() = 0)".asFormula,QE & done)
+
+  private lazy val existsOr1 = proveBy("(\\exists x_ p_(x_) | \\exists y_ q_(y_)) <-> (\\exists x_ (p_(x_) |  q_(x_)))".asFormula,
+    prop & OnAll(existsL('L) & prop) <( existsR('R), existsR('R), existsR("y_".asTerm)('R), existsR("x_".asTerm)('Rlast)) & OnAll(prop))
+
+  private lazy val existsSame = proveBy("(\\exists x_ p_(x_) | \\exists x_ q_(x_)) <-> (\\exists x_ (p_(x_) |  q_(x_)))".asFormula,
+    prop & OnAll(existsL('L) & prop) <( existsR('R), existsR('R), existsR("x_".asTerm)('R), existsR("x_".asTerm)('Rlast)) & OnAll(prop))
+
+  private lazy val existsOr2 = proveBy("\\exists x_ p_(x_) | q_() <-> (\\exists x_ (p_(x_) |  q_()))".asFormula,
+    prop & OnAll((existsL('L)*) & (existsR('R)*) & prop))
+
+  private lazy val existsOr3 = proveBy("q_() | \\exists x_ p_(x_) <-> (\\exists x_ (p_(x_) |  q_()))".asFormula,
+    prop & OnAll((existsL('L)*) & (existsR('R)*) & prop))
+
+  private lazy val existsAnd1 = proveBy("(\\exists x_ p_(x_) & \\exists y_ q_(y_)) <-> (\\exists x_ \\exists y_ (p_(x_) & q_(y_)))".asFormula,
+    prop & OnAll((existsL('L)*) & prop) <( existsR('R) & existsR('R) & prop, existsR('R) & prop,existsR('R)&prop))
+
+  private lazy val existsAnd2 = proveBy("(\\exists x_ p_(x_) & q_()) <-> (\\exists x_ (p_(x_) & q_()))".asFormula,
+    prop & OnAll((existsL('L)*) & (existsR('R)*) & prop))
+
+  private lazy val existsAnd3 = proveBy("(q_() & \\exists x_ p_(x_)) <-> (\\exists x_ (p_(x_) & q_()))".asFormula,
+    prop & OnAll((existsL('L)*) & (existsR('R)*) & prop))
+
+  private lazy val existsRename = proveBy("(\\exists x_ p_(x_) & \\exists x_ q_(x_)) <-> (\\exists x_ p_(x_) & \\exists z_ q_(z_))".asFormula,
+    prop & OnAll((existsL('L)*) & prop) <(existsR("x_".asTerm)('R), existsR("z_".asTerm)('R)) & OnAll(prop))
+
+  //A=0 | B = 0 <-> A*B=0
+  //A=0 & B = 0 <-> A^2+B^2=0
+  private lazy val orEqz = proveBy("F_()=0 | G_() =0 <-> F_()*G_()=0".asFormula,QE)
+  private lazy val andEqz = proveBy("F_()=0 & G_() =0 <-> F_()^2 + G_()^2 =0".asFormula,QE)
+
+  private lazy val divEq = proveBy("!(G_()=0) -> F_()/G_() = 0 -> F_() = 0".asFormula,QE)
+  private lazy val divNeq = proveBy("!(G_()=0) -> (F_()/G_() != 0) -> F_() != 0".asFormula,QE) //Derivable from the above
+
+  //Only the B ones are necessary, but the others help avoid extra terms
+  private lazy val addDiv =
+  (proveBy("F_()/G_() + A_()/B_() = (F_()*B_()+A_()*G_())/(G_()*B_())".asFormula,QE),
+    proveBy("F_()/G_() + A_() = (F_()+A_()*G_())/G_()".asFormula,QE),
+    proveBy("F_() + A_()/B_() = (F_()*B_()+A_())/B_()".asFormula,QE))
+
+  private lazy val mulDiv =
+    (proveBy("(F_()/G_()) * (A_()/B_()) = (F_()*A_())/(G_()*B_())".asFormula,QE),
+      proveBy("(F_()/G_()) * A_() = (F_()*A_())/G_()".asFormula,QE),
+      proveBy("F_() * (A_()/B_()) = (F_()*A_())/B_()".asFormula,QE))
+
+  private lazy val subDiv =
+    (proveBy("F_()/G_() - A_()/B_() = (F_()*B_()-A_()*G_())/(G_()*B_())".asFormula,QE),
+      proveBy("F_()/G_() - A_() = (F_()-A_()*G_())/G_()".asFormula,QE),
+      proveBy("F_() - A_()/B_() = (F_()*B_()-A_())/B_()".asFormula,QE))
+
+  private lazy val divDiv =
+    (proveBy("(F_()/G_()) / (A_()/B_()) = (F_()*B_())/(A_()*G_())".asFormula,QE),
+      proveBy("(F_()/G_()) / A_() = (F_()/(G_()*A_()))".asFormula,QE),
+      proveBy("F_()/(A_()/B_()) = (F_()*B_())/A_()".asFormula,QE))
+
+  private lazy val negDiv = proveBy("-(F_()/G_()) = (-F_())/G_()".asFormula,QE)
+  // This next one is only provable for concrete instances of K_(), probably have to do it on the fly
+  // val powDivB = proveBy("(F_()/G_())^K_() = F_()^K_()/G_()^K_()".asFormula,QE)
+
 
   //Assumes that the terms are Variables or nullary Functions
   // Default: x < y, x < x(), y < x()
@@ -145,14 +298,6 @@ object PolynomialArith {
     }
   }
 
-  //List of reassociations needed -- avoids QE inside the actual proof (QE should get everything right)
-  private lazy val plusAssoc1 = proveBy("(F_() + G_()) + (A_() + B_()) = ((F_()+G_())+A_())+B_()".asFormula,QE & done)
-  private lazy val plusAssoc2 = proveBy("(F_() + K_()*M_()) + (A_() + L_()*M_()) = (F_()+A_())+(K_()+L_())*M_()".asFormula,QE & done)
-
-  private lazy val plusCoeff1 = proveBy("K_() = 0 -> (F_() + K_()*M_() = F_())".asFormula,QE & done)
-  private lazy val plusCoeff2 = proveBy("K_() = L_() -> (F_() + K_()*M_() = F_() + L_()*M_())".asFormula,
-    byUS("const congruence"))
-
   //This seems like it might be a bad idea ...
   private def getProver(skip_proofs:Boolean) :(Formula,BelleExpr)=>ProvableSig =
     if (skip_proofs) ( (f:Formula,b:BelleExpr) => DerivedAxioms.equivReflexiveAxiom.fact ) else proveBy
@@ -215,21 +360,6 @@ object PolynomialArith {
     res
   }
 
-  //One of these is missing in DerivedAxioms
-  private lazy val onetimes = proveBy("1*F_() = F_()".asFormula,QE & done)
-  private lazy val timesone = proveBy("F_()*1 = F_()".asFormula,QE & done)
-
-  private lazy val timesAssoc1 = proveBy("(F_() * G_()) * (A_() * B_()) = ((F_()*G_())*A_())*B_()".asFormula,QE & done)
-  private lazy val timesAssoc2 = proveBy("(F_() * M_()^K_()) * (A_() * M_()^L_()) = (F_()*A_())*M_()^(K_()+L_())".asFormula,QE & done)
-
-  //QE has interesting ideas about X^0
-  private lazy val timesCoeff1Lem = proveBy("F_() = F_() * M_() ^ 0".asFormula,QE & done)
-  private lazy val timesCoeff1 = proveBy("K_() = 0 -> (F_() * M_()^K_() = F_() )".asFormula,
-    useAt(timesCoeff1Lem)(SuccPosition(1,1::1::Nil)) & byUS("const congruence"))
-
-  private lazy val timesCoeff2 = proveBy("K_() = L_() -> (F_() * M_()^K_() = F_() * M_()^L_())".asFormula,
-    byUS("const congruence"))
-
   //Multiplies and returns normalised monomials (this is basically the same as the implementation for adding polynomials)
   def mulMono(l:Term,r:Term,skip_proofs:Boolean = false): (Term,ProvableSig) = {
     val lhs = Times(l,r)
@@ -272,9 +402,6 @@ object PolynomialArith {
       case _ => ???
     }
   }
-
-  private lazy val timesAssoc3 = proveBy(("(P_() + C_() * M_()) * (D_() * N_()) = " +
-    "P_() * (D_() * N_()) + (C_() * D_()) * (M_() * N_())").asFormula,QE & done)
 
   def mulCoeff(cl:Term,cr:Term) : Term = {
     (cl,cr) match {
@@ -331,13 +458,6 @@ object PolynomialArith {
     }
   }
 
-  private lazy val powLem1 = proveBy("F_()^0 = 1".asFormula,QE & done)
-  private lazy val powLem2 = proveBy("F_()^1 = F_()".asFormula,QE & done)
-  private lazy val powLem3 = proveBy("(F_()^K_())^2 = F_()^(2*K_())".asFormula,QE & done)
-  private lazy val powLem4 = proveBy("(F_()^K_())^2 * F_() = F_()^(2*K_()+1)".asFormula,QE & done)
-  private lazy val powLem5 = proveBy("K_() = L_() -> (M_()^K_() = M_()^L_())".asFormula,
-    byUS("const congruence"))
-
   //Reduces t^n to iterated squares
   def iterSquare(l:Term,p:Int,skip_proofs:Boolean = false) : (Term,ProvableSig) = {
     val lhs = Power(l,Number(p))
@@ -363,10 +483,6 @@ object PolynomialArith {
         useAt(powLem5,PosInExpr(1::Nil))(1) & RCF))
     }
   }
-
-  private lazy val negNormalise = proveBy("-P_() = P_() * (-1/1 * 1)".asFormula,QE & done)
-  private lazy val minusNormalise = proveBy("P_()-Q_() = P_() + -(Q_())".asFormula,QE & done)
-  private lazy val powNormalise = proveBy("P_()^2 = P_() * P_()".asFormula,QE & done)
 
   def divCoeff(cl:Term,cr:Term) : Term = {
     (cl,cr) match {
@@ -430,17 +546,56 @@ object PolynomialArith {
     }
   }
 
+  def isMono(t:Term): Boolean = {
+    t match {
+      case Times(l,r) =>
+        isMono(l) && isMono(r)
+      case Power(l,r:Number) =>
+        isMono(l) && r.value.isValidInt
+      case v:Variable => isVar(v)
+      case _ => false
+    }
+  }
 
-  private lazy val divNormalise = proveBy(" P_() / Q_()  = (1/Q_()) *P_() ".asFormula,QE & done)
-  //Add ^1 for a variable
-  private lazy val var1Normalise = proveBy("P_() = 0 + (1/1) * (1 * P_()^1)".asFormula,QE & done)
-  //Normalization for any variable (or power of variable)
-  private lazy val varNormalise = proveBy("P_() = 0 + (1/1) * (1 * P_())".asFormula,QE & done)
+  //Optimized normalisation for a monomial
+  //Assume the input term is of the shape x^n * y ^ m * ...
+  //i.e. it is a monomial but not necessarily normalised
+//  def normaliseMonomial(m:Term,skip_proofs:Boolean = false) : (Term,ProvableSig) = {
+//    val prover = getProver(skip_proofs)
+//    val res = m match {
+//      case Times(lm,rm) =>
+//        val (ln,lpr) = normaliseMonomial(lm)
+//        val (rn,rpr) = normaliseMonomial(rm)
+//        val (res,pr) = mulMono(ln,rn,skip_proofs)
+//        (res,prover(Equal(m,res),QE)) //temporary
+//      case Power(_:Variable,_:Number) =>
+//        val res = Times(Number(1),m)
+//        (res,prover(Equal(m,res),QE)) //temporary
+//      case Power(p,n:Number) if n.value.intValue() == 2 =>
+//        val (res1,pr1) = normaliseMonomial(p)
+//        val (res2,pr2) = mulMono(res1,res1,skip_proofs)
+//        (res2,prover(Equal(m,res2),QE)) //temporary
+//      case _:Variable =>
+//        val res = Times(Number(1),Power(m,Number(1)))
+//        (res,prover(Equal(m,res),QE)) //temporary
+//      case _ => ???
+//    }
+//    res
+//  }
+
 
   //Normalizes an otherwise un-normalized term
   def normalise(l:Term,skip_proofs:Boolean = false) : (Term,ProvableSig) = {
+
     if(DEBUG) println("Normalizing at",l)
     val prover = getProver(skip_proofs)
+
+//    if(isMono(l)){
+//      val (mon,pr) = normaliseMonomial(l,skip_proofs)
+//      //0 + 1 * (1 * v^n)
+//      val res = Plus(Number(0),Times(Divide(Number(1),Number(1)), mon) )
+//      return (res,prover(Equal(l,res), useAt(pr)(SuccPosition(1,0::Nil)) & byUS(var2Normalise)))
+//    }
     val res = l match {
       case n:Number =>
         //0 + 1 * n (unless n = 0)
@@ -650,10 +805,6 @@ object PolynomialArith {
     *   Updated procedure using g<>0 |- g^2 + SOS > 0 (previously, g = 1 was just a special case)
     */
 
-  private lazy val zeroGeZero:ProvableSig = proveBy("0>=0".asFormula,RCF)
-  private lazy val plusGeMono: ProvableSig = proveBy("(f_() >= k_() & g_() >= 0) -> f_() + g_() >= k_()".asFormula,QE)
-  private lazy val timesPos: ProvableSig = proveBy("(f_() >= 0 & g_() >= 0) -> f_() * g_() >= 0".asFormula,QE)
-
   // Input: list of pairs a_i, p_i
   // Proves sum_i (a_i * p_i ^2) >= 0
   // Each a_i should be a positive (rational) coefficient (proved by RCF)
@@ -669,8 +820,6 @@ object PolynomialArith {
               useAt(timesPos,PosInExpr(1::Nil))(1) & andR(1) <( RCF, byUS("nonnegative squares") ) )))
     }
   }
-
-  private lazy val neGtSquared : ProvableSig = proveBy(" f_() != 0 & g_() > 0 -> f_()^2 * g_() > 0 ".asFormula,QE )
 
   // Given a goal of the form a_i = 0 , b_j != 0 |-
   // Proves that some provided combination of the b_j is > 0
@@ -696,7 +845,6 @@ object PolynomialArith {
     (ineqP,cut(Greater(ineqP,Number(0))) <( ident,tac))
   }
 
-  private lazy val plusGtMono: ProvableSig = proveBy("(f_() > k_() & g_() >= 0) -> f_() + g_() > k_()".asFormula,QE)
   // Generate a proof for |- g>0 -> g + a_1 * s_1^2 + ... + a_n * s_n^2 > 0)
   // Each a_i should be a positive (rational) coefficient (proved by RCF)
   def genWitness(gtz:Term,l:List[(Term,Term)]) : (Term,ProvableSig) =
@@ -709,10 +857,6 @@ object PolynomialArith {
         implyR(1) & useAt(plusGtMono,PosInExpr(1::Nil))(1) & andR(1) <(closeId, cohideR(1) & by(geZ) )))
 
   }
-
-  //todo: more convenient to cut in, can be derived without QE from something else
-  private lazy val gtNotZero: ProvableSig = proveBy("f_() > 0 -> !(f_() = 0)".asFormula,QE & done)
-  private lazy val axMov: ProvableSig = proveBy("f_() + a_() * g_() = k_() -> (a_() = 0 -> f_() = k_())".asFormula,QE & done)
 
   //Goal must be of the form (Fi=0, Gj!=0 |- )
   def genWitnessTac(mon:List[Int], witness:List[(Term,Term)], instopt:Option[List[(Int,Term)]] = None) : DependentTactic = new SingleGoalDependentTactic("ANON") {
@@ -762,35 +906,6 @@ object PolynomialArith {
   // an optional list of instructions (detailing the coefficients) and a list of witnesses s_i ^2
   // Proves the contradiction g_1 = 0 ; ... g_k = 0 |-
   // Nothing needs to be normalized?
-
-  /**
-    * The rest of the axiomatization
-    */
-
-  // Succedent to antecedent for inequations (rewrite left to right followed by notR)
-  private lazy val ltSucc: ProvableSig = proveBy(" f_() < g_() <-> !(f_()>=g_())".asFormula,QE)
-  private lazy val leSucc: ProvableSig = proveBy(" f_() <= g_() <-> !(f_()>g_())".asFormula,QE)
-  private lazy val gtSucc: ProvableSig = proveBy(" f_() > g_() <-> !g_()>=f_()".asFormula,QE)
-  private lazy val geSucc: ProvableSig = proveBy(" f_() >= g_() <-> !g_()>f_()".asFormula,QE)
-  private lazy val eqSucc: ProvableSig = proveBy(" f_() = g_() <-> !g_()!=f_()".asFormula,QE) //Convenient rule for A3
-  private lazy val neSucc: ProvableSig = proveBy(" f_() != g_() <-> !g_()=f_()".asFormula,QE) //Convenient rule for A3
-
-  //(based on note in DerivedAxioms) These require Mathematica QE to prove, will be asserted as axioms
-  //note: these folds = 0 normalisation in as well
-  //todo: do the existsL naming properly
-
-  private lazy val ltAnte: ProvableSig = proveBy("f_() < g_() <-> \\exists wit_ (f_()-g_())*wit_^2 + 1 = 0".asFormula,QE)
-  private lazy val leAnte: ProvableSig = proveBy("f_() <= g_() <-> \\exists wit_ (f_()-g_()) + wit_^2 = 0".asFormula,QE)
-  private lazy val gtAnte: ProvableSig = proveBy("f_() > g_() <-> \\exists wit_ (f_()-g_())*wit_^2 - 1 = 0".asFormula,QE)
-  private lazy val geAnte: ProvableSig = proveBy("f_() >= g_() <-> \\exists wit_ (f_()-g_()) - wit_^2 = 0".asFormula,QE)
-
-  private lazy val eqAnte: ProvableSig = proveBy("f_() = g_() <-> f_() - g_() = 0".asFormula,QE & done)
-  private lazy val neAnte: ProvableSig = proveBy("f_() != g_() <-> \\exists wit_ (f_()-g_())*wit_ - 1 = 0".asFormula,QE & done)
-
-  //This just makes sorting the assumptions a bit easier
-  private lazy val neAnteZ: ProvableSig = proveBy("f_() != g_() <-> !!(f_()-g_() !=0)".asFormula,QE & done)
-  private lazy val ltAnteZ: ProvableSig = proveBy("f_() < g_() <-> f_() <= g_() & f_() - g_() != 0 ".asFormula,QE)
-  private lazy val gtAnteZ: ProvableSig = proveBy("f_() > g_() <-> f_() >= g_() & f_() - g_() != 0 ".asFormula,QE)
 
   //clearSucc and normAnte are the real nullstellensatz versions (i.e. they normalise everything to equalities on the left)
   lazy val clearSucc:DependentTactic = new SingleGoalDependentTactic("flip succ") {
@@ -868,7 +983,7 @@ object PolynomialArith {
 
   // Guided linear variable elimination at a top-level position (of shape A=B)
   // Rewrites that position to lhs = rhs using polynomial arithmetic to prove its correctness
-  private lazy val mulZero: ProvableSig = proveBy("g_() != 0 -> (f_() = 0 <-> g_() * f_() = 0)".asFormula,QE & done)
+
   //The list of instructions contains:
   // 1) position to rewrite, 2) term to leave on LHS, 3) term on RHS
   // 4) determines the cofactor on the variable (expected to be provable to be non-zero by RCF)
@@ -947,31 +1062,6 @@ object PolynomialArith {
     }
   }
 
-  //Only the B ones are necessary, but the others help avoid extra terms
-  val addDiv =
-  (proveBy("F_()/G_() + A_()/B_() = (F_()*B_()+A_()*G_())/(G_()*B_())".asFormula,QE),
-    proveBy("F_()/G_() + A_() = (F_()+A_()*G_())/G_()".asFormula,QE),
-    proveBy("F_() + A_()/B_() = (F_()*B_()+A_())/B_()".asFormula,QE))
-
-  val mulDiv =
-  (proveBy("(F_()/G_()) * (A_()/B_()) = (F_()*A_())/(G_()*B_())".asFormula,QE),
-    proveBy("(F_()/G_()) * A_() = (F_()*A_())/G_()".asFormula,QE),
-    proveBy("F_() * (A_()/B_()) = (F_()*A_())/B_()".asFormula,QE))
-
-  val subDiv =
-  (proveBy("F_()/G_() - A_()/B_() = (F_()*B_()-A_()*G_())/(G_()*B_())".asFormula,QE),
-    proveBy("F_()/G_() - A_() = (F_()-A_()*G_())/G_()".asFormula,QE),
-    proveBy("F_() - A_()/B_() = (F_()*B_()-A_())/B_()".asFormula,QE))
-
-  val divDiv =
-    (proveBy("(F_()/G_()) / (A_()/B_()) = (F_()*B_())/(A_()*G_())".asFormula,QE),
-      proveBy("(F_()/G_()) / A_() = (F_()/(G_()*A_()))".asFormula,QE),
-      proveBy("F_()/(A_()/B_()) = (F_()*B_())/A_()".asFormula,QE))
-
-  val negDiv = proveBy("-(F_()/G_()) = (-F_())/G_()".asFormula,QE)
-  // This is only provable for concrete instances of K_(), probably have to do it on the fly
-  // val powDivB = proveBy("(F_()/G_())^K_() = F_()^K_()/G_()^K_()".asFormula,QE)
-
   def useForOpt(pr:Option[ProvableSig],p:Position) : ForwardTactic = {
     pr match {
       case None => iden
@@ -1028,10 +1118,6 @@ object PolynomialArith {
     res
   }
 
-  val divEq = proveBy("!(G_()=0) -> F_()/G_() = 0 -> F_() = 0".asFormula,QE)
-  val divNeq = proveBy("!(G_()=0) -> (F_()/G_() != 0) -> F_() != 0".asFormula,QE) //Derivable from the above
-  val neqzConj = proveBy(" A * B != 0 <-> A!=0 & B!=0".asFormula,QE)
-
   // Repeatedly finds the first rational term in the antecedent starting at an index and cuts in the appropriate side goal
   // A/B = 0 , G |-  turns into A = 0 , G |- and B = 0 , G |-
   // This assumes that ALL divisions occuring in the goal are well-defined
@@ -1085,35 +1171,10 @@ object PolynomialArith {
   lazy val ratTac = ratFormTac(0,true,false)
 
   //Move everything into antecedents via double negation
-  lazy val doubleNeg = proveBy("P_() <-> !(!P_())".asFormula,prop)
   lazy val clearSuccNNF:BelleExpr =
     ((useAt(doubleNeg)(1) & notR(1))*) & fullSimpTac(faxs = composeIndex(defaultFaxs,chaseIndex),taxs = emptyTaxs)
 
   //NOTE: this doesn't (can't?) make use of the alternate inequality formulation!
-  lazy val existsOr1 = proveBy("(\\exists x_ p_(x_) | \\exists y_ q_(y_)) <-> (\\exists x_ (p_(x_) |  q_(x_)))".asFormula,
-    prop & OnAll(existsL('L) & prop) <( existsR('R), existsR('R), existsR("y_".asTerm)('R), existsR("x_".asTerm)('Rlast)) & OnAll(prop))
-
-  lazy val existsSame = proveBy("(\\exists x_ p_(x_) | \\exists x_ q_(x_)) <-> (\\exists x_ (p_(x_) |  q_(x_)))".asFormula,
-    prop & OnAll(existsL('L) & prop) <( existsR('R), existsR('R), existsR("x_".asTerm)('R), existsR("x_".asTerm)('Rlast)) & OnAll(prop))
-
-  lazy val existsOr2 = proveBy("\\exists x_ p_(x_) | q_() <-> (\\exists x_ (p_(x_) |  q_()))".asFormula,
-    prop & OnAll((existsL('L)*) & (existsR('R)*) & prop))
-
-  lazy val existsOr3 = proveBy("q_() | \\exists x_ p_(x_) <-> (\\exists x_ (p_(x_) |  q_()))".asFormula,
-    prop & OnAll((existsL('L)*) & (existsR('R)*) & prop))
-
-  lazy val existsAnd1 = proveBy("(\\exists x_ p_(x_) & \\exists y_ q_(y_)) <-> (\\exists x_ \\exists y_ (p_(x_) & q_(y_)))".asFormula,
-    prop & OnAll((existsL('L)*) & prop) <( existsR('R) & existsR('R) & prop, existsR('R) & prop,existsR('R)&prop))
-
-  lazy val existsAnd2 = proveBy("(\\exists x_ p_(x_) & q_()) <-> (\\exists x_ (p_(x_) & q_()))".asFormula,
-    prop & OnAll((existsL('L)*) & (existsR('R)*) & prop))
-
-  lazy val existsAnd3 = proveBy("(q_() & \\exists x_ p_(x_)) <-> (\\exists x_ (p_(x_) & q_()))".asFormula,
-    prop & OnAll((existsL('L)*) & (existsR('R)*) & prop))
-
-  lazy val existsRename = proveBy("(\\exists x_ p_(x_) & \\exists x_ q_(x_)) <-> (\\exists x_ p_(x_) & \\exists z_ q_(z_))".asFormula,
-    prop & OnAll((existsL('L)*) & prop) <(existsR("x_".asTerm)('R), existsR("z_".asTerm)('R)) & OnAll(prop))
-
   def renWitness(f:Formula,ctx:context) : List[ProvableSig] = {
     f match{
       case And(Exists(v1,f1),Exists(v2,f2)) =>
@@ -1141,12 +1202,7 @@ object PolynomialArith {
     }
   }
 
-  lazy val ths = List(leAnte,ltAnte,geAnte,gtAnte,eqAnte,neAnte)
-
-  //A=0 | B = 0 <-> A*B=0
-  //A=0 & B = 0 <-> A^2+B^2=0
-  lazy val orEqz = proveBy("F_()=0 | G_() =0 <-> F_()*G_()=0".asFormula,QE)
-  lazy val andEqz = proveBy("F_()=0 & G_() =0 <-> F_()^2 + G_()^2 =0".asFormula,QE)
+  private lazy val ths = List(leAnte,ltAnte,geAnte,gtAnte,eqAnte,neAnte)
 
   //Relax strict to non-strict inequalities, and then hide all the top-level != to the right
   lazy val relaxStrict2:DependentTactic = new SingleGoalDependentTactic("strict to non2") {
