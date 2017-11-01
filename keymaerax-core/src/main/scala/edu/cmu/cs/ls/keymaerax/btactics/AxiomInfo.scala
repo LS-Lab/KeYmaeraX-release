@@ -618,6 +618,26 @@ object DerivationInfo {
     new DerivedAxiomInfo("metric <= | <=", "metricOrLe", "metricOrLe", {case () => useAt(DerivedAxioms.metricOrLe)}),
     new DerivedAxiomInfo("metric < | <", "metricOrLt", "metricOrLt", {case () => useAt(DerivedAxioms.metricOrLt)}),
 
+    //Extra SimplifierV3 axioms
+    new DerivedAxiomInfo("* identity neg", "timesIdentityNeg", "timesIdentityNeg", {case () => useAt(DerivedAxioms.timesIdentityNeg)}),
+    new DerivedAxiomInfo("-0", "minusZero", "minusZero", {case () => useAt(DerivedAxioms.minusZero)}),
+    new DerivedAxiomInfo("0-", "zeroMinus", "zeroMinus", {case () => useAt(DerivedAxioms.zeroMinus)}),
+    new DerivedAxiomInfo(">0 -> !=0" ,"gtzImpNez" , "gtzImpNez"  ,{case () => useAt(DerivedAxioms.gtzImpNez)}),
+    new DerivedAxiomInfo("<0 -> !=0" ,"ltzImpNez" , "ltzImpNez"  ,{case () => useAt(DerivedAxioms.ltzImpNez)}),
+    new DerivedAxiomInfo("!=0 -> 0/F","zeroDivNez", "zeroDivNez" ,{case () => useAt(DerivedAxioms.zeroDivNez)}),
+    new DerivedAxiomInfo("!=0 -> F^0","powZeroNez", "powZeroNez" ,{case () => useAt(DerivedAxioms.powZeroNez)}),
+    new DerivedAxiomInfo("F^1"       ,"powOne"    , "powOne"     ,{case () => useAt(DerivedAxioms.powOne)}),
+    new DerivedAxiomInfo("< irrefl", "lessNotRefl", "lessNotRefl", {case () => useAt(DerivedAxioms.lessNotRefl)}),
+    new DerivedAxiomInfo("> irrefl", "greaterNotRefl", "greaterNotRefl", {case () => useAt(DerivedAxioms.greaterNotRefl)}),
+    new DerivedAxiomInfo("!= irrefl", "notEqualNotRefl", "notEqualNotRefl", {case () => useAt(DerivedAxioms.notEqualNotRefl)}),
+    new DerivedAxiomInfo("= refl", "equalRefl", "equalRefl", {case () => useAt(DerivedAxioms.equalRefl)}),
+    new DerivedAxiomInfo("<= refl", "lessEqualRefl", "lessEqualRefl", {case () => useAt(DerivedAxioms.lessEqualRefl)}),
+    new DerivedAxiomInfo(">= refl", "greaterEqualRefl", "greaterEqualRefl", {case () => useAt(DerivedAxioms.greaterEqualRefl)}),
+    new DerivedAxiomInfo("= sym", "equalSym", "equalSym", {case () => useAt(DerivedAxioms.equalSym)}),
+    new DerivedAxiomInfo("!= sym", "notEqualSym", "notEqualSym", {case () => useAt(DerivedAxioms.notEqualSym)}),
+    new DerivedAxiomInfo("> antisym", "greaterNotSym", "greaterNotSym", {case () => useAt(DerivedAxioms.greaterNotSym)}),
+    new DerivedAxiomInfo("< antisym", "lessNotSym", "lessNotSym", {case () => useAt(DerivedAxioms.lessNotSym)}),
+
     // Note: Tactic info does not cover all tactics yet.
     // Proof rule position PositionTactics
     new PositionTacticInfo("notL"
