@@ -66,15 +66,15 @@ object PolynomialArith {
     "P_() * (D_() * N_()) + (C_() * D_()) * (M_() * N_())").asFormula,QE & done)
 
   //QE has interesting ideas about X^0
-  private lazy val timesCoeff1Lem = proveBy("F_() = F_() * M_() ^ 0".asFormula,QE & done)
+  private lazy val timesCoeff1Lem = proveBy("F_() = F_() * M_() ^ 0".asFormula, simp(1) & close)
   private lazy val timesCoeff1 = proveBy("K_() = 0 -> (F_() * M_()^K_() = F_() )".asFormula,
     useAt(timesCoeff1Lem)(SuccPosition(1,1::1::Nil)) & byUS("const congruence"))
   private lazy val timesCoeff2 = proveBy("K_() = L_() -> (F_() * M_()^K_() = F_() * M_()^L_())".asFormula,
     byUS("const congruence"))
 
   //These are used for iterated squaring
-  private lazy val powLem1 = proveBy("F_()^0 = 1".asFormula,QE & done)
-  private lazy val powLem2 = DerivedAxioms.powOne
+  private lazy val powLem1 = DerivedAxioms.powZero.fact
+  private lazy val powLem2 = DerivedAxioms.powOne.fact
   private lazy val powLem3 = proveBy("(F_()^K_())^2 = F_()^(2*K_())".asFormula,QE & done)
   private lazy val powLem4 = proveBy("(F_()^K_())^2 * F_() = F_()^(2*K_()+1)".asFormula,QE & done)
   private lazy val powLem5 = proveBy("K_() = L_() -> (M_()^K_() = M_()^L_())".asFormula,
@@ -111,12 +111,12 @@ object PolynomialArith {
 
   // Succedent to antecedent for inequations (rewrite left to right followed by notR)
   // todo: These can all go into the simplifier
-  private lazy val ltSucc: ProvableSig = proveBy(" f_() < g_() <-> !(f_()>=g_())".asFormula,QE)
-  private lazy val leSucc: ProvableSig = proveBy(" f_() <= g_() <-> !(f_()>g_())".asFormula,QE)
-  private lazy val gtSucc: ProvableSig = proveBy(" f_() > g_() <-> !g_()>=f_()".asFormula,QE)
-  private lazy val geSucc: ProvableSig = proveBy(" f_() >= g_() <-> !g_()>f_()".asFormula,QE)
-  private lazy val eqSucc: ProvableSig = proveBy(" f_() = g_() <-> !g_()!=f_()".asFormula,QE) //Convenient rule for A3
-  private lazy val neSucc: ProvableSig = proveBy(" f_() != g_() <-> !g_()=f_()".asFormula,QE) //Convenient rule for A3
+  private lazy val ltSucc: ProvableSig = proveBy(" f_() < g_() <-> !(f_()>=g_())".asFormula, simp(1) & prop & OnAll(simp(1) & ?(close)))
+  private lazy val leSucc: ProvableSig = proveBy(" f_() <= g_() <-> !(f_()>g_())".asFormula, simp(1) & prop & OnAll(simp(1) & ?(close)))
+  private lazy val gtSucc: ProvableSig = proveBy(" f_() > g_() <-> !g_()>=f_()".asFormula, simp(1) & prop & OnAll(simp(1) & ?(close)))
+  private lazy val geSucc: ProvableSig = proveBy(" f_() >= g_() <-> !g_()>f_()".asFormula, simp(1) & prop & OnAll(simp(1) & ?(close)))
+  private lazy val eqSucc: ProvableSig = proveBy(" f_() = g_() <-> !g_()!=f_()".asFormula, simp(1) & prop & OnAll(simp(1) & ?(close))) //Convenient rule for A3
+  private lazy val neSucc: ProvableSig = proveBy(" f_() != g_() <-> !g_()=f_()".asFormula, simp(1) & prop & OnAll(simp(1) & ?(close))) //Convenient rule for A3
 
   //(based on note in DerivedAxioms) These require Mathematica QE to prove, will be asserted as axioms
   //note: these fold = 0 normalisation in as well

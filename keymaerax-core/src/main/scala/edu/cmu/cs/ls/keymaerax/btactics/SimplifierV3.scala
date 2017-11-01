@@ -748,9 +748,7 @@ object SimplifierV3 {
     useFor(DerivedAxioms.ltzImpNez.fact, PosInExpr(1 :: Nil))(SuccPosition(1,0::Nil))(DerivedAxioms.zeroDivNez.fact))
 
   lazy val powArith = List(
-    DerivedAxioms.powZeroNez.fact,
-    useFor(DerivedAxioms.gtzImpNez.fact, PosInExpr(1 :: Nil))(SuccPosition(1,0::Nil))(DerivedAxioms.powZeroNez.fact),
-    useFor(DerivedAxioms.ltzImpNez.fact, PosInExpr(1 :: Nil))(SuccPosition(1,0::Nil))(DerivedAxioms.powZeroNez.fact),
+    DerivedAxioms.powZero.fact,
     DerivedAxioms.powOne.fact)
 
   //These may also be useful:
@@ -879,6 +877,11 @@ object SimplifierV3 {
   def cmpIndex (f:Formula,ctx:context) : List[ProvableSig] = {
 
     f match {
+      // Not of a comparison formula
+      case Not(bop:ComparisonFormula) =>
+        List(DerivedAxioms.notNotEqual,DerivedAxioms.notEqual,
+          DerivedAxioms.notLess,DerivedAxioms.notGreater,
+          DerivedAxioms.notLessEqual,DerivedAxioms.notGreaterEqual).map(l=>l.fact)
       // Reflexive cases
       // This protects against unification errors using Scala to inspect the term directly
       case bop:ComparisonFormula if bop.left==bop.right =>

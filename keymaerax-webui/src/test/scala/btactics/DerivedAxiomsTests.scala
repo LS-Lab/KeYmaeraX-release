@@ -292,7 +292,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   "it" should "prove >0 -> !=0"  in {check{gtzImpNez}}
   "it" should "prove <0 -> !=0"  in {check{ltzImpNez}}
   "it" should "prove !=0 -> 0/F" in {check{zeroDivNez}}
-  "it" should "prove !=0 -> F^0" in {check{powZeroNez}}
+  "it" should "prove F^0" in {check{powZero}}
   "it" should "prove F^1"        in {check{powOne}}
 
   "it" should "prove < irrefl" in {check{lessNotRefl}}
