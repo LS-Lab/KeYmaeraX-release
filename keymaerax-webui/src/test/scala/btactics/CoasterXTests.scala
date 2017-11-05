@@ -12,9 +12,6 @@ import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 
 @SlowTest
-object CoasterXTests {
-
-}
 class CoasterXTests extends TacticTestBase {
   "Joint Parser" should "parse first joint" in {
     val joint = CoasterXParser.parsePoint("(40,100)")
