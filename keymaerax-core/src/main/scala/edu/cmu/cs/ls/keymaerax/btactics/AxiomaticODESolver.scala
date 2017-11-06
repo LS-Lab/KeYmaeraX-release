@@ -56,12 +56,14 @@ object AxiomaticODESolver {
       case Some(Diamond(ODESystem(_, True), _)) =>
         useAt("<> diamond", PosInExpr(1::Nil))(pos) &
         boxAxiomaticSolve(instEnd)(pos ++ PosInExpr(0::Nil)) &
-        pushNegation(pos)
+        pushNegation(pos) &
+        simplifier(pos)
       case Some(Diamond(ODESystem(_, _), _)) =>
         useAt("<> diamond", PosInExpr(1::Nil))(pos) &
         boxAxiomaticSolve(instEnd)(pos ++ PosInExpr(0::Nil)) &
         pushNegation(pos) &
-        useAt("PC10", PosInExpr(1::Nil))(pos ++ PosInExpr(0::1::1::Nil))
+        useAt("PC10", PosInExpr(1::Nil))(pos ++ PosInExpr(0::1::1::Nil)) &
+        simplifier(pos)
       case _ => boxAxiomaticSolve(instEnd)(pos)
     }
   })
