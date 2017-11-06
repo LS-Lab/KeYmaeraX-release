@@ -518,6 +518,18 @@ class DLTests extends TacticTestBase {
     result.subgoals(2).succ should contain only "x < 0".asFormula
   }
 
+  it should "allow any variant argument name" in {
+    val fml = "<{x:=x-1;}*>x < 0".asFormula
+    val arg = Variable("y")
+    val defn = Greater(arg, Variable("x"))
+    val result = proveBy(fml,DLBySubst.conRule(arg,defn)(1))
+    result.subgoals(0).succ should contain only "\\exists y y>x".asFormula
+    result.subgoals(1).ante should contain only ("y>0".asFormula, "y>x".asFormula)
+    result.subgoals(1).succ should contain only "<x:=x-1;>y-1>x".asFormula
+    result.subgoals(2).ante should contain only ("y<=0".asFormula, "y>x".asFormula)
+    result.subgoals(2).succ should contain only "x < 0".asFormula
+  }
+
   it should "work with preconditions" in {
     val fml = "x = 0 & 0 >= 0 -> <{x:=x-1;}*>x < 0".asFormula
     val arg = Variable("v")
