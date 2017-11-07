@@ -538,11 +538,9 @@ object KeYmaeraX {
     */
   def check(options: OptionMap): Unit = {
     require(options.contains('in), usage)
+
     val inputFileName = options('in).toString
-    assert(inputFileName.endsWith(".kya") || inputFileName.endsWith(".kyx"),
-      "\n[Error] Wrong file name " + inputFileName + " used for -check! KeYmaera X only checks .kya files. Please use: -check FILENAME.kya")
-    val input = scala.io.Source.fromFile(inputFileName).mkString
-    val archiveContent = KeYmaeraXArchiveParser.parse(input)
+    val archiveContent = KeYmaeraXArchiveParser(inputFileName)
 
     val statistics = scala.collection.mutable.LinkedHashMap[String, Either[(Long, Long, Int, Int, Int), Throwable]]()
 
@@ -609,15 +607,12 @@ object KeYmaeraX {
   def modelplex(options: OptionMap) = {
     require(options.contains('in), usage)
 
-    // KeYmaeraXPrettyPrinter(ModelPlex(vars)(KeYmaeraXProblemParser(input))
-    val inputFileNameDotKey = options('in).toString
-    assert(inputFileNameDotKey.endsWith(".key") || inputFileNameDotKey.endsWith(".kyx"),
-      "\n[Error] Wrong file name " + inputFileNameDotKey + " used for -modelplex! ModelPlex only handles .key or .kyx files. Please use: -modelplex FILENAME.[key/kyx]")
-    val input = scala.io.Source.fromFile(inputFileNameDotKey).mkString
-    val inputModel = KeYmaeraXProblemParser(input)
+    val in = options('in).toString
+    val inputModel = KeYmaeraXArchiveParser(in).head.model.asInstanceOf[Formula]
+
     val verifyOption = options.getOrElse('verify, false).asInstanceOf[Boolean]
     val isarOption = options.getOrElse('isar,false).asInstanceOf[Boolean]
-    val inputFileName = inputFileNameDotKey.dropRight(4)
+    val inputFileName = in.split('#')(0).dropRight(4)
     var outputFileName = inputFileName
     if(options.contains('out)) {
       val outputFileNameDotMx = options('out).toString

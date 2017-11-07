@@ -44,6 +44,19 @@ object KeYmaeraXArchiveParser {
   /** The entry name, kyx file content, entry kind (theorem, lemma, etc.), and list of name+tactic text. */
   type ArchiveEntry = (String, String, String, List[(String, String)])
 
+  /** Reads all (file.kyx) or a specific archive entry (file.kyx#entry) from said `file`. */
+  def apply(file: String): List[ParsedArchiveEntry] = {
+    file.split('#').toList match {
+      case fileName :: Nil =>
+        val input = scala.io.Source.fromFile(fileName).mkString
+        KeYmaeraXArchiveParser.parse(input)
+      case fileName :: entryName :: Nil =>
+        val input = scala.io.Source.fromFile(fileName).mkString
+        KeYmaeraXArchiveParser.getEntry(entryName, input).
+          getOrElse(throw new IllegalArgumentException("Unknown archive entry " + entryName)) :: Nil
+    }
+  }
+
   /** Parses the archive content into archive entries with parsed model and tactics. */
   def parse(archiveContentBOM: String): List[ParsedArchiveEntry] = {
     val archiveContents: List[ArchiveEntry] = read(archiveContentBOM)
