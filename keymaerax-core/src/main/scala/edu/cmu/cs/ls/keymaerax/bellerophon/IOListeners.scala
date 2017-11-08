@@ -18,8 +18,8 @@ import scala.collection.immutable.IndexedSeq
   */
 object IOListeners {
 
-  /** Interpreter listener that logs QE calls to `logPath` if condition `logCondition` is satisfied. */
-  class QELogListener(logPath: String, logCondition: (ProvableSig, BelleExpr) => Boolean) extends IOListener() {
+  /** Interpreter listener that logs QE calls to `logger` if condition `logCondition` is satisfied. */
+  class QELogListener(logger: (Sequent, Sequent, String) => Unit, logCondition: (ProvableSig, BelleExpr) => Boolean) extends IOListener() {
     private val logged: scala.collection.mutable.Set[Sequent] = scala.collection.mutable.Set()
     private def qeFml(s: Sequent): Formula =
       if (s.ante.isEmpty && s.succ.size == 1) s.succ.head.universalClosure
@@ -28,7 +28,7 @@ object IOListeners {
       case BelleProvable(p, _) if logCondition(p, expr) =>
         val logSeq = Sequent(IndexedSeq(), IndexedSeq(qeFml(p.subgoals.head)))
         if (!logged.contains(logSeq)) {
-          QELogger.logSequent(p.conclusion, logSeq, s"QE ${logged.size}", logPath)
+          logger(p.conclusion, logSeq, s"QE ${logged.size}")
           logged.add(logSeq)
         }
       case _ => // do nothing
@@ -36,6 +36,10 @@ object IOListeners {
     override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {}
     override def kill(): Unit = {}
   }
+
+  /** Interpreter listener that logs QE calls to `logPath` if condition `logCondition` is satisfied. */
+  class QEFileLogListener(logPath: String, logCondition: (ProvableSig, BelleExpr) => Boolean)
+    extends QELogListener((c: Sequent, g: Sequent, s: String) => QELogger.logSequent(c, g, s, logPath), logCondition)
 
   /** Interpreter listener that records the duration of tactics that satisfy condition `logCondition`. */
   class StopwatchListener(logCondition: (ProvableSig, BelleExpr) => Boolean) extends IOListener() {

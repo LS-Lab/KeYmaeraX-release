@@ -56,12 +56,14 @@ object AxiomaticODESolver {
       case Some(Diamond(ODESystem(_, True), _)) =>
         useAt("<> diamond", PosInExpr(1::Nil))(pos) &
         boxAxiomaticSolve(instEnd)(pos ++ PosInExpr(0::Nil)) &
-        pushNegation(pos)
+        pushNegation(pos) &
+        simplifier(pos)
       case Some(Diamond(ODESystem(_, _), _)) =>
         useAt("<> diamond", PosInExpr(1::Nil))(pos) &
         boxAxiomaticSolve(instEnd)(pos ++ PosInExpr(0::Nil)) &
         pushNegation(pos) &
-        useAt("PC10", PosInExpr(1::Nil))(pos ++ PosInExpr(0::1::1::Nil))
+        useAt("PC10", PosInExpr(1::Nil))(pos ++ PosInExpr(0::1::1::Nil)) &
+        simplifier(pos)
       case _ => boxAxiomaticSolve(instEnd)(pos)
     }
   })
@@ -143,7 +145,7 @@ object AxiomaticODESolver {
       DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
       odeSolverPreconds(pos ++ PosInExpr(1 :: Nil)) &
       DebuggingTactics.debug("AFTER precondition check", ODE_DEBUGGER) &
-      (cutInSoln(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("Cut in a sol'n", ODE_DEBUGGER)) * osize &
+      (cutInSoln(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("Cut in a sol'n", ODE_DEBUGGER)) &
       DebuggingTactics.debug("AFTER cutting in all soln's", ODE_DEBUGGER) &
       simplifyEvolutionDomain(osize)(odePosAfterInitialVals ++ PosInExpr(0 :: 1 :: Nil)) &
       DebuggingTactics.debug("AFTER simplifying evolution domain constraint", ODE_DEBUGGER) &
@@ -404,30 +406,18 @@ object AxiomaticODESolver {
 
     val initialConditions: Map[Variable, Term] = extract(s(pos.top), pos.inExpr.parent, odeSize+1).toMap
 
-    val nextEqn = sortAtomicOdes(atomicOdes(system), diffArg)
-      .filter(_.xp.x != TIMEVAR)
-      .filterNot(eqn => isSolved(eqn.xp.x, system))
-      .head
-
-    tmpmsg(s"next equation to integrate and cut: ${nextEqn.prettyString}")
-
-    val initIdx = TIMEVAR.index match {
-      case Some(n) => n+1
-      case None => 0
-    }
-
-    //@todo switch completely to the new integrator, so that this is a single tactic instead of a saturated tactic.
-    val solnToCut =
-      Integrator(initialConditions, Minus(TIMEVAR, Variable(TIMEVAR.name, Some(initIdx))), system).find(eq => eq.left == nextEqn.xp.x)
-        .getOrElse(throw new Exception(s"Could not get integrated value for ${nextEqn.xp.x} using new integration logic."))
-
-    tmpmsg(s"Solution for ${nextEqn.prettyString} is $solnToCut")
+    val initIdx = TIMEVAR.index.getOrElse(-1) + 1
 
     //@note we have to cut one at a time instead of just constructing a single tactic because solutions need to be added
     //to the domain constraint for recurrences to work. IMO we should probably go for a different implementation of
     //integral and recurrence so that saturating this tactic isn't necessary, and we can just do it all in one shot.
 
-    cutAndProveFml(solnToCut, odeSize+1)(pos)
+    val solutions = Integrator(initialConditions, Minus(TIMEVAR, Variable(TIMEVAR.name, Some(initIdx))), system)
+
+    val sortedDifferentials = sortAtomicOdes(atomicOdes(system), diffArg).filter(_.xp.x != TIMEVAR).map(_.xp.x)
+    val sortedSolutions = solutions.sortWith({case (Equal(a, _), Equal(b, _)) => sortedDifferentials.indexOf(a) < sortedDifferentials.indexOf(b)})
+
+    sortedSolutions.foldRight(nil)((soln, tactic) => cutAndProveFml(soln, odeSize+1)(pos) & tactic)
   })
 
   /** Augment ODE with formula `cut`, consider context of size `contextSize` when proving with DI. */

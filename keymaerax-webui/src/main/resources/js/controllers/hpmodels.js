@@ -330,6 +330,15 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
       $scope.origModel = JSON.parse(JSON.stringify(response.data)); // deep copy
   });
 
+  /** Deletes all proofs of the model */
+  $scope.deleteModelProofs = function() {
+    $http.post('user/' + userid + "/model/" + modelid + "/deleteProofs").success(function(data) {
+      if (data.success) {
+        $scope.model.numProofs = 0;
+      }
+    });
+  }
+
   $scope.saveModelData = function() {
     if ($scope.origModel.name !== $scope.model.name || $scope.origModel.title !== $scope.model.title
      || $scope.origModel.description !== $scope.model.description

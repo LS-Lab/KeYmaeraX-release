@@ -618,6 +618,26 @@ object DerivationInfo {
     new DerivedAxiomInfo("metric <= | <=", "metricOrLe", "metricOrLe", {case () => useAt(DerivedAxioms.metricOrLe)}),
     new DerivedAxiomInfo("metric < | <", "metricOrLt", "metricOrLt", {case () => useAt(DerivedAxioms.metricOrLt)}),
 
+    //Extra SimplifierV3 axioms
+    new DerivedAxiomInfo("* identity neg", "timesIdentityNeg", "timesIdentityNeg", {case () => useAt(DerivedAxioms.timesIdentityNeg)}),
+    new DerivedAxiomInfo("-0", "minusZero", "minusZero", {case () => useAt(DerivedAxioms.minusZero)}),
+    new DerivedAxiomInfo("0-", "zeroMinus", "zeroMinus", {case () => useAt(DerivedAxioms.zeroMinus)}),
+    new DerivedAxiomInfo(">0 -> !=0" ,"gtzImpNez" , "gtzImpNez"  ,{case () => useAt(DerivedAxioms.gtzImpNez)}),
+    new DerivedAxiomInfo("<0 -> !=0" ,"ltzImpNez" , "ltzImpNez"  ,{case () => useAt(DerivedAxioms.ltzImpNez)}),
+    new DerivedAxiomInfo("!=0 -> 0/F","zeroDivNez", "zeroDivNez" ,{case () => useAt(DerivedAxioms.zeroDivNez)}),
+    new DerivedAxiomInfo("F^0","powZero", "powZero" ,{case () => useAt(DerivedAxioms.powZero)}),
+    new DerivedAxiomInfo("F^1","powOne"    , "powOne"     ,{case () => useAt(DerivedAxioms.powOne)}),
+    new DerivedAxiomInfo("< irrefl", "lessNotRefl", "lessNotRefl", {case () => useAt(DerivedAxioms.lessNotRefl)}),
+    new DerivedAxiomInfo("> irrefl", "greaterNotRefl", "greaterNotRefl", {case () => useAt(DerivedAxioms.greaterNotRefl)}),
+    new DerivedAxiomInfo("!= irrefl", "notEqualNotRefl", "notEqualNotRefl", {case () => useAt(DerivedAxioms.notEqualNotRefl)}),
+    new DerivedAxiomInfo("= refl", "equalRefl", "equalRefl", {case () => useAt(DerivedAxioms.equalRefl)}),
+    new DerivedAxiomInfo("<= refl", "lessEqualRefl", "lessEqualRefl", {case () => useAt(DerivedAxioms.lessEqualRefl)}),
+    new DerivedAxiomInfo(">= refl", "greaterEqualRefl", "greaterEqualRefl", {case () => useAt(DerivedAxioms.greaterEqualRefl)}),
+    new DerivedAxiomInfo("= sym", "equalSym", "equalSym", {case () => useAt(DerivedAxioms.equalSym)}),
+    new DerivedAxiomInfo("!= sym", "notEqualSym", "notEqualSym", {case () => useAt(DerivedAxioms.notEqualSym)}),
+    new DerivedAxiomInfo("> antisym", "greaterNotSym", "greaterNotSym", {case () => useAt(DerivedAxioms.greaterNotSym)}),
+    new DerivedAxiomInfo("< antisym", "lessNotSym", "lessNotSym", {case () => useAt(DerivedAxioms.lessNotSym)}),
+
     // Note: Tactic info does not cover all tactics yet.
     // Proof rule position PositionTactics
     new PositionTacticInfo("notL"
@@ -872,6 +892,17 @@ object DerivationInfo {
       , _ => ((lemmaName: String) => ((tactic: Option[String]) =>
         TactixLibrary.useLemma(lemmaName, tactic.map(_.asTactic))): TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
 
+    InputPositionTacticInfo("useLemmaAt"
+      , "useLemmaAt"
+      , List(StringArg("lemma"), StringArg("key"))
+      , _ => ((lemmaName: String) => ((key: Option[String]) =>
+        TactixLibrary.useLemmaAt(lemmaName, key.map(k => PosInExpr(k.split("\\.").map(Integer.parseInt).toList)))): TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
+
+    InputPositionTacticInfo("cutAt"
+      , "cutAt"
+      , List(FormulaArg("fml"))
+      , _ => ((fml: Formula) => TactixLibrary.cutAt(fml)): TypedFunc[Formula, BelleExpr]),
+
     // Differential tactics
     new PositionTacticInfo("splitWeakInequality", "splitWeakInequality", {case () => DifferentialTactics.splitWeakInequality}, needsTool = true),
     new PositionTacticInfo("ODE",
@@ -1091,6 +1122,10 @@ object ProvableInfo {
       case info: ProvableInfo => info
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom or axiomatic rule, whether derived or not.")
     }
+
+  /** True if ProvableInfo with `storedName` exists, false otherwise. */
+  def existsStoredName(storedName: String): Boolean =
+    DerivationInfo.allInfo.exists({case si: StorableInfo => si.storedName == storedName case _ => false})
 
   /** Retrieve meta-information on an inference by the given stored name `storedName` */
   def ofStoredName(storedName: String): ProvableInfo = {

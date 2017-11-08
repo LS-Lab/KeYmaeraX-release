@@ -286,4 +286,24 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
     ) shouldBe 'proved
   }
 
+  "SimplifierV3" should "prove * identity neg" in {check{timesIdentityNeg}}
+  "it" should "prove -0" in {check{minusZero}}
+  "it" should "prove 0-" in {check{zeroMinus}}
+  "it" should "prove >0 -> !=0"  in {check{gtzImpNez}}
+  "it" should "prove <0 -> !=0"  in {check{ltzImpNez}}
+  "it" should "prove !=0 -> 0/F" in {check{zeroDivNez}}
+  "it" should "prove F^0" in {check{powZero}}
+  "it" should "prove F^1"        in {check{powOne}}
+
+  "it" should "prove < irrefl" in {check{lessNotRefl}}
+  "it" should "prove > irrefl" in {check{greaterNotRefl}}
+  "it" should "prove != irrefl" in {check{notEqualNotRefl}}
+  "it" should "prove = refl"  in {check{equalRefl}}
+  "it" should "prove <= refl"  in {check{lessEqualRefl}}
+  "it" should "prove >= refl"  in {check{greaterEqualRefl}}
+
+  "it" should "prove = sym"  in {check{equalSym}}
+  "it" should "prove != sym"  in {check{equalSym}}
+  "it" should "prove > antisym"  in {check{greaterNotSym}}
+  "it" should "prove < antisym"  in {check{lessNotSym}}
 }

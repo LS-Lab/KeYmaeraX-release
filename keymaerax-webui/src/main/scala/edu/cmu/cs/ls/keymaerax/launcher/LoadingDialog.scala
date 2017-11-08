@@ -57,17 +57,19 @@ class CLILoadingDialog() extends LoadingDialog {
   */
 class GraphicalLoadingDialog() extends LoadingDialog {
   println("Starting GUI Loading Dialog.")
-  override val initialMsg: String = "KeYmaera X User Interface " + core.VERSION + " is Loading..."
+  private val titleMsg: String = "KeYmaera X " + core.VERSION
+  override val initialMsg: String = "Loading..."
 
   private val progressBar = new JProgressBar()
-  //  val progressMonitor = new ProgressMonitor(progressBar, "Initializing HyDRA..", "Binding port 8090", 0, 100)
-  private val label = new JLabel(initialMsg)
+  private val titleLabel = new JLabel(titleMsg)
+  private val progressLabel = new JLabel(initialMsg)
   //@todo only show on first launch
   private val firstLaunch = new JLabel("The first two starts might take a while to populate the local lemma database.")
 
   private var window = new JWindow()
-  window.setLayout(new GridLayout(3,1))
-  window.getContentPane.add(label)
+  window.setLayout(new GridLayout(4,1))
+  window.getContentPane.add(titleLabel)
+  window.getContentPane.add(progressLabel)
   window.getContentPane.add(firstLaunch)
   window.getContentPane.add(progressBar)
   window.setSize(500,100)
@@ -75,7 +77,7 @@ class GraphicalLoadingDialog() extends LoadingDialog {
   window.setVisible(true)
 
   override def addToStatus(x : Int, msg: Option[String]): Unit = {
-    label.setText(msg.getOrElse(initialMsg))
+    progressLabel.setText(msg.getOrElse(initialMsg))
     val newValue = progressBar.getValue + x
     progressBar.setValue(newValue)
     //    progressMonitor.setProgress(newValue)

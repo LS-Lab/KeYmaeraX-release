@@ -231,6 +231,13 @@ trait RestApi extends HttpService with SLF4JLogging {
     }
   }}}
 
+  val deleteModelProofs: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "deleteProofs") { modelId => pathEnd {
+    post {
+      val r = new DeleteModelProofsRequest(database, userId, modelId)
+      completeRequest(r, t)
+    }
+  }}}
+
   val deleteProof: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => pathPrefix("proof" / Segment / "delete") { proofId => pathEnd {
     post {
       val r = new DeleteProofRequest(database, userId, proofId)
@@ -1072,6 +1079,7 @@ trait RestApi extends HttpService with SLF4JLogging {
     userTheme             ::
     browseProofRoot       ::
     browseNodeChildren    ::
+    deleteModelProofs     ::
     logoff                ::
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil

@@ -11,9 +11,9 @@ Functions.
   R A.  /* Maximum acceleration */
   R m.  /* End of movement authority (train must not drive past m) */
 
-  R stopDist(R) = ((.)^2/(2*b)).                       /* Train stopping distance from speed (.) with braking force b */
-  R accCompensation(R) = (((A/b) + 1)*((A/2)*ep^2 + ep*(.))).               /* Distance to compensate speed increase. */
-  R SB(R)       = (stopDist(.) + accCompensation(.)).        /* Distance needed to stop safely when accelerating once */
+  R stopDist(R v) = (v^2/(2*b)).                       /* Train stopping distance from speed (.) with braking force b */
+  R accCompensation(R v) = (((A/b) + 1)*((A/2)*ep^2 + ep*v)).               /* Distance to compensate speed increase. */
+  R SB(R v)       = (stopDist(v) + accCompensation(v)).      /* Distance needed to stop safely when accelerating once */
 
   /* Initial states */
   B initial() <-> (
@@ -22,7 +22,7 @@ Functions.
     A>=0                                                                                         /* engine is working */
   ).
 
-  B safe(R) <-> ((.) <= m).             /* safety property: train 'z' never drives past end of movement authority 'm' */
+  B safe(R z) <-> (z <= m).             /* safety property: train 'z' never drives past end of movement authority 'm' */
 
   B loopInv() <-> (m-z >= stopDist(v)).               /* loop invariant: always maintain sufficient stopping distance */
 End.
@@ -71,7 +71,7 @@ loopAuto('R) ; <(                                             /* prove loop by i
     diffInvariant({`t>=old(t)`}, 'R);
     diffInvariant({`v=old(v)+A*t`}, 'R);
     diffInvariant({`z=old(z)+old(v)*t+A/2*t^2`}, 'R)
-  ) ; doall(dW('R) ; QE)                                      /* prove safety from just the differential invariants */
+  ) ; doall(dW('R) ; QE({`Mathematica`}))                       /* prove safety from just the differential invariants */
 )
 End.
 
@@ -235,7 +235,7 @@ Tactic "ETCS RBC Controllability Corollary Proof".
     existsR({`v^2/(2*b)`}, 1)
   );
   doall(andR(1));
-  doall(QE)
+  doall(QE({`Mathematica`}))
 End.
 
 End.
@@ -348,6 +348,7 @@ em = emOff() & v^2 - d^2 <= 2*b*(m-z) & d >=0 & b > 0 & A >= 0 & ep >= 0
 End.
 
 Tactic "ETCS Safety Proof".
+  /* requires QE({`Mathematica`}) */
   master
 End.
 

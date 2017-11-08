@@ -60,8 +60,8 @@ object SimplifierV3 {
 
   private lazy val negAx = remember( "(A_() -> (L_() = LL_())) -> A_() -> (-L_() = -LL_())".asFormula,prop & exhaustiveEqL2R(-1) & cohideR(1) & byUS("= reflexive"), namespace).fact
 
-
-  private lazy val equalTrans = remember("(P_() -> (F_() = FF_())) & (Q_() -> (FF_() = FFF_())) -> (P_() & Q_() -> (F_() = FFF_())) ".asFormula,prop & QE & done, namespace).fact
+  private val equalTrans = proveBy("(P_() -> (F_() = FF_())) & (Q_() -> (FF_() = FFF_())) -> (P_() & Q_() -> (F_() = FFF_())) ".asFormula,
+    prop & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive"))
 
   //TODO: think more about the type used to represent the current context
   type context = Set[Formula]
@@ -716,23 +716,40 @@ object SimplifierV3 {
 
   /** Term simplification indices */
 
-  private def qeTermProof(t:String,tt:String,pre:Option[String] = None): ProvableSig =
-  {
-    pre match{
-      case None => remember(Equal(t.asTerm,tt.asTerm),QE & done, namespace).fact
-      case Some(f) => remember(Imply(f.asFormula,Equal(t.asTerm,tt.asTerm)),QE & done, namespace).fact
-    }
-  }
+//  private def qeTermProof(t:String,tt:String,pre:Option[String] = None): ProvableSig =
+//  {
+//    pre match{
+//      case None => remember(Equal(t.asTerm,tt.asTerm),QE & done, namespace).fact
+//      case Some(f) => remember(Imply(f.asFormula,Equal(t.asTerm,tt.asTerm)),QE & done, namespace).fact
+//    }
+//  }
 
   //These are mostly just the basic unit and identity rules
-  private lazy val mulArith = List(qeTermProof("0*F_()","0"), qeTermProof("F_()*0","0"), qeTermProof("1*F_()","F_()"),
-    qeTermProof("F_()*1","F_()"), qeTermProof("-1*F_()","-F_()"), qeTermProof("F_()*-1","-F_()"))
-  private lazy val plusArith = List(qeTermProof("0+F_()","F_()"), qeTermProof("F_()+0","F_()"))
-  private lazy val minusArith = List( qeTermProof("F_()-0","F_()"),qeTermProof("0-F_()","-F_()"))
-  //This is enabled by dependent rewriting
-  private lazy val divArith = List(qeTermProof("0/F_()","0",Some("F_()>0")), qeTermProof("0/F_()","0",Some("F_()<0")))
-  private lazy val powArith = List(qeTermProof("F_()^0","1",Some("F_()>0")), qeTermProof("F_()^0","1",Some("F_()<0")),
-    qeTermProof("F_()^1","F_()"))
+  private lazy val mulArith = List(
+    DerivedAxioms.zeroTimes.fact,
+    DerivedAxioms.timesZero.fact,
+    DerivedAxioms.timesIdentity.fact,
+    useFor(DerivedAxioms.timesCommute.fact, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(DerivedAxioms.timesIdentity.fact),
+    DerivedAxioms.timesIdentityNeg.fact,
+    useFor(DerivedAxioms.timesCommute.fact, PosInExpr(0 :: Nil))(SuccPosition(1,0::Nil))(DerivedAxioms.timesIdentityNeg.fact))
+
+  private lazy val plusArith = List(
+    DerivedAxioms.plusZero.fact,
+    DerivedAxioms.zeroPlus.fact)
+
+  private lazy val minusArith = List(
+    DerivedAxioms.minusZero.fact,
+    DerivedAxioms.zeroMinus.fact)
+
+  //TODO: move to DerivedAxioms?
+  lazy val divArith = List(
+    DerivedAxioms.zeroDivNez.fact,
+    useFor(DerivedAxioms.gtzImpNez.fact, PosInExpr(1 :: Nil))(SuccPosition(1,0::Nil))(DerivedAxioms.zeroDivNez.fact),
+    useFor(DerivedAxioms.ltzImpNez.fact, PosInExpr(1 :: Nil))(SuccPosition(1,0::Nil))(DerivedAxioms.zeroDivNez.fact))
+
+  lazy val powArith = List(
+    DerivedAxioms.powZero.fact,
+    DerivedAxioms.powOne.fact)
 
   //These may also be useful:
   //qeTermProof("F_()*(F_()^-1)","1",Some("F_()>0")), qeTermProof("(F_()^-1)*F_()","1",Some("F_()>0")))
@@ -775,7 +792,7 @@ object SimplifierV3 {
   }
 
   private lazy val impReflexive = remember("p_() -> p_()".asFormula,prop & done, namespace).fact
-  private lazy val eqSymmetricImp = remember("F_() = G_() -> G_() = F_()".asFormula,QE & done, namespace).fact
+  private lazy val eqSymmetricImp = remember("F_() = G_() -> G_() = F_()".asFormula,prop & exhaustiveEqL2R(-1) & byUS("= reflexive"),namespace).fact
 
   //Constrained search for equalities of the form t = Num (or Num = t) in the context
   def groundEqualityIndex (t:Term,ctx:context) : List[ProvableSig] = {
@@ -831,27 +848,7 @@ object SimplifierV3 {
     }
   }
 
-  private def qeFormulaProof(f:Option[String],t:String,tt:String):ProvableSig =
-  {
-    val ttt  = tt.asFormula
-    f match{
-      case None => remember(Equiv(t.asFormula,ttt),prop & QE & done, namespace).fact
-      case Some(f) => remember(Imply(f.asFormula,Equiv(t.asFormula,ttt)),prop & QE & done, namespace).fact
-    }
-  }
-
-  private lazy val ltNotReflex = qeFormulaProof(None,"F_()<F_()","false")
-  private lazy val gtNotReflex = qeFormulaProof(None,"F_()>F_()","false")
-  private lazy val neqNotReflex = qeFormulaProof(None,"F_()!=F_()","false")
-  private lazy val equalReflex = qeFormulaProof(None,"F_() = F_()","true")
-  private lazy val lessequalReflex = qeFormulaProof(None,"F_() <= F_()","true")
-  private lazy val greaterequalReflex = qeFormulaProof(None,"F_() >= F_()","true")
-
-  private lazy val eqSym = qeFormulaProof(Some("F_() = G_()"),"G_() = F_()","true")
-  private lazy val neqSym = qeFormulaProof(Some("F_() != G_()"),"G_() != F_()","true")
-  private lazy val gtNotSym = qeFormulaProof(Some("F_() > G_()"),"G_() > F_()","false")
-  private lazy val ltNotSym = qeFormulaProof(Some("F_() < G_()"),"G_() < F_()","false")
-
+  //TODO: These are annoying to add to the derived axioms database...
   private def qeSearch(cmp1:(Term,Term)=>Formula,cmps:List[(Term,Term)=>Formula]) : List[ProvableSig] = {
     //Use partial QE because I don't want to do everything by hand..
     val f = "F_()".asTerm
@@ -869,27 +866,32 @@ object SimplifierV3 {
     ).filter(_.isProved)
   }
 
-  private lazy val eqs = eqSym::qeSearch(Equal.apply,List(NotEqual.apply,Greater.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
-  private lazy val neqs = neqSym::qeSearch(NotEqual.apply,List(Equal.apply,Greater.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
-  private lazy val gts = gtNotSym::qeSearch(Greater.apply,List(Equal.apply,NotEqual.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
+  private lazy val eqs = DerivedAxioms.equalSym.fact::qeSearch(Equal.apply,List(NotEqual.apply,Greater.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
+  private lazy val neqs = DerivedAxioms.notEqualSym.fact::qeSearch(NotEqual.apply,List(Equal.apply,Greater.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
+  private lazy val gts = DerivedAxioms.greaterNotSym.fact::qeSearch(Greater.apply,List(Equal.apply,NotEqual.apply,GreaterEqual.apply,Less.apply,LessEqual.apply))
   private lazy val ges = qeSearch(GreaterEqual.apply,List(Equal.apply,NotEqual.apply,Greater.apply,Less.apply,LessEqual.apply))
-  private lazy val lts = ltNotSym::qeSearch(Less.apply,List(Equal.apply,NotEqual.apply,Greater.apply,GreaterEqual.apply,LessEqual.apply))
+  private lazy val lts = DerivedAxioms.lessNotSym.fact::qeSearch(Less.apply,List(Equal.apply,NotEqual.apply,Greater.apply,GreaterEqual.apply,LessEqual.apply))
   private lazy val les = qeSearch(LessEqual.apply,List(Equal.apply,NotEqual.apply,Greater.apply,GreaterEqual.apply,Less.apply))
 
   //This contains the basic heuristics for closing a comparison formula
   def cmpIndex (f:Formula,ctx:context) : List[ProvableSig] = {
 
     f match {
+      // Not of a comparison formula
+      case Not(bop:ComparisonFormula) =>
+        List(DerivedAxioms.notNotEqual,DerivedAxioms.notEqual,
+          DerivedAxioms.notLess,DerivedAxioms.notGreater,
+          DerivedAxioms.notLessEqual,DerivedAxioms.notGreaterEqual).map(l=>l.fact)
       // Reflexive cases
       // This protects against unification errors using Scala to inspect the term directly
       case bop:ComparisonFormula if bop.left==bop.right =>
         bop match{
-          case Less(_,_) => List(ltNotReflex)
-          case Greater(_,_) => List(gtNotReflex)
-          case NotEqual(_,_) => List(neqNotReflex)
-          case Equal(_,_) => List(equalReflex)
-          case GreaterEqual(_,_) => List(greaterequalReflex)
-          case LessEqual(_,_) => List(lessequalReflex)
+          case Less(_,_) => List(DerivedAxioms.lessNotRefl.fact)
+          case Greater(_,_) => List(DerivedAxioms.greaterNotRefl.fact)
+          case NotEqual(_,_) => List(DerivedAxioms.notEqualNotRefl.fact)
+          case Equal(_,_) => List(DerivedAxioms.equalRefl.fact)
+          case GreaterEqual(_,_) => List(DerivedAxioms.greaterEqualRefl.fact)
+          case LessEqual(_,_) => List(DerivedAxioms.lessEqualRefl.fact)
         }
       //Closing by search
       case bop:ComparisonFormula =>

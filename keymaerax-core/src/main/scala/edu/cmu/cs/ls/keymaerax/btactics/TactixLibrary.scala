@@ -563,14 +563,16 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[RCF]] */
   def QE(order: List[NamedSymbol] = Nil, requiresTool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
     //@todo implement as part of tools?
-    val tool = ToolProvider.qeTool(requiresTool).getOrElse(
+    lazy val tool = ToolProvider.qeTool(requiresTool).getOrElse(
       throw new BelleThrowable(s"QE requires ${requiresTool.getOrElse("a QETool")}, but got None"))
-    (tool, timeout) match {
-      case (tom: ToolOperationManagement, Some(t)) => tom.setOperationTimeout(t)
-      case (_, Some(t)) => throw BelleUnsupportedFailure("Tool " + tool + " does not support timeouts")
-      case (_, None) => // do nothing
+    lazy val timeoutTool: QETool = timeout match {
+      case Some(t) => tool match {
+        case tom: ToolOperationManagement => tom.setOperationTimeout(t); tool
+        case _ => throw BelleUnsupportedFailure("Tool " + tool + " does not support timeouts")
+      }
+      case None => tool
     }
-    val tactic = ToolTactics.fullQE(order)(tool)
+    val tactic = ToolTactics.fullQE(order)(timeoutTool)
     (requiresTool, timeout) match {
       case (Some(toolName), Some(t)) => "QE" byWithInputs (Variable(toolName)::Number(t)::Nil, tactic)
       case (Some(toolName), None) => "QE" byWithInputs (Variable(toolName)::Nil, tactic)
@@ -839,6 +841,17 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       } else throw new BelleAbort("Missing lemma " + lemmaName, "Please prove lemma " + lemmaName + " first")
     }
   )
+
+  /** Applies the lemma by matching `key` in the lemma with the tactic position. */
+  def useLemmaAt(lemmaName: String, key: Option[PosInExpr]): DependentPositionWithAppliedInputTactic = "useLemmaAt" byWithInputs(
+    if (key.isDefined) lemmaName::key.get.prettyString::Nil else lemmaName::Nil,
+    (pos: Position, _: Sequent) => {
+      val userLemmaName = "user" + File.separator + lemmaName //@todo FileLemmaDB + multi-user environment
+      if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {
+        val lemma = LemmaDBFactory.lemmaDB.get(userLemmaName).get
+        useAt(lemma, key.getOrElse(PosInExpr(0::Nil)))(pos)
+      } else throw new BelleAbort("Missing lemma " + lemmaName, "Please prove lemma " + lemmaName + " first")
+    })
 
   /** Finds a counter example, indicating that the specified formula is not valid. */
   def findCounterExample(formula: Formula) = ToolProvider.cexTool().getOrElse(throw new BelleThrowable("findCounterExample requires a CounterExampleTool, but got None")).findCounterExample(formula)

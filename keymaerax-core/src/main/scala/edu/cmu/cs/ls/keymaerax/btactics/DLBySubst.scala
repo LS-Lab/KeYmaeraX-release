@@ -299,15 +299,17 @@ private object DLBySubst {
   def conRule(variantArg:Variable, variantDef:Formula) = "con" byWithInput(variantDef, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "conRule only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
-    require(variantArg == Variable("v"))
+
+    val v = "v_".asVariable
     val pre = Exists(IndexedSeq(variantArg), variantDef)
+
     cutR(pre)(pos.checkSucc.top) < (
-      ident partial (BelleLabels.initCase),
+      ident partial(BelleLabels.initCase),
       cohide(pos) & implyR(1)
-      & existsL(-1)
-      & byUS("con convergence") < (
-        assignd(1, 1 :: Nil) partial
-      , Idioms.nil) partial
+      & ProofRuleTactics.boundRenaming(variantArg, v)(-1) & existsL(-1)
+      & byUS("con convergence") & OnAll(ProofRuleTactics.uniformRenaming(v, variantArg)) < (
+        assignd(1, 1 :: Nil)
+      , Idioms.nil)
     ) partial(BelleLabels.indStep)
   })
 
