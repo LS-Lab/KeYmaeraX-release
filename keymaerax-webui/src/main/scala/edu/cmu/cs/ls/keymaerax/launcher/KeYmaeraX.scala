@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.btactics.IsabelleSyntax._
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.pt.{IsabelleConverter, PTProvable, ProvableSig}
 
 import scala.collection.immutable
 import scala.compat.Platform
@@ -74,6 +74,7 @@ object KeYmaeraX {
       |  -vars     use ordered list of variables, treating others as constant functions
       |  -interval guard reals by interval arithmetic in floating point (recommended)
       |  -nointerval skip interval arithmetic presuming no floating point errors
+      |  -savept path export proof term s-expression from -check to path
       |  -lax      use lax mode with more flexible parser, printer, prover etc.
       |  -strict   use strict mode with no flexibility in prover
       |  -debug    use debug mode with more exhaustive messages
@@ -214,6 +215,9 @@ object KeYmaeraX {
       case "-check" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "check", 'in -> value), tail)
         else optionErrorReporter("-check")
+      case "-savept" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('ptOut -> value), tail)
+        else optionErrorReporter("-savept")
       case "-modelplex" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "modelplex", 'in -> value), tail)
         else optionErrorReporter("-modelPlex")
@@ -563,12 +567,28 @@ object KeYmaeraX {
         println("==========================================")
     }
 
+    def savePt(pt:ProvableSig):Unit = {
+      (pt, options.get('ptOut)) match {
+        case (ptp:PTProvable, Some(path:String)) =>
+          val conv = new IsabelleConverter(ptp.pt)
+          val source = conv.sexp
+          val writer = new PrintWriter(path)
+          writer.write(source)
+          writer.close()
+        case (_, None) => ()
+        case (ptp:PTProvable, None) => assert(false, "Proof term output path specified but proof did not contain proof term")
+      }
+    }
+
     val qeDurationListener = new IOListeners.StopwatchListener((_, t) => t match {
       case DependentTactic("QE") => true
       case DependentTactic("smartQE") => true
       case _ => false
     })
 
+    if(options.contains('ptOut)) {
+      ProvableSig.PROOF_TERMS_ENABLED = true
+    }
     BelleInterpreter.setInterpreter(SequentialInterpreter(qeDurationListener::Nil))
 
     archiveContent.foreach({case ParsedArchiveEntry(modelName, _, _, model: Formula, tactics) =>
@@ -587,6 +607,7 @@ object KeYmaeraX {
           statistics(statisticName) = Left(end-start, qeDuration, TacticStatistics.size(tactic), TacticStatistics.lines(tactic), proof.steps)
 
           printStatistics(statisticName, statistics(statisticName))
+          savePt(proof)
         } catch {
           case ex: Throwable =>
             statistics(statisticName) = Right(ex)
@@ -610,9 +631,21 @@ object KeYmaeraX {
     val in = options('in).toString
     val inputModel = KeYmaeraXArchiveParser(in).head.model.asInstanceOf[Formula]
 
-    val verifyOption = options.getOrElse('verify, false).asInstanceOf[Boolean]
-    val isarOption = options.getOrElse('isar,false).asInstanceOf[Boolean]
+    val verifyOption:Option[(ProvableSig => Unit)] =
+      if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
+        Some({case ptp:PTProvable =>
+          val conv = new IsabelleConverter(ptp.pt)
+          val source = conv.sexp
+          val pwPt = new PrintWriter(options('ptOut).asInstanceOf[String]+".pt")
+          pwPt.write(source)
+          pwPt.close()
+        case _:ProvableSig => ()
+        })
+      } else Some{case _ => ()}
+    //val isarOption = options.getOrElse('isar,false).asInstanceOf[Boolean]
+
     val inputFileName = in.split('#')(0).dropRight(4)
+
     var outputFileName = inputFileName
     if(options.contains('out)) {
       val outputFileNameDotMx = options('out).toString
@@ -627,6 +660,9 @@ object KeYmaeraX {
       if (options.contains('monitor)) options('monitor).asInstanceOf[Symbol]
       else 'model
 
+    if(options.contains('ptOut)) {
+      ProvableSig.PROOF_TERMS_ENABLED = true
+    }
     val outputFml = if (options.contains('vars))
       ModelPlex(options('vars).asInstanceOf[Array[Variable]].toList, kind, verifyOption)(inputModel)
     else
@@ -642,14 +678,15 @@ object KeYmaeraX {
     pw.write(output)
     pw.close()
 
-    if(isarOption) {
 
-      val pw2 = new PrintWriter(outputFileName + ".isar")
-      val (prog,proof) = isarSyntax(outputFml)
-      pw2.write("/************************************\n * Pretty printer syntax for Isabelle/HOL import \n ************************************/\n\n")
-      pw2.write(prettyProg(prog))
-      pw2.close()
-
+    options.get('ptOut) match {
+      case Some(path:String) =>
+        val pwProg = new PrintWriter(path+".hp")
+        val (prog,proof) = isarSyntax(outputFml)
+        pwProg.write("/************************************\n * Pretty printer syntax for Isabelle/HOL import \n ************************************/\n\n")
+        pwProg.write(prettyProg(prog))
+        pwProg.close()
+      case None => ()
     }
   }
 

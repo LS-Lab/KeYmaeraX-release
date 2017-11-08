@@ -34,7 +34,7 @@ object ModelPlex extends ModelPlexTrait {
   /**
    * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
    */
-  def apply(formula: Formula, kind: Symbol, checkProvable: Boolean = true): Formula = formula match {
+  def apply(formula: Formula, kind: Symbol, checkProvable: Option[(ProvableSig => Unit)] = Some({case _ => ()})): Formula = formula match {
     case Imply(assumptions, Box(prg, _)) =>
       val vars = StaticSemantics.boundVars(prg).symbols.filter(v => v.isInstanceOf[Variable] && !v.isInstanceOf[DifferentialSymbol]).map((x:NamedSymbol)=>x.asInstanceOf[Variable]).toList
       val sortedVars = vars.sortWith((x,y)=>x<y)
@@ -45,7 +45,7 @@ object ModelPlex extends ModelPlexTrait {
   /**
    * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
    */
-  def apply(vars: List[Variable], kind: Symbol): (Formula => Formula) = apply(vars, kind, checkProvable=true)
+  def apply(vars: List[Variable], kind: Symbol): (Formula => Formula) = apply(vars, kind, checkProvable=Some({case _ => ()}))
 
   /**
    * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
@@ -53,7 +53,7 @@ object ModelPlex extends ModelPlexTrait {
     *
     * @param checkProvable true to check the Provable proof certificates (recommended).
    */
-  def apply(vars: List[Variable], kind: Symbol, checkProvable: Boolean): (Formula => Formula) = formula => {
+  def apply(vars: List[Variable], kind: Symbol, checkProvable: Option[(ProvableSig => Unit)]): (Formula => Formula) = formula => {
     require(kind == 'ctrl || kind == 'model, "Unknown monitor kind " + kind + ", expected one of 'ctrl or 'model")
     val (mxInputFml, assumptions) = createMonitorSpecificationConjecture(formula, vars:_*)
     val mxInputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
@@ -76,23 +76,25 @@ object ModelPlex extends ModelPlexTrait {
     assert(result.conclusion == mxInputSequent, "Proof was a proof of the ModelPlex specification")
     // @todo conjunction with phi|_cnst when monitor should also check the conditions on constants
     val mxOutputProofTree = result.subgoals.head.succ.head
-    if (checkProvable) {
-      //@todo probably doesn't make much sense anymore in new version
-      val witnessStart= Platform.currentTime
-      val provable = result.proved
-      assert(provable.ante.size == 1 && provable.succ.size == 1, "ModelPlex tactic expected to provide a single formula (in place version)")
-      assert(provable == mxInputSequent, "Provable is a proof of the ModelPlex specification")
-      assert(provable.ante.head == True)
-      val mxOutput = provable.succ.head
-      assert(mxOutput == mxOutputProofTree, "ModelPlex output from Provable and from ProofNode agree (if ProofNode is correct)")
-      val witnessDuration = Platform.currentTime - witnessStart
-      Console.println("[proof time       " + proofDuration + "ms]")
-      Console.println("[certificate time " + witnessDuration + "ms]")
-      println("ModelPlex Proof certificate: Passed")
-      mxOutput
-    } else {
-      println("ModelPlex Proof certificate: Skipped")
-      mxOutputProofTree
+    checkProvable match {
+      case Some(report) =>
+        //@todo probably doesn't make much sense anymore in new version
+        val witnessStart= Platform.currentTime
+        val provable = result.proved
+        assert(provable.ante.size == 1 && provable.succ.size == 1, "ModelPlex tactic expected to provide a single formula (in place version)")
+        assert(provable == mxInputSequent, "Provable is a proof of the ModelPlex specification")
+        assert(provable.ante.head == True)
+        val mxOutput = provable.succ.head
+        assert(mxOutput == mxOutputProofTree, "ModelPlex output from Provable and from ProofNode agree (if ProofNode is correct)")
+        val witnessDuration = Platform.currentTime - witnessStart
+        Console.println("[proof time       " + proofDuration + "ms]")
+        Console.println("[certificate time " + witnessDuration + "ms]")
+        println("ModelPlex Proof certificate: Passed")
+        report(result)
+        mxOutput
+      case None =>
+        println("ModelPlex Proof certificate: Skipped")
+        mxOutputProofTree
     }
   }
 
