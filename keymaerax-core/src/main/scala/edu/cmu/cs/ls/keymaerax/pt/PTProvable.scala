@@ -63,7 +63,7 @@ trait ProvableSig {
   def prettyString: String
 }
 object ProvableSig {
-  var PROOF_TERMS_ENABLED = false
+  var PROOF_TERMS_ENABLED = System.getProperty("PROOFTERM", "false") == "true"
 
   val axiom: immutable.Map[String, Formula] = Provable.axiom
 
