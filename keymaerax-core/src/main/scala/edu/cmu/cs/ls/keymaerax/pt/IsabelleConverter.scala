@@ -360,8 +360,8 @@ case class IExists(x:ID, child:Iformula) extends Iformula {}
 case class IDiamond(prog:Ihp, post:Iformula) extends Iformula {}
 case class IInContext(id:ID, child:Iformula) extends Iformula {}
 
-object IaxRule {
-  def apply(n:String):IaxRule = {
+object IaxiomaticRule {
+  def apply(n:String):IaxiomaticRule = {
     n match {
       case "CT" => ICT()
       case "CQ equation congruence" => ICQ()
@@ -373,12 +373,12 @@ object IaxRule {
     }
   }
 }
-sealed trait IaxRule {}
-case class ICT() extends IaxRule {}
-case class ICQ() extends IaxRule {}
-case class ICE() extends IaxRule {}
-case class IG() extends IaxRule {}
-case class Imonb() extends IaxRule {}
+sealed trait IaxiomaticRule {}
+case class ICT() extends IaxiomaticRule {}
+case class ICQ() extends IaxiomaticRule {}
+case class ICE() extends IaxiomaticRule {}
+case class IG() extends IaxiomaticRule {}
+case class Imonb() extends IaxiomaticRule {}
 
 //object IruleApp {}
 sealed trait IruleApp {}
@@ -524,8 +524,8 @@ SODEs:List[Option[IODE]])
 
 sealed trait Ipt {}
 case class IFOLRConstant(f:Iformula) extends Ipt {}
-case class IRuleApp (child:Ipt, ra:IruleApp,branch:Int) extends Ipt {}
-case class IAxRule(ar:IaxRule) extends Ipt {}
+case class IRuleApplication (child:Ipt, ra:IruleApp,branch:Int) extends Ipt {}
+case class IAxRule(ar:IaxiomaticRule) extends Ipt {}
 case class IPrUSubst(child:Ipt, sub:Isubst) extends Ipt {}
 case class IAx(ax:Iaxiom) extends Ipt {}
 case class IFNC(child:Ipt, seq:Isequent,ra:IruleApp) extends Ipt {}
@@ -784,7 +784,7 @@ class IsabelleConverter(pt:ProofTerm) {
             val ax = IADIGeq()
             val result = IPrUSubst(IAx(ax),theapp)
             val foo = ProofChecker(pttt)
-            IRuleApp(ISub(apply(a),ISub(apply(b),result,c),d),apply(e,g,h),f)
+            IRuleApplication(ISub(apply(a),ISub(apply(b),result,c),d),apply(e,g,h),f)
           case LessEqual(r,l) =>
             val fsym = UnitFunctional("f", AnyArg, Real)
             val gsym = UnitFunctional("g", AnyArg, Real)
@@ -793,7 +793,7 @@ class IsabelleConverter(pt:ProofTerm) {
             val ax = IADIGeq()
             val result = IPrUSubst(IAx(ax),theapp)
             val foo = ProofChecker(pttt)
-            IRuleApp(ISub(apply(a),ISub(apply(b),result,c),d),apply(e,g,h),f)
+            IRuleApplication(ISub(apply(a),ISub(apply(b),result,c),d),apply(e,g,h),f)
           case Equal(r,l) =>
             val fsym = UnitFunctional("f", AnyArg, Real)
             val gsym = UnitFunctional("g", AnyArg, Real)
@@ -802,7 +802,7 @@ class IsabelleConverter(pt:ProofTerm) {
             val ax = IADIEq()
             val result = IPrUSubst(IAx(ax),theapp)
             val foo = ProofChecker(pttt)
-            IRuleApp(ISub(apply(a),ISub(apply(b),result,c),d),apply(e,g,h),f)
+            IRuleApplication(ISub(apply(a),ISub(apply(b),result,c),d),apply(e,g,h),f)
             //result
           case _ => throw ConversionException("Unsupported differential invariant type: " + p)
         }
@@ -842,10 +842,10 @@ class IsabelleConverter(pt:ProofTerm) {
     } else {
       pt match {
         case FOLRConstant(f) => IFOLRConstant(apply(f,NonSubst()))
-        case RuleTerm(name) => IAxRule(IaxRule(name))
+        case RuleTerm(name) => IAxRule(IaxiomaticRule(name))
         case AxiomTerm(name) => IAx(Iaxiom(name))
         case RuleApplication(child, name, sub, seqPos, expArgs) =>
-          IRuleApp(apply(child), apply(name, seqPos, expArgs), sub)
+          IRuleApplication(apply(child), apply(name, seqPos, expArgs), sub)
         case UsubstProvableTerm(child, subst) =>
           val defun = axiomNeedsDefunctionalization(child)
           val kid = apply(child)
@@ -1249,7 +1249,7 @@ abstract class SourceBuilder(sb:StringBuilder) {
     b1("int_of_integer", ()=>sb.++=(br.toString))
   }
 
-  def apply(ar:IaxRule):Unit = {
+  def apply(ar:IaxiomaticRule):Unit = {
     ar match {
       case ICT() => b0("CT")
       case ICQ() => b0("CQ")
@@ -1330,7 +1330,7 @@ abstract class SourceBuilder(sb:StringBuilder) {
   def apply(pt:Ipt):Unit = {
     pt match {
       case IFOLRConstant(f) => b1("FOLRConstant",()=>apply(f))
-      case IRuleApp (child, ra,branch) => b3("RuleApp",()=>apply(child),()=>apply(ra),()=>nat(branch))
+      case IRuleApplication (child, ra,branch) => b3("RuleApp",()=>apply(child),()=>apply(ra),()=>nat(branch))
       case IAxRule(ar) => b1("AxRule", ()=>apply(ar))
       case IPrUSubst(child, subst) => b2("PrUSubst",()=>apply(child),()=>apply(subst))
       case IAx(ax) => b1("Ax", ()=>apply(ax))
