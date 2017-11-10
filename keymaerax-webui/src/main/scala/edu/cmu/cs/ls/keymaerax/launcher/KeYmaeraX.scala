@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.btactics.IsabelleSyntax._
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj}
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
 import edu.cmu.cs.ls.keymaerax.pt.{IsabelleConverter, PTProvable, ProvableSig}
 
@@ -596,7 +597,7 @@ object KeYmaeraX {
 
     BelleInterpreter.setInterpreter(SequentialInterpreter(qeDurationListener::Nil))
 
-    archiveContent.foreach({case ParsedArchiveEntry(modelName, _, _, model: Formula, tactics) =>
+    archiveContent.foreach({case ParsedArchiveEntry(modelName, kind, fileContent, model: Formula, tactics) =>
       tactics.foreach({case (tacticName, tactic) =>
         val statisticName = modelName + " with " + tacticName
         try {
@@ -610,6 +611,17 @@ object KeYmaeraX {
           assert(proof.isProved, "Expected finished proof")
 
           statistics(statisticName) = Left(end-start, qeDuration, TacticStatistics.size(tactic), TacticStatistics.lines(tactic), proof.steps)
+
+          if (kind == "lemma") {
+            val lemmaName = "user" + File.separator + modelName
+            if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
+            val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
+              "tool" -> "KeYmaera X",
+              "model" -> fileContent,
+              "tactic" -> tactics.head._2.prettyString
+            )) :: Nil)
+            LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
+          }
 
           printStatistics(statisticName, statistics(statisticName))
           savePt(proof)
