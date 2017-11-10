@@ -67,11 +67,14 @@ object ProvableSig {
 
   val axiom: immutable.Map[String, Formula] = Provable.axiom
 
-  val axioms: immutable.Map[String, ProvableSig] =
-    if(PROOF_TERMS_ENABLED) PTProvable.axioms else NoProofTermProvable.axioms
+  // lazy so that startup-time change in PROOF_TERMS_ENABLED is taken
+  def axioms: immutable.Map[String, ProvableSig] = {
+    if (PROOF_TERMS_ENABLED) PTProvable.axioms else NoProofTermProvable.axioms
+  }
 
-  val rules: immutable.Map[String, ProvableSig] =
-    if(PROOF_TERMS_ENABLED) PTProvable.rules else NoProofTermProvable.rules
+  def rules: immutable.Map[String, ProvableSig] = {
+    if (PROOF_TERMS_ENABLED) PTProvable.rules else NoProofTermProvable.rules
+  }
 
   def startProof(goal : Sequent): ProvableSig =
     if(PROOF_TERMS_ENABLED) PTProvable.startProof(goal) else NoProofTermProvable.startProof(goal)
@@ -100,7 +103,9 @@ case class NoProofTermProvable(provable: Provable) extends ProvableSig {
   override def apply(subderivation: ProvableSig, subgoal: Subgoal): ProvableSig =
     NoProofTermProvable(provable(subderivation.underlyingProvable, subgoal), steps+subderivation.steps)
 
-  override def apply(subst: USubst): ProvableSig = NoProofTermProvable(provable(subst), steps+1)
+  override def apply(subst: USubst): ProvableSig =  {
+    NoProofTermProvable(provable(subst), steps+1)
+  }
 
   override def apply(newConsequence: Sequent, rule: Rule): ProvableSig = NoProofTermProvable(provable(newConsequence, rule), steps+1)
 
@@ -133,15 +138,33 @@ object NoProofTermProvable {
 
 object PTProvable {
 
-  val axioms: immutable.Map[String, ProvableSig] = Provable.axioms.map(x => (x._1, PTProvable(NoProofTermProvable.axioms.apply(x._1), AxiomTerm(x._1))))
+  val axioms: immutable.Map[String, ProvableSig] = Provable.axioms.map(x => (x._1, PTProvable(NoProofTermProvable.axioms.apply(x._1),
+    {//println("Provable-axiom:" + x._1);
+    AxiomTerm(x._1)}
+  )))
 
   val rules: immutable.Map[String, ProvableSig] = Provable.rules.map(x => (x._1, PTProvable(NoProofTermProvable.rules.apply(x._1), RuleTerm(x._1))))
 
-  def startProof(goal : Sequent): ProvableSig = PTProvable(NoProofTermProvable.startProof(goal), StartProof(goal))
+  def startProof(goal : Sequent): ProvableSig = {
+    val sym = StaticSemantics.signature(goal)
+    if(sym.exists({case _:UnitFunctional => true case _ => false})) {
+      val 2 = 1 + 1
+      ???
+    }
+
+    PTProvable(NoProofTermProvable.startProof(goal), StartProof(goal))
+  }
 
   private def fml2Seq(f:Formula):Sequent = Sequent(IndexedSeq(), IndexedSeq(f))
 
-  def startProof(goal : Formula): ProvableSig = PTProvable(NoProofTermProvable.startProof(goal), StartProof(fml2Seq(goal)))
+  def startProof(goal : Formula): ProvableSig = {
+    val sym = StaticSemantics.signature(goal)
+    if(sym.exists({case _:UnitFunctional => true case _ => false})) {
+      //println("Goal needs exemption: " + goal)
+
+    }
+    PTProvable(NoProofTermProvable.startProof(goal), StartProof(fml2Seq(goal)))
+  }
 
   def proveArithmetic(t: QETool, f: Formula): Lemma = {
     //@todo after changing everything to ProvableSig's, then create a lemma with an PTProvable.
@@ -229,6 +252,7 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
           PTProvable(provable(subProvable, subgoal), thePt)
         } else if (derivedAxiom.isDefined) {
           val term = Sub(pt, AxiomTerm(derivedAxiom.get.codeName), subgoal)
+          println("derivedaxiom codename: " + derivedAxiom.get.codeName)
           val axiomPT = PTProvable(NoProofTermProvable(derivedAxiom.get.provable.underlyingProvable), term)
           PTProvable(provable(subprovable, subgoal), term)
         }
@@ -244,11 +268,14 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
         }
         else {
           //For more complicated uses of useAt, by, etc. it's unclear what to do (and indeed the general architecture is problematic -- same reason that extraction works by the miracle of hard work aone).
-          throw new Exception(s"Cannot construct a proof term for ${subderivation} because it has no associated proof term.")
+          throw new DebugMeException()
+          //throw new Exception(s"Cannot construct a proof term for ${subderivation} because it has no associated proof term.")
         }
       }
     }
   }
+
+  class DebugMeException extends Exception {}
 
   override def apply(subst: USubst): ProvableSig = {
     PTProvable(provable(subst), UsubstProvableTerm(pt, subst))
@@ -272,9 +299,23 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
 
   lazy val rules: immutable.Map[String, ProvableSig] = PTProvable.rules
 
-  def startProof(goal : Sequent): ProvableSig = PTProvable.startProof(goal)
+  def startProof(goal : Sequent): ProvableSig = {
+    val sym = StaticSemantics.signature(goal)
+    if(sym.exists({case _:UnitFunctional => true case _ => false})) {
+      val 2 = 1 + 1
+      ???
+    }
+    PTProvable.startProof(goal)
+  }
 
-  def startProof(goal : Formula): ProvableSig = PTProvable.startProof(goal)
+  def startProof(goal : Formula): ProvableSig = {
+    val sym = StaticSemantics.signature(goal)
+    if (sym.exists({ case _: UnitFunctional => true case _ => false })) {
+      val 2 = 1 + 1
+      ???
+    }
+    PTProvable.startProof(goal)
+  }
 
   def proveArithmetic(t: QETool, f: Formula): Lemma =
     PTProvable.proveArithmetic(t,f)

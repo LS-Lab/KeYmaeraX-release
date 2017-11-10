@@ -541,6 +541,14 @@ object KeYmaeraX {
     * @param options The prover options.
     */
   def check(options: OptionMap): Unit = {
+    //println("RUNNING CHECK")
+    if(options.contains('ptOut)) {
+      //println("ENABLING PROOF TERMS")
+      ProvableSig.PROOF_TERMS_ENABLED = true
+    } else {
+      //println("DISABLING PROOF TERMS")
+      ProvableSig.PROOF_TERMS_ENABLED = false
+    }
     require(options.contains('in), usage)
 
     val inputFileName = options('in).toString
@@ -586,9 +594,6 @@ object KeYmaeraX {
       case _ => false
     })
 
-    if(options.contains('ptOut)) {
-      ProvableSig.PROOF_TERMS_ENABLED = true
-    }
     BelleInterpreter.setInterpreter(SequentialInterpreter(qeDurationListener::Nil))
 
     archiveContent.foreach({case ParsedArchiveEntry(modelName, _, _, model: Formula, tactics) =>
@@ -626,6 +631,14 @@ object KeYmaeraX {
    * @param options in describes input file name, vars describes the list of variables, out describes the output file name.
    */
   def modelplex(options: OptionMap) = {
+    //println("RUNNING MODELPLEX")
+    if(options.contains('ptOut)) {
+      //println("ENABLING PROOF TERMS")
+      ProvableSig.PROOF_TERMS_ENABLED = true
+    } else {
+      //println("DISABLING PROOF TERMS")
+      ProvableSig.PROOF_TERMS_ENABLED = false
+    }
     require(options.contains('in), usage)
 
     val in = options('in).toString
@@ -660,9 +673,6 @@ object KeYmaeraX {
       if (options.contains('monitor)) options('monitor).asInstanceOf[Symbol]
       else 'model
 
-    if(options.contains('ptOut)) {
-      ProvableSig.PROOF_TERMS_ENABLED = true
-    }
     val outputFml = if (options.contains('vars))
       ModelPlex(options('vars).asInstanceOf[Array[Variable]].toList, kind, verifyOption)(inputModel)
     else
