@@ -383,8 +383,8 @@ case class Imonb() extends IaxRule {}
 //object IruleApp {}
 sealed trait IruleApp {}
 case class IURename(what:ID,repl:ID) extends IruleApp {}
-case class IRrule(r:Irrule, i:Int) extends IruleApp {}
-case class ILrule(r:Ilrule, i:Int) extends IruleApp {}
+case class IApplyRrule(r:Irrule, i:Int) extends IruleApp {}
+case class IApplyLrule(r:Ilrule, i:Int) extends IruleApp {}
 case class ICloseId(i:Int,j:Int) extends IruleApp {}
 case class ICohide2(i:Int,j:Int) extends IruleApp {}
 case class ICut(f:Iformula) extends IruleApp {}
@@ -575,31 +575,31 @@ class IsabelleConverter(pt:ProofTerm) {
       case ("CoHide2", (a:AntePos) :: (s:SuccPos) :: Nil, _) => ICohide2(a.getIndex,s.getIndex)
 
 
-      case ("cut Left", (a:AntePos) :: Nil, (f:Formula) :: Nil) => ILrule(ICutLeft(apply(f,NonSubst())), a.getIndex)
-      case ("Not Left", (a:AntePos)::Nil, _) => ILrule(INotL(),a.getIndex)
-      case ("Imply Left", (a:AntePos)::Nil, _) => ILrule(IImplyL(),a.getIndex)
-      case ("And Left", (a:AntePos)::Nil, _) => ILrule(IAndL(),a.getIndex)
-      case ("Equiv Left", (a:AntePos)::Nil, _) => ILrule(IEquivL(),a.getIndex)
-      case ("Equiv Left1", (a:AntePos)::Nil, _) => ILrule(IEquivForwardL(),a.getIndex)
-      case ("Equiv Left2", (a:AntePos)::Nil, _) => ILrule(IEquivBackwardL(),a.getIndex)
-      case ("HideLeft", (a:AntePos)::Nil, _) => ILrule(IHideL(),a.getIndex)
+      case ("cut Left", (a:AntePos) :: Nil, (f:Formula) :: Nil) => IApplyLrule(ICutLeft(apply(f,NonSubst())), a.getIndex)
+      case ("Not Left", (a:AntePos)::Nil, _) => IApplyLrule(INotL(),a.getIndex)
+      case ("Imply Left", (a:AntePos)::Nil, _) => IApplyLrule(IImplyL(),a.getIndex)
+      case ("And Left", (a:AntePos)::Nil, _) => IApplyLrule(IAndL(),a.getIndex)
+      case ("Equiv Left", (a:AntePos)::Nil, _) => IApplyLrule(IEquivL(),a.getIndex)
+      case ("Equiv Left1", (a:AntePos)::Nil, _) => IApplyLrule(IEquivForwardL(),a.getIndex)
+      case ("Equiv Left2", (a:AntePos)::Nil, _) => IApplyLrule(IEquivBackwardL(),a.getIndex)
+      case ("HideLeft", (a:AntePos)::Nil, _) => IApplyLrule(IHideL(),a.getIndex)
       case ("Bound Renaming", (a:AntePos) :: Nil, BaseVariable(n1,ind1,_) :: BaseVariable(n2,ind2,_) :: Nil) =>
-        ILrule(IBRenameL(IDEnum(m.varMap((n1,ind1))),IDEnum(m.varMap((n2,ind2)))), a.getIndex)
+        IApplyLrule(IBRenameL(IDEnum(m.varMap((n1,ind1))),IDEnum(m.varMap((n2,ind2)))), a.getIndex)
 
-      case ("cut Right", (s:SuccPos) :: Nil, (f:Formula) :: Nil) => IRrule(ICutRight(apply(f,NonSubst())), s.getIndex)
-      case ("Imply Right", (s:SuccPos)::Nil, _) => IRrule(IImplyR(), s.getIndex)
-      case ("CoHideRight", (s:SuccPos)::Nil, _) => IRrule(ICohideRR(), s.getIndex)
-      case ("Cohide Right 2", (s:SuccPos)::Nil, _) => IRrule(ICohideR(), s.getIndex)
-      case ("CloseTrue", (s:SuccPos)::Nil, _) => IRrule(ITrueR(), s.getIndex)
-      case ("Equiv Right", (s:SuccPos)::Nil, _) => IRrule(IEquivR(), s.getIndex)
-      case ("EquivifyRight", (s:SuccPos)::Nil, _) => IRrule(IEquivifyR(), s.getIndex)
-      case ("CommuteEquivRight", (s:SuccPos)::Nil, _) => IRrule(ICommuteEquivR(), s.getIndex)
-      case ("All Right", (s:SuccPos)::Nil, _) => IRrule(ISkolem(), s.getIndex)
-      case ("And Right", (s:SuccPos)::Nil, _) => IRrule(IAndR(), s.getIndex)
-      case ("HideRight", (s:SuccPos)::Nil, _) => IRrule(IHideR(), s.getIndex)
-      case ("Skolemize", (s:SuccPos)::Nil, _) => IRrule(ISkolem(), s.getIndex)
+      case ("cut Right", (s:SuccPos) :: Nil, (f:Formula) :: Nil) => IApplyRrule(ICutRight(apply(f,NonSubst())), s.getIndex)
+      case ("Imply Right", (s:SuccPos)::Nil, _) => IApplyRrule(IImplyR(), s.getIndex)
+      case ("CoHideRight", (s:SuccPos)::Nil, _) => IApplyRrule(ICohideRR(), s.getIndex)
+      case ("Cohide Right 2", (s:SuccPos)::Nil, _) => IApplyRrule(ICohideR(), s.getIndex)
+      case ("CloseTrue", (s:SuccPos)::Nil, _) => IApplyRrule(ITrueR(), s.getIndex)
+      case ("Equiv Right", (s:SuccPos)::Nil, _) => IApplyRrule(IEquivR(), s.getIndex)
+      case ("EquivifyRight", (s:SuccPos)::Nil, _) => IApplyRrule(IEquivifyR(), s.getIndex)
+      case ("CommuteEquivRight", (s:SuccPos)::Nil, _) => IApplyRrule(ICommuteEquivR(), s.getIndex)
+      case ("All Right", (s:SuccPos)::Nil, _) => IApplyRrule(ISkolem(), s.getIndex)
+      case ("And Right", (s:SuccPos)::Nil, _) => IApplyRrule(IAndR(), s.getIndex)
+      case ("HideRight", (s:SuccPos)::Nil, _) => IApplyRrule(IHideR(), s.getIndex)
+      case ("Skolemize", (s:SuccPos)::Nil, _) => IApplyRrule(ISkolem(), s.getIndex)
       case ("Bound Renaming", (s:SuccPos) :: Nil, BaseVariable(n1,ind1,_) :: BaseVariable(n2,ind2,_) :: Nil) =>
-        IRrule(IBRenameR(IDEnum(m.varMap((n1,ind1))),IDEnum(m.varMap((n2,ind2)))), s.getIndex)
+        IApplyRrule(IBRenameR(IDEnum(m.varMap((n1,ind1))),IDEnum(m.varMap((n2,ind2)))), s.getIndex)
       case _ =>
         throw ConversionException("Unrecognized non-axiomatic rule: " + name + ","  + seqPos.toList +", " + expArgs.toList)
     }
@@ -1233,8 +1233,8 @@ abstract class SourceBuilder(sb:StringBuilder) {
   def apply(ra:IruleApp):Unit = {
     ra match {
       case IURename(w,r) => b2("URename",()=>apply(w),()=>apply(r))
-      case IRrule(rr,n) => b2("Rrule", ()=>apply(rr), ()=>nat(n))
-      case ILrule(lr,n) => b2("Lrule", ()=>apply(lr), ()=>nat(n))
+      case IApplyRrule(rr,n) => b2("Rrule", ()=>apply(rr), ()=>nat(n))
+      case IApplyLrule(lr,n) => b2("Lrule", ()=>apply(lr), ()=>nat(n))
       case ICloseId(i,j) => b2("CloseId",()=>nat(i),()=>nat(j))
       case ICohide2(i,j) => b2("Cohide2",()=>nat(i),()=>nat(j))
       case ICut(f) => b1("Cut",()=>apply(f))
