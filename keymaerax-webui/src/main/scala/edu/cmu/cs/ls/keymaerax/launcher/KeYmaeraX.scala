@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.IsabelleSyntax._
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
-import edu.cmu.cs.ls.keymaerax.pt.{IsabelleConverter, PTProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, PTProvable, ProvableSig}
 
 import scala.collection.immutable
 import scala.compat.Platform
@@ -699,6 +699,10 @@ object KeYmaeraX {
     pw.write("/**\n * @param variables are for the state before the controller run\n * @param post() function symbols are for the state after the controller run\n * @param other function symbols are constant\n */\n\n")
     pw.write(output)
     pw.close()
+
+    val pwHOL = new PrintWriter(outputFileName + ".hol")
+    pwHOL.write(HOLConverter.monitorFmlDef(outputFml))
+    pwHOL.close()
 
 
     options.get('ptOut) match {
