@@ -78,20 +78,9 @@ object ModelPlex extends ModelPlexTrait {
     val mxOutputProofTree = result.subgoals.head.succ.head
     checkProvable match {
       case Some(report) =>
-        //@todo probably doesn't make much sense anymore in new version
-        val witnessStart= Platform.currentTime
-        val provable = result.proved
-        assert(provable.ante.size == 1 && provable.succ.size == 1, "ModelPlex tactic expected to provide a single formula (in place version)")
-        assert(provable == mxInputSequent, "Provable is a proof of the ModelPlex specification")
-        assert(provable.ante.head == True)
-        val mxOutput = provable.succ.head
-        assert(mxOutput == mxOutputProofTree, "ModelPlex output from Provable and from ProofNode agree (if ProofNode is correct)")
-        val witnessDuration = Platform.currentTime - witnessStart
-        Console.println("[proof time       " + proofDuration + "ms]")
-        Console.println("[certificate time " + witnessDuration + "ms]")
-        println("ModelPlex Proof certificate: Passed")
         report(result)
-        mxOutput
+        println("ModelPlex Proof certificate: Produced")
+        mxOutputProofTree
       case None =>
         println("ModelPlex Proof certificate: Skipped")
         mxOutputProofTree
