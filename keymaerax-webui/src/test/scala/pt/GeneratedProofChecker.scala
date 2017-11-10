@@ -1,8 +1,13 @@
 package pt
 
+import java.io.{BufferedWriter, FileWriter}
+
 import pt.Int.int_of_integer
 import pt.Rat.Frct
 import pt.Real.Ratreal
+//import pt.lib.Scratch.myvars
+//import pt.lib.{Int, Nat, Proof_Checker, Rat, Real, Scratch, Sum_Type, Syntax, USubst}
+//import pt.lib.Syntax._
 
 import scala.io.Source
 
@@ -11436,6 +11441,9 @@ object Syntax {
   def TT[A, B, C]: formula[A, B, C] =
     Geq[A, C, B](Const[A, C](Real.zero_real), Const[A, C](Real.zero_real))
 
+  def FF[A, B, C]: formula[A, B, C] =
+    Geq[A, C, B](Const[A, C](Real.zero_real), Const[A, C](Real.one_real))
+
   def Box[A, B, C](alpha: hp[A, B, C], p: formula[A, B, C]): formula[A, B, C] =
     Not[A, B, C](Diamond[A, B, C](alpha, Not[A, B, C](p)))
 
@@ -12252,6 +12260,59 @@ object Parser {
 
 
 }
+
+
+object HOLPrinter {
+  import Real._
+  import Rat._
+  import Int._
+  import Proof_Checker._
+  import Syntax._
+  import Nat._
+  import USubst._
+  import Scratch._
+  import Sum_Type._
+
+
+  def apply(t:trm[myvars, myvars]):String = {
+    ???
+  }
+
+  def apply(ode:ODE[myvars, myvars]):String = {
+    ???
+  }
+
+  def apply(hp:hp[myvars, myvars, myvars]):String = {
+    ???
+  }
+
+  def apply(f:formula[myvars, myvars, myvars]):String = {
+    ???
+  }
+
+  private def toSingleFormula(seq:(List[formula[myvars, myvars, myvars]], List[formula[myvars, myvars, myvars]])):formula[myvars, myvars, myvars] = {
+    val (ante,succ) = seq
+    Implies(ante.foldLeft[formula[myvars, myvars, myvars]](TT)({case (acc,x) => And[myvars,myvars,myvars](x,acc)}),
+            succ.foldLeft[formula[myvars, myvars, myvars]](FF)({case (acc,x) => Or(x,acc)}))
+  }
+
+  def apply(seq:Option[(List[(List[Syntax.formula[myvars, myvars, myvars]],
+    List[Syntax.formula[myvars, myvars, myvars]])],
+    (List[Syntax.formula[myvars, myvars, myvars]],
+      List[Syntax.formula[myvars, myvars, myvars]]))]):String = {
+    seq match {
+      case Some((Nil,con)) =>
+        val fml:Syntax.formula[myvars, myvars, myvars] = toSingleFormula(con)
+        //@TODO actual printing
+        val str = "TT" //apply(fml)
+        "val monitor_fml = ``" + str + "`` |> (DEPTH_CONV wordsLib.WORD_GROUND_CONV) |> rconc;;"
+      case _ => throw new Exception("Unexpected result from proof term re-checking")
+    }
+
+  }
+}
+
+
 object GeneratedProofChecker {
   import Real._
   import Rat._
@@ -12263,7 +12324,8 @@ object GeneratedProofChecker {
   import Scratch._
   import Sum_Type._
   def main(input : Array[String]) = {
-    val path = if(input.isEmpty) {"/usr0/home/bbohrer/KeYmaeraX/velocityCar-defun.pt"  /*"/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"*/}  else input(0) //e.g. "/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"
+    val path    = if(input.isEmpty) {"/usr0/home/bbohrer/KeYmaeraX/doubleCar-dfunl.pt"   /*"/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"*/}  else input(0) //e.g. "/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"
+    val outPath = if(input.length < 2) {"/usr0/home/bbohrer/KeYmaeraX/doubleCar-dfunl.hol"} else { input(1)}
     val str = Source.fromFile(path).mkString
     val start = System.currentTimeMillis()
     val (term,_) = Parser.proofTerm(str,0)
@@ -12276,5 +12338,9 @@ object GeneratedProofChecker {
     val end = System.currentTimeMillis()
     println(res)
     println("Proof time elapsed (s):" + (end-mid)/1000.0)
+    val HOLsrc = HOLPrinter(res)
+    val writer = new BufferedWriter(new FileWriter(outPath))
+    writer.append(HOLsrc)
+    writer.close()
   }}
 
