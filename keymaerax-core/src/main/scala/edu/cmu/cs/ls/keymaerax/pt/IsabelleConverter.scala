@@ -343,6 +343,7 @@ case class IOProd(left:IODE,right:IODE) extends IODE {}
 sealed trait Ihp {}
 case class IPvar(id:ID) extends Ihp {}
 case class IAssign(id:ID, t:Itrm) extends Ihp {}
+case class IAssignAny(id:ID) extends Ihp {}
 case class IDiffAssign(id:ID, t:Itrm) extends Ihp {}
 case class ITest(child:Iformula) extends Ihp {}
 case class IEvolveODE(ode:IODE, con:Iformula) extends Ihp {}
@@ -429,6 +430,7 @@ object Iaxiom {
       case "[++] choice" => IAchoice()
       case "K modal modus ponens" => IAK()
       case "V vacuous" => IAV()
+      case "[:*] assign nondet" => IAassignany()
       case "[:=] assign" => IAassign()
       case "[':=] differential assign" => IAdassign()
       case "x' derive var" => IAdvar()
@@ -474,6 +476,7 @@ case class IAchoice() extends Iaxiom {}
 case class IAK() extends Iaxiom {}
 case class IAV() extends Iaxiom {}
 case class IAassign() extends Iaxiom {}
+case class IAassignany() extends Iaxiom {}
 case class IAdassign() extends Iaxiom {}
 case class IAdvar() extends Iaxiom {}
 
@@ -627,12 +630,12 @@ class IsabelleConverter(pt:ProofTerm) {
   // @TODO: Surely has type issues
   // @TODO: Have to ensure identifier renaming preserves choice of reserved identifiers in axioms/axiomatic rules
   def apply(sub:USubst, defun:Boolean=false):Isubst = {
-    if(defun)
+    /*if(defun)
       println("DEFUN")
     else
       println("NO-DEFUN")
 
-    println("This sub ("+subst_so_far+"): " + sub)
+    println("This sub ("+subst_so_far+"): " + sub)*/
     subst_so_far = subst_so_far + 1
 
     def extendSub[T](l:List[(String,T)],ids:List[String] = ISABELLE_IDS.toList):List[Option[T]] = {
@@ -820,13 +823,13 @@ class IsabelleConverter(pt:ProofTerm) {
   * axiom*/
   private def axiomNeedsDefunctionalization(pt:ProofTerm):Boolean = {
     pt match {
-      case AxiomTerm("DE differential effect (system)") => println("Defunkking: " + pt); true
-      case AxiomTerm("' linear") => println("Defunkking: " + pt); true
-      case AxiomTerm("-' derive minus") => println("Defunkking: " + pt); true
+      case AxiomTerm("DE differential effect (system)") => true
+      case AxiomTerm("' linear") => true
+      case AxiomTerm("-' derive minus") => true
         // commuted DESys... yechh
       case Sub(RuleApplication(StartProof(seq),_,_,_,_),_,_) if seqNeedsDefun(seq)=>
         true
-      case AxiomTerm(n) => println("Normal ax: " + pt); false
+      case AxiomTerm(n) => /*println("Normal ax: " + pt); */false
       case _ => false
     }
   }
@@ -1002,7 +1005,7 @@ class IsabelleConverter(pt:ProofTerm) {
           } else {
             IDEnum(m.funMap(Left(name)))
           }
-        println("Garbage: " + name + " is " + funId)
+        //println("Garbage: " + name + " is " + funId)
         IFunction(funId, allArgs.map(apply(_,sm)))
       case (Times(l,r),_) => ITimes(apply(l,sm),apply(r,sm))
       case (Plus(l,r),_) => IPlus(apply(l,sm),apply(r,sm))
@@ -1034,7 +1037,7 @@ class IsabelleConverter(pt:ProofTerm) {
       case Choice(a,b) => IChoice(apply(a,sm),apply(b,sm))
       case Compose(a,b) => ISequence(apply(a,sm),apply(b,sm))
       case Loop(a) => ILoop(apply(a,sm))
-      case _ : AssignAny => throw ConversionException("Nondeterministic assignment not supported yet")
+      case AssignAny(BaseVariable(x,ind,_)) => IAssignAny(IDEnum(m.varMap((x,ind))))
     }
   }
 
@@ -1164,6 +1167,7 @@ abstract class SourceBuilder(sb:StringBuilder) {
     p match {
       case IPvar(a) => b1("Pvar",()=>apply(a))
       case IAssign(x,e) => b2("Assign",()=>apply(x),()=>apply(e))
+      case IAssignAny(x) => b1("AssignAny",()=>apply(x))
       case IDiffAssign(x,e) => b2("DiffAssign",()=>apply(x),()=>apply(e))
       case ITest(p) => b1("Test",()=>apply(p))
       case IEvolveODE(ode,con) => b2("EvolveODE",()=>apply(ode),()=>apply(con))
@@ -1265,6 +1269,7 @@ abstract class SourceBuilder(sb:StringBuilder) {
       case IAK() => b0("AK")
       case IAV() => b0("AV")
       case IAassign() => b0("Aassign")
+      case IAassignany() => b0("Aassignany")
       case IAdassign() => b0("Adassign")
       case IAdvar() => b0("Advar")
       case IAdConst() => b0("AdConst")
