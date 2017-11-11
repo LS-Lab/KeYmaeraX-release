@@ -117,6 +117,13 @@ object ModelPlex extends ModelPlexTrait {
     }
   }
 
+  /** Conjecture for double-checking a monitor formula for correctness: assumptions -> (monitor -> < prg; >Upsilon). */
+  def createMonitorCorrectnessConjecture(vars: List[Variable], kind: Symbol, checkProvable: Option[(ProvableSig => Unit)]): (Formula => Formula) = formula => {
+    val monitor = apply(vars, kind, checkProvable)(formula)
+    val (monitorConjecture, assumptions) = createMonitorSpecificationConjecture(formula, vars:_*)
+    Imply(assumptions.reduceOption(And).getOrElse(True), Imply(monitor, monitorConjecture))
+  }
+
   /**
    * Returns a tactic to derive a controller monitor in axiomatic style using forward chase. The tactic is designed to
    * operate on input produced by createMonitorSpecificationConjecture.

@@ -79,6 +79,10 @@ class ModelplexTacticTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "xpost=1".asFormula
+
+    val monitorCorrectnessConjecture = ModelPlex.createMonitorCorrectnessConjecture(Variable("x")::Nil, 'ctrl, None)(model)
+    println("Correctness conjecture " + monitorCorrectnessConjecture .prettyString)
+    proveBy(monitorCorrectnessConjecture , implyR(1)*2 & ModelPlex.controllerMonitorByChase(1) & auto) shouldBe 'proved
   }
 
   it should "chase away a loop by updateCalculus implicationally" in {
