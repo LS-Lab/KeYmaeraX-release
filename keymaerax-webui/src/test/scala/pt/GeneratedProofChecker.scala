@@ -10087,6 +10087,7 @@ object Parser {
     ("AK",AK()),
     ("AV",AV()),
     ("Aassign",Aassign()),
+    ("Aassignany", AassignAny()),
     ("Adassign",Adassign()),
     ("Advar",Advar()),
     ("AdConst",AdConst()),
@@ -10270,6 +10271,11 @@ object Parser {
           val i5 = eatChar(str,i4,' ')
           val (t, i6) = trm(fid)(str,i5)
           (DiffAssign(x,t),i6)
+        case "AssignRand" =>
+          val (x, i4) = mv(str,i3)
+        //  val i5 = eatChar(str,i4,' ')
+//          val (t, i6) = trm(fid)(str,i5)
+          (AssignAny(x),i4)
         case "Test" =>
           val (p, i4) = formula(fid,pid)(str,i3)
           (Test(p), i4)
@@ -10515,6 +10521,13 @@ object Parser {
         case "Cut" =>
           val (f,i4) = formula(mv,mv)(str,i3)
           (Cut(f),i4)
+        case "DIGeqSchema" =>
+          val (o,i4)  = ode(mv)(str,i3)
+          val i5      = eatChar(str,i4,' ')
+          val (t1,i6) = trm(mv)(str,i5)
+          val i7      = eatChar(str,i6,' ')
+          val (t2,i8) = trm(mv)(str,i7)
+          (DIGeqSchema(o,t1,t2),i8)
       }
     val iEnd = eatChar(str,beforeParen,')')
     (res,iEnd)
@@ -10640,7 +10653,7 @@ object GeneratedProofChecker {
   import Scratch._
   import Sum_Type._
   def main(input : Array[String]) = {
-    val path    = if(input.isEmpty) {"/usr0/home/bbohrer/KeYmaeraX/doubleCar-dfunl.pt"   /*"/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"*/}  else input(0) //e.g. "/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"
+    val path    = if(input.isEmpty) {"/usr0/home/bbohrer/KeYmaeraX/velocityCar-dist.pt"   /*"/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"*/}  else input(0) //e.g. "/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"
     val outPath = if(input.length < 2) {"/usr0/home/bbohrer/KeYmaeraX/doubleCar-dfunl.hol"} else { input(1)}
     val str = Source.fromFile(path).mkString
     val start = System.currentTimeMillis()
