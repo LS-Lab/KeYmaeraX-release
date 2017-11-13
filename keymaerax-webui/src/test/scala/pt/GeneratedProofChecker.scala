@@ -9,6 +9,8 @@ import pt.Real.Ratreal
 //import pt.lib.{Int, Nat, Proof_Checker, Rat, Real, Scratch, Sum_Type, Syntax, USubst}
 //import pt.lib.Syntax._
 
+import Failure._
+
 import scala.io.Source
 
 object Failure {
@@ -73,10 +75,33 @@ def max[A : ord](a: A, b: A): A = (if (less_eq[A](a, b)) b else a)
 
 object Num {
 
-abstract sealed class num
-final case class One() extends num
-final case class Bit0(a: num) extends num
-final case class Bit1(a: num) extends num
+  abstract sealed class num
+  final case class One() extends num
+  final case class Bit0(a: num) extends num
+  final case class Bit1(a: num) extends num
+
+  def length(n:num):Int = n match {
+    case One() => 1
+    case Bit0(a) => 1 + length(a)
+    case Bit1(a) => 1 + length(a)
+  }
+
+  def exp(n:Int,m:Int):Int = (n,m) match {
+    case (_,0) => 1
+    case (n,m) => n*exp(n,m-1)
+  }
+
+  def toInt(n:num):Int = n match {
+    case One() => 1
+    case Bit0(a) => 2 * toInt(a)
+    case Bit1(a) => 1 + 2 * toInt(a)
+  }
+
+  def ofInt(n:Int):num =
+    if(n == 1) { One()}
+    else if(n % 2 == 0) {Bit0(ofInt(n/2))}
+    else  {Bit1(ofInt(n/2))}
+
 
 } /* object Num */
 
@@ -472,9 +497,16 @@ def uminus_rat(p: rat): rat = Frct({
 
 object String {
 
-abstract sealed class char
-final case class zero_char() extends char
-final case class Char(a: Num.num) extends char
+  object Char {
+    def ofChar(c:scala.Char):String.char = {
+      Char(Num.ofInt(c.toInt))
+    }
+  }
+  abstract sealed class char
+  final case class zero_char() extends char
+  final case class Char(a: Num.num) extends char {
+    override def toString = Character.toString(((Num.toInt(a).toChar)))
+  }
 
 } /* object String */
 
@@ -1822,7 +1854,749 @@ def y: myvars = i2()
 
 def z: myvars = i3()
 
-def ddl_P(p: myvars): Syntax.formula[myvars, myvars, myvars] =
+
+  def ddl_join(s: List[String.char], x1: List[List[String.char]]):
+  List[String.char]
+  =
+    (s, x1) match {
+      case (s, Nil) => Nil
+      case (sa, List(s)) => s
+      case (sa, s :: v :: va) => s ++ (sa ++ ddl_join(sa, v :: va))
+    }
+
+  def ddl_hpid_to_string(vid: myvars): List[String.char] = s"${vid}".toList.map(String.Char.ofChar)
+  /*(if (equal_myvarsa(vid, x))
+    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))))
+  else (if (equal_myvarsa(vid, y))
+    List(String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))))
+  else (if (equal_myvarsa(vid, z))
+    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))),
+      String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One())))))))
+  else List(String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))),
+    String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))))))
+*/
+  def ddl_vid_to_string(vid: myvars): List[String.char] = s"${vid}".toList.map(String.Char.ofChar)
+  /*(if (equal_myvarsa(vid, x))
+    List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))))
+  else (if (equal_myvarsa(vid, y))
+    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))))
+  else (if (equal_myvarsa(vid, z))
+    List(String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))))
+  else List(String.Char(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One())))))))))))
+*/
+  def ddl_fid_to_string(vid: myvars): List[String.char] = s"${vid}".toList.map(String.Char.ofChar)
+  /*    (if (equal_myvarsa(vid, i1()))
+        List(String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))))
+      else (if (equal_myvarsa(vid, i2()))
+        List(String.Char(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))))
+      else (if (equal_myvarsa(vid, i3()))
+        List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.One()))))))))
+      else List(String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.One())))))))))))
+  */
+  def ddl_trm_to_string(x0: Syntax.trm[myvars, myvars]): List[String.char] = x0
+  match {
+    case Syntax.Var(x) => ddl_vid_to_string(x)
+    case Syntax.Const(r) =>
+      val(Ratreal(Frct((int_of_integer(n),int_of_integer(d))))) = r
+      s"$n/$d".toList.map(String.Char.ofChar)
+    //List(String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.One()))))))))
+    case Syntax.Function(f, args) => ddl_fid_to_string(f)
+    case Syntax.Functional(f) => ddl_fid_to_string(f)++ddl_fid_to_string(f)
+    case Syntax.Plus(t1, t2) =>
+      ddl_trm_to_string(t1) ++
+        (List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+          ddl_trm_to_string(t2))
+    case Syntax.Times(t1, t2) =>
+      ddl_trm_to_string(t1) ++
+        (List(String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+          ddl_trm_to_string(t2))
+    case Syntax.DiffVar(x) =>
+      List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+        String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One()))))))),
+        String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))) ++
+        (ddl_vid_to_string(x) ++
+          List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))))
+    case Syntax.Differential(t) =>
+      List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+        String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))) ++
+        (ddl_trm_to_string(t) ++
+          List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))))
+  }
+
+  def ddl_oid_to_string(vid: myvars): List[String.char] =
+    (if (equal_myvarsa(vid, x))
+      List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))))
+    else (if (equal_myvarsa(vid, y))
+      List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))),
+        String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One())))))))
+    else (if (equal_myvarsa(vid, z))
+      List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))),
+        String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One())))))))
+    else List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))),
+      String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.One()))))))))))
+
+  val PRINT_ASSOC = true
+
+  def ddl_ode_to_string(x0: Syntax.ODE[myvars, myvars]): List[String.char] = x0
+  match {
+    case Syntax.OVar(x,sp) => ddl_oid_to_string(x)
+    case Syntax.OSing(x, t) =>
+      List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One())))))))) ++
+        (ddl_vid_to_string(x) ++
+          (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+            ddl_trm_to_string(t)))
+    case Syntax.OProd(oDE1, oDE2) =>
+      (if(PRINT_ASSOC) "{" else "").toList.map(String.Char.ofChar) ++
+        ddl_ode_to_string(oDE1) ++
+        (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+          String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+          ddl_ode_to_string(oDE2)) ++
+        (if(PRINT_ASSOC) "}" else "").toList.map(String.Char.ofChar)
+  }
+
+  def ddl_ppid_to_string(vid: myvars): List[String.char] =
+    (if (equal_myvarsa(vid, i1()))
+      List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))))
+    else (if (equal_myvarsa(vid, i2()))
+      List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))))
+    else (if (equal_myvarsa(vid, i3()))
+      List(String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))))
+    else List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.One())))))))))))
+
+  def ddl_cid_to_string(vid: myvars): List[String.char] =
+    (if (equal_myvarsa(vid, i1()))
+      List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))))
+    else (if (equal_myvarsa(vid, i2()))
+      List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+        String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One())))))))
+    else (if (equal_myvarsa(vid, i3()))
+      List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+        String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One())))))))
+    else List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+      String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.One()))))))))))
+
+  def ddl_fml_to_string(x0: Syntax.formula[myvars, myvars, myvars]):
+  List[String.char]
+  =
+    x0 match {
+      case Syntax.Geq(t1, t2) =>
+        ddl_trm_to_string(t1) ++
+          (List(String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))),
+            String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+            ddl_trm_to_string(t2))
+      case Syntax.Prop(p, args) => s"Prop(${p})".toList.map(String.Char.ofChar)
+      case Syntax.Not(p) =>
+        (p match {
+          case Syntax.Geq(_, _) =>
+            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              ddl_fml_to_string(p)
+          case Syntax.Prop(_, _) =>
+            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              ddl_fml_to_string(p)
+          case Syntax.Not(_) =>
+            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              ddl_fml_to_string(p)
+          case Syntax.And(formula1, formula2) =>
+            (formula1 match {
+              case Syntax.Geq(_, _) =>
+                List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                  ddl_fml_to_string(p)
+              case Syntax.Prop(_, _) =>
+                List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                  ddl_fml_to_string(p)
+              case Syntax.Not(Syntax.Geq(trm1, trm2)) =>
+                (formula2 match {
+                  case Syntax.Geq(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Prop(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Geq(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Prop(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Not(pa)) =>
+                    ddl_fml_to_string(pa) ++
+                      (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+                        String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+                        ddl_fml_to_string(Syntax.Geq[myvars, myvars,
+                          myvars](trm1, trm2)))
+                  case Syntax.Not(Syntax.And(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Exists(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Diamond(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.InContext(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.And(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Exists(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Diamond(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.InContext(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                })
+              case Syntax.Not(Syntax.Prop(c, fun)) =>
+                (formula2 match {
+                  case Syntax.Geq(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Prop(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Geq(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Prop(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Not(pa)) =>
+                    ddl_fml_to_string(pa) ++
+                      (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+                        String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+                        ddl_fml_to_string(Syntax.Prop[myvars, myvars,
+                          myvars](c, fun)))
+                  case Syntax.Not(Syntax.And(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Exists(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Diamond(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.InContext(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.And(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Exists(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Diamond(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.InContext(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                })
+              case Syntax.Not(Syntax.Not(formula)) =>
+                (formula2 match {
+                  case Syntax.Geq(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Prop(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Geq(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Prop(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Not(pa)) =>
+                    ddl_fml_to_string(pa) ++
+                      (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+                        String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+                        ddl_fml_to_string(Syntax.Not[myvars, myvars,
+                          myvars](formula)))
+                  case Syntax.Not(Syntax.And(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Exists(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Diamond(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.InContext(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.And(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Exists(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Diamond(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.InContext(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                })
+              case Syntax.Not(Syntax.And(formula1a, formula2a)) =>
+                (formula2 match {
+                  case Syntax.Geq(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Prop(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Geq(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Prop(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Not(pa)) =>
+                    ddl_fml_to_string(pa) ++
+                      (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+                        String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+                        ddl_fml_to_string(Syntax.And[myvars, myvars,
+                          myvars](formula1a, formula2a)))
+                  case Syntax.Not(Syntax.And(Syntax.Geq(_, _), _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.And(Syntax.Prop(_, _), _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Geq(_, _))) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Prop(_, _)))
+                  => List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.And(Syntax.Not(pa), Syntax.Not(q))) =>
+                    (if (Syntax.equal_formulaa[myvars, myvars,
+                      myvars](formula1a, pa) &&
+                      Syntax.equal_formulaa[myvars, myvars,
+                        myvars](formula2a, q))
+                      ddl_fml_to_string(formula1a) ++
+                        (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))),
+                          String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+                          String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+                          ddl_fml_to_string(formula2a))
+                    else List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(Syntax.And[myvars, myvars,
+                        myvars](Syntax.Not[myvars, myvars,
+                        myvars](Syntax.And[myvars, myvars,
+                        myvars](formula1a, formula2a)),
+                        Syntax.Not[myvars, myvars,
+                          myvars](Syntax.And[myvars, myvars,
+                          myvars](Syntax.Not[myvars, myvars, myvars](pa),
+                          Syntax.Not[myvars, myvars, myvars](q))))))
+                  case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.And(_, _))) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Exists(_, _)))
+                  => List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.And(Syntax.Not(_),
+                  Syntax.Diamond(_, _)))
+                  => List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.And(Syntax.Not(_),
+                  Syntax.InContext(_, _)))
+                  => List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.And(Syntax.And(_, _), _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.And(Syntax.Exists(_, _), _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.And(Syntax.Diamond(_, _), _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.And(Syntax.InContext(_, _), _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Exists(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Diamond(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.InContext(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.And(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Exists(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Diamond(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.InContext(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                })
+              case Syntax.Not(Syntax.Exists(c, formula)) =>
+                (formula2 match {
+                  case Syntax.Geq(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Prop(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Geq(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Prop(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Not(pa)) =>
+                    ddl_fml_to_string(pa) ++
+                      (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+                        String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+                        ddl_fml_to_string(Syntax.Exists[myvars, myvars,
+                          myvars](c, formula)))
+                  case Syntax.Not(Syntax.And(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Exists(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Diamond(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.InContext(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.And(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Exists(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Diamond(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.InContext(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                })
+              case Syntax.Not(Syntax.Diamond(hp, formula)) =>
+                (formula2 match {
+                  case Syntax.Geq(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Prop(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Geq(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Prop(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Not(pa)) =>
+                    ddl_fml_to_string(pa) ++
+                      (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+                        String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+                        ddl_fml_to_string(Syntax.Diamond[myvars, myvars,
+                          myvars](hp, formula)))
+                  case Syntax.Not(Syntax.And(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Exists(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Diamond(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.InContext(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.And(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Exists(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Diamond(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.InContext(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                })
+              case Syntax.Not(Syntax.InContext(b, formula)) =>
+                (formula2 match {
+                  case Syntax.Geq(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Prop(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Geq(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Prop(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Not(pa)) =>
+                    ddl_fml_to_string(pa) ++
+                      (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+                        String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+                        ddl_fml_to_string(Syntax.InContext[myvars, myvars,
+                          myvars](b, formula)))
+                  case Syntax.Not(Syntax.And(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Exists(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.Diamond(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Not(Syntax.InContext(_, _)) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.And(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Exists(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.Diamond(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                  case Syntax.InContext(_, _) =>
+                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                      ddl_fml_to_string(p)
+                })
+              case Syntax.And(_, _) =>
+                List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                  ddl_fml_to_string(p)
+              case Syntax.Exists(_, _) =>
+                List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                  ddl_fml_to_string(p)
+              case Syntax.Diamond(_, _) =>
+                List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                  ddl_fml_to_string(p)
+              case Syntax.InContext(_, _) =>
+                List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                  ddl_fml_to_string(p)
+            })
+          case Syntax.Exists(_, Syntax.Geq(_, _)) =>
+            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              ddl_fml_to_string(p)
+          case Syntax.Exists(_, Syntax.Prop(_, _)) =>
+            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              ddl_fml_to_string(p)
+          case Syntax.Exists(x, Syntax.Not(pa)) =>
+            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))))) ++
+              (ddl_vid_to_string(x) ++
+                (List(String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+                  ddl_fml_to_string(pa)))
+          case Syntax.Exists(_, Syntax.And(_, _)) =>
+            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              ddl_fml_to_string(p)
+          case Syntax.Exists(_, Syntax.Exists(_, _)) =>
+            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              ddl_fml_to_string(p)
+          case Syntax.Exists(_, Syntax.Diamond(_, _)) =>
+            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              ddl_fml_to_string(p)
+          case Syntax.Exists(_, Syntax.InContext(_, _)) =>
+            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              ddl_fml_to_string(p)
+          case Syntax.Diamond(_, Syntax.Geq(_, _)) =>
+            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              ddl_fml_to_string(p)
+          case Syntax.Diamond(_, Syntax.Prop(_, _)) =>
+            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              ddl_fml_to_string(p)
+          case Syntax.Diamond(a, Syntax.Not(pa)) =>
+            List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))))) ++
+              (ddl_hp_to_string(a) ++
+                (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))))) ++
+                  ddl_fml_to_string(pa)))
+          case Syntax.Diamond(_, Syntax.And(_, _)) =>
+            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              ddl_fml_to_string(p)
+          case Syntax.Diamond(_, Syntax.Exists(_, _)) =>
+            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              ddl_fml_to_string(p)
+          case Syntax.Diamond(_, Syntax.Diamond(_, _)) =>
+            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              ddl_fml_to_string(p)
+          case Syntax.Diamond(_, Syntax.InContext(_, _)) =>
+            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              ddl_fml_to_string(p)
+          case Syntax.InContext(_, _) =>
+            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              ddl_fml_to_string(p)
+        })
+      case Syntax.And(p, q) =>
+        ddl_fml_to_string(p) ++
+          (List(String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            ddl_fml_to_string(q))
+      case Syntax.Exists(x, p) =>
+        List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))))) ++
+          (ddl_vid_to_string(x) ++
+            (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+              String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+              String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              ddl_fml_to_string(p)))
+      case Syntax.Diamond(a, p) =>
+        List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+          (ddl_hp_to_string(a) ++
+            (List(String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+              ddl_fml_to_string(p)))
+      case Syntax.InContext(c, p) =>
+        (p match {
+          case Syntax.Geq(_, _) => ddl_ppid_to_string(c)
+          case Syntax.Prop(_, _) =>
+            ddl_cid_to_string(c) ++
+              (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+                (ddl_fml_to_string(p) ++
+                  List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
+          case Syntax.Not(_) =>
+            ddl_cid_to_string(c) ++
+              (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+                (ddl_fml_to_string(p) ++
+                  List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
+          case Syntax.And(_, _) =>
+            ddl_cid_to_string(c) ++
+              (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+                (ddl_fml_to_string(p) ++
+                  List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
+          case Syntax.Exists(_, _) =>
+            ddl_cid_to_string(c) ++
+              (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+                (ddl_fml_to_string(p) ++
+                  List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
+          case Syntax.Diamond(_, _) =>
+            ddl_cid_to_string(c) ++
+              (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+                (ddl_fml_to_string(p) ++
+                  List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
+          case Syntax.InContext(_, _) =>
+            ddl_cid_to_string(c) ++
+              (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+                (ddl_fml_to_string(p) ++
+                  List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
+        })
+    }
+
+  def ddl_hp_to_string(x0: Syntax.hp[myvars, myvars, myvars]): List[String.char] =
+    x0 match {
+      case Syntax.Pvar(a) => ddl_hpid_to_string(a)
+      case Syntax.Assign(x, e) =>
+        ddl_vid_to_string(x) ++
+          (List(String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One())))))),
+            String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+            ddl_trm_to_string(e))
+      case Syntax.DiffAssign(x, e) =>
+        List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+          String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))) ++
+          (ddl_vid_to_string(x) ++
+            (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))),
+              String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One())))))),
+              String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+              ddl_trm_to_string(e)))
+      case Syntax.AssignAny(x) =>
+        List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+          String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))) ++
+          (ddl_vid_to_string(x)) ++ ddl_vid_to_string(x) ++ ddl_vid_to_string(x)
+      case Syntax.Test(p) =>
+        List(String.Char(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+          ddl_fml_to_string(p)
+      case Syntax.EvolveODE(ode, p) =>
+        List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))) ++
+          (ddl_ode_to_string(ode) ++
+            (List(String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+              (ddl_fml_to_string(p) ++
+                List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))))))
+      case Syntax.Choice(a, b) =>
+        ddl_hp_to_string(a) ++
+          (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))) ++
+            ddl_hp_to_string(b))
+      case Syntax.Sequence(a, b) =>
+        ddl_hp_to_string(a) ++
+          (List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+            ddl_hp_to_string(b))
+      case Syntax.Loop(a) =>
+        ddl_hp_to_string(a) ++
+          List(String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))
+    }
+
+  def ddl_seq_to_string(x0: (List[Syntax.formula[myvars, myvars, myvars]],
+    List[Syntax.formula[myvars, myvars, myvars]])):
+  List[String.char]
+  =
+    x0 match {
+      case (a, s) =>
+        ddl_join(List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+          String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+          Lista.map[Syntax.formula[myvars, myvars, myvars],
+            List[String.char]](((aa:
+                                 Syntax.formula[myvars, myvars, myvars])
+          =>
+            ddl_fml_to_string(aa)),
+            a)) ++
+          (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))),
+            String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            ddl_join(List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+              String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+              Lista.map[Syntax.formula[myvars, myvars, myvars],
+                List[String.char]](((aa:
+                                     Syntax.formula[myvars, myvars, myvars])
+              =>
+                ddl_fml_to_string(aa)),
+                s)))
+    }
+
+  def ddl_rule_to_string(x0: (List[(List[Syntax.formula[myvars, myvars, myvars]],
+    List[Syntax.formula[myvars, myvars,
+      myvars]])],
+    (List[Syntax.formula[myvars, myvars, myvars]],
+      List[Syntax.formula[myvars, myvars, myvars]]))):
+  List[String.char]
+  =
+    x0 match {
+      case (sg, c) =>
+        ddl_join(List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One())))))),
+          String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One())))))),
+          String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+          String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+          String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+          Lista.map[(List[Syntax.formula[myvars, myvars, myvars]],
+            List[Syntax.formula[myvars, myvars, myvars]]),
+            List[String.char]](((a:
+                                 (List[Syntax.formula[myvars, myvars, myvars]],
+                                   List[Syntax.formula[myvars, myvars, myvars]]))
+          =>
+            ddl_seq_to_string(a)),
+            sg)) ++
+          (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            ddl_seq_to_string(c))
+    }
+
+
+  def ddl_P(p: myvars): Syntax.formula[myvars, myvars, myvars] =
   Syntax.Predicational[myvars, myvars, myvars](p)
 
 def ddl_f0(f: myvars): Syntax.trm[myvars, myvars] =
@@ -2864,24 +3638,24 @@ def ddl_Rrule_result(x0: Proof_Checker.rrule[myvars, myvars, myvars],
   (x0, j, x2) match {
   case (Proof_Checker.NotR(), j, (a, s)) =>
     (Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j) match {
-       case Syntax.Geq(_, _) => None
-       case Syntax.Prop(_, _) => None
+       case Syntax.Geq(_, _) => fail()
+       case Syntax.Prop(_, _) => fail()
        case Syntax.Not(p) =>
          Some[List[(List[Syntax.formula[myvars, myvars, myvars]],
                      List[Syntax.formula[myvars, myvars,
   myvars]])]](List((a ++ List(p),
                      Proof_Checker.closeI[Syntax.formula[myvars, myvars,
                   myvars]](s, j))))
-       case Syntax.And(_, _) => None
-       case Syntax.Exists(_, _) => None
-       case Syntax.Diamond(_, _) => None
-       case Syntax.InContext(_, _) => None
+       case Syntax.And(_, _) => fail()
+       case Syntax.Exists(_, _) => fail()
+       case Syntax.Diamond(_, _) => fail()
+       case Syntax.InContext(_, _) => fail()
      })
   case (Proof_Checker.AndR(), j, (a, s)) =>
     (Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j) match {
-       case Syntax.Geq(_, _) => None
-       case Syntax.Prop(_, _) => None
-       case Syntax.Not(_) => None
+       case Syntax.Geq(_, _) => fail()
+       case Syntax.Prop(_, _) => fail()
+       case Syntax.Not(_) => fail()
        case Syntax.And(p, q) =>
          Some[List[(List[Syntax.formula[myvars, myvars, myvars]],
                      List[Syntax.formula[myvars, myvars,
@@ -2889,25 +3663,25 @@ def ddl_Rrule_result(x0: Proof_Checker.rrule[myvars, myvars, myvars],
                       myvars]](s, j, p)),
                     (a, Proof_Checker.replaceI[Syntax.formula[myvars, myvars,
                        myvars]](s, j, q))))
-       case Syntax.Exists(_, _) => None
-       case Syntax.Diamond(_, _) => None
-       case Syntax.InContext(_, _) => None
+       case Syntax.Exists(_, _) => fail()
+       case Syntax.Diamond(_, _) => fail()
+       case Syntax.InContext(_, _) => fail()
      })
   case (Proof_Checker.ImplyR(), j, (a, s)) =>
     (Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j) match {
-       case Syntax.Geq(_, _) => None
-       case Syntax.Prop(_, _) => None
-       case Syntax.Not(Syntax.Geq(_, _)) => None
-       case Syntax.Not(Syntax.Prop(_, _)) => None
-       case Syntax.Not(Syntax.Not(_)) => None
-       case Syntax.Not(Syntax.And(Syntax.Geq(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Prop(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Geq(_, _))) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Prop(_, _))) => None
+       case Syntax.Geq(_, _) => fail()
+       case Syntax.Prop(_, _) => fail()
+       case Syntax.Not(Syntax.Geq(_, _)) => fail()
+       case Syntax.Not(Syntax.Prop(_, _)) => fail()
+       case Syntax.Not(Syntax.Not(_)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Geq(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Prop(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Geq(_, _))) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Prop(_, _))) => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Not(Syntax.Geq(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Not(Syntax.Prop(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(q), Syntax.Not(Syntax.Not(p)))) =>
          Some[List[(List[Syntax.formula[myvars, myvars, myvars]],
                      List[Syntax.formula[myvars, myvars,
@@ -2916,75 +3690,75 @@ def ddl_Rrule_result(x0: Proof_Checker.rrule[myvars, myvars, myvars],
                   myvars]](s, j) ++
                        List(q))))
        case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Not(Syntax.And(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_),
                                    Syntax.Not(Syntax.Exists(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_),
                                    Syntax.Not(Syntax.Diamond(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_),
                                    Syntax.Not(Syntax.InContext(_, _))))
-         => None
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.And(_, _))) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Exists(_, _))) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Diamond(_, _))) => None
+         => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.And(_, _))) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Exists(_, _))) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Diamond(_, _))) => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.InContext(_, _))) =>
-         None
-       case Syntax.Not(Syntax.And(Syntax.And(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Exists(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Diamond(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.InContext(_, _), _)) => None
-       case Syntax.Not(Syntax.Exists(_, _)) => None
-       case Syntax.Not(Syntax.Diamond(_, _)) => None
-       case Syntax.Not(Syntax.InContext(_, _)) => None
-       case Syntax.And(_, _) => None
-       case Syntax.Exists(_, _) => None
-       case Syntax.Diamond(_, _) => None
-       case Syntax.InContext(_, _) => None
+         fail()
+       case Syntax.Not(Syntax.And(Syntax.And(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Exists(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Diamond(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.InContext(_, _), _)) => fail()
+       case Syntax.Not(Syntax.Exists(_, _)) => fail()
+       case Syntax.Not(Syntax.Diamond(_, _)) => fail()
+       case Syntax.Not(Syntax.InContext(_, _)) => fail()
+       case Syntax.And(_, _) => fail()
+       case Syntax.Exists(_, _) => fail()
+       case Syntax.Diamond(_, _) => fail()
+       case Syntax.InContext(_, _) => fail()
      })
   case (Proof_Checker.EquivR(), j, (a, s)) =>
     (Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j) match {
-       case Syntax.Geq(_, _) => None
-       case Syntax.Prop(_, _) => None
-       case Syntax.Not(Syntax.Geq(_, _)) => None
-       case Syntax.Not(Syntax.Prop(_, _)) => None
-       case Syntax.Not(Syntax.Not(_)) => None
-       case Syntax.Not(Syntax.And(Syntax.Geq(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Prop(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Geq(_, _)), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Prop(_, _)), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Not(_)), _)) => None
+       case Syntax.Geq(_, _) => fail()
+       case Syntax.Prop(_, _) => fail()
+       case Syntax.Not(Syntax.Geq(_, _)) => fail()
+       case Syntax.Not(Syntax.Prop(_, _)) => fail()
+       case Syntax.Not(Syntax.Not(_)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Geq(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Prop(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Geq(_, _)), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Prop(_, _)), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Not(_)), _)) => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Geq(_, _)))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Prop(_, _)))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.Geq(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.Prop(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.Not(_))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Geq(_, _), _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Prop(_, _),
                   _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.Geq(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.Prop(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(p, q)),
                                    Syntax.Not(Syntax.And(Syntax.Not(pa),
                   Syntax.Not(qa)))))
@@ -3000,74 +3774,74 @@ def ddl_Rrule_result(x0: Proof_Checker.rrule[myvars, myvars, myvars],
                            Proof_Checker.closeI[Syntax.formula[myvars, myvars,
                         myvars]](s, j) ++
                              List(p))))
-              else None)
+              else fail())
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.And(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.Exists(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.Diamond(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.InContext(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.And(_, _), _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Exists(_, _),
                   _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Diamond(_, _),
                   _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.InContext(_, _),
                   _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.Exists(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.Diamond(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.InContext(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.And(_, _)))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Exists(_, _)))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Diamond(_, _)))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.InContext(_, _)))
-         => None
-       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Exists(_, _)), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Diamond(_, _)), _)) => None
+         => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Exists(_, _)), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Diamond(_, _)), _)) => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.InContext(_, _)), _)) =>
-         None
-       case Syntax.Not(Syntax.And(Syntax.And(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Exists(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Diamond(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.InContext(_, _), _)) => None
-       case Syntax.Not(Syntax.Exists(_, _)) => None
-       case Syntax.Not(Syntax.Diamond(_, _)) => None
-       case Syntax.Not(Syntax.InContext(_, _)) => None
-       case Syntax.And(_, _) => None
-       case Syntax.Exists(_, _) => None
-       case Syntax.Diamond(_, _) => None
-       case Syntax.InContext(_, _) => None
+         fail()
+       case Syntax.Not(Syntax.And(Syntax.And(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Exists(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Diamond(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.InContext(_, _), _)) => fail()
+       case Syntax.Not(Syntax.Exists(_, _)) => fail()
+       case Syntax.Not(Syntax.Diamond(_, _)) => fail()
+       case Syntax.Not(Syntax.InContext(_, _)) => fail()
+       case Syntax.And(_, _) => fail()
+       case Syntax.Exists(_, _) => fail()
+       case Syntax.Diamond(_, _) => fail()
+       case Syntax.InContext(_, _) => fail()
      })
   case (Proof_Checker.CohideRR(), j, (a, s)) =>
     Some[List[(List[Syntax.formula[myvars, myvars, myvars]],
@@ -3083,24 +3857,24 @@ def ddl_Rrule_result(x0: Proof_Checker.rrule[myvars, myvars, myvars],
     Syntax.Const[myvars, myvars](Real.zero_real)))
            Some[List[(List[Syntax.formula[myvars, myvars, myvars]],
                        List[Syntax.formula[myvars, myvars, myvars]])]](Nil)
-           else None)
-       case Syntax.Prop(_, _) => None
-       case Syntax.Not(_) => None
-       case Syntax.And(_, _) => None
-       case Syntax.Exists(_, _) => None
-       case Syntax.Diamond(_, _) => None
-       case Syntax.InContext(_, _) => None
+           else fail())
+       case Syntax.Prop(_, _) => fail()
+       case Syntax.Not(_) => fail()
+       case Syntax.And(_, _) => fail()
+       case Syntax.Exists(_, _) => fail()
+       case Syntax.Diamond(_, _) => fail()
+       case Syntax.InContext(_, _) => fail()
      })
   case (Proof_Checker.Skolem(), j, (a, s)) =>
     (Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j) match {
-       case Syntax.Geq(_, _) => None
-       case Syntax.Prop(_, _) => None
-       case Syntax.Not(Syntax.Geq(_, _)) => None
-       case Syntax.Not(Syntax.Prop(_, _)) => None
-       case Syntax.Not(Syntax.Not(_)) => None
-       case Syntax.Not(Syntax.And(_, _)) => None
-       case Syntax.Not(Syntax.Exists(_, Syntax.Geq(_, _))) => None
-       case Syntax.Not(Syntax.Exists(_, Syntax.Prop(_, _))) => None
+       case Syntax.Geq(_, _) => fail()
+       case Syntax.Prop(_, _) => fail()
+       case Syntax.Not(Syntax.Geq(_, _)) => fail()
+       case Syntax.Not(Syntax.Prop(_, _)) => fail()
+       case Syntax.Not(Syntax.Not(_)) => fail()
+       case Syntax.Not(Syntax.And(_, _)) => fail()
+       case Syntax.Not(Syntax.Exists(_, Syntax.Geq(_, _))) => fail()
+       case Syntax.Not(Syntax.Exists(_, Syntax.Prop(_, _))) => fail()
        case Syntax.Not(Syntax.Exists(x, Syntax.Not(p))) =>
          (if (! (Set.member[Sum_Type.sum[myvars,
   myvars]](Sum_Type.Inl[myvars, myvars](x),
@@ -3132,29 +3906,29 @@ Proof_Checker.closeI[Syntax.formula[myvars, myvars,
                        List[Syntax.formula[myvars, myvars,
     myvars]])]](List((a, Proof_Checker.replaceI[Syntax.formula[myvars, myvars,
                         myvars]](s, j, p))))
-           else None)
-       case Syntax.Not(Syntax.Exists(_, Syntax.And(_, _))) => None
-       case Syntax.Not(Syntax.Exists(_, Syntax.Exists(_, _))) => None
-       case Syntax.Not(Syntax.Exists(_, Syntax.Diamond(_, _))) => None
-       case Syntax.Not(Syntax.Exists(_, Syntax.InContext(_, _))) => None
-       case Syntax.Not(Syntax.Diamond(_, _)) => None
-       case Syntax.Not(Syntax.InContext(_, _)) => None
-       case Syntax.And(_, _) => None
-       case Syntax.Exists(_, _) => None
-       case Syntax.Diamond(_, _) => None
-       case Syntax.InContext(_, _) => None
+           else fail())
+       case Syntax.Not(Syntax.Exists(_, Syntax.And(_, _))) => fail()
+       case Syntax.Not(Syntax.Exists(_, Syntax.Exists(_, _))) => fail()
+       case Syntax.Not(Syntax.Exists(_, Syntax.Diamond(_, _))) => fail()
+       case Syntax.Not(Syntax.Exists(_, Syntax.InContext(_, _))) => fail()
+       case Syntax.Not(Syntax.Diamond(_, _)) => fail()
+       case Syntax.Not(Syntax.InContext(_, _)) => fail()
+       case Syntax.And(_, _) => fail()
+       case Syntax.Exists(_, _) => fail()
+       case Syntax.Diamond(_, _) => fail()
+       case Syntax.InContext(_, _) => fail()
      })
   case (Proof_Checker.BRenameR(x, y), j, (a, s)) =>
-    (if (equal_myvarsa(x, y)) None
+    (if (equal_myvarsa(x, y)) fail()
       else (Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j) match {
-              case Syntax.Geq(_, _) => None
-              case Syntax.Prop(_, _) => None
-              case Syntax.Not(Syntax.Geq(_, _)) => None
-              case Syntax.Not(Syntax.Prop(_, _)) => None
-              case Syntax.Not(Syntax.Not(_)) => None
-              case Syntax.Not(Syntax.And(_, _)) => None
-              case Syntax.Not(Syntax.Exists(_, Syntax.Geq(_, _))) => None
-              case Syntax.Not(Syntax.Exists(_, Syntax.Prop(_, _))) => None
+              case Syntax.Geq(_, _) => fail()
+              case Syntax.Prop(_, _) => fail()
+              case Syntax.Not(Syntax.Geq(_, _)) => fail()
+              case Syntax.Not(Syntax.Prop(_, _)) => fail()
+              case Syntax.Not(Syntax.Not(_)) => fail()
+              case Syntax.Not(Syntax.And(_, _)) => fail()
+              case Syntax.Not(Syntax.Exists(_, Syntax.Geq(_, _))) => fail()
+              case Syntax.Not(Syntax.Exists(_, Syntax.Prop(_, _))) => fail()
               case Syntax.Not(Syntax.Exists(xvar, Syntax.Not(phi))) =>
                 (if (equal_myvarsa(x, xvar) &&
                        (ddl_FRadmit(Syntax.Forall[myvars, myvars,
@@ -3180,18 +3954,18 @@ Proof_Checker.closeI[Syntax.formula[myvars, myvars,
                                myvars,
                                myvars]](s, j,
  ddl_FBrename(x, y, Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j))))))
-                  else None)
-              case Syntax.Not(Syntax.Exists(_, Syntax.And(_, _))) => None
-              case Syntax.Not(Syntax.Exists(_, Syntax.Exists(_, _))) => None
-              case Syntax.Not(Syntax.Exists(_, Syntax.Diamond(_, _))) => None
-              case Syntax.Not(Syntax.Exists(_, Syntax.InContext(_, _))) => None
-              case Syntax.Not(Syntax.Diamond(Syntax.Pvar(_), _)) => None
+                  else fail())
+              case Syntax.Not(Syntax.Exists(_, Syntax.And(_, _))) => fail()
+              case Syntax.Not(Syntax.Exists(_, Syntax.Exists(_, _))) => fail()
+              case Syntax.Not(Syntax.Exists(_, Syntax.Diamond(_, _))) => fail()
+              case Syntax.Not(Syntax.Exists(_, Syntax.InContext(_, _))) => fail()
+              case Syntax.Not(Syntax.Diamond(Syntax.Pvar(_), _)) => fail()
               case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
       Syntax.Geq(_, _)))
-                => None
+                => fail()
               case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
       Syntax.Prop(_, _)))
-                => None
+                => fail()
               case Syntax.Not(Syntax.Diamond(Syntax.Assign(xvar, theta),
       Syntax.Not(phi)))
                 => (if (equal_myvarsa(x, xvar) &&
@@ -3227,32 +4001,32 @@ Proof_Checker.closeI[Syntax.formula[myvars, myvars,
                                   myvars]](s, j,
     ddl_FBrename(x, y,
                   Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j))))))
-                     else None)
+                     else fail())
               case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
       Syntax.And(_, _)))
-                => None
+                => fail()
               case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
       Syntax.Exists(_, _)))
-                => None
+                => fail()
               case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
       Syntax.Diamond(_, _)))
-                => None
+                => fail()
               case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
       Syntax.InContext(_, _)))
-                => None
-              case Syntax.Not(Syntax.Diamond(Syntax.AssignAny(_), _)) => None
+                => fail()
+              case Syntax.Not(Syntax.Diamond(Syntax.AssignAny(_), _)) => fail()
               case Syntax.Not(Syntax.Diamond(Syntax.DiffAssign(_, _), _)) =>
-                None
-              case Syntax.Not(Syntax.Diamond(Syntax.Test(_), _)) => None
-              case Syntax.Not(Syntax.Diamond(Syntax.EvolveODE(_, _), _)) => None
-              case Syntax.Not(Syntax.Diamond(Syntax.Choice(_, _), _)) => None
-              case Syntax.Not(Syntax.Diamond(Syntax.Sequence(_, _), _)) => None
-              case Syntax.Not(Syntax.Diamond(Syntax.Loop(_), _)) => None
-              case Syntax.Not(Syntax.InContext(_, _)) => None
-              case Syntax.And(_, _) => None
-              case Syntax.Exists(_, _) => None
-              case Syntax.Diamond(_, _) => None
-              case Syntax.InContext(_, _) => None
+                fail()
+              case Syntax.Not(Syntax.Diamond(Syntax.Test(_), _)) => fail()
+              case Syntax.Not(Syntax.Diamond(Syntax.EvolveODE(_, _), _)) => fail()
+              case Syntax.Not(Syntax.Diamond(Syntax.Choice(_, _), _)) => fail()
+              case Syntax.Not(Syntax.Diamond(Syntax.Sequence(_, _), _)) => fail()
+              case Syntax.Not(Syntax.Diamond(Syntax.Loop(_), _)) => fail()
+              case Syntax.Not(Syntax.InContext(_, _)) => fail()
+              case Syntax.And(_, _) => fail()
+              case Syntax.Exists(_, _) => fail()
+              case Syntax.Diamond(_, _) => fail()
+              case Syntax.InContext(_, _) => fail()
             }))
   case (Proof_Checker.HideR(), j, (a, s)) =>
     Some[List[(List[Syntax.formula[myvars, myvars, myvars]],
@@ -3272,19 +4046,19 @@ Proof_Checker.closeI[Syntax.formula[myvars, myvars,
     myvars](v, Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j))))))
   case (Proof_Checker.EquivifyR(), j, (a, s)) =>
     (Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j) match {
-       case Syntax.Geq(_, _) => None
-       case Syntax.Prop(_, _) => None
-       case Syntax.Not(Syntax.Geq(_, _)) => None
-       case Syntax.Not(Syntax.Prop(_, _)) => None
-       case Syntax.Not(Syntax.Not(_)) => None
-       case Syntax.Not(Syntax.And(Syntax.Geq(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Prop(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Geq(_, _))) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Prop(_, _))) => None
+       case Syntax.Geq(_, _) => fail()
+       case Syntax.Prop(_, _) => fail()
+       case Syntax.Not(Syntax.Geq(_, _)) => fail()
+       case Syntax.Not(Syntax.Prop(_, _)) => fail()
+       case Syntax.Not(Syntax.Not(_)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Geq(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Prop(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Geq(_, _))) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Prop(_, _))) => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Not(Syntax.Geq(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Not(Syntax.Prop(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(q), Syntax.Not(Syntax.Not(p)))) =>
          Some[List[(List[Syntax.formula[myvars, myvars, myvars]],
                      List[Syntax.formula[myvars, myvars,
@@ -3292,75 +4066,75 @@ Proof_Checker.closeI[Syntax.formula[myvars, myvars,
                       myvars]](s, j,
                                 Syntax.Equiv[myvars, myvars, myvars](p, q)))))
        case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Not(Syntax.And(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_),
                                    Syntax.Not(Syntax.Exists(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_),
                                    Syntax.Not(Syntax.Diamond(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_),
                                    Syntax.Not(Syntax.InContext(_, _))))
-         => None
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.And(_, _))) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Exists(_, _))) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Diamond(_, _))) => None
+         => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.And(_, _))) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Exists(_, _))) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Diamond(_, _))) => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.InContext(_, _))) =>
-         None
-       case Syntax.Not(Syntax.And(Syntax.And(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Exists(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Diamond(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.InContext(_, _), _)) => None
-       case Syntax.Not(Syntax.Exists(_, _)) => None
-       case Syntax.Not(Syntax.Diamond(_, _)) => None
-       case Syntax.Not(Syntax.InContext(_, _)) => None
-       case Syntax.And(_, _) => None
-       case Syntax.Exists(_, _) => None
-       case Syntax.Diamond(_, _) => None
-       case Syntax.InContext(_, _) => None
+         fail()
+       case Syntax.Not(Syntax.And(Syntax.And(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Exists(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Diamond(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.InContext(_, _), _)) => fail()
+       case Syntax.Not(Syntax.Exists(_, _)) => fail()
+       case Syntax.Not(Syntax.Diamond(_, _)) => fail()
+       case Syntax.Not(Syntax.InContext(_, _)) => fail()
+       case Syntax.And(_, _) => fail()
+       case Syntax.Exists(_, _) => fail()
+       case Syntax.Diamond(_, _) => fail()
+       case Syntax.InContext(_, _) => fail()
      })
   case (Proof_Checker.CommuteEquivR(), j, (a, s)) =>
     (Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j) match {
-       case Syntax.Geq(_, _) => None
-       case Syntax.Prop(_, _) => None
-       case Syntax.Not(Syntax.Geq(_, _)) => None
-       case Syntax.Not(Syntax.Prop(_, _)) => None
-       case Syntax.Not(Syntax.Not(_)) => None
-       case Syntax.Not(Syntax.And(Syntax.Geq(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Prop(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Geq(_, _)), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Prop(_, _)), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Not(_)), _)) => None
+       case Syntax.Geq(_, _) => fail()
+       case Syntax.Prop(_, _) => fail()
+       case Syntax.Not(Syntax.Geq(_, _)) => fail()
+       case Syntax.Not(Syntax.Prop(_, _)) => fail()
+       case Syntax.Not(Syntax.Not(_)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Geq(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Prop(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Geq(_, _)), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Prop(_, _)), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Not(_)), _)) => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Geq(_, _)))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Prop(_, _)))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.Geq(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.Prop(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.Not(_))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Geq(_, _), _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Prop(_, _),
                   _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.Geq(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.Prop(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(p, q)),
                                    Syntax.Not(Syntax.And(Syntax.Not(pa),
                   Syntax.Not(qa)))))
@@ -3373,74 +4147,74 @@ Proof_Checker.closeI[Syntax.formula[myvars, myvars,
                            myvars]](s, j,
                                      Syntax.Equiv[myvars, myvars,
            myvars](q, p)))))
-              else None)
+              else fail())
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.And(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.Exists(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.Diamond(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.InContext(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.And(_, _), _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Exists(_, _),
                   _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Diamond(_, _),
                   _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.InContext(_, _),
                   _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.Exists(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.Diamond(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.InContext(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.And(_, _)))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Exists(_, _)))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Diamond(_, _)))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.InContext(_, _)))
-         => None
-       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Exists(_, _)), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Diamond(_, _)), _)) => None
+         => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Exists(_, _)), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Diamond(_, _)), _)) => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.InContext(_, _)), _)) =>
-         None
-       case Syntax.Not(Syntax.And(Syntax.And(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Exists(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Diamond(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.InContext(_, _), _)) => None
-       case Syntax.Not(Syntax.Exists(_, _)) => None
-       case Syntax.Not(Syntax.Diamond(_, _)) => None
-       case Syntax.Not(Syntax.InContext(_, _)) => None
-       case Syntax.And(_, _) => None
-       case Syntax.Exists(_, _) => None
-       case Syntax.Diamond(_, _) => None
-       case Syntax.InContext(_, _) => None
+         fail()
+       case Syntax.Not(Syntax.And(Syntax.And(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Exists(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Diamond(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.InContext(_, _), _)) => fail()
+       case Syntax.Not(Syntax.Exists(_, _)) => fail()
+       case Syntax.Not(Syntax.Diamond(_, _)) => fail()
+       case Syntax.Not(Syntax.InContext(_, _)) => fail()
+       case Syntax.And(_, _) => fail()
+       case Syntax.Exists(_, _) => fail()
+       case Syntax.Diamond(_, _) => fail()
+       case Syntax.InContext(_, _) => fail()
      })
 }
 
@@ -3454,9 +4228,9 @@ def ddl_Lrule_result(x0: Proof_Checker.lrule[myvars, myvars, myvars],
   (x0, j, x2) match {
   case (Proof_Checker.AndL(), j, (a, s)) =>
     (Lista.nth[Syntax.formula[myvars, myvars, myvars]](a, j) match {
-       case Syntax.Geq(_, _) => None
-       case Syntax.Prop(_, _) => None
-       case Syntax.Not(_) => None
+       case Syntax.Geq(_, _) => fail()
+       case Syntax.Prop(_, _) => fail()
+       case Syntax.Not(_) => fail()
        case Syntax.And(p, q) =>
          Some[List[(List[Syntax.formula[myvars, myvars, myvars]],
                      List[Syntax.formula[myvars, myvars,
@@ -3464,25 +4238,25 @@ def ddl_Lrule_result(x0: Proof_Checker.lrule[myvars, myvars, myvars],
                  myvars]](a, j) ++
                       List(p, q),
                      s)))
-       case Syntax.Exists(_, _) => None
-       case Syntax.Diamond(_, _) => None
-       case Syntax.InContext(_, _) => None
+       case Syntax.Exists(_, _) => fail()
+       case Syntax.Diamond(_, _) => fail()
+       case Syntax.InContext(_, _) => fail()
      })
   case (Proof_Checker.ImplyL(), j, (a, s)) =>
     (Lista.nth[Syntax.formula[myvars, myvars, myvars]](a, j) match {
-       case Syntax.Geq(_, _) => None
-       case Syntax.Prop(_, _) => None
-       case Syntax.Not(Syntax.Geq(_, _)) => None
-       case Syntax.Not(Syntax.Prop(_, _)) => None
-       case Syntax.Not(Syntax.Not(_)) => None
-       case Syntax.Not(Syntax.And(Syntax.Geq(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Prop(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Geq(_, _))) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Prop(_, _))) => None
+       case Syntax.Geq(_, _) => fail()
+       case Syntax.Prop(_, _) => fail()
+       case Syntax.Not(Syntax.Geq(_, _)) => fail()
+       case Syntax.Not(Syntax.Prop(_, _)) => fail()
+       case Syntax.Not(Syntax.Not(_)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Geq(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Prop(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Geq(_, _))) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Prop(_, _))) => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Not(Syntax.Geq(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Not(Syntax.Prop(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(q), Syntax.Not(Syntax.Not(p)))) =>
          Some[List[(List[Syntax.formula[myvars, myvars, myvars]],
                      List[Syntax.formula[myvars, myvars,
@@ -3493,32 +4267,32 @@ def ddl_Lrule_result(x0: Proof_Checker.lrule[myvars, myvars, myvars],
                     myvars]](a, j, q),
                       s)))
        case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Not(Syntax.And(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_),
                                    Syntax.Not(Syntax.Exists(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_),
                                    Syntax.Not(Syntax.Diamond(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_),
                                    Syntax.Not(Syntax.InContext(_, _))))
-         => None
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.And(_, _))) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Exists(_, _))) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Diamond(_, _))) => None
+         => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.And(_, _))) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Exists(_, _))) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Diamond(_, _))) => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.InContext(_, _))) =>
-         None
-       case Syntax.Not(Syntax.And(Syntax.And(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Exists(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Diamond(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.InContext(_, _), _)) => None
-       case Syntax.Not(Syntax.Exists(_, _)) => None
-       case Syntax.Not(Syntax.Diamond(_, _)) => None
-       case Syntax.Not(Syntax.InContext(_, _)) => None
-       case Syntax.And(_, _) => None
-       case Syntax.Exists(_, _) => None
-       case Syntax.Diamond(_, _) => None
-       case Syntax.InContext(_, _) => None
+         fail()
+       case Syntax.Not(Syntax.And(Syntax.And(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Exists(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Diamond(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.InContext(_, _), _)) => fail()
+       case Syntax.Not(Syntax.Exists(_, _)) => fail()
+       case Syntax.Not(Syntax.Diamond(_, _)) => fail()
+       case Syntax.Not(Syntax.InContext(_, _)) => fail()
+       case Syntax.And(_, _) => fail()
+       case Syntax.Exists(_, _) => fail()
+       case Syntax.Diamond(_, _) => fail()
+       case Syntax.InContext(_, _) => fail()
      })
   case (Proof_Checker.HideL(), j, (a, s)) =>
     Some[List[(List[Syntax.formula[myvars, myvars, myvars]],
@@ -3538,46 +4312,46 @@ def ddl_Lrule_result(x0: Proof_Checker.lrule[myvars, myvars, myvars],
    myvars](Lista.nth[Syntax.formula[myvars, myvars, myvars]](a, j), f)))))
   case (Proof_Checker.EquivL(), j, (a, s)) =>
     (Lista.nth[Syntax.formula[myvars, myvars, myvars]](a, j) match {
-       case Syntax.Geq(_, _) => None
-       case Syntax.Prop(_, _) => None
-       case Syntax.Not(Syntax.Geq(_, _)) => None
-       case Syntax.Not(Syntax.Prop(_, _)) => None
-       case Syntax.Not(Syntax.Not(_)) => None
-       case Syntax.Not(Syntax.And(Syntax.Geq(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Prop(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Geq(_, _)), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Prop(_, _)), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Not(_)), _)) => None
+       case Syntax.Geq(_, _) => fail()
+       case Syntax.Prop(_, _) => fail()
+       case Syntax.Not(Syntax.Geq(_, _)) => fail()
+       case Syntax.Not(Syntax.Prop(_, _)) => fail()
+       case Syntax.Not(Syntax.Not(_)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Geq(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Prop(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Geq(_, _)), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Prop(_, _)), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Not(_)), _)) => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Geq(_, _)))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Prop(_, _)))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.Geq(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.Prop(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.Not(_))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Geq(_, _), _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Prop(_, _),
                   _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.Geq(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.Prop(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(p, q)),
                                    Syntax.Not(Syntax.And(Syntax.Not(pa),
                   Syntax.Not(qa)))))
@@ -3595,92 +4369,92 @@ def ddl_Lrule_result(x0: Proof_Checker.lrule[myvars, myvars, myvars],
        myvars](Syntax.Not[myvars, myvars, myvars](p),
                 Syntax.Not[myvars, myvars, myvars](q))),
                            s)))
-              else None)
+              else fail())
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.And(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.Exists(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.Diamond(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.InContext(_, _)))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.And(_, _), _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Exists(_, _),
                   _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.Diamond(_, _),
                   _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.And(Syntax.InContext(_, _),
                   _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.Exists(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.Diamond(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Not(Syntax.InContext(_, _))))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.And(_, _)))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Exists(_, _)))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.Diamond(_, _)))
-         => None
+         => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
                                    Syntax.InContext(_, _)))
-         => None
-       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Exists(_, _)), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Diamond(_, _)), _)) => None
+         => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Exists(_, _)), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Diamond(_, _)), _)) => fail()
        case Syntax.Not(Syntax.And(Syntax.Not(Syntax.InContext(_, _)), _)) =>
-         None
-       case Syntax.Not(Syntax.And(Syntax.And(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Exists(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.Diamond(_, _), _)) => None
-       case Syntax.Not(Syntax.And(Syntax.InContext(_, _), _)) => None
-       case Syntax.Not(Syntax.Exists(_, _)) => None
-       case Syntax.Not(Syntax.Diamond(_, _)) => None
-       case Syntax.Not(Syntax.InContext(_, _)) => None
-       case Syntax.And(_, _) => None
-       case Syntax.Exists(_, _) => None
-       case Syntax.Diamond(_, _) => None
-       case Syntax.InContext(_, _) => None
+         fail()
+       case Syntax.Not(Syntax.And(Syntax.And(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Exists(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.Diamond(_, _), _)) => fail()
+       case Syntax.Not(Syntax.And(Syntax.InContext(_, _), _)) => fail()
+       case Syntax.Not(Syntax.Exists(_, _)) => fail()
+       case Syntax.Not(Syntax.Diamond(_, _)) => fail()
+       case Syntax.Not(Syntax.InContext(_, _)) => fail()
+       case Syntax.And(_, _) => fail()
+       case Syntax.Exists(_, _) => fail()
+       case Syntax.Diamond(_, _) => fail()
+       case Syntax.InContext(_, _) => fail()
      })
   case (Proof_Checker.BRenameL(x, y), j, (a, s)) =>
-    (if (equal_myvarsa(x, y)) None
+    (if (equal_myvarsa(x, y)) fail()
       else (Lista.nth[Syntax.formula[myvars, myvars, myvars]](a, j) match {
-              case Syntax.Geq(_, _) => None
-              case Syntax.Prop(_, _) => None
-              case Syntax.Not(Syntax.Geq(_, _)) => None
-              case Syntax.Not(Syntax.Prop(_, _)) => None
-              case Syntax.Not(Syntax.Not(_)) => None
-              case Syntax.Not(Syntax.And(_, _)) => None
-              case Syntax.Not(Syntax.Exists(_, _)) => None
-              case Syntax.Not(Syntax.Diamond(Syntax.Pvar(_), _)) => None
+              case Syntax.Geq(_, _) => fail()
+              case Syntax.Prop(_, _) => fail()
+              case Syntax.Not(Syntax.Geq(_, _)) => fail()
+              case Syntax.Not(Syntax.Prop(_, _)) => fail()
+              case Syntax.Not(Syntax.Not(_)) => fail()
+              case Syntax.Not(Syntax.And(_, _)) => fail()
+              case Syntax.Not(Syntax.Exists(_, _)) => fail()
+              case Syntax.Not(Syntax.Diamond(Syntax.Pvar(_), _)) => fail()
               case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
       Syntax.Geq(_, _)))
-                => None
+                => fail()
               case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
       Syntax.Prop(_, _)))
-                => None
+                => fail()
               case Syntax.Not(Syntax.Diamond(Syntax.Assign(xvar, theta),
       Syntax.Not(phi)))
                 => (if (equal_myvarsa(x, xvar) &&
@@ -3716,49 +4490,50 @@ def ddl_Lrule_result(x0: Proof_Checker.lrule[myvars, myvars, myvars],
                                myvars]](a, j,
  ddl_FBrename(x, y, Lista.nth[Syntax.formula[myvars, myvars, myvars]](a, j))),
                                  s)))
-                     else None)
+                     else fail())
               case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
       Syntax.And(_, _)))
-                => None
+                => fail()
               case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
       Syntax.Exists(_, _)))
-                => None
+                => fail()
               case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
       Syntax.Diamond(_, _)))
-                => None
+                => fail()
               case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
       Syntax.InContext(_, _)))
-                => None
-              case Syntax.Not(Syntax.Diamond(Syntax.AssignAny(_), _)) => None
+                => fail()
+              case Syntax.Not(Syntax.Diamond(Syntax.AssignAny(_), _)) => fail()
               case Syntax.Not(Syntax.Diamond(Syntax.DiffAssign(_, _), _)) =>
-                None
-              case Syntax.Not(Syntax.Diamond(Syntax.Test(_), _)) => None
-              case Syntax.Not(Syntax.Diamond(Syntax.EvolveODE(_, _), _)) => None
-              case Syntax.Not(Syntax.Diamond(Syntax.Choice(_, _), _)) => None
-              case Syntax.Not(Syntax.Diamond(Syntax.Sequence(_, _), _)) => None
-              case Syntax.Not(Syntax.Diamond(Syntax.Loop(_), _)) => None
-              case Syntax.Not(Syntax.InContext(_, _)) => None
-              case Syntax.And(_, _) => None
-              case Syntax.Exists(_, _) => None
-              case Syntax.Diamond(_, _) => None
-              case Syntax.InContext(_, _) => None
+                fail()
+              case Syntax.Not(Syntax.Diamond(Syntax.Test(_), _)) => fail()
+              case Syntax.Not(Syntax.Diamond(Syntax.EvolveODE(_, _), _)) => fail()
+              case Syntax.Not(Syntax.Diamond(Syntax.Choice(_, _), _)) => fail()
+              case Syntax.Not(Syntax.Diamond(Syntax.Sequence(_, _), _)) => fail()
+              case Syntax.Not(Syntax.Diamond(Syntax.Loop(_), _)) => fail()
+              case Syntax.Not(Syntax.InContext(_, _)) => fail()
+              case Syntax.And(_, _) => fail()
+              case Syntax.Exists(_, _) => fail()
+              case Syntax.Diamond(_, _) => fail()
+              case Syntax.InContext(_, _) => fail()
             }))
   case (Proof_Checker.NotL(), j, (a, s)) =>
     (Lista.nth[Syntax.formula[myvars, myvars, myvars]](a, j) match {
-       case Syntax.Geq(_, _) => None
-       case Syntax.Prop(_, _) => None
+       case Syntax.Geq(_, _) => fail()
+       case Syntax.Prop(_, _) => fail()
        case Syntax.Not(p) =>
          Some[List[(List[Syntax.formula[myvars, myvars, myvars]],
                      List[Syntax.formula[myvars, myvars,
   myvars]])]](List((Proof_Checker.closeI[Syntax.formula[myvars, myvars,
                  myvars]](a, j),
                      s ++ List(p))))
-       case Syntax.And(_, _) => None
-       case Syntax.Exists(_, _) => None
-       case Syntax.Diamond(_, _) => None
-       case Syntax.InContext(_, _) => None
+       case Syntax.And(_, _) => fail()
+       case Syntax.Exists(_, _) => fail()
+       case Syntax.Diamond(_, _) => fail()
+       case Syntax.InContext(_, _) => fail()
      })
 }
+
 
 def ddl_merge_rules(x0: (List[(List[Syntax.formula[myvars, myvars, myvars]],
                                 List[Syntax.formula[myvars, myvars, myvars]])],
@@ -3795,7 +4570,11 @@ List[Syntax.formula[myvars, myvars, myvars]])](p1, i),
                                 List[Syntax.formula[myvars, myvars,
              myvars]])](p1, i),
           c1))
-      else None)
+      else {
+
+      fail()
+    })
+
   case ((p1, c1), (s :: ss, c2), i) =>
     (if (Nat.less_nat(i, Lista.size_list[(List[Syntax.formula[myvars, myvars,
                        myvars]],
@@ -3817,7 +4596,7 @@ List[Syntax.formula[myvars, myvars, myvars]])](p1, i),
                myvars]])](p1, i, s) ++
            ss,
           c1))
-      else None)
+      else fail())
 }
 
 def ddl_SUrename(x: myvars, y: myvars,
@@ -3865,13 +4644,13 @@ def ddl_rule_result(x0: (List[(List[Syntax.formula[myvars, myvars, myvars]],
                                  myvars, myvars]],
              List[Syntax.formula[myvars, myvars, myvars]])](sg, i))),
                           j))
-      None
+      fail()
       else (ddl_Lrule_result(l, j,
                               Lista.nth[(List[Syntax.formula[myvars, myvars,
                       myvars]],
   List[Syntax.formula[myvars, myvars, myvars]])](sg, i))
               match {
-              case None => None
+              case None => fail()
               case Some(a) =>
                 ddl_merge_rules((sg, c),
                                  (a, Lista.nth[(List[Syntax.formula[myvars,
@@ -3888,13 +4667,13 @@ def ddl_rule_result(x0: (List[(List[Syntax.formula[myvars, myvars, myvars]],
                                  myvars, myvars]],
              List[Syntax.formula[myvars, myvars, myvars]])](sg, i))),
                           j))
-      None
+      fail()
       else (ddl_Rrule_result(r, j,
                               Lista.nth[(List[Syntax.formula[myvars, myvars,
                       myvars]],
   List[Syntax.formula[myvars, myvars, myvars]])](sg, i))
               match {
-              case None => None
+              case None => fail()
               case Some(a) =>
                 ddl_merge_rules((sg, c),
                                  (a, Lista.nth[(List[Syntax.formula[myvars,
@@ -3961,7 +4740,7 @@ j),
                                 List[Syntax.formula[myvars, myvars,
              myvars]])](sg, i),
           c))
-      else None)
+      else fail())
   case ((sg, c), (i, Proof_Checker.URename(x, ya))) =>
     (if (ddl_FRadmit(Denotational_Semantics.seq2fml[myvars, myvars,
              myvars](Lista.nth[(List[Syntax.formula[myvars, myvars, myvars]],
@@ -3987,7 +4766,7 @@ j),
                                      List[Syntax.formula[myvars, myvars,
                   myvars]])](sg, i)),
                        i)
-      else None)
+      else fail())
   case ((sg, c), (i, Proof_Checker.Cohide2(j, k))) =>
     (if (Nat.less_eq_nat(Lista.size_list[Syntax.formula[myvars, myvars,
                  myvars]].apply(Product_Type.fst[List[Syntax.formula[myvars,
@@ -4005,7 +4784,7 @@ j),
                                    myvars, myvars]],
                List[Syntax.formula[myvars, myvars, myvars]])](sg, i))),
                             k))
-      None
+      fail()
       else ddl_merge_rules((sg, c),
                             (List((List(Lista.nth[Syntax.formula[myvars, myvars,
                           myvars]](Product_Type.fst[List[Syntax.formula[myvars,
@@ -4035,18 +4814,18 @@ j),
               List[Syntax.formula[myvars, myvars, myvars]])
         = (Nil, List(Syntax.Implies[myvars, myvars,
                                      myvars](Syntax.Implies[myvars, myvars,
-                     myvars](Syntax.DPredl[myvars, myvars, myvars](y),
+                     myvars](Syntax.DPredl[myvars, myvars, myvars](x),
                               Syntax.And[myvars, myvars,
   myvars](Syntax.Geq[myvars, myvars, myvars](theta_1, theta_2),
            Syntax.Box[myvars, myvars,
                        myvars](Syntax.EvolveODE[myvars, myvars,
-         myvars](ode, Syntax.DPredl[myvars, myvars, myvars](y)),
+         myvars](ode, Syntax.DPredl[myvars, myvars, myvars](x)),
                                 Syntax.Geq[myvars, myvars,
     myvars](Syntax.Differential[myvars, myvars](theta_1),
              Syntax.Differential[myvars, myvars](theta_2))))),
       Syntax.Box[myvars, myvars,
                   myvars](Syntax.EvolveODE[myvars, myvars,
-    myvars](ode, Syntax.DPredl[myvars, myvars, myvars](y)),
+    myvars](ode, Syntax.DPredl[myvars, myvars, myvars](x)),
                            Syntax.Geq[myvars, myvars,
                                        myvars](theta_1, theta_2)))))
       val wanted:
@@ -4082,7 +4861,8 @@ j),
                                   List[Syntax.formula[myvars, myvars,
                myvars]])](sg, i),
             c))
-        else None)
+        else
+        fail())
     }
 }
 
@@ -4099,7 +4879,7 @@ def ddl_fnc(r: (List[(List[Syntax.formula[myvars, myvars, myvars]],
                  List[Syntax.formula[myvars, myvars, myvars]]))]
   =
   (ddl_rule_result(ddl_start_proof(seq), (Nat.zero_nat, ra)) match {
-     case None => None
+     case None => fail()
      case Some(rule) => ddl_merge_rules(rule, r, Nat.zero_nat)
    })
 
@@ -8657,7 +9437,8 @@ def ddl_DiffEffectSysAxiom: Syntax.formula[myvars, myvars, myvars] =
                 myvars](Syntax.Box[myvars, myvars,
                                     myvars](Syntax.EvolveODE[myvars, myvars,
                       myvars](Syntax.oprod[myvars,
-    myvars](Syntax.OSing[myvars, myvars](x, Syntax.DFunl[myvars, myvars](i2())),
+  //todo update isabelle side
+    myvars](Syntax.OSing[myvars, myvars](x, Syntax.DFunl[myvars, myvars](i1())),
              Syntax.OVar[myvars, myvars](x, Some[myvars](x))),
                                ddl_P(i2())),
      ddl_P(i1())),
@@ -8666,11 +9447,11 @@ def ddl_DiffEffectSysAxiom: Syntax.formula[myvars, myvars, myvars] =
                        myvars](Syntax.oprod[myvars,
      myvars](Syntax.OVar[myvars, myvars](x, Some[myvars](x)),
               Syntax.OSing[myvars,
-                            myvars](x, Syntax.DFunl[myvars, myvars](i2()))),
+                            myvars](x, Syntax.DFunl[myvars, myvars](i1()))),
                                 ddl_P(i2())),
       Syntax.Box[myvars, myvars,
                   myvars](Syntax.DiffAssign[myvars, myvars,
-     myvars](x, Syntax.DFunl[myvars, myvars](i2())),
+     myvars](x, Syntax.DFunl[myvars, myvars](i1())),
                            ddl_P(i1()))))
 
 def ddl_diff_assign_axiom: Syntax.formula[myvars, myvars, myvars] =
@@ -8949,6 +9730,9 @@ def ddl_get_axrule(x0: Proof_Checker.axRule):
   case Proof_Checker.monb() => ddl_monbrule
 }
 
+var num_subs = 0
+
+
 def ddl_pt_result(x0: Proof_Checker.pt[myvars, myvars, myvars]):
       Option[(List[(List[Syntax.formula[myvars, myvars, myvars]],
                      List[Syntax.formula[myvars, myvars, myvars]])],
@@ -8983,7 +9767,12 @@ def ddl_pt_result(x0: Proof_Checker.pt[myvars, myvars, myvars]):
            (List[Syntax.formula[myvars, myvars, myvars]],
              List[Syntax.formula[myvars, myvars, myvars]]))](ddl_get_axrule(ar))
   case Proof_Checker.PrUSubst(pt, sub) =>
-    (ddl_pt_result(pt) match {
+    num_subs = num_subs + 1
+    println("Current sub num: " + num_subs)
+    if(num_subs == 32) {
+      val 2 = 1 + 1
+    }
+    ( ddl_pt_result(pt) match {
        case None => None
        case Some(res) =>
          (if (ddl_ssafe(sub) &&
@@ -9064,7 +9853,11 @@ def ddl_pt_result(x0: Proof_Checker.pt[myvars, myvars, myvars]):
                                i))
            None else (ddl_pt_result(pt2) match {
                         case None => None
-                        case Some(res2) => ddl_merge_rules(res1, res2, i)
+                        case Some(res2) =>
+                          println("SubL:" + ddl_rule_to_string(res1).mkString)
+                          println("SubR:" + ddl_rule_to_string(res2).mkString)
+                          println("Merge index:" + i)
+                          ddl_merge_rules(res1, res2, i)
                       }))
      })
 }

@@ -842,7 +842,7 @@ class IsabelleConverter(pt:ProofTerm) {
       case UsubstProvableTerm(AxiomTerm("DE differential effect (system)"), sub) =>
         val axTerm =  IAx(Iaxiom("DE differential effect (system)"))
         val defun = true
-        val depred = true
+        val depred = false
         val space = INBSpace("i1")
         val subst = apply(sub, defun = defun, depred = depred, space)
         IPrUSubst(axTerm,subst)
@@ -851,7 +851,7 @@ class IsabelleConverter(pt:ProofTerm) {
       case UsubstProvableTerm(Sub(RuleApplication(StartProof(seq),a,b,c,d),e,f),sub) if seqNeedsDefun(seq)=>
         //val axTerm =  IAx(Iaxiom("DE differential effect (system)"))
         val defun = true
-        val depred = true
+        val depred = false
         val space = INBSpace("i1")
         val subst = apply(sub, defun = defun, depred = depred, space)
         val child = apply(Sub(RuleApplication(StartProof(seq),a,b,c,d),e,f))
@@ -881,9 +881,9 @@ private def or(p:Iformula,q:Iformula):Iformula = {
   }
 
   private def diGeqConclusion(o:IODE,t1:Itrm,t2:Itrm):Iformula = {
-    implies(implies(dpredl("i2"),IAnd(IGeq(t1,t2),
-      box(IEvolveODE(o,dpredl("i2")),IGeq(IDifferential(t1),IDifferential(t2))))),
-      box(IEvolveODE(o,dpredl("i2")),IGeq(t1,t2)))
+    implies(implies(dpredl("i1"),IAnd(IGeq(t1,t2),
+      box(IEvolveODE(o,dpredl("i1")),IGeq(IDifferential(t1),IDifferential(t2))))),
+      box(IEvolveODE(o,dpredl("i1")),IGeq(t1,t2)))
   }
 
   private def translateDiffTermChase(pttt: ProofTerm):Ipt = {
@@ -900,8 +900,8 @@ private def or(p:Iformula,q:Iformula):Iformula = {
             val fsym = UnitFunctional("f", AnyArg, Real)
             val gsym = UnitFunctional("g", AnyArg, Real)
             val bigSubst = USubst(collection.immutable.Seq(SubstitutionPair(csym,cc),SubstitutionPair(qsym,q),SubstitutionPair(fsym,l),SubstitutionPair(gsym,r)))
-            val smallSubst = USubst(collection.immutable.Seq(SubstitutionPair(qsym,q)))
-            val smallApp = apply(smallSubst)
+            val smallSubst = USubst(collection.immutable.Seq(SubstitutionPair(psym,q)))
+            val smallApp = apply(smallSubst, depred = true)
             val ode = apply(cc,NonSubst())
             val left = apply(l,Defun(NonSubst()))
             val right = apply(r,Defun(NonSubst()))
@@ -968,10 +968,10 @@ private def or(p:Iformula,q:Iformula):Iformula = {
   private def axiomNeedsDepredicationalization(pt:ProofTerm):Boolean = {
     pt match {
   //    case AxiomTerm("DE differential effect (system)") => true
-      case AxiomTerm("DI differential invariant") => true
+      case AxiomTerm("DI differential invariant") => false //true
       // commuted DESys... yechh
       case Sub(RuleApplication(StartProof(seq),_,_,_,_),_,_) if seqNeedsDepred(seq)=>
-        true
+        false//true
       case AxiomTerm(n) => /*println("Normal ax: " + pt); */false
       case _ => false
     }
@@ -1016,10 +1016,14 @@ private def or(p:Iformula,q:Iformula):Iformula = {
           val sm1 = if(seqNeedsDefun(seq)) { Defun(sm0) } else sm0
           val sm2 = if(seqNeedsDepred(seq)) { Depred(sm0) } else sm1
           val space = if(seqNeedsBanana(seq)) { INBSpace("i1") } else {IAllSpace()}
-          if(sm2 != NonSubst()) {
-            println("Interesting startproof: " + sm2)
+          val sm3 = if(seqNeedsBanana(seq)) {
+            println("Bananizing startproof: " + seq)
+            BananaODE(sm2)
+          } else sm2
+          if(sm3 != NonSubst()) {
+            println("Interesting startproof: " + sm3)
           }
-          IStart(apply(seq,BananaODE(sm2)))
+          IStart(apply(seq,sm3))
         case NoProof() => throw ConversionException("Encountered unproven subproof")
       }
     }
