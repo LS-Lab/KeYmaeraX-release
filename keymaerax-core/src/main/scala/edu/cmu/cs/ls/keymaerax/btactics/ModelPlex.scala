@@ -87,6 +87,10 @@ object ModelPlex extends ModelPlexTrait {
     }
   }
 
+  /** Returns the post variable of `v` */
+  private def postVar = (v: Variable) => BaseVariable(v.name + "post", v.index)
+  private def preVar = (v: Variable) => BaseVariable(v.name + "pre", v.index)
+
   /**
     * Construct ModelPlex monitor specification conjecture corresponding to given formula.
     *
@@ -97,7 +101,7 @@ object ModelPlex extends ModelPlexTrait {
     */
   def createMonitorSpecificationConjecture(fml: Formula, vars: Variable*): (Formula, List[Formula]) = {
     require(vars.nonEmpty, "ModelPlex expects non-empty list of variables to monitor")
-    require(StaticSemantics.symbols(fml).intersect(vars.map(v => BaseVariable(v.name + "post", v.index)).toSet).isEmpty,
+    require(StaticSemantics.symbols(fml).intersect(vars.map(postVar).toSet).isEmpty,
       "ModelPlex post symbols must not occur in original formula")
 
     def conjectureOf(assumptions: Formula, prg: Program): (Formula, List[Formula]) = {
@@ -105,7 +109,7 @@ object ModelPlex extends ModelPlexTrait {
       assert(boundVars.forall(v => !v.isInstanceOf[Variable] || v.isInstanceOf[DifferentialSymbol] || vars.contains(v)),
         "All bound variables " + StaticSemantics.boundVars(prg).prettyString + " must occur in monitor list " + vars.mkString(", ") +
           "\nMissing: " + (StaticSemantics.boundVars(prg).symbols.toSet diff vars.toSet).mkString(", "))
-      val posteqs = vars.map(v => Equal(BaseVariable(v.name + "post", v.index), v)).reduceRight(And)
+      val posteqs = vars.map(v => Equal(postVar(v), v)).reduceRight(And)
       //@note suppress assumptions mentioning bound variables
       val nonboundAssumptions = FormulaTools.conjuncts(assumptions).filter(a => boundVars.intersect(StaticSemantics.freeVars(a).symbols).isEmpty)
       (Diamond(prg, posteqs), nonboundAssumptions)
@@ -122,6 +126,40 @@ object ModelPlex extends ModelPlexTrait {
     val monitor = apply(vars, kind, checkProvable)(formula)
     val (monitorConjecture, assumptions) = createMonitorSpecificationConjecture(formula, vars:_*)
     Imply(assumptions.reduceOption(And).getOrElse(True), Imply(monitor, monitorConjecture))
+  }
+
+  /** Creates a sandbox safety conjecture from a formula of the shape init->[{ctrl;plant}*]safe. The sandbox embeds
+    * an (unverified) external controller in monitor checks of `kind`. It approximates the external controller behavior
+    * with nondeterministic values for each of the `ctrlVars`. Input to the external controller is measured with
+    * nondeterministic values for each of the `senseVars`, but restricted to those satisfying the `plantApprox`
+    * formula and the plant evolution domain constraints. If the monitor is satisfied, the external controller's
+    * decision are actuated. Otherwise (monitor unsatisfied) `fallback` (if specified, ctrl by default) is executed.
+    */
+  def createSandbox(vars: List[Variable], consts: List[FuncOf], senseVars: List[Variable], ctrlVars: List[Variable],
+                    fallback: Option[Program], plantApprox: Formula, kind: Symbol,
+                    checkProvable: Option[(ProvableSig => Unit)]): (Formula => Formula) = formula => {
+    require(kind == 'ctrl, s"Unable to create a sandbox of kind $kind, so far only controller monitors supported")
+    val monitor = apply(vars, kind, checkProvable)(formula)
+    formula match {
+      case Imply(init, Box(Compose(Test(bounds), Loop(Compose(ctrlPrg, ODESystem(ode, q)))), safe)) =>
+        // todo sanity check consts, senseVars, ctrlVars with bound and free vars of the programs
+        assert(proveBy(Imply(init,bounds), auto).isProved)
+        val preVars = senseVars.map(v => preVar(v) -> v)
+        assert((StaticSemantics(And(plantApprox,q)).fv -- senseVars).toSet.subsetOf(preVars.map(_._1).toSet),
+          "Plant approximation only allowed to mention sensed variables and their initial states")
+        val pre = preVars.map(Assign.tupled).reduceOption(Compose).getOrElse(Test(True))
+        // senseVars0:=senseVars; senseVars:=*; ?Q;
+        val readSensors = senseVars.map(AssignAny).reduceOption(Compose).getOrElse(Test(True))
+        val sense = Compose(pre, Compose(readSensors, Test(And(plantApprox, q))))
+        // ctrlVarsTemp:=*;
+        val ctrl = ctrlVars.map(postVar).map(AssignAny).reduceOption(Compose).getOrElse(Test(True))
+        // ctrlVars:=ctrlVarsTemp
+        val operationalize = ctrlVars.map(v => Assign(v, postVar(v))).reduceOption(Compose).getOrElse(Test(True))
+        // if (monitor) ctrlVars:=ctrlVarsTemp else ctrlVars:=fallback
+        val act = Choice(Compose(Test(monitor), operationalize), Compose(Test(Not(monitor)), fallback.getOrElse(ctrlPrg)))
+
+        Imply(init, Box(Compose(Test(bounds), Loop(Compose(sense, Compose(ctrl, act)))), safe))
+    }
   }
 
   /**
