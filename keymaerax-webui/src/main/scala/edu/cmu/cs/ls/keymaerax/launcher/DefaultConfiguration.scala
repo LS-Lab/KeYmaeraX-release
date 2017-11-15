@@ -111,8 +111,12 @@ object DefaultConfiguration {
       val mathematicaLinuxPrefix = "/usr/local/Wolfram/Mathematica"
       var mathematicaVersion = ""
       if(new File(mathematicaLinuxPrefix).exists()) {
+        //@todo replace this appraoch with something that just lists the [[mathematicaLinuxPrefix]] directory and determines the largest version available.
+        // check if Mathematica version is 11.2
+        if(new File(mathematicaLinuxPrefix + File.separator + "11.2").exists())
+          mathematicaVersion = "11.2"
         // check if Mathematica version is 11.0
-        if(new File(mathematicaLinuxPrefix + File.separator + "11.0").exists())
+        else if(new File(mathematicaLinuxPrefix + File.separator + "11.0").exists())
           mathematicaVersion = "11.0"
         // check if Mathematica version is 10.4
         else if(new File(mathematicaLinuxPrefix + File.separator + "10.4").exists())
