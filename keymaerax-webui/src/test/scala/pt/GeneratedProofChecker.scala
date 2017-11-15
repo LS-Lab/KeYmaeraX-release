@@ -709,9 +709,9 @@ final case class BRenameL[C, A, B](a: C, b: C) extends lrule[A, B, C]
 
 abstract sealed class ruleApp[A, B, C]
 final case class URename[C, A, B](a: C, b: C) extends ruleApp[A, B, C]
-final case class Rrule[A, B, C](a: rrule[A, B, C], b: Nat.nat) extends
+final case class RightRule[A, B, C](a: rrule[A, B, C], b: Nat.nat) extends
   ruleApp[A, B, C]
-final case class Lrule[A, B, C](a: lrule[A, B, C], b: Nat.nat) extends
+final case class LeftRule[A, B, C](a: lrule[A, B, C], b: Nat.nat) extends
   ruleApp[A, B, C]
 final case class CloseId[A, B, C](a: Nat.nat, b: Nat.nat) extends
   ruleApp[A, B, C]
@@ -767,7 +767,7 @@ abstract sealed class pt[A, B, C]
 final case class FOLRConstant[A, B, C](a: Syntax.formula[A, B, C]) extends
   pt[A, B, C]
 final case class
-  RuleApp[A, B, C](a: pt[A, B, C], b: ruleApp[A, B, C], c: Nat.nat)
+  RuleApplication[A, B, C](a: pt[A, B, C], b: ruleApp[A, B, C], c: Nat.nat)
   extends pt[A, B, C]
 final case class AxiomaticRule[A, B, C](a: axRule) extends pt[A, B, C]
 final case class
@@ -4681,7 +4681,7 @@ def ddl_rule_result(x0: (List[(List[Syntax.formula[myvars, myvars, myvars]],
                  List[Syntax.formula[myvars, myvars, myvars]]))]
   =
   (x0, x1) match {
-  case ((sg, c), (i, Proof_Checker.Lrule(l, j))) =>
+  case ((sg, c), (i, Proof_Checker.LeftRule(l, j))) =>
     (if (Nat.less_eq_nat(Lista.size_list[Syntax.formula[myvars, myvars,
                  myvars]].apply(Product_Type.fst[List[Syntax.formula[myvars,
                               myvars, myvars]],
@@ -4704,7 +4704,7 @@ def ddl_rule_result(x0: (List[(List[Syntax.formula[myvars, myvars, myvars]],
          List[Syntax.formula[myvars, myvars, myvars]])](sg, i)),
                                  i)
             }))
-  case ((sg, c), (i, Proof_Checker.Rrule(r, j))) =>
+  case ((sg, c), (i, Proof_Checker.RightRule(r, j))) =>
     (if (Nat.less_eq_nat(Lista.size_list[Syntax.formula[myvars, myvars,
                  myvars]].apply(Product_Type.snd[List[Syntax.formula[myvars,
                               myvars, myvars]],
@@ -9792,7 +9792,7 @@ def ddl_pt_result(x0: Proof_Checker.pt[myvars, myvars, myvars]):
            (List[Syntax.formula[myvars, myvars, myvars]],
              List[Syntax.formula[myvars, myvars,
                                   myvars]]))]((Nil, (Nil, List(f))))
-  case Proof_Checker.RuleApp(pt, ra, i) =>
+  case Proof_Checker.RuleApplication(pt, ra, i) =>
     (ddl_pt_result(pt) match {
        case None => None
        case Some(res) =>
@@ -11341,12 +11341,12 @@ object Parser {
           val (rule, i4) = rightRule(str,i3)
           val i5 = eatChar(str,i4,' ')
           val (n,i6) = nat(str,i5)
-          (Rrule(rule,n),i6)
+          (RightRule(rule,n),i6)
         case "Lrule" =>
           val (rule, i4) = leftRule(str,i3)
           val i5 = eatChar(str,i4,' ')
           val (n,i6) = nat(str,i5)
-          (Lrule(rule,n),i6)
+          (LeftRule(rule,n),i6)
         case "CloseId" =>
           val (w,i4) = nat(str,i3)
           val i5 = eatChar(str,i4,' ')
@@ -11387,7 +11387,7 @@ object Parser {
           val (rApp,i6) = ruleAppl(str,i5)
           val i7 = eatChar(str,i6,' ')
           val (n, i8) = nat(str,i7)
-          (RuleApp(child,rApp,n),i8)
+          (RuleApplication(child,rApp,n),i8)
         case "AxRule" =>
           val (ar,i4) = axrule(str,i3)
           (AxiomaticRule(ar),i4)
