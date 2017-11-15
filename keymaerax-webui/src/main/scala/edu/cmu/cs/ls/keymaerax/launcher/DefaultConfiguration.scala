@@ -71,8 +71,12 @@ object DefaultConfiguration {
       var mathematicaVersion = ""
 
       if(new File(mathematicaWindowsPrefix).exists()) {
+        if(new File(mathematicaWindowsPrefix + File.separator + "11.2").exists())
+          mathematicaVersion = "11.2"
+        else if(new File(mathematicaWindowsPrefix + File.separator + "11.0").exists())
+          mathematicaVersion = "11.0"
         // check if Mathematica version is 10.4
-        if(new File(mathematicaWindowsPrefix + File.separator + "10.4").exists())
+        else if(new File(mathematicaWindowsPrefix + File.separator + "10.4").exists())
           mathematicaVersion = "10.4"
         // check if Mathematica version is 10.3
         else if(new File(mathematicaWindowsPrefix + File.separator + "10.3").exists())
