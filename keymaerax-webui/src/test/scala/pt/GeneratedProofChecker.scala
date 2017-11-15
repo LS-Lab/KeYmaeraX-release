@@ -497,14 +497,14 @@ def uminus_rat(p: rat): rat = Frct({
 
 object String {
 
-  object Char {
+  object Characterr {
     def ofChar(c:scala.Char):String.char = {
-      Char(Num.ofInt(c.toInt))
+      Characterr(Num.ofInt(c.toInt))
     }
   }
   abstract sealed class char
   final case class zero_char() extends char
-  final case class Char(a: Num.num) extends char {
+  final case class Characterr(a: Num.num) extends char {
     override def toString = Character.toString(((Num.toInt(a).toChar)))
   }
 
@@ -614,7 +614,7 @@ def uminus_real(x0: real): real = x0 match {
 object Predicate {
 
 abstract sealed class pred[A]
-final case class Seq[A](a: Unit => seq[A]) extends pred[A]
+final case class Sequence[A](a: Unit => seq[A]) extends pred[A]
 
 abstract sealed class seq[A]
 final case class Empty[A]() extends seq[A]
@@ -628,7 +628,7 @@ def applya[A, B](f: A => pred[B], x1: seq[A]): seq[B] = (f, x1) match {
 }
 
 def bind[A, B](x0: pred[A], f: A => pred[B]): pred[B] = (x0, f) match {
-  case (Seq(g), f) => Seq[B](((_: Unit) => applya[A, B](f, g(()))))
+  case (Sequence(g), f) => Sequence[B](((_: Unit) => applya[A, B](f, g(()))))
 }
 
 def member[A : HOL.equal](xa0: seq[A], x: A): Boolean = (xa0, x) match {
@@ -638,22 +638,22 @@ def member[A : HOL.equal](xa0: seq[A], x: A): Boolean = (xa0, x) match {
 }
 
 def eval[A : HOL.equal](x0: pred[A]): A => Boolean = x0 match {
-  case Seq(f) => ((a: A) => member[A](f(()), a))
+  case Sequence(f) => ((a: A) => member[A](f(()), a))
 }
 
 def holds(p: pred[Unit]): Boolean = (eval[Unit](p)).apply(())
 
-def bot_pred[A]: pred[A] = Seq[A](((_: Unit) => Empty[A]()))
+def bot_pred[A]: pred[A] = Sequence[A](((_: Unit) => Empty[A]()))
 
-def single[A](x: A): pred[A] = Seq[A](((_: Unit) => Insert[A](x, bot_pred[A])))
+def single[A](x: A): pred[A] = Sequence[A](((_: Unit) => Insert[A](x, bot_pred[A])))
 
 def sup_pred[A](x0: pred[A], x1: pred[A]): pred[A] = (x0, x1) match {
-  case (Seq(f), Seq(g)) =>
-    Seq[A](((_: Unit) =>
+  case (Sequence(f), Sequence(g)) =>
+    Sequence[A](((_: Unit) =>
              (f(()) match {
                 case Empty() => g(())
-                case Insert(x, p) => Insert[A](x, sup_pred[A](p, Seq[A](g)))
-                case Join(p, xq) => adjunct[A](Seq[A](g), Join[A](p, xq))
+                case Insert(x, p) => Insert[A](x, sup_pred[A](p, Sequence[A](g)))
+                case Join(p, xq) => adjunct[A](Sequence[A](g), Join[A](p, xq))
               })))
 }
 
@@ -1864,7 +1864,7 @@ def z: myvars = i3()
       case (sa, s :: v :: va) => s ++ (sa ++ ddl_join(sa, v :: va))
     }
 
-  def ddl_hpid_to_string(vid: myvars): List[String.char] = s"${vid}".toList.map(String.Char.ofChar)
+  def ddl_hpid_to_string(vid: myvars): List[String.char] = s"${vid}".toList.map(String.Characterr.ofChar)
   /*(if (equal_myvarsa(vid, x))
     List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))))
   else (if (equal_myvarsa(vid, y))
@@ -1875,7 +1875,7 @@ def z: myvars = i3()
   else List(String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))),
     String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))))))
 */
-  def ddl_vid_to_string(vid: myvars): List[String.char] = s"${vid}".toList.map(String.Char.ofChar)
+  def ddl_vid_to_string(vid: myvars): List[String.char] = s"${vid}".toList.map(String.Characterr.ofChar)
   /*(if (equal_myvarsa(vid, x))
     List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))))
   else (if (equal_myvarsa(vid, y))
@@ -1884,7 +1884,7 @@ def z: myvars = i3()
     List(String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))))
   else List(String.Char(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One())))))))))))
 */
-  def ddl_fid_to_string(vid: myvars): List[String.char] = s"${vid}".toList.map(String.Char.ofChar)
+  def ddl_fid_to_string(vid: myvars): List[String.char] = s"${vid}".toList.map(String.Characterr.ofChar)
   /*    (if (equal_myvarsa(vid, i1()))
         List(String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))))
       else (if (equal_myvarsa(vid, i2()))
@@ -1898,42 +1898,42 @@ def z: myvars = i3()
     case Syntax.Var(x) => ddl_vid_to_string(x)
     case Syntax.Const(r) =>
       val(Ratreal(Frct((int_of_integer(n),int_of_integer(d))))) = r
-      s"$n/$d".toList.map(String.Char.ofChar)
+      s"$n/$d".toList.map(String.Characterr.ofChar)
     //List(String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.One()))))))))
     case Syntax.Function(f, args) => ddl_fid_to_string(f)
     case Syntax.Functional(f) => ddl_fid_to_string(f)++ddl_fid_to_string(f)
     case Syntax.Plus(t1, t2) =>
       ddl_trm_to_string(t1) ++
-        (List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+        (List(String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
           ddl_trm_to_string(t2))
     case Syntax.Times(t1, t2) =>
       ddl_trm_to_string(t1) ++
-        (List(String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+        (List(String.Characterr(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
           ddl_trm_to_string(t2))
     case Syntax.DiffVar(x) =>
-      List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
-        String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One()))))))),
-        String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))) ++
+      List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+        String.Characterr(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One()))))))),
+        String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))) ++
         (ddl_vid_to_string(x) ++
-          List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))))
+          List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))))
     case Syntax.Differential(t) =>
-      List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
-        String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))) ++
+      List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+        String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))) ++
         (ddl_trm_to_string(t) ++
-          List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))))
+          List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))))
   }
 
   def ddl_oid_to_string(vid: myvars): List[String.char] =
     (if (equal_myvarsa(vid, x))
-      List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))))
+      List(String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))))
     else (if (equal_myvarsa(vid, y))
-      List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))),
-        String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One())))))))
+      List(String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))),
+        String.Characterr(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One())))))))
     else (if (equal_myvarsa(vid, z))
-      List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))),
-        String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One())))))))
-    else List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))),
-      String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.One()))))))))))
+      List(String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))),
+        String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One())))))))
+    else List(String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.One()))))))),
+      String.Characterr(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.One()))))))))))
 
   val PRINT_ASSOC = true
 
@@ -1941,39 +1941,39 @@ def z: myvars = i3()
   match {
     case Syntax.OVar(x,sp) => ddl_oid_to_string(x)
     case Syntax.OSing(x, t) =>
-      List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One())))))))) ++
+      List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One())))))))) ++
         (ddl_vid_to_string(x) ++
-          (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+          (List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
             ddl_trm_to_string(t)))
     case Syntax.OProd(oDE1, oDE2) =>
-      (if(PRINT_ASSOC) "{" else "").toList.map(String.Char.ofChar) ++
+      (if(PRINT_ASSOC) "{" else "").toList.map(String.Characterr.ofChar) ++
         ddl_ode_to_string(oDE1) ++
-        (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
-          String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+        (List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+          String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
           ddl_ode_to_string(oDE2)) ++
-        (if(PRINT_ASSOC) "}" else "").toList.map(String.Char.ofChar)
+        (if(PRINT_ASSOC) "}" else "").toList.map(String.Characterr.ofChar)
   }
 
   def ddl_ppid_to_string(vid: myvars): List[String.char] =
     (if (equal_myvarsa(vid, i1()))
-      List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))))
+      List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))))
     else (if (equal_myvarsa(vid, i2()))
-      List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))))
+      List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))))
     else (if (equal_myvarsa(vid, i3()))
-      List(String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))))
-    else List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.One())))))))))))
+      List(String.Characterr(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))))
+    else List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.One())))))))))))
 
   def ddl_cid_to_string(vid: myvars): List[String.char] =
     (if (equal_myvarsa(vid, i1()))
-      List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))))
+      List(String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))))
     else (if (equal_myvarsa(vid, i2()))
-      List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
-        String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One())))))))
+      List(String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+        String.Characterr(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One())))))))
     else (if (equal_myvarsa(vid, i3()))
-      List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
-        String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One())))))))
-    else List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
-      String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.One()))))))))))
+      List(String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+        String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.One())))))))
+    else List(String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+      String.Characterr(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.One()))))))))))
 
   def ddl_fml_to_string(x0: Syntax.formula[myvars, myvars, myvars]):
   List[String.char]
@@ -1981,195 +1981,195 @@ def z: myvars = i3()
     x0 match {
       case Syntax.Geq(t1, t2) =>
         ddl_trm_to_string(t1) ++
-          (List(String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))),
-            String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+          (List(String.Characterr(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))),
+            String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
             ddl_trm_to_string(t2))
-      case Syntax.Prop(p, args) => s"Prop(${p})".toList.map(String.Char.ofChar)
+      case Syntax.Prop(p, args) => s"Prop(${p})".toList.map(String.Characterr.ofChar)
       case Syntax.Not(p) =>
         (p match {
           case Syntax.Geq(_, _) =>
-            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               ddl_fml_to_string(p)
           case Syntax.Prop(_, _) =>
-            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               ddl_fml_to_string(p)
           case Syntax.Not(_) =>
-            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               ddl_fml_to_string(p)
           case Syntax.And(formula1, formula2) =>
             (formula1 match {
               case Syntax.Geq(_, _) =>
-                List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                   ddl_fml_to_string(p)
               case Syntax.Prop(_, _) =>
-                List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                   ddl_fml_to_string(p)
               case Syntax.Not(Syntax.Geq(trm1, trm2)) =>
                 (formula2 match {
                   case Syntax.Geq(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Prop(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Geq(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Prop(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Not(pa)) =>
                     ddl_fml_to_string(pa) ++
-                      (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
-                        String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+                      (List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+                        String.Characterr(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
                         ddl_fml_to_string(Syntax.Geq[myvars, myvars,
                           myvars](trm1, trm2)))
                   case Syntax.Not(Syntax.And(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Exists(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Diamond(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.InContext(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.And(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Exists(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Diamond(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.InContext(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                 })
               case Syntax.Not(Syntax.Prop(c, fun)) =>
                 (formula2 match {
                   case Syntax.Geq(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Prop(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Geq(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Prop(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Not(pa)) =>
                     ddl_fml_to_string(pa) ++
-                      (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
-                        String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+                      (List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+                        String.Characterr(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
                         ddl_fml_to_string(Syntax.Prop[myvars, myvars,
                           myvars](c, fun)))
                   case Syntax.Not(Syntax.And(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Exists(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Diamond(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.InContext(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.And(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Exists(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Diamond(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.InContext(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                 })
               case Syntax.Not(Syntax.Not(formula)) =>
                 (formula2 match {
                   case Syntax.Geq(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Prop(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Geq(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Prop(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Not(pa)) =>
                     ddl_fml_to_string(pa) ++
-                      (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
-                        String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+                      (List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+                        String.Characterr(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
                         ddl_fml_to_string(Syntax.Not[myvars, myvars,
                           myvars](formula)))
                   case Syntax.Not(Syntax.And(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Exists(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Diamond(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.InContext(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.And(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Exists(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Diamond(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.InContext(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                 })
               case Syntax.Not(Syntax.And(formula1a, formula2a)) =>
                 (formula2 match {
                   case Syntax.Geq(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Prop(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Geq(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Prop(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Not(pa)) =>
                     ddl_fml_to_string(pa) ++
-                      (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
-                        String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+                      (List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+                        String.Characterr(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
                         ddl_fml_to_string(Syntax.And[myvars, myvars,
                           myvars](formula1a, formula2a)))
                   case Syntax.Not(Syntax.And(Syntax.Geq(_, _), _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.And(Syntax.Prop(_, _), _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Geq(_, _))) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Prop(_, _)))
-                  => List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                  => List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                     ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.And(Syntax.Not(pa), Syntax.Not(q))) =>
                     (if (Syntax.equal_formulaa[myvars, myvars,
@@ -2177,11 +2177,11 @@ def z: myvars = i3()
                       Syntax.equal_formulaa[myvars, myvars,
                         myvars](formula2a, q))
                       ddl_fml_to_string(formula1a) ++
-                        (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))),
-                          String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
-                          String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+                        (List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))),
+                          String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+                          String.Characterr(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
                           ddl_fml_to_string(formula2a))
-                    else List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    else List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(Syntax.And[myvars, myvars,
                         myvars](Syntax.Not[myvars, myvars,
                         myvars](Syntax.And[myvars, myvars,
@@ -2191,300 +2191,300 @@ def z: myvars = i3()
                           myvars](Syntax.Not[myvars, myvars, myvars](pa),
                           Syntax.Not[myvars, myvars, myvars](q))))))
                   case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.And(_, _))) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Exists(_, _)))
-                  => List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                  => List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                     ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.Diamond(_, _)))
-                  => List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                  => List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                     ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.And(Syntax.Not(_),
                   Syntax.InContext(_, _)))
-                  => List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                  => List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                     ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.And(Syntax.And(_, _), _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.And(Syntax.Exists(_, _), _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.And(Syntax.Diamond(_, _), _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.And(Syntax.InContext(_, _), _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Exists(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Diamond(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.InContext(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.And(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Exists(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Diamond(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.InContext(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                 })
               case Syntax.Not(Syntax.Exists(c, formula)) =>
                 (formula2 match {
                   case Syntax.Geq(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Prop(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Geq(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Prop(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Not(pa)) =>
                     ddl_fml_to_string(pa) ++
-                      (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
-                        String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+                      (List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+                        String.Characterr(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
                         ddl_fml_to_string(Syntax.Exists[myvars, myvars,
                           myvars](c, formula)))
                   case Syntax.Not(Syntax.And(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Exists(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Diamond(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.InContext(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.And(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Exists(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Diamond(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.InContext(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                 })
               case Syntax.Not(Syntax.Diamond(hp, formula)) =>
                 (formula2 match {
                   case Syntax.Geq(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Prop(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Geq(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Prop(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Not(pa)) =>
                     ddl_fml_to_string(pa) ++
-                      (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
-                        String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+                      (List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+                        String.Characterr(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
                         ddl_fml_to_string(Syntax.Diamond[myvars, myvars,
                           myvars](hp, formula)))
                   case Syntax.Not(Syntax.And(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Exists(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Diamond(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.InContext(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.And(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Exists(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Diamond(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.InContext(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                 })
               case Syntax.Not(Syntax.InContext(b, formula)) =>
                 (formula2 match {
                   case Syntax.Geq(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Prop(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Geq(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Prop(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Not(pa)) =>
                     ddl_fml_to_string(pa) ++
-                      (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
-                        String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+                      (List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+                        String.Characterr(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
                         ddl_fml_to_string(Syntax.InContext[myvars, myvars,
                           myvars](b, formula)))
                   case Syntax.Not(Syntax.And(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Exists(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.Diamond(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Not(Syntax.InContext(_, _)) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.And(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Exists(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.Diamond(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                   case Syntax.InContext(_, _) =>
-                    List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                    List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                       ddl_fml_to_string(p)
                 })
               case Syntax.And(_, _) =>
-                List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                   ddl_fml_to_string(p)
               case Syntax.Exists(_, _) =>
-                List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                   ddl_fml_to_string(p)
               case Syntax.Diamond(_, _) =>
-                List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                   ddl_fml_to_string(p)
               case Syntax.InContext(_, _) =>
-                List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+                List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
                   ddl_fml_to_string(p)
             })
           case Syntax.Exists(_, Syntax.Geq(_, _)) =>
-            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               ddl_fml_to_string(p)
           case Syntax.Exists(_, Syntax.Prop(_, _)) =>
-            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               ddl_fml_to_string(p)
           case Syntax.Exists(x, Syntax.Not(pa)) =>
-            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))))) ++
               (ddl_vid_to_string(x) ++
-                (List(String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+                (List(String.Characterr(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit0(Num.One()))))))) ++
                   ddl_fml_to_string(pa)))
           case Syntax.Exists(_, Syntax.And(_, _)) =>
-            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               ddl_fml_to_string(p)
           case Syntax.Exists(_, Syntax.Exists(_, _)) =>
-            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               ddl_fml_to_string(p)
           case Syntax.Exists(_, Syntax.Diamond(_, _)) =>
-            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               ddl_fml_to_string(p)
           case Syntax.Exists(_, Syntax.InContext(_, _)) =>
-            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               ddl_fml_to_string(p)
           case Syntax.Diamond(_, Syntax.Geq(_, _)) =>
-            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               ddl_fml_to_string(p)
           case Syntax.Diamond(_, Syntax.Prop(_, _)) =>
-            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               ddl_fml_to_string(p)
           case Syntax.Diamond(a, Syntax.Not(pa)) =>
-            List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))))) ++
               (ddl_hp_to_string(a) ++
-                (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))))) ++
+                (List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))))) ++
                   ddl_fml_to_string(pa)))
           case Syntax.Diamond(_, Syntax.And(_, _)) =>
-            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               ddl_fml_to_string(p)
           case Syntax.Diamond(_, Syntax.Exists(_, _)) =>
-            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               ddl_fml_to_string(p)
           case Syntax.Diamond(_, Syntax.Diamond(_, _)) =>
-            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               ddl_fml_to_string(p)
           case Syntax.Diamond(_, Syntax.InContext(_, _)) =>
-            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               ddl_fml_to_string(p)
           case Syntax.InContext(_, _) =>
-            List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               ddl_fml_to_string(p)
         })
       case Syntax.And(p, q) =>
         ddl_fml_to_string(p) ++
-          (List(String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+          (List(String.Characterr(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.One()))))))) ++
             ddl_fml_to_string(q))
       case Syntax.Exists(x, p) =>
-        List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))))) ++
+        List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))))) ++
           (ddl_vid_to_string(x) ++
-            (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
-              String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
-              String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            (List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+              String.Characterr(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+              String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               ddl_fml_to_string(p)))
       case Syntax.Diamond(a, p) =>
-        List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+        List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
           (ddl_hp_to_string(a) ++
-            (List(String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+            (List(String.Characterr(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
               ddl_fml_to_string(p)))
       case Syntax.InContext(c, p) =>
         (p match {
           case Syntax.Geq(_, _) => ddl_ppid_to_string(c)
           case Syntax.Prop(_, _) =>
             ddl_cid_to_string(c) ++
-              (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+              (List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
                 (ddl_fml_to_string(p) ++
-                  List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
+                  List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
           case Syntax.Not(_) =>
             ddl_cid_to_string(c) ++
-              (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+              (List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
                 (ddl_fml_to_string(p) ++
-                  List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
+                  List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
           case Syntax.And(_, _) =>
             ddl_cid_to_string(c) ++
-              (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+              (List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
                 (ddl_fml_to_string(p) ++
-                  List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
+                  List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
           case Syntax.Exists(_, _) =>
             ddl_cid_to_string(c) ++
-              (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+              (List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
                 (ddl_fml_to_string(p) ++
-                  List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
+                  List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
           case Syntax.Diamond(_, _) =>
             ddl_cid_to_string(c) ++
-              (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+              (List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
                 (ddl_fml_to_string(p) ++
-                  List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
+                  List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
           case Syntax.InContext(_, _) =>
             ddl_cid_to_string(c) ++
-              (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
+              (List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One()))))))) ++
                 (ddl_fml_to_string(p) ++
-                  List(String.Char(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
+                  List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))))
         })
     }
 
@@ -2493,41 +2493,41 @@ def z: myvars = i3()
       case Syntax.Pvar(a) => ddl_hpid_to_string(a)
       case Syntax.Assign(x, e) =>
         ddl_vid_to_string(x) ++
-          (List(String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One())))))),
-            String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+          (List(String.Characterr(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One())))))),
+            String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
             ddl_trm_to_string(e))
       case Syntax.DiffAssign(x, e) =>
-        List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
-          String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))) ++
+        List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+          String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))) ++
           (ddl_vid_to_string(x) ++
-            (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))),
-              String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One())))))),
-              String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+            (List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))),
+              String.Characterr(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One())))))),
+              String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
               ddl_trm_to_string(e)))
       case Syntax.AssignAny(x) =>
-        List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
-          String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))) ++
+        List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+          String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))) ++
           (ddl_vid_to_string(x)) ++ ddl_vid_to_string(x) ++ ddl_vid_to_string(x)
       case Syntax.Test(p) =>
-        List(String.Char(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+        List(String.Characterr(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))) ++
           ddl_fml_to_string(p)
       case Syntax.EvolveODE(ode, p) =>
-        List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))) ++
+        List(String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))) ++
           (ddl_ode_to_string(ode) ++
-            (List(String.Char(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            (List(String.Characterr(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit0(Num.One()))))))) ++
               (ddl_fml_to_string(p) ++
-                List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))))))
+                List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One())))))))))))
       case Syntax.Choice(a, b) =>
         ddl_hp_to_string(a) ++
-          (List(String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))) ++
+          (List(String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))) ++
             ddl_hp_to_string(b))
       case Syntax.Sequence(a, b) =>
         ddl_hp_to_string(a) ++
-          (List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One()))))))) ++
+          (List(String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One()))))))) ++
             ddl_hp_to_string(b))
       case Syntax.Loop(a) =>
         ddl_hp_to_string(a) ++
-          List(String.Char(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))
+          List(String.Characterr(Num.Bit0(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit0(Num.One())))))))
     }
 
   def ddl_seq_to_string(x0: (List[Syntax.formula[myvars, myvars, myvars]],
@@ -2536,20 +2536,20 @@ def z: myvars = i3()
   =
     x0 match {
       case (a, s) =>
-        ddl_join(List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
-          String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+        ddl_join(List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+          String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
           Lista.map[Syntax.formula[myvars, myvars, myvars],
             List[String.char]](((aa:
                                  Syntax.formula[myvars, myvars, myvars])
           =>
             ddl_fml_to_string(aa)),
             a)) ++
-          (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
-            String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))),
-            String.Char(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
-            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
-            ddl_join(List(String.Char(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
-              String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+          (List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Characterr(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit1(Num.Bit1(Num.One()))))))),
+            String.Characterr(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+            String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+            ddl_join(List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit1(Num.Bit1(Num.Bit0(Num.One())))))),
+              String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
               Lista.map[Syntax.formula[myvars, myvars, myvars],
                 List[String.char]](((aa:
                                      Syntax.formula[myvars, myvars, myvars])
@@ -2567,11 +2567,11 @@ def z: myvars = i3()
   =
     x0 match {
       case (sg, c) =>
-        ddl_join(List(String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One())))))),
-          String.Char(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One())))))),
-          String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
-          String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
-          String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
+        ddl_join(List(String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One())))))),
+          String.Characterr(Num.Bit1(Num.Bit1(Num.Bit0(Num.Bit1(Num.Bit1(Num.One())))))),
+          String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+          String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+          String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))),
           Lista.map[(List[Syntax.formula[myvars, myvars, myvars]],
             List[Syntax.formula[myvars, myvars, myvars]]),
             List[String.char]](((a:
@@ -2580,18 +2580,18 @@ def z: myvars = i3()
           =>
             ddl_seq_to_string(a)),
             sg)) ++
-          (List(String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
-            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
-            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
-            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
-            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
-            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
-            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
-            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
-            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
-            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
-            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
-            String.Char(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
+          (List(String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One())))))),
+            String.Characterr(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.Bit0(Num.One()))))))) ++
             ddl_seq_to_string(c))
     }
 

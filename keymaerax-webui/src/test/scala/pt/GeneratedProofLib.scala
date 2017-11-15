@@ -423,7 +423,7 @@ object String {
 
   abstract sealed class char
   final case class zero_char() extends char
-  final case class Char(a: Num.num) extends char {
+  final case class Characterr(a: Num.num) extends char {
     override def toString = Character.toString(((Num.toInt(a).toChar)))
 
   }
