@@ -769,7 +769,7 @@ final case class FOLRConstant[A, B, C](a: Syntax.formula[A, B, C]) extends
 final case class
   RuleApp[A, B, C](a: pt[A, B, C], b: ruleApp[A, B, C], c: Nat.nat)
   extends pt[A, B, C]
-final case class AxRule[A, B, C](a: axRule) extends pt[A, B, C]
+final case class AxiomaticRule[A, B, C](a: axRule) extends pt[A, B, C]
 final case class
   PrUSubst[A, B, C](a: pt[A, B, C], b: USubst.subst_ext[A, B, C, Unit])
   extends pt[A, B, C]
@@ -4138,306 +4138,6 @@ Proof_Checker.closeI[Syntax.formula[myvars, myvars,
       case Syntax.Diamond(_, _) => None
       case Syntax.InContext(_, _) => None
     })
-  /*case (Proof_Checker.CommuteEquivR(), j, (a, s)) =>
-    (Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j) match {
-      case Syntax.Geq(_, _) => None
-      case Syntax.Prop(_, _) => None
-      case Syntax.Not(Syntax.Geq(_, _)) => None
-      case Syntax.Not(Syntax.Prop(_, _)) => None
-      case Syntax.Not(Syntax.Not(_)) => None
-      case Syntax.Not(Syntax.And(Syntax.Geq(_, _), _)) => None
-      case Syntax.Not(Syntax.And(Syntax.Prop(_, _), _)) => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Geq(_, _)), _)) => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Prop(_, _)), _)) => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Not(_)), _)) => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Geq(_, _)))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Prop(_, _)))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.Geq(_, _))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.Prop(_, _))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.Not(_))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.And(Syntax.Geq(_, _), _))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.And(Syntax.Prop(_, _),
-      _))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.And(Syntax.Not(_),
-      Syntax.Geq(_, _)))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.And(Syntax.Not(_),
-      Syntax.Prop(_, _)))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(p, q)),
-      Syntax.Not(Syntax.And(Syntax.Not(pa),
-      Syntax.Not(qa)))))
-      => (if (Syntax.equal_formulaa[myvars, myvars, myvars](p, pa) &&
-        Syntax.equal_formulaa[myvars, myvars, myvars](q, qa))
-        Some[List[(List[Syntax.formula[myvars, myvars, myvars]],
-          List[Syntax.formula[myvars, myvars,
-            myvars]])]](List((a, Proof_Checker.replaceI[Syntax.formula[myvars,
-          myvars,
-          myvars]](s, j,
-          Syntax.Equiv[myvars, myvars,
-            myvars](q, p)))))
-      else None)
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.And(Syntax.Not(_),
-      Syntax.And(_, _)))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.And(Syntax.Not(_),
-      Syntax.Exists(_, _)))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.And(Syntax.Not(_),
-      Syntax.Diamond(_, _)))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.And(Syntax.Not(_),
-      Syntax.InContext(_, _)))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.And(Syntax.And(_, _), _))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.And(Syntax.Exists(_, _),
-      _))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.And(Syntax.Diamond(_, _),
-      _))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.And(Syntax.InContext(_, _),
-      _))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.Exists(_, _))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.Diamond(_, _))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Not(Syntax.InContext(_, _))))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.And(_, _)))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Exists(_, _)))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.Diamond(_, _)))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.And(_, _)),
-      Syntax.InContext(_, _)))
-      => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Exists(_, _)), _)) => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.Diamond(_, _)), _)) => None
-      case Syntax.Not(Syntax.And(Syntax.Not(Syntax.InContext(_, _)), _)) =>
-        None
-      case Syntax.Not(Syntax.And(Syntax.And(_, _), _)) => None
-      case Syntax.Not(Syntax.And(Syntax.Exists(_, _), _)) => None
-      case Syntax.Not(Syntax.And(Syntax.Diamond(_, _), _)) => None
-      case Syntax.Not(Syntax.And(Syntax.InContext(_, _), _)) => None
-      case Syntax.Not(Syntax.Exists(_, _)) => None
-      case Syntax.Not(Syntax.Diamond(_, _)) => None
-      case Syntax.Not(Syntax.InContext(_, _)) => None
-      case Syntax.And(_, _) => None
-      case Syntax.Exists(_, _) => None
-      case Syntax.Diamond(_, _) => None
-      case Syntax.InContext(_, _) => None
-    })*/
-/*  case (Proof_Checker.BRenameR(x, y), j, (a, s)) =>
-    println("Doin a brenamer")
-    (
-      if (equal_myvarsa(x, y)) fail()
-      else (Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j) match {
-              case Syntax.Geq(_, _) => fail()
-              case Syntax.Prop(_, _) => fail()
-              case Syntax.Not(Syntax.Geq(_, _)) => fail()
-              case Syntax.Not(Syntax.Prop(_, _)) => fail()
-              case Syntax.Not(Syntax.Not(_)) => fail()
-              case Syntax.Not(Syntax.And(_, _)) => fail()
-              case Syntax.Not(Syntax.Exists(_, Syntax.Geq(_, _))) => fail()
-              case Syntax.Not(Syntax.Exists(_, Syntax.Prop(_, _))) => fail()
-              case Syntax.Not(Syntax.Exists(xvar, Syntax.Not(phi))) =>
-                (if (equal_myvarsa(x, xvar) &&
-                       (ddl_FRadmit(Syntax.Forall[myvars, myvars,
-           myvars](xvar, phi)) &&
-                         (ddl_FRadmit(phi) &&
-                           (Syntax.fsafe[myvars, myvars,
-  myvars](Syntax.Forall[myvars, myvars, myvars](xvar, phi)) &&
-                             Set.equal_seta[Sum_Type.sum[myvars,
-                  myvars]](Set.inf_set[Sum_Type.sum[myvars,
-             myvars]](Set.insert[Sum_Type.sum[myvars,
-       myvars]](Sum_Type.Inl[myvars, myvars](y),
-                 Set.insert[Sum_Type.sum[myvars,
-  myvars]](Sum_Type.Inr[myvars, myvars](y),
-            Set.insert[Sum_Type.sum[myvars,
-                                     myvars]](Sum_Type.Inr[myvars, myvars](x),
-       Set.bot_set[Sum_Type.sum[myvars, myvars]]))),
-                       Static_Semantics.FVF[myvars, myvars,
-     myvars](Syntax.Forall[myvars, myvars, myvars](xvar, phi))),
-                            Set.bot_set[Sum_Type.sum[myvars, myvars]])))))
-                  Some[List[(List[Syntax.formula[myvars, myvars, myvars]],
-                              List[Syntax.formula[myvars, myvars,
-           myvars]])]](List((a, Proof_Checker.replaceI[Syntax.formula[myvars,
-                               myvars,
-                               myvars]](s, j,
- ddl_FBrename(x, y, Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j))))))
-                  else fail())
-              case Syntax.Not(Syntax.Exists(_, Syntax.And(_, _))) => fail()
-              case Syntax.Not(Syntax.Exists(_, Syntax.Exists(_, _))) => fail()
-              case Syntax.Not(Syntax.Exists(_, Syntax.Diamond(_, _))) => fail()
-              case Syntax.Not(Syntax.Exists(_, Syntax.InContext(_, _))) => fail()
-              case Syntax.Not(Syntax.Diamond(Syntax.Pvar(_), _)) => fail()
-              case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
-      Syntax.Geq(_, _)))
-                => fail()
-              case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
-      Syntax.Prop(_, _)))
-                => fail()
-              case Syntax.Not(Syntax.Diamond(Syntax.Assign(xvar, theta),
-      Syntax.Not(phi)))
-                => (if (equal_myvarsa(x, xvar) &&
-                          (ddl_TRadmit(theta) &&
-                            (ddl_FRadmit(Syntax.Box[myvars, myvars,
-             myvars](Syntax.Assign[myvars, myvars, myvars](xvar, theta),
-                      phi)) &&
-                              (ddl_FRadmit(phi) &&
-                                (Syntax.fsafe[myvars, myvars,
-       myvars](Syntax.Box[myvars, myvars,
-                           myvars](Syntax.Assign[myvars, myvars,
-          myvars](xvar, theta),
-                                    phi)) &&
-                                  Set.equal_seta[Sum_Type.sum[myvars,
-                       myvars]](Set.inf_set[Sum_Type.sum[myvars,
-                  myvars]](Set.insert[Sum_Type.sum[myvars,
-            myvars]](Sum_Type.Inl[myvars, myvars](y),
-                      Set.insert[Sum_Type.sum[myvars,
-       myvars]](Sum_Type.Inr[myvars, myvars](y),
-                 Set.insert[Sum_Type.sum[myvars,
-  myvars]](Sum_Type.Inr[myvars, myvars](x),
-            Set.bot_set[Sum_Type.sum[myvars, myvars]]))),
-                            Static_Semantics.FVF[myvars, myvars,
-          myvars](Syntax.Box[myvars, myvars,
-                              myvars](Syntax.Assign[myvars, myvars,
-             myvars](xvar, theta),
-                                       phi))),
-                                 Set.bot_set[Sum_Type.sum[myvars, myvars]]))))))
-                     Some[List[(List[Syntax.formula[myvars, myvars, myvars]],
-                                 List[Syntax.formula[myvars, myvars,
-              myvars]])]](List((a, Proof_Checker.replaceI[Syntax.formula[myvars,
-                                  myvars,
-                                  myvars]](s, j,
-    ddl_FBrename(x, y,
-                  Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j))))))
-                     else fail())
-              case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
-      Syntax.And(_, _)))
-                => fail()
-              case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
-      Syntax.Exists(_, _)))
-                => fail()
-              case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
-      Syntax.Diamond(_, _)))
-                => fail()
-              case Syntax.Not(Syntax.Diamond(Syntax.Assign(_, _),
-      Syntax.InContext(_, _)))
-                => fail()
-              case Syntax.Not(Syntax.Diamond(Syntax.AssignAny(_), _)) => fail()
-              case Syntax.Not(Syntax.Diamond(Syntax.DiffAssign(_, _), _)) =>
-                fail()
-              case Syntax.Not(Syntax.Diamond(Syntax.Test(_), _)) => fail()
-              case Syntax.Not(Syntax.Diamond(Syntax.EvolveODE(_, _), _)) => fail()
-              case Syntax.Not(Syntax.Diamond(Syntax.Choice(_, _), _)) => fail()
-              case Syntax.Not(Syntax.Diamond(Syntax.Sequence(_, _), _)) => fail()
-              case Syntax.Not(Syntax.Diamond(Syntax.Loop(_), _)) => fail()
-              case Syntax.Not(Syntax.InContext(_, _)) => fail()
-              case Syntax.And(_, _) => fail()
-              case Syntax.Exists(_, _) => fail()
-              case Syntax.Diamond(_, _) => fail()
-              case Syntax.InContext(_, _) => fail()
-            }))
-  case (Proof_Checker.HideR(), j, (a, s)) =>
-    Some[List[(List[Syntax.formula[myvars, myvars, myvars]],
-                List[Syntax.formula[myvars, myvars,
-                                     myvars]])]](List((a,
-                Proof_Checker.closeI[Syntax.formula[myvars, myvars,
-             myvars]](s, j))))
-  case (Proof_Checker.CutRight(v), j, (a, s)) =>
-    Some[List[(List[Syntax.formula[myvars, myvars, myvars]],
-                List[Syntax.formula[myvars, myvars,
-                                     myvars]])]](List((a,
-                Proof_Checker.replaceI[Syntax.formula[myvars, myvars,
-               myvars]](s, j, v)),
-               (a, Proof_Checker.replaceI[Syntax.formula[myvars, myvars,
-                  myvars]](s, j,
-                            Syntax.Implies[myvars, myvars,
-    myvars](v, Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j))))))
-  case (Proof_Checker.EquivifyR(), j, (a, s)) =>
-    (Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j) match {
-       case Syntax.Geq(_, _) => fail()
-       case Syntax.Prop(_, _) => fail()
-       case Syntax.Not(Syntax.Geq(_, _)) => fail()
-       case Syntax.Not(Syntax.Prop(_, _)) => fail()
-       case Syntax.Not(Syntax.Not(_)) => fail()
-       case Syntax.Not(Syntax.And(Syntax.Geq(_, _), _)) => fail()
-       case Syntax.Not(Syntax.And(Syntax.Prop(_, _), _)) => fail()
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Geq(_, _))) => fail()
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Prop(_, _))) => fail()
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Not(Syntax.Geq(_, _))))
-         => fail()
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Not(Syntax.Prop(_, _))))
-         => fail()
-       case Syntax.Not(Syntax.And(Syntax.Not(q), Syntax.Not(Syntax.Not(p)))) =>
-         Some[List[(List[Syntax.formula[myvars, myvars, myvars]],
-                     List[Syntax.formula[myvars, myvars,
-  myvars]])]](List((a, Proof_Checker.replaceI[Syntax.formula[myvars, myvars,
-                      myvars]](s, j,
-                                Syntax.Equiv[myvars, myvars, myvars](p, q)))))
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Not(Syntax.And(_, _))))
-         => fail()
-       case Syntax.Not(Syntax.And(Syntax.Not(_),
-                                   Syntax.Not(Syntax.Exists(_, _))))
-         => fail()
-       case Syntax.Not(Syntax.And(Syntax.Not(_),
-                                   Syntax.Not(Syntax.Diamond(_, _))))
-         => fail()
-       case Syntax.Not(Syntax.And(Syntax.Not(_),
-                                   Syntax.Not(Syntax.InContext(_, _))))
-         => fail()
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.And(_, _))) => fail()
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Exists(_, _))) => fail()
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.Diamond(_, _))) => fail()
-       case Syntax.Not(Syntax.And(Syntax.Not(_), Syntax.InContext(_, _))) =>
-         fail()
-       case Syntax.Not(Syntax.And(Syntax.And(_, _), _)) => fail()
-       case Syntax.Not(Syntax.And(Syntax.Exists(_, _), _)) => fail()
-       case Syntax.Not(Syntax.And(Syntax.Diamond(_, _), _)) => fail()
-       case Syntax.Not(Syntax.And(Syntax.InContext(_, _), _)) => fail()
-       case Syntax.Not(Syntax.Exists(_, _)) => fail()
-       case Syntax.Not(Syntax.Diamond(_, _)) => fail()
-       case Syntax.Not(Syntax.InContext(_, _)) => fail()
-       case Syntax.And(_, _) => fail()
-       case Syntax.Exists(_, _) => fail()
-       case Syntax.Diamond(_, _) => fail()
-       case Syntax.InContext(_, _) => fail()
-     })*/
   case (Proof_Checker.CommuteEquivR(), j, (a, s)) =>
     (Lista.nth[Syntax.formula[myvars, myvars, myvars]](s, j) match {
        case Syntax.Geq(_, _) => fail()
@@ -10107,7 +9807,7 @@ def ddl_pt_result(x0: Proof_Checker.pt[myvars, myvars, myvars]):
                                i))
            None else ddl_rule_result(res, (i, ra)))
      })
-  case Proof_Checker.AxRule(ar) =>
+  case Proof_Checker.AxiomaticRule(ar) =>
     Some[(List[(List[Syntax.formula[myvars, myvars, myvars]],
                  List[Syntax.formula[myvars, myvars, myvars]])],
            (List[Syntax.formula[myvars, myvars, myvars]],
@@ -11690,7 +11390,7 @@ object Parser {
           (RuleApp(child,rApp,n),i8)
         case "AxRule" =>
           val (ar,i4) = axrule(str,i3)
-          (AxRule(ar),i4)
+          (AxiomaticRule(ar),i4)
         case "PrUSubst" =>
           val (pterm,i4) = proofTerm(str,i3)
           val i5 = eatChar(str,i4,' ')
@@ -11792,7 +11492,7 @@ object GeneratedProofChecker {
   import Scratch._
   import Sum_Type._
   def main(input : Array[String]) = {
-    val path    = if(input.isEmpty) {"/usr0/home/bbohrer/KeYmaeraX/velocityCar-dist.pt"   /*"/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"*/}  else input(0) //e.g. "/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"
+    val path    = if(input.isEmpty) {"/usr0/home/bbohrer/research/verified-pipeline/code/velocitycar_dist.pt"   /*"/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"*/}  else input(0) //e.g. "/usr0/home/bbohrer/KeYmaeraX/velocityCar.pt"
     val outPath = if(input.length < 2) {"/usr0/home/bbohrer/KeYmaeraX/doubleCar-dfunl.hol"} else { input(1)}
     val str = Source.fromFile(path).mkString
     val start = System.currentTimeMillis()
