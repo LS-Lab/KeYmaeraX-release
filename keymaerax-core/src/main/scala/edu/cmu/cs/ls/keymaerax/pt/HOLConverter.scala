@@ -13,7 +13,7 @@ object HOLConverter {
     t match {
       case Number(n) => s"(Const ${n.toIntExact}w)"
       //@todo: more robust please
-      case FuncOf(Function(n,_,_,_,_),_) => s"(Var $c$n$c)"
+      case FuncOf(Function(n,_,_,_,_),_) => s"(Var $c$n()$c)"
       case BaseVariable(n,None,_) => s"(Var $c$n$c)"
       case BaseVariable(n,Some(i),_) => s"(Var $c${n}_$i$c)"
       case Plus(l,r) => s"(Plus ${apply(l)} ${apply(r)})"
@@ -59,8 +59,7 @@ object HOLConverter {
     //val plant_fmlRHS = apply(???)
     val ctrl_fmlRHS = apply(outputFml)
     val configFile =
-      s"""
-        |#The constant variable names
+      s"""#The constant variable names
         |const_vars = [$const_varsRHS]
         |#The old sensor names (before plant)
         |sensor_pre_vars = [$sensor_pre_varsRHS]
@@ -74,7 +73,7 @@ object HOLConverter {
         |init_fml = $init_fmlRHS
         |#The control formula
         |ctrl_fml = $ctrl_fmlRHS
-      """.stripMargin
+""".stripMargin
       configFile
 //    #The plant formula
 //    plant_fml = Leq (Times (Var"V()") (Plus (Var"ep()") (Times (Const (-1w)) (Var("t"))))) (Var ("d"))
