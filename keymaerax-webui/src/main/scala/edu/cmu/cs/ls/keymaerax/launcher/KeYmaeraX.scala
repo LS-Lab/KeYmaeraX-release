@@ -645,8 +645,8 @@ object KeYmaeraX {
   def modelplex(options: OptionMap) = {
     //println("RUNNING MODELPLEX")
     if(options.contains('ptOut)) {
-      //println("ENABLING PROOF TERMS")
-      ProvableSig.PROOF_TERMS_ENABLED = true
+      //@TODO: Actual produce proof terms here, right now this option is overloaded to produce hol config instead
+      ProvableSig.PROOF_TERMS_ENABLED = false
     } else {
       //println("DISABLING PROOF TERMS")
       ProvableSig.PROOF_TERMS_ENABLED = false
@@ -654,7 +654,8 @@ object KeYmaeraX {
     require(options.contains('in), usage)
 
     val in = options('in).toString
-    val inputModel = KeYmaeraXArchiveParser(in).head.model.asInstanceOf[Formula]
+    val allEntries = KeYmaeraXArchiveParser(in)
+    val inputModel = allEntries.head.model.asInstanceOf[Formula]
 
     val verifyOption:Option[(ProvableSig => Unit)] =
       if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
@@ -700,18 +701,17 @@ object KeYmaeraX {
     pw.write(output)
     pw.close()
 
-    val pwHOL = new PrintWriter(outputFileName + ".hol")
-    pwHOL.write(HOLConverter.monitorFmlDef(outputFml))
-    pwHOL.close()
 
 
     options.get('ptOut) match {
       case Some(path:String) =>
-        val pwProg = new PrintWriter(path+".hp")
-        val (prog,proof) = isarSyntax(outputFml)
-        pwProg.write("/************************************\n * Pretty printer syntax for Isabelle/HOL import \n ************************************/\n\n")
-        pwProg.write(prettyProg(prog))
-        pwProg.close()
+        val pwHOL = new PrintWriter(outputFileName + ".holconfiggen")
+        // @TODO: Robustify
+        val Imply(init, Box(Compose(Test(bounds),Loop(Compose(ctrl,plant))),safe)) = inputModel
+        val consts = StaticSemantics.signature(inputModel)
+        pwHOL.write(HOLConverter.configFile(consts,options('vars).asInstanceOf[Array[Variable]].toList,bounds,init,outputFml))
+        pwHOL.close()
+
       case None => ()
     }
   }
