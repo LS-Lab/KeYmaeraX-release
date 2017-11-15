@@ -38,6 +38,23 @@ object DefaultConfiguration {
     else Map()
   }
 
+  /** Assumes that directory is a directory that contains subdirectory for each installed version of Mathematica.
+    * Returns the largest version of Mathematica that has an installation directory if one exists. Else returns the empty string. */
+  private def findLargestSubdirectory(dir: File) = {
+    assert(dir.isDirectory, s"Expected a directory but found something else @ ${dir.getAbsolutePath}")
+    val largestAvailableVersion = dir.listFiles().map(f =>
+      try {
+        java.lang.Double.parseDouble(f.getName)
+      } catch {
+        case _:Exception => -1
+      }
+    ).max
+
+    if(largestAvailableVersion == -1)
+      ""
+    else
+      largestAvailableVersion.toString
+  }
   //@todo this code should be re-written. First identify the prefix/suffix for the system, and then figure out the version. Otherwise we have to update N places in the code every time a new version of Mathematica is released.
   def defaultMathLinkPath: (String, String) = {
     var linkNamePath: String = ""
@@ -70,93 +87,49 @@ object DefaultConfiguration {
       val mathematicaWindowsPrefix = "C:\\Program Files\\Wolfram Research\\Mathematica"
       var mathematicaVersion = ""
 
-      if(new File(mathematicaWindowsPrefix).exists()) {
-        if(new File(mathematicaWindowsPrefix + File.separator + "11.2").exists())
-          mathematicaVersion = "11.2"
-        else if(new File(mathematicaWindowsPrefix + File.separator + "11.0").exists())
-          mathematicaVersion = "11.0"
-        // check if Mathematica version is 10.4
-        else if(new File(mathematicaWindowsPrefix + File.separator + "10.4").exists())
-          mathematicaVersion = "10.4"
-        // check if Mathematica version is 10.3
-        else if(new File(mathematicaWindowsPrefix + File.separator + "10.3").exists())
-          mathematicaVersion = "10.3"
-        // check if Mathematica version is 10.2
-        else if(new File(mathematicaWindowsPrefix + File.separator + "10.2").exists())
-          mathematicaVersion = "10.2"
-        // check if Mathematica version is 10.1
-        else if(new File(mathematicaWindowsPrefix + File.separator + "10.1").exists())
-          mathematicaVersion = "10.1"
-        else {
-          // check if Mathematica version is any of 6.0, 7.0, 8.0, 9.0 or 10.0
-          for(i <- 6 to 10) {
-            if(new File(mathematicaWindowsPrefix + File.separator + i.toString + ".0").exists())
-              mathematicaVersion = i.toString + ".0"
-          }
-        }
-        if(mathematicaVersion!="") {
-          val linkNamePathWindows = mathematicaWindowsPrefix + File.separator + mathematicaVersion + File.separator + "MathKernel.exe"
-          if(new File(linkNamePathWindows).exists())
-            linkNamePath = linkNamePathWindows
-          if (osArch.contains("64")) {
-            val libDirPathWindows64 =  mathematicaWindowsPrefix + File.separator + mathematicaVersion + File.separator + "SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows-x86-64"
-            if(new File(libDirPathWindows64).exists())
-              libDirPath = libDirPathWindows64
-          } else {
-            val libDirPathWindows32 =  mathematicaWindowsPrefix + File.separator + mathematicaVersion + File.separator + "SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows"
-            if(new File(libDirPathWindows32).exists())
-              libDirPath = libDirPathWindows32
-          }
+      val versionsDir = new File(mathematicaWindowsPrefix)
+      if(versionsDir.exists())
+        mathematicaVersion = findLargestSubdirectory(versionsDir)
+
+      if(mathematicaVersion!="") {
+        val linkNamePathWindows = mathematicaWindowsPrefix + File.separator + mathematicaVersion + File.separator + "MathKernel.exe"
+        if(new File(linkNamePathWindows).exists())
+          linkNamePath = linkNamePathWindows
+        if (osArch.contains("64")) {
+          val libDirPathWindows64 =  mathematicaWindowsPrefix + File.separator + mathematicaVersion + File.separator + "SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows-x86-64"
+          if(new File(libDirPathWindows64).exists())
+            libDirPath = libDirPathWindows64
+        } else {
+          val libDirPathWindows32 =  mathematicaWindowsPrefix + File.separator + mathematicaVersion + File.separator + "SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows"
+          if(new File(libDirPathWindows32).exists())
+            libDirPath = libDirPathWindows32
         }
       }
-
     }
+
     else if(osName.contains("linux")) {
       val mathematicaLinuxPrefix = "/usr/local/Wolfram/Mathematica"
       var mathematicaVersion = ""
-      if(new File(mathematicaLinuxPrefix).exists()) {
-        //@todo replace this appraoch with something that just lists the [[mathematicaLinuxPrefix]] directory and determines the largest version available.
-        // check if Mathematica version is 11.2
-        if(new File(mathematicaLinuxPrefix + File.separator + "11.2").exists())
-          mathematicaVersion = "11.2"
-        // check if Mathematica version is 11.0
-        else if(new File(mathematicaLinuxPrefix + File.separator + "11.0").exists())
-          mathematicaVersion = "11.0"
-        // check if Mathematica version is 10.4
-        else if(new File(mathematicaLinuxPrefix + File.separator + "10.4").exists())
-          mathematicaVersion = "10.4"
-        // check if Mathematica version is 10.3
-        else if(new File(mathematicaLinuxPrefix + File.separator + "10.3").exists())
-          mathematicaVersion = "10.3"
-        // check if Mathematica version is 10.2
-        else if(new File(mathematicaLinuxPrefix + File.separator + "10.2").exists())
-          mathematicaVersion = "10.2"
-        // check if Mathematica version is 10.1
-        else if(new File(mathematicaLinuxPrefix + File.separator + "10.1").exists())
-          mathematicaVersion = "10.1"
-        else {
-          // check if Mathematica version is any of 6.0, 7.0, 8.0, 9.0 or 10.0
-          for(i <- 6 to 10) {
-            if(new File(mathematicaLinuxPrefix + File.separator + i.toString + ".0").exists())
-              mathematicaVersion = i.toString + ".0"
-          }
-        }
-        if(mathematicaVersion != "") {
-          val linkNamePathLinux = mathematicaLinuxPrefix + File.separator + mathematicaVersion + File.separator + "Executables/MathKernel"
-          if(new File(linkNamePathLinux).exists())
-            linkNamePath = linkNamePathLinux
-          if(osArch.contains("64")) {
-            val libDirPathLinux64 = mathematicaLinuxPrefix + File.separator + mathematicaVersion + File.separator + "SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64"
-            if(new File(libDirPathLinux64).exists())
-              libDirPath = libDirPathLinux64
-          } else {
-            val libDirPathLinux32 = mathematicaLinuxPrefix + File.separator + mathematicaVersion + File.separator + "SystemFiles/Links/JLink/SystemFiles/Libraries/Linux"
-            if(new File(libDirPathLinux32).exists())
-              libDirPath = libDirPathLinux32
-          }
+      val installedMathematicas = new File(mathematicaLinuxPrefix)
+      if(installedMathematicas.exists())
+        mathematicaVersion = findLargestSubdirectory(installedMathematicas)
+
+      if(mathematicaVersion != "") {
+        val linkNamePathLinux = mathematicaLinuxPrefix + File.separator + mathematicaVersion + File.separator + "Executables/MathKernel"
+        if(new File(linkNamePathLinux).exists())
+          linkNamePath = linkNamePathLinux
+        if(osArch.contains("64")) {
+          val libDirPathLinux64 = mathematicaLinuxPrefix + File.separator + mathematicaVersion + File.separator + "SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64"
+          if(new File(libDirPathLinux64).exists())
+            libDirPath = libDirPathLinux64
+        } else {
+          val libDirPathLinux32 = mathematicaLinuxPrefix + File.separator + mathematicaVersion + File.separator + "SystemFiles/Links/JLink/SystemFiles/Libraries/Linux"
+          if(new File(libDirPathLinux32).exists())
+            libDirPath = libDirPathLinux32
         }
       }
     }
+
     (linkNamePath, libDirPath)
   }
 
