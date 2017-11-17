@@ -21,6 +21,8 @@ import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, PTProvable, 
 import scala.collection.immutable
 import scala.compat.Platform
 import scala.util.Random
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+
 
 /**
  * Command-line interface launcher for KeYmaera X.
@@ -43,7 +45,8 @@ object KeYmaeraX {
       |Usage: java -jar keymaerax.jar
       |  -prove file.kyx -tactic file.kyt [-out file.kyp] |
       |  -check file.kya |
-      |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar] |
+      |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar]
+      |     [-sandbox] ([-vars|-ctrlvars|-sensevars] vars)* [-fallback fml] [-plantApprox fml]|
       |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c] |
       |  -ui [web server options] |
       |  -parse file.kyx |
@@ -219,6 +222,8 @@ object KeYmaeraX {
       case "-savept" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('ptOut -> value), tail)
         else optionErrorReporter("-savept")
+      case "-sandbox" :: tail =>
+        nextOption(map ++ Map('sandbox -> true), tail)
       case "-modelplex" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "modelplex", 'in -> value), tail)
         else optionErrorReporter("-modelPlex")
@@ -240,6 +245,18 @@ object KeYmaeraX {
       case "-out" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('out -> value), tail)
         else optionErrorReporter("-out")
+      case "-fallback" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('fallback -> value), tail)
+        else optionErrorReporter("-fallback")
+      case "-plantApprox" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('plantApprox -> value), tail)
+        else optionErrorReporter("-plantApprox")
+      case "-sensevars" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('sensevars -> makeVariables(value.split(","))), tail)
+        else optionErrorReporter("-sensevars")
+      case "-ctrlvars" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('ctrlvars -> makeVariables(value.split(","))), tail)
+        else optionErrorReporter("-ctrlvars")
       case "-vars" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
         else optionErrorReporter("-vars")
@@ -673,6 +690,7 @@ object KeYmaeraX {
     val inputFileName = in.split('#')(0).dropRight(4)
 
     var outputFileName = inputFileName
+
     if(options.contains('out)) {
       val outputFileNameDotMx = options('out).toString
       assert(outputFileNameDotMx.endsWith(".kym"),
@@ -683,10 +701,28 @@ object KeYmaeraX {
     val pw = new PrintWriter(outputFileName + ".kym")
 
     val kind =
-      if (options.contains('monitor)) options('monitor).asInstanceOf[Symbol]
+      if(options.contains('sandbox)) 'sandbox
+      else if (options.contains('monitor)) options('monitor).asInstanceOf[Symbol]
       else 'model
 
-    val outputFml = if (options.contains('vars))
+    val outputFml =
+      if(options.contains('sandbox)) {
+        val fallback = options('fallback).asInstanceOf[String].asProgram
+        val plantApprox = options('plantApprox).asInstanceOf[String].asFormula
+        val vars = options('vars).asInstanceOf[Array[Variable]].toList
+        val sensevars = options('sensevars).asInstanceOf[Array[Variable]].toList
+        val ctrlvars = options('ctrlvars).asInstanceOf[Array[Variable]].toList
+          ModelPlex.createSandbox(vars,
+          StaticSemantics.signature(inputModel).toList.filter(_.isInstanceOf[FuncOf]).map{case x:FuncOf => x},
+          sensevars,
+          ctrlvars,
+           Some(fallback),
+          plantApprox: Formula,
+          kind = 'ctrl,
+         checkProvable =  None)(inputModel)
+
+        }
+      else if (options.contains('vars))
       ModelPlex(options('vars).asInstanceOf[Array[Variable]].toList, kind, verifyOption)(inputModel)
     else
       ModelPlex(inputModel, kind, verifyOption)
