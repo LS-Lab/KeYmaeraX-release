@@ -17,14 +17,14 @@ import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalactic.{AbstractStringUniformity, Uniformity}
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
+import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers, AppendedClues}
 
 import scala.collection.immutable._
 
 /**
  * Base class for tactic tests.
  */
-class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
+class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with AppendedClues {
   protected def theInterpreter: Interpreter = BelleInterpreter.interpreter
   private var interpreters: List[Interpreter] = _
 
@@ -306,7 +306,11 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
     qeDurationListener.reset()
     val proof = proveBy(entry.model.asInstanceOf[Formula], tactic)
     val end = System.currentTimeMillis()
-    proof shouldBe 'proved
+
+    tactic match {
+      case _: PartialTactic => // nothing to do, tactic deliberately allowed to result in a non-proof
+      case _ => proof shouldBe 'proved withClue entryName + "/" + tacticName
+    }
 
     if (entry.kind == "lemma") {
       val lemmaName = "user" + File.separator + entry.name
@@ -356,7 +360,11 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
       val proof = proveBy(entry.model.asInstanceOf[Formula], tactic)
       val end = System.currentTimeMillis()
       val qeDuration = qeDurationListener.duration
-      proof shouldBe 'proved
+
+      tactic match {
+        case _: PartialTactic => // nothing to do, tactic deliberately allowed to result in a non-proof
+        case _ => proof shouldBe 'proved withClue entry.name + "/" + tacticName
+      }
 
       if (entry.kind == "lemma") {
         val lemmaName = "user" + File.separator + entry.name
