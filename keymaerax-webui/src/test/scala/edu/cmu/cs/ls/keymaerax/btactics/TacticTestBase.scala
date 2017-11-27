@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, UserPOJO}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
@@ -329,7 +330,10 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   def checkArchiveEntries(archive: String): Unit = {
     val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
       getClass.getResourceAsStream(archive)).mkString)
+    checkArchiveEntries(entries)
+  }
 
+  def checkArchiveEntries(entries: List[ParsedArchiveEntry]): Unit = {
     val statistics = scala.collection.mutable.LinkedHashMap[String, (Long, Long, Int, Int, Int)]()
 
     def printStatistics(v: (Long, Long, Int, Int, Int)) = {

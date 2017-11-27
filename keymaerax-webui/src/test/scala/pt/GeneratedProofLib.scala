@@ -1,5 +1,7 @@
 package pt.lib
 
+//import pt.Scratch.myvars
+//import pt.{Int, Nat, Proof_Checker, Rat, Real, Scratch, Sum_Type, Syntax, USubst}
 import pt.lib._
 import pt.lib.Scratch.myvars
 import pt.lib.Sum_Type._
@@ -421,7 +423,7 @@ object String {
 
   abstract sealed class char
   final case class zero_char() extends char
-  final case class Char(a: Num.num) extends char {
+  final case class Characterr(a: Num.num) extends char {
     override def toString = Character.toString(((Num.toInt(a).toChar)))
 
   }
@@ -647,9 +649,9 @@ object Proof_Checker {
   abstract sealed class ruleApp[A, B, C]
   final case class URename[C, A, B](a: C, b: C) extends ruleApp[A, B, C]
   final case class BRename[C, A, B](a: C, b: C) extends ruleApp[A, B, C]
-  final case class Rrule[A, B, C](a: rrule[A, B, C], b: Nat.nat) extends
+  final case class RightRule[A, B, C](a: rrule[A, B, C], b: Nat.nat) extends
     ruleApp[A, B, C]
-  final case class Lrule[A, B, C](a: lrule[A,B,C], b: Nat.nat) extends ruleApp[A, B, C]
+  final case class LeftRule[A, B, C](a: lrule[A,B,C], b: Nat.nat) extends ruleApp[A, B, C]
   final case class CloseId[A, B, C](a: Nat.nat, b: Nat.nat) extends
     ruleApp[A, B, C]
   final case class Cohide2[A, B, C](a: Nat.nat, b: Nat.nat) extends
@@ -702,9 +704,9 @@ object Proof_Checker {
   final case class FOLRConstant[A, B, C](a: Syntax.formula[A, B, C]) extends
     pt[A, B, C]
   final case class
-  RuleApp[A, B, C](a: pt[A, B, C], b: ruleApp[A, B, C], c: Nat.nat)
+  RuleApplication[A, B, C](a: pt[A, B, C], b: ruleApp[A, B, C], c: Nat.nat)
     extends pt[A, B, C]
-  final case class AxRule[A, B, C](a: axRule) extends pt[A, B, C]
+  final case class AxiomaticRule[A, B, C](a: axRule) extends pt[A, B, C]
   final case class
   PrUSubst[A, B, C](a: pt[A, B, C], b: USubst.subst_ext[A, B, C, Unit])
     extends pt[A, B, C]
@@ -851,6 +853,9 @@ object Syntax {
 
   def TT[A, B, C]: formula[A, B, C] =
     Geq[A, C, B](Const[A, C](Real.zero_real), Const[A, C](Real.zero_real))
+
+  def FF[A, B, C]: formula[A, B, C] =
+    Geq[A, C, B](Const[A, C](Real.zero_real), Const[A, C](Real.one_real))
 
   def Box[A, B, C](alpha: hp[A, B, C], p: formula[A, B, C]): formula[A, B, C] =
     Not[A, B, C](Diamond[A, B, C](alpha, Not[A, B, C](p)))
@@ -1495,12 +1500,12 @@ object Parser {
           val (rule, i4) = rightRule(str,i3)
           val i5 = eatChar(str,i4,' ')
           val (n,i6) = nat(str,i5)
-          (Rrule(rule,n),i6)
+          (RightRule(rule,n),i6)
         case "Lrule" =>
           val (rule, i4) = leftRule(str,i3)
           val i5 = eatChar(str,i4,' ')
           val (n,i6) = nat(str,i5)
-          (Lrule(rule,n),i6)
+          (LeftRule(rule,n),i6)
         case "CloseId" =>
           val (w,i4) = nat(str,i3)
           val i5 = eatChar(str,i4,' ')
@@ -1534,10 +1539,10 @@ object Parser {
           val (rApp,i6) = ruleAppl(str,i5)
           val i7 = eatChar(str,i6,' ')
           val (n, i8) = nat(str,i7)
-          (RuleApp(child,rApp,n),i8)
+          (RuleApplication(child,rApp,n),i8)
         case "AxRule" =>
           val (ar,i4) = axrule(str,i3)
-          (AxRule(ar),i4)
+          (AxiomaticRule(ar),i4)
         case "PrUSubst" =>
           val (pterm,i4) = proofTerm(str,i3)
           val i5 = eatChar(str,i4,' ')
@@ -1574,4 +1579,53 @@ object Parser {
   }
 
 
+}
+
+object HOLPrinter {
+  import Real._
+  import Rat._
+  import Int._
+  import Proof_Checker._
+  import Syntax._
+  import Nat._
+  import USubst._
+  import Scratch._
+  import Sum_Type._
+
+
+  def apply(t:trm[myvars, myvars]):String = {
+    ???
+  }
+
+  def apply(ode:ODE[myvars, myvars]):String = {
+    ???
+  }
+
+  def apply(hp:hp[myvars, myvars, myvars]):String = {
+    ???
+  }
+
+  def apply(f:formula[myvars, myvars, myvars]):String = {
+    ???
+  }
+
+  private def toSingleFormula(seq:(List[formula[myvars, myvars, myvars]], List[formula[myvars, myvars, myvars]])):formula[myvars, myvars, myvars] = {
+    val (ante,succ) = seq
+    Implies(ante.foldLeft[formula[myvars, myvars, myvars]](TT)({case (acc,x) => And[myvars,myvars,myvars](x,acc)}),
+            succ.foldLeft[formula[myvars, myvars, myvars]](FF)({case (acc,x) => Or(x,acc)}))
+  }
+
+  def apply(seq:Option[(List[(List[Syntax.formula[myvars, myvars, myvars]],
+    List[Syntax.formula[myvars, myvars, myvars]])],
+    (List[Syntax.formula[myvars, myvars, myvars]],
+      List[Syntax.formula[myvars, myvars, myvars]]))]):String = {
+    seq match {
+      case Some((Nil,con)) =>
+        val fml:Syntax.formula[myvars, myvars, myvars] = toSingleFormula(con)
+        val str = apply(fml)
+        "val monitor_fml = ``" + str + "`` |> (DEPTH_CONV wordsLib.WORD_GROUND_CONV) |> rconc;;"
+      case _ => throw new Exception("Unexpected result from proof term re-checking")
+    }
+
+  }
 }

@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
@@ -79,6 +79,11 @@ class ModelplexTacticTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "xpost=1".asFormula
+
+    val monitorCorrectnessConjecture = ModelPlex.createMonitorCorrectnessConjecture(Variable("x")::Nil, 'ctrl, None)(model)
+    println("Correctness conjecture " + monitorCorrectnessConjecture.prettyString)
+    proveBy(monitorCorrectnessConjecture , implyR(1)*2 & ModelPlex.controllerMonitorByChase(1) & auto) shouldBe 'proved
+
   }
 
   it should "chase away a loop by updateCalculus implicationally" in {
@@ -932,6 +937,72 @@ class ModelplexTacticTests extends TacticTestBase {
     val Or(acc,stop) = result.subgoals.head.succ.head
     acc shouldBe "S-x>=ep*(v+cpost+D)&(-D<=dpost&dpost<=D)&((0<=tpost&ep>=tpost)&(-tpost)*(cpost+dpost+v)+xpost=x)&v=vpost".asFormula
     stop shouldBe "((((0<=tpost&ep>=tpost)&x=xpost)&vpost=0)&dpost=0)&cpost=0".asFormula
+  }
+
+  "PLDI17" should "prove velocity car safety" in withMathematica { _ =>
+    val entry = KeYmaeraXArchiveParser("/Users/smitsch/Documents/projects/keymaera/documents/Papers/verified-pipeline-new/verified-pipeline/models/velocitycar_dist.kyx#Velocity Car Safety").head
+    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._2) shouldBe 'proved
+  }
+
+  it should "derive controller monitor for velocity car safety" in withMathematica { tool =>
+    val entry = KeYmaeraXArchiveParser("/Users/smitsch/Documents/projects/keymaera/documents/Papers/verified-pipeline-new/verified-pipeline/models/velocitycar_dist.kyx#Velocity Car Safety").head
+    val model = entry.model.asInstanceOf[Formula]
+    val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
+      Variable("d"), Variable("v"), Variable("t"))
+
+    val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
+    val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*) & simplifier(1))
+    result.subgoals.loneElement shouldBe "==> (V()>=0&ep()>=0) & (d>=V()*ep()&(0<=vpost&vpost<=V())&dpost=d&tpost=0 | dpost=d&vpost=0&tpost=0)".asSequent
+  }
+
+  it should "prove controller monitor correctness" in withMathematica { _ =>
+    val entry = KeYmaeraXArchiveParser("/Users/smitsch/Documents/projects/keymaera/documents/Papers/verified-pipeline-new/verified-pipeline/models/velocitycar_dist.kyx#Controller Monitor Formula Implies Controller Monitor Specification").head
+    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._2) shouldBe 'proved
+  }
+
+  it should "generate a correct sandbox conjecture" in withMathematica { _ =>
+    val entry = KeYmaeraXArchiveParser("/Users/smitsch/Documents/projects/keymaera/documents/Papers/verified-pipeline-new/verified-pipeline/models/velocitycar_dist.kyx#Velocity Car Safety").head
+    val vars = Variable("d") :: Variable("t") :: Variable("v") :: Nil
+    val consts = FuncOf(Function("V", None, Unit, Real), Nothing) :: FuncOf(Function("ep", None, Unit, Real), Nothing) :: Nil
+    val senseVars = Variable("d") :: Variable("t") :: Nil
+    val ctrlVars = Variable("t") :: Variable("v") :: Nil
+    val fallback = "v:=0;t:=0;".asProgram
+    val plantApprox = "t<=ep() & d>=V()*(ep()-t)".asFormula
+    val sandbox = ModelPlex.createSandbox(vars, consts, senseVars, ctrlVars, Some(fallback), plantApprox, 'ctrl, None)(entry.model.asInstanceOf[Formula])
+
+    sandbox shouldBe
+      """
+        |d>=0 & V()>=0 & ep()>=0 ->
+        |[?V()>=0 & ep()>=0; /* test bounds */
+        | {
+        |  /* sensing */
+        |  {
+        |   {dpre:=d;tpre:=t;}
+        |   {d:=*;t:=*;}
+        |   ?(t<=ep()&d>=V()*(ep()-t))&t<=ep();
+        |  }
+        |  { tpost:=*; vpost:=*; } /* external control */
+        |  /* actuate if monitor satisfied, else fallback */
+        |  { if ((V()>=0&ep()>=0)&(d>=V()*ep()&(0<=vpost&vpost<=V())&dpost=d&tpost=0|dpost=d&tpost=0&vpost=0)) {
+        |      t:=tpost;
+        |      v:=vpost;
+        |  } else {
+        |      v:=0;
+        |      t:=0;
+        |  }
+        |  }
+        | }*]d>=0
+      """.stripMargin.asFormula
+  }
+
+  it should "prove fallback preserves controller monitor" in withMathematica { _ =>
+    val entry = KeYmaeraXArchiveParser("/Users/smitsch/Documents/projects/keymaera/documents/Papers/verified-pipeline-new/verified-pipeline/models/velocitycar_dist.kyx#Fallback Preserves Controller Monitor").head
+    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._2) shouldBe 'proved
+  }
+
+  it should "check all archive entries" in withMathematica { _ =>
+    val entries = KeYmaeraXArchiveParser("/Users/smitsch/Documents/projects/keymaera/documents/Papers/verified-pipeline-new/verified-pipeline/models/velocitycar_dist.kyx")
+    checkArchiveEntries(entries)
   }
 
   "ModelPlex formula metric" should "convert simple formula" in withMathematica { tool =>
