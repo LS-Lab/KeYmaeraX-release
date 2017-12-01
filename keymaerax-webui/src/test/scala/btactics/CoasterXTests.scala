@@ -8,10 +8,11 @@ import edu.cmu.cs.ls.keymaerax.btactics.coasterx.{CoasterXParser, CoasterXProver
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import edu.cmu.cs.ls.keymaerax.tags.{IgnoreInBuildTest, SlowTest}
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 
 @SlowTest
+@IgnoreInBuildTest
 class CoasterXTests extends TacticTestBase {
   "Joint Parser" should "parse first joint" in {
     val joint = CoasterXParser.parsePoint("(40,100)")
