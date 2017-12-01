@@ -38,6 +38,12 @@ class StringConverter(val s: String) {
 
   def asTactic : BelleExpr = BelleParser(s)
 
+  def asDeclarations: KeYmaeraXDeclarationsParser.Declaration = {
+    val tokens = KeYmaeraXLexer.inMode(s, AxiomFileMode)
+    val (decls, _) = KeYmaeraXDeclarationsParser(tokens)
+    decls
+  }
+
   //If a split failed to parse, merge it with the next formula and try again because it might have been split incorrectly
   //e.g. max((a,b)) would be incorrectly split
   private def smartFmlSplit(acc:String,ls:List[String]) : List[Formula] = {

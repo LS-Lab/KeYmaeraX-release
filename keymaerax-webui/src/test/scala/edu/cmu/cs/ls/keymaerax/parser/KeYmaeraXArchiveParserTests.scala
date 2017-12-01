@@ -32,6 +32,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       "theorem",
       """ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.""".stripMargin,
+      "ProgramVariables. R x. R y. End.".asDeclarations,
       "x>y -> x>=y".asFormula,
       Nil
     )
@@ -104,6 +105,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       "theorem",
       """ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.""".stripMargin,
+      "ProgramVariables. R x. R y. End.".asDeclarations,
       "x>y -> x>=y".asFormula,
       ("Proof 1", implyR(1) & QE) :: Nil
     )
@@ -125,6 +127,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       "theorem",
       """ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.""".stripMargin,
+      "ProgramVariables. R x. R y. End.".asDeclarations,
       "x>y -> x>=y".asFormula,
       ("Proof 1", implyR(1) & QE) :: ("Proof 2", implyR('R)) :: Nil
     )
@@ -151,6 +154,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       "theorem",
       """ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.""".stripMargin,
+      "ProgramVariables. R x. R y. End.".asDeclarations,
       "x>y -> x>=y".asFormula,
       Nil
     )
@@ -160,6 +164,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       """Functions. R x(). End.
         |  ProgramVariables R y. End.
         |  Problem. x()>=y -> x()>=y End.""".stripMargin,
+      "Functions. R x(). End.\n ProgramVariables. R y. End.".asDeclarations,
       "x()>=y -> x()>=y".asFormula,
       ("Prop Proof", prop) :: Nil
     )
@@ -197,6 +202,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         "theorem",
         """ProgramVariables. R x. R y. End.
           | Problem. x>y -> x>=y End.""".stripMargin,
+        "ProgramVariables. R x. R y. End.".asDeclarations,
         "x>y -> x>=y".asFormula,
         Nil
       ) ::
@@ -206,6 +212,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         """Functions. R x(). End.
           |  ProgramVariables R y. End.
           |  Problem. x()>=y -> x()>=y End.""".stripMargin,
+        "Functions. R x(). End.\n ProgramVariables. R y. End.".asDeclarations,
         "x()>=y -> x()>=y".asFormula,
         ("Prop Proof", prop) :: Nil
       ) ::
@@ -214,6 +221,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         "theorem",
         """ProgramVariables. R x. End.
           |  Problem. x>3 -> x>=3 End.""".stripMargin,
+        "ProgramVariables. R x. End.".asDeclarations,
         "x>3 -> x>=3".asFormula,
         Nil
       ) ::
@@ -222,6 +230,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         "theorem",
         """ProgramVariables. R x. End.
           |  Problem. x>4 -> x>=4 End.""".stripMargin,
+        "ProgramVariables. R x. End.".asDeclarations,
         "x>4 -> x>=4".asFormula,
         Nil
       ) :: Nil
@@ -259,6 +268,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         "theorem",
         """ProgramVariables. R x. R y. End.
           | Problem. x>y -> x>=y End.""".stripMargin,
+        "ProgramVariables. R x. R y. End.".asDeclarations,
         "x>y -> x>=y".asFormula,
         Nil
       ) ::
@@ -268,6 +278,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
           """Functions. R x(). End.
             |  ProgramVariables R y. End.
             |  Problem. x()>=y -> x()>=y End.""".stripMargin,
+          "Functions. R x(). End.\n ProgramVariables. R y. End.".asDeclarations,
           "x()>=y -> x()>=y".asFormula,
           ("Prop Proof of Lemma 2", prop) :: Nil
         ) ::
@@ -276,6 +287,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
           "theorem",
           """ProgramVariables. R x. End.
             |  Problem. x>3 -> x>=3 End.""".stripMargin,
+          "ProgramVariables. R x. End.".asDeclarations,
           "x>3 -> x>=3".asFormula,
           Nil
         ) ::
@@ -284,6 +296,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
           "theorem",
           """ProgramVariables. R x. End.
             |  Problem. x>4 -> x>=4 End.""".stripMargin,
+          "ProgramVariables. R x. End.".asDeclarations,
           "x>4 -> x>=4".asFormula,
           Nil
         ) :: Nil
@@ -303,6 +316,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       "lemma",
       """ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.""".stripMargin,
+      "ProgramVariables. R x. R y. End.".asDeclarations,
       "x>y -> x>=y".asFormula,
       Nil
     )
@@ -322,6 +336,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       "theorem",
       """ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.""".stripMargin,
+      "ProgramVariables. R x. R y. End.".asDeclarations,
       "x>y -> x>=y".asFormula,
       Nil
     )
@@ -348,6 +363,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       "lemma",
       """ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.""".stripMargin,
+      "ProgramVariables. R x. R y. End.".asDeclarations,
       "x>y -> x>=y".asFormula,
       Nil
     )
@@ -356,6 +372,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       "theorem",
       """ProgramVariables. R x. R y. End.
         | Problem. x>y -> x>=y End.""".stripMargin,
+      "ProgramVariables. R x. R y. End.".asDeclarations,
       "x>y -> x>=y".asFormula,
       ("Proof Entry 2", TactixLibrary.useLemma("Entry 1", None))::Nil
     )
@@ -390,6 +407,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         |End.
         |ProgramVariables. R x. R y. End.
         | Problem. gt(x,y) -> x>=y End.""".stripMargin,
+      "Definitions.\nB gt(R,R) <-> ( ._0 > ._1 ).\nEnd.\nProgramVariables. R x. R y. End.".asDeclarations,
       "x>y -> x>=y".asFormula,
       Nil
     )
@@ -401,6 +419,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         | B geq(R,R) <-> ( ._0 >= ._1 ). End.
         | ProgramVariables. R x. R y. End.
         | Problem. gt(x,y) -> geq(x,y) End.""".stripMargin,
+      "Definitions.\nB gt(R,R) <-> ( ._0 > ._1 ).\n B geq(R,R) <-> ( ._0 >= ._1 ). End.\n ProgramVariables. R x. R y. End.".asDeclarations,
       "x>y -> x>=y".asFormula,
       ("Proof Entry 2", TactixLibrary.useLemma("Entry 1", None))::Nil
     )
@@ -462,6 +481,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         | B geq(R,R) <-> ( ._0 >= ._1 ). End.
         | ProgramVariables. R x. R y. End.
         | Problem. gt(x,y) -> geq(x,y) End.""".stripMargin,
+      "Definitions.\nB gt(R,R) <-> ( \\exists t (t=1 & ._0*t > ._1) ).\n B geq(R,R) <-> ( ._0 >= ._1 ). End.\n ProgramVariables. R x. R y. End.".asDeclarations,
       "\\exists t (t=1 & x*t>y) -> x>=y".asFormula,
       Nil
     )

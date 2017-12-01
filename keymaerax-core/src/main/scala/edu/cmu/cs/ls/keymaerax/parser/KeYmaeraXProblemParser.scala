@@ -200,6 +200,9 @@ object KeYmaeraXDeclarationsParser {
     /** Joins two declarations. */
     def ++(other: Declaration): Declaration = Declaration(decls ++ other.decls)
 
+    /** Finds the definition with `name` and index `idx`. */
+    def find(name: String, idx: Option[Int] = None): Option[Signature] = decls.get(name -> idx)
+
     /** Turns a function declaration (with defined body) into a substitution pair. */
     private def declAsSubstitutionPair(name: KeYmaeraXDeclarationsParser.Name, signature: KeYmaeraXDeclarationsParser.Signature): SubstitutionPair = {
       assert(signature._3.isDefined, "Substitution only for defined functions")

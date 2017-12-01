@@ -40,7 +40,9 @@ object KeYmaeraXArchiveParser {
   private val NAME_REGEX = "^\"([^\"]*)\"\\.(?s)(.*)".r
 
   /** The entry name, kyx file content (model), parsed model, and parsed name+tactic. */
-  case class ParsedArchiveEntry(name: String, kind: String, fileContent: String, model: Expression, tactics: List[(String, BelleExpr)])
+  case class ParsedArchiveEntry(name: String, kind: String, fileContent: String,
+                                defs: KeYmaeraXProblemParser.Declaration,
+                                model: Expression, tactics: List[(String, BelleExpr)])
   /** The entry name, kyx file content, entry kind (theorem, lemma, etc.), and list of name+tactic text. */
   type ArchiveEntry = (String, String, String, List[(String, String)])
 
@@ -75,7 +77,7 @@ object KeYmaeraXArchiveParser {
     val (defs, formula) = KeYmaeraXProblemParser.parseProblem(modelText)
     val parsedTactics = tactics.map({
       case (tacticName, tacticText) => (tacticName, BelleParser.parseWithInvGen(tacticText, None, defs)) })
-    ParsedArchiveEntry(name, kind, modelText, formula, parsedTactics)
+    ParsedArchiveEntry(name, kind, modelText, defs, formula, parsedTactics)
   }
 
   /** Reads the archive content into string-only archive entries. */
