@@ -28,29 +28,27 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      };
 
      $scope.updateModelContentFromFile = function(fileName, fileContent) {
-       if (!(fileName.endsWith('.kyx') || fileName.endsWith('.kyx.txt') ||
-             fileName.endsWith('.kya') || fileName.endsWith('.kya.txt'))) {
-         showMessage($uibModal, "Unknown file extension",
-                                "Expected file extension: .kyx / .kya / .kyx.txt / .kya.txt", "md");
-       } else {
-         var isKyx = fileName.endsWith('.kyx') || fileName.endsWith('.kyx.txt');
-         $scope.model.kind = isKyx ? 'kyx' : 'kya';
-         $scope.model.content = fileContent;
-         $scope.model.uri = "file://" + fileName;
+       $scope.model.kind = isKya(fileContent) ? 'kya' : 'kyx';
+       $scope.model.content = fileContent;
+       if ($scope.model.kind == 'kyx') {
+         $scope.model.modelName = fileName.substring(0, fileName.indexOf('.'));
        }
+       $scope.model.uri = "file://" + fileName;
      };
 
      $scope.updateModelContentFromURL = function() {
-       if ($scope.model.uri && !$scope.model.uri.startsWith('file://') &&
-            ($scope.model.uri.endsWith('.kyx') || $scope.model.uri.endsWith('.kyx.txt')
-            || $scope.model.uri.endsWith('.kya') || $scope.model.uri.endsWith('.kya.txt'))) {
-         $http.get($scope.model.uri).then(function(response) {
-            var isKyx = $scope.model.uri.endsWith('.kyx') || $scope.model.uri.endsWith('.kyx.txt');
-            $scope.model.kind = isKyx ? 'kyx' : 'kya';
-            $scope.model.content = response.data;
-         })
-       }
-     }
+       $http.get($scope.model.uri).then(function(response) {
+          $scope.model.kind = isKya(response.data) ? 'kya' : 'kyx';
+          $scope.model.content = response.data;
+       });
+     };
+
+     /* Indicates whether `content` is an archive or a plain model file. */
+     isKya = function(content) {
+        // archives contain lemmas, theorems etc., e.g., search for matches: Theorem "...".
+        var regex = /(Theorem|Lemma|ArchiveEntry|Exercise) \"[^\"]*\"\./g;
+        return content && content.search(regex) >= 0;
+     };
 
      $scope.uploadContent = function(startProof) {
        var url =  "user/" + sessionService.getUser() +
