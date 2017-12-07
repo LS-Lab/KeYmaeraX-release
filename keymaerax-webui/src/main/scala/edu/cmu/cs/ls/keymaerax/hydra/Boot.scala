@@ -172,7 +172,23 @@ object HyDRAInitializer {
   private def createTool(options: OptionMap, config: ToolProvider.Configuration, preferredTool: String): Unit = {
     val tool: String = options.getOrElse('tool, preferredTool).toString
     val provider = tool.toLowerCase() match {
-      case "mathematica" => new MathematicaToolProvider(config)
+      case "mathematica" =>
+        try {
+          val p = new MathematicaToolProvider(config)
+          if (!p.tools().forall(_.isInitialized)) {
+            println("Unable to connect to Mathematica, switching to Z3")
+            println("Please check your Mathematica configuration in Help->Tools")
+            new Z3ToolProvider
+          } else p
+        } catch {
+          case ex: Throwable =>
+            println("Unable to connect to Mathematica, switching to Z3")
+            println("Please check your Mathematica configuration in Help->Tools")
+            println("Mathematica initialization failed with the error below")
+            ex.printStackTrace(System.out)
+            println("Starting with Z3 since Mathematica initialization failed")
+            new Z3ToolProvider
+        }
       case "z3" => new Z3ToolProvider
       case t => throw new Exception("Unknown tool '" + t + "'")
     }

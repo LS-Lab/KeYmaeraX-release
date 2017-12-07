@@ -171,12 +171,10 @@ class JLinkMathematicaLink extends MathematicaLink {
 
   /** Restarts the Mathematica connection */
   def restart(): Unit = {
-    val l: KernelLink = ml
-    ml = null
-    l.abandonEvaluation()
-    l.terminateKernel()
+    // only stable with MATH_LINK_TCPIP, may fail due to Mathematica JLink segmentation fault otherwise
+    shutdown()
+    Thread.sleep(2000) // try to avoid Mathematica segmentation fault by waiting
     init(linkName, jlinkLibDir)
-    l.close()
   }
 
   /**
@@ -241,9 +239,18 @@ class JLinkMathematicaLink extends MathematicaLink {
             case ex: MathematicaComputationAbortedException =>
               executor.remove(taskId)
               throw ex
+            case ex: IllegalArgumentException =>
+              // computation error, but Mathematica still functional
+              throw ToolException("Error executing Mathematica command " + checkErrorMsgCmd, ex)
             case ex: Throwable =>
               executor.remove(taskId, force = true)
-              throw new ToolException("Error executing Mathematica " + checkErrorMsgCmd, throwable)
+              try {
+                restart()
+              } catch {
+                case restartEx: Throwable =>
+                  throw ToolException("Restarting Mathematica failed. Please restart KeYmaera X. If the problem persists, try Z3 instead of Mathematica (Help->Tools). Mathematica error that triggered the restart:\n" + ex.getMessage, restartEx)
+              }
+              throw ToolException("Restarted Mathematica, please rerun the failed command (error details below)", throwable)
           }
           case None =>
             //@note Thread is interrupted by another thread (e.g., UI button 'stop')
@@ -285,8 +292,8 @@ class JLinkMathematicaLink extends MathematicaLink {
         if (res == MathematicaSymbols.ABORTED) {
           throw new MathematicaComputationAbortedException(ctx)
         } else if (res == MathematicaSymbols.EXCEPTION) {
-          // an exception occurred
-          ml.evaluate(fetchMessagesCmd)
+          // an exception occurred, rerun to get the messages
+          ml.evaluate(ctx + ";" + fetchMessagesCmd)
           ml.waitForAnswer()
           val txtMsg = importResult(ml.getExpr, _.toString)
           throw new IllegalArgumentException("Input " + ctx + " cannot be evaluated: " + txtMsg)

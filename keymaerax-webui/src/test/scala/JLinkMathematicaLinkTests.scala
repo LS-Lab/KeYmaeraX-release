@@ -2,11 +2,14 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleTopLevelLabel
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tools.Mathematica
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.MExpr
+import edu.cmu.cs.ls.keymaerax.tools._
+import org.scalatest.PrivateMethodTester
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 import scala.collection.immutable.Map
@@ -16,7 +19,7 @@ import scala.collection.immutable.Map
   *
   * @author Stefan Mitsch
  */
-class JLinkMathematicaLinkTests extends TacticTestBase {
+class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester {
 
   private val x = Variable("x")
   private val y = Variable("y")
@@ -110,5 +113,35 @@ class JLinkMathematicaLinkTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain theSameElementsAs False::Nil
+  }
+
+  "Restarting Mathematica" should "work from a killed kernel" taggedAs IgnoreInBuildTest in withMathematica { link =>
+    //@note Kills all WolframKernel!
+    val lnk = PrivateMethod[JLinkMathematicaLink]('link)
+    val theLink = link invokePrivate lnk()
+    val bridge = new MathematicaQETool(theLink)
+
+    var compAfterRestart: Option[Expression] = None
+
+    val t = new Thread(new Runnable() {
+      override def run(): Unit = {
+        the [ToolException] thrownBy bridge.run(
+          new MExpr(new MExpr(Expr.SYMBOL, "Pause"), Array[MExpr](new MExpr(30)))
+        ) should have message "Restarted Mathematica, please rerun the failed command (error details below)"
+        compAfterRestart = Some(bridge.run(KeYmaeraToMathematica("2+3".asTerm))._2)
+      }
+    })
+    t.start()
+    println("Sleeping for 5s...")
+    Thread.sleep(5000)
+    println("Killing Mathematica...")
+    val rt = Runtime.getRuntime
+    if (System.getProperty("os.name").toLowerCase.indexOf("mac os x") > -1) {
+      rt.exec("pkill -9 MathKernel")
+    } else {
+      ???
+    }
+    t.join()
+    compAfterRestart shouldBe Some("5".asTerm)
   }
 }
