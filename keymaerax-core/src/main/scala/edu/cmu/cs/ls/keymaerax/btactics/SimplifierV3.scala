@@ -791,8 +791,9 @@ object SimplifierV3 {
     }
   }
 
-  private lazy val impReflexive = remember("p_() -> p_()".asFormula,prop & done, namespace).fact
-  private lazy val eqSymmetricImp = remember("F_() = G_() -> G_() = F_()".asFormula,prop & exhaustiveEqL2R(-1) & byUS("= reflexive"),namespace).fact
+  private lazy val impReflexive = remember("p_() -> p_()".asFormula, prop & done, namespace).fact
+  private lazy val eqSymmetricImp = remember("F_() = G_() -> G_() = F_()".asFormula,
+    prop & exhaustiveEqL2R(-1) & hideL(-1) & byUS("= reflexive"), namespace).fact
 
   //Constrained search for equalities of the form t = Num (or Num = t) in the context
   def groundEqualityIndex (t:Term,ctx:context) : List[ProvableSig] = {
