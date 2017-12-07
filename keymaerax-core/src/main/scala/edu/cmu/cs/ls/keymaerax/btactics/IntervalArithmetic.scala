@@ -260,10 +260,11 @@ object IntervalArithmetic {
     "DivL(f_(),g_()) <= f_() / g_()").asFormula,
     implyR(1) & allL("f_()".asTerm)(-1) & allL("g_()".asTerm)(-1) & close)
 
-  private val DivULem = proveBy(("((\\forall x \\forall y (x / y <= DivU(x,y))) &" +
+  private lazy val DivULem = proveBy(("((\\forall x \\forall y (x / y <= DivU(x,y))) &" +
     "f_() <= F_() & ff_() <= f_() & g_() <= G_() & gg_() <= g_() & (G_()<0 | 0 < gg_()) -> " +
     "f_() / g_() <= max((max((DivU((F_(),G_())),DivU((F_(),gg_())))),max((DivU((ff_(),G_())),DivU((ff_(),gg_())))))))").asFormula,
     implyR(1) & (andL('Llast)*)&
+      //@todo replace with new 1Div<= up
       useAt("Div<= up",PosInExpr(1::Nil))(1) & simpTac(1) & hideL('Llast) & prop &
       (OnAll((useAt("rwMax",rwMax,PosInExpr(1::Nil))(1)) & prop)*) &
       <(allL("ff_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
@@ -272,10 +273,11 @@ object IntervalArithmetic {
         allL("F_()".asTerm)(-1) & allL("G_()".asTerm)(-1)) &
       OnAll(close))
 
-  private val DivLLem = proveBy(("((\\forall x \\forall y (DivL(x,y) <= x / y)) &" +
+  private lazy val DivLLem = proveBy(("((\\forall x \\forall y (DivL(x,y) <= x / y)) &" +
     "f_() <= F_() & ff_() <= f_() & g_() <= G_() & gg_() <= g_() & (G_()<0 | 0<gg_()) -> " +
     "min((min((DivL((F_(),G_())),DivL((F_(),gg_())))),min((DivL((ff_(),G_())),DivL((ff_(),gg_())))))) <= f_() / g_() )").asFormula,
     implyR(1) & (andL('Llast)*)&
+      //@todo replace with <=1Div down
       useAt("<=Div down",PosInExpr(1::Nil))(1) & simpTac(1) & hideL('Llast) & prop &
       (OnAll((useAt("rwMin",rwMin,PosInExpr(1::Nil))(1)) & prop)*) &
       <(allL("ff_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
