@@ -354,16 +354,16 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "complain about sort mismatches" in {
     val input = "Functions. R y() = (3>2). End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
     the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
-      """1:18 Definition sort does not match declaration
-        |Found:    <Bool> at 1:18 to 1:25
+      """1:20 Definition sort does not match declaration
+        |Found:    <Bool> at 1:20 to 1:25
         |Expected: <Real>""".stripMargin
   }
 
   it should "complain about non-delimited definitions" in {
     val input = "Functions. R y() = (3>2. End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
     the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
-      """1:18 Non-delimited definition
-        |Found:    NUM(2.) at 1:18 to 1:23
+      """1:12 Non-delimited definition
+        |Found:    NUM(2.) at 1:12 to 1:23
         |Expected: )""".stripMargin
   }
   
