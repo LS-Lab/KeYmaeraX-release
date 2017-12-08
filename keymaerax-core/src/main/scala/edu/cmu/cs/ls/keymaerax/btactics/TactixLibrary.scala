@@ -152,7 +152,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       (OnAll(tacticChase(createAutoTacticIndex)(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
         ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
         andR, equivR, loop, odeR, solve))*) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
-        OnAll((exhaustiveEqL2R('L)*) & ?(QE)))
+        OnAll((exhaustiveEqL2R('L)*) & ?(QE & done)))
   }
 
   /** master: master tactic that tries hard to prove whatever it could
