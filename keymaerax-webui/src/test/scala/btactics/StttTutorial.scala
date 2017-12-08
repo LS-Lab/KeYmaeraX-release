@@ -225,7 +225,7 @@ class StttTutorial extends TacticTestBase {
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
-  it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
+  it should "be provable from parsed tactic" in withMathematica { _ => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.kyt")).mkString)
     db.proveBy(modelContent, tactic) shouldBe 'proved
@@ -276,7 +276,7 @@ class StttTutorial extends TacticTestBase {
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
-  it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
+  it should "be provable from parsed tactic" in withMathematica { _ => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.kyt")).mkString)
     db.proveBy(modelContent, tactic) shouldBe 'proved
