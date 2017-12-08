@@ -134,14 +134,13 @@ class InvariantArithTests extends TacticTestBase {
     val i = "w()^2*x^2 + y^2 <= c()^2 -> [{x'=y,y'=-w()^2*x-2*d()*w()*y & (w()>=0 & d()>=0)}]w()^2*x^2 + y^2 <= c()^2".asFormula
 
     val ineq = List(0)
-    val linear = List((1,"a()","wit__1^2","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm))
-    val witness = List(("3"," wit__0*x^3 - 6*wit__0*x^2 + 9*wit__0*x"),("3","wit__0*wit__1*x")).map( s => (s._1.asTerm,s._2.asTerm))
+    val linear = List((1,"d()","wit__1^2","1"),(1,"w()","wit__2^2","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm))
+    val witness = List(("4","wit__0*y*wit__3*wit__4")).map( s => (s._1.asTerm,s._2.asTerm))
 
     val tactic = implyR(1) & dI('diffInd)(1) < (QE, //QE just for reflexivity, no problem
       chase(1) &
         DebuggingTactics.print("Before normalizing") &  prop &
         OnAll(prepareArith2) &
-        printGoal &
         printGoal & linearElim(linear) & genWitnessTac(ineq,witness))
 
     val res = proveBy(i, tactic)
