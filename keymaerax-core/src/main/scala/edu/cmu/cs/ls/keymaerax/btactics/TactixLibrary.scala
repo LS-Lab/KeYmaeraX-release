@@ -130,8 +130,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   val prop: BelleExpr = "prop" by tacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
                                                 ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse)
 
-  /** Master/auto implementation */
-  private def master(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr]): BelleExpr = "ANON" by {
+  /** Master/auto implementation with tactic `loop` for nondeterministic repetition and `odeR` for
+    * differential equations in the succedent.
+    * `keepQEFalse` indicates whether or not QE results "false" at the proof leaves should be kept or undone. */
+  private def master(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr],
+                     keepQEFalse: Boolean): BelleExpr = "ANON" by {
     /** Create a tactic index that hands out loop tactics and configurable ODE tactics. */
     val createAutoTacticIndex = new DefaultTacticIndex {
       override def tacticRecursors(tactic: BelleExpr): TacticRecursors =
@@ -152,21 +155,22 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       (OnAll(tacticChase(createAutoTacticIndex)(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
         ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
         andR, equivR, loop, odeR, solve))*) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
-        OnAll((exhaustiveEqL2R('L)*) & ?(QE & done)))
+        OnAll((exhaustiveEqL2R('L)*) & ?(QE & (if (keepQEFalse) nil else done))))
   }
 
-  /** master: master tactic that tries hard to prove whatever it could
+  /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
+    * result `false` of a QE step at the leaves is kept or undone (i.e., reverted to the QE input sequent).
     * @see [[auto]] */
-  def master(gen: Generator[Formula] = invGenerator): BelleExpr = "master" by {
+  def master(gen: Generator[Formula] = invGenerator, keepQEFalse: Boolean=true): BelleExpr = "master" by {
     def endODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) =>{
       ODE(pos) & ?(allR(pos) & implyR(pos)*2 & allL(Variable("s_"), Variable("t_"))('Llast) & auto & done)
     })
-    master(loop(gen), endODE)
+    master(loop(gen), endODE, keepQEFalse)
   }
 
   /** auto: automatically try to prove the current goal if that succeeds.
     * @see [[master]] */
-  def auto: BelleExpr = "auto" by master(loopauto, ODE) & done
+  def auto: BelleExpr = "auto" by master(loopauto, ODE, keepQEFalse=true) & done
 
   /*******************************************************************
     * unification and matching based auto-tactics
