@@ -22,7 +22,7 @@ object DatabasePopulator {
   // and case studies and import into the database
 
   case class TutorialEntry(name: String, model: String, description: Option[String], title: Option[String],
-                           link: Option[String], tactic: Option[(String, String, Boolean)])
+                           link: Option[String], tactic: Option[(String, String, Boolean)], kind: String = "Unknown")
 
   /** Imports tutorial entries from the JSON file at URL. Optionally proves the models when tactics are present. */
   def importJson(db: DBAbstraction, user: String, url: String, prove: Boolean = false): Unit = {
@@ -45,8 +45,8 @@ object DatabasePopulator {
   def readKya(url: String): List[TutorialEntry] = {
     val kya = loadResource(url)
     val archiveEntries = KeYmaeraXArchiveParser.read(kya)
-    archiveEntries.flatMap({case (modelName, modelContent, _, tactics) =>
-      tactics.map({case (tname, tactic) => TutorialEntry(modelName, modelContent, None, None, None, Some((tname, tactic, true)))})})
+    archiveEntries.flatMap({case (modelName, modelContent, kind, tactics) =>
+      tactics.map({case (tname, tactic) => TutorialEntry(modelName, modelContent, None, None, None, Some((tname, tactic, true)), kind)})})
   }
 
   /** Reads tutorial entries from the specified URL. */
