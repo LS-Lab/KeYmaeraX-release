@@ -92,8 +92,8 @@ class JLinkMathematicaLink extends MathematicaLink {
 
   //@todo really should be private -> fix SpiralGenerator
   //@todo concurrent access to ml needs ml access to be synchronized everywhere or pooled or
-  private[keymaerax] var ml: KernelLink = null
-  private var linkName: String = null
+  private[keymaerax] var ml: KernelLink = _
+  private var linkName: String = _
   private var jlinkLibDir: Option[String] = None
 
   //@note all access to queryIndex must be synchronized
@@ -108,7 +108,7 @@ class JLinkMathematicaLink extends MathematicaLink {
    * @return true if initialization was successful
    * @note Must be called before first use of ml
    */
-  def init(linkName : String, jlinkLibDir : Option[String]): Boolean = {
+  def init(linkName : String, jlinkLibDir : Option[String], remainingTrials: Int=5): Boolean = {
     this.linkName = linkName
     this.jlinkLibDir = jlinkLibDir
     if (jlinkLibDir.isDefined) {
@@ -142,6 +142,21 @@ class JLinkMathematicaLink extends MathematicaLink {
           "\nPlease provide paths to the J/Link native library and restart KeYmaera X.")
         shutdown()
         false
+      case e: MathLinkException if e.getErrCode == 1004 && e.getMessage.contains("Link failed to open") && remainingTrials > 0 =>
+        // link did not open, wait a little and retry
+        println("Repeating connection attempt\nMathematica J/Link failed to open " + e +
+          "\nRepeating connection attempt (remaining trials: " + (remainingTrials-1) + ")\n" + diagnostic)
+//        if (DEBUG) {
+          val rt = Runtime.getRuntime
+          if (System.getProperty("os.name").toLowerCase.indexOf("mac os x") > -1) {
+            val p = rt.exec("pgrep MathKernel")
+            p.waitFor
+            val grepResult = scala.io.Source.fromInputStream(p.getInputStream).mkString
+            println("Running MathKernels: " + grepResult)
+          }
+//        }
+        Thread.sleep(10000)
+        init(linkName, jlinkLibDir, remainingTrials-1)
       case e: MathLinkException =>
         println("Shutting down since Mathematica J/Link errored " + e + "\nPlease double check configuration and Mathematica license.\n" + diagnostic)
         shutdown()
