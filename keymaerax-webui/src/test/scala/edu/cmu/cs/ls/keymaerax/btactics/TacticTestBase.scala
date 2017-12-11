@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalactic.{AbstractStringUniformity, Uniformity}
-import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers, AppendedClues}
+import org.scalatest.{AppendedClues, BeforeAndAfterEach, FlatSpec, Matchers}
 
 import scala.collection.immutable._
 
@@ -241,6 +241,14 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       ToolProvider.shutdown()
       ToolProvider.setProvider(new NoneToolProvider())
       TactixLibrary.invGenerator = FixedGenerator(Nil)
+      // force-kill all Mathematica kernels that did not react to the shutdown request
+      val rt = Runtime.getRuntime
+      if (System.getProperty("os.name").toLowerCase.indexOf("mac os x") > -1) {
+        val p = rt.exec("pgrep MathKernel")
+        p.waitFor
+        val grepResult = scala.io.Source.fromInputStream(p.getInputStream).mkString
+        if (grepResult != "") rt.exec("pkill -9 MathKernel").waitFor
+      }
     }
   }
 
