@@ -49,7 +49,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     }
   }
 
-  "Belle interpreter" should "generate proof terms when supplied with the PTProvable as input" in {
+  "Belle interpreter" should "generate proof terms when supplied with the PTProvable as input" ignore {
     val label = "[:=] assign"
     val f = "[x_:=f();]p(x_) <-> p(f())".asFormula
     val t = ??? //US(USubst.apply(scala.collection.immutable.Seq()), label)
@@ -176,7 +176,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     println(source)
   })
 
-  it should "convert simple axiom usage" in withMathematica(_ => {
+  it should "convert simple axiom usage" ignore withMathematica(_ => {
     val label = "[:=] assign"
     val f = "[x_:=f();]p(x_) <-> p(f())".asFormula
     val t = ??? ///US(USubst.apply(scala.collection.immutable.Seq()), label)
@@ -203,7 +203,7 @@ class ProofTermCheckerTests extends TacticTestBase {
     }
   })
 
-  it should "convert VelocityCar" in withMathematica(_ => {
+  it should "convert VelocityCar" ignore withMathematica(_ => {
     val f = "x<=m() & V()>=0 -> [{{?x<=m()-V()*ep(); v:=V(); ++ v:=0;} t := 0; {x'=v, t'=1 & t<=ep()}}*@invariant(x<=m())] x <= m()".asFormula
     val t =
       implyR(1) & loop("x<=m()".asFormula)(1) <(
@@ -240,7 +240,7 @@ class ProofTermCheckerTests extends TacticTestBase {
         //println(source)
     }})
 
-  it should "convert CPP'17 example" in withMathematica(_ => {
+  it should "convert CPP'17 example" ignore withMathematica(_ => {
     val f = "A() >= 0 & v >= 0 -> [{v' = A(), x' = v & true}] v >= 0".asFormula
     val provable = PTProvable.startProof(f)
     val t = TactixLibrary.implyR(1) & andL(-1) & dI()(1)
