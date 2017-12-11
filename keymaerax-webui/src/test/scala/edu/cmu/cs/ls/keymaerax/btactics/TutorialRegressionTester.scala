@@ -56,12 +56,28 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
     }
   }
 
-  it should "prove all entries flagged as being provable with Mathematica" in withDatabase {
-    val provider = new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig)
-    ToolProvider.setProvider(provider)
+  it should "prove all entries flagged as being provable with Mathematica" in withMathematica { _ => withDatabase {
     prove("Mathematica")
-  }
+  }}
   it should "prove all entries flagged as being provable with Z3" in withZ3 { _ => withDatabase { prove("Z3") }}
+
+  /* Try to see if any of the Mathematica entries work with Z3. Test "fails" if Z3 can prove an entry. */
+  it should "try all Mathematica entries also with Z3" in withZ3 { _ => withDatabase { db =>
+    val qeFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
+
+    val mathematicaEntries = tutorialEntries.filter(e => e._6.isDefined && e._6.get._3 &&
+        qeFinder.findAllMatchIn(e._6.get._2).exists(p => p.group("toolName") == "Mathematica"))
+
+    forEvery (mathematicaEntries) { (name, model, _, _, _, tactic, kind) =>
+      val t = (tactic.get._1, qeFinder.replaceAllIn(tactic.get._2, "QE"), tactic.get._3)
+      try {
+        runEntry(name, model, kind, t, db)
+        fail("Now works with Z3: " + name)
+      } catch {
+        case _: BelleThrowable => // still fails, so QE({`Mathematica`}) is still required
+      }
+    }
+  }}
 
   /** Proves all entries that either use no QE at all, all generic QE, or whose specific QE({`tool`}) (if any) match tool */
   private def prove(tool: String)(db: DbTacticTester) = {
@@ -73,41 +89,46 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
         qeFinder.findAllMatchIn(e._6.get._2).forall(p => p.group("toolName") == tool)).
       foreach(e => println(s"QE tool mismatch: skipping ${e._1}"))
 
-    forEvery (tutorialEntries.filter(e => e._6.isDefined && e._6.get._3 &&
-      qeFinder.findAllMatchIn(e._6.get._2).forall(p => p.group("toolName") == tool))) { (name, model, _, _, _, tactic, kind) =>
-      withClue(name + "/" + tactic.get._1) {
-        val (decls, invGen) = parseProblem(model)
-        println(s"Proving $name with ${tactic.get._1}")
-        val t = BelleParser.parseWithInvGen(tactic.get._2, Some(invGen), decls)
+    forEvery (tutorialEntries.
+      filter(e => e._6.isDefined && e._6.get._3 &&
+        qeFinder.findAllMatchIn(e._6.get._2).forall(p => p.group("toolName") == tool))) { (name, model, _, _, _, tactic, kind) =>
+      runEntry(name, model, kind, tactic.get, db)
+    }
+  }
 
-        val start = System.currentTimeMillis()
-        val proof = db.proveBy(model, t, name)
-        val end = System.currentTimeMillis()
+  private def runEntry(name: String, model: String, kind: String, tactic: (String, String, Boolean), db: DbTacticTester) = {
+    withClue(name + "/" + tactic._1) {
+      val (decls, invGen) = parseProblem(model)
+      println(s"Proving $name with ${tactic._1}")
+      val t = BelleParser.parseWithInvGen(tactic._2, Some(invGen), decls)
 
-        println("Proof Statistics")
-        println(s"Model $name, tactic ${tactic.get._1}")
-        println(s"Duration [ms]: ${end - start}")
-        println("Tactic LOC/normalized LOC/steps: " +
-          Source.fromString(tactic.get._2).getLines.size + "/" +
-          TacticStatistics.lines(t) + "/" +
-          TacticStatistics.size(t))
-        println("Proof steps: " + proof.steps)
+      val start = System.currentTimeMillis()
+      val proof = db.proveBy(model, t, name)
+      val end = System.currentTimeMillis()
 
-        if (kind == "lemma") {
-          val lemmaName = "user" + File.separator + name
-          if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
-          val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
-            "tool" -> "KeYmaera X",
-            "model" -> model,
-            "tactic" -> t.prettyString
-          )) :: Nil)
-          LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
-        }
+      println("Proof Statistics")
+      println(s"Model $name, tactic ${tactic._1}")
+      println(s"Duration [ms]: ${end - start}")
+      println("Tactic LOC/normalized LOC/steps: " +
+        Source.fromString(tactic._2).getLines.size + "/" +
+        TacticStatistics.lines(t) + "/" +
+        TacticStatistics.size(t))
+      println("Proof steps: " + proof.steps)
 
-        t match {
-          case _: PartialTactic => // nothing to do, tactic deliberately allowed to result in a non-proof
-          case _ => proof shouldBe 'proved withClue name + "/" + tactic.get._1
-        }
+      if (kind == "lemma") {
+        val lemmaName = "user" + File.separator + name
+        if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
+        val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
+          "tool" -> "KeYmaera X",
+          "model" -> model,
+          "tactic" -> t.prettyString
+        )) :: Nil)
+        LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
+      }
+
+      t match {
+        case _: PartialTactic => // nothing to do, tactic deliberately allowed to result in a non-proof
+        case _ => proof shouldBe 'proved withClue name + "/" + tactic._1
       }
     }
   }
