@@ -92,6 +92,8 @@ class PrimeSubstituterTest extends TacticTestBase {
 
   //@author Yong Kiam Tan
   it should "not prove x'=1 by putting primes into DX postconditions" in withMathematica { qeTool =>
+    //@note test is supposed to fail until DX axiom is fixed
+
     val ante = IndexedSeq()
     val succ = IndexedSeq("x'=1".asFormula)
 
@@ -107,6 +109,8 @@ class PrimeSubstituterTest extends TacticTestBase {
 
   //@author Andre Platzer
   it should "not put primes into DX's evolution domain constraint" in {
+    //@note test is supposed to fail until DX axiom is fixed
+
     // [{c&q(||)}]p(||) -> (q(||)->p(||))
     val pr = ProvableSig.axioms("DX differential skip")
 
@@ -122,6 +126,8 @@ class PrimeSubstituterTest extends TacticTestBase {
 
   //@author Andre Platzer
   it should "not put primes into DX's postcondition" in {
+    //@note test is supposed to fail until DX axiom is fixed
+
     // [{c&q(||)}]p(||) -> (q(||)->p(||))
     val pr = ProvableSig.axioms("DX differential skip")
 
