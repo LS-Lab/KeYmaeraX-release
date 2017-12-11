@@ -55,7 +55,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
   it should "have 4 open goals for abstract invariant J(x,v) with master" in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1.kyx"))
-    val result = proveBy(s, master())
+    val result = proveBy(s, master(keepQEFalse=false))
     result.subgoals should have size 4
     result.subgoals(0) shouldBe "x!=m(), b()>0 ==> J(x,v)".asSequent
     result.subgoals(1) shouldBe "J(x,v), b()>0 ==> x!=m()".asSequent
@@ -87,7 +87,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
   "Example 2" should "have expected open goal and a counter example" in withMathematica { tool =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/02_robo2-justbrakenaive.kyx"))
-    val result = proveBy(s, master())
+    val result = proveBy(s, master(keepQEFalse=false))
     result.isProved shouldBe false //@note This assertion is a soundness check!
     result.subgoals.loneElement shouldBe "x<=m(), b()>0, t_>=0, \\forall s_ (0<=s_&s_<=t_ -> (-b())*s_+v>=0) ==> (-b())/2*t_^2+v*t_+x <= m()".asSequent
 
@@ -111,7 +111,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
   it should "find the braking condition" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/02_robo2-justbrakenaive.kyx"))
-    val result = proveBy(s, master())
+    val result = proveBy(s, master(keepQEFalse=false))
     result.subgoals.loneElement shouldBe "x<=m(), b()>0, t_>=0, \\forall s_ (0<=s_&s_<=t_ -> (-b())*s_+v>=0) ==> (-b())/2*t_^2+v*t_+x <= m()".asSequent
 
     val initCond = proveBy(result.subgoals.head, TactixLibrary.partialQE)
@@ -133,7 +133,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
   it should "find the acceleration condition" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/04_robo2-justaccnaive.kyx"))
-    val result = proveBy(s, master())
+    val result = proveBy(s, master(keepQEFalse=false))
     result.subgoals.loneElement shouldBe "A()>=0, b()>0, v^2<=2*b()*(m()-x), ep()>0, Q(x,v), t=0, t_>=0, \\forall s_ (0<=s_&s_<=t_ -> A()*s_+v>=0 & s_+0<=ep()) ==> (A()*t_+v)^2 <= 2*b()*(m()-(A()/2*t_^2+v*t_+x))".asSequent
 
     val initCond = proveBy(result.subgoals.head, hideL(-5, "Q(x,v)".asFormula) & TactixLibrary.partialQE)
