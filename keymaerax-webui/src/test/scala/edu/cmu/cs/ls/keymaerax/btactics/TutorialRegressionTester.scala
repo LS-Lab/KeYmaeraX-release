@@ -12,13 +12,13 @@ import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Lemma, Program}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
-import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser.Declaration
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
-import edu.cmu.cs.ls.keymaerax.tools.{SMTQeException, ToolEvidence}
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.scalatest.AppendedClues
+import org.scalatest.exceptions.TestFailedException
 
 import scala.io.Source
 import scala.language.postfixOps
@@ -62,19 +62,21 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
   it should "prove all entries flagged as being provable with Z3" in withZ3 { _ => withDatabase { prove("Z3") }}
 
   /* Try to see if any of the Mathematica entries work with Z3. Test "fails" if Z3 can prove an entry. */
-  it should "try all Mathematica entries also with Z3" in withZ3 { _ => withDatabase { db =>
+  it should "try all Mathematica entries also with Z3" in withZ3 { tool => withDatabase { db =>
     val qeFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
 
     val mathematicaEntries = tutorialEntries.filter(e => e._6.isDefined && e._6.get._3 &&
         qeFinder.findAllMatchIn(e._6.get._2).exists(p => p.group("toolName") == "Mathematica"))
 
+    tool.setOperationTimeout(30) // avoid getting stuck
     forEvery (mathematicaEntries) { (name, model, _, _, _, tactic, kind) =>
       val t = (tactic.get._1, qeFinder.replaceAllIn(tactic.get._2, "QE"), tactic.get._3)
       try {
         runEntry(name, model, kind, t, db)
-        fail("Now works with Z3: " + name)
+        fail("Now works with Z3: " + tutorialName + "/" + name + "/" + t._1)
       } catch {
-        case _: BelleThrowable => // still fails, so QE({`Mathematica`}) is still required
+        case _: BelleThrowable => // test "succeeds" (Z3 still fails), so QE({`Mathematica`}) is still required
+        case e: TestFailedException if e.getMessage.contains("was not proved") => // master/ODE etc. stopped before proof was done
       }
     }
   }}
@@ -97,7 +99,7 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
   }
 
   private def runEntry(name: String, model: String, kind: String, tactic: (String, String, Boolean), db: DbTacticTester) = {
-    withClue(name + "/" + tactic._1) {
+    withClue(tutorialName + ": " + name + "/" + tactic._1) {
       val (decls, invGen) = parseProblem(model)
       println(s"Proving $name with ${tactic._1}")
       val t = BelleParser.parseWithInvGen(tactic._2, Some(invGen), decls)
@@ -106,8 +108,8 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
       val proof = db.proveBy(model, t, name)
       val end = System.currentTimeMillis()
 
-      println("Proof Statistics")
-      println(s"Model $name, tactic ${tactic._1}")
+      println(s"Proof Statistics (proved: ${proof.isProved})")
+      println(s"$tutorialName, model $name, tactic ${tactic._1}")
       println(s"Duration [ms]: ${end - start}")
       println("Tactic LOC/normalized LOC/steps: " +
         Source.fromString(tactic._2).getLines.size + "/" +
@@ -128,7 +130,7 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
 
       t match {
         case _: PartialTactic => // nothing to do, tactic deliberately allowed to result in a non-proof
-        case _ => proof shouldBe 'proved withClue name + "/" + tactic._1
+        case _ => proof shouldBe 'proved withClue tutorialName + "/" + name + "/" + tactic._1
       }
     }
   }
