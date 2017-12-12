@@ -97,11 +97,18 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           }
         }
 
-      case SaturateTactic(child) if child==Idioms.nil => throw new BelleThrowable("SaturateTactic done")
       case SaturateTactic(child) =>
         var result: (BelleValue, ExecutionContext) = (goal, ctx)
         try {
-          result = runTactic(if (child==Idioms.nil) child else SeqTactic(child, tactic), result._1, level, result._2)
+          val repeatOnChange = new DependentTactic("ANON") {
+            override def computeExpr(provable: ProvableSig): BelleExpr = goal match {
+              case BelleProvable(p, _) => provable.subgoals.headOption match {
+                case Some(s) if s != p.subgoals.head => tactic
+                case _ => Idioms.nil
+              }
+            }
+          }
+          result = runTactic(child & repeatOnChange, result._1, level, result._2)
         } catch {
           case _: BelleThrowable =>
         }

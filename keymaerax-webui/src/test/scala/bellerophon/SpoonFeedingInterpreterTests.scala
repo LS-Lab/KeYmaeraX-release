@@ -12,6 +12,9 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import testHelper.KeYmaeraXTestTags.SlowTest
 
 import scala.collection.immutable._
+import scala.language.postfixOps
+
+import org.scalatest.LoneElement._
 
 /**
   * Tests the spoon-feeding interpreter.
@@ -332,6 +335,55 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     n30.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula, "x>1".asFormula, "x>2".asFormula), IndexedSeq("x>0".asFormula)))
     n30.children shouldBe empty
   }
+
+  it should "not recurse on nil" in withMathematica { _ => withDatabase { db =>
+    val modelContent = "Variables. R x. End. Problem. x>0 -> x>1 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter))
+    interpreter(nil*, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.nodes should have size 3
+
+    // final nil: SpoonFeedingInterpreter inserts a nil when saturation is done
+    tree.nodes.map(_.makerShortName) should contain theSameElementsInOrderAs None::Some("nil")::Some("nil")::Nil
+    tree.root.conclusion shouldBe "==> x>0 -> x>1".asSequent
+    tree.root.provable.subgoals should contain theSameElementsInOrderAs "==> x>0 -> x>1".asSequent::Nil
+    tree.root.children should have size 1
+
+    val n1 = tree.root.children.head
+    n1.makerShortName shouldBe Some("nil")
+    n1.goal shouldBe Some("==> x>0 -> x>1".asSequent)
+    n1.children.loneElement.makerShortName shouldBe Some("nil")
+  }}
+
+  it should "recurse only on change" in withMathematica { _ => withDatabase { db =>
+    val modelContent = "Variables. R x. End. Problem. x>0 -> x>1 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter))
+    interpreter(Idioms.?(QE)*, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.nodes should have size 4
+
+    // final nil: SpoonFeedingInterpreter inserts a nil when saturation is done
+    tree.nodes.map(_.makerShortName) should contain theSameElementsInOrderAs None::Some("QE")::Some("QE")::Some("nil")::Nil
+    tree.root.conclusion shouldBe "==> x>0 -> x>1".asSequent
+    tree.root.provable.subgoals should contain theSameElementsInOrderAs "==> false".asSequent::Nil
+    tree.root.children should have size 1
+
+    val n1 = tree.root.children.head
+    n1.makerShortName shouldBe Some("QE")
+    n1.goal shouldBe Some("==> false".asSequent)
+    n1.children should have size 1
+
+    val n2 = n1.children.head
+    n2.makerShortName shouldBe Some("QE")
+    n2.goal shouldBe Some("==> false".asSequent)
+    n2.children.loneElement.makerShortName shouldBe Some("nil")
+  }}
 
   "Repeat" should "record each iteration as step" in withDatabase {db =>
     val modelContent = "Variables. R x. End. Problem. x>0&x>1&x>2&x>3 -> x>0 End."
