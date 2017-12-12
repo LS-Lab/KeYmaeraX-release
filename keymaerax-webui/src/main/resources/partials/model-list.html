@@ -102,9 +102,9 @@
             </td>
             <td class="k4-abbreviate">
                 <div>
-                <button class="btn btn-link" ng-if="model.pubLink"
+                <a class="btn btn-link" ng-if="model.pubLink"
                         uib-tooltip="{{model.description}}" tooltip-placement="auto top" tooltip-popup-delay="1000"
-                        href="{{model.pubLink}}">{{model.description}}</button>
+                        href="{{model.pubLink}}">{{model.description}}</a>
                 <div uib-tooltip="{{model.description}}" tooltip-placement="auto top" tooltip-popup-delay="1000"
                      ng-if="!model.pubLink">{{model.description}}</div>
                 </div>
