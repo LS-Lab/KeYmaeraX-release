@@ -282,8 +282,8 @@ object Main {
           val content = DatabasePopulator.readKya(url)
           launcherLog("Comparing cached and source content")
           models.flatMap(m => content.find(_.name == m.name) match {
-            case Some(DatabasePopulator.TutorialEntry(_, model, _, _, _, _)) if model == m.keyFile => None
-            case Some(DatabasePopulator.TutorialEntry(_, model, _, _, _, _)) if model != m.keyFile => Some(m)
+            case Some(DatabasePopulator.TutorialEntry(_, model, _, _, _, _, _)) if model == m.keyFile => None
+            case Some(DatabasePopulator.TutorialEntry(_, model, _, _, _, _, _)) if model != m.keyFile => Some(m)
             case _ => /*@note model was deleted/renamed in original file, so delete*/ Some(m)
           })
         } else List()
