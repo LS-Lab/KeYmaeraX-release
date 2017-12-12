@@ -601,7 +601,7 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
       new ExamplePOJO(0, "STTT Tutorial",
         "Automated stop sign braking for cars",
         "/dashboard.html?#/tutorials",
-        "classpath:/examples/tutorials/sttt/sttt.json",
+        "classpath:/examples/tutorials/sttt/sttt.kyx",
         "/examples/tutorials/sttt/sttt.png", 1) ::
       new ExamplePOJO(1, "CPSWeek 2016 Tutorial",
         "Proving ODEs",
@@ -755,7 +755,7 @@ class ImportExampleRepoRequest(db: DBAbstraction, userId: String, repoUrl: Strin
     if (repoUrl.endsWith(".json")) {
       DatabasePopulator.importJson(db, userId, repoUrl, prove=false)
       BooleanResponse(flag=true) :: Nil
-    } else if (repoUrl.endsWith(".kya")) {
+    } else if (repoUrl.endsWith(".kya") || repoUrl.endsWith(".kyx")) {
       DatabasePopulator.importKya(db, userId, repoUrl, prove=false, Nil)
       BooleanResponse(flag=true) :: Nil
     } else {

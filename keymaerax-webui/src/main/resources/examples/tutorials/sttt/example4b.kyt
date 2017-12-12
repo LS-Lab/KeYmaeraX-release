@@ -1,5 +1,0 @@
-implyR(1) & (andL('L)*) & loop({`v<=V()`}, 1) & <(
-  QE & done,
-  QE & done,
-  composeb(1) & assignb(1) & ODE(1) & QE & done
-)

@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.KeYmaeraXTestTags.TodoTest
@@ -29,7 +29,8 @@ import scala.language.postfixOps
 class StttTutorial extends TacticTestBase {
 
   "Example 1" should "be provable" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 1", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
     val tactic = implyR('_) & andL('_) & dC("v>=0".asFormula)(1) <(
       /* use */ dW(1) & prop,
       /* show */ dI()(1)
@@ -38,24 +39,29 @@ class StttTutorial extends TacticTestBase {
   }}
 
   it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.kyx")).mkString
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.kyt")).mkString)
+    val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 1", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get
+    val modelContent = entry.fileContent
+    val tactic = entry.tactics.head._2
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
   it should "be provable with diffSolve" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 1", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
     val tactic = implyR('_) & andL('_) & solve(1) & QE
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
   it should "be provable with master" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 1", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
   it should "be provable with diffInvariant" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 1", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
     val tactic = implyR('_) & andL('_) & diffInvariant("v>=0".asFormula)('R) & dW('R) & prop
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
@@ -84,18 +90,21 @@ class StttTutorial extends TacticTestBase {
   }}
 
   "Example 2" should "be provable with master and custom loop invariant" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 2", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
     val Imply(_, Box(loop, _)) = KeYmaeraXProblemParser(modelContent)
     db.proveBy(modelContent, master(new ConfigurableGenerator(Map((loop, "v>=0".asFormula))))) shouldBe 'proved
   }}
 
   it should "be provable with master and loop invariant from file" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 2", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
   it should "be provable with abstract loop invariant" taggedAs TodoTest ignore withMathematica { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 2", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
 
     val tactic = implyR('_) & (andL('_)*) & loop("J(v)".asFormula)('R) <(
       skip,
@@ -110,25 +119,30 @@ class StttTutorial extends TacticTestBase {
   }}
 
   it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.kyx")).mkString
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.kyt")).mkString)
-    db.proveBy(modelContent, tactic) shouldBe 'proved
+    val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 2", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get
+    db.proveBy(entry.fileContent, entry.tactics.head._2) shouldBe 'proved
   }}
 
   "Example 3a" should "be provable with master and loop invariant from file" in withQE { _ => withDatabase { db =>
     // // needs evolution domain at time 0
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3a.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 3a", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
   it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3a.kyx")).mkString
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3a.kyt")).mkString)
+    val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 3a", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get
+    val modelContent = entry.fileContent
+    val tactic = entry.tactics.head._2
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
   "Example3b" should "find correct safety condition" in withMathematica { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3b.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 3b", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
+
     val tactic = implyR('_) & (andL('_)*) & chase('R) & normalize & OnAll(solve('R))
     val intermediate = db.proveBy(modelContent, tactic)
     intermediate.subgoals should have size 3
@@ -151,8 +165,10 @@ class StttTutorial extends TacticTestBase {
   }}
 
   it should "stop at correct spot when tactic is parsed from file" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3b.kyx")).mkString
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example3b.kyt")).mkString)
+    val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 3b", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get
+    val modelContent = entry.fileContent
+    val tactic = entry.tactics.head._2
     val intermediate = db.proveBy(modelContent, tactic)
     intermediate.subgoals should have size 3
     intermediate.subgoals(0) shouldBe Sequent(
@@ -167,36 +183,45 @@ class StttTutorial extends TacticTestBase {
   }}
 
   "Example 4a" should "be provable with master and loop invariant from file" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4a.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 4a", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
   it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4a.kyx")).mkString
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4a.kyt")).mkString)
+    val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 4a", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get
+    val modelContent = entry.fileContent
+    val tactic = entry.tactics.head._2
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
   "Example 4b" should "be provable with master and loop invariant from file" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4b.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 4b", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
   it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4b.kyx")).mkString
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4b.kyt")).mkString)
+    val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 4b", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get
+    val modelContent = entry.fileContent
+    val tactic = entry.tactics.head._2
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
   "Example 4c" should "be provable with master and loop invariant from file" in withQE { _ => withDatabase { db =>
     // needs evolution domain at time 0
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4c.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 4c", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
   it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4c.kyx")).mkString
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example4c.kyt")).mkString)
+    val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 4c", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get
+    val modelContent = entry.fileContent
+    val tactic = entry.tactics.head._2
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
@@ -221,18 +246,22 @@ class StttTutorial extends TacticTestBase {
   }}
 
   "Example 5" should "be provable automatically" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 5", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
   it should "be provable from parsed tactic" in withMathematica { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.kyx")).mkString
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.kyt")).mkString)
+    val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 5", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get
+    val modelContent = entry.fileContent
+    val tactic = entry.tactics.head._2
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
   it should "be provable with chase etc" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 5", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
 
     val tactic = implyR('R) & (andL('L)*) &
       loop("v >= 0 & x+v^2/(2*B()) <= S()".asFormula)('R) <(
@@ -246,7 +275,9 @@ class StttTutorial extends TacticTestBase {
   }}
 
   it should "be provable with abstract loop invariant" ignore withMathematica { _ =>
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.kyx"))
+    val s = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 5", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.model.asInstanceOf[Formula]
+
 
     val tactic = implyR('R) & (andL('L)*) &
       loop("J(v,x,B,S)".asFormula)('R) <(
@@ -261,24 +292,30 @@ class StttTutorial extends TacticTestBase {
   }
 
   "Example 6" should "be provable automatically" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example6.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 6", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
   it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example6.kyx")).mkString
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example6.kyt")).mkString)
+    val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 6", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get
+    val modelContent = entry.fileContent
+    val tactic = entry.tactics.head._2
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
   "Example 7" should "be provable automatically" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 7", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
   it should "be provable from parsed tactic" in withMathematica { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.kyx")).mkString
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.kyt")).mkString)
+    val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 7", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get
+    val modelContent = entry.fileContent
+    val tactic = entry.tactics.head._2
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
@@ -289,19 +326,23 @@ class StttTutorial extends TacticTestBase {
   }
 
   "Example 9a" should "be provable" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9a.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 9a", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
     val tactic = implyR('R) & (andL('L)*) & dI()('R)
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
   it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9a.kyx")).mkString
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9a.kyt")).mkString)
+    val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 9a", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get
+    val modelContent = entry.fileContent
+    val tactic = entry.tactics.head._2
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
   "Example 9b" should "be provable" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9b.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 9b", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
 
     val ode =
       // xr = (xm+S)/2
@@ -323,13 +364,16 @@ class StttTutorial extends TacticTestBase {
   }}
 
   it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9b.kyx")).mkString
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example9b.kyt")).mkString)
+    val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 9b", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get
+    val modelContent = entry.fileContent
+    val tactic = entry.tactics.head._2
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
   "Example 10" should "be provable" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 10", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
 
     def ode(a: String) =
       dC("c>=0".asFormula)(1) & Idioms.<(
@@ -363,7 +407,8 @@ class StttTutorial extends TacticTestBase {
   }}
 
   it should "be provable with multi-arg diff. invariant" in withQE { _ => withDatabase { _ =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.kyx")).mkString
+    val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 10", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
 
     def ode(a: String) = diffInvariant("c>=0".asFormula, "dx^2+dy^2=1".asFormula, s"v=old(v)+$a*c".asFormula,
       s"-c*(v-$a/2*c) <= y - old(y) & y - old(y) <= c*(v-$a/2*c)".asFormula)('R) & dW('R)
@@ -388,8 +433,10 @@ class StttTutorial extends TacticTestBase {
   }}
 
   it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.kyx")).mkString
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.kyt")).mkString)
+    val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 10", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get
+    val modelContent = entry.fileContent
+    val tactic = entry.tactics.head._2
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 

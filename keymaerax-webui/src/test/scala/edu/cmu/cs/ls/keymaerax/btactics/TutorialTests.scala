@@ -17,7 +17,7 @@ class TutorialTests extends Suites(
   // Tutorials
   new TutorialRegressionTester("Basic", "classpath:/examples/tutorials/basic/basic.json"),
   new TutorialRegressionTester("FM", "classpath:/examples/tutorials/fm/fm.json"),
-  new TutorialRegressionTester("STTT", "classpath:/examples/tutorials/sttt/sttt.json"),
+  new TutorialRegressionTester("STTT", "classpath:/examples/tutorials/sttt/sttt.kyx"),
   new TutorialRegressionTester("CPSWeek", "classpath:/examples/tutorials/cpsweek/cpsweek.json"),
   // Course
   new TutorialRegressionTester("FCPS17-05", s"$COURSE17_PATH/05-dynax.kya"),
@@ -38,8 +38,6 @@ class TutorialTests extends Suites(
   new TutorialRegressionTester("FCPS-R09", s"$COURSE17_PATH/recitation09.kya"),
   new TutorialRegressionTester("FCPS-R11", s"$COURSE17_PATH/recitation11.kya"),
   new TutorialRegressionTester("FCPS-R12", s"$COURSE17_PATH/recitation12.kya"),
-  // Case Study Archives
-  new TutorialRegressionTester("ETCS", "classpath:/examples/casestudies/etcs/rephrased/ETCS.kya"),
   // keymaerax-projects
   new TutorialRegressionTester("Bifurcations", s"$GITHUB_PROJECTS_RAW_PATH/bifurcations/saddle-nodes/1D/combined.kya"),
   new TutorialRegressionTester("DLDS 1", s"$GITHUB_PROJECTS_RAW_PATH/dlds/dlds.kya"),
@@ -68,12 +66,14 @@ class TutorialTests extends Suites(
   new TutorialRegressionTester("LMPC", s"$GITHUB_PROJECTS_RAW_PATH/LMPC/LMPC.kya"),
   new TutorialRegressionTester("Roundabout", s"$GITHUB_PROJECTS_RAW_PATH/roundabout/TRM-essentials.kya"),
   new TutorialRegressionTester("ACAS X", s"$GITHUB_PROJECTS_RAW_PATH/acasx/acasx.kyx"),
-  new TutorialRegressionTester("Robix", s"$GITHUB_PROJECTS_RAW_PATH/ijrr/robix.kyx")
+  new TutorialRegressionTester("Robix", s"$GITHUB_PROJECTS_RAW_PATH/ijrr/robix.kyx"),
+  new TutorialRegressionTester("ETCS", s"$GITHUB_PROJECTS_RAW_PATH/etcs/etcs.kyx")
 )
 
 object TutorialTests {
   private val COURSE17_PATH = "http://symbolaris.com/course/fcps17"
   private val GITHUB_PROJECTS_RAW_PATH = "https://raw.githubusercontent.com/LS-Lab/KeYmaeraX-projects/master"
   // for testing changes in a locally cloned repository
-  //private val GITHUB_PROJECTS_RAW_PATH = "classpath:/keymaerax-projects"
+//  private val COURSE17_PATH = "classpath:/course"
+//  private val GITHUB_PROJECTS_RAW_PATH = "classpath:/keymaerax-projects"
 }
