@@ -720,14 +720,14 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: S
   def resultingResponses(): List[Response] = {
     try {
       val archiveEntries = KeYmaeraXArchiveParser.read(kyaFileContents)
-      val (failedModels, succeededModels) = archiveEntries.foldLeft((List[String](), List[String]()))({ case ((failedImports, succeededImports), (name, modelFileContent, _, tactic)) =>
+      val (failedModels, succeededModels) = archiveEntries.foldLeft((List[String](), List[String]()))({ case ((failedImports, succeededImports), (name, modelFileContent, _, tactic, info)) =>
         // parse entry's model and tactics
         val (d, _) = KeYmaeraXProblemParser.parseProblem(modelFileContent)
         tactic.foreach({ case (_, ttext) => BelleParser.parseWithInvGen(ttext, None, d) })
 
         val uniqueModelName = db.getUniqueModelName(userId, name)
-        db.createModel(userId, uniqueModelName, modelFileContent, currentDate(), None, None, None,
-          tactic.headOption.map(_._2)) match {
+        db.createModel(userId, uniqueModelName, modelFileContent, currentDate(), info.get("Description"),
+          info.get("Title"), info.get("Link"), tactic.headOption.map(_._2)) match {
           case None =>
             // really should not get here. print and continue importing the remainder of the archive
             println(s"Model import failed: model $name already exists in the database and attempt of importing under uniquified name $uniqueModelName failed. Continuing with remainder of the archive.")

@@ -614,7 +614,7 @@ object KeYmaeraX {
 
     BelleInterpreter.setInterpreter(SequentialInterpreter(qeDurationListener::Nil))
 
-    archiveContent.foreach({case ParsedArchiveEntry(modelName, kind, fileContent, _, model: Formula, tactics) =>
+    archiveContent.foreach({case ParsedArchiveEntry(modelName, kind, fileContent, _, model: Formula, tactics, _) =>
       tactics.foreach({case (tacticName, tactic) =>
         val statisticName = modelName + " with " + tacticName
         try {

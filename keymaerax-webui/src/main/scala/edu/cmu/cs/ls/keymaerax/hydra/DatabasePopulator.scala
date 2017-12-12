@@ -45,8 +45,10 @@ object DatabasePopulator {
   def readKya(url: String): List[TutorialEntry] = {
     val kya = loadResource(url)
     val archiveEntries = KeYmaeraXArchiveParser.read(kya)
-    archiveEntries.flatMap({case (modelName, modelContent, kind, tactics) =>
-      tactics.map({case (tname, tactic) => TutorialEntry(modelName, modelContent, None, None, None, Some((tname, tactic, true)), kind)})})
+    archiveEntries.flatMap({case (modelName, modelContent, kind, tactics, info) =>
+      tactics.map({case (tname, tactic) =>
+        TutorialEntry(modelName, modelContent, info.get("Description"), info.get("Title"), info.get("Link"),
+          Some((tname, tactic, true)), kind)})})
   }
 
   /** Reads tutorial entries from the specified URL. */

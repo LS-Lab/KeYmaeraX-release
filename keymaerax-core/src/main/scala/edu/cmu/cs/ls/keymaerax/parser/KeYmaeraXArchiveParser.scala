@@ -39,12 +39,15 @@ object KeYmaeraXArchiveParser {
   /** Two groups: entry name, model+optional tactic */
   private val NAME_REGEX = "^\"([^\"]*)\"\\.(?s)(.*)".r
 
+  private val INFO_REGEX = "(?m)^\\s*(\\w+)\\s*\"([^\"]*)\"\\.\\s*$".r("name", "info")
+
   /** The entry name, kyx file content (model), parsed model, and parsed name+tactic. */
   case class ParsedArchiveEntry(name: String, kind: String, fileContent: String,
                                 defs: KeYmaeraXProblemParser.Declaration,
-                                model: Expression, tactics: List[(String, BelleExpr)])
-  /** The entry name, kyx file content, entry kind (theorem, lemma, etc.), and list of name+tactic text. */
-  type ArchiveEntry = (String, String, String, List[(String, String)])
+                                model: Expression, tactics: List[(String, BelleExpr)],
+                                info: Map[String, String])
+  /** The entry name, kyx file content, entry kind (theorem, lemma, etc.), a list of name+tactic text, and named info. */
+  type ArchiveEntry = (String, String, String, List[(String, String)], Map[String, String])
 
   /** Reads all (file.kyx) or a specific archive entry (file.kyx#entry) from said `file`. */
   def apply(file: String): List[ParsedArchiveEntry] = {
@@ -73,11 +76,11 @@ object KeYmaeraXArchiveParser {
 
   /** Parses an entry (model and tactic). */
   private def parseEntry(entry: ArchiveEntry): ParsedArchiveEntry = {
-    val (name, modelText, kind, tactics) = entry
+    val (name, modelText, kind, tactics, info) = entry
     val (defs, formula) = KeYmaeraXProblemParser.parseProblem(modelText)
     val parsedTactics = tactics.map({
       case (tacticName, tacticText) => (tacticName, BelleParser.parseWithInvGen(tacticText, None, defs)) })
-    ParsedArchiveEntry(name, kind, modelText, defs, formula, parsedTactics)
+    ParsedArchiveEntry(name, kind, modelText, defs, formula, parsedTactics, info)
   }
 
   /** Reads the archive content into string-only archive entries. */
@@ -105,13 +108,21 @@ object KeYmaeraXArchiveParser {
           case _ =>
             NAME_REGEX.findAllMatchIn(entry.trim().stripSuffix(END_BLOCK)).map({ m =>
               val modelName = m.group(1)
-              val (model: String, tactics: List[(String, String)]) = m.group(2).split(TACTIC_BEGIN).toList match {
-                case modelText :: ts => (modelText.trim(), ts.flatMap(tacticText => {
-                  NAME_REGEX.findAllMatchIn(tacticText.trim().stripSuffix(END_BLOCK)).map({
-                    tm => (tm.group(1), tm.group(2))
-                  })
-                }))
-              }
+              val (model: String, tactics: List[(String, String)], info: Map[String, String]) =
+                m.group(2).split(TACTIC_BEGIN).toList match {
+                  case modelContent :: ts =>
+                    val info = INFO_REGEX.findAllMatchIn(modelContent.trim()).map({
+                      tm => (tm.group("name"), tm.group("info"))
+                    }).toMap
+                    val modelText = INFO_REGEX.replaceAllIn(modelContent, "").trim()
+                    (modelText,
+                      ts.flatMap(tacticText => {
+                        NAME_REGEX.findAllMatchIn(tacticText.trim().stripSuffix(END_BLOCK)).map({
+                          tm => (tm.group(1), tm.group(2))
+                        })
+                      }),
+                      info)
+                }
               //@note copies shared definitions into each Functions/Definitions block.
               val augmentedModel = globalDefs match {
                 case Some(d) if model.contains("Functions.") || model.contains("Definitions.") =>
@@ -121,7 +132,7 @@ object KeYmaeraXArchiveParser {
                   "Definitions.\n" + d + "\nEnd.\n" + model
                 case None => model
               }
-              (modelName, augmentedModel, kind, tactics)
+              (modelName, augmentedModel, kind, tactics, info)
             })
         }
     }).toList
