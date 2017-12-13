@@ -9,8 +9,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.OnAll
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Formula, Real, SubstitutionPair, USubst, Function, Unit}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Formula, Function, Real, SubstitutionPair, USubst, Unit}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
@@ -153,13 +153,16 @@ class CpsWeekTutorial extends TacticTestBase {
   }
 
   it should "prove the full model" in withQE { _ =>
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-full.kyx"))
+    val s = KeYmaeraXArchiveParser.getEntry("CPSWeek Tutorial Example 1", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString).get.model.asInstanceOf[Formula]
     proveBy(s, master()) shouldBe 'proved
   }
 
   it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-full.kyx")).mkString
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-full.kyt")).mkString)
+    val entry = KeYmaeraXArchiveParser.getEntry("CPSWeek Tutorial Example 1", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString).get
+    val modelContent = entry.fileContent
+    val tactic = entry.tactics.head._2
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
@@ -183,12 +186,14 @@ class CpsWeekTutorial extends TacticTestBase {
     val simple = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-full.kyx"))
     proveBy(simple, tactic("v^2<=2*b()*(m()-x)".asFormula)) shouldBe 'proved
 
-    val harder = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-full.kyx"))
+    val harder = KeYmaeraXArchiveParser.getEntry("CPSWeek Tutorial Example 1", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString).get.model.asInstanceOf[Formula]
     proveBy(harder, tactic("v^2<=2*b()*(m()-x)".asFormula)) shouldBe 'proved
   }
 
   "2D Car" should "be provable" in withQE { _ =>
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/07_robo3-full.kyx"))
+    val s = KeYmaeraXArchiveParser.getEntry("CPSWeek Tutorial Example 4", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString).get.model.asInstanceOf[Formula]
 
     def di(a: String) = diffInvariant("dx^2+dy^2=1".asFormula, "t>=0".asFormula, s"v=old(v)+$a*t".asFormula,
       s"-t*(v-$a/2*t)<=x-old(x) & x-old(x)<=t*(v-$a/2*t)".asFormula,
@@ -211,33 +216,41 @@ class CpsWeekTutorial extends TacticTestBase {
   }
 
   it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/07_robo3-full.kyx")).mkString
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/07_robo3-full.kyt")).mkString)
+    val entry = KeYmaeraXArchiveParser.getEntry("CPSWeek Tutorial Example 4", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString).get
+    val modelContent = entry.fileContent
+    val tactic = entry.tactics.head._2
     val result = db.proveBy(modelContent, tactic)
     result.subgoals should have size 1
   }}
 
   "Motzkin" should "be provable with DI+DW" in withQE { _ =>
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/motzkin.kyx"))
+    val s = KeYmaeraXArchiveParser.getEntry("CPSWeek Tutorial Example 3", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString).get.model.asInstanceOf[Formula]
     val tactic = implyR('R) & diffInvariant("x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c".asFormula)('R) & dW('R) & prop
     proveBy(s, tactic) shouldBe 'proved
   }
 
   it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/motzkin.kyx")).mkString
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/motzkin.kyt")).mkString)
+    val entry = KeYmaeraXArchiveParser.getEntry("CPSWeek Tutorial Example 3", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString).get
+    val modelContent = entry.fileContent
+    val tactic = entry.tactics.head._2
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
   "Damped oscillator" should "be provable with DI+DW" in withQE { _ =>
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/08_dampedosc.kyx"))
+    val s = KeYmaeraXArchiveParser.getEntry("CPSWeek Tutorial Example 2", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString).get.model.asInstanceOf[Formula]
     val tactic = implyR('R) & dI()('R)
     proveBy(s, tactic) shouldBe 'proved
   }
 
   it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
-    val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/08_dampedosc.kyx")).mkString
-    val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/08_dampedosc.kyt")).mkString)
+    val entry = KeYmaeraXArchiveParser.getEntry("CPSWeek Tutorial Example 2", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString).get
+    val modelContent = entry.fileContent
+    val tactic = entry.tactics.head._2
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 

@@ -606,7 +606,7 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
       new ExamplePOJO(1, "CPSWeek 2016 Tutorial",
         "Proving ODEs",
         "http://www.ls.cs.cmu.edu/KeYmaeraX/KeYmaeraX-tutorial.pdf",
-        "classpath:/examples/tutorials/cpsweek/cpsweek.json",
+        "classpath:/examples/tutorials/cpsweek/cpsweek.kyx",
         "/examples/tutorials/cpsweek/cpsweek.png", 1) ::
       new ExamplePOJO(2, "FM 2016 Tutorial",
         "Tactics and Proofs",
