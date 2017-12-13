@@ -16,7 +16,7 @@ import TutorialTests._
 class TutorialTests extends Suites(
   // Tutorials
   new TutorialRegressionTester("Basic", "classpath:/examples/tutorials/basic/basic.json"),
-  new TutorialRegressionTester("FM", "classpath:/examples/tutorials/fm/fm.json"),
+  new TutorialRegressionTester("FM", "classpath:/examples/tutorials/fm/fm.kyx"),
   new TutorialRegressionTester("STTT", "classpath:/examples/tutorials/sttt/sttt.kyx"),
   new TutorialRegressionTester("CPSWeek", "classpath:/examples/tutorials/cpsweek/cpsweek.json"),
   // Course

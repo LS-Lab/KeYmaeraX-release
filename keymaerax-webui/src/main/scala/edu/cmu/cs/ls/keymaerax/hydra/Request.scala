@@ -611,7 +611,7 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
       new ExamplePOJO(2, "FM 2016 Tutorial",
         "Tactics and Proofs",
         "/dashboard.html?#/tutorials",
-        "classpath:/examples/tutorials/fm/fm.json",
+        "classpath:/examples/tutorials/fm/fm.kyx",
         "/examples/tutorials/fm/fm.png", 1) ::
       new ExamplePOJO(3, "Beginner's Tutorial",
         "Feature Tour Tutorial",
