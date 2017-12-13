@@ -616,7 +616,7 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
       new ExamplePOJO(3, "Beginner's Tutorial",
         "Feature Tour Tutorial",
         "/dashboard.html?#/tutorials",
-        "classpath:/examples/tutorials/basic/basic.kyx",
+        "classpath:/examples/tutorials/basic/basictutorial.kyx",
         "/examples/tutorials/fm/fm.png", 0) ::
         new ExamplePOJO(3, "DLDS",
           "Dynamic Logic for Dynamical Systems Examples",
