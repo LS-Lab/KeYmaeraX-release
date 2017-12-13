@@ -211,12 +211,12 @@ object ModelPlex extends ModelPlexTrait {
     applyAtAllODEs(ode)(pos) & // solve isolated ODEs once before splitting choices
     // chase and solve remaining
     chase(3,3, (e:Expression) => e match {
-    // remove loops
-    case Diamond(Loop(_), _) => "<*> approx" :: Nil
-    // keep ODEs, solve later
-    case Diamond(ODESystem(_, _), _) => Nil
-    case _ => println("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
-  })(pos) &
+      // remove loops
+      case Diamond(Loop(_), _) => "<*> approx" :: Nil
+      // keep ODEs, solve later
+      case Diamond(ODESystem(_, _), _) => Nil
+      case _ => println("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
+    })(pos) &
     applyAtAllODEs(ode)(pos))
 
   /** Applies tatic `t` at all ODEs underneath this tactic's position. */
@@ -448,7 +448,9 @@ object ModelPlex extends ModelPlexTrait {
         case None => skip
         case Some(t) =>
           val simplified = t.simplify(qeFml, assumptions)
-          val backSubst = signature.foldLeft[Formula](simplified)((fml, t) => fml.replaceAll(Variable(t.name, t.index), FuncOf(t, Nothing)))
+          val backSubst = And(
+            assumptions.reduceOption(And).getOrElse(True),
+            signature.foldLeft[Formula](simplified)((fml, t) => fml.replaceAll(Variable(t.name, t.index), FuncOf(t, Nothing))))
           val pqe = proveBy(Imply(backSubst, existsFml), QE & done)
           cutAt(backSubst)(pp) < (skip, (if (pp.isSucc) cohideR(pp.topLevel) else cohideR('Rlast)) & CMon(pp.inExpr) & by(pqe))
       }
@@ -458,8 +460,8 @@ object ModelPlex extends ModelPlexTrait {
         case (Forall(xs, Imply(Equal(x, _), _)), pp) if pp.isSucc && xs.contains(x) => Some(useAt(simplForall1, PosInExpr(1::Nil))(pp))
         case (Forall(xs, Imply(Equal(_, x), _)), pp) if pp.isSucc && xs.contains(x) => Some(useAt(simplForall2, PosInExpr(1::Nil))(pp))
         // @note shape of ode solution
-        case (ode@Exists(ts, And(GreaterEqual(_, _), And(Forall(ss, Imply(And(_, _), _)), _))), pp)
-            if tool.isDefined && pp.isSucc && ts.contains("t_".asVariable) && ss.contains("s_".asVariable)=>
+        case (ode@Exists(t::Nil, And(GreaterEqual(_, _), And(Forall(s::Nil, Imply(And(_, _), _)), _))), pp)
+            if tool.isDefined && pp.isSucc && t == "t_".asVariable && s == "s_".asVariable =>
           val signature = StaticSemantics.signature(ode).filter({
             case Function(_, _, Unit, _, false) => true case _ => false }).map(_.asInstanceOf[Function])
           val edo = signature.foldLeft[Formula](ode)((fml, t) => fml.replaceAll(FuncOf(t, Nothing), Variable(t.name, t.index)))
