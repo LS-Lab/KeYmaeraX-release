@@ -1,0 +1,437 @@
+ArchiveEntry "00: Forward-Driving Car".
+  Description "Simple model of straight-line driving. Car can accelerate, coast, or brake, but not drive backwards.".
+  Title "Forward-driving 1-dimensional car".
+
+Functions. /* function symbols cannot change their value */
+  R A.     /* real-valued maximum acceleration constant */
+  R B.     /* real-valued maximum braking constant */
+End.
+
+ProgramVariables. /* program variables may change their value over time */
+  R x.            /* real-valued position */
+  R v.            /* real-valued velocity */
+  R a.            /* current acceleration chosen by controller */
+End.
+
+Problem.                                /* conjecture in differential dynamic logic */
+  v>=0 & A>0 & B>0                      /* initial condition */
+->                                      /* implies */
+[                                       /* all runs of hybrid program dynamics */
+  {                                     /* braces {} for grouping of programs */
+    {?v<=5;a:=A; ++ a :=0; ++ a:=-B; }  /* nondeterministic choice of acceleration a */
+    {x'=v , v'=a & v>=0}                /* differential equation system with domain */
+  }*@invariant(v>=0)                    /* loop repeats, with invariant contract */
+] v>=0                                  /* safety/postcondition */
+End.
+
+Tactic "Proof 00: Forward-Driving Car".
+implyR(1) ; andL('L) ; loop({`v>=0`}, 1) ; <(    /* splits separate branches */
+  closeId,                                       /* initial case: shown with close by identity */
+  QE,                                            /* postcondition: prove by real arithmetic QE */
+  /* induction step: decomposes hybrid program semi-explicitly */
+  composeb(1) ; solve(1.1) ; choiceb(1) ; andR(1) ; <( /* more branching*/
+    composeb(1) ; testb(1) ; master,                   /* decompose some steps then ask master */
+    choiceb(1) ; andR(1) ; doall(assignb(1) & QE)      /*doall same on all branches */
+  )
+)
+End.      
+
+End.      
+
+ArchiveEntry "05: Short Bouncing Ball: Single Hop".
+  Description "Single-hop of a bouncing ball without loop! Dropped evolution domain as in chapter 5.".
+  Title "Short bouncing ball: single hop".
+  Link "http://symbolaris.com/course/fcps16/05-dynax.pdf#page=16".
+
+Functions.        /* function symbols cannot change their value */
+  R H.            /* initial height */
+  R g.            /* gravity */
+  R c.            /* damping coefficient */
+End.
+
+ProgramVariables. /* program variables may change their value over time */
+  R x.            /* height */
+  R v.            /* velocity */
+End.
+
+Problem.
+  x>=0 & x=H
+  & v=0 & g>0 & 1>=c&c>=0
+ ->
+  [
+      {x'=v,v'=-g}
+      {?x=0; v:=-c*v;  ++  ?x>=0;}
+  ] (x>=0 & x<=H)
+End.
+
+Tactic "Proof 05: Short Bouncing Ball: Single Hop".
+implyR(1) ; composeb(1) ; choiceb(1.1) ; composeb(1.1.0) ; testb(1.1.0) ; testb(1.1.1) ; assignb(1.1.0.1) ;
+solve(1) ; allR(1) ; implyR(1) ; QE
+End.
+
+End.
+
+ArchiveEntry "07: Bouncing Ball".
+  Description "Quantum the acrophobic bouncing ball, as in chapter 7".
+  Title "Bouncing ball".
+  Link "http://symbolaris.com/course/fcps16/07-loops.pdf#page=13".
+
+Functions.        /* function symbols cannot change their value */
+  R H.            /* initial height */
+  R g.            /* gravity */
+  R c.            /* damping coefficient */
+End.
+
+ProgramVariables. /* program variables may change their value over time */
+  R x.            /* height */
+  R v.            /* velocity */
+End.
+
+Problem.
+  x>=0 & x=H
+  & v=0 & g>0 & 1=c&c>=0
+ ->
+  [
+    {
+      {x'=v,v'=-g&x>=0}
+      {?x=0; v:=-c*v;  ++  ?x!=0;}
+    }*@invariant(2*g*x=2*g*H-v^2 & x>=0)
+  ] (x>=0 & x<=H)
+End.
+
+Tactic "Proof 07: Bouncing Ball".
+implyR(1) ; loop({`2*g()*x=2*g()*H()-v^2&x>=0`}, 1) ; <(
+  QE ; done,
+  QE ; done,
+  composeb(1) ; MR({`2*g()*x=2*g()*H()-v^2&x>=0&c()=1&g()>0`}, 1) ; <(
+    solveEnd(1) ; QE ; done
+    ,
+    choiceb(1) ; andR(1) ; <(
+      composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; QE ; done,
+      testb(1) ; prop ; done
+    )
+  )
+)
+End.
+
+End.
+
+ArchiveEntry "08: Event-triggered Ping Pong Ball".
+  Description "Control ping pong paddle when certain events happen".
+  Title "Event-triggered ping pong ball".
+  Link "http://symbolaris.com/course/fcps16/08-events.pdf".
+  Author "Andre Platzer".
+  See "Andre Platzer. Foundations of Cyber-Physical Systems. chapter 8 Events & responses. Computer Science Department, Carnegie Mellon University. 2016.".
+
+ProgramVariables.
+  R x.            /* height */
+  R v.            /* velocity */
+
+  R H.            /* initial height */
+  R g.            /* gravity */
+  R c.            /* damping coefficient */
+  R f.            /* paddle factor */
+End.
+
+Problem.
+  0<=x&x<=5 & v<=0
+  & g>0 & 1>=c&c>=0 & f>=0
+  ->
+  [
+    {
+      { {x'=v,v'=-g&x>=0&x<=5}++{x'=v,v'=-g&x>=5} }
+      {?x=0; v:=-c*v; ++ ?(4<=x&x<=5&v>=0); v:=-f*v; ++ ?(x!=0&x<4|x>5);}
+    }*@invariant(5>=x&x>=0 & (x=5->v<=0))
+  ] (0<=x&x<=5)
+End.
+
+Tactic "Proof 08: Event-triggered Ping Pong Ball"
+implyR(1) ; loop({`5>=x&x>=0&(x=5->v<=0)`}, 1) ; <(
+  QE ; done,
+  QE ; done,
+  composeb(1) ; choiceb(1.1) ; choiceb(1.1.1) ; composeb(1.1.0) ; composeb(1.1.1.0) ; assignb(1.1.0.1) ; testb(1.1.0) ;
+  assignb(1.1.1.0.1) ; testb(1.1.1.0) ; testb(1.1.1.1) ; choiceb(1) ; andR(1) ; <(
+    solve(1) ; QE({`Mathematica`}),
+    solve(1) ; QE({`Mathematica`})
+    )
+  )
+End.
+
+End.
+
+ArchiveEntry "09: Time-Triggered Ping Pong Ball".
+  Description "Control ping pong paddle at certain time points".
+  Title "Time-triggered ping pong ball".
+  Link "http://symbolaris.com/course/fcps16/09-time.pdf".
+  Author "Andre Platzer".
+  See "Andre Platzer. Foundations of Cyber-Physical Systems. chapter 9 Reactions & delays. chapter Notes, Computer Science Department, Carnegie Mellon University. 2016.".
+
+ProgramVariables.
+  R x.            /* height */
+  R v.            /* velocity */
+  R t.            /* time */
+
+  R H.            /* initial height */
+  R g.            /* gravity */
+  R c.            /* damping coefficient */
+  R f.            /* paddle factor */
+End.
+
+Problem.
+  2*x=2*H-v^2 & 0<=x&x<=5 & v<=0
+  & g=1&g>0 & 1=c&c>=0 & 1=f&f>=0
+  ->
+  [
+    {
+      {{?x=0; v:=-c*v; ++ ?x!=0;}
+      {?((x>5+1/2-v | 2*x>2*5-v^2&v<1) & v>=0); v:=-f*v; ++ ? !((x>5+1/2-v | 2*x>2*5-v^2&v<1) & v>=0);}}
+      t:=0; {x'=v,v'=-g,t'=1 & x>=0&t<=1}
+    }*@invariant(2*x=2*H-v^2 & (x>=0&x<=5))
+  ] (0<=x&x<=5)
+End.
+
+Tactic "Proof 09: Time-Triggered Ping Pong Ball".
+implyR(1) ; loop({`2*x=2*H-v^2&x>=0&x<=5`}, 1) ; <(
+  QE ; done,
+  QE ; done,
+  composeb(1) ; composeb(1) ; composeb(1.1.1) ; solve(1.1.1.1) ; assignb(1.1.1) ; choiceb(1) ; andR(1) ; <(
+    composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; choiceb(1) ; andR(1) ; <(
+      composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; QE({`Mathematica`}) ; done,
+      testb(1) ; QE({`Mathematica`}) ; done
+      ),
+    testb(1) ; implyR(1) ; choiceb(1) ; andR(1) ; <(
+      composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; QE({`Mathematica`}) ; done,
+      testb(1) ; QE({`Mathematica`}) ; done
+      )
+    )
+  )
+End.
+
+End.
+
+ArchiveEntry "10: Simple Rotational Dynamics".
+  Description "Simple rotational dynamics".
+  Title "Simple rotational dynamics".
+  Link "http://symbolaris.com/course/fcps16/10-diffinv.pdf".
+  Author "Andre Platzer".
+
+ProgramVariables.
+  R d.  /* direction in x-axis */
+  R e.  /* direction in y-axis */
+  R r.  /* radius r of circle around origin */
+End.
+
+Problem.
+  d^2+e^2-r^2=0 ->
+    [{d'=e,e'=-d}@invariant(d^2+e^2-r^2=0)] d^2+e^2-r^2=0
+End.
+
+Tactic "Proof 10: Simple Rotational Dynamics".
+implyR(1) ; dI(1) ; done
+End.
+
+End.
+
+ArchiveEntry "10: Henon-Heiles Motion of a Star".
+  Description "Henon-Heiles system for the motion of a star around the center of the galaxy.".
+  Title "Henon-Heiles motion of a star".
+  Link "http://symbolaris.com/course/fcps16/10-diffinv.pdf".
+
+ProgramVariables.
+  R x.     /* x-position */
+  R y.     /* x-position */
+  R u.     /* x-direction */
+  R v.     /* y-direction */
+  R eps.
+  R A.
+  R B.
+End.
+
+Problem.
+  1/2 * (u^2 + v^2 + A*x^2 + B*y^2) + x^2*y - 1/3 * eps * y^3 = 0 ->
+  [{x'=u,y'=v,u'=-A*x - 2*x*y, v'= -B*y + eps*y^2 - x^2}]1/2 * (u^2 + v^2 + A*x^2 + B*y^2) + x^2*y - 1/3 * eps * y^3 = 0
+End.
+
+Tactic "Proof 10: Henon-Heiles Motion of a Star".
+implyR(1) ; dI(1) ; done
+End.
+
+End.
+
+ArchiveEntry "10: Motzkin Polynomial Invariant".
+  Description "Motzkin polynomial invariant.".
+  Title "Motzkin polynomial invariant".
+  Link "http://symbolaris.com/course/fcps16/10-diffinv.pdf".
+  Author "Andrew Sogokon".
+
+ProgramVariables.
+  R x.
+  R y.
+  R c.
+End.
+
+Problem.
+  x^4*y^2+x^2*y^4-3*x^2*y^2+1=c ->
+  [
+    {x'=2*x^4*y+4*x^2*y^3-6*x^2*y, y'=-4*x^3*y^2-2*x*y^4+6*x*y^2}@invariant(x^4*y^2+x^2*y^4-3*x^2*y^2+1-c=0)
+  ] x^4*y^2+x^2*y^4-3*x^2*y^2+1=c
+End.
+
+Tactic "Proof 10: Motzkin Polynomial Invariant".
+implyR(1) ; dI(1) ; done
+End.
+
+End.
+
+ArchiveEntry "10: Self-Crossing Invariant".
+  Description "Self-crossing".
+  Title "Self-crossing invariant".
+  Link "http://symbolaris.com/course/fcps16/10-diffinv.pdf".
+  Author "Andrew Sogokon".
+
+ProgramVariables.
+  R x.
+  R y.
+  R c.
+End.
+
+Problem.
+ x^2+x^3-y^2-c=0 ->
+   [{x' = -2*y, y' = -2*x - 3*x^2}] x^2+x^3-y^2-c=0
+
+End.
+
+Tactic "Proof 10: Self-Crossing Invariant".
+implyR(1) ; dI(1) ; done
+End.
+
+End.
+
+ArchiveEntry "11: Aerodynamic Acrophobic Bouncing Ball".
+  Description "".
+  Title "Aerodynamic acrophobic bouncing ball".
+  Link "http://symbolaris.com/course/fcps16/11-diffcut.pdf".
+
+ProgramVariables. /* program variables may change their value over time */
+  R x.            /* height of ball */
+  R v.            /* velocity of ball */
+End.
+
+Functions.        /* function symbols cannot change their value */
+  R H.            /* initial height of ball */
+  R g.            /* gravitational constant */
+  R c.            /* elastic damping factor for bounce on the floor (x=0) */
+  R r.            /* aerodynamic damping factor in the air / air resistance */
+End.
+
+Problem.
+  x<=H & v=0 & x>=0 & (g>0 & 1>=c&c>=0 & r>=0)
+ ->
+  [
+    {
+      {?x=0; v:=-c*v;  ++  ?x!=0;}
+      {{x'=v,v'=-g-r*v^2&x>=0&v>=0} ++ {x'=v,v'=-g+r*v^2&x>=0&v<=0}}
+    }*@invariant(2*g*x<=2*g*H-v^2&x>=0)
+  ] (0<=x&x<=H)
+End.
+
+Tactic "Proof 11: Aerodynamic Acrophobic Bouncing Ball".
+implyR(1) ; loop({`2*g()*x<=2*g()*H()-v^2&x>=0`}, 1) ; <(
+  QE ; done,
+  QE ; done,
+  composeb(1) ; MR({`2*g()*x<=2*g()*H()-v^2&x>=0&g()>0&r()>=0`}, 1) ; <(
+  choiceb(1) ; andR(1) ; <(
+    composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; QE ; done,
+      testb(1) ; implyR(1) ; QE ; done
+    ),
+    choiceb(1) ; andR(1) ; <(
+      dC({`2*g()*x<=2*g()*H()-v^2`}, 1) ; <(
+        dW(1) ; QE ; done,
+        dI(1) ; done
+      )
+      ,
+      dC({`2*g()*x<=2*g()*H()-v^2`}, 1) ; <(
+        dW(1) ; QE ; done,
+        dI(1) ; done
+      )
+    )
+  )
+)
+End.
+
+End.
+
+ArchiveEntry "12: Bouncing Ball with ghost solutions".
+  Description "Model 'Bouncing Ball' with ghost solutions proof, as in chapter 7 with the proof from chapter 12".
+  Title "Quantum the Acrophobic Bouncing Ball".
+  Link "http://symbolaris.com/course/fcps16/12-diffghost.pdf".
+
+Functions.        /* function symbols cannot change their value */
+  R H.            /* initial height */
+  R g.            /* gravity */
+  R c.            /* damping coefficient */
+End.
+
+ProgramVariables. /* program variables may change their value over time */
+  R x.            /* height */
+  R v.            /* velocity */
+End.
+
+Problem.
+  x>=0 & x=H
+  & v=0 & g>0 & 1=c&c>=0
+ ->
+  [
+    {
+      {x'=v,v'=-g&x>=0}
+      {?x=0; v:=-c*v;  ++  ?x!=0;}
+    }*@invariant(2*g*x=2*g*H-v^2 & x>=0)
+  ] (x>=0 & x<=H)
+End.
+
+Tactic "Proof 12: Bouncing Ball with ghost solutions".
+implyR(1) ; loop({`2*g()*x=2*g()*H()-v^2&x>=0`}, 1) ; <(
+  QE ; done,
+  QE ; done,
+  composeb(1) ; MR({`(2*g()*x=2*g()*H()-v^2&x>=0)&g()>0&1=c()`}, 1) ; <(
+    boxAnd(1) ; andR(1) ; <(
+      dG({`t'=1`}, 1) ; existsR({`0`}, 1) ; dC({`v=old(v)-g()*t`}, 1) ; <(
+        dC({`x=old(x)+old(v)*t-g()/2*t^2`}, 1) ; <(
+          dW(1) ; QE ; done,
+          dI(1) ; done
+        ),
+        dI(1) ; done
+      ),
+      GV(1) ; andR(1) ; <(
+        closeId ; done,
+        closeId ; done
+      )
+    ),
+    choiceb(1) ; andR(1) ; <(
+      composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; QE ; done,
+      testb(1) ; implyR(1) ; prop ; done
+    )
+  )
+)
+End.
+
+End.
+
+ArchiveEntry "12: Exponential Decay".
+  Description "Exponentially decaying x'=-x".
+  Title "Exponential decay".
+  Link "http://symbolaris.com/course/fcps16/12-diffghost.pdf".
+
+ProgramVariables.
+  R x.
+End.
+
+Problem.
+  x>1 -> [{x'=-x}]x>0
+End.
+
+Tactic "Proof 12: Exponential Decay".
+implyR(1) ; dG({`y'=1/2*y`}, {`x*y^2=1`}, 1) ; dI(1.0) ; QE({`Mathematica`}) ; done
+End.
+
+End.
