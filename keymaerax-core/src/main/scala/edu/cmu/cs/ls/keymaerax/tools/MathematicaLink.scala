@@ -146,15 +146,6 @@ class JLinkMathematicaLink extends MathematicaLink {
         // link did not open, wait a little and retry
         println("Repeating connection attempt\nMathematica J/Link failed to open " + e +
           "\nRepeating connection attempt (remaining trials: " + (remainingTrials-1) + ")\n" + diagnostic)
-//        if (DEBUG) {
-          val rt = Runtime.getRuntime
-          if (System.getProperty("os.name").toLowerCase.indexOf("mac os x") > -1) {
-            val p = rt.exec("pgrep MathKernel")
-            p.waitFor
-            val grepResult = scala.io.Source.fromInputStream(p.getInputStream).mkString
-            println("Running MathKernels: " + grepResult)
-          }
-//        }
         Thread.sleep(10000)
         init(linkName, jlinkLibDir, remainingTrials-1)
       case e: MathLinkException =>
