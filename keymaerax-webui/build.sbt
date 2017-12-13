@@ -80,7 +80,7 @@ watchSources <++= baseDirectory map {
 
 parallelExecution in Test := false
 
-fork in Test := true
+fork in Test := false // set fork to true in order to run tests in their own Java process
 
 //@todo reenable once unserializable exceptions fixed:
 // testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-h", "target/test-reports")
