@@ -99,30 +99,24 @@ object KeYmaeraXArchiveParser {
         else if (s.startsWith(THEOREM_BEGIN)) (s.stripPrefix(THEOREM_BEGIN), "theorem")
         else if (s.startsWith(LEMMA_BEGIN)) (s.stripPrefix(LEMMA_BEGIN), "lemma")
         else if (s.startsWith(EXERCISE_BEGIN)) (s.stripPrefix(EXERCISE_BEGIN), "exercise")
-        else throw new IllegalArgumentException(s"Expected either $DEFINITIONS_BEGIN, $ARCHIVE_ENTRY_BEGIN, $LEMMA_BEGIN, $THEOREM_BEGIN, but got unknown entry kind $s")
+        else try {
+          KeYmaeraXProblemParser(s)
+          (s, "model")
+        } catch {
+          case e: Throwable => throw new IllegalArgumentException(s"Expected either $DEFINITIONS_BEGIN, $ARCHIVE_ENTRY_BEGIN, $LEMMA_BEGIN, $THEOREM_BEGIN, but got unknown entry kind $s")
+        }
 
         kind match {
+          case "model" =>
+            val (model, tactics, info) = parseContent(s)
+            ("Unnamed", model, "theorem", tactics, info)::Nil
           case "definitions" =>
             globalDefs = Some(entry.trim().stripSuffix(END_BLOCK).trim())
             Nil
           case _ =>
             NAME_REGEX.findAllMatchIn(entry.trim().stripSuffix(END_BLOCK)).map({ m =>
               val modelName = m.group(1)
-              val (model: String, tactics: List[(String, String)], info: Map[String, String]) =
-                m.group(2).split(TACTIC_BEGIN).toList match {
-                  case modelContent :: ts =>
-                    val info = INFO_REGEX.findAllMatchIn(modelContent.trim()).map({
-                      tm => (tm.group("name"), tm.group("info"))
-                    }).toMap
-                    val modelText = INFO_REGEX.replaceAllIn(modelContent, "").trim()
-                    (modelText,
-                      ts.flatMap(tacticText => {
-                        NAME_REGEX.findAllMatchIn(tacticText.trim().stripSuffix(END_BLOCK)).map({
-                          tm => (tm.group(1), tm.group(2))
-                        })
-                      }),
-                      info)
-                }
+              val (model: String, tactics: List[(String, String)], info: Map[String, String]) = parseContent(m.group(2))
               //@note copies shared definitions into each Functions/Definitions block.
               val augmentedModel = globalDefs match {
                 case Some(d) if model.contains("Functions.") || model.contains("Definitions.") =>
@@ -136,5 +130,23 @@ object KeYmaeraXArchiveParser {
             })
         }
     }).toList
+  }
+
+  /** Splits content into a model, tactics, and info. */
+  private def parseContent(content: String) = {
+    content.split(TACTIC_BEGIN).toList match {
+      case modelContent :: ts =>
+        val info = INFO_REGEX.findAllMatchIn(modelContent.trim()).map({
+          tm => (tm.group("name"), tm.group("info"))
+        }).toMap
+        val modelText = INFO_REGEX.replaceAllIn(modelContent, "").trim()
+        (modelText,
+          ts.flatMap(tacticText => {
+            NAME_REGEX.findAllMatchIn(tacticText.trim().stripSuffix(END_BLOCK)).map({
+              tm => (tm.group(1), tm.group(2))
+            })
+          }),
+          info)
+    }
   }
 }

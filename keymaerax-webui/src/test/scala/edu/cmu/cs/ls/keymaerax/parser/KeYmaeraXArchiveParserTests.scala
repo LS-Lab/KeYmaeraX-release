@@ -39,6 +39,25 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     )
   }
 
+  it should "parse a plain problem format" in {
+    val input =
+      """ProgramVariables. R x. R y. End.
+        |Problem. x>y -> x>=y End.
+      """.stripMargin
+    val entries = KeYmaeraXArchiveParser.parse(input)
+    entries should have size 1
+    entries.head shouldBe ParsedArchiveEntry(
+      "Unnamed",
+      "theorem",
+      """ProgramVariables. R x. R y. End.
+        |Problem. x>y -> x>=y End.""".stripMargin,
+      "ProgramVariables. R x. R y. End.".asDeclarations,
+      "x>y -> x>=y".asFormula,
+      Nil,
+      Map.empty
+    )
+  }
+
   it should "detect duplicate variable definitions" in {
     val input =
       """
