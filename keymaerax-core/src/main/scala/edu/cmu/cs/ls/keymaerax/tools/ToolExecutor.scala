@@ -82,5 +82,13 @@ class ToolExecutor[T](poolSize: Int) {
 
   /** Creates the future that ultimately executes the task. */
   private def makeFuture(task: Unit => T): FutureTask[Either[T, Throwable]] =
-    new FutureTask(() => try { Left(task()) } catch { case e: Throwable => Right(e) })
+    new FutureTask(new Callable[Either[T, Throwable]]() {
+      override def call(): Either[T, Throwable] = {
+        try {
+          Left(task())
+        } catch {
+          case e: Throwable => Right(e)
+        }
+      }
+    })
 }
