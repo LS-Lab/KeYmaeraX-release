@@ -111,6 +111,7 @@ class JLinkMathematicaLink extends MathematicaLink {
   def init(linkName : String, jlinkLibDir : Option[String], remainingTrials: Int=5): Boolean = {
     this.linkName = linkName
     this.jlinkLibDir = jlinkLibDir
+    println("Connecting to Mathematica over TCPIP: " + TCPIP)
     if (jlinkLibDir.isDefined) {
       System.setProperty("com.wolfram.jlink.libdir", jlinkLibDir.get) //e.g., "/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink"
     }
