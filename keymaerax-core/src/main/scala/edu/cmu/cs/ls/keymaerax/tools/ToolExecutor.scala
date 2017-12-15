@@ -4,11 +4,6 @@ import java.util.concurrent._
 
 import scala.collection.mutable
 
-object ToolExecutor {
-  val defaultSize = 10
-  def defaultExecutor[T](): ToolExecutor[T] = new ToolExecutor[T](defaultSize)
-}
-
 class ToolExecutor[T](poolSize: Int) {
   require(poolSize > 0, "At least one thread is needed.")
   private val pool: ExecutorService = Executors.newFixedThreadPool(poolSize)
@@ -87,13 +82,5 @@ class ToolExecutor[T](poolSize: Int) {
 
   /** Creates the future that ultimately executes the task. */
   private def makeFuture(task: Unit => T): FutureTask[Either[T, Throwable]] =
-    new FutureTask(new Callable[Either[T, Throwable]]() {
-      override def call(): Either[T, Throwable] = {
-        try {
-          Left(task())
-        } catch {
-          case e: Throwable => Right(e)
-        }
-      }
-    })
+    new FutureTask(() => try { Left(task()) } catch { case e: Throwable => Right(e) })
 }

@@ -240,7 +240,9 @@ class JLinkMathematicaLink extends MathematicaLink {
         })
 
         executor.wait(taskId) match {
-          case Some(Left(result)) => result
+          case Some(Left(result)) =>
+            executor.remove(taskId)
+            result
           case Some(Right(throwable)) => throwable match {
             case ex: MathematicaComputationAbortedException =>
               executor.remove(taskId)
@@ -275,7 +277,7 @@ class JLinkMathematicaLink extends MathematicaLink {
   }
 
   /** Send command `cmd` for evaluation to Mathematica kernel straight away */
-  private def dispatch(cmd: String) = {
+  private def dispatch(cmd: String): Unit = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.evaluate(cmd)
   }
