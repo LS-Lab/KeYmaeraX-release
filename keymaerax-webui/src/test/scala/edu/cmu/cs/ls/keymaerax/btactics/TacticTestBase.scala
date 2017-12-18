@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, UserPOJO}
+import edu.cmu.cs.ls.keymaerax.hydra.{BellerophonTacticExecutor, DBAbstraction, DbProofTree, UserPOJO}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
@@ -17,16 +17,29 @@ import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalactic.{AbstractStringUniformity, Uniformity}
-import org.scalatest.{AppendedClues, BeforeAndAfterEach, FlatSpec, Matchers}
+import org.scalatest._
 
 import scala.collection.immutable._
 
 /**
  * Base class for tactic tests.
  */
-class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with AppendedClues {
+class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with AppendedClues {
   protected def theInterpreter: Interpreter = BelleInterpreter.interpreter
   private var interpreters: List[Interpreter] = _
+
+  class Lazy[T](f: => T) {
+    private var option: Option[T] = None
+    def apply(): T = option match {
+      case Some(t) => t
+      case None => val t = f; option = Some(t); t
+    }
+    def isInitialized: Boolean = option.isDefined
+    def asOption: Option[T] = option
+  }
+
+  //@note Initialize once per test class, but only if requested in a withMathematica call
+  private val mathematicaProvider = new Lazy(new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig))
 
   private val LOG_EARLIEST_QE = System.getProperty("LOG_POTENTIAL_QE", "false")=="true"
   private val LOG_QE = System.getProperty("LOG_QE", "false")=="true"
@@ -171,7 +184,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
    * }}}
    * */
   def withMathematica(testcode: Mathematica => Any) {
-    val provider = new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig)
+    val provider = mathematicaProvider() // new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig)
     ToolProvider.setProvider(provider)
     testcode(provider.tool())
   }
@@ -238,17 +251,22 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       interpreters = Nil
     } finally {
       PrettyPrinter.setPrinter(e => e.getClass.getName)
-      ToolProvider.shutdown()
+      if (!mathematicaProvider.isInitialized) {
+        //@note only shutdown non-Mathematica tool providers; Mathematica is shutdown in afterAll()
+        ToolProvider.shutdown()
+      }
       ToolProvider.setProvider(new NoneToolProvider())
       TactixLibrary.invGenerator = FixedGenerator(Nil)
-      // force-kill all Mathematica kernels that did not react to the shutdown request
-      val rt = Runtime.getRuntime
-      if (System.getProperty("os.name").toLowerCase.indexOf("mac os x") > -1) {
-        val p = rt.exec("pgrep MathKernel")
-        p.waitFor
-        val grepResult = scala.io.Source.fromInputStream(p.getInputStream).mkString
-        if (grepResult != "") rt.exec("pkill -9 MathKernel").waitFor
-      }
+    }
+  }
+
+  /* Test suite tear down */
+  override def afterAll(): Unit = {
+    //@note reduce number of zombie MathKernels: init and tear down Mathematica once per test class
+    if (mathematicaProvider.isInitialized) {
+      ToolProvider.shutdown()
+      ToolProvider.setProvider(new NoneToolProvider())
+      mathematicaProvider().shutdown()
     }
   }
 
