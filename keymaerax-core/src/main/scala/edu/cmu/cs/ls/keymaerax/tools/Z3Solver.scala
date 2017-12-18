@@ -24,10 +24,8 @@ import ExecutionContext.Implicits.global
  * @author Ran Ji
  * @author Stefan Mitsch
  */
-class Z3Solver extends ToolOperationManagementBase with SMTSolver {
+class Z3Solver(val converter: SMTConverter = DefaultSMTConverter) extends ToolOperationManagementBase with SMTSolver {
   private val DEBUG = System.getProperty("DEBUG", "false")=="true"
-
-  private val converter = DefaultSMTConverter
 
   /** Get the absolute path to Z3 executable
     * Copies Z3 out of the JAR if the KeYmaera X version has updated. */

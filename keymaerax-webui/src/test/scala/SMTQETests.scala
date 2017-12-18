@@ -6,7 +6,7 @@
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
-
+import edu.cmu.cs.ls.keymaerax.core.{Power, Term}
 import org.scalatest.prop.TableDrivenPropertyChecks._
 
 /**
@@ -120,17 +120,34 @@ class SMTQETests extends TacticTestBase {
   }
 
   it should "not exceed a timeout" ignore {
-    //@note takes >60s with v4.5.0
+    //@note takes >60s with v4.5.0, unknown with 4.4.1
     val f = "\\forall x_0 \\forall v_0 \\forall t__0 \\forall ep_0 \\forall S_0 \\forall B_0 \\forall A_0 (A_0>0&B_0>0&ep_0>0&x_0+v_0^2/(2*B_0)+(A_0/B_0+1)*(A_0/2*ep_0^2+ep_0*v_0)<=S_0&t__0>=0&\\forall s_ (0<=s_&s_<=t__0->A_0*s_+v_0>=0&s_+0<=ep_0)&v_0>=0&x_0+v_0^2/(2*B_0)<=S_0->A_0/2*t__0^2+v_0*t__0+x_0+(A_0*t__0+v_0)^2/(2*B_0)<=S_0)".asFormula
     z3.setOperationTimeout(5)
     the [ToolException] thrownBy z3.qeEvidence(f) should have message "Z3 timeout of 5s exceeded"
+  }
+
+  it should "detect when x^n is no longer less powerful than x*x*..." in {
+    val f = "x>0->(\\exists y_ (true->x*y_^2>0&\\forall x \\forall y_ (-x)*y_^2+x*(2*y_^(2-1)*(1/2*y_+0))>=0))".asFormula
+
+    val z3Default = new Z3Solver()
+    z3Default.qeEvidence(f)._1 shouldBe "true".asFormula
+
+    // converter that always translates to ^
+    val z3Power = new Z3Solver(new SMTConverter() {
+      override protected def convertTerm(t: Term): String = t match {
+        case Power(l, r)  => "(^ " + convertTerm(l) + " " + convertTerm(r) + ")"
+        case _ => super.convertTerm(t)
+      }
+    })
+    the [SMTQeException] thrownBy z3Power.qeEvidence(f) should have message
+      "QE with Z3 gives UNKNOWN. Cannot reduce the following formula to True:\n" + f.prettyString + "\n"
   }
 
   "Z3Reports" should "prove intervalUpDivide" ignore {
     val intervalUpDivideStr = "\\forall yy \\forall xx \\forall Y \\forall X \\forall z \\forall y \\forall x (x/y<=z <- (((xx<=x & x<=X) & (yy<=y & y<=Y)) & ((Y<0|0<yy) &(xx/yy<=z & xx/Y<=z & X/yy<=z & X/Y<=z))))"
     val intervalUpDivide = intervalUpDivideStr.asFormula
     println(intervalUpDivideStr)
-    z3.qeEvidence(intervalUpDivide)
+    z3.qeEvidence(intervalUpDivide)._1 shouldBe "true".asFormula
   }
 
   it should "prove intervalDownDivide" ignore {
@@ -138,7 +155,7 @@ class SMTQETests extends TacticTestBase {
 //    val intervalDownDivideStr = "h_() <= f_()/g_() <- (((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & ((G_()<0 | 0 < gg_()) & (h_()<=ff_()/gg_() & h_()<=ff_()/G_() & h_()<=F_()/gg_() & h_()<=F_()/G_())))"
     val intervalDownDivide = intervalDownDivideStr.asFormula
     println(intervalDownDivideStr)
-    z3.qeEvidence(intervalDownDivide)
+    z3.qeEvidence(intervalDownDivide)._1 shouldBe "true".asFormula
 
   }
 }
