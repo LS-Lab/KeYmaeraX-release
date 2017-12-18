@@ -25,14 +25,6 @@ class FMTutorial extends TacticTestBase {
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
-  it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
-    val entry = KeYmaeraXArchiveParser.getEntry("Formal Methods Tutorial Example 1", io.Source.fromInputStream(
-      getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get
-    val modelContent = entry.fileContent
-    val tactic = entry.tactics.head._2
-    db.proveBy(modelContent, tactic) shouldBe 'proved
-  }}
-
   "Example 2" should "stop in the right place" in withMathematica { _ => withDatabase { db =>
     val entry = KeYmaeraXArchiveParser.getEntry("Formal Methods Tutorial Example 2", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get
@@ -50,34 +42,10 @@ class FMTutorial extends TacticTestBase {
     db.proveBy(modelContent, master()) shouldBe 'proved
   }}
 
-  it should "be provable from parsed tactic" in withMathematica { _ => withDatabase { db =>
-    val entry = KeYmaeraXArchiveParser.getEntry("Formal Methods Tutorial Example 3", io.Source.fromInputStream(
-      getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get
-    val modelContent = entry.fileContent
-    val tactic = entry.tactics.head._2
-    db.proveBy(modelContent, tactic) shouldBe 'proved
-  }}
-
   "Example 4" should "be provable with master" in withQE { _ => withDatabase { db =>
     val modelContent = KeYmaeraXArchiveParser.getEntry("Formal Methods Tutorial Example 4", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get.fileContent
     db.proveBy(modelContent, master()) shouldBe 'proved
-  }}
-
-  it should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
-    val entry = KeYmaeraXArchiveParser.getEntry("Formal Methods Tutorial Example 4", io.Source.fromInputStream(
-      getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get
-    val modelContent = entry.fileContent
-    val tactic = entry.tactics.head._2
-    db.proveBy(modelContent, tactic) shouldBe 'proved
-  }}
-
-  "Example 5" should "be provable from parsed tactic" in withQE { _ => withDatabase { db =>
-    val entry = KeYmaeraXArchiveParser.getEntry("Formal Methods Tutorial Example 5", io.Source.fromInputStream(
-      getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get
-    val modelContent = entry.fileContent
-    val tactic = entry.tactics.head._2
-    db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
 }

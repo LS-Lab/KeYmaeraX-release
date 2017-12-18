@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 
 import scala.collection.immutable._
 
-class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach {
+class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   val mathematicaConfig: Map[String, String] = DefaultConfiguration.defaultMathematicaConfig
   var link: JLinkMathematicaLink = _
@@ -31,14 +31,15 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   def num(n : Integer) = Number(new BigDecimal(n.toString))
   def snum(n : String) = Number(new BigDecimal(n))
 
-  override def beforeEach(): Unit = {
+  override def beforeAll(): Unit = {
+    //@note only once for the entire test suite, reduce number of Mathematica inits/shutdowns
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter)
     link = new JLinkMathematicaLink()
     link.init(mathematicaConfig("linkName"), None) //@todo jlink
     ml = new BaseKeYmaeraMathematicaBridge[KExpr](link, KeYmaeraToMathematica, MathematicaToKeYmaera) {}
   }
 
-  override def afterEach(): Unit = {
+  override def afterAll(): Unit = {
     link.shutdown()
     link = null
     ml = null
@@ -123,12 +124,12 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "convert rules correctly with the nonQEConverter" in {
-    ml = new BaseKeYmaeraMathematicaBridge[KExpr](link, new  UncheckedK2MConverter(), new UncheckedM2KConverter()) {}
-    ml.runUnchecked("Rule[kyx`x,kyx`y]")._2 shouldBe Equal(x, y)
-    ml.runUnchecked("Rule[kyx`x[kyx`y],kyx`y]")._2 should be (Equal(FuncOf(xFn, y), y))
-    ml.runUnchecked("{{Rule[kyx`x,kyx`y]}}")._2 should be (Equal(x, y))
-    ml.runUnchecked("{{Rule[kyx`x,kyx`y], Rule[kyx`y,kyx`x]}}")._2 should be (And(Equal(x, y), Equal(y, x)))
-    ml.runUnchecked("{{Rule[kyx`x,kyx`y], Rule[kyx`y,kyx`x]}, {Rule[kyx`x[kyx`y],kyx`y]}}")._2 shouldBe
+    val localMl = new BaseKeYmaeraMathematicaBridge[KExpr](link, new  UncheckedK2MConverter(), new UncheckedM2KConverter()) {}
+    localMl.runUnchecked("Rule[kyx`x,kyx`y]")._2 shouldBe Equal(x, y)
+    localMl.runUnchecked("Rule[kyx`x[kyx`y],kyx`y]")._2 should be (Equal(FuncOf(xFn, y), y))
+    localMl.runUnchecked("{{Rule[kyx`x,kyx`y]}}")._2 should be (Equal(x, y))
+    localMl.runUnchecked("{{Rule[kyx`x,kyx`y], Rule[kyx`y,kyx`x]}}")._2 should be (And(Equal(x, y), Equal(y, x)))
+    localMl.runUnchecked("{{Rule[kyx`x,kyx`y], Rule[kyx`y,kyx`x]}, {Rule[kyx`x[kyx`y],kyx`y]}}")._2 shouldBe
       Or(And(Equal(x, y), Equal(y, x)), Equal(FuncOf(xFn, y), y))
   }
 
@@ -173,8 +174,8 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "convert derivatives with the nonQEConverter" in {
-    ml = new BaseKeYmaeraMathematicaBridge[KExpr](link, new  UncheckedK2MConverter(), new UncheckedM2KConverter()) {}
-    ml.runUnchecked("Derivative[1][kyx`x]")._2 shouldBe DifferentialSymbol(Variable("x"))
+    val localMl = new BaseKeYmaeraMathematicaBridge[KExpr](link, new  UncheckedK2MConverter(), new UncheckedM2KConverter()) {}
+    localMl.runUnchecked("Derivative[1][kyx`x]")._2 shouldBe DifferentialSymbol(Variable("x"))
   }
 
   "KeYmaera <-> Mathematica converters" should "commute" in {
@@ -222,8 +223,10 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "convert non-arg functions with nonQEConverter" in {
-    ml = new BaseKeYmaeraMathematicaBridge[KExpr](link, new  UncheckedK2MConverter(), new UncheckedM2KConverter()) {}
-    round trip("g()".asTerm, new UncheckedK2MConverter())
+    val localMl = new BaseKeYmaeraMathematicaBridge[KExpr](link, new  UncheckedK2MConverter(), new UncheckedM2KConverter()) {}
+    val e = "g()".asTerm
+    val math = new UncheckedK2MConverter()(e)
+    localMl.run(math)._2 shouldBe e
   }
 
   "KeYmaera -> Mathematica" should "convert Apply" in {
