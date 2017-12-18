@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.{CounterExampleTool, ToolBase, ToolEvidence}
 
 import scala.collection.immutable._
+import org.scalatest.LoneElement._
 
 class ArithmeticTests extends TacticTestBase {
 
@@ -13,10 +14,10 @@ class ArithmeticTests extends TacticTestBase {
     initialized = true
     //@todo should we keep hacking ourselves into the trusted tools of the core, or should we add a TestMode where MockTool is trusted?
     //@note ProvableSig forwards to Provable -> Provable has to trust our tool
-    val rcf = Class.forName(Provable.getClass.getCanonicalName).getField("MODULE$").get(null)
-    val trustedToolsField = rcf.getClass.getDeclaredField("trustedTools")
+    private val rcf = Class.forName(Provable.getClass.getCanonicalName).getField("MODULE$").get(null)
+    private val trustedToolsField = rcf.getClass.getDeclaredField("trustedTools")
     trustedToolsField.setAccessible(true)
-    val trustedTools = trustedToolsField.get(rcf).asInstanceOf[List[String]]
+    private val trustedTools = trustedToolsField.get(rcf).asInstanceOf[List[String]]
     trustedToolsField.set(rcf, trustedTools :+ MockTool.this.getClass.getCanonicalName)
 
     override def qeEvidence(formula: Formula): (Formula, Evidence) = {
@@ -42,15 +43,14 @@ class ArithmeticTests extends TacticTestBase {
     ToolProvider.setProvider(new PreferredToolProvider(tool::Nil))
     //@note actual assertions are made by MockTool, expect a BelleThrowable since MockTool returns false as QE answer
     val result = proveBy(
-      Sequent(IndexedSeq("v_0>0&x_0<s".asFormula, "a=v_0^2/(2*(s-x_0))".asFormula, "t_0=0".asFormula), IndexedSeq("v>=0&t>=0&v=(-1*a*t+v_0)&x=1/2*(-1*a*t^2+2*t*v_0+2*x_0)->x+v^2/(2*a)<=s".asFormula)),
+      "v_0>0&x_0<s, a=v_0^2/(2*(s-x_0)), t_0=0 ==> v>=0&t>=0&v=(-1*a*t+v_0)&x=1/2*(-1*a*t^2+2*t*v_0+2*x_0)->x+v^2/(2*a)<=s".asSequent,
       TactixLibrary.QE)
-    result.subgoals should have size 1
-    result.subgoals.head shouldBe Sequent(IndexedSeq(), IndexedSeq(False))
+    result.subgoals.loneElement shouldBe "==> false".asSequent
   }
 
-  it should "prove after apply equalities, transform to implication, and universal closure" in withMathematica { tool =>
+  it should "prove after apply equalities, transform to implication, and universal closure" in withQE { _ =>
     proveBy(
-      Sequent(IndexedSeq("v_0>0&x_0<s".asFormula, "a=v_0^2/(2*(s-x_0))".asFormula, "t_0=0".asFormula), IndexedSeq("v>=0&t>=0&v=(-1*a*t+v_0)&x=1/2*(-1*a*t^2+2*t*v_0+2*x_0)->x+v^2/(2*a)<=s".asFormula)),
+      "v_0>0&x_0<s, a=v_0^2/(2*(s-x_0)), t_0=0 ==> v>=0&t>=0&v=(-1*a*t+v_0)&x=1/2*(-1*a*t^2+2*t*v_0+2*x_0)->x+v^2/(2*a)<=s".asSequent,
       TactixLibrary.QE) shouldBe 'proved
   }
 
@@ -58,42 +58,37 @@ class ArithmeticTests extends TacticTestBase {
     val tool = new MockTool(
       "\\forall y_0 \\forall x_0 \\forall r_0 (x_0^2+y_0^2=r_0^2&r_0>0->y_0<=r_0)".asFormula)
     ToolProvider.setProvider(new PreferredToolProvider(tool::Nil))
-    val result = proveBy(
-      Sequent(IndexedSeq("x^2 + y^2 = r^2".asFormula, "r > 0".asFormula), IndexedSeq("y <= r".asFormula)),
-      TactixLibrary.QE)
-    result.subgoals should have size 1
-    result.subgoals.head shouldBe Sequent(IndexedSeq(), IndexedSeq(False))
+    val result = proveBy("x^2 + y^2 = r^2, r > 0 ==> y <= r".asSequent, TactixLibrary.QE)
+    result.subgoals.loneElement shouldBe "==> false".asSequent
   }
 
-  it should "prove after only apply equalities for variables" in withMathematica { tool =>
-    proveBy(
-      Sequent(IndexedSeq("x^2 + y^2 = r^2".asFormula, "r > 0".asFormula), IndexedSeq("y <= r".asFormula)),
-      TactixLibrary.QE) shouldBe 'proved
+  it should "prove after only apply equalities for variables" in withQE { _ =>
+    proveBy("x^2 + y^2 = r^2, r > 0 ==> y <= r".asSequent, TactixLibrary.QE) shouldBe 'proved
   }
 
-  it should "not support differential symbols" in withMathematica { tool =>
+  it should "not support differential symbols" in withQE { _ =>
     the [BelleThrowable] thrownBy { proveBy("5=5 | x' = 1'".asFormula,
       TactixLibrary.QE) } should have message "[Bellerophon Runtime] Name conversion of differential symbols not allowed: x'"
   }
 
-  it should "not prove differential symbols by some hidden assumption in Mathematica" in withMathematica { tool =>
+  it should "not prove differential symbols by some hidden assumption in the backend solver" in withQE { _ =>
     the [BelleThrowable] thrownBy proveBy("x>=y -> x' >= y'".asFormula,
       TactixLibrary.QE) should have message "[Bellerophon Runtime] Name conversion of differential symbols not allowed: x'"
   }
 
-  it should "avoid name clashes" in withMathematica { tool =>
-    val result = proveBy(
-      Sequent(IndexedSeq("a=1".asFormula, "a()=2".asFormula), IndexedSeq("a=a()".asFormula)),
-      TactixLibrary.QE)
-    result.subgoals should have size 1
-    result.subgoals.head shouldBe Sequent(IndexedSeq(), IndexedSeq(False))
-
-    proveBy(
-      Sequent(IndexedSeq("a=1".asFormula, "a()=2".asFormula), IndexedSeq("a<a()".asFormula)),
-      TactixLibrary.QE) shouldBe 'proved
+  it should "avoid name clashes with Mathematica" in withMathematica { _ =>
+    val result = proveBy("a=1, a()=2 ==> a=a()".asSequent, TactixLibrary.QE)
+    result.subgoals.loneElement shouldBe "==> false".asSequent
+    proveBy("a=1, a()=2 ==> a<a()".asSequent, TactixLibrary.QE) shouldBe 'proved
   }
 
-  it should "work with functions" in withMathematica { tool =>
+  it should "avoid name clashes with Z3" in withZ3 { _ =>
+    the [BelleThrowable] thrownBy proveBy("a=1, a()=2 ==> a=a()".asSequent, TactixLibrary.QE) should have message
+      "[Bellerophon Runtime] QE with Z3 gives SAT. Cannot reduce the following formula to True:\ntrue->1=2\n"
+    proveBy("a=1, a()=2 ==> a<a()".asSequent, TactixLibrary.QE) shouldBe 'proved
+  }
+
+  it should "work with functions" in withQE { _ =>
     proveBy("A()>0 -> A()>=0".asFormula, TactixLibrary.QE) shouldBe 'proved
     proveBy("ep>0 & t>=ep & abs(x_0-xo_0)*ep>v -> abs(x_0-xo_0)*t>v".asFormula, TactixLibrary.QE) shouldBe 'proved
   }
@@ -134,33 +129,33 @@ class ArithmeticTests extends TacticTestBase {
     tool.findCounterExample("a=1&a()=2 -> a<a()".asFormula) shouldBe None
   }
 
-  "transform" should "prove a simple example" in withMathematica { tool =>
+  "transform" should "prove a simple example" in withQE { _ =>
     proveBy(
-      Sequent(IndexedSeq("a<b".asFormula), IndexedSeq("b>a".asFormula)),
+      "a<b ==> b>a".asSequent,
       TactixLibrary.transform("a<b".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
   }
 
-  it should "prove a simple example with modalities in other formulas" in withMathematica { tool =>
+  it should "prove a simple example with modalities in other formulas" in withQE { _ =>
     proveBy(
-      Sequent(IndexedSeq("a<b".asFormula), IndexedSeq("b>a".asFormula, "[x:=2;]x>0".asFormula)),
+      "a<b ==> b>a, [x:=2;]x>0".asSequent,
       TactixLibrary.transform("a<b".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
   }
 
-  it should "keep enough context around to prove the transformation" in withMathematica { tool =>
+  it should "keep enough context around to prove the transformation" in withQE { _ =>
     proveBy(
-      Sequent(IndexedSeq("a+b<c".asFormula, "b>=0&[y:=3;]y=3".asFormula, "y>4".asFormula), IndexedSeq("a<c".asFormula, "[x:=2;]x>0".asFormula)),
+      "a+b<c, b>=0&[y:=3;]y=3, y>4 ==> a<c, [x:=2;]x>0".asSequent,
       TactixLibrary.transform("a+b<c".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
   }
 
-  it should "work with division by zero" in withMathematica { tool =>
+  it should "work with division by zero" in withQE { _ =>
     proveBy(
-      Sequent(IndexedSeq("a/b<c".asFormula, "b>0".asFormula), IndexedSeq("c>a/b".asFormula)),
+      "a/b<c, b>0 ==> c>a/b".asSequent,
       TactixLibrary.transform("a/b<c".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
   }
 
-  it should "work with division by zero even with modalities somewhere" in withMathematica { tool =>
+  it should "work with division by zero even with modalities somewhere" in withQE { _ =>
     proveBy(
-      Sequent(IndexedSeq("a/b<c".asFormula, "b>0&[y:=3;]y=3".asFormula), IndexedSeq("c>a/b".asFormula, "[x:=2;]x>0".asFormula)),
+      "a/b<c, b>0&[y:=3;]y=3 ==> c>a/b, [x:=2;]x>0".asSequent,
       TactixLibrary.transform("a/b<c".asFormula)(1) & TactixLibrary.closeId) shouldBe 'proved
   }
 

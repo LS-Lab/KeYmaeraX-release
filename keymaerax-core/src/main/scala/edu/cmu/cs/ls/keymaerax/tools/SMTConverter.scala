@@ -153,7 +153,8 @@ abstract class SMTConverter extends (Formula=>String) {
           //@todo Real literals should contain a dot in Z3 (integer without dot), check whether compatible with Polya
           "(- " + (-n).toString() + ")"
         } else n.toString()
-      case t: Variable => PREFIX + nameIdentifier(t)
+      case t: BaseVariable => PREFIX + nameIdentifier(t)
+      case t: DifferentialSymbol => throw new SMTConversionException("Name conversion of differential symbols not allowed: " + t.prettyString)
       case FuncOf(fn, Nothing) => PREFIX + nameIdentifier(fn)
       case FuncOf(fn, child) if fn.interpreted => fn match {
         case Function("min",None,Tuple(Real,Real),Real,true) => "(" + SMT_MIN + " " + convertTerm(child) + ")"
