@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.StopTraversal
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.mapSubpositions
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
@@ -611,20 +612,5 @@ object ModelPlex extends ModelPlexTrait {
       Idioms.repeatWhile(_.isInstanceOf[BinaryCompositeFormula])(propNF(1))(1))
     assert(result.subgoals.length == 1 && result.subgoals.head.ante.isEmpty && result.subgoals.head.succ.length == 1)
     result.subgoals.head.succ.head
-  }
-
-  private def mapSubpositions[T](pos: Position, sequent: Sequent, trafo: (Expression, Position) => Option[T]): List[T] = {
-    var result: List[T] = Nil
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = trafo(e, pos ++ p) match {
-        case Some(tt) => result = tt +: result; Left(None)
-        case None => Left(None)
-      }
-      override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = trafo(t, pos ++ p) match {
-        case Some(tt) => result = tt +: result; Left(None)
-        case None => Left(None)
-      }
-    }, sequent.sub(pos).get.asInstanceOf[Formula])
-    result
   }
 }

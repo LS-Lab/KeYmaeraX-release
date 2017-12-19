@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
 import ProofRuleTactics.requireOneSubgoal
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDB
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
@@ -280,6 +281,37 @@ object Idioms {
    * shift(child, t) does t to positions shifted by child
    */
   def shift(child: PosInExpr, t: DependentPositionTactic): DependentPositionTactic = shift(p => p ++ child, t)
+
+  /** Map sub-positions of `pos` to Ts that fit to the expressions at those sub-positions per `trafo`. */
+  def mapSubpositions[T](pos: Position, sequent: Sequent, trafo: (Expression, Position) => Option[T]): List[T] = {
+    var result: List[T] = Nil
+
+    def mapTerm(p: PosInExpr, t: Term) = trafo(t, pos ++ p) match {
+      case Some(tt) => result = tt +: result; Left(None)
+      case None => Left(None)
+    }
+
+    def mapFormula(p: PosInExpr, e: Formula) = trafo(e, pos ++ p) match {
+      case Some(tt) => result = tt +: result; Left(None)
+      case None => Left(None)
+    }
+
+    //@note traverse expression, collect Ts in `result` as side effect
+    sequent.sub(pos) match {
+      case Some(f: Formula) =>
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = mapFormula(p, e)
+          override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = mapTerm(p, t)
+        }, f)
+      case Some(t: Term) =>
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+          override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = mapTerm(p, t)
+        }, t)
+      case _ =>
+    }
+
+    result
+  }
 }
 
 /** Creates tactic objects */
