@@ -189,4 +189,14 @@ class EqualityTests extends TacticTestBase {
     val result = proveBy("max(x,y) >= 5 ==> ".asSequent, minmax(-1, 0::Nil))
     result.subgoals.loneElement shouldBe "max_0>=5, x>=y&max_0=x | x<y&max_0=y ==> ".asSequent
   }
+
+  "expandAll" should "expand abs everywhere" in withQE { _ =>
+    val result = proveBy("abs(x-y)>0 ==> abs(a-5)>0, abs(x-y)>37".asSequent, expandAll)
+    result.subgoals.loneElement shouldBe "abs_0>0, x-y>=0&abs_0=x-y|x-y < 0&abs_0=-(x-y), a-5>=0&abs_1=a-5|a-5 < 0&abs_1=-(a-5) ==> abs_1>0, abs_0>37".asSequent
+  }
+
+  it should "expand all special functions everywhere" in withQE { _ =>
+    val result = proveBy("min(x,y)>0 ==> abs(a-5)>0, max(x,y)>37".asSequent, expandAll)
+    result.subgoals.loneElement shouldBe "min_0>0, x<=y&min_0=x|x>y&min_0=y, a-5>=0&abs_0=a-5|a-5 < 0&abs_0=-(a-5), x>=y&max_0=x|x < y&max_0=y ==> abs_0>0, max_0>37".asSequent
+  }
 }
