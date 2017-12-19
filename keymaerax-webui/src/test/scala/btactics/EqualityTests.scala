@@ -2,10 +2,10 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics._
-import edu.cmu.cs.ls.keymaerax.core.{Variable, Sequent}
+import edu.cmu.cs.ls.keymaerax.core.Variable
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
-import scala.collection.immutable.IndexedSeq
+import org.scalatest.LoneElement._
 
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics]]
@@ -13,251 +13,180 @@ import scala.collection.immutable.IndexedSeq
 class EqualityTests extends TacticTestBase {
 
   "eqL2R" should "rewrite x*y=0 to 0*y=0 using x=0" in {
-    val result = proveBy(Sequent(IndexedSeq("x=0".asFormula), IndexedSeq("x*y=0".asFormula)), eqL2R(-1)(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=0".asFormula
-    result.subgoals.head.succ should contain only "0*y=0".asFormula
+    val result = proveBy("x=0 ==> x*y=0".asSequent, eqL2R(-1)(1))
+    result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0".asSequent
   }
 
   it should "rewrite entire formula" in {
-    val result = proveBy(Sequent(IndexedSeq("x=0".asFormula), IndexedSeq("x*y=x&x+1=1".asFormula, "x+1>0".asFormula)), eqL2R(-1)(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=0".asFormula
-    result.subgoals.head.succ should contain only ("0*y=0&0+1=1".asFormula, "x+1>0".asFormula)
+    val result = proveBy("x=0 ==> x*y=x&x+1=1, x+1>0".asSequent, eqL2R(-1)(1))
+    result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0&0+1=1, x+1>0".asSequent
   }
 
   it should "rewrite entire formula at specified position" in {
-    val result = proveBy(Sequent(IndexedSeq("x=0".asFormula), IndexedSeq("x*y=x&x+1=1".asFormula, "x+1>0".asFormula)), eqL2R(-1)(1, 0::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=0".asFormula
-    result.subgoals.head.succ should contain only ("0*y=0&x+1=1".asFormula, "x+1>0".asFormula)
+    val result = proveBy("x=0 ==> x*y=x&x+1=1, x+1>0".asSequent, eqL2R(-1)(1, 0::Nil))
+    result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0&x+1=1, x+1>0".asSequent
   }
 
   it should "rewrite entire term at specified position" in {
-    val result = proveBy(Sequent(IndexedSeq("x=0".asFormula), IndexedSeq("x*x*y=x".asFormula, "x+1>0".asFormula)), eqL2R(-1)(1, 0::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=0".asFormula
-    result.subgoals.head.succ should contain only ("0*0*y=x".asFormula, "x+1>0".asFormula)
+    val result = proveBy("x=0 ==> x*x*y=x, x+1>0".asSequent, eqL2R(-1)(1, 0::Nil))
+    result.subgoals.loneElement shouldBe "x=0 ==> 0*0*y=x, x+1>0".asSequent
   }
 
   it should "rewrite only at very specified position" in {
-    val result = proveBy(Sequent(IndexedSeq("x=0".asFormula), IndexedSeq("x*y=x".asFormula, "x+1>0".asFormula)), eqL2R(-1)(1, 0::0::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=0".asFormula
-    result.subgoals.head.succ should contain only ("0*y=x".asFormula, "x+1>0".asFormula)
+    val result = proveBy("x=0 ==> x*y=x, x+1>0".asSequent, eqL2R(-1)(1, 0::0::Nil))
+    result.subgoals.loneElement shouldBe "x=0 ==> 0*y=x, x+1>0".asSequent
   }
 
   it should "keep positions stable" in {
-    val result = proveBy(Sequent(IndexedSeq("x=0".asFormula), IndexedSeq("x*y=0".asFormula, "x+1>0".asFormula)), eqL2R(-1)(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=0".asFormula
-    result.subgoals.head.succ shouldBe IndexedSeq("0*y=0".asFormula, "x+1>0".asFormula)
+    val result = proveBy("x=0 ==> x*y=0, x+1>0".asSequent, eqL2R(-1)(1))
+    result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0, x+1>0".asSequent
   }
 
   it should "rewrite complicated" in {
-    val result = proveBy(Sequent(IndexedSeq("x=0".asFormula), IndexedSeq("x*y=0 & x+3>2 | \\forall y y+x>=0".asFormula)), eqL2R(-1)(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=0".asFormula
-    result.subgoals.head.succ should contain only "0*y=0 & 0+3>2 | \\forall y y+0>=0".asFormula
+    val result = proveBy("x=0 ==> x*y=0 & x+3>2 | \\forall y y+x>=0".asSequent, eqL2R(-1)(1))
+    result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0 & 0+3>2 | \\forall y y+0>=0".asSequent
   }
 
   it should "rewrite complicated exhaustively" in {
-    val result = proveBy(Sequent(IndexedSeq("x=0".asFormula), IndexedSeq("x*y=0 & x+3>2 | \\forall y y+x>=0 & \\exists x x>0".asFormula)),
-      eqL2R(-1)(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=0".asFormula
-    result.subgoals.head.succ should contain only "0*y=0 & 0+3>2 | \\forall y y+0>=0 & \\exists x x>0".asFormula
+    val result = proveBy("x=0 ==> x*y=0 & x+3>2 | \\forall y y+x>=0 & \\exists x x>0".asSequent, eqL2R(-1)(1))
+    result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0 & 0+3>2 | \\forall y y+0>=0 & \\exists x x>0".asSequent
   }
 
-  it should "rewrite x*y=0 to 0*y=0 using 0=x" in withMathematica { qeTool =>
-    val result = proveBy(Sequent(IndexedSeq("0=x".asFormula), IndexedSeq("x*y=0".asFormula)),
+  it should "rewrite x*y=0 to 0*y=0 using 0=x" in withQE { _ =>
+    val result = proveBy("0=x ==> x*y=0".asSequent,
       TactixLibrary.useAt("= commute")(-1) & eqL2R(-1)(1) & TactixLibrary.useAt("= commute")(-1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "0=x".asFormula
-    result.subgoals.head.succ should contain only "0*y=0".asFormula
+    result.subgoals.loneElement shouldBe "0=x ==> 0*y=0".asSequent
   }
 
-  it should "rewrite only some of the symbols when asked to" in withMathematica { qeTool =>
-    val result = proveBy(Sequent(IndexedSeq("y=x".asFormula), IndexedSeq("y=2&y+y+2>y+1".asFormula)),
-      eqL2R(-1)(1, 0::0::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "y=x".asFormula
-    result.subgoals.head.succ should contain only "x=2&y+y+2>y+1".asFormula
+  it should "rewrite only some of the symbols when asked to" in withQE { _ =>
+    val result = proveBy("y=x ==> y=2&y+y+2>y+1".asSequent, eqL2R(-1)(1, 0::0::Nil))
+    result.subgoals.loneElement shouldBe "y=x ==> x=2&y+y+2>y+1".asSequent
   }
 
-  "eqR2L" should "rewrite x*y=0 to 0*y=0 using 0=x" in withMathematica { qeTool =>
-    val result = proveBy(Sequent(IndexedSeq("0=x".asFormula), IndexedSeq("x*y=0".asFormula)), eqR2L(-1)(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "0=x".asFormula
-    result.subgoals.head.succ should contain only "0*y=0".asFormula
+  "eqR2L" should "rewrite x*y=0 to 0*y=0 using 0=x" in withQE { _ =>
+    val result = proveBy("0=x ==> x*y=0".asSequent, eqR2L(-1)(1))
+    result.subgoals.loneElement shouldBe "0=x ==> 0*y=0".asSequent
   }
 
   "Exhaustive eqR2L" should "rewrite x*y=0 to 0*y=0 using 0=x" in {
-    val result = proveBy(Sequent(IndexedSeq("0=x".asFormula), IndexedSeq("x*y=0".asFormula)), exhaustiveEqR2L(-1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "0=x".asFormula
-    result.subgoals.head.succ should contain only "0*y=0".asFormula
+    val result = proveBy("0=x ==> x*y=0".asSequent, exhaustiveEqR2L(-1))
+    result.subgoals.loneElement shouldBe "0=x ==> 0*y=0".asSequent
   }
 
   "Exhaustive eqL2R" should "rewrite a single formula exhaustively" in {
-    val result = proveBy(Sequent(IndexedSeq("x=0".asFormula), IndexedSeq("x*y=0".asFormula, "z>2".asFormula, "z<x+1".asFormula)), exhaustiveEqL2R(-1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=0".asFormula
-    result.subgoals.head.succ should contain only ("0*y=0".asFormula, "z>2".asFormula, "z<0+1".asFormula)
+    val result = proveBy("x=0 ==> x*y=0, z>2, z<x+1".asSequent, exhaustiveEqL2R(-1))
+    result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0, z>2, z<0+1".asSequent
   }
 
   it should "not fail when there are no applicable positions" in {
-    val result = proveBy(Sequent(IndexedSeq("x=0".asFormula), IndexedSeq("z>2".asFormula)), exhaustiveEqL2R(-1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=0".asFormula
-    result.subgoals.head.succ should contain only "z>2".asFormula
+    val result = proveBy("x=0 ==> z>2".asSequent, exhaustiveEqL2R(-1))
+    result.subgoals.loneElement shouldBe "x=0 ==> z>2".asSequent
   }
 
   it should "rewrite a single formula exhaustively for a single applicable position" in {
-    val result = proveBy(Sequent(IndexedSeq("x=0".asFormula), IndexedSeq("x*y=0".asFormula, "z>2".asFormula)), exhaustiveEqL2R(-1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=0".asFormula
-    result.subgoals.head.succ should contain only ("0*y=0".asFormula, "z>2".asFormula)
+    val result = proveBy("x=0 ==> x*y=0, z>2".asSequent, exhaustiveEqL2R(-1))
+    result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0, z>2".asSequent
   }
 
   it should "rewrite formulas exhaustively" in {
-    val result = proveBy(Sequent(IndexedSeq("x=0".asFormula, "z=x".asFormula), IndexedSeq("x*y=0".asFormula, "z>2".asFormula, "z<x+1".asFormula)), exhaustiveEqL2R(-1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x=0".asFormula, "z=0".asFormula)
-    result.subgoals.head.succ should contain only ("0*y=0".asFormula, "z>2".asFormula, "z<0+1".asFormula)
+    val result = proveBy("x=0, z=x ==> x*y=0, z>2, z<x+1".asSequent, exhaustiveEqL2R(-1))
+    result.subgoals.loneElement shouldBe "x=0, z=0 ==> 0*y=0, z>2, z<0+1".asSequent
   }
 
   it should "rewrite formulas exhaustively everywhere" in {
-    val result = proveBy(Sequent(IndexedSeq("z=x".asFormula, "x=0".asFormula), IndexedSeq("x*y=0".asFormula, "z>2".asFormula, "z<x+1".asFormula)), exhaustiveEqL2R(-2))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x=0".asFormula, "z=0".asFormula)
-    result.subgoals.head.succ should contain only ("0*y=0".asFormula, "z>2".asFormula, "z<0+1".asFormula)
+    val result = proveBy("z=x, x=0 ==> x*y=0, z>2, z<x+1".asSequent, exhaustiveEqL2R(-2))
+    result.subgoals.loneElement shouldBe "z=0, x=0 ==> 0*y=0, z>2, z<0+1".asSequent
   }
 
   it should "work even if there is only one other formula" in {
-    val result = proveBy(Sequent(IndexedSeq("x<5".asFormula, "x=0".asFormula), IndexedSeq()), exhaustiveEqL2R(-2))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("0<5".asFormula, "x=0".asFormula)
-    result.subgoals.head.succ shouldBe empty
+    val result = proveBy("x<5, x=0 ==> ".asSequent, exhaustiveEqL2R(-2))
+    result.subgoals.loneElement shouldBe "0<5, x=0 ==> ".asSequent
   }
 
   it should "replace arbitary terms" in {
-    val result = proveBy(Sequent(IndexedSeq("a+b<5".asFormula, "a+b=c".asFormula), IndexedSeq()), exhaustiveEqL2R(-2))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("c<5".asFormula, "a+b=c".asFormula)
-    result.subgoals.head.succ shouldBe empty
+    val result = proveBy("a+b<5, a+b=c ==> ".asSequent, exhaustiveEqL2R(-2))
+    result.subgoals.loneElement shouldBe "c<5, a+b=c ==> ".asSequent
   }
 
   // rewriting numbers is disallowed, because otherwise we run into endless rewriting
   it should "not rewrite numbers" in {
-    a [BelleThrowable] should be thrownBy proveBy(Sequent(IndexedSeq("0<5".asFormula, "0=0".asFormula), IndexedSeq()), exhaustiveEqL2R(-2))
+    a [BelleThrowable] should be thrownBy proveBy("0<5, 0=0 ==> ".asSequent, exhaustiveEqL2R(-2))
   }
 
   it should "not try to rewrite bound occurrences" in {
-    val result = proveBy(Sequent(IndexedSeq("a=1".asFormula), IndexedSeq("[a:=2;]a=1".asFormula)), exhaustiveEqL2R(-1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "a=1".asFormula
-    result.subgoals.head.succ should contain only "[a:=2;]a=1".asFormula
+    val result = proveBy("a=1 ==> [a:=2;]a=1".asSequent, exhaustiveEqL2R(-1))
+    result.subgoals.loneElement shouldBe "a=1 ==> [a:=2;]a=1".asSequent
   }
 
   it should "rewrite multiple occurrences of a term in one shot" in {
-    val result = proveBy(Sequent(IndexedSeq("x+2<=x+3".asFormula, "x=y".asFormula), IndexedSeq()), exhaustiveEqL2R(-2))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe IndexedSeq("y+2<=y+3".asFormula, "x=y".asFormula)
-    result.subgoals.head.succ shouldBe empty
+    val result = proveBy("x+2<=x+3, x=y ==> ".asSequent, exhaustiveEqL2R(-2))
+    result.subgoals.loneElement shouldBe "y+2<=y+3, x=y ==> ".asSequent
   }
 
-  "Abbrv tactic" should "abbreviate a+b to z" in withMathematica { qeTool =>
+  "Abbrv tactic" should "abbreviate a+b to z" in withQE { _ =>
     val result = proveBy("a+b < c".asFormula, abbrv(Variable("z"))(1, 0::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "z = a+b".asFormula
-    result.subgoals.head.succ should contain only "z < c".asFormula
+    result.subgoals.loneElement shouldBe "z = a+b ==> z < c".asSequent
   }
 
-  it should "abbreviate min(a,b) to z" in withMathematica { qeTool =>
+  it should "abbreviate min(a,b) to z" in withQE { _ =>
     val result = proveBy("min(a,b) < c".asFormula, abbrv(Variable("z"))(1, 0::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "z = min(a,b)".asFormula
-    result.subgoals.head.succ should contain only "z < c".asFormula
+    result.subgoals.loneElement shouldBe "z = min(a,b) ==> z < c".asSequent
   }
 
-  it should "not abbreviate in places where at least one of the arguments is bound" in withMathematica { qeTool =>
-    val result = proveBy(Sequent(IndexedSeq("min(a,b) < c".asFormula), IndexedSeq("[a:=0;]min(a,b) < c".asFormula)),
+  it should "not abbreviate in places where at least one of the arguments is bound" in withQE { _ =>
+    val result = proveBy("min(a,b) < c ==> [a:=0;]min(a,b) < c".asSequent, abbrv(Variable("z"))(-1, 0::Nil))
+    result.subgoals.loneElement shouldBe "z < c, z = min(a,b) ==> [a:=0;]min(a,b) < c".asSequent
+  }
+
+  it should "abbreviate min(a,b) to z everywhere (except at bound occurrences)" in withQE { _ =>
+    val result = proveBy("min(a,b) < c, x>y, 5 < min(a,b) ==> min(a,b) + 2 = 7, a<b, [b:=2;]min(a,b) < 9".asSequent,
       abbrv(Variable("z"))(-1, 0::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("z = min(a,b)".asFormula, "z < c".asFormula)
-    result.subgoals.head.succ should contain only "[a:=0;]min(a,b) < c".asFormula
+    result.subgoals.loneElement shouldBe "z<c, x>y, 5<z, z = min(a,b) ==> z+2=7, a<b, [b:=2;]min(a,b)<9".asSequent
   }
 
-  it should "abbreviate min(a,b) to z everywhere (except at bound occurrences)" in withMathematica { qeTool =>
-    val result = proveBy(Sequent(IndexedSeq("min(a,b) < c".asFormula, "x>y".asFormula, "5 < min(a,b)".asFormula), IndexedSeq("min(a,b) + 2 = 7".asFormula, "a<b".asFormula, "[b:=2;]min(a,b) < 9".asFormula)), abbrv(Variable("z"))(-1, 0::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("z = min(a,b)".asFormula, "z<c".asFormula, "x>y".asFormula, "5<z".asFormula)
-    result.subgoals.head.succ should contain only ("z+2=7".asFormula, "a<b".asFormula, "[b:=2;]min(a,b)<9".asFormula)
+  it should "abbreviate min(a,b) to z everywhere (except at bound occurrences) and pick a name automatically" in withQE { _ =>
+    val result = proveBy("min(a,b) < c, x>y, 5 < min(a,b) ==> min(a,b) + 2 = 7, a<b, [b:=2;]min(a,b) < 9".asSequent,
+      abbrv("min(a,b)".asTerm))
+    result.subgoals.loneElement shouldBe "min_0<c, x>y, 5<min_0, min_0 = min(a,b) ==> min_0+2=7, a<b, [b:=2;]min(a,b)<9".asSequent
   }
 
-  //@todo input tactic with optional arguments
-  it should "abbreviate min(a,b) to z everywhere (except at bound occurrences) and pick a name automatically" ignore withMathematica { qeTool =>
-    val result = proveBy(Sequent(IndexedSeq("min(a,b) < c".asFormula, "x>y".asFormula, "5 < min(a,b)".asFormula), IndexedSeq("min(a,b) + 2 = 7".asFormula, "a<b".asFormula, "[b:=2;]min(a,b) < 9".asFormula)), abbrv("min(a,b)".asTerm))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("min_0 = min(a,b)".asFormula, "min_0<c".asFormula, "x>y".asFormula, "5<min_0".asFormula)
-    result.subgoals.head.succ should contain only ("min_0+2=7".asFormula, "a<b".asFormula, "[b:=2;]min(a,b)<9".asFormula)
+  it should "abbreviate any argument even if not contained in the sequent and pick a name automatically" in withQE { _ =>
+    val result = proveBy("x>y ==> a<b".asSequent, abbrv("c+d".asTerm))
+    result.subgoals.loneElement shouldBe "x>y, x_0 = c+d ==> a<b".asSequent
   }
 
-  //@todo input tactic with optional arguments
-  it should "abbreviate any argument even if not contained in the sequent and pick a name automatically" ignore withMathematica { qeTool =>
-    val result = proveBy(Sequent(IndexedSeq("x>y".asFormula), IndexedSeq("a<b".asFormula)), abbrv("c+d".asTerm))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x_0 = c+d".asFormula, "x>y".asFormula)
-    result.subgoals.head.succ should contain only "a<b".asFormula
-  }
-
-  "abs" should "expand abs(x) in succedent" in withMathematica { qeTool =>
+  "abs" should "expand abs(x) in succedent" in withQE { _ =>
     val result = proveBy("abs(x) >= 5".asFormula, abs(1, 0::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x>=0&abs_0=x | x<0&abs_0=-x".asFormula
-    result.subgoals.head.succ should contain only "abs_0>=5".asFormula
+    result.subgoals.loneElement shouldBe "x>=0&abs_0=x | x<0&abs_0=-x ==> abs_0>=5".asSequent
   }
 
-  it should "expand abs(x) in non-top-level succedent" in withMathematica { qeTool =>
+  it should "expand abs(x) in non-top-level succedent" in withQE { _ =>
     val result = proveBy("y=2 | abs(x) >= 5".asFormula, abs(1, 1::0::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x>=0&abs_0=x | x<0&abs_0=-x".asFormula
-    result.subgoals.head.succ should contain only "y=2 | abs_0>=5".asFormula
+    result.subgoals.loneElement shouldBe "x>=0&abs_0=x | x<0&abs_0=-x ==> y=2 | abs_0>=5".asSequent
   }
 
-  it should "expand abs(x) in antecedent" in withMathematica { qeTool =>
-    val result = proveBy(Sequent(IndexedSeq("abs(x) >= 5".asFormula), IndexedSeq()), abs(-1, 0::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x>=0&abs_0=x | x<0&abs_0=-x".asFormula, "abs_0>=5".asFormula)
-    result.subgoals.head.succ shouldBe empty
+  it should "expand abs(x) in antecedent" in withQE { _ =>
+    val result = proveBy("abs(x) >= 5 ==> ".asSequent, abs(-1, 0::Nil))
+    result.subgoals.loneElement shouldBe "abs_0>=5, x>=0&abs_0=x | x<0&abs_0=-x ==> ".asSequent
   }
 
-  "min" should "expand min(x,y) in succedent" in withMathematica { qeTool =>
+  "min" should "expand min(x,y) in succedent" in withQE { _ =>
     val result = proveBy("min(x,y) >= 5".asFormula, minmax(1, 0::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x<=y&min_0=x | x>y&min_0=y".asFormula
-    result.subgoals.head.succ should contain only "min_0>=5".asFormula
+    result.subgoals.loneElement shouldBe "x<=y&min_0=x | x>y&min_0=y ==> min_0>=5".asSequent
   }
 
-  it should "expand min(x,y) in antecedent" in withMathematica { qeTool =>
-    val result = proveBy(Sequent(IndexedSeq("min(x,y) >= 5".asFormula), IndexedSeq()), minmax(-1, 0::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x<=y&min_0=x | x>y&min_0=y".asFormula, "min_0>=5".asFormula)
-    result.subgoals.head.succ shouldBe empty
+  it should "expand min(x,y) in antecedent" in withQE { qeTool =>
+    val result = proveBy("min(x,y) >= 5 ==> ".asSequent, minmax(-1, 0::Nil))
+    result.subgoals.loneElement shouldBe "min_0>=5, x<=y&min_0=x | x>y&min_0=y ==> ".asSequent
   }
 
-  "max" should "expand max(x,y) in succedent" in withMathematica { qeTool =>
+  "max" should "expand max(x,y) in succedent" in withQE { _ =>
     val result = proveBy("max(x,y) >= 5".asFormula, minmax(1, 0::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x>=y&max_0=x | x<y&max_0=y".asFormula
-    result.subgoals.head.succ should contain only "max_0>=5".asFormula
+    result.subgoals.loneElement shouldBe "x>=y&max_0=x | x<y&max_0=y ==> max_0>=5".asSequent
   }
 
-  it should "expand max(x,y) in antecedent" in withMathematica { qeTool =>
-    val result = proveBy(Sequent(IndexedSeq("max(x,y) >= 5".asFormula), IndexedSeq()), minmax(-1, 0::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x>=y&max_0=x | x<y&max_0=y".asFormula, "max_0>=5".asFormula)
-    result.subgoals.head.succ shouldBe empty
+  it should "expand max(x,y) in antecedent" in withQE { _ =>
+    val result = proveBy("max(x,y) >= 5 ==> ".asSequent, minmax(-1, 0::Nil))
+    result.subgoals.loneElement shouldBe "max_0>=5, x>=y&max_0=x | x<y&max_0=y ==> ".asSequent
   }
 }
