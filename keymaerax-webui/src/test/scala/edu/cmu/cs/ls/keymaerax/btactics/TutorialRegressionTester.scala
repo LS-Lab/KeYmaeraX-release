@@ -33,8 +33,8 @@ import org.scalatest.prop.TableDrivenPropertyChecks._
 class TutorialRegressionTester(val tutorialName: String, val url: String) extends TacticTestBase with AppendedClues {
 
   private def table(entries: List[TutorialEntry]) = {
-    Table(("Name", "Model", "Description", "Title", "Link", "Tactic", "Kind"),
-      entries.map(e => (e.name, e.model, e.description, e.title, e.link, e.tactic, e.kind)):_*)
+    Table(("Tutorial name", "Entry name", "Model", "Description", "Title", "Link", "Tactic", "Kind"),
+      entries.map(e => (tutorialName, e.name, e.model, e.description, e.title, e.link, e.tactic, e.kind)):_*)
   }
 
   private val tutorialEntries = table({
@@ -45,14 +45,14 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
   })
 
   tutorialName should "parse all models" in {
-    forEvery (tutorialEntries) { (name, model, _, _, _, _, _) =>
-      withClue(name) { KeYmaeraXProblemParser(model) }
+    forEvery (tutorialEntries) { (tutorialName, name, model, _, _, _, _, _) =>
+      withClue(tutorialName + "/" + name) { KeYmaeraXProblemParser(model) }
     }
   }
 
   it should "parse all tactics" in {
-    forEvery (tutorialEntries.filter(_._6.isDefined)) { (name, _, _, _, _, tactic, _) =>
-      withClue(name + "/" + tactic.get._1) { BelleParser(tactic.get._2) }
+    forEvery (tutorialEntries.filter(_._6.isDefined)) { (tutorialName, name, _, _, _, _, tactic, _) =>
+      withClue(tutorialName + "/" + name + "/" + tactic.get._1) { BelleParser(tactic.get._2) }
     }
   }
 
@@ -68,11 +68,11 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
   it should "try all Mathematica entries also with Z3" in withZ3 { tool => withDatabase { db =>
     val qeFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
 
-    val mathematicaEntries = tutorialEntries.filter(e => e._6.isDefined && e._6.get._3 &&
-        qeFinder.findAllMatchIn(e._6.get._2).exists(p => p.group("toolName") == "Mathematica"))
+    val mathematicaEntries = tutorialEntries.filter(e => e._7.isDefined && e._7.get._3 &&
+        qeFinder.findAllMatchIn(e._7.get._2).exists(p => p.group("toolName") == "Mathematica"))
 
     tool.setOperationTimeout(30) // avoid getting stuck
-    forEvery (mathematicaEntries) { (name, model, _, _, _, tactic, kind) =>
+    forEvery (mathematicaEntries) { (_, name, model, _, _, _, tactic, kind) =>
       val t = (tactic.get._1, qeFinder.replaceAllIn(tactic.get._2, "QE"), tactic.get._3)
       try {
         runEntry(name, model, kind, t, db)
@@ -85,18 +85,18 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
   }}
 
   /** Proves all entries that either use no QE at all, all generic QE, or whose specific QE({`tool`}) (if any) match tool */
-  private def prove(tool: String)(db: DbTacticTester) = {
+  private def prove(tool: String)(db: DbTacticTester): Unit = {
     // finds all specific QE({`tool`}) entries, but ignores the generic QE that works with any tool
     val qeFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
 
     tutorialEntries.
-      filterNot(e => e._6.isDefined && e._6.get._3 &&
-        qeFinder.findAllMatchIn(e._6.get._2).forall(p => p.group("toolName") == tool)).
+      filterNot(e => e._6.isDefined && e._7.get._3 &&
+        qeFinder.findAllMatchIn(e._7.get._2).forall(p => p.group("toolName") == tool)).
       foreach(e => println(s"QE tool mismatch: skipping ${e._1}"))
 
     forEvery (tutorialEntries.
-      filter(e => e._6.isDefined && e._6.get._3 &&
-        qeFinder.findAllMatchIn(e._6.get._2).forall(p => p.group("toolName") == tool))) { (name, model, _, _, _, tactic, kind) =>
+      filter(e => e._7.isDefined && e._7.get._3 &&
+        qeFinder.findAllMatchIn(e._7.get._2).forall(p => p.group("toolName") == tool))) { (_, name, model, _, _, _, tactic, kind) =>
       runEntry(name, model, kind, tactic.get, db)
     }
   }
