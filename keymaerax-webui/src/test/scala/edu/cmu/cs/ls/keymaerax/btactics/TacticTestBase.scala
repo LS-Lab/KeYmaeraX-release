@@ -40,6 +40,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
 
   //@note Initialize once per test class, but only if requested in a withMathematica call
   private val mathematicaProvider = new Lazy(new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig))
+  //@note setup lazy in beforeEach, automatically initialize in withDatabase, tear down in afterEach if initialized
+  private var dbTester: Lazy[DbTacticTester] = _
 
   private val LOG_EARLIEST_QE = System.getProperty("LOG_POTENTIAL_QE", "false")=="true"
   private val LOG_QE = System.getProperty("LOG_QE", "false")=="true"
@@ -172,7 +174,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   /** For tests that want to record proofs in the database. */
-  def withDatabase(testcode: DbTacticTester => Any): Unit = testcode(new DbTacticTester())
+  def withDatabase(testcode: DbTacticTester => Any): Unit = testcode(dbTester())
 
   /**
    * Creates and initializes Mathematica for tests that want to use QE. Also necessary for tests that use derived
@@ -232,6 +234,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   /** Test setup */
   override def beforeEach(): Unit = {
     interpreters = Nil
+    dbTester = new Lazy(new DbTacticTester())
     val listeners = (if (LOG_QE) qeListener::Nil else Nil) ++
       (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil) ++
       (if (LOG_QE_DURATION) qeDurationListener::Nil else Nil) ++
@@ -254,6 +257,10 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       if (!mathematicaProvider.isInitialized) {
         //@note only shutdown non-Mathematica tool providers; Mathematica is shutdown in afterAll()
         ToolProvider.shutdown()
+      }
+      if (dbTester.isInitialized) {
+        dbTester().db.session.close()
+        dbTester = null
       }
       ToolProvider.setProvider(new NoneToolProvider())
       TactixLibrary.invGenerator = FixedGenerator(Nil)

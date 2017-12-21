@@ -59,7 +59,10 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
   it should "prove all entries flagged as being provable with Mathematica" in withMathematica { _ => withDatabase {
     prove("Mathematica")
   }}
-  it should "prove all entries flagged as being provable with Z3" in withZ3 { _ => withDatabase { prove("Z3") }}
+  it should "prove all entries flagged as being provable with Z3" in withZ3 { tool => withDatabase {
+    tool.setOperationTimeout(30) // avoid getting stuck
+    prove("Z3")
+  }}
 
   /* Try to see if any of the Mathematica entries work with Z3. Test "fails" if Z3 can prove an entry. */
   it should "try all Mathematica entries also with Z3" in withZ3 { tool => withDatabase { db =>
