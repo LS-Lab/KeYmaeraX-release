@@ -807,6 +807,44 @@ private object DifferentialTactics {
       )
   })
 
+  /**
+    * Proves a strict barrier certificate property
+    * p >~ 0 -> [ {ODE & Q} ] p >~ 0
+    * where Q & p = 0 -> p' > 0
+    * works for both > and >= (and <, <=)
+    * Soundness note: this uses a ghost that is not smooth
+    */
+  private val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
+  private val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
+
+  def dgBarrier: DependentPositionTactic = "dgBarrier" by ((pos: Position, seq:Sequent) => {
+
+    val Some(Box(ODESystem(system, dom), property)) = seq.sub(pos)
+
+    val (barrier,flip) = property match {
+      case GreaterEqual(lhs, rhs) => (Minus(lhs,rhs),false)
+      case Greater(lhs, rhs) => (Minus(lhs,rhs),false)
+      case LessEqual(lhs, rhs) => (Minus(lhs,rhs),true)
+      case Less(lhs, rhs) => (Minus(lhs,rhs),true)
+      case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}")
+    }
+
+    val lie = DifferentialHelper.lieDerivative(system, barrier)
+
+    val zero = Number(0)
+    //The special max term
+    val barrierAlg = if (flip) FuncOf(maxF,Pair(Times(barrier,barrier),Neg(lie))) else FuncOf(maxF,Pair(Times(barrier,barrier),lie))
+    val barrierFml = Greater(barrierAlg,zero)
+    //The cofactor
+    val cofactor = Divide(Times(barrier,lie),barrierAlg)
+
+    // First cut in the barrier property, then use dgdbx on it
+    dC(barrierFml)(pos) <(
+      dgDbx(cofactor)(pos),
+      dW(pos) & QE
+    )
+  })
+
   //Keeps the top level =s in evol domain as a groebner basis of terms?
   private def domToTerms(f:Formula) : List[Term] = {
     f match {

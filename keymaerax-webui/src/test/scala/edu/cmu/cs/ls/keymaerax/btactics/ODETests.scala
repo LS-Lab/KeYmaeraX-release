@@ -94,6 +94,14 @@ class ODETests extends TacticTestBase {
     pr.subgoals.loneElement shouldBe "x+z=0 ==> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] x+z=0".asSequent
   }
 
+  "ODE" should "prove a strict barrier certificate" in withMathematica {qeTool =>
+    //This one doesn't actually need the full power of strict barriers because it's also an inequational dbx
+    val fml = "x>=0 -> [{x'=100*x^4+y*x^3-x^2+x+c, c'=x+y+z & c > x}] x>=0".asFormula
+    val pr = TactixLibrary.proveBy(fml,implyR(1) &
+      DifferentialTactics.dgBarrier(1))
+    pr shouldBe 'proved
+  }
+
   /** End temporary tests */
 
   "ODE" should "prove x=0 -> [{x'=-x}]x=0" in withMathematica { _ =>
