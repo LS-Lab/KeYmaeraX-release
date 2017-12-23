@@ -37,10 +37,7 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "have usage information, formatted to 80 characters width" in {
     val usage = KeYmaeraX.usage
-    val split = usage.split('\n')
-    for (line <- split) {
-      line.length<=80 shouldBe true
-    }
+    usage.lines.foreach(l => withClue(l) { l.length should be <= 80 })
   }
 
   "Launcher process" should "report a parsable model with exit value 0" taggedAs IgnoreInBuildTest in {

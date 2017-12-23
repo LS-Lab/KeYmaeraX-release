@@ -46,7 +46,8 @@ object KeYmaeraX {
       |  -prove file.kyx -tactic file.kyt [-out file.kyp] |
       |  -check file.kya |
       |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar]
-      |     [-sandbox] ([-vars|-ctrlvars|-sensevars] vars)* [-fallback fml] [-plantApprox fml]|
+      |     [-sandbox] ([-vars|-ctrlvars|-sensevars] vars)*
+      |     [-fallback fml] [-plantApprox fml]|
       |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c] |
       |  -ui [web server options] |
       |  -parse file.kyx |
