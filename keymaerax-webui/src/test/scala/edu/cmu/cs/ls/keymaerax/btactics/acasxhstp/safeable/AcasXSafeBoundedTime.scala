@@ -65,7 +65,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
   private val invariant = And(And("(w=-1 | w=1) & (to<=tl | tl<0)".asFormula, condImpl), "(hp > 0 & rp >= 0 & rv >= 0 & a > 0 & aM > 0)".asFormula)
 
   "ACAS X bounded time" should "prove Theorem 4: correctness of lower bound" in withMathematica { tool =>
-    if (lemmaDB.contains("bounded_safe_implicit")) lemmaDB.remove("bounded_safe_implicit")
+    if (containsLemma("bounded_safe_implicit")) removeLemma("bounded_safe_implicit")
 
     val safeLemmaFormula =
       """maxI=max((0,w*(dhf-dhd)))	&
@@ -125,11 +125,11 @@ class AcasXSafeBoundedTime extends AcasXBase {
 
     val safeLemma = proveBy(safeLemmaFormula, safeLemmaTac)
     safeLemma shouldBe 'proved
-    storeLemma(safeLemma, Some("bounded_safe_implicit"))
+    storeLemma(safeLemma, "bounded_safe_implicit")
   }
 
   it should "prove Theorem 4: correctness of upper bound" in withMathematica { tool =>
-    if (lemmaDB.contains("bounded_safe_upimplicit")) lemmaDB.remove("bounded_safe_upimplicit")
+    if (containsLemma("bounded_safe_upimplicit")) removeLemma("bounded_safe_upimplicit")
 
     //@todo same tactic as above (and probably as in twosided)
 
@@ -192,19 +192,19 @@ class AcasXSafeBoundedTime extends AcasXBase {
 
     val safeUpLemma = proveBy(safeUpLemmaFormula, safeUpLemmaTac)
     safeUpLemma shouldBe 'proved
-    storeLemma(safeUpLemma, Some("bounded_safe_upimplicit"))
+    storeLemma(safeUpLemma, "bounded_safe_upimplicit")
   }
 
   it should "prove Theorem 4: use case lemma" in withMathematica { tool =>
-    if (lemmaDB.contains("bounded_implicit_usecase")) lemmaDB.remove("bounded_implicit_usecase")
+    if (containsLemma("bounded_implicit_usecase")) removeLemma("bounded_implicit_usecase")
     val ucLoLemma = proveBy(Imply(invariant, "(abs(r)>rp|abs(h)>hp)".asFormula),
       implyR('R) & (andL('L)*) & SharedTactics.ucLoTac(condImpl))
     ucLoLemma shouldBe 'proved
-    storeLemma(ucLoLemma, Some("bounded_implicit_usecase"))
+    storeLemma(ucLoLemma, "bounded_implicit_usecase")
   }
 
   it should "prove Theorem 4: correctness of implicit bounded-time safe regions" in withMathematica { tool =>
-    if (lemmaDB.contains("bounded_implicit")) lemmaDB.remove("bounded_implicit")
+    if (containsLemma("user/bounded_implicit")) removeLemma("user/bounded_implicit")
 
     runLemmaTest("bounded_implicit_usecase", "ACAS X bounded time should prove Theorem 4: use case lemma")
     runLemmaTest("bounded_safe_implicit", "ACAS X bounded time should prove Theorem 4: correctness of lower bound")
@@ -223,7 +223,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
       (initCase, dT("Base case") & prop & done),
       (useCase, dT("Use case") & hideL('L, "hp>0&rp>=0&rv>=0&a>0&aM>0".asFormula) &
         andR('R) & Idioms.<(
-          implyRi & by(lemmaDB.get("bounded_implicit_usecase").getOrElse(throw new BelleAbort("Incomplete", "Lemma bounded usecase must be proved"))),
+          implyRi & useLemma("bounded_implicit_usecase", None),
           andL('L) & closeId
         ) & done),
       (indStep, dT("Step") & hideL('L, "hp>0&rp>=0&rv>=0&a>0&aM>0".asFormula) & composeb('R) & generalize(invariant)('R) & Idioms.<(
@@ -232,7 +232,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
         ,
         /*use*/ dT("Generalization Strong Enough") & Idioms.cases(
           (Case(Not(evolutionDomain)),
-            hideL('L, invariant) & DifferentialTactics.diffUnpackEvolutionDomainInitially('R) & notL('L) & closeId & done)
+            DifferentialTactics.diffUnpackEvolutionDomainInitially('R) & notL('L) & closeId & done)
           ,
           (Case(evolutionDomain),
             dT("Before diff. solution") &
@@ -249,15 +249,15 @@ class AcasXSafeBoundedTime extends AcasXBase {
                   hideL('L, "w*dhd<=w*dhfM&w*ao<=aM|w*ao<=0".asFormula) &
                   hideL('L, "w*(ao*t_+dhd)<=w*dhfM&w*ao<=aM|w*ao<=0".asFormula) &
                   hideR('R, "\\forall t \\forall ro \\forall ho ((t<=tl-(t_+to)|tl < 0)&(0<=t&t < max(0,w*(dhfM-(ao*t_+dhd)))/aM&ro=rv*t&ho=w*aM/2*t^2+(ao*t_+dhd)*t|t>=max(0,w*(dhfM-(ao*t_+dhd)))/aM&ro=rv*t&ho=(ao*t_+dhd+w*max(0,w*(dhfM-(ao*t_+dhd))))*t-w*max(0,w*(dhfM-(ao*t_+dhd)))^2/(2*aM))->abs((-rv)*t_+r-ro)>rp|w*(-(ao/2*t_^2+dhd*t_)+h)>w*ho+hp)".asFormula) &
-                  dT("lower lemma") & PropositionalTactics.toSingleFormula &
-                  by(lemmaDB.get("bounded_safe_implicit").getOrElse(throw new BelleAbort("Incomplete", "Lemma bounded_safe_implicit must be proved first"))),
+                  dT("lower lemma") &
+                  useLemma("bounded_safe_implicit", Some(prop)),
                 dT("Before hide upper") &
                   hideL('L, "maxI=max((0,w*(dhf-dhd)))".asFormula) & hideL('L, "a>0".asFormula) &
                   hideL('L, "w*dhd>=w*dhf|w*ao>=a".asFormula) &
                   hideL('L, "w*(ao*t_+dhd)>=w*dhf|w*ao>=a".asFormula) &
                   hideR('R, "\\forall t \\forall ro \\forall ho ((t<=tl-(t_+to)|tl < 0)&(0<=t&t < max(0,w*(dhf-(ao*t_+dhd)))/a&ro=rv*t&ho=w*a/2*t^2+(ao*t_+dhd)*t|t>=max(0,w*(dhf-(ao*t_+dhd)))/a&ro=rv*t&ho=dhf*t-w*max(0,w*(dhf-(ao*t_+dhd)))^2/(2*a))->abs((-rv)*t_+r-ro)>rp|w*(-(ao/2*t_^2+dhd*t_)+h) < w*ho-hp)".asFormula) &
-                  dT("upper lemma") & PropositionalTactics.toSingleFormula &
-                  by(lemmaDB.get("bounded_safe_upimplicit").getOrElse(throw new BelleAbort("Incomplete", "Lemma bounded_safe_upimplicit must be proved first")))
+                  dT("upper lemma") &
+                  useLemma("bounded_safe_upimplicit", Some(prop))
                 )
           )
         )
@@ -267,11 +267,11 @@ class AcasXSafeBoundedTime extends AcasXBase {
 
     val safeTheorem = proveBy(safeImplicitTLFormula, safeTac)
     safeTheorem shouldBe 'proved
-    storeLemma(safeTheorem, Some("bounded_implicit"))
+    storeLemma(safeTheorem, "bounded_implicit")
   }
 
   it should "prove Lemma 4a: time-limited implicit-explicit lower equivalence" in withMathematica { tool =>
-    if (lemmaDB.contains("bounded_lower_equivalence")) lemmaDB.remove("bounded_lower_equivalence")
+    if (containsLemma("bounded_lower_equivalence")) removeLemma("bounded_lower_equivalence")
 
     val reductionFml = KeYmaeraXProblemParser(io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/bounded_lower_equivalence.kyx")).mkString)
@@ -509,7 +509,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
 
     val equivalence = proveBy(reductionFml, tactic)
     equivalence shouldBe 'proved
-    storeLemma(equivalence, Some("bounded_lower_equivalence"))
+    storeLemma(equivalence, "bounded_lower_equivalence")
   }
 
   it should "prove Lemma 4b: time-limited implicit-explicit upper equivalence" in withMathematica { tool =>
@@ -831,11 +831,11 @@ class AcasXSafeBoundedTime extends AcasXBase {
     val reductionProof = proveBy(reductionFml, tactic)
     reductionProof shouldBe 'proved
 
-    storeLemma(reductionProof, Some("bounded_upper_equivalence"))
+    storeLemma(reductionProof, "bounded_upper_equivalence")
   }
 
   it should "prove Lemma 4: time-limited implicit-explicit equivalence from Lemma 4a and Lemma 4b" in {
-    if (lemmaDB.contains("lemma4-bounded_lower_equivalence_lemma")) lemmaDB.remove("lemma4-bounded_lower_equivalence_lemma")
+    if (containsLemma("lemma4-bounded_lower_equivalence_lemma")) removeLemma("lemma4-bounded_lower_equivalence_lemma")
 
     runLemmaTest("bounded_lower_equivalence", "ACAS X bounded time should prove Lemma 4a: time-limited implicit-explicit lower equivalence")
     runLemmaTest("bounded_upper_equivalence", "ACAS X bounded time should prove Lemma 4b: time-limited implicit-explicit upper equivalence")
@@ -880,8 +880,8 @@ class AcasXSafeBoundedTime extends AcasXBase {
       gen shouldBe 'proved
 
       // load lemmas lower/upper equivalence
-      require(lemmaDB.contains("bounded_lower_equivalence"), "Lower bounded-time equivalence lemma must be proved")
-      require(lemmaDB.contains("bounded_upper_equivalence"), "Upper bounded-time equivalence lemma must be proved")
+      require(containsLemma("bounded_lower_equivalence"), "Lower bounded-time equivalence lemma must be proved")
+      require(containsLemma("bounded_upper_equivalence"), "Upper bounded-time equivalence lemma must be proved")
 
       // negate time precondition
       val Or(LessEqual(t0, tl1), Less(tl2, z)) = uPt
@@ -912,18 +912,18 @@ class AcasXSafeBoundedTime extends AcasXBase {
           useAt(gen, PosInExpr(1 :: Nil))(1, 1 :: Nil) &
           assertE(And(Imply(lP, Equiv(lI, lE)), Imply(uP, Equiv(uI, uE))), "Lemma 4: Unexpected form E")(1) &
           andR(1) & Idioms.<(
-          by(lemmaDB.get("bounded_lower_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Bounded lower equivalence must be proved"))),
-          by(lemmaDB.get("bounded_upper_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Bounded upper equivalence must be proved"))))
+          useLemma("bounded_lower_equivalence", None),
+          useLemma("bounded_upper_equivalence", None))
       )
       lemma4Proof shouldBe 'proved
 
-      storeLemma(lemma4Proof, Some("lemma4-bounded_lower_equivalence_lemma"))
+      storeLemma(lemma4Proof, "lemma4-bounded_lower_equivalence_lemma")
     }
   }
 
   it should "prove Lemma 4: alternative proof fitting the form required by Corollary 4" in {
-    if (lemmaDB.contains("lemma4-bounded_lower_equivalence_lemma")) lemmaDB.remove("lemma4-bounded_lower_equivalence_lemma")
-    if (lemmaDB.contains("lemma4-alt-bounded_lower_equivalence_lemma")) lemmaDB.remove("lemma4-alt-bounded_lower_equivalence_lemma")
+    if (containsLemma("lemma4-bounded_lower_equivalence_lemma")) removeLemma("lemma4-bounded_lower_equivalence_lemma")
+    if (containsLemma("lemma4-alt-bounded_lower_equivalence_lemma")) removeLemma("lemma4-alt-bounded_lower_equivalence_lemma")
 
     //@note alternative proof so that theorems and lemmas fit together, because bounded_implicit.key uses a>0 & aM>0 instead of aM>=a & a>0
     //@note this proof stores two lemmas: the actual Lemma 4, and the intermediate step necessary for Corollary 4
@@ -978,8 +978,8 @@ class AcasXSafeBoundedTime extends AcasXBase {
       negate shouldBe 'proved
 
       // load lemmas lower/upper equivalence
-      require(lemmaDB.contains("bounded_lower_equivalence"), "Lower bounded-time equivalence lemma must be proved")
-      require(lemmaDB.contains("bounded_upper_equivalence"), "Upper bounded-time equivalence lemma must be proved")
+      require(containsLemma("bounded_lower_equivalence"), "Lower bounded-time equivalence lemma must be proved")
+      require(containsLemma("bounded_upper_equivalence"), "Upper bounded-time equivalence lemma must be proved")
 
       // cf. STTT: Lemma 4:
       // P -> (C_impl <-> C_expl), where
@@ -1006,11 +1006,11 @@ class AcasXSafeBoundedTime extends AcasXBase {
           useAt(upgrade, PosInExpr(1 :: Nil))(1, 0 :: Nil) &
           assertE(And(Imply(lP, Equiv(lI, lE)), Imply(uP, Equiv(uI, uE))), "Lemma 4: Unexpected form E")(1) &
           andR(1) & Idioms.<(
-          by(lemmaDB.get("bounded_lower_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Bounded lower equivalence must be proved"))),
-          by(lemmaDB.get("bounded_upper_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Bounded upper equivalence must be proved"))))
+          useLemma("bounded_lower_equivalence", None),
+          useLemma("bounded_upper_equivalence", None))
       )
       intermediateProof shouldBe 'proved
-      storeLemma(intermediateProof, Some("lemma4-alt-bounded_lower_equivalence_lemma"))
+      storeLemma(intermediateProof, "lemma4-alt-bounded_lower_equivalence_lemma")
 
       val lemma4Proof = proveBy(lemma4,
         useAt(gen, PosInExpr(1 :: Nil))(1) &
@@ -1019,12 +1019,12 @@ class AcasXSafeBoundedTime extends AcasXBase {
       )
       lemma4Proof shouldBe 'proved
 
-      storeLemma(lemma4Proof, Some("lemma4-bounded_lower_equivalence_lemma"))
+      storeLemma(lemma4Proof, "lemma4-bounded_lower_equivalence_lemma")
     }
   }
 
   it should "prove Corollary 4 (safety of bounded-time explicit regions) from Theorem 4 (bounded-time implicit safety) and Lemma 4 (implicit-explicit equivalence)" in {
-    if (lemmaDB.contains("bounded_implicit-explicit")) lemmaDB.remove("bounded_implicit-explicit")
+    if (containsLemma("bounded_implicit-explicit")) removeLemma("bounded_implicit-explicit")
 
     runLemmaTest("bounded_implicit", "ACAS X bounded time should prove Theorem 4: correctness of implicit bounded-time safe regions")
     runLemmaTest("lemma4-bounded_lower_equivalence_lemma", "ACAS X bounded time should prove Lemma 4: alternative proof fitting the form required by Corollary 4")
@@ -1037,10 +1037,10 @@ class AcasXSafeBoundedTime extends AcasXBase {
       val implicitSafety = KeYmaeraXProblemParser(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/bounded_implicit.kyx")).mkString)
 
-      val theorem4 = lemmaDB.get("bounded_implicit").getOrElse(throw new BelleAbort("Incomplete", "Bounded implicit safety must be proved"))
+      val theorem4 = getLemma("bounded_implicit")
       theorem4.fact.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(implicitSafety))
 
-      val lemma4 = lemmaDB.get("lemma4-alt-bounded_lower_equivalence_lemma").getOrElse(throw new BelleAbort("Incomplete", "Bounded lower equivalence must be proved"))
+      val lemma4 = getLemma("lemma4-alt-bounded_lower_equivalence_lemma")
 
       val Imply(And(a, w), Equiv(e, i)) = lemma4.fact.conclusion.succ.head
       val Imply(And(p1, And(p2, pi)), Box(Loop(Compose(Compose(Choice(maintain, Compose(prgA, Compose(prgB, Compose(prgC, Compose(prgD, Test(cimpl)))))), act), ode)), And(u1, And(u2, _)))) = implicitSafety
@@ -1048,7 +1048,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
       pi shouldBe i
       cimpl shouldBe i
 
-      val ucLoFact = lemmaDB.get("bounded_implicit_usecase").getOrElse(throw new BelleAbort("Incomplete", "Bounded implicit use case must be proved"))
+      val ucLoFact = getLemma("bounded_implicit_usecase")
       val ucLoLemma = TactixLibrary.proveBy(Sequent(IndexedSeq(a, w, i), IndexedSeq(u1)),
         cut(ucLoFact.fact.conclusion.succ.head) & Idioms.<(
           (cutShow, cohide(2) & by(ucLoFact)),
@@ -1069,7 +1069,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
       proof shouldBe 'proved
       proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq(corollary4))
 
-      storeLemma(proof, Some("bounded_implicit-explicit"))
+      storeLemma(proof, "bounded_implicit-explicit")
     }
   }
 

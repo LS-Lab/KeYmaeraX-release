@@ -119,7 +119,7 @@ class AcasXSafeable extends AcasXBase {
 
     val safeLemma = proveBy(safeLemmaFormula.asFormula, safeLemmaTac)
     safeLemma shouldBe 'proved
-    storeLemma(safeLemma, Some("safeable_safe_implicit"))
+    storeLemma(safeLemma, "safeable_safe_implicit")
   }
 
   it should "prove Theorem 5: lemma safe upper implicit" in withMathematica { tool =>
@@ -219,7 +219,7 @@ class AcasXSafeable extends AcasXBase {
 
     val safeUpLemma = proveBy(safeUpLemmaFormula.asFormula , safeUpLemmaTac)
     safeUpLemma shouldBe 'proved
-    storeLemma(safeUpLemma, Some("safeable_safe_upimplicit"))
+    storeLemma(safeUpLemma, "safeable_safe_upimplicit")
   }
 
   it should "prove Theorem 5: propagate Lo" in withMathematica { tool =>
@@ -318,11 +318,12 @@ class AcasXSafeable extends AcasXBase {
 
     val propagateLo = proveBy(propagateLoFormula.asFormula , propagateLoTac)
     propagateLo shouldBe 'proved
-    storeLemma(propagateLo, Some("safeable_propagateLo"))
+    storeLemma(propagateLo, "safeable_propagateLo")
   }
 
   it should "prove Theorem 5: correctness of implicit safeable region" in withMathematica { tool =>
     // large lemma evidence, needs stack size -Xss256M
+    runLemmaTest("safeable_propagateLo", "ACAS X safeable should prove Theorem 5: propagate Lo")
 
     /*** Invariants etc. ***/
     /* TODO make accelerations a parameter and changing throughout time
@@ -488,7 +489,7 @@ class AcasXSafeable extends AcasXBase {
           ,
         /*use*/ dT("Generalization Strong Enough") & Idioms.cases(prop)(
           (Case(Not(evolutionDomain)),
-            hideL('L, invariant) & dT("Before DI") &
+            dT("Before DI") &
             DifferentialTactics.diffUnpackEvolutionDomainInitially('R) & (hideR('R)*) & notL('L) & close & done
           ),
           (Case(evolutionDomain),
@@ -522,7 +523,7 @@ class AcasXSafeable extends AcasXBase {
                     dT("APPLY LEMMA LOWER") &
                       hideL('L, "\\forall hNew \\forall dhdNew (0<=tl-to&tl-to < maxI/a&hNew=w*a/2*(tl-to)^2+dhd*(tl-to)&dhdNew=w*a*(tl-to)+dhd|tl-to>=maxI/a&hNew=dhf*(tl-to)-w*maxI^2/(2*a)&dhdNew=dhf->\\forall t \\forall ro \\forall ho ((t <= -1-to|-1 < 0)&(0<=t&t < max((0,(w)*(dhfExtr-dhdNew)))/a&ro=rv*t&ho=(w)*a/2*t^2+dhdNew*t|t>=max((0,(w)*(dhfExtr-dhdNew)))/a&ro=rv*t&ho=dhfExtr*t-(w)*max((0,(w)*(dhfExtr-dhdNew)))^2/(2*a))->abs(r-rv*(tl-to)-ro)>rp|(w)*(h-hNew) < (w)*ho-hp))".asFormula) &
                       dT("lower lemma") &
-                      applyTweakLemma("safeable_safe_implicit"),
+                      useLemma("safeable_safe_implicit", Some(prop)),
                     dT("DONE after tl") &
                       hideL('L, "\\forall t \\forall ro \\forall ho ((t <= tl-to|tl < 0)&(0<=t&t < maxI/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxI/a&ro=rv*t&ho=dhf*t-w*maxI^2/(2*a))->abs(r-ro)>rp|w*h < w*ho-hp)".asFormula) &
                       cutEZ("(0<=tl-to&tl-to < maxI/a) | tl-to >= maxI/a".asFormula, QE) & dT("cutEZ on tl-to") &
@@ -655,7 +656,7 @@ class AcasXSafeable extends AcasXBase {
                     andR('R) & Idioms.<(
                       dT("APPLY LEMMA UPPER") &
                       hideL('L, "\\forall hNew \\forall dhdNew (0<=tl-to&tl-to < maxUpI/aM&hNew=w*aM/2*(tl-to)^2+dhd*(tl-to)&dhdNew=w*aM*(tl-to)+dhd|tl-to>=maxUpI/aM&hNew=(dhd+w*maxUpI)*(tl-to)-w*maxUpI^2/(2*aM)&dhdNew=dhd+w*maxUpI->\\forall t \\forall ro \\forall ho ((t <= -1-to|-1 < 0)&(0<=t&t < max((0,(-w)*(dhfUpExtr-dhdNew)))/a&ro=rv*t&ho=(-w)*a/2*t^2+dhdNew*t|t>=max((0,(-w)*(dhfUpExtr-dhdNew)))/a&ro=rv*t&ho=dhfUpExtr*t-(-w)*max((0,(-w)*(dhfUpExtr-dhdNew)))^2/(2*a))->abs(r-rv*(tl-to)-ro)>rp|(-w)*(h-hNew) < (-w)*ho-hp))".asFormula) &
-                      dT("upper lemma") & applyTweakLemma("safeable_safe_upimplicit")
+                      dT("upper lemma") & useLemma("safeable_safe_upimplicit", Some(prop))
                       ,
                       dT("after tl") &
                       hideL('L, "\\forall t \\forall ro \\forall ho ((t <= tl-to|tl < 0)&(0<=t&t < maxUpI/aM&ro=rv*t&ho=w*aM/2*t^2+dhd*t|t>=maxUpI/aM&ro=rv*t&ho=(dhd+w*maxUpI)*t-w*maxUpI^2/(2*aM))->abs(r-ro)>rp|w*h>w*ho+hp)".asFormula) &

@@ -64,7 +64,7 @@ class AcasXSafe extends AcasXBase {
   //private val logQE = QELogger.enableLogging((40,"ACAS X Safe"))
 
   "ACAS X safe" should "prove use case lemma" in withMathematica { _ => withDatabase { db =>
-    if (lemmaDB.contains("nodelay_ucLoLemma")) lemmaDB.remove("nodelay_ucLoLemma")
+    if (containsLemma("nodelay_ucLoLemma")) removeLemma("nodelay_ucLoLemma")
 
     val ucLoFormula = Imply(invariant, postcond)
     val ucLoTac = implyR('R) & (andL('L)*) &
@@ -80,7 +80,7 @@ class AcasXSafe extends AcasXBase {
 
     val ucLoLemma = proveBy(ucLoFormula, ucLoTac)
     ucLoLemma shouldBe 'proved
-    storeLemma(ucLoLemma, Some("nodelay_ucLoLemma"))
+    storeLemma(ucLoLemma, "nodelay_ucLoLemma")
 
     // reprove with spoon-feeding interpreter to create extractable tactic
     val proofId = db.createProof(createAcasXProblemFile(ucLoFormula))
@@ -93,18 +93,18 @@ class AcasXSafe extends AcasXBase {
   }}
 
   it should "prove the use case lemma with a parsed Belle tactic" in withMathematica { _ =>
-    if (lemmaDB.contains("nodelay_ucLoLemma")) lemmaDB.remove("nodelay_ucLoLemma")
+    if (containsLemma("nodelay_ucLoLemma")) removeLemma("nodelay_ucLoLemma")
 
     val ucLoFormula = Imply(invariant, postcond)
     val ucLoTac = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_uclo.kyt")).mkString)
     val ucLoLemma = proveBy(ucLoFormula, ucLoTac)
 
     ucLoLemma shouldBe 'proved
-    storeLemma(ucLoLemma, Some("nodelay_ucLoLemma"))
+    storeLemma(ucLoLemma, "nodelay_ucLoLemma")
   }
 
   it should "prove lower bound safe lemma" in withMathematica { _ =>
-    if (lemmaDB.contains("nodelay_safeLoLemma")) lemmaDB.remove("nodelay_safeLoLemma")
+    if (containsLemma("nodelay_safeLoLemma")) removeLemma("nodelay_safeLoLemma")
 
     // Formula from print in Theorem 1
     val safeLemmaFormula = """(w*dhd>=w*dhf|w*ao>=a)&(((w=-1|w=1)&\forall t \forall ro \forall ho (0<=t&t < maxI/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=maxI/a&ro=rv*t&ho=dhf*t-w*maxI^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&hp>0&rp>=0&rv>=0&a>0)&maxI=max((0,w*(dhf-dhd)))->[{r'=-rv,h'=-dhd,dhd'=ao&w*dhd>=w*dhf|w*ao>=a}](((w=-1|w=1)&\forall t \forall ro \forall ho (0<=t&t < max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=w*a/2*t^2+dhd*t|t>=max((0,w*(dhf-dhd)))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-dhd)))^2/(2*a)->abs(r-ro)>rp|w*h < w*ho-hp))&hp>0&rp>=0&rv>=0&a>0)""".stripMargin.asFormula
@@ -151,11 +151,11 @@ class AcasXSafe extends AcasXBase {
     val safeLemma = proveBy(safeLemmaFormula, safeLemmaTac)
     safeLemma shouldBe 'proved
 
-    storeLemma(safeLemma, Some("nodelay_safeLoLemma"))
+    storeLemma(safeLemma, "nodelay_safeLoLemma")
   }
 
   it should "prove Theorem 1: correctness of implicit safe regions" in {
-    if (lemmaDB.contains("safe_implicit")) lemmaDB.remove("safe_implicit")
+    if (containsLemma("safe_implicit")) removeLemma("safe_implicit")
 
     runLemmaTest("nodelay_ucLoLemma", "ACAS X safe should prove use case lemma")
     runLemmaTest("nodelay_safeLoLemma", "ACAS X safe should prove lower bound safe lemma")
@@ -170,7 +170,7 @@ class AcasXSafe extends AcasXBase {
         (initCase, dT("Base case") & prop & done)
         ,
         (useCase, dT("Use case") & andR('R) & Idioms.<(
-          cohide2(-1, 1) & implyRi & by(lemmaDB.get("nodelay_ucLoLemma").getOrElse(throw new Exception("Lemma nodelay_ucLoLemma must be proved first"))) & done,
+          cohide2(-1, 1) & implyRi & useLemma("nodelay_ucLoLemma", None) & done,
           (andL('L) *) & closeId & done
         ) & done)
         ,
@@ -182,19 +182,19 @@ class AcasXSafe extends AcasXBase {
 
             DifferentialTactics.diffUnpackEvolutionDomainInitially(1) &
             dT("Preparing for safeLoLemma") & hideL(-1) & (andLi *) & implyRi &
-            by(lemmaDB.get("nodelay_safeLoLemma").getOrElse(throw new Exception("Lemma nodelay_safeLoLemma must be proved first"))) & done
+            useLemma("nodelay_safeLoLemma", None) & done
           ) /* End indStepLbl */
         )
       )
 
       val safeTheorem = proveBy(safeSeq, safeTac)
       safeTheorem shouldBe 'proved
-      storeLemma(safeTheorem, Some("safe_implicit"))
+      storeLemma(safeTheorem, "safe_implicit")
     }
   }
 
   it should "prove Lemma 1: equivalence between implicit and explicit region formulation" in withMathematica { _ =>
-    if (lemmaDB.contains("safe_equivalence")) lemmaDB.remove("safe_equivalence")
+    if (containsLemma("safe_equivalence")) removeLemma("safe_equivalence")
 
     val s = KeYmaeraXProblemParser(io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_equivalence.kyx")).mkString)
@@ -543,7 +543,7 @@ class AcasXSafe extends AcasXBase {
 
     val equivalence = proveBy(s, tactic)
     equivalence shouldBe 'proved
-    storeLemma(equivalence, Some("safe_equivalence"))
+    storeLemma(equivalence, "safe_equivalence")
   }
 
   it should "prove Corollary 1: explicit region safety from implicit region safety and conditional equivalence" in {
@@ -560,15 +560,15 @@ class AcasXSafe extends AcasXBase {
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_implicit.kyx")).mkString)
       val acasxexplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_explicit.kyx")).mkString)
-      val acasximplicitP = lemmaDB.get("safe_implicit").getOrElse(throw new Exception("Proof will be partial. Prove safe_implicit first"))
-      val implicitExplicitP = lemmaDB.get("safe_equivalence").getOrElse(throw new Exception("Proof will be partial. Prove safe_equivalence first"))
+      val acasximplicitP = getLemma("safe_implicit")
+      val implicitExplicitP = getLemma("safe_equivalence")
 
       // extract formula fragments
       val equivalence = implicitExplicitP.fact.conclusion.succ.head
       val Imply(And(a, w), Equiv(_, i)) = equivalence
       // extract subformulas A()&W(w) -> (Ce(...)<->Ci(...))
       val Imply(And(_, And(_, _)), Box(Loop(_), And(u, _))) = acasximplicit
-      val ucLoFact = lemmaDB.get("nodelay_ucLoLemma").getOrElse(throw new Exception("Proof will be partial. Prove nodelay_ucLoLemma first"))
+      val ucLoFact = getLemma("nodelay_ucLoLemma")
       val ucLoLemma = proveBy(Sequent(IndexedSeq(a, w, i), IndexedSeq(u)),
         cut(ucLoFact.fact.conclusion.succ.head) & Idioms.<(
           /*use*/ prop & done,
@@ -584,7 +584,7 @@ class AcasXSafe extends AcasXBase {
       proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq(acasxexplicit))
 
       // large lemma evidence, needs stack size -Xss256M
-      storeLemma(proof, Some("safe_explicit"))
+      storeLemma(proof, "safe_explicit")
     }
   }
 

@@ -91,7 +91,7 @@ class AcasXSafeTwoSided extends AcasXBase {
   private val invariant = And(And("w=-1 | w=1".asFormula, condImpl), "hp > 0 & rp >= 0 & rv >= 0 & a > 0 & aM > 0".asFormula) //invariantStr.asFormula
 
   "ACAS X 2-sided safe" should "prove Theorem 3, lemma safe implicit" in withMathematica { tool =>
-    if (lemmaDB.contains("2side_safe_implicit")) lemmaDB.remove("2side_safe_implicit")
+    if (containsLemma("2side_safe_implicit")) removeLemma("2side_safe_implicit")
 
     def safeLemmaTac(r: String, h: String, dhd: String) = dT("lemma") & implyR('R) & (andL('L)*) &
       dT("Before skolem") & (allR('R)*) & dT("After skolem") &
@@ -143,11 +143,11 @@ class AcasXSafeTwoSided extends AcasXBase {
 
     val safeLemma = proveBy(safeLemmaFormula, safeLemmaTac("((-rv)*t_+r)", "(-(ao/2*t_^2+dhd*t_)+h)", "(ao*t_+dhd)"))
     safeLemma shouldBe 'proved
-    storeLemma(safeLemma, Some("2side_safe_implicit"))
+    storeLemma(safeLemma, "2side_safe_implicit")
   }
 
   it should "prove Theorem 3, lemma up safe implicit" in withMathematica { tool =>
-    if (lemmaDB.contains("2side_safe_upimplicit")) lemmaDB.remove("2side_safe_upimplicit")
+    if (containsLemma("2side_safe_upimplicit")) removeLemma("2side_safe_upimplicit")
 
     //@todo same tactic as above, but with different instances
 
@@ -198,18 +198,18 @@ class AcasXSafeTwoSided extends AcasXBase {
 
     val safeUpLemma = proveBy(safeUpLemmaFormula, safeUpLemmaTac("((-rv)*t_+r)", "(-(ao/2*t_^2+dhd*t_)+h)", "(ao*t_+dhd)"))
     safeUpLemma shouldBe 'proved
-    storeLemma(safeUpLemma, Some("2side_safe_upimplicit"))
+    storeLemma(safeUpLemma, "2side_safe_upimplicit")
   }
 
   it should "prove Theorem 3: uc lo lemma" in withMathematica { tool =>
-    if (lemmaDB.contains("twosided_implicit_usecase")) lemmaDB.remove("twosided_implicit_usecase")
+    if (containsLemma("twosided_implicit_usecase")) removeLemma("twosided_implicit_usecase")
     val ucLoLemma = proveBy(Imply(invariant, "(abs(r)>rp|abs(h)>hp)".asFormula), implyR('R) & (andL('L)*) & ucLoTac(condImpl))
     ucLoLemma shouldBe 'proved
-    storeLemma(ucLoLemma, Some("twosided_implicit_usecase"))
+    storeLemma(ucLoLemma, "twosided_implicit_usecase")
   }
 
   it should "prove Theorem 3: correctness of implicit two-sided safe regions" in {
-    if (lemmaDB.contains("twosided_implicit")) lemmaDB.remove("twosided_implicit")
+    if (containsLemma("twosided_implicit")) removeLemma("twosided_implicit")
     runLemmaTest("twosided_implicit_usecase", "ACAS X 2-sided safe should prove Theorem 3: uc lo lemma")
     runLemmaTest("2side_safe_implicit", "ACAS X 2-sided safe should prove Theorem 3, lemma safe implicit")
     runLemmaTest("2side_safe_upimplicit", "ACAS X 2-sided safe should prove Theorem 3, lemma up safe implicit")
@@ -239,7 +239,7 @@ class AcasXSafeTwoSided extends AcasXBase {
         (initCase, dT("Base case") & prop & done),
         (useCase, dT("Use case") &
           andR('R) & Idioms.<(
-          cohide2(-1, 1) & implyRi & by(lemmaDB.get("twosided_implicit_usecase").getOrElse(throw new Exception("Lemma twosided_implicit_usecase must be proved first"))) & done,
+          useLemma("twosided_implicit_usecase", Some(prop)) & done,
           (andL('L) *) & closeId & done
         ) & done)
         ,
@@ -277,14 +277,14 @@ class AcasXSafeTwoSided extends AcasXBase {
                     hideL('L, "w*(ao*t_+dhd)<=w*dhfM&w*ao<=aM|w*ao<=0".asFormula) &
                     hideR('R, "\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhfM-(ao*t_+dhd))))/aM&ro=rv*t&ho=w*aM/2*t^2+(ao*t_+dhd)*t|t>=max((0,w*(dhfM-(ao*t_+dhd))))/aM&ro=rv*t&ho=((ao*t_+dhd)+w*max((0,w*(dhfM-(ao*t_+dhd)))))*t-w*max((0,w*(dhfM-(ao*t_+dhd))))^2/(2*aM)->abs((-rv)*t_+r-ro)>rp|w*(-(ao/2*t_^2+dhd*t_)+h)>w*ho+hp)".asFormula) &
                     dT("lower lemma") &
-                    applyLemma(safeLemmaFormula, by(lemmaDB.get("2side_safe_implicit").getOrElse(throw new Exception("Lemma 2side_safe_implicit must be proved first")))) & done
+                    applyLemma(safeLemmaFormula, useLemma("2side_safe_implicit", None)) & done
                   ,
                   hideL('L, "maxI=max((0,w*(dhf-dhd)))".asFormula) & hideL('L, "a>0".asFormula) &
                     hideL('L, "w*dhd>=w*dhf|w*ao>=a".asFormula) &
                     hideL('L, "w*(ao*t_+dhd)>=w*dhf|w*ao>=a".asFormula) &
                     hideR('R, "\\forall t \\forall ro \\forall ho (0<=t&t < max((0,w*(dhf-(ao*t_+dhd))))/a&ro=rv*t&ho=w*a/2*t^2+(ao*t_+dhd)*t|t>=max((0,w*(dhf-(ao*t_+dhd))))/a&ro=rv*t&ho=dhf*t-w*max((0,w*(dhf-(ao*t_+dhd))))^2/(2*a)->abs((-rv)*t_+r-ro)>rp|w*(-(ao/2*t_^2+dhd*t_)+h) < w*ho-hp)".asFormula) &
                     dT("upper lemma") &
-                    applyLemma(safeUpLemmaFormula, by(lemmaDB.get("2side_safe_upimplicit").getOrElse(throw new Exception("Lemma 2side_safe_upimplicit must be proved first")))) & done
+                    applyLemma(safeUpLemmaFormula, useLemma("2side_safe_upimplicit", None)) & done
                 )
               ),
               QE
@@ -297,7 +297,7 @@ class AcasXSafeTwoSided extends AcasXBase {
       val safeTheorem = proveBy(safeSeq, safeTac)
       safeTheorem shouldBe 'proved
       // large lemma evidence, needs stack size -Xss128M
-      storeLemma(safeTheorem, Some("twosided_implicit"))
+      storeLemma(safeTheorem, "twosided_implicit")
     }
   }
 
@@ -306,7 +306,7 @@ class AcasXSafeTwoSided extends AcasXBase {
   }
 
   it should "prove Lemma 3b: implicit-explicit upper equivalence" in withMathematica { tool =>
-    if (lemmaDB.contains("upper_equivalence")) lemmaDB.remove("upper_equivalence")
+    if (containsLemma("upper_equivalence")) removeLemma("upper_equivalence")
 
     val reductionFml = KeYmaeraXProblemParser(io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/upper_equivalence.kyx")).mkString)
@@ -372,12 +372,12 @@ class AcasXSafeTwoSided extends AcasXBase {
 
     val reductionProof = proveBy(reductionFml, tactic)
     reductionProof shouldBe 'proved
-    storeLemma(reductionProof, Some("upper_equivalence"))
+    storeLemma(reductionProof, "upper_equivalence")
   }
 
 
   it should "prove Lemma 3 (Equivalence of two-sided explicit safe regions) from Lemma 3a (lower) and Lemma 3b (upper) bound equivalences" in {
-    if (lemmaDB.contains("lemma3-safe_equivalence_lemma")) lemmaDB.remove("lemma3-safe_equivalence_lemma")
+    if (containsLemma("lemma3-safe_equivalence_lemma")) removeLemma("lemma3-safe_equivalence_lemma")
     // execute dependent tests if lemmas not already proved
     runLemmaTest("safe_equivalence", "ACAS X 2-sided safe should prove Lemma 3a: implicit-explicit lower equivalence")
     runLemmaTest("upper_equivalence", "ACAS X 2-sided safe should prove Lemma 3b: implicit-explicit upper equivalence")
@@ -429,13 +429,13 @@ class AcasXSafeTwoSided extends AcasXBase {
           useAt(gen, PosInExpr(1 :: Nil))(1, 1 :: Nil) &
           assertE(And(Imply(lP, Equiv(lI, lE)), Imply(uP, Equiv(uI, uE))), "Lemma 3: Unexpected form C")(1) &
           andR(1) & Idioms.<(
-            by(lemmaDB.get("safe_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Lower equivalence lemma must be proved"))),
-            by(lemmaDB.get("upper_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Upper equivalence lemma must be proved"))))
+            useLemma("safe_equivalence", None),
+            useLemma("upper_equivalence", None))
       )
 
       lemma3Proof shouldBe 'proved
       // large lemma evidence, needs stack size -Xss128M
-      storeLemma(lemma3Proof, Some("lemma3-safe_equivalence_lemma"))
+      storeLemma(lemma3Proof, "lemma3-safe_equivalence_lemma")
     }
   }
 
@@ -443,8 +443,8 @@ class AcasXSafeTwoSided extends AcasXBase {
     //@note alternative proof so that theorems and lemmas fit together, because twosided_implicit.key uses a>0 & aM>0 instead of aM>=a & a>0
     //@note this proof stores two lemmas: the actual Lemma 3, and the intermediate step necessary for Corollary 3
 
-    if (lemmaDB.contains("lemma3-safe_equivalence_lemma")) lemmaDB.remove("lemma3-safe_equivalence_lemma")
-    if (lemmaDB.contains("lemma3-alt-safe_equivalence_lemma")) lemmaDB.remove("lemma3-alt-safe_equivalence_lemma")
+    if (containsLemma("lemma3-safe_equivalence_lemma")) removeLemma("lemma3-safe_equivalence_lemma")
+    if (containsLemma("lemma3-alt-safe_equivalence_lemma")) removeLemma("lemma3-alt-safe_equivalence_lemma")
 
     // execute dependent tests if lemmas not already proved
     runLemmaTest("safe_equivalence", "ACAS X 2-sided safe should prove Lemma 3a: implicit-explicit lower equivalence")
@@ -502,12 +502,12 @@ class AcasXSafeTwoSided extends AcasXBase {
           useAt(weakenRight, PosInExpr(1 :: Nil))(1, 1 :: Nil) &
           assertE(And(Imply(lP, Equiv(lI, lE)), Imply(uP, Equiv(uI, uE))), "Lemma 3: Unexpected form C")(1) &
           andR(1) & Idioms.<(
-          by(lemmaDB.get("safe_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Lower equivalence lemma must be proved"))),
-          by(lemmaDB.get("upper_equivalence").getOrElse(throw new BelleAbort("Incomplete", "Upper equivalence lemma must be proved"))))
+            useLemma("safe_equivalence", None),
+            useLemma("upper_equivalence", None))
       )
       intermediateProof shouldBe 'proved
       // large lemma evidence, needs stack size -Xss128M
-      storeLemma(intermediateProof, Some("lemma3-alt-safe_equivalence_lemma"))
+      storeLemma(intermediateProof, "lemma3-alt-safe_equivalence_lemma")
 
       val lemma3Proof = proveBy(lemma3,
         useAt(gen, PosInExpr(1 :: Nil))(1) &
@@ -517,12 +517,12 @@ class AcasXSafeTwoSided extends AcasXBase {
 
       lemma3Proof shouldBe 'proved
       // large lemma evidence, needs stack size -Xss128M
-      storeLemma(lemma3Proof, Some("lemma3-safe_equivalence_lemma"))
+      storeLemma(lemma3Proof, "lemma3-safe_equivalence_lemma")
     }
   }
 
   it should "prove Corollary 3 (safety of explicit 2-sided regions) from Theorem 3 (implicit 2-sided safety) and Lemma 3 (implicit-explicit equivalence)" in {
-    if (lemmaDB.contains("twosided_explicit")) lemmaDB.remove("twosided_explicit")
+    if (containsLemma("twosided_explicit")) removeLemma("twosided_explicit")
 
     runLemmaTest("twosided_implicit", "ACAS X 2-sided safe should prove Theorem 3: correctness of implicit two-sided safe regions")
     runLemmaTest("twosided_implicit_usecase", "ACAS X 2-sided safe should prove Theorem 3: uc lo lemma")
@@ -535,17 +535,17 @@ class AcasXSafeTwoSided extends AcasXBase {
       val implicitSafety = KeYmaeraXProblemParser(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/twosided_implicit.kyx")).mkString)
 
-      val theorem3 = lemmaDB.get("twosided_implicit").getOrElse(throw new BelleAbort("Incomplete", "2-sided implicit safety must be proved"))
+      val theorem3 = getLemma("twosided_implicit")
       theorem3.fact.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(implicitSafety))
 
-      val lemma3 = lemmaDB.get("lemma3-alt-safe_equivalence_lemma").getOrElse(throw new BelleAbort("Incomplete", "2-sided implicit safety alternative must be proved"))
+      val lemma3 = getLemma("lemma3-alt-safe_equivalence_lemma")
 
       val Imply(And(a, w), Equiv(e, i)) = lemma3.fact.conclusion.succ.head
       val Imply(And(p1, And(p2, _)), Box(Loop(Compose(Compose(Choice(maintain, Compose(prgA, Compose(prgB, Test(cimpl)))), act), ode)), And(u, _))) = implicitSafety
 
       cimpl shouldBe i
 
-      val ucLoFact = lemmaDB.get("twosided_implicit_usecase").getOrElse(throw new BelleAbort("Incomplete", "2-sided implicit usecase must be proved")).fact
+      val ucLoFact = getLemma("twosided_implicit_usecase").fact
       val ucLoLemma = TactixLibrary.proveBy(Sequent(IndexedSeq(a, w, i), IndexedSeq(u)),
         cut(ucLoFact.conclusion.succ.head) & Idioms.<(
           (cutShow, cohide('Rlast) & by(ucLoFact)),
@@ -567,7 +567,7 @@ class AcasXSafeTwoSided extends AcasXBase {
       proof.proved shouldBe Sequent(IndexedSeq(), IndexedSeq(corollary3))
 
       // large lemma evidence, needs stack size -Xss128M
-      storeLemma(proof, Some("twosided_explicit"))
+      storeLemma(proof, "twosided_explicit")
     }
   }
 
