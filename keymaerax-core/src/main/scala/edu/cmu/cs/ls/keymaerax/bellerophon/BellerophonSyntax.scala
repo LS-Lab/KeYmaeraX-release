@@ -471,6 +471,8 @@ abstract class StringInputTactic(override val name: String, val inputs: List[Str
 
 abstract class DependentPositionWithAppliedInputTactic(private val n: String, val inputs: List[Any]) extends DependentPositionTactic(n) {
   override def apply(locator: PositionLocator): AppliedDependentPositionTacticWithAppliedInput = new AppliedDependentPositionTacticWithAppliedInput(this, locator)
+  //@note non-serializable pretty-string, only applied tactic is serializable. @see AppliedDependendPositionTacticWithAppliedInput
+  override def prettyString: String = super.prettyString + "(" + inputs.mkString(",") + ")"
 }
 class AppliedDependentPositionTacticWithAppliedInput(pt: DependentPositionWithAppliedInputTactic, locator: PositionLocator) extends AppliedDependentPositionTactic(pt, locator) {
   override def prettyString: String =
