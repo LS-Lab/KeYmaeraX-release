@@ -98,7 +98,23 @@ class ODETests extends TacticTestBase {
     //This one doesn't actually need the full power of strict barriers because it's also an inequational dbx
     val fml = "x>=0 -> [{x'=100*x^4+y*x^3-x^2+x+c, c'=x+y+z & c > x}] x>=0".asFormula
     val pr = TactixLibrary.proveBy(fml,implyR(1) &
-      DifferentialTactics.dgBarrier(1))
+      DifferentialTactics.dgBarrier()(1))
+    pr shouldBe 'proved
+  }
+
+  "ODE" should "prove a strict barrier certificate 1" in withMathematica {qeTool =>
+    //This one doesn't actually need the full power of strict barriers because it's also an inequational dbx
+    val fml = "(87*x^2)/200 - (7*x*y)/180 + (209*y^2)/1080 - 10 >=0 -> [{x'=(5*x)/4 - (5*y)/6, y'=(9*x)/4 + (5*y)/2}] (87*x^2)/200 - (7*x*y)/180 + (209*y^2)/1080 - 10>=0".asFormula
+    val pr = TactixLibrary.proveBy(fml,implyR(1) &
+      DifferentialTactics.dgBarrier(Some(qeTool))(1))
+    pr shouldBe 'proved
+  }
+
+  "ODE" should "prove a strict barrier certificate 2" in withMathematica {qeTool =>
+    //This one doesn't actually need the full power of strict barriers because it's also an inequational dbx
+    val fml = "(23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5 >=0 -> [{x'=-(x/2) - (7*y)/3 , y'=x + y}] (23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5>=0".asFormula
+    val pr = TactixLibrary.proveBy(fml,implyR(1) &
+      DifferentialTactics.dgBarrier(Some(qeTool))(1))
     pr shouldBe 'proved
   }
 

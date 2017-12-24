@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ODESolverTool
+import edu.cmu.cs.ls.keymaerax.tools.{ODESolverTool, SimplificationTool}
 
 import scala.collection.immutable
 import scala.collection.immutable.{IndexedSeq, List}
@@ -808,6 +808,7 @@ private object DifferentialTactics {
   })
 
   /**
+    * This tactic is EXPERIMENTAL: it requires the use of max in a ghost
     * Proves a strict barrier certificate property
     * p >~ 0 -> [ {ODE & Q} ] p >~ 0
     * where Q & p = 0 -> p' > 0
@@ -817,7 +818,7 @@ private object DifferentialTactics {
   private val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
   private val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
 
-  def dgBarrier: DependentPositionTactic = "dgBarrier" by ((pos: Position, seq:Sequent) => {
+  def dgBarrier(tool : Option[SimplificationTool] = None) : DependentPositionTactic = "dgBarrier" by ((pos: Position, seq:Sequent) => {
 
     val Some(Box(ODESystem(system, dom), property)) = seq.sub(pos)
 
@@ -829,7 +830,7 @@ private object DifferentialTactics {
       case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}")
     }
 
-    val lie = DifferentialHelper.lieDerivative(system, barrier)
+    val lie = DifferentialSaturation.simplifiedLieDerivative(system, barrier, tool)
 
     val zero = Number(0)
     //The special max term
