@@ -5,7 +5,7 @@
 
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
-import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
+import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core.{Power, Term}
 import org.scalatest.prop.TableDrivenPropertyChecks._
 
@@ -97,7 +97,7 @@ class SMTQETests extends TacticTestBase {
   // Real applications
   // ---------------------------
 
-  // proved with Z3 v4.4.1, but no longer with v4.5.0
+  // prove with Z3 v4.4.1, but no longer with v4.5.0 and v4.6.0
   private val regressionExamples = Table(("Name", "Formula", "Expected"),
     ("STTT Tutorial Example 5 simplectrl", "\\forall x_6 \\forall x_5 \\forall x_4 \\forall v_6 \\forall v_5 \\forall v_4 \\forall ep_0 \\forall c_9 \\forall c_8 \\forall c_7 \\forall a_2 \\forall S_0 \\forall B_0 \\forall A_0 ((((((((((((((A_0>0&B_0>0)&ep_0>0)&a_2=-B_0)&c_9=0)&v_6>=0)&x_4+v_6^2/(2*B_0)<=S_0)&x_5=x_4)&v_4=v_6)&c_7<=ep_0)&c_8=0)&c_7>=0)&v_5=v_6+-B_0*(c_7-0))&x_6=1/2*(2*x_4+2*v_6*(c_7-0)+-B_0*(c_7-0)^2))&v_6+-B_0*(c_7-0)>=0->1/2*(2*x_4+2*v_6*(c_7-0)+-B_0*(c_7-0)^2)+(v_6+-B_0*(c_7-0))^2/(2*B_0)<=S_0)".asFormula, "true".asFormula),
     ("STTT Tutorial Example 5", "\\forall x_6 \\forall x_5 \\forall x_4 \\forall v_6 \\forall v_5 \\forall v_4 \\forall ep_0 \\forall c_9 \\forall c_8 \\forall c_7 \\forall a_2 \\forall S_0 \\forall B_0 \\forall A_0 (((((((((((((((A_0>0&B_0>0)&ep_0>0)&v_4>=0)&x_6+v_4^2/(2*B_0)<=S_0)&x_6+v_4^2/(2*B_0)+(A_0/B_0+1)*(A_0/2*ep_0^2+ep_0*v_4)<=S_0)&a_2=A_0)&c_9=0)&x_5=x_6)&v_6=v_4)&c_8<=ep_0)&c_7=0)&c_8>=0)&v_5=v_4+A_0*(c_8-0))&x_4=1/2*(2*x_6+2*v_4*(c_8-0)+A_0*(c_8-0)^2))&v_4+A_0*(c_8-0)>=0->1/2*(2*x_6+2*v_4*(c_8-0)+A_0*(c_8-0)^2)+(v_4+A_0*(c_8-0))^2/(2*B_0)<=S_0)".asFormula, "true".asFormula),
@@ -114,9 +114,16 @@ class SMTQETests extends TacticTestBase {
   )
 
   "Z3" should "prove every regression example" in {
+    z3.setOperationTimeout(30)
     forEvery (regressionExamples) {
       (name, input, expected) => withClue(name) { z3.qeEvidence(input)._1 shouldBe expected }
     }
+  }
+
+  it should "handle abs" in withZ3 { _ =>
+    val f = "abs(x-y)>v^2 -> (x-y)^2>0".asFormula
+    proveBy(f, TactixLibrary.abs(1, 0::0::Nil) & TactixLibrary.QE) shouldBe 'proved
+    proveBy(f, TactixLibrary.QE) shouldBe 'proved
   }
 
   it should "not exceed a timeout" ignore {
