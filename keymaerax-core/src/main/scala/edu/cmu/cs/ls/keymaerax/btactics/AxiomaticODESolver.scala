@@ -43,9 +43,6 @@ object AxiomaticODESolver {
   /** The name of the evolution domain time variable 0<=s_<=t_ */
   private lazy val EVOL_DOM_TIME: Variable = "s_".asVariable
 
-  /** Temporary messages that aren't even necessarily useful to have in verbose ODE debugger mode. */
-  private def tmpmsg(s: String) = if (ODE_DEBUGGER) println(s)
-
   //region The main tactic
 
   def apply(): DependentPositionTactic = axiomaticSolve()
@@ -100,6 +97,8 @@ object AxiomaticODESolver {
     val odeVars = StaticSemantics.boundVars(ode).toSet + DURATION + EVOL_DOM_TIME
     val consts = assumptions.filter(_.isFOL).flatMap(FormulaTools.conjuncts).
       filter(StaticSemantics.freeVars(_).toSet.intersect(odeVars).isEmpty).
+      // filter quantified, avoid substitution clash in dI on formulas of the shape (\forall x x>0)'
+      filter({ case _: Quantified => false case _ => true}).
       map(SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), _, SimplifierV3.defaultFaxs, SimplifierV3.defaultTaxs)._1).
       filterNot(f => f==True || f==False). //@todo improve DI
       reduceOption(And).getOrElse(True)
@@ -457,14 +456,14 @@ object AxiomaticODESolver {
     //Variables that don't occur in the ODE are trivially already solved
     //An occurring variable is solved when an evolution domain constraint of the form 'a = ...' exists
     !atomicOdes(system.ode).exists(_.xp.x == v) ||
-      decomposeAnds(system.constraint).exists({ case Equal(l, r) => l == v case _ => false })
+      decomposeAnds(system.constraint).exists({ case Equal(l, _) => l == v case _ => false })
   }
 
   //endregion
 
   //region Simplify post-condition and evolution domain constraint
 
-  private def simplifyEvolutionDomain(odeSize: Int) = "simplifyEvolutionDomain" by ((pos: Position, seq: Sequent) => {
+  private def simplifyEvolutionDomain(odeSize: Int) = "simplifyEvolutionDomain" by ((pos: Position, _: Sequent) => {
     lazy val simplFact = remember(
       "p_(f(x_)) & x_=f(x_) <-> p_(x_) & x_=f(x_)".asFormula, TactixLibrary.equivR(1) <(
         TactixLibrary.andL(-1) & TactixLibrary.andR(1) < (TactixLibrary.eqL2R(-2)(1) & TactixLibrary.closeId, TactixLibrary.closeId),
@@ -472,7 +471,7 @@ object AxiomaticODESolver {
         ), namespace)
 
     val step = "simplifyEvolDomainStep" by ((pp: Position, ss: Sequent) => {
-      val subst = (us: Option[TactixLibrary.Subst]) => ss.sub(pp) match {
+      val subst = (_: Option[TactixLibrary.Subst]) => ss.sub(pp) match {
         case Some(And(p, Equal(x, f))) => RenUSubst(
           ("x_".asVariable, x) ::
             ("p_(.)".asFormula, p.replaceFree(x, DotTerm())) ::
@@ -499,13 +498,13 @@ object AxiomaticODESolver {
     //@note compute substitution fresh on each step, single pass unification match does not work because q_(x_) before x_=f
     ("simplifyPostConditionStep" by ((pp: Position, ss: Sequent) => {
       val (xx, subst, rewrite) = ss.sub(pp) match {
-        case Some(Imply(And(q, Equal(x: Variable, f)), p)) => (x, (us: Option[TactixLibrary.Subst]) => RenUSubst(
+        case Some(Imply(And(q, Equal(x: Variable, f)), p)) => (x, (_: Option[TactixLibrary.Subst]) => RenUSubst(
           ("x_".asVariable, x) ::
             ("q_(.)".asFormula, q.replaceFree(x, DotTerm())) ::
             ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p).replaceAll(x, "x_".asVariable)) ::
             ("f(.)".asTerm, f.replaceFree(x, DotTerm())) ::
             Nil), rewrite1)
-        case Some(And(And(q, Equal(x: Variable, f)), p)) => (x, (us: Option[TactixLibrary.Subst]) => RenUSubst(
+        case Some(And(And(q, Equal(x: Variable, f)), p)) => (x, (_: Option[TactixLibrary.Subst]) => RenUSubst(
           ("x_".asVariable, x) ::
             ("q_(.)".asFormula, q.replaceFree(x, DotTerm())) ::
             ("p_(.)".asFormula, Box(Assign(x, DotTerm()), p).replaceAll(x, "x_".asVariable)) ::
@@ -568,7 +567,7 @@ object AxiomaticODESolver {
 
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
     s.sub(pos) match {
-      case Some(f@Box(ODESystem(ode@DifferentialProduct(y_DE: AtomicODE, c), q), p)) if polarity > 0 =>
+      case Some(f@Box(ODESystem(ode@DifferentialProduct(y_DE: AtomicODE, _), _), _)) if polarity > 0 =>
         val axiomName = "DG inverse differential ghost implicational"
         //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
         TactixLibrary.cutAt(Forall(y_DE.xp.x::Nil, f))(pos) <(
@@ -581,7 +580,7 @@ object AxiomaticODESolver {
         ) & checkResult(ode, y_DE)
       case Some(Box(ODESystem(ode@DifferentialProduct(y_DE: AtomicODE, c), q), p)) if polarity < 0 =>
         //@note must substitute manually since DifferentialProduct reassociates (see cutAt) and therefore unification won't match
-        val subst = (us: Option[TactixLibrary.Subst]) =>
+        val subst = (_: Option[TactixLibrary.Subst]) =>
           RenUSubst(
             ("y_".asTerm, y_DE.xp.x) ::
             ("b(|y_|)".asTerm, y_DE.e) ::
