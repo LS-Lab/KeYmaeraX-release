@@ -185,9 +185,10 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
    *    }
    * }}}
    * */
-  def withMathematica(testcode: Mathematica => Any) {
+  def withMathematica(testcode: Mathematica => Any, timeout: Int = -1) {
     val provider = mathematicaProvider() // new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig)
     ToolProvider.setProvider(provider)
+    //@todo timeout
     testcode(provider.tool())
   }
 
@@ -201,14 +202,15 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     *    }
     * }}}
     * */
-  def withZ3(testcode: Z3 => Any) {
+  def withZ3(testcode: Z3 => Any, timeout: Int = -1) {
     val provider = new Z3ToolProvider
     ToolProvider.setProvider(provider)
+    provider.tool().setOperationTimeout(timeout)
     testcode(provider.tool())
   }
 
   /** Tests with both Mathematica and Z3 as QE tools. */
-  def withQE(testcode: QETool => Any): Unit = {
+  def withQE(testcode: QETool => Any, timeout: Int = -1): Unit = {
     withClue("Mathematica") { withMathematica(testcode) }
     afterEach()
     beforeEach()
