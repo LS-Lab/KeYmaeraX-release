@@ -64,7 +64,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
   private val condImpl = Or(condImplLower, condImplUpper)
   private val invariant = And(And("(w=-1 | w=1) & (to<=tl | tl<0)".asFormula, condImpl), "(hp > 0 & rp >= 0 & rv >= 0 & a > 0 & aM > 0)".asFormula)
 
-  "ACAS X bounded time" should "prove Theorem 4: correctness of lower bound" in withMathematica { tool =>
+  "ACAS X bounded time" should "prove Theorem 4: correctness of lower bound" in withQE { tool =>
     if (containsLemma("bounded_safe_implicit")) removeLemma("bounded_safe_implicit")
 
     val safeLemmaFormula =
@@ -128,7 +128,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
     storeLemma(safeLemma, "bounded_safe_implicit")
   }
 
-  it should "prove Theorem 4: correctness of upper bound" in withMathematica { tool =>
+  it should "prove Theorem 4: correctness of upper bound" in withQE { tool =>
     if (containsLemma("bounded_safe_upimplicit")) removeLemma("bounded_safe_upimplicit")
 
     //@todo same tactic as above (and probably as in twosided)
@@ -195,7 +195,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
     storeLemma(safeUpLemma, "bounded_safe_upimplicit")
   }
 
-  it should "prove Theorem 4: use case lemma" in withMathematica { tool =>
+  it should "prove Theorem 4: use case lemma" in withQE { tool =>
     if (containsLemma("bounded_implicit_usecase")) removeLemma("bounded_implicit_usecase")
     val ucLoLemma = proveBy(Imply(invariant, "(abs(r)>rp|abs(h)>hp)".asFormula),
       implyR('R) & (andL('L)*) & SharedTactics.ucLoTac(condImpl))
@@ -203,7 +203,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
     storeLemma(ucLoLemma, "bounded_implicit_usecase")
   }
 
-  it should "prove Theorem 4: correctness of implicit bounded-time safe regions" in withMathematica { tool =>
+  it should "prove Theorem 4: correctness of implicit bounded-time safe regions" in withQE { tool =>
     if (containsLemma("user/bounded_implicit")) removeLemma("user/bounded_implicit")
 
     runLemmaTest("bounded_implicit_usecase", "ACAS X bounded time should prove Theorem 4: use case lemma")
@@ -270,7 +270,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
     storeLemma(safeTheorem, "bounded_implicit")
   }
 
-  it should "prove Lemma 4a: time-limited implicit-explicit lower equivalence" in withMathematica { tool =>
+  it should "prove Lemma 4a: time-limited implicit-explicit lower equivalence" in withQE { tool =>
     if (containsLemma("bounded_lower_equivalence")) removeLemma("bounded_lower_equivalence")
 
     val reductionFml = KeYmaeraXProblemParser(io.Source.fromInputStream(
@@ -512,7 +512,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
     storeLemma(equivalence, "bounded_lower_equivalence")
   }
 
-  it should "prove Lemma 4b: time-limited implicit-explicit upper equivalence" in withMathematica { tool =>
+  it should "prove Lemma 4b: time-limited implicit-explicit upper equivalence" in withQE { tool =>
     val reductionFml = KeYmaeraXProblemParser(io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/bounded_upper_equivalence.kyx")).mkString)
 
@@ -841,7 +841,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
     runLemmaTest("bounded_upper_equivalence", "ACAS X bounded time should prove Lemma 4b: time-limited implicit-explicit upper equivalence")
 
     beforeEach()
-    withMathematica { _ =>
+    withQE { _ =>
 
       val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/bounded_lower_equivalence.kyx")).mkString)
@@ -931,7 +931,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
     runLemmaTest("bounded_upper_equivalence", "ACAS X bounded time should prove Lemma 4b: time-limited implicit-explicit upper equivalence")
 
     beforeEach()
-    withMathematica { _ =>
+    withQE { _ =>
 
       val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/bounded_lower_equivalence.kyx")).mkString)
@@ -1032,7 +1032,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
 
     // rerun initialization (runTest runs afterEach() at the end)
     beforeEach()
-    withMathematica { _ =>
+    withQE { _ =>
 
       val implicitSafety = KeYmaeraXProblemParser(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/bounded_implicit.kyx")).mkString)

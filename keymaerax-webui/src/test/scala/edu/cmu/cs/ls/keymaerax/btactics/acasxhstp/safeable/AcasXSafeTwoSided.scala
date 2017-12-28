@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleAbort, BelleExpr, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
@@ -90,7 +90,7 @@ class AcasXSafeTwoSided extends AcasXBase {
 
   private val invariant = And(And("w=-1 | w=1".asFormula, condImpl), "hp > 0 & rp >= 0 & rv >= 0 & a > 0 & aM > 0".asFormula) //invariantStr.asFormula
 
-  "ACAS X 2-sided safe" should "prove Theorem 3, lemma safe implicit" in withMathematica { tool =>
+  "ACAS X 2-sided safe" should "prove Theorem 3, lemma safe implicit" in withQE { _ =>
     if (containsLemma("2side_safe_implicit")) removeLemma("2side_safe_implicit")
 
     def safeLemmaTac(r: String, h: String, dhd: String) = dT("lemma") & implyR('R) & (andL('L)*) &
@@ -146,7 +146,7 @@ class AcasXSafeTwoSided extends AcasXBase {
     storeLemma(safeLemma, "2side_safe_implicit")
   }
 
-  it should "prove Theorem 3, lemma up safe implicit" in withMathematica { tool =>
+  it should "prove Theorem 3, lemma up safe implicit" in withQE { _ =>
     if (containsLemma("2side_safe_upimplicit")) removeLemma("2side_safe_upimplicit")
 
     //@todo same tactic as above, but with different instances
@@ -201,7 +201,7 @@ class AcasXSafeTwoSided extends AcasXBase {
     storeLemma(safeUpLemma, "2side_safe_upimplicit")
   }
 
-  it should "prove Theorem 3: uc lo lemma" in withMathematica { tool =>
+  it should "prove Theorem 3: uc lo lemma" in withQE { _ =>
     if (containsLemma("twosided_implicit_usecase")) removeLemma("twosided_implicit_usecase")
     val ucLoLemma = proveBy(Imply(invariant, "(abs(r)>rp|abs(h)>hp)".asFormula), implyR('R) & (andL('L)*) & ucLoTac(condImpl))
     ucLoLemma shouldBe 'proved
@@ -215,7 +215,7 @@ class AcasXSafeTwoSided extends AcasXBase {
     runLemmaTest("2side_safe_upimplicit", "ACAS X 2-sided safe should prove Theorem 3, lemma up safe implicit")
 
     beforeEach()
-    withMathematica { _ =>
+    withQE { _ =>
 
       def applyLemma(formula: Formula, apply: BelleExpr) = cut(formula) & Idioms.<(
         (cutUse, dT("use Lemma " + formula) & SimplifierV2.simpTac('L, formula) & closeId & done)
@@ -305,7 +305,7 @@ class AcasXSafeTwoSided extends AcasXBase {
     new AcasXSafe().runLemmaTest("safe_equivalence", "ACAS X safe should prove Lemma 1: equivalence between implicit and explicit region formulation")
   }
 
-  it should "prove Lemma 3b: implicit-explicit upper equivalence" in withMathematica { tool =>
+  it should "prove Lemma 3b: implicit-explicit upper equivalence" in withMathematica { _ =>
     if (containsLemma("upper_equivalence")) removeLemma("upper_equivalence")
 
     val reductionFml = KeYmaeraXProblemParser(io.Source.fromInputStream(
@@ -383,7 +383,7 @@ class AcasXSafeTwoSided extends AcasXBase {
     runLemmaTest("upper_equivalence", "ACAS X 2-sided safe should prove Lemma 3b: implicit-explicit upper equivalence")
 
     beforeEach()
-    withMathematica { _ =>
+    withQE { _ =>
 
       val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_equivalence.kyx")).mkString)
@@ -451,7 +451,7 @@ class AcasXSafeTwoSided extends AcasXBase {
     runLemmaTest("upper_equivalence", "ACAS X 2-sided safe should prove Lemma 3b: implicit-explicit upper equivalence")
 
     beforeEach()
-    withMathematica { _ =>
+    withQE { _ =>
 
       val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_equivalence.kyx")).mkString)
@@ -530,7 +530,7 @@ class AcasXSafeTwoSided extends AcasXBase {
 
     // rerun initialization (runTest runs afterEach() at the end)
     beforeEach()
-    withMathematica { _ =>
+    withQE { _ =>
 
       val implicitSafety = KeYmaeraXProblemParser(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/twosided_implicit.kyx")).mkString)

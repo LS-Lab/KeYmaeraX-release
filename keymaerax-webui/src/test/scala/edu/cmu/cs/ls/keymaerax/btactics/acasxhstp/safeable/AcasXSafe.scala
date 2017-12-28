@@ -63,7 +63,7 @@ class AcasXSafe extends AcasXBase {
   // Logs all the QE calls, including internal ones
   //private val logQE = QELogger.enableLogging((40,"ACAS X Safe"))
 
-  "ACAS X safe" should "prove use case lemma" in withMathematica { _ => withDatabase { db =>
+  "ACAS X safe" should "prove use case lemma" in withQE { _ => withDatabase { db =>
     if (containsLemma("nodelay_ucLoLemma")) removeLemma("nodelay_ucLoLemma")
 
     val ucLoFormula = Imply(invariant, postcond)
@@ -92,7 +92,7 @@ class AcasXSafe extends AcasXBase {
     tactic shouldBe expectedTactic
   }}
 
-  it should "prove the use case lemma with a parsed Belle tactic" in withMathematica { _ =>
+  it should "prove the use case lemma with a parsed Belle tactic" in withQE { _ =>
     if (containsLemma("nodelay_ucLoLemma")) removeLemma("nodelay_ucLoLemma")
 
     val ucLoFormula = Imply(invariant, postcond)
@@ -103,7 +103,7 @@ class AcasXSafe extends AcasXBase {
     storeLemma(ucLoLemma, "nodelay_ucLoLemma")
   }
 
-  it should "prove lower bound safe lemma" in withMathematica { _ =>
+  it should "prove lower bound safe lemma" in withQE { _ =>
     if (containsLemma("nodelay_safeLoLemma")) removeLemma("nodelay_safeLoLemma")
 
     // Formula from print in Theorem 1
@@ -161,7 +161,7 @@ class AcasXSafe extends AcasXBase {
     runLemmaTest("nodelay_safeLoLemma", "ACAS X safe should prove lower bound safe lemma")
 
     beforeEach()
-    withMathematica { _ =>
+    withQE { _ =>
       /** * Main safe theorem and its tactic ***/
       val safeSeq = KeYmaeraXProblemParser(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_implicit.kyx")).mkString)
@@ -193,7 +193,7 @@ class AcasXSafe extends AcasXBase {
     }
   }
 
-  it should "prove Lemma 1: equivalence between implicit and explicit region formulation" in withMathematica { _ =>
+  it should "prove Lemma 1: equivalence between implicit and explicit region formulation" in withQE { _ =>
     if (containsLemma("safe_equivalence")) removeLemma("safe_equivalence")
 
     val s = KeYmaeraXProblemParser(io.Source.fromInputStream(
@@ -554,7 +554,7 @@ class AcasXSafe extends AcasXBase {
     runLemmaTest("safe_equivalence", "ACAS X safe should prove Lemma 1: equivalence between implicit and explicit region formulation")
 
     beforeEach() // rerun initialization (runTest runs afterEach() at the end)
-    withMathematica {_ =>
+    withQE {_ =>
       // load lemmas
       val acasximplicit = KeYmaeraXProblemParser( io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_implicit.kyx")).mkString)
