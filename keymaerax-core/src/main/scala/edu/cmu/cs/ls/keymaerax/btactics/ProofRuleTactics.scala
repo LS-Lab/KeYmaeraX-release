@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.{Configuration, core}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import org.apache.logging.log4j.scala.Logging
 
 
 /**
@@ -16,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
   * @author Nathan Fulton
  * @see [[SequentCalculi]]
  */
-private object ProofRuleTactics {
+private object ProofRuleTactics extends Logging {
   //@note Rule.LAX_MODE not accessible outside core
   val LAX_MODE = Configuration(Configuration.Keys.LAX) == "true"
 
@@ -202,7 +203,7 @@ private object ProofRuleTactics {
           close(-1,1)
         )
       )
-      if (BelleExpr.DEBUG) println("contextualize.side " + side)
+      logger.debug("contextualize.side " + side)
       TactixLibrary.CEat(side)(pos)
     })
 

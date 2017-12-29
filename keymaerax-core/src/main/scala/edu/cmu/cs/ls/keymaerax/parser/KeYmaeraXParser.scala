@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import scala.annotation.{switch, tailrec}
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
+import org.apache.logging.log4j.scala.Logging
 
 /**
  * KeYmaera X parser items on the parser stack.
@@ -99,17 +100,15 @@ private object MORE extends ExpectNonterminal("<more>") {override def toString =
  * @see [[edu.cmu.cs.ls.keymaerax.parser]]
  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
-object KeYmaeraXParser extends Parser {
+object KeYmaeraXParser extends Parser with Logging {
   import OpSpec.statementSemicolon
   import OpSpec.func
 
   /** This default parser. */
-  val parser = this
+  val parser: Parser = this
 
   /** Lax mode where the parser is a little flexible about accepting input. */
   private[keymaerax] val LAX_MODE = Configuration(Configuration.Keys.LAX) == "true"
-
-  private[parser] val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
 
   private val parseErrorsAsExceptions = true
 
@@ -180,7 +179,7 @@ object KeYmaeraXParser extends Parser {
     }
     semanticAnalysis(parse) match {
       case None => parse
-      case Some(error) => if (LAX_MODE) {if (false) println("WARNING: " + "Semantic analysis" + "\nin " + "parsed: " + printer.stringify(parse) + "\n" + error); parse}
+      case Some(error) => if (LAX_MODE) { logger.trace("WARNING: " + "Semantic analysis" + "\nin " + "parsed: " + printer.stringify(parse) + "\n" + error); parse}
       else throw ParseException("Semantic analysis error " + error, parse).inInput("<unknown>", Some(input))
     }
   }
@@ -200,7 +199,7 @@ object KeYmaeraXParser extends Parser {
       case ex: CoreException => return Some("semantics: symbols computation error\n" + ex)
     }
     val names = symbols.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol]))
-    assert(!DEBUG || (names.size == symbols.size) == (symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).distinct.length == symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).length), "equivalent ways of checking uniqueness via set conversion or list distinctness")
+    assert(Configuration(Configuration.Keys.DEBUG) == "false" || (names.size == symbols.size) == (symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).distinct.length == symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).length), "equivalent ways of checking uniqueness via set conversion or list distinctness")
     //@NOTE Stringify avoids infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
     if (names.size == symbols.size) None
     else {
@@ -282,7 +281,7 @@ object KeYmaeraXParser extends Parser {
     op.const(tok1.tok.img, elaborate(st, tok1, op, op.kind._1, e1), elaborate(st, tok1, op, op.kind._2, e2), elaborate(st, tok1, op, op.kind._3, e3))
 
   private[parser] var annotationListener: ((Program,Formula) => Unit) =
-  {(p,inv) => println("Annotation: " + p + " @invariant(" + inv + ")")}
+  {(p,inv) => logger.trace("Annotation: " + p + " @invariant(" + inv + ")")}
   /**
    * Register a listener for @annotations during the parse.
     *
@@ -308,8 +307,8 @@ object KeYmaeraXParser extends Parser {
   //@todo reorder cases also such that pretty cases like fully parenthesized get parsed fast and early
   private def parseStep(st: ParseState): ParseState = {
     val ParseState(s, input@(Token(la,laloc) :: rest)) = st
-    if(PARSER_DEBUGGING) println(s)
-    if(PARSER_DEBUGGING) println(la)
+    logger.info(s)
+    logger.info(la)
     //@note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
       // nonproductive: help KeYmaeraXLexer recognize := * with whitespaces as ASSIGNANY

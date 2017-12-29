@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import org.apache.logging.log4j.scala.Logging
 
 /**
  * Sequential interpreter for Bellerophon tactic expressions.
@@ -19,7 +20,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
  * @author Nathan Fulton
  * @author Andre Platzer
  */
-case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends Interpreter {
+case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends Interpreter with Logging {
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
     if (Thread.currentThread().isInterrupted) {
       //@todo kill the running tactic (cancel QE), here or in kill
@@ -211,11 +212,11 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           var result: Option[BelleValue] = None
           while (opts.hasNext && result.isEmpty) {
             val o = opts.next()
-            if (BelleExpr.DEBUG) println("ChooseSome: try " + o)
+            logger.debug("ChooseSome: try " + o)
             val someResult: Option[BelleValue] = try {
               Some(apply(e(o), v))
             } catch { case err: BelleThrowable => errors += "in " + o + " " + err + "\n"; None }
-            if (BelleExpr.DEBUG) println("ChooseSome: try " + o + " got " + someResult)
+            logger.debug("ChooseSome: try " + o + " got " + someResult)
             (someResult, e) match {
               case (Some(p@BelleProvable(_, _)), _) => result = Some(p)
               case (Some(p), _: PartialTactic) => result = Some(p)
@@ -281,7 +282,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           } catch {
             case e: Throwable => throw new BelleThrowable("Unable to start inner proof in let: " + e.getMessage, e)
           }
-          if (BelleExpr.DEBUG) println("INFO: " + expr + " considers\n" + in + "\nfor outer\n" + provable)
+          logger.debug("INFO: " + expr + " considers\n" + in + "\nfor outer\n" + provable)
           //assert(us(in.conclusion) == provable.subgoals.head, "backsubstitution will ultimately succeed from\n" + in + "\nvia " + us + " to outer\n" + provable)
           apply(inner, BelleProvable(in)) match {
             case BelleProvable(derivation, _) =>

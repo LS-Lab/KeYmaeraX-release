@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
+import org.apache.logging.log4j.scala.Logger
 
 import scala.List
 import scala.collection.immutable._
@@ -57,6 +58,9 @@ import scala.language.postfixOps
   */
 object TactixLibrary extends HilbertCalculus with SequentCalculus {
   import Generator.Generator
+
+  private val logger = Logger(getClass) //@note instead of "with Logging" to avoid cyclic dependencies
+
   /** Default generator for loop invariants and differential invariants to use.
     * @see [[InvariantGenerator]] */
   var invGenerator: Generator[Formula] = FixedGenerator(Nil)
@@ -298,7 +302,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     ChooseSome(
       () => try { InvariantGenerator.loopInvariantGenerator(seq,pos) } catch {
         case err: Exception =>
-          if (BelleExpr.DEBUG) println("ChooseSome: error listing options " + err)
+          logger.debug("ChooseSome: error listing options " + err, err)
           List[Formula]().iterator
       },
       (inv:Formula) => loop(inv)(pos) & onAll(auto) & done

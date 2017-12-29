@@ -9,9 +9,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, DerivationInfo, FormulaTool
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{Location, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import org.apache.logging.log4j.scala.{Logger, Logging}
 
 object BelleExpr {
-  private[keymaerax] val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
   private[keymaerax] val RECHECK = Configuration(Configuration.Keys.DEBUG) == "true"
 }
 
@@ -25,7 +25,6 @@ object BelleExpr {
  * @see [[edu.cmu.cs.ls.keymaerax.bellerophon]]
  */
 abstract class BelleExpr(private var location: Location = UnknownLocation) {
-  private[keymaerax] val DEBUG = BelleExpr.DEBUG
   // tactic combinators
 
   /** this & other: sequential composition executes other on the output of this, failing if either fail. */
@@ -69,8 +68,7 @@ trait NamedBelleExpr extends BelleExpr {
 
 /** Give a code name to the given tactic `tactic` for serialization purposes. */
 case class NamedTactic(name: String, tactic: BelleExpr) extends NamedBelleExpr {
-  //@todo make this an assert.
-  if(name != "ANON" && !DerivationInfo.hasCodeName(name)) println(s"WARNING: NamedTactic was named ${name} but this name does not appear in DerivationInfo's list of codeNames.")
+  assert(name == "ANON" || DerivationInfo.hasCodeName(name), s"WARNING: NamedTactic was named $name but this name does not appear in DerivationInfo's list of codeNames.")
 }
 
 /* Common base class for built-in tactics coming from the base layer of the tactic library directly manipulate core Provables. */
@@ -137,7 +135,7 @@ object BelleDot extends BelleDot()
   * @author Stefan Mitsch
   * @author Andre Platzer
   */
-trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
+trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) with Logging {
   import Find._
 
   /**
@@ -257,8 +255,8 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) {
       case _ => throw new BelleThrowable(s"Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
     //@todo how to check expected formula?
-    case 'Llast => println("INFO: will not check expected for 'Llast yet"); apply(LastAnte(0))
-    case 'Rlast => println("INFO: will not check expected for 'Rlast yet"); apply(LastSucc(0))
+    case 'Llast => logger.info("INFO: will not check expected for 'Llast yet"); apply(LastAnte(0))
+    case 'Rlast => logger.info("INFO: will not check expected for 'Rlast yet"); apply(LastSucc(0))
   }
 
 }
@@ -417,7 +415,7 @@ case class AppliedBuiltinTwoPositionTactic(positionTactic: BuiltInTwoPositionTac
  * @param name The name of the tactic.
  * @todo is there a short lambda abstraction notation as syntactic sugar?
  */
-abstract case class DependentTactic(name: String) extends NamedBelleExpr {
+abstract case class DependentTactic(name: String) extends NamedBelleExpr with Logging {
   def computeExpr(provable: ProvableSig): BelleExpr = throw new BelleThrowable("Not implemented")
   def computeExpr(e: BelleValue with BelleThrowable): BelleExpr = throw e
   /** Generic computeExpr; prefer overriding computeExpr(Provable) and computeExpr(BelleThrowable) */
@@ -427,7 +425,7 @@ abstract case class DependentTactic(name: String) extends NamedBelleExpr {
     }
   } catch {
     case be: BelleThrowable => throw be
-    case t: Throwable => if (DEBUG) t.printStackTrace(); throw new BelleThrowable(t.getMessage, t)
+    case t: Throwable => logger.debug("Unable to create dependent tactic", t); throw new BelleThrowable(t.getMessage, t)
   }
 }
 abstract class SingleGoalDependentTactic(override val name: String) extends DependentTactic(name) {
@@ -437,7 +435,7 @@ abstract class SingleGoalDependentTactic(override val name: String) extends Depe
     computeExpr(provable.subgoals.head)
   }
 }
-abstract class LabelledGoalsDependentTactic(override val name: String) extends DependentTactic(name) {
+abstract class LabelledGoalsDependentTactic(override val name: String) extends DependentTactic(name) with Logging {
   def computeExpr(provable: ProvableSig, labels: List[BelleLabel]): BelleExpr = throw new BelleThrowable("Not implemented")
   /** Generic computeExpr; prefer overriding computeExpr(Provable) and computeExpr(BelleThrowable) */
   override def computeExpr(v : BelleValue): BelleExpr = try { v match {
@@ -447,7 +445,7 @@ abstract class LabelledGoalsDependentTactic(override val name: String) extends D
   }
   } catch {
     case be: BelleThrowable => throw be
-    case t: Throwable => if (DEBUG) t.printStackTrace(); throw new BelleThrowable(t.getMessage, t)
+    case t: Throwable => logger.debug("Unable to create dependent labelled tactic", t); throw new BelleThrowable(t.getMessage, t)
   }
 }
 

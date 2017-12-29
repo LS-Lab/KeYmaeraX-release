@@ -10,15 +10,14 @@ import scala.collection.immutable.{Map, _}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, RenUSubst, _}
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
 
 /**
   * Created by yongkiat on 11/27/16.
   */
-object PolynomialArith {
-
-  private val DEBUG = false
+object PolynomialArith extends Logging {
 
   /**
     * Normalised polynomial arithmetic
@@ -223,7 +222,7 @@ object PolynomialArith {
   //Additional check: the terms in "variable" position are actual variables
   //The nested variables i.e. those in l must be lexicographically smaller so (a^5)*b^3 is valid, (b^3)*a^5 is invalid
   def checkMono(t:Term,maxs:Option[Term] = None): Boolean = {
-    if(DEBUG) println("Checking ",t,maxs)
+    logger.debug(s"Checking $t, $maxs")
     t match {
       case n:Number => n.value == 1
       case Times(l,Power(s,n:Number)) if isVar(s) =>
@@ -262,7 +261,7 @@ object PolynomialArith {
     def compare(l: Term, r: Term): Int = {
       val ol = ordMono(l)
       val or = ordMono(r)
-      if(DEBUG) println("monos:",l,r,ol,or)
+      logger.debug(s"monos: $l, $r, $ol, $or")
       if (ol < or) -1
       else if(ol > or) 1
       else lexMono(l,r)
@@ -283,7 +282,7 @@ object PolynomialArith {
 
   //Sanity check that a term representing a polynomial satisfies the normalisation requirement
   def checkPoly(t:Term,maxm:Option[Term] = None): Boolean = {
-    if(DEBUG) println("Checking",t,maxm)
+    logger.debug(s"Checking $t, $maxm")
     t match {
       case n:Number => n.value == 0
       case Plus(l,Times(c,m)) =>
@@ -417,7 +416,7 @@ object PolynomialArith {
 
   //Multiplies a normalized polynomial (l) by a constant (c) and a normalized monomial (r)
   def mulPolyMono(l:Term,c:Term,r:Term,skip_proofs:Boolean = false): (Term,ProvableSig) = {
-    if(DEBUG) println("mul poly, const, mono",l,c,r)
+    logger.debug(s"mul poly, const, mono $l, $c, $r")
     val lhs = Times(l,Times(c,r))
     val prover = getProver(skip_proofs)
     l match {
@@ -587,7 +586,7 @@ object PolynomialArith {
   //Normalizes an otherwise un-normalized term
   def normalise(l:Term,skip_proofs:Boolean = false) : (Term,ProvableSig) = {
 
-    if(DEBUG) println("Normalizing at",l)
+    logger.debug(s"Normalizing at $l")
     val prover = getProver(skip_proofs)
 
 //    if(isMono(l)){
@@ -1072,7 +1071,7 @@ object PolynomialArith {
   // Given a term, turns it into a "rational form" and proves |- t = t, where A , B do not contain divisions
   // If no division occurs in the term then it does nothing
   def ratForm(l:Term) : (Option[ProvableSig]) = {
-    if(DEBUG) println("rat form at",l)
+    logger.debug(s"rat form at $l")
     val res = l match {
       case Power(_,_) => None //(a/b)^k unhandled
       case b: BinaryCompositeTerm =>

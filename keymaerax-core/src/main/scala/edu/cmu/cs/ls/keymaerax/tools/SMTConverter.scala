@@ -7,9 +7,8 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
-import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable._
 
@@ -22,14 +21,12 @@ object DefaultSMTConverter extends SMTConverter {}
   * @author Ran Ji
   * @author Stefan Mitsch
   */
-abstract class SMTConverter extends (Formula=>String) {
-  protected val DEBUG: Boolean = Configuration(Configuration.Keys.DEBUG) == "true"
-
+abstract class SMTConverter extends (Formula=>String) with Logging {
   /** Convert given formula to an SMTLib specification that, if SMT(\result) returns `unsat` says that `expr` is valid. */
   def apply(expr: Formula): String = {
     val negation = generateAssertNegation(expr)
     val result = negation
-    if(DEBUG) println(s"SMT output for ${expr.prettyString} (NEGATED AS: ${result}) is: \n${result}")
+    logger.debug(s"SMT output for ${expr.prettyString} (NEGATED AS: $result) is: \n$result")
     result
   }
 

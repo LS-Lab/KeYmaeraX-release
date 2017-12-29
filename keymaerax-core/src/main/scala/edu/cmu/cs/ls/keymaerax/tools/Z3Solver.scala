@@ -14,6 +14,7 @@ import java.util.Locale
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, ParseException}
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
 import scala.concurrent._
@@ -25,9 +26,7 @@ import ExecutionContext.Implicits.global
  * @author Ran Ji
  * @author Stefan Mitsch
  */
-class Z3Solver(val converter: SMTConverter = DefaultSMTConverter) extends ToolOperationManagementBase with SMTSolver {
-  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
-
+class Z3Solver(val converter: SMTConverter = DefaultSMTConverter) extends ToolOperationManagementBase with SMTSolver with Logging {
   /** Get the absolute path to Z3 executable
     * Copies Z3 out of the JAR if the KeYmaera X version has updated. */
   private val pathToZ3 : String = {
@@ -69,7 +68,7 @@ class Z3Solver(val converter: SMTConverter = DefaultSMTConverter) extends ToolOp
       }
     //Update if the version stroed in the version file does not equal the current version.
     val result = !versionWhenLastCopied.equals(edu.cmu.cs.ls.keymaerax.core.VERSION)
-    if(result && DEBUG) println("Updating Z3 binary...")
+    if(result) logger.debug("Updating Z3 binary...")
     result
   }
 
@@ -135,7 +134,7 @@ class Z3Solver(val converter: SMTConverter = DefaultSMTConverter) extends ToolOp
   def qeEvidence(f: Formula) : (Formula, Evidence) = {
     val smtCode = converter(f)
     val z3Output = callZ3(smtCode, "z3sat", getOperationTimeout) //@note (check-sat) gives unsat, sat or unknown
-    if (DEBUG) println(s"[Z3 result] From calling Z3 on ${f.prettyString}: " + z3Output + "\n")
+    logger.debug(s"[Z3 result] From calling Z3 on ${f.prettyString}: " + z3Output + "\n")
     //@todo So far does not handle get-model or unsat-core
     z3Output.stripLineEnd match {
       case "unsat" => (True, ToolEvidence(immutable.List("input" -> smtCode, "output" -> z3Output)))
@@ -152,16 +151,16 @@ class Z3Solver(val converter: SMTConverter = DefaultSMTConverter) extends ToolOp
    */
   def simplify(t: Term) : Term = {
     val smtCode = converter.generateSimplify(t)
-    if (DEBUG) println("[Simplifying with Z3 ...] \n" + smtCode)
+    logger.debug("[Simplifying with Z3 ...] \n" + smtCode)
     val z3Output = callZ3(smtCode, "z3simplify", getOperationTimeout)
-    if (DEBUG) println("[Z3 simplify result] \n" + z3Output + "\n")
+    logger.debug("[Z3 simplify result] \n" + z3Output + "\n")
     if (z3Output.contains("!")) t
     else {
       try {
         KeYmaeraXParser.termParser(z3Output)
       } catch {
         case _: ParseException =>
-          if (DEBUG) println("[Info] Cannot parse Z3 simplified result: " + z3Output)
+          logger.debug("[Info] Cannot parse Z3 simplified result: " + z3Output)
           t
       }
     }
@@ -171,7 +170,7 @@ class Z3Solver(val converter: SMTConverter = DefaultSMTConverter) extends ToolOp
 
   /** Calls Z3 with the command `z3Command` for at most `timeout` time, and returns the resulting output. */
   private def callZ3(z3Command: String, tmpFilePrefix: String, timeout: Int): String = {
-    if (DEBUG) println("[Calling Z3...] \n" + z3Command)
+    logger.debug("[Calling Z3...] \n" + z3Command)
     val smtFile = File.createTempFile(tmpFilePrefix, ".smt2")
     val writer = new FileWriter(smtFile)
     writer.write(z3Command)
@@ -179,8 +178,8 @@ class Z3Solver(val converter: SMTConverter = DefaultSMTConverter) extends ToolOp
     val cmd = pathToZ3 + " " + smtFile.getAbsolutePath
 
     var result: String = ""
-    val logger = ProcessLogger(s => result = s)
-    val p = cmd.run(logger) // start asynchronously, log output to logger
+    val pl = ProcessLogger(s => result = s)
+    val p = cmd.run(pl) // start asynchronously, log output to logger
     val f = Future(blocking(p.exitValue())) // wrap in Future
     val exitVal = try {
       if (timeout >= 0) Await.result(f, duration.Duration(timeout, "sec"))

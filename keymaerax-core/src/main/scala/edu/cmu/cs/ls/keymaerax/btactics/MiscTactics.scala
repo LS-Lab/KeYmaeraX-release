@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversal
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDB
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
 import scala.language.postfixOps
@@ -185,7 +186,7 @@ object Idioms {
       Idioms.<(labels.map(l => labelledTactics(l)):_*)
     }
     override def computeExpr(provable: ProvableSig): BelleExpr = {
-      if (DEBUG) println("No branch labels, executing by branch order")
+      logger.debug("No branch labels, executing by branch order")
       Idioms.<((s1 +: spec).map(_._2):_*)
     }
   }
@@ -326,19 +327,19 @@ object TacticFactory {
    * @param name The tactic name.
     *             Use the special name "ANON" to indicate that this is an anonymous inner tactic that needs no storage.
    */
-  implicit class TacticForNameFactory(val name: String) {
+  implicit class TacticForNameFactory(val name: String) extends Logging {
     if (name == "") throw new InternalError("Don't use empty name, use ANON for anonymous inner tactics")
     /*if (false)*/ {
       try {
         if (name != "ANON" && DerivationInfo.ofCodeName(name).codeName.toLowerCase() != name.toLowerCase())
-          println("WARNING: codeName should be changed to a consistent name: " + name + " vs. " + DerivationInfo.ofCodeName(name).codeName)
+          logger.warn("WARNING: codeName should be changed to a consistent name: " + name + " vs. " + DerivationInfo.ofCodeName(name).codeName)
       } catch {
-        case _: IllegalArgumentException => println("WARNING: codeName not found: " + name)
+        case ex: IllegalArgumentException => logger.warn("WARNING: codeName not found: " + name, ex)
       }
     }
 
     /** Creates a named tactic */
-    def by(t: BelleExpr): BelleExpr = new NamedTactic(name, t)
+    def by(t: BelleExpr): BelleExpr = NamedTactic(name, t)
 
     def byTactic(t: ((ProvableSig, Position, Position) => BelleExpr)) = new DependentTwoPositionTactic(name) {
       override def computeExpr(p1: Position, p2: Position): DependentTactic = new DependentTactic("") {

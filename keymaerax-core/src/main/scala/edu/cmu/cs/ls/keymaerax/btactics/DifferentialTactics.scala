@@ -12,6 +12,7 @@ import Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ODESolverTool
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
 import scala.collection.immutable.{IndexedSeq, List}
@@ -23,7 +24,7 @@ import scala.language.postfixOps
   * @note Container for "complicated" tactics. Single-line implementations are in [[TactixLibrary]].
  * @see [[TactixLibrary.DW]], [[TactixLibrary.DC]]
  */
-private object DifferentialTactics {
+private object DifferentialTactics extends Logging {
 
   /** @see [[HilbertCalculus.DE]] */
   lazy val DE: DependentPositionTactic = new DependentPositionTactic("DE") {
@@ -62,7 +63,7 @@ private object DifferentialTactics {
             ODESystem(AtomicODE(xp, t), h),
             Box(Assign(xp, t), p)
           )
-        case _ => println("Unsure how to predict DE outcome for " + fml); ???
+        case _ => logger.fatal("Unsure how to predict DE outcome for " + fml); ???
       }
     }
 
@@ -443,7 +444,7 @@ private object DifferentialTactics {
       override def computeExpr(sequent: Sequent): BelleExpr = sequent.sub(pos) match {
         case Some(Differential(x: Variable)) =>
           if (OPTIMIZED) {
-            if (DEBUG) println("Dvariable " + keyPart + " on " + x)
+            logger.debug("Dvariable " + keyPart + " on " + x)
             val fact = UnificationMatch.apply(keyPart, Differential(x)).toForward(axiom.provable)
             CEat(fact)(pos)
           } else {
@@ -531,7 +532,7 @@ private object DifferentialTactics {
       InvariantGenerator.differentialInvariantGenerator(seq,pos)
     } catch {
       case err: Exception =>
-        if (BelleExpr.DEBUG) println("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
+        logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
         List[Formula]().iterator
     }
 
@@ -994,7 +995,7 @@ private object DifferentialTactics {
       spooky,
       (pr:ProvableSig) => {
         assume(pr.subgoals.length==1, "exactly one subgoal from DA induction step expected")
-        if (BelleExpr.DEBUG) println("Instantiate::\n" + pr)
+        logger.debug("Instantiate::\n" + pr)
         // induction step condition \forall x \forall ghost condition>=0
         val condition = FormulaTools.kernel(pr.subgoals.head.succ.head) match {
           case Imply(domain, GreaterEqual(condition, Number(n))) if n==0 => condition
@@ -1002,14 +1003,14 @@ private object DifferentialTactics {
           case _ => throw new AssertionError("DGauto: Unexpected shape " + pr)
         }
         //@todo a witness of Reduce of >=0 would suffice
-        if (BelleExpr.DEBUG) println("Solve[" + condition + "==0" + "," + spooky + "]")
+        logger.debug("Solve[" + condition + "==0" + "," + spooky + "]")
         ToolProvider.solverTool().getOrElse(throw new BelleThrowable("DGAuto requires a SolutionTool, but got None")).solve(Equal(condition, Number(0)), spooky::Nil) match {
-          case Some(Equal(l,r)) if l==spooky => if (BelleExpr.DEBUG) println("Need ghost " + ghost + "'=(" + r + ")*" + ghost + " for " + quantity);
+          case Some(Equal(l,r)) if l==spooky => logger.debug("Need ghost " + ghost + "'=(" + r + ")*" + ghost + " for " + quantity)
             constructedGhost = Some(r)
             r
-          case None => if (BelleExpr.DEBUG) println("Solve[" + condition + "==0" + "," + spooky + "]")
+          case None => logger.debug("Solve[" + condition + "==0" + "," + spooky + "]")
             throw new BelleThrowable("DGauto could not solve conditions: " + condition + ">=0")
-          case Some(stuff) => if (BelleExpr.DEBUG) println("Solve[" + condition + "==0" + "," + spooky + "]")
+          case Some(stuff) => logger.debug("Solve[" + condition + "==0" + "," + spooky + "]")
             throw new BelleThrowable("DGauto got unexpected solution format: " + condition + ">=0\n" + stuff)
         }
       }
@@ -1020,7 +1021,7 @@ private object DifferentialTactics {
     ) & QE & done
     // fallback rescue tactic if proper misbehaves
     val fallback: DependentPositionTactic = "ANON" by ((pos:Position,seq:Sequent) => {
-      if (BelleExpr.DEBUG) println("DGauto falling back on ghost " + ghost + "'=(" + constructedGhost + ")*" + ghost);
+      logger.debug("DGauto falling back on ghost " + ghost + "'=(" + constructedGhost + ")*" + ghost)
       // terrible hack that accesses constructGhost after LetInspect was almost successful except for the sadly failing usubst in the end.
       dG(AtomicODE(DifferentialSymbol(ghost), Plus(Times(constructedGhost.getOrElse(throw new BelleThrowable("DGauto construction was unsuccessful in constructing a ghost")), ghost), Number(0))),
         Some(Greater(Times(quantity, Power(ghost, Number(2))), Number(0)))

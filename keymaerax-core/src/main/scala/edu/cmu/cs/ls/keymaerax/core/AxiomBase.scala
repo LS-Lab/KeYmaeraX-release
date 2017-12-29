@@ -19,8 +19,8 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable
 import scala.collection.immutable._
-
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXAxiomParser
+import org.apache.logging.log4j.scala.Logging
 
 /**
   * The data base of axioms and axiomatic rules of KeYmaera X as resulting from differential dynamic logic axiomatizations.
@@ -33,7 +33,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXAxiomParser
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]]]
   */
-private[core] object AxiomBase {
+private[core] object AxiomBase extends Logging {
   /**
     * KeYmaera X Axiomatic Proof Rules.
     * @note Soundness-critical: Only return locally sound proof rules.
@@ -140,7 +140,7 @@ private[core] object AxiomBase {
       val res = KeYmaeraXAxiomParser(loadAxiomString())
       assert(res.length == res.map(k => k._1).distinct.length, "No duplicate axiom names during parse")
       res.map(k => (k._1 -> k._2)).toMap
-    } catch { case e: Exception => e.printStackTrace(); println("Problem while reading axioms " + e); sys.exit(10) }
+    } catch { case e: Exception => logger.fatal("Cannot read axioms", e); println("Cannot read axioms " + e); sys.exit(10) }
   } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
 
   /** Redundant code checking expected form of axioms */

@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import org.apache.logging.log4j.scala.Logging
 import spray.http.CacheDirectives.{`max-age`, `no-cache`}
 import spray.http.HttpHeaders.`Cache-Control`
 import spray.routing._
@@ -46,7 +47,7 @@ class RestApiActor extends Actor with RestApi {
 /**
  * RestApi is the API router. See README.md for a description of the API.
  */
-trait RestApi extends HttpService with SLF4JLogging {
+trait RestApi extends HttpService with Logging {
   private val database = DBAbstractionObj.defaultDatabase //SQLite //Not sure when or where to create this... (should be part of Boot?)
   private val DEFAULT_ARCHIVE_LOCATION = "http://keymaerax.org/KeYmaeraX-projects/"
   private val BUNDLED_ARCHIVE_DIR = "/keymaerax-projects/"
@@ -101,7 +102,7 @@ trait RestApi extends HttpService with SLF4JLogging {
   private def completeResponse(responses: List[Response]): ToResponseMarshallable  = {
     //@note log all error responses
     responses.foreach({
-      case e: ErrorResponse => log.warn("Error response details: " + e.msg, e.exn)
+      case e: ErrorResponse => logger.warn("Error response details: " + e.msg, e.exn)
       case _ => /* nothing to do */
     })
 
@@ -785,7 +786,7 @@ trait RestApi extends HttpService with SLF4JLogging {
           val path = segments.reduce(_+"/"+_)
           if (getClass.getResourceAsStream(BUNDLED_ARCHIVE_DIR + path) != null) (BUNDLED_ARCHIVE_LOCATION + path, path)
           else {
-            println(s"Could not find ${BUNDLED_ARCHIVE_LOCATION + path} resource in JAR file. Accessing remote host.")
+            logger.info(s"Could not find ${BUNDLED_ARCHIVE_LOCATION + path} resource in JAR file. Accessing remote host.")
             (DEFAULT_ARCHIVE_LOCATION + path, path)
           }
       }

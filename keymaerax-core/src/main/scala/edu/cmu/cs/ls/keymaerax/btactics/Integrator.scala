@@ -10,13 +10,14 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import StaticSemantics.freeVars
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleTacticFailure}
 import edu.cmu.cs.ls.keymaerax.tools.{ODESolverTool, Tool, ToolBase}
+import org.apache.logging.log4j.scala.Logging
 
 /**
   * Solves the initial value problem for systems of differential equations.
   *
   * @author Nathan Fulton
   */
-object Integrator {
+object Integrator extends Logging {
   /**
     * Integrates the differential equation and returns the solution as a list of equalities for each of the primed variables occuring in the system.
     * @param initialValues Initial conditions for each of the variables that occur primed in the ODE.
@@ -79,7 +80,7 @@ object Integrator {
     solutions.foldLeft[Term](t)((newT, op) => {
       val v = op._1
       val t = op._2
-      if (BelleExpr.DEBUG) println(s"Replacing ${v} with ${t} in ${newT}")
+      logger.debug(s"Replacing $v with $t in $newT")
       SubstitutionHelper.replaceFree(newT)(v, t)
     })
   }

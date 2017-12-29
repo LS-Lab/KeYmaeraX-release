@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
+import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.switch
 
@@ -18,7 +19,7 @@ import scala.annotation.switch
  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo]]
  */
-object AxiomIndex {
+object AxiomIndex extends Logging {
 
   /**
     * AxiomIndex (key,recursor) where the key identifies the subformula used for matching and the recursors lists resulting siblings for subsequent chase.
@@ -251,7 +252,7 @@ object AxiomIndex {
         case _: Choice => "<++> choice" :: Nil
         case _: Dual => "<d> dual direct" :: Nil
         case _: Loop => "<*> iterate" :: unknown
-        case _: ODESystem => println("AxiomIndex for <ODE> still missing. Use tactic ODE"); unknown
+        case _: ODESystem => logger.warn("AxiomIndex for <ODE> still missing. Use tactic ODE"); unknown
         case _ => Nil
       }
 

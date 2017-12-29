@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.SimplificationTool
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
 import scala.compat.Platform
@@ -31,7 +32,8 @@ import scala.language.postfixOps
  * @see Stefan Mitsch and André Platzer. [[http://dx.doi.org/10.1007/978-3-319-11164-3_17 ModelPlex: Verified runtime validation of verified cyber-physical system models]].
  *      In Borzoo Bonakdarpour and Scott A. Smolka, editors, Runtime Verification - 5th International Conference, RV 2014, Toronto, ON, Canada, September 22-25, 2014. Proceedings, volume 8734 of LNCS, pages 199-214. Springer, 2014.
  */
-object ModelPlex extends ModelPlexTrait {
+object ModelPlex extends ModelPlexTrait with Logging {
+
   /**
    * Synthesize the ModelPlex (Controller) Monitor for the given formula for monitoring the given variable.
    */
@@ -70,7 +72,7 @@ object ModelPlex extends ModelPlexTrait {
     val proofStart = Platform.currentTime
     val result = TactixLibrary.proveBy(ProvableSig.startProof(mxInputSequent), tactic)
     val proofDuration = Platform.currentTime - proofStart
-    Console.println("[proof time " + proofDuration + "ms]")
+    logger.info("[proof time " + proofDuration + "ms]")
 
     assert(result.subgoals.size == 1 && result.subgoals.head.ante.isEmpty &&
       result.subgoals.head.succ.size == 1, "ModelPlex tactic expected to provide a single formula (in place version)")
@@ -80,10 +82,10 @@ object ModelPlex extends ModelPlexTrait {
     checkProvable match {
       case Some(report) =>
         report(result)
-        println("ModelPlex Proof certificate: Produced")
+        logger.info("ModelPlex Proof certificate: Produced")
         mxOutputProofTree
       case None =>
-        println("ModelPlex Proof certificate: Skipped")
+        logger.info("ModelPlex Proof certificate: Skipped")
         mxOutputProofTree
     }
   }
@@ -192,7 +194,7 @@ object ModelPlex extends ModelPlexTrait {
     case Diamond(Loop(_), _) => "<*> approx" :: Nil
     // remove ODEs for controller monitor
     case Diamond(ODESystem(_, _), _) => "DX diamond differential skip" :: Nil
-    case _ => println("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
+    case _ => logger.trace("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
   })
 
   /**
@@ -216,7 +218,7 @@ object ModelPlex extends ModelPlexTrait {
       case Diamond(Loop(_), _) => "<*> approx" :: Nil
       // keep ODEs, solve later
       case Diamond(ODESystem(_, _), _) => Nil
-      case _ => println("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
+      case _ => logger.trace("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
     })(pos) &
     applyAtAllODEs(ode)(pos))
 

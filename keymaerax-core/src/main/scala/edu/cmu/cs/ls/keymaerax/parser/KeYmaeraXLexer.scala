@@ -11,6 +11,7 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.Configuration
+import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 import scala.collection.immutable._
@@ -298,13 +299,9 @@ private object TOOL_VALUE_PAT {
   * @author Andre Platzer
  * @author nfulton
  */
-object KeYmaeraXLexer extends ((String) => List[Token]) {
-
+object KeYmaeraXLexer extends ((String) => List[Token]) with Logging {
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
-
-  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
-
 
   /** Normalize all new lines in input to a s*/
   def normalizeNewlines(input: String): String = input.replace("\r\n", "\n").replace("\r", "\n").replaceAll(" *\n", "\n")
@@ -320,7 +317,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
   //@todo performance bottleneck
   def inMode(input: String, mode: LexerMode) = {
     val correctedInput = normalizeNewlines(input)
-    if (DEBUG) println("LEX: " + correctedInput)
+    logger.debug("LEX: " + correctedInput)
     val output = lex(correctedInput, SuffixRegion(1,1), mode)
     require(!output.exists(x => x.tok == ANYTHING), "output should not contain ??")
     require(output.last.tok.equals(EOF), "Expected EOF but found " + output.last.tok)

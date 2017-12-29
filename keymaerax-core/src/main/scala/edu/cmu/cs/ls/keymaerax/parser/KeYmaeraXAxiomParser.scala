@@ -4,18 +4,16 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
+import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
+import org.apache.logging.log4j.scala.Logging
 
 /**
  * Parse an axiom string to a list of named formulas that are to be used as axioms in a theory.
  * Created by nfulton on 6/11/15.
  * @author nfulton
  */
-object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) {
-  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
-
+object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) with Logging {
   /**
    * @todo sort checking.
    * @param input The contents of the axiom file.
@@ -23,7 +21,7 @@ object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) {
    */
   def apply(input: String) : List[(String,Formula)] = {
     val tokens = KeYmaeraXLexer.inMode(input, AxiomFileMode)
-    if (DEBUG) println("Tokens are: " + tokens)
+    logger.debug("Tokens are: " + tokens)
     try {
       val (decls, axiomTokens) = KeYmaeraXDeclarationsParser(tokens)
       val axioms = parseAxioms(axiomTokens)
@@ -57,7 +55,7 @@ object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) {
       case Token(LEMMA_AXIOM_NAME(x),_) => x
       case _ => throw new AssertionError("Require should have failed.")
     }
-    if (DEBUG) println("Axiom " + name)
+    logger.debug("Axiom " + name)
     //Find the End. token and exclude it.
     val (axiomTokens, remainderTokens) =
       input.tail.tail.span(x => !x.tok.equals(END_BLOCK)) //1st element is AXIOM_BEGIN, 2nd is AXIOM_NAME.

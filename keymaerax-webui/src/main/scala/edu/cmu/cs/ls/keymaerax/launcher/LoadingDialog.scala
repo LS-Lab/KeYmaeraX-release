@@ -1,8 +1,10 @@
 package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.awt.GridLayout
-import javax.swing.{JWindow, JLabel, JProgressBar}
+import javax.swing.{JLabel, JProgressBar, JWindow}
+
 import edu.cmu.cs.ls.keymaerax.core
+import org.apache.logging.log4j.scala.Logging
 
 /**
   * @author Nathan Fulton
@@ -36,18 +38,18 @@ object LoadingDialogFactory {
   def close(): Unit = theDialog = None
 }
 
-class CLILoadingDialog() extends LoadingDialog {
+class CLILoadingDialog() extends LoadingDialog with Logging {
   private var status: Int = 0
   override val initialMsg: String = "Headless KeYmaera X Server " + core.VERSION + " is Loading... "
 
   override def addToStatus(x: Int, msg: Option[String]): Unit = {
     status = status + x
     if (status >= 100) close()
-    else println(s"${msg.getOrElse(initialMsg)} ($status% complete)")
+    else logger.info(s"${msg.getOrElse(initialMsg)} ($status% complete)")
   }
 
   override def close(): Unit = {
-    println("Loading Complete!")
+    logger.info("Loading Complete!")
     LoadingDialogFactory.close()
   }
 }
@@ -56,7 +58,6 @@ class CLILoadingDialog() extends LoadingDialog {
   * Splash screen indicator that the user interface is in the process of loading.
   */
 class GraphicalLoadingDialog() extends LoadingDialog {
-  println("Starting GUI Loading Dialog.")
   private val titleMsg: String = "KeYmaera X " + core.VERSION
   override val initialMsg: String = "Loading..."
 

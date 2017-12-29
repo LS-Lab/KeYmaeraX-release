@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import SequentCalculus.{cohide2, cohideR, commuteEquivR, equivR, equivifyR, hideL, hideR, implyR, commuteEqual}
+import SequentCalculus.{cohide2, cohideR, commuteEqual, commuteEquivR, equivR, equivifyR, hideL, hideR, implyR}
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{closeTrue, cut, cutL, cutLR, cutR}
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics._
@@ -20,6 +20,7 @@ import StaticSemanticsTools._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import org.apache.logging.log4j.scala.{Logger, Logging}
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -36,8 +37,7 @@ import scala.language.postfixOps
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
   */
 trait UnifyUSCalculus {
-  import BelleExpr.DEBUG
-
+  private val logger = Logger(getClass) //@note instead of "with Logging" to avoid cyclic dependencies
   /** Whether to use a liberal context via replaceAt instead of proper Context substitutions */
   private val LIBERAL = Context.GUARDED
 
@@ -64,7 +64,7 @@ trait UnifyUSCalculus {
         if (sub.isEmpty) throw new BelleUserGeneratedError("ill-positioned " + pos + " in " + sequent + "\nin " + "stepAt(" + pos + ")\n(" + sequent + ")")
         axiomIndex(sub.get) match {
           case Some(axiom) =>
-            if (BelleExpr.DEBUG) println("stepAt " + axiom)
+            logger.debug("stepAt " + axiom)
             DerivationInfo(axiom).belleExpr match {
               case ap:AtPosition[_] => ap(pos)
               case expr:BelleExpr => expr
@@ -195,13 +195,13 @@ trait UnifyUSCalculus {
       val info = ProvableInfo.ofStoredName(name)
       if (info.provable == lem.fact) useAt(info, key, inst)
       else {
-        println("INFO: useAt(" + name + ") has an incompatible lemma name, which may disable tactic extraction")
+        logger.info("INFO: useAt(" + name + ") has an incompatible lemma name, which may disable tactic extraction")
         useAt("useAt", lem.fact, key, inst)
       }
     case Some(name) if !ProvableInfo.existsStoredName(name) =>
       useAt("useAt", lem.fact, key, inst)
     case None =>
-      println("INFO: useAt of an anonymous lemma may disable tactic extraction")
+      logger.info("INFO: useAt of an anonymous lemma may disable tactic extraction")
       useAt("useAt", lem.fact, key, inst)
   }
   def useAt(lem: Lemma, key:PosInExpr): DependentPositionTactic = useAt(lem, key, (us:Option[Subst])=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
@@ -261,9 +261,9 @@ trait UnifyUSCalculus {
     */
   def US(fact: ProvableSig): DependentTactic = new SingleGoalDependentTactic("US") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
-      if (DEBUG) println("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " ... checking")
+      logger.debug("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " ... checking")
       val subst = UnificationMatch(fact.conclusion, sequent)
-      if (DEBUG) println("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " by " + subst)
+      logger.debug("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " by " + subst)
       if (sequent != subst(fact.conclusion)) throw BelleUnsupportedFailure("unification computed an incorrect unifier\nunification should match:\n  unify: " + sequent + "\n  gives: " + subst(fact.conclusion) + " when matching against\n  form:  " + fact.conclusion + "\n  by:    " + subst)
       by(subst.toForward(fact))
     }
@@ -359,7 +359,7 @@ trait UnifyUSCalculus {
       override def computeExpr(sequent: Sequent): BelleExpr = {
         val (ctx,expr) = sequent.at(pos)
         val subst = inst(UnificationMatch.unifiable(keyPart, expr))
-        if (DEBUG) println("Doing a useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst)
+        logger.debug("Doing a useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst)
         Predef.assert(!RECHECK || expr == subst(keyPart), "unification matched left successfully\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst + "\n  gave:    " + subst(keyPart) + "\n  that is: " + keyPart + " instantiated by " + subst)
         //val keyCtxMatched = Context(subst(keyCtx.ctx))
         useAt(subst, keyCtx, keyPart, pos, ctx, expr, sequent)
@@ -642,14 +642,14 @@ trait UnifyUSCalculus {
           require(ctxF == ctxG, "Same context expected, but got contexts " + ctxF + " and " + ctxG)
           require(ctxF.ctx == ctxG.ctx, "Same context formulas expected, but got " + ctxF.ctx + " and " + ctxG.ctx)
           require(ctxF.isTermContext, "Formula context expected for CQ")
-          if (DEBUG) println("CQ: boundAt(" + ctxF.ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(f) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f)++freeVars(g)) + "\nIntersect: " + boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)))
+          logger.debug("CQ: boundAt(" + ctxF.ctx + "," + inEqPos + ")=" + boundAt(ctxF.ctx, inEqPos) + " intersecting FV(" + f + ")=" + freeVars(f) + "\\/FV(" + g + ")=" + freeVars(g) + " i.e. " + (freeVars(f)++freeVars(g)) + "\nIntersect: " + boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)))
           if (boundAt(ctxF.ctx, inEqPos).intersect(freeVars(f)++freeVars(g)).isEmpty) {
             by("CQ equation congruence", USubst(SubstitutionPair(c_, ctxF.ctx) :: SubstitutionPair(f_, f) :: SubstitutionPair(g_, g) :: Nil))
           } else {
-            if (DEBUG) println("CQ: Split " + p + " around " + inEqPos)
+            logger.debug("CQ: Split " + p + " around " + inEqPos)
             val (fmlPos,termPos) : (PosInExpr,PosInExpr) = Context.splitPos(p, inEqPos)
-            if (DEBUG) println("CQ: Split " + p + " around " + inEqPos + "\ninto " + fmlPos + " and " + termPos + "\n  as " + p.at(fmlPos)._1 + " and " + Context.at(p.at(fmlPos)._2,termPos)._1)
-            if (p.at(fmlPos)._2.isInstanceOf[Modal]) println(">>CE TACTIC MAY PRODUCE INFINITE LOOP<<")
+            logger.debug("CQ: Split " + p + " around " + inEqPos + "\ninto " + fmlPos + " and " + termPos + "\n  as " + p.at(fmlPos)._1 + " and " + Context.at(p.at(fmlPos)._2,termPos)._1)
+            if (p.at(fmlPos)._2.isInstanceOf[Modal]) logger.warn(">>CE TACTIC MAY PRODUCE INFINITE LOOP<<")
             if (fmlPos == HereP) throw new IllegalStateException("CQ split void, would cause infinite loop unless stopped")
             //@todo could optimize to build directly since ctx already known
             CE(fmlPos) & CQ(termPos)
@@ -1019,11 +1019,11 @@ trait UnifyUSCalculus {
       else (impl.conclusion.ante.head, impl.conclusion.succ.head)
 
     require(C.isFormulaContext, "Formula context expected to make use of equivalences with CE " + C)
-    if (DEBUG) println("CMon(" + C + ")" + "(" + impl + ")")
+    logger.debug("CMon(" + C + ")" + "(" + impl + ")")
     /** Monotonicity rewriting step to replace occurrence of instance of k by instance of o in context */
     def monStep(C: Context[Formula], mon: ProvableSig): ProvableSig = {
       //@todo assert(mon.ante.head == C{left or right} && mon.succ.head == C{right or left})
-      if (DEBUG) println("in monStep(" + C + ", " + mon + ")") //\nin CMon(" + C + ")" + "(" + impl + ")")
+      logger.debug("in monStep(" + C + ", " + mon + ")") //\nin CMon(" + C + ")" + "(" + impl + ")")
 
       val localPolarity = FormulaTools.polarityAt(C.ctx, FormulaTools.posOf(C.ctx, DotFormula).getOrElse(
         throw new IllegalArgumentException("Context should contain DotFormula")))
@@ -1073,7 +1073,7 @@ trait UnifyUSCalculus {
               ) (monStep(Context(c), mon), 0)
 
           case Imply(e, c) if !symbols(e).contains(DotFormula) =>
-            if (DEBUG) println("CMon check case: " + C + " to prove " + Sequent(ante, succ) + "\nfrom " + mon +
+            logger.debug("CMon check case: " + C + " to prove " + Sequent(ante, succ) + "\nfrom " + mon +
               "\nnext step in context " + Context(c) + "\n having current polarity " + polarity + " and new polarity " + localPolarity)
             (ProvableSig.startProof(Sequent(ante, succ))
               // e->c{a} |- e->c{s}
@@ -1089,7 +1089,7 @@ trait UnifyUSCalculus {
               ) (monStep(Context(c), mon), 0)
 
           case Imply(c, e) if !symbols(e).contains(DotFormula) =>
-            if (DEBUG) println("CMon check case: " + C + " to prove " + Sequent(ante, succ) + "\nfrom " + mon +
+            logger.debug("CMon check case: " + C + " to prove " + Sequent(ante, succ) + "\nfrom " + mon +
               "\nnext step in context " + Context(c) + "\n having current polarity " + polarity + " and new polarity " + localPolarity)
             (ProvableSig.startProof(Sequent(ante, succ))
               // c{a}->e |- c{s}->e
@@ -1275,15 +1275,15 @@ trait UnifyUSCalculus {
   def useFor(fact: ProvableSig, key: PosInExpr, inst: Subst=>Subst = (us => us)): ForwardPositionTactic = {
     // split key into keyCtx{keyPart} = fact
     val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).at(key)
-    if (DEBUG) println("useFor(" + fact.conclusion + ") key: " + keyPart + " in key context: " + keyCtx)
+    logger.debug("useFor(" + fact.conclusion + ") key: " + keyPart + " in key context: " + keyCtx)
 
     pos => proof => {
       // split proof into ctx{expr} at pos
       val (ctx, expr) = proof.conclusion.at(pos)
       // instantiated unification of expr against keyPart
       val subst = inst(UnificationMatch(keyPart, expr))
-      if (DEBUG) println("useFor(" + fact.conclusion.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
-      if (DEBUG) println("useFor(" + fact.conclusion + ") on " + proof)
+      logger.debug("useFor(" + fact.conclusion.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
+      logger.debug("useFor(" + fact.conclusion + ") on " + proof)
       Predef.assert(expr == subst(keyPart), "unification matched key successfully:\nexpr     " + expr + "\nequals   " + subst(keyPart) + "\nwhich is " + keyPart + "\ninstantiated by " + subst)
 
       /** useFor(subst, K,k, p, C,c)
@@ -1543,7 +1543,7 @@ trait UnifyUSCalculus {
       }
 
       val r = useFor(subst, keyCtx, keyPart, pos, ctx, expr)
-      if (DEBUG) println("useFor(" + fact.conclusion + ") on " + proof + "\n ~~> " + r)
+      logger.debug("useFor(" + fact.conclusion + ") on " + proof + "\n ~~> " + r)
       r
     }
   }
@@ -1667,10 +1667,10 @@ trait UnifyUSCalculus {
         }
         Predef.assert(initial.isProved && initial.conclusion.ante.isEmpty && initial.conclusion.succ.length==1,
           "Proved reflexive start " + initial + " for " + e)
-        if (DEBUG) println("chase starts at " + initial)
+        logger.debug("chase starts at " + initial)
         //@note start the chase on the left-hand side
         val r = forward(SuccPosition(1, 0::Nil))(initial)
-        if (DEBUG) println("chase(" + e.prettyString + ") = ~~> " + r + " done")
+        logger.debug("chase(" + e.prettyString + ") = ~~> " + r + " done")
         r
       } ensuring(r => r.isProved, "chase remains proved: " + " final chase(" + e + ")")
     }
@@ -1702,11 +1702,11 @@ trait UnifyUSCalculus {
                inst: String=>(Subst=>Subst) = ax=>us=>us): ForwardPositionTactic = pos => de => {
     /** Recursive chase implementation */
     def doChase(de: ProvableSig, pos: Position): ProvableSig = {
-      if (DEBUG) println("chase(" + de.conclusion.sub(pos).get.prettyString + ")")
+      logger.debug("chase(" + de.conclusion.sub(pos).get.prettyString + ")")
       // generic recursor
       keys(de.conclusion.sub(pos).get) match {
         case Nil =>
-          if (DEBUG) println("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
+          logger.debug("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
           de
         /*throw new IllegalArgumentException("No axiomFor for: " + expr)*/
         case List(ax) =>
@@ -1729,7 +1729,7 @@ trait UnifyUSCalculus {
           }
           firstAxUse match {
             case None =>
-              if (DEBUG) println("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
+              logger.debug("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
               de
             case Some((axUse, recursor)) =>
               recursor.foldLeft(axUse)(
@@ -1750,11 +1750,11 @@ trait UnifyUSCalculus {
   def chaseCustomFor(keys: Expression=>List[(ProvableSig,PosInExpr, List[PosInExpr])]): ForwardPositionTactic = pos => de => {
     /** Recursive chase implementation */
     def doChase(de: ProvableSig, pos: Position): ProvableSig = {
-      if (DEBUG) println("chase(" + de.conclusion.sub(pos).get.prettyString + ")")
+      logger.debug("chase(" + de.conclusion.sub(pos).get.prettyString + ")")
       // generic recursor
       keys(de.conclusion.sub(pos).get) match {
         case Nil =>
-          if (DEBUG) println("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
+          logger.debug("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
           de
         // take the first axiom among breadth that works for one useFor step
         case l: List[(ProvableSig,PosInExpr, List[PosInExpr])] =>
@@ -1767,7 +1767,7 @@ trait UnifyUSCalculus {
           }
           firstAxUse match {
             case None =>
-              if (DEBUG) println("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
+              logger.debug("no chase(" + de.conclusion.sub(pos).get.prettyString + ")")
               de
             case Some((axUse, recursor)) =>
               recursor.foldLeft(axUse)(

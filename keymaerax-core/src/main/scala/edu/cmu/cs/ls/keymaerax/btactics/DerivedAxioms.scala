@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.{AxiomTerm, NoProofTermProvable, PTProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.{immutable, mutable}
 import scala.collection.immutable._
@@ -31,7 +32,7 @@ import scala.reflect.runtime.{universe => ru}
  */
 
 
-object DerivedAxioms {
+object DerivedAxioms extends Logging {
 
   val DerivedAxiomProvableSig = ProvableSig//NoProofTermProvable
   /** Database for derived axioms */
@@ -164,8 +165,7 @@ object DerivedAxioms {
       } catch {
         case e: Throwable =>
           failures += fns(idx)
-          println("WARNING: Failed to add derived lemma.")
-          e.printStackTrace()
+          logger.warn("WARNING: Failed to add derived lemma.", e)
       }
     })
     if (failures.nonEmpty) throw new Exception(s"WARNING: Encountered ${failures.size} failures when trying to populate DerivedLemmas database. Unable to derive:\n" + failures.mkString("\n"))

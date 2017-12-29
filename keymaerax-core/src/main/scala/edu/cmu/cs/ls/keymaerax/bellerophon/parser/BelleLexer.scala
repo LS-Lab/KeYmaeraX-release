@@ -1,8 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
-import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.BelleToken
 import edu.cmu.cs.ls.keymaerax.parser._
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.List
 
@@ -11,10 +11,8 @@ import scala.collection.immutable.List
   *
   * @author Nathan Fulton
   */
-object BelleLexer extends ((String) => List[BelleToken]) {
+object BelleLexer extends ((String) => List[BelleToken]) with Logging {
   type TokenStream = List[BelleToken]
-
-  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
 
   def apply(s: String) : List[BelleToken] = {
     //Avoids importing a thing with lots of potential name clashes.
@@ -22,7 +20,7 @@ object BelleLexer extends ((String) => List[BelleToken]) {
     //@todo not sure if this position is Ok. This is what's used in the KeYmaera X lexer.
     val startingLocation = SuffixRegion(1,1)
 
-    if (DEBUG) println("LEX: " + correctedInput)
+    logger.debug("LEX: " + correctedInput)
     lex(s, startingLocation)
   }
 

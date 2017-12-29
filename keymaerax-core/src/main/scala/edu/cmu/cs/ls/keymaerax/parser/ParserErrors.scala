@@ -4,9 +4,10 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core.Expression
 import edu.cmu.cs.ls.keymaerax.core.ProverException
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.{TokenStream, ParseState}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.{ParseState, TokenStream}
 
 /**
  * Indicates a parse error at the given location,
@@ -38,13 +39,13 @@ case class ParseException (msg: String, loc: Location, found: String/*Token*/, e
           if (!rem.isEmpty) rem.head + "\n" + (" " * (loc.column-1)) + ("^"*count) + "\n" else "<past EOF> unexpectedly at line " + loc.line
         }
     }
-    throw inContext(loc + "\n" + lineInfo + "\ninput:  \n" + input + (if (KeYmaeraXParser.DEBUG) "\ntokens: " + tokenStream.getOrElse("<unknown>") else ""))
+    throw inContext(loc + "\n" + lineInfo + "\ninput:  \n" + input + (if (Configuration(Configuration.Keys.DEBUG) == "true") "\ntokens: " + tokenStream.getOrElse("<unknown>") else ""))
   }
 
   /** Get more details on the error message in addition to [[getContext]]. */
   def getDetails: String = "After:   " + after + "\nin " + state
 
-  override def toString: String = super.getMessage + getContext + (if (KeYmaeraXParser.DEBUG) "\n" + getDetails else "")
+  override def toString: String = super.getMessage + getContext + (if (Configuration(Configuration.Keys.DEBUG) == "true") "\n" + getDetails else "")
 }
 
 object ParseException {

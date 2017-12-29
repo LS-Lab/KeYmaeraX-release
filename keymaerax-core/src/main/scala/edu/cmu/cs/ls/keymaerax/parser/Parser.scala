@@ -22,9 +22,6 @@ import edu.cmu.cs.ls.keymaerax.core._
  * @author Andre Platzer
  */
 trait Parser extends (String => Expression) {
-  /** Show approximately and only INFO-level debugging messages in the KeYmaera X parser. */
-  val PARSER_DEBUGGING = Configuration(Configuration.Keys.PARSER_DEBUG) == "true"
-
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   def apply(input: String): Expression
 

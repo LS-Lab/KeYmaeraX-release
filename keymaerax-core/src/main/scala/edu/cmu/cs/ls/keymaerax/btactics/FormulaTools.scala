@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.List
 
@@ -14,9 +15,7 @@ import scala.collection.immutable.List
  * Tactic tools for formula manipulation and extraction.
  * @author Andre Platzer
  */
-object FormulaTools {
-  // formula tools
-
+object FormulaTools extends Logging {
   /**
    * Split a formula into its conjuncts.
    * Without performing clause form or CNF or DNF transformations.
@@ -127,7 +126,7 @@ object FormulaTools {
       case f: BinaryCompositeFormula if pos.head == 0 => polarityAt(f.left, pos.child)
       case f: BinaryCompositeFormula if pos.head == 1 => polarityAt(f.right, pos.child)
       case f: Modal                  if pos.head == 1 => polarityAt(f.child, pos.child)
-      case f: Modal                  if pos.head == 0 => println("Polarity within programs not yet implemented " + formula); 0
+      case f: Modal                  if pos.head == 0 => logger.warn("Polarity within programs not yet implemented " + formula); 0
 //      case f: Modal                  => require(pos.head == 1, "Modal operator must have position head 1, but was " + pos); polarityAt(f.child, pos.child)
       case f: Quantified             => require(pos.head == 0, "Quantified must have position head 0, but was " + pos); polarityAt(f.child, pos.child)
     }

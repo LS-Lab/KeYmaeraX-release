@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.DefaultSMTConverter
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
@@ -20,7 +21,8 @@ import scala.io.Source
 /**
   * Helper tools to log QE calls
   */
-object QELogger {
+object QELogger extends Logging {
+
   /* A simple measure of complexity on a first-order sequent
    - Used in QE logger to skip over trivial goals like 0 + 0 = 0
   */
@@ -70,8 +72,7 @@ object QELogger {
       f.delete()
     } catch {
       case ex: Exception =>
-        println("Failed to delete log")
-        ex.printStackTrace()
+        logger.error("Failed to delete log", ex)
     }
   }
 
@@ -82,8 +83,7 @@ object QELogger {
       f.appendAll(namestr)
     } catch {
       case ex: Exception =>
-        println("Failed to record sequent")
-        ex.printStackTrace()
+        logger.error("Failed to record sequent", ex)
     }
   }
 
@@ -97,8 +97,7 @@ object QELogger {
       Some(ss(0),pr,seq)
     } catch {
       case ex: Exception =>
-        println("Failed to parse",s)
-        ex.printStackTrace()
+        logger.error("Failed to parse " + s, ex)
         None
     }
   }
@@ -124,8 +123,7 @@ object QELogger {
       }
     } catch {
       case ex: Exception =>
-        println("File I/O exception")
-        ex.printStackTrace()
+        logger.error("File I/O exception", ex)
     }
     seqMap.toList.groupBy(_._1).mapValues(_.map(p => (p._2,p._3)))
   }
@@ -191,7 +189,7 @@ object QELogger {
     case "-convert" :: value :: tail => parseOptions(parsedOptions ++ Map("convert" -> value), tail)
     case "-logpath" :: value :: tail => parseOptions(parsedOptions ++ Map("logpath" -> value), tail)
     case "-outputpath" :: value :: tail => parseOptions(parsedOptions ++ Map("outputpath" -> value), tail)
-    case option :: tail => println("[Warning] Unknown option " + option + "\n\n"); parseOptions(parsedOptions, tail)
+    case option :: tail => logger.warn("[Warning] Unknown option " + option + "\n\n"); parseOptions(parsedOptions, tail)
   }
 
 }

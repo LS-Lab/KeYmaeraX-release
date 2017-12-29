@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.tools._
 import edu.cmu.cs.ls.keymaerax.core._
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
@@ -18,7 +19,7 @@ import scala.language.postfixOps
   * Does NOT construct proofs along the way
  */
 
-object DifferentialSaturation {
+object DifferentialSaturation extends Logging {
 
   def pQE(f:Formula) : Formula = {
     val qe = ToolProvider.qeTool().getOrElse(throw new BelleThrowable("partialQE requires a QETool, but got None"))
@@ -268,9 +269,9 @@ object DifferentialSaturation {
     var ineqinvs = ListBuffer[(Term,Map[Variable,Term])]()
     var domain = dom.to[ListBuffer]
     for (cs <- candSets) {
-      println("Parametric invariants for",cs)
+      logger.trace("Parametric invariants for " + cs)
       for (deg <- List.range(1,degLimit)) {
-        println("Degree",deg)
+        logger.trace("Degree " + deg)
 
         //Try for equational invariant first
         val eqinv = parametricInvariant(ode,domain.toList,cs,insts,fresh,deg,tool,false) match {
@@ -278,7 +279,7 @@ object DifferentialSaturation {
           case Some((t,s,iv,nf)) =>
             insts = iv
             fresh = nf
-            println("Found = invariant",t)
+            logger.trace("Found = invariant " + t)
             //This unfortunately seems to make PQE do badly...
             domain += Equal(t,Number(0))
             eqinvs+=((t,s))
@@ -293,7 +294,7 @@ object DifferentialSaturation {
             case Some((t, s, iv, nf)) =>
               insts = iv
               fresh = nf
-              println("Found >= invariant", t)
+              logger.trace("Found >= invariant " + t)
               //This unfortunately seems to make PQE do badly...
               domain += GreaterEqual(t, Number(0))
               ineqinvs += ((t, s))

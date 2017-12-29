@@ -6,11 +6,11 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import java.lang.Number
 
-import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, ExpressionTraversal, FormulaTools}
 import edu.cmu.cs.ls.keymaerax.core._
+import org.apache.logging.log4j.scala.Logger
 
 import scala.annotation.tailrec
 
@@ -20,8 +20,7 @@ import scala.annotation.tailrec
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]
   */
 object UIIndex {
-  //@todo import a debug flag as in Tactics.DEBUG
-  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
+  private val logger = Logger(UIIndex.getClass)
 
   /** Give the canonical (derived) axiom name or tactic names that simplifies the expression expr, optionally considering that this expression occurs at the indicated position pos in the given sequent. Disregard tactics that require input */
   def theStepAt(expr: Expression, pos: Option[Position] = None): Option[String] = expr match {
@@ -40,7 +39,7 @@ object UIIndex {
     //@note the truth-value of isAnte is nonsense if !isTop ....
     val isAnte = pos.nonEmpty && pos.get.isAnte
     val alwaysApplicable = Nil
-    if (DEBUG) println("allStepsAt(" + expr + ") at " + pos + " which " + (if (isTop) "is top" else "is not top") + " and " + (if (isAnte) "is ante" else "is succ"))
+    logger.debug("allStepsAt(" + expr + ") at " + pos + " which " + (if (isTop) "is top" else "is not top") + " and " + (if (isAnte) "is ante" else "is succ"))
     expr match {
       case Differential(t) =>
         val tactics =
@@ -241,7 +240,7 @@ object UIIndex {
     //    if (!axioms.isEmpty && pos.isDefined && pos.get.isTopLevel)
     //      axioms ++ (if (pos.get.isAnte) "hideL" :: /*"cutL" ::*/ Nil else "hideR" :: /*"cutR" ::*/ Nil)
     //    else
-    if (DEBUG) println("allStepsAt=" + axioms)
+    logger.debug("allStepsAt=" + axioms)
     axioms
   }
 }

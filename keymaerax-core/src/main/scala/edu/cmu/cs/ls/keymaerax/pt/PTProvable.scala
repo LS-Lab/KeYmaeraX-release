@@ -8,6 +8,7 @@ package edu.cmu.cs.ls.keymaerax.pt
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, DerivedAxiomInfo, DerivedRuleInfo, ProvableInfo}
 import edu.cmu.cs.ls.keymaerax.core._
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
 import scala.collection.immutable.IndexedSeq
@@ -181,7 +182,7 @@ object PTProvable {
   * PTProvable has the same signature as Provable, but constructs proof terms alongside Provables.
   * @author Nathan Fulton
   */
-case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig {
+case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig with Logging {
   override val conclusion: Sequent = provable.conclusion
   override val subgoals: IndexedSeq[Sequent] = provable.subgoals
 
@@ -253,7 +254,7 @@ case class PTProvable(provable: ProvableSig, pt: ProofTerm) extends ProvableSig 
           PTProvable(provable(subProvable, subgoal), thePt)
         } else if (derivedAxiom.isDefined) {
           val term = Sub(pt, AxiomTerm(derivedAxiom.get.codeName), subgoal)
-          println("derivedaxiom codename: " + derivedAxiom.get.codeName)
+          logger.trace("derivedaxiom codename: " + derivedAxiom.get.codeName)
           val axiomPT = PTProvable(NoProofTermProvable(derivedAxiom.get.provable.underlyingProvable), term)
           PTProvable(provable(subprovable, subgoal), term)
         }

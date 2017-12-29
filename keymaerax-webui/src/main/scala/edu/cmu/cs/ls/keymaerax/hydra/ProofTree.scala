@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{Box, Expression, Loop, ODESystem, Sequent}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.{List, Map}
 import scala.util.Try
@@ -245,12 +246,12 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proofId: String) extends P
   protected def stepId: Option[Int]
 }
 
-object DbPlainExecStepProofTreeNode {
+object DbPlainExecStepProofTreeNode extends Logging {
   /** Initializes a proof tree node from a recorded execution step. The branch identifies the subgoal created by the
     * execution step. If None, the node refers to the steps source node. */
   def fromExecutionStep(db: DBAbstraction, proofId: String)(step: ExecutionStepPOJO, branch: Option[Int]): DbPlainExecStepProofTreeNode = branch match {
     case None => DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(step.previousStep, Some(step.branchOrder)), proofId,
-      () => { if (BelleExpr.DEBUG) println("WARNING: ripple loading (node parent)"); db.getPlainExecutionStep(proofId.toInt, step.previousStep.get).get})
+      () => { logger.debug("WARNING: ripple loading (node parent)"); db.getPlainExecutionStep(proofId.toInt, step.previousStep.get).get})
     case Some(b) => DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(step.stepId, Some(b)), proofId,
       () => step)
   }
@@ -261,7 +262,8 @@ object DbPlainExecStepProofTreeNode {
   * step and searches the actual successor step on demand. */
 case class DbPlainExecStepProofTreeNode(db: DBAbstraction,
                                    override val id: ProofTreeNodeId, override val proofId: String,
-                                   stepLoader: () => ExecutionStepPOJO) extends DbProofTreeNode(db, proofId) {
+                                   stepLoader: () => ExecutionStepPOJO)
+    extends DbProofTreeNode(db, proofId) with Logging {
   /** Loads the step on demand. */
   private lazy val step = stepLoader()
 
@@ -289,22 +291,22 @@ case class DbPlainExecStepProofTreeNode(db: DBAbstraction,
   }
 
   private lazy val dbMaker = {
-    if (BelleExpr.DEBUG) println(s"Node $id: querying maker")
+    logger.debug(s"Node $id: querying maker")
     db.getExecutable(step.executableId).belleExpr
   }
 
   private lazy val dbParent = step.previousStep match {
     case None => Some(DbRootProofTreeNode(db)(DbStepPathNodeId(None, None), proofId))
     case Some(pId) =>
-      if (BelleExpr.DEBUG) println(s"Node $id: querying parent")
+      logger.debug(s"Node $id: querying parent")
       // this step knows on which branch it was executed
       val parentBranch = db.getPlainExecutionStep(proofId.toInt, stepId.get).map(_.branchOrder)
       Some(DbPlainExecStepProofTreeNode(db, DbStepPathNodeId(Some(pId), parentBranch), proofId,
-        () => { if (BelleExpr.DEBUG) println("WARNING: ripple loading (parent " + pId + ")"); db.getPlainExecutionStep(proofId.toInt, pId).get}))
+        () => { logger.debug("WARNING: ripple loading (parent " + pId + ")"); db.getPlainExecutionStep(proofId.toInt, pId).get}))
   }
 
   private lazy val dbSubgoals = {
-    if (BelleExpr.DEBUG) println(s"Node $id: querying subgoals")
+    logger.debug(s"Node $id: querying subgoals")
     // subgoals are the steps that have this.stepId as previousStep and this.goalIdx as branchOrder
     val successors = db.getPlainStepSuccessors(proofId.toInt, stepId.get, goalIdx)
     assert(successors.size <= 1, "Expected unique successor step for node " + id + ", but got " + successors)

@@ -5,9 +5,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, BelleExpr, Position}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleThrowable, Position}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import Augmentors._
+import org.apache.logging.log4j.scala.Logging
 
 /** Invariant generators and differential invariant generators.
   * @author Andre Platzer
@@ -15,7 +16,7 @@ import Augmentors._
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-642-32347-8_3 A differential operator approach to equational differential invariants]]. In Lennart Beringer and Amy Felty, editors, Interactive Theorem Proving, International Conference, ITP 2012, August 13-15, Princeton, USA, Proceedings, volume 7406 of LNCS, pages 28-48. Springer, 2012.
   * @see Andre Platzer and Edmund M. Clarke. [[http://dx.doi.org/10.1007/s10703-009-0079-8 Computing differential invariants of hybrid systems as fixedpoints]]. Formal Methods in System Design, 35(1), pp. 98-120, 2009
   */
-object InvariantGenerator {
+object InvariantGenerator extends Logging {
   import Generator.Generator
 
   /** A relevance filtering tool for dependency-optimized invariant and differential invariant generation
@@ -63,9 +64,9 @@ object InvariantGenerator {
         StaticSemantics.freeVars(a).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(y=>y!=x)).size <
           StaticSemantics.freeVars(b).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(y=>y!=x)).size
       )
-      lazy val iterareHumanumEst = {
-        if (BelleExpr.DEBUG) println("dependencies:\t" + deps + "\nbounds:\t" + bounds.mkString(",") + "\nfrees:\t" + frees.mkString(",") + "\nknowledge:\t" + knowledge.mkString(",")  + "\nmissing:\t" + missing.mkString(","))
-        if (BelleExpr.DEBUG) println("CANDIDATE: " + candidates)
+      lazy val iterareHumanumEst: Iterator[Formula] = {
+        logger.debug("dependencies:\t" + deps + "\nbounds:\t" + bounds.mkString(",") + "\nfrees:\t" + frees.mkString(",") + "\nknowledge:\t" + knowledge.mkString(",")  + "\nmissing:\t" + missing.mkString(","))
+        logger.debug("CANDIDATE: " + candidates)
         candidates.iterator
       }
       def hasNext: Boolean = iterareHumanumEst.hasNext

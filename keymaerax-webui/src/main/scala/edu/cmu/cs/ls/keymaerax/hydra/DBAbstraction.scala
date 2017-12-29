@@ -11,11 +11,12 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.Nil
 
 //Global setting:
-object DBAbstractionObj {
+object DBAbstractionObj extends Logging {
   def defaultDatabase: SQLite.SQLiteDB = SQLite.ProdDB //this needs to be a def and not a val because DBAbstractionObj is initialized in SQLite.
   def testDatabase: SQLite.SQLiteDB = SQLite.TestDB
   private def getLocation(isTest: Boolean): String = {
@@ -23,7 +24,7 @@ object DBAbstractionObj {
   }
 
   val dblocation: String = getLocation(isTest=false)
-  println(dblocation)
+  logger.info("Using database " + dblocation)
   val testLocation: String = getLocation(isTest=true)
 }
 

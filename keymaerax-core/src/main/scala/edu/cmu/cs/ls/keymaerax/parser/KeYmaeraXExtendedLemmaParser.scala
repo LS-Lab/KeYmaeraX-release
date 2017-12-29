@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Evidence, Sequent}
 import edu.cmu.cs.ls.keymaerax.{Configuration, parser}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
 import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
 
@@ -33,11 +34,10 @@ import scala.collection.immutable
   * @author Stefan Mitsch
   * @author Nathan Fulton
   */
-object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutable.List[Sequent], immutable.List[Evidence])) {
+object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutable.List[Sequent], immutable.List[Evidence]))
+  with Logging {
   /** the lemma name, the lemma conclusion, and the supporting evidence */
   private type Lemma = (Option[String], List[Sequent], List[Evidence])
-
-  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
 
   /**
     * @todo sort hcecking.
@@ -48,9 +48,9 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutabl
     val input = parser.ParserHelper.removeBOM(inputWithPossibleBOM)
 
     val tokens = KeYmaeraXLexer.inMode(input, LemmaFileMode)
-    if (DEBUG) println("Tokens are: " + tokens)
+    logger.debug("Tokens are: " + tokens)
     val (decls, lemmaTokens) = KeYmaeraXDeclarationsParser(tokens)
-    if (DEBUG) println("Declarations: " + decls)
+    logger.debug("Declarations: " + decls)
     parseLemma(lemmaTokens)
   } catch {
     case e: ParseException => throw e.inContext("input:  " + inputWithPossibleBOM)

@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV2._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable._
 
@@ -22,7 +23,7 @@ import scala.collection.immutable._
   *
   * @author Yong Kiam Tan
   */
-object IntervalArithmetic {
+object IntervalArithmetic extends Logging {
 
   private val ubPrefix = "u"
   private val lbPrefix = "l"
@@ -64,7 +65,7 @@ object IntervalArithmetic {
         at.prettyString
       case FuncOf(f,Nothing) => //Allows functions with unit args
         f.name
-      case FuncOf(f,e) if (axFuncs.contains(f))=> //This allows interpreted functions
+      case FuncOf(f,e) if axFuncs.contains(f) => //This allows interpreted functions
         f.name+getVarName(e)
       //case Pair(l,r)=>
       //  "L"+getVarName(l)+"C"+getVarName(r)+"R"
@@ -80,9 +81,9 @@ object IntervalArithmetic {
         "dL"+getVarName(l)+"C"+getVarName(r)+"R"
       case Neg(l) =>
         "nL"+getVarName(l)+"R"
-      case _ => {
-        if (DEBUG) println("Unknown term: "+t);
-        ???}
+      case _ =>
+        logger.fatal("Unknown term: " + t)
+        ???
     }
   }
 

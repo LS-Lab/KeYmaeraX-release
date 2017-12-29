@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import org.apache.logging.log4j.scala.Logging
 
 /**
   * Approximations
@@ -29,11 +30,11 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
   *       and statements in discrete fragments for programs or in ev dom constraints.
   * @author Nathan Fulton
   */
-object Approximator {
-  /** Debugging flag for the Approximator. */
-  private val ADEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
+object Approximator extends Logging {
 
   //region The [[approximate]] tactic with helpers for figuring out which approximation to use.
+
+  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
 
   /**
     * Approximates the variable {{{t}}} in the ODE up to the {{{n^th}}} term.
@@ -75,11 +76,11 @@ object Approximator {
 
           val cuts = Range(0,N).map(i => GreaterEqual(e, expExpansion(t,i)))
 
-          if(ADEBUG) println(s"exp approximator performing these cuts:\n\t${cuts.mkString("\n\t")}")
+          logger.debug(s"exp approximator performing these cuts:\n\t${cuts.mkString("\n\t")}")
 
           //dI handles the normal case, ODE handles the base case.
           val proofOfCut =
-            DebuggingTactics.debug("Trying to prove by proofOfCut", ADEBUG) &
+            DebuggingTactics.debug("Trying to prove by proofOfCut", DEBUG) &
             (TactixLibrary.dI()(pos) | TactixLibrary.ODE(pos)) &
             DebuggingTactics.done("Expected dI to succeed.")
 
@@ -87,12 +88,12 @@ object Approximator {
             cuts.map(cut => {
               TactixLibrary.dC(cut)(pos) < (
                 nil,
-                DebuggingTactics.debug("Trying to prove this by dI or by ODE", ADEBUG) & proofOfCut
+                DebuggingTactics.debug("Trying to prove this by dI or by ODE", DEBUG) & proofOfCut
               )
             })
           }
 
-          DebuggingTactics.debug(s"Beginning expApproximation on ${e.prettyString}, ${n.prettyString}", ADEBUG) & cutTactics.reduce(_ & _)
+          DebuggingTactics.debug(s"Beginning expApproximation on ${e.prettyString}, ${n.prettyString}", DEBUG) & cutTactics.reduce(_ & _)
         })
       }
     }
@@ -124,10 +125,10 @@ object Approximator {
             nil
             ,
             TactixLibrary.dI()(pos) & DebuggingTactics.done("Expected dI to succeed")
-          ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut isOnCircle", ADEBUG)
+          ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut isOnCircle", DEBUG)
 
           val cuts = interleave(cosCuts, sinCuts)
-          if (ADEBUG) println(s"Taylor Approximator performing these cuts: ${cuts.mkString("\n")}")
+          logger.debug(s"Taylor Approximator performing these cuts: ${cuts.mkString("\n")}")
 
           //Construct a tactic that interleaves these cuts.
           val cutTactics: Seq[BelleExpr] =
@@ -136,11 +137,11 @@ object Approximator {
                 nil
                 ,
                 //dW&QE handles the base case, dI handles all others.
-                DebuggingTactics.debug("Trying to prove next bound: ", ADEBUG) & (TactixLibrary.dI()(pos) | (TactixLibrary.dW(pos)&QE)) & DebuggingTactics.done("Expected dI to succeed")
-              ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut ${cut}", ADEBUG)
+                DebuggingTactics.debug("Trying to prove next bound: ", DEBUG) & (TactixLibrary.dI()(pos) | (TactixLibrary.dW(pos)&QE)) & DebuggingTactics.done("Expected dI to succeed")
+              ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut $cut", DEBUG)
             )
 
-          DebuggingTactics.debug(s"Beginning expApproximation on ${s.prettyString}, ${c.prettyString}, ${n.prettyString}", ADEBUG) & isOnCircle & cutTactics.reduce(_ & _)
+          DebuggingTactics.debug(s"Beginning expApproximation on ${s.prettyString}, ${c.prettyString}, ${n.prettyString}", DEBUG) & isOnCircle & cutTactics.reduce(_ & _)
         })
       }
     }
@@ -201,11 +202,11 @@ object Approximator {
       val fact = Imply(extendEvDom(m, cut), f)
 
       TactixLibrary.proveBy(fact,
-        DebuggingTactics.debug(s"Trying to prove lemma ${fact}", ADEBUG) &
+        DebuggingTactics.debug(s"Trying to prove lemma $fact", DEBUG) &
         TactixLibrary.implyR(1) & TactixLibrary.dC(cut)(1) <(
-          DebuggingTactics.debug("lemma branch 1: closeId", ADEBUG) & TactixLibrary.closeId & DebuggingTactics.done,
-          DebuggingTactics.debug("lemma branch 2: use provided tactic to prove cut", ADEBUG) & TactixLibrary.hideL(-1) & cutProof & DebuggingTactics.debug("should've been done",true) & DebuggingTactics.done
-        ) & DebuggingTactics.debug(s"Successfully proved lemma ${fact}", ADEBUG)
+          DebuggingTactics.debug("lemma branch 1: closeId", DEBUG) & TactixLibrary.closeId & DebuggingTactics.done,
+          DebuggingTactics.debug("lemma branch 2: use provided tactic to prove cut", DEBUG) & TactixLibrary.hideL(-1) & cutProof & DebuggingTactics.debug("should've been done",true) & DebuggingTactics.done
+        ) & DebuggingTactics.debug(s"Successfully proved lemma $fact", DEBUG)
       )
 
     }

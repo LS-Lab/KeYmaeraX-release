@@ -40,6 +40,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, BreadthFirstSearc
 import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import org.apache.logging.log4j.scala.Logging
 
 import scala.util.Try
 
@@ -54,7 +55,7 @@ import scala.util.Try
  *
  * Request.getResultingUpdates might be run from a new thread.
  */
-sealed trait Request {
+sealed trait Request extends Logging {
   /** Checks read/write/registered access. Additional checks by overriding doPermission. */
   final def permission(t: SessionToken): Boolean = (t match {
     case t: ReadonlyToken => this.isInstanceOf[ReadRequest]
@@ -716,7 +717,7 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: S
           info.get("Title"), info.get("Link"), tactic.headOption.map(_._2)) match {
           case None =>
             // really should not get here. print and continue importing the remainder of the archive
-            println(s"Model import failed: model $name already exists in the database and attempt of importing under uniquified name $uniqueModelName failed. Continuing with remainder of the archive.")
+            logger.info(s"Model import failed: model $name already exists in the database and attempt of importing under uniquified name $uniqueModelName failed. Continuing with remainder of the archive.")
             (failedImports :+ name, succeededImports)
           case Some(modelId) =>
             tactic.foreach({ case (tname, ttext) =>
@@ -982,7 +983,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
 class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, monitorKind: String, testKinds: Map[String, Boolean],
                            amount: Int, timeout: Option[Int]) extends UserRequest(userId) with RegisteredOnlyRequest {
   def resultingResponses(): List[Response]  = {
-    println("Got Test Synthesis Request")
+    logger.debug("Got Test Synthesis Request")
     val model = db.getModel(modelId)
     val modelFml = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
     val vars = StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable]).toList
@@ -1666,7 +1667,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               case (Some(_), None, expr: BelleExpr) => expr
               case (Some(Fixed(p1, None, _)), Some(Fixed(p2, None, _)), expr: BuiltInTwoPositionTactic) => expr(p1, p2)
               case (Some(_), Some(_), expr: BelleExpr) => expr
-              case _ => println("pos " + pos.getClass.getName + ", expr " + expr.getClass.getName); throw new ProverException("Match error")
+              case _ => logger.error("Position error running tactic at pos " + pos.getClass.getName + ", expr " + expr.getClass.getName); throw new ProverException("Match error")
             }
 
             val ruleName =
@@ -2069,7 +2070,7 @@ class MockRequest(resourceName: String) extends Request {
 /** Global server state for proof validation requests.
   * For now, scheduling immediately dispatches a new thread where the validation occurs. In the future, we may want
   * to rate-limit validation requests. The easiest way to do that is to create a thread pool with a max size. */
-object ProofValidationRunner {
+object ProofValidationRunner extends Logging {
   private val results : mutable.Map[String, (Formula, BelleExpr, Option[Boolean])] = mutable.Map()
 
   case class ValidationRequestDNE(taskId: String) extends Exception(s"The requested taskId $taskId does not exist.")
@@ -2087,7 +2088,7 @@ object ProofValidationRunner {
 
     new Thread(new Runnable() {
       override def run(): Unit = {
-        println(s"Received request to validate $taskId. Running in separate thread.")
+        logger.trace(s"Received request to validate $taskId. Running in separate thread.")
         val provable = NoProofTermProvable( Provable.startProof(model) )
 
         try {
@@ -2100,7 +2101,7 @@ object ProofValidationRunner {
           case e : Throwable => results update (taskId, (model, proof, Some(false)))
         }
 
-        println(s"Done executing validation check for $taskId")
+        logger.trace(s"Done executing validation check for $taskId")
       }
     }).start()
 

@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
+import org.apache.logging.log4j.scala.Logging
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 
@@ -25,9 +26,7 @@ import spray.json.DefaultJsonProtocol._
   *
   * @author Nathan Fulton
   */
-object UpdateChecker {
-
-
+object UpdateChecker extends Logging {
 
   def needDatabaseUpgrade(databaseVersion: String) : Option[Boolean] = {
     downloadDBVersion match {
@@ -66,7 +65,7 @@ object UpdateChecker {
     try {
       val json = scala.io.Source.fromInputStream(getClass.getResourceAsStream("/sql/upgradescripts.json")).mkString
       val versionString = json.parseJson.asJsObject.fields("minVersion").convertTo[String]
-      println("Oldest compatible database version: " + versionString)
+      logger.info("Oldest compatible database version: " + versionString)
       Some(versionString)
     } catch {
       case _: Throwable => None

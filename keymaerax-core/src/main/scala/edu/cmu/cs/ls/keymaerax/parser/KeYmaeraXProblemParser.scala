@@ -6,13 +6,12 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.{ExpressionTraversal, SubstitutionHelper}
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
+import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
-import scala.util.Try
 
 /**
  * Parses `.kyx` KeYmaera X problem files.
@@ -20,7 +19,7 @@ import scala.util.Try
  * @author Nathan Fulton
  * Created by nfulton on 6/12/15.
  */
-object KeYmaeraXProblemParser {
+object KeYmaeraXProblemParser extends Logging {
   type Declaration = KeYmaeraXDeclarationsParser.Declaration
 
   /** Indicates whether or not the model represents an exercise. */
@@ -37,7 +36,7 @@ object KeYmaeraXProblemParser {
         case Some(pair) => throw ParseException(s"Input string contains non-ASCII character ${pair._2}", pair._1)
         case None =>
           val lexResult = KeYmaeraXLexer.inMode(input, ProblemFileMode)
-          if(KeYmaeraXParser.PARSER_DEBUGGING) println(lexResult) //@note Useful to change this to true if you're modifying the parser or chasing down a bug.
+          logger.info(lexResult) //@note Useful to enable logging in keymaerax-webui/src/test/resources/log4j2-test.xml if you're modifying the parser or chasing down a bug.
           parseProblem(lexResult)
       }
     } catch {
@@ -131,7 +130,7 @@ object KeYmaeraXProblemParser {
     checkInput(remainingTokens.head.tok.equals(PROBLEM_BLOCK), "Problem. block expected", remainingTokens.head.loc, "kyx reading problem block")
 
     if(d.decls.keySet.nonEmpty && remainingTokens.head.loc.line <= 1)
-      println("WARNING: There were declarations in this file but the non-declaration portion of the file starts at line 0 or line 1. There may be off-by-n errors in location messages.")
+      logger.warn("WARNING: There were declarations in this file but the non-declaration portion of the file starts at line 0 or line 1. There may be off-by-n errors in location messages.")
 
     val (theProblem, eof) = remainingTokens.span(x => !x.tok.equals(END_BLOCK))
     checkInput(eof.length == 2 && eof.head.tok.equals(END_BLOCK),

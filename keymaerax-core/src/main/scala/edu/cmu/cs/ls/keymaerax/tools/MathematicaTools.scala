@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion._
 import edu.cmu.cs.ls.keymaerax.tools.SimulationTool.{SimRun, SimState, Simulation}
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
 
@@ -142,7 +143,7 @@ object CEXM2KConverter extends UncheckedM2KConverter {
   * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, CEXK2MConverter, CEXM2KConverter) with CounterExampleTool {
+class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, CEXK2MConverter, CEXM2KConverter) with CounterExampleTool with Logging {
 
   def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Expression]] = {
     val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
@@ -155,10 +156,10 @@ class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaer
     run(input) match {
       case (_, cex: Formula) => cex match {
         case False =>
-          if (DEBUG) println("No counterexample, Mathematica returned: " + cex.prettyString)
+          logger.debug("No counterexample, Mathematica returned: " + cex.prettyString)
           None
         case _ =>
-          if (DEBUG) println("Counterexample " + cex.prettyString)
+          logger.debug("Counterexample " + cex.prettyString)
           Some(FormulaTools.conjuncts(cex).map({
             case Equal(name: Variable, value) => name -> value
             case Equal(name: DifferentialSymbol, value) => name -> value
@@ -167,7 +168,7 @@ class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaer
           }).toMap)
       }
       case result =>
-        if (DEBUG) println("No counterexample, Mathematica returned: " + result)
+        logger.debug("No counterexample, Mathematica returned: " + result)
         None
     }
   }
