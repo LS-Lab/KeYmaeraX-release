@@ -7,12 +7,14 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
-import java.io.{FileWriter, FileOutputStream, File, InputStream}
+import java.io.{File, FileOutputStream, FileWriter, InputStream}
 import java.nio.channels.Channels
 import java.util.Locale
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, ParseException, KeYmaeraXParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter, ParseException}
+
 import scala.collection.immutable
 import scala.sys.process._
 
@@ -21,13 +23,13 @@ import scala.sys.process._
  * @author Ran Ji
  */
 class PolyaSolver extends SMTSolver {
-  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
+  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
 
   private val converter = DefaultSMTConverter
 
   /** Get the absolute path to Polya jar */
   private val pathToPolya : String = {
-    val polyaTempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
+    val polyaTempDir = Configuration.path(Configuration.Keys.POLYA_PATH)
     if(!new File(polyaTempDir).exists) new File(polyaTempDir).mkdirs
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
 
@@ -50,7 +52,8 @@ class PolyaSolver extends SMTSolver {
         throw new Exception("Polya solver is currently not supported in your operating system.")
       }
       if(resource == null)
-        throw new Exception("Could not find Polya in classpath: " + System.getProperty("user.dir"))
+        //@note points to a release error
+        throw new Exception("Unable to find Polya in classpath jar bundle: " + System.getProperty("user.dir"))
 
       val polyaSource = Channels.newChannel(resource)
       val polyaTemp = new File(polyaTempDir, "polya")

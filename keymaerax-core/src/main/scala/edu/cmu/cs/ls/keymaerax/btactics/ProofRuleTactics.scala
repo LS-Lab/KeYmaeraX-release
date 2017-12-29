@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.core
+import edu.cmu.cs.ls.keymaerax.{Configuration, core}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -18,7 +18,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
  */
 private object ProofRuleTactics {
   //@note Rule.LAX_MODE not accessible outside core
-  val LAX_MODE = System.getProperty("LAX", "true")=="true"
+  val LAX_MODE = Configuration(Configuration.Keys.LAX) == "true"
 
   /**
    * Throw exception if there is more than one open subgoal on the provable.

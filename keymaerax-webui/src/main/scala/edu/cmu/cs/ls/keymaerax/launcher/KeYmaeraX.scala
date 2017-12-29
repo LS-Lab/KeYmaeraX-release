@@ -4,6 +4,7 @@ import java.io.{File, FilePermission, PrintWriter}
 import java.lang.reflect.ReflectPermission
 import java.security.Permission
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.api.ScalaTacticCompiler
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
@@ -124,7 +125,7 @@ object KeYmaeraX {
         try {
           initializeProver(
             if (options.contains('tool)) options
-            else options ++ configFromDB(DBAbstractionObj.defaultDatabase, "z3"))
+            else options ++ configFromFile("z3"))
 
           //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
           options.get('mode) match {
@@ -142,18 +143,17 @@ object KeYmaeraX {
     }
   }
 
-  private def configFromDB(db: DBAbstraction, defaultTool: String): OptionMap = {
-    db.getConfiguration("tool").config.getOrElse("qe", defaultTool).toLowerCase() match {
-      case "mathematica" => Map('tool -> "mathematica") ++ mathematicaConfigFromDB(db)
+  private def configFromFile(defaultTool: String): OptionMap = {
+    Configuration.getOption(Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
+      case "mathematica" => Map('tool -> "mathematica") ++ mathematicaConfig
       case "z3" => Map('tool -> "z3")
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
   }
 
-  private def mathematicaConfigFromDB(db: DBAbstraction): OptionMap = {
-    val mathConfig = db.getConfiguration("mathematica").config
-    mathConfig.get("linkName") match {
-      case Some(l) => mathConfig.get("jlinkLibDir") match {
+  private def mathematicaConfig: OptionMap = {
+    Configuration.getOption(Configuration.Keys.MATHEMATICA_LINK_NAME) match {
+      case Some(l) => Configuration.getOption(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) match {
         case Some(libDir) => Map('mathkernel -> l, 'jlink -> libDir)
         case None => Map('mathkernel -> l)
       }
@@ -301,7 +301,7 @@ object KeYmaeraX {
       sys.exit(0)
     } catch {
       case e: Throwable =>
-        if (System.getProperty("DEBUG", "false")=="true") e.printStackTrace()
+        if (Configuration(Configuration.Keys.DEBUG)=="true") e.printStackTrace()
         println(e)
         println("Failed to parse file")
         sys.exit(-1)
@@ -317,7 +317,7 @@ object KeYmaeraX {
       sys.exit(0)
     } catch {
       case e: Throwable =>
-        if (System.getProperty("DEBUG", "false")=="true") e.printStackTrace()
+        if (Configuration(Configuration.Keys.DEBUG)=="true") e.printStackTrace()
         println(e)
         println("Failed to parse file")
         sys.exit(-1)
@@ -844,9 +844,6 @@ object KeYmaeraX {
     * Instead we settle for preventing people from installing less-restrictive security managers and restricting
     * all writes to be inside the .keymaerax directory. */
   class KeYmaeraXSecurityManager extends SecurityManager {
-    private val homeDir = System.getProperty("user.home")
-    private val keymaerax = homeDir + "/.keymaerax"
-
     override def checkPermission(perm: Permission): Unit = {
       perm match {
           //@todo should disallow writing reflection in .core.
@@ -861,8 +858,8 @@ object KeYmaeraX {
           val name = filePermission.getName
           val actions = filePermission.getActions
           if ((actions.contains("write") || actions.contains("delete"))
-            && !name.startsWith(keymaerax)) {
-            throw new SecurityException("KeYmaera X security manager forbids writing to files outside ~/.keymaerax")
+            && !name.startsWith(Configuration.KEYMAERAX_HOME_PATH)) {
+            throw new SecurityException("KeYmaera X security manager forbids writing to files outside " + Configuration.KEYMAERAX_HOME_PATH)
           }
       }
     }

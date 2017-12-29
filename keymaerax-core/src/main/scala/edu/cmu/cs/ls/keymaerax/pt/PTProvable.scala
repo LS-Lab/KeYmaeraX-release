@@ -5,6 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.pt
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, DerivedAxiomInfo, DerivedRuleInfo, ProvableInfo}
 import edu.cmu.cs.ls.keymaerax.core._
 
@@ -63,7 +64,7 @@ trait ProvableSig {
   def prettyString: String
 }
 object ProvableSig {
-  var PROOF_TERMS_ENABLED = System.getProperty("PROOFTERM", "false") == "true"
+  var PROOF_TERMS_ENABLED: Boolean = Configuration(Configuration.Keys.PROOF_TERM) == "true"
 
   val axiom: immutable.Map[String, Formula] = Provable.axiom
 

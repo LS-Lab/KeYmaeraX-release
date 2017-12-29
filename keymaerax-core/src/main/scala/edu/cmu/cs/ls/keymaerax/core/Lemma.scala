@@ -10,6 +10,7 @@ package edu.cmu.cs.ls.keymaerax.core
 
 import java.security.MessageDigest
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.{AxiomInfo, DerivationInfo, DerivedAxiomInfo, DerivedRuleInfo}
 import edu.cmu.cs.ls.keymaerax.parser.{FullPrettyPrinter, KeYmaeraXExtendedLemmaParser}
 import edu.cmu.cs.ls.keymaerax.pt._
@@ -24,7 +25,7 @@ import scala.collection.immutable._
   */
 object Lemma {
   //@todo disable lemma compatibility mode. This will require some version update code because old lemma dbs (both SQLite and file lemma db) will fail to work.
-  private val LEMMA_COMPAT_MODE = System.getProperty("LEMMA_COMPAT_MODE", "true")=="true"
+  private val LEMMA_COMPAT_MODE = Configuration(Configuration.Keys.LEMMA_COMPATIBILITY) == "true"
   //@todo figure out a stable but fast checksum. Ideally something like portable hashCodes.
   private[this] val digest = MessageDigest.getInstance("MD5")
 

@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
 import ProofRuleTactics.requireOneSubgoal
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDB
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -17,7 +18,7 @@ import scala.language.postfixOps
  */
 object DebuggingTactics {
   //@todo import a debug flag as in Tactics.DEBUG
-  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
 
   def error(e : Throwable) = new BuiltInTactic("Error") {
     override def result(provable: ProvableSig): ProvableSig = throw e

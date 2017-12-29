@@ -11,6 +11,7 @@ import java.io._
 import java.nio.channels.Channels
 import java.util.Locale
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, ParseException}
 
@@ -25,12 +26,12 @@ import ExecutionContext.Implicits.global
  * @author Stefan Mitsch
  */
 class Z3Solver(val converter: SMTConverter = DefaultSMTConverter) extends ToolOperationManagementBase with SMTSolver {
-  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
 
   /** Get the absolute path to Z3 executable
     * Copies Z3 out of the JAR if the KeYmaera X version has updated. */
   private val pathToZ3 : String = {
-    val z3TempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
+    val z3TempDir = Configuration.path(Configuration.Keys.Z3_PATH)
     if (!new File(z3TempDir).exists) new File(z3TempDir).mkdirs
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
 
@@ -104,7 +105,7 @@ class Z3Solver(val converter: SMTConverter = DefaultSMTConverter) extends ToolOp
       throw new Exception("Z3 solver is currently not supported in your operating system.")
     }
     if (resource == null)
-      throw new Exception("Could not find Z3 in classpath: " + System.getProperty("user.dir"))
+      throw new Exception("Could not find Z3 in classpath jar bundle: " + System.getProperty("user.dir"))
     val z3Source = Channels.newChannel(resource)
     val z3Temp = {
       if (osName.contains("windows")) {

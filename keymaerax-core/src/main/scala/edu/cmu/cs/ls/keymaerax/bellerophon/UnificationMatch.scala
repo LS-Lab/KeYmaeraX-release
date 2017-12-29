@@ -4,6 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, FormulaTools, SubstitutionHelper}
 import edu.cmu.cs.ls.keymaerax.btactics.SubstitutionHelper.replaceFree
 import edu.cmu.cs.ls.keymaerax.core._
@@ -35,7 +36,7 @@ object UnificationMatch extends FreshUnificationMatch
   * @author Andre Platzer
   */
 trait Matcher extends ((Expression,Expression) => RenUSubst) {
-  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
 
   /** Check result of unification for being a valid unifier/matcher */
   private[bellerophon] val REVERIFY = BelleExpr.RECHECK
@@ -98,10 +99,10 @@ trait InsistentMatcher extends Matcher {
   */
 trait BaseMatcher extends Matcher {
   //@todo import a debug flag as in Tactics.DEBUG
-  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
 
   //@todo import a debug flag as in Tactics.DEBUG
-  private[bellerophon] val DEBUGALOT = System.getProperty("DEBUG", "false")=="true"
+  private[bellerophon] val DEBUGALOT = Configuration(Configuration.Keys.DEBUG) == "true"
 
   def apply(e1: Expression, e2: Expression): Subst = if (e1.kind==e2.kind || e1.kind==ProgramKind && e2.kind==DifferentialProgramKind)
     e1 match {

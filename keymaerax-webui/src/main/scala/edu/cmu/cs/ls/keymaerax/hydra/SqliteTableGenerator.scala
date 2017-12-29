@@ -6,6 +6,8 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.io.File
 
+import edu.cmu.cs.ls.keymaerax.Configuration
+
 import scala.slick.driver.SQLiteDriver
 import scala.slick.codegen.SourceCodeGenerator
 
@@ -15,8 +17,7 @@ import scala.slick.codegen.SourceCodeGenerator
 object SqliteTableGenerator {
   /* Make sure the SQLite driver is loaded*/
   Class.forName("org.sqlite.JDBC")
-  val loc = System.getProperty("user.home") + File.separator +
-    ".keymaerax" + File.separator + "keymaerax.sqlite"
+  val loc = Configuration.path(Configuration.Keys.DB_PATH)
   val db = SQLiteDriver.simple.Database.forURL("jdbc:sqlite:"+loc)
   val model = db.withSession({ implicit session => SQLiteDriver.createModel()})
 

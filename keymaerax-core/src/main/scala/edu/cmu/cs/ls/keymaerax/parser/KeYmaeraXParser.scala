@@ -10,6 +10,8 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.Configuration
+
 import scala.annotation.{switch, tailrec}
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -105,9 +107,9 @@ object KeYmaeraXParser extends Parser {
   val parser = this
 
   /** Lax mode where the parser is a little flexible about accepting input. */
-  private[keymaerax] val LAX_MODE = System.getProperty("LAX", "true")=="true"
+  private[keymaerax] val LAX_MODE = Configuration(Configuration.Keys.LAX) == "true"
 
-  private[parser] val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  private[parser] val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
 
   private val parseErrorsAsExceptions = true
 

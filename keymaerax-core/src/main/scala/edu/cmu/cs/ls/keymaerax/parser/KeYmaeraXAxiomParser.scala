@@ -4,6 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
 
@@ -13,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
  * @author nfulton
  */
 object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) {
-  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
 
   /**
    * @todo sort checking.

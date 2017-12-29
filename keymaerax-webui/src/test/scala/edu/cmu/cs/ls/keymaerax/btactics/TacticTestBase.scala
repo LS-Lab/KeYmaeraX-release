@@ -2,13 +2,14 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.hydra.{BellerophonTacticExecutor, DBAbstraction, DbProofTree, UserPOJO}
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, UserPOJO}
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
@@ -43,15 +44,15 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   //@note setup lazy in beforeEach, automatically initialize in withDatabase, tear down in afterEach if initialized
   private var dbTester: Lazy[DbTacticTester] = _
 
-  private val LOG_EARLIEST_QE = System.getProperty("LOG_POTENTIAL_QE", "false")=="true"
-  private val LOG_QE = System.getProperty("LOG_QE", "false")=="true"
-  private val LOG_QE_DURATION = System.getProperty("LOG_QE_DURATION", "true")=="true"
-  private val LOG_QE_STDOUT = System.getProperty("LOG_QE_STDOUT", "false")=="true"
+  private val LOG_EARLIEST_QE = Configuration(Configuration.Keys.LOG_ALL_FO) == "true"
+  private val LOG_QE = Configuration(Configuration.Keys.LOG_QE) == "true"
+  private val LOG_QE_DURATION = Configuration(Configuration.Keys.LOG_QE_DURATION) == "true"
+  private val LOG_QE_STDOUT = Configuration(Configuration.Keys.LOG_QE_STDOUT) == "true"
 
-  protected val qeLogPath: String = System.getProperty("user.home") + "/.keymaerax/logs/qe/"
+  protected val qeLogPath: String = Configuration.path(Configuration.Keys.QE_LOG_PATH)
   private val allPotentialQEListener = new QEFileLogListener(qeLogPath + "wantqe.txt", (p, _) => { p.subgoals.size == 1 && p.subgoals.head.isFOL })
   private val qeListener = new QEFileLogListener(qeLogPath + "haveqe.txt", (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
-  private val qeStdOutListener = new QELogListener((c: Sequent, g: Sequent, s: String) => println(s"$s: ${g.prettyString}"), (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
+  private val qeStdOutListener = new QELogListener((_: Sequent, g: Sequent, s: String) => println(s"$s: ${g.prettyString}"), (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
   protected val qeDurationListener = new StopwatchListener((_, t) => t match {
     case DependentTactic("QE") => true
     case DependentTactic("smartQE") => true
@@ -62,7 +63,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
 
   /** Tests that want to record proofs in a database. */
   class DbTacticTester {
-    lazy val user: UserPOJO = db.getUser("guest").get
+    lazy val user: UserPOJO = db.getUser(Configuration(Configuration.Keys.GUEST_USER)).get
 
     val db: SQLiteDB = {
       val testLocation = File.createTempFile("testdb", ".sqlite")
@@ -186,6 +187,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
    * }}}
    * */
   def withMathematica(testcode: Mathematica => Any, timeout: Int = -1) {
+    val mathLinkTcp = System.getProperty("MATH_LINK_TCPIP", "true") // JVM parameter -DMATH_LINK_TCPIP=[true,false]
+    Configuration.set("MATH_LINK_TCPIP", mathLinkTcp, saveToFile = false)
     val provider = mathematicaProvider() // new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig)
     ToolProvider.setProvider(provider)
     //@todo timeout
@@ -375,7 +378,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   def checkArchiveEntries(entries: List[ParsedArchiveEntry]): Unit = {
     val statistics = scala.collection.mutable.LinkedHashMap[String, (Long, Long, Int, Int, Int)]()
 
-    def printStatistics(v: (Long, Long, Int, Int, Int)) = {
+    def printStatistics(v: (Long, Long, Int, Int, Int)): Unit = {
       println("Proof duration [ms]: " + v._1)
       println("QE duration [ms]: " + v._2)
       println("Tactic size: " + v._3)

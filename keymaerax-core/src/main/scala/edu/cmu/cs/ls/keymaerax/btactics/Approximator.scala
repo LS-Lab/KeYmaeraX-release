@@ -5,6 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -30,7 +31,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
   */
 object Approximator {
   /** Debugging flag for the Approximator. */
-  private val ADEBUG = System.getProperty("DEBUG", "false")=="true"
+  private val ADEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
 
   //region The [[approximate]] tactic with helpers for figuring out which approximation to use.
 

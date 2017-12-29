@@ -10,6 +10,7 @@ package edu.cmu.cs.ls.keymaerax.tools
 import java.util.{Date, GregorianCalendar}
 
 import com.wolfram.jlink._
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion._
 
 import scala.collection.immutable
@@ -64,7 +65,7 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
   /** Timeout for Mathematica requests in seconds, set to TIMEOUT_OFF to disable. */
   var timeout: Int = TIMEOUT_OFF
 
-  protected val DEBUG: Boolean = System.getProperty("DEBUG", "false")=="true"
+  protected val DEBUG: Boolean = Configuration(Configuration.Keys.DEBUG) == "true"
   protected val mathematicaExecutor: ToolExecutor[(String, T)] = new ToolExecutor(1)
 
   override def runUnchecked(cmd: String): (String, T) = link.synchronized { link.runUnchecked(timeConstrained(cmd), m2k) }
@@ -87,8 +88,8 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
  * @author Stefan Mitsch
  */
 class JLinkMathematicaLink extends MathematicaLink {
-  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
-  private val TCPIP = System.getProperty("MATH_LINK_TCPIP", "false")=="true"
+  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
+  private val TCPIP = Configuration(Configuration.Keys.MATH_LINK_TCPIP) == "true"
 
   //@todo really should be private -> fix SpiralGenerator
   //@todo concurrent access to ml needs ml access to be synchronized everywhere or pooled or
@@ -112,6 +113,7 @@ class JLinkMathematicaLink extends MathematicaLink {
     this.linkName = linkName
     this.jlinkLibDir = jlinkLibDir
     println("Connecting to Mathematica over TCPIP: " + TCPIP)
+    // set native library VM property for JLink
     if (jlinkLibDir.isDefined) {
       System.setProperty("com.wolfram.jlink.libdir", jlinkLibDir.get) //e.g., "/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink"
     }
@@ -137,10 +139,10 @@ class JLinkMathematicaLink extends MathematicaLink {
         }
     } catch {
       case e: UnsatisfiedLinkError =>
-        println("Shutting down since Mathematica J/Link native library was not found in:\n" + System.getProperty("com.wolfram.jlink.libdir", "(undefined)") +
+        println("Shutting down since Mathematica J/Link native library was not found in:\n" + jlinkLibDir +
           "\nOr this path did not contain the native library compatible with " + System.getProperties.getProperty("sun.arch.data.model") + "-bit " + System.getProperties.getProperty("os.name") + " " + System.getProperties.getProperty("os.version") +
           diagnostic +
-          "\nPlease provide paths to the J/Link native library and restart KeYmaera X.")
+          "\nPlease provide paths to the J/Link native library in " + Configuration.KEYMAERAX_HOME_PATH + "/application.conf and restart KeYmaera X.")
         shutdown()
         false
       case e: MathLinkException if e.getErrCode == 1004 && e.getMessage.contains("Link failed to open") && remainingTrials > 0 =>

@@ -9,7 +9,8 @@ package edu.cmu.cs.ls.keymaerax.tools
 
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.core.{QETool, Term}
+import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.core.QETool
 
 /**
  * Common interface for SMT solvers.
@@ -19,8 +20,7 @@ trait SMTSolver extends QETool {
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
 
   lazy val smt2path: File = {
-    val file = new File(System.getProperty("user.home") + File.separator +
-      ".keymaerax" + File.separator + "cache" + File.separator + "smt2")
+    val file = new File(Configuration.path(Configuration.Keys.SMT_CACHE_PATH))
     file.mkdirs
     file
   }

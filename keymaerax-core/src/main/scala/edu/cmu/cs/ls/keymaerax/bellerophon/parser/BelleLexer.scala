@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.BelleToken
 import edu.cmu.cs.ls.keymaerax.parser._
 
@@ -13,7 +14,7 @@ import scala.collection.immutable.List
 object BelleLexer extends ((String) => List[BelleToken]) {
   type TokenStream = List[BelleToken]
 
-  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
 
   def apply(s: String) : List[BelleToken] = {
     //Avoids importing a thing with lots of potential name clashes.

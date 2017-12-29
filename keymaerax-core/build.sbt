@@ -15,6 +15,8 @@ libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.11.7"
 
 libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.11.7"
 
+libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.2"
+
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 
 ////////////////////////////////////////////////////////////////////////////////

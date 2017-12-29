@@ -9,6 +9,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 
 /**
@@ -22,7 +23,7 @@ import edu.cmu.cs.ls.keymaerax.core._
  */
 trait Parser extends (String => Expression) {
   /** Show approximately and only INFO-level debugging messages in the KeYmaera X parser. */
-  val PARSER_DEBUGGING = System.getProperty("PARSER_DEBUGGING", "false")=="true"
+  val PARSER_DEBUGGING = Configuration(Configuration.Keys.PARSER_DEBUG) == "true"
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   def apply(input: String): Expression

@@ -5,9 +5,9 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import _root_.edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
-
 import java.io.File
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
@@ -16,17 +16,10 @@ import scala.collection.immutable.Nil
 
 //Global setting:
 object DBAbstractionObj {
-  def defaultDatabase = SQLite.ProdDB //this needs to be a def and not a val because DBAbstractionObj is initialized in SQLite.
-  def testDatabase = SQLite.TestDB
+  def defaultDatabase: SQLite.SQLiteDB = SQLite.ProdDB //this needs to be a def and not a val because DBAbstractionObj is initialized in SQLite.
+  def testDatabase: SQLite.SQLiteDB = SQLite.TestDB
   private def getLocation(isTest: Boolean): String = {
-    val dirname = ".keymaerax"
-    val filename = if (isTest) "testDB.sqlite" else "keymaerax.sqlite"
-    new File(
-      System.getProperty("user.home") + File.separator + dirname
-    ).mkdirs()
-    val file = new File(System.getProperty("user.home") + File.separator +
-      dirname + File.separator + filename)
-    file.getCanonicalPath
+    new File(Configuration.path(if (isTest) Configuration.Keys.TEST_DB_PATH else Configuration.Keys.DB_PATH)).getCanonicalPath
   }
 
   val dblocation: String = getLocation(isTest=false)

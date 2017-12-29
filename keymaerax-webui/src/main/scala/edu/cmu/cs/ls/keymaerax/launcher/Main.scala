@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 import java.io._
 import javax.swing.JOptionPane
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.hydra._
 import spray.json.JsArray
 
@@ -92,7 +93,7 @@ object Main {
 
   /** Clears the cache if the cache was created by a previous version of KeYmaera X */
   private def clearCacheIfDeprecated(): Unit = {
-    val cacheLocation = System.getProperty("user.home") + File.separator + ".keymaerax" + File.separator + "cache"
+    val cacheLocation = Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH)
     val cacheDirectory = new File(cacheLocation)
     val cacheVersionFile = new File(cacheLocation + File.separator + "VERSION")
 
@@ -179,8 +180,8 @@ object Main {
         UpdateChecker.needDatabaseUpgrade(databaseVersion).getOrElse(false)) {
       //Exit if KeYmaera X is up to date but the production database belongs to a deprecated version of KeYmaera X.
       //@todo maybe it makes more sense for the JSON file to associate each KeYmaera X version to a list of database and cache versions that work with that version.
-      val backupPath = s"~/.keymaerax/keymaerax.sqlite-$databaseVersion-*"
-      val defaultName = "keymaerax.sqlite"
+      val backupPath = Configuration.path(Configuration.Keys.DB_PATH) + s"-$databaseVersion-*"
+      val defaultName = new File(Configuration.path(Configuration.Keys.DB_PATH)).getName
       try {
         val upgradedVersion = upgradeDatabase(databaseVersion)
         if (UpdateChecker.needDatabaseUpgrade(upgradedVersion).getOrElse(false)) {
@@ -533,21 +534,11 @@ object Main {
     }
 
     /** Location of the KeYmaera X lock file. Choose a non-. file so that students can find it easily if they need to delete it. */
-    private def lockFile : java.io.File =
-      new java.io.File(System.getProperty("user.home") + File.separator + ".keymaerax" + File.separator + "lockfile")
+    private def lockFile: java.io.File =
+      new java.io.File(Configuration.KEYMAERAX_HOME_PATH + File.separator + "lockfile")
 
     /** Returns the assigned port from the database, or the default port if the database or config key DNE. */
-    private def keymaeraxPort() : String = {
-      val defaultPort = "8090"
-      try {
-        DBAbstractionObj.defaultDatabase.getConfiguration("serverconfig").config.get("port") match {
-          case Some(port) => port
-          case None => defaultPort
-        }
-      } catch {
-        case _ : Throwable => defaultPort
-      }
-    }
+    private def keymaeraxPort(): String = Configuration(Configuration.Keys.PORT)
 
     /** Returns true iff the port is bound.
       * @note The port is a canary for determining whether there's an instance of KeYmaera X currently running.

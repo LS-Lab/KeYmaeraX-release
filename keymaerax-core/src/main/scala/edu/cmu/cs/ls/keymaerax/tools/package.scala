@@ -17,8 +17,8 @@ package edu.cmu.cs.ls.keymaerax
 package object tools {
   /** Gather diagnostic information about the system configuration relevant to KeYmaera X and its tool integrations. */
   def diagnostic: String =
-    "Java Virtual Machine: " + System.getProperties().getProperty("sun.arch.data.model") + "-bit Java " + System.getProperties().getProperty("java.runtime.version") +
-    "\nJava home:            " + System.getProperties().getProperty("java.home") +
-    "\nOperating system:     " + System.getProperties().getProperty("os.name") + " " + System.getProperties().getProperty("os.version") +
-    "\nMathematica J/Link:   " + System.getProperty("com.wolfram.jlink.libdir", "(undefined)")
+    "Java Virtual Machine: " + System.getProperties.getProperty("sun.arch.data.model") + "-bit Java " + System.getProperties.getProperty("java.runtime.version") +
+    "\nJava home:            " + System.getProperties.getProperty("java.home") +
+    "\nOperating system:     " + System.getProperties.getProperty("os.name") + " " + System.getProperties.getProperty("os.version") +
+    "\nMathematica J/Link:   " + Configuration.getOption(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
 }

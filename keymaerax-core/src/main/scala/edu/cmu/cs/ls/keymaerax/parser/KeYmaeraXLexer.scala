@@ -10,6 +10,8 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.Configuration
+
 import scala.annotation.tailrec
 import scala.collection.immutable._
 import scala.util.matching.Regex
@@ -301,7 +303,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
 
-  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
 
 
   /** Normalize all new lines in input to a s*/

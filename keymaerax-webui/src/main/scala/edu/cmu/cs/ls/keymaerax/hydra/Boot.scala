@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import akka.actor.{Actor, ActorSystem, Props}
 import akka.io.IO
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
@@ -94,7 +95,7 @@ object SSLBoot extends App with KyxSslConfiguration {
   import HyDRAServerConfig._
   implicit var system = ActorSystem("on-spray-can")
 
-  assert(database.getConfiguration("serverconfig").config.get("jks").isDefined,
+  assert(Configuration.getOption(Configuration.Keys.JKS).isDefined,
     "ERROR: Cannot start an SSL server without a password for the KeyStore.jks file stored in the the serverconfig.jks configuration.")
 
   if(host != "0.0.0.0")
@@ -131,7 +132,7 @@ object HyDRAInitializer {
     LoadingDialogFactory().addToStatus(15, Some("Connecting to arithmetic tools..."))
 
     try {
-      val preferredTool = preferredToolFromDB(database)
+      val preferredTool = preferredToolFromConfig
       val config = configFromDB(options, database, preferredTool)
       createTool(options, config, preferredTool)
     } catch {
@@ -199,19 +200,19 @@ object HyDRAInitializer {
   private def configFromDB(options: OptionMap, db: DBAbstraction, preferredTool: String): ToolProvider.Configuration = {
     val tool: String = options.getOrElse('tool, preferredTool).toString
     tool.toLowerCase() match {
-      case "mathematica" => mathematicaConfigFromDB(db)
+      case "mathematica" => mathematicaConfig
       case "z3" => Map.empty
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
   }
 
-  private def preferredToolFromDB(db: DBAbstraction): String = {
-    db.getConfiguration("tool").config.getOrElse("qe", throw new Exception("No preferred tool"))
+  private def preferredToolFromConfig: String = {
+    Configuration.getOption(Configuration.Keys.QE_TOOL).getOrElse(throw new Exception("No preferred tool"))
   }
 
-  def mathematicaConfigFromDB(db: DBAbstraction): ToolProvider.Configuration = {
-    getMathematicaLinkName(db) match {
-      case Some(l) => getMathematicaLibDir(db) match {
+  def mathematicaConfig: ToolProvider.Configuration = {
+    getMathematicaLinkName match {
+      case Some(l) => getMathematicaLibDir match {
         case Some(libDir) => Map("linkName" -> l, "libDir" -> libDir)
         case None => Map("linkName" -> l)
       }
@@ -219,14 +220,12 @@ object HyDRAInitializer {
     }
   }
 
-  private def getMathematicaLinkName(db: DBAbstraction): Option[String] = {
-    db.getConfiguration("mathematica").config.get("linkName")
+  private def getMathematicaLinkName: Option[String] = {
+    Configuration.getOption(Configuration.Keys.MATHEMATICA_LINK_NAME)
   }
 
-  private def getMathematicaLibDir(db: DBAbstraction): Option[String] = {
-    val config = db.getConfiguration("mathematica").config
-    if (config.contains("jlinkLibDir")) Some(config("jlinkLibDir"))
-    else None
+  private def getMathematicaLibDir: Option[String] = {
+    Configuration.getOption(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
   }
 }
 
@@ -237,19 +236,10 @@ object HyDRAServerConfig {
   val database = DBAbstractionObj.defaultDatabase
   var service = system.actorOf(Props[RestApiActor], "hydra")
 
-  val databaserServerConfig = database.getAllConfigurations.find(_.name == "serverconfig")
-
-  val (isHosted:Boolean, host:String, port:Int) = databaserServerConfig match {
-    case Some(c) =>
-      assert(c.config.keySet.contains("host"), "If serverconfig configuration exists then it should have a 'host' key.")
-      assert(c.config.keySet.contains("port"), "If serverconfig configuration exists then it should have a 'port' key.")
-      val isHosted = c.config.get("isHosted") match {
-        case Some(s) => s.equals("true")
-        case None => false
-      }
-      (isHosted, c.config("host"), Integer.parseInt(c.config("port")))
-    case None => (false, "127.0.0.1", 8090) //default values.
-  }
+  val (isHosted: Boolean, host: String, port: Int) =
+    (Configuration(Configuration.Keys.IS_HOSTED) == "true",
+      Configuration(Configuration.Keys.HOST),
+      Integer.parseInt(Configuration(Configuration.Keys.PORT)))
 
   assert(isHosted || host == "127.0.0.1" || host == "localhost",
     "Either isHosted should be set or else the host should be localhost. This is crucial -- isHosted is used in security-critical ways.")

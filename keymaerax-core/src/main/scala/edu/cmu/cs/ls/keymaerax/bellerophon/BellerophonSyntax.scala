@@ -4,14 +4,15 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, DerivationInfo, FormulaTools}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{Location, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 object BelleExpr {
-  private[keymaerax] val DEBUG = System.getProperty("DEBUG", "false")=="true"
-  private[keymaerax] val RECHECK = System.getProperty("DEBUG", "false")=="true"
+  private[keymaerax] val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
+  private[keymaerax] val RECHECK = Configuration(Configuration.Keys.DEBUG) == "true"
 }
 
 /**

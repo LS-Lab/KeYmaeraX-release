@@ -9,6 +9,7 @@ import java.util.{Calendar, Date}
 
 import akka.event.slf4j.SLF4JLogging
 import akka.actor.{Actor, ActorContext}
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -858,7 +859,7 @@ trait RestApi extends HttpService with SLF4JLogging {
   val toolStatus: Route = path("config" / "toolStatus") {
     pathEnd {
       get {
-        database.getConfiguration("tool").config("qe") match {
+        Configuration(Configuration.Keys.QE_TOOL) match {
           case "mathematica" => completeRequest(new MathematicaStatusRequest(database), EmptyToken())
           case "z3" => completeRequest(new Z3StatusRequest(database), EmptyToken())
         }

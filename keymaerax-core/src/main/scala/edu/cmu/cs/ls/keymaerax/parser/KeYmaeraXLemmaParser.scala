@@ -4,6 +4,7 @@
 //*/
 //package edu.cmu.cs.ls.keymaerax.parser
 //
+//import edu.cmu.cs.ls.keymaerax.Configuration
 //import edu.cmu.cs.ls.keymaerax.core.{Evidence, Formula}
 //import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
 //import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
@@ -16,7 +17,7 @@
 //  /** the lemma name, the lemma conclusion, and the supporting evidence */
 //  private type Lemma = (Option[String], Formula, Evidence)
 //
-//  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+//  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
 //
 //  /**
 //   * @todo sort hcecking.

@@ -7,6 +7,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 
@@ -22,7 +23,7 @@ object DefaultSMTConverter extends SMTConverter {}
   * @author Stefan Mitsch
   */
 abstract class SMTConverter extends (Formula=>String) {
-  protected val DEBUG: Boolean = System.getProperty("DEBUG", "false")=="true"
+  protected val DEBUG: Boolean = Configuration(Configuration.Keys.DEBUG) == "true"
 
   /** Convert given formula to an SMTLib specification that, if SMT(\result) returns `unsat` says that `expr` is valid. */
   def apply(expr: Formula): String = {

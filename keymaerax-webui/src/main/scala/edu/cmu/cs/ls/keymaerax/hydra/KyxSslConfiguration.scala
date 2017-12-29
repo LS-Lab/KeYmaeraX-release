@@ -5,8 +5,10 @@
 
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import java.security.{SecureRandom, KeyStore}
+import java.security.{KeyStore, SecureRandom}
 import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
+
+import edu.cmu.cs.ls.keymaerax.Configuration
 import spray.io._
 
 
@@ -19,7 +21,7 @@ trait KyxSslConfiguration {
   // since we want non-default settings in this example we make a custom SSLContext available here
   implicit def sslContext: SSLContext = {
     val keyStoreResource = "/private/KeyStore.jks"
-    val password = SQLite.ProdDB.getConfiguration("serverconfig").config("jks")
+    val password = Configuration(Configuration.Keys.JKS)
 
     val keyStore = KeyStore.getInstance("jks")
     keyStore.load(getClass.getResourceAsStream(keyStoreResource), password.toCharArray)

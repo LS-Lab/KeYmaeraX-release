@@ -5,6 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.helpers
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BuiltInTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
@@ -61,7 +62,7 @@ object QELogger {
     *
     *   Sequents with the same name are grouped together when the file is re-parsed
     */
-  private val defaultPath = System.getProperty("user.home") + "/.keymaerax/QElog.txt"
+  private val defaultPath: String = Configuration.path(Configuration.Keys.QE_LOG_PATH)
 
   def clearLog(filename: String = defaultPath): Unit = {
     try {
