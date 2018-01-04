@@ -309,6 +309,20 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     )
     )
 
+  /** throughout: prove a property of a loop by induction with the given loop invariant (hybrid systems) that
+    * holds throughout the steps of the loop body.
+    * Wipes conditions that contain bound variables of the loop.
+    * {{{
+    *   use:                      init:        steps:
+    *   I, G_cnst |- p, D_cnst    G |- I, D    I, G_cnst |- [a]I,    D_cnst
+    *                                          I, G_cnst |- [b;c;]I, D_cnst
+    *                                          I, G_cnst |- [d;]I,   D_cnst
+    *   -------------------------------------------------------------------
+    *   G |- [{a;{b;c;}d}*]p, D
+    * }}}
+    */
+  def throughout(invariant: Formula): DependentPositionTactic = DLBySubst.throughout(invariant)
+
   // differential equations
 
   /** ODE: try to prove a property of a differential equation automatically.

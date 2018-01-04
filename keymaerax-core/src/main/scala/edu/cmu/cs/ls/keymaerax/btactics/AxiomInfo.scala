@@ -794,6 +794,15 @@ object DerivationInfo {
       , List(FormulaArg("j(x)")), _ => ((fml: Formula) => TactixLibrary.loop(fml)): TypedFunc[Formula, BelleExpr]),
     new PositionTacticInfo("loopAuto", "loopAuto",
       {case () => (gen:Generator.Generator[Formula]) => TactixLibrary.loop(gen)}, needsGenerator = true),
+    new InputPositionTacticInfo("throughout",
+      RuleDisplayInfo("Loop Induction Throughout",(List("&Gamma;"), List("[{a;{b;c};d}*]P", "&Delta;")),
+        List(
+          (List("&Gamma;"),List("j(x)", "&Delta;")),
+          (List("j(x)"),List("[a]j(x)")),
+          (List("j(x)"),List("[b;c]j(x)")),
+          (List("j(x)"),List("[d]j(x)")),
+          (List("j(x)"),List("P"))))
+      , List(FormulaArg("j(x)")), _ => ((fml: Formula) => TactixLibrary.throughout(fml)): TypedFunc[Formula, BelleExpr]),
     new InputPositionTacticInfo("con",
       RuleDisplayInfo("Loop Convergence",(List("&Gamma;"), List("&lt;a*&gt;P", "&Delta;")),
         List(
