@@ -386,7 +386,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       println("Proof steps: " + v._5)
     }
 
-    for (entry <- entries) {
+    for (entry <- entries.filter(_.tactics.nonEmpty)) {
       val tacticName = entry.tactics.head._1
       val tactic = entry.tactics.head._2
 
