@@ -5,7 +5,7 @@ import java.io.File
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
@@ -328,6 +328,15 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       case BelleProvable(provable, _) => provable
       case r => fail("Unexpected tactic result " + r)
     }
+  }
+
+  /** Filters the archive entries that should be provable with the `tool`. */
+  def toolArchiveEntries(entries: List[ParsedArchiveEntry], tool: Tool): List[ParsedArchiveEntry] = {
+    // finds all specific QE({`tool`}) entries, but ignores the generic QE that works with any tool
+    val qeFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
+    entries.
+      filter(e => e.tactics.nonEmpty &&
+        qeFinder.findAllMatchIn(BellePrettyPrinter(e.tactics.head._2)).forall(p => p.group("toolName") == tool.name))
   }
 
   /** Checks a specific entry from a bundled archive. Uses the first tactic if tacticName is None. */
