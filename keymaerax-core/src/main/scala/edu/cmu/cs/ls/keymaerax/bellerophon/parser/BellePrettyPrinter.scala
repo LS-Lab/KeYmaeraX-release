@@ -48,6 +48,7 @@ object BellePrettyPrinter extends (BelleExpr => String) {
             case (a: Formula, v: Formula) => edu.cmu.cs.ls.keymaerax.core.Equiv(a, v)
           })) + ") " + IN.img + " (" +
           newline(indent+1) + pp(inner, indent+1) + newline(indent) + ")"
+        case DependentPositionTactic(name) if name == "ANON" => throw PrinterException("Anonymous tactic cannot be re-parsed: please replace anonymous tactic with its inner steps.")
         case DependentPositionTactic(name) => name // name of a DependentPositionTactic is the codeName
         case adp: AppliedDependentPositionTactic => adp.pt match {
           case e: DependentPositionWithAppliedInputTactic =>

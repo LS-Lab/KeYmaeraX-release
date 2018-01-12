@@ -28,6 +28,7 @@ case class Fixed private[keymaerax] (pos: Position, shape: Option[Formula] = Non
     case (Some(fml), false) => s"~={`${fml.prettyString}`}"
     case (None, _) => ""
   })
+  override def toPosition(p: ProvableSig): Position = pos
 }
 object Fixed {
   def apply(seqPos: Int, inExpr: List[Int], shape: Option[Formula], exact: Boolean): Fixed = new Fixed(Position(seqPos, inExpr), shape, exact)
@@ -61,11 +62,13 @@ object Find {
 /** 'Llast Locates the last position in the antecedent. */
 case class LastAnte(goal: Int) extends PositionLocator {
   override def prettyString: String ="'Llast"
+  override def toPosition(p: ProvableSig): Position = AntePosition.base0(p.subgoals(goal).ante.length - 1)
 }
 
 /** 'Rlast Locates the last position in the succedent. */
 case class LastSucc(goal: Int) extends PositionLocator {
   override def prettyString: String ="'Rlast"
+  override def toPosition(p: ProvableSig): Position = SuccPosition.base0(p.subgoals(goal).succ.length - 1)
 }
 
 ///**
