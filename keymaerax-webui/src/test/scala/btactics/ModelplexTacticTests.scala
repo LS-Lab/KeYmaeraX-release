@@ -966,7 +966,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
     val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Velocity Car Safety").head
     val fallback = "v:=0;t:=0;".asProgram
-    val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(entry.name, entry.tactics(1)._2,
+    val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(entry.name, entry.tactics.head._2,
       Some(fallback), 'ctrl, None)(entry.model.asInstanceOf[Formula])
 
     sandbox shouldBe
@@ -996,26 +996,11 @@ class ModelplexTacticTests extends TacticTestBase {
 
     def defs(f: Formula): Declaration = Declaration(Map.empty)
 
-    def extractSerializableTactic(fml: Formula, tactic: BelleExpr): BelleExpr = {
-      val modelContent = KeYmaeraXPrettyPrinter(fml)
-      val proofId = db.createProof(modelContent)
-      val theInterpreter = SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter)
-      def interpreter(listeners: Seq[IOListener]): Interpreter = {
-        //@note ignore listeners provided by db.proveByWithProofId, use own trace recording listener
-        theInterpreter
-      }
-      val (_, proof) = db.proveByWithProofId(modelContent, tactic, interpreter, Some(proofId))
-      theInterpreter.kill()
-      BelleInterpreter.setInterpreter(SequentialInterpreter())
-      proof shouldBe 'proved
-      db.extractTactic(proofId)
-    }
-
     val lemmaEntries = lemmas.map({ case (name, fml, tactic) => ParsedArchiveEntry(name, "lemma", "", defs(fml), fml,
-      (name + " Proof", extractSerializableTactic(fml, tactic))::Nil, Map.empty)})
+      (name + " Proof", db.extractSerializableTactic(fml, tactic))::Nil, Map.empty)})
 
     val sandboxEntry = ParsedArchiveEntry(entry.name + " Sandbox", "theorem", "", defs(sandbox),
-      sandbox, (entry.name + " Sandbox Proof", extractSerializableTactic(sandbox, sbTactic))::Nil, Map.empty)
+      sandbox, (entry.name + " Sandbox Proof", db.extractSerializableTactic(sandbox, sbTactic))::Nil, Map.empty)
 
     val archive = (lemmaEntries :+ sandboxEntry).map(new KeYmaeraXArchivePrinter()(_)).mkString("\n\n")
     checkArchiveEntries(KeYmaeraXArchiveParser.parse(archive))

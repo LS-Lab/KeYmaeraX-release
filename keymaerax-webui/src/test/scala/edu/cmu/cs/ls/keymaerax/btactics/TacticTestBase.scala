@@ -5,17 +5,15 @@ import java.io.File
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DbProofTree, UserPOJO}
+import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
-import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalactic.{AbstractStringUniformity, Uniformity}
 import org.scalatest._
@@ -42,7 +40,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   //@note Initialize once per test class, but only if requested in a withMathematica call
   private val mathematicaProvider = new Lazy(new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig))
   //@note setup lazy in beforeEach, automatically initialize in withDatabase, tear down in afterEach if initialized
-  private var dbTester: Lazy[DbTacticTester] = _
+  private var dbTester: Lazy[TempDBTools] = _
 
   private val LOG_EARLIEST_QE = Configuration(Configuration.Keys.LOG_ALL_FO) == "true"
   private val LOG_QE = Configuration(Configuration.Keys.LOG_QE) == "true"
@@ -61,131 +59,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
 
   println("QE log path: " + qeLogPath + " (enabled: " + LOG_QE + ")")
 
-  /** Tests that want to record proofs in a database. */
-  class DbTacticTester {
-    lazy val user: UserPOJO = db.getUser(Configuration(Configuration.Keys.GUEST_USER)).get
-
-    val db: SQLiteDB = {
-      val testLocation = File.createTempFile("testdb", ".sqlite")
-      val db = new SQLiteDB(testLocation.getAbsolutePath)
-      db.cleanup(testLocation.getAbsolutePath)
-      db
-    }
-
-    /** Turns a formula into a model problem with mandatory declarations. */
-    def makeModel(content: String): String = {
-      def printDomain(d: Sort): String = d match {
-        case Real => "R"
-        case Bool => "B"
-        case Unit => ""
-        case Tuple(l, r) => printDomain(l) + "," + printDomain(r)
-      }
-
-      def augmentDeclarations(content: String, parsedContent: Formula): String =
-        if (content.contains("Problem.")) content //@note determine by mandatory "Problem." block of KeYmaeraXProblemParser
-        else {
-          val symbols = StaticSemantics.symbols(parsedContent)
-          val fnDecls = symbols.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>
-            if (fn.sort == Real) s"R ${fn.asString}(${printDomain(fn.domain)})."
-            else if (fn.sort == Bool) s"B ${fn.asString}(${printDomain(fn.domain)})."
-            else throw new Exception("Unknown sort: " + fn.sort)
-          ).mkString("\n  ")
-          val varDecls = symbols.filter(_.isInstanceOf[BaseVariable]).map(v => s"R ${v.prettyString}.").mkString("\n  ")
-          s"""Functions.
-             |  $fnDecls
-             |End.
-             |ProgramVariables.
-             |  $varDecls
-             |End.
-             |Problem.
-             |  $content
-             |End.""".stripMargin
-        }
-
-      augmentDeclarations(content, KeYmaeraXProblemParser.parseAsProblemOrFormula(content))
-    }
-
-    /** Creates a new proof entry in the database for a model parsed from `modelContent`. */
-    def createProof(modelContent: String, modelName: String = "", proofName: String = "Proof"): Int = {
-      db.getModelList(user.userName).find(_.name == modelName) match {
-        case Some(m) => db.deleteModel(m.modelId)
-        case None => // nothing to do
-      }
-      db.createModel(user.userName, modelName, makeModel(modelContent), "", None, None, None, None) match {
-        case Some(modelId) => db.createProofForModel(modelId, modelName + proofName, "", "", None)
-        case None => fail("Unable to create temporary model in DB")
-      }
-    }
-
-    /** Prove model `modelContent` using tactic  `t`. Record the proof in the database and check that the recorded
-      * tactic is the provided tactic. Returns the proof ID and resulting provable. */
-    def proveByWithProofId(modelContent: String, t: BelleExpr,
-                           interpreter: Seq[IOListener] => Interpreter = SequentialInterpreter,
-                           proofId: Option[Int] = None,
-                           modelName: String = ""): (Int, ProvableSig) = {
-      val s: Sequent = KeYmaeraXProblemParser.parseAsProblemOrFormula(modelContent) match {
-        case fml: Formula => Sequent(IndexedSeq(), IndexedSeq(fml))
-        case _ => fail("Model content " + modelContent + " cannot be parsed")
-      }
-      val pId = proofId match {
-        case Some(id) => id
-        case None => createProof(modelContent, modelName)
-      }
-      val globalProvable = ProvableSig.startProof(s)
-      val listener = new TraceRecordingListener(db, pId, None,
-        globalProvable, 0 /* start from single provable */, recursive = false, "custom")
-      val listeners = listener::Nil ++
-        (if (LOG_QE) qeListener::Nil else Nil) ++
-        (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil) ++
-        (if (LOG_QE_STDOUT) qeStdOutListener::Nil else Nil)
-      BelleInterpreter.setInterpreter(interpreter(listeners))
-      BelleInterpreter(t, BelleProvable(ProvableSig.startProof(s))) match {
-        case BelleProvable(provable, _) =>
-          provable.conclusion shouldBe s
-          //extractTactic(proofId) shouldBe t //@todo trim trailing branching nil
-          if (provable.isProved) {
-            // check that database thinks so too
-            val finalTree = DbProofTree(db, pId.toString)
-            finalTree.load()
-            //finalTree.leaves shouldBe empty
-            finalTree.nodes.foreach(n => n.parent match {
-              case None => n.conclusion shouldBe s
-              case Some(parent) =>
-                //@todo throughout tactic records goal index and parent provables wrong
-                //n.conclusion shouldBe parent.localProvable.subgoals(n.goalIdx)
-            })
-          }
-          (pId, provable)
-        case r => fail("Unexpected tactic result " + r)
-      }
-    }
-
-    /** Prove model `modelContent` using tactic  `t`. Record the proof in the database and check that the recorded
-      * tactic is the provided tactic. Returns the resulting provable. */
-    def proveBy(modelContent: String, t: BelleExpr, interpreter: Seq[IOListener] => Interpreter = SequentialInterpreter,
-                modelName: String = ""): ProvableSig =
-      proveByWithProofId(modelContent, t, interpreter, None, modelName)._2
-
-    /** Returns the tactic recorded for the proof `proofId`. */
-    def extractTactic(proofId: Int): BelleExpr = DbProofTree(db, proofId.toString).tactic
-
-    /** Extracts the internal steps taken by proof step `stepId` at level `level` (0: original tactic, 1: direct internal steps, etc.)  */
-    def extractStepDetails(proofId: Int, stepId: String, level: Int = 1): BelleExpr = {
-      DbProofTree(db, proofId.toString).locate(stepId) match {
-        case Some(node) => node.maker match {
-          case Some(tactic) =>
-            val localProofId = db.createProof(node.localProvable)
-            val interpreter = registerInterpreter(SpoonFeedingInterpreter(localProofId, -1, db.createProof, listener(db), SequentialInterpreter, level, strict=false))
-            interpreter(BelleParser(tactic), BelleProvable(ProvableSig.startProof(node.localProvable.conclusion)))
-            extractTactic(localProofId)
-        }
-      }
-
-    }
-  }
-
   /** For tests that want to record proofs in the database. */
-  def withDatabase(testcode: DbTacticTester => Any): Unit = testcode(dbTester())
+  def withDatabase(testcode: TempDBTools => Any): Unit = testcode(dbTester())
 
   /**
    * Creates and initializes Mathematica for tests that want to use QE. Also necessary for tests that use derived
@@ -249,11 +124,12 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   /** Test setup */
   override def beforeEach(): Unit = {
     interpreters = Nil
-    dbTester = new Lazy(new DbTacticTester())
-    val listeners = (if (LOG_QE) qeListener::Nil else Nil) ++
+    val listeners =
+      (if (LOG_QE) qeListener::Nil else Nil) ++
       (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil) ++
       (if (LOG_QE_DURATION) qeDurationListener::Nil else Nil) ++
       (if (LOG_QE_STDOUT) qeStdOutListener::Nil else Nil)
+    dbTester = new Lazy(new TempDBTools(listeners))
     BelleInterpreter.setInterpreter(registerInterpreter(SequentialInterpreter(listeners)))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[Formula]()
@@ -447,17 +323,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  def listener(db: DBAbstraction)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = {
-    val trace = db.getExecutionSteps(proofId)
-    assert(-1 <= parentInTrace && parentInTrace < trace.length, "Invalid trace index " + parentInTrace + ", expected -1<=i<trace.length")
-    val parentStep: Option[Int] = if (parentInTrace < 0) None else trace(parentInTrace).stepId
-    val globalProvable = parentStep match {
-      case None => db.getProvable(db.getProofInfo(proofId).provableId.get).provable
-      case Some(sId) => db.getExecutionStep(proofId, sId).map(_.local).get
-    }
-    new TraceRecordingListener(db, proofId, parentStep,
-      globalProvable, branch, recursive = false, tacticName) :: Nil
-  }
+  def listener(db: DBAbstraction)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = DBTools.listener(db)(proofId)(tacticName, parentInTrace, branch)
 
   /** Removes all whitespace for string comparisons in tests.
     * @example{{{
