@@ -5,8 +5,9 @@
 
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import edu.cmu.cs.ls.keymaerax.btactics.FormulaTools
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Term}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Locate Positions
@@ -18,7 +19,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
 sealed trait PositionLocator {
   def prettyString: String
 
-  def toPosition(p: ProvableSig): Position = ??? //@todo Surely this already exists?!
+  def toPosition(p: ProvableSig): Position
 }
 
 /** Locates the formula at the specified fixed position. Can optionally specify the expected formula or expected shape of formula at that position as contract. */
@@ -49,6 +50,24 @@ case class Find(goal: Int, shape: Option[Expression], start: Position, exact: Bo
     case (_, None, _) => "'_"
     case (_, Some(s), true) => s"'_=={`${s.prettyString}`}"
     case (_, Some(s), false) => s"'_~={`${s.prettyString}`}"
+  }
+
+  override def toPosition(p: ProvableSig): Position = findPosition(p, start)
+
+  /** Finds a position in the provable `p` at or after `pos` that matches the `shape`. */
+  def findPosition(p: ProvableSig, pos: Position): Position = {
+    require(start.isIndexDefined(p.subgoals(goal)), "Find must point to a valid position in the sequent, but " + start.prettyString + " is undefined in " + p.subgoals(goal).prettyString)
+    shape match {
+      case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, p.subgoals(goal)(pos.top)).isDefined => pos
+      case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, p.subgoals(goal)(pos.top)).isEmpty => findPosition(p, pos.advanceIndex(1))
+      case Some(f: Formula) if exact && p.subgoals(goal)(pos.top) == f => pos
+      case Some(f: Formula) if exact && p.subgoals(goal)(pos.top) != f => findPosition(p, pos.advanceIndex(1))
+      case Some(t: Term) =>
+        val tPos = FormulaTools.posOf(p.subgoals(goal)(pos.top), e => if (exact) e == t else UnificationMatch.unifiable(e, t).isDefined)
+        if (tPos.isEmpty) findPosition(p, pos.advanceIndex(1))
+        else pos.topLevel ++ tPos.head
+      case None => pos
+    }
   }
 }
 

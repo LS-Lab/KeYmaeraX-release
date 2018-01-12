@@ -328,10 +328,10 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
           }
         case None => positionTactic.computeResult(provable, pos)
       }
-      case Find(goal, shape, start, exact) =>
+      case l@Find(goal, shape, start, exact) =>
         require(start.isTopLevel, "Start position must be top-level in sequent")
         require(start.isIndexDefined(provable.subgoals(goal)), "Start position must be valid in sequent")
-        tryAllAfter(provable, goal, shape, start, exact, null)
+        tryAllAfter(provable, l, null)
       case LastAnte(goal) => positionTactic.computeResult(provable, AntePosition.base0(provable.subgoals(goal).ante.size-1))
       case LastSucc(goal) => positionTactic.computeResult(provable, SuccPosition.base0(provable.subgoals(goal).succ.size-1))
     }
@@ -346,38 +346,24 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
     case t: Throwable => throw new BelleThrowable(t.getMessage, t)
   }
 
-  /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
-  private def tryAllAfter(provable: ProvableSig, goal: Int, shape: Option[Expression], pos: Position, exact: Boolean,
-                          cause: BelleThrowable): ProvableSig =
-    if (pos.isIndexDefined(provable.subgoals(goal))) {
+  /** Recursively tries the position tactic at positions at or after the locator's start in the specified provable. */
+  private def tryAllAfter(provable: ProvableSig, locator: Find, cause: BelleThrowable): ProvableSig =
+    if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
       try {
-        shape match {
-          case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isDefined =>
-            positionTactic.computeResult(provable, pos)
-          case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isEmpty =>
-            tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, new BelleThrowable(s"Formula is not of expected shape", cause))
-          case Some(f: Formula) if exact && provable.subgoals(goal)(pos.top) == f => positionTactic.computeResult(provable, pos)
-          case Some(f: Formula) if exact && provable.subgoals(goal)(pos.top) != f =>
-            tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, new BelleThrowable(s"Formula is not of expected shape", cause))
-          case Some(t: Term) =>
-            val tPos = FormulaTools.posOf(provable.subgoals(goal)(pos.top), e => if (exact) e == t else UnificationMatch.unifiable(e, t).isDefined)
-            if (tPos.isEmpty) tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, new BelleThrowable(s"Formula is not of expected shape", cause))
-            else positionTactic.computeResult(provable, pos.topLevel ++ tPos.head)
-          case None => positionTactic.computeResult(provable, pos)
-        }
+        positionTactic.computeResult(provable, locator.toPosition(provable))
       } catch {
         //@todo should catch only fails not eat problems
         case e: Throwable =>
           val newCause = if (cause == null) new BelleThrowable(s"Position tactic ${positionTactic.prettyString} is not " +
-            s"applicable at ${pos.prettyString}", e)
+            s"applicable at ${locator.start.prettyString}", e)
           else new CompoundException(
-            new BelleThrowable(s"Position tactic ${positionTactic.prettyString} is not applicable at ${pos.prettyString}", e),
+            new BelleThrowable(s"Position tactic ${positionTactic.prettyString} is not applicable at ${locator.start.prettyString}", e),
             cause)
-          tryAllAfter(provable, goal, shape, pos.advanceIndex(1), exact, newCause)
+          tryAllAfter(provable, Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact), newCause)
       }
     } else throw cause
 
-  override def prettyString = positionTactic.prettyString + "(" + locator.prettyString + ")"
+  override def prettyString: String = positionTactic.prettyString + "(" + locator.prettyString + ")"
 }
 
 abstract case class BuiltInTwoPositionTactic(name: String) extends NamedBelleExpr {
@@ -402,7 +388,7 @@ case class AppliedBuiltinTwoPositionTactic(positionTactic: BuiltInTwoPositionTac
     case t: Throwable => throw new BelleThrowable(t.getMessage, t)
   }
 
-  override def prettyString = positionTactic.prettyString + "(" + posOne.prettyString + "," + posTwo.prettyString + ")"
+  override def prettyString: String = positionTactic.prettyString + "(" + posOne.prettyString + "," + posTwo.prettyString + ")"
 }
 
 /**
@@ -498,9 +484,9 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
         }
         case None => pt.factory(pos).computeExpr(v)
       }
-      case Find(goal, shape, start, exact) =>
+      case l@Find(goal, shape, start, exact) =>
         require(start.isTopLevel, "Start position must be top-level in sequent")
-        tryAllAfter(goal, shape, start, exact, null)
+        tryAllAfter(l, null)
       case LastAnte(goal) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition.base0(provable.subgoals(goal).ante.size - 1) })
       case LastSucc(goal) => pt.factory(v match { case BelleProvable(provable, _) => SuccPosition.base0(provable.subgoals(goal).succ.size - 1) })
     }
@@ -521,42 +507,28 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
   }
 
   /** Recursively tries the position tactic at positions at or after pos in the specified provable. */
-  private def tryAllAfter(goal: Int, shape: Option[Expression], pos: Position, exact: Boolean,
-                          cause: BelleThrowable): DependentTactic = new DependentTactic(name) {
+  private def tryAllAfter(locator: Find, cause: BelleThrowable): DependentTactic = new DependentTactic(name) {
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
-        if (pos.isIndexDefined(provable.subgoals(goal))) {
+        if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
           try {
-            shape match {
-              case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isDefined =>
-                pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
-              case Some(f: Formula) if !exact && UnificationMatch.unifiable(f, provable.subgoals(goal)(pos.top)).isEmpty =>
-                tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleThrowable(s"Formula is not of expected shape", cause))
-              case Some(f: Formula) if exact && f == provable.subgoals(goal)(pos.top) =>
-                pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
-              case Some(f: Formula) if exact && f != provable.subgoals(goal)(pos.top) =>
-                tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleThrowable(s"Formula is not of expected shape", cause))
-              case Some(t: Term) =>
-                val tPos = FormulaTools.posOf(provable.subgoals(goal)(pos.top), e => if (exact) e == t else UnificationMatch.unifiable(e, t).isDefined)
-                if (tPos.isEmpty) tryAllAfter(goal, shape, pos.advanceIndex(1), exact, new BelleThrowable(s"Formula is not of expected shape", cause))
-                else pt.factory(pos.topLevel ++ tPos.head).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
-              case None =>
-                pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
-            }
+            pt.factory(locator.toPosition(provable)) |
+              tryAllAfter(Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact), cause)
           } catch {
             // also advance if computeExpr already throws a BelleThrowable
             case e: BelleThrowable =>
               val newCause = if (cause == null) new BelleThrowable(s"Dependent position tactic ${pt.prettyString} is not " +
-                s"applicable at ${pos.prettyString}", e)
+                s"applicable at ${locator.start.prettyString}", e)
               else new CompoundException(
-                new BelleThrowable(s"Dependent position tactic ${pt.prettyString} is not applicable at ${pos.prettyString}", e),
+                new BelleThrowable(s"Dependent position tactic ${pt.prettyString} is not applicable at ${locator.start.prettyString}", e),
                 cause)
-              tryAllAfter(goal, shape, pos.advanceIndex(1), exact, newCause)
+              tryAllAfter(Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact), newCause)
           }
         } else if (cause == null) {
-          throw new BelleThrowable(s"Dependent position tactic ${pt.prettyString} is not applicable at ${pos.prettyString} in ${provable.subgoals(goal).prettyString}")
+          throw new BelleThrowable(s"Dependent position tactic ${pt.prettyString} is not applicable at ${locator.start.prettyString} in ${provable.subgoals(locator.goal).prettyString}")
         } else throw cause
-      case _ => pt.factory(pos).computeExpr(v) | tryAllAfter(goal, shape, pos.advanceIndex(1), exact, cause)
+      case _ => pt.factory(locator.start).computeExpr(v) |
+        tryAllAfter(Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact), cause)
     }
   }
 }
