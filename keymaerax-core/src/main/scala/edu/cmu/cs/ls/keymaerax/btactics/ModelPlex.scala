@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.SimplificationTool
@@ -131,25 +132,86 @@ object ModelPlex extends ModelPlexTrait with Logging {
     Imply(assumptions.reduceOption(And).getOrElse(True), Imply(monitor, monitorConjecture))
   }
 
-  /** Creates a sandbox safety conjecture from a formula of the shape init->[{ctrl;plant}*]safe. The sandbox embeds
+  /** Creates a sandbox safety conjecture from a formula of the shape init->[?bounds;{ctrl;plant}*]safe. The sandbox embeds
     * an (unverified) external controller in monitor checks of `kind`. It approximates the external controller behavior
-    * with nondeterministic values for each of the `ctrlVars`. Input to the external controller is measured with
-    * nondeterministic values for each of the `senseVars`, but restricted to those satisfying the `plantApprox`
-    * formula and the plant evolution domain constraints. If the monitor is satisfied, the external controller's
+    * with nondeterministic values for each of the bound variables in `ctrl`. Input to the external controller is measured with
+    * nondeterministic values for each of the bound variables in `plant`, but restricted to those satisfying the
+    * evolution domain constraints and invariants of the plant. If the monitor is satisfied, the external controller's
     * decision are actuated. Otherwise (monitor unsatisfied) `fallback` (if specified, ctrl by default) is executed.
+    * @param tactic The tactic used to prove safety of the original model.
+    * @param fallback The fallback controller to embed in the sandbox, `ctrl` by default.
+    * @param kind The kind of monitor to derive (controller or model monitor).
+    * @param checkProvable Whether or not to check the ModelPlex provable.
+    * @return The sandbox formula with a tactic to prove it, and a list of lemmas used in the proof.
     */
-  def createSandbox(vars: List[Variable], consts: List[FuncOf], senseVars: List[Variable], ctrlVars: List[Variable],
-                    fallback: Option[Program], plantApprox: Formula, kind: Symbol,
-                    checkProvable: Option[(ProvableSig => Unit)]): (Formula => Formula) = formula => {
+  def createSandbox(name: String, tactic: BelleExpr, fallback: Option[Program], kind: Symbol,
+                    checkProvable: Option[(ProvableSig => Unit)]):
+  (Formula => ((Formula,BelleExpr), List[(String,Formula,BelleExpr)])) = formula => {
     require(kind == 'ctrl, s"Unable to create a sandbox of kind $kind, so far only controller monitors supported")
+    val vars: List[BaseVariable] = StaticSemantics.symbols(formula).filter({case _: BaseVariable => true case _ => false}).map(_.asInstanceOf[BaseVariable]).toList.sorted[NamedSymbol]
     val monitor = apply(vars, kind, checkProvable)(formula)
     formula match {
       case Imply(init, Box(Compose(Test(bounds), Loop(Compose(ctrlPrg, ODESystem(ode, q)))), safe)) =>
-        // todo sanity check consts, senseVars, ctrlVars with bound and free vars of the programs
+        val senseVars: List[Variable] = StaticSemantics.boundVars(ode).toSet.filterNot(StaticSemantics.isDifferential(_)).toList.sorted[NamedSymbol]
+        val ctrlVars: List[Variable] = StaticSemantics.boundVars(ctrlPrg).toSet[Variable].toList.sorted[NamedSymbol]
+
+        //@todo different cuts on different branches
+        val proofListener = new IOListener() {
+          var invariant: Option[Formula] = None
+          var diffInvariants: List[Formula] = Nil
+          var odeLemma: Option[(String, Formula, BelleExpr)] = None
+          var throughoutLemmas: List[(String, Formula, BelleExpr)] = Nil
+          var loopBranch: Option[BelleExpr] = None
+          override def begin(input: BelleValue, expr: BelleExpr): Unit = expr match {
+            case SeqTactic(t: AppliedDependentPositionTacticWithAppliedInput, b: BranchTactic) if t.pt.name == "throughout" =>
+              loopBranch = Some(b)
+            case SeqTactic(t: AppliedDependentPositionTactic, s: BelleExpr) if t.name == "dW" => input match {
+              case BelleProvable(p, _) =>
+                assert(p.subgoals.size == 1, "dW expected on a single subgoal")
+                val dWResult = proveBy(p.subgoals.head, t)
+                assert(dWResult.subgoals.size == 1, "dW expected to result in a single subgoal")
+                odeLemma = Some((name+"_dW", dWResult.subgoals.head.toFormula, s))
+            }
+            case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "throughout" =>
+              invariant = Some(t.pt.asInstanceOf[DependentPositionWithAppliedInputTactic].inputs.head.asInstanceOf[Formula])
+            case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "dC" => input match {
+              case BelleProvable(p, _) =>
+                val di = t.pt.asInstanceOf[DependentPositionWithAppliedInputTactic].inputs.head.asInstanceOf[Formula]
+                p.subgoals.head.sub(t.locator.toPosition(p)) match {
+                  case Some(Box(ODESystem(_, And(_, prevDi)), _)) =>
+                    //@todo identify branch (e.g., (a=-B -> dC1) & (a=0 -> dC2) & (a=A -> dC3)
+                    //@todo shared diffcuts before branch
+                    if (StaticSemantics.freeVars(di).intersect(senseVars.toSet).toSet.nonEmpty) {
+                      val idx = diffInvariants.indexOf(prevDi)
+                      if (idx >= 0) diffInvariants = diffInvariants.updated(idx, And(diffInvariants(idx), di))
+                      else diffInvariants = diffInvariants :+ di
+                    }
+                  case Some(Box(ODESystem(_, _), _)) => diffInvariants = diffInvariants :+ di
+                }
+            }
+            case b@BranchTactic(children) if loopBranch.contains(b) => input match {
+              case BelleProvable(p, _) =>
+                //@todo make sandbox tactic synthesis more flexible for shapes other than ctrl;plant
+                assert(children.size == 4 && children.size == p.subgoals.size, "4 open goals expected after throughout")
+                throughoutLemmas = p.subgoals.zip(children).zipWithIndex.map({ case ((s, t), i) => (name+"_"+i, s.toFormula, implyR(1) & t) }).toList
+              case _ =>
+            }
+            case _ => // nothing to do
+          }
+          override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = expr match {
+            case b@BranchTactic(children) if loopBranch.contains(b) => loopBranch = None
+            case _ =>
+          }
+          override def kill(): Unit = {}
+        }
+        SequentialInterpreter(proofListener::Nil)(tactic, BelleProvable(ProvableSig.startProof(formula)))
+
+        val plantApprox = proofListener.diffInvariants.flatMap(f => FormulaTools.conjuncts(f)).toSet[Formula].reduceRightOption(And).getOrElse(True)
+
         assert(proveBy(Imply(init,bounds), auto).isProved)
         val preVars = senseVars.map(v => preVar(v) -> v)
-        assert((StaticSemantics(And(plantApprox,q)).fv -- senseVars).toSet.subsetOf(preVars.map(_._1).toSet),
-          "Plant approximation only allowed to mention sensed variables and their initial states")
+//        assert((StaticSemantics(And(plantApprox,q)).fv -- senseVars).toSet.subsetOf(preVars.map(_._1).toSet),
+//          "Plant approximation only allowed to mention sensed variables and their initial states")
         val pre = preVars.map(Assign.tupled).reduceOption(Compose).getOrElse(Test(True))
         // senseVars0:=senseVars; senseVars:=*; ?Q;
         val readSensors = senseVars.map(AssignAny).reduceOption(Compose).getOrElse(Test(True))
@@ -161,9 +223,108 @@ object ModelPlex extends ModelPlexTrait with Logging {
         // if (monitor) ctrlVars:=ctrlVarsTemp else ctrlVars:=fallback
         val act = Choice(Compose(Test(monitor), operationalize), Compose(Test(Not(monitor)), fallback.getOrElse(ctrlPrg)))
 
-        Imply(init, Box(Compose(Test(bounds), Loop(Compose(sense, Compose(ctrl, act)))), safe))
+        val upsilonConjuncts = vars.sorted[NamedSymbol].map(v => Equal(BaseVariable(v.name + "post", v.index), v))
+        val upsilon = upsilonConjuncts.reduce(And)
+
+        // ctrlVarsTemp:=ctrlVars
+        val tempCtrl = vars.map(v => Assign(postVar(v), v)).reduceOption(Compose).getOrElse(Test(True))
+        val fallbackCtrl = Compose(fallback.getOrElse(ctrl), tempCtrl)
+
+        val sandbox = Imply(init, Box(Compose(Test(bounds), Loop(Compose(sense, Compose(ctrl, act)))), safe))
+        val sbTactic = sandboxTactic(name, proofListener.invariant.get, monitor, q, ctrlPrg, fallbackCtrl,
+          upsilon, senseVars)
+
+        val monitorCheck = (name+"_MonitorCheck", Imply(monitor, Diamond(ctrlPrg, And(upsilon, q))), chase(1, 1::Nil) & QE)
+        val fallbackCheck = (name+"_FallbackCheck", Imply(bounds, Box(fallbackCtrl, monitor)), master())
+
+        val lemmas =
+          proofListener.throughoutLemmas ++
+          (if (proofListener.odeLemma.isDefined) proofListener.odeLemma.get::Nil else Nil) ++
+          (monitorCheck::Nil) ++
+          (fallbackCheck::Nil)
+
+        (sandbox -> sbTactic, lemmas)
     }
   }
+
+  /**
+    * Synthesizes a tactic to derive a sandbox safety proof from the safety proof of the original model.
+    * @param name The name of the sandbox (used to prefix lemma lookup).
+    * @param inv The throughout invariant used in the original safety proof.
+    * @param monitor Monitor derived from the model.
+    * @param ctrl Verified control program.
+    * @param fallbackCtrl Fallback control with control effect set to post-vars, of the shape fallback;xp:=x;
+    * @param upsilon The ModelPlex conjecture post-condition of the shape xp=x
+    * @param senseVars The variables bound in the plant.
+    * @return The tactic to derive a sandbox safety proof from the original safety proof.
+    */
+  private def sandboxTactic(name: String, inv: Formula, monitor: Formula, odeDomain: Formula,
+                            ctrl: Program, fallbackCtrl: Program,
+                            upsilon: Formula, senseVars: List[Variable]): BelleExpr = {
+    val numCtrlVars = StaticSemantics.boundVars(ctrl).toSet.size
+    val upsilonConjuncts = FormulaTools.conjuncts(upsilon)
+
+    /*@note chase but stop on <ctrl>fallbackUpsilon */
+    val chaseFallback = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+      case Some(Diamond(prg, _)) if prg == ctrl => nil
+      case _ => step(pos)
+    })
+
+    val Diamond(_, fallbackUpsilon) = proveBy(Box(fallbackCtrl, Diamond(ctrl, upsilon)),
+      chaseFallback(1)*).subgoals.head.succ.head
+
+    val fallbackUpsilonConjuncts = FormulaTools.conjuncts(fallbackUpsilon)
+
+    implyR(1) & (andL('L)*) & composeb(1) & testb(1) & implyR(1) & throughout(inv)(1) & Idioms.<(
+      DebuggingTactics.print("Proving base case") & useLemma(name+"_0", Some(prop)) & done
+      ,
+      DebuggingTactics.print("Proving use case") & useLemma(name+"_1", Some(prop)) & done
+      ,
+      DebuggingTactics.print("Proving plant") & chase(1) & allR(1)*senseVars.size &
+      useLemma(name+"_dW", Some(prop)) & DebuggingTactics.print("Plant lemma") & done
+      ,
+      DebuggingTactics.print("Proving external control") & chase(1) & allR(1)*numCtrlVars & prop & done
+      ,
+      DebuggingTactics.print("Proving controllers") & chase(1) & andR(1) & Idioms.<(
+        DebuggingTactics.print("Proving external control passes monitor") &
+        useLemmaAt(name+"_MonitorCheck", Some(PosInExpr(0::Nil)))(1, 0::Nil) &
+        implyR(1) & cut(Box(ctrl, inv)) & Idioms.<(
+          cut(Diamond(ctrl, And(inv, And(upsilon, odeDomain)))) & Idioms.<(
+            hideL('L, Box(ctrl, inv)) & hideL('L, Diamond(ctrl, And(upsilon, odeDomain))) &
+            useAt("<> diamond", PosInExpr(1::Nil))('Llast) &
+            notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & (andL('L)*) &
+            upsilonConjuncts.filter({ case Equal(l, r) => l != r }).map(c => exhaustiveEqL2R('L, c)).reduce[BelleExpr](_&_) &
+            prop & done
+            ,
+            useAt("Kd2 diamond modus ponens", PosInExpr(1::1::Nil))(2) & onAll(prop) & done
+          ),
+          useLemma(name+"_2", Some(prop)) & done
+        ) & done & DebuggingTactics.print("Done proving external control")
+        ,
+        DebuggingTactics.print("Proving fallback") &
+        implyR(1) & hideL('Llast) & cut(Box(fallbackCtrl, monitor)) & Idioms.<(
+          Idioms.searchApplyIn(Box(fallbackCtrl, monitor),
+            useLemmaAt(name+"_MonitorCheck", Some(PosInExpr(0::Nil))), PosInExpr(1::Nil)) &
+          (chaseFallback('Llast)*) & cut(Box(ctrl, inv)) & Idioms.<(
+            cut(Diamond(ctrl, And(inv, And(fallbackUpsilon, odeDomain)))) & Idioms.<(
+              hideL('L, Box(ctrl, inv)) & hideL('L, Diamond(ctrl, And(fallbackUpsilon, odeDomain))) &
+              useAt("<> diamond", PosInExpr(1::Nil))('Llast) &
+              notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & (andL('L)*) &
+              fallbackUpsilonConjuncts.filter({ case Equal(l, r) => l != r }).map(c => exhaustiveEqR2L('L, c)).reduce[BelleExpr](_&_) &
+              prop & done
+              ,
+              useAt("Kd2 diamond modus ponens", PosInExpr(1::1::Nil))('Rlast) & onAll(prop) & done
+            )
+            ,
+            useLemma(name+"_2", Some(prop)) & done
+          )
+          ,
+          useLemma(name+"_FallbackCheck", Some(prop)) & done
+        ) & DebuggingTactics.print("Done proving fallback")
+      )
+    )
+  }
+
 
   /**
    * Returns a tactic to derive a controller monitor in axiomatic style using forward chase. The tactic is designed to
