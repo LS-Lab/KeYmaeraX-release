@@ -415,6 +415,26 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     n30.children shouldBe empty
   }
 
+  "Listeners" should "not be informed when doing auxiliary inner proofs" in withMathematica { _ =>
+    val mockListener = new IOListener() {
+      var beginnings: List[(BelleValue, BelleExpr)] = Nil
+      override def begin(input: BelleValue, expr: BelleExpr): Unit = beginnings = beginnings :+ (input -> expr)
+      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {}
+      override def kill(): Unit = {}
+    }
+    val mockListenerFactory: Int => (String, Int, Int) => scala.Seq[IOListener] =
+      (_: Int) => (_: String, _: Int, _: Int) => mockListener::Nil
+
+    val interpreter = SpoonFeedingInterpreter(1, -1, (_: ProvableSig) => 1, mockListenerFactory, SequentialInterpreter)
+    BelleInterpreter.setInterpreter(interpreter)
+    BelleInterpreter(implyR(1) & dC("x>0".asFormula)(1, 1::Nil), BelleProvable(ProvableSig.startProof("y>0 -> [x:=3;][{x'=4}]x>0".asFormula)))
+    //@note auxiliary inner proofs started by UnifyUSCalculus ruin database trace if reported to listeners
+    mockListener.beginnings shouldNot contain (BelleProvable(ProvableSig.startProof("[{x'=4}]x>0".asFormula)) -> (QE & done))
+    mockListener.beginnings shouldNot contain (BelleProvable(ProvableSig.startProof("(p_()<->q_())&q_()->p_()<->true".asFormula)) -> prop)
+    //@note should also not contain the following, but not testable without huge effort since closeTrue is private and so is ProofRuleTactics
+    //mockListener.beginnings shouldNot contain (BelleProvable(ProvableSig.startProof("[a{|^@|};]true <-> true".asFormula)) -> (equivR(1) <(closeTrue(SuccPos(1)), cohideR(1) & byUS("[]T system"))))
+  }
+
   "Parsed tactic" should "record STTT tutorial example 1 steps" taggedAs SlowTest in withDatabase { db => withMathematica { _ =>
     val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 1", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent

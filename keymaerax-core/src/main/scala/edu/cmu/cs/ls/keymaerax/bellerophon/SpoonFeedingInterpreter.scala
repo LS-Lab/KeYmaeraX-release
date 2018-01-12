@@ -70,7 +70,14 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
 
   private var isDead = false
 
-  override def apply(expr: BelleExpr, v: BelleValue): BelleValue = runTactic(expr, v, descend, DbAtomPointer(startStepIndex))._1
+  override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
+    if (runningInner == null) {
+      runTactic(expr, v, descend, DbAtomPointer(startStepIndex))._1
+    } else {
+      logger.debug("Handing auxiliary proof of an already running tactic (like initiated by UnifyUSCalculus or Simplifier) to fresh inner interpreter")
+      inner(Nil)(expr, v)
+    }
+  }
 
   private def runTactic(tactic: BelleExpr, goal: BelleValue, level: Int, ctx: ExecutionContext): (BelleValue, ExecutionContext) = synchronized {
     if (isDead) (goal, ctx)
