@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, PartialTactic, TacticStatistics}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, PartialTactic, SequentialInterpreter, TacticStatistics}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Lemma, Program}
@@ -108,7 +108,7 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
       val t = BelleParser.parseWithInvGen(tactic._2, Some(invGen), decls)
 
       val start = System.currentTimeMillis()
-      val proof = db.proveBy(model, t, name)
+      val proof = db.proveBy(model, t, SequentialInterpreter, name)
       val end = System.currentTimeMillis()
 
       println(s"Proof Statistics (proved: ${proof.isProved})")
