@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.{DependentPositionWithAppliedInputTactic, _}
 import SequentCalculus.{cohide2, cohideR, commuteEqual, commuteEquivR, equivR, equivifyR, hideL, hideR, implyR}
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.{closeTrue, cut, cutL, cutLR, cutR}
@@ -306,8 +306,8 @@ trait UnifyUSCalculus {
     */
   def boundRename(what: Variable, repl: Variable): DependentPositionTactic = ProofRuleTactics.boundRenaming(what,repl)
 
-  def useAt(axiom: ProvableInfo, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic = useAt(axiom.codeName, axiom.provable, key, inst)
-  def useAt(axiom: ProvableInfo, key: PosInExpr): DependentPositionTactic = useAt(axiom.codeName, axiom.provable, key, us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
+  def useAt(axiom: ProvableInfo, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic = useAt(axiom.canonicalName, axiom.provable, key, inst)
+  def useAt(axiom: ProvableInfo, key: PosInExpr): DependentPositionTactic = useAt(axiom.canonicalName, axiom.provable, key, us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr): DependentPositionTactic = useAt("ANON", fact, key, us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
   private[btactics] def useAt(fact: ProvableSig): DependentPositionTactic = useAt(fact, PosInExpr(0::Nil))
   /**
@@ -352,7 +352,9 @@ trait UnifyUSCalculus {
     * @see [[edu.cmu.cs.ls.keymaerax.btactics]]
     * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
     */
-  def useAt(codeName: String, fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution"))): DependentPositionTactic = new DependentPositionTactic(codeName) {
+  def useAt(canonicalName: String, fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution"))): DependentPositionTactic =
+    new DependentPositionWithAppliedInputTactic("useAt",
+      if (AxiomIndex.axiomIndex(canonicalName)._1 == key) canonicalName::Nil else canonicalName::key.prettyString.substring(1)::Nil) {
     private val (keyCtx:Context[_],keyPart) = fact.conclusion.succ.head.at(key)
 
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
