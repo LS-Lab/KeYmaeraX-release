@@ -866,7 +866,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /** Applies the lemma by matching `key` in the lemma with the tactic position. */
   def useLemmaAt(lemmaName: String, key: Option[PosInExpr]): DependentPositionWithAppliedInputTactic = "useLemmaAt" byWithInputs(
-    if (key.isDefined) lemmaName::key.get.prettyString::Nil else lemmaName::Nil,
+    if (key.isDefined) lemmaName::key.get.prettyString.substring(1)::Nil else lemmaName::Nil, //@note remove leading . from PosInExpr
     (pos: Position, _: Sequent) => {
       val userLemmaName = "user" + File.separator + lemmaName //@todo FileLemmaDB + multi-user environment
       if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {
