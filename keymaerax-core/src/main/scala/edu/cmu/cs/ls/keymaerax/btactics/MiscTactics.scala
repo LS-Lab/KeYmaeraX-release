@@ -314,6 +314,21 @@ object Idioms {
 
     result
   }
+
+  /** Search for formula `f` in the sequent and apply tactic `t` at subposition `in` of the found position. */
+  def searchApplyIn(f: Formula, t: DependentPositionTactic, in: PosInExpr): DependentTactic = "ANON" by ((seq: Sequent) => {
+    //@todo Extend position locators to sub-positions, e.g., 'L.1.0.1, 'Llast.1.1
+    val subPos: Position = {
+      val ante = seq.ante.indexOf(f)
+      if (ante >= 0) AntePosition.base0(ante, in)
+      else {
+        val succ = seq.succ.indexOf(f)
+        if (succ >= 0) SuccPosition.base0(succ, in)
+        else throw BelleTacticFailure("Cannot find formula " + f.prettyString + " in sequent " + seq.prettyString)
+      }
+    }
+    t(subPos)
+  })
 }
 
 /** Creates tactic objects */
