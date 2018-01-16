@@ -887,7 +887,7 @@ object PolynomialArith extends Logging {
           inst.foldRight(ident)(
             (h, tac) =>
               implyRi(keep = true)(AntePos(h._1), SuccPos(0))
-                & useAt("ANON", axMov, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("g_()".asTerm, h._2) :: Nil))(1)
+                & useAt(axMov, PosInExpr(1 :: Nil), (us: Option[Subst]) => us.get ++ RenUSubst(("g_()".asTerm, h._2) :: Nil))(1)
                 & tac) &
           normaliseAt(SuccPosition(1, 0 :: Nil)) &
           ?(cohideR(1) & byUS("= reflexive"))

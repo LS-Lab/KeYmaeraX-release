@@ -347,7 +347,9 @@ class ScriptedRequestTests extends TacticTestBase {
     val (tacticString: String, inputs: List[BelleTermInput], pos1: Option[PositionLocator], pos2: Option[PositionLocator]) = tactic match {
       case AppliedPositionTactic(t, p) => (t.prettyString, Nil, Some(p), None)
       case t: AppliedDependentPositionTactic => t.pt match {
-        case inner: DependentPositionWithAppliedInputTactic =>
+        case inner: DependentPositionWithAppliedInputTactic if inner.inputs.isEmpty =>
+          (inner.name, Nil, Some(t.locator), None)
+        case inner: DependentPositionWithAppliedInputTactic if inner.inputs.nonEmpty =>
           val info = DerivationInfo(t.pt.name)
           val expectedInputs = info.inputs
           val inputs = inner.inputs.zipWithIndex.map({

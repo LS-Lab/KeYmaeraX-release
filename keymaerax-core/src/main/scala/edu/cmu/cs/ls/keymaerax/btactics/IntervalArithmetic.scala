@@ -172,7 +172,7 @@ object IntervalArithmetic extends Logging {
       "f_() * g_() <= max((max((TimesU((F_(),G_())),TimesU((F_(),gg_())))),max((TimesU((ff_(),G_())),TimesU((ff_(),gg_())))))))").asFormula,
     implyR(1) &
       useAt("*<= up",PosInExpr(1::Nil))(1) & prop &
-      (OnAll((useAt("rwMax",rwMax,PosInExpr(1::Nil))(1)) & prop)*)
+      (OnAll(useAt(rwMax,PosInExpr(1::Nil))(1) & prop)*)
         <(allL("ff_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
         allL("ff_()".asTerm)(-1) & allL("G_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
@@ -184,7 +184,7 @@ object IntervalArithmetic extends Logging {
       "min((min((TimesL((F_(),G_())),TimesL((F_(),gg_())))),min((TimesL((ff_(),G_())),TimesL((ff_(),gg_())))))) <= f_() * g_())").asFormula,
     implyR(1) &
       useAt("<=* down",PosInExpr(1::Nil))(1) & prop &
-      (OnAll((useAt("rwMin",rwMin,PosInExpr(1::Nil))(1)) & prop)*)
+      (OnAll(useAt(rwMin,PosInExpr(1::Nil))(1) & prop)*)
         <(allL("ff_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
         allL("ff_()".asTerm)(-1) & allL("G_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
@@ -209,7 +209,7 @@ object IntervalArithmetic extends Logging {
     "f_()^2 <= max((TimesU(F_(),F_()),TimesU(ff_(),ff_())))").asFormula,
     implyR(1) & useAt("pow<= up",PosInExpr(1::Nil))(1) & prop &
       (OnAll(useAt(rwPow2,PosInExpr(0::Nil))(SuccPosition(1,0::Nil)))) &
-      (OnAll((useAt("rwMax",rwMax,PosInExpr(1::Nil))(1)) & prop)*) &
+      (OnAll(useAt(rwMax,PosInExpr(1::Nil))(1) & prop)*) &
       <(allL("ff_()".asTerm)(-1) & allL("ff_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("F_()".asTerm)(-1)) &
       OnAll(close))
@@ -267,7 +267,7 @@ object IntervalArithmetic extends Logging {
     implyR(1) & (andL('Llast)*)&
       //@todo replace with new 1Div<= up
       useAt("Div<= up",PosInExpr(1::Nil))(1) & simpTac(1) & hideL('Llast) & prop &
-      (OnAll((useAt("rwMax",rwMax,PosInExpr(1::Nil))(1)) & prop)*) &
+      (OnAll(useAt(rwMax,PosInExpr(1::Nil))(1) & prop)*) &
       <(allL("ff_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
         allL("ff_()".asTerm)(-1) & allL("G_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
@@ -280,7 +280,7 @@ object IntervalArithmetic extends Logging {
     implyR(1) & (andL('Llast)*)&
       //@todo replace with <=1Div down
       useAt("<=Div down",PosInExpr(1::Nil))(1) & simpTac(1) & hideL('Llast) & prop &
-      (OnAll((useAt("rwMin",rwMin,PosInExpr(1::Nil))(1)) & prop)*) &
+      (OnAll(useAt(rwMin,PosInExpr(1::Nil))(1) & prop)*) &
       <(allL("ff_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
         allL("ff_()".asTerm)(-1) & allL("G_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),

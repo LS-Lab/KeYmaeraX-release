@@ -181,7 +181,7 @@ object SimplifierV3 {
             val fml = Imply(premise, Equal( t, tt ))
             //instantiate the middle ff to recf
             val prr = proveBy(fml,
-              useAt("ANON",equalTrans,PosInExpr(1::Nil),
+              useAt(equalTrans,PosInExpr(1::Nil),
                 (us:Option[Subst])=>us.get++RenUSubst(("FF_()".asTerm,rect)::Nil))(1) &
                 andR(1) <(by(pr2),by(pr))
             )
@@ -531,7 +531,7 @@ object SimplifierV3 {
             val fml = Imply(premise, Equiv( f, ff ))
             //instantiate the middle ff to recf
             val prr = proveBy(fml,
-              useAt("ANON",equivTrans,PosInExpr(1::Nil),
+              useAt(equivTrans,PosInExpr(1::Nil),
                 (us:Option[Subst])=>us.get++RenUSubst(("FF_()".asFormula,recf)::Nil))(1) &
               andR(1) <(by(pr2),by(pr))
             )
