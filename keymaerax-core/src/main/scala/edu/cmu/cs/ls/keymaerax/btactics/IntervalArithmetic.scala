@@ -8,15 +8,17 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, RenUSubst, _}
 import edu.cmu.cs.ls.keymaerax.core.{Assign, Variable, _}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
-import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV2._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable._
+import scala.language.postfixOps
 
 /**
   * Tactics for introducing interval arithmetic.
@@ -28,6 +30,7 @@ object IntervalArithmetic extends Logging {
   private val ubPrefix = "u"
   private val lbPrefix = "l"
   private val DEBUG = false
+  private val namespace = "intervalarithmetic"
 
   private val PlusU = Function("PlusU", None, Tuple(Real, Real), Real)
   private val PlusL = Function("PlusL", None, Tuple(Real, Real), Real)
@@ -101,10 +104,10 @@ object IntervalArithmetic extends Logging {
   }
 
   //Encoding of no-op
-  private val nop = Assign(Variable("x_"),Variable("x_"))
+  private lazy val nop = Assign(Variable("x_"),Variable("x_"))
 
   //Axiomatization of op-with-rounding functions
-  val intervalAxiomContext = IndexedSeq(
+  lazy val intervalAxiomContext = IndexedSeq(
     "\\forall x \\forall y (x + y <= PlusU(x,y))".asFormula,
     "\\forall x \\forall y (PlusL(x,y) <= x + y)".asFormula,
 
@@ -120,7 +123,7 @@ object IntervalArithmetic extends Logging {
   )
 
   //todo: negation lemma just strips the negation and flips the inequality
-  private val NegLem = proveBy("g_()<=f_() -> -(f_()) <= -(g_())".asFormula,QE & done)
+  private lazy val NegLem = remember("g_()<=f_() -> -(f_()) <= -(g_())".asFormula, QE & done, namespace).fact
 
   private def liftSubst(s:Option[Subst]) : Subst =
     s match{
@@ -128,46 +131,46 @@ object IntervalArithmetic extends Logging {
       case Some(_) => s.get
     }
   //Arithmetic lemmas involving the interval axioms
-  private val PlusULem = proveBy(("((\\forall x \\forall y (x + y <= PlusU(x,y))) & f_() <= F_() & g_() <= G_()) ->" +
+  private lazy val PlusULem = remember(("((\\forall x \\forall y (x + y <= PlusU(x,y))) & f_() <= F_() & g_() <= G_()) ->" +
     "f_() + g_() <= PlusU(F_(),G_())").asFormula,
     useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"F_()".asTerm)::Nil))(SuccPosition(1,0::0::Nil)) &
       useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"G_()".asTerm)::Nil))(SuccPosition(1,0::0::Nil)) &
-      useAt("+<= up",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop)
+      useAt("+<= up",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop, namespace).fact
 
-  private val PlusLLem = proveBy(("((\\forall x \\forall y (PlusL(x,y) <= x + y)) & ff_() <= f_() & gg_() <= g_()) ->" +
+  private lazy val PlusLLem = remember(("((\\forall x \\forall y (PlusL(x,y) <= x + y)) & ff_() <= f_() & gg_() <= g_()) ->" +
     "PlusL(ff_(),gg_()) <= f_() + g_()").asFormula,
     useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"ff_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
       useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"gg_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
-      useAt("<=+ down",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop)
+      useAt("<=+ down",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop, namespace).fact
 
-  private val MinusULem = proveBy(("((\\forall x \\forall y (x - y <= MinusU(x,y))) & f_() <= F_() & gg_() <= g_()) ->" +
+  private lazy val MinusULem = remember(("((\\forall x \\forall y (x - y <= MinusU(x,y))) & f_() <= F_() & gg_() <= g_()) ->" +
     "f_() - g_() <= MinusU(F_(),gg_())").asFormula,
     useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"F_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
       useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"gg_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
-      useAt("-<= up",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop)
+      useAt("-<= up",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop, namespace).fact
 
-  private val MinusLLem = proveBy(("((\\forall x \\forall y (MinusL(x,y) <= x - y)) & ff_() <= f_() & g_() <= G_()) ->" +
+  private lazy val MinusLLem = remember(("((\\forall x \\forall y (MinusL(x,y) <= x - y)) & ff_() <= f_() & g_() <= G_()) ->" +
     "MinusL(ff_(),G_()) <= f_() - g_()").asFormula,
     useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"ff_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
       useAt("all instantiate",(us:Option[Subst])=>liftSubst(us)++RenUSubst(("f()".asTerm,"G_()".asTerm )::Nil))(SuccPosition(1,0::0::Nil)) &
-      useAt("<=- down",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop)
+      useAt("<=- down",PosInExpr(1::Nil))(SuccPosition(1,1::Nil)) & prop, namespace).fact
 
   //Rewrites for max/min, not to be confused with the actual lemmas
-  private val rwMax = proveBy( "h_() <= f_() | h_() <= g_() -> h_() <= max(f_(),g_()) ".asFormula,QE & done)
-  private val rwMin = proveBy( "f_() <= H_() | g_() <= H_() -> min(f_(),g_()) <= H_()".asFormula,QE & done)
+  private lazy val rwMax = remember( "h_() <= f_() | h_() <= g_() -> h_() <= max(f_(),g_()) ".asFormula, QE & done, namespace).fact
+  private lazy val rwMin = remember( "f_() <= H_() | g_() <= H_() -> min(f_(),g_()) <= H_()".asFormula, QE & done, namespace).fact
 
   //Specialization of both arguments
-  private val TimesULemSpec = proveBy(("(\\forall x \\forall y (x * y <= TimesU(x,y))) ->" +
+  private lazy val TimesULemSpec = remember(("(\\forall x \\forall y (x * y <= TimesU(x,y))) ->" +
     "f_() * g_() <= TimesU(f_(),g_())").asFormula,
-    implyR(1) & allL("f_()".asTerm)(-1) & allL("g_()".asTerm)(-1) & close)
+    implyR(1) & allL("f_()".asTerm)(-1) & allL("g_()".asTerm)(-1) & close, namespace).fact
 
-  private val TimesLLemSpec = proveBy(("(\\forall x \\forall y (TimesL(x,y) <= x * y)) -> " +
+  private lazy val TimesLLemSpec = remember(("(\\forall x \\forall y (TimesL(x,y) <= x * y)) -> " +
     "TimesL(f_(),g_()) <= f_()*g_()").asFormula,
-    implyR(1) & allL("f_()".asTerm)(-1) & allL("g_()".asTerm)(-1) & close)
+    implyR(1) & allL("f_()".asTerm)(-1) & allL("g_()".asTerm)(-1) & close, namespace).fact
 
   //todo: specialization of one or arg only (reduce the number of maxes to calculate to 1 instead of 3)
 
-  private val TimesULem = proveBy(
+  private lazy val TimesULem = remember(
     ("((\\forall x \\forall y (x * y <= TimesU(x,y))) & f_() <= F_() & ff_() <= f_() & g_() <= G_() & gg_() <= g_() ->" +
       "f_() * g_() <= max((max((TimesU((F_(),G_())),TimesU((F_(),gg_())))),max((TimesU((ff_(),G_())),TimesU((ff_(),gg_())))))))").asFormula,
     implyR(1) &
@@ -177,9 +180,9 @@ object IntervalArithmetic extends Logging {
         allL("ff_()".asTerm)(-1) & allL("G_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("G_()".asTerm)(-1)) &
-      OnAll(close))
+      OnAll(close), namespace).fact
 
-  private val TimesLLem = proveBy(
+  private lazy val TimesLLem = remember(
     ("((\\forall x \\forall y (TimesL(x,y) <= x * y)) & f_() <= F_() & ff_() <= f_() & g_() <= G_() & gg_() <= g_() ->" +
       "min((min((TimesL((F_(),G_())),TimesL((F_(),gg_())))),min((TimesL((ff_(),G_())),TimesL((ff_(),gg_())))))) <= f_() * g_())").asFormula,
     implyR(1) &
@@ -189,79 +192,80 @@ object IntervalArithmetic extends Logging {
         allL("ff_()".asTerm)(-1) & allL("G_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("G_()".asTerm)(-1)) &
-      OnAll(close))
+      OnAll(close), namespace).fact
 
-  private val rwPow2 = proveBy("f_()^2 = f_() * f_()".asFormula,QE & done)
+  private lazy val rwPow2 = remember("f_()^2 = f_() * f_()".asFormula, QE & done, namespace).fact
 
   //specific bounds
-  private val uPowLemSpec = proveBy(("(\\forall x \\forall y (x * y <= TimesU(x,y))) ->" +
+  private lazy val uPowLemSpec = remember(("(\\forall x \\forall y (x * y <= TimesU(x,y))) ->" +
     "f_()^2 <= TimesU(f_(),f_())").asFormula,
     implyR(1) & useAt(rwPow2,PosInExpr(0::Nil))(SuccPosition(1,0::Nil)) &
-      allL("f_()".asTerm)(-1) & allL("f_()".asTerm)(-1) & close)
+      allL("f_()".asTerm)(-1) & allL("f_()".asTerm)(-1) & close, namespace).fact
 
-  private val lPowLemSpec = proveBy(("(\\forall x \\forall y (TimesL(x,y) <= x * y)) -> " +
+  private lazy val lPowLemSpec = remember(("(\\forall x \\forall y (TimesL(x,y) <= x * y)) -> " +
     "TimesL(f_(),f_()) <= f_()^2").asFormula,
     implyR(1) & useAt(rwPow2,PosInExpr(0::Nil))(SuccPosition(1,1::Nil)) &
-      allL("f_()".asTerm)(-1) & allL("f_()".asTerm)(-1) & close)
+      allL("f_()".asTerm)(-1) & allL("f_()".asTerm)(-1) & close, namespace).fact
 
   //generic upper bound^2 lemmas
-  private val uPowLem = proveBy(("((\\forall x \\forall y (x * y <= TimesU(x,y))) & ff_() <= f_() & f_() <= F_()) -> " +
+  private lazy val uPowLem = remember(("((\\forall x \\forall y (x * y <= TimesU(x,y))) & ff_() <= f_() & f_() <= F_()) -> " +
     "f_()^2 <= max((TimesU(F_(),F_()),TimesU(ff_(),ff_())))").asFormula,
     implyR(1) & useAt("pow<= up",PosInExpr(1::Nil))(1) & prop &
-      (OnAll(useAt(rwPow2,PosInExpr(0::Nil))(SuccPosition(1,0::Nil)))) &
+      OnAll(useAt(rwPow2,PosInExpr(0::Nil))(SuccPosition(1,0::Nil))) &
       (OnAll(useAt(rwMax,PosInExpr(1::Nil))(1) & prop)*) &
       <(allL("ff_()".asTerm)(-1) & allL("ff_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("F_()".asTerm)(-1)) &
-      OnAll(close))
+      OnAll(close), namespace).fact
 
   //generic lower bound ^2 lemmas
   //When the interval is entirely positive
-  private val lpowLem1 = proveBy("(0<=ff_() & ff_() <= f_() & h_() <= ff_()*ff_()) -> h_() <= f_()^2".asFormula,QE & done)
-  private val poslPowLem = proveBy(
+  private lazy val lpowLem1 = remember("(0<=ff_() & ff_() <= f_() & h_() <= ff_()*ff_()) -> h_() <= f_()^2".asFormula, QE & done, namespace).fact
+  private lazy val poslPowLem = remember(
     ("((\\forall x \\forall y (TimesL(x,y) <= x * y)) & 0 <= ff_() & ff_() <= f_()) -> " +
       "TimesL(ff_(),ff_()) <= f_()^2").asFormula,
     implyR(1) &
       useAt(lpowLem1,PosInExpr(1::Nil))(1) & prop &
       allL("ff_()".asTerm)(-1) &
-      allL("ff_()".asTerm)(-1) & close)
+      allL("ff_()".asTerm)(-1) & close, namespace).fact
   //When the interval is entirely negative
-  private val lpowLem2 = proveBy("(F_()<=0 & f_() <= F_() & h_() <= F_()*F_()) -> h_() <= f_()^2".asFormula,QE & done)
-  private val neglPowLem = proveBy(
+  private lazy val lpowLem2 = remember("(F_()<=0 & f_() <= F_() & h_() <= F_()*F_()) -> h_() <= f_()^2".asFormula,
+    QE & done, namespace).fact
+  private lazy val neglPowLem = remember(
     ("((\\forall x \\forall y (TimesL(x,y) <= x * y)) & F_() <= 0 & f_() <= F_()) -> " +
       "TimesL(F_(),F_()) <= f_()^2").asFormula,
     implyR(1) &
       useAt(lpowLem2,PosInExpr(1::Nil))(1) & prop &
       allL("F_()".asTerm)(-1) &
-      allL("F_()".asTerm)(-1) & close)
+      allL("F_()".asTerm)(-1) & close, namespace).fact
   //When it is inconclusive
-  private val bothlPowLem = proveBy("0 <= F_()^2".asFormula,QE & done)
+  private lazy val bothlPowLem = remember("0 <= F_()^2".asFormula, QE & done, namespace).fact
 
   //Optimized divison checking
   //Divisor >0 upper bound division
-  //  private val udivLem1 = proveBy(("gg_() <= g_() & g_() <= G_() & f_() <= F_() & 0<gg_() &" +
-  //    "F_()/G_() <= h_() & F_()/gg_() <= h_() -> f_()/g_() <= h_()").asFormula,QE)
+  //  private lazy val udivLem1 = remember(("gg_() <= g_() & g_() <= G_() & f_() <= F_() & 0<gg_() &" +
+  //    "F_()/G_() <= h_() & F_()/gg_() <= h_() -> f_()/g_() <= h_()").asFormula,QE, namespace).fact
   //  //Divisor >0 lower bound division
-  //  private val udivLem2 = proveBy(("gg_() <= g_() & g_() <= G_() & ff_() <= f_() & 0<gg_() &" +
-  //    "h_() <= ff_()/G_() & h_() <= ff_()/gg_() -> h_() <= f_()/g_()").asFormula,QE)
+  //  private lazy val udivLem2 = remember(("gg_() <= g_() & g_() <= G_() & ff_() <= f_() & 0<gg_() &" +
+  //    "h_() <= ff_()/G_() & h_() <= ff_()/gg_() -> h_() <= f_()/g_()").asFormula,QE, namespace).fact
   //  //Divisor <0 upper bound division
-  //  private val udivLem3 = proveBy(("gg_() <= g_() & g_() <= G_() & ff_() <= f_() & G_() < 0 &" +
-  //    "ff_()/gg_() <= h_() & ff_()/G_() <= h_() -> f_()/g_() <= h_()").asFormula,QE)
+  //  private lazy val udivLem3 = remember(("gg_() <= g_() & g_() <= G_() & ff_() <= f_() & G_() < 0 &" +
+  //    "ff_()/gg_() <= h_() & ff_()/G_() <= h_() -> f_()/g_() <= h_()").asFormula,QE, namespace).fact
   //  //Divisor <0 lower bound division
-  //  private val udivLem4 = proveBy(("gg_() <= g_() & g_() <= G_() & f_() <= F_() & G_() < 0 &" +
-  //    "h_() <= F_()/G_() & h_() <= F_()/gg_() -> h_() <= f_()/g_()").asFormula,QE)
+  //  private lazy val udivLem4 = remember(("gg_() <= g_() & g_() <= G_() & f_() <= F_() & G_() < 0 &" +
+  //    "h_() <= F_()/G_() & h_() <= F_()/gg_() -> h_() <= f_()/g_()").asFormula,QE, namespace).fact
 
   //todo: the specifications of DivU and DivL seem slightly off, because this doesn't require !(y=0),
   // but the full lemma does (because of appeal to QE)
   //Specialization of both arguments
-  private val DivULemSpec = proveBy(("(\\forall x \\forall y (x / y <= DivU(x,y))) ->" +
+  private lazy val DivULemSpec = remember(("(\\forall x \\forall y (x / y <= DivU(x,y))) ->" +
     "f_() / g_() <= DivU(f_(),g_())").asFormula,
-    implyR(1) & allL("f_()".asTerm)(-1) & allL("g_()".asTerm)(-1) & close)
+    implyR(1) & allL("f_()".asTerm)(-1) & allL("g_()".asTerm)(-1) & close, namespace).fact
 
-  private val DivLLemSpec = proveBy(("(\\forall x \\forall y (DivL(x,y) <= x / y)) -> " +
+  private lazy val DivLLemSpec = remember(("(\\forall x \\forall y (DivL(x,y) <= x / y)) -> " +
     "DivL(f_(),g_()) <= f_() / g_()").asFormula,
-    implyR(1) & allL("f_()".asTerm)(-1) & allL("g_()".asTerm)(-1) & close)
+    implyR(1) & allL("f_()".asTerm)(-1) & allL("g_()".asTerm)(-1) & close, namespace).fact
 
-  private lazy val DivULem = proveBy(("((\\forall x \\forall y (x / y <= DivU(x,y))) &" +
+  private lazy val DivULem = remember(("((\\forall x \\forall y (x / y <= DivU(x,y))) &" +
     "f_() <= F_() & ff_() <= f_() & g_() <= G_() & gg_() <= g_() & (G_()<0 | 0 < gg_()) -> " +
     "f_() / g_() <= max((max((DivU((F_(),G_())),DivU((F_(),gg_())))),max((DivU((ff_(),G_())),DivU((ff_(),gg_())))))))").asFormula,
     implyR(1) & (andL('Llast)*)&
@@ -272,9 +276,9 @@ object IntervalArithmetic extends Logging {
         allL("ff_()".asTerm)(-1) & allL("G_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("G_()".asTerm)(-1)) &
-      OnAll(close))
+      OnAll(close), namespace).fact
 
-  private lazy val DivLLem = proveBy(("((\\forall x \\forall y (DivL(x,y) <= x / y)) &" +
+  private lazy val DivLLem = remember(("((\\forall x \\forall y (DivL(x,y) <= x / y)) &" +
     "f_() <= F_() & ff_() <= f_() & g_() <= G_() & gg_() <= g_() & (G_()<0 | 0<gg_()) -> " +
     "min((min((DivL((F_(),G_())),DivL((F_(),gg_())))),min((DivL((ff_(),G_())),DivL((ff_(),gg_())))))) <= f_() / g_() )").asFormula,
     implyR(1) & (andL('Llast)*)&
@@ -285,14 +289,14 @@ object IntervalArithmetic extends Logging {
         allL("ff_()".asTerm)(-1) & allL("G_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("G_()".asTerm)(-1)) &
-      OnAll(close))
+      OnAll(close), namespace).fact
 
   //Upper bound for max, min
-  private val MaxULem = proveBy("f_() <= F_() & g_() <= G_() -> max(f_(),g_()) <= max(F_(),G_())".asFormula,QE & done)
-  private val MaxLLem = proveBy("ff_() <= f_() & gg_() <= g_() -> max(ff_(),gg_()) <= max(f_(),g_())".asFormula,QE & done)
+  private lazy val MaxULem = remember("f_() <= F_() & g_() <= G_() -> max(f_(),g_()) <= max(F_(),G_())".asFormula, QE & done, namespace).fact
+  private lazy val MaxLLem = remember("ff_() <= f_() & gg_() <= g_() -> max(ff_(),gg_()) <= max(f_(),g_())".asFormula, QE & done, namespace).fact
 
-  private val MinULem = proveBy("f_() <= F_() & g_() <= G_() -> min(f_(),g_()) <= min(F_(),G_())".asFormula,QE & done)
-  private val MinLLem = proveBy("ff_() <= f_() & gg_() <= g_() -> min(ff_(),gg_()) <= min(f_(),g_())".asFormula,QE & done)
+  private lazy val MinULem = remember("f_() <= F_() & g_() <= G_() -> min(f_(),g_()) <= min(F_(),G_())".asFormula, QE & done, namespace).fact
+  private lazy val MinLLem = remember("ff_() <= f_() & gg_() <= g_() -> min(ff_(),gg_()) <= min(f_(),g_())".asFormula, QE & done, namespace).fact
 
   //todo: abs is tricky because the interval can cross 0
 
@@ -315,22 +319,22 @@ object IntervalArithmetic extends Logging {
     if (vars.contains(varname)) return (vars,nop,nvar)
     t match {
       case at:AtomicTerm =>
-        return (vars,nop,t)
+        (vars,nop,t)
       case FuncOf(f,Nothing) =>
-        return (vars,nop,t)
+        (vars,nop,t)
       case Neg(l) =>
         val (lvars,lp,lbound) = deriveTermProgram(!dir,vars,l)
-        return(varname::lvars,Compose(lp,Assign(nvar,Neg(lbound))),nvar)
+        (varname::lvars,Compose(lp,Assign(nvar,Neg(lbound))),nvar)
       case Plus(l,r) =>
         val (lvars,lp,lbound) = deriveTermProgram(dir,vars,l)
         val (rvars,rp,rbound) = deriveTermProgram(dir,lvars,r)
         val func = if(dir) PlusU else PlusL
-        return (varname :: rvars,Compose(Compose(lp,rp),Assign(nvar,FuncOf(func,Pair(lbound,rbound)))),nvar)
+        (varname :: rvars,Compose(Compose(lp,rp),Assign(nvar,FuncOf(func,Pair(lbound,rbound)))),nvar)
       case Minus(l,r) =>
         val (lvars,lp,lbound) = deriveTermProgram(dir,vars,l)
         val (rvars,rp,rbound) = deriveTermProgram(!dir,lvars,r)
         val func = if(dir) MinusU else MinusL
-        return (varname :: rvars,Compose(Compose(lp,rp),Assign(nvar,FuncOf(func,Pair(lbound,rbound)))),nvar)
+        (varname :: rvars,Compose(Compose(lp,rp),Assign(nvar,FuncOf(func,Pair(lbound,rbound)))),nvar)
       case Times(l,r) =>
         //Specific implementation if both l and r are known
         // (no need to calculate upper/lower bound)
@@ -363,7 +367,7 @@ object IntervalArithmetic extends Logging {
         val prog2 = Compose(Compose(Compose(uuasg,ulasg),Compose(luasg,llasg)),Compose(umax,lmax))
         //Final program
         val prog = Compose(Compose(prog1,prog2),Assign(nvar,FuncOf(bound,Pair(ubvar,lbvar))))
-        return (varname :: rlvars,prog,nvar)
+        (varname :: rlvars,prog,nvar)
       case Divide(l,r) =>
         val func = if(dir) DivU else DivL
 
@@ -396,7 +400,7 @@ object IntervalArithmetic extends Logging {
         val test = Test(Or(Less(rubound,Number(0)),Less(Number(0),rlbound)))
         //Final program
         val prog = Compose(Compose(Compose(prog1,test),prog2),Assign(nvar,FuncOf(bound,Pair(ubvar,lbvar))))
-        return (varname :: rlvars,prog,nvar)
+        (varname :: rlvars,prog,nvar)
       case Power(l,n:Number) if n.value == 2 =>
         val func = if(dir) TimesU else TimesL
         val boundstr = if(dir) "max" else "min"
@@ -421,10 +425,8 @@ object IntervalArithmetic extends Logging {
           val prog2 = Compose(uuasg,llasg)
           val lmax = Assign(nvar,FuncOf(maxF,Pair(Variable(varname+"uu"),Variable(varname+"ll"))))
           val prog = Compose(Compose(prog1,prog2),lmax)
-          return(varname :: llvars,prog,nvar)
-        }
-        else
-        {
+          (varname :: llvars,prog,nvar)
+        } else {
           //If the U(x) <= 0 then U(x)^2 is a lower bound
           //else if the l(x) >= 0 then l(x)^2 is a lower bound
           //else 0 is the lower bound
@@ -434,155 +436,128 @@ object IntervalArithmetic extends Logging {
           val innerTest = ifThenElse( LessEqual(Number(0),llbound), llasg, zasg )
           val outerTest = ifThenElse(LessEqual(lubound,Number(0)),luasg,innerTest)
           val prog = Compose(prog1,outerTest)
-          return(varname :: llvars,prog,nvar)
+          (varname :: llvars,prog,nvar)
         }
-      case _ => return(vars,nop,t)
+      case _ => (vars,nop,t)
     }
   }
 
   def deriveFormulaProgram(vars:List[String],f:Formula) : (List[String],Program,Formula) = {
     f match {
       case LessEqual(l,r) =>
-      {
         val (luvars,lup,lubound) = deriveTermProgram(true,vars,l)
         val (rlvars,rlp,rlbound) = deriveTermProgram(false,luvars,r)
-        return (rlvars, Compose(lup,rlp),LessEqual(lubound,rlbound))
-      }
+        (rlvars, Compose(lup,rlp),LessEqual(lubound,rlbound))
       case Less(l,r) =>
-      {
         val (luvars,lup,lubound) = deriveTermProgram(true,vars,l)
         val (rlvars,rlp,rlbound) = deriveTermProgram(false,luvars,r)
-        return (rlvars, Compose(lup,rlp),Less(lubound,rlbound))
-      }
+        (rlvars, Compose(lup,rlp),Less(lubound,rlbound))
       //Note that the r,l args are flipped for >= and >
       case GreaterEqual(r,l) =>
-      {
         val (luvars,lup,lubound) = deriveTermProgram(true,vars,l)
         val (rlvars,rlp,rlbound) = deriveTermProgram(false,luvars,r)
-        return (rlvars, Compose(lup,rlp),GreaterEqual(rlbound,lubound))
-      }
+        (rlvars, Compose(lup,rlp),GreaterEqual(rlbound,lubound))
       case Greater(r,l) =>
-      {
         val (luvars,lup,lubound) = deriveTermProgram(true,vars,l)
         val (rlvars,rlp,rlbound) = deriveTermProgram(false,luvars,r)
-        return (rlvars, Compose(lup,rlp),Greater(rlbound,lubound))
-      }
+        (rlvars, Compose(lup,rlp),Greater(rlbound,lubound))
       //Not sure what to do for equality, especially if it is on non-trivial sub-terms
       case Equal(l,r) =>
-        return(vars,nop,Equal(l,r))
+        (vars,nop,Equal(l,r))
       //NotEqual can be translated to Greater or Less, but maybe it should have special meaning w.r.t. to Equal
       case NotEqual(l,r) =>
-        return(vars,nop,NotEqual(l,r))
+        (vars,nop,NotEqual(l,r))
       case And(l,r) =>
-      {
         val (lvars,lp,lf) = deriveFormulaProgram(vars,l)
         val (rvars,rp,rf) = deriveFormulaProgram(lvars,r)
-        return (rvars, Compose(lp,rp),And(lf,rf))
-      }
+        (rvars, Compose(lp,rp),And(lf,rf))
       case Or(l,r) =>
-      {
         val (lvars,lp,lf) = deriveFormulaProgram(vars,l)
         val (rvars,rp,rf) = deriveFormulaProgram(lvars,r)
-        return (rvars, Compose(lp,rp),Or(lf,rf))
-      }
+        (rvars, Compose(lp,rp),Or(lf,rf))
     }
   }
 
   //Decompose across Imply
   //These are single sided implications
-  private val decomposeAnd = proveBy("((P_() -> PP_()) & (Q_() -> QQ_())) -> (P_() & Q_() -> PP_() & QQ_())".asFormula,prop & done)
-  private val decomposeOr = proveBy("((P_() -> PP_()) & (Q_() -> QQ_())) -> (P_() | Q_() -> PP_() | QQ_())".asFormula,prop & done)
-  private val decomposeLE = proveBy("(f_() <= F_() & gg_() <= g_() ) -> (F_() <= gg_() -> f_() <= g_())".asFormula,QE & done)
-  private val decomposeLT = proveBy("(f_() <= F_() & gg_() <= g_() ) -> (F_() < gg_() -> f_() < g_())".asFormula,QE & done)
-  private val decomposeGE = proveBy("(f_() <= F_() & gg_() <= g_() ) -> (gg_() >= F_() -> g_() >= f_())".asFormula,QE & done)
-  private val decomposeGT = proveBy("(f_() <= F_() & gg_() <= g_() ) -> (gg_() > F_() -> g_() > f_())".asFormula,QE & done)
+  private lazy val decomposeAnd = remember("((P_() -> PP_()) & (Q_() -> QQ_())) -> (P_() & Q_() -> PP_() & QQ_())".asFormula, prop & done, namespace).fact
+  private lazy val decomposeOr = remember("((P_() -> PP_()) & (Q_() -> QQ_())) -> (P_() | Q_() -> PP_() | QQ_())".asFormula, prop & done, namespace).fact
+  private lazy val decomposeLE = remember("(f_() <= F_() & gg_() <= g_() ) -> (F_() <= gg_() -> f_() <= g_())".asFormula, QE & done, namespace).fact
+  private lazy val decomposeLT = remember("(f_() <= F_() & gg_() <= g_() ) -> (F_() < gg_() -> f_() < g_())".asFormula, QE & done, namespace).fact
+  private lazy val decomposeGE = remember("(f_() <= F_() & gg_() <= g_() ) -> (gg_() >= F_() -> g_() >= f_())".asFormula, QE & done, namespace).fact
+  private lazy val decomposeGT = remember("(f_() <= F_() & gg_() <= g_() ) -> (gg_() > F_() -> g_() > f_())".asFormula, QE & done, namespace).fact
 
   // These can be used to decompose the big formula generated at the end
-  //private val decomposeDiamTestAnd = proveBy("<?p_() & q_();>r_() <-> <?p_();?q_();>r_()".asFormula,
-  //  chase(SuccPosition(1,0::Nil)) & chase(SuccPosition(1,1::Nil)) & prop)
-  //private val decomposeDiamTestOr = proveBy("<?p_() | q_();>r_() <-> <?p_(); ++ ?q_();>r_()".asFormula,
-  //  chase(SuccPosition(1,0::Nil)) & chase(SuccPosition(1,1::Nil)) & prop)
+  //private lazy val decomposeDiamTestAnd = remember("<?p_() & q_();>r_() <-> <?p_();?q_();>r_()".asFormula,
+  //  chase(SuccPosition(1,0::Nil)) & chase(SuccPosition(1,1::Nil)) & prop, namespace).fact
+  //private lazy val decomposeDiamTestOr = remember("<?p_() | q_();>r_() <-> <?p_(); ++ ?q_();>r_()".asFormula,
+  //  chase(SuccPosition(1,0::Nil)) & chase(SuccPosition(1,1::Nil)) & prop, namespace).fact
 
-  private def hideDiamond(e:Expression) : List[String] =
-  {
-    e match {
-      //This hides the final diamond
-      case Diamond(Test(_),True) => Nil
-      case Diamond(_,_) =>  AxiomIndex.axiomsFor(e)
-      case  _ => Nil //AxiomIndex.axiomsFor(e)
-    }
+  private def hideDiamond(e: Expression): List[String] = e match {
+    //This hides the final diamond
+    case Diamond(Test(_),True) => Nil
+    case Diamond(_,_) =>  AxiomIndex.axiomsFor(e)
+    case  _ => Nil //AxiomIndex.axiomsFor(e)
   }
 
-  private val lastImplyRi: DependentTactic  = new SingleGoalDependentTactic("lastImplyRi") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      assert(sequent.ante.length > 0)
-      implyRi()(AntePos(sequent.ante.length-1),SuccPos(0))
-    }
-  }
+  private val lastImplyRi: DependentTactic  = "lastImplyRi" by ((sequent: Sequent) => {
+    assert(sequent.ante.nonEmpty, "Sequent must be non-empty for implyRi")
+    implyRi()(AntePos(sequent.ante.length-1),SuccPos(0))
+  })
 
   //Explicitly pattern match to apply the correct lemmas for each arithmetic goal shape
-  val patmatchArith :DependentTactic = new SingleGoalDependentTactic("patmatchArith") {
-    override def computeExpr(sequent:Sequent): BelleExpr = {
-      sequent.succ(0) match {
-        case LessEqual(a,b) => (a,b) match{
-          case (Neg(_),Neg(_)) => useAt(NegLem,PosInExpr(1::Nil))(1)
-          case (_,Plus(_,_)) => useAt(PlusLLem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_))
-          case (Plus(_,_),_) => useAt(PlusULem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_))
-          case (_,Minus(_,_)) => useAt(MinusLLem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_))
-          case (Minus(_,_),_) => useAt(MinusULem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_))
-          case (_,Times(l,r)) => {
-            if(isVar(l) & isVar(r)){
-              useAt(TimesLLemSpec,PosInExpr(1::Nil))(1)
-            }
-            else useAt(TimesLLem,PosInExpr(1::Nil))(1) & andR('_) < (close, (OnAll(?(andR('_)))*))
+  val patmatchArith: DependentTactic = "patmatchArith" by ((sequent: Sequent) => {
+    sequent.succ(0) match {
+      case LessEqual(a,b) => (a,b) match {
+        case (Neg(_),Neg(_)) => useAt(NegLem,PosInExpr(1::Nil))(1)
+        case (_,Plus(_,_)) => useAt(PlusLLem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_))
+        case (Plus(_,_),_) => useAt(PlusULem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_))
+        case (_,Minus(_,_)) => useAt(MinusLLem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_))
+        case (Minus(_,_),_) => useAt(MinusULem,PosInExpr(1::Nil))(1) & andR('_) < (close, andR('_))
+        case (_,Times(l,r)) =>
+          if(isVar(l) & isVar(r)){
+            useAt(TimesLLemSpec,PosInExpr(1::Nil))(1)
           }
-          case (Times(l,r),_) => {
-            if(isVar(l) & isVar(r)){
-              useAt(TimesULemSpec,PosInExpr(1::Nil))(1)
-            }
-            else useAt(TimesULem,PosInExpr(1::Nil))(1) & andR('_) < (close, (OnAll(?(andR('_)))*))
+          else useAt(TimesLLem,PosInExpr(1::Nil))(1) & andR('_) < (close, OnAll(?(andR('_)))*)
+        case (Times(l,r),_) =>
+          if(isVar(l) & isVar(r)){
+            useAt(TimesULemSpec,PosInExpr(1::Nil))(1)
           }
-          case (_,Divide(l,r)) => {
-            if(isVar(l) & isVar(r)){
-              useAt(DivLLemSpec,PosInExpr(1::Nil))(1)
-            }
-            else {
-              useAt(DivLLem,PosInExpr(1::Nil))(1) & andR('_)  < (close, (OnAll(?(andR('_)))*))
-            }
+          else useAt(TimesULem,PosInExpr(1::Nil))(1) & andR('_) < (close, OnAll(?(andR('_)))*)
+        case (_,Divide(l,r)) =>
+          if(isVar(l) & isVar(r)){
+            useAt(DivLLemSpec,PosInExpr(1::Nil))(1)
           }
-          case (Divide(l,r),_) => {
-            if(isVar(l) & isVar(r)){
-              useAt(DivULemSpec,PosInExpr(1::Nil))(1)
-            }
-            else {
-              useAt(DivULem,PosInExpr(1::Nil))(1) & andR('_) < (close, (OnAll(?(andR('_)))*))
-            }
+          else {
+            useAt(DivLLem,PosInExpr(1::Nil))(1) & andR('_)  < (close, OnAll(?(andR('_)))*)
           }
-          case (_,Power(n,_)) =>
-            if(isVar(n)) {
-              useAt(lPowLemSpec,PosInExpr(1::Nil))(1)
-            }
-            else
-              (useAt(poslPowLem,PosInExpr(1::Nil))(1) & andR('_) <(close, andR('_) <(close,ident))) |
-                (useAt(neglPowLem,PosInExpr(1::Nil))(1) & andR('_) <(close, andR('_) <(close,ident))) |
-                (cohideR(1) & byUS(bothlPowLem))
-          case (Power(n,_),_) =>
-            if(isVar(n)){
-              useAt(uPowLemSpec,PosInExpr(1::Nil))(1)
-            }
-            else useAt(uPowLem,PosInExpr(1::Nil))(1) & andR('_) <(close, andR('_))
-          case f => ident
-        }
-        case _ => ident
+        case (Divide(l,r),_) =>
+          if(isVar(l) & isVar(r)){
+            useAt(DivULemSpec,PosInExpr(1::Nil))(1)
+          }
+          else {
+            useAt(DivULem,PosInExpr(1::Nil))(1) & andR('_) < (close, OnAll(?(andR('_)))*)
+          }
+        case (_,Power(n,_)) =>
+          if (isVar(n)) {
+            useAt(lPowLemSpec,PosInExpr(1::Nil))(1)
+          }
+          else
+            (useAt(poslPowLem,PosInExpr(1::Nil))(1) & andR('_) <(close, andR('_) <(close,ident))) |
+              (useAt(neglPowLem,PosInExpr(1::Nil))(1) & andR('_) <(close, andR('_) <(close,ident))) |
+              (cohideR(1) & byUS(bothlPowLem))
+        case (Power(n,_),_) =>
+          if (isVar(n)){
+            useAt(uPowLemSpec,PosInExpr(1::Nil))(1)
+          }
+          else useAt(uPowLem,PosInExpr(1::Nil))(1) & andR('_) <(close, andR('_))
+        case f => ident
       }
+      case _ => ident
     }
-  }
+  })
 
-  def debugPrint(str:String) : BelleExpr =
-    if (DEBUG) print(str) else ident
-
-  def deriveFormulaProof(f:Formula) : (Program,ProvableSig) =
-  {
+  def deriveFormulaProof(f: Formula): (Program,ProvableSig) = {
     // f must be in NNF, with negations completely pushed into comparisons
     // Also, >, >= should be flipped to <, <=
     val(_,pinit,ff) = deriveFormulaProgram(Nil,f)
@@ -590,16 +565,16 @@ object IntervalArithmetic extends Logging {
 
     val pf = proveBy(Sequent(intervalAxiomContext,IndexedSeq(Imply(Diamond(prog,True),f))),
       //Turn the program part into a formula first, preserving the test part using hideDiamond
-      debugPrint("Chasing away formula") &
+      DebuggingTactics.debug("Chasing away formula", doPrint=DEBUG) &
         useAt("<;> compose")(SuccPosition(1,0::Nil)) &
         //        chase(3,3, (e:Expression)=>chaseAtomic(e))(SuccPosition(1,0::Nil)) & ident)
         chase(3,3, (e:Expression)=>hideDiamond(e))(SuccPosition(1,0::Nil)) &
         //Strip off all accumulated side conditions
         implyR(1) &
         //This is really slow if the goal splits a lot...
-        debugPrint("splitting") &
+        DebuggingTactics.debug("splitting", doPrint=DEBUG) &
         (OnAll(?(andL('Llast) | orL('Llast) ))*) &
-        debugPrint("solve") &
+        DebuggingTactics.debug("solve", doPrint=DEBUG) &
         //Conditional bounds like those found in squares might lead to splitting
         OnAll(
           lastImplyRi &
@@ -612,16 +587,17 @@ object IntervalArithmetic extends Logging {
               (useAt(decomposeAnd,PosInExpr(1::Nil))(1) & andR('_)) |
                 (useAt(decomposeOr,PosInExpr(1::Nil))(1) & andR('_))))*) &
             //Decompose inequalities
-            debugPrint("decompose ineq") &
+            DebuggingTactics.debug("decompose ineq", doPrint=DEBUG) &
             (OnAll(?(
               (useAt(decomposeLE,PosInExpr(1::Nil))(1) & andR('_)) |
                 (useAt(decomposeLT,PosInExpr(1::Nil))(1) & andR('_)) |
                 (useAt(decomposeGE,PosInExpr(1::Nil))(1) & andR('_)) |
                 (useAt(decomposeGT,PosInExpr(1::Nil))(1) & andR('_))
             )) *) &
-            debugPrint("arith") &
+            DebuggingTactics.debug("arith", doPrint=DEBUG) &
             //single step removal of the rounding arithmetic axioms
-            ((OnAll(debugPrint("arith step") &patmatchArith & debugPrint("done")))*) &
+            (OnAll(DebuggingTactics.debug("arith step", doPrint=DEBUG) & patmatchArith &
+              DebuggingTactics.debug("done", doPrint=DEBUG))*) &
             //reflexivity
             OnAll(simpTac(1) & ?(closeT))
         )
@@ -633,10 +609,10 @@ object IntervalArithmetic extends Logging {
   def prettyTerm(t:Term) : String = {
     t match {
       case n:Number => "Const "+n.value.toString()
-      case FuncOf(f,Pair(l,r)) if (axFuncs.contains(f)) =>
+      case FuncOf(f,Pair(l,r)) if axFuncs.contains(f) =>
         //If f is an arith function, then print the arguments
         f.name+" ("+prettyTerm(l) +") ("+ prettyTerm(r)+")"
-      case FuncOf(f,Pair(l,r)) if (builtinFuncs.contains(f)) =>
+      case FuncOf(f,Pair(l,r)) if builtinFuncs.contains(f) =>
         //For max,min (and later,abs, we need to capitalize...)
         if (f.equals(maxF)) "Max ("+prettyTerm(l) +") ("+ prettyTerm(r)+")"
         else if (f.equals(minF)) "Min "+prettyTerm(l) +") ("+ prettyTerm(r)+")"
@@ -677,24 +653,24 @@ object IntervalArithmetic extends Logging {
     }
   }
 
-  private val equivExpand = proveBy("(p_() <-> q_()) <-> ((p_() -> q_()) & (q_() -> p_()))".asFormula,prop)
+  private lazy val equivExpand = remember("(p_() <-> q_()) <-> ((p_() -> q_()) & (q_() -> p_()))".asFormula, prop, namespace).fact
 
-  private val minusExpand = proveBy("f_()-g_() = f_() +(-g_())".asFormula,QE & done)
+  private lazy val minusExpand = remember("f_()-g_() = f_() +(-g_())".asFormula, QE & done, namespace).fact
 
-  private val plusRec = proveBy("f_() + g_() = f_() + g_()".asFormula,byUS("= reflexive"))
-  private val timesRec = proveBy("f_() * g_() = f_() * g_()".asFormula,byUS("= reflexive"))
-  //private val divRec = proveBy("f_() / g_() = f_() / g_()".asFormula,byUS("= reflexive"))
-  private val powerRec = proveBy("f_() ^ g_() = f_() ^ g_()".asFormula,byUS("= reflexive"))
+  private lazy val plusRec = remember("f_() + g_() = f_() + g_()".asFormula, byUS("= reflexive"), namespace).fact
+  private lazy val timesRec = remember("f_() * g_() = f_() * g_()".asFormula, byUS("= reflexive"), namespace).fact
+  //private lazy val divRec = remember("f_() / g_() = f_() / g_()".asFormula,byUS("= reflexive"), namespace).fact
+  private lazy val powerRec = remember("f_() ^ g_() = f_() ^ g_()".asFormula, byUS("= reflexive"), namespace).fact
 
-  private val lessEqualRec = proveBy("f_() <= g_() <-> f_() <= g_()".asFormula,byUS("<-> reflexive"))
-  private val lessRec = proveBy("f_() < g_() <-> f_() < g_()".asFormula,byUS("<-> reflexive"))
+  private lazy val lessEqualRec = remember("f_() <= g_() <-> f_() <= g_()".asFormula, byUS("<-> reflexive"), namespace).fact
+  private lazy val lessRec = remember("f_() < g_() <-> f_() < g_()".asFormula, byUS("<-> reflexive"), namespace).fact
 
-  private def binaryDefault(ax:ProvableSig) = (ax,PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
+  private def binaryDefault(ax: ProvableSig) = (ax,PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)
   //Converts an input formula (FOL, no quantifiers) into a formula satisfying:
   //1) NNF (negations pushed into (in)equalities)
   //2) Flip inequalities
   //3) Rewrite arithmetic, e.g. push (a-b) to a + (-b), custom rewrites of powers to squares
-  def normalise(f:Formula) : (Formula,ProvableSig) = {
+  def normalise(f:Formula): (Formula,ProvableSig) = {
     val refl = proveBy(Equiv(f,f),byUS("<-> reflexive"))
     val nnf = chaseCustomFor((exp: Expression) => exp match {
       case And(_,_) => fromAxIndex("& recursor"):: Nil
@@ -705,7 +681,7 @@ object IntervalArithmetic extends Logging {
       case _ => Nil
     })(SuccPosition(1,1::Nil))(refl)
 
-    val flip = chaseCustomFor((exp: Expression) => exp match {
+    val flip = chaseCustomFor({
       case And(_,_) => fromAxIndex("& recursor"):: Nil
       case Or(_,_) => fromAxIndex("| recursor") :: Nil
       case Greater(_,_) => fromAxIndex("> flip")::Nil
@@ -714,7 +690,7 @@ object IntervalArithmetic extends Logging {
     })(SuccPosition(1,1::Nil))(nnf)
 
     //Recurses into all sub terms
-    val arith = chaseCustomFor((exp:Expression) => exp match {
+    val arith = chaseCustomFor({
       case And(_,_) => fromAxIndex("& recursor"):: Nil
       case Or(_,_) => fromAxIndex("| recursor") :: Nil
       case LessEqual(a,b) => binaryDefault(lessEqualRec)::Nil
@@ -728,7 +704,7 @@ object IntervalArithmetic extends Logging {
     })(SuccPosition(1,1::Nil))(flip)
 
     val fml = arith.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Formula]
-    return (fml,arith)
+    (fml,arith)
   }
 
 }
