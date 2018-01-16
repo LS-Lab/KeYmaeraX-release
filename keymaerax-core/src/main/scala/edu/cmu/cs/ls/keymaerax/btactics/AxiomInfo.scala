@@ -901,6 +901,11 @@ object DerivationInfo {
       , _ => ((lemmaName: String) => ((tactic: Option[String]) =>
         TactixLibrary.useLemma(lemmaName, tactic.map(_.asTactic))): TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
 
+    InputTacticInfo("byUS"
+      , "byUS"
+      , List(StringArg("axiom"))
+      , _ => ((axiomName: String) => TactixLibrary.byUS(axiomName)): TypedFunc[String, BelleExpr]),
+
     InputPositionTacticInfo("useLemmaAt"
       , "useLemmaAt"
       , List(StringArg("lemma"), StringArg("key"))
