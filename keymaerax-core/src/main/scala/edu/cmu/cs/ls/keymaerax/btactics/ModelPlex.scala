@@ -12,14 +12,14 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms.mapSubpositions
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
-import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.SimplificationTool
 import org.apache.logging.log4j.scala.Logging
 
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 import scala.compat.Platform
 import scala.language.postfixOps
 
@@ -132,6 +132,94 @@ object ModelPlex extends ModelPlexTrait with Logging {
     Imply(assumptions.reduceOption(And).getOrElse(True), Imply(monitor, monitorConjecture))
   }
 
+  private def doReplaceOld(t: Term, x0: Map[Variable, Variable]): Term = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+    override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+      case v: BaseVariable if x0.contains(v) => Right(x0(v))
+      case _ => Left(None)
+    }
+  }, t).get
+
+  private def replaceOld(f: Formula, x0: Map[Variable, Variable]): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+    override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+      case FuncOf(Function("old", _, _, _, _), v: BaseVariable) if x0.contains(v) => Right(x0(v))
+      case FuncOf(Function("old", _, _, _, _), v: BaseVariable) if !x0.contains(v) => Right(v)
+      case FuncOf(Function("old", _, _, _, _), t) => Right(doReplaceOld(t, x0))
+      case _ => Left(None)
+    }
+  }, f).get
+
+  private def proofListener(name: String, senseVars: Set[Variable], q: Formula, x0: Map[Variable, Variable]) = new IOListener() {
+    var invariant: Option[Formula] = None
+    var diffInvariants: List[Formula] = Nil
+    var odeLemma: Option[(String, Formula, BelleExpr)] = None
+    var throughoutLemmas: List[(String, Formula, BelleExpr)] = Nil
+    var loopBranch: Option[BelleExpr] = None
+    override def begin(input: BelleValue, expr: BelleExpr): Unit = expr match {
+      case SeqTactic(t: AppliedDependentPositionTacticWithAppliedInput, b: BranchTactic) if t.pt.name == "throughout" =>
+        loopBranch = Some(b)
+      case SeqTactic(t: AppliedDependentPositionTactic, s: BelleExpr) if t.name == "dW" => input match {
+        case BelleProvable(p, _) =>
+          assert(p.subgoals.size == 1, "dW expected on a single subgoal")
+          val dWResult = proveBy(p.subgoals.head, t)
+          assert(dWResult.subgoals.size == 1, "dW expected to result in a single subgoal")
+          odeLemma = Some((name+"_dW", dWResult.subgoals.head.toFormula, s))
+      }
+      case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "throughout" =>
+        invariant = Some(t.pt.asInstanceOf[DependentPositionWithAppliedInputTactic].inputs.head.asInstanceOf[Formula])
+      case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "dC" => input match {
+        case BelleProvable(p, _) =>
+          val di = t.pt.asInstanceOf[DependentPositionWithAppliedInputTactic].inputs.head.asInstanceOf[Formula]
+          p.subgoals.head.sub(t.locator.toPosition(p)) match {
+            case Some(Box(ODESystem(_, qq@And(_, prevDi)), _)) if qq != q =>
+              //@todo identify branch (e.g., (a=-B -> dC1) & (a=0 -> dC2) & (a=A -> dC3)
+              //@todo shared diffcuts before branch
+              if (StaticSemantics.freeVars(di).intersect(senseVars).toSet.nonEmpty) {
+                val idx = diffInvariants.indexWhere({
+                  case And(_, diPostfix) => replaceOld(diPostfix, x0) == prevDi
+                  case diPostfix => replaceOld(diPostfix, x0) == prevDi
+                })
+                if (idx >= 0) diffInvariants = diffInvariants.updated(idx, And(diffInvariants(idx), di))
+                else diffInvariants = diffInvariants :+ di
+              }
+            case Some(Box(ODESystem(_, _), _)) => diffInvariants = diffInvariants :+ di
+          }
+      }
+      case b@BranchTactic(children) if loopBranch.contains(b) => input match {
+        case BelleProvable(p, _) =>
+          //@todo make sandbox tactic synthesis more flexible for shapes other than ctrl;plant
+          assert(children.size == 4 && children.size == p.subgoals.size, "4 open goals expected after throughout")
+          throughoutLemmas = p.subgoals.zip(children).zipWithIndex.map({ case ((s, t), i) => (name+"_"+i, s.toFormula, implyR(1) & t) }).toList
+        case _ =>
+      }
+      case _ => // nothing to do
+    }
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = expr match {
+      case b@BranchTactic(children) if loopBranch.contains(b) => loopBranch = None
+      case _ =>
+    }
+    override def kill(): Unit = {}
+  }
+
+  /** Creates a model with the ODE approximated by the evolution domain and diff. invariants from the `tactic`.
+    * Returns the adapted model and a tactic to proof safety from the original proof. */
+  def createNonlinearModelApprox(name: String, tactic: BelleExpr): (Expression => (Formula, BelleExpr)) = {
+    case fml@Imply(init, Box(Loop(Compose(ctrl, plant@ODESystem(_, q))), safe)) =>
+      val plantVars = StaticSemantics.boundVars(plant).toSet.filter(_.isInstanceOf[BaseVariable]).toList.sorted[NamedSymbol]
+      val x0 = plantVars.map(v => v -> BaseVariable(v.name, TacticHelper.freshIndexInFormula(v.name, fml))).toMap
+      val x0Ghosts = x0.map({ case (v, g) => Assign(g, v) }).reduceRight(Compose)
+      val nondetPlant = plantVars.map(AssignAny).reduceRight(Compose)
+
+      val pl = proofListener(name, plantVars.toSet, q, x0)
+      SequentialInterpreter(pl::Nil)(tactic, BelleProvable(ProvableSig.startProof(fml)))
+
+      val diffInvariants = pl.diffInvariants.map(replaceOld(_, x0)).map(f => FormulaTools.conjuncts(f).toSet[Formula]).map(_.reduceRightOption(And).getOrElse(True)).reduceRightOption(Or).getOrElse(True)
+      val evolDomain = if (q == True) diffInvariants else And(q, diffInvariants)
+      val body = Compose(ctrl, Compose(x0Ghosts, Compose(Test(evolDomain), Compose(nondetPlant, Test(evolDomain)))))
+      val approx = Imply(init, Box(Loop(body), safe))
+      (approx, skip)
+    case _ => throw new IllegalArgumentException("Unsupported model shape, expected shape init -> [(ctrl;plant;)*]safe")
+  }
+
   /** Creates a sandbox safety conjecture from a formula of the shape init->[?bounds;{ctrl;plant}*]safe. The sandbox embeds
     * an (unverified) external controller in monitor checks of `kind`. It approximates the external controller behavior
     * with nondeterministic values for each of the bound variables in `ctrl`. Input to the external controller is measured with
@@ -154,59 +242,12 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case Imply(init, Box(Compose(Test(bounds), Loop(Compose(ctrlPrg, ODESystem(ode, q)))), safe)) =>
         val senseVars: List[Variable] = StaticSemantics.boundVars(ode).toSet.filterNot(StaticSemantics.isDifferential(_)).toList.sorted[NamedSymbol]
         val ctrlVars: List[Variable] = StaticSemantics.boundVars(ctrlPrg).toSet[Variable].toList.sorted[NamedSymbol]
+        val x0 = senseVars.map(v => v -> BaseVariable(v.name, TacticHelper.freshIndexInFormula(v.name, formula))).toMap
 
-        //@todo different cuts on different branches
-        val proofListener = new IOListener() {
-          var invariant: Option[Formula] = None
-          var diffInvariants: List[Formula] = Nil
-          var odeLemma: Option[(String, Formula, BelleExpr)] = None
-          var throughoutLemmas: List[(String, Formula, BelleExpr)] = Nil
-          var loopBranch: Option[BelleExpr] = None
-          override def begin(input: BelleValue, expr: BelleExpr): Unit = expr match {
-            case SeqTactic(t: AppliedDependentPositionTacticWithAppliedInput, b: BranchTactic) if t.pt.name == "throughout" =>
-              loopBranch = Some(b)
-            case SeqTactic(t: AppliedDependentPositionTactic, s: BelleExpr) if t.name == "dW" => input match {
-              case BelleProvable(p, _) =>
-                assert(p.subgoals.size == 1, "dW expected on a single subgoal")
-                val dWResult = proveBy(p.subgoals.head, t)
-                assert(dWResult.subgoals.size == 1, "dW expected to result in a single subgoal")
-                odeLemma = Some((name+"_dW", dWResult.subgoals.head.toFormula, s))
-            }
-            case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "throughout" =>
-              invariant = Some(t.pt.asInstanceOf[DependentPositionWithAppliedInputTactic].inputs.head.asInstanceOf[Formula])
-            case t: AppliedDependentPositionTacticWithAppliedInput if t.pt.name == "dC" => input match {
-              case BelleProvable(p, _) =>
-                val di = t.pt.asInstanceOf[DependentPositionWithAppliedInputTactic].inputs.head.asInstanceOf[Formula]
-                p.subgoals.head.sub(t.locator.toPosition(p)) match {
-                  case Some(Box(ODESystem(_, And(_, prevDi)), _)) =>
-                    //@todo identify branch (e.g., (a=-B -> dC1) & (a=0 -> dC2) & (a=A -> dC3)
-                    //@todo shared diffcuts before branch
-                    if (StaticSemantics.freeVars(di).intersect(senseVars.toSet).toSet.nonEmpty) {
-                      val idx = diffInvariants.indexOf(prevDi)
-                      if (idx >= 0) diffInvariants = diffInvariants.updated(idx, And(diffInvariants(idx), di))
-                      else diffInvariants = diffInvariants :+ di
-                    }
-                  case Some(Box(ODESystem(_, _), _)) => diffInvariants = diffInvariants :+ di
-                }
-            }
-            case b@BranchTactic(children) if loopBranch.contains(b) => input match {
-              case BelleProvable(p, _) =>
-                //@todo make sandbox tactic synthesis more flexible for shapes other than ctrl;plant
-                assert(children.size == 4 && children.size == p.subgoals.size, "4 open goals expected after throughout")
-                throughoutLemmas = p.subgoals.zip(children).zipWithIndex.map({ case ((s, t), i) => (name+"_"+i, s.toFormula, implyR(1) & t) }).toList
-              case _ =>
-            }
-            case _ => // nothing to do
-          }
-          override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = expr match {
-            case b@BranchTactic(children) if loopBranch.contains(b) => loopBranch = None
-            case _ =>
-          }
-          override def kill(): Unit = {}
-        }
-        SequentialInterpreter(proofListener::Nil)(tactic, BelleProvable(ProvableSig.startProof(formula)))
+        val pl = proofListener(name, senseVars.toSet, q, x0)
+        SequentialInterpreter(pl::Nil)(tactic, BelleProvable(ProvableSig.startProof(formula)))
 
-        val plantApprox = proofListener.diffInvariants.flatMap(f => FormulaTools.conjuncts(f)).toSet[Formula].reduceRightOption(And).getOrElse(True)
+        val plantApprox = pl.diffInvariants.flatMap(f => FormulaTools.conjuncts(f)).toSet[Formula].reduceRightOption(And).getOrElse(True)
 
         assert(proveBy(Imply(init,bounds), auto).isProved)
         val preVars = senseVars.map(v => preVar(v) -> v)
@@ -231,15 +272,15 @@ object ModelPlex extends ModelPlexTrait with Logging {
         val fallbackCtrl = Compose(fallback.getOrElse(ctrl), tempCtrl)
 
         val sandbox = Imply(init, Box(Compose(Test(bounds), Loop(Compose(sense, Compose(ctrl, act)))), safe))
-        val sbTactic = sandboxTactic(name, proofListener.invariant.get, monitor, q, ctrlPrg, fallbackCtrl,
+        val sbTactic = sandboxTactic(name, pl.invariant.get, monitor, q, ctrlPrg, fallbackCtrl,
           upsilon, senseVars)
 
         val monitorCheck = (name+"_MonitorCheck", Imply(monitor, Diamond(ctrlPrg, And(upsilon, q))), chase(1, 1::Nil) & QE)
         val fallbackCheck = (name+"_FallbackCheck", Imply(bounds, Box(fallbackCtrl, monitor)), master())
 
         val lemmas =
-          proofListener.throughoutLemmas ++
-          (if (proofListener.odeLemma.isDefined) proofListener.odeLemma.get::Nil else Nil) ++
+          pl.throughoutLemmas ++
+          (if (pl.odeLemma.isDefined) pl.odeLemma.get::Nil else Nil) ++
           (monitorCheck::Nil) ++
           (fallbackCheck::Nil)
 
@@ -651,21 +692,36 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case Some(Exists(vars, phi)) if pos.isSucc =>
         // case from nondeterministic assignments
 
-        class SynonymFinder(v: NamedSymbol) extends ExpressionTraversalFunction {
-          var synonyms: Set[Term] = Set()
+        class SynonymFinder(v: Variable) extends ExpressionTraversalFunction {
+          private val vs = v :: postVar(v) :: Nil
+          var synonyms: mutable.Map[Variable, Set[Term]] = mutable.Map(vs.map(_ -> Set[Term]()):_*)
           override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-            case Equal(l, r) if v==l => synonyms = synonyms + r; Left(None)
-            case Equal(l, r) if v==r => synonyms = synonyms + l; Left(None)
+            case Equal(l: Variable, r: Variable) =>
+              if (vs.contains(l)) synonyms(l) = synonyms(l) + r
+              if (vs.contains(r)) synonyms(r) = synonyms(r) + l
+              Left(None)
+            case Equal(l: Variable, r) if vs.contains(l) => synonyms(l) = synonyms(l) + r; Left(None)
+            case Equal(l, r: Variable) if vs.contains(r) => synonyms(r) = synonyms(r) + l; Left(None)
             case Or(l, r) =>
               val lFinder = new SynonymFinder(v)
               val rFinder = new SynonymFinder(v)
               ExpressionTraversal.traverse(lFinder, l)
               ExpressionTraversal.traverse(rFinder, r)
-              synonyms = synonyms ++
-                (if (lFinder.synonyms.nonEmpty && rFinder.synonyms.nonEmpty) lFinder.synonyms & rFinder.synonyms
-                 else lFinder.synonyms | rFinder.synonyms)
+              val vSyns = lFinder.flattenSynonyms(v).intersect(rFinder.flattenSynonyms(v))
+              val vPostSyns = lFinder.flattenSynonyms(postVar(v)).intersect(rFinder.flattenSynonyms(postVar(v)))
+              val newSyns = Map(v -> vSyns, postVar(v) -> vPostSyns)
+              synonyms = synonyms.map({ case (key, value) => key -> value.union(newSyns(key)) })
               Right(e)
             case _ => Left(None)
+          }
+
+          def flattenSynonyms(of: Variable): Set[Term] = {
+            //@note if v synonyms empty but vpost contains a term: then v=vpost because vpost synonyms are result of [:=] subst
+            if (synonyms(v).isEmpty) synonyms(v) = synonyms(postVar(v))
+            val direct = synonyms(of)
+            val transitive1 = direct.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable]).flatMap(synonyms.getOrElse(_, Set()))
+            val transitive2 = direct.flatMap(s => synonyms.filterKeys(k => synonyms.getOrElse(k, Set()).contains(s)).keySet)
+            (direct ++ transitive1 ++ transitive2) - of
           }
         }
 
@@ -673,14 +729,11 @@ object ModelPlex extends ModelPlexTrait with Logging {
         val vFinder = new SynonymFinder(v)
         ExpressionTraversal.traverse(vFinder, phi)
 
-        //@note use synonym if all equalities (except x=xpost) agree across branches, otherwise instantiate with "xpost"
-        val postEquality = vFinder.synonyms.find({
-          case r: Variable => v.name + "post" == r.name
-          case _ => false})
-        val remainingEqs = vFinder.synonyms.filter(Some(_) != postEquality)
-        val equality: Option[Term] =
-          if (remainingEqs.size == 1) Some(remainingEqs.head)
-          else postEquality
+        //@note prefer x=xpost over first synonym, if no synonyms found instantiate with "xpost"
+        val synonyms = vFinder.flattenSynonyms(v)
+        val postEquality = synonyms.find({ case r: BaseVariable => v.name + "post" == r.name case _ => false })
+        val equality: Option[Term] = if (postEquality.isDefined) postEquality else synonyms.headOption
+
         optimizationOneAt(equality.map(v -> _))(pos)
     }
   })
