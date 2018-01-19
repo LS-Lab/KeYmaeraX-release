@@ -5,9 +5,9 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.helpers
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver.AxiomaticODESolverExn
-import edu.cmu.cs.ls.keymaerax.btactics.{FormulaTools, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{DLBySubst, FormulaTools, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -62,18 +62,21 @@ object DifferentialHelper {
     vs.exists(v => isPrimedVariable(v, Some(system.ode)))
 
   /**
-    * Extracts all equalities that look like initial conditions from the formula f.
+    * Extracts all comparisons that look like initial conditions from the formula f.
     *
-    * @param ode Optionally an ODE; if None, then all equalities are extracted from f. This may include non-initial-conds.
+    * @param ode Optionally an ODE; if None, then all comparisons are extracted from f. This may include non-initial-conds.
     * @param f A formula containing conjunctions.
-    * @return A list of equality formulas after deconstructing Ands. E.g., A&B&C -> A::B::C::Nil
+    * @return A list of comparison formulas after deconstructing Ands. E.g., A&B&C -> A::B::C::Nil
     */
-  def extractInitialConditions(ode : Option[Program])(f : Formula) : List[Formula] =
+  def extractInitialConditions(ode: Option[Program])(f: Formula): List[Formula] =
     FormulaTools.conjuncts(f match {
       case And(l, r) => extractInitialConditions(ode)(l) ++ extractInitialConditions(ode)(r)
-      case Equal(v: Variable, _) => if (isPrimedVariable(v, ode)) f :: Nil else Nil
-      case Equal(_, v: Variable) => if (isPrimedVariable(v, ode)) f :: Nil else Nil
-      case _ => Nil //@todo is it possible to allow set-valued initial conditiosn (e.g., inequalities, disjunctions, etc.)?
+      //@todo search in other formulas using polarity
+      case cf: ComparisonFormula =>
+        val leftInitials = cf.left match { case v: Variable if isPrimedVariable(v, ode) => f :: Nil case _ => Nil }
+        val rightInitials = cf.right match { case v: Variable if isPrimedVariable(v, ode) => f :: Nil case _ => Nil }
+        leftInitials ++ rightInitials
+      case _ => Nil
     })
 
   /** Returns the list of variables that have differential equations in an ODE. */
