@@ -25,6 +25,8 @@ object FormulaTools extends Logging {
     case And(p,q) => conjuncts(p) ++ conjuncts(q)
     case f => List(f)
   }
+  /** @see conjuncts(formula: Formula) */
+  def conjuncts(formulas: List[Formula]): List[Formula] = formulas.flatMap(conjuncts)
 
   /**
    * Split a formula into its disjuncts.

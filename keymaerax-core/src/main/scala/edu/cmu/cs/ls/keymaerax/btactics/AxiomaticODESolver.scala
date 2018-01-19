@@ -456,7 +456,7 @@ object AxiomaticODESolver {
     //Variables that don't occur in the ODE are trivially already solved
     //An occurring variable is solved when an evolution domain constraint of the form 'a = ...' exists
     !atomicOdes(system.ode).exists(_.xp.x == v) ||
-      decomposeAnds(system.constraint).exists({ case Equal(l, _) => l == v case _ => false })
+      FormulaTools.conjuncts(system.constraint).exists({ case Equal(l, _) => l == v case _ => false })
   }
 
   //endregion

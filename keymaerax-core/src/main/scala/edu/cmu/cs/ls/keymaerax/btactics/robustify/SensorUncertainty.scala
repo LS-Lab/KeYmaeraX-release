@@ -5,9 +5,9 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.robustify
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, BelleExpr, BelleValue, DependentTactic}
-import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.btactics.helpers.{DifferentialHelper, ProgramHelpers}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DependentTactic}
+import edu.cmu.cs.ls.keymaerax.btactics.FormulaTools
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.ProgramHelpers
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
@@ -51,7 +51,7 @@ object SensorUncertainty {
   /** Checks that the preconditions are a sequence of And's that contains some ComparisonFormula placing initial conditions on the sensor variable.
     * @returns Some ComparisonFormula containing only the sensor variable on the left or right-hand side, or else None. */
   private def preconditionShapeAnalysis(sensor: Variable, preconditions: Formula): Option[ComparisonFormula] = {
-    val sensorPreconds = DifferentialHelper.flattenAnds(preconditions :: Nil).filter({
+    val sensorPreconds = FormulaTools.conjuncts(preconditions).filter({
       case cmp: ComparisonFormula => cmp.left == sensor || cmp.right == sensor //@todo could make the tactic more robust by supporting anything s.t. filter(freeVars(_).contains(sensors))
       case _ => false
     })

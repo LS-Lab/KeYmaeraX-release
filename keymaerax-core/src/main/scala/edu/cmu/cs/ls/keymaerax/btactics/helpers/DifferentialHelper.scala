@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics.helpers
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver.AxiomaticODESolverExn
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
+import edu.cmu.cs.ls.keymaerax.btactics.{FormulaTools, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -69,7 +69,7 @@ object DifferentialHelper {
     * @return A list of equality formulas after deconstructing Ands. E.g., A&B&C -> A::B::C::Nil
     */
   def extractInitialConditions(ode : Option[Program])(f : Formula) : List[Formula] =
-    flattenAnds(f match {
+    FormulaTools.conjuncts(f match {
       case And(l, r) => extractInitialConditions(ode)(l) ++ extractInitialConditions(ode)(r)
       case Equal(v: Variable, _) => if (isPrimedVariable(v, ode)) f :: Nil else Nil
       case Equal(_, v: Variable) => if (isPrimedVariable(v, ode)) f :: Nil else Nil
@@ -84,14 +84,6 @@ object DifferentialHelper {
     case _: AtomicDifferentialProgram => ???
     case _ => throw AxiomaticODESolverExn(s"Expected a differential program or ODE system but found ${ode.getClass}")
   }
-
-  /**
-    * Converts list of formulas possibly containing Ands into list of formulas that does not contain any ANDs.
-    *
-    * @param fs A list of formulas, possibly containing Ands.
-    */
-  //@todo duplicate with FormulaTools.conjuncts
-  def flattenAnds(fs : immutable.List[Formula]): immutable.List[Formula] = fs.flatMap(decomposeAnds)
 
   /** Split a differential program into its ghost constituents: parseGhost("y'=a*x+b".asProgram) is (y,a,b) */
   def parseGhost(ghost: DifferentialProgram): (Variable,Term,Term) = {
@@ -169,17 +161,6 @@ object DifferentialHelper {
 
   /**
     *
-    * @param f A formula.
-    * @return A list of formulas with no top-level Ands.
-    */
-  def decomposeAnds(f : Formula) : immutable.List[Formula] = f match {
-    case And(l,r) => decomposeAnds(l) ++ decomposeAnds(r)
-    case _ => f :: Nil
-  }
-
-
-  /**
-    *
     * @param iniitalConstraints
     * @param x The variable whose initial value is requested.
     * @return The initial value of x.
@@ -196,7 +177,7 @@ object DifferentialHelper {
     * @return A map (f -> term) which maps each f in fs of the foram f=term to term.
     */
   def conditionsToValues(fs : List[Formula]) : Map[Variable, Term] = {
-    val flattened = flattenAnds(fs)
+    val flattened = FormulaTools.conjuncts(fs)
     val vOnLhs = flattened.map({
       case Equal(left, right) => left match {
         case v : Variable => Some(v, right)

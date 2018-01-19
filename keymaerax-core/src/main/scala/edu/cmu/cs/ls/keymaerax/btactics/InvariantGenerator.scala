@@ -30,7 +30,7 @@ object InvariantGenerator extends Logging {
       case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }
-    val evos = if (constraint==True) Nil else DifferentialHelper.flattenAnds(List(constraint))
+    val evos = if (constraint==True) Nil else FormulaTools.conjuncts(constraint)
     new Iterator[Formula] {
       lazy val deps = StaticSemanticsTools.transitiveDependencies(system)
       lazy val bounds = StaticSemantics.boundVars(system).symbols
@@ -108,8 +108,8 @@ object InvariantGenerator extends Logging {
     * @author Andre Platzer */
   private val simpleInvariantCandidates: Generator[Formula] = (sequent,pos) =>
     sequent.sub(pos) match {
-      case Some(Box(ode: ODESystem, post)) => DifferentialHelper.flattenAnds(post +: sequent.ante.toList).iterator
-      case Some(Box(loop: Loop, post))     => DifferentialHelper.flattenAnds(post +: sequent.ante.toList).iterator
+      case Some(Box(ode: ODESystem, post)) => FormulaTools.conjuncts(post +: sequent.ante.toList).iterator
+      case Some(Box(loop: Loop, post))     => FormulaTools.conjuncts(post +: sequent.ante.toList).iterator
       case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }
@@ -126,7 +126,7 @@ object InvariantGenerator extends Logging {
       case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }
-    val evos = if (constraint==True) Nil else DifferentialHelper.flattenAnds(List(constraint))
+    val evos = if (constraint==True) Nil else FormulaTools.conjuncts(constraint)
     val solutions = try {
       ToolProvider.pdeTool().get.pdeSolve(ode)
     } catch {
