@@ -7,13 +7,13 @@ version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/
 
 assemblyJarName in assembly := s"keymaerax-core-${version.value}.jar"
 
-scalaVersion := "2.11.7"
+scalaVersion := "2.11.12"
 
 //scalacOptions ++= Seq("-Xno-patmat-analysis")
 
-libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.11.7"
+libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.11.12"
 
-libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.11.7"
+libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.11.12"
 
 libraryDependencies += "org.apache.commons" % "commons-configuration2" % "2.2"
 

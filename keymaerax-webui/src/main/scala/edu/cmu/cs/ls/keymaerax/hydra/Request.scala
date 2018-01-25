@@ -1962,7 +1962,7 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest with RegisteredOnlyRequest
           ToolProvider.shutdown()
           System.out.flush()
           System.err.flush()
-          HyDRAServerConfig.system.shutdown()
+          HyDRAServerConfig.system.terminate()
           System.out.flush()
           System.err.flush()
           this.synchronized {
