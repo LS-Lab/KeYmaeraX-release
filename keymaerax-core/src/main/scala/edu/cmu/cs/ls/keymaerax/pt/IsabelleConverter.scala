@@ -800,7 +800,7 @@ class IsabelleConverter(pt:ProofTerm) {
           ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm(">=' derive >="), _),
           UsubstProvableTerm(RuleTerm("CE congruence"), _)), _, _: EquivifyRight), _, _: CoHideRight), _),
           UsubstProvableTerm(AxiomTerm("<-> reflexive"), equivReflSubst), where) =>
-            println(reflFml+"\n\n\n"+equivReflSubst)
+          //  println(reflFml+"\n\n\n"+equivReflSubst)
             ISub(IStart(apply(reflFml,NonSubst())),IPrUSubst(IAx(Iaxiom("<-> reflexive")),apply(equivReflSubst)), where)
 /*      case Sub(Sub(RuleApplication(StartProof(reflFml),"cut Right",_,_,_),
           ForwardNewConsequenceTerm(
@@ -810,14 +810,14 @@ class IsabelleConverter(pt:ProofTerm) {
           ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm("<=' derive <="), _),
           UsubstProvableTerm(RuleTerm("CE congruence"), _)), _, _: EquivifyRight), _, _: CoHideRight), _),
           UsubstProvableTerm(AxiomTerm("<-> reflexive"), equivReflSubst), where) =>
-            println(reflFml+"\n\n\n"+equivReflSubst)
+            //println(reflFml+"\n\n\n"+equivReflSubst)
             ISub(IStart(apply(reflFml,NonSubst())),IPrUSubst(IAx(Iaxiom("<-> reflexive")),apply(equivReflSubst)), where)
       case Sub(Sub(RuleApplication(StartProof(reflFml), "cut Right", _, _, _),
       ForwardNewConsequenceTerm(
       ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm("=' derive ="), _),
       UsubstProvableTerm(RuleTerm("CE congruence"), _)), _, _: EquivifyRight), _, _: CoHideRight), _),
       UsubstProvableTerm(AxiomTerm("<-> reflexive"), equivReflSubst), where) =>
-        println(reflFml+"\n\n\n"+equivReflSubst)
+        //println(reflFml+"\n\n\n"+equivReflSubst)
         ISub(IStart(apply(reflFml,NonSubst())),IPrUSubst(IAx(Iaxiom("<-> reflexive")),apply(equivReflSubst)), where)
       case _ =>
         val 2 = 1 + 1
@@ -905,14 +905,14 @@ private def or(p:Iformula,q:Iformula):Iformula = {
             val ode = apply(cc,NonSubst())
             val left = apply(l,Defun(NonSubst()))
             val right = apply(r,Defun(NonSubst()))
-            println("Doin the translate, left: " + left + " and right: " + right)
+            //println("Doin the translate, left: " + left + " and right: " + right)
             val ruleApp = IDIGeqSchema(ode,left,right)
             //val ax = IADIGeq()
             val inst:Iformula = diGeqConclusion(ode,left,right)
             val instSeq = (List(), List(inst))
             val result = IPrUSubst(IRuleApplication(IStart(instSeq), ruleApp,0),smallApp)
             val foo = ProofChecker(pttt)
-            println("Thesubst >=: ************" + bigSubst + "\n******************")
+            //println("Thesubst >=: ************" + bigSubst + "\n******************")
             IRuleApplication(ISub(apply(a),ISub(apply(b),result,c),d),apply(e,g,h),f)
           /*case LessEqual(r,l) =>
             val fsym = UnitFunctional("f", AnyArg, Real)
@@ -1017,11 +1017,11 @@ private def or(p:Iformula,q:Iformula):Iformula = {
           val sm2 = if(seqNeedsDepred(seq)) { Depred(sm0) } else sm1
           val space = if(seqNeedsBanana(seq)) { INBSpace("i1") } else {IAllSpace()}
           val sm3 = if(seqNeedsBanana(seq)) {
-            println("Bananizing startproof: " + seq)
+            //println("Bananizing startproof: " + seq)
             BananaODE(sm2)
           } else sm2
           if(sm3 != NonSubst()) {
-            println("Interesting startproof: " + sm3)
+            //println("Interesting startproof: " + sm3)
           }
           IStart(apply(seq,sm3))
         case NoProof() => throw ConversionException("Encountered unproven subproof")
@@ -1175,7 +1175,7 @@ private def or(p:Iformula,q:Iformula):Iformula = {
       case (UnitFunctional(name, _space, _sort),_)if sm.base == DefunSubst() || sm.base == FunSubst()=>
         val tmp = m.funMap(Right(name))
         val fid = tmp//if (tmp == "i1")  {println("Doin second magic: " ); "i2"} else tmp
-        if(fid == "i5") println("!!! 1")
+        //if(fid == "i5") println("!!! 1")
         IFunctional(IDLeft(IDEnum(fid)))
       //case UnitFunctional(name, _space, _sort) if sm == FunSubst()=> IFunctional(IDLeft(IDEnum(m.funMap(Right(name)))))
       case (UnitFunctional(name, _space, _sort),_) => IFunctional(IDEnum(m.funMap(Right(name))))
@@ -1198,7 +1198,7 @@ private def or(p:Iformula,q:Iformula):Iformula = {
         val funId =
           // @todo: should depredsubst be here
           if(sm.base == FunSubst() || sm.base == DefunSubst() || sm.base == DepredSubst()) {
-            println("Funcof: " + name + " mode: " + sm + " id: " + m.funMap(Left(name)))
+            //println("Funcof: " + name + " mode: " + sm + " id: " + m.funMap(Left(name)))
             IDLeft(IDEnum(m.funMap(Left(name))))
           } else {
             IDEnum(m.funMap(Left(name)))
