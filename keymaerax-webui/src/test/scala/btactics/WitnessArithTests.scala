@@ -16,7 +16,7 @@ import scala.collection.mutable.ListBuffer
 /**
   * Created by yongkiat on 11/27/16.
   */
-class ArithTests extends TacticTestBase {
+class WitnessArithTests extends TacticTestBase {
 
 
   "PolynomialArith" should "Arith 1" in withMathematica { qeTool =>
