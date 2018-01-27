@@ -8,15 +8,14 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import BelleLexer.TokenStream
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser.Declaration
+import org.apache.logging.log4j.scala.Logging
 
 /**
   * The Bellerophon parser
   *
   * @author Nathan Fulton
   */
-object BelleParser extends (String => BelleExpr) {
-  private var DEBUG = false
-
+object BelleParser extends (String => BelleExpr) with Logging {
   private case class DefScope[K, V](defs: scala.collection.mutable.Map[K, V] = scala.collection.mutable.Map.empty[K, V],
                                     parent: Option[DefScope[K, V]] = None) {
     def get(key: K): Option[V] = defs.get(key) match {
@@ -41,17 +40,10 @@ object BelleParser extends (String => BelleExpr) {
         parseTokenStream(BelleLexer(s), DefScope[String, DefTactic](), DefScope[Expression, DefExpression](), g, defs)
       } catch {
         case e: Throwable =>
-          System.err.println("Error parsing\n" + s)
+          logger.error("Error parsing\n" + s, e)
           throw e
       }
     }
-
-  /** Runs the parser with debug mode turned on. */
-  def debug(s: String): Unit = {
-    DEBUG = true
-    apply(s)
-    DEBUG = false
-  }
 
   //region The LL Parser
 
@@ -81,7 +73,7 @@ object BelleParser extends (String => BelleExpr) {
   private def parseLoop(st: ParserState, tacticDefs: DefScope[String, DefTactic],
                         exprDefs: DefScope[Expression, DefExpression], g: Option[Generator.Generator[Expression]],
                         defs: Declaration): ParserState = {
-    if (DEBUG) println(s"Current state: $st")
+    logger.debug(s"Current state: $st")
 
     st.stack match {
       case _ :+ (_: FinalBelleItem) => st

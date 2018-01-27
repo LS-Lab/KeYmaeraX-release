@@ -10,6 +10,9 @@ package edu.cmu.cs.ls.keymaerax.lemma
 
 import java.io.{File, IOException, PrintWriter}
 
+import edu.cmu.cs.ls.keymaerax.Configuration
+import org.apache.logging.log4j.scala.Logging
+
 /**
  * File-based lemma DB implementation. Stores one lemma per file in the user's KeYmaera X home directory under
  * cache/lemmadb/. Lemma file names are created automatically and in a thread-safe manner.
@@ -22,12 +25,12 @@ import java.io.{File, IOException, PrintWriter}
  * @author Brandon Bohrer
  */
 
-class FileLemmaDB extends LemmaDBBase {
-  private lazy val cachePath = System.getProperty("user.home") + File.separator + ".keymaerax" + File.separator + "cache"
+class FileLemmaDB extends LemmaDBBase with Logging {
+  private lazy val cachePath = Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH)
 
   private lazy val lemmadbpath: File = {
     val file = new File(cachePath + File.separator + "lemmadb")
-    if (!file.exists() && !file.mkdirs()) println("WARNING: FileLemmaDB cache did not get created: " + file.getAbsolutePath)
+    if (!file.exists() && !file.mkdirs()) logger.warn("WARNING: FileLemmaDB cache did not get created: " + file.getAbsolutePath)
     file
   }
 

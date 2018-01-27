@@ -1,17 +1,17 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import java.io.File
-
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, DependentPositionTactic, PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex.createMonitorSpecificationConjecture
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
@@ -19,6 +19,8 @@ import testHelper.ParserFactory._
 
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
+
+import java.io.File
 
 /**
  * Created by smitsch on 3/8/15.
@@ -53,7 +55,7 @@ class ModelplexTacticTests extends TacticTestBase {
 //  def numBranches(n: ProofNode): Int = if (n.children.nonEmpty) n.children.map(numBranches).min else 0
 //  def numBranches(s: ProofStep): Int = if (s.subgoals.nonEmpty) s.subgoals.map(numBranches).sum else 1
 
-  def report(result: Formula, proof: ProvableSig, name: String) = {
+  private def report(result: Formula, proof: ProvableSig, name: String): Unit = {
     println(s"$name monitor size: " + monitorSize(result))
 //    println("Number of proof steps: " + numSteps(proof))
 //    println("Number of branches (open/all): " + proof.subgoals.size + "/" + numBranches(proof))
@@ -933,12 +935,16 @@ class ModelplexTacticTests extends TacticTestBase {
   }
 
   "PLDI17" should "prove velocity car safety" taggedAs IgnoreInBuildTest in withMathematica { _ =>
-    val entry = KeYmaeraXArchiveParser("/Users/smitsch/Documents/projects/keymaera/documents/Papers/verified-pipeline-new/verified-pipeline/models/velocitycar_dist.kyx#Velocity Car Safety").head
+    //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
+    val baseDir = System.getProperty("PLDI17_BASE_DIR")
+    val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Velocity Car Safety").head
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._2) shouldBe 'proved
   }
 
   it should "derive controller monitor for velocity car safety" taggedAs IgnoreInBuildTest in withMathematica { tool =>
-    val entry = KeYmaeraXArchiveParser("/Users/smitsch/Documents/projects/keymaera/documents/Papers/verified-pipeline-new/verified-pipeline/models/velocitycar_dist.kyx#Velocity Car Safety").head
+    //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
+    val baseDir = System.getProperty("PLDI17_BASE_DIR")
+    val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Velocity Car Safety").head
     val model = entry.model.asInstanceOf[Formula]
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("d"), Variable("v"), Variable("t"))
@@ -949,34 +955,35 @@ class ModelplexTacticTests extends TacticTestBase {
   }
 
   it should "prove controller monitor correctness" taggedAs IgnoreInBuildTest in withMathematica { _ =>
-    val entry = KeYmaeraXArchiveParser("/Users/smitsch/Documents/projects/keymaera/documents/Papers/verified-pipeline-new/verified-pipeline/models/velocitycar_dist.kyx#Controller Monitor Formula Implies Controller Monitor Specification").head
+    //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
+    val baseDir = System.getProperty("PLDI17_BASE_DIR")
+    val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Controller Monitor Formula Implies Controller Monitor Specification").head
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._2) shouldBe 'proved
   }
 
-  it should "generate a correct sandbox conjecture" taggedAs IgnoreInBuildTest in withMathematica { _ =>
-    val entry = KeYmaeraXArchiveParser("/Users/smitsch/Documents/projects/keymaera/documents/Papers/verified-pipeline-new/verified-pipeline/models/velocitycar_dist.kyx#Velocity Car Safety").head
-    val vars = Variable("d") :: Variable("t") :: Variable("v") :: Nil
-    val consts = FuncOf(Function("V", None, Unit, Real), Nothing) :: FuncOf(Function("ep", None, Unit, Real), Nothing) :: Nil
-    val senseVars = Variable("d") :: Variable("t") :: Nil
-    val ctrlVars = Variable("t") :: Variable("v") :: Nil
+  it should "generate a correct sandbox conjecture" taggedAs IgnoreInBuildTest in withMathematica { _ => withDatabase { db =>
+    //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
+    val baseDir = System.getProperty("PLDI17_BASE_DIR")
+    val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Velocity Car Safety").head
     val fallback = "v:=0;t:=0;".asProgram
-    val plantApprox = "t<=ep() & d>=V()*(ep()-t)".asFormula
-    val sandbox = ModelPlex.createSandbox(vars, consts, senseVars, ctrlVars, Some(fallback), plantApprox, 'ctrl, None)(entry.model.asInstanceOf[Formula])
+    val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(entry.name, entry.tactics.head._2,
+      Some(fallback), 'ctrl, None)(entry.model.asInstanceOf[Formula])
 
     sandbox shouldBe
       """
-        |d>=0 & V()>=0 & ep()>=0 ->
+        |d>=0 & v=0 & t=0 & V()>=0 & ep()>=0 ->
         |[?V()>=0 & ep()>=0; /* test bounds */
         | {
         |  /* sensing */
         |  {
         |   {dpre:=d;tpre:=t;}
         |   {d:=*;t:=*;}
-        |   ?(t<=ep()&d>=V()*(ep()-t))&t<=ep();
+        |   ?(t>=0&v>=0&d>=v*(ep()-t))&t<=ep();
         |  }
+        |  {
         |  { tpost:=*; vpost:=*; } /* external control */
         |  /* actuate if monitor satisfied, else fallback */
-        |  { if ((V()>=0&ep()>=0)&(d>=V()*ep()&(0<=vpost&vpost<=V())&dpost=d&tpost=0|dpost=d&tpost=0&vpost=0)) {
+        |  if ((V()>=0&ep()>=0)&(d>=V()*ep()&(0<=vpost&vpost<=V())&dpost=d&tpost=0|dpost=d&tpost=0&vpost=0)) {
         |      t:=tpost;
         |      v:=vpost;
         |  } else {
@@ -986,16 +993,34 @@ class ModelplexTacticTests extends TacticTestBase {
         |  }
         | }*]d>=0
       """.stripMargin.asFormula
-  }
+
+    def defs(f: Formula): Declaration = Declaration(Map.empty)
+
+    val lemmaEntries = lemmas.map({ case (name, fml, tactic) => ParsedArchiveEntry(name, "lemma", "", defs(fml), fml,
+      (name + " Proof", db.extractSerializableTactic(fml, tactic))::Nil, Map.empty)})
+
+    val sandboxEntry = ParsedArchiveEntry(entry.name + " Sandbox", "theorem", "", defs(sandbox),
+      sandbox, (entry.name + " Sandbox Proof", db.extractSerializableTactic(sandbox, sbTactic))::Nil, Map.empty)
+
+    val archive = (lemmaEntries :+ sandboxEntry).map(new KeYmaeraXArchivePrinter()(_)).mkString("\n\n")
+    checkArchiveEntries(KeYmaeraXArchiveParser.parse(archive))
+  }}
 
   it should "prove fallback preserves controller monitor" taggedAs IgnoreInBuildTest in withMathematica { _ =>
-    val entry = KeYmaeraXArchiveParser("/Users/smitsch/Documents/projects/keymaera/documents/Papers/verified-pipeline-new/verified-pipeline/models/velocitycar_dist.kyx#Fallback Preserves Controller Monitor").head
+    //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
+    val baseDir = System.getProperty("PLDI17_BASE_DIR")
+    val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Fallback Preserves Controller Monitor").head
     proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._2) shouldBe 'proved
   }
 
   it should "check all archive entries" taggedAs IgnoreInBuildTest in withMathematica { _ =>
-    val entries = KeYmaeraXArchiveParser("/Users/smitsch/Documents/projects/keymaera/documents/Papers/verified-pipeline-new/verified-pipeline/models/velocitycar_dist.kyx")
+    //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
+    val baseDir = System.getProperty("PLDI17_BASE_DIR")
+    val entries = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx")
     checkArchiveEntries(entries)
+    //checkArchiveEntries(entries.filter(_.name == "Velocity Car Safety"))
+    //checkArchiveEntries(entries.filter(_.name == "Velocity Car Plant Preserves Invariant"))
+    //checkArchiveEntries(entries.filter(_.name == "Velocity Car Sandbox Safety from Car Safety"))
   }
 
   "ModelPlex formula metric" should "convert simple formula" in withMathematica { tool =>

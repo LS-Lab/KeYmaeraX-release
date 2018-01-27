@@ -284,6 +284,20 @@ private object DLBySubst {
       )
   })
 
+  /** @see [[TactixLibrary.throughout]] */
+  def throughout(invariant: Formula, pre: BelleExpr = alphaRule*): DependentPositionWithAppliedInputTactic = "throughout" byWithInput(invariant, (pos, sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "throughout only at top-level in succedent, but got " + pos)
+    lazy val split: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+      case Some(Box(Compose(_, _), _)) => composeb(pos) & generalize(invariant)(pos) & Idioms.<(skip, split(pos))
+      case _ => skip
+    })
+
+    loop(invariant, pre)(pos) & Idioms.<(
+      skip,
+      skip,
+      split(pos)
+    )})
+
   /**
     * Loop convergence wiping all context.
     * {{{

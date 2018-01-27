@@ -9,6 +9,7 @@ package edu.cmu.cs.ls.keymaerax.tools
 
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
 
@@ -18,7 +19,7 @@ import scala.collection.immutable
  * @author Stefan Mitsch
  */
 class MathematicaQETool(override val link: MathematicaLink)
-  extends BaseKeYmaeraMathematicaBridge[KExpr](link, KeYmaeraToMathematica, MathematicaToKeYmaera) with QETool {
+  extends BaseKeYmaeraMathematicaBridge[KExpr](link, KeYmaeraToMathematica, MathematicaToKeYmaera) with QETool with Logging {
 
   def qeEvidence(f: Formula): (Formula, Evidence) = {
     val input = new MExpr(MathematicaSymbols.REDUCE,
@@ -27,9 +28,7 @@ class MathematicaQETool(override val link: MathematicaLink)
       val (output, result) = run(input)
       result match {
         case resultingQeFormula: Formula =>
-          if (DEBUG) {
-            println(s"Mathematica QE result from input ${f.prettyString}: " + resultingQeFormula.prettyString)
-          }
+          logger.debug(s"Mathematica QE result from input ${f.prettyString}: " + resultingQeFormula.prettyString)
           (resultingQeFormula, ToolEvidence(immutable.List("input" -> input.toString, "output" -> output)))
         case _ => throw ToolException("Expected a formula from Reduce call but got a non-formula expression.")
       }

@@ -2,13 +2,13 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core.{Close, Cut, EquivLeft, NotLeft}
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
 import scala.language.postfixOps
@@ -16,7 +16,7 @@ import scala.language.postfixOps
 /**
  * [[PropositionalTactics]] provides tactics for propositional reasoning.
  */
-private object PropositionalTactics {
+private object PropositionalTactics extends Logging {
   /**
    * Inverse of [[SequentCalculus.implyR]].
    * @author Nathan Fulton
@@ -252,8 +252,8 @@ private object PropositionalTactics {
     //First try to left-unify, then try to right-unify. I.e., default to left-rewriting when bot hare available.
     //@note This is also the default behavior of instantiatedEquivRewriting, and the two should be consistent on defaults.
     (leftRenaming, rightRenaming) match {
-      case (Some(subst), _)  => { println(s"Unified ${equiv.right} with ${target} under ${subst}"); subst }
-      case (None, Some(subst)) => { println(s"Unified ${equiv.left} with ${target} under ${subst}"); subst }
+      case (Some(subst), _)  => { logger.trace(s"Unified ${equiv.right} with ${target} under ${subst}"); subst }
+      case (None, Some(subst)) => { logger.trace(s"Unified ${equiv.left} with ${target} under ${subst}"); subst }
       case _ => RenUSubst(Nil) //Try to go ahead with an empty renaming since it will work more often than not.
     }
   }

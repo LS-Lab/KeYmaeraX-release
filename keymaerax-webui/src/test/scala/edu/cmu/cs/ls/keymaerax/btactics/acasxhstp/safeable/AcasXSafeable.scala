@@ -37,7 +37,7 @@ class AcasXSafeable extends AcasXBase {
 
   private def eqHide(f: String) = exhaustiveEqL2R('L, f.asFormula)
 
-  "ACAS X safeable" should "prove Theorem 5: lemma safe implicit" in withMathematica { tool =>
+  "ACAS X safeable" should "prove Theorem 5: lemma safe implicit" in withQE { tool =>
     val initDomain = "w*dhd>=w*dhf|w*ao>=a".asFormula
 
     val safeLemmaFormula =
@@ -122,7 +122,7 @@ class AcasXSafeable extends AcasXBase {
     storeLemma(safeLemma, "safeable_safe_implicit")
   }
 
-  it should "prove Theorem 5: lemma safe upper implicit" in withMathematica { tool =>
+  it should "prove Theorem 5: lemma safe upper implicit" in withQE { tool =>
     val safeUpLemmaFormula =
       "maxUpI=max((0,w*(dhfUp-dhd))) &"+
       "t_>=0 & "+
@@ -222,7 +222,7 @@ class AcasXSafeable extends AcasXBase {
     storeLemma(safeUpLemma, "safeable_safe_upimplicit")
   }
 
-  it should "prove Theorem 5: propagate Lo" in withMathematica { tool =>
+  it should "prove Theorem 5: propagate Lo" in withQE { tool =>
     val propagateLoFormula =
       "\\forall h0 \\forall v0 \\forall a0 \\forall vt0 \\forall to0"+
         "\\forall h1 \\forall v1 \\forall a1 \\forall vt1 \\forall to1"+
@@ -321,7 +321,7 @@ class AcasXSafeable extends AcasXBase {
     storeLemma(propagateLo, "safeable_propagateLo")
   }
 
-  it should "prove Theorem 5: correctness of implicit safeable region" in withMathematica { tool =>
+  it should "prove Theorem 5: correctness of implicit safeable region" in withQE { tool =>
     // large lemma evidence, needs stack size -Xss256M
     runLemmaTest("safeable_propagateLo", "ACAS X safeable should prove Theorem 5: propagate Lo")
 

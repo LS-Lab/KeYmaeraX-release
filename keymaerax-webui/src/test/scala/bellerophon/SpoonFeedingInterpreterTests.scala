@@ -1,6 +1,6 @@
 package bellerophon
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
@@ -413,6 +413,26 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     n30.makerShortName shouldBe Some("andL('L)")
     n30.goal shouldBe Some(Sequent(IndexedSeq("x>0".asFormula, "x>1".asFormula, "x>2&x>3".asFormula), IndexedSeq("x>0".asFormula)))
     n30.children shouldBe empty
+  }
+
+  "Listeners" should "not be informed when doing auxiliary inner proofs" in withMathematica { _ =>
+    val mockListener = new IOListener() {
+      var beginnings: List[(BelleValue, BelleExpr)] = Nil
+      override def begin(input: BelleValue, expr: BelleExpr): Unit = beginnings = beginnings :+ (input -> expr)
+      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {}
+      override def kill(): Unit = {}
+    }
+    val mockListenerFactory: Int => (String, Int, Int) => scala.Seq[IOListener] =
+      (_: Int) => (_: String, _: Int, _: Int) => mockListener::Nil
+
+    val interpreter = SpoonFeedingInterpreter(1, -1, (_: ProvableSig) => 1, mockListenerFactory, SequentialInterpreter)
+    BelleInterpreter.setInterpreter(interpreter)
+    BelleInterpreter(implyR(1) & dC("x>0".asFormula)(1, 1::Nil), BelleProvable(ProvableSig.startProof("y>0 -> [x:=3;][{x'=4}]x>0".asFormula)))
+    //@note auxiliary inner proofs started by UnifyUSCalculus ruin database trace if reported to listeners
+    mockListener.beginnings shouldNot contain (BelleProvable(ProvableSig.startProof("[{x'=4}]x>0".asFormula)) -> (QE & done))
+    mockListener.beginnings shouldNot contain (BelleProvable(ProvableSig.startProof("(p_()<->q_())&q_()->p_()<->true".asFormula)) -> prop)
+    //@note should also not contain the following, but not testable without huge effort since closeTrue is private and so is ProofRuleTactics
+    //mockListener.beginnings shouldNot contain (BelleProvable(ProvableSig.startProof("[a{|^@|};]true <-> true".asFormula)) -> (equivR(1) <(closeTrue(SuccPos(1)), cohideR(1) & byUS("[]T system"))))
   }
 
   "Parsed tactic" should "record STTT tutorial example 1 steps" taggedAs SlowTest in withDatabase { db => withMathematica { _ =>
@@ -1024,18 +1044,26 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         DbProofTree(db, id1.toString).locate("(2,0)") match {
           case Some(n2) =>
             val (id2, tactic2) = stepInto(n2, "dC({`d>=0`}, 1)")(db)
-            tactic2 shouldBe BelleParser("DC(1) ; <(nil, nil)")
+            val tacticString = "useAt({`DC differential cut`},1) ; <(nil, nil)"
+            tactic2 shouldBe BelleParser(tacticString)
+            BellePrettyPrinter(tactic2) should equal (tacticString) (after being whiteSpaceRemoved)
         }
         //diffInd
         DbProofTree(db, id1.toString).locate("(3,1)") match {
           case Some(n2) =>
             val (_, tactic) = stepInto(n2, "dI(1)")(db)
-            tactic shouldBe BelleParser(
-              """DI(1) ; implyR(1) ; andR(1) ; <(
-                |  QE,
-                |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; Dassignb(1.1) ; Dassignb(1.1) ; DW(1) ; GV(1) ; QE
-                |)
-              """.stripMargin)
+            val tacticString = """useAt({`DI differential invariant`},1) ; implyR(1) ; andR(1) ; <(
+                                 |  QE,
+                                 |  derive(1.1) ; DE(1) ;
+                                 |  useAt({`[':=] differential assign`},1.1) ;
+                                 |  useAt({`[':=] differential assign`},1.1) ;
+                                 |  useAt({`[':=] differential assign`},1.1) ;
+                                 |  useAt({`DW differential weakening`},1) ;
+                                 |  GV(1) ; QE
+                                 |)
+                               """.stripMargin
+            tactic shouldBe BelleParser(tacticString)
+            BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
         }
     }
   }
@@ -1052,11 +1080,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(1,0)") match {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")(db)
-        tactic shouldBe BelleParser(
-          """DI(1) ; implyR(1) ; andR(1) ; <(
-            |  QE,
-            |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
-            |)""".stripMargin)
+        val tacticString = """useAt({`DI differential invariant`},1) ; implyR(1) ; andR(1) ; <(
+                             |  QE,
+                             |  derive(1.1) ; DE(1) ; useAt({`[':=] differential assign`},1.1) ; GV(1) ; QE
+                             |)""".stripMargin
+        tactic shouldBe BelleParser(tacticString)
+        BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
         proveBy(problem, implyR(1) & tactic) shouldBe 'proved
     }
   }
@@ -1073,11 +1102,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(1,0)") match {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")(db)
-        tactic shouldBe BelleParser(
-          """DI(1) ; implyR(1) ; andR(1) ; <(
-            |  QE,
-            |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
-            |)""".stripMargin)
+        val tacticString = """useAt({`DI differential invariant`},1) ; implyR(1) ; andR(1) ; <(
+                             |  QE,
+                             |  derive(1.1) ; DE(1) ; useAt({`[':=] differential assign`},1.1) ; GV(1) ; QE
+                             |)""".stripMargin
+        tactic shouldBe BelleParser(tacticString)
+        BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
         proveBy(problem, implyR(1) & tactic) shouldBe 'proved
     }
   }
@@ -1094,12 +1124,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(1,0)") match {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")(db)
-        tactic shouldBe BelleParser(
-          """DI(1) ; implyR(1) ; andR(1) ; <(
-            |  QE,
-            |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
-            |)
-            """.stripMargin)
+        val tacticString = """useAt({`DI differential invariant`},1) ; implyR(1) ; andR(1) ; <(
+                             |  QE,
+                             |  derive(1.1) ; DE(1) ; useAt({`[':=] differential assign`},1.1) ; GV(1) ; QE
+                             |)
+                           """.stripMargin
+        tactic shouldBe BelleParser(tacticString)
+        BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
     }
   }
 
@@ -1116,12 +1147,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val innerId = interpreter.innerProofId.getOrElse(proofId)
     val tree = DbProofTree(db, innerId.toString)
     val tactic = tree.tactic
-    tactic shouldBe BelleParser(
-      """DI(1) ; (implyR(1) ; (andR(1) ; <(
-        |  QE,
-        |  derive(1.1) ; (DE(1) ; (Dassignb(1.1) ; (GV(1) ; QE)))
-        |)))
-        """.stripMargin)
+    val tacticString = """useAt({`DI differential invariant`},1) ; implyR(1) ; andR(1) ; <(
+                         |  QE,
+                         |  derive(1.1) ; DE(1) ; useAt({`[':=] differential assign`},1.1) ; GV(1) ; QE
+                         |)
+                       """.stripMargin
+    tactic shouldBe BelleParser(tacticString)
+    BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
   }
 
   it should "work when dI fails with multiple non-primed variables in postcondition" in withMathematica { _ =>
@@ -1136,12 +1168,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val innerId = interpreter.innerProofId.getOrElse(proofId)
     val tactic = DbProofTree(db, innerId.toString).tactic
-    tactic shouldBe BelleParser(
-      """DI(1) ; implyR(1) ; andR(1) ; <(
-        |  QE,
-        |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
-        |)
-      """.stripMargin)
+    val tacticString = """useAt({`DI differential invariant`},1) ; implyR(1) ; andR(1) ; <(
+                         |  QE,
+                         |  derive(1.1) ; DE(1) ; useAt({`[':=] differential assign`},1.1) ; GV(1) ; QE
+                         |)
+                       """.stripMargin
+    tactic shouldBe BelleParser(tacticString)
+    BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
   }
 
   it should "work for partial prop" in withMathematica { _ => withDatabase { sql =>

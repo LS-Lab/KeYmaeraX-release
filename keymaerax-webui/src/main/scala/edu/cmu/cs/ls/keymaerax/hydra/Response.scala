@@ -23,6 +23,7 @@ import Helpers._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import org.apache.logging.log4j.scala.Logging
 import spray.httpx.marshalling.ToResponseMarshallable
 
 import scala.collection.mutable.ListBuffer
@@ -300,8 +301,8 @@ class CreatedIdResponse(id : String) extends Response {
   def getJson = JsObject("id" -> JsString(id))
 }
 
-class PossibleAttackResponse(val msg: String) extends Response {
-  println(s"POSSIBLE ATTACK: $msg")
+class PossibleAttackResponse(val msg: String) extends Response with Logging {
+  logger.fatal(s"POSSIBLE ATTACK: $msg")
   override def getJson: JsValue = new ErrorResponse(msg).getJson
 }
 

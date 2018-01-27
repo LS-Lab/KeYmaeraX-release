@@ -4,6 +4,7 @@ import java.io.{File, FilePermission, PrintWriter}
 import java.lang.reflect.ReflectPermission
 import java.security.Permission
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.api.ScalaTacticCompiler
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
@@ -12,10 +13,10 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
-import edu.cmu.cs.ls.keymaerax.btactics.IsabelleSyntax._
-import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj}
+import edu.cmu.cs.ls.keymaerax.hydra.{DBTools, TempDBTools}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.Declaration
 import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, PTProvable, ProvableSig}
 
 import scala.collection.immutable
@@ -46,8 +47,7 @@ object KeYmaeraX {
       |  -prove file.kyx -tactic file.kyt [-out file.kyp] |
       |  -check file.kya |
       |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar]
-      |     [-sandbox] ([-vars|-ctrlvars|-sensevars] vars)*
-      |     [-fallback fml] [-plantApprox fml]|
+      |     [-sandbox] [-fallback prg] |
       |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c] |
       |  -ui [web server options] |
       |  -parse file.kyx |
@@ -100,7 +100,7 @@ object KeYmaeraX {
   var LAUNCH: Boolean = false
 
 
-  def main (args: Array[String]): Unit = {
+  def main(args: Array[String]): Unit = {
     if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); exit(1)}
     println("KeYmaera X Prover" + " " + VERSION + "\n" +
       "Use option -help for usage and license information")
@@ -124,7 +124,7 @@ object KeYmaeraX {
         try {
           initializeProver(
             if (options.contains('tool)) options
-            else options ++ configFromDB(DBAbstractionObj.defaultDatabase, "z3"))
+            else options ++ configFromFile("z3"))
 
           //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
           options.get('mode) match {
@@ -142,18 +142,17 @@ object KeYmaeraX {
     }
   }
 
-  private def configFromDB(db: DBAbstraction, defaultTool: String): OptionMap = {
-    db.getConfiguration("tool").config.getOrElse("qe", defaultTool).toLowerCase() match {
-      case "mathematica" => Map('tool -> "mathematica") ++ mathematicaConfigFromDB(db)
+  private def configFromFile(defaultTool: String): OptionMap = {
+    Configuration.getOption(Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
+      case "mathematica" => Map('tool -> "mathematica") ++ mathematicaConfig
       case "z3" => Map('tool -> "z3")
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
   }
 
-  private def mathematicaConfigFromDB(db: DBAbstraction): OptionMap = {
-    val mathConfig = db.getConfiguration("mathematica").config
-    mathConfig.get("linkName") match {
-      case Some(l) => mathConfig.get("jlinkLibDir") match {
+  private def mathematicaConfig: OptionMap = {
+    Configuration.getOption(Configuration.Keys.MATHEMATICA_LINK_NAME) match {
+      case Some(l) => Configuration.getOption(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) match {
         case Some(libDir) => Map('mathkernel -> l, 'jlink -> libDir)
         case None => Map('mathkernel -> l)
       }
@@ -249,15 +248,6 @@ object KeYmaeraX {
       case "-fallback" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('fallback -> value), tail)
         else optionErrorReporter("-fallback")
-      case "-plantApprox" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('plantApprox -> value), tail)
-        else optionErrorReporter("-plantApprox")
-      case "-sensevars" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('sensevars -> makeVariables(value.split(","))), tail)
-        else optionErrorReporter("-sensevars")
-      case "-ctrlvars" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('ctrlvars -> makeVariables(value.split(","))), tail)
-        else optionErrorReporter("-ctrlvars")
       case "-vars" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('vars -> makeVariables(value.split(","))), tail)
         else optionErrorReporter("-vars")
@@ -282,10 +272,10 @@ object KeYmaeraX {
       case "-nointerval" :: tail => require(!map.contains('interval)); nextOption(map ++ Map('interval -> false), tail)
       case "-dnf" :: tail => require(!map.contains('dnf)); nextOption(map ++ Map('dnf -> true), tail)
       // global options
-      case "-lax" :: tail => System.setProperty("LAX", "true"); nextOption(map, tail)
-      case "-strict" :: tail => System.setProperty("LAX", "false"); nextOption(map, tail)
-      case "-debug" :: tail => System.setProperty("DEBUG", "true"); nextOption(map, tail)
-      case "-nodebug" :: tail => System.setProperty("DEBUG", "false"); nextOption(map, tail)
+      case "-lax" :: tail => Configuration.set(Configuration.Keys.LAX, "true", saveToFile = false); nextOption(map, tail)
+      case "-strict" :: tail => Configuration.set(Configuration.Keys.LAX, "false", saveToFile = false); nextOption(map, tail)
+      case "-debug" :: tail => Configuration.set(Configuration.Keys.DEBUG, "true", saveToFile = false); nextOption(map, tail)
+      case "-nodebug" :: tail => Configuration.set(Configuration.Keys.DEBUG, "false", saveToFile = false); nextOption(map, tail)
       case "-security" :: tail => activateSecurity(); nextOption(map, tail)
       case "-launch" :: tail => launched(); nextOption(map, tail)
       case option :: tail => optionErrorReporter(option)
@@ -301,7 +291,7 @@ object KeYmaeraX {
       sys.exit(0)
     } catch {
       case e: Throwable =>
-        if (System.getProperty("DEBUG", "false")=="true") e.printStackTrace()
+        if (Configuration(Configuration.Keys.DEBUG)=="true") e.printStackTrace()
         println(e)
         println("Failed to parse file")
         sys.exit(-1)
@@ -317,13 +307,14 @@ object KeYmaeraX {
       sys.exit(0)
     } catch {
       case e: Throwable =>
-        if (System.getProperty("DEBUG", "false")=="true") e.printStackTrace()
+        if (Configuration(Configuration.Keys.DEBUG)=="true") e.printStackTrace()
         println(e)
         println("Failed to parse file")
         sys.exit(-1)
     }
   }
 
+  /** Prints help messages for command line options. */
   private def optionErrorReporter(option: String) = {
     val noValueMessage = "[Error] No value specified for " + option + " option. "
     option match {
@@ -341,7 +332,8 @@ object KeYmaeraX {
     }
   }
 
-  private def initializeProver(options: OptionMap) = {
+  /** Initializes the backend solvers, tactic interpreter, and invariant generator. */
+  private def initializeProver(options: OptionMap): Unit = {
     options('tool) match {
       case "mathematica" => initMathematica(options)
       case "z3" => initZ3(options)
@@ -360,12 +352,12 @@ object KeYmaeraX {
   }
 
   /** Initializes Z3 from command line options. */
-  private def initZ3(options: OptionMap) = {
+  private def initZ3(options: OptionMap): Unit = {
     ToolProvider.setProvider(new Z3ToolProvider())
   }
 
   /** Initializes Mathematica from command line options, if present; else from default config */
-  private def initMathematica(options: OptionMap) = {
+  private def initMathematica(options: OptionMap): Unit = {
     assert((options.contains('mathkernel) && options.contains('jlink)) || (!options.contains('mathkernel) && !options.contains('jlink)),
       "\n[Error] Please always use command line option -mathkernel and -jlink together," +
         "and specify the Mathematica link paths with:\n" +
@@ -409,8 +401,10 @@ object KeYmaeraX {
     ToolProvider.setProvider(new MathematicaToolProvider(mathematicaConfig))
   }
 
-  private def shutdownProver() = {
+  /** Shuts down the backend solver and invariant generator. */
+  private def shutdownProver(): Unit = {
     ToolProvider.shutdown()
+    ToolProvider.setProvider(new NoneToolProvider())
     TactixLibrary.invGenerator = FixedGenerator(Nil)
   }
 
@@ -660,20 +654,18 @@ object KeYmaeraX {
    *
    * @param options in describes input file name, vars describes the list of variables, out describes the output file name.
    */
-  def modelplex(options: OptionMap) = {
-    //println("RUNNING MODELPLEX")
-    if(options.contains('ptOut)) {
+  def modelplex(options: OptionMap): Unit = {
+    if (options.contains('ptOut)) {
       //@TODO: Actual produce proof terms here, right now this option is overloaded to produce hol config instead
       ProvableSig.PROOF_TERMS_ENABLED = false
     } else {
-      //println("DISABLING PROOF TERMS")
       ProvableSig.PROOF_TERMS_ENABLED = false
     }
     require(options.contains('in), usage)
 
     val in = options('in).toString
-    val allEntries = KeYmaeraXArchiveParser(in)
-    val inputModel = allEntries.head.model.asInstanceOf[Formula]
+    val inputEntry = KeYmaeraXArchiveParser(in).head
+    val inputModel = inputEntry.model.asInstanceOf[Formula]
 
     val verifyOption:Option[(ProvableSig => Unit)] =
       if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
@@ -692,45 +684,60 @@ object KeYmaeraX {
 
     var outputFileName = inputFileName
 
-    if(options.contains('out)) {
+    if (options.contains('out)) {
       val outputFileNameDotMx = options('out).toString
       assert(outputFileNameDotMx.endsWith(".kym"),
         "\n[Error] Wrong file name " + outputFileNameDotMx + " used for -out! ModelPlex only generates .kym file. Please use: -out FILENAME.kym")
       outputFileName = outputFileNameDotMx.dropRight(4)
     }
 
-    val pw = new PrintWriter(outputFileName + ".kym")
-
     val kind =
-      if(options.contains('sandbox)) 'sandbox
+      if (options.contains('sandbox)) 'sandbox
       else if (options.contains('monitor)) options('monitor).asInstanceOf[Symbol]
       else 'model
 
-    val outputFml =
-      if(options.contains('sandbox)) {
-        val fallback = options('fallback).asInstanceOf[String].asProgram
-        val plantApprox = options('plantApprox).asInstanceOf[String].asFormula
-        val vars = options('vars).asInstanceOf[Array[Variable]].toList
-        val sensevars = options('sensevars).asInstanceOf[Array[Variable]].toList
-        val ctrlvars = options('ctrlvars).asInstanceOf[Array[Variable]].toList
-          ModelPlex.createSandbox(vars,
-          StaticSemantics.signature(inputModel).toList.filter(_.isInstanceOf[FuncOf]).map{case x:FuncOf => x},
-          sensevars,
-          ctrlvars,
-           Some(fallback),
-          plantApprox: Formula,
-          kind = 'ctrl,
-         checkProvable =  None)(inputModel)
-
+    if (options.contains('sandbox)) {
+      val fallback = options.get('fallback) match {
+        case Some(fallbackPrgString: String) => fallbackPrgString.asProgram
+        case _ => inputEntry.model match {
+          case Imply(_, Box(Compose(ctrl, _), _)) => ctrl
+          case _ => throw new IllegalArgumentException("Unable to extract fallback from input model. Please provide fallback program with option -fallback.")
         }
-      else if (options.contains('vars))
-      ModelPlex(options('vars).asInstanceOf[Array[Variable]].toList, kind, verifyOption)(inputModel)
-    else
-      ModelPlex(inputModel, kind, verifyOption)
-    val output = KeYmaeraXPrettyPrinter(outputFml)
+      }
 
+      val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(
+        inputEntry.name,
+        inputEntry.tactics.head._2,
+        Some(fallback),
+        kind = 'ctrl,
+        checkProvable =  None)(inputModel)
+
+      val db = new TempDBTools(Nil)
+
+      val lemmaEntries = lemmas.map({ case (name, fml, tactic) => ParsedArchiveEntry(name, "lemma", "", Declaration(Map.empty), fml,
+        (name + " Proof", db.extractSerializableTactic(fml, tactic))::Nil, Map.empty)})
+
+      val sandboxEntry = ParsedArchiveEntry(inputEntry.name + " Sandbox", "theorem", "", Declaration(Map.empty),
+        sandbox, (inputEntry.name + " Sandbox Proof", db.extractSerializableTactic(sandbox, sbTactic))::Nil, Map.empty)
+
+      val archive = (lemmaEntries :+ sandboxEntry).map(new KeYmaeraXArchivePrinter()(_)).mkString("\n\n")
+      val pw = new PrintWriter(outputFileName + ".kym")
+      pw.write(archive)
+      pw.close()
+    } else if (options.contains('vars)) {
+      val result = ModelPlex(options('vars).asInstanceOf[Array[Variable]].toList, kind, verifyOption)(inputModel)
+      printModelplexResult(inputModel, result, outputFileName, options)
+    } else {
+      val result = ModelPlex(inputModel, kind, verifyOption)
+      printModelplexResult(inputModel, result, outputFileName, options)
+    }
+  }
+
+  private def printModelplexResult(model: Formula, fml: Formula, outputFileName: String, options: OptionMap): Unit = {
+    val output = KeYmaeraXPrettyPrinter(fml)
     val reparse = KeYmaeraXParser(output)
-    assert(reparse == outputFml, "parse of print is identity")
+    assert(reparse == fml, "parse of print is identity")
+    val pw = new PrintWriter(outputFileName + ".kym")
     pw.write(stampHead(options))
     pw.write("/* @evidence: parse of print of ModelPlex proof output */\n\n")
     pw.write("/************************************\n * Generated by KeYmaera X ModelPlex\n ************************************/\n\n")
@@ -738,15 +745,13 @@ object KeYmaeraX {
     pw.write(output)
     pw.close()
 
-
-
     options.get('ptOut) match {
       case Some(path:String) =>
         val pwHOL = new PrintWriter(outputFileName + ".holconfiggen")
         // @TODO: Robustify
-        val Imply(init, Box(Compose(Test(bounds),Loop(Compose(ctrl,plant))),safe)) = inputModel
-        val consts = StaticSemantics.signature(inputModel)
-        pwHOL.write(HOLConverter.configFile(consts,options('vars).asInstanceOf[Array[Variable]].toList,bounds,init,outputFml))
+        val Imply(init, Box(Compose(Test(bounds),Loop(Compose(ctrl,plant))),safe)) = model
+        val consts = StaticSemantics.signature(model)
+        pwHOL.write(HOLConverter.configFile(consts,options('vars).asInstanceOf[Array[Variable]].toList,bounds,init,fml))
         pwHOL.close()
 
       case None => ()
@@ -844,9 +849,6 @@ object KeYmaeraX {
     * Instead we settle for preventing people from installing less-restrictive security managers and restricting
     * all writes to be inside the .keymaerax directory. */
   class KeYmaeraXSecurityManager extends SecurityManager {
-    private val homeDir = System.getProperty("user.home")
-    private val keymaerax = homeDir + "/.keymaerax"
-
     override def checkPermission(perm: Permission): Unit = {
       perm match {
           //@todo should disallow writing reflection in .core.
@@ -861,8 +863,8 @@ object KeYmaeraX {
           val name = filePermission.getName
           val actions = filePermission.getActions
           if ((actions.contains("write") || actions.contains("delete"))
-            && !name.startsWith(keymaerax)) {
-            throw new SecurityException("KeYmaera X security manager forbids writing to files outside ~/.keymaerax")
+            && !name.startsWith(Configuration.KEYMAERAX_HOME_PATH)) {
+            throw new SecurityException("KeYmaera X security manager forbids writing to files outside " + Configuration.KEYMAERAX_HOME_PATH)
           }
       }
     }

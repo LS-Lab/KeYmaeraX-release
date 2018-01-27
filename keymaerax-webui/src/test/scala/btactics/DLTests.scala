@@ -671,6 +671,27 @@ class DLTests extends TacticTestBase {
     result.subgoals(2).succ should contain theSameElementsAs "x>0".asFormula::Nil
   }
 
+  "Throughout" should "split simple sequences" in {
+    val result = proveBy("x>2 ==> [{x:=x+1; x:=x+2; x:=x+3;}*]x>0".asSequent, throughout("x>1".asFormula)(1))
+    result.subgoals should have size 5
+    result.subgoals(0) shouldBe "x>2 ==> x>1".asSequent
+    result.subgoals(1) shouldBe "x>1 ==> x>0".asSequent
+    result.subgoals(2) shouldBe "x>1 ==> [x:=x+1;]x>1".asSequent
+    result.subgoals(3) shouldBe "x>1 ==> [x:=x+2;]x>1".asSequent
+    result.subgoals(4) shouldBe "x>1 ==> [x:=x+3;]x>1".asSequent
+  }
+
+  it should "keep left-composed sequences together" in {
+    val result = proveBy("x>2 ==> [{{x:=x-1;x:=x+1;} {x:=x+2;x:=x-1;} {x:=x+3;x:=x+4;}}*]x>0".asSequent, throughout("x>1".asFormula)(1))
+    result.subgoals should have size 6
+    result.subgoals(0) shouldBe "x>2 ==> x>1".asSequent
+    result.subgoals(1) shouldBe "x>1 ==> x>0".asSequent
+    result.subgoals(2) shouldBe "x>1 ==> [x:=x-1;x:=x+1;]x>1".asSequent
+    result.subgoals(3) shouldBe "x>1 ==> [x:=x+2;x:=x-1;]x>1".asSequent
+    result.subgoals(4) shouldBe "x>1 ==> [x:=x+3;]x>1".asSequent
+    result.subgoals(5) shouldBe "x>1 ==> [x:=x+4;]x>1".asSequent
+  }
+
   "Discrete ghost" should "introduce assignment to fresh variable" in {
     val result = proveBy("y>0".asFormula, discreteGhost("y".asVariable)(1))
     result.subgoals should have size 1

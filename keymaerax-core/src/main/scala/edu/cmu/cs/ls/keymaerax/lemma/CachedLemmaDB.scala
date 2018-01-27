@@ -8,6 +8,7 @@
 package edu.cmu.cs.ls.keymaerax.lemma
 
 import edu.cmu.cs.ls.keymaerax.core.Lemma
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.mutable
 
@@ -18,7 +19,7 @@ import scala.collection.mutable
   *
   * Created by bbohrer on 8/3/16.
   */
-class CachedLemmaDB (db: LemmaDB) extends LemmaDB {
+class CachedLemmaDB (db: LemmaDB) extends LemmaDB with Logging {
   private var cachedLemmas: mutable.Map[LemmaID, Lemma] = mutable.Map()
 
   override def get(lemmaIDs:List[LemmaID]): Option[List[Lemma]] = {
@@ -36,11 +37,9 @@ class CachedLemmaDB (db: LemmaDB) extends LemmaDB {
       }
     }
     catch {
-      case e:Throwable => {
-        println("Error while trying to retrieve lemma")
-        e.printStackTrace()
+      case e:Throwable =>
+        logger.error("Error while trying to retrieve lemma", e)
         None
-      }
     }
   }
 
@@ -50,7 +49,7 @@ class CachedLemmaDB (db: LemmaDB) extends LemmaDB {
     id
   }
 
-  override def deleteDatabase() = {
+  override def deleteDatabase(): Unit = {
     cachedLemmas.clear()
     db.deleteDatabase()
   }

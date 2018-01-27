@@ -1,13 +1,13 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
+import org.apache.logging.log4j.scala.Logging
 
 /**
   * @note stub! At the moment just trying things out.
   * Created by nfulton on 12/22/15.
   */
-class DatabaseTacticSerializer(db: DBAbstraction) extends IOListener {
+class DatabaseTacticSerializer(db: DBAbstraction) extends IOListener with Logging {
   var ignoreUntilAfter : Option[BelleExpr] = None
 
   edu.cmu.cs.ls.keymaerax.core.PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter)
@@ -18,7 +18,7 @@ class DatabaseTacticSerializer(db: DBAbstraction) extends IOListener {
           print(t.prettyString)
           ignoreUntilAfter = Some(expr)
         }
-        case t: InputTactic => println("Don't know what to do with InputTactics that don't take Formulas.")
+        case t: InputTactic => logger.warn("Don't know what to do with InputTactics that don't take Formulas.")
         case PartialTactic(t, _) => print("partial(")
       }
     }

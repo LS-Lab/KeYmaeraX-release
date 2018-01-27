@@ -28,6 +28,7 @@ import java.io._
 import java.text.SimpleDateFormat
 import java.util.{Calendar, Locale}
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
 
@@ -39,6 +40,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, BreadthFirstSearc
 import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import org.apache.logging.log4j.scala.Logging
 
 import scala.util.Try
 
@@ -53,7 +55,7 @@ import scala.util.Try
  *
  * Request.getResultingUpdates might be run from a new thread.
  */
-sealed trait Request {
+sealed trait Request extends Logging {
   /** Checks read/write/registered access. Additional checks by overriding doPermission. */
   final def permission(t: SessionToken): Boolean = (t match {
     case t: ReadonlyToken => this.isInstanceOf[ReadRequest]
@@ -376,13 +378,12 @@ class SimulationRequest(db: DBAbstraction, userId: String, proofId: String, node
 class KyxConfigRequest(db: DBAbstraction) extends LocalhostOnlyRequest with ReadRequest {
   val newline = "\n"
   override def resultingResponses() : List[Response] = {
-    val mathConfig = db.getConfiguration("mathematica").config
     // keymaera X version
     val kyxConfig = "KeYmaera X version: " + VERSION + newline +
       "Java version: " + System.getProperty("java.runtime.version") + " with " + System.getProperty("sun.arch.data.model") + " bits" + newline +
       "OS: " + System.getProperty("os.name") + " " + System.getProperty("os.version") + newline +
-      "LinkName: " + mathConfig.apply("linkName") + newline +
-      "jlinkLibDir: " + mathConfig.apply("jlinkLibDir")
+      "LinkName: " + Configuration.getOption(Configuration.Keys.MATHEMATICA_LINK_NAME) + newline +
+      "jlinkLibDir: " + Configuration.getOption(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
     new KyxConfigResponse(kyxConfig) :: Nil
   }
 }
@@ -436,21 +437,9 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
         if (jlinkLibNamePrefix.exists()) jlinkLibNamePrefix.toString else "", false) :: Nil
     }
     else {
-      val originalConfig = db.getConfiguration("mathematica")
-      val configMap = scala.collection.immutable.Map("linkName" -> linkName, "jlinkLibDir" -> jlinkLibDir.getAbsolutePath)
-      val newConfig = new ConfigurationPOJO("mathematica", configMap)
-
-      db.updateConfiguration(newConfig)
-
-      try {
-        new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
-      } catch {
-        /* @todo Is this exception ever actually raised? */
-        case e : FileNotFoundException =>
-          db.updateConfiguration(originalConfig)
-          e.printStackTrace()
-          new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, false) :: Nil
-      }
+      Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkName)
+      Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
+      new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
     }
   }
 }
@@ -526,7 +515,7 @@ class LicensesRequest() extends Request with ReadRequest {
 class GetToolRequest(db: DBAbstraction) extends LocalhostOnlyRequest with ReadRequest {
   override def resultingResponses(): List[Response] = {
     //@todo more/different tools
-    new KvpResponse("tool", db.getConfiguration("tool").config("qe")) :: Nil
+    new KvpResponse("tool", Configuration(Configuration.Keys.QE_TOOL)) :: Nil
   }
 }
 
@@ -536,8 +525,7 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
     if (tool != "mathematica" && tool != "z3") new ErrorResponse("Unknown tool " + tool + ", expected either 'mathematica' or 'z3'")::Nil
     else {
       assert(tool == "mathematica" || tool == "z3", "Expected either Mathematica or Z3 tool")
-      val toolConfig = new ConfigurationPOJO("tool", Map("qe" -> tool))
-      db.updateConfiguration(toolConfig)
+      Configuration.set(Configuration.Keys.QE_TOOL, tool)
       new KvpResponse("tool", tool) :: Nil
     }
   }
@@ -545,7 +533,6 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
 
 class GetMathematicaConfigurationRequest(db : DBAbstraction) extends LocalhostOnlyRequest with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    val config = db.getConfiguration("mathematica").config
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
     val jlinkLibFile = {
       if(osName.contains("win")) "JLinkNativeLibrary.dll"
@@ -553,8 +540,8 @@ class GetMathematicaConfigurationRequest(db : DBAbstraction) extends LocalhostOn
       else if(osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) "libJLinkNativeLibrary.so"
       else "Unknown"
     }
-    if (config.contains("linkName") && config.contains("jlinkLibDir")) {
-      new MathematicaConfigurationResponse(config("linkName"), config("jlinkLibDir") + File.separator + jlinkLibFile) :: Nil
+    if (Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) && Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)) {
+      new MathematicaConfigurationResponse(Configuration(Configuration.Keys.MATHEMATICA_LINK_NAME), Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) + File.separator + jlinkLibFile) :: Nil
     } else {
       new MathematicaConfigurationResponse("", "") :: Nil
     }
@@ -585,8 +572,8 @@ class SetUserThemeRequest(db: DBAbstraction, userName: String, themeCss: String,
 
 class MathematicaStatusRequest(db : DBAbstraction) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    val config = db.getConfiguration("mathematica").config
-    new ToolStatusResponse("Mathematica", config.contains("linkName") && config.contains("jlinkLibDir")) :: Nil
+    new ToolStatusResponse("Mathematica", Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
+      Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)) :: Nil
   }
 }
 
@@ -730,7 +717,7 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: S
           info.get("Title"), info.get("Link"), tactic.headOption.map(_._2)) match {
           case None =>
             // really should not get here. print and continue importing the remainder of the archive
-            println(s"Model import failed: model $name already exists in the database and attempt of importing under uniquified name $uniqueModelName failed. Continuing with remainder of the archive.")
+            logger.info(s"Model import failed: model $name already exists in the database and attempt of importing under uniquified name $uniqueModelName failed. Continuing with remainder of the archive.")
             (failedImports :+ name, succeededImports)
           case Some(modelId) =>
             tactic.foreach({ case (tname, ttext) =>
@@ -996,7 +983,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
 class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, monitorKind: String, testKinds: Map[String, Boolean],
                            amount: Int, timeout: Option[Int]) extends UserRequest(userId) with RegisteredOnlyRequest {
   def resultingResponses(): List[Response]  = {
-    println("Got Test Synthesis Request")
+    logger.debug("Got Test Synthesis Request")
     val model = db.getModel(modelId)
     val modelFml = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
     val vars = StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable]).toList
@@ -1680,7 +1667,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               case (Some(_), None, expr: BelleExpr) => expr
               case (Some(Fixed(p1, None, _)), Some(Fixed(p2, None, _)), expr: BuiltInTwoPositionTactic) => expr(p1, p2)
               case (Some(_), Some(_), expr: BelleExpr) => expr
-              case _ => println("pos " + pos.getClass.getName + ", expr " + expr.getClass.getName); throw new ProverException("Match error")
+              case _ => logger.error("Position error running tactic at pos " + pos.getClass.getName + ", expr " + expr.getClass.getName); throw new ProverException("Match error")
             }
 
             val ruleName =
@@ -2083,7 +2070,7 @@ class MockRequest(resourceName: String) extends Request {
 /** Global server state for proof validation requests.
   * For now, scheduling immediately dispatches a new thread where the validation occurs. In the future, we may want
   * to rate-limit validation requests. The easiest way to do that is to create a thread pool with a max size. */
-object ProofValidationRunner {
+object ProofValidationRunner extends Logging {
   private val results : mutable.Map[String, (Formula, BelleExpr, Option[Boolean])] = mutable.Map()
 
   case class ValidationRequestDNE(taskId: String) extends Exception(s"The requested taskId $taskId does not exist.")
@@ -2101,7 +2088,7 @@ object ProofValidationRunner {
 
     new Thread(new Runnable() {
       override def run(): Unit = {
-        println(s"Received request to validate $taskId. Running in separate thread.")
+        logger.trace(s"Received request to validate $taskId. Running in separate thread.")
         val provable = NoProofTermProvable( Provable.startProof(model) )
 
         try {
@@ -2114,7 +2101,7 @@ object ProofValidationRunner {
           case e : Throwable => results update (taskId, (model, proof, Some(false)))
         }
 
-        println(s"Done executing validation check for $taskId")
+        logger.trace(s"Done executing validation check for $taskId")
       }
     }).start()
 

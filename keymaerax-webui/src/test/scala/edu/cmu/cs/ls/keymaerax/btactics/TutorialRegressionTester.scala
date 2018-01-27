@@ -6,11 +6,11 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, PartialTactic, TacticStatistics}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, PartialTactic, SequentialInterpreter, TacticStatistics}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Lemma, Program}
-import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
+import edu.cmu.cs.ls.keymaerax.hydra.{DatabasePopulator, TempDBTools}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
@@ -85,7 +85,7 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
   }}
 
   /** Proves all entries that either use no QE at all, all generic QE, or whose specific QE({`tool`}) (if any) match tool */
-  private def prove(tool: String)(db: DbTacticTester): Unit = {
+  private def prove(tool: String)(db: TempDBTools): Unit = {
     // finds all specific QE({`tool`}) entries, but ignores the generic QE that works with any tool
     val qeFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
 
@@ -101,14 +101,14 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
     }
   }
 
-  private def runEntry(name: String, model: String, kind: String, tactic: (String, String, Boolean), db: DbTacticTester) = {
+  private def runEntry(name: String, model: String, kind: String, tactic: (String, String, Boolean), db: TempDBTools) = {
     withClue(tutorialName + ": " + name + "/" + tactic._1) {
       val (decls, invGen) = parseProblem(model)
       println(s"Proving $name with ${tactic._1}")
       val t = BelleParser.parseWithInvGen(tactic._2, Some(invGen), decls)
 
       val start = System.currentTimeMillis()
-      val proof = db.proveBy(model, t, name)
+      val proof = db.proveBy(model, t, SequentialInterpreter, name)
       val end = System.currentTimeMillis()
 
       println(s"Proof Statistics (proved: ${proof.isProved})")
