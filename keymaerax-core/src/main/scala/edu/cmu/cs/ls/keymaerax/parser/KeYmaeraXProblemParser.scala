@@ -114,6 +114,8 @@ object KeYmaeraXProblemParser {
       }
       val prefix = s.split(nonAsciiCharacter).head
       val lines = prefix.split("\n")
+      assert(lines != null && lines.length > 0,
+        s"Expected a 'last' element but found ${lines} because there is a disallowed unicode character _${disallowedChars.mkString(" ")}_")
       val lineNumber = lines.length
       val columnNumber = lines.last.length + 1
       Some(new Region(lineNumber, columnNumber, lineNumber, columnNumber), nonAsciiCharacter)
