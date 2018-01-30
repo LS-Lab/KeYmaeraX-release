@@ -362,7 +362,7 @@ private object ToolTactics {
         pushIn(pos.inExpr)(pos.top)
       )
       )
-    else throw BelleTacticFailure(s"Invalid transformation: $to")
+    else throw BelleTacticFailure(s"Invalid transformation: cannot transform ${sequent.sub(pos)} to $to")
   }
 
   /** Transforms the term at position `pos` into the term `to`. */
