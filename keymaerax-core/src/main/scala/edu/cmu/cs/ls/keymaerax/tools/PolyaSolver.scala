@@ -7,12 +7,15 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
-import java.io.{FileWriter, FileOutputStream, File, InputStream}
+import java.io.{File, FileOutputStream, FileWriter, InputStream}
 import java.nio.channels.Channels
 import java.util.Locale
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, ParseException, KeYmaeraXParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter, ParseException}
+import org.apache.logging.log4j.scala.Logging
+
 import scala.collection.immutable
 import scala.sys.process._
 
@@ -20,14 +23,12 @@ import scala.sys.process._
  * Created by ran on 4/24/15.
  * @author Ran Ji
  */
-class PolyaSolver extends SMTSolver {
-  private val DEBUG = System.getProperty("DEBUG", "true")=="true"
-
+class PolyaSolver extends SMTSolver with Logging {
   private val converter = DefaultSMTConverter
 
   /** Get the absolute path to Polya jar */
   private val pathToPolya : String = {
-    val polyaTempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
+    val polyaTempDir = Configuration.path(Configuration.Keys.POLYA_PATH)
     if(!new File(polyaTempDir).exists) new File(polyaTempDir).mkdirs
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
 
@@ -50,7 +51,8 @@ class PolyaSolver extends SMTSolver {
         throw new Exception("Polya solver is currently not supported in your operating system.")
       }
       if(resource == null)
-        throw new Exception("Could not find Polya in classpath: " + System.getProperty("user.dir"))
+        //@note points to a release error
+        throw new Exception("Unable to find Polya in classpath jar bundle: " + System.getProperty("user.dir"))
 
       val polyaSource = Channels.newChannel(resource)
       val polyaTemp = new File(polyaTempDir, "polya")
@@ -101,7 +103,7 @@ class PolyaSolver extends SMTSolver {
   /** Return Polya QE result and the proof evidence */
   def qeEvidence(f: Formula) : (Formula, Evidence) = {
     val smtCode = converter(f)
-    if (DEBUG) println("[Solving with Polya...] \n" + smtCode)
+    logger.debug("[Solving with Polya...] \n" + smtCode)
     val smtFile = File.createTempFile("polyaQe", ".smt2")
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
@@ -110,7 +112,7 @@ class PolyaSolver extends SMTSolver {
     val cmd = pathToPolya + " " + smtFile.getAbsolutePath
     /** Polya output as String, (check-sat) gives 1, -1 or 0 */
     val polyaOutput = cmd.!!
-    if (DEBUG) println("[Polya result] \n" + polyaOutput)
+    logger.debug("[Polya result] \n" + polyaOutput)
     val polyaResult = getTruncatedResult(polyaOutput)
     /** Interpretation of Polya output as KeYmaera X formula
       * if Polya output is 1, then return True
@@ -130,7 +132,7 @@ class PolyaSolver extends SMTSolver {
    */
   def simplify(t: Term) : Term = {
     val smtCode = converter.generateSimplify(t)
-    if (DEBUG) println("[Simplifying with Polya ...] \n" + smtCode)
+    logger.debug("[Simplifying with Polya ...] \n" + smtCode)
     val smtFile = File.createTempFile("polyaSimplify", ".smt2")
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
@@ -138,13 +140,13 @@ class PolyaSolver extends SMTSolver {
     writer.close()
     val cmd = pathToPolya + " " + smtFile.getAbsolutePath
     val polyaOutput = cmd.!!
-    if (DEBUG) println("[Polya simplify result] \n" + polyaOutput + "\n")
+    logger.debug("[Polya simplify result] \n" + polyaOutput + "\n")
     val polyaResult = getTruncatedResult(polyaOutput)
     try {
       KeYmaeraXParser.termParser(polyaResult)
     } catch {
       case e: ParseException =>
-        if (DEBUG) println("[Info] Cannot parse Polya simplified result: " + polyaResult)
+        logger.debug("[Info] Cannot parse Polya simplified result: " + polyaResult)
         t
     }
   }

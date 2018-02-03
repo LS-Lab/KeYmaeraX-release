@@ -4,9 +4,12 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
 import ProofRuleTactics.requireOneSubgoal
+import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDB
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
+import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
 import scala.language.postfixOps
@@ -16,7 +19,7 @@ import scala.language.postfixOps
  */
 object DebuggingTactics {
   //@todo import a debug flag as in Tactics.DEBUG
-  private val DEBUG = System.getProperty("DEBUG", "false")=="true"
+  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
 
   def error(e : Throwable) = new BuiltInTactic("Error") {
     override def result(provable: ProvableSig): ProvableSig = throw e
@@ -183,7 +186,7 @@ object Idioms {
       Idioms.<(labels.map(l => labelledTactics(l)):_*)
     }
     override def computeExpr(provable: ProvableSig): BelleExpr = {
-      if (DEBUG) println("No branch labels, executing by branch order")
+      logger.debug("No branch labels, executing by branch order")
       Idioms.<((s1 +: spec).map(_._2):_*)
     }
   }
@@ -280,6 +283,52 @@ object Idioms {
    * shift(child, t) does t to positions shifted by child
    */
   def shift(child: PosInExpr, t: DependentPositionTactic): DependentPositionTactic = shift(p => p ++ child, t)
+
+  /** Map sub-positions of `pos` to Ts that fit to the expressions at those sub-positions per `trafo`. */
+  def mapSubpositions[T](pos: Position, sequent: Sequent, trafo: (Expression, Position) => Option[T]): List[T] = {
+    var result: List[T] = Nil
+
+    def mapTerm(p: PosInExpr, t: Term) = trafo(t, pos ++ p) match {
+      case Some(tt) => result = tt +: result; Left(None)
+      case None => Left(None)
+    }
+
+    def mapFormula(p: PosInExpr, e: Formula) = trafo(e, pos ++ p) match {
+      case Some(tt) => result = tt +: result; Left(None)
+      case None => Left(None)
+    }
+
+    //@note traverse expression, collect Ts in `result` as side effect
+    sequent.sub(pos) match {
+      case Some(f: Formula) =>
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = mapFormula(p, e)
+          override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = mapTerm(p, t)
+        }, f)
+      case Some(t: Term) =>
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+          override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = mapTerm(p, t)
+        }, t)
+      case _ =>
+    }
+
+    result
+  }
+
+  /** Search for formula `f` in the sequent and apply tactic `t` at subposition `in` of the found position. */
+  def searchApplyIn(f: Formula, t: DependentPositionTactic, in: PosInExpr): DependentTactic = "ANON" by ((seq: Sequent) => {
+    //@todo Extend position locators to sub-positions, e.g., 'L.1.0.1, 'Llast.1.1
+    val subPos: Position = {
+      val ante = seq.ante.indexOf(f)
+      if (ante >= 0) AntePosition.base0(ante, in)
+      else {
+        val succ = seq.succ.indexOf(f)
+        if (succ >= 0) SuccPosition.base0(succ, in)
+        else throw BelleTacticFailure("Cannot find formula " + f.prettyString + " in sequent " + seq.prettyString)
+      }
+    }
+    t(subPos)
+  })
 }
 
 /** Creates tactic objects */
@@ -293,19 +342,19 @@ object TacticFactory {
    * @param name The tactic name.
     *             Use the special name "ANON" to indicate that this is an anonymous inner tactic that needs no storage.
    */
-  implicit class TacticForNameFactory(val name: String) {
+  implicit class TacticForNameFactory(val name: String) extends Logging {
     if (name == "") throw new InternalError("Don't use empty name, use ANON for anonymous inner tactics")
     /*if (false)*/ {
       try {
         if (name != "ANON" && DerivationInfo.ofCodeName(name).codeName.toLowerCase() != name.toLowerCase())
-          println("WARNING: codeName should be changed to a consistent name: " + name + " vs. " + DerivationInfo.ofCodeName(name).codeName)
+          logger.warn("WARNING: codeName should be changed to a consistent name: " + name + " vs. " + DerivationInfo.ofCodeName(name).codeName)
       } catch {
-        case _: IllegalArgumentException => println("WARNING: codeName not found: " + name)
+        case ex: IllegalArgumentException => logger.warn("WARNING: codeName not found: " + name, ex)
       }
     }
 
     /** Creates a named tactic */
-    def by(t: BelleExpr): BelleExpr = new NamedTactic(name, t)
+    def by(t: BelleExpr): BelleExpr = NamedTactic(name, t)
 
     def byTactic(t: ((ProvableSig, Position, Position) => BelleExpr)) = new DependentTwoPositionTactic(name) {
       override def computeExpr(p1: Position, p2: Position): DependentTactic = new DependentTactic("") {

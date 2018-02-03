@@ -60,8 +60,8 @@ object SimplifierV3 {
 
   private lazy val negAx = remember( "(A_() -> (L_() = LL_())) -> A_() -> (-L_() = -LL_())".asFormula,prop & exhaustiveEqL2R(-1) & cohideR(1) & byUS("= reflexive"), namespace).fact
 
-  private val equalTrans = proveBy("(P_() -> (F_() = FF_())) & (Q_() -> (FF_() = FFF_())) -> (P_() & Q_() -> (F_() = FFF_())) ".asFormula,
-    prop & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive"))
+  private lazy val equalTrans = remember("(P_() -> (F_() = FF_())) & (Q_() -> (FF_() = FFF_())) -> (P_() & Q_() -> (F_() = FFF_())) ".asFormula,
+    prop & exhaustiveEqL2R(-1) & exhaustiveEqL2R(-2) & cohideR(1) & byUS("= reflexive")).fact
 
   //TODO: think more about the type used to represent the current context
   type context = Set[Formula]
@@ -181,7 +181,7 @@ object SimplifierV3 {
             val fml = Imply(premise, Equal( t, tt ))
             //instantiate the middle ff to recf
             val prr = proveBy(fml,
-              useAt("ANON",equalTrans,PosInExpr(1::Nil),
+              useAt(equalTrans,PosInExpr(1::Nil),
                 (us:Option[Subst])=>us.get++RenUSubst(("FF_()".asTerm,rect)::Nil))(1) &
                 andR(1) <(by(pr2),by(pr))
             )
@@ -531,7 +531,7 @@ object SimplifierV3 {
             val fml = Imply(premise, Equiv( f, ff ))
             //instantiate the middle ff to recf
             val prr = proveBy(fml,
-              useAt("ANON",equivTrans,PosInExpr(1::Nil),
+              useAt(equivTrans,PosInExpr(1::Nil),
                 (us:Option[Subst])=>us.get++RenUSubst(("FF_()".asFormula,recf)::Nil))(1) &
               andR(1) <(by(pr2),by(pr))
             )

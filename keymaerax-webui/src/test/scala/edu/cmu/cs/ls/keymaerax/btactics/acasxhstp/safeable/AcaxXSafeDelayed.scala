@@ -71,8 +71,8 @@ class AcaxXSafeDelayed extends AcasXBase {
   }
 
   it should "prove delay use case lemma" ignore withMathematica { tool =>
-    if (lemmaDB.contains("delay_ucLoLemma"))
-      lemmaDB.remove("delay_ucLoLemma")
+    if (containsLemma("delay_ucLoLemma"))
+      removeLemma("delay_ucLoLemma")
 
     val ucLoFormula = Imply(invariant, postcond)
 
@@ -92,12 +92,12 @@ class AcaxXSafeDelayed extends AcasXBase {
         )
     val ucLoLemma = proveBy(ucLoFormula, ucLoTac)
     ucLoLemma shouldBe 'proved
-    storeLemma(ucLoLemma, Some("delay_ucLoLemma"))
+    storeLemma(ucLoLemma, "delay_ucLoLemma")
   }
 
   it should "prove implicit delay case arithmetic" ignore withMathematica { tool =>
-    if (lemmaDB.contains("delay_implicitArith"))
-      lemmaDB.remove("delay_implicitArith")
+    if (containsLemma("delay_implicitArith"))
+      removeLemma("delay_implicitArith")
 
     val antes = IndexedSeq(
       "tl<=dl".asFormula,
@@ -123,13 +123,11 @@ class AcaxXSafeDelayed extends AcasXBase {
     val minusSimp2 = proveBy("F_() - G_() + G_() = F_()".asFormula,TactixLibrary.QE)
     val custom1 = proveBy("F_() = 0 -> (F_() = 0)".asFormula,implyR(1) & close)
 
-    val minus = ( (t:Term,ctx:context) =>
-      t match {
-        case Minus(Plus(a,b), c) if b == c => List(minusSimp1)
-        case Plus(Minus(a,b),c) if b == c => List(minusSimp2)
-        case _ => List()
-      }
-    )
+    val minus = (t:Term,ctx:context) => t match {
+      case Minus(Plus(a,b), c) if b == c => List(minusSimp1)
+      case Plus(Minus(a,b),c) if b == c => List(minusSimp2)
+      case _ => List()
+    }
 
     //Common useful rewrites in this tactic (rewriteEq should be applied more judiciously)
     val fullSimp = SimplifierV3.fullSimpTac(List(custom1),taxs = composeIndex(minus,defaultTaxs,arithGroundIndex))
@@ -463,11 +461,11 @@ class AcaxXSafeDelayed extends AcasXBase {
     )
 
     pr shouldBe 'proved
-    storeLemma(pr, Some("delay_implicitArith"))
+    storeLemma(pr, "delay_implicitArith")
   }
 
   it should "prove delay lower bound safe lemma" ignore withMathematica { tool =>
-    if (lemmaDB.contains("delay_safeLoLemma")) lemmaDB.remove("delay_safeLoLemma")
+    if (containsLemma("delay_safeLoLemma")) removeLemma("delay_safeLoLemma")
 
     // Formula from print in Theorem 2
     val safeLemmaFormula = """((((w=-1|w=1)&\forall t \forall rt \forall ht \forall hd \forall dhd (rt=rv*t&(0<=t&t < max((0,d))&ht=-w*ad/2*t^2+dho*t|(hd=-w*ad/2*max((0,d))^2+dho*max((0,d))&dhd-dho=-w*ad*max((0,d)))&(0<=t-max((0,d))&t-max((0,d)) < max((0,w*(dhf-dhd)))/ar&ht-hd=w*ar/2*(t-max((0,d)))^2+dhd*(t-max((0,d)))|t-max((0,d))>=max((0,w*(dhf-dhd)))/ar&ht-hd=dhf*(t-max((0,d)))-w*max((0,w*(dhf-dhd)))^2/(2*ar)))->abs(r-rt)>rp|w*(h-ht) < -hp))&rp>=0&hp>0&rv>=0&ar>0&ad>=0&dp>=0&dl>=0)&tl=0&w*a>=-ad)&tl<=dl&(d<=0->w*dho>=w*dhf|w*a>=ar)->[{r'=-rv,h'=-dho,dho'=a,d'=-1,tl'=1&tl<=dl&(d<=0->w*dho>=w*dhf|w*a>=ar)}](((w=-1|w=1)&\forall t \forall rt \forall ht \forall hd \forall dhd (rt=rv*t&(0<=t&t < max((0,d))&ht=-w*ad/2*t^2+dho*t|(hd=-w*ad/2*max((0,d))^2+dho*max((0,d))&dhd-dho=-w*ad*max((0,d)))&(0<=t-max((0,d))&t-max((0,d)) < max((0,w*(dhf-dhd)))/ar&ht-hd=w*ar/2*(t-max((0,d)))^2+dhd*(t-max((0,d)))|t-max((0,d))>=max((0,w*(dhf-dhd)))/ar&ht-hd=dhf*(t-max((0,d)))-w*max((0,w*(dhf-dhd)))^2/(2*ar)))->abs(r-rt)>rp|w*(h-ht) < -hp))&rp>=0&hp>0&rv>=0&ar>0&ad>=0&dp>=0&dl>=0)""".stripMargin.asFormula
@@ -475,16 +473,16 @@ class AcaxXSafeDelayed extends AcasXBase {
     val safeLemmaTac = dT("lemma") & implyR('R) & eAndL & dT("solving") & solve('R) &
       dT("Before skolem") & ((allR('R) | implyR('R))*) & dT("After skolem") &
       SimplifierV3.simpTac()(1) & dT("Simplified using known facts") & (allR('R)*) &
-      by(lemmaDB.get("delay_implicitArith").getOrElse(throw new Exception("Lemma delay_implicitArith must be proved first")))
+      useLemma("delay_implicitArith", None)
 
     val safeLemma = proveBy(safeLemmaFormula, safeLemmaTac)
     safeLemma shouldBe 'proved
 
-    storeLemma(safeLemma, Some("delay_safeLoLemma"))
+    storeLemma(safeLemma, "delay_safeLoLemma")
   }
 
   it should "prove Theorem 2: correctness of delayed implicit safe regions" ignore {
-    if (lemmaDB.contains("safe_delay_implicit")) lemmaDB.remove("safe_delay_implicit")
+    if (containsLemma("safe_delay_implicit")) removeLemma("safe_delay_implicit")
     runLemmaTest("delay_ucLoLemma", "ACAS X safe should prove delay use case lemma")
     runLemmaTest("delay_implicitArith", "ACAS X safe should prove implicit delay case arithmetic")
     runLemmaTest("delay_safeLoLemma", "ACAS X safe should prove lower bound safe lemma")
@@ -502,7 +500,7 @@ class AcaxXSafeDelayed extends AcasXBase {
         (useCase,
           dT("Use case") & andR('R) & Idioms.<(
             cohide2(-1, 1) & implyRi &
-              by(lemmaDB.get("delay_ucLoLemma").getOrElse(throw new Exception("Lemma delay_ucLoLemma must be proved first"))) & done,
+              useLemma("delay_ucLoLemma", None) & done,
             eAndL & closeId & done
           ) & done
           )
@@ -517,10 +515,8 @@ class AcaxXSafeDelayed extends AcasXBase {
                 DifferentialTactics.diffUnpackEvolutionDomainInitially(1) &
                 dT("Preparing for delay_safeLoLemma") & (andLi *) & implyRi &
                 dT("status") &
-                by(lemmaDB.get("delay_safeLoLemma").getOrElse(throw new Exception("Lemma delay_safeLoLemma must be proved first"))) & done
-
+                useLemma("delay_safeLoLemma", None) & done
               )
-
           )
       )
 
@@ -528,7 +524,7 @@ class AcaxXSafeDelayed extends AcasXBase {
 
       println(safeTheorem)
       safeTheorem shouldBe 'proved
-      storeLemma(safeTheorem, Some("safe_delay_implicit"))
+      storeLemma(safeTheorem, "safe_delay_implicit")
     }
   }
 
@@ -540,7 +536,7 @@ class AcaxXSafeDelayed extends AcasXBase {
 
 //Note: incomplete
 //  it should "prove Lemma 2: equivalence of delayed explicit safe regions" in withMathematica { tool =>
-//    //if (lemmaDB.contains("safe_delay_equivalence")) lemmaDB.remove("safe_delay_equivalence")
+//    //if (containsLemma("safe_delay_equivalence")) removeLemma("safe_delay_equivalence")
 //    //val foo = new AcasXSafe().runLemmaTest("safe_equivalence", "ACAS X safe should prove Lemma 1: equivalence between implicit and explicit region formulation")
 //
 //    val rewriteEq = proveBy("F_() - G_() = H_() <-> F_() = H_() + G_()".asFormula, QE)

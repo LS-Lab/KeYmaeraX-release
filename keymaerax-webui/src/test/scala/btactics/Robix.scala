@@ -17,6 +17,8 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 
 import scala.language.postfixOps
 
+import org.scalatest.LoneElement._
+
 /**
  * Robix test cases.
  *
@@ -104,9 +106,7 @@ class Robix extends TacticTestBase {
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) & SimplifierV2.simpTac(1))
 
-    foResult.subgoals should have size 1
-    foResult.subgoals.head.ante shouldBe empty
-    foResult.subgoals.head.succ should contain only "v>=0&xpost()=x&ypost()=y&vpost()=v&apost()=-B()&dxpost()=dx&dypost()=dy&wpost()=w".asFormula
+    foResult.subgoals.loneElement shouldBe "==> v>=0&xpost=x&ypost=y&vpost=v&apost=-B()&dxpost=dx&dypost=dy&wpost=w".asSequent
   }
 
   "Passive Safety" should "be provable" in withMathematica { qeTool =>

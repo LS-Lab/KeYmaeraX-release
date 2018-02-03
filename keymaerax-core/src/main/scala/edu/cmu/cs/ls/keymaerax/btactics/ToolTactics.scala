@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger.LogConfig
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 import scala.language.postfixOps
 import scala.math.Ordering.Implicits._
@@ -28,25 +29,27 @@ private object ToolTactics {
   private val namespace = "tooltactics"
 
   /** Performs QE and fails if the goal isn't closed. */
-  def fullQE(order: List[NamedSymbol] = Nil)(qeTool: => QETool): BelleExpr = {
-    Idioms.NamedTactic("QE",
-      QELogger.getLogTactic &
-      (done | //@note don't fail QE if already proved
-        ((alphaRule*) &
+  def fullQE(order: List[NamedSymbol] = Nil)(qeTool: => QETool): BelleExpr = Idioms.NamedTactic("QE", {
+    val prepareAndRcf = toSingleFormula & assertT(_.succ.head.isFOL, "QE on FOL only") &
+      FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool) &
+      (done | ("ANON" by ((s: Sequent) =>
+        if (s.succ.head == False) label("QE CEX")
+        else DebuggingTactics.done("QE was unable to prove: invalid formula")))
+        )
+
+    QELogger.getLogTactic &
+    (done | //@note don't fail QE if already proved
+      ((alphaRule*) &
         (close |
           ((EqualityTactics.atomExhaustiveEqL2R('L)*) &
-          hidePredicates &
-          toSingleFormula & assertT(_.succ.head.isFOL, "QE on FOL only") &
-            FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool) &
-            (done | ("ANON" by ((s: Sequent) =>
-              if (s.succ.head == False) label("QE CEX")
-              else DebuggingTactics.done("QE was unable to prove: invalid formula")))
-              )
-            )
+            hidePredicates &
+            (prepareAndRcf | EqualityTactics.expandAll & prepareAndRcf)
           )
         )
       )
-  )}
+    )
+  })
+
   def fullQE(qeTool: => QETool): BelleExpr = fullQE()(qeTool)
 
   // Follows heuristic in C.W. Brown. Companion to the tutorial: Cylindrical algebraic decomposition, (ISSAC 2004)

@@ -1,5 +1,6 @@
 package bellerophon.pptests
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
@@ -62,6 +63,13 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
     val tactic = TactixLibrary.loop("x>0".asFormula)(1)
     BellePrettyPrinter(tactic) shouldBe "loop({`x>0`}, 1)"
     roundTrip("loop({`x>0`}, 1)")
+  }
+
+  "useLemmaAt" should "print key correctly" in {
+    BellePrettyPrinter(TactixLibrary.useLemmaAt("the lemma", None)(1)) shouldBe "useLemmaAt({`the lemma`}, 1)"
+    roundTrip("useLemmaAt({`the lemma`}, 1)")
+    BellePrettyPrinter(TactixLibrary.useLemmaAt("the lemma", Some(PosInExpr(1::Nil)))(1)) shouldBe "useLemmaAt({`the lemma`}, {`1`}, 1)"
+    roundTrip("useLemmaAt({`the lemma`}, {`1`}, 1)")
   }
 
   "Operator precedence" should "bind saturate * stronger than ;" in { roundTrip("implyR(1) ; andL('L)*") }

@@ -5,7 +5,12 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 
-import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
+import java.io.File
+
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
+import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
+import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Lemma}
 import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -72,17 +77,32 @@ class AcasXBase extends TacticTestBase {
        |""".stripMargin
 
   /* Lemmas */
-  def storeLemma(fact: ProvableSig, name: Option[String]): String = {
+  def storeLemma(fact: ProvableSig, name: String): String = {
     val evidence = ToolEvidence(immutable.List("input" -> fact.conclusion.prettyString, "output" -> "true")) :: Nil
     // add lemma into DB, which creates an ID for it. use ID to apply the lemma
-    val id = lemmaDB.add(Lemma(fact, evidence, name))
-    println(s"Lemma ${name.getOrElse("")} stored as $id")
+    val id = lemmaDB.add(Lemma(fact, evidence, Some("user" + File.separator + name)))
+    println(s"Lemma $name stored as $id")
     id
+  }
+
+  def containsLemma(name: String): Boolean = lemmaDB.contains("user" + File.separator + name)
+
+  def removeLemma(name: String): Unit = lemmaDB.remove("user" + File.separator + name)
+
+  def getLemma(name: String): Lemma = lemmaDB.get("user" + File.separator + name).getOrElse(throw new Exception(s"Proof will be partial. Prove $name first"))
+
+  def insertLemma(lemmaName: String): BelleExpr = {
+    val lemma = getLemma(lemmaName)
+    // when no hyp in lemma
+    cut(lemma.fact.conclusion.succ.head) & Idioms.<(
+      (cutShow, cohideR('Rlast) & by(lemma)),
+      (cutUse, skip)
+    )
   }
 
   /** Proves a lemma by running its test case. */
   def runLemmaTest(name: String, proofCaseName: String): Unit = {
-    if (!lemmaDB.contains(name)) {
+    if (!containsLemma(name)) {
       println(s"Proving $name...")
       runTest(proofCaseName, Args(nilReporter))
       println("...done")

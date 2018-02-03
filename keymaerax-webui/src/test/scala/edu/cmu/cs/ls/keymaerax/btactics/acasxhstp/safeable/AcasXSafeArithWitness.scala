@@ -52,7 +52,7 @@ class AcasXSafeArithWitness extends AcasXBase {
   private lazy val fQE = normaliseNNF & OnAll(ratTac) & OnAll(resortEqs)
 
   "ACAS X safe" should "prove use case lemma" in withMathematica { tool => withDatabase { db =>
-    if (lemmaDB.contains("nodelay_ucLoLemma")) lemmaDB.remove("nodelay_ucLoLemma")
+    if (containsLemma("nodelay_ucLoLemma")) removeLemma("nodelay_ucLoLemma")
 
     val w1 = List(((List(1),List((1,"maxI","max_0","1"),(1,"max_0","0","1"),(1,"rp","wit__0^2","1"),(1,"rv","wit__1^2","1"),(5,"a","wit_^2","1"),(4,"hp","wit__5^2","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm)),List(),Some(List((0,"0"),(1,"0"),(2,"0"),(3,"1/2")).map (s => (s._1,s._2.asTerm))))),
       ((List(1,2),List((1,"maxI","max_0","1"),(1,"max_0","-(dhd - dhf)*w","1"),(1,"rp","wit__0^2","1"),(1,"rv","wit__1^2","1"),(4,"a","wit__5^2","1"),(3,"hp","wit__4^2","1")).map( s => (s._1,s._2.asTerm,s._3.asTerm,s._4.asTerm)),List(("1","wit__2*wit__5^3*wit_")).map( s => (s._1.asTerm,s._2.asTerm)),Some(List((0,"0"),(1,"-(dhd - dhf)*w*wit__5^4"),(2,"0"),(3,"-wit__2^2*wit__5^6")).map (s => (s._1,s._2.asTerm))))),

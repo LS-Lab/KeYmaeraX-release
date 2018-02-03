@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, Interpreter, Sequenti
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
+import org.apache.logging.log4j.scala.Logging
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 
@@ -16,7 +17,7 @@ import scala.collection.immutable._
   * Populates the database from a JSON collection of models and tactics.
   * @author Stefan Mitsch
   */
-object DatabasePopulator {
+object DatabasePopulator extends Logging {
 
   //@todo publish the tutorials and case studies somewhere on the web page, add Web UI functionality to explore tutorials
   // and case studies and import into the database
@@ -90,21 +91,21 @@ object DatabasePopulator {
   def importModel(db: DBAbstraction, user: String, prove: Boolean)(entry: TutorialEntry): Unit = {
     val now = Calendar.getInstance()
     val entryName = db.getUniqueModelName(user, entry.name)
-    println("Importing model " + entryName + "...")
+    logger.info("Importing model " + entryName + "...")
     db.createModel(user, entryName, entry.model, now.getTime.toString, entry.description,
       entry.link, entry.title, entry.tactic match { case Some((_, t, _)) => Some(t) case _ => None }) match {
       case Some(modelId) => entry.tactic match {
         case Some((tname, tacticText, _)) =>
-          println("Importing proof...")
+          logger.info("Importing proof...")
           val proofId = db.createProofForModel(modelId, entryName + " (" + tname + ")", "Imported from tactic " + tname,
             now.getTime.toString, Some(tacticText))
           if (prove) executeTactic(db, entry.model, proofId, tacticText)
-          println("...done")
+          logger.info("...done")
         case _ => // nothing else to do, not asked to prove or don't know how to prove without tactic
       }
       case None => ???
     }
-    println("...done")
+    logger.info("...done")
   }
 
   /** Prepares an interpreter for executing tactics. */

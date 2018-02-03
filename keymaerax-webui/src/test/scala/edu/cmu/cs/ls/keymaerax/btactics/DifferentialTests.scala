@@ -1156,6 +1156,11 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "r>0&true ==> \\forall t_ (t_>=0 -> 1/r*t_+v>0)".asSequent
   }
 
+  it should "retain quantified facts without trying to diffcut" in withQE { _ =>
+    val result = proveBy("\\forall v v>0 ==> [{v'=1}]v>0".asSequent, solve(1))
+    result.subgoals.loneElement shouldBe "\\forall v v>0 ==> \\forall t_ (t_>=0 -> t_+v>0)".asSequent
+  }
+
   it should "solve in context" in withQE { _ =>
     val result = proveBy("A>0 -> [a:=A;][{v'=a}]v>0".asFormula, implyR(1) & solve(1, 1::Nil))
     result.subgoals.loneElement shouldBe "A>0 ==> [a:=A;]\\forall t_ (t_>=0 -> a*t_+v>0)".asSequent

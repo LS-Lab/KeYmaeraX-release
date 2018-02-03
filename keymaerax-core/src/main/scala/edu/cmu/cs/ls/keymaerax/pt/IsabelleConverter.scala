@@ -6,7 +6,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.btactics.{AxiomInfo, DerivedRuleInfo, ExpressionTraversal}
 import edu.cmu.cs.ls.keymaerax.core.{DotFormula, _}
-import edu.cmu.cs.ls.keymaerax.pt.IsabelleConverter._
+import edu.cmu.cs.ls.keymaerax.pt.IsabelleConverter.{ID,ISABELLE_IDS,IDEnum,IDLeft,IDRight,IDUnit,Irule,Isequent}
+import org.apache.logging.log4j.scala.Logging
 
 /**
   * Convert proof terms to sublanguage + syntax used by Isabelle formalization
@@ -14,7 +15,8 @@ import edu.cmu.cs.ls.keymaerax.pt.IsabelleConverter._
   * @see [[ProofChecker]]
   * @author Brandon Bohrer
   */
-object IsabelleConverter {
+object IsabelleConverter extends Logging {
+
   val idtype = "myvars"
   val unittype = "Unit"
 
@@ -43,7 +45,7 @@ object IsabelleConverter {
   }
 }
 
-object IDMap {
+object IDMap extends Logging {
   val axiomIds = IDMap(
     // VAR MAP
     Map((("x_",None), "i1"), (("y_",None), "i2"), (("v_",None), "i1"), (("t_",None),"i2"), (("s_",None),"i3")),
@@ -183,7 +185,7 @@ object IDMap {
 //        println("Translating functional replaced with: " + repl)
         ofFuncl(name,repl,acc)
       case (x,y) => {
-        println(x,y)
+        logger.trace(s"$x, $y")
         val 2 = 1 + 1
         ???
       }
@@ -203,7 +205,7 @@ object IDMap {
               try {
                 DerivedRuleInfo.allInfo.find(info => info.codeName.toLowerCase() == name.toLowerCase()).get.provable.underlyingProvable
               } catch {
-                case e : NoSuchElementException => println("Couldn't find rule: " + name)
+                case e : NoSuchElementException => logger.warn("Couldn't find rule: " + name, e)
                   throw e
               }
           }
@@ -418,7 +420,7 @@ case class ICommuteEquivR() extends Irrule {}
 case class ISkolem() extends Irrule {}
 case class IBRenameR(what:ID,repl:ID) extends Irrule {}
 
-object Iaxiom {
+object Iaxiom extends Logging {
   def apply(n:String):Iaxiom = {
     n match {
       case "(+)'" => IAdPlus()
@@ -446,7 +448,7 @@ object Iaxiom {
         //IADIGeq() // e.g. IADIGr()
       case "G goedel" => {
         val 2 = 1 + 1
-        println("Encountered goedel axiom, thought it should be rule")
+        logger.fatal("Encountered goedel axiom, thought it should be rule")
         ???
       }
       case "<-> reflexive" => IAEquivReflexive()
@@ -598,7 +600,7 @@ case class ConSubst() extends SymMode {
   def base = this
 }
 
-class IsabelleConverter(pt:ProofTerm) {
+class IsabelleConverter(pt:ProofTerm) extends Logging {
 
 
   val m:IDMap = IDMap.ofProofTerm(pt, IDMap.empty)
@@ -691,7 +693,7 @@ class IsabelleConverter(pt:ProofTerm) {
         case (Nil, id::idss) => None :: extendSub(Nil,idss)
         case (Nil, Nil) => Nil
         case (a::b, Nil) =>
-          println("wot")
+          logger.fatal("wot")
           ???
       }
     }
@@ -784,7 +786,7 @@ class IsabelleConverter(pt:ProofTerm) {
       ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm(geqPrimeName /*">=' derive >="*/), _),
       UsubstProvableTerm(RuleTerm(ceName /*"CE Equiv"*/), _)), _, _), _, _), _),
       UsubstProvableTerm(AxiomTerm(equivReflName), equivReflSubst), where) =>
-        println("Did we find a new case for diff formula chase?"+ pt)
+        logger.trace("Did we find a new case for diff formula chase?"+ pt)
         false
       case _ => false
     }
@@ -800,7 +802,7 @@ class IsabelleConverter(pt:ProofTerm) {
           ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm(">=' derive >="), _),
           UsubstProvableTerm(RuleTerm("CE congruence"), _)), _, _: EquivifyRight), _, _: CoHideRight), _),
           UsubstProvableTerm(AxiomTerm("<-> reflexive"), equivReflSubst), where) =>
-            println(reflFml+"\n\n\n"+equivReflSubst)
+            logger.trace(reflFml+"\n\n\n"+equivReflSubst)
             ISub(IStart(apply(reflFml,NonSubst())),IPrUSubst(IAx(Iaxiom("<-> reflexive")),apply(equivReflSubst)), where)
 /*      case Sub(Sub(RuleApplication(StartProof(reflFml),"cut Right",_,_,_),
           ForwardNewConsequenceTerm(
@@ -810,14 +812,14 @@ class IsabelleConverter(pt:ProofTerm) {
           ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm("<=' derive <="), _),
           UsubstProvableTerm(RuleTerm("CE congruence"), _)), _, _: EquivifyRight), _, _: CoHideRight), _),
           UsubstProvableTerm(AxiomTerm("<-> reflexive"), equivReflSubst), where) =>
-            println(reflFml+"\n\n\n"+equivReflSubst)
+            logger.trace(reflFml+"\n\n\n"+equivReflSubst)
             ISub(IStart(apply(reflFml,NonSubst())),IPrUSubst(IAx(Iaxiom("<-> reflexive")),apply(equivReflSubst)), where)
       case Sub(Sub(RuleApplication(StartProof(reflFml), "cut Right", _, _, _),
       ForwardNewConsequenceTerm(
       ForwardNewConsequenceTerm(ProlongationTerm(UsubstProvableTerm(AxiomTerm("=' derive ="), _),
       UsubstProvableTerm(RuleTerm("CE congruence"), _)), _, _: EquivifyRight), _, _: CoHideRight), _),
       UsubstProvableTerm(AxiomTerm("<-> reflexive"), equivReflSubst), where) =>
-        println(reflFml+"\n\n\n"+equivReflSubst)
+        logger.trace(reflFml+"\n\n\n"+equivReflSubst)
         ISub(IStart(apply(reflFml,NonSubst())),IPrUSubst(IAx(Iaxiom("<-> reflexive")),apply(equivReflSubst)), where)
       case _ =>
         val 2 = 1 + 1
@@ -905,14 +907,14 @@ private def or(p:Iformula,q:Iformula):Iformula = {
             val ode = apply(cc,NonSubst())
             val left = apply(l,Defun(NonSubst()))
             val right = apply(r,Defun(NonSubst()))
-            println("Doin the translate, left: " + left + " and right: " + right)
+            logger.trace("Doin the translate, left: " + left + " and right: " + right)
             val ruleApp = IDIGeqSchema(ode,left,right)
             //val ax = IADIGeq()
             val inst:Iformula = diGeqConclusion(ode,left,right)
             val instSeq = (List(), List(inst))
             val result = IPrUSubst(IRuleApplication(IStart(instSeq), ruleApp,0),smallApp)
             val foo = ProofChecker(pttt)
-            println("Thesubst >=: ************" + bigSubst + "\n******************")
+            logger.trace("Thesubst >=: ************" + bigSubst + "\n******************")
             IRuleApplication(ISub(apply(a),ISub(apply(b),result,c),d),apply(e,g,h),f)
           /*case LessEqual(r,l) =>
             val fsym = UnitFunctional("f", AnyArg, Real)
@@ -1017,11 +1019,11 @@ private def or(p:Iformula,q:Iformula):Iformula = {
           val sm2 = if(seqNeedsDepred(seq)) { Depred(sm0) } else sm1
           val space = if(seqNeedsBanana(seq)) { INBSpace("i1") } else {IAllSpace()}
           val sm3 = if(seqNeedsBanana(seq)) {
-            println("Bananizing startproof: " + seq)
+            logger.trace("Bananizing startproof: " + seq)
             BananaODE(sm2)
           } else sm2
           if(sm3 != NonSubst()) {
-            println("Interesting startproof: " + sm3)
+            logger.trace("Interesting startproof: " + sm3)
           }
           IStart(apply(seq,sm3))
         case NoProof() => throw ConversionException("Encountered unproven subproof")
@@ -1175,7 +1177,7 @@ private def or(p:Iformula,q:Iformula):Iformula = {
       case (UnitFunctional(name, _space, _sort),_)if sm.base == DefunSubst() || sm.base == FunSubst()=>
         val tmp = m.funMap(Right(name))
         val fid = tmp//if (tmp == "i1")  {println("Doin second magic: " ); "i2"} else tmp
-        if(fid == "i5") println("!!! 1")
+        if(fid == "i5") logger.trace("!!! 1")
         IFunctional(IDLeft(IDEnum(fid)))
       //case UnitFunctional(name, _space, _sort) if sm == FunSubst()=> IFunctional(IDLeft(IDEnum(m.funMap(Right(name)))))
       case (UnitFunctional(name, _space, _sort),_) => IFunctional(IDEnum(m.funMap(Right(name))))
@@ -1198,7 +1200,7 @@ private def or(p:Iformula,q:Iformula):Iformula = {
         val funId =
           // @todo: should depredsubst be here
           if(sm.base == FunSubst() || sm.base == DefunSubst() || sm.base == DepredSubst()) {
-            println("Funcof: " + name + " mode: " + sm + " id: " + m.funMap(Left(name)))
+            logger.trace("Funcof: " + name + " mode: " + sm + " id: " + m.funMap(Left(name)))
             IDLeft(IDEnum(m.funMap(Left(name))))
           } else {
             IDEnum(m.funMap(Left(name)))

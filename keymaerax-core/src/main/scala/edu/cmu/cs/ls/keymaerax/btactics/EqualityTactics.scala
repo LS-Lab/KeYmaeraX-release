@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -207,5 +208,19 @@ private object EqualityTactics {
       abbrv(minmax, Some(minmaxVar)) &
         useAt("= commute")('L, Equal(minmaxVar, minmax)) &
         useAt(fn)('L, Equal(minmax, minmaxVar))
+  })
+
+  /** Expands all special functions (abs/min/max). */
+  def expandAll: BelleExpr = "expandAll" by ((s: Sequent) => {
+    val allTopPos = s.ante.indices.map(i => AntePos(i)) ++ s.succ.indices.map(i => SuccPos(i))
+    val tactics = allTopPos.flatMap(p =>
+      Idioms.mapSubpositions(p, s, {
+        case (FuncOf(Function("abs", _, _, _, true), _), pos: Position) => Some(?(abs(pos)))
+        case (FuncOf(Function("min", _, _, _, true), _), pos: Position) => Some(?(minmax(pos)))
+        case (FuncOf(Function("max", _, _, _, true), _), pos: Position) => Some(?(minmax(pos)))
+        case _ => None
+      })
+    )
+    tactics.reduceOption(_ & _).getOrElse(skip)
   })
 }

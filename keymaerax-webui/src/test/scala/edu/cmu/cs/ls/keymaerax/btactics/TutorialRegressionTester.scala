@@ -6,11 +6,11 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, PartialTactic, TacticStatistics}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, PartialTactic, SequentialInterpreter, TacticStatistics}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Lemma, Program}
-import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
+import edu.cmu.cs.ls.keymaerax.hydra.{DatabasePopulator, TempDBTools}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
@@ -33,8 +33,8 @@ import org.scalatest.prop.TableDrivenPropertyChecks._
 class TutorialRegressionTester(val tutorialName: String, val url: String) extends TacticTestBase with AppendedClues {
 
   private def table(entries: List[TutorialEntry]) = {
-    Table(("Name", "Model", "Description", "Title", "Link", "Tactic", "Kind"),
-      entries.map(e => (e.name, e.model, e.description, e.title, e.link, e.tactic, e.kind)):_*)
+    Table(("Tutorial name", "Entry name", "Model", "Description", "Title", "Link", "Tactic", "Kind"),
+      entries.map(e => (tutorialName, e.name, e.model, e.description, e.title, e.link, e.tactic, e.kind)):_*)
   }
 
   private val tutorialEntries = table({
@@ -45,31 +45,34 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
   })
 
   tutorialName should "parse all models" in {
-    forEvery (tutorialEntries) { (name, model, _, _, _, _, _) =>
-      withClue(name) { KeYmaeraXProblemParser(model) }
+    forEvery (tutorialEntries) { (tutorialName, name, model, _, _, _, _, _) =>
+      withClue(tutorialName + "/" + name) { KeYmaeraXProblemParser(model) }
     }
   }
 
   it should "parse all tactics" in {
-    forEvery (tutorialEntries.filter(_._6.isDefined)) { (name, _, _, _, _, tactic, _) =>
-      withClue(name + "/" + tactic.get._1) { BelleParser(tactic.get._2) }
+    forEvery (tutorialEntries.filter(_._6.isDefined)) { (tutorialName, name, _, _, _, _, tactic, _) =>
+      withClue(tutorialName + "/" + name + "/" + tactic.get._1) { BelleParser(tactic.get._2) }
     }
   }
 
   it should "prove all entries flagged as being provable with Mathematica" in withMathematica { _ => withDatabase {
     prove("Mathematica")
   }}
-  it should "prove all entries flagged as being provable with Z3" in withZ3 { _ => withDatabase { prove("Z3") }}
+  it should "prove all entries flagged as being provable with Z3" in withZ3 { tool => withDatabase {
+    tool.setOperationTimeout(30) // avoid getting stuck
+    prove("Z3")
+  }}
 
   /* Try to see if any of the Mathematica entries work with Z3. Test "fails" if Z3 can prove an entry. */
   it should "try all Mathematica entries also with Z3" in withZ3 { tool => withDatabase { db =>
     val qeFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
 
-    val mathematicaEntries = tutorialEntries.filter(e => e._6.isDefined && e._6.get._3 &&
-        qeFinder.findAllMatchIn(e._6.get._2).exists(p => p.group("toolName") == "Mathematica"))
+    val mathematicaEntries = tutorialEntries.filter(e => e._7.isDefined && e._7.get._3 &&
+        qeFinder.findAllMatchIn(e._7.get._2).exists(p => p.group("toolName") == "Mathematica"))
 
     tool.setOperationTimeout(30) // avoid getting stuck
-    forEvery (mathematicaEntries) { (name, model, _, _, _, tactic, kind) =>
+    forEvery (mathematicaEntries) { (_, name, model, _, _, _, tactic, kind) =>
       val t = (tactic.get._1, qeFinder.replaceAllIn(tactic.get._2, "QE"), tactic.get._3)
       try {
         runEntry(name, model, kind, t, db)
@@ -82,30 +85,30 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
   }}
 
   /** Proves all entries that either use no QE at all, all generic QE, or whose specific QE({`tool`}) (if any) match tool */
-  private def prove(tool: String)(db: DbTacticTester) = {
+  private def prove(tool: String)(db: TempDBTools): Unit = {
     // finds all specific QE({`tool`}) entries, but ignores the generic QE that works with any tool
     val qeFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
 
     tutorialEntries.
-      filterNot(e => e._6.isDefined && e._6.get._3 &&
-        qeFinder.findAllMatchIn(e._6.get._2).forall(p => p.group("toolName") == tool)).
+      filterNot(e => e._6.isDefined && e._7.get._3 &&
+        qeFinder.findAllMatchIn(e._7.get._2).forall(p => p.group("toolName") == tool)).
       foreach(e => println(s"QE tool mismatch: skipping ${e._1}"))
 
     forEvery (tutorialEntries.
-      filter(e => e._6.isDefined && e._6.get._3 &&
-        qeFinder.findAllMatchIn(e._6.get._2).forall(p => p.group("toolName") == tool))) { (name, model, _, _, _, tactic, kind) =>
+      filter(e => e._7.isDefined && e._7.get._3 &&
+        qeFinder.findAllMatchIn(e._7.get._2).forall(p => p.group("toolName") == tool))) { (_, name, model, _, _, _, tactic, kind) =>
       runEntry(name, model, kind, tactic.get, db)
     }
   }
 
-  private def runEntry(name: String, model: String, kind: String, tactic: (String, String, Boolean), db: DbTacticTester) = {
+  private def runEntry(name: String, model: String, kind: String, tactic: (String, String, Boolean), db: TempDBTools) = {
     withClue(tutorialName + ": " + name + "/" + tactic._1) {
       val (decls, invGen) = parseProblem(model)
       println(s"Proving $name with ${tactic._1}")
       val t = BelleParser.parseWithInvGen(tactic._2, Some(invGen), decls)
 
       val start = System.currentTimeMillis()
-      val proof = db.proveBy(model, t, name)
+      val proof = db.proveBy(model, t, SequentialInterpreter, name)
       val end = System.currentTimeMillis()
 
       println(s"Proof Statistics (proved: ${proof.isProved})")

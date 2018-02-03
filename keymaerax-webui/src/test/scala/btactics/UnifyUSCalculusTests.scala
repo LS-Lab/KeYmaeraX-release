@@ -3,10 +3,10 @@ package btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import org.scalatest.PrivateMethodTester
 
 import scala.collection.immutable._
 
@@ -16,7 +16,7 @@ import scala.collection.immutable._
   * Documents some failures in UnifyUSCalculus, and usage of a few primitives
   *
   */
-class UnifyUSCalculusTests extends TacticTestBase {
+class UnifyUSCalculusTests extends TacticTestBase with PrivateMethodTester {
 
   //Unifier manages to unify F_() - F_() with bad LHS
   "UnifyUSCalculus" should "unify weirdly" ignore withMathematica { qeTool =>
@@ -24,7 +24,8 @@ class UnifyUSCalculusTests extends TacticTestBase {
     val minusReflex = proveBy("A_() - B_() = -B_() + A_()".asFormula,TactixLibrary.QE)
     val fml = "x - y = z".asFormula
     //Both of the following fail because of unification
-    proveBy(fml,useAt("ANON", minusCancel,PosInExpr(0::Nil))(SuccPosition(1, 0 :: Nil)))
+    val useAt = PrivateMethod[DependentPositionTactic]('useAt)
+    proveBy(fml,(HilbertCalculus invokePrivate useAt(minusCancel,PosInExpr(0::Nil)))(SuccPosition(1, 0 :: Nil)))
     useFor(minusCancel, PosInExpr(0 :: Nil))(SuccPosition(1, 0 :: Nil))(minusReflex)
   }
 
@@ -93,14 +94,16 @@ class UnifyUSCalculusTests extends TacticTestBase {
       "P() -> (Q_()=0 -> F_() = 0)".asFormula)
     val succs = antes
 
+    val useAt = PrivateMethod[DependentPositionTactic]('useAt)
+
     val pr = proveBy(Sequent(antes,succs),
       //The position passed in identifies the location of the key to match in rewritten position
 
       //Succedent rewrite
       DebuggingTactics.print("Initial") &
-      useAt("ANON",impl,PosInExpr(1::Nil))(2) & //F_() is matched and strengthened to F_()^2 using F^2=0 -> F =0
+      (HilbertCalculus invokePrivate useAt(impl,PosInExpr(1::Nil)))(2) & //F_() is matched and strengthened to F_()^2 using F^2=0 -> F =0
       //Antecedent rewrite
-      useAt("ANON",impl2,PosInExpr(0::Nil))(-2) & //F_() is matched and weakened to F_()^2 using F=0 -> F^2=0
+      (HilbertCalculus invokePrivate useAt(impl2,PosInExpr(0::Nil)))(-2) & //F_() is matched and weakened to F_()^2 using F=0 -> F^2=0
       DebuggingTactics.print("After useAt") &
 
       //Same as above, except now just giving it straight to CEat under a context

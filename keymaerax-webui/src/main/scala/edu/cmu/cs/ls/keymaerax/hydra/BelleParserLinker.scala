@@ -49,7 +49,7 @@ object BelleParserLinker {
     //Split up the definitions.
     val definitions = s.split("\n\n").filter(_.contains(":==")).map(definition => {
       val parts = definition.split(":==")
-      assert(parts.length == 2, println(definition))
+      assert(parts.length == 2, definition)
       (parts(0).replaceAll(" ","").replaceAll("\n",""), parts(1))
     }).toList
 
@@ -70,7 +70,7 @@ object BelleParserLinker {
 object BelleParserMain {
   def main(args: Array[String]) = {
     val s = scala.io.Source.fromFile("/home/nfulton/dev/scuba/time_triggered_better_hr/padi/below_lactate_threshold/proof.kyt").getLines().mkString("\n")
-    ToolProvider.setProvider(new MathematicaToolProvider(HyDRAInitializer.mathematicaConfigFromDB(DBAbstractionObj.defaultDatabase)))
+    ToolProvider.setProvider(new MathematicaToolProvider(HyDRAInitializer.mathematicaConfig))
     println(BelleParserLinker(s, "main"))
   }
 }

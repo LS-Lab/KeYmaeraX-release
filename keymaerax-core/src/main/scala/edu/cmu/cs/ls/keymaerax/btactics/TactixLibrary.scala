@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
+import org.apache.logging.log4j.scala.Logger
 
 import scala.List
 import scala.collection.immutable._
@@ -57,6 +58,9 @@ import scala.language.postfixOps
   */
 object TactixLibrary extends HilbertCalculus with SequentCalculus {
   import Generator.Generator
+
+  private val logger = Logger(getClass) //@note instead of "with Logging" to avoid cyclic dependencies
+
   /** Default generator for loop invariants and differential invariants to use.
     * @see [[InvariantGenerator]] */
   var invGenerator: Generator[Formula] = FixedGenerator(Nil)
@@ -298,12 +302,26 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     ChooseSome(
       () => try { InvariantGenerator.loopInvariantGenerator(seq,pos) } catch {
         case err: Exception =>
-          if (BelleExpr.DEBUG) println("ChooseSome: error listing options " + err)
+          logger.debug("ChooseSome: error listing options " + err, err)
           List[Formula]().iterator
       },
       (inv:Formula) => loop(inv)(pos) & onAll(auto) & done
     )
     )
+
+  /** throughout: prove a property of a loop by induction with the given loop invariant (hybrid systems) that
+    * holds throughout the steps of the loop body.
+    * Wipes conditions that contain bound variables of the loop.
+    * {{{
+    *   use:                      init:        steps:
+    *   I, G_cnst |- p, D_cnst    G |- I, D    I, G_cnst |- [a]I,    D_cnst
+    *                                          I, G_cnst |- [b;c;]I, D_cnst
+    *                                          I, G_cnst |- [d;]I,   D_cnst
+    *   -------------------------------------------------------------------
+    *   G |- [{a;{b;c;}d}*]p, D
+    * }}}
+    */
+  def throughout(invariant: Formula): DependentPositionTactic = DLBySubst.throughout(invariant)
 
   // differential equations
 
@@ -848,7 +866,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /** Applies the lemma by matching `key` in the lemma with the tactic position. */
   def useLemmaAt(lemmaName: String, key: Option[PosInExpr]): DependentPositionWithAppliedInputTactic = "useLemmaAt" byWithInputs(
-    if (key.isDefined) lemmaName::key.get.prettyString::Nil else lemmaName::Nil,
+    if (key.isDefined) lemmaName::key.get.prettyString.substring(1)::Nil else lemmaName::Nil, //@note remove leading . from PosInExpr
     (pos: Position, _: Sequent) => {
       val userLemmaName = "user" + File.separator + lemmaName //@todo FileLemmaDB + multi-user environment
       if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {

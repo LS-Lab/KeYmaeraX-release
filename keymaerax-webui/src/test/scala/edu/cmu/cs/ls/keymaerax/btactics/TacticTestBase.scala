@@ -2,19 +2,18 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.hydra.{BellerophonTacticExecutor, DBAbstraction, DbProofTree, UserPOJO}
+import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
-import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalactic.{AbstractStringUniformity, Uniformity}
 import org.scalatest._
@@ -40,16 +39,18 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
 
   //@note Initialize once per test class, but only if requested in a withMathematica call
   private val mathematicaProvider = new Lazy(new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig))
+  //@note setup lazy in beforeEach, automatically initialize in withDatabase, tear down in afterEach if initialized
+  private var dbTester: Lazy[TempDBTools] = _
 
-  private val LOG_EARLIEST_QE = System.getProperty("LOG_POTENTIAL_QE", "false")=="true"
-  private val LOG_QE = System.getProperty("LOG_QE", "false")=="true"
-  private val LOG_QE_DURATION = System.getProperty("LOG_QE_DURATION", "true")=="true"
-  private val LOG_QE_STDOUT = System.getProperty("LOG_QE_STDOUT", "false")=="true"
+  private val LOG_EARLIEST_QE = Configuration(Configuration.Keys.LOG_ALL_FO) == "true"
+  private val LOG_QE = Configuration(Configuration.Keys.LOG_QE) == "true"
+  private val LOG_QE_DURATION = Configuration(Configuration.Keys.LOG_QE_DURATION) == "true"
+  private val LOG_QE_STDOUT = Configuration(Configuration.Keys.LOG_QE_STDOUT) == "true"
 
-  protected val qeLogPath: String = System.getProperty("user.home") + "/.keymaerax/logs/qe/"
+  protected val qeLogPath: String = Configuration.path(Configuration.Keys.QE_LOG_PATH)
   private val allPotentialQEListener = new QEFileLogListener(qeLogPath + "wantqe.txt", (p, _) => { p.subgoals.size == 1 && p.subgoals.head.isFOL })
   private val qeListener = new QEFileLogListener(qeLogPath + "haveqe.txt", (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
-  private val qeStdOutListener = new QELogListener((c: Sequent, g: Sequent, s: String) => println(s"$s: ${g.prettyString}"), (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
+  private val qeStdOutListener = new QELogListener((_: Sequent, g: Sequent, s: String) => println(s"$s: ${g.prettyString}"), (_, t) => t match { case DependentTactic("rcf") => true case _ => false })
   protected val qeDurationListener = new StopwatchListener((_, t) => t match {
     case DependentTactic("QE") => true
     case DependentTactic("smartQE") => true
@@ -58,121 +59,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
 
   println("QE log path: " + qeLogPath + " (enabled: " + LOG_QE + ")")
 
-  /** Tests that want to record proofs in a database. */
-  class DbTacticTester {
-    lazy val user: UserPOJO = db.getUser("guest").get
-
-    val db: SQLiteDB = {
-      val testLocation = File.createTempFile("testdb", ".sqlite")
-      val db = new SQLiteDB(testLocation.getAbsolutePath)
-      db.cleanup(testLocation.getAbsolutePath)
-      db
-    }
-
-    /** Turns a formula into a model problem with mandatory declarations. */
-    def makeModel(content: String): String = {
-      def printDomain(d: Sort): String = d match {
-        case Real => "R"
-        case Bool => "B"
-        case Unit => ""
-        case Tuple(l, r) => printDomain(l) + "," + printDomain(r)
-      }
-
-      def augmentDeclarations(content: String, parsedContent: Formula): String =
-        if (content.contains("Problem.")) content //@note determine by mandatory "Problem." block of KeYmaeraXProblemParser
-        else {
-          val symbols = StaticSemantics.symbols(parsedContent)
-          val fnDecls = symbols.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>
-            if (fn.sort == Real) s"R ${fn.asString}(${printDomain(fn.domain)})."
-            else if (fn.sort == Bool) s"B ${fn.asString}(${printDomain(fn.domain)})."
-            else throw new Exception("Unknown sort: " + fn.sort)
-          ).mkString("\n  ")
-          val varDecls = symbols.filter(_.isInstanceOf[BaseVariable]).map(v => s"R ${v.prettyString}.").mkString("\n  ")
-          s"""Functions.
-             |  $fnDecls
-             |End.
-             |ProgramVariables.
-             |  $varDecls
-             |End.
-             |Problem.
-             |  $content
-             |End.""".stripMargin
-        }
-
-      augmentDeclarations(content, KeYmaeraXProblemParser.parseAsProblemOrFormula(content))
-    }
-
-    /** Creates a new proof entry in the database for a model parsed from `modelContent`. */
-    def createProof(modelContent: String, modelName: String = "", proofName: String = "Proof"): Int = {
-      db.createModel(user.userName, modelName, makeModel(modelContent), "", None, None, None, None) match {
-        case Some(modelId) => db.createProofForModel(modelId, modelName + proofName, "", "", None)
-        case None => fail("Unable to create temporary model in DB")
-      }
-    }
-
-    /** Prove model `modelContent` using tactic  `t`. Record the proof in the database and check that the recorded
-      * tactic is the provided tactic. Returns the proof ID and resulting provable. */
-    def proveByWithProofId(modelContent: String, t: BelleExpr, modelName: String = ""): (Int, ProvableSig) = {
-      val s: Sequent = KeYmaeraXProblemParser.parseAsProblemOrFormula(modelContent) match {
-        case fml: Formula => Sequent(IndexedSeq(), IndexedSeq(fml))
-        case _ => fail("Model content " + modelContent + " cannot be parsed")
-      }
-      db.getModelList(user.userName).find(_.name == modelName) match {
-        case Some(m) => db.deleteModel(m.modelId)
-        case None => // nothing to do
-      }
-      val proofId = createProof(modelContent, modelName)
-      val globalProvable = ProvableSig.startProof(s)
-      val listener = new TraceRecordingListener(db, proofId, None,
-        globalProvable, 0 /* start from single provable */, recursive = false, "custom")
-      val listeners = listener::Nil ++
-        (if (LOG_QE) qeListener::Nil else Nil) ++
-        (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil) ++
-        (if (LOG_QE_STDOUT) qeStdOutListener::Nil else Nil)
-      BelleInterpreter.setInterpreter(SequentialInterpreter(listeners))
-      BelleInterpreter(t, BelleProvable(ProvableSig.startProof(s))) match {
-        case BelleProvable(provable, _) =>
-          provable.conclusion shouldBe s
-          //extractTactic(proofId) shouldBe t //@todo trim trailing branching nil
-          if (provable.isProved) {
-            // check that database thinks so too
-            val finalTree = DbProofTree(db, proofId.toString)
-            finalTree.load()
-            //finalTree.leaves shouldBe empty
-            finalTree.nodes.foreach(n => n.parent match {
-              case None => n.conclusion shouldBe s
-              case Some(parent) => n.conclusion shouldBe parent.localProvable.subgoals(n.goalIdx)
-            })
-          }
-          (proofId, provable)
-        case r => fail("Unexpected tactic result " + r)
-      }
-    }
-
-    /** Prove model `modelContent` using tactic  `t`. Record the proof in the database and check that the recorded
-      * tactic is the provided tactic. Returns the resulting provable. */
-    def proveBy(modelContent: String, t: BelleExpr, modelName: String = ""): ProvableSig = proveByWithProofId(modelContent, t, modelName)._2
-
-    /** Returns the tactic recorded for the proof `proofId`. */
-    def extractTactic(proofId: Int): BelleExpr = DbProofTree(db, proofId.toString).tactic
-
-    /** Extracts the internal steps taken by proof step `stepId` at level `level` (0: original tactic, 1: direct internal steps, etc.)  */
-    def extractStepDetails(proofId: Int, stepId: String, level: Int = 1): BelleExpr = {
-      DbProofTree(db, proofId.toString).locate(stepId) match {
-        case Some(node) => node.maker match {
-          case Some(tactic) =>
-            val localProofId = db.createProof(node.localProvable)
-            val interpreter = registerInterpreter(SpoonFeedingInterpreter(localProofId, -1, db.createProof, listener(db), SequentialInterpreter, level, strict=false))
-            interpreter(BelleParser(tactic), BelleProvable(ProvableSig.startProof(node.localProvable.conclusion)))
-            extractTactic(localProofId)
-        }
-      }
-
-    }
-  }
-
   /** For tests that want to record proofs in the database. */
-  def withDatabase(testcode: DbTacticTester => Any): Unit = testcode(new DbTacticTester())
+  def withDatabase(testcode: TempDBTools => Any): Unit = testcode(dbTester())
 
   /**
    * Creates and initializes Mathematica for tests that want to use QE. Also necessary for tests that use derived
@@ -183,9 +71,12 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
    *    }
    * }}}
    * */
-  def withMathematica(testcode: Mathematica => Any) {
+  def withMathematica(testcode: Mathematica => Any, timeout: Int = -1) {
+    val mathLinkTcp = System.getProperty("MATH_LINK_TCPIP", "true") // JVM parameter -DMATH_LINK_TCPIP=[true,false]
+    Configuration.set("MATH_LINK_TCPIP", mathLinkTcp, saveToFile = false)
     val provider = mathematicaProvider() // new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig)
     ToolProvider.setProvider(provider)
+    //@todo timeout
     testcode(provider.tool())
   }
 
@@ -199,14 +90,15 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     *    }
     * }}}
     * */
-  def withZ3(testcode: Z3 => Any) {
+  def withZ3(testcode: Z3 => Any, timeout: Int = -1) {
     val provider = new Z3ToolProvider
     ToolProvider.setProvider(provider)
+    provider.tool().setOperationTimeout(timeout)
     testcode(provider.tool())
   }
 
   /** Tests with both Mathematica and Z3 as QE tools. */
-  def withQE(testcode: QETool => Any): Unit = {
+  def withQE(testcode: QETool => Any, timeout: Int = -1): Unit = {
     withClue("Mathematica") { withMathematica(testcode) }
     afterEach()
     beforeEach()
@@ -232,10 +124,12 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   /** Test setup */
   override def beforeEach(): Unit = {
     interpreters = Nil
-    val listeners = (if (LOG_QE) qeListener::Nil else Nil) ++
+    val listeners =
+      (if (LOG_QE) qeListener::Nil else Nil) ++
       (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil) ++
       (if (LOG_QE_DURATION) qeDurationListener::Nil else Nil) ++
       (if (LOG_QE_STDOUT) qeStdOutListener::Nil else Nil)
+    dbTester = new Lazy(new TempDBTools(listeners))
     BelleInterpreter.setInterpreter(registerInterpreter(SequentialInterpreter(listeners)))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[Formula]()
@@ -254,6 +148,10 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       if (!mathematicaProvider.isInitialized) {
         //@note only shutdown non-Mathematica tool providers; Mathematica is shutdown in afterAll()
         ToolProvider.shutdown()
+      }
+      if (dbTester.isInitialized) {
+        dbTester().db.session.close()
+        dbTester = null
       }
       ToolProvider.setProvider(new NoneToolProvider())
       TactixLibrary.invGenerator = FixedGenerator(Nil)
@@ -318,6 +216,15 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     }
   }
 
+  /** Filters the archive entries that should be provable with the `tool`. */
+  def toolArchiveEntries(entries: List[ParsedArchiveEntry], tool: Tool): List[ParsedArchiveEntry] = {
+    // finds all specific QE({`tool`}) entries, but ignores the generic QE that works with any tool
+    val qeFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
+    entries.
+      filter(e => e.tactics.nonEmpty &&
+        qeFinder.findAllMatchIn(BellePrettyPrinter(e.tactics.head._2)).forall(p => p.group("toolName") == tool.name))
+  }
+
   /** Checks a specific entry from a bundled archive. Uses the first tactic if tacticName is None. */
   def checkArchiveEntry(archive: String, entryName: String, tacticName: Option[String] = None): Unit = {
     val entry = KeYmaeraXArchiveParser.getEntry(entryName, io.Source.fromInputStream(
@@ -366,7 +273,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   def checkArchiveEntries(entries: List[ParsedArchiveEntry]): Unit = {
     val statistics = scala.collection.mutable.LinkedHashMap[String, (Long, Long, Int, Int, Int)]()
 
-    def printStatistics(v: (Long, Long, Int, Int, Int)) = {
+    def printStatistics(v: (Long, Long, Int, Int, Int)): Unit = {
       println("Proof duration [ms]: " + v._1)
       println("QE duration [ms]: " + v._2)
       println("Tactic size: " + v._3)
@@ -374,7 +281,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       println("Proof steps: " + v._5)
     }
 
-    for (entry <- entries) {
+    for (entry <- entries.filter(_.tactics.nonEmpty)) {
       val tacticName = entry.tactics.head._1
       val tactic = entry.tactics.head._2
 
@@ -416,17 +323,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   /** A listener that stores proof steps in the database `db` for proof `proofId`. */
-  def listener(db: DBAbstraction)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = {
-    val trace = db.getExecutionSteps(proofId)
-    assert(-1 <= parentInTrace && parentInTrace < trace.length, "Invalid trace index " + parentInTrace + ", expected -1<=i<trace.length")
-    val parentStep: Option[Int] = if (parentInTrace < 0) None else trace(parentInTrace).stepId
-    val globalProvable = parentStep match {
-      case None => db.getProvable(db.getProofInfo(proofId).provableId.get).provable
-      case Some(sId) => db.getExecutionStep(proofId, sId).map(_.local).get
-    }
-    new TraceRecordingListener(db, proofId, parentStep,
-      globalProvable, branch, recursive = false, tacticName) :: Nil
-  }
+  def listener(db: DBAbstraction)(proofId: Int)(tacticName: String, parentInTrace: Int, branch: Int): Seq[IOListener] = DBTools.listener(db)(proofId)(tacticName, parentInTrace, branch)
 
   /** Removes all whitespace for string comparisons in tests.
     * @example{{{

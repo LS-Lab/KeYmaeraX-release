@@ -343,11 +343,13 @@ class ScriptedRequestTests extends TacticTestBase {
     )
   }
 
-  private def runTactic(db: DbTacticTester, token: SessionToken, proofId: Int)(nodeId: String, tactic: BelleExpr): Response = {
+  private def runTactic(db: TempDBTools, token: SessionToken, proofId: Int)(nodeId: String, tactic: BelleExpr): Response = {
     val (tacticString: String, inputs: List[BelleTermInput], pos1: Option[PositionLocator], pos2: Option[PositionLocator]) = tactic match {
       case AppliedPositionTactic(t, p) => (t.prettyString, Nil, Some(p), None)
       case t: AppliedDependentPositionTactic => t.pt match {
-        case inner: DependentPositionWithAppliedInputTactic =>
+        case inner: DependentPositionWithAppliedInputTactic if inner.inputs.isEmpty =>
+          (inner.name, Nil, Some(t.locator), None)
+        case inner: DependentPositionWithAppliedInputTactic if inner.inputs.nonEmpty =>
           val info = DerivationInfo(t.pt.name)
           val expectedInputs = info.inputs
           val inputs = inner.inputs.zipWithIndex.map({
@@ -363,7 +365,7 @@ class ScriptedRequestTests extends TacticTestBase {
     runTacticString(db, token, proofId)(nodeId, tacticString, consultAxiomInfo = true, pos1, pos2, inputs)
   }
 
-  private def runTacticString(db: DbTacticTester, token: SessionToken, proofId: Int)
+  private def runTacticString(db: TempDBTools, token: SessionToken, proofId: Int)
                              (nodeId: String, tactic: String, consultAxiomInfo: Boolean,
                               pos1: Option[PositionLocator], pos2: Option[PositionLocator],
                               inputs: List[BelleTermInput]): Response = {
