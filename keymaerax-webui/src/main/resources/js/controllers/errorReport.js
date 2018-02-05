@@ -204,7 +204,13 @@ angular.module('keymaerax.controllers').controller('TacticErrorCtrl', function($
 angular.module('keymaerax.controllers').controller('ErrorReportCtrl', function($scope, $uibModalInstance, $http, error) {
   $http.get("/kyxConfig").success(function(data) {
     $scope.kyxConfig = data.kyxConfig;
-    });
+  });
+  $http.get("/keymaeraXVersion").success(function(data) {
+    $scope.kyxVersion = data.keymaeraXVersion;
+  });
+  $http.get("/isLocal").success(function(data) {
+    $scope.isLocal = data.success;
+  });
   $scope.errorText = error.textStatus;
   $scope.errorTrace = error.errorThrown;
   $scope.userDescription = undefined
@@ -219,6 +225,7 @@ angular.module('keymaerax.controllers').controller('ErrorReportCtrl', function($
 
   $scope.bodyText = function() {
     return encodeText("Description\n" + ($scope.userDescription ? $scope.userDescription : "") +
+      "\n\nKeYmaera X v" + $scope.kyxVersion + ($scope.isLocal ? " (local)" : " (web.keymaerax.org)") +
       ($scope.omitSysConfig ? "\n\nSystem configuration unreported" : "\n\nSystem configuration\n" + $scope.kyxConfig) +
       "\n\nError message\n" + $scope.errorText +
       "\n\nError trace\n" + $scope.errorTrace);
