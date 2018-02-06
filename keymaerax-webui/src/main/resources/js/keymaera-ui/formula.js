@@ -2,8 +2,9 @@ angular.module('formula', ['ngSanitize']);
 
 /** Renders a formula into hierarchically structured spans */
 angular.module('formula')
-  .directive('k4Formula', ['$compile', '$http', '$sce', '$q', 'derivationInfos', 'sequentProofData', 'spinnerService',
-      function($compile, $http, $sce, $q, derivationInfos, sequentProofData, spinnerService) {
+  .directive('k4Formula', ['$compile', '$http', '$sce', '$q', '$uibModal', 'derivationInfos', 'sequentProofData',
+             'spinnerService',
+      function($compile, $http, $sce, $q, $uibModal, derivationInfos, sequentProofData, spinnerService) {
     return {
         restrict: 'AE',
         scope: {
@@ -112,7 +113,6 @@ angular.module('formula')
             }
 
             scope.lemma = {
-              selectedName: undefined,
               selected: undefined,
               allInfos: function(formulaId, partialLemmaName) {
                 if (partialLemmaName && partialLemmaName.length > 0) {
@@ -146,12 +146,8 @@ angular.module('formula')
               scope.onTactic({formulaId: formulaId, tacticId: tacticId});
             }
 
-            scope.applyInputTactic = function(formulaId, tactic) {
+            scope.applyInputTactic = function(formulaId, tacticId, input) {
               scope.tacticPopover.close();
-              //@note have to declare local variables with exactly the names of the event arguments,
-              //      otherwise the event parameters are undefined in the listener :-O
-              var tacticId = tactic.id;
-              var input = tactic.derivation.input;
               scope.onInputTactic({formulaId: formulaId, tacticId: tacticId, input: input});
             }
 
