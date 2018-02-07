@@ -133,11 +133,6 @@ angular.module('formula')
               selectedKeyPos: function() {
                 var s = scope.lemma.selected;
                 return s.selectedKeyPos ? s.selectedKeyPos : s.defaultKeyPos;
-              },
-              selectKeyEnd: function(to) {
-                //@note assumes either implication/equivalence/equality or conditional equivalence/equality
-                var currentKeyPos = scope.lemma.selectedKeyPos();
-                scope.lemma.selected.selectedKeyPos = currentKeyPos.slice(0, currentKeyPos.lastIndexOf('.')+1) + to;
               }
             }
 
