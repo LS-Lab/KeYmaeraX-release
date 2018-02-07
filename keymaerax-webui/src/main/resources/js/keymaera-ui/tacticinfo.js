@@ -7,6 +7,7 @@ angular.module('keymaerax.ui.directives')
           proofId: '@',
           nodeId: '@',
           formulaId: '@',
+          axiomReadonly: '=',
           tactic: '=',
           onTactic: '&',     // onTactic(formulaId, tacticId)
           onInputTactic: '&' // onInputTactic(formulaId, tacticId, input)
@@ -14,7 +15,14 @@ angular.module('keymaerax.ui.directives')
       templateUrl: 'templates/tacticInfoTemplate.html',
       link: function(scope, element, attrs) {
         scope.applyTactic = function(tacticId) {
-          scope.onTactic({formulaId: scope.formulaId, tacticId: tacticId});
+          var s = scope.tactic.selectedDerivation().derivation;
+          if (s.selectedKeyPos && s.selectedKeyPos != s.defaultKeyPos) {
+            scope.onInputTactic({ formulaId: scope.formulaId, tacticId: 'useAt',
+                                  input: [{param: 'axiom', value: s.canonicalName },
+                                          {param: 'key', value: '' + s.selectedKeyPos }] });
+          } else {
+            scope.onTactic({formulaId: scope.formulaId, tacticId: tacticId});
+          }
         }
 
         scope.applyInputTactic = function(tactic) {

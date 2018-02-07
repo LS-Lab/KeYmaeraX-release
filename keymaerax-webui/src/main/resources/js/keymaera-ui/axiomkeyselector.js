@@ -3,7 +3,8 @@ angular.module('keymaerax.ui.directives')
     return {
       restrict: 'AE',
       scope: {
-        axiom: '='
+        axiom: '=',
+        readonly: '='
       },
       templateUrl: 'templates/axiomKeySelectorTemplate.html',
       link: function(scope, element, attrs) {

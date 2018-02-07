@@ -22,7 +22,7 @@
         <div ng-repeat="tactic in formulaAxiomsMap[tacticPopover.formulaId()]" class="k4-tactic-popover-entry">
             <k4-tactic-info user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                             formula-id="{{tacticPopover.formulaId()}}"
-                            tactic="tactic"
+                            tactic="tactic" axiom-readonly="true"
                             on-tactic="applyTactic(formulaId, tacticId)"
                             on-input-tactic="applyInputTactic(formulaId, tacticId, input)"></k4-tactic-info>
         </div>
@@ -39,7 +39,7 @@
                 <i class="input-group-addon" ng-if="lemma.loading" class="fa fa-refresh"></i>
                 <div class="input-group-addon" ng-if="lemma.noResults"><i class="fa fa-remove"></i> No Lemmas Found</div>
                 <div class="input-group-addon" ng-if="!lemma.noResults && lemma.selected && lemma.selected.displayInfoParts">
-                    <k4-axiom-key-selector axiom="lemma.selected"></k4-axiom-key-selector>
+                    <k4-axiom-key-selector axiom="lemma.selected" readonly="false"></k4-axiom-key-selector>
                 </div>
                 <a class="input-group-addon btn btn-default" ng-disabled="!lemma.selected"
                    ng-click="lemma.apply(tacticPopover.formulaId())"><b>Apply Lemma</b></a>

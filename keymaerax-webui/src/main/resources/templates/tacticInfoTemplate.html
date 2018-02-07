@@ -14,7 +14,10 @@
                                        code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
                 </a>
             </div>
-            <div class="col-md-9"><span ng-bind-html="tactic.selectedDerivation().derivation.formula"></span></div>
+            <div class="col-md-9">
+                <k4-axiom-key-selector axiom="tactic.selectedDerivation().derivation"
+                                       readonly="axiomReadonly"></k4-axiom-key-selector>
+            </div>
         </div>
     </div>
     <div class="well well-compact" ng-if="tactic.selectedDerivation().derivation.type === 'tactic'">
