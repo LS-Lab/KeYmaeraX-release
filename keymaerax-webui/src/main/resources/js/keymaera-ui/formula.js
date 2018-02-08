@@ -266,6 +266,29 @@ angular.module('formula')
               });
             }
 
+            scope.browseLemmas = function() {
+              var modalInstance = $uibModal.open({
+                templateUrl: 'partials/lemmabrowserdialog.html',
+                controller: 'LemmaBrowserCtrl',
+                size: 'lg',
+                resolve: {
+                  userId: function() { return scope.userId; },
+                  proofId: function() { return scope.proofId; },
+                  nodeId: function() { return scope.nodeId; },
+                  formulaId: function() { return scope.tacticPopover.formulaId(); },
+                  formula: function() { return scope.replaceNullaryFn(scope.formula.string); }
+                }
+              });
+              modalInstance.result.then(
+                function (tactic) {
+                  if (tactic.input) scope.onInputTactic(tactic);
+                  else scope.onTactic(tactic);
+                },
+                function () { /* modal dismissed */ }
+              );
+              scope.tacticPopover.close();
+            }
+
 //            console.log("Compiling formula")
 //            var fmlMarkup = scope.collapsed ? scope.formula.string : scope.formula.html;
 //            // compile template, bind to scope, and add into DOM

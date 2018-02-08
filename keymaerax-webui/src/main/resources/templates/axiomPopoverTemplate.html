@@ -41,6 +41,8 @@
                 <div class="input-group-addon" ng-if="!lemma.noResults && lemma.selected && lemma.selected.displayInfoParts">
                     <k4-axiom-key-selector axiom="lemma.selected" readonly="false"></k4-axiom-key-selector>
                 </div>
+                <a class="input-group-addon btn btn-default"
+                   ng-click="browseLemmas()">Browse...</a>
                 <a class="input-group-addon btn btn-default" ng-disabled="!lemma.selected"
                    ng-click="lemma.apply(tacticPopover.formulaId())"><b>Apply Lemma</b></a>
             </div>

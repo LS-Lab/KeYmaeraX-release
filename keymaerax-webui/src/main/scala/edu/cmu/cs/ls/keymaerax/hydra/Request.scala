@@ -1445,11 +1445,14 @@ class GetApplicableTwoPosTacticsRequest(db:DBAbstraction, userId: String, proofI
   }
 }
 
-class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, axiomId: String)
-  extends UserProofRequest(db, userId, proofId) with ReadRequest {
+class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String,
+                               axiomId: Option[String]) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
-    val info = (DerivationInfo.ofCodeName(axiomId), UIIndex.comfortOf(axiomId).map(DerivationInfo.ofCodeName)) :: Nil
-    new ApplicableAxiomsResponse(info, Map.empty) :: Nil
+    val infos = axiomId match {
+      case Some(aid) => (DerivationInfo.ofCodeName(aid), UIIndex.comfortOf(aid).map(DerivationInfo.ofCodeName)) :: Nil
+      case None => DerivationInfo.allInfo.map(di => (di, UIIndex.comfortOf(di.codeName).map(DerivationInfo.ofCodeName)))
+    }
+    ApplicableAxiomsResponse(infos, Map.empty) :: Nil
   }
 }
 

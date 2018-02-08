@@ -92,7 +92,7 @@ object DerivationInfo {
     * Central registry for axiom, derived axiom, proof rule, and tactic meta-information.
     * Transferred into subsequent maps etc for efficiency reasons.
     */
-  private [btactics] val allInfo: List[DerivationInfo] = convert(ProvableSig.rules) ++ List(
+  val allInfo: List[DerivationInfo] = convert(ProvableSig.rules) ++ List(
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> diamond"
       , AxiomDisplayInfo(("<·>", "<.>"), "<span class=\"k4-axiom-key\">&not;[a]&not;P</span> ↔ &langle;a&rangle;P")

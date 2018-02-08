@@ -1,0 +1,49 @@
+<div class="modal-header row">
+    <div class="col-md-4">
+        <h3 class="modal-title">Select proof step</h3>
+    </div>
+    <div class="col-md-7">
+        <div class="input-group">
+            <input type="text" ng-model="derivationInfos.filter" placeholder="Search for proof steps"
+                   class="form-control" />
+            <a class="input-group-addon btn btn-default" ng-if="derivationInfos.order === 'standardDerivation.name'"
+               ng-click="derivationInfos.order = '-standardDerivation.name'"><i class="fa fa-sort-alpha-desc"></i></a>
+            <a class="input-group-addon btn btn-default" ng-if="derivationInfos.order === '-standardDerivation.name'"
+               ng-click="derivationInfos.order = 'standardDerivation.name'"><i class="fa fa-sort-alpha-asc"></i></a>
+        </div>
+    </div>
+    <div class="col-md-1">
+        <a class="pull-right" ng-click="cancel()"><span class="fa fa-close"></span>
+        </a>
+    </div>
+</div>
+<div class="modal-body">
+    <div class="row" ng-if="formula">
+        <div class="col-md-12"><blockquote><span ng-bind-html="formula"></span></blockquote></div>
+    </div>
+    <div class="row" ng-if="sequent">
+        <div class="col-md-12">
+            <blockquote>
+                <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{deductionPath.sections[0].path[0]}}"
+                            sequent="proofTree.nodesMap[deductionPath.sections[0].path[0]].getSequent()"
+                            read-only="readOnly" collapsed="false"
+                            on-apply-tactic="onApplyTactic(formulaId, tacticId)"
+                            on-apply-input-tactic="onApplyInputTactic(formulaId, tacticId, input)"
+                            on-apply-two-position-tactic="onApplyTwoPositionTactic(fml1Id, fml2Id, tacticId)"></k4-sequent>
+            </blockquote>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div ng-repeat="tactic in derivationInfos.infos | filter: derivationInfos.filter | orderBy: derivationInfos.order"
+                 class="k4-tactic-popover-entry">
+                <k4-tactic-info user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
+                                formula-id="{{formulaId}}"
+                                tactic="tactic" axiom-readonly="false"
+                                on-tactic="applyTactic(formulaId, tacticId)"
+                                on-input-tactic="applyInputTactic(formulaId, tacticId, input)"></k4-tactic-info>
+            </div>
+        </div>
+    </div>
+</div>
