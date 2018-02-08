@@ -4,7 +4,7 @@
 <div class="row k4-proofrow">
     <div class="col-md-12">
         <!-- need duplication because 'step.subgoals.length > 0' is non-assignable -->
-        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
+        <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                     sequent="proofTree.nodesMap[deductionPath.sections[0].path[0]].getSequent()"
                     read-only="readOnly" collapsed="false"
                     on-apply-tactic="onApplyTactic(formulaId, tacticId)"
@@ -57,7 +57,7 @@
             </li>
         </ul>
         <div class="col-md-12 k4-goalwithsiblings" id="seq_{{proofTree.htmlNodeId(step)}}">
-            <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
+            <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                         sequent="proofTree.nodesMap[step].getSequent()"
                         read-only="true" collapsed="true"></k4-sequent>
             <div ng-include="'siblinglinks.html'" replace-include></div>
@@ -103,7 +103,7 @@
             </li>
         </ul>
         <div class="col-md-12" id="seq_{{proofTree.htmlNodeId(step)}}">
-            <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
+            <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                         sequent="proofTree.nodesMap[step].getSequent()"
                         read-only="true" collapsed="true"></k4-sequent>
         </div>
@@ -190,7 +190,7 @@
         </li>
     </ul>
     <div class="col-md-12 k4-goalwithsiblings" id="seq_{{proofTree.htmlNodeId(step.id)}}" ng-if="step !== undefined">
-        <k4-sequent user-id="userId" proof-id="proofId" node-id="nodeId"
+        <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
                     sequent="step.sequent"
                     read-only="true" collapsed="true"></k4-sequent>
         <div ng-include="'siblinglinks.html'" replace-include></div>
