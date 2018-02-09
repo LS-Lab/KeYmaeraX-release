@@ -1154,10 +1154,10 @@ private object DifferentialTactics extends Logging {
 
         val continv = ToolProvider.invGenTool().getOrElse(throw new BelleThrowable(
           "InvGenTool needed, but got None")).
-          invgen("Needs[\"Strategies`\",\"/home/s0805753/Work/pegasus-invgen/Strategies.m\"]; " +
-           "Needs[\"Methods`\",\"/home/s0805753/Work/pegasus-invgen/Methods.m\"]; " +
-           "Needs[\"Classifier`\",\"/home/s0805753/Work/pegasus-invgen/Classifier.m\"]; " +
-           "Needs[\"AbstractionPolynomials`\",\"/home/s0805753/Work/pegasus-invgen/AbstractionPolynomials.m\"]; " +
+          invgen("Needs[\"Strategies`\",\"/home/s0805753/Work/pegasus-mathematica/Strategies.m\"]; " +
+           "Needs[\"Methods`\",\"/home/s0805753/Work/pegasus-mathematica/Methods.m\"]; " +
+           "Needs[\"Classifier`\",\"/home/s0805753/Work/pegasus-mathematica/Classifier.m\"]; " +
+           "Needs[\"AbstractionPolynomials`\",\"/home/s0805753/Work/pegasus-mathematica/AbstractionPolynomials.m\"]; " +
           "Strategies`Pegasus["+ problem +"]")
 
         debug(s"[ODE] Trying to cut in invariant candidate", true) &
