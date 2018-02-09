@@ -272,6 +272,12 @@ del {
 .k4-term {background: transparent; }
 .k4-nullary-fn { font-style: italic; }
 
+.k4-select-hover {
+  color: var(--lsmainback);
+  background-color:var(--lslightblue);
+  position: relative;
+}
+
 .k4-has-step.k4-prove-hover {
   color: var(--lsmainback);
   background-color:var(--lslightblue);
@@ -425,6 +431,9 @@ del {
   color: white;
 }
 .k4-has-step.k4-chase-hover span {
+  color: white;
+}
+.k4-select-hover span {
   color: white;
 }
 

@@ -46,12 +46,19 @@ angular.module('formula')
               if (scope.modeIsEdit() && editable=='editable') {
                 event.stopPropagation();
                 $(event.currentTarget).addClass("k4-edit-hover");
-              } else if (scope.modeIsProve() && !event.altKey && step=='has-step') {
+              } else if (scope.modeIsProve() && !event.altKey && step === 'has-step') {
                 event.stopPropagation();
                 $(event.currentTarget).addClass("k4-prove-hover");
-              } else if (scope.modeIsProve() && event.altKey && step=='has-step') {
+              } else if (scope.modeIsProve() && event.altKey && step === 'has-step') {
                 event.stopPropagation();
                 $(event.currentTarget).addClass("k4-chase-hover");
+              } else if (scope.modeIsSelect() && !event.altKey && step === 'has-step') {
+                event.stopPropagation();
+                $(event.currentTarget).addClass("k4-select-hover");
+              } else if (scope.modeIsSelect() && event.altKey && event.currentTarget.id.length > 4) {
+                // with option pressed, any formula or term with an ID is selectable (fml_#)
+                event.stopPropagation();
+                $(event.currentTarget).addClass("k4-select-hover");
               }
             }
 
@@ -59,10 +66,14 @@ angular.module('formula')
               $(event.currentTarget).removeClass("k4-edit-hover");
               $(event.currentTarget).removeClass("k4-prove-hover");
               $(event.currentTarget).removeClass("k4-chase-hover");
+              if (!sequentProofData.formulas.highlighted
+                || !event.currentTarget.id.endsWith(sequentProofData.formulas.highlighted)) {
+                $(event.currentTarget).removeClass("k4-select-hover");
+              }
             }
 
             scope.exprClick = function(event, formulaId, step, editable) {
-              if (scope.modeIsProve() && formulaId && formulaId !== '' && step == 'has-step') {
+              if (scope.modeIsProve() && formulaId && formulaId !== '' && step === 'has-step') {
                 // avoid event propagation once a span with an ID is found
                 event.stopPropagation();
                 spinnerService.show('tacticExecutionSpinner');
@@ -83,8 +94,12 @@ angular.module('formula')
                       }
                   });
                 }
-              } else if (scope.modeIsEdit() && formulaId && formulaId !== '' && editable == 'editable') {
+              } else if (scope.modeIsEdit() && formulaId && formulaId !== '' && editable === 'editable') {
                 // not used
+              } else if (scope.modeIsSelect() && formulaId && formulaId !== ''
+                  && (step === 'has-step' || event.altKey)) {
+                event.stopPropagation();
+                scope.onTactic({formulaId: formulaId, tacticId: undefined});
               }
             }
 
@@ -249,11 +264,15 @@ angular.module('formula')
             }
 
             scope.modeIsProve = function() {
-              return sequentProofData.formulas.mode == 'prove';
+              return sequentProofData.formulas.mode === 'prove';
             }
 
             scope.modeIsEdit = function() {
-              return sequentProofData.formulas.mode == 'edit';
+              return sequentProofData.formulas.mode === 'edit';
+            }
+
+            scope.modeIsSelect = function() {
+              return sequentProofData.formulas.mode === 'select';
             }
 
             scope.trustedHtml = function(html) {
