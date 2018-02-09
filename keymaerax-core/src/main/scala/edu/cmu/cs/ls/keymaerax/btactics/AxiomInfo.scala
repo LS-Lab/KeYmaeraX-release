@@ -173,6 +173,11 @@ object DerivationInfo {
 
     // differential equation axioms
     new CoreAxiomInfo("DW base", "DWbase", "DWbase", {case () => HilbertCalculus.DW}),
+    new PositionTacticInfo("contInvGen"
+      , RuleDisplayInfo("Pegasus (continuous invariant generator)"
+        , /* conclusion */ (List("&Gamma;"),List("p(x)→[{x′=f(x) & Q}]q(x)","&Delta;"))
+        , /* premises */ List((List("&Gamma;<sub>const</sub>", "Q"), List("p(x)", "&Delta;<sub>const</sub>"))))
+      , {case () => DifferentialTactics.contInvGen}),
     new PositionTacticInfo("dW"
       , RuleDisplayInfo("Differential Weaken"
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]p(x)","&Delta;"))

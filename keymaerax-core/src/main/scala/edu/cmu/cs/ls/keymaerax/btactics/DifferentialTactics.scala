@@ -11,7 +11,8 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.SimplificationTool
+import edu.cmu.cs.ls.keymaerax.tools._
+//import edu.cmu.cs.ls.keymaerax.tools.SimplificationTool
 
 import org.apache.logging.log4j.scala.Logging
 
@@ -1104,6 +1105,65 @@ private object DifferentialTactics extends Logging {
       case Some(Diamond(ode: ODESystem, _)) => ode.constraint != True
       case Some(e) => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
+    }
+  }
+
+
+  private def dottedSymbols(ode: DifferentialProgram) = {
+    var dottedSymbols = List[Variable]()
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+        case DifferentialSymbol(ps) => ps :: dottedSymbols; Left(None)
+        case Differential(_) => throw new IllegalArgumentException("Only derivatives of variables supported")
+        case _ => Left(None)
+      }
+    }, ode)
+    dottedSymbols.reverse
+  }
+
+  /** @see [[TactixLibrary.dC()]] */
+  val contInvGen: DependentPositionTactic = new DependentPositionTactic("contInvGen") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        require(pos.isSucc && pos.isTopLevel, "contInvGen")
+        val (ode, postcond) = sequent.sub(pos) match {
+          case Some(Box(odesys: ODESystem, post: Formula)) => (odesys, post)
+          case _ => throw new IllegalArgumentException("Not a continuous safety goal" + sequent.sub(pos))
+        }
+        val precond = sequent.ante.seq match {
+          case assumptions: IndexedSeq[Formula] => assumptions.reduce(new And(_, _))
+          case _ => throw new IllegalArgumentException("Not a continuous safety goal")
+        }
+
+        val k2m = new UncheckedK2MConverter();
+        var problem:String = ""
+        val vars = primedSymbols(ode.ode).toList
+        val stringVars= ("{"+ ((vars.map( x => k2m.apply(x).toString)).mkString(", ")) + "}")
+        val vectorField = (ode.ode.toString).filterNot(c => c == '}' || c =='{' || c ==' ').
+        split(",").map( x => k2m.apply((x.split("=")(1)).asTerm).toString)
+        val vectorFieldString = vectorField.mkString(", ")
+        val constraint = ode.constraint
+        // print (constraint.toString)
+        problem = "{ " +
+          k2m.apply(precond).toString + ", { "+
+          " {"+ vectorFieldString + "} "+
+          ", " + stringVars + ", " +
+          k2m.apply(constraint).toString +" }, " +
+          k2m.apply(postcond).toString + " }"
+        print (problem)
+
+        val continv = ToolProvider.invGenTool().getOrElse(throw new BelleThrowable(
+          "InvGenTool needed, but got None")).
+          invgen("Needs[\"Strategies`\",\"/home/s0805753/Work/pegasus-invgen/Strategies.m\"]; " +
+           "Needs[\"Methods`\",\"/home/s0805753/Work/pegasus-invgen/Methods.m\"]; " +
+           "Needs[\"Classifier`\",\"/home/s0805753/Work/pegasus-invgen/Classifier.m\"]; " +
+           "Needs[\"AbstractionPolynomials`\",\"/home/s0805753/Work/pegasus-invgen/AbstractionPolynomials.m\"]; " +
+          "Strategies`Pegasus["+ problem +"]")
+
+        debug(s"[ODE] Trying to cut in invariant candidate", true) &
+          diffCut(continv)(pos) /* < (skip, proveWithoutCuts(pos) & done)*/
+
+      }
     }
   }
 

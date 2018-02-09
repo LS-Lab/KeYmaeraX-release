@@ -19,11 +19,12 @@ import scala.collection.immutable.Map
  * @author Stefan Mitsch
  * @todo Code Review: Move non-critical tool implementations into a separate package tactictools
  */
-class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool with CounterExampleTool with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool with PDESolverTool {
+class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool with ODESolverTool with CounterExampleTool with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool with PDESolverTool {
   // JLink, shared between tools
   private[tools] val link = new JLinkMathematicaLink
 
   private val mQE = new MathematicaQETool(link)
+  private val mPegasus = new MathematicaInvGenTool(link)  
   private val mCEX = new MathematicaCEXTool(link)
   private val mODE = new MathematicaODESolverTool(link)
   private val mPDE = new MathematicaPDESolverTool(link)
@@ -48,6 +49,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
   /** Closes the connection to Mathematica */
   override def shutdown(): Unit = {
     mQE.shutdown()
+    mPegasus.shutdown()    
     mCEX.shutdown()
     mODE.shutdown()
     mPDE.shutdown()
@@ -142,6 +144,8 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
   override def simplify(expr: Expression, assumptions: List[Formula]): Expression = mSimplify.simplify(expr, assumptions)
   override def simplify(expr: Formula, assumptions: List[Formula]): Formula = mSimplify.simplify(expr, assumptions)
   override def simplify(expr: Term, assumptions: List[Formula]): Term = mSimplify.simplify(expr, assumptions)
+  override def invgen(problem:String):Formula = mPegasus.invgen(problem)
+
 
   /** Restarts the MathKernel with the current configuration */
   override def restart(): Unit = link.restart()

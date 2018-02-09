@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.ToolProvider.Configuration
+import edu.cmu.cs.ls.keymaerax.core.InvGenTool
 import edu.cmu.cs.ls.keymaerax.core.QETool
 import edu.cmu.cs.ls.keymaerax.tools._
 
@@ -41,6 +42,8 @@ object ToolProvider extends ToolProvider {
 
   def qeTool(name: Option[String] = None): Option[QETool] = f.qeTool(name)
 
+  def invGenTool(name: Option[String] = None): Option[InvGenTool] = f.invGenTool(name)
+
   def odeTool(): Option[ODESolverTool] = f.odeTool()
 
   def pdeTool(): Option[PDESolverTool] = f.pdeTool()
@@ -71,6 +74,8 @@ trait ToolProvider {
 
   /** Returns a QE tool. */
   def qeTool(name: Option[String] = None): Option[QETool]
+
+  def invGenTool(name: Option[String] = None): Option[InvGenTool]
 
   /** Returns an ODE tool. */
   def odeTool(): Option[ODESolverTool]
@@ -105,6 +110,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
   require(toolPreferences != null && toolPreferences.nonEmpty && toolPreferences.forall(_.isInitialized), "Initialized tool expected")
 
   private[this] lazy val qe: Option[Tool with QETool] = toolPreferences.find(_.isInstanceOf[QETool]).map(_.asInstanceOf[Tool with QETool])
+  private[this] lazy val invgen: Option[Tool with InvGenTool] = toolPreferences.find(_.isInstanceOf[InvGenTool]).map(_.asInstanceOf[Tool with InvGenTool])
   private[this] lazy val ode: Option[Tool with ODESolverTool] = toolPreferences.find(_.isInstanceOf[ODESolverTool]).map(_.asInstanceOf[Tool with ODESolverTool])
   private[this] lazy val pde: Option[Tool with PDESolverTool] = toolPreferences.find(_.isInstanceOf[PDESolverTool]).map(_.asInstanceOf[Tool with PDESolverTool])
   private[this] lazy val cex: Option[Tool with CounterExampleTool] = toolPreferences.find(_.isInstanceOf[CounterExampleTool]).map(_.asInstanceOf[Tool with CounterExampleTool])
@@ -117,6 +123,10 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
   override def qeTool(name: Option[String] = None): Option[QETool] = ensureInitialized[Tool with QETool](name match {
     case Some(qeToolName) => toolPreferences.find(t => t.isInstanceOf[QETool] && t.name == qeToolName).map(_.asInstanceOf[Tool with QETool])
     case None => qe
+  })
+  override def invGenTool(name: Option[String] = None): Option[InvGenTool] = ensureInitialized[Tool with InvGenTool](name match {
+    case Some(invGenToolName) => toolPreferences.find(t => t.isInstanceOf[InvGenTool] && t.name == invGenToolName).map(_.asInstanceOf[Tool with InvGenTool])
+    case None => invgen
   })
   override def odeTool(): Option[ODESolverTool] = ensureInitialized(ode)
   override def pdeTool(): Option[PDESolverTool] = ensureInitialized(pde)
@@ -140,6 +150,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
 class NoneToolProvider extends ToolProvider {
   override def tools(): List[Tool] = Nil
   override def qeTool(name: Option[String] = None): Option[QETool] = None
+  override def invGenTool(name: Option[String] = None): Option[InvGenTool] = None
   override def odeTool(): Option[ODESolverTool] = None
   override def pdeTool(): Option[PDESolverTool] = None
   override def simplifierTool(): Option[SimplificationTool] = None
