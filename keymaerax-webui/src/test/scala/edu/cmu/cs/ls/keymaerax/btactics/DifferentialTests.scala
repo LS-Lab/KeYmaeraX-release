@@ -994,6 +994,16 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "==> \\exists y [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asSequent
   }
 
+  "Inverse Differential Ghost" should "remove the left-most DE" in withQE { _ =>
+    val result = proveBy("==> [{y'=1,x'=2}]p(x)".asSequent, DifferentialTactics.inverseDiffGhost(1))
+    result.subgoals.loneElement shouldBe "==> [{x'=2}]p(x)".asSequent
+  }
+
+  it should "remove the left-most DE in context" in withQE { _ =>
+    val result = proveBy("==> [x:=2;][{y'=1,x'=2}]p(x)".asSequent, DifferentialTactics.inverseDiffGhost(1, 1::Nil))
+    result.subgoals.loneElement shouldBe "==> [x:=2;][{x'=2}]p(x)".asSequent
+  }
+
   "diffSolve" should "find a solution" in withQE { _ =>
     val result = proveBy("x>b ==> [{x'=2,t'=1}]x>b".asSequent, solve(1))
     result.subgoals.loneElement shouldBe "x>b ==> \\forall t_ (t_>=0 -> 2*t_+x>b)".asSequent

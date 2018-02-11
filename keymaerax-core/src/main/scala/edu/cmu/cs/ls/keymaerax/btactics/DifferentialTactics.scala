@@ -457,6 +457,50 @@ private object DifferentialTactics extends Logging {
         case _ => DG(ghost)(pos) //@note no r or r==p
       })
 
+  /**
+    * Removes the left-most DE from a system of ODEs:
+    * {{{
+    *   [v'=a,t'=1 & q]p
+    *   ---------------------- dGi
+    *   [x'=v,v'=a,t'=1 & q]p
+    * }}}
+    */
+  def inverseDiffGhost: DependentPositionTactic = "dGi" by ((pos: Position, s: Sequent) => {
+    val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
+    s.sub(pos) match {
+      case Some(f@Box(ODESystem(DifferentialProduct(y_DE: AtomicODE, _), _), _)) if polarity > 0 =>
+        val axiomName = "DG inverse differential ghost implicational"
+        //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
+        TactixLibrary.cutAt(Forall(y_DE.xp.x::Nil, f))(pos) <(
+          HilbertCalculus.useExpansionAt(axiomName)(pos)
+          ,
+          (if (pos.isSucc) TactixLibrary.cohideR(pos.top) else TactixLibrary.cohideR('Rlast)) &
+            HilbertCalculus.useAt("all eliminate")(1, PosInExpr((if (pos.isSucc) 0 else 1) +: pos.inExpr.pos)) &
+            TactixLibrary.useAt(DerivedAxioms.implySelf)(1) & TactixLibrary.closeT & DebuggingTactics.done
+        )
+      case Some(Box(ODESystem(DifferentialProduct(y_DE: AtomicODE, c), q), p)) if polarity < 0 =>
+        //@note must substitute manually since DifferentialProduct reassociates (see cutAt) and therefore unification won't match
+        val subst = (_: Option[TactixLibrary.Subst]) =>
+          RenUSubst(
+            ("y_".asTerm, y_DE.xp.x) ::
+              ("b(|y_|)".asTerm, y_DE.e) ::
+              ("q(|y_|)".asFormula, q) ::
+              (DifferentialProgramConst("c", Except("y_".asVariable)), c) ::
+              ("p(|y_|)".asFormula, p.replaceAll(y_DE.xp.x, "y_".asVariable)) ::
+              Nil)
+
+        //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then rewrite.
+        HilbertCalculus.useAt(", commute", PosInExpr(1::Nil))(pos) &
+          TactixLibrary.cutAt(Exists(y_DE.xp.x::Nil, Box(ODESystem(DifferentialProduct(c, y_DE), q), p)))(pos) <(
+            HilbertCalculus.useAt("DG differential ghost constant", PosInExpr(1::Nil), subst)(pos)
+            ,
+            (if (pos.isSucc) TactixLibrary.cohideR(pos.top) else TactixLibrary.cohideR('Rlast)) &
+              TactixLibrary.CMon(pos.inExpr) & TactixLibrary.implyR(1) &
+              TactixLibrary.existsR(y_DE.xp.x)(1) & TactixLibrary.closeId
+          )
+    }
+  })
+
   /** @see [[HilbertCalculus.Derive.Dvar]] */
   //@todo could probably simplify implementation by picking atomic formula, using "x' derive var" and then embedding this equivalence into context by CE.
   //@todo Or, rather, by using CE directly on a "x' derive var" provable fact (z)'=1 <-> z'=1.

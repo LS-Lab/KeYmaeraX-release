@@ -252,6 +252,14 @@ object DerivationInfo {
           }) :  TypedFunc[Option[Formula], BelleExpr]
         ) : TypedFunc[Expression, TypedFunc[Option[Formula], BelleExpr]]
     ),
+    PositionTacticInfo("dGi",
+      RuleDisplayInfo(
+        "Inverse Differential Ghost",
+        /* conclusion */ (List("&Gamma;"), List("∃y [{x′=f(x),E & Q}]P", "&Delta;")),
+        /* premises */ List( (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")) )
+      ),
+      _ => DifferentialTactics.inverseDiffGhost
+    ),
     new InputPositionTacticInfo("dGold",
       RuleDisplayInfo(
         "Differential Ghost",
