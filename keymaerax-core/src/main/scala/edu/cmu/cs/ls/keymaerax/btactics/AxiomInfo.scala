@@ -835,7 +835,12 @@ object DerivationInfo {
         (List("&Gamma;"),List("[a]Q", "&Delta;")),
         (List("Q"),List("P"))))
     , List(FormulaArg("Q")), _ => ((fml:Formula) => TactixLibrary.generalize(fml)): TypedFunc[Formula, BelleExpr]),
-    new InputPositionTacticInfo("transform", "trafo", List(ExpressionArg("to")),
+    InputPositionTacticInfo("transform",
+      RuleDisplayInfo("trafo",
+        //@todo suggests formulas, but also works with terms
+        /* conclusion */ (List("&Gamma;"), List("P", "&Delta;")),
+        /* premises */ List((List("&Gamma;"),List("Q", "&Delta;")))),
+      List(ExpressionArg("Q")),
       _ => ((expr:Expression) => TactixLibrary.transform(expr)): TypedFunc[Expression, BelleExpr]),
     new InputPositionTacticInfo("edit", "edit", List(ExpressionArg("to")),
       _ => ((expr:Expression) => TactixLibrary.edit(expr)): TypedFunc[Expression, BelleExpr]),
@@ -928,8 +933,11 @@ object DerivationInfo {
         TactixLibrary.useLemmaAt(lemmaName, key.map(k => PosInExpr(k.split("\\.").map(Integer.parseInt).toList)))): TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
 
     InputPositionTacticInfo("cutAt"
-      , "cutAt"
-      , List(FormulaArg("fml"))
+      , RuleDisplayInfo("cutAt",
+        /* conclusion */ (List("&Gamma;"), List("C{c}", "&Delta;")),
+        /* premises */   List((List("&Gamma;"),List("C{repl}", "&Delta;")),
+                              (List("&Gamma;"),List("&Delta;", "C{repl}→C{c}"))))
+      , List(FormulaArg("repl"))
       , _ => ((fml: Formula) => TactixLibrary.cutAt(fml)): TypedFunc[Formula, BelleExpr]),
 
     // Differential tactics
