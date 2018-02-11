@@ -347,6 +347,30 @@ private object DifferentialTactics extends Logging {
       diffCut(formulas: _*)(pos) <(diffIndAllButFirst:_*)
     })
 
+  /** Inverse differential cut, removes the last conjunct from the evolution domain constraint. */
+  def inverseDiffCut: DependentPositionTactic = "dCi" by ((pos: Position, s: Sequent) => {
+    val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
+    val fact = s.at(pos) match {
+      case (ctx, fml: Modal) =>
+        val (remainder, last) = fml.program match {
+          case ODESystem(_, And(l, r)) => (l, r)
+          case ODESystem(_, edc) => (True, edc)
+        }
+        val factFml =
+          if (polarity > 0) Imply(last, Imply(fml.replaceAt(PosInExpr(0::1::Nil), remainder), fml))
+          else Imply(last, Imply(fml, ctx(fml.replaceAt(PosInExpr(0::1::Nil), remainder))))
+        proveBy(factFml,
+          implyR(1)*2 & diffCut(last)(if (polarity > 0) -2 else 1) <(
+            Idioms.?(useAt("true&")(-2, PosInExpr(0::1::Nil))) & close
+            ,
+            cohideOnlyR('Rlast) & diffInd()(1) & DebuggingTactics.done
+          )
+        )
+    }
+
+    useAt(fact, PosInExpr(1::(if (polarity > 0) 1 else 0)::Nil))(pos)
+  })
+
   /**
    * Turns things that are constant in ODEs into function symbols.
     *

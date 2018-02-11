@@ -668,6 +668,34 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(2) shouldBe "v>=0, x_0>0, x_0=x ==> [{x'=v,v'=2 & true & v>=0}]x>=x_0".asSequent
   }
 
+  "Inverse diffCut" should "remove a simple formula" in withQE { _ =>
+    val result = proveBy("==> [{x'=1 & x>=0}]true".asSequent, DifferentialTactics.inverseDiffCut(1))
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe "==> [{x'=1}]true".asSequent
+    result.subgoals(1) shouldBe "==> x>=0".asSequent
+  }
+
+  it should "remove the last conjunct" in withQE { _ =>
+    val result = proveBy("==> [{x'=1 & y>=0 & x>=0}]true".asSequent, DifferentialTactics.inverseDiffCut(1))
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe "==> [{x'=1 & y>=0}]true".asSequent
+    result.subgoals(1) shouldBe "==> x>=0".asSequent
+  }
+
+  it should "keep position stable" in withQE { _ =>
+    val result = proveBy("x>=0 ==> y>=0, [{x'=1 & y>=0 & x>=0}]true, z>1".asSequent, DifferentialTactics.inverseDiffCut(2))
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe "x>=0 ==> y>=0, [{x'=1 & y>=0}]true, z>1".asSequent
+    result.subgoals(1) shouldBe "x>=0 ==> y>=0, z>1, x>=0".asSequent
+  }
+
+  it should "work in context" in withQE { _ =>
+    val result = proveBy("==> [x:=1;][{x'=1 & y>=0 & x>=0}]true".asSequent, DifferentialTactics.inverseDiffCut(1, 1::Nil))
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe "==> [x:=1;][{x'=1 & y>=0}]true".asSequent
+    result.subgoals(1) shouldBe "==> [x:=1;]x>=0".asSequent
+  }
+
   "diffInvariant" should "cut in a simple formula" in withQE { _ =>
     val result = proveBy("x>0 ==> [{x'=2}]x>=0".asSequent, diffInvariant("x>0".asFormula)(1))
     result.subgoals.loneElement shouldBe "x>0 ==> [{x'=2 & true & x>0}]x>=0".asSequent

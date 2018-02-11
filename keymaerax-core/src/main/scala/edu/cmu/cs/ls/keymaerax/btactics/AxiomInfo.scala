@@ -188,6 +188,13 @@ object DerivationInfo {
         (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
     , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
     , _ => ((fml: Formula) => TactixLibrary.dC(fml)): TypedFunc[Formula, BelleExpr]),
+    PositionTacticInfo("dCi"
+      , RuleDisplayInfo("Inverse Differential Cut"
+        , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))
+        , /* premises */ List(
+          (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
+          (List("&Gamma;"), List("R", "&Delta;"))))
+      , _ => DifferentialTactics.inverseDiffCut),
     new InputPositionTacticInfo("autoApproximate",
       RuleDisplayInfo("Approximate",
         (List("&Gamma;"), List("[{X'=F & &Alpha;(n)}]", "&Delta;")),
