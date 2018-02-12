@@ -753,6 +753,11 @@ object DerivationInfo {
     new PositionTacticInfo("absExp", "absExp", {case () => EqualityTactics.abs}),
     new PositionTacticInfo("toSingleFormula", "toSingleFormula", {case () => PropositionalTactics.toSingleFormula}),
 
+    PositionTacticInfo("CMon"
+      , RuleDisplayInfo("CMon", (List(), List("C{o}→C{k}")), List((List(), List("o→k"))))
+      , {case () => TactixLibrary.CMon}
+    ),
+
     // proof management tactics
     InputTacticInfo("debug"
       , SimpleDisplayInfo("Debug","debug")

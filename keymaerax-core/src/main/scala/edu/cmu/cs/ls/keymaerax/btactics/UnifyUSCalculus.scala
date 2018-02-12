@@ -752,6 +752,17 @@ trait UnifyUSCalculus {
     }
   }
 
+  /** Convenience CMon with hiding. */
+  def CMon: DependentPositionTactic = new DependentPositionTactic("CMon") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
+        require(pos.isSucc, "Expected CMon in succedent, but got " + pos.prettyString)
+        cohideR(pos.top) & CMon(PosInExpr(pos.inExpr.pos.tail))
+      }
+    }
+  }
+
   /** CEat(fact) uses the equivalence `left<->right` or equality `left=right` or implication `left->right` fact for congruence
     * reasoning at the indicated position to replace `right` by `left` at indicated position (literally, no substitution).
     * Efficient unification-free version of [[UnifyUSCalculus#useAt(Provable, PosInExpr):PositionTactic]]
