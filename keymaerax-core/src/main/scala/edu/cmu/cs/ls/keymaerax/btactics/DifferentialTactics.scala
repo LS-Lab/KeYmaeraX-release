@@ -440,12 +440,20 @@ private object DifferentialTactics extends Logging {
             "\nWhen dividing by a variable v, try cutting v!=0 into the evolution domain constraint"
           )
 
-        val subst = (us: Option[Subst]) => us.getOrElse(throw BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
-          (Variable("y_",None,Real), y) ::
-          (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a) ::
-          (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
+        (a, b) match {
+          case (Number(n), _) if n == 0 =>
+            val subst = (us: Option[Subst]) => us.getOrElse(throw BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
+              (Variable("y_",None,Real), y) ::
+                (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
+            useAt("DG differential ghost constant", PosInExpr(0::Nil), subst)(pos)
+          case _ =>
+            val subst = (us: Option[Subst]) => us.getOrElse(throw BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
+              (Variable("y_",None,Real), y) ::
+                (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a) ::
+                (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
 
-        useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
+            useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
+        }
     }
   })
 

@@ -48,7 +48,7 @@ class ToolTacticsTests extends TacticTestBase {
     inside(the [BelleThrowable] thrownBy proveBy("z<=5 ==> ".asSequent, transform("z<=4".asFormula)(-1))) {
       case bt: BelleThrowable =>
         bt should have message "[Bellerophon Runtime] Tactic transform({`z<=4`},-1) may point to wrong position, found Some(z<=5) at position Fixed(-1,None,true)"
-        bt.getCause should have message "[Bellerophon Runtime] Invalid transformation: z<=4"
+        bt.getCause should have message "[Bellerophon Runtime] Invalid transformation: cannot transform Some(z<=5) to z<=4"
     }
   }
 
@@ -174,6 +174,12 @@ class ToolTacticsTests extends TacticTestBase {
   it should "transform terms" in withQE { _ =>
     val result = proveBy("[x:=x/b+1+1+0;]x>0".asFormula, transform("x/b+2".asTerm)(1, 0::1::Nil))
     result.subgoals.loneElement shouldBe "==> [x:=x/b+2;]x>0".asSequent
+  }
+
+  //@todo missing feature
+  it should "transform terms in ODEs" ignore withQE { _ =>
+    val result = proveBy("x<0 -> [{x'=0*x+-5}]x<0".asFormula, transform("-5".asTerm)(1, 1::0::0::1::Nil))
+    result.subgoals.loneElement shouldBe "==> x<0 -> [{x'=-5}]x<0".asSequent
   }
 
   "Edit" should "transform when special function abbrv is not used" in withQE { _ =>

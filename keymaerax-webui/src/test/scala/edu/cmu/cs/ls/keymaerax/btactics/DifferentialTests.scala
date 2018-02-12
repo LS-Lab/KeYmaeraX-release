@@ -866,17 +866,17 @@ class DifferentialTests extends TacticTestBase {
 
   "DG" should "add y'=1 to [x'=2]x>0" in {
     val result = proveBy("[{x'=2}]x>0".asFormula, dG("{y'=0*y+1}".asDifferentialProgram, None)(1))
-    result.subgoals.loneElement shouldBe "==> \\exists y [{x'=2,y'=0*y+1}]x>0".asSequent
+    result.subgoals.loneElement shouldBe "==> \\exists y [{x'=2,y'=1}]x>0".asSequent
   }
 
   it should "add z'=1 to [y'=2]y>0" in {
     val result = proveBy("[{y'=2}]y>0".asFormula, dG("{z'=0*z+1}".asDifferentialProgram, None)(1))
-    result.subgoals.loneElement shouldBe "==> \\exists z [{y'=2,z'=0*z+1}]y>0".asSequent
+    result.subgoals.loneElement shouldBe "==> \\exists z [{y'=2,z'=1}]y>0".asSequent
   }
 
   it should "add x'=1 to [y'=2]y>0" in {
     val result = proveBy("[{y'=2}]y>0".asFormula, dG("{x'=0*x+1}".asDifferentialProgram, None)(1))
-    result.subgoals.loneElement shouldBe "==> \\exists x [{y'=2,x'=0*x+1}]y>0".asSequent
+    result.subgoals.loneElement shouldBe "==> \\exists x [{y'=2,x'=1}]y>0".asSequent
   }
 
   it should "add y'=3*y+10 to [x'=2]x>0" in {
@@ -901,7 +901,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "do basic unification" in {
     val result = proveBy("[{x'=2}]x>0".asFormula, dG("{t'=0*t+1}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1))
-    result.subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=0*t+1}]x>0".asSequent
+    result.subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1}]x>0".asSequent
   }
 
   it should "not allow non-linear ghosts (1)" in {
@@ -920,28 +920,28 @@ class DifferentialTests extends TacticTestBase {
     val s = "==> [{x'=2}]x>0".asSequent
     val tactic = dG("{y'=0*y+1}".asDifferentialProgram, Some("y>0 & x*y>0".asFormula))(1)
     val result = proveBy(s, tactic)
-    result.subgoals.loneElement shouldBe "==> \\exists y [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\exists y [{x'=2,y'=1}](y>0 & x*y>0)".asSequent
   }
 
   it should "work in a simple context" in withQE { _ =>
     val s = "x>0 ==> a=2 -> [{x'=2}]x>0".asSequent
     val tactic = dG("{y'=0*y+1}".asDifferentialProgram, Some("y>0 & x*y>0".asFormula))(1, 1::Nil)
     val result = proveBy(s, tactic)
-    result.subgoals.loneElement shouldBe "x>0 ==> a=2 -> \\exists y [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asSequent
+    result.subgoals.loneElement shouldBe "x>0 ==> a=2 -> \\exists y [{x'=2,y'=1}](y>0 & x*y>0)".asSequent
   }
 
   it should "work in a complicated context" in withQE { _ =>
     val s = "x>0 ==> a=2 -> [b:=3;]<?c=5;{c'=2}>[{x'=2}]x>0".asSequent
     val tactic = dG("{y'=0*y+1}".asDifferentialProgram, Some("y>0 & x*y>0".asFormula))(1, 1::1::1::Nil)
     val result = proveBy(s, tactic)
-    result.subgoals.loneElement shouldBe "x>0 ==> a=2 -> [b:=3;]<?c=5;{c'=2}>\\exists y [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asSequent
+    result.subgoals.loneElement shouldBe "x>0 ==> a=2 -> [b:=3;]<?c=5;{c'=2}>\\exists y [{x'=2,y'=1}](y>0 & x*y>0)".asSequent
   }
 
   it should "add y'=-a() to [x'=2]x>0" in withQE { _ =>
     val s = "a()>0, x>0 ==> [{x'=2}]x>0".asSequent
     val tactic = dG("{y'=0*y+(-a())}".asDifferentialProgram, Some("x>0 & y<0".asFormula))(1)
     val result = proveBy(s, tactic)
-    result.subgoals.loneElement shouldBe "a()>0, x>0 ==> \\exists y [{x'=2,y'=0*y+-a()}](x>0 & y<0)".asSequent
+    result.subgoals.loneElement shouldBe "a()>0, x>0 ==> \\exists y [{x'=2,y'=-a()}](x>0 & y<0)".asSequent
   }
 
   it should "solve x'=x" in withQE { _ =>
@@ -991,7 +991,7 @@ class DifferentialTests extends TacticTestBase {
     val s = "==> [{x'=2}]x>0".asSequent
     val tactic = dG("{y'=0*y+1}".asDifferentialProgram, None)(1) & transform("y>0 & x*y>0".asFormula)(1, 0::1::Nil)
     val result = proveBy(s, tactic)
-    result.subgoals.loneElement shouldBe "==> \\exists y [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\exists y [{x'=2,y'=1}](y>0 & x*y>0)".asSequent
   }
 
   "Inverse Differential Ghost" should "remove the left-most DE" in withQE { _ =>
