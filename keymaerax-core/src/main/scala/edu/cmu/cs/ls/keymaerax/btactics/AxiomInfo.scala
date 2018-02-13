@@ -301,8 +301,8 @@ object DerivationInfo {
       , "DGCa", {case () => HilbertCalculus.useAt("DG differential ghost constant all")}),
     new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", {case () => ???}),
     new CoreAxiomInfo("DG inverse differential ghost implicational", "DG inverse differential ghost implicational", "DGi", {case () => ???}),
-    new CoreAxiomInfo(", commute", ",", "commaCommute", {case () => ???}),
-    new CoreAxiomInfo(", sort", ",", "commaSort", {case () => ???}),
+    CoreAxiomInfo(", commute", ",", "commaCommute", {case () => HilbertCalculus.useAt(", commute")}),
+    new CoreAxiomInfo(", sort", ",", "commaSort", {case () => HilbertCalculus.useAt(", sort")}),
     new CoreAxiomInfo("DS& differential equation solution", "DS&", "DS", {case () => HilbertCalculus.DS}),
     new CoreAxiomInfo("DIo open differential invariance >"
       , AxiomDisplayInfo("DIo >", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]f(x)>g(x)</span>↔[?Q]f(x)>g(x))←(Q→[{x′=f(x)&Q}](f(x)>g(x)→(f(x)>g(x))′))")
