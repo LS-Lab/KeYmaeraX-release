@@ -269,7 +269,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
         // ctrlVarsTemp:=ctrlVars
         val tempCtrl = vars.map(v => Assign(postVar(v), v)).reduceOption(Compose).getOrElse(Test(True))
-        val fallbackCtrl = Compose(fallback.getOrElse(ctrl), tempCtrl)
+        val fallbackCtrl = Compose(fallback.getOrElse(ctrlPrg), tempCtrl)
 
         val sandbox = Imply(init, Box(Compose(Test(bounds), Loop(Compose(sense, Compose(ctrl, act)))), safe))
         val sbTactic = sandboxTactic(name, pl.invariant.get, monitor, q, ctrlPrg, fallbackCtrl,
@@ -308,23 +308,26 @@ object ModelPlex extends ModelPlexTrait with Logging {
     /*@note chase but stop on <ctrl>fallbackUpsilon */
     val chaseFallback = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
       case Some(Diamond(prg, _)) if prg == ctrl => nil
-      case _ => step(pos)
+      case _ => step(pos) | alphaRule | allR(pos)
     })
 
+    //@todo generalize to fallback with nondeterministic choice
     val Diamond(_, fallbackUpsilon) = proveBy(Box(fallbackCtrl, Diamond(ctrl, upsilon)),
       chaseFallback(1)*).subgoals.head.succ.head
 
     val fallbackUpsilonConjuncts = FormulaTools.conjuncts(fallbackUpsilon)
 
     implyR(1) & (andL('L)*) & composeb(1) & testb(1) & implyR(1) & throughout(inv)(1) & Idioms.<(
-      DebuggingTactics.print("Proving base case") & useLemma(name+"_0", Some(prop)) & done
+      DebuggingTactics.print("Proving base case") & useLemma(name+"_0", Some(prop)) & DebuggingTactics.done("Base case")
       ,
-      DebuggingTactics.print("Proving use case") & useLemma(name+"_1", Some(prop)) & done
+      DebuggingTactics.print("Proving use case") & useLemma(name+"_1", Some(prop)) & DebuggingTactics.done("Use case")
       ,
       DebuggingTactics.print("Proving plant") & chase(1) & allR(1)*senseVars.size &
-      useLemma(name+"_dW", Some(prop)) & DebuggingTactics.print("Plant lemma") & done
+      DebuggingTactics.print("Applying " + name + "_dW lemma") &
+      useLemma(name+"_dW", Some(prop)) & DebuggingTactics.done(name + "_dW lemma")
       ,
-      DebuggingTactics.print("Proving external control") & chase(1) & allR(1)*numCtrlVars & prop & done
+      DebuggingTactics.print("Proving external control") & chase(1) & allR(1)*numCtrlVars & prop &
+      DebuggingTactics.done("External control")
       ,
       DebuggingTactics.print("Proving controllers") & chase(1) & andR(1) & Idioms.<(
         DebuggingTactics.print("Proving external control passes monitor") &
@@ -335,12 +338,13 @@ object ModelPlex extends ModelPlexTrait with Logging {
             useAt("<> diamond", PosInExpr(1::Nil))('Llast) &
             notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & (andL('L)*) &
             upsilonConjuncts.filter({ case Equal(l, r) => l != r }).map(c => exhaustiveEqL2R('L, c)).reduce[BelleExpr](_&_) &
-            prop & done
+            prop & DebuggingTactics.done("External control passes monitor 1")
             ,
-            useAt("Kd2 diamond modus ponens", PosInExpr(1::1::Nil))(2) & onAll(prop) & done
+            useAt("Kd2 diamond modus ponens", PosInExpr(1::1::Nil))(2) & onAll(prop) &
+            DebuggingTactics.done("External control passes monitor 2")
           ),
-          useLemma(name+"_2", Some(prop)) & done
-        ) & done & DebuggingTactics.print("Done proving external control")
+          useLemma(name+"_2", Some(prop)) & DebuggingTactics.done("External control passes monitor 3")
+        ) & DebuggingTactics.done("External control")
         ,
         DebuggingTactics.print("Proving fallback") &
         implyR(1) & hideL('Llast) & cut(Box(fallbackCtrl, monitor)) & Idioms.<(
@@ -352,16 +356,19 @@ object ModelPlex extends ModelPlexTrait with Logging {
               useAt("<> diamond", PosInExpr(1::Nil))('Llast) &
               notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & (andL('L)*) &
               fallbackUpsilonConjuncts.filter({ case Equal(l, r) => l != r }).map(c => exhaustiveEqR2L('L, c)).reduce[BelleExpr](_&_) &
-              prop & done
+              prop & DebuggingTactics.done("Fallback 1")
               ,
-              useAt("Kd2 diamond modus ponens", PosInExpr(1::1::Nil))('Rlast) & onAll(prop) & done
+              useAt("Kd2 diamond modus ponens", PosInExpr(1::1::Nil))('Rlast) & onAll(prop) &
+              DebuggingTactics.done("Fallback 2")
             )
             ,
-            useLemma(name+"_2", Some(prop)) & done
+            DebuggingTactics.print("Applying " + name + "_2 lemma") &
+            useLemma(name+"_2", Some(prop)) & DebuggingTactics.done("Applying " + name + "_2 lemma")
           )
           ,
-          useLemma(name+"_FallbackCheck", Some(prop)) & done
-        ) & DebuggingTactics.print("Done proving fallback")
+          DebuggingTactics.print("Applying " + name + "_FallbackCheck lemma") &
+          useLemma(name+"_FallbackCheck", Some(prop)) & DebuggingTactics.done("Applying " + name + "_FallbackCheck lemma")
+        ) & DebuggingTactics.done("Proving fallback")
       )
     )
   }
