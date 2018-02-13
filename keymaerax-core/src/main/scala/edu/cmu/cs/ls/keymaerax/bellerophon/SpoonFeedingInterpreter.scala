@@ -136,7 +136,9 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
       case BranchTactic(children) if children.nonEmpty => goal match {
         case BelleProvable(p, labels) =>
           if (children.length != p.subgoals.length)
-            throw new BelleThrowable("<(e)(v) is only defined when len(e) = len(v), but " + children.length + "!=" + p.subgoals.length).inContext(tactic, "")
+            throw new BelleThrowable("<(e)(v) is only defined when len(e) = len(v), but " +
+              children.length + "!=" + p.subgoals.length + " subgoals (v)\n" +
+              p.subgoals.map(_.prettyString).mkString("\n===================\n")).inContext(tactic, "")
 
           val branchTactics: Seq[(BelleExpr, BelleValue)] = children.zip(p.subgoals.map(sg => BelleProvable(ProvableSig.startProof(sg), labels)))
           val branchCtxs = ctx.branch(children.size)
