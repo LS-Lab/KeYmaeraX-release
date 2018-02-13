@@ -762,7 +762,9 @@ object DerivationInfo {
     InputTacticInfo("debug"
       , SimpleDisplayInfo("Debug","debug")
       ,List(StringArg("msg")), _ => ((msg: String) => DebuggingTactics.debug(msg)): TypedFunc[String, BelleExpr]),
-    new TacticInfo("done", "done", {case () => TactixLibrary.done}), // turn into input tactic if message should be stored too
+    InputTacticInfo("done"
+      , SimpleDisplayInfo("Done","done")
+      ,List(StringArg("msg")), _ => ((msg: Option[String]) => DebuggingTactics.done(msg.getOrElse(""))): TypedFunc[Option[String], BelleExpr]),
 
     // Proof rule two-position tactics
     new TwoPositionTacticInfo("coHide2", "W", {case () => SequentCalculus.cohide2}),

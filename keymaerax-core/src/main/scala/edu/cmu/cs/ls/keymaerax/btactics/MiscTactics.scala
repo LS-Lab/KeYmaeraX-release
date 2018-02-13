@@ -148,7 +148,7 @@ object DebuggingTactics {
 
   /** @see [[TactixLibrary.done]] */
   lazy val done: BelleExpr = done()
-  def done(msg: String = ""): BelleExpr = new BuiltInTactic("done") {
+  def done(msg: String = ""): BelleExpr = new StringInputTactic("done", if (msg != "") msg::Nil else Nil) {
     override def result(provable : ProvableSig): ProvableSig = {
       if (provable.isProved) { print(msg + {if (msg.nonEmpty) ": " else ""} + "checked done"); provable }
       else throw new BelleThrowable((if (msg.nonEmpty) msg + "\n" else "") + "Expected proved provable, but got " + provable)
