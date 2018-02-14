@@ -369,8 +369,6 @@ object ModelPlex extends ModelPlexTrait with Logging {
           chase(1, 1::Nil) & QE)
         val fallbackCheck = (name+"_FallbackCheck", Imply(inv, Box(fallbackCtrl, monitor)), master())
 
-        println("Monitorcheck\n" + monitorCheck._2.prettyString)
-
         val lemmas =
           pl.throughoutLemmas ++
             (if (pl.odeLemma.isDefined) pl.odeLemma.get::Nil else Nil) ++
