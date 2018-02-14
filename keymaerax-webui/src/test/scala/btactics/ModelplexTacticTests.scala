@@ -951,7 +951,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
     val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*) & simplifier(1))
-    result.subgoals.loneElement shouldBe "==> (V()>=0&ep()>=0) & (d>=V()*ep()&(0<=vpost&vpost<=V())&dpost=d&tpost=0 | dpost=d&vpost=0&tpost=0)".asSequent
+    result.subgoals.loneElement shouldBe "==> d>=V()*ep()&(0<=vpost&vpost<=V())&0<=ep()&dpost=d&tpost=0|0<=ep()&dpost=d&vpost=0&tpost=0".asSequent
   }
 
   it should "prove controller monitor correctness" taggedAs IgnoreInBuildTest in withMathematica { _ =>
@@ -965,32 +965,22 @@ class ModelplexTacticTests extends TacticTestBase {
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
     val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Velocity Car Safety").head
-    val fallback = "v:=0;t:=0;".asProgram
+    val fallback = "t:=0;v:=0;".asProgram
     val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(entry.name, entry.tactics.head._2,
       Some(fallback), 'ctrl, None)(entry.model.asInstanceOf[Formula])
 
     sandbox shouldBe
       """
-        |d>=0 & v=0 & t=0 & V()>=0 & ep()>=0 ->
-        |[?V()>=0 & ep()>=0; /* test bounds */
-        | {
-        |  /* sensing */
-        |  {
-        |   {dpre:=d;tpre:=t;}
-        |   {d:=*;t:=*;}
-        |   ?(t>=0&v>=0&d>=v*(ep()-t))&t<=ep();
+        |[{V:=*;ep:=*;}
+        | {d:=*;t:=*;}
+        | ?d>=0&v=0&t=0&V>=0&ep>=0;
+        | {{tpost:=*;vpost:=*;}
+        |  {  ?  d>=V*ep&(0<=vpost&vpost<=V)&0<=ep&dpost=d&tpost=0|0<=ep&dpost=d&tpost=0&vpost=0;t:=tpost;v:=vpost;
+        |   ++?!(d>=V*ep&(0<=vpost&vpost<=V)&0<=ep&dpost=d&tpost=0|0<=ep&dpost=d&tpost=0&vpost=0);t:=0;v:=0;
         |  }
-        |  {
-        |  { tpost:=*; vpost:=*; } /* external control */
-        |  /* actuate if monitor satisfied, else fallback */
-        |  if ((V()>=0&ep()>=0)&(d>=V()*ep()&(0<=vpost&vpost<=V())&dpost=d&tpost=0|dpost=d&tpost=0&vpost=0)) {
-        |      t:=tpost;
-        |      v:=vpost;
-        |  } else {
-        |      v:=0;
-        |      t:=0;
-        |  }
-        |  }
+        |  {dpost:=*;tpost:=*;}
+        |  ?tpost>=0&v>=0&dpost>=v*(ep-tpost)&tpost<=ep;
+        |  d:=dpost;t:=tpost;
         | }*]d>=0
       """.stripMargin.asFormula
 
@@ -998,6 +988,8 @@ class ModelplexTacticTests extends TacticTestBase {
 
     val lemmaEntries = lemmas.map({ case (name, fml, tactic) => ParsedArchiveEntry(name, "lemma", "", defs(fml), fml,
       (name + " Proof", db.extractSerializableTactic(fml, tactic))::Nil, Map.empty)})
+    val lemmaTempArchive = lemmaEntries.map(new KeYmaeraXArchivePrinter()(_)).mkString("\n\n")
+    checkArchiveEntries(KeYmaeraXArchiveParser.parse(lemmaTempArchive))
 
     val sandboxEntry = ParsedArchiveEntry(entry.name + " Sandbox", "theorem", "", defs(sandbox),
       sandbox, (entry.name + " Sandbox Proof", db.extractSerializableTactic(sandbox, sbTactic))::Nil, Map.empty)
