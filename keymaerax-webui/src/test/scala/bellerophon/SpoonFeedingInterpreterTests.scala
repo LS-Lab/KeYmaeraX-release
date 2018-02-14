@@ -415,6 +415,19 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     n30.children shouldBe empty
   }
 
+  "Let" should "be recorded plain" in withDatabase { db =>
+    val modelContent = "Variables. R x. End. Problem. x>0&x>1&x>2&x>3 -> x>0 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof,
+      listener(db.db), SequentialInterpreter))
+    interpreter(let("X()".asTerm, "x".asVariable, prop),
+      BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.nodes should have size 2
+    tree.nodes.map(_.makerShortName) should contain theSameElementsInOrderAs None :: Some("let(X()=x in prop)") :: Nil
+  }
+
   "Listeners" should "not be informed when doing auxiliary inner proofs" in withMathematica { _ =>
     val mockListener = new IOListener() {
       var beginnings: List[(BelleValue, BelleExpr)] = Nil
@@ -718,7 +731,6 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     interpreter(tactic, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
     val tree = DbProofTree(db.db, proofId.toString)
-    val foo = tree.nodes
     tree.tactic shouldBe BelleParser("implyR(1); dC({`x>=old(x)`}, 1); <(dW(1); QE, dI(1))")
   }}
 
@@ -759,7 +771,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.tactic shouldBe BelleParser("implyR(1); dC({`x>=old(x)`}, 1); <(nil, nil)")
   }}
 
-  "Revealing internal steps" should "should work for diffInvariant" in withMathematica { tool => withDatabase { db =>
+  "Revealing internal steps" should "should work for diffInvariant" in withMathematica { _ => withDatabase { db =>
     val problem = "x>=0 -> [{x'=1}]x>=0"
     val modelContent = s"Variables. R x. End. Problem. $problem End."
     val proofId = db.createProof(modelContent)
@@ -791,7 +803,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       """.stripMargin)
   }}
 
-  it should "should work for multiple levels of diffInvariant" ignore withMathematica { tool => withDatabase { db =>
+  it should "should work for multiple levels of diffInvariant" ignore withMathematica { _ => withDatabase { db =>
     val problem = "x>=0 -> [{x'=1}]x>=0"
     val modelContent = s"Variables. R x. End. Problem. $problem End."
     val proofId = db.createProof(modelContent)
@@ -994,7 +1006,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   }
 
   //@todo print/parse assert
-  it should "should work on a typical example" ignore withDatabase { db => withMathematica { tool =>
+  it should "should work on a typical example" ignore withDatabase { db => withMathematica { _ =>
     val problem = "x>=0 & y>=1 & z<=x+y & 3>2  -> [x:=x+y;]x>=z"
     val modelContent = s"Variables. R x. R y. R z. End.\n\n Problem. $problem End."
     val proofId = db.createProof(modelContent)
@@ -1030,7 +1042,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  [{x'=y, y'=-w()^2*x-2*d*w()*y, d'=7 & w()>=0}]w()^2*x^2 + y^2 <= c()^2
       """.stripMargin
     val p = ProvableSig.startProof(problem.asFormula)
-    implicit val db = new InMemoryDB()
+    implicit val db: DBAbstraction = new InMemoryDB()
     val proofId = db.createProof(p)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.createProof, listener(db), SequentialInterpreter))
     interpreter(implyR(1) & diffInvariant("d>=0".asFormula)(1), BelleProvable(p))
@@ -1043,8 +1055,8 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         //diffCut
         DbProofTree(db, id1.toString).locate("(2,0)") match {
           case Some(n2) =>
-            val (id2, tactic2) = stepInto(n2, "dC({`d>=0`}, 1)")(db)
-            val tacticString = "useAt({`DC differential cut`},1) ; <(nil, nil)"
+            val (_, tactic2) = stepInto(n2, "dC({`d>=0`}, 1)")(db)
+            val tacticString = "DC(1) ; <(nil, nil)"
             tactic2 shouldBe BelleParser(tacticString)
             BellePrettyPrinter(tactic2) should equal (tacticString) (after being whiteSpaceRemoved)
         }
@@ -1052,13 +1064,13 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         DbProofTree(db, id1.toString).locate("(3,1)") match {
           case Some(n2) =>
             val (_, tactic) = stepInto(n2, "dI(1)")(db)
-            val tacticString = """useAt({`DI differential invariant`},1) ; implyR(1) ; andR(1) ; <(
+            val tacticString = """DI(1) ; implyR(1) ; andR(1) ; <(
                                  |  QE,
                                  |  derive(1.1) ; DE(1) ;
-                                 |  useAt({`[':=] differential assign`},1.1) ;
-                                 |  useAt({`[':=] differential assign`},1.1) ;
-                                 |  useAt({`[':=] differential assign`},1.1) ;
-                                 |  useAt({`DW differential weakening`},1) ;
+                                 |  Dassignb(1.1) ;
+                                 |  Dassignb(1.1) ;
+                                 |  Dassignb(1.1) ;
+                                 |  DW(1) ;
                                  |  GV(1) ; QE
                                  |)
                                """.stripMargin
@@ -1071,7 +1083,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   it should "work for simple dI" in withMathematica { _ =>
     val problem = "x>0 -> [{x'=3}]x>0".asFormula
     val p = ProvableSig.startProof(problem)
-    implicit val db = new InMemoryDB()
+    implicit val db: DBAbstraction = new InMemoryDB()
     val proofId = db.createProof(p)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.createProof, listener(db), SequentialInterpreter))
     interpreter(implyR(1) & dI()(1), BelleProvable(p))
@@ -1080,9 +1092,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(1,0)") match {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")(db)
-        val tacticString = """useAt({`DI differential invariant`},1) ; implyR(1) ; andR(1) ; <(
+        val tacticString = """DI(1) ; implyR(1) ; andR(1) ; <(
                              |  QE,
-                             |  derive(1.1) ; DE(1) ; useAt({`[':=] differential assign`},1.1) ; GV(1) ; QE
+                             |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
                              |)""".stripMargin
         tactic shouldBe BelleParser(tacticString)
         BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
@@ -1093,7 +1105,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   it should "work for simple dI with constants" in withMathematica { _ =>
     val problem = "x>0 & a>=0 -> [{x'=a}]x>0".asFormula
     val p = ProvableSig.startProof(problem)
-    implicit val db = new InMemoryDB()
+    implicit val db: DBAbstraction = new InMemoryDB()
     val proofId = db.createProof(p)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.createProof, listener(db), SequentialInterpreter))
     interpreter(implyR(1) & dI()(1), BelleProvable(p))
@@ -1102,9 +1114,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(1,0)") match {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")(db)
-        val tacticString = """useAt({`DI differential invariant`},1) ; implyR(1) ; andR(1) ; <(
+        val tacticString = """DI(1) ; implyR(1) ; andR(1) ; <(
                              |  QE,
-                             |  derive(1.1) ; DE(1) ; useAt({`[':=] differential assign`},1.1) ; GV(1) ; QE
+                             |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
                              |)""".stripMargin
         tactic shouldBe BelleParser(tacticString)
         BellePrettyPrinter(tactic) should equal (tacticString) (after being whiteSpaceRemoved)
@@ -1115,7 +1127,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   it should "work for simple dI with non-primed variables in postcondition" in withMathematica { _ =>
     val problem = "x>a -> [{x'=5}]x>a".asFormula
     val p = ProvableSig.startProof(problem)
-    implicit val db = new InMemoryDB()
+    implicit val db: DBAbstraction = new InMemoryDB()
     val proofId = db.createProof(p)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.createProof, listener(db), SequentialInterpreter))
     interpreter(implyR(1) & dI()(1), BelleProvable(p))
@@ -1124,9 +1136,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.locate("(1,0)") match {
       case Some(n1) =>
         val (_, tactic) = stepInto(n1, "dI(1)")(db)
-        val tacticString = """useAt({`DI differential invariant`},1) ; implyR(1) ; andR(1) ; <(
+        val tacticString = """DI(1) ; implyR(1) ; andR(1) ; <(
                              |  QE,
-                             |  derive(1.1) ; DE(1) ; useAt({`[':=] differential assign`},1.1) ; GV(1) ; QE
+                             |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
                              |)
                            """.stripMargin
         tactic shouldBe BelleParser(tacticString)
@@ -1137,7 +1149,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   it should "work when dI fails with non-primed variables in postcondition" in withMathematica { _ =>
     val problem = "[{x'=5}]x>a".asFormula
     val p = ProvableSig.startProof(problem)
-    implicit val db = new InMemoryDB()
+    implicit val db: DBAbstraction = new InMemoryDB()
     val proofId = db.createProof(p)
 
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.createProof, listener(db), SequentialInterpreter, 1, strict = false))
@@ -1147,9 +1159,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val innerId = interpreter.innerProofId.getOrElse(proofId)
     val tree = DbProofTree(db, innerId.toString)
     val tactic = tree.tactic
-    val tacticString = """useAt({`DI differential invariant`},1) ; implyR(1) ; andR(1) ; <(
+    val tacticString = """DI(1) ; implyR(1) ; andR(1) ; <(
                          |  QE,
-                         |  derive(1.1) ; DE(1) ; useAt({`[':=] differential assign`},1.1) ; GV(1) ; QE
+                         |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
                          |)
                        """.stripMargin
     tactic shouldBe BelleParser(tacticString)
@@ -1159,7 +1171,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
   it should "work when dI fails with multiple non-primed variables in postcondition" in withMathematica { _ =>
     val problem = "[{x'=5}]x>a+b".asFormula
     val p = ProvableSig.startProof(problem)
-    implicit val db = new InMemoryDB()
+    implicit val db: DBAbstraction = new InMemoryDB()
     val proofId = db.createProof(p)
 
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.createProof, listener(db), SequentialInterpreter, 1, strict = false))
@@ -1168,9 +1180,9 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val innerId = interpreter.innerProofId.getOrElse(proofId)
     val tactic = DbProofTree(db, innerId.toString).tactic
-    val tacticString = """useAt({`DI differential invariant`},1) ; implyR(1) ; andR(1) ; <(
+    val tacticString = """DI(1) ; implyR(1) ; andR(1) ; <(
                          |  QE,
-                         |  derive(1.1) ; DE(1) ; useAt({`[':=] differential assign`},1.1) ; GV(1) ; QE
+                         |  derive(1.1) ; DE(1) ; Dassignb(1.1) ; GV(1) ; QE
                          |)
                        """.stripMargin
     tactic shouldBe BelleParser(tacticString)
@@ -1186,7 +1198,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     intercept[BelleThrowable] { proveBy(problem, tactic) }.getMessage should startWith ("[Bellerophon Runtime] Expected proved provable")
     sql.extractTactic(pId) shouldBe BelleParser("nil")
 
-    implicit val db = new InMemoryDB()
+    implicit val db: DBAbstraction = new InMemoryDB()
     val proofId = db.createProof(p)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.createProof, listener(db), SequentialInterpreter, 1, strict=false))
     intercept[BelleThrowable] { interpreter(tactic, BelleProvable(p)) }.getMessage should startWith ("[Bellerophon Runtime] Expected proved provable")

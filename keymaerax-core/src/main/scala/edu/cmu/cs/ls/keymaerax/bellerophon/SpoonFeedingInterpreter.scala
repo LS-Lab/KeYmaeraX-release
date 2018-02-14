@@ -193,20 +193,30 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
         }
 
         val (in: ProvableSig, us: USubst, innerMost) = flattenLets(innerTactic, SubstitutionPair(abbr, value)::Nil, value->abbr::Nil)
-        logger.debug("INFO: " + tactic + " considers\n" + in + "\nfor outer\n" + provable)
-        val innerId = idProvider(in)
-        innerProofId = Some(innerId)
-        val innerFeeder = SpoonFeedingInterpreter(innerId, -1, idProvider, listeners, inner, descend, strict = strict)
-        val result = innerFeeder.runTactic(innerMost, BelleProvable(in), level, DbAtomPointer(-1)) match {
-          case (BelleProvable(derivation, _), _) =>
-            val backsubst: ProvableSig = derivation(us)
-            //@todo store inner steps as part of this proof
-            (BelleProvable(provable(backsubst, 0), lbl), ctx.store(Idioms.nil))
-          case _ => throw new BelleThrowable("Let expected sub-derivation")
+        logger.debug(tactic + " considers\n" + in + "\nfor outer\n" + provable)
+        if (descend > 0) {
+          val innerId = idProvider(in)
+          innerProofId = Some(innerId)
+          val innerFeeder = SpoonFeedingInterpreter(innerId, -1, idProvider, listeners, inner, descend, strict = strict)
+          val result = innerFeeder.runTactic(innerMost, BelleProvable(in), level, DbAtomPointer(-1)) match {
+            case (BelleProvable(derivation, _), _) =>
+              val backsubst: ProvableSig = derivation(us)
+              //@todo store inner steps as part of this proof
+              (BelleProvable(provable(backsubst, 0), lbl), ctx/*.store(tactic)*/)
+            case _ => throw new BelleThrowable("Let expected sub-derivation")
+          }
+          innerFeeder.kill()
+          result
+        } else {
+          runningInner = inner(listeners(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
+          runningInner(tactic, BelleProvable(provable.sub(0), lbl)) match {
+            case BelleProvable(innerProvable, _) =>
+              val r = (BelleProvable(provable(innerProvable, 0), lbl), ctx.store(tactic))
+              runningInner = null
+              r
+            case e: BelleThrowable => throw e
+          }
         }
-        innerFeeder.kill()
-        result
-
       case ChooseSome(options, e) =>
         val opts = options()
         var errors = ""
