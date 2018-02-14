@@ -376,6 +376,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
             (fallbackCheck::Nil)
 
         (sandbox -> sbTactic, lemmas)
+      case _ => throw new IllegalArgumentException("Sandbox synthesis supports input formulas of the shape init -> [{ctrl;ODE}*]safe. Please use {} to group program statements into exactly two blocks, e.g. { {ctrl1;ctrl2;}{ODE} }*.")
     }
   }
 
