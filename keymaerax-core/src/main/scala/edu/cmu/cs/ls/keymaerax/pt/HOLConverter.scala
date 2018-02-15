@@ -11,7 +11,7 @@ object HOLConverter {
   def apply(t:Term):String = {
     val c = '\"'
     t match {
-      case Number(n) => s"(Const ${n.toIntExact}w)"
+      case Number(n) => s"(Const (${n.toIntExact}w))"
       //@todo: more robust please
       case FuncOf(Function(n,_,_,_,_),_) => s"(Var $c$n()$c)"
       case BaseVariable(n,None,_) => s"(Var $c$n$c)"
