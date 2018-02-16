@@ -776,8 +776,8 @@ object DerivationInfo {
       , RuleDisplayInfo(("Abbreviate","abbrv")
         ,(List("&Gamma;"), List("&Delta;"))
         ,List(
-          (List("&Gamma;", "v=t"),List("&Delta;"))))
-      ,List(TermArg("t"),VariableArg("v", "v"::Nil)), _ => ((t:Term) => ((v: Option[Variable]) => EqualityTactics.abbrv(t, v)): TypedFunc[Option[Variable], BelleExpr]): TypedFunc[Term, _]),
+          (List("&Gamma;", "freshVar=theta"),List("&Delta;"))))
+      ,List(TermArg("theta"),VariableArg("freshVar", "freshVar"::Nil)), _ => ((t:Term) => ((v: Option[Variable]) => EqualityTactics.abbrv(t, v)): TypedFunc[Option[Variable], BelleExpr]): TypedFunc[Term, _]),
     // Proof rule input position tactics
     new InputPositionTacticInfo("cutL", "Cut", List(FormulaArg("cutFormula")),
       _ => ((fml:Formula) => TactixLibrary.cutL(fml)): TypedFunc[Formula, BelleExpr]),
