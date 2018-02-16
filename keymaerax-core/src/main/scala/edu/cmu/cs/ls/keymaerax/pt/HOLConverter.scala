@@ -11,7 +11,7 @@ object HOLConverter {
   def apply(t:Term):String = {
     val c = '\"'
     t match {
-      case Number(n) => s"(Const ${n.toIntExact}w)"
+      case Number(n) => s"(Const (${n.toIntExact}w))"
       //@todo: more robust please
       case FuncOf(Function(n,_,_,_,_),_) => s"(Var $c$n()$c)"
       case BaseVariable(n,None,_) => s"(Var $c$n$c)"
@@ -21,14 +21,22 @@ object HOLConverter {
     }
   }
 
-  //@todo not needed yet - FOL_R only so far
+  //@todo not needed yet
   def apply(dp:DifferentialProgram):String = {
     ???
   }
 
-  //@todo not needed yet - FOL_R only so far
+  def apply(s:String):String = '\"' + s + '\"'
+  //@todo not all constructs are needed yet
   def apply(p:Program):String = {
-    ???
+    p match {
+      case Test(p) => s"(Test ${apply(p)})"
+      case Assign(x,e) => s"(Assign ${apply(x)} (SOME ${apply(e)}))"
+      case AssignAny(x) => s"(Assign ${apply(x)} NONE)"
+      case Compose(a,b) => s"(Seq ${apply(a)} ${apply(b)})"
+      case Choice(a,b) => s"(Choice ${apply(a)} ${apply(b)})"
+      case Loop(a) => s"(Loop ${apply(a)})"
+    }
   }
 
   def apply(f:Formula):String = {
@@ -44,7 +52,6 @@ object HOLConverter {
       case Less(l,r) => s"(And (Leq ${apply(l)} ${apply(r)}) (Not (Leq ${apply(r)} ${apply(l)})))"
       case Greater(l,r) => s"(And (Leq ${apply(r)} ${apply(l)}) (Not (Leq ${apply(l)} ${apply(r)})))"
       case GreaterEqual(l,r) => s"(Leq ${apply(r)} ${apply(l)})"
-
     }
   }
 

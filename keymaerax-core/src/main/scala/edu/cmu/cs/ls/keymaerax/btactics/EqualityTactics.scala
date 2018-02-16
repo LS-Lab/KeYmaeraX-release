@@ -66,13 +66,13 @@ private object EqualityTactics {
       case Some(eq@Equal(lhs, rhs)) =>
         val (condEquiv@Imply(_, Equiv(_, repl)), dottedRepl) = sequent.sub(pos) match {
           case Some(f: Formula) =>
-            (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, f.replaceFree(lhs, rhs)).asInstanceOf[Formula])),
+            (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, f.replaceFree(lhs, rhs)))),
               sequent(pos.top).replaceAt(pos.inExpr, f.replaceFree(lhs, DotTerm())))
           case Some(t: Term) if t == lhs =>
-            (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, rhs).asInstanceOf[Formula])),
+            (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, rhs))),
               sequent(pos.top).replaceAt(pos.inExpr, DotTerm()))
           case Some(t: Term) if t != lhs =>
-            (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, t.replaceFree(lhs, rhs)).asInstanceOf[Formula])),
+            (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, t.replaceFree(lhs, rhs)))),
               sequent(pos.top).replaceAt(pos.inExpr, t.replaceFree(lhs, DotTerm())))
         }
 

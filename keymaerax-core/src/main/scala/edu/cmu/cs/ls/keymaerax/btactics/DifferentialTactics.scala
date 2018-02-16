@@ -347,6 +347,30 @@ private object DifferentialTactics extends Logging {
       diffCut(formulas: _*)(pos) <(diffIndAllButFirst:_*)
     })
 
+  /** Inverse differential cut, removes the last conjunct from the evolution domain constraint. */
+  def inverseDiffCut: DependentPositionTactic = "dCi" by ((pos: Position, s: Sequent) => {
+    val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
+    val fact = s.at(pos) match {
+      case (ctx, fml: Modal) =>
+        val (remainder, last) = fml.program match {
+          case ODESystem(_, And(l, r)) => (l, r)
+          case ODESystem(_, edc) => (True, edc)
+        }
+        val factFml =
+          if (polarity > 0) Imply(last, Imply(fml.replaceAt(PosInExpr(0::1::Nil), remainder), fml))
+          else Imply(last, Imply(fml, ctx(fml.replaceAt(PosInExpr(0::1::Nil), remainder))))
+        proveBy(factFml,
+          implyR(1)*2 & diffCut(last)(if (polarity > 0) -2 else 1) <(
+            Idioms.?(useAt("true&")(-2, PosInExpr(0::1::Nil))) & close
+            ,
+            cohideOnlyR('Rlast) & diffInd()(1) & DebuggingTactics.done
+          )
+        )
+    }
+
+    useAt(fact, PosInExpr(1::(if (polarity > 0) 1 else 0)::Nil))(pos)
+  })
+
   /**
    * Turns things that are constant in ODEs into function symbols.
     *
@@ -416,12 +440,20 @@ private object DifferentialTactics extends Logging {
             "\nWhen dividing by a variable v, try cutting v!=0 into the evolution domain constraint"
           )
 
-        val subst = (us: Option[Subst]) => us.getOrElse(throw BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
-          (Variable("y_",None,Real), y) ::
-          (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a) ::
-          (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
+        (a, b) match {
+          case (Number(n), _) if n == 0 =>
+            val subst = (us: Option[Subst]) => us.getOrElse(throw BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
+              (Variable("y_",None,Real), y) ::
+                (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
+            useAt("DG differential ghost constant", PosInExpr(0::Nil), subst)(pos)
+          case _ =>
+            val subst = (us: Option[Subst]) => us.getOrElse(throw BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
+              (Variable("y_",None,Real), y) ::
+                (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a) ::
+                (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
 
-        useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
+            useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
+        }
     }
   })
 
@@ -432,6 +464,50 @@ private object DifferentialTactics extends Logging {
         case Some(rr) if r != sequent.sub(pos ++ PosInExpr(1::Nil)) => DG(ghost)(pos) & transform(rr)(pos ++ PosInExpr(0::1::Nil))
         case _ => DG(ghost)(pos) //@note no r or r==p
       })
+
+  /**
+    * Removes the left-most DE from a system of ODEs:
+    * {{{
+    *   [v'=a,t'=1 & q]p
+    *   ---------------------- dGi
+    *   [x'=v,v'=a,t'=1 & q]p
+    * }}}
+    */
+  def inverseDiffGhost: DependentPositionTactic = "dGi" by ((pos: Position, s: Sequent) => {
+    val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
+    s.sub(pos) match {
+      case Some(f@Box(ODESystem(DifferentialProduct(y_DE: AtomicODE, _), _), _)) if polarity > 0 =>
+        val axiomName = "DG inverse differential ghost implicational"
+        //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
+        TactixLibrary.cutAt(Forall(y_DE.xp.x::Nil, f))(pos) <(
+          HilbertCalculus.useExpansionAt(axiomName)(pos)
+          ,
+          (if (pos.isSucc) TactixLibrary.cohideR(pos.top) else TactixLibrary.cohideR('Rlast)) &
+            HilbertCalculus.useAt("all eliminate")(1, PosInExpr((if (pos.isSucc) 0 else 1) +: pos.inExpr.pos)) &
+            TactixLibrary.useAt(DerivedAxioms.implySelf)(1) & TactixLibrary.closeT & DebuggingTactics.done
+        )
+      case Some(Box(ODESystem(DifferentialProduct(y_DE: AtomicODE, c), q), p)) if polarity < 0 =>
+        //@note must substitute manually since DifferentialProduct reassociates (see cutAt) and therefore unification won't match
+        val subst = (_: Option[TactixLibrary.Subst]) =>
+          RenUSubst(
+            ("y_".asTerm, y_DE.xp.x) ::
+              ("b(|y_|)".asTerm, y_DE.e) ::
+              ("q(|y_|)".asFormula, q) ::
+              (DifferentialProgramConst("c", Except("y_".asVariable)), c) ::
+              ("p(|y_|)".asFormula, p.replaceAll(y_DE.xp.x, "y_".asVariable)) ::
+              Nil)
+
+        //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then rewrite.
+        HilbertCalculus.useAt(", commute", PosInExpr(1::Nil))(pos) &
+          TactixLibrary.cutAt(Exists(y_DE.xp.x::Nil, Box(ODESystem(DifferentialProduct(c, y_DE), q), p)))(pos) <(
+            HilbertCalculus.useAt("DG differential ghost constant", PosInExpr(1::Nil), subst)(pos)
+            ,
+            (if (pos.isSucc) TactixLibrary.cohideR(pos.top) else TactixLibrary.cohideR('Rlast)) &
+              TactixLibrary.CMon(pos.inExpr) & TactixLibrary.implyR(1) &
+              TactixLibrary.existsR(y_DE.xp.x)(1) & TactixLibrary.closeId
+          )
+    }
+  })
 
   /** @see [[HilbertCalculus.Derive.Dvar]] */
   //@todo could probably simplify implementation by picking atomic formula, using "x' derive var" and then embedding this equivalence into context by CE.

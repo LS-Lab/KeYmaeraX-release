@@ -533,7 +533,7 @@ trait RestApi extends HttpService with Logging {
     }
   }}}
 
-  val derivationInfo: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "derivationInfos" / Segment) { (userId, proofId, nodeId, axiomId) => { pathEnd {
+  val derivationInfo: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "derivationInfos" / Segment.?) { (userId, proofId, nodeId, axiomId) => { pathEnd {
     get {
       val request = new GetDerivationInfoRequest(database, userId, proofId, nodeId, axiomId)
       completeRequest(request, t)

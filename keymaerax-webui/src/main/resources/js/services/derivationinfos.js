@@ -12,6 +12,26 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
         });
       return promise;
     },
+
+    allDerivationsCache: undefined,
+
+    allDerivationInfos: function(userId, proofId, nodeId) {
+      if (serviceDef.allDerivationsCache) {
+        return $q(function(resolve, reject) { resolve({data: serviceDef.allDerivationsCache}); });
+      } else {
+        var promise = $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/derivationInfos/')
+          .then(function(response) {
+            // return value gets picked up by 'then' in the controller using this service
+            serviceDef.allDerivationsCache = $.map(response.data, function(info, i) {
+              return serviceDef.convertTacticInfo(info, true);
+            });
+            return {
+              data: serviceDef.allDerivationsCache
+            };
+          });
+        return promise;
+      }
+    },
     sequentSuggestionDerivationInfos: function(userId, proofId, nodeId) {
       var promise = $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/listStepSuggestions')
         .then(function(response) {

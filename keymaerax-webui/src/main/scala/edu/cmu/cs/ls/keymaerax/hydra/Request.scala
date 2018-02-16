@@ -1445,11 +1445,14 @@ class GetApplicableTwoPosTacticsRequest(db:DBAbstraction, userId: String, proofI
   }
 }
 
-class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, axiomId: String)
-  extends UserProofRequest(db, userId, proofId) with ReadRequest {
+class GetDerivationInfoRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String,
+                               axiomId: Option[String]) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
-    val info = (DerivationInfo.ofCodeName(axiomId), UIIndex.comfortOf(axiomId).map(DerivationInfo.ofCodeName)) :: Nil
-    new ApplicableAxiomsResponse(info, Map.empty) :: Nil
+    val infos = axiomId match {
+      case Some(aid) => (DerivationInfo.ofCodeName(aid), UIIndex.comfortOf(aid).map(DerivationInfo.ofCodeName)) :: Nil
+      case None => DerivationInfo.allInfo.map(di => (di, UIIndex.comfortOf(di.codeName).map(DerivationInfo.ofCodeName)))
+    }
+    ApplicableAxiomsResponse(infos, Map.empty) :: Nil
   }
 }
 
@@ -1962,7 +1965,7 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest with RegisteredOnlyRequest
           ToolProvider.shutdown()
           System.out.flush()
           System.err.flush()
-          HyDRAServerConfig.system.shutdown()
+          HyDRAServerConfig.system.terminate()
           System.out.flush()
           System.err.flush()
           this.synchronized {
@@ -2157,6 +2160,37 @@ object RequestHelper {
          |  $content
          |End.""".stripMargin
     }
+
+  def jsonDisplayInfoComponents(di: DerivationInfo): JsValue = {
+    val keyPos = AxiomIndex.axiomIndex(di.canonicalName)._1
+
+    def prettyPrint(s: String): String = {
+      val p = """([a-zA-Z]+)\(\|\|\)""".r("name")
+      val pretty = p.replaceAllIn(s.replaceAll("_", ""), _.group("name").toUpperCase).replaceAll("""\(\|\|\)""", "")
+      UIKeYmaeraXPrettyPrinter.htmlEncode(pretty)
+    }
+
+    //@todo need more verbose axiom info
+    ProvableInfo.locate(di.canonicalName) match {
+      case Some(i) =>
+        val (cond, op, key, keyPosString, conclusion, conclusionPos) = i.provable.conclusion.succ.head match {
+          case Imply(c, eq@Equiv(l, r)) if keyPos == PosInExpr(1::0::Nil) => (Some(c), OpSpec.op(eq).opcode, l, "1.0", r, "1.1")
+          case Imply(c, eq@Equiv(l, r)) if keyPos == PosInExpr(1::1::Nil) => (Some(c), OpSpec.op(eq).opcode, r, "1.1", l, "1.0")
+          case bcf: BinaryCompositeFormula if keyPos == PosInExpr(0::Nil) => (None, OpSpec.op(bcf).opcode, bcf.left, "0", bcf.right, "1")
+          case bcf: BinaryCompositeFormula if keyPos == PosInExpr(1::Nil) => (None, OpSpec.op(bcf).opcode, bcf.right, "1", bcf.left, "0")
+          case f => (None, OpSpec.op(Equiv(f, True)).opcode, f, "0", True, "1")
+        }
+        JsObject(
+          "cond" -> (if (cond.isDefined) JsString(prettyPrint(cond.get.prettyString)) else JsNull),
+          "op" -> (if (op.nonEmpty) JsString(prettyPrint(op)) else JsNull),
+          "key" -> JsString(prettyPrint(key.prettyString)),
+          "keyPos" -> JsString(keyPosString),
+          "conclusion" -> JsString(prettyPrint(conclusion.prettyString)),
+          "conclusionPos" -> JsString(conclusionPos)
+        )
+      case None => JsNull
+    }
+  }
 
   /* String representation of the actual step (if tacticId refers to stepAt, otherwise tacticId).
      For display purposes only. */

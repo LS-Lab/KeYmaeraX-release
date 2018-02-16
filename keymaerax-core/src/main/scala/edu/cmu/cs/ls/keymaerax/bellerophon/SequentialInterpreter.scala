@@ -155,7 +155,9 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         case BranchTactic(children) => v match {
           case BelleProvable(p, _) =>
             if (children.length != p.subgoals.length)
-              throw new BelleThrowable("<(e)(v) is only defined when len(e) = len(v), but " + children.length + "!=" + p.subgoals.length).inContext(expr, "")
+              throw new BelleThrowable("<(e)(v) is only defined when len(e) = len(v), but " +
+                children.length + "!=" + p.subgoals.length + " subgoals (v)\n" +
+                p.subgoals.map(_.prettyString).mkString("\n===================\n")).inContext(expr, "")
             //Compute the results of piecewise applications of children to provable subgoals.
             val results: Seq[Either[BelleValue,BelleThrowable]] =
               (children zip p.subgoals) map (pair => {

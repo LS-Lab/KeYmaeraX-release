@@ -92,7 +92,7 @@ object DerivationInfo {
     * Central registry for axiom, derived axiom, proof rule, and tactic meta-information.
     * Transferred into subsequent maps etc for efficiency reasons.
     */
-  private [btactics] val allInfo: List[DerivationInfo] = convert(ProvableSig.rules) ++ List(
+  val allInfo: List[DerivationInfo] = convert(ProvableSig.rules) ++ List(
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> diamond"
       , AxiomDisplayInfo(("<·>", "<.>"), "<span class=\"k4-axiom-key\">&not;[a]&not;P</span> ↔ &langle;a&rangle;P")
@@ -188,6 +188,13 @@ object DerivationInfo {
         (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
     , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
     , _ => ((fml: Formula) => TactixLibrary.dC(fml)): TypedFunc[Formula, BelleExpr]),
+    PositionTacticInfo("dCi"
+      , RuleDisplayInfo("Inverse Differential Cut"
+        , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))
+        , /* premises */ List(
+          (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
+          (List("&Gamma;"), List("R", "&Delta;"))))
+      , _ => DifferentialTactics.inverseDiffCut),
     new InputPositionTacticInfo("autoApproximate",
       RuleDisplayInfo("Approximate",
         (List("&Gamma;"), List("[{X'=F & &Alpha;(n)}]", "&Delta;")),
@@ -245,6 +252,14 @@ object DerivationInfo {
           }) :  TypedFunc[Option[Formula], BelleExpr]
         ) : TypedFunc[Expression, TypedFunc[Option[Formula], BelleExpr]]
     ),
+    PositionTacticInfo("dGi",
+      RuleDisplayInfo(
+        "Inverse Differential Ghost",
+        /* conclusion */ (List("&Gamma;"), List("∃y [{x′=f(x),E & Q}]P", "&Delta;")),
+        /* premises */ List( (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")) )
+      ),
+      _ => DifferentialTactics.inverseDiffGhost
+    ),
     new InputPositionTacticInfo("dGold",
       RuleDisplayInfo(
         "Differential Ghost",
@@ -286,8 +301,8 @@ object DerivationInfo {
       , "DGCa", {case () => HilbertCalculus.useAt("DG differential ghost constant all")}),
     new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", {case () => ???}),
     new CoreAxiomInfo("DG inverse differential ghost implicational", "DG inverse differential ghost implicational", "DGi", {case () => ???}),
-    new CoreAxiomInfo(", commute", ",", "commaCommute", {case () => ???}),
-    new CoreAxiomInfo(", sort", ",", "commaSort", {case () => ???}),
+    CoreAxiomInfo(", commute", ",", "commaCommute", {case () => HilbertCalculus.useAt(", commute")}),
+    new CoreAxiomInfo(", sort", ",", "commaSort", {case () => HilbertCalculus.useAt(", sort")}),
     new CoreAxiomInfo("DS& differential equation solution", "DS&", "DS", {case () => HilbertCalculus.DS}),
     new CoreAxiomInfo("DIo open differential invariance >"
       , AxiomDisplayInfo("DIo >", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]f(x)>g(x)</span>↔[?Q]f(x)>g(x))←(Q→[{x′=f(x)&Q}](f(x)>g(x)→(f(x)>g(x))′))")
@@ -738,11 +753,18 @@ object DerivationInfo {
     new PositionTacticInfo("absExp", "absExp", {case () => EqualityTactics.abs}),
     new PositionTacticInfo("toSingleFormula", "toSingleFormula", {case () => PropositionalTactics.toSingleFormula}),
 
+    PositionTacticInfo("CMon"
+      , RuleDisplayInfo("CMon", (List(), List("C{o}→C{k}")), List((List(), List("o→k"))))
+      , {case () => TactixLibrary.CMon}
+    ),
+
     // proof management tactics
     InputTacticInfo("debug"
       , SimpleDisplayInfo("Debug","debug")
       ,List(StringArg("msg")), _ => ((msg: String) => DebuggingTactics.debug(msg)): TypedFunc[String, BelleExpr]),
-    new TacticInfo("done", "done", {case () => TactixLibrary.done}), // turn into input tactic if message should be stored too
+    InputTacticInfo("done"
+      , SimpleDisplayInfo("Done","done")
+      ,List(StringArg("msg")), _ => ((msg: Option[String]) => DebuggingTactics.done(msg.getOrElse(""))): TypedFunc[Option[String], BelleExpr]),
 
     // Proof rule two-position tactics
     new TwoPositionTacticInfo("coHide2", "W", {case () => SequentCalculus.cohide2}),
@@ -820,7 +842,12 @@ object DerivationInfo {
         (List("&Gamma;"),List("[a]Q", "&Delta;")),
         (List("Q"),List("P"))))
     , List(FormulaArg("Q")), _ => ((fml:Formula) => TactixLibrary.generalize(fml)): TypedFunc[Formula, BelleExpr]),
-    new InputPositionTacticInfo("transform", "trafo", List(ExpressionArg("to")),
+    InputPositionTacticInfo("transform",
+      RuleDisplayInfo("trafo",
+        //@todo suggests formulas, but also works with terms
+        /* conclusion */ (List("&Gamma;"), List("P", "&Delta;")),
+        /* premises */ List((List("&Gamma;"),List("Q", "&Delta;")))),
+      List(ExpressionArg("Q")),
       _ => ((expr:Expression) => TactixLibrary.transform(expr)): TypedFunc[Expression, BelleExpr]),
     new InputPositionTacticInfo("edit", "edit", List(ExpressionArg("to")),
       _ => ((expr:Expression) => TactixLibrary.edit(expr)): TypedFunc[Expression, BelleExpr]),
@@ -913,8 +940,11 @@ object DerivationInfo {
         TactixLibrary.useLemmaAt(lemmaName, key.map(k => PosInExpr(k.split("\\.").map(Integer.parseInt).toList)))): TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
 
     InputPositionTacticInfo("cutAt"
-      , "cutAt"
-      , List(FormulaArg("fml"))
+      , RuleDisplayInfo("cutAt",
+        /* conclusion */ (List("&Gamma;"), List("C{c}", "&Delta;")),
+        /* premises */   List((List("&Gamma;"),List("C{repl}", "&Delta;")),
+                              (List("&Gamma;"),List("&Delta;", "C{repl}→C{c}"))))
+      , List(FormulaArg("repl"))
       , _ => ((fml: Formula) => TactixLibrary.cutAt(fml)): TypedFunc[Formula, BelleExpr]),
 
     // Differential tactics

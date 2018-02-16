@@ -7,6 +7,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 import org.apache.logging.log4j.scala.Logging
@@ -22,7 +23,12 @@ class MathematicaQETool(override val link: MathematicaLink)
   extends BaseKeYmaeraMathematicaBridge[KExpr](link, KeYmaeraToMathematica, MathematicaToKeYmaera) with QETool with Logging {
 
   def qeEvidence(f: Formula): (Formula, Evidence) = {
-    val input = new MExpr(MathematicaSymbols.REDUCE,
+    val method = Configuration.getOption(Configuration.Keys.MATHEMATICA_QE_METHOD).getOrElse("Reduce") match {
+      case "Reduce" => MathematicaSymbols.REDUCE
+      case "Resolve" => MathematicaSymbols.RESOLVE
+      case m => throw new IllegalStateException("Unknown Mathematica QE method '" + m + "'. Please configure either 'Reduce' or 'Resolve'.")
+    }
+    val input = new MExpr(method,
       Array(k2m(f), new MExpr(MathematicaSymbols.LIST, new Array[MExpr](0)), MathematicaSymbols.REALS))
     try {
       val (output, result) = run(input)

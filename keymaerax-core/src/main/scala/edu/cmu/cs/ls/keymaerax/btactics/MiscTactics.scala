@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversal
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDB
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
-import org.apache.logging.log4j.scala.Logging
+import org.apache.logging.log4j.scala.{Logger, Logging}
 
 import scala.collection.immutable
 import scala.language.postfixOps
@@ -20,6 +20,8 @@ import scala.language.postfixOps
 object DebuggingTactics {
   //@todo import a debug flag as in Tactics.DEBUG
   private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
+
+  private val logger = Logger(getClass)
 
   def error(e : Throwable) = new BuiltInTactic("Error") {
     override def result(provable: ProvableSig): ProvableSig = throw e
@@ -33,7 +35,7 @@ object DebuggingTactics {
 
   def recordQECall(): BuiltInTactic = new BuiltInTactic("recordQECall") {
     override def result(provable: ProvableSig): ProvableSig = {
-      println(s"QE CALL\n==QE==\n${provable.subgoals(0).prettyString}\n==END_QE==")
+      logger.info(s"QE CALL\n==QE==\n${provable.subgoals(0).prettyString}\n==END_QE==")
       provable
     }
   }
@@ -42,7 +44,7 @@ object DebuggingTactics {
   def debug(message: => String, doPrint: Boolean = DEBUG, printer: ProvableSig => String = _.toString): StringInputTactic =
       new StringInputTactic(if (doPrint) "print" else "debug", message::Nil) {
     override def result(provable: ProvableSig): ProvableSig = {
-      if (doPrint) println("===== " + message + " ==== " + printer(provable) + " =====")
+      if (doPrint) logger.info("===== " + message + " ==== " + printer(provable) + " =====")
       provable
     }
   }
@@ -56,7 +58,7 @@ object DebuggingTactics {
   /** debug is a no-op tactic that prints a message and the current provable, if the system property DEBUG is true. */
   def debugAt(message: => String, doPrint: Boolean = DEBUG): BuiltInPositionTactic = new BuiltInPositionTactic("debug") {
     override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
-      if (doPrint) println("===== " + message + " ==== " + "\n\t with formula: " + provable.subgoals.head.at(pos)
+      if (doPrint) logger.info("===== " + message + " ==== " + "\n\t with formula: " + provable.subgoals.head.at(pos)
         + " at position " + pos + " of first subgoal,"
         + "\n\t entire provable: " + provable + " =====")
       provable
@@ -148,7 +150,7 @@ object DebuggingTactics {
 
   /** @see [[TactixLibrary.done]] */
   lazy val done: BelleExpr = done()
-  def done(msg: String = ""): BelleExpr = new BuiltInTactic("done") {
+  def done(msg: String = ""): BelleExpr = new StringInputTactic("done", if (msg != "") msg::Nil else Nil) {
     override def result(provable : ProvableSig): ProvableSig = {
       if (provable.isProved) { print(msg + {if (msg.nonEmpty) ": " else ""} + "checked done"); provable }
       else throw new BelleThrowable((if (msg.nonEmpty) msg + "\n" else "") + "Expected proved provable, but got " + provable)
