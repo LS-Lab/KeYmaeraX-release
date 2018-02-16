@@ -489,14 +489,15 @@ trait RestApi extends HttpService with Logging {
 
   /* Strictly positive position = SuccPosition, strictly negative = AntePosition, 0 not used */
   def parseFormulaId(id:String): Position = {
-    val (idx :: inExprs) = id.split(',').toList.map(str =>
+    val positionStringParts = id.split(',').toList
+    val (idx :: inExprs) = positionStringParts.map(str =>
       try {
         str.toInt
       } catch {
         case e: NumberFormatException => {
           //HACK: if position is top-level (no inExpr) and unspecified, then "Hint" web ui was probably used. In this case, assume top-level succ.
           //@todo This is a hack that *should* be fixed in the front-end by telling the "Hint: ...|...|...|" portion of the web ui to please specify a position. See sequent.js and collapsiblesequent.html
-          if(str.equals("null") && id.count(_==',') == 1)
+          if(str.equals("null") && positionStringParts.length==1)
             1
           else
             throw new Exception("Invalid formulaId " + str + " when parsing positions")
