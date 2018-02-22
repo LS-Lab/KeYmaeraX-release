@@ -30,9 +30,8 @@
         <Logger name="edu.cmu.cs.ls.keymaerax.tools.JLinkMathematicaLink" level="info" additivity="false">
             <AppenderRef ref="ConsolePrint"/>
         </Logger>
-        <Root level="all">
+        <Root level="error">
             <AppenderRef level="error" ref="ConsoleError"/>
-            <AppenderRef level="all" ref="TraceFile"/>
         </Root>
     </Loggers>
 </Configuration>
