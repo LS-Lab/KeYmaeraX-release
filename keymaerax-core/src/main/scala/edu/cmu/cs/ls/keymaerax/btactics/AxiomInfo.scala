@@ -929,9 +929,19 @@ object DerivationInfo {
         TactixLibrary.useLemma(lemmaName, tactic.map(_.asTactic))): TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
 
     InputTacticInfo("byUS"
-      , "byUS"
-      , List(StringArg("axiom"))
-      , _ => ((axiomName: String) => TactixLibrary.byUS(axiomName)): TypedFunc[String, BelleExpr]),
+      , RuleDisplayInfo(("US", "byUS"), (List(),List("sigma(phi)")),
+        List((List(), List("phi"))))
+      , List(StringArg("phi"), FormulaArg("sigma"))
+      , _ => ((axiomName: String) => ({
+        case None => TactixLibrary.byUS(axiomName)
+        case Some(substFml: Formula) =>
+          val subst = RenUSubst(FormulaTools.conjuncts(substFml).map({
+            case Equal(l, r) => (l, r)
+            case Equiv(l, r) => (l, r)
+            case s => throw new IllegalArgumentException("Expected substitution of the shape t=s or p<->q, but got " + s.prettyString)
+          }))
+          TactixLibrary.byUS(axiomName, (_: UnificationMatch.Subst) => subst)
+      }): TypedFunc[Option[Formula], BelleExpr]): TypedFunc[String, _]),
 
     InputPositionTacticInfo("useLemmaAt"
       , "useLemmaAt"
