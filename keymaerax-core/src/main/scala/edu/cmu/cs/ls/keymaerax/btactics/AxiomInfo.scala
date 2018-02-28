@@ -856,6 +856,11 @@ object DerivationInfo {
         List((List("&Gamma;"),List("∀y P(y)","&Delta;"))))
       , List(VariableArg("x"),VariableArg("y"))
       , _ => ((x:Variable) => ((y:Variable) => TactixLibrary.boundRename(x,y)): TypedFunc[Variable, BelleExpr]): TypedFunc[Variable, TypedFunc[Variable, BelleExpr]]),
+    InputTacticInfo("uniformRename"
+      , RuleDisplayInfo(("UR", "UR"), (List("P(x)"), List("Q(x)")),
+        List((List("P(y)"),List("Q(y)"))))
+      , List(VariableArg("x"),VariableArg("y"))
+      , _ => ((x:Variable) => ((y:Variable) => TactixLibrary.uniformRename(x,y)): TypedFunc[Variable, BelleExpr]): TypedFunc[Variable, TypedFunc[Variable, BelleExpr]]),
     new InputPositionTacticInfo("stutter"
       , RuleDisplayInfo(("[:=]", "[:=]"), (List("&Gamma;"), List("P","&Delta;"))
       , List((List("&Gamma;"),List("[x:=x]P","&Delta;")))), List(VariableArg("x"))

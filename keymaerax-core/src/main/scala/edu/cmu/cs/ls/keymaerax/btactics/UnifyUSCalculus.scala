@@ -302,7 +302,7 @@ trait UnifyUSCalculus {
   /** uniformRename(what,repl) renames `what` to `repl` uniformly and vice versa.
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
     */
-  def uniformRename(what: Variable, repl: Variable): BuiltInTactic = ProofRuleTactics.uniformRenaming(what,repl)
+  def uniformRename(what: Variable, repl: Variable): InputTactic = ProofRuleTactics.uniformRenaming(what,repl)
 
   /** boundRename(what,repl) renames `what` to `repl` at the indicated position (or vice versa).
     * @see [[edu.cmu.cs.ls.keymaerax.core.BoundRenaming]]

@@ -117,12 +117,14 @@ private object ProofRuleTactics extends Logging {
     * @return
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
     */
-  def uniformRenaming(what: Variable, repl: Variable) = new BuiltInTactic("UniformRenaming") {
-    override def result(provable: ProvableSig): ProvableSig = {
-      requireOneSubgoal(provable, name + "(" + what + "~~>" + repl + ")")
-      provable(core.UniformRenaming(what, repl), 0)
+  def uniformRenaming(what: Variable, repl: Variable): InputTactic = "uniformRename" byWithInputs(what::repl::Nil,
+    new BuiltInTactic("UniformRenaming") {
+      override def result(provable: ProvableSig): ProvableSig = {
+        requireOneSubgoal(provable, name + "(" + what + "~~>" + repl + ")")
+        provable(core.UniformRenaming(what, repl), 0)
+      }
     }
-  }
+  )
 
   import TacticFactory._
   /**
