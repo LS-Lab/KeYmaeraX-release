@@ -37,6 +37,7 @@ import scala.collection.immutable._
 import scala.collection.mutable
 import edu.cmu.cs.ls.keymaerax.btactics.cexsearch
 import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, BreadthFirstSearch, ProgramSearchNode, SearchNode}
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
@@ -278,7 +279,7 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
         if (ToolProvider.odeTool().isDefined) fml match {
           case Imply(initial, b@Box(prg, _)) =>
             // all symbols because we need frame constraints for constants
-            val vars = (StaticSemantics.symbols(prg) ++ StaticSemantics.symbols(initial)).filter(_.isInstanceOf[Variable])
+            val vars = (StaticSemantics.symbols(prg) ++ StaticSemantics.symbols(initial)).filter(_.isInstanceOf[BaseVariable])
             val Box(prgPre, _) = vars.foldLeft[Formula](b)((b, v) => b.replaceAll(v, Variable("pre" + v.name, v.index, v.sort)))
             val stateRelEqs = vars.map(v => Equal(v.asInstanceOf[Term], Variable("pre" + v.name, v.index, v.sort))).reduceRightOption(And).getOrElse(True)
             val simSpec = Diamond(solveODEs(prgPre), stateRelEqs)
@@ -320,11 +321,11 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
 
   private def solve(ode: DifferentialProgram, evoldomain: Formula): Program = {
     val iv: Map[Variable, Variable] =
-      primedSymbols(ode).map(v => v -> Variable(v.name + "0", v.index, v.sort)).toMap
+      DifferentialHelper.getPrimedVariables(ode).map(v => v -> Variable(v.name + "0", v.index, v.sort)).toMap
     val time: Variable = Variable("t_", None, Real)
     //@note replace initial values with original variable, since we turn them into assignments
     val solution = replaceFree(ToolProvider.odeTool().get.odeSolve(ode, time, iv).get, iv.map(_.swap))
-    val flatSolution = flattenConjunctions(solution).
+    val flatSolution = FormulaTools.conjuncts(solution).
       sortWith((f, g) => StaticSemantics.symbols(f).size < StaticSemantics.symbols(g).size)
     Compose(
       flatSolution.map({ case Equal(v: Variable, r) => Assign(v, r) }).reduceRightOption(Compose).getOrElse(Test(True)),
@@ -334,37 +335,23 @@ class SetupSimulationRequest(db: DBAbstraction, userId: String, proofId: String,
   private def replaceFree(f: Formula, vars: Map[Variable, Variable]) = {
     vars.keySet.foldLeft[Formula](f)((b, v) => b.replaceFree(v, vars(v)))
   }
-
-  private def primedSymbols(ode: DifferentialProgram) = {
-    var primedSymbols = Set[Variable]()
-    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
-      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-        case DifferentialSymbol(ps) => primedSymbols += ps; Left(None)
-        case Differential(_) => throw new IllegalArgumentException("Only derivatives of variables supported")
-        case _ => Left(None)
-      }
-    }, ode)
-    primedSymbols
-  }
-
-  private def flattenConjunctions(f: Formula): List[Formula] = {
-    var result: List[Formula] = Nil
-    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
-      override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
-        case And(l, r) => result = result ++ flattenConjunctions(l) ++ flattenConjunctions(r); Left(Some(ExpressionTraversal.stop))
-        case a => result = result :+ a; Left(Some(ExpressionTraversal.stop))
-      }
-    }, f)
-    result
-  }
 }
 
 class SimulationRequest(db: DBAbstraction, userId: String, proofId: String, nodeId: String, initial: Formula, stateRelation: Formula, steps: Int, n: Int, stepDuration: Term) extends UserProofRequest(db, userId, proofId) with RegisteredOnlyRequest {
   override protected def doResultingResponses(): List[Response] = {
+    def replaceFuncs(fml: Formula) = ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+        case FuncOf(Function(name, idx, Unit, Real, false), _) => Right(BaseVariable(name, idx))
+        case _ => Left(None)
+      }
+    }, fml)
+
     ToolProvider.simulationTool() match {
       case Some(s) =>
-        val timedStateRelation = stateRelation.replaceFree(Variable("t_"), stepDuration)
-        val simulation = s.simulate(initial, timedStateRelation, steps, n)
+        val varsStateRelation = replaceFuncs(stateRelation).get
+        val varsInitial = replaceFuncs(initial).get
+        val timedStateRelation = varsStateRelation.replaceFree(Variable("t_"), stepDuration)
+        val simulation = s.simulate(varsInitial, timedStateRelation, steps, n)
         new SimulationResponse(simulation, stepDuration) :: Nil
       case _ => new ErrorResponse("No simulation tool configured, please setup Mathematica") :: Nil
     }

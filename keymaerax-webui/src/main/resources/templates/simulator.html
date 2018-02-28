@@ -64,16 +64,16 @@
     </div>
 
     <uib-accordion close-others="false">
-        <uib-accordion-group heading="Line plot"
+        <div uib-accordion-group class="panel-default" heading="Line plot"
                              is-open="true" is-disabled="false">
             <canvas class="chart chart-line" chart-data="lineStates" chart-series="varNames" chart-labels="ticks"
                     chart-legend="true"></canvas>
-        </uib-accordion-group>
-        <uib-accordion-group heading="Radar plot"
+        </div>
+        <div uib-accordion-group class="panel-default" heading="Radar plot"
                              is-open="true" is-disabled="false" ng-if="varNames.length > 2">
             <canvas class="chart chart-radar" chart-data="radarStates" chart-series="ticks" chart-labels="varNames"
                     chart-legend="true"></canvas>
-        </uib-accordion-group>
+        </div>
     </uib-accordion>
 </div>
 <div class="modal-footer">
