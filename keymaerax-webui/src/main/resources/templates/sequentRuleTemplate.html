@@ -53,14 +53,37 @@
     </div>
     <div class="row k4-sequentRuleConclusion">
         <!--<div class="col-md-12 k4-nobreak">-->
-        <div class="col-md-4 k4-nobreak k4-sequentRuleAnte">
-            <span ng-repeat="ante in tactic.derivation.conclusion.ante"><span ng-bind-html="ante"></span>{{$last ? '' : ','}}</span>
-        </div>
+        <span class="col-md-4 k4-nobreak k4-sequentRuleAnte">
+            <span ng-repeat="ante in tactic.derivation.conclusion.ante">
+                <span ng-repeat="antePart in ante">
+                    <span ng-bind-html="antePart.text" ng-if="!antePart.isInput"></span>
+                    <span ng-if="readOnly">{{antePart.placeholder}}</span>
+                    <span id="c{{antePart.text}}" class="k4-axiomtactic-input"
+                          e-name="{{antePart.text}}" e-placeholder="{{antePart.placeholder}}" buttons="no"
+                          ng-if="!readOnly && antePart.isInput"
+                          uib-tooltip="{{antePart.value}}" tooltip-placement="auto top"
+                          editable-text="antePart.value" onbeforesave="saveValue(antePart, $data)"
+                          e-required>{{antePart.value || antePart.placeholder}}</span>
+                </span>
+                {{$last ? '' : ','}}
+            </span>
+        </span>
         <div class="col-md-1">&#8866;</div>
-        <div class="col-md-7 k4-nobreak k4-sequentRuleSucc">
-            <span class="k4-nobreak" ng-repeat="succ in tactic.derivation.conclusion.succ"><span
-                    ng-bind-html="succ"></span>{{$last ? '' : ','}}</span>
-        </div>
+        <span class="col-md-7 k4-nobreak k4-sequentRuleSucc">
+            <span ng-repeat="succ in tactic.derivation.conclusion.succ">
+                <span ng-repeat="succPart in succ">
+                    <span ng-bind-html="succPart.text" ng-if="!succPart.isInput"></span>
+                    <span ng-if="readOnly">{{succPart.placeholder}}</span>
+                    <span id="c{{succPart.text}}" class="k4-axiomtactic-input"
+                          e-name="{{succPart.text}}" e-placeholder="{{succPart.placeholder}}" buttons="no"
+                          ng-if="!readOnly && succPart.isInput"
+                          uib-tooltip="{{succPart.value}}" tooltip-placement="auto top"
+                          editable-text="succPart.value" onbeforesave="saveValue(succPart, $data)"
+                          e-required>{{succPart.value || succPart.placeholder}}</span>
+                </span>
+                {{$last ? '' : ','}}
+            </span>
+        </span>
         <!--</div>-->
     </div>
 </div>

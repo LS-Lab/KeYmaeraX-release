@@ -96,6 +96,11 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
           isClosed: premise.isClosed
         };
       });
+      tactic.derivation.conclusion = {
+        ante: serviceDef.convertToInput(tactic.derivation.conclusion.ante, tactic),
+        succ: serviceDef.convertToInput(tactic.derivation.conclusion.succ, tactic),
+        numInputs: tactic.derivation.input.length
+      };
       tactic.missingInputNames = function() {
         var missingInputs = $.grep(tactic.derivation.input, function(input, idx) { return input.value == undefined; });
         return $.map(missingInputs, function(val, i) { return val.param; });
