@@ -1113,9 +1113,115 @@ private object DifferentialTactics extends Logging {
     SandR | fallback(pos)
   })
 
+  //A start on the LZZ procedure
+  /**
+    * Vectorial Darboux, currently just constructs and returns an appropriate provable
+    * because we do not yet have vectorial dG
+    *
+    * @param odesys the ODE system
+    * @param Gco the cofactor matrix
+    * @param p the polynomial vector
+    * @return provable with extra ghosts
+    */
 
+  def dgVdbx(odesys : ODESystem,Gco:List[List[Term]],p:List[Term]) : ProvableSig = {
+    val dim = p.length
+    assert(Gco.length == dim && Gco.forall(gs => gs.length == dim))
+    val diffeqs = odesys.ode
+    val dom = odesys.constraint
+
+    val ghostPrefix = "vdbxy_"
+    //Doubly indexed ghost variables
+    val ghostVars = List.range(0,dim).map( i => List.range(0,dim).map( j => Variable(ghostPrefix,Some(i*dim+j))))
+    println("Ghost vars: "+ghostVars)
+
+    val Gcotrans = Gco.transpose
+
+    //Construct the system of equations
+    val ghostRHS = List.range(0,dim).map( i => matvec_prod(Gcotrans,ghostVars(i)).map(t => Neg(t)))
+    val ghostEqs = (ghostVars zip ghostRHS).map(p => p._1 zip p._2)
+    //Each ghostEqs at this point is a separate vectorial diff ghost
+    //We could also work directly with the flattened versions, but this is just for easier portability when we get vDG
+    println("Ghost eqs: "+ghostEqs)
+
+    //For now, construct the differential equations obtained from ghosts
+    val ghostDiffEqs = ghostEqs.flatten.map(p => AtomicODE(DifferentialSymbol(p._1),p._2)).reduce(DifferentialProduct.apply)
+    val ghostSys = ODESystem(DifferentialProduct(diffeqs,ghostDiffEqs),dom)
+    println("Extended system: "+ghostSys)
+
+    val zero = Number(0)
+    val one = Number(1)
+    //Constructing the p=0 invariant (using conjunctions)
+    val inv = p.foldLeft[Formula](True)((fml,trm)=> And(Equal(trm,zero),fml))
+    val boxfml = Box(ghostSys,inv)
+    val fml = ghostVars.foldRight[Formula](boxfml)((vs,fml)=> (vs.foldRight[Formula](fml)((v,fml)=>Exists(v::Nil,fml))))
+    println("Formula: "+fml)
+
+    //Finally, we can now prove the invariant property
+    val seq = ProvableSig.startProof( Imply(inv,fml) )
+    println("Seq: "+seq)
+
+    val determinant = sym_det(ghostVars)
+    val trace = sym_trace(Gco)
+    println("Symbolic Det: "+determinant)
+    println("Symbolic Trace: "+trace)
+
+    //Relevant tactics
+
+    //Explicitly instantiate the sequence of ghost variables with the identity matrix
+    val idExistsTac = List.range(0,dim).map( i => List.range(0,dim).map( j => existsR(Variable(ghostPrefix,Some(i*dim+j)),
+      if(i==j) one else zero)))
+    val idExistsTacPos = idExistsTac.foldRight(skip)( (exts,tac) => exts.foldRight(tac)( (ext,tac) => ext(1) & tac )  )
+
+    //Cut in the symbolic dot products p.y = 0
+    val dotprods = ghostVars.map( ls => Equal(dot_prod(ls,p),zero))
+    val dITac = diffInvariant(dotprods:_*)(1)
+
+    val pr = proveBy(seq,
+      implyR(1) & idExistsTacPos & dITac &
+      diffCut(Greater(determinant,zero))(1) <(
+        dW(1) & QE,
+        //Prove Darboux invariance for the determinant
+        dgDbx(Neg(trace))(1))
+    )
+
+    pr
+  }
 
   // implementation helpers
+
+  //Explicit symbolic expression for the determinant of a matrix
+  //Currently just explicitly calculated, but can use Mathematica's det if available
+  //Also, this probably doesn't actually need to be explicitly calculated everytime since we always apply it on ghost variables
+  private def sym_det (m:List[List[Term]]) : Term = {
+    val dim = m.length
+    assert(m.forall(ls => ls.length == dim))
+    if(dim==1)
+      return m(0)(0)
+    else if(dim==2) //det ((a b)(c d)) = a d - b c
+      return Minus(Times(m(0)(0),m(1)(1)),Times(m(0)(1),m(1)(0)))
+    else if(dim==3) //det ((a b c)(d e f)(g h i)) = -c e g + b f g + c d h - a f h - b d i + a e i
+      ???
+    else
+      ???
+  }
+
+  //Symbolic trace
+  private def sym_trace (m:List[List[Term]]) : Term = {
+    val dim = m.length
+    assert(m.forall(ls => ls.length == dim))
+    return List.range(0,dim).map(i=>m(i)(i)).foldLeft[Term](Number(0))(Plus.apply)
+  }
+
+  // Symbolic matrix and vector products, assuming that the dimensions all match up
+  private def dot_prod (v1:List[Term],v2:List[Term]) : Term = {
+    val zipped = (v1 zip v2).map({case (t1,t2)=>Times(t1,t2)})
+    return zipped.reduce(Plus.apply)
+  }
+
+  private def matvec_prod (m:List[List[Term]],v:List[Term]) : List[Term] ={
+    return m.map(ls => dot_prod(ls,v))
+  }
 
   @deprecated("Possible duplicate of DifferentialHelper.flattenAnds")
   private def flattenConjunctions(f: Formula): List[Formula] = {
