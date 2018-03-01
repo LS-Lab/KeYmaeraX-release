@@ -1342,4 +1342,31 @@ class DifferentialTests extends TacticTestBase {
     proveBy("b>0 -> \\forall p \\exists d (d^2<=b^2 & <{x'=d}>x>=p)".asFormula, diffVar(1, 1::0::0::1::Nil)) shouldBe 'proved
   }
 
+  it should "diff var unsound without time constraints" in withMathematica { _ =>
+    // Unsound instance of DV (the solution does not exist for sufficient duration)
+    val fml = "t=0 & x=1 -> <{x'=x^2,t'=1}> t>=1".asFormula
+    val pr = proveBy(fml,implyR(1) & diffVar(1))
+    //println(pr)
+
+    // This one is sound
+    val fml2 = "t=0 & x=1 -> [{x'=x^2,t'=1}] (x>=1 & x*(1-t)=1)".asFormula
+    val pr2 = proveBy(fml2,implyR(1) &
+      diffInvariant("x>=1".asFormula)(1) & dC("x*(1-t)-1=0".asFormula)(1) <(
+        dW(1) & QE,
+        DifferentialTactics.dgDbx("x".asTerm)(1))
+      )
+    //println(pr2)
+
+    // prove false
+    val pr3 = proveBy("false".asFormula,
+      cut("\\exists t \\exists x (t=0&x=1)".asFormula)<(skip,QE) & existsL('L) & existsL('L) &
+      cut("<{x'=x^2,t'=1}>t>=1".asFormula) <(
+        useAt("<> diamond",PosInExpr(1::Nil))(-2) & hideR(1) & notL('L) &
+        dC("(x>=1 & x*(1-t)=1)".asFormula)(1) < (dW(1) & QE, implyRi & by(pr2)),
+        hideR(1) & implyRi & by (pr)
+      )
+    )
+    println(pr3)
+  }
+
 }
