@@ -570,18 +570,37 @@ private object DifferentialTactics extends Logging {
       require(pos.isTopLevel && pos.isSucc, "diffWeaken only at top level in succedent")
 
       if (sequent.succ.size <= 1) {
-        def constAnteConditions(sequent: Sequent, taboo: Set[Variable]): IndexedSeq[(Formula, Int)] = {
-          sequent.ante.zipWithIndex.filter(f => StaticSemantics.freeVars(f._1).intersect(taboo).isEmpty)
-        }
-        val consts = constAnteConditions(sequent, StaticSemantics(a).bv.toSet)
+        val primedVars = DifferentialHelper.getPrimedVariables(a)
 
-        if (consts.nonEmpty) {
-          val dw = diffWeakenG(pos) & implyR(1) & andL('Llast)*consts.size & implyRi
-          val constFml = consts.map(_._1).reduceRight(And)
-          diffCut(constFml)(pos) <(dw, V('Rlast) & (andR('Rlast) <(closeIdWith('Rlast) & done, skip))*(consts.size-1) & closeIdWith('Rlast) & done)
-        } else {
-          diffWeakenG(pos)
-        }
+        val rewriteExistingGhosts = sequent.ante.zipWithIndex.filter({
+          case (Equal(l: Variable, r: Variable), _) => primedVars.contains(r) && !primedVars.contains(l)
+          case _ => false
+        }).reverse.map({ case (_, i) => exhaustiveEqR2L(hide=true)(AntePosition.base0(i)) }).
+          reduceOption[BelleExpr](_&_).getOrElse(skip)
+
+
+        val storeInitialVals = "ANON" by ((seq: Sequent) => {
+          val anteSymbols = seq.ante.flatMap(StaticSemantics.symbols)
+          val storePrimedVars = primedVars.filter(anteSymbols.contains)
+          storePrimedVars.
+            map(discreteGhost(_)(pos)).reduceOption[BelleExpr](_&_).getOrElse(skip) &
+            (DLBySubst.assignEquality(pos) & exhaustiveEqR2L(hide=true)('Llast))*storePrimedVars.size
+        })
+
+        val dw = "ANON" by ((seq: Sequent) => {
+          diffWeakenG(pos) & implyR(1) & andL('Llast)*seq.ante.size & implyRi
+        })
+
+        val cutAllAntes = "ANON" by ((seq: Sequent) => {
+          if (seq.ante.isEmpty) skip
+          //@note all ante formulas rewritten to initial values at this point
+          else diffCut(seq.ante.reduceRight(And))(pos) <(
+            skip,
+            V('Rlast) & (andR('Rlast) <(closeIdWith('Rlast) & done, skip))*(seq.ante.size-1) & closeIdWith('Rlast) & done
+          )
+        })
+
+        rewriteExistingGhosts & storeInitialVals & cutAllAntes & dw
       } else {
         useAt("DW differential weakening")(pos) & abstractionb(pos) & (allR('Rlast)*)
       }

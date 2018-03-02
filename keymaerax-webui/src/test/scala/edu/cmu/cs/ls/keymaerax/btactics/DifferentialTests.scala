@@ -88,12 +88,20 @@ class DifferentialTests extends TacticTestBase {
 
   it should "retain single context formula" in withQE { _ =>
     val result = proveBy("A>0, x=4 ==> [{x'=1&x>0}]x>0".asSequent, dW(1))
-    result.subgoals.loneElement shouldBe "A>0 ==> x>0 -> x>0".asSequent
+    result.subgoals.loneElement shouldBe "A>0, x_0=4 ==> x>0 -> x>0".asSequent
   }
 
   it should "retain context" in withQE { _ =>
     val result = proveBy("A>0&A>1, B=1, C=2&D=3, x=4 ==> [{x'=1&x>0}]x>0".asSequent, dW(1))
-    result.subgoals.loneElement shouldBe "A>0&A>1, B=1, C=2&D=3 ==> x>0 -> x>0".asSequent
+    result.subgoals.loneElement shouldBe "A>0&A>1, B=1, C=2&D=3, x_0=4 ==> x>0 -> x>0".asSequent
+  }
+
+  it should "keep initial conditions" in withQE { _ =>
+    val result = proveBy(("dx_0^2+dy_0^2=1&x^2+y^2>0, dx_0=dx, dy_0=dy, old=dy*x-(dx-1)*y " +
+      " ==> [{x'=dx-1,y'=dy,dx'=0,dy'=0 & dx=dx_0&dy=dy_0&dy*x-(dx-1)*y=old}](dx^2+dy^2=1 & x^2+y^2>0)").asSequent,
+      dW(1))
+    result.subgoals.loneElement shouldBe ("dx_0^2+dy_0^2=1&x_0^2+y_0^2>0, old=dy_0*x_0-(dx_0-1)*y_0 " +
+      " ==> dx=dx_0&dy=dy_0&dy*x-(dx-1)*y=old -> dx^2+dy^2=1&x^2+y^2>0").asSequent
   }
 
   it should "work if not sole formula in succedent" in withQE { _ =>
