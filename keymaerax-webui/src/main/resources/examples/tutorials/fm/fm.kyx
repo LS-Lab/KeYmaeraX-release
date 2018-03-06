@@ -261,8 +261,13 @@ implyR(1); (andL('L)*); loop({`v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(
     diffInvariant({`-t*(v-a/2*t)<=x-old(x)&x-old(x)<=t*(v-a/2*t)`}, 1);
     diffInvariant({`-t*(v-a/2*t)<=y-old(y)&y-old(y)<=t*(v-a/2*t)`}, 1);
     dW(1); prop; <(
-      hideR(2=={`abs(y-yo)>v^2/(2*B())`}) & smartQE; done,
-      hideR(1=={`abs(x-xo)>v^2/(2*B())`}) & smartQE; done
+      hideR(2=={`abs(y-yo)>v^2/(2*B())`});
+      transformEquality({`ep()=t`}, 'L=={`abs(x_0-xo)>v_0^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v_0)`});
+      smartQE; done
+      ,
+      hideR(1=={`abs(x-xo)>v^2/(2*B())`});
+      transformEquality({`ep()=t`}, 'L=={`abs(y_0-yo)>v_0^2/(2*B())+(A()/B()+1)*(A()/2*ep()^2+ep()*v_0)`});
+      smartQE; done
     )
   )
 )
