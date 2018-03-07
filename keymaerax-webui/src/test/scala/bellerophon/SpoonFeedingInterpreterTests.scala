@@ -211,12 +211,12 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val n30 = n21.children.head
     n30.makerShortName shouldBe Some("dW(1)")
     n30.conclusion shouldBe Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=1&x>=0}]x>=0".asFormula))
-    n30.goal shouldBe Some(Sequent(IndexedSeq(), IndexedSeq("x>=0->x>=0".asFormula)))
+    n30.goal shouldBe Some(Sequent(IndexedSeq("x_0>0".asFormula), IndexedSeq("x>=0->x>=0".asFormula)))
     n30.children should have size 1
 
     val n40 = n30.children.head
     n40.makerShortName shouldBe Some("prop")
-    n40.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>=0->x>=0".asFormula))
+    n40.conclusion shouldBe Sequent(IndexedSeq("x_0>0".asFormula), IndexedSeq("x>=0->x>=0".asFormula))
     n40.goal shouldBe None
     n40.children shouldBe empty
 
