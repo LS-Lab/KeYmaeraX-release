@@ -432,7 +432,7 @@ object SQLite {
 
         val substTactic = tactic match {
           case None => None
-          case Some(t) => Some(BelleParser.parseWithInvGen(t, None, d).prettyString)
+          case Some(t) => Some(BellePrettyPrinter(BelleParser.parseWithInvGen(t, None, d)))
         }
 
         val provable = ProvableSig.startProof(problem)
