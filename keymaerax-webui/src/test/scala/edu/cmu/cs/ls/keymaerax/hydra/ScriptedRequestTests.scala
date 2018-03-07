@@ -1,13 +1,17 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, FixedGenerator, FormulaArg, TacticTestBase}
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Real}
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Real}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.Inside._
+import spray.json.{JsArray, JsBoolean, JsString}
+import org.scalatest.prop.TableDrivenPropertyChecks._
 
 /**
   * Tests the server-side web API with scripted requests.
@@ -342,6 +346,77 @@ class ScriptedRequestTests extends TacticTestBase {
       'errorText (Some("Argument j(x) uses new names that do not occur in the sequent: f, is it a typo?"))
     )
   }
+
+  private def importExamplesIntoDB(db: TempDBTools) = {
+    val userName = "maxLevelUser"
+    db.db.createUser(userName, "", "1") // industry mode - return all examples
+    val t = SessionManager.token(SessionManager.add(db.db.getUser(userName).get))
+    val examplesResponse = new ListExamplesRequest(db.db, userName).getResultingResponses(t).loneElement.getJson
+    examplesResponse shouldBe a [JsArray]
+    val urls = examplesResponse.asInstanceOf[JsArray].elements.map(_.asJsObject.fields("url").asInstanceOf[JsString].value)
+    urls should have size 5 // change when ListExamplesRequest is updated
+    val urlsTable = Table("url", urls:_*)
+    forEvery(urlsTable) { (url) =>
+      val response = new ImportExampleRepoRequest(db.db, userName, url).getResultingResponses(t).loneElement
+      response should have ('flag (true), 'errorText (None))
+    }
+  }
+
+  "Shipped tutorial import" should "import all tutorials correctly" in withDatabase { importExamplesIntoDB }
+
+  it should "execute all imported tutorial tactics correctly" in withMathematica { _ => withDatabase { db =>
+    val userName = "maxLevelUser"
+    // import all tutorials, creates user too
+    importExamplesIntoDB(db)
+    val t = SessionManager.token(SessionManager.add(db.db.getUser(userName).get))
+    val models = new GetModelListRequest(db.db, userName).getResultingResponses(t).loneElement.getJson
+    val modelInfos = models.asInstanceOf[JsArray].elements.
+      filter(_.asJsObject.fields("hasTactic").asInstanceOf[JsBoolean].value).
+      map(m => m.asJsObject.fields("name").asInstanceOf[JsString].value -> m.asJsObject.fields("id").asInstanceOf[JsString].value)
+    modelInfos should have size 59  // change when ListExamplesRequest is updated
+    val modelInfosTable = Table(("name", "id"), modelInfos:_*)
+    forEvery(modelInfosTable) { (name, id) =>
+      println("Importing and opening " + name + "...")
+      val r1 = new CreateModelTacticProofRequest(db.db, userName, id).getResultingResponses(t).loneElement
+      r1 shouldBe a[CreatedIdResponse]
+      val proofId = r1.getJson.asJsObject.fields("id").asInstanceOf[JsString].value
+      val r2 = new OpenProofRequest(db.db, userName, proofId).getResultingResponses(t).loneElement
+      r2 shouldBe a [OpenProofResponse]
+      val r3 = new InitializeProofFromTacticRequest(db.db, userName, proofId).getResultingResponses(t).loneElement
+      r3 shouldBe a[RunBelleTermResponse]
+      val nodeId = r3.getJson.asJsObject.fields("nodeId").asInstanceOf[JsString].value
+      val taskId = r3.getJson.asJsObject.fields("taskId").asInstanceOf[JsString].value
+      var status = "running"
+      do {
+        val r4 = new TaskStatusRequest(db.db, userName, proofId, nodeId, taskId).getResultingResponses(t).loneElement
+        r4 shouldBe a[TaskStatusResponse]
+        status = r4.getJson.asJsObject.fields("status").asInstanceOf[JsString].value
+      } while (status != "done")
+      new TaskResultRequest(db.db, userName, proofId, nodeId, taskId).getResultingResponses(t).loneElement match {
+        case _: TaskResultResponse => // ok
+        case e: ErrorResponse => fail(e.msg, e.exn)
+      }
+      val r5 = new GetAgendaAwesomeRequest(db.db, userName, proofId).getResultingResponses(t).loneElement
+      r5 shouldBe a[AgendaAwesomeResponse]
+      BelleParser(db.db.getModel(id).tactic.get) match {
+        case _: PartialTactic =>
+          r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe false
+        case _ =>
+          r5.getJson.asJsObject.fields("agendaItems").asJsObject.getFields() shouldBe empty
+          r5.getJson.asJsObject.fields("closed").asInstanceOf[JsBoolean].value shouldBe true
+          val r6 = new CheckIsProvedRequest(db.db, userName, proofId).getResultingResponses(t).loneElement
+          r6 shouldBe a[ProofVerificationResponse]
+          r6.getJson.asJsObject.fields("proofId").asInstanceOf[JsString].value shouldBe proofId
+          r6.getJson.asJsObject.fields("isProved").asInstanceOf[JsBoolean].value shouldBe true
+          // double check extracted tactic
+          println("Reproving extracted tactic...")
+          val extractedTactic = BelleParser(r6.getJson.asJsObject.fields("tactic").asInstanceOf[JsString].value)
+          proveBy(KeYmaeraXArchiveParser.parse(db.db.getModel(id).keyFile).head.model.asInstanceOf[Formula],
+            extractedTactic) shouldBe 'proved
+      }
+      println("Done")
+    }
+  }}
 
   private def runTactic(db: TempDBTools, token: SessionToken, proofId: Int)(nodeId: String, tactic: BelleExpr): Response = {
     val (tacticString: String, inputs: List[BelleTermInput], pos1: Option[PositionLocator], pos2: Option[PositionLocator]) = tactic match {
