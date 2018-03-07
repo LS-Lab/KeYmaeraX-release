@@ -357,7 +357,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
           val newCause = if (cause == null) new BelleThrowable(s"Position tactic ${positionTactic.prettyString} is not " +
             s"applicable at ${locator.start.prettyString}", e)
           else new CompoundException(
-            new BelleThrowable(s"Position tactic ${positionTactic.prettyString} is not applicable at ${locator.start.prettyString}", e),
+            new BelleThrowable(s"Position tactic ${positionTactic.prettyString}(${locator.prettyString}) is not applicable at ${locator.start.prettyString}", e),
             cause)
           tryAllAfter(provable, Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact), newCause)
       }
