@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.universalGen
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
@@ -553,6 +554,44 @@ class ODETests extends TacticTestBase {
     val cofactors = List(List("0","2*x2"),List("0","0")).map(ls => ls.map(s => s.asTerm))
     val pr = DifferentialTactics.dgVdbx(system,cofactors,polys)
     println(pr)
+    pr shouldBe 'proved
+  }
+
+  "liveness" should "prove that exponential diff eqs are unbounded" in withMathematica { _ =>
+    //Tests out a derived version of DV
+
+    //Abuse DS to show that solutions exist for all time
+    val texists = "x0 > 0 -> <{t'=1}> 0<=x0-x1+x0*t".asFormula
+    val pr1 = proveBy(texists,
+      implyR(1) & useAt("Dsol differential equation solution")(1) &
+        chase(1, 0::1::Nil) & QE
+    )
+
+    //DG for linear systems
+    val xexists = "x0>0 -> <{t'=1,x'=1*x+0}> 0<=x0-x1+x0*t".asFormula
+    val pr2 = proveBy(xexists,
+      implyR(1) &
+      universalGen(Some("x".asVariable),"x".asTerm)(1) &
+      useAt("DGd diamond differential ghost",PosInExpr(1::Nil))(1) &
+      implyRi &
+      by(pr1)
+    )
+
+    val fml = "x=x0 & t = 0  & x0 > 0 -> <{t'=1,x'=1*x+0}> x - x1 >= 0".asFormula
+    val pr = proveBy(fml, prop &
+      cut("[{t'=1,x'=1*x+0 & true & x-x1 < 0}] 0 > (x0-x1)+x0*t".asFormula)
+      <(
+        useAt("<> diamond",PosInExpr(1::Nil))(1) & notR(1)  & SimplifierV3.fullSimpTac() &
+        //Inverse diff cut
+        cut("[{t'=1,x'=1*x+0 & true}] 0 > (x0-x1)+x0*t".asFormula) <(
+          useAt("[] box",PosInExpr(1::Nil))(-6) & notL(-6) &
+            chase(1, 1::Nil) & implyRi()(AntePos(2),SuccPos(0)) & cohideR(1) & byUS(pr2),
+          dC("x-x1 < 0".asFormula)(1) < ( closeId,closeId) )
+        ,
+        hideR(1) & dC("x >= x0".asFormula)(1)
+        <( dC("x-x1 >= (x0-x1)+x0*t".asFormula)(1) <(dW(1)&QE,dI('full)(1)), openDiffInd(1))
+      )
+    )
     pr shouldBe 'proved
   }
 }
