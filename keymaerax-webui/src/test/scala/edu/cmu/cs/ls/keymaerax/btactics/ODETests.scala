@@ -289,7 +289,7 @@ class ODETests extends TacticTestBase {
   it should "work with maybe bound" in withMathematica { _ =>
     val result = proveBy("x>0 -> [{x'=-x}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asFormula,
       implyR(1) & DifferentialTactics.ODE(introduceStuttering=true, dW(1) & assignb(1, 1::Nil))(1))
-    result.subgoals.loneElement shouldBe "==> true&x>0 -> [{x:=x+3;}* ++ y:=x;](x>0&y>0)".asSequent
+    result.subgoals.loneElement shouldBe "x_0>0 ==> true&x>0 -> [{x:=x+3;}* ++ y:=x;](x>0&y>0)".asSequent
   }
 
   it should "not stutter repeatedly" in withQE { _ =>
