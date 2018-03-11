@@ -134,6 +134,18 @@ class SimpleBelleParserTests extends TacticTestBase {
     BelleParser(s) shouldBe (round trip t)
   }
 
+  it should "parse OptionArg arguments when option unspecified" in {
+    val s = "dbx(1)"
+    val t = BelleParser(s)
+    BelleParser(s) shouldBe (round trip t)
+  }
+
+  it should "parse OptionArg arguments with option specified" in {
+    val s = "dbx({`x`}, 1)"
+    val t = BelleParser(s)
+    BelleParser(s) shouldBe (round trip t)
+  }
+
   //endregion
 
   //region Sequential combinator

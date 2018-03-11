@@ -1130,6 +1130,11 @@ case class TermArg (override val name: String, override val allowsFresh: List[St
 case class StringArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "string"
 }
+case class OptionArg(arg: ArgInfo) extends ArgInfo {
+  val name: String = arg.name
+  val sort: String = "option[" + arg.sort + "]"
+  val allowsFresh: List[String] = arg.allowsFresh
+}
 @deprecated("Until lists are actually added to the concrete syntax of Bellerophon.", "4.2b1")
 case class ListArg (override val name: String, elementSort: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "list"

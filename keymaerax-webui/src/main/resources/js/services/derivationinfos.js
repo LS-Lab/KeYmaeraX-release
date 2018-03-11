@@ -102,7 +102,9 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
         numInputs: tactic.derivation.input.length
       };
       tactic.missingInputNames = function() {
-        var missingInputs = $.grep(tactic.derivation.input, function(input, idx) { return input.value == undefined; });
+        var missingInputs = $.grep(tactic.derivation.input, function(input, idx) {
+          return !input.type.startsWith('option[') && input.value == undefined;
+        });
         return $.map(missingInputs, function(val, i) { return val.param; });
       };
       return tactic;

@@ -1522,6 +1522,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
         case BelleTermInput(value, Some(arg: FormulaArg)) => arg -> (KeYmaeraXParser(value) :: Nil)
         case BelleTermInput(value, Some(arg: VariableArg)) => arg -> (KeYmaeraXParser(value) :: Nil)
         case BelleTermInput(value, Some(arg: ExpressionArg)) => arg -> (KeYmaeraXParser(value) :: Nil)
+        case BelleTermInput(value, Some(OptionArg(arg))) => arg -> (KeYmaeraXParser(value) :: Nil)
         case BelleTermInput(value, Some(arg@ListArg(_, "formula", _))) => arg -> value.split(",").map(KeYmaeraXParser).toList
       }
 

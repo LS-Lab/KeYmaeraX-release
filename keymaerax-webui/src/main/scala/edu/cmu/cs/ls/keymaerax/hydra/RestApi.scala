@@ -10,7 +10,7 @@ import java.util.{Calendar, Date}
 import akka.event.slf4j.SLF4JLogging
 import akka.actor.{Actor, ActorContext}
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, OptionArg}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core.Formula
@@ -593,16 +593,22 @@ trait RestApi extends HttpService with Logging {
         val illFormedParams = paramArray.filter({obj =>
           val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
           val paramInfo = expectedInputs.find(_.name == paramName)
-          paramInfo.isEmpty || obj.getFields("value").isEmpty
+          paramInfo.isEmpty ||
+            (paramInfo match { case Some(_: OptionArg) => false case _ => obj.getFields("value").isEmpty})
         })
         if (illFormedParams.isEmpty) {
-          val inputs =
-            paramArray.map({ obj =>
-              val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
-              val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
-              val paramInfo = expectedInputs.find(_.name == paramName)
-              BelleTermInput(paramValue, paramInfo)
-            })
+          val inputs = paramArray.map({ obj =>
+            val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
+            expectedInputs.find(_.name == paramName) match {
+              case Some(OptionArg(paramInfo)) => obj.getFields("value").headOption match {
+                case Some(JsString(paramValue)) => Some(BelleTermInput(paramValue, Some(paramInfo)))
+                case _ => None
+              }
+              case paramInfo =>
+                val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
+                Some(BelleTermInput(paramValue, paramInfo))
+            }
+          }).filter(_.isDefined).map(_.get)
           val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId,
             Some(Fixed(parseFormulaId(formulaId))), None, inputs.toList, consultAxiomInfo=true, stepwise=stepwise)
           completeRequest(request, t)

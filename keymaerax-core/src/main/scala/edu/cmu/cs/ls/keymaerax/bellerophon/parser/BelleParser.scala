@@ -544,7 +544,11 @@ object BelleParser extends (String => BelleExpr) with Logging {
         import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
         //Use the parsed result if it matches the expected type. Otherwise re-parse using a grammar-specific parser.
         assert(expectedType.nonEmpty, "When parsing an EXPRESSION argument an expectedType should be specified.")
-        expectedType.get match {
+        val unwrappedExpectedType = expectedType match {
+          case Some(OptionArg(argType)) => argType
+          case Some(argType) => argType
+        }
+        unwrappedExpectedType match {
           case _:StringArg => Left(tok.undelimitedExprString)
           case _:FormulaArg if tok.expression.isInstanceOf[Formula] => Left(tok.expression)
           case _:FormulaArg => try {
