@@ -272,6 +272,15 @@ object DerivationInfo {
         case None => DifferentialTactics.dgDbxAuto
       }: TypedFunc[Option[Term], BelleExpr]
     ),
+    PositionTacticInfo("barrier",
+      RuleDisplayInfo(
+        "Strict Barrier Certificate",
+        /* conclusion */ (List("p≳0"), List("[{x′=f(x) & Q}]p≳0")),
+        /* premises */ List( (List("Q ∧ p=0"), List("p'>0")) )
+      ),
+      _ => DifferentialTactics.dgBarrier(ToolProvider.simplifierTool())
+      , needsTool = true
+    ),
     new InputPositionTacticInfo("dGold",
       RuleDisplayInfo(
         "Differential Ghost",

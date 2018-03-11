@@ -915,7 +915,7 @@ private object DifferentialTactics extends Logging {
   private val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
   private val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
 
-  def dgBarrier(tool : Option[SimplificationTool] = None) : DependentPositionTactic = "dgBarrier" by ((pos: Position, seq:Sequent) => {
+  def dgBarrier(tool: Option[SimplificationTool] = None): DependentPositionTactic = "barrier" by ((pos: Position, seq:Sequent) => {
 
     val Some(Box(ODESystem(system, dom), property)) = seq.sub(pos)
 
