@@ -854,7 +854,7 @@ private object DifferentialTactics extends Logging {
     * Note: this also works for fractional q, if its denominator is already in Q
     * Otherwise, DG will fail on the singularity
     */
-  def dgDbx(qco:Term) : DependentPositionTactic = "dgDbx" by ((pos: Position, seq:Sequent) => {
+  def dgDbx(qco: Term): DependentPositionWithAppliedInputTactic = "dbx" byWithInput (qco, (pos: Position, seq:Sequent) => {
 
     val Some(Box(ODESystem(system, _), property)) = seq.sub(pos)
 
@@ -976,7 +976,7 @@ private object DifferentialTactics extends Logging {
   private lazy val eqNorm: ProvableSig = proveBy(" f_() = g_() <-> f_()-g_() = 0 ".asFormula,QE)
   // Normalises to p = 0
   // then attempts to automatically guess the darboux cofactor
-  def dgDbxAuto: DependentPositionTactic = "dgDbxAuto" by ((pos: Position, seq:Sequent) => {
+  def dgDbxAuto: DependentPositionTactic = "dbx" by ((pos: Position, seq:Sequent) => {
     if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable("dgDbxAuto requires a AlgebraTool, but got None")
 
     val Some(Box(ODESystem(system, dom), property)) = seq.sub(pos)

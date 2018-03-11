@@ -260,6 +260,18 @@ object DerivationInfo {
       ),
       _ => DifferentialTactics.inverseDiffGhost
     ),
+    InputPositionTacticInfo("dbx",
+      RuleDisplayInfo(
+        "Darboux (in)equalities",
+        /* conclusion */ (List("p≳0"), List("[{x′=f(x) & Q}]p≳0")),
+        /* premises */ List( (List("Q"), List("p' ≥ gp")) )
+      ),
+      List(OptionArg(TermArg("g"))),
+      _ => {
+        case Some(g: Term) => DifferentialTactics.dgDbx(g)
+        case None => DifferentialTactics.dgDbxAuto
+      }: TypedFunc[Option[Term], BelleExpr]
+    ),
     new InputPositionTacticInfo("dGold",
       RuleDisplayInfo(
         "Differential Ghost",
