@@ -661,6 +661,8 @@ private object DifferentialTactics extends Logging {
           else {
             diffInd()(pos)       | // >= to >=
             openDiffInd(pos)     | // >= to >, with >= assumption
+            (dgBarrier(ToolProvider.simplifierTool())(pos) & done) |
+            (dgDbxAuto(pos) & done)   |
             DGauto(pos)          |
             dgZeroMonomial(pos)  | //Equalities
             dgZeroPolynomial(pos)  //Equalities

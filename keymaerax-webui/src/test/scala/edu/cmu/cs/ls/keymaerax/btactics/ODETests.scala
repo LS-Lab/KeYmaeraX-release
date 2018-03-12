@@ -135,6 +135,22 @@ class ODETests extends TacticTestBase {
     db.proveBy(modelContent, implyR(1) & ODE(1)) shouldBe 'proved
   }}
 
+  it should "prove a barrier certificate" in withMathematica { _ =>
+    val fml =
+      """
+        |x^2 <= 1/2 & y^2 <= 1/3 ->
+        | [
+        |   {x'=-x - (1117*y)/500 + (439*y^3)/200 - (333*y^5)/500, y'=x + (617*y)/500 - (439*y^3)/200 + (333*y^5)/500}
+        |   @invariant(x^2 + x*y + y^2 - 111/59 <= 0)
+        | ] (x - 4*y < 8)
+      """.stripMargin.asFormula
+
+    proveBy(fml, implyR(1) & dC("x^2 + x*y + y^2 - 111/59 <= 0".asFormula)(1) <(
+      dW(1) & QE & done,
+      ODE(1) & done
+    )) shouldBe 'proved
+  }
+
   "Z3" should "prove what's needed by ODE for the Z3 ghost" in withZ3 { _ =>
     the [BelleThrowable] thrownBy TactixLibrary.proveBy("\\forall x_0 (x_0>0&true->\\forall x (x>0->-x>=0))".asFormula, QE) should have message
       "[Bellerophon Runtime] QE with Z3 gives SAT. Cannot reduce the following formula to True:\ntrue->\\forall x_0 (x_0>0&true->\\forall x (x>0->-x>=0))\n"
