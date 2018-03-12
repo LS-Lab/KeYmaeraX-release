@@ -981,9 +981,12 @@ private object DifferentialTactics extends Logging {
 
     val Some(Box(ODESystem(system, dom), property)) = seq.sub(pos)
 
-    val (p,pop,ax) = property match {
-      case Equal(lhs, rhs) => (Minus(lhs,rhs),Equal,eqNorm)
+    val (p,bop) = property match {
+      case bop:ComparisonFormula =>
+        (Minus(bop.left,bop.right),bop)
+      case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}")
     }
+
     val lie = DifferentialHelper.lieDerivative(system, p)
     val algTool = ToolProvider.algebraTool().get
     //val gb = p::domToTerms(dom)
@@ -991,21 +994,37 @@ private object DifferentialTactics extends Logging {
     //todo: groebnerBasis seems broken for > 1 term??
     val gb = if(domterms.nonEmpty) algTool.groebnerBasis(domterms) else Nil
     val quo = algTool.polynomialReduce(lie,p::gb)
-    //Maybe this should take the polynomial LCM (rp' = qp), then divide by r after proving it is non-zero?
+    // quo._1.head is the cofactor of p
+    // quo._2 is the remainder
+    // For =darboux, attempt proof of quo._2 = 0
+    // For >=,> , attempt proof of quo._2 >=0 (and similarly for <=,<)
+    val cofactor = quo._1.head
+    val rem = quo._2
+    val (num,den) = stripDenom(cofactor) //Need to put it in a form that DG can understand
 
-    quo._2 match {
-      case n:Number if n.value == 0 => {
-        val cofactor = quo._1.head
-        //This might contain fractions
-        val (num,den) = stripDenom(cofactor) //Need to put it in a form that DG can understand
-        useAt(ax)(pos ++ PosInExpr(1 :: Nil)) & diffCut(NotEqual(den,Number(0))) (pos) <(
-        dgDbx(Divide(num,den))(pos),
-        //Leaves the fractional goal open if it isn't implied by DW
-        ?(dW(pos) & QE & done) | skip
-        )
-      }
-      case _ => skip
+    //println("poly: "+p+" cofactor: "+cofactor+" rem: "+rem)
+    val zero = Number(0)
+
+    val remSgn = bop match {
+      case GreaterEqual(lhs, rhs) => GreaterEqual(rem,zero)
+      case Greater(lhs, rhs) => GreaterEqual(rem,zero)
+      case LessEqual(lhs, rhs) => LessEqual(rem,zero)
+      case Less(lhs, rhs) => LessEqual(rem,zero)
+      case Equal(_,_) => Equal(rem,zero)
+      case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}")
     }
+
+    //First, attempt to prove denominator non-zero, and the remainder has appropriate sign
+    diffCut(And(NotEqual(den,zero),remSgn))(pos) < (
+      //Finally, use dgDbx
+      diffCut(bop.reapply(p,zero))(pos) <(
+        dW(pos) & QE
+        ,
+        dgDbx(Divide(num,den))(pos)
+      ),
+      //Leaves the denonominator goal open if it isn't implied by DW
+      ?(dW(pos) & QE & done)
+    )
   })
 
   /** @see [[TactixLibrary.DGauto]]
