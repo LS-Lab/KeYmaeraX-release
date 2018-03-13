@@ -1078,10 +1078,11 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
         case None => new ErrorResponse("Unable to open proof " + proofId + ", because it does not refer to a model")::Nil // duplicate check to above
         case Some(mId) =>
           val generator = new ConfigurableGenerator[Formula]()
-          KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p -> inv))
+          KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
+            generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ inv)))
           val defsGenerator = new ConfigurableGenerator[Expression]()
           val (d, _) = KeYmaeraXProblemParser.parseProblem(db.getModel(mId).keyFile)
-          d.substs.foreach(sp => defsGenerator.products += (sp.what -> sp.repl))
+          d.substs.foreach(sp => defsGenerator.products += (sp.what -> (sp.repl::Nil)))
           session += proofId -> ProofSession(proofId, generator, d)
           TactixLibrary.invGenerator = generator //@todo should not store invariant generator globally for all users
           new OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil

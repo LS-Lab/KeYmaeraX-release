@@ -34,7 +34,8 @@ object CourseMain {
     //Intialize the printer, the configuration generator, the parser, and the invariant generator.
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[Formula]()
-    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
+    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
+      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv)))
     TactixLibrary.invGenerator = generator
   }
 

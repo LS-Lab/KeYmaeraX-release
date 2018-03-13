@@ -84,7 +84,7 @@ class StttTutorial extends TacticTestBase {
     val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 2", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
     val Imply(_, Box(loop, _)) = KeYmaeraXProblemParser(modelContent)
-    db.proveBy(modelContent, master(new ConfigurableGenerator(Map((loop, "v>=0".asFormula))))) shouldBe 'proved
+    db.proveBy(modelContent, master(new ConfigurableGenerator(Map((loop, "v>=0".asFormula::Nil))))) shouldBe 'proved
   }}
 
   it should "be provable with master and loop invariant from file" in withQE { _ => withDatabase { db =>

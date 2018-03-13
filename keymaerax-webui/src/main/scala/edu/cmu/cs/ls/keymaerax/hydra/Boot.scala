@@ -128,7 +128,8 @@ object HyDRAInitializer extends Logging {
     // connect invariant generator to tactix library
     val generator = new ConfigurableGenerator[Formula]()
     TactixLibrary.invGenerator = generator
-    KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) => generator.products += (p->inv))
+    KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) =>
+      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv)))
 
     LoadingDialogFactory().addToStatus(15, Some("Connecting to arithmetic tools..."))
 

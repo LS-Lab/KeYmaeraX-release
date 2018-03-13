@@ -52,7 +52,8 @@ object CoasterXMain {
     BelleInterpreter.setInterpreter(registerInterpreter(SequentialInterpreter(listeners)))
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXNoContractPrettyPrinter)
     val generator = new ConfigurableGenerator[Formula]()
-    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
+    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
+      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv)))
     TactixLibrary.invGenerator = generator
     ToolProvider.setProvider(new NoneToolProvider())
   }
@@ -192,7 +193,8 @@ object CoasterXMain {
     // connect invariant generator to tactix library
     val generator = new ConfigurableGenerator[Formula]()
     TactixLibrary.invGenerator = generator
-    KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) => generator.products += (p->inv))
+    KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) =>
+      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv)))
 
     println("Connecting to arithmetic tools...")
 

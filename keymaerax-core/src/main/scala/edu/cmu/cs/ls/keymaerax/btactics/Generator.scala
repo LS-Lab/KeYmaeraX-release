@@ -26,14 +26,20 @@ case class FixedGenerator[A](list: List[A]) extends Generator.Generator[A] {
   def apply(s: Sequent, p: Position): Iterator[A] = list.iterator
 }
 
-/** Map-based generator providing output according to the fixed map `product` according to its program or whole formula.
+/** Map-based generator providing output according to the fixed map `products` according to its program or whole formula.
   * @author Stefan Mitsch
   * */
-class ConfigurableGenerator[A](var products: Map[Expression,A] = Map[Expression,A]()) extends Generator.Generator[A] {
+class ConfigurableGenerator[A](var products: Map[Expression,Seq[A]] = Map[Expression,Seq[A]]()) extends Generator.Generator[A] {
   def apply(s: Sequent, p: Position): Iterator[A] = s.sub(p) match {
-    case Some(Box(prg, _)) => products.get(prg).iterator
-    case Some(Diamond(prg, _)) => products.get(prg).iterator
-    case Some(f) => products.get(f).iterator
+    case Some(Box(prg, _)) => findPrgProducts(prg)
+    case Some(Diamond(prg, _)) => findPrgProducts(prg)
+    case Some(f) => products.getOrElse(f, Nil).iterator
     case None => Nil.iterator
+  }
+
+  private def findPrgProducts(prg: Program): Iterator[A] = prg match {
+    case ODESystem(ode, q) =>
+      products.find({ case (ODESystem(key, _), _) => ode == key case _ => false }).getOrElse(() -> Nil)._2.iterator
+    case _ => products.getOrElse(prg, Nil).iterator
   }
 }
