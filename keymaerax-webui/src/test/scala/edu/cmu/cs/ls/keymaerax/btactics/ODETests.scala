@@ -96,7 +96,7 @@ class ODETests extends TacticTestBase {
     pr.subgoals.loneElement shouldBe "x+z=0 ==> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] (1!=0&A*y+-1*A*z^2=0)".asSequent
   }
 
-  "ODE" should "prove a strict barrier certificate" in withMathematica {qeTool =>
+  "ODE Barrier" should "prove a strict barrier certificate" in withMathematica { _ =>
     //This one doesn't actually need the full power of strict barriers because it's also an inequational dbx
     val fml = "x>=0 -> [{x'=100*x^4+y*x^3-x^2+x+c, c'=x+y+z & c > x}] x>=0".asFormula
     val pr = TactixLibrary.proveBy(fml,implyR(1) &
@@ -104,14 +104,14 @@ class ODETests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  "ODE" should "prove a strict barrier certificate 1" in withMathematica {qeTool =>
+  it should "prove a strict barrier certificate 1" in withMathematica {qeTool =>
     val fml = "(87*x^2)/200 - (7*x*y)/180 + (209*y^2)/1080 - 10 >=0 -> [{x'=(5*x)/4 - (5*y)/6, y'=(9*x)/4 + (5*y)/2}] (87*x^2)/200 - (7*x*y)/180 + (209*y^2)/1080 - 10>=0".asFormula
     val pr = TactixLibrary.proveBy(fml,implyR(1) &
       DifferentialTactics.dgBarrier(Some(qeTool))(1))
     pr shouldBe 'proved
   }
 
-  "ODE" should "prove a strict barrier certificate 2" in withMathematica {qeTool =>
+  it should "prove a strict barrier certificate 2" in withMathematica {qeTool =>
     val fml = "(23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5 <= 0 -> [{x'=(x/2) + (7*y)/3 , y'=-x - y}] (23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5<=0".asFormula
     val pr = TactixLibrary.proveBy(fml,implyR(1) &
       DifferentialTactics.dgBarrier(Some(qeTool))(1))
@@ -298,22 +298,17 @@ class ODETests extends TacticTestBase {
 
   it should "work with solvable maybe bound" in withQE { _ =>
     val result = proveBy("[{x'=5}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asFormula, ODE(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall x (x=5*t_+x_1 -> [{x:=x+3;}* ++ y:=x;](x>0&y>0)))".asFormula)
+    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> \\forall x (x=5*t_+x_1 -> [{x:=x+3;}* ++ y:=x;](x>0&y>0)))".asSequent
   }
 
   it should "work with maybe bound" in withMathematica { _ =>
-    val result = proveBy("x>0 -> [{x'=-x}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asFormula,
-      implyR(1) & DifferentialTactics.ODE(introduceStuttering=true, dW(1) & assignb(1, 1::Nil))(1))
-    result.subgoals.loneElement shouldBe "x_0>0 ==> true&x>0 -> [{x:=x+3;}* ++ y:=x;](x>0&y>0)".asSequent
+    val result = proveBy("x>0 -> [{x'=-x}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asFormula, implyR(1) & ODE(1))
+    result.subgoals.loneElement shouldBe "x>0 ==> [{x'=-x & x>0}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asSequent
   }
 
   it should "not stutter repeatedly" in withQE { _ =>
     val result = proveBy("[{x'=x^x}]x>0".asFormula, ODE(1) | skip)
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain theSameElementsAs "[{x'=x^x}]x>0".asFormula::Nil
+    result.subgoals.loneElement shouldBe "==> [{x'=x^x}]x>0".asSequent
   }
 
   it should "prove cheat sheet example" in withQE { _ => {

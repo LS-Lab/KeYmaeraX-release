@@ -622,7 +622,21 @@ private object DifferentialTactics extends Logging {
     * @author Andre Platzer
     * @author Nathan Fulton
     */
-  lazy val ODE: DependentPositionTactic = ODE(introduceStuttering=true, assertT(_=>false, failureMessage))
+  lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+    case Some(Box(ODESystem(ode, q), _)) =>
+      val odeAtoms = DifferentialHelper.atomicOdes(ode)
+      val qAtoms = FormulaTools.conjuncts(q)
+      ODE(introduceStuttering=true,
+        //@note abort if unchanged
+        assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) match {
+          case Some(Box(ODESystem(extendedOde, extendedQ), _)) =>
+            (DifferentialHelper.atomicOdes(extendedOde).toSet -- odeAtoms).nonEmpty ||
+            (FormulaTools.conjuncts(extendedQ).toSet -- qAtoms).nonEmpty
+          case _ => false
+        }, failureMessage)(pos) &
+          (if (q == True) useAt("true&")(pos ++ PosInExpr(0::1::Nil)) else skip)
+    )(pos)
+  })
   def ODE(introduceStuttering: Boolean, finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
     val invariantCandidates = try {
       InvariantGenerator.differentialInvariantGenerator(seq,pos)
@@ -657,12 +671,11 @@ private object DifferentialTactics extends Logging {
           ) |
           (if (isOpen) {
               (openDiffInd(pos) | DGauto(pos)) //>
-          }
-          else {
+          } else {
             diffInd()(pos)       | // >= to >=
             openDiffInd(pos)     | // >= to >, with >= assumption
             (dgBarrier(ToolProvider.simplifierTool())(pos) & done) |
-            (dgDbxAuto(pos) & done)   |
+            (dgDbxAuto(pos) & done) |
             DGauto(pos)          |
             dgZeroMonomial(pos)  | //Equalities
             dgZeroPolynomial(pos)  //Equalities
@@ -675,7 +688,7 @@ private object DifferentialTactics extends Logging {
     val addInvariant = ChooseSome(
       () => invariantCandidates,
       (inv: Formula) => {
-        debug(s"[ODE] Trying to cut in invaariant candidate: ${inv}", true) &
+        debug(s"[ODE] Trying to cut in invariant candidate: $inv", true) &
           diffCut(inv)(pos) <(skip, proveWithoutCuts(pos) & done)
       }
     )
@@ -690,22 +703,29 @@ private object DifferentialTactics extends Logging {
         primedVars.map(DLBySubst.stutter(_)(pos ++ PosInExpr(1::Nil))).reduceOption[BelleExpr](_&_).getOrElse(skip)
     })
 
+    val unstutter = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+      case Some(Box(a: ODESystem, _)) =>
+        val primedVars = StaticSemantics.boundVars(a).toSet[Variable].filter(_.isInstanceOf[BaseVariable])
+        (1 to primedVars.size).reverse.map(i => ?(assignb(pos ++ PosInExpr(List.fill(i)(1))))).
+          reduceOption[BelleExpr](_&_).getOrElse(skip)
+      case _ => skip
+    })
+
     //The tactic:
     //@todo do at least proveWithoutCuts before diffSolve, but find some heuristics for figuring out when a simpler argument will do the trick.
-    if(insistOnProof)
+    if (insistOnProof)
       proveWithoutCuts(pos)        |
       (addInvariant & ODE(introduceStuttering,finish)(pos))    |
       TactixLibrary.solve(pos) |
       splitWeakInequality(pos)<(ODE(introduceStuttering,finish)(pos), ODE(introduceStuttering,finish)(pos)) |
-      //@todo default finish fails with useful error message, but undoes all intermediate steps, even if potentially useful
-      (if (introduceStuttering) stutter(pos) & ODE(introduceStuttering=false,finish)(pos)
+      (if (introduceStuttering) stutter(pos) & ODE(introduceStuttering=false,finish)(pos) & unstutter(pos)
        else finish)
     else
       (proveWithoutCuts(pos) & done)   |
       (addInvariant & ODE(introduceStuttering,finish)(pos) & done) |
       TactixLibrary.solve(pos)     |
       (splitWeakInequality(pos)<(ODE(introduceStuttering,finish)(pos), ODE(introduceStuttering,finish)(pos)) & done) |
-      (if (introduceStuttering) stutter(pos) & ODE(introduceStuttering=false,finish)(pos) & done
+      (if (introduceStuttering) stutter(pos) & ODE(introduceStuttering=false,finish)(pos) & unstutter(pos) & done
        else finish)
   })
 
