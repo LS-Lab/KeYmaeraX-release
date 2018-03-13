@@ -587,6 +587,22 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(2) shouldBe "v>=0, x_0>0, x_0=x ==> [{x'=v,v'=2 & true & v>=0}]x>=x_0".asSequent
   }
 
+  it should "not duplicate cuts" in withQE { _ =>
+    val result = proveBy("v>=0, x>0 ==> [{x'=v,v'=2}]x>=0".asSequent,
+      dC("v>=0".asFormula, "v>=0".asFormula)(1) <(dC("v>=0".asFormula)(1), skip))
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe "v>=0, x>0 ==> [{x'=v,v'=2 & true & v>=0}]x>=0".asSequent
+    result.subgoals(1) shouldBe "v>=0, x>0 ==> [{x'=v,v'=2}]v>=0".asSequent
+  }
+
+  it should "not duplicate old cuts" in withQE { _ =>
+    val result = proveBy("v>=0, x>0 ==> [{x'=v,v'=2}]x>=0".asSequent,
+      dC("v>=old(v)".asFormula, "v>=old(v)".asFormula)(1) <(dC("v>=old(v)".asFormula)(1), skip))
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe "v_0>=0, x>0, v_0=v ==> [{x'=v,v'=2 & true & v>=v_0}]x>=0".asSequent
+    result.subgoals(1) shouldBe "v_0>=0, x>0, v_0=v ==> [{x'=v,v'=2}]v>=v_0".asSequent
+  }
+
   it should "not expand old() ghosts in context" in withQE { _ =>
     val result = proveBy("[x:=0;][{x'=1}]x>=0".asFormula, dC("x>=old(x)".asFormula)(1, 1::Nil))
     result.subgoals should have size 2

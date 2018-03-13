@@ -265,32 +265,32 @@ private object DifferentialTactics extends Logging {
   /** @see [[TactixLibrary.dC()]] */
   def diffCut(formulas: Formula*): DependentPositionTactic =
     "dC" byWithInputs (formulas.toList, (pos, sequent) => {
-      formulas.map(ghostDC(_, pos, sequent)).foldRight[BelleExpr](skip)((cut, all) => cut <(all, skip))
+      formulas.map(ghostDC(_, pos, sequent)(pos)).foldRight[BelleExpr](skip)((cut, all) => cut & Idioms.?(<(all, skip)))
     })
 
   /** Looks for special 'old' function symbol in f and creates DC (possibly with ghost) */
-  private def ghostDC(f: Formula, pos: Position, sequent: Sequent): BelleExpr = {
-    def dc = sequent.sub(pos) match {
-      case Some(Box(_, _)) => DC _
-      case Some(Diamond(_, _)) => DCd _
+  private def ghostDC(f: Formula, origPos: Position, origSeq: Sequent): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+    lazy val (ode, dc) = seq.sub(pos) match {
+      case Some(Box(os: ODESystem, _)) => (os, DC _)
+      case Some(Diamond(os: ODESystem, _)) => (os, DCd _)
     }
 
     val ov = oldVars(f)
     if (ov.isEmpty) {
-      dc(f)(pos)
+      if (FormulaTools.conjuncts(f).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip else dc(f)(pos)
     } else {
-      var freshOld = TacticHelper.freshNamedSymbol(Variable("old"), sequent)
+      var freshOld = TacticHelper.freshNamedSymbol(Variable("old"), origSeq)
       val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {
         val (ghost: Variable, ghostPos: Option[Position]) = old match {
           case v: Variable =>
-            sequent.ante.zipWithIndex.find({
+            origSeq.ante.zipWithIndex.find({
               //@note heuristic to avoid new ghosts on repeated old(v) usage
               case (Equal(x0: Variable, x: Variable), _) => v==x && x0.name==x.name
               case _ => false
             }).map[(Variable, Option[Position])]({ case (Equal(x0: Variable, _), i) => (x0, Some(AntePosition.base0(i))) }).
-              getOrElse((TacticHelper.freshNamedSymbol(v, sequent), None))
+              getOrElse((TacticHelper.freshNamedSymbol(v, origSeq), None))
           case _ =>
-            sequent.ante.zipWithIndex.find({
+            origSeq.ante.zipWithIndex.find({
               //@note heuristic to avoid new ghosts on repeated old(v) usage
               case (Equal(x0: Variable, t: Term), _) => old==t && x0.name == "old"
               case _ => false
@@ -310,9 +310,11 @@ private object DifferentialTactics extends Logging {
           })
       }).toList
       val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
-      ghosts.map(_._2).reduce(_ & _) & dc(replaceOld(f, ghosts.map(_._1).toMap))(pos ++ PosInExpr(List.fill(posIncrements)(1)))
+      val oldified = replaceOld(f, ghosts.map(_._1).toMap)
+      if (FormulaTools.conjuncts(oldified).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip
+      else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(pos ++ PosInExpr(List.fill(posIncrements)(1)))
     }
-  }
+  })
 
   /** Returns a set of variables that are arguments to a special 'old' function */
   private def oldVars(fml: Formula): Set[Term] = {
@@ -624,17 +626,22 @@ private object DifferentialTactics extends Logging {
     */
   lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(Box(ODESystem(ode, q), _)) =>
-      val odeAtoms = DifferentialHelper.atomicOdes(ode)
-      val qAtoms = FormulaTools.conjuncts(q)
+      val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
+      val qAtoms = FormulaTools.conjuncts(q).toSet
       ODE(introduceStuttering=true,
         //@note abort if unchanged
         assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) match {
           case Some(Box(ODESystem(extendedOde, extendedQ), _)) =>
-            (DifferentialHelper.atomicOdes(extendedOde).toSet -- odeAtoms).nonEmpty ||
-            (FormulaTools.conjuncts(extendedQ).toSet -- qAtoms).nonEmpty
+            odeAtoms.subsetOf(DifferentialHelper.atomicOdes(extendedOde).toSet) ||
+            qAtoms.subsetOf(FormulaTools.conjuncts(extendedQ).toSet)
           case _ => false
         }, failureMessage)(pos) &
-          (if (q == True) useAt("true&")(pos ++ PosInExpr(0::1::Nil)) else skip)
+          ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
+            case Some(ODESystem(_, extendedQ)) =>
+              if (q == True) useAt("true&")(ppos ++
+                PosInExpr(1 +: FormulaTools.posOf(extendedQ, q).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
+              else skip
+          }))(pos ++ PosInExpr(0::Nil))
     )(pos)
   })
   def ODE(introduceStuttering: Boolean, finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
@@ -689,7 +696,8 @@ private object DifferentialTactics extends Logging {
       () => invariantCandidates,
       (inv: Formula) => {
         debug(s"[ODE] Trying to cut in invariant candidate: $inv", true) &
-          diffCut(inv)(pos) <(skip, proveWithoutCuts(pos) & done)
+        /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
+        diffCut(inv)(pos) <(skip, proveWithoutCuts(pos) & done)
       }
     )
 

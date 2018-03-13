@@ -483,6 +483,16 @@ class ODETests extends TacticTestBase {
     }
   }
 
+  it should "use an annotated differential invariant" in withMathematica { _ =>
+    val g = "[{x'=-y,y'=x}@invariant(x^2+y^2=old(x^2+y^2))]x>0".asFormula
+    proveBy(g, ODE(1)).subgoals.loneElement shouldBe "old=x^2+y^2 ==> [{x'=-y,y'=x & x^2+y^2=old}]x>0".asSequent
+  }
+
+  it should "use annotated differential invariants" in withMathematica { _ =>
+    val g = "[{x'=-y,y'=x,z'=2}@invariant(z>=old(z), x^2+y^2=old(x^2+y^2))]x>0".asFormula
+    proveBy(g, ODE(1)).subgoals.loneElement shouldBe "z_0=z, old=x^2+y^2 ==> [{x'=-y,y'=x, z'=2 & z>=z_0 & x^2+y^2=old}]x>0".asSequent
+  }
+
   "splitWeakInequality" should "split x>=0->[{x'=x}]x>=0" in withQE { _ =>
     val f = "x>=0->[{x'=x}]x>=0".asFormula
     val result = proveBy(f, implyR(1) & DifferentialTactics.splitWeakInequality(1))
