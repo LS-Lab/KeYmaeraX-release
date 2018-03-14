@@ -354,10 +354,10 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
       } catch {
         //@todo should catch only fails not eat problems
         case e: Throwable =>
-          val newCause = if (cause == null) new BelleThrowable(s"Position tactic ${positionTactic.prettyString} is not " +
+          val newCause = if (cause == null) new BelleThrowable(s"Position tactic $prettyString is not " +
             s"applicable at ${locator.start.prettyString}", e)
           else new CompoundException(
-            new BelleThrowable(s"Position tactic ${positionTactic.prettyString}(${locator.prettyString}) is not applicable at ${locator.start.prettyString}", e),
+            new BelleThrowable(s"Position tactic $prettyString is not applicable at ${locator.start.prettyString}", e),
             cause)
           tryAllAfter(provable, Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact), newCause)
       }
@@ -521,12 +521,12 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
               val newCause = if (cause == null) new BelleThrowable(s"Dependent position tactic ${pt.prettyString} is not " +
                 s"applicable at ${locator.start.prettyString}", e)
               else new CompoundException(
-                new BelleThrowable(s"Dependent position tactic ${pt.prettyString} is not applicable at ${locator.start.prettyString}", e),
+                new BelleThrowable(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString}", e),
                 cause)
               tryAllAfter(Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact), newCause)
           }
         } else if (cause == null) {
-          throw new BelleThrowable(s"Dependent position tactic ${pt.prettyString} is not applicable at ${locator.start.prettyString} in ${provable.subgoals(locator.goal).prettyString}")
+          throw new BelleThrowable(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} in ${provable.subgoals(locator.goal).prettyString}")
         } else throw cause
       case _ => pt.factory(locator.start).computeExpr(v) |
         tryAllAfter(Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact), cause)
