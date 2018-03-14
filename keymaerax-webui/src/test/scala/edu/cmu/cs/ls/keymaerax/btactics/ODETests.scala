@@ -493,6 +493,24 @@ class ODETests extends TacticTestBase {
     proveBy(g, ODE(1)).subgoals.loneElement shouldBe "z_0=z, old=x^2+y^2 ==> [{x'=-y,y'=x, z'=2 & z>=z_0 & x^2+y^2=old}]x>0".asSequent
   }
 
+  it should "interpret implications as differential invariants in simple ODE" in withMathematica { _ =>
+    val g = "A>=0, b()>0 ==> [{a:=A; ++ a:=-b(); ++ a:=0;}{{v'=a}@invariant((v'=A -> v>=old(v)), (v'=-b() -> v<=old(v)), (v'=0 -> v=old(v)))}]x>0".asSequent
+    val result = proveBy(g, chase(1) & andR(1) <(ODE(1), andR(1) <(ODE(1), ODE(1))))
+    //@note ODE solves after cutting in v>=old(v), v<=old(v), and v=old(v)
+    result.subgoals(0) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->A*s_+v>=v_0) -> x>0)".asSequent
+    result.subgoals(1) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->(-b())*s_+v<=v_0) -> x>0)".asSequent
+    result.subgoals(2) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->v=v_0) -> x>0)".asSequent
+  }
+
+  it should "interpret implications as differential invariants on multiple occurrences of substituted variable" in withMathematica { _ =>
+    val g = "A>=0, b()>0 ==> [{a:=A; ++ a:=-b(); ++ a:=0;}{{v'=a,w'=a/r}@invariant((v'=A -> v>=old(v)), (v'=-b() -> v<=old(v)), (v'=0 -> v=old(v)))}]x>0".asSequent
+    val result = proveBy(g, chase(1) & andR(1) <(ODE(1), andR(1) <(ODE(1), ODE(1))))
+    //@note ODE solves after cutting in v>=old(v), v<=old(v), and v=old(v)
+    result.subgoals(0) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->A*s_+v>=v_0) -> x>0)".asSequent
+    result.subgoals(1) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->(-b())*s_+v<=v_0) -> x>0)".asSequent
+    result.subgoals(2) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->v=v_0) -> x>0)".asSequent
+  }
+
   "splitWeakInequality" should "split x>=0->[{x'=x}]x>=0" in withQE { _ =>
     val f = "x>=0->[{x'=x}]x>=0".asFormula
     val result = proveBy(f, implyR(1) & DifferentialTactics.splitWeakInequality(1))
