@@ -31,6 +31,8 @@ abstract class BelleExpr(private var location: Location = UnknownLocation) {
   def &(other: BelleExpr)             = SeqTactic(this, other)
   /** this | other: alternative composition executes other if applying this fails, failing if both fail. */
   def |(other: BelleExpr)             = EitherTactic(this, other)
+  /** this > other: followup composition executes other on the output or error of this, failing if other fails. */
+  def >(other: BelleExpr)             = AfterTactic(this, other)
   /** (this*): saturating repetition executes this tactic to a fixpoint, casting result to type annotation, diverging if no fixpoint. */
   def * = SaturateTactic(this)
   /** this+: saturating repetition executes this tactic to a fixpoint, requires at least one successful application */
@@ -545,6 +547,7 @@ case class PartialTactic(child: BelleExpr, label: Option[BelleLabel] = None) ext
 
 case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString = "(" + left.prettyString + "&" + right.prettyString + ")" }
 case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString = "(" + left.prettyString + "|" + right.prettyString + ")" }
+case class AfterTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString = "(" + left.prettyString + ">" + right.prettyString + ")" }
 //@note saturate and repeat tactic fully parenthesize for parser
 case class SaturateTactic(child: BelleExpr) extends BelleExpr { override def prettyString = "((" + child.prettyString + ")*)" }
 case class RepeatTactic(child: BelleExpr, times: Int) extends BelleExpr { override def prettyString = "((" + child.prettyString + ")*" + times + ")" }

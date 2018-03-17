@@ -92,6 +92,23 @@ class SequentialInterpreterTests extends TacticTestBase {
     )
   }
 
+  "After combinator" should "prove a simple property" in {
+    val result = theInterpreter.apply(implyR(1) > close, BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula)))
+    result shouldBe a[BelleProvable]
+    result.asInstanceOf[BelleProvable].p shouldBe 'proved
+  }
+
+  it should "run right tactic on left failure" in {
+    val right = new DependentTactic("ANON") {
+      override def computeExpr(v: BelleValue): BelleExpr = v match {
+        case _: BelleProvable => fail("Expected a BelleThrowable, but got a BelleProvable")
+        case err: BelleValue with BelleThrowable => throw err
+      }
+    }
+    the [BelleThrowable] thrownBy theInterpreter.apply(andR(1) > right, BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula))) should
+      have message "[Bellerophon Runtime] Tactic andR applied at Fixed(1,None,true) on a non-matching expression in NoProofTermProvable(Provable(==> 1:  1=2->1=2\tImply\n  from   ==> 1:  1=2->1=2\tImply))"
+  }
+
   "OnAll combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
     val expr = andR(SuccPos(0)) & OnAll (implyR(SuccPos(0)) & close)

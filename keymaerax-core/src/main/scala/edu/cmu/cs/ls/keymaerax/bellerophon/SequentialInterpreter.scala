@@ -131,6 +131,22 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
                 "Failed: both left-hand side and right-hand side " + expr)
             }
         }
+        case AfterTactic(left, right) =>
+          val leftResult: Either[BelleValue, BelleValue] = try {
+            Left(apply(left, v))
+          } catch {
+            case eleft: BelleThrowable =>
+              try {
+                Right(apply(right, new BelleThrowable(eleft.getMessage, eleft.getCause) with BelleValue))
+              } catch {
+                case eright: BelleThrowable => throw eright.inContext(EitherTactic(eleft.context, eright.context),
+                  "Failed: both left-hand side and right-hand side " + expr)
+              }
+          }
+          leftResult match {
+            case Left(lr: BelleValue) => apply(right, lr)
+            case Right(rr: BelleValue) => rr
+          }
         case SaturateTactic(child) =>
           var prev: BelleValue = null
           var result: BelleValue = v
