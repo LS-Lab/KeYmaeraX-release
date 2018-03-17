@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
 import scala.collection.immutable._
@@ -232,5 +233,31 @@ class TactixLibraryTests extends TacticTestBase {
     proof.subgoals should have size 1
     proof.subgoals.head.ante should contain only ("y>0".asFormula, "x=2".asFormula)
     proof.subgoals.head.succ should contain only ("y>=0".asFormula, "[{x'=3}]x>0".asFormula)
+  }
+
+  "QE" should "reset timeout when done" in withQE {
+    case tool: ToolOperationManagement =>
+      val origTimeout = tool.getOperationTimeout
+      origTimeout shouldBe -1 // infinity initially
+      proveBy("x>1 -> x>0".asFormula, QE(Nil, None, Some(7)) & new BuiltInTactic("ANON") {
+        def result(provable: ProvableSig): ProvableSig = {
+          tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
+          provable
+        }
+      }) shouldBe 'proved
+    case _ => // nothing to test
+  }
+
+  it should "reset timeout when failing" in withQE {
+    case tool: ToolOperationManagement =>
+      val origTimeout = tool.getOperationTimeout
+      origTimeout shouldBe -1 // infinity initially
+      proveBy("x>0 -> x>1".asFormula, QE(Nil, None, Some(7)) | new BuiltInTactic("ANON") {
+        def result(provable: ProvableSig): ProvableSig = {
+          tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
+          provable
+        }
+      }) should (not be 'proved)
+    case _ => // nothing to test
   }
 }
