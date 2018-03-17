@@ -19,7 +19,9 @@ import scala.collection.immutable.Map
  * @author Stefan Mitsch
  * @todo Code Review: Move non-critical tool implementations into a separate package tactictools
  */
-class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool with CounterExampleTool with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool with PDESolverTool {
+class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool with CounterExampleTool
+    with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool
+    with PDESolverTool with ToolOperationManagement {
   // JLink, shared between tools
   private[tools] val link = new JLinkMathematicaLink
 
@@ -31,6 +33,8 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
   private val mSolve = new MathematicaEquationSolverTool(link)
   private val mAlgebra = new MathematicaAlgebraTool(link)
   private val mSimplify = new MathematicaSimplificationTool(link)
+
+  private var maxTimeout = mQE.TIMEOUT_OFF
 
   override def init(config: Map[String,String]): Unit = {
     val linkName = config.get("linkName") match {
@@ -62,6 +66,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
 
   /** Quantifier elimination on the specified formula, returns an equivalent quantifier-free formula plus Mathematica input/output as evidence */
   override def qeEvidence(formula: Formula): (Formula, Evidence) = {
+    //@todo read timeouts from configuration
     mQE.timeout = 5
     try {
       mQE.qeEvidence(formula)
@@ -71,13 +76,13 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
         try {
           mCEX.findCounterExample(stripUniversalClosure(formula)) match {
             case None =>
-              mQE.timeout = mQE.TIMEOUT_OFF
+              mQE.timeout = maxTimeout
               mQE.qeEvidence(formula)
             case Some(cex) => (False, ToolEvidence(List("input" -> formula.prettyString, "output" -> cex.mkString(","))))
           }
         } catch {
           case _: MathematicaComputationAbortedException =>
-            mQE.timeout = mQE.TIMEOUT_OFF
+            mQE.timeout = maxTimeout
             mQE.qeEvidence(formula)
         }
     }
@@ -145,4 +150,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with ODESolverTool
 
   /** Restarts the MathKernel with the current configuration */
   override def restart(): Unit = link.restart()
+
+  override def setOperationTimeout(timeout: Int): Unit = maxTimeout = timeout
+  override def getOperationTimeout: Int = maxTimeout
 }
