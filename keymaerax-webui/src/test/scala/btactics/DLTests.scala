@@ -604,9 +604,9 @@ class DLTests extends TacticTestBase {
     (finalTree.nodes.toSet - finalTree.root).foreach(_.maker shouldBe 'defined)
   }
 
-  it should "work with multi-variate abstract invariant" ignore {
+  it should "work with multi-variate abstract invariant" in {
     val fml = "x>1 & y < -1 -> [{x:=x+1;y:=y-1;}*](x>0&y<0)".asFormula
-    val tactic = implyR('R) & loop("J(x,y)".asFormula)('R) <(skip, skip, normalize partial)
+    val tactic = implyR('R) & loop("J(x,y)".asFormula)('R) <(skip, skip, normalize)
     val result = proveBy(fml, tactic)
 
     result.subgoals should have size 3
@@ -620,12 +620,9 @@ class DLTests extends TacticTestBase {
     result.subgoals(2).ante should contain only "J(x,y)".asFormula
     result.subgoals(2).succ should contain only "J(x+1,y-1)".asFormula
 
-    val dot = DotTerm(Tuple(Real, Real))
-
-    //@todo fst/snd not yet available
     val subst = USubst(SubstitutionPair(
-      PredOf(Function("J", None, Tuple(Real, Real), Bool), dot),
-      "x>=1&y<=-1".asFormula.replaceFree("x".asTerm, "fst(.(.,.))".asTerm).replaceFree("y".asTerm, "snd(.(.,.))".asTerm))::Nil)
+      PredOf(Function("J", None, Tuple(Real, Real), Bool), "(._1,._2)".asTerm),
+      "x>=1&y<=-1".asFormula.replaceFree("x".asTerm, "._1".asTerm).replaceFree("y".asTerm, "._2".asTerm))::Nil)
     val substResult = result(subst)
 
     // init
