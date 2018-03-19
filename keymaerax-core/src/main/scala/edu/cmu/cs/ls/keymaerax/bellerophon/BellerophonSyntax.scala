@@ -607,6 +607,24 @@ case class LetInspect(abbr: Expression, instantiator: ProvableSig => Expression,
   override def prettyString = "let(" + abbr + ":= inspect " + instantiator + " in " + inner + ")"
 }
 
+/**
+  * SearchAndRescue(abbr, common, instantiator, continuation) alias `search abbr := after common among instantiator in continuation`
+  * postpones the choice for the definition of `abbr` until tactic `common` finished on the Provable,
+  * but then searches for the definition of `abbr` by trying to run `continuation` from the outcome of `common`
+  * until `continuation` is successful.
+  * Each time it asks `instantiator` to choose a value for `abbr` based on the same Provable at the end of `common`
+  * in addition to the present Provable obtained after the current attempt of running `continuation` with the last choice for `abbr`.
+  * Resumes to the outer proof by a uniform substitution of instantiator(result)` for `abbr` of the resulting provable
+  * which corresponds to having run `USubst(abbr,inst){ common } ; continuation`.
+  *
+  * @see [[ProvableSig.apply(USubst)]]
+  * @note abbr should be fresh in the Provable
+  */
+case class SearchAndRescueAgain(abbr: Expression, common: BelleExpr, instantiator: (ProvableSig,ProverException) => Expression, continuation: BelleExpr) extends BelleExpr {
+  override def prettyString = "searchAndRescueAgain(" + abbr + ":= after " + common + " among " + instantiator + " in " + continuation + ")"
+}
+
+
 /** Defines a tactic for later execution. */
 case class DefTactic(name: String, t: BelleExpr) extends BelleExpr {
   override def prettyString: String = s"tactic $name as (${t.prettyString})"

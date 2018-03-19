@@ -333,6 +333,39 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             case e => throw new BelleThrowable("LetInspect expected sub-derivation")
           }
 
+
+        case SearchAndRescueAgain(abbr, common, instantiator, continuation) =>
+          val (provable,lbl) = v match {
+            case BelleProvable(p, l) => (p,l)
+            case _ => throw new BelleThrowable("Cannot attempt SearchAndRescueAgain with a non-Provable value.").inContext(expr, "")
+          }
+          if (provable.subgoals.length != 1)
+            throw new BelleThrowable("SearchAndRescueAgain of multiple goals is not currently supported.").inContext(expr, "")
+
+          val in: ProvableSig = ProvableSig.startProof(provable.subgoals.head)
+          apply(common, BelleProvable(in)) match {
+            case BelleProvable(commonDerivation, lbl2) =>
+              var lastProblem: ProverException = NoProverException
+              while (true) {
+                val value: Expression = instantiator(commonDerivation, lastProblem)
+                try {
+                  val us: USubst = USubst(SubstitutionPair(abbr, value) :: Nil)
+                  val backsubst: ProvableSig = commonDerivation(us)
+                  val remaining: BelleProvable = BelleProvable(provable(backsubst, 0), lbl2)
+                  apply(continuation, remaining) match {
+                    case pr: BelleProvable => return pr
+                    case e => ???
+                  }
+                } catch {
+                  case e: BelleThrowable => lastProblem = e
+                  case e: ProverException => lastProblem = e
+                }
+              }
+              ???
+            case e => throw new BelleThrowable("SearchAndRescueAgain expected sub-derivation after running common")
+          }
+
+
         case t@USubstPatternTactic(children) => {
           val provable = v match {
             case BelleProvable(p, _) => p

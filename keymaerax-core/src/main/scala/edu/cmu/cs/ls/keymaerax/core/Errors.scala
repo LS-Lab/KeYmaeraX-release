@@ -62,3 +62,6 @@ case class ProverAssertionError(msg: String) extends ProverException("Assertion 
 
 /** Thrown to indicate when an unknown operator occurs */
 case class UnknownOperatorException(msg: String, e:Expression) extends ProverException(msg + ": " + e.prettyString + " of " + e.getClass + " " + e) {}
+
+/** Nil case for exceptions, which is almost useless except when an exception type is needed to indicate that there was none. */
+object NoProverException extends ProverException("No prover exception has occurred")
