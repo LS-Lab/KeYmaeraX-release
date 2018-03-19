@@ -285,6 +285,14 @@ angular.module('formula')
               });
             }
 
+            scope.subscriptIndex = function(html) {
+              return html;
+              //@note disabled for now for proper copy-paste behavior
+//              return html.replace(/_(\d+)/g, function(match, idx, parens, offset, string) {
+//                return '<sub>' + idx + '</sub>';
+//              });
+            }
+
             scope.browseLemmas = function() {
               var modalInstance = $uibModal.open({
                 templateUrl: 'partials/lemmabrowserdialog.html',
