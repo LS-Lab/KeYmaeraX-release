@@ -161,6 +161,26 @@ object BelleParser extends (String => BelleExpr) with Logging {
         }
       //endregion
 
+      //region After combinator
+      case _ :+ ParsedBelleExpr(_, _) :+ BelleToken(AFTER_COMBINATOR, combatinorLoc) => st.input.headOption match {
+        case Some(BelleToken(OPEN_PAREN, _)) => ParserState(stack :+ st.input.head, st.input.tail)
+        case Some(BelleToken(IDENT(_), _)) => ParserState(stack :+ st.input.head, st.input.tail)
+        case Some(BelleToken(PARTIAL, _)) => ParserState(stack :+ st.input.head, st.input.tail)
+        case Some(BelleToken(OPTIONAL, _)) => ParserState(stack :+ st.input.head, st.input.tail)
+        case Some(_) => throw ParseException("A combinator should be followed by a full tactic expression", st)
+        case None => throw ParseException("Tactic script cannot end with a combinator", combatinorLoc)
+      }
+      case r :+ ParsedBelleExpr(left, leftLoc) :+ BelleToken(AFTER_COMBINATOR, combatinorLoc) :+ ParsedBelleExpr(right, rightLoc) =>
+        st.input.headOption match {
+          case Some(BelleToken(AFTER_COMBINATOR, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
+          case Some(BelleToken(SEQ_COMBINATOR | DEPRECATED_SEQ_COMBINATOR, _)) => ParserState(st.stack :+ st.input.head, st.input.tail)
+          case _ =>
+            val parsedExpr = left > right
+            parsedExpr.setLocation(combatinorLoc)
+            ParserState(r :+ ParsedBelleExpr(parsedExpr, leftLoc.spanTo(rightLoc)), st.input)
+        }
+      //endregion
+
       //region Branch combinator
       case _ :+ ParsedBelleExpr(_, _) :+ BelleToken(BRANCH_COMBINATOR, combinatorLoc) => st.input.headOption match {
         case Some(BelleToken(OPEN_PAREN, _)) => ParserState(stack :+ st.input.head, st.input.tail)

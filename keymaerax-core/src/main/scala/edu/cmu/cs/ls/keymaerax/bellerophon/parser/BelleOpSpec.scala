@@ -37,6 +37,7 @@ object BelleOpSpec {
   val base     = BelleUnitOpSpec(none, 0, false, (s:String) => ???)
   val seq      = BelleBinaryOpSpec(SEQ_COMBINATOR,    200, false)
   val either   = BelleBinaryOpSpec(EITHER_COMBINATOR, 220, false)
+  val after   = BelleBinaryOpSpec(AFTER_COMBINATOR, 210, false)
   val star     = BelleUnaryOpSpec(KLEENE_STAR,        150, false)
   val saturate = BelleSaturatingOpSpec(SATURATE, 150, false, (child: BelleExpr, annotation: BelleType) => SaturateTactic.apply(child))
   val repeat   = (i: Int) => BelleRepeatOpSpec(N_TIMES(i), 150, false, (child: BelleExpr, times: Int, annotation: BelleType) => RepeatTactic.apply(child, times))
@@ -50,6 +51,7 @@ object BelleOpSpec {
   def op(e : BelleExpr): BelleOpSpec = e match {
     case e:SeqTactic      => seq
     case e:EitherTactic   => either
+    case e:AfterTactic   => after
     case e:SaturateTactic => star
     case e:RepeatTactic   => repeat(e.times)
     case e:PartialTactic  => partial
