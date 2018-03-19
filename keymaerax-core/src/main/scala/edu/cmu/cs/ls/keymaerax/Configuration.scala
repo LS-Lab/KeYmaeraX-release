@@ -10,6 +10,8 @@ import java.nio.file.{Files, Paths}
 
 import org.apache.commons.configuration2.PropertiesConfiguration
 
+import scala.collection.JavaConverters._
+
 /** The KeYmaera X configuration. */
 object Configuration {
   /** Configuration keys */
@@ -39,6 +41,10 @@ object Configuration {
     val SMT_CACHE_PATH = "SMT_CACHE_PATH"
     val TEST_DB_PATH = "TEST_DB_PATH"
     val Z3_PATH = "Z3_PATH"
+    val QE_TIMEOUT_INITIAL = "QE_TIMEOUT_INITIAL"
+    val QE_TIMEOUT_CEX = "QE_TIMEOUT_CEX"
+    val QE_TIMEOUT_MAX = "QE_TIMEOUT_MAX"
+    val ODE_TIMEOUT_FINALQE = "ODE_TIMEOUT_FINAL_QE"
   }
 
   private val KEYMAERAX_HOME: String = System.getProperty("KEYMAERAX_HOME", ".keymaerax")
@@ -60,7 +66,7 @@ object Configuration {
       config.read(scala.io.Source.fromInputStream(getClass.getResourceAsStream(DEFAULT_CONFIG_PATH)).reader)
       config.write(new PrintWriter(new File(CONFIG_PATH)))
     } else config.read(scala.io.Source.fromFile(CONFIG_PATH).reader)
-    config
+    updateConfig(config)
   }
 
   /** Indicates whether or not the configuration contains the `key`. */
@@ -83,5 +89,16 @@ object Configuration {
   def set(key: String, value: String, saveToFile: Boolean = true): Unit = {
     config.setProperty(key, value)
     if (saveToFile) config.write(new PrintWriter(new File(CONFIG_PATH)))
+  }
+
+  private def updateConfig(config: PropertiesConfiguration): PropertiesConfiguration = {
+    val default = new PropertiesConfiguration()
+    default.read(scala.io.Source.fromInputStream(getClass.getResourceAsStream(DEFAULT_CONFIG_PATH)).reader)
+    val missing = default.getKeys().asScala.toSet -- config.getKeys().asScala.toSet
+    if (missing.nonEmpty) {
+      missing.foreach(m => config.setProperty(m, default.getString(m)))
+      config.write(new PrintWriter(new File(CONFIG_PATH)))
+    }
+    config
   }
 }
