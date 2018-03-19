@@ -44,7 +44,7 @@ object Configuration {
     val QE_TIMEOUT_INITIAL = "QE_TIMEOUT_INITIAL"
     val QE_TIMEOUT_CEX = "QE_TIMEOUT_CEX"
     val QE_TIMEOUT_MAX = "QE_TIMEOUT_MAX"
-    val ODE_TIMEOUT_FINALQE = "ODE_TIMEOUT_FINAL_QE"
+    val ODE_TIMEOUT_FINALQE = "ODE_TIMEOUT_FINALQE"
   }
 
   private val KEYMAERAX_HOME: String = System.getProperty("KEYMAERAX_HOME", ".keymaerax")
