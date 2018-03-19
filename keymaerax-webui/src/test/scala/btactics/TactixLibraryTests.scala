@@ -224,6 +224,7 @@ class TactixLibraryTests extends TacticTestBase {
         OnAll(master()) & done
       )
     )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x:=x+2;}*]x>=0".asFormula))
     proof shouldBe 'proved
   }
 
@@ -236,6 +237,7 @@ class TactixLibraryTests extends TacticTestBase {
         OnAll(master()) & done
       )
     )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>=5 & y>=0 -> [{x:=x+y;}*]x>=0".asFormula))
     proof shouldBe 'proved
   }
 
@@ -248,6 +250,19 @@ class TactixLibraryTests extends TacticTestBase {
         OnAll(master()) & done
       )
     )
+    proof shouldBe 'proved
+  }
+
+  it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;{x'=x^2+y}}*]x>=0" in withMathematica { qeTool =>
+    val jj = "j(.)".asFormula
+    val proof = proveBy("x>=5 & y>=0 -> [{x:=x+y;{x'=x^2+y}}*]x>=0".asFormula,
+      implyR(1) & SearchAndRescueAgain(jj,
+        loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, chase(1)),
+        feedOneAfterTheOther(List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)),
+        OnAll(master()) & done
+      )
+    )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>=5 & y>=0 -> [{x:=x+y;{x'=x^2+y}}*]x>=0".asFormula))
     proof shouldBe 'proved
   }
 
