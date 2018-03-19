@@ -12,6 +12,26 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
         });
       return promise;
     },
+
+    allDerivationsCache: undefined,
+
+    allDerivationInfos: function(userId, proofId, nodeId) {
+      if (serviceDef.allDerivationsCache) {
+        return $q(function(resolve, reject) { resolve({data: serviceDef.allDerivationsCache}); });
+      } else {
+        var promise = $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/derivationInfos/')
+          .then(function(response) {
+            // return value gets picked up by 'then' in the controller using this service
+            serviceDef.allDerivationsCache = $.map(response.data, function(info, i) {
+              return serviceDef.convertTacticInfo(info, true);
+            });
+            return {
+              data: serviceDef.allDerivationsCache
+            };
+          });
+        return promise;
+      }
+    },
     sequentSuggestionDerivationInfos: function(userId, proofId, nodeId) {
       var promise = $http.get('proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/listStepSuggestions')
         .then(function(response) {
@@ -76,8 +96,15 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
           isClosed: premise.isClosed
         };
       });
+      tactic.derivation.conclusion = {
+        ante: serviceDef.convertToInput(tactic.derivation.conclusion.ante, tactic),
+        succ: serviceDef.convertToInput(tactic.derivation.conclusion.succ, tactic),
+        numInputs: tactic.derivation.input.length
+      };
       tactic.missingInputNames = function() {
-        var missingInputs = $.grep(tactic.derivation.input, function(input, idx) { return input.value == undefined; });
+        var missingInputs = $.grep(tactic.derivation.input, function(input, idx) {
+          return !input.type.startsWith('option[') && input.value == undefined;
+        });
         return $.map(missingInputs, function(val, i) { return val.param; });
       };
       return tactic;

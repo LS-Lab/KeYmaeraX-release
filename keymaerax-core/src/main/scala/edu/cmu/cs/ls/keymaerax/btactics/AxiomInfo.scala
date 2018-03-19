@@ -17,6 +17,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import scala.collection.immutable.HashMap
 import scala.language.implicitConversions
 import scala.reflect.runtime.universe.TypeTag
+import scala.util.Try
 
 /**
   * Since axioms are always referred to by their names (which are strings), we have the following problems:
@@ -92,7 +93,7 @@ object DerivationInfo {
     * Central registry for axiom, derived axiom, proof rule, and tactic meta-information.
     * Transferred into subsequent maps etc for efficiency reasons.
     */
-  private [btactics] val allInfo: List[DerivationInfo] = convert(ProvableSig.rules) ++ List(
+  val allInfo: List[DerivationInfo] = convert(ProvableSig.rules) ++ List(
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> diamond"
       , AxiomDisplayInfo(("<·>", "<.>"), "<span class=\"k4-axiom-key\">&not;[a]&not;P</span> ↔ &langle;a&rangle;P")
@@ -193,6 +194,13 @@ object DerivationInfo {
         (List("&Gamma;"), List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))))
     , List(FormulaArg("R")) //@todo should be ListArg -> before merge, we already had lists in concrete Bellerophon syntax
     , _ => ((fml: Formula) => TactixLibrary.dC(fml)): TypedFunc[Formula, BelleExpr]),
+    PositionTacticInfo("dCi"
+      , RuleDisplayInfo("Inverse Differential Cut"
+        , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & (Q∧R)}]P","&Delta;"))
+        , /* premises */ List(
+          (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
+          (List("&Gamma;"), List("R", "&Delta;"))))
+      , _ => DifferentialTactics.inverseDiffCut),
     new InputPositionTacticInfo("autoApproximate",
       RuleDisplayInfo("Approximate",
         (List("&Gamma;"), List("[{X'=F & &Alpha;(n)}]", "&Delta;")),
@@ -250,6 +258,35 @@ object DerivationInfo {
           }) :  TypedFunc[Option[Formula], BelleExpr]
         ) : TypedFunc[Expression, TypedFunc[Option[Formula], BelleExpr]]
     ),
+    PositionTacticInfo("dGi",
+      RuleDisplayInfo(
+        "Inverse Differential Ghost",
+        /* conclusion */ (List("&Gamma;"), List("∃y [{x′=f(x),E & Q}]P", "&Delta;")),
+        /* premises */ List( (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")) )
+      ),
+      _ => DifferentialTactics.inverseDiffGhost
+    ),
+    InputPositionTacticInfo("dbx",
+      RuleDisplayInfo(
+        "Darboux (in)equalities",
+        /* conclusion */ (List("p≳0"), List("[{x′=f(x) & Q}]p≳0")),
+        /* premises */ List( (List("Q"), List("p' ≥ gp")) )
+      ),
+      List(OptionArg(TermArg("g"))),
+      _ => {
+        case Some(g: Term) => DifferentialTactics.dgDbx(g)
+        case None => DifferentialTactics.dgDbxAuto
+      }: TypedFunc[Option[Term], BelleExpr]
+    ),
+    PositionTacticInfo("barrier",
+      RuleDisplayInfo(
+        "Strict Barrier Certificate",
+        /* conclusion */ (List("p≳0"), List("[{x′=f(x) & Q}]p≳0")),
+        /* premises */ List( (List("Q ∧ p=0"), List("p'>0")) )
+      ),
+      _ => DifferentialTactics.dgBarrier(ToolProvider.simplifierTool())
+      , needsTool = true
+    ),
     new InputPositionTacticInfo("dGold",
       RuleDisplayInfo(
         "Differential Ghost",
@@ -291,8 +328,8 @@ object DerivationInfo {
       , "DGCa", {case () => HilbertCalculus.useAt("DG differential ghost constant all")}),
     new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", {case () => ???}),
     new CoreAxiomInfo("DG inverse differential ghost implicational", "DG inverse differential ghost implicational", "DGi", {case () => ???}),
-    new CoreAxiomInfo(", commute", ",", "commaCommute", {case () => ???}),
-    new CoreAxiomInfo(", sort", ",", "commaSort", {case () => ???}),
+    CoreAxiomInfo(", commute", ",", "commaCommute", {case () => HilbertCalculus.useAt(", commute")}),
+    new CoreAxiomInfo(", sort", ",", "commaSort", {case () => HilbertCalculus.useAt(", sort")}),
     new CoreAxiomInfo("DS& differential equation solution", "DS&", "DS", {case () => HilbertCalculus.DS}),
     new CoreAxiomInfo("DIo open differential invariance >"
       , AxiomDisplayInfo("DIo >", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]f(x)>g(x)</span>↔[?Q]f(x)>g(x))←(Q→[{x′=f(x)&Q}](f(x)>g(x)→(f(x)>g(x))′))")
@@ -743,11 +780,18 @@ object DerivationInfo {
     new PositionTacticInfo("absExp", "absExp", {case () => EqualityTactics.abs}),
     new PositionTacticInfo("toSingleFormula", "toSingleFormula", {case () => PropositionalTactics.toSingleFormula}),
 
+    PositionTacticInfo("CMon"
+      , RuleDisplayInfo("CMon", (List(), List("C{o}→C{k}")), List((List(), List("o→k"))))
+      , {case () => TactixLibrary.CMon}
+    ),
+
     // proof management tactics
     InputTacticInfo("debug"
       , SimpleDisplayInfo("Debug","debug")
       ,List(StringArg("msg")), _ => ((msg: String) => DebuggingTactics.debug(msg)): TypedFunc[String, BelleExpr]),
-    new TacticInfo("done", "done", {case () => TactixLibrary.done}), // turn into input tactic if message should be stored too
+    InputTacticInfo("done"
+      , SimpleDisplayInfo("Done","done")
+      ,List(StringArg("msg")), _ => ((msg: Option[String]) => DebuggingTactics.done(msg.getOrElse(""))): TypedFunc[Option[String], BelleExpr]),
 
     // Proof rule two-position tactics
     new TwoPositionTacticInfo("coHide2", "W", {case () => SequentCalculus.cohide2}),
@@ -781,8 +825,8 @@ object DerivationInfo {
       , RuleDisplayInfo(("Abbreviate","abbrv")
         ,(List("&Gamma;"), List("&Delta;"))
         ,List(
-          (List("&Gamma;", "v=t"),List("&Delta;"))))
-      ,List(TermArg("t"),VariableArg("v", "v"::Nil)), _ => ((t:Term) => ((v: Option[Variable]) => EqualityTactics.abbrv(t, v)): TypedFunc[Option[Variable], BelleExpr]): TypedFunc[Term, _]),
+          (List("&Gamma;", "freshVar=theta"),List("&Delta;"))))
+      ,List(TermArg("theta"),VariableArg("freshVar", "freshVar"::Nil)), _ => ((t:Term) => ((v: Option[Variable]) => EqualityTactics.abbrv(t, v)): TypedFunc[Option[Variable], BelleExpr]): TypedFunc[Term, _]),
     // Proof rule input position tactics
     new InputPositionTacticInfo("cutL", "Cut", List(FormulaArg("cutFormula")),
       _ => ((fml:Formula) => TactixLibrary.cutL(fml)): TypedFunc[Formula, BelleExpr]),
@@ -825,7 +869,12 @@ object DerivationInfo {
         (List("&Gamma;"),List("[a]Q", "&Delta;")),
         (List("Q"),List("P"))))
     , List(FormulaArg("Q")), _ => ((fml:Formula) => TactixLibrary.generalize(fml)): TypedFunc[Formula, BelleExpr]),
-    new InputPositionTacticInfo("transform", "trafo", List(ExpressionArg("to")),
+    InputPositionTacticInfo("transform",
+      RuleDisplayInfo("trafo",
+        //@todo suggests formulas, but also works with terms
+        /* conclusion */ (List("&Gamma;"), List("P", "&Delta;")),
+        /* premises */ List((List("&Gamma;"),List("Q", "&Delta;")))),
+      List(ExpressionArg("Q")),
       _ => ((expr:Expression) => TactixLibrary.transform(expr)): TypedFunc[Expression, BelleExpr]),
     new InputPositionTacticInfo("edit", "edit", List(ExpressionArg("to")),
       _ => ((expr:Expression) => TactixLibrary.edit(expr)): TypedFunc[Expression, BelleExpr]),
@@ -834,6 +883,11 @@ object DerivationInfo {
         List((List("&Gamma;"),List("∀y P(y)","&Delta;"))))
       , List(VariableArg("x"),VariableArg("y"))
       , _ => ((x:Variable) => ((y:Variable) => TactixLibrary.boundRename(x,y)): TypedFunc[Variable, BelleExpr]): TypedFunc[Variable, TypedFunc[Variable, BelleExpr]]),
+    InputTacticInfo("uniformRename"
+      , RuleDisplayInfo(("UR", "UR"), (List("P(x)"), List("Q(x)")),
+        List((List("P(y)"),List("Q(y)"))))
+      , List(VariableArg("x"),VariableArg("y"))
+      , _ => ((x:Variable) => ((y:Variable) => TactixLibrary.uniformRename(x,y)): TypedFunc[Variable, BelleExpr]): TypedFunc[Variable, TypedFunc[Variable, BelleExpr]]),
     new InputPositionTacticInfo("stutter"
       , RuleDisplayInfo(("[:=]", "[:=]"), (List("&Gamma;"), List("P","&Delta;"))
       , List((List("&Gamma;"),List("[x:=x]P","&Delta;")))), List(VariableArg("x"))
@@ -872,9 +926,16 @@ object DerivationInfo {
     new TacticInfo("master", "master", {case () => (gen:Generator.Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true),
     InputTacticInfo("QE", "QE",
-      List(VariableArg("tool")),
-      _ => { case Some(toolName: Variable) => TactixLibrary.QE(Nil, Some(toolName.name))
-             case _ => TactixLibrary.QE }: TypedFunc[Option[Variable], BelleExpr], needsTool = true),
+      List(OptionArg(StringArg("tool")), OptionArg(TermArg("timeout"))),
+      _ => { case Some(toolName: String) => {
+               case (Some(Number(timeout))) => TactixLibrary.QE(Nil, Some(toolName), Some(timeout.toInt))
+               // interpret optional toolName as timeout
+               case _ if Try(Integer.parseInt(toolName)).isSuccess => TactixLibrary.QE(Nil, None, Some(Integer.parseInt(toolName)))
+               case _ =>  TactixLibrary.QE(Nil, Some(toolName)) }: TypedFunc[Option[Term], BelleExpr]
+             case _ => {
+               case Some(Number(timeout)) => TactixLibrary.QE(Nil, None, Some(timeout.toInt))
+               case _ => TactixLibrary.QE }: TypedFunc[Option[Term], BelleExpr]
+      }: TypedFunc[Option[String], _], needsTool = true),
     new TacticInfo("rcf", "rcf",  {case () => TactixLibrary.RCF}, needsTool = true),
     //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),
@@ -907,9 +968,19 @@ object DerivationInfo {
         TactixLibrary.useLemma(lemmaName, tactic.map(_.asTactic))): TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
 
     InputTacticInfo("byUS"
-      , "byUS"
-      , List(StringArg("axiom"))
-      , _ => ((axiomName: String) => TactixLibrary.byUS(axiomName)): TypedFunc[String, BelleExpr]),
+      , RuleDisplayInfo(("US", "byUS"), (List(),List("sigma(phi)")),
+        List((List(), List("phi"))))
+      , List(StringArg("phi"), FormulaArg("sigma"))
+      , _ => ((axiomName: String) => ({
+        case None => TactixLibrary.byUS(axiomName)
+        case Some(substFml: Formula) =>
+          val subst = RenUSubst(FormulaTools.conjuncts(substFml).map({
+            case Equal(l, r) => (l, r)
+            case Equiv(l, r) => (l, r)
+            case s => throw new IllegalArgumentException("Expected substitution of the shape t=s or p<->q, but got " + s.prettyString)
+          }))
+          TactixLibrary.byUS(axiomName, (_: UnificationMatch.Subst) => subst)
+      }): TypedFunc[Option[Formula], BelleExpr]): TypedFunc[String, _]),
 
     InputPositionTacticInfo("useLemmaAt"
       , "useLemmaAt"
@@ -918,8 +989,11 @@ object DerivationInfo {
         TactixLibrary.useLemmaAt(lemmaName, key.map(k => PosInExpr(k.split("\\.").map(Integer.parseInt).toList)))): TypedFunc[Option[String], BelleExpr]): TypedFunc[String, _]),
 
     InputPositionTacticInfo("cutAt"
-      , "cutAt"
-      , List(FormulaArg("fml"))
+      , RuleDisplayInfo("cutAt",
+        /* conclusion */ (List("&Gamma;"), List("C{c}", "&Delta;")),
+        /* premises */   List((List("&Gamma;"),List("C{repl}", "&Delta;")),
+                              (List("&Gamma;"),List("&Delta;", "C{repl}→C{c}"))))
+      , List(FormulaArg("repl"))
       , _ => ((fml: Formula) => TactixLibrary.cutAt(fml)): TypedFunc[Formula, BelleExpr]),
 
     // Differential tactics
@@ -1089,6 +1163,11 @@ case class TermArg (override val name: String, override val allowsFresh: List[St
 }
 case class StringArg (override val name: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {
   val sort = "string"
+}
+case class OptionArg(arg: ArgInfo) extends ArgInfo {
+  val name: String = arg.name
+  val sort: String = "option[" + arg.sort + "]"
+  val allowsFresh: List[String] = arg.allowsFresh
 }
 @deprecated("Until lists are actually added to the concrete syntax of Bellerophon.", "4.2b1")
 case class ListArg (override val name: String, elementSort: String, override val allowsFresh: List[String] = Nil) extends ArgInfo {

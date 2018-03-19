@@ -42,7 +42,6 @@ keymaeraProofApp.run(function(editableOptions) {
 keymaeraProofApp.run(function($templateCache, $http) {
   // cache templates for popovers, otherwise they're only populated on second show
   $http.get('templates/axiomPopoverTemplate.html', { cache: $templateCache });
-  $http.get('templates/sequentRuleTemplate.html', { cache: $templateCache });
   $http.get('templates/formulaDndTooltipTemplate.html', { cache: $templateCache });
   $http.get('templates/tacticError.html', { cache: $templateCache });
 });

@@ -10,7 +10,7 @@ import java.util.{Calendar, Date}
 import akka.event.slf4j.SLF4JLogging
 import akka.actor.{Actor, ActorContext}
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo
+import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, OptionArg}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core.Formula
@@ -489,7 +489,22 @@ trait RestApi extends HttpService with Logging {
 
   /* Strictly positive position = SuccPosition, strictly negative = AntePosition, 0 not used */
   def parseFormulaId(id:String): Position = {
-    val (idx :: inExprs) = id.split(',').toList.map(_.toInt)
+    val positionStringParts = id.split(',').toList
+    val (idx :: inExprs) = positionStringParts.map(str =>
+      try {
+        str.toInt
+      } catch {
+        case e: NumberFormatException => {
+          //HACK: if position is top-level (no inExpr) and unspecified, then "Hint" web ui was probably used. In this case, assume top-level succ.
+          //@todo This is a hack that *should* be fixed in the front-end by telling the "Hint: ...|...|...|" portion of the web ui to please specify a position. See sequent.js and collapsiblesequent.html
+          if(str.equals("null") && positionStringParts.length==1)
+            1
+          else
+            throw new Exception("Invalid formulaId " + str + " when parsing positions")
+        }
+      }
+    )
+
     try { Position(idx, inExprs) }
     catch {
       case e: IllegalArgumentException =>
@@ -518,7 +533,7 @@ trait RestApi extends HttpService with Logging {
     }
   }}}
 
-  val derivationInfo: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "derivationInfos" / Segment) { (userId, proofId, nodeId, axiomId) => { pathEnd {
+  val derivationInfo: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "derivationInfos" / Segment.?) { (userId, proofId, nodeId, axiomId) => { pathEnd {
     get {
       val request = new GetDerivationInfoRequest(database, userId, proofId, nodeId, axiomId)
       completeRequest(request, t)
@@ -578,16 +593,22 @@ trait RestApi extends HttpService with Logging {
         val illFormedParams = paramArray.filter({obj =>
           val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
           val paramInfo = expectedInputs.find(_.name == paramName)
-          paramInfo.isEmpty || obj.getFields("value").isEmpty
+          paramInfo.isEmpty ||
+            (paramInfo match { case Some(_: OptionArg) => false case _ => obj.getFields("value").isEmpty})
         })
         if (illFormedParams.isEmpty) {
-          val inputs =
-            paramArray.map({ obj =>
-              val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
-              val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
-              val paramInfo = expectedInputs.find(_.name == paramName)
-              BelleTermInput(paramValue, paramInfo)
-            })
+          val inputs = paramArray.map({ obj =>
+            val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
+            expectedInputs.find(_.name == paramName) match {
+              case Some(OptionArg(paramInfo)) => obj.getFields("value").headOption match {
+                case Some(JsString(paramValue)) => Some(BelleTermInput(paramValue, Some(paramInfo)))
+                case _ => None
+              }
+              case paramInfo =>
+                val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
+                Some(BelleTermInput(paramValue, paramInfo))
+            }
+          }).filter(_.isDefined).map(_.get)
           val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId,
             Some(Fixed(parseFormulaId(formulaId))), None, inputs.toList, consultAxiomInfo=true, stepwise=stepwise)
           completeRequest(request, t)

@@ -7,6 +7,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.SimulationTool.{SimRun, SimState, Simulation}
 
@@ -19,7 +20,9 @@ import scala.collection.immutable.Map
  * @author Stefan Mitsch
  * @todo Code Review: Move non-critical tool implementations into a separate package tactictools
  */
-class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool with ODESolverTool with CounterExampleTool with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool with PDESolverTool {
+class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool with ODESolverTool with CounterExampleTool
+    with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool
+    with PDESolverTool with ToolOperationManagement {
   // JLink, shared between tools
   private[tools] val link = new JLinkMathematicaLink
 
@@ -32,6 +35,10 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
   private val mSolve = new MathematicaEquationSolverTool(link)
   private val mAlgebra = new MathematicaAlgebraTool(link)
   private val mSimplify = new MathematicaSimplificationTool(link)
+
+  private val qeInitialTimeout = Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_INITIAL))
+  private val qeCexTimeout = Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_CEX))
+  private var qeMaxTimeout = Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
 
   override def init(config: Map[String,String]): Unit = {
     val linkName = config.get("linkName") match {
@@ -64,22 +71,22 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
 
   /** Quantifier elimination on the specified formula, returns an equivalent quantifier-free formula plus Mathematica input/output as evidence */
   override def qeEvidence(formula: Formula): (Formula, Evidence) = {
-    mQE.timeout = 5
+    mQE.timeout = qeInitialTimeout
     try {
       mQE.qeEvidence(formula)
     } catch {
       case _: MathematicaComputationAbortedException =>
-        mCEX.timeout = 2
+        mCEX.timeout = qeCexTimeout
         try {
           mCEX.findCounterExample(stripUniversalClosure(formula)) match {
             case None =>
-              mQE.timeout = mQE.TIMEOUT_OFF
+              mQE.timeout = qeMaxTimeout
               mQE.qeEvidence(formula)
             case Some(cex) => (False, ToolEvidence(List("input" -> formula.prettyString, "output" -> cex.mkString(","))))
           }
         } catch {
           case _: MathematicaComputationAbortedException =>
-            mQE.timeout = mQE.TIMEOUT_OFF
+            mQE.timeout = qeMaxTimeout
             mQE.qeEvidence(formula)
         }
     }
@@ -149,4 +156,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
 
   /** Restarts the MathKernel with the current configuration */
   override def restart(): Unit = link.restart()
+
+  override def setOperationTimeout(timeout: Int): Unit = qeMaxTimeout = timeout
+  override def getOperationTimeout: Int = qeMaxTimeout
 }

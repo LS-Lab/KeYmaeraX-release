@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 import scala.collection.immutable.IndexedSeq
 
@@ -133,6 +134,38 @@ class QETests extends TacticTestBase {
     val tactic = BelleParser("andR(1); <(QE({`Z3`}), andR(1) ; <(QE({`Mathematica`}), QE))")
     proveBy("x>0 ==> x>=0&\\exists s x*s^2>0&x>=-2".asSequent, tactic) shouldBe 'proved
   }
+
+  "QE with timeout" should "reset timeout when done" in withDatabase{ db => withQE { _ =>
+    val modelContent = "Variables. R x. End. Problem. x>1 -> x>0 End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter))
+    interpreter(QE(Nil, None, Some(7)), BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
+    db.extractTactic(proofId) shouldBe BelleParser("QE({`7`})")
+  }}
+
+  it should "omit timeout reset when no timeout" in withDatabase{ db => withQE { _ =>
+    val modelContent = "Variables. R x. End. Problem. x>1 -> x>0 End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter))
+    interpreter(QE, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
+    db.extractTactic(proofId) shouldBe BelleParser("QE")
+  }}
+
+  it should "use the right tool" in withDatabase{ db => withQE { case tool: Tool =>
+    val modelContent = "Variables. R x. End. Problem. x>1 -> x>0 End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter))
+    interpreter(QE(Nil, Some(tool.name), Some(7)), BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
+    db.extractTactic(proofId) shouldBe BelleParser(s"QE({`${tool.name}`}, {`7`})")
+  }}
+
+  it should "complain about the wrong tool" in withDatabase{ db => withZ3 { _ =>
+    val modelContent = "Variables. R x. End. Problem. x>1 -> x>0 End."
+    val proofId = db.createProof(modelContent)
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter))
+    the [BelleThrowable] thrownBy interpreter(QE(Nil, Some("Mathematica"), Some(7)),
+      BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent)))) should have message "[Bellerophon Runtime] QE requires Mathematica, but got None"
+  }}
 
   "Partial QE" should "not fail on |-" in withMathematica { qeTool =>
     val result = proveBy(Sequent(IndexedSeq(), IndexedSeq()), ToolTactics.partialQE(qeTool))

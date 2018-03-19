@@ -134,6 +134,18 @@ class SimpleBelleParserTests extends TacticTestBase {
     BelleParser(s) shouldBe (round trip t)
   }
 
+  it should "parse OptionArg arguments when option unspecified" in {
+    val s = "dbx(1)"
+    val t = BelleParser(s)
+    BelleParser(s) shouldBe (round trip t)
+  }
+
+  it should "parse OptionArg arguments with option specified" in {
+    val s = "dbx({`x`}, 1)"
+    val t = BelleParser(s)
+    BelleParser(s) shouldBe (round trip t)
+  }
+
   //endregion
 
   //region Sequential combinator
@@ -238,6 +250,65 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   it should "parse e | b & c" in {
     val result = BelleParser("andR(1) | andR(2) & andR(3)").asInstanceOf[EitherTactic]
+    result shouldBe (round trip result)
+    result.left shouldBe TactixLibrary.andR(1)
+    result.right.asInstanceOf[SeqTactic].left shouldBe TactixLibrary.andR(2)
+    result.right.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(3)
+  }
+
+  //endregion
+
+  //region After combinator
+
+  "After parser" should "parse e > e" in {
+    val result = BelleParser("andR(1) > andR(2)").asInstanceOf[AfterTactic]
+    result shouldBe (round trip result)
+    result.left shouldBe TactixLibrary.andR(1)
+    result.right shouldBe TactixLibrary.andR(2)
+  }
+
+  it should "parse after right-associative -- e > e > e parses to e > (e > e)" in {
+    val result = BelleParser("andR(1) > andR(2) > andR(3)").asInstanceOf[AfterTactic]
+    result shouldBe (round trip result)
+    result.left shouldBe TactixLibrary.andR(1)
+    result.right.asInstanceOf[AfterTactic].left shouldBe TactixLibrary.andR(2)
+    result.right.asInstanceOf[AfterTactic].right shouldBe TactixLibrary.andR(3)
+  }
+
+  it should "parse after right-associative when there are a bunch of parens" in {
+    val result = BelleParser("(andR(1)) > (andR(2)) > (andR(3))").asInstanceOf[AfterTactic]
+    result shouldBe (round trip result)
+    result.left shouldBe TactixLibrary.andR(1)
+    result.right.asInstanceOf[AfterTactic].left shouldBe TactixLibrary.andR(2)
+    result.right.asInstanceOf[AfterTactic].right shouldBe TactixLibrary.andR(3)
+  }
+
+  it should "parse e > (e > e)" in {
+    val result = BelleParser("andR(1) > (andR(2) > andR(3))").asInstanceOf[AfterTactic]
+    result shouldBe (round trip result)
+    result.left shouldBe TactixLibrary.andR(1)
+    result.right.asInstanceOf[AfterTactic].left shouldBe TactixLibrary.andR(2)
+    result.right.asInstanceOf[AfterTactic].right shouldBe TactixLibrary.andR(3)
+  }
+
+  it should "parse (e > e) > e" in {
+    val result = BelleParser("(andR(1) > andR(2)) > andR(3)").asInstanceOf[AfterTactic]
+    result shouldBe (round trip result)
+    result.left.asInstanceOf[AfterTactic].left shouldBe TactixLibrary.andR(1)
+    result.left.asInstanceOf[AfterTactic].right shouldBe TactixLibrary.andR(2)
+    result.right shouldBe TactixLibrary.andR(3)
+  }
+
+  it should "parse e & b > c" in {
+    val result = BelleParser("andR(1) & andR(2) > andR(3)").asInstanceOf[AfterTactic]
+    result shouldBe (round trip result)
+    result.left.asInstanceOf[SeqTactic].left shouldBe TactixLibrary.andR(1)
+    result.left.asInstanceOf[SeqTactic].right shouldBe TactixLibrary.andR(2)
+    result.right shouldBe TactixLibrary.andR(3)
+  }
+
+  it should "parse e > b & c" in {
+    val result = BelleParser("andR(1) > andR(2) & andR(3)").asInstanceOf[AfterTactic]
     result shouldBe (round trip result)
     result.left shouldBe TactixLibrary.andR(1)
     result.right.asInstanceOf[SeqTactic].left shouldBe TactixLibrary.andR(2)

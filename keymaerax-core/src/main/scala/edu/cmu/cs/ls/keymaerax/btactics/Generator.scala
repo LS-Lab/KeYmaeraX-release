@@ -5,8 +5,11 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.Position
+import edu.cmu.cs.ls.keymaerax.bellerophon.{NonSubstUnificationMatch, Position}
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
+
+import scala.util.Try
 
 /** Invariant generator
   * @author Stefan Mitsch
@@ -26,14 +29,41 @@ case class FixedGenerator[A](list: List[A]) extends Generator.Generator[A] {
   def apply(s: Sequent, p: Position): Iterator[A] = list.iterator
 }
 
-/** Map-based generator providing output according to the fixed map `product` according to its program or whole formula.
+/** Map-based generator providing output according to the fixed map `products` according to its program or whole formula.
   * @author Stefan Mitsch
   * */
-class ConfigurableGenerator[A](var products: Map[Expression,A] = Map[Expression,A]()) extends Generator.Generator[A] {
+class ConfigurableGenerator[A](var products: Map[Expression,Seq[A]] = Map[Expression,Seq[A]]()) extends Generator.Generator[A] {
   def apply(s: Sequent, p: Position): Iterator[A] = s.sub(p) match {
-    case Some(Box(prg, _)) => products.get(prg).iterator
-    case Some(Diamond(prg, _)) => products.get(prg).iterator
-    case Some(f) => products.get(f).iterator
+    case Some(Box(prg, _)) => findPrgProducts(prg)
+    case Some(Diamond(prg, _)) => findPrgProducts(prg)
+    case Some(f) => products.getOrElse(f, Nil).iterator
     case None => Nil.iterator
+  }
+
+  /** Finds products that match the program `prg` either literally, or if ODE then without evolution domain constraint. */
+  private def findPrgProducts(prg: Program): Iterator[A] = prg match {
+    case sys@ODESystem(ode, _) =>
+      products.find({ case (ODESystem(key, _), _) => ode == key case _ => false }).
+        getOrElse(() -> findConditionalDiffInv(sys))._2.iterator
+    case _ => products.getOrElse(prg, Nil).iterator
+  }
+
+  /** Finds products that match the ODE `ode` by shape and with a condition that matches.
+    * For example, v'=A matches v'=a@invariant(v'=A->v>=old(v), v'=-2 -> v<=old(v)). */
+  private def findConditionalDiffInv(ode: ODESystem): Seq[A] = {
+    //@note UnificationMatch and RenUSubst won't allow numbers, use own naive subst in these cases
+    products.find({
+        case (ODESystem(key, _), _) =>
+          val subs = Try(NonSubstUnificationMatch.unifyODE(key, ode.ode)).toOption.getOrElse(Nil)
+          NonSubstUnificationMatch.unifier(subs)(key) == ode.ode
+      }).map({ case (_, odeProducts) =>
+        odeProducts.map({
+          case Imply(Equal(xp: DifferentialSymbol, e), invCandidate) =>
+            if (DifferentialHelper.atomicOdes(ode.ode).exists(a => a.xp == xp && a.e == e)) {
+              Some(invCandidate.asInstanceOf[A])
+            } else None
+          case inv => Some(inv)
+        })
+      }).getOrElse(Nil).filter(_.isDefined).map(_.get).distinct
   }
 }

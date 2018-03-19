@@ -88,12 +88,20 @@ class DifferentialTests extends TacticTestBase {
 
   it should "retain single context formula" in withQE { _ =>
     val result = proveBy("A>0, x=4 ==> [{x'=1&x>0}]x>0".asSequent, dW(1))
-    result.subgoals.loneElement shouldBe "A>0 ==> x>0 -> x>0".asSequent
+    result.subgoals.loneElement shouldBe "A>0, x_0=4 ==> x>0 -> x>0".asSequent
   }
 
   it should "retain context" in withQE { _ =>
     val result = proveBy("A>0&A>1, B=1, C=2&D=3, x=4 ==> [{x'=1&x>0}]x>0".asSequent, dW(1))
-    result.subgoals.loneElement shouldBe "A>0&A>1, B=1, C=2&D=3 ==> x>0 -> x>0".asSequent
+    result.subgoals.loneElement shouldBe "A>0&A>1, B=1, C=2&D=3, x_0=4 ==> x>0 -> x>0".asSequent
+  }
+
+  it should "keep initial conditions" in withQE { _ =>
+    val result = proveBy(("dx_0^2+dy_0^2=1&x^2+y^2>0, dx_0=dx, dy_0=dy, old=dy*x-(dx-1)*y " +
+      " ==> [{x'=dx-1,y'=dy,dx'=0,dy'=0 & dx=dx_0&dy=dy_0&dy*x-(dx-1)*y=old}](dx^2+dy^2=1 & x^2+y^2>0)").asSequent,
+      dW(1))
+    result.subgoals.loneElement shouldBe ("dx_0^2+dy_0^2=1&x_0^2+y_0^2>0, old=dy_0*x_0-(dx_0-1)*y_0 " +
+      " ==> dx=dx_0&dy=dy_0&dy*x-(dx-1)*y=old -> dx^2+dy^2=1&x^2+y^2>0").asSequent
   }
 
   it should "work if not sole formula in succedent" in withQE { _ =>
@@ -579,6 +587,22 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(2) shouldBe "v>=0, x_0>0, x_0=x ==> [{x'=v,v'=2 & true & v>=0}]x>=x_0".asSequent
   }
 
+  it should "not duplicate cuts" in withQE { _ =>
+    val result = proveBy("v>=0, x>0 ==> [{x'=v,v'=2}]x>=0".asSequent,
+      dC("v>=0".asFormula, "v>=0".asFormula)(1) <(dC("v>=0".asFormula)(1), skip))
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe "v>=0, x>0 ==> [{x'=v,v'=2 & true & v>=0}]x>=0".asSequent
+    result.subgoals(1) shouldBe "v>=0, x>0 ==> [{x'=v,v'=2}]v>=0".asSequent
+  }
+
+  it should "not duplicate old cuts" in withQE { _ =>
+    val result = proveBy("v>=0, x>0 ==> [{x'=v,v'=2}]x>=0".asSequent,
+      dC("v>=old(v)".asFormula, "v>=old(v)".asFormula)(1) <(dC("v>=old(v)".asFormula)(1), skip))
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe "v_0>=0, x>0, v_0=v ==> [{x'=v,v'=2 & true & v>=v_0}]x>=0".asSequent
+    result.subgoals(1) shouldBe "v_0>=0, x>0, v_0=v ==> [{x'=v,v'=2}]v>=v_0".asSequent
+  }
+
   it should "not expand old() ghosts in context" in withQE { _ =>
     val result = proveBy("[x:=0;][{x'=1}]x>=0".asFormula, dC("x>=old(x)".asFormula)(1, 1::Nil))
     result.subgoals should have size 2
@@ -666,6 +690,34 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(0) shouldBe "v>=0, x_0>0, x_0=x ==> <{x'=v,v'=2 & (true & v>=0) & x>=x_0}>x>=0".asSequent
     result.subgoals(1) shouldBe "v>=0, x>0 ==> [{x'=v,v'=2}]v>=0".asSequent
     result.subgoals(2) shouldBe "v>=0, x_0>0, x_0=x ==> [{x'=v,v'=2 & true & v>=0}]x>=x_0".asSequent
+  }
+
+  "Inverse diffCut" should "remove a simple formula" in withQE { _ =>
+    val result = proveBy("==> [{x'=1 & x>=0}]true".asSequent, DifferentialTactics.inverseDiffCut(1))
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe "==> [{x'=1}]true".asSequent
+    result.subgoals(1) shouldBe "==> x>=0".asSequent
+  }
+
+  it should "remove the last conjunct" in withQE { _ =>
+    val result = proveBy("==> [{x'=1 & y>=0 & x>=0}]true".asSequent, DifferentialTactics.inverseDiffCut(1))
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe "==> [{x'=1 & y>=0}]true".asSequent
+    result.subgoals(1) shouldBe "==> x>=0".asSequent
+  }
+
+  it should "keep position stable" in withQE { _ =>
+    val result = proveBy("x>=0 ==> y>=0, [{x'=1 & y>=0 & x>=0}]true, z>1".asSequent, DifferentialTactics.inverseDiffCut(2))
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe "x>=0 ==> y>=0, [{x'=1 & y>=0}]true, z>1".asSequent
+    result.subgoals(1) shouldBe "x>=0 ==> y>=0, z>1, x>=0".asSequent
+  }
+
+  it should "work in context" in withQE { _ =>
+    val result = proveBy("==> [x:=1;][{x'=1 & y>=0 & x>=0}]true".asSequent, DifferentialTactics.inverseDiffCut(1, 1::Nil))
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe "==> [x:=1;][{x'=1 & y>=0}]true".asSequent
+    result.subgoals(1) shouldBe "==> [x:=1;]x>=0".asSequent
   }
 
   "diffInvariant" should "cut in a simple formula" in withQE { _ =>
@@ -838,17 +890,17 @@ class DifferentialTests extends TacticTestBase {
 
   "DG" should "add y'=1 to [x'=2]x>0" in {
     val result = proveBy("[{x'=2}]x>0".asFormula, dG("{y'=0*y+1}".asDifferentialProgram, None)(1))
-    result.subgoals.loneElement shouldBe "==> \\exists y [{x'=2,y'=0*y+1}]x>0".asSequent
+    result.subgoals.loneElement shouldBe "==> \\exists y [{x'=2,y'=1}]x>0".asSequent
   }
 
   it should "add z'=1 to [y'=2]y>0" in {
     val result = proveBy("[{y'=2}]y>0".asFormula, dG("{z'=0*z+1}".asDifferentialProgram, None)(1))
-    result.subgoals.loneElement shouldBe "==> \\exists z [{y'=2,z'=0*z+1}]y>0".asSequent
+    result.subgoals.loneElement shouldBe "==> \\exists z [{y'=2,z'=1}]y>0".asSequent
   }
 
   it should "add x'=1 to [y'=2]y>0" in {
     val result = proveBy("[{y'=2}]y>0".asFormula, dG("{x'=0*x+1}".asDifferentialProgram, None)(1))
-    result.subgoals.loneElement shouldBe "==> \\exists x [{y'=2,x'=0*x+1}]y>0".asSequent
+    result.subgoals.loneElement shouldBe "==> \\exists x [{y'=2,x'=1}]y>0".asSequent
   }
 
   it should "add y'=3*y+10 to [x'=2]x>0" in {
@@ -873,7 +925,7 @@ class DifferentialTests extends TacticTestBase {
 
   it should "do basic unification" in {
     val result = proveBy("[{x'=2}]x>0".asFormula, dG("{t'=0*t+1}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1))
-    result.subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=0*t+1}]x>0".asSequent
+    result.subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1}]x>0".asSequent
   }
 
   it should "not allow non-linear ghosts (1)" in {
@@ -892,28 +944,28 @@ class DifferentialTests extends TacticTestBase {
     val s = "==> [{x'=2}]x>0".asSequent
     val tactic = dG("{y'=0*y+1}".asDifferentialProgram, Some("y>0 & x*y>0".asFormula))(1)
     val result = proveBy(s, tactic)
-    result.subgoals.loneElement shouldBe "==> \\exists y [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\exists y [{x'=2,y'=1}](y>0 & x*y>0)".asSequent
   }
 
   it should "work in a simple context" in withQE { _ =>
     val s = "x>0 ==> a=2 -> [{x'=2}]x>0".asSequent
     val tactic = dG("{y'=0*y+1}".asDifferentialProgram, Some("y>0 & x*y>0".asFormula))(1, 1::Nil)
     val result = proveBy(s, tactic)
-    result.subgoals.loneElement shouldBe "x>0 ==> a=2 -> \\exists y [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asSequent
+    result.subgoals.loneElement shouldBe "x>0 ==> a=2 -> \\exists y [{x'=2,y'=1}](y>0 & x*y>0)".asSequent
   }
 
   it should "work in a complicated context" in withQE { _ =>
     val s = "x>0 ==> a=2 -> [b:=3;]<?c=5;{c'=2}>[{x'=2}]x>0".asSequent
     val tactic = dG("{y'=0*y+1}".asDifferentialProgram, Some("y>0 & x*y>0".asFormula))(1, 1::1::1::Nil)
     val result = proveBy(s, tactic)
-    result.subgoals.loneElement shouldBe "x>0 ==> a=2 -> [b:=3;]<?c=5;{c'=2}>\\exists y [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asSequent
+    result.subgoals.loneElement shouldBe "x>0 ==> a=2 -> [b:=3;]<?c=5;{c'=2}>\\exists y [{x'=2,y'=1}](y>0 & x*y>0)".asSequent
   }
 
   it should "add y'=-a() to [x'=2]x>0" in withQE { _ =>
     val s = "a()>0, x>0 ==> [{x'=2}]x>0".asSequent
     val tactic = dG("{y'=0*y+(-a())}".asDifferentialProgram, Some("x>0 & y<0".asFormula))(1)
     val result = proveBy(s, tactic)
-    result.subgoals.loneElement shouldBe "a()>0, x>0 ==> \\exists y [{x'=2,y'=0*y+-a()}](x>0 & y<0)".asSequent
+    result.subgoals.loneElement shouldBe "a()>0, x>0 ==> \\exists y [{x'=2,y'=-a()}](x>0 & y<0)".asSequent
   }
 
   it should "solve x'=x" in withQE { _ =>
@@ -963,7 +1015,17 @@ class DifferentialTests extends TacticTestBase {
     val s = "==> [{x'=2}]x>0".asSequent
     val tactic = dG("{y'=0*y+1}".asDifferentialProgram, None)(1) & transform("y>0 & x*y>0".asFormula)(1, 0::1::Nil)
     val result = proveBy(s, tactic)
-    result.subgoals.loneElement shouldBe "==> \\exists y [{x'=2,y'=0*y+1}](y>0 & x*y>0)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\exists y [{x'=2,y'=1}](y>0 & x*y>0)".asSequent
+  }
+
+  "Inverse Differential Ghost" should "remove the left-most DE" in withQE { _ =>
+    val result = proveBy("==> [{y'=1,x'=2}]p(x)".asSequent, DifferentialTactics.inverseDiffGhost(1))
+    result.subgoals.loneElement shouldBe "==> [{x'=2}]p(x)".asSequent
+  }
+
+  it should "remove the left-most DE in context" in withQE { _ =>
+    val result = proveBy("==> [x:=2;][{y'=1,x'=2}]p(x)".asSequent, DifferentialTactics.inverseDiffGhost(1, 1::Nil))
+    result.subgoals.loneElement shouldBe "==> [x:=2;][{x'=2}]p(x)".asSequent
   }
 
   "diffSolve" should "find a solution" in withQE { _ =>

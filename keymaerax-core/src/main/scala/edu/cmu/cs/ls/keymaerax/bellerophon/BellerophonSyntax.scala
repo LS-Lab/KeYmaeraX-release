@@ -31,6 +31,8 @@ abstract class BelleExpr(private var location: Location = UnknownLocation) {
   def &(other: BelleExpr)             = SeqTactic(this, other)
   /** this | other: alternative composition executes other if applying this fails, failing if both fail. */
   def |(other: BelleExpr)             = EitherTactic(this, other)
+  /** this > other: followup composition executes other on the output or error of this, failing if other fails. */
+  def >(other: BelleExpr)             = AfterTactic(this, other)
   /** (this*): saturating repetition executes this tactic to a fixpoint, casting result to type annotation, diverging if no fixpoint. */
   def * = SaturateTactic(this)
   /** this+: saturating repetition executes this tactic to a fixpoint, requires at least one successful application */
@@ -354,10 +356,10 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
       } catch {
         //@todo should catch only fails not eat problems
         case e: Throwable =>
-          val newCause = if (cause == null) new BelleThrowable(s"Position tactic ${positionTactic.prettyString} is not " +
+          val newCause = if (cause == null) new BelleThrowable(s"Position tactic $prettyString is not " +
             s"applicable at ${locator.start.prettyString}", e)
           else new CompoundException(
-            new BelleThrowable(s"Position tactic ${positionTactic.prettyString} is not applicable at ${locator.start.prettyString}", e),
+            new BelleThrowable(s"Position tactic $prettyString is not applicable at ${locator.start.prettyString}", e),
             cause)
           tryAllAfter(provable, Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact), newCause)
       }
@@ -521,12 +523,12 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
               val newCause = if (cause == null) new BelleThrowable(s"Dependent position tactic ${pt.prettyString} is not " +
                 s"applicable at ${locator.start.prettyString}", e)
               else new CompoundException(
-                new BelleThrowable(s"Dependent position tactic ${pt.prettyString} is not applicable at ${locator.start.prettyString}", e),
+                new BelleThrowable(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString}", e),
                 cause)
               tryAllAfter(Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact), newCause)
           }
         } else if (cause == null) {
-          throw new BelleThrowable(s"Dependent position tactic ${pt.prettyString} is not applicable at ${locator.start.prettyString} in ${provable.subgoals(locator.goal).prettyString}")
+          throw new BelleThrowable(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} in ${provable.subgoals(locator.goal).prettyString}")
         } else throw cause
       case _ => pt.factory(locator.start).computeExpr(v) |
         tryAllAfter(Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact), cause)
@@ -545,6 +547,7 @@ case class PartialTactic(child: BelleExpr, label: Option[BelleLabel] = None) ext
 
 case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString = "(" + left.prettyString + "&" + right.prettyString + ")" }
 case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString = "(" + left.prettyString + "|" + right.prettyString + ")" }
+case class AfterTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString = "(" + left.prettyString + ">" + right.prettyString + ")" }
 //@note saturate and repeat tactic fully parenthesize for parser
 case class SaturateTactic(child: BelleExpr) extends BelleExpr { override def prettyString = "((" + child.prettyString + ")*)" }
 case class RepeatTactic(child: BelleExpr, times: Int) extends BelleExpr { override def prettyString = "((" + child.prettyString + ")*" + times + ")" }
@@ -603,6 +606,24 @@ case class Let(abbr: Expression, value: Expression, inner: BelleExpr) extends Be
 case class LetInspect(abbr: Expression, instantiator: ProvableSig => Expression, inner: BelleExpr) extends BelleExpr {
   override def prettyString = "let(" + abbr + ":= inspect " + instantiator + " in " + inner + ")"
 }
+
+/**
+  * SearchAndRescue(abbr, common, instantiator, continuation) alias `search abbr := after common among instantiator in continuation`
+  * postpones the choice for the definition of `abbr` until tactic `common` finished on the Provable,
+  * but then searches for the definition of `abbr` by trying to run `continuation` from the outcome of `common`
+  * until `continuation` is successful.
+  * Each time it asks `instantiator` to choose a value for `abbr` based on the same Provable at the end of `common`
+  * in addition to the present Provable obtained after the current attempt of running `continuation` with the last choice for `abbr`.
+  * Resumes to the outer proof by a uniform substitution of instantiator(result)` for `abbr` of the resulting provable
+  * which corresponds to having run `USubst(abbr,inst){ common } ; continuation`.
+  *
+  * @see [[ProvableSig.apply(USubst)]]
+  * @note abbr should be fresh in the Provable
+  */
+case class SearchAndRescueAgain(abbr: Expression, common: BelleExpr, instantiator: (ProvableSig,ProverException) => Expression, continuation: BelleExpr) extends BelleExpr {
+  override def prettyString = "searchAndRescueAgain(" + abbr + ":= after " + common + " among " + instantiator + " in " + continuation + ")"
+}
+
 
 /** Defines a tactic for later execution. */
 case class DefTactic(name: String, t: BelleExpr) extends BelleExpr {

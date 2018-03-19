@@ -1,62 +1,3 @@
-<!-- Despite the name: axioms and tactics -->
-<script type="text/ng-template" id="templates/tacticPopoverEntry.html">
-    <div>
-    <div class="well well-compact" ng-if="tactic.selectedDerivation().derivation.type === 'axiom'">
-        <div class="row">
-            <div class="col-md-3 k4-abbreviate" uib-tooltip-template="'nameAndCodeNameTooltip.html'"
-                 tooltip-placement="auto top" tooltip-popup-delay="1000">
-                <a class="btn btn-link" ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)">
-                    <b ng-include="'nameAndCodeName.html'"></b>
-                </a>
-            </div>
-            <div class="col-md-9"><span ng-bind-html="tactic.selectedDerivation().derivation.formula"></span></div>
-        </div>
-    </div>
-    <div class="well well-compact" ng-if="tactic.selectedDerivation().derivation.type === 'tactic'">
-        <div class="row">
-            <div class="col-md-3 k4-abbreviate" uib-tooltip-template="'nameAndCodeNameTooltip.html'"
-                 tooltip-placement="auto top" tooltip-popup-delay="1000">
-                <a class="btn btn-link" ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)">
-                    <b ng-include="'nameAndCodeName.html'"></b>
-                </a>
-            </div>
-            <div class="col-md-9"><span ng-bind-html="tactic.selectedDerivation().derivation.formula"></span></div>
-        </div>
-    </div>
-    <div class="panel panel-default panel-sm" ng-if="tactic.selectedDerivation().derivation.type === 'sequentrule'">
-        <div class="panel-heading panel-heading-compact">
-            <a ng-if="tactic.selectedDerivation().derivation.input.length === 0"
-               ng-class="{'disabled' : tacticForm.$invalid, 'btn': true, 'btn-link': true}"
-               uib-tooltip-template="'nameAndCodeNameTooltip.html'" tooltip-placement="auto top"
-               tooltip-popup-delay="1000"
-               ng-click="applyTactic(tacticPopover.formulaId(), tactic.selectedDerivation().id)"><b ng-include="'nameAndCodeName.html'"></b></a>
-            <!-- Rule link: execute if form is valid, otherwise open details -->
-            <a ng-if="tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length <= 0"
-               class="btn btn-link"
-               ng-click="applyInputTactic(tacticPopover.formulaId(), tactic.selectedDerivation())"><b ng-include="'nameAndCodeName.html'"></b></a>
-            <a ng-if="tactic.isOpen && tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length > 0"
-               class="btn btn-link"
-               ng-click="tactic.selectedDerivation().showMissingInputError = true"><b ng-include="'nameAndCodeName.html'"></b></a>
-            <a ng-if="!tactic.isOpen && tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length > 0"
-               class="btn btn-link"
-               ng-click="tactic.isOpen = !tactic.isOpen"><b ng-include="'nameAndCodeName.html'"></b><b> ...</b></a>
-            <span class="text-danger" ng-if="tactic.selectedDerivation().showMissingInputError && tactic.selectedDerivation().missingInputNames().length > 0">Please enter {{tactic.selectedDerivation().missingInputNames().join(', ')}} and confirm each input with <kbd>Enter</kbd></span>
-
-            <div class="pull-right">
-                <span ng-if="tactic.selectedDerivation().derivation.help"
-                      uib-popover-html="tactic.selectedDerivation().derivation.help"
-                      popover-trigger="'outsideClick'"><i class="fa fa-question-circle"></i></span>
-                <span ng-if="tactic.comfortDerivation !== undefined" ng-click="tactic.reduceBranching = !tactic.reduceBranching">Reduce branching <i ng-class="{'fa fa-toggle-off': !tactic.reduceBranching, 'fa fa-toggle-on': tactic.reduceBranching}"></i></span>
-                <span ng-click="tactic.isOpen = !tactic.isOpen"><i class="fa fa-bars"></i></span>
-            </div>
-        </div>
-        <div class="panel-body" uib-collapse="!tactic.isOpen">
-            <div class="col-md-12" ng-repeat="tactic in [tactic.selectedDerivation()]" ng-include="'templates/sequentRuleTemplate.html'"></div>
-        </div>
-    </div>
-    </div>
-</script>
-
 <script type="text/ng-template" id="templates/lemmaDropdownTemplate.html">
     <a>
     <div>
@@ -79,7 +20,11 @@
     <!-- padding around content -->
     <div class="col-md-12">
         <div ng-repeat="tactic in formulaAxiomsMap[tacticPopover.formulaId()]" class="k4-tactic-popover-entry">
-            <div ng-include="'templates/tacticPopoverEntry.html'"></div>
+            <k4-tactic-info user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
+                            formula-id="{{tacticPopover.formulaId()}}"
+                            tactic="tactic" axiom-readonly="true"
+                            on-tactic="applyTactic(formulaId, tacticId)"
+                            on-input-tactic="applyInputTactic(formulaId, tacticId, input)"></k4-tactic-info>
         </div>
         <div class="k4-tactic-popover-entry">
             <div class="input-group">
@@ -93,25 +38,11 @@
                        class="form-control">
                 <i class="input-group-addon" ng-if="lemma.loading" class="fa fa-refresh"></i>
                 <div class="input-group-addon" ng-if="lemma.noResults"><i class="fa fa-remove"></i> No Lemmas Found</div>
-                <div class="input-group-addon" ng-if="!lemma.noResults && lemma.selected && lemma.selected.displayInfoParts"
-                     uib-tooltip="{{lemma.selected.displayInfoParts.cond ? 'Prove italic condition to replace boldface lemma sub-formula with dashed sub-formula. Click dashed sub-formula to change.' : 'Replace boldface lemma sub-formula with dashed sub-formula. Click dashed sub-formula to change.'}}"
-                     tooltip-placement="auto top">
-                    <span ng-if="lemma.selected.displayInfoParts.cond" class="k4-axiom-cond">
-                        <span ng-bind-html="lemma.selected.displayInfoParts.cond"></span>
-                    </span>
-                    <span ng-if="lemma.selected.displayInfoParts.cond">&rarr;</span>
-                    <span ng-class="{'k4-axiom-key': lemma.selectedKeyPos().endsWith('0'),'k4-axiom-repl': lemma.selectedKeyPos().endsWith('1')}"
-                          ng-click="lemma.selectKeyEnd('0')">
-                        <span ng-if="lemma.selected.displayInfoParts.keyPos.endsWith('0')" ng-bind-html="lemma.selected.displayInfoParts.key"></span>
-                        <span ng-if="lemma.selected.displayInfoParts.conclusionPos.endsWith('0')" ng-bind-html="lemma.selected.displayInfoParts.conclusion"></span>
-                    </span>
-                    <span ng-bind-html="lemma.selected.displayInfoParts.op"></span>
-                    <span ng-class="{'k4-axiom-key': lemma.selectedKeyPos().endsWith('1'),'k4-axiom-repl': lemma.selectedKeyPos().endsWith('0')}"
-                          ng-click="lemma.selectKeyEnd('1')">
-                        <span ng-if="lemma.selected.displayInfoParts.keyPos.endsWith('1')" ng-bind-html="lemma.selected.displayInfoParts.key"></span>
-                        <span ng-if="lemma.selected.displayInfoParts.conclusionPos.endsWith('1')" ng-bind-html="lemma.selected.displayInfoParts.conclusion"></span>
-                    </span>
+                <div class="input-group-addon" ng-if="!lemma.noResults && lemma.selected && lemma.selected.displayInfoParts">
+                    <k4-axiom-key-selector axiom="lemma.selected" readonly="false"></k4-axiom-key-selector>
                 </div>
+                <a class="input-group-addon btn btn-default"
+                   ng-click="browseLemmas()">Browse...</a>
                 <a class="input-group-addon btn btn-default" ng-disabled="!lemma.selected"
                    ng-click="lemma.apply(tacticPopover.formulaId())"><b>Apply Lemma</b></a>
             </div>
@@ -122,12 +53,3 @@
 <div ng-if="formulaAxiomsMap[tacticPopover.formulaId()] === undefined || formulaAxiomsMap[tacticPopover.formulaId()] === null || formulaAxiomsMap[tacticPopover.formulaId()].length == 0">
     <span class="fa fa-exclamation-triangle"> Sorry, no tactics applicable here. Try working on formulas from outside in, starting from the left.</span>
 </div>
-<script type="text/ng-template" id="nameAndCodeName.html">
-    <span><span ng-bind-html="tactic.selectedDerivation().name"></span> <code>{{tactic.selectedDerivation().codeName}}</code></span>
-</script>
-<script type="text/ng-template" id="nameAndCodeNameTooltip.html">
-    <span>Refer to <span ng-bind-html="tactic.selectedDerivation().name"></span> in proof programming by
-        <code>{{tactic.selectedDerivation().codeName}}(pos)</code> with position locator <code>pos</code>.
-        For example, with absolute position <samp>{{tactic.selectedDerivation().codeName}}(1)</samp> or
-        using a search locator <samp>{{tactic.selectedDerivation().codeName}}('L)</samp>.</span>
-</script>

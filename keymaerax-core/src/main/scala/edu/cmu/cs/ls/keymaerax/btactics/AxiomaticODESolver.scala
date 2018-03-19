@@ -160,7 +160,7 @@ object AxiomaticODESolver {
       DebuggingTactics.debug("AFTER all inverse diff cuts", ODE_DEBUGGER) &
       simplifier(odePosAfterInitialVals ++ PosInExpr(0 :: 1 :: Nil)) &
       DebuggingTactics.debug("AFTER simplifying evolution domain 2", ODE_DEBUGGER) &
-      RepeatTactic(inverseDiffGhost(odePosAfterInitialVals), osize) &
+      RepeatTactic(DifferentialTactics.inverseDiffGhost(odePosAfterInitialVals), osize) &
       DebuggingTactics.assert((s, p) => odeSize(s.apply(p)) == 1, "ODE should only have time.")(odePosAfterInitialVals) &
       DebuggingTactics.debug("AFTER all inverse diff ghosts", ODE_DEBUGGER) &
       HilbertCalculus.useAt("DS& differential equation solution")(odePosAfterInitialVals) &
@@ -550,65 +550,12 @@ object AxiomaticODESolver {
 
   //endregion
 
-  //region Inverse diff ghosts
-
-  /**
-    * Removes the left-most DE from a system of ODEs:
-    * {{{
-    *   [v'=a,t'=1 & q]p
-    *   ---------------------- inserverDiffGhost
-    *   [x'=v,v'=a,t'=1 & q]p
-    * }}}
-    */
-  val inverseDiffGhost: DependentPositionTactic = "inverseDiffGhost" by ((pos: Position, s: Sequent) => {
-    def checkResult(ode: DifferentialProgram, y_DE: AtomicDifferentialProgram) = DebuggingTactics.assertProvableSize(1) &
-      DebuggingTactics.debug(s"[inverseDiffGhost] Finished trying to eliminate $y_DE from the ODE.", ODE_DEBUGGER) &
-      DebuggingTactics.assert((s,p) => odeSize(s.apply(p)) == odeSize(ode)-1, "[inverseDiffGhost] Size of ODE should have decreased by one after an inverse diff ghost step.")(pos)
-
-    val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
-    s.sub(pos) match {
-      case Some(f@Box(ODESystem(ode@DifferentialProduct(y_DE: AtomicODE, _), _), _)) if polarity > 0 =>
-        val axiomName = "DG inverse differential ghost implicational"
-        //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then performing rewriting.
-        TactixLibrary.cutAt(Forall(y_DE.xp.x::Nil, f))(pos) <(
-          DebuggingTactics.debug(s"[inverseDiffGhost] Trying to eliminate $y_DE from the ODE via an application of $axiomName.", ODE_DEBUGGER) &
-          HilbertCalculus.useExpansionAt(axiomName)(pos)
-          ,
-          (if (pos.isSucc) TactixLibrary.cohideR(pos.top) else TactixLibrary.cohideR('Rlast)) &
-          HilbertCalculus.useAt("all eliminate")(1, PosInExpr((if (pos.isSucc) 0 else 1) +: pos.inExpr.pos)) &
-            TactixLibrary.useAt(DerivedAxioms.implySelf)(1) & TactixLibrary.closeT & DebuggingTactics.done
-        ) & checkResult(ode, y_DE)
-      case Some(Box(ODESystem(ode@DifferentialProduct(y_DE: AtomicODE, c), q), p)) if polarity < 0 =>
-        //@note must substitute manually since DifferentialProduct reassociates (see cutAt) and therefore unification won't match
-        val subst = (_: Option[TactixLibrary.Subst]) =>
-          RenUSubst(
-            ("y_".asTerm, y_DE.xp.x) ::
-            ("b(|y_|)".asTerm, y_DE.e) ::
-            ("q(|y_|)".asFormula, q) ::
-            (DifferentialProgramConst("c", Except("y_".asVariable)), c) ::
-            ("p(|y_|)".asFormula, p.replaceAll(y_DE.xp.x, "y_".asVariable)) ::
-            Nil)
-
-        //Cut in the right-hand side of the equivalence in the [[axiomName]] axiom, prove it, and then rewrite.
-        HilbertCalculus.useAt(", commute", PosInExpr(1::Nil))(pos) &
-        TactixLibrary.cutAt(Exists(y_DE.xp.x::Nil, Box(ODESystem(DifferentialProduct(c, y_DE), q), p)))(pos) <(
-          HilbertCalculus.useAt("DG differential ghost constant", PosInExpr(1::Nil), subst)(pos)
-          ,
-          (if (pos.isSucc) TactixLibrary.cohideR(pos.top) else TactixLibrary.cohideR('Rlast)) &
-            TactixLibrary.CMon(pos.inExpr) & TactixLibrary.implyR(1) &
-            TactixLibrary.existsR(y_DE.xp.x)(1) & TactixLibrary.closeId
-        ) & checkResult(ode, y_DE)
-    }
-  })
-
   private def odeSize(e: Expression): Int = odeSize(e.asInstanceOf[Modal].program.asInstanceOf[ODESystem].ode)
   private def odeSize(ode: DifferentialProgram): Int = ode match {
     case _: DifferentialProgramConst => 1
     case _: AtomicODE => 1
     case x: DifferentialProduct => odeSize(x.left) + odeSize(x.right)
   }
-
-  //endregion
 
   //region Misc.
 

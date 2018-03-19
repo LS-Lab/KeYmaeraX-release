@@ -42,7 +42,7 @@ References
 ----------
 [1] André Platzer. 
 A complete uniform substitution calculus for differential dynamic logic. 
-Journal of Automated Reasoning, 2016.
+Journal of Automated Reasoning, 59(2), pp. 219-265, 2017.
 http://dx.doi.org/10.1007/s10817-016-9385-1 http://arxiv.org/abs/1601.06183
 
 André Platzer. 
@@ -63,11 +63,17 @@ http://dx.doi.org/10.1145/2817824
 The date of last full code review is added to the top of the file as @note Code Review: 2016-03-22.
 A log of all major code reviews and the findings are reported here:
 
+Code Review Agenda Summary: Core agenda summarized in one place.
+  con: program needs SpaceDependent(Except(v)).
+  DI: system generalization can only have bound variables of the ODE free in postcondition (and no resulting '' by data structure invariant), just like DI itself has p(x). Vectorial DI systems.
+  DX skip: no ' in postcondition (no bound differential symbols). Vectors suffice to say [X'=f(X)&q(X)]p(X) -> (q(X)->p(X))
+  VDG: vectorial DG with vectorial quantifier.
+  DG: singularities from division by zero disallowed, also via interpreted functions.
+
 Code Review: KeYmaera X Core: 2016-08-17
   Verdict: stable
   NOTE Could turn DifferentialProgram into non-Program.
   NOTE Could remove some convenience functionality from the core that the core does not use.
-
 
 Extended Delta Code Review: 2016-08-16 Full review of lemma handling
   NOTE Lemma could isolate checksum handling exclusively into toString and fromString

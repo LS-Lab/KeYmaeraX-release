@@ -51,9 +51,9 @@ object Augmentors {
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Term], Expression) = Context.at(term, pos)
     /** Replace at position pos by repl */
-    def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(term, pos, repl)
+    def replaceAt(pos: PosInExpr, repl: Expression): Term = Context.replaceAt(term, pos, repl)
     /** Replace all free occurrences of `what` in `term` by `repl`. */
-    def replaceFree(what: Term, repl:Term): Term = SubstitutionHelper.replaceFree(term)(what,repl)
+    def replaceFree(what: Term, repl: Term): Term = SubstitutionHelper.replaceFree(term)(what,repl)
 
     /**
       * Find the first (i.e., left-most) position of a subexpression satisfying `condition`, if any.
@@ -92,7 +92,7 @@ object Augmentors {
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Formula], Expression) = Context.at(fml, pos)
     /** Replace at position pos by repl */
-    def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(fml, pos, repl)
+    def replaceAt(pos: PosInExpr, repl: Expression): Formula = Context.replaceAt(fml, pos, repl)
     /** Replace all free occurrences of `what` in `fml` by `repl`. */
     def replaceFree(what: Term, repl:Term): Formula = SubstitutionHelper.replaceFree(fml)(what,repl)
     /** Replace all occurrences of `what` in `fml` by `repl`. `what` and `repl` must be of the same kind, either Term or Formula */
@@ -219,7 +219,7 @@ object Augmentors {
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Program], Expression) = Context.at(prog, pos)
     /** Replace at position pos by repl */
-    def replaceAt(pos: PosInExpr, repl: Expression): Expression = Context.replaceAt(prog, pos, repl)
+    def replaceAt(pos: PosInExpr, repl: Expression): Program = Context.replaceAt(prog, pos, repl)
     /** Replace all free occurrences of what by repl */
     def replaceFree(what: Term, repl: Term): Program = SubstitutionHelper.replaceFree(prog)(what, repl)
 
@@ -239,7 +239,7 @@ object Augmentors {
     /** Split into expression and its *formula* context at the indicated position */
     def at(pos: Position): (Context[Formula], Expression) = FormulaAugmentor(seq(pos.top)).at(pos.inExpr)
     /** Replace at position pos by repl */
-    def replaceAt(pos: Position, repl: Expression): Expression = FormulaAugmentor(seq(pos.top)).replaceAt(pos.inExpr, repl)
+    def replaceAt(pos: Position, repl: Expression): Formula = FormulaAugmentor(seq(pos.top)).replaceAt(pos.inExpr, repl)
     /** Replace all free occurrences of `what` in `seq` by `repl`. */
     def replaceFree(what: Term, repl: Term): Sequent = SubstitutionHelper.replaceFree(seq)(what,repl)
     /** Replace all occurrences of `what` in `seq` by `repl`. */

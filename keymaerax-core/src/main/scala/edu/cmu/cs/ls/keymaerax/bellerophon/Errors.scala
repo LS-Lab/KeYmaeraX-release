@@ -17,7 +17,7 @@ class BelleFriendlyUserMessage(message: String) extends Exception
 
 /** Common exception type for all Bellerophon tactic exceptions. */
 class BelleThrowable(message: String, cause: Throwable = null)
-  extends ProverException(s"[Bellerophon Runtime] $message", if (cause != null) cause else new Throwable(message)) {
+  extends ProverException(s"[Bellerophon Runtime] ${message.stripPrefix("[Bellerophon Runtime] ")}", if (cause != null) cause else new Throwable(message)) {
   /* @note mutable state for gathering the logical context that led to this exception */
   private var tacticContext: BelleExpr = BelleDot  //@todo BelleUnknown?
   def context: BelleExpr = tacticContext

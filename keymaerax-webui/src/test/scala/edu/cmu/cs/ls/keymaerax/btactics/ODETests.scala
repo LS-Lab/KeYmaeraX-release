@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.universalGen
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
@@ -57,18 +58,18 @@ class ODETests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "prove < darboux" in withQE { _ =>
+  it should "prove < darboux" in withMathematica { _ =>
     //(x+z)' =  x^2 + z*x - x^2 <= x*(x+z)
     val fml = "x+z<0 -> [{x'=x^2, z' = z*x+y & y = -x^2}] x+z<0".asFormula
-    val pr = TactixLibrary.proveBy(fml,implyR(1) & DifferentialTactics.dgDbx("x".asTerm)(1))
+    val pr = TactixLibrary.proveBy(fml,implyR(1) & DifferentialTactics.dgDbxAuto(1))
     pr shouldBe 'proved
   }
 
-  it should "prove < fractional darboux" in withQE { _ =>
+  it should "prove < fractional darboux" in withMathematica { _ =>
     //(x+z)' =  (1/z^2)(x+z) - x^2 <= (1/z^2)(x+z)
     //Maybe this should leave open that the remainder is >= 0?
     val fml = "x+z<0 -> [{x'=1/z, z' = x/z^2 + y & z^2 > 0 & y = -x^2}] x+z<0".asFormula
-    val pr = TactixLibrary.proveBy(fml,implyR(1) & DifferentialTactics.dgDbx("1/z^2".asTerm)(1))
+    val pr = TactixLibrary.proveBy(fml,implyR(1) & DifferentialTactics.dgDbxAuto(1))
     pr shouldBe 'proved
   }
 
@@ -91,10 +92,11 @@ class ODETests extends TacticTestBase {
     val fml = "x+z=0 -> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] x+z=0".asFormula
     val pr = TactixLibrary.proveBy(fml,implyR(1) & DifferentialTactics.dgDbxAuto(1))
     pr should not be 'proved
-    pr.subgoals.loneElement shouldBe "x+z=0 ==> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] x+z=0".asSequent
+    //The automatically generated remainder term goal is left open
+    pr.subgoals.loneElement shouldBe "x+z=0 ==> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] (1!=0&A*y+-1*A*z^2=0)".asSequent
   }
 
-  "ODE" should "prove a strict barrier certificate" in withMathematica {qeTool =>
+  "ODE Barrier" should "prove a strict barrier certificate" in withMathematica { _ =>
     //This one doesn't actually need the full power of strict barriers because it's also an inequational dbx
     val fml = "x>=0 -> [{x'=100*x^4+y*x^3-x^2+x+c, c'=x+y+z & c > x}] x>=0".asFormula
     val pr = TactixLibrary.proveBy(fml,implyR(1) &
@@ -102,14 +104,14 @@ class ODETests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  "ODE" should "prove a strict barrier certificate 1" in withMathematica {qeTool =>
+  it should "prove a strict barrier certificate 1" in withMathematica {qeTool =>
     val fml = "(87*x^2)/200 - (7*x*y)/180 + (209*y^2)/1080 - 10 >=0 -> [{x'=(5*x)/4 - (5*y)/6, y'=(9*x)/4 + (5*y)/2}] (87*x^2)/200 - (7*x*y)/180 + (209*y^2)/1080 - 10>=0".asFormula
     val pr = TactixLibrary.proveBy(fml,implyR(1) &
       DifferentialTactics.dgBarrier(Some(qeTool))(1))
     pr shouldBe 'proved
   }
 
-  "ODE" should "prove a strict barrier certificate 2" in withMathematica {qeTool =>
+  it should "prove a strict barrier certificate 2" in withMathematica {qeTool =>
     val fml = "(23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5 <= 0 -> [{x'=(x/2) + (7*y)/3 , y'=-x - y}] (23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5<=0".asFormula
     val pr = TactixLibrary.proveBy(fml,implyR(1) &
       DifferentialTactics.dgBarrier(Some(qeTool))(1))
@@ -132,6 +134,22 @@ class ODETests extends TacticTestBase {
       getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get.fileContent
     db.proveBy(modelContent, implyR(1) & ODE(1)) shouldBe 'proved
   }}
+
+  it should "prove a barrier certificate" in withMathematica { _ =>
+    val fml =
+      """
+        |x^2 <= 1/2 & y^2 <= 1/3 ->
+        | [
+        |   {x'=-x - (1117*y)/500 + (439*y^3)/200 - (333*y^5)/500, y'=x + (617*y)/500 - (439*y^3)/200 + (333*y^5)/500}
+        |   @invariant(x^2 + x*y + y^2 - 111/59 <= 0)
+        | ] (x - 4*y < 8)
+      """.stripMargin.asFormula
+
+    proveBy(fml, implyR(1) & dC("x^2 + x*y + y^2 - 111/59 <= 0".asFormula)(1) <(
+      dW(1) & QE & done,
+      ODE(1) & done
+    )) shouldBe 'proved
+  }
 
   "Z3" should "prove what's needed by ODE for the Z3 ghost" in withZ3 { _ =>
     the [BelleThrowable] thrownBy TactixLibrary.proveBy("\\forall x_0 (x_0>0&true->\\forall x (x>0->-x>=0))".asFormula, QE) should have message
@@ -280,22 +298,17 @@ class ODETests extends TacticTestBase {
 
   it should "work with solvable maybe bound" in withQE { _ =>
     val result = proveBy("[{x'=5}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asFormula, ODE(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall x (x=5*t_+x_1 -> [{x:=x+3;}* ++ y:=x;](x>0&y>0)))".asFormula)
+    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> \\forall x (x=5*t_+x_1 -> [{x:=x+3;}* ++ y:=x;](x>0&y>0)))".asSequent
   }
 
   it should "work with maybe bound" in withMathematica { _ =>
-    val result = proveBy("x>0 -> [{x'=-x}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asFormula,
-      implyR(1) & DifferentialTactics.ODE(introduceStuttering=true, dW(1) & assignb(1, 1::Nil))(1))
-    result.subgoals.loneElement shouldBe "==> true&x>0 -> [{x:=x+3;}* ++ y:=x;](x>0&y>0)".asSequent
+    val result = proveBy("x>0 -> [{x'=-x}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asFormula, implyR(1) & ODE(1))
+    result.subgoals.loneElement shouldBe "x>0 ==> [{x'=-x & x>0}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asSequent
   }
 
   it should "not stutter repeatedly" in withQE { _ =>
     val result = proveBy("[{x'=x^x}]x>0".asFormula, ODE(1) | skip)
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain theSameElementsAs "[{x'=x^x}]x>0".asFormula::Nil
+    result.subgoals.loneElement shouldBe "==> [{x'=x^x}]x>0".asSequent
   }
 
   it should "prove cheat sheet example" in withQE { _ => {
@@ -470,6 +483,34 @@ class ODETests extends TacticTestBase {
     }
   }
 
+  it should "use an annotated differential invariant" in withMathematica { _ =>
+    val g = "[{x'=-y,y'=x}@invariant(x^2+y^2=old(x^2+y^2))]x>0".asFormula
+    proveBy(g, ODE(1)).subgoals.loneElement shouldBe "old=x^2+y^2 ==> [{x'=-y,y'=x & x^2+y^2=old}]x>0".asSequent
+  }
+
+  it should "use annotated differential invariants" in withMathematica { _ =>
+    val g = "[{x'=-y,y'=x,z'=2}@invariant(z>=old(z), x^2+y^2=old(x^2+y^2))]x>0".asFormula
+    proveBy(g, ODE(1)).subgoals.loneElement shouldBe "z_0=z, old=x^2+y^2 ==> [{x'=-y,y'=x, z'=2 & z>=z_0 & x^2+y^2=old}]x>0".asSequent
+  }
+
+  it should "interpret implications as differential invariants in simple ODE" in withMathematica { _ =>
+    val g = "A>=0, b()>0 ==> [{a:=A; ++ a:=-b(); ++ a:=0;}{{v'=a}@invariant((v'=A -> v>=old(v)), (v'=-b() -> v<=old(v)), (v'=0 -> v=old(v)))}]x>0".asSequent
+    val result = proveBy(g, chase(1) & andR(1) <(ODE(1), andR(1) <(ODE(1), ODE(1))))
+    //@note ODE solves after cutting in v>=old(v), v<=old(v), and v=old(v)
+    result.subgoals(0) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->A*s_+v>=v_0) -> x>0)".asSequent
+    result.subgoals(1) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->(-b())*s_+v<=v_0) -> x>0)".asSequent
+    result.subgoals(2) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->v=v_0) -> x>0)".asSequent
+  }
+
+  it should "interpret implications as differential invariants on multiple occurrences of substituted variable" in withMathematica { _ =>
+    val g = "A>=0, b()>0 ==> [{a:=A; ++ a:=-b(); ++ a:=0;}{{v'=a,w'=a/r}@invariant((v'=A -> v>=old(v)), (v'=-b() -> v<=old(v)), (v'=0 -> v=old(v)))}]x>0".asSequent
+    val result = proveBy(g, chase(1) & andR(1) <(ODE(1), andR(1) <(ODE(1), ODE(1))))
+    //@note ODE solves after cutting in v>=old(v), v<=old(v), and v=old(v)
+    result.subgoals(0) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->A*s_+v>=v_0) -> x>0)".asSequent
+    result.subgoals(1) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->(-b())*s_+v<=v_0) -> x>0)".asSequent
+    result.subgoals(2) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->v=v_0) -> x>0)".asSequent
+  }
+
   "splitWeakInequality" should "split x>=0->[{x'=x}]x>=0" in withQE { _ =>
     val f = "x>=0->[{x'=x}]x>=0".asFormula
     val result = proveBy(f, implyR(1) & DifferentialTactics.splitWeakInequality(1))
@@ -534,5 +575,63 @@ class ODETests extends TacticTestBase {
                    |)""".stripMargin.asTactic
 
     proveBy(formula, tactic) shouldBe 'proved
+  }
+
+  "VDbx" should "prove a simple equilibirum" in withMathematica { _ =>
+    val polys = List("x","y").map( s => s.asTerm)
+    // Directly prove that the origin is an equilibrium point
+    val system = "x'=y,y'=x".asProgram.asInstanceOf[ODESystem]
+    val cofactors = List(List("0","1"),List("1","0")).map(ls => ls.map(s => s.asTerm))
+    val pr = DifferentialTactics.dgVdbx(system,cofactors,polys)
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "SAS'14 Example 12" in withMathematica { _ =>
+    val polys = List("x1^2+x2^2-1","x3-x1").map( s => s.asTerm)
+    // Directly prove that the origin is an equilibrium point
+    val system = "x1'=-x2,x2'=x3,x3'=-x2".asProgram.asInstanceOf[ODESystem]
+    val cofactors = List(List("0","2*x2"),List("0","0")).map(ls => ls.map(s => s.asTerm))
+    val pr = DifferentialTactics.dgVdbx(system,cofactors,polys)
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  "liveness" should "prove that exponential diff eqs are unbounded" in withMathematica { _ =>
+    //Tests out a derived version of DV
+
+    //Abuse DS to show that solutions exist for all time
+    val texists = "x0 > 0 -> <{t'=1}> 0<=x0-x1+x0*t".asFormula
+    val pr1 = proveBy(texists,
+      implyR(1) & useAt("Dsol differential equation solution")(1) &
+        chase(1, 0::1::Nil) & QE
+    )
+
+    //DG for linear systems
+    val xexists = "x0>0 -> <{t'=1,x'=1*x+0}> 0<=x0-x1+x0*t".asFormula
+    val pr2 = proveBy(xexists,
+      implyR(1) &
+      universalGen(Some("x".asVariable),"x".asTerm)(1) &
+      useAt("DGd diamond differential ghost",PosInExpr(1::Nil))(1) &
+      implyRi &
+      by(pr1)
+    )
+
+    val fml = "x=x0 & t = 0  & x0 > 0 -> <{t'=1,x'=1*x+0}> x - x1 >= 0".asFormula
+    val pr = proveBy(fml, prop &
+      cut("[{t'=1,x'=1*x+0 & true & x-x1 < 0}] 0 > (x0-x1)+x0*t".asFormula)
+      <(
+        useAt("<> diamond",PosInExpr(1::Nil))(1) & notR(1)  & SimplifierV3.fullSimpTac() &
+        //Inverse diff cut
+        cut("[{t'=1,x'=1*x+0 & true}] 0 > (x0-x1)+x0*t".asFormula) <(
+          useAt("[] box",PosInExpr(1::Nil))(-6) & notL(-6) &
+            chase(1, 1::Nil) & implyRi()(AntePos(2),SuccPos(0)) & cohideR(1) & byUS(pr2),
+          dC("x-x1 < 0".asFormula)(1) < ( closeId,closeId) )
+        ,
+        hideR(1) & dC("x >= x0".asFormula)(1)
+        <( dC("x-x1 >= (x0-x1)+x0*t".asFormula)(1) <(dW(1)&QE,dI('full)(1)), openDiffInd(1))
+      )
+    )
+    pr shouldBe 'proved
   }
 }

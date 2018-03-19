@@ -1,4 +1,4 @@
-<span ng-if="!highlight || collapsed" ng-bind-html="trustedHtml(replaceNullaryFn(formula.string))">
+<span ng-if="!highlight || collapsed" ng-bind-html="trustedHtml(subscriptIndex(replaceNullaryFn(formula.string)))">
 </span>
 <span frang-tree ng-if="highlight && !collapsed">
     <span frang-tree-repeat="expr in [formula.json]"
@@ -17,8 +17,8 @@
         <span ng-if="modeIsEdit() && expr.plain">
             <span editable-text="expr.plain" onbeforesave="editExpr(expr.id, $data)">{{expr.plain}}</span>
         </span>
-        <span ng-if="(modeIsProve() || !expr.plain) && expr.text" ng-bind-html="replaceNullaryFn(expr.text)"></span>
-        <span ng-if="(modeIsProve() || !expr.plain) && expr.children && expr.children.length > 0"
+        <span ng-if="(modeIsProve() || modeIsSelect() || !expr.plain) && expr.text" ng-bind-html="subscriptIndex(replaceNullaryFn(expr.text))"></span>
+        <span ng-if="(modeIsProve() || modeIsSelect() || !expr.plain) && expr.children && expr.children.length > 0"
               frang-tree-insert-children="expr.children"></span>
         </span>
     </span>

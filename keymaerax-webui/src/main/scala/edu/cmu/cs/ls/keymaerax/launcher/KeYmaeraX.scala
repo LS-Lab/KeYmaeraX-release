@@ -24,6 +24,8 @@ import scala.compat.Platform
 import scala.util.Random
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
+import scala.collection.immutable.{List, Nil}
+
 
 /**
  * Command-line interface launcher for KeYmaera X.
@@ -344,7 +346,8 @@ object KeYmaeraX {
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
 
     val generator = new ConfigurableGenerator[Formula]()
-    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
+    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
+      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv)))
     TactixLibrary.invGenerator = generator
 
     //@note just in case the user shuts down the prover from the command line
@@ -655,6 +658,7 @@ object KeYmaeraX {
    * @param options in describes input file name, vars describes the list of variables, out describes the output file name.
    */
   def modelplex(options: OptionMap): Unit = {
+    //@TODO remove option, hol config no longer necessary
     if (options.contains('ptOut)) {
       //@TODO: Actual produce proof terms here, right now this option is overloaded to produce hol config instead
       ProvableSig.PROOF_TERMS_ENABLED = false
@@ -682,14 +686,9 @@ object KeYmaeraX {
 
     val inputFileName = in.split('#')(0).dropRight(4)
 
-    var outputFileName = inputFileName
-
-    if (options.contains('out)) {
-      val outputFileNameDotMx = options('out).toString
-      assert(outputFileNameDotMx.endsWith(".kym"),
-        "\n[Error] Wrong file name " + outputFileNameDotMx + " used for -out! ModelPlex only generates .kym file. Please use: -out FILENAME.kym")
-      outputFileName = outputFileNameDotMx.dropRight(4)
-    }
+    val outputFileName =
+      if (options.contains('out)) options('out).toString
+      else inputFileName + ".kym"
 
     val kind =
       if (options.contains('sandbox)) 'sandbox
@@ -700,30 +699,61 @@ object KeYmaeraX {
       val fallback = options.get('fallback) match {
         case Some(fallbackPrgString: String) => fallbackPrgString.asProgram
         case _ => inputEntry.model match {
+          case Imply(_, Box(Loop(Compose(ctrl, _)), _)) => ctrl
           case Imply(_, Box(Compose(ctrl, _), _)) => ctrl
           case _ => throw new IllegalArgumentException("Unable to extract fallback from input model. Please provide fallback program with option -fallback.")
         }
       }
 
+      //check safety proof
+      println(s"Checking safety proof ${inputEntry.name}...")
+      assert(TactixLibrary.proveBy(inputEntry.model.asInstanceOf[Formula], inputEntry.tactics.head._2).isProved,
+        s"Sandbox synthesis requires a provably safe input model, but ${inputEntry.name} is not proved.")
+      println(s"Done checking safety proof ${inputEntry.name}")
+
+      println("Synthesizing sandbox and safety proof...")
       val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(
         inputEntry.name,
         inputEntry.tactics.head._2,
         Some(fallback),
         kind = 'ctrl,
         checkProvable =  None)(inputModel)
+      println("Done synthesizing sandbox and safety proof")
 
       val db = new TempDBTools(Nil)
 
       val lemmaEntries = lemmas.map({ case (name, fml, tactic) => ParsedArchiveEntry(name, "lemma", "", Declaration(Map.empty), fml,
         (name + " Proof", db.extractSerializableTactic(fml, tactic))::Nil, Map.empty)})
+      // check and store lemmas
+      lemmaEntries.foreach(entry => {
+        println(s"Checking sandbox lemma ${entry.name}...")
+        val lemmaProof = TactixLibrary.proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._2)
+        assert(lemmaProof.isProved, s"Aborting sandbox synthesis: sandbox lemma ${entry.name} was not provable.")
+        println(s"Done checking sandbox lemma ${entry.name}")
+        val lemmaName = "user" + File.separator + entry.name
+        if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
+        val evidence = Lemma.requiredEvidence(lemmaProof, ToolEvidence(List(
+          "tool" -> "KeYmaera X",
+          "model" -> entry.fileContent,
+          "tactic" -> entry.tactics.head._2.prettyString
+        )) :: Nil)
+        LemmaDBFactory.lemmaDB.add(new Lemma(lemmaProof, evidence, Some(lemmaName)))
+      })
 
       val sandboxEntry = ParsedArchiveEntry(inputEntry.name + " Sandbox", "theorem", "", Declaration(Map.empty),
         sandbox, (inputEntry.name + " Sandbox Proof", db.extractSerializableTactic(sandbox, sbTactic))::Nil, Map.empty)
+      // check sandbox proof
+      println("Checking sandbox safety...")
+      assert(TactixLibrary.proveBy(sandboxEntry.model.asInstanceOf[Formula],
+        sandboxEntry.tactics.head._2).isProved,
+        "Aborting sandbox synthesis: sandbox safety was not derivable from input model safety proof.")
+      println("Done checking sandbox safety")
 
       val archive = (lemmaEntries :+ sandboxEntry).map(new KeYmaeraXArchivePrinter()(_)).mkString("\n\n")
-      val pw = new PrintWriter(outputFileName + ".kym")
+      val pw = new PrintWriter(outputFileName)
       pw.write(archive)
       pw.close()
+      println(s"Sandbox synthesis successful: $outputFileName")
     } else if (options.contains('vars)) {
       val result = ModelPlex(options('vars).asInstanceOf[Array[Variable]].toList, kind, verifyOption)(inputModel)
       printModelplexResult(inputModel, result, outputFileName, options)
@@ -737,7 +767,7 @@ object KeYmaeraX {
     val output = KeYmaeraXPrettyPrinter(fml)
     val reparse = KeYmaeraXParser(output)
     assert(reparse == fml, "parse of print is identity")
-    val pw = new PrintWriter(outputFileName + ".kym")
+    val pw = new PrintWriter(outputFileName)
     pw.write(stampHead(options))
     pw.write("/* @evidence: parse of print of ModelPlex proof output */\n\n")
     pw.write("/************************************\n * Generated by KeYmaera X ModelPlex\n ************************************/\n\n")

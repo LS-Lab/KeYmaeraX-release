@@ -15,7 +15,7 @@
     <div class="row k4-proofrow">
         <!-- need duplication because 'step.subgoals.length > 0' is non-assignable -->
         <div class="col-md-12">
-            <k4-sequent user-id="userId" proof-id="proofId" node-id="deductionPath.sections[0].path[0]"
+            <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{deductionPath.sections[0].path[0]}}"
                         sequent="proofTree.nodesMap[deductionPath.sections[0].path[0]].getSequent()"
                         read-only="true" collapsed="false"></k4-sequent>
         </div>
@@ -39,7 +39,7 @@
                 </li>
             </ul>
             <div class="col-md-12 k4-goalwithsiblings" id="seq_{{proofTree.htmlNodeId(step)}}">
-                <k4-sequent user-id="userId" proof-id="proofId" node-id="step"
+                <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{step}}"
                             sequent="proofTree.nodesMap[step].getSequent()"
                             read-only="true" collapsed="true"></k4-sequent>
                 {{highlightStepPosition(proofStepChildren(step)[0], true)}} <!-- permanently highlight step -->
@@ -64,7 +64,7 @@
             </ul>
             <!-- do not repeat if first==last, i.e., sole element in list fetched so far -->
             <div ng-if="!$first" class="col-md-12 k4-goalwithsiblings" id="seq_{{proofTree.htmlNodeId(step)}}">
-                <k4-sequent user-id="userId" proof-id="proofId" node-id="step"
+                <k4-sequent user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{step}}"
                             sequent="proofTree.nodesMap[step].getSequent()"
                             read-only="true" collapsed="true"></k4-sequent>
                 {{highlightStepPosition(proofStepChildren(step)[0], true)}} <!-- permanently highlight step -->

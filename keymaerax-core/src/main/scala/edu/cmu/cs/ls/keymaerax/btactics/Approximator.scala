@@ -34,7 +34,7 @@ object Approximator extends Logging {
 
   //region The [[approximate]] tactic with helpers for figuring out which approximation to use.
 
-  private val DEBUG = Configuration(Configuration.Keys.DEBUG) == "true"
+  private val DEBUG = true//Configuration(Configuration.Keys.DEBUG) == "true"
 
   /**
     * Approximates the variable {{{t}}} in the ODE up to the {{{n^th}}} term.
@@ -65,86 +65,91 @@ object Approximator extends Logging {
 
   //region Approximation for {{{e'=e}}}
 
-  def expApproximate(e: Variable, n: Number) =
-    new DependentPositionWithAppliedInputTactic("expApproximate", e::n::Nil) {
-      override def factory(pos: Position): DependentTactic = {
-        anon((sequent: Sequent) => {
-          val t = timeVarInModality(sequent.sub(pos))
+  def expApproximate(e: Variable, n: Number): DependentPositionWithAppliedInputTactic =
+      "expApproximate" byWithInputs(e::n::Nil, (pos: Position, sequent: Sequent) => {
+    val t = timeVarInModality(sequent.sub(pos))
 
-          val N = n.value.toInt
-          assert(N >= 0, s"${this.name} expects a non-negative number as its 3rd argument (# of terms to expand the Taylor series.)")
+    val N = n.value.toInt
+    assert(N >= 0, s"expApproximate expects a non-negative number as its 3rd argument (# of terms to expand the Taylor series.)")
 
-          val cuts = Range(0,N).map(i => GreaterEqual(e, expExpansion(t,i)))
+    val cuts = Range(0,N).map(i => GreaterEqual(e, expExpansion(t,i)))
 
-          logger.debug(s"exp approximator performing these cuts:\n\t${cuts.mkString("\n\t")}")
+    logger.debug(s"exp approximator performing these cuts:\n\t${cuts.mkString("\n\t")}")
 
-          //dI handles the normal case, ODE handles the base case.
-          val proofOfCut =
-            DebuggingTactics.debug("Trying to prove by proofOfCut", DEBUG) &
-            (TactixLibrary.dI()(pos) | TactixLibrary.ODE(pos)) &
-            DebuggingTactics.done("Expected dI to succeed.")
+    //dI handles the normal case, ODE handles the base case.
+    val proofOfCut =
+      DebuggingTactics.debug("Trying to prove by proofOfCut", DEBUG) &
+        (TactixLibrary.dI()(pos) | TactixLibrary.ODE(pos)) &
+        DebuggingTactics.done("Expected dI to succeed.")
 
-          val cutTactics: Seq[BelleExpr] = {
-            cuts.map(cut => {
-              TactixLibrary.dC(cut)(pos) < (
-                nil,
-                DebuggingTactics.debug("Trying to prove this by dI or by ODE", DEBUG) & proofOfCut
-              )
-            })
-          }
-
-          DebuggingTactics.debug(s"Beginning expApproximation on ${e.prettyString}, ${n.prettyString}", DEBUG) & cutTactics.reduce(_ & _)
-        })
-      }
+    val qAtoms = sequent.sub(pos ++ PosInExpr(0::Nil)) match {
+      case Some(ODESystem(_, q)) => FormulaTools.conjuncts(q).toSet
+      case _ => Set[Formula]()
     }
+
+    val cutTactics: Seq[BelleExpr] = {
+      cuts.filter(!FormulaTools.conjuncts(_).toSet.subsetOf(qAtoms)).map(cut => {
+        TactixLibrary.dC(cut)(pos) <(
+          nil,
+          DebuggingTactics.debug("Trying to prove this by dI or by ODE", DEBUG) & proofOfCut
+        )
+      })
+    }
+
+    DebuggingTactics.debug(s"Beginning expApproximation on ${e.prettyString}, ${n.prettyString}", DEBUG) & cutTactics.reduce(_ & _)
+  })
 
   /** Cuts in Taylor approixmations for circular dynamics {{{x'=y,y'=-x}}}.
     * @todo Good error messages for when the first cut or two fail ==> "missing assumptions." */
-  def circularApproximate(s: Variable, c: Variable, n: Number) =
-    new DependentPositionWithAppliedInputTactic("circularApproximate", s::c::n::Nil) {
-      override def factory(pos: Position): DependentTactic = {
-        anon((sequent: Sequent) => {
-          val t = timeVarInModality(sequent.sub(pos))
+  def circularApproximate(s: Variable, c: Variable, n: Number): DependentPositionWithAppliedInputTactic =
+      "circularApproximate" byWithInputs(s::c::n::Nil, (pos: Position, sequent: Sequent) => {
+    val t = timeVarInModality(sequent.sub(pos))
 
-          //Get the number of terms we should expand.
-          val N = n.value.toInt
-          assert(N >= 0, s"${this.name} expects a non-negative number as its 3rd argument (# of terms to expand the Taylor series.)")
+    //Get the number of terms we should expand.
+    val N = n.value.toInt
+    assert(N >= 0, s"circularApproximate expects a non-negative number as its 3rd argument (# of terms to expand the Taylor series.)")
 
-          //Compute the series of cuts.
-          val sinCuts = Range(0, N).map(i =>
-            if (i % 2 == 0) LessEqual(s, taylorSin(t, i))
-            else GreaterEqual(s, taylorSin(t, i))
-          )
-          val cosCuts = Range(0, N).map(i =>
-            if (i % 2 == 0) LessEqual(c, taylorCos(t, i))
-            else GreaterEqual(c, taylorCos(t, i))
-          )
+    //Compute the series of cuts.
+    val sinCuts = Range(0, N).map(i =>
+      if (i % 2 == 0) LessEqual(s, taylorSin(t, i))
+      else GreaterEqual(s, taylorSin(t, i))
+    )
+    val cosCuts = Range(0, N).map(i =>
+      if (i % 2 == 0) LessEqual(c, taylorCos(t, i))
+      else GreaterEqual(c, taylorCos(t, i))
+    )
 
-          //Prove that (c,s) is a circle. @todo allow for any radius.
-          val isOnCircle = TactixLibrary.dC("s^2 + c^2 = 1".asFormula)(pos) < (
-            nil
-            ,
-            TactixLibrary.dI()(pos) & DebuggingTactics.done("Expected dI to succeed")
-          ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut isOnCircle", DEBUG)
+    val radius = Plus(Power(s, Number(2)), Power(c, Number(2)))
+    val radiusIsConst = Equal(radius, FuncOf(Function("old", None, Real, Real), radius))
 
-          val cuts = interleave(cosCuts, sinCuts)
-          logger.debug(s"Taylor Approximator performing these cuts: ${cuts.mkString("\n")}")
+    //Prove that (c,s) is a circle.
+    val isOnCircle = TactixLibrary.dC(radiusIsConst)(pos) < (
+      nil
+      ,
+      TactixLibrary.dI()(pos) & DebuggingTactics.done("Expected dI to succeed")
+    ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut isOnCircle", DEBUG)
 
-          //Construct a tactic that interleaves these cuts.
-          val cutTactics: Seq[BelleExpr] =
-            cuts.map(cut =>
-              TactixLibrary.dC(cut)(pos) < (
-                nil
-                ,
-                //dW&QE handles the base case, dI handles all others.
-                DebuggingTactics.debug("Trying to prove next bound: ", DEBUG) & (TactixLibrary.dI()(pos) | (TactixLibrary.dW(pos)&QE)) & DebuggingTactics.done("Expected dI to succeed")
-              ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut $cut", DEBUG)
-            )
+    val cuts = interleave(cosCuts, sinCuts)
+    logger.debug(s"Taylor Approximator performing these cuts: ${cuts.mkString("\n")}")
 
-          DebuggingTactics.debug(s"Beginning expApproximation on ${s.prettyString}, ${c.prettyString}, ${n.prettyString}", DEBUG) & isOnCircle & cutTactics.reduce(_ & _)
-        })
-      }
+    val qAtoms = sequent.sub(pos ++ PosInExpr(0::Nil)) match {
+      case Some(ODESystem(_, q)) => FormulaTools.conjuncts(q).toSet
+      case _ => Set[Formula]()
     }
+
+    //Construct a tactic that interleaves these cuts.
+    val cutTactics: Seq[BelleExpr] =
+      cuts.filter(!FormulaTools.conjuncts(_).toSet.subsetOf(qAtoms)).map(cut => DebuggingTactics.print("Cutting " + cut.prettyString) &
+        TactixLibrary.dC(cut)(pos) <(
+          nil
+          ,
+          //dW&QE handles the base case, dI handles all others.
+          DebuggingTactics.debug("Trying to prove next bound: ", DEBUG) & (TactixLibrary.dI()(pos) | (TactixLibrary.dW(pos)&QE)) & DebuggingTactics.done("Expected dI to succeed")
+        ) & DebuggingTactics.assertProvableSize(1) & DebuggingTactics.debug(s"Successfully cut $cut", DEBUG)
+      )
+
+    DebuggingTactics.debug(s"Beginning expApproximation on ${s.prettyString}, ${c.prettyString}, ${n.prettyString}", DEBUG) & isOnCircle & cutTactics.reduce(_ & _)
+  })
 
   //region Definitions of series.
 

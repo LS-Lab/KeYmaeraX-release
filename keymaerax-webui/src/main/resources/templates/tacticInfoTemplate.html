@@ -1,0 +1,82 @@
+<script type="text/ng-template" id="nameAndCodeNameTooltip.html">
+    <span>Refer to <span ng-bind-html="tactic.selectedDerivation().name"></span> in proof programming by
+        <code>{{tactic.selectedDerivation().codeName}}(pos)</code> with position locator <code>pos</code>.
+        For example, with absolute position <samp>{{tactic.selectedDerivation().codeName}}(1)</samp> or
+        using a search locator <samp>{{tactic.selectedDerivation().codeName}}('L)</samp>.</span>
+</script>
+<div>
+    <div class="well well-compact" ng-if="tactic.selectedDerivation().derivation.type === 'axiom'">
+        <div class="row">
+            <div class="col-md-3 k4-abbreviate" uib-tooltip-template="'nameAndCodeNameTooltip.html'"
+                 tooltip-placement="auto top" tooltip-popup-delay="1000">
+                <a class="btn btn-link" ng-click="applyTactic(tactic.selectedDerivation().id)">
+                    <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
+                                       code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
+                </a>
+            </div>
+            <div class="col-md-9">
+                <k4-axiom-key-selector axiom="tactic.selectedDerivation().derivation"
+                                       readonly="axiomReadonly"></k4-axiom-key-selector>
+            </div>
+        </div>
+    </div>
+    <div class="well well-compact" ng-if="tactic.selectedDerivation().derivation.type === 'tactic'">
+        <div class="row">
+            <div class="col-md-3 k4-abbreviate" uib-tooltip-template="'nameAndCodeNameTooltip.html'"
+                 tooltip-placement="auto top" tooltip-popup-delay="1000">
+                <a class="btn btn-link" ng-click="applyTactic(tactic.selectedDerivation().id)">
+                    <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
+                                       code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
+                </a>
+            </div>
+            <div class="col-md-9"><span ng-bind-html="tactic.selectedDerivation().derivation.formula"></span></div>
+        </div>
+    </div>
+    <div class="panel panel-default panel-sm" ng-if="tactic.selectedDerivation().derivation.type === 'sequentrule'">
+        <div class="panel-heading panel-heading-compact">
+            <a ng-if="tactic.selectedDerivation().derivation.input.length === 0"
+               ng-class="{'disabled' : tacticForm.$invalid, 'btn': true, 'btn-link': true}"
+               uib-tooltip-template="'nameAndCodeNameTooltip.html'" tooltip-placement="auto top"
+               tooltip-popup-delay="1000"
+               ng-click="applyTactic(tactic.selectedDerivation().id)">
+                <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
+                                   code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
+            </a>
+            <!-- Rule link: execute if form is valid, otherwise open details -->
+            <a ng-if="tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length <= 0"
+               class="btn btn-link"
+               ng-click="applyInputTactic(tactic.selectedDerivation())">
+                <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
+                                   code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
+            </a>
+            <a ng-if="tactic.isOpen && tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length > 0"
+               class="btn btn-link"
+               ng-click="tactic.selectedDerivation().showMissingInputError = true">
+                <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
+                                   code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
+            </a>
+            <a ng-if="!tactic.isOpen && tactic.selectedDerivation().derivation.input.length > 0 && tactic.selectedDerivation().missingInputNames().length > 0"
+               class="btn btn-link"
+               ng-click="tactic.isOpen = !tactic.isOpen">
+                <b><k4-tactic-name name="{{tactic.selectedDerivation().name}}"
+                                   code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
+                <b> ...</b>
+            </a>
+            <span class="text-danger" ng-if="tactic.selectedDerivation().showMissingInputError && tactic.selectedDerivation().missingInputNames().length > 0">Please enter {{tactic.selectedDerivation().missingInputNames().join(', ')}} and confirm each input with <kbd>Enter</kbd></span>
+
+            <div class="pull-right">
+            <span ng-if="tactic.selectedDerivation().derivation.help"
+                  uib-popover-html="tactic.selectedDerivation().derivation.help"
+                  popover-trigger="'outsideClick'"><i class="fa fa-question-circle"></i></span>
+                <span ng-if="tactic.comfortDerivation !== undefined" ng-click="tactic.reduceBranching = !tactic.reduceBranching">Reduce branching <i ng-class="{'fa fa-toggle-off': !tactic.reduceBranching, 'fa fa-toggle-on': tactic.reduceBranching}"></i></span>
+                <span ng-click="tactic.isOpen = !tactic.isOpen"><i class="fa fa-bars"></i></span>
+            </div>
+        </div>
+        <div class="panel-body" uib-collapse="!tactic.isOpen">
+            <div class="col-md-12">
+                <k4-sequent-rule-info user-id="{{userId}}" proof-id="{{proofId}}" node-id="{{nodeId}}"
+                                      tactic="tactic.selectedDerivation()"></k4-sequent-rule-info>
+            </div>
+        </div>
+    </div>
+</div>

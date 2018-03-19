@@ -1,0 +1,19 @@
+<div uib-tooltip="{{axiom.displayInfoParts.cond ? 'Prove italic condition to replace boldface lemma sub-formula with dashed sub-formula. Click dashed sub-formula to change.' : 'Replace boldface lemma sub-formula with dashed sub-formula. Click dashed sub-formula to change.'}}"
+     tooltip-enable="!readonly"
+     tooltip-placement="auto top">
+    <span ng-if="axiom.displayInfoParts.cond" class="k4-axiom-cond">
+        <span ng-bind-html="axiom.displayInfoParts.cond"></span>
+    </span>
+    <span ng-if="axiom.displayInfoParts.cond">&rarr;</span>
+    <span ng-class="{'k4-axiom-key': selectedKeyPos().endsWith('0'),'k4-axiom-repl': selectedKeyPos().endsWith('1')}"
+          ng-click="!readonly && selectKeyEnd('0')">
+        <span ng-if="axiom.displayInfoParts.keyPos.endsWith('0')" ng-bind-html="axiom.displayInfoParts.key"></span>
+        <span ng-if="axiom.displayInfoParts.conclusionPos.endsWith('0')" ng-bind-html="axiom.displayInfoParts.conclusion"></span>
+    </span>
+    <span ng-bind-html="axiom.displayInfoParts.op"></span>
+    <span ng-class="{'k4-axiom-key': selectedKeyPos().endsWith('1'),'k4-axiom-repl': selectedKeyPos().endsWith('0')}"
+          ng-click="!readonly && selectKeyEnd('1')">
+        <span ng-if="axiom.displayInfoParts.keyPos.endsWith('1')" ng-bind-html="axiom.displayInfoParts.key"></span>
+        <span ng-if="axiom.displayInfoParts.conclusionPos.endsWith('1')" ng-bind-html="axiom.displayInfoParts.conclusion"></span>
+    </span>
+</div>

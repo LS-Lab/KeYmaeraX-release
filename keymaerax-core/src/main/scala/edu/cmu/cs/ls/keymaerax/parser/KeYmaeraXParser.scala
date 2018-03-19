@@ -321,8 +321,13 @@ object KeYmaeraXParser extends Parser with Logging {
         reportAnnotation(elaborate(st, tok, OpSpec.sNone, ProgramKind, p).asInstanceOf[Program],
           elaborate(st, tok, OpSpec.sNone, FormulaKind, f1).asInstanceOf[Formula])
         reduce(st, 4, Bottom, r :+ Expr(p))
+      case r :+ Expr(p: Program) :+ (tok@Token(INVARIANT, _)) :+ (lpar@Token(LPAREN, _)) :+ Expr(f1) :+ Token(COMMA, _) if isAnnotable(p) =>
+        //@note elaborate DifferentialProgramKind to ODESystem to make sure annotations are stored on top-level
+        reportAnnotation(elaborate(st, tok, OpSpec.sNone, ProgramKind, p).asInstanceOf[Program],
+          elaborate(st, tok, OpSpec.sNone, FormulaKind, f1).asInstanceOf[Formula])
+        reduce(st, 2, Bottom, r :+ Expr(p) :+ tok :+ lpar)
       case r :+ Expr(p: Program) :+ Token(INVARIANT, _) :+ Token(LPAREN, _) :+ Expr(f1: Formula) if isAnnotable(p) =>
-        if (la == RPAREN || formulaBinOp(la)) shift(st) else error(st, List(RPAREN, BINARYFORMULAOP))
+        if (la == RPAREN || la == COMMA || formulaBinOp(la)) shift(st) else error(st, List(RPAREN, COMMA, BINARYFORMULAOP))
       case r :+ Expr(p: Program) :+ Token(INVARIANT, _) =>
         if (isAnnotable(p)) if (la == LPAREN) shift(st) else error(st, List(LPAREN))
         else errormsg(st, "requires an operator that supports annotation")
@@ -973,6 +978,7 @@ object KeYmaeraXParser extends Parser with Logging {
   private def followsFormula(la: Terminal): Boolean = la==AMP || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV || la==RPAREN ||
     la==SEMI /* from tests */ ||
     la==RBRACE /* from predicationals */ ||
+    la==COMMA /* from invariant annotations */ ||
     la==PRIME || la==EOF
 
   /** Is la a (binary) operator that only works for formulas? */

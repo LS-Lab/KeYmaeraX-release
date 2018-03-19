@@ -436,6 +436,31 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       });
     }
 
+    $scope.openProofstepBrowser = function() {
+      var prevMode = sequentProofData.formulas.mode;
+      sequentProofData.formulas.mode = 'select';
+      var modalInstance = $uibModal.open({
+        templateUrl: 'partials/lemmabrowserdialog.html',
+        controller: 'LemmaBrowserCtrl',
+        size: 'lg',
+        resolve: {
+          userId: function() { return $scope.userId; },
+          proofId: function() { return $scope.proofId; },
+          nodeId: function() { return sequentProofData.agenda.selectedId(); },
+          formulaId: function() { return undefined; },
+          formula: function() { return undefined; }
+        }
+      });
+      modalInstance.result.then(
+        function (tactic) {
+          sequentProofData.formulas.mode = prevMode;
+          if (tactic.input) $scope.doInputTactic(tactic.formulaId, tactic.tacticId, tactic.input);
+          else $scope.doTactic(tactic.formulaId, tactic.tacticId);
+        },
+        function () { sequentProofData.formulas.mode = prevMode; }
+      );
+    }
+
     $scope.doTactic = function(formulaId, tacticId) {
       var nodeId = sequentProofData.agenda.selectedId();
       var base = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId;

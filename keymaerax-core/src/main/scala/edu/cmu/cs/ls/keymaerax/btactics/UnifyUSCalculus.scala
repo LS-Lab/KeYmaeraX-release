@@ -302,7 +302,7 @@ trait UnifyUSCalculus {
   /** uniformRename(what,repl) renames `what` to `repl` uniformly and vice versa.
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
     */
-  def uniformRename(what: Variable, repl: Variable): BuiltInTactic = ProofRuleTactics.uniformRenaming(what,repl)
+  def uniformRename(what: Variable, repl: Variable): InputTactic = ProofRuleTactics.uniformRenaming(what,repl)
 
   /** boundRename(what,repl) renames `what` to `repl` at the indicated position (or vice versa).
     * @see [[edu.cmu.cs.ls.keymaerax.core.BoundRenaming]]
@@ -748,6 +748,17 @@ trait UnifyUSCalculus {
           else implyR(SuccPos(0)) &
             by(CMon(ctxP)(ProvableSig.startProof(Sequent(IndexedSeq(p), IndexedSeq(q))))) &
             by(inverseImplyR(ProvableSig.startProof(Sequent(IndexedSeq(), IndexedSeq(Imply(p, q))))))
+      }
+    }
+  }
+
+  /** Convenience CMon with hiding. */
+  def CMon: DependentPositionTactic = new DependentPositionTactic("CMon") {
+    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
+        require(pos.isSucc, "Expected CMon in succedent, but got " + pos.prettyString)
+        cohideR(pos.top) & CMon(PosInExpr(pos.inExpr.pos.tail))
       }
     }
   }

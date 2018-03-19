@@ -20,7 +20,8 @@ class SystemTestBase extends FlatSpec with Matchers with BeforeAndAfterEach {
   override def beforeEach() = {
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[Formula]()
-    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => generator.products += (p->inv))
+    KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
+      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv)))
   }
 
   /* Test teardown */

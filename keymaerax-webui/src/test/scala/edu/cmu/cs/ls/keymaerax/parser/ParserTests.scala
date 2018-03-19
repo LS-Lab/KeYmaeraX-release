@@ -366,6 +366,46 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         |Found:    NUM(2.) at 1:12 to 1:23
         |Expected: )""".stripMargin
   }
+
+  it should "populate easy ODE annotations" in {
+    val input = "x>=2 -> [{x'=1}@invariant(x>=1)]x>=0"
+    //@todo mock objects
+    var called = false
+    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
+      called = true
+      prg shouldBe "{x'=1}".asProgram
+      fml shouldBe "x>=1".asFormula
+    })
+    KeYmaeraXParser(input)
+    called shouldBe true
+  }
+
+  it should "populate ODE annotations with old(.)" in {
+    val input = "x>=2 -> [{x'=1}@invariant(x>=old(x))]x>=0"
+    //@todo mock objects
+    var called = false
+    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
+      called = true
+      prg shouldBe "{x'=1}".asProgram
+      fml shouldBe "x>=old(x)".asFormula
+    })
+    KeYmaeraXParser(input)
+    called shouldBe true
+  }
+
+  it should "parse multiple annotations" in {
+    val input = "x>=3 -> [{x'=1}@invariant(x>=2, x>=1)]x>=0"
+    //@todo mock objects
+    var idx = 0
+    var invs = ("{x'=1}".asProgram -> "x>=2".asFormula) :: ("{x'=1}".asProgram -> "x>=1".asFormula) :: Nil
+    KeYmaeraXParser.setAnnotationListener((prg, fml) =>{
+      prg shouldBe invs(idx)._1
+      fml shouldBe invs(idx)._2
+      idx = idx + 1
+    })
+    KeYmaeraXParser(input)
+    idx shouldBe 2
+  }
   
   //////////////////////////////////////////////////////////////////////////////
   // Begin ALP Parser tests

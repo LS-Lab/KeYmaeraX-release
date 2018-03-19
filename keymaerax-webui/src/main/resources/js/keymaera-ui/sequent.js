@@ -4,9 +4,9 @@ angular.module('sequent', ['ngSanitize', 'formula', 'ui.bootstrap', 'ngCookies',
     return {
         restrict: 'AE',
         scope: {
-            userId: '=',
-            proofId: '=',
-            nodeId: '=',
+            userId: '@',
+            proofId: '@',
+            nodeId: '@',
             sequent: '=',
             readOnly: '=?',
             collapsed: '=?',

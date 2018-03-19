@@ -2,8 +2,9 @@ angular.module('formula', ['ngSanitize']);
 
 /** Renders a formula into hierarchically structured spans */
 angular.module('formula')
-  .directive('k4Formula', ['$compile', '$http', '$sce', '$q', 'derivationInfos', 'sequentProofData', 'spinnerService',
-      function($compile, $http, $sce, $q, derivationInfos, sequentProofData, spinnerService) {
+  .directive('k4Formula', ['$compile', '$http', '$sce', '$q', '$uibModal', 'derivationInfos', 'sequentProofData',
+             'spinnerService',
+      function($compile, $http, $sce, $q, $uibModal, derivationInfos, sequentProofData, spinnerService) {
     return {
         restrict: 'AE',
         scope: {
@@ -45,12 +46,19 @@ angular.module('formula')
               if (scope.modeIsEdit() && editable=='editable') {
                 event.stopPropagation();
                 $(event.currentTarget).addClass("k4-edit-hover");
-              } else if (scope.modeIsProve() && !event.altKey && step=='has-step') {
+              } else if (scope.modeIsProve() && !event.altKey && step === 'has-step') {
                 event.stopPropagation();
                 $(event.currentTarget).addClass("k4-prove-hover");
-              } else if (scope.modeIsProve() && event.altKey && step=='has-step') {
+              } else if (scope.modeIsProve() && event.altKey && step === 'has-step') {
                 event.stopPropagation();
                 $(event.currentTarget).addClass("k4-chase-hover");
+              } else if (scope.modeIsSelect() && !event.altKey && step === 'has-step') {
+                event.stopPropagation();
+                $(event.currentTarget).addClass("k4-select-hover");
+              } else if (scope.modeIsSelect() && event.altKey && event.currentTarget.id.length > 4) {
+                // with option pressed, any formula or term with an ID is selectable (fml_#)
+                event.stopPropagation();
+                $(event.currentTarget).addClass("k4-select-hover");
               }
             }
 
@@ -58,10 +66,14 @@ angular.module('formula')
               $(event.currentTarget).removeClass("k4-edit-hover");
               $(event.currentTarget).removeClass("k4-prove-hover");
               $(event.currentTarget).removeClass("k4-chase-hover");
+              if (!sequentProofData.formulas.highlighted
+                || !event.currentTarget.id.endsWith(sequentProofData.formulas.highlighted)) {
+                $(event.currentTarget).removeClass("k4-select-hover");
+              }
             }
 
             scope.exprClick = function(event, formulaId, step, editable) {
-              if (scope.modeIsProve() && formulaId && formulaId !== '' && step == 'has-step') {
+              if (scope.modeIsProve() && formulaId && formulaId !== '' && step === 'has-step') {
                 // avoid event propagation once a span with an ID is found
                 event.stopPropagation();
                 spinnerService.show('tacticExecutionSpinner');
@@ -82,8 +94,12 @@ angular.module('formula')
                       }
                   });
                 }
-              } else if (scope.modeIsEdit() && formulaId && formulaId !== '' && editable == 'editable') {
+              } else if (scope.modeIsEdit() && formulaId && formulaId !== '' && editable === 'editable') {
                 // not used
+              } else if (scope.modeIsSelect() && formulaId && formulaId !== ''
+                  && (step === 'has-step' || event.altKey)) {
+                event.stopPropagation();
+                scope.onTactic({formulaId: formulaId, tacticId: undefined});
               }
             }
 
@@ -112,7 +128,6 @@ angular.module('formula')
             }
 
             scope.lemma = {
-              selectedName: undefined,
               selected: undefined,
               allInfos: function(formulaId, partialLemmaName) {
                 if (partialLemmaName && partialLemmaName.length > 0) {
@@ -133,11 +148,6 @@ angular.module('formula')
               selectedKeyPos: function() {
                 var s = scope.lemma.selected;
                 return s.selectedKeyPos ? s.selectedKeyPos : s.defaultKeyPos;
-              },
-              selectKeyEnd: function(to) {
-                //@note assumes either implication/equivalence/equality or conditional equivalence/equality
-                var currentKeyPos = scope.lemma.selectedKeyPos();
-                scope.lemma.selected.selectedKeyPos = currentKeyPos.slice(0, currentKeyPos.lastIndexOf('.')+1) + to;
               }
             }
 
@@ -146,12 +156,8 @@ angular.module('formula')
               scope.onTactic({formulaId: formulaId, tacticId: tacticId});
             }
 
-            scope.applyInputTactic = function(formulaId, tactic) {
+            scope.applyInputTactic = function(formulaId, tacticId, input) {
               scope.tacticPopover.close();
-              //@note have to declare local variables with exactly the names of the event arguments,
-              //      otherwise the event parameters are undefined in the listener :-O
-              var tacticId = tactic.id;
-              var input = tactic.derivation.input;
               scope.onInputTactic({formulaId: formulaId, tacticId: tacticId, input: input});
             }
 
@@ -258,11 +264,15 @@ angular.module('formula')
             }
 
             scope.modeIsProve = function() {
-              return sequentProofData.formulas.mode == 'prove';
+              return sequentProofData.formulas.mode === 'prove';
             }
 
             scope.modeIsEdit = function() {
-              return sequentProofData.formulas.mode == 'edit';
+              return sequentProofData.formulas.mode === 'edit';
+            }
+
+            scope.modeIsSelect = function() {
+              return sequentProofData.formulas.mode === 'select';
             }
 
             scope.trustedHtml = function(html) {
@@ -273,6 +283,37 @@ angular.module('formula')
               return html.replace(/(\w+)(\(\))/g, function(match, fn, parens, offset, string) {
                 return '<span class="k4-nullary-fn">' + fn + '</span>';
               });
+            }
+
+            scope.subscriptIndex = function(html) {
+              return html;
+              //@note disabled for now for proper copy-paste behavior
+//              return html.replace(/_(\d+)/g, function(match, idx, parens, offset, string) {
+//                return '<sub>' + idx + '</sub>';
+//              });
+            }
+
+            scope.browseLemmas = function() {
+              var modalInstance = $uibModal.open({
+                templateUrl: 'partials/lemmabrowserdialog.html',
+                controller: 'LemmaBrowserCtrl',
+                size: 'lg',
+                resolve: {
+                  userId: function() { return scope.userId; },
+                  proofId: function() { return scope.proofId; },
+                  nodeId: function() { return scope.nodeId; },
+                  formulaId: function() { return scope.tacticPopover.formulaId(); },
+                  formula: function() { return scope.replaceNullaryFn(scope.formula.string); }
+                }
+              });
+              modalInstance.result.then(
+                function (tactic) {
+                  if (tactic.input) scope.onInputTactic(tactic);
+                  else scope.onTactic(tactic);
+                },
+                function () { /* modal dismissed */ }
+              );
+              scope.tacticPopover.close();
             }
 
 //            console.log("Compiling formula")

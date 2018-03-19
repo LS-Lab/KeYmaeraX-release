@@ -42,6 +42,10 @@ private object EITHER_COMBINATOR extends BelleTerminal("|") {
   override def regexp = "\\|".r
 }
 
+private object AFTER_COMBINATOR extends BelleTerminal(">") {
+  override def regexp = ">".r
+}
+
 object BRANCH_COMBINATOR extends BelleTerminal("<")
 
 private object ON_ALL extends BelleTerminal("doall")

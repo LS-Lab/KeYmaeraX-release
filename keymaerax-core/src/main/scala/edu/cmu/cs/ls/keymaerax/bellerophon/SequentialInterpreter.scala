@@ -131,6 +131,22 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
                 "Failed: both left-hand side and right-hand side " + expr)
             }
         }
+        case AfterTactic(left, right) =>
+          val leftResult: Either[BelleValue, BelleValue] = try {
+            Left(apply(left, v))
+          } catch {
+            case eleft: BelleThrowable =>
+              try {
+                Right(apply(right, new BelleThrowable(eleft.getMessage, eleft.getCause) with BelleValue))
+              } catch {
+                case eright: BelleThrowable => throw eright.inContext(EitherTactic(eleft.context, eright.context),
+                  "Failed: both left-hand side and right-hand side " + expr)
+              }
+          }
+          leftResult match {
+            case Left(lr: BelleValue) => apply(right, lr)
+            case Right(rr: BelleValue) => rr
+          }
         case SaturateTactic(child) =>
           var prev: BelleValue = null
           var result: BelleValue = v
@@ -155,7 +171,9 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         case BranchTactic(children) => v match {
           case BelleProvable(p, _) =>
             if (children.length != p.subgoals.length)
-              throw new BelleThrowable("<(e)(v) is only defined when len(e) = len(v), but " + children.length + "!=" + p.subgoals.length).inContext(expr, "")
+              throw new BelleThrowable("<(e)(v) is only defined when len(e) = len(v), but " +
+                children.length + "!=" + p.subgoals.length + " subgoals (v)\n" +
+                p.subgoals.map(_.prettyString).mkString("\n===================\n")).inContext(expr, "")
             //Compute the results of piecewise applications of children to provable subgoals.
             val results: Seq[Either[BelleValue,BelleThrowable]] =
               (children zip p.subgoals) map (pair => {
@@ -314,6 +332,39 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
               }
             case e => throw new BelleThrowable("LetInspect expected sub-derivation")
           }
+
+
+        case SearchAndRescueAgain(abbr, common, instantiator, continuation) =>
+          val (provable,lbl) = v match {
+            case BelleProvable(p, l) => (p,l)
+            case _ => throw new BelleThrowable("Cannot attempt SearchAndRescueAgain with a non-Provable value.").inContext(expr, "")
+          }
+          if (provable.subgoals.length != 1)
+            throw new BelleThrowable("SearchAndRescueAgain of multiple goals is not currently supported.").inContext(expr, "")
+
+          val in: ProvableSig = ProvableSig.startProof(provable.subgoals.head)
+          apply(common, BelleProvable(in)) match {
+            case BelleProvable(commonDerivation, lbl2) =>
+              var lastProblem: ProverException = NoProverException
+              while (true) {
+                val value: Expression = instantiator(commonDerivation, lastProblem)
+                try {
+                  val us: USubst = USubst(SubstitutionPair(abbr, value) :: Nil)
+                  val backsubst: ProvableSig = commonDerivation(us)
+                  val remaining: BelleProvable = BelleProvable(provable(backsubst, 0), lbl2)
+                  apply(continuation, remaining) match {
+                    case pr: BelleProvable => return pr
+                    case e => ???
+                  }
+                } catch {
+                  case e: BelleThrowable => lastProblem = e
+                  case e: ProverException => lastProblem = e
+                }
+              }
+              ???
+            case e => throw new BelleThrowable("SearchAndRescueAgain expected sub-derivation after running common")
+          }
+
 
         case t@USubstPatternTactic(children) => {
           val provable = v match {
