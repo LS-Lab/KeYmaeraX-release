@@ -1366,4 +1366,13 @@ class DifferentialTests extends TacticTestBase {
     proveBy("b>0 -> \\forall p \\exists d (d^2<=b^2 & <{x'=d}>x>=p)".asFormula, diffVar(1, 1::0::0::1::Nil)) shouldBe 'proved
   }
 
+  "Continuous invariant generation" should "generate a simple invariant" in withMathematica { _ =>
+    val problem = "x>-1 & -2*x > 1 & -2*y > 1 & y>=-1 ==> [{x'=y,y'=x^5 - x*y}] x+y<=1".asSequent
+
+    val result = proveBy(problem, DifferentialTactics.contInvGen(1))
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe "x>-1 & -2*x > 1 & -2*y > 1 & y>=-1 ==> [{x'=y,y'=x^5 - x*y & true & x^5 <= (x+4*x^3)*y & y <= 0}] x+y<=1".asSequent
+    result.subgoals(1) shouldBe "x>-1 & -2*x > 1 & -2*y > 1 & y>=-1 ==> [{x'=y,y'=x^5 - x*y}](x^5 <= (x+4*x^3)*y & y <= 0)".asSequent
+  }
+
 }

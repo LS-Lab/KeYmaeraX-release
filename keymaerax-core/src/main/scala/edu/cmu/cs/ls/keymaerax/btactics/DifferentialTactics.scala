@@ -1,5 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import java.io.File
+
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch
@@ -13,7 +15,6 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
-
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
@@ -1402,13 +1403,17 @@ private object DifferentialTactics extends Logging {
           k2m.apply(postcond).toString + " }"
         print (problem)
 
+        val pegasusPath = Configuration(Configuration.Keys.PEGASUS_PATH)
+
         val continv = ToolProvider.invGenTool().getOrElse(throw new BelleThrowable(
           "InvGenTool needed, but got None")).
-          invgen("Needs[\"Strategies`\",\"/home/s0805753/Work/pegasus-mathematica/Strategies.m\"]; " +
-           "Needs[\"Methods`\",\"/home/s0805753/Work/pegasus-mathematica/Methods.m\"]; " +
-           "Needs[\"Classifier`\",\"/home/s0805753/Work/pegasus-mathematica/Classifier.m\"]; " +
-           "Needs[\"AbstractionPolynomials`\",\"/home/s0805753/Work/pegasus-mathematica/AbstractionPolynomials.m\"]; " +
-          "Strategies`Pegasus["+ problem +"]")
+          invgen(
+            s"""Needs["Strategies`","$pegasusPath/Strategies.m"];
+              |Needs["Methods`","$pegasusPath/Methods.m"];
+              |Needs["Classifier`","$pegasusPath/Classifier.m"];
+              |Needs["AbstractionPolynomials`","$pegasusPath/AbstractionPolynomials.m"];
+              |Strategies`Pegasus[$problem]
+            """.stripMargin)
 
         debug(s"[ODE] Trying to cut in invariant candidate", true) &
           diffCut(continv)(pos) /* < (skip, proveWithoutCuts(pos) & done)*/
