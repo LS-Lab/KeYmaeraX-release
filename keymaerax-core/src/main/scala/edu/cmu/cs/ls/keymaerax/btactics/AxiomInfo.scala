@@ -17,6 +17,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import scala.collection.immutable.HashMap
 import scala.language.implicitConversions
 import scala.reflect.runtime.universe.TypeTag
+import scala.util.Try
 
 /**
   * Since axioms are always referred to by their names (which are strings), we have the following problems:
@@ -920,9 +921,16 @@ object DerivationInfo {
     new TacticInfo("master", "master", {case () => (gen:Generator.Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true),
     InputTacticInfo("QE", "QE",
-      List(VariableArg("tool")),
-      _ => { case Some(toolName: Variable) => TactixLibrary.QE(Nil, Some(toolName.name))
-             case _ => TactixLibrary.QE }: TypedFunc[Option[Variable], BelleExpr], needsTool = true),
+      List(OptionArg(StringArg("tool")), OptionArg(TermArg("timeout"))),
+      _ => { case Some(toolName: String) => {
+               case (Some(Number(timeout))) => TactixLibrary.QE(Nil, Some(toolName), Some(timeout.toInt))
+               // interpret optional toolName as timeout
+               case _ if Try(Integer.parseInt(toolName)).isSuccess => TactixLibrary.QE(Nil, None, Some(Integer.parseInt(toolName)))
+               case _ =>  TactixLibrary.QE(Nil, Some(toolName)) }: TypedFunc[Option[Term], BelleExpr]
+             case _ => {
+               case Some(Number(timeout)) => TactixLibrary.QE(Nil, None, Some(timeout.toInt))
+               case _ => TactixLibrary.QE }: TypedFunc[Option[Term], BelleExpr]
+      }: TypedFunc[Option[String], _], needsTool = true),
     new TacticInfo("rcf", "rcf",  {case () => TactixLibrary.RCF}, needsTool = true),
     //new TacticInfo("MathematicaQE", "MathematicaQE", {case () => TactixLibrary.QE}, needsTool = true),
     new TacticInfo("pQE", "pQE",  {case () => TactixLibrary.partialQE}, needsTool = true),
