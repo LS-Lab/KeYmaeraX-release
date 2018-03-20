@@ -216,54 +216,83 @@ class TactixLibraryTests extends TacticTestBase {
   }
 
   "SnR Loop Invariant" should "find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica{qeTool =>
+    val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
+    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val jj = "j(.)".asFormula
-    val proof = proveBy("x>=5 -> [{x:=x+2;}*]x>=0".asFormula,
+    val proof = proveBy(fml,
       implyR(1) & SearchAndRescueAgain(jj,
         loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, chase(1)),
-        feedOneAfterTheOther(List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)),
+        feedOneAfterTheOther(invs),
         OnAll(master()) & done
       )
     )
-    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>=5 -> [{x:=x+2;}*]x>=0".asFormula))
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs.iterator)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;}*]x>=0" in withMathematica { qeTool =>
+    val fml = "x>=5 & y>=0 -> [{x:=x+y;}*]x>=0".asFormula
+    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val jj = "j(.)".asFormula
-    val proof = proveBy("x>=5 & y>=0 -> [{x:=x+y;}*]x>=0".asFormula,
+    val proof = proveBy(fml,
       implyR(1) & SearchAndRescueAgain(jj,
         loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, chase(1)),
-        feedOneAfterTheOther(List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)),
+        feedOneAfterTheOther(invs),
         OnAll(master()) & done
       )
     )
-    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>=5 & y>=0 -> [{x:=x+y;}*]x>=0".asFormula))
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs.iterator)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for x>=0 & y>=0 -> [{x:=x+y;y:=y+1;}*]x>=0" in withMathematica{qeTool =>
+    val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;}*]x>=0".asFormula
+    val invs = List("._0>=-1 & ._1>=0".asFormula, "._0=5  & ._1>=0".asFormula, "._0>=0 & ._1>=0".asFormula)
     val jj = "j(._0,._1)".asFormula
-    val proof = proveBy("x>=5 & y>=0 -> [{x:=x+y;y:=y+1;}*]x>=0".asFormula,
+    val proof = proveBy(fml,
       implyR(1) & SearchAndRescueAgain(jj,
         loop(USubst(Seq(SubstitutionPair("._0".asTerm,"x".asTerm), SubstitutionPair("._1".asTerm, "y".asTerm)))(jj))(1) <(nil, nil, chase(1)),
-        feedOneAfterTheOther(List("._0>=-1 & ._1>=0".asFormula, "._0=5  & ._1>=0".asFormula, "._0>=0 & ._1>=0".asFormula)),
+        feedOneAfterTheOther(invs),
         OnAll(master()) & done
       )
     )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs.iterator)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;{x'=x^2+y}}*]x>=0" in withMathematica { qeTool =>
+    val fml = "x>=5 & y>=0 -> [{x:=x+y;{x'=x^2+y}}*]x>=0".asFormula
+    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val jj = "j(.)".asFormula
-    val proof = proveBy("x>=5 & y>=0 -> [{x:=x+y;{x'=x^2+y}}*]x>=0".asFormula,
+    val proof = proveBy(fml,
       implyR(1) & SearchAndRescueAgain(jj,
         loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, chase(1)),
-        feedOneAfterTheOther(List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)),
+        feedOneAfterTheOther(invs),
         OnAll(master()) & done
       )
     )
-    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("x>=5 & y>=0 -> [{x:=x+y;{x'=x^2+y}}*]x>=0".asFormula))
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs.iterator)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x>=0 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0" in withMathematica{qeTool =>
+    val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0".asFormula
+    val invs = List("._0>=-1 & ._1>=0".asFormula, "._0=5  & ._1>=0".asFormula, "._0>=0 & ._1>=0".asFormula)
+    val jj = "j(._0,._1)".asFormula
+    val proof = proveBy(fml,
+      implyR(1) & SearchAndRescueAgain(jj,
+        loop(USubst(Seq(SubstitutionPair("._0".asTerm,"x".asTerm), SubstitutionPair("._1".asTerm, "y".asTerm)))(jj))(1) <(nil, nil, chase(1)),
+        feedOneAfterTheOther(invs),
+        OnAll(master()) & done
+      )
+    )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+    proof shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs.iterator)(1)) shouldBe 'proved
   }
 
 

@@ -13,12 +13,12 @@ import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import org.apache.logging.log4j.scala.Logger
 
-import scala.List
-import scala.collection.immutable._
+import scala.collection.immutable.{List, _}
 import scala.language.postfixOps
 
 /**
@@ -172,7 +172,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     master(loop(gen), endODE, keepQEFalse)
   }
 
-  /** auto: automatically try to prove the current goal if that succeeds.
+  /** auto: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
   def auto: BelleExpr = "auto" by master(loopauto, ODE, keepQEFalse=true) & done
 
@@ -308,6 +308,31 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       (inv:Formula) => loop(inv)(pos) & onAll(auto) & done
     )
     )
+
+  /** loopSR: cleverly prove a property of a loop automatically by induction, trying hard to generate loop invariants.
+    * @see [[loopauto]] */
+  def loopSR(gen: Generator[Formula]): DependentPositionTactic = "loopSR" by ((pos:Position,seq:Sequent) => {
+    import Augmentors.SequentAugmentor
+    val cand: Iterator[Formula] = gen(seq, pos)
+    val bounds: List[Variable] = StaticSemantics.boundVars(SequentAugmentor(seq)(pos).asInstanceOf[Formula]).toSet.toList
+    var i = -1
+    val subst: USubst = USubst(
+      bounds.map(xi=> {i=i+1; SubstitutionPair(DotTerm(Real,Some(i)), xi)})
+    )
+    val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp=>sp.what).mkString(",") + ")")
+      SearchAndRescueAgain(jj,
+        loop(subst(jj))(1) < (nil, nil, chase(1)),
+        feedOneAfterTheOther(cand),
+        OnAll(master()) & done
+      )
+  })
+  private def feedOneAfterTheOther[A<:Expression](gen: Iterator[A]) : (ProvableSig,ProverException)=>Expression = {
+    (_,e) => logger.debug("SnR loop status " + e)
+      if (gen.hasNext)
+        gen.next()
+      else
+        throw new BelleThrowable("loopSR ran out of loop invariant candidates")
+  }
 
   /** throughout: prove a property of a loop by induction with the given loop invariant (hybrid systems) that
     * holds throughout the steps of the loop body.
