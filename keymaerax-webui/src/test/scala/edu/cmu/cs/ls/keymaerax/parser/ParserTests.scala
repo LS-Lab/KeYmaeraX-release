@@ -43,6 +43,67 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   }
 
+  it should "parse nullary predicate definitions" in {
+    val input = """
+      |Definitions.
+      |  B J() <-> ( 1>=0 ).
+      |End.
+      |ProgramVariables.
+      |  R x.
+      |End.
+      |Problem.
+      |  J() -> [{x:=x+1;}*@invariant(J())]J()
+      |End.
+    """.stripMargin
+    KeYmaeraXProblemParser(input) shouldBe "1>=0 -> [{x:=x+1;}*]1>=0".asFormula
+  }
+
+  it should "parse unary predicate definitions" in {
+    val input = """
+      |Definitions.
+      |  B J(R x) <-> ( x>=0 ).
+      |End.
+      |ProgramVariables.
+      |  R x.
+      |End.
+      |Problem.
+      |  J(x) -> [{x:=x+1;}*@invariant(J(x))]J(x)
+      |End.
+    """.stripMargin
+    KeYmaeraXProblemParser(input) shouldBe "x>=0 -> [{x:=x+1;}*]x>=0".asFormula
+  }
+
+  it should "parse binary predicate definitions" in {
+    val input = """
+      |Definitions.
+      |  B J(R x, R y) <-> ( x>=y ).
+      |End.
+      |ProgramVariables.
+      |  R x.
+      |  R y.
+      |End.
+      |Problem.
+      |  J(x,y) -> [{x:=x+1;}*@invariant(J(x,y))]J(x,y)
+      |End.
+    """.stripMargin
+    KeYmaeraXProblemParser(input) shouldBe "x>=y -> [{x:=x+1;}*]x>=y".asFormula
+  }
+
+  it should "parse program definitions" in {
+    val input = """
+      |Definitions.
+      |  HP prg ::= { x:=x+1; }.
+      |End.
+      |ProgramVariables.
+      |  R x.
+      |End.
+      |Problem.
+      |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
+      |End.
+    """.stripMargin
+    KeYmaeraXProblemParser(input) shouldBe "x>=0 -> [{x:=x+1;}*]x>=0".asFormula
+  }
+
   "The Parser" should "place implicit parens correctly (a.k.a. resolve abiguities correctly)" in {
     val equalPairs =
       // unary operator binds stronger than binary operator
