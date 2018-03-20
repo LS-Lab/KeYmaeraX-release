@@ -5,7 +5,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.btactics.ToolProvider.Configuration
-import edu.cmu.cs.ls.keymaerax.core.InvGenTool
 import edu.cmu.cs.ls.keymaerax.core.QETool
 import edu.cmu.cs.ls.keymaerax.tools._
 

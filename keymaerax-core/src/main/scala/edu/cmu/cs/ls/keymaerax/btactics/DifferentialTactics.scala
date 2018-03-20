@@ -1376,48 +1376,16 @@ private object DifferentialTactics extends Logging {
   val contInvGen: DependentPositionTactic = new DependentPositionTactic("contInvGen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
-        require(pos.isSucc && pos.isTopLevel, "contInvGen")
         val (ode, postcond) = sequent.sub(pos) match {
           case Some(Box(odesys: ODESystem, post: Formula)) => (odesys, post)
-          case _ => throw new IllegalArgumentException("Not a continuous safety goal" + sequent.sub(pos))
-        }
-        val precond = sequent.ante.seq match {
-          case assumptions: IndexedSeq[Formula] => assumptions.reduce(new And(_, _))
-          case _ => throw new IllegalArgumentException("Not a continuous safety goal")
+          case _ => throw new IllegalArgumentException("Not a continuous safety goal " + sequent.sub(pos))
         }
 
-        val k2m = new UncheckedK2MConverter();
-        var problem:String = ""
-        val vars = primedSymbols(ode.ode).toList
-        val stringVars= ("{"+ ((vars.map( x => k2m.apply(x).toString)).mkString(", ")) + "}")
-        val vectorField = (ode.ode.toString).filterNot(c => c == '}' || c =='{' || c ==' ').
-        split(",").map( x => k2m.apply((x.split("=")(1)).asTerm).toString)
-        val vectorFieldString = vectorField.mkString(", ")
-        val constraint = ode.constraint
-        // print (constraint.toString)
-        problem = "{ " +
-          k2m.apply(precond).toString + ", { "+
-          " {"+ vectorFieldString + "} "+
-          ", " + stringVars + ", " +
-          k2m.apply(constraint).toString +" }, " +
-          k2m.apply(postcond).toString + " }"
-        print (problem)
+        val continvs: Seq[Formula] = ToolProvider.invGenTool().
+          getOrElse(throw new BelleThrowable("InvGenTool needed, but got None")).
+          invgen(ode, sequent.ante, postcond)
 
-        val pegasusPath = Configuration(Configuration.Keys.PEGASUS_PATH)
-
-        val continv = ToolProvider.invGenTool().getOrElse(throw new BelleThrowable(
-          "InvGenTool needed, but got None")).
-          invgen(
-            s"""Needs["Strategies`","$pegasusPath/Strategies.m"];
-              |Needs["Methods`","$pegasusPath/Methods.m"];
-              |Needs["Classifier`","$pegasusPath/Classifier.m"];
-              |Needs["AbstractionPolynomials`","$pegasusPath/AbstractionPolynomials.m"];
-              |Strategies`Pegasus[$problem]
-            """.stripMargin)
-
-        debug(s"[ODE] Trying to cut in invariant candidate", true) &
-          diffCut(continv)(pos) /* < (skip, proveWithoutCuts(pos) & done)*/
-
+        diffCut(continvs:_*)(pos)
       }
     }
   }

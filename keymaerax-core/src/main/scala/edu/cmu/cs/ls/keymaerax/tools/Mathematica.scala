@@ -11,10 +11,11 @@ import java.io.{File, FileOutputStream}
 import java.nio.channels.Channels
 
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.btactics.InvGenTool
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.SimulationTool.{SimRun, SimState, Simulation}
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{Map, Seq}
 
 /**
  * Mathematica tool for quantifier elimination and solving differential equations.
@@ -176,7 +177,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
   override def simplify(expr: Expression, assumptions: List[Formula]): Expression = mSimplify.simplify(expr, assumptions)
   override def simplify(expr: Formula, assumptions: List[Formula]): Formula = mSimplify.simplify(expr, assumptions)
   override def simplify(expr: Term, assumptions: List[Formula]): Term = mSimplify.simplify(expr, assumptions)
-  override def invgen(problem:String):Formula = mPegasus.invgen(problem)
+  override def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Formula] = mPegasus.invgen(ode, assumptions, postCond)
 
 
   /** Restarts the MathKernel with the current configuration */
