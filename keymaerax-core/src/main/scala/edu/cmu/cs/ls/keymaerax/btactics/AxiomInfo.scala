@@ -179,7 +179,7 @@ object DerivationInfo {
         , /* conclusion */ (List("&Gamma;"),List("[{x′=f(x) & Q}]p(x)","&Delta;"))
         , /* premises */ List((List("&Gamma;<sub>const</sub>", "Q"), List("p(x)", "&Delta;<sub>const</sub>"))))
       , {case () => DifferentialTactics.diffWeaken}),
-    new CoreAxiomInfo("DC differential cut"
+    new DerivedAxiomInfo("DC differential cut"
     , InputAxiomDisplayInfo("DC","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[{x′=f(x)&Q∧R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
     , "DC", {case () => HilbertCalculus.useAt("DC differential cut")}),
     new InputPositionTacticInfo("dC"
@@ -196,6 +196,12 @@ object DerivationInfo {
           (List("&Gamma;"), List("[{x′=f(x) & Q}]P", "&Delta;")),
           (List("&Gamma;"), List("R", "&Delta;"))))
       , _ => DifferentialTactics.inverseDiffCut),
+    new CoreAxiomInfo("DMP differential modus ponens"
+      , InputAxiomDisplayInfo("DMP","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>←[{x′=f(x)&R}]P)←[{x′=f(x)&Q}](Q→R)", List(FormulaArg("R")))
+      , "DMP", {case () => HilbertCalculus.useAt("DMP differential modus ponens")}),
+    new DerivedAxiomInfo("DR differential refine"
+      , InputAxiomDisplayInfo("DR","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>←[{x′=f(x)&R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
+      , "DR", {case () => HilbertCalculus.useAt("DR differential refine")}),
     new InputPositionTacticInfo("autoApproximate",
       RuleDisplayInfo("Approximate",
         (List("&Gamma;"), List("[{X'=F & &Alpha;(n)}]", "&Delta;")),

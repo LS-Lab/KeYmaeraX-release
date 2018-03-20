@@ -1646,6 +1646,40 @@ object DerivedAxioms extends Logging {
   )
 
   /**
+    * {{{Axiom "DR differential refine".
+    *    ([{c&q(||)}]p(||) <- [{c&r(||)}]p(||)) <- [{c&q(||)}]r(||)
+    * End.
+    *
+    * @Derived
+    * }}}
+    */
+  lazy val DiffRefine = derivedAxiom("DR differential refine",
+    Sequent(IndexedSeq(),IndexedSeq("([{c&q(||)}]p(||) <- [{c&r(||)}]p(||)) <- [{c&q(||)}]r(||)".asFormula)),
+    implyR(1) &
+      useAt("DMP differential modus ponens", PosInExpr(1::Nil))(1) &
+      useAt("DW differential weakening", PosInExpr(1::Nil))(1) & closeId
+  )
+
+  /**
+    * {{{Axiom "DC differential cut".
+    *    ([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)
+    * End.
+    *
+    * @Derived
+    * }}}
+    */
+  lazy val DiffCut = derivedAxiom("DC differential cut",
+    Sequent(IndexedSeq(),IndexedSeq("([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)".asFormula)),
+    implyR(1) & equivR(1) <
+      (
+        implyRi()(AntePos(1), SuccPos(0)) &
+          useAt("DR differential refine", PosInExpr(1::Nil))(1) &
+          useAt("DW differential weakening", PosInExpr(0::Nil))(1) & G(1) & prop ,
+        useAt("DW differential weakening and", PosInExpr(0::Nil))(-1) &
+          implyRi()(AntePos(1), SuccPos(0)) & implyRi & byUS("DR differential refine"))
+  )
+
+  /**
     * {{{Axiom "DI differential invariance".
     *  ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}]((p(||))'))
     *  //([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))')) THEORY
