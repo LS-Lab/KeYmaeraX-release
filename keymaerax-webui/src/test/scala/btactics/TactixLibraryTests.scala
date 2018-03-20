@@ -263,7 +263,7 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs.iterator)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;{x'=x^2+y}}*]x>=0" in withMathematica { qeTool =>
+  it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;{x'=x^2+y}}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 & y>=0 -> [{x:=x+y;{x'=x^2+y}}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val jj = "j(.)".asFormula
@@ -276,7 +276,7 @@ class TactixLibraryTests extends TacticTestBase {
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
-    val invs2: List[Formula] = invs.map(USubst(Seq(SubstitutionPair(DotTerm(),DotTerm(Real,Some(0))))))
+    val invs2: List[Formula] = invs.map(USubst(Seq(SubstitutionPair(DotTerm(),DotTerm(Real,Some(0)))))(_))
     proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs2.iterator)(1)) shouldBe 'proved
   }
 
