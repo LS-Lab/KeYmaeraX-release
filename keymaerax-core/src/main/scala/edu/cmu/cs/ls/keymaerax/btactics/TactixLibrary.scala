@@ -610,7 +610,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @param order the order of variables to use during quantifier elimination
     * @see [[QE]]
     * @see [[RCF]] */
-  def QE(order: List[NamedSymbol] = Nil, requiresTool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
+  def QE(order: Seq[NamedSymbol] = Nil, requiresTool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
     //@todo implement as part of tools?
     lazy val tool = ToolProvider.qeTool(requiresTool).getOrElse(
       throw new BelleThrowable(s"QE requires ${requiresTool.getOrElse("a QETool")}, but got None"))

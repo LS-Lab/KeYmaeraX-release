@@ -29,7 +29,7 @@ private object ToolTactics {
   private val namespace = "tooltactics"
 
   /** Performs QE and fails if the goal isn't closed. */
-  def fullQE(order: List[NamedSymbol] = Nil)(qeTool: => QETool): BelleExpr = Idioms.NamedTactic("QE", {
+  def fullQE(order: Seq[NamedSymbol] = Nil)(qeTool: => QETool): BelleExpr = Idioms.NamedTactic("QE", {
     val prepareAndRcf = toSingleFormula & assertT(_.succ.head.isFOL, "QE on FOL only") &
       FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool) &
       (done | ("ANON" by ((s: Sequent) =>
