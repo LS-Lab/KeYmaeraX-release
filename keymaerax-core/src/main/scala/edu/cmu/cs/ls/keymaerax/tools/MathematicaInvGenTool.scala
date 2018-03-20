@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.KExpr
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.Seq
+import scala.util.Try
 
 /**
  * A continuous invariant implementation using Mathematica over the JLink interface.
@@ -33,14 +34,19 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
     val pegasusPath = Configuration(Configuration.Keys.PEGASUS_PATH)
 
-    //@todo configurable timeout
+    val timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT))).toOption
+
+    def pegasus(cmd: String): String = timeout match {
+      case Some(to) if to >= 0 => "TimeConstrained[Strategies`Pegasus[" + cmd + "]," + to + "]"
+      case _ => "Strategies`Pegasus[" + cmd + "]"
+    }
+
     val command = s"""
        |Needs["Strategies`","$pegasusPath/Strategies.m"];
        |Needs["Methods`","$pegasusPath/Methods.m"];
        |Needs["Classifier`","$pegasusPath/Classifier.m"];
        |Needs["AbstractionPolynomials`","$pegasusPath/AbstractionPolynomials.m"];
-       |TimeConstrained[Strategies`Pegasus[$problem], 60]
-            """.stripMargin
+       |${pegasus(problem)}""".stripMargin
 
     val (output, result) = runUnchecked(command)
     logger.debug("Generated invariant: "+ result.prettyString + " from raw output " + output)
