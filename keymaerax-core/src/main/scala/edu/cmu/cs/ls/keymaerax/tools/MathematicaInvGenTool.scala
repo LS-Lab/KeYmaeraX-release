@@ -1,5 +1,8 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
+import java.io.{File, FileOutputStream}
+import java.nio.channels.Channels
+
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.InvGenTool
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
@@ -17,6 +20,8 @@ import scala.util.Try
 class MathematicaInvGenTool(override val link: MathematicaLink)
   extends BaseKeYmaeraMathematicaBridge[KExpr](link, KeYmaeraToMathematica, MathematicaToKeYmaera)
     with InvGenTool with Logging {
+
+  init()
 
   def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Formula] = {
     val k2m = new UncheckedK2MConverter()
@@ -55,6 +60,29 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
       case _ => throw ToolException("Expected a formula from Pegasus call but got a non-formula expression: " +
         result.prettyString)
     }
+  }
+
+  private def init(): Unit = {
+    // copy Pegasus Mathematica notebooks
+    val pegasusTempDir = Configuration.path(Configuration.Keys.PEGASUS_PATH)
+    if (!new File(pegasusTempDir).exists) new File(pegasusTempDir).mkdirs
+
+    val pegasusResourcePath = "/pegasus-mathematica/"
+    val pegasusResourceNames =
+      "AbstractionPolynomials.m" ::
+      "Classifier.m" ::
+      "FirstIntegralGen.m" ::
+      "Methods.m" ::
+      "PlanarLinear.m" ::
+      "Strategies.m" :: Nil
+
+    pegasusResourceNames.foreach(n => {
+      val pegasusDest = new FileOutputStream(pegasusTempDir + File.separator + n)
+      val pegasusSrc = Channels.newChannel(getClass.getResourceAsStream(pegasusResourcePath + "/" + n))
+      pegasusDest.getChannel.transferFrom(pegasusSrc, 0, Long.MaxValue)
+    })
+    val pegasusAbsPaths = pegasusResourceNames.map(n => pegasusTempDir + File.separator + n)
+    assert(pegasusAbsPaths.forall(new File(_).exists()), "Missing Pegasus files")
   }
 
 }
