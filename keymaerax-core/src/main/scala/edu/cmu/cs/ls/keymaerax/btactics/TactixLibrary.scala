@@ -316,10 +316,12 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     val cand: Iterator[Formula] = gen(seq, pos)
     val bounds: List[Variable] = StaticSemantics.boundVars(SequentAugmentor(seq)(pos).asInstanceOf[Formula]).toSet.toList
     var i = -1
-    val subst: USubst = USubst(
+    val subst: USubst = if (bounds.length==1)
+      USubst(Seq(SubstitutionPair(DotTerm(), bounds.head)))
+    else USubst(
       bounds.map(xi=> {i=i+1; SubstitutionPair(DotTerm(Real,Some(i)), xi)})
     )
-    val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp=>sp.what).mkString(",") + ")")
+    val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp=>sp.what.prettyString).mkString(",") + ")")
       SearchAndRescueAgain(jj,
         loop(subst(jj))(1) < (nil, nil, chase(1)),
         feedOneAfterTheOther(cand),
