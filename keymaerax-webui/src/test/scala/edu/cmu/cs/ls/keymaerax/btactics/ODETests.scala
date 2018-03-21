@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.universalGen
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
@@ -166,6 +167,7 @@ class ODETests extends TacticTestBase {
   }
 
   "Pretest" should "PDEify x^2+y^2=1&e=x -> [{x'=-y,y'=e,e'=-y}](x^2+y^2=1&e=x)" in withQE { _ =>
+    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "-1", saveToFile = false)
     TactixLibrary.proveBy("x^2+y^2=1&e=x -> [{x'=-y,y'=e,e'=-y}](x^2+y^2=1&e=x)".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
@@ -452,6 +454,7 @@ class ODETests extends TacticTestBase {
   )
 
   it should "prove a list of ODEs" in withQE { qeTool =>
+    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "-1", saveToFile = false)
     forEvery (list) {
       (formula, requiredTool) =>
         if (requiredTool == "Any" || qeTool.asInstanceOf[Tool].name == requiredTool) {
@@ -461,6 +464,7 @@ class ODETests extends TacticTestBase {
   }
 
   it should "detect when additional auto ODEs become supported" in withQE { qeTool =>
+    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "-1", saveToFile = false)
     forEvery (list) {
       (formula, requiredTool) =>
         if (requiredTool != "Any" && qeTool.asInstanceOf[Tool].name != requiredTool) {
