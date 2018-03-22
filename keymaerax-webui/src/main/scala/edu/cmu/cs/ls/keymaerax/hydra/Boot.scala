@@ -5,18 +5,23 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import akka.actor.{Actor, ActorSystem, Props}
+import akka.http.scaladsl.Http
 import akka.io.IO
+import akka.stream.ActorMaterializer
+import akka.util.Timeout
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
-import edu.cmu.cs.ls.keymaerax.hydra.HyDRAServerConfig.{host, port}
 import edu.cmu.cs.ls.keymaerax.launcher.{DefaultConfiguration, LoadingDialogFactory, SystemWebBrowser}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import org.apache.logging.log4j.scala.Logging
-import spray.can.Http
+import scala.concurrent.duration._
+import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.server.Directives._
 
 /**
   * Creates a HyDRA server listening on a host and port specified in the database's config file under the configurations serverconfig.host and serverconfig.port.
@@ -30,46 +35,49 @@ import spray.can.Http
   * @author Nathan Fulton
   */
 object NonSSLBoot extends App with Logging {
-  /** Actor notified when binding is finished */
-  class BindingFinishedActor extends Actor {
-    def receive: Actor.Receive = {
-      case _: Http.Bound =>
-        LoadingDialogFactory().addToStatus(15, Some("Finished loading"))
-
-        // Finally, print a message indicating that the server was started.
-        logger.info(
-          "\n**********************************************************\n" +
-            "****                   KeYmaera X                     ****\n" +
-            "****                                                  ****\n" +
-            "**** OPEN YOUR WEB BROWSER AT  http://" + host + ":" + port + "/ ****\n" +
-            "****                                                  ****\n" +
-            "**** THE BROWSER MAY NEED RELOADS TILL THE PAGE SHOWS ****\n" +
-            "**********************************************************\n"
-        )
-
-        LoadingDialogFactory().close()
-        SystemWebBrowser(s"http://$host:$port/")
-      case _ =>
-        LoadingDialogFactory().addToStatus(0, Some("Loading failed..."))
-        System.exit(1)
-    }
-  }
-
-  LoadingDialogFactory() //@note show if not already started through Main.scala
-
   assert(!System.getenv().containsKey("HyDRA_SSL") || System.getenv("HyDRA_SSL").equals("off"),
     "A non-SSL server can only be booted when the environment var HyDRA_SSL is unset or is set to 'off'")
 
-  import HyDRAServerConfig._
+  //Initialize all tools.
+  HyDRAInitializer(args, HyDRAServerConfig.database)
+
+  //Some boilerplate code that I don't understand.
+  implicit val system = ActorSystem("hydraloader") //Not sure what the significance of this name is?
+  implicit val materializer = ActorMaterializer()
+  implicit val executionContext = system.dispatcher
+  implicit val timeout = Timeout(10 seconds) //@note this might need to be much higher.
   val config = ConfigFactory.load()
     .withValue("akka.loglevel", ConfigValueFactory.fromAnyRef("OFF"))
     .withValue("akka.stdout-loglevel", ConfigValueFactory.fromAnyRef("OFF"))
-  implicit var system = ActorSystem("on-spray-can", config)
 
-  HyDRAInitializer(args, database)
+  val api = routes
 
-  val bindingFinished = system.actorOf(Props[BindingFinishedActor], "hydraloader")
-  IO(Http).tell(Http.Bind(service, interface = host, port = port), bindingFinished)
+  def routes : Route = RestApi.api
+
+  //Do the KeYmaera X initialization GUI stuff...
+  LoadingDialogFactory() //@note show if not already started through Main.scala
+  Http().bindAndHandle(handler = api, interface = HyDRAServerConfig.host, port = HyDRAServerConfig.port) map {
+    binding => {
+      // Finally, print a message indicating that the server was started.
+      LoadingDialogFactory().addToStatus(15, Some("Finished loading"))
+      logger.info(
+        "\n**********************************************************\n" +
+          "****                   KeYmaera X                     ****\n" +
+          "****                                                  ****\n" +
+          "**** OPEN YOUR WEB BROWSER AT  http://" + HyDRAServerConfig.host + ":" + HyDRAServerConfig.port + "/ ****\n" +
+          "****                                                  ****\n" +
+          "**** THE BROWSER MAY NEED RELOADS TILL THE PAGE SHOWS ****\n" +
+          "**********************************************************\n"
+      )
+      LoadingDialogFactory().close()
+      SystemWebBrowser(s"http://${HyDRAServerConfig.host}:${HyDRAServerConfig.port}/")
+    }
+  } recover {
+    case ex => {
+      LoadingDialogFactory().addToStatus(0, Some("Loading failed..."))
+      System.exit(1)
+    }
+  }
 }
 
 /**
@@ -85,7 +93,7 @@ object NonSSLBoot extends App with Logging {
   * @see [[NonSSLBoot]] is better if you are binding to localhost or only exposing your server to trusted clients (i.e., not on the internet or a semi-public intranet.)
   * @author Nathan Fulton
   */
-object SSLBoot extends App with KyxSslConfiguration with Logging {
+object SSLBoot extends App with Logging {
   //@note when booting from IntelliJ, you will want to set HyDRA_SSL and then boot IntelliJ. Setting HyDRA_SSL in a separate terminal once IntelliJ is running won't work.
   //Alternatively, you can comment out these assertions and then change application.conf to just say ssl-encryption = on.
   assert(System.getenv().containsKey("HyDRA_SSL"),
@@ -93,22 +101,41 @@ object SSLBoot extends App with KyxSslConfiguration with Logging {
   assert(System.getenv("HyDRA_SSL").equals("on"),
     s"An SSL server can only be booted when the environment var HyDRA_SSL is set to 'on', but it is currently set to ${System.getenv("HyDRA_SSL")}")
 
-  import HyDRAServerConfig._
-  implicit var system = ActorSystem("on-spray-can")
+  //Initialize all tools.
+  HyDRAInitializer(args, HyDRAServerConfig.database)
 
   assert(Configuration.getOption(Configuration.Keys.JKS).isDefined,
     "ERROR: Cannot start an SSL server without a password for the KeyStore.jks file stored in the the serverconfig.jks configuration.")
-
-  if(host != "0.0.0.0")
+  if(HyDRAServerConfig.host != "0.0.0.0")
     logger.warn("WARNING: Expecting host 0.0.0.0 in SSL mode.")
 
-  //@todo Should also check that the .aks file actually exists.
+  //Some boilerplate code that I don't understand.
+  implicit val system = ActorSystem("hydraloader") //Not sure what the significance of this name is?
+  implicit val materializer = ActorMaterializer()
+  implicit val executionContext = system.dispatcher
+  implicit val timeout = Timeout(10 seconds) //@note this might need to be much higher.
+  val config = ConfigFactory.load()
+    .withValue("akka.loglevel", ConfigValueFactory.fromAnyRef("OFF"))
+    .withValue("akka.stdout-loglevel", ConfigValueFactory.fromAnyRef("OFF"))
 
-  logger.info(s"SSL BOOT: Attempting to listen on $host:$port. SSL requests only!")
-  logger.info("NOTE: No browser instance will open because we assume SSL-hosted servers are headless (i.e., SSL mode is for production deployments only -- if hosting locally, use NonSSLBoot!)")
+  val api = routes
 
-  HyDRAInitializer(args, database)
-  IO(Http) ! Http.Bind(service, interface = host, port = port)
+  def routes : Route = RestApi.api
+
+  //Do the KeYmaera X initialization GUI stuff...
+  Http().bindAndHandle(handler = api, interface = HyDRAServerConfig.host, port = HyDRAServerConfig.port) map {
+    binding => {
+      // Finally, print a message indicating that the server was started.
+      logger.info(s"SSL BOOT: Attempting to listen on ${HyDRAServerConfig.host}:${HyDRAServerConfig.port}. SSL requests only!")
+      logger.info("NOTE: No browser instance will open because we assume SSL-hosted servers are headless (i.e., SSL mode is for production deployments only -- if hosting locally, use NonSSLBoot!)")
+    }
+  } recover {
+    case ex => {
+      println(s"Failed to start an SSL server. ${ex.getMessage}")
+      logger.error(s"Failed to start an SSL server. ${ex.getMessage}")
+      System.exit(1)
+    }
+  }
 }
 
 /**
@@ -246,7 +273,7 @@ object HyDRAServerConfig {
   // we need an ActorSystem to host our application in
   var system = ActorSystem("on-spray-can")
   val database = DBAbstractionObj.defaultDatabase
-  var service = system.actorOf(Props[RestApiActor], "hydra")
+//  var service = system.actorOf(Props[RestApiActor], "hydra")
 
   val (isHosted: Boolean, host: String, port: Int) =
     (Configuration(Configuration.Keys.IS_HOSTED) == "true",

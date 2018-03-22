@@ -16,7 +16,13 @@ import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
+
 import spray.json._
+import DefaultJsonProtocol._
+import akka.http.scaladsl.marshalling.ToResponseMarshallable
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
+import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
+
 import java.io.{PrintWriter, StringWriter}
 
 import Helpers._
@@ -24,7 +30,6 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrint
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
-import spray.httpx.marshalling.ToResponseMarshallable
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.immutable

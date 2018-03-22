@@ -26,6 +26,11 @@ object ArithmeticSpeculativeSimplification {
 
   private val DEBUG = false
 
+  /** @todo I'm not sure where the error function was defined prior to this. Maybe it was a Scala 2.11->2.12 thing? */
+  class ErrorException(msg: String) extends Exception
+  def error[T](message : String) : T = throw new ErrorException(message)
+
+
   /** Tries decreasingly aggressive strategies of hiding formulas before QE, until finally falling back to full QE if none
     * of the simplifications work out. */
   lazy val speculativeQE: BelleExpr = "smartQE" by ((sequent: Sequent) => {

@@ -9,7 +9,6 @@ import java.security.{KeyStore, SecureRandom}
 import javax.net.ssl.{KeyManagerFactory, SSLContext, TrustManagerFactory}
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import spray.io._
 
 
 /**
@@ -37,11 +36,11 @@ trait KyxSslConfiguration {
   // if there is no ServerSSLEngineProvider in scope implicitly the HttpServer uses the default one,
   // since we want to explicitly enable cipher suites and protocols we make a custom ServerSSLEngineProvider
   // available here
-  implicit def sslEngineProvider: ServerSSLEngineProvider = {
-    ServerSSLEngineProvider { engine =>
-      engine.setEnabledCipherSuites(Array("TLS_RSA_WITH_AES_256_CBC_SHA"))
-      engine.setEnabledProtocols(Array("SSLv3", "TLSv1"))
-      engine
-    }
-  }
+//  implicit def sslEngineProvider: ServerSSLEngineProvider = {
+//    ServerSSLEngineProvider { engine =>
+//      engine.setEnabledCipherSuites(Array("TLS_RSA_WITH_AES_256_CBC_SHA"))
+//      engine.setEnabledProtocols(Array("SSLv3", "TLSv1"))
+//      engine
+//    }
+//  }
 }
