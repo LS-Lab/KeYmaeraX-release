@@ -5,8 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
 import akka.actor.{Actor, ActorSystem, Props}
-import akka.http.scaladsl.Http
-import akka.io.IO
+import akka.http.scaladsl.{ConnectionContext, Http, HttpsConnectionContext}
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
@@ -18,10 +17,11 @@ import edu.cmu.cs.ls.keymaerax.launcher.{DefaultConfiguration, LoadingDialogFact
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import org.apache.logging.log4j.scala.Logging
+
 import scala.concurrent.duration._
 import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
+import com.typesafe.sslconfig.akka.AkkaSSLConfig
 
 /**
   * Creates a HyDRA server listening on a host and port specified in the database's config file under the configurations serverconfig.host and serverconfig.port.
@@ -111,6 +111,7 @@ object SSLBoot extends App with Logging {
 
   //Some boilerplate code that I don't understand.
   implicit val system = ActorSystem("hydraloader") //Not sure what the significance of this name is?
+//  val sslConfig = AkkaSSLConfig()
   implicit val materializer = ActorMaterializer()
   implicit val executionContext = system.dispatcher
   implicit val timeout = Timeout(10 seconds) //@note this might need to be much higher.
@@ -122,8 +123,9 @@ object SSLBoot extends App with Logging {
 
   def routes : Route = RestApi.api
 
-  //Do the KeYmaera X initialization GUI stuff...
-  Http().bindAndHandle(handler = api, interface = HyDRAServerConfig.host, port = HyDRAServerConfig.port) map {
+  val https: HttpsConnectionContext = ConnectionContext.https(KyxSslConfiguration.sslContext)
+  Http().setDefaultServerHttpContext(https)
+  Http().bindAndHandle(handler = api, interface = HyDRAServerConfig.host, port = HyDRAServerConfig.port, connectionContext = https) map {
     binding => {
       // Finally, print a message indicating that the server was started.
       logger.info(s"SSL BOOT: Attempting to listen on ${HyDRAServerConfig.host}:${HyDRAServerConfig.port}. SSL requests only!")
