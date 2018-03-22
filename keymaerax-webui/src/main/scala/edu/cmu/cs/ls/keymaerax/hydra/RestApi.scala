@@ -6,7 +6,6 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import java.security.SecureRandom
 import java.util.{Calendar, Date}
-import javax.swing.JOptionPane
 
 import akka.event.slf4j.SLF4JLogging
 import akka.actor.{Actor, ActorContext}
