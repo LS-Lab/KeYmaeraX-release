@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.Configuration
   * Created by nfulton on 6/25/16.
   * Copied from https://gist.github.com/pymeat/7426513
   */
-trait KyxSslConfiguration {
+object KyxSslConfiguration {
   // if there is no SSLContext in scope implicitly the HttpServer uses the default SSLContext,
   // since we want non-default settings in this example we make a custom SSLContext available here
   implicit def sslContext: SSLContext = {
