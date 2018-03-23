@@ -310,24 +310,32 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     )
 
   /** loopSR: cleverly prove a property of a loop automatically by induction, trying hard to generate loop invariants.
-    * @see [[loopauto]] */
-  def loopSR(gen: Generator[Formula]): DependentPositionTactic = "loopSR" by ((pos:Position,seq:Sequent) => {
-    import Augmentors.SequentAugmentor
-    val cand: Iterator[Formula] = gen(seq, pos)
-    val bounds: List[Variable] = StaticSemantics.boundVars(SequentAugmentor(seq)(pos).asInstanceOf[Formula]).toSet.toList
-    var i = -1
-    val subst: USubst = if (bounds.length==1)
-      USubst(Seq(SubstitutionPair(DotTerm(), bounds.head)))
-    else USubst(
-      bounds.map(xi=> {i=i+1; SubstitutionPair(DotTerm(Real,Some(i)), xi)})
-    )
-    val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp=>sp.what.prettyString).mkString(",") + ")")
+    * Uses [[SearchAndRescueAgain]] to avoid repetitive proving.
+    * @see [[loopauto]]
+    * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+    *      Example 32. */
+  def loopSR(gen: Generator[Formula]): DependentPositionTactic = "loopSR" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
+    case loopfml@Box(prog, post) =>
+      val cand: Iterator[Formula] = gen(seq, pos)
+      val bounds: List[Variable] = //if (StaticSemantics.freeVars(post) contains no DifferentialSymbol)
+        StaticSemantics.boundVars(loopfml).toSet.toList
+      //else
+      //@todo  DependencyAnalysis.dependencies(prog, DependencyAnalysis.freeVars(post))
+      var i = -1
+      val subst: USubst = if (bounds.length==1)
+        USubst(Seq(SubstitutionPair(DotTerm(), bounds.head)))
+      else USubst(
+        bounds.map(xi=> {i=i+1; SubstitutionPair(DotTerm(Real,Some(i)), xi)})
+      )
+      val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp=>sp.what.prettyString).mkString(",") + ")")
       SearchAndRescueAgain(jj,
         loop(subst(jj))(1) < (nil, nil, chase(1)),
         feedOneAfterTheOther(cand),
         OnAll(master()) & done
       )
+    case e => throw new BelleThrowable("Wrong shape to generate an invariant for " + e + " at position " + pos)
   })
+
   private def feedOneAfterTheOther[A<:Expression](gen: Iterator[A]) : (ProvableSig,ProverException)=>Expression = {
     (_,e) => logger.debug("SnR loop status " + e)
       if (gen.hasNext)
