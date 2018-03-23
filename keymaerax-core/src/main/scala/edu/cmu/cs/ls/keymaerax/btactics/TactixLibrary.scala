@@ -317,10 +317,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def loopSR(gen: Generator[Formula]): DependentPositionTactic = "loopSR" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
       val cand: Iterator[Formula] = gen(seq, pos)
-      val bounds: List[Variable] = //if (StaticSemantics.freeVars(post) contains no DifferentialSymbol)
-        StaticSemantics.boundVars(loopfml).toSet.toList
-      //else
-      //@todo  DependencyAnalysis.dependencies(prog, DependencyAnalysis.freeVars(post))
+      val bounds: List[Variable] =
+        if (StaticSemantics.freeVars(post).toSet.exists( v => v.isInstanceOf[DifferentialSymbol] ) )
+          StaticSemantics.boundVars(loopfml).toSet.toList
+        else DependencyAnalysis.dependencies(prog, DependencyAnalysis.freeVars(post))._1.toList
       var i = -1
       val subst: USubst = if (bounds.length==1)
         USubst(Seq(SubstitutionPair(DotTerm(), bounds.head)))
