@@ -324,13 +324,13 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       var i = -1
       val subst: USubst = if (bounds.length==1)
         USubst(Seq(SubstitutionPair(DotTerm(), bounds.head)))
-      else USubst(
-        bounds.map(xi=> {i=i+1; SubstitutionPair(DotTerm(Real,Some(i)), xi)})
-      )
+      else
+        USubst(bounds.map(xi=> {i=i+1; SubstitutionPair(DotTerm(Real,Some(i)), xi)}))
       val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp=>sp.what.prettyString).mkString(",") + ")")
       SearchAndRescueAgain(jj,
         loop(subst(jj))(1) < (nil, nil, chase(1)),
         feedOneAfterTheOther(cand),
+        //@todo switch to quickstop mode
         OnAll(master()) & done
       )
     case e => throw new BelleThrowable("Wrong shape to generate an invariant for " + e + " at position " + pos)
