@@ -325,7 +325,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
               (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.sub(pos).get).isDefined)) {
             positionTactic.computeResult(provable, pos)
           } else {
-            throw new BelleIllFormedError("Formula " + provable.subgoals.head.sub(pos) + " at position " + pos +
+            throw BelleIllFormedError("Formula " + provable.subgoals.head.sub(pos).getOrElse("") + " at position " + pos +
               " is not of expected shape " + f)
           }
         case None => positionTactic.computeResult(provable, pos)
@@ -499,7 +499,30 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
       case _: Find => throw be
       case Fixed(pos, _, _) => v match {
         case BelleProvable(provable, _) if provable.subgoals.size == 1 =>
-          throw new BelleThrowable("Tactic " + prettyString + " may point to wrong position, found " + provable.subgoals.head.sub(pos) + " at position " + locator, be)
+          def printParents(p: Position): String =
+            if (p.isTopLevel) {
+              provable.subgoals.head(p.top).prettyString + " at " + p.prettyString
+            } else {
+              (provable.subgoals.head.sub(p) match {
+                case Some(e) => e.prettyString + " at " + p.prettyString
+                case _ => "(nothing) at " + p.prettyString
+              }) + "\n" + printParents(p.topLevel ++ PosInExpr(p.inExpr.pos.dropRight(1)))
+            }
+          def printWithParents(p: Position): String =
+            if (pos.isIndexDefined(provable.subgoals.head)) {
+              provable.subgoals.head.sub(pos) match {
+                case Some(e) => e.prettyString
+                case _ => printParents(pos)
+              }
+            } else {
+              "position outside sequent: expected -1...-" + provable.subgoals.head.ante.size +
+                " or 1..." + provable.subgoals.head.succ.size
+            }
+          throw new BelleThrowable(
+            s"""Tactic $prettyString is not applicable to
+              |    ${printWithParents(pos)}
+              |at position $locator
+              |because ${be.getMessage.stripPrefix("[Bellerophon Runtime] ")}""".stripMargin, be)
         case _ => throw be
       }
     }
