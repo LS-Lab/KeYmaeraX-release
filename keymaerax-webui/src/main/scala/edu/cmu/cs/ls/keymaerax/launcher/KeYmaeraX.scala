@@ -286,15 +286,17 @@ object KeYmaeraX {
 
   private def parseProblemFile(fileName: String) = {
     try {
-      val fileContents = scala.io.Source.fromFile(fileName).getLines().mkString("\n")
-      val formula = KeYmaeraXProblemParser(fileContents)
-      println(KeYmaeraXPrettyPrinter(formula))
-      println("Parsed file successfully")
+      KeYmaeraXArchiveParser(fileName).foreach(e => {
+        println(e.name)
+        println(KeYmaeraXPrettyPrinter(e.model))
+        println("Parsed file successfully")
+      })
       sys.exit(0)
     } catch {
       case e: Throwable =>
         if (Configuration(Configuration.Keys.DEBUG)=="true") e.printStackTrace()
-        println(e)
+        println(e.getMessage)
+        println(e.getCause)
         println("Failed to parse file")
         sys.exit(-1)
     }
