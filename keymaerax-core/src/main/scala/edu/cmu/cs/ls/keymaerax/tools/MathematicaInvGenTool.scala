@@ -18,46 +18,67 @@ import scala.util.Try
  * @author Andrew Sogokon, based on QETool by Nathan Fulton and Stefan Mitsch
  */
 class MathematicaInvGenTool(override val link: MathematicaLink)
-  extends BaseKeYmaeraMathematicaBridge[KExpr](link, KeYmaeraToMathematica, MathematicaToKeYmaera)
+  extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter(), MathematicaToKeYmaera)
     with InvGenTool with Logging {
 
   init()
 
+  private val pegasusPath = System.getProperty("user.home") + File.separator + Configuration(Configuration.Keys.PEGASUS_PATH)
+
   def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Formula] = {
-    val k2m = new UncheckedK2MConverter()
     val vars = DifferentialHelper.getPrimedVariables(ode)
     val stringVars = "{" + vars.map(k2m(_)).mkString(", ") + "}"
     val vectorField = "{" + DifferentialHelper.atomicOdes(ode).map(o => k2m(o.e)).mkString(", ") + "}"
     val problem = "{ " +
-      k2m.apply(assumptions.reduce(And)) + ", { " +
+      k2m(assumptions.reduce(And)) + ", { " +
       vectorField + ", " +
       stringVars + ", " +
-      k2m.apply(ode.constraint) + " }, " +
-      k2m.apply(postCond) + " }"
+      k2m(ode.constraint) + " }, " +
+      k2m(postCond) + " }"
 
     logger.debug("Raw Mathematica input into Pegasus: " + problem)
 
-    val pegasusPath = Configuration(Configuration.Keys.PEGASUS_PATH)
-
-    val timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT))).toOption
-
-    def pegasus(cmd: String): String = timeout match {
-      case Some(to) if to >= 0 => "TimeConstrained[Strategies`Pegasus[" + cmd + "]," + to + "]"
-      case _ => "Strategies`Pegasus[" + cmd + "]"
-    }
+    timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT))).getOrElse(-1)
 
     val command = s"""
        |Needs["Strategies`","$pegasusPath/Strategies.m"];
        |Needs["Methods`","$pegasusPath/Methods.m"];
        |Needs["Classifier`","$pegasusPath/Classifier.m"];
        |Needs["AbstractionPolynomials`","$pegasusPath/AbstractionPolynomials.m"];
-       |${pegasus(problem)}""".stripMargin
+       |Strategies`Pegasus[$problem]""".stripMargin
 
     val (output, result) = runUnchecked(command)
     logger.debug("Generated invariant: "+ result.prettyString + " from raw output " + output)
     result match {
       case continuousInvariant: Formula => continuousInvariant :: Nil
       case _ => throw ToolException("Expected a formula from Pegasus call but got a non-formula expression: " +
+        result.prettyString)
+    }
+  }
+
+  def lzzCheck(ode: ODESystem, inv: Formula): Boolean = {
+    val vars = DifferentialHelper.getPrimedVariables(ode)
+    val stringVars = "{" + vars.map(k2m(_)).mkString(", ") + "}"
+    val vectorField = "{" + DifferentialHelper.atomicOdes(ode).map(o => k2m(o.e)).mkString(", ") + "}"
+    val problem =
+      k2m(inv) + ", " +
+      vectorField + ", " +
+      stringVars + ", " +
+      k2m(ode.constraint)
+
+    logger.debug("Raw Mathematica input into Pegasus: " + problem)
+
+    timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
+
+    val command = s"""Needs["Methods`","$pegasusPath/Methods.m"];
+                     |Methods`InvS[$problem]""".stripMargin
+
+    val (output, result) = runUnchecked(command)
+    logger.debug("LZZ check: "+ result.prettyString + " from raw output " + output)
+    result match {
+      case True => true
+      case False => false
+      case _ => throw ToolException("Expected true/false from Pegasus call but got expression: " +
         result.prettyString)
     }
   }

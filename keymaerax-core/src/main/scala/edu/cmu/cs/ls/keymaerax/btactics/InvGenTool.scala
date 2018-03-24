@@ -21,5 +21,8 @@ trait InvGenTool {
     * @return A sequence of continuous invariants.
     */
   def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Formula]
+
+  /** Fast check whether or not `inv` is worth proving to be an invariant of `ode`. */
+  def lzzCheck(ode: ODESystem, inv: Formula): Boolean
 }
 
