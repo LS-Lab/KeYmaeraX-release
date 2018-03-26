@@ -1,15 +1,17 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
+import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest}
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.ToolException
+import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, ToolException}
 import testHelper.CustomAssertions._
 import testHelper.KeYmaeraXTestTags
 
@@ -17,6 +19,8 @@ import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
 import org.scalatest.prop.TableDrivenPropertyChecks.forEvery
 import org.scalatest.prop.Tables._
+import org.scalatest.concurrent.Timeouts
+import org.scalatest.time.SpanSugar._
 
 /**
  * Tests
@@ -26,7 +30,7 @@ import org.scalatest.prop.Tables._
  */
 @SummaryTest
 @UsualTest
-class DifferentialTests extends TacticTestBase {
+class DifferentialTests extends TacticTestBase with Timeouts {
   val randomTrials = 500
   val randomComplexity = 6
   val rand = new RandomFormula()
@@ -1373,6 +1377,93 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals should have size 2
     result.subgoals(0) shouldBe "x>-1 & -2*x > 1 & -2*y > 1 & y>=-1 ==> [{x'=y,y'=x^5 - x*y & true & x^5 <= (x+4*x^3)*y & y <= 0}] x+y<=1".asSequent
     result.subgoals(1) shouldBe "x>-1 & -2*x > 1 & -2*y > 1 & y>=-1 ==> [{x'=y,y'=x^5 - x*y}](x^5 <= (x+4*x^3)*y & y <= 0)".asSequent
+  }
+
+  it should "generate invariants for nonlinear benchmarks" taggedAs SlowTest in withMathematica { _ =>
+    val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
+      getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
+    val annotatedInvariants: ConfigurableGenerator[Formula] = TactixLibrary.invGenerator match {
+      case gen: ConfigurableGenerator[Formula] => gen
+    }
+    TactixLibrary.invGenerator = FixedGenerator(Nil)
+    forEvery(Table(("Name", "Model"), entries.map(e => e.name -> e.model):_*)) {
+      (name, model) =>
+        println("\n" + name)
+        val fml@Imply(_, succFml@Box(ode@ODESystem(_, q), _)) = model
+        val result = proveBy(fml, implyR(1) & Idioms.?(DifferentialTactics.contInvGen(1)))
+
+        //@note the annotations in nonlinear.kyx are produced by Pegasus
+        annotatedInvariants.products.get(ode) match {
+          case Some(invs) =>
+            result.subgoals should have size 2
+            val Box(ODESystem(_, And(qUse, invUse)), _) = result.subgoals(0).succ.loneElement
+            qUse shouldBe q withClue "evolution domain qUse same as q"
+            invUse shouldBe invs.reduce(And) withClue "invariant expected"
+            val Box(ODESystem(_, qShow), invShow) = result.subgoals(1).succ.loneElement
+            qShow shouldBe q withClue "evolution domain qShow same as q"
+            invShow shouldBe invUse withClue "show invariant same as use invariant"
+          case None =>
+            //@note invariant generator did not produce an invariant before, not expected to produce one now. Test will
+            // fail if invariant generator improves and finds an invariant.
+            // In that case, add annotation to nonlinear.kyx.
+            result.subgoals.loneElement.succ.loneElement shouldBe succFml
+        }
+        println(name + " done")
+    }
+  }
+
+  it should "fast-check invariants with LZZ" taggedAs SlowTest in withMathematica { tool =>
+    Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, "-1", saveToFile = false)
+
+    val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
+      getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
+    val annotatedInvariants: ConfigurableGenerator[Formula] = TactixLibrary.invGenerator match {
+      case gen: ConfigurableGenerator[Formula] => gen
+    }
+
+    forEvery(Table(("Name", "Model"), entries.map(e => e.name -> e.model):_*)) {
+      (name, model) =>
+        println("\n" + name)
+        val Imply(_, Box(ode@ODESystem(_, q), _)) = model
+        annotatedInvariants.products.get(ode) match {
+          case Some(invs) => tool.lzzCheck(ode, invs.reduce(And)) shouldBe true
+          case None => // no invariant to fast-check
+        }
+        println(name + " done")
+    }
+  }
+
+  it should "produce invariants that are provable with ODE" taggedAs SlowTest in withMathematica { _ =>
+    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "180", saveToFile = false)
+    Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, "60", saveToFile = false)
+
+    val timeouts =
+      "Bhatia Szego Ex_2_4 page 68" ::
+      "Dumortier Llibre Artes Ex. 1_9b" ::
+      "Dumortier Llibre Artes Ex. 10_11b" ::
+      "Dumortier Llibre Artes Ex. 10_15_i" :: Nil
+    // split conjunction into list:
+    //   Collin Goriely page 60
+    //   Dai Gan Xhia Zhan JSC14 Ex. 2
+    //   Dai Gan Xhia Zhan JSC14 Ex. 5
+    //   Darboux Christoffel Int Goriely page 58
+    //   Dumortier Llibre Artes Ex. 5_2_ii
+    //   Dumortier Llibre Artes Ex. 10_15_ii
+    //   Dumortier Llibre Artes Ex. 5_2
+    //   Forsman Phd Ex 6_1 page 99
+    //   Strogatz Example 6_6_2 Limit Cycle
+    //   Wiggins Example 18_1_2
+
+    val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
+      getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
+    forEvery(Table(("Name", "Model", "Tactic"), entries.filterNot(e => timeouts.contains(e.name)).filter(e => e.tactics.nonEmpty).map(e => (e.name, e.model, e.tactics.head._2)):_*)) {
+      (name, model, tactic) =>
+        println("\n" + name + " with " + BellePrettyPrinter(tactic))
+        failAfter(3 minutes) {
+          proveBy(model.asInstanceOf[Formula], tactic) shouldBe 'proved
+        }
+        println(name + " done")
+    }
   }
 
 }

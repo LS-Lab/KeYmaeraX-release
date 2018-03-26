@@ -678,17 +678,27 @@ private object DifferentialTactics extends Logging {
           (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
             diffWeaken(pos) & QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE)))) & done else fail
           ) |
-          (if (isOpen) {
-              (openDiffInd(pos) | DGauto(pos)) //>
-          } else {
-            diffInd()(pos)       | // >= to >=
-            openDiffInd(pos)     | // >= to >, with >= assumption
-            (dgBarrier(ToolProvider.simplifierTool())(pos) & done) |
-            (dgDbxAuto(pos) & done) |
-            DGauto(pos)          |
-            dgZeroMonomial(pos)  | //Equalities
-            dgZeroPolynomial(pos)  //Equalities
-          })
+          ( DebuggingTactics.assert((invSeq: Sequent, invPos: Position) => {
+              invSeq.sub(invPos) match {
+                case Some(Box(ode@ODESystem(_, q), invCandidate)) => ToolProvider.invGenTool() match {
+                  case Some(invTool) => invTool.lzzCheck(ode, invCandidate)
+                  case _ => true
+                }
+                case _ => false
+              }
+            }, "Invariant fast-check failed")(pos) &
+            (if (isOpen) {
+              openDiffInd(pos) | DGauto(pos) //>
+            } else {
+              diffInd()(pos)       | // >= to >=
+              openDiffInd(pos)     | // >= to >, with >= assumption
+              (dgBarrier(ToolProvider.simplifierTool())(pos) & done) |
+              (dgDbxAuto(pos) & done) |
+              DGauto(pos)          |
+              dgZeroMonomial(pos)  | //Equalities
+              dgZeroPolynomial(pos)  //Equalities
+            })
+          )
         })) (pos))
     })
 
