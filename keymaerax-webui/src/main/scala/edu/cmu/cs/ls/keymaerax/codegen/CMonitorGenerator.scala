@@ -46,18 +46,19 @@ class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
          |  if (!monitorSatisfied(pre,post,params)) return (*fallback)(pre,params,in);
          |  else return post;""".stripMargin
 
+    // @note negate to turn into safety distance >=0 satisfied, <0 unsatisfied monitor
+    def negate(s: String): String = "-(" + s + ")"
     val (distBody, satBody) = kind match {
-      //@note unlike C convention, distance is 0.0 means monitor is satisfied (<=0 is satisfied, >0 is not satisfied)
-      case "boolean" => (printMonitor(expr, parameters) + " ? 0.0 : 1.0", "boundaryDist(pre,curr,params) <= 0.0")
+      case "boolean" => (printMonitor(expr, parameters), "boundaryDist(pre,curr,params) != 0.0")
       case "metric" => expr match {
         case LessEqual(l, r) =>
-          val lhs = printMonitor(l, parameters)
-          val rhs = printMonitor(r, parameters)
-          (lhs, "boundaryDist(pre,curr,params) < " + rhs)
+          val lhs = negate(printMonitor(l, parameters))
+          val rhs = negate(printMonitor(r, parameters))
+          (lhs, "boundaryDist(pre,curr,params) >= " + rhs)
         case Less(l, r) =>
-          val lhs = printMonitor(l, parameters)
-          val rhs = printMonitor(r, parameters)
-          (lhs, "boundaryDist(pre,curr,params) <= " + rhs)
+          val lhs = negate(printMonitor(l, parameters))
+          val rhs = negate(printMonitor(r, parameters))
+          (lhs, "boundaryDist(pre,curr,params) > " + rhs)
       }
     }
 
