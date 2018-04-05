@@ -497,7 +497,6 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** DIo: Open Differential Invariant proves an open formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * openDiffInd: proves an inequality to be an invariant of a differential equation (by DIo, DW, DE, QE)
     *           For strict inequalities, it uses open diff ind (<,>)
-    *           For non-strict inequalities, it uses open diff ind (<=,>=)
     *
     * @example{{{
     *         *

@@ -191,10 +191,8 @@ private object DifferentialTactics extends Logging {
         val (axUse,der) = sequent.sub(pos) match {
           case Some(Box(_: ODESystem, _: Greater)) => ("DIo open differential invariance >",true)
           case Some(Box(_: ODESystem, _: Less)) => ("DIo open differential invariance <",true)
-          case Some(Box(_: ODESystem, _: GreaterEqual)) => ("DIo open differential invariance >=",false)
-          case Some(Box(_: ODESystem, _: LessEqual)) => ("DIo open differential invariance <=",false)
 
-          case _ => throw new IllegalArgumentException("openDiffInd only at ODE system in succedent with an inequality in the postcondition (f>g,f<g,f>=g,f<=g), but got " + sequent.sub(pos))
+          case _ => throw new IllegalArgumentException("openDiffInd only at ODE system in succedent with an inequality in the postcondition (f>g,f<g), but got " + sequent.sub(pos))
         }
         if (pos.isTopLevel) {
           val t = useAt(axUse)(pos) <(
@@ -677,10 +675,9 @@ private object DifferentialTactics extends Logging {
             diffWeaken(pos) & QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE)))) & done else fail
           ) |
           (if (isOpen) {
-              (openDiffInd(pos) | DGauto(pos)) //>
+              (openDiffInd(pos) | DGauto(pos)) //> TODO: needs updating
           } else {
             diffInd()(pos)       | // >= to >=
-            openDiffInd(pos)     | // >= to >, with >= assumption
             (dgBarrier(ToolProvider.simplifierTool())(pos) & done) |
             (dgDbxAuto(pos) & done) |
             DGauto(pos)          |
