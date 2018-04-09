@@ -634,4 +634,18 @@ class ODETests extends TacticTestBase {
     )
     pr shouldBe 'proved
   }
+
+  "invariant clusters" should "prove example 6 (Kong et. al. HSCC'17)" in withMathematica { _ =>
+    val fml = "(x+15)^2 + (y-17)^2 - 1 <= 0 -> [{x'=y^2, y'=x*y}] (x-11)^2+(y-33/2)^2-1>0".asFormula
+    val pr = proveBy(fml,implyR(1) &
+      cut("\\exists x0 \\exists y0 \\exists u1 \\exists u3 ( (u1^2+u3^2) !=0 & x=x0 & y = y0 & (x0+15)^2 + (y0-17)^2 - 1 <= 0 & u1 -u3*(x^2-y^2)=0)".asFormula)
+      <(
+        (existsL('L)*) & dC("u1-u3*(x^2-y^2)=0".asFormula)(1) <(
+          dC("(x0+15)^2 + (y0-17)^2 - 1 <= 0 & u1 -u3*(x0^2-y0^2)=0".asFormula)(1) <( dW(1) & QE , dI('full)(1)),
+          dI('full)(1)),
+        hideR(1) & QE
+      )
+    )
+    pr shouldBe 'proved
+  }
 }
