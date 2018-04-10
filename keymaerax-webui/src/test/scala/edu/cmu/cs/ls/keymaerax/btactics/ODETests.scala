@@ -640,7 +640,7 @@ class ODETests extends TacticTestBase {
     val pr = proveBy(fml,implyR(1) &
       cut("\\exists u1 \\exists u3 ( (u1^2+u3^2) !=0 & u1 -u3*(x^2-y^2)=0)".asFormula)
       <(
-        (existsL('L)*) & dC("old(u1)-old(u3)*(x^2-y^2)=0".asFormula)(1)
+        (existsL('L)*) & dC("u1-u3*(x^2-y^2)=0".asFormula)(1)
         <(
           dW(1) & QE,
           dI('full)(1)
