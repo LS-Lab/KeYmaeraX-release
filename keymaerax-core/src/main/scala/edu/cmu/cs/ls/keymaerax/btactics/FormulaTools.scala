@@ -163,18 +163,39 @@ object FormulaTools extends Logging {
   }
 
   /**
-   * Returns the first (i.e., left-most) position of subFormula within formula, if any.
-   * @param formula The formula to search for containment of subformula.
-   * @param subFormula The subformula.
-   * @return The first position, or None if subformula is not contained in formula.
+   * Returns the first (i.e., left-most) position of `sub` within `expr`, if any.
+   * @param expr The expression to search for containment of `sub`.
+   * @param sub The sub-expression.
+   * @return The first position, or None if `sub` is not contained in `expr`.
    */
-  def posOf(formula: Formula, subFormula: Formula): Option[PosInExpr] = {
+  def posOf(expr: Expression, sub: Expression): Option[PosInExpr] = {
     var pos: Option[PosInExpr] = None
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
-        if (e == subFormula) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
-        else Left(None)
-    }, formula)
+    expr match {
+      case formula: Formula =>
+        sub match {
+          case subFormula: Formula =>
+            ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+              override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
+                if (e == subFormula) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
+                else Left(None)
+            }, formula)
+          case subTerm: Term =>
+            ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+              override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+                if (e == subTerm) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
+                else Left(None)
+            }, formula)
+        }
+      case term: Term =>
+        sub match {
+          case subTerm: Term =>
+            ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+              override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+                if (e == subTerm) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
+                else Left(None)
+            }, term)
+        }
+    }
     pos
   }
 
