@@ -248,4 +248,14 @@ class ToolTacticsTests extends TacticTestBase {
       "abs_0>0, abs_2>3, a>=0 & abs_0=a | a<0 & abs_0=-a, b>=0 & abs_1=b | b<0 & abs_1=-b, c>=0 & abs_2=c | c<0 & abs_2=-c ==> abs_0>0 | abs_1>1 | abs_2>2".asSequent
   }
 
+  it should "transform in programs" in withQE { _ =>
+    val result = proveBy("x<0 -> [x:=x-1+0*z;]x<0".asFormula, edit("x<0 -> [x:=x-1;]x<0".asFormula)(1))
+    result.subgoals.loneElement shouldBe "==> x<0 -> [x:=x-1;]x<0".asSequent
+  }
+
+  it should "transform postcondition of modal" in withQE { _ =>
+    val result = proveBy("x<0 -> [x:=x-1;](x<0&v^2>=0)".asFormula, edit("x<0 -> [x:=x-1;]x<0".asFormula)(1))
+    result.subgoals.loneElement shouldBe "==> x<0 -> [x:=x-1;]x<0".asSequent
+  }
+
 }
