@@ -851,9 +851,9 @@ object DerivationInfo {
       RuleDisplayInfo("Loop Convergence",(List("&Gamma;"), List("&lt;a*&gt;P", "&Delta;")),
         List(
           (List("&Gamma;"),List("∃v. j(v)", "&Delta;")),
-          (List("v >= 0", "j(v)"),List("&lt;a;x:=x-1&gt;j(v)")),
-          (List("v < 0", "j(v)"),List("P"))))
-      , List(FormulaArg("j(v)")), _ => ((fml: Formula) => DLBySubst.conRule(Variable("v"), fml)): TypedFunc[Formula, BelleExpr]),
+          (List("v > 0", "j(v)"),List("&lt;a;v:=v-1&gt;j(v)")),
+          (List("v ≤ 0", "j(v)"),List("P"))))
+      , List(FormulaArg("j(v)", allowsFresh = "v" :: Nil)), _ => ((fml: Formula) => DLBySubst.conRule(Variable("v"), fml)): TypedFunc[Formula, BelleExpr]),
 
     new PositionTacticInfo("loopauto", RuleDisplayInfo("loopauto",(List("&Gamma;"), List("[a*]P", "&Delta;")),
       List()), {case () => TactixLibrary.loopauto}, needsGenerator = true),
