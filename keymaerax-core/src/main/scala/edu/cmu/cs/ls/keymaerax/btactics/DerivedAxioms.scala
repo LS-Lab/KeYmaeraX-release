@@ -884,6 +884,22 @@ object DerivedAxioms extends Logging {
   )
 
   /**
+    * {{{Axiom "<:=> self assign".
+    *    <x_:=x_;>p(||) <-> p(||)
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val assigndSelfAxiom = derivedAxiom("<:=> self assign",
+    Sequent(IndexedSeq(), IndexedSeq("<x_:=x_;>p(||) <-> p(||)".asFormula)),
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("[:=] self assign")(1, 0::0::Nil) &
+      useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  /**
     * {{{Axiom ":= assign dual".
     *    <v:=t();>p(v) <-> [v:=t();]p(v)
     * End.

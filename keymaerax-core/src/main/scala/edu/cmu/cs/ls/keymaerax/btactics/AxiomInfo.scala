@@ -113,6 +113,7 @@ object DerivationInfo {
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignbAxiom", {case () => HilbertCalculus.useAt("[:=] assign")}),
     new CoreAxiomInfo("[:=] self assign", "[:=]", "selfassignb", {case () => HilbertCalculus.useAt("[:=] self assign")}),
     new DerivedAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
+    new DerivedAxiomInfo("<:=> self assign", "<:=>", "selfassignd", {case () => HilbertCalculus.useAt("<:=> self assign")}),
     new DerivedAxiomInfo("<:=> assign equality", "<:=>", "assigndEquality", {case () => HilbertCalculus.useAt("<:=> assign equality")}),
     new DerivedAxiomInfo("<:=> assign equality all", "<:=>", "assigndEqualityAll", {case () => HilbertCalculus.useAt("<:=> assign equality all")}),
     new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", {case () => HilbertCalculus.useAt("[:=] assign equality")}),
@@ -850,10 +851,10 @@ object DerivationInfo {
     new InputPositionTacticInfo("con",
       RuleDisplayInfo("Loop Convergence",(List("&Gamma;"), List("&lt;a*&gt;P", "&Delta;")),
         List(
-          (List("&Gamma;"),List("∃v. j(v)", "&Delta;")),
-          (List("v > 0", "j(v)"),List("&lt;a;v:=v-1&gt;j(v)")),
-          (List("v ≤ 0", "j(v)"),List("P"))))
-      , List(FormulaArg("j(v)", allowsFresh = "v" :: Nil)), _ => ((fml: Formula) => DLBySubst.conRule(Variable("v"), fml)): TypedFunc[Formula, BelleExpr]),
+          (List("&Gamma;"),List("∃v_. j(v_)", "&Delta;")),
+          (List("v_ > 0", "j(v_)"),List("&lt;a&gt;j(v_-1)")),
+          (List("v_ ≤ 0", "j(v_)"),List("P"))))
+      , List(FormulaArg("j(v_)", allowsFresh = "v_" :: Nil)), _ => ((fml: Formula) => DLBySubst.conRule(fml)): TypedFunc[Formula, BelleExpr]),
 
     new PositionTacticInfo("loopauto", RuleDisplayInfo("loopauto",(List("&Gamma;"), List("[a*]P", "&Delta;")),
       List()), {case () => TactixLibrary.loopauto}, needsGenerator = true),

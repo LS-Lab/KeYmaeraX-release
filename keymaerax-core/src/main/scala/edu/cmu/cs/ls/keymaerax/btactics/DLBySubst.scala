@@ -189,6 +189,20 @@ private object DLBySubst {
       (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos) else ident)
   })
 
+  /** Equality assignment to a fresh variable. @see assignEquality @incontext */
+  lazy val assigndEquality: DependentPositionTactic = "assigndEquality" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    //@note have already failed assigning directly so grab fresh name index otherwise
+    // [x:=f(x)]P(x)
+    case Some(fml@Diamond(Assign(x, t), p)) =>
+      val y = TacticHelper.freshNamedSymbol(x, sequent)
+      ProofRuleTactics.boundRenaming(x, y)(pos) &
+        (if (pos.isSucc) useAt("<:=> assign equality all")(pos) else useAt("<:=> assign equality")(pos)) &
+        ProofRuleTactics.uniformRenaming(y, x) &
+        (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
+         else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL(pos)
+         else ident)
+  })
+
   /** @see [[TactixLibrary.generalize()]]
    * @todo same for diamonds by the dual of K
    */
@@ -301,27 +315,23 @@ private object DLBySubst {
   /**
     * Loop convergence wiping all context.
     * {{{
-    *   init:                     step:                      use:
-    *   G |- exists v. J(v), D    v>0,J(v) -> <a>J(v-1)      v<=0, J(v) |- p
-    *   --------------------------------------------------------------------
+    *   init:                       step:                         use:
+    *   G |- exists v_. J(v_), D    v_>0,J(v_) -> <a>J(v_-1)      v_<=0, J(v_) |- p
+    *   ---------------------------------------------------------------------------
     *   G |- <{a}*>p, D
     * }}}
-    * @param variantArg Which variable is treated as the argument of the variant property
     * @param variantDef The variant property or convergence property in terms of variantDef
-    * @example The variant J(v) |-> (v = x) has variantArg == v  and variantDef == (v = x)
+    * @example The variant J(v_) |-> (v_ = x) has variantDef == (v_ = x)
     */
-  def conRule(variantArg:Variable, variantDef:Formula) = "con" byWithInput(variantDef, (pos, sequent) => {
+  def conRule(variantDef: Formula): DependentPositionWithAppliedInputTactic = "con" byWithInput(variantDef, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "conRule only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
 
-    val v = "v_".asVariable
-    val pre = Exists(IndexedSeq(variantArg), variantDef)
-
-    cutR(pre)(pos.checkSucc.top) < (
+    cutR(Exists(Variable("v_") :: Nil, variantDef))(pos.checkSucc.top) < (
       ident partial(BelleLabels.initCase),
       cohide(pos) & implyR(1)
-      & ProofRuleTactics.boundRenaming(variantArg, v)(-1) & existsL(-1)
-      & byUS("con convergence") & OnAll(ProofRuleTactics.uniformRenaming(v, variantArg)) < (
+      & existsL(-1)
+      & byUS("con convergence") <(
         assignd(1, 1 :: Nil)
       , Idioms.nil)
     ) partial(BelleLabels.indStep)
