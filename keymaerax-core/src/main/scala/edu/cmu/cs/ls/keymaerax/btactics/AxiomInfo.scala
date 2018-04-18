@@ -425,6 +425,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("all distribute", ("∀→","all->"), "allDist", {case () => HilbertCalculus.allDist}),
     new CoreAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", {case () => HilbertCalculus.allV}),
     new DerivedAxiomInfo("vacuous exists quantifier", ("V∃","existsV"), "existsV", {case () => HilbertCalculus.existsV}),
+    new DerivedAxiomInfo("partial vacuous exists quantifier", ("pV∃","pexistsV"), "pexistsV", {case () => HilbertCalculus.useAt("partial vacuous exists quantifier")}),
 
     // more
     new CoreAxiomInfo("const congruence", "CCE", "constCongruence", {case () => ???}),
@@ -505,6 +506,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("<> split"
       , AxiomDisplayInfo(("<>∨","<>|"), "<span class=\"k4-axiom-key\">&langle;a&rangle;(P∨Q)</span>↔&langle;a&rangle;P ∨ &langle;a&rangle;Q")
         , "diamondOr", {case () => useAt(DerivedAxioms.diamondOr)}),
+    new DerivedAxiomInfo("<> partial vacuous", ("pVd","pVd"), "pVd", {case () => HilbertCalculus.useAt("<> partial vacuous")}),
 //    new DerivedAxiomInfo("<> split left", "<>|<-", "diamondSplitLeft", {case () => useAt(DerivedAxioms.diamondSplitLeft)}),
 //    new DerivedAxiomInfo("[] split left", "[]&<-", "boxSplitLeft", {case () => useAt(DerivedAxioms.boxSplitLeft)}),
 //    new DerivedAxiomInfo("[] split right", "[]&->", "boxSplitRight", {case () => useAt(DerivedAxioms.boxSplitRight)}),

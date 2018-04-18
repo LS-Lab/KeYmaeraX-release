@@ -723,6 +723,37 @@ object DerivedAxioms extends Logging {
   )
 
   /**
+    * {{{Axiom "<> partial vacuous".
+    *    <a;>p(||) & q() <-> <a;>(p(||)&q())
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note unsound for hybrid games
+    */
+  lazy val diamondPartialVacuous: Lemma = derivedAxiom("<> partial vacuous",
+    Sequent(IndexedSeq(), IndexedSeq("(<a_{|^@|};>p_(||) & q_()) <-> <a_{|^@|};>(p_(||)&q_())".asFormula)),
+      equivR(1) <(
+        andL(-1) & useAt("<> diamond", PosInExpr(1::Nil))(1) & notR(1) &
+        useAt("<> diamond", PosInExpr(1::Nil))(-1) & notL(-1) &
+        useAt(notAnd.fact)(-2, 1::Nil) & useAt(implyExpand.fact, PosInExpr(1::Nil))(-2, 1::Nil) &
+        useAt(converseImply.fact)(-2, 1::Nil) & useAt(doubleNegationAxiom.fact)(-2, 1::0::Nil) &
+        useAt("K modal modus ponens", PosInExpr(0::Nil))(-2) & implyL(-2) <(V('Rlast) & closeId, closeId)
+        ,
+        useAt("<> diamond", PosInExpr(1::Nil))(-1) & useAt(notAnd.fact)(-1, 0::1::Nil) &
+        useAt(implyExpand.fact, PosInExpr(1::Nil))(-1, 0::1::Nil) & notL(-1) &
+        andR(1) <(
+          useAt("<> diamond", PosInExpr(1::Nil))(1) & notR(1) & implyRi &
+          useAt("K modal modus ponens", PosInExpr(1::Nil))(1) &
+          useAt(proveBy("(!p() -> p() -> q()) <-> true".asFormula, prop))(1, 1::Nil) & byUS("[]T system")
+          ,
+          useAt(proveBy("!q_() -> (p_() -> !q_())".asFormula, prop), PosInExpr(1::Nil))(2, 1::Nil) &
+          V(2) & notR(2) & closeId
+        )
+      )
+  )
+
+  /**
     * {{{Axiom "<> split left".
     *    <a;>(p(||)&q(||)) -> <a;>p(||)
     * End.
@@ -1276,6 +1307,22 @@ object DerivedAxioms extends Logging {
       useAt("vacuous all quantifier")(1, 0::0::Nil) &
       useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
+  )
+
+  /**
+    * {{{Axiom "partial vacuous exists quantifier".
+    *    (\exists x p(x) & q()) <-> (\exists x p(x)) & q()
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val partialVacuousExistsAxiom = derivedAxiom("partial vacuous exists quantifier",
+    Sequent(IndexedSeq(), IndexedSeq("\\exists x_ (p_(x_) & q_()) <-> \\exists x_ p_(x_) & q_()".asFormula)),
+      equivR(1) <(
+        existsL(-1) & andR(1) <(existsR("x_".asVariable)(1) & prop & done, prop & done),
+        andL('L) & existsL(-1) & existsR("x_".asVariable)(1) & prop & done
+      )
   )
 
   /**
