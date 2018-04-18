@@ -155,6 +155,16 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x>y, x_0 = c+d ==> a<b".asSequent
   }
 
+  it should "abbreviate inside programs when free" in withQE { _ =>
+    val result = proveBy("x+1>0 ==> [x:=x+1;]x>0".asSequent, abbrv("x+1".asTerm, Some("y".asVariable)))
+    result.subgoals.loneElement shouldBe "y>0, y=x+1 ==> [x:=y;]x>0".asSequent
+  }
+
+  it should "not try to abbreviate inside programs when not free" in withQE { _ =>
+    val result = proveBy("x+1>0 ==> [{x:=x+1;}*]x>0".asSequent, abbrv("x+1".asTerm, Some("y".asVariable)))
+    result.subgoals.loneElement shouldBe "y>0, y=x+1 ==> [{x:=x+1;}*]x>0".asSequent
+  }
+
   "abs" should "expand abs(x) in succedent" in withQE { _ =>
     val result = proveBy("abs(x) >= 5".asFormula, abs(1, 0::Nil))
     result.subgoals.loneElement shouldBe "x>=0&abs_0=x | x<0&abs_0=-x ==> abs_0>=5".asSequent
@@ -175,7 +185,7 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x<=y&min_0=x | x>y&min_0=y ==> min_0>=5".asSequent
   }
 
-  it should "expand min(x,y) in antecedent" in withQE { qeTool =>
+  it should "expand min(x,y) in antecedent" in withQE { _ =>
     val result = proveBy("min(x,y) >= 5 ==> ".asSequent, minmax(-1, 0::Nil))
     result.subgoals.loneElement shouldBe "min_0>=5, x<=y&min_0=x | x>y&min_0=y ==> ".asSequent
   }

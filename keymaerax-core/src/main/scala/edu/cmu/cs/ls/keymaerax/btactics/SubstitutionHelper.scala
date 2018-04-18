@@ -22,7 +22,7 @@ object SubstitutionHelper {
     new SubstitutionHelper(what, repl).usubst(SetLattice.bottom[Variable], SetLattice.bottom[Variable], t)
   /** Return the result of replacing all free occurrences of `what` in sequent `seq` by `repl`. */
   def replaceFree(seq: Sequent)(what: Term, repl:Term): Sequent =
-    new Sequent(seq.ante.map((f:Formula)=>replaceFree(f)(what,repl)), seq.succ.map((f:Formula)=>replaceFree(f)(what,repl)))
+    Sequent(seq.ante.map((f:Formula)=>replaceFree(f)(what,repl)), seq.succ.map((f:Formula)=>replaceFree(f)(what,repl)))
   /** Return the result of replacing all free occurrences of `what` in program `prg` by `repl`. */
   def replaceFree(prg: Program)(what: Term, repl:Term): Program =
     new SubstitutionHelper(what, repl).usubst(SetLattice.bottom[Variable], SetLattice.bottom[Variable], prg).p
@@ -53,17 +53,17 @@ class SubstitutionHelper(what: Term, repl: Term) {
     t match {
       // homomorphic cases
       case Neg(e) if t != what => Neg(usubst(o, u, e))
-      case Neg(e) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
+      case Neg(_) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
       case Plus(l, r) if t != what => Plus(usubst(o, u, l), usubst(o, u, r))
-      case Plus(l, r) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
+      case Plus(_, _) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
       case Minus(l, r) if t != what => Minus(usubst(o, u, l), usubst(o, u, r))
-      case Minus(l, r) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
+      case Minus(_, _) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
       case Times(l, r) if t != what => Times(usubst(o, u, l), usubst(o, u, r))
-      case Times(l, r) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
+      case Times(_, _) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
       case Divide(l, r) if t != what => Divide(usubst(o, u, l), usubst(o, u, r))
-      case Divide(l, r) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
+      case Divide(_, _) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
       case Power(l, r) if t != what => Power(usubst(o, u, l), usubst(o, u, r))
-      case Power(l, r) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
+      case Power(_, _) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
       // base cases
       case x: Variable if !u.contains(x) && x == what => repl
       case x: Variable if  u.contains(x) || x != what => x
@@ -71,14 +71,15 @@ class SubstitutionHelper(what: Term, repl: Term) {
 //      case d: DifferentialSymbol if d != what => d
       case d: Differential if d == what => repl
       case d: Differential if d != what => d
-      case app@FuncOf(fn, theta) if /*!u.contains(fn) &&*/ app == what => repl
+      case app@FuncOf(_, _) if /*!u.contains(fn) &&*/ app == what => repl
       case app@FuncOf(fn, theta) if  /*u.contains(fn) ||*/ app != what => FuncOf(fn, usubst(o, u, theta))
       case Nothing => Nothing
       case Number(_) if t == what => repl
       case x: AtomicTerm => x
       case Pair(l, r) if t != what => Pair(usubst(o, u, l), usubst(o, u, r))
-      case Pair(l, r) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
-      case _ => throw new UnknownOperatorException("Not implemented yet", t)
+      case Pair(_, _) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
+      case _ if t == what && !u.intersect(StaticSemantics(t)).isEmpty => what
+      case _ => throw UnknownOperatorException("Not implemented yet", t)
     }
   }
 
@@ -108,7 +109,7 @@ class SubstitutionHelper(what: Term, repl: Term) {
     case PredOf(fn, theta) => PredOf(fn, usubst(o, u, theta))
     case DifferentialFormula(g) => DifferentialFormula(usubst(o, u, g))
     case x: AtomicFormula => x
-    case _ => throw new UnknownOperatorException("Not implemented yet", f)
+    case _ => throw UnknownOperatorException("Not implemented yet", f)
   }
 
   private def usubst(o: SetLattice[Variable], u: SetLattice[Variable], p: Program): USR = p match {
@@ -117,8 +118,8 @@ class SubstitutionHelper(what: Term, repl: Term) {
     case AssignAny(x) => USR(o+x, u+x, p)
     case Test(f) => USR(o, u, Test(usubst(o, u, f)))
       //@todo double-check this case
-    case ODESystem(ode, h) => val x = primedVariables(ode);
-      val sode = usubst(o, u, x, ode);
+    case ODESystem(ode, h) => val x = primedVariables(ode)
+      val sode = usubst(o, u, x, ode)
       val ssys = ODESystem(sode, usubst(o++SetLattice(x), u++SetLattice(x), h))
       USR(o++SetLattice(x), u++SetLattice(x), ssys)
     case ode: DifferentialProgram => val x = primedVariables(ode); val sode = usubst(o, u, x, ode); USR(o++SetLattice(x), u++SetLattice(x), sode)
@@ -126,9 +127,9 @@ class SubstitutionHelper(what: Term, repl: Term) {
     case Choice(a, b) =>
       val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(o, u, b)
       USR(q.intersect(r), v++w, Choice(as, bs))
-    case Loop(a) => val USR(q, v, _) = usubst(o, u, a); val USR(r, w, as) = usubst(o, v, a); USR(o, w, Loop(as))
+    case Loop(a) => val USR(_, v, _) = usubst(o, u, a); val USR(_, w, as) = usubst(o, v, a); USR(o, w, Loop(as))
     case Dual(a) => val USR(q, v, as) = usubst(o, u, a); USR(q, v, Dual(as))
-    case _ => throw new UnknownOperatorException("Not implemented yet", p)
+    case _ => throw UnknownOperatorException("Not implemented yet", p)
   }
 
   /**
@@ -142,7 +143,7 @@ class SubstitutionHelper(what: Term, repl: Term) {
   private def usubst(o: SetLattice[Variable], u: SetLattice[Variable], primed: Set[Variable], p: DifferentialProgram):
       DifferentialProgram = p match {
     case DifferentialProduct(a, b) => DifferentialProduct(usubst(o, u, primed, a), usubst(o, u, primed, b))
-    case AtomicODE(d@DifferentialSymbol(x), e) => AtomicODE(d, usubst(o++SetLattice(primed), u++SetLattice(primed), e))
+    case AtomicODE(d: DifferentialSymbol, e) => AtomicODE(d, usubst(o++SetLattice(primed), u++SetLattice(primed), e))
     case _: DifferentialProgramConst => p
   }
 
