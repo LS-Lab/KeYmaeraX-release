@@ -313,28 +313,84 @@ private object DLBySubst {
     )})
 
   /**
+    * Loop convergence.
+    * {{{
+    *   init:                       step:                                  use:
+    *   G |- exists v_. J(v_), D    v_>0, J(v_), consts -> <a>J(v_-1)      v_<=0, J(v_), consts |- p
+    *   --------------------------------------------------------------------------------------------
+    *   G |- <{a}*>p, D
+    * }}}
+    * @param variant The variant property or convergence property in terms of variantDef
+    * @example The variant J(v_) |-> (v_ = x) has variantDef == (v_ = x)
+    */
+  def con(variant: Formula, pre: BelleExpr = alphaRule*): DependentPositionWithAppliedInputTactic = "con" byWithInput(variant, (pos, sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "con only at top-level in succedent, but got " + pos)
+    require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
+
+    pre & ("doCon" byWithInput(variant, (pp, seq) => {
+      seq.sub(pp) match {
+        case Some(Diamond(prg: Loop, _)) if !FormulaTools.dualFree(prg) => conRule(variant)(pos)
+        case Some(d@Diamond(prg@Loop(a), p)) if  FormulaTools.dualFree(prg) =>
+          val abv = StaticSemantics(a).bv
+          val consts = constAnteConditions(seq, abv)
+          val q =
+            if (consts.size > 1) And(variant, consts.reduceRight(And))
+            else if (consts.size == 1) And(variant, consts.head)
+            else And(variant, True)
+
+          def closeConsts(pos: Position) = andR(pos) <(skip, onAll(andR(pos) <(closeId, skip))*(consts.size-1) & close)
+          val splitConsts = if (consts.nonEmpty) andL('Llast)*consts.size else useAt(DerivedAxioms.andTrue.fact)('Llast)
+
+          val abvVars = abv.toSet[Variable].filter(_.isInstanceOf[BaseVariable]).toList
+          def stutterABV(pos: Position) = abvVars.map(stutter(_)(pos)).reduceOption[BelleExpr](_&_).getOrElse(skip)
+          def unstutterABV(pos: Position) = useAt("[:=] self assign")(pos)*abvVars.size
+
+          cutR(Exists(Variable("v_") :: Nil, q))(pp.checkSucc.top) <(
+            stutter("v_".asVariable)(pos ++ PosInExpr(0::0::Nil)) &
+            useAt(DerivedAxioms.partialVacuousExistsAxiom)(pos) & closeConsts(pos) &
+            assignb(pos ++ PosInExpr(0::Nil)) partial(BelleLabels.initCase),
+            cohide(pp) & implyR(1)
+              & existsL(-1)
+              & byUS("con convergence") <(
+                stutter("v_".asVariable)(1, 1::1::0::Nil) &
+                useAt("<> partial vacuous", PosInExpr(1::Nil))(1, 1::Nil) &
+                assignb(1, 1::0::1::Nil) &
+                stutterABV(SuccPosition.base0(0, PosInExpr(1::0::Nil))) &
+                useAt("<> partial vacuous", PosInExpr(1::Nil))(1) &
+                unstutterABV(SuccPosition.base0(0, PosInExpr(0::1::Nil))) &
+                splitConsts & closeConsts(SuccPos(0)) & assignd(1, 1 :: Nil) partial(BelleLabels.indStep)
+                ,
+                splitConsts partial(BelleLabels.useCase)
+              )
+          )
+      }
+    }))(pos)
+  })
+
+  /**
     * Loop convergence wiping all context.
     * {{{
-    *   init:                       step:                         use:
-    *   G |- exists v_. J(v_), D    v_>0,J(v_) -> <a>J(v_-1)      v_<=0, J(v_) |- p
-    *   ---------------------------------------------------------------------------
+    *   init:                      step:                         use:
+    *   G |- exists v. J(v_), D    v>0, J(v_) -> <a>J(v_-1)      v_<=0, J(v_) |- p
+    *   --------------------------------------------------------------------------
     *   G |- <{a}*>p, D
     * }}}
     * @param variantDef The variant property or convergence property in terms of variantDef
-    * @example The variant J(v_) |-> (v_ = x) has variantDef == (v_ = x)
+    * @example The variant J(v_) ~> (v_ = x) has variantDef == (v = x)
     */
-  def conRule(variantDef: Formula): DependentPositionWithAppliedInputTactic = "con" byWithInput(variantDef, (pos, sequent) => {
+  def conRule(variantDef: Formula) = "conRule" byWithInput(variantDef, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "conRule only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
 
-    cutR(Exists(Variable("v_") :: Nil, variantDef))(pos.checkSucc.top) < (
+    cutR(Exists("v_".asVariable ::Nil, variantDef))(pos.checkSucc.top) <(
       ident partial(BelleLabels.initCase),
       cohide(pos) & implyR(1)
-      & existsL(-1)
-      & byUS("con convergence") <(
-        assignd(1, 1 :: Nil)
-      , Idioms.nil)
-    ) partial(BelleLabels.indStep)
+        & existsL(-1)
+        & byUS("con convergence") <(
+        assignd(1, 1 :: Nil) partial(BelleLabels.indStep)
+        ,
+        Idioms.nil partial(BelleLabels.useCase))
+    )
   })
 
   /** @see [[TactixLibrary.discreteGhost()]] */

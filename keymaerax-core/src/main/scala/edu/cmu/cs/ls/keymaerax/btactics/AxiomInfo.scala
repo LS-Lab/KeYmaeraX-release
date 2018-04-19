@@ -856,7 +856,7 @@ object DerivationInfo {
           (List("&Gamma;"),List("∃v_. j(v_)", "&Delta;")),
           (List("v_ > 0", "j(v_)"),List("&lt;a&gt;j(v_-1)")),
           (List("v_ ≤ 0", "j(v_)"),List("P"))))
-      , List(FormulaArg("j(v_)", allowsFresh = "v_" :: Nil)), _ => ((fml: Formula) => DLBySubst.conRule(fml)): TypedFunc[Formula, BelleExpr]),
+      , List(FormulaArg("j(v_)", allowsFresh = "v_" :: Nil)), _ => ((fml: Formula) => DLBySubst.con(fml)): TypedFunc[Formula, BelleExpr]),
 
     new PositionTacticInfo("loopauto", RuleDisplayInfo("loopauto",(List("&Gamma;"), List("[a*]P", "&Delta;")),
       List()), {case () => TactixLibrary.loopauto}, needsGenerator = true),
