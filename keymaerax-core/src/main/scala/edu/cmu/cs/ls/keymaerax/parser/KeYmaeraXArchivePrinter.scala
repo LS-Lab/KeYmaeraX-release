@@ -72,7 +72,7 @@ class KeYmaeraXArchivePrinter extends (KeYmaeraXArchiveParser.ParsedArchiveEntry
 
     val printedDecls = symbols.filter(s => !defs.keySet.contains(s.name -> s.index)).map({
       case Function(name, idx, domain, sort, _) if !entry.defs.decls.contains((name, idx)) =>
-        s"${printSort(sort)} ${printName(name, idx)}(${printSort(domain)})."
+        s"  ${printSort(sort)} ${printName(name, idx)}(${printSort(domain)})."
       case _ => "" // either printedDefs or printedVars
     }).filter(_.nonEmpty).mkString("\n")
 
@@ -93,8 +93,9 @@ class KeYmaeraXArchivePrinter extends (KeYmaeraXArchiveParser.ParsedArchiveEntry
     }).mkString("\n\n")
 
     val defsBlock =
-      if (printedDecls.nonEmpty || printedDefs.nonEmpty) "Definitions.\n" + printedDecls +
-        (if (printedDecls.nonEmpty) "\n" else "") + printedDefs.mkString("\n") + "\n" + END_BLOCK + "\n"
+      if (printedDecls.nonEmpty || printedDefs.nonEmpty) "Definitions.\n" +
+        printedDecls + (if (printedDecls.nonEmpty && printedDefs.nonEmpty) "\n" else "") +
+        printedDefs.mkString("\n") + "\n" + END_BLOCK + "\n"
       else ""
 
     s"""$head "${entry.name}".
