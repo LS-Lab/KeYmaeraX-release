@@ -6,7 +6,7 @@ import Augmentors._
 import ProofRuleTactics.requireOneSubgoal
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDB
+import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.{Logger, Logging}
@@ -150,10 +150,16 @@ object DebuggingTactics {
 
   /** @see [[TactixLibrary.done]] */
   lazy val done: BelleExpr = done()
-  def done(msg: String = ""): BelleExpr = new StringInputTactic("done", if (msg != "") msg::Nil else Nil) {
-    override def result(provable : ProvableSig): ProvableSig = {
-      if (provable.isProved) { print(msg + {if (msg.nonEmpty) ": " else ""} + "checked done"); provable }
-      else throw new BelleThrowable((if (msg.nonEmpty) msg + "\n" else "") + "Expected proved provable, but got " + provable)
+  def done(msg: String = "", storeLemma: Option[String] = None): BelleExpr = new StringInputTactic("done",
+      if (msg != "" && storeLemma.isDefined) msg::storeLemma.get::Nil
+      else if (msg != "") msg::Nil
+      else Nil) {
+    override def result(provable: ProvableSig): ProvableSig = {
+      if (provable.isProved) {
+        print(msg + {if (msg.nonEmpty) ": " else ""} + "checked done")
+        if (storeLemma.isDefined) LemmaDBFactory.lemmaDB.add(Lemma(provable, Lemma.requiredEvidence(provable), storeLemma))
+        provable
+      } else throw new BelleThrowable((if (msg.nonEmpty) msg + "\n" else "") + "Expected proved provable, but got " + provable)
     }
   }
 }

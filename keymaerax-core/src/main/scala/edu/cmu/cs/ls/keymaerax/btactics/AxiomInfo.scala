@@ -789,7 +789,11 @@ object DerivationInfo {
       ,List(StringArg("msg")), _ => ((msg: String) => DebuggingTactics.debug(msg)): TypedFunc[String, BelleExpr]),
     InputTacticInfo("done"
       , SimpleDisplayInfo("Done","done")
-      ,List(StringArg("msg")), _ => ((msg: Option[String]) => DebuggingTactics.done(msg.getOrElse(""))): TypedFunc[Option[String], BelleExpr]),
+      ,List(StringArg("msg"),StringArg("lemmaName")), _ =>
+        ((msg: Option[String]) =>
+          ((lemmaName: Option[String]) =>
+            DebuggingTactics.done(msg.getOrElse(""), lemmaName)): TypedFunc[Option[String], BelleExpr]): TypedFunc[Option[String], _]
+    ),
 
     // Proof rule two-position tactics
     new TwoPositionTacticInfo("coHide2", "W", {case () => SequentCalculus.cohide2}),
