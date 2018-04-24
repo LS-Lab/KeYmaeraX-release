@@ -119,12 +119,11 @@ private[core] object AxiomBase extends Logging {
         *     J(v) |- <a{|v|}*>P
         * }}}
         * @todo Bugfix soundness by telling a to be SpaceDependent Except(v)
-        * @todo Bugfix soundness: third premise should be \exists v (v<=0 & J(v)) |- P to prevent P from using v.
         */
       ("con convergence",
         (immutable.IndexedSeq(
             Sequent(immutable.IndexedSeq(Greater(v, Number(0)),Jany), immutable.IndexedSeq(Diamond(a, Diamond(Assign(v,Minus(v,Number(1))),Jany)))),
-            Sequent(immutable.IndexedSeq(LessEqual(v, Number(0)), Jany), immutable.IndexedSeq(pany))),
+            Sequent(immutable.IndexedSeq(Exists(v::Nil, And(LessEqual(v, Number(0)), Jany))), immutable.IndexedSeq(pany))),
           Sequent(immutable.IndexedSeq(Jany), immutable.IndexedSeq(Diamond(Loop(a), pany)))))
     )
   }
