@@ -349,19 +349,17 @@ private object DLBySubst {
             stutter("v_".asVariable)(pos ++ PosInExpr(0::0::Nil)) &
             useAt(DerivedAxioms.partialVacuousExistsAxiom)(pos) & closeConsts(pos) &
             assignb(pos ++ PosInExpr(0::Nil)) partial(BelleLabels.initCase),
-            cohide(pp) & implyR(1)
-              & existsL(-1)
-              & byUS("con convergence") <(
-                stutter("v_".asVariable)(1, 1::1::0::Nil) &
-                useAt("<> partial vacuous", PosInExpr(1::Nil))(1, 1::Nil) &
-                assignb(1, 1::0::1::Nil) &
-                stutterABV(SuccPosition.base0(0, PosInExpr(1::0::Nil))) &
-                useAt("<> partial vacuous", PosInExpr(1::Nil))(1) &
-                unstutterABV(SuccPosition.base0(0, PosInExpr(0::1::Nil))) &
-                splitConsts & closeConsts(SuccPos(0)) & assignd(1, 1 :: Nil) partial(BelleLabels.indStep)
-                ,
-                splitConsts partial(BelleLabels.useCase)
-              )
+            cohide(pp) & implyR(1) & existsL(-1) & byUS("con convergence") <(
+              stutter("v_".asVariable)(1, 1::1::0::Nil) &
+              useAt("<> partial vacuous", PosInExpr(1::Nil))(1, 1::Nil) &
+              assignb(1, 1::0::1::Nil) &
+              stutterABV(SuccPosition.base0(0, PosInExpr(1::0::Nil))) &
+              useAt("<> partial vacuous", PosInExpr(1::Nil))(1) &
+              unstutterABV(SuccPosition.base0(0, PosInExpr(0::1::Nil))) &
+              splitConsts & closeConsts(SuccPos(0)) & assignd(1, 1 :: Nil) partial(BelleLabels.indStep)
+              ,
+              existsL('Llast) & andL('Llast) & splitConsts partial(BelleLabels.useCase)
+            )
           )
       }
     }))(pos)

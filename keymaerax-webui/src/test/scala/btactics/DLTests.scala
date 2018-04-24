@@ -532,6 +532,13 @@ class DLTests extends TacticTestBase {
     result.subgoals(2) shouldBe "v_<=0, v_>x, 0>=0 ==> x < 0".asSequent
   }
 
+  it should "rename in postcondition" in {
+    val result = proveBy("x = 0, 0 >= 0 ==> <{x:=x-1;}*>v_<=2".asSequent, DLBySubst.con("v_<=1".asFormula)(1))
+    result.subgoals(0) shouldBe "x=0, 0>=0 ==> \\exists v_ v_<=1".asSequent
+    result.subgoals(1) shouldBe "v_>0, v_<=1, 0>=0 ==> <x:=x-1;>v_-1<=1".asSequent
+    result.subgoals(2) shouldBe "v_<=0, v_<=1, 0>=0 ==> v__0<=2".asSequent
+  }
+
   it should "work in second position" in {
     val result = proveBy("x=0, 0>=0 ==> 0=1, <{x:=x-1;}*>x<0".asSequent, DLBySubst.con("v_>x".asFormula)(2))
     result.subgoals(0) shouldBe "x=0, 0>=0 ==> 0=1, \\exists v_ v_>x".asSequent
@@ -540,11 +547,11 @@ class DLTests extends TacticTestBase {
   }
 
   it should "accept modal convergence conditions" in {
-    val result = proveBy("<{x:=x-1;}*>x < 0".asFormula, DLBySubst.con("<{v_:=v_-1;x:=x-1;}*>(v_>0 & x<0)".asFormula)(1))
+    val result = proveBy("<{{x'=-1}}*>x < 0".asFormula, DLBySubst.con("<{{x'=-1};v_:=v_-1;}*>(v_>0 & x<0)".asFormula)(1))
     result.subgoals should have size 3
-    result.subgoals(0) shouldBe "==> \\exists v_ <{v_:=v_-1;x:=x-1;}*>(v_>0 & x<0)".asSequent
-    result.subgoals(1) shouldBe "v__0>0, <{v__0:=v__0-1;x:=x-1;}*>(v__0>0&x<0) ==> <x:=x-1;>\\forall v_ (v_=v__0-1-><{v_:=v_-1;x:=x-1;}*>(v_>0&x < 0))".asSequent
-    result.subgoals(2) shouldBe "v_<=0, <{v_:=v_-1;x:=x-1;}*>(v_>0&x < 0) ==> x < 0".asSequent
+    result.subgoals(0) shouldBe "==> \\exists v_ <{{x'=-1};v_:=v_-1;}*>(v_>0 & x<0)".asSequent
+    result.subgoals(1) shouldBe "v__0>0, <{{x'=-1};v__0:=v__0-1;}*>(v__0>0&x<0) ==> <{x'=-1}>\\forall v_ (v_=v__0-1-><{{x'=-1};v_:=v_-1;}*>(v_>0&x < 0))".asSequent
+    result.subgoals(2) shouldBe "v_<=0, <{{x'=-1};v_:=v_-1;}*>(v_>0&x < 0) ==> x < 0".asSequent
   }
 
   it should "retain constant fact" in {
@@ -572,7 +579,7 @@ class DLTests extends TacticTestBase {
     val result = proveBy("x>y, y>0 ==> <{{x:=x-y; ++ x:=-3;}^@}*>x<0".asSequent, DLBySubst.con("v_*y>x".asFormula)(1))
     result.subgoals(0) shouldBe "x>y, y>0 ==> \\exists v_ v_*y>x".asSequent
     result.subgoals(1) shouldBe "v_>0, v_*y>x ==> <{x:=x-y; ++ x:=-3;}^@>(v_-1)*y>x".asSequent
-    result.subgoals(2) shouldBe "v_<=0, v_*y>x ==> x < 0".asSequent
+    result.subgoals(2) shouldBe "\\exists v_ (v_<=0 & v_*y>x) ==> x < 0".asSequent
   }
 
   "Loop" should "work with abstract invariant" in {
