@@ -199,7 +199,7 @@ private object DLBySubst {
         (if (pos.isSucc) useAt("<:=> assign equality all")(pos) else useAt("<:=> assign equality")(pos)) &
         ProofRuleTactics.uniformRenaming(y, x) &
         (if (pos.isTopLevel && pos.isSucc) allR(pos) & implyR(pos)
-         else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL(pos)
+         else if (pos.isTopLevel && pos.isAnte) existsL(pos) & andL('Llast)
          else ident)
   })
 

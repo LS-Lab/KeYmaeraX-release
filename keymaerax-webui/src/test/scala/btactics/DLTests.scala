@@ -14,6 +14,8 @@ import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps
 
+import org.scalatest.LoneElement._
+
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.DLBySubst]]
  */
@@ -508,14 +510,22 @@ class DLTests extends TacticTestBase {
 
   "assignd" should "work with ODE" in {
     val result = proveBy("<x:=x+1;><{x'=1}>x>0".asFormula, assignd(1))
-    result.subgoals should have size 1
-    result.subgoals.head shouldBe "x=x_0+1 ==> <{x'=1}>x>0".asSequent
+    result.subgoals.loneElement shouldBe "x=x_0+1 ==> <{x'=1}>x>0".asSequent
   }
 
   it should "work with loop" in {
     val result = proveBy("<x:=x+1;><{x:=x+1;}*>x>0".asFormula, assignd(1))
-    result.subgoals should have size 1
-    result.subgoals.head shouldBe "x=x_0+1 ==> <{x:=x+1;}*>x>0".asSequent
+    result.subgoals.loneElement shouldBe "x=x_0+1 ==> <{x:=x+1;}*>x>0".asSequent
+  }
+
+  it should "work with ODE in antecedent" in {
+    val result = proveBy("<x:=x+1;><{x:=x+1;}*>x>0 ==> ".asSequent, assignd(-1))
+    result.subgoals.loneElement shouldBe "x=x_0+1, <{x:=x+1;}*>x>0 ==> ".asSequent
+  }
+
+  it should "work with loop in antecedent and context" in {
+    val result = proveBy("0>=0, <x:=x+1;><{x:=x+1;}*>x>0, 1>=1, 2>=2 ==> ".asSequent, assignd(-2))
+    result.subgoals.loneElement shouldBe "0>=0, 1>=1, 2>=2, x=x_0+1, <{x:=x+1;}*>x>0 ==> ".asSequent
   }
 
   "Convergence" should "work in easy case" in {
