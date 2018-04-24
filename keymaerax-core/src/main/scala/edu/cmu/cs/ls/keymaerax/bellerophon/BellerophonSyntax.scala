@@ -221,7 +221,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
     * @see [[apply(locator: PositionLocator)]]
     */
   //@todo turn into properly type-checkable locator arguments without going crazy long.
-  final def apply(locator: Symbol): T = locator match {
+  final def apply(locator: Symbol, inExpr: PosInExpr): T = locator match {
     case 'L => apply(FindL(0, None))
     case 'R => apply(FindR(0, None))
     case '_ => this match {
@@ -229,9 +229,10 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
       case _: BuiltInRightTactic => apply(FindR(0, None))
       case _ => throw new BelleThrowable(s"Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
-    case 'Llast => apply(LastAnte(0))
-    case 'Rlast => apply(LastSucc(0))
+    case 'Llast => apply(LastAnte(0, inExpr))
+    case 'Rlast => apply(LastSucc(0, inExpr))
   }
+  final def apply(locator: Symbol): T = apply(locator, PosInExpr.HereP)
   /**
     * Returns the tactic at the position identified by `locator`, ensuring that `locator` will yield the formula `expected` verbatim.
     *
@@ -334,8 +335,8 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
         require(start.isTopLevel, "Start position must be top-level in sequent")
         require(start.isIndexDefined(provable.subgoals(goal)), "Start position must be valid in sequent")
         tryAllAfter(provable, l, null)
-      case LastAnte(goal) => positionTactic.computeResult(provable, AntePosition.base0(provable.subgoals(goal).ante.size-1))
-      case LastSucc(goal) => positionTactic.computeResult(provable, SuccPosition.base0(provable.subgoals(goal).succ.size-1))
+      case LastAnte(goal, sub) => positionTactic.computeResult(provable, AntePosition.base0(provable.subgoals(goal).ante.size-1, sub))
+      case LastSucc(goal, sub) => positionTactic.computeResult(provable, SuccPosition.base0(provable.subgoals(goal).succ.size-1, sub))
     }
   } catch {
     case be: BelleThrowable => throw be
@@ -490,8 +491,8 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
       case l@Find(goal, shape, start, exact) =>
         require(start.isTopLevel, "Start position must be top-level in sequent")
         tryAllAfter(l, null)
-      case LastAnte(goal) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition.base0(provable.subgoals(goal).ante.size - 1) })
-      case LastSucc(goal) => pt.factory(v match { case BelleProvable(provable, _) => SuccPosition.base0(provable.subgoals(goal).succ.size - 1) })
+      case LastAnte(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition.base0(provable.subgoals(goal).ante.size - 1, sub) })
+      case LastSucc(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => SuccPosition.base0(provable.subgoals(goal).succ.size - 1, sub) })
     }
   } catch {
     //note the following exceptions are likely caused by wrong positioning
