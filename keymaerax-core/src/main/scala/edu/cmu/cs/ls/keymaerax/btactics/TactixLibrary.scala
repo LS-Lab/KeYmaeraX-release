@@ -122,7 +122,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     /** Execute `t` at pos, read tactic recursors and schedule followup tactics. */
     def applyAndRecurse(t: AtPosition[_ <: BelleExpr], pos: Position, s: Sequent): BelleExpr = {
       val recursors = tacticIndex.tacticRecursors(t)
-      if (recursors.nonEmpty) t(new Fixed(pos)) & recursors.map(r => applyRecursor(r(s, pos.top))).reduce(_&_)
+      if (recursors.nonEmpty) t(new Fixed(pos)) & (done | recursors.map(r => applyRecursor(r(s, pos.top))).reduce(_&_))
       else t(new Fixed(pos))
     }
 
@@ -149,8 +149,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
           ((_: Sequent, p: SeqPos) => (new Fixed(p)::Nil)::Nil) :: Nil
         } else super.tacticRecursors(tactic)
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
-        case Box(a, _) if a.isInstanceOf[Loop] => (Nil, loop::Nil)
-        case Box(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.solve::Nil, odeR::Nil)
+        case Box(_: Loop, _) => (Nil, loop::Nil)
+        case Box(_: ODESystem, _) => (Nil, odeR::Nil)
         case _ => super.tacticsFor(expr)
       }
     }
