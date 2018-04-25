@@ -24,32 +24,32 @@ object InvariantGenerator extends Logging {
     * @author Andre Platzer */
   def relevanceFilter(generator: Generator[Formula]): Generator[Formula] = (sequent,pos) => {
     //@todo if frees depend on bound variables that are not mentioned in evolution domain constraint, then diffCut
-    val (system, constraint, post) = sequent.sub(pos) match {
-      case Some(Box(ode: ODESystem, pf)) => (ode.ode,ode.constraint,pf)
-      case Some(Box(system: Loop, pf)) => (system,True,pf)
+    val (system, constraint, post, allowPost) = sequent.sub(pos) match {
+      case Some(Box(ode: ODESystem, pf)) => (ode.ode,ode.constraint,pf,false)
+      case Some(Box(system: Loop, pf)) => (system,True,pf,true)
       case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }
     val evos = if (constraint==True) Nil else FormulaTools.conjuncts(constraint)
     new Iterator[Formula] {
-      lazy val deps = StaticSemanticsTools.transitiveDependencies(system)
-      lazy val bounds = StaticSemantics.boundVars(system).symbols
-      lazy val frees = StaticSemantics.freeVars(post).symbols
-      lazy val knowledge = StaticSemantics.freeVars(constraint).symbols
+      private lazy val deps = StaticSemanticsTools.transitiveDependencies(system)
+      private lazy val bounds = StaticSemantics.boundVars(system).symbols
+      private lazy val frees = StaticSemantics.freeVars(post).symbols
+      private lazy val knowledge = StaticSemantics.freeVars(constraint).symbols
       // bound variables that free variables of the postcondition depend on but that are not yet free in the evolution domain constraint, so missing knowledge.
       // i.e. variables that the free variables of the postcondition depend on, that are also bound, but not yet free in the evolution domain constraint
-      lazy val missing = frees.flatMap(x => deps.getOrElse(x,List.empty).intersect(bounds.to)).diff(knowledge)
+      private lazy val missing = frees.flatMap(x => deps.getOrElse(x,List.empty).intersect(bounds.to)).diff(knowledge)
       //@todo above of course even vars that are in the domain might need more knowledge, but todo that later and lazy
-      lazy val candidates = generator(sequent,pos).toList.
+      private lazy val candidates = generator(sequent,pos).toList.
         distinct.
         // new invariants only that aren't in the evolution domain constraint yet
         //@note it's never a good idea to diffCut the postcondition itself, because a direct proof then also succeeds
-        filter(fml => fml!=post && !evos.contains(fml)).
+        filter(fml => (allowPost || fml!=post) && !evos.contains(fml)).
         // filter out constants
         // filter(fml => !StaticSemantics.freeVars(fml).symbols.intersect(bounds).isEmpty)
         // candidates with knowledge about missing variables
         //@todo could check that a cut with this extra knowledge would actually prove invariant, but not sure if that pays off compared to just trying the proof.
-        filter(fml => !StaticSemantics.freeVars(fml).symbols.intersect(missing).isEmpty).
+        filter(StaticSemantics.freeVars(_).symbols.intersect(missing).nonEmpty).
         //@todo could check that it's not a tautology using RCF or check that it's not provable by DW
         //@todo postpone and try later candidates not covering all their dependencies (given the knowledge)
         //        filter(fml => {
@@ -64,7 +64,7 @@ object InvariantGenerator extends Logging {
         StaticSemantics.freeVars(a).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(y=>y!=x)).size <
           StaticSemantics.freeVars(b).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(y=>y!=x)).size
       )
-      lazy val iterareHumanumEst: Iterator[Formula] = {
+      private lazy val iterareHumanumEst: Iterator[Formula] = {
         logger.debug("dependencies:\t" + deps + "\nbounds:\t" + bounds.mkString(",") + "\nfrees:\t" + frees.mkString(",") + "\nknowledge:\t" + knowledge.mkString(",")  + "\nmissing:\t" + missing.mkString(","))
         logger.debug("CANDIDATE: " + candidates)
         candidates.iterator
