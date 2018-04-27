@@ -361,6 +361,20 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     case _ => // nothing to test
   }
 
+  it should "not change timeout before being run" in withQE {
+    case tool: ToolOperationManagement =>
+      val origTimeout = tool.getOperationTimeout
+      origTimeout shouldBe Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
+      proveBy("x>0 -> x>1".asFormula, (DebuggingTactics.assert(_ => false, "Fail")
+          & QE(Nil, None, Some(7))) | new BuiltInTactic("ANON") {
+        def result(provable: ProvableSig): ProvableSig = {
+          tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
+          provable
+        }
+      }) should (not be 'proved)
+    case _ => // nothing to test
+  }
+
   "Tactic chase" should "not infinite recurse" in {
     var i = 0
     val count = "ANON" by ((pos: Position, seq: Sequent) => { i=i+1; skip })

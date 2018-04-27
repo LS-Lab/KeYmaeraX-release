@@ -624,7 +624,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     //@todo implement as part of tools?
     lazy val tool = ToolProvider.qeTool(requiresTool).getOrElse(
       throw new BelleThrowable(s"QE requires ${requiresTool.getOrElse("a QETool")}, but got None"))
-    val resetTimeout: (BelleExpr => BelleExpr) = timeout match {
+    lazy val resetTimeout: (BelleExpr => BelleExpr) = timeout match {
       case Some(t) => tool match {
         case tom: ToolOperationManagement =>
           val oldTimeout = tom.getOperationTimeout
@@ -653,7 +653,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       }
       case None => tool
     }
-    val tactic = resetTimeout(ToolTactics.fullQE(order)(timeoutTool))
+    lazy val tactic = resetTimeout(ToolTactics.fullQE(order)(timeoutTool))
     (requiresTool, timeout) match {
       case (Some(toolName), Some(t)) => "QE" byWithInputs (Variable(toolName)::Number(t)::Nil, tactic)
       case (Some(toolName), None) => "QE" byWithInputs (Variable(toolName)::Nil, tactic)
