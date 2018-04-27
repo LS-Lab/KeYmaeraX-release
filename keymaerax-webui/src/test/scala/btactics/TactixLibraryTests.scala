@@ -6,8 +6,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -16,6 +18,10 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
 import scala.collection.immutable._
+import scala.language.postfixOps
+import org.scalatest.LoneElement._
+import org.scalatest.concurrent._
+import org.scalatest.time.SpanSugar._
 
 /**
  * Tactix Library Test.
@@ -23,7 +29,7 @@ import scala.collection.immutable._
  */
 @SummaryTest
 @UsualTest
-class TactixLibraryTests extends TacticTestBase {
+class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does not abort test */ {
   private val someList: () => Iterator[Formula] = () =>
       ("x>=4".asFormula :: "x>=6".asFormula :: "x<2".asFormula :: "x>=5".asFormula :: "x>=0".asFormula :: Nil).iterator
 
@@ -332,7 +338,7 @@ class TactixLibraryTests extends TacticTestBase {
   "QE" should "reset timeout when done" in withQE {
     case tool: ToolOperationManagement =>
       val origTimeout = tool.getOperationTimeout
-      origTimeout shouldBe -1 // infinity initially
+      origTimeout shouldBe Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
       proveBy("x>1 -> x>0".asFormula, QE(Nil, None, Some(7)) & new BuiltInTactic("ANON") {
         def result(provable: ProvableSig): ProvableSig = {
           tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
@@ -345,7 +351,7 @@ class TactixLibraryTests extends TacticTestBase {
   it should "reset timeout when failing" in withQE {
     case tool: ToolOperationManagement =>
       val origTimeout = tool.getOperationTimeout
-      origTimeout shouldBe -1 // infinity initially
+      origTimeout shouldBe Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
       proveBy("x>0 -> x>1".asFormula, QE(Nil, None, Some(7)) | new BuiltInTactic("ANON") {
         def result(provable: ProvableSig): ProvableSig = {
           tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
@@ -353,5 +359,21 @@ class TactixLibraryTests extends TacticTestBase {
         }
       }) should (not be 'proved)
     case _ => // nothing to test
+  }
+
+  "Tactic chase" should "not infinite recurse" in {
+    var i = 0
+    val count = "ANON" by ((pos: Position, seq: Sequent) => { i=i+1; skip })
+
+    failAfter(1 second) {
+      val result = proveBy("[{x'=1}]x>0".asFormula, master(loopauto, count, keepQEFalse=false))
+      result.subgoals.loneElement shouldBe "==> [{x'=1}]x>0".asSequent
+    }
+
+    i shouldBe 1
+  }
+
+  it should "exhaustively apply propositional" in {
+    proveBy("true<->(p()<->q())&q()->p()".asFormula, prop) shouldBe 'proved
   }
 }

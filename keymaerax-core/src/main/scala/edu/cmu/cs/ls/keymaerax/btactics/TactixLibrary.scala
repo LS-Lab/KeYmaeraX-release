@@ -85,8 +85,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     val restrictions = restrictTo.toList
 
     /** Apply the canonical tactic for the formula at position `pos`; exhaustively depth-first search on resulting other formulas */
-    lazy val atPos: DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
-      s.sub(pos) match {
+    def atPos(except: Option[Position]): DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
+      if (except.contains(pos)) skip
+      else s.sub(pos) match {
         case Some(fml) if pos.isAnte && s.succ.contains(fml) => close(pos.checkAnte.top, SuccPos(s.succ.indexOf(fml))) & done
         case Some(fml) if pos.isSucc && s.ante.contains(fml) => close(AntePos(s.ante.indexOf(fml)), pos.checkSucc.top) & done
         case Some(fml) =>
@@ -101,9 +102,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     })
 
     /** Apply `atPos` at the specified position, or search for the expected formula if it cannot be found there. */
-    def atOrSearch(p: PositionLocator): BelleExpr = atPos(p) | (p match {
-      case Fixed(pos, Some(fml), exact) if pos.isAnte => atPos(Find.FindL(0, Some(fml), exact=exact)) | skip
-      case Fixed(pos, Some(fml), exact) if pos.isSucc => atPos(Find.FindR(0, Some(fml), exact=exact)) | skip
+    def atOrSearch(p: PositionLocator): BelleExpr = atPos(None)(p) | (p match {
+      case Fixed(pos, Some(fml), exact) if pos.isAnte => atPos(Some(pos))(Find.FindL(0, Some(fml), exact=exact)) | skip
+      case Fixed(pos, Some(fml), exact) if pos.isSucc => atPos(Some(pos))(Find.FindR(0, Some(fml), exact=exact)) | skip
       case _ => skip
     })
 
@@ -116,19 +117,21 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     def applyRecursor(rec: TacticIndex.Branches): BelleExpr = rec match {
       case Nil => skip
       case r::Nil => onAll(applyBranchRecursor(r))
-      case r => BranchTactic(r.map(applyBranchRecursor))
+      case r => DebuggingTactics.assertProvableSize(r.length) & BranchTactic(r.map(applyBranchRecursor))
     }
 
     /** Execute `t` at pos, read tactic recursors and schedule followup tactics. */
     def applyAndRecurse(t: AtPosition[_ <: BelleExpr], pos: Position, s: Sequent): BelleExpr = {
       val recursors = tacticIndex.tacticRecursors(t)
-      if (recursors.nonEmpty) t(new Fixed(pos)) & (done | recursors.map(r => applyRecursor(r(s, pos.top))).reduce(_&_))
+      if (recursors.nonEmpty) t(new Fixed(pos)) & (done | recursors.map(r =>
+        DebuggingTactics.assertOnAll(_ != s, "Stopping to recurse on unchanged sequent") &
+        applyRecursor(r(s, pos.top))).reduce(_&_))
       else t(new Fixed(pos))
     }
 
     //@note Execute on formulas in order of sequent; might be useful to sort according to some tactic priority.
-    seq.ante.zipWithIndex.map({ case (fml, i) => onAll(atPos(AntePosition.base0(i), fml) | atPos('L, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip) &
-    seq.succ.zipWithIndex.map({ case (fml, i) => onAll(atPos(SuccPosition.base0(i), fml) | atPos('R, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+    seq.ante.zipWithIndex.map({ case (fml, i) => onAll(atPos(None)(AntePosition.base0(i), fml) | atPos(Some(AntePosition.base0(i)))('L, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip) &
+    seq.succ.zipWithIndex.map({ case (fml, i) => onAll(atPos(None)(SuccPosition.base0(i), fml) | atPos(Some(SuccPosition.base0(i)))('R, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
   })
 
   val prop: BelleExpr = "prop" by tacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
@@ -137,8 +140,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Master/auto implementation with tactic `loop` for nondeterministic repetition and `odeR` for
     * differential equations in the succedent.
     * `keepQEFalse` indicates whether or not QE results "false" at the proof leaves should be kept or undone. */
-  private def master(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr],
-                     keepQEFalse: Boolean): BelleExpr = "ANON" by {
+  def master(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr],
+             keepQEFalse: Boolean): BelleExpr = "ANON" by {
     /** Create a tactic index that hands out loop tactics and configurable ODE tactics. */
     val createAutoTacticIndex = new DefaultTacticIndex {
       override def tacticRecursors(tactic: BelleExpr): TacticRecursors =
@@ -150,7 +153,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         } else super.tacticRecursors(tactic)
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
         case Box(_: Loop, _) => (Nil, loop::Nil)
-        case Box(_: ODESystem, _) => (Nil, odeR::Nil)
+        case Box(_: ODESystem, _) => (TactixLibrary.solve::Nil, odeR::Nil)
         case _ => super.tacticsFor(expr)
       }
     }
@@ -166,7 +169,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * result `false` of a QE step at the leaves is kept or undone (i.e., reverted to the QE input sequent).
     * @see [[auto]] */
   def master(gen: Generator[Formula] = invGenerator, keepQEFalse: Boolean=true): BelleExpr = "master" by {
-    def endODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) =>{
+    def endODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
       ODE(pos) & ?(allR(pos) & implyR(pos)*2 & allL(Variable("s_"), Variable("t_"))('Llast) & auto & done)
     })
     master(loop(gen), endODE, keepQEFalse)
