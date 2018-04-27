@@ -106,13 +106,24 @@ object DebuggingTactics {
     }
   }
 
-  /** assert is a no-op tactic that raises an error if the provable does not satisfy a condition. */
+  /** assert is a no-op tactic that raises an error if the provable does not satisfy a condition on the sole subgoal. */
   def assert(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("assert") {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.size != 1 || !cond(provable.subgoals.head)) {
         throw BelleUserGeneratedError(message + "\nExpected 1 subgoal whose sequent matches condition " + cond + ",\n\t but got " +
           (if (provable.subgoals.size != 1) provable.subgoals.size + " subgoals"
           else provable.subgoals.head.prettyString))
+      }
+      provable
+    }
+  }
+
+  /** assertOnAll is a no-op tactic that raises an error the provable does not satisfy a condition on all subgoals. */
+  def assertOnAll(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("assert") {
+    override def result(provable: ProvableSig): ProvableSig = {
+      if (!provable.subgoals.forall(cond(_))) {
+        throw BelleUserGeneratedError(message + "\nExpected all subgoals match condition " + cond + ",\n\t but " +
+          provable.subgoals.filter(!cond(_)).mkString("\n") + " do not match")
       }
       provable
     }
