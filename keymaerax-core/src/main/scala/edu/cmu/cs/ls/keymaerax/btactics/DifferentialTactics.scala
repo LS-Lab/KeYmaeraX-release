@@ -12,7 +12,7 @@ import Augmentors._
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.SimplificationTool
+import edu.cmu.cs.ls.keymaerax.tools.{SimplificationTool, ToolException}
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
@@ -1019,7 +1019,11 @@ private object DifferentialTactics extends Logging {
     //val gb = p::domToTerms(dom)
     val domterms = domToTerms(dom)
     //todo: groebnerBasis seems broken for > 1 term??
-    val gb = if(domterms.nonEmpty) algTool.groebnerBasis(domterms) else Nil
+    //todo: comment above might require own MathematicaToKeYmaera converter,
+    //      since the default converter for QE accepts lists of length=2 only to represent Pairs
+    val gb = if (domterms.nonEmpty) {
+      try { algTool.groebnerBasis(domterms) } catch { case _: ToolException => Nil }
+    } else Nil
     val quo = algTool.polynomialReduce(lie,p::gb)
     // quo._1.head is the cofactor of p
     // quo._2 is the remainder
@@ -1041,16 +1045,28 @@ private object DifferentialTactics extends Logging {
       case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}")
     }
 
-    //First, attempt to prove denominator non-zero, and the remainder has appropriate sign
-    diffCut(And(NotEqual(den,zero),remSgn))(pos) < (
-      //Finally, use dgDbx
+    val denRemReq = And(NotEqual(den,zero),remSgn)
+
+    val denRemReqTactic = (t: BelleExpr) =>
+      if ((FormulaTools.conjuncts(denRemReq).toSet -- FormulaTools.conjuncts(dom)).isEmpty) {
+        t
+      } else {
+        //First, attempt to prove denominator non-zero, and the remainder has appropriate sign
+        diffCut(denRemReq)(pos) <(
+          t,
+          //Leaves the denonominator goal open if it isn't implied by DW
+          ?(dW(pos) & QE & done)
+        )
+      }
+
+
+    denRemReqTactic(
+      // use dgDbx
       diffCut(bop.reapply(p,zero))(pos) <(
-        dW(pos) & QE
+        dW(pos) & QE & done
         ,
         dgDbx(Divide(num,den))(pos)
-      ),
-      //Leaves the denonominator goal open if it isn't implied by DW
-      ?(dW(pos) & QE & done)
+      )
     )
   })
 

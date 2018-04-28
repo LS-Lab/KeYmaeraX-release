@@ -92,6 +92,24 @@ class ODETests extends TacticTestBase {
     TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
   }
 
+  it should "fail find fractional darboux" in withMathematica { _ =>
+    //(x+z)' = ((x*A+B)/z^2)(x+z), where z^2 > 0
+    val seq = "x+z=0 ==> [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&y=x^2&z^2>0}] x+z=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) should not be 'proved
+    TactixLibrary.proveBy(seq, ODE(1)) should not be 'proved
+    TactixLibrary.proveBy(seq, master()) should not be 'proved
+    the [BelleThrowable] thrownBy TactixLibrary.proveBy(seq, auto) should have message
+      """[Bellerophon Runtime] Expected proved provable, but got NoProofTermProvable(Provable(x+z=0
+        |  ==>  [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&y=x^2&z^2>0}]x+z=0
+        |  from   x+z=0
+        |  ==>  [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&y=x^2&z^2>0}]x+z=0))""".stripMargin
+  }
+
+  it should "not fail when evolution domain already contains denominator and remainder sign requirements" in withMathematica { _ =>
+    val seq = "x+z=0 ==> [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&(y=x^2&z^2>0)&z^2*1!=0&-1*A+A*y*z^-2=0}]x+z-0=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
+  }
+
   it should "fail with evolution domain constraints" in withMathematica { _ =>
     //(x+z)' = (x*A+B)(x+z)
     val seq = "x+z=0 ==> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] x+z=0".asSequent
