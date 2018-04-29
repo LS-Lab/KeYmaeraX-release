@@ -287,7 +287,7 @@ protected object FOQuantifierTactics {
    * @param order The order of quantifiers.
    * @return The tactic.
    */
-  def universalClosure(order: List[NamedSymbol] = Nil): DependentPositionTactic = "universalClosure" byWithInputs (order, (pos: Position, sequent: Sequent) => {
+  def universalClosure(order: Seq[NamedSymbol] = Nil): DependentPositionTactic = "universalClosure" byWithInputs (order, (pos: Position, sequent: Sequent) => {
     // fetch non-bound variables and parameterless function symbols
     require(pos.isTopLevel, "Universal closure only at top-level")
     val varsFns: Set[NamedSymbol] = StaticSemantics.freeVars(sequent(pos.top)).toSet ++ StaticSemantics.signature(sequent(pos.top))
@@ -296,7 +296,7 @@ protected object FOQuantifierTactics {
     // use specified order in reverse, prepend the rest alphabetically
     // @note get both: specified order and compatibility with previous sorting, which resulted in
     //       reverse-alphabetical ordering of quantifiers
-    val sorted: List[Term] = ((varsFns -- order).
+    val sorted: Seq[Term] = ((varsFns -- order).
       filter({ case BaseVariable(_, _, _) => true case Function(_, _, Unit, _, false) => true case _ => false }).
       // guarantee stable sorting of quantifiers so that Mathematica behavior is predictable
       toList.sorted ++ order.reverse).

@@ -221,7 +221,7 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
     * @see [[apply(locator: PositionLocator)]]
     */
   //@todo turn into properly type-checkable locator arguments without going crazy long.
-  final def apply(locator: Symbol): T = locator match {
+  final def apply(locator: Symbol, inExpr: PosInExpr): T = locator match {
     case 'L => apply(FindL(0, None))
     case 'R => apply(FindR(0, None))
     case '_ => this match {
@@ -229,9 +229,10 @@ trait AtPosition[T <: BelleExpr] extends BelleExpr with (PositionLocator => T) w
       case _: BuiltInRightTactic => apply(FindR(0, None))
       case _ => throw new BelleThrowable(s"Cannot determine whether this tactic is left/right. Please use 'L or 'R as appropriate.")
     }
-    case 'Llast => apply(LastAnte(0))
-    case 'Rlast => apply(LastSucc(0))
+    case 'Llast => apply(LastAnte(0, inExpr))
+    case 'Rlast => apply(LastSucc(0, inExpr))
   }
+  final def apply(locator: Symbol): T = apply(locator, PosInExpr.HereP)
   /**
     * Returns the tactic at the position identified by `locator`, ensuring that `locator` will yield the formula `expected` verbatim.
     *
@@ -325,7 +326,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
               (!exact && UnificationMatch.unifiable(f, provable.subgoals.head.sub(pos).get).isDefined)) {
             positionTactic.computeResult(provable, pos)
           } else {
-            throw new BelleIllFormedError("Formula " + provable.subgoals.head.sub(pos) + " at position " + pos +
+            throw BelleIllFormedError("Formula " + provable.subgoals.head.sub(pos).getOrElse("") + " at position " + pos +
               " is not of expected shape " + f)
           }
         case None => positionTactic.computeResult(provable, pos)
@@ -334,8 +335,8 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
         require(start.isTopLevel, "Start position must be top-level in sequent")
         require(start.isIndexDefined(provable.subgoals(goal)), "Start position must be valid in sequent")
         tryAllAfter(provable, l, null)
-      case LastAnte(goal) => positionTactic.computeResult(provable, AntePosition.base0(provable.subgoals(goal).ante.size-1))
-      case LastSucc(goal) => positionTactic.computeResult(provable, SuccPosition.base0(provable.subgoals(goal).succ.size-1))
+      case LastAnte(goal, sub) => positionTactic.computeResult(provable, AntePosition.base0(provable.subgoals(goal).ante.size-1, sub))
+      case LastSucc(goal, sub) => positionTactic.computeResult(provable, SuccPosition.base0(provable.subgoals(goal).succ.size-1, sub))
     }
   } catch {
     case be: BelleThrowable => throw be
@@ -446,17 +447,17 @@ abstract case class DependentPositionTactic(name: String) extends NamedBelleExpr
   /** Create the actual tactic to be applied at position pos */
   def factory(pos: Position): DependentTactic
 }
-abstract case class InputTactic(name: String, inputs: List[Any]) extends BelleExpr with NamedBelleExpr {
+abstract case class InputTactic(name: String, inputs: Seq[Any]) extends BelleExpr with NamedBelleExpr {
   def computeExpr(): BelleExpr
   override def prettyString: String =
     s"$name(${inputs.map({case input: Expression => s"{`${input.prettyString}`}" case input => s"{`${input.toString}`}"}).mkString(",")})"
 }
-abstract class StringInputTactic(override val name: String, val inputs: List[String]) extends BuiltInTactic(name) {
+abstract class StringInputTactic(override val name: String, val inputs: Seq[String]) extends BuiltInTactic(name) {
   override def prettyString: String =
     s"$name(${inputs.map(input => s"{`$input`}").mkString(",")})"
 }
 
-abstract class DependentPositionWithAppliedInputTactic(private val n: String, val inputs: List[Any]) extends DependentPositionTactic(n) {
+abstract class DependentPositionWithAppliedInputTactic(private val n: String, val inputs: Seq[Any]) extends DependentPositionTactic(n) {
   override def apply(locator: PositionLocator): AppliedDependentPositionTacticWithAppliedInput = new AppliedDependentPositionTacticWithAppliedInput(this, locator)
   //@note non-serializable pretty-string, only applied tactic is serializable. @see AppliedDependendPositionTacticWithAppliedInput
   override def prettyString: String = super.prettyString + "(" + inputs.mkString(",") + ")"
@@ -490,8 +491,8 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
       case l@Find(goal, shape, start, exact) =>
         require(start.isTopLevel, "Start position must be top-level in sequent")
         tryAllAfter(l, null)
-      case LastAnte(goal) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition.base0(provable.subgoals(goal).ante.size - 1) })
-      case LastSucc(goal) => pt.factory(v match { case BelleProvable(provable, _) => SuccPosition.base0(provable.subgoals(goal).succ.size - 1) })
+      case LastAnte(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition.base0(provable.subgoals(goal).ante.size - 1, sub) })
+      case LastSucc(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => SuccPosition.base0(provable.subgoals(goal).succ.size - 1, sub) })
     }
   } catch {
     //note the following exceptions are likely caused by wrong positioning
@@ -499,7 +500,30 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
       case _: Find => throw be
       case Fixed(pos, _, _) => v match {
         case BelleProvable(provable, _) if provable.subgoals.size == 1 =>
-          throw new BelleThrowable("Tactic " + prettyString + " may point to wrong position, found " + provable.subgoals.head.sub(pos) + " at position " + locator, be)
+          def printParents(p: Position): String =
+            if (p.isTopLevel) {
+              provable.subgoals.head(p.top).prettyString + " at " + p.prettyString
+            } else {
+              (provable.subgoals.head.sub(p) match {
+                case Some(e) => e.prettyString + " at " + p.prettyString
+                case _ => "(nothing) at " + p.prettyString
+              }) + "\n" + printParents(p.topLevel ++ PosInExpr(p.inExpr.pos.dropRight(1)))
+            }
+          def printWithParents(p: Position): String =
+            if (pos.isIndexDefined(provable.subgoals.head)) {
+              provable.subgoals.head.sub(pos) match {
+                case Some(e) => e.prettyString
+                case _ => printParents(pos)
+              }
+            } else {
+              "position outside sequent: expected -1...-" + provable.subgoals.head.ante.size +
+                " or 1..." + provable.subgoals.head.succ.size
+            }
+          throw new BelleThrowable(
+            s"""Tactic $prettyString is not applicable to
+              |    ${printWithParents(pos)}
+              |at position $locator
+              |because ${be.getMessage.stripPrefix("[Bellerophon Runtime] ")}""".stripMargin, be)
         case _ => throw be
       }
     }
@@ -619,6 +643,8 @@ case class LetInspect(abbr: Expression, instantiator: ProvableSig => Expression,
   *
   * @see [[ProvableSig.apply(USubst)]]
   * @note abbr should be fresh in the Provable
+  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+  *      Example 32.
   */
 case class SearchAndRescueAgain(abbr: Expression, common: BelleExpr, instantiator: (ProvableSig,ProverException) => Expression, continuation: BelleExpr) extends BelleExpr {
   override def prettyString = "searchAndRescueAgain(" + abbr + ":= after " + common + " among " + instantiator + " in " + continuation + ")"

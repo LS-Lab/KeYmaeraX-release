@@ -123,7 +123,7 @@ private[core] object AxiomBase extends Logging {
       ("con convergence",
         (immutable.IndexedSeq(
             Sequent(immutable.IndexedSeq(Greater(v, Number(0)),Jany), immutable.IndexedSeq(Diamond(a, Diamond(Assign(v,Minus(v,Number(1))),Jany)))),
-            Sequent(immutable.IndexedSeq(LessEqual(v, Number(0)), Jany), immutable.IndexedSeq(pany))),
+            Sequent(immutable.IndexedSeq(Exists(v::Nil, And(LessEqual(v, Number(0)), Jany))), immutable.IndexedSeq(pany))),
           Sequent(immutable.IndexedSeq(Jany), immutable.IndexedSeq(Diamond(Loop(a), pany)))))
     )
   }
@@ -184,9 +184,10 @@ private[core] object AxiomBase extends Logging {
       */
     // Figure 3
     assert(axs("DW base") == Box(ODESystem(ode, qany), qany), "DW base")
-    assert(axs("DC differential cut") == Imply(Box(ODESystem(ode, qany), UnitPredicational("r",AnyArg)),
-      Equiv(Box(ODESystem(ode, qany), pany),
-        Box(ODESystem(ode, And(qany,UnitPredicational("r",AnyArg))), pany))), "DC differential cut")
+    assert(axs("DMP differential modus ponens") == Imply(Box(ODESystem(ode, qany), Imply(qany,UnitPredicational("r",AnyArg))),
+      Imply(
+        Box(ODESystem(ode, UnitPredicational("r",AnyArg)), pany),
+        Box(ODESystem(ode, qany), pany))), "DMP differential modus ponens")
     /* @note Generalized postcondition compared to theory as in DE differential effect (system) */
     assert(axs("DE differential effect") == Equiv(
       Box(ODESystem(AtomicODE(DifferentialSymbol(x),FuncOf(Function("f",None,Real,Real),x)), PredOf(Function("q",None,Real,Bool),x)), pany),
@@ -305,11 +306,6 @@ Axiom "DW base".
 /* [x'=f(x)&q(x);]q(x) THEORY */
 End.
 
-Axiom "DC differential cut".
-  ([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)
-/* ([x'=f(x)&q(x);]p(x) <-> [x'=f(x)&(q(x)&r(x));]p(x)) <- [x'=f(x)&q(x);]r(x) THEORY */
-End.
-
 Axiom "DE differential effect".
   /* [x'=f(x)&q(x);]p(x,x') <-> [x'=f(x)&q(x);][x':=f(x);]p(x,x')  THEORY */
   [{x_'=f(x_)&q(x_)}]p(||) <-> [{x_'=f(x_)&q(x_)}][x_':=f(x_);]p(||)
@@ -370,12 +366,13 @@ Axiom "DIo open differential invariance >".
   ([{c&q(||)}]f(||)>g(||) <-> [?q(||);]f(||)>g(||)) <- (q(||) -> [{c&q(||)}](f(||)>g(||) -> (f(||)>g(||))'))
 End.
 
-Axiom "DIo open differential invariance >=".
-  ([{c&q(||)}]f(||)>=g(||) <-> [?q(||);]f(||)>=g(||)) <- (q(||) -> [{c&q(||)}](f(||)>=g(||) -> (f(||))'>g(||)'))
-End.
-
 Axiom "DV differential variant >=".
   <{c&true}>f(||)>=g(||) <- \exists e_ (e_>0 & [{c&true}](f(||)<=g(||) -> f(||)'>=g(||)'+e_))
+End.
+
+/** Extended differential equations axioms https://arxiv.org/abs/1802.01226 */
+Axiom "DMP differential modus ponens".
+  ([{c&q(||)}]p(||) <- [{c&r(||)}]p(||)) <- [{c&q(||)}](q(||) -> r(||))
 End.
 
 Axiom "c()' derive constant fn".

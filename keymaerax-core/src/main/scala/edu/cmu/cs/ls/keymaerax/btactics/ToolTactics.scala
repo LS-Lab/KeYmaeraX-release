@@ -29,7 +29,7 @@ private object ToolTactics {
   private val namespace = "tooltactics"
 
   /** Performs QE and fails if the goal isn't closed. */
-  def fullQE(order: List[NamedSymbol] = Nil)(qeTool: => QETool): BelleExpr = Idioms.NamedTactic("QE", {
+  def fullQE(order: Seq[NamedSymbol] = Nil)(qeTool: => QETool): BelleExpr = Idioms.NamedTactic("QE", {
     val prepareAndRcf = toSingleFormula & assertT(_.succ.head.isFOL, "QE on FOL only") &
       FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool) &
       (done | ("ANON" by ((s: Sequent) =>
@@ -215,7 +215,12 @@ private object ToolTactics {
           })) skip
           else transform(expandTo)(pos)
         } catch {
-          case _: UnificationException => transform(expandTo)(pos)
+          case ex: UnificationException =>
+            //@note looks for specific transform position until we have better formula diff
+            FormulaTools.posOf(e, ex.e2.asExpr) match {
+              case Some(pp) => transform(ex.e1.asExpr)(pos.topLevel ++ pp) | transform(expandTo)(pos)
+              case _ => transform(expandTo)(pos)
+            }
         }
     })
 

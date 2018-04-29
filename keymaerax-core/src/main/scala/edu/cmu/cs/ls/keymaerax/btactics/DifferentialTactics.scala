@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
+
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
@@ -193,10 +194,8 @@ private object DifferentialTactics extends Logging {
         val (axUse,der) = sequent.sub(pos) match {
           case Some(Box(_: ODESystem, _: Greater)) => ("DIo open differential invariance >",true)
           case Some(Box(_: ODESystem, _: Less)) => ("DIo open differential invariance <",true)
-          case Some(Box(_: ODESystem, _: GreaterEqual)) => ("DIo open differential invariance >=",false)
-          case Some(Box(_: ODESystem, _: LessEqual)) => ("DIo open differential invariance <=",false)
 
-          case _ => throw new IllegalArgumentException("openDiffInd only at ODE system in succedent with an inequality in the postcondition (f>g,f<g,f>=g,f<=g), but got " + sequent.sub(pos))
+          case _ => throw new IllegalArgumentException("openDiffInd only at ODE system in succedent with an inequality in the postcondition (f>g,f<g), but got " + sequent.sub(pos))
         }
         if (pos.isTopLevel) {
           val t = useAt(axUse)(pos) <(
@@ -688,15 +687,14 @@ private object DifferentialTactics extends Logging {
               }
             }, "Invariant fast-check failed")(pos) &
             (if (isOpen) {
-              openDiffInd(pos) | DGauto(pos) //>
+              (openDiffInd(pos) | DGauto(pos)) //> TODO: needs updating
             } else {
               diffInd()(pos)       | // >= to >=
-              openDiffInd(pos)     | // >= to >, with >= assumption
-              (dgBarrier(ToolProvider.simplifierTool())(pos) & done) |
-              (dgDbxAuto(pos) & done) |
-              DGauto(pos)          |
-              dgZeroMonomial(pos)  | //Equalities
-              dgZeroPolynomial(pos)  //Equalities
+                (dgBarrier(ToolProvider.simplifierTool())(pos) & done) |
+                (dgDbxAuto(pos) & done) |
+                DGauto(pos)          |
+                dgZeroMonomial(pos)  | //Equalities
+                dgZeroPolynomial(pos)  //Equalities
             })
           )
         })) (pos))
@@ -1034,7 +1032,11 @@ private object DifferentialTactics extends Logging {
     //val gb = p::domToTerms(dom)
     val domterms = domToTerms(dom)
     //todo: groebnerBasis seems broken for > 1 term??
-    val gb = if(domterms.nonEmpty) algTool.groebnerBasis(domterms) else Nil
+    //todo: comment above might require own MathematicaToKeYmaera converter,
+    //      since the default converter for QE accepts lists of length=2 only to represent Pairs
+    val gb = if (domterms.nonEmpty) {
+      try { algTool.groebnerBasis(domterms) } catch { case _: ToolException => Nil }
+    } else Nil
     val quo = algTool.polynomialReduce(lie,p::gb)
     // quo._1.head is the cofactor of p
     // quo._2 is the remainder
@@ -1056,16 +1058,28 @@ private object DifferentialTactics extends Logging {
       case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}")
     }
 
-    //First, attempt to prove denominator non-zero, and the remainder has appropriate sign
-    diffCut(And(NotEqual(den,zero),remSgn))(pos) < (
-      //Finally, use dgDbx
+    val denRemReq = And(NotEqual(den,zero),remSgn)
+
+    val denRemReqTactic = (t: BelleExpr) =>
+      if ((FormulaTools.conjuncts(denRemReq).toSet -- FormulaTools.conjuncts(dom)).isEmpty) {
+        t
+      } else {
+        //First, attempt to prove denominator non-zero, and the remainder has appropriate sign
+        diffCut(denRemReq)(pos) <(
+          t,
+          //Leaves the denonominator goal open if it isn't implied by DW
+          ?(dW(pos) & QE & done)
+        )
+      }
+
+
+    denRemReqTactic(
+      // use dgDbx
       diffCut(bop.reapply(p,zero))(pos) <(
-        dW(pos) & QE
+        dW(pos) & QE & done
         ,
         dgDbx(Divide(num,den))(pos)
-      ),
-      //Leaves the denonominator goal open if it isn't implied by DW
-      ?(dW(pos) & QE & done)
+      )
     )
   })
 

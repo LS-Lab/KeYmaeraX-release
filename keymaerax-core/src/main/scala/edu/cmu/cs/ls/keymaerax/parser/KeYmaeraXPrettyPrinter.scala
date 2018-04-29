@@ -275,7 +275,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
       wrapLeft(t, pp(q++0, t.left)) + ppOp(t) + wrapRight(t, pp(q++1, t.right))
   })
 
-  private def pp(q: PosInExpr, formula: Formula): String = emit(q, formula match {
+  protected def pp(q: PosInExpr, formula: Formula): String = emit(q, formula match {
     case True|False|DotFormula  => ppOp(formula)
     case PredOf(p, c)           => p.asString + "(" + pp(q++0, c) + ")"
     case PredicationalOf(p, c)  => p.asString + "{" + pp(q++0, c) + "}"
@@ -293,7 +293,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
       wrapLeft(t, pp(q++0, t.left)) + ppOp(t) + wrapRight(t, pp(q++1, t.right))
   })
 
-  private def pp(q: PosInExpr, program: Program): String = emit(q, program match {
+  protected def pp(q: PosInExpr, program: Program): String = emit(q, program match {
     case a: ProgramConst        => statement(a.asString)
     case a: SystemConst         => statement(a.toString)
     case Assign(x, e)           => statement(pp(q++0, x) + ppOp(program) + pp(q++1, e))
@@ -312,7 +312,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     case t: BinaryCompositeProgram => pwrapLeft(t, pp(q++0, t.left)) + ppOp(t) + pwrapRight(t, pp(q++1, t.right))
   })
 
-  private def ppODE(q: PosInExpr, program: DifferentialProgram): String = emit(q, program match {
+  protected def ppODE(q: PosInExpr, program: DifferentialProgram): String = emit(q, program match {
     case a: DifferentialProgramConst => a.asString
     case AtomicODE(xp, e)       => pp(q++0, xp) + ppOp(program) + pp(q++1, e)
     case t: DifferentialProduct =>

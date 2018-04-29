@@ -2153,12 +2153,6 @@ object RequestHelper {
   def jsonDisplayInfoComponents(di: DerivationInfo): JsValue = {
     val keyPos = AxiomIndex.axiomIndex(di.canonicalName)._1
 
-    def prettyPrint(s: String): String = {
-      val p = """([a-zA-Z]+)\(\|\|\)""".r("name")
-      val pretty = p.replaceAllIn(s.replaceAll("_", ""), _.group("name").toUpperCase).replaceAll("""\(\|\|\)""", "")
-      UIKeYmaeraXPrettyPrinter.htmlEncode(pretty)
-    }
-
     //@todo need more verbose axiom info
     ProvableInfo.locate(di.canonicalName) match {
       case Some(i) =>
@@ -2170,11 +2164,11 @@ object RequestHelper {
           case f => (None, OpSpec.op(Equiv(f, True)).opcode, f, "0", True, "1")
         }
         JsObject(
-          "cond" -> (if (cond.isDefined) JsString(prettyPrint(cond.get.prettyString)) else JsNull),
-          "op" -> (if (op.nonEmpty) JsString(prettyPrint(op)) else JsNull),
-          "key" -> JsString(prettyPrint(key.prettyString)),
+          "cond" -> (if (cond.isDefined) JsString(UIKeYmaeraXAxiomPrettyPrinter.pp(cond.get)) else JsNull),
+          "op" -> (if (op.nonEmpty) JsString(UIKeYmaeraXAxiomPrettyPrinter.pp.htmlEncode(op)) else JsNull),
+          "key" -> JsString(UIKeYmaeraXAxiomPrettyPrinter.pp(key)),
           "keyPos" -> JsString(keyPosString),
-          "conclusion" -> JsString(prettyPrint(conclusion.prettyString)),
+          "conclusion" -> JsString(UIKeYmaeraXAxiomPrettyPrinter.pp(conclusion)),
           "conclusionPos" -> JsString(conclusionPos)
         )
       case None => JsNull

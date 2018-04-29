@@ -13,12 +13,12 @@ import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import org.apache.logging.log4j.scala.Logger
 
-import scala.List
-import scala.collection.immutable._
+import scala.collection.immutable.{List, _}
 import scala.language.postfixOps
 
 /**
@@ -85,8 +85,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     val restrictions = restrictTo.toList
 
     /** Apply the canonical tactic for the formula at position `pos`; exhaustively depth-first search on resulting other formulas */
-    lazy val atPos: DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
-      s.sub(pos) match {
+    def atPos(except: Option[Position]): DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
+      if (except.contains(pos)) skip
+      else s.sub(pos) match {
         case Some(fml) if pos.isAnte && s.succ.contains(fml) => close(pos.checkAnte.top, SuccPos(s.succ.indexOf(fml))) & done
         case Some(fml) if pos.isSucc && s.ante.contains(fml) => close(AntePos(s.ante.indexOf(fml)), pos.checkSucc.top) & done
         case Some(fml) =>
@@ -101,9 +102,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     })
 
     /** Apply `atPos` at the specified position, or search for the expected formula if it cannot be found there. */
-    def atOrSearch(p: PositionLocator): BelleExpr = atPos(p) | (p match {
-      case Fixed(pos, Some(fml), exact) if pos.isAnte => atPos(Find.FindL(0, Some(fml), exact=exact)) | skip
-      case Fixed(pos, Some(fml), exact) if pos.isSucc => atPos(Find.FindR(0, Some(fml), exact=exact)) | skip
+    def atOrSearch(p: PositionLocator): BelleExpr = atPos(None)(p) | (p match {
+      case Fixed(pos, Some(fml), exact) if pos.isAnte => atPos(Some(pos))(Find.FindL(0, Some(fml), exact=exact)) | skip
+      case Fixed(pos, Some(fml), exact) if pos.isSucc => atPos(Some(pos))(Find.FindR(0, Some(fml), exact=exact)) | skip
       case _ => skip
     })
 
@@ -116,19 +117,21 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     def applyRecursor(rec: TacticIndex.Branches): BelleExpr = rec match {
       case Nil => skip
       case r::Nil => onAll(applyBranchRecursor(r))
-      case r => BranchTactic(r.map(applyBranchRecursor))
+      case r => DebuggingTactics.assertProvableSize(r.length) & BranchTactic(r.map(applyBranchRecursor))
     }
 
     /** Execute `t` at pos, read tactic recursors and schedule followup tactics. */
     def applyAndRecurse(t: AtPosition[_ <: BelleExpr], pos: Position, s: Sequent): BelleExpr = {
       val recursors = tacticIndex.tacticRecursors(t)
-      if (recursors.nonEmpty) t(new Fixed(pos)) & recursors.map(r => applyRecursor(r(s, pos.top))).reduce(_&_)
+      if (recursors.nonEmpty) t(new Fixed(pos)) & (done | recursors.map(r =>
+        DebuggingTactics.assertOnAll(_ != s, "Stopping to recurse on unchanged sequent") &
+        applyRecursor(r(s, pos.top))).reduce(_&_))
       else t(new Fixed(pos))
     }
 
     //@note Execute on formulas in order of sequent; might be useful to sort according to some tactic priority.
-    seq.ante.zipWithIndex.map({ case (fml, i) => onAll(atPos(AntePosition.base0(i), fml) | atPos('L, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip) &
-    seq.succ.zipWithIndex.map({ case (fml, i) => onAll(atPos(SuccPosition.base0(i), fml) | atPos('R, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+    seq.ante.zipWithIndex.map({ case (fml, i) => onAll(atPos(None)(AntePosition.base0(i), fml) | atPos(Some(AntePosition.base0(i)))('L, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip) &
+    seq.succ.zipWithIndex.map({ case (fml, i) => onAll(atPos(None)(SuccPosition.base0(i), fml) | atPos(Some(SuccPosition.base0(i)))('R, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
   })
 
   val prop: BelleExpr = "prop" by tacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
@@ -137,8 +140,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Master/auto implementation with tactic `loop` for nondeterministic repetition and `odeR` for
     * differential equations in the succedent.
     * `keepQEFalse` indicates whether or not QE results "false" at the proof leaves should be kept or undone. */
-  private def master(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr],
-                     keepQEFalse: Boolean): BelleExpr = "ANON" by {
+  def master(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr],
+             keepQEFalse: Boolean): BelleExpr = "ANON" by {
     /** Create a tactic index that hands out loop tactics and configurable ODE tactics. */
     val createAutoTacticIndex = new DefaultTacticIndex {
       override def tacticRecursors(tactic: BelleExpr): TacticRecursors =
@@ -149,8 +152,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
           ((_: Sequent, p: SeqPos) => (new Fixed(p)::Nil)::Nil) :: Nil
         } else super.tacticRecursors(tactic)
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
-        case Box(a, _) if a.isInstanceOf[Loop] => (Nil, loop::Nil)
-        case Box(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.solve::Nil, odeR::Nil)
+        case Box(_: Loop, _) => (Nil, loop::Nil)
+        case Box(_: ODESystem, _) => (TactixLibrary.solve::Nil, odeR::Nil)
         case _ => super.tacticsFor(expr)
       }
     }
@@ -166,13 +169,13 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * result `false` of a QE step at the leaves is kept or undone (i.e., reverted to the QE input sequent).
     * @see [[auto]] */
   def master(gen: Generator[Formula] = invGenerator, keepQEFalse: Boolean=true): BelleExpr = "master" by {
-    def endODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) =>{
+    def endODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
       ODE(pos) & ?(allR(pos) & implyR(pos)*2 & allL(Variable("s_"), Variable("t_"))('Llast) & auto & done)
     })
     master(loop(gen), endODE, keepQEFalse)
   }
 
-  /** auto: automatically try to prove the current goal if that succeeds.
+  /** auto: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
   def auto: BelleExpr = "auto" by master(loopauto, ODE, keepQEFalse=true) & done
 
@@ -308,6 +311,41 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       (inv:Formula) => loop(inv)(pos) & onAll(auto) & done
     )
     )
+
+  /** loopSR: cleverly prove a property of a loop automatically by induction, trying hard to generate loop invariants.
+    * Uses [[SearchAndRescueAgain]] to avoid repetitive proving.
+    * @see [[loopauto]]
+    * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+    *      Example 32. */
+  def loopSR(gen: Generator[Formula]): DependentPositionTactic = "loopSR" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
+    case loopfml@Box(prog, post) =>
+      val cand: Iterator[Formula] = gen(seq, pos)
+      val bounds: List[Variable] =
+        if (StaticSemantics.freeVars(post).toSet.exists( v => v.isInstanceOf[DifferentialSymbol] ) )
+          StaticSemantics.boundVars(loopfml).toSet.toList
+        else DependencyAnalysis.dependencies(prog, DependencyAnalysis.freeVars(post))._1.toList
+      var i = -1
+      val subst: USubst = if (bounds.length==1)
+        USubst(Seq(SubstitutionPair(DotTerm(), bounds.head)))
+      else
+        USubst(bounds.map(xi=> {i=i+1; SubstitutionPair(DotTerm(Real,Some(i)), xi)}))
+      val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp=>sp.what.prettyString).mkString(",") + ")")
+      SearchAndRescueAgain(jj,
+        loop(subst(jj))(1) < (nil, nil, chase(1)),
+        feedOneAfterTheOther(cand),
+        //@todo switch to quickstop mode
+        OnAll(master()) & done
+      )
+    case e => throw new BelleThrowable("Wrong shape to generate an invariant for " + e + " at position " + pos)
+  })
+
+  private def feedOneAfterTheOther[A<:Expression](gen: Iterator[A]) : (ProvableSig,ProverException)=>Expression = {
+    (_,e) => logger.debug("SnR loop status " + e)
+      if (gen.hasNext)
+        gen.next()
+      else
+        throw new BelleThrowable("loopSR ran out of loop invariant candidates")
+  }
 
   /** throughout: prove a property of a loop by induction with the given loop invariant (hybrid systems) that
     * holds throughout the steps of the loop body.
@@ -466,7 +504,6 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** DIo: Open Differential Invariant proves an open formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * openDiffInd: proves an inequality to be an invariant of a differential equation (by DIo, DW, DE, QE)
     *           For strict inequalities, it uses open diff ind (<,>)
-    *           For non-strict inequalities, it uses open diff ind (<=,>=)
     *
     * @example{{{
     *         *
@@ -587,33 +624,40 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @param order the order of variables to use during quantifier elimination
     * @see [[QE]]
     * @see [[RCF]] */
-  def QE(order: List[NamedSymbol] = Nil, requiresTool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
+  def QE(order: Seq[NamedSymbol] = Nil, requiresTool: Option[String] = None, timeout: Option[Int] = None): BelleExpr = {
     //@todo implement as part of tools?
     lazy val tool = ToolProvider.qeTool(requiresTool).getOrElse(
       throw new BelleThrowable(s"QE requires ${requiresTool.getOrElse("a QETool")}, but got None"))
-    lazy val (timeoutTool: QETool, resetTimeout: (BelleExpr => BelleExpr)) = timeout match {
+    lazy val resetTimeout: (BelleExpr => BelleExpr) = timeout match {
       case Some(t) => tool match {
         case tom: ToolOperationManagement =>
           val oldTimeout = tom.getOperationTimeout
           tom.setOperationTimeout(t)
-          val resetTimeoutTactic =
-            if (oldTimeout != t) {
-              (e: BelleExpr) => e > new DependentTactic("ANON") {
-                override def computeExpr(v: BelleValue): BelleExpr = {
-                  tom.setOperationTimeout(oldTimeout)
-                  v match {
-                    case _: BelleProvable => skip
-                    case err: BelleValue with BelleThrowable => throw err
-                  }
+          if (oldTimeout != t) {
+            (e: BelleExpr) => e > new DependentTactic("ANON") {
+              override def computeExpr(v: BelleValue): BelleExpr = {
+                tom.setOperationTimeout(oldTimeout)
+                v match {
+                  case _: BelleProvable => skip
+                  case err: BelleValue with BelleThrowable => throw err
                 }
               }
-            } else (e: BelleExpr) => e
-          (tool, resetTimeoutTactic)
+            }
+          } else (e: BelleExpr) => e
         case _ => throw BelleUnsupportedFailure("Tool " + tool + " does not support timeouts")
       }
-      case None => (tool, (e: BelleExpr) => e)
+      case None => (e: BelleExpr) => e
     }
-    val tactic = resetTimeout(ToolTactics.fullQE(order)(timeoutTool))
+    lazy val timeoutTool: QETool = timeout match {
+      case Some(t) => tool match {
+        case tom: ToolOperationManagement =>
+          tom.setOperationTimeout(t)
+          tool
+        case _ => throw BelleUnsupportedFailure("Tool " + tool + " does not support timeouts")
+      }
+      case None => tool
+    }
+    lazy val tactic = resetTimeout(ToolTactics.fullQE(order)(timeoutTool))
     (requiresTool, timeout) match {
       case (Some(toolName), Some(t)) => "QE" byWithInputs (Variable(toolName)::Number(t)::Nil, tactic)
       case (Some(toolName), None) => "QE" byWithInputs (Variable(toolName)::Nil, tactic)

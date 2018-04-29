@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.hydra.{DBTools, TempDBTools}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.{Declaration, Name, Signature}
 import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, PTProvable, ProvableSig}
 
 import scala.collection.immutable
@@ -55,6 +55,7 @@ object KeYmaeraX {
       |  -parse file.kyx |
       |  -bparse file.kyt |
       |  -repl file.kyx [file.kyt] [scaladefs]
+      |  -striphints file.kyx -out file2.kyx
       |  -coasterx ( -component component-name [-formula] [-tactic] [-stats]
       |                [-num-runs N] [-debug-level (0|1|2)]
       |            | -coaster file.rctx -feet-per-unit X [-num-runs N]
@@ -135,6 +136,7 @@ object KeYmaeraX {
             case Some("modelplex") => modelplex(options)
             case Some("codegen") => codegen(options)
             case Some("repl") => repl(options)
+            case Some("striphints") => stripHints(options)
             case Some("ui") => assert(false, "already handled above since no prover needed"); ???
           }
         } finally {
@@ -242,6 +244,9 @@ object KeYmaeraX {
         if (model.nonEmpty  && !model.toString.startsWith("-"))
           nextOption(newMap ++ Map('mode -> "repl", 'model -> model), restArgs)
         else optionErrorReporter("-repl")
+      case "-striphints" :: kyx :: tail =>
+        if(kyx.nonEmpty && !kyx.toString.startsWith("-")) nextOption(map ++ Map('mode -> "striphints", 'in -> kyx), tail)
+        else optionErrorReporter("-striphints")
       case "-ui" :: tail => launchUI(tail.toArray); map ++ Map('mode -> "ui")
       // action options
       case "-out" :: value :: tail =>
@@ -286,15 +291,17 @@ object KeYmaeraX {
 
   private def parseProblemFile(fileName: String) = {
     try {
-      val fileContents = scala.io.Source.fromFile(fileName).getLines().mkString("\n")
-      val formula = KeYmaeraXProblemParser(fileContents)
-      println(KeYmaeraXPrettyPrinter(formula))
-      println("Parsed file successfully")
+      KeYmaeraXArchiveParser(fileName).foreach(e => {
+        println(e.name)
+        println(KeYmaeraXPrettyPrinter(e.model))
+        println("Parsed file successfully")
+      })
       sys.exit(0)
     } catch {
       case e: Throwable =>
         if (Configuration(Configuration.Keys.DEBUG)=="true") e.printStackTrace()
-        println(e)
+        println(e.getMessage)
+        println(e.getCause)
         println("Failed to parse file")
         sys.exit(-1)
     }
@@ -856,6 +863,26 @@ object KeYmaeraX {
     pw.close()
   }
 
+  /** Strips proof hints from the model. */
+  def stripHints(options: OptionMap): Unit = {
+    require(options.contains('in) && options.contains('out), usage)
+
+    val kyxFile = options('in).toString
+    val archiveContent = KeYmaeraXArchiveParser(kyxFile)
+
+    //@note remove all tactics, e.model does not contain annotations anyway
+    //@note remove all definitions too, those might be used as proof hints
+    def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry =
+      ParsedArchiveEntry(e.name, e.kind, e.fileContent, Declaration(Map.empty), e.model, Nil, e.info)
+
+    val printer = new KeYmaeraXArchivePrinter()
+    val printedStrippedContent = archiveContent.map(stripEntry).map(printer(_)).mkString("\n\n")
+
+    val outFile = options('out).toString
+    val pw = new PrintWriter(outFile)
+    pw.write(printedStrippedContent)
+    pw.close()
+  }
 
   /** Launch the web user interface */
   def launchUI(args: Array[String]): Unit = {

@@ -1,6 +1,6 @@
 import java.io.{BufferedReader, FileReader}
 
-scalaVersion in ThisBuild := "2.11.12"
+scalaVersion in ThisBuild := "2.12.4"
 
 //scalacOptions in ThisBuild ++= Seq("-Xno-patmat-analysis")
 

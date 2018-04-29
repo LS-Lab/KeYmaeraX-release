@@ -92,7 +92,6 @@ object BelleLexer extends ((String) => List[BelleToken]) with Logging {
       case ON_ALL.startPattern(_*) => consumeTerminalLength(ON_ALL, loc)
       case US_MATCH.startPattern(_*) => consumeTerminalLength(US_MATCH, loc)
       case PARTIAL.startPattern(_*) => consumeTerminalLength(PARTIAL, loc)
-      case DONE.startPattern(_*) => consumeTerminalLength(DONE, loc)
       case LET.startPattern(_*) => consumeTerminalLength(LET, loc)
       case IN.startPattern(_*) => consumeTerminalLength(IN, loc)
       case TACTIC.startPattern(_*) => consumeTerminalLength(TACTIC, loc)

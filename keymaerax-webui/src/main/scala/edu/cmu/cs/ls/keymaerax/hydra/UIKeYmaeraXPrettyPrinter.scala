@@ -10,13 +10,14 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.OpSpec.op
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 
-object UIKeYmaeraXPrettyPrinter {
-  private val HTML_OPEN = "$#@@$"
-  private val HTML_CLOSE = "$@@#$"
-  private val HTML_END_SPAN = htmlEndTag("span")
+/** Prints HTML tags and HTML operators. */
+trait HTMLPrinter {
+  val HTML_OPEN: String = "$#@@$"
+  val HTML_CLOSE: String = "$@@#$"
+  val HTML_END_SPAN: String = htmlEndTag("span")
 
   //@todo custom OpSpec?
-  private val rewritings = List(
+  val rewritings = List(
     "&" -> "&and;",
     "!=" -> "&ne;",
     "!" -> "&not;",
@@ -36,7 +37,7 @@ object UIKeYmaeraXPrettyPrinter {
     HTML_CLOSE -> ">"
   )
 
-  private val textTagRewritings = List(
+  val textTagRewritings = List(
     "&" -> "&amp;",
     "<" -> "&lt;",
     ">" -> "&gt;",
@@ -44,10 +45,6 @@ object UIKeYmaeraXPrettyPrinter {
     HTML_CLOSE -> ">"
   )
 
-  //private val opPattern: Regex = "(&|!=|!|\\||<->|->|<=|>=|\\\\forall|\\\\exists|\\[|\\]|<|>|\\$#@@\\$|\\$@@#\\$)".r
-
-  /** UIKeYmaeraXPrettyPrinter(topId) is a UI pretty printer for sequent-formula with identifier topId */
-  def apply(topId: String, plainText: Boolean): Expression=>String = new UIKeYmaeraXPrettyPrinter(topId, plainText)
 
   /** Returns an opening tag with encoded <>. */
   def htmlOpenTag(tag: String, clazz: Option[String] = None): String = clazz match {
@@ -73,6 +70,11 @@ object UIKeYmaeraXPrettyPrinter {
   def htmlTagEncode(text: String): String = {
     textTagRewritings.foldLeft(text)({ case (s, (key, repl)) => s.replaceAllLiterally(key, repl) })
   }
+}
+
+object UIKeYmaeraXPrettyPrinter extends HTMLPrinter {
+  /** UIKeYmaeraXPrettyPrinter(topId) is a UI pretty printer for sequent-formula with identifier topId */
+  def apply(topId: String, plainText: Boolean): Expression=>String = new UIKeYmaeraXPrettyPrinter(topId, plainText)
 }
 
 /**
@@ -235,4 +237,92 @@ class UIKeYmaeraXPrettyPrinter(val topId: String, val plainText: Boolean) extend
 //    val printer: PrettyPrinter = UIKeYmaeraXPrettyPrinter.this
 //  }
   override val fullPrinter: (Expression => String) = (e:Expression) => throw new UnsupportedOperationException("UIKeYmaeraXPrettyPrinter.fullPrinter not implemented yet")
+}
+
+object UIKeYmaeraXAxiomPrettyPrinter {
+  lazy val pp = new UIKeYmaeraXAxiomPrettyPrinter()
+}
+
+/**
+  * User-interface pretty printer for UI axiom entries.
+  * @author Stefan Mitsch
+  */
+class UIKeYmaeraXAxiomPrettyPrinter extends KeYmaeraXWeightedPrettyPrinter with HTMLPrinter {
+  override def apply(expr: Expression): String = htmlEncode(stringify(expr))
+
+  /** Print name, suffix _ stripped. */
+  private def printName(s: NamedSymbol): String = s.index match {
+    case None => s.name.stripSuffix("_")
+    case Some(idx) => s.name.stripSuffix("_") + "_" + idx
+  }
+
+  private def printSpace(s: Space): String = s match {
+    case AnyArg => "" //s"(${HTML_OPEN}b$HTML_CLOSE${HTML_OPEN}i$HTML_CLOSE" + "x" + s"$HTML_OPEN/i$HTML_CLOSE$HTML_OPEN/b$HTML_CLOSE)"
+    case Except(v) => s"(${HTML_OPEN}s$HTML_CLOSE" + printName(v) + s"$HTML_OPEN/s$HTML_CLOSE)"
+  }
+
+  protected override def pp(q: PosInExpr, fml: Formula): String = emit(q, fml match {
+    case PredOf(p, Nothing) => printName(p) + "()"
+    case PredOf(p, arg) => printName(p) + "(" + pp(q++PosInExpr(0::Nil), arg) + ")"
+    case p@UnitPredicational(_, s) => printName(p) + printSpace(s)
+    case _ => super.pp(q, fml)
+  })
+
+  protected override def pp(q: PosInExpr, term: Term): String = emit(q, term match {
+    case FuncOf(f, Nothing) => printName(f) + "()"
+    case FuncOf(f, arg) => printName(f) + "(" + pp(q++PosInExpr(0::Nil), arg) + ")"
+    case v: BaseVariable => printName(v)
+    case v: DifferentialSymbol => printName(v.x) + "'"
+    case f@UnitFunctional(_, s, _) => printName(f) + printSpace(s)
+    case t: Power =>
+      wrapLeft(t, pp(q++0, t.left)) + s"${HTML_OPEN}sup$HTML_CLOSE" + wrapRight(t, pp(q++1, t.right)) + s"$HTML_OPEN/sup$HTML_CLOSE"
+    case _ => super.pp(q, term)
+  })
+
+  protected override def pp(q: PosInExpr, program: Program): String = emit(q, program match {
+    case a: ProgramConst => printName(a) + ";"
+    case a: SystemConst => printName(a) + ";"
+    case a: NamedSymbol => printName(a)
+    case _ => super.pp(q, program)
+  })
+
+  protected override def ppODE(q: PosInExpr, program: DifferentialProgram): String = emit(q, program match {
+    case a@DifferentialProgramConst(_, s) => printName(a) + printSpace(s)
+    case _ => super.ppODE(q, program)
+  })
+
+  override def apply(seq: Sequent): String = ???
+
+  // symmetric space depending on left/right/both having parentheses
+  protected override def spaceLeft(t: BinaryComposite, leftPrint: String): String = (skipParensLeft(t), skipParensRight(t)) match {
+    case (true, true) => leftPrint + (" " * balanceWeight(t))
+    case (true, false) => leftPrint + (" " * weight(t.right, t))
+    case (false, true) => leftPrint + (" " * weight(t.left, t))
+    case (false, false) => leftPrint + " "
+  }
+  protected override def spaceRight(t: BinaryComposite, rightPrint: String): String = (skipParensLeft(t), skipParensRight(t)) match {
+    case (true, true) => (" " * balanceWeight(t)) + rightPrint
+    case (true, false) => (" " * weight(t.right, t)) + rightPrint
+    case (false, true) => (" " * weight(t.left, t)) + rightPrint
+    case (false, false) => " " + rightPrint
+  }
+
+  private def balanceWeight(par: BinaryComposite): Int = Math.max(weight(par.left, par), weight(par.right, par))
+
+  protected override def weight(sub: Expression, par: BinaryComposite): Int = {
+    val prec = op(par).prec
+    val subPrec = op(sub).prec
+
+    def prec2weight(prec: Int) =
+      if (prec >= 200)
+      // programs are formatted relative to one another not with their ridiculously large prec
+        (prec-150) / 50
+      else
+        prec / 50
+
+    // adapt own weight by sub operator weight
+    (prec2weight(subPrec)/2) * prec2weight(prec)
+  }
+
+  override val fullPrinter: (Expression => String) = (e:Expression) => throw new UnsupportedOperationException("UIKeYmaeraXAxiomPrettyPrinter.fullPrinter not implemented yet")
 }

@@ -110,6 +110,7 @@ class DefaultTacticIndex extends TacticIndex {
       case Box(a, _) if !a.isInstanceOf[ODESystem] && !a.isInstanceOf[Loop] => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
       case Box(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.solve::Nil, TactixLibrary.ODE::Nil)
       case Diamond(a, _) if !a.isInstanceOf[ODESystem] && !a.isInstanceOf[Loop] => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
+      case Diamond(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.solve::Nil, TactixLibrary.solve::Nil)
       case Forall(_, _) => (Nil, TactixLibrary.allR::Nil)
       case Exists(_, _) => (TactixLibrary.existsL::Nil, Nil)
       case Not(_) => (TactixLibrary.notL::Nil, TactixLibrary.notR::Nil)

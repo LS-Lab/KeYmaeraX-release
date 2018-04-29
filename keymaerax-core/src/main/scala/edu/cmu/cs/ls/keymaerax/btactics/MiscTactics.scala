@@ -6,7 +6,7 @@ import Augmentors._
 import ProofRuleTactics.requireOneSubgoal
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDB
+import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.{Logger, Logging}
@@ -106,13 +106,24 @@ object DebuggingTactics {
     }
   }
 
-  /** assert is a no-op tactic that raises an error if the provable does not satisfy a condition. */
+  /** assert is a no-op tactic that raises an error if the provable does not satisfy a condition on the sole subgoal. */
   def assert(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("assert") {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.size != 1 || !cond(provable.subgoals.head)) {
         throw BelleUserGeneratedError(message + "\nExpected 1 subgoal whose sequent matches condition " + cond + ",\n\t but got " +
           (if (provable.subgoals.size != 1) provable.subgoals.size + " subgoals"
           else provable.subgoals.head.prettyString))
+      }
+      provable
+    }
+  }
+
+  /** assertOnAll is a no-op tactic that raises an error the provable does not satisfy a condition on all subgoals. */
+  def assertOnAll(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("assert") {
+    override def result(provable: ProvableSig): ProvableSig = {
+      if (!provable.subgoals.forall(cond(_))) {
+        throw BelleUserGeneratedError(message + "\nExpected all subgoals match condition " + cond + ",\n\t but " +
+          provable.subgoals.filter(!cond(_)).mkString("\n") + " do not match")
       }
       provable
     }
@@ -150,10 +161,16 @@ object DebuggingTactics {
 
   /** @see [[TactixLibrary.done]] */
   lazy val done: BelleExpr = done()
-  def done(msg: String = ""): BelleExpr = new StringInputTactic("done", if (msg != "") msg::Nil else Nil) {
-    override def result(provable : ProvableSig): ProvableSig = {
-      if (provable.isProved) { print(msg + {if (msg.nonEmpty) ": " else ""} + "checked done"); provable }
-      else throw new BelleThrowable((if (msg.nonEmpty) msg + "\n" else "") + "Expected proved provable, but got " + provable)
+  def done(msg: String = "", storeLemma: Option[String] = None): BelleExpr = new StringInputTactic("done",
+      if (msg != "" && storeLemma.isDefined) msg::storeLemma.get::Nil
+      else if (msg != "") msg::Nil
+      else Nil) {
+    override def result(provable: ProvableSig): ProvableSig = {
+      if (provable.isProved) {
+        print(msg + {if (msg.nonEmpty) ": " else ""} + "checked done")
+        if (storeLemma.isDefined) LemmaDBFactory.lemmaDB.add(Lemma(provable, Lemma.requiredEvidence(provable), storeLemma))
+        provable
+      } else throw new BelleThrowable((if (msg.nonEmpty) msg + "\n" else "") + "Expected proved provable, but got " + provable)
     }
   }
 }
@@ -383,7 +400,7 @@ object TacticFactory {
     }
 
     /** A position tactic with multiple inputs. */
-    def byWithInputs(inputs: List[Any], t: ((Position, Sequent) => BelleExpr)): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic(name, inputs) {
+    def byWithInputs(inputs: Seq[Any], t: ((Position, Sequent) => BelleExpr)): DependentPositionWithAppliedInputTactic = new DependentPositionWithAppliedInputTactic(name, inputs) {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           require(pos.isIndexDefined(sequent), "Cannot apply at undefined position " + pos + " in sequent " + sequent)
@@ -393,16 +410,16 @@ object TacticFactory {
     }
 
     /** A named tactic with multiple inputs. */
-    def byWithInputs(inputs: List[Any], t: BelleExpr): InputTactic = new InputTactic(name, inputs) {
+    def byWithInputs(inputs: Seq[Any], t: => BelleExpr): InputTactic = new InputTactic(name, inputs) {
       override def computeExpr(): BelleExpr = t
     }
 
     /** A position tactic with a single input. */
     def byWithInput(input: Any, t: ((Position, Sequent) => BelleExpr)): DependentPositionWithAppliedInputTactic =
-      byWithInputs(List(input), t)
+      byWithInputs(input :: Nil, t)
 
     /** A named tactic with a single input. */
-    def byWithInput(input: Any, t: BelleExpr): InputTactic = byWithInputs(List(input), t)
+    def byWithInput(input: Any, t: => BelleExpr): InputTactic = byWithInputs(input :: Nil, t)
 
     /** Creates a dependent tactic, which can inspect the sole sequent */
     def by(t: Sequent => BelleExpr): DependentTactic = new SingleGoalDependentTactic(name) {

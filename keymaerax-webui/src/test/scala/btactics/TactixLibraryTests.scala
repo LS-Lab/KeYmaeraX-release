@@ -6,8 +6,10 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -16,6 +18,10 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
 import scala.collection.immutable._
+import scala.language.postfixOps
+import org.scalatest.LoneElement._
+import org.scalatest.concurrent._
+import org.scalatest.time.SpanSugar._
 
 /**
  * Tactix Library Test.
@@ -23,7 +29,7 @@ import scala.collection.immutable._
  */
 @SummaryTest
 @UsualTest
-class TactixLibraryTests extends TacticTestBase {
+class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does not abort test */ {
   private val someList: () => Iterator[Formula] = () =>
       ("x>=4".asFormula :: "x>=6".asFormula :: "x<2".asFormula :: "x>=5".asFormula :: "x>=0".asFormula :: Nil).iterator
 
@@ -216,39 +222,87 @@ class TactixLibraryTests extends TacticTestBase {
   }
 
   "SnR Loop Invariant" should "find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica{qeTool =>
+    val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
+    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val jj = "j(.)".asFormula
-    val proof = proveBy("x>=5 -> [{x:=x+2;}*]x>=0".asFormula,
+    val proof = proveBy(fml,
       implyR(1) & SearchAndRescueAgain(jj,
         loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, chase(1)),
-        feedOneAfterTheOther(List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)),
+        feedOneAfterTheOther(invs),
         OnAll(master()) & done
       )
     )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs.iterator)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;}*]x>=0" in withMathematica { qeTool =>
+    val fml = "x>=5 & y>=0 -> [{x:=x+y;}*]x>=0".asFormula
+    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val jj = "j(.)".asFormula
-    val proof = proveBy("x>=5 & y>=0 -> [{x:=x+y;}*]x>=0".asFormula,
+    val proof = proveBy(fml,
       implyR(1) & SearchAndRescueAgain(jj,
         loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, chase(1)),
-        feedOneAfterTheOther(List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)),
+        feedOneAfterTheOther(invs),
         OnAll(master()) & done
       )
     )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
+    //Note: dependency analysis generates (x,y) instead of just x
+    val invs2: List[Formula] = invs.map(USubst(Seq(SubstitutionPair(DotTerm(),DotTerm(Real,Some(0)))))(_))
+    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs2.iterator)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant for x>=0 & y>=0 -> [{x:=x+y;y:=y+1;}*]x>=0" in withMathematica{qeTool =>
+  it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;y:=y+1;}*]x>=0" in withMathematica{qeTool =>
+    val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;}*]x>=0".asFormula
+    val invs = List("._0>=-1 & ._1>=0".asFormula, "._0=5  & ._1>=0".asFormula, "._0>=0 & ._1>=0".asFormula)
     val jj = "j(._0,._1)".asFormula
-    val proof = proveBy("x>=5 & y>=0 -> [{x:=x+y;y:=y+1;}*]x>=0".asFormula,
+    val proof = proveBy(fml,
       implyR(1) & SearchAndRescueAgain(jj,
         loop(USubst(Seq(SubstitutionPair("._0".asTerm,"x".asTerm), SubstitutionPair("._1".asTerm, "y".asTerm)))(jj))(1) <(nil, nil, chase(1)),
-        feedOneAfterTheOther(List("._0>=-1 & ._1>=0".asFormula, "._0=5  & ._1>=0".asFormula, "._0>=0 & ._1>=0".asFormula)),
+        feedOneAfterTheOther(invs),
         OnAll(master()) & done
       )
     )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs.iterator)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;{x'=x^2+y}}*]x>=0" in withMathematica { _ =>
+    val fml = "x>=5 & y>=0 -> [{x:=x+y;{x'=x^2+y}}*]x>=0".asFormula
+    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
+    val jj = "j(.)".asFormula
+    val proof = proveBy(fml,
+      implyR(1) & SearchAndRescueAgain(jj,
+        loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, chase(1)),
+        feedOneAfterTheOther(invs),
+        OnAll(master()) & done
+      )
+    )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+    proof shouldBe 'proved
+    val invs2: List[Formula] = invs.map(USubst(Seq(SubstitutionPair(DotTerm(),DotTerm(Real,Some(0)))))(_))
+    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs2.iterator)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0" in withMathematica{qeTool =>
+    // Failing test case
+    val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0".asFormula
+    val invs = List("._0>=-1 & ._1>=0".asFormula, "._0=5  & ._1>=0".asFormula, "._0>=0 & ._1>=0".asFormula)
+    val jj = "j(._0,._1)".asFormula
+    val proof = proveBy(fml,
+      implyR(1) & SearchAndRescueAgain(jj,
+        loop(USubst(Seq(SubstitutionPair("._0".asTerm,"x".asTerm), SubstitutionPair("._1".asTerm, "y".asTerm)))(jj))(1) <(nil, nil, chase(1)),
+        feedOneAfterTheOther(invs),
+        OnAll(master()) & done
+      )
+    )
+    proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
+    proof shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs.iterator)(1)) shouldBe 'proved
   }
 
 
@@ -284,7 +338,7 @@ class TactixLibraryTests extends TacticTestBase {
   "QE" should "reset timeout when done" in withQE {
     case tool: ToolOperationManagement =>
       val origTimeout = tool.getOperationTimeout
-      origTimeout shouldBe -1 // infinity initially
+      origTimeout shouldBe Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
       proveBy("x>1 -> x>0".asFormula, QE(Nil, None, Some(7)) & new BuiltInTactic("ANON") {
         def result(provable: ProvableSig): ProvableSig = {
           tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
@@ -297,7 +351,7 @@ class TactixLibraryTests extends TacticTestBase {
   it should "reset timeout when failing" in withQE {
     case tool: ToolOperationManagement =>
       val origTimeout = tool.getOperationTimeout
-      origTimeout shouldBe -1 // infinity initially
+      origTimeout shouldBe Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
       proveBy("x>0 -> x>1".asFormula, QE(Nil, None, Some(7)) | new BuiltInTactic("ANON") {
         def result(provable: ProvableSig): ProvableSig = {
           tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
@@ -305,5 +359,35 @@ class TactixLibraryTests extends TacticTestBase {
         }
       }) should (not be 'proved)
     case _ => // nothing to test
+  }
+
+  it should "not change timeout before being run" in withQE {
+    case tool: ToolOperationManagement =>
+      val origTimeout = tool.getOperationTimeout
+      origTimeout shouldBe Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
+      proveBy("x>0 -> x>1".asFormula, (DebuggingTactics.assert(_ => false, "Fail")
+          & QE(Nil, None, Some(7))) | new BuiltInTactic("ANON") {
+        def result(provable: ProvableSig): ProvableSig = {
+          tool.getOperationTimeout shouldBe origTimeout // timeout should be reset after QE
+          provable
+        }
+      }) should (not be 'proved)
+    case _ => // nothing to test
+  }
+
+  "Tactic chase" should "not infinite recurse" in {
+    var i = 0
+    val count = "ANON" by ((pos: Position, seq: Sequent) => { i=i+1; skip })
+
+    failAfter(1 second) {
+      val result = proveBy("[{x'=1}]x>0".asFormula, master(loopauto, count, keepQEFalse=false))
+      result.subgoals.loneElement shouldBe "==> [{x'=1}]x>0".asSequent
+    }
+
+    i shouldBe 1
+  }
+
+  it should "exhaustively apply propositional" in {
+    proveBy("true<->(p()<->q())&q()->p()".asFormula, prop) shouldBe 'proved
   }
 }

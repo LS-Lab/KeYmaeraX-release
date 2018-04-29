@@ -120,7 +120,6 @@ object BelleParser extends (String => BelleExpr) with Logging {
           case Some(BelleToken(BRANCH_COMBINATOR, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(OPTIONAL, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(ON_ALL, _)) => ParserState(stack :+ st.input.head, st.input.tail)
-          case Some(BelleToken(DONE, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(TACTIC, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(LET, _)) => ParserState(stack :+ st.input.head, st.input.tail)
           case Some(BelleToken(DEF, _)) => ParserState(stack :+ st.input.head, st.input.tail)
@@ -343,15 +342,6 @@ object BelleParser extends (String => BelleExpr) with Logging {
 
       //endregion
 
-      //region done
-
-      case r :+ BelleToken(DONE, doneLoc) =>
-        val parsedExpr = TactixLibrary.done
-        parsedExpr.setLocation(doneLoc)
-        ParserState(r :+ ParsedBelleExpr(parsedExpr, doneLoc), st.input)
-
-      //endregion
-
       //region built-in tactics
       case r :+ BelleToken(IDENT(name), identLoc) =>
         try {
@@ -445,7 +435,6 @@ object BelleParser extends (String => BelleExpr) with Logging {
 
   private def isProofStateToken(toks: TokenStream) = toks.headOption match {
     case Some(BelleToken(PARTIAL, _)) => true
-    case Some(BelleToken(DONE, _)) => true
     case _ => false
   }
 

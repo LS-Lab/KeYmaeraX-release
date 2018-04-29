@@ -1139,6 +1139,7 @@ class DifferentialTests extends TacticTestBase with Timeouts {
   it should "solve the simplest of all ODEs" in withQE { _ =>
     val result = proveBy("x>0 ==> [{x'=1}]x>0".asSequent, solve(1))
     result.subgoals.loneElement shouldBe "x>0 ==> \\forall t_ (t_>=0 -> t_+x>0)".asSequent
+
   }
 
   it should "solve simple box after ODE" in withQE { _ =>
@@ -1336,14 +1337,6 @@ class DifferentialTests extends TacticTestBase with Timeouts {
 
   it should "prove x^3>5 -> [{x'=7*x^3+x^8}]x^3>5" in withQE { _ =>
     proveBy("x^3>5 -> [{x'=7*x^3+x^8}]x^3>5".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
-  }
-
-  it should "prove x^3>=5 -> [{x'=7*x^3+x^8}]x^3>=5" in withQE { _ =>
-    proveBy("x^3>=5 -> [{x'=7*x^3+x^8}]x^3>=5".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
-  }
-
-  it should "prove 5<=x^3 -> [{x'=7*x^3+x^8}]5<=x^3" in withQE { _ =>
-    proveBy("5<=x^3 -> [{x'=7*x^3+x^8}]5<=x^3".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
 
   it should "open diff ind x>b() |- [{x'=2}]x>b()" in withQE { _ =>

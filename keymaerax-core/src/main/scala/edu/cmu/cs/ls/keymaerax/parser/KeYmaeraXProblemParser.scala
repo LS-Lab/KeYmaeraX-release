@@ -172,7 +172,7 @@ object KeYmaeraXProblemParser extends Logging {
 /**
  * Parses the declarations in .kyx and .alp files.
  */
-object KeYmaeraXDeclarationsParser {
+object KeYmaeraXDeclarationsParser extends Logging {
   /** Name is alphanumeric name and index. */
   type Name = (String, Option[Int])
   /** Signature is domain sort, codomain sort, "interpretation", token that starts the declaration. */
@@ -608,8 +608,7 @@ object KeYmaeraXDeclarationsParser {
           case Some(i) => nextDecl._1._1 + "_" + i
           case None => nextDecl._1._1
         }
-        throw new ParseException("Duplicate symbol '" + name + "'",
-          UnknownLocation, "", "", "", "")
+        logger.info("Duplicate symbol '" + name + "', entry local definition overrides shared definition")
       }
       processDeclarations(remainders, Declaration(accumulated.decls.updated(nextDecl._1, nextDecl._2)))
     } else accumulated

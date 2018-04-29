@@ -9,6 +9,8 @@ import java.util.{Calendar, Date}
 
 import akka.event.slf4j.SLF4JLogging
 import akka.actor.{Actor, ActorContext}
+import akka.http.scaladsl.model.{Multipart, StatusCodes}
+import akka.http.scaladsl.server.ExceptionHandler
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, OptionArg}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
@@ -16,53 +18,84 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import org.apache.logging.log4j.scala.Logging
-import spray.http.CacheDirectives.{`max-age`, `no-cache`}
-import spray.http.HttpHeaders.`Cache-Control`
-import spray.routing._
-import spray.http._
+import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.Http
 import spray.json._
-import spray.routing
-import spray.util.LoggingContext
-import spray.http.StatusCodes.{Forbidden, Unauthorized}
-import spray.httpx.marshalling.ToResponseMarshallable
+import DefaultJsonProtocol._
+import akka.http.scaladsl.marshalling.ToResponseMarshallable
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
+import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
+import akka.actor.{Actor, ActorSystem, Props}
+import akka.http.scaladsl.Http
+import akka.io.IO
+import akka.stream.ActorMaterializer
+import akka.util.Timeout
+import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
+import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, SequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.btactics._
+import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
+import edu.cmu.cs.ls.keymaerax.launcher.{DefaultConfiguration, LoadingDialogFactory, SystemWebBrowser}
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import org.apache.logging.log4j.scala.Logging
+
+import scala.concurrent.duration._
+import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.Multipart.FormData.BodyPart
+import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.model.headers._
+import akka.http.scaladsl.model.headers.CacheDirectives.`max-age`
+import akka.http.scaladsl.model.headers.CacheDirectives.`no-cache`
+import akka.http.scaladsl.server._
+import StatusCodes._
 
 import scala.language.postfixOps
 
-class RestApiActor extends Actor with RestApi {
-  implicit def eh(implicit log: LoggingContext) = ExceptionHandler {
-    case e: Throwable => ctx =>
-      val errorJson: String = new ErrorResponse(e.getMessage, e).getJson.prettyPrint
-      log.error(e, s"Request '${ctx.request.uri}' resulted in uncaught exception", ctx.request)
-      ctx.complete(StatusCodes.InternalServerError, errorJson)
-  }
-
-  def actorRefFactory: ActorContext = context
-
-  //Note: separating the actor and router allows testing of the router without
-  //spinning up an actor.
-  def receive: Actor.Receive = runRoute(myRoute)
-
-}
+//@todo not sure what this is or how to replicate this in Akka.
+//class RestApiActor extends Actor with RestApi {
+//  implicit def eh(implicit log: LoggingContext) = ExceptionHandler {
+//    case e: Throwable => ctx =>
+//      val errorJson: String = new ErrorResponse(e.getMessage, e).getJson.prettyPrint
+//      log.error(e, s"Request '${ctx.request.uri}' resulted in uncaught exception", ctx.request)
+//      ctx.complete(StatusCodes.InternalServerError, errorJson)
+//  }
+//
+//  def actorRefFactory: ActorContext = context
+//
+//  //Note: separating the actor and router allows testing of the router without
+//  //spinning up an actor.
+//  def receive: Actor.Receive = runRoute(myRoute)
+//
+//}
 
 /**
  * RestApi is the API router. See README.md for a description of the API.
  */
-trait RestApi extends HttpService with Logging {
+object RestApi extends Logging {
+  //region Database setup
+
   private val database = DBAbstractionObj.defaultDatabase //SQLite //Not sure when or where to create this... (should be part of Boot?)
+
+  //endregion
+
+  //region Constants for accessing resources and database values.
+
   private val DEFAULT_ARCHIVE_LOCATION = "http://keymaerax.org/KeYmaeraX-projects/"
   private val BUNDLED_ARCHIVE_DIR = "/keymaerax-projects/"
   private val BUNDLED_ARCHIVE_LOCATION = s"classpath:${BUNDLED_ARCHIVE_DIR}"
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Helper Methods
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //endregion
+
+  //region Helper Methods
 
   private def getUserFromUserIdCookieContent(userIdContent : String):String = userIdContent //for now...
 
-  private def getFileContentsFromFormData(item : BodyPart) : String = {
+  private def getFileContentsFromFormData(item : Multipart.FormData.BodyPart) : String = {
     val entity = item.entity
     val headers = item.headers
-    val content = item.entity.data.asString
+    val content = item.entity.getDataBytes().toString() //@todo not sure if this is correct.
 
     //Just FYI here's how you get the content type...
     val contentType = headers.find(h => h.is("content-type")).get.value
@@ -80,11 +113,11 @@ trait RestApi extends HttpService with Logging {
     * @note A hosted version of the server should probably turn this off.
     * */
   private def completeWithoutCache(response: String) =
-    respondWithHeader(`Cache-Control`(Seq(`no-cache`, `max-age`(0)))) {
-      super.complete(response)
+    respondWithHeader(`Cache-Control`(scala.collection.immutable.Seq(`no-cache`, `max-age`(0)))) {
+      complete(response)
     }
 
-  private def completeRequest(r: Request, t: SessionToken) = t match {
+  def completeRequest(r: Request, t: SessionToken) = t match {
     case NewlyExpiredToken(_) => complete(Unauthorized, Nil, s"Session $t expired")
     case _ =>
       if (r.permission(t)) complete(standardCompletion(r, t))
@@ -112,12 +145,10 @@ trait RestApi extends HttpService with Logging {
     }
   }
 
+  //endregion
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Begin Routing
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //region Common partial routes
 
-  //Some common partials.
   private val userPrefix = pathPrefix("user" / Segment)
 
   private val denied = path("private" / "KeyStore.jks") { get { getFromResource("index_bootstrap.html") } }
@@ -125,20 +156,20 @@ trait RestApi extends HttpService with Logging {
   //The static directory.
   private val staticRoute =
     pathPrefix("") { get {
-      respondWithHeader(`Cache-Control`(Seq(`no-cache`, `max-age`(0)))) {
+      respondWithHeader(`Cache-Control`(scala.collection.immutable.Seq(`no-cache`, `max-age`(0)))) {
         getFromResourceDirectory("")
       }
     }}
   private val homePage = path("") { get {
-    respondWithHeader(`Cache-Control`(Seq(`no-cache`, `max-age`(0)))) {
+    respondWithHeader(`Cache-Control`(scala.collection.immutable.Seq(`no-cache`, `max-age`(0)))) {
       getFromResource("index_bootstrap.html")
     }
   }}
 
+  //endregion
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Users
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //region Users
+
   val users: Route = pathPrefix("user" / Segment / Segment / "mode" / Segment) { (username, password, mode) => {
     implicit val sessionUser = None
     pathEnd {
@@ -153,13 +184,22 @@ trait RestApi extends HttpService with Logging {
     }
   }}
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Models
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  val logoff: SessionToken=>Route  = (t: SessionToken) => path("user" / "logoff") { pathEnd { get {
+    t match {
+      case ut: UserToken => SessionManager.remove(ut.token)
+      case NewlyExpiredToken(_) => //Well, that was convienant.
+      case _ => //that works too.
+    }
+    complete("[]")
+  }}}
+
+  //endregion
+
+  //region Models
 
   // FYI to get cookies do this:
   val cookie_echo: Route = pathPrefix("cookie_echo" / Segment) { cookieName => cookie(cookieName) { cookieValue => {
-    complete(cookieName + ": " + cookieValue.content)
+    complete(cookieName + ": " + cookieValue.value)
   }}}
 
   val userTheme: SessionToken=>Route = (t: SessionToken) => path("users" / Segment / "theme") { userId => pathEnd {
@@ -184,11 +224,26 @@ trait RestApi extends HttpService with Logging {
   //POST /users/<user id>/model/< name >/< keyFile >
   val userModel: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => {pathPrefix("model" / Segment) {modelNameOrId => {pathEnd {
     post {
-      entity(as[MultipartFormData]) { formData => {
-        if(formData.fields.length > 1) ??? //should only have a single file.
-        val data = formData.fields.last
-        val contents = getFileContentsFromFormData(data)
-        val request = new CreateModelRequest(database, userId, modelNameOrId, contents)
+      entity(as[Multipart.FormData]) { formData => {
+        //@todo hacky.
+        //Note: I don't know how to ask for formData.parts.head, so instead I'll just map over all of them
+        //and throw an error if I manage to find more than one thing during that map. This variable keeps track
+        //of whether I'm processing the first element in formData.parts.
+        var processingFirstFile = true
+
+        //I'll also safe the request so that I can completeRequest with this request outside of the map.
+        var request : Request = null
+        formData.parts.map(part => {
+          if (processingFirstFile) {
+            val contents = getFileContentsFromFormData(part)
+            request = new CreateModelRequest(database, userId, modelNameOrId, contents)
+            processingFirstFile = false
+          }
+          else {
+            ??? //should only have a single file.
+          }
+        })
+
         completeRequest(request, t)
       }}
     } ~
@@ -366,438 +421,432 @@ trait RestApi extends HttpService with Logging {
     }
   }}}
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Proofs
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //endregion
 
-  val createProof: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "createProof") { (userId, modelId) => { pathEnd {
-    post {
-      entity(as[String]) { x => {
-        val obj = x.parseJson
-        val submittedProofName = obj.asJsObject.getFields("proofName").last.asInstanceOf[JsString].value
-        val proofName = if (submittedProofName == "") {
-          val model = database.getModel(modelId)
-          model.name + ": Proof " + (model.numProofs + 1)
-        } else submittedProofName
-        val proofDescription = obj.asJsObject.getFields("proofDescription").last.asInstanceOf[JsString].value
+  //region Proofs
 
-        val request = new CreateProofRequest(database, userId, modelId, proofName, proofDescription)
-        completeRequest(request, t)
-      }}
-    }
-  }}}
+    val createProof: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "createProof") { (userId, modelId) => { pathEnd {
+      post {
+        entity(as[String]) { x => {
+          val obj = x.parseJson
+          val submittedProofName = obj.asJsObject.getFields("proofName").last.asInstanceOf[JsString].value
+          val proofName = if (submittedProofName == "") {
+            val model = database.getModel(modelId)
+            model.name + ": Proof " + (model.numProofs + 1)
+          } else submittedProofName
+          val proofDescription = obj.asJsObject.getFields("proofDescription").last.asInstanceOf[JsString].value
 
-  val createModelTacticProof: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "createTacticProof") { (userId, modelId) => { pathEnd {
-    post {
-      entity(as[String]) { _ => {
-        val request = new CreateModelTacticProofRequest(database, userId, modelId)
-        completeRequest(request, t)
-      }}
-    }
-  }}}
-
-  val proofListForModel: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "proofs") { (userId, modelId) => { pathEnd {
-    get {
-      val request = new ProofsForModelRequest(database, userId, modelId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val proofList: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "proofs") { (userId) => { pathEnd {
-    get {
-      val request = new ProofsForUserRequest(database, userId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val openProof: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment) { (userId, proofId) => { pathEnd {
-    get {
-      val request = new OpenProofRequest(database, userId, proofId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val initProofFromTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "initfromtactic") { (userId, proofId) => { pathEnd {
-    get {
-      val request = new InitializeProofFromTacticRequest(database, userId, proofId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val browseProofRoot: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "browseagenda") { (userId, proofId) => { pathEnd {
-    get {
-      val request = new GetProofRootAgendaRequest(database, userId, proofId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val browseNodeChildren: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "browseChildren") { (userId, proofId, nodeId) => { pathEnd {
-    get {
-      val request = new GetProofNodeChildrenRequest(database, userId, proofId, nodeId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val proofTasksNew: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "agendaawesome") { (userId, proofId) => { pathEnd {
-    get {
-      val request = new GetAgendaAwesomeRequest(database, userId, proofId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val proofTasksParent: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "parent") { (userId, proofId, nodeId) => { pathEnd {
-    get {
-      val request = new ProofTaskParentRequest(database, userId, proofId, nodeId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val proofTasksPathAll: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "pathall") { (userId, proofId, nodeId) => { pathEnd {
-    get {
-      val request = new GetPathAllRequest(database, userId, proofId, nodeId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val proofTasksBranchRoot: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "branchroot") { (userId, proofId, nodeId) => { pathEnd {
-    get {
-      val request = new GetBranchRootRequest(database, userId, proofId, nodeId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val proofTaskExpand: SessionToken => Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "expand") { (userId, proofId, nodeId) => { pathEnd {
-    get {
-      val request = new ProofTaskExpandRequest(database, userId, proofId, nodeId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val proofNodeSequent: SessionToken => Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "sequent") { (userId, proofId, nodeId) => { pathEnd {
-    get {
-      val request = new ProofNodeSequentRequest(database, userId, proofId, nodeId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val stepwiseTrace: SessionToken => Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "trace") { (userId, proofId) => { pathEnd {
-    get {
-      val request = new StepwiseTraceRequest(database, userId, proofId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  /* Strictly positive position = SuccPosition, strictly negative = AntePosition, 0 not used */
-  def parseFormulaId(id:String): Position = {
-    val positionStringParts = id.split(',').toList
-    val (idx :: inExprs) = positionStringParts.map(str =>
-      try {
-        str.toInt
-      } catch {
-        case e: NumberFormatException => {
-          //HACK: if position is top-level (no inExpr) and unspecified, then "Hint" web ui was probably used. In this case, assume top-level succ.
-          //@todo This is a hack that *should* be fixed in the front-end by telling the "Hint: ...|...|...|" portion of the web ui to please specify a position. See sequent.js and collapsiblesequent.html
-          if(str.equals("null") && positionStringParts.length==1)
-            1
-          else
-            throw new Exception("Invalid formulaId " + str + " when parsing positions")
-        }
-      }
-    )
-
-    try { Position(idx, inExprs) }
-    catch {
-      case e: IllegalArgumentException =>
-        throw new Exception("Invalid formulaId " + id + " in axiomList").initCause(e)
-    }
-  }
-
-  val axiomList: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "list") { (userId, proofId, nodeId, formulaId) => { pathEnd {
-    get {
-      val request = new GetApplicableAxiomsRequest(database, userId, proofId, nodeId, parseFormulaId(formulaId))
-      completeRequest(request, t)
-    }
-  }}}
-
-  val sequentList: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "listStepSuggestions") { (userId, proofId, nodeId) => { pathEnd {
-    get {
-      val request = new GetSequentStepSuggestionRequest(database, userId, proofId, nodeId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val twoPosList: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "twoposlist") { (userId, proofId, nodeId, fml1Id, fml2Id) => { pathEnd {
-    get {
-      val request = new GetApplicableTwoPosTacticsRequest(database, userId, proofId, nodeId, parseFormulaId(fml1Id), parseFormulaId(fml2Id))
-      completeRequest(request, t)
-    }
-  }}}
-
-  val derivationInfo: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "derivationInfos" / Segment.?) { (userId, proofId, nodeId, axiomId) => { pathEnd {
-    get {
-      val request = new GetDerivationInfoRequest(database, userId, proofId, nodeId, axiomId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val exportSequent: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / "export" / Segment / Segment / Segment) { (userId, proofId, nodeId) => { pathEnd {
-    get {
-      val request = new ExportCurrentSubgoal(database, userId, proofId, nodeId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val doAt: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
-    get { parameters('stepwise.as[Boolean]) { stepwise =>
-      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))), None, Nil, consultAxiomInfo=true, stepwise=stepwise)
-      completeRequest(request, t)
-    }}}
-  }}
-
-  val getStep: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "whatStep") { (userId, proofId, nodeId, formulaId) => { pathEnd {
-    get {
-      val request = new GetStepRequest(database, userId, proofId, nodeId, parseFormulaId(formulaId))
-      completeRequest(request, t)
-    }}
-  }}
-
-  val searchLemmas: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "lemmas" / Segment) { (userId, proofId, nodeId, formulaId, partialLemmaName) => { pathEnd {
-    get {
-      val request = new GetLemmasRequest(database, userId, proofId, nodeId, parseFormulaId(formulaId), partialLemmaName)
-      completeRequest(request, t)
-    }}
-  }}
-
-  val formulaPrettyString: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "prettyString") { (userId, proofId, nodeId, formulaId) => { pathEnd {
-    get {
-      val request = new GetFormulaPrettyStringRequest(database, userId, proofId, nodeId, parseFormulaId(formulaId))
-      completeRequest(request, t)
-    }}
-  }}
-
-  val checkInput: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "checkInput" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
-    get {
-      parameters('param, 'type, 'value) { (pName, pType, pValue) =>
-        completeRequest(new CheckTacticInputRequest(database, userId, proofId, nodeId, tacticId, pName, pType, pValue), t)
-      }
-    }
-  }}}
-
-  val doInputAt: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "doInputAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
-    post {
-      parameters('stepwise.as[Boolean]) { stepwise => entity(as[String]) { params => {
-        val info = DerivationInfo(tacticId)
-        val expectedInputs = info.inputs
-        // Input has format [{"type":"formula","param":"j(x)","value":"v >= 0"}]
-        val paramArray = JsonParser(params).asInstanceOf[JsArray].elements.map(_.asJsObject())
-        val illFormedParams = paramArray.filter({obj =>
-          val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
-          val paramInfo = expectedInputs.find(_.name == paramName)
-          paramInfo.isEmpty ||
-            (paramInfo match { case Some(_: OptionArg) => false case _ => obj.getFields("value").isEmpty})
-        })
-        if (illFormedParams.isEmpty) {
-          val inputs = paramArray.map({ obj =>
-            val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
-            expectedInputs.find(_.name == paramName) match {
-              case Some(OptionArg(paramInfo)) => obj.getFields("value").headOption match {
-                case Some(JsString(paramValue)) => Some(BelleTermInput(paramValue, Some(paramInfo)))
-                case _ => None
-              }
-              case paramInfo =>
-                val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
-                Some(BelleTermInput(paramValue, paramInfo))
-            }
-          }).filter(_.isDefined).map(_.get)
-          val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId,
-            Some(Fixed(parseFormulaId(formulaId))), None, inputs.toList, consultAxiomInfo=true, stepwise=stepwise)
+          val request = new CreateProofRequest(database, userId, modelId, proofName, proofDescription)
           completeRequest(request, t)
-        } else {
-          val missing = illFormedParams.map(_.getFields("param").head.asInstanceOf[JsString].value).mkString(", ")
-          completeRequest(new FailedRequest(userId, "Ill-formed tactic arguments, missing parameters " + missing), t)
+        }}
+      }
+    }}}
+
+    val createModelTacticProof: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "createTacticProof") { (userId, modelId) => { pathEnd {
+      post {
+        entity(as[String]) { _ => {
+          val request = new CreateModelTacticProofRequest(database, userId, modelId)
+          completeRequest(request, t)
+        }}
+      }
+    }}}
+
+    val proofListForModel: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "model" / Segment / "proofs") { (userId, modelId) => { pathEnd {
+      get {
+        val request = new ProofsForModelRequest(database, userId, modelId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val proofList: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "proofs") { (userId) => { pathEnd {
+      get {
+        val request = new ProofsForUserRequest(database, userId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val openProof: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment) { (userId, proofId) => { pathEnd {
+      get {
+        val request = new OpenProofRequest(database, userId, proofId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val initProofFromTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "initfromtactic") { (userId, proofId) => { pathEnd {
+      get {
+        val request = new InitializeProofFromTacticRequest(database, userId, proofId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val browseProofRoot: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "browseagenda") { (userId, proofId) => { pathEnd {
+      get {
+        val request = new GetProofRootAgendaRequest(database, userId, proofId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val browseNodeChildren: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "browseChildren") { (userId, proofId, nodeId) => { pathEnd {
+      get {
+        val request = new GetProofNodeChildrenRequest(database, userId, proofId, nodeId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val proofTasksNew: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "agendaawesome") { (userId, proofId) => { pathEnd {
+      get {
+        val request = new GetAgendaAwesomeRequest(database, userId, proofId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val proofTasksParent: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "parent") { (userId, proofId, nodeId) => { pathEnd {
+      get {
+        val request = new ProofTaskParentRequest(database, userId, proofId, nodeId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val proofTasksPathAll: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "pathall") { (userId, proofId, nodeId) => { pathEnd {
+      get {
+        val request = new GetPathAllRequest(database, userId, proofId, nodeId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val proofTasksBranchRoot: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "branchroot") { (userId, proofId, nodeId) => { pathEnd {
+      get {
+        val request = new GetBranchRootRequest(database, userId, proofId, nodeId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val proofTaskExpand: SessionToken => Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "expand") { (userId, proofId, nodeId) => { pathEnd {
+      get {
+        val request = new ProofTaskExpandRequest(database, userId, proofId, nodeId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val proofNodeSequent: SessionToken => Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "sequent") { (userId, proofId, nodeId) => { pathEnd {
+      get {
+        val request = new ProofNodeSequentRequest(database, userId, proofId, nodeId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val stepwiseTrace: SessionToken => Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "trace") { (userId, proofId) => { pathEnd {
+      get {
+        val request = new StepwiseTraceRequest(database, userId, proofId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    /* Strictly positive position = SuccPosition, strictly negative = AntePosition, 0 not used */
+    def parseFormulaId(id:String): Position = {
+      val positionStringParts = id.split(',').toList
+      val (idx :: inExprs) = positionStringParts.map(str =>
+        try {
+          str.toInt
+        } catch {
+          case e: NumberFormatException => {
+            //HACK: if position is top-level (no inExpr) and unspecified, then "Hint" web ui was probably used. In this case, assume top-level succ.
+            //@todo This is a hack that *should* be fixed in the front-end by telling the "Hint: ...|...|...|" portion of the web ui to please specify a position. See sequent.js and collapsiblesequent.html
+            if(str.equals("null") && positionStringParts.length==1)
+              1
+            else
+              throw new Exception("Invalid formulaId " + str + " when parsing positions")
+          }
+        }
+      )
+
+      try { Position(idx, inExprs) }
+      catch {
+        case e: IllegalArgumentException =>
+          throw new Exception("Invalid formulaId " + id + " in axiomList").initCause(e)
+      }
+    }
+
+    val axiomList: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "list") { (userId, proofId, nodeId, formulaId) => { pathEnd {
+      get {
+        val request = new GetApplicableAxiomsRequest(database, userId, proofId, nodeId, parseFormulaId(formulaId))
+        completeRequest(request, t)
+      }
+    }}}
+
+    val sequentList: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "listStepSuggestions") { (userId, proofId, nodeId) => { pathEnd {
+      get {
+        val request = new GetSequentStepSuggestionRequest(database, userId, proofId, nodeId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val twoPosList: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "twoposlist") { (userId, proofId, nodeId, fml1Id, fml2Id) => { pathEnd {
+      get {
+        val request = new GetApplicableTwoPosTacticsRequest(database, userId, proofId, nodeId, parseFormulaId(fml1Id), parseFormulaId(fml2Id))
+        completeRequest(request, t)
+      }
+    }}}
+
+    val derivationInfo: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "derivationInfos" / Segment.?) { (userId, proofId, nodeId, axiomId) => { pathEnd {
+      get {
+        val request = new GetDerivationInfoRequest(database, userId, proofId, nodeId, axiomId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val exportSequent: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / "export" / Segment / Segment / Segment) { (userId, proofId, nodeId) => { pathEnd {
+      get {
+        val request = new ExportCurrentSubgoal(database, userId, proofId, nodeId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val doAt: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
+      get { parameters('stepwise.as[Boolean]) { stepwise =>
+        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, Some(Fixed(parseFormulaId(formulaId))), None, Nil, consultAxiomInfo=true, stepwise=stepwise)
+        completeRequest(request, t)
+      }}}
+    }}
+
+    val getStep: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "whatStep") { (userId, proofId, nodeId, formulaId) => { pathEnd {
+      get {
+        val request = new GetStepRequest(database, userId, proofId, nodeId, parseFormulaId(formulaId))
+        completeRequest(request, t)
+      }}
+    }}
+
+    val searchLemmas: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "lemmas" / Segment) { (userId, proofId, nodeId, formulaId, partialLemmaName) => { pathEnd {
+      get {
+        val request = new GetLemmasRequest(database, userId, proofId, nodeId, parseFormulaId(formulaId), partialLemmaName)
+        completeRequest(request, t)
+      }}
+    }}
+
+    val formulaPrettyString: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "prettyString") { (userId, proofId, nodeId, formulaId) => { pathEnd {
+      get {
+        val request = new GetFormulaPrettyStringRequest(database, userId, proofId, nodeId, parseFormulaId(formulaId))
+        completeRequest(request, t)
+      }}
+    }}
+
+    val checkInput: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "checkInput" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
+      get {
+        parameters('param, 'type, 'value) { (pName, pType, pValue) =>
+          completeRequest(new CheckTacticInputRequest(database, userId, proofId, nodeId, tacticId, pName, pType, pValue), t)
         }
       }
     }}}
-  }}}
 
-  val doTwoPosAt: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, fml1Id, fml2Id, tacticId) => { pathEnd {
-    get { parameters('stepwise.as[Boolean]) { stepwise =>
-      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId,
-        Some(Fixed(parseFormulaId(fml1Id))), Some(Fixed(parseFormulaId(fml2Id))), Nil, consultAxiomInfo=true, stepwise=stepwise)
-      completeRequest(request, t)
-    }}}
-  }}
-
-  val doTactic: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "do" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
-    get { parameters('stepwise.as[Boolean]) { stepwise =>
-      val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None, None, Nil, consultAxiomInfo=true, stepwise=stepwise)
-      completeRequest(request, t)
-    }}}
-  }}
-
-  val doInputTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doInput" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
-    post { parameters('stepwise.as[Boolean]) { stepwise =>
-      entity(as[String]) { params => {
-        val info = DerivationInfo(tacticId)
-        val expectedInputs = info.inputs
-        // Input has format [{"type":"formula","param":"j(x)","value":"v >= 0"}]
-        val paramArray = JsonParser(params).asInstanceOf[JsArray]
-        val inputs =
-          paramArray.elements.map({ elem =>
-            val obj = elem.asJsObject()
+    val doInputAt: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "doInputAt" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
+      post {
+        parameters('stepwise.as[Boolean]) { stepwise => entity(as[String]) { params => {
+          val info = DerivationInfo(tacticId)
+          val expectedInputs = info.inputs
+          // Input has format [{"type":"formula","param":"j(x)","value":"v >= 0"}]
+          val paramArray = JsonParser(params).asInstanceOf[JsArray].elements.map(_.asJsObject())
+          val illFormedParams = paramArray.filter({obj =>
             val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
-            val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
             val paramInfo = expectedInputs.find(_.name == paramName)
-            BelleTermInput(paramValue, paramInfo)
+            paramInfo.isEmpty ||
+              (paramInfo match { case Some(_: OptionArg) => false case _ => obj.getFields("value").isEmpty})
           })
-        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None, None, inputs.toList, consultAxiomInfo=true, stepwise=stepwise)
-        completeRequest(request, t)
-      }
+          if (illFormedParams.isEmpty) {
+            val inputs = paramArray.map({ obj =>
+              val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
+              expectedInputs.find(_.name == paramName) match {
+                case Some(OptionArg(paramInfo)) => obj.getFields("value").headOption match {
+                  case Some(JsString(paramValue)) => Some(BelleTermInput(paramValue, Some(paramInfo)))
+                  case _ => None
+                }
+                case paramInfo =>
+                  val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
+                  Some(BelleTermInput(paramValue, paramInfo))
+              }
+            }).filter(_.isDefined).map(_.get)
+            val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId,
+              Some(Fixed(parseFormulaId(formulaId))), None, inputs.toList, consultAxiomInfo=true, stepwise=stepwise)
+            completeRequest(request, t)
+          } else {
+            val missing = illFormedParams.map(_.getFields("param").head.asInstanceOf[JsString].value).mkString(", ")
+            completeRequest(new FailedRequest(userId, "Ill-formed tactic arguments, missing parameters " + missing), t)
+          }
+        }
       }}}
-  }}}
-
-  val doCustomTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doCustomTactic") { (userId, proofId, nodeId) => { pathEnd {
-    post { parameters('stepwise.as[Boolean]) { stepwise =>
-      entity(as[String]) { tactic => {
-        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tactic, None, consultAxiomInfo=false, stepwise=stepwise)
-        completeRequest(request, t)
-      }}
     }}}
-  }}
 
-  val doSearch: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doSearch" / Segment / Segment) { (userId, proofId, goalId, where, tacticId) => { pathEnd {
-    get { parameters('stepwise.as[Boolean]) { stepwise =>
-      val pos = where match {
-        case "R" => Find.FindR(0, None)
-        case "L" => Find.FindL(0, None)
-        case loc => throw new IllegalArgumentException("Unknown position locator " + loc)
-      }
-      val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(pos), None, Nil, consultAxiomInfo=true, stepwise=stepwise)
-      completeRequest(request, t)
-    }} ~
-    post { parameters('stepwise.as[Boolean]) { stepwise =>
-      entity(as[String]) { params => {
-        val info = DerivationInfo(tacticId)
-        val expectedInputs = info.inputs
-        // Input has format [{"type":"formula","param":"j(x)","value":"v >= 0"}]
-        val paramArray = JsonParser(params).asInstanceOf[JsArray]
-        val inputs =
-          paramArray.elements.map({elem =>
-            val obj = elem.asJsObject()
-            val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
-            val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
-            val paramInfo = expectedInputs.find(_.name == paramName)
-            BelleTermInput(paramValue, paramInfo)
-          })
+    val doTwoPosAt: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / Segment / "doAt" / Segment) { (userId, proofId, nodeId, fml1Id, fml2Id, tacticId) => { pathEnd {
+      get { parameters('stepwise.as[Boolean]) { stepwise =>
+        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId,
+          Some(Fixed(parseFormulaId(fml1Id))), Some(Fixed(parseFormulaId(fml2Id))), Nil, consultAxiomInfo=true, stepwise=stepwise)
+        completeRequest(request, t)
+      }}}
+    }}
+
+    val doTactic: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "do" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
+      get { parameters('stepwise.as[Boolean]) { stepwise =>
+        val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None, None, Nil, consultAxiomInfo=true, stepwise=stepwise)
+        completeRequest(request, t)
+      }}}
+    }}
+
+    val doInputTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doInput" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
+      post { parameters('stepwise.as[Boolean]) { stepwise =>
+        entity(as[String]) { params => {
+          val info = DerivationInfo(tacticId)
+          val expectedInputs = info.inputs
+          // Input has format [{"type":"formula","param":"j(x)","value":"v >= 0"}]
+          val paramArray = JsonParser(params).asInstanceOf[JsArray]
+          val inputs =
+            paramArray.elements.map({ elem =>
+              val obj = elem.asJsObject()
+              val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
+              val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
+              val paramInfo = expectedInputs.find(_.name == paramName)
+              BelleTermInput(paramValue, paramInfo)
+            })
+          val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None, None, inputs.toList, consultAxiomInfo=true, stepwise=stepwise)
+          completeRequest(request, t)
+        }
+        }}}
+    }}}
+
+    val doCustomTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doCustomTactic") { (userId, proofId, nodeId) => { pathEnd {
+      post { parameters('stepwise.as[Boolean]) { stepwise =>
+        entity(as[String]) { tactic => {
+          val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tactic, None, consultAxiomInfo=false, stepwise=stepwise)
+          completeRequest(request, t)
+        }}
+      }}}
+    }}
+
+    val doSearch: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "doSearch" / Segment / Segment) { (userId, proofId, goalId, where, tacticId) => { pathEnd {
+      get { parameters('stepwise.as[Boolean]) { stepwise =>
         val pos = where match {
           case "R" => Find.FindR(0, None)
           case "L" => Find.FindL(0, None)
           case loc => throw new IllegalArgumentException("Unknown position locator " + loc)
         }
-        val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(pos), None, inputs.toList, consultAxiomInfo=true, stepwise=stepwise)
+        val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(pos), None, Nil, consultAxiomInfo=true, stepwise=stepwise)
         completeRequest(request, t)
-      }
-      }}}
-    }
-  }}
-
-  val taskStatus: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "status") { (userId, proofId, nodeId, taskId) => { pathEnd {
-    get {
-      val request = new TaskStatusRequest(database, userId, proofId, nodeId, taskId)
-      completeRequest(request, t)
-    }}
-  }}
-
-  val taskResult: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "result") { (userId, proofId, nodeId, taskId) => { pathEnd {
-    get {
-      val request = new TaskResultRequest(database, userId, proofId, nodeId, taskId)
-      completeRequest(request, t)
-    }}
-  }}
-
-  val stopTask: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "stop") { (userId, proofId, nodeId, taskId) => { pathEnd {
-    get {
-      val request = new StopTaskRequest(database, userId, proofId, nodeId, taskId)
-      completeRequest(request, t)
-    }}
-  }}
-
-  val pruneBelow: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "pruneBelow") { (userId, proofId, nodeId) => { pathEnd {
-    get {
-      val request = new PruneBelowRequest(database, userId, proofId, nodeId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val getAgendaItem: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "agendaItem" / Segment) { (userId, proofId, nodeId) => { pathEnd {
-    get {
-      val request = GetAgendaItemRequest(database, userId, proofId, nodeId)
-      completeRequest(request, t)
-    }}}}
-
-  val setAgendaItemName: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "name" / Segment) { (userId, proofId, nodeId, newName) => { pathEnd {
-    post {
-      entity(as[String]) { _ => {
-        val request = SetAgendaItemNameRequest(database, userId, proofId, nodeId, newName)
-        completeRequest(request, t)
-    }}}}}}
-
-  val proofProgressStatus: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "progress") { (userId, proofId) => { pathEnd {
-    get {
-      val request = new GetProofProgressStatusRequest(database, userId, proofId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val proofCheckIsProved: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "validatedStatus") { (userId, proofId) => { pathEnd {
-    get {
-      val request = new CheckIsProvedRequest(database, userId, proofId)
-      completeRequest(request, t)
-    }
-  }}}
-
-  val counterExample: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "counterExample") { (userId, proofId, nodeId) => {
-    pathEnd {
-      get {
-        val request = new CounterExampleRequest(database, userId, proofId, nodeId)
-        completeRequest(request, t)
-      }
-    }}
-  }
-
-  val setupSimulation: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "setupSimulation") { (userId, proofId, nodeId) => {
-    pathEnd {
-      get {
-        val request = new SetupSimulationRequest(database, userId, proofId, nodeId)
-        completeRequest(request, t)
-      }
-    }}
-  }
-
-  val simulate: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "simulate") { (userId, proofId, nodeId) => {
-    pathEnd {
-      post {
+      }} ~
+      post { parameters('stepwise.as[Boolean]) { stepwise =>
         entity(as[String]) { params => {
-          val obj = JsonParser(params).asJsObject()
-          val initial = obj.fields("initial").asInstanceOf[JsString].value.asFormula
-          val stateRelation = obj.fields("stateRelation").asInstanceOf[JsString].value.asFormula
-          val numSteps = obj.fields("numSteps").asInstanceOf[JsNumber].value.intValue()
-          val stepDuration = obj.fields("stepDuration").asInstanceOf[JsString].value.asTerm
-          val request = new SimulationRequest(database, userId, proofId, nodeId, initial, stateRelation, numSteps, 1, stepDuration)
+          val info = DerivationInfo(tacticId)
+          val expectedInputs = info.inputs
+          // Input has format [{"type":"formula","param":"j(x)","value":"v >= 0"}]
+          val paramArray = JsonParser(params).asInstanceOf[JsArray]
+          val inputs =
+            paramArray.elements.map({elem =>
+              val obj = elem.asJsObject()
+              val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
+              val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
+              val paramInfo = expectedInputs.find(_.name == paramName)
+              BelleTermInput(paramValue, paramInfo)
+            })
+          val pos = where match {
+            case "R" => Find.FindR(0, None)
+            case "L" => Find.FindL(0, None)
+            case loc => throw new IllegalArgumentException("Unknown position locator " + loc)
+          }
+          val request = new RunBelleTermRequest(database, userId, proofId, goalId, tacticId, Some(pos), None, inputs.toList, consultAxiomInfo=true, stepwise=stepwise)
           completeRequest(request, t)
+        }
         }}}
+      }
     }}
-  }
 
+    val taskStatus: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "status") { (userId, proofId, nodeId, taskId) => { pathEnd {
+      get {
+        val request = new TaskStatusRequest(database, userId, proofId, nodeId, taskId)
+        completeRequest(request, t)
+      }}
+    }}
 
-  val logoff: SessionToken=>Route  = (t: SessionToken) => path("user" / "logoff") { pathEnd { get {
-    t match {
-      case ut: UserToken => SessionManager.remove(ut.token)
-      case NewlyExpiredToken(_) => //Well, that was convienant.
-      case _ => //that works too.
+    val taskResult: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "result") { (userId, proofId, nodeId, taskId) => { pathEnd {
+      get {
+        val request = new TaskResultRequest(database, userId, proofId, nodeId, taskId)
+        completeRequest(request, t)
+      }}
+    }}
+
+    val stopTask: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / Segment / "stop") { (userId, proofId, nodeId, taskId) => { pathEnd {
+      get {
+        val request = new StopTaskRequest(database, userId, proofId, nodeId, taskId)
+        completeRequest(request, t)
+      }}
+    }}
+
+    val pruneBelow: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "pruneBelow") { (userId, proofId, nodeId) => { pathEnd {
+      get {
+        val request = new PruneBelowRequest(database, userId, proofId, nodeId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val getAgendaItem: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "agendaItem" / Segment) { (userId, proofId, nodeId) => { pathEnd {
+      get {
+        val request = GetAgendaItemRequest(database, userId, proofId, nodeId)
+        completeRequest(request, t)
+      }}}}
+
+    val setAgendaItemName: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "name" / Segment) { (userId, proofId, nodeId, newName) => { pathEnd {
+      post {
+        entity(as[String]) { _ => {
+          val request = SetAgendaItemNameRequest(database, userId, proofId, nodeId, newName)
+          completeRequest(request, t)
+      }}}}}}
+
+    val proofProgressStatus: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "progress") { (userId, proofId) => { pathEnd {
+      get {
+        val request = new GetProofProgressStatusRequest(database, userId, proofId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val proofCheckIsProved: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "validatedStatus") { (userId, proofId) => { pathEnd {
+      get {
+        val request = new CheckIsProvedRequest(database, userId, proofId)
+        completeRequest(request, t)
+      }
+    }}}
+
+    val counterExample: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "counterExample") { (userId, proofId, nodeId) => {
+      pathEnd {
+        get {
+          val request = new CounterExampleRequest(database, userId, proofId, nodeId)
+          completeRequest(request, t)
+        }
+      }}
     }
-    complete("[]")
-  }}}
+
+    val setupSimulation: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "setupSimulation") { (userId, proofId, nodeId) => {
+      pathEnd {
+        get {
+          val request = new SetupSimulationRequest(database, userId, proofId, nodeId)
+          completeRequest(request, t)
+        }
+      }}
+    }
+
+    val simulate: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "simulate") { (userId, proofId, nodeId) => {
+      pathEnd {
+        post {
+          entity(as[String]) { params => {
+            val obj = JsonParser(params).asJsObject()
+            val initial = obj.fields("initial").asInstanceOf[JsString].value.asFormula
+            val stateRelation = obj.fields("stateRelation").asInstanceOf[JsString].value.asFormula
+            val numSteps = obj.fields("numSteps").asInstanceOf[JsNumber].value.intValue()
+            val stepDuration = obj.fields("stepDuration").asInstanceOf[JsString].value.asTerm
+            val request = new SimulationRequest(database, userId, proofId, nodeId, initial, stateRelation, numSteps, 1, stepDuration)
+            completeRequest(request, t)
+          }}}
+      }}
+    }
+
+  //endregion
+
+  //region Archives
 
   val guestBrowseArchiveRequest: Route = path("show" / Segments) { archiveUri => pathEnd {
     get {
@@ -815,6 +864,10 @@ trait RestApi extends HttpService with Logging {
       completeRequest(request, EmptyToken())
     }
   }}
+
+  //endregion
+
+  //region Configuration and versioning information
 
   val kyxConfig: Route = path("kyxConfig") {
     pathEnd {
@@ -905,6 +958,10 @@ trait RestApi extends HttpService with Logging {
     }
   }
 
+  //endregion
+
+  //region Examples
+
   val examples: SessionToken=>Route = (t : SessionToken) => path("examples" / "user" / Segment / "all") { userId =>
     pathEnd {
       get {
@@ -913,6 +970,10 @@ trait RestApi extends HttpService with Logging {
       }
     }
   }
+
+  //endregion
+
+  //region More proof development stuff
 
   val runBelleTerm: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "tactics" / "runBelleTerm") { (userId, proofId, nodeId) => { pathEnd {
     post {
@@ -930,6 +991,10 @@ trait RestApi extends HttpService with Logging {
     }
   }}}
 
+  //endregion
+
+  //region Special developer actions
+
   val devAction: Route = path("dev" / Segment) { (action) => {
     get {
       assert(!HyDRAServerConfig.isHosted, "dev actions are only available on locally hosted instances.")
@@ -943,9 +1008,9 @@ trait RestApi extends HttpService with Logging {
     }
   }}
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Proof validation requests
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //endregion
+
+  //region Proof validation
 
   /** Validates the proof of a lemma. */
   val validateProof: Route = path("validate") { pathEnd {
@@ -972,9 +1037,9 @@ trait RestApi extends HttpService with Logging {
     }
   }}
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////
-  // Server management
-  //////////////////////////////////////////////////////////////////////////////////////////////////
+  //endregion
+
+  //region LOCAL server management
 
   val isLocal: Route = path("isLocal") { pathEnd { get {
     implicit val sessionUser = None
@@ -991,29 +1056,14 @@ trait RestApi extends HttpService with Logging {
     completeRequest(new ExtractDatabaseRequest(), EmptyToken())
   }}}
 
+  //endregion
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Licensing
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  //@todo license acceptance per user
-//  val license = path("licenseacceptance") {  {
-//    get {
-//      completeRequest(new IsLicenseAcceptedRequest(database), EmptyToken())
-//    } ~
-//    post {
-//      completeRequest(new AcceptLicenseRequest(database), EmptyToken())
-//    }
-//  }}
+  //region routing
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Route precedence
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-  val publicRoutes: List[routing.Route] =
+  val publicRoutes: List[Route] =
     denied ::
     staticRoute        ::
     homePage           ::
-//    license            ::
     isLocal            ::
     extractdb          ::
     shutdown           ::
@@ -1036,7 +1086,7 @@ trait RestApi extends HttpService with Logging {
   /** Requests that need a session token parameter.
     *
     * @see [[sessionRoutes]] is built by wrapping all of these sessions in a cookieOptional("session") {...} that extrtacts the cookie name. */
-  private val partialSessionRoutes : List[SessionToken => routing.Route] =
+  private val partialSessionRoutes : List[SessionToken => Route] =
     downloadAllModels     :: //@note before userModel2 to match correctly
     modelList             ::
     modelTactic           ::
@@ -1107,18 +1157,20 @@ trait RestApi extends HttpService with Logging {
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil
 
-  val sessionRoutes : List[routing.Route] = partialSessionRoutes.map(routeForSession => optionalHeaderValueByName("x-session-token") {
+  val sessionRoutes : List[Route] = partialSessionRoutes.map(routeForSession => optionalHeaderValueByName("x-session-token") {
     case Some(token) => routeForSession(SessionManager.token(token))
     case None => routeForSession(EmptyToken())
   })
 
-  val myRoute: Route = (publicRoutes ++ sessionRoutes).reduce(_ ~ _)
+  val api : Route = (publicRoutes ++ sessionRoutes).reduce(_ ~ _)
+
+  //endregion
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Custom and stand-alone in-memory session managements @todo replace with something less naive.
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// In-memory session managements @todo replace with something less naive.
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
   * @todo replace this with an existing library that does The Right Things
   * @todo do we want to enforce timeouts as well?

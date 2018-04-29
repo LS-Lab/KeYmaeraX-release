@@ -79,15 +79,15 @@ object Find {
 }
 
 /** 'Llast Locates the last position in the antecedent. */
-case class LastAnte(goal: Int) extends PositionLocator {
-  override def prettyString: String ="'Llast"
-  override def toPosition(p: ProvableSig): Position = AntePosition.base0(p.subgoals(goal).ante.length - 1)
+case class LastAnte(goal: Int, inExpr: PosInExpr = PosInExpr.HereP) extends PositionLocator {
+  override def prettyString: String = "'Llast"
+  override def toPosition(p: ProvableSig): Position = AntePosition.base0(p.subgoals(goal).ante.length - 1, inExpr)
 }
 
 /** 'Rlast Locates the last position in the succedent. */
-case class LastSucc(goal: Int) extends PositionLocator {
-  override def prettyString: String ="'Rlast"
-  override def toPosition(p: ProvableSig): Position = SuccPosition.base0(p.subgoals(goal).succ.length - 1)
+case class LastSucc(goal: Int, inExpr: PosInExpr = PosInExpr.HereP) extends PositionLocator {
+  override def prettyString: String = "'Rlast"
+  override def toPosition(p: ProvableSig): Position = SuccPosition.base0(p.subgoals(goal).succ.length - 1, inExpr)
 }
 
 ///**

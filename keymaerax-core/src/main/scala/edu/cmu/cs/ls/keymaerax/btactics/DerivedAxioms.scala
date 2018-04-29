@@ -723,6 +723,37 @@ object DerivedAxioms extends Logging {
   )
 
   /**
+    * {{{Axiom "<> partial vacuous".
+    *    <a;>p(||) & q() <-> <a;>(p(||)&q())
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note unsound for hybrid games
+    */
+  lazy val diamondPartialVacuous: Lemma = derivedAxiom("<> partial vacuous",
+    Sequent(IndexedSeq(), IndexedSeq("(<a_{|^@|};>p_(||) & q_()) <-> <a_{|^@|};>(p_(||)&q_())".asFormula)),
+      equivR(1) <(
+        andL(-1) & useAt("<> diamond", PosInExpr(1::Nil))(1) & notR(1) &
+        useAt("<> diamond", PosInExpr(1::Nil))(-1) & notL(-1) &
+        useAt(notAnd.fact)(-2, 1::Nil) & useAt(implyExpand.fact, PosInExpr(1::Nil))(-2, 1::Nil) &
+        useAt(converseImply.fact)(-2, 1::Nil) & useAt(doubleNegationAxiom.fact)(-2, 1::0::Nil) &
+        useAt("K modal modus ponens", PosInExpr(0::Nil))(-2) & implyL(-2) <(V('Rlast) & closeId, closeId)
+        ,
+        useAt("<> diamond", PosInExpr(1::Nil))(-1) & useAt(notAnd.fact)(-1, 0::1::Nil) &
+        useAt(implyExpand.fact, PosInExpr(1::Nil))(-1, 0::1::Nil) & notL(-1) &
+        andR(1) <(
+          useAt("<> diamond", PosInExpr(1::Nil))(1) & notR(1) & implyRi &
+          useAt("K modal modus ponens", PosInExpr(1::Nil))(1) &
+          useAt(proveBy("(!p() -> p() -> q()) <-> true".asFormula, prop))(1, 1::Nil) & byUS("[]T system")
+          ,
+          useAt(proveBy("!q_() -> (p_() -> !q_())".asFormula, prop), PosInExpr(1::Nil))(2, 1::Nil) &
+          V(2) & notR(2) & closeId
+        )
+      )
+  )
+
+  /**
     * {{{Axiom "<> split left".
     *    <a;>(p(||)&q(||)) -> <a;>p(||)
     * End.
@@ -879,6 +910,22 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f();>p(x_) <-> p(f())".asFormula)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("[:=] assign")(1, 0::0::Nil) &
+      useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  /**
+    * {{{Axiom "<:=> self assign".
+    *    <x_:=x_;>p(||) <-> p(||)
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val assigndSelfAxiom = derivedAxiom("<:=> self assign",
+    Sequent(IndexedSeq(), IndexedSeq("<x_:=x_;>p(||) <-> p(||)".asFormula)),
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("[:=] self assign")(1, 0::0::Nil) &
       useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
@@ -1260,6 +1307,22 @@ object DerivedAxioms extends Logging {
       useAt("vacuous all quantifier")(1, 0::0::Nil) &
       useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
+  )
+
+  /**
+    * {{{Axiom "partial vacuous exists quantifier".
+    *    (\exists x p(x) & q()) <-> (\exists x p(x)) & q()
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val partialVacuousExistsAxiom = derivedAxiom("partial vacuous exists quantifier",
+    Sequent(IndexedSeq(), IndexedSeq("\\exists x_ (p_(x_) & q_()) <-> \\exists x_ p_(x_) & q_()".asFormula)),
+      equivR(1) <(
+        existsL(-1) & andR(1) <(existsR("x_".asVariable)(1) & prop & done, prop & done),
+        andL('L) & existsL(-1) & existsR("x_".asVariable)(1) & prop & done
+      )
   )
 
   /**
@@ -1646,6 +1709,40 @@ object DerivedAxioms extends Logging {
   )
 
   /**
+    * {{{Axiom "DR differential refine".
+    *    ([{c&q(||)}]p(||) <- [{c&r(||)}]p(||)) <- [{c&q(||)}]r(||)
+    * End.
+    *
+    * @Derived
+    * }}}
+    */
+  lazy val DiffRefine = derivedAxiom("DR differential refine",
+    Sequent(IndexedSeq(),IndexedSeq("([{c&q(||)}]p(||) <- [{c&r(||)}]p(||)) <- [{c&q(||)}]r(||)".asFormula)),
+    implyR(1) &
+      useAt("DMP differential modus ponens", PosInExpr(1::Nil))(1) &
+      useAt("DW differential weakening", PosInExpr(1::Nil))(1) & closeId
+  )
+
+  /**
+    * {{{Axiom "DC differential cut".
+    *    ([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)
+    * End.
+    *
+    * @Derived
+    * }}}
+    */
+  lazy val DiffCut = derivedAxiom("DC differential cut",
+    Sequent(IndexedSeq(),IndexedSeq("([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)".asFormula)),
+    implyR(1) & equivR(1) <
+      (
+        implyRi()(AntePos(1), SuccPos(0)) &
+          useAt("DR differential refine", PosInExpr(1::Nil))(1) &
+          useAt("DW differential weakening", PosInExpr(0::Nil))(1) & G(1) & prop ,
+        useAt("DW differential weakening and", PosInExpr(0::Nil))(-1) &
+          implyRi()(AntePos(1), SuccPos(0)) & implyRi & byUS("DR differential refine"))
+  )
+
+  /**
     * {{{Axiom "DI differential invariance".
     *  ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}]((p(||))'))
     *  //([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))')) THEORY
@@ -1705,23 +1802,6 @@ object DerivedAxioms extends Logging {
       useAt(flipLessEqual.fact)(1, 0::1::1::1::Nil) &
       useExpansionAt(">' derive >")(1, 0::1::1::1::Nil) &
       byUS("DIo open differential invariance >")
-  )
-
-  /**
-    * {{{Axiom "DIo open differential invariance <=".
-    *    ([{c&q(||)}]f(||)<=g(||) <-> [?q(||);]f(||)<=g(||)) <- (q(||) -> [{c&q(||)}](f(||)<=g(||) -> (f(||))'<(g(||))'))
-    * End.
-    * }}}
-    *
-    * @Derived
-    */
-  lazy val DIOpeninvariantLessEqual = derivedAxiom("DIo open differential invariance <=",
-    Sequent(IndexedSeq(), IndexedSeq("([{c&q(||)}]f(||)<=g(||) <-> [?q(||);]f(||)<=g(||)) <- (q(||) -> [{c&q(||)}](f(||)<=g(||) -> (f(||))'<(g(||))'))".asFormula)),
-    useAt(flipLessEqual)(1, 1::0::1::Nil) &
-      useAt(flipLessEqual)(1, 1::1::1::Nil) &
-      useAt(flipLessEqual)(1, 0::1::1::0::Nil) &
-      useAt(flipLess)(1, 0::1::1::1::Nil) &
-      byUS("DIo open differential invariance >=")
   )
 
   /**

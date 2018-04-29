@@ -286,3 +286,214 @@ class CExpressionLogPrettyPrinter extends (CExpression => String) {
   }
 
 }
+
+/** Prints C expressions that keep track of the reason for their value. NOT interval arithmetic, intervals are for
+  * comparisons and formulas. Logs original formula and does unverified metric conversion to measure safety. */
+class CExpressionIntervalLaTeXLogPrettyPrinter extends (CExpression => String) {
+
+  override def apply(e: CExpression): String = {
+    "eval(" + print(e) + ")"
+  }
+
+  def printOperators: String = {
+    """typedef struct expr {
+      |  long double low;
+      |  long double high;
+      |  const char* source;
+      |} expr;
+      |
+      |const char* klog(const char* format, ...) {
+      |  va_list args;
+      |  va_start(args, format);
+      |  /* don't care about memory leak */
+      |  char* res = (char*)malloc(32758 * sizeof(char));
+      |  vsnprintf(res, 32758, format, args);
+      |  va_end(args);
+      |  return res;
+      |}
+      |
+      |expr number(long double v) {
+      |  return (expr) {
+      |    .low = v,
+      |    .high = v,
+      |    .source = klog("%Lf", v)
+      |  };
+      |}
+      |
+      |expr variable(long double v, const char* name) {
+      |  return (expr) {
+      |    .low = v,
+      |    .high = v,
+      |    .source = klog("\\overset{%Lf}{\\text{%s}}", name, v)
+      |  };
+      |}
+      |
+      |expr neg(expr c) {
+      |  return (expr) {
+      |    .low = -c.high,
+      |    .high = -c.low,
+      |    .source = klog("-(%s)", c.source)
+      |  };
+      |}
+      |
+      |expr minus(expr l, expr r) {
+      |  return (expr) {
+      |    .low  = l.low - r.low,
+      |    .high = l.high - r.high,
+      |    .source = klog("(%s) - (%s)", l.source, r.source)
+      |  };
+      |}
+      |expr plus(expr l, expr r) {
+      |  return (expr) {
+      |    .low = l.low + r.low,
+      |    .high = l.high + r.high,
+      |    .source = klog("(%s) + (%s)", l.source, r.source)
+      |  };
+      |}
+      |expr times(expr l, expr r) {
+      |  return (expr) {
+      |    .low  = l.low * r.low,
+      |    .high = l.high * r.high,
+      |    .source = klog("(%s) * (%s)", l.source, r.source)
+      |  };
+      |}
+      |expr divide(expr l, expr r) {
+      |  return (expr) {
+      |    .low  = l.low / r.low,
+      |    .high = l.high / r.high,
+      |    .source = klog("(%s) / (%s)", l.source, r.source)
+      |  };
+      |}
+      |expr power(expr l, expr r) {
+      |  return (expr) {
+      |    .low = pow(l.low, r.low),
+      |    .high = pow(l.high, r.high),
+      |    .source = klog("(%s)^(%s)", l.source, r.source)
+      |  };
+      |}
+      |expr kmin(expr l, expr r) {
+      |  return (expr) {
+      |    .low  = fminl(l.low, r.low),
+      |    .high = fminl(l.high, r.high),
+      |    .source = fminl(l.low, r.low)==l.low ? klog("min(%s, _)", l.source) : klog("min(_, %s)", r.source)
+      |  };
+      |}
+      |expr kmax(expr l, expr r) {
+      |  return (expr) {
+      |    .low = fmaxl(l.low, r.low),
+      |    .high = fmaxl(l.high, r.high),
+      |    .source = fmaxl(l.low, r.low)==l.low ? klog("max(%s, _)", l.source, l.low) : klog("max(_, %s)", r.source, r.low),
+      |  };
+      |}
+      |expr kabs(expr c) {
+      |  return (expr) {
+      |    .low = fabsl(c.low),
+      |    .high = fabsl(c.high),
+      |    .source = klog("abs(%s)", c.source)
+      |  };
+      |}
+      |expr lt(expr l, expr r) {
+      |  return (expr) {
+      |    .low = l.low - r.low, /* todo: wrong answer when == */
+      |    .high = l.low - r.low,
+      |    .source = klog("%s \\overset{%Lf}{<} %s", l.source, l.low-r.low, r.source)
+      |  };
+      |}
+      |expr leq(expr l, expr r) {
+      |  return (expr) {
+      |    .low = l.low - r.low,
+      |    .high = l.low - r.low,
+      |    .source = klog("%s \\overset{%Lf}{\\leq} %s", l.source, l.low-r.low, r.source)
+      |  };
+      |}
+      |expr eq(expr l, expr r) {
+      |  return (expr) {
+      |    .low = -fabsl(l.low - r.low),
+      |    .high = -fabsl(l.low - r.low),
+      |    .source = klog("%s \\overset{%Lf}{=} %s", l.source, -fabsl(l.low-r.low), r.source)
+      |  };
+      |}
+      |expr neq(expr l, expr r) {
+      |  return (expr) {
+      |    .low = fabsl(l.low - r.low), /* note: wrong answer when == */
+      |    .high = fabsl(l.low - r.low),
+      |    .source = klog("%s \\overset{%Lf}{\\neq} %s", l.source, fabsl(l.low-r.low), r.source)
+      |  };
+      |}
+      |expr geq(expr l, expr r) {
+      |  return (expr) {
+      |    .low = r.low - l.low,
+      |    .high = r.low - l.low,
+      |    .source = klog("%s \\overset{%Lf}{\\geq} %s", l.source, r.low-l.low, r.source)
+      |  };
+      |}
+      |expr gt(expr l, expr r) {
+      |  return (expr) {
+      |    .low = r.low - l.low, /* todo: wrong answer when == */
+      |    .high = r.low - l.low,
+      |    .source = klog("%s \\overset{%Lf}{>} %s", l.source, r.low-l.low, r.source)
+      |  };
+      |}
+      |expr and(expr l, expr r) {
+      |  return (expr) {
+      |    .low = fminl(l.low, r.low),
+      |    .high = fmaxl(l.high, r.high),
+      |    .source = l.high <= 0 ? (r.high <= 0 ? klog("%s \\overset{[%Lf,%Lf]}{\\wedge} %s", l.source, fminl(l.low, r.low), fmaxl(l.high, r.high), r.source) : klog("\\_ \\overset{[%Lf,%Lf]}{\\wedge} %s", r.source, fminl(l.low, r.low), fmaxl(l.high, r.high))) : klog("%s \\overset{[%Lf,%Lf]}{\\wedge} \\_", l.source, fminl(l.low, r.low), fmaxl(l.high, r.high))
+      |  };
+      |}
+      |expr or(expr l, expr r) {
+      |  return (expr) {
+      |    .low = fmaxl(l.low, r.low),
+      |    .high = fminl(l.high, r.high),
+      |    .source = l.low <= 0 ? klog("%s \\overset{[%Lf,%Lf]}{\\vee} \\_", l.source, fmaxl(l.low, r.low), fminl(l.high, r.high)) : (r.low <= 0 ? klog("\\_ \\overset{[%Lf,%Lf]}{\\vee} %s", r.source, fmaxl(l.low, r.low), fminl(l.high, r.high)) : klog("%s \\overset{[%Lf,%Lf]}{\\vee} %s", l.source, fmaxl(l.low, r.low), fminl(l.high, r.high), r.source))
+      |  };
+      |}
+      |expr not(expr c) {
+      |  return (expr) {
+      |    .low = c.high,
+      |    .high = c.low,
+      |    .source = klog("\\overset{[%Lf,%Lf]}{\\neg}(%s)", c.source, c.high, c.low)
+      |  };
+      |}
+      |long double eval(expr e) {
+      |  printf("expr = [%Lf,%Lf] from %s\r\n", e.low, e.high, e.source);
+      |  return e.high;
+      |}
+    """.stripMargin
+  }
+
+  //@todo print only necessary parentheses
+  private def print(e: CExpression): String = e match {
+    case CNumber(n) => "number(" + n.underlying().toString + ")"
+    case CVariable(n) => "variable(" + n + ", \"" + n + "\")"
+    case CUnaryFunction(n, arg) => n + "(" + print(arg) + ")"
+    case CPair(l, r) => print(l) + "," + print(r)
+    case CNeg(c) => "neg(" + print(c) + ")"
+    case CPlus(l, r) => "plus(" + print(l) + ", " + print(r) + ")"
+    case CMinus(l, r) => "minus(" + print(l) + ", " + print(r) + ")"
+    case CTimes(l, r) => "times(" + print(l) + ", " + print(r) + ")"
+    case CDivide(l, r) => "divide(" + print(l) + ", " + print(r) + ")"
+    case CPower(l, r) => "power(" + print(l) + ", " + print(r) + ")"
+    /** Convert interpreted functions to corresponding C functions.
+      *
+      * C 99 standard:
+      *   double fabs()
+      *   float fabsf()
+      *   long double fabsl()
+      */
+    case CMin(l, r) => "kmin(" + print(l) + ", " + print(r) + ")"
+    case CMax(l, r) => "kmax(" + print(l) + ", " + print(r) + ")"
+    case CAbs(c) => "kabs(" + print(c) + ")"
+
+    case CLess(l, r) => "lt(" + print(l) + ", " + print(r) + ")"
+    case CLessEqual(l, r) => "leq(" + print(l) + ", " + print(r) + ")"
+    case CEqual(l, r) => "eq(" + print(l) + ", " + print(r) + ")"
+    case CGreaterEqual(l, r) => "geq(" + print(l) + ", " + print(r) + ")"
+    case CGreater(l, r) => "gt(" + print(l) + ", " + print(r) + ")"
+    case CNotEqual(l, r) => "neq(" + print(l) + ", " + print(r) + ")"
+    case CNot(c) => "not(" + print(c) + ")"
+    case CAnd(l, r) => "and(" + print(l) + ", " + print(r) + ")"
+    case COr(l, r) => "or(" + print(l) + ", " + print(r) + ")"
+  }
+
+}
