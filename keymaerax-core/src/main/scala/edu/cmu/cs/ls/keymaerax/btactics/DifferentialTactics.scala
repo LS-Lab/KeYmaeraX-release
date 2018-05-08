@@ -620,6 +620,38 @@ private object DifferentialTactics extends Logging {
   private val failureMessage = "The automatic tactic does not currently provide automated proving capabilities for this " +
     "combination of system and post-condition. Consider using the individual ODE tactics and/or submitting a feature request."
 
+  /** Assert LZZ succeeds at a certain position. */
+  lazy val lzzCheck: BuiltInPositionTactic = {
+    def constConditions(formulas: IndexedSeq[Formula], taboo: SetLattice[Variable]): IndexedSeq[Formula] = {
+      formulas.filter(StaticSemantics.freeVars(_).intersect(taboo).isEmpty)
+    }
+
+    DebuggingTactics.assert((invSeq: Sequent, invPos: Position) => {
+      invSeq.sub(invPos) match {
+        case Some(Box(ode: ODESystem, invCandidate)) => ToolProvider.invGenTool() match {
+          case Some(invTool) =>
+            //@todo constant conditions at the sub position
+            val topFml = invSeq.sub(invPos.top).get.asInstanceOf[Formula]
+            val consts = constConditions(
+              invSeq.ante.flatMap(FormulaTools.conjuncts),
+              StaticSemantics(topFml).bv).reduceRightOption(And)
+            val strengthenedCandidate = consts match {
+              case Some(c) => And(c, invCandidate)
+              case None => invCandidate
+            }
+            try {
+              invTool.lzzCheck(ode, strengthenedCandidate)
+            } catch {
+              // cannot falsify for whatever reason (timeout, ...), so continue with the tactic
+              case _: Exception => true
+            }
+          case _ => true
+        }
+        case _ => false
+      }
+    }, "Invariant fast-check failed")
+  }
+
   /**
     * @see [[TactixLibrary.ODE]]
     * @author Andre Platzer
@@ -677,15 +709,7 @@ private object DifferentialTactics extends Logging {
           (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
             diffWeaken(pos) & QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE)))) & done else fail
           ) |
-          ( DebuggingTactics.assert((invSeq: Sequent, invPos: Position) => {
-              invSeq.sub(invPos) match {
-                case Some(Box(ode@ODESystem(_, q), invCandidate)) => ToolProvider.invGenTool() match {
-                  case Some(invTool) => invTool.lzzCheck(ode, invCandidate)
-                  case _ => true
-                }
-                case _ => false
-              }
-            }, "Invariant fast-check failed")(pos) &
+          ( lzzCheck(pos) &
             (if (isOpen) {
               (openDiffInd(pos) | DGauto(pos)) //> TODO: needs updating
             } else {

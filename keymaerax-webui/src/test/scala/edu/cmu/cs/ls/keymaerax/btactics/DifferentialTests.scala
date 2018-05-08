@@ -11,7 +11,7 @@ import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.{ConversionException, ToolException}
+import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, ToolException}
 import testHelper.CustomAssertions._
 import testHelper.KeYmaeraXTestTags
 
@@ -1379,7 +1379,9 @@ class DifferentialTests extends TacticTestBase with Timeouts {
       case gen: ConfigurableGenerator[Formula] => gen
     }
     TactixLibrary.invGenerator = FixedGenerator(Nil)
-    forEvery(Table(("Name", "Model"), entries.map(e => e.name -> e.model):_*)) {
+    forEvery(Table(("Name", "Model"),
+        entries.map(e => e.name -> e.model):_*).
+        filter({ case (_, Imply(_, Box(_: ODESystem, _))) => true case _ => false })) {
       (name, model) =>
         println("\n" + name)
         val fml@Imply(_, succFml@Box(ode@ODESystem(_, q), _)) = model
@@ -1414,7 +1416,9 @@ class DifferentialTests extends TacticTestBase with Timeouts {
       case gen: ConfigurableGenerator[Formula] => gen
     }
 
-    forEvery(Table(("Name", "Model"), entries.map(e => e.name -> e.model):_*)) {
+    forEvery(Table(("Name", "Model"),
+        entries.map(e => e.name -> e.model):_*).
+        filter({ case (_, Imply(_, Box(_: ODESystem, _))) => true case _ => false })) {
       (name, model) =>
         println("\n" + name)
         val Imply(_, Box(ode@ODESystem(_, q), _)) = model
@@ -1424,6 +1428,22 @@ class DifferentialTests extends TacticTestBase with Timeouts {
         }
         println(name + " done")
     }
+  }
+
+  it should "consider constants when fast-checking invariants with LZZ" in withMathematica { tool =>
+    Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, "5", saveToFile = false)
+    val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial: Example 9a", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/keymaerax-projects/benchmarks/basic.kyx")).mkString).head
+
+    a [MathematicaComputationAbortedException] should be thrownBy tool.lzzCheck(
+      "{ x' = v, v' = -Kp()*(x-xr()) - Kd()*v }".asProgram.asInstanceOf[ODESystem],
+      "5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()".asFormula)
+
+    tool.lzzCheck(
+      "{ x' = v, v' = -Kp()*(x-xr()) - Kd()*v }".asProgram.asInstanceOf[ODESystem],
+      "c()>0 & Kp()=2 & Kd()=3 & 5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()".asFormula) shouldBe true
+
+    proveBy(entry.model.asInstanceOf[Formula], implyR(1) & ODE(1)) shouldBe 'proved
   }
 
   it should "produce invariants that are provable with ODE" taggedAs SlowTest in withMathematica { _ =>
