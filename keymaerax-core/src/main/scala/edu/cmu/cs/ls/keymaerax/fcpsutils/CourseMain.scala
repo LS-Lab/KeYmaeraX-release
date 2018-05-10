@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.fcpsutils
 import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleInterpreter, BelleProvable, SequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, ParseException}
@@ -21,7 +21,7 @@ object CourseMain {
         "libDir" -> "/usr0/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64")
       val provider = new MathematicaToolProvider(config)
       ToolProvider.setProvider(provider)
-      BelleInterpreter.setInterpreter(SequentialInterpreter())
+      BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
       if(provider.tools().forall(_.isInitialized)) println("Initialized!")
       else println("Not initialized, but without any errors -- won't be able to parse tactics or check proofs.")
     } catch {

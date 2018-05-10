@@ -44,7 +44,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
 
   // Evaluate a Bellerophon snippet, used to get reasonable IntelliJ debugging
   def interpret(e:BelleExpr, pr:ProvableSig):ProvableSig = {
-    SequentialInterpreter()(e, BelleProvable(pr)) match {
+    LazySequentialInterpreter()(e, BelleProvable(pr)) match {
       case BelleProvable(result,_) => result
     }
   }
