@@ -375,6 +375,19 @@ Axiom "DMP differential modus ponens".
   ([{c&q(||)}]p(||) <- [{c&r(||)}]p(||)) <- [{c&q(||)}](q(||) -> r(||))
 End.
 
+Axiom "Uniq uniqueness".
+  <{c&q1(||)}>p1(||) & <{c&q2(||)}>p2(||) <-> <{c&q1(||) & q2(||)}>(p1(||) | p2 (||))
+End.
+
+/** The following axioms needs 's to be banned in f(||), q(||) */
+Axiom "RI& closed real induction >=".
+  [{c&q(||)}]f(||)>=0 <-> (q(||) -> f(||)>=0) & [{c&q(||) & f(||)>=0}] (<{t_:=0;{t_'=1,c&q(||)}}>t_!=0 -> <{t_:=0;{t_'=1,c&f(||)>=0}}>t_!=0)
+End.
+
+Axiom "Cont continuous existence".
+  f(||) > 0 -> <{t_:=0;{t_'=1,c&f(||)>0}}>t_!=0
+End.
+
 Axiom "c()' derive constant fn".
   c()' = 0
 End.
