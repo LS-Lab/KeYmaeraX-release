@@ -1724,6 +1724,23 @@ object DerivedAxioms extends Logging {
   )
 
   /**
+    * {{{Axiom "DR<> diamond differential refine".
+    *    (<{c&q(||)}>p(||) <- <{c&r(||)}>p(||)) <- [{c&r(||)}]q(||)
+    * End.
+    *
+    * @Derived
+    * }}}
+    */
+  lazy val DiffRefineDiamond = derivedAxiom("DR<> differential refine",
+    Sequent(IndexedSeq(),IndexedSeq("(<{c&q(||)}>p(||) <- <{c&r(||)}>p(||)) <- [{c&r(||)}]q(||)".asFormula)),
+    implyR(1) & implyR(1) &
+      useAt("<> diamond", PosInExpr(1::Nil))(1) &
+      useAt("<> diamond", PosInExpr(1::Nil))(-2) & notL(-2) & notR(1) &
+      implyRi()(AntePos(1), SuccPos(0)) & implyRi &
+      byUS("DR differential refine")
+  )
+
+  /**
     * {{{Axiom "DC differential cut".
     *    ([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)
     * End.

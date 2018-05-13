@@ -203,6 +203,15 @@ object DerivationInfo {
     new DerivedAxiomInfo("DR differential refine"
       , InputAxiomDisplayInfo("DR","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>←[{x′=f(x)&R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
       , "DR", {case () => HilbertCalculus.useAt("DR differential refine")}),
+    new DerivedAxiomInfo("DR<> differential refine"
+      , InputAxiomDisplayInfo("DRd","(<span class=\"k4-axiom-key\"><{x′=f(x)&Q}>P</span>←<{x′=f(x)&R}>P)←[{x′=f(x)&R}]Q", List(FormulaArg("R")))
+      , "DRd", {case () => HilbertCalculus.useAt("DR<> differential refine")}),
+    new CoreAxiomInfo("RI& closed real induction >=", "RI& >=", "RIclosedgeq",
+      {case () => HilbertCalculus.useAt("RI& closed real induction >=")}),
+    new CoreAxiomInfo("Cont continuous existence", "Cont", "Cont",
+      {case () => HilbertCalculus.useAt("Cont continuous existence")}),
+    new CoreAxiomInfo("Uniq uniqueness", "Uniq", "Uniq",
+      {case () => HilbertCalculus.useAt("Uniq uniqueness")}),
     new InputPositionTacticInfo("autoApproximate",
       RuleDisplayInfo("Approximate",
         (List("&Gamma;"), List("[{X'=F & &Alpha;(n)}]", "&Delta;")),
