@@ -78,7 +78,7 @@ object ODEInvariance {
   def pStar(ode: DifferentialProgram,p:Term, bound: Int) : Formula ={
     if(bound <= 0) return Greater(p,Number(0))
     else{
-      val lie = DifferentialHelper.lieDerivative(ode, p)
+      val lie = DifferentialSaturation.simplifiedLieDerivative(ode, p, None)
       val fml = pStar(ode,lie,bound-1)
       return And(GreaterEqual(p,Number(0)), Imply(Equal(p,Number(0)),fml))
     }
@@ -110,7 +110,7 @@ object ODEInvariance {
       case e => throw new BelleThrowable("Unknown shape: " + e)
     }
     //Maybe pass this as an argument to avoid recomputing
-    val lie = DifferentialHelper.lieDerivative(ode, p)
+    val lie = DifferentialSaturation.simplifiedLieDerivative(ode, p, None)
 
     cutR(Or(Greater(p,Number(0)), Equal(p,Number(0))))(pos) <(
       //Left open for outer tactic (drops all other succedents)
@@ -135,7 +135,7 @@ object ODEInvariance {
     if (bound <= 0)
       implyRi & byUS(contAx)
     else //Could also make this fallback to the continuity step for early termination
-      //DebuggingTactics.print("start") &
+      DebuggingTactics.print("start") &
       andL(-1) & lpstep(1)< (
         hideL(-2) & byUS(geq),
         hideL(-1) & implyL(-1) & <(closeId, hideL(-2) & lpgeq(bound-1))

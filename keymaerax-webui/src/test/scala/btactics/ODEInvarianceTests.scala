@@ -66,9 +66,9 @@ class ODEInvarianceTests extends TacticTestBase {
     val seq = "max(min(z,min(x,y)),min(x,y))>=0 ==> <{t_'=1,x'=x^2+1, y'=2*x+y, z'=x+y+z & max(min(z,min(x,y)),min(x,y)) >= 0}>t_!=0".asSequent
     val t = "max(min(z,min(x,y)),min(x,y))".asTerm
     val pr = proveBy(seq,
-      cut(pStarHom("{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asDifferentialProgram,t,2))
+      cut(pStarHom("{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asDifferentialProgram,t,4))
         <(
-        cohide2(-2,1) & lpclosed(2,t),
+        cohide2(-2,1) & lpclosed(4,t),
         cohideOnlyR('Rlast) & QE
       ))
     println(pr)
