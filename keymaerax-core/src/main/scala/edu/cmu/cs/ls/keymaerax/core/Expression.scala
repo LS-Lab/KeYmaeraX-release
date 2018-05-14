@@ -645,7 +645,9 @@ case class Loop(child: Program) extends UnaryCompositeProgram { def reapply = co
 case class Dual(child: Program) extends UnaryCompositeProgram { def reapply = copy }
 
 /** Differential equation system ode with given evolution domain constraint */
-case class ODESystem(ode: DifferentialProgram, constraint: Formula = True) extends Program
+case class ODESystem(ode: DifferentialProgram, constraint: Formula = True) extends Program {
+  insist(!StaticSemantics.isDifferential(constraint), "No differentials in evolution domain constraints {" + ode + " & " + constraint + "}")
+}
 
 
 
