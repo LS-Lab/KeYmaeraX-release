@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.tools.{SimplificationTool, ToolException}
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
-import scala.collection.immutable.{IndexedSeq, List}
+import scala.collection.immutable.{IndexedSeq, List, Seq}
 import scala.language.postfixOps
 
 /**
@@ -337,6 +337,24 @@ private object DifferentialTactics extends Logging {
       case Some(g) => g
     }
   }
+
+  //Domain constraint refinement step for box/diamond ODEs on either (top-level) side of a sequent
+  //This tactic currently does not discard any context, e.g.:
+  // G|- [x'=f(x)&R]P, D     G|- D,
+  // --- dR
+  // G|- [x'=f(x)&Q]P, D
+  def diffRefine(f:Formula) : DependentPositionTactic =
+    "diffRefine" byWithInput (f,(pos,sequent) => {
+    require(pos.isTopLevel, "diffRefine only at top-level succedents/antecedents")
+    val (newFml,ax) = sequent.sub(pos) match {
+      case Some(Diamond(sys:ODESystem,post)) => (Diamond(ODESystem(sys.ode,f),post),DerivedAxioms.DiffRefineDiamond.fact)
+      case Some(Box(sys:ODESystem,post)) => (Box(ODESystem(sys.ode,f),post),DerivedAxioms.DiffRefine.fact)
+      case _ => throw new IllegalArgumentException("diffRefine only for box/diamond ODEs")
+    }
+    //TODO: is cohide or no cohide more useful?
+    if(pos.isSucc)  cutLR(newFml)(pos) <(skip,useAt(ax,PosInExpr(1::Nil))(pos))// & cohideOnlyR(pos))
+    else cutLR(newFml)(pos) <(skip,useAt(ax,PosInExpr(1::Nil))('Rlast)) // & cohideOnlyR('Rlast))
+  })
 
   /** @see [[TactixLibrary.diffInvariant]] */
   def diffInvariant(formulas: Formula*): DependentPositionTactic =
