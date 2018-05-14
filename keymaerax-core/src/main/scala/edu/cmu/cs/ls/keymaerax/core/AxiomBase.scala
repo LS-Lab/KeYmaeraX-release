@@ -379,13 +379,13 @@ End.
    so that q(||) and f(||) both do not contain 's
    ODE data structure invariant implies t_ not already in c
    Theory:
-   Uniq <x'=f(x)&q1(x)>p1(x) & <x'=f(x)&q2(x)>p2(x) <-> <x'=f(x)&q1(x)&q2(x)>(p1(x) | p2(x))
+   Uniq <x'=f(x)&q1(x)>p1(x) & <x'=f(x)&q2(x)>p2(x) -> <x'=f(x)&q1(x)&q2(x)>(p1(x) | p2(x))
    Cont x=y -> (p(x) > 0 -> <x'=f(x)& p(x) > 0> x!=y
    RI& [x'=f(x)&q(x)]p(x) <->
        \forall y [x'=f(x)&q(x) & (p(x) | x=y)] (x=y -> p(x) & (<x'=f(x)&q(x)>x!=y -> <x'=f(x)&p(x)>x!=y))
    */
 Axiom "Uniq uniqueness".
-  <{c&q(||)}>p(||) & <{c&r(||)}>s(||) <-> <{c&q(||) & r(||)}>(p(||) | s (||))
+  <{c&q(||)}>p(||) & <{c&r(||)}>s(||) -> <{c&q(||) & r(||)}>(p(||) | s (||))
 End.
 
 Axiom "Cont continuous existence".
