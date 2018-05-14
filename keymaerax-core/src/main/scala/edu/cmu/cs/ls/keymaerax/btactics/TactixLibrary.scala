@@ -421,7 +421,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   //@todo("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
   def dC(formulas: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(formulas:_*)
 
-  def dR(formula: Formula) : DependentPositionTactic = DifferentialTactics.diffRefine(formula)
+  def dR(formula: Formula, hide:Boolean=true) : DependentPositionTactic = DifferentialTactics.diffRefine(formula,hide)
   /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * (uses DI, DW, DE, QE)
     *

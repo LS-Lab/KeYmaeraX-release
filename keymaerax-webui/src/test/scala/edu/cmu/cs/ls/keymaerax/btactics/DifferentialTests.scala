@@ -722,13 +722,13 @@ class DifferentialTests extends TacticTestBase {
 
   "diffRefine" should "refine at succedent positions" in withQE { _ =>
     val result = proveBy("x>=0 ==> <{x'=v,v'=2}>x>=0, [{x'=x+y,y'=2}]y>=0".asSequent,
-      dR("x<=5".asFormula)(1) <(dR("y>=5".asFormula)(2), skip)
+      dR("x<=5".asFormula)(1) <(dR("y>=5".asFormula,hide=false)(2), skip)
     )
     result.subgoals should have size 3
     //Subgoal after both refinements
     result.subgoals(0) shouldBe "x>=0 ==> <{x'=v,v'=2&x<=5}>x>=0, [{x'=x+y,y'=2&y>=5}]y>=0".asSequent
     //The other goal arising from refinement steps
-    result.subgoals(1) shouldBe "x>=0 ==> [{x'=v,v'=2&x<=5}]true, [{x'=x+y,y'=2&true}]y>=0".asSequent
+    result.subgoals(1) shouldBe "x>=0 ==> [{x'=v,v'=2&x<=5}]true".asSequent
     result.subgoals(2) shouldBe "x>=0 ==> <{x'=v,v'=2&x<=5}>x>=0, [{x'=x+y,y'=2&true}]y>=5".asSequent
   }
 
@@ -740,8 +740,20 @@ class DifferentialTests extends TacticTestBase {
     //Subgoal after both refinements
     result.subgoals(0) shouldBe "<{x'=v,v'=2&x<=5}>x>=0, [{x'=x+y,y'=2&y>=5}]y>=0 ==> x>=0".asSequent
     //The other goal arising from refinement steps
-    result.subgoals(1) shouldBe "[{x'=x+y,y'=2&true}]y>=0 ==> x>=0, [{x'=v,v'=2&true}]x<=5".asSequent
-    result.subgoals(2) shouldBe "<{x'=v,v'=2&x<=5}>x>=0 ==> x>=0, [{x'=x+y,y'=2&y>=5}]true".asSequent
+    result.subgoals(1) shouldBe "[{x'=x+y,y'=2&true}]y>=0 ==> [{x'=v,v'=2&true}]x<=5".asSequent
+    result.subgoals(2) shouldBe "<{x'=v,v'=2&x<=5}>x>=0 ==> [{x'=x+y,y'=2&y>=5}]true".asSequent
+  }
+
+  it should "refine at antecedent positions" in withQE { _ =>
+    val result = proveBy("<{x'=v,v'=2}>x>=0, [{x'=x+y,y'=2}]y>=0 ==> x>=0 ".asSequent,
+      dR("x<=5".asFormula)(-1) <(dR("y>=5".asFormula)(-2), skip)
+    )
+    result.subgoals should have size 3
+    //Subgoal after both refinements
+    result.subgoals(0) shouldBe "<{x'=v,v'=2&x<=5}>x>=0, [{x'=x+y,y'=2&y>=5}]y>=0 ==> x>=0".asSequent
+    //The other goal arising from refinement steps
+    result.subgoals(1) shouldBe "[{x'=x+y,y'=2&true}]y>=0 ==> [{x'=v,v'=2&true}]x<=5".asSequent
+    result.subgoals(2) shouldBe "<{x'=v,v'=2&x<=5}>x>=0 ==> [{x'=x+y,y'=2&y>=5}]true".asSequent
   }
 
   "diffInvariant" should "cut in a simple formula" in withQE { _ =>

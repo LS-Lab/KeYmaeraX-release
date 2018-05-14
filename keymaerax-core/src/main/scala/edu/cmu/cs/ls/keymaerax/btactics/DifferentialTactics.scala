@@ -339,21 +339,22 @@ private object DifferentialTactics extends Logging {
   }
 
   //Domain constraint refinement step for box/diamond ODEs on either (top-level) side of a sequent
-  //This tactic currently does not discard any context, e.g.:
-  // G|- [x'=f(x)&R]P, D     G|- D,
+  //Hides other succedents in the refinement subgoal by default, e.g.:
+  // G|- [x'=f(x)&R]P, D     G|- [x'=f(x)&Q]R
   // --- dR
   // G|- [x'=f(x)&Q]P, D
-  def diffRefine(f:Formula) : DependentPositionTactic =
-    "diffRefine" byWithInput (f,(pos,sequent) => {
+
+  def diffRefine(f:Formula,hide:Boolean=true) : DependentPositionTactic =
+    "diffRefine" byWithInputs (f::hide::Nil,(pos,sequent) => {
     require(pos.isTopLevel, "diffRefine only at top-level succedents/antecedents")
     val (newFml,ax) = sequent.sub(pos) match {
       case Some(Diamond(sys:ODESystem,post)) => (Diamond(ODESystem(sys.ode,f),post),DerivedAxioms.DiffRefineDiamond.fact)
       case Some(Box(sys:ODESystem,post)) => (Box(ODESystem(sys.ode,f),post),DerivedAxioms.DiffRefine.fact)
       case _ => throw new IllegalArgumentException("diffRefine only for box/diamond ODEs")
     }
-    //TODO: is cohide or no cohide more useful?
-    if(pos.isSucc)  cutLR(newFml)(pos) <(skip,useAt(ax,PosInExpr(1::Nil))(pos))// & cohideOnlyR(pos))
-    else cutLR(newFml)(pos) <(skip,useAt(ax,PosInExpr(1::Nil))('Rlast)) // & cohideOnlyR('Rlast))
+    val cpos = if(pos.isSucc) Fixed(pos) else LastSucc(0)
+
+    cutLR(newFml)(pos) <(skip,useAt(ax,PosInExpr(1::Nil))(cpos) & (if(hide) cohideOnlyR(cpos) else skip))
   })
 
   /** @see [[TactixLibrary.diffInvariant]] */

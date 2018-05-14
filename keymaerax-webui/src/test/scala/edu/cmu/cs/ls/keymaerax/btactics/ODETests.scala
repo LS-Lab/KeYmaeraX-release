@@ -662,9 +662,9 @@ class ODETests extends TacticTestBase {
     val fml = "(x+15)^2 + (y-17)^2 - 1 <= 0 -> [{x'=y^2, y'=x*y}] (x-11)^2+(y-33/2)^2-1>0".asFormula
     val pr = proveBy(fml,implyR(1) &
       cut("\\exists u1 \\exists u3 ( (u1^2+u3^2) !=0 & u1 -u3*(x^2-y^2)=0)".asFormula)
-      <(
-        (existsL('L)*) & dC("u1-u3*(x^2-y^2)=0".asFormula)(1)
         <(
+        (existsL('L)*) & dC("u1-u3*(x^2-y^2)=0".asFormula)(1)
+          <(
           dW(1) & QE,
           dI('full)(1)
         ),
@@ -673,5 +673,38 @@ class ODETests extends TacticTestBase {
     )
     //println(pr)
     pr shouldBe 'proved
+  }
+
+  "RealInduction" should "test drive the axioms" in withMathematica { _ =>
+    val fml = "x>=0 -> [{z'=2,x'=x+1,y'=1&x+y<=10}]x>=0".asFormula
+    val pr = proveBy(fml,implyR(1)&
+      //Axiom application
+      useAt("RI& closed real induction >=")(1) & andR(1) <
+      (//Precondition p>=0
+        prop,
+        //Standard steps
+        composeb(1) & dW(1) & implyR(1) & assignb(1) &
+        //Domain constraint (diamond hidden for now)
+        implyR(1) & hideL('Llast) &
+        //"Integration" step
+        cut("x>0 | x=0".asFormula) <(skip,hideR(1) & QE) & //This QE should be replaced with an axiom
+        orL('Llast) <(
+          dR("x>0".asFormula)(1) <(
+            useAt("Cont continuous existence",PosInExpr(1::Nil))(1) & closeId ,
+            dW(1) & cohideR(1) & QE), //This entire Cont continuous existence step should just be a derived axiom
+          dR("x+1>=0".asFormula)(1) <(
+            cut("x+1>0".asFormula) <(
+              dR("x+1>0".asFormula)(1) <(
+                useAt("Cont continuous existence",PosInExpr(1::Nil))(1) & closeId ,
+                dW(1) & cohideR(1) & QE), //This entire Cont continuous existence step should just be a derived axiom
+              hideR(1) & QE),
+            dI('full)(1)
+          )
+        )
+      )
+    )
+    val pr2 = proveBy(fml,implyR(1) & ODE(1)) //Trivial Darboux inequality
+    pr shouldBe 'proved
+    pr2 shouldBe 'proved
   }
 }
