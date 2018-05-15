@@ -744,18 +744,6 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(2) shouldBe "<{x'=v,v'=2&x<=5}>x>=0 ==> [{x'=x+y,y'=2&y>=5}]true".asSequent
   }
 
-  it should "refine at antecedent positions" in withQE { _ =>
-    val result = proveBy("<{x'=v,v'=2}>x>=0, [{x'=x+y,y'=2}]y>=0 ==> x>=0 ".asSequent,
-      dR("x<=5".asFormula)(-1) <(dR("y>=5".asFormula)(-2), skip)
-    )
-    result.subgoals should have size 3
-    //Subgoal after both refinements
-    result.subgoals(0) shouldBe "<{x'=v,v'=2&x<=5}>x>=0, [{x'=x+y,y'=2&y>=5}]y>=0 ==> x>=0".asSequent
-    //The other goal arising from refinement steps
-    result.subgoals(1) shouldBe "[{x'=x+y,y'=2&true}]y>=0 ==> [{x'=v,v'=2&true}]x<=5".asSequent
-    result.subgoals(2) shouldBe "<{x'=v,v'=2&x<=5}>x>=0 ==> [{x'=x+y,y'=2&y>=5}]true".asSequent
-  }
-
   "diffInvariant" should "cut in a simple formula" in withQE { _ =>
     val result = proveBy("x>0 ==> [{x'=2}]x>=0".asSequent, diffInvariant("x>0".asFormula)(1))
     result.subgoals.loneElement shouldBe "x>0 ==> [{x'=2 & true & x>0}]x>=0".asSequent
@@ -1393,6 +1381,124 @@ class DifferentialTests extends TacticTestBase {
 
   it should "diff var flat flight progress [variable]" taggedAs IgnoreInBuildTest in withQE { _ =>
     proveBy("b>0 -> \\forall p \\exists d (d^2<=b^2 & <{x'=d}>x>=p)".asFormula, diffVar(1, 1::0::0::1::Nil)) shouldBe 'proved
+  }
+
+  /**
+    * Test cases for the Darboux ghost tactics
+    */
+  "Normalizer" should "correctly normalize to ~0 normal form" in withQE { _ =>
+    val fml = " x+y"
+
+  }
+
+  "ODE Darboux" should "prove equational darboux" in withQE { _ =>
+    //(x+z)' = (x*A+B)(x+z)
+    val seq = "x+z=0 ==> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] x+z=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x*A+B()".asTerm)(1)) shouldBe 'proved
+  }
+
+  it should "prove fractional darboux" in withQE { _ =>
+    //(x+z)' = ((x*A+B)/z^2)(x+z), where z^2 > 0
+    //assumes z^2 non-zero already in evol domain, or the ghost will report a singularity
+    val seq = "x+z=0 ==> [{x'=(A*y+B()*x)/z^2, z' = (A*x+B())/z & y = x^2 & z^2 > 0}] x+z=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("(x*A+B())/z^2".asTerm)(1)) shouldBe 'proved
+  }
+
+  it should "prove >= darboux" in withQE { _ =>
+    //(x+z)' =  x^2 + z*x + x^2 >= x*(x+z)
+    //Maybe this should leave open that the remainder is >= 0?
+    val seq = "x+z>=0 ==> [{x'=x^2, z' = z*x+y & y = x^2}] x+z>=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asTerm)(1)) shouldBe 'proved
+  }
+
+  it should "auto-prove >= darboux" in withMathematica { _ =>
+    //(x+z)' =  x^2 + z*x + x^2 >= x*(x+z)
+    //Maybe this should leave open that the remainder is >= 0?
+    val seq = "x+z>=0 ==> [{x'=x^2, z' = z*x+y & y = x^2}] x+z>=0".asSequent
+    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+  }
+
+  it should "prove >= fractional darboux" in withQE { _ =>
+    //(x+z)' =  (1/z^2)(x+z) + x^2 >= (1/z^2)(x+z)
+    //Maybe this should leave open that the remainder is >= 0?
+    val seq = "x+z>=0 ==> [{x'=1/z, z' = x/z^2 + y & z^2 > 0 & y = x^2}] x+z>=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("1/z^2".asTerm)(1)) shouldBe 'proved
+  }
+
+  it should "prove < darboux" in withMathematica { _ =>
+    //(x+z)' =  x^2 + z*x - x^2 <= x*(x+z)
+    val seq = "x+z<0 ==> [{x'=x^2, z' = z*x+y & y = -x^2}] x+z<0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asVariable)(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+  }
+
+  it should "prove < fractional darboux" in withMathematica { _ =>
+    //(x+z)' =  (1/z^2)(x+z) - x^2 <= (1/z^2)(x+z)
+    //Maybe this should leave open that the remainder is >= 0?
+    val seq = "x+z<0 ==> [{x'=1/z, z' = x/z^2 + y & z^2 > 0 & y = -x^2}] x+z<0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+  }
+
+  it should "automatically find equational darboux" in withMathematica { _ =>
+    //(x+z)' = (x*A+B)(x+z)
+    val seq = "x+z=0 ==> [{x'=(A*x^2+B()*x), z' = A*z*x+B()*z}] 0=-x-z".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+  }
+
+  it should "automatically find fractional darboux" in withMathematica { _ =>
+    //(x+z)' = ((x*A+B)/z^2)(x+z), where z^2 > 0
+    val seq = "x+z=0 ==> [{x'=(A*x^2+B()*x)/z^2, z' = (A*x+B())/z & z^2 > 0}] x+z=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+  }
+
+  it should "fail to find fractional darboux" in withMathematica { _ =>
+    //(x+z)' = ((x*A+B)/z^2)(x+z), where z^2 > 0
+    val seq = "x+z=0 ==> [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&y=x^2&z^2>0}] x+z=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) should not be 'proved
+    TactixLibrary.proveBy(seq, ODE(1)) should not be 'proved
+    TactixLibrary.proveBy(seq, master()) should not be 'proved
+    the [BelleThrowable] thrownBy TactixLibrary.proveBy(seq, auto) should have message
+      """[Bellerophon Runtime] Expected proved provable, but got NoProofTermProvable(Provable(x+z=0
+        |  ==>  [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&y=x^2&z^2>0}]x+z=0
+        |  from   x+z=0
+        |  ==>  [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&y=x^2&z^2>0}]x+z=0))""".stripMargin
+  }
+
+  it should "not fail when evolution domain already contains denominator and remainder sign requirements" in withMathematica { _ =>
+    val seq = "x=-z ==> [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&(y=x^2&z^2>0)&z^2*1!=0&-1*A+A*y*z^-2=0}]x=-z+0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
+  }
+
+  it should "fail with evolution domain constraints" in withMathematica { _ =>
+    //(x+z)' = (x*A+B)(x+z)
+    val seq = "x+z=0 ==> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] x+z=0".asSequent
+    val pr = TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1))
+    pr should not be 'proved
+    //The automatically generated remainder term goal is left open
+    pr.subgoals.loneElement shouldBe "x+z=0 ==> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] (1!=0&A*y+-1*A*z^2=0)".asSequent
+  }
+
+  "ODE Barrier" should "prove a strict barrier certificate" in withMathematica { _ =>
+    //This one doesn't actually need the full power of strict barriers because it's also an inequational dbx
+    val seq = "-x<=0 ==> [{x'=100*x^4+y*x^3-x^2+x+c, c'=x+y+z & c > x}] -x<=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier()(1)) shouldBe 'proved
+    //TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+  }
+
+  it should "prove a strict barrier certificate 1" in withMathematica {qeTool =>
+    val seq = "(87*x^2)/200 - (7*x*y)/180 >= -(209*y^2)/1080 + 10 ==> [{x'=(5*x)/4 - (5*y)/6, y'=(9*x)/4 + (5*y)/2}] (87*x^2)/200 - (7*x*y)/180>= -(209*y^2)/1080 + 10 ".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(Some(qeTool))(1)) shouldBe 'proved
+    //TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+  }
+
+  it should "prove a strict barrier certificate 2" in withMathematica {qeTool =>
+    val seq = "(23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5 <= 0 ==> [{x'=(x/2) + (7*y)/3 , y'=-x - y}] (23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5<=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(Some(qeTool))(1)) shouldBe 'proved
+    //TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
   }
 
 }

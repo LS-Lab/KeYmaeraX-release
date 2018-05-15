@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3.context
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{SimplificationTool, ToolException}
@@ -899,16 +900,21 @@ private object DifferentialTactics extends Logging {
     * (similarly for >= 0, > 0, != 0)
     * Note: this also works for fractional q, if its denominator is already in Q
     * Otherwise, DG will fail on the singularity
+    * Note: this assumes that the (in)equalities are normalized to have 0 on the RHS
     */
   def dgDbx(qco: Term): DependentPositionWithAppliedInputTactic = "dbx" byWithInput (qco, (pos: Position, seq:Sequent) => {
+    require(pos.isSucc && pos.isTopLevel, "dbx only at top-level succedent")
 
-    val Some(Box(ODESystem(system, _), property)) = seq.sub(pos)
+    val (system,property) = seq.sub(pos) match {
+      case Some (Box (ODESystem (system, _), property) ) => (system,property)
+      case _ => throw new BelleThrowable(s"dbx only at box ODE in succedent")
+    }
 
     /** The argument works for any comparison operator */
     val (p,pop) = property match {
       case bop:ComparisonFormula if bop.right.isInstanceOf[Number] && bop.right.asInstanceOf[Number].value == 0 =>
         (bop.left,bop)
-      case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}")
+      case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}, dgDbx requires 0 on RHS")
     }
 
     /** The ghost variable */
@@ -962,29 +968,35 @@ private object DifferentialTactics extends Logging {
   private val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
 
   def dgBarrier(tool: Option[SimplificationTool] = None): DependentPositionTactic = "barrier" by ((pos: Position, seq:Sequent) => {
+    require(pos.isSucc && pos.isTopLevel, "barrier only at top-level succedent")
 
-    val Some(Box(ODESystem(system, dom), property)) = seq.sub(pos)
-
-    val (barrier,flip) = property match {
-      case GreaterEqual(lhs, rhs) => (Minus(lhs,rhs),false)
-      case Greater(lhs, rhs) => (Minus(lhs,rhs),false)
-      case LessEqual(lhs, rhs) => (Minus(lhs,rhs),true)
-      case Less(lhs, rhs) => (Minus(lhs,rhs),true)
-      case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}")
+    val (system,dom,post) = seq.sub(pos) match {
+      case Some (Box (ODESystem (system, dom), property) ) => (system,dom,property)
+      case _ => throw new BelleThrowable(s"barrier only at box ODE in succedent")
     }
+
+    val (property,propt)=SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post, ineqNormalize, SimplifierV3.defaultTaxs)
+
+    val starter = propt match {
+      case None => skip
+      case Some(pr) => useAt(pr)(pos ++ PosInExpr(1::Nil))
+    }
+
+    //p>=0 or p>0
+    val barrier = property.asInstanceOf[ComparisonFormula].left
 
     val lie = DifferentialSaturation.simplifiedLieDerivative(system, barrier, tool)
 
     val zero = Number(0)
     //The special max term
-    val barrierAlg = if (flip) FuncOf(maxF,Pair(Times(barrier,barrier),Neg(lie))) else FuncOf(maxF,Pair(Times(barrier,barrier),lie))
+    val barrierAlg = FuncOf(maxF,Pair(Times(barrier,barrier),lie))
     val barrierFml = Greater(barrierAlg,zero)
     //The cofactor
     val cofactor = Divide(Times(barrier,lie),barrierAlg)
 
     // First cut in the barrier property, then use dgdbx on it
     dC(barrierFml)(pos) <(
-      dgDbx(cofactor)(pos),
+      starter & dgDbx(cofactor)(pos),
       dW(pos) & QE
     )
   })
@@ -1019,19 +1031,27 @@ private object DifferentialTactics extends Logging {
     }
   }
 
-  private lazy val eqNorm: ProvableSig = proveBy(" f_() = g_() <-> f_()-g_() = 0 ".asFormula,QE)
   // Normalises to p = 0
   // then attempts to automatically guess the darboux cofactor
   def dgDbxAuto: DependentPositionTactic = "dbx" by ((pos: Position, seq:Sequent) => {
     if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable("dgDbxAuto requires a AlgebraTool, but got None")
 
-    val Some(Box(ODESystem(system, dom), property)) = seq.sub(pos)
+    require(pos.isSucc && pos.isTopLevel, "barrier only at top-level succedent")
 
-    val (p,bop) = property match {
-      case bop:ComparisonFormula =>
-        (Minus(bop.left,bop.right),bop)
-      case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}")
+    val (system,dom,post) = seq.sub(pos) match {
+      case Some (Box (ODESystem (system, dom), property) ) => (system,dom,property)
+      case _ => throw new BelleThrowable(s"dbx auto only at box ODE in succedent")
     }
+
+    val (property,propt)=SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post, atomNormalize, SimplifierV3.defaultTaxs)
+
+    val starter = propt match {
+      case None => skip
+      case Some(pr) => useAt(pr)(pos ++ PosInExpr(1::Nil))
+    }
+
+    //normalized to have p on LHS
+    val p = property.asInstanceOf[ComparisonFormula].left
 
     val lie = DifferentialHelper.lieDerivative(system, p)
     val algTool = ToolProvider.algebraTool().get
@@ -1052,15 +1072,16 @@ private object DifferentialTactics extends Logging {
     val rem = quo._2
     val (num,den) = stripDenom(cofactor) //Need to put it in a form that DG can understand
 
-    //println("poly: "+p+" cofactor: "+cofactor+" rem: "+rem)
+    //println("poly: "+p+" lie: "+lie+" cofactor: "+cofactor+" rem: "+rem)
     val zero = Number(0)
 
-    val remSgn = bop match {
-      case GreaterEqual(lhs, rhs) => GreaterEqual(rem,zero)
-      case Greater(lhs, rhs) => GreaterEqual(rem,zero)
-      case LessEqual(lhs, rhs) => LessEqual(rem,zero)
-      case Less(lhs, rhs) => LessEqual(rem,zero)
+    val remSgn = property match {
+      case GreaterEqual(_, _) => GreaterEqual(rem,zero)
+      case Greater(_, _) => GreaterEqual(rem,zero)
+      case LessEqual(_, _) => LessEqual(rem,zero) //Not needed
+      case Less(_, _) => LessEqual(rem,zero) //Not needed
       case Equal(_,_) => Equal(rem,zero)
+      //case NotEqual(_,_) => Equal(rem,zero) TODO check?
       case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}")
     }
 
@@ -1073,7 +1094,7 @@ private object DifferentialTactics extends Logging {
         //First, attempt to prove denominator non-zero, and the remainder has appropriate sign
         diffCut(denRemReq)(pos) <(
           t,
-          //Leaves the denonominator goal open if it isn't implied by DW
+          //Leaves the denominator goal open if it isn't implied by DW
           ?(dW(pos) & QE & done)
         )
       }
@@ -1081,11 +1102,7 @@ private object DifferentialTactics extends Logging {
 
     denRemReqTactic(
       // use dgDbx
-      diffCut(bop.reapply(p,zero))(pos) <(
-        dW(pos) & QE & done
-        ,
-        dgDbx(Divide(num,den))(pos)
-      )
+      starter & dgDbx(Divide(num,den))(pos)
     )
   })
 
@@ -1389,4 +1406,50 @@ private object DifferentialTactics extends Logging {
     }
   }
 
+  //Normalization axioms + normalization indexes for use with the simplifier
+  //TODO: is it faster to use simplification + axioms or direct QE of the normal form?
+  //TODO: these are probably duplicated elsewhere: should start a new file for all normalization tactics
+  private lazy val leNorm: ProvableSig = proveBy("f_() <= g_() <-> g_() - f_() >= 0".asFormula,QE)
+  private lazy val geNorm: ProvableSig = proveBy("f_() >= g_() <-> f_() - g_() >= 0".asFormula,QE)
+  private lazy val ltNorm: ProvableSig = proveBy("f_() < g_() <-> g_() - f_() > 0".asFormula,QE)
+  private lazy val gtNorm: ProvableSig = proveBy("f_() > g_() <-> f_() - g_() > 0".asFormula,QE)
+  private lazy val eqNorm: ProvableSig = proveBy(" f_() = g_() <-> f_() - g_() = 0 ".asFormula,QE)
+  private lazy val deqNorm: ProvableSig = proveBy(" f_() != g_() <-> f_() - g_() != 0 ".asFormula,QE)
+  private lazy val minNorm:ProvableSig = proveBy("f()>=0&g()>=0<->min((f(),g()))>=0".asFormula,QE)
+  private lazy val maxNorm:ProvableSig = proveBy("f()>=0|g()>=0<->max((f(),g()))>=0".asFormula,QE)
+
+  // Simplifier index that normalizes a single inequality to have 0 on the RHS
+  def ineqNormalize(f:Formula,ctx:context) : List[ProvableSig] = {
+    f match{
+      case LessEqual(l,r) => List(leNorm)
+      case GreaterEqual(l,r) => List(geNorm)
+      case Less(l,r) => List(ltNorm)
+      case Greater(l,r) => List(gtNorm)
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be inequality >=,>,<=,<)")
+    }
+  }
+
+  // Simplifier index that normalizes a single (in) equality to have 0 on the RHS
+  def atomNormalize(f:Formula,ctx:context) : List[ProvableSig] = {
+    f match{
+      case LessEqual(l,r) => List(leNorm)
+      case GreaterEqual(l,r) => List(geNorm)
+      case Less(l,r) => List(ltNorm)
+      case Greater(l,r) => List(gtNorm)
+      case Equal(l,r) =>  List(eqNorm)
+      case NotEqual(l,r) =>  List(deqNorm)
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be atomic comparison formula >=,>,<=,<,=,!=)")
+    }
+  }
+
+  // Simplifier index that normalizes a formula into max/min >= normal form
+  def maxMinNormalize(f:Formula,ctx:context) : List[ProvableSig] = {
+    f match{
+      case GreaterEqual(l,r) => List(geNorm)
+      case LessEqual(l,r) => List(leNorm)
+      case And(l,r) =>  List(minNorm)
+      case Or(l,r) =>  List(maxNorm)
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to max/min >=0 normal form (must be a conjunction/disjunction of >=,<=)")
+    }
+  }
 }
