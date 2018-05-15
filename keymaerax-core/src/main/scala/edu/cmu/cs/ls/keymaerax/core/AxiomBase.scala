@@ -377,7 +377,6 @@ End.
 
 /** The axioms RI& closed and Cont require no 's in domain constraints
    so that q(||) and f(||) both do not contain 's
-   ODE data structure invariant implies t_ not already in c
    Theory:
    Uniq <x'=f(x)&q1(x)>p1(x) & <x'=f(x)&q2(x)>p2(x) -> <x'=f(x)&q1(x)&q2(x)>(p1(x) | p2(x))
    Cont x=y -> (p(x) > 0 -> <x'=f(x)& p(x) > 0> x!=y
@@ -393,9 +392,9 @@ Axiom "Cont continuous existence".
 End.
 
 Axiom "RI& closed real induction >=".
-  [{c&q(|t_|)}]f(|t_|)>=0 <->
+  [{c{|t_|}&q(|t_|)}]f(|t_|)>=0 <->
   (q(|t_|) ->f(|t_|)>=0) &
-  [{{c&q(|t_|) & f(|t_|)>=0};t_:=0;}] (<{t_'=1,c&q(|t_|)}>t_!=0 -> <{t_'=1,c&f(|t_|)>=0}>t_!=0)
+  [{{c{|t_|}&q(|t_|) & f(|t_|)>=0};t_:=0;}] (<{t_'=1,c{|t_|}&q(|t_|)}>t_!=0 -> <{t_'=1,c{|t_|}&f(|t_|)>=0}>t_!=0)
 End.
 
 Axiom "c()' derive constant fn".
