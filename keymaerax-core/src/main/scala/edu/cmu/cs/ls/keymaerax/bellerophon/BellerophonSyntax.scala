@@ -637,7 +637,7 @@ case class LetInspect(abbr: Expression, instantiator: ProvableSig => Expression,
   * but then searches for the definition of `abbr` by trying to run `continuation` from the outcome of `common`
   * until `continuation` is successful.
   * Each time it asks `instantiator` to choose a value for `abbr` based on the same Provable at the end of `common`
-  * in addition to the present Provable obtained after the current attempt of running `continuation` with the last choice for `abbr`.
+  * in addition to the present ProverException obtained after the current attempt of running `continuation` with the last choice for `abbr`.
   * Resumes to the outer proof by a uniform substitution of instantiator(result)` for `abbr` of the resulting provable
   * which corresponds to having run `USubst(abbr,inst){ common } ; continuation`.
   * Thus, the logical effect is identical to directly running
@@ -648,6 +648,7 @@ case class LetInspect(abbr: Expression, instantiator: ProvableSig => Expression,
   * @param abbr the abbreviation to instantie, which should be fresh in the Provable
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   *      Example 32.
+  * @see [[NoProverException]]
   */
 case class SearchAndRescueAgain(abbr: Expression, common: BelleExpr, instantiator: (ProvableSig,ProverException) => Expression, continuation: BelleExpr) extends BelleExpr {
   override def prettyString = "searchAndRescueAgain(" + abbr + ":= after " + common + " among " + instantiator + " in " + continuation + ")"
