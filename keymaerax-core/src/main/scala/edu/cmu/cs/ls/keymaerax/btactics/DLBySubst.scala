@@ -260,14 +260,14 @@ private object DLBySubst {
               cutR(Box(Loop(a), q))(pos.checkSucc.top) & Idioms.<(
                 /* c */ useAt("I induction")(pos) & andR(pos) & Idioms.<(
                 andR(pos) & Idioms.<(
-                  label(initCase.label),
+                  label(initCase),
                   (andR(pos) & Idioms.<(closeIdWith(pos), ident))*(consts.size-1) & close & done),
                 cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) & Idioms.<(
-                  (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hideL('Llast, True)) & label(indStep.label),
+                  (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hideL('Llast, True)) & label(indStep),
                   andL(-1) & hideL(-1, invariant) & V(1) & close(-1, 1) & done)
                 ),
                 /* c -> d */ cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &
-                (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hideL('Llast, True)) & label(useCase.label)
+                (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hideL('Llast, True)) & label(useCase)
                 )
             }
        }}))(pos)})

@@ -20,4 +20,7 @@ object BelleLabels {
   // cuts
   val cutUse = BelleTopLevelLabel("Cut use")
   val cutShow = BelleTopLevelLabel("Cut show")
+
+  // QE
+  val QECEX = BelleTopLevelLabel("QE CEX")
 }

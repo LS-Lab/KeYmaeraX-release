@@ -39,7 +39,7 @@ private object ProofRuleTactics extends Logging {
       override def result(provable: ProvableSig): ProvableSig = {
         provable(core.Cut(f), 0)
       }
-    } & Idioms.<(label(BelleLabels.cutUse.label), label(BelleLabels.cutShow.label))
+    } & Idioms.<(label(BelleLabels.cutUse), label(BelleLabels.cutShow))
   }
 
   def cutL(f: Formula): DependentPositionWithAppliedInputTactic = "cutL" byWithInput(f, (pos: Position, _: Sequent) => {
