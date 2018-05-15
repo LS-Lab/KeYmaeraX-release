@@ -32,24 +32,6 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
     try {
       val result: BelleValue =
       expr match {
-        case DefTactic(_, _) => v //@note noop, but included for serialization purposes
-        case DefExpression(Equal(fn@FuncOf(name, arg), t)) =>
-          val subst = arg match {
-            case Nothing => SubstitutionPair(fn, t)::Nil
-            case term => SubstitutionPair(FuncOf(name, DotTerm()), t.replaceFree(term, DotTerm()))::Nil
-          }
-          //@todo should Let(fn=t) in remainder with expand(fn);expanded ending let and continue expanded after let
-          apply(TactixLibrary.US(USubst(subst)), v)
-        case DefExpression(Equiv(p@PredOf(name, arg), q)) =>
-          val subst = arg match {
-            case Nothing => SubstitutionPair(p, q)::Nil
-            case term => SubstitutionPair(FuncOf(name, DotTerm()), q.replaceFree(term, DotTerm()))::Nil
-          }
-          //@todo should Let(fn=t) in remainder with expand(fn);expanded ending let and continue expanded after let
-          apply(TactixLibrary.US(USubst(subst)), v)
-        case ExpandDef(_) => v
-        case ApplyDefTactic(DefTactic(_, t)) => apply(t, v)
-        case named: NamedTactic => apply(named.tactic, v)
         case builtIn: BuiltInTactic => v match {
           case BelleProvable(pr, _) => try {
             BelleProvable(builtIn.execute(pr))
@@ -58,35 +40,15 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           }
           case _ => throw new BelleThrowable(s"Attempted to apply a built-in tactic to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
         }
-        case LabelBranch(label) => v match {
-          case BelleProvable(pr, Some(labels)) => BelleProvable(pr, Some(labels :+ label))
-          case BelleProvable(pr, None) => BelleProvable(pr, Some(label :: Nil))
-          case _ => throw new BelleThrowable(s"Attempted to give a label to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
-        }
-        case (_: BuiltInPositionTactic) | (_:BuiltInLeftTactic) | (_:BuiltInRightTactic) | (_:BuiltInTwoPositionTactic) | (_:DependentPositionTactic) =>
-          throw new BelleThrowable(s"Need to apply position tactic at a position before executing it: ${expr}(???)").inContext(expr, "")
-        case AppliedPositionTactic(positionTactic, pos) => v match {
-          case BelleProvable(pr, _) => try {
-            BelleProvable(positionTactic.apply(pos).computeResult(pr))
-          } catch {
-            case e: BelleThrowable => throw e.inContext(positionTactic + " at " + pos, pr.prettyString)
-          }
-        }
-        case positionTactic@AppliedBuiltinTwoPositionTactic(_, posOne, posTwo) => v match {
-          case BelleProvable(pr, _) => try {
-            BelleProvable(positionTactic.computeResult(pr))
-          } catch {
-            case e: BelleThrowable => throw e.inContext(positionTactic + " at " + posOne + ", " + posTwo, pr.prettyString)
-          }
-        }
+
         case SeqTactic(left, right) => left match {
-            //@todo on ExpandDef: postpone right until after let
-//          case ExpandDef(DefExpression(Equal(FuncOf(name, arg), t))) =>
-//            val dotArg = if (arg.sort == Unit) Nothing else DotTerm()
-//            apply(Let(FuncOf(name, dotArg), t.replaceFree(arg, DotTerm()), right), v)
-//          case ExpandDef(DefExpression(Equiv(p@PredOf(name, arg), q))) =>
-//            val dotArg = if (arg.sort == Unit) Nothing else DotTerm()
-//            apply(Let(PredOf(name, dotArg), q.replaceFree(arg, DotTerm()), right), v)
+          //@todo on ExpandDef: postpone right until after let
+          //          case ExpandDef(DefExpression(Equal(FuncOf(name, arg), t))) =>
+          //            val dotArg = if (arg.sort == Unit) Nothing else DotTerm()
+          //            apply(Let(FuncOf(name, dotArg), t.replaceFree(arg, DotTerm()), right), v)
+          //          case ExpandDef(DefExpression(Equiv(p@PredOf(name, arg), q))) =>
+          //            val dotArg = if (arg.sort == Unit) Nothing else DotTerm()
+          //            apply(Let(PredOf(name, dotArg), q.replaceFree(arg, DotTerm()), right), v)
           case _ =>
             val leftResult = try {
               apply(left, v)
@@ -100,26 +62,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
               case e: BelleThrowable => throw e.inContext(SeqTactic(left, e.context), "Failed right-hand side of &: " + right)
             }
         }
-        case d: DependentTactic => try {
-          val valueDependentTactic = d.computeExpr(v)
-          apply(valueDependentTactic, v)
-        } catch {
-          case e: BelleFriendlyUserMessage => throw e
-          case e: BelleThrowable => throw e.inContext(d, v.prettyString)
-            //@todo unable to create is a serious error in the tactic not just an "oops whatever try something else exception"
-          case e: Throwable => throw new BelleThrowable("Unable to create dependent tactic: " + e.getMessage, e).inContext(d, "")
-        }
-        case it: InputTactic => try {
-          apply(it.computeExpr(), v)
-        } catch {
-          case e: BelleThrowable => throw e.inContext(it, v.prettyString)
-          case e: Throwable => throw new BelleThrowable("Unable to create input tactic: " + e.getMessage, e).inContext(it, "")
-        }
-        case PartialTactic(child, _) => try {
-          apply(child, v)
-        } catch {
-          case e: BelleThrowable => throw e.inContext(PartialTactic(e.context), "Tactic declared as partial failed to run: " + child)
-        }
+
         case EitherTactic(left, right) => try {
           apply(left, v)
         } catch {
@@ -131,6 +74,52 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
                 "Failed: both left-hand side and right-hand side " + expr)
             }
         }
+
+        case BranchTactic(children) => v match {
+          case BelleProvable(p, _) =>
+            if (children.length != p.subgoals.length)
+              throw new BelleThrowable("<(e)(v) is only defined when len(e) = len(v), but " +
+                children.length + "!=" + p.subgoals.length + " subgoals (v)\n" +
+                p.subgoals.map(_.prettyString).mkString("\n===================\n")).inContext(expr, "")
+            //Compute the results of piecewise applications of children to provable subgoals.
+            val results: Seq[Either[BelleValue,BelleThrowable]] =
+            (children zip p.subgoals) map (pair => {
+              val e_i = pair._1
+              val s_i = pair._2
+              try {
+                Left(apply(e_i, bval(s_i)))
+              } catch {
+                case e: BelleThrowable => Right(e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context)), "Failed on branch " + e_i))
+              }
+            })
+
+            val errors = results.collect({case Right(r) => r})
+            if (errors.nonEmpty) throw errors.reduce[BelleThrowable](new CompoundException(_, _))
+
+            // Compute a single provable that contains the combined effect of all the piecewise computations.
+            // The Int is threaded through to keep track of indexes changing, which can occur when a subgoal
+            // is replaced with 0 new subgoals (also means: drop labels).
+            def createLabels(start: Int, end: Int): List[BelleLabel] = (start until end).map(i => BelleTopLevelLabel(s"$i")).toList
+
+            //@todo preserve labels from parent p (turn new labels into sublabels)
+            val combinedEffect =
+            results.collect({case Left(l) => l}).foldLeft[(ProvableSig, Int, Option[List[BelleLabel]])]((p, 0, None))({ case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]]), subderivation: BelleProvable) => {
+              val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, subderivation.p)
+              val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
+                case (Some(origLabels), Some(newLabels)) =>
+                  Some(origLabels.patch(cidx, newLabels, 0))
+                case (Some(origLabels), None) =>
+                  Some(origLabels.patch(cidx, createLabels(origLabels.length, origLabels.length + (nextIdx - cidx)), 0))
+                case (None, Some(newLabels)) =>
+                  Some(createLabels(0, cidx) ++ newLabels)
+                case (None, None) => None
+              }
+              (combinedProvable, nextIdx, combinedLabels)
+            }})
+            BelleProvable(combinedEffect._1, if (combinedEffect._3.isEmpty) None else combinedEffect._3)
+          case _ => throw new BelleThrowable("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(expr, "")
+        }
+
         case AfterTactic(left, right) =>
           val leftResult: Either[BelleValue, BelleValue] = try {
             Left(apply(left, v))
@@ -147,6 +136,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             case Left(lr: BelleValue) => apply(right, lr)
             case Right(rr: BelleValue) => rr
           }
+
         case SaturateTactic(child) =>
           var prev: BelleValue = null
           var result: BelleValue = v
@@ -159,6 +149,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             }
           } while (result != prev)
           result
+
         case RepeatTactic(child, times) =>
           var result = v
           for (i <- 1 to times) try {
@@ -168,50 +159,49 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
               "Failed while repating tactic " + i + "th iterate of " + times + ": " + child)
           }
           result
-        case BranchTactic(children) => v match {
-          case BelleProvable(p, _) =>
-            if (children.length != p.subgoals.length)
-              throw new BelleThrowable("<(e)(v) is only defined when len(e) = len(v), but " +
-                children.length + "!=" + p.subgoals.length + " subgoals (v)\n" +
-                p.subgoals.map(_.prettyString).mkString("\n===================\n")).inContext(expr, "")
-            //Compute the results of piecewise applications of children to provable subgoals.
-            val results: Seq[Either[BelleValue,BelleThrowable]] =
-              (children zip p.subgoals) map (pair => {
-                val e_i = pair._1
-                val s_i = pair._2
-                try {
-                  Left(apply(e_i, bval(s_i)))
-                } catch {
-                  case e: BelleThrowable => Right(e.inContext(BranchTactic(children.map(c => if (c != e_i) c else e.context)), "Failed on branch " + e_i))
-                }
-              })
 
-            val errors = results.collect({case Right(r) => r})
-            if (errors.nonEmpty) throw errors.reduce[BelleThrowable](new CompoundException(_, _))
+        case (_: BuiltInPositionTactic) | (_:BuiltInLeftTactic) | (_:BuiltInRightTactic) | (_:BuiltInTwoPositionTactic) | (_:DependentPositionTactic) =>
+          throw new BelleThrowable(s"Need to apply position tactic at a position before executing it: ${expr}(???)").inContext(expr, "")
 
-            // Compute a single provable that contains the combined effect of all the piecewise computations.
-            // The Int is threaded through to keep track of indexes changing, which can occur when a subgoal
-            // is replaced with 0 new subgoals (also means: drop labels).
-            def createLabels(start: Int, end: Int): List[BelleLabel] = (start until end).map(i => BelleTopLevelLabel(s"$i")).toList
-
-            //@todo preserve labels from parent p (turn new labels into sublabels)
-            val combinedEffect =
-              results.collect({case Left(l) => l}).foldLeft[(ProvableSig, Int, Option[List[BelleLabel]])]((p, 0, None))({ case ((cp: ProvableSig, cidx: Int, clabels: Option[List[BelleLabel]]), subderivation: BelleProvable) => {
-                val (combinedProvable, nextIdx) = replaceConclusion(cp, cidx, subderivation.p)
-                val combinedLabels: Option[List[BelleLabel]] = (clabels, subderivation.label) match {
-                  case (Some(origLabels), Some(newLabels)) =>
-                    Some(origLabels.patch(cidx, newLabels, 0))
-                  case (Some(origLabels), None) =>
-                    Some(origLabels.patch(cidx, createLabels(origLabels.length, origLabels.length + (nextIdx - cidx)), 0))
-                  case (None, Some(newLabels)) =>
-                    Some(createLabels(0, cidx) ++ newLabels)
-                  case (None, None) => None
-                }
-                (combinedProvable, nextIdx, combinedLabels)
-              }})
-            BelleProvable(combinedEffect._1, if (combinedEffect._3.isEmpty) None else combinedEffect._3)
-          case _ => throw new BelleThrowable("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(expr, "")
+        case AppliedPositionTactic(positionTactic, pos) => v match {
+          case BelleProvable(pr, _) => try {
+            BelleProvable(positionTactic.apply(pos).computeResult(pr))
+          } catch {
+            case e: BelleThrowable => throw e.inContext(positionTactic + " at " + pos, pr.prettyString)
+          }
         }
+
+        case positionTactic@AppliedBuiltinTwoPositionTactic(_, posOne, posTwo) => v match {
+          case BelleProvable(pr, _) => try {
+            BelleProvable(positionTactic.computeResult(pr))
+          } catch {
+            case e: BelleThrowable => throw e.inContext(positionTactic + " at " + posOne + ", " + posTwo, pr.prettyString)
+          }
+        }
+
+       case d: DependentTactic => try {
+          val valueDependentTactic = d.computeExpr(v)
+          apply(valueDependentTactic, v)
+        } catch {
+          case e: BelleFriendlyUserMessage => throw e
+          case e: BelleThrowable => throw e.inContext(d, v.prettyString)
+            //@todo unable to create is a serious error in the tactic not just an "oops whatever try something else exception"
+          case e: Throwable => throw new BelleThrowable("Unable to create dependent tactic: " + e.getMessage, e).inContext(d, "")
+        }
+
+        case it: InputTactic => try {
+          apply(it.computeExpr(), v)
+        } catch {
+          case e: BelleThrowable => throw e.inContext(it, v.prettyString)
+          case e: Throwable => throw new BelleThrowable("Unable to create input tactic: " + e.getMessage, e).inContext(it, "")
+        }
+
+        case PartialTactic(child, _) => try {
+          apply(child, v)
+        } catch {
+          case e: BelleThrowable => throw e.inContext(PartialTactic(e.context), "Tactic declared as partial failed to run: " + child)
+        }
+
         case OnAll(e) =>
           val provable = v match {
             case BelleProvable(p, _) => p
@@ -246,6 +236,30 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             case Some(r) => r
             case None => throw new BelleThrowable("ChooseSome did not succeed with any of its options").inContext(ChooseSome(options, e), "Failed all options in ChooseSome: " + opts.toList + "\n" + errors)
           }
+
+        case DefTactic(_, _) => v //@note noop, but included for serialization purposes
+        case DefExpression(Equal(fn@FuncOf(name, arg), t)) =>
+          val subst = arg match {
+            case Nothing => SubstitutionPair(fn, t)::Nil
+            case term => SubstitutionPair(FuncOf(name, DotTerm()), t.replaceFree(term, DotTerm()))::Nil
+          }
+          //@todo should Let(fn=t) in remainder with expand(fn);expanded ending let and continue expanded after let
+          apply(TactixLibrary.US(USubst(subst)), v)
+        case DefExpression(Equiv(p@PredOf(name, arg), q)) =>
+          val subst = arg match {
+            case Nothing => SubstitutionPair(p, q)::Nil
+            case term => SubstitutionPair(FuncOf(name, DotTerm()), q.replaceFree(term, DotTerm()))::Nil
+          }
+          //@todo should Let(fn=t) in remainder with expand(fn);expanded ending let and continue expanded after let
+          apply(TactixLibrary.US(USubst(subst)), v)
+        case ExpandDef(_) => v
+        case ApplyDefTactic(DefTactic(_, t)) => apply(t, v)
+        case named: NamedTactic => apply(named.tactic, v)
+        case LabelBranch(label) => v match {
+          case BelleProvable(pr, Some(labels)) => BelleProvable(pr, Some(labels :+ label))
+          case BelleProvable(pr, None) => BelleProvable(pr, Some(label :: Nil))
+          case _ => throw new BelleThrowable(s"Attempted to give a label to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
+        }
 
         case ProveAs(lemmaName, f, e) => {
           val BelleProvable(provable, labels) = v
@@ -402,6 +416,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           apply(unification._2(unification._1.asInstanceOf[RenUSubst]), v)
         }
 
+          //@todo this seems wrongly scoped, so AppliedDependentTwoPositionTactic and USubstPatternTactic are dead code
         case AppliedDependentTwoPositionTactic(t, p1, p2) =>
           val provable = v match {
             case BelleProvable(p,_) => p

@@ -690,6 +690,7 @@ case class ProveAs(lemmaName: String, f: Formula, e: BelleExpr) extends BelleExp
 trait BelleValue {
   def prettyString: String = toString
 }
+/** A Provable during a Bellerophon interpreter run, readily paired with an optional list of BelleLabels */
 case class BelleProvable(p : ProvableSig, label: Option[List[BelleLabel]] = None) extends BelleExpr with BelleValue {
   if(label.nonEmpty) insist(label.get.length == p.subgoals.length, s"Length of label set (${label.get.length}) should equal number of remaining subgoals (${p.subgoals.length}")
   override def toString: String = p.prettyString
@@ -707,10 +708,12 @@ trait BelleLabel {
   protected val LABEL_DELIMITER: String = ":"
   def prettyString: String
 }
+/** A top-level label for a BelleProvable */
 case class BelleTopLevelLabel(label: String) extends BelleLabel {
   require(!label.contains(LABEL_DELIMITER), s"Label should not contain the sublabel delimiter $LABEL_DELIMITER")
   override def prettyString: String = label
 }
+/** A sublabel for a BelleProvable */
 case class BelleSubLabel(parent: BelleLabel, label: String)  extends BelleLabel {
   require(!label.contains(LABEL_DELIMITER), s"Label should not contain the sublabel delimiter $LABEL_DELIMITER")
   override def prettyString: String = parent.prettyString + LABEL_DELIMITER + label

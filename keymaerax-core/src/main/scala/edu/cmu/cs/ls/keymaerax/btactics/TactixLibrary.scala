@@ -193,7 +193,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   // conditional tactics
 
-  /** Call/label the current proof branch s
+  /** Call/label the current proof branch by the top-level label s.
    *
    * @see [[Idioms.<()]]
    * @see [[sublabel()]]
