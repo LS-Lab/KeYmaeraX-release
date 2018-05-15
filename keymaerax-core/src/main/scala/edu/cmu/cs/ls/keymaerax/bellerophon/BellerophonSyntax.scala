@@ -84,7 +84,7 @@ abstract case class BuiltInTactic(name: String) extends NamedBelleExpr {
 }
 case class LabelBranch(label: BelleLabel) extends BelleExpr { override def prettyString: String = s"Label ${label.prettyString}" }
 
-/** ⎵: Placeholder for tactics in tactic contexts. Reserved tactic expression */
+/** ⎵: Placeholder for tactics in tactic contexts. Reserved tactic expression that cannot be executed. */
 class BelleDot() extends BelleExpr { override def prettyString = ">>_<<" }
 object BelleDot extends BelleDot()
 
@@ -631,7 +631,8 @@ case class LetInspect(abbr: Expression, instantiator: ProvableSig => Expression,
 }
 
 /**
-  * SearchAndRescue(abbr, common, instantiator, continuation) alias `search abbr := after common among instantiator in continuation`
+  * SearchAndRescue(abbr, common, instantiator, continuation)
+  * alias `search abbr := after common among instantiator in continuation`
   * postpones the choice for the definition of `abbr` until tactic `common` finished on the Provable,
   * but then searches for the definition of `abbr` by trying to run `continuation` from the outcome of `common`
   * until `continuation` is successful.
@@ -639,9 +640,12 @@ case class LetInspect(abbr: Expression, instantiator: ProvableSig => Expression,
   * in addition to the present Provable obtained after the current attempt of running `continuation` with the last choice for `abbr`.
   * Resumes to the outer proof by a uniform substitution of instantiator(result)` for `abbr` of the resulting provable
   * which corresponds to having run `USubst(abbr,inst){ common } ; continuation`.
+  * Thus, the logical effect is identical to directly running
+  * `USubst(abbr,inst){ common } ; continuation`
+  * but the operational effect differs by the above search to find the instantiation `inst` in the first place.
   *
   * @see [[ProvableSig.apply(USubst)]]
-  * @note abbr should be fresh in the Provable
+  * @param abbr the abbreviation to instantie, which should be fresh in the Provable
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   *      Example 32.
   */

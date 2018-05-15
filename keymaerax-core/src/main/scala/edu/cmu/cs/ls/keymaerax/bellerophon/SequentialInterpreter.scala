@@ -369,7 +369,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             throw new BelleThrowable("SearchAndRescueAgain of multiple goals is not currently supported.").inContext(expr, "")
 
           val in: ProvableSig = ProvableSig.startProof(provable.subgoals.head)
-          apply(common, BelleProvable(in)) match {
+          apply(common, BelleProvable(in, lbl)) match {
             case BelleProvable(commonDerivation, lbl2) =>
               var lastProblem: ProverException = NoProverException
               while (true) {
@@ -379,14 +379,17 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
                   val backsubst: ProvableSig = commonDerivation(us)
                   val remaining: BelleProvable = BelleProvable(provable(backsubst, 0), lbl2)
                   apply(continuation, remaining) match {
+                    // return upon success of tactic
                     case pr: BelleProvable => return pr
                     case e => ???
                   }
                 } catch {
+                  // remember exception in lastProblem for next repetition
                   case e: BelleThrowable => lastProblem = e
                   case e: ProverException => lastProblem = e
                 }
               }
+              // cannot come here
               ???
             case e => throw new BelleThrowable("SearchAndRescueAgain expected sub-derivation after running common")
           }
