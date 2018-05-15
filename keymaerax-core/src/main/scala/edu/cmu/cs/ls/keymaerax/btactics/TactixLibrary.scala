@@ -193,12 +193,19 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   // conditional tactics
 
+  /** Call/label the current proof branch by the given label s.
+    * @see [[Idioms.<()]]
+    * @see [[sublabel()]]
+    * @see [[BelleLabels]]
+    */
+  def label(s: BelleLabel): BelleExpr = LabelBranch(s)
+
   /** Call/label the current proof branch by the top-level label s.
-   *
-   * @see [[Idioms.<()]]
-   * @see [[sublabel()]]
-   */
-  def label(s: String): BelleExpr = LabelBranch(BelleTopLevelLabel(s))
+    *
+    * @see [[Idioms.<()]]
+    * @see [[sublabel()]]
+    */
+  def label(s: String): BelleExpr = label(BelleTopLevelLabel(s))
 
   /** Mark the current proof branch and all subbranches s
     *

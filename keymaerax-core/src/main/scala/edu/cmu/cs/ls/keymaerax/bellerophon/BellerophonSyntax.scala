@@ -46,8 +46,7 @@ abstract class BelleExpr(private var location: Location = UnknownLocation) {
   /** case _ of {fi => ei} uniform substitution case pattern applies the first ei such that fi uniformly substitutes to current provable for which ei does not fail, fails if the ei of all matching fi fail. */
   def U(p: (SequentType, RenUSubst => BelleExpr)*) = SeqTactic(this, USubstPatternTactic(p))
   /** partial: marks a tactic that is allowed to not close all its goals. */
-  def partial(label: BelleLabel)      = PartialTactic(this, Some(label))
-  /** partial: marks a tactic that is allowed to not close all its goals. */
+  @deprecated("Only useful in unit tests")
   def partial                         = PartialTactic(this)
   //@todo Maybe support ?(e) or try(e) or optional(e) defined as this|skip
 
@@ -697,13 +696,20 @@ case class BelleProvable(p : ProvableSig, label: Option[List[BelleLabel]] = None
   override def prettyString: String = p.prettyString
 }
 
-/** To communicate proof IDs of subproofs opened in the spoon-feeding interpreter in Let between requests.
+/** Internal: To communicate proof IDs of subproofs opened in the spoon-feeding interpreter in Let between requests.
   * NOT TO BE USED FOR ANYTHING ELSE */
 case class BelleSubProof(id: Int) extends BelleValue
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Bellerophon Labels
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+  * Bellerophon labels for proof branches.
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.label()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.Idioms.<()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.BelleLabels]]
+  */
 trait BelleLabel {
   protected val LABEL_DELIMITER: String = ":"
   def prettyString: String

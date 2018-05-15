@@ -33,8 +33,8 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
       val result: BelleValue =
       expr match {
         case builtIn: BuiltInTactic => v match {
-          case BelleProvable(pr, _) => try {
-            BelleProvable(builtIn.execute(pr))
+          case BelleProvable(pr, lbl) => try {
+            BelleProvable(builtIn.execute(pr), lbl)
           } catch {
             case e: BelleThrowable => throw e.inContext(BelleDot, pr.prettyString)
           }
@@ -76,7 +76,7 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         }
 
         case BranchTactic(children) => v match {
-          case BelleProvable(p, _) =>
+          case BelleProvable(p, lbl) =>
             if (children.length != p.subgoals.length)
               throw new BelleThrowable("<(e)(v) is only defined when len(e) = len(v), but " +
                 children.length + "!=" + p.subgoals.length + " subgoals (v)\n" +
@@ -164,16 +164,16 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           throw new BelleThrowable(s"Need to apply position tactic at a position before executing it: ${expr}(???)").inContext(expr, "")
 
         case AppliedPositionTactic(positionTactic, pos) => v match {
-          case BelleProvable(pr, _) => try {
-            BelleProvable(positionTactic.apply(pos).computeResult(pr))
+          case BelleProvable(pr, lbl) => try {
+            BelleProvable(positionTactic.apply(pos).computeResult(pr), lbl)
           } catch {
             case e: BelleThrowable => throw e.inContext(positionTactic + " at " + pos, pr.prettyString)
           }
         }
 
         case positionTactic@AppliedBuiltinTwoPositionTactic(_, posOne, posTwo) => v match {
-          case BelleProvable(pr, _) => try {
-            BelleProvable(positionTactic.computeResult(pr))
+          case BelleProvable(pr, lbl) => try {
+            BelleProvable(positionTactic.computeResult(pr), lbl)
           } catch {
             case e: BelleThrowable => throw e.inContext(positionTactic + " at " + posOne + ", " + posTwo, pr.prettyString)
           }
@@ -196,8 +196,18 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
           case e: Throwable => throw new BelleThrowable("Unable to create input tactic: " + e.getMessage, e).inContext(it, "")
         }
 
-        case PartialTactic(child, _) => try {
+        case PartialTactic(child, None) => try {
           apply(child, v)
+        } catch {
+          case e: BelleThrowable => throw e.inContext(PartialTactic(e.context), "Tactic declared as partial failed to run: " + child)
+        }
+
+        case PartialTactic(child, Some(label)) => try {
+          apply(child, v) match {
+            case BelleProvable(pr, Some(labels)) => BelleProvable(pr, Some(labels :+ label))
+            case BelleProvable(pr, None) => BelleProvable(pr, Some(label :: Nil))
+            case _ => throw new BelleThrowable(s"Attempted to give a label to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
+          }
         } catch {
           case e: BelleThrowable => throw e.inContext(PartialTactic(e.context), "Tactic declared as partial failed to run: " + child)
         }
@@ -237,6 +247,12 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
             case None => throw new BelleThrowable("ChooseSome did not succeed with any of its options").inContext(ChooseSome(options, e), "Failed all options in ChooseSome: " + opts.toList + "\n" + errors)
           }
 
+        case LabelBranch(label) => v match {
+          case BelleProvable(pr, Some(labels)) => BelleProvable(pr, Some(labels :+ label))
+          case BelleProvable(pr, None) => BelleProvable(pr, Some(label :: Nil))
+          case _ => throw new BelleThrowable(s"Attempted to give a label to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
+        }
+
         case DefTactic(_, _) => v //@note noop, but included for serialization purposes
         case DefExpression(Equal(fn@FuncOf(name, arg), t)) =>
           val subst = arg match {
@@ -255,13 +271,9 @@ case class SequentialInterpreter(listeners : Seq[IOListener] = Seq()) extends In
         case ExpandDef(_) => v
         case ApplyDefTactic(DefTactic(_, t)) => apply(t, v)
         case named: NamedTactic => apply(named.tactic, v)
-        case LabelBranch(label) => v match {
-          case BelleProvable(pr, Some(labels)) => BelleProvable(pr, Some(labels :+ label))
-          case BelleProvable(pr, None) => BelleProvable(pr, Some(label :: Nil))
-          case _ => throw new BelleThrowable(s"Attempted to give a label to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
-        }
 
         case ProveAs(lemmaName, f, e) => {
+          //@todo why is labels ignored?
           val BelleProvable(provable, labels) = v
           assert(provable.subgoals.length == 1)
 
