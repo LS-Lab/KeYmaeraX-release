@@ -370,20 +370,12 @@ Axiom "DV differential variant >=".
   <{c&true}>f(||)>=g(||) <- \exists e_ (e_>0 & [{c&true}](f(||)<=g(||) -> f(||)'>=g(||)'+e_))
 End.
 
-/** Extended differential equations axioms https://arxiv.org/abs/1802.01226 */
 Axiom "DMP differential modus ponens".
   ([{c&q(||)}]p(||) <- [{c&r(||)}]p(||)) <- [{c&q(||)}](q(||) -> r(||))
 End.
 
-/** The axioms RI& closed and Cont require that q(||) and f(||) do not contain 's
-   Theory:
-   Uniq <x'=f(x)&q1(x)>p1(x) & <x'=f(x)&q2(x)>p2(x) -> <x'=f(x)&q1(x)&q2(x)>(p1(x) | p2(x))
-   Cont x=y -> (p(x) > 0 -> <x'=f(x)& p(x) > 0> x!=y
-   RI& [x'=f(x)&q(x)]p(x) <->
-       \forall y [x'=f(x)&q(x) & (p(x) | x=y)] (x=y -> p(x) & (<x'=f(x)&q(x)>x!=y -> <x'=f(x)&p(x)>x!=y))
-   */
 Axiom "Uniq uniqueness".
-  <{c&q(||)}>p(||) & <{c&r(||)}>s(||) -> <{c&q(||) & r(||)}>(p(||) | s (||))
+  <{c&q1(||)}>p1(||) & <{c&q2(||)}>p2(||) -> <{c&q1(||) & q2(||)}>(p1(||) | p2 (||))
 End.
 
 Axiom "Cont continuous existence".
