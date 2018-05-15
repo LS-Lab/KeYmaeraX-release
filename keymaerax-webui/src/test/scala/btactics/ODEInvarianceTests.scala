@@ -74,4 +74,11 @@ class ODEInvarianceTests extends TacticTestBase {
     println(pr)
     pr shouldBe 'proved
   }
+
+  it should "package with real induction" in withMathematica { qeTool =>
+    val fml = "-x<=0 & -y<=0 | x+y<=10 | y>=0 -> [{z'=2,x'=x+1,y'=1&x^2+y^2<1}] (-x<=0 & -y<=0 | x+y<=10 | y>=0)".asFormula
+    val pr = proveBy(fml, implyR(1) & sAIclosed(1)(1))
+    println(pr)
+    pr shouldBe 'proved
+  }
 }
