@@ -375,8 +375,7 @@ Axiom "DMP differential modus ponens".
   ([{c&q(||)}]p(||) <- [{c&r(||)}]p(||)) <- [{c&q(||)}](q(||) -> r(||))
 End.
 
-/** The axioms RI& closed and Cont require no 's in domain constraints
-   so that q(||) and f(||) both do not contain 's
+/** The axioms RI& closed and Cont require that q(||) and f(||) do not contain 's
    Theory:
    Uniq <x'=f(x)&q1(x)>p1(x) & <x'=f(x)&q2(x)>p2(x) -> <x'=f(x)&q1(x)&q2(x)>(p1(x) | p2(x))
    Cont x=y -> (p(x) > 0 -> <x'=f(x)& p(x) > 0> x!=y
