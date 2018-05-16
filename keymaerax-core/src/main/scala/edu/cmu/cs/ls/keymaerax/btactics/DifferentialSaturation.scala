@@ -69,7 +69,7 @@ object DifferentialSaturation extends Logging {
 
   // Computes and simplifies the lie derivative
   // Firstly, it turns all remaining differentials into 0, then it simplifies and strips out things like x^0 = 1
-  // The simplifier can't do the last simplification without proof (since 0^0 is nasty)
+  // The simplifier can't do the last simplification with proof (since 0^0 is nasty)
   def stripConstants(t:Term) : Term = {
     t match {
       case v:DifferentialSymbol => {

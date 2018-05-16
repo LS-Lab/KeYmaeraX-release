@@ -367,7 +367,7 @@ object ODEInvariance {
   private def recRankOneTac(f:Formula) : BelleExpr = {
     //TODO:Currently Darbouxs all the time, but could just use dI in simple case
     //Perhaps delegate to Darboux tactic to check for simpler case
-    f match {
+    DebuggingTactics.print(f.prettyString) & (f match {
       case True => G(1) & close
       case And(l,r) => andL(-1) & DebuggingTactics.print("state") & dC(l)(1)<(
         hideL(-1) & boxAnd(1) & andR(1) <(
@@ -376,8 +376,8 @@ object ODEInvariance {
         hideL(-2) & recRankOneTac(l)
       )
       case Or(l,r) => ???
-      case _ => dgDbxAuto(1) | dgBarrier(1)
-    }
+      case _ => (dgDbxAuto(1) & done) | dgBarrier(1)
+    })
   }
 
   // Prove semialgebraic invariants where every polynomial is rank 1

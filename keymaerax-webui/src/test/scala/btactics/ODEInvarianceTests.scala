@@ -155,4 +155,26 @@ class ODEInvarianceTests extends TacticTestBase {
     println(pr)
     pr shouldBe 'proved
   }
+
+  it should "try a (very) difficult invariant" in withMathematica { qeTool =>
+    val fml = "1/100 - x^2 - y^2 >= 0 -> [{x'=-2*x+x^2+y, y'=x-2*y+y^2 & x!=0 | y!=0}]!(x^2+y^2 >= 1/4)".asFormula
+    //Original question did not have x!=0 | y!=0 constraint
+    //Pegasus invariant: ((x*y<=x^2+y^2&x+y<=2)&4*(x^2+y^2)<=1)&-1+4*x^2+4*y^2 < 0
+    //However, the equilibrium point at the origin for x*y<=x^2+y^2 is insurmountable for all current tactics
+//    val pr = proveBy(fml, implyR(1) &
+//      dC("((x*y<=x^2+y^2&x+y<=2)&4*(x^2+y^2)<=1)".asFormula)(1) <(
+//        dW(1),
+//        sAIclosedPlus(1)(1)
+//      )
+//    )
+
+    //The actual invariant:
+    val pr2 = proveBy(fml, implyR(1) &
+      dC("((x*y<=x^2+y^2&x+y<=2)&4*(x^2+y^2)<=1)&-1+4*x^2+4*y^2 < 0".asFormula)(1) <(
+        dW(1) & QE,
+        sAIRankOne(1)
+      )
+    )
+    println(pr2)
+  }
 }
