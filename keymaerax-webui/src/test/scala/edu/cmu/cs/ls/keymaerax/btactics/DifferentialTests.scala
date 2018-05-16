@@ -1366,13 +1366,12 @@ class DifferentialTests extends TacticTestBase with Timeouts {
   "Continuous invariant generation" should "generate a simple invariant" in withMathematica { _ =>
     val problem = "x>-1 & -2*x > 1 & -2*y > 1 & y>=-1 ==> [{x'=y,y'=x^5 - x*y}] x+y<=1".asSequent
 
-    val result = proveBy(problem, DifferentialTactics.contInvGen(1))
-    result.subgoals should have size 2
-    result.subgoals(0) shouldBe "x>-1 & -2*x > 1 & -2*y > 1 & y>=-1 ==> [{x'=y,y'=x^5 - x*y & true & x^5 <= (x+4*x^3)*y & y <= 0}] x+y<=1".asSequent
-    result.subgoals(1) shouldBe "x>-1 & -2*x > 1 & -2*y > 1 & y>=-1 ==> [{x'=y,y'=x^5 - x*y}](x^5 <= (x+4*x^3)*y & y <= 0)".asSequent
+    InvariantGenerator.differentialInvariantCandidates(problem, SuccPos(0)) should contain theSameElementsInOrderAs(
+      "x>-1".asFormula::"-2*x>1".asFormula::"-2*y>1".asFormula::"y>=-1".asFormula::
+      "x^5 <= (x+4*x^3)*y".asFormula::"y <= 0".asFormula::"x^5 <= (x+4*x^3)*y & y <= 0".asFormula :: Nil)
   }
 
-  it should "generate invariants for nonlinear benchmarks" taggedAs SlowTest in withMathematica { _ =>
+  it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs SlowTest in withMathematica { _ =>
     val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
       getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
     val annotatedInvariants: ConfigurableGenerator[Formula] = TactixLibrary.invGenerator match {
@@ -1384,24 +1383,20 @@ class DifferentialTests extends TacticTestBase with Timeouts {
         filter({ case (_, Imply(_, Box(_: ODESystem, _))) => true case _ => false })) {
       (name, model) =>
         println("\n" + name)
-        val fml@Imply(_, succFml@Box(ode@ODESystem(_, q), _)) = model
-        val result = proveBy(fml, implyR(1) & Idioms.?(DifferentialTactics.contInvGen(1)))
+        val Imply(assumptions, succFml@Box(ode@ODESystem(_, q), _)) = model
 
         //@note the annotations in nonlinear.kyx are produced by Pegasus
+        val invariants = InvariantGenerator.pegasusInvariantCandidates(
+          Sequent(IndexedSeq(assumptions), IndexedSeq(succFml)), SuccPos(0))
+
         annotatedInvariants.products.get(ode) match {
           case Some(invs) =>
-            result.subgoals should have size 2
-            val Box(ODESystem(_, And(qUse, invUse)), _) = result.subgoals(0).succ.loneElement
-            qUse shouldBe q withClue "evolution domain qUse same as q"
-            invUse shouldBe invs.reduce(And) withClue "invariant expected"
-            val Box(ODESystem(_, qShow), invShow) = result.subgoals(1).succ.loneElement
-            qShow shouldBe q withClue "evolution domain qShow same as q"
-            invShow shouldBe invUse withClue "show invariant same as use invariant"
+            invariants should contain theSameElementsInOrderAs invs
           case None =>
             //@note invariant generator did not produce an invariant before, not expected to produce one now. Test will
             // fail if invariant generator improves and finds an invariant.
             // In that case, add annotation to nonlinear.kyx.
-            result.subgoals.loneElement.succ.loneElement shouldBe succFml
+            invariants shouldBe empty
         }
         println(name + " done")
     }
@@ -1450,26 +1445,17 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "180", saveToFile = false)
     Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, "60", saveToFile = false)
 
-    val timeouts =
+    val fails =
       "Bhatia Szego Ex_2_4 page 68" ::
       "Dumortier Llibre Artes Ex. 1_9b" ::
-      "Dumortier Llibre Artes Ex. 10_11b" ::
-      "Dumortier Llibre Artes Ex. 10_15_i" :: Nil
-    // split conjunction into list:
-    //   Collin Goriely page 60
-    //   Dai Gan Xhia Zhan JSC14 Ex. 2
-    //   Dai Gan Xhia Zhan JSC14 Ex. 5
-    //   Darboux Christoffel Int Goriely page 58
-    //   Dumortier Llibre Artes Ex. 5_2_ii
-    //   Dumortier Llibre Artes Ex. 10_15_ii
-    //   Dumortier Llibre Artes Ex. 5_2
-    //   Forsman Phd Ex 6_1 page 99
-    //   Strogatz Example 6_6_2 Limit Cycle
-    //   Wiggins Example 18_1_2
+      "Dumortier Llibre Artes Ex. 10_11b" :: Nil
 
     val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
       getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
-    forEvery(Table(("Name", "Model", "Tactic"), entries.filterNot(e => timeouts.contains(e.name)).filter(e => e.tactics.nonEmpty).map(e => (e.name, e.model, e.tactics.head._2)):_*)) {
+    forEvery(Table(("Name", "Model", "Tactic"), entries.
+        filterNot(e => fails.contains(e.name)).
+        filter(e => e.tactics.nonEmpty).
+        map(e => (e.name, e.model, e.tactics.head._2)):_*)) {
       (name, model, tactic) =>
         println("\n" + name + " with " + BellePrettyPrinter(tactic))
         failAfter(3 minutes) {

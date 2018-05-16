@@ -21,31 +21,31 @@ object Generator {
     * @tparam A the type of results that are being generated.
     * @author Stefan Mitsch
     */
-  type Generator[A] = ((Sequent, Position) => Iterator[A])
+  type Generator[A] = ((Sequent, Position) => Stream[A])
 }
 
 /** Generator always providing a fixed list as output. */
 case class FixedGenerator[A](list: List[A]) extends Generator.Generator[A] {
-  def apply(s: Sequent, p: Position): Iterator[A] = list.iterator
+  def apply(s: Sequent, p: Position): Stream[A] = list.toStream
 }
 
 /** Map-based generator providing output according to the fixed map `products` according to its program or whole formula.
   * @author Stefan Mitsch
   * */
 class ConfigurableGenerator[A](var products: Map[Expression,Seq[A]] = Map[Expression,Seq[A]]()) extends Generator.Generator[A] {
-  def apply(s: Sequent, p: Position): Iterator[A] = s.sub(p) match {
+  def apply(s: Sequent, p: Position): Stream[A] = s.sub(p) match {
     case Some(Box(prg, _)) => findPrgProducts(prg)
     case Some(Diamond(prg, _)) => findPrgProducts(prg)
-    case Some(f) => products.getOrElse(f, Nil).iterator
-    case None => Nil.iterator
+    case Some(f) => products.getOrElse(f, Nil).toStream
+    case None => Nil.toStream
   }
 
   /** Finds products that match the program `prg` either literally, or if ODE then without evolution domain constraint. */
-  private def findPrgProducts(prg: Program): Iterator[A] = prg match {
+  private def findPrgProducts(prg: Program): Stream[A] = prg match {
     case sys@ODESystem(ode, _) =>
       products.find({ case (ODESystem(key, _), _) => ode == key case _ => false }).
-        getOrElse(() -> findConditionalDiffInv(sys))._2.iterator
-    case _ => products.getOrElse(prg, Nil).iterator
+        getOrElse(() -> findConditionalDiffInv(sys))._2.toStream
+    case _ => products.getOrElse(prg, Nil).toStream
   }
 
   /** Finds products that match the ODE `ode` by shape and with a condition that matches.

@@ -671,7 +671,7 @@ private object DifferentialTactics extends Logging {
         }, failureMessage)(pos) &
           ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
             case Some(ODESystem(_, extendedQ)) =>
-              if (q == True) useAt("true&")(ppos ++
+              if (q == True && extendedQ != True) useAt("true&")(ppos ++
                 PosInExpr(1 +: FormulaTools.posOf(extendedQ, q).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
               else skip
           }))(pos ++ PosInExpr(0::Nil))
@@ -683,7 +683,7 @@ private object DifferentialTactics extends Logging {
     } catch {
       case err: Exception =>
         logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
-        List[Formula]().iterator
+        Stream[Formula]()
     }
 
     //Tries to prove without any invariant generation or solving.
@@ -713,12 +713,12 @@ private object DifferentialTactics extends Logging {
             (if (isOpen) {
               (openDiffInd(pos) | DGauto(pos)) //> TODO: needs updating
             } else {
-              diffInd()(pos)       | // >= to >=
+              diffInd()(pos) | // >= to >=
                 (dgBarrier(ToolProvider.simplifierTool())(pos) & done) |
                 (dgDbxAuto(pos) & done) |
-                DGauto(pos)          |
-                dgZeroMonomial(pos)  | //Equalities
-                dgZeroPolynomial(pos)  //Equalities
+                DGauto(pos) |
+                dgZeroMonomial(pos) | //Equalities
+                dgZeroPolynomial(pos) //Equalities
             })
           )
         })) (pos))
@@ -727,9 +727,9 @@ private object DifferentialTactics extends Logging {
     //Adds an invariant to the system's evolution domain constraint and tries to establish the invariant via proveWithoutCuts.
     //Fails if the invariant cannot be established by proveWithoutCuts.
     val addInvariant = ChooseSome(
-      () => invariantCandidates,
+      () => invariantCandidates.iterator,
       (inv: Formula) => {
-        debug(s"[ODE] Trying to cut in invariant candidate: $inv", true) &
+        DebuggingTactics.print(s"[ODE] Trying to cut in invariant candidate: $inv") &
         /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
         diffCut(inv)(pos) <(skip, proveWithoutCuts(pos) & done)
       }
@@ -1419,23 +1419,4 @@ private object DifferentialTactics extends Logging {
     }, ode)
     dottedSymbols.reverse
   }
-
-  /** @see [[TactixLibrary.dC()]] */
-  val contInvGen: DependentPositionTactic = new DependentPositionTactic("contInvGen") {
-    override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = {
-        val (ode, postcond) = sequent.sub(pos) match {
-          case Some(Box(odesys: ODESystem, post: Formula)) => (odesys, post)
-          case _ => throw new IllegalArgumentException("Not a continuous safety goal " + sequent.sub(pos))
-        }
-
-        val continvs: Seq[Formula] = ToolProvider.invGenTool().
-          getOrElse(throw new BelleThrowable("InvGenTool needed, but got None")).
-          invgen(ode, sequent.ante, postcond)
-
-        diffCut(continvs:_*)(pos)
-      }
-    }
-  }
-
 }

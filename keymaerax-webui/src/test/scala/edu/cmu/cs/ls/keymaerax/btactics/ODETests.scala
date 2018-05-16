@@ -93,6 +93,7 @@ class ODETests extends TacticTestBase {
   }
 
   it should "fail find fractional darboux" in withMathematica { _ =>
+    Configuration.set(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT, "1", saveToFile = false)
     //(x+z)' = ((x*A+B)/z^2)(x+z), where z^2 > 0
     val seq = "x+z=0 ==> [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&y=x^2&z^2>0}] x+z=0".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) should not be 'proved
@@ -328,7 +329,12 @@ class ODETests extends TacticTestBase {
   }
 
   it should "not stutter repeatedly" in withQE { _ =>
-    val result = proveBy("[{x'=x^x}]x>0".asFormula, ODE(1) | skip)
+    val result = proveBy("[{x'=x^x}]x>0".asFormula, ODE(1))
+    result.subgoals.loneElement shouldBe "==> [{x'=x^x}]x>0".asSequent
+  }
+
+  it should "not fail evolution domain simplification on empty evolution domain constraint" in withQE { _ =>
+    val result = proveBy("[{x'=x^x}]x>0".asFormula, ODE(1))
     result.subgoals.loneElement shouldBe "==> [{x'=x^x}]x>0".asSequent
   }
 

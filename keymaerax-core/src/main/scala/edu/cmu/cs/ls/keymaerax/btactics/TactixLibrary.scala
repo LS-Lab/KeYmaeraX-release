@@ -294,7 +294,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[loop(Formula)]] */
   def loop(gen: Generator[Formula]): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = loop(nextOrElse(gen(sequent, pos),
+      override def computeExpr(sequent: Sequent): BelleExpr = loop(nextOrElse(gen(sequent, pos).iterator,
         throw new BelleThrowable("Unable to generate an invariant for " + sequent(pos.checkTop) + " at position " + pos)))(pos)
       private def nextOrElse[A](it: Iterator[A], otherwise: => A) = if (it.hasNext) it.next else otherwise
     }
@@ -303,7 +303,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[loop(Formula)]] */
   def loopauto: DependentPositionTactic = "loopauto" by ((pos:Position,seq:Sequent) =>
     ChooseSome(
-      () => try { InvariantGenerator.loopInvariantGenerator(seq,pos) } catch {
+      () => try { InvariantGenerator.loopInvariantGenerator(seq,pos).iterator } catch {
         case err: Exception =>
           logger.debug("ChooseSome: error listing options " + err, err)
           List[Formula]().iterator
@@ -319,7 +319,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     *      Example 32. */
   def loopSR(gen: Generator[Formula]): DependentPositionTactic = "loopSR" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
-      val cand: Iterator[Formula] = gen(seq, pos)
+      val cand: Iterator[Formula] = gen(seq, pos).iterator
       val bounds: List[Variable] =
         if (StaticSemantics.freeVars(post).toSet.exists( v => v.isInstanceOf[DifferentialSymbol] ) )
           StaticSemantics.boundVars(loopfml).toSet.toList
@@ -419,11 +419,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[diffInvariant()]]
     */
   //@todo("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
-
-  // Continuous invariant generator
-  def contInvGen    : DependentPositionTactic = DifferentialTactics.contInvGen
-
   def dC(formulas: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(formulas:_*)
+
   /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * (uses DI, DW, DE, QE)
     *
