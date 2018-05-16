@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
+import scala.collection.mutable.ListBuffer
 
 /**
   * Implements ODE tactics based on the axiomatization from
@@ -293,6 +294,119 @@ object ODEInvariance {
       cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
       implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.print("QE step") & QE & done, skip) //Don't bother running the rest if QE fails
       & cohide2(-3,1)& implyR(1) & lpclosedPlus(inst)
+    )
+  })
+
+  // Determines if a formula is of the special "recursive" rank one case
+  // i.e. every p~0 is (trivially) Darboux
+  // Additionally returns a list of formulas if so representing the diff cut order
+  // TODO: can generalize p>=0, p>0 cases to check the barrier condition as well
+  // TODO: this should be keeping track of co-factors
+  def rankOneFml(ode: DifferentialProgram, dom:Formula, f:Formula) : Option[Formula] = {
+    f match {
+      case cf:ComparisonFormula =>
+        val p = cf.left
+        val lie = lieDer(ode, p)
+        val (q,r) = polyReduce(lie,p)
+        println("comparison fml: "+f+" Lie:"+lie+" "+q+" "+r)
+
+        val zero = Number(0)
+        val prf = cf match {
+          case GreaterEqual(_, _) => GreaterEqual(r,zero)
+          case Greater(_, _) => GreaterEqual(r,zero)
+          case LessEqual(_, _) => LessEqual(r,zero) //Not needed
+          case Less(_, _) => LessEqual(r,zero) //Not needed
+          case Equal(_,_) => Equal(r,zero)
+          case NotEqual(_,_) => Equal(r,zero)
+        }
+        val pr = proveBy(Imply(dom,prf),QE)
+        println(pr)
+        if(pr.isProved)
+          Some(f)
+        else {
+          val pr2 = proveBy(Imply(And(dom, Equal(p, zero)), Greater(r, zero)), QE)
+          println(pr2)
+          if(pr2.isProved)
+            Some(f)
+          else None
+        }
+
+      case and:And =>
+        var ls = DifferentialTactics.flattenConjunctions(and)
+        var acc = ListBuffer[Formula]()
+        var domC = dom
+        while(true){
+          println("Domain: ",domC)
+          //Pull out the ones that are rank 1
+          val checkls = ls.map(f =>
+            rankOneFml(ode,domC,f) match { case None => Left(f) case Some(res) => Right(res)})
+          val l = checkls.collect{case Left(v) => v}
+          val r : List[Formula] = checkls.collect{case Right(v) => v}
+          acc ++= r
+          println("Acc: ",acc)
+          if(l.length == checkls.length)
+            return None
+          else if(l.length == 0)
+            return Some( acc.foldRight(True:Formula)((x,y) => And(x,y)))
+          else {
+            ls = l
+            domC = r.foldRight(domC)((x, y) => And(x, y))
+          }
+        }
+        return None
+      case or:Or =>
+        (rankOneFml(ode,dom,or.left),rankOneFml(ode,dom,or.right)) match
+        {
+          case (Some(l),Some(r)) => Some(Or(l,r))
+          case _ => None
+        }
+      case _ => ???
+    }
+  }
+
+  private def recRankOneTac(f:Formula) : BelleExpr = {
+    //TODO:Currently Darbouxs all the time, but could just use dI in simple case
+    //Perhaps delegate to Darboux tactic to check for simpler case
+    f match {
+      case True => G(1) & close
+      case And(l,r) => andL(-1) & DebuggingTactics.print("state") & dC(l)(1)<(
+        hideL(-1) & boxAnd(1) & andR(1) <(
+          DW(1) & G(1) & prop,
+          recRankOneTac(r)),
+        hideL(-2) & recRankOneTac(l)
+      )
+      case Or(l,r) => ???
+      case _ => dgDbxAuto(1) | dgBarrier(1)
+    }
+  }
+
+  // Prove semialgebraic invariants where every polynomial is rank 1
+  def sAIRankOne : DependentPositionTactic = "sAIR1" by ((pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "sAI only in top-level succedent")
+    val (ode,dom,post) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
+      case _ => throw new BelleThrowable("sAI only at box ODE in succedent")
+    }
+    val (f2,propt)=SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post,
+      DifferentialTactics.atomNormalize2,SimplifierV3.emptyTaxs)
+    val f3 = rankOneFml(ode,dom,f2) match {
+      case None => throw new BelleThrowable("Not recursive rank 1: "+f2)
+      case Some(f) => f
+    }
+
+    val reorder = proveBy(Equiv(f2,f3),QE)
+    assert(reorder.isProved)
+
+    println("Rank 1: "+f3)
+
+    //Rewrite postcondition to match real induction
+    val (starter,imm) = propt match {
+      case None => (skip,skip)
+      case Some(pr) => (useAt(pr)(pos ++ PosInExpr(1::Nil)),useAt(pr,PosInExpr(1::Nil))(pos))
+    }
+    starter & useAt(reorder)(pos ++ PosInExpr(1::Nil)) & cutR(f3)(pos)<(
+      useAt(reorder,PosInExpr(1::Nil))(pos) & QE,
+      cohideR(1) & implyR(1) & recRankOneTac(f3)
     )
   })
 }

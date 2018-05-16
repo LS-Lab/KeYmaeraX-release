@@ -134,4 +134,25 @@ class ODEInvarianceTests extends TacticTestBase {
     val p1 = pStarHomPlus(ode,dom,poly,1)
     println(p1)
   }
+
+  it should "aggressively try rank 1" in withMathematica { qeTool =>
+    val ode = "{x'=x*(x-2*y), y'=-(2*x-y)*y}".asDifferentialProgram
+    val fml = "((x<=0&x^2-2*x*y<=0)&y<=0)".asFormula
+    val res = rankOneFml(ode,True,fml)
+    println(res)
+  }
+
+  it should "try rank 1 invariants" in withMathematica { qeTool =>
+    val fml = "x=-1 & y=-1 -> [{x'=x*(x-2*y), y'=-(2*x-y)*y}]!(x>0 | y>0)".asFormula
+    //This is an invariant which cannot be proved by the current tactic
+    //It requires a higher dimensional DG
+    val pr = proveBy(fml, implyR(1) &
+      dC("(x^2<=2*x*y)&x<=0&y<=0".asFormula)(1) <(
+        dW(1) & QE,
+        sAIRankOne(1)
+      )
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
 }

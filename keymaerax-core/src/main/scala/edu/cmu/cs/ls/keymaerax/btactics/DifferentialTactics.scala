@@ -1081,7 +1081,7 @@ private object DifferentialTactics extends Logging {
       case LessEqual(_, _) => LessEqual(rem,zero) //Not needed
       case Less(_, _) => LessEqual(rem,zero) //Not needed
       case Equal(_,_) => Equal(rem,zero)
-      //case NotEqual(_,_) => Equal(rem,zero) TODO check?
+      case NotEqual(_,_) => Equal(rem,zero)
       case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}")
     }
 
@@ -1341,7 +1341,7 @@ private object DifferentialTactics extends Logging {
   }
 
   @deprecated("Possible duplicate of DifferentialHelper.flattenAnds")
-  private def flattenConjunctions(f: Formula): List[Formula] = {
+  def flattenConjunctions(f: Formula): List[Formula] = {
     var result: List[Formula] = Nil
     ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
       override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
@@ -1440,6 +1440,19 @@ private object DifferentialTactics extends Logging {
       case Equal(l,r) =>  List(eqNorm)
       case NotEqual(l,r) =>  List(deqNorm)
       case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be atomic comparison formula >=,>,<=,<,=,!=)")
+    }
+  }
+
+  // Simplifier index that normalizes a single (in) equality to have 0 on the RHS
+  def atomNormalize2(f:Formula,ctx:context) : List[ProvableSig] = {
+    f match{
+      case LessEqual(l,r) => List(leNorm)
+      case GreaterEqual(l,r) => List(geNorm)
+      case Less(l,r) => List(ltNorm)
+      case Greater(l,r) => List(gtNorm)
+      case Equal(l,r) =>  List(eqNorm)
+      case NotEqual(l,r) =>  List(deqNorm)
+      case _ => List()
     }
   }
 
