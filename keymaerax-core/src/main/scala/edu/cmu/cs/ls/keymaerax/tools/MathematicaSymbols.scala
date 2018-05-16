@@ -59,6 +59,7 @@ private object MathematicaSymbols {
   def REDUCE = new MExpr(Expr.SYMBOL,  "Reduce")
   def RESOLVE = new MExpr(Expr.SYMBOL,  "Resolve")
   def REALS = new MExpr(Expr.SYMBOL, "Reals")
+  def RATIONALS = new MExpr(Expr.SYMBOL, "Rationals")
   def SOLVE = new MExpr(Expr.SYMBOL,  "Solve")
   def DSOLVE = new MExpr(Expr.SYMBOL,  "DSolve")
   def FULLSIMPLIFY = new MExpr(Expr.SYMBOL,  "FullSimplify")
@@ -71,6 +72,7 @@ private object MathematicaSymbols {
   def MONOMIALORDER = new MExpr(Expr.SYMBOL, "MonomialOrder")
   def DEGREEREVERSELEXICOGRAPHIC = new MExpr(Expr.SYMBOL, "DegreeReverseLexicographic")
   def GENERATEDPARAMETERS = new MExpr(Expr.SYMBOL, "GeneratedParameters")
+  def COEFFICIENTDOMAIN = new MExpr(Expr.SYMBOL, "CoefficientDomain")
 
   def CHECK = new MExpr(Expr.SYMBOL, "Check")
   def EXCEPTION = new MExpr(Expr.SYMBOL, "$Exception")

@@ -33,7 +33,7 @@ private object ToolTactics {
     val prepareAndRcf = toSingleFormula & assertT(_.succ.head.isFOL, "QE on FOL only") &
       FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool) &
       (done | ("ANON" by ((s: Sequent) =>
-        if (s.succ.head == False) label("QE CEX")
+        if (s.succ.head == False) label(BelleLabels.QECEX)
         else DebuggingTactics.done("QE was unable to prove: invalid formula")))
         )
 
@@ -148,7 +148,7 @@ private object ToolTactics {
           hidePredicates &
           toSingleFormula & orderedClosure(po) & rcf(qeTool) &
             (done | ("ANON" by ((s: Sequent) =>
-              if (s.succ.head == False) label("QE CEX")
+              if (s.succ.head == False) label(BelleLabels.QECEX)
               else DebuggingTactics.done("QE was unable to prove: invalid formula")))
               ))))
     )}

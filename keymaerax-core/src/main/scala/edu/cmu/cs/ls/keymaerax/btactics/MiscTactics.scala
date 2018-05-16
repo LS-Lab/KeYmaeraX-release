@@ -196,8 +196,9 @@ object Idioms {
   /** Execute ts by branch order. */
   def <(t: BelleExpr*): BelleExpr = BranchTactic(t)
 
-  /** Execute ts by branch label, fall back to branch order if branches come without labels.
-    * <((lbl1,t1), (lbl2,t2)) uses tactic t1 on branch labelled lbl1 and t2 on lbl2
+  /** Execute different tactics depending on branch label, fall back to branch order if branches come without labels.
+    * <((lbl1,t1), (lbl2,t2)) uses tactic t1 on branch labelled lbl1 and uses t2 on lbl2.
+    * @see [[BelleLabels]]
     */
   def <(s1: (BelleLabel, BelleExpr), spec: (BelleLabel, BelleExpr)*): BelleExpr = new LabelledGoalsDependentTactic("onBranch") {
     override def computeExpr(provable: ProvableSig, labels: List[BelleLabel]): BelleExpr = {

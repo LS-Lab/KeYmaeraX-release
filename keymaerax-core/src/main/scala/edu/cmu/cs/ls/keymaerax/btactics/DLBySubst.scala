@@ -260,14 +260,14 @@ private object DLBySubst {
               cutR(Box(Loop(a), q))(pos.checkSucc.top) & Idioms.<(
                 /* c */ useAt("I induction")(pos) & andR(pos) & Idioms.<(
                 andR(pos) & Idioms.<(
-                  label(initCase.label),
+                  label(initCase),
                   (andR(pos) & Idioms.<(closeIdWith(pos), ident))*(consts.size-1) & close & done),
                 cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) & Idioms.<(
-                  (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hideL('Llast, True)) & label(indStep.label),
+                  (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hideL('Llast, True)) & label(indStep),
                   andL(-1) & hideL(-1, invariant) & V(1) & close(-1, 1) & done)
                 ),
                 /* c -> d */ cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &
-                (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hideL('Llast, True)) & label(useCase.label)
+                (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hideL('Llast, True)) & label(useCase)
                 )
             }
        }}))(pos)})
@@ -279,7 +279,7 @@ private object DLBySubst {
     *   --------------------------------
     *   G |- [{a}*]p, D
     * }}}
- *
+    *
     * @param invariant The invariant.
     */
 
@@ -289,11 +289,11 @@ private object DLBySubst {
     require(sequent(pos) match { case Box(Loop(_),_)=>true case _=>false}, "only applicable for [a*]p(||)")
     //val alast = AntePosition(sequent.ante.length)
     cutR(invariant)(pos.checkSucc.top) <(
-        ident partial(BelleLabels.initCase),
+        ident & label(BelleLabels.initCase),
         cohide(pos) & implyR(1) & generalize(invariant, isGame = true)(1) <(
-          byUS("ind induction") partial(BelleLabels.indStep)
+          byUS("ind induction") & label(BelleLabels.indStep)
           ,
-          ident partial(BelleLabels.useCase)
+          ident & label(BelleLabels.useCase)
         )
       )
   })
@@ -348,7 +348,7 @@ private object DLBySubst {
           cutR(Exists(Variable("v_") :: Nil, q))(pp.checkSucc.top) <(
             stutter("v_".asVariable)(pos ++ PosInExpr(0::0::Nil)) &
             useAt(DerivedAxioms.partialVacuousExistsAxiom)(pos) & closeConsts(pos) &
-            assignb(pos ++ PosInExpr(0::Nil)) partial(BelleLabels.initCase),
+            assignb(pos ++ PosInExpr(0::Nil)) & label(BelleLabels.initCase),
             cohide(pp) & implyR(1) & existsL(-1) & byUS("con convergence") <(
               stutter("v_".asVariable)(1, 1::1::0::Nil) &
               useAt("<> partial vacuous", PosInExpr(1::Nil))(1, 1::Nil) &
@@ -356,9 +356,9 @@ private object DLBySubst {
               stutterABV(SuccPosition.base0(0, PosInExpr(1::0::Nil))) &
               useAt("<> partial vacuous", PosInExpr(1::Nil))(1) &
               unstutterABV(SuccPosition.base0(0, PosInExpr(0::1::Nil))) &
-              splitConsts & closeConsts(SuccPos(0)) & assignd(1, 1 :: Nil) partial(BelleLabels.indStep)
+              splitConsts & closeConsts(SuccPos(0)) & assignd(1, 1 :: Nil) & label(BelleLabels.indStep)
               ,
-              existsL('Llast) & andL('Llast) & splitConsts partial(BelleLabels.useCase)
+              existsL('Llast) & andL('Llast) & splitConsts & label(BelleLabels.useCase)
             )
           )
       }
@@ -381,13 +381,13 @@ private object DLBySubst {
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
 
     cutR(Exists("v_".asVariable ::Nil, variantDef))(pos.checkSucc.top) <(
-      ident partial(BelleLabels.initCase),
+      ident & label(BelleLabels.initCase),
       cohide(pos) & implyR(1)
         & existsL(-1)
         & byUS("con convergence") <(
-        assignd(1, 1 :: Nil) partial(BelleLabels.indStep)
+        assignd(1, 1 :: Nil) & label(BelleLabels.indStep)
         ,
-        Idioms.nil partial(BelleLabels.useCase))
+        Idioms.nil & label(BelleLabels.useCase))
     )
   })
 

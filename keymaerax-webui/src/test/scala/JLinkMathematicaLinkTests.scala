@@ -4,7 +4,7 @@
 */
 import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleTopLevelLabel
-import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics.{BelleLabels, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.MExpr
@@ -107,7 +107,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
   "QE" should "label branch on invalid formula" in withMathematica { link =>
     link.qeEvidence("5<3".asFormula)._1 shouldBe False
     val result = proveBy("5<3".asFormula, TactixLibrary.QE, {
-      case Some(labels) => labels should contain theSameElementsAs BelleTopLevelLabel("QE CEX")::Nil
+      case Some(labels) => labels should contain theSameElementsAs BelleLabels.QECEX::Nil
       case None => fail("Expected QE CEX label")
     })
     result.subgoals should have size 1

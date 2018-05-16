@@ -7,7 +7,8 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleTopLevelLabel
 
 /**
-  * Created by aplatzer on 1/25/16.
+  * Default labels used by the KeYmaera X tactics.
+  * Other labels can be used by the user, but this list of labels makes it easier to match.
   * @author aplatzer
   */
 object BelleLabels {
@@ -19,4 +20,7 @@ object BelleLabels {
   // cuts
   val cutUse = BelleTopLevelLabel("Cut use")
   val cutShow = BelleTopLevelLabel("Cut show")
+
+  // QE
+  val QECEX = BelleTopLevelLabel("QE CEX")
 }
