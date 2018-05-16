@@ -530,9 +530,9 @@ object DerivationInfo {
     new DerivedAxiomInfo("<*> merge", "<*> merge", "loopMerged", {case () => useAt(DerivedAxioms.loopMerged)}),
     new DerivedAxiomInfo("[**] iterate iterate", "[**]", "iterateiterateb", {case () => useAt(DerivedAxioms.iterateiterateb)}),
     new DerivedAxiomInfo("<**> iterate iterate", "<**>", "iterateiterated", {case () => useAt(DerivedAxioms.iterateiterated)}),
-//    new DerivedAxiomInfo("[*-] backiterate", "[*-]", "backiterate", {case () => useAt(DerivedAxioms.backiterateb)}),
-//    new DerivedAxiomInfo("[*-] backiterate necessity", "[*-]", "backiterate necessity", {case () => useAt(DerivedAxioms.backiteratebnecc)}),
-//    new DerivedAxiomInfo("[*-] backiterate sufficiency", "[*-]", "backiterate sufficiency", {case () => useAt(DerivedAxioms.backiteratebsuff)}),
+    new DerivedAxiomInfo("[*-] backiterate", "[*-]", "backiterateb", {case () => useAt(DerivedAxioms.backiterateb)}),
+    new DerivedAxiomInfo("[*-] backiterate necessity", "[*-] backiterate necessity", "backiteratebnecc", {case () => useAt(DerivedAxioms.backiteratebnecc)}),
+    new DerivedAxiomInfo("[*-] backiterate sufficiency", "[*-] backiterate sufficiency", "backiteratebsuff", {case () => useAt(DerivedAxioms.backiteratebsuff)}),
     new DerivedAxiomInfo("II induction", "II induction", "IIinduction", {case () => useAt(DerivedAxioms.iiinduction)}),
   //@todo might have a better name
     new DerivedAxiomInfo("exists generalize", ("∃G","existsG"), "existsGeneralize", {case () => useAt(DerivedAxioms.existsGeneralize)}),
