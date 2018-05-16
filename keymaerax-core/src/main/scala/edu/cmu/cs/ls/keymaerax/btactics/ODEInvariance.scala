@@ -24,7 +24,9 @@ import scala.collection.immutable._
 object ODEInvariance {
 
   private val namespace = "odeinvariance"
-  private def lieDer(ode:DifferentialProgram,p:Term) = DifferentialSaturation.simplifiedLieDerivative(ode, p, None)
+  private def lieDer(ode:DifferentialProgram,p:Term) =
+      DifferentialSaturation.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
+
   /* Temporary stash of derived axioms */
   lazy val geq = proveBy("f_()>=0 ==> f_()>0 | f_()=0".asSequent,QE)
   // TODO: maybe core's Cont axiom should be stated without DX?
@@ -289,12 +291,8 @@ object ODEInvariance {
     starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
       implyR(pos) & imm & ?(closeId), //common case?
       cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
-      implyR(1) & cutR(pf)(1)<(
-          hideL(-3) & DebuggingTactics.print("QE step") & QE,
-          cohide2(-3,1)& implyR(1) &
-            //DebuggingTactics.print("STATE") &
-            lpclosedPlus(inst)
-        )
+      implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.print("QE step") & QE & done, skip) //Don't bother running the rest if QE fails
+      & cohide2(-3,1)& implyR(1) & lpclosedPlus(inst)
     )
   })
 }
