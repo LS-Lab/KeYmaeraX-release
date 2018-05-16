@@ -528,6 +528,8 @@ object DerivationInfo {
     new DerivedAxiomInfo("[*] approx", "[*] approx", "loopApproxb", {case () => useAt(DerivedAxioms.loopApproxb)}),
     new DerivedAxiomInfo("[*] merge", "[*] merge", "loopMergeb", {case () => useAt(DerivedAxioms.loopMergeb)}),
     new DerivedAxiomInfo("<*> merge", "<*> merge", "loopMerged", {case () => useAt(DerivedAxioms.loopMerged)}),
+    new DerivedAxiomInfo("[**] iterate iterate", "[**]", "iterateiterateb", {case () => useAt(DerivedAxioms.iterateiterateb)}),
+    new DerivedAxiomInfo("<**> iterate iterate", "<**>", "iterateiterated", {case () => useAt(DerivedAxioms.iterateiterated)}),
     new DerivedAxiomInfo("II induction", "II induction", "IIinduction", {case () => useAt(DerivedAxioms.iiinduction)}),
   //@todo might have a better name
     new DerivedAxiomInfo("exists generalize", ("∃G","existsG"), "existsGeneralize", {case () => useAt(DerivedAxioms.existsGeneralize)}),

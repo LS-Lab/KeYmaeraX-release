@@ -1240,6 +1240,32 @@ object DerivedAxioms extends Logging {
     )
   )
 
+  /**
+    * {{{Axiom "[**] iterate iterate".
+    *    [{a;}*;{a;}*]p(||) <-> [{a;}*]p(||)
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val iterateiterateb = derivedAxiom("[**] iterate iterate",
+    "==> [{a_{|^@|};}*;{a_{|^@|};}*]p_(||) <-> [{a_{|^@|};}*]p_(||)".asSequent,
+    useAt("[;] compose")(1, 0::Nil) & by(loopMergeb.fact)
+  )
+
+  /**
+    * {{{Axiom "<**> iterate iterate".
+    *    <{a;}*;{a;}*>p(||) <-> <{a;}*>p(||)
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val iterateiterated = derivedAxiom("<**> iterate iterate",
+    "==> <{a_{|^@|};}*;{a_{|^@|};}*>p_(||) <-> <{a_{|^@|};}*>p_(||)".asSequent,
+    useAt("<;> compose")(1, 0::Nil) & by(loopMerged.fact)
+  )
+
   //@todo this is somewhat indirect. Maybe it'd be better to represent derived axioms merely as Lemma and auto-wrap them within their ApplyRule[LookupLemma] tactics on demand.
   //private def useAt(lem: ApplyRule[LookupLemma]): PositionTactic = TactixLibrary.useAt(lem.rule.lemma.fact)
 
