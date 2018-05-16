@@ -76,9 +76,62 @@ class ODEInvarianceTests extends TacticTestBase {
   }
 
   it should "package with real induction" in withMathematica { qeTool =>
-    val fml = "-x<=0 & -y<=0 | x+y<=10 | y>=0 -> [{z'=2,x'=x+1,y'=1&x^2+y^2<1}] (-x<=0 & -y<=0 | x+y<=10 | y>=0)".asFormula
-    val pr = proveBy(fml, implyR(1) & sAIclosed(1)(1))
+    val fml = "-x<=0 & -y<=0 | x+y<=1 | y>=0 -> [{z'=2,x'=x+1,y'=1&x^2+y^2<1}] (-x<=0 & -y<=0 | x+y<=1 | y>=0)".asFormula
+    val pr = proveBy(fml, implyR(1) & sAIclosedPlus(0)(1))
     println(pr)
     pr shouldBe 'proved
+  }
+
+  it should "try some invariants (1)" in withMathematica { qeTool =>
+    val fml = "x^2+y^2>=1 -> [{x'=x-y^3, y'=x^3+y}]!(x^2+y^2<1/2)".asFormula
+    val pr = proveBy(fml, implyR(1) &
+      dC("(2*(x^2+y^2)-1>=0)".asFormula)(1) <(
+        dW(1) & QE,
+        sAIclosedPlus()(1) & QE
+      )
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "try some invariants (2)" in withMathematica { qeTool =>
+    val fml = "x=-1 & y=-1 -> [{x'=x*(x-2*y), y'=-(2*x-y)*y}]!(x>0 | y>0)".asFormula
+    //This is an invariant which cannot be proved by the current tactic
+    //It requires a higher dimensional DG
+    val pr = proveBy(fml, implyR(1) &
+      dC("((x<=0&x^2<=2*x*y)&y<=0)".asFormula)(1) <(
+        dW(1) & QE,
+        sAIclosedPlus(3)(1)
+      )
+    )
+    println(pr)
+    //pr shouldBe 'proved
+  }
+
+  it should "try some invariants (3)" in withMathematica { qeTool =>
+    //The disjunct x=0 should become "trivial" in the progress proof
+    val fml = "x <=0 | x=0 -> [{x'=x-1}] (x <=0 | x=0)".asFormula
+    val pr = proveBy(fml, implyR(1) &
+        sAIclosedPlus(3)(1)
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "try some invariants (4)" in withMathematica { qeTool =>
+    val fml = "(((y<=0&x<=0)&3*x<=2*y)&x<=1+y) -> [{x'=315*x^7+477*x^6*y-113*x^5*y^2+301*x^4*y^3-300*x^3*y^4-192*x^2*y^5+128*x*y^6-16*y^7,\n    y'=y*(2619*x^6-99*x^5*y-3249*x^4*y^2+1085*x^3*y^3+596*x^2*y^4-416*x*y^5+64*y^6)}] (((y<=0&x<=0)&3*x<=2*y)&x<=1+y)".asFormula
+    //Again, requires higher DG
+    val pr = proveBy(fml, implyR(1) &
+      sAIclosedPlus(1)(1)
+    )
+    println(pr)
+  }
+
+  it should "compute aggressive P*" in withMathematica { qeTool =>
+    val ode = "{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asDifferentialProgram
+    val dom = "c=0".asFormula
+    val poly = "max(min(z,min(x,y)),min(x,-abs(z)))".asTerm
+    val p1 = pStarHomPlus(ode,dom,poly,1)
+    println(p1)
   }
 }

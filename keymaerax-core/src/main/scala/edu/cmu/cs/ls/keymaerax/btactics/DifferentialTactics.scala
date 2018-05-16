@@ -1415,8 +1415,9 @@ private object DifferentialTactics extends Logging {
   private lazy val gtNorm: ProvableSig = proveBy("f_() > g_() <-> f_() - g_() > 0".asFormula,QE)
   private lazy val eqNorm: ProvableSig = proveBy(" f_() = g_() <-> f_() - g_() = 0 ".asFormula,QE)
   private lazy val deqNorm: ProvableSig = proveBy(" f_() != g_() <-> f_() - g_() != 0 ".asFormula,QE)
-  private lazy val minNorm:ProvableSig = proveBy("f()>=0&g()>=0<->min((f(),g()))>=0".asFormula,QE)
-  private lazy val maxNorm:ProvableSig = proveBy("f()>=0|g()>=0<->max((f(),g()))>=0".asFormula,QE)
+  private lazy val minNorm:ProvableSig = proveBy("f_()>=0&g_()>=0<->min((f_(),g_()))>=0".asFormula,QE)
+  private lazy val maxNorm:ProvableSig = proveBy("f_()>=0|g_()>=0<->max((f_(),g_()))>=0".asFormula,QE)
+  private lazy val eqNormAbs:ProvableSig = proveBy("f_() = g_()<-> -abs(f_()-g_())>=0".asFormula,QE)
 
   // Simplifier index that normalizes a single inequality to have 0 on the RHS
   def ineqNormalize(f:Formula,ctx:context) : List[ProvableSig] = {
@@ -1447,6 +1448,7 @@ private object DifferentialTactics extends Logging {
     f match{
       case GreaterEqual(l,r) => List(geNorm)
       case LessEqual(l,r) => List(leNorm)
+      case Equal(l,r) => List(eqNormAbs) //Special normalization for equalities
       case And(l,r) =>  List(minNorm)
       case Or(l,r) =>  List(maxNorm)
       case _ => throw new IllegalArgumentException("cannot normalize "+f+" to max/min >=0 normal form (must be a conjunction/disjunction of >=,<=)")

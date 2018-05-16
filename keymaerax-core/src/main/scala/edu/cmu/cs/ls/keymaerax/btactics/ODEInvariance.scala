@@ -24,7 +24,7 @@ import scala.collection.immutable._
 object ODEInvariance {
 
   private val namespace = "odeinvariance"
-
+  private def lieDer(ode:DifferentialProgram,p:Term) = DifferentialSaturation.simplifiedLieDerivative(ode, p, None)
   /* Temporary stash of derived axioms */
   lazy val geq = proveBy("f_()>=0 ==> f_()>0 | f_()=0".asSequent,QE)
   // TODO: maybe core's Cont axiom should be stated without DX?
@@ -56,9 +56,17 @@ object ODEInvariance {
   lazy val maxLemR =
     proveBy("g()>=0 -> max((f(),g()))>=0".asFormula,QE)
 
+  lazy val absLem =
+    proveBy("-abs(f())>=0<->f()=0".asFormula,QE)
+
   lazy val uniqMin =
     proveBy("<{c& min(f(||),g(||))>=0}>p(||) <-> <{c&f(||)>=0}>p(||) & <{c&g(||)>=0}>p(||)".asFormula,
       useAt(uniqAx)(1,1::Nil) & CE(PosInExpr(0::1::Nil)) & byUS(minLem)
+    )
+
+  lazy val refAbs =
+    proveBy("<{c& -abs(f(||))>=0}>p(||) <-> <{c&f(||)=0}>p(||)".asFormula,
+      CE(PosInExpr(0::1::Nil)) & byUS(absLem)
     )
 
   //Refine left/right of max
@@ -72,6 +80,7 @@ object ODEInvariance {
 
   private val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
   private val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
+  private val absF = Function("abs", None, Real, Real, interpreted=true)
 
   //Given a bound i, generate the local progress formula up to that bound
   // i.e. the i-th Lie derivative is strict
@@ -79,7 +88,7 @@ object ODEInvariance {
   def pStar(ode: DifferentialProgram,p:Term, bound: Int) : Formula ={
     if(bound <= 0) return Greater(p,Number(0))
     else{
-      val lie = DifferentialSaturation.simplifiedLieDerivative(ode, p, None)
+      val lie = lieDer(ode, p)
       val fml = pStar(ode,lie,bound-1)
       return And(GreaterEqual(p,Number(0)), Imply(Equal(p,Number(0)),fml))
     }
@@ -111,7 +120,7 @@ object ODEInvariance {
       case e => throw new BelleThrowable("Unknown shape: " + e)
     }
     //Maybe pass this as an argument to avoid recomputing
-    val lie = DifferentialSaturation.simplifiedLieDerivative(ode, p, None)
+    val lie = lieDer(ode, p)
 
     cutR(Or(Greater(p,Number(0)), Equal(p,Number(0))))(pos) <(
       //Left open for outer tactic (drops all other succedents)
@@ -157,40 +166,121 @@ object ODEInvariance {
       case _ => lpgeq(bound)
     }
 
-  //TODO: is it faster to use simplification + axioms or direct QE of the normal form?
-  //TODO: these are probably just duplicated elsewhere: should start a new file for all normalization tactics
-  private lazy val leNorm: ProvableSig = proveBy("f_() <= g_() <-> g_() - f_() >= 0".asFormula,QE)
-  private lazy val geNorm: ProvableSig = proveBy("f_() >= g_() <-> f_() - g_() >= 0".asFormula,QE)
-  private lazy val minNorm:ProvableSig = proveBy("f()>=0&g()>=0<->min((f(),g()))>=0".asFormula,QE)
-  private lazy val maxNorm:ProvableSig = proveBy("f()>=0|g()>=0<->max((f(),g()))>=0".asFormula,QE)
+  //An ADT encoding the "instruction" for the ODE tactic is
+  sealed trait Instruction
+  //Disjunctive instruction
+  case class Disj(left: Instruction, right:Instruction) extends Instruction
+  case class Conj(left: Instruction, right:Instruction) extends Instruction
+  //Prove atomic polynomial (in)equality with dI
+  case class DiffInv(equational:Boolean) extends Instruction //TODO: maybe keep around provables for re-use
+  //Prove atomic polynomial (in)equality with this cofactor
+  case class Darboux(cofactor : Term, equational:Boolean) extends Instruction //TODO: maybe keep around provables for re-use
+  //Prove atomic polynomial >= with this bound
+  case class Strict(bound : Int) extends Instruction
+  //Prove using closeF
+  case class Triv() extends Instruction
 
-  // Simplifier index that auto-normalizes a formula into max/min normal form
-  def maxMinNormalize(f:Formula,ctx:context) : List[ProvableSig] = {
-    f match{
-      case GreaterEqual(l,r) => List(geNorm)
-      case LessEqual(l,r) => List(leNorm)
-      case And(l,r) =>  List(minNorm)
-      case Or(l,r) =>  List(maxNorm)
-      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to max/min >=0 normal form")
+  //Reduce polynomial a by b directly, returning (q,r) where b = qa+r
+  private def polyReduce(a:Term, b:Term) : (Term,Term) ={
+    //TODO: remove dependence on algebra tool
+    if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable("reduction requires a AlgebraTool, but got None")
+    val algTool = ToolProvider.algebraTool().get
+    val quo = algTool.polynomialReduce(a,List(b))
+    val cofactor = quo._1.head
+    val rem = quo._2
+    return (cofactor,rem)
+  }
+  // A more exhaustive implementation
+  def pStarHomPlus(ode: DifferentialProgram, dom:Formula, p:Term, bound: Int) : (Formula,Instruction) = {
+    p match{
+      case FuncOf(f,Pair(l,r)) =>
+        if (f == maxF) {
+          val (lfml, linst) = pStarHomPlus(ode, dom, l, bound)
+          val (rfml, rinst) = pStarHomPlus(ode, dom, r, bound)
+          (Or(lfml, rfml), Disj(linst, rinst))
+        }
+        else if (f==minF) {
+          val (lfml, linst) = pStarHomPlus(ode, dom, l, bound)
+          val (rfml, rinst) = pStarHomPlus(ode, dom, r, bound)
+          (And(lfml, rfml), Conj(linst, rinst))
+        }
+        else ???
+      case Neg(FuncOf(a,p)) =>
+        if (a==absF) {
+          val lie = lieDer(ode, p)
+          val (q,r) = polyReduce(lie,p)
+          //Check if domain constraint implies r=0
+          println("Equational Lie:"+lie+" "+q+" "+r)
+          val pr = proveBy(Imply(dom,Equal(r,Number(0))),QE)
+          if(pr.isProved)
+            if(q == Number(0)) (Equal(p,Number(0)),DiffInv(true))
+            else (Equal(p,Number(0)),Darboux(q,true))
+          else
+            (False, Triv())
+        }
+        else ???
+      case _ => {
+        val lie = lieDer(ode, p)
+        val (q,r) = polyReduce(lie,p)
+        println("Inequational Lie:"+lie+" "+q+" "+r)
+        val pr = proveBy(Imply(dom,GreaterEqual(r,Number(0))),QE)
+        if(pr.isProved)
+          if(q == Number(0)) (GreaterEqual(p,Number(0)),DiffInv(false))
+          else (GreaterEqual(p,Number(0)),Darboux(q,false))
+        else
+          (pStar(ode, p, bound),Strict(bound))
+      }
     }
   }
 
-  // Prove closed semialgebraic invariants
+  //Assume the Q progress condition is at -1
+  def lpclosedPlus(inst:Instruction) : BelleExpr =
+    inst match{
+      case Darboux(t,eq) =>
+        (if(eq) useAt(refAbs)(1) else skip) &
+        DebuggingTactics.print("Darboux "+t+" "+eq) & implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DifferentialTactics.dgDbx(t)(1)
+      case Disj(l,r) =>
+        DebuggingTactics.print("DISJ") &
+        orL(-2) <(
+          useAt(refMaxL,PosInExpr(1::Nil))(1) & lpclosedPlus(l),
+          useAt(refMaxR,PosInExpr(1::Nil))(1) & lpclosedPlus(r))
+      case Conj(l,r) =>
+        DebuggingTactics.print("CONJ") &
+        andL(-2) & useAt(uniqMin,PosInExpr(0::Nil))(1) & andR(1) <(
+          hideL(-3) & lpclosedPlus(l),
+          hideL(-2) & lpclosedPlus(r)
+        )
+      case DiffInv(eq) =>
+        DebuggingTactics.print("DI "+eq) &
+        (if(eq) useAt(refAbs)(1) else skip) & implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & dI('full)(1)
+      case Strict(bound) =>
+        DebuggingTactics.print("Strict"+bound) &
+        hideL(-1) &
+        lpgeq(bound)
+      case Triv() =>
+        DebuggingTactics.print("Triv") &
+        closeF
+    }
+
+  // Prove closed semialgebraic invariants ++
   // Current assumptions (for completeness)
   // 1) domain constraint is open
-  // 2) only -strict- cases occur for higher Lie derivatives
-  def sAIclosed(bound:Int=1) : DependentPositionTactic = "sAIc" byWithInput (bound,(pos:Position,seq:Sequent) => {
+  // 2) only -strict- cases occur for higher Lie derivatives, OR
+  // 3) a Darboux inequality occurs
+  def sAIclosedPlus(bound:Int=1) : DependentPositionTactic = "sAIc" byWithInput (bound,(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only in top-level succedent")
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
       case _ => throw new BelleThrowable("sAI only at box ODE in succedent")
     }
-    val (f2,propt)=SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post, maxMinNormalize, SimplifierV3.emptyTaxs)
-    val (p,pf) = f2 match {
-      case GreaterEqual(p,r) if r == Number(0) => (p,pStarHom(ode,p,bound))
+    val (f2,propt)=SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post,
+      DifferentialTactics.maxMinNormalize, SimplifierV3.emptyTaxs)
+    val (p,(pf,inst)) = f2 match {
+      case GreaterEqual(p,r) if r == Number(0) => (p,pStarHomPlus(ode,dom,p,bound))
       case _ => throw new BelleThrowable("Normalization failed to reach a normal form "+f2)
     }
-    println(f2,propt,p,pf)
+    println("HOMPLUS:",p,pf,inst)
+
     //Rewrite postcondition to match real induction
     val (starter,imm) = propt match {
       case None => (skip,skip)
@@ -199,11 +289,12 @@ object ODEInvariance {
     starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
       implyR(pos) & imm & ?(closeId), //common case?
       cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
-      implyR(1) & hideL('Llast) & //Currently discards the diamond modality for domain constraints
-      cutR(pf)(1)<(
-        QE,
-        cohideR(1) & implyR(1) & lpclosed(bound,p)
-      )
+      implyR(1) & cutR(pf)(1)<(
+          hideL(-3) & DebuggingTactics.print("QE step") & QE,
+          cohide2(-3,1)& implyR(1) &
+            //DebuggingTactics.print("STATE") &
+            lpclosedPlus(inst)
+        )
     )
   })
 }
