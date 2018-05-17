@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr, RenUSubst}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, OnAll, PosInExpr, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allInstantiateInverse
 import edu.cmu.cs.ls.keymaerax.core._
@@ -1313,7 +1313,7 @@ object DerivedAxioms extends Logging {
       useAt("[*] iterate")(-1) & andL(-1) & close(-1,1)
       ,
       generalize("[{b_{|^@|};}*]q_(||)".asFormula)(1) <(
-        useAt(iiinduction.fact, PosInExpr(1::1::Nil))(1) & andR(1) <(
+        useAt(iiinduction.fact, PosInExpr(1::1::Nil))(1) <(
           close(-1,1)
           ,
           G(1) & useAt("[*] iterate")(1, 0::Nil) & prop
@@ -1335,12 +1335,12 @@ object DerivedAxioms extends Logging {
   lazy val Ieq = derivedAxiom("Ieq induction",
     "==> [{a_{|^@|};}*]p_(||) <-> p_(||) & [{a_{|^@|};}*](p_(||)->[a_{|^@|};]p_(||))".asSequent,
     equivR(1) <(
-      implyR(1) & andR(1) <(
+      andR(1) <(
         iterateb(-1) & andL(-1) & close(-1,1)
         ,
         useAt(backiterateb.fact)(-1) & andL(-1) & hideL(-1) & byUS(boxMonotone.fact) & implyR(1) & close(-1,1)
         ),
-      prop & done
+      useAt(iiinduction.fact, PosInExpr(1::1::Nil))(1) & OnAll(prop & done)
       )
   )
 
