@@ -26,7 +26,7 @@ object ODEInvariance {
 
   private val namespace = "odeinvariance"
   private def lieDer(ode:DifferentialProgram,p:Term) =
-      DifferentialSaturation.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
+      DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
 
   /* Temporary stash of derived axioms */
   lazy val geq = proveBy("f_()>=0 ==> f_()>0 | f_()=0".asSequent,QE)

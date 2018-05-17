@@ -10,6 +10,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver.AxiomaticODESolverExn
 import edu.cmu.cs.ls.keymaerax.btactics.{DLBySubst, FormulaTools, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tools.SimplificationTool
+import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 
 import scala.collection.immutable
 
@@ -229,6 +231,44 @@ object DifferentialHelper {
       TactixLibrary.Dassignb(1)*(StaticSemantics.boundVars(ode).symbols.count(_.isInstanceOf[DifferentialSymbol])))
     ).
       subgoals(1).succ(0)
+  }
+
+  //Simplification with either term simplifier or using simplification tool if available
+  def simpWithTool(tool: Option[SimplificationTool],t:Term) : Term = {
+    tool match {
+      case None => termSimp(t,emptyCtx,defaultTaxs)._1
+      case Some(tl) => tl.simplify(t,List())
+    }
+  }
+
+  // Computes and simplifies the lie derivative
+  // Firstly, it turns all remaining differentials into 0, then it simplifies and strips out things like x^0 = 1
+  // The simplifier can't do the last simplification with proof (since 0^0 is nasty)
+  def stripConstants(t:Term) : Term = {
+    t match {
+      case v:DifferentialSymbol => {
+        Number(0)
+      }
+      case bop:BinaryCompositeTerm => bop.reapply(stripConstants(bop.left),stripConstants(bop.right))
+      case uop:UnaryCompositeTerm => uop.reapply(stripConstants(uop.child))
+      case _ => t
+    }
+  }
+
+  def stripPowZero(t:Term) : Term = {
+    t match {
+      case Power(v,n:Number) if n.value.isValidInt && n.value.intValue()== 0 => Number(1)
+      case bop:BinaryCompositeTerm => bop.reapply(stripPowZero(bop.left),stripPowZero(bop.right))
+      case uop:UnaryCompositeTerm => uop.reapply(stripPowZero(uop.child))
+      case _ => t
+    }
+  }
+
+  def simplifiedLieDerivative(p:DifferentialProgram,t:Term, tool: Option[SimplificationTool]) : Term = {
+    val ld = stripConstants(lieDerivative(p,t))
+    val ts1 = simpWithTool(tool,ld)
+    val ts2 = simpWithTool(tool,stripPowZero(ts1))
+    ts2
   }
 
   /**

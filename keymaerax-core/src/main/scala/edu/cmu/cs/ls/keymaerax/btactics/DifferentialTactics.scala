@@ -985,7 +985,7 @@ private object DifferentialTactics extends Logging {
     //p>=0 or p>0
     val barrier = property.asInstanceOf[ComparisonFormula].left
 
-    val lie = DifferentialSaturation.simplifiedLieDerivative(system, barrier, tool)
+    val lie = DifferentialHelper.simplifiedLieDerivative(system, barrier, tool)
 
     val zero = Number(0)
     //The special max term
@@ -1053,6 +1053,7 @@ private object DifferentialTactics extends Logging {
     //normalized to have p on LHS
     val p = property.asInstanceOf[ComparisonFormula].left
 
+    //Use simplification tool if available
     val lie = DifferentialHelper.lieDerivative(system, p)
     val algTool = ToolProvider.algebraTool().get
     //val gb = p::domToTerms(dom)
