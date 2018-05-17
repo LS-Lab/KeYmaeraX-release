@@ -1,6 +1,7 @@
 package btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
+import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.ODEInvariance._
@@ -27,10 +28,14 @@ class ODEInvarianceTests extends TacticTestBase {
     val p2 = pStar(ode,poly,2)
     val p3 = pStar(ode,poly,3)
 
+    //println(p0)
+    //println(p1)
+    //println(p2)
+    //println(p3)
     p0 shouldBe "x+y*z>0".asFormula
-    p1 shouldBe "x+y*z>=0&(x+y*z=0->x^2+1+((2*x+y)*z+y*(x+y+z))>0)".asFormula
-    p2 shouldBe "x+y*z>=0&(x+y*z=0->x^2+1+((2*x+y)*z+y*(x+y+z))>=0&(x^2+1+((2*x+y)*z+y*(x+y+z))=0->2*x^(2-1)*(x^2+1)+0+((2*(x^2+1)+(2*x+y))*z+(2*x+y)*(x+y+z)+((2*x+y)*(x+y+z)+y*(x^2+1+(2*x+y)+(x+y+z))))>0))".asFormula
-    p3 shouldBe "x+y*z>=0&(x+y*z=0->x^2+1+((2*x+y)*z+y*(x+y+z))>=0&(x^2+1+((2*x+y)*z+y*(x+y+z))=0->2*x^(2-1)*(x^2+1)+0+((2*(x^2+1)+(2*x+y))*z+(2*x+y)*(x+y+z)+((2*x+y)*(x+y+z)+y*(x^2+1+(2*x+y)+(x+y+z))))>=0&(2*x^(2-1)*(x^2+1)+0+((2*(x^2+1)+(2*x+y))*z+(2*x+y)*(x+y+z)+((2*x+y)*(x+y+z)+y*(x^2+1+(2*x+y)+(x+y+z))))=0->2*((2-1)*x^(2-1-1)*(x^2+1))*(x^2+1)+2*x^(2-1)*(2*x^(2-1)*(x^2+1)+0)+0+((2*(2*x^(2-1)*(x^2+1)+0)+(2*(x^2+1)+(2*x+y)))*z+(2*(x^2+1)+(2*x+y))*(x+y+z)+((2*(x^2+1)+(2*x+y))*(x+y+z)+(2*x+y)*(x^2+1+(2*x+y)+(x+y+z)))+((2*(x^2+1)+(2*x+y))*(x+y+z)+(2*x+y)*(x^2+1+(2*x+y)+(x+y+z))+((2*x+y)*(x^2+1+(2*x+y)+(x+y+z))+y*(2*x^(2-1)*(x^2+1)+0+(2*(x^2+1)+(2*x+y))+(x^2+1+(2*x+y)+(x+y+z))))))>0)))".asFormula
+    p1 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>0)".asFormula
+    p2 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>0))".asFormula
+    p3 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>=0&(2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)=0->2+6*x^4+12*y+12*y^2+8*(1+y)*z+2*x^3*(6+y+2*z)+4*x^2*(8+3*y+2*z)+x*(12+37*y+18*z)>0)))".asFormula
   }
 
   it should "compute bounded P*" in withMathematica { qeTool =>
@@ -97,11 +102,11 @@ class ODEInvarianceTests extends TacticTestBase {
   it should "try some invariants (2)" in withMathematica { qeTool =>
     val fml = "x=-1 & y=-1 -> [{x'=x*(x-2*y), y'=-(2*x-y)*y}]!(x>0 | y>0)".asFormula
     //This is an invariant which cannot be proved by the current tactic
-    //It requires a higher dimensional DG
+    //But it could be proved by re-ordering in a smarter way
     val pr = proveBy(fml, implyR(1) &
       dC("((x<=0&x^2<=2*x*y)&y<=0)".asFormula)(1) <(
         dW(1) & QE,
-        sAIclosedPlus(3)(1)
+        (?(sAIclosedPlus(3)(1)))
       )
     )
     println(pr)
@@ -170,11 +175,24 @@ class ODEInvarianceTests extends TacticTestBase {
 
     //The actual invariant:
     val pr2 = proveBy(fml, implyR(1) &
-      dC("((x*y<=x^2+y^2&x+y<=2)&4*(x^2+y^2)<=1)&-1+4*x^2+4*y^2 < 0".asFormula)(1) <(
+      dC("x^2+y^2=0 | x^2+y^2!=0 & ((x*y<=x^2+y^2&x+y<=2)&4*(x^2+y^2)<=1)&-1+4*x^2+4*y^2 < 0".asFormula)(1) <(
         dW(1) & QE,
         sAIRankOne(1)
       )
     )
     println(pr2)
+  }
+
+  it should "prove van der pol" in withMathematica { qeTool =>
+    val fml = "1.25<=x&x<=1.55 & 2.35<=y&y<=2.45 -> [{x'=y, y'=y-x-x^2*y, t'=1 & 0<=t&t<=7}]!(y>=2.75)".asFormula
+    //The actual invariant:
+    val pr = proveBy(fml, implyR(1) &
+      dC("0.20595*x^4*y - 0.15329*x^4 - 1.1185*x^3*y + 1.7568*x^2*y^2 - 0.73732*x*y^3 + 0.13061*y^4 - 0.18577*x^3 - 0.12111*x^2*y + 0.074299*x*y^2 + 0.16623*y^3 - 1.6423*x^2 + 0.81389*x*y - 0.40302*y^2 - 0.88487*x + 0.35337*y - 3.7906<=0".asFormula)(1) <(
+        dW(1) & QE,
+        //dgBarrier(1)
+        sAIclosedPlus()(1) & QE
+      )
+    )
+    println(pr)
   }
 }
