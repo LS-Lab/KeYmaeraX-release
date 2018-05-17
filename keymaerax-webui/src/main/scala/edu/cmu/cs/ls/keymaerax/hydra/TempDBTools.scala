@@ -76,7 +76,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
   /** Prove model `modelContent` using tactic  `t`. Record the proof in the database and check that the recorded
     * tactic is the provided tactic. Returns the proof ID and resulting provable. */
   def proveByWithProofId(modelContent: String, t: BelleExpr,
-                         interpreter: Seq[IOListener] => Interpreter = SequentialInterpreter,
+                         interpreter: Seq[IOListener] => Interpreter = ExhaustiveSequentialInterpreter,
                          proofId: Option[Int] = None,
                          modelName: String = ""): (Int, ProvableSig) = {
     val s: Sequent = KeYmaeraXProblemParser.parseAsProblemOrFormula(modelContent) match {
@@ -115,7 +115,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
 
   /** Prove model `modelContent` using tactic  `t`. Record the proof in the database and check that the recorded
     * tactic is the provided tactic. Returns the resulting provable. */
-  def proveBy(modelContent: String, t: BelleExpr, interpreter: Seq[IOListener] => Interpreter = SequentialInterpreter,
+  def proveBy(modelContent: String, t: BelleExpr, interpreter: Seq[IOListener] => Interpreter = ExhaustiveSequentialInterpreter,
               modelName: String = ""): ProvableSig =
     proveByWithProofId(modelContent, t, interpreter, None, modelName)._2
 
@@ -128,7 +128,8 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
       case Some(node) => node.maker match {
         case Some(tactic) =>
           val localProofId = db.createProof(node.localProvable)
-          val interpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, DBTools.listener(db), SequentialInterpreter, level, strict=false)
+          val interpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof, DBTools.listener(db),
+            ExhaustiveSequentialInterpreter, level, strict=false)
           interpreter(BelleParser(tactic), BelleProvable(ProvableSig.startProof(node.localProvable.conclusion)))
           extractTactic(localProofId)
       }
@@ -147,7 +148,8 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
         val modelContent = KeYmaeraXPrettyPrinter(fml)
         val proofId = createProof(modelContent)
         val currInterpreter = BelleInterpreter.interpreter
-        val theInterpreter = SpoonFeedingInterpreter(proofId, -1, db.createProof, DBTools.listener(db), SequentialInterpreter)
+        val theInterpreter = SpoonFeedingInterpreter(proofId, -1, db.createProof, DBTools.listener(db),
+          ExhaustiveSequentialInterpreter)
         def interpreter(listeners: Seq[IOListener]): Interpreter = {
           //@note ignore listeners provided by db.proveByWithProofId, use own trace recording listener
           theInterpreter

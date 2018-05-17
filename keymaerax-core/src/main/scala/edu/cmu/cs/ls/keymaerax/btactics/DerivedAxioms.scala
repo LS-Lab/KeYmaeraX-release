@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr, RenUSubst}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, OnAll, PosInExpr, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allInstantiateInverse
 import edu.cmu.cs.ls.keymaerax.core._
@@ -1239,6 +1239,111 @@ object DerivedAxioms extends Logging {
       useAt("<*> iterate")(1) & prop & done
     )
   )
+
+  /**
+    * {{{Axiom "[**] iterate iterate".
+    *    [{a;}*;{a;}*]p(||) <-> [{a;}*]p(||)
+    * End.
+    * }}}
+    * @see Lemma 7.6 of textbook
+    * @Derived
+    */
+  lazy val iterateiterateb = derivedAxiom("[**] iterate iterate",
+    "==> [{a_{|^@|};}*;{a_{|^@|};}*]p_(||) <-> [{a_{|^@|};}*]p_(||)".asSequent,
+    useAt("[;] compose")(1, 0::Nil) & by(loopMergeb.fact)
+  )
+
+  /**
+    * {{{Axiom "<**> iterate iterate".
+    *    <{a;}*;{a;}*>p(||) <-> <{a;}*>p(||)
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val iterateiterated = derivedAxiom("<**> iterate iterate",
+    "==> <{a_{|^@|};}*;{a_{|^@|};}*>p_(||) <-> <{a_{|^@|};}*>p_(||)".asSequent,
+    useAt("<;> compose")(1, 0::Nil) & by(loopMerged.fact)
+  )
+
+  /**
+    * {{{Axiom "[*-] backiterate".
+    *    [{a;}*]p(||) <-> p(||) & [{a;}*][{a;}]p(||)
+    * End.
+    * }}}
+    * @see Lemma 7.5 in textbook
+    * @Derived for programs
+    */
+  lazy val backiterateb = derivedAxiom("[*-] backiterate",
+    "==> [{a_{|^@|};}*]p_(||) <-> p_(||) & [{a_{|^@|};}*][a_{|^@|};]p_(||)".asSequent,
+    equivR(1) <(
+      byUS(backiteratebnecc.fact),
+      by(backiteratebsuff.fact)
+      )
+  )
+
+  /**
+    * {{{Axiom "[*-] backiterate sufficiency".
+    *    [{a;}*]p(||) <- p(||) & [{a;}*][{a;}]p(||)
+    * End.
+    * }}}
+    * @see Lemma 7.5 in textbook
+    * @Derived for programs
+    */
+  lazy val backiteratebsuff = derivedAxiom("[*-] backiterate sufficiency",
+    "p_(||) & [{a_{|^@|};}*][a_{|^@|};]p_(||) ==> [{a_{|^@|};}*]p_(||)".asSequent,
+    andL(-1) & useAt(iiinduction.fact, PosInExpr(1::1::Nil))(1) <(
+      close(-1,1)
+      ,
+      hideL(-1) & byUS(boxMonotone.fact) & implyR(1) & close(-1,1)
+      )
+  )
+
+  /**
+    * {{{Axiom "[*-] backiterate necessity".
+    *    [{a;}*]p(||) -> p(||) & [{a;}*][{a;}]p(||)
+    * End.
+    * }}}
+    * @see Figure 7.8 in textbook
+    * @Derived for programs
+    */
+  lazy val backiteratebnecc = derivedAxiom("[*-] backiterate necessity",
+    "[{b_{|^@|};}*]q_(||) ==> q_(||) & [{b_{|^@|};}*][b_{|^@|};]q_(||)".asSequent,
+    andR(1) <(
+      useAt("[*] iterate")(-1) & andL(-1) & close(-1,1)
+      ,
+      generalize("[{b_{|^@|};}*]q_(||)".asFormula)(1) <(
+        useAt(iiinduction.fact, PosInExpr(1::1::Nil))(1) <(
+          close(-1,1)
+          ,
+          G(1) & useAt("[*] iterate")(1, 0::Nil) & prop
+          )
+        ,
+        implyRi()(-1,1) & byUS(loopApproxb.fact)
+        )
+      )
+  )
+
+  /**
+    * {{{Axiom "Ieq induction".
+    *    [{a;}*]p(||) <-> p(||) & [{a;}*](p(||)->[{a;}]p(||))
+    * End.
+    * }}}
+    * @see Section 7.7.4 in textbook
+    * @Derived for programs
+    */
+  lazy val Ieq = derivedAxiom("Ieq induction",
+    "==> [{a_{|^@|};}*]p_(||) <-> p_(||) & [{a_{|^@|};}*](p_(||)->[a_{|^@|};]p_(||))".asSequent,
+    equivR(1) <(
+      andR(1) <(
+        iterateb(-1) & andL(-1) & close(-1,1)
+        ,
+        useAt(backiterateb.fact)(-1) & andL(-1) & hideL(-1) & byUS(boxMonotone.fact) & implyR(1) & close(-1,1)
+        ),
+      useAt(iiinduction.fact, PosInExpr(1::1::Nil))(1) & OnAll(prop & done)
+      )
+  )
+
 
   //@todo this is somewhat indirect. Maybe it'd be better to represent derived axioms merely as Lemma and auto-wrap them within their ApplyRule[LookupLemma] tactics on demand.
   //private def useAt(lem: ApplyRule[LookupLemma]): PositionTactic = TactixLibrary.useAt(lem.rule.lemma.fact)

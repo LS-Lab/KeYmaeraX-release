@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, PosInExpr, SequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstractionObj, ProofTree}
@@ -22,7 +22,7 @@ class TraceRecordingTests extends FlatSpec with Matchers with BeforeAndAfterEach
   //@todo fill in reasonable data, this is bogus
   private val u = 999
   val listener = new TraceRecordingListener(db, 1337, Some(u), ProvableSig.startProof(True), 0, false, "TODO")
-  val theInterpreter = new SequentialInterpreter(Seq(listener))
+  val theInterpreter = new ExhaustiveSequentialInterpreter(Seq(listener))
   object TestLib extends UnifyUSCalculus
 
   override def beforeEach() = {

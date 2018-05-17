@@ -130,7 +130,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       (if (LOG_QE_DURATION) qeDurationListener::Nil else Nil) ++
       (if (LOG_QE_STDOUT) qeStdOutListener::Nil else Nil)
     dbTester = new Lazy(new TempDBTools(listeners))
-    BelleInterpreter.setInterpreter(registerInterpreter(SequentialInterpreter(listeners)))
+    BelleInterpreter.setInterpreter(registerInterpreter(LazySequentialInterpreter(listeners)))
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[Formula]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>

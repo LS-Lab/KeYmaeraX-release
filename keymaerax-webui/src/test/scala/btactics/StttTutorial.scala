@@ -307,9 +307,9 @@ class StttTutorial extends TacticTestBase {
         print("Use case") & speculativeQE,
         print("Step") & chase('R) & normalize & printIndexed("Normalized") <(
           //@todo position assertions not yet stored and extracted
-          printIndexed("Acc") & hideL(-9/*, "abs(y-ly)+v^2/(2*b) < lw".asFormula*/) & ode("a") &
+          printIndexed("Acc") & hideL(-9, "abs(y-ly())+v^2/(2*b()) < lw()".asFormula) & ode("a") &
             (alphaRule*) &
-            printIndexed("Before replaceTransform") & replaceTransform("ep()".asTerm, "c".asTerm)(-8) &
+            printIndexed("Before replaceTransform") & replaceTransform("ep()".asTerm, "c".asTerm)(-9, "abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()".asFormula) &
             prop & OnAll(speculativeQE),
           printIndexed("Stop") & ode("0") & prop & OnAll(speculativeQE),
           printIndexed("Brake") & ode("a") & prop & OnAll(speculativeQE)
@@ -333,7 +333,7 @@ class StttTutorial extends TacticTestBase {
         print("Step") & chase('R) & normalize & printIndexed("Normalized") <(
           printIndexed("Acc") & hideL(-9, "abs(y-ly())+v^2/(2*b()) < lw()".asFormula) & ode("a") &
             (alphaRule*) &
-            printIndexed("Before replaceTransform") & replaceTransform("ep()".asTerm, "c".asTerm)(-8) &
+            printIndexed("Before replaceTransform") & replaceTransform("ep()".asTerm, "c".asTerm)(-9, "abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()".asFormula) &
             prop & OnAll(speculativeQE),
           printIndexed("Stop") & ode("0") & prop & OnAll(speculativeQE),
           printIndexed("Brake") & ode("a") & prop & OnAll(speculativeQE)

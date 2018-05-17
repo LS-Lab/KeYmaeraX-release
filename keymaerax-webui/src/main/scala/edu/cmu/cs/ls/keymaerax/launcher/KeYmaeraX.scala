@@ -349,7 +349,7 @@ object KeYmaeraX {
       case tool => throw new Exception("Unknown tool " + tool)
     }
 
-    BelleInterpreter.setInterpreter(SequentialInterpreter())
+    BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
 
     val generator = new ConfigurableGenerator[Formula]()
@@ -617,7 +617,7 @@ object KeYmaeraX {
       case _ => false
     })
 
-    BelleInterpreter.setInterpreter(SequentialInterpreter(qeDurationListener::Nil))
+    BelleInterpreter.setInterpreter(LazySequentialInterpreter(qeDurationListener::Nil))
 
     archiveContent.foreach({case ParsedArchiveEntry(modelName, kind, fileContent, _, model: Formula, tactics, _) =>
       tactics.foreach({case (tacticName, tactic) =>

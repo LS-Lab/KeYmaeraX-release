@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import java.util.Calendar
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, Interpreter, SequentialInterpreter, SpoonFeedingInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
@@ -121,7 +121,7 @@ object DatabasePopulator extends Logging {
       new TraceRecordingListener(db, proofId, parentStep,
         globalProvable, branch, recursive = false, tacticName) :: Nil
     }
-    SpoonFeedingInterpreter(proofId, -1, db.createProof, listener, SequentialInterpreter)
+    SpoonFeedingInterpreter(proofId, -1, db.createProof, listener, LazySequentialInterpreter)
   }
 
   /** Executes the `tactic` on the `model` and records the tactic steps as proof in the database. */

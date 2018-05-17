@@ -1,13 +1,12 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, SequentialInterpreter, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, ExhaustiveSequentialInterpreter, SequentialInterpreter, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.{FormulaArg, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.Sequent
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable.IndexedSeq
-
 import org.scalatest.LoneElement._
 
 /**
@@ -33,7 +32,7 @@ class ProofTreeTests extends TacticTestBase {
 
     var tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 1
-    tree.openGoals.head.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait=true)
+    tree.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter, implyR(1), "implyR", wait=true)
 
     tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 2
@@ -63,7 +62,7 @@ class ProofTreeTests extends TacticTestBase {
 
     var tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 1
-    tree.openGoals.head.runTactic("guest", SequentialInterpreter, QE, "QE", wait=true)
+    tree.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter, QE, "QE", wait=true)
 
     tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 2
@@ -93,10 +92,10 @@ class ProofTreeTests extends TacticTestBase {
     val proofId = db.createProof(modelContent)
 
     var tree = DbProofTree(db.db, proofId.toString)
-    tree.openGoals.loneElement.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait=true)
+    tree.openGoals.loneElement.runTactic("guest", ExhaustiveSequentialInterpreter, implyR(1), "implyR", wait=true)
     tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals.loneElement.goal shouldBe Some("x>0 ==> [x:=x+1;]x>0".asSequent)
-    tree.openGoals.loneElement.runTactic("guest", SequentialInterpreter, solve(1), "solve", wait=true)
+    tree.openGoals.loneElement.runTactic("guest", ExhaustiveSequentialInterpreter, solve(1), "solve", wait=true)
     tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals.loneElement.goal shouldBe Some("x>0 ==> [x:=x+1;]x>0".asSequent)
   }
@@ -107,9 +106,9 @@ class ProofTreeTests extends TacticTestBase {
 
     var tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 1
-    tree.openGoals.head.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait=true)
+    tree.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter, implyR(1), "implyR", wait=true)
     tree = DbProofTree(db.db, proofId.toString)
-    tree.openGoals.head.runTactic("guest", SequentialInterpreter, QE, "QE", wait=true)
+    tree.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter, QE, "QE", wait=true)
 
     val rt = DbProofTree(db.db, proofId.toString)
     rt.nodes should have size 3
@@ -147,7 +146,7 @@ class ProofTreeTests extends TacticTestBase {
 
     var tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 1
-    tree.openGoals.head.runTactic("guest", SequentialInterpreter, cut("y=37".asFormula), "cut", wait = true)
+    tree.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter, cut("y=37".asFormula), "cut", wait = true)
 
     tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 3
@@ -176,9 +175,9 @@ class ProofTreeTests extends TacticTestBase {
 
     var tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 1
-    tree.openGoals.head.runTactic("guest", SequentialInterpreter, cut("y=37".asFormula), "cut", wait = true)
+    tree.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter, cut("y=37".asFormula), "cut", wait = true)
     tree = DbProofTree(db.db, proofId.toString)
-    tree.openGoals.head.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait = true)
+    tree.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter, implyR(1), "implyR", wait = true)
 
     tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 4
@@ -232,7 +231,7 @@ class ProofTreeTests extends TacticTestBase {
     val modelContent = "Variables. R x. End. Problem. x>0->x>0 End."
     val proofId = db.createProof(modelContent)
     var tree = DbProofTree(db.db, proofId.toString)
-    tree.openGoals.head.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait=true)
+    tree.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter, implyR(1), "implyR", wait=true)
     tree = DbProofTree(db.db, proofId.toString)
     val tactics = tree.openGoals.head.applicableTacticsAt(AntePosition(1), Some(SuccPosition(1)))
     tactics should have size 1
@@ -264,8 +263,8 @@ class ProofTreeTests extends TacticTestBase {
       ft.openGoals.zip(st.openGoals).foreach({ case (ftn, stn) => ftn.goal shouldBe stn.goal })
       ft.openGoals.head.applicableTacticsAt(SuccPosition(1)) shouldBe st.openGoals.head.applicableTacticsAt(SuccPosition(1))
 
-      if (i % 2 == 1) ft.openGoals.head.runTactic("guest", SequentialInterpreter, implyRi, "implyRi", wait = true)
-      else ft.openGoals.head.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait = true)
+      if (i % 2 == 1) ft.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter, implyRi, "implyRi", wait = true)
+      else ft.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter, implyR(1), "implyR", wait = true)
     }
   }
 
@@ -284,8 +283,8 @@ class ProofTreeTests extends TacticTestBase {
 
       ft.openGoals.head.applicableTacticsAt(SuccPosition(1)) shouldBe st.openGoals.head.applicableTacticsAt(SuccPosition(1))
 
-      if (i % 2 == 1) ft.openGoals.head.runTactic("guest", SequentialInterpreter, implyRi, "implyRi", wait = true)
-      else ft.openGoals.head.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait = true)
+      if (i % 2 == 1) ft.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter, implyRi, "implyRi", wait = true)
+      else ft.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter, implyR(1), "implyR", wait = true)
     }
   }
 
@@ -295,7 +294,7 @@ class ProofTreeTests extends TacticTestBase {
 
     var tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 1
-    tree.openGoals.head.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait=true)
+    tree.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter, implyR(1), "implyR", wait=true)
 
     tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 2
@@ -316,9 +315,9 @@ class ProofTreeTests extends TacticTestBase {
 
     var tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 1
-    tree.openGoals.head.runTactic("guest", SequentialInterpreter, cut("y=37".asFormula), "cut", wait = true)
+    tree.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter, cut("y=37".asFormula), "cut", wait = true)
     tree = DbProofTree(db.db, proofId.toString)
-    tree.openGoals.head.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait = true)
+    tree.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter, implyR(1), "implyR", wait = true)
 
     tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 4
@@ -345,9 +344,9 @@ class ProofTreeTests extends TacticTestBase {
 
     var tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 1
-    tree.openGoals.head.runTactic("guest", SequentialInterpreter, cut("y=37".asFormula), "cut", wait = true)
+    tree.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter, cut("y=37".asFormula), "cut", wait = true)
     tree = DbProofTree(db.db, proofId.toString)
-    tree.openGoals.head.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait = true)
+    tree.openGoals.head.runTactic("guest", ExhaustiveSequentialInterpreter, implyR(1), "implyR", wait = true)
 
     tree = DbProofTree(db.db, proofId.toString)
     tree.nodes should have size 4
@@ -394,8 +393,8 @@ class ProofTreeTests extends TacticTestBase {
 
       val tacticSuggestionFetch = System.currentTimeMillis()
 
-      if (i%2==1) goals.head.runTactic("guest", SequentialInterpreter, implyRi, "implyRi", wait=true)
-      else goals.head.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait=true)
+      if (i%2==1) goals.head.runTactic("guest", ExhaustiveSequentialInterpreter, implyRi, "implyRi", wait=true)
+      else goals.head.runTactic("guest", ExhaustiveSequentialInterpreter, implyR(1), "implyR", wait=true)
       val tacticExecuted = System.currentTimeMillis()
 
       val end = System.currentTimeMillis()
@@ -439,8 +438,8 @@ class ProofTreeTests extends TacticTestBase {
       if (i%2==1) tactics shouldBe empty
       else { tactics should have size 1; tactics.head._1.codeName shouldBe "implyR" }
 
-      if (i%2==1) goals.head.runTactic("guest", SequentialInterpreter, implyRi, "implyRi", wait=true)
-      else goals.head.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait=true)
+      if (i%2==1) goals.head.runTactic("guest", ExhaustiveSequentialInterpreter, implyRi, "implyRi", wait=true)
+      else goals.head.runTactic("guest", ExhaustiveSequentialInterpreter, implyR(1), "implyR", wait=true)
 
       val end = System.currentTimeMillis()
       durations(i) = end-start
@@ -482,8 +481,8 @@ class ProofTreeTests extends TacticTestBase {
         if (i%2==0) tactics shouldBe empty
         else { tactics should have size 1; tactics.head._1.codeName shouldBe "implyR" }
 
-        if (i%2==0) goals.head.runTactic("guest", SequentialInterpreter, implyRi, "implyRi", wait=true)
-        else goals.head.runTactic("guest", SequentialInterpreter, implyR(1), "implyR", wait=true)
+        if (i%2==0) goals.head.runTactic("guest", ExhaustiveSequentialInterpreter, implyRi, "implyRi", wait=true)
+        else goals.head.runTactic("guest", ExhaustiveSequentialInterpreter, implyR(1), "implyR", wait=true)
 
         val end = System.currentTimeMillis()
         avg(proof) = (avg(proof)*(i-1) + (end-start))/i
