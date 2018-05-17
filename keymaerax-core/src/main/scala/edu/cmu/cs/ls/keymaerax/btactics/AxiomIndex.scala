@@ -48,7 +48,6 @@ object AxiomIndex extends Logging {
     case "[d] dual"    | "<d> dual" | "[d] dual direct"    | "<d> dual direct"    => (PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)
 
     case "DW base"              => (PosInExpr(Nil), Nil)
-    case "contInvGen" => (PosInExpr(0::Nil), unknown)
     case "DC differential cut" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
     case "DCd diamond differential cut" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
     case "DE differential effect" | "DE differential effect (system)" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)

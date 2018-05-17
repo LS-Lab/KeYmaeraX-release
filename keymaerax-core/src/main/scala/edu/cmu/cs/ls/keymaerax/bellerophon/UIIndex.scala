@@ -118,7 +118,7 @@ object UIIndex {
             case _: DifferentialProduct => "DE differential effect (system)" :: "dW" :: "dC" :: rules
             case _ => rules
           }
-          case ODESystem(_, _) => ("ODE" :: "solve" :: "dC" :: "dI" ::  "dW" :: "dG" :: "contInvGen" :: Nil) ++ rules
+          case ODESystem(_, _) => ("ODE" :: "solve" :: "dC" :: "dI" ::  "dW" :: "dG" :: Nil) ++ rules
           case _ => rules
         }
 
