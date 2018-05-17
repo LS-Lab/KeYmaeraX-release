@@ -536,7 +536,7 @@ class ODETests extends TacticTestBase {
           dC("x-x1 < 0".asFormula)(1) < ( closeId,closeId) )
         ,
         hideR(1) & dC("x >= x0".asFormula)(1)
-        <( dC("x-x1 >= (x0-x1)+x0*t".asFormula)(1) <(dW(1)&QE,dI('full)(1)), openDiffInd(1))
+        <( dC("x-x1 >= (x0-x1)+x0*t".asFormula)(1) <(dW(1)&QE,dI('full)(1)), ODE(1))
       )
     )
     pr shouldBe 'proved
