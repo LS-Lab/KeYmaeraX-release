@@ -126,6 +126,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove [*-] backiterate sufficiency" in {check(backiteratebsuff)}
   it should "prove [*-] backiterate necessity" in {check(backiteratebnecc)}
   it should "prove [*-] backiterate" in {check(backiterateb)}
+  it should "prove Ieq induction" in {check(Ieq)}
   it should "prove [d] dual" in {check(dualbAxiom)}
   it should "prove [d] dual direct" in {check(dualbDirectAxiom)}
   it should "prove <d> dual direct" in {check(dualdDirectAxiom)}
