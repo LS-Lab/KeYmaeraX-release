@@ -376,7 +376,7 @@ object ODEInvariance {
         hideL(-2) & recRankOneTac(l)
       )
       case Or(l,r) => ???
-      case _ => (dgDbxAuto(1) & done) | dgBarrier(1)
+      case _ => (DifferentialTactics.dgDbxAuto(1) & done) | DifferentialTactics.dgBarrier()(1)
     })
   }
 
