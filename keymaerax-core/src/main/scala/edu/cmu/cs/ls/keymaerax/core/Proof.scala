@@ -580,7 +580,7 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
     r => r.subgoals == immutable.List(r.conclusion), "sub Provable is an unfinished Provable")
 
   override def toString: String = "Provable(" + conclusion + (if (isProved) " proved" else "\n  from   " + subgoals.mkString("\n  with   ")) + ")"
-  def prettyString: String = "Provable(" + conclusion.prettyString + (if (isProved) " proved" else "\n  from   " + subgoals.map(_.prettyString).mkString("\n  with   ")) + ")"
+  def prettyString: String = "Provable{" + (if (isProved) conclusion.prettyString + " proved" else "\n" + conclusion.prettyString + "\n  from\n" + subgoals.map(_.prettyString).mkString("\n  with\n")) + "}"
 }
 
 

@@ -1348,7 +1348,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val (localProvable, parentStep, parentRule) = (node.localProvable, node.children.head.maker.get, node.children.head.makerShortName.get)
         val localProofId = db.createProof(localProvable)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof,
-          RequestHelper.listenerFactory(db), SequentialInterpreter, 1, strict=false)
+          RequestHelper.listenerFactory(db), ExhaustiveSequentialInterpreter, 1, strict=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(localProvable))
         innerInterpreter.kill()
@@ -1668,7 +1668,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 
             def interpreter(proofId: Int, startNodeId: Int) = new Interpreter {
               val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof, RequestHelper.listenerFactory(db),
-                SequentialInterpreter, 0, strict = false)
+                ExhaustiveSequentialInterpreter, 0, strict = false)
 
               override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
                 inner(expr, v)
@@ -1705,7 +1705,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               }
             } else {
               //@note execute clicked single-step tactics on sequential interpreter right away
-              val taskId = node.runTactic(userId, SequentialInterpreter, appliedExpr, ruleName)
+              val taskId = node.runTactic(userId, ExhaustiveSequentialInterpreter, appliedExpr, ruleName)
               RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
             }
           } catch {
@@ -1738,7 +1738,7 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
             //@note if spoonfeeding interpreter fails, try sequential interpreter so that tactics at least proofcheck
             //      even if browsing then shows a single step only
             val tree: ProofTree = DbProofTree(db, proofId)
-            val taskId = tree.root.runTactic(userId, SequentialInterpreter, tactic, "custom")
+            val taskId = tree.root.runTactic(userId, ExhaustiveSequentialInterpreter, tactic, "custom")
             RunBelleTermResponse(proofId, "()", taskId) :: Nil
         }
     }

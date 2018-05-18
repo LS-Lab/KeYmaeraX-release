@@ -308,7 +308,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       case it if 20 until 30 contains it => Assign(vars(rand.nextInt(vars.length)), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))
       case it if (30 until 35 contains it) && diffs => Assign(DifferentialSymbol(vars(rand.nextInt(vars.length))), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))
       case it if 35 until 40 contains it => AssignAny(vars(rand.nextInt(vars.length)))
-      case it if (40 until 50 contains it) && diffs => ODESystem(nextDP(vars, n, dotTs=dotTs, funcs=funcs), nextF(vars, n-1, true, dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs,duals=duals))
+      case it if (40 until 50 contains it) && diffs => ODESystem(nextDP(vars, n, dotTs=dotTs, funcs=funcs), nextF(vars, n-1, true, dotTs=dotTs,dotFs=dotFs,diffs=false,funcs=funcs,duals=duals))
       case it if 50 until 100 contains it => Choice(nextP(vars, n-1, dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs,duals=duals), nextP(vars, n-1, dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs,duals=duals))
       case it if 100 until 150 contains it => Compose(nextP(vars, n-1, dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs,duals=duals), nextP(vars, n-1, dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs,duals=duals))
       case it if (190 until 220 contains it) && duals => Dual(nextP(vars, n-1, dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs,duals=duals))

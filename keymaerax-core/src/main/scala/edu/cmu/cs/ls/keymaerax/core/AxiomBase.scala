@@ -370,9 +370,22 @@ Axiom "DV differential variant >=".
   <{c&true}>f(||)>=g(||) <- \exists e_ (e_>0 & [{c&true}](f(||)<=g(||) -> f(||)'>=g(||)'+e_))
 End.
 
-/** Extended differential equations axioms https://arxiv.org/abs/1802.01226 */
 Axiom "DMP differential modus ponens".
   ([{c&q(||)}]p(||) <- [{c&r(||)}]p(||)) <- [{c&q(||)}](q(||) -> r(||))
+End.
+
+Axiom "Uniq uniqueness".
+  <{c&q1(||)}>p1(||) & <{c&q2(||)}>p2(||) -> <{c&q1(||) & q2(||)}>(p1(||) | p2 (||))
+End.
+
+Axiom "Cont continuous existence".
+  f(||) > 0 -> <{t_'=1,c&f(||)>0}>t_!=0
+End.
+
+Axiom "RI& closed real induction >=".
+  [{c{|t_|}&q(|t_|)}]f(|t_|)>=0 <->
+  (q(|t_|) ->f(|t_|)>=0) &
+  [{{c{|t_|}&q(|t_|) & f(|t_|)>=0};t_:=0;}] (<{t_'=1,c{|t_|}&q(|t_|)}>t_!=0 -> <{t_'=1,c{|t_|}&f(|t_|)>=0}>t_!=0)
 End.
 
 Axiom "c()' derive constant fn".

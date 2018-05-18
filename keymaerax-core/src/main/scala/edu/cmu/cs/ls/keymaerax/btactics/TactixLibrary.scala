@@ -193,12 +193,19 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   // conditional tactics
 
-  /** Call/label the current proof branch s
-   *
-   * @see [[Idioms.<()]]
-   * @see [[sublabel()]]
-   */
-  def label(s: String): BelleExpr = LabelBranch(BelleTopLevelLabel(s))
+  /** Call/label the current proof branch by the given label s.
+    * @see [[Idioms.<()]]
+    * @see [[sublabel()]]
+    * @see [[BelleLabels]]
+    */
+  def label(s: BelleLabel): BelleExpr = LabelBranch(s)
+
+  /** Call/label the current proof branch by the top-level label s.
+    *
+    * @see [[Idioms.<()]]
+    * @see [[sublabel()]]
+    */
+  def label(s: String): BelleExpr = label(BelleTopLevelLabel(s))
 
   /** Mark the current proof branch and all subbranches s
     *
@@ -331,7 +338,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         USubst(bounds.map(xi=> {i=i+1; SubstitutionPair(DotTerm(Real,Some(i)), xi)}))
       val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp=>sp.what.prettyString).mkString(",") + ")")
       SearchAndRescueAgain(jj,
-        loop(subst(jj))(1) < (nil, nil, chase(1)),
+        //@todo OnAll(ifThenElse(shape [a]P, chase(1.0) , skip)) instead of | to chase away modal postconditions
+        loop(subst(jj))(1) < (nil, nil, chase(1) & OnAll(chase(1, List(0)) | skip)),
         feedOneAfterTheOther(cand),
         //@todo switch to quickstop mode
         OnAll(master()) & done
@@ -420,6 +428,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     */
   //@todo("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
   def dC(formulas: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(formulas:_*)
+
+  def dR(formula: Formula, hide:Boolean=true) : DependentPositionTactic = DifferentialTactics.diffRefine(formula,hide)
 
   /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * (uses DI, DW, DE, QE)

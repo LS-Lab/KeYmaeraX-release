@@ -203,6 +203,15 @@ object DerivationInfo {
     new DerivedAxiomInfo("DR differential refine"
       , InputAxiomDisplayInfo("DR","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>←[{x′=f(x)&R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
       , "DR", {case () => HilbertCalculus.useAt("DR differential refine")}),
+    new DerivedAxiomInfo("DR<> differential refine"
+      , InputAxiomDisplayInfo("DRd","(<span class=\"k4-axiom-key\"><{x′=f(x)&Q}>P</span>←<{x′=f(x)&R}>P)←[{x′=f(x)&R}]Q", List(FormulaArg("R")))
+      , "DRd", {case () => HilbertCalculus.useAt("DR<> differential refine")}),
+    new CoreAxiomInfo("RI& closed real induction >=", "RI& >=", "RIclosedgeq",
+      {case () => HilbertCalculus.useAt("RI& closed real induction >=")}),
+    new CoreAxiomInfo("Cont continuous existence", "Cont", "Cont",
+      {case () => HilbertCalculus.useAt("Cont continuous existence")}),
+    new CoreAxiomInfo("Uniq uniqueness", "Uniq", "Uniq",
+      {case () => HilbertCalculus.useAt("Uniq uniqueness")}),
     new InputPositionTacticInfo("autoApproximate",
       RuleDisplayInfo("Approximate",
         (List("&Gamma;"), List("[{X'=F & &Alpha;(n)}]", "&Delta;")),
@@ -528,7 +537,13 @@ object DerivationInfo {
     new DerivedAxiomInfo("[*] approx", "[*] approx", "loopApproxb", {case () => useAt(DerivedAxioms.loopApproxb)}),
     new DerivedAxiomInfo("[*] merge", "[*] merge", "loopMergeb", {case () => useAt(DerivedAxioms.loopMergeb)}),
     new DerivedAxiomInfo("<*> merge", "<*> merge", "loopMerged", {case () => useAt(DerivedAxioms.loopMerged)}),
+    new DerivedAxiomInfo("[**] iterate iterate", "[**]", "iterateiterateb", {case () => useAt(DerivedAxioms.iterateiterateb)}),
+    new DerivedAxiomInfo("<**> iterate iterate", "<**>", "iterateiterated", {case () => useAt(DerivedAxioms.iterateiterated)}),
+    new DerivedAxiomInfo("[*-] backiterate", "[*-]", "backiterateb", {case () => useAt(DerivedAxioms.backiterateb)}),
+    new DerivedAxiomInfo("[*-] backiterate necessity", "[*-] backiterate necessity", "backiteratebnecc", {case () => useAt(DerivedAxioms.backiteratebnecc)}),
+    new DerivedAxiomInfo("[*-] backiterate sufficiency", "[*-] backiterate sufficiency", "backiteratebsuff", {case () => useAt(DerivedAxioms.backiteratebsuff)}),
     new DerivedAxiomInfo("II induction", "II induction", "IIinduction", {case () => useAt(DerivedAxioms.iiinduction)}),
+    new DerivedAxiomInfo("Ieq induction", "I", "Ieq", {case () => useAt(DerivedAxioms.Ieq)}),
   //@todo might have a better name
     new DerivedAxiomInfo("exists generalize", ("∃G","existsG"), "existsGeneralize", {case () => useAt(DerivedAxioms.existsGeneralize)}),
     new DerivedAxiomInfo("all substitute", ("∀S","allS"), "allSubstitute", {case () => useAt(DerivedAxioms.allSubstitute)}),

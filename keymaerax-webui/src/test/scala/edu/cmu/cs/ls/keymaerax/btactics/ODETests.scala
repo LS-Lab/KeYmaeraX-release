@@ -668,9 +668,9 @@ class ODETests extends TacticTestBase {
     val fml = "(x+15)^2 + (y-17)^2 - 1 <= 0 -> [{x'=y^2, y'=x*y}] (x-11)^2+(y-33/2)^2-1>0".asFormula
     val pr = proveBy(fml,implyR(1) &
       cut("\\exists u1 \\exists u3 ( (u1^2+u3^2) !=0 & u1 -u3*(x^2-y^2)=0)".asFormula)
-      <(
-        (existsL('L)*) & dC("u1-u3*(x^2-y^2)=0".asFormula)(1)
         <(
+        (existsL('L)*) & dC("u1-u3*(x^2-y^2)=0".asFormula)(1)
+          <(
           dW(1) & QE,
           dI('full)(1)
         ),

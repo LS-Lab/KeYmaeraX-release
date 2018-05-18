@@ -210,7 +210,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       val nondetPlant = plantVars.map(AssignAny).reduceRight(Compose)
 
       val pl = proofListener(name, plantVars.toSet, q, x0)
-      SequentialInterpreter(pl::Nil)(tactic, BelleProvable(ProvableSig.startProof(fml)))
+      LazySequentialInterpreter(pl::Nil)(tactic, BelleProvable(ProvableSig.startProof(fml)))
 
       val diffInvariants = pl.diffInvariants.map(replaceOld(_, x0)).map(f => FormulaTools.conjuncts(f).toSet[Formula]).map(_.reduceRightOption(And).getOrElse(True)).reduceRightOption(Or).getOrElse(True)
       val evolDomain = if (q == True) diffInvariants else And(q, diffInvariants)
@@ -245,7 +245,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
         val x0 = senseVars.map(v => v -> BaseVariable(v.name, TacticHelper.freshIndexInFormula(v.name, formula))).toMap
 
         val pl = proofListener(name, senseVars.toSet, q, x0)
-        SequentialInterpreter(pl::Nil)(tactic, BelleProvable(ProvableSig.startProof(formula)))
+        LazySequentialInterpreter(pl::Nil)(tactic, BelleProvable(ProvableSig.startProof(formula)))
 
         val plantApprox = pl.diffInvariants.flatMap(f => FormulaTools.conjuncts(f)).toSet[Formula].reduceRightOption(And).getOrElse(True)
 
@@ -330,7 +330,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
         val readConsts = consts.values.toList.sorted[NamedSymbol].map(AssignAny).reduceOption(Compose).getOrElse(Test(True))
 
         val pl = proofListener(name, senseVars.toSet, q, x0)
-        SequentialInterpreter(pl::Nil)(tactic, BelleProvable(ProvableSig.startProof(formula)))
+        LazySequentialInterpreter(pl::Nil)(tactic, BelleProvable(ProvableSig.startProof(formula)))
         val inv = replace(pl.invariant.get, consts)
 
         val plantApprox = (pl.diffInvariants :+ q).

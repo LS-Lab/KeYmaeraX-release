@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.launcher
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, DependentTactic, Interpreter, SequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.CoasterXTestLib.{CoasterStats, ComponentStats, countVars, doStats}
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx.{CoasterXParser, CoasterXProver, CoasterXSpec, CoasterXTestLib}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
@@ -49,7 +49,7 @@ object CoasterXMain {
     val listeners = (if (LOG_QE) qeListener::Nil else Nil) ++
       (if (LOG_EARLIEST_QE) allPotentialQEListener::Nil else Nil) ++
       (if (LOG_QE_DURATION) qeDurationListener::Nil else Nil)
-    BelleInterpreter.setInterpreter(registerInterpreter(SequentialInterpreter(listeners)))
+    BelleInterpreter.setInterpreter(registerInterpreter(ExhaustiveSequentialInterpreter(listeners)))
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXNoContractPrettyPrinter)
     val generator = new ConfigurableGenerator[Formula]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
@@ -187,7 +187,7 @@ object CoasterXMain {
     val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
 
     //@note setup interpreter
-    BelleInterpreter.setInterpreter(SequentialInterpreter())
+    BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
     //@note pretty printer setup must be first, otherwise derived axioms print wrong
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXNoContractPrettyPrinter)
     // connect invariant generator to tactix library
