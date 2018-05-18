@@ -152,6 +152,7 @@ object InvariantProvers {
         finishOff
       ) | (
         // pass-through rescue phase
+        DebuggingTactics.print("loopPostMaster commits " + candidate) &
         loop(candidate)(pos) < (master(), master(),
           chase(pos) & OnAll(propChase) & OnAll((chase(pos ++ PosInExpr(1::Nil)) | skip) & (QE() | skip))
           ) & finishOff
