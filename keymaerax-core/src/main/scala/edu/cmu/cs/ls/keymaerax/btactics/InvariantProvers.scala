@@ -65,4 +65,40 @@ object InvariantProvers {
       else
         throw new BelleThrowable("loopSR ran out of loop invariant candidates")
   }
+
+  def loopPostMaster(gen: Generator[Formula]): DependentPositionTactic = "loopPostMaster" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
+    case loopfml@Box(prog, post) =>
+      //val cand: Iterator[Formula] = gen(seq, pos)
+      val bounds: List[Variable] =
+        if (StaticSemantics.freeVars(post).toSet.exists( v => v.isInstanceOf[DifferentialSymbol] ) )
+          StaticSemantics.boundVars(loopfml).toSet.toList
+        else DependencyAnalysis.dependencies(prog, DependencyAnalysis.freeVars(post))._1.toList
+      var i = -1
+      val subst: USubst = if (bounds.length==1)
+        USubst(Seq(SubstitutionPair(DotTerm(), bounds.head)))
+      else
+        USubst(bounds.map(xi=> {i=i+1; SubstitutionPair(DotTerm(Real,Some(i)), xi)}))
+      val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp=>sp.what.prettyString).mkString(",") + ")")
+      val jja: Formula = KeYmaeraXParser.formulaParser("jja()")
+      SearchAndRescueAgain(jj,
+        //@todo OnAll(ifThenElse(shape [a]P, chase(1.0) , skip)) instead of | to chase away modal postconditions
+        loop(subst(jj))(1) < (nil, nil,
+          cut(jja) <(
+            /* show postponed */ cohide(Find.FindR(0, Some(jja)))
+            ,
+            /* use */
+            chase(1) & OnAll(propChase) & OnAll((chase(1, List(0)) | skip) & (QE() | skip))
+            )
+          ),
+        ???, //feedOneAfterTheOther(cand),
+        //@todo switch to quickstop mode
+        //@todo if (ODE) then ODEInvariance.sAIclosedPlus(1) else ....
+        //@todo plug in true for jja, commit if succeeded. Else plug in init for jja and generate
+        OnAll(ODEInvariance.sAIclosedPlus(1)) & done
+      )
+    case e => throw new BelleThrowable("Wrong shape to generate an invariant for " + e + " at position " + pos)
+  })
+
+  //@todo this is a suboptimal emulation for propositional chase on (1)
+  def propChase = normalize
 }
