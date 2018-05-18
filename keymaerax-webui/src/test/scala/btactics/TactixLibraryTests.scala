@@ -223,7 +223,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
 
   "sAI" should "prove x>=0 -> [{x'=2}]x>=0" in withMathematica{qeTool =>
     val fml = "x>=0 -> [{x'=2}]x>=0".asFormula
-    proveBy(fml, implyR(1) & ODEInvariance.sAIclosedPlus(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & ODEInvariance.sAIclosedPlus()(1)) shouldBe 'proved
   }
 
   "loopPostMaster" should "find an invariant for x=5-> [{x:=x+2;{x'=1}}*]x>=0" in withMathematica{qeTool =>
