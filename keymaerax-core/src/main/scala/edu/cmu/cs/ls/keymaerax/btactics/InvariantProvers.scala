@@ -114,6 +114,7 @@ object InvariantProvers {
                       if (proveBy(wouldBeSeq, finishOff).isProved) {
                         // proof will work so no need to change candidate
                       } else {
+                        println("loopPostMaster progressing")
                         val assumeMoreSeq = USubst(Seq(jjl ~>> candidate, SubstitutionPair(jja,initialCond)))(seq)
                         candidate = gen(assumeMoreSeq, pos).next()
                         progress = true

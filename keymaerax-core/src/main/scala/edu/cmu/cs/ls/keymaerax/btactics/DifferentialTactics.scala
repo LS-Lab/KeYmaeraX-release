@@ -1367,7 +1367,7 @@ private object DifferentialTactics extends Logging {
   }
 
   /** Indicates whether there is an ODE at the indicated position of a sequent */
-  private val isODE: (Sequent,Position)=>Boolean = (sequent,pos) => {
+  val isODE: (Sequent,Position)=>Boolean = (sequent,pos) => {
     sequent.sub(pos) match {
       case Some(Box(_: ODESystem, _))     => true
       case Some(Diamond(_: ODESystem, _)) => true
@@ -1377,7 +1377,7 @@ private object DifferentialTactics extends Logging {
   }
 
   /** Indicates whether there is a proper ODE System at the indicated position of a sequent with >=2 ODEs */
-  private val isODESystem: (Sequent,Position)=>Boolean = (sequent,pos) => {
+  val isODESystem: (Sequent,Position)=>Boolean = (sequent,pos) => {
     sequent.sub(pos) match {
       case Some(Box(ODESystem(_:DifferentialProduct,_), _))     => true
       case Some(Diamond(ODESystem(_:DifferentialProduct,_), _)) => true
@@ -1398,7 +1398,7 @@ private object DifferentialTactics extends Logging {
   }
 
   /** Whether the ODE at indicated position of a sequent has a nontrivial domain */
-  private val hasODEDomain: (Sequent,Position)=>Boolean = (sequent,pos) => {
+  val hasODEDomain: (Sequent,Position)=>Boolean = (sequent,pos) => {
     sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, _))     => ode.constraint != True
       case Some(Diamond(ode: ODESystem, _)) => ode.constraint != True
