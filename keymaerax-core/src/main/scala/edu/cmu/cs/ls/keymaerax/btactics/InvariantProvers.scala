@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, _}
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -19,7 +19,6 @@ import org.apache.logging.log4j.scala.Logger
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.List
-
 import util.control.Breaks._
 
 /**
@@ -95,30 +94,35 @@ object InvariantProvers {
 
 
       def generateOnTheFly[A <: Expression](initialCond: Formula, pos: Position, initialCandidate: Formula): (ProvableSig, ProverException) => Expression = {
+        import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.ExpressionAugmentor
         var candidate: Formula = initialCandidate
         println/*logger.info*/("loopPostMaster initial " + candidate)
         return {
           (pr, e) => {
+            var progress: Boolean = false
               breakable {
                 for (seq <- pr.subgoals) {
                   seq.sub(pos) match {
                     case Some(Box(sys: ODESystem, post)) =>
-                      val wouldBeSeq = USubst(Seq(SubstitutionPair(jj, candidate), SubstitutionPair(jja, True)))(seq)
+                      val wouldBeSeq = USubst(Seq(jj ~>> candidate, SubstitutionPair(jja,True)))(seq)
                       if (proveBy(wouldBeSeq, finishOff).isProved) {
                         // proof will work so no need to change candidate
                       } else {
-                        val assumeMoreSeq = USubst(Seq(SubstitutionPair(jj, candidate), SubstitutionPair(jja, initialCond)))(seq)
+                        val assumeMoreSeq = USubst(Seq(jj ~>> candidate, SubstitutionPair(jja,initialCond)))(seq)
                         candidate = gen(assumeMoreSeq, pos).next()
+                        progress = true
                         println/*logger.info*/("loopPostMaster next    " + candidate)
                         break
                       }
                     case _ =>
                     // ignore branches that are not about ODEs
-                      //@todo don't loop forever if there are no odes anywhere
                   }
                 }
               }
-            candidate
+            if (progress)
+              candidate
+            else
+              throw new BelleThrowable("No more progress for lack of ODEs in the loop")
           }
         }
       }

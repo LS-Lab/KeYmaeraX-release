@@ -265,7 +265,9 @@ object Augmentors {
     }
 
     /** The substitution pair `term~>other` after dottifying `other` to fit arguments of `term`. */
-    def ~>>(other: Expression): SubstitutionPair = {
+    def ~>>(other: Expression): SubstitutionPair = implicitSubst(other)
+
+    def implicitSubst(other: Expression): SubstitutionPair = {
 
       /** Converts the atoms of term `t` into DotTerms. Returns a map of (atom -> dot), the accumulated nested terms,
         * and the next unused dot index. */
