@@ -73,13 +73,22 @@ object ODEInvariance {
     )
 
   //Refine left/right of max
-  val refMaxL =
+  lazy val refMaxL =
     proveBy("<{c&f(||)>=0}>p(||) -> <{c& max(f(||),g(||))>=0}>p(||)".asFormula,
       useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemL))
 
-  val refMaxR =
+  lazy val refMaxR =
     proveBy("<{c&g(||)>=0}>p(||) -> <{c& max(f(||),g(||))>=0}>p(||)".asFormula,
       useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemR))
+
+  //Refine or under box
+  lazy val boxOrL =
+    proveBy("[{c&q(||)}]p(||) -> [{c& q(||)}](p(||) | r(||))".asFormula,
+      CMon(PosInExpr(1::Nil)) & prop)
+
+  lazy val boxOrR =
+    proveBy("[{c&q(||)}]r(||) -> [{c& q(||)}](p(||) | r(||))".asFormula,
+      CMon(PosInExpr(1::Nil)) & prop)
 
   private val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
   private val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
@@ -265,11 +274,21 @@ object ODEInvariance {
         closeF
     }
 
-  // Prove closed semialgebraic invariants ++
-  // Current assumptions (for completeness)
-  // 1) domain constraint is open
-  // 2) only -strict- cases occur for higher Lie derivatives, OR
-  // 3) a Darboux inequality occurs
+  /** Given a top-level succedent position corresponding to [x'=f(x)&Q]P
+    * Tries to prove that P is a closed semialgebraic invariant, i.e. G|- [x'=f(x)&Q]P
+    * P is assumed to be formed from conjunctions, disjunction, p<=q, p>=q, p=q
+    * which are collectively normalized to f>=0 (f possibly involving max,min and abs)
+    *
+    * Current tactic limitations:
+    * 1) Assumes that P is already in the antecedents, otherwise leaves that subgoal open
+    * 2) It does not characterize local progress for domain constraint Q
+    * 3) For polynomials p>=0 in the normalized form that are NOT rank 1, this tactic currently requires
+    *    checks the progress formula (p*>0) up to a given bound, rather than p*>=0
+    * @param bound (default 1): the bound on higher Lie derivatives to check for strict inequality, i.e. for p>=0,
+    *              this is generated p>=0 & (p=0 -> (p'>=0 & (p'=0 -> ...p'^bound > 0 ...))
+    *              (i.e. the bound-th Lie derivative is required to be strict)
+    * @return Leaves the initial goal G |- P open if it does not prove by QE
+    */
   def sAIclosedPlus(bound:Int=1) : DependentPositionTactic = "sAIc" byWithInput (bound,(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only in top-level succedent")
     val (ode,dom,post) = seq.sub(pos) match {
@@ -290,7 +309,7 @@ object ODEInvariance {
       case Some(pr) => (useAt(pr)(pos ++ PosInExpr(1::Nil)),useAt(pr,PosInExpr(1::Nil))(pos))
     }
     starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
-      implyR(pos) & imm & ?(closeId), //common case?
+      implyR(pos) & imm & ?(closeId) & QE & done, //common case?
       cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
       implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.print("QE step") & QE & done, skip) //Don't bother running the rest if QE fails
       & cohide2(-3,1)& implyR(1) & lpclosedPlus(inst)
@@ -324,6 +343,7 @@ object ODEInvariance {
         if(pr.isProved)
           Some(f)
         else {
+          if(cf.isInstanceOf[Equal] || cf.isInstanceOf[NotEqual]) return None
           val pr2 = proveBy(Imply(And(dom, Equal(p, zero)), Greater(r, zero)), QE)
           println(pr2)
           if(pr2.isProved)
@@ -375,12 +395,24 @@ object ODEInvariance {
           recRankOneTac(r)),
         hideL(-2) & recRankOneTac(l)
       )
-      case Or(l,r) => ???
+      case Or(l,r) => orL(-1)<(
+        useAt(boxOrL,PosInExpr(1::Nil))(1) & recRankOneTac(l),
+        useAt(boxOrR,PosInExpr(1::Nil))(1) & recRankOneTac(r)
+      )
       case _ => (DifferentialTactics.dgDbxAuto(1) & done) | DifferentialTactics.dgBarrier()(1)
     })
   }
 
-  // Prove semialgebraic invariants where every polynomial is rank 1
+  /** Given a top-level succedent position corresponding to [x'=f(x)&Q]P
+    * Tries to prove that P is a semialgebraic invariant, i.e. G|- [x'=f(x)&Q]P
+    * P is assumed to be formed from conjunctions, disjunctions and inequalities
+    * This does not go via (closed) real induction, and so also applies for strict inequalities
+    * However, all of the sub formulas need to be "recursively" rank 1, i.e. they are provable either:
+    * 1) with darboux inequalities p'>=qp (for p>=0 , p>0)
+    * 2) with a barrier certificate
+    *
+    * This tactic reorders conjunctions internally to try and find an order that works
+    */
   def sAIRankOne : DependentPositionTactic = "sAIR1" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only in top-level succedent")
     val (ode,dom,post) = seq.sub(pos) match {
