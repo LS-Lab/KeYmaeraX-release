@@ -91,7 +91,7 @@ object InvariantProvers {
       //@todo switch to quickstop mode
       //@todo if (ODE) then ODEInvariance.sAIclosedPlus(1) else ....
       //@todo plug in true for jja, commit if succeeded. Else plug in init for jja and generate
-        OnAll(ODEInvariance.sAIclosedPlus(1)) & done
+        OnAll(ODEInvariance.sAIclosedPlus()(1)) & done
 
 
       def generateOnTheFly[A <: Expression](initialCond: Formula, pos: Position, initialCandidate: Formula): (ProvableSig, ProverException) => Expression = {
