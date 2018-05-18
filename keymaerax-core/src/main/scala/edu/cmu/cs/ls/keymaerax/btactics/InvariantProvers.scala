@@ -84,6 +84,7 @@ object InvariantProvers {
           i = i + 1; SubstitutionPair(DotTerm(Real, Some(i)), xi)
         }))
       val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp => sp.what.prettyString).mkString(",") + ")")
+      val jjl: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp => sp.repl.prettyString).mkString(",") + ")")
       val jja: Formula = KeYmaeraXParser.formulaParser("jja()")
 
       val finishOff: BelleExpr =
@@ -104,11 +105,12 @@ object InvariantProvers {
                 for (seq <- pr.subgoals) {
                   seq.sub(pos) match {
                     case Some(Box(sys: ODESystem, post)) =>
-                      val wouldBeSeq = USubst(Seq(jj ~>> candidate, SubstitutionPair(jja,True)))(seq)
+                      println("loopPostMaster subst " + USubst(Seq(jjl ~>> candidate, SubstitutionPair(jja,True))))
+                      val wouldBeSeq = USubst(Seq(jjl ~>> candidate, SubstitutionPair(jja,True)))(seq)
                       if (proveBy(wouldBeSeq, finishOff).isProved) {
                         // proof will work so no need to change candidate
                       } else {
-                        val assumeMoreSeq = USubst(Seq(jj ~>> candidate, SubstitutionPair(jja,initialCond)))(seq)
+                        val assumeMoreSeq = USubst(Seq(jjl ~>> candidate, SubstitutionPair(jja,initialCond)))(seq)
                         candidate = gen(assumeMoreSeq, pos).next()
                         progress = true
                         println/*logger.info*/("loopPostMaster next    " + candidate)
