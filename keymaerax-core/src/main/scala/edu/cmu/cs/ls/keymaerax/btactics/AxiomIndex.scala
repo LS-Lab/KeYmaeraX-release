@@ -45,6 +45,7 @@ object AxiomIndex extends Logging {
     case "[++] choice" | "<++> choice" => binaryDefault
     case "[;] compose" | "<;> compose" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
     case "[*] iterate" | "<*> iterate" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
+    case "[*-] backiterate" => (PosInExpr(0::Nil), PosInExpr(1::1::Nil)::Nil)
     case "[d] dual"    | "<d> dual" | "[d] dual direct"    | "<d> dual direct"    => (PosInExpr(0::Nil), PosInExpr(0::Nil)::Nil)
 
     case "DW base"              => (PosInExpr(Nil), Nil)
@@ -99,6 +100,7 @@ object AxiomIndex extends Logging {
       (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
     case "[]T system" => (PosInExpr(Nil), Nil)
     case "K modal modus ponens" => (PosInExpr(1::1::Nil), PosInExpr(Nil)::Nil)
+    case "Ieq induction" => (PosInExpr(0::Nil), PosInExpr(1::1::1::Nil)::PosInExpr(1::Nil)::Nil)
     case "I induction" => (PosInExpr(1::Nil), /*PosInExpr(0::Nil)::*/PosInExpr(1::1::Nil)::PosInExpr(1::Nil)::Nil)
     // derived
     case "' linear" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
