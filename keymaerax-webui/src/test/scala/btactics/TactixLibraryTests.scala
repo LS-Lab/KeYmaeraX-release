@@ -244,7 +244,19 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs.iterator)(1)) shouldBe 'proved
   }
 
-  it should "at least not loop forevere when finding an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica{qeTool =>
+  it should "find a invariant for x=5-> [{{x'=x};}*]x>=0" in withMathematica{qeTool =>
+    val fml = "x>=5 -> [{x'=x}}*]x>=0".asFormula
+    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs.iterator)(1)) shouldBe 'proved
+  }
+
+  it should "find a invariant for x=5-> [{{x'=x};}*]x>0" in withMathematica{qeTool =>
+    val fml = "x>=5 -> [{x'=x}}*]x>0".asFormula
+    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula, ".>0".asFormula)
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs.iterator)(1)) shouldBe 'proved
+  }
+
+  it should "at least not loop forever when finding an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica{qeTool =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs.iterator)(1)) shouldBe 'proved

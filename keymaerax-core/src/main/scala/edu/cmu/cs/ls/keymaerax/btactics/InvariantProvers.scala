@@ -107,6 +107,7 @@ object InvariantProvers {
                     case Some(Box(sys: ODESystem, post)) =>
                       println("loopPostMaster subst " + USubst(Seq(jjl ~>> candidate, SubstitutionPair(jja,True))))
                       val wouldBeSeq = USubst(Seq(jjl ~>> candidate, SubstitutionPair(jja,True)))(seq)
+                      println(wouldBeSeq)
                       if (proveBy(wouldBeSeq, finishOff).isProved) {
                         // proof will work so no need to change candidate
                       } else {
@@ -124,7 +125,7 @@ object InvariantProvers {
             if (progress)
               candidate
             else
-              throw new BelleThrowable("No more progress for lack of ODEs in the loop")
+              throw new BelleThrowable("loopPostMaster: No more progress for lack of ODEs in the loop\n" + pr.prettyString)
           }
         }
       }
