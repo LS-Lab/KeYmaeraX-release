@@ -306,7 +306,7 @@ object ODEInvariance {
     //Rewrite postcondition to match real induction
     val (starter,imm) = propt match {
       case None => (skip,skip)
-      case Some(pr) => (useAt(pr)(pos ++ PosInExpr(1::Nil)),useAt(pr,PosInExpr(1::Nil))(pos))
+      case Some(pr) => (useAt(pr)(pos ++ PosInExpr(1::Nil)),useAt(pr,PosInExpr(1::Nil))('Rlast))
     }
     starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
       implyR(pos) & imm & ?(closeId) & QE & done, //common case?
