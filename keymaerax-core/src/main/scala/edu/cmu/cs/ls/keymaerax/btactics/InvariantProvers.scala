@@ -96,7 +96,7 @@ object InvariantProvers {
 
       def generateOnTheFly[A <: Expression](initialCond: Formula, pos: Position, initialCandidate: Formula): (ProvableSig, ProverException) => Expression = {
         var candidate: Formula = initialCandidate
-        logger.info("loopPostMaster initial " + candidate)
+        println/*logger.info*/("loopPostMaster initial " + candidate)
         return {
           (pr, e) => {
               breakable {
@@ -109,11 +109,12 @@ object InvariantProvers {
                       } else {
                         val assumeMoreSeq = USubst(Seq(SubstitutionPair(jj, candidate), SubstitutionPair(jja, initialCond)))(seq)
                         candidate = gen(assumeMoreSeq, pos).next()
-                        logger.info("loopPostMaster next    " + candidate)
+                        println/*logger.info*/("loopPostMaster next    " + candidate)
                         break
                       }
                     case _ =>
                     // ignore branches that are not about ODEs
+                      //@todo don't loop forever if there are no odes anywhere
                   }
                 }
               }
@@ -127,7 +128,9 @@ object InvariantProvers {
         //@todo OnAll(ifThenElse(shape [a]P, chase(1.0) , skip)) instead of | to chase away modal postconditions
         loop(subst(jj))(pos) < (nil, nil,
           cut(jja) <(
-            /* show postponed |- jja() */ cohide(Find.FindR(0, Some(jja)))
+            /* show postponed |- jja() */
+            hide(pos)
+            //@todo cohide(Find.FindR(0, Some(jja)))
             ,
             /* use jja() |- */
             chase(pos) & OnAll(propChase) & OnAll((chase(pos ++ PosInExpr(1::Nil)) | skip) & (QE() | skip))
