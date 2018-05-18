@@ -256,4 +256,71 @@ object Augmentors {
     /** Returns true if all formulas in the sequent are FOL, false otherwise. */
     def isFOL: Boolean = seq.ante.forall(_.isFOL) && seq.succ.forall(_.isFOL)
   }
+
+  implicit class ExpressionAugmentor(val e: Expression) {
+    def replaceFree(what: Term, repl: Term): Expression = e match {
+      case f: Formula => f.replaceFree(what, repl)
+      case t: Term => t.replaceFree(what, repl)
+      case p: Program => p.replaceFree(what, repl)
+    }
+
+    /** The substitution pair `term~>other` after dottifying `other` to fit arguments of `term`. */
+    def ~>>(other: Expression): SubstitutionPair = {
+
+      /** Converts the atoms of term `t` into DotTerms. Returns a map of (atom -> dot), the accumulated nested terms,
+        * and the next unused dot index. */
+      def findDots(t: Term, idx: Int, dots: Map[Term, DotTerm]): (Map[Term, DotTerm], Term, Int) = t match {
+        case Pair(l, r) =>
+          val (lDots, lAccDots, lNextIdx) = findDots(l, idx, dots)
+          val (rDots, rAccDots, rNextIdx) = findDots(r, lNextIdx, lDots)
+          (rDots, Pair(lAccDots, rAccDots), rNextIdx)
+        case _ =>
+          val dot = DotTerm(t.sort, Some(idx))
+          (dots + (t -> dot), dot, idx+1)
+      }
+
+      /** Returns the dots used in expression `e`. */
+      def dotsOf(e: Expression): Set[DotTerm] = {
+        val dots = scala.collection.mutable.Set[DotTerm]()
+        val traverseFn = new ExpressionTraversalFunction() {
+          override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
+            case d: DotTerm => dots += d; Left(None)
+            case _ => Left(None)
+          }
+        }
+        e match {
+          case t: Term => ExpressionTraversal.traverse(traverseFn, t)
+          case f: Formula => ExpressionTraversal.traverse(traverseFn, f)
+          case p: Program => ExpressionTraversal.traverse(traverseFn, p)
+        }
+        dots.toSet
+      }
+
+      val signature = e match {
+        case FuncOf(_, t) => t
+        case PredOf(_, t) => t
+      }
+
+      val (dots: Map[Term, DotTerm], arg: Term, _) = signature match {
+        case Nothing => (Map.empty, Nothing, 0)
+        case Pair(_, _) => findDots(signature, 0, Map.empty)
+        case _ =>
+          val dot = DotTerm(signature.sort)
+          (Map(signature -> dot), dot, 1)
+      }
+
+      val what = e match {
+        case FuncOf(fn, _) => FuncOf(fn, arg)
+        case PredOf(fn, _) => PredOf(fn, arg)
+      }
+
+      val repl = dots.foldLeft(other)({ case (t, (w, r)) => t.replaceFree(w, r) })
+
+      val undeclaredDots = dotsOf(repl) -- dotsOf(arg)
+      if (undeclaredDots.nonEmpty) throw new IllegalArgumentException("Function/predicate " +
+        what.prettyString + " defined using undeclared " + undeclaredDots.map(_.prettyString).mkString(","))
+
+      SubstitutionPair(what, repl)
+    }
+  }
 }
