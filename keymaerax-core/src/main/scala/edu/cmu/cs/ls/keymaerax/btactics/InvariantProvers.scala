@@ -87,6 +87,10 @@ object InvariantProvers {
       val jjl: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp => sp.repl.prettyString).mkString(",") + ")")
       val jja: Formula = KeYmaeraXParser.formulaParser("jja()")
 
+      /* stateful mutable candidate used in generateOnTheFly and the pass-through later since usubst end tactic not present yet */
+      var candidate: Formula = initialCond
+
+
       val finishOff: BelleExpr =
       //@todo switch to quickstop mode
       //@todo if (ODE) then ODEInvariance.sAIclosedPlus(1) else ....
@@ -96,7 +100,6 @@ object InvariantProvers {
 
       def generateOnTheFly[A <: Expression](initialCond: Formula, pos: Position, initialCandidate: Formula): (ProvableSig, ProverException) => Expression = {
         import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.ExpressionAugmentor
-        var candidate: Formula = initialCandidate
         println/*logger.info*/("loopPostMaster initial " + candidate)
         return {
           (pr, e) => {
@@ -147,7 +150,13 @@ object InvariantProvers {
         generateOnTheFly(initialCond, pos, post)
         ,
         finishOff
-      )
+      ) | (
+        // pass-through rescue phase
+        loop(candidate)(pos) < (master(), master(),
+          chase(pos) & OnAll(propChase) & OnAll((chase(pos ++ PosInExpr(1::Nil)) | skip) & (QE() | skip))
+          ) & finishOff
+        )
+
     case e => throw new BelleThrowable("Wrong shape to generate an invariant for " + e + " at position " + pos)
   })
 
