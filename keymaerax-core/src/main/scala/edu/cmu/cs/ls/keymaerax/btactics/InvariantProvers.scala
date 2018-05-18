@@ -13,11 +13,14 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.SequentAugmentor
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import org.apache.logging.log4j.scala.Logger
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.List
+
+import util.control.Breaks._
 
 /**
   * Created by aplatzer on 5/17/18.
@@ -50,7 +53,7 @@ object InvariantProvers {
       val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp=>sp.what.prettyString).mkString(",") + ")")
       SearchAndRescueAgain(jj,
         //@todo OnAll(ifThenElse(shape [a]P, chase(1.0) , skip)) instead of | to chase away modal postconditions
-        loop(subst(jj))(1) < (nil, nil, chase(1) & OnAll(chase(1, List(0)) | skip)),
+        loop(subst(jj))(pos) < (nil, nil, chase(pos) & OnAll(chase(pos ++ PosInExpr(1::Nil)) | skip)),
         feedOneAfterTheOther(cand),
         //@todo switch to quickstop mode
         OnAll(master()) & done
@@ -68,37 +71,74 @@ object InvariantProvers {
 
   def loopPostMaster(gen: Generator[Formula]): DependentPositionTactic = "loopPostMaster" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
+      val initialCond = seq.ante.reduceRightOption(And).getOrElse(True)
       //val cand: Iterator[Formula] = gen(seq, pos)
       val bounds: List[Variable] =
-        if (StaticSemantics.freeVars(post).toSet.exists( v => v.isInstanceOf[DifferentialSymbol] ) )
+        if (StaticSemantics.freeVars(post).toSet.exists(v => v.isInstanceOf[DifferentialSymbol]))
           StaticSemantics.boundVars(loopfml).toSet.toList
         else DependencyAnalysis.dependencies(prog, DependencyAnalysis.freeVars(post))._1.toList
       var i = -1
-      val subst: USubst = if (bounds.length==1)
+      val subst: USubst = if (bounds.length == 1)
         USubst(Seq(SubstitutionPair(DotTerm(), bounds.head)))
       else
-        USubst(bounds.map(xi=> {i=i+1; SubstitutionPair(DotTerm(Real,Some(i)), xi)}))
-      val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp=>sp.what.prettyString).mkString(",") + ")")
+        USubst(bounds.map(xi => {
+          i = i + 1; SubstitutionPair(DotTerm(Real, Some(i)), xi)
+        }))
+      val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp => sp.what.prettyString).mkString(",") + ")")
       val jja: Formula = KeYmaeraXParser.formulaParser("jja()")
+
+      val finishOff: BelleExpr =
+      //@todo switch to quickstop mode
+      //@todo if (ODE) then ODEInvariance.sAIclosedPlus(1) else ....
+      //@todo plug in true for jja, commit if succeeded. Else plug in init for jja and generate
+        OnAll(ODEInvariance.sAIclosedPlus(1)) & done
+
+
+      def generateOnTheFly[A <: Expression](initialCond: Formula, pos: Position, initialCandidate: Formula): (ProvableSig, ProverException) => Expression = {
+        var candidate: Formula = initialCandidate
+        return {
+          (pr, e) => {
+              breakable {
+                for (seq <- pr.subgoals) {
+                  seq.sub(pos) match {
+                    case Some(Box(sys: ODESystem, post)) =>
+                      val wouldBeSeq = USubst(Seq(SubstitutionPair(jj, candidate), SubstitutionPair(jja, True)))(seq)
+                      if (proveBy(wouldBeSeq, finishOff).isProved) {
+                        // proof will work so no need to change candidate
+                      } else {
+                        val assumeMoreSeq = USubst(Seq(SubstitutionPair(jj, candidate), SubstitutionPair(jja, initialCond)))(seq)
+                        candidate = gen(assumeMoreSeq, pos).next()
+                        break
+                      }
+                    case _ =>
+                    // ignore branches that are not about ODEs
+                  }
+                }
+              }
+            candidate
+          }
+        }
+      }
+
+
       SearchAndRescueAgain(jj,
         //@todo OnAll(ifThenElse(shape [a]P, chase(1.0) , skip)) instead of | to chase away modal postconditions
-        loop(subst(jj))(1) < (nil, nil,
+        loop(subst(jj))(pos) < (nil, nil,
           cut(jja) <(
-            /* show postponed */ cohide(Find.FindR(0, Some(jja)))
+            /* show postponed |- jja() */ cohide(Find.FindR(0, Some(jja)))
             ,
-            /* use */
-            chase(1) & OnAll(propChase) & OnAll((chase(1, List(0)) | skip) & (QE() | skip))
+            /* use jja() |- */
+            chase(pos) & OnAll(propChase) & OnAll((chase(pos ++ PosInExpr(1::Nil)) | skip) & (QE() | skip))
             )
           ),
-        ???, //feedOneAfterTheOther(cand),
-        //@todo switch to quickstop mode
-        //@todo if (ODE) then ODEInvariance.sAIclosedPlus(1) else ....
-        //@todo plug in true for jja, commit if succeeded. Else plug in init for jja and generate
-        OnAll(ODEInvariance.sAIclosedPlus(1)) & done
+        generateOnTheFly(initialCond, pos, post)
+        ,
+        finishOff
       )
     case e => throw new BelleThrowable("Wrong shape to generate an invariant for " + e + " at position " + pos)
   })
 
   //@todo this is a suboptimal emulation for propositional chase on (1)
   def propChase = normalize
+
 }
