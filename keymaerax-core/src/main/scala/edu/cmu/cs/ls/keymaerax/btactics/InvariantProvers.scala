@@ -91,7 +91,7 @@ object InvariantProvers {
       //@todo switch to quickstop mode
       //@todo if (ODE) then ODEInvariance.sAIclosedPlus(1) else ....
       //@todo plug in true for jja, commit if succeeded. Else plug in init for jja and generate
-        OnAll(ODEInvariance.sAIclosedPlus()(1)) & done
+        OnAll(ODEInvariance.sAIclosedPlus()(1) | QE()) & done
 
 
       def generateOnTheFly[A <: Expression](initialCond: Formula, pos: Position, initialCandidate: Formula): (ProvableSig, ProverException) => Expression = {
@@ -107,7 +107,7 @@ object InvariantProvers {
                     case Some(Box(sys: ODESystem, post)) =>
                       println("loopPostMaster subst " + USubst(Seq(jjl ~>> candidate, SubstitutionPair(jja,True))))
                       val wouldBeSeq = USubst(Seq(jjl ~>> candidate, SubstitutionPair(jja,True)))(seq)
-                      println(wouldBeSeq)
+                      println("loopPostMaster looks at\n" + wouldBeSeq)
                       if (proveBy(wouldBeSeq, finishOff).isProved) {
                         // proof will work so no need to change candidate
                       } else {
@@ -122,9 +122,10 @@ object InvariantProvers {
                   }
                 }
               }
-            if (progress)
+            if (progress) {
+              println/*logger.info*/("loopPostMaster cand    " + candidate)
               candidate
-            else
+            } else
               throw new BelleThrowable("loopPostMaster: No more progress for lack of ODEs in the loop\n" + pr.prettyString)
           }
         }
