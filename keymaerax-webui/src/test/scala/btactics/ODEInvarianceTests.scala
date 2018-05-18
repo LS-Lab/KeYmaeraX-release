@@ -92,7 +92,7 @@ class ODEInvarianceTests extends TacticTestBase {
     val pr = proveBy(fml, implyR(1) &
       dC("(2*(x^2+y^2)-1>=0)".asFormula)(1) <(
         dW(1) & QE,
-        sAIclosedPlus()(1) & QE
+        sAIclosedPlus()(1)
       )
     )
     println(pr)
@@ -123,15 +123,6 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "try some invariants (4)" in withMathematica { qeTool =>
-    val fml = "(((y<=0&x<=0)&3*x<=2*y)&x<=1+y) -> [{x'=315*x^7+477*x^6*y-113*x^5*y^2+301*x^4*y^3-300*x^3*y^4-192*x^2*y^5+128*x*y^6-16*y^7,\n    y'=y*(2619*x^6-99*x^5*y-3249*x^4*y^2+1085*x^3*y^3+596*x^2*y^4-416*x*y^5+64*y^6)}] (((y<=0&x<=0)&3*x<=2*y)&x<=1+y)".asFormula
-    //Again, requires higher DG
-    val pr = proveBy(fml, implyR(1) &
-      sAIclosedPlus(1)(1)
-    )
-    println(pr)
-  }
-
   it should "compute aggressive P*" in withMathematica { qeTool =>
     val ode = "{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asDifferentialProgram
     val dom = "c=0".asFormula
@@ -147,12 +138,10 @@ class ODEInvarianceTests extends TacticTestBase {
     println(res)
   }
 
-  it should "try rank 1 invariants" in withMathematica { qeTool =>
+  it should "try rank 1 invariants (1)" in withMathematica { qeTool =>
     val fml = "x=-1 & y=-1 -> [{x'=x*(x-2*y), y'=-(2*x-y)*y}]!(x>0 | y>0)".asFormula
-    //This is an invariant which cannot be proved by the current tactic
-    //It requires a higher dimensional DG
     val pr = proveBy(fml, implyR(1) &
-      dC("(x^2<=2*x*y)&x<=0&y<=0".asFormula)(1) <(
+      dC("x=0&y=0 | (x^2<=2*x*y)&x<=0&y<=0".asFormula)(1) <(
         dW(1) & QE,
         sAIRankOne(1)
       )
@@ -161,26 +150,38 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+//  it should "try rank 1 invariants (2)" in withMathematica { qeTool =>
+//    val fml = "(((y<=0&x<=0)&3*x<=2*y)&x<=1+y) -> [{x'=315*x^7+477*x^6*y-113*x^5*y^2+301*x^4*y^3-300*x^3*y^4-192*x^2*y^5+128*x*y^6-16*y^7,\n    y'=y*(2619*x^6-99*x^5*y-3249*x^4*y^2+1085*x^3*y^3+596*x^2*y^4-416*x*y^5+64*y^6)}] (((y<=0&x<=0)&3*x<=2*y)&x<=1+y)".asFormula
+//    //Requires vectorial DG?
+//    val pr = proveBy(fml, implyR(1) &
+//      sAIRankOne(1)
+//    )
+//    println(pr)
+//  }
+
   it should "try a (very) difficult invariant" in withMathematica { qeTool =>
     val fml = "1/100 - x^2 - y^2 >= 0 -> [{x'=-2*x+x^2+y, y'=x-2*y+y^2 & x!=0 | y!=0}]!(x^2+y^2 >= 1/4)".asFormula
     //Original question did not have x!=0 | y!=0 constraint
     //Pegasus invariant: ((x*y<=x^2+y^2&x+y<=2)&4*(x^2+y^2)<=1)&-1+4*x^2+4*y^2 < 0
     //However, the equilibrium point at the origin for x*y<=x^2+y^2 is insurmountable for all current tactics
-//    val pr = proveBy(fml, implyR(1) &
-//      dC("((x*y<=x^2+y^2&x+y<=2)&4*(x^2+y^2)<=1)".asFormula)(1) <(
-//        dW(1),
-//        sAIclosedPlus(1)(1)
-//      )
-//    )
+    val pr = proveBy(fml, implyR(1) &
+      dC("((x*y<=x^2+y^2&x+y<=2)&4*(x^2+y^2)<=1)".asFormula)(1) <(
+        dW(1),
+        sAIclosedPlus(1)(1)
+      )
+    )
+    //This needs a strict inequality to prove
+    println(pr)
 
-    //The actual invariant:
+    //The actual invariant proves with the specialized rank 1 tactic:
     val pr2 = proveBy(fml, implyR(1) &
-      dC("x^2+y^2=0 | x^2+y^2!=0 & ((x*y<=x^2+y^2&x+y<=2)&4*(x^2+y^2)<=1)&-1+4*x^2+4*y^2 < 0".asFormula)(1) <(
+      dC("((x*y<=x^2+y^2&x+y<=2)&4*(x^2+y^2)<=1)&-1+4*x^2+4*y^2 < 0".asFormula)(1) <(
         dW(1) & QE,
         sAIRankOne(1)
       )
     )
     println(pr2)
+    pr2 shouldBe 'proved
   }
 
   it should "prove van der pol" in withMathematica { qeTool =>
@@ -190,7 +191,7 @@ class ODEInvarianceTests extends TacticTestBase {
       dC("0.20595*x^4*y - 0.15329*x^4 - 1.1185*x^3*y + 1.7568*x^2*y^2 - 0.73732*x*y^3 + 0.13061*y^4 - 0.18577*x^3 - 0.12111*x^2*y + 0.074299*x*y^2 + 0.16623*y^3 - 1.6423*x^2 + 0.81389*x*y - 0.40302*y^2 - 0.88487*x + 0.35337*y - 3.7906<=0".asFormula)(1) <(
         dW(1) & QE,
         //dgBarrier(1)
-        sAIclosedPlus()(1) & QE
+        sAIclosedPlus()(1)
       )
     )
     println(pr)

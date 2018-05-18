@@ -1386,10 +1386,6 @@ class DifferentialTests extends TacticTestBase {
   /**
     * Test cases for the Darboux ghost tactics
     */
-  "Normalizer" should "correctly normalize to ~0 normal form" in withQE { _ =>
-    val fml = " x+y"
-
-  }
 
   "ODE Darboux" should "prove equational darboux" in withQE { _ =>
     //(x+z)' = (x*A+B)(x+z)
