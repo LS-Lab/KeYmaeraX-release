@@ -96,6 +96,7 @@ object InvariantProvers {
 
       def generateOnTheFly[A <: Expression](initialCond: Formula, pos: Position, initialCandidate: Formula): (ProvableSig, ProverException) => Expression = {
         var candidate: Formula = initialCandidate
+        logger.info("loopPostMaster initial " + candidate)
         return {
           (pr, e) => {
               breakable {
@@ -108,6 +109,7 @@ object InvariantProvers {
                       } else {
                         val assumeMoreSeq = USubst(Seq(SubstitutionPair(jj, candidate), SubstitutionPair(jja, initialCond)))(seq)
                         candidate = gen(assumeMoreSeq, pos).next()
+                        logger.info("loopPostMaster next    " + candidate)
                         break
                       }
                     case _ =>
