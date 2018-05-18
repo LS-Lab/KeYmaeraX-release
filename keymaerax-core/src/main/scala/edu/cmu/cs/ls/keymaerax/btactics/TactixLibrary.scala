@@ -848,6 +848,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     case None => throw new IllegalArgumentException("here() locator does not occur in positionOf(" + fml + ")")
   }
 
+  /** ifThenElse(cond,thenT,elseT) runs `thenT` if `cond` holds at position and `elseT` otherwise. */
   def ifThenElse(cond: (Sequent, Position)=>Boolean, thenT: BelleExpr, elseT: BelleExpr): DependentPositionTactic = "ifThenElse" by ((pos:Position,seq:Sequent) =>
     if (cond(seq, pos))
       thenT
