@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.ODEInvariance._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable._
@@ -196,4 +197,19 @@ class ODEInvarianceTests extends TacticTestBase {
     )
     println(pr)
   }
+
+  it should "prove FM'18 constructed example" in withMathematica { qeTool =>
+    val fml = "x1<=0 & x2<=0 & x3 <=0 -> [{x1'=2*x1+x2+2*x3-x1^2+x1*x3-x3^2, x2'=-2+x1-x2-x2^2, x3'=-2-x2-x3+x1^2-x1*x3}]!(x1+x2+x3>=1)".asFormula
+    val pr = proveBy(fml, implyR(1) &
+      //B1,B2,B3 <=0
+      dC("1/100*(365*x1+365*x2+365*x3-60) <= 0 & 1/100*(175*x1+180*x2+100*x3-160)<=0 & 1/100*(460*x1+155*x2+270*x3-250)<=0".asFormula)(1) <(
+        dW(1) & QE,
+        //dgBarrier(1)
+        sAIclosedPlus()(1)
+      )
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
 }
