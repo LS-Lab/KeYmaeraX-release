@@ -13,15 +13,7 @@ import scala.collection.immutable._
 
 class ODEInvarianceTests extends TacticTestBase {
 
-  "ODEInvariance" should "prove the helper axioms" in withMathematica { qeTool =>
-    uniqMin shouldBe 'proved
-    refMaxL shouldBe 'proved
-    refMaxR shouldBe 'proved
-    uniqAx shouldBe 'proved
-    contAx shouldBe 'proved
-  }
-
-  it should "compute bounded p*>0" in withMathematica { qeTool =>
+  "ODEInvariance" should "compute bounded p*>0" in withMathematica { qeTool =>
     val ode = "{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asDifferentialProgram
     val poly = "x+y*z".asTerm
     val p0 = pStar(ode,poly,0)
@@ -47,13 +39,23 @@ class ODEInvarianceTests extends TacticTestBase {
     val p2 = pStarHom(ode,poly,2)
     val p3 = pStarHom(ode,poly,3)
     //Huge mess of a formula here
+    (p0,p1,p2,p3) shouldBe
+      ("z>0&x>0&y>0|x>0&y>0".asFormula,
+       "(z>=0&(z=0->x+y+z>0))&(x>=0&(x=0->1+x^2>0))&y>=0&(y=0->2*x+y>0)|(x>=0&(x=0->1+x^2>0))&y>=0&(y=0->2*x+y>0)".asFormula,
+       "(z>=0&(z=0->x+y+z>=0&(x+y+z=0->1+x*(3+x)+2*y+z>0)))&(x>=0&(x=0->1+x^2>=0&(1+x^2=0->2*(x+x^3)>0)))&y>=0&(y=0->2*x+y>=0&(2*x+y=0->2+2*x*(1+x)+y>0))|(x>=0&(x=0->1+x^2>=0&(1+x^2=0->2*(x+x^3)>0)))&y>=0&(y=0->2*x+y>=0&(2*x+y=0->2+2*x*(1+x)+y>0))".asFormula,
+       "(z>=0&(z=0->x+y+z>=0&(x+y+z=0->1+x*(3+x)+2*y+z>=0&(1+x*(3+x)+2*y+z=0->3+x*(7+x*(3+2*x))+3*y+z>0))))&(x>=0&(x=0->1+x^2>=0&(1+x^2=0->2*(x+x^3)>=0&(2*(x+x^3)=0->2+8*x^2+6*x^4>0))))&y>=0&(y=0->2*x+y>=0&(2*x+y=0->2+2*x*(1+x)+y>=0&(2+2*x*(1+x)+y=0->2+2*x*(3+x+2*x^2)+y>0)))|(x>=0&(x=0->1+x^2>=0&(1+x^2=0->2*(x+x^3)>=0&(2*(x+x^3)=0->2+8*x^2+6*x^4>0))))&y>=0&(y=0->2*x+y>=0&(2*x+y=0->2+2*x*(1+x)+y>=0&(2+2*x*(1+x)+y=0->2+2*x*(3+x+2*x^2)+y>0)))".asFormula)
     println(p0,p1,p2,p3)
   }
 
   it should "take a local progress step" in withMathematica { qeTool =>
     val seq = "x>=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0, <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0".asSequent
     val pr = proveBy(seq, lpstep(2))
-    println(pr)
+    //println(pr)
+    pr.subgoals should have size 2
+    //Local progress into p>=0 requires p>0 | p=0 initially
+    pr.subgoals(0) shouldBe "x>=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0, x>0|x=0".asSequent
+    //In the p=0 case, more work needs to be done
+    pr.subgoals(1) shouldBe "x>=0, x=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0, <{t_'=1,z'=2,x'=x+1,y'=1&1+x>=0}>t_!=0".asSequent
   }
 
   it should "do full local progress p>=0" in withMathematica { qeTool =>
@@ -100,7 +102,7 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "try some invariants (2)" in withMathematica { qeTool =>
+  it should "try some invariants (2)" ignore withMathematica { qeTool =>
     val fml = "x=-1 & y=-1 -> [{x'=x*(x-2*y), y'=-(2*x-y)*y}]!(x>0 | y>0)".asFormula
     //This is an invariant which cannot be proved by the current tactic
     //But it could be proved by re-ordering in a smarter way
@@ -130,13 +132,16 @@ class ODEInvarianceTests extends TacticTestBase {
     val poly = "max(min(z,min(x,y)),min(x,-abs(z)))".asTerm
     val p1 = pStarHomPlus(ode,dom,poly,1)
     println(p1)
+    p1._1 shouldBe "((z>=0&(z=0->x+y+z>0))&x>=0&y>=0&(y=0->2*x+y>0)|x>=0&false".asFormula
   }
 
   it should "aggressively try rank 1" in withMathematica { qeTool =>
     val ode = "{x'=x*(x-2*y), y'=-(2*x-y)*y}".asDifferentialProgram
-    val fml = "((x<=0&x^2-2*x*y<=0)&y<=0)".asFormula
+    val fml = "((x^2-2*x*y<=0 & x<=0)&y<=0)".asFormula
     val res = rankOneFml(ode,True,fml)
+    //Reorder the conjuncts
     println(res)
+    res shouldBe Some("x<=0&y<=0&x^2-2*x*y<=0&true".asFormula)
   }
 
   it should "try rank 1 invariants (1)" in withMathematica { qeTool =>
@@ -150,15 +155,6 @@ class ODEInvarianceTests extends TacticTestBase {
     println(pr)
     pr shouldBe 'proved
   }
-
-//  it should "try rank 1 invariants (2)" in withMathematica { qeTool =>
-//    val fml = "(((y<=0&x<=0)&3*x<=2*y)&x<=1+y) -> [{x'=315*x^7+477*x^6*y-113*x^5*y^2+301*x^4*y^3-300*x^3*y^4-192*x^2*y^5+128*x*y^6-16*y^7,\n    y'=y*(2619*x^6-99*x^5*y-3249*x^4*y^2+1085*x^3*y^3+596*x^2*y^4-416*x*y^5+64*y^6)}] (((y<=0&x<=0)&3*x<=2*y)&x<=1+y)".asFormula
-//    //Requires vectorial DG?
-//    val pr = proveBy(fml, implyR(1) &
-//      sAIRankOne(1)
-//    )
-//    println(pr)
-//  }
 
   it should "try a (very) difficult invariant" in withMathematica { qeTool =>
     val fml = "1/100 - x^2 - y^2 >= 0 -> [{x'=-2*x+x^2+y, y'=x-2*y+y^2 & x!=0 | y!=0}]!(x^2+y^2 >= 1/4)".asFormula

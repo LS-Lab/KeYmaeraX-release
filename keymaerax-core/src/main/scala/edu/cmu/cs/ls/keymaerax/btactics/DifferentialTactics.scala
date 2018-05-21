@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
@@ -27,6 +28,8 @@ import scala.language.postfixOps
  * @see [[TactixLibrary.DW]], [[TactixLibrary.DC]]
  */
 private object DifferentialTactics extends Logging {
+
+  private val namespace = "differentialtactics"
 
   /** @see [[HilbertCalculus.DE]] */
   lazy val DE: DependentPositionTactic = new DependentPositionTactic("DE") {
@@ -1410,15 +1413,15 @@ private object DifferentialTactics extends Logging {
   //Normalization axioms + normalization indexes for use with the simplifier
   //TODO: is it faster to use simplification + axioms or direct QE of the normal form?
   //TODO: these are probably duplicated elsewhere: should start a new file for all normalization tactics
-  private lazy val leNorm: ProvableSig = proveBy("f_() <= g_() <-> g_() - f_() >= 0".asFormula,QE)
-  private lazy val geNorm: ProvableSig = proveBy("f_() >= g_() <-> f_() - g_() >= 0".asFormula,QE)
-  private lazy val ltNorm: ProvableSig = proveBy("f_() < g_() <-> g_() - f_() > 0".asFormula,QE)
-  private lazy val gtNorm: ProvableSig = proveBy("f_() > g_() <-> f_() - g_() > 0".asFormula,QE)
-  private lazy val eqNorm: ProvableSig = proveBy(" f_() = g_() <-> f_() - g_() = 0 ".asFormula,QE)
-  private lazy val deqNorm: ProvableSig = proveBy(" f_() != g_() <-> f_() - g_() != 0 ".asFormula,QE)
-  private lazy val minNorm:ProvableSig = proveBy("f_()>=0&g_()>=0<->min((f_(),g_()))>=0".asFormula,QE)
-  private lazy val maxNorm:ProvableSig = proveBy("f_()>=0|g_()>=0<->max((f_(),g_()))>=0".asFormula,QE)
-  private lazy val eqNormAbs:ProvableSig = proveBy("f_() = g_()<-> -abs(f_()-g_())>=0".asFormula,QE)
+  private lazy val leNorm: ProvableSig = remember("f_() <= g_() <-> g_() - f_() >= 0".asFormula,QE,namespace).fact
+  private lazy val geNorm: ProvableSig = remember("f_() >= g_() <-> f_() - g_() >= 0".asFormula,QE,namespace).fact
+  private lazy val ltNorm: ProvableSig = remember("f_() < g_() <-> g_() - f_() > 0".asFormula,QE,namespace).fact
+  private lazy val gtNorm: ProvableSig = remember("f_() > g_() <-> f_() - g_() > 0".asFormula,QE,namespace).fact
+  private lazy val eqNorm: ProvableSig = remember(" f_() = g_() <-> f_() - g_() = 0 ".asFormula,QE,namespace).fact
+  private lazy val deqNorm: ProvableSig = remember(" f_() != g_() <-> f_() - g_() != 0 ".asFormula,QE,namespace).fact
+  private lazy val minNorm:ProvableSig = remember("f_()>=0&g_()>=0<->min((f_(),g_()))>=0".asFormula,QE,namespace).fact
+  private lazy val maxNorm:ProvableSig = remember("f_()>=0|g_()>=0<->max((f_(),g_()))>=0".asFormula,QE,namespace).fact
+  private lazy val eqNormAbs:ProvableSig = remember("f_() = g_()<-> -abs(f_()-g_())>=0".asFormula,QE,namespace).fact
 
   // Simplifier index that normalizes a single inequality to have 0 on the RHS
   def ineqNormalize(f:Formula,ctx:context) : List[ProvableSig] = {

@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
-import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3.context
+import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3.{context, namespace}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{useAt, _}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
@@ -28,71 +28,79 @@ object ODEInvariance {
   private def lieDer(ode:DifferentialProgram,p:Term) =
       DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
 
-  /* Temporary stash of derived axioms */
-  lazy val geq = proveBy("f_()>=0 ==> f_()>0 | f_()=0".asSequent,QE)
-  // TODO: maybe core's Cont axiom should be stated without DX?
-  lazy val contAx =
-    proveBy("f(||) > 0 -> <{t_'=1,c&f(||)>=0}>t_!=0".asFormula,
+  /* Stash of derived axioms */
+
+  // Rewrite >=
+  private lazy val geq = remember("f_()>=0 -> f_()>0 | f_()=0".asFormula, QE, namespace)
+
+  // Cont with the domain constraint already refined to >= instead of >
+  private lazy val contAx =
+    remember("f(||) > 0 -> <{t_'=1,c&f(||)>=0}>t_!=0".asFormula,
       implyR(1) &
       dR("f(||)>0".asFormula)(1) <(
         implyRi & byUS("Cont continuous existence"),
         DW(1) & G(1) & useAt("> flip")(1,0::Nil) & useAt(">= flip")(1,1::Nil) & useAt("<=")(1,1::Nil) & prop
-      )
-    )
-  lazy val uniqAx =
-    proveBy("<{c&q(||)}>p(||) & <{c&r(||)}>p(||) <-> <{c&q(||) & r(||)}>p(||)".asFormula,
+      ), namespace)
+
+  //iff version of uniqueness axiom
+  private lazy val uniqAx =
+    remember("<{c&q(||)}>p(||) & <{c&r(||)}>p(||) <-> <{c&q(||) & r(||)}>p(||)".asFormula,
       prop <(
         cut("<{c&q(||) & r(||)}>(p(||)|p(||))".asFormula) <(
           cohide2(-3,1) & mond & prop,
           hideR(1) & useAt("Uniq uniqueness",PosInExpr(1::Nil))(1) & prop),
         dR("q(||)&r(||)".asFormula)(1)<( closeId, DW(1) & G(1) & prop),
         dR("q(||)&r(||)".asFormula)(1)<( closeId, DW(1) & G(1) & prop)
-      )
-    )
+      ),namespace)
 
-  lazy val minLem =
-    proveBy("min((f(),g()))>=0<->f()>=0&g()>=0".asFormula,QE)
+  //Various conversion rewrites for CE in corresponding lemmas
+  private lazy val minLem =
+    remember("min((f(),g()))>=0<->f()>=0&g()>=0".asFormula,QE,namespace)
 
-  lazy val maxLemL =
-    proveBy("f()>=0 -> max((f(),g()))>=0".asFormula,QE)
+  private lazy val maxLemL =
+    remember("f()>=0 -> max((f(),g()))>=0".asFormula,QE,namespace)
 
-  lazy val maxLemR =
-    proveBy("g()>=0 -> max((f(),g()))>=0".asFormula,QE)
+  private lazy val maxLemR =
+    remember("g()>=0 -> max((f(),g()))>=0".asFormula,QE,namespace)
 
-  lazy val absLem =
-    proveBy("-abs(f())>=0<->f()=0".asFormula,QE)
+  private lazy val absLem =
+    remember("-abs(f())>=0<->f()=0".asFormula,QE,namespace)
 
-  lazy val uniqMin =
-    proveBy("<{c& min(f(||),g(||))>=0}>p(||) <-> <{c&f(||)>=0}>p(||) & <{c&g(||)>=0}>p(||)".asFormula,
-      useAt(uniqAx)(1,1::Nil) & CE(PosInExpr(0::1::Nil)) & byUS(minLem)
-    )
+  private lazy val uniqMin =
+    remember("<{c& min(f(||),g(||))>=0}>p(||) <-> <{c&f(||)>=0}>p(||) & <{c&g(||)>=0}>p(||)".asFormula,
+      useAt(uniqAx)(1,1::Nil) & CE(PosInExpr(0::1::Nil)) & byUS(minLem),
+      namespace)
 
-  lazy val refAbs =
-    proveBy("<{c& -abs(f(||))>=0}>p(||) <-> <{c&f(||)=0}>p(||)".asFormula,
-      CE(PosInExpr(0::1::Nil)) & byUS(absLem)
-    )
+  private lazy val refAbs =
+    remember("<{c& -abs(f(||))>=0}>p(||) <-> <{c&f(||)=0}>p(||)".asFormula,
+      CE(PosInExpr(0::1::Nil)) & byUS(absLem),
+      namespace)
 
   //Refine left/right of max
-  lazy val refMaxL =
-    proveBy("<{c&f(||)>=0}>p(||) -> <{c& max(f(||),g(||))>=0}>p(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemL))
+  private lazy val refMaxL =
+    remember("<{c&f(||)>=0}>p(||) -> <{c& max(f(||),g(||))>=0}>p(||)".asFormula,
+      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemL),
+      namespace)
 
-  lazy val refMaxR =
-    proveBy("<{c&g(||)>=0}>p(||) -> <{c& max(f(||),g(||))>=0}>p(||)".asFormula,
-      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemR))
+  private lazy val refMaxR =
+    remember("<{c&g(||)>=0}>p(||) -> <{c& max(f(||),g(||))>=0}>p(||)".asFormula,
+      useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & byUS(maxLemR),
+      namespace)
 
   //Refine or under box
-  lazy val boxOrL =
-    proveBy("[{c&q(||)}]p(||) -> [{c& q(||)}](p(||) | r(||))".asFormula,
-      CMon(PosInExpr(1::Nil)) & prop)
+  private lazy val boxOrL =
+    remember("[{c&q(||)}]p(||) -> [{c& q(||)}](p(||) | r(||))".asFormula,
+      CMon(PosInExpr(1::Nil)) & prop,
+      namespace)
 
-  lazy val boxOrR =
-    proveBy("[{c&q(||)}]r(||) -> [{c& q(||)}](p(||) | r(||))".asFormula,
-      CMon(PosInExpr(1::Nil)) & prop)
+  private lazy val boxOrR =
+    remember("[{c&q(||)}]r(||) -> [{c& q(||)}](p(||) | r(||))".asFormula,
+      CMon(PosInExpr(1::Nil)) & prop,
+      namespace)
 
-  private val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
-  private val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
-  private val absF = Function("abs", None, Real, Real, interpreted=true)
+  private lazy val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
+  private lazy val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
+  private lazy val absF = Function("abs", None, Real, Real, interpreted=true)
 
   //Given a bound i, generate the local progress formula up to that bound
   // i.e. the i-th Lie derivative is strict
@@ -159,7 +167,7 @@ object ODEInvariance {
     else //Could also make this fallback to the continuity step for early termination
       //DebuggingTactics.print("start") &
       andL(-1) & lpstep(1)< (
-        hideL(-2) & byUS(geq),
+        hideL(-2) & implyRi & byUS(geq),
         hideL(-1) & implyL(-1) & <(closeId, hideL(-2) & lpgeq(bound-1))
       )
 
@@ -308,7 +316,7 @@ object ODEInvariance {
       case None => (skip,skip)
       case Some(pr) => (useAt(pr)(pos ++ PosInExpr(1::Nil)),useAt(pr,PosInExpr(1::Nil))('Rlast))
     }
-    starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
+    DebuggingTactics.print("PRE") & starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
       implyR(pos) & imm & ?(closeId) & QE & done, //common case?
       cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
       implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.print("QE step") & QE & done, skip) //Don't bother running the rest if QE fails
