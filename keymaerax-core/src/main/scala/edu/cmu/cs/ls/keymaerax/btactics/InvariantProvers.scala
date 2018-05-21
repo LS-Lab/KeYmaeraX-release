@@ -90,7 +90,6 @@ object InvariantProvers {
       /* stateful mutable candidate used in generateOnTheFly and the pass-through later since usubst end tactic not present yet */
       var candidate: Formula = initialCond
 
-
       val finishOff: BelleExpr =
       //@todo switch to quickstop mode
         OnAll(ifThenElse(DifferentialTactics.isODE, ODEInvariance.sAIclosedPlus()(pos), QE())(pos)) & done
@@ -106,15 +105,19 @@ object InvariantProvers {
                 for (seq <- pr.subgoals) {
                   seq.sub(pos) match {
                     case Some(Box(sys: ODESystem, post)) =>
-                      println("loopPostMaster subst " + USubst(Seq(jjl ~>> candidate, SubstitutionPair(jja,True))))
+                      println("loopPostMaster subst " + USubst(Seq(jjl ~>> candidate, jja ~> True)))
                       // plug in true for jja, commit if succeeded. Else plug in init for jja and generate
-                      val wouldBeSeq = USubst(Seq(jjl ~>> candidate, SubstitutionPair(jja,True)))(seq)
+                      val wouldBeSeq = USubst(Seq(jjl ~>> candidate, jja ~> True))(seq)
+                      lazy val wouldBeSubgoals = USubst(Seq(jjl ~>> candidate, jja ~> True))(pr)
                       println("loopPostMaster looks at\n" + wouldBeSeq)
-                      if (proveBy(wouldBeSeq, finishOff).isProved) {
+                      //@note first check induction step; then lazily check all subgoals (candidate may not be true initially or not strong enough)
+                      if (proveBy(wouldBeSeq, ?(finishOff)).isProved && proveBy(wouldBeSubgoals, ?(finishOff)).isProved) {
                         // proof will work so no need to change candidate
+                        println("Proof will work " + wouldBeSubgoals.prettyString)
+                        //@todo continuation still fails since doesn't know about jja ~> True substitution
                       } else {
                         println("loopPostMaster progressing")
-                        val assumeMoreSeq = USubst(Seq(jjl ~>> candidate, SubstitutionPair(jja,initialCond)))(seq)
+                        val assumeMoreSeq = USubst(Seq(jjl ~>> candidate, jja ~> initialCond))(seq)
                         candidate = gen(assumeMoreSeq, pos).next()
                         progress = true
                         println/*logger.info*/("loopPostMaster next    " + candidate)
@@ -141,12 +144,12 @@ object InvariantProvers {
         //@todo OnAll(ifThenElse(shape [a]P, chase(1.0) , skip)) instead of | to chase away modal postconditions
         loop(subst(jj))(pos) < (nil, nil,
           cut(jja) <(
+            /* use jja() |- */
+            chase(pos) & OnAll(propChase) & OnAll(?(chase(pos ++ PosInExpr(1::Nil))) & ?(QE()))
+            ,
             /* show postponed |- jja() */
             hide(pos)
             //@todo cohide(Find.FindR(0, Some(jja)))
-            ,
-            /* use jja() |- */
-            chase(pos) & OnAll(propChase) & OnAll((chase(pos ++ PosInExpr(1::Nil)) | skip) & (QE() | skip))
             )
           ),
         generateOnTheFly(initialCond, pos, post)

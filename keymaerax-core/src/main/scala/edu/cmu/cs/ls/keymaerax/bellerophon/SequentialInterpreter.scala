@@ -400,6 +400,7 @@ abstract class SequentialInterpreter(listeners: Seq[IOListener]) extends Interpr
               apply(continuation, remaining) match {
                 // return upon success of tactic
                 case pr: BelleProvable => return pr
+                case e: BelleThrowable => lastProblem = e
                 case e => ???
               }
             } catch {
