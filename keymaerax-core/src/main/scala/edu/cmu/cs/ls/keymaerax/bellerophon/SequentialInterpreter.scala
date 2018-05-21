@@ -394,7 +394,7 @@ abstract class SequentialInterpreter(listeners: Seq[IOListener]) extends Interpr
           while (true) {
             val values = instantiator(commonDerivation, lastProblem)
             try {
-              val us: USubst = USubst(abbr.zip(values).map({ case (what, repl) => SubstitutionPair(what, repl) }))
+              val us: USubst = USubst(abbr.zip(values).map({ case (what, repl) => what ~>> repl }))
               val backsubst: ProvableSig = commonDerivation(us)
               val remaining: BelleProvable = BelleProvable(provable(backsubst, 0), lbl2)
               apply(continuation, remaining) match {

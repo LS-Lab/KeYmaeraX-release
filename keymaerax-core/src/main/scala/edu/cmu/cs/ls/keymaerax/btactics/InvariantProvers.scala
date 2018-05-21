@@ -88,77 +88,76 @@ object InvariantProvers {
       val jja: Formula = KeYmaeraXParser.formulaParser("jja()")
 
       /* stateful mutable candidate used in generateOnTheFly and the pass-through later since usubst end tactic not present yet */
-      var candidate: Formula = initialCond
+      var candidate: Option[Formula] = Some(initialCond)
 
       val finishOff: BelleExpr =
       //@todo switch to quickstop mode
-        OnAll(ifThenElse(DifferentialTactics.isODE, ODEInvariance.sAIclosedPlus()(pos), QE())(pos)) & done
+        OnAll(ifThenElse(DifferentialTactics.isODE, ODEInvariance.sAIclosedPlus()(pos) | ODEInvariance.sAIRankOne(pos), QE())(pos)) & done
 
-
-      def generateOnTheFly[A <: Expression](initialCond: Formula, pos: Position, initialCandidate: Formula): (ProvableSig, ProverException) => scala.collection.immutable.Seq[Expression] = {
-        import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.ExpressionAugmentor
-        println/*logger.info*/("loopPostMaster initial " + candidate)
-        return {
-          (pr, e) => {
-            var hasCandidate: Boolean = false
-              breakable {
-                for (seq <- pr.subgoals) {
-                  seq.sub(pos) match {
-                    case Some(Box(sys: ODESystem, post)) =>
-                      println("loopPostMaster subst " + USubst(Seq(jjl ~>> candidate, jja ~> True)))
-                      // plug in true for jja, commit if succeeded. Else plug in init for jja and generate
-                      val wouldBeSeq = USubst(Seq(jjl ~>> candidate, jja ~> True))(seq)
-                      lazy val wouldBeSubgoals = USubst(Seq(jjl ~>> candidate, jja ~> True))(pr)
-                      println("loopPostMaster looks at\n" + wouldBeSeq)
-                      //@note first check induction step; then lazily check all subgoals (candidate may not be true initially or not strong enough)
-                      //@todo avoid doing wouldBeSeq twice
-                      if (proveBy(wouldBeSeq, ?(finishOff)).isProved && proveBy(wouldBeSubgoals, ?(finishOff)).isProved) {
-                        // proof will work so no need to change candidate
-                        println("Proof will work " + wouldBeSubgoals.prettyString)
-                        hasCandidate = true
-                      } else {
-                        println("loopPostMaster progressing")
-                        val assumeMoreSeq = USubst(Seq(jjl ~>> candidate, jja ~> initialCond))(seq)
-                        val generator = gen(assumeMoreSeq, pos)
-                        if (generator.hasNext) {
-                          candidate = gen(assumeMoreSeq, pos).next()
-                          hasCandidate = true
-                          println/*logger.info*/("loopPostMaster next    " + candidate)
-                          break
-                        } else {
-                          hasCandidate = false
-                          break
-                        }
-                      }
-                    case _ =>
-                    // ignore branches that are not about ODEs
-                  }
-                }
-              }
-            if (hasCandidate) {
-              println/*logger.info*/("loopPostMaster cand    " + candidate)
-              candidate :: True :: Nil
+      def nextCandidate(pr: ProvableSig, sequent: Sequent, currentCandidate: Option[Formula]): Option[Formula] = currentCandidate match {
+        case Some(cand) =>
+          println("loopPostMaster subst " + USubst(Seq(jjl ~>> cand, jja ~> True)))
+          // plug in true for jja, commit if succeeded. Else plug in init for jja and generate
+          val wouldBeSeq = USubst(Seq(jjl ~>> cand, jja ~> True))(sequent)
+          lazy val wouldBeSubgoals = USubst(Seq(jjl ~>> cand, jja ~> True))(pr)
+          println("loopPostMaster looks at\n" + wouldBeSeq)
+          //@note first check induction step; then lazily check all subgoals (candidate may not be true initially or not strong enough)
+          //@todo avoid doing wouldBeSeq twice
+          if (proveBy(wouldBeSeq, ?(finishOff)).isProved && proveBy(wouldBeSubgoals, ?(finishOff)).isProved) {
+            // proof will work so no need to change candidate
+            println("Proof will work " + wouldBeSubgoals.prettyString)
+            currentCandidate
+          } else {
+            println("loopPostMaster progressing")
+            val assumeMoreSeq = USubst(Seq(jjl ~>> cand, jja ~> initialCond))(sequent)
+            val generator = gen(assumeMoreSeq, pos)
+            if (generator.hasNext) {
+              candidate = Some(gen(assumeMoreSeq, pos).next())
+              println/*logger.info*/("loopPostMaster next    " + candidate)
+              candidate
             } else {
-              throw new BelleThrowable("loopPostMaster: No more progress for lack of ODEs in the loop\n" + pr.prettyString)
+              None
             }
+          }
+        case _ => currentCandidate
+      }
+
+      def generateOnTheFly[A <: Expression](pos: Position): (ProvableSig, ProverException) => scala.collection.immutable.Seq[Expression] = {
+        println/*logger.info*/("loopPostMaster initial " + candidate)
+        (pr: ProvableSig, _: ProverException) => {
+          //@note updates "global" candidate
+          breakable {
+            for (seq <- pr.subgoals) {
+              seq.sub(pos) match {
+                case Some(Box(_: ODESystem, _)) => candidate = nextCandidate(pr, seq, candidate); break
+                case Some(p: PredOf) if p == jjl => candidate = nextCandidate(pr, seq, candidate); break
+                case _ => // ignore branches that are not about ODEs
+              }
+            }
+          }
+          candidate match {
+            case Some(c) =>
+              println/*logger.info*/("loopPostMaster cand    " + candidate)
+              c :: True :: Nil
+            case _ =>
+              throw new BelleThrowable("loopPostMaster: No more progress for lack of ODEs in the loop\n" + pr.prettyString)
           }
         }
       }
 
-
-      SearchAndRescueAgain(jj :: jja :: Nil,
+      SearchAndRescueAgain(jjl :: jja :: Nil,
         //@todo OnAll(ifThenElse(shape [a]P, chase(1.0) , skip)) instead of | to chase away modal postconditions
         loop(subst(jj))(pos) < (nil, nil,
           cut(jja) <(
             /* use jja() |- */
-            chase(pos) & OnAll(propChase) & OnAll(?(chase(pos ++ PosInExpr(1::Nil))) & ?(QE()))
+            chase(pos) & OnAll(propChase) & DebuggingTactics.print("Foo") & OnAll(?(chase(pos ++ PosInExpr(1::Nil))) & DebuggingTactics.print("Bar") & ?(QE() & done) & DebuggingTactics.print("Zee")) & DebuggingTactics.print("WTF")
             ,
             /* show postponed |- jja() */
             hide(pos)
             //@todo cohide(Find.FindR(0, Some(jja)))
             )
           ),
-        generateOnTheFly(initialCond, pos, post)
+        generateOnTheFly(pos)
         ,
         finishOff
       )

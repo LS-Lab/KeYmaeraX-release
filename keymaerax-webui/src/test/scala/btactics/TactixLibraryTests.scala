@@ -226,51 +226,51 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & ODEInvariance.sAIclosedPlus()(1)) shouldBe 'proved
   }
 
-  "loopPostMaster" should "find an invariant for x=5-> [{x:=x+2;{x'=1}}*]x>=0" in withMathematica{qeTool =>
+  "loopPostMaster" should "find an invariant for x=5-> [{x:=x+2;{x'=1}}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;{x'=1}}*]x>=0".asFormula
-    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant for x=5-> [{{x'=2}}*]x>=0" in withMathematica{qeTool =>
+  it should "find an invariant for x=5-> [{{x'=2}}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{{x'=2}}*]x>=0".asFormula
-    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant for x>=5 & y>=0 -> [{{x'=x+y};}*]x>=0" in withMathematica { qeTool =>
+  it should "find an invariant for x>=5 & y>=0 -> [{{x'=x+y};}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 & y>=0 -> [{{x'=x+y}}*]x>=0".asFormula
-    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
-  it should "find a invariant for x=4-> [{{x'=-x};}*]x>=0 with other init" in withMathematica { qeTool =>
+  it should "find a invariant for x=4-> [{{x'=-x};}*]x>=0 with other init" in withMathematica { _ =>
     val fml = "x=4 -> [{{x'=-x}}*]x>=0".asFormula
-    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
-  it should "find a invariant for x=5-> [{{x'=-x};}*]x>=0" in withMathematica{qeTool =>
+  it should "find a invariant for x=5-> [{{x'=-x};}*]x>=0" in withMathematica { _ =>
     val fml = "x=5 -> [{{x'=-x}}*]x>=0".asFormula
-    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
-  it should "find a invariant for x=5-> [{{x'=-x};}*]x>0" in withMathematica{qeTool =>
+  it should "find a invariant for x=5-> [{{x'=-x};}*]x>0" in withMathematica { _ =>
     val fml = "x=5 -> [{{x'=-x}}*]x>0".asFormula
-    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula, ".>0".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x>0".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
   it should "at least not loop forever when finding an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
-    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant for x=5-> [{{x'=0} ++ {x'=5}}*]x>=0" in withMathematica{qeTool =>
+  it should "find an invariant for x=5-> [{{x'=0} ++ {x'=5}}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{{x'=0} ++ {x'=5}}*]x>=0".asFormula
-    val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
