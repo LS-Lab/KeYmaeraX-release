@@ -31,7 +31,7 @@ object ODEInvariance {
   /* Stash of derived axioms */
 
   // Rewrite >=
-  private lazy val geq = remember("f_()>=0 -> f_()>0 | f_()=0".asFormula, QE, namespace)
+  private lazy val geq = remember("f_()>=0 <-> f_()>0 | f_()=0".asFormula, QE, namespace)
 
   // Cont with the domain constraint already refined to >= instead of >
   private lazy val contAx =
@@ -142,18 +142,28 @@ object ODEInvariance {
     //Maybe pass this as an argument to avoid recomputing
     val lie = lieDer(ode, p)
 
+    //DebuggingTactics.print("LPSTEP"+p) &
     cutR(Or(Greater(p,Number(0)), Equal(p,Number(0))))(pos) <(
       //Left open for outer tactic (drops all other succedents)
       skip,
       implyR(pos) &
-      orL('Llast) <(
+      //DebuggingTactics.print("OR STEP") &
+        orL('Llast) <(
         //Strict case
-        useAt(contAx,PosInExpr(1::Nil))(pos) & closeId,
+        //DebuggingTactics.print("Cont STEP") &
+          useAt(contAx,PosInExpr(1::Nil))(pos) & closeId,
         //Integral case
+        //DebuggingTactics.print("DI STEP") &
         dR(GreaterEqual(lie,Number(0)),false)(pos) <(
           //left open for outer tactic
           skip,
-          dI('full)(pos) //TODO: probably don't need full power dI here
+          //TODO: this may fail on consts -- check
+          cohideOnlyL('Llast) &
+          //This is a special case where we don't want full DI, because we already have everything
+          cohideOnlyR(pos) & dI('diffInd)(1) <(
+            useAt(geq)(1) & orR(1) & closeId,
+            cohideOnlyL('Llast) & (Dassignb(1)*) & QE
+          )
         )
       ))
   })
@@ -167,7 +177,7 @@ object ODEInvariance {
     else //Could also make this fallback to the continuity step for early termination
       //DebuggingTactics.print("start") &
       andL(-1) & lpstep(1)< (
-        hideL(-2) & implyRi & byUS(geq),
+        hideL(-2) & useAt(geq)(-1) & closeId,
         hideL(-1) & implyL(-1) & <(closeId, hideL(-2) & lpgeq(bound-1))
       )
 
