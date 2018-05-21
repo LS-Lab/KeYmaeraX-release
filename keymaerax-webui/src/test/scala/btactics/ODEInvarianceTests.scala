@@ -132,7 +132,7 @@ class ODEInvarianceTests extends TacticTestBase {
     val poly = "max(min(z,min(x,y)),min(x,-abs(z)))".asTerm
     val p1 = pStarHomPlus(ode,dom,poly,1)
     println(p1)
-    p1._1 shouldBe "((z>=0&(z=0->x+y+z>0))&x>=0&y>=0&(y=0->2*x+y>0)|x>=0&false".asFormula
+    p1._1 shouldBe "(z>=0&(z=0->x+y+z>0))&x>=0&y>=0&(y=0->2*x+y>0)|x>=0&false".asFormula
   }
 
   it should "aggressively try rank 1" in withMathematica { qeTool =>
@@ -208,4 +208,14 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+  it should "prove Strict(3) example" in withMathematica { qeTool =>
+    //The invariant has a special which requires the 3rd Lie derivative
+    val fml = "(-4 + x^2 + y^2)*(-5*x*y + 1/2*(x^2 + y^2)^3) <= 0 & y>= 1/3 -> [{x'=2*(-(3/5) + x)*(1 - 337/225*(-(3/5) + x)^2 + 56/75 * (-(3/5) + x)*(-(4/5) + y) - 32/25 * (-(4/5) + y)^2) - y + 1/2 *x * (4 - x^2 - y^2), y'=x +  2*(1 - 337/225*(-(3/5) + x)^2 + 56/75*(-(3/5) + x)*(-(4/5) + y) - 32/25 * (-(4/5) + y)^2)*(-(4/5) + y) + 1/2 *y * (4 - x^2 - y^2)}]((-4 + x^2 + y^2)*(-5*x*y + 1/2*(x^2 + y^2)^3) <= 0 & y>= 1/3)".asFormula
+    val pr = proveBy(fml, implyR(1) &
+      sAIclosedPlus(3)(1)
+    )
+    println(pr)
+    //TODO: can this be sped up??, it seems to get stuck in polynomial equality step in DI
+    pr shouldBe 'proved
+  }
 }
