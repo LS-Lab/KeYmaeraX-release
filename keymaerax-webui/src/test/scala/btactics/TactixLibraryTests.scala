@@ -212,11 +212,11 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proof shouldBe 'proved
   }
 
-  def feedOneAfterTheOther[A<:Expression](list: List[A]) : (ProvableSig,ProverException)=>Expression = {
+  def feedOneAfterTheOther[A<:Expression](list: List[A]) : (ProvableSig,ProverException)=>Seq[Expression] = {
     var rem = list
     (_,e) => println("SnR loop status " + e)
       rem match {
-        case hd::tail => rem = tail; hd
+        case hd::tail => rem = tail; hd :: Nil
         case nil => throw new BelleThrowable("SearchAndRescueAgain ran out of alternatives among: " + list)
       }
   }
@@ -262,7 +262,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
-  it should "at least not loop forever when finding an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica{qeTool =>
+  it should "at least not loop forever when finding an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
@@ -279,7 +279,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val jj = "j(.)".asFormula
     val proof = proveBy(fml,
-      implyR(1) & SearchAndRescueAgain(jj,
+      implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, chase(1)),
         feedOneAfterTheOther(invs),
         OnAll(master()) & done
@@ -295,7 +295,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val jj = "j(.)".asFormula
     val proof = proveBy(fml,
-      implyR(1) & SearchAndRescueAgain(jj,
+      implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, chase(1)),
         feedOneAfterTheOther(invs),
         OnAll(master()) & done
@@ -313,7 +313,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     val invs = List("._0>=-1 & ._1>=0".asFormula, "._0=5  & ._1>=0".asFormula, "._0>=0 & ._1>=0".asFormula)
     val jj = "j(._0,._1)".asFormula
     val proof = proveBy(fml,
-      implyR(1) & SearchAndRescueAgain(jj,
+      implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair("._0".asTerm,"x".asTerm), SubstitutionPair("._1".asTerm, "y".asTerm)))(jj))(1) <(nil, nil, chase(1)),
         feedOneAfterTheOther(invs),
         OnAll(master()) & done
@@ -329,7 +329,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val jj = "j(.)".asFormula
     val proof = proveBy(fml,
-      implyR(1) & SearchAndRescueAgain(jj,
+      implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, chase(1)),
         feedOneAfterTheOther(invs),
         OnAll(master()) & done
@@ -347,7 +347,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     val invs = List("._0>=-1 & ._1>=0".asFormula, "._0=5  & ._1>=0".asFormula, "._0>=0 & ._1>=0".asFormula)
     val jj = "j(._0,._1)".asFormula
     val proof = proveBy(fml,
-      implyR(1) & SearchAndRescueAgain(jj,
+      implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair("._0".asTerm,"x".asTerm), SubstitutionPair("._1".asTerm, "y".asTerm)))(jj))(1) <(nil, nil, chase(1)),
         feedOneAfterTheOther(invs),
         OnAll(master()) & done

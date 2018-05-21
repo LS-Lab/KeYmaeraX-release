@@ -50,7 +50,7 @@ object InvariantProvers {
       else
         USubst(bounds.map(xi=> {i=i+1; SubstitutionPair(DotTerm(Real,Some(i)), xi)}))
       val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp=>sp.what.prettyString).mkString(",") + ")")
-      SearchAndRescueAgain(jj,
+      SearchAndRescueAgain(jj :: Nil,
         //@todo OnAll(ifThenElse(shape [a]P, chase(1.0) , skip)) instead of | to chase away modal postconditions
         loop(subst(jj))(pos) < (nil, nil, chase(pos) & OnAll(chase(pos ++ PosInExpr(1::Nil)) | skip)),
         feedOneAfterTheOther(cand),
@@ -60,10 +60,10 @@ object InvariantProvers {
     case e => throw new BelleThrowable("Wrong shape to generate an invariant for " + e + " at position " + pos)
   })
 
-  private def feedOneAfterTheOther[A<:Expression](gen: Iterator[A]) : (ProvableSig,ProverException)=>Expression = {
+  private def feedOneAfterTheOther[A<:Expression](gen: Iterator[A]) : (ProvableSig,ProverException)=>Seq[Expression] = {
     (_,e) => logger.debug("SnR loop status " + e)
       if (gen.hasNext)
-        gen.next()
+        gen.next() :: Nil
       else
         throw new BelleThrowable("loopSR ran out of loop invariant candidates")
   }
@@ -95,12 +95,12 @@ object InvariantProvers {
         OnAll(ifThenElse(DifferentialTactics.isODE, ODEInvariance.sAIclosedPlus()(pos), QE())(pos)) & done
 
 
-      def generateOnTheFly[A <: Expression](initialCond: Formula, pos: Position, initialCandidate: Formula): (ProvableSig, ProverException) => Expression = {
+      def generateOnTheFly[A <: Expression](initialCond: Formula, pos: Position, initialCandidate: Formula): (ProvableSig, ProverException) => scala.collection.immutable.Seq[Expression] = {
         import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.ExpressionAugmentor
         println/*logger.info*/("loopPostMaster initial " + candidate)
         return {
           (pr, e) => {
-            var progress: Boolean = false
+            var hasCandidate: Boolean = false
               breakable {
                 for (seq <- pr.subgoals) {
                   seq.sub(pos) match {
@@ -111,28 +111,34 @@ object InvariantProvers {
                       lazy val wouldBeSubgoals = USubst(Seq(jjl ~>> candidate, jja ~> True))(pr)
                       println("loopPostMaster looks at\n" + wouldBeSeq)
                       //@note first check induction step; then lazily check all subgoals (candidate may not be true initially or not strong enough)
+                      //@todo avoid doing wouldBeSeq twice
                       if (proveBy(wouldBeSeq, ?(finishOff)).isProved && proveBy(wouldBeSubgoals, ?(finishOff)).isProved) {
                         // proof will work so no need to change candidate
                         println("Proof will work " + wouldBeSubgoals.prettyString)
-                        //@todo continuation still fails since doesn't know about jja ~> True substitution
+                        hasCandidate = true
                       } else {
                         println("loopPostMaster progressing")
                         val assumeMoreSeq = USubst(Seq(jjl ~>> candidate, jja ~> initialCond))(seq)
-                        candidate = gen(assumeMoreSeq, pos).next()
-                        progress = true
-                        println/*logger.info*/("loopPostMaster next    " + candidate)
-                        break
+                        val generator = gen(assumeMoreSeq, pos)
+                        if (generator.hasNext) {
+                          candidate = gen(assumeMoreSeq, pos).next()
+                          hasCandidate = true
+                          println/*logger.info*/("loopPostMaster next    " + candidate)
+                          break
+                        } else {
+                          hasCandidate = false
+                          break
+                        }
                       }
                     case _ =>
                     // ignore branches that are not about ODEs
                   }
                 }
               }
-            if (progress) {
+            if (hasCandidate) {
               println/*logger.info*/("loopPostMaster cand    " + candidate)
-              candidate
+              candidate :: True :: Nil
             } else {
-              candidate = False
               throw new BelleThrowable("loopPostMaster: No more progress for lack of ODEs in the loop\n" + pr.prettyString)
             }
           }
@@ -140,7 +146,7 @@ object InvariantProvers {
       }
 
 
-      SearchAndRescueAgain(jj,
+      SearchAndRescueAgain(jj :: jja :: Nil,
         //@todo OnAll(ifThenElse(shape [a]P, chase(1.0) , skip)) instead of | to chase away modal postconditions
         loop(subst(jj))(pos) < (nil, nil,
           cut(jja) <(
@@ -155,13 +161,7 @@ object InvariantProvers {
         generateOnTheFly(initialCond, pos, post)
         ,
         finishOff
-      ) | (
-        // pass-through rescue phase
-        DebuggingTactics.print("loopPostMaster commits " + candidate) &
-        loop(candidate)(pos) < (master(), master(),
-          chase(pos) & OnAll(propChase) & OnAll((chase(pos ++ PosInExpr(1::Nil)) | skip) & (QE() | skip))
-          ) & finishOff
-        )
+      )
 
     case e => throw new BelleThrowable("Wrong shape to generate an invariant for " + e + " at position " + pos)
   })
