@@ -98,6 +98,10 @@ object ODEInvariance {
       CMon(PosInExpr(1::Nil)) & prop,
       namespace)
 
+  private lazy val fastGeqCheck =
+    remember("f_() = g_() -> (f_() >=0 -> g_()>=0)".asFormula,QE,
+      namespace)
+
   private lazy val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
   private lazy val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
   private lazy val absF = Function("abs", None, Real, Real, interpreted=true)
@@ -162,7 +166,8 @@ object ODEInvariance {
           //This is a special case where we don't want full DI, because we already have everything
           cohideOnlyR(pos) & dI('diffInd)(1) <(
             useAt(geq)(1) & orR(1) & closeId,
-            cohideOnlyL('Llast) & (Dassignb(1)*) & QE
+            cohideOnlyL('Llast) & (Dassignb(1)*) & implyRi &
+            useAt(fastGeqCheck,PosInExpr(1::Nil))(1) & QE
           )
         )
       ))
