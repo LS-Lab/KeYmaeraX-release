@@ -11,20 +11,23 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import org.apache.logging.log4j.scala.Logger
 
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
 
 /**
-  * Implements ODE tactics based on the axiomatization from
-  * Differential equation axiomatization: The impressive power of differential ghosts [LICS'18].
+  * Implements ODE tactics based on the differential equation axiomatization.
   *
   * Created by yongkiat on 05/14/18.
+  * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
   */
 
 object ODEInvariance {
 
   private val namespace = "odeinvariance"
+  private val logger = Logger(getClass) //@note instead of "with Logging" to avoid cyclic dependencies
+
   private def lieDer(ode:DifferentialProgram,p:Term) =
       DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
 
@@ -245,7 +248,7 @@ object ODEInvariance {
           val lie = lieDer(ode, p)
           val (q,r) = polyReduce(lie,p)
           //Check if domain constraint implies r=0
-          println("Equational Lie:"+lie+" "+q+" "+r)
+          logger.debug("Equational Lie:"+lie+" "+q+" "+r)
           val pr = proveBy(Imply(dom,Equal(r,Number(0))),QE)
           if(pr.isProved)
             if(q == Number(0)) (Equal(p,Number(0)),DiffInv(true))
@@ -257,7 +260,7 @@ object ODEInvariance {
       case _ => {
         val lie = lieDer(ode, p)
         val (q,r) = polyReduce(lie,p)
-        println("Inequational Lie:"+lie+" "+q+" "+r)
+        logger.debug("Inequational Lie:"+lie+" "+q+" "+r)
         val pr = proveBy(Imply(dom,GreaterEqual(r,Number(0))),QE)
         if(pr.isProved)
           if(q == Number(0)) (GreaterEqual(p,Number(0)),DiffInv(false))
@@ -311,6 +314,7 @@ object ODEInvariance {
     *              this is generated p>=0 & (p=0 -> (p'>=0 & (p'=0 -> ...p'^bound > 0 ...))
     *              (i.e. the bound-th Lie derivative is required to be strict)
     * @return Leaves the initial goal G |- P open if it does not prove by QE
+    * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
     */
   def sAIclosedPlus(bound:Int=1) : DependentPositionTactic = "sAIc" byWithInput (bound,(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only applicable in top-level succedent")
@@ -324,7 +328,7 @@ object ODEInvariance {
       case GreaterEqual(p,r) if r == Number(0) => (p,pStarHomPlus(ode,dom,p,bound))
       case _ => throw new BelleThrowable("Normalization failed to reach a normal form "+f2)
     }
-    println("HOMPLUS:",p,pf,inst)
+    logger.debug("HOMPLUS:",p,pf,inst)
 
     //Rewrite postcondition to match real induction
     val (starter,imm) = propt match {
@@ -350,7 +354,7 @@ object ODEInvariance {
         val p = cf.left
         val lie = lieDer(ode, p)
         val (q,r) = polyReduce(lie,p)
-        println("comparison fml: "+f+" Lie:"+lie+" "+q+" "+r)
+        logger.debug("comparison fml: "+f+" Lie:"+lie+" "+q+" "+r)
 
         val zero = Number(0)
         val prf = cf match {
@@ -362,13 +366,13 @@ object ODEInvariance {
           case NotEqual(_,_) => Equal(r,zero)
         }
         val pr = proveBy(Imply(dom,prf),QE)
-        println(pr)
+        logger.debug(pr)
         if(pr.isProved)
           Some(f)
         else {
           if(cf.isInstanceOf[Equal] || cf.isInstanceOf[NotEqual]) return None
           val pr2 = proveBy(Imply(And(dom, Equal(p, zero)), Greater(r, zero)), QE)
-          println(pr2)
+          logger.debug(pr2)
           if(pr2.isProved)
             Some(f)
           else None
@@ -379,14 +383,14 @@ object ODEInvariance {
         var acc = ListBuffer[Formula]()
         var domC = dom
         while(true){
-          println("Domain: ",domC)
+          logger.debug("Domain: " + domC)
           //Pull out the ones that are rank 1
           val checkls = ls.map(f =>
             rankOneFml(ode,domC,f) match { case None => Left(f) case Some(res) => Right(res)})
           val l = checkls.collect{case Left(v) => v}
           val r : List[Formula] = checkls.collect{case Right(v) => v}
           acc ++= r
-          println("Acc: ",acc)
+          logger.debug("Acc: " + acc)
           if(l.length == checkls.length)
             return None
           else if(l.length == 0)
@@ -435,6 +439,7 @@ object ODEInvariance {
     * 2) with a barrier certificate
     *
     * This tactic reorders conjunctions internally to try and find an order that works
+    * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
     */
   def sAIRankOne : DependentPositionTactic = "sAIR1" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only in top-level succedent")
@@ -452,7 +457,7 @@ object ODEInvariance {
     val reorder = proveBy(Equiv(f2,f3),QE)
     assert(reorder.isProved)
 
-    println("Rank 1: "+f3)
+    logger.debug("Rank 1: "+f3)
 
     //Rewrite postcondition to match real induction
     val (starter,imm) = propt match {

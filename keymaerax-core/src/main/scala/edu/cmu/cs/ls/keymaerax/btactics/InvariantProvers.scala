@@ -68,10 +68,10 @@ object InvariantProvers {
         throw new BelleThrowable("loopSR ran out of loop invariant candidates")
   }
 
+
   def loopPostMaster(gen: Generator[Formula]): DependentPositionTactic = "loopPostMaster" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
       val initialCond = seq.ante.reduceRightOption(And).getOrElse(True)
-      //val cand: Iterator[Formula] = gen(seq, pos)
       val bounds: List[Variable] =
         if (StaticSemantics.freeVars(post).toSet.exists(v => v.isInstanceOf[DifferentialSymbol]))
           StaticSemantics.boundVars(loopfml).toSet.toList
@@ -85,22 +85,22 @@ object InvariantProvers {
         }))
       val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp => sp.what.prettyString).mkString(",") + ")")
       val jjl: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp => sp.repl.prettyString).mkString(",") + ")")
+      // eventually instantiated to True, trick to substitute initialCond in during the search process
       val jja: Formula = KeYmaeraXParser.formulaParser("jja()")
 
       /* stateful mutable candidate used in generateOnTheFly and the pass-through later since usubst end tactic not present yet */
-      var candidate: Option[Formula] = Some(initialCond)
+      var candidate: Option[Formula] = Some(post)
 
       val finishOff: BelleExpr =
-      //@todo switch to quickstop mode
-        OnAll(ifThenElse(DifferentialTactics.isODE, ODEInvariance.sAIclosedPlus()(pos) | ODEInvariance.sAIRankOne(pos), QE())(pos)) & done
+        OnAll(ifThenElse(DifferentialTactics.isODE, odeInvariant(pos), QE())(pos)) & done
 
       def nextCandidate(pr: ProvableSig, sequent: Sequent, currentCandidate: Option[Formula]): Option[Formula] = currentCandidate match {
         case Some(cand) =>
-          println("loopPostMaster subst " + USubst(Seq(jjl ~>> cand, jja ~> True)))
+          logger.debug("loopPostMaster subst " + USubst(Seq(jjl ~>> cand, jja ~> True)))
           // plug in true for jja, commit if succeeded. Else plug in init for jja and generate
           val wouldBeSeq = USubst(Seq(jjl ~>> cand, jja ~> True))(sequent)
           lazy val wouldBeSubgoals = USubst(Seq(jjl ~>> cand, jja ~> True))(pr)
-          println("loopPostMaster looks at\n" + wouldBeSeq)
+          logger.debug("loopPostMaster looks at\n" + wouldBeSeq)
           //@note first check induction step; then lazily check all subgoals (candidate may not be true initially or not strong enough)
           //@todo avoid doing wouldBeSeq twice
           if (proveBy(wouldBeSeq, ?(finishOff)).isProved && proveBy(wouldBeSubgoals, ?(finishOff)).isProved) {
@@ -108,7 +108,7 @@ object InvariantProvers {
             println("Proof will work " + wouldBeSubgoals.prettyString)
             currentCandidate
           } else {
-            println("loopPostMaster progressing")
+            logger.debug("loopPostMaster progressing")
             val assumeMoreSeq = USubst(Seq(jjl ~>> cand, jja ~> initialCond))(sequent)
             val generator = gen(assumeMoreSeq, pos)
             if (generator.hasNext) {
@@ -123,24 +123,24 @@ object InvariantProvers {
       }
 
       def generateOnTheFly[A <: Expression](pos: Position): (ProvableSig, ProverException) => scala.collection.immutable.Seq[Expression] = {
-        println/*logger.info*/("loopPostMaster initial " + candidate)
+        logger.debug("loopPostMaster initial " + candidate)
         (pr: ProvableSig, _: ProverException) => {
           //@note updates "global" candidate
           breakable {
             for (seq <- pr.subgoals) {
               seq.sub(pos) match {
                 case Some(Box(_: ODESystem, _)) => candidate = nextCandidate(pr, seq, candidate); break
-                case Some(p: PredOf) if p == jjl => candidate = nextCandidate(pr, seq, candidate); break
+                //case Some(p: PredOf) if p == jjl => candidate = nextCandidate(pr, seq, candidate); break
                 case _ => // ignore branches that are not about ODEs
               }
             }
           }
           candidate match {
             case Some(c) =>
-              println/*logger.info*/("loopPostMaster cand    " + candidate)
+              logger.debug("loopPostMaster cand    " + candidate)
               c :: True :: Nil
             case _ =>
-              throw new BelleThrowable("loopPostMaster: No more progress for lack of ODEs in the loop\n" + pr.prettyString)
+              throw new BelleThrowable("loopPostMaster: No more progress, possibly for lack of ODEs in the loop\n" + pr.prettyString)
           }
         }
       }
@@ -150,10 +150,10 @@ object InvariantProvers {
         loop(subst(jj))(pos) < (nil, nil,
           cut(jja) <(
             /* use jja() |- */
-            chase(pos) & OnAll(propChase) & DebuggingTactics.print("Foo") & OnAll(?(chase(pos ++ PosInExpr(1::Nil))) & DebuggingTactics.print("Bar") & ?(QE() & done) & DebuggingTactics.print("Zee")) & DebuggingTactics.print("WTF")
+            chase(pos) & OnAll(propChase) & OnAll(?(chase(pos ++ PosInExpr(1::Nil))) & ?(QE() & done))
             ,
-            /* show postponed |- jja() */
-            hide(pos)
+            /* show |- jja() is postponed since only provable for jja()=True */
+            cohide('Rlast)
             //@todo cohide(Find.FindR(0, Some(jja)))
             )
           ),
