@@ -324,36 +324,12 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[loopauto]]
     * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     *      Example 32. */
-  def loopSR(gen: Generator[Formula]): DependentPositionTactic = "loopSR" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
-    case loopfml@Box(prog, post) =>
-      val cand: Iterator[Formula] = gen(seq, pos).iterator
-      val bounds: List[Variable] =
-        if (StaticSemantics.freeVars(post).toSet.exists( v => v.isInstanceOf[DifferentialSymbol] ) )
-          StaticSemantics.boundVars(loopfml).toSet.toList
-        else DependencyAnalysis.dependencies(prog, DependencyAnalysis.freeVars(post))._1.toList
-      var i = -1
-      val subst: USubst = if (bounds.length==1)
-        USubst(Seq(SubstitutionPair(DotTerm(), bounds.head)))
-      else
-        USubst(bounds.map(xi=> {i=i+1; SubstitutionPair(DotTerm(Real,Some(i)), xi)}))
-      val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp=>sp.what.prettyString).mkString(",") + ")")
-      SearchAndRescueAgain(jj,
-        //@todo OnAll(ifThenElse(shape [a]P, chase(1.0) , skip)) instead of | to chase away modal postconditions
-        loop(subst(jj))(1) < (nil, nil, chase(1) & OnAll(chase(1, List(0)) | skip)),
-        feedOneAfterTheOther(cand),
-        //@todo switch to quickstop mode
-        OnAll(master()) & done
-      )
-    case e => throw new BelleThrowable("Wrong shape to generate an invariant for " + e + " at position " + pos)
-  })
-
-  private def feedOneAfterTheOther[A<:Expression](gen: Iterator[A]) : (ProvableSig,ProverException)=>Expression = {
-    (_,e) => logger.debug("SnR loop status " + e)
-      if (gen.hasNext)
-        gen.next()
-      else
-        throw new BelleThrowable("loopSR ran out of loop invariant candidates")
-  }
+  def loopSR(gen: Generator[Formula]): DependentPositionTactic = InvariantProvers.loopSR(gen)
+  /** loopPostMaster: search-and-rescue style automatic loop induction based on successive generator gen.
+    * Uses [[SearchAndRescueAgain]] to avoid repetitive proving.
+    * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+    *      Example 32. */
+  def loopPostMaster(gen: Generator[Formula]): DependentPositionTactic = InvariantProvers.loopPostMaster(gen)
 
   /** throughout: prove a property of a loop by induction with the given loop invariant (hybrid systems) that
     * holds throughout the steps of the loop body.
@@ -382,6 +358,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[dG]]
     */
   lazy val ODE: DependentPositionTactic = DifferentialTactics.ODE
+
+  /* odeInvariant: prove invariants of differential equations [LICS'18] */
+  lazy val odeInvariant: DependentPositionTactic = "odeInvariant" by ((pos:Position) =>
+    ODEInvariance.sAIclosedPlus()(pos) | ODEInvariance.sAIRankOne(pos))
+
   /** DG/DA differential ghosts that are generated automatically to prove differential equations.
     *
     * @see [[dG]] */
@@ -876,6 +857,14 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     case Some((pos,_)) => pos
     case None => throw new IllegalArgumentException("here() locator does not occur in positionOf(" + fml + ")")
   }
+
+  /** ifThenElse(cond,thenT,elseT) runs `thenT` if `cond` holds at position and `elseT` otherwise. */
+  def ifThenElse(cond: (Sequent, Position)=>Boolean, thenT: BelleExpr, elseT: BelleExpr): DependentPositionTactic = "ifThenElse" by ((pos:Position,seq:Sequent) =>
+    if (cond(seq, pos))
+      thenT
+    else
+      elseT
+    )
 
   /**
     * Prove the new goal by the given tactic, returning the resulting Provable

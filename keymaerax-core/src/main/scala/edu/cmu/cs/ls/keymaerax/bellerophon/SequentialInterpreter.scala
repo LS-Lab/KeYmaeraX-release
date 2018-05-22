@@ -392,14 +392,15 @@ abstract class SequentialInterpreter(listeners: Seq[IOListener]) extends Interpr
         case BelleProvable(commonDerivation, lbl2) =>
           var lastProblem: ProverException = NoProverException
           while (true) {
-            val value: Expression = instantiator(commonDerivation, lastProblem)
+            val values = instantiator(commonDerivation, lastProblem)
             try {
-              val us: USubst = USubst(SubstitutionPair(abbr, value) :: Nil)
+              val us: USubst = USubst(abbr.zip(values).map({ case (what, repl) => what ~>> repl }))
               val backsubst: ProvableSig = commonDerivation(us)
               val remaining: BelleProvable = BelleProvable(provable(backsubst, 0), lbl2)
               apply(continuation, remaining) match {
                 // return upon success of tactic
                 case pr: BelleProvable => return pr
+                case e: BelleThrowable => lastProblem = e
                 case e => ???
               }
             } catch {

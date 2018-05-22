@@ -139,7 +139,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proof shouldBe 'proved
   }
 
-  it should "post-hoc instantiate a j(||) closing \\exists j 5+3=j" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{ qeTool =>
+  ignore should "post-hoc instantiate a j(||) closing \\exists j 5+3=j" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{ qeTool =>
     val proof = proveBy("\\exists jj 5+3=jj".asFormula,
       LetInspect("j(||)".asTerm,
         (pr:ProvableSig) => pr.subgoals.head.succ.head match {
@@ -198,7 +198,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proof shouldBe 'proved
   }
 
-  it should "post-hoc find a j(||) closing (x+x*y)'=j(||)" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{qeTool =>
+  ignore should "post-hoc find a j(||) closing (x+x*y)'=j(||)" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{qeTool =>
     val proof = proveBy("\\exists jj (x+x*y)'=jj".asFormula,
       LetInspect("j(||)".asTerm,
         (pr:ProvableSig) => pr.subgoals.head.succ.head match {
@@ -212,21 +212,91 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proof shouldBe 'proved
   }
 
-  def feedOneAfterTheOther[A<:Expression](list: List[A]) : (ProvableSig,ProverException)=>Expression = {
+  def feedOneAfterTheOther[A<:Expression](list: List[A]) : (ProvableSig,ProverException)=>Seq[Expression] = {
     var rem = list
     (_,e) => println("SnR loop status " + e)
       rem match {
-        case hd::tail => rem = tail; hd
+        case hd::tail => rem = tail; hd :: Nil
         case nil => throw new BelleThrowable("SearchAndRescueAgain ran out of alternatives among: " + list)
       }
   }
+
+  "sAI" should "prove x>=0 -> [{x'=2}]x>=0" in withMathematica{qeTool =>
+    val fml = "x>=0 -> [{x'=2}]x>=0".asFormula
+    proveBy(fml, implyR(1) & ODEInvariance.sAIclosedPlus()(1)) shouldBe 'proved
+  }
+
+  "loopPostMaster" should "find an invariant for x=5-> [{x:=x+2;{x'=1}}*]x>=0" in withMathematica { _ =>
+    val fml = "x>=5 -> [{x:=x+2;{x'=1}}*]x>=0".asFormula
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x=5-> [{{x'=2}}*]x>=0" in withMathematica { _ =>
+    val fml = "x>=5 -> [{{x'=2}}*]x>=0".asFormula
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
+  it should "prove x>=5 & y>=0 -> [{{x'=x+y};}*]x>=0 by invariant x>=0 & y>=0" in withMathematica { _ =>
+    val fml = "x>=5 & y>=0 -> [{{x'=x+y}}*]x>=0".asFormula
+    proveBy(fml, implyR(1) & loop("x>=0 & y>=0".asFormula)(1) <(QE,QE, odeInvariant(1))) shouldBe 'proved
+  }
+
+  it should "prove x>=5 & y>=0 -> [{{x'=x+y};}*]x>=0 by invariant x>=0" in withMathematica { _ =>
+    val fml = "x>=5 & y>=0 -> [{{x'=x+y}}*]x>=0".asFormula
+    proveBy(fml, implyR(1) & loop("x>=0".asFormula)(1) <(QE,QE, odeInvariant(1))) shouldBe 'proved
+  }
+
+  it should "find an invariant for x>=5 & y>=0 -> [{{x'=x+y};}*]x>=0" in withMathematica { _ =>
+    val fml = "x>=5 & y>=0 -> [{{x'=x+y}}*]x>=0".asFormula
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
+  it should "find a invariant for x=4-> [{{x'=-x};}*]x>=0 with other init" in withMathematica { _ =>
+    val fml = "x=4 -> [{{x'=-x}}*]x>=0".asFormula
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
+  it should "find a invariant for x=5-> [{{x'=-x};}*]x>=0" in withMathematica { _ =>
+    val fml = "x=5 -> [{{x'=-x}}*]x>=0".asFormula
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
+  it should "find a invariant for x=5-> [{{x'=-x};}*]x>0" in withMathematica { _ =>
+    val fml = "x=5 -> [{{x'=-x}}*]x>0".asFormula
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x>0".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
+  it should "at least not loop forever when finding an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
+    val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x=5-> [{{x'=0} ++ {x'=5}}*]x>=0" in withMathematica { _ =>
+    val fml = "x>=5 -> [{{x'=0} ++ {x'=5}}*]x>=0".asFormula
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x=5-> [{x:=x+1;{x'=x}}*]x>=4 by counting up" in withMathematica { _ =>
+    val fml = "x=5-> [{x:=x+1;{x'=x}}*]x>=4".asFormula
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
 
   "SnR Loop Invariant" should "find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica{qeTool =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val jj = "j(.)".asFormula
     val proof = proveBy(fml,
-      implyR(1) & SearchAndRescueAgain(jj,
+      implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, chase(1)),
         feedOneAfterTheOther(invs),
         OnAll(master()) & done
@@ -242,7 +312,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val jj = "j(.)".asFormula
     val proof = proveBy(fml,
-      implyR(1) & SearchAndRescueAgain(jj,
+      implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, chase(1)),
         feedOneAfterTheOther(invs),
         OnAll(master()) & done
@@ -255,12 +325,12 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs2.toStream)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;y:=y+1;}*]x>=0" in withMathematica{qeTool =>
+ it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;y:=y+1;}*]x>=0" in withMathematica{qeTool =>
     val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;}*]x>=0".asFormula
     val invs = List("._0>=-1 & ._1>=0".asFormula, "._0=5  & ._1>=0".asFormula, "._0>=0 & ._1>=0".asFormula)
     val jj = "j(._0,._1)".asFormula
     val proof = proveBy(fml,
-      implyR(1) & SearchAndRescueAgain(jj,
+      implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair("._0".asTerm,"x".asTerm), SubstitutionPair("._1".asTerm, "y".asTerm)))(jj))(1) <(nil, nil, chase(1)),
         feedOneAfterTheOther(invs),
         OnAll(master()) & done
@@ -276,7 +346,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val jj = "j(.)".asFormula
     val proof = proveBy(fml,
-      implyR(1) & SearchAndRescueAgain(jj,
+      implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair(".".asTerm,"x".asTerm)))(jj))(1) <(nil, nil, chase(1)),
         feedOneAfterTheOther(invs),
         OnAll(master()) & done
@@ -288,13 +358,21 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs2.toStream)(1)) shouldBe 'proved
   }
 
+  it should "prove x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0 by invariant x>=0&y>=0" in withMathematica{qeTool =>
+    val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0".asFormula
+    proveBy(fml, implyR(1) & loop("x>=0&y>=0".asFormula)(1) <(QE(), QE(), composeb(1) & assignb(1) & composeb(1) & assignb(1) &
+      ODEInvariance.sAIclosedPlus()(1))) shouldBe 'proved
+  }
+
   it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0" taggedAs SlowTest ignore withMathematica { _ =>
     // Failing test case
     val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0".asFormula
     val invs = List("._0>=-1 & ._1>=0".asFormula, "._0=5  & ._1>=0".asFormula, "._0>=0 & ._1>=0".asFormula)
+    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs.toStream)(1)) shouldBe 'proved
+
     val jj = "j(._0,._1)".asFormula
     val proof = proveBy(fml,
-      implyR(1) & SearchAndRescueAgain(jj,
+      implyR(1) & SearchAndRescueAgain(jj :: Nil,
         loop(USubst(Seq(SubstitutionPair("._0".asTerm,"x".asTerm), SubstitutionPair("._1".asTerm, "y".asTerm)))(jj))(1) <(nil, nil, chase(1)),
         feedOneAfterTheOther(invs),
         OnAll(master()) & done

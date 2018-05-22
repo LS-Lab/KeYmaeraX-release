@@ -650,8 +650,10 @@ case class LetInspect(abbr: Expression, instantiator: ProvableSig => Expression,
   *      Example 32.
   * @see [[NoProverException]]
   */
-case class SearchAndRescueAgain(abbr: Expression, common: BelleExpr, instantiator: (ProvableSig,ProverException) => Expression, continuation: BelleExpr) extends BelleExpr {
-  override def prettyString = "searchAndRescueAgain(" + abbr + ":= after " + common + " among " + instantiator + " in " + continuation + ")"
+case class SearchAndRescueAgain(abbr: scala.collection.immutable.Seq[Expression],
+                                common: BelleExpr, instantiator: (ProvableSig,ProverException) => scala.collection.immutable.Seq[Expression],
+                                continuation: BelleExpr) extends BelleExpr {
+  override def prettyString: String = "searchAndRescueAgain(" + abbr + ":= after " + common + " among " + instantiator + " in " + continuation + ")"
 }
 
 
