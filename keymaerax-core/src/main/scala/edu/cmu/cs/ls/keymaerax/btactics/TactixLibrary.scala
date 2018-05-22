@@ -72,15 +72,17 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
      else HilbertCalculus.stepAt(pos))
     | assignb(pos))
 
-  /** Normalize to sequent form */
+  /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to [[orL]], [[implyL]], [[equivL]], [[andR]], and [[equivR]]. */
   lazy val normalize: BelleExpr = "normalize" by normalize(orL, implyL, equivL, andR, equivR)
-  /** Normalize to sequent form, keeping branching factor restricted to `beta` */
+  /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to `beta` rules. */
   def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by tacticChase()(notL::andL::notR::implyR::orR::allR::existsL::step::ProofRuleTactics.closeTrue::ProofRuleTactics.closeFalse::Nil ++ beta:_*)
 
-  /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
+  /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). Keeps branching factor of [[tacticChase]] restricted to [[andR]]. */
   val unfoldProgramNormalize: BelleExpr = "unfold" by normalize(andR)
 
-  /** Exhaustively (depth-first) apply tactics from the tactic index, restricted to the tactics in `restrictTo` */
+  /** Exhaustively (depth-first) apply tactics from the tactic index, restricted to the tactics in `restrictTo`, to chase away.
+    * Unlike [[chase]], tacticChase will use propositional proof rules and possibly branch
+    * @see [[chase]] */
   def tacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by ((seq: Sequent) => {
     val restrictions = restrictTo.toList
 

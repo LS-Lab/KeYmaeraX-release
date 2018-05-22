@@ -1618,7 +1618,8 @@ trait UnifyUSCalculus {
     * Computation-based auto-tactics
     *******************************************************************/
 
-  /** Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices. */
+  /** Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices.
+    * Unlike [[TactixLibrary.tacticChase]] will not branch or use propositional rules, merely transform the chosen formula in place. */
   lazy val chase: DependentPositionTactic = chase(3,3)
 
   /** Chase with bounded breadth and giveUp to stop.
