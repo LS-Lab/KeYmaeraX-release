@@ -243,13 +243,11 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loop("x>=0 & y>=0".asFormula)(1) <(QE,QE, odeInvariant(1))) shouldBe 'proved
   }
 
-  //@todo Yong Kiam
   it should "prove x>=5 & y>=0 -> [{{x'=x+y};}*]x>=0 by invariant x>=0" in withMathematica { _ =>
     val fml = "x>=5 & y>=0 -> [{{x'=x+y}}*]x>=0".asFormula
     proveBy(fml, implyR(1) & loop("x>=0".asFormula)(1) <(QE,QE, odeInvariant(1))) shouldBe 'proved
   }
 
-  //@todo Yong Kiam
   it should "find an invariant for x>=5 & y>=0 -> [{{x'=x+y};}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 & y>=0 -> [{{x'=x+y}}*]x>=0".asFormula
     val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).iterator

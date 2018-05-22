@@ -350,7 +350,6 @@ object ODEInvariance {
     f match {
       case cf:ComparisonFormula =>
         val (pr, denRemReq, cofactor, rem) = DifferentialTactics.findDbx(ode, dom, cf,false)
-        println(pr,denRemReq,cofactor,rem)
         if (pr.isProved)// TODO: this should be keeping track of co-factors rather than throwing them away
           Some(f)
         else {
