@@ -1030,8 +1030,8 @@ private object DifferentialTactics extends Logging {
   /** Find Q|- p' = q/g p + r, and proves Q|- g!=0 & r~0 with appropriate
     * sign condition on r as specified by "property"
     */
-  private [btactics] def findDbx(p:Term, ode: DifferentialProgram, dom: Formula, property : Formula) : (ProvableSig,Formula,Term,Term) = {
-
+  private [btactics] def findDbx(ode: DifferentialProgram, dom: Formula, property: ComparisonFormula, strict:Boolean=true) : (ProvableSig,Formula,Term,Term) = {
+    val p = property.left
     val lie = DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
     // p' = g/q p + r
     val (g,q,r) = domQuoRem(lie,p,dom)
@@ -1048,11 +1048,12 @@ private object DifferentialTactics extends Logging {
       case _ => throw new BelleThrowable(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
     }
 
+
     //q!=0, r~0 (as appropriate)
     val denRemReq = And(NotEqual(q,zero),remSgn)
     val pr = proveBy(Imply(dom,denRemReq), QE)
 
-    if(!pr.isProved)
+    if(!pr.isProved && strict)
       throw new BelleThrowable("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+g+" denom: "+q+" rem: "+r+" unable to prove: "+denRemReq)
 
     (pr,denRemReq,Divide(g,q),r)
@@ -1075,8 +1076,7 @@ private object DifferentialTactics extends Logging {
     }
 
     //normalized to have p on LHS
-    val p = property.asInstanceOf[ComparisonFormula].left
-    val (pr,denRemReq,cofactor,rem) = findDbx(p,system,dom,property)
+    val (pr,denRemReq,cofactor,rem) = findDbx(system,dom,property.asInstanceOf[ComparisonFormula])
 
     //DI if simple, otherwise use dgDbx
     val finishTac = if (cofactor == Number(0)) dI('full)(pos) else dgDbx(cofactor)(pos)
