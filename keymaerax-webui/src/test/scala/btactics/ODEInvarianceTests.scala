@@ -50,7 +50,7 @@ class ODEInvarianceTests extends TacticTestBase {
   it should "take a local progress step" in withMathematica { qeTool =>
     val seq = "x>=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0, <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0".asSequent
     val pr = proveBy(seq, lpstep(2))
-    //println(pr)
+    println(pr)
     pr.subgoals should have size 2
     //Local progress into p>=0 requires p>0 | p=0 initially
     pr.subgoals(0) shouldBe "x>=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0, x>0|x=0".asSequent
@@ -209,13 +209,31 @@ class ODEInvarianceTests extends TacticTestBase {
   }
 
   it should "prove Strict(3) example" in withMathematica { qeTool =>
-    //The invariant has a special which requires the 3rd Lie derivative
+    //The invariant has a special point which requires the 3rd Lie derivative
     val fml = "(-4 + x^2 + y^2)*(-5*x*y + 1/2*(x^2 + y^2)^3) <= 0 & y>= 1/3 -> [{x'=2*(-(3/5) + x)*(1 - 337/225*(-(3/5) + x)^2 + 56/75 * (-(3/5) + x)*(-(4/5) + y) - 32/25 * (-(4/5) + y)^2) - y + 1/2 *x * (4 - x^2 - y^2), y'=x +  2*(1 - 337/225*(-(3/5) + x)^2 + 56/75*(-(3/5) + x)*(-(4/5) + y) - 32/25 * (-(4/5) + y)^2)*(-(4/5) + y) + 1/2 *y * (4 - x^2 - y^2)}]((-4 + x^2 + y^2)*(-5*x*y + 1/2*(x^2 + y^2)^3) <= 0 & y>= 1/3)".asFormula
     val pr = proveBy(fml, implyR(1) &
       sAIclosedPlus(3)(1)
     )
     println(pr)
-    //TODO: can this be sped up??, it seems to get stuck in polynomial equality step in DI
     pr shouldBe 'proved
+  }
+
+  it should "prove with consts (sAIRankOne)" in withMathematica { qeTool =>
+    val fml = "x>=0 & y>=0 -> [{x'=x+y}](x>=0 & y>=0)".asFormula
+    val pr = proveBy(fml, implyR(1) &
+      sAIRankOne(1)
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove with consts (sAIClosedPlus)" in withMathematica { qeTool =>
+    val fml = "x>=0 & y>=0 -> [{x'=x+y}](x>=0 & y>=0)".asFormula
+    //failing
+    val pr = proveBy(fml, implyR(1) &
+      sAIclosedPlus()(1)
+    )
+    println(pr)
+    //pr shouldBe 'proved
   }
 }

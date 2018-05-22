@@ -1039,7 +1039,7 @@ private object DifferentialTactics extends Logging {
   def dgDbxAuto: DependentPositionTactic = "dbx" by ((pos: Position, seq:Sequent) => {
     if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable("dgDbxAuto requires a AlgebraTool, but got None")
 
-    require(pos.isSucc && pos.isTopLevel, "barrier only at top-level succedent")
+    require(pos.isSucc && pos.isTopLevel, "dgDbxAuto only at top-level succedent")
 
     val (system,dom,post) = seq.sub(pos) match {
       case Some (Box (ODESystem (system, dom), property) ) => (system,dom,property)
@@ -1057,7 +1057,7 @@ private object DifferentialTactics extends Logging {
     val p = property.asInstanceOf[ComparisonFormula].left
 
     //Use simplification tool if available
-    val lie = DifferentialHelper.lieDerivative(system, p)
+    val lie = DifferentialHelper.simplifiedLieDerivative(system, p, ToolProvider.simplifierTool())
     val algTool = ToolProvider.algebraTool().get
     //val gb = p::domToTerms(dom)
     val domterms = domToTerms(dom)

@@ -429,7 +429,7 @@ object ODEInvariance {
         useAt(boxOrL,PosInExpr(1::Nil))(1) & recRankOneTac(l),
         useAt(boxOrR,PosInExpr(1::Nil))(1) & recRankOneTac(r)
       )
-      case _ => (DifferentialTactics.dgDbxAuto(1) & done)// | DifferentialTactics.dgBarrier()(1)
+      case _ => (DifferentialTactics.dgDbxAuto(1) & done) | DifferentialTactics.dgBarrier()(1)
     })
   }
 
