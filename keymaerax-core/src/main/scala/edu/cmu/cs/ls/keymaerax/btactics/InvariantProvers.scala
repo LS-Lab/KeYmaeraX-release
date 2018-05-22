@@ -69,6 +69,8 @@ object InvariantProvers {
   }
 
 
+
+  /** [[TactixLibrary.loopPostMaster()]] */
   def loopPostMaster(gen: Generator[Formula]): DependentPositionTactic = "loopPostMaster" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
       val initialCond = seq.ante.reduceRightOption(And).getOrElse(True)
@@ -150,7 +152,7 @@ object InvariantProvers {
         loop(subst(jj))(pos) < (nil, nil,
           cut(jja) <(
             /* use jja() |- */
-            chase(pos) & OnAll(propChase) & OnAll(?(chase(pos ++ PosInExpr(1::Nil))) & ?(QE() & done))
+            chase(pos) & OnAll(unfoldProgramNormalize) & OnAll(?(chase(pos ++ PosInExpr(1::Nil))) & ?(QE() & done))
             ,
             /* show |- jja() is postponed since only provable for jja()=True */
             cohide('Rlast)
@@ -164,8 +166,5 @@ object InvariantProvers {
 
     case e => throw new BelleThrowable("Wrong shape to generate an invariant for " + e + " at position " + pos)
   })
-
-  //@todo this is a suboptimal emulation for propositional chase on (1)
-  def propChase = normalize
 
 }
