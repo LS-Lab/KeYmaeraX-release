@@ -168,8 +168,8 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proof shouldBe 'proved
   }
 
-  /** @see UnificationMatchTest should "unify j()=x+y with s()=s()" */
-  it should "post-hoc find a j() closing (x+x*y)'=j()" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{_ =>
+  /** @see UnificationMatchTest should "unify j()=x+y with s()=s()" unifiable but not by mere matching, needs a proper unifier instead of a single sided matcher */
+  ignore should "post-hoc find a j() closing (x+x*y)'=j()" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{_ =>
     val proof = proveBy("\\exists jj (x+x*y)'=jj".asFormula,
       LetInspect("j(||)".asTerm,
         (pr:ProvableSig) => pr.subgoals.head.succ.head match {
@@ -184,7 +184,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   }
 
   /** @see UnificationMatchTest should "unify j()=x+y with s()=s()" */
-  it should "post-hoc find a j() closing j()=(x+x*y)'" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{qeTool =>
+  ignore should "post-hoc find a j() closing j()=(x+x*y)'" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{qeTool =>
     val proof = proveBy("\\exists jj jj=(x+x*y)'".asFormula,
       LetInspect("j(||)".asTerm,
         (pr:ProvableSig) => pr.subgoals.head.succ.head match {
@@ -228,13 +228,13 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
 
   "loopPostMaster" should "find an invariant for x=5-> [{x:=x+2;{x'=1}}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;{x'=1}}*]x>=0".asFormula
-    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for x=5-> [{{x'=2}}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{{x'=2}}*]x>=0".asFormula
-    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
@@ -250,46 +250,45 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
 
   it should "find an invariant for x>=5 & y>=0 -> [{{x'=x+y};}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 & y>=0 -> [{{x'=x+y}}*]x>=0".asFormula
-    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
   it should "find a invariant for x=4-> [{{x'=-x};}*]x>=0 with other init" in withMathematica { _ =>
     val fml = "x=4 -> [{{x'=-x}}*]x>=0".asFormula
-    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
   it should "find a invariant for x=5-> [{{x'=-x};}*]x>=0" in withMathematica { _ =>
     val fml = "x=5 -> [{{x'=-x}}*]x>=0".asFormula
-    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
   it should "find a invariant for x=5-> [{{x'=-x};}*]x>0" in withMathematica { _ =>
     val fml = "x=5 -> [{{x'=-x}}*]x>0".asFormula
-    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x>0".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x>0".asFormula, "x=7".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
   it should "at least not loop forever when finding an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
-    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for x=5-> [{{x'=0} ++ {x'=5}}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{{x'=0} ++ {x'=5}}*]x>=0".asFormula
-    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x>=7".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for x=5-> [{x:=x+1;{x'=x}}*]x>=4 by counting up" in withMathematica { _ =>
     val fml = "x=5-> [{x:=x+1;{x'=x}}*]x>=4".asFormula
-    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x>=-5".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
-
 
   "SnR Loop Invariant" should "find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica{qeTool =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
