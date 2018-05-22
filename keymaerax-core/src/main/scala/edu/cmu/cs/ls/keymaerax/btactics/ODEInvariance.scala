@@ -4,7 +4,6 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
-import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3.{context, namespace}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{useAt, _}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
@@ -110,9 +109,14 @@ object ODEInvariance {
   private lazy val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
   private lazy val absF = Function("abs", None, Real, Real, interpreted=true)
 
-  //Given a bound i, generate the local progress formula up to that bound
-  // i.e. the i-th Lie derivative is strict
-  // p>=0 & (p=0 -> (p'>=0 & (p'=0 -> ...) & (p=0&... -> p'^i >0)
+  /** Given a bound i, generate the local progress formula up to that bound
+    * i.e. the i-th Lie derivative is strict:
+    * p>=0 & (p=0 -> (p'>=0 & (p'=0 -> ...) & (p=0&... -> p'^i >0)
+    * @param ode   : the ODEs under consideration
+    * @param p     : the polynomial p to generate p*>0
+    * @param bound : number of higher Lie derivatives to generate
+    * @return p*>0 (bounded)
+    */
   def pStar(ode: DifferentialProgram,p:Term, bound: Int) : Formula ={
     if(bound <= 0) return Greater(p,Number(0))
     else{
@@ -122,7 +126,13 @@ object ODEInvariance {
     }
   }
 
-  //Homomorphically extend pStar to max and min terms
+  /** Homomorphically extend pStar to max and min terms
+    *
+    * @param ode   : the ODEs under consideration
+    * @param p     : the term p>=0 (including max/min terms)
+    * @param bound : number of higher Lie derivatives to generate
+    * @return p*>0
+    */
   def pStarHom(ode: DifferentialProgram,p:Term, bound: Int) : Formula = {
     p match{
       case FuncOf(f,Pair(l,r)) =>
@@ -180,7 +190,7 @@ object ODEInvariance {
   // The following LP helper orchestration tactics assume that the relevant "progress" condition
   // is in antecedent (-1), and the target progress condition is in succedent (1)
   // Currently, a uniform bound is assumed on all the progress conditions
-  def lpgeq(bound:Int) : BelleExpr =
+  private def lpgeq(bound:Int) : BelleExpr =
     if (bound <= 0)
       implyRi & byUS(contAx)
     else //Could also make this fallback to the continuity step for early termination
@@ -191,7 +201,7 @@ object ODEInvariance {
       )
 
   //Homomorphically extend lpgeq to max and min terms
-  def lpclosed(bound:Int, progressTerm:Term) : BelleExpr =
+  private def lpclosed(bound:Int, progressTerm:Term) : BelleExpr =
     progressTerm match{
       case FuncOf(f,Pair(l,r)) =>
         if (f == maxF) orL(-1) <(
@@ -218,7 +228,7 @@ object ODEInvariance {
   case class Triv() extends Instruction
 
   // A more exhaustive implementation
-  def pStarHomPlus(ode: DifferentialProgram, dom:Formula, p:Term, bound: Int) : (Formula,Instruction) = {
+  private def pStarHomPlus(ode: DifferentialProgram, dom:Formula, p:Term, bound: Int) : (Formula,Instruction) = {
     p match {
       case FuncOf(f, Pair(l, r)) =>
         if (f == maxF) {
@@ -259,7 +269,7 @@ object ODEInvariance {
   }
 
   //Assume the Q progress condition is at -1
-  def lpclosedPlus(inst:Instruction) : BelleExpr =
+  private def lpclosedPlus(inst:Instruction) : BelleExpr =
     inst match{
       case Darboux(iseq,cofactor,cut, pr) =>
         DebuggingTactics.print(cofactor+" "+cut) & skip
@@ -345,11 +355,12 @@ object ODEInvariance {
 
   // Determines if a formula is of the special "recursive" rank one case
   // i.e. every p~0 is (trivially) Darboux
-  // Additionally returns a list of formulas if so representing the diff cut order
+  // returns a list of formulas internally re-arranged according to diff cut order
   def rankOneFml(ode: DifferentialProgram, dom:Formula, f:Formula) : Option[Formula] = {
     f match {
       case cf:ComparisonFormula =>
         val (pr, denRemReq, cofactor, rem) = DifferentialTactics.findDbx(ode, dom, cf,false)
+        println(pr,denRemReq,cofactor,rem)
         if (pr.isProved)// TODO: this should be keeping track of co-factors rather than throwing them away
           Some(f)
         else {
