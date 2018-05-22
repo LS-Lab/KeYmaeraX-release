@@ -3,7 +3,7 @@
 Needs["Methods`",NotebookDirectory[]<>"Methods.m"] (* Load invariant generation methods package from current directory *)
 Needs["Classifier`",NotebookDirectory[]<>"Classifier.m"] (* Load classifier package from current directory *)
 Needs["AbstractionPolynomials`",NotebookDirectory[]<>"AbstractionPolynomials.m"] (* Polynomial sources for qualitative abstraction *)
-Needs["PlanarLinear`",NotebookDirectory[]<>"PlanarLinear.m"] (* Planar linear system analysis package *)
+(* Needs["PlanarLinear`",NotebookDirectory[]<>"PlanarLinear.m"] *) (* Planar linear system analysis package *)
 Needs["Linear`",NotebookDirectory[]<>"Linear.m"] (* Linear system analysis package *)
 
 
@@ -135,11 +135,11 @@ Switch[methodID,
 "OneDimPotential", Methods`OneDimPotential[problem],
 "OneDimReach", Methods`OneDimReach[problem],
 
-"PlanarLinear", Methods`DWC[precond, postcond, system, PlanarLinear`PlanarLinearMethod[precond, postcond, system]],
+(*"PlanarLinear", Methods`DWC[precond, postcond, system, PlanarLinear`PlanarLinearMethod[precond, postcond, system]],*)
 "Linear", Methods`DWC[precond, postcond, system, Linear`LinearMethod[precond, postcond, system, RationalsOnly->True, RationalPrecision->3]],
 "Multi-Linear", Methods`DWC[precond, postcond, system, MultiLinear`MultiLinearMethod[precond, postcond, system]],
 
-"PlanarLinearSmallest", Methods`DWC[precond, postcond, system, PlanarLinear`PlanarLinearMethod[precond, postcond, system], Smallest->False],
+(*"PlanarLinearSmallest", Methods`DWC[precond, postcond, system, PlanarLinear`PlanarLinearMethod[precond, postcond, system], Smallest->False],*)
 "LinearSmallest", Methods`DWC[precond, postcond, system, Linear`LinearMethod[precond, postcond, system], Smallest->True],
 
 (* Methods for non-linear systems based on qualitative analysis and discrete abstraction *)
