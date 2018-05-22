@@ -243,11 +243,13 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loop("x>=0 & y>=0".asFormula)(1) <(QE,QE, odeInvariant(1))) shouldBe 'proved
   }
 
+  //@todo Yong Kiam
   it should "prove x>=5 & y>=0 -> [{{x'=x+y};}*]x>=0 by invariant x>=0" in withMathematica { _ =>
     val fml = "x>=5 & y>=0 -> [{{x'=x+y}}*]x>=0".asFormula
     proveBy(fml, implyR(1) & loop("x>=0".asFormula)(1) <(QE,QE, odeInvariant(1))) shouldBe 'proved
   }
 
+  //@todo Yong Kiam
   it should "find an invariant for x>=5 & y>=0 -> [{{x'=x+y};}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 & y>=0 -> [{{x'=x+y}}*]x>=0".asFormula
     val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).iterator
@@ -287,6 +289,24 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   it should "find an invariant for x=5-> [{x:=x+1;{x'=x}}*]x>=4 by counting up" in withMathematica { _ =>
     val fml = "x=5-> [{x:=x+1;{x'=x}}*]x>=4".asFormula
     val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x>=-5".asFormula).iterator
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]v>=0" in withMathematica { _ =>
+    val fml = "x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]v>=0".asFormula
+    val invs = List("x>=-1".asFormula, "v>=1".asFormula, "x>=0&v>1".asFormula, "v>=-1".asFormula, "v>=0".asFormula, "x=7".asFormula).iterator
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]x>=0" in withMathematica { _ =>
+    val fml = "x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]x>=0".asFormula
+    val invs = List("x>=-1".asFormula, "v>=1".asFormula, "x>=0&v>1".asFormula, "v>=-1".asFormula, "v>=0".asFormula, "x>=0&v>=0".asFormula, "x=7".asFormula).iterator
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x=0&v=0-> [{{v:=-1; ++ ?v*v<10-x;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10" in withMathematica { _ =>
+    val fml = "x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
+    val invs = List("x>=-1".asFormula, "v>=1".asFormula, "x>=0&v>1".asFormula, "v>=-1".asFormula, "v>=0".asFormula, "v<=5".asFormula, "v<=5 & x<=10".asFormula, "x>=0&v>=0".asFormula, "v*v<10-x".asFormula, "x=7".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
