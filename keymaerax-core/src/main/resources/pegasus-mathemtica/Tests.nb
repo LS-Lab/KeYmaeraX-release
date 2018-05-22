@@ -1,0 +1,81 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 11.2' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[      2126,         73]
+NotebookOptionsPosition[      1834,         60]
+NotebookOutlinePosition[      2173,         75]
+CellTagsIndexPosition[      2130,         72]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"Needs", "[", 
+   RowBox[{"\"\<Strategies`\>\"", ",", 
+    RowBox[{
+     RowBox[{"NotebookDirectory", "[", "]"}], "<>", 
+     "\"\<Strategies.m\>\""}]}], "]"}], " ", 
+  RowBox[{"(*", " ", 
+   RowBox[{
+   "Load", " ", "Pegasus", " ", "strategies", " ", "package", " ", "from", 
+    " ", "current", " ", "directory"}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"(*", " ", "Tests", " ", "*)"}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{"Pegasus", "[", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{
+       RowBox[{
+        RowBox[{
+         RowBox[{
+          RowBox[{"x", "\[LessEqual]", "1"}], "&"}], " ", "x"}], "==", "0"}], 
+       "&"}], " ", "y"}], "=", "1"}], ",", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{
+         RowBox[{"x", "'"}], "=", "y"}], ",", 
+        RowBox[{
+         RowBox[{"y", "'"}], "=", 
+         RowBox[{"-", "x"}]}]}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"x", ",", "y"}], "}"}], ",", " ", "True"}], "}"}], ",", 
+    RowBox[{"x", "\[LessEqual]", "1"}]}], "}"}], "]"}]}], "Input",
+ CellChangeTimes->{{3.7360017260021544`*^9, 
+  3.7360017613121357`*^9}},ExpressionUUID->"b97e9cf0-5d7b-471d-bf0f-\
+09ceab41a7e8"]
+},
+WindowSize->{1366, 733},
+WindowMargins->{{2, Automatic}, {-1, Automatic}},
+FrontEndVersion->"11.2 for Linux x86 (64-bit) (September 10, 2017)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 1272, 38, 101, "Input",ExpressionUUID->"b97e9cf0-5d7b-471d-bf0f-09ceab41a7e8"]
+}
+]
+*)
+
