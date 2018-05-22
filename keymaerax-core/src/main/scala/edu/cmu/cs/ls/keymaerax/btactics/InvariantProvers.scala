@@ -104,8 +104,8 @@ object InvariantProvers {
           lazy val wouldBeSubgoals = USubst(Seq(jjl ~>> cand, jja ~> True))(pr)
           logger.debug("loopPostMaster looks at\n" + wouldBeSeq)
           //@note first check induction step; then lazily check all subgoals (candidate may not be true initially or not strong enough)
-          //@todo avoid doing wouldBeSeq twice
-          if (proveBy(wouldBeSeq, ?(finishOff)).isProved && proveBy(wouldBeSubgoals, ?(finishOff)).isProved) {
+          val stepProof = proveBy(wouldBeSeq, ?(finishOff))
+          if (stepProof.isProved && proveBy(wouldBeSubgoals(stepProof, wouldBeSubgoals.subgoals.indexOf(stepProof.conclusion)), ?(finishOff)).isProved) {
             // proof will work so no need to change candidate
             println("Proof will work " + wouldBeSubgoals.prettyString)
             currentCandidate
@@ -135,7 +135,6 @@ object InvariantProvers {
                 case Some(Box(_: ODESystem, _)) =>
                   sawODE = true
                   candidate = nextCandidate(pr, seq, candidate); break
-                //case Some(p: PredOf) if p == jjl => candidate = nextCandidate(pr, seq, candidate); break
                 case _ => // ignore branches that are not about ODEs
               }
             }
