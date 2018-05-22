@@ -313,10 +313,10 @@ object ODEInvariance {
     * @return Leaves the initial goal G |- P open if it does not prove by QE
     */
   def sAIclosedPlus(bound:Int=1) : DependentPositionTactic = "sAIc" byWithInput (bound,(pos:Position,seq:Sequent) => {
-    require(pos.isTopLevel && pos.isSucc, "sAI only in top-level succedent")
+    require(pos.isTopLevel && pos.isSucc, "sAI only applicable in top-level succedent")
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
-      case _ => throw new BelleThrowable("sAI only at box ODE in succedent")
+      case _ => throw new BelleThrowable("sAI only applicable to box ODE in succedent")
     }
     val (f2,propt)=SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post,
       DifferentialTactics.maxMinNormalize, SimplifierV3.emptyTaxs)

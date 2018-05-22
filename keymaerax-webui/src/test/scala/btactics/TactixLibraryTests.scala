@@ -139,7 +139,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proof shouldBe 'proved
   }
 
-  it should "post-hoc instantiate a j(||) closing \\exists j 5+3=j" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{ qeTool =>
+  ignore should "post-hoc instantiate a j(||) closing \\exists j 5+3=j" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{ qeTool =>
     val proof = proveBy("\\exists jj 5+3=jj".asFormula,
       LetInspect("j(||)".asTerm,
         (pr:ProvableSig) => pr.subgoals.head.succ.head match {
@@ -198,7 +198,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proof shouldBe 'proved
   }
 
-  it should "post-hoc find a j(||) closing (x+x*y)'=j(||)" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{qeTool =>
+  ignore should "post-hoc find a j(||) closing (x+x*y)'=j(||)" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{qeTool =>
     val proof = proveBy("\\exists jj (x+x*y)'=jj".asFormula,
       LetInspect("j(||)".asTerm,
         (pr:ProvableSig) => pr.subgoals.head.succ.head match {
@@ -341,10 +341,18 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs2.iterator)(1)) shouldBe 'proved
   }
 
+  it should "prove x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0 by invariant x>=0&y>=0" in withMathematica{qeTool =>
+    val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0".asFormula
+    proveBy(fml, implyR(1) & loop("x>=0&y>=0".asFormula)(1) <(QE(), QE(), composeb(1) & assignb(1) & composeb(1) & assignb(1) &
+      ODEInvariance.sAIclosedPlus()(1))) shouldBe 'proved
+  }
+
   it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0" in withMathematica{qeTool =>
     // Failing test case
     val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0".asFormula
     val invs = List("._0>=-1 & ._1>=0".asFormula, "._0=5  & ._1>=0".asFormula, "._0>=0 & ._1>=0".asFormula)
+    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs.iterator)(1)) shouldBe 'proved
+
     val jj = "j(._0,._1)".asFormula
     val proof = proveBy(fml,
       implyR(1) & SearchAndRescueAgain(jj :: Nil,
@@ -355,7 +363,6 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
-    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs.iterator)(1)) shouldBe 'proved
   }
 
 
