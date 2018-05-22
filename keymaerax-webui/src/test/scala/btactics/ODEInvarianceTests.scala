@@ -6,9 +6,6 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.ODEInvariance._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-
-import scala.collection.immutable._
 
 class ODEInvarianceTests extends TacticTestBase {
 
@@ -55,31 +52,6 @@ class ODEInvarianceTests extends TacticTestBase {
     pr.subgoals(0) shouldBe "x>=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0, x>0|x=0".asSequent
     //In the p=0 case, more work needs to be done
     pr.subgoals(1) shouldBe "x>=0, x=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0, <{t_'=1,z'=2,x'=x+1,y'=1&1+x>=0}>t_!=0".asSequent
-  }
-
-  it should "do full local progress p>=0" in withMathematica { qeTool =>
-    val seq = "x>=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0".asSequent
-    val pr = proveBy(seq,
-      cut(pStar("{z'=2,x'=x+1,y'=1}".asDifferentialProgram,"x".asTerm,10))
-      <(
-        cohide2(-2,1) & lpgeq(10),
-        cohideOnlyR('Rlast) & QE
-      ))
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "do full local progress with max(min) >=0" in withMathematica { qeTool =>
-    val seq = "max(min(z,min(x,y)),min(x,y))>=0 ==> <{t_'=1,x'=x^2+1, y'=2*x+y, z'=x+y+z & max(min(z,min(x,y)),min(x,y)) >= 0}>t_!=0".asSequent
-    val t = "max(min(z,min(x,y)),min(x,y))".asTerm
-    val pr = proveBy(seq,
-      cut(pStarHom("{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asDifferentialProgram,t,4))
-        <(
-        cohide2(-2,1) & lpclosed(4,t),
-        cohideOnlyR('Rlast) & QE
-      ))
-    println(pr)
-    pr shouldBe 'proved
   }
 
   it should "package with real induction" in withMathematica { qeTool =>
