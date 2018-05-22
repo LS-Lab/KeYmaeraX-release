@@ -27,6 +27,7 @@ object ODEInvariance {
 
   private val namespace = "odeinvariance"
   private val logger = Logger(getClass) //@note instead of "with Logging" to avoid cyclic dependencies
+  private val debugTactic = false
 
   private def lieDer(ode:DifferentialProgram,p:Term) =
       DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
@@ -276,27 +277,27 @@ object ODEInvariance {
     inst match{
       case Darboux(t,eq) =>
         (if(eq) useAt(refAbs)(1) else skip) &
-        DebuggingTactics.debug("Darboux "+t+" "+eq) & implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DifferentialTactics.dgDbx(t)(1)
+        DebuggingTactics.debug("Darboux "+t+" "+eq,doPrint = debugTactic) & implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DifferentialTactics.dgDbx(t)(1)
       case Disj(l,r) =>
-        DebuggingTactics.debug("DISJ") &
+        DebuggingTactics.debug("DISJ",doPrint = debugTactic) &
         orL(-2) <(
           useAt(refMaxL,PosInExpr(1::Nil))(1) & lpclosedPlus(l),
           useAt(refMaxR,PosInExpr(1::Nil))(1) & lpclosedPlus(r))
       case Conj(l,r) =>
-        DebuggingTactics.debug("CONJ") &
+        DebuggingTactics.debug("CONJ",doPrint = debugTactic) &
         andL(-2) & useAt(uniqMin,PosInExpr(0::Nil))(1) & andR(1) <(
           hideL(-3) & lpclosedPlus(l),
           hideL(-2) & lpclosedPlus(r)
         )
       case DiffInv(eq) =>
-        DebuggingTactics.debug("DI "+eq) &
+        DebuggingTactics.debug("DI "+eq,doPrint = debugTactic) &
         (if(eq) useAt(refAbs)(1) else skip) & implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & dI('full)(1)
       case Strict(bound) =>
-        DebuggingTactics.debug("Strict"+bound) &
+        DebuggingTactics.debug("Strict"+bound,doPrint = debugTactic) &
         hideL(-1) &
         lpgeq(bound)
       case Triv() =>
-        DebuggingTactics.debug("Triv") &
+        DebuggingTactics.debug("Triv",doPrint = debugTactic) &
         closeF
     }
 
@@ -313,7 +314,8 @@ object ODEInvariance {
     * @param bound (default 1): the bound on higher Lie derivatives to check for strict inequality, i.e. for p>=0,
     *              this is generated p>=0 & (p=0 -> (p'>=0 & (p'=0 -> ...p'^bound > 0 ...))
     *              (i.e. the bound-th Lie derivative is required to be strict)
-    * @return Leaves the initial goal G |- P open if it does not prove by QE
+    * @return closes the subgoal if P is indeed invariant, fails if P fails to normalize to f>=0 form, or if
+    *         one of tactic limitations is met
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
     */
   def sAIclosedPlus(bound:Int=1) : DependentPositionTactic = "sAIc" byWithInput (bound,(pos:Position,seq:Sequent) => {
@@ -335,10 +337,10 @@ object ODEInvariance {
       case None => (skip,skip)
       case Some(pr) => (useAt(pr)(pos ++ PosInExpr(1::Nil)),useAt(pr,PosInExpr(1::Nil))('Rlast))
     }
-    DebuggingTactics.debug("PRE") & starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
+    DebuggingTactics.debug("PRE",doPrint = debugTactic) & starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
       implyR(pos) & imm & ?(closeId) & QE & done, //common case?
       cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
-      implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.debug("QE step") & QE & done, skip) //Don't bother running the rest if QE fails
+      implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.debug("QE step",doPrint = debugTactic) & QE & done, skip) //Don't bother running the rest if QE fails
       & cohide2(-3,1)& implyR(1) & lpclosedPlus(inst)
     )
   })
@@ -414,9 +416,10 @@ object ODEInvariance {
   private def recRankOneTac(f:Formula) : BelleExpr = {
     //TODO:Currently Darbouxs all the time, but could just use dI in simple case
     //Perhaps delegate to Darboux tactic to check for simpler case
-    DebuggingTactics.debug(f.prettyString) & (f match {
+    DebuggingTactics.debug(f.prettyString,doPrint = debugTactic) & (f match {
       case True => G(1) & close
-      case And(l,r) => andL(-1) & DebuggingTactics.debug("state") & dC(l)(1)<(
+      case And(l,r) => andL(-1) &
+        DebuggingTactics.debug("state",doPrint = debugTactic) & dC(l)(1)<(
         hideL(-1) & boxAnd(1) & andR(1) <(
           DW(1) & G(1) & prop,
           recRankOneTac(r)),
@@ -426,7 +429,7 @@ object ODEInvariance {
         useAt(boxOrL,PosInExpr(1::Nil))(1) & recRankOneTac(l),
         useAt(boxOrR,PosInExpr(1::Nil))(1) & recRankOneTac(r)
       )
-      case _ => (DifferentialTactics.dgDbxAuto(1) & done) | DifferentialTactics.dgBarrier()(1)
+      case _ => (DifferentialTactics.dgDbxAuto(1) & done)// | DifferentialTactics.dgBarrier()(1)
     })
   }
 
