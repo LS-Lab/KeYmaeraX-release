@@ -220,6 +220,7 @@ class ODEInvarianceTests extends TacticTestBase {
 
   it should "prove with consts (sAIRankOne)" in withMathematica { qeTool =>
     val fml = "x>=0 & y>=0 -> [{x'=x+y}](x>=0 & y>=0)".asFormula
+    //This worked out because the tactic reorders y>=0 before x>=0
     val pr = proveBy(fml, implyR(1) &
       sAIRankOne(1)
     )
@@ -227,13 +228,11 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "prove with consts (sAIClosedPlus)" in withMathematica { qeTool =>
-    val fml = "x>=0 & y>=0 -> [{x'=x+y}](x>=0 & y>=0)".asFormula
+  it should "prove with consts (auto const)" in withMathematica { qeTool =>
+    val fml = "x>=0 & y>0 -> [{x'=x+y}]x>=0".asFormula
     //failing
-    val pr = proveBy(fml, implyR(1) &
-      sAIclosedPlus()(1)
-    )
+    val pr = proveBy(fml, implyR(1) & andL(-1) & odeInvariant(1))
     println(pr)
-    //pr shouldBe 'proved
+    pr shouldBe 'proved
   }
 }

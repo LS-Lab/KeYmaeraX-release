@@ -320,12 +320,15 @@ object ODEInvariance {
     */
   def sAIclosedPlus(bound:Int=1) : DependentPositionTactic = "sAIc" byWithInput (bound,(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only applicable in top-level succedent")
+
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
       case _ => throw new BelleThrowable("sAI only applicable to box ODE in succedent")
     }
+
     val (f2,propt)=SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post,
       DifferentialTactics.maxMinNormalize, SimplifierV3.emptyTaxs)
+
     val (p,(pf,inst)) = f2 match {
       case GreaterEqual(p,r) if r == Number(0) => (p,pStarHomPlus(ode,dom,p,bound))
       case _ => throw new BelleThrowable("Normalization failed to reach a normal form "+f2)
@@ -337,6 +340,7 @@ object ODEInvariance {
       case None => (skip,skip)
       case Some(pr) => (useAt(pr)(pos ++ PosInExpr(1::Nil)),useAt(pr,PosInExpr(1::Nil))('Rlast))
     }
+
     DebuggingTactics.debug("PRE",doPrint = debugTactic) & starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
       implyR(pos) & imm & ?(closeId) & QE & done, //common case?
       cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
@@ -396,7 +400,7 @@ object ODEInvariance {
           if(l.length == checkls.length)
             return None
           else if(l.length == 0)
-            return Some( acc.foldRight(True:Formula)((x,y) => And(x,y)))
+            return Some(acc.foldRight(True:Formula)((x,y) => And(x,y)))
           else {
             ls = l
             domC = r.foldRight(domC)((x, y) => And(x, y))
