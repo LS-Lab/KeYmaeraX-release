@@ -80,7 +80,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
   val unfoldProgramNormalize: BelleExpr = "unfold" by normalize(andR)
 
-  /** Exhaustively (depth-first) apply tactics from the tactic index, restricted to the tactics in `restrictTo` */
+  /** Exhaustively (depth-first) apply tactics from the tactic index, restricted to the tactics in `restrictTo`, to chase away.
+    * Unlike [[chase]], tacticChase will use propositional proof rules and possibly branch
+    * @see [[chase]] */
   def tacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by ((seq: Sequent) => {
     val restrictions = restrictTo.toList
 

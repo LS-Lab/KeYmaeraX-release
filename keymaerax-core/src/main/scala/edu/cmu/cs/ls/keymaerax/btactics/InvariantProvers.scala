@@ -147,7 +147,7 @@ object InvariantProvers {
               c :: True :: Nil
             case _ =>
               if (sawODE)
-                throw new BelleThrowable("loopPostMaster: Invariant generator ran out of ideas\n" + pr.prettyString)
+                throw new BelleThrowable("loopPostMaster: Invariant generator ran out of ideas for\n" + pr.prettyString)
               else
                 throw new BelleThrowable("loopPostMaster: No more progress for lack of ODEs in the loop\n" + pr.prettyString)
           }
