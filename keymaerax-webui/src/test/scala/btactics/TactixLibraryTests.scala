@@ -304,9 +304,15 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant for x=0&v=0-> [{{v:=-1; ++ ?v*v<10-x;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10" in withMathematica { _ =>
+  it should "find an invariant for x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1; ++ ?false;v:=v;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10" in withMathematica { _ =>
+    val fml = "x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1; ++ ?false;v:=v;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
+    val invs = List("x>=-1".asFormula, "v>=1".asFormula, "x>=0&v>1".asFormula, "v>=-1".asFormula, "v>=0".asFormula, "v<=5".asFormula, "x<=10".asFormula, "v<=5 & x<=10".asFormula, "x>=0&v>=0".asFormula, "v*v<10-x".asFormula, "x=7".asFormula).iterator
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10" in withMathematica { _ =>
     val fml = "x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
-    val invs = List("x>=-1".asFormula, "v>=1".asFormula, "x>=0&v>1".asFormula, "v>=-1".asFormula, "v>=0".asFormula, "v<=5".asFormula, "v<=5 & x<=10".asFormula, "x>=0&v>=0".asFormula, "v*v<10-x".asFormula, "x=7".asFormula).iterator
+    val invs = List("x>=-1".asFormula, "v>=1".asFormula, "x>=0&v>1".asFormula, "v>=-1".asFormula, "v>=0".asFormula, "v<=5".asFormula, "x<=10".asFormula, "v<=5 & x<=10".asFormula, "x>=0&v>=0".asFormula, "v*v<10-x".asFormula, "x=7".asFormula).iterator
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 

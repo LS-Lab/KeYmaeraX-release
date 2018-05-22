@@ -115,7 +115,7 @@ object InvariantProvers {
             val generator = gen(assumeMoreSeq, pos)
             if (generator.hasNext) {
               candidate = Some(gen(assumeMoreSeq, pos).next())
-              println/*logger.info*/("loopPostMaster next    " + candidate)
+              println/*logger.info*/("loopPostMaster next    " + candidate.get)
               candidate
             } else {
               None
@@ -127,11 +127,14 @@ object InvariantProvers {
       def generateOnTheFly[A <: Expression](pos: Position): (ProvableSig, ProverException) => scala.collection.immutable.Seq[Expression] = {
         logger.debug("loopPostMaster initial " + candidate)
         (pr: ProvableSig, _: ProverException) => {
+          var sawODE: Boolean = false
           //@note updates "global" candidate
           breakable {
             for (seq <- pr.subgoals) {
               seq.sub(pos) match {
-                case Some(Box(_: ODESystem, _)) => candidate = nextCandidate(pr, seq, candidate); break
+                case Some(Box(_: ODESystem, _)) =>
+                  sawODE = true
+                  candidate = nextCandidate(pr, seq, candidate); break
                 //case Some(p: PredOf) if p == jjl => candidate = nextCandidate(pr, seq, candidate); break
                 case _ => // ignore branches that are not about ODEs
               }
@@ -139,10 +142,14 @@ object InvariantProvers {
           }
           candidate match {
             case Some(c) =>
-              logger.debug("loopPostMaster cand    " + candidate)
+              logger.debug("loopPostMaster cand    " + c)
+              // c for jjl, eventual True for jja
               c :: True :: Nil
             case _ =>
-              throw new BelleThrowable("loopPostMaster: No more progress, possibly for lack of ODEs in the loop\n" + pr.prettyString)
+              if (sawODE)
+                throw new BelleThrowable("loopPostMaster: Invariant generator ran out of ideas\n" + pr.prettyString)
+              else
+                throw new BelleThrowable("loopPostMaster: No more progress for lack of ODEs in the loop\n" + pr.prettyString)
           }
         }
       }
