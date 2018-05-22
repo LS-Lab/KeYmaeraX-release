@@ -305,6 +305,21 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariantCandidates)(1)) shouldBe 'proved
   }
 
+  it should "find an invariant for a simple time-triggered example" in withMathematica { _ =>
+    val fml =
+      """v=0 & A>=0 & b>0 & x<=m & ep>=0
+        | -> [
+        |      {
+        |        {?(2*b*(m-x) >= v^2+(A+b)*(A*ep^2+2*ep*v)); a:=A; ++ a:=-b; }
+        |        t := 0;
+        |        {x'=v, v'=a, t'=1 & v>=0 & t<=ep}
+        |      }*
+        |    ] x <= m
+      """.stripMargin.asFormula
+    val invs = ("v<=0" :: "v^2<=2*b*(m-x)" :: Nil).map(_.asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+  }
+
   "SnR Loop Invariant" should "find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica{qeTool =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
