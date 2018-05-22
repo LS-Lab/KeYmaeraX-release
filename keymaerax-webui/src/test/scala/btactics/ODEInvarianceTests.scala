@@ -1,13 +1,12 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.ODEInvariance._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
 
@@ -126,15 +125,6 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "compute aggressive P*" in withMathematica { qeTool =>
-    val ode = "{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asDifferentialProgram
-    val dom = "c=0".asFormula
-    val poly = "max(min(z,min(x,y)),min(x,-abs(z)))".asTerm
-    val p1 = pStarHomPlus(ode,dom,poly,1)
-    println(p1)
-    p1._1 shouldBe "(z>=0&(z=0->x+y+z>0))&x>=0&y>=0&(y=0->2*x+y>0)|x>=0&false".asFormula
-  }
-
   it should "aggressively try rank 1" in withMathematica { qeTool =>
     val ode = "{x'=x*(x-2*y), y'=-(2*x-y)*y}".asDifferentialProgram
     val fml = "((x^2-2*x*y<=0 & x<=0)&y<=0)".asFormula
@@ -232,6 +222,17 @@ class ODEInvarianceTests extends TacticTestBase {
     val fml = "x>=0 & y>0 -> [{x'=x+y}]x>=0".asFormula
     //failing
     val pr = proveBy(fml, implyR(1) & andL(-1) & odeInvariant(1))
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "ignore bad dbx cofactors" in withMathematica { qeTool =>
+    val fml = "x>=5 & y>=0 -> [{x'=x^2+y,y'=x}](x>=1 & y>=0)".asFormula
+    // This won't work because neither conjunct is rank 1
+    // In addition, Mathematica returns a rational function answer for the polynomial division
+    // val pr = proveBy(fml, implyR(1) & sAIRankOne(1))
+    // Fortunately, sAIclosedPlus is a fallback
+    val pr = proveBy(fml, implyR(1) & sAIclosedPlus()(1))
     println(pr)
     pr shouldBe 'proved
   }
