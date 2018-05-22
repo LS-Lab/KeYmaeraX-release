@@ -276,27 +276,27 @@ object ODEInvariance {
     inst match{
       case Darboux(t,eq) =>
         (if(eq) useAt(refAbs)(1) else skip) &
-        DebuggingTactics.print("Darboux "+t+" "+eq) & implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DifferentialTactics.dgDbx(t)(1)
+        DebuggingTactics.debug("Darboux "+t+" "+eq) & implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DifferentialTactics.dgDbx(t)(1)
       case Disj(l,r) =>
-        DebuggingTactics.print("DISJ") &
+        DebuggingTactics.debug("DISJ") &
         orL(-2) <(
           useAt(refMaxL,PosInExpr(1::Nil))(1) & lpclosedPlus(l),
           useAt(refMaxR,PosInExpr(1::Nil))(1) & lpclosedPlus(r))
       case Conj(l,r) =>
-        DebuggingTactics.print("CONJ") &
+        DebuggingTactics.debug("CONJ") &
         andL(-2) & useAt(uniqMin,PosInExpr(0::Nil))(1) & andR(1) <(
           hideL(-3) & lpclosedPlus(l),
           hideL(-2) & lpclosedPlus(r)
         )
       case DiffInv(eq) =>
-        DebuggingTactics.print("DI "+eq) &
+        DebuggingTactics.debug("DI "+eq) &
         (if(eq) useAt(refAbs)(1) else skip) & implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & dI('full)(1)
       case Strict(bound) =>
-        DebuggingTactics.print("Strict"+bound) &
+        DebuggingTactics.debug("Strict"+bound) &
         hideL(-1) &
         lpgeq(bound)
       case Triv() =>
-        DebuggingTactics.print("Triv") &
+        DebuggingTactics.debug("Triv") &
         closeF
     }
 
@@ -335,10 +335,10 @@ object ODEInvariance {
       case None => (skip,skip)
       case Some(pr) => (useAt(pr)(pos ++ PosInExpr(1::Nil)),useAt(pr,PosInExpr(1::Nil))('Rlast))
     }
-    DebuggingTactics.print("PRE") & starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
+    DebuggingTactics.debug("PRE") & starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
       implyR(pos) & imm & ?(closeId) & QE & done, //common case?
       cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
-      implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.print("QE step") & QE & done, skip) //Don't bother running the rest if QE fails
+      implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.debug("QE step") & QE & done, skip) //Don't bother running the rest if QE fails
       & cohide2(-3,1)& implyR(1) & lpclosedPlus(inst)
     )
   })
@@ -414,9 +414,9 @@ object ODEInvariance {
   private def recRankOneTac(f:Formula) : BelleExpr = {
     //TODO:Currently Darbouxs all the time, but could just use dI in simple case
     //Perhaps delegate to Darboux tactic to check for simpler case
-    DebuggingTactics.print(f.prettyString) & (f match {
+    DebuggingTactics.debug(f.prettyString) & (f match {
       case True => G(1) & close
-      case And(l,r) => andL(-1) & DebuggingTactics.print("state") & dC(l)(1)<(
+      case And(l,r) => andL(-1) & DebuggingTactics.debug("state") & dC(l)(1)<(
         hideL(-1) & boxAnd(1) & andR(1) <(
           DW(1) & G(1) & prop,
           recRankOneTac(r)),

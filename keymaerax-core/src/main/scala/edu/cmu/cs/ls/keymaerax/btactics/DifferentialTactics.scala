@@ -1076,7 +1076,7 @@ private object DifferentialTactics extends Logging {
     val rem = quo._2
     val (num,den) = stripDenom(cofactor) //Need to put it in a form that DG can understand
 
-    println("poly: "+p+" lie: "+lie+" cofactor: "+cofactor+" rem: "+rem+" num: "+num+" den: "+den)
+    logger.debug("poly: "+p+" lie: "+lie+" cofactor: "+cofactor+" rem: "+rem+" num: "+num+" den: "+den)
     val zero = Number(0)
 
     val remSgn = property match {
