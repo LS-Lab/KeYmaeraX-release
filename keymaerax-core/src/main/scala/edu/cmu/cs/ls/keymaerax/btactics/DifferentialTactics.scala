@@ -413,6 +413,29 @@ private object DifferentialTactics extends Logging {
     }
   })
 
+ /** Add constant context into the domain constraint at a given (top-level) position by V
+   * @example Turns v>0, a>0 |- [v'=a]v>0 into v>0, a>0 |- [v'=a & a>0]v>0
+   */
+ def DconstV : DependentPositionTactic = "DconstV" by ((pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel, "DconstV only at top-level positions")
+    //TODO: possibly the postcondition could be simplified
+    val dom = seq.sub(pos) match {
+      case Some(Box(ODESystem(_, dom), p)) => dom
+      case Some(Diamond(ODESystem(_, dom), p)) => dom
+      case _ => throw new BelleThrowable("DconstV adds constants into domain constraint for box/diamond ODEs")
+    }
+    //The constant context
+    val constCtxt = TacticHelper.propertiesOfConstants(seq,pos.checkTop)
+    if(constCtxt.isEmpty)
+      skip
+    else {
+      val newDom = constCtxt.foldRight(dom)((x, y) => And(x, y))
+      dR(newDom)(pos) <( skip,
+         //propositional proof should be sufficient here
+        (boxAnd(1) & andR(1) <(V(1) & closeId,skip))*constCtxt.length & diffWeakenG(1) & implyR(1) & closeId)
+    }
+  })
+
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     *
