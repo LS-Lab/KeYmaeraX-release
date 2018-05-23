@@ -328,6 +328,16 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
+  it should "prove x=0&v=0&t=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10 by invariant x<=10" in withMathematica { _ =>
+    val fml = "x=0&v=0&t=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
+    //proveBy(fml, implyR(1) & loop("x<=10".asFormula)(1) <(QE,QE, chase(1) & unfoldProgramNormalize & OnAll(solve(1) & QE()))) shouldBe 'proved
+    proveBy(fml, implyR(1) & loop("x<=10".asFormula)(1) <(QE,QE,
+      chase(1) & unfoldProgramNormalize <(
+      odeInvariant(1),
+      dC("x<=9+t".asFormula)(1) <( dW(1) & QE, odeInvariant(1))
+    ))) shouldBe 'proved
+  }
+
   ignore should "prove x=0&v=0&t=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10 by invariant x<=10-t" in withMathematica { _ =>
     val fml = "x=0&v=0&t=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
     proveBy(fml, implyR(1) & loop("x<=10-t&t>=0".asFormula)(1) <(QE,QE, chase(1) & unfoldProgramNormalize & OnAll(solve(1) & QE()))) shouldBe 'proved
