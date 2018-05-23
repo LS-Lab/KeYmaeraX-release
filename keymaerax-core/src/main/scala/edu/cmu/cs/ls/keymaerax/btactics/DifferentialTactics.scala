@@ -1035,7 +1035,7 @@ private object DifferentialTactics extends Logging {
     val lie = DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
     // p' = g/q p + r
     val (g,q,r) = domQuoRem(lie,p,dom)
-        val zero = Number(0)
+    val zero = Number(0)
 
     //The sign of the remainder for a Darboux argument
     val remSgn = property match {
@@ -1047,7 +1047,6 @@ private object DifferentialTactics extends Logging {
       case NotEqual(_,_) => Equal(r,zero)
       case _ => throw new BelleThrowable(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
     }
-
 
     //q!=0, r~0 (as appropriate)
     val denRemReq = And(NotEqual(q,zero),remSgn)
@@ -1318,7 +1317,8 @@ private object DifferentialTactics extends Logging {
     // quo._2 is the remainder (r)
 
     val (g,q) = stripDenom(quo._1.head)
-    (g,q,quo._2)
+    if(FormulaTools.singularities(q) == Nil) (g,q,quo._2)
+    else (Number(0),Number(1),poly)
   }
 
   //Keeps the top level =s in evol domain as a groebner basis of terms?
