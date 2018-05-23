@@ -341,6 +341,42 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
   }
 
+  it should "find an invariant for x>=5 & y>=0 -> [{y:=y+1;{x'=x+y}}*]x>=1" in withMathematica { _ =>
+    val fml = "x>=5 & y>=0 -> [{y:=y+1;{x'=x+y}}*]x>=1".asFormula
+    val invs = List("x>=-1".asFormula, "y>=1".asFormula, "x>=0&y>=0".asFormula, "x>=1&y>=1".asFormula, "x>=1&y>=0".asFormula, "x=7".asFormula).iterator
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x+y}}*]x>=1" in withMathematica { _ =>
+    val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x+y}}*]x>=1".asFormula
+    val invs = List("x>=-1".asFormula, "y>=1".asFormula, "x>=0&y>=0".asFormula, "x>=1&y>=1".asFormula, "x>=1&y>=0".asFormula, "x=7".asFormula).iterator
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x>=5 & y>=0 -> [{y:=y+1;{x'=x+y,y'=5}}*]x>=1" in withMathematica { _ =>
+    val fml = "x>=5 & y>=0 -> [{y:=y+1;{x'=x+y,y'=5}}*]x>=1".asFormula
+    val invs = List("x>=-1".asFormula, "y>=1".asFormula, "x>=0&y>=0".asFormula, "x>=1&y>=1".asFormula, "x>=1&y>=0".asFormula, "x=7".asFormula).iterator
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x+y,y'=5}}*]x>=1" in withMathematica { _ =>
+    val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x+y,y'=5}}*]x>=1".asFormula
+    val invs = List("x>=-1".asFormula, "y>=1".asFormula, "x>=0&y>=0".asFormula, "x>=1&y>=1".asFormula, "x>=1&y>=0".asFormula, "x=7".asFormula).iterator
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x>=5 & y>=1 -> [{y:=y+1;{x'=x^2+2*y+x,y'=y^2+y}}*]x>=1" in withMathematica { _ =>
+    val fml = "x>=5 & y>=1 -> [{y:=y+1;{x'=x^2+2*y+x,y'=y^2+y}}*]x>=1".asFormula
+    val invs = List("x>=-1".asFormula, "y>=1".asFormula, "x>=0&y>=0".asFormula, "x>=1&y>=1".asFormula, "x>=1&y>=0".asFormula, "x=7".asFormula).iterator
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x>=5 & y>=1 -> [{x:=x+y;y:=y+1;{x'=x^2+2*y+x,y'=y^2+y}}*]x>=1" in withMathematica { _ =>
+    val fml = "x>=5 & y>=1 -> [{x:=x+y;y:=y+1;{x'=x^2+2*y+x,y'=y^2+y}}*]x>=1".asFormula
+    val invs = List("x>=-1".asFormula, "y>=1".asFormula, "x>=0&y>=0".asFormula, "x>=1&y>=1".asFormula, "x>=1&y>=0".asFormula, "x=7".asFormula).iterator
+    proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs)(1)) shouldBe 'proved
+  }
+
 
   "SnR Loop Invariant" should "find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica{qeTool =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
