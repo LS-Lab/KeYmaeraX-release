@@ -1454,7 +1454,11 @@ class DifferentialTests extends TacticTestBase {
   it should "fail to find fractional darboux" in withMathematica { _ =>
     //(x+z)' = ((x*A+B)/z^2)(x+z), where z^2 > 0
     val seq = "x+z=0 ==> [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&y=x^2&z^2>0}] x+z=0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) should not be 'proved
+    the [BelleThrowable] thrownBy TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) should have message
+      """[Bellerophon Runtime] Tactic dbx(1) is not applicable to
+        |    [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&y=x^2&z^2>0}]x+z=0
+        |at position Fixed(1,None,true)
+        |because Automatic darboux failed -- poly :x+z-0 lie: z^-2*(B()*(x+z)+A*(y+x*z)) cofactor: 1*(B()+A*z) denom: z^2*1 rem: -1*A+A*y*z^-2 unable to prove: z^2*1!=0&-1*A+A*y*z^-2=0""".stripMargin
     TactixLibrary.proveBy(seq, ODE(1)) should not be 'proved
     TactixLibrary.proveBy(seq, master()) should not be 'proved
     the [BelleThrowable] thrownBy TactixLibrary.proveBy(seq, auto) should have message
@@ -1471,11 +1475,11 @@ class DifferentialTests extends TacticTestBase {
 
   it should "fail with evolution domain constraints" in withMathematica { _ =>
     //(x+z)' = (x*A+B)(x+z)
-    val seq = "x+z=0 ==> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] x+z=0".asSequent
-    val pr = TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1))
+    val seq = "x+z=0 ==> [{x'=(A*y+B()*x), z'=A*z*x+B()*z & y=x^2}]x+z=0".asSequent
+    val pr = TactixLibrary.proveBy(seq, Idioms.?(DifferentialTactics.dgDbxAuto(1)))
     pr should not be 'proved
     //The automatically generated remainder term goal is left open
-    pr.subgoals.loneElement shouldBe "x+z=0 ==> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] (1!=0&A*y+-1*A*z^2=0)".asSequent
+    pr.subgoals.loneElement shouldBe "x+z=0 ==> [{x'=(A*y+B()*x), z'=A*z*x+B()*z & y=x^2}]x+z=0".asSequent
   }
 
   "ODE Barrier" should "prove a strict barrier certificate" in withMathematica { _ =>

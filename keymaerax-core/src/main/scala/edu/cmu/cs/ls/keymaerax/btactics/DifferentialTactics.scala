@@ -1109,10 +1109,10 @@ private object DifferentialTactics extends Logging {
     //DI if simple, otherwise use dgDbx
     val finishTac = if (cofactor == Number(0)) dI('full)(pos) else dgDbx(cofactor)(pos)
     val denRemReqTactic = (t: BelleExpr) =>
-        diffCut(denRemReq)(pos) <(
-          t,
-          diffWeakenG(pos) & byUS(pr)
-        )
+      diffCut(denRemReq)(pos) & (<(
+        t,
+        diffWeakenG(pos) & byUS(pr)
+      ) | t)
 
     denRemReqTactic(
       starter & finishTac
