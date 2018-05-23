@@ -85,6 +85,7 @@ object InvariantProvers {
         USubst(bounds.map(xi => {
           i = i + 1; SubstitutionPair(DotTerm(Real, Some(i)), xi)
         }))
+      //@todo directly construct jj and jjl via jj = PredOf(Function("jjl", Range(0, subst.subsDefsInput.size).foldRight((s,t)=>Tuple(Real,t)), Bool), subst.subsDefsInput.map(sp => sp.what).foldRight(Pair))
       val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp => sp.what.prettyString).mkString(",") + ")")
       val jjl: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp => sp.repl.prettyString).mkString(",") + ")")
       // eventually instantiated to True, trick to substitute initialCond in during the search process
