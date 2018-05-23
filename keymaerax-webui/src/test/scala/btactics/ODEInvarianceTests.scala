@@ -154,6 +154,21 @@ class ODEInvarianceTests extends TacticTestBase {
       )
     )
     println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove duffing" in withMathematica { qeTool =>
+    val fml = "(-((2*x)/5) + y)^2 <= 1/200 & x^2 <= 1/16 -> [{x'=y, y'=x - x^3 - y}] -(3/2) + x^2 + 4*y^2 <= 0".asFormula
+    //The actual invariant:
+    val pr = proveBy(fml, implyR(1) &
+      dC("-641 + 2*x - 5*y + 49039*y^2 + 115*y^3 + 397279*y^4 + 1022*y^5 + 64226*y^6 - 41291*x*y - 148*x*y^2 - 248650*x*y^3 - 362*x*y^4 - 11562*x*y^5 + 10969*x^2 + 17*x^2*y - 102496*x^2*y^2 - 18*x^2*y^3 + 10911*x^2*y^4 + 12*x^3 + 83659*x^3*y + 51*x^3*y^2 + 98766*x^3*y^3 - 20780*x^4 + 4*x^4*y + 66980*x^4*y^2 - 13*x^5 - 40639*x^5*y + 10000*x^6<=0".asFormula)(1) <(
+        dW(1) & QE,
+        //dgBarrier(1)
+        sAIclosedPlus()(1)
+      )
+    )
+    println(pr)
+    pr shouldBe 'proved
   }
 
   it should "prove FM'18 constructed example" in withMathematica { qeTool =>
