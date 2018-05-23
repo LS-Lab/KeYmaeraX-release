@@ -5,8 +5,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{useAt, _}
-import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -28,8 +29,7 @@ object ODEInvariance {
   private val logger = Logger(getClass) //@note instead of "with Logging" to avoid cyclic dependencies
   private val debugTactic = false
 
-  private def lieDer(ode:DifferentialProgram,p:Term) =
-      DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
+  private def lieDer(ode:DifferentialProgram,p:Term) = simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
 
   /* Stash of derived axioms */
 
@@ -247,7 +247,7 @@ object ODEInvariance {
         if (a == absF) {
           try {
             val prop = Equal(p, Number(0))
-            val (pr, denRemReq, cofactor, rem) = DifferentialTactics.findDbx(ode, dom, prop)
+            val (pr, denRemReq, cofactor, rem) = findDbx(ode, dom, prop)
             (prop, Darboux(true, cofactor, denRemReq, pr))
           }
           catch {
@@ -276,7 +276,7 @@ object ODEInvariance {
         (if(iseq) useAt(refAbs)(1) else skip) &
         DebuggingTactics.debug("Darboux "+cofactor+" ",doPrint = debugTactic) &
         implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) &
-        dC(cut)(1)  <(DifferentialTactics.dgDbx(cofactor)(1), DifferentialTactics.diffWeakenG(1) & byUS(pr))
+        dC(cut)(1)  <(dgDbx(cofactor)(1), diffWeakenG(1) & byUS(pr))
       case Disj(l,r) =>
         DebuggingTactics.debug("DISJ",doPrint = debugTactic) &
         orL(-2) <(
@@ -322,15 +322,14 @@ object ODEInvariance {
       case _ => throw new BelleThrowable("sAI only applicable to box ODE in succedent")
     }
 
-    val (fml,propt)=SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post,
-      DifferentialTactics.maxMinNormalize, SimplifierV3.emptyTaxs)
+    val (fml,propt)=SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post, maxMinNormalize, SimplifierV3.emptyTaxs)
 
     require(fml.isInstanceOf[GreaterEqual], "Normalization failed to reach normal form "+fml)
     val f2 = fml.asInstanceOf[GreaterEqual]
 
     val (pf,inst) = pStarHomPlus(ode,dom,f2.left,bound)
 
-    logger.debug("HOMPLUS:"+pf+" "+inst)
+    //println("HOMPLUS:"+pf+" "+inst)
 
     //Performs rewriting to and from the normal form
     //Isn't there a faster way to do this rewrite??
@@ -347,7 +346,7 @@ object ODEInvariance {
     DebuggingTactics.debug("PRE",doPrint = debugTactic) &
       starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
       implyR(pos) & r1 & ?(closeId) & QE & done, //common case?
-      cohideR(pos) & composeb(1) & dW(1) & implyR(1) & r2 & assignb(1) &
+      cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
       implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.debug("QE step",doPrint = debugTactic) & QE & done, skip) //Don't bother running the rest if QE fails
       & cohide2(-3,1)& implyR(1) & lpclosedPlus(inst)
     )
@@ -359,8 +358,8 @@ object ODEInvariance {
   def rankOneFml(ode: DifferentialProgram, dom:Formula, f:Formula) : Option[Formula] = {
     f match {
       case cf:ComparisonFormula =>
-        val (pr, denRemReq, cofactor, rem) = DifferentialTactics.findDbx(ode, dom, cf,false)
-        println(pr,denRemReq,cofactor,rem)
+        val (pr, denRemReq, cofactor, rem) = findDbx(ode, dom, cf,false)
+        //println(pr,denRemReq,cofactor,rem)
         if (pr.isProved)// TODO: this should be keeping track of co-factors rather than throwing them away
           Some(f)
         else {
@@ -374,7 +373,7 @@ object ODEInvariance {
         }
 
       case and:And =>
-        var ls = DifferentialTactics.flattenConjunctions(and)
+        var ls = flattenConjunctions(and)
         var acc = ListBuffer[Formula]()
         var domC = dom
         while(true){
@@ -420,7 +419,7 @@ object ODEInvariance {
         useAt(boxOrL,PosInExpr(1::Nil))(1) & recRankOneTac(l),
         useAt(boxOrR,PosInExpr(1::Nil))(1) & recRankOneTac(r)
       )
-      case _ => (DifferentialTactics.dgDbxAuto(1) | DifferentialTactics.dgBarrier()(1)) & done
+      case _ => (dgDbxAuto(1) | dgBarrier()(1)) & done
     })
   }
 
@@ -441,8 +440,7 @@ object ODEInvariance {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
       case _ => throw new BelleThrowable("sAI only at box ODE in succedent")
     }
-    val (f2,propt)=SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post,
-      DifferentialTactics.atomNormalize2,SimplifierV3.emptyTaxs)
+    val (f2,propt)=SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post, atomNormalize2,SimplifierV3.emptyTaxs)
     val f3 = rankOneFml(ode,dom,f2) match {
       case None => throw new BelleThrowable("Not recursive rank 1: "+f2)
       case Some(f) => f
@@ -463,4 +461,110 @@ object ODEInvariance {
       cohideR(1) & implyR(1) & recRankOneTac(f3)
     )
   })
+
+  /**
+    * Vectorial Darboux, currently just constructs and returns an appropriate provable
+    * because we do not yet have vectorial dG
+    *
+    * @param odesys the ODE system
+    * @param Gco the cofactor matrix
+    * @param p the polynomial vector
+    * @return provable with extra ghosts
+    */
+  def dgVdbx(odesys : ODESystem,Gco:List[List[Term]],p:List[Term]) : ProvableSig = {
+    val dim = p.length
+    assert(Gco.length == dim && Gco.forall(gs => gs.length == dim))
+    val diffeqs = odesys.ode
+    val dom = odesys.constraint
+
+    val ghostPrefix = "vdbxy_"
+    //Doubly indexed ghost variables
+    val ghostVars = List.range(0,dim).map( i => List.range(0,dim).map( j => Variable(ghostPrefix,Some(i*dim+j))))
+    //println("Ghost vars: "+ghostVars)
+
+    val Gcotrans = Gco.transpose
+
+    //Construct the system of equations
+    val ghostRHS = List.range(0,dim).map( i => matvec_prod(Gcotrans,ghostVars(i)).map(t => Neg(t)))
+    val ghostEqs = (ghostVars zip ghostRHS).map(p => p._1 zip p._2)
+    //Each ghostEqs at this point is a separate vectorial diff ghost
+    //We could also work directly with the flattened versions, but this is just for easier portability when we get vDG
+    //println("Ghost eqs: "+ghostEqs)
+
+    //For now, construct the differential equations obtained from ghosts
+    val ghostDiffEqs = ghostEqs.flatten.map(p => AtomicODE(DifferentialSymbol(p._1),p._2)).reduce(DifferentialProduct.apply)
+    val ghostSys = ODESystem(DifferentialProduct(diffeqs,ghostDiffEqs),dom)
+    //println("Extended system: "+ghostSys)
+
+    val zero = Number(0)
+    val one = Number(1)
+    //Constructing the p=0 invariant (using conjunctions)
+    val inv = p.foldLeft[Formula](True)((fml,trm)=> And(Equal(trm,zero),fml))
+    val boxfml = Box(ghostSys,inv)
+    val fml = ghostVars.foldRight[Formula](boxfml)((vs,fml)=> (vs.foldRight[Formula](fml)((v,fml)=>Exists(v::Nil,fml))))
+    //println("Formula: "+fml)
+
+    //Finally, we can now prove the invariant property
+    val seq = ProvableSig.startProof( Imply(inv,fml) )
+    //println("Seq: "+seq)
+
+    val determinant = sym_det(ghostVars)
+    val trace = sym_trace(Gco)
+    //println("Symbolic Det: "+determinant)
+    //println("Symbolic Trace: "+trace)
+
+    //Relevant tactics
+
+    //Explicitly instantiate the sequence of ghost variables with the identity matrix
+    val idExistsTac = List.range(0,dim).map( i => List.range(0,dim).map( j => existsR(Variable(ghostPrefix,Some(i*dim+j)),
+      if(i==j) one else zero)))
+    val idExistsTacPos = idExistsTac.foldRight(skip)( (exts,tac) => exts.foldRight(tac)( (ext,tac) => ext(1) & tac )  )
+
+    //Cut in the symbolic dot products p.y = 0
+    val dotprods = ghostVars.map( ls => Equal(dot_prod(ls,p),zero))
+    val dITac = DifferentialTactics.diffInvariant(dotprods:_*)(1)
+
+    val pr = proveBy(seq,
+      implyR(1) & idExistsTacPos & dITac &
+        diffCut(Greater(determinant,zero))(1) <(
+          dW(1) & QE,
+          //Prove Darboux invariance for the determinant
+          dgDbx(Neg(trace))(1))
+    )
+
+    pr
+  }
+
+  //Explicit symbolic expression for the determinant of a matrix
+  //Currently just explicitly calculated, but can use Mathematica's det if available
+  //Also, this probably doesn't actually need to be explicitly calculated everytime since we always apply it on ghost variables
+  private def sym_det (m:List[List[Term]]) : Term = {
+    val dim = m.length
+    assert(m.forall(ls => ls.length == dim))
+    if(dim==1) m(0)(0)
+    else if(dim==2) //det ((a b)(c d)) = a d - b c
+      Minus(Times(m(0)(0),m(1)(1)),Times(m(0)(1),m(1)(0)))
+    else if(dim==3) //det ((a b c)(d e f)(g h i)) = -c e g + b f g + c d h - a f h - b d i + a e i
+      ???
+    else
+      ???
+  }
+
+  //Symbolic trace
+  private def sym_trace (m:List[List[Term]]) : Term = {
+    val dim = m.length
+    assert(m.forall(ls => ls.length == dim))
+    List.range(0,dim).map(i=>m(i)(i)).foldLeft[Term](Number(0))(Plus.apply)
+  }
+
+  // Symbolic matrix and vector products, assuming that the dimensions all match up
+  private def dot_prod (v1:List[Term],v2:List[Term]) : Term = {
+    val zipped = (v1 zip v2).map({case (t1,t2)=>Times(t1,t2)})
+    zipped.reduce(Plus.apply)
+  }
+
+  private def matvec_prod (m:List[List[Term]],v:List[Term]) : List[Term] ={
+    m.map(ls => dot_prod(ls,v))
+  }
+
 }
