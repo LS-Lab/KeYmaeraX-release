@@ -1317,7 +1317,7 @@ private object DifferentialTactics extends Logging {
     // quo._2 is the remainder (r)
 
     val (g,q) = stripDenom(quo._1.head)
-    if(FormulaTools.singularities(q) == Nil) (g,q,quo._2)
+    if((FormulaTools.singularities(g) ++ FormulaTools.singularities(q)).isEmpty) (g,q,quo._2)
     else (Number(0),Number(1),poly)
   }
 
