@@ -46,10 +46,16 @@ object DatabasePopulator extends Logging {
   def readKya(url: String): List[TutorialEntry] = {
     val kya = loadResource(url)
     val archiveEntries = KeYmaeraXArchiveParser.read(kya)
-    archiveEntries.flatMap({case (modelName, modelContent, kind, tactics, info) =>
-      tactics.map({case (tname, tactic) =>
+    val entries = archiveEntries.flatMap({case (modelName, modelContent, kind, tactics, info) =>
+      if (tactics.nonEmpty) tactics.map({case (tname, tactic) =>
         TutorialEntry(modelName, modelContent, info.get("Description"), info.get("Title"), info.get("Link"),
-          Some((tname, tactic, true)), kind)})})
+          Some((tname, tactic, true)), kind)})
+      else
+        TutorialEntry(modelName, modelContent, info.get("Description"), info.get("Title"), info.get("Link"),
+          None, kind) :: Nil
+    })
+    assert(entries.size == archiveEntries.size, "Expected " + archiveEntries.size + " entries, but got " + entries.size)
+    entries
   }
 
   /** Reads tutorial entries from the specified URL. */
