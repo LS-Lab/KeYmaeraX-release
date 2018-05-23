@@ -1503,4 +1503,12 @@ class DifferentialTests extends TacticTestBase {
     pr.subgoals.loneElement shouldBe
       "f()>0, v>0, a>0, b>0, <{x'=c+f()&f()>0&c < 0&true}>x>0, c < 0 ==> z=1, a>0, [{v'=a+b,x'=y+f()&f()>0&a>0&b>0&(x>=v|x>=5)}]v>0, x=5, y=1".asSequent
   }
+
+  "domSimplify" should "simplify box succedent with domain constraint" in withMathematica {_ =>
+    val seq = "==> a<0,[{x'=1 & f()>0 & b<0}](b<0 & f()>1)".asSequent
+    val pr = TactixLibrary.proveBy(seq,DifferentialTactics.domSimplify(2))
+    println(pr)
+    pr.subgoals.loneElement shouldBe
+    "==>  a < 0, [{x'=1&f()>0&b < 0}]f()>1".asSequent
+  }
 }

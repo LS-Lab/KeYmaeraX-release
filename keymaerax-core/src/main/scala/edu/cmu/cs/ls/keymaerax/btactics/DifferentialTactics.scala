@@ -436,6 +436,30 @@ private object DifferentialTactics extends Logging {
     }
   })
 
+  /** Simplify a top-level succedent box ODE with the domain constraint
+    * This uses the default simplifier configuration
+    * @example Turns |- [v'=a & a>0](a>0&v>0) into |- [v'=a & a>0]v>0
+    */
+
+  def domSimplify : DependentPositionTactic = "domSimplify" by ((pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "domSimplify currently only works at top-level succedents")
+
+    val (ode,post) = seq.sub(pos) match {
+      case Some(Box(ode @ ODESystem(_,_), post)) => (ode,post)
+      case _ => throw new BelleThrowable("domSimplify only applies to box ODEs")
+    }
+
+    val (f,propt) = SimplifierV3.simpWithDischarge(flattenConjunctions(ode.constraint).toIndexedSeq,post,SimplifierV3.defaultFaxs,SimplifierV3.defaultTaxs)
+    propt match {
+      case None => skip
+      case Some(pr) =>
+        cutR (Box (ode, f) ) (pos) < (skip,
+        cohideR (pos) & implyR(1) & DW(1) & monb & implyR(1) & implyRi & (andL('L)*) & equivifyR(1) &
+        commuteEquivR(1) & by(pr)
+        )
+    }
+  })
+
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     *

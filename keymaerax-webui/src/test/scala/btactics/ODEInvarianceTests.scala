@@ -191,8 +191,7 @@ class ODEInvarianceTests extends TacticTestBase {
   }
 
   it should "prove with consts (auto const)" in withMathematica { qeTool =>
-    val fml = "x>=0 & y>0 -> [{x'=x+y}]x>=0".asFormula
-    //failing
+    val fml = "x>=0 & y>0 -> [{x'=x+y}](x>=0 & y>0)".asFormula
     val pr = proveBy(fml, implyR(1) & andL(-1) & odeInvariant(1))
     println(pr)
     pr shouldBe 'proved
