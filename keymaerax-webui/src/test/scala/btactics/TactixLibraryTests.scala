@@ -411,8 +411,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
 
   it should "prove x>=5 & y>=0 -> [{{x'=x^2+y,y'=x+1}}*]x>=0 by invariant x>=0&y>=0" in withMathematica{qeTool =>
     val fml = "x>=5 & y>=0 -> [{{x'=x^2+y,y'=x+1}}*]x>=0".asFormula
-    proveBy(fml, implyR(1) & loop("x>=0&y>=0".asFormula)(1) <(QE(), QE(), composeb(1) & assignb(1) & composeb(1) & assignb(1) &
-      odeInvariant(1))) shouldBe 'proved
+    proveBy(fml, implyR(1) & loop("x>=0&y>=0".asFormula)(1) <(QE(), QE(), odeInvariant(1))) shouldBe 'proved
   }
 
   it should "prove x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x+1}}*]x>=0 by invariant x>=0&y>=0" in withMathematica{qeTool =>
@@ -422,6 +421,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   }
 
   it should "prove x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0 by invariant x>=0&y>=0" in withMathematica{qeTool =>
+    // Failing test case because of equilibrium at x=0,y=0
     val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0".asFormula
     proveBy(fml, implyR(1) & loop("x>=0&y>=0".asFormula)(1) <(QE(), QE(), composeb(1) & assignb(1) & composeb(1) & assignb(1) &
       odeInvariant(1))) shouldBe 'proved
