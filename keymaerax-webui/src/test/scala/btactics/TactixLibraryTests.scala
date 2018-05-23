@@ -168,8 +168,8 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proof shouldBe 'proved
   }
 
-  /** @see UnificationMatchTest should "unify j()=x+y with s()=s()" */
-  it should "post-hoc find a j() closing (x+x*y)'=j()" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{_ =>
+  /** @see UnificationMatchTest should "unify j()=x+y with s()=s()" unifiable but not by mere matching, needs a proper unifier instead of a single sided matcher */
+  ignore should "post-hoc find a j() closing (x+x*y)'=j()" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{_ =>
     val proof = proveBy("\\exists jj (x+x*y)'=jj".asFormula,
       LetInspect("j(||)".asTerm,
         (pr:ProvableSig) => pr.subgoals.head.succ.head match {
@@ -184,7 +184,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   }
 
   /** @see UnificationMatchTest should "unify j()=x+y with s()=s()" */
-  it should "post-hoc find a j() closing j()=(x+x*y)'" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{qeTool =>
+  ignore should "post-hoc find a j() closing j()=(x+x*y)'" taggedAs(TodoTest,IgnoreInBuildTest) in withMathematica{qeTool =>
     val proof = proveBy("\\exists jj jj=(x+x*y)'".asFormula,
       LetInspect("j(||)".asTerm,
         (pr:ProvableSig) => pr.subgoals.head.succ.head match {
@@ -228,13 +228,17 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
 
   "loopPostMaster" should "find an invariant for x=5-> [{x:=x+2;{x'=1}}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;{x'=1}}*]x>=0".asFormula
-    //@note postcondition is invariant
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+    //@note postcondition is invariant, loopPostMaster won't ask invariant generator
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for x=5-> [{{x'=2}}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{{x'=2}}*]x>=0".asFormula
-    //@note postcondition is invariant
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+    //@note postcondition is invariant, loopPostMaster won't ask invariant generator
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
@@ -250,43 +254,122 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
 
   it should "find an invariant for x>=5 & y>=0 -> [{{x'=x+y};}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 & y>=0 -> [{{x'=x+y}}*]x>=0".asFormula
-    //@note postcondition is invariant
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+    //@note postcondition is invariant, loopPostMaster won't ask invariant generator
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
   it should "find a invariant for x=4-> [{{x'=-x};}*]x>=0 with other init" in withMathematica { _ =>
     val fml = "x=4 -> [{{x'=-x}}*]x>=0".asFormula
-    //@note postcondition is invariant
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+    //@note postcondition is invariant, loopPostMaster won't ask invariant generator
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
   it should "find a invariant for x=5-> [{{x'=-x};}*]x>=0" in withMathematica { _ =>
     val fml = "x=5 -> [{{x'=-x}}*]x>=0".asFormula
-    //@note postcondition is invariant
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+    //@note postcondition is invariant, loopPostMaster won't ask invariant generator
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
   it should "find a invariant for x=5-> [{{x'=-x};}*]x>0" in withMathematica { _ =>
     val fml = "x=5 -> [{{x'=-x}}*]x>0".asFormula
-    //@note postcondition is invariant
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x>0".asFormula, "x=7".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+    //@note postcondition is invariant, loopPostMaster won't ask invariant generator
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
   it should "at least not loop forever when finding an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
-    //@note postcondition is invariant
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+    //@note postcondition is invariant, loopPostMaster won't ask invariant generator
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for x=5-> [{{x'=0} ++ {x'=5}}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{{x'=0} ++ {x'=5}}*]x>=0".asFormula
-    //@note postcondition is invariant
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+    //@note postcondition is invariant, loopPostMaster won't ask invariant generator
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
   it should "find an invariant for x=5-> [{x:=x+1;{x'=x}}*]x>=4 by counting up" in withMathematica { _ =>
     val fml = "x=5-> [{x:=x+1;{x'=x}}*]x>=4".asFormula
-    //@note postcondition is invariant
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x>=-5".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+    //@note postcondition is invariant, loopPostMaster won't ask invariant generator
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]v>=0" in withMathematica { _ =>
+    val fml = "x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]v>=0".asFormula
+    val invs = List("x>=-1".asFormula, "v>=1".asFormula, "x>=0&v>1".asFormula, "v>=-1".asFormula,
+      "v>=0".asFormula, "x=7".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+    //@note postcondition is invariant, loopPostMaster won't ask invariant generator
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]x>=0" in withMathematica { _ =>
+    val fml = "x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]x>=0".asFormula
+    val invs = List("x>=-1".asFormula, "v>=1".asFormula, "x>=0&v>1".asFormula, "v>=-1".asFormula, "v>=0".asFormula,
+      "x>=0&v>=0".asFormula, "x=7".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+    //@note postcondition is invariant, loopPostMaster won't ask invariant generator
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
+  }
+
+  //@todo time not in inv so odeInvariant won't work
+  it should "prove x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10 by invariant x<=10" ignore withMathematica { _ =>
+    val fml = "x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
+    proveBy(fml, implyR(1) & loop("x<=10".asFormula)(1) <(QE,QE, chase(1) & unfoldProgramNormalize & OnAll(solve(1) & QE()))) shouldBe 'proved
+    proveBy(fml, implyR(1) & loop("x<=10".asFormula)(1) <(QE,QE, chase(1) & unfoldProgramNormalize & OnAll(odeInvariant(1)))) shouldBe 'proved
+  }
+
+  //@todo time not in inv so odeInvariant won't work
+  it should "find an invariant for x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1; ++ ?false;v:=v;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10" ignore withMathematica { _ =>
+    val fml = "x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1; ++ ?false;v:=v;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
+    val invs = List("x>=-1".asFormula, "v>=1".asFormula, "x>=0&v>1".asFormula, "v>=-1".asFormula, "v>=0".asFormula,
+      "v<=5".asFormula, "x<=10".asFormula, "v<=5 & x<=10".asFormula, "x>=0&v>=0".asFormula, "v*v<10-x".asFormula,
+      "x=7".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+  }
+
+  //@todo time not in inv so odeInvariant won't work
+  it should "find an invariant for x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10" ignore withMathematica { _ =>
+    val fml = "x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
+    val invs = List("x>=-1".asFormula, "v>=1".asFormula, "x>=0&v>1".asFormula, "v>=-1".asFormula, "v>=0".asFormula,
+      "v<=5".asFormula, "x<=10".asFormula, "v<=5 & x<=10".asFormula, "x>=0&v>=0".asFormula, "v*v<10-x".asFormula,
+      "x=7".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+  }
+
+  it should "prove x=0&v=0&t=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10 by invariant x<=10-t" in withMathematica { _ =>
+    val fml = "x=0&v=0&t=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
+    proveBy(fml, implyR(1) & loop("x<=10-t&t>=0".asFormula)(1) <(QE,QE, chase(1) & unfoldProgramNormalize & OnAll(solve(1) & QE()))) shouldBe 'proved
+    proveBy(fml, implyR(1) & loop("x<=10-t&t>=0".asFormula)(1) <(QE,QE, chase(1) & unfoldProgramNormalize & OnAll(odeInvariant(1)))) shouldBe 'proved
+  }
+
+  it should "find an invariant for x=0&v=0&t=0-> [{{v:=-1; ++ ?x<9;v:=1; ++ ?false;v:=v;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10 with more invariants" in withMathematica { _ =>
+    val fml = "x=0&v=0&t=0-> [{{v:=-1; ++ ?x<9;v:=1; ++ ?false;v:=v;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
+    val invs = List("x>=-1".asFormula, "v>=1".asFormula, "x>=0&v>1".asFormula, "v>=-1".asFormula, "v>=0".asFormula,
+      "v<=5".asFormula, "x<=10".asFormula, "v<=5 & x<=10".asFormula, "x>=0&v>=0".asFormula, "x<=10-t".asFormula,
+      "x<=10-t&t>=0".asFormula, "v*v<10-x".asFormula, "x=7".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;{x'=x^2+y}}*]x>=0" in withMathematica { _ =>
+    val fml = "x>=5 & y>=0 -> [{x:=x+y;{x'=x^2+y}}*]x>=0".asFormula
+    val invs = List("x>=-1".asFormula, "y>=1".asFormula, "x>=0&y>=0".asFormula, "x=7".asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+    //@note postcondition is invariant, loopPostMaster won't ask invariant generator
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
@@ -387,10 +470,22 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs2.toStream)(1)) shouldBe 'proved
   }
 
+  it should "prove x>=5 & y>=0 -> [{{x'=x^2+y,y'=x+1}}*]x>=0 by invariant x>=0&y>=0" in withMathematica{qeTool =>
+    val fml = "x>=5 & y>=0 -> [{{x'=x^2+y,y'=x+1}}*]x>=0".asFormula
+    proveBy(fml, implyR(1) & loop("x>=0&y>=0".asFormula)(1) <(QE(), QE(), odeInvariant(1))) shouldBe 'proved
+  }
+
+  it should "prove x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x+1}}*]x>=0 by invariant x>=0&y>=0" in withMathematica{qeTool =>
+    val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x+1}}*]x>=0".asFormula
+    proveBy(fml, implyR(1) & loop("x>=0&y>=0".asFormula)(1) <(QE(), QE(), composeb(1) & assignb(1) & composeb(1) & assignb(1) &
+      odeInvariant(1))) shouldBe 'proved
+  }
+
   it should "prove x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0 by invariant x>=0&y>=0" in withMathematica{qeTool =>
+    // Failing test case because of equilibrium at x=0,y=0
     val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0".asFormula
     proveBy(fml, implyR(1) & loop("x>=0&y>=0".asFormula)(1) <(QE(), QE(), composeb(1) & assignb(1) & composeb(1) & assignb(1) &
-      ODEInvariance.sAIclosedPlus()(1))) shouldBe 'proved
+      odeInvariant(1))) shouldBe 'proved
   }
 
   it should "find an invariant for x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0" taggedAs SlowTest ignore withMathematica { _ =>

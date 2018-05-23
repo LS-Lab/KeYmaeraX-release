@@ -1603,4 +1603,10 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     //TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
   }
 
+  "DConstV" should "extend domain constraint with const assumptions" in withMathematica {_ =>
+    val seq = "f()>0 , v>0, a>0, b>0, <{x'=c+f()}> x>0, c<0 ==> z=1, a>0, [{v'=a+b,x'=y+f() & x>=v | x>=5}]v>0, x=5, y=1".asSequent
+    val pr = TactixLibrary.proveBy(seq,DifferentialTactics.DconstV(3) & DifferentialTactics.DconstV(-5))
+    pr.subgoals.loneElement shouldBe
+      "f()>0, v>0, a>0, b>0, <{x'=c+f()&f()>0&c < 0&true}>x>0, c < 0 ==> z=1, a>0, [{v'=a+b,x'=y+f()&f()>0&a>0&b>0&(x>=v|x>=5)}]v>0, x=5, y=1".asSequent
+  }
 }

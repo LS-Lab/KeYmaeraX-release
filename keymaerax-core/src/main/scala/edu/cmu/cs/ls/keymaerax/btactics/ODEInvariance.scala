@@ -4,7 +4,6 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
-import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3.{context, namespace}
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{useAt, _}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
@@ -27,6 +26,7 @@ object ODEInvariance {
 
   private val namespace = "odeinvariance"
   private val logger = Logger(getClass) //@note instead of "with Logging" to avoid cyclic dependencies
+  private val debugTactic = false
 
   private def lieDer(ode:DifferentialProgram,p:Term) =
       DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
@@ -109,9 +109,14 @@ object ODEInvariance {
   private lazy val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
   private lazy val absF = Function("abs", None, Real, Real, interpreted=true)
 
-  //Given a bound i, generate the local progress formula up to that bound
-  // i.e. the i-th Lie derivative is strict
-  // p>=0 & (p=0 -> (p'>=0 & (p'=0 -> ...) & (p=0&... -> p'^i >0)
+  /** Given a bound i, generate the local progress formula up to that bound
+    * i.e. the i-th Lie derivative is strict:
+    * p>=0 & (p=0 -> (p'>=0 & (p'=0 -> ...) & (p=0&... -> p'^i >0)
+    * @param ode   : the ODEs under consideration
+    * @param p     : the polynomial p to generate p*>0
+    * @param bound : number of higher Lie derivatives to generate
+    * @return p*>0 (bounded)
+    */
   def pStar(ode: DifferentialProgram,p:Term, bound: Int) : Formula ={
     if(bound <= 0) return Greater(p,Number(0))
     else{
@@ -121,7 +126,13 @@ object ODEInvariance {
     }
   }
 
-  //Homomorphically extend pStar to max and min terms
+  /** Homomorphically extend pStar to max and min terms
+    *
+    * @param ode   : the ODEs under consideration
+    * @param p     : the term p>=0 (including max/min terms)
+    * @param bound : number of higher Lie derivatives to generate
+    * @return p*>0
+    */
   def pStarHom(ode: DifferentialProgram,p:Term, bound: Int) : Formula = {
     p match{
       case FuncOf(f,Pair(l,r)) =>
@@ -179,7 +190,7 @@ object ODEInvariance {
   // The following LP helper orchestration tactics assume that the relevant "progress" condition
   // is in antecedent (-1), and the target progress condition is in succedent (1)
   // Currently, a uniform bound is assumed on all the progress conditions
-  def lpgeq(bound:Int) : BelleExpr =
+  private def lpgeq(bound:Int) : BelleExpr =
     if (bound <= 0)
       implyRi & byUS(contAx)
     else //Could also make this fallback to the continuity step for early termination
@@ -190,7 +201,7 @@ object ODEInvariance {
       )
 
   //Homomorphically extend lpgeq to max and min terms
-  def lpclosed(bound:Int, progressTerm:Term) : BelleExpr =
+  private def lpclosed(bound:Int, progressTerm:Term) : BelleExpr =
     progressTerm match{
       case FuncOf(f,Pair(l,r)) =>
         if (f == maxF) orL(-1) <(
@@ -209,94 +220,80 @@ object ODEInvariance {
   //Disjunctive instruction
   case class Disj(left: Instruction, right:Instruction) extends Instruction
   case class Conj(left: Instruction, right:Instruction) extends Instruction
-  //Prove atomic polynomial (in)equality with dI
-  case class DiffInv(equational:Boolean) extends Instruction //TODO: maybe keep around provables for re-use
   //Prove atomic polynomial (in)equality with this cofactor
-  case class Darboux(cofactor : Term, equational:Boolean) extends Instruction //TODO: maybe keep around provables for re-use
+  case class Darboux(is_eq:Boolean, cofactor : Term, cut : Formula, pr :ProvableSig) extends Instruction //TODO: maybe keep around provables for re-use
   //Prove atomic polynomial >= with this bound
   case class Strict(bound : Int) extends Instruction
   //Prove using closeF
   case class Triv() extends Instruction
 
-  //Reduce polynomial a by b directly, returning (q,r) where b = qa+r
-  private def polyReduce(a:Term, b:Term) : (Term,Term) ={
-    //TODO: remove dependence on algebra tool
-    if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable("reduction requires a AlgebraTool, but got None")
-    val algTool = ToolProvider.algebraTool().get
-    val quo = algTool.polynomialReduce(a,List(b))
-    val cofactor = quo._1.head
-    val rem = quo._2
-    return (cofactor,rem)
-  }
   // A more exhaustive implementation
-  def pStarHomPlus(ode: DifferentialProgram, dom:Formula, p:Term, bound: Int) : (Formula,Instruction) = {
-    p match{
-      case FuncOf(f,Pair(l,r)) =>
+  private def pStarHomPlus(ode: DifferentialProgram, dom:Formula, p:Term, bound: Int) : (Formula,Instruction) = {
+    p match {
+      case FuncOf(f, Pair(l, r)) =>
         if (f == maxF) {
           val (lfml, linst) = pStarHomPlus(ode, dom, l, bound)
           val (rfml, rinst) = pStarHomPlus(ode, dom, r, bound)
           (Or(lfml, rfml), Disj(linst, rinst))
         }
-        else if (f==minF) {
+        else if (f == minF) {
           val (lfml, linst) = pStarHomPlus(ode, dom, l, bound)
           val (rfml, rinst) = pStarHomPlus(ode, dom, r, bound)
           (And(lfml, rfml), Conj(linst, rinst))
         }
         else ???
-      case Neg(FuncOf(a,p)) =>
-        if (a==absF) {
-          val lie = lieDer(ode, p)
-          val (q,r) = polyReduce(lie,p)
-          //Check if domain constraint implies r=0
-          logger.debug("Equational Lie:"+lie+" "+q+" "+r)
-          val pr = proveBy(Imply(dom,Equal(r,Number(0))),QE)
-          if(pr.isProved)
-            if(q == Number(0)) (Equal(p,Number(0)),DiffInv(true))
-            else (Equal(p,Number(0)),Darboux(q,true))
-          else
-            (False, Triv())
+      case Neg(FuncOf(a, p)) =>
+
+        if (a == absF) {
+          try {
+            val prop = Equal(p, Number(0))
+            val (pr, denRemReq, cofactor, rem) = DifferentialTactics.findDbx(ode, dom, prop)
+            (prop, Darboux(true, cofactor, denRemReq, pr))
+          }
+          catch {
+            case e: BelleThrowable => (False, Triv())
+          }
         }
         else ???
       case _ => {
-        val lie = lieDer(ode, p)
-        val (q,r) = polyReduce(lie,p)
-        logger.debug("Inequational Lie:"+lie+" "+q+" "+r)
-        val pr = proveBy(Imply(dom,GreaterEqual(r,Number(0))),QE)
-        if(pr.isProved)
-          if(q == Number(0)) (GreaterEqual(p,Number(0)),DiffInv(false))
-          else (GreaterEqual(p,Number(0)),Darboux(q,false))
-        else
-          (pStar(ode, p, bound),Strict(bound))
+        try {
+          val prop = GreaterEqual(p, Number(0))
+          val (pr, denRemReq, cofactor, rem) = DifferentialTactics.findDbx(ode, dom, prop)
+          (prop, Darboux(false, cofactor, denRemReq, pr))
+        }
+        catch {
+          case e: BelleThrowable => (pStar(ode, p, bound), Strict(bound))
+        }
       }
     }
   }
 
   //Assume the Q progress condition is at -1
-  def lpclosedPlus(inst:Instruction) : BelleExpr =
+  private def lpclosedPlus(inst:Instruction) : BelleExpr =
     inst match{
-      case Darboux(t,eq) =>
-        (if(eq) useAt(refAbs)(1) else skip) &
-        DebuggingTactics.debug("Darboux "+t+" "+eq) & implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DifferentialTactics.dgDbx(t)(1)
+      case Darboux(iseq,cofactor,cut, pr) =>
+        DebuggingTactics.print(cofactor+" "+cut) & skip
+        (if(iseq) useAt(refAbs)(1) else skip) &
+        DebuggingTactics.debug("Darboux "+cofactor+" ",doPrint = debugTactic) &
+        implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) &
+        dC(cut)(1)  <(DifferentialTactics.dgDbx(cofactor)(1), DifferentialTactics.diffWeakenG(1) & byUS(pr))
       case Disj(l,r) =>
-        DebuggingTactics.debug("DISJ") &
+        DebuggingTactics.debug("DISJ",doPrint = debugTactic) &
         orL(-2) <(
           useAt(refMaxL,PosInExpr(1::Nil))(1) & lpclosedPlus(l),
           useAt(refMaxR,PosInExpr(1::Nil))(1) & lpclosedPlus(r))
       case Conj(l,r) =>
-        DebuggingTactics.debug("CONJ") &
+        DebuggingTactics.debug("CONJ",doPrint = debugTactic) &
         andL(-2) & useAt(uniqMin,PosInExpr(0::Nil))(1) & andR(1) <(
           hideL(-3) & lpclosedPlus(l),
           hideL(-2) & lpclosedPlus(r)
         )
-      case DiffInv(eq) =>
-        DebuggingTactics.debug("DI "+eq) &
-        (if(eq) useAt(refAbs)(1) else skip) & implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & dI('full)(1)
       case Strict(bound) =>
-        DebuggingTactics.debug("Strict"+bound) &
+        DebuggingTactics.debug("Strict"+bound,doPrint = debugTactic) &
         hideL(-1) &
         lpgeq(bound)
       case Triv() =>
-        DebuggingTactics.debug("Triv") &
+        DebuggingTactics.debug("Triv",doPrint = debugTactic) &
         closeF
     }
 
@@ -313,65 +310,63 @@ object ODEInvariance {
     * @param bound (default 1): the bound on higher Lie derivatives to check for strict inequality, i.e. for p>=0,
     *              this is generated p>=0 & (p=0 -> (p'>=0 & (p'=0 -> ...p'^bound > 0 ...))
     *              (i.e. the bound-th Lie derivative is required to be strict)
-    * @return Leaves the initial goal G |- P open if it does not prove by QE
+    * @return closes the subgoal if P is indeed invariant, fails if P fails to normalize to f>=0 form, or if
+    *         one of tactic limitations is met
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
     */
   def sAIclosedPlus(bound:Int=1) : DependentPositionTactic = "sAIc" byWithInput (bound,(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only applicable in top-level succedent")
+
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
       case _ => throw new BelleThrowable("sAI only applicable to box ODE in succedent")
     }
-    val (f2,propt)=SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post,
-      DifferentialTactics.maxMinNormalize, SimplifierV3.emptyTaxs)
-    val (p,(pf,inst)) = f2 match {
-      case GreaterEqual(p,r) if r == Number(0) => (p,pStarHomPlus(ode,dom,p,bound))
-      case _ => throw new BelleThrowable("Normalization failed to reach a normal form "+f2)
-    }
-    logger.debug("HOMPLUS:",p,pf,inst)
 
-    //Rewrite postcondition to match real induction
-    val (starter,imm) = propt match {
-      case None => (skip,skip)
-      case Some(pr) => (useAt(pr)(pos ++ PosInExpr(1::Nil)),useAt(pr,PosInExpr(1::Nil))('Rlast))
+    val (fml,propt)=SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post,
+      DifferentialTactics.maxMinNormalize, SimplifierV3.emptyTaxs)
+
+    require(fml.isInstanceOf[GreaterEqual], "Normalization failed to reach normal form "+fml)
+    val f2 = fml.asInstanceOf[GreaterEqual]
+
+    val (pf,inst) = pStarHomPlus(ode,dom,f2.left,bound)
+
+    logger.debug("HOMPLUS:"+pf+" "+inst)
+
+    //Performs rewriting to and from the normal form
+    //Isn't there a faster way to do this rewrite??
+    val (starter,r1,r2,r3) = propt match {
+      case None => (skip,skip,skip,skip)
+      case Some(pr) => (
+        useAt(pr)(pos ++ PosInExpr(1::Nil)),
+        useAt(pr,PosInExpr(1::Nil))('Rlast),
+        useAt(pr,PosInExpr(1::Nil))(-1,PosInExpr(1::Nil)),
+        useAt(pr,PosInExpr(1::Nil))('Llast)
+      )
     }
-    DebuggingTactics.debug("PRE") & starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
-      implyR(pos) & imm & ?(closeId) & QE & done, //common case?
-      cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
-      implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.debug("QE step") & QE & done, skip) //Don't bother running the rest if QE fails
+
+    DebuggingTactics.debug("PRE",doPrint = debugTactic) &
+      starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
+      implyR(pos) & r1 & ?(closeId) & QE & done, //common case?
+      cohideR(pos) & composeb(1) & dW(1) & implyR(1) & r2 & assignb(1) &
+      implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.debug("QE step",doPrint = debugTactic) & QE & done, skip) //Don't bother running the rest if QE fails
       & cohide2(-3,1)& implyR(1) & lpclosedPlus(inst)
     )
   })
 
   // Determines if a formula is of the special "recursive" rank one case
   // i.e. every p~0 is (trivially) Darboux
-  // Additionally returns a list of formulas if so representing the diff cut order
-  // TODO: can generalize p>=0, p>0 cases to check the barrier condition as well
-  // TODO: this should be keeping track of co-factors
+  // returns a list of formulas internally re-arranged according to diff cut order
   def rankOneFml(ode: DifferentialProgram, dom:Formula, f:Formula) : Option[Formula] = {
     f match {
       case cf:ComparisonFormula =>
-        val p = cf.left
-        val lie = lieDer(ode, p)
-        val (q,r) = polyReduce(lie,p)
-        logger.debug("comparison fml: "+f+" Lie:"+lie+" "+q+" "+r)
-
-        val zero = Number(0)
-        val prf = cf match {
-          case GreaterEqual(_, _) => GreaterEqual(r,zero)
-          case Greater(_, _) => GreaterEqual(r,zero)
-          case LessEqual(_, _) => LessEqual(r,zero) //Not needed
-          case Less(_, _) => LessEqual(r,zero) //Not needed
-          case Equal(_,_) => Equal(r,zero)
-          case NotEqual(_,_) => Equal(r,zero)
-        }
-        val pr = proveBy(Imply(dom,prf),QE)
-        logger.debug(pr)
-        if(pr.isProved)
+        val (pr, denRemReq, cofactor, rem) = DifferentialTactics.findDbx(ode, dom, cf,false)
+        println(pr,denRemReq,cofactor,rem)
+        if (pr.isProved)// TODO: this should be keeping track of co-factors rather than throwing them away
           Some(f)
         else {
           if(cf.isInstanceOf[Equal] || cf.isInstanceOf[NotEqual]) return None
-          val pr2 = proveBy(Imply(And(dom, Equal(p, zero)), Greater(r, zero)), QE)
+          //TODO: need to check cofactor well-defined as well?
+          val pr2 = proveBy(Imply(And(dom, Equal(cf.left, Number(0))), Greater(rem, Number(0))), QE)
           logger.debug(pr2)
           if(pr2.isProved)
             Some(f)
@@ -394,7 +389,7 @@ object ODEInvariance {
           if(l.length == checkls.length)
             return None
           else if(l.length == 0)
-            return Some( acc.foldRight(True:Formula)((x,y) => And(x,y)))
+            return Some(acc.foldRight(True:Formula)((x,y) => And(x,y)))
           else {
             ls = l
             domC = r.foldRight(domC)((x, y) => And(x, y))
@@ -412,11 +407,10 @@ object ODEInvariance {
   }
 
   private def recRankOneTac(f:Formula) : BelleExpr = {
-    //TODO:Currently Darbouxs all the time, but could just use dI in simple case
-    //Perhaps delegate to Darboux tactic to check for simpler case
-    DebuggingTactics.debug(f.prettyString) & (f match {
+    DebuggingTactics.debug(f.prettyString,doPrint = debugTactic) & (f match {
       case True => G(1) & close
-      case And(l,r) => andL(-1) & DebuggingTactics.debug("state") & dC(l)(1)<(
+      case And(l,r) => andL(-1) &
+        DebuggingTactics.debug("state",doPrint = debugTactic) & dC(l)(1)<(
         hideL(-1) & boxAnd(1) & andR(1) <(
           DW(1) & G(1) & prop,
           recRankOneTac(r)),
@@ -426,7 +420,7 @@ object ODEInvariance {
         useAt(boxOrL,PosInExpr(1::Nil))(1) & recRankOneTac(l),
         useAt(boxOrR,PosInExpr(1::Nil))(1) & recRankOneTac(r)
       )
-      case _ => (DifferentialTactics.dgDbxAuto(1) & done) | DifferentialTactics.dgBarrier()(1)
+      case _ => (DifferentialTactics.dgDbxAuto(1) | DifferentialTactics.dgBarrier()(1)) & done
     })
   }
 

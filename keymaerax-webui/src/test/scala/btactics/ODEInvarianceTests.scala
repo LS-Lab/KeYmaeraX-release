@@ -1,15 +1,11 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.ODEInvariance._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-
-import scala.collection.immutable._
 
 class ODEInvarianceTests extends TacticTestBase {
 
@@ -50,37 +46,12 @@ class ODEInvarianceTests extends TacticTestBase {
   it should "take a local progress step" in withMathematica { qeTool =>
     val seq = "x>=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0, <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0".asSequent
     val pr = proveBy(seq, lpstep(2))
-    //println(pr)
+    println(pr)
     pr.subgoals should have size 2
     //Local progress into p>=0 requires p>0 | p=0 initially
     pr.subgoals(0) shouldBe "x>=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0, x>0|x=0".asSequent
     //In the p=0 case, more work needs to be done
     pr.subgoals(1) shouldBe "x>=0, x=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0, <{t_'=1,z'=2,x'=x+1,y'=1&1+x>=0}>t_!=0".asSequent
-  }
-
-  it should "do full local progress p>=0" in withMathematica { qeTool =>
-    val seq = "x>=0 ==> <{t_'=1,z'=2,x'=x+1,y'=1&x>=0}>t_!=0".asSequent
-    val pr = proveBy(seq,
-      cut(pStar("{z'=2,x'=x+1,y'=1}".asDifferentialProgram,"x".asTerm,10))
-      <(
-        cohide2(-2,1) & lpgeq(10),
-        cohideOnlyR('Rlast) & QE
-      ))
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "do full local progress with max(min) >=0" in withMathematica { qeTool =>
-    val seq = "max(min(z,min(x,y)),min(x,y))>=0 ==> <{t_'=1,x'=x^2+1, y'=2*x+y, z'=x+y+z & max(min(z,min(x,y)),min(x,y)) >= 0}>t_!=0".asSequent
-    val t = "max(min(z,min(x,y)),min(x,y))".asTerm
-    val pr = proveBy(seq,
-      cut(pStarHom("{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asDifferentialProgram,t,4))
-        <(
-        cohide2(-2,1) & lpclosed(4,t),
-        cohideOnlyR('Rlast) & QE
-      ))
-    println(pr)
-    pr shouldBe 'proved
   }
 
   it should "package with real induction" in withMathematica { qeTool =>
@@ -124,15 +95,6 @@ class ODEInvarianceTests extends TacticTestBase {
     )
     println(pr)
     pr shouldBe 'proved
-  }
-
-  it should "compute aggressive P*" in withMathematica { qeTool =>
-    val ode = "{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asDifferentialProgram
-    val dom = "c=0".asFormula
-    val poly = "max(min(z,min(x,y)),min(x,-abs(z)))".asTerm
-    val p1 = pStarHomPlus(ode,dom,poly,1)
-    println(p1)
-    p1._1 shouldBe "(z>=0&(z=0->x+y+z>0))&x>=0&y>=0&(y=0->2*x+y>0)|x>=0&false".asFormula
   }
 
   it should "aggressively try rank 1" in withMathematica { qeTool =>
@@ -209,13 +171,41 @@ class ODEInvarianceTests extends TacticTestBase {
   }
 
   it should "prove Strict(3) example" in withMathematica { qeTool =>
-    //The invariant has a special which requires the 3rd Lie derivative
+    //The invariant has a special point which requires the 3rd Lie derivative
     val fml = "(-4 + x^2 + y^2)*(-5*x*y + 1/2*(x^2 + y^2)^3) <= 0 & y>= 1/3 -> [{x'=2*(-(3/5) + x)*(1 - 337/225*(-(3/5) + x)^2 + 56/75 * (-(3/5) + x)*(-(4/5) + y) - 32/25 * (-(4/5) + y)^2) - y + 1/2 *x * (4 - x^2 - y^2), y'=x +  2*(1 - 337/225*(-(3/5) + x)^2 + 56/75*(-(3/5) + x)*(-(4/5) + y) - 32/25 * (-(4/5) + y)^2)*(-(4/5) + y) + 1/2 *y * (4 - x^2 - y^2)}]((-4 + x^2 + y^2)*(-5*x*y + 1/2*(x^2 + y^2)^3) <= 0 & y>= 1/3)".asFormula
     val pr = proveBy(fml, implyR(1) &
       sAIclosedPlus(3)(1)
     )
     println(pr)
-    //TODO: can this be sped up??, it seems to get stuck in polynomial equality step in DI
+    pr shouldBe 'proved
+  }
+
+  it should "prove with consts (sAIRankOne)" in withMathematica { qeTool =>
+    val fml = "x>=0 & y>=0 -> [{x'=x+y}](x>=0 & y>=0)".asFormula
+    //This worked out because the tactic reorders y>=0 before x>=0
+    val pr = proveBy(fml, implyR(1) &
+      sAIRankOne(1)
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove with consts (auto const)" in withMathematica { qeTool =>
+    val fml = "x>=0 & y>0 -> [{x'=x+y}]x>=0".asFormula
+    //failing
+    val pr = proveBy(fml, implyR(1) & andL(-1) & odeInvariant(1))
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "ignore bad dbx cofactors" in withMathematica { qeTool =>
+    val fml = "x>=5 & y>=0 -> [{x'=x^2+y,y'=x}](x>=1 & y>=0)".asFormula
+    // This won't work because neither conjunct is rank 1
+    // In addition, Mathematica returns a rational function answer for the polynomial division
+    // val pr = proveBy(fml, implyR(1) & sAIRankOne(1))
+    // Fortunately, sAIclosedPlus is a fallback
+    val pr = proveBy(fml, implyR(1) & sAIclosedPlus()(1))
+    println(pr)
     pr shouldBe 'proved
   }
 }

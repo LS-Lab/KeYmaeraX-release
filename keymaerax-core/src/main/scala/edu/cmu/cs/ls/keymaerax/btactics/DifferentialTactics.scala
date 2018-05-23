@@ -416,6 +416,29 @@ private object DifferentialTactics extends Logging {
     }
   })
 
+ /** Add constant context into the domain constraint at a given (top-level) position by V
+   * @example Turns v>0, a>0 |- [v'=a]v>0 into v>0, a>0 |- [v'=a & a>0]v>0
+   */
+ def DconstV : DependentPositionTactic = "DconstV" by ((pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel, "DconstV only at top-level positions")
+    //TODO: possibly the postcondition could be simplified
+    val dom = seq.sub(pos) match {
+      case Some(Box(ODESystem(_, dom), p)) => dom
+      case Some(Diamond(ODESystem(_, dom), p)) => dom
+      case _ => throw new BelleThrowable("DconstV adds constants into domain constraint for box/diamond ODEs")
+    }
+    //The constant context
+    val constCtxt = TacticHelper.propertiesOfConstants(seq,pos.checkTop)
+    if(constCtxt.isEmpty)
+      skip
+    else {
+      val newDom = constCtxt.foldRight(dom)((x, y) => And(x, y))
+      dR(newDom)(pos) <( skip,
+         //propositional proof should be sufficient here
+        (boxAnd(1) & andR(1) <(V(1) & closeId,skip))*constCtxt.length & diffWeakenG(1) & implyR(1) & closeId)
+    }
+  })
+
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     *
@@ -1041,49 +1064,47 @@ private object DifferentialTactics extends Logging {
     )
   })
 
-  //Keeps the top level =s in evol domain as a groebner basis of terms?
-  private def domToTerms(f:Formula) : List[Term] = {
-    f match {
-      case Equal(l,r) => Minus(l,r) :: Nil
-      case And(l,r) => domToTerms(l) ++ domToTerms(r)
-      case _ => Nil
+  /** Find Q|- p' = q/g p + r, and proves Q|- g!=0 & r~0 with appropriate
+    * sign condition on r as specified by "property"
+    */
+  private [btactics] def findDbx(ode: DifferentialProgram, dom: Formula, property: ComparisonFormula, strict:Boolean=true) : (ProvableSig,Formula,Term,Term) = {
+    val p = property.left
+    val lie = DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
+    // p' = g/q p + r
+    val (g,q,r) = domQuoRem(lie,p,dom)
+    val zero = Number(0)
+
+    //The sign of the remainder for a Darboux argument
+    val remSgn = property match {
+      case GreaterEqual(_, _) => GreaterEqual(r,zero)
+      case Greater(_, _) => GreaterEqual(r,zero)
+      case LessEqual(_, _) => LessEqual(r,zero)
+      case Less(_, _) => LessEqual(r,zero)
+      case Equal(_,_) => Equal(r,zero)
+      case NotEqual(_,_) => Equal(r,zero)
+      case _ => throw new BelleThrowable(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
     }
+
+    //q!=0, r~0 (as appropriate)
+    val denRemReq = And(NotEqual(q,zero),remSgn)
+    val pr = proveBy(Imply(dom,denRemReq), QE)
+
+    if(!pr.isProved && strict)
+      throw new BelleThrowable("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+g+" denom: "+q+" rem: "+r+" unable to prove: "+denRemReq)
+
+    (pr,denRemReq,Divide(g,q),r)
   }
 
-  //Pulls out divisions
-  private def stripDenom(t:Term) : (Term,Term) = {
-    t match {
-      case Times(l,r) =>
-        val (ln,ld) = stripDenom(l)
-        val (rn,rd) = stripDenom(r)
-        (Times(ln,rn),Times(ld,rd))
-      case Divide(l,r) =>
-        val (ln,ld) = stripDenom(l)
-        val (rn,rd) = stripDenom(r)
-        (Times(ln,rd),Times(ld,rn))
-      case Power(tt,p:Number) if p.value < 0 =>
-        (Number(1),Power(tt,Number(-p.value)))
-      case Power(tt,p) =>
-        val (tn,td) = stripDenom(tt)
-        (Power(tn,p),Power(td,p))
-      //Ignore everything else todo: could deal with common denominators
-      case _ => (t,Number(1))
-    }
-  }
-
-  // Normalises to p = 0
-  // then attempts to automatically guess the darboux cofactor
+  // Normalises to p = 0 then attempts to automatically guess the darboux cofactor
   def dgDbxAuto: DependentPositionTactic = "dbx" by ((pos: Position, seq:Sequent) => {
-    if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable("dgDbxAuto requires a AlgebraTool, but got None")
-
-    require(pos.isSucc && pos.isTopLevel, "barrier only at top-level succedent")
+    require(pos.isSucc && pos.isTopLevel, "dgDbxAuto only at top-level succedent")
 
     val (system,dom,post) = seq.sub(pos) match {
       case Some (Box (ODESystem (system, dom), property) ) => (system,dom,property)
       case _ => throw new BelleThrowable(s"dbx auto only at box ODE in succedent")
     }
 
-    val (property,propt)=SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post, atomNormalize, SimplifierV3.defaultTaxs)
+    val (property,propt) = SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post, atomNormalize, SimplifierV3.defaultTaxs)
 
     val starter = propt match {
       case None => skip
@@ -1091,59 +1112,18 @@ private object DifferentialTactics extends Logging {
     }
 
     //normalized to have p on LHS
-    val p = property.asInstanceOf[ComparisonFormula].left
+    val (pr,denRemReq,cofactor,rem) = findDbx(system,dom,property.asInstanceOf[ComparisonFormula])
 
-    //Use simplification tool if available
-    val lie = DifferentialHelper.lieDerivative(system, p)
-    val algTool = ToolProvider.algebraTool().get
-    //val gb = p::domToTerms(dom)
-    val domterms = domToTerms(dom)
-    //todo: groebnerBasis seems broken for > 1 term??
-    //todo: comment above might require own MathematicaToKeYmaera converter,
-    //      since the default converter for QE accepts lists of length=2 only to represent Pairs
-    val gb = if (domterms.nonEmpty) {
-      try { algTool.groebnerBasis(domterms) } catch { case _: ToolException => Nil }
-    } else Nil
-    val quo = algTool.polynomialReduce(lie,p::gb)
-    // quo._1.head is the cofactor of p
-    // quo._2 is the remainder
-    // For =darboux, attempt proof of quo._2 = 0
-    // For >=,> , attempt proof of quo._2 >=0 (and similarly for <=,<)
-    val cofactor = quo._1.head
-    val rem = quo._2
-    val (num,den) = stripDenom(cofactor) //Need to put it in a form that DG can understand
-
-    logger.debug("poly: "+p+" lie: "+lie+" cofactor: "+cofactor+" rem: "+rem+" num: "+num+" den: "+den)
-    val zero = Number(0)
-
-    val remSgn = property match {
-      case GreaterEqual(_, _) => GreaterEqual(rem,zero)
-      case Greater(_, _) => GreaterEqual(rem,zero)
-      case LessEqual(_, _) => LessEqual(rem,zero) //Not needed
-      case Less(_, _) => LessEqual(rem,zero) //Not needed
-      case Equal(_,_) => Equal(rem,zero)
-      case NotEqual(_,_) => Equal(rem,zero)
-      case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}")
-    }
-
-    val denRemReq = And(NotEqual(den,zero),remSgn)
-
+    //DI if simple, otherwise use dgDbx
+    val finishTac = if (cofactor == Number(0)) dI('full)(pos) else dgDbx(cofactor)(pos)
     val denRemReqTactic = (t: BelleExpr) =>
-      if ((FormulaTools.conjuncts(denRemReq).toSet -- FormulaTools.conjuncts(dom)).isEmpty) {
-        t
-      } else {
-        //First, attempt to prove denominator non-zero, and the remainder has appropriate sign
         diffCut(denRemReq)(pos) <(
           t,
-          //Leaves the denominator goal open if it isn't implied by DW
-          ?(dW(pos) & QE & done)
+          diffWeakenG(pos) & byUS(pr)
         )
-      }
-
 
     denRemReqTactic(
-      // use dgDbx
-      starter & dgDbx(Divide(num,den))(pos)
+      starter & finishTac
     )
   })
 
@@ -1348,6 +1328,66 @@ private object DifferentialTactics extends Logging {
 
   // implementation helpers
 
+  /** Computes (potentially fractional) quotient remainder resulting from polynomial division wrt domain
+    * @param poly polynomial to divide
+    * @param div divisor
+    * @param dom domain constraint
+    * @return (g,q,r) where Q |- poly = (g/q)*div + r
+    */
+  def domQuoRem(poly:Term, div:Term, dom:Formula) : (Term,Term,Term) = {
+    //TODO: remove dependence on algebra tool
+    if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable("domQuoRem requires a AlgebraTool, but got None")
+
+    val algTool = ToolProvider.algebraTool().get
+
+    //todo: groebnerBasis seems broken for > 1 term??
+    //todo: comment above might require own MathematicaToKeYmaera converter,
+    //      since the default converter for QE accepts lists of length=2 only to represent Pairs
+    //val gb = p::domToTerms(dom)
+    val domterms = domToTerms(dom)
+
+    val gb = if (domterms.nonEmpty) {
+      try { algTool.groebnerBasis(domterms) } catch { case _: ToolException => Nil }
+    } else Nil
+    val quo = algTool.polynomialReduce(poly,div::gb)
+    // quo._1.head is the cofactor of div (g/q)
+    // quo._2 is the remainder (r)
+
+    val (g,q) = stripDenom(quo._1.head)
+    if((FormulaTools.singularities(g) ++ FormulaTools.singularities(q)).isEmpty) (g,q,quo._2)
+    else (Number(0),Number(1),poly)
+  }
+
+  //Keeps the top level =s in evol domain as a groebner basis of terms?
+  private def domToTerms(f:Formula) : List[Term] = {
+    f match {
+      case Equal(l,r) => Minus(l,r) :: Nil
+      case And(l,r) => domToTerms(l) ++ domToTerms(r)
+      case _ => Nil
+    }
+  }
+
+  //Pulls out divisions
+  private def stripDenom(t:Term) : (Term,Term) = {
+    t match {
+      case Times(l,r) =>
+        val (ln,ld) = stripDenom(l)
+        val (rn,rd) = stripDenom(r)
+        (Times(ln,rn),Times(ld,rd))
+      case Divide(l,r) =>
+        val (ln,ld) = stripDenom(l)
+        val (rn,rd) = stripDenom(r)
+        (Times(ln,rd),Times(ld,rn))
+      case Power(tt,p:Number) if p.value < 0 =>
+        (Number(1),Power(tt,Number(-p.value)))
+      case Power(tt,p) =>
+        val (tn,td) = stripDenom(tt)
+        (Power(tn,p),Power(td,p))
+      //Ignore everything else todo: could deal with common denominators
+      case _ => (t,Number(1))
+    }
+  }
+
   //Explicit symbolic expression for the determinant of a matrix
   //Currently just explicitly calculated, but can use Mathematica's det if available
   //Also, this probably doesn't actually need to be explicitly calculated everytime since we always apply it on ghost variables
@@ -1379,18 +1419,6 @@ private object DifferentialTactics extends Logging {
 
   private def matvec_prod (m:List[List[Term]],v:List[Term]) : List[Term] ={
     return m.map(ls => dot_prod(ls,v))
-  }
-
-  @deprecated("Possible duplicate of DifferentialHelper.flattenAnds")
-  def flattenConjunctions(f: Formula): List[Formula] = {
-    var result: List[Formula] = Nil
-    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
-      override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
-        case And(l, r) => result = result ++ flattenConjunctions(l) ++ flattenConjunctions(r); Left(Some(ExpressionTraversal.stop))
-        case a => result = result :+ a; Left(Some(ExpressionTraversal.stop))
-      }
-    }, f)
-    result
   }
 
   //@todo possibly should ask StaticSemantics.boundVars(ode).filter(_.isInstanceOf[DifferentialSymbol)
@@ -1519,5 +1547,16 @@ private object DifferentialTactics extends Logging {
       case Or(l,r) =>  List(maxNorm)
       case _ => throw new IllegalArgumentException("cannot normalize "+f+" to max/min >=0 normal form (must be a conjunction/disjunction of >=,<=)")
     }
+  }
+
+  def flattenConjunctions(f: Formula): List[Formula] = {
+    var result: List[Formula] = Nil
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, f: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = f match {
+        case And(l, r) => result = result ++ flattenConjunctions(l) ++ flattenConjunctions(r); Left(Some(ExpressionTraversal.stop))
+        case a => result = result :+ a; Left(Some(ExpressionTraversal.stop))
+      }
+    }, f)
+    result
   }
 }

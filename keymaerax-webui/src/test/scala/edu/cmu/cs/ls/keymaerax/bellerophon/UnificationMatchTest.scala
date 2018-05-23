@@ -251,7 +251,7 @@ class UnificationMatchTest extends SystemTestBase {
   }
 
   it should "unify j()=x+y with s()=s()" ignore {
-    //@note unification but not matching
+    //@note unifiable but not by mere matching, needs a proper unifier instead of a single sided matcher
     shouldUnify("s()=s()".asFormula, "j()=x+y".asFormula, USubst(
       SubstitutionPair("s()".asTerm, "x+y".asTerm) :: SubstitutionPair("j()".asTerm, "x+y".asTerm) :: Nil))
   }

@@ -70,6 +70,8 @@ object InvariantProvers {
   }
 
 
+
+  /** [[TactixLibrary.loopPostMaster()]] */
   def loopPostMaster(gen: Generator[Formula]): DependentPositionTactic = "loopPostMaster" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
       val initialCond = seq.ante.reduceRightOption(And).getOrElse(True)
@@ -105,8 +107,8 @@ object InvariantProvers {
           lazy val wouldBeSubgoals = USubst(Seq(jjl ~>> cand, jja ~> True))(pr)
           logger.debug("loopPostMaster looks at\n" + wouldBeSeq)
           //@note first check induction step; then lazily check all subgoals (candidate may not be true initially or not strong enough)
-          //@todo avoid doing wouldBeSeq twice
-          if (proveBy(wouldBeSeq, ?(finishOff)).isProved && proveBy(wouldBeSubgoals, ?(finishOff)).isProved) {
+          val stepProof = proveBy(wouldBeSeq, ?(finishOff))
+          if (stepProof.isProved && proveBy(wouldBeSubgoals(stepProof, wouldBeSubgoals.subgoals.indexOf(stepProof.conclusion)), ?(finishOff)).isProved) {
             // proof will work so no need to change candidate
             println("Proof will work " + wouldBeSubgoals.prettyString)
             currentCandidate
@@ -124,7 +126,7 @@ object InvariantProvers {
 
             if (genIt.hasNext) {
               candidate = Some(genIt.next())
-              println/*logger.info*/("loopPostMaster next    " + candidate)
+              println/*logger.info*/("loopPostMaster next    " + candidate.get)
               candidate
             } else {
               None
@@ -136,22 +138,28 @@ object InvariantProvers {
       def generateOnTheFly[A <: Expression](pos: Position): (ProvableSig, ProverException) => scala.collection.immutable.Seq[Expression] = {
         logger.debug("loopPostMaster initial " + candidate)
         (pr: ProvableSig, _: ProverException) => {
+          var sawODE: Boolean = false
           //@note updates "global" candidate
           breakable {
             for (seq <- pr.subgoals) {
               seq.sub(pos) match {
-                case Some(Box(_: ODESystem, _)) => candidate = nextCandidate(pr, seq, candidate); break
-                //case Some(p: PredOf) if p == jjl => candidate = nextCandidate(pr, seq, candidate); break
+                case Some(Box(_: ODESystem, _)) =>
+                  sawODE = true
+                  candidate = nextCandidate(pr, seq, candidate); break
                 case _ => // ignore branches that are not about ODEs
               }
             }
           }
           candidate match {
             case Some(c) =>
-              logger.debug("loopPostMaster cand    " + candidate)
+              logger.debug("loopPostMaster cand    " + c)
+              // c for jjl, eventual True for jja
               c :: True :: Nil
             case _ =>
-              throw new BelleThrowable("loopPostMaster: No more progress, possibly for lack of ODEs in the loop\n" + pr.prettyString)
+              if (sawODE)
+                throw new BelleThrowable("loopPostMaster: Invariant generator ran out of ideas for\n" + pr.prettyString)
+              else
+                throw new BelleThrowable("loopPostMaster: No more progress for lack of ODEs in the loop\n" + pr.prettyString)
           }
         }
       }
@@ -161,7 +169,7 @@ object InvariantProvers {
         loop(subst(jj))(pos) < (nil, nil,
           cut(jja) <(
             /* use jja() |- */
-            chase(pos) & OnAll(propChase) & OnAll(?(chase(pos ++ PosInExpr(1::Nil))) & ?(QE() & done))
+            chase(pos) & OnAll(unfoldProgramNormalize) & OnAll(?(chase(pos ++ PosInExpr(1::Nil))) & ?(QE() & done))
             ,
             /* show |- jja() is postponed since only provable for jja()=True */
             cohide('Rlast)
@@ -175,8 +183,5 @@ object InvariantProvers {
 
     case e => throw new BelleThrowable("Wrong shape to generate an invariant for " + e + " at position " + pos)
   })
-
-  //@todo this is a suboptimal emulation for propositional chase on (1)
-  def propChase = normalize
 
 }
