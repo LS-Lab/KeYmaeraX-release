@@ -360,7 +360,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[openDiffInd]]
     * @see [[dG]]
     */
-  lazy val ODE: DependentPositionTactic = DifferentialTactics.ODE
+  lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position) =>
+    odeInvariant(pos) | solve(pos) | DifferentialTactics.ODE(pos))
 
   /* odeInvariant: prove invariants of differential equations [LICS'18] */
   lazy val odeInvariant: DependentPositionTactic = "odeInvariant" by ((pos:Position) =>

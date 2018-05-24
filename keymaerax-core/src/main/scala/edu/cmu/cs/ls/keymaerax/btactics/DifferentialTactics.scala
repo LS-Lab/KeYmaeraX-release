@@ -696,7 +696,7 @@ private object DifferentialTactics extends Logging {
     * @author Andre Platzer
     * @author Nathan Fulton
     */
-  lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+  lazy val ODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(Box(ODESystem(ode, q), _)) =>
       val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
       val qAtoms = FormulaTools.conjuncts(q).toSet
@@ -710,7 +710,7 @@ private object DifferentialTactics extends Logging {
         }, failureMessage)(pos) &
           ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
             case Some(ODESystem(_, extendedQ)) =>
-              if (q == True) useAt("true&")(ppos ++
+              if (q == True && extendedQ != True) useAt("true&")(ppos ++
                 PosInExpr(1 +: FormulaTools.posOf(extendedQ, q).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
               else skip
           }))(pos ++ PosInExpr(0::Nil))
@@ -725,6 +725,16 @@ private object DifferentialTactics extends Logging {
         logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
         List[Formula]().iterator
     }
+
+    def compatibilityFallback(isOpen: Boolean): BelleExpr =
+      if (isOpen) {
+        openDiffInd(pos) | DGauto(pos) //> TODO: needs updating
+      } else {
+        diffInd()(pos)       | // >= to >=
+        DGauto(pos)          |
+        dgZeroMonomial(pos)  | //Equalities
+        dgZeroPolynomial(pos)  //Equalities
+      }
 
     //Tries to prove without any invariant generation or solving.
     val proveWithoutCuts = "ANON" by ((pos: Position) => {
@@ -748,17 +758,7 @@ private object DifferentialTactics extends Logging {
           //@note diffWeaken will already include all cases where V works, without much additional effort.
           (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
             diffWeaken(pos) & QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE)))) & done else fail
-          ) |
-          (if (isOpen) {
-              (openDiffInd(pos) | DGauto(pos)) //> TODO: needs updating
-          } else {
-            diffInd()(pos)       | // >= to >=
-            (dgBarrier(ToolProvider.simplifierTool())(pos) & done) |
-            (dgDbxAuto(pos) & done) |
-            DGauto(pos)          |
-            dgZeroMonomial(pos)  | //Equalities
-            dgZeroPolynomial(pos)  //Equalities
-          })
+          ) | TactixLibrary.odeInvariant(pos) | compatibilityFallback(isOpen)
         })) (pos))
     })
 
@@ -791,19 +791,15 @@ private object DifferentialTactics extends Logging {
       case _ => skip
     })
 
-    //The tactic:
-    //@todo do at least proveWithoutCuts before diffSolve, but find some heuristics for figuring out when a simpler argument will do the trick.
     if (insistOnProof)
       proveWithoutCuts(pos)        |
       (addInvariant & ODE(introduceStuttering,finish)(pos))    |
-      TactixLibrary.solve(pos) |
       splitWeakInequality(pos)<(ODE(introduceStuttering,finish)(pos), ODE(introduceStuttering,finish)(pos)) |
       (if (introduceStuttering) stutter(pos) & ODE(introduceStuttering=false,finish)(pos) & unstutter(pos)
        else finish)
     else
       (proveWithoutCuts(pos) & done)   |
       (addInvariant & ODE(introduceStuttering,finish)(pos) & done) |
-      TactixLibrary.solve(pos)     |
       (splitWeakInequality(pos)<(ODE(introduceStuttering,finish)(pos), ODE(introduceStuttering,finish)(pos)) & done) |
       (if (introduceStuttering) stutter(pos) & ODE(introduceStuttering=false,finish)(pos) & unstutter(pos) & done
        else finish)
