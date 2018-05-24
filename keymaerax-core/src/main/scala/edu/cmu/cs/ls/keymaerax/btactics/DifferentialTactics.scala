@@ -712,7 +712,8 @@ private object DifferentialTactics extends Logging {
           }))(pos ++ PosInExpr(0::Nil))
     )(pos)
   })
-  def ODE(introduceStuttering: Boolean, finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+
+  private def ODE(introduceStuttering: Boolean, finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
     val invariantCandidates = try {
       InvariantGenerator.differentialInvariantGenerator(seq,pos)
     } catch {
