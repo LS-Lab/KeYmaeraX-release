@@ -7,10 +7,12 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{useAt, _}
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import edu.cmu.cs.ls.keymaerax.tools.ToolException
 import org.apache.logging.log4j.scala.Logger
 
 import scala.collection.immutable._
@@ -434,32 +436,40 @@ object ODEInvariance {
     * This tactic reorders conjunctions internally to try and find an order that works
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
     */
-  def sAIRankOne : DependentPositionTactic = "sAIR1" by ((pos:Position,seq:Sequent) => {
+  def sAIRankOne(doReorder:Boolean=true) : DependentPositionTactic = "sAIR1" byWithInput (doReorder,(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only in top-level succedent")
-    val (ode,dom,post) = seq.sub(pos) match {
-      case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
+    val (ode, dom, post) = seq.sub(pos) match {
+      case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
       case _ => throw new BelleThrowable("sAI only at box ODE in succedent")
     }
-    val (f2,propt)=SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post, atomNormalize2,SimplifierV3.emptyTaxs)
-    val f3 = rankOneFml(ode,dom,f2) match {
-      case None => throw new BelleThrowable("Not recursive rank 1: "+f2)
-      case Some(f) => f
+    val (f2, propt) = SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post, atomNormalize2, SimplifierV3.emptyTaxs)
+
+    val (starter, imm) = propt match {
+      case None => (skip, skip)
+      case Some(pr) => (useAt(pr)(pos ++ PosInExpr(1 :: Nil)), useAt(pr, PosInExpr(1 :: Nil))(pos))
     }
 
-    val reorder = proveBy(Equiv(f2,f3),QE)
-    assert(reorder.isProved)
-
-    logger.debug("Rank 1: "+f3)
-
-    //Rewrite postcondition to match real induction
-    val (starter,imm) = propt match {
-      case None => (skip,skip)
-      case Some(pr) => (useAt(pr)(pos ++ PosInExpr(1::Nil)),useAt(pr,PosInExpr(1::Nil))(pos))
+    if (!doReorder) {
+      starter & cutR(f2)(pos) < (QE,
+        cohideR(pos) & implyR(1) & recRankOneTac(f2)
+      )
     }
-    starter & useAt(reorder)(pos ++ PosInExpr(1::Nil)) & cutR(f3)(pos)<(
-      useAt(reorder,PosInExpr(1::Nil))(pos) & QE,
-      cohideR(1) & implyR(1) & recRankOneTac(f3)
-    )
+    else {
+      val f3 =
+        rankOneFml(ode, dom, f2) match {
+          case None => throw new BelleThrowable("Unable to re-order to recursive rank 1 form: " + f2)
+          case Some(f) => f
+        }
+
+      val reorder = proveBy(Equiv(f2, f3), QE)
+      assert(reorder.isProved)
+
+      logger.debug("Rank 1: " + f3)
+      starter & useAt(reorder)(pos ++ PosInExpr(1 :: Nil)) & cutR(f3)(pos) < (
+        useAt(reorder, PosInExpr(1 :: Nil))(pos) & QE,
+        cohideR(pos) & implyR(1) & recRankOneTac(f3)
+      )
+    }
   })
 
   /**
@@ -534,6 +544,29 @@ object ODEInvariance {
 
     pr
   }
+
+  //Explicitly calculate the rank of a polynomial term, no optimizations
+  //todo: Groebner basis broken
+//  def rank(ode:DifferentialProgram, poly:Term) : Unit = {
+//    if (ToolProvider.algebraTool().isEmpty)
+//      throw new BelleThrowable(s"rank computation requires a AlgebraTool, but got None")
+//
+//    val algTool = ToolProvider.algebraTool().get
+//
+//    var gb = List(poly)
+//    var rank = 1
+//    var curP = poly
+//
+//    while(rank<=2) {
+//      val lie = DifferentialHelper.simplifiedLieDerivative(ode, curP, ToolProvider.simplifierTool())
+//      val quo = algTool.polynomialReduce(lie, gb)
+//      println("reduction: ",quo)
+//      println("rank: ",rank)
+//      gb = algTool.groebnerBasis(lie::gb)
+//      curP = lie
+//      rank+=1
+//    }
+//  }
 
   //Explicit symbolic expression for the determinant of a matrix
   //Currently just explicitly calculated, but can use Mathematica's det if available

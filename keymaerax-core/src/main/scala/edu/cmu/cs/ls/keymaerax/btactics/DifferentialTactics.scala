@@ -1286,7 +1286,7 @@ private object DifferentialTactics extends Logging {
   def domQuoRem(poly:Term, div:Term, dom:Formula) : (Term,Term,Term) = {
     //TODO: remove dependence on algebra tool
     if (ToolProvider.algebraTool().isEmpty) {
-      throw new BelleThrowable(s"dgZeroEquilibrium requires a AlgebraTool, but got None")
+      throw new BelleThrowable(s"duoQuoRem requires a AlgebraTool, but got None")
       // val polynorm = PolynomialArith.normalise(poly,true)._1
       //  val divnorm = PolynomialArith.normalise(div,true)._1
     }

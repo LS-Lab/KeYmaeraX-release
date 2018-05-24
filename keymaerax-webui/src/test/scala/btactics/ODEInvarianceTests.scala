@@ -73,6 +73,18 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+  it should "try some invariants (1) in position" in withMathematica { qeTool =>
+    val seq = "x^2+y^2>=1 ==> a>0, [{x'=x-y^3, y'=x^3+y}]!(x^2+y^2<1/2)".asSequent
+    val pr = proveBy(seq,
+      dC("(2*(x^2+y^2)-1>=0)".asFormula)(2) <(
+        dW(2) & QE,
+        sAIclosedPlus()(2)
+      )
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
   it should "try some invariants (2)" ignore withMathematica { qeTool =>
     val fml = "x=-1 & y=-1 -> [{x'=x*(x-2*y), y'=-(2*x-y)*y}]!(x>0 | y>0)".asFormula
     //This is an invariant which cannot be proved by the current tactic
@@ -107,11 +119,36 @@ class ODEInvarianceTests extends TacticTestBase {
   }
 
   it should "try rank 1 invariants (1)" in withMathematica { qeTool =>
-    val fml = "x=-1 & y=-1 -> [{x'=x*(x-2*y), y'=-(2*x-y)*y}]!(x>0 | y>0)".asFormula
-    val pr = proveBy(fml, implyR(1) &
+    val seq = "x=-1 & y=-1 -> [{x'=x*(x-2*y), y'=-(2*x-y)*y}]!(x>0 | y>0)".asFormula
+    val pr = proveBy(seq, implyR(1) &
       dC("x=0&y=0 | (x^2<=2*x*y)&x<=0&y<=0".asFormula)(1) <(
         dW(1) & QE,
-        sAIRankOne(1)
+        sAIRankOne(true)(1)
+      )
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "try rank 1 invariants (1) in position" in withMathematica { qeTool =>
+    val seq = "x=-1 & y=-1 ==> a>0 , [{x'=x*(x-2*y), y'=-(2*x-y)*y}]!(x>0 | y>0)".asSequent
+    val pr = proveBy(seq,
+      dC("x=0&y=0 | (x^2<=2*x*y)&x<=0&y<=0".asFormula)(2) <(
+        dW(2) & QE,
+        sAIRankOne(true)(2)
+      )
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "try rank 1 invariants (1) without reorder" in withMathematica { qeTool =>
+    val seq = "x=-1 & y=-1 -> [{x'=x*(x-2*y), y'=-(2*x-y)*y}]!(x>0 | y>0)".asFormula
+    //Tactic fails when given wrong ordering of conjuncts
+    val pr = proveBy(seq, implyR(1) &
+      dC("x=0&y=0 | x<=0&y<=0 & (x^2<=2*x*y)".asFormula)(1) <(
+        dW(1) & QE,
+        sAIRankOne(false)(1)
       )
     )
     println(pr)
@@ -136,7 +173,7 @@ class ODEInvarianceTests extends TacticTestBase {
     val pr2 = proveBy(fml, implyR(1) &
       dC("((x*y<=x^2+y^2&x+y<=2)&4*(x^2+y^2)<=1)&-1+4*x^2+4*y^2 < 0".asFormula)(1) <(
         dW(1) & QE,
-        sAIRankOne(1)
+        sAIRankOne(true)(1)
       )
     )
     println(pr2)
@@ -199,7 +236,7 @@ class ODEInvarianceTests extends TacticTestBase {
     val fml = "x>=0 & y>=0 -> [{x'=x+y}](x>=0 & y>=0)".asFormula
     //This worked out because the tactic reorders y>=0 before x>=0
     val pr = proveBy(fml, implyR(1) &
-      sAIRankOne(1)
+      sAIRankOne(true)(1)
     )
     println(pr)
     pr shouldBe 'proved
@@ -222,7 +259,7 @@ class ODEInvarianceTests extends TacticTestBase {
     println(pr)
     pr shouldBe 'proved
   }
-
+  
   "VDbx" should "prove a simple equilibirum" in withMathematica { _ =>
     val polys = List("x","y").map( s => s.asTerm)
     // Directly prove that the origin is an equilibrium point
@@ -243,5 +280,9 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-
+//  "rank" should "naively compute rank" in withMathematica {_ =>
+//    val poly = "(-4 + x^2 + y^2)*(-5*x*y + 1/2*(x^2 + y^2)^3)".asTerm
+//    val ode = "x'=2*(-(3/5) + x)*(1 - 337/225*(-(3/5) + x)^2 + 56/75 * (-(3/5) + x)*(-(4/5) + y) - 32/25 * (-(4/5) + y)^2) - y + 1/2 *x * (4 - x^2 - y^2), y'=x +  2*(1 - 337/225*(-(3/5) + x)^2 + 56/75*(-(3/5) + x)*(-(4/5) + y) - 32/25 * (-(4/5) + y)^2)*(-(4/5) + y) + 1/2 *y * (4 - x^2 - y^2)".asDifferentialProgram
+//    rank(ode,poly)
+//  }
 }
