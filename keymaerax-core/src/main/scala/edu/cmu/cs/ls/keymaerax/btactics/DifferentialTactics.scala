@@ -458,7 +458,7 @@ private object DifferentialTactics extends Logging {
       case None => skip
       case Some(pr) =>
         cutR (Box (ode, f) ) (pos) < (skip,
-        cohideR (pos) & implyR(1) & DW(1) & monb & implyR(1) & implyRi & (andL('L)*) & DebuggingTactics.print("ctx") & equivifyR(1) &
+        cohideR (pos) & implyR(1) & DW(1) & monb & implyR(1) & implyRi & (andL('L)*) & equivifyR(1) &
         commuteEquivR(1) & by(pr)
         )
     }
