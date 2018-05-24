@@ -649,7 +649,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     val count = "ANON" by ((pos: Position, seq: Sequent) => { i=i+1; skip })
 
     failAfter(1 second) {
-      val result = proveBy("[{x'=1}]x>0".asFormula, master(loopauto, count, keepQEFalse=false))
+      val result = proveBy("[{x'=1}]x>0".asFormula, master(loopauto(), count, keepQEFalse=false))
       result.subgoals.loneElement shouldBe "==> [{x'=1}]x>0".asSequent
     }
 
