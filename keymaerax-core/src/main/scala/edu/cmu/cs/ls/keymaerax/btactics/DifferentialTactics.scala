@@ -1074,13 +1074,13 @@ private object DifferentialTactics extends Logging {
     }
 
     //q!=0, r~0 (as appropriate)
-    val denRemReq = And(NotEqual(q,zero),remSgn)
+    val denRemReq = if(q == Number(1)) remSgn else And(NotEqual(q,zero),remSgn)
     val pr = proveBy(Imply(dom,denRemReq), QE)
 
     if(!pr.isProved && strict)
       throw new BelleThrowable("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+g+" denom: "+q+" rem: "+r+" unable to prove: "+denRemReq)
 
-    (pr,denRemReq,Divide(g,q),r)
+    (pr,denRemReq, if (q==Number(1)) g else Divide(g,q),r)
   }
 
   // Normalises to p = 0 then attempts to automatically guess the darboux cofactor

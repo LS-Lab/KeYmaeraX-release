@@ -276,7 +276,7 @@ object ODEInvariance {
         (if(iseq) useAt(refAbs)(1) else skip) &
         DebuggingTactics.debug("Darboux "+cofactor+" ",doPrint = debugTactic) &
         implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) &
-        dC(cut)(1)  <(dgDbx(cofactor)(1), diffWeakenG(1) & byUS(pr))
+        dC(cut)(1)  <(if(cofactor==Number(0)) dI('full)(1) else dgDbx(cofactor)(1), diffWeakenG(1) & byUS(pr))
       case Disj(l,r) =>
         DebuggingTactics.debug("DISJ",doPrint = debugTactic) &
         orL(-2) <(
