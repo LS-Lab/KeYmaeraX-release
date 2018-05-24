@@ -86,10 +86,17 @@ object InvariantProvers {
         USubst(bounds.map(xi => {
           i = i + 1; SubstitutionPair(DotTerm(Real, Some(i)), xi)
         }))
-      val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp => sp.what.prettyString).mkString(",") + ")")
-      val jjl: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp => sp.repl.prettyString).mkString(",") + ")")
+
+      def constructPred(name: String, args: Seq[Term]): Formula = {
+        val head :: tail = args.reverse
+        val arg = tail.foldLeft(head)({ case (ps, t) => Pair(t, ps) })
+        PredOf(Function(name, None, arg.sort, Bool), arg)
+      }
+
+      val jj: Formula = constructPred("jjl", subst.subsDefsInput.map(_.what.asInstanceOf[Term]))
+      val jjl: Formula = constructPred("jjl", subst.subsDefsInput.map(_.repl.asInstanceOf[Term]))
       // eventually instantiated to True, trick to substitute initialCond in during the search process
-      val jja: Formula = KeYmaeraXParser.formulaParser("jja()")
+      val jja: Formula = PredOf(Function("jja", None, Unit, Bool), Nothing)
 
       /* stateful mutable candidate used in generateOnTheFly and the pass-through later since usubst end tactic not present yet */
       var candidate: Option[Formula] = Some(post)

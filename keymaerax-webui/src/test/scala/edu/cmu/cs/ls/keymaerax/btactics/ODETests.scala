@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.universalGen
+import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
@@ -15,14 +16,17 @@ import scala.collection.immutable._
 import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
+import org.scalatest.concurrent.Timeouts
+import org.scalatest.exceptions.TestCanceledException
 import org.scalatest.prop.TableDrivenPropertyChecks._
+import org.scalatest.time.SpanSugar._
 
 /**
  * Tests automatic
  * [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.ODE]] differential equations proving.
  */
 @UsualTest
-class ODETests extends TacticTestBase {
+class ODETests extends TacticTestBase with Timeouts {
 
   /**
     * Temporary test cases for Darboux
@@ -437,7 +441,7 @@ class ODETests extends TacticTestBase {
     //"x>0&a()<0&b()>=0->[{x'=a()*x+b()}]x>0",
     //"x>0&a<0&b>=0->[{x'=a*x+b}]x>0",
     // conserved quantity
-    ("x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c -> [{x1'=2*x1^4*x2+4*x1^2*x2^3-6*x1^2*x2, x2'=-4*x1^3*x2^2-2*x1*x2^4+6*x1*x2^2}] x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c", "Any"),
+    ("x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c -> [{x1'=2*x1^4*x2+4*x1^2*x2^3-6*x1^2*x2, x2'=-4*x1^3*x2^2-2*x1*x2^4+6*x1*x2^2}] x1^4*x2^2+x1^2*x2^4-3*x1^2*x2^2+1 <= c", "Mathematica"),
     // diffcut
     //"x>=0&y>0&a>0->[{x'=y,y'=y*a}]x>=0",
     // misc
@@ -479,9 +483,10 @@ class ODETests extends TacticTestBase {
   )
 
   it should "prove a list of ODEs" in withQE { qeTool =>
-    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "-1", saveToFile = false)
+    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "60", saveToFile = false)
     forEvery (list) {
       (formula, requiredTool) =>
+        println("Proving " + formula)
         if (requiredTool == "Any" || qeTool.asInstanceOf[Tool].name == requiredTool) {
           TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE)) shouldBe 'proved
         }
@@ -489,11 +494,18 @@ class ODETests extends TacticTestBase {
   }
 
   it should "detect when additional auto ODEs become supported" in withQE { qeTool =>
-    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "-1", saveToFile = false)
+    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "60", saveToFile = false)
     forEvery (list) {
       (formula, requiredTool) =>
         if (requiredTool != "Any" && qeTool.asInstanceOf[Tool].name != requiredTool) {
-          a [BelleThrowable] should be thrownBy TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE))
+          println("Works now with " + qeTool.asInstanceOf[Tool].name + "? " + formula)
+          try {
+            cancelAfter(2 minutes) {
+              a[BelleThrowable] should be thrownBy TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE) & done)
+            }
+          } catch {
+            case _: TestCanceledException => // cancelled by timeout, not yet solved fast enough
+          }
         }
     }
   }
@@ -523,21 +535,26 @@ class ODETests extends TacticTestBase {
   }
 
   it should "interpret implications as differential invariants in simple ODE" in withMathematica { _ =>
+    //@note unprovable, so that automation doesn't run off
     val g = "A>=0, b()>0 ==> [{a:=A; ++ a:=-b(); ++ a:=0;}{{v'=a}@invariant((v'=A -> v>=old(v)), (v'=-b() -> v<=old(v)), (v'=0 -> v=old(v)))}]x>0".asSequent
-    val result = proveBy(g, chase(1) & andR(1) <(ODE(1), andR(1) <(ODE(1), ODE(1))))
-    //@note ODE solves after cutting in v>=old(v), v<=old(v), and v=old(v)
-    result.subgoals(0) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->A*s_+v>=v_0) -> x>0)".asSequent
-    result.subgoals(1) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->(-b())*s_+v<=v_0) -> x>0)".asSequent
-    result.subgoals(2) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->v=v_0) -> x>0)".asSequent
+    val cutAnnotatedInvs = "ANON" by ((pos: Position, seq: Sequent) => {
+      dC(InvariantGenerator.differentialInvariantGenerator(seq, pos).toList:_*)(1) <(skip, dI()(1))
+    })
+    val result = proveBy(g, chase(1) & andR(1) <(cutAnnotatedInvs(1), andR(1) <(cutAnnotatedInvs(1), cutAnnotatedInvs(1))))
+    result.subgoals(0) shouldBe "A>=0, b()>0, v_0=v ==> [{v'=A & true & v>=v_0}]x>0".asSequent
+    result.subgoals(1) shouldBe "A>=0, b()>0, v_0=v ==> [{v'=-b() & true & v<=v_0}]x>0".asSequent
+    result.subgoals(2) shouldBe "A>=0, b()>0, v_0=v ==> [{v'=0 & true & v=v_0}]x>0".asSequent
   }
 
   it should "interpret implications as differential invariants on multiple occurrences of substituted variable" in withMathematica { _ =>
     val g = "A>=0, b()>0 ==> [{a:=A; ++ a:=-b(); ++ a:=0;}{{v'=a,w'=a/r}@invariant((v'=A -> v>=old(v)), (v'=-b() -> v<=old(v)), (v'=0 -> v=old(v)))}]x>0".asSequent
-    val result = proveBy(g, chase(1) & andR(1) <(ODE(1), andR(1) <(ODE(1), ODE(1))))
-    //@note ODE solves after cutting in v>=old(v), v<=old(v), and v=old(v)
-    result.subgoals(0) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->A*s_+v>=v_0) -> x>0)".asSequent
-    result.subgoals(1) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->(-b())*s_+v<=v_0) -> x>0)".asSequent
-    result.subgoals(2) shouldBe "A>=0, b()>0, v_0=v ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_&s_<=t_->v=v_0) -> x>0)".asSequent
+    val cutAnnotatedInvs = "ANON" by ((pos: Position, seq: Sequent) => {
+      dC(InvariantGenerator.differentialInvariantGenerator(seq, pos).toList:_*)(1) <(skip, dI()(1))
+    })
+    val result = proveBy(g, chase(1) & andR(1) <(cutAnnotatedInvs(1), andR(1) <(cutAnnotatedInvs(1), cutAnnotatedInvs(1))))
+    result.subgoals(0) shouldBe "A>=0, b()>0, v_0=v ==> [{v'=A,w'=A/r & true & v>=v_0}]x>0".asSequent
+    result.subgoals(1) shouldBe "A>=0, b()>0, v_0=v ==> [{v'=-b(),w'=(-b())/r & true & v<=v_0}]x>0".asSequent
+    result.subgoals(2) shouldBe "A>=0, b()>0, v_0=v ==> [{v'=0,w'=0/r & true & v=v_0}]x>0".asSequent
   }
 
   "splitWeakInequality" should "split x>=0->[{x'=x}]x>=0" in withQE { _ =>
@@ -604,26 +621,6 @@ class ODETests extends TacticTestBase {
                    |)""".stripMargin.asTactic
 
     proveBy(formula, tactic) shouldBe 'proved
-  }
-
-  "VDbx" should "prove a simple equilibirum" in withMathematica { _ =>
-    val polys = List("x","y").map( s => s.asTerm)
-    // Directly prove that the origin is an equilibrium point
-    val system = "x'=y,y'=x".asProgram.asInstanceOf[ODESystem]
-    val cofactors = List(List("0","1"),List("1","0")).map(ls => ls.map(s => s.asTerm))
-    val pr = DifferentialTactics.dgVdbx(system,cofactors,polys)
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "SAS'14 Example 12" in withMathematica { _ =>
-    val polys = List("x1^2+x2^2-1","x3-x1").map( s => s.asTerm)
-    // Directly prove that the origin is an equilibrium point
-    val system = "x1'=-x2,x2'=x3,x3'=-x2".asProgram.asInstanceOf[ODESystem]
-    val cofactors = List(List("0","2*x2"),List("0","0")).map(ls => ls.map(s => s.asTerm))
-    val pr = DifferentialTactics.dgVdbx(system,cofactors,polys)
-    println(pr)
-    pr shouldBe 'proved
   }
 
   "liveness" should "prove that exponential diff eqs are unbounded" in withMathematica { _ =>

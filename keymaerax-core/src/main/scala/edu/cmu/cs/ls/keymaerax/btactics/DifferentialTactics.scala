@@ -439,6 +439,34 @@ private object DifferentialTactics extends Logging {
     }
   })
 
+  /** Simplify a top-level succedent box ODE with the domain constraint
+    * This uses the default simplifier configuration
+    * @example Turns |- [v'=a & a>0](a>0&v>0) into |- [v'=a & a>0]v>0
+    */
+
+  def domSimplify : DependentPositionTactic = "domSimplify" by ((pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "domSimplify currently only works at top-level succedents")
+
+    val (ode,post) = seq.sub(pos) match {
+      case Some(Box(ode @ ODESystem(_,_), post)) => (ode,post)
+      case _ => throw new BelleThrowable("domSimplify only applies to box ODEs")
+    }
+
+    //todo: How to exactly simulate behavior of andL('L)*?? flattenConjunctions doesn't match it
+    val ctx = proveBy(Sequent(IndexedSeq(ode.constraint),IndexedSeq(False)), (andL('L)*)).subgoals(0).ante
+
+    val (f,propt) = SimplifierV3.simpWithDischarge(ctx,post,SimplifierV3.defaultFaxs,SimplifierV3.defaultTaxs)
+    //val (f,propt) = SimplifierV3.simpWithDischarge(flattenConjunctions(ode.constraint).toIndexedSeq,post,SimplifierV3.defaultFaxs,SimplifierV3.defaultTaxs)
+    propt match {
+      case None => skip
+      case Some(pr) =>
+        cutR (Box (ode, f) ) (pos) < (skip,
+        cohideR (pos) & implyR(1) & DW(1) & monb & implyR(1) & implyRi & (andL('L)*) & equivifyR(1) &
+        commuteEquivR(1) & by(pr)
+        )
+    }
+  })
+
   /** DG: Differential Ghost add auxiliary differential equations with extra variables `y'=a*y+b`.
     * `[x'=f(x)&q(x)]p(x)` reduces to `\exists y [x'=f(x),y'=a*y+b&q(x)]p(x)`.
     *
@@ -703,7 +731,7 @@ private object DifferentialTactics extends Logging {
     * @author Andre Platzer
     * @author Nathan Fulton
     */
-  lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+  lazy val ODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(Box(ODESystem(ode, q), _)) =>
       val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
       val qAtoms = FormulaTools.conjuncts(q).toSet
@@ -723,7 +751,8 @@ private object DifferentialTactics extends Logging {
           }))(pos ++ PosInExpr(0::Nil))
     )(pos)
   })
-  def ODE(introduceStuttering: Boolean, finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+
+  private def ODE(introduceStuttering: Boolean, finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
     val invariantCandidates = try {
       InvariantGenerator.differentialInvariantGenerator(seq,pos)
     } catch {
@@ -731,6 +760,17 @@ private object DifferentialTactics extends Logging {
         logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
         Stream[Formula]()
     }
+
+    def compatibilityFallback(isOpen: Boolean): BelleExpr =
+      lzzCheck(pos) &
+        (if (isOpen) {
+          openDiffInd(pos) | DGauto(pos) //> TODO: needs updating
+        } else {
+          diffInd()(pos)       | // >= to >=
+          DGauto(pos)          |
+          dgZeroMonomial(pos)  | //Equalities
+          dgZeroPolynomial(pos)  //Equalities
+        })
 
     //Tries to prove without any invariant generation or solving.
     val proveWithoutCuts = "ANON" by ((pos: Position) => {
@@ -754,19 +794,7 @@ private object DifferentialTactics extends Logging {
           //@note diffWeaken will already include all cases where V works, without much additional effort.
           (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
             diffWeaken(pos) & QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE)))) & done else fail
-          ) |
-          ( lzzCheck(pos) &
-            (if (isOpen) {
-              (openDiffInd(pos) | DGauto(pos)) //> TODO: needs updating
-            } else {
-              diffInd()(pos) | // >= to >=
-                (dgBarrier(ToolProvider.simplifierTool())(pos) & done) |
-                (dgDbxAuto(pos) & done) |
-                DGauto(pos) |
-                dgZeroMonomial(pos) | //Equalities
-                dgZeroPolynomial(pos) //Equalities
-            })
-          )
+          ) | TactixLibrary.odeInvariant(pos) | compatibilityFallback(isOpen)
         })) (pos))
     })
 
@@ -799,19 +827,15 @@ private object DifferentialTactics extends Logging {
       case _ => skip
     })
 
-    //The tactic:
-    //@todo do at least proveWithoutCuts before diffSolve, but find some heuristics for figuring out when a simpler argument will do the trick.
     if (insistOnProof)
       proveWithoutCuts(pos)        |
       (addInvariant & ODE(introduceStuttering,finish)(pos))    |
-      TactixLibrary.solve(pos) |
       splitWeakInequality(pos)<(ODE(introduceStuttering,finish)(pos), ODE(introduceStuttering,finish)(pos)) |
       (if (introduceStuttering) stutter(pos) & ODE(introduceStuttering=false,finish)(pos) & unstutter(pos)
        else finish)
     else
       (proveWithoutCuts(pos) & done)   |
       (addInvariant & ODE(introduceStuttering,finish)(pos) & done) |
-      TactixLibrary.solve(pos)     |
       (splitWeakInequality(pos)<(ODE(introduceStuttering,finish)(pos), ODE(introduceStuttering,finish)(pos)) & done) |
       (if (introduceStuttering) stutter(pos) & ODE(introduceStuttering=false,finish)(pos) & unstutter(pos) & done
        else finish)
@@ -1117,10 +1141,10 @@ private object DifferentialTactics extends Logging {
     //DI if simple, otherwise use dgDbx
     val finishTac = if (cofactor == Number(0)) dI('full)(pos) else dgDbx(cofactor)(pos)
     val denRemReqTactic = (t: BelleExpr) =>
-        diffCut(denRemReq)(pos) <(
-          t,
-          diffWeakenG(pos) & byUS(pr)
-        )
+      diffCut(denRemReq)(pos) & (<(
+        t,
+        diffWeakenG(pos) & byUS(pr)
+      ) | t)
 
     denRemReqTactic(
       starter & finishTac
@@ -1251,81 +1275,6 @@ private object DifferentialTactics extends Logging {
     SandR | fallback(pos)
   })
 
-  //A start on the LZZ procedure
-  /**
-    * Vectorial Darboux, currently just constructs and returns an appropriate provable
-    * because we do not yet have vectorial dG
-    *
-    * @param odesys the ODE system
-    * @param Gco the cofactor matrix
-    * @param p the polynomial vector
-    * @return provable with extra ghosts
-    */
-
-  def dgVdbx(odesys : ODESystem,Gco:List[List[Term]],p:List[Term]) : ProvableSig = {
-    val dim = p.length
-    assert(Gco.length == dim && Gco.forall(gs => gs.length == dim))
-    val diffeqs = odesys.ode
-    val dom = odesys.constraint
-
-    val ghostPrefix = "vdbxy_"
-    //Doubly indexed ghost variables
-    val ghostVars = List.range(0,dim).map( i => List.range(0,dim).map( j => Variable(ghostPrefix,Some(i*dim+j))))
-    println("Ghost vars: "+ghostVars)
-
-    val Gcotrans = Gco.transpose
-
-    //Construct the system of equations
-    val ghostRHS = List.range(0,dim).map( i => matvec_prod(Gcotrans,ghostVars(i)).map(t => Neg(t)))
-    val ghostEqs = (ghostVars zip ghostRHS).map(p => p._1 zip p._2)
-    //Each ghostEqs at this point is a separate vectorial diff ghost
-    //We could also work directly with the flattened versions, but this is just for easier portability when we get vDG
-    println("Ghost eqs: "+ghostEqs)
-
-    //For now, construct the differential equations obtained from ghosts
-    val ghostDiffEqs = ghostEqs.flatten.map(p => AtomicODE(DifferentialSymbol(p._1),p._2)).reduce(DifferentialProduct.apply)
-    val ghostSys = ODESystem(DifferentialProduct(diffeqs,ghostDiffEqs),dom)
-    println("Extended system: "+ghostSys)
-
-    val zero = Number(0)
-    val one = Number(1)
-    //Constructing the p=0 invariant (using conjunctions)
-    val inv = p.foldLeft[Formula](True)((fml,trm)=> And(Equal(trm,zero),fml))
-    val boxfml = Box(ghostSys,inv)
-    val fml = ghostVars.foldRight[Formula](boxfml)((vs,fml)=> (vs.foldRight[Formula](fml)((v,fml)=>Exists(v::Nil,fml))))
-    println("Formula: "+fml)
-
-    //Finally, we can now prove the invariant property
-    val seq = ProvableSig.startProof( Imply(inv,fml) )
-    println("Seq: "+seq)
-
-    val determinant = sym_det(ghostVars)
-    val trace = sym_trace(Gco)
-    println("Symbolic Det: "+determinant)
-    println("Symbolic Trace: "+trace)
-
-    //Relevant tactics
-
-    //Explicitly instantiate the sequence of ghost variables with the identity matrix
-    val idExistsTac = List.range(0,dim).map( i => List.range(0,dim).map( j => existsR(Variable(ghostPrefix,Some(i*dim+j)),
-      if(i==j) one else zero)))
-    val idExistsTacPos = idExistsTac.foldRight(skip)( (exts,tac) => exts.foldRight(tac)( (ext,tac) => ext(1) & tac )  )
-
-    //Cut in the symbolic dot products p.y = 0
-    val dotprods = ghostVars.map( ls => Equal(dot_prod(ls,p),zero))
-    val dITac = diffInvariant(dotprods:_*)(1)
-
-    val pr = proveBy(seq,
-      implyR(1) & idExistsTacPos & dITac &
-      diffCut(Greater(determinant,zero))(1) <(
-        dW(1) & QE,
-        //Prove Darboux invariance for the determinant
-        dgDbx(Neg(trace))(1))
-    )
-
-    pr
-  }
-
   // implementation helpers
 
   /** Computes (potentially fractional) quotient remainder resulting from polynomial division wrt domain
@@ -1336,26 +1285,36 @@ private object DifferentialTactics extends Logging {
     */
   def domQuoRem(poly:Term, div:Term, dom:Formula) : (Term,Term,Term) = {
     //TODO: remove dependence on algebra tool
-    if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable("domQuoRem requires a AlgebraTool, but got None")
+    if (ToolProvider.algebraTool().isEmpty) {
+      throw new BelleThrowable(s"dgZeroEquilibrium requires a AlgebraTool, but got None")
+      // val polynorm = PolynomialArith.normalise(poly,true)._1
+      //  val divnorm = PolynomialArith.normalise(div,true)._1
+    }
 
-    val algTool = ToolProvider.algebraTool().get
+    else {
+      val algTool = ToolProvider.algebraTool().get
 
-    //todo: groebnerBasis seems broken for > 1 term??
-    //todo: comment above might require own MathematicaToKeYmaera converter,
-    //      since the default converter for QE accepts lists of length=2 only to represent Pairs
-    //val gb = p::domToTerms(dom)
-    val domterms = domToTerms(dom)
+      //todo: groebnerBasis seems broken for > 1 term??
+      //todo: comment above might require own MathematicaToKeYmaera converter,
+      //      since the default converter for QE accepts lists of length=2 only to represent Pairs
+      //val gb = p::domToTerms(dom)
+      val domterms = domToTerms(dom)
 
-    val gb = if (domterms.nonEmpty) {
-      try { algTool.groebnerBasis(domterms) } catch { case _: ToolException => Nil }
-    } else Nil
-    val quo = algTool.polynomialReduce(poly,div::gb)
-    // quo._1.head is the cofactor of div (g/q)
-    // quo._2 is the remainder (r)
+      val gb = if (domterms.nonEmpty) {
+        try {
+          algTool.groebnerBasis(domterms)
+        } catch {
+          case _: ToolException => Nil
+        }
+      } else Nil
+      val quo = algTool.polynomialReduce(poly, div :: gb)
+      // quo._1.head is the cofactor of div (g/q)
+      // quo._2 is the remainder (r)
 
-    val (g,q) = stripDenom(quo._1.head)
-    if((FormulaTools.singularities(g) ++ FormulaTools.singularities(q)).isEmpty) (g,q,quo._2)
-    else (Number(0),Number(1),poly)
+      val (g, q) = stripDenom(quo._1.head)
+      if ((FormulaTools.singularities(g) ++ FormulaTools.singularities(q)).isEmpty) (g, q, quo._2)
+      else (Number(0), Number(1), poly)
+    }
   }
 
   //Keeps the top level =s in evol domain as a groebner basis of terms?
@@ -1386,39 +1345,6 @@ private object DifferentialTactics extends Logging {
       //Ignore everything else todo: could deal with common denominators
       case _ => (t,Number(1))
     }
-  }
-
-  //Explicit symbolic expression for the determinant of a matrix
-  //Currently just explicitly calculated, but can use Mathematica's det if available
-  //Also, this probably doesn't actually need to be explicitly calculated everytime since we always apply it on ghost variables
-  private def sym_det (m:List[List[Term]]) : Term = {
-    val dim = m.length
-    assert(m.forall(ls => ls.length == dim))
-    if(dim==1)
-      return m(0)(0)
-    else if(dim==2) //det ((a b)(c d)) = a d - b c
-      return Minus(Times(m(0)(0),m(1)(1)),Times(m(0)(1),m(1)(0)))
-    else if(dim==3) //det ((a b c)(d e f)(g h i)) = -c e g + b f g + c d h - a f h - b d i + a e i
-      ???
-    else
-      ???
-  }
-
-  //Symbolic trace
-  private def sym_trace (m:List[List[Term]]) : Term = {
-    val dim = m.length
-    assert(m.forall(ls => ls.length == dim))
-    return List.range(0,dim).map(i=>m(i)(i)).foldLeft[Term](Number(0))(Plus.apply)
-  }
-
-  // Symbolic matrix and vector products, assuming that the dimensions all match up
-  private def dot_prod (v1:List[Term],v2:List[Term]) : Term = {
-    val zipped = (v1 zip v2).map({case (t1,t2)=>Times(t1,t2)})
-    return zipped.reduce(Plus.apply)
-  }
-
-  private def matvec_prod (m:List[List[Term]],v:List[Term]) : List[Term] ={
-    return m.map(ls => dot_prod(ls,v))
   }
 
   //@todo possibly should ask StaticSemantics.boundVars(ode).filter(_.isInstanceOf[DifferentialSymbol)
@@ -1533,7 +1459,9 @@ private object DifferentialTactics extends Logging {
       case Greater(l,r) => List(gtNorm)
       case Equal(l,r) =>  List(eqNorm)
       case NotEqual(l,r) =>  List(deqNorm)
-      case _ => List()
+      case And(l,r) =>  Nil
+      case Or(l,r) =>  Nil
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be a conjunction/disjunction of atomic comparisons)")
     }
   }
 

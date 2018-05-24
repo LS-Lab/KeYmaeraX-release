@@ -1560,7 +1560,11 @@ class DifferentialTests extends TacticTestBase with Timeouts {
   it should "fail to find fractional darboux" in withMathematica { _ =>
     //(x+z)' = ((x*A+B)/z^2)(x+z), where z^2 > 0
     val seq = "x+z=0 ==> [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&y=x^2&z^2>0}] x+z=0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) should not be 'proved
+    the [BelleThrowable] thrownBy TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) should have message
+      """[Bellerophon Runtime] Tactic dbx(1) is not applicable to
+        |    [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&y=x^2&z^2>0}]x+z=0
+        |at position Fixed(1,None,true)
+        |because Automatic darboux failed -- poly :x+z-0 lie: z^-2*(B()*(x+z)+A*(y+x*z)) cofactor: 1*(B()+A*z) denom: z^2*1 rem: -1*A+A*y*z^-2 unable to prove: z^2*1!=0&-1*A+A*y*z^-2=0""".stripMargin
     TactixLibrary.proveBy(seq, ODE(1)) should not be 'proved
     TactixLibrary.proveBy(seq, master()) should not be 'proved
     the [BelleThrowable] thrownBy TactixLibrary.proveBy(seq, auto) should have message
@@ -1577,11 +1581,11 @@ class DifferentialTests extends TacticTestBase with Timeouts {
 
   it should "fail with evolution domain constraints" in withMathematica { _ =>
     //(x+z)' = (x*A+B)(x+z)
-    val seq = "x+z=0 ==> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] x+z=0".asSequent
-    val pr = TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1))
+    val seq = "x+z=0 ==> [{x'=(A*y+B()*x), z'=A*z*x+B()*z & y=x^2}]x+z=0".asSequent
+    val pr = TactixLibrary.proveBy(seq, Idioms.?(DifferentialTactics.dgDbxAuto(1)))
     pr should not be 'proved
     //The automatically generated remainder term goal is left open
-    pr.subgoals.loneElement shouldBe "x+z=0 ==> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] (1!=0&A*y+-1*A*z^2=0)".asSequent
+    pr.subgoals.loneElement shouldBe "x+z=0 ==> [{x'=(A*y+B()*x), z'=A*z*x+B()*z & y=x^2}]x+z=0".asSequent
   }
 
   "ODE Barrier" should "prove a strict barrier certificate" in withMathematica { _ =>
@@ -1608,5 +1612,21 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     val pr = TactixLibrary.proveBy(seq,DifferentialTactics.DconstV(3) & DifferentialTactics.DconstV(-5))
     pr.subgoals.loneElement shouldBe
       "f()>0, v>0, a>0, b>0, <{x'=c+f()&f()>0&c < 0&true}>x>0, c < 0 ==> z=1, a>0, [{v'=a+b,x'=y+f()&f()>0&a>0&b>0&(x>=v|x>=5)}]v>0, x=5, y=1".asSequent
+  }
+
+  "domSimplify" should "simplify box succedent with domain constraint" in withMathematica {_ =>
+    val seq = "==> a<0,[{x'=1 & f()>0 & b<0}](b<0 & f()>1)".asSequent
+    val pr = TactixLibrary.proveBy(seq,DifferentialTactics.domSimplify(2))
+    println(pr)
+    pr.subgoals.loneElement shouldBe
+    "==>  a < 0, [{x'=1&f()>0&b < 0}]f()>1".asSequent
+  }
+
+  it should "correctly handle reordering of domain constraints" in withMathematica {_ =>
+    val seq = "==> a<0,[{x'=1 & ((d = 0 & c > 0 | a < 0 & (a >0 & b>0) & c>0) & (b<0 & (f()>0 | b>=0)))}](b<0 & f()>1)".asSequent
+    val pr = TactixLibrary.proveBy(seq,DifferentialTactics.domSimplify(2))
+    println(pr)
+    pr.subgoals.loneElement shouldBe
+      "==>  a < 0, [{x'=1&((d = 0 & c > 0 | a < 0 & (a >0 & b>0) & c>0) & (b<0 & (f()>0 | b>=0)))}]f()>1".asSequent
   }
 }

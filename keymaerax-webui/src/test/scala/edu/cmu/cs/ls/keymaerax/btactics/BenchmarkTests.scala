@@ -5,6 +5,8 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.bellerophon.TacticStatistics
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Program}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
@@ -14,7 +16,6 @@ import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 
 import scala.language.postfixOps
-
 import org.scalatest.{AppendedClues, Suites}
 import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.concurrent._
@@ -33,7 +34,7 @@ class BenchmarkTests extends Suites(
   // benchmark problems
   new BenchmarkTester("Basic Benchmark", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/basic.kyx"),
   new BenchmarkTester("Advanced Benchmark", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/advanced.kyx"),
-//  new BenchmarkTester("Nonlinear Benchmark", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx")
+  new BenchmarkTester("Nonlinear Benchmark", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx")
 )
 
 object BenchmarkTests {
@@ -62,6 +63,11 @@ class BenchmarkTester(val benchmarkName: String, val url: String) extends Tactic
     tool.setOperationTimeout(TOOL_TIMEOUT)
   }
 
+  it should "prove interactive benchmarks" in withMathematica { tool =>
+    setTimeouts(tool)
+    forEvery (entries) { (_, name, modelContent, tactic) => runInteractive(name, modelContent, tactic.map(_._2)) }
+  }
+
   it should "prove benchmarks with proof hints and Mathematica" in withMathematica { tool =>
     setTimeouts(tool)
     forEvery (entries) { (_, name, modelContent, _) => runWithHints(name, modelContent) }
@@ -82,23 +88,30 @@ class BenchmarkTester(val benchmarkName: String, val url: String) extends Tactic
 //    forEvery (entries) { (_, name, modelContent, _) => runAuto(name, modelContent) }
 //  }
 
-  private def runWithHints(name: String, modelContent: String) = runEntry(name, parseWithHints(modelContent))
-  private def runAuto(name: String, modelContent: String) = runEntry(name, parseStripHints(modelContent))
+  private def runInteractive(name: String, modelContent: String, tactic: Option[String]) = runEntry(name, parseWithHints(modelContent), tactic)
+  private def runWithHints(name: String, modelContent: String) = runEntry(name, parseWithHints(modelContent), Some("master"))
+  private def runAuto(name: String, modelContent: String) = runEntry(name, parseStripHints(modelContent), Some("master"))
 
-  private def runEntry(name: String, model: Formula) = {
-    withClue(benchmarkName + ": " + name) {
-      println(s"Proving $name")
+  private def runEntry(name: String, model: Formula, tactic: Option[String]) = {
+    tactic match {
+      case Some(t) =>
+        withClue(benchmarkName + ": " + name) {
+          println(s"Proving $name")
 
-      val start = System.currentTimeMillis()
-      val proof = failAfter(2 minutes) { proveBy(model, TactixLibrary.auto) }
-      val end = System.currentTimeMillis()
+          val start = System.currentTimeMillis()
+          val theTactic = BelleParser(t)
+          val proof = failAfter(2 minutes) { proveBy(model, theTactic) }
+          val end = System.currentTimeMillis()
 
-      println(s"Proof Statistics (proved: ${proof.isProved})")
-      println(s"$benchmarkName, model $name")
-      println(s"Duration [ms]: ${end - start}")
-      println("Proof steps: " + proof.steps)
+          println(s"Proof Statistics (proved: ${proof.isProved})")
+          println(s"$benchmarkName, model $name")
+          println(s"Duration [ms]: ${end - start}")
+          println("Proof steps: " + proof.steps)
+          println("Tactic size: " + TacticStatistics.size(theTactic))
 
-      proof shouldBe 'proved withClue benchmarkName + "/" + name
+          proof shouldBe 'proved withClue benchmarkName + "/" + name
+        }
+      case None => println("Skipping " + name + " for lack of tactic")
     }
   }
 
