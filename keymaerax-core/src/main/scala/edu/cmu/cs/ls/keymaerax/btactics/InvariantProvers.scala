@@ -75,6 +75,7 @@ object InvariantProvers {
     case loopfml@Box(prog, post) =>
       val initialCond = seq.ante.reduceRightOption(And).getOrElse(True)
       val bounds: List[Variable] =
+        // DependencyAnalysis is incorrect when primed symbols occur, so default to all bound variables in that case
         if (StaticSemantics.freeVars(post).toSet.exists(v => v.isInstanceOf[DifferentialSymbol]))
           StaticSemantics.boundVars(loopfml).toSet.toList
         else DependencyAnalysis.dependencies(prog, DependencyAnalysis.freeVars(post))._1.toList
@@ -101,7 +102,12 @@ object InvariantProvers {
       var candidate: Option[Formula] = Some(post)
 
       val finishOff: BelleExpr =
-        OnAll(ifThenElse(DifferentialTactics.isODE, odeInvariant(pos), QE())(pos)) & done
+        OnAll(ifThenElse(DifferentialTactics.isODE,
+          odeInvariant(pos) |
+            // augment loop invariant to local ODE invariant if possible
+            ("ANON" by ((pos: Position, seq: Sequent) => { dC(gen(seq, pos).toList.head)(pos) <(dW(pos) & QE(), odeInvariant(pos)) }))
+          ,
+          QE())(pos)) & done
 
       def nextCandidate(pr: ProvableSig, sequent: Sequent, currentCandidate: Option[Formula]): Option[Formula] = currentCandidate match {
         case Some(cand) =>
