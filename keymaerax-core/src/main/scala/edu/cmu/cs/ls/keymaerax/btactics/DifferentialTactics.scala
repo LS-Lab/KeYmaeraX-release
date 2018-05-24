@@ -449,12 +449,16 @@ private object DifferentialTactics extends Logging {
       case _ => throw new BelleThrowable("domSimplify only applies to box ODEs")
     }
 
-    val (f,propt) = SimplifierV3.simpWithDischarge(flattenConjunctions(ode.constraint).toIndexedSeq,post,SimplifierV3.defaultFaxs,SimplifierV3.defaultTaxs)
+    //todo: How to exactly simulate behavior of andL('L)*?? flattenConjunctions doesn't match it
+    val ctx = proveBy(Sequent(IndexedSeq(ode.constraint),IndexedSeq(False)), (andL('L)*)).subgoals(0).ante
+
+    val (f,propt) = SimplifierV3.simpWithDischarge(ctx,post,SimplifierV3.defaultFaxs,SimplifierV3.defaultTaxs)
+    //val (f,propt) = SimplifierV3.simpWithDischarge(flattenConjunctions(ode.constraint).toIndexedSeq,post,SimplifierV3.defaultFaxs,SimplifierV3.defaultTaxs)
     propt match {
       case None => skip
       case Some(pr) =>
         cutR (Box (ode, f) ) (pos) < (skip,
-        cohideR (pos) & implyR(1) & DW(1) & monb & implyR(1) & implyRi & (andL('L)*) & equivifyR(1) &
+        cohideR (pos) & implyR(1) & DW(1) & monb & implyR(1) & implyRi & (andL('L)*) & DebuggingTactics.print("ctx") & equivifyR(1) &
         commuteEquivR(1) & by(pr)
         )
     }
@@ -1249,26 +1253,36 @@ private object DifferentialTactics extends Logging {
     */
   def domQuoRem(poly:Term, div:Term, dom:Formula) : (Term,Term,Term) = {
     //TODO: remove dependence on algebra tool
-    if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable("domQuoRem requires a AlgebraTool, but got None")
+    if (ToolProvider.algebraTool().isEmpty) {
+      throw new BelleThrowable(s"dgZeroEquilibrium requires a AlgebraTool, but got None")
+      // val polynorm = PolynomialArith.normalise(poly,true)._1
+      //  val divnorm = PolynomialArith.normalise(div,true)._1
+    }
 
-    val algTool = ToolProvider.algebraTool().get
+    else {
+      val algTool = ToolProvider.algebraTool().get
 
-    //todo: groebnerBasis seems broken for > 1 term??
-    //todo: comment above might require own MathematicaToKeYmaera converter,
-    //      since the default converter for QE accepts lists of length=2 only to represent Pairs
-    //val gb = p::domToTerms(dom)
-    val domterms = domToTerms(dom)
+      //todo: groebnerBasis seems broken for > 1 term??
+      //todo: comment above might require own MathematicaToKeYmaera converter,
+      //      since the default converter for QE accepts lists of length=2 only to represent Pairs
+      //val gb = p::domToTerms(dom)
+      val domterms = domToTerms(dom)
 
-    val gb = if (domterms.nonEmpty) {
-      try { algTool.groebnerBasis(domterms) } catch { case _: ToolException => Nil }
-    } else Nil
-    val quo = algTool.polynomialReduce(poly,div::gb)
-    // quo._1.head is the cofactor of div (g/q)
-    // quo._2 is the remainder (r)
+      val gb = if (domterms.nonEmpty) {
+        try {
+          algTool.groebnerBasis(domterms)
+        } catch {
+          case _: ToolException => Nil
+        }
+      } else Nil
+      val quo = algTool.polynomialReduce(poly, div :: gb)
+      // quo._1.head is the cofactor of div (g/q)
+      // quo._2 is the remainder (r)
 
-    val (g,q) = stripDenom(quo._1.head)
-    if((FormulaTools.singularities(g) ++ FormulaTools.singularities(q)).isEmpty) (g,q,quo._2)
-    else (Number(0),Number(1),poly)
+      val (g, q) = stripDenom(quo._1.head)
+      if ((FormulaTools.singularities(g) ++ FormulaTools.singularities(q)).isEmpty) (g, q, quo._2)
+      else (Number(0), Number(1), poly)
+    }
   }
 
   //Keeps the top level =s in evol domain as a groebner basis of terms?

@@ -1511,4 +1511,12 @@ class DifferentialTests extends TacticTestBase {
     pr.subgoals.loneElement shouldBe
     "==>  a < 0, [{x'=1&f()>0&b < 0}]f()>1".asSequent
   }
+
+  it should "correctly handle reordering of domain constraints" in withMathematica {_ =>
+    val seq = "==> a<0,[{x'=1 & ((d = 0 & c > 0 | a < 0 & (a >0 & b>0) & c>0) & (b<0 & (f()>0 | b>=0)))}](b<0 & f()>1)".asSequent
+    val pr = TactixLibrary.proveBy(seq,DifferentialTactics.domSimplify(2))
+    println(pr)
+    pr.subgoals.loneElement shouldBe
+      "==>  a < 0, [{x'=1&((d = 0 & c > 0 | a < 0 & (a >0 & b>0) & c>0) & (b<0 & (f()>0 | b>=0)))}]f()>1".asSequent
+  }
 }
