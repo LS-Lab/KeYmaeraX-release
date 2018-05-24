@@ -348,6 +348,20 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   }
 
   //@todo time not in inv so odeInvariant won't work
+  it should "find one invariant for x=0&v=0&t=0-> [{{v:=-1; ++ ?x<9;v:=1; ++ ?false;t:=t; ++ ?false;v:=v;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10" ignore withMathematica { _ =>
+    val fml = "x=0&v=0&t=0-> [{{v:=-1; ++ ?x<9;v:=1; ++ ?false;t:=t; ++ ?false;v:=v;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
+    val invs = List("x<=9+t&t>=0".asFormula, "x<=10".asFormula)
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs.toStream)(1)) shouldBe 'proved
+  }
+
+  //@todo time not in inv so odeInvariant won't work
+  it should "find one invariant for x=0&v=0&t=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10" ignore withMathematica { _ =>
+    val fml = "x=0&v=0&t=0-> [{{?x<9;v:=1; ++ ?false;t:=t; ++ ?false;v:=v;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
+    val invs = List("x<=9+t&t>=0".asFormula, "x<=10".asFormula)
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs.toStream)(1)) shouldBe 'proved
+  }
+
+  //@todo time not in inv so odeInvariant won't work
   it should "find an invariant for x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10" ignore withMathematica { _ =>
     val fml = "x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
     val invs = List("x>=-1".asFormula, "v>=1".asFormula, "x>=0&v>1".asFormula, "v>=-1".asFormula, "v>=0".asFormula,
@@ -405,7 +419,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariantCandidates)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant for a simple time-triggered example" in withMathematica { _ =>
+  it should "find an invariant for a simple time-triggered example" ignore withMathematica { _ =>
     val fml =
       """v=0 & A>=0 & b>0 & x<=m & ep>=0
         | -> [

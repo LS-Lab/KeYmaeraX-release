@@ -348,7 +348,10 @@ case class Power(left: Term, right: Term) extends RBinaryCompositeTerm { def rea
 /** ' differential of a term */
 case class Differential(child: Term) extends RUnaryCompositeTerm { def reapply = copy }
 
-/** Pairs (left,right) for binary Function and FuncOf and PredOf */
+/** Pairs (left,right) for binary Function and FuncOf and PredOf.
+  * @note By convention, pairs are usually used in right-associative ways.
+  *       That is, n-ary argument terms (t1,t2,t3,...tn) are represented as (t1,(t2,(t3,...tn))).
+  *       This is not a strict requirement, but the default parse. */
 case class Pair(left: Term, right: Term) extends BinaryCompositeTerm {
   def reapply = copy
   final val sort: Sort = Tuple(left.sort, right.sort)
