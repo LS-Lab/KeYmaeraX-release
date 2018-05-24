@@ -1,5 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import java.io.File
+
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch
@@ -14,7 +16,8 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3.context
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.{SimplificationTool, ToolException}
+import edu.cmu.cs.ls.keymaerax.tools._
+
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
@@ -691,6 +694,38 @@ private object DifferentialTactics extends Logging {
   private val failureMessage = "The automatic tactic does not currently provide automated proving capabilities for this " +
     "combination of system and post-condition. Consider using the individual ODE tactics and/or submitting a feature request."
 
+  /** Assert LZZ succeeds at a certain position. */
+  lazy val lzzCheck: BuiltInPositionTactic = {
+    def constConditions(formulas: IndexedSeq[Formula], taboo: SetLattice[Variable]): IndexedSeq[Formula] = {
+      formulas.filter(StaticSemantics.freeVars(_).intersect(taboo).isEmpty)
+    }
+
+    DebuggingTactics.assert((invSeq: Sequent, invPos: Position) => {
+      invSeq.sub(invPos) match {
+        case Some(Box(ode: ODESystem, invCandidate)) => ToolProvider.invGenTool() match {
+          case Some(invTool) =>
+            //@todo constant conditions at the sub position
+            val topFml = invSeq.sub(invPos.top).get.asInstanceOf[Formula]
+            val consts = constConditions(
+              invSeq.ante.flatMap(FormulaTools.conjuncts),
+              StaticSemantics(topFml).bv).reduceRightOption(And)
+            val strengthenedCandidate = consts match {
+              case Some(c) => And(c, invCandidate)
+              case None => invCandidate
+            }
+            try {
+              invTool.lzzCheck(ode, strengthenedCandidate)
+            } catch {
+              // cannot falsify for whatever reason (timeout, ...), so continue with the tactic
+              case _: Exception => true
+            }
+          case _ => true
+        }
+        case _ => false
+      }
+    }, "Invariant fast-check failed")
+  }
+
   /**
     * @see [[TactixLibrary.ODE]]
     * @author Andre Platzer
@@ -723,18 +758,19 @@ private object DifferentialTactics extends Logging {
     } catch {
       case err: Exception =>
         logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
-        List[Formula]().iterator
+        Stream[Formula]()
     }
 
     def compatibilityFallback(isOpen: Boolean): BelleExpr =
-      if (isOpen) {
-        openDiffInd(pos) | DGauto(pos) //> TODO: needs updating
-      } else {
-        diffInd()(pos)       | // >= to >=
-        DGauto(pos)          |
-        dgZeroMonomial(pos)  | //Equalities
-        dgZeroPolynomial(pos)  //Equalities
-      }
+      lzzCheck(pos) &
+        (if (isOpen) {
+          openDiffInd(pos) | DGauto(pos) //> TODO: needs updating
+        } else {
+          diffInd()(pos)       | // >= to >=
+          DGauto(pos)          |
+          dgZeroMonomial(pos)  | //Equalities
+          dgZeroPolynomial(pos)  //Equalities
+        })
 
     //Tries to prove without any invariant generation or solving.
     val proveWithoutCuts = "ANON" by ((pos: Position) => {
@@ -765,9 +801,9 @@ private object DifferentialTactics extends Logging {
     //Adds an invariant to the system's evolution domain constraint and tries to establish the invariant via proveWithoutCuts.
     //Fails if the invariant cannot be established by proveWithoutCuts.
     val addInvariant = ChooseSome(
-      () => invariantCandidates,
+      () => invariantCandidates.iterator,
       (inv: Formula) => {
-        debug(s"[ODE] Trying to cut in invariant candidate: $inv", true) &
+        DebuggingTactics.print(s"[ODE] Trying to cut in invariant candidate: $inv") &
         /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
         diffCut(inv)(pos) <(skip, proveWithoutCuts(pos) & done)
       }
@@ -1363,6 +1399,18 @@ private object DifferentialTactics extends Logging {
       case Some(e) => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
     }
+  }
+
+  private def dottedSymbols(ode: DifferentialProgram) = {
+    var dottedSymbols = List[Variable]()
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
+      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+        case DifferentialSymbol(ps) => ps :: dottedSymbols; Left(None)
+        case Differential(_) => throw new IllegalArgumentException("Only derivatives of variables supported")
+        case _ => Left(None)
+      }
+    }, ode)
+    dottedSymbols.reverse
   }
 
   //Normalization axioms + normalization indexes for use with the simplifier

@@ -19,6 +19,7 @@ import org.apache.logging.log4j.scala.Logger
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.List
+import scala.collection.mutable
 import util.control.Breaks._
 
 /**
@@ -39,7 +40,7 @@ object InvariantProvers {
     *      Example 32. */
   def loopSR(gen: Generator[Formula]): DependentPositionTactic = "loopSR" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
-      val cand: Iterator[Formula] = gen(seq, pos)
+      val cand: Iterator[Formula] = gen(seq, pos).iterator
       val bounds: List[Variable] =
         if (StaticSemantics.freeVars(post).toSet.exists( v => v.isInstanceOf[DifferentialSymbol] ) )
           StaticSemantics.boundVars(loopfml).toSet.toList
@@ -75,6 +76,7 @@ object InvariantProvers {
     case loopfml@Box(prog, post) =>
       val initialCond = seq.ante.reduceRightOption(And).getOrElse(True)
       val bounds: List[Variable] =
+        // DependencyAnalysis is incorrect when primed symbols occur, so default to all bound variables in that case
         if (StaticSemantics.freeVars(post).toSet.exists(v => v.isInstanceOf[DifferentialSymbol]))
           StaticSemantics.boundVars(loopfml).toSet.toList
         else DependencyAnalysis.dependencies(prog, DependencyAnalysis.freeVars(post))._1.toList
@@ -101,7 +103,14 @@ object InvariantProvers {
       var candidate: Option[Formula] = Some(post)
 
       val finishOff: BelleExpr =
-        OnAll(ifThenElse(DifferentialTactics.isODE, odeInvariant(pos), QE())(pos)) & done
+        OnAll(ifThenElse(DifferentialTactics.isODE,
+          odeInvariant(pos) |
+            // augment loop invariant to local ODE invariant if possible
+            ("ANON" by ((pos: Position, seq: Sequent) => { dC(gen(seq, pos).toList.head)(pos) <(dW(pos) & QE(), odeInvariant(pos)) }))
+          ,
+          QE())(pos)) & done
+
+      var candidates: Option[(Stream[Formula], Iterator[Formula])] = None
 
       def nextCandidate(pr: ProvableSig, sequent: Sequent, currentCandidate: Option[Formula]): Option[Formula] = currentCandidate match {
         case Some(cand) =>
@@ -119,9 +128,17 @@ object InvariantProvers {
           } else {
             logger.debug("loopPostMaster progressing")
             val assumeMoreSeq = USubst(Seq(jjl ~>> cand, jja ~> initialCond))(sequent)
+
             val generator = gen(assumeMoreSeq, pos)
-            if (generator.hasNext) {
-              candidate = Some(gen(assumeMoreSeq, pos).next())
+            val (genStream, genIt) = candidates match {
+              case Some((s, it)) if s == generator => (s, it)
+              case Some((s, _)) if s != generator => (generator, generator.iterator)
+              case None => (generator, generator.iterator)
+            }
+            candidates = Some(genStream, genIt)
+
+            if (genIt.hasNext) {
+              candidate = Some(genIt.next())
               println/*logger.info*/("loopPostMaster next    " + candidate.get)
               candidate
             } else {

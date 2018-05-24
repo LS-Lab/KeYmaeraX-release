@@ -38,6 +38,12 @@ object FormulaTools extends Logging {
     case f => List(f)
   }
 
+  /** Split a formula into left-hand side conjuncts, keep right-hand side conjunctions (inverse reduce). */
+  def leftConjuncts(formula: Formula): List[Formula] = formula match {
+    case And(p,q) => conjuncts(p) :+ q
+    case f => List(f)
+  }
+
   /**
     * Gets the (unquantified) kernel part of a quantified formula by peeling off quantifiers.
     */
