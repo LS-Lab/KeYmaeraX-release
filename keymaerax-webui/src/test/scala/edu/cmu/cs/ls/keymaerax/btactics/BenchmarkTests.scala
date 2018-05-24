@@ -88,7 +88,8 @@ class BenchmarkTester(val benchmarkName: String, val url: String) extends Tactic
 //    forEvery (entries) { (_, name, modelContent, _) => runAuto(name, modelContent) }
 //  }
 
-  private def runInteractive(name: String, modelContent: String, tactic: Option[String]) = runEntry(name, parseWithHints(modelContent), tactic)
+  private def runInteractive(name: String, modelContent: String, tactic: Option[String]) =
+    runEntry(name, parseWithHints(modelContent), tactic.map(_.trim) match { case Some("master") => None case t => t })
   private def runWithHints(name: String, modelContent: String) = runEntry(name, parseWithHints(modelContent), Some("master"))
   private def runAuto(name: String, modelContent: String) = runEntry(name, parseStripHints(modelContent), Some("master"))
 
