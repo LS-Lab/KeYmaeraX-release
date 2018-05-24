@@ -19,6 +19,18 @@ LyapunovRand::usage="LyapunovRand[problem_List]"
 Begin["`Private`"]
 
 
+(* Upper rational bound of a number *)
+UpperRat[x_?NumericQ]:=Module[{precision=10},
+uncertainty=Abs[x]*10^-precision;
+Rationalize[N[x,precision]+uncertainty, uncertainty]
+]
+(* Lower rational bound of a number *)
+LowerRat[x_?NumericQ]:=Module[{precision=10},
+uncertainty=Abs[x]*10^-precision;
+Rationalize[N[x,precision]-uncertainty, uncertainty]
+]
+
+
 PlanarLinearClass[M_?MatrixQ]:=Module[{
 trace=Tr[M],
 det=Det[M]
@@ -80,18 +92,19 @@ statevars=System[[2]]
 },
 separatrices=EigenspacePolys[M, statevars];
 initConnectedComponents=CylindricalDecomposition[Init,statevars,"Components"];
-class=PlanarLinearClass[M]/.{
-"Centre" :> Block[{FI=Select[FirstIntegralGen`FindFirstIntegrals[2, statevars,System[[1]]],Not[NumberQ[#]]&][[1]]},
-max=Map[MaxValue[{FI, #},statevars]&, initConnectedComponents];
-min=Map[MinValue[{FI, #},statevars]&, initConnectedComponents];
+partitioning=Switch[PlanarLinearClass[M],
+"Centre", Block[{FI=FirstIntegralGen`FindFirstIntegrals[2, statevars,System[[1]]]//First},
+max=Map[UpperRat, Map[MaxValue[{FI, #},statevars]&, {Init}]];
+min=Map[LowerRat, Map[MinValue[{FI, #},statevars]&, {Init}]];
+Print[Map[FI-# &, Union[min, max]]];
 Map[FI-# &, Union[min, max]]
 ],
-"Stable Focus":> Block[{},
+"Stable Focus", Block[{},
 LyapunovFn=LyapunovIdentity[M,statevars];
 maxLyap=Map[MaxValue[{LyapunovFn, #},statevars]&, initConnectedComponents];
 Map[LyapunovFn-# &, maxLyap]
 ],
-"Stable Node":> Block[{},
+"Stable Node", Block[{},
 LyapunovFn=LyapunovIdentity[M,statevars];
 Krasovskii=System[[1]].System[[1]]; 
 maximise=Union[separatrices, {LyapunovFn, Krasovskii}];
@@ -100,12 +113,12 @@ maxFns = Map[#[[1]]-MaxValue[#,statevars]&, Tuples[{maximise, initConnectedCompo
 minFns = Map[#[[1]]-MinValue[#,statevars]&, Tuples[{minimise, initConnectedComponents}] ];
 Union[separatrices, maxFns, minFns]
 ],
-"Unstable Focus":> Block[{},
+"Unstable Focus", Block[{},
 LyapunovFn=LyapunovIdentity[-M,statevars];
 minLyap=Map[MinValue[{LyapunovFn, #},statevars]&, initConnectedComponents];
 Map[LyapunovFn-# &, minLyap]
 ],
-"Unstable Node":> Block[{},
+"Unstable Node", Block[{},
 LyapunovFn=LyapunovIdentity[-M,statevars];
 Krasovskii=(-System[[1]]).(-System[[1]]); 
 maximise=Union[separatrices];
@@ -114,14 +127,14 @@ maxFns = Map[#[[1]]-MaxValue[#,statevars]&, Tuples[{maximise, initConnectedCompo
 minFns = Map[#[[1]]-MinValue[#,statevars]&, Tuples[{minimise, initConnectedComponents}] ];
 Union[separatrices, maxFns, minFns]
 ],
-"Saddle":> Block[{},
+"Saddle", Block[{},
 maxFns = Map[#[[1]]-MaxValue[#,statevars]&, Tuples[{separatrices, initConnectedComponents}] ];
 minFns = Map[#[[1]]-MinValue[#,statevars]&, Tuples[{separatrices, initConnectedComponents}] ];
 Union[minFns, maxFns, separatrices]
 ],
-_-> separatrices
-};
-class
+_, separatrices];
+Print[partitioning];
+partitioning
 ]
 
 

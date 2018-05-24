@@ -308,36 +308,6 @@ If[TrueQ[Reduce[condition, Reals]], False, transition]
 ]
 
 
-ValidateTransitionDI[transition_DirectedEdge, f_List, vars_List]:=Module[{
-state1=transition[[1]],
-state2=transition[[2]]
-},
-context=Or[Apply[And, state1], Apply[And, state2]];
-(* Get sign conditions for polynomials in A *)
-signcond1=Rest[state1];
-signcond2=Rest[state2];
-
-(* Otherwise, align the corresponding sign conditions: this relies on the ordering from the construction process *)
-pairs = Transpose[{signcond1,signcond2}];
-
-(* Pairs converted to True if the transition can be removed using DI *)
-condition = pairs/.{
-{p_<0, p_==0} :> Implies[context,LD[p,f,vars]<=0], 
-{p_>0, p_==0} :> Implies[context,LD[p,f,vars]>=0], 
-{p_==0, p_<0} :> Implies[context,LD[p,f,vars]>=0 ], 
-{p_==0, p_>0} :> Implies[context,LD[p,f,vars]<=0 ],
-{p_==0, p_==0} :> False,
-{p_>0, p_>0} :> False,
-{p_<0, p_<0} :> False,
-{p_<0, p_>0} :> False,
-{p_>0, p_<0} :> False
-};
-condition=Apply[Or,condition];
-
-If[TrueQ[Reduce[condition, Reals]], False, transition]
-]
-
-
 ValidateTransitionTiwari[transition_DirectedEdge, f_List, vars_List]:=Module[{
 state1=transition[[1]],
 state2=transition[[2]]
@@ -413,7 +383,6 @@ ValidateAllTransitions[graph_Graph, f_List, vars_List, opts:OptionsPattern[]]:=M
 DistributeDefinitions[
 	ValidateTransitionTiwari,
 	ValidateTransitionTiwariStrict,
-	ValidateTransitionDI,
 	ValidateTransitionLZZvanilla,
 	ValidateTransitionLZZopt
 	];
@@ -424,7 +393,6 @@ MAP=OptionValue[Parallel]/.{True-> ParallelMap, _->Map};
 T=OptionValue[TransitionRemovalMethod]/.{
 "Tiwari-FMSD"          -> Complement[MAP[ValidateTransitionTiwari[#,f,vars]&, Tn],{False}],
 "Tiwari-FMSD-strict"   -> Complement[MAP[ValidateTransitionTiwariStrict[#,f,vars]&, Tn],{False}],
-"Tiwari-DI"            -> Complement[MAP[ValidateTransitionDI[#,f,vars]&, Tn],{False}],
 "LZZ-vanilla"          -> Complement[MAP[ValidateTransitionLZZvanilla[#,f,vars]&, Tn],{False}],
 "LZZ-opt"              -> Complement[MAP[ValidateTransitionLZZopt[#,f,vars]&, Tn],{False}],
                      _ -> Tn
@@ -585,7 +553,12 @@ SIMPLIFY[
 ]
 
 
-Options[DWC]={TransitionRemovalMethod->"LZZ-vanilla", Parallel->False, SimplifyInvariant->Simplify, WorkingPrecision -> \[Infinity]};
+DoNotSimplify[formula_, assumptions_]:=Module[{},
+formula
+]
+
+
+Options[DWC]={TransitionRemovalMethod->"LZZ-vanilla", Parallel->False, SimplifyInvariant->DoNotSimplify, Smallest->False, WorkingPrecision -> \[Infinity]};
 
 DWC[precond_, postcond_, system_List, A0_List, opts:OptionsPattern[]]:=Catch[
 Module[{GT,EQ,LT,p,f=system[[1]],vars=system[[2]],H0=system[[3]]},
@@ -597,16 +570,23 @@ SetOptions[DWC,
 	Parallel->OptionValue[Parallel],
 	WorkingPrecision-> OptionValue[WorkingPrecision] ];
 
-SIMPLIFY=OptionValue[SimplifyInvariant]/.{FullSimplify-> FullSimplify, Simplify -> Simplify, _ -> StandardForm};
+SIMPLIFY=OptionValue[SimplifyInvariant]/.{FullSimplify-> FullSimplify, Simplify -> Simplify, _ -> DoNotSimplify};
+USEDW=Not[TrueQ[OptionValue[Smallest]/.{True->True, _->False}]];
 
 (* Sufficiency check: No evolution from the initial set, so no reachable set *)
 If[TrueQ[Reduce[ForAll[vars,Not[H0 && precond]],vars,Reals]], Throw[False] ]; 
 
 (* DW check *)
-If[TrueQ[Reduce[ForAll[vars,Implies[H0, postcond]],vars,Reals]], Throw[H0] ]; 
+If[USEDW && TrueQ[Reduce[ForAll[vars,Implies[H0, postcond]],vars,Reals]], Print["DW"]; Throw[H0] ]; 
 
 (* Main loop *)
-Do[p=Simplify[A0[[i]],H0];
+Do[p=SIMPLIFY[A0[[i]],H0]; 
+
+(* DC check 0 *)
+If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p==0]],vars,Reals]]) && (TrueQ[InvS[p==0, f, vars, H0]]),
+Print["DC on ", p==0];
+Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p==0), Reals]}, Delete[A0,i]]]
+];
 
 (* DC check 1 *)
 If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p>=0]],vars,Reals]]) && (TrueQ[InvS[p>=0, f, vars, H0]]),
@@ -620,7 +600,8 @@ Print["DC on ", p<=0];
 Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p<=0), Reals]}, Delete[A0,i]]]
 ];
 
-(* DDC check 
+ (*DDC check  *)
+ (*
 If[TrueQ[TrueQ[InvS[p==0, f, vars, H0]] && TrueQ[InvS[p==0, -f, vars, H0]]],
 Print["DDC on ", p==0];
 GT=DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p<0 ), Reals]},Delete[A0,i]];
@@ -630,7 +611,7 @@ LT=DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p>0 ), Reals]},Delete[A0,i]];
 (* Combine reachable sets of the sub-systems *)
 Throw[SIMPLIFY[(GT || EQ || LT),Reals]]
 
-]; *)
+]; *) 
 
 ,{i,1,Length[A0]}]; (* End of main loop *)
 
