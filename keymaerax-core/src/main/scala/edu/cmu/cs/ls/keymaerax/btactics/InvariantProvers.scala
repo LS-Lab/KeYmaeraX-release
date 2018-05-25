@@ -79,7 +79,9 @@ object InvariantProvers {
         // DependencyAnalysis is incorrect when primed symbols occur, so default to all bound variables in that case
         if (StaticSemantics.freeVars(post).toSet.exists(v => v.isInstanceOf[DifferentialSymbol]))
           StaticSemantics.boundVars(loopfml).toSet.toList
-        else DependencyAnalysis.dependencies(prog, DependencyAnalysis.freeVars(post))._1.toList
+        else
+          //@todo does not work: DependencyAnalysis.dependencies(prog, DependencyAnalysis.freeVars(post))._1.toList
+          StaticSemantics.boundVars(loopfml).toSet.toList.filterNot(v => v.isInstanceOf[DifferentialSymbol])
       var i = -1
       val subst: USubst = if (bounds.length == 1)
         USubst(Seq(SubstitutionPair(DotTerm(), bounds.head)))
@@ -106,7 +108,12 @@ object InvariantProvers {
         OnAll(ifThenElse(DifferentialTactics.isODE,
           odeInvariant(pos) |
             // augment loop invariant to local ODE invariant if possible
-            ("ANON" by ((pos: Position, seq: Sequent) => { dC(gen(seq, pos).toList.head)(pos) <(dW(pos) & QE(), odeInvariant(pos)) }))
+            ("ANON" by ((pos: Position, seq: Sequent) => {
+              print("loopPostMaster")
+              val localInv = gen(seq, pos).head
+              println(" local " + localInv)
+              dC(localInv)(pos) <(dW(pos) & QE(), odeInvariant(pos))
+            }))(pos)
           ,
           QE())(pos)) & done
 
