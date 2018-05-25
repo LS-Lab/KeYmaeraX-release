@@ -1421,10 +1421,13 @@ private object DifferentialTactics extends Logging {
   private lazy val ltNorm: ProvableSig = remember("f_() < g_() <-> g_() - f_() > 0".asFormula,QE,namespace).fact
   private lazy val gtNorm: ProvableSig = remember("f_() > g_() <-> f_() - g_() > 0".asFormula,QE,namespace).fact
   private lazy val eqNorm: ProvableSig = remember(" f_() = g_() <-> f_() - g_() = 0 ".asFormula,QE,namespace).fact
-  private lazy val deqNorm: ProvableSig = remember(" f_() != g_() <-> f_() - g_() != 0 ".asFormula,QE,namespace).fact
-  private lazy val minNorm:ProvableSig = remember("f_()>=0&g_()>=0<->min((f_(),g_()))>=0".asFormula,QE,namespace).fact
-  private lazy val maxNorm:ProvableSig = remember("f_()>=0|g_()>=0<->max((f_(),g_()))>=0".asFormula,QE,namespace).fact
+  private lazy val neqNorm: ProvableSig = remember(" f_() != g_() <-> f_() - g_() != 0 ".asFormula,QE,namespace).fact
+  private lazy val minGeqNorm:ProvableSig = remember("f_()>=0&g_()>=0<->min((f_(),g_()))>=0".asFormula,QE,namespace).fact
+  private lazy val maxGeqNorm:ProvableSig = remember("f_()>=0|g_()>=0<->max((f_(),g_()))>=0".asFormula,QE,namespace).fact
+  private lazy val minGtNorm:ProvableSig = remember("f_()>0&g_()>0<->min((f_(),g_()))>0".asFormula,QE,namespace).fact
+  private lazy val maxGtNorm:ProvableSig = remember("f_()>0|g_()>0<->max((f_(),g_()))>0".asFormula,QE,namespace).fact
   private lazy val eqNormAbs:ProvableSig = remember("f_() = g_()<-> -abs(f_()-g_())>=0".asFormula,QE,namespace).fact
+  private lazy val neqNormAbs:ProvableSig = remember("f_() != g_()<-> abs(f_()-g_())>0".asFormula,QE,namespace).fact
 
   // Simplifier index that normalizes a single inequality to have 0 on the RHS
   def ineqNormalize(f:Formula,ctx:context) : List[ProvableSig] = {
@@ -1433,7 +1436,8 @@ private object DifferentialTactics extends Logging {
       case GreaterEqual(l,r) => List(geNorm)
       case Less(l,r) => List(ltNorm)
       case Greater(l,r) => List(gtNorm)
-      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be inequality >=,>,<=,<)")
+      //case Not(_) =>  throw new IllegalArgumentException("Rewrite "+f+" to negation normal form")
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be inequality >=,>,<=,<), rewrite to negation normal form if necessary")
     }
   }
 
@@ -1445,8 +1449,9 @@ private object DifferentialTactics extends Logging {
       case Less(l,r) => List(ltNorm)
       case Greater(l,r) => List(gtNorm)
       case Equal(l,r) =>  List(eqNorm)
-      case NotEqual(l,r) =>  List(deqNorm)
-      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be atomic comparison formula >=,>,<=,<,=,!=)")
+      case NotEqual(l,r) =>  List(neqNorm)
+      //case Not(_) =>  throw new IllegalArgumentException("Rewrite "+f+" to negation normal form")
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be atomic comparison formula >=,>,<=,<,=,!=), rewrite to negation normal form if necessary")
     }
   }
 
@@ -1458,10 +1463,11 @@ private object DifferentialTactics extends Logging {
       case Less(l,r) => List(ltNorm)
       case Greater(l,r) => List(gtNorm)
       case Equal(l,r) =>  List(eqNorm)
-      case NotEqual(l,r) =>  List(deqNorm)
+      case NotEqual(l,r) =>  List(neqNorm)
       case And(l,r) =>  Nil
       case Or(l,r) =>  Nil
-      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be a conjunction/disjunction of atomic comparisons)")
+      //case Not(_) =>  throw new IllegalArgumentException("Rewrite "+f+" to negation normal form")
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be a conjunction/disjunction of atomic comparisons), rewrite to negation normal form if necessary")
     }
   }
 
@@ -1471,9 +1477,10 @@ private object DifferentialTactics extends Logging {
       case GreaterEqual(l,r) => List(geNorm)
       case LessEqual(l,r) => List(leNorm)
       case Equal(l,r) => List(eqNormAbs) //Special normalization for equalities
-      case And(l,r) =>  List(minNorm)
-      case Or(l,r) =>  List(maxNorm)
-      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to max/min >=0 normal form (must be a conjunction/disjunction of >=,<=)")
+      case And(l,r) =>  List(minGeqNorm)
+      case Or(l,r) =>  List(maxGeqNorm)
+      //case Not(_) =>  throw new IllegalArgumentException("Rewrite "+f+" to negation normal form")
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to max/min >=0 normal form (must be a conjunction/disjunction of >=,<=), rewrite to negation normal form if necessary")
     }
   }
 

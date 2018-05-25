@@ -259,7 +259,16 @@ class ODEInvarianceTests extends TacticTestBase {
     println(pr)
     pr shouldBe 'proved
   }
-  
+
+  it should "false and true invariant" in withMathematica { qeTool =>
+    val fmlF = "false -> [{x'=x^2+y,y'=x}]false".asFormula
+    val fmlT = "true -> [{x'=x^2+y,y'=x}]true".asFormula
+    val prF = proveBy(fmlF, implyR(1) & odeInvariant(1))
+    val prT = proveBy(fmlT, implyR(1) & odeInvariant(1))
+    prF shouldBe 'proved
+    prT shouldBe 'proved
+  }
+
   "VDbx" should "prove a simple equilibirum" in withMathematica { _ =>
     val polys = List("x","y").map( s => s.asTerm)
     // Directly prove that the origin is an equilibrium point

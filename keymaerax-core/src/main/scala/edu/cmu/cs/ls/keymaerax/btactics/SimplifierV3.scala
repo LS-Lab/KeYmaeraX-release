@@ -839,13 +839,15 @@ object SimplifierV3 {
   private lazy val tauto = propProof("F_()","true",Some("F_()"))
   //!(F_()) -> (F_() <-> false)
   private lazy val tauto2 = propProof("F_()","false",Some("!F_()"))
+  //false -> (F_() <-> true)
+  private lazy val tauto3 = propProof("F_()","true",Some("false"))
 
   //This is a critical index
   def baseIndex (f:Formula,ctx:context) : List[ProvableSig] = {
     f match {
       case True => List()
-      case False => List()
-      case _ => List(tauto,tauto2)
+      case False => List(tauto3)
+      case _ => List(tauto,tauto2,tauto3)
     }
   }
 
