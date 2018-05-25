@@ -433,6 +433,20 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     //proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariantCandidates)(1)) shouldBe 'proved
   }
 
+  it should "find an invariant when first branch uninformative" in withMathematica { _ =>
+    val fml = "x=0&v=0 -> [{{v:=0; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
+    val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "y=0" :: Nil).map(_.asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariantCandidates)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant when first a branch uninformative" in withMathematica { _ =>
+    val fml = "x=0&v=0&a=0 -> [{{v:=0;a:=0; ++ a:=-1; ++ ?10-x>=2+4*v; v*v;a:=1;};t:=0;{x'=v,v'=a,t'=1&t<=1}}*]x<=10".asFormula
+    val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "y=0" :: Nil).map(_.asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariantCandidates)(1)) shouldBe 'proved
+  }
+
   it should "find an invariant for the Ahmadi Parillo Kristic benchmark example" in withMathematica { _ =>
     val fml = "1/2*x<=x & x<=7/10 & 0<=y & y<=3/10 -> [{{x'=-x+x*y, y'=-y}}*]!(-8/10>=x & x>=-1 & -7/10>=y & y>=-1)".asFormula
     val invs = ("y<=0" :: "y>=0" :: "y=0" :: Nil).map(_.asFormula).toStream
