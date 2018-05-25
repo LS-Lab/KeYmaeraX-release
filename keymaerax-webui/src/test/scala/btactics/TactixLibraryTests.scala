@@ -382,7 +382,6 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs.toStream)(1)) shouldBe 'proved
   }
 
-
   //@todo time not in inv so odeInvariant won't work
   it should "find an invariant for x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10" ignore withMathematica { _ =>
     val fml = "x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula

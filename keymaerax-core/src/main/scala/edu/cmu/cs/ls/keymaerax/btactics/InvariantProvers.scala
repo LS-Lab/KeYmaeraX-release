@@ -109,9 +109,8 @@ object InvariantProvers {
           odeInvariant(pos) |
             // augment loop invariant to local ODE invariant if possible
             ("ANON" by ((pos: Position, seq: Sequent) => {
-              print("loopPostMaster")
               val localInv = gen(seq, pos).head
-              println(" local " + localInv)
+              println/*logger.debug*/("loopPostMaster local " + localInv)
               dC(localInv)(pos) <(dW(pos) & QE(), odeInvariant(pos))
             }))(pos)
           ,
@@ -130,7 +129,7 @@ object InvariantProvers {
           val stepProof = proveBy(wouldBeSeq, ?(finishOff))
           if (stepProof.isProved && proveBy(wouldBeSubgoals(stepProof, wouldBeSubgoals.subgoals.indexOf(stepProof.conclusion)), ?(finishOff)).isProved) {
             // proof will work so no need to change candidate
-            println("Proof will work " + wouldBeSubgoals.prettyString)
+            logger.debug("Proof will work " + wouldBeSubgoals.prettyString)
             currentCandidate
           } else {
             logger.debug("loopPostMaster progressing")
@@ -156,7 +155,7 @@ object InvariantProvers {
       }
 
       def generateOnTheFly[A <: Expression](pos: Position): (ProvableSig, ProverException) => scala.collection.immutable.Seq[Expression] = {
-        logger.debug("loopPostMaster initial " + candidate)
+        logger.debug("loopPostMaster init " + candidate)
         (pr: ProvableSig, _: ProverException) => {
           var sawODE: Boolean = false
           //@note updates "global" candidate
