@@ -164,7 +164,9 @@ object InvariantProvers {
               seq.sub(pos) match {
                 case Some(Box(_: ODESystem, _)) =>
                   sawODE = true
-                  candidate = nextCandidate(pr, seq, candidate); break
+                  candidate = nextCandidate(pr, seq, candidate)
+                  // try the candidate if there is one, else proceed to the next branch
+                  if (candidate.isDefined) break
                 case _ => // ignore branches that are not about ODEs
               }
             }
@@ -174,7 +176,7 @@ object InvariantProvers {
               logger.debug("loopPostMaster cand    " + c)
               // c for jjl, eventual True for jja
               c :: True :: Nil
-            case _ =>
+            case None =>
               if (sawODE)
                 throw new BelleThrowable("loopPostMaster: Invariant generator ran out of ideas for\n" + pr.prettyString)
               else
