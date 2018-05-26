@@ -71,7 +71,7 @@ object InvariantProvers {
 
 
 
-  /** [[TactixLibrary.loopPostMaster()]] */
+  /** [[TactixLibrary.loopPostMaster()]]. */
   def loopPostMaster(gen: Generator[Formula]): DependentPositionTactic = "loopPostMaster" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
       val initialCond = seq.ante.reduceRightOption(And).getOrElse(True)
@@ -118,6 +118,7 @@ object InvariantProvers {
 
       var candidates: Option[(Stream[Formula], Iterator[Formula])] = None
 
+      // generate the next candidate from the given sequent of the given provable with the present candidate currentCandidate
       def nextCandidate(pr: ProvableSig, sequent: Sequent, currentCandidate: Option[Formula]): Option[Formula] = currentCandidate match {
         case Some(cand) =>
           logger.debug("loopPostMaster subst " + USubst(Seq(jjl ~>> cand, jja ~> True)))
@@ -143,15 +144,16 @@ object InvariantProvers {
             }
             candidates = Some(genStream, genIt)
 
-            if (genIt.hasNext) {
-              candidate = Some(genIt.next())
-              println/*logger.info*/("loopPostMaster next    " + candidate.get)
-              candidate
-            } else {
-              None
+            while (genIt.hasNext) {
+              val next = Some(genIt.next())
+              if (next != currentCandidate) {
+                println /*logger.info*/ ("loopPostMaster next    " + next.get)
+                return next
+              }
             }
+            return None
           }
-        case _ => currentCandidate
+        case _ => None
       }
 
       def generateOnTheFly[A <: Expression](pos: Position): (ProvableSig, ProverException) => scala.collection.immutable.Seq[Expression] = {
