@@ -54,7 +54,8 @@ object DatabasePopulator extends Logging {
         TutorialEntry(modelName, modelContent, info.get("Description"), info.get("Title"), info.get("Link"),
           None, kind) :: Nil
     })
-    assert(entries.size == archiveEntries.size, "Expected " + archiveEntries.size + " entries, but got " + entries.size)
+    assert(entries.map(_.name).toSet.size == archiveEntries.map(_._1).toSet.size,
+      "Expected " + archiveEntries.size + " entries, but got " + entries.size)
     entries
   }
 
