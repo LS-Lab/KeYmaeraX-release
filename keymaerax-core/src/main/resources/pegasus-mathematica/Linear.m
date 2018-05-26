@@ -12,6 +12,7 @@ BeginPackage[ "Linear`"]
 
 LinearMethod::usage="LinearMethod[problem_List]"
 PlanarConstantMethod::usage="ConstantMethod[problem_List]"
+FirstIntegralMethod::usage="FirstIntegralMethod[problem_List]"
 LinearClass::usage="LinearClass[matrix]"
 UpperRat::usage="UpperRat[number, precision]"
 LowerRat::usage="LowerRat[number, precision]"
@@ -167,6 +168,44 @@ initConnectedComponents=CylindricalDecomposition[Init,statevars,"Components"];
 
 (* Compute first integral *)
 FIs=FirstIntegralGen`FuncIndep[FirstIntegralGen`FindFirstIntegrals[FIDeg, statevars, f],statevars];
+
+maximise=Union[FIs,{f.statevars}]//Flatten;
+minimise=Union[FIs,{f.statevars}]//Flatten;
+
+maxFns = Map[#[[1]]-upperRat[MaxValue[#,statevars]/.{Infinity -> 0,-Infinity -> 0}] &, Tuples[{maximise, initConnectedComponents}] ];
+minFns = Map[#[[1]]-lowerRat[MinValue[#,statevars]/.{Infinity -> 0,-Infinity -> 0}] &, Tuples[{minimise, initConnectedComponents}] ];
+Print[Union[ maxFns, minFns]];
+partitioning=Union[ maxFns, minFns];
+partitioning
+]
+
+
+(* Computing the maximal total polynomial degree of a given polynomial P *)
+PolynomDegree[P_]:=Module[{},
+Max[Map[Apply[Plus, #]&,Map[#[[1]]&,CoefficientRules[P]]]]
+]
+
+
+Options[FirstIntegralMethod]={RationalsOnly->False, RationalPrecision->10, FirstIntegralDegree->0};
+FirstIntegralMethod[Init_, Postcond_, System_List, opts:OptionsPattern[]]:=Module[{
+f=System[[1]],
+statevars=System[[2]]
+},
+
+(* Process options *)
+rats=TrueQ[OptionValue[RationalsOnly]];
+FIDeg=If[TrueQ[OptionValue[FirstIntegralDegree]>0],OptionValue[FirstIntegralDegree], Max[Map[PolynomDegree,f]]+1];
+ratPrecision=If[TrueQ[OptionValue[RationalPrecision]>0],OptionValue[RationalPrecision],10];
+
+(* Create rationalization function wrappers *)
+upperRat[num_]:=If[TrueQ[rats && Element[num,Reals]], UpperRat[num, ratPrecision], num];
+lowerRat[num_]:=If[TrueQ[rats && Element[num,Reals]], LowerRat[num, ratPrecision], num];
+
+(* Compute the connected components of the initial set *)
+initConnectedComponents=CylindricalDecomposition[Init,statevars,"Components"];
+
+(* Compute first integral *)
+FIs=FirstIntegralGen`FuncIndep[FirstIntegralGen`FindFirstIntegralsAlt[FIDeg, statevars, f],statevars];
 
 maximise=Union[FIs,{f.statevars}]//Flatten;
 minimise=Union[FIs,{f.statevars}]//Flatten;
