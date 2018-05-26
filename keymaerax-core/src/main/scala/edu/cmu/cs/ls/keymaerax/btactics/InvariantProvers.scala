@@ -71,7 +71,7 @@ object InvariantProvers {
 
 
 
-  /** [[TactixLibrary.loopPostMaster()]] */
+  /** [[TactixLibrary.loopPostMaster()]]. */
   def loopPostMaster(gen: Generator[Formula]): DependentPositionTactic = "loopPostMaster" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
       val initialCond = seq.ante.reduceRightOption(And).getOrElse(True)
@@ -79,7 +79,9 @@ object InvariantProvers {
         // DependencyAnalysis is incorrect when primed symbols occur, so default to all bound variables in that case
         if (StaticSemantics.freeVars(post).toSet.exists(v => v.isInstanceOf[DifferentialSymbol]))
           StaticSemantics.boundVars(loopfml).toSet.toList
-        else DependencyAnalysis.dependencies(prog, DependencyAnalysis.freeVars(post))._1.toList
+        else
+          //@todo does not work: DependencyAnalysis.dependencies(prog, DependencyAnalysis.freeVars(post))._1.toList
+          StaticSemantics.boundVars(loopfml).toSet.toList.filterNot(v => v.isInstanceOf[DifferentialSymbol])
       var i = -1
       val subst: USubst = if (bounds.length == 1)
         USubst(Seq(SubstitutionPair(DotTerm(), bounds.head)))
@@ -106,12 +108,17 @@ object InvariantProvers {
         OnAll(ifThenElse(DifferentialTactics.isODE,
           odeInvariant(pos) |
             // augment loop invariant to local ODE invariant if possible
-            ("ANON" by ((pos: Position, seq: Sequent) => { dC(gen(seq, pos).toList.head)(pos) <(dW(pos) & QE(), odeInvariant(pos)) }))
+            ("ANON" by ((pos: Position, seq: Sequent) => {
+              val localInv = gen(seq, pos).head
+              println/*logger.debug*/("loopPostMaster local " + localInv)
+              dC(localInv)(pos) <(dW(pos) & QE(), odeInvariant(pos))
+            }))(pos)
           ,
           QE())(pos)) & done
 
       var candidates: Option[(Stream[Formula], Iterator[Formula])] = None
 
+      // generate the next candidate from the given sequent of the given provable with the present candidate currentCandidate
       def nextCandidate(pr: ProvableSig, sequent: Sequent, currentCandidate: Option[Formula]): Option[Formula] = currentCandidate match {
         case Some(cand) =>
           logger.debug("loopPostMaster subst " + USubst(Seq(jjl ~>> cand, jja ~> True)))
@@ -123,7 +130,7 @@ object InvariantProvers {
           val stepProof = proveBy(wouldBeSeq, ?(finishOff))
           if (stepProof.isProved && proveBy(wouldBeSubgoals(stepProof, wouldBeSubgoals.subgoals.indexOf(stepProof.conclusion)), ?(finishOff)).isProved) {
             // proof will work so no need to change candidate
-            println("Proof will work " + wouldBeSubgoals.prettyString)
+            logger.debug("Proof will work " + wouldBeSubgoals.prettyString)
             currentCandidate
           } else {
             logger.debug("loopPostMaster progressing")
@@ -137,19 +144,20 @@ object InvariantProvers {
             }
             candidates = Some(genStream, genIt)
 
-            if (genIt.hasNext) {
-              candidate = Some(genIt.next())
-              println/*logger.info*/("loopPostMaster next    " + candidate.get)
-              candidate
-            } else {
-              None
+            while (genIt.hasNext) {
+              val next = Some(genIt.next())
+              if (next != currentCandidate) {
+                println /*logger.info*/ ("loopPostMaster next    " + next.get)
+                return next
+              }
             }
+            return None
           }
-        case _ => currentCandidate
+        case _ => None
       }
 
       def generateOnTheFly[A <: Expression](pos: Position): (ProvableSig, ProverException) => scala.collection.immutable.Seq[Expression] = {
-        logger.debug("loopPostMaster initial " + candidate)
+        logger.debug("loopPostMaster init " + candidate)
         (pr: ProvableSig, _: ProverException) => {
           var sawODE: Boolean = false
           //@note updates "global" candidate
@@ -158,7 +166,9 @@ object InvariantProvers {
               seq.sub(pos) match {
                 case Some(Box(_: ODESystem, _)) =>
                   sawODE = true
-                  candidate = nextCandidate(pr, seq, candidate); break
+                  candidate = nextCandidate(pr, seq, candidate)
+                  // try the candidate if there is one, else proceed to the next branch
+                  if (candidate.isDefined) break
                 case _ => // ignore branches that are not about ODEs
               }
             }
@@ -168,7 +178,7 @@ object InvariantProvers {
               logger.debug("loopPostMaster cand    " + c)
               // c for jjl, eventual True for jja
               c :: True :: Nil
-            case _ =>
+            case None =>
               if (sawODE)
                 throw new BelleThrowable("loopPostMaster: Invariant generator ran out of ideas for\n" + pr.prettyString)
               else
