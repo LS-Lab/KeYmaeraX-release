@@ -39,6 +39,21 @@ Throw[reachSet]]
 ]]
 
 
+PlanarConstantStrat[problem_List]:=Catch[Module[{inv,invs},
+(* Pattern match fields in the problem *)
+{ pre, { f, vars, evoConst }, post } = problem;
+Print["PLANAR CONSTANT STRATEGY"];
+(* Compute the connected components of the initial set  *)
+initConnectedComponents=CylindricalDecomposition[pre,vars,"Components"];
+(* Treat each initial connected component as a new initial set - separate the problems *)
+problems = Map[ {#, {f,vars,evoConst}, post}&, initConnectedComponents];
+(* Run the PlanarLinear method on these problems separately *)
+invs=Map[RunMethod["PlanarConstant", #]&, problems];
+(* Combine the results into a disjunction and return *)
+inv=If[Length[invs]>1, Throw[Apply[Or, invs]], Throw[invs[[1]]]]
+]]
+
+
 PlanarLinearStrat[problem_List]:=Catch[Module[{inv,invs},
 (* Pattern match fields in the problem *)
 { pre, { f, vars, evoConst }, post } = problem;
@@ -113,10 +128,16 @@ Throw[aggregate]
 Pegasus[problem_List]:=Catch[Module[{}, { pre, { f, vars, evoConst }, post } = problem;
 
 (* Sanity checks *)
+
 preIsPost=SameQ[Resolve[pre,vars], Resolve[post,vars]];
 If[ TrueQ[preIsPost], 
 Print["Precondition is the same as the postcondition! Just check postcondition for invariance."]; Throw[post], 
 Print["Precondition is not equal to the postcondition. Proceeding."]];
+
+zeroVF=AllTrue[f, Expand[#]==0&];
+If[ TrueQ[ZeroVF], 
+Print["Zero vector field."]; Throw[pre], 
+Print["Non-zero vector field. Proceeding."]];
 
 preImpliesPost=CheckSemiAlgInclusion[pre, post, vars];
 If[ Not[TrueQ[preImpliesPost]], 
@@ -137,6 +158,7 @@ Print["Pretcondition is not an invariant. Proceeding."]];
 class=Classifier`ClassifyProblem[problem];
 strat = class/.{
 {1,CLASSES_List}-> OneDimStrat, 
+{2,{"Constant"}}-> PlanarConstantStrat, 
 {2,{"Linear"}}-> PlanarLinearStrat, 
 {dim_,{"Linear"}}-> GeneralLinearStrat, 
 {dim_,{"Multi-affine"}}-> MultiLinearStrat, 
@@ -148,8 +170,8 @@ inv=strat[problem];
 inv=inv/.{Greater[a_,b_]->GreaterEqual[a,b],Less[a_,b_]->LessEqual[a,b],Unequal[a_,b_]-> True};
 
 invImpliesPost=CheckSemiAlgInclusion[inv, post, vars];
-If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[inv],
-Print["Generated invariant does not imply postcondition. Bad luck; returning postcondition."]; Throw[post]]
+If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{inv, True}],
+Print["Generated invariant does not imply postcondition. Bad luck; returning what I could find."]; Throw[{inv, False}]]
 
 ]]
 
@@ -161,6 +183,9 @@ Switch[methodID,
 (* Methods for one-dimensional systems *)
 "OneDimPotential", Methods`OneDimPotential[problem],
 "OneDimReach", Methods`OneDimReach[problem],
+
+(* Planar constant systems *)
+"PlanarConstant", Methods`DWC[precond, postcond, system, Linear`PlanarConstantMethod[precond, postcond, system, RationalsOnly->True, RationalPrecision->3]],
 
 (*"PlanarLinear", Methods`DWC[precond, postcond, system, PlanarLinear`PlanarLinearMethod[precond, postcond, system]],*)
 "Linear", Methods`DWC[precond, postcond, system, Linear`LinearMethod[precond, postcond, system, RationalsOnly->True, RationalPrecision->3]],
