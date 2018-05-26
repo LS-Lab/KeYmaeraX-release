@@ -4,13 +4,14 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import java.io.PrintWriter
+
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.TacticStatistics
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Program}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
-import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
@@ -19,6 +20,7 @@ import scala.language.postfixOps
 import org.scalatest.{AppendedClues, Suites}
 import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.concurrent._
+import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import org.scalatest.time.SpanSugar._
 
 /**
@@ -32,9 +34,9 @@ class BenchmarkTests extends Suites(
 //  new TutorialRegressionTester("Advanced Benchmark", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/advanced.kyx"),
 //  new TutorialRegressionTester("Nonlinear Benchmark", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx")
   // benchmark problems
-  new BenchmarkTester("Basic Benchmark", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/basic.kyx"),
-  new BenchmarkTester("Advanced Benchmark", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/advanced.kyx"),
-  new BenchmarkTester("Nonlinear Benchmark", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx")
+//  new BenchmarkTester("Basic", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/basic.kyx", 2)
+//  new BenchmarkTester("Advanced", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/advanced.kyx", 20),
+  new BenchmarkTester("Nonlinear", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx", 2)
 )
 
 object BenchmarkTests {
@@ -43,17 +45,30 @@ object BenchmarkTests {
 //    private val GITHUB_PROJECTS_RAW_PATH = "classpath:/keymaerax-projects"
 }
 
-class BenchmarkTester(val benchmarkName: String, val url: String) extends TacticTestBase with AppendedClues with Timeouts {
+/** Collects a benchmark result. */
+case class BenchmarkResult(name: String, status: String, timeout: Int, duration: Long, proofSteps: Int, tacticSize: Int,
+                           ex: Option[Throwable]) {
+  override def toString: String =
+    s"""Proof Statistics ($name $status, with time budget $timeout)
+      |Duration [ms]: $duration
+      |Proof steps: $proofSteps
+      |Tactic size: $tacticSize
+    """.stripMargin
 
-  private def table(entries: List[TutorialEntry]) = {
-    Table(("Benchmark name", "Entry name", "Model", "Tactic"),
-      entries.map(e => (benchmarkName, e.name, e.model, e.tactic)):_*)
-  }
+def toCsv: String = s"$name,$status,$timeout,$duration,$proofSteps,$tacticSize"
+}
 
-  private val entries = table({
+class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: Int) extends TacticTestBase with AppendedClues with Timeouts {
+
+  private val entries = {
     println("Reading " + url)
     DatabasePopulator.readKya(url)
-  })
+  }
+
+  private def tableResults(results: Seq[BenchmarkResult]) = {
+    Table(("Benchmark name", "Entry name", "Status", "Duration", "Failure Cause"),
+    results.map(r => (benchmarkName, r.name, r.status, r.duration, r.ex)):_*)
+  }
 
   private val ODE_TIMEOUT = "30"
   private val TOOL_TIMEOUT = 30
@@ -65,54 +80,77 @@ class BenchmarkTester(val benchmarkName: String, val url: String) extends Tactic
 
   it should "prove interactive benchmarks" in withMathematica { tool =>
     setTimeouts(tool)
-    forEvery (entries) { (_, name, modelContent, tactic) => runInteractive(name, modelContent, tactic.map(_._2)) }
+    val results = entries.map(e => runInteractive(e.name, e.model, e.tactic.map(_._2)))
+    val writer = new PrintWriter(benchmarkName + "_interactive.csv")
+    writer.write(
+      "Name,Status,Timeout[min],Duration[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv).mkString("\r\n"))
+    writer.close()
+    forEvery(tableResults(results)) { (_, name, status, _, cause) =>
+      status shouldBe "proved" withClue cause
+    }
   }
 
   it should "prove benchmarks with proof hints and Mathematica" in withMathematica { tool =>
     setTimeouts(tool)
-    forEvery (entries) { (_, name, modelContent, _) => runWithHints(name, modelContent) }
+    val results = entries.map(e => runWithHints(e.name, e.model))
+    val writer = new PrintWriter(benchmarkName + "_withhints.csv")
+    writer.write(
+      "Name,Status,Timeout[min],Duration[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv).mkString("\r\n"))
+    writer.close()
+    forEvery(tableResults(results)) { (_, name, status, _, cause) =>
+      status shouldBe "proved" withClue cause
+    }
   }
 
-//  it should "prove benchmarks with proof hints and Z3" in withZ3 { tool =>
+//  it should "prove benchmarks with proof hints and in Z3" in withZ3 { tool =>
 //    setTimeouts(tool)
 //    forEvery (entries) { (_, name, modelContent, _) => runWithHints(name, modelContent) }
 //  }
 
-  it should "prove benchmarks without proof hints and Mathematica" in withMathematica { tool =>
+  it should "prove benchmarks without proof hints and in Mathematica" in withMathematica { tool =>
     setTimeouts(tool)
-    forEvery (entries) { (_, name, modelContent, _) => runAuto(name, modelContent) }
+    val results = entries.map(e => runAuto(e.name, e.model))
+    val writer = new PrintWriter(benchmarkName + "_auto.csv")
+    writer.write(
+      "Name,Status,Timeout[min],Duration[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv).mkString("\r\n"))
+    writer.close()
+    forEvery(tableResults(results)) { (_, name, status, _, cause) =>
+      status shouldBe "proved" withClue cause
+    }
   }
 
-//  it should "prove benchmarks without proof hints and Z3" in withZ3 { tool =>
+//  it should "prove benchmarks without proof hints and in Z3" in withZ3 { tool =>
 //    setTimeouts(tool)
 //    forEvery (entries) { (_, name, modelContent, _) => runAuto(name, modelContent) }
 //  }
 
   private def runInteractive(name: String, modelContent: String, tactic: Option[String]) =
     runEntry(name, parseWithHints(modelContent), tactic.map(_.trim) match { case Some("master") => None case t => t })
-  private def runWithHints(name: String, modelContent: String) = runEntry(name, parseWithHints(modelContent), Some("master"))
-  private def runAuto(name: String, modelContent: String) = runEntry(name, parseStripHints(modelContent), Some("master"))
+  private def runWithHints(name: String, modelContent: String) =
+    runEntry(name, parseWithHints(modelContent), Some("master"))
+  private def runAuto(name: String, modelContent: String) =
+    runEntry(name, parseStripHints(modelContent), Some("master"))
 
-  private def runEntry(name: String, model: Formula, tactic: Option[String]) = {
+  private def runEntry(name: String, model: Formula, tactic: Option[String]): BenchmarkResult = {
     tactic match {
       case Some(t) =>
-        withClue(benchmarkName + ": " + name) {
-          println(s"Proving $name")
+        println(s"Proving $name")
 
-          val start = System.currentTimeMillis()
-          val theTactic = BelleParser(t)
-          val proof = failAfter(2 minutes) { proveBy(model, theTactic) }
+        val start = System.currentTimeMillis()
+        val theTactic = BelleParser(t)
+        try {
+          val proof = failAfter(timeout minutes) {
+            proveBy(model, theTactic)
+          }
           val end = System.currentTimeMillis()
-
-          println(s"Proof Statistics (proved: ${proof.isProved})")
-          println(s"$benchmarkName, model $name")
-          println(s"Duration [ms]: ${end - start}")
-          println("Proof steps: " + proof.steps)
-          println("Tactic size: " + TacticStatistics.size(theTactic))
-
-          proof shouldBe 'proved withClue benchmarkName + "/" + name
+          BenchmarkResult(name, if (proof.isProved) "proved" else "unfinished", timeout, end - start, proof.steps, TacticStatistics.size(theTactic), None)
+        } catch {
+          case ex: TestFailedDueToTimeoutException => BenchmarkResult(name, "timeout", timeout, -1, -1, -1, Some(ex))
+          case ex => BenchmarkResult(name, "failed", timeout, -1, -1, -1, Some(ex))
         }
-      case None => println("Skipping " + name + " for lack of tactic")
+      case None =>
+        println("Skipping " + name + " for lack of tactic")
+        BenchmarkResult(name, "skipped", timeout, -1, -1, -1, None)
     }
   }
 
