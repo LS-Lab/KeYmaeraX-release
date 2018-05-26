@@ -324,7 +324,7 @@ object ODEInvariance {
       case _ => throw new BelleThrowable("sAI only applicable to box ODE in succedent")
     }
 
-    val (fml,propt)=SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post, maxMinNormalize, SimplifierV3.emptyTaxs)
+    val (fml,propt) = maxMinGeqNormalize(post)
 
     require(fml.isInstanceOf[GreaterEqual], "Normalization failed to reach normal form "+fml)
     val f2 = fml.asInstanceOf[GreaterEqual]
@@ -442,7 +442,7 @@ object ODEInvariance {
       case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
       case _ => throw new BelleThrowable("sAI only at box ODE in succedent")
     }
-    val (f2, propt) = SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post, atomNormalize2, SimplifierV3.emptyTaxs)
+    val (f2, propt) = semiAlgNormalize(post)
 
     val (starter, imm) = propt match {
       case None => (skip, skip)
