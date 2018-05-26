@@ -13,11 +13,10 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3.context
+import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3.{context, formulaIndex}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
-
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
@@ -30,7 +29,7 @@ import scala.language.postfixOps
   * @note Container for "complicated" tactics. Single-line implementations are in [[TactixLibrary]].
  * @see [[TactixLibrary.DW]], [[TactixLibrary.DC]]
  */
-private object DifferentialTactics extends Logging {
+object DifferentialTactics extends Logging {
 
   private val namespace = "differentialtactics"
 
@@ -1062,7 +1061,7 @@ private object DifferentialTactics extends Logging {
       case _ => throw new BelleThrowable(s"barrier only at box ODE in succedent")
     }
 
-    val (property,propt)=SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post, ineqNormalize, SimplifierV3.defaultTaxs)
+    val (property,propt)= ineqNormalize(post)
 
     val starter = propt match {
       case None => skip
@@ -1128,7 +1127,7 @@ private object DifferentialTactics extends Logging {
       case _ => throw new BelleThrowable(s"dbx auto only at box ODE in succedent")
     }
 
-    val (property,propt) = SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), post, atomNormalize, SimplifierV3.defaultTaxs)
+    val (property,propt) = atomNormalize(post)
 
     val starter = propt match {
       case None => skip
@@ -1429,20 +1428,31 @@ private object DifferentialTactics extends Logging {
   private lazy val eqNormAbs:ProvableSig = remember("f_() = g_()<-> -abs(f_()-g_())>=0".asFormula,QE,namespace).fact
   private lazy val neqNormAbs:ProvableSig = remember("f_() != g_()<-> abs(f_()-g_())>0".asFormula,QE,namespace).fact
 
+  //todo: quick implementation to get an exhaustive NNF
+  private def to_NNF(f:Formula) : Option[(Formula,ProvableSig)] = {
+    val nnff = FormulaTools.negationNormalForm(f)
+    if(nnff != f) {
+      val pr = proveBy(Equiv(f,nnff),QE) //todo: propositional should do it
+      require(pr.isProved, "NNF normalization failed:"+f+" "+nnff)
+      Some(nnff,pr)
+    }
+    else None
+  }
+
   // Simplifier index that normalizes a single inequality to have 0 on the RHS
-  def ineqNormalize(f:Formula,ctx:context) : List[ProvableSig] = {
+  private def ineqNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
     f match{
       case LessEqual(l,r) => List(leNorm)
       case GreaterEqual(l,r) => List(geNorm)
       case Less(l,r) => List(ltNorm)
       case Greater(l,r) => List(gtNorm)
       //case Not(_) =>  throw new IllegalArgumentException("Rewrite "+f+" to negation normal form")
-      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be inequality >=,>,<=,<), rewrite to negation normal form if necessary")
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be inequality >=,>,<=,<)")
     }
   }
 
-  // Simplifier index that normalizes a single (in) equality to have 0 on the RHS
-  def atomNormalize(f:Formula,ctx:context) : List[ProvableSig] = {
+  // ineqNormalize + equality and disequalities ~= all atomic comparisons
+  private def atomNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
     f match{
       case LessEqual(l,r) => List(leNorm)
       case GreaterEqual(l,r) => List(geNorm)
@@ -1451,12 +1461,12 @@ private object DifferentialTactics extends Logging {
       case Equal(l,r) =>  List(eqNorm)
       case NotEqual(l,r) =>  List(neqNorm)
       //case Not(_) =>  throw new IllegalArgumentException("Rewrite "+f+" to negation normal form")
-      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be atomic comparison formula >=,>,<=,<,=,!=), rewrite to negation normal form if necessary")
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be atomic comparison formula >=,>,<=,<,=,!=)")
     }
   }
 
-  // Simplifier index that normalizes a single (in) equality to have 0 on the RHS
-  def atomNormalize2(f:Formula,ctx:context) : List[ProvableSig] = {
+  // recursive normalization for and/or formulas
+  private def semiAlgNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
     f match{
       case LessEqual(l,r) => List(leNorm)
       case GreaterEqual(l,r) => List(geNorm)
@@ -1467,12 +1477,12 @@ private object DifferentialTactics extends Logging {
       case And(l,r) =>  Nil
       case Or(l,r) =>  Nil
       //case Not(_) =>  throw new IllegalArgumentException("Rewrite "+f+" to negation normal form")
-      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be a conjunction/disjunction of atomic comparisons), rewrite to negation normal form if necessary")
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be a conjunction/disjunction of atomic comparisons)")
     }
   }
 
   // Simplifier index that normalizes a formula into max/min >= normal form
-  def maxMinNormalize(f:Formula,ctx:context) : List[ProvableSig] = {
+  private def maxMinGeqNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
     f match{
       case GreaterEqual(l,r) => List(geNorm)
       case LessEqual(l,r) => List(leNorm)
@@ -1483,6 +1493,37 @@ private object DifferentialTactics extends Logging {
       case _ => throw new IllegalArgumentException("cannot normalize "+f+" to max/min >=0 normal form (must be a conjunction/disjunction of >=,<=), rewrite to negation normal form if necessary")
     }
   }
+
+  /**
+    * Normalize with respect to a simplification index (with NNF built-in)
+    */
+  def doNormalize(fi:formulaIndex)(f:Formula) : (Formula,Option[ProvableSig]) = {
+    to_NNF(f) match {
+      case Some((nnf,pr)) =>
+        val (ff,propt) = SimplifierV3.simpWithDischarge (IndexedSeq[Formula] (), nnf, fi, SimplifierV3.emptyTaxs)
+        propt match {
+          case None => (nnf,Some(pr))
+          case Some(pr2) =>
+            println(pr,pr2)
+            (ff, Some(useFor(pr2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))(pr)) )
+        }
+      case None =>
+        SimplifierV3.simpWithDischarge (IndexedSeq[Formula] (), f, fi, SimplifierV3.emptyTaxs)
+    }
+  }
+
+  /**
+    * Various normalization steps
+    * ineqNormalize : normalizes atomic inequalities only
+    * atomNormalize : normalizes all atomic comparisons
+    * semiAlgNormalize : semialgebraic to have 0 on RHS
+    * maxMinGeqNormalize : max,min >=0 normal form
+    */
+  val ineqNormalize = doNormalize(ineqNormalizeIndex)(_)
+  val atomNormalize = doNormalize(atomNormalizeIndex)(_)
+  val semiAlgNormalize = doNormalize(semiAlgNormalizeIndex)(_)
+  val maxMinGeqNormalize = doNormalize(maxMinGeqNormalizeIndex)(_)
+
 
   def flattenConjunctions(f: Formula): List[Formula] = {
     var result: List[Formula] = Nil
