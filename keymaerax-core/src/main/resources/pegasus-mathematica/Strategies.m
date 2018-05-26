@@ -47,10 +47,30 @@ Print["PLANAR CONSTANT STRATEGY"];
 initConnectedComponents=CylindricalDecomposition[pre,vars,"Components"];
 (* Treat each initial connected component as a new initial set - separate the problems *)
 problems = Map[ {#, {f,vars,evoConst}, post}&, initConnectedComponents];
-(* Run the PlanarLinear method on these problems separately *)
+(* Run the method on these problems separately *)
 invs=Map[RunMethod["PlanarConstant", #]&, problems];
 (* Combine the results into a disjunction and return *)
-inv=If[Length[invs]>1, Throw[Apply[Or, invs]], Throw[invs[[1]]]]
+inv=If[Length[invs]>1, Apply[Or, invs], invs[[1]]];
+(* Fall back to projection if result insufficient *)
+If[CheckSemiAlgInclusion[inv,post,vars], Throw[inv],
+invproj=ProjectAlongVec[pre,f,vars];
+Throw[invproj]]
+]]
+
+
+ProjectAlongVec[S_,vf_List,vars_List]:=Module[{},
+subst=Map[Apply[Rule,#]&,{vars,vars-vf*PROJECTIONLAMBDA}//Transpose];
+proj=S/.subst;
+Resolve[Exists[{PROJECTIONLAMBDA},proj&&PROJECTIONLAMBDA>=0],Reals]
+]
+
+
+ConstantStrat[problem_List]:=Catch[Module[{inv,invs},
+(* Pattern match fields in the problem *)
+{ pre, { f, vars, evoConst }, post } = problem;
+Print["CONSTANT STRATEGY"];
+(* Project initial set along the constant flow and return the result *)
+inv=ProjectAlongVec[pre,f,vars];
 ]]
 
 
@@ -159,6 +179,7 @@ class=Classifier`ClassifyProblem[problem];
 strat = class/.{
 {1,CLASSES_List}-> OneDimStrat, 
 {2,{"Constant"}}-> PlanarConstantStrat, 
+{dim_,{"Constant"}}-> ConstantStrat, 
 {2,{"Linear"}}-> PlanarLinearStrat, 
 {dim_,{"Linear"}}-> GeneralLinearStrat, 
 {dim_,{"Multi-affine"}}-> MultiLinearStrat, 
