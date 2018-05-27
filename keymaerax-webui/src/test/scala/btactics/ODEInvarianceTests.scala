@@ -288,6 +288,15 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+  it should "normalize invariants" ignore withMathematica { _ =>
+    //@note fails because rank
+    val normalizedSeq = "(1/2*x<=x & x<=7/10 & 0<=y & y<=3/10) ==> [{x'=-x+x*y, y'=-y}](-4/5 < x | x < -1 | -7/10 < y | y < -1)".asSequent
+    proveBy(normalizedSeq, odeInvariant(1)) shouldBe 'proved
+    //@note fails because not normalized
+    val seq = "(1/2*x<=x & x<=7/10 & 0<=y & y<=3/10) ==> [{x'=-x+x*y, y'=-y}]!(((-4/5>=x&x>=-1)&-7/10>=y)&y>=-1)".asSequent
+    proveBy(seq, odeInvariant(1)) shouldBe 'proved
+  }
+
   "VDbx" should "prove a simple equilibirum" in withMathematica { _ =>
     val polys = List("x","y").map( s => s.asTerm)
     // Directly prove that the origin is an equilibrium point

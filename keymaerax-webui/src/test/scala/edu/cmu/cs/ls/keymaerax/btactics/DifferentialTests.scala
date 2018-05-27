@@ -1410,7 +1410,7 @@ class DifferentialTests extends TacticTestBase with Timeouts {
         val Imply(assumptions, succFml@Box(ode@ODESystem(_, q), _)) = model
 
         //@note the annotations in nonlinear.kyx are produced by Pegasus
-        val invariants = InvariantGenerator.pegasusInvariantCandidates(
+        val invariants = InvariantGenerator.pegasusInvariants(
           Sequent(IndexedSeq(assumptions), IndexedSeq(succFml)), SuccPos(0))
 
         annotatedInvariants.products.get(ode) match {

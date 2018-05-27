@@ -103,7 +103,7 @@ object InvariantGenerator extends Logging {
     * @author Andre Platzer */
   lazy val differentialInvariantCandidates: Generator[Formula] = cached((sequent,pos) =>
     //@note be careful to not evaluate entire stream by sorting etc.
-    sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #::: relevanceFilter(pegasusInvariantCandidates)(sequent,pos))
+    sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #::: relevanceFilter(pegasusCandidates)(sequent,pos))
 
   /** A simplistic loop invariant candidate generator.
     * @author Andre Platzer */
@@ -121,16 +121,22 @@ object InvariantGenerator extends Logging {
     }
 
   /** Pegasus invariant generator (requires Mathematica). */
-  lazy val pegasusInvariantCandidates: Generator[Formula] = (sequent,pos) => sequent.sub(pos) match {
+  lazy val pegasusInvariants: Generator[Formula] = pegasus(includeCandidates=false)
+  lazy val pegasusCandidates: Generator[Formula] = pegasus(includeCandidates=true)
+  def pegasus(includeCandidates: Boolean): Generator[Formula] = (sequent,pos) => sequent.sub(pos) match {
     case Some(Box(ode: ODESystem, post: Formula)) if post.isFOL =>
       ToolProvider.invGenTool() match {
         case Some(tool) =>
-          //@todo invgen should tell us whether or not to split
-          lazy val pegasusInvs = tool.invgen(ode, sequent.ante, post) match {
-            case (f: And) :: Nil => FormulaTools.leftConjuncts(f) :+ f
-            case invs => invs
+          //@todo Pegasus should report diffcut chains
+          def toDCChain(candidates: Seq[Formula]): Seq[Formula] = candidates match {
+            case (f: And) :: tail => (f +: FormulaTools.leftConjuncts(f)) ++ toDCChain(tail)
+            case fmls => fmls
           }
-          Stream[Formula]() #::: pegasusInvs.toStream
+          lazy val pegasusInvs = tool.invgen(ode, sequent.ante, post)
+          lazy val invs = toDCChain(
+            if (includeCandidates) pegasusInvs.map({ case Left(l) => l case Right(r) => r })
+            else pegasusInvs.filter(_.isLeft).map(_.left.get))
+          Stream[Formula]() #::: invs.toStream
         case _ => Seq().toStream
       }
     case Some(Box(_: ODESystem, post: Formula)) if !post.isFOL => Seq().toStream

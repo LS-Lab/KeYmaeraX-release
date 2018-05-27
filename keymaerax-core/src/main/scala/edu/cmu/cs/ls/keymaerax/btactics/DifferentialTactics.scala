@@ -734,7 +734,7 @@ private object DifferentialTactics extends Logging {
     case Some(Box(ODESystem(ode, q), _)) =>
       val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
       val qAtoms = FormulaTools.conjuncts(q).toSet
-      ODE(introduceStuttering=true,
+      odeInvariant(pos) | solve(pos) | ODE(useOdeInvariant=false, introduceStuttering=true,
         //@note abort if unchanged
         assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) match {
           case Some(Box(ODESystem(extendedOde, extendedQ), _)) =>
@@ -751,7 +751,7 @@ private object DifferentialTactics extends Logging {
     )(pos)
   })
 
-  private def ODE(introduceStuttering: Boolean, finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+  private def ODE(useOdeInvariant: Boolean, introduceStuttering: Boolean, finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
     val invariantCandidates = try {
       InvariantGenerator.differentialInvariantGenerator(seq,pos)
     } catch {
@@ -793,7 +793,8 @@ private object DifferentialTactics extends Logging {
           //@note diffWeaken will already include all cases where V works, without much additional effort.
           (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
             diffWeaken(pos) & QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE)))) & done else fail
-          ) | TactixLibrary.odeInvariant(pos) | compatibilityFallback(isOpen)
+          ) | (if (useOdeInvariant) TactixLibrary.odeInvariant(pos) | compatibilityFallback(isOpen)
+               else compatibilityFallback(isOpen))
         })) (pos))
     })
 
@@ -828,15 +829,17 @@ private object DifferentialTactics extends Logging {
 
     if (insistOnProof)
       proveWithoutCuts(pos)        |
-      (addInvariant & ODE(introduceStuttering,finish)(pos))    |
-      splitWeakInequality(pos)<(ODE(introduceStuttering,finish)(pos), ODE(introduceStuttering,finish)(pos)) |
-      (if (introduceStuttering) stutter(pos) & ODE(introduceStuttering=false,finish)(pos) & unstutter(pos)
+      (addInvariant & ODE(useOdeInvariant=true, introduceStuttering,finish)(pos))    |
+      splitWeakInequality(pos)<(ODE(useOdeInvariant=true, introduceStuttering,finish)(pos), ODE(useOdeInvariant=true, introduceStuttering,finish)(pos)) |
+      (if (introduceStuttering) stutter(pos) & ODE(useOdeInvariant=true, introduceStuttering=false,finish)(pos) & unstutter(pos)
        else finish)
     else
       (proveWithoutCuts(pos) & done)   |
-      (addInvariant & ODE(introduceStuttering,finish)(pos) & done) |
-      (splitWeakInequality(pos)<(ODE(introduceStuttering,finish)(pos), ODE(introduceStuttering,finish)(pos)) & done) |
-      (if (introduceStuttering) stutter(pos) & ODE(introduceStuttering=false,finish)(pos) & unstutter(pos) & done
+      (addInvariant & ODE(useOdeInvariant=true, introduceStuttering,finish)(pos) & done) |
+      (splitWeakInequality(pos) <(
+        ODE(useOdeInvariant=true, introduceStuttering,finish)(pos),
+        ODE(useOdeInvariant=true, introduceStuttering,finish)(pos)) & done) |
+      (if (introduceStuttering) stutter(pos) & ODE(useOdeInvariant=true, introduceStuttering=false, finish)(pos) & unstutter(pos) & done
        else finish)
   })
 

@@ -137,6 +137,28 @@ object CEXM2KConverter extends UncheckedM2KConverter {
   }
 }
 
+object PegasusM2KConverter extends MathematicaToKeYmaera {
+  override def k2m = null
+  override def apply(e: MExpr): KExpr = convert(e)
+
+  override def convert(e: MExpr): KExpr = {
+    if (e.listQ()) convertFormulaList(e)
+    else super.convert(e)
+  }
+
+  private def convertFormulaList(e: MExpr): Formula = {
+    if (e.listQ) {
+      //@HACK first conjunct length=length indicates length of list
+      e.args().map(convert(_).asInstanceOf[Formula]).reduceOption(And) match {
+        case Some(fmls) => And(Equal(Number(e.args().length), Number(e.args.length)), fmls)
+        case None => Equal(Number(e.args().length), Number(e.args.length))
+      }
+    } else throw new ConversionException("Expected a list, but got " + e)
+  }
+}
+
+
+
 /**
  * Mathematica counter example implementation.
   *

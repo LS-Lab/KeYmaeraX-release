@@ -18,9 +18,9 @@ trait InvGenTool {
     * @param ode The differential equation for which to generate a continuous invariants.
     * @param assumptions Assumptions on the initial state of the ODE.
     * @param postCond What to prove from the invariants.
-    * @return A sequence of continuous invariants.
+    * @return A sequence of continuous invariants (left=invariant, right=candidate).
     */
-  def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Formula]
+  def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Either[Formula,Formula]]
 
   /** Fast check whether or not `inv` is worth proving to be an invariant of `ode`. */
   def lzzCheck(ode: ODESystem, inv: Formula): Boolean

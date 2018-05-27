@@ -37,14 +37,14 @@ class InvariantGeneratorTests extends TacticTestBase {
   }
 
   it should "not fail if Mathematica is unavailable" in {
-    val gen = InvariantGenerator.pegasusInvariantCandidates("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0))
+    val gen = InvariantGenerator.pegasusInvariants("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0))
     gen shouldBe 'empty
   }
 
   it should "use Pegasus if available" in withMathematica { _ =>
-    val gen = InvariantGenerator.pegasusInvariantCandidates("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0))
+    val gen = InvariantGenerator.pegasusInvariants("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0))
     gen should not be 'empty
-    gen.head shouldBe "-1/3*x^3<=0".asFormula
+    gen.head shouldBe "x>=0".asFormula
   }
 
   "Auto with invariant generator" should "prove simple loop from precondition invariant" in withQE { _ =>
