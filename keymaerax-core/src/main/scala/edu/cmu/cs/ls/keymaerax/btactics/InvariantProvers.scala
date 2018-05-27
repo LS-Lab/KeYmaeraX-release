@@ -114,6 +114,7 @@ object InvariantProvers {
             ("ANON" by ((pos: Position, seq: Sequent) => {
               val odePost = seq.sub(pos++PosInExpr(1::Nil))
               // no need to try same invariant again if odeInvariant(pos) already failed
+              //@todo optimize: if the invariant generator were correct, could restrict to its first element
               ChooseSome(() => gen(seq, pos).iterator.filterNot(localInv => Some(localInv)==odePost),
                 (localInv:Formula) => {
                   println/*logger.debug*/("loopPostMaster local " + localInv)
