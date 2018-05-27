@@ -74,6 +74,7 @@ object InvariantProvers {
   /** [[TactixLibrary.loopPostMaster()]]. */
   def loopPostMaster(gen: Generator[Formula]): DependentPositionTactic = "loopPostMaster" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
+      // extra information occasionally thrown in to help direct invariant generation
       val initialCond = seq.ante.reduceRightOption(And).getOrElse(True)
       val bounds: List[Variable] =
         // DependencyAnalysis is incorrect when primed symbols occur, so default to all bound variables in that case
@@ -90,6 +91,7 @@ object InvariantProvers {
           i = i + 1; SubstitutionPair(DotTerm(Real, Some(i)), xi)
         }))
 
+      /** name(args) */
       def constructPred(name: String, args: Seq[Term]): Formula = {
         val head :: tail = args.reverse
         val arg = tail.foldLeft(head)({ case (ps, t) => Pair(t, ps) })
@@ -104,6 +106,7 @@ object InvariantProvers {
       /* stateful mutable candidate used in generateOnTheFly and the pass-through later since usubst end tactic not present yet */
       var candidate: Option[Formula] = Some(post)
 
+      // completes ODE invariant proofs and arithmetic
       val finishOff: BelleExpr =
         OnAll(ifThenElse(DifferentialTactics.isODE,
           odeInvariant(pos) |
@@ -114,12 +117,15 @@ object InvariantProvers {
               dC(localInv)(pos) <(dW(pos) & QE(), odeInvariant(pos))
             }))(pos)
           ,
-          QE())(pos)) & done
+          QE()
+        )(pos)) & done
 
+      // present mutable invariant candidate source stream and its present iterator
       var candidates: Option[(Stream[Formula], Iterator[Formula])] = None
 
-      // generate the next candidate from the given sequent of the given provable with the present candidate currentCandidate
+      /** generate the next candidate from the given sequent of the given provable with the present candidate currentCandidate */
       def nextCandidate(pr: ProvableSig, sequent: Sequent, currentCandidate: Option[Formula]): Option[Formula] = currentCandidate match {
+        //@note updates "global" candidates
         case Some(cand) =>
           logger.debug("loopPostMaster subst " + USubst(Seq(jjl ~>> cand, jja ~> True)))
           // plug in true for jja, commit if succeeded. Else plug in init for jja and generate
@@ -137,15 +143,15 @@ object InvariantProvers {
             val assumeMoreSeq = USubst(Seq(jjl ~>> cand, jja ~> initialCond))(sequent)
 
             val generator = gen(assumeMoreSeq, pos)
-            val (genStream, genIt) = candidates match {
+            // keep iterating if same generator stream, else advance both
+            candidates = Some(candidates match {
               case Some((s, it)) if s == generator => (s, it)
               case Some((s, _)) if s != generator => (generator, generator.iterator)
               case None => (generator, generator.iterator)
-            }
-            candidates = Some(genStream, genIt)
+            })
 
-            while (genIt.hasNext) {
-              val next = Some(genIt.next())
+            while (candidates.get._2.hasNext) {
+              val next = Some(candidates.get._2.next())
               if (next != currentCandidate) {
                 println /*logger.info*/ ("loopPostMaster next    " + next.get)
                 return next
@@ -198,9 +204,8 @@ object InvariantProvers {
             /* use jja() |- */
             chase(pos) & OnAll(unfoldProgramNormalize) & OnAll(?(chase(pos ++ PosInExpr(1::Nil))) & ?(QE() & done))
             ,
-            /* show |- jja() is postponed since only provable for jja()=True */
-            cohide('Rlast)
-            //@todo cohide(Find.FindR(0, Some(jja)))
+            /* show |- jja() is postponed since only provable when eventually jja()~>True instantiated */
+            cohide('Rlast, jja)
             )
           ),
         generateOnTheFly(pos)
