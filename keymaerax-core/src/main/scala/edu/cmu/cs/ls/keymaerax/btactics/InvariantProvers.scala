@@ -153,7 +153,7 @@ object InvariantProvers {
             }
             return None
           }
-        case _ => None
+        case None => None
       }
 
       def generateOnTheFly[A <: Expression](pos: Position): (ProvableSig, ProverException) => scala.collection.immutable.Seq[Expression] = {
@@ -166,12 +166,16 @@ object InvariantProvers {
               seq.sub(pos) match {
                 case Some(Box(_: ODESystem, _)) =>
                   sawODE = true
-                  candidate = nextCandidate(pr, seq, candidate)
+                  val next = nextCandidate(pr, seq, candidate)
                   // try the candidate if there is one, else proceed to the next branch
-                  if (candidate.isDefined) break
+                  if (next.isDefined) {
+                    candidate = next
+                    break
+                  }
                 case _ => // ignore branches that are not about ODEs
               }
             }
+            candidate = None
           }
           candidate match {
             case Some(c) =>
