@@ -449,12 +449,15 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
   }
 
+  it should "find an invariant when first a branch informative (scripted)" in withMathematica { _ =>
+    val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1&t<=1}}*]x<=10".asFormula
+    val invs = ("10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0" :: "v*v<=10-x" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+  }
+
   it should "find an invariant when first a branch informative" in withMathematica { _ =>
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1&t<=1}}*]x<=10".asFormula
-    val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula).toStream
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
-    println("Prove again because it was so much fun")
-    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
   }
 
   it should "find an invariant when middle branch informative" in withMathematica { _ =>

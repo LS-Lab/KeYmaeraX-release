@@ -112,9 +112,13 @@ object InvariantProvers {
           odeInvariant(pos) |
             // augment loop invariant to local ODE invariant if possible
             ("ANON" by ((pos: Position, seq: Sequent) => {
-              val localInv = gen(seq, pos).head
-              println/*logger.debug*/("loopPostMaster local " + localInv)
-              dC(localInv)(pos) <(dW(pos) & QE(), odeInvariant(pos))
+              val odePost = seq.sub(pos++PosInExpr(1::Nil))
+              // no need to try same invariant again if odeInvariant(pos) already failed
+              ChooseSome(() => gen(seq, pos).iterator.filterNot(localInv => Some(localInv)==odePost),
+                (localInv:Formula) => {
+                  println/*logger.debug*/("loopPostMaster local " + localInv)
+                  dC(localInv)(pos) < (dW(pos) & QE(), odeInvariant(pos))
+                })
             }))(pos)
           ,
           QE()
@@ -178,6 +182,7 @@ object InvariantProvers {
                     candidate = next
                     break
                   }
+                  println/*logger.debug*/("loopPostMaster branch skip")
                 case _ => // ignore branches that are not about ODEs
               }
             }
