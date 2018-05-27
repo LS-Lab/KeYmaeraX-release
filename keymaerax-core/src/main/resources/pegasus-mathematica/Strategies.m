@@ -171,33 +171,56 @@ Throw[aggregate]
 ]]
 
 
+(* Set righ-hand side of terms to zero *)
+ZeroRHS[formula_] := Module[{},formula/.{
+Equal[a_,b_]        :>  Equal[a-b,0],
+Unequal[a_,b_]      :>  Unequal[a-b,0],
+Greater[a_,b_]      :>  Greater[a-b,0],
+GreaterEqual[a_,b_] :>  GreaterEqual[a-b,0],
+Less[a_,b_]         :>  Less[a-b,0], 
+LessEqual[a_,b_]    :>  LessEqual[a-b,0]
+}]
+
+GeqToLeq[formula_]:=Module[{}, formula/.{         GreaterEqual[lhs_,rhs_] :>  LessEqual[rhs,lhs]} ] 
+GtToLt[formula_]:=Module[{}, formula/.{           Greater[lhs_,rhs_]      :>  Less[rhs,lhs]} ] 
+UnequalToLtOrGt[formula_]:=Module[{}, formula/.{  Unequal[lhs_,rhs_]      :>  Or[Less[lhs,rhs] ,Less[rhs,lhs]]} ] 
+EqualToLeqAndGeq[formula_]:=Module[{}, formula/.{ Equal[lhs_,rhs_]        :>  And[LessEqual[lhs,rhs] ,LessEqual[rhs,lhs]]} ] 
+LeqToLtOrEqual[formula_]:=Module[{}, formula/.{   LessEqual[lhs_,rhs_]    :>  Or[Less[lhs,rhs] ,Equal[rhs,lhs]]} ] 
+
+PreProcess[expression_]:=Module[{},
+ZeroRHS[
+GeqToLeq[
+GtToLt[
+LogicalExpand[BooleanMinimize[UnequalToLtOrGt[expression], "DNF"]]
+]
+]
+]
+] 
+
+
 Pegasus[problem_List]:=Catch[Module[{}, { pre, { f, vars, evoConst }, post } = problem;
 
 (* Sanity checks *)
-
+(*
 preIsPost=SameQ[Resolve[pre,vars], Resolve[post,vars]];
 If[ TrueQ[preIsPost], 
 Print["Precondition is the same as the postcondition! Just check postcondition for invariance."]; Throw[post], 
 Print["Precondition is not equal to the postcondition. Proceeding."]];
-
-zeroVF=AllTrue[f, Expand[#]==0&];
-If[ TrueQ[ZeroVF], 
-Print["Zero vector field."]; Throw[pre], 
-Print["Non-zero vector field. Proceeding."]];
+*)
 
 preImpliesPost=CheckSemiAlgInclusion[pre, post, vars];
 If[ Not[TrueQ[preImpliesPost]], 
-Print["Precondition does not imply postcondition! Nothing to do."]; Throw[False], 
+Print["Precondition does not imply postcondition! Nothing to do."]; Throw[{False, False}], 
 Print["Precondition implies postcondition. Proceeding."]];
 
 postInvariant=Methods`InvS[post, f, vars, evoConst];
 If[ TrueQ[postInvariant], 
-Print["Postcondition is an invariant! Nothing to do."]; Throw[post], 
+Print["Postcondition is an invariant! Nothing to do."]; Throw[{PreProcess[post],True}], 
 Print["Postcondition is not an invariant. Proceeding."]];
 
 preInvariant=Methods`InvS[pre, f, vars, evoConst];
 If[ TrueQ[preInvariant], 
-Print["Precondition is an invariant! Nothing to do."]; Throw[pre], 
+Print["Precondition is an invariant! Nothing to do."]; Throw[{PreProcess[pre], True}], 
 Print["Pretcondition is not an invariant. Proceeding."]];
 
 (* Determine strategies depending on problem classification by pattern matching on {dimension, classes} *)
