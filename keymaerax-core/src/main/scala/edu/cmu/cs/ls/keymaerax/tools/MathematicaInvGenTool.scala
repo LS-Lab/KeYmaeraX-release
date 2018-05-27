@@ -19,14 +19,14 @@ import scala.util.Try
  * @author Andrew Sogokon, based on QETool by Nathan Fulton and Stefan Mitsch
  */
 class MathematicaInvGenTool(override val link: MathematicaLink)
-  extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter(), MathematicaToKeYmaera)
+  extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter(), PegasusM2KConverter)
     with InvGenTool with Logging {
 
   init()
 
   private val pegasusPath = System.getProperty("user.home") + File.separator + Configuration(Configuration.Keys.PEGASUS_PATH)
 
-  def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Formula] = {
+  def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Either[Formula,Formula]] = {
     require(postCond.isFOL, "Unable to generate invariant, expected FOL post conditions but got " + postCond.prettyString)
 
     val vars = DifferentialHelper.getPrimedVariables(ode)
@@ -54,7 +54,16 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
       val (output, result) = runUnchecked(command)
       logger.debug("Generated invariant: " + result.prettyString + " from raw output " + output)
       result match {
-        case continuousInvariant: Formula => continuousInvariant :: Nil
+        case And(Equal(Number(invListLength), _), invList) =>
+          //@note Pegasus returns lists of length 2:
+          // - first entry is formula
+          // - second indicates invariant (true) vs. candidate (false)
+          assert(invListLength == 2, "Expected a list with two entries, but got " + invListLength)
+          invList match {
+            case And(fml, False) => Right(fml) :: Nil
+            case And(fml, True) => Left(fml) :: Nil
+          }
+        case fml: Formula => Left(fml) :: Nil
         case _ => throw ToolException("Expected a formula from Pegasus call but got a non-formula expression: " +
           result.prettyString)
       }
