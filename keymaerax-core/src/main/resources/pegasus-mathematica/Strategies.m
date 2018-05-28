@@ -198,15 +198,22 @@ LogicalExpand[BooleanMinimize[UnequalToLtOrGt[expression], "DNF"]]
 ] 
 
 
-Pegasus[problem_List]:=Catch[Module[{}, { pre, { f, vars, evoConst }, post } = problem;
+AugmentWithParameters[problem_List]:=Module[{},
+{ pre, { f, vars, evoConst }, post } = problem;
+symbols=Complement[DeleteDuplicates@Cases[{pre, post, f, evoConst},_Symbol,Infinity], {True, False}];
+parameters=Complement[symbols, vars];
+newvars=Join[vars,parameters];
+newf=Join[f,Table[0,{i,Length[parameters]}]];
+{ pre, { newf, newvars, evoConst }, post }
+]
+
+
+Pegasus[parametricProb_List]:=Catch[Module[{}, 
+(* Bring symbolic parameters into the dynamics *)
+problem = AugmentWithParameters[parametricProb];
+{ pre, { f, vars, evoConst }, post }=problem;
 
 (* Sanity checks *)
-(*
-preIsPost=SameQ[Resolve[pre,vars], Resolve[post,vars]];
-If[ TrueQ[preIsPost], 
-Print["Precondition is the same as the postcondition! Just check postcondition for invariance."]; Throw[post], 
-Print["Precondition is not equal to the postcondition. Proceeding."]];
-*)
 
 preImpliesPost=CheckSemiAlgInclusion[pre, post, vars];
 If[ Not[TrueQ[preImpliesPost]], 
@@ -259,7 +266,7 @@ Switch[methodID,
 
 (*"PlanarLinear", Methods`DWC[precond, postcond, system, PlanarLinear`PlanarLinearMethod[precond, postcond, system]],*)
 "Linear", Methods`DWC[precond, postcond, system, Linear`LinearMethod[precond, postcond, system, RationalsOnly->True, RationalPrecision->3]],
-"Multi-Linear", Methods`DWC[precond, postcond, system, MultiLinear`MultiLinearMethod[precond, postcond, system]],
+"Multi-Linear", Methods`DWC[precond, postcond, system, AbstractionPolynomials`PostRHSFactors[problem]],
 
 (*"PlanarLinearSmallest", Methods`DWC[precond, postcond, system, PlanarLinear`PlanarLinearMethod[precond, postcond, system], Smallest->False],*)
 "LinearSmallest", Methods`DWC[precond, postcond, system, Linear`LinearMethod[precond, postcond, system], Smallest->True],
