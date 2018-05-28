@@ -461,12 +461,12 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   }
 
   it should "prove using invariants" in withMathematica { _ =>
-    //This controller is tighter: 10-x>=v^2/2 +2*v+1
+    //This controller could be tighter: 10-x>=v^2/2 +2*v+1
     //The v>=0 in domain constraint is not necessary, but makes the invariance argument easier
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1&t<=1 & v>=0}}*]x<=10".asFormula
     val pr = proveBy(fml, implyR(1) &
-      loop("10-x>=v^2/2".asFormula)(1)<(QE,QE,chase(1) & unfoldProgramNormalize<(
-        dC("t>=0&(10-x>=v^2/2+2*v*(1-t)+(1-t)^2)".asFormula)(1)<(
+      loop("10-x>=v^2".asFormula)(1)<(QE,QE,chase(1) & unfoldProgramNormalize<(
+        dC("t>=0&(10-x>=v^2+2*v*(1-t)+(1-t)^2)".asFormula)(1)<(
           dW(1)&QE,odeInvariant(1)),
         dC("v=0".asFormula)(1)<(odeInvariant(1),odeInvariant(1)),
         odeInvariant(1)
