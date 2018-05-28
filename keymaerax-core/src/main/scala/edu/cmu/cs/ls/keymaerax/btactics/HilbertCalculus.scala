@@ -9,7 +9,6 @@ import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
 
 import scala.collection.immutable._
-import scala.language.postfixOps
 
 /**
   * Hilbert Calculus for differential dynamic logic.

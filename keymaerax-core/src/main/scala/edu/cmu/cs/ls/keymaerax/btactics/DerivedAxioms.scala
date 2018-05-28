@@ -16,7 +16,6 @@ import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.{immutable, mutable}
 import scala.collection.immutable._
-import scala.language.postfixOps
 import scala.reflect.runtime.{universe => ru}
 
 /**

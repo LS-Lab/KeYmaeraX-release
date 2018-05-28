@@ -547,7 +547,7 @@ object SimplifierV3 {
       val anteLen = sequent.ante.length
       assert(anteLen > 0)
       val finder = new Find(0, None, AntePosition(anteLen))
-      (andL(finder))*
+      SaturateTactic(andL(finder))
     }
   }
 

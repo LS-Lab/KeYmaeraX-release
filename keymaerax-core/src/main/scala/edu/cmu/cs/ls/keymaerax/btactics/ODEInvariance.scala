@@ -182,7 +182,7 @@ object ODEInvariance {
           //This is a special case where we don't want full DI, because we already have everything
           cohideOnlyR(pos) & dI('diffInd)(1) <(
             useAt(geq)(1) & orR(1) & closeId,
-            cohideOnlyL('Llast) & (Dassignb(1)*) & implyRi &
+            cohideOnlyL('Llast) & SaturateTactic(Dassignb(1)) & implyRi &
             useAt(fastGeqCheck,PosInExpr(1::Nil))(1) & QE
           )
         )

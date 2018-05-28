@@ -156,7 +156,7 @@ object AxiomaticODESolver {
       simplifyPostCondition(osize)(odePosAfterInitialVals ++ PosInExpr(1 :: Nil)) &
       DebuggingTactics.debug("AFTER simplifying post-condition", ODE_DEBUGGER) &
       //@todo box ODE in succedent: could shortcut with diffWeaken (but user-definable if used or not)
-      (inverseDiffCut(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).* &
+      SaturateTactic(inverseDiffCut(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)) &
       DebuggingTactics.debug("AFTER all inverse diff cuts", ODE_DEBUGGER) &
       simplifier(odePosAfterInitialVals ++ PosInExpr(0 :: 1 :: Nil)) &
       DebuggingTactics.debug("AFTER simplifying evolution domain 2", ODE_DEBUGGER) &

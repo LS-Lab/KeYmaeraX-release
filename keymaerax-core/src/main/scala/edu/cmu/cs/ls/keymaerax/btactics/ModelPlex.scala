@@ -21,7 +21,6 @@ import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.{immutable, mutable}
 import scala.compat.Platform
-import scala.language.postfixOps
 
 /**
  * ModelPlex: Verified runtime validation of verified cyber-physical system models.
@@ -63,9 +62,9 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val mxInputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(mxInputFml))
     //@note SimplifierV2 disabled as precaution in case Z3 cannot prove one of its lemmas
     val tactic = (kind, ToolProvider.simplifierTool()) match {
-      case ('ctrl, tool) => controllerMonitorByChase(1) & (optimizationOneWithSearch(tool, assumptions)(1)*) &
+      case ('ctrl, tool) => controllerMonitorByChase(1) & SaturateTactic(optimizationOneWithSearch(tool, assumptions)(1)) &
         (if (tool.isDefined) SimplifierV2.simpTac(1) else skip)
-      case ('model, tool) => modelMonitorByChase(1) & (optimizationOneWithSearch(tool, assumptions)(1)*) &
+      case ('model, tool) => modelMonitorByChase(1) & SaturateTactic(optimizationOneWithSearch(tool, assumptions)(1)) &
         (if (tool.isDefined) SimplifierV2.simpTac(1) else skip)
       case _ => throw new IllegalArgumentException("Unknown monitor kind " + kind + ", expected one of 'ctrl or 'model; both require a simplification tool")
     }
@@ -405,11 +404,11 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
     //@todo generalize to fallback with nondeterministic choice
     val Diamond(_, fallbackUpsilon) = proveBy(Box(fallbackCtrl, Diamond(ctrl, upsilon)),
-      chaseFallback(1)*).subgoals.head.succ.head
+      SaturateTactic(chaseFallback(1))).subgoals.head.succ.head
 
     val fallbackUpsilonConjuncts = FormulaTools.conjuncts(fallbackUpsilon)
 
-    implyR(1) & (andL('L)*) & composeb(1) & testb(1) & implyR(1) & throughout(inv)(1) & Idioms.<(
+    implyR(1) & SaturateTactic(andL('L)) & composeb(1) & testb(1) & implyR(1) & throughout(inv)(1) & Idioms.<(
       DebuggingTactics.print("Proving base case") & useLemma(name+"_0", Some(prop)) & DebuggingTactics.done("Base case")
       ,
       DebuggingTactics.print("Proving use case") & useLemma(name+"_1", Some(prop)) & DebuggingTactics.done("Use case")
@@ -428,7 +427,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
           cut(Diamond(ctrl, And(inv, And(upsilon, odeDomain)))) & Idioms.<(
             hideL('L, Box(ctrl, inv)) & hideL('L, Diamond(ctrl, And(upsilon, odeDomain))) &
             useAt("<> diamond", PosInExpr(1::Nil))('Llast) &
-            notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & (andL('L)*) &
+            notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & SaturateTactic(andL('L)) &
             upsilonConjuncts.filter({ case Equal(l, r) => l != r }).map(c => exhaustiveEqL2R('L, c)).reduce[BelleExpr](_&_) &
             prop & DebuggingTactics.done("External control passes monitor 1")
             ,
@@ -442,11 +441,11 @@ object ModelPlex extends ModelPlexTrait with Logging {
         implyR(1) & hideL('Llast) & cut(Box(fallbackCtrl, monitor)) <(
           Idioms.searchApplyIn(Box(fallbackCtrl, monitor),
             useLemmaAt(name+"_MonitorCheck", Some(PosInExpr(0::Nil))), PosInExpr(1::Nil)) &
-          (chaseFallback('Llast)*) & cut(Box(ctrl, inv)) <(
+            SaturateTactic(chaseFallback('Llast)) & cut(Box(ctrl, inv)) <(
             cut(Diamond(ctrl, And(inv, And(fallbackUpsilon, odeDomain)))) <(
               hideL('L, Box(ctrl, inv)) & hideL('L, Diamond(ctrl, And(fallbackUpsilon, odeDomain))) &
               useAt("<> diamond", PosInExpr(1::Nil))('Llast) &
-              notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & (andL('L)*) &
+              notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & SaturateTactic(andL('L)) &
               fallbackUpsilonConjuncts.filter({ case Equal(l, r) => l != r }).
                 map(c => exhaustiveEqR2L('L, c)).
                 reduce[BelleExpr](_&_) &
@@ -493,14 +492,14 @@ object ModelPlex extends ModelPlexTrait with Logging {
 
     //@todo generalize to fallback with nondeterministic choice
     val Diamond(_, fallbackUpsilon) = proveBy(Box(fallbackCtrl, Diamond(ctrl, upsilon)),
-      chaseFallback(1)*).subgoals.head.succ.head
+      SaturateTactic(chaseFallback(1))).subgoals.head.succ.head
 
     val fallbackUpsilonConjuncts = FormulaTools.conjuncts(fallbackUpsilon)
 
     def constify(tactic: BelleExpr): BelleExpr = consts.foldLeft[BelleExpr](tactic)((tactic, c) => let(c._1, c._2, tactic))
 
     DebuggingTactics.print("Proving sandbox safety") &
-    chase(1) & ((allR(1) | implyR(1))*) & loop(inv)(1) <(
+    chase(1) & SaturateTactic((allR(1) | implyR(1))) & loop(inv)(1) <(
       DebuggingTactics.print("Proving base case") & constify(useLemma(name+"_0", Some(prop))) & DebuggingTactics.done("Base case")
       ,
       DebuggingTactics.print("Proving use case") & constify(useLemma(name+"_1", Some(prop))) & DebuggingTactics.done("Use case")
@@ -520,7 +519,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
               chase(1) &
               hideL('L, Box(ctrl, inv)) & hideL('L, Diamond(ctrl, And(upsilon, odeDomain))) &
               useAt("<> diamond", PosInExpr(1::Nil))('Llast) &
-              notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & (andL('L)*) &
+              notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & SaturateTactic(andL('L)) &
               upsilonConjuncts.filter({ case Equal(l, r) => l != r }).map(c => exhaustiveEqL2R('L, c)).reduce[BelleExpr](_&_) &
               prop & DebuggingTactics.done("Using external control actuation cuts")
               ,
@@ -538,13 +537,13 @@ object ModelPlex extends ModelPlexTrait with Logging {
           cut(Box(fallbackCtrl, monitor)) <(
             Idioms.searchApplyIn(Box(fallbackCtrl, monitor),
               useLemmaAt(name+"_MonitorCheck", Some(PosInExpr(0::Nil))), PosInExpr(1::Nil)) &
-            (chaseFallback('Llast)*) & DebuggingTactics.print("Fallback chased") &
+              SaturateTactic(chaseFallback('Llast)) & DebuggingTactics.print("Fallback chased") &
             cut(Box(ctrl, inv)) <(
               cut(Diamond(ctrl, And(inv, And(fallbackUpsilon, odeDomain)))) <(
                 DebuggingTactics.print("Using fallback cuts") &
                 chase(1) & hideL('L, Box(ctrl, inv)) & hideL('L, Diamond(ctrl, And(fallbackUpsilon, odeDomain))) &
                 useAt("<> diamond", PosInExpr(1::Nil))('Llast) &
-                notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & (andL('L)*) &
+                notL('Llast) & abstractionb('Rlast) & allR('Rlast)*numCtrlVars & notR('Rlast) & SaturateTactic(andL('L)) &
                 fallbackUpsilonConjuncts.filter({ case Equal(l, r) => l != r }).map(c => exhaustiveEqR2L('L, c)).reduce[BelleExpr](_&_) &
                 prop & DebuggingTactics.done("Using fallback cuts")
                 ,
@@ -746,7 +745,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
                              (unprog: Boolean => DependentPositionTactic): DependentPositionTactic = "Modelplex In-Place" by ((pos: Position, sequent: Sequent) => {
     sequent.sub(pos) match {
       case Some(Diamond(_, _)) =>
-        ((debug("Before HP") & unprog(useOptOne)(pos) & debug("After  HP"))*) &
+        (SaturateTactic(debug("Before HP") & unprog(useOptOne)(pos) & debug("After  HP"))) &
           debug("Done with transformation, now looking for quantifiers") &
           debug("Modelplex done")
     }
