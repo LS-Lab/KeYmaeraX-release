@@ -57,7 +57,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     case _ => false
   })
 
-  println("QE log path: " + qeLogPath + " (enabled: " + LOG_QE + ")")
+  if (LOG_QE) println("QE log path: " + qeLogPath + " (enabled: " + LOG_QE + ")")
 
   /** For tests that want to record proofs in the database. */
   def withDatabase(testcode: TempDBTools => Any): Unit = testcode(dbTester())
