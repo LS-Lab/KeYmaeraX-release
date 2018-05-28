@@ -18,7 +18,7 @@ import edu.cmu.cs.ls.keymaerax.lemma._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXDeclarationsParser, KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
-import edu.cmu.cs.ls.keymaerax.pt.{NoProof, ElidingProvable$, TermProvable$, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{NoProof, ElidingProvable, TermProvable, ProvableSig}
 
 import scala.collection.immutable.Nil
 import scala.slick.driver.SQLiteDriver

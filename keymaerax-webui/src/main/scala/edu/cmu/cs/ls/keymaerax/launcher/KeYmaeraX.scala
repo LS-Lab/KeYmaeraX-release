@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.{DBTools, TempDBTools}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.{Declaration, Name, Signature}
-import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, TermProvable$, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, TermProvable, ProvableSig}
 
 import scala.collection.immutable
 import scala.compat.Platform

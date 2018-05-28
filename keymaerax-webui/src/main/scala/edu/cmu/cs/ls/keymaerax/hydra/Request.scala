@@ -30,7 +30,7 @@ import java.util.{Calendar, Locale}
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
-import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable$, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 
 import scala.io.Source
 import scala.collection.immutable._
