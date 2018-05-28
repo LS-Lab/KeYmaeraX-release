@@ -480,9 +480,19 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE(), QE(), master())) shouldBe 'proved
   }
 
+  it should "prove the invariants of first a branch informative (scripted) nosolve" in withMathematica { _ =>
+    val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{{x'=v,v'=a,t'=1,z'=z^5-z^2+z&t<=1&v>=0}@invariant((10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0),(v*v<=10-x),(v=0&x<=10))}}*]x<=10".asFormula
+    proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE(), QE(), master())) shouldBe 'proved
+  }
+
   it should "prove the invariants of first a branch informative (scripted) 2" in withMathematica { _ =>
     //todo: These are getting proved directly with solve
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{{x'=v,v'=a,t'=1&t<=1&v>=0}@invariant((a=1->10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0),(a=-1->v*v<=10-x),(a=0->v=0&x<=10))}}*]x<=10".asFormula
+    proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE(), QE(), master())) shouldBe 'proved
+  }
+
+  it should "prove the invariants of first a branch informative (scripted) 2 nosolve" in withMathematica { _ =>
+    val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{{x'=v,v'=a,t'=1,z'=z^5-z^2+z&t<=1&v>=0}@invariant((a=1->10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0),(a=-1->v*v<=10-x),(a=0->v=0&x<=10))}}*]x<=10".asFormula
     proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE(), QE(), master())) shouldBe 'proved
   }
 
@@ -492,8 +502,19 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
   }
 
+  it should "find an invariant when first a branch informative (scripted) nosolve" in withMathematica { _ =>
+    val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1,z'=z^5-z^2+z&t<=1&v>=0}}*]x<=10".asFormula
+    val invs = ("10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0" :: "v*v<=10-x" :: "v=0&x<=10" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+  }
+
   it should "find an invariant when first a branch informative" in withMathematica { _ =>
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1&t<=1&v>=0}}*]x<=10".asFormula
+    proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant when first a branch informative nosolve" in withMathematica { _ =>
+    val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1,z'=z^5-z^2+z&t<=1&v>=0}}*]x<=10".asFormula
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
   }
 
@@ -505,8 +526,24 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
   }
 
+  it should "find an invariant when middle branch informative nosolve" in withMathematica { _ =>
+    val fml = "x=0&v=0&a=0 -> [{{a:=-1; ++ ?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0;};t:=0;{x'=v,v'=a,t'=1,z'=z^5-z^2+z&t<=1&v>=0}}*]x<=10".asFormula
+    val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
+    println("Prove again because it was so much fun")
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+  }
+
   it should "find an invariant when first a branch uninformative" in withMathematica { _ =>
     val fml = "x=0&v=0&a=0 -> [{{v:=0;a:=0; ++ a:=-1; ++ ?10-x>=2+(4+v)*v; a:=1;};t:=0;{x'=v,v'=a,t'=1&t<=1&v>=0}}*]x<=10".asFormula
+    val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula).toStream
+    proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
+    println("Prove again because it was so much fun")
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant when first a branch uninformative nosolve" in withMathematica { _ =>
+    val fml = "x=0&v=0&a=0 -> [{{v:=0;a:=0; ++ a:=-1; ++ ?10-x>=2+(4+v)*v; a:=1;};t:=0;{x'=v,v'=a,t'=1,z'=z^5-z^2+z&t<=1&v>=0}}*]x<=10".asFormula
     val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula).toStream
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
     println("Prove again because it was so much fun")
