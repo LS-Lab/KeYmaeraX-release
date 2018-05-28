@@ -284,6 +284,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
+  //@todo fails, no ODEs
   it should "at least not loop forever when finding an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).toStream
@@ -332,7 +333,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   }
 
   //@todo time not in inv so odeInvariant won't work
-  it should "prove x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10 by invariant x<=10" ignore withMathematica { _ =>
+  "foo" should "prove x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10 by invariant x<=10" in withMathematica { _ =>
     val fml = "x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
     proveBy(fml, implyR(1) & loop("x<=10".asFormula)(1) <(QE,QE, chase(1) & unfoldProgramNormalize & OnAll(solve(1) & QE()))) shouldBe 'proved
     proveBy(fml, implyR(1) & loop("x<=10".asFormula)(1) <(QE,QE, chase(1) & unfoldProgramNormalize & OnAll(odeInvariant(1)))) shouldBe 'proved
@@ -347,35 +348,30 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
   }
 
-  //@todo
   it should "find one invariant for x=0&v=0-> [{{?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10" in withMathematica { _ =>
     val fml = "x=0&v=0-> [{{?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
     val invs = List("x<=9+t&t>=0".asFormula, "x<=10".asFormula, "x<10".asFormula)
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs.toStream)(1)) shouldBe 'proved
   }
 
-  //@todo
   it should "find one invariant for x=0&v=0&t=0-> [{{v:=-1; ++ ?x<9;v:=1; ++ ?false;t:=t; ++ ?false;v:=v;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10" in withMathematica { _ =>
     val fml = "x=0&v=0&t=0-> [{{v:=-1; ++ ?x<9;v:=1; ++ ?false;t:=t; ++ ?false;v:=v;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
     val invs = List("x<=9+t&t>=0".asFormula, "x<=10".asFormula)
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs.toStream)(1)) shouldBe 'proved
   }
 
-  //@todo
   it should "find one invariant for x=0&v=0&t=0-> [{{?x<9;v:=1; ++ ?false;t:=t; ++ ?false;v:=v;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10" in withMathematica { _ =>
     val fml = "x=0&v=0&t=0-> [{{?x<9;v:=1; ++ ?false;t:=t; ++ ?false;v:=v;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
     val invs = List("x<=9+t&t>=0".asFormula, "x<=10".asFormula)
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs.toStream)(1)) shouldBe 'proved
   }
 
-  //@todo
   it should "find one invariant for x=0&v=0&t=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10" in withMathematica { _ =>
     val fml = "x=0&v=0&t=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
     val invs = List("x<=9+t&t>=0".asFormula, "x<=10".asFormula)
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs.toStream)(1)) shouldBe 'proved
   }
 
-  //@todo
   it should "find one invariant for x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10" in withMathematica { _ =>
     val fml = "x=0&v=0-> [{{v:=-1; ++ ?x<9;v:=1;};t:=0;{x'=v,t'=1&t<=1}}*]x<=10".asFormula
     val invs = List("x<=9+t&t>=0".asFormula, "x<=10".asFormula)
@@ -481,6 +477,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   }
 
   it should "prove the invariants of first a branch informative (scripted) nosolve" in withMathematica { _ =>
+    //todo: invariant annotation doesn't help proof
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}@invariant((10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0),(v*v<=10-x),(v=0&x<=10))}}*]x<=10".asFormula
     proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE(), QE(), master())) shouldBe 'proved
   }
@@ -492,6 +489,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   }
 
   it should "prove the invariants of first a branch informative (scripted) 2 nosolve" in withMathematica { _ =>
+    //todo: invariant annotation doesn't help proof
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}@invariant((a=1->10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0),(a=-1->v*v<=10-x),(a=0->v=0&x<=10))}}*]x<=10".asFormula
     proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE(), QE(), master())) shouldBe 'proved
   }
@@ -509,16 +507,19 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   }
 
   it should "find an invariant when first a branch informative" in withMathematica { _ =>
+    //todo: Pegasus doesn't generate the right invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1&t<=1&v>=0}}*]x<=10".asFormula
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
   }
 
   it should "find an invariant when first a branch informative nosolve" in withMathematica { _ =>
+    //todo: Pegasus doesn't generate the right invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}}*]x<=10".asFormula
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
   }
 
   it should "find an invariant when middle branch informative" in withMathematica { _ =>
+    //todo: Pegasus doesn't generate the right invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{a:=-1; ++ ?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0;};t:=0;{x'=v,v'=a,t'=1&t<=1&v>=0}}*]x<=10".asFormula
     val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula).toStream
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
@@ -527,6 +528,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   }
 
   it should "find an invariant when middle branch informative nosolve" in withMathematica { _ =>
+    //todo: Pegasus doesn't generate the right invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{a:=-1; ++ ?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0;};t:=0;{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}}*]x<=10".asFormula
     val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula).toStream
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
@@ -535,6 +537,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   }
 
   it should "find an invariant when first a branch uninformative" in withMathematica { _ =>
+    //todo: Pegasus doesn't generate the right invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{v:=0;a:=0; ++ a:=-1; ++ ?10-x>=2+(4+v)*v; a:=1;};t:=0;{x'=v,v'=a,t'=1&t<=1&v>=0}}*]x<=10".asFormula
     val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula).toStream
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
@@ -543,6 +546,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   }
 
   it should "find an invariant when first a branch uninformative nosolve" in withMathematica { _ =>
+    //todo: Pegasus doesn't generate the right invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{v:=0;a:=0; ++ a:=-1; ++ ?10-x>=2+(4+v)*v; a:=1;};t:=0;{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}}*]x<=10".asFormula
     val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula).toStream
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
