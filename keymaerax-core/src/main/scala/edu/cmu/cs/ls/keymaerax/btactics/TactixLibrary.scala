@@ -377,7 +377,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /* odeInvariant: prove invariants of differential equations [LICS'18] */
   lazy val odeInvariant: DependentPositionTactic = "odeInvariant" by ((pos:Position) =>
     DifferentialTactics.DconstV(pos) & DifferentialTactics.domSimplify(pos) &
-      ((cohide(pos) & boxTrue(1)) | ODEInvariance.sAIclosedPlus(3)(pos) | ODEInvariance.sAIRankOne(true)(pos)))
+      ((DifferentialTactics.diffWeakenG(pos) & QE & done) | ODEInvariance.sAIclosedPlus(1)(pos) | ODEInvariance.sAIRankOne(true)(pos)))
 
   /** DG/DA differential ghosts that are generated automatically to prove differential equations.
     *
