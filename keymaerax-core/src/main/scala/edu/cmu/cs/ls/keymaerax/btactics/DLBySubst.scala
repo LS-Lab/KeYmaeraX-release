@@ -13,7 +13,6 @@ import Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics
 
 import scala.collection.immutable.IndexedSeq
-import scala.language.postfixOps
 
 /**
   * Implementation: some dL tactics using substitution tactics.
@@ -245,7 +244,7 @@ private object DLBySubst {
   }
 
   /** @see [[TactixLibrary.loop]] */
-  def loop(invariant: Formula, pre: BelleExpr = alphaRule*): DependentPositionWithAppliedInputTactic = "loop" byWithInput(invariant, (pos, sequent) => {
+  def loop(invariant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = "loop" byWithInput(invariant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "loop only at top-level in succedent, but got " + pos)
     pre & ("doLoop" byWithInput(invariant, (pos, sequent) => {
        sequent.sub(pos) match {
@@ -299,7 +298,7 @@ private object DLBySubst {
   })
 
   /** @see [[TactixLibrary.throughout]] */
-  def throughout(invariant: Formula, pre: BelleExpr = alphaRule*): DependentPositionWithAppliedInputTactic = "throughout" byWithInput(invariant, (pos, sequent) => {
+  def throughout(invariant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = "throughout" byWithInput(invariant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "throughout only at top-level in succedent, but got " + pos)
     lazy val split: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(Box(Compose(_, _), _)) => composeb(pos) & generalize(invariant)(pos) & Idioms.<(skip, split(pos))
@@ -323,7 +322,7 @@ private object DLBySubst {
     * @param variant The variant property or convergence property in terms of variantDef
     * @example The variant J(v_) |-> (v_ = x) has variantDef == (v_ = x)
     */
-  def con(variant: Formula, pre: BelleExpr = alphaRule*): DependentPositionWithAppliedInputTactic = "con" byWithInput(variant, (pos, sequent) => {
+  def con(variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = "con" byWithInput(variant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "con only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
 

@@ -14,7 +14,6 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 
-import scala.language.postfixOps
 import scala.math.Ordering.Implicits._
 import scala.collection.immutable._
 
@@ -39,9 +38,9 @@ private object ToolTactics {
 
     QELogger.getLogTactic &
     (done | //@note don't fail QE if already proved
-      ((alphaRule*) &
+      (SaturateTactic(alphaRule) &
         (close |
-          ((EqualityTactics.atomExhaustiveEqL2R('L)*) &
+          (SaturateTactic(EqualityTactics.atomExhaustiveEqL2R('L)) &
             hidePredicates &
             (prepareAndRcf | EqualityTactics.expandAll & prepareAndRcf)
           )
@@ -142,9 +141,9 @@ private object ToolTactics {
     Idioms.NamedTactic("ordered QE",
       //      DebuggingTactics.recordQECall() &
       done | //@note don't fail QE if already proved
-        ((alphaRule*) &
+        (SaturateTactic(alphaRule) &
         (close |
-          ((EqualityTactics.atomExhaustiveEqL2R('L)*) &
+          (SaturateTactic(EqualityTactics.atomExhaustiveEqL2R('L)) &
           hidePredicates &
           toSingleFormula & orderedClosure(po) & rcf(qeTool) &
             (done | ("ANON" by ((s: Sequent) =>

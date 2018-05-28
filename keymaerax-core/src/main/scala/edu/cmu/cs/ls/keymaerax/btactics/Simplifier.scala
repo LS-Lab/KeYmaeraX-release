@@ -9,7 +9,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversal
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 
-import scala.language.postfixOps
 
 
 /**
@@ -244,6 +243,6 @@ object Simplifier {
   })
 
   def simp(simps:List[Simplification] = defaultSimps):DependentPositionTactic = "simp" by ((pos, sequent) =>
-    ((simpOnce(simps)(pos))*))
+    SaturateTactic(simpOnce(simps)(pos)))
 }
 

@@ -8,7 +8,6 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 
 import scala.collection.immutable._
-import scala.language.postfixOps
 
 
 /**

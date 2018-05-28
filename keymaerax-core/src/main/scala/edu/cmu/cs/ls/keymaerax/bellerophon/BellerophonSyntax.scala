@@ -27,13 +27,14 @@ object BelleExpr {
 abstract class BelleExpr(private var location: Location = UnknownLocation) {
   // tactic combinators
 
-  /** this & other: sequential composition executes other on the output of this, failing if either fail. */
+  /** this & other: sequential composition this ; other executes other on the output of this, failing if either fail. */
   def &(other: BelleExpr)             = SeqTactic(this, other)
   /** this | other: alternative composition executes other if applying this fails, failing if both fail. */
   def |(other: BelleExpr)             = EitherTactic(this, other)
   /** this > other: followup composition executes other on the output or error of this, failing if other fails. */
   def >(other: BelleExpr)             = AfterTactic(this, other)
   /** (this*): saturating repetition executes this tactic to a fixpoint, casting result to type annotation, diverging if no fixpoint. */
+  @deprecated("Use SaturateTactic(this) instead to avoid postfix parse")
   def * = SaturateTactic(this)
   /** this+: saturating repetition executes this tactic to a fixpoint, requires at least one successful application */
   //def + = this & this.*

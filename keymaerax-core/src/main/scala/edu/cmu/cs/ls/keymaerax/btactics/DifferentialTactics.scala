@@ -21,7 +21,6 @@ import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
 import scala.collection.immutable.{IndexedSeq, List, Seq}
-import scala.language.postfixOps
 
 /**
  * Implementation: provides tactics for differential equations.
@@ -144,7 +143,7 @@ private object DifferentialTactics extends Logging {
                  else {
                   assert(auto == 'diffInd)
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
-                  abstractionb(pos) & (allR(pos)*) & ?(implyR(pos)) })
+                  abstractionb(pos) & SaturateTactic(allR(pos)) & ?(implyR(pos)) })
               } else skip
               )
           if (auto == 'full) Dconstify(t)(pos)
@@ -452,7 +451,7 @@ private object DifferentialTactics extends Logging {
     }
 
     //todo: How to exactly simulate behavior of andL('L)*?? flattenConjunctions doesn't match it
-    val ctx = proveBy(Sequent(IndexedSeq(ode.constraint),IndexedSeq(False)), (andL('L)*)).subgoals(0).ante
+    val ctx = proveBy(Sequent(IndexedSeq(ode.constraint),IndexedSeq(False)), SaturateTactic(andL('L))).subgoals(0).ante
 
     val (f,propt) = SimplifierV3.simpWithDischarge(ctx,post,SimplifierV3.defaultFaxs,SimplifierV3.defaultTaxs)
     //val (f,propt) = SimplifierV3.simpWithDischarge(flattenConjunctions(ode.constraint).toIndexedSeq,post,SimplifierV3.defaultFaxs,SimplifierV3.defaultTaxs)
@@ -460,7 +459,7 @@ private object DifferentialTactics extends Logging {
       case None => skip
       case Some(pr) =>
         cutR (Box (ode, f) ) (pos) < (skip,
-        cohideR (pos) & implyR(1) & DW(1) & monb & implyR(1) & implyRi & (andL('L)*) & equivifyR(1) &
+        cohideR (pos) & implyR(1) & DW(1) & monb & implyR(1) & implyRi & SaturateTactic(andL('L)) & equivifyR(1) &
         commuteEquivR(1) & by(pr)
         )
     }
@@ -678,7 +677,7 @@ private object DifferentialTactics extends Logging {
 
         rewriteExistingGhosts & storeInitialVals & cutAllAntes & dw
       } else {
-        useAt("DW differential weakening")(pos) & abstractionb(pos) & (allR('Rlast)*)
+        useAt("DW differential weakening")(pos) & abstractionb(pos) & SaturateTactic(allR('Rlast))
       }
   })
 
@@ -773,7 +772,7 @@ private object DifferentialTactics extends Logging {
 
     //Tries to prove without any invariant generation or solving.
     val proveWithoutCuts = "ANON" by ((pos: Position) => {
-      ((boxAnd(pos) & andR(pos))*) &
+      SaturateTactic(boxAnd(pos) & andR(pos)) &
         onAll(("ANON" by ((pos: Position, seq: Sequent) => {
           val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
             case Some(Box(ode: ODESystem, pf)) => (ode, pf)

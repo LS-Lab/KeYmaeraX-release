@@ -18,7 +18,6 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable._
-import scala.language.postfixOps
 
 /**
   * Tactics for introducing interval arithmetic.
@@ -175,7 +174,7 @@ object IntervalArithmetic extends Logging {
       "f_() * g_() <= max((max((TimesU((F_(),G_())),TimesU((F_(),gg_())))),max((TimesU((ff_(),G_())),TimesU((ff_(),gg_())))))))").asFormula,
     implyR(1) &
       useAt("*<= up",PosInExpr(1::Nil))(1) & prop &
-      (OnAll(useAt(rwMax,PosInExpr(1::Nil))(1) & prop)*)
+      SaturateTactic(OnAll(useAt(rwMax,PosInExpr(1::Nil))(1) & prop))
         <(allL("ff_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
         allL("ff_()".asTerm)(-1) & allL("G_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
@@ -187,7 +186,7 @@ object IntervalArithmetic extends Logging {
       "min((min((TimesL((F_(),G_())),TimesL((F_(),gg_())))),min((TimesL((ff_(),G_())),TimesL((ff_(),gg_())))))) <= f_() * g_())").asFormula,
     implyR(1) &
       useAt("<=* down",PosInExpr(1::Nil))(1) & prop &
-      (OnAll(useAt(rwMin,PosInExpr(1::Nil))(1) & prop)*)
+      SaturateTactic(OnAll(useAt(rwMin,PosInExpr(1::Nil))(1) & prop))
         <(allL("ff_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
         allL("ff_()".asTerm)(-1) & allL("G_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
@@ -212,7 +211,7 @@ object IntervalArithmetic extends Logging {
     "f_()^2 <= max((TimesU(F_(),F_()),TimesU(ff_(),ff_())))").asFormula,
     implyR(1) & useAt("pow<= up",PosInExpr(1::Nil))(1) & prop &
       OnAll(useAt(rwPow2,PosInExpr(0::Nil))(SuccPosition(1,0::Nil))) &
-      (OnAll(useAt(rwMax,PosInExpr(1::Nil))(1) & prop)*) &
+      SaturateTactic(OnAll(useAt(rwMax,PosInExpr(1::Nil))(1) & prop)) &
       <(allL("ff_()".asTerm)(-1) & allL("ff_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("F_()".asTerm)(-1)) &
       OnAll(close), namespace).fact
@@ -268,10 +267,10 @@ object IntervalArithmetic extends Logging {
   private lazy val DivULem = remember(("((\\forall x \\forall y (x / y <= DivU(x,y))) &" +
     "f_() <= F_() & ff_() <= f_() & g_() <= G_() & gg_() <= g_() & (G_()<0 | 0 < gg_()) -> " +
     "f_() / g_() <= max((max((DivU((F_(),G_())),DivU((F_(),gg_())))),max((DivU((ff_(),G_())),DivU((ff_(),gg_())))))))").asFormula,
-    implyR(1) & (andL('Llast)*)&
+    implyR(1) & SaturateTactic(andL('Llast))&
       //@todo replace with new 1Div<= up
       useAt("Div<= up",PosInExpr(1::Nil))(1) & simpTac(1) & hideL('Llast) & prop &
-      (OnAll(useAt(rwMax,PosInExpr(1::Nil))(1) & prop)*) &
+      SaturateTactic(OnAll(useAt(rwMax,PosInExpr(1::Nil))(1) & prop)) &
       <(allL("ff_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
         allL("ff_()".asTerm)(-1) & allL("G_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
@@ -281,10 +280,10 @@ object IntervalArithmetic extends Logging {
   private lazy val DivLLem = remember(("((\\forall x \\forall y (DivL(x,y) <= x / y)) &" +
     "f_() <= F_() & ff_() <= f_() & g_() <= G_() & gg_() <= g_() & (G_()<0 | 0<gg_()) -> " +
     "min((min((DivL((F_(),G_())),DivL((F_(),gg_())))),min((DivL((ff_(),G_())),DivL((ff_(),gg_())))))) <= f_() / g_() )").asFormula,
-    implyR(1) & (andL('Llast)*)&
+    implyR(1) & SaturateTactic(andL('Llast))&
       //@todo replace with <=1Div down
       useAt("<=Div down",PosInExpr(1::Nil))(1) & simpTac(1) & hideL('Llast) & prop &
-      (OnAll(useAt(rwMin,PosInExpr(1::Nil))(1) & prop)*) &
+      SaturateTactic(OnAll(useAt(rwMin,PosInExpr(1::Nil))(1) & prop)) &
       <(allL("ff_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
         allL("ff_()".asTerm)(-1) & allL("G_()".asTerm)(-1),
         allL("F_()".asTerm)(-1) & allL("gg_()".asTerm)(-1),
@@ -518,25 +517,25 @@ object IntervalArithmetic extends Logging {
           if(isVar(l) & isVar(r)){
             useAt(TimesLLemSpec,PosInExpr(1::Nil))(1)
           }
-          else useAt(TimesLLem,PosInExpr(1::Nil))(1) & andR('_) < (close, OnAll(?(andR('_)))*)
+          else useAt(TimesLLem,PosInExpr(1::Nil))(1) & andR('_) < (close, SaturateTactic(OnAll(?(andR('_)))))
         case (Times(l,r),_) =>
           if(isVar(l) & isVar(r)){
             useAt(TimesULemSpec,PosInExpr(1::Nil))(1)
           }
-          else useAt(TimesULem,PosInExpr(1::Nil))(1) & andR('_) < (close, OnAll(?(andR('_)))*)
+          else useAt(TimesULem,PosInExpr(1::Nil))(1) & andR('_) < (close, SaturateTactic(OnAll(?(andR('_)))))
         case (_,Divide(l,r)) =>
           if(isVar(l) & isVar(r)){
             useAt(DivLLemSpec,PosInExpr(1::Nil))(1)
           }
           else {
-            useAt(DivLLem,PosInExpr(1::Nil))(1) & andR('_)  < (close, OnAll(?(andR('_)))*)
+            useAt(DivLLem,PosInExpr(1::Nil))(1) & andR('_)  < (close, SaturateTactic(OnAll(?(andR('_)))))
           }
         case (Divide(l,r),_) =>
           if(isVar(l) & isVar(r)){
             useAt(DivULemSpec,PosInExpr(1::Nil))(1)
           }
           else {
-            useAt(DivULem,PosInExpr(1::Nil))(1) & andR('_) < (close, OnAll(?(andR('_)))*)
+            useAt(DivULem,PosInExpr(1::Nil))(1) & andR('_) < (close, SaturateTactic(OnAll(?(andR('_)))))
           }
         case (_,Power(n,_)) =>
           if (isVar(n)) {
@@ -573,7 +572,7 @@ object IntervalArithmetic extends Logging {
         implyR(1) &
         //This is really slow if the goal splits a lot...
         DebuggingTactics.debug("splitting", doPrint=DEBUG) &
-        (OnAll(?(andL('Llast) | orL('Llast) ))*) &
+        SaturateTactic(OnAll(?(andL('Llast) | orL('Llast) ))) &
         DebuggingTactics.debug("solve", doPrint=DEBUG) &
         //Conditional bounds like those found in squares might lead to splitting
         OnAll(
@@ -583,21 +582,21 @@ object IntervalArithmetic extends Logging {
             useAt("&true")(SuccPosition(1,0::Nil)) &
             //print("decompose f") &
             //Repeatedly decompose w.r.t. shape of formula
-            (OnAll(?(
+            SaturateTactic(OnAll(?(
               (useAt(decomposeAnd,PosInExpr(1::Nil))(1) & andR('_)) |
-                (useAt(decomposeOr,PosInExpr(1::Nil))(1) & andR('_))))*) &
+                (useAt(decomposeOr,PosInExpr(1::Nil))(1) & andR('_))))) &
             //Decompose inequalities
             DebuggingTactics.debug("decompose ineq", doPrint=DEBUG) &
-            (OnAll(?(
+            SaturateTactic(OnAll(?(
               (useAt(decomposeLE,PosInExpr(1::Nil))(1) & andR('_)) |
                 (useAt(decomposeLT,PosInExpr(1::Nil))(1) & andR('_)) |
                 (useAt(decomposeGE,PosInExpr(1::Nil))(1) & andR('_)) |
                 (useAt(decomposeGT,PosInExpr(1::Nil))(1) & andR('_))
-            )) *) &
+            ))) &
             DebuggingTactics.debug("arith", doPrint=DEBUG) &
             //single step removal of the rounding arithmetic axioms
-            (OnAll(DebuggingTactics.debug("arith step", doPrint=DEBUG) & patmatchArith &
-              DebuggingTactics.debug("done", doPrint=DEBUG))*) &
+            SaturateTactic(OnAll(DebuggingTactics.debug("arith step", doPrint=DEBUG) & patmatchArith &
+              DebuggingTactics.debug("done", doPrint=DEBUG))) &
             //reflexivity
             OnAll(simpTac(1) & ?(closeT))
         )
