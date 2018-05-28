@@ -1467,7 +1467,7 @@ class DifferentialTests extends TacticTestBase with Timeouts {
   }
 
   it should "produce invariants that are provable with ODE" taggedAs SlowTest in withMathematica { _ =>
-    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "180", saveToFile = false)
+    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "300", saveToFile = false)
     Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, "60", saveToFile = false)
 
     val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
@@ -1477,7 +1477,7 @@ class DifferentialTests extends TacticTestBase with Timeouts {
       map(e => (e.name, e.model, e.tactics.headOption.getOrElse("" -> TactixLibrary.auto)._2)): _*)) {
       (name, model, tactic) =>
         println("\n" + name + " with " + BellePrettyPrinter(tactic))
-        failAfter(3 minutes) {
+        failAfter(5 minutes) {
           proveBy(model.asInstanceOf[Formula], tactic) shouldBe 'proved
         }
         println(name + " done")
