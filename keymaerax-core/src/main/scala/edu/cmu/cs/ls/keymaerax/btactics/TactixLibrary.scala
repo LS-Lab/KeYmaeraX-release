@@ -19,7 +19,6 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import org.apache.logging.log4j.scala.Logger
 
 import scala.collection.immutable.{List, _}
-import scala.language.postfixOps
 
 /**
   * Tactix: Main tactic library with simple interface.
@@ -161,10 +160,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     }
 
     OnAll(close |
-      (OnAll(tacticChase(createAutoTacticIndex)(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
+      SaturateTactic(OnAll(tacticChase(createAutoTacticIndex)(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
         ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-        andR, equivR, loop, odeR, solve))*) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
-        OnAll((exhaustiveEqL2R('L)*) & ?(QE & (if (keepQEFalse) nil else done))))
+        andR, equivR, loop, odeR, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
+        OnAll(SaturateTactic(exhaustiveEqL2R('L)) & ?(QE & (if (keepQEFalse) nil else done))))
   }
 
   /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
@@ -263,7 +262,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         require(pos.isTopLevel, "with abstraction only at top-level")
         sequent(pos.checkTop) match {
           case Box(a, p) =>
-            t(pos) & abstractionb(pos) & (if (pos.isSucc) (allR(pos)*) partial else skip)
+            t(pos) & abstractionb(pos) & (if (pos.isSucc) SaturateTactic(allR(pos)) partial else skip)
           case Diamond(a, p) if pos.isAnte => ???
         }
       }
@@ -341,6 +340,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** loopPostMaster: search-and-rescue style automatic loop induction based on successive generator gen.
     * Uses [[SearchAndRescueAgain]] to avoid repetitive proving.
     * Present implementation needs differential equations to occur somewhere within the loop.
+    * @author Andre Platzer
+    * @author Stefan Mitsch
     * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     *      Example 32. */
   def loopPostMaster(gen: Generator[Formula]): DependentPositionTactic = InvariantProvers.loopPostMaster(gen)
@@ -681,7 +682,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @param preQE Tactic to execute before each individual QE call (default: skip).
     * @param qe How to QE
     */
-  def atomicQE(split: BelleExpr = onAll(alphaRule | betaRule)*, preQE: BelleExpr = skip, qe: BelleExpr = QE): BelleExpr =
+  def atomicQE(split: BelleExpr = SaturateTactic(onAll(alphaRule | betaRule)), preQE: BelleExpr = skip, qe: BelleExpr = QE): BelleExpr =
     split & onAll(preQE & qe & done)
   def atomicQE: BelleExpr = atomicQE()
 

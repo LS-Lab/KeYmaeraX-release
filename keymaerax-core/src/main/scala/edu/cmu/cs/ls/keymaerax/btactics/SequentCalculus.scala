@@ -12,7 +12,6 @@ import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
-import scala.language.postfixOps
 
 /**
   * Sequent Calculus for propositional and first-order logic.
@@ -55,13 +54,13 @@ trait SequentCalculus {
   /** Cohides in succedent, but leaves antecedent as is. */
   def cohideOnlyR: DependentPositionTactic = "cohideOnlyR" by { (pos: Position, seq: Sequent) =>
     assert(pos.isTopLevel & pos.isSucc, "Expected top-level succedent position, but got " + pos)
-    (hideR(1) * pos.checkTop.getIndex) & (hideR(2)*)
+    (hideR(1) * pos.checkTop.getIndex) & SaturateTactic(hideR(2))
   }
 
   /** Cohides in antecedent, but leaves succedent as is. */
   def cohideOnlyL: DependentPositionTactic = "cohideOnlyL" by { (pos: Position, seq: Sequent) =>
     assert(pos.isTopLevel & pos.isAnte, "Expected top-level antecedent position, but got " + pos)
-    (hideL(-1) * pos.checkTop.getIndex) & (hideL(-2)*)
+    (hideL(-1) * pos.checkTop.getIndex) & SaturateTactic(hideL(-2))
   }
 
   /** !L Not left: move an negation in the antecedent to the succedent ([[edu.cmu.cs.ls.keymaerax.core.NotLeft NotLeft]]) */

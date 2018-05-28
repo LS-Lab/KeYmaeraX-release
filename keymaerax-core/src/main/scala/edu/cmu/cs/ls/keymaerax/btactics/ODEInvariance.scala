@@ -182,7 +182,7 @@ object ODEInvariance {
           //This is a special case where we don't want full DI, because we already have everything
           cohideOnlyR(pos) & dI('diffInd)(1) <(
             useAt(geq)(1) & orR(1) & closeId,
-            cohideOnlyL('Llast) & (Dassignb(1)*) & implyRi &
+            cohideOnlyL('Llast) & SaturateTactic(Dassignb(1)) & implyRi &
             useAt(fastGeqCheck,PosInExpr(1::Nil))(1) & QE
           )
         )
@@ -260,7 +260,7 @@ object ODEInvariance {
       case _ => {
         try {
           val prop = GreaterEqual(p, Number(0))
-          val (pr, denRemReq, cofactor, rem) = DifferentialTactics.findDbx(ode, dom, prop)
+          val (pr, denRemReq, cofactor, rem) = findDbx(ode, dom, prop)
           (prop, Darboux(false, cofactor, denRemReq, pr))
         }
         catch {
@@ -278,7 +278,7 @@ object ODEInvariance {
         (if(iseq) useAt(refAbs)(1) else skip) &
         DebuggingTactics.debug("Darboux "+cofactor+" ",doPrint = debugTactic) &
         implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) &
-        dC(cut)(1)  <(if(cofactor==Number(0)) dI('full)(1) else dgDbx(cofactor)(1), diffWeakenG(1) & byUS(pr))
+          (if(cofactor==Number(0)) dI('full)(1) else dgDbx(cofactor)(1))
       case Disj(l,r) =>
         DebuggingTactics.debug("DISJ",doPrint = debugTactic) &
         orL(-2) <(
@@ -360,8 +360,8 @@ object ODEInvariance {
   def rankOneFml(ode: DifferentialProgram, dom:Formula, f:Formula) : Option[Formula] = {
     f match {
       case cf:ComparisonFormula =>
+        //Non-strict findDbx
         val (pr, denRemReq, cofactor, rem) = findDbx(ode, dom, cf,false)
-        //println(pr,denRemReq,cofactor,rem)
         if (pr.isProved)// TODO: this should be keeping track of co-factors rather than throwing them away
           Some(f)
         else {

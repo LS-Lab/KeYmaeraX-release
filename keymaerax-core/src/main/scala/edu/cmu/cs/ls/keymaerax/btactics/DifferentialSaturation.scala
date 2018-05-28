@@ -10,7 +10,6 @@ import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
-import scala.language.postfixOps
 
 /**
   * Differential Saturation (Fig 6.3, Logical Analysis of Hybrid Systems)

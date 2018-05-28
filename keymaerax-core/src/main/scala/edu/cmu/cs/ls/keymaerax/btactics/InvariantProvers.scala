@@ -74,6 +74,7 @@ object InvariantProvers {
   /** [[TactixLibrary.loopPostMaster()]]. */
   def loopPostMaster(gen: Generator[Formula]): DependentPositionTactic = "loopPostMaster" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
+      // extra information occasionally thrown in to help direct invariant generation
       val initialCond = seq.ante.reduceRightOption(And).getOrElse(True)
       val bounds: List[Variable] =
         // DependencyAnalysis is incorrect when primed symbols occur, so default to all bound variables in that case
@@ -90,6 +91,7 @@ object InvariantProvers {
           i = i + 1; SubstitutionPair(DotTerm(Real, Some(i)), xi)
         }))
 
+      /** name(args) */
       def constructPred(name: String, args: Seq[Term]): Formula = {
         val head :: tail = args.reverse
         val arg = tail.foldLeft(head)({ case (ps, t) => Pair(t, ps) })
@@ -104,22 +106,31 @@ object InvariantProvers {
       /* stateful mutable candidate used in generateOnTheFly and the pass-through later since usubst end tactic not present yet */
       var candidate: Option[Formula] = Some(post)
 
+      // completes ODE invariant proofs and arithmetic
       val finishOff: BelleExpr =
         OnAll(ifThenElse(DifferentialTactics.isODE,
           odeInvariant(pos) |
             // augment loop invariant to local ODE invariant if possible
             ("ANON" by ((pos: Position, seq: Sequent) => {
-              val localInv = gen(seq, pos).head
-              println/*logger.debug*/("loopPostMaster local " + localInv)
-              dC(localInv)(pos) <(dW(pos) & QE(), odeInvariant(pos))
+              val odePost = seq.sub(pos++PosInExpr(1::Nil))
+              // no need to try same invariant again if odeInvariant(pos) already failed
+              //@todo optimize: if the invariant generator were correct, could restrict to its first element
+              ChooseSome(() => gen(seq, pos).iterator.filterNot(localInv => Some(localInv)==odePost),
+                (localInv:Formula) => {
+                  println/*logger.debug*/("loopPostMaster local " + localInv)
+                  dC(localInv)(pos) < (dW(pos) & QE(), odeInvariant(pos))
+                })
             }))(pos)
           ,
-          QE())(pos)) & done
+          QE()
+        )(pos)) & done
 
+      // present mutable invariant candidate source stream and its present iterator
       var candidates: Option[(Stream[Formula], Iterator[Formula])] = None
 
-      // generate the next candidate from the given sequent of the given provable with the present candidate currentCandidate
+      /** generate the next candidate from the given sequent of the given provable with the present candidate currentCandidate */
       def nextCandidate(pr: ProvableSig, sequent: Sequent, currentCandidate: Option[Formula]): Option[Formula] = currentCandidate match {
+        //@note updates "global" candidates
         case Some(cand) =>
           logger.debug("loopPostMaster subst " + USubst(Seq(jjl ~>> cand, jja ~> True)))
           // plug in true for jja, commit if succeeded. Else plug in init for jja and generate
@@ -137,15 +148,15 @@ object InvariantProvers {
             val assumeMoreSeq = USubst(Seq(jjl ~>> cand, jja ~> initialCond))(sequent)
 
             val generator = gen(assumeMoreSeq, pos)
-            val (genStream, genIt) = candidates match {
+            // keep iterating if same generator stream, else advance both
+            candidates = Some(candidates match {
               case Some((s, it)) if s == generator => (s, it)
               case Some((s, _)) if s != generator => (generator, generator.iterator)
               case None => (generator, generator.iterator)
-            }
-            candidates = Some(genStream, genIt)
+            })
 
-            while (genIt.hasNext) {
-              val next = Some(genIt.next())
+            while (candidates.get._2.hasNext) {
+              val next = Some(candidates.get._2.next())
               if (next != currentCandidate) {
                 println /*logger.info*/ ("loopPostMaster next    " + next.get)
                 return next
@@ -153,7 +164,7 @@ object InvariantProvers {
             }
             return None
           }
-        case _ => None
+        case None => None
       }
 
       def generateOnTheFly[A <: Expression](pos: Position): (ProvableSig, ProverException) => scala.collection.immutable.Seq[Expression] = {
@@ -166,12 +177,17 @@ object InvariantProvers {
               seq.sub(pos) match {
                 case Some(Box(_: ODESystem, _)) =>
                   sawODE = true
-                  candidate = nextCandidate(pr, seq, candidate)
+                  val next = nextCandidate(pr, seq, candidate)
                   // try the candidate if there is one, else proceed to the next branch
-                  if (candidate.isDefined) break
+                  if (next.isDefined) {
+                    candidate = next
+                    break
+                  }
+                  println/*logger.debug*/("loopPostMaster branch skip")
                 case _ => // ignore branches that are not about ODEs
               }
             }
+            candidate = None
           }
           candidate match {
             case Some(c) =>
@@ -194,9 +210,8 @@ object InvariantProvers {
             /* use jja() |- */
             chase(pos) & OnAll(unfoldProgramNormalize) & OnAll(?(chase(pos ++ PosInExpr(1::Nil))) & ?(QE() & done))
             ,
-            /* show |- jja() is postponed since only provable for jja()=True */
-            cohide('Rlast)
-            //@todo cohide(Find.FindR(0, Some(jja)))
+            /* show |- jja() is postponed since only provable when eventually jja()~>True instantiated */
+            cohide('Rlast, jja)
             )
           ),
         generateOnTheFly(pos)

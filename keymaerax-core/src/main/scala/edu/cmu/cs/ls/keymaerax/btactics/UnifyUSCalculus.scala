@@ -21,7 +21,6 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logger
 
 import scala.collection.immutable._
-import scala.language.postfixOps
 
 /**
   * Automatic unification-based Uniform Substitution Calculus with indexing.

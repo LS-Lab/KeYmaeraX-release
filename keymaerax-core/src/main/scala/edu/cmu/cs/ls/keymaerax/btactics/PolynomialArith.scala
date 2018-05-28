@@ -145,22 +145,22 @@ object PolynomialArith extends Logging {
     prop & OnAll(existsL('L) & prop) <( existsR('R), existsR('R), existsR("x_".asTerm)('R), existsR("x_".asTerm)('Rlast)) & OnAll(prop))
 
   private lazy val existsOr2 = proveBy("\\exists x_ p_(x_) | q_() <-> (\\exists x_ (p_(x_) |  q_()))".asFormula,
-    prop & OnAll((existsL('L)*) & (existsR('R)*) & prop))
+    prop & OnAll(SaturateTactic(existsL('L)) & SaturateTactic(existsR('R)) & prop))
 
   private lazy val existsOr3 = proveBy("q_() | \\exists x_ p_(x_) <-> (\\exists x_ (p_(x_) |  q_()))".asFormula,
-    prop & OnAll((existsL('L)*) & (existsR('R)*) & prop))
+    prop & OnAll(SaturateTactic(existsL('L)) & SaturateTactic(existsR('R)) & prop))
 
   private lazy val existsAnd1 = proveBy("(\\exists x_ p_(x_) & \\exists y_ q_(y_)) <-> (\\exists x_ \\exists y_ (p_(x_) & q_(y_)))".asFormula,
-    prop & OnAll((existsL('L)*) & prop) <( existsR('R) & existsR('R) & prop, existsR('R) & prop,existsR('R)&prop))
+    prop & OnAll(SaturateTactic(existsL('L)) & prop) <( existsR('R) & existsR('R) & prop, existsR('R) & prop,existsR('R)&prop))
 
   private lazy val existsAnd2 = proveBy("(\\exists x_ p_(x_) & q_()) <-> (\\exists x_ (p_(x_) & q_()))".asFormula,
-    prop & OnAll((existsL('L)*) & (existsR('R)*) & prop))
+    prop & OnAll(SaturateTactic(existsL('L)) & SaturateTactic(existsR('R)) & prop))
 
   private lazy val existsAnd3 = proveBy("(q_() & \\exists x_ p_(x_)) <-> (\\exists x_ (p_(x_) & q_()))".asFormula,
-    prop & OnAll((existsL('L)*) & (existsR('R)*) & prop))
+    prop & OnAll(SaturateTactic(existsL('L)) & SaturateTactic(existsR('R)) & prop))
 
   private lazy val existsRename = proveBy("(\\exists x_ p_(x_) & \\exists x_ q_(x_)) <-> (\\exists x_ p_(x_) & \\exists z_ q_(z_))".asFormula,
-    prop & OnAll((existsL('L)*) & prop) <(existsR("x_".asTerm)('R), existsR("z_".asTerm)('R)) & OnAll(prop))
+    prop & OnAll(SaturateTactic(existsL('L)) & prop) <(existsR("x_".asTerm)('R), existsR("z_".asTerm)('R)) & OnAll(prop))
 
   //A=0 | B = 0 <-> A*B=0
   //A=0 & B = 0 <-> A^2+B^2=0
@@ -974,7 +974,7 @@ object PolynomialArith extends Logging {
           case LessEqual(f, g) => useAt(leAnte)(ind) & existsL(ind)
           case _ => DebuggingTactics.print("Hiding: "+fi._1) & hideL(ind)
         }) & tac
-      } & ((notR('R))*)
+      } & SaturateTactic(notR('R))
     }
   }
 
@@ -1171,7 +1171,7 @@ object PolynomialArith extends Logging {
 
   //Move everything into antecedents via double negation
   lazy val clearSuccNNF:BelleExpr =
-    ((useAt(doubleNeg)(1) & notR(1))*) & fullSimpTac(faxs = composeIndex(defaultFaxs,chaseIndex),taxs = emptyTaxs)
+  SaturateTactic(useAt(doubleNeg)(1) & notR(1)) & fullSimpTac(faxs = composeIndex(defaultFaxs,chaseIndex),taxs = emptyTaxs)
 
   //NOTE: this doesn't (can't?) make use of the alternate inequality formulation!
   def renWitness(f:Formula,ctx:context) : List[ProvableSig] = {
@@ -1213,7 +1213,7 @@ object PolynomialArith extends Logging {
           case Less(f, g) => useAt(ltAnteZ)(ind)
           case _ => ident
         }) & tac
-      } & (andL('L)*)
+      } & SaturateTactic(andL('L))
     }
   }
 
@@ -1231,10 +1231,10 @@ object PolynomialArith extends Logging {
 
   lazy val normAntes1 = fullSimpTac(ths = ths,faxs = renWitness,taxs = emptyTaxs,simpSuccs = false)
   lazy val normAntes2 = fullSimpTac(ths = List(andEqz,orEqz),faxs = emptyFaxs,taxs = emptyTaxs,simpSuccs = false)
-  lazy val normaliseNNF = clearSuccNNF & (onAll(alphaRule)*) & relaxStrict2 & hideTopNeq & normAntes1 & (existsL('L)*) & normAntes2 & (notR('R)*)
+  lazy val normaliseNNF = clearSuccNNF & SaturateTactic(onAll(alphaRule)) & relaxStrict2 & hideTopNeq & normAntes1 & SaturateTactic(existsL('L)) & normAntes2 & SaturateTactic(notR('R))
 
   //Just to rearrange things back into equalities first then inequalities
-  lazy val resortEqs = hideTopNeq & (notR('R)*)
+  lazy val resortEqs = hideTopNeq & SaturateTactic(notR('R))
 
   //lazy val normaliseNNF = clearSuccNNF & (onAll(alphaRule)*) & normAntes1 & (existsL('L)*) & normAntes2
 }

@@ -1469,17 +1469,11 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "180", saveToFile = false)
     Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, "60", saveToFile = false)
 
-    val fails =
-      "Bhatia Szego Ex_2_4 page 68" ::
-      "Dumortier Llibre Artes Ex. 1_9b" ::
-      "Dumortier Llibre Artes Ex. 10_11b" :: Nil
-
     val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
       getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
     forEvery(Table(("Name", "Model", "Tactic"), entries.
-      filterNot(e => fails.contains(e.name)).
       filter(e => e.tactics.nonEmpty).
-      map(e => (e.name, e.model, e.tactics.head._2)): _*)) {
+      map(e => (e.name, e.model, e.tactics.headOption.getOrElse("" -> TactixLibrary.auto)._2)): _*)) {
       (name, model, tactic) =>
         println("\n" + name + " with " + BellePrettyPrinter(tactic))
         failAfter(3 minutes) {

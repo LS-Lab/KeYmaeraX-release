@@ -12,7 +12,6 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.{Logger, Logging}
 
 import scala.collection.immutable
-import scala.language.postfixOps
 
 /**
  * @author Nathan Fulton
@@ -227,7 +226,7 @@ object Idioms {
     }
 
     val caseTactics = cases.map({ case (Case(fml, doSimp), t) =>
-      (if (doSimp) simplifyAllButCase(fml) & ((TactixLibrary.hideL('L, True) | TactixLibrary.hideR('R, False))*) else ident) & t}).
+      (if (doSimp) simplifyAllButCase(fml) & SaturateTactic(TactixLibrary.hideL('L, True) | TactixLibrary.hideR('R, False)) else ident) & t}).
       reduceRight[BelleExpr]({ case (t1, t2) => TactixLibrary.orL('Llast) & Idioms.<(t1, t2)})
 
     TactixLibrary.cut(caseFml) & Idioms.<(
@@ -268,7 +267,7 @@ object Idioms {
 
   /** Repeats t while condition at position is true. */
   def repeatWhile(condition: Expression => Boolean)(t: BelleExpr): DependentPositionTactic = "loopwhile" by {(pos: Position) =>
-    (DebuggingTactics.assertAt((_: Expression) => "Stopping loop", condition)(pos) & t)*
+    SaturateTactic(DebuggingTactics.assertAt((_: Expression) => "Stopping loop", condition)(pos) & t)
   }
 
   /** must(t) runs tactic `t` but only if `t` actually changed the goal. */
