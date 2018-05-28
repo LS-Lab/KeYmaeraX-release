@@ -1096,12 +1096,12 @@ private object DifferentialTactics extends Logging {
   private [btactics] def findDbx(ode: DifferentialProgram, dom: Formula, property: ComparisonFormula, strict:Boolean=true) : (ProvableSig,Formula,Term,Term) = {
     val p = property.left
     val lie = DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
-    // p' = g/q p + r
-    val (g,q,r) = domQuoRem(lie,p,dom)
+    // p' = q p + r
+    val (q,r) = domQuoRem(lie,p,dom)
     val zero = Number(0)
 
     //The sign of the remainder for a Darboux argument
-    val remSgn = property match {
+    val denRemReq = property match {
       case GreaterEqual(_, _) => GreaterEqual(r,zero)
       case Greater(_, _) => GreaterEqual(r,zero)
       case LessEqual(_, _) => LessEqual(r,zero)
@@ -1111,14 +1111,12 @@ private object DifferentialTactics extends Logging {
       case _ => throw new BelleThrowable(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
     }
 
-    //q!=0, r~0 (as appropriate)
-    val denRemReq = if(q == Number(1)) remSgn else And(NotEqual(q,zero),remSgn)
     val pr = proveBy(Imply(dom,denRemReq), QE)
 
     if(!pr.isProved && strict)
-      throw new BelleThrowable("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+g+" denom: "+q+" rem: "+r+" unable to prove: "+denRemReq)
+      throw new BelleThrowable("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+q+" rem: "+r+" unable to prove: "+denRemReq)
 
-    (pr,denRemReq, if (q==Number(1)) g else Divide(g,q),r)
+    (pr,denRemReq, q,r)
   }
 
   // Normalises to p = 0 then attempts to automatically guess the darboux cofactor
@@ -1138,19 +1136,13 @@ private object DifferentialTactics extends Logging {
     }
 
     //normalized to have p on LHS
+    //todo: utilize pr which proves the necessary sign requirement for denRemReq
     val (pr,denRemReq,cofactor,rem) = findDbx(system,dom,property.asInstanceOf[ComparisonFormula])
 
     //DI if simple, otherwise use dgDbx
     val finishTac = if (cofactor == Number(0)) dI('full)(pos) else dgDbx(cofactor)(pos)
-    val denRemReqTactic = (t: BelleExpr) =>
-      diffCut(denRemReq)(pos) & (<(
-        t,
-        diffWeakenG(pos) & byUS(pr)
-      ) | t)
 
-    denRemReqTactic(
-      starter & finishTac
-    )
+    starter & finishTac
   })
 
   /** @see [[TactixLibrary.DGauto]]
@@ -1279,13 +1271,13 @@ private object DifferentialTactics extends Logging {
 
   // implementation helpers
 
-  /** Computes (potentially fractional) quotient remainder resulting from polynomial division wrt domain
+  /** Computes quotient remainder resulting from (RATIONAL) polynomial division wrt domain
     * @param poly polynomial to divide
     * @param div divisor
     * @param dom domain constraint
-    * @return (g,q,r) where Q |- poly = (g/q)*div + r
+    * @return (q,r) where Q |- poly = q*div + r , q,r are polynomials
     */
-  def domQuoRem(poly:Term, div:Term, dom:Formula) : (Term,Term,Term) = {
+  def domQuoRem(poly:Term, div:Term, dom:Formula) : (Term,Term) = {
     //TODO: remove dependence on algebra tool
     if (ToolProvider.algebraTool().isEmpty) {
       throw new BelleThrowable(s"duoQuoRem requires a AlgebraTool, but got None")
@@ -1310,12 +1302,14 @@ private object DifferentialTactics extends Logging {
         }
       } else Nil
       val quo = algTool.polynomialReduce(poly, div :: gb)
-      // quo._1.head is the cofactor of div (g/q)
+      // quo._1.head is the cofactor of div (q)
       // quo._2 is the remainder (r)
 
-      val (g, q) = stripDenom(quo._1.head)
-      if ((FormulaTools.singularities(g) ++ FormulaTools.singularities(q)).isEmpty) (g, q, quo._2)
-      else (Number(0), Number(1), poly)
+      (quo._1.head,quo._2)
+      //Older support for polynomials
+      //val (g, q) = stripDenom(quo._1.head)
+      //if ((FormulaTools.singularities(g) ++ FormulaTools.singularities(q)).isEmpty) (g, q, quo._2)
+      //else (Number(0), Number(1), poly)
     }
   }
 
@@ -1507,7 +1501,6 @@ private object DifferentialTactics extends Logging {
         propt match {
           case None => (nnf,Some(pr))
           case Some(pr2) =>
-            println(pr,pr2)
             (ff, Some(useFor(pr2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))(pr)) )
         }
       case None =>

@@ -485,6 +485,9 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
         new MExpr(Expr.SYM_LIST, vars.map(k2m).toArray),
         new MExpr(MathematicaSymbols.RULE, Array[MExpr](
           MathematicaSymbols.MONOMIALORDER, MathematicaSymbols.DEGREEREVERSELEXICOGRAPHIC
+        )),
+        new MExpr(MathematicaSymbols.RULE, Array[MExpr](
+          MathematicaSymbols.COEFFICIENTDOMAIN, MathematicaSymbols.RATIONALS
         ))
       ))
     val (_, result) = run(input)
