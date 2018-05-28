@@ -1562,7 +1562,7 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     TactixLibrary.proveBy(seq, ODE(1)) should not be 'proved
     TactixLibrary.proveBy(seq, master()) should not be 'proved
     the [BelleThrowable] thrownBy TactixLibrary.proveBy(seq, auto) should have message
-      """[Bellerophon Runtime] Expected proved provable, but got NoProofTermProvable(Provable(x+z=0
+      """[Bellerophon Runtime] Expected proved provable, but got ElidingProvable(Provable(x+z=0
         |  ==>  [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&y=x^2&z^2>0}]x+z=0
         |  from   x+z=0
         |  ==>  [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&y=x^2&z^2>0}]x+z=0))""".stripMargin

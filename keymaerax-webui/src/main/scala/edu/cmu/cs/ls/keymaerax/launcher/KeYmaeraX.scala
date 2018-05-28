@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.{DBTools, TempDBTools}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.{Declaration, Name, Signature}
-import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, PTProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, TermProvable$, ProvableSig}
 
 import scala.collection.immutable
 import scala.compat.Platform
@@ -600,14 +600,14 @@ object KeYmaeraX {
 
     def savePt(pt:ProvableSig):Unit = {
       (pt, options.get('ptOut)) match {
-        case (ptp:PTProvable, Some(path:String)) =>
+        case (ptp:TermProvable, Some(path:String)) =>
           val conv = new IsabelleConverter(ptp.pt)
           val source = conv.sexp
           val writer = new PrintWriter(path)
           writer.write(source)
           writer.close()
         case (_, None) => ()
-        case (ptp:PTProvable, None) => assert(false, "Proof term output path specified but proof did not contain proof term")
+        case (ptp:TermProvable, None) => assert(false, "Proof term output path specified but proof did not contain proof term")
       }
     }
 
@@ -680,7 +680,7 @@ object KeYmaeraX {
 
     val verifyOption:Option[(ProvableSig => Unit)] =
       if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
-        Some({case ptp:PTProvable =>
+        Some({case ptp:TermProvable =>
           val conv = new IsabelleConverter(ptp.pt)
           val source = conv.sexp
           val pwPt = new PrintWriter(options('ptOut).asInstanceOf[String]+".pt")

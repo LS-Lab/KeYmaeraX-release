@@ -672,7 +672,7 @@ object Provable {
     //@note soundness-critical
     val fact = Provable.oracle(new Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(f, equivalent))),
       immutable.IndexedSeq())
-    Lemma(NoProofTermProvable(fact), Lemma.requiredEvidence(NoProofTermProvable(fact), evidence :: Nil), None)
+    Lemma(ElidingProvable(fact), Lemma.requiredEvidence(ElidingProvable(fact), evidence :: Nil), None)
   }
 
   /**

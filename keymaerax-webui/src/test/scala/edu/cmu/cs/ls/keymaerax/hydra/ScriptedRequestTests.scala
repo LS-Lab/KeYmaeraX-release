@@ -140,7 +140,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = tacticRunner("()", implyR(2))
     response shouldBe a [ErrorResponse]
-    response should have ('msg ("Tactic failed with error: [Bellerophon Runtime] Position Fixed(2,None,true) may point outside the positions of the goal NoProofTermProvable(Provable(==> 1:  x>=0->[x:=x+1;]x>=0\tImply\n  from   ==> 1:  x>=0->[x:=x+1;]x>=0\tImply))"))
+    response should have ('msg ("Tactic failed with error: [Bellerophon Runtime] Position Fixed(2,None,true) may point outside the positions of the goal ElidingProvable(Provable(==> 1:  x>=0->[x:=x+1;]x>=0\tImply\n  from   ==> 1:  x>=0->[x:=x+1;]x>=0\tImply))"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, leaves, _, _) =>
