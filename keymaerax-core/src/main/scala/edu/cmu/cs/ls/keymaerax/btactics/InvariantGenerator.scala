@@ -80,6 +80,10 @@ object InvariantGenerator extends Logging {
       )
   }
 
+  /** Default invariant generator used in Bellerophon tactics if no specific generator is requested. */
+  lazy val defaultInvariantGenerator: Generator[Formula] = cached((sequent,pos) =>
+    loopInvariantGenerator(sequent,pos) #::: differentialInvariantGenerator(sequent,pos))
+
   /** A differential invariant generator.
     * @author Andre Platzer */
   lazy val differentialInvariantGenerator: Generator[Formula] = cached((sequent,pos) =>
