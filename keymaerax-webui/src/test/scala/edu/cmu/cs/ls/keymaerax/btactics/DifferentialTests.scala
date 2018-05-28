@@ -3,7 +3,8 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics.{diffCut, diffWeaken}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{fail, _}
 import edu.cmu.cs.ls.keymaerax.core._
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest}
 
@@ -1392,7 +1393,7 @@ class DifferentialTests extends TacticTestBase with Timeouts {
 
     InvariantGenerator.differentialInvariantCandidates(problem, SuccPos(0)) should contain theSameElementsInOrderAs(
       "x>-1".asFormula::"-2*x>1".asFormula::"-2*y>1".asFormula::"y>=-1".asFormula::
-      "x^5 <= (x+4*x^3)*y".asFormula::"y <= 0".asFormula::"x^5 <= (x+4*x^3)*y & y <= 0".asFormula :: Nil)
+      "x^5+-1*x*y+-4*x^3*y<=0&y<=0".asFormula::"x^5+-1*x*y+-4*x^3*y<=0".asFormula::"y<=0".asFormula :: Nil)
   }
 
   it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs SlowTest in withMathematica { _ =>
@@ -1481,6 +1482,49 @@ class DifferentialTests extends TacticTestBase with Timeouts {
         }
         println(name + " done")
     }
+  }
+
+  it should "standalone test of pegasus + odeInvariant only" taggedAs SlowTest in withMathematica { _ =>
+    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "180", saveToFile = false)
+    Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, "60", saveToFile = false)
+
+    val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
+      getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
+    var generated = 0
+    var success = 0
+    var total = 0
+    forEvery(Table(("Name", "Model", "Tactic"), entries.
+      map(e => (e.name, e.model, e.tactics)): _*)) {
+      (name, model, _) =>
+        println("\n" + name + " " + model)
+        try {
+          failAfter(3 minutes) {
+            total+=1
+            val pr = proveBy(model.asInstanceOf[Formula], implyR(1))
+            val invs = InvariantGenerator.pegasusInvariants(pr.subgoals(0),SuccPosition(1))
+            invs.headOption match {
+              case None =>
+                println("Pegasus did not generate an invariant")
+              case Some(inv) =>
+                generated +=1
+                val pr2 = proveBy(pr, Idioms.?(diffCut(inv)(1) <(
+                  diffWeaken(1) & QE & done,
+                  odeInvariant(1))))
+                if(pr2.isProved) {
+                  println("Proof success")
+                  success+=1
+                }
+                else println("Proof failed")
+            }
+          }
+          println(name + " done")
+        }
+        catch {
+          case ex: IllegalArgumentException =>
+            println(name + " not of expected form")
+        }
+    }
+    println("Generated :"+generated+" Succeeded: "+success+" Total: "+total)
   }
 
   /**
