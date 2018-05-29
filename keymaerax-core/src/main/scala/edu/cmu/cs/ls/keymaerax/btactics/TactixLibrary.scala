@@ -379,7 +379,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * G |- [x'=f(x) & Q]P with invariant techniques [LICS'18]
     * The auto version additionally calls Pegasus to generate an invariant
     * */
-  lazy val odeInvariant: DependentPositionTactic = DifferentialTactics.odeInvariant
+  lazy val odeInvariant: DependentPositionTactic = DifferentialTactics.odeInvariant(false)
 
   lazy val odeInvariantAuto: DependentPositionTactic = DifferentialTactics.odeInvariantAuto
 

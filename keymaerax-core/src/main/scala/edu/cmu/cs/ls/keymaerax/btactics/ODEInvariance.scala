@@ -272,7 +272,8 @@ object ODEInvariance {
 
   //Assume the Q progress condition is at -1
   private def lpclosedPlus(inst:Instruction) : BelleExpr =
-    inst match{
+    SeqTactic(DebuggingTactics.debug(inst.toString(),doPrint = debugTactic),
+      inst match{
       case Darboux(iseq,cofactor,cut, pr) =>
         DebuggingTactics.print(cofactor+" "+cut) & skip
         (if(iseq) useAt(refAbs)(1) else skip) &
@@ -296,8 +297,7 @@ object ODEInvariance {
         lpgeq(bound)
       case Triv() =>
         DebuggingTactics.debug("Triv",doPrint = debugTactic) &
-        closeF
-    }
+        closeF})
 
   /** Given a top-level succedent position corresponding to [x'=f(x)&Q]P
     * Tries to prove that P is a closed semialgebraic invariant, i.e. G|- [x'=f(x)&Q]P
@@ -434,9 +434,15 @@ object ODEInvariance {
     * 2) with a barrier certificate
     *
     * This tactic reorders conjunctions internally to try and find an order that works
+    *
+    * @param doReorder whether to reorder conjunctions
+    * @param skipClosed whether to skip over closed invariants
+    *                   (this should be used if the outer tactic already tried sAIclosedPlus, which is much faster
+    *                   than this one anyway)
+    *                   The option only applies if doReorder = true
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
     */
-  def sAIRankOne(doReorder:Boolean=true) : DependentPositionTactic = "sAIR1" byWithInput (doReorder,(pos:Position,seq:Sequent) => {
+  def sAIRankOne(doReorder:Boolean=true,skipClosed:Boolean =true) : DependentPositionTactic = "sAIR1" byWithInput (doReorder,(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only in top-level succedent")
     val (ode, dom, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
@@ -450,9 +456,19 @@ object ODEInvariance {
     }
 
     if (!doReorder) {
-      starter & cutR(f2)(pos) < (QE,
-        cohideR(pos) & implyR(1) & recRankOneTac(f2)
-      )
+      if (skipClosed & flattenConjunctions(f2).forall(
+        f => f match {
+          case Equal(_, _) => true
+          case GreaterEqual(_, _) => true
+          case _ => false
+        })) {
+        fail
+      }
+      else {
+        starter & cutR(f2)(pos) < (QE,
+          cohideR(pos) & implyR(1) & recRankOneTac(f2)
+        )
+      }
     }
     else {
       val f3 =
