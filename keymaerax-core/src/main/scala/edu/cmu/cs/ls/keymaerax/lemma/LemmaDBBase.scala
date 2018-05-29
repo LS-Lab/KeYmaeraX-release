@@ -9,7 +9,7 @@ package edu.cmu.cs.ls.keymaerax.lemma
 
 import edu.cmu.cs.ls.keymaerax.core.Lemma
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXExtendedLemmaParser
-import edu.cmu.cs.ls.keymaerax.pt.{NoProof, NoProofTermProvable, PTProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{NoProof, ElidingProvable, TermProvable, ProvableSig}
 
 /**
   * Common Lemma Database implemented from string-based storage primitives.
@@ -36,7 +36,7 @@ abstract class LemmaDBBase extends LemmaDB {
   private def saveLemma(lemma:Lemma, id:LemmaID): Unit = {
     val alternativeFact =
       if(ProvableSig.PROOF_TERMS_ENABLED) {
-        PTProvable(NoProofTermProvable(lemma.fact.underlyingProvable), NoProof())
+        TermProvable(ElidingProvable(lemma.fact.underlyingProvable), NoProof())
       } else {
         lemma.fact
       }
@@ -57,13 +57,13 @@ abstract class LemmaDBBase extends LemmaDB {
       case Some(got) =>
         val alternativeGot =
           got.fact match {
-            case PTProvable(pr, pt) => Lemma(PTProvable(pr, NoProof()), got.evidence, got.name)
+            case TermProvable(pr, pt) => Lemma(TermProvable(pr, NoProof()), got.evidence, got.name)
             case _ => got
           }
         if (alternativeGot != alternativeLemma) {
           val b1 = got.fact == alternativeLemma.fact
           val b1a = got.fact.underlyingProvable == alternativeLemma.fact.underlyingProvable
-          val b1b = got.fact.asInstanceOf[PTProvable].pt == alternativeLemma.fact.asInstanceOf[PTProvable].pt
+          val b1b = got.fact.asInstanceOf[TermProvable].pt == alternativeLemma.fact.asInstanceOf[TermProvable].pt
           val b2 = got.evidence == alternativeLemma.evidence
           val b3 = got.name == alternativeLemma.name
           remove(id)

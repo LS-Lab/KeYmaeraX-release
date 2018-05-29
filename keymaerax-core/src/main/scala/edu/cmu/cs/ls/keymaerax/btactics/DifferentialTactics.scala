@@ -1268,6 +1268,56 @@ private object DifferentialTactics extends Logging {
     SandR | fallback(pos)
   })
 
+  // Fresh implementation of ODE invariance tactics -- only applies for top-level succedents
+
+  // Try hard to prove G|-[x'=f(x)&Q]P by an invariance argument on P only (NO SOLVE)
+  lazy val odeInvariant: DependentPositionTactic = "odeInvariant" by ((pos:Position) => {
+    require(pos.isSucc && pos.isTopLevel, "ODE invariant only applicable in top-level succedent")
+    require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
+
+    //Add constant assumptions to domain constraint
+    DifferentialTactics.DconstV(pos) &
+      //Naive simplification of domain constraint
+      DifferentialTactics.domSimplify(pos) &
+      ((DifferentialTactics.diffWeakenG(pos) & QE & done) |
+        ODEInvariance.sAIclosedPlus(3)(pos) |
+        ODEInvariance.sAIRankOne(true)(pos))
+  })
+
+  // Asks Pegasus invariant generator for an invariant (DC chain)
+  // Try hard to prove G|-[x'=f(x)&Q]P by an invariance argument with the chain only (NO SOLVE)
+  lazy val odeInvariantAuto : DependentPositionTactic = "odeInvariant" by ((pos:Position, seq: Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "ODE invariant (with Pegasus) only applicable in top-level succedent")
+    require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
+
+    DifferentialTactics.DconstV(pos) & odeInvariantAuto(pos,seq)
+  })
+
+  private def odeInvariantAuto(pos:Position,seq:Sequent) = {
+    val invs = InvariantGenerator.pegasusInvariants(seq,pos).toList
+    //Empty list = failed to generate an invariant
+    //True ~ no DCs needed
+    //Else, DC chain
+    val qe =  QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE))))
+
+    // Assume that Pegasus hands us back a diffcut chain
+    invs.headOption match {
+      case None => throw new BelleThrowable(s"Pegasus failed to generate an invariant")
+      case Some(True) => diffWeakenG(pos) & qe & done
+      case _ =>
+        invs.foldRight(diffWeakenG(pos) & qe & done)( (fml,tac) =>
+          DC(fml)(pos) <(tac,
+            (
+            //todo: delete once Pegasus reports dC chain
+            (DifferentialTactics.diffWeakenG(pos) & QE & done) |
+            ODEInvariance.sAIclosedPlus(3)(pos) |
+            //todo: optimize further, this should be a last fallback, turn flag to false once Pegasus reports dC chain
+            ODEInvariance.sAIRankOne(true)(pos)) & done)
+        )
+    }
+  }
+
+
   // implementation helpers
 
   /** Computes quotient remainder resulting from (RATIONAL) polynomial division wrt domain
@@ -1415,6 +1465,9 @@ private object DifferentialTactics extends Logging {
   private lazy val geNorm: ProvableSig = remember("f_() >= g_() <-> f_() - g_() >= 0".asFormula,QE,namespace).fact
   private lazy val ltNorm: ProvableSig = remember("f_() < g_() <-> g_() - f_() > 0".asFormula,QE,namespace).fact
   private lazy val gtNorm: ProvableSig = remember("f_() > g_() <-> f_() - g_() > 0".asFormula,QE,namespace).fact
+  //TODO: are these normalizations better?
+//  private lazy val eqNorm: ProvableSig = remember(" f_() = g_() <-> -(f_() - g_())^2 >= 0 ".asFormula,QE,namespace).fact
+//  private lazy val neqNorm: ProvableSig = remember(" f_() != g_() <-> -(f_() - g_())^2 > 0 ".asFormula,QE,namespace).fact
   private lazy val eqNorm: ProvableSig = remember(" f_() = g_() <-> f_() - g_() = 0 ".asFormula,QE,namespace).fact
   private lazy val neqNorm: ProvableSig = remember(" f_() != g_() <-> f_() - g_() != 0 ".asFormula,QE,namespace).fact
   private lazy val minGeqNorm:ProvableSig = remember("f_()>=0&g_()>=0<->min((f_(),g_()))>=0".asFormula,QE,namespace).fact

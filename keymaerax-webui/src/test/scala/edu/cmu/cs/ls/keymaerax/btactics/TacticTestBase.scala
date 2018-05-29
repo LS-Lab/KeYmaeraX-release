@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalactic.{AbstractStringUniformity, Uniformity}
 import org.scalatest._
@@ -57,7 +57,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     case _ => false
   })
 
-  println("QE log path: " + qeLogPath + " (enabled: " + LOG_QE + ")")
+  if (LOG_QE) println("QE log path: " + qeLogPath + " (enabled: " + LOG_QE + ")")
 
   /** For tests that want to record proofs in the database. */
   def withDatabase(testcode: TempDBTools => Any): Unit = testcode(dbTester())
@@ -201,7 +201,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   def proveBy(p: Provable, tactic: BelleExpr): ProvableSig = {
-    val v = BelleProvable(NoProofTermProvable(p))
+    val v = BelleProvable(ElidingProvable(p))
     theInterpreter(tactic, v) match {
       case BelleProvable(provable, _) => provable
       case r => fail("Unexpected tactic result " + r)

@@ -118,7 +118,9 @@ object InvariantProvers {
               ChooseSome(() => gen(seq, pos).iterator.filterNot(localInv => Some(localInv)==odePost),
                 (localInv:Formula) => {
                   println/*logger.debug*/("loopPostMaster local " + localInv)
-                  dC(localInv)(pos) < (dW(pos) & QE(), odeInvariant(pos))
+                  DebuggingTactics.debug("local")&
+                  dC(localInv)(pos) < (dW(pos) & QE(), odeInvariant(pos)) &
+                  done & DebuggingTactics.debug("success")
                 })
             }))(pos)
           ,

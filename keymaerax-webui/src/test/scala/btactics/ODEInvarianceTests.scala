@@ -7,6 +7,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.ODEInvariance._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
+import scala.collection.immutable.IndexedSeq
+
 class ODEInvarianceTests extends TacticTestBase {
 
   "ODEInvariance" should "compute bounded p*>0" in withMathematica { qeTool =>
@@ -279,10 +281,10 @@ class ODEInvarianceTests extends TacticTestBase {
   it should "prove wien bridge with barrier certificate" in withMathematica { qeTool =>
     val fml = "x^2<=1/2&y^2<=1/3->[{x'=-x-1117*y/500+439*y^3/200-333*y^5/500,y'=x+617*y/500-439*y^3/200+333*y^5/500&true}]x-4*y < 8".asFormula
     val pr = proveBy(fml, implyR(1) &
-      dC("0.29974*x^4 + 0.88095*x^3*y + 1.2781*x^2*y^2 + 1.0779*x*y^3 + \n 0.36289*y^4 - 0.064049*x^3 - 0.31889*x^2*y - 0.55338*x*y^2 - \n 0.33535*y^3 + 0.63612*x^2 + 0.44252*x*y + 1.4492*y^2 + 0.28572*x - \n 0.051594*y - 2.1067 <= 0 & x-4*y < 8".asFormula)(1) <(
+      dC("0.29974*x^4 + 0.88095*x^3*y + 1.2781*x^2*y^2 + 1.0779*x*y^3 + \n 0.36289*y^4 - 0.064049*x^3 - 0.31889*x^2*y - 0.55338*x*y^2 - \n 0.33535*y^3 + 0.63612*x^2 + 0.44252*x*y + 1.4492*y^2 + 0.28572*x - \n 0.051594*y - 2.1067 <= 0 & x-4*y <= 8".asFormula)(1) <(
       dW(1) & QE,
       //dgBarrier(1)
-      odeInvariant(1)
+      sAIclosedPlus()(1)
     ))
     println(pr)
     pr shouldBe 'proved

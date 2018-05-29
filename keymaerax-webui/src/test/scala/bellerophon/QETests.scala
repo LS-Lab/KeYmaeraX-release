@@ -62,7 +62,7 @@ class QETests extends TacticTestBase {
 
   it should "fail x()=x" in withMathematica { qeTool =>
     the [BelleThrowable] thrownBy proveBy("x()=x".asFormula, ToolTactics.fullQE(qeTool) & done) should have message
-      """[Bellerophon Runtime] Expected proved provable, but got NoProofTermProvable(Provable(  ==>  x()=x
+      """[Bellerophon Runtime] Expected proved provable, but got ElidingProvable(Provable(  ==>  x()=x
         |  from     ==>  false))""".stripMargin
   }
 

@@ -30,7 +30,7 @@ import java.util.{Calendar, Locale}
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
-import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 
 import scala.io.Source
 import scala.collection.immutable._
@@ -2081,7 +2081,7 @@ object ProofValidationRunner extends Logging {
     new Thread(new Runnable() {
       override def run(): Unit = {
         logger.trace(s"Received request to validate $taskId. Running in separate thread.")
-        val provable = NoProofTermProvable( Provable.startProof(model) )
+        val provable = ElidingProvable( Provable.startProof(model) )
 
         try {
           BelleInterpreter(proof, BelleProvable(provable)) match {

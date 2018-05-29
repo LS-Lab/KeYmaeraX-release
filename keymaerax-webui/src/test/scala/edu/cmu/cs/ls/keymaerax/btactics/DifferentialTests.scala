@@ -3,7 +3,8 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics.{diffCut, diffWeaken}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{fail, _}
 import edu.cmu.cs.ls.keymaerax.core._
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest}
 
@@ -1392,7 +1393,7 @@ class DifferentialTests extends TacticTestBase with Timeouts {
 
     InvariantGenerator.differentialInvariantCandidates(problem, SuccPos(0)) should contain theSameElementsInOrderAs(
       "x>-1".asFormula::"-2*x>1".asFormula::"-2*y>1".asFormula::"y>=-1".asFormula::
-      "x^5 <= (x+4*x^3)*y".asFormula::"y <= 0".asFormula::"x^5 <= (x+4*x^3)*y & y <= 0".asFormula :: Nil)
+      "x^5+-1*x*y+-4*x^3*y<=0&y<=0".asFormula::"x^5+-1*x*y+-4*x^3*y<=0".asFormula::"y<=0".asFormula :: Nil)
   }
 
   it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs SlowTest in withMathematica { _ =>
@@ -1483,6 +1484,48 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     }
   }
 
+  it should "standalone test of pegasus + odeInvariant only" taggedAs SlowTest in withMathematica { _ =>
+    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "180", saveToFile = false)
+    Configuration.set(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT, "60", saveToFile = false)
+
+    val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
+      getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
+    var generated = 0
+    var success = 0
+    var total = 0
+    forEvery(Table(("Name", "Model", "Tactic"), entries.
+      map(e => (e.name, e.model, e.tactics)): _*)) {
+      (name, model, _) =>
+        println("\n" + name + " " + model)
+        try {
+          failAfter(3 minutes) {
+            total+=1
+            try {
+              val pr = proveBy(model.asInstanceOf[Formula], implyR(1) & odeInvariantAuto(1) & done)
+              success+=1
+              generated += 1
+            }
+            catch {
+              case ex: BelleThrowable =>
+                if(ex.getMessage.contains("Pegasus failed to generate an invariant"))
+                  println("Pegasus did not generate an invariant")
+                else {
+                  println(ex.getMessage)
+                  generated += 1
+                }
+            }
+          }
+          println(name + " done.")
+          println("Total: "+total+" Generated: "+generated+" Proved: ",success)
+        }
+        catch {
+          case ex: IllegalArgumentException =>
+            println(name + " not of expected form")
+        }
+    }
+    println("Total: "+total+" Generated: "+generated+" Proved: ",success)
+  }
+
   /**
     * Test cases for the Darboux ghost tactics
     */
@@ -1529,48 +1572,11 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
   }
 
-  it should "prove < fractional darboux" in withMathematica { _ =>
-    //(x+z)' =  (1/z^2)(x+z) - x^2 <= (1/z^2)(x+z)
-    //Maybe this should leave open that the remainder is >= 0?
-    val seq = "x+z<0 ==> [{x'=1/z, z' = x/z^2 + y & z^2 > 0 & y = -x^2}] x+z<0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
-    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
-  }
-
   it should "automatically find equational darboux" in withMathematica { _ =>
     //(x+z)' = (x*A+B)(x+z)
     val seq = "x+z=0 ==> [{x'=(A*x^2+B()*x), z' = A*z*x+B()*z}] 0=-x-z".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
     TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
-  }
-
-  it should "automatically find fractional darboux" in withMathematica { _ =>
-    //(x+z)' = ((x*A+B)/z^2)(x+z), where z^2 > 0
-    val seq = "x+z=0 ==> [{x'=(A*x^2+B()*x)/z^2, z' = (A*x+B())/z & z^2 > 0}] x+z=0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
-    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
-  }
-
-  it should "fail to find fractional darboux" in withMathematica { _ =>
-    //(x+z)' = ((x*A+B)/z^2)(x+z), where z^2 > 0
-    val seq = "x+z=0 ==> [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&y=x^2&z^2>0}] x+z=0".asSequent
-    the [BelleThrowable] thrownBy TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) should have message
-      """[Bellerophon Runtime] Tactic dbx(1) is not applicable to
-        |    [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&y=x^2&z^2>0}]x+z=0
-        |at position Fixed(1,None,true)
-        |because Automatic darboux failed -- poly :x+z-0 lie: z^-2*(B()*(x+z)+A*(y+x*z)) cofactor: 1*(B()+A*z) denom: z^2*1 rem: -1*A+A*y*z^-2 unable to prove: z^2*1!=0&-1*A+A*y*z^-2=0""".stripMargin
-    TactixLibrary.proveBy(seq, ODE(1)) should not be 'proved
-    TactixLibrary.proveBy(seq, master()) should not be 'proved
-    the [BelleThrowable] thrownBy TactixLibrary.proveBy(seq, auto) should have message
-      """[Bellerophon Runtime] Expected proved provable, but got NoProofTermProvable(Provable(x+z=0
-        |  ==>  [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&y=x^2&z^2>0}]x+z=0
-        |  from   x+z=0
-        |  ==>  [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&y=x^2&z^2>0}]x+z=0))""".stripMargin
-  }
-
-  it should "not fail when evolution domain already contains denominator and remainder sign requirements" in withMathematica { _ =>
-    val seq = "x=-z ==> [{x'=(A*y+B()*x)/z^2,z'=(A*x+B())/z&(y=x^2&z^2>0)&z^2*1!=0&-1*A+A*y*z^-2=0}]x=-z+0".asSequent
-    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
   }
 
   it should "fail with evolution domain constraints" in withMathematica { _ =>

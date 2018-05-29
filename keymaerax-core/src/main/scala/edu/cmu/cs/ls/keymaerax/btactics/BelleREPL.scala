@@ -5,9 +5,9 @@ import java.io.PrintWriter
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
-import scala.util.control.Breaks._
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ElidingProvable$, ProvableSig}
 
+import scala.util.control.Breaks._
 import scala.util.Try
 
 /** Credit for Eval class to https://gist.github.com/xuwei-k/9ba39fe22f120cb098f4 */
@@ -67,7 +67,7 @@ class BelleREPL (val concl:Formula, val initTactic:Option[String], val initScala
   private class REPLParseException(err:String) extends Exception
 
   def interpret(e:BelleExpr, pr:Provable):ProvableSig = {
-    BelleInterpreter(e, BelleProvable(NoProofTermProvable(pr))) match {
+    BelleInterpreter(e, BelleProvable(ElidingProvable(pr))) match {
       case BelleProvable(result,_) => result
     }
   }

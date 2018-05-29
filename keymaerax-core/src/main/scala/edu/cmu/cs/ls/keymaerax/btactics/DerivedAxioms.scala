@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allInstantiateInvers
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.{AxiomTerm, NoProofTermProvable, PTProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.Logging
 
@@ -55,10 +55,10 @@ object DerivedAxioms extends Logging {
   private[btactics] def derivedAxiom(name: String, fact: ProvableSig): Lemma = {
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
     val lemmaName = DerivedAxiomInfo(name).storedName
-    val npt = NoProofTermProvable(fact.underlyingProvable)
+    val npt = ElidingProvable(fact.underlyingProvable)
     val alternativeFact =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
-        PTProvable(npt, AxiomTerm(lemmaName))
+        TermProvable(npt, AxiomTerm(lemmaName))
       } else {
         npt
       }

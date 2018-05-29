@@ -73,7 +73,7 @@ object Lemma {
 
     val ptProvable =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
-        PTProvable(NoProofTermProvable(fact), name match { case Some(n) =>
+        TermProvable(ElidingProvable(fact), name match { case Some(n) =>
           DerivedAxiomInfo.allInfo.find(info => info.storedName == n) match {
             case Some(info) =>
             AxiomTerm(info.canonicalName)
@@ -85,7 +85,7 @@ object Lemma {
           }
         case None => FOLRConstant(sequents.head.succ.head) })
       } else {
-        NoProofTermProvable(fact)
+        ElidingProvable(fact)
       }
     Lemma(ptProvable, evidence, name) //@todo also load proof terms.
   }

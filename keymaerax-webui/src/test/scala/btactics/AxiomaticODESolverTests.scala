@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{byUS, _}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
-import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable$, ProvableSig}
 import org.scalatest.PrivateMethodTester
 import testHelper.KeYmaeraXTestTags.{DeploymentTest, IgnoreInBuildTest, SummaryTest, TodoTest}
 
