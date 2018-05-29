@@ -560,7 +560,7 @@ formula
 
 Options[DWC]={TransitionRemovalMethod->"LZZ-vanilla", Parallel->False, SimplifyInvariant->DoNotSimplify, Smallest->False, WorkingPrecision -> \[Infinity]};
 
-DWC[precond_, postcond_, system_List, A0_List, opts:OptionsPattern[]]:=Catch[
+DWC[precond_, postcond_, system_List, A0_List, cuts_List, opts:OptionsPattern[]]:=Catch[
 Module[{GT,EQ,LT,p,f=system[[1]],vars=system[[2]],H0=system[[3]]},
 
 SetOptions[Reduce,WorkingPrecision-> OptionValue[WorkingPrecision]];
@@ -574,10 +574,10 @@ SIMPLIFY=OptionValue[SimplifyInvariant]/.{FullSimplify-> FullSimplify, Simplify 
 USEDW=Not[TrueQ[OptionValue[Smallest]/.{True->True, _->False}]];
 
 (* Sufficiency check: No evolution from the initial set, so no reachable set *)
-If[TrueQ[Reduce[ForAll[vars,Not[H0 && precond]],vars,Reals]], Throw[False] ]; 
+If[TrueQ[Reduce[ForAll[vars,Not[H0 && precond]],vars,Reals]], Throw[{False, cuts}] ]; 
 
 (* DW check *)
-If[USEDW && TrueQ[Reduce[ForAll[vars,Implies[H0, postcond]],vars,Reals]], Print["DW"]; Throw[H0] ]; 
+If[USEDW && TrueQ[Reduce[ForAll[vars,Implies[H0, postcond]],vars,Reals]], Print["DW"]; Throw[{H0, cuts}] ]; 
 
 (* Main loop *)
 Do[p=SIMPLIFY[A0[[i]],H0]; 
@@ -585,19 +585,19 @@ Do[p=SIMPLIFY[A0[[i]],H0];
 (* DC check 0 *)
 If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p==0]],vars,Reals]]) && (TrueQ[InvS[p==0, f, vars, H0]]),
 Print["DC on ", p==0];
-Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p==0), Reals]}, Delete[A0,i]]]
+Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p==0), Reals]}, Delete[A0,i], Join[cuts,{p==0}]]]
 ];
 
 (* DC check 1 *)
 If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p>=0]],vars,Reals]]) && (TrueQ[InvS[p>=0, f, vars, H0]]),
 Print["DC on ", p>=0];
-Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p>=0), Reals]}, Delete[A0,i]]]
+Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p>=0), Reals]}, Delete[A0,i], Join[cuts,{p>=0}]]]
 ];
 
 (* DC check 2 *)
 If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p<=0]],vars,Reals]]) && (TrueQ[InvS[p<=0, f, vars, H0]]),
 Print["DC on ", p<=0];
-Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p<=0), Reals]}, Delete[A0,i]]]
+Throw[DWC[precond,postcond,{f,vars, SIMPLIFY[(H0 && p<=0), Reals]}, Delete[A0,i], Join[cuts,{p<=0}]]]
 ];
 
  (*DDC check  *)
@@ -617,7 +617,7 @@ Throw[SIMPLIFY[(GT || EQ || LT),Reals]]
 
 Print["No more cuts ... "];
 
-Throw[H0]
+Throw[{H0, cuts}]
 ]]
 
 
@@ -644,16 +644,16 @@ If[TrueQ[Reduce[ForAll[vars,Implies[H0, postcond]],vars,Reals]], Throw[H0] ];
 Do[p=A0[[i]];
 
 (* DC check 1 *)
-If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p>0]],vars,Reals]]) && (TrueQ[InvS[p>0, f, vars, H0]]),
-Print["DC on ", p>0];
-Throw[DWCLZR[precond,postcond,{f,vars,(H0 && p>0)}, Delete[A0,i]]]
+If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p>=0]],vars,Reals]]) && (TrueQ[InvS[p>=0, f, vars, H0]]),
+Print["DC on ", p>=0];
+Throw[DWCLZR[precond,postcond,{f,vars,(H0 && p>=0)}, Delete[A0,i]]]
 ];
 
 (* DC check 2 *)
-If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p<0]],vars,Reals]]) && (TrueQ[InvS[p<0, f, vars, H0]]),
-Print["DC on ", p<0];
-Throw[DWCLZR[precond,postcond,{f,vars, (H0 && p<0)}, Delete[A0,i]]]
-];
+If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p<0]],vars,Reals]]) && (TrueQ[InvS[p<=0, f, vars, H0]]),
+Print["DC on ", p<=0];
+Throw[DWCLZR[precond,postcond,{f,vars, (H0 && p<=0)}, Delete[A0,i]]]
+]; 
 
 (* DDC check 
 If[TrueQ[TrueQ[InvS[p==0, f, vars, H0]] && TrueQ[InvS[p==0, -f, vars, H0]]],
