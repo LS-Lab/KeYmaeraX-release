@@ -733,7 +733,7 @@ private object DifferentialTactics extends Logging {
     case Some(Box(ODESystem(ode, q), _)) =>
       val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
       val qAtoms = FormulaTools.conjuncts(q).toSet
-      odeInvariant(pos) | solve(pos) | ODE(useOdeInvariant=false, introduceStuttering=true,
+      odeInvariant(true)(pos) | solve(pos) | ODE(useOdeInvariant=false, introduceStuttering=true,
         //@note abort if unchanged
         assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) match {
           case Some(Box(ODESystem(extendedOde, extendedQ), _)) =>
@@ -1112,6 +1112,7 @@ private object DifferentialTactics extends Logging {
 
     val pr = proveBy(Imply(dom,denRemReq), QE)
 
+    //println(pr,denRemReq,lie,q,p,r)
     if(!pr.isProved && strict)
       throw new BelleThrowable("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+q+" rem: "+r+" unable to prove: "+denRemReq)
 
@@ -1271,17 +1272,22 @@ private object DifferentialTactics extends Logging {
   // Fresh implementation of ODE invariance tactics -- only applies for top-level succedents
 
   // Try hard to prove G|-[x'=f(x)&Q]P by an invariance argument on P only (NO SOLVE)
-  lazy val odeInvariant: DependentPositionTactic = "odeInvariant" by ((pos:Position) => {
+  def odeInvariant(tryHard:Boolean = false): DependentPositionTactic = "odeInvariant" by ((pos:Position) => {
     require(pos.isSucc && pos.isTopLevel, "ODE invariant only applicable in top-level succedent")
     require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
+
+    //todo: Ideally this will go for full rank + everything proof if tryHard=true
+    val rankConfig = if(tryHard) 3 else 1
+    //todo: and this should disappear for tryHard mode
+    val reorderConfig = if(tryHard) true else false
 
     //Add constant assumptions to domain constraint
     DifferentialTactics.DconstV(pos) &
       //Naive simplification of domain constraint
       DifferentialTactics.domSimplify(pos) &
       ((DifferentialTactics.diffWeakenG(pos) & QE & done) |
-        ODEInvariance.sAIclosedPlus(3)(pos) |
-        ODEInvariance.sAIRankOne(true)(pos))
+        ODEInvariance.sAIclosedPlus(rankConfig)(pos) |
+        ODEInvariance.sAIRankOne(reorderConfig)(pos))
   })
 
   // Asks Pegasus invariant generator for an invariant (DC chain)
@@ -1308,11 +1314,10 @@ private object DifferentialTactics extends Logging {
         invs.foldRight(diffWeakenG(pos) & qe & done)( (fml,tac) =>
           DC(fml)(pos) <(tac,
             (
-            //todo: delete once Pegasus reports dC chain
+            //todo: delete repeated dW&QE once Pegasus reports dC chain
             (DifferentialTactics.diffWeakenG(pos) & QE & done) |
-            ODEInvariance.sAIclosedPlus(3)(pos) |
-            //todo: optimize further, this should be a last fallback, turn flag to false once Pegasus reports dC chain
-            ODEInvariance.sAIRankOne(true)(pos)) & done)
+            ODEInvariance.sAIclosedPlus(1)(pos) |
+            ODEInvariance.sAIRankOne(false)(pos)) & done)
         )
     }
   }
