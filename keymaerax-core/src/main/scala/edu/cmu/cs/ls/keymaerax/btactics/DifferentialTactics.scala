@@ -728,8 +728,9 @@ private object DifferentialTactics extends Logging {
     * @see [[TactixLibrary.ODE]]
     * @author Andre Platzer
     * @author Nathan Fulton
+    * @author Stefan Mitsch
     */
-  lazy val ODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+  lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(Box(ODESystem(ode, q), _)) =>
       val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
       val qAtoms = FormulaTools.conjuncts(q).toSet
@@ -770,6 +771,20 @@ private object DifferentialTactics extends Logging {
           dgZeroPolynomial(pos)  //Equalities
         })
 
+    val proveInvariant = "ANON" by ((pos: Position, seq: Sequent) => {
+      val post: Formula = seq.sub(pos) match {
+        case Some(Box(ode: ODESystem, pf)) => pf
+        case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
+        case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
+      }
+      val isOpen = post match {
+        case  _: Greater => true
+        case _: Less => true
+        case _ => false
+      }
+      TactixLibrary.odeInvariant(pos) | compatibilityFallback(isOpen)
+    })
+
     //Tries to prove without any invariant generation or solving.
     val proveWithoutCuts = "ANON" by ((pos: Position) => {
       SaturateTactic(boxAnd(pos) & andR(pos)) &
@@ -792,7 +807,7 @@ private object DifferentialTactics extends Logging {
           //@note diffWeaken will already include all cases where V works, without much additional effort.
           (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
             diffWeaken(pos) & QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE)))) & done else fail
-          ) | (if (useOdeInvariant) TactixLibrary.odeInvariant(pos) | compatibilityFallback(isOpen)
+          ) | (if (useOdeInvariant) proveInvariant(pos)
                else compatibilityFallback(isOpen))
         })) (pos))
     })
@@ -804,7 +819,7 @@ private object DifferentialTactics extends Logging {
       (inv: Formula) => {
         DebuggingTactics.print(s"[ODE] Trying to cut in invariant candidate: $inv") &
         /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
-        diffCut(inv)(pos) <(skip, proveWithoutCuts(pos) & done)
+        diffCut(inv)(pos) <(skip, proveInvariant(pos) & done)
       }
     )
 
@@ -840,6 +855,79 @@ private object DifferentialTactics extends Logging {
         ODE(useOdeInvariant=true, introduceStuttering,finish)(pos)) & done) |
       (if (introduceStuttering) stutter(pos) & ODE(useOdeInvariant=true, introduceStuttering=false, finish)(pos) & unstutter(pos) & done
        else finish)
+  })
+
+  /**
+    * @see [[TactixLibrary.ODE]]
+    * @author Andre Platzer
+    * @author Nathan Fulton
+    * @author Stefan Mitsch
+    */
+  lazy val fastODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+    case Some(Box(ODESystem(ode, q), _)) =>
+      val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
+      val qAtoms = FormulaTools.conjuncts(q).toSet
+
+      /*DconstV(pos) &*/ (odeInvariant(pos) | solve(pos) | fastODE(
+        //@note abort if unchanged
+        assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) match {
+          case Some(Box(ODESystem(extendedOde, extendedQ), _)) =>
+            odeAtoms.subsetOf(DifferentialHelper.atomicOdes(extendedOde).toSet) ||
+              qAtoms.subsetOf(FormulaTools.conjuncts(extendedQ).toSet)
+          case _ => false
+        }, failureMessage)(pos) &
+          ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
+            case Some(ODESystem(_, extendedQ)) =>
+              if (q == True && extendedQ != True) useAt("true&")(ppos ++
+                PosInExpr(1 +: FormulaTools.posOf(extendedQ, q).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
+              else skip
+          }))(pos ++ PosInExpr(0::Nil))
+      )(pos)) & DebuggingTactics.print("ODE done")
+  })
+
+  private def fastODE(finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+    val invariantCandidates = try {
+      InvariantGenerator.differentialInvariantGenerator(seq,pos)
+    } catch {
+      case err: Exception =>
+        logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
+        Stream[Formula]()
+    }
+
+    val proveFromEvolutionDomain = "ANON" by ((pos: Position) => {
+      SaturateTactic(boxAnd(pos) & andR(pos)) &
+        onAll(("ANON" by ((pos: Position, seq: Sequent) => {
+          val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
+            case Some(Box(ode: ODESystem, pf)) => (ode, pf)
+            case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
+            case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
+          }
+
+          val bounds = StaticSemantics.boundVars(ode.ode).symbols //@note ordering irrelevant, only intersecting/subsetof
+          val frees = StaticSemantics.freeVars(post).symbols      //@note ordering irrelevant, only intersecting/subsetof
+
+          //@note diffWeaken will already include all cases where V works, without much additional effort.
+          if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
+            diffWeaken(pos) & QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE)))) & done
+          else fail
+        })) (pos))
+    })
+
+    //Adds an invariant to the system's evolution domain constraint and tries to establish the invariant via proveWithoutCuts.
+    //Fails if the invariant cannot be established by proveWithoutCuts.
+    val addInvariant = ChooseSome(
+      () => invariantCandidates.iterator,
+      (inv: Formula) => {
+        DebuggingTactics.print(s"[ODE] Trying to cut in invariant candidate: $inv") &
+          /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
+          diffCut(inv)(pos) <(skip, odeInvariant(pos) & done)
+      }
+    )
+
+    proveFromEvolutionDomain(pos) & DebuggingTactics.print("ODE dW") & done |
+      odeInvariant(pos) & DebuggingTactics.print("ODE YK") & done |
+      addInvariant & DebuggingTactics.print("inv added") & fastODE(finish)(pos) & DebuggingTactics.print("ODE inv") |
+      finish & DebuggingTactics.print("ODE finish")
   })
 
   /** Splits a post-condition containing a weak inequality into an open set case and an equillibrium point case.

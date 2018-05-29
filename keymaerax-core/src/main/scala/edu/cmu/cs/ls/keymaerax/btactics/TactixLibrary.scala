@@ -384,7 +384,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[openDiffInd]]
     * @see [[dG]]
     */
-  lazy val ODE: DependentPositionTactic = DifferentialTactics.ODE
+  lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position) => {
+    if (ToolProvider.qeTool(Some("Mathematica")).isDefined) DifferentialTactics.fastODE(pos)
+    else DifferentialTactics.ODE(pos)
+  })
 
   /**
     * ODE tactics that try hard to prove
