@@ -302,6 +302,7 @@ class LoopInvTests extends TacticTestBase with Timeouts /* TimeLimits does not a
   it should "find an invariant when first a branch informative (scripted)" in withMathematica { _ =>
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1&t<=1&v>=0}}*]x<=10".asFormula
     val invs = ("10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0" :: "v*v<=10-x" :: "v=0&x<=10" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula).toStream
+    //todo: this fails with the default (fast) odeInvariance setting because of DC chain v=0 & x<=10
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
   }
 
