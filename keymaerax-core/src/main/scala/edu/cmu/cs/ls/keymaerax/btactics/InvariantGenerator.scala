@@ -131,15 +131,10 @@ object InvariantGenerator extends Logging {
     case Some(Box(ode: ODESystem, post: Formula)) if post.isFOL =>
       ToolProvider.invGenTool() match {
         case Some(tool) =>
-          //@todo Pegasus should report diffcut chains
-          def toDCChain(candidates: Seq[Formula]): Seq[Formula] = candidates match {
-            case (f: And) :: tail => (f +: FormulaTools.leftConjuncts(f)) ++ toDCChain(tail)
-            case fmls => fmls
-          }
           lazy val pegasusInvs = tool.invgen(ode, sequent.ante, post)
-          lazy val invs = toDCChain(
-            if (includeCandidates) pegasusInvs.map({ case Left(l) => l case Right(r) => r })
-            else pegasusInvs.filter(_.isLeft).map(_.left.get))
+          lazy val invs =
+            if (includeCandidates) pegasusInvs.flatMap({ case Left(l) => l case Right(r) => r })
+            else pegasusInvs.filter(_.isLeft).flatMap(_.left.get)
           Stream[Formula]() #::: invs.toStream
         case _ => Seq().toStream
       }
