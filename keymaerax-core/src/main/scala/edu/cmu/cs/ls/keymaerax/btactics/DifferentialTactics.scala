@@ -348,7 +348,6 @@ private object DifferentialTactics extends Logging {
   // G|- [x'=f(x)&R]P, D     G|- [x'=f(x)&Q]R
   // --- dR
   // G|- [x'=f(x)&Q]P, D
-
   def diffRefine(f:Formula,hide:Boolean=true) : DependentPositionTactic =
     "diffRefine" byWithInputs (f::hide::Nil,(pos,sequent) => {
     require(pos.isTopLevel, "diffRefine only at top-level succedents/antecedents")
@@ -396,11 +395,11 @@ private object DifferentialTactics extends Logging {
   })
 
   /**
-   * Turns things that are constant in ODEs into function symbols.
+    * Turns things that are constant in ODEs into function symbols.
     *
     * @example Turns v>0, a>0 |- [v'=a;]v>0, a>0 into v>0, a()>0 |- [v'=a();]v>0, a()>0
-   * @return The tactic.
-   */
+    * @return The tactic.
+    */
   def Dconstify(inner: BelleExpr): DependentPositionTactic = TacticFactory.anon ((pos: Position, seq: Sequent) => {
     seq.sub(pos) match {
       case Some(Box(ode@ODESystem(_, _), p)) =>
@@ -441,7 +440,6 @@ private object DifferentialTactics extends Logging {
     * This uses the default simplifier configuration
     * @example Turns |- [v'=a & a>0](a>0&v>0) into |- [v'=a & a>0]v>0
     */
-
   def domSimplify : DependentPositionTactic = "domSimplify" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "domSimplify currently only works at top-level succedents")
 
@@ -1370,10 +1368,13 @@ private object DifferentialTactics extends Logging {
     val reorderConfig = if(tryHard) true else false
 
     //Add constant assumptions to domain constraint
+    //DebuggingTactics.print("DConstV") &
     DifferentialTactics.DconstV(pos) &
       //Naive simplification of domain constraint
+      //DebuggingTactics.print("domSimplify") &
       DifferentialTactics.domSimplify(pos) &
-      ((DifferentialTactics.diffWeakenG(pos) & QE & done) |
+      //DebuggingTactics.print("close") &
+      ( (DifferentialTactics.diffWeakenG(pos) & DebuggingTactics.print("QE") & QE & DebuggingTactics.print("after") & done) |
         ODEInvariance.sAIclosedPlus(rankConfig)(pos) |
         ODEInvariance.sAIRankOne(reorderConfig)(pos))
   })
@@ -1413,54 +1414,39 @@ private object DifferentialTactics extends Logging {
 
   // implementation helpers
 
-  /** Computes quotient remainder resulting from (RATIONAL) polynomial division wrt domain
+  /** Computes quotient remainder resulting from (RATIONAL) polynomial division wrt equalities in domain
     * @param poly polynomial to divide
     * @param div divisor
     * @param dom domain constraint
     * @return (q,r) where Q |- poly = q*div + r , q,r are polynomials
     */
-  def domQuoRem(poly:Term, div:Term, dom:Formula) : (Term,Term) = {
+  def domQuoRem(poly: Term, div: Term, dom: Formula): (Term,Term) = {
     //TODO: remove dependence on algebra tool
     if (ToolProvider.algebraTool().isEmpty) {
       throw new BelleThrowable(s"duoQuoRem requires a AlgebraTool, but got None")
       // val polynorm = PolynomialArith.normalise(poly,true)._1
-      //  val divnorm = PolynomialArith.normalise(div,true)._1
+      // val divnorm = PolynomialArith.normalise(div,true)._1
     }
-
     else {
       val algTool = ToolProvider.algebraTool().get
-
-      //todo: groebnerBasis seems broken for > 1 term??
-      //todo: comment above might require own MathematicaToKeYmaera converter,
-      //      since the default converter for QE accepts lists of length=2 only to represent Pairs
-      //val gb = p::domToTerms(dom)
-      val domterms = domToTerms(dom)
-
-      val gb = if (domterms.nonEmpty) {
-        try {
-          algTool.groebnerBasis(domterms)
-        } catch {
-          case _: ToolException => Nil
-        }
-      } else Nil
+      val gb = algTool.groebnerBasis(domToTerms(dom))
       val quo = algTool.polynomialReduce(poly, div :: gb)
       // quo._1.head is the cofactor of div (q)
       // quo._2 is the remainder (r)
 
       (quo._1.head,quo._2)
-      //Older support for polynomials
+      //Older support for rational functions
       //val (g, q) = stripDenom(quo._1.head)
       //if ((FormulaTools.singularities(g) ++ FormulaTools.singularities(q)).isEmpty) (g, q, quo._2)
       //else (Number(0), Number(1), poly)
     }
   }
 
-  //Keeps the top level =s in evol domain as a groebner basis of terms?
+  //Keeps equalities in domain constraint
   private def domToTerms(f:Formula) : List[Term] = {
-    f match {
-      case Equal(l,r) => Minus(l,r) :: Nil
-      case And(l,r) => domToTerms(l) ++ domToTerms(r)
-      case _ => Nil
+    flattenConjunctions(f).flatMap{
+      case Equal(l,r) => Some(Minus(l,r))
+      case _ => None
     }
   }
 
@@ -1559,8 +1545,8 @@ private object DifferentialTactics extends Logging {
   private lazy val ltNorm: ProvableSig = remember("f_() < g_() <-> g_() - f_() > 0".asFormula,QE,namespace).fact
   private lazy val gtNorm: ProvableSig = remember("f_() > g_() <-> f_() - g_() > 0".asFormula,QE,namespace).fact
   //TODO: are these normalizations better?
-//  private lazy val eqNorm: ProvableSig = remember(" f_() = g_() <-> -(f_() - g_())^2 >= 0 ".asFormula,QE,namespace).fact
-//  private lazy val neqNorm: ProvableSig = remember(" f_() != g_() <-> -(f_() - g_())^2 > 0 ".asFormula,QE,namespace).fact
+  //private lazy val eqNorm: ProvableSig = remember(" f_() = g_() <-> -(f_() - g_())^2 >= 0 ".asFormula,QE,namespace).fact
+  //private lazy val neqNorm: ProvableSig = remember(" f_() != g_() <-> -(f_() - g_())^2 > 0 ".asFormula,QE,namespace).fact
   private lazy val eqNorm: ProvableSig = remember(" f_() = g_() <-> f_() - g_() = 0 ".asFormula,QE,namespace).fact
   private lazy val neqNorm: ProvableSig = remember(" f_() != g_() <-> f_() - g_() != 0 ".asFormula,QE,namespace).fact
   private lazy val minGeqNorm:ProvableSig = remember("f_()>=0&g_()>=0<->min((f_(),g_()))>=0".asFormula,QE,namespace).fact
@@ -1639,7 +1625,7 @@ private object DifferentialTactics extends Logging {
   /**
     * Normalize with respect to a simplification index (with NNF built-in)
     */
-  def doNormalize(fi:formulaIndex)(f:Formula) : (Formula,Option[ProvableSig]) = {
+  private def doNormalize(fi:formulaIndex)(f:Formula) : (Formula,Option[ProvableSig]) = {
     to_NNF(f) match {
       case Some((nnf,pr)) =>
         val (ff,propt) = SimplifierV3.simpWithDischarge (IndexedSeq[Formula] (), nnf, fi, SimplifierV3.emptyTaxs)
@@ -1654,18 +1640,18 @@ private object DifferentialTactics extends Logging {
   }
 
   /**
-    * Various normalization steps
+    * Various normalization steps (the first thing each of them do is NNF normalize)
     * ineqNormalize : normalizes atomic inequalities only
-    * atomNormalize : normalizes all atomic comparisons
+    * atomNormalize : normalizes all (nested) atomic comparisons
     * semiAlgNormalize : semialgebraic to have 0 on RHS
     * maxMinGeqNormalize : max,min >=0 normal form
     */
-  val ineqNormalize = doNormalize(ineqNormalizeIndex)(_)
-  val atomNormalize = doNormalize(atomNormalizeIndex)(_)
-  val semiAlgNormalize = doNormalize(semiAlgNormalizeIndex)(_)
-  val maxMinGeqNormalize = doNormalize(maxMinGeqNormalizeIndex)(_)
+  val ineqNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(ineqNormalizeIndex)(_)
+  val atomNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(atomNormalizeIndex)(_)
+  val semiAlgNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(semiAlgNormalizeIndex)(_)
+  val maxMinGeqNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGeqNormalizeIndex)(_)
 
-
+  /** Flattens a formula to a list of its top-level conjunctions */
   def flattenConjunctions(f: Formula): List[Formula] = {
     var result: List[Formula] = Nil
     ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
