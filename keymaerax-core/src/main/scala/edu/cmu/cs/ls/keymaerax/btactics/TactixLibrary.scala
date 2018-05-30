@@ -375,12 +375,23 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   lazy val ODE: DependentPositionTactic = DifferentialTactics.ODE
 
   /**
-    * ODE tactics that try hard to prove
-    * G |- [x'=f(x) & Q]P with invariant techniques [LICS'18]
-    * The auto version additionally calls Pegasus to generate an invariant
-    * */
+    * Attempts to prove ODE property as an invariant of the ODE directly [LICS'18]
+    * G |- P    P |- [x'=f(x)&Q]P
+    * ---
+    * G |- [x'=f(x)&Q]P
+    * (Default behavior: fast (but incomplete) version, no solving attempted)
+    **/
   lazy val odeInvariant: DependentPositionTactic = DifferentialTactics.odeInvariant(false)
 
+  /**
+    * Attemppts to prove ODE property by asking for an automatically generated invariant C from Pegasus, i.e.,
+    *
+    * G |- C  C |- [x'=f(x)&Q]C C |- P
+    * ---
+    * G |- [x'=f(x)&Q]P
+    *
+    * (fast version, no solving attempted)
+    */
   lazy val odeInvariantAuto: DependentPositionTactic = DifferentialTactics.odeInvariantAuto
 
   /** DG/DA differential ghosts that are generated automatically to prove differential equations.
@@ -430,7 +441,14 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   //@todo("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
   def dC(formulas: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(formulas:_*)
 
-  def dR(formula: Formula, hide:Boolean=true) : DependentPositionTactic = DifferentialTactics.diffRefine(formula,hide)
+  /** Refine top-level antecedent/succedent ODE domain constraint
+    * G|- [x'=f(x)&R]P, D     G|- [x'=f(x)&Q]R, (D)?
+    * --- dR
+    * G|- [x'=f(x)&Q]P, D
+    * @param formula the formula R to refine Q to
+    * @param hide whether to keep the extra succedents (D) around (default true), which makes position management easier
+    */
+  def dR(formula: Formula, hide: Boolean=true): DependentPositionTactic = DifferentialTactics.diffRefine(formula,hide)
 
   /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * (uses DI, DW, DE, QE)
