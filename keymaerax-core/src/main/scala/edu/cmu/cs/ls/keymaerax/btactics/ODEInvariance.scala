@@ -328,6 +328,8 @@ object ODEInvariance {
     require(fml.isInstanceOf[GreaterEqual], "Normalization failed to reach normal form "+fml)
     val f2 = fml.asInstanceOf[GreaterEqual]
 
+    //println("Rank reordering:",rankReorder(ODESystem(ode,dom),post))
+
     val (pf,inst) = pStarHomPlus(ode,dom,f2.left,bound)
 
     //println("HOMPLUS:"+pf+" "+inst)
@@ -560,32 +562,94 @@ object ODEInvariance {
     pr
   }
 
-  /**  Explicitly calculate the conjunctive rank of a list of polynomials
-    *  (conjunctive optimization from SAS'14)
+  /**
+    * Explicitly calculate the conjunctive rank of a list of polynomials
+    * (uses conjunctive optimization from SAS'14)
+    * @param ode the ODESystem to use
+    * @param polys the polynomials to compute rank for
+    * @return the Groebner basis of the polynomials closed under Lie derivation + the rank (at which this occurs)
     */
-  def rank(ode:ODESystem, polys:List[Term]) : Integer = {
+  def rank(ode:ODESystem, polys:List[Term]) : (List[Term],Int) = {
     if (ToolProvider.algebraTool().isEmpty)
       throw new BelleThrowable(s"rank computation requires a AlgebraTool, but got None")
 
     val algTool = ToolProvider.algebraTool().get
 
-    var gb = polys ++ domainEqualities(ode.constraint)
+    var gb = algTool.groebnerBasis(polys ++ domainEqualities(ode.constraint))
     var rank = 1
-    var curPs = polys
+    //remainder after each round of polynomial reduction
+    var remaining = polys
 
     while(true) {
-      val lies = polys.map(p => DifferentialHelper.simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
-      val quos = lies.map(p => algTool.polynomialReduce(p, gb)._2)
-      //println("reduction: ",quos)
-      //println("rank: ",rank)
-      //println("gb: ",gb)
-      val remaining = quos.filterNot(_ == Number(0))
-      if(remaining.isEmpty) return rank
+      val lies = remaining.map(p => DifferentialHelper.simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
+      val quos = lies.map(p => algTool.polynomialReduce(p, gb))
+      remaining = quos.map(_._2).filterNot(_ == Number(0))
+      if(remaining.isEmpty) {
+        //println(gb,rank)
+        return (gb,rank)
+      }
       gb = algTool.groebnerBasis(remaining ++ gb)
-      curPs = lies
       rank+=1
     }
-    return 0
+    (List(),0)
+  }
+
+  /** Experimenting with tricks for reordering the cofactor matrix
+    * If we think of Gco as an adjacency matrix where:
+    * Gco_{i,j} is non-zero iff there is an edge j -> i, ignoring self edges
+    * Then "all" we need to do is topologically sort Gco
+    * */
+  private def rankReorder(ode:ODESystem, f:Formula) : Boolean = {
+    val fml = semiAlgNormalize(f)
+    rankReorderAux(ode,f)
+  }
+
+  private def rankReorderAux(ode:ODESystem, f:Formula) : Boolean = {
+    val (atoms,rest) = flattenConjunctions(f).partition(
+      _ match {
+        case LessEqual(l,r) => true
+        case GreaterEqual(l,r) => true
+        case Equal(l,r) => true
+        case _ => false
+      }
+    )
+    val dorest = rest.forall ( _ match {
+      case Or(l,r) => rankReorderAux(ode,l) && rankReorderAux(ode,r)
+      case _ => false
+    })
+    val polys = atoms.map(f => f.asInstanceOf[ComparisonFormula].left)
+    val (cof,gb,r) = rankCofactors(ode,polys)
+    val reorder = reorderCofactors(cof)
+    dorest && reorder.isDefined
+  }
+
+  private def reorderCofactors(Gco:List[List[Term]]) : Option[List[Int]] = {
+    var adjacencies = Gco.zipWithIndex.map(pr =>
+      (pr._2,pr._1.zipWithIndex.filterNot( p => p._1 == Number(0) || pr._2 == p._2).map(_._2))
+    )
+    var order = ListBuffer[Int]()
+    while(adjacencies.nonEmpty) {
+      //println("ADJ",adjacencies)
+      val (l,r) = adjacencies.partition(pls => pls._2.isEmpty)
+      val ls = l.map(_._1)
+      if(l.isEmpty)
+        return None
+      order ++= ls
+      adjacencies = r.map( pls => (pls._1,pls._2.filterNot(i => ls.contains(i))))
+    }
+    Some(order.toList)
+  }
+
+  //Cofactors at rank
+  private def rankCofactors(ode:ODESystem, polys:List[Term]): (List[List[Term]],List[Term],Int) = {
+    if (ToolProvider.algebraTool().isEmpty)
+      throw new BelleThrowable(s"rank computation requires a AlgebraTool, but got None")
+
+    val algTool = ToolProvider.algebraTool().get
+    val (gb,r) = rank(ode,polys)
+    val lies = gb.map(p => DifferentialHelper.simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
+    val quos = lies.map(p => algTool.polynomialReduce(p, gb))
+    (quos.map(_._1),gb,r)
   }
 
   //Explicit symbolic expression for the determinant of a matrix
