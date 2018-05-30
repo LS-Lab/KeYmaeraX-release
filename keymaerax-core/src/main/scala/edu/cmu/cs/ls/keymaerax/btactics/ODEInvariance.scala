@@ -223,7 +223,7 @@ object ODEInvariance {
   case class Disj(left: Instruction, right:Instruction) extends Instruction
   case class Conj(left: Instruction, right:Instruction) extends Instruction
   //Prove atomic polynomial (in)equality with this cofactor
-  case class Darboux(is_eq:Boolean, cofactor : Term, cut : Formula, pr :ProvableSig) extends Instruction //TODO: maybe keep around provables for re-use
+  case class Darboux(is_eq:Boolean, cofactor : Term, pr :ProvableSig) extends Instruction //TODO: maybe keep around provables for re-use
   //Prove atomic polynomial >= with this bound
   case class Strict(bound : Int) extends Instruction
   //Prove using closeF
@@ -249,8 +249,8 @@ object ODEInvariance {
         if (a == absF) {
           try {
             val prop = Equal(p, Number(0))
-            val (pr, denRemReq, cofactor, rem) = findDbx(ode, dom, prop)
-            (prop, Darboux(true, cofactor, denRemReq, pr))
+            val (pr, cofactor, rem) = findDbx(ode, dom, prop)
+            (prop, Darboux(true, cofactor, pr))
           }
           catch {
             case e: BelleThrowable => (False, Triv())
@@ -260,8 +260,8 @@ object ODEInvariance {
       case _ => {
         try {
           val prop = GreaterEqual(p, Number(0))
-          val (pr, denRemReq, cofactor, rem) = findDbx(ode, dom, prop)
-          (prop, Darboux(false, cofactor, denRemReq, pr))
+          val (pr, cofactor, rem) = findDbx(ode, dom, prop)
+          (prop, Darboux(false, cofactor, pr))
         }
         catch {
           case e: BelleThrowable => (pStar(ode, p, bound), Strict(bound))
@@ -274,12 +274,11 @@ object ODEInvariance {
   private def lpclosedPlus(inst:Instruction) : BelleExpr =
     SeqTactic(DebuggingTactics.debug(inst.toString(),doPrint = debugTactic),
       inst match{
-      case Darboux(iseq,cofactor,cut, pr) =>
-        DebuggingTactics.print(cofactor+" "+cut) & skip
+      case Darboux(iseq,cofactor,pr) =>
         (if(iseq) useAt(refAbs)(1) else skip) &
         DebuggingTactics.debug("Darboux "+cofactor+" ",doPrint = debugTactic) &
         implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) &
-          (if(cofactor==Number(0)) dI('full)(1) else dgDbx(cofactor)(1))
+        dgDbx(cofactor)(1)
       case Disj(l,r) =>
         DebuggingTactics.debug("DISJ",doPrint = debugTactic) &
         orL(-2) <(
@@ -360,8 +359,8 @@ object ODEInvariance {
   def rankOneFml(ode: DifferentialProgram, dom:Formula, f:Formula) : Option[Formula] = {
     f match {
       case cf:ComparisonFormula =>
-        //Non-strict findDbx
-        val (pr, denRemReq, cofactor, rem) = findDbx(ode, dom, cf,false)
+        //findDbx
+        val (pr, cofactor, rem) = findDbx(ode, dom, cf,false)
         if (pr.isProved)// TODO: this should be keeping track of co-factors rather than throwing them away
           Some(f)
         else {
@@ -372,6 +371,7 @@ object ODEInvariance {
           if(pr2.isProved)
             Some(f)
           else None
+          //TODO: for strict inequalities, can also check that p>0 proves using open DI (p>0 -> p'>=0)
         }
 
       case and:And =>
@@ -456,12 +456,11 @@ object ODEInvariance {
     }
 
     if (!doReorder) {
-      if (skipClosed & flattenConjunctions(f2).forall(
-        f => f match {
-          case Equal(_, _) => true
-          case GreaterEqual(_, _) => true
-          case _ => false
-        })) {
+      if (skipClosed & flattenConjunctions(f2).forall {
+        case Equal(_, _) => true
+        case GreaterEqual(_, _) => true
+        case _ => false
+      }) {
         fail
       }
       else {
@@ -561,28 +560,33 @@ object ODEInvariance {
     pr
   }
 
-  //Explicitly calculate the rank of a polynomial term, no optimizations
-  //todo: Groebner basis broken
-//  def rank(ode:DifferentialProgram, poly:Term) : Unit = {
-//    if (ToolProvider.algebraTool().isEmpty)
-//      throw new BelleThrowable(s"rank computation requires a AlgebraTool, but got None")
-//
-//    val algTool = ToolProvider.algebraTool().get
-//
-//    var gb = List(poly)
-//    var rank = 1
-//    var curP = poly
-//
-//    while(rank<=2) {
-//      val lie = DifferentialHelper.simplifiedLieDerivative(ode, curP, ToolProvider.simplifierTool())
-//      val quo = algTool.polynomialReduce(lie, gb)
-//      println("reduction: ",quo)
-//      println("rank: ",rank)
-//      gb = algTool.groebnerBasis(lie::gb)
-//      curP = lie
-//      rank+=1
-//    }
-//  }
+  /**  Explicitly calculate the conjunctive rank of a list of polynomials
+    *  (conjunctive optimization from SAS'14)
+    */
+  def rank(ode:ODESystem, polys:List[Term]) : Integer = {
+    if (ToolProvider.algebraTool().isEmpty)
+      throw new BelleThrowable(s"rank computation requires a AlgebraTool, but got None")
+
+    val algTool = ToolProvider.algebraTool().get
+
+    var gb = polys ++ domainEqualities(ode.constraint)
+    var rank = 1
+    var curPs = polys
+
+    while(true) {
+      val lies = polys.map(p => DifferentialHelper.simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
+      val quos = lies.map(p => algTool.polynomialReduce(p, gb)._2)
+      //println("reduction: ",quos)
+      //println("rank: ",rank)
+      //println("gb: ",gb)
+      val remaining = quos.filterNot(_ == Number(0))
+      if(remaining.isEmpty) return rank
+      gb = algTool.groebnerBasis(remaining ++ gb)
+      curPs = lies
+      rank+=1
+    }
+    return 0
+  }
 
   //Explicit symbolic expression for the determinant of a matrix
   //Currently just explicitly calculated, but can use Mathematica's det if available
