@@ -868,7 +868,7 @@ private object DifferentialTactics extends Logging {
       val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
       val qAtoms = FormulaTools.conjuncts(q).toSet
 
-      /*DconstV(pos) &*/ (odeInvariant(pos) | solve(pos) | fastODE(
+      odeInvariant()(pos) | solve(pos) | fastODE(
         //@note abort if unchanged
         assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) match {
           case Some(Box(ODESystem(extendedOde, extendedQ), _)) =>
@@ -882,7 +882,7 @@ private object DifferentialTactics extends Logging {
                 PosInExpr(1 +: FormulaTools.posOf(extendedQ, q).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
               else skip
           }))(pos ++ PosInExpr(0::Nil))
-      )(pos)) & DebuggingTactics.print("ODE done")
+      )(pos)
   })
 
   private def fastODE(finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
@@ -920,14 +920,14 @@ private object DifferentialTactics extends Logging {
       (inv: Formula) => {
         DebuggingTactics.print(s"[ODE] Trying to cut in invariant candidate: $inv") &
           /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
-          diffCut(inv)(pos) <(skip, odeInvariant(pos) & done)
+          diffCut(inv)(pos) <(skip, odeInvariant()(pos) & done)
       }
     )
 
-    proveFromEvolutionDomain(pos) & DebuggingTactics.print("ODE dW") & done |
-      odeInvariant(pos) & DebuggingTactics.print("ODE YK") & done |
-      addInvariant & DebuggingTactics.print("inv added") & fastODE(finish)(pos) & DebuggingTactics.print("ODE inv") |
-      finish & DebuggingTactics.print("ODE finish")
+    proveFromEvolutionDomain(pos) & done |
+      odeInvariant()(pos) & done |
+      addInvariant & fastODE(finish)(pos) |
+      finish
   })
 
   /** Splits a post-condition containing a weak inequality into an open set case and an equillibrium point case.
