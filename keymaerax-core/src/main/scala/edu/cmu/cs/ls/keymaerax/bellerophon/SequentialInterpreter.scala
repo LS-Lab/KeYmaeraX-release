@@ -26,7 +26,6 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
 
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
     if (Thread.currentThread().isInterrupted || isDead) {
-      println("Interpreter dead, refuse " + Thread.currentThread().getStackTrace.mkString("\n"))
       //@todo kill the running tactic (cancel QE), here or in kill
       //@note end executing the interpreter when its thread gets interrupted
       //@todo throw an error that is easier to identify (for now: irrelevant, since Hydra Future already gone when we throw here)
