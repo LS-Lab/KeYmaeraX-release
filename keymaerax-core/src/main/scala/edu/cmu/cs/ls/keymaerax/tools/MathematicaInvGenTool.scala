@@ -5,7 +5,7 @@ import java.nio.channels.Channels
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.InvGenTool
+import edu.cmu.cs.ls.keymaerax.btactics.{FormulaTools, InvGenTool}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.KExpr
@@ -26,7 +26,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
   private val pegasusPath = System.getProperty("user.home") + File.separator + Configuration(Configuration.Keys.PEGASUS_PATH)
 
-  def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Either[Formula,Formula]] = {
+  def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Either[Seq[Formula],Seq[Formula]]] = {
     require(postCond.isFOL, "Unable to generate invariant, expected FOL post conditions but got " + postCond.prettyString)
 
     val vars = DifferentialHelper.getPrimedVariables(ode)
@@ -53,20 +53,10 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     try {
       val (output, result) = runUnchecked(command)
       logger.debug("Generated invariant: " + result.prettyString + " from raw output " + output)
-      result match {
-        case And(Equal(Number(invListLength), _), invList) =>
-          //@note Pegasus returns lists of length 2:
-          // - first entry is formula
-          // - second indicates invariant (true) vs. candidate (false)
-          assert(invListLength == 2, "Expected a list with two entries, but got " + invListLength)
-          invList match {
-            case And(fml, False) => Right(fml) :: Nil
-            case And(fml, True) => Left(fml) :: Nil
-          }
-        case fml: Formula => Left(fml) :: Nil
-        case _ => throw ToolException("Expected a formula from Pegasus call but got a non-formula expression: " +
-          result.prettyString)
-      }
+      PegasusM2KConverter.decodeFormulaList(result).map({ case (fmls, flag) =>
+        assert(flag == True || flag == False, "Expected invariant/candidate flag, but got " + flag.prettyString)
+        if (flag == True) Left(fmls) else Right(fmls)
+      })
     } catch {
       case ex: ConversionException =>
         logger.warn("Pegasus conversion exception", ex)

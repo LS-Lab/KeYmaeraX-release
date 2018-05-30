@@ -44,7 +44,18 @@ class InvariantGeneratorTests extends TacticTestBase {
   it should "use Pegasus if available" in withMathematica { _ =>
     val gen = InvariantGenerator.pegasusInvariants("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0))
     gen should not be 'empty
-    gen.head shouldBe "x>=0".asFormula
+    gen.head shouldBe "-1*x<=0".asFormula
+  }
+
+  it should "split formulas correctly" in {
+    FormulaTools.leftConjuncts("(1=1&2=2)&3=3".asFormula, 1) should contain theSameElementsInOrderAs
+      "(1=1&2=2)&3=3".asFormula :: Nil
+    FormulaTools.leftConjuncts("(1=1&2=2)&3=3".asFormula, 2) should contain theSameElementsInOrderAs
+      "1=1&2=2".asFormula :: "3=3".asFormula :: Nil
+    FormulaTools.leftConjuncts("(1=1&2=2)&3=3".asFormula, 3) should contain theSameElementsInOrderAs
+      "1=1".asFormula :: "2=2".asFormula :: "3=3".asFormula :: Nil
+    FormulaTools.leftConjuncts("(1=1&2=2)&3=3".asFormula, -1) should contain theSameElementsInOrderAs
+      "1=1".asFormula :: "2=2".asFormula :: "3=3".asFormula :: Nil
   }
 
   "Auto with invariant generator" should "prove simple loop from precondition invariant" in withQE { _ =>

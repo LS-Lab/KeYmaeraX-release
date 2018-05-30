@@ -348,7 +348,6 @@ private object DifferentialTactics extends Logging {
   // G|- [x'=f(x)&R]P, D     G|- [x'=f(x)&Q]R
   // --- dR
   // G|- [x'=f(x)&Q]P, D
-
   def diffRefine(f:Formula,hide:Boolean=true) : DependentPositionTactic =
     "diffRefine" byWithInputs (f::hide::Nil,(pos,sequent) => {
     require(pos.isTopLevel, "diffRefine only at top-level succedents/antecedents")
@@ -396,11 +395,11 @@ private object DifferentialTactics extends Logging {
   })
 
   /**
-   * Turns things that are constant in ODEs into function symbols.
+    * Turns things that are constant in ODEs into function symbols.
     *
     * @example Turns v>0, a>0 |- [v'=a;]v>0, a>0 into v>0, a()>0 |- [v'=a();]v>0, a()>0
-   * @return The tactic.
-   */
+    * @return The tactic.
+    */
   def Dconstify(inner: BelleExpr): DependentPositionTactic = TacticFactory.anon ((pos: Position, seq: Sequent) => {
     seq.sub(pos) match {
       case Some(Box(ode@ODESystem(_, _), p)) =>
@@ -441,7 +440,6 @@ private object DifferentialTactics extends Logging {
     * This uses the default simplifier configuration
     * @example Turns |- [v'=a & a>0](a>0&v>0) into |- [v'=a & a>0]v>0
     */
-
   def domSimplify : DependentPositionTactic = "domSimplify" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "domSimplify currently only works at top-level succedents")
 
@@ -728,12 +726,13 @@ private object DifferentialTactics extends Logging {
     * @see [[TactixLibrary.ODE]]
     * @author Andre Platzer
     * @author Nathan Fulton
+    * @author Stefan Mitsch
     */
-  lazy val ODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+  lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(Box(ODESystem(ode, q), _)) =>
       val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
       val qAtoms = FormulaTools.conjuncts(q).toSet
-      odeInvariant(pos) | solve(pos) | ODE(useOdeInvariant=false, introduceStuttering=true,
+      odeInvariant(true)(pos) | solve(pos) | ODE(useOdeInvariant=false, introduceStuttering=true,
         //@note abort if unchanged
         assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) match {
           case Some(Box(ODESystem(extendedOde, extendedQ), _)) =>
@@ -770,6 +769,20 @@ private object DifferentialTactics extends Logging {
           dgZeroPolynomial(pos)  //Equalities
         })
 
+    val proveInvariant = "ANON" by ((pos: Position, seq: Sequent) => {
+      val post: Formula = seq.sub(pos) match {
+        case Some(Box(ode: ODESystem, pf)) => pf
+        case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
+        case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
+      }
+      val isOpen = post match {
+        case  _: Greater => true
+        case _: Less => true
+        case _ => false
+      }
+      TactixLibrary.odeInvariant(pos) | compatibilityFallback(isOpen)
+    })
+
     //Tries to prove without any invariant generation or solving.
     val proveWithoutCuts = "ANON" by ((pos: Position) => {
       SaturateTactic(boxAnd(pos) & andR(pos)) &
@@ -792,7 +805,7 @@ private object DifferentialTactics extends Logging {
           //@note diffWeaken will already include all cases where V works, without much additional effort.
           (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
             diffWeaken(pos) & QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE)))) & done else fail
-          ) | (if (useOdeInvariant) TactixLibrary.odeInvariant(pos) | compatibilityFallback(isOpen)
+          ) | (if (useOdeInvariant) proveInvariant(pos)
                else compatibilityFallback(isOpen))
         })) (pos))
     })
@@ -804,7 +817,7 @@ private object DifferentialTactics extends Logging {
       (inv: Formula) => {
         DebuggingTactics.print(s"[ODE] Trying to cut in invariant candidate: $inv") &
         /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
-        diffCut(inv)(pos) <(skip, proveWithoutCuts(pos) & done)
+        diffCut(inv)(pos) <(skip, proveInvariant(pos) & done)
       }
     )
 
@@ -840,6 +853,79 @@ private object DifferentialTactics extends Logging {
         ODE(useOdeInvariant=true, introduceStuttering,finish)(pos)) & done) |
       (if (introduceStuttering) stutter(pos) & ODE(useOdeInvariant=true, introduceStuttering=false, finish)(pos) & unstutter(pos) & done
        else finish)
+  })
+
+  /**
+    * @see [[TactixLibrary.ODE]]
+    * @author Andre Platzer
+    * @author Nathan Fulton
+    * @author Stefan Mitsch
+    */
+  lazy val fastODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+    case Some(Box(ODESystem(ode, q), _)) =>
+      val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
+      val qAtoms = FormulaTools.conjuncts(q).toSet
+
+      odeInvariant()(pos) | solve(pos) | fastODE(
+        //@note abort if unchanged
+        assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) match {
+          case Some(Box(ODESystem(extendedOde, extendedQ), _)) =>
+            odeAtoms.subsetOf(DifferentialHelper.atomicOdes(extendedOde).toSet) ||
+              qAtoms.subsetOf(FormulaTools.conjuncts(extendedQ).toSet)
+          case _ => false
+        }, failureMessage)(pos) &
+          ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
+            case Some(ODESystem(_, extendedQ)) =>
+              if (q == True && extendedQ != True) useAt("true&")(ppos ++
+                PosInExpr(1 +: FormulaTools.posOf(extendedQ, q).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
+              else skip
+          }))(pos ++ PosInExpr(0::Nil))
+      )(pos)
+  })
+
+  private def fastODE(finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+    val invariantCandidates = try {
+      InvariantGenerator.differentialInvariantGenerator(seq,pos)
+    } catch {
+      case err: Exception =>
+        logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
+        Stream[Formula]()
+    }
+
+    val proveFromEvolutionDomain = "ANON" by ((pos: Position) => {
+      SaturateTactic(boxAnd(pos) & andR(pos)) &
+        onAll(("ANON" by ((pos: Position, seq: Sequent) => {
+          val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
+            case Some(Box(ode: ODESystem, pf)) => (ode, pf)
+            case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
+            case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
+          }
+
+          val bounds = StaticSemantics.boundVars(ode.ode).symbols //@note ordering irrelevant, only intersecting/subsetof
+          val frees = StaticSemantics.freeVars(post).symbols      //@note ordering irrelevant, only intersecting/subsetof
+
+          //@note diffWeaken will already include all cases where V works, without much additional effort.
+          if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
+            diffWeaken(pos) & QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE)))) & done
+          else fail
+        })) (pos))
+    })
+
+    //Adds an invariant to the system's evolution domain constraint and tries to establish the invariant via proveWithoutCuts.
+    //Fails if the invariant cannot be established by proveWithoutCuts.
+    val addInvariant = ChooseSome(
+      () => invariantCandidates.iterator,
+      (inv: Formula) => {
+        DebuggingTactics.print(s"[ODE] Trying to cut in invariant candidate: $inv") &
+          /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
+          diffCut(inv)(pos) <(skip, odeInvariant()(pos) & done)
+      }
+    )
+
+    proveFromEvolutionDomain(pos) & done |
+      odeInvariant()(pos) & done |
+      addInvariant & fastODE(finish)(pos) |
+      finish
   })
 
   /** Splits a post-condition containing a weak inequality into an open set case and an equillibrium point case.
@@ -1112,6 +1198,7 @@ private object DifferentialTactics extends Logging {
 
     val pr = proveBy(Imply(dom,denRemReq), QE)
 
+    //println(pr,denRemReq,lie,q,p,r)
     if(!pr.isProved && strict)
       throw new BelleThrowable("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+q+" rem: "+r+" unable to prove: "+denRemReq)
 
@@ -1271,17 +1358,25 @@ private object DifferentialTactics extends Logging {
   // Fresh implementation of ODE invariance tactics -- only applies for top-level succedents
 
   // Try hard to prove G|-[x'=f(x)&Q]P by an invariance argument on P only (NO SOLVE)
-  lazy val odeInvariant: DependentPositionTactic = "odeInvariant" by ((pos:Position) => {
+  def odeInvariant(tryHard:Boolean = false): DependentPositionTactic = "odeInvariant" by ((pos:Position) => {
     require(pos.isSucc && pos.isTopLevel, "ODE invariant only applicable in top-level succedent")
     require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
 
+    //todo: Ideally this will go for full rank + everything proof if tryHard=true
+    val rankConfig = if(tryHard) 3 else 1
+    //todo: and this should disappear for tryHard mode
+    val reorderConfig = if(tryHard) true else false
+
     //Add constant assumptions to domain constraint
+    //DebuggingTactics.print("DConstV") &
     DifferentialTactics.DconstV(pos) &
       //Naive simplification of domain constraint
+      //DebuggingTactics.print("domSimplify") &
       DifferentialTactics.domSimplify(pos) &
-      ((DifferentialTactics.diffWeakenG(pos) & QE & done) |
-        ODEInvariance.sAIclosedPlus(3)(pos) |
-        ODEInvariance.sAIRankOne(true)(pos))
+      //DebuggingTactics.print("close") &
+      ( (DifferentialTactics.diffWeakenG(pos) & DebuggingTactics.print("QE") & QE & DebuggingTactics.print("after") & done) |
+        ODEInvariance.sAIclosedPlus(rankConfig)(pos) |
+        ODEInvariance.sAIRankOne(reorderConfig)(pos))
   })
 
   // Asks Pegasus invariant generator for an invariant (DC chain)
@@ -1308,11 +1403,10 @@ private object DifferentialTactics extends Logging {
         invs.foldRight(diffWeakenG(pos) & qe & done)( (fml,tac) =>
           DC(fml)(pos) <(tac,
             (
-            //todo: delete once Pegasus reports dC chain
+            //todo: delete repeated dW&QE once Pegasus reports dC chain
             (DifferentialTactics.diffWeakenG(pos) & QE & done) |
-            ODEInvariance.sAIclosedPlus(3)(pos) |
-            //todo: optimize further, this should be a last fallback, turn flag to false once Pegasus reports dC chain
-            ODEInvariance.sAIRankOne(true)(pos)) & done)
+            ODEInvariance.sAIclosedPlus(1)(pos) |
+            ODEInvariance.sAIRankOne(false)(pos)) & done)
         )
     }
   }
@@ -1320,54 +1414,39 @@ private object DifferentialTactics extends Logging {
 
   // implementation helpers
 
-  /** Computes quotient remainder resulting from (RATIONAL) polynomial division wrt domain
+  /** Computes quotient remainder resulting from (RATIONAL) polynomial division wrt equalities in domain
     * @param poly polynomial to divide
     * @param div divisor
     * @param dom domain constraint
     * @return (q,r) where Q |- poly = q*div + r , q,r are polynomials
     */
-  def domQuoRem(poly:Term, div:Term, dom:Formula) : (Term,Term) = {
+  def domQuoRem(poly: Term, div: Term, dom: Formula): (Term,Term) = {
     //TODO: remove dependence on algebra tool
     if (ToolProvider.algebraTool().isEmpty) {
       throw new BelleThrowable(s"duoQuoRem requires a AlgebraTool, but got None")
       // val polynorm = PolynomialArith.normalise(poly,true)._1
-      //  val divnorm = PolynomialArith.normalise(div,true)._1
+      // val divnorm = PolynomialArith.normalise(div,true)._1
     }
-
     else {
       val algTool = ToolProvider.algebraTool().get
-
-      //todo: groebnerBasis seems broken for > 1 term??
-      //todo: comment above might require own MathematicaToKeYmaera converter,
-      //      since the default converter for QE accepts lists of length=2 only to represent Pairs
-      //val gb = p::domToTerms(dom)
-      val domterms = domToTerms(dom)
-
-      val gb = if (domterms.nonEmpty) {
-        try {
-          algTool.groebnerBasis(domterms)
-        } catch {
-          case _: ToolException => Nil
-        }
-      } else Nil
+      val gb = algTool.groebnerBasis(domToTerms(dom))
       val quo = algTool.polynomialReduce(poly, div :: gb)
       // quo._1.head is the cofactor of div (q)
       // quo._2 is the remainder (r)
 
       (quo._1.head,quo._2)
-      //Older support for polynomials
+      //Older support for rational functions
       //val (g, q) = stripDenom(quo._1.head)
       //if ((FormulaTools.singularities(g) ++ FormulaTools.singularities(q)).isEmpty) (g, q, quo._2)
       //else (Number(0), Number(1), poly)
     }
   }
 
-  //Keeps the top level =s in evol domain as a groebner basis of terms?
+  //Keeps equalities in domain constraint
   private def domToTerms(f:Formula) : List[Term] = {
-    f match {
-      case Equal(l,r) => Minus(l,r) :: Nil
-      case And(l,r) => domToTerms(l) ++ domToTerms(r)
-      case _ => Nil
+    flattenConjunctions(f).flatMap{
+      case Equal(l,r) => Some(Minus(l,r))
+      case _ => None
     }
   }
 
@@ -1466,8 +1545,8 @@ private object DifferentialTactics extends Logging {
   private lazy val ltNorm: ProvableSig = remember("f_() < g_() <-> g_() - f_() > 0".asFormula,QE,namespace).fact
   private lazy val gtNorm: ProvableSig = remember("f_() > g_() <-> f_() - g_() > 0".asFormula,QE,namespace).fact
   //TODO: are these normalizations better?
-//  private lazy val eqNorm: ProvableSig = remember(" f_() = g_() <-> -(f_() - g_())^2 >= 0 ".asFormula,QE,namespace).fact
-//  private lazy val neqNorm: ProvableSig = remember(" f_() != g_() <-> -(f_() - g_())^2 > 0 ".asFormula,QE,namespace).fact
+  //private lazy val eqNorm: ProvableSig = remember(" f_() = g_() <-> -(f_() - g_())^2 >= 0 ".asFormula,QE,namespace).fact
+  //private lazy val neqNorm: ProvableSig = remember(" f_() != g_() <-> -(f_() - g_())^2 > 0 ".asFormula,QE,namespace).fact
   private lazy val eqNorm: ProvableSig = remember(" f_() = g_() <-> f_() - g_() = 0 ".asFormula,QE,namespace).fact
   private lazy val neqNorm: ProvableSig = remember(" f_() != g_() <-> f_() - g_() != 0 ".asFormula,QE,namespace).fact
   private lazy val minGeqNorm:ProvableSig = remember("f_()>=0&g_()>=0<->min((f_(),g_()))>=0".asFormula,QE,namespace).fact
@@ -1546,7 +1625,7 @@ private object DifferentialTactics extends Logging {
   /**
     * Normalize with respect to a simplification index (with NNF built-in)
     */
-  def doNormalize(fi:formulaIndex)(f:Formula) : (Formula,Option[ProvableSig]) = {
+  private def doNormalize(fi:formulaIndex)(f:Formula) : (Formula,Option[ProvableSig]) = {
     to_NNF(f) match {
       case Some((nnf,pr)) =>
         val (ff,propt) = SimplifierV3.simpWithDischarge (IndexedSeq[Formula] (), nnf, fi, SimplifierV3.emptyTaxs)
@@ -1561,18 +1640,18 @@ private object DifferentialTactics extends Logging {
   }
 
   /**
-    * Various normalization steps
+    * Various normalization steps (the first thing each of them do is NNF normalize)
     * ineqNormalize : normalizes atomic inequalities only
-    * atomNormalize : normalizes all atomic comparisons
+    * atomNormalize : normalizes all (nested) atomic comparisons
     * semiAlgNormalize : semialgebraic to have 0 on RHS
     * maxMinGeqNormalize : max,min >=0 normal form
     */
-  val ineqNormalize = doNormalize(ineqNormalizeIndex)(_)
-  val atomNormalize = doNormalize(atomNormalizeIndex)(_)
-  val semiAlgNormalize = doNormalize(semiAlgNormalizeIndex)(_)
-  val maxMinGeqNormalize = doNormalize(maxMinGeqNormalizeIndex)(_)
+  val ineqNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(ineqNormalizeIndex)(_)
+  val atomNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(atomNormalizeIndex)(_)
+  val semiAlgNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(semiAlgNormalizeIndex)(_)
+  val maxMinGeqNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGeqNormalizeIndex)(_)
 
-
+  /** Flattens a formula to a list of its top-level conjunctions */
   def flattenConjunctions(f: Formula): List[Formula] = {
     var result: List[Formula] = Nil
     ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {

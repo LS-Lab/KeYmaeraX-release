@@ -38,10 +38,14 @@ object FormulaTools extends Logging {
     case f => List(f)
   }
 
-  /** Split a formula into left-hand side conjuncts, keep right-hand side conjunctions (inverse reduce). */
-  def leftConjuncts(formula: Formula): List[Formula] = formula match {
-    case And(p,q) => conjuncts(p) :+ q
-    case f => List(f)
+  /** Split a formula into `length` left-hand side conjuncts (-1 for exhaustive splitting),
+    * keep right-hand side conjunctions (inverse reduce). */
+  def leftConjuncts(formula: Formula, length: Int = -1): List[Formula] = {
+    def leftConjuncts(formula: Formula, length: Int, count: Int): List[Formula] = formula match {
+      case And(p, q) if length == -1 || count < length => leftConjuncts(p, length, count+1) :+ q
+      case f => List(f)
+    }
+    leftConjuncts(formula, length, 1) //@note not splitting is a list of length 1
   }
 
   /**
