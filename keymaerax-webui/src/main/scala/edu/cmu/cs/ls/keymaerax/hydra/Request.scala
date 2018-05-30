@@ -1684,6 +1684,8 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               }
 
               override def kill(): Unit = inner.kill()
+              override def isDead: Boolean = inner.isDead
+              override def listeners: Seq[IOListener] = inner.listeners
             }
 
             if (stepwise) {

@@ -25,4 +25,10 @@ object BelleInterpreter extends Interpreter {
 
   /** Stops the interpreter and kills all its tactic executions. */
   override def kill(): Unit = interpreter.kill()
+
+  /** Indicates whether the interpreter is still operational. A killed interpreter refuses to run tactics. */
+  override def isDead: Boolean = interpreter.isDead
+
+  /** Registered listeners. */
+  override def listeners: scala.collection.immutable.Seq[IOListener] = interpreter.listeners
 }

@@ -7,12 +7,12 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import java.io.PrintWriter
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.TacticStatistics
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, LazySequentialInterpreter, TacticStatistics}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Program}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaera3PrettyPrinter, KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 
@@ -21,7 +21,7 @@ import org.scalatest.{AppendedClues, Suites}
 import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.concurrent._
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
-import org.scalatest.time.SpanSugar._
+import org.scalatest.time.{Minutes, Seconds, Span}
 
 /**
   * Benchmarks.
@@ -34,9 +34,9 @@ class BenchmarkTests extends Suites(
 //  new TutorialRegressionTester("Advanced Benchmark", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/advanced.kyx"),
 //  new TutorialRegressionTester("Nonlinear Benchmark", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx")
   // benchmark problems
-//  new BenchmarkTester("Basic", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/basic.kyx", 2)
-//  new BenchmarkTester("Advanced", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/advanced.kyx", 20),
-  new BenchmarkTester("Nonlinear", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx", 5)
+  new BenchmarkTester("Basic", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/basic.kyx", 300),
+  new BenchmarkTester("Nonlinear", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx", 300),
+  new BenchmarkTester("Advanced", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/advanced.kyx", 300)
 )
 
 object BenchmarkTests {
@@ -139,9 +139,14 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
         val start = System.currentTimeMillis()
         val theTactic = BelleParser(t)
         try {
-          val proof = failAfter(timeout minutes) {
+          val proof = failAfter(Span(timeout, Seconds))({
+            //@note use a new interpreter every time, since failAfter kills them
+            BelleInterpreter.setInterpreter(registerInterpreter(LazySequentialInterpreter(theInterpreter.listeners)))
             proveBy(model, theTactic)
-          }
+          })((testThread: Thread) => {
+            theInterpreter.kill()
+            testThread.interrupt()
+          })
           val end = System.currentTimeMillis()
           println(s"Done proving $name")
           BenchmarkResult(name, if (proof.isProved) "proved" else "unfinished", timeout, end - start, proof.steps, TacticStatistics.size(theTactic), None)

@@ -449,7 +449,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {}
       override def kill(): Unit = {}
     }
-    val mockListenerFactory: Int => (String, Int, Int) => scala.Seq[IOListener] =
+    val mockListenerFactory: Int => (String, Int, Int) => scala.collection.immutable.Seq[IOListener] =
       (_: Int) => (_: String, _: Int, _: Int) => mockListener::Nil
 
     val interpreter = SpoonFeedingInterpreter(1, -1, (_: ProvableSig) => 1, mockListenerFactory,

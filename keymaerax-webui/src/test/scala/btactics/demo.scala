@@ -23,7 +23,7 @@ class demo extends FlatSpec with Matchers {
 
   }
 
-  val interp = ExhaustiveSequentialInterpreter(Seq(listener))
+  val interp = ExhaustiveSequentialInterpreter(listener :: Nil)
 
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter)
 

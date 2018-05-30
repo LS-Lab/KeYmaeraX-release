@@ -52,7 +52,7 @@ case class DbBranchPointer(parent: Int, branch: Int, predStep: Int, openBranches
   * @param rootProofId The ID of the proof this interpreter is working on.
   * @param startStepIndex The index in the proof trace where the interpreter starts appending steps (-1 for none, e.g., in a fresh proof).
   * @param idProvider Provides IDs for child provables created in this interpreter.
-  * @param listeners Creates listener that are notified from the inner interpreter, takes (tactic name, parent step index in trace, branch).
+  * @param listenerFactory Creates listener that are notified from the inner interpreter, takes (tactic name, parent step index in trace, branch).
   * @param inner Processes atomic tactics.
   * @param descend How far to descend into depending tactics (default: do not descend)
   * @param strict If true, follow tactic strictly; otherwise perform some optimizations (e.g., do not execute nil).
@@ -61,14 +61,17 @@ case class DbBranchPointer(parent: Int, branch: Int, predStep: Int, openBranches
   * @author Stefan Mitsch
   */
 case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProvider: ProvableSig => Int,
-                                   listeners: Int => ((String, Int, Int) => Seq[IOListener]),
-                                   inner: Seq[IOListener] => Interpreter, descend: Int = 0,
+                                   listenerFactory: Int => ((String, Int, Int) => scala.collection.immutable.Seq[IOListener]),
+                                   inner: scala.collection.immutable.Seq[IOListener] => Interpreter, descend: Int = 0,
                                    strict: Boolean = true) extends Interpreter with Logging {
   var innerProofId: Option[Int] = None
 
   private var runningInner: Interpreter = _
 
-  private var isDead = false
+  var isDead = false
+
+  /** The spoon-feeding interpreter itself does not have listeners. */
+  val listeners: scala.collection.immutable.Seq[IOListener] = Nil
 
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
     if (runningInner == null) {
@@ -197,7 +200,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
         if (descend > 0) {
           val innerId = idProvider(in)
           innerProofId = Some(innerId)
-          val innerFeeder = SpoonFeedingInterpreter(innerId, -1, idProvider, listeners, inner, descend, strict = strict)
+          val innerFeeder = SpoonFeedingInterpreter(innerId, -1, idProvider, listenerFactory, inner, descend, strict = strict)
           val result = innerFeeder.runTactic(innerMost, BelleProvable(in), level, DbAtomPointer(-1)) match {
             case (BelleProvable(derivation, _), _) =>
               val backsubst: ProvableSig = derivation(us)
@@ -208,7 +211,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           innerFeeder.kill()
           result
         } else {
-          runningInner = inner(listeners(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
+          runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
           runningInner(tactic, BelleProvable(provable.sub(0), lbl)) match {
             case BelleProvable(innerProvable, _) =>
               val r = (BelleProvable(provable(innerProvable, 0), lbl), ctx.store(tactic))
@@ -261,13 +264,13 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
         if (!strict && tactic == Idioms.nil) (goal, ctx)
         else goal match {
           case BelleProvable(provable, _) if provable.subgoals.isEmpty =>
-            runningInner = inner(Seq())
+            runningInner = inner(scala.collection.immutable.Seq())
             val result = (runningInner(tactic, goal), ctx)
             runningInner = null
             result
           case BelleProvable(provable, labels) if provable.subgoals.nonEmpty =>
             if (ctx.onBranch >= 0) {
-              runningInner = inner(listeners(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
+              runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
               runningInner(tactic, BelleProvable(provable.sub(0), labels)) match {
                 case BelleProvable(innerProvable, _) =>
                   val result = (BelleProvable(provable(innerProvable, 0), labels), ctx.store(tactic))

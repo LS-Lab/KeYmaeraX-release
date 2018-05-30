@@ -20,13 +20,17 @@ import org.apache.logging.log4j.scala.Logging
  * @author Nathan Fulton
  * @author Andre Platzer
  */
-abstract class SequentialInterpreter(listeners: Seq[IOListener]) extends Interpreter with Logging {
+abstract class SequentialInterpreter(val listeners: scala.collection.immutable.Seq[IOListener])
+  extends Interpreter with Logging {
+  var isDead: Boolean = false
+
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
-    if (Thread.currentThread().isInterrupted) {
+    if (Thread.currentThread().isInterrupted || isDead) {
+      println("Interpreter dead, refuse " + Thread.currentThread().getStackTrace.mkString("\n"))
       //@todo kill the running tactic (cancel QE), here or in kill
       //@note end executing the interpreter when its thread gets interrupted
       //@todo throw an error that is easier to identify (for now: irrelevant, since Hydra Future already gone when we throw here)
-      throw new BelleThrowable("Execution Stopped by interrupting the interpreter thread")
+      throw new BelleThrowable("Execution stopped by killing the interpreter or interrupting the interpreter thread")
     }
     listeners.foreach(_.begin(v, expr))
     try {
@@ -45,7 +49,7 @@ abstract class SequentialInterpreter(listeners: Seq[IOListener]) extends Interpr
   }
 
   override def kill(): Unit = {
-    //@todo kill the running tactic (cancel QE)
+    isDead = true
     listeners.foreach(_.kill())
   }
 
@@ -247,7 +251,7 @@ abstract class SequentialInterpreter(listeners: Seq[IOListener]) extends Interpr
       val opts = options()
       var errors = ""
       var result: Option[BelleValue] = None
-      while (opts.hasNext && result.isEmpty) {
+      while (opts.hasNext && result.isEmpty && !isDead) {
         val o = opts.next()
         logger.debug("ChooseSome: try " + o)
         val someResult: Option[BelleValue] = try {
@@ -391,7 +395,7 @@ abstract class SequentialInterpreter(listeners: Seq[IOListener]) extends Interpr
       apply(common, BelleProvable(in, lbl)) match {
         case BelleProvable(commonDerivation, lbl2) =>
           var lastProblem: ProverException = NoProverException
-          while (true) {
+          while (!isDead) {
             val values = instantiator(commonDerivation, lastProblem)
             try {
               val us: USubst = USubst(abbr.zip(values).map({ case (what, repl) => what ~>> repl }))
@@ -487,11 +491,11 @@ abstract class SequentialInterpreter(listeners: Seq[IOListener]) extends Interpr
 }
 
 /** Sequential interpreter that explores branching tactics exhaustively, regardless of failure of some. */
-case class ExhaustiveSequentialInterpreter(listeners: Seq[IOListener] = Seq())
+case class ExhaustiveSequentialInterpreter(override val listeners: scala.collection.immutable.Seq[IOListener] = scala.collection.immutable.Seq())
   extends SequentialInterpreter(listeners) { }
 
 /** Sequential interpreter that stops exploring branching on the first failing branch. */
-case class LazySequentialInterpreter(listeners: Seq[IOListener] = Seq()) extends SequentialInterpreter(listeners) {
+case class LazySequentialInterpreter(override val listeners: scala.collection.immutable.Seq[IOListener] = scala.collection.immutable.Seq()) extends SequentialInterpreter(listeners) {
   override def runExpr(expr: BelleExpr, v: BelleValue): BelleValue = expr match {
     case BranchTactic(children) => v match {
       case BelleProvable(p, _) =>
