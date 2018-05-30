@@ -1141,6 +1141,8 @@ private object DifferentialTactics extends Logging {
   private val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
   private val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
 
+  private lazy val barrierCond: ProvableSig = remember("max(f_()*f_(),g_()) > 0 <-> f_()=0 -> g_()>0".asFormula,QE,namespace).fact
+
   def dgBarrier(tool: Option[SimplificationTool] = None): DependentPositionTactic = "barrier" by ((pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "barrier only at top-level succedent")
 
@@ -1169,10 +1171,10 @@ private object DifferentialTactics extends Logging {
     val cofactor = Divide(Times(barrier,lie),barrierAlg)
 
     // First cut in the barrier property, then use dgdbx on it
+    // Barrier condition is checked first to make it fail faster
     dC(barrierFml)(pos) <(
-      starter & dgDbx(cofactor)(pos),
-      dW(pos) & QE
-    )
+      skip,diffWeakenG(pos) & useAt(barrierCond)(1,1::Nil) & QE & done
+    ) & starter & dgDbx(cofactor)(pos)
   })
 
   /** Find Q|- p' = q/g p + r, and proves Q|- g!=0 & r~0 with appropriate
@@ -1403,8 +1405,8 @@ private object DifferentialTactics extends Logging {
         invs.foldRight(diffWeakenG(pos) & qe & done)( (fml,tac) =>
           DC(fml)(pos) <(tac,
             (
-            //todo: delete repeated dW&QE once Pegasus reports dC chain
-            (DifferentialTactics.diffWeakenG(pos) & QE & done) |
+            //note: repeated dW&QE not needed if Pegasus reports a correct dC chain
+            //(DifferentialTactics.diffWeakenG(pos) & QE & done) |
             ODEInvariance.sAIclosedPlus(1)(pos) |
             ODEInvariance.sAIRankOne(false)(pos)) & done)
         )
@@ -1429,7 +1431,7 @@ private object DifferentialTactics extends Logging {
     }
     else {
       val algTool = ToolProvider.algebraTool().get
-      val gb = algTool.groebnerBasis(domToTerms(dom))
+      val gb = algTool.groebnerBasis(domainEqualities(dom))
       val quo = algTool.polynomialReduce(poly, div :: gb)
       // quo._1.head is the cofactor of div (q)
       // quo._2 is the remainder (r)
@@ -1443,7 +1445,7 @@ private object DifferentialTactics extends Logging {
   }
 
   //Keeps equalities in domain constraint
-  private def domToTerms(f:Formula) : List[Term] = {
+  private[btactics] def domainEqualities(f:Formula) : List[Term] = {
     flattenConjunctions(f).flatMap{
       case Equal(l,r) => Some(Minus(l,r))
       case _ => None
