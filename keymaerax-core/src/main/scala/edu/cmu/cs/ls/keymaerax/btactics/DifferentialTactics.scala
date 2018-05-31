@@ -32,6 +32,9 @@ private object DifferentialTactics extends Logging {
 
   private val namespace = "differentialtactics"
 
+  //QE with default timeout for use in ODE tactics
+  private[btactics] val timeoutQE = QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE))))
+
   /** @see [[HilbertCalculus.DE]] */
   lazy val DE: DependentPositionTactic = new DependentPositionTactic("DE") {
     //@todo investigate why unification fails and causes unnecessarily complicated tactic. And get rid of duplicate implementation
@@ -1188,7 +1191,7 @@ private object DifferentialTactics extends Logging {
     // First cut in the barrier property, then use dgdbx on it
     // Barrier condition is checked first to make it fail faster
     dC(barrierFml)(pos) <(
-      skip,diffWeakenG(pos) & useAt(barrierCond)(1,1::Nil) & QE & done
+      skip,diffWeakenG(pos) & useAt(barrierCond)(1,1::Nil) & timeoutQE & done
     ) & starter & dgDbx(cofactor)(pos)
   })
 
@@ -1198,6 +1201,7 @@ private object DifferentialTactics extends Logging {
     */
   private [btactics] def findDbx(ode: DifferentialProgram, dom: Formula,
                                  property: ComparisonFormula, strict:Boolean=true): (ProvableSig,Term,Term) = {
+
     val p = property.left
     val lie = DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
     // p' = q p + r
@@ -1206,13 +1210,13 @@ private object DifferentialTactics extends Logging {
 
     //The sign of the remainder for a Darboux argument
     val pr = property match {
-      case GreaterEqual(_, _) => proveBy(Imply(dom,GreaterEqual(r,zero)),QE)
-      case Greater(_, _) => proveBy(Imply(And(dom,property),GreaterEqual(r,zero)),QE)
-      case LessEqual(_, _) => proveBy(Imply(dom,LessEqual(r,zero)),QE)
-      case Less(_, _) => proveBy(Imply(And(dom,property),LessEqual(r,zero)),QE)
-      case Equal(_,_) => proveBy(Imply(dom,Equal(r,zero)),QE)
+      case GreaterEqual(_, _) => proveBy(Imply(dom,GreaterEqual(r,zero)),timeoutQE)
+      case Greater(_, _) => proveBy(Imply(And(dom,property),GreaterEqual(r,zero)),timeoutQE)
+      case LessEqual(_, _) => proveBy(Imply(dom,LessEqual(r,zero)),timeoutQE)
+      case Less(_, _) => proveBy(Imply(And(dom,property),LessEqual(r,zero)),timeoutQE)
+      case Equal(_,_) => proveBy(Imply(dom,Equal(r,zero)),timeoutQE)
       //todo: is there a special case of open DI that would work for disequalities?
-      case NotEqual(_,_) => proveBy(Imply(dom,Equal(r,zero)),QE)
+      case NotEqual(_,_) => proveBy(Imply(dom,Equal(r,zero)),timeoutQE)
       case _ => throw new BelleThrowable(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
     }
 
@@ -1389,7 +1393,7 @@ private object DifferentialTactics extends Logging {
       //DebuggingTactics.print("domSimplify") &
       DifferentialTactics.domSimplify(pos) &
       //DebuggingTactics.print("close") &
-      ( (DifferentialTactics.diffWeakenG(pos) & DebuggingTactics.print("QE") & QE & DebuggingTactics.print("after") & done) |
+      ( (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
         ODEInvariance.sAIclosedPlus(rankConfig)(pos) |
         ODEInvariance.sAIRankOne(reorderConfig)(pos))
   })
@@ -1408,14 +1412,13 @@ private object DifferentialTactics extends Logging {
     //Empty list = failed to generate an invariant
     //True ~ no DCs needed
     //Else, DC chain
-    val qe =  QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE))))
 
     // Assume that Pegasus hands us back a diffcut chain
     invs.headOption match {
       case None => throw new BelleThrowable(s"Pegasus failed to generate an invariant")
-      case Some(True) => diffWeakenG(pos) & qe & done
+      case Some(True) => diffWeakenG(pos) & timeoutQE & done
       case _ =>
-        invs.foldRight(diffWeakenG(pos) & qe & done)( (fml,tac) =>
+        invs.foldRight(diffWeakenG(pos) & timeoutQE & done)( (fml,tac) =>
           DC(fml)(pos) <(tac,
             (
             //note: repeated dW&QE not needed if Pegasus reports a correct dC chain

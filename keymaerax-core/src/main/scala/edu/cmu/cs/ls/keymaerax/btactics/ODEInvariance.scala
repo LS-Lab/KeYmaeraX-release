@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
@@ -348,9 +349,9 @@ object ODEInvariance {
 
     DebuggingTactics.debug("PRE",doPrint = debugTactic) &
       starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
-      implyR(pos) & r1 & ?(closeId) & QE & done, //common case?
+      implyR(pos) & r1 & ?(closeId) & timeoutQE & done, //common case?
       cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
-      implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.debug("QE step",doPrint = debugTactic) & QE & done, skip) //Don't bother running the rest if QE fails
+      implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.debug("QE step",doPrint = debugTactic) & timeoutQE & done, skip) //Don't bother running the rest if QE fails
       & cohide2(-3,1)& implyR(1) & lpclosedPlus(inst)
     )
   })
@@ -359,6 +360,7 @@ object ODEInvariance {
   // i.e. every p~0 is (trivially) Darboux
   // returns a list of formulas internally re-arranged according to diff cut order
   def rankOneFml(ode: DifferentialProgram, dom:Formula, f:Formula) : Option[Formula] = {
+
     f match {
       case cf:ComparisonFormula =>
         //findDbx
@@ -368,7 +370,7 @@ object ODEInvariance {
         else {
           if(cf.isInstanceOf[Equal] || cf.isInstanceOf[NotEqual]) return None
           //TODO: need to check cofactor well-defined as well?
-          val pr2 = proveBy(Imply(And(dom, Equal(cf.left, Number(0))), Greater(rem, Number(0))), QE)
+          val pr2 = proveBy(Imply(And(dom, Equal(cf.left, Number(0))), Greater(rem, Number(0))), timeoutQE)
           logger.debug(pr2)
           if(pr2.isProved)
             Some(f)
@@ -446,6 +448,7 @@ object ODEInvariance {
     */
   def sAIRankOne(doReorder:Boolean=true,skipClosed:Boolean =true) : DependentPositionTactic = "sAIR1" byWithInput (doReorder,(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only in top-level succedent")
+
     val (ode, dom, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
       case _ => throw new BelleThrowable("sAI only at box ODE in succedent")
@@ -466,7 +469,7 @@ object ODEInvariance {
         fail
       }
       else {
-        starter & cutR(f2)(pos) < (QE,
+        starter & cutR(f2)(pos) < (timeoutQE,
           cohideR(pos) & implyR(1) & recRankOneTac(f2)
         )
       }
@@ -478,12 +481,12 @@ object ODEInvariance {
           case Some(f) => f
         }
 
-      val reorder = proveBy(Equiv(f2, f3), QE)
+      val reorder = proveBy(Equiv(f2, f3), timeoutQE)
       assert(reorder.isProved)
 
       logger.debug("Rank 1: " + f3)
       starter & useAt(reorder)(pos ++ PosInExpr(1 :: Nil)) & cutR(f3)(pos) < (
-        useAt(reorder, PosInExpr(1 :: Nil))(pos) & QE,
+        useAt(reorder, PosInExpr(1 :: Nil))(pos) & timeoutQE,
         cohideR(pos) & implyR(1) & recRankOneTac(f3)
       )
     }
