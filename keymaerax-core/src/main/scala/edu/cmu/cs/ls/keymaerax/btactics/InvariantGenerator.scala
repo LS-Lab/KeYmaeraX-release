@@ -30,14 +30,19 @@ object InvariantGenerator extends Logging {
       case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }
-    val evos = if (constraint==True) Nil else FormulaTools.conjuncts(constraint)
+    lazy val evos = if (constraint==True) Nil else FormulaTools.conjuncts(constraint)
     lazy val deps = StaticSemanticsTools.transitiveDependencies(system)
     lazy val bounds = StaticSemantics.boundVars(system).symbols
     lazy val frees = StaticSemantics.freeVars(post).symbols
     lazy val knowledge = StaticSemantics.freeVars(constraint).symbols
     // bound variables that free variables of the postcondition depend on but that are not yet free in the evolution domain constraint, so missing knowledge.
     // i.e. variables that the free variables of the postcondition depend on, that are also bound, but not yet free in the evolution domain constraint
-    lazy val missing = frees.flatMap(x => deps.getOrElse(x,List.empty).intersect(bounds.to)).diff(knowledge)
+    def relevantInvVars(x: Variable) = system match {
+      //@note ODEs can be proved with diffcut chains, but loops need single shot attempt
+      case _: DifferentialProgram => deps.getOrElse(x,List.empty).intersect(bounds.to)
+      case _: Loop => (x +: deps.getOrElse(x,List.empty)).intersect(bounds.to)
+    }
+    lazy val missing = frees.flatMap(relevantInvVars).diff(knowledge)
     //@todo above of course even vars that are in the domain might need more knowledge, but todo that later and lazy
     generator(sequent,pos).
       distinct.
