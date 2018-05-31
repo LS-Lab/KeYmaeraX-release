@@ -3210,4 +3210,31 @@ object DerivedAxioms extends Logging {
   lazy val lessNotSym = mkDerivedAxiom("< antisym",Some("F_() < G_()"),"G_() < F_()","false")
 
 
+  /**
+    * {{{Axiom "all stutter".
+    *    \forall x p <-> \forall x p
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  lazy val forallStutter: Lemma = derivedAxiom("all stutter",
+    Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(x_) <-> \\forall x_ p_(x_)".asFormula)),
+    byUS(equivReflexiveAxiom)
+  )
+
+  /**
+    * {{{Axiom "exists stutter".
+    *    \exists x p <-> \exists x p
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  lazy val existsStutter: Lemma = derivedAxiom("exists stutter",
+    Sequent(IndexedSeq(), IndexedSeq("\\exists x_ p_(x_) <-> \\exists x_ p_(x_)".asFormula)),
+    byUS(equivReflexiveAxiom)
+  )
 }

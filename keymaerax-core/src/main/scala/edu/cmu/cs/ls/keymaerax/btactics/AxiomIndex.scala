@@ -127,6 +127,8 @@ object AxiomIndex extends Logging {
     case "<*> approx" => (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
     case "<*> stuck" => (PosInExpr(0::Nil), Nil)
     case "<'> stuck" => (PosInExpr(0::Nil), Nil)
+    case "all stutter" => (PosInExpr(0::Nil), Nil)
+    case "exists stutter" => (PosInExpr(0::Nil), Nil)
 
     case "[] post weaken" => (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
 
