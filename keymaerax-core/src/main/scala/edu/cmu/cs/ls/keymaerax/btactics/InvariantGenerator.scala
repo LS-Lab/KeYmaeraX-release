@@ -72,17 +72,27 @@ object InvariantGenerator extends Logging {
       case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }
+
     lazy val deps = StaticSemanticsTools.transitiveDependencies(system)
+
+    def sizeCompare(a: Formula, b: Formula) = system match {
+      case _: DifferentialProgram =>
+        // smaller set of variables that it depends on means good idea to try first in dependency order, excluding self-dependencies
+        StaticSemantics.freeVars(a).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(_!=x)).size <
+        StaticSemantics.freeVars(b).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(_!=x)).size
+      case _: Loop =>
+        // try invariants with larger coverage of the loop's free variables first
+        (StaticSemantics.freeVars(system).symbols -- StaticSemantics.freeVars(a).symbols).size <
+        (StaticSemantics.freeVars(system).symbols -- StaticSemantics.freeVars(b).symbols).size
+    }
+
     relevanceFilter(generator)(sequent, pos).
       // sort by dependency order
       //@todo performance construction should probably have been the other way around to ensure primitive dependencies are tried first and avoding sorting by that order retroactively
       sortWith((a:Formula,b:Formula) =>
         //@todo improve sorting to take dependency order into account, not just number. If x depends on y then y is smaller.
         //@todo improve sorting to take dependency cluster into account, too.
-        // smaller set of variables that it depends on means good idea to try first in dependency order, excluding self-dependencies
-        if (a.isFOL == b.isFOL)
-          StaticSemantics.freeVars(a).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(_!=x)).size <
-          StaticSemantics.freeVars(b).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(_!=x)).size
+        if (a.isFOL == b.isFOL) sizeCompare(a, b)
         else a.isFOL //@note a.isFOL != b.isFOL, FOL are smaller than non-FOL formulas
       )
   }
@@ -123,13 +133,16 @@ object InvariantGenerator extends Logging {
 
   /** A simplistic invariant and differential invariant candidate generator.
     * @author Andre Platzer */
-  lazy val simpleInvariantCandidates: Generator[Formula] = (sequent,pos) =>
+  lazy val simpleInvariantCandidates: Generator[Formula] = (sequent,pos) => {
+    def combinedAssumptions(loop: Loop): Formula = {
+      sequent.ante.toList.filter(fml => !StaticSemantics.freeVars(fml).intersect(StaticSemantics.boundVars(loop)).isEmpty).reduceOption(And).getOrElse(True)
+    }
     sequent.sub(pos) match {
       case Some(Box(_: ODESystem, post)) => FormulaTools.conjuncts(post +: sequent.ante.toList).toStream
-      case Some(Box(_: Loop, post))     => FormulaTools.conjuncts(post +: sequent.ante.toList).toStream
+      case Some(Box(l: Loop, post))     => (FormulaTools.conjuncts(post +: sequent.ante.toList) :+ combinedAssumptions(l) :+ post).toStream
       case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
-    }
+    }}
 
   /** Pegasus invariant generator (requires Mathematica). */
   lazy val pegasusInvariants: Generator[Formula] = pegasus(includeCandidates=false)
