@@ -1091,43 +1091,58 @@ private object DifferentialTactics extends Logging {
       case _ => throw new BelleThrowable(s"Not sure what to do with shape ${seq.sub(pos)}, dgDbx requires 0 on RHS")
     }
 
-    /** The ghost variable */
-    val gvy = "dbxy_".asVariable
-    require(!StaticSemantics.vars(system).contains(gvy), "fresh ghost " + gvy + " in " + system.prettyString)
-    //@todo should not occur anywhere else in the sequent either...
+    val isOpen = property match {
+      case  _: Greater => true
+      case _: Less => true
+      case _ => false
+    }
 
-    /** Another ghost variable */
-    val gvz = "dbxz_".asVariable
-    require(!StaticSemantics.vars(system).contains(gvz), "fresh ghost " + gvz + " in " + system.prettyString)
-    //@todo should not occur anywhere else in the sequent either...
+    //Skip ghosts if input cofactor was just 0
+    //Could also do more triviality checks like -0, 0+0 etc.
+    if (qco == Number(0)) {
+      //println("dgDbx automatically used dI for trivial cofactor")
+      if(isOpen) openDiffInd(pos) else dI('full)(pos)
+    }
+    else {
+      /** The ghost variable */
+      val gvy = "dbxy_".asVariable
+      require(!StaticSemantics.vars(system).contains(gvy), "fresh ghost " + gvy + " in " + system.prettyString)
+      //@todo should not occur anywhere else in the sequent either...
 
-    //Construct the diff ghost y' = -qy
-    val dey = AtomicODE(DifferentialSymbol(gvy), Times(Neg(qco),gvy))
-    //Diff ghost z' = qz/2
-    val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(qco,Number(2)),gvz))
+      /** Another ghost variable */
+      val gvz = "dbxz_".asVariable
+      require(!StaticSemantics.vars(system).contains(gvz), "fresh ghost " + gvz + " in " + system.prettyString)
+      //@todo should not occur anywhere else in the sequent either...
 
-    val zero = Number(0)
-    val one = Number(1)
-    val two = Number(2)
+      //Construct the diff ghost y' = -qy
+      val dey = AtomicODE(DifferentialSymbol(gvy), Times(Neg(qco), gvy))
+      //Diff ghost z' = qz/2
+      val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(qco, Number(2)), gvz))
 
-    //Postcond:
-    //For equalities, != 0 works too, but the > 0 works for >=, > as well
-    val gtz = Greater(gvy,zero)
-    val pcy = And(gtz, pop.reapply(Times(gvy,p),zero))
-    val pcz = Equal(Times(gvy,Power(gvz,two)), one)
+      val zero = Number(0)
+      val one = Number(1)
+      val two = Number(2)
 
-    DebuggingTactics.debug("Darboux postcond "+pcy.toString+" "+pcz.toString) &
-      dG(dey,Some(pcy))(pos) &     //Introduce the dbx ghost
-      existsR(one)(pos) &          //Anything works here, as long as it is > 0, 1 is convenient
-      diffCut(gtz)(pos) <(
-        boxAnd(pos) & andR(pos) <(
-          dW(pos) & prop,
-          diffInd('full)(pos)) // Closes p z = 0 invariant
-      ,
-        dG(dez,Some(pcz))(pos) &     //Introduce the dbx ghost
-        existsR(one)(pos) &          //The sqrt inverse of y, 1 is convenient
-        diffInd('full)(pos)          // Closes z > 0 invariant with another diff ghost
-      )
+      //Postcond:
+      //For equalities, != 0 works too, but the > 0 works for >=, > as well
+      val gtz = Greater(gvy, zero)
+      val pcy = And(gtz, pop.reapply(Times(gvy, p), zero))
+      val pcz = Equal(Times(gvy, Power(gvz, two)), one)
+
+      DebuggingTactics.debug("Darboux postcond " + pcy.toString + " " + pcz.toString) &
+        dG(dey, Some(pcy))(pos) & //Introduce the dbx ghost
+        existsR(one)(pos) & //Anything works here, as long as it is > 0, 1 is convenient
+        diffCut(gtz)(pos) < (
+          boxAnd(pos) & andR(pos) < (
+            dW(pos) & prop,
+            if (isOpen) openDiffInd(pos) else diffInd('full)(pos)
+          ) // Closes p z = 0 invariant
+          ,
+          dG(dez, Some(pcz))(pos) & //Introduce the dbx ghost
+            existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
+            diffInd('full)(pos) // Closes z > 0 invariant with another diff ghost
+        )
+    }
   })
 
   /**
@@ -1140,6 +1155,8 @@ private object DifferentialTactics extends Logging {
     */
   private val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
   private val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
+
+  private lazy val barrierCond: ProvableSig = remember("max(f_()*f_(),g_()) > 0 <-> f_()=0 -> g_()>0".asFormula,QE,namespace).fact
 
   def dgBarrier(tool: Option[SimplificationTool] = None): DependentPositionTactic = "barrier" by ((pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "barrier only at top-level succedent")
@@ -1169,16 +1186,18 @@ private object DifferentialTactics extends Logging {
     val cofactor = Divide(Times(barrier,lie),barrierAlg)
 
     // First cut in the barrier property, then use dgdbx on it
+    // Barrier condition is checked first to make it fail faster
     dC(barrierFml)(pos) <(
-      starter & dgDbx(cofactor)(pos),
-      dW(pos) & QE
-    )
+      skip,diffWeakenG(pos) & useAt(barrierCond)(1,1::Nil) & QE & done
+    ) & starter & dgDbx(cofactor)(pos)
   })
 
-  /** Find Q|- p' = q/g p + r, and proves Q|- g!=0 & r~0 with appropriate
+  /** Find Q|- p' = q p + r, and proves |- Q -> r~0 with appropriate
     * sign condition on r as specified by "property"
+    * In addition, if the "property" was open, then also assume it in Q
     */
-  private [btactics] def findDbx(ode: DifferentialProgram, dom: Formula, property: ComparisonFormula, strict:Boolean=true) : (ProvableSig,Formula,Term,Term) = {
+  private [btactics] def findDbx(ode: DifferentialProgram, dom: Formula,
+                                 property: ComparisonFormula, strict:Boolean=true): (ProvableSig,Term,Term) = {
     val p = property.left
     val lie = DifferentialHelper.simplifiedLieDerivative(ode, p, ToolProvider.simplifierTool())
     // p' = q p + r
@@ -1186,23 +1205,22 @@ private object DifferentialTactics extends Logging {
     val zero = Number(0)
 
     //The sign of the remainder for a Darboux argument
-    val denRemReq = property match {
-      case GreaterEqual(_, _) => GreaterEqual(r,zero)
-      case Greater(_, _) => GreaterEqual(r,zero)
-      case LessEqual(_, _) => LessEqual(r,zero)
-      case Less(_, _) => LessEqual(r,zero)
-      case Equal(_,_) => Equal(r,zero)
-      case NotEqual(_,_) => Equal(r,zero)
+    val pr = property match {
+      case GreaterEqual(_, _) => proveBy(Imply(dom,GreaterEqual(r,zero)),QE)
+      case Greater(_, _) => proveBy(Imply(And(dom,property),GreaterEqual(r,zero)),QE)
+      case LessEqual(_, _) => proveBy(Imply(dom,LessEqual(r,zero)),QE)
+      case Less(_, _) => proveBy(Imply(And(dom,property),LessEqual(r,zero)),QE)
+      case Equal(_,_) => proveBy(Imply(dom,Equal(r,zero)),QE)
+      //todo: is there a special case of open DI that would work for disequalities?
+      case NotEqual(_,_) => proveBy(Imply(dom,Equal(r,zero)),QE)
       case _ => throw new BelleThrowable(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
     }
 
-    val pr = proveBy(Imply(dom,denRemReq), QE)
-
     //println(pr,denRemReq,lie,q,p,r)
     if(!pr.isProved && strict)
-      throw new BelleThrowable("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+q+" rem: "+r+" unable to prove: "+denRemReq)
+      throw new BelleThrowable("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+q+" rem: "+r+" unable to prove: "+pr.conclusion)
 
-    (pr,denRemReq, q,r)
+    (pr,q,r)
   }
 
   // Normalises to p = 0 then attempts to automatically guess the darboux cofactor
@@ -1223,12 +1241,9 @@ private object DifferentialTactics extends Logging {
 
     //normalized to have p on LHS
     //todo: utilize pr which proves the necessary sign requirement for denRemReq
-    val (pr,denRemReq,cofactor,rem) = findDbx(system,dom,property.asInstanceOf[ComparisonFormula])
+    val (pr,cofactor,rem) = findDbx(system,dom,property.asInstanceOf[ComparisonFormula])
 
-    //DI if simple, otherwise use dgDbx
-    val finishTac = if (cofactor == Number(0)) dI('full)(pos) else dgDbx(cofactor)(pos)
-
-    starter & finishTac
+    starter & dgDbx(cofactor)(pos)
   })
 
   /** @see [[TactixLibrary.DGauto]]
@@ -1403,8 +1418,8 @@ private object DifferentialTactics extends Logging {
         invs.foldRight(diffWeakenG(pos) & qe & done)( (fml,tac) =>
           DC(fml)(pos) <(tac,
             (
-            //todo: delete repeated dW&QE once Pegasus reports dC chain
-            (DifferentialTactics.diffWeakenG(pos) & QE & done) |
+            //note: repeated dW&QE not needed if Pegasus reports a correct dC chain
+            //(DifferentialTactics.diffWeakenG(pos) & QE & done) |
             ODEInvariance.sAIclosedPlus(1)(pos) |
             ODEInvariance.sAIRankOne(false)(pos)) & done)
         )
@@ -1429,7 +1444,7 @@ private object DifferentialTactics extends Logging {
     }
     else {
       val algTool = ToolProvider.algebraTool().get
-      val gb = algTool.groebnerBasis(domToTerms(dom))
+      val gb = algTool.groebnerBasis(domainEqualities(dom))
       val quo = algTool.polynomialReduce(poly, div :: gb)
       // quo._1.head is the cofactor of div (q)
       // quo._2 is the remainder (r)
@@ -1443,7 +1458,7 @@ private object DifferentialTactics extends Logging {
   }
 
   //Keeps equalities in domain constraint
-  private def domToTerms(f:Formula) : List[Term] = {
+  private[btactics] def domainEqualities(f:Formula) : List[Term] = {
     flattenConjunctions(f).flatMap{
       case Equal(l,r) => Some(Minus(l,r))
       case _ => None

@@ -12,9 +12,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ToolException
 import org.apache.logging.log4j.scala.Logger
 
+import scala.collection.immutable
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
 
@@ -223,7 +223,7 @@ object ODEInvariance {
   case class Disj(left: Instruction, right:Instruction) extends Instruction
   case class Conj(left: Instruction, right:Instruction) extends Instruction
   //Prove atomic polynomial (in)equality with this cofactor
-  case class Darboux(is_eq:Boolean, cofactor : Term, cut : Formula, pr :ProvableSig) extends Instruction //TODO: maybe keep around provables for re-use
+  case class Darboux(is_eq:Boolean, cofactor : Term, pr :ProvableSig) extends Instruction //TODO: maybe keep around provables for re-use
   //Prove atomic polynomial >= with this bound
   case class Strict(bound : Int) extends Instruction
   //Prove using closeF
@@ -249,8 +249,8 @@ object ODEInvariance {
         if (a == absF) {
           try {
             val prop = Equal(p, Number(0))
-            val (pr, denRemReq, cofactor, rem) = findDbx(ode, dom, prop)
-            (prop, Darboux(true, cofactor, denRemReq, pr))
+            val (pr, cofactor, rem) = findDbx(ode, dom, prop)
+            (prop, Darboux(true, cofactor, pr))
           }
           catch {
             case e: BelleThrowable => (False, Triv())
@@ -260,8 +260,8 @@ object ODEInvariance {
       case _ => {
         try {
           val prop = GreaterEqual(p, Number(0))
-          val (pr, denRemReq, cofactor, rem) = findDbx(ode, dom, prop)
-          (prop, Darboux(false, cofactor, denRemReq, pr))
+          val (pr, cofactor, rem) = findDbx(ode, dom, prop)
+          (prop, Darboux(false, cofactor, pr))
         }
         catch {
           case e: BelleThrowable => (pStar(ode, p, bound), Strict(bound))
@@ -274,12 +274,11 @@ object ODEInvariance {
   private def lpclosedPlus(inst:Instruction) : BelleExpr =
     SeqTactic(DebuggingTactics.debug(inst.toString(),doPrint = debugTactic),
       inst match{
-      case Darboux(iseq,cofactor,cut, pr) =>
-        DebuggingTactics.print(cofactor+" "+cut) & skip
+      case Darboux(iseq,cofactor,pr) =>
         (if(iseq) useAt(refAbs)(1) else skip) &
         DebuggingTactics.debug("Darboux "+cofactor+" ",doPrint = debugTactic) &
         implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) &
-          (if(cofactor==Number(0)) dI('full)(1) else dgDbx(cofactor)(1))
+        dgDbx(cofactor)(1)
       case Disj(l,r) =>
         DebuggingTactics.debug("DISJ",doPrint = debugTactic) &
         orL(-2) <(
@@ -329,6 +328,8 @@ object ODEInvariance {
     require(fml.isInstanceOf[GreaterEqual], "Normalization failed to reach normal form "+fml)
     val f2 = fml.asInstanceOf[GreaterEqual]
 
+    //println("Rank reordering:",rankReorder(ODESystem(ode,dom),post))
+
     val (pf,inst) = pStarHomPlus(ode,dom,f2.left,bound)
 
     //println("HOMPLUS:"+pf+" "+inst)
@@ -360,8 +361,8 @@ object ODEInvariance {
   def rankOneFml(ode: DifferentialProgram, dom:Formula, f:Formula) : Option[Formula] = {
     f match {
       case cf:ComparisonFormula =>
-        //Non-strict findDbx
-        val (pr, denRemReq, cofactor, rem) = findDbx(ode, dom, cf,false)
+        //findDbx
+        val (pr, cofactor, rem) = findDbx(ode, dom, cf,false)
         if (pr.isProved)// TODO: this should be keeping track of co-factors rather than throwing them away
           Some(f)
         else {
@@ -372,6 +373,7 @@ object ODEInvariance {
           if(pr2.isProved)
             Some(f)
           else None
+          //TODO: for strict inequalities, can also check that p>0 proves using open DI (p>0 -> p'>=0)
         }
 
       case and:And =>
@@ -456,12 +458,11 @@ object ODEInvariance {
     }
 
     if (!doReorder) {
-      if (skipClosed & flattenConjunctions(f2).forall(
-        f => f match {
-          case Equal(_, _) => true
-          case GreaterEqual(_, _) => true
-          case _ => false
-        })) {
+      if (skipClosed & flattenConjunctions(f2).forall {
+        case Equal(_, _) => true
+        case GreaterEqual(_, _) => true
+        case _ => false
+      }) {
         fail
       }
       else {
@@ -561,28 +562,157 @@ object ODEInvariance {
     pr
   }
 
-  //Explicitly calculate the rank of a polynomial term, no optimizations
-  //todo: Groebner basis broken
-//  def rank(ode:DifferentialProgram, poly:Term) : Unit = {
-//    if (ToolProvider.algebraTool().isEmpty)
-//      throw new BelleThrowable(s"rank computation requires a AlgebraTool, but got None")
-//
-//    val algTool = ToolProvider.algebraTool().get
-//
-//    var gb = List(poly)
-//    var rank = 1
-//    var curP = poly
-//
-//    while(rank<=2) {
-//      val lie = DifferentialHelper.simplifiedLieDerivative(ode, curP, ToolProvider.simplifierTool())
-//      val quo = algTool.polynomialReduce(lie, gb)
-//      println("reduction: ",quo)
-//      println("rank: ",rank)
-//      gb = algTool.groebnerBasis(lie::gb)
-//      curP = lie
-//      rank+=1
-//    }
-//  }
+  /**
+    * Event stuck tactics: roughly, [x'=f(x)&Q]P might be true in a state if:
+    * 1) Q is false in the state (trivializing the box modality)
+    * 2) Q,P are true in initial state, but the ODE cannot evolve for non-zero duration without leaving Q
+    * 3) the "actual" interesting case, where P is true along all solutions (staying in Q)
+    *
+    * 1) is handled by diffUnpackEvolutionDomainInitially, this suite handles case 2)
+    */
+
+  /** Given a top-level succedent of the form [{t'=c,x'=f(x)& Q & t=d}]P
+    * proves P invariant because the domain constraint prevents progress
+    * This tactic is relatively flexible:
+    * t'=c can be any time-like ODE (except c cannot be 0)
+    * t=d requires d to be a constant number, which forces the whole ODE to be frozen
+    * (of course, P should be true initially)
+    */
+  def timeBound : DependentPositionTactic = "timeBound" by ((pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "time bound only in top-level succedent")
+    val (ode, dom, post) = seq.sub(pos) match {
+      case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
+      case _ => throw new BelleThrowable("time bound only at box ODE in succedent")
+    }
+    //Check that the domain at least freezes one of the coordinates
+    val domConj = flattenConjunctions(dom)
+    val atoms = atomicListify(ode)
+
+    //Only need to freeze coordinates free in postcondition
+    val fvs = StaticSemantics.freeVars(post)
+    val freeAtoms = atoms.filter( p => fvs.contains(p.xp.x))
+
+    val timeLike = atoms.flatMap(_ match {
+      case AtomicODE(v ,n:Number) if n.value!=0 => Some(v.x)
+      case _=> None
+    })
+    val constRHS = domConj.filter(_ match {
+      //todo: this can be generalized
+      case Equal(l,_:Number) if timeLike.contains(l) => true
+      case _ => false})
+
+    constRHS match {
+      case Nil => throw new BelleThrowable("time bound requires at least one time-like coordinate to be frozen in domain, found none")
+      case Equal(t,d)::_ =>
+        //Construct the bounding polynomials sum_i (x_i-old(x_i))^2 <= (sum_i 2x_ix'_i)*t
+        val left = freeAtoms.map(f =>
+          Power(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)),Number(2)):Term).reduce(Plus)
+        val right = Times(freeAtoms.map(f => Times(Number(2),
+          Times(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)), f.e)):Term).reduce(Plus),Minus(t,d))
+        dC(LessEqual(left,right))(pos)<(
+          dW(pos) & QE & done,
+          dI('full)(1)
+        )
+    }
+  })
+
+  //@todo: copied from Expression.scala but slightly modified to always return atomic ODEs directly
+  private def atomicListify(ode: DifferentialProgram): immutable.List[AtomicODE] =
+  ode match {
+    case p: DifferentialProduct => atomicListify(p.left) ++ atomicListify(p.right)
+    case a: AtomicODE => a :: Nil
+    case _ => throw new IllegalArgumentException("Unable to listify:"+ode)
+  }
+
+    /**
+    * Explicitly calculate the conjunctive rank of a list of polynomials
+    * (uses conjunctive optimization from SAS'14)
+    * @param ode the ODESystem to use
+    * @param polys the polynomials to compute rank for
+    * @return the Groebner basis of the polynomials closed under Lie derivation + the rank (at which this occurs)
+    */
+  def rank(ode:ODESystem, polys:List[Term]) : (List[Term],Int) = {
+    if (ToolProvider.algebraTool().isEmpty)
+      throw new BelleThrowable(s"rank computation requires a AlgebraTool, but got None")
+
+    val algTool = ToolProvider.algebraTool().get
+
+    var gb = algTool.groebnerBasis(polys ++ domainEqualities(ode.constraint))
+    var rank = 1
+    //remainder after each round of polynomial reduction
+    var remaining = polys
+
+    while(true) {
+      val lies = remaining.map(p => DifferentialHelper.simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
+      val quos = lies.map(p => algTool.polynomialReduce(p, gb))
+      remaining = quos.map(_._2).filterNot(_ == Number(0))
+      if(remaining.isEmpty) {
+        //println(gb,rank)
+        return (gb,rank)
+      }
+      gb = algTool.groebnerBasis(remaining ++ gb)
+      rank+=1
+    }
+    (List(),0)
+  }
+
+  /** Experimenting with tricks for reordering the cofactor matrix
+    * If we think of Gco as an adjacency matrix where:
+    * Gco_{i,j} is non-zero iff there is an edge j -> i, ignoring self edges
+    * Then "all" we need to do is topologically sort Gco
+    * */
+  private def rankReorder(ode:ODESystem, f:Formula) : Boolean = {
+    val fml = semiAlgNormalize(f)
+    rankReorderAux(ode,f)
+  }
+
+  private def rankReorderAux(ode:ODESystem, f:Formula) : Boolean = {
+    val (atoms,rest) = flattenConjunctions(f).partition(
+      _ match {
+        case LessEqual(l,r) => true
+        case GreaterEqual(l,r) => true
+        case Equal(l,r) => true
+        case _ => false
+      }
+    )
+    val dorest = rest.forall ( _ match {
+      case Or(l,r) => rankReorderAux(ode,l) && rankReorderAux(ode,r)
+      case _ => false
+    })
+    val polys = atoms.map(f => f.asInstanceOf[ComparisonFormula].left)
+    val (cof,gb,r) = rankCofactors(ode,polys)
+    val reorder = reorderCofactors(cof)
+    dorest && reorder.isDefined
+  }
+
+  private def reorderCofactors(Gco:List[List[Term]]) : Option[List[Int]] = {
+    var adjacencies = Gco.zipWithIndex.map(pr =>
+      (pr._2,pr._1.zipWithIndex.filterNot( p => p._1 == Number(0) || pr._2 == p._2).map(_._2))
+    )
+    var order = ListBuffer[Int]()
+    while(adjacencies.nonEmpty) {
+      //println("ADJ",adjacencies)
+      val (l,r) = adjacencies.partition(pls => pls._2.isEmpty)
+      val ls = l.map(_._1)
+      if(l.isEmpty)
+        return None
+      order ++= ls
+      adjacencies = r.map( pls => (pls._1,pls._2.filterNot(i => ls.contains(i))))
+    }
+    Some(order.toList)
+  }
+
+  //Cofactors at rank
+  private def rankCofactors(ode:ODESystem, polys:List[Term]): (List[List[Term]],List[Term],Int) = {
+    if (ToolProvider.algebraTool().isEmpty)
+      throw new BelleThrowable(s"rank computation requires a AlgebraTool, but got None")
+
+    val algTool = ToolProvider.algebraTool().get
+    val (gb,r) = rank(ode,polys)
+    val lies = gb.map(p => DifferentialHelper.simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
+    val quos = lies.map(p => algTool.polynomialReduce(p, gb))
+    (quos.map(_._1),gb,r)
+  }
 
   //Explicit symbolic expression for the determinant of a matrix
   //Currently just explicitly calculated, but can use Mathematica's det if available
