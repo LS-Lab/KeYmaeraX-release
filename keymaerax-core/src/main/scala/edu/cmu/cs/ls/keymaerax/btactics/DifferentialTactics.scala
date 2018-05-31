@@ -435,7 +435,8 @@ private object DifferentialTactics extends Logging {
       val newDom = constCtxt.foldRight(dom)((x, y) => And(x, y))
       dR(newDom)(pos) <( skip,
          //propositional proof should be sufficient here
-        (boxAnd(1) & andR(1) <(V(1) & closeId,skip))*constCtxt.length & diffWeakenG(1) & implyR(1) & closeId)
+        (boxAnd(1) & andR(1)<(V(1) & closeId,skip))*constCtxt.length &
+         diffWeakenG(1) & implyR(1) & closeId)
     }
   })
 
@@ -925,9 +926,13 @@ private object DifferentialTactics extends Logging {
       }
     )
 
-    proveFromEvolutionDomain(pos) & done |
+    //DebuggingTactics.print("prove from evol dom") &
+      proveFromEvolutionDomain(pos) & done |
+    //DebuggingTactics.print("prove by ode inv") &
       odeInvariant()(pos) & done |
+    //DebuggingTactics.print("add & recur") &
       addInvariant & fastODE(finish)(pos) |
+    //DebuggingTactics.print("finish") &
       finish
   })
 
@@ -1384,7 +1389,7 @@ private object DifferentialTactics extends Logging {
     //todo: Ideally this will go for full rank + everything proof if tryHard=true
     val rankConfig = if(tryHard) 3 else 1
     //todo: and this should disappear for tryHard mode
-    val reorderConfig = if(tryHard) true else false
+    val reorderConfig = tryHard
 
     //Add constant assumptions to domain constraint
     //DebuggingTactics.print("DConstV") &
@@ -1393,9 +1398,17 @@ private object DifferentialTactics extends Logging {
       //DebuggingTactics.print("domSimplify") &
       DifferentialTactics.domSimplify(pos) &
       //DebuggingTactics.print("close") &
-      ( (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
-        ODEInvariance.sAIclosedPlus(rankConfig)(pos) |
-        ODEInvariance.sAIRankOne(reorderConfig)(pos))
+      (
+        //DebuggingTactics.print("try DWQE") &
+          (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
+        //DebuggingTactics.print("try sAI closed plus") &
+          ODEInvariance.sAIclosedPlus(rankConfig)(pos) |
+        //DebuggingTactics.print("try sAIR1") &
+          ODEInvariance.sAIRankOne(reorderConfig)(pos)
+        //| DebuggingTactics.print("try failed") &
+        //  fail
+        )
+      // & DebuggingTactics.print("success")
   })
 
   // Asks Pegasus invariant generator for an invariant (DC chain)
@@ -1636,7 +1649,25 @@ private object DifferentialTactics extends Logging {
       case And(l,r) =>  List(minGeqNorm)
       case Or(l,r) =>  List(maxGeqNorm)
       //case Not(_) =>  throw new IllegalArgumentException("Rewrite "+f+" to negation normal form")
-      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to max/min >=0 normal form (must be a conjunction/disjunction of >=,<=), rewrite to negation normal form if necessary")
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to max/min >=0 normal form (must be a conjunction/disjunction of >=,<=)")
+    }
+  }
+
+  //Simplifier term index that throws an exception when it encounters terms that are not atomic
+  private def atomicTermIndex(t:Term,ctx:context) : List[ProvableSig] = {
+    t match {
+      case v:BaseVariable => List()
+      case n:Number => List()
+      case FuncOf(_,Nothing) => List()
+      case Neg(_) => List()
+      case Plus(_,_) => List()
+      case Minus(_,_) => List()
+      case Times(_,_) => List()
+      case Divide(_,_) => List()
+      case Power(_,_) => List()
+      case _ => {
+        throw new IllegalArgumentException("cannot normalize term:"+t+" rejecting immediately")
+      }
     }
   }
 
@@ -1646,14 +1677,14 @@ private object DifferentialTactics extends Logging {
   private def doNormalize(fi:formulaIndex)(f:Formula) : (Formula,Option[ProvableSig]) = {
     to_NNF(f) match {
       case Some((nnf,pr)) =>
-        val (ff,propt) = SimplifierV3.simpWithDischarge (IndexedSeq[Formula] (), nnf, fi, SimplifierV3.emptyTaxs)
+        val (ff,propt) = SimplifierV3.simpWithDischarge (IndexedSeq[Formula] (), nnf, fi, atomicTermIndex)
         propt match {
           case None => (nnf,Some(pr))
           case Some(pr2) =>
             (ff, Some(useFor(pr2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))(pr)) )
         }
       case None =>
-        SimplifierV3.simpWithDischarge (IndexedSeq[Formula] (), f, fi, SimplifierV3.emptyTaxs)
+        SimplifierV3.simpWithDischarge (IndexedSeq[Formula] (), f, fi, atomicTermIndex)
     }
   }
 
