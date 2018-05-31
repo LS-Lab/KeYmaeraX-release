@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{useAt, _}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -614,7 +614,7 @@ object ODEInvariance {
           Times(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)), f.e)):Term).reduce(Plus),Minus(t,d))
         dC(LessEqual(left,right))(pos)<(
           dW(pos) & QE & done,
-          dI('full)(1)
+          dI('full)(pos)
         )
     }
   })
@@ -626,6 +626,53 @@ object ODEInvariance {
     case a: AtomicODE => a :: Nil
     case _ => throw new IllegalArgumentException("Unable to listify:"+ode)
   }
+
+  /**
+    * Given either a stuck diamond modality in the antecedent
+    * G, P, <x'=f(x)&Q>~P |-
+    * or dually a stuck box in the succedent:
+    * G, P |- [x'=f(x)&Q]P
+    *
+    * reduces the goal to local progress into ~Q
+    * G |- <t'=1,x'=f(x)& ~Q | t=0> t!=0
+    *
+    * todo: compose with local progress to further reduce to G |- ~Q*
+    * todo: do not re-introduce t'=1 if it is already there
+    */
+
+  // main stuck argument
+  private lazy val stuckRefine =
+    remember("<{c&!q(||) | r(||)}>!r(||) -> ([{c&r(||)}]p(||) -> [{c&q(||)}]p(||))".asFormula,
+      implyR(1) & implyR(1) &
+        useAt("[] box",PosInExpr(1::Nil))(-2) & notL(-2) &
+        useAt("[] box",PosInExpr(1::Nil))(1) & notR(1) &
+        andLi & useAt("Uniq uniqueness")(-1) & DWd(-1) &
+        cutL("<{c&(!q(||)|r(||))&q(||)}>!p(||)".asFormula)(-1) <(
+          implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
+          cohideR(2) & implyR(1) & mond & prop), namespace)
+
+  def domainStuck : DependentPositionTactic = "domainStuck" by ((pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel, "domain stuck only at top-level")
+    val (ode, dom, post) = seq.sub(pos) match {
+      //needs to be dualized
+      case Some(Box(sys: ODESystem, post)) if pos.isSucc => (sys.ode, sys.constraint, post)
+      //todo: case Some(Diamond(sys:ODESystem,post)) if pos.isAnte => (sys.ode, sys.constraint, post)
+      case _ => throw new BelleThrowable("domain stuck for box ODE in succedent or diamond ODE in antecedent")
+    }
+
+    val tvName = "stuck_"
+    val timeOde = (tvName+"'=1").asDifferentialProgram
+    val stuckDom = (tvName+"=0").asFormula
+    val odedim = getODEDim(seq,pos)
+
+    // set up the time variable
+    // commute it to the front to better match with realind/cont
+    DifferentialTactics.dG(timeOde,None)(pos) & existsR(Number(0))(pos) & (useAt(", commute")(pos)) * odedim &
+    cutR(Box(ODESystem(DifferentialProduct(timeOde,ode),stuckDom),post))(pos)<(
+      timeBound(pos),
+      useAt(stuckRefine,PosInExpr(1::Nil))(pos)
+    )
+  })
 
     /**
     * Explicitly calculate the conjunctive rank of a list of polynomials

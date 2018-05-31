@@ -1,6 +1,6 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, SaturateTactic, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -355,7 +355,7 @@ class ODEInvarianceTests extends TacticTestBase {
         cut("<{t'=1,x'=x,y'=x+y+z& x<=5 & (!x<=5 | t=0)}> (!y=100 | t!=0)".asFormula)<(
           //un-dualize back to box
           useAt("<> diamond",PosInExpr(1::Nil))('Llast) & notL('Llast) &
-          //TODO: better manage extra introduced diamond modalities because dW doesn't work
+          //TODO: better manage extra diamond modalities because dW doesn't work properly with them
           hideL('Llast) & hideL('Llast) &
           dR("t=0".asFormula)(1)<(
             timeBound(1),
@@ -367,6 +367,14 @@ class ODEInvarianceTests extends TacticTestBase {
         //Local progress tactic needs to be generalized to do integration trick for strict inequalities
         skip
       )
+    )
+    println(pr)
+  }
+
+  it should "freeze predicates with stuck domains (auto)" in withMathematica { _ =>
+    val seq = "x=5 & y=100 ==> x=3 , [{x'=x, y'=x+y+z & x<=5}]y=100".asSequent
+    val pr = proveBy(seq,
+      domainStuck(2)
     )
     println(pr)
   }
