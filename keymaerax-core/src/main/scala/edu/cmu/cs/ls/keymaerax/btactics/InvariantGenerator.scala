@@ -80,8 +80,10 @@ object InvariantGenerator extends Logging {
         //@todo improve sorting to take dependency order into account, not just number. If x depends on y then y is smaller.
         //@todo improve sorting to take dependency cluster into account, too.
         // smaller set of variables that it depends on means good idea to try first in dependency order, excluding self-dependencies
-        StaticSemantics.freeVars(a).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(_!=x)).size <
+        if (a.isFOL == b.isFOL)
+          StaticSemantics.freeVars(a).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(_!=x)).size <
           StaticSemantics.freeVars(b).symbols.flatMap((x:Variable) => deps.getOrElse(x,List.empty).filter(_!=x)).size
+        else a.isFOL //@note a.isFOL != b.isFOL, FOL are smaller than non-FOL formulas
       )
   }
 
