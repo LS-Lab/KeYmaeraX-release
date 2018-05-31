@@ -1,5 +1,6 @@
 package btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.SuccPosition
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -319,9 +320,22 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-//  "rank" should "naively compute rank" in withMathematica {_ =>
-//    val poly = "(-4 + x^2 + y^2)*(-5*x*y + 1/2*(x^2 + y^2)^3)".asTerm
-//    val ode = "x'=2*(-(3/5) + x)*(1 - 337/225*(-(3/5) + x)^2 + 56/75 * (-(3/5) + x)*(-(4/5) + y) - 32/25 * (-(4/5) + y)^2) - y + 1/2 *x * (4 - x^2 - y^2), y'=x +  2*(1 - 337/225*(-(3/5) + x)^2 + 56/75*(-(3/5) + x)*(-(4/5) + y) - 32/25 * (-(4/5) + y)^2)*(-(4/5) + y) + 1/2 *y * (4 - x^2 - y^2)".asDifferentialProgram
-//    rank(ode,poly)
-//  }
+  "Frozen time" should "freeze predicates with time (manual)" in withMathematica { _ =>
+    val fml = "x+y=5 -> [{t'=1,x'=x^5+y, y'=x, c'=5 ,d'=100 & t=0 & c=1}]x+y=5".asFormula
+    val pr = proveBy(fml, implyR(1) &
+      //This is slightly optimized only to freeze the coordinates free in postcondition
+      dC("(x-old(x))^2+(y-old(y))^2 <= (2*(x-x_0)*(x^5+y) + 2*(y-y_0)*x)*t".asFormula)(1) <(
+        dW(1) & QE,
+        dI('full)(1)
+      ))
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "freeze predicates with time (auto)" in withMathematica { _ =>
+    val fml = "x+y=5 -> [{t'=1,x'=x^5+y, y'=x, c'=5 ,d'=100 & t=0 & c=1}]x+y=5".asFormula
+    val pr = proveBy(fml, implyR(1) &
+      timeBound(1))
+    println(pr)
+  }
 }

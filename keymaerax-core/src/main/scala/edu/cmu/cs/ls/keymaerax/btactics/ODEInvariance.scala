@@ -12,9 +12,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ToolException
 import org.apache.logging.log4j.scala.Logger
 
+import scala.collection.immutable
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
 
@@ -563,6 +563,68 @@ object ODEInvariance {
   }
 
   /**
+    * Event stuck tactics: roughly, [x'=f(x)&Q]P might be true in a state if:
+    * 1) Q is false in the state (trivializing the box modality)
+    * 2) Q,P are true in initial state, but the ODE cannot evolve for non-zero duration without leaving Q
+    * 3) the "actual" interesting case, where P is true along all solutions (staying in Q)
+    *
+    * 1) is handled by diffUnpackEvolutionDomainInitially, this suite handles case 2)
+    */
+
+  /** Given a top-level succedent of the form [{t'=c,x'=f(x)& Q & t=d}]P
+    * proves P invariant because the domain constraint prevents progress
+    * This tactic is relatively flexible:
+    * t'=c can be any time-like ODE (except c cannot be 0)
+    * t=d requires d to be a constant number, which forces the whole ODE to be frozen
+    * (of course, P should be true initially)
+    */
+  def timeBound : DependentPositionTactic = "timeBound" by ((pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "time bound only in top-level succedent")
+    val (ode, dom, post) = seq.sub(pos) match {
+      case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
+      case _ => throw new BelleThrowable("time bound only at box ODE in succedent")
+    }
+    //Check that the domain at least freezes one of the coordinates
+    val domConj = flattenConjunctions(dom)
+    val atoms = atomicListify(ode)
+
+    //Only need to freeze coordinates free in postcondition
+    val fvs = StaticSemantics.freeVars(post)
+    val freeAtoms = atoms.filter( p => fvs.contains(p.xp.x))
+
+    val timeLike = atoms.flatMap(_ match {
+      case AtomicODE(v ,n:Number) if n.value!=0 => Some(v.x)
+      case _=> None
+    })
+    val constRHS = domConj.filter(_ match {
+      //todo: this can be generalized
+      case Equal(l,_:Number) if timeLike.contains(l) => true
+      case _ => false})
+
+    constRHS match {
+      case Nil => throw new BelleThrowable("time bound requires at least one time-like coordinate to be frozen in domain, found none")
+      case Equal(t,d)::_ =>
+        //Construct the bounding polynomials sum_i (x_i-old(x_i))^2 <= (sum_i 2x_ix'_i)*t
+        val left = freeAtoms.map(f =>
+          Power(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)),Number(2)):Term).reduce(Plus)
+        val right = Times(freeAtoms.map(f => Times(Number(2),
+          Times(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)), f.e)):Term).reduce(Plus),Minus(t,d))
+        dC(LessEqual(left,right))(pos)<(
+          dW(pos) & QE & done,
+          dI('full)(1)
+        )
+    }
+  })
+
+  //@todo: copied from Expression.scala but slightly modified to always return atomic ODEs directly
+  private def atomicListify(ode: DifferentialProgram): immutable.List[AtomicODE] =
+  ode match {
+    case p: DifferentialProduct => atomicListify(p.left) ++ atomicListify(p.right)
+    case a: AtomicODE => a :: Nil
+    case _ => throw new IllegalArgumentException("Unable to listify:"+ode)
+  }
+
+    /**
     * Explicitly calculate the conjunctive rank of a list of polynomials
     * (uses conjunctive optimization from SAS'14)
     * @param ode the ODESystem to use
