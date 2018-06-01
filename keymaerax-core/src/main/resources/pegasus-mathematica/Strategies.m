@@ -78,11 +78,12 @@ GeneralLinearStrat[problem_List]:=Catch[Module[{inv,invs},
 Print["GENERAL LINEAR STRATEGY"];
 Print["Trying first integrals first"];
 FIs=Linear`FirstIntegralMethod[pre, post, { f, vars, evoConst }, RationalsOnly->True, RationalPrecision->3];
+If[Length[FIs]>0,
 {fiInv, cuts}= Methods`DWC[pre, post, { f, vars, evoConst }, FIs, {}];
 If[CheckSemiAlgInclusion[fiInv,post,vars], 
 Throw[cuts],
 Print["First integrals didn't do it. Proceeding to other qualitative methods."]
-];
+]];
 (* Apply methods for linear systems  *)
 initConnectedComponents=CylindricalDecomposition[pre,vars,"Components"];
 problems = Map[ {#, {f,vars,evoConst}, post}&, initConnectedComponents];
@@ -97,11 +98,12 @@ MultiLinearStrat[problem_List]:=Catch[Module[{inv,invs},
 Print["MULTI-LINEAR STRATEGY"];
 Print["Trying first integrals first"];
 FIs=Linear`FirstIntegralMethod[pre, post, { f, vars, evoConst }, RationalsOnly->True, RationalPrecision->3];
+If[Length[FIs]>0,
 {fiInv, cuts}= Methods`DWC[pre, post, { f, vars, evoConst }, FIs, {}];
 If[CheckSemiAlgInclusion[fiInv,post,vars], 
 Throw[cuts],
 Print["First integrals didn't do it. Proceeding to other qualitative methods."]
-];
+]];
 (* Apply methods for mutilinear systems  *)
 inv=RunMethod["Multi-Linear", problem, {}];
 Throw[inv]
@@ -114,11 +116,12 @@ QualitativeBasic[problem_List]:=Catch[Module[{},
 Print["BASIC QUALITATIVE STRATEGY (DWC)"];
 Print["Trying first integrals first"];
 FIs=Linear`FirstIntegralMethod[pre, post, { f, vars, evoConst }, RationalsOnly->True, RationalPrecision->3];
+If[Length[FIs]>0,
 {fiInv,cuts}= Methods`DWC[pre, post, { f, vars, evoConst }, FIs, {}];
 If[CheckSemiAlgInclusion[fiInv,post,vars], 
 Throw[cuts],
 Print["First integrals didn't do it. Proceeding to other qualitative methods."]
-];
+]];
 
 aggregate=evoConst;
 cutsAggregate={};
@@ -144,24 +147,18 @@ QualitativeExtended[problem_List]:=Catch[Module[{},
 { pre, { f, vars, evoConst }, post } = problem;
 Print["EXTENDED QUALITATIVE STRATEGY (DWCL i.e. full abstraction)"];
 
+fiInv=True;
 Print["Trying first integrals first"];
 FIs=Linear`FirstIntegralMethod[pre, post, { f, vars, evoConst }, RationalsOnly->True, RationalPrecision->3];
+If[Length[FIs]>0,
 {fiInv,cuts}= Methods`DWC[pre, post, { f, vars, evoConst }, FIs, {}];
 If[CheckSemiAlgInclusion[fiInv,post,vars], 
 Throw[cuts],
 Print["First integrals didn't do it. Proceeding to other qualitative methods."]
-];
+]];
 
-aggregate=evoConst;
-inv=True;
-Do[
-inv=RunMethod[method,problem, FIs];
-If[ TrueQ[Reduce[Implies[inv, post], vars, Reals]], Throw[{inv}]];
-aggregate=inv && aggregate;
-If[TrueQ[Reduce[Implies[aggregate, post], vars, Reals]], Throw[{aggregate}]],
-{method,{"DWCL-Factors-RHS-Product"}}
-];
-Throw[{aggregate}]
+inv=RunMethod["DWCL-Factors-RHS-Product",problem, FIs];
+Throw[{inv}]
 ]]
 
 
