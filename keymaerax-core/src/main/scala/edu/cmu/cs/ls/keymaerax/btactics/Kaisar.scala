@@ -149,7 +149,7 @@ object Kaisar {
       case UnitPredicational(id, _) => Some(id)
       case BaseVariable(id, _, _) => Some(id)
       case UnitFunctional(id, _, _) => Some(id)
-      case ProgramConst(id) => Some(id)
+      case ProgramConst(id, _) => Some(id)
       case SystemConst(id) => Some(id)
       case _ => None
     }
@@ -484,7 +484,7 @@ object Kaisar {
         }
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] =
         e match {
-          case ProgramConst(fname) if c.hasDef(fname) =>
+          case ProgramConst(fname,_) if c.hasDef(fname) =>
             Right(c.getDef(fname).asInstanceOf[Program])
           case SystemConst(fname) if c.hasDef(fname) =>
             Right(c.getDef(fname).asInstanceOf[Program])
@@ -1155,7 +1155,7 @@ def pmatch(pat:Expression, e:Expression, c:Context, ante:immutable.IndexedSeq[Fo
     case UnitPredicational(id, _) if c.hasDef(id) => matchDef(id)
     case BaseVariable(id, _, _) if c.hasDef(id) => matchDef(id)
     case UnitFunctional(id, _, _) if c.hasDef(id) => matchDef(id)
-    case ProgramConst(id) if c.hasDef(id) => matchDef(id)
+    case ProgramConst(id, _) if c.hasDef(id) => matchDef(id)
     case SystemConst(id) if c.hasDef(id) => matchDef(id)
     case PredOf(Function("p", _, _, _, _), args) if collectVarPat(args).isDefined || collectNegVarPat(args).isDefined =>
       (collectVarPat(args), collectNegVarPat(args)) match {
@@ -1240,7 +1240,7 @@ def pmatch(pat:Expression, e:Expression, c:Context, ante:immutable.IndexedSeq[Fo
       } else {
         throw patExn(pat, e, "Expression did not match assumption " + ident)
       }
-    case ProgramConst("wild") => Context.empty
+    case ProgramConst("wild",AnyArg) => Context.empty
     case ODESystem(DifferentialProgramConst("wild",_),_) => Context.empty
     case FuncOf(Function("wild", _, _, _, _), pat) => Context.empty
     case FuncOf(Function("wild", _, _, _, _), pat) => Context.empty
@@ -1279,7 +1279,7 @@ def pmatch(pat:Expression, e:Expression, c:Context, ante:immutable.IndexedSeq[Fo
       } else {
         throw exn
       }
-    case ProgramConst(name: String) =>
+    case ProgramConst(name: String, _) =>
       if(name.last == '_' && !c.hasDef(name)) {
         Context.ofDef(name.dropRight(1), e)
       } else if (pat == e) {
