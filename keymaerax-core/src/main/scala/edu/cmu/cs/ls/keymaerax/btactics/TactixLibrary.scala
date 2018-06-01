@@ -125,8 +125,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     def applyAndRecurse(t: AtPosition[_ <: BelleExpr], pos: Position, s: Sequent): BelleExpr = {
       val recursors = tacticIndex.tacticRecursors(t)
       if (recursors.nonEmpty) t(new Fixed(pos)) & (done | recursors.map(r =>
-        DebuggingTactics.assertOnAll(_ != s, "Stopping to recurse on unchanged sequent") &
-        applyRecursor(r(s, pos.top))).reduce(_&_))
+        DebuggingTactics.assertOnAll(_ != s ||
+          //@note allow recursing on subposition after no-op steps that supply recursors
+          r(s, pos).exists(_.exists({ case Fixed(pp, _, _) => !pp.isTopLevel case _ => false })), "Stopping to recurse on unchanged sequent") &
+        applyRecursor(r(s, pos))).reduce(_&_))
       else t(new Fixed(pos))
     }
 
@@ -148,9 +150,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       override def tacticRecursors(tactic: BelleExpr): TacticRecursors =
         if (tactic == loop) {
           //@todo positions? what to expect there?
-          ((_: Sequent, p: SeqPos) => (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: Nil) :: Nil
+          ((_: Sequent, p: Position) => (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: Nil) :: Nil
         } else if (tactic == odeR) {
-          ((_: Sequent, p: SeqPos) => (new Fixed(p)::Nil)::Nil) :: Nil
+          ((_: Sequent, p: Position) => (new Fixed(p)::Nil)::Nil) :: Nil
         } else super.tacticRecursors(tactic)
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
         case Box(_: Loop, _) => (Nil, loop::Nil)
@@ -160,9 +162,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     }
 
     OnAll(close |
-      SaturateTactic(OnAll(tacticChase(createAutoTacticIndex)(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
-        ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-        andR, equivR, loop, odeR, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
+      SaturateTactic(OnAll(tacticChase(createAutoTacticIndex)(notL, andL, notR, implyR, orR, allR,
+        TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
+        implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
+        andR, equivR, loop, odeR, solve))) & DebuggingTactics.print("master chase done") & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
         OnAll(SaturateTactic(exhaustiveEqL2R('L)) & ?(QE & (if (keepQEFalse) nil else done))))
   }
 
