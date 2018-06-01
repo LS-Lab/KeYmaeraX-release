@@ -12,18 +12,21 @@ import scala.collection.immutable.IndexedSeq
 
 class ODEInvarianceTests extends TacticTestBase {
 
-  "ODEInvariance" should "compute bounded p*>0" in withMathematica { qeTool =>
-    val ode = "{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asDifferentialProgram
+  "ODEInvariance" should "compute (bounded) p*>0" in withMathematica { qeTool =>
+    val ode = "{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asProgram.asInstanceOf[ODESystem]
     val poly = "x+y*z".asTerm
-    val p0 = pStar(ode,poly,0)
-    val p1 = pStar(ode,poly,1)
-    val p2 = pStar(ode,poly,2)
-    val p3 = pStar(ode,poly,3)
+    val p0 = pStar(ode,poly,Some(0))
+    val p1 = pStar(ode,poly,Some(1))
+    val p2 = pStar(ode,poly,Some(2))
+    val p3 = pStar(ode,poly,Some(3))
+    val pn = pStar(ode,poly,None)
 
     //println(p0)
     //println(p1)
     //println(p2)
     //println(p3)
+    //println(pn)
+
     p0 shouldBe "x+y*z>0".asFormula
     p1 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>0)".asFormula
     p2 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>0))".asFormula
@@ -340,42 +343,24 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "freeze predicates with stuck domains (manual)" in withMathematica { _ =>
-    val fml = "x=5 & y=100 -> [{x'=x, y'=x+y+z & x<=5}]y=100".asFormula
-    val pr = proveBy(fml, implyR(1) &
-      //Add time variable
-      dG("t'=1".asDifferentialProgram,None)(1) & existsR("0".asTerm)(1) &
-      //VERY ANNOYING: dG adds t'=1 to the back, while continuity and RI& adds it to the front
-      //This needs to commute times equal to the number of ODEs
-      (useAt(", commute")(1)) * 2 &
-      //dualize since this argument works over the diamond modality
-      useAt("[] box",PosInExpr(1::Nil))(1) & notR(1) &
-      //cut local progress into negated domain
-      cut("<{t'=1,x'=x,y'=x+y+z& !(x<=5) | t=0}> t!=0".asFormula) <(
-        cut("<{t'=1,x'=x,y'=x+y+z& x<=5 & (!x<=5 | t=0)}> (!y=100 | t!=0)".asFormula)<(
-          //un-dualize back to box
-          useAt("<> diamond",PosInExpr(1::Nil))('Llast) & notL('Llast) &
-          //TODO: better manage extra diamond modalities because dW doesn't work properly with them
-          hideL('Llast) & hideL('Llast) &
-          dR("t=0".asFormula)(1)<(
-            timeBound(1),
-            dW(1) & QE
-          )
-          ,
-          useAt("Uniq uniqueness",PosInExpr(1::Nil))(1) & prop
-        ),
-        //Local progress tactic needs to be generalized to do integration trick for strict inequalities
-        skip
-      )
-    )
-    println(pr)
-  }
-
   it should "freeze predicates with stuck domains (auto)" in withMathematica { _ =>
     val seq = "x=5 & y=100 ==> x=3 , [{x'=x, y'=x+y+z & x<=5}]y=100".asSequent
     val pr = proveBy(seq,
-      domainStuck(2)
+      domainStuck(2) &
+      cutR("(x-5)-stuck_^2>=0 & ((x-5)-stuck_^2=0 -> -2*stuck_+x>0)".asFormula)(2) <(
+        QE,
+        cohideR(2) & implyR(1) &
+        lpgt(1)
+      )
     )
     println(pr)
+    pr shouldBe 'proved
+  }
+
+  "local progress" should "report the full local progress formula" in withMathematica { _ =>
+    val ode = "{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asProgram.asInstanceOf[ODESystem]
+    val fml = "x-z<=0|x+y*z>0 & x<=0".asFormula
+    println(localProgressFml(ode,fml))
+    //todo
   }
 }
