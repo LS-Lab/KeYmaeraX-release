@@ -57,6 +57,7 @@ private[core] object AxiomBase extends Logging {
     val a = ProgramConst("a_")
     val sys = SystemConst("a_")
     val v = Variable("v_", None, Real)
+    val anonv = ProgramConst("a_", Except(v))
     val Jany = UnitPredicational("J", AnyArg)
     Map(
       /**
@@ -113,21 +114,19 @@ private[core] object AxiomBase extends Logging {
           Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany))))),
       /**
         * Rule "con convergence".
-        * Premisses: v > 0, J(||) |- <a{|v|}><v:=v-1;> J(||)
-        *            v <= 0, J(||) |- P
-        * Conclusion  J(||) |- <a{|v|}*>J(||)
+        * Premise: v > 0, J(||) |- <a{|v|}><v:=v-1;> J(||)
+        * Conclusion:  J(||) |- <a{|v|}*>\exists v (v<=0 & J(||))
         * {{{
-        *     v > 0, J(v) |- <a{|v|}>J(v-1)  v <= 0, J(v) |- P
-        *    -------------------------------------- con
-        *     J(v) |- <a{|v|}*>P
+        *     v > 0, J(v) |- <a{|v|}>J(v-1)
+        *    ---------------------------------------------------- con
+        *     J(v) |- <a{|v|}*>\exists v (v<=0 & J(v))
         * }}}
-        * @todo Bugfix soundness by telling a to be SpaceDependent Except(v)
+        * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
         */
       ("con convergence",
         (immutable.IndexedSeq(
-            Sequent(immutable.IndexedSeq(Greater(v, Number(0)),Jany), immutable.IndexedSeq(Diamond(a, Diamond(Assign(v,Minus(v,Number(1))),Jany)))),
-            Sequent(immutable.IndexedSeq(Exists(v::Nil, And(LessEqual(v, Number(0)), Jany))), immutable.IndexedSeq(pany))),
-          Sequent(immutable.IndexedSeq(Jany), immutable.IndexedSeq(Diamond(Loop(a), pany)))))
+            Sequent(immutable.IndexedSeq(Greater(v, Number(0)),Jany), immutable.IndexedSeq(Diamond(anonv, Diamond(Assign(v,Minus(v,Number(1))),Jany))))),
+          Sequent(immutable.IndexedSeq(Jany), immutable.IndexedSeq(Diamond(Loop(anonv), Exists(immutable.Seq(v), And(LessEqual(v, Number(0)), Jany)))))))
     )
   }
 

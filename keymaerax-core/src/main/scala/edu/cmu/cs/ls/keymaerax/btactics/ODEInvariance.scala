@@ -1,12 +1,13 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{useAt, _}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -348,9 +349,9 @@ object ODEInvariance {
 
     DebuggingTactics.debug("PRE",doPrint = debugTactic) &
       starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
-      implyR(pos) & r1 & ?(closeId) & QE & done, //common case?
+      implyR(pos) & r1 & ?(closeId) & timeoutQE & done, //common case?
       cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
-      implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.debug("QE step",doPrint = debugTactic) & QE & done, skip) //Don't bother running the rest if QE fails
+      implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.debug("QE step",doPrint = debugTactic) & timeoutQE & done, skip) //Don't bother running the rest if QE fails
       & cohide2(-3,1)& implyR(1) & lpclosedPlus(inst)
     )
   })
@@ -359,6 +360,7 @@ object ODEInvariance {
   // i.e. every p~0 is (trivially) Darboux
   // returns a list of formulas internally re-arranged according to diff cut order
   def rankOneFml(ode: DifferentialProgram, dom:Formula, f:Formula) : Option[Formula] = {
+
     f match {
       case cf:ComparisonFormula =>
         //findDbx
@@ -368,7 +370,7 @@ object ODEInvariance {
         else {
           if(cf.isInstanceOf[Equal] || cf.isInstanceOf[NotEqual]) return None
           //TODO: need to check cofactor well-defined as well?
-          val pr2 = proveBy(Imply(And(dom, Equal(cf.left, Number(0))), Greater(rem, Number(0))), QE)
+          val pr2 = proveBy(Imply(And(dom, Equal(cf.left, Number(0))), Greater(rem, Number(0))), timeoutQE)
           logger.debug(pr2)
           if(pr2.isProved)
             Some(f)
@@ -446,6 +448,7 @@ object ODEInvariance {
     */
   def sAIRankOne(doReorder:Boolean=true,skipClosed:Boolean =true) : DependentPositionTactic = "sAIR1" byWithInput (doReorder,(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only in top-level succedent")
+
     val (ode, dom, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
       case _ => throw new BelleThrowable("sAI only at box ODE in succedent")
@@ -466,7 +469,7 @@ object ODEInvariance {
         fail
       }
       else {
-        starter & cutR(f2)(pos) < (QE,
+        starter & cutR(f2)(pos) < (timeoutQE,
           cohideR(pos) & implyR(1) & recRankOneTac(f2)
         )
       }
@@ -478,12 +481,12 @@ object ODEInvariance {
           case Some(f) => f
         }
 
-      val reorder = proveBy(Equiv(f2, f3), QE)
+      val reorder = proveBy(Equiv(f2, f3), timeoutQE)
       assert(reorder.isProved)
 
       logger.debug("Rank 1: " + f3)
       starter & useAt(reorder)(pos ++ PosInExpr(1 :: Nil)) & cutR(f3)(pos) < (
-        useAt(reorder, PosInExpr(1 :: Nil))(pos) & QE,
+        useAt(reorder, PosInExpr(1 :: Nil))(pos) & timeoutQE,
         cohideR(pos) & implyR(1) & recRankOneTac(f3)
       )
     }
@@ -611,7 +614,7 @@ object ODEInvariance {
           Times(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)), f.e)):Term).reduce(Plus),Minus(t,d))
         dC(LessEqual(left,right))(pos)<(
           dW(pos) & QE & done,
-          dI('full)(1)
+          dI('full)(pos)
         )
     }
   })
@@ -623,6 +626,53 @@ object ODEInvariance {
     case a: AtomicODE => a :: Nil
     case _ => throw new IllegalArgumentException("Unable to listify:"+ode)
   }
+
+  /**
+    * Given either a stuck diamond modality in the antecedent
+    * G, P, <x'=f(x)&Q>~P |-
+    * or dually a stuck box in the succedent:
+    * G, P |- [x'=f(x)&Q]P
+    *
+    * reduces the goal to local progress into ~Q
+    * G |- <t'=1,x'=f(x)& ~Q | t=0> t!=0
+    *
+    * todo: compose with local progress to further reduce to G |- ~Q*
+    * todo: do not re-introduce t'=1 if it is already there
+    */
+
+  // main stuck argument
+  private lazy val stuckRefine =
+    remember("<{c&!q(||) | r(||)}>!r(||) -> ([{c&r(||)}]p(||) -> [{c&q(||)}]p(||))".asFormula,
+      implyR(1) & implyR(1) &
+        useAt("[] box",PosInExpr(1::Nil))(-2) & notL(-2) &
+        useAt("[] box",PosInExpr(1::Nil))(1) & notR(1) &
+        andLi & useAt("Uniq uniqueness")(-1) & DWd(-1) &
+        cutL("<{c&(!q(||)|r(||))&q(||)}>!p(||)".asFormula)(-1) <(
+          implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
+          cohideR(2) & implyR(1) & mond & prop), namespace)
+
+  def domainStuck : DependentPositionTactic = "domainStuck" by ((pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel, "domain stuck only at top-level")
+    val (ode, dom, post) = seq.sub(pos) match {
+      //needs to be dualized
+      case Some(Box(sys: ODESystem, post)) if pos.isSucc => (sys.ode, sys.constraint, post)
+      //todo: case Some(Diamond(sys:ODESystem,post)) if pos.isAnte => (sys.ode, sys.constraint, post)
+      case _ => throw new BelleThrowable("domain stuck for box ODE in succedent or diamond ODE in antecedent")
+    }
+
+    val tvName = "stuck_"
+    val timeOde = (tvName+"'=1").asDifferentialProgram
+    val stuckDom = (tvName+"=0").asFormula
+    val odedim = getODEDim(seq,pos)
+
+    // set up the time variable
+    // commute it to the front to better match with realind/cont
+    DifferentialTactics.dG(timeOde,None)(pos) & existsR(Number(0))(pos) & (useAt(", commute")(pos)) * odedim &
+    cutR(Box(ODESystem(DifferentialProduct(timeOde,ode),stuckDom),post))(pos)<(
+      timeBound(pos),
+      useAt(stuckRefine,PosInExpr(1::Nil))(pos)
+    )
+  })
 
     /**
     * Explicitly calculate the conjunctive rank of a list of polynomials

@@ -87,7 +87,7 @@ object IDMap extends Logging {
 
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
         e match {
-          case ProgramConst(name) => pos = pos.addProg(name)
+          case ProgramConst(name,_) => pos = pos.addProg(name)
           case DifferentialProgramConst(name,_) => pos = pos.addDiffProg(name)
           case _ =>
         }
@@ -177,7 +177,7 @@ object IDMap extends Logging {
       case (acc,(PredOf(Function(name,_,_,_,_),arg),repl)) => ofPred(name,arg,repl,acc)
       case (acc,(PredicationalOf(Function(name,_,_,_,_),arg),repl)) => ofCon(name,arg,repl,acc)
       case (acc,(UnitPredicational(name,arg),repl)) => ofUnitPred(name,repl,acc)
-      case (acc,(ProgramConst(name),repl)) => ofProg(name,repl,acc)
+      case (acc,(ProgramConst(name,_),repl)) => ofProg(name,repl,acc)
       // Isabelle formalization doesn't have games, so collapse it all to systems anyway
       case (acc,(SystemConst(name),repl)) => ofProg(name,repl,acc)
       case (acc,(DifferentialProgramConst(name,_),repl)) => ofDiffConst(name,repl,acc)
@@ -741,7 +741,7 @@ class IsabelleConverter(pt:ProofTerm) extends Logging {
           case (_:UnitPredicational,e:Formula) => apply(e, if(depred)DepredSubst() else FunSubst())
         })),
       extendSub(sortSubs(con, {case PredicationalOf(Function(name,_,_,_,_),_) => m.conMap(Left(name)) case UnitPredicational(name, _) => m.conMap(Right(name))}, {case (_,e:Formula) => apply(e, sm=ConSubst())})),
-      extendSub(sortSubs(prog, {case ProgramConst(name) =>  m.progMap(name) case SystemConst(name) =>  m.progMap(name)}, {case (_,e:Program) => apply(e,NonSubst())})),
+      extendSub(sortSubs(prog, {case ProgramConst(name,_) =>  m.progMap(name) case SystemConst(name) =>  m.progMap(name)}, {case (_,e:Program) => apply(e,NonSubst())})),
       extendSub(sortSubs(ode, {case DifferentialProgramConst(name,_) =>  m.odeMap(name)}, {case (_,e:DifferentialProgram) => apply(e,NonSubst())})),
       space)
     res
@@ -1231,7 +1231,7 @@ private def or(p:Iformula,q:Iformula):Iformula = {
   def apply(hp:Program,sm:SymMode):Ihp = {
     hp match {
       case SystemConst(name) => IPvar(IDEnum(m.progMap((name))))
-      case ProgramConst(name) => IPvar(IDEnum(m.progMap((name))))
+      case ProgramConst(name,_) => IPvar(IDEnum(m.progMap((name))))
       case Assign(BaseVariable(x,ind,_),e) => IAssign(IDEnum(m.varMap((x,ind))),apply(e,sm))
       case Assign(DifferentialSymbol(BaseVariable(x,ind,_)),e) => IDiffAssign(IDEnum(m.varMap((x,ind))),apply(e,ddefun(sm)))
       case Test(p) => ITest(apply(p,sm))

@@ -493,7 +493,7 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
 
   override def groebnerBasis(polynomials: List[Term]): List[Term] = {
     //@note sort for stable results
-    val vars = polynomials.flatMap(p => StaticSemantics.vars(p).symbols[NamedSymbol].toList.sorted)
+    val vars = polynomials.flatMap(p => StaticSemantics.vars(p).symbols[NamedSymbol]).distinct.sorted
     val input = new MExpr(MathematicaSymbols.GROEBNERBASIS,
       Array[MExpr](
         new MExpr(Expr.SYM_LIST, polynomials.map(k2m).toArray),
@@ -515,7 +515,7 @@ class MathematicaAlgebraTool(override val link: MathematicaLink) extends BaseKeY
 
   override def polynomialReduce(polynomial: Term, GB: List[Term]): (List[Term], Term) = {
     //@note sort for stable results
-    val vars = StaticSemantics.vars(polynomial).symbols[NamedSymbol].toList.sorted.map(_.asInstanceOf[Variable])
+    val vars = (polynomial::GB).flatMap(p => StaticSemantics.vars(p).symbols[NamedSymbol]).distinct.sorted
     val input = new MExpr(MathematicaSymbols.POLYNOMIALREDUCE,
       Array[MExpr](
         k2m(polynomial),

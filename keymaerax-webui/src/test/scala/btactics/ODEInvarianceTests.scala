@@ -1,6 +1,6 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.SuccPosition
+import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, SaturateTactic, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -336,6 +336,46 @@ class ODEInvarianceTests extends TacticTestBase {
     val fml = "x+y=5 -> [{t'=1,x'=x^5+y, y'=x, c'=5 ,d'=100 & t=0 & c=1}]x+y=5".asFormula
     val pr = proveBy(fml, implyR(1) &
       timeBound(1))
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "freeze predicates with stuck domains (manual)" in withMathematica { _ =>
+    val fml = "x=5 & y=100 -> [{x'=x, y'=x+y+z & x<=5}]y=100".asFormula
+    val pr = proveBy(fml, implyR(1) &
+      //Add time variable
+      dG("t'=1".asDifferentialProgram,None)(1) & existsR("0".asTerm)(1) &
+      //VERY ANNOYING: dG adds t'=1 to the back, while continuity and RI& adds it to the front
+      //This needs to commute times equal to the number of ODEs
+      (useAt(", commute")(1)) * 2 &
+      //dualize since this argument works over the diamond modality
+      useAt("[] box",PosInExpr(1::Nil))(1) & notR(1) &
+      //cut local progress into negated domain
+      cut("<{t'=1,x'=x,y'=x+y+z& !(x<=5) | t=0}> t!=0".asFormula) <(
+        cut("<{t'=1,x'=x,y'=x+y+z& x<=5 & (!x<=5 | t=0)}> (!y=100 | t!=0)".asFormula)<(
+          //un-dualize back to box
+          useAt("<> diamond",PosInExpr(1::Nil))('Llast) & notL('Llast) &
+          //TODO: better manage extra diamond modalities because dW doesn't work properly with them
+          hideL('Llast) & hideL('Llast) &
+          dR("t=0".asFormula)(1)<(
+            timeBound(1),
+            dW(1) & QE
+          )
+          ,
+          useAt("Uniq uniqueness",PosInExpr(1::Nil))(1) & prop
+        ),
+        //Local progress tactic needs to be generalized to do integration trick for strict inequalities
+        skip
+      )
+    )
+    println(pr)
+  }
+
+  it should "freeze predicates with stuck domains (auto)" in withMathematica { _ =>
+    val seq = "x=5 & y=100 ==> x=3 , [{x'=x, y'=x+y+z & x<=5}]y=100".asSequent
+    val pr = proveBy(seq,
+      domainStuck(2)
+    )
     println(pr)
   }
 }

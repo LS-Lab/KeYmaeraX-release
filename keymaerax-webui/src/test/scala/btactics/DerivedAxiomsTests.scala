@@ -74,6 +74,13 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
     Sequent(immutable.IndexedSeq("q_(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula))
   ) }
 
+  it should "prove con convergence flat" in withMathematica { qeTool => convergenceFlat.fact.subgoals shouldBe List(
+//    * Premisses: v <= 0, J(||) |- P
+  //  *            v > 0, J(||) |- <a{|v|}><v:=v-1;> J(||)
+    Sequent(immutable.IndexedSeq("v_<=0".asFormula, "J(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula)),
+    Sequent(immutable.IndexedSeq("v_>0".asFormula, "J(||)".asFormula), immutable.IndexedSeq("<a{|v_|};><v:=v-1;>J(||)".asFormula))
+  ) }
+
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
   it should "prove !!" in {check(doubleNegationAxiom)}
   it should "prove exists dual" in {check(existsDualAxiom)}

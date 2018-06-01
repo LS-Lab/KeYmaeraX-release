@@ -417,6 +417,9 @@ object KeYmaeraXParser extends Parser with Logging {
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ Token(RBARB, _) =>
         if (la == SEMI) shift(st)
         else error(st, List(SEMI))
+      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Expr(x: Variable) :+ Token(RBARB, _) :+ Token(SEMI, _) if statementSemicolon =>
+        require(tok.index == None, "no index supported for ProgramConst")
+        reduce(st, 5, ProgramConst(tok.name, Except(x)), r)
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) =>
         if (la == RBARB || la.isInstanceOf[IDENT] || la == DUAL) shift(st)
         else error(st, List(RBARB, ANYIDENT))
@@ -424,7 +427,7 @@ object KeYmaeraXParser extends Parser with Logging {
         if (la == RBARB) shift(st)
         else error(st, List(RBARB))
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Expr(_) =>
-        errormsg(st, "Identifier expected after state-dependent DiffProgramConst")
+        errormsg(st, "Identifier expected after state-dependent ProgramConst or DiffProgramConst")
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) =>
         if (la == RBARB) shift(st)
         else error(st, List(RBARB))
