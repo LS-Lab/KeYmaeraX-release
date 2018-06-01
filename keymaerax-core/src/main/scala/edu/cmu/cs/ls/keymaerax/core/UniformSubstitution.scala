@@ -68,8 +68,11 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
           else Set(taboo, DifferentialSymbol(taboo))
         )
         sp match {
-          //@note by previous insists, repl has to be a DifferentialProgram
+          //@note by previous insists, repl has to be a DifferentialProgram in this case
           case _: DifferentialProgramConst => val vc = StaticSemantics(repl.asInstanceOf[DifferentialProgram])
+            vc.fv.intersect(taboos).isEmpty && vc.bv.intersect(taboos).isEmpty
+          //@note by previous insists, repl has to be a Program in this case
+          case _: ProgramConst => val vc = StaticSemantics(repl.asInstanceOf[Program])
             vc.fv.intersect(taboos).isEmpty && vc.bv.intersect(taboos).isEmpty
           case _: UnitPredicational => StaticSemantics.freeVars(repl).intersect(taboos).isEmpty
           case _: UnitFunctional    => StaticSemantics.freeVars(repl).intersect(taboos).isEmpty
@@ -111,7 +114,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
       // program constants are always admissible, since their meaning doesn't depend on state
       // DifferentialProgramConst are handled in analogy to program constants, since space-compatibility already checked
       case UnitFunctional(_, _, _) | UnitPredicational(_, _) | PredicationalOf(_, DotFormula) | DotFormula |
-           ProgramConst(_) | SystemConst(_) | DifferentialProgramConst(_, _) => bottom
+           ProgramConst(_, _) | SystemConst(_) | DifferentialProgramConst(_, _) => bottom
     }
     case _ => StaticSemantics.freeVars(repl)
   }
