@@ -157,7 +157,7 @@ inv=True;
 Do[
 inv=RunMethod[method,problem, FIs];
 If[ TrueQ[Reduce[Implies[inv, post], vars, Reals]], Throw[{inv}]];
-aggregate=FullSimplify[inv && aggregate];
+aggregate=inv && aggregate;
 If[TrueQ[Reduce[Implies[aggregate, post], vars, Reals]], Throw[{aggregate}]],
 {method,{"DWCL-Factors-RHS-Product"}}
 ];
@@ -272,7 +272,7 @@ Switch[methodID,
 "DWC-Factors-RHS", Methods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSFactors[problem]], {}],
 "DWC-Factors-RHS-Lie", Methods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSLieDFactors[problem]], {}],
 "DWC-Factors-RHS-Product", Methods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSProductFactors[problem]], {}],
-"DWC-Factors-RHS-Lie-Product", Methods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSLieDProductFactors[problem], {}], {}],
+"DWC-Factors-RHS-Lie-Product", Methods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSLieDProductFactors[problem]], {}],
 "DWCL-Factors-RHS-Product", Methods`DWCLZR[precond, postcond,system,  Union[hintPolynomials,AbstractionPolynomials`PostRHSFactors[problem]]],
 "DWCL-Factors-RHS-Lie-Product", Methods`DWCLZR[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSLieDFactors[problem]]]
 ]

@@ -1,20 +1,21 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{useAt, _}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.ToolException
 import org.apache.logging.log4j.scala.Logger
 
+import scala.collection.immutable
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
 
@@ -328,6 +329,8 @@ object ODEInvariance {
     require(fml.isInstanceOf[GreaterEqual], "Normalization failed to reach normal form "+fml)
     val f2 = fml.asInstanceOf[GreaterEqual]
 
+    //println("Rank reordering:",rankReorder(ODESystem(ode,dom),post))
+
     val (pf,inst) = pStarHomPlus(ode,dom,f2.left,bound)
 
     //println("HOMPLUS:"+pf+" "+inst)
@@ -346,9 +349,9 @@ object ODEInvariance {
 
     DebuggingTactics.debug("PRE",doPrint = debugTactic) &
       starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
-      implyR(pos) & r1 & ?(closeId) & QE & done, //common case?
+      implyR(pos) & r1 & ?(closeId) & timeoutQE & done, //common case?
       cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
-      implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.debug("QE step",doPrint = debugTactic) & QE & done, skip) //Don't bother running the rest if QE fails
+      implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.debug("QE step",doPrint = debugTactic) & timeoutQE & done, skip) //Don't bother running the rest if QE fails
       & cohide2(-3,1)& implyR(1) & lpclosedPlus(inst)
     )
   })
@@ -357,6 +360,7 @@ object ODEInvariance {
   // i.e. every p~0 is (trivially) Darboux
   // returns a list of formulas internally re-arranged according to diff cut order
   def rankOneFml(ode: DifferentialProgram, dom:Formula, f:Formula) : Option[Formula] = {
+
     f match {
       case cf:ComparisonFormula =>
         //findDbx
@@ -366,7 +370,7 @@ object ODEInvariance {
         else {
           if(cf.isInstanceOf[Equal] || cf.isInstanceOf[NotEqual]) return None
           //TODO: need to check cofactor well-defined as well?
-          val pr2 = proveBy(Imply(And(dom, Equal(cf.left, Number(0))), Greater(rem, Number(0))), QE)
+          val pr2 = proveBy(Imply(And(dom, Equal(cf.left, Number(0))), Greater(rem, Number(0))), timeoutQE)
           logger.debug(pr2)
           if(pr2.isProved)
             Some(f)
@@ -444,6 +448,7 @@ object ODEInvariance {
     */
   def sAIRankOne(doReorder:Boolean=true,skipClosed:Boolean =true) : DependentPositionTactic = "sAIR1" byWithInput (doReorder,(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only in top-level succedent")
+
     val (ode, dom, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
       case _ => throw new BelleThrowable("sAI only at box ODE in succedent")
@@ -464,7 +469,7 @@ object ODEInvariance {
         fail
       }
       else {
-        starter & cutR(f2)(pos) < (QE,
+        starter & cutR(f2)(pos) < (timeoutQE,
           cohideR(pos) & implyR(1) & recRankOneTac(f2)
         )
       }
@@ -476,12 +481,12 @@ object ODEInvariance {
           case Some(f) => f
         }
 
-      val reorder = proveBy(Equiv(f2, f3), QE)
+      val reorder = proveBy(Equiv(f2, f3), timeoutQE)
       assert(reorder.isProved)
 
       logger.debug("Rank 1: " + f3)
       starter & useAt(reorder)(pos ++ PosInExpr(1 :: Nil)) & cutR(f3)(pos) < (
-        useAt(reorder, PosInExpr(1 :: Nil))(pos) & QE,
+        useAt(reorder, PosInExpr(1 :: Nil))(pos) & timeoutQE,
         cohideR(pos) & implyR(1) & recRankOneTac(f3)
       )
     }
@@ -560,32 +565,203 @@ object ODEInvariance {
     pr
   }
 
-  /**  Explicitly calculate the conjunctive rank of a list of polynomials
-    *  (conjunctive optimization from SAS'14)
+  /**
+    * Event stuck tactics: roughly, [x'=f(x)&Q]P might be true in a state if:
+    * 1) Q is false in the state (trivializing the box modality)
+    * 2) Q,P are true in initial state, but the ODE cannot evolve for non-zero duration without leaving Q
+    * 3) the "actual" interesting case, where P is true along all solutions (staying in Q)
+    *
+    * 1) is handled by diffUnpackEvolutionDomainInitially, this suite handles case 2)
     */
-  def rank(ode:ODESystem, polys:List[Term]) : Integer = {
+
+  /** Given a top-level succedent of the form [{t'=c,x'=f(x)& Q & t=d}]P
+    * proves P invariant because the domain constraint prevents progress
+    * This tactic is relatively flexible:
+    * t'=c can be any time-like ODE (except c cannot be 0)
+    * t=d requires d to be a constant number, which forces the whole ODE to be frozen
+    * (of course, P should be true initially)
+    */
+  def timeBound : DependentPositionTactic = "timeBound" by ((pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "time bound only in top-level succedent")
+    val (ode, dom, post) = seq.sub(pos) match {
+      case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)
+      case _ => throw new BelleThrowable("time bound only at box ODE in succedent")
+    }
+    //Check that the domain at least freezes one of the coordinates
+    val domConj = flattenConjunctions(dom)
+    val atoms = atomicListify(ode)
+
+    //Only need to freeze coordinates free in postcondition
+    val fvs = StaticSemantics.freeVars(post)
+    val freeAtoms = atoms.filter( p => fvs.contains(p.xp.x))
+
+    val timeLike = atoms.flatMap(_ match {
+      case AtomicODE(v ,n:Number) if n.value!=0 => Some(v.x)
+      case _=> None
+    })
+    val constRHS = domConj.filter(_ match {
+      //todo: this can be generalized
+      case Equal(l,_:Number) if timeLike.contains(l) => true
+      case _ => false})
+
+    constRHS match {
+      case Nil => throw new BelleThrowable("time bound requires at least one time-like coordinate to be frozen in domain, found none")
+      case Equal(t,d)::_ =>
+        //Construct the bounding polynomials sum_i (x_i-old(x_i))^2 <= (sum_i 2x_ix'_i)*t
+        val left = freeAtoms.map(f =>
+          Power(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)),Number(2)):Term).reduce(Plus)
+        val right = Times(freeAtoms.map(f => Times(Number(2),
+          Times(Minus(f.xp.x, FuncOf(Function("old", None, Real, Real, false), f.xp.x)), f.e)):Term).reduce(Plus),Minus(t,d))
+        dC(LessEqual(left,right))(pos)<(
+          dW(pos) & QE & done,
+          dI('full)(pos)
+        )
+    }
+  })
+
+  //@todo: copied from Expression.scala but slightly modified to always return atomic ODEs directly
+  private def atomicListify(ode: DifferentialProgram): immutable.List[AtomicODE] =
+  ode match {
+    case p: DifferentialProduct => atomicListify(p.left) ++ atomicListify(p.right)
+    case a: AtomicODE => a :: Nil
+    case _ => throw new IllegalArgumentException("Unable to listify:"+ode)
+  }
+
+  /**
+    * Given either a stuck diamond modality in the antecedent
+    * G, P, <x'=f(x)&Q>~P |-
+    * or dually a stuck box in the succedent:
+    * G, P |- [x'=f(x)&Q]P
+    *
+    * reduces the goal to local progress into ~Q
+    * G |- <t'=1,x'=f(x)& ~Q | t=0> t!=0
+    *
+    * todo: compose with local progress to further reduce to G |- ~Q*
+    * todo: do not re-introduce t'=1 if it is already there
+    */
+
+  // main stuck argument
+  private lazy val stuckRefine =
+    remember("<{c&!q(||) | r(||)}>!r(||) -> ([{c&r(||)}]p(||) -> [{c&q(||)}]p(||))".asFormula,
+      implyR(1) & implyR(1) &
+        useAt("[] box",PosInExpr(1::Nil))(-2) & notL(-2) &
+        useAt("[] box",PosInExpr(1::Nil))(1) & notR(1) &
+        andLi & useAt("Uniq uniqueness")(-1) & DWd(-1) &
+        cutL("<{c&(!q(||)|r(||))&q(||)}>!p(||)".asFormula)(-1) <(
+          implyRi & useAt("DR<> differential refine",PosInExpr(1::Nil))(1) & DW(1) & G(1) & prop,
+          cohideR(2) & implyR(1) & mond & prop), namespace)
+
+  def domainStuck : DependentPositionTactic = "domainStuck" by ((pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel, "domain stuck only at top-level")
+    val (ode, dom, post) = seq.sub(pos) match {
+      //needs to be dualized
+      case Some(Box(sys: ODESystem, post)) if pos.isSucc => (sys.ode, sys.constraint, post)
+      //todo: case Some(Diamond(sys:ODESystem,post)) if pos.isAnte => (sys.ode, sys.constraint, post)
+      case _ => throw new BelleThrowable("domain stuck for box ODE in succedent or diamond ODE in antecedent")
+    }
+
+    val tvName = "stuck_"
+    val timeOde = (tvName+"'=1").asDifferentialProgram
+    val stuckDom = (tvName+"=0").asFormula
+    val odedim = getODEDim(seq,pos)
+
+    // set up the time variable
+    // commute it to the front to better match with realind/cont
+    DifferentialTactics.dG(timeOde,None)(pos) & existsR(Number(0))(pos) & (useAt(", commute")(pos)) * odedim &
+    cutR(Box(ODESystem(DifferentialProduct(timeOde,ode),stuckDom),post))(pos)<(
+      timeBound(pos),
+      useAt(stuckRefine,PosInExpr(1::Nil))(pos)
+    )
+  })
+
+    /**
+    * Explicitly calculate the conjunctive rank of a list of polynomials
+    * (uses conjunctive optimization from SAS'14)
+    * @param ode the ODESystem to use
+    * @param polys the polynomials to compute rank for
+    * @return the Groebner basis of the polynomials closed under Lie derivation + the rank (at which this occurs)
+    */
+  def rank(ode:ODESystem, polys:List[Term]) : (List[Term],Int) = {
     if (ToolProvider.algebraTool().isEmpty)
       throw new BelleThrowable(s"rank computation requires a AlgebraTool, but got None")
 
     val algTool = ToolProvider.algebraTool().get
 
-    var gb = polys ++ domainEqualities(ode.constraint)
+    var gb = algTool.groebnerBasis(polys ++ domainEqualities(ode.constraint))
     var rank = 1
-    var curPs = polys
+    //remainder after each round of polynomial reduction
+    var remaining = polys
 
     while(true) {
-      val lies = polys.map(p => DifferentialHelper.simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
-      val quos = lies.map(p => algTool.polynomialReduce(p, gb)._2)
-      //println("reduction: ",quos)
-      //println("rank: ",rank)
-      //println("gb: ",gb)
-      val remaining = quos.filterNot(_ == Number(0))
-      if(remaining.isEmpty) return rank
+      val lies = remaining.map(p => DifferentialHelper.simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
+      val quos = lies.map(p => algTool.polynomialReduce(p, gb))
+      remaining = quos.map(_._2).filterNot(_ == Number(0))
+      if(remaining.isEmpty) {
+        //println(gb,rank)
+        return (gb,rank)
+      }
       gb = algTool.groebnerBasis(remaining ++ gb)
-      curPs = lies
       rank+=1
     }
-    return 0
+    (List(),0)
+  }
+
+  /** Experimenting with tricks for reordering the cofactor matrix
+    * If we think of Gco as an adjacency matrix where:
+    * Gco_{i,j} is non-zero iff there is an edge j -> i, ignoring self edges
+    * Then "all" we need to do is topologically sort Gco
+    * */
+  private def rankReorder(ode:ODESystem, f:Formula) : Boolean = {
+    val fml = semiAlgNormalize(f)
+    rankReorderAux(ode,f)
+  }
+
+  private def rankReorderAux(ode:ODESystem, f:Formula) : Boolean = {
+    val (atoms,rest) = flattenConjunctions(f).partition(
+      _ match {
+        case LessEqual(l,r) => true
+        case GreaterEqual(l,r) => true
+        case Equal(l,r) => true
+        case _ => false
+      }
+    )
+    val dorest = rest.forall ( _ match {
+      case Or(l,r) => rankReorderAux(ode,l) && rankReorderAux(ode,r)
+      case _ => false
+    })
+    val polys = atoms.map(f => f.asInstanceOf[ComparisonFormula].left)
+    val (cof,gb,r) = rankCofactors(ode,polys)
+    val reorder = reorderCofactors(cof)
+    dorest && reorder.isDefined
+  }
+
+  private def reorderCofactors(Gco:List[List[Term]]) : Option[List[Int]] = {
+    var adjacencies = Gco.zipWithIndex.map(pr =>
+      (pr._2,pr._1.zipWithIndex.filterNot( p => p._1 == Number(0) || pr._2 == p._2).map(_._2))
+    )
+    var order = ListBuffer[Int]()
+    while(adjacencies.nonEmpty) {
+      //println("ADJ",adjacencies)
+      val (l,r) = adjacencies.partition(pls => pls._2.isEmpty)
+      val ls = l.map(_._1)
+      if(l.isEmpty)
+        return None
+      order ++= ls
+      adjacencies = r.map( pls => (pls._1,pls._2.filterNot(i => ls.contains(i))))
+    }
+    Some(order.toList)
+  }
+
+  //Cofactors at rank
+  private def rankCofactors(ode:ODESystem, polys:List[Term]): (List[List[Term]],List[Term],Int) = {
+    if (ToolProvider.algebraTool().isEmpty)
+      throw new BelleThrowable(s"rank computation requires a AlgebraTool, but got None")
+
+    val algTool = ToolProvider.algebraTool().get
+    val (gb,r) = rank(ode,polys)
+    val lies = gb.map(p => DifferentialHelper.simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
+    val quos = lies.map(p => algTool.polynomialReduce(p, gb))
+    (quos.map(_._1),gb,r)
   }
 
   //Explicit symbolic expression for the determinant of a matrix

@@ -26,6 +26,14 @@ FindFirstIntegralsAlt[deg_Integer?NonNegative, vars_List, vectorField_List]
 Alternative implementation relying on Solve"
 
 
+FindDbx::usage="
+FindDbx[deg_Integer?NonNegative, vars_List, vectorField_List] 
+Darboux polynomial search based on Solve"
+FindDbxBoreale::usage="
+FindDbx[deg_Integer?NonNegative, vars_List, vectorField_List] 
+Darboux polynomial search based on Solve"
+
+
 FindFirstIntegralsPDE::usage="
 FindFirstIntegralsPDE[vars_List, vectorField_List] 
 computes a list of POTENTIALLY NON-POLYNOMIAL first integrals in the variables 'vars'
@@ -126,6 +134,61 @@ sol=Solve[problem, TemplateCoeffs];
 FIs=(FITemplate/.sol);
 (* Filter out the first integrals *)
 Select[DeleteDuplicates[Grad[FIs, TemplateCoeffs]//Flatten], Not[NumericQ[#]]&]
+]
+
+
+(* Alternative polynomial first integral generation method using the solver - inspired by Kong & Boreale *)
+FindDbxBoreale[deg_Integer?NonNegative,vars_List,vectorField_List]:=Module[{
+(* Maximum total polynomial degree of the first integral being sought *)
+r=deg, 
+(* Maximum total polynomial degree of the vector field *)
+d=Max[Map[PolynomDegree,vectorField]]},
+(* Compute the monomial basis *)
+MonBas=MonomialList[FromCoefficientRules[Map[Rule[#,1]&,GenMonomialBasis[vars,r]],vars]];
+(* Create a template polynomial with symbolic coefficients *)
+TemplateCoeffs=Table[Symbol["COEFF"<>ToString[i]], {i,1,Length[MonBas]}];
+DbxTemplate=Evaluate[TemplateCoeffs.MonBas];
+(* Compute the Lie derivatives of the monomial basis *)
+LieDTemplate=Expand[Grad[DbxTemplate,vars].vectorField];
+(* Equate the template derivative coefficients to zero and solve a system of linear equations *)
+rem=PolynomialReduce[LieDTemplate,{DbxTemplate},Union[TemplateCoeffs, vars]]//Last;
+(* Solve for zero remainder *)
+problem=Map[#==0&,DeleteDuplicates[Flatten[CoefficientList[rem,vars]]]];
+sol=Solve[problem, TemplateCoeffs];
+(* Use the solutions to create instances of the original template *)
+Dbxs=(DbxTemplate/.sol);
+(* Filter out the first integrals *)
+Select[DeleteDuplicates[Grad[Dbxs, TemplateCoeffs]//Flatten], Not[NumericQ[#]]&] 
+]
+
+
+(* Implementation of an (incomplete) Darboux polynomial generation method due to Kong et al., HSCC 2017*)
+FindDbx[deg_Integer?NonNegative,vars_List,vectorField_List]:=Module[{
+(* Maximum total polynomial degree of the first integral being sought *)
+r=deg, 
+(* Maximum total polynomial degree of the vector field *)
+d=Max[Map[PolynomDegree,vectorField]]},
+(* Compute the monomial basis in Degree Reverse Lexicographic Order *)
+MonBas=MonomialList[FromCoefficientRules[Map[Rule[#,1]&,GenMonomialBasis[vars,r]],vars], "DegreeReverseLexicographic"];
+(* Create symbolic coefficients for the monomial basis *)
+Coeffs=Table[Symbol["coeff"<>ToString[i]], {i, 1, Length[MonBas]}];
+(* Create a symbolic polynomial template *)
+PTemp = Coeffs.MonBas;
+(* Compute the Lie derivative of the polynomial template along the trajectories *)
+LfPTemp = Grad[PTemp, vars].vectorField;
+(* Compute the Leading Terms of the template and the Lie derivative wrt the same monomial ordering *)
+LTPTemp = Coeffs[[1]]*MonBas[[1]];
+LTLfPTemp = FromCoefficientRules[{CoefficientRules[LfPTemp,vars, "DegreeReverseLexicographic"][[1]]}, vars];
+(* Compute the remainder coefficients wrt to the monomial ordering *)
+remcoeffs = CoefficientRules[LfPTemp-(LTLfPTemp/LTPTemp)*PTemp, vars,  "DegreeReverseLexicographic"];
+(* Create a system of equalities *)
+syst = Map[#/.Rule[_,coeff_]:>coeff==0&, remcoeffs];
+(* Compute a parametric solution *)
+parametricSol=Solve[syst, Coeffs];
+(* Eliminate symbolic coefficients *)
+Dbxs=(PTemp/.parametricSol);
+(* Filter out the first integrals *)
+Select[DeleteDuplicates[Grad[Dbxs, Coeffs]//Flatten], Not[NumericQ[#]]&]
 ]
 
 
