@@ -15,6 +15,7 @@ import scala.collection.immutable._
  */
 protected object FOQuantifierTactics {
   /** Proves exists by duality from universal base tactic */
+  //@todo use "exists eliminate" instead
   def existsByDuality(base: DependentPositionTactic, atTopLevel: Boolean = false): DependentPositionTactic =
     TacticFactory.anon ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
       case Some(Exists(vars, p)) =>

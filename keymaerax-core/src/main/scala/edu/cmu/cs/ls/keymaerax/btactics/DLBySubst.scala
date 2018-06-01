@@ -348,6 +348,7 @@ private object DLBySubst {
             stutter("v_".asVariable)(pos ++ PosInExpr(0::0::Nil)) &
             useAt(DerivedAxioms.partialVacuousExistsAxiom)(pos) & closeConsts(pos) &
             assignb(pos ++ PosInExpr(0::Nil)) & label(BelleLabels.initCase),
+            //@todo adapt to "con convergence flat" and its modified branch order
             cohide(pp) & implyR(1) & existsL(-1) & byUS("con convergence") <(
               stutter("v_".asVariable)(1, 1::1::0::Nil) &
               useAt("<> partial vacuous", PosInExpr(1::Nil))(1, 1::Nil) &

@@ -309,13 +309,13 @@ object DerivedAxioms extends Logging {
     * }}}
     */
   lazy val convergenceFlat = {
-    val v = Variable("v_", None, Real)
+    val v = Variable("x_", None, Real)
     val anonv = ProgramConst("a_", Except(v))
     val Jany = UnitPredicational("J", AnyArg)
     derivedRule("con convergence flat",
       Sequent(immutable.IndexedSeq(Jany), immutable.IndexedSeq(Diamond(Loop(anonv), "p_(||)".asFormula))),
       cut(Diamond(Loop(anonv), Exists(immutable.Seq(v), And(LessEqual(v, Number(0)), Jany)))) <(
-        hideL(-1) & mond & andL(-1)
+        hideL(-1) & mond & useAt("exists eliminate", PosInExpr(1::Nil))(-1) & andL(-1)
         ,
         hideR(1) & by(ProvableSig.rules("con convergence"))
         )
