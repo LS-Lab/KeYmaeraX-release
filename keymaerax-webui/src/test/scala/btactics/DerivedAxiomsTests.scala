@@ -75,10 +75,9 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   ) }
 
   it should "prove con convergence flat" in withMathematica { qeTool => convergenceFlat.fact.subgoals shouldBe List(
-//    * Premisses: v <= 0, J(||) |- P
-  //  *            v > 0, J(||) |- <a{|v|}><v:=v-1;> J(||)
-    Sequent(immutable.IndexedSeq("v_<=0".asFormula, "J(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula)),
-    Sequent(immutable.IndexedSeq("v_>0".asFormula, "J(||)".asFormula), immutable.IndexedSeq("<a{|v_|};><v:=v-1;>J(||)".asFormula))
+    //Sequent(immutable.IndexedSeq("v_<=0".asFormula, "J(||)".asFormula), immutable.IndexedSeq("p_(||)".asFormula)),
+    Sequent(immutable.IndexedSeq("\\exists x_ (x_<=0 & J(||))".asFormula), immutable.IndexedSeq("p_(||)".asFormula)),
+    Sequent(immutable.IndexedSeq("x_>0".asFormula, "J(||)".asFormula), immutable.IndexedSeq("<a_{|x_|};><x_:=x_-1;>J(||)".asFormula))
   ) }
 
   "Derived Axioms" should "prove <-> reflexive" in {check(equivReflexiveAxiom)}
