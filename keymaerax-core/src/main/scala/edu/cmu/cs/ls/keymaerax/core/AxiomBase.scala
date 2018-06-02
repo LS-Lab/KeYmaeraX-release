@@ -57,7 +57,6 @@ private[core] object AxiomBase extends Logging {
     val a = ProgramConst("a_")
     val sys = SystemConst("a_")
     val x = Variable("x_", None, Real)
-    val anonv = ProgramConst("a_", Except(x))
     val Jany = UnitPredicational("J", AnyArg)
     Map(
       /**
@@ -125,8 +124,8 @@ private[core] object AxiomBase extends Logging {
         */
       ("con convergence",
         (immutable.IndexedSeq(
-            Sequent(immutable.IndexedSeq(Greater(x, Number(0)),Jany), immutable.IndexedSeq(Diamond(anonv, Diamond(Assign(x,Minus(x,Number(1))),Jany))))),
-          Sequent(immutable.IndexedSeq(Jany), immutable.IndexedSeq(Diamond(Loop(anonv), Exists(immutable.Seq(x), And(LessEqual(x, Number(0)), Jany)))))))
+            Sequent(immutable.IndexedSeq(Greater(x,Number(0)),Jany), immutable.IndexedSeq(Diamond(ProgramConst("a_", Except(x)), Diamond(Assign(x,Minus(x,Number(1))),Jany))))),
+          Sequent(immutable.IndexedSeq(Jany), immutable.IndexedSeq(Diamond(Loop(ProgramConst("a_", Except(x))), Exists(immutable.Seq(x), And(LessEqual(x, Number(0)), Jany)))))))
     )
   }
 
