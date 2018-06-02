@@ -299,11 +299,11 @@ object DerivedAxioms extends Logging {
 
   /**
     * Rule "con convergence flat".
-    * Premisses: v <= 0, J(||) |- P
-    *            v > 0, J(||) |- <a{|v|}><v:=v-1;> J(||)
-    * Conclusion  J(||) |- <a{|v|}*>J(||)
+    * Premisses: \exists x_ (x <= 0 & J(||)) |- P
+    *            x_ > 0, J(||) |- <a{|x_|}><x_:=x_-1;> J(||)
+    * Conclusion  J(||) |- <a{|x_|}*>P(||)
     * {{{
-    *    v <= 0, J(v) |- P   v > 0, J(v) |- <a{|v|}>J(v-1)
+    *    \exists x_ (x_ <= 0 & J(x_)) |- P   x_ > 0, J(x_) |- <a{|x_|}>J(x_-1)
     *    ------------------------------------------------- con
     *     J(v) |- <a{|v|}*>P
     * }}}
