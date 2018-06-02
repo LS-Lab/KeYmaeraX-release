@@ -337,4 +337,19 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   it should "exhaustively apply propositional" in {
     proveBy("true<->(p()<->q())&q()->p()".asFormula, prop) shouldBe 'proved
   }
+
+  "Loop convergence" should "prove x>=0 -> <{x:=x-1;}*>x<1 with conRule" in withMathematica {qeTool =>
+    val fml = "x>=0 -> <{x:=x-1;}*>x<1".asFormula
+    val vari = "x<x_+1".asFormula
+    proveBy(fml, implyR(1) & DLBySubst.conRule(vari)(1) <(
+      debug("init") & QE(),
+      debug("use") & QE(),
+      debug("step") & assignd(1) & QE()
+      ))
+    proveBy(fml, implyR(1) & DLBySubst.conRule(vari)(1)).subgoals shouldBe (List(
+      Sequent(IndexedSeq("x>=0".asFormula), IndexedSeq("\\exists x_ x<x_+1".asFormula)),
+      Sequent(IndexedSeq("x_<=0".asFormula, "x<x_+1".asFormula), IndexedSeq("x<1".asFormula)),
+      Sequent(IndexedSeq("x_>0".asFormula, "x<x_+1".asFormula), IndexedSeq("<x:=x-1;;>x<(x_-1)+1".asFormula))
+    ))
+  }
 }

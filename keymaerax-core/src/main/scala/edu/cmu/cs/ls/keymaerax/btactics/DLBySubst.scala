@@ -311,17 +311,7 @@ private object DLBySubst {
       split(pos)
     )})
 
-  /**
-    * Loop convergence.
-    * {{{
-    *   init:                       step:                                  use:
-    *   G |- exists v_. J(v_), D    v_>0, J(v_), consts -> <a>J(v_-1)      v_<=0, J(v_), consts |- p
-    *   --------------------------------------------------------------------------------------------
-    *   G |- <{a}*>p, D
-    * }}}
-    * @param variant The variant property or convergence property in terms of variantDef
-    * @example The variant J(v_) |-> (v_ = x) has variantDef == (v_ = x)
-    */
+  /** [[TactixLibrary.con()]] */
   def con(variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = "con" byWithInput(variant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "con only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
@@ -344,21 +334,21 @@ private object DLBySubst {
           def stutterABV(pos: Position) = abvVars.map(stutter(_)(pos)).reduceOption[BelleExpr](_&_).getOrElse(skip)
           def unstutterABV(pos: Position) = useAt("[:=] self assign")(pos)*abvVars.size
 
-          cutR(Exists(Variable("v_") :: Nil, q))(pp.checkSucc.top) <(
-            stutter("v_".asVariable)(pos ++ PosInExpr(0::0::Nil)) &
+          cutR(Exists(Variable("x_") :: Nil, q))(pp.checkSucc.top) <(
+            stutter("x_".asVariable)(pos ++ PosInExpr(0::0::Nil)) &
             useAt(DerivedAxioms.partialVacuousExistsAxiom)(pos) & closeConsts(pos) &
             assignb(pos ++ PosInExpr(0::Nil)) & label(BelleLabels.initCase),
             //@todo adapt to "con convergence flat" and its modified branch order
-            cohide(pp) & implyR(1) & existsL(-1) & byUS("con convergence") <(
-              stutter("v_".asVariable)(1, 1::1::0::Nil) &
+            cohide(pp) & implyR(1) & existsL(-1) & byUS("con convergence flat") <(
+              existsL('Llast) & andL('Llast) & splitConsts & label(BelleLabels.useCase)
+              ,
+              stutter("x_".asVariable)(1, 1::1::0::Nil) &
               useAt("<> partial vacuous", PosInExpr(1::Nil))(1, 1::Nil) &
               assignb(1, 1::0::1::Nil) &
               stutterABV(SuccPosition.base0(0, PosInExpr(1::0::Nil))) &
               useAt("<> partial vacuous", PosInExpr(1::Nil))(1) &
               unstutterABV(SuccPosition.base0(0, PosInExpr(0::1::Nil))) &
               splitConsts & closeConsts(SuccPos(0)) & assignd(1, 1 :: Nil) & label(BelleLabels.indStep)
-              ,
-              existsL('Llast) & andL('Llast) & splitConsts & label(BelleLabels.useCase)
             )
           )
       }
@@ -368,26 +358,28 @@ private object DLBySubst {
   /**
     * Loop convergence wiping all context.
     * {{{
-    *   init:                      step:                         use:
-    *   G |- exists v. J(v_), D    v>0, J(v_) -> <a>J(v_-1)      v_<=0, J(v_) |- p
+    *   init:                       use:                  step:
+    *   G |- exists x_. J(x_), D    x_<=0, J(x_) |- p     x_>0, J(x_) -> <a>J(x_-1)
     *   --------------------------------------------------------------------------
     *   G |- <{a}*>p, D
     * }}}
-    * @param variantDef The variant property or convergence property in terms of variantDef
-    * @example The variant J(v_) ~> (v_ = x) has variantDef == (v = x)
+    * @param variant The variant property or convergence property in terms of variant
+    * @example The variant J(x_) ~> (x_ = z) is specified as variant == "x_ = z".asFormula
     */
-  def conRule(variantDef: Formula) = "conRule" byWithInput(variantDef, (pos, sequent) => {
+  def conRule(variant: Formula) = "conRule" byWithInput(variant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "conRule only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
 
-    cutR(Exists("v_".asVariable ::Nil, variantDef))(pos.checkSucc.top) <(
-      ident & label(BelleLabels.initCase),
+    cutR(Exists("x_".asVariable ::Nil, variant))(pos.checkSucc.top) <(
+      ident & label(BelleLabels.initCase)
+      ,
       cohide(pos) & implyR(1)
         & existsL(-1)
-        & byUS("con convergence") <(
-        assignd(1, 1 :: Nil) & label(BelleLabels.indStep)
+        & byUS("con convergence flat") <(
+        existsL(-1) & andL(-1) & label(BelleLabels.useCase)
         ,
-        Idioms.nil & label(BelleLabels.useCase))
+        assignd(1, 1 :: Nil) & label(BelleLabels.indStep)
+        )
     )
   })
 

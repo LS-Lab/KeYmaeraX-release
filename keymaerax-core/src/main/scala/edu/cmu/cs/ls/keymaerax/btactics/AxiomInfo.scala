@@ -874,11 +874,10 @@ object DerivationInfo {
     new InputPositionTacticInfo("con",
       RuleDisplayInfo("Loop Convergence",(List("&Gamma;"), List("&lt;a*&gt;P", "&Delta;")),
         List(
-          //@todo adapt
-          (List("&Gamma;"),List("∃v_. j(v_)", "&Delta;")),
-          (List("v_ > 0", "j(v_)"),List("&lt;a&gt;j(v_-1)")),
-          (List("v_ ≤ 0", "j(v_)"),List("P"))))
-      , List(FormulaArg("j(v_)", allowsFresh = "v_" :: Nil)), _ => ((fml: Formula) => DLBySubst.con(fml)): TypedFunc[Formula, BelleExpr]),
+          (List("&Gamma;"),List("∃x_. j(x_)", "&Delta;")),
+          (List("x_ ≤ 0", "j(x_)"),List("P")),
+          (List("x_ > 0", "j(x_)"),List("&lt;a&gt;j(x_-1)"))))
+      , List(FormulaArg("j(x_)", allowsFresh = "x_" :: Nil)), _ => ((fml: Formula) => DLBySubst.con(fml)): TypedFunc[Formula, BelleExpr]),
 
     new PositionTacticInfo("loopauto", RuleDisplayInfo("loopauto",(List("&Gamma;"), List("[a*]P", "&Delta;")),
       List()), {case () => (gen: Generator.Generator[Formula]) => TactixLibrary.loopauto(gen)}, needsGenerator = true),

@@ -375,6 +375,20 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     */
   def throughout(invariant: Formula): DependentPositionTactic = DLBySubst.throughout(invariant)
 
+  /**
+    * Loop convergence: prove a diamond property of a loop by induction with a variant for progress.
+    * {{{
+    *   init:                       use:                         step:
+    *   G |- exists x_. J(x_), D    x_<=0, J(x_), consts |- p    x_>0, J(x_), consts |- <a>J(x_-1)
+    *   --------------------------------------------------------------------------------------------
+    *   G |- <{a}*>p, D
+    * }}}
+    * @param variant The variant property or convergence property in terms of x_
+    * @example The variant J(x_) ~> (x_ = z) is specified as variant == "x_ = z".asFormula
+    */
+  def con(variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = DLBySubst.con(variant, pre)
+
+
   // differential equations
 
   /** ODE: try to prove a property of a differential equation automatically.
