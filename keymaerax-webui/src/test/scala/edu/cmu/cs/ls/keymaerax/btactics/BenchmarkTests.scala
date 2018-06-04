@@ -36,7 +36,7 @@ class BenchmarkTests extends Suites(
   // benchmark problems
   new BenchmarkTester("Basic", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/basic.kyx", 300),
   new BenchmarkTester("Nonlinear", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx", 300),
-  new BenchmarkTester("Advanced", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/advanced.kyx", 300)
+  new BenchmarkTester("Advanced", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/advanced.kyx", 900)
 )
 
 object BenchmarkTests {
@@ -46,16 +46,18 @@ object BenchmarkTests {
 }
 
 /** Collects a benchmark result. */
-case class BenchmarkResult(name: String, status: String, timeout: Int, duration: Long, proofSteps: Int, tacticSize: Int,
+case class BenchmarkResult(name: String, status: String, timeout: Int, duration: Long, qeDuration: Long,
+                           proofSteps: Int, tacticSize: Int,
                            ex: Option[Throwable]) {
   override def toString: String =
     s"""Proof Statistics ($name $status, with time budget $timeout)
       |Duration [ms]: $duration
+      |QE [ms]: $qeDuration
       |Proof steps: $proofSteps
       |Tactic size: $tacticSize
     """.stripMargin
 
-def toCsv: String = s"$name,$status,$timeout,$duration,$proofSteps,$tacticSize"
+def toCsv: String = s"$name,$status,$timeout,$duration,$qeDuration,$proofSteps,$tacticSize"
 }
 
 class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: Int) extends TacticTestBase with AppendedClues with Timeouts {
@@ -71,9 +73,10 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
   }
 
   private def setTimeouts(tool: ToolOperationManagement): Unit = {
-    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, timeout.toString, saveToFile = false)
-    Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, (timeout/3).toString, saveToFile = false)
-    tool.setOperationTimeout(timeout)
+    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "120", saveToFile = false)
+    Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, "60", saveToFile = false)
+    Configuration.set(Configuration.Keys.LOG_QE_DURATION, "true", saveToFile = false)
+    tool.setOperationTimeout(120)
   }
 
   it should "prove interactive benchmarks" in withMathematica { tool =>
@@ -125,23 +128,25 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
 //  }
 
   private def runInteractive(name: String, modelContent: String, tactic: Option[String]) =
-    runEntry(name, parseWithHints(modelContent), tactic.map(_.trim) match { case Some("master") => None case t => t })
+    runEntry(name, modelContent, parseWithHints, tactic.map(_.trim) match { case Some("master") => None case t => t })
   private def runWithHints(name: String, modelContent: String, tactic: Option[String]) =
-    runEntry(name, parseWithHints(modelContent), Some("master"))
+    runEntry(name, modelContent, parseWithHints, Some("master"))
   private def runAuto(name: String, modelContent: String) =
-    runEntry(name, parseStripHints(modelContent), Some("master"))
+    runEntry(name, modelContent, parseStripHints, Some("master"))
 
-  private def runEntry(name: String, model: Formula, tactic: Option[String]): BenchmarkResult = {
-    tactic match {
+  private def runEntry(name: String, modelContent: String, modelParser: String => Formula, tactic: Option[String]): BenchmarkResult = {
+    beforeEach()
+    withMathematica(_ => {}) //@HACK beforeEach and afterEach clean up tool provider
+    val model = modelParser(modelContent)
+    val result = tactic match {
       case Some(t) =>
         println(s"Proving $name")
 
+        qeDurationListener.reset()
         val start = System.currentTimeMillis()
         val theTactic = BelleParser(t)
         try {
           val proof = failAfter(Span(timeout, Seconds))({
-            //@note use a new interpreter every time, since failAfter kills them
-            BelleInterpreter.setInterpreter(registerInterpreter(LazySequentialInterpreter(theInterpreter.listeners)))
             proveBy(model, theTactic)
           })((testThread: Thread) => {
             theInterpreter.kill()
@@ -149,15 +154,19 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
           })
           val end = System.currentTimeMillis()
           println(s"Done proving $name")
-          BenchmarkResult(name, if (proof.isProved) "proved" else "unfinished", timeout, end - start, proof.steps, TacticStatistics.size(theTactic), None)
+          BenchmarkResult(name, if (proof.isProved) "proved" else "unfinished", timeout, end - start,
+            qeDurationListener.duration, proof.steps, TacticStatistics.size(theTactic), None)
         } catch {
-          case ex: TestFailedDueToTimeoutException => BenchmarkResult(name, "timeout", timeout, -1, -1, -1, Some(ex))
-          case ex => BenchmarkResult(name, "failed", timeout, -1, -1, -1, Some(ex))
+          case ex: TestFailedDueToTimeoutException => BenchmarkResult(name, "timeout", timeout,
+            -1, qeDurationListener.duration, -1, -1, Some(ex))
+          case ex => BenchmarkResult(name, "failed", timeout, -1, qeDurationListener.duration, -1, -1, Some(ex))
         }
       case None =>
         println("Skipping " + name + " for lack of tactic")
-        BenchmarkResult(name, "skipped", timeout, -1, -1, -1, None)
+        BenchmarkResult(name, "skipped", timeout, -1, -1, -1, -1, None)
     }
+    afterEach()
+    result
   }
 
   /** Parse model and add proof hint annotations to invariant generator. */
