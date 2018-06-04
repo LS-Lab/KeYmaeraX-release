@@ -43,7 +43,9 @@ class UncheckedM2KConverter extends MathematicaToKeYmaera {
 
   /** Extends default converter with rule and rule list handling */
   override def convert(e: MExpr): KExpr = {
-    if (KMComparator.hasHead(e, MathematicaSymbols.RULE)) convertRule(e)
+    if (isAborted(e)) throw new MathematicaComputationAbortedException(e.toString)
+    else if (isFailed(e)) throw new MathematicaComputationFailedException(e.toString)
+    else if (KMComparator.hasHead(e, MathematicaSymbols.RULE)) convertRule(e)
     else if (e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(
       KMComparator.hasHead(_, MathematicaSymbols.RULE)))) convertRuleList(e)
     // Derivatives are of the form Derivative[1][x]
