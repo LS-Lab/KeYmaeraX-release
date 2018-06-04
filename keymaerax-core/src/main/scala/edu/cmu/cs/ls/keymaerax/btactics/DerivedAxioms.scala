@@ -299,23 +299,25 @@ object DerivedAxioms extends Logging {
 
   /**
     * Rule "con convergence flat".
-    * Premisses: v <= 0, J(||) |- P
-    *            v > 0, J(||) |- <a{|v|}><v:=v-1;> J(||)
-    * Conclusion  J(||) |- <a{|v|}*>J(||)
+    * Premisses: \exists x_ (x <= 0 & J(||)) |- P
+    *            x_ > 0, J(||) |- <a{|x_|}><x_:=x_-1;> J(||)
+    * Conclusion  J(||) |- <a{|x_|}*>P(||)
     * {{{
-    *    v <= 0, J(v) |- P   v > 0, J(v) |- <a{|v|}>J(v-1)
+    *    \exists x_ (x_ <= 0 & J(x_)) |- P   x_ > 0, J(x_) |- <a{|x_|}>J(x_-1)
     *    ------------------------------------------------- con
     *     J(v) |- <a{|v|}*>P
     * }}}
     */
   lazy val convergenceFlat = {
-    val v = Variable("v_", None, Real)
+    val v = Variable("x_", None, Real)
     val anonv = ProgramConst("a_", Except(v))
     val Jany = UnitPredicational("J", AnyArg)
     derivedRule("con convergence flat",
       Sequent(immutable.IndexedSeq(Jany), immutable.IndexedSeq(Diamond(Loop(anonv), "p_(||)".asFormula))),
       cut(Diamond(Loop(anonv), Exists(immutable.Seq(v), And(LessEqual(v, Number(0)), Jany)))) <(
-        hideL(-1) & mond & andL(-1)
+        hideL(-1) & mond
+          // existsL(-1)
+          //useAt("exists eliminate", PosInExpr(1::Nil))(-1) & andL(-1)
         ,
         hideR(1) & by(ProvableSig.rules("con convergence"))
         )

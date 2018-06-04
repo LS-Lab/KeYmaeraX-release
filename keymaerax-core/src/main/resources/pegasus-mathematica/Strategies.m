@@ -157,7 +157,9 @@ Throw[cuts],
 Print["First integrals didn't do it. Proceeding to other qualitative methods."]
 ]];
 
-inv=RunMethod["DWCL-Factors-RHS-Product",problem, FIs];
+(* Postcondition and right-hand side factors *)
+abstraction=AbstractionPolynomials`PostRHSFactors[problem];
+inv=Methods`DWCLZR[pre, post, {f,vars,evoConst}, abstraction];
 Throw[{inv}]
 ]]
 

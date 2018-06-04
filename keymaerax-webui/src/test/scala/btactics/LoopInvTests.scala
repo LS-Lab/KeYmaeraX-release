@@ -90,7 +90,7 @@ class LoopInvTests extends TacticTestBase with Timeouts /* TimeLimits does not a
   }
 
   //todo: fails with no ODEs
-  it should "at least not loop forever when finding an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
+  it should "at least not loop forever when finding an invariant for x=5-> [{x:=x+2;}*]x>=0" ignore withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).toStream
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
@@ -295,7 +295,7 @@ class LoopInvTests extends TacticTestBase with Timeouts /* TimeLimits does not a
 
   it should "prove the invariants of first a branch informative (scripted) 2 nosolve" in withMathematica { _ =>
     //todo: invariant annotation doesn't help proof
-    val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}@invariant((a=1->10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0),(a=-1->v*v<=10-x),(a=0->v=0&x<=10))}}*]x<=10".asFormula
+    val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}@invariant((v'=1->10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0),(v'=-1->v*v<=10-x),(v'=0->v=0&x<=10))}}*]x<=10".asFormula
     proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE(), QE(), master())) shouldBe 'proved
   }
 
