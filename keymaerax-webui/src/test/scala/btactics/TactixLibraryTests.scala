@@ -340,18 +340,13 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
 
   "Loop convergence" should "prove x>=0 -> <{x:=x-1;}*>x<1 with conRule" in withMathematica {qeTool =>
     val fml = "x>=0 -> <{x:=x-1;}*>x<1".asFormula
-    val vari = "x<x_+1".asFormula
-    proveBy(fml, implyR(1) & DLBySubst.conRule(vari)(1)).subgoals shouldBe (List(
-      Sequent(IndexedSeq("x>=0".asFormula), IndexedSeq("\\exists x_ x<x_+1".asFormula)),
-      Sequent(IndexedSeq("x_<=0".asFormula, "x<x_+1".asFormula), IndexedSeq("x<1".asFormula)),
-      Sequent(IndexedSeq("x_>0".asFormula, "x<x_+1".asFormula), IndexedSeq("<x:=x-1;>x<(x_-1)+1".asFormula))
+    val vari = "x<v+1".asFormula
+    proveBy(fml, implyR(1) & DLBySubst.conRule("v".asVariable, vari)(1)).subgoals shouldBe (IndexedSeq(
+      Sequent(IndexedSeq("x>=0".asFormula), IndexedSeq("\\exists v x<v+1".asFormula)),
+      Sequent(IndexedSeq("v<=0".asFormula, "x<v+1".asFormula), IndexedSeq("x<1".asFormula)),
+      Sequent(IndexedSeq("v>0".asFormula, "x<v+1".asFormula), IndexedSeq("<x:=x-1;>x<(v-1)+1".asFormula))
     ))
-    proveBy(fml, implyR(1) & DLBySubst.conRule(vari)(1) <(
-      debug("init") & RCF,
-      debug("use") & RCF,
-      debug("step") & assignd(1) & RCF
-      ))
-    proveBy(fml, implyR(1) & DLBySubst.conRule(vari)(1) <(
+    proveBy(fml, implyR(1) & DLBySubst.conRule("v".asVariable, vari)(1) <(
       debug("init") & QE(),
       debug("use") & QE(),
       debug("step") & assignd(1) & QE()
@@ -360,18 +355,13 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
 
   it should "prove x>=0 -> <{x:=x-1;}*>x<1 with con" in withMathematica {qeTool =>
     val fml = "x>=0 -> <{x:=x-1;}*>x<1".asFormula
-    val vari = "x<x_+1".asFormula
-    proveBy(fml, implyR(1) & con(vari)(1)).subgoals shouldBe (List(
-      Sequent(IndexedSeq("x>=0".asFormula), IndexedSeq("\\exists x_ x<x_+1".asFormula)),
-      Sequent(IndexedSeq("x_<=0".asFormula, "x<x_+1".asFormula), IndexedSeq("x<1".asFormula)),
-      Sequent(IndexedSeq("x_>0".asFormula, "x<x_+1".asFormula), IndexedSeq("<x:=x-1;>x<(x_-1)+1".asFormula))
+    val vari = "x<v+1".asFormula
+    proveBy(fml, implyR(1) & con("v".asVariable, vari)(1)).subgoals shouldBe (IndexedSeq(
+      Sequent(IndexedSeq("x>=0".asFormula), IndexedSeq("\\exists v x<v+1".asFormula)),
+      Sequent(IndexedSeq("v<=0".asFormula, "x<v+1".asFormula), IndexedSeq("x<1".asFormula)),
+      Sequent(IndexedSeq("v>0".asFormula, "x<v+1".asFormula), IndexedSeq("<x:=x-1;>x<(v-1)+1".asFormula))
     ))
-    proveBy(fml, implyR(1) & DLBySubst.conRule(vari)(1) <(
-      debug("init") & RCF,
-      debug("use") & RCF,
-      debug("step") & assignd(1) & RCF
-      ))
-    proveBy(fml, implyR(1) & DLBySubst.conRule(vari)(1) <(
+    proveBy(fml, implyR(1) & DLBySubst.conRule("v".asVariable, vari)(1) <(
       debug("init") & QE(),
       debug("use") & QE(),
       debug("step") & assignd(1) & QE()
@@ -380,18 +370,13 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
 
   it should "prove x>=0 & c=1 -> <{x:=x-c;}*>x<1 with con" in withMathematica {qeTool =>
     val fml = "x>=0 & c=1 -> <{x:=x-c;}*>x<1".asFormula
-    val vari = "x<x_+1".asFormula
-    proveBy(fml, implyR(1) & andL(-1) & con(vari)(1)).subgoals shouldBe (List(
-      Sequent(IndexedSeq("x>=0".asFormula, "c=1".asFormula), IndexedSeq("\\exists x_ x<x_+1".asFormula)),
-      Sequent(IndexedSeq("x_<=0".asFormula, "x<x_+1".asFormula, "c=1".asFormula), IndexedSeq("x<1".asFormula)),
-      Sequent(IndexedSeq("x_>0".asFormula, "x<x_+1".asFormula, "c=1".asFormula), IndexedSeq("<x:=x-c;>x<(x_-1)+1".asFormula))
+    val vari = "x<z+1".asFormula
+    proveBy(fml, implyR(1) & andL(-1) & con("z".asVariable, vari)(1)).subgoals shouldBe (IndexedSeq(
+      Sequent(IndexedSeq("x>=0".asFormula, "c=1".asFormula), IndexedSeq("\\exists z x<z+1".asFormula)),
+      Sequent(IndexedSeq("z<=0".asFormula, "x<z+1".asFormula, "c=1".asFormula), IndexedSeq("x<1".asFormula)),
+      Sequent(IndexedSeq("z>0".asFormula, "x<z+1".asFormula, "c=1".asFormula), IndexedSeq("<x:=x-c;>x<(z-1)+1".asFormula))
     ))
-    proveBy(fml, implyR(1) & con(vari)(1) <(
-      debug("init") & RCF,
-      debug("use") & RCF,
-      debug("step") & assignd(1) & RCF
-      ))
-    proveBy(fml, implyR(1) & con(vari)(1) <(
+    proveBy(fml, implyR(1) & con("z".asVariable, vari)(1) <(
       debug("init") & QE(),
       debug("use") & QE(),
       debug("step") & assignd(1) & QE()

@@ -187,6 +187,7 @@ object Idioms {
   lazy val nil: BelleExpr = new BuiltInTactic("nil") {
     override def result(provable: ProvableSig): ProvableSig = provable
   }
+  /** no-op nil */
   lazy val ident: BelleExpr = nil
 
   /** Optional tactic */

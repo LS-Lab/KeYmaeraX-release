@@ -312,20 +312,21 @@ private object DLBySubst {
     )})
 
   /** [[TactixLibrary.con()]] */
-  def con(variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = "con" byWithInput(variant, (pos, sequent) => {
+  def con(v: Variable, variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = "con" byWithInput(variant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "con only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
 
     pre & ("doCon" byWithInput(variant, (pp, seq) => {
       seq.sub(pp) match {
-        case Some(Diamond(prg: Loop, _)) if !FormulaTools.dualFree(prg) => conRule(variant)(pos)
+        case Some(Diamond(prg: Loop, _)) if !FormulaTools.dualFree(prg) => conRule(v, variant)(pos)
         case Some(d@Diamond(prg@Loop(a), p)) if  FormulaTools.dualFree(prg) =>
+          val ur = URename(Variable("x_",None,Real), v)
           val abv = StaticSemantics(a).bv
           val consts = constAnteConditions(seq, abv)
           val q =
-            if (consts.size > 1) And(variant, consts.reduceRight(And))
-            else if (consts.size == 1) And(variant, consts.head)
-            else And(variant, True)
+            if (consts.size > 1) And(ur(variant), consts.reduceRight(And))
+            else if (consts.size == 1) And(ur(variant), consts.head)
+            else And(ur(variant), True)
 
           def closeConsts(pos: Position) = andR(pos) <(skip, onAll(andR(pos) <(closeId, skip))*(consts.size-1) & close)
           val splitConsts = if (consts.nonEmpty) andL('Llast)*consts.size else useAt(DerivedAxioms.andTrue.fact)('Llast)
@@ -334,21 +335,22 @@ private object DLBySubst {
           def stutterABV(pos: Position) = abvVars.map(stutter(_)(pos)).reduceOption[BelleExpr](_&_).getOrElse(skip)
           def unstutterABV(pos: Position) = useAt("[:=] self assign")(pos)*abvVars.size
 
-          cutR(Exists(Variable("x_") :: Nil, q))(pp.checkSucc.top) <(
-            stutter("x_".asVariable)(pos ++ PosInExpr(0::0::Nil)) &
+          cutR(Exists(ur.what :: Nil, q))(pp.checkSucc.top) <(
+            stutter(ur.what)(pos ++ PosInExpr(0::0::Nil)) &
             useAt(DerivedAxioms.partialVacuousExistsAxiom)(pos) & closeConsts(pos) &
-            assignb(pos ++ PosInExpr(0::Nil)) & label(BelleLabels.initCase),
+            assignb(pos ++ PosInExpr(0::Nil)) & uniformRename(ur) & label(BelleLabels.initCase)
+            ,
             //@todo adapt to "con convergence flat" and its modified branch order
             cohide(pp) & implyR(1) & existsL(-1) & byUS("con convergence flat") <(
-              existsL('Llast) & andL('Llast) & splitConsts & label(BelleLabels.useCase)
+              existsL('Llast) & andL('Llast) & splitConsts & uniformRename(ur) & label(BelleLabels.useCase)
               ,
-              stutter("x_".asVariable)(1, 1::1::0::Nil) &
+              stutter(ur.what)(1, 1::1::0::Nil) &
               useAt("<> partial vacuous", PosInExpr(1::Nil))(1, 1::Nil) &
               assignb(1, 1::0::1::Nil) &
               stutterABV(SuccPosition.base0(0, PosInExpr(1::0::Nil))) &
               useAt("<> partial vacuous", PosInExpr(1::Nil))(1) &
               unstutterABV(SuccPosition.base0(0, PosInExpr(0::1::Nil))) &
-              splitConsts & closeConsts(SuccPos(0)) & assignd(1, 1 :: Nil) & label(BelleLabels.indStep)
+              splitConsts & closeConsts(SuccPos(0)) & assignd(1, 1 :: Nil) & uniformRename(ur) & label(BelleLabels.indStep)
             )
           )
       }
@@ -359,26 +361,27 @@ private object DLBySubst {
     * Loop convergence wiping all context.
     * {{{
     *   init:                       use:                  step:
-    *   G |- exists x_. J(x_), D    x_<=0, J(x_) |- p     x_>0, J(x_) -> <a>J(x_-1)
+    *   G |- exists v. J(v), D    v<=0, J(v) |- p     v>0, J(v) |- <a>J(v-1)
     *   --------------------------------------------------------------------------
     *   G |- <{a}*>p, D
     * }}}
-    * @param variant The variant property or convergence property in terms of variant
-    * @example The variant J(x_) ~> (x_ = z) is specified as variant == "x_ = z".asFormula
+    * @param variant The variant property or convergence property in terms of new variable `v`.
+    * @example The variant J(v) ~> (v = z) is specified as v=="v".asVariable, variant == "v = z".asFormula
     */
-  def conRule(variant: Formula) = "conRule" byWithInput(variant, (pos, sequent) => {
+  def conRule(v: Variable, variant: Formula) = "conRule" byWithInput(variant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "conRule only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
+    val ur = URename(Variable("x_",None,Real), v)
 
-    cutR(Exists("x_".asVariable ::Nil, variant))(pos.checkSucc.top) <(
-      ident & label(BelleLabels.initCase)
+    cutR(Exists(ur.what ::Nil, ur(variant)))(pos.checkSucc.top) <(
+      uniformRename(ur) & label(BelleLabels.initCase)
       ,
       cohide(pos) & implyR(1)
         & existsL(-1)
         & byUS("con convergence flat") <(
-        existsL(-1) & andL(-1) & label(BelleLabels.useCase)
+        existsL(-1) & andL(-1) & uniformRename(ur) & label(BelleLabels.useCase)
         ,
-        assignd(1, 1 :: Nil) & label(BelleLabels.indStep)
+        assignd(1, 1 :: Nil) & uniformRename(ur) & label(BelleLabels.indStep)
         )
     )
   })
