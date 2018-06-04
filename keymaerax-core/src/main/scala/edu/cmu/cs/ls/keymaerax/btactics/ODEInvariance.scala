@@ -302,7 +302,6 @@ object ODEInvariance {
         }
         else ???
       case Neg(FuncOf(a, p)) =>
-
         if (a == absF) {
           try {
             val prop = Equal(p, Number(0))
@@ -407,8 +406,8 @@ object ODEInvariance {
       starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
       implyR(pos) & r1 & ?(closeId) & timeoutQE & done, //common case?
       cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
-      implyR(1) & cutR(pf)(1)<(hideL(-3) & DebuggingTactics.debug("QE step",doPrint = debugTactic) & timeoutQE & done, skip) //Don't bother running the rest if QE fails
-      & cohide2(-3,1)& implyR(1) & lpclosedPlus(inst)
+      implyR(1) & cutR(pf)(1)<(hideL(-3) & r2 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & timeoutQE & done, skip) //Don't bother running the rest if QE fails
+      & cohide2(-3,1)& DebuggingTactics.debug("Finish step",doPrint = debugTactic) & implyR(1) & lpclosedPlus(inst)
     )
   })
 
