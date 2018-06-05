@@ -107,7 +107,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
     pegasusResourceNames.foreach(n => {
       val pegasusDest = new FileOutputStream(pegasusTempDir + File.separator + n)
-      val pegasusSrc = Channels.newChannel(getClass.getResourceAsStream(pegasusResourcePath + "/" + n))
+      val pegasusSrc = Channels.newChannel(getClass.getResourceAsStream(pegasusResourcePath + n))
       pegasusDest.getChannel.transferFrom(pegasusSrc, 0, Long.MaxValue)
     })
     val pegasusAbsPaths = pegasusResourceNames.map(n => pegasusTempDir + File.separator + n)
