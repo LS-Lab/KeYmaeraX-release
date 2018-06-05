@@ -240,7 +240,11 @@ inv=strat[problem];
 inv=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
 
 (* Return the invariant without strict inequalities - KeYmaera has trouble with mixed formulas *)
-inv=inv/.{Greater[a_,b_]->GreaterEqual[a,b],Less[a_,b_]->LessEqual[a,b],Unequal[a_,b_]-> True};
+inv=inv/.{Unequal[a_,b_]-> True};
+relaxedInv=Methods`InvS[inv, f, vars, evoConst];
+If[ TrueQ[relaxedInv], 
+Print["Relaxed invariant is still ok. Proceeding"], 
+Print["Relaxed invariant is no longer invariant. Sorry."];Throw[{{True},False}]];
 
 invImpliesPost=CheckSemiAlgInclusion[Apply[And,inv], post, vars];
 If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{inv, True}],
