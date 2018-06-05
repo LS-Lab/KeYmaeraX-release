@@ -83,7 +83,7 @@ case class ProgramSearchNode (pre: Formula, prog: Program, post: Formula)(implic
       /* This should really never come up during execution, but if it does, since this means "I can be any program"
       * it means we could make the state whatever we want, which simply means the precondition goes out the window
       * and the precondition needs to hold in every possible state */
-      case ProgramConst (_) | DifferentialProgramConst(_, _) => List(ProgramSearchNode(True, Test(True), post))
+      case ProgramConst(_, _) | DifferentialProgramConst(_, _) => List(ProgramSearchNode(True, Test(True), post))
 
     }
     kids.toSet

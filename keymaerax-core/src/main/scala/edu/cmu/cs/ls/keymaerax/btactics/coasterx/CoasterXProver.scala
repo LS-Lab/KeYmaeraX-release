@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.core.{And, _}
 import edu.cmu.cs.ls.keymaerax.btactics.coasterx._
 import edu.cmu.cs.ls.keymaerax.lemma.{CachedLemmaDB, FileLemmaDB, LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.{NoProof, NoProofTermProvable, PTProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{NoProof, ElidingProvable, TermProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -44,7 +44,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
 
   // Evaluate a Bellerophon snippet, used to get reasonable IntelliJ debugging
   def interpret(e:BelleExpr, pr:ProvableSig):ProvableSig = {
-    SequentialInterpreter()(e, BelleProvable(pr)) match {
+    LazySequentialInterpreter()(e, BelleProvable(pr)) match {
       case BelleProvable(result,_) => result
     }
   }
@@ -348,7 +348,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
       case 0 => f(conjI,pr)
       case _ =>
         val pr1 = interpret(andR(1), pr)
-        val prHead = NoProofTermProvable.startProof(pr1.subgoals.head)
+        val prHead = ElidingProvable.startProof(pr1.subgoals.head)
         val prHeadProved = f(conjI, prHead)
         val prTail = pr1(prHeadProved,0)
         proveConjs(f, prTail, conjDepth - 1, conjI + 1)
@@ -553,7 +553,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
         case 0 => f(conjI,pr)
         case _ =>
           val pr1 = interpret(andR(1), pr)
-          val prHead = NoProofTermProvable.startProof(pr1.subgoals.head)
+          val prHead = ElidingProvable.startProof(pr1.subgoals.head)
           val prHeadProved = f(conjI, prHead)
           val prTail = pr1(prHeadProved,0)
           proveConjs(f, prTail, conjDepth - 1, conjI + 1)
@@ -621,7 +621,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
                hideR(1) & QE,
                master()
              )*/
-        val pr = NoProofTermProvable.startProof(con)
+        val pr = ElidingProvable.startProof(con)
         val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
         val pr2 = interpret(e, pr1)
         storeLemma(pr2, Some(provableName))
@@ -659,7 +659,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
               hideR(1) & QE,
               master()
             )*/
-        val pr = NoProofTermProvable.startProof(con)
+        val pr = ElidingProvable.startProof(con)
         val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
         val pr2 = interpret(e, pr1)
         storeLemma(pr2, Some(provableName))
@@ -700,7 +700,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
         val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9,a10,a11), immutable.IndexedSeq(c))
-        val pr = NoProofTermProvable.startProof(con)
+        val pr = ElidingProvable.startProof(con)
         val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
         val pr2 = interpret(dC("dx=-(cy()-y)/r()".asFormula)(1) <(nil, dI()(1)), pr1)
         val pr3 = interpret(dC("dy=(cx()-x)/r()".asFormula)(1) <(nil, dI()(1)), pr2)
@@ -746,7 +746,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
         val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9,a10,a11,a12), immutable.IndexedSeq(c))
-        val pr = NoProofTermProvable.startProof(con)
+        val pr = ElidingProvable.startProof(con)
         val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
         val pr2 = interpret(dC("dx=(cy()-y)/r()".asFormula)(1) <(nil, dI()(1)), pr1)
         val pr3 = interpret(dC("dy=-(cx()-x)/r()".asFormula)(1) <(nil, dI()(1)), pr2)
@@ -799,7 +799,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
         val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10, a11,a12), immutable.IndexedSeq(c))
-        val pr = NoProofTermProvable.startProof(con)
+        val pr = ElidingProvable.startProof(con)
         val cy = "cy()".asTerm
         val v0 = "v0()".asTerm
         val r = "r()".asTerm
@@ -859,7 +859,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
         val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10,a11), immutable.IndexedSeq(c))
-        val pr = NoProofTermProvable.startProof(con)
+        val pr = ElidingProvable.startProof(con)
         val cy = "cy()".asTerm
         val v0 = "v0()".asTerm
         val r = "r()".asTerm
@@ -921,7 +921,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
           dC("v>0".asFormula)(1) <(nil, ODE(1)) &
           dC("(x-cx())^2 + (y-cy())^2 = r()^2".asFormula)(1) <(nil, ODE(1)) &
           ODE(1)
-        val pr = NoProofTermProvable.startProof(con)
+        val pr = ElidingProvable.startProof(con)
         val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
         val pr2 = interpret(e, pr1)
         storeLemma(pr2, Some(provableName))
@@ -976,7 +976,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             ) &
             dC("(x-cx())^2 + (y-cy())^2 = r()^2".asFormula)(1) <(nil, dI()(1)) &
             ODE(1)
-        val pr = NoProofTermProvable.startProof(con)
+        val pr = ElidingProvable.startProof(con)
         val pr1 = interpret(TactixLibrary.unfoldProgramNormalize, pr)
         val pr2 = interpret(e, pr1)
         storeLemma(pr2, Some(provableName))
@@ -1018,7 +1018,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
         val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10,a11, a12), immutable.IndexedSeq(c))
-        val pr = NoProofTermProvable.startProof(con)
+        val pr = ElidingProvable.startProof(con)
         val cy = "cy()".asTerm
         val v0 = "v0()".asTerm
         val r = "r()".asTerm
@@ -1079,7 +1079,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
             |          & ((x-cx())^2 + (y-cy())^2 = r()^2)
             |          )""".stripMargin.asFormula
         val con:Sequent = Sequent(immutable.IndexedSeq(a1, a2, a3, a4, a5, a6, a7, a8,a9, a10,a11), immutable.IndexedSeq(c))
-        val pr = NoProofTermProvable.startProof(con)
+        val pr = ElidingProvable.startProof(con)
         val cy = "cy()".asTerm
         val v0 = "v0()".asTerm
         val r = "r()".asTerm
@@ -1291,12 +1291,12 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     pr.subgoals.head.succ.head match {
       case (Box(Choice(_,_), _)) =>
         val pr1 = interpret(choiceb(1) & andR(1), pr)
-        val sgHead = NoProofTermProvable.startProof(pr1.subgoals(0))
-        val sgTail = NoProofTermProvable.startProof(pr1.subgoals(1))
+        val sgHead = ElidingProvable.startProof(pr1.subgoals(0))
+        val sgTail = ElidingProvable.startProof(pr1.subgoals(1))
         val (global, locals) = splitComponents(sgTail, i+1)
         (pr1(global,1), sgHead::locals)
       case  _ =>
-        (pr, NoProofTermProvable.startProof(pr.subgoals.last) :: Nil)
+        (pr, ElidingProvable.startProof(pr.subgoals.last) :: Nil)
     }
   }
 
@@ -1377,7 +1377,7 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val v0 = s"($v0pre)*(g()^(1/2))".asTerm
     val specc = spec.fromAligned(align,env)
     val nSections = segments.length-1
-    val pr = NoProofTermProvable.startProof(specc)
+    val pr = ElidingProvable.startProof(specc)
     val pr1 = interpret(implyR(1), pr)
     // _ |- [a]post
     val pr1a = interpret(andL(-1), pr1)
@@ -1390,11 +1390,11 @@ class CoasterXProver (spec:CoasterXSpec,env:AccelEnvelope, reuseComponents:Boole
     val pr1e = interpret(unpackLocalConsts, pr1c)
     val inv = invariant(align,env)
     val pr2 = interpret(DLBySubst.loop(inv, pre = nil)(1), pr1e)
-    val firstBranch = NoProofTermProvable.startProof(pr2.subgoals.head)
+    val firstBranch = ElidingProvable.startProof(pr2.subgoals.head)
     val firstResult = preImpliesInv(firstBranch, nSections)
     val pr3 = pr2(firstResult, 0)
     assert(pr3.subgoals.length == 2, "Precondition step of loop induction failed")
-    val secondBranch = NoProofTermProvable.startProof(pr3.subgoals.head)
+    val secondBranch = ElidingProvable.startProof(pr3.subgoals.head)
     val pr4 = pr3(invImpliesPost(secondBranch, nSections), 0)
     val (globalPr, localPrs) = splitComponents(pr4)
     val prEnd = proveAllComponents(globalPr, localPrs, points, segments.tail, v0, points.head._2, 0, segments.tail.length, ds)

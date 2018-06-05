@@ -1,0 +1,12 @@
+EVALUATION README
+
+Install Wolfram Mathematica version 11.2 or newer (free 15 day trial available from: https://www.wolfram.com/mathematica/trial/ ).
+
+1. Open Pegasus_Run.nb in Mathematica.
+
+2. Load the Strategies.m package into Mathematica by left-clicking on the first cell in Pegasus_Run.nb 
+   (i.e. the cell containing Needs["Strategies`", NotebookDirectory[] <> "Strategies.m"] ) and executing it by pressing Shift+Enter.
+
+3. The invariant generation examples in the notebook are likewise executed by selecting a cell and executing it with Shift+Enter.
+
+Comments: tested with Mathematica 11.2 on Linux. Older versions of Mathematica will have issues with CylindricalDecomposition.

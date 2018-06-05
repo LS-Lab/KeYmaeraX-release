@@ -4,13 +4,13 @@
 */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import akka.actor.{Actor, ActorSystem, Props}
+import akka.actor.ActorSystem
 import akka.http.scaladsl.{ConnectionContext, Http, HttpsConnectionContext}
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, SequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, ExhaustiveSequentialInterpreter, SequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
 import edu.cmu.cs.ls.keymaerax.launcher.{DefaultConfiguration, LoadingDialogFactory, SystemWebBrowser}
@@ -20,8 +20,9 @@ import org.apache.logging.log4j.scala.Logging
 
 import scala.concurrent.duration._
 import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.server.Directives._
-import com.typesafe.sslconfig.akka.AkkaSSLConfig
+
+import scala.concurrent.ExecutionContextExecutor
+import scala.language.postfixOps
 
 /**
   * Creates a HyDRA server listening on a host and port specified in the database's config file under the configurations serverconfig.host and serverconfig.port.
@@ -42,10 +43,10 @@ object NonSSLBoot extends App with Logging {
   HyDRAInitializer(args, HyDRAServerConfig.database)
 
   //Some boilerplate code that I don't understand.
-  implicit val system = ActorSystem("hydraloader") //Not sure what the significance of this name is?
-  implicit val materializer = ActorMaterializer()
-  implicit val executionContext = system.dispatcher
-  implicit val timeout = Timeout(10 seconds) //@note this might need to be much higher.
+  implicit val system: ActorSystem = ActorSystem("hydraloader") //Not sure what the significance of this name is?
+  implicit val materializer: ActorMaterializer = ActorMaterializer()
+  implicit val executionContext: ExecutionContextExecutor = system.dispatcher
+  implicit val timeout: Timeout = Timeout(10 seconds) //@note this might need to be much higher.
   val config = ConfigFactory.load()
     .withValue("akka.loglevel", ConfigValueFactory.fromAnyRef("OFF"))
     .withValue("akka.stdout-loglevel", ConfigValueFactory.fromAnyRef("OFF"))
@@ -57,7 +58,7 @@ object NonSSLBoot extends App with Logging {
   //Do the KeYmaera X initialization GUI stuff...
   LoadingDialogFactory() //@note show if not already started through Main.scala
   Http().bindAndHandle(handler = api, interface = HyDRAServerConfig.host, port = HyDRAServerConfig.port) map {
-    binding => {
+    _ => {
       // Finally, print a message indicating that the server was started.
       LoadingDialogFactory().addToStatus(15, Some("Finished loading"))
       logger.info(
@@ -73,10 +74,9 @@ object NonSSLBoot extends App with Logging {
       SystemWebBrowser(s"http://${HyDRAServerConfig.host}:${HyDRAServerConfig.port}/")
     }
   } recover {
-    case ex => {
+    case _ =>
       LoadingDialogFactory().addToStatus(0, Some("Loading failed..."))
       System.exit(1)
-    }
   }
 }
 
@@ -110,11 +110,11 @@ object SSLBoot extends App with Logging {
     logger.warn("WARNING: Expecting host 0.0.0.0 in SSL mode.")
 
   //Some boilerplate code that I don't understand.
-  implicit val system = ActorSystem("hydraloader") //Not sure what the significance of this name is?
+  implicit val system: ActorSystem = ActorSystem("hydraloader") //Not sure what the significance of this name is?
 //  val sslConfig = AkkaSSLConfig()
-  implicit val materializer = ActorMaterializer()
-  implicit val executionContext = system.dispatcher
-  implicit val timeout = Timeout(10 seconds) //@note this might need to be much higher.
+  implicit val materializer: ActorMaterializer = ActorMaterializer()
+  implicit val executionContext: ExecutionContextExecutor = system.dispatcher
+  implicit val timeout: Timeout = Timeout(10 seconds) //@note this might need to be much higher.
   val config = ConfigFactory.load()
     .withValue("akka.loglevel", ConfigValueFactory.fromAnyRef("OFF"))
     .withValue("akka.stdout-loglevel", ConfigValueFactory.fromAnyRef("OFF"))
@@ -126,17 +126,16 @@ object SSLBoot extends App with Logging {
   val https: HttpsConnectionContext = ConnectionContext.https(KyxSslConfiguration.sslContext)
   Http().setDefaultServerHttpContext(https)
   Http().bindAndHandle(handler = api, interface = HyDRAServerConfig.host, port = HyDRAServerConfig.port, connectionContext = https) map {
-    binding => {
+    _ => {
       // Finally, print a message indicating that the server was started.
       logger.info(s"SSL BOOT: Attempting to listen on ${HyDRAServerConfig.host}:${HyDRAServerConfig.port}. SSL requests only!")
       logger.info("NOTE: No browser instance will open because we assume SSL-hosted servers are headless (i.e., SSL mode is for production deployments only -- if hosting locally, use NonSSLBoot!)")
     }
   } recover {
-    case ex => {
+    case ex =>
       println(s"Failed to start an SSL server. ${ex.getMessage}")
       logger.error(s"Failed to start an SSL server. ${ex.getMessage}")
       System.exit(1)
-    }
   }
 }
 
@@ -151,7 +150,7 @@ object HyDRAInitializer extends Logging {
     val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
 
     //@note setup interpreter
-    BelleInterpreter.setInterpreter(SequentialInterpreter())
+    BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
     //@note pretty printer setup must be first, otherwise derived axioms print wrong
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     // connect invariant generator to tactix library
@@ -274,7 +273,7 @@ object HyDRAInitializer extends Logging {
 object HyDRAServerConfig {
   // we need an ActorSystem to host our application in
   var system = ActorSystem("on-spray-can")
-  val database = DBAbstractionObj.defaultDatabase
+  val database: DBAbstraction = DBAbstractionObj.defaultDatabase
 //  var service = system.actorOf(Props[RestApiActor], "hydra")
 
   val (isHosted: Boolean, host: String, port: Int) =

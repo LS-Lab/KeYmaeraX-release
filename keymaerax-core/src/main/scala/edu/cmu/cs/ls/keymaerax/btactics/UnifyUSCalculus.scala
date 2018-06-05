@@ -21,7 +21,6 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logger
 
 import scala.collection.immutable._
-import scala.language.postfixOps
 
 /**
   * Automatic unification-based Uniform Substitution Calculus with indexing.
@@ -237,7 +236,7 @@ trait UnifyUSCalculus {
 
   /** US(subst, fact) reduces the proof to a proof of `fact`, whose uniform substitution instance under `subst` the current goal is.
  *
-    * @see [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.apply(USubst)]]
+    * @see [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(USubst)]]
     */
   def US(subst: USubst, fact: ProvableSig): BuiltInTactic = by(fact(subst))
   /** US(subst, axiom) reduces the proof to the given axiom, whose uniform substitution instance under `subst` the current goal is. */
@@ -303,11 +302,19 @@ trait UnifyUSCalculus {
     * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
     */
   def uniformRename(what: Variable, repl: Variable): InputTactic = ProofRuleTactics.uniformRenaming(what,repl)
+  /** uniformRename(ur) renames `ur.what` to `ur.repl` uniformly and vice versa.
+    * @see [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming]]
+    */
+  def uniformRename(ur: URename): InputTactic = ProofRuleTactics.uniformRenaming(ur.what,ur.repl)
 
   /** boundRename(what,repl) renames `what` to `repl` at the indicated position (or vice versa).
     * @see [[edu.cmu.cs.ls.keymaerax.core.BoundRenaming]]
     */
   def boundRename(what: Variable, repl: Variable): DependentPositionTactic = ProofRuleTactics.boundRenaming(what,repl)
+
+  /** @see [[US()]] */
+  def uniformSubstitute(subst: USubst): BuiltInTactic = US(subst)
+
 
   def useAt(axiom: ProvableInfo, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic = useAt(axiom.codeName, axiom.provable, key, inst)
   def useAt(axiom: ProvableInfo, key: PosInExpr): DependentPositionTactic = useAt(axiom.codeName, axiom.provable, key, us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
@@ -1618,7 +1625,8 @@ trait UnifyUSCalculus {
     * Computation-based auto-tactics
     *******************************************************************/
 
-  /** Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices. */
+  /** Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices.
+    * Unlike [[TactixLibrary.tacticChase]] will not branch or use propositional rules, merely transform the chosen formula in place. */
   lazy val chase: DependentPositionTactic = chase(3,3)
 
   /** Chase with bounded breadth and giveUp to stop.

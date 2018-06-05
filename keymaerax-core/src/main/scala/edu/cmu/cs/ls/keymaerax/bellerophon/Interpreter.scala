@@ -18,6 +18,12 @@ trait Interpreter {
 
   /** Stops the interpreter and kills all its tactic executions. */
   def kill(): Unit
+
+  /** Indicates whether the interpreter is still operational. A dead interpreter refuses to run tactics. */
+  def isDead: Boolean
+
+  /** Registered listeners. */
+  def listeners: scala.collection.immutable.Seq[IOListener]
 }
 
 /**

@@ -5,7 +5,9 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.{Branches, TacticRecursors}
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.annotation.switch
@@ -26,9 +28,12 @@ object TacticIndex {
     * Recursors list resulting siblings for subsequent chase (every recursor is itself
     * a list, since tactics may branch).
     */
-  type TacticRecursors = List[(Sequent, SeqPos) => Branches]
+  type TacticRecursors = List[(Sequent, Position) => Branches]
 
   lazy val default: TacticIndex = new DefaultTacticIndex
+
+  val allLStutter: DependentPositionTactic = TactixLibrary.useAt(DerivedAxioms.forallStutter)
+  val existsRStutter: DependentPositionTactic = TactixLibrary.useAt(DerivedAxioms.existsStutter)
 }
 
 trait TacticIndex {
@@ -47,39 +52,61 @@ class DefaultTacticIndex extends TacticIndex {
   def tacticRecursors(tactic: BelleExpr): TacticRecursors = (tactic: @switch) match {
     //@note expected formulas are used to fall back to search
     case TactixLibrary.notL =>
-      ((s: Sequent, p: SeqPos) => one(Fixed(SuccPosition.base0(s.succ.length), child(s(p))))) :: Nil
+      ((s: Sequent, p: Position) => one(Fixed(SuccPosition.base0(s.succ.length), child(s(p.top))))) :: Nil
     case TactixLibrary.andL =>
-      ((s: Sequent, p: SeqPos) => one(Fixed(AntePosition.base0(s.ante.length), right(s(p))))) ::
-      ((s: Sequent, p: SeqPos) => one(Fixed(AntePosition.base0(s.ante.length-1), left(s(p))))) :: Nil
+      ((s: Sequent, p: Position) => one(Fixed(AntePosition.base0(s.ante.length), right(s(p.top))))) ::
+      ((s: Sequent, p: Position) => one(Fixed(AntePosition.base0(s.ante.length-1), left(s(p.top))))) :: Nil
     case TactixLibrary.orL =>
-      ((s: Sequent, p: SeqPos) => (new Fixed(p, left(s(p)))::Nil)::(new Fixed(p, right(s(p)))::Nil)::Nil) :: Nil
+      ((s: Sequent, p: Position) => (new Fixed(p, left(s(p.top)))::Nil)::(new Fixed(p, right(s(p.top)))::Nil)::Nil) :: Nil
     case TactixLibrary.implyL =>
-      ((s: Sequent, p: SeqPos) =>
-        (Fixed(SuccPosition.base0(s.succ.length), left(s(p)))::Nil)::
-        (new Fixed(p, right(s(p)))::Nil)::Nil) :: Nil
+      ((s: Sequent, p: Position) =>
+        (Fixed(SuccPosition.base0(s.succ.length), left(s(p.top)))::Nil)::
+        (new Fixed(p, right(s(p.top)))::Nil)::Nil) :: Nil
     case TactixLibrary.equivL =>
-      ((s: Sequent, p: SeqPos) =>
-        (new Fixed(p, Some(And(left(s(p)).get, right(s(p)).get)))::Nil)::
-        (new Fixed(p, Some(And(Not(left(s(p)).get), Not(right(s(p)).get))))::Nil)::Nil) :: Nil
+      ((s: Sequent, p: Position) =>
+        (new Fixed(p, Some(And(left(s(p.top)).get, right(s(p.top)).get)))::Nil)::
+        (new Fixed(p, Some(And(Not(left(s(p.top)).get), Not(right(s(p.top)).get))))::Nil)::Nil) :: Nil
     case TactixLibrary.notR =>
-      ((s: Sequent, p: SeqPos) => one(Fixed(AntePosition.base0(s.ante.length), child(s(p))))) :: Nil
+      ((s: Sequent, p: Position) => one(Fixed(AntePosition.base0(s.ante.length), child(s(p.top))))) :: Nil
     case TactixLibrary.implyR =>
-      ((s: Sequent, p: SeqPos) => one(Fixed(AntePosition.base0(s.ante.length), left(s(p))))) ::
-      ((s: Sequent, p: SeqPos) => one(Fixed(SuccPosition.base0(s.succ.length-1), right(s(p))))) :: Nil
+      ((s: Sequent, p: Position) => one(Fixed(AntePosition.base0(s.ante.length), left(s(p.top))))) ::
+      ((s: Sequent, p: Position) => one(Fixed(SuccPosition.base0(s.succ.length-1), right(s(p.top))))) :: Nil
     case TactixLibrary.orR =>
-      ((s: Sequent, p: SeqPos) => one(Fixed(SuccPosition.base0(s.succ.length), right(s(p))))) ::
-      ((s: Sequent, p: SeqPos) => one(Fixed(SuccPosition.base0(s.succ.length-1), left(s(p))))) :: Nil
+      ((s: Sequent, p: Position) => one(Fixed(SuccPosition.base0(s.succ.length), right(s(p.top))))) ::
+      ((s: Sequent, p: Position) => one(Fixed(SuccPosition.base0(s.succ.length-1), left(s(p.top))))) :: Nil
     case TactixLibrary.andR =>
-      ((s: Sequent, p: SeqPos) => (new Fixed(p, left(s(p)))::Nil)::(new Fixed(p, right(s(p)))::Nil)::Nil) :: Nil
+      ((s: Sequent, p: Position) => (new Fixed(p, left(s(p.top)))::Nil)::(new Fixed(p, right(s(p.top)))::Nil)::Nil) :: Nil
     case TactixLibrary.equivR =>
-      ((s: Sequent, p: SeqPos) =>
-        (Fixed(AntePosition.base0(s.ante.length), left(s(p)))::Fixed(SuccPosition.base0(s.succ.length-1), right(s(p)))::Nil)::
-        (Fixed(AntePosition.base0(s.ante.length), right(s(p)))::Fixed(SuccPosition.base0(s.succ.length-1), left(s(p)))::Nil)::Nil) :: Nil
-    case TactixLibrary.step => ((_: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
-    case TactixLibrary.allR => ((s: Sequent, p: SeqPos) => one(new Fixed(p, child(s(p))))) :: Nil
-    case TactixLibrary.existsL => ((s: Sequent, p: SeqPos) => one(new Fixed(p, child(s(p))))) :: Nil
-    case TactixLibrary.ODE => ((_: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
-    case TactixLibrary.`solve` => ((_: Sequent, p: SeqPos) => one(new Fixed(p))) :: Nil
+      ((s: Sequent, p: Position) =>
+        (Fixed(AntePosition.base0(s.ante.length), left(s(p.top)))::Fixed(SuccPosition.base0(s.succ.length-1), right(s(p.top)))::Nil)::
+        (Fixed(AntePosition.base0(s.ante.length), right(s(p.top)))::Fixed(SuccPosition.base0(s.succ.length-1), left(s(p.top)))::Nil)::Nil) :: Nil
+    case TactixLibrary.step => ((_: Sequent, p: Position) => one(new Fixed(p))) :: Nil
+    case TactixLibrary.allR => ((s: Sequent, p: Position) => one(new Fixed(p, child(s(p.top))))) :: Nil
+    case TacticIndex.allLStutter => ((s: Sequent, p: Position) => {
+      //@note skip ahead to programs
+      var (childPos, c) = (PosInExpr(0::Nil), child(s(p.top)))
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = e match {
+          case _: Modal => childPos = p; c = Some(e); Left(Some(ExpressionTraversal.stop))
+          case _ => Left(None)
+        }
+      }, s(p.top))
+      one(new Fixed(p ++ childPos, c))
+    }) :: Nil
+    case TactixLibrary.existsL => ((s: Sequent, p: Position) => one(new Fixed(p, child(s(p.top))))) :: Nil
+    case TacticIndex.existsRStutter => ((s: Sequent, p: Position) => {
+      //@note skip ahead to programs
+      var (childPos, c) = (PosInExpr(0::Nil), child(s(p.top)))
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+        override def preF(p: PosInExpr, e: Formula): Either[Option[ExpressionTraversal.StopTraversal], Formula] = e match {
+          case _: Modal => childPos = p; c = Some(e); Left(Some(ExpressionTraversal.stop))
+          case _ => Left(None)
+        }
+      }, s(p.top))
+      one(new Fixed(p ++ childPos, c))
+    }) :: Nil
+    case TactixLibrary.ODE => ((_: Sequent, p: Position) => one(new Fixed(p))) :: Nil
+    case TactixLibrary.`solve` => ((_: Sequent, p: Position) => one(new Fixed(p))) :: Nil
     // default position: stop searching
     case _ => Nil
   }
@@ -110,8 +137,9 @@ class DefaultTacticIndex extends TacticIndex {
       case Box(a, _) if !a.isInstanceOf[ODESystem] && !a.isInstanceOf[Loop] => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
       case Box(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.solve::Nil, TactixLibrary.ODE::Nil)
       case Diamond(a, _) if !a.isInstanceOf[ODESystem] && !a.isInstanceOf[Loop] => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
-      case Forall(_, _) => (Nil, TactixLibrary.allR::Nil)
-      case Exists(_, _) => (TactixLibrary.existsL::Nil, Nil)
+      case Diamond(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.solve::Nil, TactixLibrary.solve::Nil)
+      case Forall(_, _) => (TacticIndex.allLStutter::Nil, TactixLibrary.allR::Nil)
+      case Exists(_, _) => (TactixLibrary.existsL::Nil, TacticIndex.existsRStutter::Nil)
       case Not(_) => (TactixLibrary.notL::Nil, TactixLibrary.notR::Nil)
       case And(_, _) => (TactixLibrary.andL::Nil, TactixLibrary.andR::Nil)
       case Or(_, _) => (TactixLibrary.orL::Nil, TactixLibrary.orR::Nil)

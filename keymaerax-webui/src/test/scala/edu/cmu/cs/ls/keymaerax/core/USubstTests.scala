@@ -1418,4 +1418,18 @@ class USubstTests extends SystemTestBase {
 
     USubst(SubstitutionPair(PredicationalOf(mycontext, DotFormula), context) :: Nil)(PredicationalOf(mycontext, arg))
   }
+
+  "Augmentor" should "create substitutions for functions" in {
+    "f()".asTerm ~>> "2*x+y".asTerm shouldBe SubstitutionPair("f()".asTerm, "2*x+y".asTerm)
+    "f(x)".asTerm ~>> "2*x+y".asTerm shouldBe SubstitutionPair("f(.)".asTerm, "2*.+y".asTerm)
+    "f(x,y)".asTerm ~>> "2*x+y".asTerm shouldBe SubstitutionPair("f(._0,._1)".asTerm, "2*._0+._1".asTerm)
+    "f(x,(y,z))".asTerm ~>> "2*x+y^z".asTerm shouldBe SubstitutionPair("f(._0,(._1,._2))".asTerm, "2*._0+._1^._2".asTerm)
+  }
+
+  it should "create substitutions for predicates" in {
+    "p()".asFormula ~>> "2*x>y".asFormula shouldBe SubstitutionPair("p()".asFormula, "2*x>y".asFormula)
+    "p(x)".asFormula ~>> "2*x>y".asFormula shouldBe SubstitutionPair("p(.)".asFormula, "2*.>y".asFormula)
+    "p(x,y)".asFormula ~>> "2*x>y".asFormula shouldBe SubstitutionPair("p(._0,._1)".asFormula, "2*._0>._1".asFormula)
+    "p(x,(y,z))".asFormula ~>> "2*x>y&z=3".asFormula shouldBe SubstitutionPair("p(._0,(._1,._2))".asFormula, "2*._0>._1&._2=3".asFormula)
+  }
 }

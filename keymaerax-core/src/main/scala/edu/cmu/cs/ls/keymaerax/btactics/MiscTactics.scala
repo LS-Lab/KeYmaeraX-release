@@ -6,13 +6,12 @@ import Augmentors._
 import ProofRuleTactics.requireOneSubgoal
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDB
+import edu.cmu.cs.ls.keymaerax.lemma.{LemmaDB, LemmaDBFactory}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.{Logger, Logging}
 
 import scala.collection.immutable
-import scala.language.postfixOps
 
 /**
  * @author Nathan Fulton
@@ -106,13 +105,24 @@ object DebuggingTactics {
     }
   }
 
-  /** assert is a no-op tactic that raises an error if the provable does not satisfy a condition. */
+  /** assert is a no-op tactic that raises an error if the provable does not satisfy a condition on the sole subgoal. */
   def assert(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("assert") {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.size != 1 || !cond(provable.subgoals.head)) {
         throw BelleUserGeneratedError(message + "\nExpected 1 subgoal whose sequent matches condition " + cond + ",\n\t but got " +
           (if (provable.subgoals.size != 1) provable.subgoals.size + " subgoals"
           else provable.subgoals.head.prettyString))
+      }
+      provable
+    }
+  }
+
+  /** assertOnAll is a no-op tactic that raises an error the provable does not satisfy a condition on all subgoals. */
+  def assertOnAll(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("assert") {
+    override def result(provable: ProvableSig): ProvableSig = {
+      if (!provable.subgoals.forall(cond(_))) {
+        throw BelleUserGeneratedError(message + "\nExpected all subgoals match condition " + cond + ",\n\t but " +
+          provable.subgoals.filter(!cond(_)).mkString("\n") + " do not match")
       }
       provable
     }
@@ -150,10 +160,16 @@ object DebuggingTactics {
 
   /** @see [[TactixLibrary.done]] */
   lazy val done: BelleExpr = done()
-  def done(msg: String = ""): BelleExpr = new StringInputTactic("done", if (msg != "") msg::Nil else Nil) {
-    override def result(provable : ProvableSig): ProvableSig = {
-      if (provable.isProved) { print(msg + {if (msg.nonEmpty) ": " else ""} + "checked done"); provable }
-      else throw new BelleThrowable((if (msg.nonEmpty) msg + "\n" else "") + "Expected proved provable, but got " + provable)
+  def done(msg: String = "", storeLemma: Option[String] = None): BelleExpr = new StringInputTactic("done",
+      if (msg != "" && storeLemma.isDefined) msg::storeLemma.get::Nil
+      else if (msg != "") msg::Nil
+      else Nil) {
+    override def result(provable: ProvableSig): ProvableSig = {
+      if (provable.isProved) {
+        print(msg + {if (msg.nonEmpty) ": " else ""} + "checked done")
+        if (storeLemma.isDefined) LemmaDBFactory.lemmaDB.add(Lemma(provable, Lemma.requiredEvidence(provable), storeLemma))
+        provable
+      } else throw new BelleThrowable((if (msg.nonEmpty) msg + "\n" else "") + "Expected proved provable, but got " + provable)
     }
   }
 }
@@ -171,6 +187,7 @@ object Idioms {
   lazy val nil: BelleExpr = new BuiltInTactic("nil") {
     override def result(provable: ProvableSig): ProvableSig = provable
   }
+  /** no-op nil */
   lazy val ident: BelleExpr = nil
 
   /** Optional tactic */
@@ -179,8 +196,9 @@ object Idioms {
   /** Execute ts by branch order. */
   def <(t: BelleExpr*): BelleExpr = BranchTactic(t)
 
-  /** Execute ts by branch label, fall back to branch order if branches come without labels.
-    * <((lbl1,t1), (lbl2,t2)) uses tactic t1 on branch labelled lbl1 and t2 on lbl2
+  /** Execute different tactics depending on branch label, fall back to branch order if branches come without labels.
+    * <((lbl1,t1), (lbl2,t2)) uses tactic t1 on branch labelled lbl1 and uses t2 on lbl2.
+    * @see [[BelleLabels]]
     */
   def <(s1: (BelleLabel, BelleExpr), spec: (BelleLabel, BelleExpr)*): BelleExpr = new LabelledGoalsDependentTactic("onBranch") {
     override def computeExpr(provable: ProvableSig, labels: List[BelleLabel]): BelleExpr = {
@@ -209,7 +227,7 @@ object Idioms {
     }
 
     val caseTactics = cases.map({ case (Case(fml, doSimp), t) =>
-      (if (doSimp) simplifyAllButCase(fml) & ((TactixLibrary.hideL('L, True) | TactixLibrary.hideR('R, False))*) else ident) & t}).
+      (if (doSimp) simplifyAllButCase(fml) & SaturateTactic(TactixLibrary.hideL('L, True) | TactixLibrary.hideR('R, False)) else ident) & t}).
       reduceRight[BelleExpr]({ case (t1, t2) => TactixLibrary.orL('Llast) & Idioms.<(t1, t2)})
 
     TactixLibrary.cut(caseFml) & Idioms.<(
@@ -250,7 +268,7 @@ object Idioms {
 
   /** Repeats t while condition at position is true. */
   def repeatWhile(condition: Expression => Boolean)(t: BelleExpr): DependentPositionTactic = "loopwhile" by {(pos: Position) =>
-    (DebuggingTactics.assertAt((_: Expression) => "Stopping loop", condition)(pos) & t)*
+    SaturateTactic(DebuggingTactics.assertAt((_: Expression) => "Stopping loop", condition)(pos) & t)
   }
 
   /** must(t) runs tactic `t` but only if `t` actually changed the goal. */

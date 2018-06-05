@@ -245,6 +245,8 @@ object KeYmaeraXParser extends Parser with Logging {
     case ode: ODESystem if kind==ProgramKind => Some(ode)
     // whether ODESystem is classified as ProgramKind or DifferentialProgramKind
     case ode: ODESystem if kind==ProgramKind || kind==DifferentialProgramKind => Some(ode)
+    // lift misclassified differential program constants without evolution domain constraints to program constants
+    //case ode: DifferentialProgramConst if kind==ProgramKind => Some(ProgramConst(ode.name, ode.space))
     // lift differential equations without evolution domain constraints to ODESystems
     case ode: DifferentialProgram if ode.kind==DifferentialProgramKind && kind==ProgramKind => assert(!ode.isInstanceOf[ODESystem], "wrong kind"); Some(ODESystem(ode))
 
@@ -407,10 +409,16 @@ object KeYmaeraXParser extends Parser with Logging {
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(RBARB, _) =>
         require(tok.index == None, "no index supported for DifferentialProgramConst")
         reduce(st, 3, DifferentialProgramConst(tok.name, AnyArg), r)
+      case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Expr(x: Variable) :+ Token(RBARB, _) :+ Token(SEMI, _) if statementSemicolon =>
+        require(tok.index == None, "no index supported for ProgramConst")
+        reduce(st, 5, ProgramConst(tok.name, Except(x)), r)
       // DifferentialProgramConst symbols of argument Taboo
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Expr(x: Variable) :+ Token(RBARB, _) =>
-        require(tok.index == None, "no index supported for DifferentialProgramConst")
-        reduce(st, 4, DifferentialProgramConst(tok.name, Except(x)), r)
+        if (la == SEMI) shift(st)
+        else {
+          require(tok.index == None, "no index supported for DifferentialProgramConst")
+          reduce(st, 4, DifferentialProgramConst(tok.name, Except(x)), r)
+        }
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) :+ Token(RBARB, _) :+ Token(SEMI, _) if statementSemicolon =>
         require(tok.index == None, "no index supported for SystemConst")
         reduce(st, 5, SystemConst(tok.name), r)
@@ -424,7 +432,7 @@ object KeYmaeraXParser extends Parser with Logging {
         if (la == RBARB) shift(st)
         else error(st, List(RBARB))
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Expr(_) =>
-        errormsg(st, "Identifier expected after state-dependent DiffProgramConst")
+        errormsg(st, "Identifier expected after state-dependent ProgramConst or DiffProgramConst")
       case r :+ Token(tok: IDENT, _) :+ Token(LBARB, _) :+ Token(DUAL, _) =>
         if (la == RBARB) shift(st)
         else error(st, List(RBARB))

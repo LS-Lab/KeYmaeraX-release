@@ -524,6 +524,21 @@ class SimpleBelleParserTests extends TacticTestBase {
     tactic shouldBe (round trip TactixLibrary.done)
   }
 
+  it should "parse empty-argument done" in {
+    val tactic = BelleParser("done()")
+    tactic shouldBe (round trip TactixLibrary.done)
+  }
+
+  it should "parse done with message" in {
+    val tactic = BelleParser("done({`Message`})")
+    tactic shouldBe (round trip DebuggingTactics.done("Message", None))
+  }
+
+  it should "parse done with message and lemma name" in {
+    val tactic = BelleParser("done({`Message`},{`My Lemma`})")
+    tactic shouldBe (round trip DebuggingTactics.done("Message", Some("My Lemma")))
+  }
+
   it should "parse in a branch" in {
     val tactic = BelleParser("andR(1) & <(closeId & done, done)")
     tactic shouldBe (round trip TactixLibrary.andR(1) & Idioms.<(TactixLibrary.closeId & TactixLibrary.done, TactixLibrary.done))

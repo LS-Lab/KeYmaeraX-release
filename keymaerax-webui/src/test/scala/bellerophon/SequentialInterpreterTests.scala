@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable.IndexedSeq
-
+import scala.collection.mutable
 import scala.language.postfixOps
 
 /**
@@ -106,7 +106,7 @@ class SequentialInterpreterTests extends TacticTestBase {
       }
     }
     the [BelleThrowable] thrownBy theInterpreter.apply(andR(1) > right, BelleProvable(ProvableSig.startProof("1=2 -> 1=2".asFormula))) should
-      have message "[Bellerophon Runtime] Tactic andR applied at Fixed(1,None,true) on a non-matching expression in NoProofTermProvable(Provable(==> 1:  1=2->1=2\tImply\n  from   ==> 1:  1=2->1=2\tImply))"
+      have message "[Bellerophon Runtime] Tactic andR applied at Fixed(1,None,true) on a non-matching expression in ElidingProvable(Provable(==> 1:  1=2->1=2\tImply\n  from   ==> 1:  1=2->1=2\tImply))"
   }
 
   "OnAll combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
@@ -147,7 +147,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   it should "fail inapplicable builtin-rules with legible error messages" in {
     the [BelleThrowable] thrownBy proveBy("x=5".asFormula, andR(1)) should have message
-      """[Bellerophon Runtime] Tactic andR applied at Fixed(1,None,true) on a non-matching expression in NoProofTermProvable(Provable(==> 1:  x=5	Equal
+      """[Bellerophon Runtime] Tactic andR applied at Fixed(1,None,true) on a non-matching expression in ElidingProvable(Provable(==> 1:  x=5	Equal
         |  from   ==> 1:  x=5	Equal))""".stripMargin
   }
 
@@ -331,6 +331,8 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "finish working branches before failing" in {
+    BelleInterpreter.setInterpreter(registerInterpreter(ExhaustiveSequentialInterpreter()))
+
     var finishedBranches = Seq.empty[Int]
     def logDone(branch: Int) = new DependentTactic("ANON") {
       override def computeExpr(provable: ProvableSig): BelleExpr = {
@@ -352,6 +354,8 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "finish working branches before failing with combined error message" in {
+    BelleInterpreter.setInterpreter(registerInterpreter(ExhaustiveSequentialInterpreter()))
+
     var finishedBranches = Seq.empty[Int]
     def logDone(branch: Int) = new DependentTactic("ANON") {
       override def computeExpr(provable: ProvableSig): BelleExpr = {
@@ -588,6 +592,42 @@ class SequentialInterpreterTests extends TacticTestBase {
     val s = thrown.getCause.getStackTrace
     //@todo works in isolation, but when run with other tests, we pick up stack trace elements of those too
     s.filter(_.getFileName == "SequentialInterpreterTests.scala").slice(0, 11).map(_.getLineNumber) shouldBe Array(280, 279, 278, 271, 271, 269, 266, 266, 263, 262, 276)
+  }
+
+  "Lazy interpreter" should "fail on the first failing branch" in {
+    val listener = new IOListener {
+      val calls: mutable.Buffer[BelleExpr] = mutable.Buffer[BelleExpr]()
+      override def begin(input: BelleValue, expr: BelleExpr): Unit = calls += expr
+      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {}
+      override def kill(): Unit = {}
+    }
+    the [BelleThrowable] thrownBy LazySequentialInterpreter(listener::Nil)(
+      "andR(1) & <(close, close)".asTactic,
+      BelleProvable(ProvableSig.startProof("false & true".asFormula))) should have message "[Bellerophon Runtime] [Bellerophon User-Generated Message] Inapplicable close"
+
+    listener.calls should have size 5
+    listener.calls should contain theSameElementsInOrderAs(
+      "andR(1) & <(close, close)".asTactic :: "andR(1)".asTactic ::
+      BranchTactic("close".asTactic :: "close".asTactic :: Nil) :: "close".asTactic ::
+      DebuggingTactics.error("Inapplicable close") :: Nil)
+  }
+
+  "Exhaustive interpreter" should "explore all branches regardless of failing ones" in {
+    val listener = new IOListener {
+      val calls: mutable.Buffer[BelleExpr] = mutable.Buffer[BelleExpr]()
+      override def begin(input: BelleValue, expr: BelleExpr): Unit = calls += expr
+      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {}
+      override def kill(): Unit = {}
+    }
+    the [BelleThrowable] thrownBy ExhaustiveSequentialInterpreter(listener::Nil)(
+      "andR(1) & <(close, close)".asTactic,
+      BelleProvable(ProvableSig.startProof("false & true".asFormula))) should have message "[Bellerophon Runtime] [Bellerophon User-Generated Message] Inapplicable close"
+
+    listener.calls should have size 7
+    listener.calls should contain theSameElementsInOrderAs(
+      "andR(1) & <(close, close)".asTactic :: "andR(1)".asTactic ::
+      BranchTactic("close".asTactic :: "close".asTactic :: Nil) :: "close".asTactic ::
+      DebuggingTactics.error("Inapplicable close") :: "close".asTactic :: ProofRuleTactics.closeTrue(1) :: Nil)
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////

@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Variable, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{existsR, _}
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 
 import scala.collection.immutable
 
@@ -149,7 +149,7 @@ object Kaisar {
       case UnitPredicational(id, _) => Some(id)
       case BaseVariable(id, _, _) => Some(id)
       case UnitFunctional(id, _, _) => Some(id)
-      case ProgramConst(id) => Some(id)
+      case ProgramConst(id, _) => Some(id)
       case SystemConst(id) => Some(id)
       case _ => None
     }
@@ -427,7 +427,7 @@ object Kaisar {
   }
 
   def interpret(e:BelleExpr, pr:Provable):Provable = {
-    BelleInterpreter(e, BelleProvable(NoProofTermProvable(pr))) match {
+    BelleInterpreter(e, BelleProvable(ElidingProvable(pr))) match {
       case BelleProvable(result,_) => result.underlyingProvable
     }
   }
@@ -484,7 +484,7 @@ object Kaisar {
         }
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] =
         e match {
-          case ProgramConst(fname) if c.hasDef(fname) =>
+          case ProgramConst(fname,_) if c.hasDef(fname) =>
             Right(c.getDef(fname).asInstanceOf[Program])
           case SystemConst(fname) if c.hasDef(fname) =>
             Right(c.getDef(fname).asInstanceOf[Program])
@@ -605,7 +605,7 @@ object Kaisar {
               val seq = Sequent(ante, immutable.IndexedSeq(q2))
               val impPos = AntePos(ante.length)
               val allPos = AntePos(ante.length+1)
-              val pr1b = renu.toForward(NoProofTermProvable(pr1)).underlyingProvable
+              val pr1b = renu.toForward(ElidingProvable(pr1)).underlyingProvable
               val s1 = Provable.startProof(seq)(Cut(p2.conclusion.succ.head), 0)
               val s1a = s1(CoHideRight(SuccPos(1)),1)
               val s2 = s1a(p2,1)
@@ -644,7 +644,7 @@ def polyK(pr:Provable, facts:List[Provable], onSecond:Boolean = false, impAtEnd:
         cut(Imply(Box(a,Imply(p,q)),Imply(Box(a,p),Box(a,q)))) <(
           DebuggingTactics.debug("a", doPrint = doPrint) &
           /* Use */ implyL(-(pos + 2)) <(/* use */ close,
-          implyL(-(pos+2)) <(  hide(1) &  useAt(NoProofTermProvable(fact), PosInExpr(Nil))(1)
+          implyL(-(pos+2)) <(  hide(1) &  useAt(ElidingProvable(fact), PosInExpr(Nil))(1)
             ,  nil )
         ),
           DebuggingTactics.debug("e", doPrint = doPrint) &
@@ -713,12 +713,12 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
             val preSeq = Sequent(ante, immutable.IndexedSeq(fml))
             val tail = eval(pre, h, c, Provable.startProof(preSeq))
             assert(tail.isProved, "Failed to prove first base case subgoal " + fml + " in subproof " + pre + ", left behind provable " + tail.prettyString)
-            DebuggingTactics.debug("BASE0 I WANTED", doPrint = true) & useAt(NoProofTermProvable(tail), PosInExpr(Nil))(1) & DebuggingTactics.debug("BASE0B", doPrint = true)
+            DebuggingTactics.debug("BASE0 I WANTED", doPrint = true) & useAt(ElidingProvable(tail), PosInExpr(Nil))(1) & DebuggingTactics.debug("BASE0B", doPrint = true)
           case (fml, pre:SP)::fps =>
             val preSeq = Sequent(ante, immutable.IndexedSeq(fml))
             val tail = eval(pre, h, c, Provable.startProof(preSeq))
             assert(tail.isProved, "Failed to prove additional base case subgoal " + fml + " in subproof " + pre + ", left behind provable " + tail.prettyString)
-            val e1 = useAt(NoProofTermProvable(tail), PosInExpr(Nil))(1)
+            val e1 = useAt(ElidingProvable(tail), PosInExpr(Nil))(1)
             val e2 = baseCase(fps, fml::done)
             andR(1) <(DebuggingTactics.debug("left", doPrint = true) & e1, DebuggingTactics.debug("right", doPrint = true) & e2)
         }
@@ -732,12 +732,12 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
             val e = hideL('Llast)*(invs.length - (done.length + 1))
             val tail = eval(inv, hh, cc, Provable.startProof(invSeq))
             assert(tail.isProved, "Failed to prove first inductive case subgoal " + fml + " in subproof " + inv + ", left behind provable " + tail.prettyString)
-            e  & useAt(NoProofTermProvable(tail), PosInExpr(Nil))(1)
+            e  & useAt(ElidingProvable(tail), PosInExpr(Nil))(1)
           case (x, (fml,pre:SP))::fps =>
             val invSeq = Sequent(anteConst ++ done ++ immutable.IndexedSeq(fml), immutable.IndexedSeq(Box(a,fml)))
             val cc = c.add(x, AntePos(invSeq.ante.length-1))
             val hide = hideL('Llast)*(invs.length - (done.length + 1))
-            val tail = NoProofTermProvable(eval(pre, hh, cc, Provable.startProof(invSeq)))
+            val tail = ElidingProvable(eval(pre, hh, cc, Provable.startProof(invSeq)))
             assert(tail.isProved, "Failed to prove additional inductive case subgoal " + fml + " in subproof " + pre + ", left behind provable " + tail.prettyString)
             val e1 = hide & useAt(tail, PosInExpr(Nil))(1)
             val e2 = indCase(fps, cc, done ++ immutable.IndexedSeq(fml))
@@ -753,7 +753,7 @@ def eval(ip:IP, h:History, c:Context, g:Provable, nInvs:Int = 0):Provable = {
             andL('Llast) * (invs.length - 2)
         }
           else {
-          def rot(pr:ProvableSig,p:SuccPosition):ProvableSig = NoProofTermProvable(rotAnte(pr.underlyingProvable))
+          def rot(pr:ProvableSig,p:SuccPosition):ProvableSig = ElidingProvable(rotAnte(pr.underlyingProvable))
           val e =
             TacticFactory.TacticForNameFactory("ANON").by((pos: ProvableSig, seq: SuccPosition) =>{rot(pos,seq)})(1)
           e
@@ -915,7 +915,7 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val ppa2 = interpret(monb, ppa1)
           val ppa3 = interpret(((andL('Llast))*(G2.length-1)), ppa2)
           val ppa35 = rotAnte(ppa3)
-          val ppa4 = interpret(useAt(NoProofTermProvable(pr2), PosInExpr(Nil))(1), ppa35)
+          val ppa4 = interpret(useAt(ElidingProvable(pr2), PosInExpr(Nil))(1), ppa35)
           val ppb = Provable.startProof(pp2.subgoals.tail.head)
           val ppb1 = interpret(hideR(1), ppb)
           val ppb2 = interpret(boxAnd(1) & andR(1),ppb1)
@@ -926,7 +926,7 @@ def eval(brule:RuleSpec, sp:List[SP], h:History, c:Context, g:Provable):Provable
           val ppd = Provable.startProof(ppb2.subgoals.head)
           val ppd1 = interpret(unsaveVars(g, bvs.toSet, rewritePost = false, hide = false), ppd)
           //val ppd1 = interpret(hideL('Llast)*bvs.toSet.size, ppd)
-          val ppd2 = interpret(useAt(NoProofTermProvable(pr1),PosInExpr(Nil))(1), ppd1)
+          val ppd2 = interpret(useAt(ElidingProvable(pr1),PosInExpr(Nil))(1), ppd1)
           val b3 = ppb2(ppd2,0)
           val b2 = b3(ppc3,0)
           val b4 = pp2(ppa4,0)
@@ -1155,7 +1155,7 @@ def pmatch(pat:Expression, e:Expression, c:Context, ante:immutable.IndexedSeq[Fo
     case UnitPredicational(id, _) if c.hasDef(id) => matchDef(id)
     case BaseVariable(id, _, _) if c.hasDef(id) => matchDef(id)
     case UnitFunctional(id, _, _) if c.hasDef(id) => matchDef(id)
-    case ProgramConst(id) if c.hasDef(id) => matchDef(id)
+    case ProgramConst(id, _) if c.hasDef(id) => matchDef(id)
     case SystemConst(id) if c.hasDef(id) => matchDef(id)
     case PredOf(Function("p", _, _, _, _), args) if collectVarPat(args).isDefined || collectNegVarPat(args).isDefined =>
       (collectVarPat(args), collectNegVarPat(args)) match {
@@ -1240,7 +1240,7 @@ def pmatch(pat:Expression, e:Expression, c:Context, ante:immutable.IndexedSeq[Fo
       } else {
         throw patExn(pat, e, "Expression did not match assumption " + ident)
       }
-    case ProgramConst("wild") => Context.empty
+    case ProgramConst("wild",AnyArg) => Context.empty
     case ODESystem(DifferentialProgramConst("wild",_),_) => Context.empty
     case FuncOf(Function("wild", _, _, _, _), pat) => Context.empty
     case FuncOf(Function("wild", _, _, _, _), pat) => Context.empty
@@ -1279,7 +1279,7 @@ def pmatch(pat:Expression, e:Expression, c:Context, ante:immutable.IndexedSeq[Fo
       } else {
         throw exn
       }
-    case ProgramConst(name: String) =>
+    case ProgramConst(name: String, _) =>
       if(name.last == '_' && !c.hasDef(name)) {
         Context.ofDef(name.dropRight(1), e)
       } else if (pat == e) {

@@ -140,10 +140,10 @@ object IsabelleSyntax {
     val ff = And(listConj(fs.toList),fu)
 
     (ff,proveBy(Imply(ff,f),
-      (OnAll(?
-      (implyR(1) & andL('Llast) & lastImplyRi & (andL('_)*) &
+      SaturateTactic(OnAll(?
+      (implyR(1) & andL('Llast) & lastImplyRi & SaturateTactic(andL('_)) &
         ?((useAt(decomposeAnd,PosInExpr(1::Nil))(1) & andR('_)) |
-          (useAt(decomposeOr,PosInExpr(1::Nil))(1) & andR('_)))))*) & onAll(prop)))
+          (useAt(decomposeOr,PosInExpr(1::Nil))(1) & andR('_)))))) & onAll(prop)))
   }
 
 

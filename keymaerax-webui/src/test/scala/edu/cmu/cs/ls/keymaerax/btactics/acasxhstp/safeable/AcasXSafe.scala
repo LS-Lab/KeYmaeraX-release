@@ -6,7 +6,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, SequentialInterpreter, SpoonFeedingInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, LazySequentialInterpreter, SequentialInterpreter, SpoonFeedingInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.CondCongruence._
 import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.SharedTactics._
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
@@ -84,7 +84,8 @@ class AcasXSafe extends AcasXBase {
 
     // reprove with spoon-feeding interpreter to create extractable tactic
     val proofId = db.createProof(createAcasXProblemFile(ucLoFormula))
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      LazySequentialInterpreter))
     interpreter(ucLoTac, BelleProvable(ProvableSig.startProof(ucLoFormula)))
 
     val tactic = db.extractTactic(proofId)

@@ -3,7 +3,6 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable._
-import scala.language.postfixOps
 
 /**
   * Dependency Analysis

@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import java.util.Calendar
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, Interpreter, SequentialInterpreter, SpoonFeedingInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
@@ -46,10 +46,17 @@ object DatabasePopulator extends Logging {
   def readKya(url: String): List[TutorialEntry] = {
     val kya = loadResource(url)
     val archiveEntries = KeYmaeraXArchiveParser.read(kya)
-    archiveEntries.flatMap({case (modelName, modelContent, kind, tactics, info) =>
-      tactics.map({case (tname, tactic) =>
+    val entries = archiveEntries.flatMap({case (modelName, modelContent, kind, tactics, info) =>
+      if (tactics.nonEmpty) tactics.map({case (tname, tactic) =>
         TutorialEntry(modelName, modelContent, info.get("Description"), info.get("Title"), info.get("Link"),
-          Some((tname, tactic, true)), kind)})})
+          Some((tname, tactic, true)), kind)})
+      else
+        TutorialEntry(modelName, modelContent, info.get("Description"), info.get("Title"), info.get("Link"),
+          None, kind) :: Nil
+    })
+    assert(entries.map(_.name).toSet.size == archiveEntries.map(_._1).toSet.size,
+      "Expected " + archiveEntries.size + " entries, but got " + entries.size)
+    entries
   }
 
   /** Reads tutorial entries from the specified URL. */
@@ -121,7 +128,7 @@ object DatabasePopulator extends Logging {
       new TraceRecordingListener(db, proofId, parentStep,
         globalProvable, branch, recursive = false, tacticName) :: Nil
     }
-    SpoonFeedingInterpreter(proofId, -1, db.createProof, listener, SequentialInterpreter)
+    SpoonFeedingInterpreter(proofId, -1, db.createProof, listener, LazySequentialInterpreter)
   }
 
   /** Executes the `tactic` on the `model` and records the tactic steps as proof in the database. */

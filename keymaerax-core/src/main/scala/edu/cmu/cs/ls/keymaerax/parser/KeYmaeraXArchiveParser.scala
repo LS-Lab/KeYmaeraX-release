@@ -87,12 +87,12 @@ object KeYmaeraXArchiveParser {
   def read(archiveContentBOM: String): List[ArchiveEntry] = {
     val archiveContent: String = ParserHelper.removeBOM(archiveContentBOM)
     // match the word boundary before ArchiveEntry etc. followed by "Name".
-    val regex = s"(?s)\\b(?=$DEFINITIONS_BEGIN)|\\b(?=($ARCHIVE_ENTRY_BEGIN|$LEMMA_BEGIN|$THEOREM_BEGIN|$EXERCISE_BEGIN)" +
-      "(?=(\\W*)\"([^\"]*)\"\\.(.*)$))"
+    val regex = (s"(?s)\\b(?=$DEFINITIONS_BEGIN)|\\b(?=($ARCHIVE_ENTRY_BEGIN|$LEMMA_BEGIN|$THEOREM_BEGIN|$EXERCISE_BEGIN)" +
+      "(?=(\\W*)\"([^\"]*)\"\\.(.*)$))").r
 
     var globalDefs: Option[String] = None
 
-    archiveContent.trim().split(regex).filter(_.nonEmpty).flatMap({s =>
+    regex.split(archiveContent.trim()).filter(_.nonEmpty).flatMap({s =>
       val (entry, kind) =
         if (s.startsWith(DEFINITIONS_BEGIN)) (s.stripPrefix(DEFINITIONS_BEGIN), "definitions")
         else if (s.startsWith(ARCHIVE_ENTRY_BEGIN)) (s.stripPrefix(ARCHIVE_ENTRY_BEGIN), "theorem")
@@ -103,7 +103,14 @@ object KeYmaeraXArchiveParser {
           KeYmaeraXProblemParser(s)
           (s, "model")
         } catch {
-          case e: Throwable => throw new IllegalArgumentException(s"Expected either $DEFINITIONS_BEGIN, $ARCHIVE_ENTRY_BEGIN, $LEMMA_BEGIN, $THEOREM_BEGIN, but got unknown entry kind $s")
+          case e: Throwable =>
+            throw new IllegalArgumentException(
+              s"""Archive with multiple entries should contain either
+                 |    $DEFINITIONS_BEGIN, $ARCHIVE_ENTRY_BEGIN, $LEMMA_BEGIN, $THEOREM_BEGIN,
+                 |but got unknown entry
+                 |$s
+                 |
+                 |Fallback to parsing as stand-alone entry failed as well""".stripMargin, e)
         }
 
         kind match {

@@ -113,6 +113,7 @@ object DerivationInfo {
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignbAxiom", {case () => HilbertCalculus.useAt("[:=] assign")}),
     new CoreAxiomInfo("[:=] self assign", "[:=]", "selfassignb", {case () => HilbertCalculus.useAt("[:=] self assign")}),
     new DerivedAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
+    new DerivedAxiomInfo("<:=> self assign", "<:=>", "selfassignd", {case () => HilbertCalculus.useAt("<:=> self assign")}),
     new DerivedAxiomInfo("<:=> assign equality", "<:=>", "assigndEquality", {case () => HilbertCalculus.useAt("<:=> assign equality")}),
     new DerivedAxiomInfo("<:=> assign equality all", "<:=>", "assigndEqualityAll", {case () => HilbertCalculus.useAt("<:=> assign equality all")}),
     new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", {case () => HilbertCalculus.useAt("[:=] assign equality")}),
@@ -202,6 +203,15 @@ object DerivationInfo {
     new DerivedAxiomInfo("DR differential refine"
       , InputAxiomDisplayInfo("DR","(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>←[{x′=f(x)&R}]P)←[{x′=f(x)&Q}]R", List(FormulaArg("R")))
       , "DR", {case () => HilbertCalculus.useAt("DR differential refine")}),
+    new DerivedAxiomInfo("DR<> differential refine"
+      , InputAxiomDisplayInfo("DRd","(<span class=\"k4-axiom-key\"><{x′=f(x)&Q}>P</span>←<{x′=f(x)&R}>P)←[{x′=f(x)&R}]Q", List(FormulaArg("R")))
+      , "DRd", {case () => HilbertCalculus.useAt("DR<> differential refine")}),
+    new CoreAxiomInfo("RI& closed real induction >=", "RI& >=", "RIclosedgeq",
+      {case () => HilbertCalculus.useAt("RI& closed real induction >=")}),
+    new CoreAxiomInfo("Cont continuous existence", "Cont", "Cont",
+      {case () => HilbertCalculus.useAt("Cont continuous existence")}),
+    new CoreAxiomInfo("Uniq uniqueness", "Uniq", "Uniq",
+      {case () => HilbertCalculus.useAt("Uniq uniqueness")}),
     new InputPositionTacticInfo("autoApproximate",
       RuleDisplayInfo("Approximate",
         (List("&Gamma;"), List("[{X'=F & &Alpha;(n)}]", "&Delta;")),
@@ -338,12 +348,6 @@ object DerivationInfo {
     new DerivedAxiomInfo("DIo open differential invariance <"
       , AxiomDisplayInfo("DIo <", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]f(x)<g(x)</span>↔[?Q]f(x)<g(x))←(Q→[{x′=f(x)&Q}](f(x)<g(x)→(f(x)<g(x))′))")
       , "DIoless", {case () => ???}),
-    new CoreAxiomInfo("DIo open differential invariance >="
-      , AxiomDisplayInfo("DIo >=", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]f(x)>=g(x)</span>↔[?Q]f(x)>=g(x))←(Q→[{x′=f(x)&Q}](f(x)>=g(x)→(f(x))'>(g(x))′))")
-      , "DIogeq", {case () => ???}),
-    new DerivedAxiomInfo("DIo open differential invariance <="
-      , AxiomDisplayInfo("DIo >=", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]f(x)<=g(x)</span>↔[?Q]f(x)<=g(x))←(Q→[{x′=f(x)&Q}](f(x)<=g(x)→(f(x))'<(g(x))′))")
-      , "DIoleq", {case () => ???}),
     new CoreAxiomInfo("DV differential variant >="
       , AxiomDisplayInfo("DVgeq", "todo DVgeq")
       , "DVgeq", {case () => ???}),
@@ -430,6 +434,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("all distribute", ("∀→","all->"), "allDist", {case () => HilbertCalculus.allDist}),
     new CoreAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", {case () => HilbertCalculus.allV}),
     new DerivedAxiomInfo("vacuous exists quantifier", ("V∃","existsV"), "existsV", {case () => HilbertCalculus.existsV}),
+    new DerivedAxiomInfo("partial vacuous exists quantifier", ("pV∃","pexistsV"), "pexistsV", {case () => HilbertCalculus.useAt("partial vacuous exists quantifier")}),
 
     // more
     new CoreAxiomInfo("const congruence", "CCE", "constCongruence", {case () => ???}),
@@ -510,12 +515,15 @@ object DerivationInfo {
     new DerivedAxiomInfo("<> split"
       , AxiomDisplayInfo(("<>∨","<>|"), "<span class=\"k4-axiom-key\">&langle;a&rangle;(P∨Q)</span>↔&langle;a&rangle;P ∨ &langle;a&rangle;Q")
         , "diamondOr", {case () => useAt(DerivedAxioms.diamondOr)}),
+    new DerivedAxiomInfo("<> partial vacuous", ("pVd","pVd"), "pVd", {case () => HilbertCalculus.useAt("<> partial vacuous")}),
 //    new DerivedAxiomInfo("<> split left", "<>|<-", "diamondSplitLeft", {case () => useAt(DerivedAxioms.diamondSplitLeft)}),
 //    new DerivedAxiomInfo("[] split left", "[]&<-", "boxSplitLeft", {case () => useAt(DerivedAxioms.boxSplitLeft)}),
 //    new DerivedAxiomInfo("[] split right", "[]&->", "boxSplitRight", {case () => useAt(DerivedAxioms.boxSplitRight)}),
     new DerivedAxiomInfo("<*> approx", "<*> approx", "loopApproxd", {case () => useAt(DerivedAxioms.loopApproxd)}),
     new DerivedAxiomInfo("<*> stuck", "<*> stuck", "loopStuck", {case () => useAt(DerivedAxioms.loopStuck)}),
     new DerivedAxiomInfo("<'> stuck", ("<′> stuck","<'> stuck"), "odeStuck", {case () => useAt(DerivedAxioms.odeStuck)}),
+    new DerivedAxiomInfo("all stutter", "all stutter", "allStutter", {case () => useAt(DerivedAxioms.forallStutter)}),
+    new DerivedAxiomInfo("exists stutter", "exists stutter", "existsStutter", {case () => useAt(DerivedAxioms.existsStutter)}),
     new DerivedAxiomInfo("[] post weaken", "[]PW", "postWeaken", {case () => useAt(DerivedAxioms.postconditionWeaken)}),
     new DerivedAxiomInfo("<-> reflexive", ("↔R","<->R"), "equivReflexive", {case () => useAt(DerivedAxioms.equivReflexiveAxiom)}),
     new DerivedAxiomInfo("-> distributes over &", ("→∧", "->&"), "implyDistAnd", {case () => useAt(DerivedAxioms.implyDistAndAxiom)}),
@@ -531,7 +539,13 @@ object DerivationInfo {
     new DerivedAxiomInfo("[*] approx", "[*] approx", "loopApproxb", {case () => useAt(DerivedAxioms.loopApproxb)}),
     new DerivedAxiomInfo("[*] merge", "[*] merge", "loopMergeb", {case () => useAt(DerivedAxioms.loopMergeb)}),
     new DerivedAxiomInfo("<*> merge", "<*> merge", "loopMerged", {case () => useAt(DerivedAxioms.loopMerged)}),
+    new DerivedAxiomInfo("[**] iterate iterate", "[**]", "iterateiterateb", {case () => useAt(DerivedAxioms.iterateiterateb)}),
+    new DerivedAxiomInfo("<**> iterate iterate", "<**>", "iterateiterated", {case () => useAt(DerivedAxioms.iterateiterated)}),
+    new DerivedAxiomInfo("[*-] backiterate", "[*-]", "backiterateb", {case () => useAt(DerivedAxioms.backiterateb)}),
+    new DerivedAxiomInfo("[*-] backiterate necessity", "[*-] backiterate necessity", "backiteratebnecc", {case () => useAt(DerivedAxioms.backiteratebnecc)}),
+    new DerivedAxiomInfo("[*-] backiterate sufficiency", "[*-] backiterate sufficiency", "backiteratebsuff", {case () => useAt(DerivedAxioms.backiteratebsuff)}),
     new DerivedAxiomInfo("II induction", "II induction", "IIinduction", {case () => useAt(DerivedAxioms.iiinduction)}),
+    new DerivedAxiomInfo("Ieq induction", "I", "Ieq", {case () => useAt(DerivedAxioms.Ieq)}),
   //@todo might have a better name
     new DerivedAxiomInfo("exists generalize", ("∃G","existsG"), "existsGeneralize", {case () => useAt(DerivedAxioms.existsGeneralize)}),
     new DerivedAxiomInfo("all substitute", ("∀S","allS"), "allSubstitute", {case () => useAt(DerivedAxioms.allSubstitute)}),
@@ -792,7 +806,11 @@ object DerivationInfo {
       ,List(StringArg("msg")), _ => ((msg: String) => DebuggingTactics.debug(msg)): TypedFunc[String, BelleExpr]),
     InputTacticInfo("done"
       , SimpleDisplayInfo("Done","done")
-      ,List(StringArg("msg")), _ => ((msg: Option[String]) => DebuggingTactics.done(msg.getOrElse(""))): TypedFunc[Option[String], BelleExpr]),
+      ,List(StringArg("msg"),StringArg("lemmaName")), _ =>
+        ((msg: Option[String]) =>
+          ((lemmaName: Option[String]) =>
+            DebuggingTactics.done(msg.getOrElse(""), lemmaName)): TypedFunc[Option[String], BelleExpr]): TypedFunc[Option[String], _]
+    ),
 
     // Proof rule two-position tactics
     new TwoPositionTacticInfo("coHide2", "W", {case () => SequentCalculus.cohide2}),
@@ -856,13 +874,14 @@ object DerivationInfo {
     new InputPositionTacticInfo("con",
       RuleDisplayInfo("Loop Convergence",(List("&Gamma;"), List("&lt;a*&gt;P", "&Delta;")),
         List(
-          (List("&Gamma;"),List("∃v. j(v)", "&Delta;")),
-          (List("v >= 0", "j(v)"),List("&lt;a;x:=x-1&gt;j(v)")),
-          (List("v < 0", "j(v)"),List("P"))))
-      , List(FormulaArg("j(v)")), _ => ((fml: Formula) => DLBySubst.conRule(Variable("v"), fml)): TypedFunc[Formula, BelleExpr]),
+          (List("&Gamma;"),List("∃x_. j(x_)", "&Delta;")),
+          (List("x_ ≤ 0", "j(x_)"),List("P")),
+          (List("x_ > 0", "j(x_)"),List("&lt;a&gt;j(x_-1)"))))
+      //@todo also input variable name
+      , List(FormulaArg("j(x_)", allowsFresh = "x_" :: Nil)), _ => ((fml: Formula) => DLBySubst.con("x_".asVariable, fml)): TypedFunc[Formula, BelleExpr]),
 
     new PositionTacticInfo("loopauto", RuleDisplayInfo("loopauto",(List("&Gamma;"), List("[a*]P", "&Delta;")),
-      List()), {case () => TactixLibrary.loopauto}, needsGenerator = true),
+      List()), {case () => (gen: Generator.Generator[Formula]) => TactixLibrary.loopauto(gen)}, needsGenerator = true),
 
     new InputPositionTacticInfo("MR",
     RuleDisplayInfo("Monotonicity",(List("&Gamma;"), List("[a]P", "&Delta;")),
@@ -1056,6 +1075,9 @@ object DerivationInfo {
     new DerivedRuleInfo("CT term congruence"
       , RuleDisplayInfo(SimpleDisplayInfo("CT term congruence", "CTtermCongruence"), SequentDisplay(Nil, "ctx_(f_(||)) = ctx_(g_(||))"::Nil), SequentDisplay(Nil, "f_(||) = g_(||)"::Nil)::Nil)
       , "CTtermCongruence", {case () => HilbertCalculus.useAt(DerivedAxioms.CTtermCongruence)}),
+    new DerivedRuleInfo("con convergence flat"
+      , RuleDisplayInfo(SimpleDisplayInfo("con flat", "conflat"), SequentDisplay("J"::Nil, "<a*>P"::Nil), SequentDisplay("\\exists v (v<=0&J)"::Nil, "P"::Nil)::SequentDisplay("v > 0"::"J"::Nil ,"<a>J(v-1)"::Nil)::Nil)
+      , "conflat", {case () => HilbertCalculus.useAt(DerivedAxioms.convergenceFlat)}),
 
     // assertions and messages
     InputTacticInfo("print"

@@ -11,7 +11,6 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
-import scala.language.postfixOps
 
 /**
  * [[PropositionalTactics]] provides tactics for propositional reasoning.

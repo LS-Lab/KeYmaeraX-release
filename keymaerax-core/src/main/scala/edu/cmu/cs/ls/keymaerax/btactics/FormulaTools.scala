@@ -38,6 +38,16 @@ object FormulaTools extends Logging {
     case f => List(f)
   }
 
+  /** Split a formula into `length` left-hand side conjuncts (-1 for exhaustive splitting),
+    * keep right-hand side conjunctions (inverse reduce). */
+  def leftConjuncts(formula: Formula, length: Int = -1): List[Formula] = {
+    def leftConjuncts(formula: Formula, length: Int, count: Int): List[Formula] = formula match {
+      case And(p, q) if length == -1 || count < length => leftConjuncts(p, length, count+1) :+ q
+      case f => List(f)
+    }
+    leftConjuncts(formula, length, 1) //@note not splitting is a list of length 1
+  }
+
   /**
     * Gets the (unquantified) kernel part of a quantified formula by peeling off quantifiers.
     */
@@ -77,6 +87,9 @@ object FormulaTools extends Logging {
       case GreaterEqual(a,b) => Less(a,b)
       case Less(a,b) => GreaterEqual(a,b)
       case LessEqual(a,b) => Greater(a,b)
+      case True => False
+      case False => True
+      case _ => throw new IllegalArgumentException("negationNormalForm of formula " + formula + " not implemented")
     }
     case Not(g:CompositeFormula) => g match {
       case Not(f) => negationNormalForm(f)
@@ -87,6 +100,7 @@ object FormulaTools extends Logging {
         And(negationNormalForm(p), negationNormalForm(Not(q))),
         And(negationNormalForm(Not(p)), negationNormalForm(q))
       )
+      case _ => throw new IllegalArgumentException("negationNormalForm of formula " + formula + " not implemented")
     }
     case Imply(p,q) => Or(negationNormalForm(Not(p)), negationNormalForm(q))
     case Equiv(p,q) => Or(
@@ -163,18 +177,39 @@ object FormulaTools extends Logging {
   }
 
   /**
-   * Returns the first (i.e., left-most) position of subFormula within formula, if any.
-   * @param formula The formula to search for containment of subformula.
-   * @param subFormula The subformula.
-   * @return The first position, or None if subformula is not contained in formula.
+   * Returns the first (i.e., left-most) position of `sub` within `expr`, if any.
+   * @param expr The expression to search for containment of `sub`.
+   * @param sub The sub-expression.
+   * @return The first position, or None if `sub` is not contained in `expr`.
    */
-  def posOf(formula: Formula, subFormula: Formula): Option[PosInExpr] = {
+  def posOf(expr: Expression, sub: Expression): Option[PosInExpr] = {
     var pos: Option[PosInExpr] = None
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
-        if (e == subFormula) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
-        else Left(None)
-    }, formula)
+    expr match {
+      case formula: Formula =>
+        sub match {
+          case subFormula: Formula =>
+            ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+              override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
+                if (e == subFormula) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
+                else Left(None)
+            }, formula)
+          case subTerm: Term =>
+            ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+              override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+                if (e == subTerm) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
+                else Left(None)
+            }, formula)
+        }
+      case term: Term =>
+        sub match {
+          case subTerm: Term =>
+            ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+              override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+                if (e == subTerm) { pos = Some(p); Left(Some(ExpressionTraversal.stop)) }
+                else Left(None)
+            }, term)
+        }
+    }
     pos
   }
 

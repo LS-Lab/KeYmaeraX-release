@@ -1,15 +1,18 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
+import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics.{diffCut, diffWeaken}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{fail, _}
 import edu.cmu.cs.ls.keymaerax.core._
-import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
+import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest}
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.ToolException
+import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, ToolException}
 import testHelper.CustomAssertions._
 import testHelper.KeYmaeraXTestTags
 
@@ -17,16 +20,19 @@ import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
 import org.scalatest.prop.TableDrivenPropertyChecks.forEvery
 import org.scalatest.prop.Tables._
+import org.scalatest.concurrent.Timeouts
+import org.scalatest.time.SpanSugar._
 
 /**
- * Tests
- * [[edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics]],
- * [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.DW]], and
- * [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.DC]]
- */
+  * Basic differential equation proving technology tests
+  * [[edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics]],
+  * [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.DW]], and
+  * [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.DC]]
+  * @see [[ContinuousInvariantTests]]
+  */
 @SummaryTest
 @UsualTest
-class DifferentialTests extends TacticTestBase {
+class DifferentialTests extends TacticTestBase with Timeouts {
   val randomTrials = 500
   val randomComplexity = 6
   val rand = new RandomFormula()
@@ -720,6 +726,30 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals(1) shouldBe "==> [x:=1;]x>=0".asSequent
   }
 
+  "diffRefine" should "refine at succedent positions" in withQE { _ =>
+    val result = proveBy("x>=0 ==> <{x'=v,v'=2}>x>=0, [{x'=x+y,y'=2}]y>=0".asSequent,
+      dR("x<=5".asFormula)(1) <(dR("y>=5".asFormula,hide=false)(2), skip)
+    )
+    result.subgoals should have size 3
+    //Subgoal after both refinements
+    result.subgoals(0) shouldBe "x>=0 ==> <{x'=v,v'=2&x<=5}>x>=0, [{x'=x+y,y'=2&y>=5}]y>=0".asSequent
+    //The other goal arising from refinement steps
+    result.subgoals(1) shouldBe "x>=0 ==> [{x'=v,v'=2&x<=5}]true".asSequent
+    result.subgoals(2) shouldBe "x>=0 ==> <{x'=v,v'=2&x<=5}>x>=0, [{x'=x+y,y'=2&true}]y>=5".asSequent
+  }
+
+  it should "refine at antecedent positions" in withQE { _ =>
+    val result = proveBy("<{x'=v,v'=2}>x>=0, [{x'=x+y,y'=2}]y>=0 ==> x>=0 ".asSequent,
+      dR("x<=5".asFormula)(-1) <(dR("y>=5".asFormula)(-2), skip)
+    )
+    result.subgoals should have size 3
+    //Subgoal after both refinements
+    result.subgoals(0) shouldBe "<{x'=v,v'=2&x<=5}>x>=0, [{x'=x+y,y'=2&y>=5}]y>=0 ==> x>=0".asSequent
+    //The other goal arising from refinement steps
+    result.subgoals(1) shouldBe "[{x'=x+y,y'=2&true}]y>=0 ==> [{x'=v,v'=2&true}]x<=5".asSequent
+    result.subgoals(2) shouldBe "<{x'=v,v'=2&x<=5}>x>=0 ==> [{x'=x+y,y'=2&y>=5}]true".asSequent
+  }
+
   "diffInvariant" should "cut in a simple formula" in withQE { _ =>
     val result = proveBy("x>0 ==> [{x'=2}]x>=0".asSequent, diffInvariant("x>0".asFormula)(1))
     result.subgoals.loneElement shouldBe "x>0 ==> [{x'=2 & true & x>0}]x>=0".asSequent
@@ -1135,6 +1165,7 @@ class DifferentialTests extends TacticTestBase {
   it should "solve the simplest of all ODEs" in withQE { _ =>
     val result = proveBy("x>0 ==> [{x'=1}]x>0".asSequent, solve(1))
     result.subgoals.loneElement shouldBe "x>0 ==> \\forall t_ (t_>=0 -> t_+x>0)".asSequent
+
   }
 
   it should "solve simple box after ODE" in withQE { _ =>
@@ -1334,14 +1365,6 @@ class DifferentialTests extends TacticTestBase {
     proveBy("x^3>5 -> [{x'=7*x^3+x^8}]x^3>5".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
 
-  it should "prove x^3>=5 -> [{x'=7*x^3+x^8}]x^3>=5" in withQE { _ =>
-    proveBy("x^3>=5 -> [{x'=7*x^3+x^8}]x^3>=5".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
-  }
-
-  it should "prove 5<=x^3 -> [{x'=7*x^3+x^8}]5<=x^3" in withQE { _ =>
-    proveBy("5<=x^3 -> [{x'=7*x^3+x^8}]5<=x^3".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
-  }
-
   it should "open diff ind x>b() |- [{x'=2}]x>b()" in withQE { _ =>
     proveBy(Sequent(IndexedSeq("x>b()".asFormula), IndexedSeq("[{x'=2}]x>b()".asFormula)), openDiffInd(1)) shouldBe 'proved
   }
@@ -1366,4 +1389,107 @@ class DifferentialTests extends TacticTestBase {
     proveBy("b>0 -> \\forall p \\exists d (d^2<=b^2 & <{x'=d}>x>=p)".asFormula, diffVar(1, 1::0::0::1::Nil)) shouldBe 'proved
   }
 
+  /**
+    * Test cases for the Darboux ghost tactics
+    */
+
+  "ODE Darboux" should "prove equational darboux" in withQE { _ =>
+    //(x+z)' = (x*A+B)(x+z)
+    val seq = "x+z=0 ==> [{x'=(A*y+B()*x), z' = A*z*x+B()*z & y = x^2}] x+z=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x*A+B()".asTerm)(1)) shouldBe 'proved
+  }
+
+  it should "prove fractional darboux" in withQE { _ =>
+    //(x+z)' = ((x*A+B)/z^2)(x+z), where z^2 > 0
+    //assumes z^2 non-zero already in evol domain, or the ghost will report a singularity
+    val seq = "x+z=0 ==> [{x'=(A*y+B()*x)/z^2, z' = (A*x+B())/z & y = x^2 & z^2 > 0}] x+z=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("(x*A+B())/z^2".asTerm)(1)) shouldBe 'proved
+  }
+
+  it should "prove >= darboux" in withQE { _ =>
+    //(x+z)' =  x^2 + z*x + x^2 >= x*(x+z)
+    //Maybe this should leave open that the remainder is >= 0?
+    val seq = "x+z>=0 ==> [{x'=x^2, z' = z*x+y & y = x^2}] x+z>=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asTerm)(1)) shouldBe 'proved
+  }
+
+  it should "auto-prove >= darboux" in withMathematica { _ =>
+    //(x+z)' =  x^2 + z*x + x^2 >= x*(x+z)
+    //Maybe this should leave open that the remainder is >= 0?
+    val seq = "x+z>=0 ==> [{x'=x^2, z' = z*x+y & y = x^2}] x+z>=0".asSequent
+    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+  }
+
+  it should "prove >= fractional darboux" in withQE { _ =>
+    //(x+z)' =  (1/z^2)(x+z) + x^2 >= (1/z^2)(x+z)
+    //Maybe this should leave open that the remainder is >= 0?
+    val seq = "x+z>=0 ==> [{x'=1/z, z' = x/z^2 + y & z^2 > 0 & y = x^2}] x+z>=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("1/z^2".asTerm)(1)) shouldBe 'proved
+  }
+
+  it should "prove < darboux" in withMathematica { _ =>
+    //(x+z)' =  x^2 + z*x - x^2 <= x*(x+z)
+    val seq = "x+z<0 ==> [{x'=x^2, z' = z*x+y & y = -x^2}] x+z<0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asVariable)(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+  }
+
+  it should "automatically find equational darboux" in withMathematica { _ =>
+    //(x+z)' = (x*A+B)(x+z)
+    val seq = "x+z=0 ==> [{x'=(A*x^2+B()*x), z' = A*z*x+B()*z}] 0=-x-z".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+  }
+
+  it should "fail with evolution domain constraints" in withMathematica { _ =>
+    //(x+z)' = (x*A+B)(x+z)
+    val seq = "x+z=0 ==> [{x'=(A*y+B()*x), z'=A*z*x+B()*z & y=x^2}]x+z=0".asSequent
+    val pr = TactixLibrary.proveBy(seq, Idioms.?(DifferentialTactics.dgDbxAuto(1)))
+    pr should not be 'proved
+    //The automatically generated remainder term goal is left open
+    pr.subgoals.loneElement shouldBe "x+z=0 ==> [{x'=(A*y+B()*x), z'=A*z*x+B()*z & y=x^2}]x+z=0".asSequent
+  }
+
+  "ODE Barrier" should "prove a strict barrier certificate" in withMathematica { _ =>
+    //This one doesn't actually need the full power of strict barriers because it's also an inequational dbx
+    val seq = "-x<=0 ==> [{x'=100*x^4+y*x^3-x^2+x+c, c'=x+y+z & c > x}] -x<=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier()(1)) shouldBe 'proved
+    //TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+  }
+
+  it should "prove a strict barrier certificate 1" in withMathematica {qeTool =>
+    val seq = "(87*x^2)/200 - (7*x*y)/180 >= -(209*y^2)/1080 + 10 ==> [{x'=(5*x)/4 - (5*y)/6, y'=(9*x)/4 + (5*y)/2}] (87*x^2)/200 - (7*x*y)/180>= -(209*y^2)/1080 + 10 ".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(Some(qeTool))(1)) shouldBe 'proved
+    //TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+  }
+
+  it should "prove a strict barrier certificate 2" in withMathematica {qeTool =>
+    val seq = "(23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5 <= 0 ==> [{x'=(x/2) + (7*y)/3 , y'=-x - y}] (23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5<=0".asSequent
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(Some(qeTool))(1)) shouldBe 'proved
+    //TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+  }
+
+  "DConstV" should "extend domain constraint with const assumptions" in withMathematica {_ =>
+    val seq = "f()>0 , v>0, a>0, b>0, <{x'=c+f()}> x>0, c<0 ==> z=1, a>0, [{v'=a+b,x'=y+f() & x>=v | x>=5}]v>0, x=5, y=1".asSequent
+    val pr = TactixLibrary.proveBy(seq,DifferentialTactics.DconstV(3) & DifferentialTactics.DconstV(-5))
+    pr.subgoals.loneElement shouldBe
+      "f()>0, v>0, a>0, b>0, <{x'=c+f()&f()>0&c < 0&true}>x>0, c < 0 ==> z=1, a>0, [{v'=a+b,x'=y+f()&f()>0&a>0&b>0&(x>=v|x>=5)}]v>0, x=5, y=1".asSequent
+  }
+
+  "domSimplify" should "simplify box succedent with domain constraint" in withMathematica {_ =>
+    val seq = "==> a<0,[{x'=1 & f()>0 & b<0}](b<0 & f()>1)".asSequent
+    val pr = TactixLibrary.proveBy(seq,DifferentialTactics.domSimplify(2))
+    println(pr)
+    pr.subgoals.loneElement shouldBe
+    "==>  a < 0, [{x'=1&f()>0&b < 0}]f()>1".asSequent
+  }
+
+  it should "correctly handle reordering of domain constraints" in withMathematica {_ =>
+    val seq = "==> a<0,[{x'=1 & ((d = 0 & c > 0 | a < 0 & (a >0 & b>0) & c>0) & (b<0 & (f()>0 | b>=0)))}](b<0 & f()>1)".asSequent
+    val pr = TactixLibrary.proveBy(seq,DifferentialTactics.domSimplify(2))
+    println(pr)
+    pr.subgoals.loneElement shouldBe
+      "==>  a < 0, [{x'=1&((d = 0 & c > 0 | a < 0 & (a >0 & b>0) & c>0) & (b<0 & (f()>0 | b>=0)))}]f()>1".asSequent
+  }
 }

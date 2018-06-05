@@ -18,7 +18,7 @@ import edu.cmu.cs.ls.keymaerax.lemma._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXDeclarationsParser, KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
-import edu.cmu.cs.ls.keymaerax.pt.{NoProof, NoProofTermProvable, PTProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{NoProof, ElidingProvable, TermProvable, ProvableSig}
 
 import scala.collection.immutable.Nil
 import scala.slick.driver.SQLiteDriver
@@ -48,7 +48,7 @@ object SQLite {
     override def get(ids: List[LemmaID]): Option[List[Lemma]] = {
       readLemmas(ids).map(_.map(Lemma.fromString)).map(_.map((lemma:Lemma) =>
         if (ProvableSig.PROOF_TERMS_ENABLED) {
-          Lemma(PTProvable(NoProofTermProvable(lemma.fact.underlyingProvable), NoProof()), lemma.evidence, lemma.name)
+          Lemma(TermProvable(ElidingProvable(lemma.fact.underlyingProvable), NoProof()), lemma.evidence, lemma.name)
         } else {
           lemma
         }

@@ -18,5 +18,9 @@ angular.module('keymaerax.ui.directives').directive('k4AutoHideAlert', function(
     scope.$watch('isVisible', function(newValue, oldValue) {
       if (newValue && scope.timeout >= 0) $timeout(function () { scope.isVisible = false; }, scope.timeout);
     });
+
+    scope.formattedMessage = function(msg) {
+      return msg ? msg.replace(/\n/g, "<br/>") : msg
+    }
   }
 });

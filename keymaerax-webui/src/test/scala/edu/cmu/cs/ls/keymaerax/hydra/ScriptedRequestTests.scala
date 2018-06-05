@@ -140,7 +140,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = tacticRunner("()", implyR(2))
     response shouldBe a [ErrorResponse]
-    response should have ('msg ("Tactic failed with error: [Bellerophon Runtime] Position Fixed(2,None,true) may point outside the positions of the goal NoProofTermProvable(Provable(==> 1:  x>=0->[x:=x+1;]x>=0\tImply\n  from   ==> 1:  x>=0->[x:=x+1;]x>=0\tImply))"))
+    response should have ('msg ("Tactic failed with error: [Bellerophon Runtime] Position Fixed(2,None,true) may point outside the positions of the goal ElidingProvable(Provable(==> 1:  x>=0->[x:=x+1;]x>=0\tImply\n  from   ==> 1:  x>=0->[x:=x+1;]x>=0\tImply))"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, leaves, _, _) =>
@@ -174,7 +174,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     val response = tacticRunner("()", choiceb(2))
     response shouldBe a [ErrorResponse]
-    response should have ('msg ("Tactic failed with error: [Bellerophon Runtime] Tactic choiceb(2) may point to wrong position, found None at position Fixed(2,None,true)"))
+    response should have ('msg ("Tactic failed with error: [Bellerophon Runtime] Tactic choiceb(2) is not applicable to\n    position outside sequent: expected -1...-0 or 1...1\nat position Fixed(2,None,true)\nbecause requirement failed: Cannot apply at undefined position 2 in sequent   ==>  x>=0&v>=0->[v:=v;]<{x'=v&true}>x>=0"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, leaves, _, _) =>
@@ -192,7 +192,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val response = tacticRunner("()", dG("y'=0*y+2".asDifferentialProgram, None)(1, 1::Nil))
     response shouldBe a [ErrorResponse]
     //@note dG immediately calls an ANON tactic, which is the one that actually raises the error
-    response should have ('msg ("Tactic failed with error: [Bellerophon Runtime] Tactic ANON(1.1) may point to wrong position, found Some([v:=v;]<{x'=v&true}>x>=0) at position Fixed(1.1,None,true)"))
+    response should have ('msg ("Tactic failed with error: [Bellerophon Runtime] Tactic ANON(1.1) is not applicable to\n    [v:=v;]<{x'=v&true}>x>=0\nat position Fixed(1.1,None,true)\nbecause Some([v:=v;]<{x'=v&true}>x>=0) (of class scala.Some)"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
       case AgendaAwesomeResponse(_, _, leaves, _, _) =>

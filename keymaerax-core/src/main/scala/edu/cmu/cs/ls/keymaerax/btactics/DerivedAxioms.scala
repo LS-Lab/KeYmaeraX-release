@@ -4,19 +4,18 @@
  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr, RenUSubst}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, OnAll, PosInExpr, RenUSubst}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.allInstantiateInverse
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.{AxiomTerm, NoProofTermProvable, PTProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt._
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.{immutable, mutable}
 import scala.collection.immutable._
-import scala.language.postfixOps
 import scala.reflect.runtime.{universe => ru}
 
 /**
@@ -56,10 +55,10 @@ object DerivedAxioms extends Logging {
   private[btactics] def derivedAxiom(name: String, fact: ProvableSig): Lemma = {
     require(fact.isProved, "only proved Provables would be accepted as derived axioms: " + name + " got\n" + fact)
     val lemmaName = DerivedAxiomInfo(name).storedName
-    val npt = NoProofTermProvable(fact.underlyingProvable)
+    val npt = ElidingProvable(fact.underlyingProvable)
     val alternativeFact =
       if (ProvableSig.PROOF_TERMS_ENABLED) {
-        PTProvable(npt, AxiomTerm(lemmaName))
+        TermProvable(npt, AxiomTerm(lemmaName))
       } else {
         npt
       }
@@ -297,6 +296,34 @@ object DerivedAxioms extends Logging {
       notL(-1) & notR(1)
       partial
   )
+
+  /**
+    * Rule "con convergence flat".
+    * Premisses: \exists x_ (x <= 0 & J(||)) |- P
+    *            x_ > 0, J(||) |- <a{|x_|}><x_:=x_-1;> J(||)
+    * Conclusion  J(||) |- <a{|x_|}*>P(||)
+    * {{{
+    *    \exists x_ (x_ <= 0 & J(x_)) |- P   x_ > 0, J(x_) |- <a{|x_|}>J(x_-1)
+    *    ------------------------------------------------- con
+    *     J(v) |- <a{|v|}*>P
+    * }}}
+    */
+  lazy val convergenceFlat = {
+    val v = Variable("x_", None, Real)
+    val anonv = ProgramConst("a_", Except(v))
+    val Jany = UnitPredicational("J", AnyArg)
+    derivedRule("con convergence flat",
+      Sequent(immutable.IndexedSeq(Jany), immutable.IndexedSeq(Diamond(Loop(anonv), "p_(||)".asFormula))),
+      cut(Diamond(Loop(anonv), Exists(immutable.Seq(v), And(LessEqual(v, Number(0)), Jany)))) <(
+        hideL(-1) & mond
+          // existsL(-1)
+          //useAt("exists eliminate", PosInExpr(1::Nil))(-1) & andL(-1)
+        ,
+        hideR(1) & by(ProvableSig.rules("con convergence"))
+        )
+    )
+  }
+
 
   // derived axioms and their proofs
 
@@ -723,6 +750,37 @@ object DerivedAxioms extends Logging {
   )
 
   /**
+    * {{{Axiom "<> partial vacuous".
+    *    <a;>p(||) & q() <-> <a;>(p(||)&q())
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note unsound for hybrid games
+    */
+  lazy val diamondPartialVacuous: Lemma = derivedAxiom("<> partial vacuous",
+    Sequent(IndexedSeq(), IndexedSeq("(<a_{|^@|};>p_(||) & q_()) <-> <a_{|^@|};>(p_(||)&q_())".asFormula)),
+      equivR(1) <(
+        andL(-1) & useAt("<> diamond", PosInExpr(1::Nil))(1) & notR(1) &
+        useAt("<> diamond", PosInExpr(1::Nil))(-1) & notL(-1) &
+        useAt(notAnd.fact)(-2, 1::Nil) & useAt(implyExpand.fact, PosInExpr(1::Nil))(-2, 1::Nil) &
+        useAt(converseImply.fact)(-2, 1::Nil) & useAt(doubleNegationAxiom.fact)(-2, 1::0::Nil) &
+        useAt("K modal modus ponens", PosInExpr(0::Nil))(-2) & implyL(-2) <(V('Rlast) & closeId, closeId)
+        ,
+        useAt("<> diamond", PosInExpr(1::Nil))(-1) & useAt(notAnd.fact)(-1, 0::1::Nil) &
+        useAt(implyExpand.fact, PosInExpr(1::Nil))(-1, 0::1::Nil) & notL(-1) &
+        andR(1) <(
+          useAt("<> diamond", PosInExpr(1::Nil))(1) & notR(1) & implyRi &
+          useAt("K modal modus ponens", PosInExpr(1::Nil))(1) &
+          useAt(proveBy("(!p() -> p() -> q()) <-> true".asFormula, prop))(1, 1::Nil) & byUS("[]T system")
+          ,
+          useAt(proveBy("!q_() -> (p_() -> !q_())".asFormula, prop), PosInExpr(1::Nil))(2, 1::Nil) &
+          V(2) & notR(2) & closeId
+        )
+      )
+  )
+
+  /**
     * {{{Axiom "<> split left".
     *    <a;>(p(||)&q(||)) -> <a;>p(||)
     * End.
@@ -879,6 +937,22 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("<x_:=f();>p(x_) <-> p(f())".asFormula)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("[:=] assign")(1, 0::0::Nil) &
+      useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
+      byUS(equivReflexiveAxiom)
+  )
+
+  /**
+    * {{{Axiom "<:=> self assign".
+    *    <x_:=x_;>p(||) <-> p(||)
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val assigndSelfAxiom = derivedAxiom("<:=> self assign",
+    Sequent(IndexedSeq(), IndexedSeq("<x_:=x_;>p(||) <-> p(||)".asFormula)),
+      useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
+      useAt("[:=] self assign")(1, 0::0::Nil) &
       useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
   )
@@ -1193,6 +1267,111 @@ object DerivedAxioms extends Logging {
     )
   )
 
+  /**
+    * {{{Axiom "[**] iterate iterate".
+    *    [{a;}*;{a;}*]p(||) <-> [{a;}*]p(||)
+    * End.
+    * }}}
+    * @see Lemma 7.6 of textbook
+    * @Derived
+    */
+  lazy val iterateiterateb = derivedAxiom("[**] iterate iterate",
+    "==> [{a_{|^@|};}*;{a_{|^@|};}*]p_(||) <-> [{a_{|^@|};}*]p_(||)".asSequent,
+    useAt("[;] compose")(1, 0::Nil) & by(loopMergeb.fact)
+  )
+
+  /**
+    * {{{Axiom "<**> iterate iterate".
+    *    <{a;}*;{a;}*>p(||) <-> <{a;}*>p(||)
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val iterateiterated = derivedAxiom("<**> iterate iterate",
+    "==> <{a_{|^@|};}*;{a_{|^@|};}*>p_(||) <-> <{a_{|^@|};}*>p_(||)".asSequent,
+    useAt("<;> compose")(1, 0::Nil) & by(loopMerged.fact)
+  )
+
+  /**
+    * {{{Axiom "[*-] backiterate".
+    *    [{a;}*]p(||) <-> p(||) & [{a;}*][{a;}]p(||)
+    * End.
+    * }}}
+    * @see Lemma 7.5 in textbook
+    * @Derived for programs
+    */
+  lazy val backiterateb = derivedAxiom("[*-] backiterate",
+    "==> [{a_{|^@|};}*]p_(||) <-> p_(||) & [{a_{|^@|};}*][a_{|^@|};]p_(||)".asSequent,
+    equivR(1) <(
+      byUS(backiteratebnecc.fact),
+      by(backiteratebsuff.fact)
+      )
+  )
+
+  /**
+    * {{{Axiom "[*-] backiterate sufficiency".
+    *    [{a;}*]p(||) <- p(||) & [{a;}*][{a;}]p(||)
+    * End.
+    * }}}
+    * @see Lemma 7.5 in textbook
+    * @Derived for programs
+    */
+  lazy val backiteratebsuff = derivedAxiom("[*-] backiterate sufficiency",
+    "p_(||) & [{a_{|^@|};}*][a_{|^@|};]p_(||) ==> [{a_{|^@|};}*]p_(||)".asSequent,
+    andL(-1) & useAt(iiinduction.fact, PosInExpr(1::1::Nil))(1) <(
+      close(-1,1)
+      ,
+      hideL(-1) & byUS(boxMonotone.fact) & implyR(1) & close(-1,1)
+      )
+  )
+
+  /**
+    * {{{Axiom "[*-] backiterate necessity".
+    *    [{a;}*]p(||) -> p(||) & [{a;}*][{a;}]p(||)
+    * End.
+    * }}}
+    * @see Figure 7.8 in textbook
+    * @Derived for programs
+    */
+  lazy val backiteratebnecc = derivedAxiom("[*-] backiterate necessity",
+    "[{b_{|^@|};}*]q_(||) ==> q_(||) & [{b_{|^@|};}*][b_{|^@|};]q_(||)".asSequent,
+    andR(1) <(
+      useAt("[*] iterate")(-1) & andL(-1) & close(-1,1)
+      ,
+      generalize("[{b_{|^@|};}*]q_(||)".asFormula)(1) <(
+        useAt(iiinduction.fact, PosInExpr(1::1::Nil))(1) <(
+          close(-1,1)
+          ,
+          G(1) & useAt("[*] iterate")(1, 0::Nil) & prop
+          )
+        ,
+        implyRi()(-1,1) & byUS(loopApproxb.fact)
+        )
+      )
+  )
+
+  /**
+    * {{{Axiom "Ieq induction".
+    *    [{a;}*]p(||) <-> p(||) & [{a;}*](p(||)->[{a;}]p(||))
+    * End.
+    * }}}
+    * @see Section 7.7.4 in textbook
+    * @Derived for programs
+    */
+  lazy val Ieq = derivedAxiom("Ieq induction",
+    "==> [{a_{|^@|};}*]p_(||) <-> p_(||) & [{a_{|^@|};}*](p_(||)->[a_{|^@|};]p_(||))".asSequent,
+    equivR(1) <(
+      andR(1) <(
+        iterateb(-1) & andL(-1) & close(-1,1)
+        ,
+        useAt(backiterateb.fact)(-1) & andL(-1) & hideL(-1) & byUS(boxMonotone.fact) & implyR(1) & close(-1,1)
+        ),
+      useAt(iiinduction.fact, PosInExpr(1::1::Nil))(1) & OnAll(prop & done)
+      )
+  )
+
+
   //@todo this is somewhat indirect. Maybe it'd be better to represent derived axioms merely as Lemma and auto-wrap them within their ApplyRule[LookupLemma] tactics on demand.
   //private def useAt(lem: ApplyRule[LookupLemma]): PositionTactic = TactixLibrary.useAt(lem.rule.lemma.fact)
 
@@ -1260,6 +1439,22 @@ object DerivedAxioms extends Logging {
       useAt("vacuous all quantifier")(1, 0::0::Nil) &
       useAt(doubleNegationAxiom.fact)(1, 0::Nil) &
       byUS(equivReflexiveAxiom)
+  )
+
+  /**
+    * {{{Axiom "partial vacuous exists quantifier".
+    *    (\exists x p(x) & q()) <-> (\exists x p(x)) & q()
+    * End.
+    * }}}
+    *
+    * @Derived
+    */
+  lazy val partialVacuousExistsAxiom = derivedAxiom("partial vacuous exists quantifier",
+    Sequent(IndexedSeq(), IndexedSeq("\\exists x_ (p_(x_) & q_()) <-> \\exists x_ p_(x_) & q_()".asFormula)),
+      equivR(1) <(
+        existsL(-1) & andR(1) <(existsR("x_".asVariable)(1) & prop & done, prop & done),
+        andL('L) & existsL(-1) & existsR("x_".asVariable)(1) & prop & done
+      )
   )
 
   /**
@@ -1661,6 +1856,23 @@ object DerivedAxioms extends Logging {
   )
 
   /**
+    * {{{Axiom "DR<> diamond differential refine".
+    *    (<{c&q(||)}>p(||) <- <{c&r(||)}>p(||)) <- [{c&r(||)}]q(||)
+    * End.
+    *
+    * @Derived
+    * }}}
+    */
+  lazy val DiffRefineDiamond = derivedAxiom("DR<> differential refine",
+    Sequent(IndexedSeq(),IndexedSeq("(<{c&q(||)}>p(||) <- <{c&r(||)}>p(||)) <- [{c&r(||)}]q(||)".asFormula)),
+    implyR(1) & implyR(1) &
+      useAt("<> diamond", PosInExpr(1::Nil))(1) &
+      useAt("<> diamond", PosInExpr(1::Nil))(-2) & notL(-2) & notR(1) &
+      implyRi()(AntePos(1), SuccPos(0)) & implyRi &
+      byUS("DR differential refine")
+  )
+
+  /**
     * {{{Axiom "DC differential cut".
     *    ([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)
     * End.
@@ -1739,23 +1951,6 @@ object DerivedAxioms extends Logging {
       useAt(flipLessEqual.fact)(1, 0::1::1::1::Nil) &
       useExpansionAt(">' derive >")(1, 0::1::1::1::Nil) &
       byUS("DIo open differential invariance >")
-  )
-
-  /**
-    * {{{Axiom "DIo open differential invariance <=".
-    *    ([{c&q(||)}]f(||)<=g(||) <-> [?q(||);]f(||)<=g(||)) <- (q(||) -> [{c&q(||)}](f(||)<=g(||) -> (f(||))'<(g(||))'))
-    * End.
-    * }}}
-    *
-    * @Derived
-    */
-  lazy val DIOpeninvariantLessEqual = derivedAxiom("DIo open differential invariance <=",
-    Sequent(IndexedSeq(), IndexedSeq("([{c&q(||)}]f(||)<=g(||) <-> [?q(||);]f(||)<=g(||)) <- (q(||) -> [{c&q(||)}](f(||)<=g(||) -> (f(||))'<(g(||))'))".asFormula)),
-    useAt(flipLessEqual)(1, 1::0::1::Nil) &
-      useAt(flipLessEqual)(1, 1::1::1::Nil) &
-      useAt(flipLessEqual)(1, 0::1::1::0::Nil) &
-      useAt(flipLess)(1, 0::1::1::1::Nil) &
-      byUS("DIo open differential invariance >=")
   )
 
   /**
@@ -3043,4 +3238,31 @@ object DerivedAxioms extends Logging {
   lazy val lessNotSym = mkDerivedAxiom("< antisym",Some("F_() < G_()"),"G_() < F_()","false")
 
 
+  /**
+    * {{{Axiom "all stutter".
+    *    \forall x p <-> \forall x p
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  lazy val forallStutter: Lemma = derivedAxiom("all stutter",
+    Sequent(IndexedSeq(), IndexedSeq("\\forall x_ p_(x_) <-> \\forall x_ p_(x_)".asFormula)),
+    byUS(equivReflexiveAxiom)
+  )
+
+  /**
+    * {{{Axiom "exists stutter".
+    *    \exists x p <-> \exists x p
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note Trivial reflexive stutter axiom, only used with a different recursor pattern in AxiomIndex.
+    */
+  lazy val existsStutter: Lemma = derivedAxiom("exists stutter",
+    Sequent(IndexedSeq(), IndexedSeq("\\exists x_ p_(x_) <-> \\exists x_ p_(x_)".asFormula)),
+    byUS(equivReflexiveAxiom)
+  )
 }

@@ -15,7 +15,7 @@ import org.scalatest.{FlatSpec, Matchers}
 class DatabaseTacticSerializerTests extends FlatSpec with Matchers {
   "serializer" should "print something we thing we can serialize and deserialize for input and dependent position tactics" in {
     val serializer = new DatabaseTacticSerializer(SQLite.TestDB)
-    val interpreter = SequentialInterpreter(Seq(serializer))
+    val interpreter = ExhaustiveSequentialInterpreter(serializer :: Nil)
 
     val input = BelleProvable(ProvableSig.startProof("1=1".asFormula))
     val tactic = new InputTactic("TestInputTactic", "1=1".asFormula::Nil) {

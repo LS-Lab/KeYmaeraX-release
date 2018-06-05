@@ -47,7 +47,7 @@ class ToolTacticsTests extends TacticTestBase {
       transform("z<=4".asFormula)(-1)) shouldNot have message "[Bellerophon Runtime] head of empty list"
     inside(the [BelleThrowable] thrownBy proveBy("z<=5 ==> ".asSequent, transform("z<=4".asFormula)(-1))) {
       case bt: BelleThrowable =>
-        bt should have message "[Bellerophon Runtime] Tactic transform({`z<=4`},-1) may point to wrong position, found Some(z<=5) at position Fixed(-1,None,true)"
+        bt should have message "[Bellerophon Runtime] Tactic transform({`z<=4`},-1) is not applicable to\n    z<=5\nat position Fixed(-1,None,true)\nbecause Invalid transformation: cannot transform Some(z<=5) to z<=4"
         bt.getCause should have message "[Bellerophon Runtime] Invalid transformation: cannot transform Some(z<=5) to z<=4"
     }
   }
@@ -246,6 +246,16 @@ class ToolTacticsTests extends TacticTestBase {
       edit("expand(abs(a))>0 | expand(abs(b))>1 | expand(abs(c))>2".asFormula)(1)).
       subgoals.loneElement shouldBe
       "abs_0>0, abs_2>3, a>=0 & abs_0=a | a<0 & abs_0=-a, b>=0 & abs_1=b | b<0 & abs_1=-b, c>=0 & abs_2=c | c<0 & abs_2=-c ==> abs_0>0 | abs_1>1 | abs_2>2".asSequent
+  }
+
+  it should "transform in programs" in withQE { _ =>
+    val result = proveBy("x<0 -> [x:=x-1+0*z;]x<0".asFormula, edit("x<0 -> [x:=x-1;]x<0".asFormula)(1))
+    result.subgoals.loneElement shouldBe "==> x<0 -> [x:=x-1;]x<0".asSequent
+  }
+
+  it should "transform postcondition of modal" in withQE { _ =>
+    val result = proveBy("x<0 -> [x:=x-1;](x<0&v^2>=0)".asFormula, edit("x<0 -> [x:=x-1;]x<0".asFormula)(1))
+    result.subgoals.loneElement shouldBe "==> x<0 -> [x:=x-1;]x<0".asSequent
   }
 
 }

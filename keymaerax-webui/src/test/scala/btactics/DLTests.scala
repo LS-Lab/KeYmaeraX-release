@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleThrowable, SequentialInterpreter, SpoonFeedingInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DLBySubst.assignbExists
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 
 import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps
+import org.scalatest.LoneElement._
 
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.DLBySubst]]
@@ -506,54 +507,88 @@ class DLTests extends TacticTestBase {
     result.subgoals(2).succ should contain only "[x:=x+1;]x>1".asFormula
   }
 
-  "Convergence" should "work in easy case" in {
-    val fml = "<{x:=x-1;}*>x < 0".asFormula
-    val arg = Variable("v")
-    val defn = Greater(Variable("v"), Variable("x"))
-    val result = proveBy(fml,DLBySubst.conRule(arg,defn)(1))
-    result.subgoals(0).succ should contain only "\\exists v v>x".asFormula
-    result.subgoals(1).ante should contain only ("v>0".asFormula, "v>x".asFormula)
-    result.subgoals(1).succ should contain only "<x:=x-1;>v-1>x".asFormula
-    result.subgoals(2).ante should contain only ("v<=0".asFormula, "v>x".asFormula)
-    result.subgoals(2).succ should contain only "x < 0".asFormula
+  "assignd" should "work with ODE" in {
+    val result = proveBy("<x:=x+1;><{x'=1}>x>0".asFormula, assignd(1))
+    result.subgoals.loneElement shouldBe "x=x_0+1 ==> <{x'=1}>x>0".asSequent
   }
 
-  it should "allow any variant argument name" in {
-    val fml = "<{x:=x-1;}*>x < 0".asFormula
-    val arg = Variable("y")
-    val defn = Greater(arg, Variable("x"))
-    val result = proveBy(fml,DLBySubst.conRule(arg,defn)(1))
-    result.subgoals(0).succ should contain only "\\exists y y>x".asFormula
-    result.subgoals(1).ante should contain only ("y>0".asFormula, "y>x".asFormula)
-    result.subgoals(1).succ should contain only "<x:=x-1;>y-1>x".asFormula
-    result.subgoals(2).ante should contain only ("y<=0".asFormula, "y>x".asFormula)
-    result.subgoals(2).succ should contain only "x < 0".asFormula
+  it should "work with loop" in {
+    val result = proveBy("<x:=x+1;><{x:=x+1;}*>x>0".asFormula, assignd(1))
+    result.subgoals.loneElement shouldBe "x=x_0+1 ==> <{x:=x+1;}*>x>0".asSequent
+  }
+
+  it should "work with ODE in antecedent" in {
+    val result = proveBy("<x:=x+1;><{x:=x+1;}*>x>0 ==> ".asSequent, assignd(-1))
+    result.subgoals.loneElement shouldBe "x=x_0+1, <{x:=x+1;}*>x>0 ==> ".asSequent
+  }
+
+  it should "work with loop in antecedent and context" in {
+    val result = proveBy("0>=0, <x:=x+1;><{x:=x+1;}*>x>0, 1>=1, 2>=2 ==> ".asSequent, assignd(-2))
+    result.subgoals.loneElement shouldBe "0>=0, 1>=1, 2>=2, x=x_0+1, <{x:=x+1;}*>x>0 ==> ".asSequent
+  }
+
+  "Convergence" should "work in easy case" in {
+    val result = proveBy("<{x:=x-1;}*>x < 0".asFormula, DLBySubst.con("v_".asVariable, "v_>x".asFormula)(1))
+    result.subgoals(0) shouldBe "==> \\exists v_ v_>x".asSequent
+    result.subgoals(1) shouldBe "v_<=0, v_>x ==> x < 0".asSequent
+    result.subgoals(2) shouldBe "v_>0, v_>x ==> <x:=x-1;>v_-1>x".asSequent
   }
 
   it should "work with preconditions" in {
-    val fml = "x = 0 & 0 >= 0 -> <{x:=x-1;}*>x < 0".asFormula
-    val arg = Variable("v")
-    val defn = Greater(Variable("v"), Variable("x"))
-    val result = proveBy(fml,implyR(1) & andL(-1) & DLBySubst.conRule(arg,defn)(1))
-    result.subgoals(0).ante should contain only ("x=0".asFormula, "0>=0".asFormula)
-    result.subgoals(0).succ should contain only "\\exists v v>x".asFormula
-    result.subgoals(1).ante should contain only ("v>0".asFormula, "v>x".asFormula)
-    result.subgoals(1).succ should contain only "<x:=x-1;>v-1>x".asFormula
-    result.subgoals(2).ante should contain only ("v<=0".asFormula, "v>x".asFormula)
-    result.subgoals(2).succ should contain only "x < 0".asFormula
+    val result = proveBy("x = 0, 0 >= 0 ==> <{x:=x-1;}*>x < 0".asSequent, DLBySubst.con("v_".asVariable, "v_>x".asFormula)(1))
+    result.subgoals(0) shouldBe "x=0, 0>=0 ==> \\exists v_ v_>x".asSequent
+    result.subgoals(1) shouldBe "v_<=0, v_>x, 0>=0 ==> x < 0".asSequent
+    result.subgoals(2) shouldBe "v_>0, v_>x, 0>=0 ==> <x:=x-1;>v_-1>x".asSequent
+  }
+
+  it should "rename in postcondition" in {
+    val result = proveBy("x = 0, 0 >= 0 ==> <{x:=x-1;}*>v_<=2".asSequent, DLBySubst.con("v_".asVariable, "v_<=1".asFormula)(1))
+    result.subgoals(0) shouldBe "x=0, 0>=0 ==> \\exists v_ v_<=1".asSequent
+    result.subgoals(1) shouldBe "v_<=0, v_<=1, 0>=0 ==> v__0<=2".asSequent
+    result.subgoals(2) shouldBe "v_>0, v_<=1, 0>=0 ==> <x:=x-1;>v_-1<=1".asSequent
   }
 
   it should "work in second position" in {
-    val fml = "x = 0 & 0 >= 0 -> (0 = 1 | <{x:=x-1;}*>x < 0)".asFormula
-    val arg = Variable("v")
-    val defn = Greater(Variable("v"), Variable("x"))
-    val result = proveBy(fml, implyR(1) & andL(-1) & orR(1) & DLBySubst.conRule(arg, defn)(2))
-    result.subgoals(0).ante should contain only ("x=0".asFormula, "0>=0".asFormula)
-    result.subgoals(0).succ should contain only ("0=1".asFormula, "\\exists v v>x".asFormula)
-    result.subgoals(1).ante should contain only ("v>0".asFormula, "v>x".asFormula)
-    result.subgoals(1).succ should contain only "<x:=x-1;>v-1>x".asFormula
-    result.subgoals(2).ante should contain only ("v<=0".asFormula, "v>x".asFormula)
-    result.subgoals(2).succ should contain only "x < 0".asFormula
+    val result = proveBy("x=0, 0>=0 ==> 0=1, <{x:=x-1;}*>x<0".asSequent, DLBySubst.con("v_".asVariable, "v_>x".asFormula)(2))
+    result.subgoals(0) shouldBe "x=0, 0>=0 ==> 0=1, \\exists v_ v_>x".asSequent
+    result.subgoals(1) shouldBe "v_<=0, v_>x, 0>=0 ==> x<0".asSequent
+    result.subgoals(2) shouldBe "v_>0, v_>x, 0>=0 ==> <x:=x-1;>v_-1>x".asSequent
+  }
+
+  it should "accept modal convergence conditions" in {
+    val result = proveBy("<{{x'=-1}}*>x < 0".asFormula, DLBySubst.con("v_".asVariable, "<{{x'=-1};v_:=v_-1;}*>(v_>0 & x<0)".asFormula)(1))
+    result.subgoals should have size 3
+    result.subgoals(0) shouldBe "==> \\exists v_ <{{x'=-1};v_:=v_-1;}*>(v_>0 & x<0)".asSequent
+    result.subgoals(1) shouldBe "v_<=0, <{{x'=-1};v_:=v_-1;}*>(v_>0&x < 0) ==> x < 0".asSequent
+    result.subgoals(2) shouldBe "v__0>0, <{{x'=-1};v__0:=v__0-1;}*>(v__0>0&x<0) ==> <{x'=-1}>\\forall v_ (v_=v__0-1-><{{x'=-1};v_:=v_-1;}*>(v_>0&x < 0))".asSequent
+  }
+
+  it should "retain constant fact" in {
+    val result = proveBy("x>y, y>0 ==> <{x:=x-y;}*>x<0".asSequent, DLBySubst.con("v_".asVariable, "v_*y>x".asFormula)(1))
+    result.subgoals(0) shouldBe "x>y, y>0 ==> \\exists v_ v_*y>x".asSequent
+    result.subgoals(1) shouldBe "v_<=0, v_*y>x, y>0 ==> x < 0".asSequent
+    result.subgoals(2) shouldBe "v_>0, v_*y>x, y>0 ==> <x:=x-y;>(v_-1)*y>x".asSequent
+  }
+
+  it should "retain constant fact 2" in {
+    val result = proveBy("x>y, y>0 ==> <{x:=x-y; {z'=3}}*>x<0".asSequent, DLBySubst.con("v_".asVariable, "v_*y>x".asFormula)(1))
+    result.subgoals(0) shouldBe "x>y, y>0 ==> \\exists v_ v_*y>x".asSequent
+    result.subgoals(1) shouldBe "v_<=0, v_*y>x, y>0 ==> x < 0".asSequent
+    result.subgoals(2) shouldBe "v_>0, v_*y>x, y>0 ==> <x:=x-y; {z'=3}>(v_-1)*y>x".asSequent
+  }
+
+  it should "retain constant facts" in {
+    val result = proveBy("x>y, y>0, z>1, a<2 ==> <{x:=x-y*z;}*>x<0".asSequent, DLBySubst.con("v_".asVariable, "v_*y*z>x".asFormula)(1))
+    result.subgoals(0) shouldBe "x>y, y>0, z>1, a<2 ==> \\exists v_ v_*y*z>x".asSequent
+    result.subgoals(1) shouldBe "v_<=0, v_*y*z>x, y>0, z>1, a<2 ==> x < 0".asSequent
+    result.subgoals(2) shouldBe "v_>0, v_*y*z>x, y>0, z>1, a<2 ==> <x:=x-y*z;>(v_-1)*y*z>x".asSequent
+  }
+
+  it should "wipe all context for games" in {
+    val result = proveBy("x>y, y>0 ==> <{{x:=x-y; ++ x:=-3;}^@}*>x<0".asSequent, DLBySubst.con("v_".asVariable, "v_*y>x".asFormula)(1))
+    result.subgoals(0) shouldBe "x>y, y>0 ==> \\exists v_ v_*y>x".asSequent
+    result.subgoals(1) shouldBe "\\exists v_ (v_<=0 & v_*y>x) ==> x < 0".asSequent
+    result.subgoals(2) shouldBe "v_>0, v_*y>x ==> <{x:=x-y; ++ x:=-3;}^@>(v_-1)*y>x".asSequent
   }
 
   "Loop" should "work with abstract invariant" in {
@@ -595,7 +630,8 @@ class DLTests extends TacticTestBase {
     val tactic = implyR('R) & loop("x>0".asFormula)('R)
 
     val proofId = db.createProof(model)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter))
 
     val BelleProvable(result, _) = interpreter(tactic, BelleProvable(ProvableSig.startProof(fml)))
     result.subgoals.size shouldBe 3

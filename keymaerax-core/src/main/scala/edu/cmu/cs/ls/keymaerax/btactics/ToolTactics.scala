@@ -14,7 +14,6 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.Tool
 
-import scala.language.postfixOps
 import scala.math.Ordering.Implicits._
 import scala.collection.immutable._
 
@@ -33,15 +32,15 @@ private object ToolTactics {
     val prepareAndRcf = toSingleFormula & assertT(_.succ.head.isFOL, "QE on FOL only") &
       FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool) &
       (done | ("ANON" by ((s: Sequent) =>
-        if (s.succ.head == False) label("QE CEX")
+        if (s.succ.head == False) label(BelleLabels.QECEX)
         else DebuggingTactics.done("QE was unable to prove: invalid formula")))
         )
 
     QELogger.getLogTactic &
     (done | //@note don't fail QE if already proved
-      ((alphaRule*) &
+      (SaturateTactic(alphaRule) &
         (close |
-          ((EqualityTactics.atomExhaustiveEqL2R('L)*) &
+          (SaturateTactic(EqualityTactics.atomExhaustiveEqL2R('L)) &
             hidePredicates &
             (prepareAndRcf | EqualityTactics.expandAll & prepareAndRcf)
           )
@@ -142,13 +141,13 @@ private object ToolTactics {
     Idioms.NamedTactic("ordered QE",
       //      DebuggingTactics.recordQECall() &
       done | //@note don't fail QE if already proved
-        ((alphaRule*) &
+        (SaturateTactic(alphaRule) &
         (close |
-          ((EqualityTactics.atomExhaustiveEqL2R('L)*) &
+          (SaturateTactic(EqualityTactics.atomExhaustiveEqL2R('L)) &
           hidePredicates &
           toSingleFormula & orderedClosure(po) & rcf(qeTool) &
             (done | ("ANON" by ((s: Sequent) =>
-              if (s.succ.head == False) label("QE CEX")
+              if (s.succ.head == False) label(BelleLabels.QECEX)
               else DebuggingTactics.done("QE was unable to prove: invalid formula")))
               ))))
     )}
@@ -215,7 +214,12 @@ private object ToolTactics {
           })) skip
           else transform(expandTo)(pos)
         } catch {
-          case _: UnificationException => transform(expandTo)(pos)
+          case ex: UnificationException =>
+            //@note looks for specific transform position until we have better formula diff
+            FormulaTools.posOf(e, ex.e2.asExpr) match {
+              case Some(pp) => transform(ex.e1.asExpr)(pos.topLevel ++ pp) | transform(expandTo)(pos)
+              case _ => transform(expandTo)(pos)
+            }
         }
     })
 

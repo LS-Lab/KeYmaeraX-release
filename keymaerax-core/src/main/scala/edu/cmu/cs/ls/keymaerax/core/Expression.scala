@@ -169,7 +169,7 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   * @note Not soundness-critical, merely speeds up matching in [[SubstitutionPair.freeVars]]. */
 sealed trait StateDependent extends Expression
 
-/** Expressions limited to a given state-space.
+/** Expressions limited to a given sub state-space.
   * @since 4.2 */
 sealed trait SpaceDependent extends StateDependent {
   /** The space that this expression lives on. */
@@ -348,7 +348,10 @@ case class Power(left: Term, right: Term) extends RBinaryCompositeTerm { def rea
 /** ' differential of a term */
 case class Differential(child: Term) extends RUnaryCompositeTerm { def reapply = copy }
 
-/** Pairs (left,right) for binary Function and FuncOf and PredOf */
+/** Pairs (left,right) for binary Function and FuncOf and PredOf.
+  * @note By convention, pairs are usually used in right-associative ways.
+  *       That is, n-ary argument terms (t1,t2,t3,...tn) are represented as (t1,(t2,(t3,...tn))).
+  *       This is not a strict requirement, but the default parse. */
 case class Pair(left: Term, right: Term) extends BinaryCompositeTerm {
   def reapply = copy
   final val sort: Sort = Tuple(left.sort, right.sort)
@@ -585,13 +588,16 @@ sealed trait Program extends Expression {
 /** Atomic programs */
 sealed trait AtomicProgram extends Program with Atomic
 
-/** Uninterpreted program constant */
-sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProgram with StateDependent {
-  final val index: Option[Int] = None
+/** Uninterpreted program constant / game symbol, limited to the given state space.
+  * The semantics of ProgramConst symbol is looked up by the state,
+  * with the additional promise that taboo is neither free nor bound, so the run does
+  * not depend on the value of taboo nor does the value of taboo change when space=Except(taboo). */
+sealed case class ProgramConst(name: String, space: Space = AnyArg) extends NamedSymbol with AtomicProgram with SpaceDependent {
+  override def asString: String = if (space == AnyArg) super.asString else super.asString + "{" + space + "}"
   namingConvention
 }
 
-/** Uninterpreted hybrid system program constant that are not hybrid games. */
+/** Uninterpreted hybrid system program constant that are NOT hybrid games. */
 sealed case class SystemConst(name: String) extends NamedSymbol with AtomicProgram with StateDependent {
   final val index: Option[Int] = None
   override def toString: String = name + "{|^@|}"
@@ -645,7 +651,9 @@ case class Loop(child: Program) extends UnaryCompositeProgram { def reapply = co
 case class Dual(child: Program) extends UnaryCompositeProgram { def reapply = copy }
 
 /** Differential equation system ode with given evolution domain constraint */
-case class ODESystem(ode: DifferentialProgram, constraint: Formula = True) extends Program
+case class ODESystem(ode: DifferentialProgram, constraint: Formula = True) extends Program {
+  insist(!StaticSemantics.isDifferential(constraint), "No differentials in evolution domain constraints {" + ode + " & " + constraint + "}")
+}
 
 
 

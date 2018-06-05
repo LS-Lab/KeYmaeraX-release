@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleProvable, BelleThrowable, SequentialInterpreter, SpoonFeedingInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
@@ -62,7 +62,7 @@ class QETests extends TacticTestBase {
 
   it should "fail x()=x" in withMathematica { qeTool =>
     the [BelleThrowable] thrownBy proveBy("x()=x".asFormula, ToolTactics.fullQE(qeTool) & done) should have message
-      """[Bellerophon Runtime] Expected proved provable, but got NoProofTermProvable(Provable(  ==>  x()=x
+      """[Bellerophon Runtime] Expected proved provable, but got ElidingProvable(Provable(  ==>  x()=x
         |  from     ==>  false))""".stripMargin
   }
 
@@ -110,7 +110,8 @@ class QETests extends TacticTestBase {
     ToolProvider.setProvider(provider)
     val modelContent = "Variables. R x. End. Problem. x>0 -> x>=0&\\exists s x*s^2>0 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter))
     interpreter(BelleParser("implyR(1); andR(1); <(QE({`Z3`}), QE({`Mathematica`}))"),
       BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("implyR(1); andR(1); <(QE({`Z3`}), QE({`Mathematica`}))")
@@ -122,7 +123,8 @@ class QETests extends TacticTestBase {
     ToolProvider.setProvider(provider)
     val modelContent = "Variables. R x. End. Problem. x>0 -> x>=0&x>=-1 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter))
     interpreter(BelleParser("implyR(1); andR(1); <(QE, QE)"),
       BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("implyR(1); andR(1); <(QE, QE)")
@@ -138,7 +140,8 @@ class QETests extends TacticTestBase {
   "QE with timeout" should "reset timeout when done" in withDatabase{ db => withQE { _ =>
     val modelContent = "Variables. R x. End. Problem. x>1 -> x>0 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter))
     interpreter(QE(Nil, None, Some(7)), BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("QE({`7`})")
   }}
@@ -146,7 +149,8 @@ class QETests extends TacticTestBase {
   it should "omit timeout reset when no timeout" in withDatabase{ db => withQE { _ =>
     val modelContent = "Variables. R x. End. Problem. x>1 -> x>0 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter))
     interpreter(QE, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser("QE")
   }}
@@ -154,7 +158,8 @@ class QETests extends TacticTestBase {
   it should "use the right tool" in withDatabase{ db => withQE { case tool: Tool =>
     val modelContent = "Variables. R x. End. Problem. x>1 -> x>0 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter))
     interpreter(QE(Nil, Some(tool.name), Some(7)), BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
     db.extractTactic(proofId) shouldBe BelleParser(s"QE({`${tool.name}`}, {`7`})")
   }}
@@ -162,7 +167,8 @@ class QETests extends TacticTestBase {
   it should "complain about the wrong tool" in withDatabase{ db => withZ3 { _ =>
     val modelContent = "Variables. R x. End. Problem. x>1 -> x>0 End."
     val proofId = db.createProof(modelContent)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db), SequentialInterpreter))
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter))
     the [BelleThrowable] thrownBy interpreter(QE(Nil, Some("Mathematica"), Some(7)),
       BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent)))) should have message "[Bellerophon Runtime] QE requires Mathematica, but got None"
   }}

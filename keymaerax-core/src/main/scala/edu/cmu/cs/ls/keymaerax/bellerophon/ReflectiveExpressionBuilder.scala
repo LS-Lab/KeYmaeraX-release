@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, Generator, TactixLibrary, TypedFunc}
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser.Declaration
 import org.apache.logging.log4j.scala.Logging
@@ -22,7 +22,7 @@ object ReflectiveExpressionBuilder extends Logging {
           case Some(theGenerator) => info.belleExpr.asInstanceOf[Generator.Generator[Expression] => Any](theGenerator)
           case None =>
             logger.debug(s"Need a generator for tactic ${info.codeName} but none was provided; switching to default.")
-            info.belleExpr.asInstanceOf[Generator.Generator[Formula] => Any](TactixLibrary.invGenerator)
+            info.belleExpr.asInstanceOf[Generator.Generator[Formula] => Any](InvariantGenerator.defaultInvariantGenerator)
         }
       } else {
         info.belleExpr

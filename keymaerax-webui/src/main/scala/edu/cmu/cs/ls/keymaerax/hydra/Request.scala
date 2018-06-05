@@ -30,7 +30,7 @@ import java.util.{Calendar, Locale}
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
-import edu.cmu.cs.ls.keymaerax.pt.{NoProofTermProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 
 import scala.io.Source
 import scala.collection.immutable._
@@ -1348,7 +1348,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val (localProvable, parentStep, parentRule) = (node.localProvable, node.children.head.maker.get, node.children.head.makerShortName.get)
         val localProofId = db.createProof(localProvable)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof,
-          RequestHelper.listenerFactory(db), SequentialInterpreter, 1, strict=false)
+          RequestHelper.listenerFactory(db), ExhaustiveSequentialInterpreter, 1, strict=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(localProvable))
         innerInterpreter.kill()
@@ -1668,7 +1668,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 
             def interpreter(proofId: Int, startNodeId: Int) = new Interpreter {
               val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof, RequestHelper.listenerFactory(db),
-                SequentialInterpreter, 0, strict = false)
+                ExhaustiveSequentialInterpreter, 0, strict = false)
 
               override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
                 inner(expr, v)
@@ -1684,6 +1684,8 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               }
 
               override def kill(): Unit = inner.kill()
+              override def isDead: Boolean = inner.isDead
+              override def listeners: Seq[IOListener] = inner.listeners
             }
 
             if (stepwise) {
@@ -1705,7 +1707,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
               }
             } else {
               //@note execute clicked single-step tactics on sequential interpreter right away
-              val taskId = node.runTactic(userId, SequentialInterpreter, appliedExpr, ruleName)
+              val taskId = node.runTactic(userId, ExhaustiveSequentialInterpreter, appliedExpr, ruleName)
               RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
             }
           } catch {
@@ -1738,7 +1740,7 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
             //@note if spoonfeeding interpreter fails, try sequential interpreter so that tactics at least proofcheck
             //      even if browsing then shows a single step only
             val tree: ProofTree = DbProofTree(db, proofId)
-            val taskId = tree.root.runTactic(userId, SequentialInterpreter, tactic, "custom")
+            val taskId = tree.root.runTactic(userId, ExhaustiveSequentialInterpreter, tactic, "custom")
             RunBelleTermResponse(proofId, "()", taskId) :: Nil
         }
     }
@@ -2081,7 +2083,7 @@ object ProofValidationRunner extends Logging {
     new Thread(new Runnable() {
       override def run(): Unit = {
         logger.trace(s"Received request to validate $taskId. Running in separate thread.")
-        val provable = NoProofTermProvable( Provable.startProof(model) )
+        val provable = ElidingProvable( Provable.startProof(model) )
 
         try {
           BelleInterpreter(proof, BelleProvable(provable)) match {
@@ -2153,12 +2155,6 @@ object RequestHelper {
   def jsonDisplayInfoComponents(di: DerivationInfo): JsValue = {
     val keyPos = AxiomIndex.axiomIndex(di.canonicalName)._1
 
-    def prettyPrint(s: String): String = {
-      val p = """([a-zA-Z]+)\(\|\|\)""".r("name")
-      val pretty = p.replaceAllIn(s.replaceAll("_", ""), _.group("name").toUpperCase).replaceAll("""\(\|\|\)""", "")
-      UIKeYmaeraXPrettyPrinter.htmlEncode(pretty)
-    }
-
     //@todo need more verbose axiom info
     ProvableInfo.locate(di.canonicalName) match {
       case Some(i) =>
@@ -2170,11 +2166,11 @@ object RequestHelper {
           case f => (None, OpSpec.op(Equiv(f, True)).opcode, f, "0", True, "1")
         }
         JsObject(
-          "cond" -> (if (cond.isDefined) JsString(prettyPrint(cond.get.prettyString)) else JsNull),
-          "op" -> (if (op.nonEmpty) JsString(prettyPrint(op)) else JsNull),
-          "key" -> JsString(prettyPrint(key.prettyString)),
+          "cond" -> (if (cond.isDefined) JsString(UIKeYmaeraXAxiomPrettyPrinter.pp(cond.get)) else JsNull),
+          "op" -> (if (op.nonEmpty) JsString(UIKeYmaeraXAxiomPrettyPrinter.pp.htmlEncode(op)) else JsNull),
+          "key" -> JsString(UIKeYmaeraXAxiomPrettyPrinter.pp(key)),
           "keyPos" -> JsString(keyPosString),
-          "conclusion" -> JsString(prettyPrint(conclusion.prettyString)),
+          "conclusion" -> JsString(UIKeYmaeraXAxiomPrettyPrinter.pp(conclusion)),
           "conclusionPos" -> JsString(conclusionPos)
         )
       case None => JsNull

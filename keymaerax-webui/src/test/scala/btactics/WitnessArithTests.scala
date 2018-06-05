@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.ParseException
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.{IsabelleConverter, PTProvable}
+import edu.cmu.cs.ls.keymaerax.pt.{IsabelleConverter, TermProvable$}
 
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer

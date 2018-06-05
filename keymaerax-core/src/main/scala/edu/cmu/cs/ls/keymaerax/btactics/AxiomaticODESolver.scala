@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.pt.NoProofTermProvable
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ElidingProvable$}
 
 import scala.collection.immutable._
 
@@ -156,7 +156,7 @@ object AxiomaticODESolver {
       simplifyPostCondition(osize)(odePosAfterInitialVals ++ PosInExpr(1 :: Nil)) &
       DebuggingTactics.debug("AFTER simplifying post-condition", ODE_DEBUGGER) &
       //@todo box ODE in succedent: could shortcut with diffWeaken (but user-definable if used or not)
-      (inverseDiffCut(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)).* &
+      SaturateTactic(inverseDiffCut(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)) &
       DebuggingTactics.debug("AFTER all inverse diff cuts", ODE_DEBUGGER) &
       simplifier(odePosAfterInitialVals ++ PosInExpr(0 :: 1 :: Nil)) &
       DebuggingTactics.debug("AFTER simplifying evolution domain 2", ODE_DEBUGGER) &
@@ -339,7 +339,7 @@ object AxiomaticODESolver {
         }
       })._3
     // The above gives us a chain of equivalences on ODES: piece the chain together.
-    insts.map(pr => HilbertCalculus.useAt(NoProofTermProvable(pr), PosInExpr(0::Nil))(pos)).foldLeft(TactixLibrary.nil)((acc,e) => e & acc)// & HilbertCalculus.byUS("<-> reflexive")
+    insts.map(pr => HilbertCalculus.useAt(ElidingProvable(pr), PosInExpr(0::Nil))(pos)).foldLeft(TactixLibrary.nil)((acc, e) => e & acc)// & HilbertCalculus.byUS("<-> reflexive")
   }
 
   /* Produces a tactic that permutes ODE into canonical ordering or a tacatic that errors if ode contains cycles */

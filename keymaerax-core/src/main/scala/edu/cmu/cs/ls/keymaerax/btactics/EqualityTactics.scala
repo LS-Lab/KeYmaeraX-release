@@ -10,7 +10,6 @@ import Augmentors._
 import StaticSemanticsTools._
 
 import scala.collection.immutable._
-import scala.language.postfixOps
 
 /**
  * Implementation: Tactics to rewrite equalities and introduce abbreviations.

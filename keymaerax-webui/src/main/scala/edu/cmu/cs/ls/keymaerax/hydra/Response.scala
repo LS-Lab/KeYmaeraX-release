@@ -390,7 +390,7 @@ class ProofVerificationResponse(proofId: String, provable: ProvableSig, tactic: 
   override def getJson = JsObject(
     "proofId" -> JsString(proofId),
     "isProved" -> JsBoolean(provable.isProved),
-    "provable" -> JsString(provable.toString),
+    "provable" -> JsString(provable.underlyingProvable.toString),
     "tactic" -> JsString(tactic))
 }
 

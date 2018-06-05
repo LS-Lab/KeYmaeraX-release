@@ -8,9 +8,10 @@
   * @note Soundness-critical: Only adopt sound axioms and sound axiomatic rules.
   * @author Andre Platzer
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
-  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
+  * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015.
   * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
-  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
+  * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
   * @note Code Review: 2016-08-17
   */
 package edu.cmu.cs.ls.keymaerax.core
@@ -25,11 +26,12 @@ import org.apache.logging.log4j.scala.Logging
 /**
   * The data base of axioms and axiomatic rules of KeYmaera X as resulting from differential dynamic logic axiomatizations.
   * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
-  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015."
-  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+  * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015.
   * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
-  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
+  * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
   * @author Andre Platzer
+  * @author Yong Kiam Tan
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]]]]
   */
@@ -39,8 +41,9 @@ private[core] object AxiomBase extends Logging {
     * @note Soundness-critical: Only return locally sound proof rules.
     * @return immutable list of locally sound axiomatic proof rules (premise, conclusion)
     * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
-    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+    * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]]. In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. arXiv 1503.01981, 2015.
     * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+    * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
     * @author Andre Platzer
     */
   private[core] def loadAxiomaticRules : immutable.Map[String, (immutable.IndexedSeq[Sequent], Sequent)] = {
@@ -53,7 +56,7 @@ private[core] object AxiomBase extends Logging {
     val context = Function("ctx_", None, Bool, Bool) // predicational symbol
     val a = ProgramConst("a_")
     val sys = SystemConst("a_")
-    val v = Variable("v_", None, Real)
+    val x = Variable("x_", None, Real)
     val Jany = UnitPredicational("J", AnyArg)
     Map(
       /**
@@ -110,21 +113,19 @@ private[core] object AxiomBase extends Logging {
           Sequent(immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany))))),
       /**
         * Rule "con convergence".
-        * Premisses: v > 0, J(||) |- <a{|v|}><v:=v-1;> J(||)
-        *            v <= 0, J(||) |- P
-        * Conclusion  J(||) |- <a{|v|}*>J(||)
+        * Premise: x > 0, J(||) |- <a{|x|}><x:=x-1;> J(||)
+        * Conclusion:  J(||) |- <a{|x|}*>\exists x (x<=0 & J(||))
         * {{{
-        *     v > 0, J(v) |- <a{|v|}>J(v-1)  v <= 0, J(v) |- P
-        *    -------------------------------------- con
-        *     J(v) |- <a{|v|}*>P
+        *     x > 0, J(x) |- <a{|x|}>J(x-1)
+        *    ---------------------------------------------------- con
+        *     J(x) |- <a{|x|}*>\exists x (x<=0 & J(x))
         * }}}
-        * @todo Bugfix soundness by telling a to be SpaceDependent Except(v)
+        * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
         */
       ("con convergence",
         (immutable.IndexedSeq(
-            Sequent(immutable.IndexedSeq(Greater(v, Number(0)),Jany), immutable.IndexedSeq(Diamond(a, Diamond(Assign(v,Minus(v,Number(1))),Jany)))),
-            Sequent(immutable.IndexedSeq(LessEqual(v, Number(0)), Jany), immutable.IndexedSeq(pany))),
-          Sequent(immutable.IndexedSeq(Jany), immutable.IndexedSeq(Diamond(Loop(a), pany)))))
+            Sequent(immutable.IndexedSeq(Greater(x,Number(0)),Jany), immutable.IndexedSeq(Diamond(ProgramConst("a_", Except(x)), Diamond(Assign(x,Minus(x,Number(1))),Jany))))),
+          Sequent(immutable.IndexedSeq(Jany), immutable.IndexedSeq(Diamond(Loop(ProgramConst("a_", Except(x))), Exists(immutable.Seq(x), And(LessEqual(x, Number(0)), Jany)))))))
     )
   }
 
@@ -366,17 +367,26 @@ Axiom "DIo open differential invariance >".
   ([{c&q(||)}]f(||)>g(||) <-> [?q(||);]f(||)>g(||)) <- (q(||) -> [{c&q(||)}](f(||)>g(||) -> (f(||)>g(||))'))
 End.
 
-Axiom "DIo open differential invariance >=".
-  ([{c&q(||)}]f(||)>=g(||) <-> [?q(||);]f(||)>=g(||)) <- (q(||) -> [{c&q(||)}](f(||)>=g(||) -> (f(||))'>g(||)'))
-End.
-
 Axiom "DV differential variant >=".
   <{c&true}>f(||)>=g(||) <- \exists e_ (e_>0 & [{c&true}](f(||)<=g(||) -> f(||)'>=g(||)'+e_))
 End.
 
-/** Extended differential equations axioms https://arxiv.org/abs/1802.01226 */
 Axiom "DMP differential modus ponens".
   ([{c&q(||)}]p(||) <- [{c&r(||)}]p(||)) <- [{c&q(||)}](q(||) -> r(||))
+End.
+
+Axiom "Uniq uniqueness".
+  <{c&q1(||)}>p1(||) & <{c&q2(||)}>p2(||) -> <{c&q1(||) & q2(||)}>(p1(||) | p2 (||))
+End.
+
+Axiom "Cont continuous existence".
+  f(||) > 0 -> <{t_'=1,c&f(||)>0}>t_!=0
+End.
+
+Axiom "RI& closed real induction >=".
+  [{c{|t_|}&q(|t_|)}]f(|t_|)>=0 <->
+  (q(|t_|) ->f(|t_|)>=0) &
+  [{{c{|t_|}&q(|t_|) & f(|t_|)>=0};t_:=0;}] (<{t_'=1,c{|t_|}&q(|t_|)}>t_!=0 -> <{t_'=1,c{|t_|}&f(|t_|)>=0}>t_!=0)
 End.
 
 Axiom "c()' derive constant fn".

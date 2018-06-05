@@ -19,7 +19,6 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import org.apache.logging.log4j.scala.Logger
 
 import scala.collection.immutable.{List, _}
-import scala.language.postfixOps
 
 /**
   * Tactix: Main tactic library with simple interface.
@@ -72,21 +71,24 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
      else HilbertCalculus.stepAt(pos))
     | assignb(pos))
 
-  /** Normalize to sequent form */
+  /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to [[orL]], [[implyL]], [[equivL]], [[andR]], and [[equivR]]. */
   lazy val normalize: BelleExpr = "normalize" by normalize(orL, implyL, equivL, andR, equivR)
-  /** Normalize to sequent form, keeping branching factor restricted to `beta` */
+  /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to `beta` rules. */
   def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by tacticChase()(notL::andL::notR::implyR::orR::allR::existsL::step::ProofRuleTactics.closeTrue::ProofRuleTactics.closeFalse::Nil ++ beta:_*)
 
-  /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). */
+  /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). Keeps branching factor of [[tacticChase]] restricted to [[andR]]. */
   val unfoldProgramNormalize: BelleExpr = "unfold" by normalize(andR)
 
-  /** Exhaustively (depth-first) apply tactics from the tactic index, restricted to the tactics in `restrictTo` */
+  /** Exhaustively (depth-first) apply tactics from the tactic index, restricted to the tactics in `restrictTo`, to chase away.
+    * Unlike [[chase]], tacticChase will use propositional proof rules and possibly branch
+    * @see [[chase]] */
   def tacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by ((seq: Sequent) => {
     val restrictions = restrictTo.toList
 
     /** Apply the canonical tactic for the formula at position `pos`; exhaustively depth-first search on resulting other formulas */
-    lazy val atPos: DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
-      s.sub(pos) match {
+    def atPos(except: Option[Position]): DependentPositionTactic = "ANON" by ((pos: Position, s: Sequent) => {
+      if (except.contains(pos)) skip
+      else s.sub(pos) match {
         case Some(fml) if pos.isAnte && s.succ.contains(fml) => close(pos.checkAnte.top, SuccPos(s.succ.indexOf(fml))) & done
         case Some(fml) if pos.isSucc && s.ante.contains(fml) => close(AntePos(s.ante.indexOf(fml)), pos.checkSucc.top) & done
         case Some(fml) =>
@@ -101,9 +103,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     })
 
     /** Apply `atPos` at the specified position, or search for the expected formula if it cannot be found there. */
-    def atOrSearch(p: PositionLocator): BelleExpr = atPos(p) | (p match {
-      case Fixed(pos, Some(fml), exact) if pos.isAnte => atPos(Find.FindL(0, Some(fml), exact=exact)) | skip
-      case Fixed(pos, Some(fml), exact) if pos.isSucc => atPos(Find.FindR(0, Some(fml), exact=exact)) | skip
+    def atOrSearch(p: PositionLocator): BelleExpr = atPos(None)(p) | (p match {
+      case Fixed(pos, Some(fml), exact) if pos.isAnte => atPos(Some(pos))(Find.FindL(0, Some(fml), exact=exact)) | skip
+      case Fixed(pos, Some(fml), exact) if pos.isSucc => atPos(Some(pos))(Find.FindR(0, Some(fml), exact=exact)) | skip
       case _ => skip
     })
 
@@ -116,19 +118,23 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     def applyRecursor(rec: TacticIndex.Branches): BelleExpr = rec match {
       case Nil => skip
       case r::Nil => onAll(applyBranchRecursor(r))
-      case r => BranchTactic(r.map(applyBranchRecursor))
+      case r => DebuggingTactics.assertProvableSize(r.length) & BranchTactic(r.map(applyBranchRecursor))
     }
 
     /** Execute `t` at pos, read tactic recursors and schedule followup tactics. */
     def applyAndRecurse(t: AtPosition[_ <: BelleExpr], pos: Position, s: Sequent): BelleExpr = {
       val recursors = tacticIndex.tacticRecursors(t)
-      if (recursors.nonEmpty) t(new Fixed(pos)) & recursors.map(r => applyRecursor(r(s, pos.top))).reduce(_&_)
+      if (recursors.nonEmpty) t(new Fixed(pos)) & (done | recursors.map(r =>
+        DebuggingTactics.assertOnAll(_ != s ||
+          //@note allow recursing on subposition after no-op steps that supply recursors
+          r(s, pos).exists(_.exists({ case Fixed(pp, _, _) => !pp.isTopLevel case _ => false })), "Stopping to recurse on unchanged sequent") &
+        applyRecursor(r(s, pos))).reduce(_&_))
       else t(new Fixed(pos))
     }
 
     //@note Execute on formulas in order of sequent; might be useful to sort according to some tactic priority.
-    seq.ante.zipWithIndex.map({ case (fml, i) => onAll(atPos(AntePosition.base0(i), fml) | atPos('L, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip) &
-    seq.succ.zipWithIndex.map({ case (fml, i) => onAll(atPos(SuccPosition.base0(i), fml) | atPos('R, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+    seq.ante.zipWithIndex.map({ case (fml, i) => onAll(atPos(None)(AntePosition.base0(i), fml) | atPos(Some(AntePosition.base0(i)))('L, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip) &
+    seq.succ.zipWithIndex.map({ case (fml, i) => onAll(atPos(None)(SuccPosition.base0(i), fml) | atPos(Some(SuccPosition.base0(i)))('R, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
   })
 
   val prop: BelleExpr = "prop" by tacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
@@ -137,44 +143,46 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Master/auto implementation with tactic `loop` for nondeterministic repetition and `odeR` for
     * differential equations in the succedent.
     * `keepQEFalse` indicates whether or not QE results "false" at the proof leaves should be kept or undone. */
-  private def master(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr],
-                     keepQEFalse: Boolean): BelleExpr = "ANON" by {
+  def master(loop: AtPosition[_ <: BelleExpr], odeR: AtPosition[_ <: BelleExpr],
+             keepQEFalse: Boolean): BelleExpr = "ANON" by {
     /** Create a tactic index that hands out loop tactics and configurable ODE tactics. */
     val createAutoTacticIndex = new DefaultTacticIndex {
       override def tacticRecursors(tactic: BelleExpr): TacticRecursors =
         if (tactic == loop) {
           //@todo positions? what to expect there?
-          ((_: Sequent, p: SeqPos) => (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: Nil) :: Nil
+          ((_: Sequent, p: Position) => (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: (new Fixed(p) :: Nil) :: Nil) :: Nil
         } else if (tactic == odeR) {
-          ((_: Sequent, p: SeqPos) => (new Fixed(p)::Nil)::Nil) :: Nil
+          ((_: Sequent, p: Position) => (new Fixed(p)::Nil)::Nil) :: Nil
         } else super.tacticRecursors(tactic)
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
-        case Box(a, _) if a.isInstanceOf[Loop] => (Nil, loop::Nil)
-        case Box(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.solve::Nil, odeR::Nil)
+        case Box(_: Loop, _) => (Nil, loop::Nil)
+        case Box(_: ODESystem, _) => (TactixLibrary.solve::Nil, odeR::Nil)
         case _ => super.tacticsFor(expr)
       }
     }
 
     OnAll(close |
-      (OnAll(tacticChase(createAutoTacticIndex)(notL, andL, notR, implyR, orR, allR, existsL, step, orL, implyL, equivL,
-        ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-        andR, equivR, loop, odeR, solve))*) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
-        OnAll((exhaustiveEqL2R('L)*) & ?(QE & (if (keepQEFalse) nil else done))))
+      SaturateTactic(OnAll(tacticChase(createAutoTacticIndex)(notL, andL, notR, implyR, orR, allR,
+        TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
+        implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
+        andR, equivR, loop, odeR, solve))) & DebuggingTactics.print("master chase done") & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
+        OnAll(SaturateTactic(exhaustiveEqL2R('L)) & ?(QE & (if (keepQEFalse) nil else done))))
   }
 
   /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
     * result `false` of a QE step at the leaves is kept or undone (i.e., reverted to the QE input sequent).
     * @see [[auto]] */
-  def master(gen: Generator[Formula] = invGenerator, keepQEFalse: Boolean=true): BelleExpr = "master" by {
-    def endODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) =>{
+  def master(gen: Generator[Formula] = InvariantGenerator.defaultInvariantGenerator,
+             keepQEFalse: Boolean=true): BelleExpr = "master" by {
+    def endODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
       ODE(pos) & ?(allR(pos) & implyR(pos)*2 & allL(Variable("s_"), Variable("t_"))('Llast) & auto & done)
     })
-    master(loop(gen), endODE, keepQEFalse)
+    master(loopauto(gen), endODE, keepQEFalse)
   }
 
   /** auto: automatically try hard to prove the current goal if that succeeds.
     * @see [[master]] */
-  def auto: BelleExpr = "auto" by master(loopauto, ODE, keepQEFalse=true) & done
+  def auto: BelleExpr = "auto" by master(loopauto(InvariantGenerator.loopInvariantGenerator), ODE, keepQEFalse=true) & done
 
   /*******************************************************************
     * unification and matching based auto-tactics
@@ -190,12 +198,19 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   // conditional tactics
 
-  /** Call/label the current proof branch s
-   *
-   * @see [[Idioms.<()]]
-   * @see [[sublabel()]]
-   */
-  def label(s: String): BelleExpr = LabelBranch(BelleTopLevelLabel(s))
+  /** Call/label the current proof branch by the given label s.
+    * @see [[Idioms.<()]]
+    * @see [[sublabel()]]
+    * @see [[BelleLabels]]
+    */
+  def label(s: BelleLabel): BelleExpr = LabelBranch(s)
+
+  /** Call/label the current proof branch by the top-level label s.
+    *
+    * @see [[Idioms.<()]]
+    * @see [[sublabel()]]
+    */
+  def label(s: String): BelleExpr = label(BelleTopLevelLabel(s))
 
   /** Mark the current proof branch and all subbranches s
     *
@@ -251,7 +266,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         require(pos.isTopLevel, "with abstraction only at top-level")
         sequent(pos.checkTop) match {
           case Box(a, p) =>
-            t(pos) & abstractionb(pos) & (if (pos.isSucc) (allR(pos)*) partial else skip)
+            t(pos) & abstractionb(pos) & (if (pos.isSucc) SaturateTactic(allR(pos)) partial else skip)
           case Diamond(a, p) if pos.isAnte => ???
         }
       }
@@ -291,58 +306,60 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[loop(Formula)]] */
   def loop(gen: Generator[Formula]): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = loop(nextOrElse(gen(sequent, pos),
+      override def computeExpr(sequent: Sequent): BelleExpr = loop(nextOrElse(gen(sequent, pos).iterator,
         throw new BelleThrowable("Unable to generate an invariant for " + sequent(pos.checkTop) + " at position " + pos)))(pos)
       private def nextOrElse[A](it: Iterator[A], otherwise: => A) = if (it.hasNext) it.next else otherwise
     }
   }
   /** loop: prove a property of a loop automatically by induction, trying hard to generate loop invariants.
     * @see [[loop(Formula)]] */
-  def loopauto: DependentPositionTactic = "loopauto" by ((pos:Position,seq:Sequent) =>
-    ChooseSome(
-      () => try { InvariantGenerator.loopInvariantGenerator(seq,pos) } catch {
-        case err: Exception =>
-          logger.debug("ChooseSome: error listing options " + err, err)
-          List[Formula]().iterator
-      },
-      (inv:Formula) => loop(inv)(pos) & onAll(auto) & done
-    )
-    )
+  def loopauto(gen: Generator[Formula] = InvariantGenerator.loopInvariantGenerator): DependentPositionTactic =
+      "loopauto" by ((pos: Position, seq: Sequent) => {
+    //@hack invGenerator collects invariant annotation during parsing; prefer those over the ones generated by gen
+    (invGenerator, seq.sub(pos)) match {
+      case (cgen: ConfigurableGenerator[Formula], Some(Box(prg@Loop(_), _))) if cgen.products.contains(prg) =>
+        logger.debug("LoopAuto uses loop with annotated invariant")
+        //@note bypass all other invariant generators except the annotated invariants, pass on to loop
+        ChooseSome(
+          () => try {
+            invGenerator(seq, pos).iterator
+          } catch {
+            case err: Exception =>
+              logger.warn("ChooseSome: error listing options " + err, err)
+              List[Formula]().iterator
+          },
+          (inv: Formula) => loop(inv)(pos) & onAll(auto) & done
+        )
+      case _ =>
+        logger.debug("LoopAuto with loopPostMaster for typical hybrid models plus fallback invariant generator")
+        loopPostMaster(gen)(pos) & done |
+          ChooseSome(
+            () => try {
+              gen(seq, pos).iterator
+            } catch {
+              case err: Exception =>
+                logger.warn("ChooseSome: error listing options " + err, err)
+                List[Formula]().iterator
+            },
+            (inv: Formula) => loop(inv)(pos) & onAll(auto) & done
+          )
+    }
+  })
 
   /** loopSR: cleverly prove a property of a loop automatically by induction, trying hard to generate loop invariants.
     * Uses [[SearchAndRescueAgain]] to avoid repetitive proving.
     * @see [[loopauto]]
     * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     *      Example 32. */
-  def loopSR(gen: Generator[Formula]): DependentPositionTactic = "loopSR" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
-    case loopfml@Box(prog, post) =>
-      val cand: Iterator[Formula] = gen(seq, pos)
-      val bounds: List[Variable] =
-        if (StaticSemantics.freeVars(post).toSet.exists( v => v.isInstanceOf[DifferentialSymbol] ) )
-          StaticSemantics.boundVars(loopfml).toSet.toList
-        else DependencyAnalysis.dependencies(prog, DependencyAnalysis.freeVars(post))._1.toList
-      var i = -1
-      val subst: USubst = if (bounds.length==1)
-        USubst(Seq(SubstitutionPair(DotTerm(), bounds.head)))
-      else
-        USubst(bounds.map(xi=> {i=i+1; SubstitutionPair(DotTerm(Real,Some(i)), xi)}))
-      val jj: Formula = KeYmaeraXParser.formulaParser("jjl(" + subst.subsDefsInput.map(sp=>sp.what.prettyString).mkString(",") + ")")
-      SearchAndRescueAgain(jj,
-        loop(subst(jj))(1) < (nil, nil, chase(1)),
-        feedOneAfterTheOther(cand),
-        //@todo switch to quickstop mode
-        OnAll(master()) & done
-      )
-    case e => throw new BelleThrowable("Wrong shape to generate an invariant for " + e + " at position " + pos)
-  })
-
-  private def feedOneAfterTheOther[A<:Expression](gen: Iterator[A]) : (ProvableSig,ProverException)=>Expression = {
-    (_,e) => logger.debug("SnR loop status " + e)
-      if (gen.hasNext)
-        gen.next()
-      else
-        throw new BelleThrowable("loopSR ran out of loop invariant candidates")
-  }
+  def loopSR(gen: Generator[Formula]): DependentPositionTactic = InvariantProvers.loopSR(gen)
+  /** loopPostMaster: search-and-rescue style automatic loop induction based on successive generator gen.
+    * Uses [[SearchAndRescueAgain]] to avoid repetitive proving.
+    * Present implementation needs differential equations to occur somewhere within the loop.
+    * @author Andre Platzer
+    * @author Stefan Mitsch
+    * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+    *      Example 32. */
+  def loopPostMaster(gen: Generator[Formula]): DependentPositionTactic = InvariantProvers.loopPostMaster(gen)
 
   /** throughout: prove a property of a loop by induction with the given loop invariant (hybrid systems) that
     * holds throughout the steps of the loop body.
@@ -358,6 +375,20 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     */
   def throughout(invariant: Formula): DependentPositionTactic = DLBySubst.throughout(invariant)
 
+  /**
+    * Loop convergence: prove a diamond property of a loop by induction with a variant for progress.
+    * {{{
+    *   init:                       use:                         step:
+    *   G |- exists v. J(v), D    v<=0, J(v), consts |- p    v>0, J(v), consts |- <a>J(v-1)
+    *   --------------------------------------------------------------------------------------------
+    *   G |- <{a}*>p, D
+    * }}}
+    * @param variant The variant property or convergence property in terms of new variable `v`.
+    * @example The variant J(v) ~> (v = z) is specified as v=="v".asVariable, variant == "v = z".asFormula
+    */
+  def con(v: Variable, variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = DLBySubst.con(v, variant, pre)
+
+
   // differential equations
 
   /** ODE: try to prove a property of a differential equation automatically.
@@ -370,7 +401,31 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[openDiffInd]]
     * @see [[dG]]
     */
-  lazy val ODE: DependentPositionTactic = DifferentialTactics.ODE
+  lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position) => {
+    if (ToolProvider.qeTool(Some("Mathematica")).isDefined) DifferentialTactics.fastODE(pos)
+    else DifferentialTactics.ODE(pos)
+  })
+
+  /**
+    * Attempts to prove ODE property as an invariant of the ODE directly [LICS'18]
+    * G |- P    P |- [x'=f(x)&Q]P
+    * ---
+    * G |- [x'=f(x)&Q]P
+    * (Default behavior: fast (but incomplete) version, no solving attempted)
+    **/
+  lazy val odeInvariant: DependentPositionTactic = DifferentialTactics.odeInvariant(false)
+
+  /**
+    * Attemppts to prove ODE property by asking for an automatically generated invariant C from Pegasus, i.e.,
+    *
+    * G |- C  C |- [x'=f(x)&Q]C C |- P
+    * ---
+    * G |- [x'=f(x)&Q]P
+    *
+    * (fast version, no solving attempted)
+    */
+  lazy val odeInvariantAuto: DependentPositionTactic = DifferentialTactics.odeInvariantAuto
+
   /** DG/DA differential ghosts that are generated automatically to prove differential equations.
     *
     * @see [[dG]] */
@@ -417,6 +472,16 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     */
   //@todo("Remove the _* -- anti-pattern for stable tactics. Turn into a List or only allow a single invariant per call.", "4.2")
   def dC(formulas: Formula*)     : DependentPositionTactic = DifferentialTactics.diffCut(formulas:_*)
+
+  /** Refine top-level antecedent/succedent ODE domain constraint
+    * G|- [x'=f(x)&R]P, D     G|- [x'=f(x)&Q]R, (D)?
+    * --- dR
+    * G|- [x'=f(x)&Q]P, D
+    * @param formula the formula R to refine Q to
+    * @param hide whether to keep the extra succedents (D) around (default true), which makes position management easier
+    */
+  def dR(formula: Formula, hide: Boolean=true): DependentPositionTactic = DifferentialTactics.diffRefine(formula,hide)
+
   /** dI: Differential Invariant proves a formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * (uses DI, DW, DE, QE)
     *
@@ -497,7 +562,6 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** DIo: Open Differential Invariant proves an open formula to be an invariant of a differential equation (with the usual steps to prove it invariant)
     * openDiffInd: proves an inequality to be an invariant of a differential equation (by DIo, DW, DE, QE)
     *           For strict inequalities, it uses open diff ind (<,>)
-    *           For non-strict inequalities, it uses open diff ind (<=,>=)
     *
     * @example{{{
     *         *
@@ -622,7 +686,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     //@todo implement as part of tools?
     lazy val tool = ToolProvider.qeTool(requiresTool).getOrElse(
       throw new BelleThrowable(s"QE requires ${requiresTool.getOrElse("a QETool")}, but got None"))
-    val resetTimeout: (BelleExpr => BelleExpr) = timeout match {
+    lazy val resetTimeout: (BelleExpr => BelleExpr) = timeout match {
       case Some(t) => tool match {
         case tom: ToolOperationManagement =>
           val oldTimeout = tom.getOperationTimeout
@@ -651,7 +715,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       }
       case None => tool
     }
-    val tactic = resetTimeout(ToolTactics.fullQE(order)(timeoutTool))
+    lazy val tactic = resetTimeout(ToolTactics.fullQE(order)(timeoutTool))
     (requiresTool, timeout) match {
       case (Some(toolName), Some(t)) => "QE" byWithInputs (Variable(toolName)::Number(t)::Nil, tactic)
       case (Some(toolName), None) => "QE" byWithInputs (Variable(toolName)::Nil, tactic)
@@ -672,7 +736,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @param preQE Tactic to execute before each individual QE call (default: skip).
     * @param qe How to QE
     */
-  def atomicQE(split: BelleExpr = onAll(alphaRule | betaRule)*, preQE: BelleExpr = skip, qe: BelleExpr = QE): BelleExpr =
+  def atomicQE(split: BelleExpr = SaturateTactic(onAll(alphaRule | betaRule)), preQE: BelleExpr = skip, qe: BelleExpr = QE): BelleExpr =
     split & onAll(preQE & qe & done)
   def atomicQE: BelleExpr = atomicQE()
 
@@ -863,6 +927,14 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     case Some((pos,_)) => pos
     case None => throw new IllegalArgumentException("here() locator does not occur in positionOf(" + fml + ")")
   }
+
+  /** ifThenElse(cond,thenT,elseT) runs `thenT` if `cond` holds at position and `elseT` otherwise. */
+  def ifThenElse(cond: (Sequent, Position)=>Boolean, thenT: BelleExpr, elseT: BelleExpr): DependentPositionTactic = "ifThenElse" by ((pos:Position,seq:Sequent) =>
+    if (cond(seq, pos))
+      thenT
+    else
+      elseT
+    )
 
   /**
     * Prove the new goal by the given tactic, returning the resulting Provable

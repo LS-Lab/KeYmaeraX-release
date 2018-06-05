@@ -140,7 +140,7 @@ class RandomReapplyTests extends FlatSpec with Matchers {
     //case DiffAssign(x,t)   => DiffAssign(reapplied(x).asInstanceOf[DifferentialSymbol], reapplied(t))
     case AssignAny(x)      => AssignAny(reapplied(x).asInstanceOf[Variable])
     case Test(f)           => Test(reapplied(f))
-    case ProgramConst(a)   => ProgramConst(a)
+    case ProgramConst(a,s)   => ProgramConst(a,s)
 
     case ODESystem(ode, h) => ODESystem(reapplied(ode).asInstanceOf[DifferentialProgram], reapplied(h))
     case AtomicODE(xp, t)  => AtomicODE(reapplied(xp).asInstanceOf[DifferentialSymbol], reapplied(t))
