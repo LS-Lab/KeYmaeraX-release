@@ -241,7 +241,8 @@ inv=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
 
 (* Return the invariant without strict inequalities - KeYmaera has trouble with mixed formulas *)
 inv=inv/.{Unequal[a_,b_]-> True};
-relaxedInv=Methods`InvS[inv, f, vars, evoConst];
+andinv=Apply[And,inv];
+relaxedInv=Methods`InvS[andinv, f, vars, evoConst];
 If[ TrueQ[relaxedInv], 
 Print["Relaxed invariant is still ok. Proceeding"], 
 Print["Relaxed invariant is no longer invariant. Sorry."];Throw[{{True},False}]];
