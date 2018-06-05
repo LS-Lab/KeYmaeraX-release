@@ -489,7 +489,7 @@ private object DifferentialTactics extends Logging {
     sequent.sub(pos) match {
       case Some(Box(ode@ODESystem(c, h), p)) if !StaticSemantics(ode).bv.contains(y) &&
         !StaticSemantics.symbols(a).contains(y) && !StaticSemantics.symbols(b).contains(y) =>
-                
+
         //SOUNDNESS-CRITICAL: DO NOT ALLOW SINGULARITIES IN GHOSTS.
         //@TODO This is a bit hacky. We should either:
         //  1) try to cut <(nil, dI(1)) NotEqual(v, Number(0)) before doing
@@ -507,12 +507,12 @@ private object DifferentialTactics extends Logging {
             !evDomFmls.contains(Greater(v, Number(0)))  &&
             !evDomFmls.contains(Greater(Number(0), v))  &&
             !evDomFmls.contains(NotEqual(v, Number(0))) &&
-            !evDomFmls.contains(Greater(Number(0), v))  
+            !evDomFmls.contains(Greater(Number(0), v))
           )
         }
 
-        if (!singular.isEmpty) 
-          throw new BelleThrowable("Possible singularities during DG(" + ghost + ") will be rejected: " + 
+        if (!singular.isEmpty)
+          throw new BelleThrowable("Possible singularities during DG(" + ghost + ") will be rejected: " +
             singular.mkString(",") + " in\n" + sequent.prettyString +
             "\nWhen dividing by a variable v, try cutting v!=0 into the evolution domain constraint"
           )
@@ -870,7 +870,7 @@ private object DifferentialTactics extends Logging {
       val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
       val qAtoms = FormulaTools.conjuncts(q).toSet
 
-      odeInvariant()(pos) | solve(pos) | fastODE(
+      solve(pos) | fastODE(
         //@note abort if unchanged
         assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) match {
           case Some(Box(ODESystem(extendedOde, extendedQ), _)) =>
@@ -888,32 +888,13 @@ private object DifferentialTactics extends Logging {
   })
 
   private def fastODE(finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
-    val invariantCandidates = try {
+    lazy val invariantCandidates = try {
       InvariantGenerator.differentialInvariantGenerator(seq,pos)
     } catch {
       case err: Exception =>
         logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
         Stream[Formula]()
     }
-
-    val proveFromEvolutionDomain = "ANON" by ((pos: Position) => {
-      SaturateTactic(boxAnd(pos) & andR(pos)) &
-        onAll(("ANON" by ((pos: Position, seq: Sequent) => {
-          val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
-            case Some(Box(ode: ODESystem, pf)) => (ode, pf)
-            case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
-            case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
-          }
-
-          val bounds = StaticSemantics.boundVars(ode.ode).symbols //@note ordering irrelevant, only intersecting/subsetof
-          val frees = StaticSemantics.freeVars(post).symbols      //@note ordering irrelevant, only intersecting/subsetof
-
-          //@note diffWeaken will already include all cases where V works, without much additional effort.
-          if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
-            diffWeaken(pos) & QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE)))) & done
-          else fail
-        })) (pos))
-    })
 
     //Adds an invariant to the system's evolution domain constraint and tries to establish the invariant via proveWithoutCuts.
     //Fails if the invariant cannot be established by proveWithoutCuts.
@@ -922,17 +903,15 @@ private object DifferentialTactics extends Logging {
       (inv: Formula) => {
         DebuggingTactics.print(s"[ODE] Trying to cut in invariant candidate: $inv") &
           /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
-          diffCut(inv)(pos) <(skip, odeInvariant()(pos) & done)
+          diffCut(inv)(pos) <(skip, DebuggingTactics.print("[ODE] Foo") & odeInvariant()(pos) & DebuggingTactics.print("[ODE] Bar") & done) & DebuggingTactics.print("[ODE] Inv Candidate done")
       }
     )
 
-    //DebuggingTactics.print("prove from evol dom") &
-      proveFromEvolutionDomain(pos) & done |
-    //DebuggingTactics.print("prove by ode inv") &
+//    DebuggingTactics.print("prove by ode inv") &
       odeInvariant()(pos) & done |
-    //DebuggingTactics.print("add & recur") &
+//    DebuggingTactics.print("add & recur") &
       addInvariant & fastODE(finish)(pos) |
-    //DebuggingTactics.print("finish") &
+//    DebuggingTactics.print("finish") &
       finish
   })
 
@@ -985,7 +964,7 @@ private object DifferentialTactics extends Logging {
     //Given a system of the form x'=f(x), this returns (f(x))'/x simplified so that x does not occur on the denom.
     //@note this is done because we can't ghost in something that contains a division by a possibly zero-valued variable (in this case, x).
     val xPrimeDividedByX = TacticHelper.transformMonomials(derivative, (t:Term) => t match {
-      case Times(coeff, Power(v,exp)) if(v == x) => 
+      case Times(coeff, Power(v,exp)) if(v == x) =>
         Times(coeff, Power(v, Minus(exp, Number(1))))
       case Times(coeff, v:Variable) if(v==x) => coeff
       case v:Variable if(v==x) => Number(1)
@@ -1083,6 +1062,8 @@ private object DifferentialTactics extends Logging {
     * Note: this also works for fractional q, if its denominator is already in Q
     * Otherwise, DG will fail on the singularity
     * Note: this assumes that the (in)equalities are normalized to have 0 on the RHS
+    * Rationale: this tactic requires a cofactor input, and so it would be surprising if it normalizes internally
+    * All automation tactics around dgDbx will need to normalize their input
     */
   def dgDbx(qco: Term): DependentPositionWithAppliedInputTactic = "dbx" byWithInput (qco, (pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "dbx only at top-level succedent")
@@ -1225,7 +1206,7 @@ private object DifferentialTactics extends Logging {
       case _ => throw new BelleThrowable(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
     }
 
-    //println(pr,denRemReq,lie,q,p,r)
+    //println(pr,lie,q,p,r)
     if(!pr.isProved && strict)
       throw new BelleThrowable("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+q+" rem: "+r+" unable to prove: "+pr.conclusion)
 
@@ -1392,23 +1373,20 @@ private object DifferentialTactics extends Logging {
     val reorderConfig = tryHard
 
     //Add constant assumptions to domain constraint
-    //DebuggingTactics.print("DConstV") &
+//    DebuggingTactics.print("DConstV") &
     DifferentialTactics.DconstV(pos) &
       //Naive simplification of domain constraint
-      //DebuggingTactics.print("domSimplify") &
+//      DebuggingTactics.print("domSimplify") &
       DifferentialTactics.domSimplify(pos) &
-      //DebuggingTactics.print("close") &
+//      DebuggingTactics.print("close") &
       (
-        //DebuggingTactics.print("try DWQE") &
+//        DebuggingTactics.print("try DWQE") &
           (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
-        //DebuggingTactics.print("try sAI closed plus") &
+//        DebuggingTactics.print("try sAI closed plus") &
           ODEInvariance.sAIclosedPlus(rankConfig)(pos) |
-        //DebuggingTactics.print("try sAIR1") &
+//        DebuggingTactics.print("try sAIR1") &
           ODEInvariance.sAIRankOne(reorderConfig)(pos)
-        //| DebuggingTactics.print("try failed") &
-        //  fail
         )
-      // & DebuggingTactics.print("success")
   })
 
   // Asks Pegasus invariant generator for an invariant (DC chain)
@@ -1417,21 +1395,21 @@ private object DifferentialTactics extends Logging {
     require(pos.isTopLevel && pos.isSucc, "ODE invariant (with Pegasus) only applicable in top-level succedent")
     require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
 
-    DifferentialTactics.DconstV(pos) & odeInvariantAuto(pos,seq)
+    DifferentialTactics.DconstV(pos) & odeInvariantAutoBody(pos)
   })
 
-  private def odeInvariantAuto(pos:Position,seq:Sequent) = {
+  private def odeInvariantAutoBody: DependentPositionTactic = "ANON" by ((pos:Position,seq:Sequent) => {
     val invs = InvariantGenerator.pegasusInvariants(seq,pos).toList
     //Empty list = failed to generate an invariant
     //True ~ no DCs needed
     //Else, DC chain
-
     // Assume that Pegasus hands us back a diffcut chain
     invs.headOption match {
       case None => throw new BelleThrowable(s"Pegasus failed to generate an invariant")
       case Some(True) => diffWeakenG(pos) & timeoutQE & done
       case _ =>
         invs.foldRight(diffWeakenG(pos) & timeoutQE & done)( (fml,tac) =>
+          //DebuggingTactics.print("DC chain: "+fml) &
           DC(fml)(pos) <(tac,
             (
             //note: repeated dW&QE not needed if Pegasus reports a correct dC chain
@@ -1440,7 +1418,7 @@ private object DifferentialTactics extends Logging {
             ODEInvariance.sAIRankOne(false)(pos)) & done)
         )
     }
-  }
+  })
 
 
   // implementation helpers
@@ -1711,4 +1689,5 @@ private object DifferentialTactics extends Logging {
     }, f)
     result
   }
+
 }

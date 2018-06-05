@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.SuccPosition
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.SuccPos
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -64,6 +65,12 @@ class InvariantGeneratorTests extends TacticTestBase {
 
   it should "prove simple loop from postcondition invariant" in withQE { _ =>
     proveBy("x=1 -> [{x:=x+1;}*]x>=1".asFormula, auto) shouldBe 'proved
+  }
+
+  "Configurable generator" should "return annotated conditional invariants" in withQE { _ =>
+    val fml = "y>0 ==> [{x:=2; ++ x:=-2;}{{y'=x*y}@invariant((y'=2*y -> y>=old(y)), (y'=-2*y -> y<=old(y)))}]y>0".asSequent
+    TactixLibrary.invGenerator("==> [{y'=2*y&true}]y>0".asSequent, SuccPosition(1)) should contain theSameElementsInOrderAs "y>=old(y)".asFormula :: Nil
+    TactixLibrary.invGenerator("==> [{y'=-2*y&true}]y>0".asSequent, SuccPosition(1)) should contain theSameElementsInOrderAs "y<=old(y)".asFormula :: Nil
   }
 
 }
