@@ -104,7 +104,7 @@ object InvariantGenerator extends Logging {
   /** A differential invariant generator.
     * @author Andre Platzer */
   lazy val differentialInvariantGenerator: Generator[Formula] = cached((sequent,pos) =>
-    TactixLibrary.invGenerator(sequent,pos) #::: relevanceFilter(differentialInvariantCandidates)(sequent,pos)
+    TactixLibrary.invGenerator(sequent,pos) #::: differentialInvariantCandidates(sequent,pos)
   // ++ relevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
   )
 
@@ -204,6 +204,7 @@ object InvariantGenerator extends Logging {
     val cache: scala.collection.mutable.Map[Box, Stream[Formula]] = new scala.collection.mutable.LinkedHashMap()
     (sequent,pos) => {
       val (box, system, constraint, post) = sequent.sub(pos) match {
+        case Some(box@Box(ODESystem(ode, And(True, q)), pf)) => (Box(ODESystem(ode, q), pf), ode, q, pf)
         case Some(box@Box(ode: ODESystem, pf)) => (box, ode.ode, ode.constraint, pf)
         case Some(box@Box(system: Loop, pf)) => (box, system, True, pf)
         case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
