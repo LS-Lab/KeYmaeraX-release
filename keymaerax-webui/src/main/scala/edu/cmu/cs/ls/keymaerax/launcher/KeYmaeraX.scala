@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.hydra.TempDBTools
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.{Declaration, Name, Signature}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.Declaration
 import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
 
 import scala.collection.immutable
@@ -51,7 +51,7 @@ object KeYmaeraX {
     """
       |
       |Usage: java -jar keymaerax.jar
-      |  -prove file.kyx -tactic file.kyt [-out file.kyp] [-timeout seconds] |
+      |  -prove file.kyx -tactic file.kyt/BelleExpr [-tacticName name] [-out file.kyp] [-timeout seconds] |
       |  -check file.kya |
       |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar]
       |     [-sandbox] [-fallback prg] |
@@ -269,6 +269,9 @@ object KeYmaeraX {
       case "-tactic" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tactic -> value), tail)
         else optionErrorReporter("-tactic")
+      case "-tacticName" :: value :: tail =>
+        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tacticName -> value), tail)
+        else optionErrorReporter("-tacticName")
       case "-interactive" :: tail => nextOption(map ++ Map('interactive -> true), tail)
       case "-tool" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('tool -> value), tail)
@@ -438,7 +441,7 @@ object KeYmaeraX {
 
   /** Reads the value of 'tactic from the `options` (either a file name or a tactic expression).
     * Default [[TactixLibrary.auto]] if `options` does not contain 'tactic. */
-  private def readTactic(options: OptionMap): BelleExpr = {
+  private def readTactic(options: OptionMap): Option[BelleExpr] = {
     options.get('tactic) match {
       case Some(t) if File(t.toString).exists =>
         val fileName = t.toString
@@ -447,12 +450,12 @@ object KeYmaeraX {
           val tacticGenClasses = new ScalaTacticCompiler().compile(source)
           assert(tacticGenClasses.size == 1, "Expected exactly 1 tactic generator class, but got " + tacticGenClasses.map(_.getName()))
           val tacticGenerator = tacticGenClasses.head.newInstance.asInstanceOf[(()=> BelleExpr)]
-          tacticGenerator()
+          Some(tacticGenerator())
         } else {
-          BelleParser(source)
+          Some(BelleParser(source))
         }
-      case Some(t) if !File(t.toString).exists => BelleParser(t.toString)
-      case None => TactixLibrary.auto
+      case Some(t) if !File(t.toString).exists => Some(BelleParser(t.toString))
+      case None => None
     }
   }
 
@@ -475,15 +478,29 @@ object KeYmaeraX {
     }).toMap
 
     val defaultTactic = readTactic(options)
+    val tacticName = options.get('tacticName)
+
     val inputModelsWithTactics = inputModels.map(e => {
-      if (e.tactics.isEmpty) ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model,
-        ("Default Tactic" -> defaultTactic)::Nil, e.info)
-      else e
+      defaultTactic match {
+        case Some(t: NamedTactic) => ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model,
+          (t.name -> t)::Nil, e.info)
+        case Some(t) => ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model,
+          ("User" -> t)::Nil, e.info)
+        case _ if e.tactics.isEmpty => ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model,
+          ("Auto" -> TactixLibrary.auto)::Nil, e.info)
+        case _ if e.tactics.nonEmpty => tacticName match {
+          case Some(tn) =>
+            val filtered = e.tactics.filter(_._1 == tn)
+            if (filtered.isEmpty) println("Entry '" + e.name + "' does not have a tactic '" + tn + "'")
+            ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model, filtered, e.info)
+          case None => e
+        }
+      }
     })
 
-    inputModelsWithTactics.foreach(e => {
+    inputModelsWithTactics.foreach(e => e.tactics.foreach(t => {
       try {
-        prove(e.name, e.model.asInstanceOf[Formula], e.tactics.head._2, outputFileNames(e.name), options, storeWitness=true)
+        prove(e.name, e.model.asInstanceOf[Formula], t._1, t._2, outputFileNames(e.name), options, storeWitness=true)
       } catch {
         case ex: Throwable =>
           println("==================================================")
@@ -495,10 +512,11 @@ object KeYmaeraX {
           println("==================================================")
           throw ex
       }
-    })
+    }))
   }
 
-  private def prove(name: String, input: Formula, tactic: BelleExpr, outputFileName: String, options: OptionMap, storeWitness: Boolean): Unit = {
+  private def prove(name: String, input: Formula, tacticName: String, tactic: BelleExpr, outputFileName: String,
+                    options: OptionMap, storeWitness: Boolean): Unit = {
     val inputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(input))
 
     Console.println("[start proof " + outputFileName + "]")
@@ -507,16 +525,16 @@ object KeYmaeraX {
 
     val timeout = options('timeout).asInstanceOf[Long]
 
-    case class ProofStatistics(name: String, status: String, timeout: Long, duration: Long, qeDuration: Long,
-                               proofSteps: Int, tacticSize: Int) {
+    case class ProofStatistics(name: String, tacticName: String, status: String, timeout: Long,
+                               duration: Long, qeDuration: Long, proofSteps: Int, tacticSize: Int) {
       override def toString: String =
-        s"""Proof Statistics ($name $status, with time budget $timeout)
+        s"""Proof Statistics ($name $status, with tactic $tacticName and time budget [s] $timeout)
            |Duration [ms]: $duration
            |QE [ms]: $qeDuration
            |Proof steps: $proofSteps
            |Tactic size: $tacticSize""".stripMargin
 
-      def toCsv: String = s"$name,$status,$timeout,$duration,$qeDuration,$proofSteps,$tacticSize"
+      def toCsv: String = s"$name,$tacticName,$status,$timeout,${duration/1000},${qeDuration/1000},$proofSteps,$tacticSize"
     }
 
     //@todo turn the following into a transformation as well. The natural type is Prover: Tactic=>(Formula=>Provable) which however always forces 'verify=true. Maybe that's not bad.
@@ -588,7 +606,7 @@ object KeYmaeraX {
         }
         pw.close()
 
-        ProofStatistics(name, "proved", timeout, proofDuration, qeDuration, proofSteps, tacticSize)
+        ProofStatistics(name, tacticName, "proved", timeout, proofDuration, qeDuration, proofSteps, tacticSize)
       } else {
         // prove did not work
         assert(!witness.isProved)
@@ -607,7 +625,7 @@ object KeYmaeraX {
         } else {
           System.err.println("Incomplete proof: tactic did not finish the proof")
         }
-        ProofStatistics(name, "unfinished", timeout, -1, -1, -1, -1)
+        ProofStatistics(name, tacticName, "unfinished", timeout, -1, -1, -1, -1)
       }
     } catch {
       case _: TimeoutException =>
@@ -616,7 +634,7 @@ object KeYmaeraX {
         println("==================================")
         BelleInterpreter.kill()
         // prover shutdown cleanup is done when KeYmaeraX exits
-        ProofStatistics(name, "timeout", timeout, -1, -1, -1, -1)
+        ProofStatistics(name, tacticName, "timeout", timeout, -1, -1, -1, -1)
     }
 
     val statisticsLogger = Logger(getClass)
