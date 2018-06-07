@@ -870,7 +870,7 @@ private object DifferentialTactics extends Logging {
       val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
       val qAtoms = FormulaTools.conjuncts(q).toSet
 
-      solve(pos) | fastODE(
+      odeInvariant()(pos) | (solve(pos) & ?(timeoutQE)) | fastODE(
         //@note abort if unchanged
         assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) match {
           case Some(Box(ODESystem(extendedOde, extendedQ), _)) =>
@@ -887,6 +887,7 @@ private object DifferentialTactics extends Logging {
       )(pos)
   })
 
+  /** Fast ODE implementation. Tactic `finish` is executed when fastODE itself cannot find a proof. */
   private def fastODE(finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
     lazy val invariantCandidates = try {
       InvariantGenerator.differentialInvariantGenerator(seq,pos)
@@ -901,18 +902,15 @@ private object DifferentialTactics extends Logging {
     val addInvariant = ChooseSome(
       () => invariantCandidates.iterator,
       (inv: Formula) => {
-        DebuggingTactics.print(s"[ODE] Trying to cut in invariant candidate: $inv") &
+        DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
           /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
-          diffCut(inv)(pos) <(skip, DebuggingTactics.print("[ODE] Foo") & odeInvariant()(pos) & DebuggingTactics.print("[ODE] Bar") & done) & DebuggingTactics.print("[ODE] Inv Candidate done")
+          diffCut(inv)(pos) <(
+            odeInvariant()(pos) & done | fastODE(finish)(pos),
+            odeInvariant()(pos) & done) & DebuggingTactics.debug("[ODE] Inv Candidate done")
       }
     )
 
-//    DebuggingTactics.print("prove by ode inv") &
-      odeInvariant()(pos) & done |
-//    DebuggingTactics.print("add & recur") &
-      addInvariant & fastODE(finish)(pos) |
-//    DebuggingTactics.print("finish") &
-      finish
+      addInvariant | finish
   })
 
   /** Splits a post-condition containing a weak inequality into an open set case and an equillibrium point case.
