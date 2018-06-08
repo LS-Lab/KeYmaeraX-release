@@ -33,7 +33,7 @@ private object DifferentialTactics extends Logging {
   private val namespace = "differentialtactics"
 
   //QE with default timeout for use in ODE tactics
-  private[btactics] val timeoutQE = QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE))))
+  private[btactics] def timeoutQE = QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE))))
 
   /** @see [[HilbertCalculus.DE]] */
   lazy val DE: DependentPositionTactic = new DependentPositionTactic("DE") {
