@@ -534,7 +534,7 @@ object KeYmaeraX {
            |Proof steps: $proofSteps
            |Tactic size: $tacticSize""".stripMargin
 
-      def toCsv: String = s"$name,$tacticName,$status,$timeout,${duration/1000},${qeDuration/1000},$proofSteps,$tacticSize"
+      def toCsv: String = s"$name,$tacticName,$status,${timeout*1000},$duration,$qeDuration,$proofSteps,$tacticSize"
     }
 
     //@todo turn the following into a transformation as well. The natural type is Prover: Tactic=>(Formula=>Provable) which however always forces 'verify=true. Maybe that's not bad.
