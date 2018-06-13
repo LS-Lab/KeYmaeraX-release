@@ -459,6 +459,18 @@ object KeYmaeraX {
     }
   }
 
+  case class ProofStatistics(name: String, tacticName: String, status: String, timeout: Long,
+                             duration: Long, qeDuration: Long, proofSteps: Int, tacticSize: Int) {
+    override def toString: String =
+      s"""Proof Statistics ($name $status, with tactic $tacticName and time budget [s] $timeout)
+         |Duration [ms]: $duration
+         |QE [ms]: $qeDuration
+         |Proof steps: $proofSteps
+         |Tactic size: $tacticSize""".stripMargin
+
+    def toCsv: String = s"$name,$tacticName,$status,${timeout*1000},$duration,$qeDuration,$proofSteps,$tacticSize"
+  }
+
   /**
    * Prove given input file (with given tactic) to produce a lemma.
    * {{{KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))}}}
@@ -498,8 +510,12 @@ object KeYmaeraX {
       }
     })
 
-    inputModelsWithTactics.foreach(e => e.tactics.foreach(t => {
-      try {
+    inputModelsWithTactics.foreach(e =>
+      if (e.tactics.isEmpty) {
+        val statisticsLogger = Logger(getClass)
+        statisticsLogger.info(MarkerManager.getMarker("PROOF_STATISTICS"),
+          ProofStatistics(e.name, "skip", "skipped", options('timeout).asInstanceOf[Long], -1, -1, -1, -1).toCsv)
+      } else e.tactics.foreach(t => try {
         prove(e.name, e.model.asInstanceOf[Formula], t._1, t._2, outputFileNames(e.name), options, storeWitness=true)
       } catch {
         case ex: Throwable =>
@@ -511,8 +527,7 @@ object KeYmaeraX {
           println(s"Error while checking $inputIdentifier")
           println("==================================================")
           throw ex
-      }
-    }))
+      }))
   }
 
   private def prove(name: String, input: Formula, tacticName: String, tactic: BelleExpr, outputFileName: String,
@@ -524,18 +539,6 @@ object KeYmaeraX {
     val pw = new PrintWriter(outputFileName)
 
     val timeout = options('timeout).asInstanceOf[Long]
-
-    case class ProofStatistics(name: String, tacticName: String, status: String, timeout: Long,
-                               duration: Long, qeDuration: Long, proofSteps: Int, tacticSize: Int) {
-      override def toString: String =
-        s"""Proof Statistics ($name $status, with tactic $tacticName and time budget [s] $timeout)
-           |Duration [ms]: $duration
-           |QE [ms]: $qeDuration
-           |Proof steps: $proofSteps
-           |Tactic size: $tacticSize""".stripMargin
-
-      def toCsv: String = s"$name,$tacticName,$status,${timeout*1000},$duration,$qeDuration,$proofSteps,$tacticSize"
-    }
 
     //@todo turn the following into a transformation as well. The natural type is Prover: Tactic=>(Formula=>Provable) which however always forces 'verify=true. Maybe that's not bad.
 
