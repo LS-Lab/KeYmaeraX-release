@@ -115,7 +115,9 @@ QualitativeBasic[problem_List]:=Catch[Module[{},
 { pre, { f, vars, evoConst }, post } = problem;
 Print["BASIC QUALITATIVE STRATEGY (DWC)"];
 Print["Trying first integrals first"];
-FIs=Linear`FirstIntegralMethod[pre, post, { f, vars, evoConst }, RationalsOnly->True, RationalPrecision->3];
+FIs=TimeConstrained[ (* Using a 5 second timeout *)
+Linear`FirstIntegralMethod[pre, post, { f, vars, evoConst }, RationalsOnly->True, RationalPrecision->3],
+5, {}];
 If[Length[FIs]>0,
 {fiInv,cuts}= Methods`DWC[pre, post, { f, vars, evoConst }, FIs, {}];
 If[CheckSemiAlgInclusion[fiInv,post,vars], 
