@@ -110,11 +110,12 @@ Throw[inv]
 ]]
 
 
-QualitativeBasic[problem_List]:=Catch[Module[{},
+QualitativeBasic[problem_List]:=Catch[Module[{pre,f,vars,evoConst,post,fiInv,cuts,FIs,aggregate,cutsAggregate,inv},
 (* Pattern match fields in the problem *)
 { pre, { f, vars, evoConst }, post } = problem;
 Print["BASIC QUALITATIVE STRATEGY (DWC)"];
-Print["Trying first integrals first"];
+FIs={};
+(*Print["Trying first integrals first"];
 FIs=TimeConstrained[ (* Using a 5 second timeout *)
 Linear`FirstIntegralMethod[pre, post, { f, vars, evoConst }, RationalsOnly->True, RationalPrecision->3],
 5, {}];
@@ -123,7 +124,7 @@ If[Length[FIs]>0,
 If[CheckSemiAlgInclusion[fiInv,post,vars], 
 Throw[cuts],
 Print["First integrals didn't do it. Proceeding to other qualitative methods."]
-]];
+]];*)
 
 aggregate=evoConst;
 cutsAggregate={};
@@ -132,7 +133,7 @@ Do[
 {inv,cuts}=RunMethod[method,problem,FIs];
 If[ TrueQ[Reduce[Implies[inv, post], vars, Reals]], Throw[cuts]];
 aggregate=FullSimplify[inv && aggregate];
-cutsAggregate=Join[cutAggregate, cuts];
+cutsAggregate=Join[cutsAggregate, cuts];
 If[TrueQ[Reduce[Implies[aggregate, post], vars, Reals]], Throw[cutsAggregate]],
 {method,{
 "DWC-Factors-RHS", 
