@@ -520,7 +520,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
                 " or 1..." + provable.subgoals.head.succ.size
             }
           throw new BelleThrowable(
-            s"""Tactic $prettyString is not applicable to
+            s"""Tactic $prettyString is not applicable for
               |    ${printWithParents(pos)}
               |at position $locator
               |because ${be.getMessage.stripPrefix("[Bellerophon Runtime] ")}""".stripMargin, be)
