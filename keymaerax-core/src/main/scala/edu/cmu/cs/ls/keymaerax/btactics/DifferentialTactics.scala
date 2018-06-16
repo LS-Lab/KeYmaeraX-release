@@ -905,8 +905,11 @@ private object DifferentialTactics extends Logging {
         DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
           /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
           diffCut(inv)(pos) <(
-            odeInvariant()(pos) & done | fastODE(finish)(pos),
-            odeInvariant()(pos) & done) & DebuggingTactics.debug("[ODE] Inv Candidate done")
+            skip,
+            odeInvariant()(pos) & done) &
+        // continue outside <(skip, ...) so that cut is proved before used
+        (odeInvariant()(pos) & done | fastODE(finish)(pos)) &
+        DebuggingTactics.debug("[ODE] Inv Candidate done")
       }
     )
 
