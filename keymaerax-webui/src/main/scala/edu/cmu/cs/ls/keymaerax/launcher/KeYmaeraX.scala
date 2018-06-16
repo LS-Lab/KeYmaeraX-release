@@ -498,9 +498,9 @@ object KeYmaeraX {
           (t.name -> t)::Nil, e.info)
         case Some(t) => ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model,
           ("User" -> t)::Nil, e.info)
-        case _ if e.tactics.isEmpty => ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model,
-          ("Auto" -> TactixLibrary.auto)::Nil, e.info)
-        case _ if e.tactics.nonEmpty => tacticName match {
+        case _ if e.tactics.isEmpty && tacticName.isEmpty =>
+          ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model, ("Auto" -> TactixLibrary.auto)::Nil, e.info)
+        case _ if e.tactics.nonEmpty || tacticName.nonEmpty => tacticName match {
           case Some(tn) =>
             val filtered = e.tactics.filter(_._1 == tn)
             if (filtered.isEmpty) println("Entry '" + e.name + "' does not have a tactic '" + tn + "'")
