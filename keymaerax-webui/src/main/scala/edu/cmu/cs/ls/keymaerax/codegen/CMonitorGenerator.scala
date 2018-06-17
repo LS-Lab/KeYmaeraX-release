@@ -128,6 +128,8 @@ class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
     }
 
     private def compileProgramFormula(f: Formula): CProgram = f match {
+      case Or(Diamond(Test(p), ifP), Diamond(Test(Not(q)), elseP)) if p==q =>
+        CIfThenElse(compileFormula(p), compileProgramFormula(ifP), compileProgramFormula(elseP))
       case Or(l, r) => COrProgram(compileProgramFormula(l), compileProgramFormula(r))
       case And(l, r) => CAndProgram(compileProgramFormula(l), compileProgramFormula(r))
       case True if kind == "boolean" => CReturn(CTrue)

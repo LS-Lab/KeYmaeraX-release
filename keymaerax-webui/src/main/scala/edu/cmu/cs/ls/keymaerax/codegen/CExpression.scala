@@ -70,19 +70,48 @@ class CExpressionPlainPrettyPrinter extends (CExpression => String) {
     else string + ".0L"
   }
 
+  def printDefinitions(e: CExpression): String = e match {
+    case COrProgram(l, r) =>
+      s"""${printDefinitions(l)}
+         |${printDefinitions(r)}
+         |
+         |double OrLeft${l.hashCode()}(state pre, state curr, const parameters* const params) {
+         |  ${print(l)}
+         |}
+         |
+         |double OrRight${r.hashCode()}(state pre, state curr, const parameters* const params) {
+         |  ${print(r)}
+         |}""".stripMargin
+    case CAndProgram(l, r) =>
+      s"""${printDefinitions(l)}
+         |${printDefinitions(r)}
+         |
+         |double AndLeft${l.hashCode()}(state pre, state curr, const parameters* const params) {
+         |  ${print(l)}
+         |}
+         |
+         |double AndRight${r.hashCode()}(state pre, state curr, const parameters* const params) {
+         |  ${print(r)}
+         |}""".stripMargin
+    case CIfThenElse(_, ifP, elseP) => printDefinitions(ifP) + "\n" + printDefinitions(elseP)
+    case _ => ""
+  }
+
+  override def apply(e: CExpression): String = { printDefinitions(e) + "\n" + print(e) }
+
   //@todo print only necessary parentheses
-  override def apply(e: CExpression): String = e match {
+  private def print(e: CExpression): String = e match {
     case CNumber(n) if n>=0 => longDoubleLiteral(n)
     case CNumber(n) if n<0 => "(" + longDoubleLiteral(n) + ")"
     case CVariable(n) => n
-    case CUnaryFunction(n, arg) => n + "(" + apply(arg) + ")"
-    case CPair(l, r) => apply(l) + "," + apply(r)
-    case CNeg(c) => "-(" + apply(c) + ")"
-    case CPlus(l, r) => "(" + apply(l) + ")+(" + apply(r) + ")"
-    case CMinus(l, r) => "(" + apply(l) + ")-(" + apply(r) + ")"
-    case CTimes(l, r) => "(" + apply(l) + ")*(" + apply(r) + ")"
-    case CDivide(l, r) => "(" + apply(l) + ")/(" + apply(r) + ")"
-    case CPower(l, r) => "pow(" + apply(l) + "," + apply(r) + ")"
+    case CUnaryFunction(n, arg) => n + "(" + print(arg) + ")"
+    case CPair(l, r) => print(l) + "," + print(r)
+    case CNeg(c) => "-(" + print(c) + ")"
+    case CPlus(l, r) => "(" + print(l) + ")+(" + print(r) + ")"
+    case CMinus(l, r) => "(" + print(l) + ")-(" + print(r) + ")"
+    case CTimes(l, r) => "(" + print(l) + ")*(" + print(r) + ")"
+    case CDivide(l, r) => "(" + print(l) + ")/(" + print(r) + ")"
+    case CPower(l, r) => "pow(" + print(l) + "," + print(r) + ")"
     /** Convert interpreted functions to corresponding C functions.
       *
       * C 99 standard:
@@ -90,26 +119,30 @@ class CExpressionPlainPrettyPrinter extends (CExpression => String) {
       *   float fabsf()
       *   long double fabsl()
       */
-    case CMin(l, r) => "fminl(" + apply(l) + ", " + apply(r) + ")"
-    case CMax(l, r) => "fmaxl(" + apply(l) + ", " + apply(r) + ")"
-    case CAbs(c) => "fabsl(" + apply(c) + ")"
+    case CMin(l, r) => "fminl(" + print(l) + ", " + print(r) + ")"
+    case CMax(l, r) => "fmaxl(" + print(l) + ", " + print(r) + ")"
+    case CAbs(c) => "fabsl(" + print(c) + ")"
 
-    case CLess(l, r) => apply(l) + " < " + apply(r)
-    case CLessEqual(l, r) => apply(l) + " <= " + apply(r)
-    case CEqual(l, r) => apply(l) + " == " + apply(r)
-    case CGreaterEqual(l, r) => apply(l) + " >= " + apply(r)
-    case CGreater(l, r) => apply(l) + " > " + apply(r)
-    case CNotEqual(l, r) => apply(l) + " != " + apply(r)
-    case CNot(c) => "!(" + apply(c) + ")"
-    case CAnd(l, r) => "(" + apply(l) + ") && (" + apply(r) + ")"
-    case COr(l, r) => "(" + apply(l) + ") || (" + apply(r) + ")"
+    case CLess(l, r) => print(l) + " < " + print(r)
+    case CLessEqual(l, r) => print(l) + " <= " + print(r)
+    case CEqual(l, r) => print(l) + " == " + print(r)
+    case CGreaterEqual(l, r) => print(l) + " >= " + print(r)
+    case CGreater(l, r) => print(l) + " > " + print(r)
+    case CNotEqual(l, r) => print(l) + " != " + print(r)
+    case CNot(c) => "!(" + print(c) + ")"
+    case CAnd(l, r) => "(" + print(l) + ") && (" + print(r) + ")"
+    case COr(l, r) => "(" + print(l) + ") || (" + print(r) + ")"
 
     case CTrue => "1"
     case CFalse => "0"
 
-    case CIfThenElse(f, ifP, elseP) => "if (" + apply(f) + ") {\n" + apply(ifP) + "\n} else {\n" + apply(elseP) + "\n}"
-    case CReturn(e: CExpression) => "return " + apply(e) + ";"
-    case CError(retVal: CExpression, msg: String) => s"""printf("%s\n", "$msg"); return ${apply(retVal)};"""
+    case CIfThenElse(f, ifP, elseP) => "if (" + print(f) + ") {\n" + print(ifP) + "\n} else {\n" + print(elseP) + "\n}"
+    case CReturn(e: CExpression) => "return " + print(e) + ";"
+    case CError(retVal: CExpression, msg: String) => s"""printf("Failed %s\\n", "$msg"); return ${print(retVal)};"""
+    case COrProgram(l, r) /* if kind=="boolean" */ =>
+      s"return OrLeft${l.hashCode()}(pre,curr,params) || OrRight${r.hashCode()}(pre,curr,params);"
+    case CAndProgram(l, r) /* if kind=="boolean" */ =>
+      s"return AndLeft${l.hashCode()}(pre,curr,params) || AndRight${r.hashCode()}(pre,curr,params);"
   }
 
 }
