@@ -111,6 +111,31 @@ class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
       throw new CodeGenerationException("Non-posterior, non-parameter function symbol is not supported")
   })
 
+  private def structuredExprGenerator(parameters: Set[NamedSymbol]) = new CFormulaTermGenerator({
+    case t: Variable if  parameters.contains(t) => "params->"
+    case t: Variable if !parameters.contains(t) && t.name.endsWith("post") => "curr."
+    case t: Variable if !parameters.contains(t) => "pre."
+    case FuncOf(fn, Nothing) if  parameters.contains(fn) => "params->"
+    case FuncOf(fn@Function(fname, _, _, _, _), Nothing) if !parameters.contains(fn) && fname.endsWith("post") => "curr."
+    case FuncOf(fn, Nothing) if !parameters.contains(fn) && !fn.name.endsWith("post") =>
+      throw new CodeGenerationException("Non-posterior, non-parameter function symbol is not supported")
+  }) {
+    override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
+                       modelName: String): String = expr match {
+      case f: Formula if f.isFOL => super.apply(f, stateVars, inputVars, modelName)
+      case f: Formula if !f.isFOL => CPrettyPrinter(compileProgramFormula(f))
+      case t: Term => super.apply(t, stateVars, inputVars, modelName)
+    }
+
+    private def compileProgramFormula(f: Formula): CProgram = f match {
+      case Or(l, r) => COrProgram(compileProgramFormula(l), compileProgramFormula(r))
+      case And(l, r) => CAndProgram(compileProgramFormula(l), compileProgramFormula(r))
+      case True if kind == "boolean" => CReturn(CTrue)
+      case Diamond(Test(p), q) if kind == "boolean" =>
+        CIfThenElse(compileFormula(p), compileProgramFormula(q), CError(CFalse, p.prettyString))
+    }
+  }
+
   /**
     * Compiles the expression `e` to C code as a body of a monitored controller execution function.
     * Names in `stateVars` are fields of the monitor function's argument "curr", names in `parameters` are fields of
@@ -118,7 +143,8 @@ class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
     */
   private def printMonitor(e: Expression, parameters: Set[NamedSymbol]): String = e match {
     case f: Formula if f.isFOL => primitiveExprGenerator(parameters)(f)
+    case f: Formula if !f.isFOL => structuredExprGenerator(parameters)(f)
     case t: Term => primitiveExprGenerator(parameters)(t)
-    case _ => throw new CodeGenerationException("The input expression: \n" + KeYmaeraXPrettyPrinter(e) + "\nis expected to be a FOL formula.")
+    case _ => throw new CodeGenerationException("The input expression: \n" + KeYmaeraXPrettyPrinter(e) + "\nis expected to be a formula or term.")
   }
 }

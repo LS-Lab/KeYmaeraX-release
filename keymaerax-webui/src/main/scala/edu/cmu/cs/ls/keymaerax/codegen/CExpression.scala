@@ -14,6 +14,7 @@ trait CExpression {
 
 trait CTerm extends CExpression {}
 trait CFormula extends CExpression {}
+trait CProgram extends CExpression {}
 
 case class CNumber(n: BigDecimal) extends CTerm {}
 case class CVariable(name: String) extends CTerm {}
@@ -44,6 +45,14 @@ case class COr(l: CFormula, r: CFormula) extends CFormula {}
 
 object CTrue extends CFormula {}
 object CFalse extends CFormula {}
+
+case class CIfThenElse(f: CFormula, ifP: CProgram, elseP: CProgram) extends CProgram
+case class COrProgram(l: CProgram, r: CProgram) extends CProgram
+case class CAndProgram(l: CProgram, r: CProgram) extends CProgram
+case class CError(retVal: CExpression, msg: String) extends CProgram
+case class CReturn(e: CExpression) extends CProgram
+object CNoop extends CProgram
+
 
 /** Prints C expressions. */
 object CPrettyPrinter extends (CExpression => String) {
@@ -94,6 +103,13 @@ class CExpressionPlainPrettyPrinter extends (CExpression => String) {
     case CNot(c) => "!(" + apply(c) + ")"
     case CAnd(l, r) => "(" + apply(l) + ") && (" + apply(r) + ")"
     case COr(l, r) => "(" + apply(l) + ") || (" + apply(r) + ")"
+
+    case CTrue => "1"
+    case CFalse => "0"
+
+    case CIfThenElse(f, ifP, elseP) => "if (" + apply(f) + ") {\n" + apply(ifP) + "\n} else {\n" + apply(elseP) + "\n}"
+    case CReturn(e: CExpression) => "return " + apply(e) + ";"
+    case CError(retVal: CExpression, msg: String) => s"""printf("%s\n", "$msg"); return ${apply(retVal)};"""
   }
 
 }
