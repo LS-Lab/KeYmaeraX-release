@@ -605,6 +605,22 @@ object ModelPlex extends ModelPlexTrait with Logging {
     case _ => logger.trace("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
   })
 
+  def chaseToTests: DependentPositionTactic = {
+//    val index: String => (PosInExpr, List[PosInExpr]) = {
+//      case "<?> test" => (PosInExpr(1::Nil), Nil)
+//      case "&true" => (PosInExpr(1::Nil), Nil)
+//      case ax => AxiomIndex.axiomIndex(ax)
+//    }
+    chaseI(3,3, (e:Expression) => e match {
+      case Or(_, _) => "| recursor" :: Nil
+      case And(_, _) => "<?> invtest" :: Nil
+      case f: Formula if f != True => "&true inv" :: Nil
+      case f: Formula if f == True => Nil
+      case _: Diamond => "<a> stuck" :: Nil
+      //case _ => logger.trace("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
+    }, (_,_) => pr=>pr, _ => us=>us, AxiomIndex.axiomIndex)
+  }
+
   /**
     * Returns a tactic to derive a model monitor in axiomatic style using forward chase + diffSolve. The tactic is
     * designed to operate on input produced by createMonitorSpecificationConjecture.

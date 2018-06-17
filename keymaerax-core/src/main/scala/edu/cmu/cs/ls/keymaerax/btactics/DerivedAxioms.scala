@@ -1128,6 +1128,14 @@ object DerivedAxioms extends Logging {
       prop
   )
 
+  /* inverse testd axiom for chase */
+  lazy val invTestdAxiom = derivedAxiom("<?> invtest",
+    Sequent(IndexedSeq(), IndexedSeq("(q_() & p_()) <-> <?q_();>p_()".asFormula)),
+    useAt("<> diamond", PosInExpr(1::Nil))(1, 1::Nil) &
+      useAt("[?] test")(1, 1::0::Nil) &
+      prop
+  )
+
   /**
     * {{{Axiom "<++> choice".
     *    <a;++b;>p(||) <-> (<a;>p(||) | <b;>p(||))
@@ -1740,6 +1748,9 @@ object DerivedAxioms extends Logging {
     * @Derived
    */
   lazy val andTrue = derivedAxiom("&true", Sequent(IndexedSeq(), IndexedSeq("(p_()&true) <-> p_()".asFormula)), prop)
+
+  /* inverse andtrue axiom for chase */
+  lazy val invAndTrue = derivedAxiom("&true inv", Sequent(IndexedSeq(), IndexedSeq("p_() <-> (p_()&true)".asFormula)), prop)
 
   /**
    * {{{Axiom "true&".
@@ -2783,6 +2794,11 @@ object DerivedAxioms extends Logging {
     */
   lazy val loopStuck = derivedAxiom("<*> stuck",
     Sequent(IndexedSeq(), IndexedSeq("<{a_;}*>p_(||) <-> <{a_;}*>p_(||)".asFormula)),
+    byUS(equivReflexiveAxiom)
+  )
+
+  lazy val programStuck = derivedAxiom("<a> stuck",
+    Sequent(IndexedSeq(), IndexedSeq("<a_;>p_(||) <-> <a_;>p_(||)".asFormula)),
     byUS(equivReflexiveAxiom)
   )
 

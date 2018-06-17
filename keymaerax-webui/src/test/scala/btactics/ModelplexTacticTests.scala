@@ -19,7 +19,6 @@ import testHelper.ParserFactory._
 
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
-
 import java.io.File
 
 /**
@@ -265,6 +264,21 @@ class ModelplexTacticTests extends TacticTestBase {
     result.subgoals.head.succ should contain only expected
 
     report(expected, result, "Watertank controller monitor (chase)")
+  }
+
+  it should "chase controller monitor condition to tests" in withMathematica { tool =>
+    val model = KeYmaeraXProblemParser(
+      io.Source.fromInputStream(
+        getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")).mkString)
+
+    val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
+      Variable("f"), Variable("l"), Variable("c"))
+    val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
+    val tactic = ModelPlex.controllerMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*) & simplifier(1)
+    val result = proveBy(modelplexInput, tactic)
+
+    val testProg = proveBy(result.subgoals.loneElement, ModelPlex.chaseToTests(1))
+    testProg.subgoals.loneElement shouldBe "==> <?-1<=fpost&fpost<=(m()-l)/ep();><?0<=l&0<=ep();><?lpost=l;><?cpost=0;>true".asSequent
   }
 
   it should "find correct controller monitor condition from model file" ignore {
@@ -660,6 +674,20 @@ class ModelplexTacticTests extends TacticTestBase {
     simplifiedResult.subgoals.head.succ should contain only "dxopost^2+dyopost^2<=V()^2&((w=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=-B()&rpost=r&tpost=0|w!=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&rpost=r&tpost=0)|v=0&0<=ep()&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=0&wpost=0&apost=0&rpost=r&tpost=0|(-B()<=apost&apost<=A())&((abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&rpost=r&tpost=0|rpost!=0&wpost*rpost=v&(abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(wpost=0&(0<=ep()&v>=0)&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&tpost=0|wpost!=0&(0<=ep()&v>=0)&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&tpost=0)))".asFormula
 
     report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "RSS controller monitor (forward chase)")
+  }
+
+  it should "find correct controller monitor test program" in withMathematica { tool =>
+    val in = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs_curvestraight.key")
+    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
+      Variable("xo"), Variable("yo"), Variable("dxo"), Variable("dyo"), Variable("x"), Variable("y"), Variable("dx"),
+      Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
+
+    val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
+    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*)
+
+    val testResult = proveBy(opt1Result.subgoals.head, ModelPlex.chaseToTests(1))
+    testResult.subgoals.loneElement shouldBe "==> <?dxopost^2+dyopost^2<=V()^2;>((<?w=0;><?0<=ep()&v>=0;><?xopost=xo;><?yopost=yo;><?dxopost=dxopost;><?dyopost=dyopost;><?xpost=x;><?ypost=y;><?dxpost=dx;><?dypost=dy;><?vpost=v;><?wpost=w;><?apost=-B();><?rpost=r;><?tpost=0;>true|<?w!=0;><?0<=ep()&v>=0;><?xopost=xo;><?yopost=yo;><?dxopost=dxopost;><?dyopost=dyopost;><?xpost=x;><?ypost=y;><?dxpost=dx;><?dypost=dy;><?vpost=v;><?wpost=w;><?apost=-B();><?rpost=r;><?tpost=0;>true)|<?v=0;>(<?0=0;><?0<=ep()&v>=0;><?xopost=xo;><?yopost=yo;><?dxopost=dxopost;><?dyopost=dyopost;><?xpost=x;><?ypost=y;><?dxpost=dx;><?dypost=dy;><?vpost=v;><?wpost=0;><?apost=0;><?rpost=r;><?tpost=0;>true|<?0!=0;><?0<=ep()&v>=0;><?xopost=xo;><?yopost=yo;><?dxopost=dxopost;><?dyopost=dyopost;><?xpost=x;><?ypost=y;><?dxpost=dx;><?dypost=dy;><?vpost=v;><?wpost=0;><?apost=0;><?rpost=r;><?tpost=0;>true)|<?-B()<=apost&apost<=A();>(<?abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()));>(<?0=0;><?0<=ep()&v>=0;><?xopost=xopost;><?yopost=yopost;><?dxopost=dxopost;><?dyopost=dyopost;><?xpost=x;><?ypost=y;><?dxpost=dx;><?dypost=dy;><?vpost=v;><?wpost=0;><?apost=apost;><?rpost=r;><?tpost=0;>true|<?0!=0;><?0<=ep()&v>=0;><?xopost=xopost;><?yopost=yopost;><?dxopost=dxopost;><?dyopost=dyopost;><?xpost=x;><?ypost=y;><?dxpost=dx;><?dypost=dy;><?vpost=v;><?wpost=0;><?apost=apost;><?rpost=r;><?tpost=0;>true)|<?rpost!=0;><?wpost*rpost=v;><?abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()));>(<?wpost=0;><?0<=ep()&v>=0;><?xopost=xopost;><?yopost=yopost;><?dxopost=dxopost;><?dyopost=dyopost;><?xpost=x;><?ypost=y;><?dxpost=dx;><?dypost=dy;><?vpost=v;><?wpost=wpost;><?apost=apost;><?rpost=rpost;><?tpost=0;>true|<?wpost!=0;><?0<=ep()&v>=0;><?xopost=xopost;><?yopost=yopost;><?dxopost=dxopost;><?dyopost=dyopost;><?xpost=x;><?ypost=y;><?dxpost=dx;><?dypost=dy;><?vpost=v;><?wpost=wpost;><?apost=apost;><?rpost=rpost;><?tpost=0;>true)))".asSequent
   }
 
   "RSS passive safety curve straight curvature" should "find correct controller monitor" in withMathematica { tool =>
