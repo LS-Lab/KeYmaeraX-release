@@ -129,7 +129,8 @@ object AxiomIndex extends Logging {
     case "[] split left" | "[] split right" => directReduction
     case "<*> approx" => (PosInExpr(1::Nil), PosInExpr(Nil)::Nil)
     case "<*> stuck" => (PosInExpr(0::Nil), Nil)
-    case "<a> stuck" => (PosInExpr(0::Nil), Nil)
+    case "<a> stuck" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
+    case "<?> combine" => (PosInExpr(0::Nil), PosInExpr(Nil)::Nil)
     case "<'> stuck" => (PosInExpr(0::Nil), Nil)
     case "all stutter" => (PosInExpr(0::Nil), Nil)
     case "exists stutter" => (PosInExpr(0::Nil), Nil)

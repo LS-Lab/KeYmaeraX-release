@@ -1136,6 +1136,15 @@ object DerivedAxioms extends Logging {
       prop
   )
 
+  /* inverse testd axiom for chase */
+  lazy val combineTestdAxiom = derivedAxiom("<?> combine",
+    Sequent(IndexedSeq(), IndexedSeq("<?q_();><?p_();>r_() <-> <?q_()&p_();>r_()".asFormula)),
+      useAt("<?> test")(1, 1::Nil) &
+      useAt("<?> test")(1, 0::Nil) &
+      useAt("<?> test")(1, 0::1::Nil) &
+      prop
+  )
+
   /**
     * {{{Axiom "<++> choice".
     *    <a;++b;>p(||) <-> (<a;>p(||) | <b;>p(||))

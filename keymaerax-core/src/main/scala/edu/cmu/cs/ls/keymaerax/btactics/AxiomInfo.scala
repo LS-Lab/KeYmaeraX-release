@@ -140,6 +140,7 @@ object DerivationInfo {
       , AxiomDisplayInfo("[?]", "<span class=\"k4-axiom-key\">[?Q]P</span>↔(Q→P)")
       , "testb", {case () => HilbertCalculus.testb}),
     new DerivedAxiomInfo("<?> test", "<?>", "testd", {case () => HilbertCalculus.testd}),
+    new DerivedAxiomInfo("<?> combine", "<?> combine", "testdcombine", {case () => useAt(DerivedAxioms.combineTestdAxiom)}),
     new DerivedAxiomInfo("<?> invtest", "<?>i", "invtestd", {case () => useAt(DerivedAxioms.invTestdAxiom)}),
     new CoreAxiomInfo("[++] choice"
       , AxiomDisplayInfo(("[∪]", "[++]"), "<span class=\"k4-axiom-key\">[a∪b]P</span>↔[a]P∧[b]P"), "choiceb", {case () => HilbertCalculus.choiceb}),
