@@ -48,6 +48,15 @@ object FormulaTools extends Logging {
     leftConjuncts(formula, length, 1) //@note not splitting is a list of length 1
   }
 
+  /** Reassociates conjunctions and disjunctions into their default right-associative case. */
+  def reassociate(fml: Formula): Formula = fml match {
+    case Or(Or(ll, lr), r) => reassociate(Or(reassociate(ll), Or(reassociate(lr), reassociate(r))))
+    case Or(l, r) => Or(reassociate(l), reassociate(r))
+    case And(And(ll, lr), r) => reassociate(And(reassociate(ll), And(reassociate(lr), reassociate(r))))
+    case And(l, r) => And(reassociate(l), reassociate(r))
+    case _ => fml
+  }
+
   /**
     * Gets the (unquantified) kernel part of a quantified formula by peeling off quantifiers.
     */
