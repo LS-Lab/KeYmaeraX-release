@@ -75,22 +75,22 @@ class CExpressionPlainPrettyPrinter extends (CExpression => (String, String)) {
       s"""${printDefinitions(l)}
          |${printDefinitions(r)}
          |
-         |double OrLeft${l.hashCode()}(state pre, state curr, const parameters* const params) {
+         |double OrLeft${uniqueName(l)}(state pre, state curr, const parameters* const params) {
          |  ${print(l)}
          |}
          |
-         |double OrRight${r.hashCode()}(state pre, state curr, const parameters* const params) {
+         |double OrRight${uniqueName(r)}(state pre, state curr, const parameters* const params) {
          |  ${print(r)}
          |}""".stripMargin
     case CAndProgram(l, r) =>
       s"""${printDefinitions(l)}
          |${printDefinitions(r)}
          |
-         |double AndLeft${l.hashCode()}(state pre, state curr, const parameters* const params) {
+         |double AndLeft${uniqueName(l)}(state pre, state curr, const parameters* const params) {
          |  ${print(l)}
          |}
          |
-         |double AndRight${r.hashCode()}(state pre, state curr, const parameters* const params) {
+         |double AndRight${uniqueName(r)}(state pre, state curr, const parameters* const params) {
          |  ${print(r)}
          |}""".stripMargin
     case CIfThenElse(_, ifP, elseP) => printDefinitions(ifP) + "\n" + printDefinitions(elseP)
@@ -98,6 +98,12 @@ class CExpressionPlainPrettyPrinter extends (CExpression => (String, String)) {
   }
 
   override def apply(e: CExpression): (String, String) = (printDefinitions(e), print(e))
+
+  private def uniqueName(fml: CExpression): String = {
+    val hashcode = fml.hashCode()
+    if (hashcode < 0) hashcode.toString.replace("-", "_")
+    else hashcode.toString
+  }
 
   //@todo print only necessary parentheses
   private def print(e: CExpression): String = e match {
@@ -140,9 +146,9 @@ class CExpressionPlainPrettyPrinter extends (CExpression => (String, String)) {
     case CReturn(e: CExpression) => "return " + print(e) + ";"
     case CError(retVal: CExpression, msg: String) => s"""printf("Failed %s\\n", "$msg"); return ${print(retVal)};"""
     case COrProgram(l, r) /* if kind=="boolean" */ =>
-      s"return OrLeft${l.hashCode()}(pre,curr,params) || OrRight${r.hashCode()}(pre,curr,params);"
+      s"return OrLeft${uniqueName(l)}(pre,curr,params) || OrRight${uniqueName(r)}(pre,curr,params);"
     case CAndProgram(l, r) /* if kind=="boolean" */ =>
-      s"return AndLeft${l.hashCode()}(pre,curr,params) || AndRight${r.hashCode()}(pre,curr,params);"
+      s"return AndLeft${uniqueName(l)}(pre,curr,params) || AndRight${uniqueName(r)}(pre,curr,params);"
   }
 
 }
