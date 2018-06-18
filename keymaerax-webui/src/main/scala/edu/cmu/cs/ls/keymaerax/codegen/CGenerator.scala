@@ -73,21 +73,23 @@ object CGenerator {
   */
 class CGenerator(bodyGenerator: CodeGenerator) extends CodeGenerator {
   /** Generate C Code for given expression using the data type cDataType throughout and the input list of variables */
-  override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String): String =
+  override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String): (String, String) =
     generateMonitoredCtrlCCode(expr, stateVars, inputVars, fileName)
 
   /** Generates a monitor `expr` that switches between a controller and a fallback controller depending on the monitor outcome. */
-  private def generateMonitoredCtrlCCode(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String) : String = {
+  private def generateMonitoredCtrlCCode(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable], fileName: String) : (String, String) = {
     val names = StaticSemantics.symbols(expr).map(nameIdentifier)
     require(names.intersect(RESERVED_NAMES).isEmpty, "Unexpected reserved C names encountered: " + names.intersect(RESERVED_NAMES).mkString(","))
     val parameters = getParameters(expr, stateVars)
 
-    printHeader(fileName) +
+    val (bodyDefs, bodyBody) = bodyGenerator(expr, stateVars, inputVars, fileName)
+
+    (printHeader(fileName) +
       INCLUDE_STATEMENTS +
       printParameterDeclaration(parameters) +
       printStateDeclaration(stateVars) +
       printInputDeclaration(inputVars) +
-      bodyGenerator(expr, stateVars, inputVars, fileName)
+      bodyDefs, bodyBody)
   }
 
   private val RESERVED_NAMES = Set("main", "Main")

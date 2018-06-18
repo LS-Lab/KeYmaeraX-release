@@ -55,13 +55,13 @@ object CNoop extends CProgram
 
 
 /** Prints C expressions. */
-object CPrettyPrinter extends (CExpression => String) {
-  var printer: (CExpression => String) = new CExpressionPlainPrettyPrinter
-  override def apply(e: CExpression): String = printer(e)
+object CPrettyPrinter extends (CExpression => (String, String)) {
+  var printer: (CExpression => (String, String)) = new CExpressionPlainPrettyPrinter
+  override def apply(e: CExpression): (String, String) = printer(e)
 }
 
 /** Prints expressions in plain C. */
-class CExpressionPlainPrettyPrinter extends (CExpression => String) {
+class CExpressionPlainPrettyPrinter extends (CExpression => (String, String)) {
 
   /** Ensure to print literals as long double literals to avoid truncation. */
   private def longDoubleLiteral(n: BigDecimal): String = {
@@ -97,7 +97,7 @@ class CExpressionPlainPrettyPrinter extends (CExpression => String) {
     case _ => ""
   }
 
-  override def apply(e: CExpression): String = { printDefinitions(e) + "\n" + print(e) }
+  override def apply(e: CExpression): (String, String) = (printDefinitions(e), print(e))
 
   //@todo print only necessary parentheses
   private def print(e: CExpression): String = e match {
@@ -148,10 +148,10 @@ class CExpressionPlainPrettyPrinter extends (CExpression => String) {
 }
 
 /** Prints C expressions that keep track of the reason for their value. */
-class CExpressionLogPrettyPrinter extends (CExpression => String) {
+class CExpressionLogPrettyPrinter extends (CExpression => (String, String)) {
 
-  override def apply(e: CExpression): String = {
-    "eval(" + print(e) + ")"
+  override def apply(e: CExpression): (String, String) = {
+    ("", "eval(" + print(e) + ")")
   }
 
   def printOperators: String = {

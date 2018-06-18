@@ -64,7 +64,7 @@ object CFormulaTermGenerator {
   */
 class CFormulaTermGenerator(termContainer: Expression => String) extends CodeGenerator {
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
-                     modelName: String): String = expr match {
+                     modelName: String): (String, String) = expr match {
     case f: Formula if f.isFOL => CPrettyPrinter(compileFormula(f))
     case t: Term => CPrettyPrinter(compileTerm(t))
   }

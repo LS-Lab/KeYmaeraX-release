@@ -15,11 +15,11 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
   */
 class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
-                     modelName: String): String =
+                     modelName: String): (String, String) =
     generateMonitoredCtrlCCode(expr, stateVars)
 
   /** Generates a monitor `expr` that switches between a controller and a fallback controller depending on the monitor outcome. */
-  private def generateMonitoredCtrlCCode(expr: Expression, stateVars: Set[BaseVariable]): String = {
+  private def generateMonitoredCtrlCCode(expr: Expression, stateVars: Set[BaseVariable]): (String, String) = {
     val symbols = StaticSemantics.symbols(expr)
     val names = symbols.map(nameIdentifier)
     require(names.size == symbols.size, "Expect unique name_index identifiers for code generation")
@@ -48,21 +48,26 @@ class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
 
     // @note negate to turn into safety distance >=0 satisfied, <0 unsatisfied monitor
     def negate(s: String): String = "-(" + s + ")"
-    val (distBody, satBody) = kind match {
+    val ((distDefs, distBody), satBody) = kind match {
       case "boolean" => (printMonitor(expr, parameters), "boundaryDist(pre,curr,params) != 0.0")
       case "metric" => expr match {
         case LessEqual(l, r) =>
-          val lhs = negate(printMonitor(l, parameters))
-          val rhs = negate(printMonitor(r, parameters))
-          (lhs, "boundaryDist(pre,curr,params) >= " + rhs)
+          val lhsMonitor = printMonitor(l, parameters)
+          val rhsMonitor = printMonitor(r, parameters)
+          val lhs = negate(lhsMonitor._2)
+          val rhs = negate(rhsMonitor._2)
+          ((lhsMonitor._1 + rhsMonitor._1, lhs), "boundaryDist(pre,curr,params) >= " + rhs)
         case Less(l, r) =>
-          val lhs = negate(printMonitor(l, parameters))
-          val rhs = negate(printMonitor(r, parameters))
-          (lhs, "boundaryDist(pre,curr,params) > " + rhs)
+          val lhsMonitor = printMonitor(l, parameters)
+          val rhsMonitor = printMonitor(r, parameters)
+          val lhs = negate(lhsMonitor._2)
+          val rhs = negate(rhsMonitor._2)
+          ((lhsMonitor._1 + rhsMonitor._1, lhs), "boundaryDist(pre,curr,params) > " + rhs)
       }
     }
 
-    s"""$monitorDistFuncHead {
+    (s"""${distDefs.trim}
+       |$monitorDistFuncHead {
        |  return $distBody;
        |}
        |
@@ -74,7 +79,7 @@ class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
        |$monitoredCtrlFuncBody
        |}
        |
-       |""".stripMargin
+       |""".stripMargin, "")
   }
 
   /** The name of the monitor function argument representing the current state. */
@@ -121,7 +126,7 @@ class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
       throw new CodeGenerationException("Non-posterior, non-parameter function symbol is not supported")
   }) {
     override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
-                       modelName: String): String = expr match {
+                       modelName: String): (String, String) = expr match {
       case f: Formula if f.isFOL => super.apply(f, stateVars, inputVars, modelName)
       case f: Formula if !f.isFOL => CPrettyPrinter(compileProgramFormula(f))
       case t: Term => super.apply(t, stateVars, inputVars, modelName)
@@ -143,7 +148,7 @@ class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
     * Names in `stateVars` are fields of the monitor function's argument "curr", names in `parameters` are fields of
     * the argument "params".
     */
-  private def printMonitor(e: Expression, parameters: Set[NamedSymbol]): String = e match {
+  private def printMonitor(e: Expression, parameters: Set[NamedSymbol]): (String, String) = e match {
     case f: Formula if f.isFOL => primitiveExprGenerator(parameters)(f)
     case f: Formula if !f.isFOL => structuredExprGenerator(parameters)(f)
     case t: Term => primitiveExprGenerator(parameters)(t)
