@@ -33,7 +33,7 @@ private object DifferentialTactics extends Logging {
   private val namespace = "differentialtactics"
 
   //QE with default timeout for use in ODE tactics
-  private[btactics] val timeoutQE = QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE))))
+  private[btactics] def timeoutQE = QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE))))
 
   /** @see [[HilbertCalculus.DE]] */
   lazy val DE: DependentPositionTactic = new DependentPositionTactic("DE") {
@@ -870,7 +870,7 @@ private object DifferentialTactics extends Logging {
       val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
       val qAtoms = FormulaTools.conjuncts(q).toSet
 
-      odeInvariant()(pos) | solve(pos) | fastODE(
+      odeInvariant()(pos) | (solve(pos) & ?(timeoutQE)) | fastODE(
         //@note abort if unchanged
         assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) match {
           case Some(Box(ODESystem(extendedOde, extendedQ), _)) =>
@@ -887,8 +887,9 @@ private object DifferentialTactics extends Logging {
       )(pos)
   })
 
+  /** Fast ODE implementation. Tactic `finish` is executed when fastODE itself cannot find a proof. */
   private def fastODE(finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
-    val invariantCandidates = try {
+    lazy val invariantCandidates = try {
       InvariantGenerator.differentialInvariantGenerator(seq,pos)
     } catch {
       case err: Exception =>
@@ -896,45 +897,23 @@ private object DifferentialTactics extends Logging {
         Stream[Formula]()
     }
 
-    val proveFromEvolutionDomain = "ANON" by ((pos: Position) => {
-      SaturateTactic(boxAnd(pos) & andR(pos)) &
-        onAll(("ANON" by ((pos: Position, seq: Sequent) => {
-          val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
-            case Some(Box(ode: ODESystem, pf)) => (ode, pf)
-            case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
-            case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
-          }
-
-          val bounds = StaticSemantics.boundVars(ode.ode).symbols //@note ordering irrelevant, only intersecting/subsetof
-          val frees = StaticSemantics.freeVars(post).symbols      //@note ordering irrelevant, only intersecting/subsetof
-
-          //@note diffWeaken will already include all cases where V works, without much additional effort.
-          if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
-            diffWeaken(pos) & QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE)))) & done
-          else fail
-        })) (pos))
-    })
-
     //Adds an invariant to the system's evolution domain constraint and tries to establish the invariant via proveWithoutCuts.
     //Fails if the invariant cannot be established by proveWithoutCuts.
     val addInvariant = ChooseSome(
       () => invariantCandidates.iterator,
       (inv: Formula) => {
-        DebuggingTactics.print(s"[ODE] Trying to cut in invariant candidate: $inv") &
+        DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
           /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
-          diffCut(inv)(pos) <(skip, odeInvariant()(pos) & done)
+          diffCut(inv)(pos) <(
+            skip,
+            odeInvariant()(pos) & done) &
+        // continue outside <(skip, ...) so that cut is proved before used
+        (odeInvariant()(pos) & done | fastODE(finish)(pos)) &
+        DebuggingTactics.debug("[ODE] Inv Candidate done")
       }
     )
 
-    //@todo This is basically redundant since odeInvariant does dW QE by itself
-//    DebuggingTactics.print("prove from evol dom") &
-      proveFromEvolutionDomain(pos) & done |
-//    DebuggingTactics.print("prove by ode inv") &
-      odeInvariant()(pos) & done |
-//    DebuggingTactics.print("add & recur") &
-      addInvariant & fastODE(finish)(pos) |
-//    DebuggingTactics.print("finish") &
-      finish
+      addInvariant | finish
   })
 
   /** Splits a post-condition containing a weak inequality into an open set case and an equillibrium point case.

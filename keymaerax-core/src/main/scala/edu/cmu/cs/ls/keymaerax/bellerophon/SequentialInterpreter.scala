@@ -250,7 +250,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       val opts = options()
       var errors = ""
       var result: Option[BelleValue] = None
-      while (opts.hasNext && result.isEmpty && !isDead) {
+      while (result.isEmpty && !isDead && opts.hasNext) {
         val o = opts.next()
         logger.debug("ChooseSome: try " + o)
         val someResult: Option[BelleValue] = try {

@@ -127,8 +127,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       if (recursors.nonEmpty) t(new Fixed(pos)) & (done | recursors.map(r =>
         DebuggingTactics.assertOnAll(_ != s ||
           //@note allow recursing on subposition after no-op steps that supply recursors
-          r(s, pos).exists(_.exists({ case Fixed(pp, _, _) => !pp.isTopLevel case _ => false })), "Stopping to recurse on unchanged sequent") &
-        applyRecursor(r(s, pos))).reduce(_&_))
+          r(s, pos).exists(_.exists({ case Fixed(pp, _, _) => !pp.isTopLevel && pp != pos case _ => false })), "Stopping to recurse on unchanged sequent") &
+        applyRecursor(r(s, pos))
+      ).reduce(_&_))
+
       else t(new Fixed(pos))
     }
 

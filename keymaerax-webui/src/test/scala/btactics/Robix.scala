@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
+import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
 
 import scala.language.postfixOps
@@ -107,6 +108,18 @@ class Robix extends TacticTestBase {
       ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) & SimplifierV2.simpTac(1))
 
     foResult.subgoals.loneElement shouldBe "==> v>=0&xpost=x&ypost=y&vpost=v&apost=-B()&dxpost=dx&dypost=dy&wpost=w".asSequent
+  }
+
+  it should "synthesize a controller monitor for IJRR static safety" in withMathematica { tool =>
+    val in = DatabasePopulator.readKya("classpath:/keymaerax-projects/ijrr/robix.kyx").filter(_.name == "Theorem 1: Static safety").head
+    val model = KeYmaeraXProblemParser(in.model)
+    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model,
+      Variable("x"), Variable("y"), Variable("v"), Variable("a"), Variable("dx"), Variable("dy"), Variable("w"))
+
+    val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
+      ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1) & SimplifierV2.simpTac(1))
+
+    foResult.subgoals.loneElement shouldBe "==> (0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=-b()&dxpost=dx&dypost=dy&wpost=w|v=0&0<=ep()&xpost=x&ypost=y&vpost=0&apost=0&dxpost=dx&dypost=dy&wpost=0|(-W()<=wpost&wpost<=W())&(rpost_0!=0&rpost_0*wpost=v)&(abs(x-xopost_0)>v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v)|abs(y-yopost_0)>v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v))&(0<=ep()&v>=0)&xpost=x&ypost=y&vpost=v&apost=A()&dxpost=dx&dypost=dy".asSequent
   }
 
   "Passive Safety" should "be provable" in withMathematica { _ =>

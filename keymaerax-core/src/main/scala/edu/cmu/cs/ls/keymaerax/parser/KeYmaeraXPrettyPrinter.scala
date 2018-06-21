@@ -184,7 +184,7 @@ object FullPrettyPrinter extends BasePrettyPrinter {
 
 
   /** Formatting the atomic statement s */
-  private def statement(s: String): String = if (statementSemicolon) s + ";" else s
+  protected def statement(s: String): String = if (statementSemicolon) s + ";" else s
 
 }
 
@@ -351,7 +351,7 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
   protected def emit(q: PosInExpr, s: String): String = s
 
   /** Formatting the atomic statement s */
-  private def statement(s: String): String = if (statementSemicolon) s + ";" else s
+  protected def statement(s: String): String = if (statementSemicolon) s + ";" else s
 
 }
 

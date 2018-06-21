@@ -110,18 +110,21 @@ Throw[inv]
 ]]
 
 
-QualitativeBasic[problem_List]:=Catch[Module[{},
+QualitativeBasic[problem_List]:=Catch[Module[{pre,f,vars,evoConst,post,fiInv,cuts,FIs,aggregate,cutsAggregate,inv},
 (* Pattern match fields in the problem *)
 { pre, { f, vars, evoConst }, post } = problem;
 Print["BASIC QUALITATIVE STRATEGY (DWC)"];
-Print["Trying first integrals first"];
-FIs=Linear`FirstIntegralMethod[pre, post, { f, vars, evoConst }, RationalsOnly->True, RationalPrecision->3];
+FIs={};
+(*Print["Trying first integrals first"];
+FIs=TimeConstrained[ (* Using a 5 second timeout *)
+Linear`FirstIntegralMethod[pre, post, { f, vars, evoConst }, RationalsOnly->True, RationalPrecision->3],
+5, {}];
 If[Length[FIs]>0,
 {fiInv,cuts}= Methods`DWC[pre, post, { f, vars, evoConst }, FIs, {}];
 If[CheckSemiAlgInclusion[fiInv,post,vars], 
 Throw[cuts],
 Print["First integrals didn't do it. Proceeding to other qualitative methods."]
-]];
+]];*)
 
 aggregate=evoConst;
 cutsAggregate={};
@@ -130,7 +133,7 @@ Do[
 {inv,cuts}=RunMethod[method,problem,FIs];
 If[ TrueQ[Reduce[Implies[inv, post], vars, Reals]], Throw[cuts]];
 aggregate=FullSimplify[inv && aggregate];
-cutsAggregate=Join[cutAggregate, cuts];
+cutsAggregate=Join[cutsAggregate, cuts];
 If[TrueQ[Reduce[Implies[aggregate, post], vars, Reals]], Throw[cutsAggregate]],
 {method,{
 "DWC-Factors-RHS", 
@@ -240,7 +243,12 @@ inv=strat[problem];
 inv=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
 
 (* Return the invariant without strict inequalities - KeYmaera has trouble with mixed formulas *)
-inv=inv/.{Greater[a_,b_]->GreaterEqual[a,b],Less[a_,b_]->LessEqual[a,b],Unequal[a_,b_]-> True};
+inv=inv/.{Unequal[a_,b_]-> True};
+andinv=Apply[And,inv];
+relaxedInv=Methods`InvS[andinv, f, vars, evoConst];
+If[ TrueQ[relaxedInv], 
+Print["Relaxed invariant is still ok. Proceeding"], 
+Print["Relaxed invariant is no longer invariant. Sorry."];Throw[{{True},False}]];
 
 invImpliesPost=CheckSemiAlgInclusion[Apply[And,inv], post, vars];
 If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{inv, True}],

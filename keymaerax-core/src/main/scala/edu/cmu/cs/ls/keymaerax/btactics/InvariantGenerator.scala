@@ -22,7 +22,7 @@ object InvariantGenerator extends Logging {
   /** A relevance filtering tool for dependency-optimized invariant and differential invariant generation
     * based on the candidates from `generator`.
     * @author Andre Platzer */
-  def relevanceFilter(generator: Generator[Formula]): Generator[Formula] = (sequent,pos) => {
+  def relevanceFilter(generator: Generator[Formula], analyzeMissing: Boolean): Generator[Formula] = (sequent,pos) => {
     //@todo if frees depend on bound variables that are not mentioned in evolution domain constraint, then diffCut
     val (system, constraint, post, allowPost) = sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, pf)) => (ode.ode,ode.constraint,pf,false)
@@ -42,7 +42,7 @@ object InvariantGenerator extends Logging {
       case _: DifferentialProgram => deps.getOrElse(x,List.empty).intersect(bounds.to)
       case _: Loop => (x +: deps.getOrElse(x,List.empty)).intersect(bounds.to)
     }
-    lazy val missing = frees.flatMap(relevantInvVars).diff(knowledge)
+    lazy val missing = if (analyzeMissing) frees.flatMap(relevantInvVars).diff(knowledge) else frees.flatMap(relevantInvVars)
     //@todo above of course even vars that are in the domain might need more knowledge, but todo that later and lazy
     generator(sequent,pos).
       distinct.
@@ -86,7 +86,7 @@ object InvariantGenerator extends Logging {
         (StaticSemantics.freeVars(system).symbols -- StaticSemantics.freeVars(b).symbols).size
     }
 
-    relevanceFilter(generator)(sequent, pos).
+    relevanceFilter(generator, analyzeMissing = true)(sequent, pos).
       // sort by dependency order
       //@todo performance construction should probably have been the other way around to ensure primitive dependencies are tried first and avoding sorting by that order retroactively
       sortWith((a:Formula,b:Formula) =>
@@ -104,7 +104,7 @@ object InvariantGenerator extends Logging {
   /** A differential invariant generator.
     * @author Andre Platzer */
   lazy val differentialInvariantGenerator: Generator[Formula] = cached((sequent,pos) =>
-    TactixLibrary.invGenerator(sequent,pos) #::: relevanceFilter(differentialInvariantCandidates)(sequent,pos)
+    TactixLibrary.invGenerator(sequent,pos) #::: differentialInvariantCandidates(sequent,pos)
   // ++ relevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
   )
 
@@ -124,7 +124,8 @@ object InvariantGenerator extends Logging {
     * @author Andre Platzer */
   lazy val differentialInvariantCandidates: Generator[Formula] = cached((sequent,pos) =>
     //@note be careful to not evaluate entire stream by sorting etc.
-    sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #::: relevanceFilter(pegasusCandidates)(sequent,pos))
+    sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #:::
+      relevanceFilter(pegasusCandidates, analyzeMissing = false)(sequent,pos))
 
   /** A simplistic loop invariant candidate generator.
     * @author Andre Platzer */
@@ -204,6 +205,7 @@ object InvariantGenerator extends Logging {
     val cache: scala.collection.mutable.Map[Box, Stream[Formula]] = new scala.collection.mutable.LinkedHashMap()
     (sequent,pos) => {
       val (box, system, constraint, post) = sequent.sub(pos) match {
+        case Some(box@Box(ODESystem(ode, And(True, q)), pf)) => (Box(ODESystem(ode, q), pf), ode, q, pf)
         case Some(box@Box(ode: ODESystem, pf)) => (box, ode.ode, ode.constraint, pf)
         case Some(box@Box(system: Loop, pf)) => (box, system, True, pf)
         case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)

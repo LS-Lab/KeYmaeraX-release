@@ -180,8 +180,8 @@ class MathematicaToKeYmaera extends M2KConverter[KExpr] {
   // error catching and reporting
 
   //@todo MathematicaSymbols.ABORTED
-  private def isAborted(e: MExpr) = e.toString.equalsIgnoreCase("$Aborted") || e.toString.equalsIgnoreCase("Abort[]")
-  private def isFailed(e: MExpr) = e.toString.equalsIgnoreCase("$Failed")
+  protected def isAborted(e: MExpr): Boolean = e.toString.equalsIgnoreCase("$Aborted") || e.toString.equalsIgnoreCase("Abort[]")
+  protected def isFailed(e: MExpr): Boolean = e.toString.equalsIgnoreCase("$Failed")
 
   private def mathExn(e: MExpr) : Exception =
     new ConversionException("Unsupported conversion for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e))
