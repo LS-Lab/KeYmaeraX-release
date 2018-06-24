@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
   * Generates a monitor from a ModelPlex expression.
   * @author Stefan Mitsch
   */
-class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
+class CMonitorGenerator extends CodeGenerator {
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
                      modelName: String): (String, String) =
     generateMonitoredCtrlCCode(expr, stateVars)
@@ -28,7 +28,7 @@ class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
     val parameters = getParameters(expr, stateVars)
 
     val monitorDistFuncHead =
-      s"""/* Computes distance to safety boundary on prior and current state (negative == safe, positive == unsafe) */
+      s"""/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */
          |long double boundaryDist(state pre, state curr, const parameters* const params)""".stripMargin
 
     val monitorSatFuncHead =
@@ -48,22 +48,25 @@ class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
 
     // @note negate to turn into safety distance >=0 satisfied, <0 unsatisfied monitor
     def negate(s: String): String = "-(" + s + ")"
-    val ((distDefs, distBody), satBody) = kind match {
-      case "boolean" => (printMonitor(expr, parameters), "boundaryDist(pre,curr,params) != 0.0")
-      case "metric" => expr match {
-        case LessEqual(l, r) =>
-          val lhsMonitor = printMonitor(l, parameters)
-          val rhsMonitor = printMonitor(r, parameters)
-          val lhs = negate(lhsMonitor._2)
-          val rhs = negate(rhsMonitor._2)
-          ((lhsMonitor._1 + rhsMonitor._1, lhs), "boundaryDist(pre,curr,params) >= " + rhs)
-        case Less(l, r) =>
-          val lhsMonitor = printMonitor(l, parameters)
-          val rhsMonitor = printMonitor(r, parameters)
-          val lhs = negate(lhsMonitor._2)
-          val rhs = negate(rhsMonitor._2)
-          ((lhsMonitor._1 + rhsMonitor._1, lhs), "boundaryDist(pre,curr,params) > " + rhs)
-      }
+    val ((distDefs, distBody), satBody) = expr match {
+      //@note when translated expression came in metric form or as a program, boundaryDist outputs a distance measure.
+      // otherwise interpret the result as C boolean (0 is false, != 0 is true)
+      // and turn into boundary distance >=0 is satisfied monitor <0 is unsatisfied
+      case LessEqual(l, r) =>
+        val lhsMonitor = printMonitor(l, parameters)
+        val rhsMonitor = printMonitor(r, parameters)
+        val lhs = negate(lhsMonitor._2)
+        val rhs = negate(rhsMonitor._2)
+        ((lhsMonitor._1 + rhsMonitor._1, lhs), "boundaryDist(pre,curr,params) >= " + rhs)
+      case Less(l, r) =>
+        val lhsMonitor = printMonitor(l, parameters)
+        val rhsMonitor = printMonitor(r, parameters)
+        val lhs = negate(lhsMonitor._2)
+        val rhs = negate(rhsMonitor._2)
+        ((lhsMonitor._1 + rhsMonitor._1, lhs), "boundaryDist(pre,curr,params) > " + rhs)
+      case _ =>
+        val monitor = printMonitor(expr, parameters)
+        ((monitor._1, s"${monitor._2} ? 1.0L : -1.0L"), "boundaryDist(pre,curr,params) >= 0.0L")
     }
 
     (s"""${distDefs.trim}
@@ -137,8 +140,8 @@ class CMonitorGenerator(val kind: String = "boolean") extends CodeGenerator {
         CIfThenElse(compileFormula(p), compileProgramFormula(ifP), compileProgramFormula(elseP))
       case Or(l, r) => COrProgram(compileProgramFormula(l), compileProgramFormula(r))
       case And(l, r) => CAndProgram(compileProgramFormula(l), compileProgramFormula(r))
-      case True if kind == "boolean" => CReturn(CTrue)
-      case Diamond(Test(p), q) if kind == "boolean" =>
+      case True => CReturn(CTrue)
+      case Diamond(Test(p), q) =>
         CIfThenElse(compileFormula(p), compileProgramFormula(q), CError(CFalse, p.prettyString))
     }
   }
