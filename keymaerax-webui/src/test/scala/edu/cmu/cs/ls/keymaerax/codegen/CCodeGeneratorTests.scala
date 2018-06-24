@@ -36,11 +36,12 @@ class CCodeGeneratorTests extends TacticTestBase {
   /** Wraps the monitor expression in the monitor boilerplate code. */
   private def expectedMonitor(compiledMonitorExpr: String,
                               paramDecl: String = "", stateDecl: String = "", inputDecl: String = "",
-                              kind: String="boolean"): String = {
+                              kind: String = "boolean"): String = {
     val (safetyDistBody, monitorSatisfiedBody) = kind match {
-      case "boolean" => (s"$compiledMonitorExpr ? 1.0L : -1.0L", "boundaryDist(pre,curr,params) >= 0.0L")
+      case "boolean" => (s"return $compiledMonitorExpr ? 1.0L : -1.0L", "boundaryDist(pre,curr,params) >= 0.0L")
+      case "program" => (compiledMonitorExpr, "boundaryDist(pre,curr,params) >= 0.0L")
       case "metric" => (
-        compiledMonitorExpr.substring(0, compiledMonitorExpr.indexOf(" >")),
+        "return " + compiledMonitorExpr.substring(0, compiledMonitorExpr.indexOf(" >")),
         "boundaryDist(pre,curr,params)" + compiledMonitorExpr.substring(compiledMonitorExpr.indexOf(" >")))
     }
 
@@ -63,7 +64,7 @@ class CCodeGeneratorTests extends TacticTestBase {
        |
        |/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */
        |long double boundaryDist(state pre, state curr, const parameters* const params) {
-       |  return $safetyDistBody;
+       |  $safetyDistBody;
        |}
        |
        |/* Evaluates monitor condition in prior and current state */
@@ -186,6 +187,21 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double y;""".stripMargin
     val monitor = (new CGenerator(new CMonitorGenerator()))("max(x,y)>=x".asFormula)
     monitor._1 shouldBe expectedMonitor("fmaxl(params->x, params->y) >= params->x", paramDecls)
+    monitor._2 shouldBe ""
+  }
+
+  "A program with tests" should "compile" in {
+    val paramDecls =
+      """long double x;
+        |  long double y;""".stripMargin
+    val monitor = (new CGenerator(new CMonitorGenerator()))("<?x>=y;>true".asFormula)
+    monitor._1 shouldBe expectedMonitor(
+      """if (params->x >= params->y) {
+        |return 1.0L;
+        |} else {
+        |printf("Failed %s\n", "x>=y"); return -1.0L;
+        |}""".stripMargin, paramDecls,
+      "", "", "program")
     monitor._2 shouldBe ""
   }
 

@@ -139,16 +139,22 @@ class CExpressionPlainPrettyPrinter extends (CExpression => (String, String)) {
     case CAnd(l, r) => "(" + print(l) + ") && (" + print(r) + ")"
     case COr(l, r) => "(" + print(l) + ") || (" + print(r) + ")"
 
-    case CTrue => "1"
-    case CFalse => "0"
+    case CTrue => "1.0L"
+    case CFalse => "-1.0L"
 
     case CIfThenElse(f, ifP, elseP) => "if (" + print(f) + ") {\n" + print(ifP) + "\n} else {\n" + print(elseP) + "\n}"
     case CReturn(e: CExpression) => "return " + print(e) + ";"
     case CError(retVal: CExpression, msg: String) => s"""printf("Failed %s\\n", "$msg"); return ${print(retVal)};"""
     case COrProgram(l, r) /* if kind=="boolean" */ =>
-      s"return OrLeft${uniqueName(l)}(pre,curr,params) || OrRight${uniqueName(r)}(pre,curr,params);"
+      s"""long double leftDist = OrLeft${uniqueName(l)}(pre,curr,params);
+         |long double rightDist = OrRight${uniqueName(r)}(pre,curr,params);
+         |printf("Or distances: %s=%Lf %s=%Lf\\n", "OrLeft${uniqueName(l)}", leftDist, "OrRight${uniqueName(r)}", rightDist);
+         |return fmaxl(leftDist, rightDist);""".stripMargin
     case CAndProgram(l, r) /* if kind=="boolean" */ =>
-      s"return AndLeft${uniqueName(l)}(pre,curr,params) || AndRight${uniqueName(r)}(pre,curr,params);"
+      s"""long double leftDist = AndLeft${uniqueName(l)}(pre,curr,params);
+         |long double rightDist = AndRight${uniqueName(r)}(pre,curr,params);
+         |printf("And distances: %s=%Lf %s=%Lf\\n", "AndLeft${uniqueName(l)}", leftDist, "AndRight${uniqueName(r)}", rightDist);
+         |return fminl(leftDist, rightDist);""".stripMargin
   }
 
 }

@@ -57,21 +57,22 @@ class CMonitorGenerator extends CodeGenerator {
         val rhsMonitor = printMonitor(r, parameters)
         val lhs = negate(lhsMonitor._2)
         val rhs = negate(rhsMonitor._2)
-        ((lhsMonitor._1 + rhsMonitor._1, lhs), "boundaryDist(pre,curr,params) >= " + rhs)
+        ((lhsMonitor._1 + rhsMonitor._1, s"return $lhs"), "boundaryDist(pre,curr,params) >= " + rhs)
       case Less(l, r) =>
         val lhsMonitor = printMonitor(l, parameters)
         val rhsMonitor = printMonitor(r, parameters)
         val lhs = negate(lhsMonitor._2)
         val rhs = negate(rhsMonitor._2)
-        ((lhsMonitor._1 + rhsMonitor._1, lhs), "boundaryDist(pre,curr,params) > " + rhs)
+        ((lhsMonitor._1 + rhsMonitor._1, s"return $lhs"), "boundaryDist(pre,curr,params) > " + rhs)
+      case Diamond(_, _) => (printMonitor(expr, parameters), "boundaryDist(pre,curr,params) >= 0.0L")
       case _ =>
         val monitor = printMonitor(expr, parameters)
-        ((monitor._1, s"${monitor._2} ? 1.0L : -1.0L"), "boundaryDist(pre,curr,params) >= 0.0L")
+        ((monitor._1, s"return ${monitor._2} ? 1.0L : -1.0L"), "boundaryDist(pre,curr,params) >= 0.0L")
     }
 
     (s"""${distDefs.trim}
        |$monitorDistFuncHead {
-       |  return $distBody;
+       |  $distBody;
        |}
        |
        |$monitorSatFuncHead {
