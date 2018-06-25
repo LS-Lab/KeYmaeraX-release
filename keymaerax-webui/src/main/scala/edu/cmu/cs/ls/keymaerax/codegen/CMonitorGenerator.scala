@@ -164,7 +164,8 @@ class CMonitorGenerator extends CodeGenerator {
           //@todo toMetric returns negated to what we assume here
           case c: ComparisonFormula => Plus(dist, Neg(c.left))
         }
-        CIfThenElse(compileFormula(p), compileProgramFormula(q, pDist), CError(CFalse, p.prettyString))
+        val errorDist = if (onlyEqualities(p)) CFalse else compileTerm(Neg(pDist))
+        CIfThenElse(compileFormula(p), compileProgramFormula(q, pDist), CError(errorDist, p.prettyString))
     }
   }
 
