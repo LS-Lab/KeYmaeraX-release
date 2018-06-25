@@ -5,6 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.codegen
 
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.{FormulaTools, ModelPlex}
 import edu.cmu.cs.ls.keymaerax.codegen.CFormulaTermGenerator._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
@@ -132,18 +133,38 @@ class CMonitorGenerator extends CodeGenerator {
     override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
                        modelName: String): (String, String) = expr match {
       case f: Formula if f.isFOL => super.apply(f, stateVars, inputVars, modelName)
-      case f: Formula if !f.isFOL => CPrettyPrinter(compileProgramFormula(f))
+      case f: Formula if !f.isFOL => CPrettyPrinter(compileProgramFormula(f, Number(0)))
       case t: Term => super.apply(t, stateVars, inputVars, modelName)
     }
 
-    private def compileProgramFormula(f: Formula): CProgram = f match {
+    def onlyEqualities(fml: Formula): Boolean = fml match {
+      case _: Equal => true
+      case And(l, r) => onlyEqualities(l) && onlyEqualities(r)
+      case _ => false
+    }
+
+    //@todo preprocess `f` to collect distance measure `dist` by proof instead of here:
+    // transform <?s=t><?x<=y><?a<=b>true into <?s=t><?x<=y><?a<=b>min(x-y,a-b)>=0
+    private def compileProgramFormula(f: Formula, dist: Term): CProgram = f match {
       case Or(Diamond(Test(p), ifP), Diamond(Test(Not(q)), elseP)) if p==q =>
-        CIfThenElse(compileFormula(p), compileProgramFormula(ifP), compileProgramFormula(elseP))
-      case Or(l, r) => COrProgram(compileProgramFormula(l), compileProgramFormula(r))
-      case And(l, r) => CAndProgram(compileProgramFormula(l), compileProgramFormula(r))
-      case True => CReturn(CTrue)
+        val ifDist = if (onlyEqualities(p)) dist else ModelPlex.toMetric(p) match {
+          //@todo toMetric returns negated to what we assume here
+          case c: ComparisonFormula => Plus(dist, Neg(c.left))
+        }
+        val elseDist = if (onlyEqualities(p)) dist else ModelPlex.toMetric(Not(q)) match {
+          //@todo toMetric returns negated to what we assume here
+          case c: ComparisonFormula => Plus(dist, Neg(c.left))
+        }
+        CIfThenElse(compileFormula(p), compileProgramFormula(ifP, ifDist), compileProgramFormula(elseP, elseDist))
+      case Or(l, r) => COrProgram(compileProgramFormula(l, Number(0)), compileProgramFormula(r, Number(0)))
+      case And(l, r) => CAndProgram(compileProgramFormula(l, Number(0)), compileProgramFormula(r, Number(0)))
+      case True => CReturn(compileTerm(dist))
       case Diamond(Test(p), q) =>
-        CIfThenElse(compileFormula(p), compileProgramFormula(q), CError(CFalse, p.prettyString))
+        val pDist = if (onlyEqualities(p)) dist else ModelPlex.toMetric(p) match {
+          //@todo toMetric returns negated to what we assume here
+          case c: ComparisonFormula => Plus(dist, Neg(c.left))
+        }
+        CIfThenElse(compileFormula(p), compileProgramFormula(q, pDist), CError(CFalse, p.prettyString))
     }
   }
 
