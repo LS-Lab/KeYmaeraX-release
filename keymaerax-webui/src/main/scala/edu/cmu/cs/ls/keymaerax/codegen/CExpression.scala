@@ -75,22 +75,22 @@ class CExpressionPlainPrettyPrinter extends (CExpression => (String, String)) {
       s"""${printDefinitions(l)}
          |${printDefinitions(r)}
          |
-         |double OrLeft${uniqueName(l)}(state pre, state curr, const parameters* const params) {
+         |long double OrLeft${uniqueName(l)}(state pre, state curr, const parameters* const params) {
          |  ${print(l)}
          |}
          |
-         |double OrRight${uniqueName(r)}(state pre, state curr, const parameters* const params) {
+         |long double OrRight${uniqueName(r)}(state pre, state curr, const parameters* const params) {
          |  ${print(r)}
          |}""".stripMargin
     case CAndProgram(l, r) =>
       s"""${printDefinitions(l)}
          |${printDefinitions(r)}
          |
-         |double AndLeft${uniqueName(l)}(state pre, state curr, const parameters* const params) {
+         |long double AndLeft${uniqueName(l)}(state pre, state curr, const parameters* const params) {
          |  ${print(l)}
          |}
          |
-         |double AndRight${uniqueName(r)}(state pre, state curr, const parameters* const params) {
+         |long double AndRight${uniqueName(r)}(state pre, state curr, const parameters* const params) {
          |  ${print(r)}
          |}""".stripMargin
     case CIfThenElse(_, ifP, elseP) => printDefinitions(ifP) + "\n" + printDefinitions(elseP)
