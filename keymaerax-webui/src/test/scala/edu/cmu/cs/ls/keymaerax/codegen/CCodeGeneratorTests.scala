@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.codegen
 
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.btactics.{ModelPlex, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
@@ -190,16 +190,16 @@ class CCodeGeneratorTests extends TacticTestBase {
     monitor._2 shouldBe ""
   }
 
-  "A program with tests" should "compile" in {
+  "A program with tests" should "compile" in withMathematica { _ =>
     val paramDecls =
       """long double x;
         |  long double y;""".stripMargin
     val monitor = (new CGenerator(new CMonitorGenerator()))("<?x>=y;>true".asFormula)
     monitor._1 shouldBe expectedMonitor(
       """if (params->x >= params->y) {
-        |return 1.0L;
+        |return (0.0L)+(-((params->y)-(params->x)));
         |} else {
-        |printf("Failed %s\n", "x>=y"); return -1.0L;
+        |printf("Failed %s\n", "x>=y"); return -((0.0L)+(-((params->y)-(params->x))));
         |}""".stripMargin, paramDecls,
       "", "", "program")
     monitor._2 shouldBe ""
