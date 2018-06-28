@@ -21,14 +21,14 @@ import scala.language.postfixOps
 import org.scalatest.LoneElement._
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
+import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator, CodeGenTestTools}
 
 /**
- * Created by smitsch on 3/8/15.
- *
- * @author Stefan Mitsch
- * @author Ran Ji
- */
+  * Created by smitsch on 3/8/15.
+  *
+  * @author Stefan Mitsch
+  * @author Ran Ji
+  */
 @SlowTest
 class ModelplexTacticTests extends TacticTestBase {
 
@@ -271,9 +271,10 @@ class ModelplexTacticTests extends TacticTestBase {
     val model = KeYmaeraXProblemParser(
       io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/modelplex/watertank/watertank.key")).mkString)
+    val Imply(_, Box(prg, _)) = model
 
-    val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
-      Variable("f"), Variable("l"), Variable("c"))
+    val stateVars = ("f"::"l"::"c"::Nil).map(_.asVariable.asInstanceOf[BaseVariable])
+    val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, stateVars:_*)
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
     val tactic = ModelPlex.controllerMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*) & simplifier(1)
     val result = proveBy(modelplexInput, tactic)
@@ -283,6 +284,62 @@ class ModelplexTacticTests extends TacticTestBase {
 
     val testProg2 = proveBy(result.subgoals.loneElement, ModelPlex.chaseToTests(combineTests=true)(1)*2)
     testProg2.subgoals.loneElement shouldBe "==> <?-1<=fpost&fpost<=(m()-l)/ep();><?0<=l&0<=ep();><?lpost=l&cpost=0;>true".asSequent
+
+    val inputs = CGenerator.getInputs(prg)
+    val code = (new CMonitorGenerator())(testProg2.subgoals.head.succ.head, stateVars.toSet, inputs, "Monitor")
+    code._1 shouldBe
+      """
+        |/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */
+        |long double boundaryDist(state pre, state curr, const parameters* const params) {
+        |  if (((-1.0L) <= curr.f) && (curr.f <= ((params->m)-(pre.l))/(params->ep))) {
+        |if ((0.0L <= pre.l) && (0.0L <= params->ep)) {
+        |if ((curr.l == pre.l) && (curr.c == 0.0L)) {
+        |return ((0.0L)+(-(fmaxl(((-1.0L))-(curr.f), (curr.f)-(((params->m)-(pre.l))/(params->ep))))))+(-(fmaxl((0.0L)-(pre.l), (0.0L)-(params->ep))));
+        |} else {
+        |printf("Failed %s\n", "lpost=l&cpost=0"); return -1.0L;
+        |}
+        |} else {
+        |printf("Failed %s\n", "0<=l&0<=ep()"); return -(((0.0L)+(-(fmaxl(((-1.0L))-(curr.f), (curr.f)-(((params->m)-(pre.l))/(params->ep))))))+(-(fmaxl((0.0L)-(pre.l), (0.0L)-(params->ep)))));
+        |}
+        |} else {
+        |printf("Failed %s\n", "-1<=fpost&fpost<=(m()-l)/ep()"); return -((0.0L)+(-(fmaxl(((-1.0L))-(curr.f), (curr.f)-(((params->m)-(pre.l))/(params->ep))))));
+        |};
+        |}
+        |
+        |/* Evaluates monitor condition in prior and current state */
+        |bool monitorSatisfied(state pre, state curr, const parameters* const params) {
+        |  return boundaryDist(pre,curr,params) >= 0.0L;
+        |}
+        |
+        |/* Run controller `ctrl` monitored, return `fallback` if `ctrl` violates monitor */
+        |state monitoredCtrl(state curr, const parameters* const params, const input* const in,
+        |                    state (*ctrl)(state,const parameters* const,const input* const), state (*fallback)(state,const parameters* const,const input* const)) {
+        |  state pre = curr;
+        |  state post = (*ctrl)(pre,params,in);
+        |  if (!monitorSatisfied(pre,post,params)) return (*fallback)(pre,params,in);
+        |  else return post;
+        |}
+        |
+        |""".stripMargin
+
+    val monitorCode = (new CGenerator(new CMonitorGenerator()))(testProg2.subgoals.head.succ.head, stateVars.toSet, inputs, "Monitor")
+
+    val codeFileContent =
+      s"""
+         |#include <stdio.h>
+         |${monitorCode._1}
+         |
+         |state ctrl(state curr, const parameters* const params, const input* const in) { return curr; }
+         |state fallback(state curr, const parameters* const params, const input* const in) { return curr; }
+         |
+         |int main() {
+         |  return 0;
+         |}
+         |""".stripMargin
+
+    val cmd = CodeGenTestTools.compileC(codeFileContent)
+    val p = Runtime.getRuntime.exec(cmd)
+    withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) { p.waitFor() shouldBe 0 }
   }
 
   it should "find correct controller monitor condition from model file" ignore {
@@ -702,21 +759,18 @@ class ModelplexTacticTests extends TacticTestBase {
       Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("k"), Variable("t"))
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
-    foResult.subgoals should have size 1
-    foResult.subgoals.head.ante shouldBe empty
-    foResult.subgoals.head.succ should contain only "\\exists dxo \\exists dyo (dxo^2+dyo^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&kpost=k&tpost=0|v=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&kpost=k&tpost=0|\\exists a ((-B()<=a&a<=A())&\\exists k \\exists w (v*k=w&\\exists xo \\exists yo ((abs(x-xo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=a&kpost=k&tpost=0)))))".asFormula
+    foResult.subgoals.loneElement.ante shouldBe empty
+    foResult.subgoals.loneElement.succ.loneElement shouldBe "\\exists dxo \\exists dyo (dxo^2+dyo^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&kpost=k&tpost=0|v=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&kpost=k&tpost=0|\\exists a ((-B()<=a&a<=A())&\\exists k \\exists w (v*k=w&\\exists xo \\exists yo ((abs(x-xo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=a&kpost=k&tpost=0)))))".asFormula
 
     //Opt. 1
     val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*)
-    opt1Result.subgoals should have size 1
-    opt1Result.subgoals.head.ante shouldBe empty
-    opt1Result.subgoals.head.succ should contain only "dxopost^2+dyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&kpost=k&tpost=0|v=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&kpost=k&tpost=0|(-B()<=apost&apost<=A())&v*kpost=wpost&(abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xopost=xopost&yopost=yopost&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=wpost&apost=apost&kpost=kpost&tpost=0)".asFormula
+    opt1Result.subgoals.loneElement.ante shouldBe empty
+    opt1Result.subgoals.loneElement.succ.loneElement shouldBe "dxopost^2+dyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&kpost=k&tpost=0|v=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&kpost=k&tpost=0|(-B()<=apost&apost<=A())&v*kpost=wpost&(abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xopost=xopost&yopost=yopost&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=wpost&apost=apost&kpost=kpost&tpost=0)".asFormula
 
     // simplify
     val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.simplify())
-    simplifiedResult.subgoals should have size 1
-    simplifiedResult.subgoals.head.ante shouldBe empty
-    simplifiedResult.subgoals.head.succ should contain only "dxopost^2+dyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&kpost=k&tpost=0|v=0&0<=ep()&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=0&wpost=0&apost=0&kpost=k&tpost=0|(-B()<=apost&apost<=A())&(abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=v*kpost&tpost=0)".asFormula
+    simplifiedResult.subgoals.loneElement.ante shouldBe empty
+    simplifiedResult.subgoals.loneElement.succ.loneElement shouldBe "dxopost^2+dyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&kpost=k&tpost=0|v=0&0<=ep()&xopost=xo&yopost=yo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=0&wpost=0&apost=0&kpost=k&tpost=0|(-B()<=apost&apost<=A())&v*kpost=wpost&(abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&tpost=0)".asFormula
 
     report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "RSS controller monitor (forward chase)")
   }
@@ -778,9 +832,8 @@ class ModelplexTacticTests extends TacticTestBase {
 
     // simplify
     val simplifiedResult = proveBy(opt1Result.subgoals.head, ModelPlex.simplify())
-    simplifiedResult.subgoals should have size 1
-    simplifiedResult.subgoals.head.ante shouldBe empty
-    simplifiedResult.subgoals.head.succ should contain only "(h>0&((kp < 0&v=0|kp < 0&v>0&2*h*kp+v*(kd()+y)=2*h*kp&h*y>h*kd()+2*v|kp < 0&v < 0&2*h*kp+v*y=2*h*kp+kd()*v&2*v+h*(kd()+y)>0|kp>0&v=0|kp>0&v>0&(2*h*kp+v*(kd()+y)=2*h*kp&h*y>h*kd()+2*v&kd()+2*sqrkp<=0|2*h*kp+v*(kd()+y)=2*h*kp&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*h*kp+v*y=2*h*kp+kd()*v&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*h*kp+v*(kd()+y)=2*h*kp&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v)|kp>0&v < 0&(2*h*kp+v*(kd()+y)=2*h*kp&kd()>2*sqrkp&h*y < h*kd()+2*v|2*h*kp+v*y=2*h*kp+kd()*v&kd()>=2*sqrkp&h*y < h*kd()+2*v|2*h*kp+v*y=2*h*kp+kd()*v&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v|2*h*kp+v*y=2*h*kp+kd()*v&h*y>h*kd()+2*v&2*v+h*(kd()+y)>=0&kd()+2*sqrkp < 0))&(y^2=kd()^2-4*kp&y>=0)&(sqrkp^2=kp&sqrkp>=0)&h^2*kp^2-2*h*h*kp^2+h^2*kp^2+kp*v^2!=0|(kp < 0&v=0&(h*y<=h*kd()|h*(kd()+y)<=0)|kp < 0&v < 0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+kd()*v!=2*h*kp+v*y)|kp < 0&v>0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+v*(kd()+y)!=2*h*kp)|kp>0&v=0&(kd()=2*sqrkp&h*y>=h*kd()|kd() < 2*sqrkp&kd()+2*sqrkp>0|kd()>2*sqrkp&h*(kd()+y)<=0|kd()+2*sqrkp<=0&h*y<=h*kd())|kp>0&v < 0&(2*h*kp+v*y!=2*h*kp+kd()*v&(h*y>=h*kd()+2*v|kd()<=2*sqrkp)|kd() < 2*sqrkp|kd()>2*sqrkp&(h*y < h*kd()+2*v&(2*h*kp+v*y < 2*h*kp+kd()*v&2*h*kp+v*(kd()+y) < 2*h*kp|2*h*kp+v*y>2*h*kp+kd()*v|2*h*kp+v*(kd()+y)>2*h*kp)|2*v+h*(kd()+y)<=0)|h*y>=h*kd()+2*v&kd()<=2*sqrkp|kd()+2*sqrkp<=0)|kp>0&v>0&(2*h*kp+v*(kd()+y)!=2*h*kp&(kd()+2*sqrkp>=0|2*v+h*(kd()+y)>=0)|kd()>=2*sqrkp|kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0&(2*h*kp+v*y < 2*h*kp+kd()*v|2*h*kp+v*(kd()+y) < 2*h*kp|2*h*kp+v*y>2*h*kp+kd()*v&2*h*kp+v*(kd()+y)>2*h*kp)|kd()+2*sqrkp>0|h*y<=h*kd()+2*v))&y^2=kd()^2-4*kp&y>=0&sqrkp^2=kp&sqrkp>=0&h^2*kp^2-2*h*h*kp^2+h^2*kp^2+kp*v^2=0))&hrefpost=h&vpost=v&hpost=h".asFormula
+    simplifiedResult.subgoals.loneElement.ante shouldBe empty
+    simplifiedResult.subgoals.loneElement.succ.loneElement shouldBe "(h>=hrefpost&hrefpost>0&((kp < 0&v=0&hrefpost>=h|kp < 0&v>0&2*h*kp+v*(kd()+y)=2*hrefpost*kp&h*y>h*kd()+2*v|kp < 0&v < 0&2*hrefpost*kp+v*y=2*h*kp+kd()*v&2*v+h*(kd()+y)>0|kp>0&v=0&hrefpost=h|kp>0&v>0&(2*h*kp+v*(kd()+y)=2*hrefpost*kp&h*y>h*kd()+2*v&kd()+2*sqrkp<=0|2*h*kp+v*(kd()+y)=2*hrefpost*kp&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*hrefpost*kp+v*y=2*h*kp+kd()*v&kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0|2*h*kp+v*(kd()+y)=2*hrefpost*kp&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v)|kp>0&v < 0&(2*h*kp+v*(kd()+y)=2*hrefpost*kp&kd()>2*sqrkp&h*y < h*kd()+2*v|2*hrefpost*kp+v*y=2*h*kp+kd()*v&kd()>=2*sqrkp&h*y < h*kd()+2*v|2*hrefpost*kp+v*y=2*h*kp+kd()*v&kd()>2*sqrkp&2*v+h*(kd()+y)>0&h*y>=h*kd()+2*v|2*hrefpost*kp+v*y=2*h*kp+kd()*v&h*y>h*kd()+2*v&2*v+h*(kd()+y)>=0&kd()+2*sqrkp < 0))&(y^2=kd()^2-4*kp&y>=0)&(sqrkp^2=kp&sqrkp>=0)&h^2*kp^2-2*h*hrefpost*kp^2+hrefpost^2*kp^2+h*kd()*kp*v-hrefpost*kd()*kp*v+kp*v^2!=0|(kp < 0&v=0&(h*y<=h*kd()|h*(kd()+y)<=0|h>hrefpost)|kp < 0&v < 0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+kd()*v!=2*hrefpost*kp+v*y)|kp < 0&v>0&(h*y<=h*kd()+2*v|2*v+h*(kd()+y)<=0|2*h*kp+v*(kd()+y)!=2*hrefpost*kp)|kp>0&v=0&(h!=hrefpost&(kd()>=2*sqrkp&h*y>=h*kd()|h*(kd()+y)>=0&kd()+2*sqrkp < 0)|kd()=2*sqrkp&h*y>=h*kd()|kd() < 2*sqrkp&kd()+2*sqrkp>0|h>hrefpost|kd()>2*sqrkp&h*(kd()+y)<=0|kd()+2*sqrkp<=0&h*y<=h*kd())|kp>0&v < 0&(2*hrefpost*kp+v*y!=2*h*kp+kd()*v&(h*y>=h*kd()+2*v|kd()<=2*sqrkp)|kd() < 2*sqrkp|kd()>2*sqrkp&(h*y < h*kd()+2*v&(2*hrefpost*kp+v*y < 2*h*kp+kd()*v&2*h*kp+v*(kd()+y) < 2*hrefpost*kp|2*hrefpost*kp+v*y>2*h*kp+kd()*v|2*h*kp+v*(kd()+y)>2*hrefpost*kp)|2*v+h*(kd()+y)<=0)|h*y>=h*kd()+2*v&kd()<=2*sqrkp|kd()+2*sqrkp<=0)|kp>0&v>0&(2*h*kp+v*(kd()+y)!=2*hrefpost*kp&(kd()+2*sqrkp>=0|2*v+h*(kd()+y)>=0)|kd()>=2*sqrkp|kd()+2*sqrkp < 0&2*v+h*(kd()+y) < 0&(2*hrefpost*kp+v*y < 2*h*kp+kd()*v|2*h*kp+v*(kd()+y) < 2*hrefpost*kp|2*hrefpost*kp+v*y>2*h*kp+kd()*v&2*h*kp+v*(kd()+y)>2*hrefpost*kp)|kd()+2*sqrkp>0|h*y<=h*kd()+2*v))&y^2=kd()^2-4*kp&y>=0&sqrkp^2=kp&sqrkp>=0&h^2*kp^2-2*h*hrefpost*kp^2+hrefpost^2*kp^2+h*kd()*kp*v-hrefpost*kd()*kp*v+kp*v^2=0))&vpost=v&hpost=h".asFormula
 
     report(simplifiedResult.subgoals.head.succ.head, simplifiedResult, "Hybrid quadcopter controller monitor (forward chase)")
   }
