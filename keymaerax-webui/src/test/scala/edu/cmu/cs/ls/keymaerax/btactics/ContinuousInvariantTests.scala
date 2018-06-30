@@ -36,7 +36,7 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
 
     InvariantGenerator.differentialInvariantCandidates(problem, SuccPos(0)) should contain theSameElementsInOrderAs(
       "x>-1".asFormula::"-2*x>1".asFormula::"-2*y>1".asFormula::"y>=-1".asFormula::
-        "x^5+-1*x*y+-4*x^3*y<=0&y<=0".asFormula::"x^5+-1*x*y+-4*x^3*y<=0".asFormula::"y<=0".asFormula :: Nil)
+        "x^5<=(x+4*x^3)*y".asFormula::"y<=0".asFormula :: Nil)
   }
 
   it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs SlowTest in withMathematica { _ =>
@@ -106,7 +106,7 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
       "{ x' = v, v' = -Kp()*(x-xr()) - Kd()*v }".asProgram.asInstanceOf[ODESystem],
       "c()>0 & Kp()=2 & Kd()=3 & 5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()".asFormula) shouldBe true
 
-    proveBy(entry.model.asInstanceOf[Formula], implyR(1) & ODE(1)) shouldBe 'proved
+    proveBy(entry.model.asInstanceOf[Formula], implyR(1) & dI()(1)) shouldBe 'proved
   }
 
   it should "produce invariants that are provable with ODE" taggedAs SlowTest in withMathematica { _ =>
