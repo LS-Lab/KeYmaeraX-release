@@ -1366,7 +1366,8 @@ private object DifferentialTactics extends Logging {
   // Try hard to prove G|-[x'=f(x)&Q]P by an invariance argument on P only (NO SOLVE)
   def odeInvariant(tryHard:Boolean = false): DependentPositionTactic = "odeInvariant" by ((pos:Position) => {
     require(pos.isSucc && pos.isTopLevel, "ODE invariant only applicable in top-level succedent")
-    require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
+    //@note dW does not need algebra tool
+    //require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
 
     //todo: Ideally this will go for full rank + everything proof if tryHard=true
     val rankConfig = if(tryHard) 3 else 1
