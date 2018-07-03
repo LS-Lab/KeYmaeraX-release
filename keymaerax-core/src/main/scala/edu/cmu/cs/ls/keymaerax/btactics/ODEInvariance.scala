@@ -431,7 +431,6 @@ object ODEInvariance {
           if(pr2.isProved)
             Some(f)
           else None
-          //TODO: for strict inequalities, can also check that p>0 proves using open DI (p>0 -> p'>=0)
         }
 
       case and:And =>

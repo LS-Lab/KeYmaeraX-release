@@ -1196,6 +1196,7 @@ private object DifferentialTactics extends Logging {
     val zero = Number(0)
 
     //The sign of the remainder for a Darboux argument
+    //e.g., tests r >= 0 for p'>=gp (Darboux inequality)
     val pr = property match {
       case GreaterEqual(_, _) => proveBy(Imply(dom,GreaterEqual(r,zero)),timeoutQE)
       case Greater(_, _) => proveBy(Imply(And(dom,property),GreaterEqual(r,zero)),timeoutQE)
@@ -1207,8 +1208,27 @@ private object DifferentialTactics extends Logging {
       case _ => throw new BelleThrowable(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
     }
 
-    //println(pr,lie,q,p,r)
-    if(!pr.isProved && strict)
+    if(pr.isProved)
+      return (pr,q,r)
+    if(q != Number(0)) {
+      // Fall-back check if straightforward DI would work
+      // This is needed, because one can e.g. get p'>=0 without having r>=0 when domain constraints are possible
+      // todo: is it possible to improve the Darboux (in)equality generation heuristic to automatically cover this case?
+      val pr = property match {
+        case GreaterEqual(_, _) => proveBy(Imply(dom,GreaterEqual(lie,zero)),timeoutQE)
+        case Greater(_, _) => proveBy(Imply(And(dom,property),GreaterEqual(lie,zero)),timeoutQE)
+        case LessEqual(_, _) => proveBy(Imply(dom,LessEqual(lie,zero)),timeoutQE)
+        case Less(_, _) => proveBy(Imply(And(dom,property),LessEqual(lie,zero)),timeoutQE)
+        case Equal(_,_) => proveBy(Imply(dom,Equal(lie,zero)),timeoutQE)
+        //todo: is there a special case of open DI that would work for disequalities?
+        case NotEqual(_,_) => proveBy(Imply(dom,Equal(lie,zero)),timeoutQE)
+        case _ => throw new BelleThrowable(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
+      }
+      if(pr.isProved)
+        return (pr,Number(0),lie)
+    }
+
+    if(strict)
       throw new BelleThrowable("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+q+" rem: "+r+" unable to prove: "+pr.conclusion)
 
     (pr,q,r)
@@ -1380,7 +1400,7 @@ private object DifferentialTactics extends Logging {
       //Naive simplification of domain constraint
 //      DebuggingTactics.print("domSimplify") &
       DifferentialTactics.domSimplify(pos) &
-//      DebuggingTactics.print("close") &
+      DebuggingTactics.print("close") &
       (
 //        DebuggingTactics.print("try DWQE") &
           (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
