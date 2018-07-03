@@ -328,6 +328,10 @@ private object DLBySubst {
             else if (consts.size == 1) And(ur(variant), consts.head)
             else And(ur(variant), True)
 
+          val x1 = Variable(ur.what.name, Some(ur.what.index.getOrElse(-1)+1)) //@note avoid clash with x_ when assignd uses assigndEquality
+          val x2 = Variable(x1.name, Some(x1.index.get+1))          //@note result after assigndEquality
+          val v0 = Variable(v.name, Some(v.index.getOrElse(-1)+1))  //@note want v__0 in result instead of x2
+
           def closeConsts(pos: Position) = andR(pos) <(skip, onAll(andR(pos) <(closeId, skip))*(consts.size-1) & close)
           val splitConsts = if (consts.nonEmpty) andL('Llast)*consts.size else useAt(DerivedAxioms.andTrue.fact)('Llast)
 
@@ -350,7 +354,10 @@ private object DLBySubst {
               stutterABV(SuccPosition.base0(0, PosInExpr(1::0::Nil))) &
               useAt("<> partial vacuous", PosInExpr(1::Nil))(1) &
               unstutterABV(SuccPosition.base0(0, PosInExpr(0::1::Nil))) &
-              splitConsts & closeConsts(SuccPos(0)) & assignd(1, 1 :: Nil) & uniformRename(ur) & label(BelleLabels.indStep)
+              splitConsts & closeConsts(SuccPos(0)) &
+              (assignd(1, 1 :: Nil) & uniformRename(ur) |
+                uniformRename(ur.what, x1) & assignd(1, 1 :: Nil) & boundRename(x1, v)(1, 1::Nil) & uniformRename(x2, v0)
+                ) & label(BelleLabels.indStep)
             )
           )
       }
