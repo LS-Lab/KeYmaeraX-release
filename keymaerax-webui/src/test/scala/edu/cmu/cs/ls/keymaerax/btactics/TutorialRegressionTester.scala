@@ -51,7 +51,7 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
   }
 
   it should "parse all tactics" in {
-    forEvery (tutorialEntries.filter(_._6.isDefined)) { (tutorialName, name, _, _, _, _, tactic, _) =>
+    forEvery (tutorialEntries.filter(_._7.isDefined)) { (tutorialName, name, _, _, _, _, tactic, _) =>
       withClue(tutorialName + "/" + name + "/" + tactic.get._1) { BelleParser(tactic.get._2) }
     }
   }
@@ -90,7 +90,7 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
     val qeFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
 
     tutorialEntries.
-      filterNot(e => e._6.isDefined && e._7.get._3 &&
+      filterNot(e => e._7.isDefined && e._7.get._3 &&
         qeFinder.findAllMatchIn(e._7.get._2).forall(p => p.group("toolName") == tool)).
       foreach(e => println(s"QE tool mismatch: skipping ${e._1}"))
 
