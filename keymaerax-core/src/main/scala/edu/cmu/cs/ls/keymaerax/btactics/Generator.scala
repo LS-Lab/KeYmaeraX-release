@@ -56,6 +56,7 @@ class ConfigurableGenerator[A](var products: Map[Expression,Seq[A]] = Map[Expres
         case (ODESystem(key, _), _) =>
           val subs = Try(NonSubstUnificationMatch.unifyODE(key, ode.ode)).toOption.getOrElse(Nil)
           NonSubstUnificationMatch.unifier(subs)(key) == ode.ode
+        case _ => false
       }).map({ case (_, odeProducts) =>
         odeProducts.map({
           case Imply(Equal(xp: DifferentialSymbol, e), invCandidate) =>
