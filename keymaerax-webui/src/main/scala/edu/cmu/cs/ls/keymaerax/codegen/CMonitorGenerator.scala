@@ -160,12 +160,15 @@ class CMonitorGenerator extends CodeGenerator {
       case And(l, r) => CAndProgram(compileProgramFormula(l, Number(0)), compileProgramFormula(r, Number(0)))
       case True => CReturn(compileTerm(dist))
       case Diamond(Test(p), q) =>
-        val pDist = if (onlyEqualities(p)) dist else ModelPlex.toMetric(p) match {
+        val (pMetric: Option[Term], pSatDist) = if (onlyEqualities(p)) (None, dist) else ModelPlex.toMetric(p) match {
           //@todo toMetric returns negated to what we assume here
-          case c: ComparisonFormula => Plus(dist, Neg(c.left))
+          //@note all nested ifs are satisfied, hence dist >= 0; encode And as plus (instead of min) has the advantage
+            // that changes in each conjunct are reflected in the combined safety distance
+          case c: ComparisonFormula => (Some(Neg(c.left)), Plus(dist, Neg(c.left)))
         }
-        val errorDist = if (onlyEqualities(p)) CFalse else compileTerm(Neg(pDist))
-        CIfThenElse(compileFormula(p), compileProgramFormula(q, pDist), CError(errorDist, p.prettyString))
+        //@note offset error distance from -1 since weak inequalities may otherwise result in safe distance 0
+        val errorDist = pMetric.map(t => CPlus(CNumber(-1), compileTerm(t))).getOrElse(CFalse)
+        CIfThenElse(compileFormula(p), compileProgramFormula(q, pSatDist), CError(errorDist, p.prettyString))
     }
   }
 

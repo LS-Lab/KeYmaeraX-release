@@ -199,7 +199,7 @@ class CCodeGeneratorTests extends TacticTestBase {
       """if (params->x >= params->y) {
         |return (0.0L)+(-((params->y)-(params->x)));
         |} else {
-        |printf("Failed %s\n", "x>=y"); return -((0.0L)+(-((params->y)-(params->x))));
+        |printf("Failed %s\n", "x>=y"); return ((-1.0L))+(-((params->y)-(params->x)));
         |}""".stripMargin, paramDecls,
       "", "", "program")
     monitor._2 shouldBe ""
