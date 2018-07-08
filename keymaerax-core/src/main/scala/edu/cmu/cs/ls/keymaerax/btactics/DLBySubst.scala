@@ -312,7 +312,7 @@ private object DLBySubst {
     )})
 
   /** [[TactixLibrary.con()]] */
-  def con(v: Variable, variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = "con" byWithInput(variant, (pos, sequent) => {
+  def con(v: Variable, variant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = "con" byWithInputs(v::variant::Nil, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "con only at top-level in succedent, but got " + pos)
     require(sequent(pos) match { case Diamond(Loop(_), _) => true case _ => false }, "only applicable for <a*>p(||)")
 
