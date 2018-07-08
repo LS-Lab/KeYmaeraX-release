@@ -878,11 +878,12 @@ object DerivationInfo {
     new InputPositionTacticInfo("con",
       RuleDisplayInfo("Loop Convergence",(List("&Gamma;"), List("&lt;a*&gt;P", "&Delta;")),
         List(
-          (List("&Gamma;"),List("∃x_. j(x_)", "&Delta;")),
-          (List("x_ ≤ 0", "j(x_)"),List("P")),
-          (List("x_ > 0", "j(x_)"),List("&lt;a&gt;j(x_-1)"))))
-      //@todo also input variable name
-      , List(FormulaArg("j(x_)", allowsFresh = "x_" :: Nil)), _ => ((fml: Formula) => DLBySubst.con("x_".asVariable, fml)): TypedFunc[Formula, BelleExpr]),
+          (List("&Gamma;"),List("∃x. j(x)", "&Delta;")),
+          (List("x ≤ 0", "j(x)"),List("P")),
+          (List("x > 0", "j(x)"),List("&lt;a&gt;j(x-1)"))))
+      , List(VariableArg("x", allowsFresh = "x" :: Nil), FormulaArg("j(x)", allowsFresh = "x" :: Nil)), _ =>
+        ((x: Variable) =>
+          ((fml: Formula) => DLBySubst.con(x, fml)): TypedFunc[Formula, BelleExpr]): TypedFunc[Variable, _]),
 
     new PositionTacticInfo("loopauto", RuleDisplayInfo("loopauto",(List("&Gamma;"), List("[a*]P", "&Delta;")),
       List()), {case () => (gen: Generator.Generator[Formula]) => TactixLibrary.loopauto(gen)}, needsGenerator = true),
