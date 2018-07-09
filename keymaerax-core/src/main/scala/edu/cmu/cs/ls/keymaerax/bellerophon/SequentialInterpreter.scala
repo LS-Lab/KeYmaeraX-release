@@ -34,15 +34,15 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
     listeners.foreach(_.begin(v, expr))
     try {
       val result = runExpr(expr, v)
-      listeners.foreach(l => l.end(v, expr, Left(result)))
+      listeners.foreach(_.end(v, expr, Left(result)))
       result
     } catch {
       case err: BelleThrowable =>
-        listeners.foreach(l => l.end(v, expr, Right(err)))
+        listeners.foreach(_.end(v, expr, Right(err)))
         throw err
       case e: Throwable =>
         val be = new BelleThrowable("Error in sequential interpreter: " + e.getMessage, e)
-        listeners.foreach(l => l.end(v, expr, Right(be)))
+        listeners.foreach(_.end(v, expr, Right(be)))
         throw be
     }
   }
@@ -131,7 +131,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
               case (Some(origLabels), Some(newLabels)) =>
                 Some(origLabels.patch(cidx, newLabels, 0))
               case (Some(origLabels), None) =>
-                Some(origLabels.patch(cidx, createLabels(origLabels.length, origLabels.length + (nextIdx - cidx)), 0))
+                Some(origLabels.patch(cidx, createLabels(origLabels.length, origLabels.length + subderivation.p.subgoals.size), 0))
               case (None, Some(newLabels)) =>
                 Some(createLabels(0, cidx) ++ newLabels)
               case (None, None) => None
@@ -530,7 +530,7 @@ case class LazySequentialInterpreter(override val listeners: scala.collection.im
               case (Some(origLabels), Some(newLabels)) =>
                 Some(origLabels.patch(cidx, newLabels, 0))
               case (Some(origLabels), None) =>
-                Some(origLabels.patch(cidx, createLabels(origLabels.length, origLabels.length + (nextIdx - cidx)), 0))
+                Some(origLabels.patch(cidx, createLabels(origLabels.length, origLabels.length + subderivation.p.subgoals.length), 0))
               case (None, Some(newLabels)) =>
                 Some(createLabels(0, cidx) ++ newLabels)
               case (None, None) => None
