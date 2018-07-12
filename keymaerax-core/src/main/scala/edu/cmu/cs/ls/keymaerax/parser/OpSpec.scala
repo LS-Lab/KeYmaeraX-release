@@ -245,6 +245,7 @@ object OpSpec {
   private val diffprogfmlprog = (DifferentialProgramKind,FormulaKind)
 
   val sProgramConst = UnitOpSpec(none,    0, name => ProgramConst(name))
+  val sSystemConst = UnitOpSpec(none,    0, name => SystemConst(name))
   val sDifferentialProgramConst = UnitOpSpec(none,  0, name => DifferentialProgramConst(name, AnyArg))
   val sAssign       = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (x:Term, e:Term) => Assign(x.asInstanceOf[Variable], e))
   assert(sAssign>sMinus, "atomic programs bind weaker than their constituent terms")
@@ -336,6 +337,7 @@ object OpSpec {
     case p: Compose      => sCompose
     case p: Choice       => sChoice
     case p: Dual         => sDual
+    case _: SystemConst  => sSystemConst
   }
 
 }
