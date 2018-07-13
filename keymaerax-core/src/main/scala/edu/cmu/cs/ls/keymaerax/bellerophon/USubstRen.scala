@@ -143,10 +143,10 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
         val (what, repl) = matchHeads(of)
         val FuncOf(wf, wArg) = what
         assert(wf == of, "match on same function heads")
-        assert(wArg.isInstanceOf[DotTerm] || wArg == Nothing)
+        assert(isDot(wArg) || wArg == Nothing)
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
-        USubstRen((wArg, usubst(theta)) :: Nil).usubst(repl.asInstanceOf[Term])
+        USubstRen(toSubsPairs(wArg, theta)).usubst(repl.asInstanceOf[Term])
       case app@FuncOf(g:Function, theta) if !matchHead(app) => FuncOf(g, usubst(theta))
       case Nothing => Nothing
       case d: DotTerm        => subs.getOrElse(d, d).asInstanceOf[Term]
@@ -176,10 +176,10 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
         val (what, repl) = matchHeads(op)
         val PredOf(wp, wArg) = what
         assert(wp == op, "match only if same head")
-        assert(wArg.isInstanceOf[DotTerm] || wArg == Nothing)
+        assert(isDot(wArg) || wArg == Nothing)
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
-        USubstRen((wArg, usubst(theta)) :: Nil).usubst(repl.asInstanceOf[Formula])
+        USubstRen(toSubsPairs(wArg, theta)).usubst(repl.asInstanceOf[Formula])
       case app@PredOf(q, theta) if !matchHead(app) => PredOf(q, usubst(theta))
       case app@PredicationalOf(op, fml) if matchHead(app) =>
         requireAdmissible(allVars, fml, formula)
@@ -345,5 +345,18 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
     val matching = c.filter(pred)
     require(matching.tail.isEmpty, "unique elemented expected in " + c.mkString)
     matching.head
+  }
+
+  /** Turns matching terms into substitution pairs (traverses pairs to create component-wise substitutions). */
+  private def toSubsPairs(w: Term, r: Term): List[(Term, Term)] = (w, r) match {
+    case (Pair(wl, wr), Pair(rl, rr)) => toSubsPairs(wl, rl) ++ toSubsPairs(wr, rr)
+    case _ => w -> usubst(r) :: Nil
+  }
+
+  /** Indicates whether the term `t` is a DotTerm or nested pairs of DotTerms. */
+  private def isDot(t: Term): Boolean = t match {
+    case _: DotTerm => true
+    case Pair(l, r) => isDot(l) && isDot(r)
+    case _ => false
   }
 }
