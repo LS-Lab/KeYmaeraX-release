@@ -987,13 +987,22 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       val userLemmaName = "user" + File.separator + lemmaName //@todo FileLemmaDB + multi-user environment
       if (LemmaDBFactory.lemmaDB.contains(userLemmaName)) {
         val lemma = LemmaDBFactory.lemmaDB.get(userLemmaName).get
-        adapt match {
-          case Some(t) => cut(lemma.fact.conclusion.succ.head) <(t, cohideR('Rlast) & by(lemma))
-          case None => by(lemma)
-        }
+        useLemma(lemma, adapt)
       } else throw new BelleAbort("Missing lemma " + lemmaName, "Please prove lemma " + lemmaName + " first")
     }
   )
+  /** useLemma(lemma, tactic) applies the `lemma`, optionally adapting the lemma formula to
+    * the current subgoal using the tactic `adapt`. Literal lemma application if `adapt` is None. */
+  def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon { _ =>
+    adapt match {
+      case Some(t) =>
+        cut(lemma.fact.conclusion.toFormula) <(t, cohideR('Rlast) &
+          (if (lemma.fact.conclusion.ante.nonEmpty) implyR(1) & andL('Llast)*(lemma.fact.conclusion.ante.size-1) else skip) &
+          (if (lemma.fact.conclusion.succ.nonEmpty) orR('Rlast)*(lemma.fact.conclusion.succ.size-1) else skip) &
+          by(lemma))
+      case None => by(lemma)
+    }
+  }
 
   /** Applies the lemma by matching `key` in the lemma with the tactic position. */
   def useLemmaAt(lemmaName: String, key: Option[PosInExpr]): DependentPositionWithAppliedInputTactic = "useLemmaAt" byWithInputs(
