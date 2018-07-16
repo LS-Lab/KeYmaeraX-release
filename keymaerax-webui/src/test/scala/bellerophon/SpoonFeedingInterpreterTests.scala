@@ -525,7 +525,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
         |  composeb(1) ; choiceb(1) ; andR(1) ; <(
         |    composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; choiceb(1) ; andR(1) ; <(ODE(1), ODE(1)),
         |    choiceb(1) ; andR(1) ; <(
-        |      composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; choiceb(1) ; andR(1) ; <(ODE(1), ODE(1);QE),
+        |      composeb(1) ; testb(1) ; implyR(1) ; assignb(1) ; choiceb(1) ; andR(1) ; <(ODE(1), ODE(1)),
         |      assignb(1) ; choiceb(1) ; andR(1) ; <(ODE(1), ODE(1))
         |    )
         |  )
