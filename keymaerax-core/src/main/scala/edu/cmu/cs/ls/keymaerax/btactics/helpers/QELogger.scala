@@ -76,9 +76,10 @@ object QELogger extends Logging {
     }
   }
 
-  def logSequent(pr:Sequent,s:Sequent, name :String, filename:String = defaultPath): Unit = {
+  def logSequent(pr: Sequent, s: Sequent, name: String, filename: String = defaultPath): Unit = {
     try {
       val f = scala.tools.nsc.io.File(filename)
+      f.parent.createDirectory(force=true)
       val namestr = "@"+name+"#"+pr.toString+"#"+s.toString+"\n"
       f.appendAll(namestr)
     } catch {
