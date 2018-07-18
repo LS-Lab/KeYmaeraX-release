@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
+import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, StaticSemantics}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable.IndexedSeq
@@ -25,7 +25,7 @@ object IOListeners {
       if (s.ante.isEmpty && s.succ.size == 1) s.succ.head.universalClosure
       else s.toFormula.universalClosure
     override def begin(input: BelleValue, expr: BelleExpr): Unit = input match {
-      case BelleProvable(p, _) if logCondition(p, expr) =>
+      case BelleProvable(p, _) if logCondition(p, expr) && !StaticSemantics.freeVars(p.subgoals.head).isInfinite =>
         val logSeq = Sequent(IndexedSeq(), IndexedSeq(qeFml(p.subgoals.head)))
         if (!logged.contains(logSeq)) {
           logger(p.conclusion, logSeq, s"QE ${logged.size}")
