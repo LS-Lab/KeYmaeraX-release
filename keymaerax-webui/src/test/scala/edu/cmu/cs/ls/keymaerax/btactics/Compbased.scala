@@ -9,12 +9,12 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
+import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex.createMonitorSpecificationConjecture
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -544,6 +544,100 @@ class Compbased extends TacticTestBase {
     val entry = KeYmaeraXArchiveParser.getEntry("Obstacle Contract Compliance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
     entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._2) shouldBe 'proved)
+  }
+
+  it should "prove choice implementation" in withMathematica { _ =>
+    val s = Variable("s")
+    def implementChoice(a: Program, b: Program, p: Formula) = Imply(
+      Box(Choice(a,b), p),
+      Box(Compose(Choice(Compose(a, Assign(s, Number(1))), Assign(s, Number(0))), Choice(Compose(Test(Equal(s, Number(0))), b), Compose(Test(Not(Equal(s, Number(0)))), Test(True)))), p))
+
+    val equalReflex = proveBy("true <-> s()=s()".asFormula, equivR(1) <(cohideR(1) & byUS("= reflexive") & done, prop & done))
+    equalReflex shouldBe 'proved
+
+    val falseImplies = proveBy("true <-> (false -> p())".asFormula, prop & done)
+    falseImplies shouldBe 'proved
+
+    val notTrue = proveBy("false <-> !true".asFormula, prop & done)
+
+    val oneIsNotZero = proveBy("false <-> 1=0".asFormula, QE() & done)
+
+    proveBy(implementChoice("x:=2;".asProgram, "x:=3;".asProgram, "x>=2".asFormula),
+      implyR(1) & choiceb(-1) & andL(-1) & composeb(1) & choiceb(1) & andR(1) <(
+        composeb(1) & assignb(1, 1::Nil) & choiceb(1, 1::Nil) & composeb(1, 1::0::Nil) & testb(1, 1::0::Nil) & chase(1, 1::1::Nil) &
+          useAt(oneIsNotZero, PosInExpr(1::Nil))(1, 1::0::0::Nil) & useAt(falseImplies, PosInExpr(1::Nil))(1, 1::0::Nil) &
+          useAt(oneIsNotZero, PosInExpr(1::Nil))(1, 1::1::0::0::Nil) & useAt(notTrue, PosInExpr(0::Nil))(1, 1::1::0::0::Nil) &
+          useAt("!! double negation")(1, 1::1::0::Nil) & useAt("true->", PosInExpr(0::Nil))(1, 1::1::Nil) &
+          useAt("true&", PosInExpr(0::Nil))(1, 1::Nil) & closeId
+        ,
+        assignb(1) & choiceb(1) & andR(1) <(
+          composeb(1) & testb(1) & useAt(equalReflex, PosInExpr(1::Nil))(1, 0::Nil) & useAt("true->")(1) & closeId
+          ,
+          composeb(1) & testb(1) & useAt(equalReflex, PosInExpr(1::Nil))(1, 0::0::Nil) &
+            useAt(notTrue, PosInExpr(1::Nil))(1, 0::Nil) &
+            useAt(falseImplies, PosInExpr(1::Nil))(1) & close
+        )
+      )) shouldBe 'proved
+  }
+
+  it should "generate obstacle monitor program" in withMathematica { tool =>
+    val compileEqualityTest = proveBy("<?f_()=g_();>p_(||) <-> <if (f_()=g_()) { ?p_(||); } else { ?false; }>true".asFormula, chase(1, 0::Nil) & chase(1, 1::Nil) & prop & done)
+    compileEqualityTest shouldBe 'proved
+
+    val compileTest =  proveBy("<?p_();><a;>q_(||) <-> <if (p_()) { ?<a;>q_(||); } else { ?false; }>true".asFormula, testd(1, 0::Nil) & chase(1, 1::Nil) & prop & done)
+    compileTest shouldBe 'proved
+
+    val compileRegionTest = proveBy("<?p_();>true <-> <if (p_()) { ?true; } else { ?false; }>true".asFormula, testd(1, 0::Nil) & chase(1, 1::Nil) & prop & done)
+    compileRegionTest shouldBe 'proved
+    
+    //@todo wrong sign (returns a formula with <= safe, > unsafe)
+    def toMetric = "toMetric" by ((pos: Position, seq: Sequent) =>
+      seq.sub(pos) match {
+      case Some(Diamond(Choice(Compose(Test(p: Equal), _), Compose(Test(Not(q: Equal)), Test(False))), _)) if p==q =>
+        val metric = proveBy(Equiv(False, "<margin:=1;>margin<=0".asFormula), assignd(1, 1::Nil) & QE & done)
+        useAt(metric, PosInExpr(0::Nil))(pos ++ PosInExpr(0::1::1::0::Nil))
+      case Some(Diamond(Choice(Compose(Test(p), Test(True)), Compose(Test(Not(q)), Test(False))), _)) if p==q =>
+        val LessEqual(metric, _) = ModelPlex.toMetric(p)
+        val margin = Variable("margin")
+        val repl = proveBy(Imply(p, Equiv(True, Diamond(Assign(margin, metric), LessEqual(margin, Number(0))))),
+          assignd(1, 1::1::Nil) & QE & done)
+        useAt(repl, PosInExpr(1::0::Nil))(pos ++ PosInExpr(0::0::1::0::Nil))
+    })
+
+    val entry = KeYmaeraXArchiveParser.getEntry("Obstacle Contract Compliance",
+      io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
+
+    val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(entry.model.asInstanceOf[Formula],
+      ("po"::"po0"::"so"::"t"::"t0"::Nil).map(Variable(_)):_*)
+    val monitor = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) & ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1))
+    monitor.subgoals.loneElement shouldBe "==> (0<=sopost&sopost<=S())&S()>=0&(((t0post<=tpost&t=t0post)&sopost=sopost)&po+sopost*tpost=popost+sopost*t)&po=po0post".asSequent
+
+    val (equalities, inequalities) = FormulaTools.conjuncts(monitor.subgoals.loneElement.succ.loneElement).partition(_.isInstanceOf[Equal])
+    val orderedMonitorFml = inequalities.reduceRightOption(And) match {
+      case Some(ineqs) => equalities.lastOption match {
+        case Some(lastEq) => equalities.updated(equalities.size-1, And(lastEq, ineqs)).reduceRight(And)
+        case None => ineqs
+      }
+      case None => equalities.reduceRightOption(And).getOrElse(True)
+    }
+    orderedMonitorFml shouldBe "t=t0post&sopost=sopost&po+sopost*tpost=popost+sopost*t&po=po0post&0<=sopost&sopost<=S()&S()>=0&t0post<=tpost".asFormula
+    val orderedMonitor = proveBy(monitor, useAt(proveBy(Equiv(monitor.subgoals.loneElement.succ.loneElement, orderedMonitorFml), prop & done), PosInExpr(0::Nil))(1))
+    orderedMonitor.subgoals should have size 1
+
+    val monitorAsTestsProgram = proveBy(orderedMonitor,
+      RepeatTactic(ModelPlex.chaseToTests(combineTests=true)(1, PosInExpr(List.fill(equalities.size)(1))), 2) &
+      ModelPlex.chaseToTests(combineTests=false)(1))
+    monitorAsTestsProgram.subgoals.loneElement shouldBe "==> <?t=t0post;><?sopost=sopost;><?po+sopost*tpost=popost+sopost*t;><?po=po0post;><?((0<=sopost&sopost<=S())&S()>=0)&t0post<=tpost;>true".asSequent
+
+    val compile = chaseCustom({
+//      case Diamond(Test(False), _) => (compileFalseTest, PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil) :: Nil
+      case Diamond(Test(Equal(_, _)), _) => (compileEqualityTest, PosInExpr(0::Nil), PosInExpr(0::0::1::0::Nil)::PosInExpr(0::1::1::0::Nil)::Nil) :: Nil
+      case Diamond(Test(_), True) => (compileRegionTest, PosInExpr(0::Nil), Nil) :: Nil
+      case _ => Nil
+    })
+
+    proveBy(monitorAsTestsProgram, compile(1) & toMetric(1) /* todo toMetric of all other tests */).subgoals.loneElement shouldBe
+      "==> <?t=t0post;?<?sopost=sopost;?<?po+sopost*tpost=popost+sopost*t;?<?po=po0post;?<?((0<=sopost&sopost<=S())&S()>=0)&t0post<=tpost;?true;++?!(((0<=sopost&sopost<=S())&S()>=0)&t0post<=tpost);?false;>true;++?!po=po0post;?false;>true;++?!po+sopost*tpost=popost+sopost*t;?false;>true;++?!sopost=sopost;?false;>true;++?!t=t0post;?<margin:=1;>margin<=0;>true".asSequent
   }
 
   it should "prove robot contract compliance" in withMathematica { _ =>
