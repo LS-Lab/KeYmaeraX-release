@@ -9,6 +9,8 @@ import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 
 import scala.collection.immutable.IndexedSeq
 
+import org.scalatest.LoneElement._
+
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics]].
  */
@@ -481,6 +483,12 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "a>0 -> [a:=a+1;]a>0".asFormula
+  }
+
+  it should "rename nondeterministic assignments" ignore {
+    //@todo not yet supported
+    val result = proveBy("[a:=*;][b:=*;]a>0 ==> \\forall b [a:=*;]a>0".asSequent, allSkolemize(1))
+    result.subgoals.loneElement shouldBe "[a:=*;][b:=*;]a>0 ==> [a:=*;]a>0".asSequent
   }
 
   "exists skolemize" should "skolemize simple" in {
