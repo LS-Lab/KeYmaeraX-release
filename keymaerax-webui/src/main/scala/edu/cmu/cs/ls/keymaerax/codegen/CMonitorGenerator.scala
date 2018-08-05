@@ -71,8 +71,7 @@ class CMonitorGenerator extends CodeGenerator {
       case f: Formula if !f.isFOL => (printMonitor(expr, parameters), "boundaryDist(pre,curr,params) >= 0.0L")
     }
 
-    (s"""${distDefs.trim}
-       |$monitorDistFuncHead {
+    (s"""$monitorDistFuncHead {
        |  $distBody;
        |}
        |
@@ -84,7 +83,7 @@ class CMonitorGenerator extends CodeGenerator {
        |$monitoredCtrlFuncBody
        |}
        |
-       |""".stripMargin, "")
+       |""".stripMargin, distDefs.trim)
   }
 
   /** The name of the monitor function argument representing the current state. */

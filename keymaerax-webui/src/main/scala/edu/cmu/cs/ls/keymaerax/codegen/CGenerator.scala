@@ -82,7 +82,7 @@ class CGenerator(bodyGenerator: CodeGenerator) extends CodeGenerator {
     require(names.intersect(RESERVED_NAMES).isEmpty, "Unexpected reserved C names encountered: " + names.intersect(RESERVED_NAMES).mkString(","))
     val parameters = getParameters(expr, stateVars)
 
-    val (bodyDefs, bodyBody) = bodyGenerator(expr, stateVars, inputVars, fileName)
+    val (bodyBody, bodyDefs) = bodyGenerator(expr, stateVars, inputVars, fileName)
 
     (printHeader(fileName) +
       INCLUDE_STATEMENTS +

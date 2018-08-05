@@ -36,7 +36,7 @@ class CCodeGeneratorTests extends TacticTestBase {
   /** Wraps the monitor expression in the monitor boilerplate code. */
   private def expectedMonitor(compiledMonitorExpr: String,
                               paramDecl: String = "", stateDecl: String = "", inputDecl: String = "",
-                              kind: String = "boolean"): String = {
+                              definitions: String = "", kind: String = "boolean"): String = {
     val (safetyDistBody, monitorSatisfiedBody) = kind match {
       case "boolean" => (s"return $compiledMonitorExpr ? 1.0L : -1.0L", "boundaryDist(pre,curr,params) >= 0.0L")
       case "program" => (compiledMonitorExpr, "boundaryDist(pre,curr,params) >= 0.0L")
@@ -61,6 +61,7 @@ class CCodeGeneratorTests extends TacticTestBase {
        |
        |typedef struct input ${structBody(inputDecl)}input;
        |
+       |$definitions
        |
        |/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */
        |long double boundaryDist(state pre, state curr, const parameters* const params) {
@@ -86,18 +87,42 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   "numbers" should "compile floating point" in {
     val monitor = (new CGenerator(new CMonitorGenerator()))("2+1.5>3.25".asFormula)
-    monitor._1 shouldBe expectedMonitor("(2.0L)+(1.5L) > 3.25L")
-    monitor._2 shouldBe ""
+    monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor("(2.0L)+(1.5L) > 3.25L")
   }
 
   it should "compile large number" in {
     val monitor = (new CGenerator(new CMonitorGenerator()))("9223372036854775807>1".asFormula)
-    monitor._1 shouldBe expectedMonitor("9223372036854775807.0L > 1.0L")
-    monitor._2 shouldBe ""
+    monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor("9223372036854775807.0L > 1.0L")
   }
 
   it should "throw exception for too large number" in {
     a [CodeGenerationException] should be thrownBy (new CGenerator(new CMonitorGenerator()))("92233720368547758079>1".asFormula)
+  }
+
+  it should "compile to MPFR" in {
+    CPrettyPrinter.printer = new CMpfrPrettyPrinter()
+    val monitor = (new CGenerator(new CMonitorGenerator()))("2+1.5>3.25".asFormula)
+    monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor(
+      /*"mpfr_cmp(_t_3, _t_0) < 0"*/ "mpfr_get_ld(_t_0, MPFR_RNDD) > mpfr_get_ld(_t_3, MPFR_RNDD)",
+      "", "", "",
+      """mpfr_t _t_0 /* (2.0L)+(1.5L) */,
+        |  _t_1 /* 2.0L */,
+        |  _t_2 /* 1.5L */,
+        |  _t_3 /* 3.25L */;
+        |
+        |void mpfrInit() {
+        |  mpfr_init2(_t_0, 200);
+        |  mpfr_init2(_t_1, 200);
+        |  mpfr_init2(_t_2, 200);
+        |  mpfr_init2(_t_3, 200);
+        |}
+        |
+        |void mpfrCompute(state pre, state curr, parameters const* const params) {
+        |  mpfr_set_ld(_t_1, 2L, MPFR_RNDD);
+        |  mpfr_set_ld(_t_2, 1.5L, MPFR_RNDD);
+        |  mpfr_set_ld(_t_3, 3.25L, MPFR_RNDD);
+        |  mpfr_add(_t_0, _t_1, _t_2, MPFR_RNDD);
+        |}""".stripMargin)
   }
 
   "variables" should "compile with index" in {
@@ -106,42 +131,71 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double z;""".stripMargin
     val stateDecls = "long double x;"
     val monitor = (new CGenerator(new CMonitorGenerator()))("x*z-y_1>1".asFormula, Set(Variable("x")))
-    monitor._1 shouldBe expectedMonitor("((pre.x)*(params->z))-(params->y_1) > 1.0L", paramDecls, stateDecls)
-    monitor._2 shouldBe ""
+    monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor("((pre.x)*(params->z))-(params->y_1) > 1.0L", paramDecls, stateDecls)
+  }
+
+  it should "compile with index to MPFR" in {
+    val paramDecls =
+      """long double y_1;
+        |  long double z;""".stripMargin
+    val stateDecls = "long double x;"
+    CPrettyPrinter.printer = new CMpfrPrettyPrinter()
+    val monitor = (new CGenerator(new CMonitorGenerator()))("x*z-y_1>1".asFormula, Set(Variable("x")))
+    monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor(
+      /*"mpfr_cmp(_t_5, _t_0) < 0"*/ "mpfr_get_ld(_t_0, MPFR_RNDD) > mpfr_get_ld(_t_5, MPFR_RNDD)", paramDecls, stateDecls, "",
+      """mpfr_t _t_0 /* ((pre.x)*(params->z))-(params->y_1) */,
+        |  _t_1 /* (pre.x)*(params->z) */,
+        |  _t_5 /* 1.0L */,
+        |  params_y_1 /* params->y_1 */,
+        |  params_z /* params->z */,
+        |  pre_x /* pre.x */;
+        |
+        |void mpfrInit() {
+        |  mpfr_init2(_t_0, 200);
+        |  mpfr_init2(_t_1, 200);
+        |  mpfr_init2(_t_5, 200);
+        |  mpfr_init2(params_y_1, 200);
+        |  mpfr_init2(params_z, 200);
+        |  mpfr_init2(pre_x, 200);
+        |}
+        |
+        |void mpfrCompute(state pre, state curr, parameters const* const params) {
+        |  mpfr_set_ld(_t_5, 1L, MPFR_RNDD);
+        |  mpfr_set_ld(params_y_1, params->y_1, MPFR_RNDD);
+        |  mpfr_set_ld(params_z, params->z, MPFR_RNDD);
+        |  mpfr_set_ld(pre_x, pre.x, MPFR_RNDD);
+        |  mpfr_mul(_t_1, pre_x, params_z, MPFR_RNDD);
+        |  mpfr_sub(_t_0, _t_1, params_y_1, MPFR_RNDD);
+        |}""".stripMargin)
   }
 
   "nullary functions" should "compile to parameters" in {
     val monitor = (new CGenerator(new CMonitorGenerator()))("x()>1".asFormula)
-    monitor._1 shouldBe expectedMonitor("params->x > 1.0L", "long double x;")
-    monitor._2 shouldBe ""
+    monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor("params->x > 1.0L", "long double x;")
   }
 
   "terms" should "compile plain" in {
     val monitor = (new CGenerator(new CMonitorGenerator()))("x+3*y > 1".asFormula, Set(Variable("x")))
-    monitor._1 shouldBe expectedMonitor("(pre.x)+((3.0L)*(params->y)) > 1.0L", "long double y;", "long double x;")
-    monitor._2 shouldBe ""
+    monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor("(pre.x)+((3.0L)*(params->y)) > 1.0L", "long double y;", "long double x;")
   }
 
   it should "compile with log" in {
     CPrettyPrinter.printer = new CExpressionLogPrettyPrinter()
     val monitor = (new CGenerator(new CMonitorGenerator()))("x+3*y > 1".asFormula, Set(Variable("x")))
-    monitor._1 shouldBe
+    monitor._1 + "\n\n" + monitor._2 shouldBe
       expectedMonitor(
         """eval(gt(plus(variable(pre.x, "pre.x"), times(number(3), variable(params->y, "params->y"))), number(1)))""",
         "long double y;", "long double x;")
-    monitor._2 shouldBe ""
   }
 
   "power" should "compile int exp" in {
     val monitor = (new CGenerator(new CMonitorGenerator()))("x^3>1".asFormula)
-    monitor._1 shouldBe expectedMonitor("(params->x)*((params->x)*(params->x)) > 1.0L", "long double x;")
-    monitor._2 shouldBe ""
+    monitor._1 + "\n\n" + monitor._2  shouldBe expectedMonitor("(params->x)*((params->x)*(params->x)) > 1.0L", "long double x;")
   }
 
   it should "compile exp=1" in {
     val monitor = (new CGenerator(new CMonitorGenerator()))("x^1>1".asFormula)
-    monitor._1 shouldBe expectedMonitor("params->x > 1.0L", "long double x;")
-    monitor._2 shouldBe ""
+    monitor._1 + "\n\n" + monitor._2  shouldBe expectedMonitor("params->x > 1.0L", "long double x;")
   }
 
   it should "compile neg int exp" in {
@@ -149,9 +203,8 @@ class CCodeGeneratorTests extends TacticTestBase {
       """long double x;
         |  long double y;""".stripMargin
     val monitor = (new CGenerator(new CMonitorGenerator()))("(x+y)^-3>1".asFormula)
-    monitor._1 shouldBe expectedMonitor(
+    monitor._1 + "\n\n" + monitor._2  shouldBe expectedMonitor(
       "(1.0L)/(((params->x)+(params->y))*(((params->x)+(params->y))*((params->x)+(params->y)))) > 1.0L", paramDecls)
-    monitor._2 shouldBe ""
   }
 
   it should "compile any exp" in {
@@ -159,8 +212,7 @@ class CCodeGeneratorTests extends TacticTestBase {
       """long double x;
         |  long double y;""".stripMargin
     val monitor = (new CGenerator(new CMonitorGenerator()))("x^y>1".asFormula)
-    monitor._1 shouldBe expectedMonitor("pow(params->x,params->y) > 1.0L", paramDecls)
-    monitor._2 shouldBe ""
+    monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor("pow(params->x,params->y) > 1.0L", paramDecls)
   }
 
   "abs" should "compile" in {
@@ -168,8 +220,7 @@ class CCodeGeneratorTests extends TacticTestBase {
       """long double x;
         |  long double y;""".stripMargin
     val monitor = (new CGenerator(new CMonitorGenerator()))("abs(x-y)>0".asFormula)
-    monitor._1 shouldBe expectedMonitor("fabsl((params->x)-(params->y)) > 0.0L", paramDecls)
-    monitor._2 shouldBe ""
+    monitor._1 + "\n\n" + monitor._2  shouldBe expectedMonitor("fabsl((params->x)-(params->y)) > 0.0L", paramDecls)
   }
 
   "min" should "compile" in {
@@ -177,8 +228,7 @@ class CCodeGeneratorTests extends TacticTestBase {
       """long double x;
         |  long double y;""".stripMargin
     val monitor = (new CGenerator(new CMonitorGenerator()))("min(x,y)<=x".asFormula)
-    monitor._1 shouldBe expectedMonitor("-(fminl(params->x, params->y)) >= -(params->x)", paramDecls, "", "", "metric")
-    monitor._2 shouldBe ""
+    monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor("-(fminl(params->x, params->y)) >= -(params->x)", paramDecls, "", "", "", "metric")
   }
 
   "max" should "compile" in {
@@ -186,8 +236,7 @@ class CCodeGeneratorTests extends TacticTestBase {
       """long double x;
         |  long double y;""".stripMargin
     val monitor = (new CGenerator(new CMonitorGenerator()))("max(x,y)>=x".asFormula)
-    monitor._1 shouldBe expectedMonitor("fmaxl(params->x, params->y) >= params->x", paramDecls)
-    monitor._2 shouldBe ""
+    monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor("fmaxl(params->x, params->y) >= params->x", paramDecls)
   }
 
   "A program with tests" should "compile" in withMathematica { _ =>
@@ -195,14 +244,13 @@ class CCodeGeneratorTests extends TacticTestBase {
       """long double x;
         |  long double y;""".stripMargin
     val monitor = (new CGenerator(new CMonitorGenerator()))("<?x>=y;>true".asFormula)
-    monitor._1 shouldBe expectedMonitor(
+    monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor(
       """if (params->x >= params->y) {
         |return (0.0L)+(-((params->y)-(params->x)));
         |} else {
         |printf("Failed %s\n", "x>=y"); return ((-1.0L))+(-((params->y)-(params->x)));
         |}""".stripMargin, paramDecls,
-      "", "", "program")
-    monitor._2 shouldBe ""
+      "", "", "", "program")
   }
 
   "C generator" should "compile function with 2 parameters" ignore {
@@ -244,9 +292,9 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double yo;""".stripMargin
     val genCode = (new CGenerator(new CMonitorGenerator()))(monitorExp, Set(Variable("a"),Variable("w"),Variable("r"),Variable("xo"),Variable("yo"),
       Variable("dxo"),Variable("dyo"),Variable("t")))
-    genCode shouldBe (expectedMonitor(
+    genCode._1 + "\n\n" + genCode._2 shouldBe expectedMonitor(
       "(((curr.dxo)*(curr.dxo))+((curr.dyo)*(curr.dyo)) <= (params->V)*(params->V)) && (((curr.a == -(params->B)) && ((curr.w == pre.w) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo) && ((curr.dyo == curr.dyo) && (curr.t == 0.0L)))))))) || (((params->v == 0.0L) && ((curr.a == 0.0L) && ((curr.w == 0.0L) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo) && ((curr.dyo == curr.dyo) && (curr.t == 0.0L))))))))) || ((-(params->B) <= curr.a) && ((curr.a <= params->A) && ((curr.r != 0.0L) && (((curr.w)*(curr.r) == params->v) && (((((!((params->x)-(curr.xo) >= 0.0L)) || ((params->x)-(curr.xo) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->x)-(curr.xo) <= 0.0L)) || ((curr.xo)-(params->x) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V)))))))) || (((!((params->y)-(curr.yo) >= 0.0L)) || ((params->y)-(curr.yo) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->y)-(curr.yo) <= 0.0L)) || ((curr.yo)-(params->y) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))))) && ((curr.a == curr.a) && ((curr.w == curr.w) && ((curr.r == curr.r) && ((curr.xo == curr.xo) && ((curr.yo == curr.yo) && ((curr.dxo == curr.dxo) && ((curr.dyo == curr.dyo) && (curr.t == 0.0L)))))))))))))))",
-      paramDecls, stateDecls), "")
+      paramDecls, stateDecls)
     }
 
   it should "generate C code for passivesafety_renamed" in {
@@ -271,11 +319,10 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double yo;""".stripMargin
     val genCode = (new CGenerator(new CMonitorGenerator()))(monitorExp, Set(Variable("a"),Variable("om"),Variable("r"),Variable("xo"),Variable("yo"),
       Variable("dxo"),Variable("dyo"),Variable("t")))
-    genCode._1 shouldBe
+    genCode._1 + "\n\n" + genCode._2 shouldBe
       expectedMonitor(
         "(((curr.dxo)*(curr.dxo))+((curr.dyo)*(curr.dyo)) <= (params->Vo)*(params->Vo)) && (((curr.a == -(params->B)) && ((curr.om == pre.om) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo) && ((curr.dyo == curr.dyo) && (curr.t == 0.0L)))))))) || (((params->v == 0.0L) && ((curr.a == 0.0L) && ((curr.om == 0.0L) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo) && ((curr.dyo == curr.dyo) && (curr.t == 0.0L))))))))) || ((-(params->B) <= curr.a) && ((curr.a <= params->A) && ((curr.r != 0.0L) && (((curr.om)*(curr.r) == params->v) && (((((!((params->x)-(curr.xo) >= 0.0L)) || ((params->x)-(curr.xo) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo))))))) && ((!((params->x)-(curr.xo) <= 0.0L)) || ((curr.xo)-(params->x) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo)))))))) || (((!((params->y)-(curr.yo) >= 0.0L)) || ((params->y)-(curr.yo) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo))))))) && ((!((params->y)-(curr.yo) <= 0.0L)) || ((curr.yo)-(params->y) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo))))))))) && ((curr.a == curr.a) && ((curr.om == curr.om) && ((curr.r == curr.r) && ((curr.xo == curr.xo) && ((curr.yo == curr.yo) && ((curr.dxo == curr.dxo) && ((curr.dyo == curr.dyo) && (curr.t == 0.0L)))))))))))))))",
         paramDecls, stateDecls)
-    genCode._2 shouldBe ""
   }
 
   it should "generate C code for passivesafetyabs" in {
@@ -304,11 +351,10 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double y;
         |  long double yo;""".stripMargin
     val genCode = (new CGenerator(new CMonitorGenerator()))(monitorExp, vars)
-    genCode._1 shouldBe
+    genCode._1 + "\n\n" + genCode._2 shouldBe
       expectedMonitor(
         "(((curr.dxo)*(curr.dxo))+((curr.dyo)*(curr.dyo)) <= (params->V)*(params->V)) && ((((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == pre.xo) && (curr.yo == pre.yo)) && (curr.dxo == curr.dxo)) && (curr.dyo == curr.dyo)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == pre.w)) && (curr.a == -(params->B))) && (curr.r == pre.r)) && (curr.t == 0.0L))) || (((pre.v == 0.0L) && (((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == pre.xo) && (curr.yo == pre.yo)) && (curr.dxo == curr.dxo)) && (curr.dyo == curr.dyo)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == 0.0L)) && (curr.a == 0.0L)) && (curr.r == pre.r)) && (curr.t == 0.0L)))) || (((-(params->B) <= curr.a) && (curr.a <= params->A)) && ((curr.r != 0.0L) && (((curr.w)*(curr.r) == pre.v) && (((fabsl((pre.x)-(curr.xo)) > ((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V)))))) || (fabsl((pre.y)-(curr.yo)) > ((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))) && (((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == curr.xo) && (curr.yo == curr.yo)) && (curr.dxo == curr.dxo)) && (curr.dyo == curr.dyo)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == curr.w)) && (curr.a == curr.a)) && (curr.r == curr.r)) && (curr.t == 0.0L)))))))))",
         paramDecls, stateDecls)
-    genCode._2 shouldBe ""
   }
 
   it should "generate metric C code for passivesafetyabs" in withMathematica { _ =>
@@ -337,12 +383,10 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double y;
         |  long double yo;""".stripMargin
     val genCode = (new CGenerator(new CMonitorGenerator))(monitorExp, vars)
-    genCode._1 shouldBe
+    genCode._1 + "\n\n" + genCode._2 shouldBe
       expectedMonitor(
         "-(fmaxl((((curr.dxo)*(curr.dxo))+((curr.dyo)*(curr.dyo)))-((params->V)*(params->V)), fminl(fmaxl(fmaxl((0.0L)-(params->ep), (0.0L)-(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(pre.xo), (pre.xo)-(curr.xo)), fmaxl((curr.yo)-(pre.yo), (pre.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo), (curr.dxo)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo), (curr.dyo)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl((curr.w)-(pre.w), (pre.w)-(curr.w))), fmaxl((curr.a)-(-(params->B)), (-(params->B))-(curr.a))), fmaxl((curr.r)-(pre.r), (pre.r)-(curr.r))), fmaxl(curr.t, (0.0L)-(curr.t)))), fminl(fmaxl(fmaxl(pre.v, (0.0L)-(pre.v)), fmaxl(fmaxl((0.0L)-(params->ep), (0.0L)-(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(pre.xo), (pre.xo)-(curr.xo)), fmaxl((curr.yo)-(pre.yo), (pre.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo), (curr.dxo)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo), (curr.dyo)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl(curr.w, (0.0L)-(curr.w))), fmaxl(curr.a, (0.0L)-(curr.a))), fmaxl((curr.r)-(pre.r), (pre.r)-(curr.r))), fmaxl(curr.t, (0.0L)-(curr.t))))), fmaxl(fmaxl((-(params->B))-(curr.a), (curr.a)-(params->A)), fmaxl(fminl((0.0L)-(curr.r), curr.r), fmaxl(fmaxl(((curr.w)*(curr.r))-(pre.v), (pre.v)-((curr.w)*(curr.r))), fmaxl(fminl((((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))-(fabsl((pre.x)+(-(curr.xo)))), (((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))-(fabsl((pre.y)+(-(curr.yo))))), fmaxl(fmaxl((0.0L)-(params->ep), (0.0L)-(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(curr.xo), (curr.xo)-(curr.xo)), fmaxl((curr.yo)-(curr.yo), (curr.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo), (curr.dxo)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo), (curr.dyo)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl((curr.w)-(curr.w), (curr.w)-(curr.w))), fmaxl((curr.a)-(curr.a), (curr.a)-(curr.a))), fmaxl((curr.r)-(curr.r), (curr.r)-(curr.r))), fmaxl(curr.t, (0.0L)-(curr.t)))))))))))) > -(0.0L)",
-        paramDecls, stateDecls, "",
-        "metric")
-    genCode._2 shouldBe ""
+        paramDecls, stateDecls, "", "", "metric")
   }
 
   it should "generate C code for passivesafetyabs with KeYmaeraX command line interface" taggedAs IgnoreInBuildTest in {
@@ -390,11 +434,10 @@ class CCodeGeneratorTests extends TacticTestBase {
       Set(Variable("a"), Variable("w"), Variable("dx"), Variable("dy"), Variable("r"), Variable("t"), Variable("ox"),
            Variable("oy"), Variable("odx"), Variable("ody"), Variable("isVisible"),
            Variable("talpha")))
-    genCode._1 shouldBe
+    genCode._1 + "\n\n" + genCode._2 shouldBe
       expectedMonitor(
         "(((curr.odx)*(curr.odx))+((curr.ody)*(curr.ody)) <= (params->V)*(params->V)) && ((((curr.w)*(pre.r) == params->v) && ((curr.a == -(params->b)) && ((curr.w == curr.w) && ((curr.dx == pre.dx) && ((curr.dy == pre.dy) && ((curr.r == pre.r) && ((curr.t == 0.0L) && ((curr.ox == pre.ox) && ((curr.oy == pre.oy) && ((curr.odx == curr.odx) && ((curr.ody == curr.ody) && ((curr.isVisible == pre.isVisible) && (curr.talpha == pre.talpha))))))))))))) || (((params->v == 0.0L) && (((curr.w)*(pre.r) == params->v) && ((curr.a == 0.0L) && ((curr.w == curr.w) && ((curr.dx == -(pre.dx)) && ((curr.dy == -(pre.dy)) && ((curr.r == pre.r) && ((curr.t == 0.0L) && ((curr.ox == pre.ox) && ((curr.oy == pre.oy) && ((curr.odx == curr.odx) && ((curr.ody == curr.ody) && ((curr.isVisible == pre.isVisible) && (curr.talpha == pre.talpha)))))))))))))) || ((-(params->b) <= curr.a) && ((curr.a <= params->A) && ((curr.r != 0.0L) && ((((params->v)+((curr.a)*(params->ep)) < 0.0L) && (((curr.isVisible < 0.0L) || ((((!((params->x)-(curr.ox) >= 0.0L)) || ((params->x)-(curr.ox) > (((params->v)*(params->v))/(((-2.0L))*(curr.a)))+((params->V)*((params->v)/(-(curr.a)))))) && ((!((params->x)-(curr.ox) <= 0.0L)) || ((curr.ox)-(params->x) > (((params->v)*(params->v))/(((-2.0L))*(curr.a)))+((params->V)*((params->v)/(-(curr.a))))))) || (((!((params->y)-(curr.oy) >= 0.0L)) || ((params->y)-(curr.oy) > (((params->v)*(params->v))/(((-2.0L))*(curr.a)))+((params->V)*((params->v)/(-(curr.a)))))) && ((!((params->y)-(curr.oy) <= 0.0L)) || ((curr.oy)-(params->y) > (((params->v)*(params->v))/(((-2.0L))*(curr.a)))+((params->V)*((params->v)/(-(curr.a))))))))) && (((!(curr.r >= 0.0L)) || (((params->v)*(params->v))/(((-2.0L))*(curr.a)) < (params->alpha)*(curr.r))) && (((!(curr.r < 0.0L)) || (((params->v)*(params->v))/(((-2.0L))*(curr.a)) < -((params->alpha)*(curr.r)))) && (((curr.w)*(curr.r) == params->v) && ((curr.a == curr.a) && ((curr.w == curr.w) && ((curr.dx == pre.dx) && ((curr.dy == pre.dy) && ((curr.r == curr.r) && ((curr.t == 0.0L) && ((curr.ox == curr.ox) && ((curr.oy == curr.oy) && ((curr.odx == curr.odx) && ((curr.ody == curr.ody) && ((curr.isVisible == curr.isVisible) && (curr.talpha == 0.0L))))))))))))))))) || (((params->v)+((curr.a)*(params->ep)) >= 0.0L) && (((curr.isVisible < 0.0L) || ((((!((params->x)-(curr.ox) >= 0.0L)) || ((params->x)-(curr.ox) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a)/(params->b))+(1.0L))*((((curr.a)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->x)-(curr.ox) <= 0.0L)) || ((curr.ox)-(params->x) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a)/(params->b))+(1.0L))*((((curr.a)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V)))))))) || (((!((params->y)-(curr.oy) >= 0.0L)) || ((params->y)-(curr.oy) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a)/(params->b))+(1.0L))*((((curr.a)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->y)-(curr.oy) <= 0.0L)) || ((curr.oy)-(params->y) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a)/(params->b))+(1.0L))*((((curr.a)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V)))))))))) && (((!(curr.r >= 0.0L)) || ((((params->v)*(params->v))/((2.0L)*(params->b)))+((((curr.a)/(params->b))+(1.0L))*((((curr.a)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*(params->v)))) < (params->alpha)*(curr.r))) && (((!(curr.r < 0.0L)) || ((((params->v)*(params->v))/((2.0L)*(params->b)))+((((curr.a)/(params->b))+(1.0L))*((((curr.a)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*(params->v)))) < -((params->alpha)*(curr.r)))) && (((curr.w)*(curr.r) == params->v) && ((curr.a == curr.a) && ((curr.w == curr.w) && ((curr.dx == pre.dx) && ((curr.dy == pre.dy) && ((curr.r == curr.r) && ((curr.t == 0.0L) && ((curr.ox == curr.ox) && ((curr.oy == curr.oy) && ((curr.odx == curr.odx) && ((curr.ody == curr.ody) && ((curr.isVisible == curr.isVisible) && (curr.talpha == 0.0L)))))))))))))))))))))))",
         paramDecls, stateDecls)
-    genCode._2 shouldBe ""
   }
 
   "quadcopter" should "generate C code for hybridquadrotor" in {
@@ -409,11 +452,10 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  long double y;""".stripMargin
     val code = (new CGenerator(new CMonitorGenerator()))(monitorExp, Set(Variable("href")))
     println(code)
-    code._1 shouldBe expectedMonitor(
+    code._1 + "\n\n" + code._2 shouldBe expectedMonitor(
       "(params->h >= curr.href) && ((curr.href > 0.0L) && ((((((params->kp < 0.0L) && ((params->v == 0.0L) && (curr.href >= params->h))) || (((params->kp < 0.0L) && ((params->v > 0.0L) && (((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) == ((2.0L)*(curr.href))*(params->kp)) && ((params->h)*(params->y) > ((params->h)*(params->kd))+((2.0L)*(params->v)))))) || (((params->kp < 0.0L) && ((params->v < 0.0L) && (((((2.0L)*(curr.href))*(params->kp))+((params->v)*(params->y)) == (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && (((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) > 0.0L)))) || (((params->kp > 0.0L) && ((params->v == 0.0L) && (curr.href == params->h))) || (((params->kp > 0.0L) && ((params->v > 0.0L) && ((((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) == ((2.0L)*(curr.href))*(params->kp)) && (((params->h)*(params->y) > ((params->h)*(params->kd))+((2.0L)*(params->v))) && ((params->kd)+((2.0L)*(params->sqrkp)) <= 0.0L))) || ((((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) == ((2.0L)*(curr.href))*(params->kp)) && (((params->kd)+((2.0L)*(params->sqrkp)) < 0.0L) && (((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) < 0.0L))) || ((((((2.0L)*(curr.href))*(params->kp))+((params->v)*(params->y)) == (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && (((params->kd)+((2.0L)*(params->sqrkp)) < 0.0L) && (((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) < 0.0L))) || (((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) == ((2.0L)*(curr.href))*(params->kp)) && ((params->kd > (2.0L)*(params->sqrkp)) && ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) > 0.0L) && ((params->h)*(params->y) >= ((params->h)*(params->kd))+((2.0L)*(params->v))))))))))) || ((params->kp > 0.0L) && ((params->v < 0.0L) && ((((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) == ((2.0L)*(curr.href))*(params->kp)) && ((params->kd > (2.0L)*(params->sqrkp)) && ((params->h)*(params->y) < ((params->h)*(params->kd))+((2.0L)*(params->v))))) || ((((((2.0L)*(curr.href))*(params->kp))+((params->v)*(params->y)) == (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && ((params->kd >= (2.0L)*(params->sqrkp)) && ((params->h)*(params->y) < ((params->h)*(params->kd))+((2.0L)*(params->v))))) || ((((((2.0L)*(curr.href))*(params->kp))+((params->v)*(params->y)) == (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && ((params->kd > (2.0L)*(params->sqrkp)) && ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) > 0.0L) && ((params->h)*(params->y) >= ((params->h)*(params->kd))+((2.0L)*(params->v)))))) || (((((2.0L)*(curr.href))*(params->kp))+((params->v)*(params->y)) == (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && (((params->h)*(params->y) > ((params->h)*(params->kd))+((2.0L)*(params->v))) && ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) >= 0.0L) && ((params->kd)+((2.0L)*(params->sqrkp)) < 0.0L)))))))))))))) && ((((params->y)*(params->y) == ((params->kd)*(params->kd))-((4.0L)*(params->kp))) && (params->y >= 0.0L)) && ((((params->sqrkp)*(params->sqrkp) == params->kp) && (params->sqrkp >= 0.0L)) && ((((((((params->h)*(params->h))*((params->kp)*(params->kp)))-((((2.0L)*(params->h))*(curr.href))*((params->kp)*(params->kp))))+(((curr.href)*(curr.href))*((params->kp)*(params->kp))))+((((params->h)*(params->kd))*(params->kp))*(params->v)))-((((curr.href)*(params->kd))*(params->kp))*(params->v)))+((params->kp)*((params->v)*(params->v))) != 0.0L)))) || ((((params->kp < 0.0L) && ((params->v == 0.0L) && (((params->h)*(params->y) <= (params->h)*(params->kd)) || (((params->h)*((params->kd)+(params->y)) <= 0.0L) || (params->h > curr.href))))) || (((params->kp < 0.0L) && ((params->v < 0.0L) && (((params->h)*(params->y) <= ((params->h)*(params->kd))+((2.0L)*(params->v))) || ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) <= 0.0L) || ((((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v)) != (((2.0L)*(curr.href))*(params->kp))+((params->v)*(params->y))))))) || (((params->kp < 0.0L) && ((params->v > 0.0L) && (((params->h)*(params->y) <= ((params->h)*(params->kd))+((2.0L)*(params->v))) || ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) <= 0.0L) || ((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) != ((2.0L)*(curr.href))*(params->kp)))))) || (((params->kp > 0.0L) && ((params->v == 0.0L) && (((params->h != curr.href) && (((params->kd >= (2.0L)*(params->sqrkp)) && ((params->h)*(params->y) >= (params->h)*(params->kd))) || (((params->h)*((params->kd)+(params->y)) >= 0.0L) && ((params->kd)+((2.0L)*(params->sqrkp)) < 0.0L)))) || (((params->kd == (2.0L)*(params->sqrkp)) && ((params->h)*(params->y) >= (params->h)*(params->kd))) || (((params->kd < (2.0L)*(params->sqrkp)) && ((params->kd)+((2.0L)*(params->sqrkp)) > 0.0L)) || ((params->h > curr.href) || (((params->kd > (2.0L)*(params->sqrkp)) && ((params->h)*((params->kd)+(params->y)) <= 0.0L)) || (((params->kd)+((2.0L)*(params->sqrkp)) <= 0.0L) && ((params->h)*(params->y) <= (params->h)*(params->kd)))))))))) || (((params->kp > 0.0L) && ((params->v < 0.0L) && ((((((2.0L)*(curr.href))*(params->kp))+((params->v)*(params->y)) != (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && (((params->h)*(params->y) >= ((params->h)*(params->kd))+((2.0L)*(params->v))) || (params->kd <= (2.0L)*(params->sqrkp)))) || ((params->kd < (2.0L)*(params->sqrkp)) || (((params->kd > (2.0L)*(params->sqrkp)) && ((((params->h)*(params->y) < ((params->h)*(params->kd))+((2.0L)*(params->v))) && ((((((2.0L)*(curr.href))*(params->kp))+((params->v)*(params->y)) < (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && ((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) < ((2.0L)*(curr.href))*(params->kp))) || (((((2.0L)*(curr.href))*(params->kp))+((params->v)*(params->y)) > (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) || ((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) > ((2.0L)*(curr.href))*(params->kp))))) || (((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) <= 0.0L))) || ((((params->h)*(params->y) >= ((params->h)*(params->kd))+((2.0L)*(params->v))) && (params->kd <= (2.0L)*(params->sqrkp))) || ((params->kd)+((2.0L)*(params->sqrkp)) <= 0.0L))))))) || ((params->kp > 0.0L) && ((params->v > 0.0L) && ((((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) != ((2.0L)*(curr.href))*(params->kp)) && (((params->kd)+((2.0L)*(params->sqrkp)) >= 0.0L) || (((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) >= 0.0L))) || ((params->kd >= (2.0L)*(params->sqrkp)) || ((((params->kd)+((2.0L)*(params->sqrkp)) < 0.0L) && ((((2.0L)*(params->v))+((params->h)*((params->kd)+(params->y))) < 0.0L) && (((((2.0L)*(curr.href))*(params->kp))+((params->v)*(params->y)) < (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) || (((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) < ((2.0L)*(curr.href))*(params->kp)) || (((((2.0L)*(curr.href))*(params->kp))+((params->v)*(params->y)) > (((2.0L)*(params->h))*(params->kp))+((params->kd)*(params->v))) && ((((2.0L)*(params->h))*(params->kp))+((params->v)*((params->kd)+(params->y))) > ((2.0L)*(curr.href))*(params->kp))))))) || (((params->kd)+((2.0L)*(params->sqrkp)) > 0.0L) || ((params->h)*(params->y) <= ((params->h)*(params->kd))+((2.0L)*(params->v)))))))))))))) && (((params->y)*(params->y) == ((params->kd)*(params->kd))-((4.0L)*(params->kp))) && ((params->y >= 0.0L) && (((params->sqrkp)*(params->sqrkp) == params->kp) && ((params->sqrkp >= 0.0L) && ((((((((params->h)*(params->h))*((params->kp)*(params->kp)))-((((2.0L)*(params->h))*(curr.href))*((params->kp)*(params->kp))))+(((curr.href)*(curr.href))*((params->kp)*(params->kp))))+((((params->h)*(params->kd))*(params->kp))*(params->v)))-((((curr.href)*(params->kd))*(params->kp))*(params->v)))+((params->kp)*((params->v)*(params->v))) == 0.0L))))))) && (curr.href == curr.href)))",
       paramDecls, "long double href;")
-    code._2 shouldBe ""
-    CodeGenTestTools.compileC(CodeGenTestTools.augmentMonitorMain(code._1, hasParams=true, hasInputs=false))
+    CodeGenTestTools.compileC(CodeGenTestTools.augmentMonitorMain(code._1 + "\n\n" + code._2, hasParams=true, hasInputs=false))
   }
 
   "Compiled controller monitor" should "evaluate boolean correctly" in {
@@ -422,7 +464,8 @@ class CCodeGeneratorTests extends TacticTestBase {
     val vars =
       Set(Variable("a"),Variable("dx"),Variable("dy"),Variable("r"),Variable("v"),Variable("w"),Variable("x"),Variable("y"),
         Variable("xo"),Variable("yo"),Variable("dxo"),Variable("dyo"),Variable("t"))
-    val monitorCode = (new CGenerator(new CMonitorGenerator()))(monitorExp, vars)._1
+    val genCode = (new CGenerator(new CMonitorGenerator()))(monitorExp, vars)
+    val monitorCode = genCode._1 + "\n\n" + genCode._2
 
     // robot and obstacle drive straight towards each other
     val code =
@@ -504,6 +547,22 @@ class CCodeGeneratorTests extends TacticTestBase {
         |}""".stripMargin
   }
 
+  it should "translate a simple deterministic controller with MPFR" in {
+    val ctrlPrg = "x:=2;".asProgram
+    CPrettyPrinter.printer = new CMpfrPrettyPrinter()
+    val cPrg = new CMpfrControllerGenerator()(ctrlPrg)
+    cPrg._1 shouldBe ""
+    cPrg._2 shouldBe """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+                       |  struct { state state; int success; } prg = { .state=curr, .success=0 };
+                       |  mpfr_t _t_0 /* 2.0L */;
+                       |  mpfr_init2(_t_0, 200);
+                       |  mpfr_set_ld(_t_0, 2L, MPFR_RNDD);
+                       |  prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
+                       |  prg.success = 1;
+                       |  return prg.state;
+                       |}""".stripMargin
+  }
+
   it should "translate nested choices" in {
     val ctrlPrg = "x:=2;++x:=3;{x:=4;++x:=5;}".asProgram
     val cPrg = new CControllerGenerator()(ctrlPrg)
@@ -536,6 +595,57 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  }
         |  return prg.state;
         |}""".stripMargin
+  }
+
+  it should "translate nested choices with MPFR" in {
+    val ctrlPrg = "x:=2;++x:=3;{x:=4;++x:=5;}".asProgram
+    CPrettyPrinter.printer = new CMpfrPrettyPrinter()
+    val cPrg = new CMpfrControllerGenerator()(ctrlPrg)
+    cPrg._1 shouldBe ""
+    cPrg._2 shouldBe """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+                       |  struct { state state; int success; } prg = { .state=curr, .success=0 };
+                       |  {
+                       |    state reset = prg.state;
+                       |    mpfr_t _t_0 /* 2.0L */;
+                       |    mpfr_init2(_t_0, 200);
+                       |    mpfr_set_ld(_t_0, 2L, MPFR_RNDD);
+                       |    prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
+                       |    prg.success = 1;
+                       |    if (!prg.success) prg.state = reset;
+                       |  }
+                       |  if (!prg.success) {
+                       |    state reset = prg.state;
+                       |    {
+                       |      mpfr_t _t_0 /* 3.0L */;
+                       |      mpfr_init2(_t_0, 200);
+                       |      mpfr_set_ld(_t_0, 3L, MPFR_RNDD);
+                       |      prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
+                       |      prg.success = 1;
+                       |    }
+                       |    if (prg.success) {
+                       |      {
+                       |        state reset = prg.state;
+                       |        mpfr_t _t_0 /* 4.0L */;
+                       |        mpfr_init2(_t_0, 200);
+                       |        mpfr_set_ld(_t_0, 4L, MPFR_RNDD);
+                       |        prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
+                       |        prg.success = 1;
+                       |        if (!prg.success) prg.state = reset;
+                       |      }
+                       |      if (!prg.success) {
+                       |        state reset = prg.state;
+                       |        mpfr_t _t_0 /* 5.0L */;
+                       |        mpfr_init2(_t_0, 200);
+                       |        mpfr_set_ld(_t_0, 5L, MPFR_RNDD);
+                       |        prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
+                       |        prg.success = 1;
+                       |        if (!prg.success) prg.state = reset;
+                       |      }
+                       |    }
+                       |    if (!prg.success) prg.state = reset;
+                       |  }
+                       |  return prg.state;
+                       |}""".stripMargin
   }
 
   it should "translate a nondeterministic assignment into an input lookup" in {
@@ -572,6 +682,42 @@ class CCodeGeneratorTests extends TacticTestBase {
         |  }
         |  return prg.state;
         |}""".stripMargin
+  }
+
+  it should "translate sequential compositions, tests, and nondeterministic choices with MPFR" in {
+    val ctrlPrg = "x:=*;?x<=5; ++ x:=7;".asProgram
+    CPrettyPrinter.printer = new CMpfrPrettyPrinter()
+    val cPrg = new CMpfrControllerGenerator()(ctrlPrg)
+    cPrg._1 shouldBe ""
+    cPrg._2 shouldBe """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+                       |  struct { state state; int success; } prg = { .state=curr, .success=0 };
+                       |  {
+                       |    state reset = prg.state;
+                       |    {
+                       |      prg.state.x = in->x; prg.success = 1;
+                       |    }
+                       |    if (prg.success) {
+                       |      mpfr_t _t_1 /* 5.0L */,
+                       |  prg_state_x /* prg.state.x */;
+                       |      mpfr_init2(_t_1, 200);
+                       |  mpfr_init2(prg_state_x, 200);
+                       |      mpfr_set_ld(_t_1, 5L, MPFR_RNDD);
+                       |  mpfr_set_ld(prg_state_x, prg.state.x, MPFR_RNDD);
+                       |      prg.success = mpfr_get_ld(prg_state_x, MPFR_RNDD) <= mpfr_get_ld(_t_1, MPFR_RNDD);
+                       |    }
+                       |    if (!prg.success) prg.state = reset;
+                       |  }
+                       |  if (!prg.success) {
+                       |    state reset = prg.state;
+                       |    mpfr_t _t_0 /* 7.0L */;
+                       |    mpfr_init2(_t_0, 200);
+                       |    mpfr_set_ld(_t_0, 7L, MPFR_RNDD);
+                       |    prg.state.x = mpfr_get_ld(_t_0, MPFR_RNDD);
+                       |    prg.success = 1;
+                       |    if (!prg.success) prg.state = reset;
+                       |  }
+                       |  return prg.state;
+                       |}""".stripMargin
   }
 
   it should "look up parameters" in {
@@ -637,6 +783,39 @@ class CCodeGeneratorTests extends TacticTestBase {
        |""".stripMargin
 
     val cmd = CodeGenTestTools.compileC(mainCode)
+    val p = Runtime.getRuntime.exec(cmd)
+    withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
+      p.waitFor() shouldBe 0
+      scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe
+        "Returned x=0.5\nReturned x=7.0"
+    }
+  }
+
+  it should "compile and run a controller with MPFR" in {
+    val ctrlPrg = "x:=*;?x<=A; ++ x:=7;".asProgram
+    CPrettyPrinter.printer = new CMpfrPrettyPrinter()
+    val code = (new CGenerator(new CMpfrControllerGenerator()))(ctrlPrg, Set(Variable("x")), Set(Variable("x")))
+
+    val mainCode =
+      s"""
+         |#include <stdio.h>
+         |#include <mpfr.h>
+         |${code._1}
+         |${code._2}
+         |
+       |int main() {
+         |  state current = { .x=0.0 };
+         |  parameters params = { .A=1.0 };
+         |  input in = { .x=0.5 };
+         |  printf("Returned x=%1.1Lf\\n", ctrlStep(current, &params, &in).x);
+         |  /* change input */
+         |  input nextIn = { .x=2.0 };
+         |  printf("Returned x=%1.1Lf", ctrlStep(current, &params, &nextIn).x);
+         |  return 0;
+         |}
+         |""".stripMargin
+
+    val cmd = CodeGenTestTools.compileC(mainCode, "-lmpfr -lgmp")
     val p = Runtime.getRuntime.exec(cmd)
     withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
       p.waitFor() shouldBe 0
