@@ -21,7 +21,7 @@ import scala.language.postfixOps
 import org.scalatest.LoneElement._
 import java.io.File
 
-import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator, CodeGenTestTools}
+import edu.cmu.cs.ls.keymaerax.codegen._
 
 /**
   * Created by smitsch on 3/8/15.
@@ -282,27 +282,36 @@ class ModelplexTacticTests extends TacticTestBase {
     val testProg = proveBy(result.subgoals.loneElement, ModelPlex.chaseToTests(combineTests=false)(1))
     testProg.subgoals.loneElement shouldBe "==> <?-1<=fpost&fpost<=(m()-l)/ep();><?0<=l&0<=ep();><?lpost=l;><?cpost=0;>true".asSequent
 
-    val testProg2 = proveBy(result.subgoals.loneElement, ModelPlex.chaseToTests(combineTests=true)(1)*2)
-    testProg2.subgoals.loneElement shouldBe "==> <?-1<=fpost&fpost<=(m()-l)/ep();><?0<=l&0<=ep();><?lpost=l&cpost=0;>true".asSequent
+    val monitorFml = result.subgoals.loneElement.succ.head
+    val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
+    proveBy(Equiv(monitorFml, reassociatedMonitorFml), prop) shouldBe 'proved
+
+    // example: combine all tests for a single if-then-else condition
+    val testProg2 = proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests=true)(1)*2)
+    testProg2.subgoals.loneElement shouldBe "==> <?((((-1<=fpost&fpost<=(m()-l)/ep())&0<=l)&0<=ep())&lpost=l)&cpost=0;>true".asSequent
 
     val inputs = CGenerator.getInputs(prg)
-    val code = (new CMonitorGenerator())(testProg2.subgoals.head.succ.head, stateVars.toSet, inputs, "Monitor")
+    CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter()
+    val code = (new CMonitorGenerator())(testProg.subgoals.head.succ.head, stateVars.toSet, inputs, "Monitor")
     code._1 shouldBe
-      """
-        |/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */
+      """/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */
         |long double boundaryDist(state pre, state curr, const parameters* const params) {
         |  if (((-1.0L) <= curr.f) && (curr.f <= ((params->m)-(pre.l))/(params->ep))) {
         |if ((0.0L <= pre.l) && (0.0L <= params->ep)) {
-        |if ((curr.l == pre.l) && (curr.c == 0.0L)) {
+        |if (curr.l == pre.l) {
+        |if (curr.c == 0.0L) {
         |return ((0.0L)+(-(fmaxl(((-1.0L))-(curr.f), (curr.f)-(((params->m)-(pre.l))/(params->ep))))))+(-(fmaxl((0.0L)-(pre.l), (0.0L)-(params->ep))));
         |} else {
-        |printf("Failed %s\n", "lpost=l&cpost=0"); return -1.0L;
+        |printf("Failed %s\n", "cpost=0"); return -1.0L;
         |}
         |} else {
-        |printf("Failed %s\n", "0<=l&0<=ep()"); return -(((0.0L)+(-(fmaxl(((-1.0L))-(curr.f), (curr.f)-(((params->m)-(pre.l))/(params->ep))))))+(-(fmaxl((0.0L)-(pre.l), (0.0L)-(params->ep)))));
+        |printf("Failed %s\n", "lpost=l"); return -1.0L;
         |}
         |} else {
-        |printf("Failed %s\n", "-1<=fpost&fpost<=(m()-l)/ep()"); return -((0.0L)+(-(fmaxl(((-1.0L))-(curr.f), (curr.f)-(((params->m)-(pre.l))/(params->ep))))));
+        |printf("Failed %s\n", "0<=l&0<=ep()"); return ((-1.0L))+(-(fmaxl((0.0L)-(pre.l), (0.0L)-(params->ep))));
+        |}
+        |} else {
+        |printf("Failed %s\n", "-1<=fpost&fpost<=(m()-l)/ep()"); return ((-1.0L))+(-(fmaxl(((-1.0L))-(curr.f), (curr.f)-(((params->m)-(pre.l))/(params->ep)))));
         |};
         |}
         |

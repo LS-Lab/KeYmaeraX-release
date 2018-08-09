@@ -623,7 +623,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
       case And(_, _) => "<?> invtest" :: Nil
       case f: Formula if f.isFOL && f != True => "&true inv" :: Nil
       case f: Formula if f == True => Nil
-      case Diamond(Test(p), Diamond(Test(_: Equal), _)) if combineTests && onlyEqualities(p) => "<?> combine" :: Nil
+      case Diamond(Test(_), Diamond(Test(_), _)) if combineTests => "<?> combine" :: Nil
       case _: Diamond => "<a> stuck" :: Nil
       //case _ => logger.trace("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
     }, (_,_) => pr=>pr, _ => us=>us, AxiomIndex.axiomIndex)
@@ -637,7 +637,16 @@ object ModelPlex extends ModelPlexTrait with Logging {
     * @return The tactic.
     */
   lazy val modelMonitorByChase: DependentPositionTactic = modelMonitorByChase()
-  def modelMonitorByChase(ode: DependentPositionTactic = AxiomaticODESolver.axiomaticSolve()): DependentPositionTactic = "modelMonitor" by ((pos: Position, seq: Sequent) => chase(3,3, (e:Expression) => e match {
+  def modelMonitorByChase(ode: DependentPositionTactic =
+    "SolveAndChase" by ((pos: Position, seq: Sequent) => {
+      AxiomaticODESolver.axiomaticSolve()(pos) & chase(3, 3, (e:Expression) => e match {
+        // remove loops
+        case Diamond(Loop(_), _) => "<*> approx" :: Nil
+        // keep ODEs, solve later
+        case Diamond(ODESystem(_, _), _) => Nil
+        case _ => println("Chasing " + e.prettyString); AxiomIndex.axiomsFor(e)
+      })(pos ++ PosInExpr(0::1::Nil)) & SimplifierV3.simpTac()(pos ++ PosInExpr(0::1::Nil))
+    })): DependentPositionTactic = "modelMonitor" by ((pos: Position, seq: Sequent) => chase(3,3, (e:Expression) => e match {
     // remove loops and split compositions to isolate differential equations before splitting choices
     case Diamond(Loop(_), _) => "<*> approx" :: Nil
     case Diamond(Compose(_, _), _) => AxiomIndex.axiomsFor(e)
@@ -894,7 +903,7 @@ object ModelPlex extends ModelPlexTrait with Logging {
     val positions: List[BelleExpr] = mapSubpositions(pos, sequent, {
         case (Forall(xs, Imply(Equal(x, _), _)), pp) if pp.isSucc && xs.contains(x) => Some(useAt(simplForall1, PosInExpr(1::Nil))(pp))
         case (Forall(xs, Imply(Equal(_, x), _)), pp) if pp.isSucc && xs.contains(x) => Some(useAt(simplForall2, PosInExpr(1::Nil))(pp))
-        // @note shape of ode solution
+        // @note shapes of ode solution
         case (ode@Exists(t::Nil, And(GreaterEqual(_, _), And(Forall(s::Nil, Imply(And(_, _), _)), _))), pp)
             if tool.isDefined && pp.isSucc && t == "t_".asVariable && s == "s_".asVariable =>
           val signature = StaticSemantics.signature(ode).filter({
@@ -904,6 +913,15 @@ object ModelPlex extends ModelPlexTrait with Logging {
           Some(solutionQE(ode, transformed.subgoals.head.succ.head, signature, assumptions)(pp) |
                solutionQE(ode, transformed.subgoals.head.succ.head, signature, Nil)(pp) |
                skip)
+        case (ode@Exists(t::Nil, And(GreaterEqual(_, _), _)), pp)
+          if tool.isDefined && pp.isSucc && t == "t_".asVariable =>
+          val signature = StaticSemantics.signature(ode).filter({
+            case Function(_, _, Unit, _, false) => true case _ => false }).map(_.asInstanceOf[Function])
+          val edo = signature.foldLeft[Formula](ode)((fml, t) => fml.replaceAll(FuncOf(t, Nothing), Variable(t.name, t.index)))
+          val transformed = proveBy(edo, partialQE)
+          Some(solutionQE(ode, transformed.subgoals.head.succ.head, signature, assumptions)(pp) |
+            solutionQE(ode, transformed.subgoals.head.succ.head, signature, Nil)(pp) |
+            skip)
         case (Exists(_, _), pp) if pp.isSucc => Some(optimizationOneWithSearchAt(pp))
         case (Forall(_, _), pp) if pp.isAnte => Some(optimizationOneWithSearchAt(pp))
         case _ => None
