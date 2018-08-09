@@ -731,12 +731,15 @@ private object DifferentialTactics extends Logging {
     * @author Andre Platzer
     * @author Nathan Fulton
     * @author Stefan Mitsch
+    * @note Compatibility tactic for Z3 ([[DifferentialTactics.odeInvariant]] not supported with Z3).
     */
   lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(Box(ODESystem(ode, q), _)) =>
       val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
       val qAtoms = FormulaTools.conjuncts(q).toSet
-      odeInvariant(true)(pos) | solve(pos) | ODE(useOdeInvariant=false, introduceStuttering=true,
+      proveWithoutCuts(false)(pos) |
+      (solve(pos) & DebuggingTactics.print("Solved") & ?(DebuggingTactics.print("Solved End") & allR(pos) & implyR(pos)*2 & allL(Variable("s_"), Variable("t_"))('Llast) & timeoutQE & DebuggingTactics.print("Solved End done") & done | DebuggingTactics.print("Solved QE") & timeoutQE & DebuggingTactics.print("Solved QE done") & done)) |
+      ODE(useOdeInvariant=false, introduceStuttering=true,
         //@note abort if unchanged
         assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) match {
           case Some(Box(ODESystem(extendedOde, extendedQ), _)) =>
@@ -753,6 +756,60 @@ private object DifferentialTactics extends Logging {
     )(pos)
   })
 
+  /** Compatibility ODE invariance tactics prior to [[DifferentialTactics.odeInvariant]] */
+  private def compatibilityFallback(pos: Position, isOpen: Boolean): BelleExpr =
+    lzzCheck(pos) &
+      (if (isOpen) {
+        openDiffInd(pos) | DGauto(pos) //> TODO: needs updating
+      } else {
+        diffInd()(pos)       | // >= to >=
+          DGauto(pos)          |
+          dgZeroMonomial(pos)  | //Equalities
+          dgZeroPolynomial(pos)  //Equalities
+      })
+
+  /** Proves ODE invariance properties. */
+  private val proveInvariant = "ANON" by ((pos: Position, seq: Sequent) => {
+    val post: Formula = seq.sub(pos) match {
+      case Some(Box(ode: ODESystem, pf)) => pf
+      case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
+      case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
+    }
+    val isOpen = post match {
+      case  _: Greater => true
+      case _: Less => true
+      case _ => false
+    }
+    TactixLibrary.odeInvariant(pos) | compatibilityFallback(pos, isOpen)
+  })
+
+  /** Tries to prove ODE properties without invariant generation or solving. */
+  private def proveWithoutCuts(useOdeInvariant: Boolean) = "ANON" by ((pos: Position) => {
+    SaturateTactic(boxAnd(pos) & andR(pos)) &
+      onAll(("ANON" by ((pos: Position, seq: Sequent) => {
+        val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
+          case Some(Box(ode: ODESystem, pf)) => (ode, pf)
+          case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
+          case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
+        }
+
+        val bounds = StaticSemantics.boundVars(ode.ode).symbols //@note ordering irrelevant, only intersecting/subsetof
+        val frees = StaticSemantics.freeVars(post).symbols      //@note ordering irrelevant, only intersecting/subsetof
+
+        val isOpen = post match {
+          case  _: Greater => true
+          case _: Less => true
+          case _ => false
+        }
+
+        //@note diffWeaken will already include all cases where V works, without much additional effort.
+        (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
+          diffWeaken(pos) & QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE)))) & done else fail
+          ) | (if (useOdeInvariant) proveInvariant(pos)
+        else compatibilityFallback(pos, isOpen))
+      })) (pos))
+  })
+
   private def ODE(useOdeInvariant: Boolean, introduceStuttering: Boolean, finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
     val invariantCandidates = try {
       InvariantGenerator.differentialInvariantGenerator(seq,pos)
@@ -761,58 +818,6 @@ private object DifferentialTactics extends Logging {
         logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
         Stream[Formula]()
     }
-
-    def compatibilityFallback(isOpen: Boolean): BelleExpr =
-      lzzCheck(pos) &
-        (if (isOpen) {
-          openDiffInd(pos) | DGauto(pos) //> TODO: needs updating
-        } else {
-          diffInd()(pos)       | // >= to >=
-          DGauto(pos)          |
-          dgZeroMonomial(pos)  | //Equalities
-          dgZeroPolynomial(pos)  //Equalities
-        })
-
-    val proveInvariant = "ANON" by ((pos: Position, seq: Sequent) => {
-      val post: Formula = seq.sub(pos) match {
-        case Some(Box(ode: ODESystem, pf)) => pf
-        case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
-        case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
-      }
-      val isOpen = post match {
-        case  _: Greater => true
-        case _: Less => true
-        case _ => false
-      }
-      TactixLibrary.odeInvariant(pos) | compatibilityFallback(isOpen)
-    })
-
-    //Tries to prove without any invariant generation or solving.
-    val proveWithoutCuts = "ANON" by ((pos: Position) => {
-      SaturateTactic(boxAnd(pos) & andR(pos)) &
-        onAll(("ANON" by ((pos: Position, seq: Sequent) => {
-          val (ode:ODESystem, post:Formula) = seq.sub(pos) match {
-            case Some(Box(ode: ODESystem, pf)) => (ode, pf)
-            case Some(ow) => throw new BelleThrowable("ill-positioned " + pos + " does not give a differential equation in " + seq)
-            case None => throw new BelleThrowable("ill-positioned " + pos + " undefined in " + seq)
-          }
-
-          val bounds = StaticSemantics.boundVars(ode.ode).symbols //@note ordering irrelevant, only intersecting/subsetof
-          val frees = StaticSemantics.freeVars(post).symbols      //@note ordering irrelevant, only intersecting/subsetof
-
-          val isOpen = post match {
-            case  _: Greater => true
-            case _: Less => true
-            case _ => false
-          }
-
-          //@note diffWeaken will already include all cases where V works, without much additional effort.
-          (if (frees.intersect(bounds).subsetOf(StaticSemantics.freeVars(ode.constraint).symbols))
-            diffWeaken(pos) & QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE)))) & done else fail
-          ) | (if (useOdeInvariant) proveInvariant(pos)
-               else compatibilityFallback(isOpen))
-        })) (pos))
-    })
 
     //Adds an invariant to the system's evolution domain constraint and tries to establish the invariant via proveWithoutCuts.
     //Fails if the invariant cannot be established by proveWithoutCuts.
@@ -844,13 +849,13 @@ private object DifferentialTactics extends Logging {
     })
 
     if (insistOnProof)
-      proveWithoutCuts(pos)        |
+      proveWithoutCuts(useOdeInvariant)(pos)        |
       (addInvariant & ODE(useOdeInvariant=true, introduceStuttering,finish)(pos))    |
       splitWeakInequality(pos)<(ODE(useOdeInvariant=true, introduceStuttering,finish)(pos), ODE(useOdeInvariant=true, introduceStuttering,finish)(pos)) |
       (if (introduceStuttering) stutter(pos) & ODE(useOdeInvariant=true, introduceStuttering=false,finish)(pos) & unstutter(pos)
        else finish)
     else
-      (proveWithoutCuts(pos) & done)   |
+      (proveWithoutCuts(useOdeInvariant)(pos) & done)   |
       (addInvariant & ODE(useOdeInvariant=true, introduceStuttering,finish)(pos) & done) |
       (splitWeakInequality(pos) <(
         ODE(useOdeInvariant=true, introduceStuttering,finish)(pos),
@@ -1196,6 +1201,7 @@ private object DifferentialTactics extends Logging {
     val zero = Number(0)
 
     //The sign of the remainder for a Darboux argument
+    //e.g., tests r >= 0 for p'>=gp (Darboux inequality)
     val pr = property match {
       case GreaterEqual(_, _) => proveBy(Imply(dom,GreaterEqual(r,zero)),timeoutQE)
       case Greater(_, _) => proveBy(Imply(And(dom,property),GreaterEqual(r,zero)),timeoutQE)
@@ -1207,8 +1213,27 @@ private object DifferentialTactics extends Logging {
       case _ => throw new BelleThrowable(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
     }
 
-    //println(pr,lie,q,p,r)
-    if(!pr.isProved && strict)
+    if(pr.isProved)
+      return (pr,q,r)
+    if(q != Number(0)) {
+      // Fall-back check if straightforward DI would work
+      // This is needed, because one can e.g. get p'>=0 without having r>=0 when domain constraints are possible
+      // todo: is it possible to improve the Darboux (in)equality generation heuristic to automatically cover this case?
+      val pr = property match {
+        case GreaterEqual(_, _) => proveBy(Imply(dom,GreaterEqual(lie,zero)),timeoutQE)
+        case Greater(_, _) => proveBy(Imply(And(dom,property),GreaterEqual(lie,zero)),timeoutQE)
+        case LessEqual(_, _) => proveBy(Imply(dom,LessEqual(lie,zero)),timeoutQE)
+        case Less(_, _) => proveBy(Imply(And(dom,property),LessEqual(lie,zero)),timeoutQE)
+        case Equal(_,_) => proveBy(Imply(dom,Equal(lie,zero)),timeoutQE)
+        //todo: is there a special case of open DI that would work for disequalities?
+        case NotEqual(_,_) => proveBy(Imply(dom,Equal(lie,zero)),timeoutQE)
+        case _ => throw new BelleThrowable(s"Darboux only on atomic >,>=,<,<=,!=,= postconditions")
+      }
+      if(pr.isProved)
+        return (pr,Number(0),lie)
+    }
+
+    if(strict)
       throw new BelleThrowable("Automatic darboux failed -- poly :"+p+" lie: "+lie+" cofactor: "+q+" rem: "+r+" unable to prove: "+pr.conclusion)
 
     (pr,q,r)
@@ -1366,7 +1391,8 @@ private object DifferentialTactics extends Logging {
   // Try hard to prove G|-[x'=f(x)&Q]P by an invariance argument on P only (NO SOLVE)
   def odeInvariant(tryHard:Boolean = false): DependentPositionTactic = "odeInvariant" by ((pos:Position) => {
     require(pos.isSucc && pos.isTopLevel, "ODE invariant only applicable in top-level succedent")
-    require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
+    //@note dW does not need algebra tool
+    //require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
 
     //todo: Ideally this will go for full rank + everything proof if tryHard=true
     val rankConfig = if(tryHard) 3 else 1
@@ -1379,7 +1405,7 @@ private object DifferentialTactics extends Logging {
       //Naive simplification of domain constraint
 //      DebuggingTactics.print("domSimplify") &
       DifferentialTactics.domSimplify(pos) &
-//      DebuggingTactics.print("close") &
+      DebuggingTactics.print("close") &
       (
 //        DebuggingTactics.print("try DWQE") &
           (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |

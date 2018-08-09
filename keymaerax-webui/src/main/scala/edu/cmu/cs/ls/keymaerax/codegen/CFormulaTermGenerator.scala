@@ -64,13 +64,13 @@ object CFormulaTermGenerator {
   */
 class CFormulaTermGenerator(termContainer: Expression => String) extends CodeGenerator {
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
-                     modelName: String): String = expr match {
+                     modelName: String): (String, String) = expr match {
     case f: Formula if f.isFOL => CPrettyPrinter(compileFormula(f))
     case t: Term => CPrettyPrinter(compileTerm(t))
   }
 
   /** Compile a term to a C expression evaluating it (in the same arithmetic) */
-  private def compileTerm(t: Term): CTerm = {
+  protected def compileTerm(t: Term): CTerm = {
     require(t.sort == Real || t.sort == Unit || t.sort.isInstanceOf[Tuple], "Expected sort Real, but got unsupported sort " + t.sort)
     t match {
       case Neg(c)       => CNeg(compileTerm(c))
@@ -110,7 +110,7 @@ class CFormulaTermGenerator(termContainer: Expression => String) extends CodeGen
     * @param exp   index of the exponential
     * @return      simplified generation of exponential
     */
-  private def compilePower(base: Term, exp: Term): CTerm = {
+  protected def compilePower(base: Term, exp: Term): CTerm = {
     if(base.equals(Number(0))) {
       //@todo since when is that the case?
       println("[warning] generating 0^0")
@@ -139,7 +139,7 @@ class CFormulaTermGenerator(termContainer: Expression => String) extends CodeGen
 
 
   /** Compile a formula to a C expression checking it (in the same arithmetic) */
-  private def compileFormula(f: Formula): CFormula = {
+  protected def compileFormula(f: Formula): CFormula = {
     f match {
       case Not(ff)     => CNot(compileFormula(ff))
       case And(l, r)   => CAnd(compileFormula(l), compileFormula(r))

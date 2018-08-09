@@ -140,6 +140,8 @@ object DerivationInfo {
       , AxiomDisplayInfo("[?]", "<span class=\"k4-axiom-key\">[?Q]P</span>↔(Q→P)")
       , "testb", {case () => HilbertCalculus.testb}),
     new DerivedAxiomInfo("<?> test", "<?>", "testd", {case () => HilbertCalculus.testd}),
+    new DerivedAxiomInfo("<?> combine", "<?> combine", "testdcombine", {case () => useAt(DerivedAxioms.combineTestdAxiom)}),
+    new DerivedAxiomInfo("<?> invtest", "<?>i", "invtestd", {case () => useAt(DerivedAxioms.invTestdAxiom)}),
     new CoreAxiomInfo("[++] choice"
       , AxiomDisplayInfo(("[∪]", "[++]"), "<span class=\"k4-axiom-key\">[a∪b]P</span>↔[a]P∧[b]P"), "choiceb", {case () => HilbertCalculus.choiceb}),
     new DerivedAxiomInfo("<++> choice", ("<∪>", "<++>"), "choiced", {case () => HilbertCalculus.choiced}),
@@ -521,6 +523,7 @@ object DerivationInfo {
 //    new DerivedAxiomInfo("[] split right", "[]&->", "boxSplitRight", {case () => useAt(DerivedAxioms.boxSplitRight)}),
     new DerivedAxiomInfo("<*> approx", "<*> approx", "loopApproxd", {case () => useAt(DerivedAxioms.loopApproxd)}),
     new DerivedAxiomInfo("<*> stuck", "<*> stuck", "loopStuck", {case () => useAt(DerivedAxioms.loopStuck)}),
+    new DerivedAxiomInfo("<a> stuck", "<a> stuck", "programStuck", {case () => useAt(DerivedAxioms.programStuck)}),
     new DerivedAxiomInfo("<'> stuck", ("<′> stuck","<'> stuck"), "odeStuck", {case () => useAt(DerivedAxioms.odeStuck)}),
     new DerivedAxiomInfo("all stutter", "all stutter", "allStutter", {case () => useAt(DerivedAxioms.forallStutter)}),
     new DerivedAxiomInfo("exists stutter", "exists stutter", "existsStutter", {case () => useAt(DerivedAxioms.existsStutter)}),
@@ -567,6 +570,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("&true"
       , AxiomDisplayInfo(("∧⊤","&T"), "<span class=\"k4-axiom-key\">(p∧⊤)</span>↔p")
       , "andTrue", {case () => useAt(DerivedAxioms.andTrue)}),
+    new DerivedAxiomInfo("&true inv", "&true inv", "andTrueInv", {case () => useAt(DerivedAxioms.invAndTrue)}),
     new DerivedAxiomInfo("true&"
       , AxiomDisplayInfo(("⊤∧","T&"), "<span class=\"k4-axiom-key\">(⊤∧p)</span>↔p")
       , "trueAnd", {case () => useAt(DerivedAxioms.trueAnd)}),
@@ -874,11 +878,12 @@ object DerivationInfo {
     new InputPositionTacticInfo("con",
       RuleDisplayInfo("Loop Convergence",(List("&Gamma;"), List("&lt;a*&gt;P", "&Delta;")),
         List(
-          (List("&Gamma;"),List("∃x_. j(x_)", "&Delta;")),
-          (List("x_ ≤ 0", "j(x_)"),List("P")),
-          (List("x_ > 0", "j(x_)"),List("&lt;a&gt;j(x_-1)"))))
-      //@todo also input variable name
-      , List(FormulaArg("j(x_)", allowsFresh = "x_" :: Nil)), _ => ((fml: Formula) => DLBySubst.con("x_".asVariable, fml)): TypedFunc[Formula, BelleExpr]),
+          (List("&Gamma;"),List("∃x. j(x)", "&Delta;")),
+          (List("x ≤ 0", "j(x)"),List("P")),
+          (List("x > 0", "j(x)"),List("&lt;a&gt;j(x-1)"))))
+      , List(VariableArg("x", allowsFresh = "x" :: Nil), FormulaArg("j(x)", allowsFresh = "x" :: Nil)), _ =>
+        ((x: Variable) =>
+          ((fml: Formula) => DLBySubst.con(x, fml)): TypedFunc[Formula, BelleExpr]): TypedFunc[Variable, _]),
 
     new PositionTacticInfo("loopauto", RuleDisplayInfo("loopauto",(List("&Gamma;"), List("[a*]P", "&Delta;")),
       List()), {case () => (gen: Generator.Generator[Formula]) => TactixLibrary.loopauto(gen)}, needsGenerator = true),

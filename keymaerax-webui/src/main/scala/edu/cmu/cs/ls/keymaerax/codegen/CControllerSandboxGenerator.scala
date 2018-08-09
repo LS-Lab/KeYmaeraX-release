@@ -21,7 +21,7 @@ import scala.collection.mutable.ListBuffer
   */
 class CControllerSandboxGenerator(val monitorKind: String, val logEval: Boolean) extends CodeGenerator {
   override def apply(expr: Expression, stateVars: Set[BaseVariable], inputVars: Set[BaseVariable],
-                     modelName: String): String = expr match {
+                     modelName: String): (String, String) = expr match {
     case ctrl: Program =>
       val vars = StaticSemantics.boundVars(ctrl).symbols[NamedSymbol].
         filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
@@ -47,13 +47,13 @@ class CControllerSandboxGenerator(val monitorKind: String, val logEval: Boolean)
         case "metric" => ModelPlex.toMetric(monitorFml)
       }
 
-      val monitorCode = new CMonitorGenerator(monitorKind)(monitor, vars, inputVars)
+      val monitorCode = (new CMonitorGenerator)(monitor, vars, inputVars)
       val params = CGenerator.getParameters(monitor, vars)
       val declarations = CGenerator.printParameterDeclaration(params) + "\n" +
         CGenerator.printStateDeclaration(vars) + "\n" +
         CGenerator.printInputDeclaration(inputVars)
 
-      s"""
+      ("", s"""
          |${CGenerator.printHeader(modelName)}
          |${CGenerator.INCLUDE_STATEMENTS}
          |#include <stdio.h>
@@ -63,7 +63,7 @@ class CControllerSandboxGenerator(val monitorKind: String, val logEval: Boolean)
          |$declarations
          |$fallbackCode
          |${monitorCode.toString.trim}
-         |""".stripMargin
+         |""".stripMargin)
     case _ => throw new CodeGenerationException("Expected program, but got " + expr.prettyString)
   }
 }

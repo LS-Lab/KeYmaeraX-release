@@ -60,6 +60,7 @@ case class BenchmarkResult(name: String, status: String, timeout: Int, duration:
 def toCsv: String = s"$name,$status,$timeout,$duration,$qeDuration,$proofSteps,$tacticSize"
 }
 
+@SlowTest
 class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: Int) extends TacticTestBase with AppendedClues with Timeouts {
 
   private val entries = {

@@ -14,6 +14,7 @@ trait CExpression {
 
 trait CTerm extends CExpression {}
 trait CFormula extends CExpression {}
+trait CProgram extends CExpression {}
 
 case class CNumber(n: BigDecimal) extends CTerm {}
 case class CVariable(name: String) extends CTerm {}
@@ -45,14 +46,22 @@ case class COr(l: CFormula, r: CFormula) extends CFormula {}
 object CTrue extends CFormula {}
 object CFalse extends CFormula {}
 
+case class CIfThenElse(f: CFormula, ifP: CProgram, elseP: CProgram) extends CProgram
+case class COrProgram(l: CProgram, r: CProgram) extends CProgram
+case class CAndProgram(l: CProgram, r: CProgram) extends CProgram
+case class CError(retVal: CExpression, msg: String) extends CProgram
+case class CReturn(e: CExpression) extends CProgram
+object CNoop extends CProgram
+
+
 /** Prints C expressions. */
-object CPrettyPrinter extends (CExpression => String) {
-  var printer: (CExpression => String) = new CExpressionPlainPrettyPrinter
-  override def apply(e: CExpression): String = printer(e)
+object CPrettyPrinter extends (CExpression => (String, String)) {
+  var printer: (CExpression => (String, String)) = new CExpressionPlainPrettyPrinter
+  override def apply(e: CExpression): (String, String) = printer(e)
 }
 
 /** Prints expressions in plain C. */
-class CExpressionPlainPrettyPrinter extends (CExpression => String) {
+class CExpressionPlainPrettyPrinter extends (CExpression => (String, String)) {
 
   /** Ensure to print literals as long double literals to avoid truncation. */
   private def longDoubleLiteral(n: BigDecimal): String = {
@@ -61,19 +70,54 @@ class CExpressionPlainPrettyPrinter extends (CExpression => String) {
     else string + ".0L"
   }
 
+  def printDefinitions(e: CExpression): String = e match {
+    case COrProgram(l, r) =>
+      s"""${printDefinitions(l)}
+         |${printDefinitions(r)}
+         |
+         |long double OrLeft${uniqueName(l)}(state pre, state curr, const parameters* const params) {
+         |  ${print(l)}
+         |}
+         |
+         |long double OrRight${uniqueName(r)}(state pre, state curr, const parameters* const params) {
+         |  ${print(r)}
+         |}""".stripMargin
+    case CAndProgram(l, r) =>
+      s"""${printDefinitions(l)}
+         |${printDefinitions(r)}
+         |
+         |long double AndLeft${uniqueName(l)}(state pre, state curr, const parameters* const params) {
+         |  ${print(l)}
+         |}
+         |
+         |long double AndRight${uniqueName(r)}(state pre, state curr, const parameters* const params) {
+         |  ${print(r)}
+         |}""".stripMargin
+    case CIfThenElse(_, ifP, elseP) => printDefinitions(ifP) + "\n" + printDefinitions(elseP)
+    case _ => ""
+  }
+
+  override def apply(e: CExpression): (String, String) = (printDefinitions(e), print(e))
+
+  private def uniqueName(fml: CExpression): String = {
+    val hashcode = fml.hashCode()
+    if (hashcode < 0) hashcode.toString.replace("-", "_")
+    else hashcode.toString
+  }
+
   //@todo print only necessary parentheses
-  override def apply(e: CExpression): String = e match {
+  private def print(e: CExpression): String = e match {
     case CNumber(n) if n>=0 => longDoubleLiteral(n)
     case CNumber(n) if n<0 => "(" + longDoubleLiteral(n) + ")"
     case CVariable(n) => n
-    case CUnaryFunction(n, arg) => n + "(" + apply(arg) + ")"
-    case CPair(l, r) => apply(l) + "," + apply(r)
-    case CNeg(c) => "-(" + apply(c) + ")"
-    case CPlus(l, r) => "(" + apply(l) + ")+(" + apply(r) + ")"
-    case CMinus(l, r) => "(" + apply(l) + ")-(" + apply(r) + ")"
-    case CTimes(l, r) => "(" + apply(l) + ")*(" + apply(r) + ")"
-    case CDivide(l, r) => "(" + apply(l) + ")/(" + apply(r) + ")"
-    case CPower(l, r) => "pow(" + apply(l) + "," + apply(r) + ")"
+    case CUnaryFunction(n, arg) => n + "(" + print(arg) + ")"
+    case CPair(l, r) => print(l) + "," + print(r)
+    case CNeg(c) => "-(" + print(c) + ")"
+    case CPlus(l, r) => "(" + print(l) + ")+(" + print(r) + ")"
+    case CMinus(l, r) => "(" + print(l) + ")-(" + print(r) + ")"
+    case CTimes(l, r) => "(" + print(l) + ")*(" + print(r) + ")"
+    case CDivide(l, r) => "(" + print(l) + ")/(" + print(r) + ")"
+    case CPower(l, r) => "pow(" + print(l) + "," + print(r) + ")"
     /** Convert interpreted functions to corresponding C functions.
       *
       * C 99 standard:
@@ -81,28 +125,45 @@ class CExpressionPlainPrettyPrinter extends (CExpression => String) {
       *   float fabsf()
       *   long double fabsl()
       */
-    case CMin(l, r) => "fminl(" + apply(l) + ", " + apply(r) + ")"
-    case CMax(l, r) => "fmaxl(" + apply(l) + ", " + apply(r) + ")"
-    case CAbs(c) => "fabsl(" + apply(c) + ")"
+    case CMin(l, r) => "fminl(" + print(l) + ", " + print(r) + ")"
+    case CMax(l, r) => "fmaxl(" + print(l) + ", " + print(r) + ")"
+    case CAbs(c) => "fabsl(" + print(c) + ")"
 
-    case CLess(l, r) => apply(l) + " < " + apply(r)
-    case CLessEqual(l, r) => apply(l) + " <= " + apply(r)
-    case CEqual(l, r) => apply(l) + " == " + apply(r)
-    case CGreaterEqual(l, r) => apply(l) + " >= " + apply(r)
-    case CGreater(l, r) => apply(l) + " > " + apply(r)
-    case CNotEqual(l, r) => apply(l) + " != " + apply(r)
-    case CNot(c) => "!(" + apply(c) + ")"
-    case CAnd(l, r) => "(" + apply(l) + ") && (" + apply(r) + ")"
-    case COr(l, r) => "(" + apply(l) + ") || (" + apply(r) + ")"
+    case CLess(l, r) => print(l) + " < " + print(r)
+    case CLessEqual(l, r) => print(l) + " <= " + print(r)
+    case CEqual(l, r) => print(l) + " == " + print(r)
+    case CGreaterEqual(l, r) => print(l) + " >= " + print(r)
+    case CGreater(l, r) => print(l) + " > " + print(r)
+    case CNotEqual(l, r) => print(l) + " != " + print(r)
+    case CNot(c) => "!(" + print(c) + ")"
+    case CAnd(l, r) => "(" + print(l) + ") && (" + print(r) + ")"
+    case COr(l, r) => "(" + print(l) + ") || (" + print(r) + ")"
+
+    case CTrue => "1.0L"
+    case CFalse => "-1.0L"
+
+    case CIfThenElse(f, ifP, elseP) => "if (" + print(f) + ") {\n" + print(ifP) + "\n} else {\n" + print(elseP) + "\n}"
+    case CReturn(e: CExpression) => "return " + print(e) + ";"
+    case CError(retVal: CExpression, msg: String) => s"""printf("Failed %s\\n", "$msg"); return ${print(retVal)};"""
+    case COrProgram(l, r) /* if kind=="boolean" */ =>
+      s"""long double leftDist = OrLeft${uniqueName(l)}(pre,curr,params);
+         |long double rightDist = OrRight${uniqueName(r)}(pre,curr,params);
+         |printf("Or distances: %s=%Lf %s=%Lf\\n", "OrLeft${uniqueName(l)}", leftDist, "OrRight${uniqueName(r)}", rightDist);
+         |return fmaxl(leftDist, rightDist);""".stripMargin
+    case CAndProgram(l, r) /* if kind=="boolean" */ =>
+      s"""long double leftDist = AndLeft${uniqueName(l)}(pre,curr,params);
+         |long double rightDist = AndRight${uniqueName(r)}(pre,curr,params);
+         |printf("And distances: %s=%Lf %s=%Lf\\n", "AndLeft${uniqueName(l)}", leftDist, "AndRight${uniqueName(r)}", rightDist);
+         |return fminl(leftDist, rightDist);""".stripMargin
   }
 
 }
 
 /** Prints C expressions that keep track of the reason for their value. */
-class CExpressionLogPrettyPrinter extends (CExpression => String) {
+class CExpressionLogPrettyPrinter extends (CExpression => (String, String)) {
 
-  override def apply(e: CExpression): String = {
-    "eval(" + print(e) + ")"
+  override def apply(e: CExpression): (String, String) = {
+    ("", "eval(" + print(e) + ")")
   }
 
   def printOperators: String = {

@@ -58,6 +58,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     case None => "nil"
     case Some(c) => c.maker match {
       case None => "nil"
+      case Some(m) if m == "assert" => "nil" //@note BuiltInTactic with Scala argument is not serializable
       case Some(m) => m
     }
   }

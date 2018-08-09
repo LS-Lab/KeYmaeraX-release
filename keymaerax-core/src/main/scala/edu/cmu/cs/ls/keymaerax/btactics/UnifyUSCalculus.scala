@@ -1359,6 +1359,7 @@ trait UnifyUSCalculus {
           * @param o
           */
         def equivStep(o: Expression): ProvableSig = {
+          //@todo chase does not work with applying axioms inverse
           require(fact.isProved, "currently want proved facts as input only\n" + fact)
           require(proof.conclusion.updated(p.top, C(subst(k)))==proof.conclusion, "expected context split")
           // |- fact: k=o or k<->o, respectively
@@ -1643,22 +1644,29 @@ trait UnifyUSCalculus {
     chaseI(breadth, giveUp,keys, modifier, ax=>us=>us)
   def chaseI(breadth: Int, giveUp: Int, keys: Expression=>List[String], inst: String=>(Subst=>Subst)): DependentPositionTactic =
     chaseI(breadth, giveUp, keys, (ax,pos)=>pr=>pr, inst)
-  def chaseI(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic, inst: String=>(Subst=>Subst)): DependentPositionTactic = {
+  def chaseI(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic, inst: String=>(Subst=>Subst)): DependentPositionTactic =
+    chaseI(breadth, giveUp, keys, (ax,pos)=>pr=>pr, inst, AxiomIndex.axiomIndex)
+  def chaseI(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic,
+             inst: String=>(Subst=>Subst), index: String=>(PosInExpr,List[PosInExpr])): DependentPositionTactic = {
     require(breadth <= giveUp, "less breadth than giveup expected: " + breadth + "<=" + giveUp)
     chase(e => keys(e) match {
       case l:List[String] if l.size > giveUp => Nil
       case l:List[String] => l.take(breadth)
-    }, modifier, inst)
+    }, modifier, inst, index)
   }
 
   def chaseFor(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic): ForwardPositionTactic =
     chaseFor(breadth, giveUp,keys, modifier, ax=>us=>us)
-  def chaseFor(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic, inst: String=>(Subst=>Subst)): ForwardPositionTactic = {
+  def chaseFor(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic,
+               inst: String=>(Subst=>Subst)): ForwardPositionTactic =
+    chaseFor(breadth, giveUp,keys, modifier, inst, AxiomIndex.axiomIndex)
+  def chaseFor(breadth: Int, giveUp: Int, keys: Expression=>List[String], modifier: (String,Position)=>ForwardTactic,
+               inst: String=>(Subst=>Subst), index: String=>(PosInExpr, List[PosInExpr])): ForwardPositionTactic = {
     require(breadth <= giveUp, "less breadth than giveup expected: " + breadth + "<=" + giveUp)
     chaseFor(e => keys(e) match {
       case l:List[String] if l.size > giveUp => Nil
       case l:List[String] => l.take(breadth)
-    }, modifier, inst)
+    }, modifier, inst, index)
   }
 
   /** chase: Chases the expression at the indicated position forward until it is chased away or can't be chased further without critical choices.
@@ -1673,6 +1681,7 @@ trait UnifyUSCalculus {
     * @param inst Transformation for instantiating additional unmatched symbols that do not occur when using the given axiom _1.
     *   Defaults to identity transformation, i.e., no change in substitution found by unification.
     *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
+    * @param index Provides recursors to continue chase after applying an axiom from `keys`. Defaults to [[AxiomIndex.axiomIndex]].
     * @note Chase is search-free and, thus, quite efficient. It directly follows the
     *       [[AxiomIndex.axiomIndex() axiom index]] information to compute follow-up positions for the chase.
     * @example When applied at 1::Nil, turns [{x'=22}](2*x+x*y>=5)' into [{x'=22}]2*x'+(x'*y+x*y')>=0
@@ -1684,7 +1693,8 @@ trait UnifyUSCalculus {
     */
   def chase(keys: Expression=>List[String],
             modifier: (String,Position)=>ForwardTactic,
-            inst: String=>(Subst=>Subst) = ax=>us=>us): DependentPositionTactic = chaseFor2Back("chase", chaseFor(keys, modifier, inst))
+            inst: String=>(Subst=>Subst) = ax=>us=>us,
+            index: String=>(PosInExpr, List[PosInExpr]) = AxiomIndex.axiomIndex): DependentPositionTactic = chaseFor2Back("chase", chaseFor(keys, modifier, inst, index))
 
   /** Converts a forward chase tactic into a backwards chase by CEat. */
   private def chaseFor2Back(name: String, forward: ForwardPositionTactic): DependentPositionTactic = new DependentPositionTactic(name) {
@@ -1738,7 +1748,8 @@ trait UnifyUSCalculus {
     */
   def chaseFor(keys: Expression=>List[String],
                modifier: (String,Position)=>ForwardTactic,
-               inst: String=>(Subst=>Subst) = ax=>us=>us): ForwardPositionTactic = pos => de => {
+               inst: String=>(Subst=>Subst) = ax=>us=>us,
+               index: String=>(PosInExpr, List[PosInExpr])): ForwardPositionTactic = pos => de => {
     /** Recursive chase implementation */
     def doChase(de: ProvableSig, pos: Position): ProvableSig = {
       logger.debug("chase(" + de.conclusion.sub(pos).get.prettyString + ")")
@@ -1749,7 +1760,7 @@ trait UnifyUSCalculus {
           de
         /*throw new IllegalArgumentException("No axiomFor for: " + expr)*/
         case List(ax) =>
-          val (key, recursor) = AxiomIndex.axiomIndex(ax)
+          val (key, recursor) = index(ax)
           try {
             val axUse = modifier(ax,pos) (useFor(ax, key, inst(ax))(pos)(de))
             recursor.foldLeft(axUse)(
@@ -1761,7 +1772,7 @@ trait UnifyUSCalculus {
           // useFor the first applicable axiom if any, or None
           def firstAxUse: Option[(ProvableSig,List[PosInExpr])] = {
             for (ax <- l) try {
-              val (key, recursor) = AxiomIndex.axiomIndex(ax)
+              val (key, recursor) = index(ax)
               return Some((modifier(ax,pos) (useFor(ax, key, inst(ax))(pos)(de)), recursor))
             } catch {case _: ProverException => /* ignore and try next */}
             None

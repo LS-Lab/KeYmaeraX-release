@@ -373,6 +373,7 @@ object ODEInvariance {
     */
   def sAIclosedPlus(bound:Int=1) : DependentPositionTactic = "sAIc" byWithInput (bound,(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only applicable in top-level succedent")
+    require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
 
     val (ode,dom,post) = seq.sub(pos) match {
       case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
@@ -430,7 +431,6 @@ object ODEInvariance {
           if(pr2.isProved)
             Some(f)
           else None
-          //TODO: for strict inequalities, can also check that p>0 proves using open DI (p>0 -> p'>=0)
         }
 
       case and:And =>
@@ -503,6 +503,7 @@ object ODEInvariance {
     */
   def sAIRankOne(doReorder:Boolean=true,skipClosed:Boolean =true) : DependentPositionTactic = "sAIR1" byWithInput (doReorder,(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "sAI only in top-level succedent")
+    require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
 
     val (ode, dom, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys.ode, sys.constraint, post)

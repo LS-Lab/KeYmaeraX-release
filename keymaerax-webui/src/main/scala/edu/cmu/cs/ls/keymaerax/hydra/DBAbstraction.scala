@@ -143,14 +143,18 @@ case class ExecutionTrace(proofId: String, executionId: String, steps: List[Exec
   //@note expensive assert
   private val orderViolationStep = findOutOfOrderBranchStep(steps)
   assert(orderViolationStep.isEmpty, "Trace steps not ordered in descending branches:"
-    + " branch " + orderViolationStep.get.branch
-    + " of step " + orderViolationStep.get.stepId + " (" + orderViolationStep.get.rule + ")"
-    + " is higher than its predecessor's branch")
+    + " branch " + orderViolationStep.get._1.branch
+    + " of step " + orderViolationStep.get._1.stepId + " (" + orderViolationStep.get._1.rule + ")"
+    + " is not less than branch " + orderViolationStep.get._2.branch + " of its predecessor step " + orderViolationStep.get._2.stepId + " (" + orderViolationStep.get._2.rule + ")")
 
   /** Finds the first step whose branch is out of order (higher than its predecessor's branch) */
-  def findOutOfOrderBranchStep(steps: List[ExecutionStep]): Option[ExecutionStep] = steps match {
+  def findOutOfOrderBranchStep(steps: List[ExecutionStep]): Option[(ExecutionStep,ExecutionStep)] = steps match {
     case Nil => None
-    case step::tail => tail.filter(_.prevStepId == step.prevStepId).find(_.branch >= step.branch).orElse(findOutOfOrderBranchStep(tail))
+      // .orElse(findOutOfOrderBranchStep(tail))
+    case step::tail => tail.filter(_.prevStepId == step.prevStepId).find(_.branch >= step.branch) match {
+      case None => findOutOfOrderBranchStep(tail)
+      case Some(s) => Some(s -> step)
+    }
   }
 
   def branch: Option[Int] = steps.lastOption.map(_.branch)

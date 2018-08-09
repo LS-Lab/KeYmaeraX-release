@@ -167,7 +167,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       SaturateTactic(OnAll(tacticChase(createAutoTacticIndex)(notL, andL, notR, implyR, orR, allR,
         TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
         implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-        andR, equivR, loop, odeR, solve))) & DebuggingTactics.print("master chase done") & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
+        andR, equivR, loop, odeR, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
         OnAll(SaturateTactic(exhaustiveEqL2R('L)) & ?(QE & (if (keepQEFalse) nil else done))))
   }
 

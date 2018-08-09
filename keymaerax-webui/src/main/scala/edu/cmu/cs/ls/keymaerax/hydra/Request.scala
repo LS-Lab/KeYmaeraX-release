@@ -883,7 +883,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
               CGenerator.printStateDeclaration(stateVars) + "\n" +
               CGenerator.printInputDeclaration(inputs)
             val fallbackCode = new CControllerGenerator()(prg, stateVars, inputs)
-            val monitorCode = new CMonitorGenerator(monitorShape)(monitorFml, stateVars, inputs)
+            val monitorCode = (new CMonitorGenerator)(monitorFml, stateVars, inputs)
 
             val sandbox =
               s"""
@@ -942,7 +942,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
         case "kym" => new ModelPlexArtifactResponse(model, monitorFml) :: Nil
         case "c" =>
           val inputs = CGenerator.getInputs(prg)
-          val monitor = (new CGenerator(new CMonitorGenerator(monitorShape)))(monitorFml, vars, inputs, model.name)
+          val monitor = (new CGenerator(new CMonitorGenerator))(monitorFml, vars, inputs, model.name)
           val code =
             s"""
               |${CGenerator.printHeader(model.name)}

@@ -946,7 +946,7 @@ object KeYmaeraX {
     val pw = new PrintWriter(outputFileName + ".c")
     pw.write(stampHead(options))
     pw.write("/* @evidence: print of CGenerator of input */\n\n")
-    pw.write(output)
+    pw.write(output._1 + "\n" + output._2)
     pw.close()
   }
 
