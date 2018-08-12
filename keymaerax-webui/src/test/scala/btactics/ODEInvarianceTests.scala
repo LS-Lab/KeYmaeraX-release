@@ -329,6 +329,17 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+  it should "prove a 2D symbolic equilibirum without vectorial ghosts" in withMathematica { _ =>
+    val polys = List("x","y").map( s => s.asTerm)
+    val fml = "x=0&y=0 -> [{x'=a*x+b*y,y'=c*x+d*y}](x=0&y=0)".asFormula
+    val pr = proveBy(fml,implyR(1) & dC("x^2+y^2<=0".asFormula)(1)<(
+      dW(1) & QE,
+      DifferentialTactics.dgDbx("2*4*max(max(abs(a),abs(b)),max(abs(c),abs(d)))".asTerm)(1)
+    ))
+    println(pr)
+    pr shouldBe 'proved
+  }
+
   "Frozen time" should "freeze predicates with time (manual)" in withMathematica { _ =>
     val fml = "x+y=5 -> [{t'=1,x'=x^5+y, y'=x, c'=5 ,d'=100 & t=0 & c=1}]x+y=5".asFormula
     val pr = proveBy(fml, implyR(1) &
@@ -369,4 +380,5 @@ class ODEInvarianceTests extends TacticTestBase {
     println(localProgressFml(ode,fml))
     //todo
   }
+
 }
