@@ -309,25 +309,6 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  "VDbx" should "prove a simple equilibirum" in withMathematica { _ =>
-    val polys = List("x","y").map( s => s.asTerm)
-    // Directly prove that the origin is an equilibrium point
-    val system = "x'=y,y'=x".asProgram.asInstanceOf[ODESystem]
-    val cofactors = List(List("0","1"),List("1","0")).map(ls => ls.map(s => s.asTerm))
-    val pr = dgVdbx(system,cofactors,polys)
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "SAS'14 Example 12" in withMathematica { _ =>
-    val polys = List("x1^2+x2^2-1","x3-x1").map( s => s.asTerm)
-    // Directly prove that the origin is an equilibrium point
-    val system = "x1'=-x2,x2'=x3,x3'=-x2".asProgram.asInstanceOf[ODESystem]
-    val cofactors = List(List("0","2*x2"),List("0","0")).map(ls => ls.map(s => s.asTerm))
-    val pr = dgVdbx(system,cofactors,polys)
-    println(pr)
-    pr shouldBe 'proved
-  }
   "Frozen time" should "freeze predicates with time (manual)" in withMathematica { _ =>
     val fml = "x+y=5 -> [{t'=1,x'=x^5+y, y'=x, c'=5 ,d'=100 & t=0 & c=1}]x+y=5".asFormula
     val pr = proveBy(fml, implyR(1) &
@@ -369,4 +350,46 @@ class ODEInvarianceTests extends TacticTestBase {
     //todo
   }
 
+  "DRI" should "prove matrix and vector bounds" in withMathematica { _ =>
+
+    //These two bounds ought to be enough for all intents and purposes
+    val cs = cauchy_schwartz(10)
+    val fs = frobenius_subord(10)
+    cs._1 shouldBe 'proved
+    cs._2 shouldBe 'proved
+    cs._3 shouldBe 'proved
+    fs shouldBe 'proved
+  }
+
+  it should "prove a 2D equilibirum" in withMathematica { _ =>
+    val fml = "x=0&y=0 ==> [{x'=y,y'=x}](x=0&y=0)".asSequent
+
+    val cofactors = List(List("0","1"),List("1","0")).map(ls => ls.map(s => s.asTerm))
+    val polys = List("x","y").map( s => s.asTerm)
+    val pr = proveBy(fml, dgVdbx(cofactors,polys)(1) & dW(1) & QE)
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove a 3D equilibirum" in withMathematica { _ =>
+    val fml = "x=0&y=0 ==> z!=1 , [{x'=(2*z+y)*x+x^2*y+z-1,y'=x+y^2+(z-1),z'=x*y+x+z-1 & x+y+z=1}](x=0&y=0&z=1)".asSequent
+
+    val cofactors = List(List("2*z+y","x^2","1"),List("1","y","1"),List("1","x","1")).map(ls => ls.map(s => s.asTerm))
+    val polys = List("x","y","z-1").map( s => s.asTerm)
+    val pr = proveBy(fml, dgVdbx(cofactors,polys)(2) & dW(2) & QE
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove a DRI SAS Ex 12" in withMathematica { _ =>
+    val polys = List("x1^2+x2^2-1","x3-x1").map( s => s.asTerm)
+
+    val system = "x1'=-x2,x2'=x3,x3'=-x2".asProgram.asInstanceOf[ODESystem]
+    val cofactors = List(List("0","2*x2"),List("0","0")).map(ls => ls.map(s => s.asTerm))
+    val pr = proveBy("x1^2+x2^2-1=0 & x3-x1=0 -> [{x1'=-x2,x2'=x3,x3'=-x2}](x1^2+x2^2-1=0 & x3-x1=0)".asFormula,
+      implyR(1) & dgVdbx(cofactors,polys)(1) & dW(1) & QE)
+    println(pr)
+    pr shouldBe 'proved
+  }
 }

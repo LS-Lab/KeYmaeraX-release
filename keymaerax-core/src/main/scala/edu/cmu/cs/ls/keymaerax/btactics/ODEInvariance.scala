@@ -1,12 +1,11 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics._
+import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics.{dG, _}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
@@ -549,79 +548,6 @@ object ODEInvariance {
   })
 
   /**
-    * Vectorial Darboux, currently just constructs and returns an appropriate provable
-    * because we do not yet have vectorial dG
-    *
-    * @param odesys the ODE system
-    * @param Gco the cofactor matrix
-    * @param p the polynomial vector
-    * @return provable with extra ghosts
-    */
-  def dgVdbx(odesys : ODESystem,Gco:List[List[Term]],p:List[Term]) : ProvableSig = {
-    val dim = p.length
-    assert(Gco.length == dim && Gco.forall(gs => gs.length == dim))
-    val diffeqs = odesys.ode
-    val dom = odesys.constraint
-
-    val ghostPrefix = "vdbxy_"
-    //Doubly indexed ghost variables
-    val ghostVars = List.range(0,dim).map( i => List.range(0,dim).map( j => Variable(ghostPrefix,Some(i*dim+j))))
-    //println("Ghost vars: "+ghostVars)
-
-    val Gcotrans = Gco.transpose
-
-    //Construct the system of equations
-    val ghostRHS = List.range(0,dim).map( i => matvec_prod(Gcotrans,ghostVars(i)).map(t => Neg(t)))
-    val ghostEqs = (ghostVars zip ghostRHS).map(p => p._1 zip p._2)
-    //Each ghostEqs at this point is a separate vectorial diff ghost
-    //We could also work directly with the flattened versions, but this is just for easier portability when we get vDG
-    //println("Ghost eqs: "+ghostEqs)
-
-    //For now, construct the differential equations obtained from ghosts
-    val ghostDiffEqs = ghostEqs.flatten.map(p => AtomicODE(DifferentialSymbol(p._1),p._2)).reduce(DifferentialProduct.apply)
-    val ghostSys = ODESystem(DifferentialProduct(diffeqs,ghostDiffEqs),dom)
-    //println("Extended system: "+ghostSys)
-
-    val zero = Number(0)
-    val one = Number(1)
-    //Constructing the p=0 invariant (using conjunctions)
-    val inv = p.foldLeft[Formula](True)((fml,trm)=> And(Equal(trm,zero),fml))
-    val boxfml = Box(ghostSys,inv)
-    val fml = ghostVars.foldRight[Formula](boxfml)((vs,fml)=> (vs.foldRight[Formula](fml)((v,fml)=>Exists(v::Nil,fml))))
-    //println("Formula: "+fml)
-
-    //Finally, we can now prove the invariant property
-    val seq = ProvableSig.startProof( Imply(inv,fml) )
-    //println("Seq: "+seq)
-
-    val determinant = sym_det(ghostVars)
-    val trace = sym_trace(Gco)
-    //println("Symbolic Det: "+determinant)
-    //println("Symbolic Trace: "+trace)
-
-    //Relevant tactics
-
-    //Explicitly instantiate the sequence of ghost variables with the identity matrix
-    val idExistsTac = List.range(0,dim).map( i => List.range(0,dim).map( j => existsR(Variable(ghostPrefix,Some(i*dim+j)),
-      if(i==j) one else zero)))
-    val idExistsTacPos = idExistsTac.foldRight(skip)( (exts,tac) => exts.foldRight(tac)( (ext,tac) => ext(1) & tac )  )
-
-    //Cut in the symbolic dot products p.y = 0
-    val dotprods = ghostVars.map( ls => Equal(dot_prod(ls,p),zero))
-    val dITac = DifferentialTactics.diffInvariant(dotprods:_*)(1)
-
-    val pr = proveBy(seq,
-      implyR(1) & idExistsTacPos & dITac &
-        diffCut(Greater(determinant,zero))(1) <(
-          dW(1) & QE,
-          //Prove Darboux invariance for the determinant
-          dgDbx(Neg(trace))(1))
-    )
-
-    pr
-  }
-
-  /**
     * Event stuck tactics: roughly, [x'=f(x)&Q]P might be true in a state if:
     * 1) Q is false in the state (trivializing the box modality)
     * 2) Q,P are true in initial state, but the ODE cannot evolve for non-zero duration without leaving Q
@@ -857,5 +783,224 @@ object ODEInvariance {
   private def matvec_prod (m:List[List[Term]],v:List[Term]) : List[Term] ={
     m.map(ls => dot_prod(ls,v))
   }
+
+  // For turning the cauchy schwartz bound into 2 sided bounds
+  // Additionally, the square root is distributed into the two norms
+  private val lemL = proveBy("a()*a() <= b()*c() & (b() >=0 & c() >= 0) -> a() >= -( b()^(1/2) * c()^(1/2) )".asFormula,QE)
+  private val lemU = proveBy("a()*a() <= b()*c() & (b() >=0 & c() >= 0) -> a() <= b()^(1/2)*c()^(1/2)".asFormula,QE)
+  // Taking square roots on both sides
+  private val lemLU = proveBy("a() <= b()*c() & (a() >= 0 & b() >=0 & c() >= 0) -> a()^(1/2)*c()^(1/2) <= b()^(1/2)*c()".asFormula,QE)
+
+  //Combine and distribute an inequality
+  private val lemDist = proveBy("a() <= b()*e() & c () <= d()* e() -> a()+c() <= (b()+d())*e()".asFormula,QE)
+  private val lemTrans = proveBy("a() <= b() & b() <= c() -> a() <= c()".asFormula,QE)
+
+  private def mkConst(name : String, index: Int) : Term ={
+    FuncOf(Function(name,Some(index),Unit,Real),Nothing)
+  }
+
+  /**
+    * Pre-prove symbolic lemmas for n-dimensional Cauchy Schwartz
+    * Note: this lemma proves pretty quickly e.g. for n=10
+    * @param n the dimension to use
+    * @return the 3 symbolic bounds (u.v)^2 <= (||u||||v||)^2 and -||u||||v|| <= u.v <= ||u||||v||
+    */
+  def cauchy_schwartz (n : Int) : (ProvableSig,ProvableSig,ProvableSig) = {
+    assert (n >= 1)
+    val csuPrefix = "csiu"
+    val csvPrefix = "csiv"
+    val us = List.range(0,n).map(i => mkConst(csuPrefix,i))
+    val vs = List.range(0,n).map(i => mkConst(csvPrefix,i))
+    val dp = dot_prod(us,vs)
+    val unorm = dot_prod(us,us)
+    val vnorm = dot_prod(vs,vs)
+    val fml1 = LessEqual(Times(dp,dp), Times(unorm,vnorm))
+    val pr1 = proveBy(fml1 , QE)
+    //TODO: positivity of unorm and vnorm can be proved directly rather than QE since they are SOS
+    val sgn = And(GreaterEqual(unorm,Number(0)),GreaterEqual(vnorm,Number(0)))
+
+    val pr = proveBy(And(fml1,sgn),andR(1) <( by(pr1), prove_sos_positive))
+
+    (pr1,useFor(lemL,PosInExpr(0::Nil))(Position(1))(pr),useFor(lemU,PosInExpr(0::Nil))(Position(1))(pr))
+  }
+
+  /**
+    * Prove the following bound:
+    * (Gp).p <= ||Gp|| ||p|| <= ||G|| ||p||^2
+    * where ||G|| is the Frobenius norm on matrices:
+    * sqrt(||G_1||^2 + ... +||G_n||^2) where G_i is the i-th row of G
+    * @param n the dimension of G and p
+    * @return the symbolic bound (Gp).p <= ||G|| ||p||^2
+    */
+  def frobenius_subord (n : Int) : ProvableSig = {
+    assert (n >= 1)
+
+    val gPrefix = "gfrosub"
+    val pPrefix = "pfrosub"
+
+    val g = List.range(0,n).map(i => List.range(0,n).map(j => mkConst(gPrefix,i*n+j)))
+    val p = List.range(0,n).map(i => mkConst(pPrefix,i))
+
+    //This is done purely usubst style using Cauchy Schwartz
+    val (cs,_,csU) = cauchy_schwartz(n)
+    val csLhs = cs.conclusion.succ(0).sub(PosInExpr(0::0::Nil)).get
+    // Use Cauchy-Schwartz on each sub-term
+    val gdot = g.map(
+      gi => {
+        val subst = UnificationMatch.unifiable(csLhs, dot_prod(gi, p)).get
+        cs(subst.usubst)
+      }
+    )
+    // println("Cauchy Schwartz: ",gdot)
+
+    // Sum the sub-terms
+    val sum = gdot.tail.foldLeft(gdot.head)(
+      (cur,pr) => {
+        val subst1 = UnificationMatch.unifiable(lemDist.conclusion.succ(0).sub(PosInExpr(0::0::Nil)).get,cur.conclusion.succ(0)).get
+        val subst2 = UnificationMatch.unifiable(lemDist.conclusion.succ(0).sub(PosInExpr(0::1::Nil)).get,pr.conclusion.succ(0)).get
+        val subst = subst1++subst2
+        val lemma = subst.usubst(lemDist)
+        val uspr = proveBy(lemma.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Formula],
+          useAt(lemma,PosInExpr(1::Nil))(1) & andR(1) <(by(cur),by(pr))
+        )
+        //println(uspr)
+        uspr
+      })
+    //println("Sum: ",sum)
+
+    // Prove all non-negativity assumptions for both sides of the result
+    val subst = UnificationMatch.unifiable(lemLU.conclusion.succ(0).sub(PosInExpr(0::0::Nil)).get, sum.conclusion.succ(0)).get
+    val lem = subst.usubst(lemLU)
+    val uspr = proveBy(lem.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Formula],
+      useAt(lem,PosInExpr(1::Nil))(1) & andR(1) <(by(sum),prove_sos_positive)
+    )
+    //This yields ||Gp||||p|| <= ||G|| ||p||^2
+    //println("Frobenius: ",uspr)
+
+    //||G|| ||p||^2
+    val rhs = uspr.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Term]
+    val subst2 = UnificationMatch.unifiable(csU.conclusion.succ(0).sub(PosInExpr(1::Nil)).get,uspr.conclusion.succ(0).sub(PosInExpr(0::Nil)).get).get
+    val cspr = subst2.usubst(csU)
+    //||Gp|| ||p||
+    val mid = cspr.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Term]
+    //(Gp).p
+    val lhs = cspr.conclusion.succ(0).sub(PosInExpr(0::Nil)).get.asInstanceOf[Term]
+
+    val sub = (us: Option[Subst]) => us.get++ RenUSubst(List(("b()".asTerm,mid)))
+
+    val finpr = proveBy(LessEqual(lhs,rhs), useAt(lemTrans,PosInExpr(1::Nil),sub)(1) & andR(1) <(
+      by(cspr),
+      by(uspr)
+    ))
+    finpr
+  }
+
+  // Proves SOS >= 0 by naive sum decomposition
+  val sqPos1 = proveBy("a_()^2 >= 0".asFormula,QE)
+  val sqPos2 = proveBy("a_()*a_() >= 0".asFormula,QE)
+  val plusPos = proveBy("a_()>=0 & b_() >=0 -> a_()+b_()>= 0".asFormula,QE)
+  private def prove_sos_positive : BelleExpr = {
+    SaturateTactic(OnAll(andR(1) | byUS(sqPos1) | byUS(sqPos2) | useAt(plusPos,PosInExpr(1::Nil))(1)))
+  }
+
+  // Specialized lemma to rearrange the ghosts
+  private val ghostLem1 = proveBy("y() > 0 & pp() <= 2*(g()*p()) -> ((-2*g())*y()+0)*p() + y()*pp() <= 0".asFormula,QE)
+  private val ghostLem2 = proveBy("2*f() <= 2*g() <-> f() <= g()".asFormula,QE)
+
+  /**
+    * Prove Vectorial Darboux (using a single non-differentiable ghost)
+    * TODO: at the moment, it is unclear what the tactic interface should be
+    * Currently, it expects an ODE, and cuts in the conjunction /\_i p_i=0 as follows:
+    *
+    * Gamma |- [x'=f(x)&Q&/\_i p_i=0]P    (it closes Gamma |- /\_i p_i=0 by QE)
+    * --- vdbx(Gco,p)
+    * Gamma |- [x'=f(x)&Q]P
+    *
+    * @param Gco the cofactor matrix
+    * @param ps the polynomial vector
+    * @return tactic implementing vdbx as described above
+    * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
+    */
+  def dgVdbx(Gco:List[List[Term]],ps:List[Term]) : DependentPositionTactic = "dgVdbx" byWithInput ((Gco,ps),(pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "dgVdbx only applicable in top-level succedent")
+    val dim = ps.length
+    require(Gco.length == dim && Gco.forall(gs => gs.length == dim) && dim >= 1, "Incorrect input dimensions")
+
+    val (ode,dom,post) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
+      case _ => throw new BelleThrowable("dgVdbx only applicable to box ODE in succedent")
+    }
+
+    val zero = Number(0)
+    val one = Number(1)
+    val two = Number(2)
+
+    // Note: this implementation is separated from dgDbx because it requires
+    // a very efficient cauchy-schwartz argument (i.e. not via QE)
+
+    //Convert between the conjunction /\_i p_i=0 and sum_i p_i^2 <=0
+    val conjp = ps.map(p => Equal(p,zero)).reduce(And)
+    val sump = ps.map(p => Times(p,p)).reduce(Plus)
+    val lie = lieDerivative(ode,sump)
+
+    //todo: can be manually proved rather than QE
+    val pr = proveBy(Equiv(conjp,LessEqual(sump,zero)),QE)
+
+    /** The ghost variable */
+    val gvy = "dbxy_".asVariable
+    /** Another ghost variable */
+    val gvz = "dbxz_".asVariable
+
+    val qco = Power(Gco.map(gl => gl.map(t => Times(t,t)).reduce( Plus)).reduce(Plus),"1/2".asTerm)
+
+    //Construct the diff ghost y' = -qy
+    val dey = AtomicODE(DifferentialSymbol(gvy), Times(Times(Number(-2),(qco)), gvy))
+    //Diff ghost z' = qz/2
+    val dez = AtomicODE(DifferentialSymbol(gvz), Times(qco, gvz))
+
+    val gtz = Greater(gvy, zero)
+    val pcy = And(gtz, LessEqual(Times(gvy, sump), zero))
+    val pcz = Equal(Times(gvy, Power(gvz, two)), one)
+
+    dC(conjp)(pos) <(
+      skip,
+      useAt(pr)(pos.checkTop.getPos,1::Nil) &
+      dG(dey, Some(pcy))(pos) & //Introduce the dbx ghost
+      existsR(one)(pos) & //Anything works here, as long as it is > 0, 1 is convenient
+
+      diffCut(gtz)(pos) < (
+          // Do the vdbx case manually
+          boxAnd(pos) & andR(pos) < (
+            dW(pos) & prop,
+            //QE can't handle this alone: diffInd('full)(pos)
+            diffInd('diffInd)(pos) <(
+              //Cleanup the goal
+              QE,
+              cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) &
+              // At this point, we should get to ((-2*g)y+0)p + y(p') <= 0
+              // Remove the y, turning the result into p' <= gp
+              useAt(ghostLem1,PosInExpr(1::Nil))(1) & andR(1) <(
+                prop,
+                //Now we need a real rearrangement using Q |- p' = Gp
+                cut(Equal(lie,Times(two,dot_prod(matvec_prod(Gco,ps),ps))))<(
+                  exhaustiveEqL2R('Llast) & hideL('Llast) &
+                  useAt(ghostLem2)(1) &
+                  //Finally apply the Frobenius bound
+                  cohideR(1) & byUS(frobenius_subord(dim))
+                  ,
+                  // This is the only "real" use of QE.
+                  hideR(1) & QE
+                )
+              )
+            )
+          )
+        ,
+          dG(dez, Some(pcz))(pos) & //Introduce the dbx ghost
+            existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
+            //TODO: this appears to be fast enough, but this step can also be done manually easily
+            diffInd('full)(pos) // Closes z > 0 invariant with another diff ghost
+        )
+    )
+  })
 
 }
