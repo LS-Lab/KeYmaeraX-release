@@ -352,13 +352,15 @@ class ODEInvarianceTests extends TacticTestBase {
 
   "DRI" should "prove matrix and vector bounds" in withMathematica { _ =>
 
-    //These two bounds ought to be enough for all intents and purposes
+    //These bounds ought to be enough for all intents and purposes
     val cs = cauchy_schwartz(10)
-    val fs = frobenius_subord(10)
+    val fsF = frobenius_subord(10,false)
+    val fsT = frobenius_subord(10,true)
     cs._1 shouldBe 'proved
     cs._2 shouldBe 'proved
     cs._3 shouldBe 'proved
-    fs shouldBe 'proved
+    fsF shouldBe 'proved
+    fsT shouldBe 'proved
   }
 
   it should "prove a 2D equilibirum" in withMathematica { _ =>
@@ -371,12 +373,32 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+  it should "prove a 2D disequilibirum" in withMathematica { _ =>
+    val fml = "x=0&y=1 ==> [{x'=y,y'=x}](x!=0|y!=0)".asSequent
+
+    val cofactors = List(List("0","1"),List("1","0")).map(ls => ls.map(s => s.asTerm))
+    val polys = List("x","y").map( s => s.asTerm)
+    val pr = proveBy(fml, dgVdbx(cofactors,polys,negate=true)(1) & dW(1) & QE)
+    println(pr)
+  }
+
   it should "prove a 3D equilibirum" in withMathematica { _ =>
-    val fml = "x=0&y=0 ==> z!=1 , [{x'=(2*z+y)*x+x^2*y+z-1,y'=x+y^2+(z-1),z'=x*y+x+z-1 & x+y+z=1}](x=0&y=0&z=1)".asSequent
+    val fml = "x=0&y=0 ==> z!=1 , [{x'=(2*z+y)*x+x^2*y+z-1,y'=x+y^2+(z-1),z'=x*y+x+z-1}](x=0&y=0&z=1)".asSequent
 
     val cofactors = List(List("2*z+y","x^2","1"),List("1","y","1"),List("1","x","1")).map(ls => ls.map(s => s.asTerm))
     val polys = List("x","y","z-1").map( s => s.asTerm)
     val pr = proveBy(fml, dgVdbx(cofactors,polys)(2) & dW(2) & QE
+    )
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove a 3D disequilibirum" in withMathematica { _ =>
+    val fml = "x=0&y=0 ==> z=1 , [{x'=(2*z+y)*x+x^2*y+z-1,y'=x+y^2+(z-1),z'=x*y+x+z-1}](x!=0|y!=0|z!=1)".asSequent
+
+    val cofactors = List(List("2*z+y","x^2","1"),List("1","y","1"),List("1","x","1")).map(ls => ls.map(s => s.asTerm))
+    val polys = List("x","y","z-1").map( s => s.asTerm)
+    val pr = proveBy(fml, dgVdbx(cofactors,polys,negate=true)(2) & dW(2) & QE
     )
     println(pr)
     pr shouldBe 'proved

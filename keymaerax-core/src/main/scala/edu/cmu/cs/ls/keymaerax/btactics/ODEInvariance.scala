@@ -786,7 +786,7 @@ object ODEInvariance {
 
   // For turning the cauchy schwartz bound into 2 sided bounds
   // Additionally, the square root is distributed into the two norms
-  private val lemL = proveBy("a()*a() <= b()*c() & (b() >=0 & c() >= 0) -> a() >= -( b()^(1/2) * c()^(1/2) )".asFormula,QE)
+  private val lemL = proveBy("a()*a() <= b()*c() & (b() >=0 & c() >= 0) -> -(b()^(1/2) * c()^(1/2)) <= a()".asFormula,QE)
   private val lemU = proveBy("a()*a() <= b()*c() & (b() >=0 & c() >= 0) -> a() <= b()^(1/2)*c()^(1/2)".asFormula,QE)
   // Taking square roots on both sides
   private val lemLU = proveBy("a() <= b()*c() & (a() >= 0 & b() >=0 & c() >= 0) -> a()^(1/2)*c()^(1/2) <= b()^(1/2)*c()".asFormula,QE)
@@ -794,6 +794,7 @@ object ODEInvariance {
   //Combine and distribute an inequality
   private val lemDist = proveBy("a() <= b()*e() & c () <= d()* e() -> a()+c() <= (b()+d())*e()".asFormula,QE)
   private val lemTrans = proveBy("a() <= b() & b() <= c() -> a() <= c()".asFormula,QE)
+  private val lemFlip = proveBy("a() <= b() -> -b() <= -a()".asFormula,QE)
 
   private def mkConst(name : String, index: Int) : Term ={
     FuncOf(Function(name,Some(index),Unit,Real),Nothing)
@@ -816,7 +817,6 @@ object ODEInvariance {
     val vnorm = dot_prod(vs,vs)
     val fml1 = LessEqual(Times(dp,dp), Times(unorm,vnorm))
     val pr1 = proveBy(fml1 , QE)
-    //TODO: positivity of unorm and vnorm can be proved directly rather than QE since they are SOS
     val sgn = And(GreaterEqual(unorm,Number(0)),GreaterEqual(vnorm,Number(0)))
 
     val pr = proveBy(And(fml1,sgn),andR(1) <( by(pr1), prove_sos_positive))
@@ -825,14 +825,16 @@ object ODEInvariance {
   }
 
   /**
-    * Prove the following bound:
-    * (Gp).p <= ||Gp|| ||p|| <= ||G|| ||p||^2
+    * Prove the following bound(s) :
+    * -||G|| ||p||2 <= -||Gp|| ||p|| <= (Gp).p <= ||Gp|| ||p|| <= ||G|| ||p||2
     * where ||G|| is the Frobenius norm on matrices:
     * sqrt(||G_1||^2 + ... +||G_n||^2) where G_i is the i-th row of G
+    * TODO: this needs to be explicitly cached!!
     * @param n the dimension of G and p
-    * @return the symbolic bound (Gp).p <= ||G|| ||p||^2
+    * @param negate controls the direction of the returned bound
+    * @return the symbolic bound (Gp).p <= ||G|| ||p||^2 (or -||G|| ||p||^2 <=  (Gp).p if negate is set to true)
     */
-  def frobenius_subord (n : Int) : ProvableSig = {
+  def frobenius_subord (n : Int, negate: Boolean) : ProvableSig = {
     assert (n >= 1)
 
     val gPrefix = "gfrosub"
@@ -842,7 +844,7 @@ object ODEInvariance {
     val p = List.range(0,n).map(i => mkConst(pPrefix,i))
 
     //This is done purely usubst style using Cauchy Schwartz
-    val (cs,_,csU) = cauchy_schwartz(n)
+    val (cs,csL,csU) = cauchy_schwartz(n)
     val csLhs = cs.conclusion.succ(0).sub(PosInExpr(0::0::Nil)).get
     // Use Cauchy-Schwartz on each sub-term
     val gdot = g.map(
@@ -874,25 +876,46 @@ object ODEInvariance {
     val uspr = proveBy(lem.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Formula],
       useAt(lem,PosInExpr(1::Nil))(1) & andR(1) <(by(sum),prove_sos_positive)
     )
-    //This yields ||Gp||||p|| <= ||G|| ||p||^2
+    //This yields the main Frobenius inequality: ||Gp||||p|| <= ||G|| ||p||^2
     //println("Frobenius: ",uspr)
 
-    //||G|| ||p||^2
-    val rhs = uspr.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Term]
-    val subst2 = UnificationMatch.unifiable(csU.conclusion.succ(0).sub(PosInExpr(1::Nil)).get,uspr.conclusion.succ(0).sub(PosInExpr(0::Nil)).get).get
-    val cspr = subst2.usubst(csU)
-    //||Gp|| ||p||
-    val mid = cspr.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Term]
-    //(Gp).p
-    val lhs = cspr.conclusion.succ(0).sub(PosInExpr(0::Nil)).get.asInstanceOf[Term]
+    if(negate) {
+      val usprF = useFor(lemFlip,PosInExpr(0::Nil))(Position(1))(uspr)
+      // -||G|| ||p||^2
+      val lhs = usprF.conclusion.succ(0).sub(PosInExpr(0::Nil)).get.asInstanceOf[Term]
+      val subst2 = UnificationMatch.unifiable(csL.conclusion.succ(0).sub(PosInExpr(0::Nil)).get,usprF.conclusion.succ(0).sub(PosInExpr(1::Nil)).get).get
+      val cspr = subst2.usubst(csL)
+      //||Gp|| ||p||
+      val mid = cspr.conclusion.succ(0).sub(PosInExpr(0::Nil)).get.asInstanceOf[Term]
+      //(Gp).p
+      val rhs = cspr.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Term]
 
-    val sub = (us: Option[Subst]) => us.get++ RenUSubst(List(("b()".asTerm,mid)))
+      val sub = (us: Option[Subst]) => us.get++ RenUSubst(List(("b()".asTerm,mid)))
 
-    val finpr = proveBy(LessEqual(lhs,rhs), useAt(lemTrans,PosInExpr(1::Nil),sub)(1) & andR(1) <(
-      by(cspr),
-      by(uspr)
-    ))
-    finpr
+      val finpr = proveBy(LessEqual(lhs,rhs), useAt(lemTrans,PosInExpr(1::Nil),sub)(1) & andR(1) <(
+        by(usprF),
+        by(cspr)
+      ))
+      finpr
+    }
+    else {
+      //||G|| ||p||^2
+      val rhs = uspr.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Term]
+      val subst2 = UnificationMatch.unifiable(csU.conclusion.succ(0).sub(PosInExpr(1::Nil)).get,uspr.conclusion.succ(0).sub(PosInExpr(0::Nil)).get).get
+      val cspr = subst2.usubst(csU)
+      //||Gp|| ||p||
+      val mid = cspr.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Term]
+      //(Gp).p
+      val lhs = cspr.conclusion.succ(0).sub(PosInExpr(0::Nil)).get.asInstanceOf[Term]
+
+      val sub = (us: Option[Subst]) => us.get++ RenUSubst(List(("b()".asTerm,mid)))
+
+      val finpr = proveBy(LessEqual(lhs,rhs), useAt(lemTrans,PosInExpr(1::Nil),sub)(1) & andR(1) <(
+        by(cspr),
+        by(uspr)
+      ))
+      finpr
+    }
   }
 
   // Proves SOS >= 0 by naive sum decomposition
@@ -905,7 +928,8 @@ object ODEInvariance {
 
   // Specialized lemma to rearrange the ghosts
   private val ghostLem1 = proveBy("y() > 0 & pp() <= 2*(g()*p()) -> ((-2*g())*y()+0)*p() + y()*pp() <= 0".asFormula,QE)
-  private val ghostLem2 = proveBy("2*f() <= 2*g() <-> f() <= g()".asFormula,QE)
+  private val ghostLem2 = proveBy("y() > 0 & 2*-(g()*p()) <= pp() -> ((-2*-g())*y()+0)*p() + y()*pp() >= 0".asFormula,QE)
+  private val ghostLem3 = proveBy("2*f() <= 2*g() <-> f() <= g()".asFormula,QE)
 
   /**
     * Prove Vectorial Darboux (using a single non-differentiable ghost)
@@ -913,15 +937,22 @@ object ODEInvariance {
     * Currently, it expects an ODE, and cuts in the conjunction /\_i p_i=0 as follows:
     *
     * Gamma |- [x'=f(x)&Q&/\_i p_i=0]P    (it closes Gamma |- /\_i p_i=0 by QE)
-    * --- vdbx(Gco,p)
+    * --- vdbx(Gco,p,F)
+    * Gamma |- [x'=f(x)&Q]P
+    *
+    * The optional flag switches this to vectorial darboux inequality instead:
+    *
+    * Gamma |- [x'=f(x)&Q& \/_i p_i != 0]P (it closes Gamma |- \/_i p_i !=0 by QE)
+    * --- vdbx(Gco,p,T)
     * Gamma |- [x'=f(x)&Q]P
     *
     * @param Gco the cofactor matrix
     * @param ps the polynomial vector
+    * @param negate implements vectorial darboux inequality instead
     * @return tactic implementing vdbx as described above
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
     */
-  def dgVdbx(Gco:List[List[Term]],ps:List[Term]) : DependentPositionTactic = "dgVdbx" byWithInput ((Gco,ps),(pos:Position,seq:Sequent) => {
+  def dgVdbx(Gco:List[List[Term]],ps:List[Term], negate:Boolean = false) : DependentPositionTactic = "dgVdbx" byWithInput ((Gco,ps),(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "dgVdbx only applicable in top-level succedent")
     val dim = ps.length
     require(Gco.length == dim && Gco.forall(gs => gs.length == dim) && dim >= 1, "Incorrect input dimensions")
@@ -938,37 +969,49 @@ object ODEInvariance {
     // Note: this implementation is separated from dgDbx because it requires
     // a very efficient cauchy-schwartz argument (i.e. not via QE)
 
-    //Convert between the conjunction /\_i p_i=0 and sum_i p_i^2 <=0
-    val conjp = ps.map(p => Equal(p,zero)).reduce(And)
+    // Turns the vector into sum_i p_i^2
     val sump = ps.map(p => Times(p,p)).reduce(Plus)
     val lie = lieDerivative(ode,sump)
 
+    //Convert between the conjunction /\_i p_i=0 and sum_i p_i^2 <=0
+    val cutp =
+      if(negate)
+        ps.map(p => NotEqual(p,zero)).reduce(Or)
+      else
+        ps.map(p => Equal(p,zero)).reduce(And)
+
     //todo: can be manually proved rather than QE
-    val pr = proveBy(Equiv(conjp,LessEqual(sump,zero)),QE)
+    val pr = proveBy(Equiv(cutp,
+      if(negate) Greater(sump,zero)
+      else LessEqual(sump,zero)),QE)
 
     /** The ghost variable */
     val gvy = "dbxy_".asVariable
     /** Another ghost variable */
     val gvz = "dbxz_".asVariable
 
-    val qco = Power(Gco.map(gl => gl.map(t => Times(t,t)).reduce( Plus)).reduce(Plus),"1/2".asTerm)
+    val qcoSqrt = Power(Gco.map(gl => gl.map(t => Times(t,t)).reduce( Plus)).reduce(Plus),"1/2".asTerm)
+    val qco = if(negate) Neg(qcoSqrt) else qcoSqrt
 
     //Construct the diff ghost y' = -qy
     val dey = AtomicODE(DifferentialSymbol(gvy), Times(Times(Number(-2),(qco)), gvy))
+
     //Diff ghost z' = qz/2
     val dez = AtomicODE(DifferentialSymbol(gvz), Times(qco, gvz))
 
     val gtz = Greater(gvy, zero)
-    val pcy = And(gtz, LessEqual(Times(gvy, sump), zero))
+    val pcy = And(gtz,
+      if(negate) Greater(Times(gvy, sump), zero)
+      else LessEqual(Times(gvy, sump), zero)
+    )
     val pcz = Equal(Times(gvy, Power(gvz, two)), one)
 
-    dC(conjp)(pos) <(
+    dC(cutp)(pos) <(
       skip,
       useAt(pr)(pos.checkTop.getPos,1::Nil) &
       dG(dey, Some(pcy))(pos) & //Introduce the dbx ghost
       existsR(one)(pos) & //Anything works here, as long as it is > 0, 1 is convenient
-
-      diffCut(gtz)(pos) < (
+        diffCut(gtz)(pos) < (
           // Do the vdbx case manually
           boxAnd(pos) & andR(pos) < (
             dW(pos) & prop,
@@ -978,15 +1021,17 @@ object ODEInvariance {
               QE,
               cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) &
               // At this point, we should get to ((-2*g)y+0)p + y(p') <= 0
-              // Remove the y, turning the result into p' <= gp
-              useAt(ghostLem1,PosInExpr(1::Nil))(1) & andR(1) <(
+              // or the negated version ((-2*-g)y+0)p + y(p') >= 0
+              // Remove the y, turning the result into p' <= 2gp or 2gp <= p'
+              (if(negate) useAt(ghostLem2,PosInExpr(1::Nil))(1)
+                else useAt(ghostLem1,PosInExpr(1::Nil))(1)) & andR(1) <(
                 prop,
                 //Now we need a real rearrangement using Q |- p' = Gp
                 cut(Equal(lie,Times(two,dot_prod(matvec_prod(Gco,ps),ps))))<(
                   exhaustiveEqL2R('Llast) & hideL('Llast) &
-                  useAt(ghostLem2)(1) &
+                  useAt(ghostLem3)(1) &
                   //Finally apply the Frobenius bound
-                  cohideR(1) & byUS(frobenius_subord(dim))
+                  cohideR(1) & byUS(frobenius_subord(dim,negate))
                   ,
                   // This is the only "real" use of QE.
                   hideR(1) & QE
