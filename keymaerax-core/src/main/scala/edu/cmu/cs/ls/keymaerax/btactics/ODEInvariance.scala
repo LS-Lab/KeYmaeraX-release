@@ -1,15 +1,14 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics.{dG, _}
+import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics._
+import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -685,7 +684,7 @@ object ODEInvariance {
     var remaining = polys
 
     while(true) {
-      val lies = remaining.map(p => DifferentialHelper.simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
+      val lies = remaining.map(p => simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
       val quos = lies.map(p => algTool.polynomialReduce(p, gb))
       remaining = quos.map(_._2).filterNot(_ == Number(0))
       if(remaining.isEmpty) {
@@ -751,7 +750,7 @@ object ODEInvariance {
 
     val algTool = ToolProvider.algebraTool().get
     val (gb,r) = rank(ode,polys)
-    val lies = gb.map(p => DifferentialHelper.simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
+    val lies = gb.map(p => simplifiedLieDerivative(ode.ode, p, ToolProvider.simplifierTool()))
     val quos = lies.map(p => algTool.polynomialReduce(p, gb))
     (quos.map(_._1),gb,r)
   }
@@ -1047,7 +1046,7 @@ object ODEInvariance {
     dC(cutp)(pos) <(
       skip,
       useAt(pr)(pos.checkTop.getPos,1::Nil) &
-      dG(dey, Some(pcy))(pos) & //Introduce the dbx ghost
+      DifferentialTactics.dG(dey, Some(pcy))(pos) & //Introduce the dbx ghost
       existsR(one)(pos) & //Anything works here, as long as it is > 0, 1 is convenient
         diffCut(gtz)(pos) < (
           // Do the vdbx case manually
@@ -1078,7 +1077,7 @@ object ODEInvariance {
             )
           )
         ,
-          dG(dez, Some(pcz))(pos) & //Introduce the dbx ghost
+          DifferentialTactics.dG(dez, Some(pcz))(pos) & //Introduce the dbx ghost
             existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
             //TODO: this appears to be fast enough, but this step can also be done manually easily
             diffInd('full)(pos) // Closes z > 0 invariant with another diff ghost
