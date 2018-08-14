@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.ODEInvariance._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable.IndexedSeq
@@ -351,16 +352,49 @@ class ODEInvarianceTests extends TacticTestBase {
   }
 
   "DRI" should "prove matrix and vector bounds" in withMathematica { _ =>
-
     //These bounds ought to be enough for all intents and purposes
     val cs = cauchy_schwartz(10)
-    val fsF = frobenius_subord(10,false)
-    val fsT = frobenius_subord(10,true)
+    val fsF = frobenius_subord(10,negate=false)
+    val fsT = frobenius_subord(10,negate=true)
     cs._1 shouldBe 'proved
     cs._2 shouldBe 'proved
     cs._3 shouldBe 'proved
     fsF shouldBe 'proved
     fsT shouldBe 'proved
+  }
+
+  it should "test caching" in withMathematica { _ =>
+    val lemmaDB = LemmaDBFactory.lemmaDB
+    val dim = 8
+
+    //Initial versions in DB
+    println("Initial call")
+    val cs1 = cauchy_schwartz(dim)
+    val fsF1 = frobenius_subord(dim,negate=false)
+    val fsT1 = frobenius_subord(dim,negate=true)
+    println("Done.")
+
+    //Definitely cached
+    println("Cached call")
+    val cs2 = cauchy_schwartz(dim)
+    val fsF2 = frobenius_subord(dim,negate=false)
+    val fsT2 = frobenius_subord(dim,negate=true)
+    println("Done.")
+
+    lemmaDB.remove("cauchy_schwartz_"+dim.toString)
+    lemmaDB.remove("cauchy_schwartz_L_"+dim.toString)
+    lemmaDB.remove("cauchy_schwartz_U_"+dim.toString)
+    lemmaDB.remove("frobenius_subord_false_"+dim.toString)
+    lemmaDB.remove("frobenius_subord_true_"+dim.toString)
+
+    //Definitely uncached
+    println("Uncached call")
+    val cs3 = cauchy_schwartz(dim)
+    val fsF3 = frobenius_subord(dim,negate=false)
+    val fsT3 = frobenius_subord(dim,negate=true)
+    println("Done.")
+
+    (cs1==cs2 && cs2 == cs3, fsF1 == fsF2 && fsF2 ==fsF3, fsT1==fsT2 && fsT2 ==fsT3) shouldBe (true,true,true)
   }
 
   it should "prove a 2D equilibirum" in withMathematica { _ =>

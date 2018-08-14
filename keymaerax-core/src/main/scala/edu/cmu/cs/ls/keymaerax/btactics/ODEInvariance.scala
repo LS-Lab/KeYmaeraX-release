@@ -1,5 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import java.io.File
+
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
@@ -17,6 +19,8 @@ import org.apache.logging.log4j.scala.Logger
 import scala.collection.immutable
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
+import edu.cmu.cs.ls.keymaerax.lemma._
+import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 
 /**
   * Implements ODE tactics based on the differential equation axiomatization.
@@ -800,6 +804,20 @@ object ODEInvariance {
     FuncOf(Function(name,Some(index),Unit,Real),Nothing)
   }
 
+  private def getLemma(name: String): Option[Lemma] = {
+    val lemmaDB = LemmaDBFactory.lemmaDB
+    lemmaDB.get(name)
+  }
+
+  private def storeLemma(pr:ProvableSig, name: String): Unit = {
+    val lemmaDB = LemmaDBFactory.lemmaDB
+    require(!lemmaDB.contains(name), "Lemma with name "+name+" already exists in DB")
+    val evidence = ToolEvidence(immutable.List("input" -> pr.conclusion.prettyString, "output" -> "true")) :: Nil
+    val id = lemmaDB.add(Lemma(pr, Lemma.requiredEvidence(pr, evidence),
+      Some(name)))
+    ()
+  }
+
   /**
     * Pre-prove symbolic lemmas for n-dimensional Cauchy Schwartz
     * Note: this lemma proves pretty quickly e.g. for n=10
@@ -807,7 +825,16 @@ object ODEInvariance {
     * @return the 3 symbolic bounds (u.v)^2 <= (||u||||v||)^2 and -||u||||v|| <= u.v <= ||u||||v||
     */
   def cauchy_schwartz (n : Int) : (ProvableSig,ProvableSig,ProvableSig) = {
-    assert (n >= 1)
+
+    require(n>=1, "Symbolic Cauchy-Schwartz inequality only applies for n >= 1")
+
+    val (pr1opt,prLopt,prUopt) = (
+      getLemma("cauchy_schwartz_"+n.toString()),
+      getLemma("cauchy_schwartz_L_"+n.toString()),
+      getLemma("cauchy_schwartz_U_"+n.toString()))
+    if(pr1opt.isDefined && prLopt.isDefined && prUopt.isDefined)
+      return (pr1opt.get.fact,prLopt.get.fact,prUopt.get.fact)
+
     val csuPrefix = "csiu"
     val csvPrefix = "csiv"
     val us = List.range(0,n).map(i => mkConst(csuPrefix,i))
@@ -820,8 +847,13 @@ object ODEInvariance {
     val sgn = And(GreaterEqual(unorm,Number(0)),GreaterEqual(vnorm,Number(0)))
 
     val pr = proveBy(And(fml1,sgn),andR(1) <( by(pr1), prove_sos_positive))
+    val prL = useFor(lemL,PosInExpr(0::Nil))(Position(1))(pr)
+    val prU = useFor(lemU,PosInExpr(0::Nil))(Position(1))(pr)
 
-    (pr1,useFor(lemL,PosInExpr(0::Nil))(Position(1))(pr),useFor(lemU,PosInExpr(0::Nil))(Position(1))(pr))
+    storeLemma(pr1, "cauchy_schwartz_"+n.toString())
+    storeLemma(prL, "cauchy_schwartz_L_"+n.toString())
+    storeLemma(prU, "cauchy_schwartz_U_"+n.toString())
+    (pr1,prL,prU)
   }
 
   /**
@@ -835,7 +867,11 @@ object ODEInvariance {
     * @return the symbolic bound (Gp).p <= ||G|| ||p||^2 (or -||G|| ||p||^2 <=  (Gp).p if negate is set to true)
     */
   def frobenius_subord (n : Int, negate: Boolean) : ProvableSig = {
-    assert (n >= 1)
+
+    require(n>=1, "Symbolic Frobenius norm inequality only applies for n >= 1")
+
+    val finpropt = getLemma("frobenius_subord_"+negate.toString()+"_"+n.toString())
+    if(finpropt.isDefined) return finpropt.get.fact
 
     val gPrefix = "gfrosub"
     val pPrefix = "pfrosub"
@@ -877,7 +913,6 @@ object ODEInvariance {
       useAt(lem,PosInExpr(1::Nil))(1) & andR(1) <(by(sum),prove_sos_positive)
     )
     //This yields the main Frobenius inequality: ||Gp||||p|| <= ||G|| ||p||^2
-    //println("Frobenius: ",uspr)
 
     if(negate) {
       val usprF = useFor(lemFlip,PosInExpr(0::Nil))(Position(1))(uspr)
@@ -896,6 +931,8 @@ object ODEInvariance {
         by(usprF),
         by(cspr)
       ))
+
+      storeLemma(finpr,"frobenius_subord_"+negate.toString()+"_"+n.toString())
       finpr
     }
     else {
@@ -914,6 +951,8 @@ object ODEInvariance {
         by(cspr),
         by(uspr)
       ))
+
+      storeLemma(finpr,"frobenius_subord_"+negate.toString()+"_"+n.toString())
       finpr
     }
   }
