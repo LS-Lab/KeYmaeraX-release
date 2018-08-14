@@ -356,6 +356,20 @@ object ODEInvariance {
         DebuggingTactics.debug("Triv",doPrint = debugTactic) &
         closeF})
 
+  //Temporary for compatibility
+  //Given pr1 : a<->b , pr2 : b<->c returns provable for a<->c
+  private def compose_equiv(pr1: Option[ProvableSig], pr2: Option[ProvableSig]) : Option[ProvableSig] = {
+    (pr1,pr2) match {
+      case (None,_) => pr2
+      case (_,None) => pr1
+      case (Some(pr1),Some(pr2)) => {
+        val pr =useFor(pr2, PosInExpr(0 :: Nil))(Position(1, 1 :: Nil))(pr1)
+        println(pr1, pr2, pr)
+        Some(pr)
+      }
+    }
+  }
+
   /** Given a top-level succedent position corresponding to [x'=f(x)&Q]P
     * Tries to prove that P is a closed semialgebraic invariant, i.e. G|- [x'=f(x)&Q]P
     * P is assumed to be formed from conjunctions, disjunction, p<=q, p>=q, p=q
@@ -382,7 +396,11 @@ object ODEInvariance {
       case _ => throw new BelleThrowable("sAI only applicable to box ODE in succedent")
     }
 
-    val (fml,propt) = maxMinGeqNormalize(post)
+    val (fml1,propt1) = semiAlgNormalize(post)
+
+    val (fml,propt2) = maxMinGeqNormalize(fml1)
+
+    val propt = compose_equiv(propt1,propt2)
 
     require(fml.isInstanceOf[GreaterEqual], "Normalization failed to reach normal form "+fml)
     val f2 = fml.asInstanceOf[GreaterEqual]

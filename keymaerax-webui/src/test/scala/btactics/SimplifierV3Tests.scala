@@ -31,14 +31,14 @@ class SimplifierV3Tests extends TacticTestBase {
       Sequent(ctxt, IndexedSeq("R()->P()&Q()->P()&(R()&P())&Q()&R()&P()&Z()&Y()".asFormula, "R()->P()&Q()->P()&(R()&P())&Q()&R()&P()&Z()&Y()".asFormula, "R()->P()&Q()->P()&R()&Q()&Z()&Y()".asFormula))
   }
 
-  "SimplifierV3" should "do dependent arithmetic simplification" in withMathematica { qeTool =>
+  it should "do dependent arithmetic simplification" in withMathematica { qeTool =>
     val fml = "ar > 0 -> (x - 0 + 0 * y + 0 + 0/ar >= 0 - k)".asFormula
     val result = proveBy(fml, SimplifierV3.simpTac()(1))
     result.subgoals should contain only
       Sequent(IndexedSeq(), IndexedSeq("ar>0->x>=-k".asFormula))
   }
 
-  "SimplifierV3" should "do full sequent simplification" in withMathematica { qeTool =>
+  it should "do full sequent simplification" in withMathematica { qeTool =>
     val antes = IndexedSeq(
       "(x - 0 + 0 * y + 0 + 0/ar >= 0 - k)".asFormula,
       "ar>0".asFormula,
@@ -68,13 +68,13 @@ class SimplifierV3Tests extends TacticTestBase {
     proveBy(fml, SimplifierV3.fullSimpTac()).subgoals.loneElement shouldBe "x=0 ==> ".asSequent
   }
 
-  "SimplifierV3" should "search for close heuristics" in withMathematica { qeTool =>
+  it should "search for close heuristics" in withMathematica { qeTool =>
     val fml = " 0 > x -> x <= 0 & y = 0 & z<x -> x != y+z | x >= 5 -> 5 < x | (x !=5 -> 5<x ) & a = 0 & y = z+a+b & a+z+b = y".asFormula
     val result = proveBy(fml, SimplifierV3.simpTac()(1))
     result.subgoals.loneElement shouldBe "==> 0>x->y=0&z < x->x!=y+z|x>=5->5 < x|!x!=5&a=0&y=z+a+b&a+z+b=y".asSequent
   }
 
-  "SimplifierV3" should "allow controlled custom rewrites" in withMathematica { qeTool =>
+  it should "allow controlled custom rewrites" in withMathematica { qeTool =>
     //Force any =0s to be rewritten
     val custom1 = proveBy("F_() = 0 -> (F_() = 0)".asFormula,TactixLibrary.QE)
     //Get rid of deMorgan once
@@ -245,14 +245,12 @@ class SimplifierV3Tests extends TacticTestBase {
     result.subgoals.head.succ should contain only "(A()&B())&C()->D()".asFormula
   }
 
-  it should "skip over decimal arithmetic" in withMathematica { qeTool =>
-    // Note: it fails to skip things like 4 * 1.0
-    // However, it should only give integer outputs
+  it should "skip over inexact decimal arithmetic" in withMathematica { qeTool =>
     val fml = "4*1.0-4.0/3 = -3.0/2 + 1/6 + (2 + 3) * 4.0".asFormula
     val ctxt = IndexedSeq()
     val tactic = simpTac()
     val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
-    result.subgoals.loneElement shouldBe "==> 4-4.0/3=-3.0/2+1/6+20".asSequent
+    result.subgoals.loneElement shouldBe "==> 4-4/3=-1.5+1/6+20".asSequent
   }
 
   it should "cooperate with chase" in withMathematica { qeTool =>
@@ -285,6 +283,27 @@ class SimplifierV3Tests extends TacticTestBase {
     val tactic = simpTac(faxs = composeIndex(defaultFaxs,chaseIndex),taxs = fullEqualityIndex)
     val result = proveBy(Sequent(ctxt, IndexedSeq(fml)), tactic(1))
     result.subgoals.loneElement shouldBe "==>  \\forall v (v=5*x+3 -> p(5*x+3))".asSequent
+  }
+
+  "Normalizer" should "do some normalization" in withMathematica { qeTool =>
+    val fml = "x*y=0 & (! x>=5 & y < 0 -> !(x>0 | 1+z>f+g+1.0))".asFormula
+
+    //base normalizer only does NNF
+    val baseres = baseNormalize(fml)
+
+    //semialg normalizer forces everything to have 0 on RHS
+    val semires = semiAlgNormalize(fml)
+
+    // maxmin normalizer further turns everything into max/min/abs
+    // It should be ran AFTER semiAlgNormalize.
+    // Reason: we often want the intermediate result
+    val maxminres = maxMinGeqNormalize(semires._1)
+
+    baseres._1 shouldBe "x*y = 0 & ((x>=5|y>=0)|x<=0&1+z<=f+g+1.0)".asFormula
+
+    semires._1 shouldBe "x*y = 0 & ((x-5>=0|y>=0)|0-x>=0&f+g+1.0-(1+z)>=0)".asFormula
+
+    maxminres._1 shouldBe "min((-abs(x*y),max((max((x-5,y)),min((0-x,f+g+1.0-(1+z)))))))>=0".asFormula
   }
 
 }
