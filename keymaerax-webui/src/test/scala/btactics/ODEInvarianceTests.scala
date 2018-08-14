@@ -421,8 +421,7 @@ class ODEInvarianceTests extends TacticTestBase {
 
     val cofactors = List(List("2*z+y","x^2","1"),List("1","y","1"),List("1","x","1")).map(ls => ls.map(s => s.asTerm))
     val polys = List("x","y","z-1").map( s => s.asTerm)
-    val pr = proveBy(fml, dgVdbx(cofactors,polys)(2) & dW(2) & QE
-    )
+    val pr = proveBy(fml, dgVdbx(cofactors,polys)(2) & dW(2) & QE)
     println(pr)
     pr shouldBe 'proved
   }
@@ -432,8 +431,7 @@ class ODEInvarianceTests extends TacticTestBase {
 
     val cofactors = List(List("2*z+y","x^2","1"),List("1","y","1"),List("1","x","1")).map(ls => ls.map(s => s.asTerm))
     val polys = List("x","y","z-1").map( s => s.asTerm)
-    val pr = proveBy(fml, dgVdbx(cofactors,polys,negate=true)(2) & dW(2) & QE
-    )
+    val pr = proveBy(fml, dgVdbx(cofactors,polys,negate=true)(2) & dW(2) & QE)
     println(pr)
     pr shouldBe 'proved
   }

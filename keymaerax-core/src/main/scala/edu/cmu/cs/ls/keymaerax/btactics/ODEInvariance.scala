@@ -790,15 +790,15 @@ object ODEInvariance {
 
   // For turning the cauchy schwartz bound into 2 sided bounds
   // Additionally, the square root is distributed into the two norms
-  private val lemL = proveBy("a()*a() <= b()*c() & (b() >=0 & c() >= 0) -> -(b()^(1/2) * c()^(1/2)) <= a()".asFormula,QE)
-  private val lemU = proveBy("a()*a() <= b()*c() & (b() >=0 & c() >= 0) -> a() <= b()^(1/2)*c()^(1/2)".asFormula,QE)
+  private val lemL = remember("a()*a() <= b()*c() & (b() >=0 & c() >= 0) -> -(b()^(1/2) * c()^(1/2)) <= a()".asFormula,QE).fact
+  private val lemU = remember("a()*a() <= b()*c() & (b() >=0 & c() >= 0) -> a() <= b()^(1/2)*c()^(1/2)".asFormula,QE).fact
   // Taking square roots on both sides
-  private val lemLU = proveBy("a() <= b()*c() & (a() >= 0 & b() >=0 & c() >= 0) -> a()^(1/2)*c()^(1/2) <= b()^(1/2)*c()".asFormula,QE)
+  private val lemLU = remember("a() <= b()*c() & (a() >= 0 & b() >=0 & c() >= 0) -> a()^(1/2)*c()^(1/2) <= b()^(1/2)*c()".asFormula,QE).fact
 
   //Combine and distribute an inequality
-  private val lemDist = proveBy("a() <= b()*e() & c () <= d()* e() -> a()+c() <= (b()+d())*e()".asFormula,QE)
-  private val lemTrans = proveBy("a() <= b() & b() <= c() -> a() <= c()".asFormula,QE)
-  private val lemFlip = proveBy("a() <= b() -> -b() <= -a()".asFormula,QE)
+  private val lemDist = remember("a() <= b()*e() & c () <= d()* e() -> a()+c() <= (b()+d())*e()".asFormula,QE).fact
+  private val lemTrans = remember("a() <= b() & b() <= c() -> a() <= c()".asFormula,QE).fact
+  private val lemFlip = remember("a() <= b() -> -b() <= -a()".asFormula,QE).fact
 
   private def mkConst(name : String, index: Int) : Term ={
     FuncOf(Function(name,Some(index),Unit,Real),Nothing)
@@ -829,9 +829,9 @@ object ODEInvariance {
     require(n>=1, "Symbolic Cauchy-Schwartz inequality only applies for n >= 1")
 
     val (pr1opt,prLopt,prUopt) = (
-      getLemma("cauchy_schwartz_"+n.toString()),
-      getLemma("cauchy_schwartz_L_"+n.toString()),
-      getLemma("cauchy_schwartz_U_"+n.toString()))
+      getLemma("cauchy_schwartz_"+n.toString),
+      getLemma("cauchy_schwartz_L_"+n.toString),
+      getLemma("cauchy_schwartz_U_"+n.toString))
     if(pr1opt.isDefined && prLopt.isDefined && prUopt.isDefined)
       return (pr1opt.get.fact,prLopt.get.fact,prUopt.get.fact)
 
@@ -850,9 +850,9 @@ object ODEInvariance {
     val prL = useFor(lemL,PosInExpr(0::Nil))(Position(1))(pr)
     val prU = useFor(lemU,PosInExpr(0::Nil))(Position(1))(pr)
 
-    storeLemma(pr1, "cauchy_schwartz_"+n.toString())
-    storeLemma(prL, "cauchy_schwartz_L_"+n.toString())
-    storeLemma(prU, "cauchy_schwartz_U_"+n.toString())
+    storeLemma(pr1, "cauchy_schwartz_"+n.toString)
+    storeLemma(prL, "cauchy_schwartz_L_"+n.toString)
+    storeLemma(prU, "cauchy_schwartz_U_"+n.toString)
     (pr1,prL,prU)
   }
 
@@ -861,7 +861,6 @@ object ODEInvariance {
     * -||G|| ||p||2 <= -||Gp|| ||p|| <= (Gp).p <= ||Gp|| ||p|| <= ||G|| ||p||2
     * where ||G|| is the Frobenius norm on matrices:
     * sqrt(||G_1||^2 + ... +||G_n||^2) where G_i is the i-th row of G
-    * TODO: this needs to be explicitly cached!!
     * @param n the dimension of G and p
     * @param negate controls the direction of the returned bound
     * @return the symbolic bound (Gp).p <= ||G|| ||p||^2 (or -||G|| ||p||^2 <=  (Gp).p if negate is set to true)
@@ -870,7 +869,7 @@ object ODEInvariance {
 
     require(n>=1, "Symbolic Frobenius norm inequality only applies for n >= 1")
 
-    val finpropt = getLemma("frobenius_subord_"+negate.toString()+"_"+n.toString())
+    val finpropt = getLemma("frobenius_subord_"+negate.toString+"_"+n.toString)
     if(finpropt.isDefined) return finpropt.get.fact
 
     val gPrefix = "gfrosub"
@@ -932,7 +931,7 @@ object ODEInvariance {
         by(cspr)
       ))
 
-      storeLemma(finpr,"frobenius_subord_"+negate.toString()+"_"+n.toString())
+      storeLemma(finpr,"frobenius_subord_"+negate.toString+"_"+n.toString)
       finpr
     }
     else {
@@ -952,23 +951,23 @@ object ODEInvariance {
         by(uspr)
       ))
 
-      storeLemma(finpr,"frobenius_subord_"+negate.toString()+"_"+n.toString())
+      storeLemma(finpr,"frobenius_subord_"+negate.toString+"_"+n.toString)
       finpr
     }
   }
 
   // Proves SOS >= 0 by naive sum decomposition
-  val sqPos1 = proveBy("a_()^2 >= 0".asFormula,QE)
-  val sqPos2 = proveBy("a_()*a_() >= 0".asFormula,QE)
-  val plusPos = proveBy("a_()>=0 & b_() >=0 -> a_()+b_()>= 0".asFormula,QE)
+  private val sqPos1 = remember("a_()^2 >= 0".asFormula,QE)
+  private val sqPos2 = remember("a_()*a_() >= 0".asFormula,QE)
+  private val plusPos = remember("a_()>=0 & b_() >=0 -> a_()+b_()>= 0".asFormula,QE)
   private def prove_sos_positive : BelleExpr = {
     SaturateTactic(OnAll(andR(1) | byUS(sqPos1) | byUS(sqPos2) | useAt(plusPos,PosInExpr(1::Nil))(1)))
   }
 
   // Specialized lemma to rearrange the ghosts
-  private val ghostLem1 = proveBy("y() > 0 & pp() <= 2*(g()*p()) -> ((-2*g())*y()+0)*p() + y()*pp() <= 0".asFormula,QE)
-  private val ghostLem2 = proveBy("y() > 0 & 2*-(g()*p()) <= pp() -> ((-2*-g())*y()+0)*p() + y()*pp() >= 0".asFormula,QE)
-  private val ghostLem3 = proveBy("2*f() <= 2*g() <-> f() <= g()".asFormula,QE)
+  private val ghostLem1 = remember("y() > 0 & pp() <= 2*(g()*p()) -> ((-2*g())*y()+0)*p() + y()*pp() <= 0".asFormula,QE)
+  private val ghostLem2 = remember("y() > 0 & 2*-(g()*p()) <= pp() -> ((-2*-g())*y()+0)*p() + y()*pp() >= 0".asFormula,QE)
+  private val ghostLem3 = remember("2*f() <= 2*g() <-> f() <= g()".asFormula,QE)
 
   /**
     * Prove Vectorial Darboux (using a single non-differentiable ghost)
@@ -996,8 +995,8 @@ object ODEInvariance {
     val dim = ps.length
     require(Gco.length == dim && Gco.forall(gs => gs.length == dim) && dim >= 1, "Incorrect input dimensions")
 
-    val (ode,dom,post) = seq.sub(pos) match {
-      case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
+    val (ode,dom) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,_)) => (sys.ode,sys.constraint)
       case _ => throw new BelleThrowable("dgVdbx only applicable to box ODE in succedent")
     }
 
@@ -1019,7 +1018,7 @@ object ODEInvariance {
       else
         ps.map(p => Equal(p,zero)).reduce(And)
 
-    //todo: can be manually proved rather than QE
+    //this can also be manually proved rather than using QE
     val pr = proveBy(Equiv(cutp,
       if(negate) Greater(sump,zero)
       else LessEqual(sump,zero)),QE)
@@ -1033,7 +1032,7 @@ object ODEInvariance {
     val qco = if(negate) Neg(qcoSqrt) else qcoSqrt
 
     //Construct the diff ghost y' = -qy
-    val dey = AtomicODE(DifferentialSymbol(gvy), Times(Times(Number(-2),(qco)), gvy))
+    val dey = AtomicODE(DifferentialSymbol(gvy), Times(Times(Number(-2),qco), gvy))
 
     //Diff ghost z' = qz/2
     val dez = AtomicODE(DifferentialSymbol(gvz), Times(qco, gvz))
