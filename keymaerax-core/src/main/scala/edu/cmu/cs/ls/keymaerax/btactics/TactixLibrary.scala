@@ -996,9 +996,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def useLemma(lemma: Lemma, adapt: Option[BelleExpr]): BelleExpr = anon { _ =>
     adapt match {
       case Some(t) =>
-        cut(lemma.fact.conclusion.toFormula) <(t, cohideR('Rlast) &
-          (if (lemma.fact.conclusion.ante.nonEmpty) implyR(1) & andL('Llast)*(lemma.fact.conclusion.ante.size-1) else skip) &
-          (if (lemma.fact.conclusion.succ.nonEmpty) orR('Rlast)*(lemma.fact.conclusion.succ.size-1) else skip) &
+        cut(lemma.fact.conclusion.toFormula ) <(t, cohideR('Rlast) &
+          (if (lemma.fact.conclusion.ante.nonEmpty) implyR(1) & andL('Llast)*(lemma.fact.conclusion.ante.size-1)
+           else /* toFormula returns true->conclusion */ implyR(1) & hideL('Llast)) &
+          (if (lemma.fact.conclusion.succ.nonEmpty) orR('Rlast)*(lemma.fact.conclusion.succ.size-1)
+           else /* toFormula returns conclusion->false */ hideR(1)) &
           by(lemma))
       case None => by(lemma)
     }
