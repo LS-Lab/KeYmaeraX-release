@@ -12,8 +12,9 @@ import org.apache.logging.log4j.scala.Logging
 import scala.collection.immutable.List
 
 /**
- * Tactic tools for formula manipulation and extraction.
- * @author Andre Platzer
+  * Tactic tools for formula manipulation and extraction.
+  * @author Andre Platzer
+  * @author Nathan Fulton
  */
 object FormulaTools extends Logging {
   /**
@@ -307,6 +308,24 @@ object FormulaTools extends Logging {
     case Compose(a, b)   => dualFree(a) && dualFree(b)
     case Loop(a)         => dualFree(a)
     case Dual(a)         => false
+  }
+
+  /** Returns all terms {{{b^e}}} such that e is not a natural number occurring in given formula .
+    * @note This is soundness-critical.
+    * @author Nathan Fulton */
+  def unnaturalPowers(f: Formula): List[Term] = {
+    var problematicExponents = scala.collection.mutable.ListBuffer[Term]()
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preT(p:PosInExpr,t:Term): Either[Option[StopTraversal], Term] = t match {
+        case Power(base, Number(n)) if(n.isValidInt && n >= 0) => Left(None)
+        case Power(base, exp) => {
+          problematicExponents += Power(base, exp)
+          Left(None)
+        }
+        case _ => Left(None)
+      }
+    }, f)
+    return problematicExponents.toList
   }
 
 }
