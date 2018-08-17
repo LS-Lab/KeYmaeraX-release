@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
+import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest}
 
 import scala.collection.immutable._
 
@@ -147,7 +147,7 @@ class InvariantArithTests extends TacticTestBase {
     res shouldBe 'proved
   }
 
-  "InvariantArith" should "prove a nasty arithmetic problem from L4Q2" in withMathematica { qeTool =>
+  "InvariantArith" should "prove a nasty arithmetic problem from L4Q2" taggedAs SlowTest in withMathematica { qeTool =>
     val antes = IndexedSeq("minr>0","buffer>0","trackr>=minr","(tx-x)^2+(ty-y)^2=trackr^2","(tx-rx)^2+(ty-ry)^2>=(buffer+trackr)^2").map(_.asFormula)
     val succ = IndexedSeq("(x-rx)^2+(y-ry)^2>=buffer^2".asFormula)
 
