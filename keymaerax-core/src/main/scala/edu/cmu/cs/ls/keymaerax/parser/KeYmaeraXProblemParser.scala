@@ -430,23 +430,27 @@ object KeYmaeraXDeclarationsParser extends Logging {
     }
 
     val afterName = ts.tail.tail //skip over IDENT and REAL/BOOL tokens.
-    if (afterName.head.tok == LPAREN) {
-      val (fnDef, remainder) = splitDef(ts, RPAREN)
-      checkInput(fnDef.last.tok == PERIOD,
-        "Expected declaration to end with . but found " + fnDef.last, fnDef.last.loc, "Reading a declaration")
-      val (domainSort, domainSortRemainder) = parseFunctionDomainSort(fnDef.tail.tail, nameToken)
-      val interpretation = parseInterpretation(sort, domainSortRemainder, nameToken)
-      (( (nameTerminal.name, nameTerminal.index), (Some(domainSort), sort, interpretation, nameToken)), remainder)
-    } else if (afterName.head.tok == PRG_DEF) {
-      val (fnDef, remainder) = splitDef(ts, RBRACE)
-      checkInput(fnDef.last.tok == PERIOD,
-        "Expected declaration to end with . but found " + fnDef.last, fnDef.last.loc, "Reading a declaration")
-      val interpretation = parseInterpretation(sort, fnDef.tail.tail, nameToken)
-      (( (nameTerminal.name, nameTerminal.index), (None, sort, interpretation, nameToken)), remainder)
-    } else if (afterName.head.tok == PERIOD) {
-      (( (nameTerminal.name, nameTerminal.index) , (None, sort, None, nameToken) ), afterName.tail)
+    if (afterName.nonEmpty) {
+      if (afterName.head.tok == LPAREN) {
+        val (fnDef, remainder) = splitDef(ts, RPAREN)
+        checkInput(fnDef.last.tok == PERIOD,
+          "Expected declaration to end with . but found " + fnDef.last, fnDef.last.loc, "Reading a declaration")
+        val (domainSort, domainSortRemainder) = parseFunctionDomainSort(fnDef.tail.tail, nameToken)
+        val interpretation = parseInterpretation(sort, domainSortRemainder, nameToken)
+        (( (nameTerminal.name, nameTerminal.index), (Some(domainSort), sort, interpretation, nameToken)), remainder)
+      } else if (afterName.head.tok == PRG_DEF) {
+        val (fnDef, remainder) = splitDef(ts, RBRACE)
+        checkInput(fnDef.last.tok == PERIOD,
+          "Expected declaration to end with . but found " + fnDef.last, fnDef.last.loc, "Reading a declaration")
+        val interpretation = parseInterpretation(sort, fnDef.tail.tail, nameToken)
+        (( (nameTerminal.name, nameTerminal.index), (None, sort, interpretation, nameToken)), remainder)
+      } else if (afterName.head.tok == PERIOD) {
+        (((nameTerminal.name, nameTerminal.index), (None, sort, None, nameToken)), afterName.tail)
+      } else {
+        throw new ParseException("Variable declarations should end with a period.", afterName.head.loc, afterName.head.tok.img, ".", "", "declaration parse")
+      }
     } else {
-      throw new ParseException("Variable declarations should end with a period.", afterName.head.loc, afterName.head.tok.img, ".", "", "declaration parse")
+      throw new ParseException("Variable declarations should end with a period.", nameToken.loc, nameToken.tok.img, ".", "", "declaration parse")
     }
   }
 
@@ -557,7 +561,7 @@ object KeYmaeraXDeclarationsParser extends Logging {
   private def splitDef(tokens: List[Token], defDelim: Terminal): (List[Token], List[Token]) = {
     val decl = tokens.sliding(2).toList.span({case Token(delim, _)::Token(PERIOD, _)::Nil => delim != defDelim case _ => true})
     if (decl._2.isEmpty) throw new ParseException("Non-delimited definition",
-      tokens.head.loc.spanTo(decl._1.last.last.loc), decl._1.last.last.toString, ")", "", "parsing interpretation")
+      tokens.head.loc.spanTo(decl._1.last.last.loc), decl._1.last.last.toString,  defDelim.img + ".", "", "parsing interpretation")
     val (definition, remainder) = (decl._1.map(_.head) :+ decl._2.head.head, decl._2.map(_.last))
     checkInput(remainder.head.tok == PERIOD,
       "Non-delimited definition. Found: " + remainder.head, tokens.head.loc.spanTo(remainder.head.loc), "parsing interpretation")

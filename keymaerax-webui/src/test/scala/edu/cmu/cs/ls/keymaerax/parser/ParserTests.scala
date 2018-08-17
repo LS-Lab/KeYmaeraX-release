@@ -104,6 +104,88 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     KeYmaeraXProblemParser(input) shouldBe "x>=0 -> [{x:=x+1;}*]x>=0".asFormula
   }
 
+  it should "report useful message on missing period in program variable declaration" in {
+    val input = """ProgramVariables.
+                  |  R x
+                  |End.
+                  |Problem.
+                  |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
+                  |End.
+                """.stripMargin
+    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
+      """2:5 Variable declarations should end with a period.
+        |Found:    x at 2:5
+        |Expected: .""".stripMargin
+  }
+
+  it should "report useful message on missing period in function definitions" in {
+    val input = """Definitions.
+                  |  R func() = ( 4 )
+                  |End.
+                  |ProgramVariables.
+                  |  R x.
+                  |End.
+                  |Problem.
+                  |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
+                  |End.
+                """.stripMargin
+    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
+      """2:3 Non-delimited definition
+        |Found:    RPAREN$ at 2:3 to 2:18
+        |Expected: ).""".stripMargin
+  }
+
+  it should "report useful message on missing parentheses in function definitions" in {
+    val input = """Definitions.
+                  |  R func() = 4.
+                  |End.
+                  |ProgramVariables.
+                  |  R x.
+                  |End.
+                  |Problem.
+                  |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
+                  |End.
+                """.stripMargin
+    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
+      """2:3 Non-delimited definition
+        |Found:    NUM(4.) at 2:3 to 2:14
+        |Expected: ).""".stripMargin
+  }
+
+  it should "report useful message on missing period in program definitions" in {
+    val input = """Definitions.
+                  |  HP prg ::= { x:=x+1; }
+                  |End.
+                  |ProgramVariables.
+                  |  R x.
+                  |End.
+                  |Problem.
+                  |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
+                  |End.
+                """.stripMargin
+    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
+      """2:3 Non-delimited definition
+        |Found:    RBRACE$ at 2:3 to 2:24
+        |Expected: }.""".stripMargin
+  }
+
+  it should "report useful message on missing braces in program definitions" in {
+    val input = """Definitions.
+                  |  HP prg ::= x:=x+1;
+                  |End.
+                  |ProgramVariables.
+                  |  R x.
+                  |End.
+                  |Problem.
+                  |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
+                  |End.
+                """.stripMargin
+    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
+      """2:3 Non-delimited definition
+        |Found:    SEMI$ at 2:3 to 2:20
+        |Expected: }.""".stripMargin
+  }
+
   "The Parser" should "place implicit parens correctly (a.k.a. resolve abiguities correctly)" in {
     val equalPairs =
       // unary operator binds stronger than binary operator
@@ -425,7 +507,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
       """1:12 Non-delimited definition
         |Found:    NUM(2.) at 1:12 to 1:23
-        |Expected: )""".stripMargin
+        |Expected: ).""".stripMargin
   }
 
   it should "populate easy ODE annotations" in {
