@@ -23,14 +23,12 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      $scope.model = {
        uri: undefined,
        modelName: undefined,
-       content: undefined,
-       kind: 'kyx'
+       content: undefined
      };
 
      $scope.updateModelContentFromFile = function(fileName, fileContent) {
-       $scope.model.kind = isKya(fileContent) ? 'kya' : 'kyx';
        $scope.model.content = fileContent;
-       if ($scope.model.kind == 'kyx') {
+       if (!isKya(fileContent)) {
          $scope.model.modelName = fileName.substring(0, fileName.indexOf('.'));
        }
        $scope.model.uri = "file://" + fileName;
@@ -38,22 +36,20 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
 
      $scope.updateModelContentFromURL = function() {
        $http.get($scope.model.uri).then(function(response) {
-          $scope.model.kind = isKya(response.data) ? 'kya' : 'kyx';
           $scope.model.content = response.data;
        });
      };
 
      /* Indicates whether `content` is an archive or a plain model file. */
-     isKya = function(content) {
+     $scope.isKya = function(content) {
         // archives contain lemmas, theorems etc., e.g., search for matches: Theorem "...".
         var regex = /(Theorem|Lemma|ArchiveEntry|Exercise) \"[^\"]*\"\./g;
         return content && content.search(regex) >= 0;
      };
 
      $scope.uploadContent = function(startProof) {
-       var url =  "user/" + sessionService.getUser() +
-         ($scope.model.kind == 'kya' ? "/archiveupload/" : "/modeltextupload/" + $scope.model.modelName);
-       upload(url, $scope.model.content, startProof && $scope.model.kind == 'kyx');
+       var url =  "user/" + sessionService.getUser() + "/modelupload/" + $scope.model.modelName;
+       upload(url, $scope.model.content, startProof && !isKya($scope.model.content));
      }
 
      $scope.close = function() { $uibModalInstance.close(); };

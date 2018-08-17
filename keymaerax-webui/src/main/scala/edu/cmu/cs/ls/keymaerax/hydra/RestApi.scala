@@ -336,22 +336,22 @@ object RestApi extends Logging {
   }}}
 
   //Because apparently FTP > modern web.
-  val userModel2: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => {pathPrefix("modeltextupload" / Segment) {modelNameOrId =>
+  val userModel2: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => {pathPrefix("modelupload" / Segment) {modelNameOrId =>
   {pathEnd {
     post {
       entity(as[String]) { contents => {
-        val request = new CreateModelRequest(database, userId, modelNameOrId, contents)
+        def isArchive(c: String): Boolean = {
+          //@note identify archives by content (theorems etc.)
+          "(Theorem|Lemma|ArchiveEntry|Exercise) \\\"[^\\\"]*\\\"\\.".r.findFirstIn(c).isDefined
+        }
+        val request = if (isArchive(contents)) {
+          //@note ignore model name/ID in archives since entry names provide IDs.
+          new UploadArchiveRequest(database, userId, contents)
+        } else {
+          new CreateModelRequest(database, userId, modelNameOrId, contents)
+        }
         completeRequest(request, t)
       }}}}}}}}
-
-  //@note somehow wouldn't match without trailing /
-  val uploadArchive: SessionToken=>Route = (t : SessionToken) => path("user" / Segment / "archiveupload" /) { userId => pathEnd {
-    post {
-      entity(as[String]) { contents => {
-        val request = new UploadArchiveRequest(database, userId, contents)
-        completeRequest(request, t)
-      }}}
-  }}
 
   val modelTactic: SessionToken=>Route = (t : SessionToken) => path("user" / Segment / "model" / Segment / "tactic") { (userId, modelId) => pathEnd {
     get {
@@ -1144,7 +1144,6 @@ object RestApi extends Logging {
     modelplexMandatoryVars::
     exportSequent         ::
     testSynthesis         ::
-    uploadArchive         ::
     userModelFromFormula  ::
     examples              ::
     stepwiseTrace         ::
