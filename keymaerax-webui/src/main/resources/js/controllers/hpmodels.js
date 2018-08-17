@@ -28,10 +28,11 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
 
      $scope.updateModelContentFromFile = function(fileName, fileContent) {
        $scope.model.content = fileContent;
-       if (!isKya(fileContent)) {
+       if (!$scope.isKya(fileContent)) {
          $scope.model.modelName = fileName.substring(0, fileName.indexOf('.'));
        }
        $scope.model.uri = "file://" + fileName;
+       $scope.$digest();
      };
 
      $scope.updateModelContentFromURL = function() {
@@ -49,7 +50,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
 
      $scope.uploadContent = function(startProof) {
        var url =  "user/" + sessionService.getUser() + "/modelupload/" + $scope.model.modelName;
-       upload(url, $scope.model.content, startProof && !isKya($scope.model.content));
+       upload(url, $scope.model.content, startProof && !$scope.isKya($scope.model.content));
      }
 
      $scope.close = function() { $uibModalInstance.close(); };
