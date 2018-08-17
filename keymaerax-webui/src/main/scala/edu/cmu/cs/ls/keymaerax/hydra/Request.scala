@@ -25,6 +25,7 @@ import edu.cmu.cs.ls.keymaerax.tools._
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 import java.io._
+import java.nio.file.{Files, Paths}
 import java.text.SimpleDateFormat
 import java.util.{Calendar, Locale}
 
@@ -1848,6 +1849,32 @@ class GetProofProgressStatusRequest(db: DBAbstraction, userId: String, proofId: 
 }
 
 class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
+  private def exportLemma(lemmaName: String, model: ModelPOJO, provable: ProvableSig, tactic: String) = {
+    if (!LemmaDBFactory.lemmaDB.contains(lemmaName)) {
+      val evidence = Lemma.requiredEvidence(provable, ToolEvidence(List(
+        "tool" -> "KeYmaera X",
+        "model" -> model.keyFile,
+        "tactic" -> tactic
+      )) :: Nil)
+      LemmaDBFactory.lemmaDB.add(new Lemma(provable, evidence, Some(lemmaName)))
+    }
+  }
+  private def backupProof(model: ModelPOJO, provable: ProvableSig, tactic: String) = {
+    val proofbackupPath = Paths.get(Configuration.KEYMAERAX_HOME_PATH + File.separator + "proofbackup")
+    if (!Files.exists(proofbackupPath)) Files.createDirectories(proofbackupPath)
+
+    val proofName = model.name + "_" + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(Calendar.getInstance().getTime)
+    var i = 0
+    var uniqueProofName = proofName
+    while (Files.exists(proofbackupPath.resolve(uniqueProofName))) {
+      i = i+1
+      uniqueProofName = proofName + "_" + i
+    }
+
+    val archiveContent = ArchiveEntryPrinter.archiveEntry(model, (proofName, tactic)::Nil)
+    Files.write(proofbackupPath.resolve(uniqueProofName), archiveContent.getBytes())
+  }
+
   override protected def doResultingResponses(): List[Response] = {
     val tree = DbProofTree(db, proofId)
     tree.load()
@@ -1871,15 +1898,9 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
         case Some(_) => // already have a tactic, so do nothing
       }
       // remember lemma
-      val lemmaName = "user" + File.separator + model.name
-      if (!LemmaDBFactory.lemmaDB.contains(lemmaName)) {
-        val evidence = Lemma.requiredEvidence(provable, ToolEvidence(List(
-          "tool" -> "KeYmaera X",
-          "model" -> model.keyFile,
-          "tactic" -> tactic
-        )) :: Nil)
-        LemmaDBFactory.lemmaDB.add(new Lemma(provable, evidence, Some(lemmaName)))
-      }
+      exportLemma("user" + File.separator + model.name, model, provable, tactic)
+      // backup proof to prevent data loss
+      backupProof(model, provable, tactic)
       new ProofVerificationResponse(proofId, provable, tree.tacticString) :: Nil
     }
   }
