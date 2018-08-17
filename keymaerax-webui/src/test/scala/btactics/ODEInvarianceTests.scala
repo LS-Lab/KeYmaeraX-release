@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.ODEInvariance._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable.IndexedSeq
@@ -309,26 +310,6 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  "VDbx" should "prove a simple equilibirum" in withMathematica { _ =>
-    val polys = List("x","y").map( s => s.asTerm)
-    // Directly prove that the origin is an equilibrium point
-    val system = "x'=y,y'=x".asProgram.asInstanceOf[ODESystem]
-    val cofactors = List(List("0","1"),List("1","0")).map(ls => ls.map(s => s.asTerm))
-    val pr = dgVdbx(system,cofactors,polys)
-    println(pr)
-    pr shouldBe 'proved
-  }
-
-  it should "SAS'14 Example 12" in withMathematica { _ =>
-    val polys = List("x1^2+x2^2-1","x3-x1").map( s => s.asTerm)
-    // Directly prove that the origin is an equilibrium point
-    val system = "x1'=-x2,x2'=x3,x3'=-x2".asProgram.asInstanceOf[ODESystem]
-    val cofactors = List(List("0","2*x2"),List("0","0")).map(ls => ls.map(s => s.asTerm))
-    val pr = dgVdbx(system,cofactors,polys)
-    println(pr)
-    pr shouldBe 'proved
-  }
-
   "Frozen time" should "freeze predicates with time (manual)" in withMathematica { _ =>
     val fml = "x+y=5 -> [{t'=1,x'=x^5+y, y'=x, c'=5 ,d'=100 & t=0 & c=1}]x+y=5".asFormula
     val pr = proveBy(fml, implyR(1) &
@@ -368,5 +349,101 @@ class ODEInvarianceTests extends TacticTestBase {
     val fml = "x-z<=0|x+y*z>0 & x<=0".asFormula
     println(localProgressFml(ode,fml))
     //todo
+  }
+
+  "DRI" should "prove matrix and vector bounds" in withMathematica { _ =>
+    //These bounds ought to be enough for all intents and purposes
+    val cs = cauchy_schwartz(10)
+    val fsF = frobenius_subord(10,negate=false)
+    val fsT = frobenius_subord(10,negate=true)
+    cs._1 shouldBe 'proved
+    cs._2 shouldBe 'proved
+    cs._3 shouldBe 'proved
+    fsF shouldBe 'proved
+    fsT shouldBe 'proved
+  }
+
+  it should "test caching" in withMathematica { _ =>
+    val lemmaDB = LemmaDBFactory.lemmaDB
+    val dim = 8
+
+    //Initial versions in DB
+    println("Initial call")
+    val cs1 = cauchy_schwartz(dim)
+    val fsF1 = frobenius_subord(dim,negate=false)
+    val fsT1 = frobenius_subord(dim,negate=true)
+    println("Done.")
+
+    //Definitely cached
+    println("Cached call")
+    val cs2 = cauchy_schwartz(dim)
+    val fsF2 = frobenius_subord(dim,negate=false)
+    val fsT2 = frobenius_subord(dim,negate=true)
+    println("Done.")
+
+    lemmaDB.remove("cauchy_schwartz_"+dim.toString)
+    lemmaDB.remove("cauchy_schwartz_L_"+dim.toString)
+    lemmaDB.remove("cauchy_schwartz_U_"+dim.toString)
+    lemmaDB.remove("frobenius_subord_false_"+dim.toString)
+    lemmaDB.remove("frobenius_subord_true_"+dim.toString)
+
+    //Definitely uncached
+    println("Uncached call")
+    val cs3 = cauchy_schwartz(dim)
+    val fsF3 = frobenius_subord(dim,negate=false)
+    val fsT3 = frobenius_subord(dim,negate=true)
+    println("Done.")
+
+    (cs1==cs2 && cs2 == cs3, fsF1 == fsF2 && fsF2 ==fsF3, fsT1==fsT2 && fsT2 ==fsT3) shouldBe (true,true,true)
+  }
+
+  it should "prove a 2D equilibirum" in withMathematica { _ =>
+    val fml = "x=0&y=0 ==> [{x'=y,y'=x}](x=0&y=0)".asSequent
+
+    val cofactors = List(List("0","1"),List("1","0")).map(ls => ls.map(s => s.asTerm))
+    val polys = List("x","y").map( s => s.asTerm)
+    val pr = proveBy(fml, dgVdbx(cofactors,polys)(1) & dW(1) & QE)
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove a 2D disequilibirum" in withMathematica { _ =>
+    val fml = "x=0&y=1 ==> [{x'=y,y'=x}](x!=0|y!=0)".asSequent
+
+    val cofactors = List(List("0","1"),List("1","0")).map(ls => ls.map(s => s.asTerm))
+    val polys = List("x","y").map( s => s.asTerm)
+    val pr = proveBy(fml, dgVdbx(cofactors,polys,negate=true)(1) & dW(1) & QE)
+    println(pr)
+  }
+
+  it should "prove a 3D equilibirum" in withMathematica { _ =>
+    val fml = "x=0&y=0 ==> z!=1 , [{x'=(2*z+y)*x+x^2*y+z-1,y'=x+y^2+(z-1),z'=x*y+x+z-1}](x=0&y=0&z=1)".asSequent
+
+    val cofactors = List(List("2*z+y","x^2","1"),List("1","y","1"),List("1","x","1")).map(ls => ls.map(s => s.asTerm))
+    val polys = List("x","y","z-1").map( s => s.asTerm)
+    val pr = proveBy(fml, dgVdbx(cofactors,polys)(2) & dW(2) & QE)
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove a 3D disequilibirum" in withMathematica { _ =>
+    val fml = "x=0&y=0 ==> z=1 , [{x'=(2*z+y)*x+x^2*y+z-1,y'=x+y^2+(z-1),z'=x*y+x+z-1}](x!=0|y!=0|z!=1)".asSequent
+
+    val cofactors = List(List("2*z+y","x^2","1"),List("1","y","1"),List("1","x","1")).map(ls => ls.map(s => s.asTerm))
+    val polys = List("x","y","z-1").map( s => s.asTerm)
+    val pr = proveBy(fml, dgVdbx(cofactors,polys,negate=true)(2) & dW(2) & QE)
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove a DRI SAS Ex 12" in withMathematica { _ =>
+    val polys = List("x1^2+x2^2-1","x3-x1").map( s => s.asTerm)
+
+    val system = "x1'=-x2,x2'=x3,x3'=-x2".asProgram.asInstanceOf[ODESystem]
+    val cofactors = List(List("0","2*x2"),List("0","0")).map(ls => ls.map(s => s.asTerm))
+    val pr = proveBy("x1^2+x2^2-1=0 & x3-x1=0 -> [{x1'=-x2,x2'=x3,x3'=-x2}](x1^2+x2^2-1=0 & x3-x1=0)".asFormula,
+      implyR(1) & dgVdbx(cofactors,polys)(1) & dW(1) & QE)
+    println(pr)
+    pr shouldBe 'proved
   }
 }

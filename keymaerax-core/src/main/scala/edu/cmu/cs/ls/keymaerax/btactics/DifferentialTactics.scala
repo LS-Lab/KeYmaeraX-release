@@ -1,12 +1,11 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import java.io.File
-
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.bellerophon.UnificationMatch
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms._
+import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -1572,138 +1571,6 @@ private object DifferentialTactics extends Logging {
     }, ode)
     dottedSymbols.reverse
   }
-
-  //Normalization axioms + normalization indexes for use with the simplifier
-  //TODO: is it faster to use simplification + axioms or direct QE of the normal form?
-  //TODO: these are probably duplicated elsewhere: should start a new file for all normalization tactics
-  private lazy val leNorm: ProvableSig = remember("f_() <= g_() <-> g_() - f_() >= 0".asFormula,QE,namespace).fact
-  private lazy val geNorm: ProvableSig = remember("f_() >= g_() <-> f_() - g_() >= 0".asFormula,QE,namespace).fact
-  private lazy val ltNorm: ProvableSig = remember("f_() < g_() <-> g_() - f_() > 0".asFormula,QE,namespace).fact
-  private lazy val gtNorm: ProvableSig = remember("f_() > g_() <-> f_() - g_() > 0".asFormula,QE,namespace).fact
-  //TODO: are these normalizations better?
-  //private lazy val eqNorm: ProvableSig = remember(" f_() = g_() <-> -(f_() - g_())^2 >= 0 ".asFormula,QE,namespace).fact
-  //private lazy val neqNorm: ProvableSig = remember(" f_() != g_() <-> -(f_() - g_())^2 > 0 ".asFormula,QE,namespace).fact
-  private lazy val eqNorm: ProvableSig = remember(" f_() = g_() <-> f_() - g_() = 0 ".asFormula,QE,namespace).fact
-  private lazy val neqNorm: ProvableSig = remember(" f_() != g_() <-> f_() - g_() != 0 ".asFormula,QE,namespace).fact
-  private lazy val minGeqNorm:ProvableSig = remember("f_()>=0&g_()>=0<->min((f_(),g_()))>=0".asFormula,QE,namespace).fact
-  private lazy val maxGeqNorm:ProvableSig = remember("f_()>=0|g_()>=0<->max((f_(),g_()))>=0".asFormula,QE,namespace).fact
-  private lazy val minGtNorm:ProvableSig = remember("f_()>0&g_()>0<->min((f_(),g_()))>0".asFormula,QE,namespace).fact
-  private lazy val maxGtNorm:ProvableSig = remember("f_()>0|g_()>0<->max((f_(),g_()))>0".asFormula,QE,namespace).fact
-  private lazy val eqNormAbs:ProvableSig = remember("f_() = g_()<-> -abs(f_()-g_())>=0".asFormula,QE,namespace).fact
-  private lazy val neqNormAbs:ProvableSig = remember("f_() != g_()<-> abs(f_()-g_())>0".asFormula,QE,namespace).fact
-
-  //todo: quick implementation to get an exhaustive NNF
-  private def to_NNF(f:Formula) : Option[(Formula,ProvableSig)] = {
-    val nnff = FormulaTools.negationNormalForm(f)
-    if(nnff != f) {
-      val pr = proveBy(Equiv(f,nnff),QE) //todo: propositional should do it
-      require(pr.isProved, "NNF normalization failed:"+f+" "+nnff)
-      Some(nnff,pr)
-    }
-    else None
-  }
-
-  // Simplifier index that normalizes a single inequality to have 0 on the RHS
-  private def ineqNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
-    f match{
-      case LessEqual(l,r) => List(leNorm)
-      case GreaterEqual(l,r) => List(geNorm)
-      case Less(l,r) => List(ltNorm)
-      case Greater(l,r) => List(gtNorm)
-      //case Not(_) =>  throw new IllegalArgumentException("Rewrite "+f+" to negation normal form")
-      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be inequality >=,>,<=,<)")
-    }
-  }
-
-  // ineqNormalize + equality and disequalities ~= all atomic comparisons
-  private def atomNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
-    f match{
-      case LessEqual(l,r) => List(leNorm)
-      case GreaterEqual(l,r) => List(geNorm)
-      case Less(l,r) => List(ltNorm)
-      case Greater(l,r) => List(gtNorm)
-      case Equal(l,r) =>  List(eqNorm)
-      case NotEqual(l,r) =>  List(neqNorm)
-      //case Not(_) =>  throw new IllegalArgumentException("Rewrite "+f+" to negation normal form")
-      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be atomic comparison formula >=,>,<=,<,=,!=)")
-    }
-  }
-
-  // recursive normalization for and/or formulas
-  private def semiAlgNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
-    f match{
-      case LessEqual(l,r) => List(leNorm)
-      case GreaterEqual(l,r) => List(geNorm)
-      case Less(l,r) => List(ltNorm)
-      case Greater(l,r) => List(gtNorm)
-      case Equal(l,r) =>  List(eqNorm)
-      case NotEqual(l,r) =>  List(neqNorm)
-      case And(l,r) =>  Nil
-      case Or(l,r) =>  Nil
-      //case Not(_) =>  throw new IllegalArgumentException("Rewrite "+f+" to negation normal form")
-      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be a conjunction/disjunction of atomic comparisons)")
-    }
-  }
-
-  // Simplifier index that normalizes a formula into max/min >= normal form
-  private def maxMinGeqNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
-    f match{
-      case GreaterEqual(l,r) => List(geNorm)
-      case LessEqual(l,r) => List(leNorm)
-      case Equal(l,r) => List(eqNormAbs) //Special normalization for equalities
-      case And(l,r) =>  List(minGeqNorm)
-      case Or(l,r) =>  List(maxGeqNorm)
-      //case Not(_) =>  throw new IllegalArgumentException("Rewrite "+f+" to negation normal form")
-      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to max/min >=0 normal form (must be a conjunction/disjunction of >=,<=)")
-    }
-  }
-
-  //Simplifier term index that throws an exception when it encounters terms that are not atomic
-  private def atomicTermIndex(t:Term,ctx:context) : List[ProvableSig] = {
-    t match {
-      case v:BaseVariable => List()
-      case n:Number => List()
-      case FuncOf(_,Nothing) => List()
-      case Neg(_) => List()
-      case Plus(_,_) => List()
-      case Minus(_,_) => List()
-      case Times(_,_) => List()
-      case Divide(_,_) => List()
-      case Power(_,_) => List()
-      case _ => {
-        throw new IllegalArgumentException("cannot normalize term:"+t+" rejecting immediately")
-      }
-    }
-  }
-
-  /**
-    * Normalize with respect to a simplification index (with NNF built-in)
-    */
-  private def doNormalize(fi:formulaIndex)(f:Formula) : (Formula,Option[ProvableSig]) = {
-    to_NNF(f) match {
-      case Some((nnf,pr)) =>
-        val (ff,propt) = SimplifierV3.simpWithDischarge (IndexedSeq[Formula] (), nnf, fi, atomicTermIndex)
-        propt match {
-          case None => (nnf,Some(pr))
-          case Some(pr2) =>
-            (ff, Some(useFor(pr2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))(pr)) )
-        }
-      case None =>
-        SimplifierV3.simpWithDischarge (IndexedSeq[Formula] (), f, fi, atomicTermIndex)
-    }
-  }
-
-  /**
-    * Various normalization steps (the first thing each of them do is NNF normalize)
-    * ineqNormalize : normalizes atomic inequalities only
-    * atomNormalize : normalizes all (nested) atomic comparisons
-    * semiAlgNormalize : semialgebraic to have 0 on RHS
-    * maxMinGeqNormalize : max,min >=0 normal form
-    */
-  val ineqNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(ineqNormalizeIndex)(_)
-  val atomNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(atomNormalizeIndex)(_)
-  val semiAlgNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(semiAlgNormalizeIndex)(_)
-  val maxMinGeqNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGeqNormalizeIndex)(_)
 
   /** Flattens a formula to a list of its top-level conjunctions */
   def flattenConjunctions(f: Formula): List[Formula] = {

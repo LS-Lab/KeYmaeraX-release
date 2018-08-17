@@ -773,6 +773,7 @@ object SimplifierV3 {
   //Note: this skips over any arithmetic whose outputs are not integers
   def arithGroundIndex (t:Term,ctx:context = emptyCtx) : List[ProvableSig] = {
     val res = t match {
+      case n:Number if !n.value.isValidInt => Some(n.value)
       case Plus(n:Number,m:Number) => Some(n.value+m.value)
       case Minus(n:Number,m:Number) => Some(n.value-m.value)
       case Times(n:Number,m:Number) => Some(n.value*m.value)
@@ -783,8 +784,9 @@ object SimplifierV3 {
     }
     res match {
       case None => List()
-      case Some(v) if v.isValidInt =>
-        val pr = proveBy(Equal(t,Number(v.toIntExact)),?(RCF))
+      case Some(v) if v.isExactDouble =>
+        val num = if(v.isValidInt) Number(v.toIntExact) else Number(v)
+        val pr = proveBy(Equal(t,num),?(RCF))
         if(pr.isProved) List(pr)
         else List()
       case _ => List()
@@ -962,4 +964,151 @@ object SimplifierV3 {
   def emptyTaxs(t:Term,ctx:context) : List[ProvableSig] = List()
   def emptyFaxs(f:Formula,ctx:context) : List[ProvableSig] = List()
 
+  /**
+    * A configurable normalizer using the simplifier
+    */
+
+  //Turns a formula into Negation Normal Form
+  private def to_NNF(f:Formula) : Option[(Formula,ProvableSig)] = {
+    val nnff = FormulaTools.negationNormalForm(f)
+    if(nnff != f) {
+      val pr = proveBy(Equiv(f,nnff),QE) //todo: propositional reasoning should do it
+      require(pr.isProved, "NNF normalization failed:"+f+" "+nnff)
+      Some(nnff,pr)
+    }
+    else None
+  }
+
+  //Simplifier term index that throws an exception when it encounters terms that are not atomic
+  private def atomicTermIndex(t:Term,ctx:context) : List[ProvableSig] = {
+    t match {
+      case v:BaseVariable => List()
+      case n:Number => List()
+      case FuncOf(_,Nothing) => List()
+      case Neg(_) => List()
+      case Plus(_,_) => List()
+      case Minus(_,_) => List()
+      case Times(_,_) => List()
+      case Divide(_,_) => List()
+      case Power(_,_) => List()
+      case _ =>
+        throw new IllegalArgumentException("cannot normalize term:"+t+" rejecting immediately")
+    }
+  }
+
+  /**
+    * Normalize a formula
+    * By default, this normalizer builds in:
+    * 1) NNF conversion
+    * 2) Term checking: no min, max, abs, functions (except consts)
+    */
+  private def doNormalize(fi:formulaIndex)(f:Formula) : (Formula,Option[ProvableSig]) = {
+    to_NNF(f) match {
+      case Some((nnf,pr)) =>
+        val (ff,propt) = SimplifierV3.simpWithDischarge (IndexedSeq[Formula] (), nnf, fi, atomicTermIndex)
+        propt match {
+          case None => (nnf,Some(pr))
+          case Some(pr2) =>
+            (ff, Some(useFor(pr2, PosInExpr(0 :: Nil))(SuccPosition(1, 1 :: Nil))(pr)) )
+        }
+      case None =>
+        SimplifierV3.simpWithDischarge (IndexedSeq[Formula] (), f, fi, atomicTermIndex)
+    }
+  }
+
+  //The basic semialgebraic normalizer turns all inequalities uniformly to have 0 on the RHS
+  private lazy val leNorm: ProvableSig = remember("f_() <= g_() <-> g_() - f_() >= 0".asFormula,QE,namespace).fact
+  private lazy val leFlip: ProvableSig = remember("0 <= g_() <-> g_() >= 0".asFormula,QE,namespace).fact
+  private lazy val geNorm: ProvableSig = remember("f_() >= g_() <-> f_() - g_() >= 0".asFormula,QE,namespace).fact
+  private lazy val ltNorm: ProvableSig = remember("f_() < g_() <-> g_() - f_() > 0".asFormula,QE,namespace).fact
+  private lazy val ltFlip: ProvableSig = remember("0 < g_() <-> g_() > 0".asFormula,QE,namespace).fact
+  private lazy val gtNorm: ProvableSig = remember("f_() > g_() <-> f_() - g_() > 0".asFormula,QE,namespace).fact
+  private lazy val eqNorm: ProvableSig = remember(" f_() = g_() <-> f_() - g_() = 0 ".asFormula,QE,namespace).fact
+  private lazy val neqNorm: ProvableSig = remember(" f_() != g_() <-> f_() - g_() != 0 ".asFormula,QE,namespace).fact
+
+  // Additional formulas for specialized normalizers
+  private lazy val minGeqNorm:ProvableSig = remember("f_()>=0&g_()>=0<->min((f_(),g_()))>=0".asFormula,QE,namespace).fact
+  private lazy val maxGeqNorm:ProvableSig = remember("f_()>=0|g_()>=0<->max((f_(),g_()))>=0".asFormula,QE,namespace).fact
+  private lazy val eqNormAbs:ProvableSig = remember("f_() = 0 <-> -abs(f_())>=0".asFormula,QE,namespace).fact
+  //private lazy val minGtNorm:ProvableSig = remember("f_()>0&g_()>0<->min((f_(),g_()))>0".asFormula,QE,namespace).fact
+  //private lazy val maxGtNorm:ProvableSig = remember("f_()>0|g_()>0<->max((f_(),g_()))>0".asFormula,QE,namespace).fact
+  //private lazy val neqNormAbs:ProvableSig = remember("f_() != g_()<-> abs(f_()-g_())>0".asFormula,QE,namespace).fact
+
+  // Normalizes a formula recursively (under And/Or) to have >=0 on RHS
+  // This is (very) lightly optimized to avoid generating additional 0s
+  // if they are already present which may be annoying
+
+  private def semiAlgNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
+    f match{
+      case LessEqual(l,r) => List(leFlip,leNorm)
+      case GreaterEqual(l,r) => if (r == Number(0)) List() else List(geNorm)
+      case Less(l,r) => List(ltFlip,ltNorm)
+      case Greater(l,r) => if (r == Number(0)) List() else List(gtNorm)
+      case Equal(l,r) => if (r == Number(0)) List() else List(eqNorm)
+      case NotEqual(l,r) => if (r == Number(0)) List() else List(neqNorm)
+      case And(l,r) =>  Nil
+      case Or(l,r) =>  Nil
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be a conjunction/disjunction of atomic comparisons)")
+    }
+  }
+
+  // Simplifier index that normalizes only a single inequality to have 0 on the RHS
+  private def ineqNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
+    f match{
+      case LessEqual(l,r) => ()
+      case GreaterEqual(l,r) => ()
+      case Less(l,r) => ()
+      case Greater(l,r) => ()
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be inequality >=,>,<=,<)")
+    }
+    semiAlgNormalizeIndex(f,ctx)
+  }
+
+  // ineqNormalize + equality and disequalities (all atomic comparisons)
+  private def atomNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
+    f match{
+      case LessEqual(l,r) => ()
+      case GreaterEqual(l,r) => ()
+      case Less(l,r) => ()
+      case Greater(l,r) => ()
+      case Equal(l,r) => ()
+      case NotEqual(l,r) => ()
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to have 0 on RHS (must be atomic comparison formula >=,>,<=,<,=,!=)")
+    }
+    semiAlgNormalizeIndex(f,ctx)
+  }
+
+  // Simplifier index that normalizes a formula into max/min >= normal form
+  private def maxMinGeqNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
+    f match{
+      case GreaterEqual(l,r:Number) if r.value.toInt == 0 => List()
+      case Equal(l,r) => List(eqNormAbs) //Special normalization for equalities
+      case And(l,r) =>  List(minGeqNorm)
+      case Or(l,r) =>  List(maxGeqNorm)
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to max/min >=0 normal form (must be a conjunction/disjunction of >= 0s or =0s)")
+    }
+  }
+
+  /**
+    * Various normalization steps (the first thing each of them do is NNF normalize)
+    * Note: This DOES NOT work with quantifiers!
+    *
+    * baseNormalize : the base normalizer
+    * ineqNormalize : normalizes atomic inequalities only
+    * atomNormalize : normalizes all (nested) atomic comparisons
+    * semiAlgNormalize : semialgebraic to have 0 on RHS
+    * maxMinGeqNormalize : max,min >=0 normal form
+    *
+    * All of these behave as follows:
+    *
+    * Input: f: formula
+    * Output: (g:formula,pr:Option[ProvableSig]) where g is the normalized version of f
+    * The (optional) pr contains a provable that proves their equivalence if f!=g
+    * Additionally, if f is of the incorrect shape, then the normalizer will throw an IllegalArgumentException
+    */
+  val baseNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(emptyFaxs)(_)
+  val ineqNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(ineqNormalizeIndex)(_)
+  val atomNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(atomNormalizeIndex)(_)
+  val semiAlgNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(semiAlgNormalizeIndex)(_)
+  val maxMinGeqNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGeqNormalizeIndex)(_)
 }
