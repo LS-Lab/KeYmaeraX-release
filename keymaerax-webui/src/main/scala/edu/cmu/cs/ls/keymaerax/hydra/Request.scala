@@ -1888,15 +1888,11 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
       assert(provable.isProved, "Provable " + provable + " must be proved")
       assert(provable.conclusion == conclusion, "Conclusion of provable " + provable + " must match problem " + conclusion)
       val tactic = tree.tacticString
-      tree.info.tactic match {
-        case None =>
-          // remember tactic string
-          val newInfo = new ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
-            tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
-            Some(tactic))
-          db.updateProofInfo(newInfo)
-        case Some(_) => // already have a tactic, so do nothing
-      }
+      // remember tactic string
+      val newInfo = new ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
+        tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
+        Some(tactic))
+      db.updateProofInfo(newInfo)
       // remember lemma
       exportLemma("user" + File.separator + model.name, model, provable, tactic)
       // backup proof to prevent data loss
@@ -1998,9 +1994,23 @@ class ShutdownReqeuest() extends LocalhostOnlyRequest with RegisteredOnlyRequest
   }
 }
 
-class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Request with ReadRequest {
+class ExtractTacticRequest(db: DBAbstraction, proofIdStr: String) extends Request with WriteRequest {
   override def resultingResponses(): List[Response] = {
-    ExtractTacticResponse(DbProofTree(db, proofIdStr).tacticString) :: Nil
+    val tree = DbProofTree(db, proofIdStr)
+    val tactic = tree.tacticString
+    // remember tactic string
+    val newInfo = new ProofPOJO(tree.info.proofId, tree.info.modelId, tree.info.name, tree.info.description,
+      tree.info.date, tree.info.stepCount, tree.info.closed, tree.info.provableId, tree.info.temporary,
+      Some(tactic))
+    db.updateProofInfo(newInfo)
+    GetTacticResponse(DbProofTree(db, proofIdStr).tacticString) :: Nil
+  }
+}
+
+class GetTacticRequest(db: DBAbstraction, proofIdStr: String) extends Request with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    val proofInfo = db.getProofInfo(proofIdStr)
+    GetTacticResponse(proofInfo.tactic.getOrElse(BellePrettyPrinter(Idioms.nil))) :: Nil
   }
 }
 
