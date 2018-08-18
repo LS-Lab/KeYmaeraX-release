@@ -189,6 +189,9 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           theTactic.lastExecutedTacticText = theTactic.tacticText;
           theTactic.tacticDiff = "";
           theTactic.tacticDel = "";
+        })
+        .catch(function(data) {
+          $rootScope.$broadcast('tactic.extractError', userId, proofId);
         });
       },
 
@@ -285,7 +288,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           }
         })
         .catch(function(data) {
-          $rootScope.$broadcast('agenda.loadError'); // TODO somewhere: open modal dialog and ask if proof should be loaded
+          $rootScope.$broadcast('agenda.loadError', userId, proofId);
 
         })
         .finally(function() { spinnerService.hide('proofLoadingSpinner'); });

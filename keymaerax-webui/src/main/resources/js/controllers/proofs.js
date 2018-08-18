@@ -166,7 +166,9 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
       size: 'fullscreen',
       resolve: {
         userid: function() { return $scope.userId; },
-        proofid: function () { return proofid; }
+        proofid: function() { return proofid; },
+        title: function() { return "Tactic"; },
+        message: function() { return undefined; }
       }
     });
   };
@@ -215,7 +217,10 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
 
 });
 
-angular.module('keymaerax.controllers').controller('ProofTacticDialogCtrl', function ($scope, $http, $uibModalInstance, userid, proofid) {
+angular.module('keymaerax.controllers').controller('ProofTacticDialogCtrl', function (
+    $scope, $http, $uibModalInstance, userid, proofid, title, message) {
+  $scope.title = title;
+  $scope.message = message;
   $scope.tactic = {
     tacticBody: "",
     proofId: proofid
