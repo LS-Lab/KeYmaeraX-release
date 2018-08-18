@@ -365,9 +365,18 @@ object RestApi extends Logging {
       }}}
   }}
 
+  /** Extracts and stores a tactic from the recorded proof steps. */
   val extractTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "extract") { (_, proofId) => { pathEnd {
     get {
       val request = new ExtractTacticRequest(database, proofId)
+      completeRequest(request, t)
+    }
+  }}}
+
+  /** Reads a previously extracted tactic. */
+  val getTactic: SessionToken=>Route = (t : SessionToken) => path("proofs" / "user" / Segment / Segment / "tactic") { (_, proofId) => { pathEnd {
+    get {
+      val request = new GetTacticRequest(database, proofId)
       completeRequest(request, t)
     }
   }}}
@@ -1133,6 +1142,7 @@ object RestApi extends Logging {
     taskResult            ::
     stopTask              ::
     extractTactic         ::
+    getTactic             ::
     tacticDiff            ::
     extractLemma          ::
     downloadProblemSolution ::

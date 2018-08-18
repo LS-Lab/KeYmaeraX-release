@@ -78,7 +78,7 @@ var pollProofStatus = function(proof, userId, http) {
 
 /* Proof list (those of an individual model if the route param modelId is defined, all proofs otherwise) */
 angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
-    $scope, $http, $location, $routeParams, $route, FileSaver, Blob, spinnerService, sessionService) {
+    $scope, $http, $location, $routeParams, $route, $uibModal, FileSaver, Blob, spinnerService, sessionService) {
   $scope.modelId = $routeParams.modelId;
   $scope.userId = sessionService.getUser();
 
@@ -159,6 +159,18 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
     });
   }
 
+  $scope.openTactic = function (proofid) {
+    var modalInstance = $uibModal.open({
+      templateUrl: 'partials/prooftacticdialog.html',
+      controller: 'ProofTacticDialogCtrl',
+      size: 'fullscreen',
+      resolve: {
+        userid: function() { return $scope.userId; },
+        proofid: function () { return proofid; }
+      }
+    });
+  };
+
   currentDateString = function() {
     var today = new Date();
     var dd = today.getDate();
@@ -201,4 +213,17 @@ angular.module('keymaerax.controllers').controller('ProofListCtrl', function (
     $scope.$emit('routeLoaded', {theview: 'allproofs'});
   }
 
+});
+
+angular.module('keymaerax.controllers').controller('ProofTacticDialogCtrl', function ($scope, $http, $uibModalInstance, userid, proofid) {
+  $scope.tactic = {
+    tacticBody: "",
+    proofId: proofid
+  };
+
+  $http.get("proofs/user/" + userid + "/" + proofid + "/tactic").then(function(response) {
+      $scope.tactic.tacticBody = response.data.tacticText;
+  });
+
+  $scope.ok = function () { $uibModalInstance.close(); };
 });

@@ -46,6 +46,7 @@
             <!--<td>Model Name</td>-->
             <td>Date</td>
             <!--<td>Proof Steps</td>-->
+            <td>Tactic</td>
             <td>Status</td>
             <td><span class="pull-right">Actions</span></td>
         </tr>
@@ -57,6 +58,11 @@
                 <a class="btn btn-link" ng-href="dashboard.html?#/proofs/{{ proof.id }}" uib-tooltip="Open proof" tooltip-placement="auto top">{{ proof.name }}</a>
             </td>
             <td>{{ proof.date }}</td>
+            <td class="k4-abbreviate">
+                <button class="btn btn-link" ng-click="openTactic(proof.id)">
+                    Tactic <i class="fa fa-file-code-o"></i>
+                </button>
+            </td>
             <td>
                 <div ng-if="$first">
                 <span data-intro="Is there more work to do (<i class='fa fa-pencil'></i>) or is the proof done (<i class='fa fa-check'></i>)?" data-position="left">
