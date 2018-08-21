@@ -987,7 +987,7 @@ object ODEInvariance {
   private val ghostLem3 = remember("2*f() <= 2*g() <-> f() <= g()".asFormula,QE)
 
   /**
-    * Prove Vectorial Darboux (using a single non-differentiable ghost)
+    * Prove Vectorial Darboux (using a single differential ghost)
     * TODO: at the moment, it is unclear what the tactic interface should be
     * Currently, it expects an ODE, and cuts in the conjunction /\_i p_i=0 as follows:
     *
@@ -1008,6 +1008,42 @@ object ODEInvariance {
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
     */
   def dgVdbx(Gco:List[List[Term]],ps:List[Term], negate:Boolean = false) : DependentPositionTactic = "dgVdbx" byWithInput ((Gco,ps),(pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "dgVdbx only applicable in top-level succedent")
+    val dim = ps.length
+    require(Gco.length == dim && Gco.forall(gs => gs.length == dim) && dim >= 1, "Incorrect input dimensions")
+
+    val zero = Number(0)
+    val one = Number(1)
+
+    // Turns the vector into sum_i p_i^2
+    val sump = ps.map(p => Times(p,p)).reduce(Plus)
+
+    //Convert between the conjunction /\_i p_i=0 and sum_i p_i^2 <=0
+    val cutp =
+      if(negate)
+        ps.map(p => NotEqual(p,zero)).reduce(Or)
+      else
+        ps.map(p => Equal(p,zero)).reduce(And)
+
+    //this can also be manually proved rather than using QE
+    val pr = proveBy(Equiv(cutp,
+      if(negate) Greater(sump,zero)
+      else LessEqual(sump,zero)),QE)
+
+    //Construct the term ||G||^2 + 1
+    val cofactorPre = Gco.flatten.foldLeft(one:Term)( (cur,t) => Plus(cur,Times(t,t)))
+    val cofactor = if (negate) Neg(cofactorPre) else cofactorPre
+
+    //Cuts
+    dC(cutp)(pos) <(
+      skip,
+      useAt(pr)(pos.checkTop.getPos,1::Nil) &
+      dgDbx(cofactor)(pos)
+    )
+  })
+
+  //Old version of dgVdbx that uses cached Cauchy-Schwartz/Frobenius norm
+  def dgVdbxOld(Gco:List[List[Term]],ps:List[Term], negate:Boolean = false) : DependentPositionTactic = "dgVdbx" byWithInput ((Gco,ps),(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "dgVdbx only applicable in top-level succedent")
     val dim = ps.length
     require(Gco.length == dim && Gco.forall(gs => gs.length == dim) && dim >= 1, "Incorrect input dimensions")

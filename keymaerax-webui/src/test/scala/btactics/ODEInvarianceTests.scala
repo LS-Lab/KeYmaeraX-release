@@ -22,11 +22,11 @@ class ODEInvarianceTests extends TacticTestBase {
     val p3 = pStar(ode,poly,Some(3))
     val pn = pStar(ode,poly,None)
 
-    //println(p0)
-    //println(p1)
-    //println(p2)
-    //println(p3)
-    //println(pn)
+    println(p0)
+    println(p1)
+    println(p2)
+    println(p3)
+    println(pn)
 
     p0 shouldBe "x+y*z>0".asFormula
     p1 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>0)".asFormula
@@ -414,6 +414,7 @@ class ODEInvarianceTests extends TacticTestBase {
     val polys = List("x","y").map( s => s.asTerm)
     val pr = proveBy(fml, dgVdbx(cofactors,polys,negate=true)(1) & dW(1) & QE)
     println(pr)
+    pr shouldBe 'proved
   }
 
   it should "prove a 3D equilibirum" in withMathematica { _ =>
@@ -446,4 +447,27 @@ class ODEInvarianceTests extends TacticTestBase {
     println(pr)
     pr shouldBe 'proved
   }
+
+  // Holding place for complete implementation of SAI (closed)
+  "SAI" should "compute p*>=0" in withMathematica { qeTool =>
+    val ode = "{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asProgram.asInstanceOf[ODESystem]
+    val poly = "x+y*z".asTerm
+    val p0 = pStar(ode,poly,Some(0))
+    val p1 = pStar(ode,poly,Some(1))
+    val p2 = pStar(ode,poly,Some(2))
+    val p3 = pStar(ode,poly,Some(3))
+    val pn = pStar(ode,poly,None)
+
+    println(p0)
+    println(p1)
+    println(p2)
+    println(p3)
+    println(pn)
+
+    p0 shouldBe "x+y*z>0".asFormula
+    p1 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>0)".asFormula
+    p2 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>0))".asFormula
+    p3 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>=0&(2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)=0->2+6*x^4+12*y+12*y^2+8*(1+y)*z+2*x^3*(6+y+2*z)+4*x^2*(8+3*y+2*z)+x*(12+37*y+18*z)>0)))".asFormula
+  }
+
 }
