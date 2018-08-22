@@ -351,50 +351,64 @@ class ODEInvarianceTests extends TacticTestBase {
     //todo
   }
 
-  "DRI" should "prove matrix and vector bounds" in withMathematica { _ =>
+  // Holding place for complete implementation of SAI (closed)
+  "SAI" should "compute p*>=0" in withMathematica { qeTool =>
+    val ode = "{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asProgram.asInstanceOf[ODESystem]
+    val poly = "x+y*z".asTerm
+    val p0 = pStar(ode,poly,Some(0))
+    val p1 = pStar(ode,poly,Some(1))
+    val p2 = pStar(ode,poly,Some(2))
+    val p3 = pStar(ode,poly,Some(3))
+    val pn = pStar(ode,poly,None)
+
+    println(p0)
+    println(p1)
+    println(p2)
+    println(p3)
+    println(pn)
+
+    p0 shouldBe "x+y*z>0".asFormula
+    p1 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>0)".asFormula
+    p2 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>0))".asFormula
+    p3 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>=0&(2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)=0->2+6*x^4+12*y+12*y^2+8*(1+y)*z+2*x^3*(6+y+2*z)+4*x^2*(8+3*y+2*z)+x*(12+37*y+18*z)>0)))".asFormula
+  }
+
+  "vdbx" should "prove matrix and vector bounds" in withMathematica { _ =>
     //These bounds ought to be enough for all intents and purposes
-    val cs = cauchy_schwartz(10)
-    val fsF = frobenius_subord(10,negate=false)
-    val fsT = frobenius_subord(10,negate=true)
-    cs._1 shouldBe 'proved
-    cs._2 shouldBe 'proved
-    cs._3 shouldBe 'proved
-    fsF shouldBe 'proved
-    fsT shouldBe 'proved
+    val cs = cauchy_schwartz_bound(10)
+    val fs = frobenius_subord_bound(10)
+    cs shouldBe 'proved
+    fs._1 shouldBe 'proved
+    fs._2 shouldBe 'proved
   }
 
   it should "test caching" in withMathematica { _ =>
     val lemmaDB = LemmaDBFactory.lemmaDB
-    val dim = 8
+    val dim = 10
 
     //Initial versions in DB
     println("Initial call")
-    val cs1 = cauchy_schwartz(dim)
-    val fsF1 = frobenius_subord(dim,negate=false)
-    val fsT1 = frobenius_subord(dim,negate=true)
+    val cs1 = cauchy_schwartz_bound(dim)
+    val fs1 = frobenius_subord_bound(dim)
     println("Done.")
 
     //Definitely cached
     println("Cached call")
-    val cs2 = cauchy_schwartz(dim)
-    val fsF2 = frobenius_subord(dim,negate=false)
-    val fsT2 = frobenius_subord(dim,negate=true)
+    val cs2 = cauchy_schwartz_bound(dim)
+    val fs2 = frobenius_subord_bound(dim)
     println("Done.")
 
     lemmaDB.remove("cauchy_schwartz_"+dim.toString)
-    lemmaDB.remove("cauchy_schwartz_L_"+dim.toString)
-    lemmaDB.remove("cauchy_schwartz_U_"+dim.toString)
-    lemmaDB.remove("frobenius_subord_false_"+dim.toString)
-    lemmaDB.remove("frobenius_subord_true_"+dim.toString)
+    lemmaDB.remove("frobenius_subord_U_"+dim.toString)
+    lemmaDB.remove("frobenius_subord_L_"+dim.toString)
 
     //Definitely uncached
     println("Uncached call")
-    val cs3 = cauchy_schwartz(dim)
-    val fsF3 = frobenius_subord(dim,negate=false)
-    val fsT3 = frobenius_subord(dim,negate=true)
+    val cs3 = cauchy_schwartz_bound(dim)
+    val fs3 = frobenius_subord_bound(dim)
     println("Done.")
 
-    (cs1==cs2 && cs2 == cs3, fsF1 == fsF2 && fsF2 ==fsF3, fsT1==fsT2 && fsT2 ==fsT3) shouldBe (true,true,true)
+    (cs1==cs2 && cs2 == cs3, fs1 == fs2 && fs2 ==fs3) shouldBe (true,true)
   }
 
   it should "prove a 2D equilibirum" in withMathematica { _ =>
@@ -448,26 +462,40 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  // Holding place for complete implementation of SAI (closed)
-  "SAI" should "compute p*>=0" in withMathematica { qeTool =>
-    val ode = "{x'=x^2+1, y'=2*x+y, z'=x+y+z}".asProgram.asInstanceOf[ODESystem]
-    val poly = "x+y*z".asTerm
-    val p0 = pStar(ode,poly,Some(0))
-    val p1 = pStar(ode,poly,Some(1))
-    val p2 = pStar(ode,poly,Some(2))
-    val p3 = pStar(ode,poly,Some(3))
-    val pn = pStar(ode,poly,None)
-
-    println(p0)
-    println(p1)
-    println(p2)
-    println(p3)
-    println(pn)
-
-    p0 shouldBe "x+y*z>0".asFormula
-    p1 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>0)".asFormula
-    p2 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>0))".asFormula
-    p3 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>=0&(2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)=0->2+6*x^4+12*y+12*y^2+8*(1+y)*z+2*x^3*(6+y+2*z)+4*x^2*(8+3*y+2*z)+x*(12+37*y+18*z)>0)))".asFormula
+  "DRI" should "prove SAS Ex 12 automatically" in withMathematica { _ =>
+    val pr = proveBy("x1^2+x2^2-1=0 & x3-x1=0 -> [{x1'=-x2,x2'=x3,x3'=-x2}](x1^2+x2^2-1=0 & x3-x1=0)".asFormula,
+      implyR(1) & dRI(1))
+    println(pr)
+    pr shouldBe 'proved
   }
+
+  it should "prove SAS 5d non-linear equilibria" in withMathematica { _ =>
+    val pr = proveBy("x1=1 & x3=4 & x4=4 & x5=1 -> [{x1' = (x1 - 1)*x2, x2' = x1, x3' = (x3 - 4)*x2, x4' = (x4 - 4)*x2, x5' = (x5 - 1)*x1}](x1=1 & x3=4 & x4=4 & x5=1)".asFormula,
+      implyR(1) & dRI(1))
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove SAS aircraft" in withMathematica { _ =>
+    val pr = proveBy("(x1^2 + x2^2 - 1)=0& x3=0& x4^2 + x5^2 - 1 =0 &(x6 - x4) =0 -> [{x1' = -x2 + x1*(1 - x1^2 - x2^2), x2' = x1 + x2*(1 - x1^2 - x2^2), x3' = x3, x4' = -x5, x5' = x6, x6'=-x5}]((x1^2 + x2^2 - 1)=0& x3=0& x4^2 + x5^2 - 1 =0 &(x6 - x4) =0)".asFormula,
+      implyR(1) & dRI(1))
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  it should "prove SAS extended Motzkin (rank 3)" in withMathematica { _ =>
+    val pr = proveBy("x1^4*x2^2 + x1^2*x2^4 - 3*x1^2*x2^2 + 1 = 0 & x3=0 -> [{x1' = (x1 - 1)*(x1 + 1), x2' = (x2 - 1)*(x2 + 1),x3' = -x3}](x1^4*x2^2 + x1^2*x2^4 - 3*x1^2*x2^2 + 1 = 0 & x3=0)".asFormula,
+      implyR(1) & dRI(1))
+    println(pr)
+    pr shouldBe 'proved
+  }
+
+  //Mathematica crashes badly
+  //  it should "handle the largest example" in withMathematica { _ =>
+  //    val pr = proveBy("(1 - 3*x1^2*x2^2 +x1^4*x2^2 +x1^2*x2^4)^13 = 0 & (x3^4*x4^2 + x3^2*x4^4 - 3*x3^2*x4^2*x5^2 +x5^6)^7 = 0 & (-1 +x6^2 +x7^2 + x8^2)^73 = 0 & (-3 + 6*x10^2 +x10^4 + 2*x10*x9 + 2*x10^3*x9 +x9^2)^21 = 0 & -1 +x13 +x11*x13 = 0 & x12=0 -> [{x1' = -292*x7*(-1 + x6^2 + x7^2 + x8^2)^145,\nx2' = -292*x8*(-1 + x6^2 + x7^2 + x8^2)^145,\nx3' = -42*(2*x10 + 2*x10^3 + 2*x9)* (-3 + 6*x10^2 + x10^4 + 2*x10*x9 + 2*x10^3*x9 + x9^2)^41,\nx4' = -42*(12*x10 + 4*x10^3 + 2*x9 + 6*x10^2*x9) * (-3 + 6*x10^2 + x10^4 + 2*x10*x9 + 2*x10^3*x9 + x9^2)^41,\nx5' = -2*x13*(-1 +x13 +x11*x13),\nx6' = -2*x12,\nx7' = 26*(-6*x1*x2^2 + 4*x1^3*x2^2 + 2*x1*x2^4)*(1 - 3*x1^2*x2^2 +x1^4*x2^2 +x1^2*x2^4)^25,\nx8' = 26*(-6*x1^2*x2 + 2*x1^4*x2 + 4*x1^2*x2^3) * (1 - 3*x1^2*x2^2 +x1^4*x2^2 +x1^2*x2^4)^25,\nx9' = 14*(4*x3^3*x4^2 + 2*x3*x4^4 - 6*x3*x4^2*x5^2)*(x3^4*x4^2 + x3^2*x4^4 - 3*x3^2*x4^2*x5^2 +x5^6)^13,\nx10' = 14*(2*x3^4*x4 + 4*x3^2*x4^3 - 6*x3^2*x4*x5^2)*(x3^4*x4^2 +x3^2*x4^4 - 3*x3^2*x4^2*x5^2 + x5^6)^13,\nx11'= 14*(-6*x3^2*x4^2*x5 + 6*x5^5)*(x3^4*x4^2 +x3^2*x4^4 - 3*x3^2*x4^2*x5^2 +x5^6)^13,\nx12'= 292*x6*(-1 +x6^2 +x7^2 +x8^2)^145}]((1 - 3*x1^2*x2^2 +x1^4*x2^2 +x1^2*x2^4)^13 = 0 & (x3^4*x4^2 + x3^2*x4^4 - 3*x3^2*x4^2*x5^2 +x5^6)^7 = 0 & (-1 +x6^2 +x7^2 + x8^2)^73 = 0 & (-3 + 6*x10^2 +x10^4 + 2*x10*x9 + 2*x10^3*x9 +x9^2)^21 = 0 & -1 +x13 +x11*x13 = 0 & x12=0)".asFormula,
+  //      implyR(1) & dRI(1))
+  //    println(pr)
+  //    pr shouldBe 'proved
+  //  }
 
 }
