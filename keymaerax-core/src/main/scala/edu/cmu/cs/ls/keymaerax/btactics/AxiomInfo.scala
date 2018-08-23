@@ -300,6 +300,15 @@ object DerivationInfo {
       _ => DifferentialTactics.dgBarrier(ToolProvider.simplifierTool())
       , needsTool = true
     ),
+    PositionTacticInfo("dRI",
+      RuleDisplayInfo(
+        "(Conj.) Differential Radical Invariants",
+        /* conclusion */ (List("p*=0"), List("[{x′=f(x) & Q}]p=0")),
+        /* premises */ List( (List("Q"), List("p*=0")) )
+      ),
+      _ => ODEInvariance.dRI
+      , needsTool = true
+    ),
     new InputPositionTacticInfo("dGold",
       RuleDisplayInfo(
         "Differential Ghost",

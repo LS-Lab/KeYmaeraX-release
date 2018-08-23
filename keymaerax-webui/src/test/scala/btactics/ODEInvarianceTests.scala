@@ -490,6 +490,14 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+  it should "prove an example with symbols (rank 4)" in withMathematica { _ =>
+    //The postcondition is NOT an invariant
+    val pr = proveBy("y=1&x=0&b()=1 -> 1=0 | 2 = 0 | [{x'=-y - x* (1 - x^2 - y^2), y'=x - y* (1 - x^2 - y^2)}](1 - x^2 - x*y + x^3*y - y^2 + x*y^3)*a() + b() = 1".asFormula,
+      implyR(1) & orR(1) & orR(2) & dRI(3))
+    println(pr)
+    pr shouldBe 'proved
+  }
+
   //Mathematica crashes badly
   //  it should "handle the largest example" in withMathematica { _ =>
   //    val pr = proveBy("(1 - 3*x1^2*x2^2 +x1^4*x2^2 +x1^2*x2^4)^13 = 0 & (x3^4*x4^2 + x3^2*x4^4 - 3*x3^2*x4^2*x5^2 +x5^6)^7 = 0 & (-1 +x6^2 +x7^2 + x8^2)^73 = 0 & (-3 + 6*x10^2 +x10^4 + 2*x10*x9 + 2*x10^3*x9 +x9^2)^21 = 0 & -1 +x13 +x11*x13 = 0 & x12=0 -> [{x1' = -292*x7*(-1 + x6^2 + x7^2 + x8^2)^145,\nx2' = -292*x8*(-1 + x6^2 + x7^2 + x8^2)^145,\nx3' = -42*(2*x10 + 2*x10^3 + 2*x9)* (-3 + 6*x10^2 + x10^4 + 2*x10*x9 + 2*x10^3*x9 + x9^2)^41,\nx4' = -42*(12*x10 + 4*x10^3 + 2*x9 + 6*x10^2*x9) * (-3 + 6*x10^2 + x10^4 + 2*x10*x9 + 2*x10^3*x9 + x9^2)^41,\nx5' = -2*x13*(-1 +x13 +x11*x13),\nx6' = -2*x12,\nx7' = 26*(-6*x1*x2^2 + 4*x1^3*x2^2 + 2*x1*x2^4)*(1 - 3*x1^2*x2^2 +x1^4*x2^2 +x1^2*x2^4)^25,\nx8' = 26*(-6*x1^2*x2 + 2*x1^4*x2 + 4*x1^2*x2^3) * (1 - 3*x1^2*x2^2 +x1^4*x2^2 +x1^2*x2^4)^25,\nx9' = 14*(4*x3^3*x4^2 + 2*x3*x4^4 - 6*x3*x4^2*x5^2)*(x3^4*x4^2 + x3^2*x4^4 - 3*x3^2*x4^2*x5^2 +x5^6)^13,\nx10' = 14*(2*x3^4*x4 + 4*x3^2*x4^3 - 6*x3^2*x4*x5^2)*(x3^4*x4^2 +x3^2*x4^4 - 3*x3^2*x4^2*x5^2 + x5^6)^13,\nx11'= 14*(-6*x3^2*x4^2*x5 + 6*x5^5)*(x3^4*x4^2 +x3^2*x4^4 - 3*x3^2*x4^2*x5^2 +x5^6)^13,\nx12'= 292*x6*(-1 +x6^2 +x7^2 +x8^2)^145}]((1 - 3*x1^2*x2^2 +x1^4*x2^2 +x1^2*x2^4)^13 = 0 & (x3^4*x4^2 + x3^2*x4^4 - 3*x3^2*x4^2*x5^2 +x5^6)^7 = 0 & (-1 +x6^2 +x7^2 + x8^2)^73 = 0 & (-3 + 6*x10^2 +x10^4 + 2*x10*x9 + 2*x10^3*x9 +x9^2)^21 = 0 & -1 +x13 +x11*x13 = 0 & x12=0)".asFormula,
