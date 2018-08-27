@@ -15,28 +15,37 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 object CourseMain {
   /** Just enough initialization. */
   def basicInitializer() = {
-    try {
-      val config = Map(
-        // Local paths
-        //"linkName" -> "/usr/local/Wolfram/Mathematica/11.3/Executables/MathKernel",
-        //"libDir" -> "/usr/local/Wolfram/Mathematica/11.3/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64")
-        // These paths might (?) work on autograding machines
-        "linkName" -> "/usr/local/depot/mathematica-11.3/Executables/MathKernel",
-        "libDir" -> "/usr/local/depot/mathematica-11.3/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64")
-      val provider = new MathematicaToolProvider(config)
-      ToolProvider.setProvider(provider)
-      BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
-      if(provider.tools().forall(_.isInitialized)) println("Initialized Mathematica!")
-      else println("Not initialized, but without any errors -- won't be able to parse tactics or check proofs.")
-    } catch {
-      case _: Throwable => {
-        println("Falling back to Z3. Not a big deal but some features won't be available.")
-        val provider = new Z3ToolProvider()
-        ToolProvider.setProvider(provider)
-        BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
-        if(provider.tools().forall(_.isInitialized)) println("Initialized Z3!")
-      }
-    }
+    // This initializes Mathematica (falling back to Z3 on failure)
+    // Commented out because it is otherwise very verbose on Autolab
+    //    try {
+    //      val config = Map(
+    //        // Local paths
+    //        //"linkName" -> "/usr/local/Wolfram/Mathematica/11.3/Executables/MathKernel",
+    //        //"libDir" -> "/usr/local/Wolfram/Mathematica/11.3/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64")
+    //        // These paths might (?) work on autograding machines
+    //        "linkName" -> "/usr/local/depot/mathematica-11.3/Executables/MathKernel",
+    //        "libDir" -> "/usr/local/depot/mathematica-11.3/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64")
+    //      val provider = new MathematicaToolProvider(config)
+    //      ToolProvider.setProvider(provider)
+    //      BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
+    //      if(provider.tools().forall(_.isInitialized)) println("Initialized Mathematica!")
+    //      else println("Not initialized, but without any errors -- won't be able to parse tactics or check proofs.")
+    //    } catch {
+    //      case _: Throwable => {
+    //        println("Falling back to Z3. Not a big deal but some features won't be available.")
+    //        val provider = new Z3ToolProvider()
+    //        ToolProvider.setProvider(provider)
+    //        BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
+    //        if(provider.tools().forall(_.isInitialized)) println("Initialized Z3!")
+    //      }
+    //    }
+
+    println("Falling back to Z3. Not a big deal but some features won't be available.")
+    val provider = new Z3ToolProvider()
+    ToolProvider.setProvider(provider)
+    BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
+    if(provider.tools().forall(_.isInitialized)) println("Initialized Z3!")
+
 
     //Intialize the printer, the configuration generator, the parser, and the invariant generator.
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.pp)
