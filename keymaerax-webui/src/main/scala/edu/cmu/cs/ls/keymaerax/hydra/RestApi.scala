@@ -940,12 +940,12 @@ object RestApi extends Logging {
     }
   }
 
-  val toolStatus: Route = path("config" / "toolStatus") {
+  val toolConfigStatus: Route = path("config" / "toolStatus") {
     pathEnd {
       get {
         Configuration(Configuration.Keys.QE_TOOL) match {
-          case "mathematica" => completeRequest(new MathematicaStatusRequest(database), EmptyToken())
-          case "z3" => completeRequest(new Z3StatusRequest(database), EmptyToken())
+          case "mathematica" => completeRequest(new MathematicaConfigStatusRequest(database), EmptyToken())
+          case "z3" => completeRequest(new Z3ConfigStatusRequest(database), EmptyToken())
         }
       }
     }
@@ -968,6 +968,21 @@ object RestApi extends Logging {
   }
 
   //endregion
+
+  // region Tools
+
+  val toolStatus: Route = path("tools" / "vitalSigns") {
+    pathEnd {
+      get {
+        Configuration(Configuration.Keys.QE_TOOL) match {
+          case "mathematica" => completeRequest(new MathematicaStatusRequest(database), EmptyToken())
+          case "z3" => completeRequest(new Z3StatusRequest(database), EmptyToken())
+        }
+      }
+    }
+  }
+
+  // endregion
 
   //region Examples
 
@@ -1081,6 +1096,7 @@ object RestApi extends Logging {
     kyxConfig          ::
     keymaeraXVersion   ::
     mathematicaConfig  ::
+    toolConfigStatus   ::
     toolStatus         ::
     tool               ::
     guestBrowseArchiveRequest ::

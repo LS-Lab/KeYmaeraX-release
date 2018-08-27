@@ -305,12 +305,16 @@ angular.module('keymaerax.controllers').controller('BrowseProofCtrl',
 });
 
 angular.module('keymaerax.controllers').controller('TaskCtrl',
-  function($rootScope, $scope, $http, $routeParams, $q, $uibModal, Tactics, sequentProofData, spinnerService, derivationInfos, sessionService) {
+  function($rootScope, $scope, $http, $routeParams, $q, $uibModal, Tactics, sequentProofData, spinnerService,
+           derivationInfos, sessionService, Poller) {
     $scope.proofId = $routeParams.proofId;
     $scope.userId = sessionService.getUser();
     $scope.agenda = sequentProofData.agenda;
     $scope.prooftree = sequentProofData.proofTree;
     $scope.tactic = sequentProofData.tactic;
+    $scope.backend = {
+      busypoller: Poller.poll("tools/vitalSigns", 2000 /*2s*/)
+    };
     sequentProofData.tactic.reset();
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -630,6 +634,10 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
                 }
             })
         })
+    }
+
+    $scope.restartBackend = function() {
+      //@todo
     }
       
     //Save a name edited using the inline editor.

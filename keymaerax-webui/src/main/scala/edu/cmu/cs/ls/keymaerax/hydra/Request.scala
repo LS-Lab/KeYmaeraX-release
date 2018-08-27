@@ -558,15 +558,35 @@ class SetUserThemeRequest(db: DBAbstraction, userName: String, themeCss: String,
 }
 
 
-class MathematicaStatusRequest(db : DBAbstraction) extends Request with ReadRequest {
+class MathematicaConfigStatusRequest(db : DBAbstraction) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    new ToolStatusResponse("Mathematica", Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
+    new ToolConfigStatusResponse("Mathematica", Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
       Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)) :: Nil
   }
 }
 
+class MathematicaStatusRequest(db: DBAbstraction) extends Request with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    val availableWorkers = ToolProvider.tool("Mathematica") match {
+      case Some(mathematica: Mathematica) => mathematica.getAvailableWorkers
+      case _ => -1
+    }
+    new ToolStatusResponse("Mathematica", availableWorkers) :: Nil
+  }
+}
+
+class Z3ConfigStatusRequest(db : DBAbstraction) extends Request with ReadRequest {
+  override def resultingResponses(): List[Response] = new ToolConfigStatusResponse("Z3", true) :: Nil
+}
+
 class Z3StatusRequest(db : DBAbstraction) extends Request with ReadRequest {
-  override def resultingResponses(): List[Response] = new ToolStatusResponse("Z3", true) :: Nil
+  override def resultingResponses(): List[Response] = {
+    val availableWorkers = ToolProvider.tool("Z3") match {
+      case Some(z3: Z3) => z3.getAvailableWorkers
+      case _ => -1
+    }
+    new ToolStatusResponse("Z3", availableWorkers) :: Nil
+  }
 }
 
 class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest(userId) with ReadRequest {
@@ -1637,86 +1657,103 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 
   private class TacticPositionError(val msg:String,val pos: edu.cmu.cs.ls.keymaerax.parser.Location,val inlineMsg: String) extends Exception
 
+  private def backendAvailable: Boolean = Configuration(Configuration.Keys.QE_TOOL) match {
+    case "mathematica" => ToolProvider.tool("Mathematica") match {
+      case Some(mathematica: Mathematica) => mathematica.getAvailableWorkers > 0
+      case _ => false
+    }
+    case "z3" => ToolProvider.tool("Mathematica") match {
+      case Some(z3: Z3) => z3.getAvailableWorkers > 0
+      case _ => false
+    }
+  }
+
   override protected def doResultingResponses(): List[Response] = {
-    val proof = db.getProofInfo(proofId)
-    if (proof.closed) new ErrorResponse("Can't execute tactics on a closed proof") :: Nil
-    else {
-      val tree: ProofTree = DbProofTree(db, proofId)
-      tree.locate(nodeId) match {
-        case None => new ErrorResponse("Unknown node " + nodeId + " in proof " + proofId)::Nil
-        case Some(node) if node.goal.isEmpty => new ErrorResponse("Node " + nodeId + " does not have a goal")::Nil
-        case Some(node) if node.goal.isDefined =>
-          val sequent = node.goal.get
+    if (backendAvailable) {
+      val proof = db.getProofInfo(proofId)
+      if (proof.closed) new ErrorResponse("Can't execute tactics on a closed proof") :: Nil
+      else {
+        val tree: ProofTree = DbProofTree(db, proofId)
+        tree.locate(nodeId) match {
+          case None => new ErrorResponse("Unknown node " + nodeId + " in proof " + proofId) :: Nil
+          case Some(node) if node.goal.isEmpty => new ErrorResponse("Node " + nodeId + " does not have a goal") :: Nil
+          case Some(node) if node.goal.isDefined =>
+            val sequent = node.goal.get
 
-          try {
-            val proofSession = session(proofId).asInstanceOf[ProofSession]
-            val expr = BelleParser.parseWithInvGen(fullExpr(sequent), Some(proofSession.invGenerator), proofSession.defs)
+            try {
+              val proofSession = session(proofId).asInstanceOf[ProofSession]
+              val expr = BelleParser.parseWithInvGen(fullExpr(sequent), Some(proofSession.invGenerator), proofSession.defs)
 
-            val appliedExpr: BelleExpr = (pos, pos2, expr) match {
-              case (None, None, _: AtPosition[BelleExpr]) =>
-                throw new TacticPositionError("Can't run a positional tactic without specifying a position", expr.getLocation, "Expected position in argument list but found none")
-              case (None, None, _) => expr
-              case (Some(position), None, expr: AtPosition[BelleExpr]) => expr(position)
-              case (Some(_), None, expr: BelleExpr) => expr
-              case (Some(Fixed(p1, None, _)), Some(Fixed(p2, None, _)), expr: BuiltInTwoPositionTactic) => expr(p1, p2)
-              case (Some(_), Some(_), expr: BelleExpr) => expr
-              case _ => logger.error("Position error running tactic at pos " + pos.getClass.getName + ", expr " + expr.getClass.getName); throw new ProverException("Match error")
-            }
-
-            val ruleName =
-              if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, _ => appliedExpr.prettyString)
-              else "custom"
-
-            def interpreter(proofId: Int, startNodeId: Int) = new Interpreter {
-              val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof, RequestHelper.listenerFactory(db),
-                ExhaustiveSequentialInterpreter, 0, strict = false)
-
-              override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
-                inner(expr, v)
-              } catch {
-                case ex: Throwable => inner.innerProofId match {
-                  case Some(innerId) =>
-                    //@note display progress of inner (Let) proof, works only in stepwise execution (step details dialog)
-                    val innerTrace = db.getExecutionTrace(innerId)
-                    if (innerTrace.steps.nonEmpty) BelleSubProof(innerId)
-                    else throw BelleTacticFailure("No progress", ex)
-                  case None => throw ex
-                }
+              val appliedExpr: BelleExpr = (pos, pos2, expr) match {
+                case (None, None, _: AtPosition[BelleExpr]) =>
+                  throw new TacticPositionError("Can't run a positional tactic without specifying a position", expr.getLocation, "Expected position in argument list but found none")
+                case (None, None, _) => expr
+                case (Some(position), None, expr: AtPosition[BelleExpr]) => expr(position)
+                case (Some(_), None, expr: BelleExpr) => expr
+                case (Some(Fixed(p1, None, _)), Some(Fixed(p2, None, _)), expr: BuiltInTwoPositionTactic) => expr(p1, p2)
+                case (Some(_), Some(_), expr: BelleExpr) => expr
+                case _ => logger.error("Position error running tactic at pos " + pos.getClass.getName + ", expr " + expr.getClass.getName); throw new ProverException("Match error")
               }
 
-              override def kill(): Unit = inner.kill()
-              override def isDead: Boolean = inner.isDead
-              override def listeners: Seq[IOListener] = inner.listeners
-            }
+              val ruleName =
+                if (consultAxiomInfo) RequestHelper.getSpecificName(belleTerm, sequent, pos, pos2, _ => appliedExpr.prettyString)
+                else "custom"
 
-            if (stepwise) {
-              if (ruleName == "custom") {
-                //@note execute tactic scripts step-by-step for better browsing
-                val startStepIndex = node.id match {
-                  case DbStepPathNodeId(id, _) => db.getExecutionSteps(proofId.toInt).indexWhere(_.stepId == id)
-                  case _ => throw new Exception("Unexpected node ID shape " + node.id.toString
-                    + ". Expected step path ID of the form (node ID,branch index)")
+              def interpreter(proofId: Int, startNodeId: Int) = new Interpreter {
+                val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof, RequestHelper.listenerFactory(db),
+                  ExhaustiveSequentialInterpreter, 0, strict = false)
+
+                override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
+                  inner(expr, v)
+                } catch {
+                  case ex: Throwable => inner.innerProofId match {
+                    case Some(innerId) =>
+                      //@note display progress of inner (Let) proof, works only in stepwise execution (step details dialog)
+                      val innerTrace = db.getExecutionTrace(innerId)
+                      if (innerTrace.steps.nonEmpty) BelleSubProof(innerId)
+                      else throw BelleTacticFailure("No progress", ex)
+                    case None => throw ex
+                  }
                 }
-                val taskId = node.stepTactic(userId, interpreter(proofId.toInt, startStepIndex), appliedExpr)
-                RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
+
+                override def kill(): Unit = inner.kill()
+
+                override def isDead: Boolean = inner.isDead
+
+                override def listeners: Seq[IOListener] = inner.listeners
+              }
+
+              if (stepwise) {
+                if (ruleName == "custom") {
+                  //@note execute tactic scripts step-by-step for better browsing
+                  val startStepIndex = node.id match {
+                    case DbStepPathNodeId(id, _) => db.getExecutionSteps(proofId.toInt).indexWhere(_.stepId == id)
+                    case _ => throw new Exception("Unexpected node ID shape " + node.id.toString
+                      + ". Expected step path ID of the form (node ID,branch index)")
+                  }
+                  val taskId = node.stepTactic(userId, interpreter(proofId.toInt, startStepIndex), appliedExpr)
+                  RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
+                } else {
+                  val localProvable = ProvableSig.startProof(sequent)
+                  val localProofId = db.createProof(localProvable)
+                  val executor = BellerophonTacticExecutor.defaultExecutor
+                  val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter(localProofId, -1))
+                  RunBelleTermResponse(localProofId.toString, "()", taskId) :: Nil
+                }
               } else {
-                val localProvable = ProvableSig.startProof(sequent)
-                val localProofId = db.createProof(localProvable)
-                val executor = BellerophonTacticExecutor.defaultExecutor
-                val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter(localProofId, -1))
-                RunBelleTermResponse(localProofId.toString, "()", taskId) :: Nil
+                //@note execute clicked single-step tactics on sequential interpreter right away
+                val taskId = node.runTactic(userId, ExhaustiveSequentialInterpreter, appliedExpr, ruleName)
+                RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
               }
-            } else {
-              //@note execute clicked single-step tactics on sequential interpreter right away
-              val taskId = node.runTactic(userId, ExhaustiveSequentialInterpreter, appliedExpr, ruleName)
-              RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
+            } catch {
+              case e: ProverException if e.getMessage == "No step possible" => new ErrorResponse("No step possible") :: Nil
+              case e: TacticPositionError => new TacticErrorResponse(e.msg, HackyInlineErrorMsgPrinter(belleTerm, e.pos, e.inlineMsg), e) :: Nil
+              case e: BelleThrowable => new TacticErrorResponse(e.getMessage, HackyInlineErrorMsgPrinter(belleTerm, UnknownLocation, e.getMessage), e) :: Nil
             }
-          } catch {
-            case e: ProverException if e.getMessage == "No step possible" => new ErrorResponse("No step possible") :: Nil
-            case e: TacticPositionError => new TacticErrorResponse(e.msg, HackyInlineErrorMsgPrinter(belleTerm, e.pos, e.inlineMsg), e) :: Nil
-            case e: BelleThrowable => new TacticErrorResponse(e.getMessage, HackyInlineErrorMsgPrinter(belleTerm, UnknownLocation, e.getMessage), e) :: Nil
-          }
+        }
       }
+    } else {
+      new ErrorResponse("Backend tool unavailable or busy. If the tool remains unavailable, please restart KeYmaera X and/or configure a different tool") :: Nil
     }
   }
 }

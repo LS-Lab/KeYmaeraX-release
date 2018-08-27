@@ -187,6 +187,15 @@
                                 <li><a ng-click="downloadProblemSolution()">Download proof</a></li>
                             </ul>
                         </li>
+                        <li class="dropdown" id="toolstatus">
+                            <a class="dropdown-toggle" data-toggle="dropdown" role="button"
+                               aria-haspopup="true" aria-expanded="false">Backend
+                                <i class="fa fa-spinner fa-spin fa-fw"
+                                   ng-if="backend.busypoller.data.response.busy"></i><!--<span class="caret"></span>--></a>
+                            <!--<ul class="dropdown-menu">-->
+                                <!--<li><a ng-click="restartBackend()">Restart</a></li>-->
+                            <!--</ul>-->
+                        </li>
                     </ul>
                 </div>
                 <div class="nav">

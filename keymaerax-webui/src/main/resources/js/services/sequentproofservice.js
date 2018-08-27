@@ -324,3 +324,23 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
     }
   }
 }]);
+
+angular.module('keymaerax.services').factory('Poller', function($http, $timeout) {
+  return {
+    poll: function(url, interval) {
+      var data = { response: {}, calls: 0 };
+      var poller = function() {
+        $http.get(url).then(function(r) {
+          data.response = r.data;
+          data.calls++;
+          $timeout(poller, interval);
+        });
+      };
+      poller();
+
+      return {
+        data: data
+      };
+    }
+  }
+});

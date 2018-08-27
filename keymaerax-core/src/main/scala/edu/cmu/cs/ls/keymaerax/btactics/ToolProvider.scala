@@ -71,6 +71,9 @@ trait ToolProvider {
   /** The provided tools. */
   def tools(): List[Tool]
 
+  /** Returns the tool with `name` */
+  def tool(name: String): Option[Tool] = tools().find(_.name == name)
+
   /** Returns a QE tool. */
   def qeTool(name: Option[String] = None): Option[QETool]
 

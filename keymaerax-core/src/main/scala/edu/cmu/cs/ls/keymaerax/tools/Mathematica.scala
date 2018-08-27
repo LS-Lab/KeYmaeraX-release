@@ -162,4 +162,5 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
 
   override def setOperationTimeout(timeout: Int): Unit = qeMaxTimeout = timeout
   override def getOperationTimeout: Int = qeMaxTimeout
+  override def getAvailableWorkers: Int = mQE.availableWorkers
 }

@@ -38,4 +38,6 @@ class Z3 extends ToolBase("Z3") with QETool with ToolOperationManagement {
 
   /** Returns the timeout duration. */
   override def getOperationTimeout: Int = z3.getOperationTimeout
+
+  override def getAvailableWorkers: Int = 1
 }

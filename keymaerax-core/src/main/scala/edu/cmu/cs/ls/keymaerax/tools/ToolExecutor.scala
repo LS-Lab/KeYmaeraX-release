@@ -9,9 +9,13 @@ import scala.collection.mutable
 class ToolExecutor[T](poolSize: Int) extends Logging {
   require(poolSize > 0, "At least one thread is needed.")
 
-  private val pool: ExecutorService = Executors.newFixedThreadPool(poolSize)
+  private val queue = new LinkedBlockingQueue[Runnable]()
+  private val pool: ExecutorService = new ThreadPoolExecutor(poolSize, poolSize, 0L,
+    TimeUnit.MILLISECONDS, new LinkedBlockingQueue[Runnable])
 
   private val scheduledTasks: mutable.Map[String, FutureTask[Either[T, Throwable]]] = mutable.Map()
+
+  def availableWorkers(): Int = poolSize - queue.size() - scheduledTasks.count(t => !t._2.isDone && !t._2.isCancelled)
 
   /**
    * Schedules a task; returns the task ID to query for status and result.
@@ -85,13 +89,10 @@ class ToolExecutor[T](poolSize: Int) extends Logging {
 
   /** Creates the future that ultimately executes the task. */
   private def makeFuture(task: Unit => T): FutureTask[Either[T, Throwable]] =
-    new FutureTask(new Callable[Either[T, Throwable]]() {
-      override def call(): Either[T, Throwable] = {
-        try {
-          Left(task())
-        } catch {
-          case e: Throwable => Right(e)
-        }
-      }
-    })
+    new FutureTask(() =>
+      try {
+        Left(task())
+      } catch {
+        case e: Throwable => Right(e)
+      })
 }

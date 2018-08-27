@@ -194,6 +194,8 @@ trait ToolOperationManagement extends ToolInterface {
 
   /** Returns the timeout duration. */
   def getOperationTimeout: Int
+
+  def getAvailableWorkers: Int
 }
 
 /** Base class for tool operation management */

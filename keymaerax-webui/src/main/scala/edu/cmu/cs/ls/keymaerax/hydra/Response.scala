@@ -1109,10 +1109,18 @@ class MathematicaConfigurationResponse(linkName: String, jlinkLibDir: String) ex
   )
 }
 
-class ToolStatusResponse(tool: String, configured : Boolean) extends Response {
+class ToolConfigStatusResponse(tool: String, configured: Boolean) extends Response {
   def getJson: JsValue = JsObject(
     "tool" -> JsString(tool),
-    "configured" -> {if(configured) JsTrue else JsFalse}
+    "configured" -> { if (configured) JsTrue else JsFalse }
+  )
+}
+
+class ToolStatusResponse(tool: String, availableWorkers: Int) extends Response {
+  def getJson: JsValue = JsObject(
+    "tool" -> JsString(tool),
+    "busy" -> JsBoolean(availableWorkers <= 0),
+    "availableWorkers" -> JsNumber(availableWorkers)
   )
 }
 

@@ -196,4 +196,6 @@ class Z3Solver(val converter: SMTConverter = DefaultSMTConverter) extends ToolOp
       throw ToolException(s"Error executing Z3, exit value $exitVal")
     }
   }
+
+  override def getAvailableWorkers: Int = 1
 }
