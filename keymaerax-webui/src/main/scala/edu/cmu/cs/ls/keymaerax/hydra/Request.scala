@@ -589,6 +589,18 @@ class Z3StatusRequest(db : DBAbstraction) extends Request with ReadRequest {
   }
 }
 
+class RestartToolRequest(db: DBAbstraction, toolId: String) extends LocalhostOnlyRequest {
+  override def resultingResponses(): List[Response] = {
+    ToolProvider.tool(toolId) match {
+      case Some(t: Tool) =>
+        t.restart()
+        new GenericOKResponse :: Nil
+      case _ => new ErrorResponse(s"Restarting failed: unknown tool '$toolId'. Please check the tool configuration.") :: Nil
+    }
+
+  }
+}
+
 class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest(userId) with ReadRequest {
   override def resultingResponses(): List[Response] = {
     //@todo read from the database/some web page?

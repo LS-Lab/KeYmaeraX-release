@@ -982,6 +982,14 @@ object RestApi extends Logging {
     }
   }
 
+  val restartTool: Route = path("tools" / "restart") {
+    pathEnd {
+      get {
+        completeRequest(new RestartToolRequest(database, Configuration(Configuration.Keys.QE_TOOL)), EmptyToken())
+      }
+    }
+  }
+
   // endregion
 
   //region Examples
@@ -1106,6 +1114,7 @@ object RestApi extends Logging {
     checkProofValidation ::
     validateProof      ::
     licenses           ::
+    restartTool        ::
     Nil
 
   /** Requests that need a session token parameter.

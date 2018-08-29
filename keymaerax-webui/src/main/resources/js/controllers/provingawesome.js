@@ -637,7 +637,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     }
 
     $scope.restartBackend = function() {
-      //@todo
+      $http.get("tools/restart")
     }
       
     //Save a name edited using the inline editor.
