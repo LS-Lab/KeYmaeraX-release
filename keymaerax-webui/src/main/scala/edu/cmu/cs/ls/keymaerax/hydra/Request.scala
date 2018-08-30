@@ -27,6 +27,7 @@ import spray.json.DefaultJsonProtocol._
 import java.io._
 import java.nio.file.{Files, Paths}
 import java.text.SimpleDateFormat
+import java.util.concurrent.{FutureTask, TimeUnit, TimeoutException}
 import java.util.{Calendar, Locale}
 
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -565,28 +566,18 @@ class MathematicaConfigStatusRequest(db : DBAbstraction) extends Request with Re
   }
 }
 
-class MathematicaStatusRequest(db: DBAbstraction) extends Request with ReadRequest {
+class ToolStatusRequest(db: DBAbstraction, toolId: String) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    val availableWorkers = ToolProvider.tool("Mathematica") match {
-      case Some(mathematica: Mathematica) => mathematica.getAvailableWorkers
+    val availableWorkers = ToolProvider.tool(toolId) match {
+      case Some(t: ToolOperationManagement) => t.getAvailableWorkers
       case _ => -1
     }
-    new ToolStatusResponse("Mathematica", availableWorkers) :: Nil
+    new ToolStatusResponse(toolId, availableWorkers) :: Nil
   }
 }
 
 class Z3ConfigStatusRequest(db : DBAbstraction) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = new ToolConfigStatusResponse("Z3", true) :: Nil
-}
-
-class Z3StatusRequest(db : DBAbstraction) extends Request with ReadRequest {
-  override def resultingResponses(): List[Response] = {
-    val availableWorkers = ToolProvider.tool("Z3") match {
-      case Some(z3: Z3) => z3.getAvailableWorkers
-      case _ => -1
-    }
-    new ToolStatusResponse("Z3", availableWorkers) :: Nil
-  }
 }
 
 class RestartToolRequest(db: DBAbstraction, toolId: String) extends LocalhostOnlyRequest {
@@ -596,6 +587,33 @@ class RestartToolRequest(db: DBAbstraction, toolId: String) extends LocalhostOnl
         t.restart()
         new GenericOKResponse :: Nil
       case _ => new ErrorResponse(s"Restarting failed: unknown tool '$toolId'. Please check the tool configuration.") :: Nil
+    }
+
+  }
+}
+
+class TestToolConnectionRequest(db: DBAbstraction, toolId: String) extends LocalhostOnlyRequest {
+  override def resultingResponses(): List[Response] = {
+    ToolProvider.tool(toolId) match {
+      case Some(t: QETool) =>
+        val simpleQeTask = new FutureTask[Either[Formula, Throwable]](() =>
+          try {
+            Left(t.qeEvidence("2+3=5".asFormula)._1)
+          } catch {
+            case e: Throwable => Right(e)
+          })
+        new Thread(simpleQeTask).start()
+        try {
+          val result = simpleQeTask.get(1, TimeUnit.SECONDS)
+          if (result.isLeft && result.left.get == "true".asFormula) new GenericOKResponse :: Nil
+          else if (result.isLeft && result.left.get != "true".asFormula) new ErrorResponse("Testing connection failed: unexpected result " + result.left.get + " for test 2+3=5") :: Nil
+          else /* result.isRight */ new ErrorResponse("Testing connection failed", result.right.get) :: Nil
+        } catch {
+          case _: TimeoutException =>
+            new ErrorResponse("Testing connection failed: tool is not responding. Please restart KeYmaera X.") :: Nil
+        }
+      case Some(t: Tool) => new ErrorResponse(s"Testing connection failed: do not know how to test '${t.getClass}' tool") :: Nil
+      case _ => new ErrorResponse(s"Testing connection failed: unknown tool '$toolId'. Please check the tool configuration.") :: Nil
     }
 
   }

@@ -974,10 +974,7 @@ object RestApi extends Logging {
   val toolStatus: Route = path("tools" / "vitalSigns") {
     pathEnd {
       get {
-        Configuration(Configuration.Keys.QE_TOOL) match {
-          case "mathematica" => completeRequest(new MathematicaStatusRequest(database), EmptyToken())
-          case "z3" => completeRequest(new Z3StatusRequest(database), EmptyToken())
-        }
+        completeRequest(new ToolStatusRequest(database, Configuration(Configuration.Keys.QE_TOOL)), EmptyToken())
       }
     }
   }
@@ -986,6 +983,14 @@ object RestApi extends Logging {
     pathEnd {
       get {
         completeRequest(new RestartToolRequest(database, Configuration(Configuration.Keys.QE_TOOL)), EmptyToken())
+      }
+    }
+  }
+
+  val testToolConnection: Route = path("tools" / "testConnection") {
+    pathEnd {
+      get {
+        completeRequest(new TestToolConnectionRequest(database, Configuration(Configuration.Keys.QE_TOOL)), EmptyToken())
       }
     }
   }
@@ -1115,6 +1120,7 @@ object RestApi extends Logging {
     validateProof      ::
     licenses           ::
     restartTool        ::
+    testToolConnection ::
     Nil
 
   /** Requests that need a session token parameter.

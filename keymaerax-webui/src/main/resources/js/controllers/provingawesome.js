@@ -313,7 +313,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
     $scope.prooftree = sequentProofData.proofTree;
     $scope.tactic = sequentProofData.tactic;
     $scope.backend = {
-      busypoller: Poller.poll("tools/vitalSigns", 2000 /*2s*/)
+      busypoller: Poller.poll("tools/vitalSigns", 2000 /*2s*/),
+      connectionTestResult: undefined
     };
     sequentProofData.tactic.reset();
 
@@ -636,8 +637,32 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         })
     }
 
-    $scope.restartBackend = function() {
-      $http.get("tools/restart")
+    $scope.restartBackend = function() { $http.get("tools/restart"); }
+    $scope.testBackendConnection = function() {
+      $http.get("tools/testConnection").then(function(response) {
+        $scope.backend.connectionTestResult = true;
+        $uibModal.open({
+          templateUrl: 'templates/modalMessageTemplate.html',
+          controller: 'ModalMessageCtrl',
+          size: 'md',
+          resolve: {
+            title: function() { return "Connection test successful"; },
+            message: function() { return "The tool connection is operational."; }
+          }
+        })
+      })
+      .catch(function(err) {
+        $scope.backend.connectionTestResult = false;
+        $uibModal.open({
+          templateUrl: 'templates/modalMessageTemplate.html',
+          controller: 'ModalMessageCtrl',
+          size: 'md',
+          resolve: {
+            title: function() { return "Error testing connection"; },
+            message: function() { return err.data.textStatus; }
+          }
+        })
+      })
     }
       
     //Save a name edited using the inline editor.
