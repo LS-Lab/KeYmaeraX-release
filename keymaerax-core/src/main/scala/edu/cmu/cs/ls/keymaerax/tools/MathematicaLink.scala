@@ -69,8 +69,8 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
   protected val DEBUG: Boolean = Configuration(Configuration.Keys.DEBUG) == "true"
   protected val mathematicaExecutor: ToolExecutor[(String, T)] = new ToolExecutor(1)
 
-  override def runUnchecked(cmd: String): (String, T) = link.synchronized { link.runUnchecked(timeConstrained(cmd), m2k) }
-  override def run(cmd: MExpr): (String, T) = link.synchronized { link.run(timeConstrained(cmd), m2k, mathematicaExecutor) }
+  override def runUnchecked(cmd: String): (String, T) = link.runUnchecked(timeConstrained(cmd), m2k)
+  override def run(cmd: MExpr): (String, T) = link.run(timeConstrained(cmd), m2k, mathematicaExecutor)
 
   def availableWorkers: Int = mathematicaExecutor.availableWorkers()
   def shutdown(): Unit = mathematicaExecutor.shutdown()
@@ -123,8 +123,9 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
         (if (TCPIP) "-linkprotocol"::"tcpip"::Nil else Nil)).toArray
 
       ml = MathLinkFactory.createKernelLink(args)
-      ml.connect()
-      ml.discardAnswer()
+      ml.synchronized {
+        ml.connect()
+        ml.discardAnswer()
         //@todo How to gracefully shutdown an unsuccessfully initialized math link again without causing follow-up problems?
         //@note print warnings for license issues instead of shutting down immediately
         isActivated match {
@@ -135,9 +136,10 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
             case None => logger.warn("WARNING: Unable to determine state of Mathematica, Mathematica may not be working.\n Restart KeYmaera X if you experience problems using arithmetic tactics."); true
           }
           case Some(false) => logger.warn("WARNING: Mathematica seems not activated or Mathematica license might be expired, Mathematica may not be working.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n If you experience problems during proofs, please renew your Mathematica license and restart KeYmaera X."); true
-            //throw new IllegalStateException("Mathematica is not activated or Mathematica license is expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please renew your Mathematica license and restart KeYmaera X.")
+          //throw new IllegalStateException("Mathematica is not activated or Mathematica license is expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please renew your Mathematica license and restart KeYmaera X.")
           case None => logger.warn("WARNING: Mathematica may not be activated or Mathematica license might be expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please check your Mathematica license manually."); true
         }
+      }
     } catch {
       case e: UnsatisfiedLinkError =>
         logger.error("Shutting down since Mathematica J/Link native library was not found in:\n" + jlinkLibDir +
@@ -269,7 +271,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
             cancel()
             executor.remove(taskId, force = true)
             logger.debug("Initiated aborting Mathematica " + checkErrorMsgCmd)
-            throw new MathematicaComputationAbortedException(checkErrorMsgCmd.toString)
+            throw new MathematicaComputationExternalAbortException(checkErrorMsgCmd.toString)
         }
       } finally {
         //@note dispose in finally instead of after getAnswer, because interrupting thread externally aborts the scheduled task without dispose
@@ -283,7 +285,9 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
   /** Send command `cmd` for evaluation to Mathematica kernel straight away */
   private def dispatch(cmd: String): Unit = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
-    ml.evaluate(cmd)
+    ml.synchronized {
+      ml.evaluate(cmd)
+    }
   }
 
   /**

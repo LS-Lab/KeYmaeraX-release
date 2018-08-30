@@ -11,7 +11,10 @@ case class ToolException(msg: String, cause: Throwable = null) extends ProverExc
 
 class ConversionException(s: String) extends Exception(s)
 class MathematicaComputationFailedException(msg: String) extends ConversionException(msg)
+/** Internal abort of computations (e.g., by TimeConstrained). */
 class MathematicaComputationAbortedException(msg: String) extends ConversionException(msg)
+/** Externally triggered abort (e.g., by stopping from the UI). */
+class MathematicaComputationExternalAbortException(msg: String) extends ConversionException(msg)
 
 class SMTConversionException(s: String) extends ConversionException(s)
 class SMTQeException(s: String) extends Exception(s)

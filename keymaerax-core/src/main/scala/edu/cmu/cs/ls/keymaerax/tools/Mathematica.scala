@@ -90,7 +90,11 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
           case _: MathematicaComputationAbortedException =>
             mQE.timeout = qeMaxTimeout
             mQE.qeEvidence(formula)
+          case ex: MathematicaComputationExternalAbortException =>
+            //@note external abort means do not try any further
+            throw ex
         }
+      case ex: MathematicaComputationExternalAbortException => throw ex
     }
   }
 
