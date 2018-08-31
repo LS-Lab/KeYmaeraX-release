@@ -16,8 +16,9 @@ import edu.cmu.cs.ls.keymaerax.core.ProverException
 class BelleFriendlyUserMessage(message: String) extends Exception
 
 /** Common exception type for all Bellerophon tactic exceptions. */
-class BelleThrowable(message: String, cause: Throwable = null)
-  extends ProverException(s"[Bellerophon Runtime] ${message.stripPrefix("[Bellerophon Runtime] ")}", if (cause != null) cause else new Throwable(message)) {
+class BelleThrowable(message: => String, cause: Throwable = null) extends ProverException("", cause) {
+  /* @note do not pass on message (constructing Bellerophon messages tends to be expensive, so construct on demand only) */
+
   /* @note mutable state for gathering the logical context that led to this exception */
   private var tacticContext: BelleExpr = BelleDot  //@todo BelleUnknown?
   def context: BelleExpr = tacticContext
@@ -26,7 +27,8 @@ class BelleThrowable(message: String, cause: Throwable = null)
     super.inContext(context.prettyString, additionalMessage)
     this
   }
-  override def toString: String = super.toString + "\nin " + tacticContext
+  override def toString: String = s"[Bellerophon Runtime] ${message.stripPrefix("[Bellerophon Runtime] ")}" + "\n" +
+    super.toString + "\nin " + tacticContext
 }
 
 /** Syntactic and semantic errors in bellerophon tactics, such as forgetting to provide an expected position.
@@ -45,7 +47,7 @@ case class BelleUnsupportedFailure(message: String, cause: Throwable = null) ext
 /** Raised when a tactic decides that all further tactical work on a goal is useless and bellerophon should immediately stop
   * @param status signaling the status of the goal such as Counterexample, Valid
   * @param message readable description of the issue */
-class BelleAbort(status: String, message: String, cause: Throwable = null) extends BelleThrowable(message, cause)
+class BelleAbort(status: => String, message: => String, cause: Throwable = null) extends BelleThrowable(message, cause)
 
 case class UnificationException(e1: String, e2: String, info: String = "")
   extends BelleThrowable("Un-Unifiable: " + e1 + "\nfor:          " + e2 + "\n" + info) {}
