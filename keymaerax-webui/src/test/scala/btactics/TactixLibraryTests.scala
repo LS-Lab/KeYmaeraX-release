@@ -331,7 +331,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
       result.subgoals.loneElement shouldBe "==> [{x'=1}]x>0".asSequent
     }
 
-    i shouldBe 1
+    i shouldBe 2 /* decomposeToODE calls ODE, and so is master after decomposeToODE is done */
   }
 
   it should "exhaustively apply propositional" in {
@@ -381,5 +381,61 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
       debug("use") & QE(),
       debug("step") & assignd(1) & QE()
       ))
+  }
+
+  "Master" should "not split unnecessarily early" in withMathematica { _ =>
+    val fml = """
+                |  /* INITIAL CONDITIONS */
+                |  (velCtrl >= 0 & velLead >= 0 & A > 0 & B > 0 & T > 0 & posCtrl <= posLead &
+                |  /* The car has to be safe in the 'worst case' where the lead car brakes to a
+                |     stop. This means that we must be able to brake to a stop as before we
+                |     reach the lead car's final position */
+                |  posCtrl + velCtrl^2/(2*B) <= posLead + velLead^2 /(2*B))
+                |  ->
+                |  [
+                |    {
+                |      /* CONTROL */
+                |      {
+                |        /* We only allow accelerations where after accelerating for time
+                |           T, we are still safe (by the above definition).
+                |           Note that the lead car might already start braking to a stop in this
+                |           scenario.
+                |           Therefore, our final position after 1 acceleration cycle then
+                |           braking to a stop must be <= the lead car's final position if it
+                |           brakes to a stop right now.
+                |           {a:=A; ? a>=0 & a <= A &
+                |            (posCtrl + velCtrl * T + a/2 * T^2) + (velCtrl+a*T)^2/(2*B) <=
+                |            (posLead + velLead^2/(2*B)); accCtrl:=a;}
+                |        */
+                |        {
+                |          {?((posCtrl + velCtrl * T + A/2 * T^2) + (velCtrl+A*T)^2/(2*B) <=
+                |            (posLead + velLead^2/(2*B))); accCtrl:=A;}
+                |          ++
+                |          {if (velCtrl = 0) {accCtrl:=0;} else {accCtrl := -B;}}
+                |        }
+                |        {
+                |          accLead := A;
+                |          ++
+                |          {if (velLead = 0) {accLead:=0;} else {accLead := -B;}}
+                |        }
+                |      }
+                |      /* CONTINUOUS DYNAMICS */
+                |      t := 0;
+                |      {
+                |        { posLead' = velLead, velLead' = accLead,
+                |          posCtrl' = velCtrl, velCtrl' = accCtrl , t' = 1 &
+                |          (velCtrl >= 0 & velLead >= 0 & t <= T)
+                |        } /* evolution domain and event-trigger */
+                |      }
+                |    }*@invariant(
+                |      posCtrl <= posLead &
+                |      posCtrl + velCtrl^2/(2*B) <= posLead + velLead^2 /(2*B) &
+                |      velLead >= 0 & velCtrl >= 0)
+                |  ]
+                |  (posCtrl <= posLead) /* safety condition */""".stripMargin.asFormula
+
+    failAfter(3 minutes) {
+      proveBy(fml, master()) shouldBe 'proved
+    }
   }
 }
