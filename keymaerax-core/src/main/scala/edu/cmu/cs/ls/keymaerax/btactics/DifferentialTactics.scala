@@ -736,14 +736,13 @@ private object DifferentialTactics extends Logging {
     case Some(Box(ODESystem(ode, q), _)) =>
       val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
       val qAtoms = FormulaTools.conjuncts(q).toSet
-      proveWithoutCuts(false)(pos) |
-      (solve(pos) & DebuggingTactics.print("Solved") & ?(DebuggingTactics.print("Solved End") & allR(pos) & implyR(pos)*2 & allL(Variable("s_"), Variable("t_"))('Llast) & timeoutQE & DebuggingTactics.print("Solved End done") & done | DebuggingTactics.print("Solved QE") & timeoutQE & DebuggingTactics.print("Solved QE done") & done)) |
-      ODE(useOdeInvariant=false, introduceStuttering=true,
+
+      lazy val recurseODE = ODE(useOdeInvariant = false, introduceStuttering = true,
         //@note abort if unchanged
         assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) match {
           case Some(Box(ODESystem(extendedOde, extendedQ), _)) =>
             odeAtoms.subsetOf(DifferentialHelper.atomicOdes(extendedOde).toSet) ||
-            qAtoms.subsetOf(FormulaTools.conjuncts(extendedQ).toSet)
+              qAtoms.subsetOf(FormulaTools.conjuncts(extendedQ).toSet)
           case _ => false
         }, failureMessage)(pos) &
           ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
@@ -751,8 +750,19 @@ private object DifferentialTactics extends Logging {
               if (q == True && extendedQ != True) useAt("true&")(ppos ++
                 PosInExpr(1 +: FormulaTools.posOf(extendedQ, q).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
               else skip
-          }))(pos ++ PosInExpr(0::Nil))
-    )(pos)
+          })) (pos ++ PosInExpr(0 :: Nil))
+      )(pos)
+
+      if (pos.isTopLevel) {
+        proveWithoutCuts(false)(pos) |
+        solve(pos) |
+        recurseODE
+      } else {
+        //@note diffInd in context won't fail even if unprovable in the end; try solve first to support the usual examples
+        solve(pos) |
+        proveWithoutCuts(false)(pos) |
+        recurseODE
+      }
   })
 
   /** Compatibility ODE invariance tactics prior to [[DifferentialTactics.odeInvariant]] */
