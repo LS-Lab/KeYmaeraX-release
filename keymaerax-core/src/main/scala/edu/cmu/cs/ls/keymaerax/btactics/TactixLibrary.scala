@@ -196,13 +196,39 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       }
     })
 
+    lazy val endODEHeuristic: BelleExpr = "ANON" by ((seq: Sequent) => {
+      val succInstantiators = seq.succ.indices.map(SuccPosition.base0(_)).flatMap(pos => {
+        Idioms.mapSubpositions(pos, seq, {
+          case (Forall(BaseVariable("t_", None, Real)::Nil, Imply(
+                  GreaterEqual(BaseVariable("t_", None, Real), _),
+                  Imply(Forall(BaseVariable("s_", None, Real)::Nil, Imply(And(
+                    LessEqual(_, BaseVariable("s_", None, Real)),
+                    LessEqual(BaseVariable("s_", None, Real), BaseVariable("t_", None, Real))), _)), _))), pp: Position) =>
+            Some(allR(pp) & implyR(pp)*2 & allL(Variable("s_"), Variable("t_"))('Llast) & auto & done)
+          case _ => None
+        })
+      })
+
+      val anteInstantiators = seq.ante.indices.map(AntePosition.base0(_)).flatMap(pos => {
+        Idioms.mapSubpositions(pos, seq, {
+          case (Forall(BaseVariable("s_", None, Real)::Nil, Imply(And(
+                  LessEqual(_, BaseVariable("s_", None, Real)),
+                  LessEqual(BaseVariable("s_", None, Real), BaseVariable("t_", None, Real))), _)), pp: Position) =>
+            Some(allL(Variable("s_"), Variable("t_"))(pp) & auto & done)
+          case _ => None
+        })
+      })
+
+      (succInstantiators ++ anteInstantiators).reduce[BelleExpr](_ & _)
+    })
+
     onAll(decomposeToODE) &
     onAll(done | close |
       SaturateTactic(onAll(tacticChase(autoTacticIndex)(notL, andL, notR, implyR, orR, allR,
         TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
         implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
         andR, equivR, loop, odeR, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
-        onAll(SaturateTactic(exhaustiveEqL2R('L)) & ?(QE & (if (keepQEFalse) nil else done))))
+        onAll(SaturateTactic(exhaustiveEqL2R('L)) & (endODEHeuristic | ?(QE & (if (keepQEFalse) nil else done)))))
   }
 
   /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
@@ -210,10 +236,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[auto]] */
   def master(gen: Generator[Formula] = InvariantGenerator.defaultInvariantGenerator,
              keepQEFalse: Boolean=true): BelleExpr = "master" by {
-    def endODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
-      ODE(pos) & ?(allR(pos) & implyR(pos)*2 & allL(Variable("s_"), Variable("t_"))('Llast) & auto & done)
-    })
-    master(loopauto(gen), endODE, keepQEFalse)
+    master(loopauto(gen), ODE, keepQEFalse)
   }
 
   /** auto: automatically try hard to prove the current goal if that succeeds.
