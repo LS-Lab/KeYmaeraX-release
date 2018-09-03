@@ -39,9 +39,28 @@ object Main {
       val java : String = javaLocation
       val keymaeraxjar : String = jarLocation
       println("Restarting KeYmaera X with sufficient stack space")
-      val cmd = (java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
-        (if (args.isEmpty) "-ui" :: Nil else Nil)
-      runCmd(cmd)
+
+      val javaVersion = System.getProperty("java.version")
+      val javaMajorMinor :: updateVersion :: Nil =
+        if (javaVersion.contains("_")) javaVersion.split("_").toList
+        else javaVersion :: "-1" :: Nil
+      val _ :: javaMajor :: javaMinor :: Nil =
+        if (javaMajorMinor.startsWith("1.")) javaMajorMinor.split("\\.").toList
+        else "1" +: javaMajorMinor.split("\\.").toList.dropRight(1) //@note Java 10 onwards (drop update version)
+
+      if (Integer.parseInt(javaMajor) < 8 || (Integer.parseInt(javaMajor) == 8 && Integer.parseInt(javaMinor) == 0 && Integer.parseInt(updateVersion) < 111)) {
+        println(s"KeYmaera X requires at least Java version 1.8.0_111, but was started with $javaVersion. Please update Java and restart KeYmaera X.")
+      } else {
+        val cmd =
+          if (Integer.parseInt(javaMajor) <= 8) {
+            (java :: "-Xss20M" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
+              (if (args.isEmpty) "-ui" :: Nil else Nil)
+          } else {
+            (java :: "-Xss20M" :: "--add-modules" :: "java.xml.bind" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
+              (if (args.isEmpty) "-ui" :: Nil else Nil)
+          }
+        runCmd(cmd)
+      }
     } else if (args.contains("-ui")) {
       if (!(System.getenv().containsKey("HyDRA_SSL") && System.getenv("HyDRA_SSL").equals("on"))) {
         // Initialize the loading dialog splash screen.
