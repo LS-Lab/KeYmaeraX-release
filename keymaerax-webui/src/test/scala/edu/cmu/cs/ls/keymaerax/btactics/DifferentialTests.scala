@@ -1492,15 +1492,4 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     pr.subgoals.loneElement shouldBe
       "==>  a < 0, [{x'=1&((d = 0 & c > 0 | a < 0 & (a >0 & b>0) & c>0) & (b<0 & (f()>0 | b>=0)))}]f()>1".asSequent
   }
-
-  "Equil" should "prove a symbolic equilibirum without vectorial ghosts" in withMathematica { _ =>
-    val fml = "x=0&y=0&z=1 -> [{x'=y*x+x^2*y+z-1,y'=x+y+(z-1),z'=z-1}](x=0&y=0&z=1)".asFormula
-    val pr = proveBy(fml,implyR(1) & dC("x^2+y^2+(z-1)^2<=0".asFormula)(1)<(
-      dW(1) & QE,
-      DifferentialTactics.dgDbx("2*9*max(1,max(x^2,abs(y)))".asTerm)(1)
-    ))
-    println(pr)
-    pr shouldBe 'proved
-  }
-
 }
