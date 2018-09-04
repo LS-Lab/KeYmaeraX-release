@@ -615,7 +615,8 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
               result: function() { return response.data.result; },
               origFormula: function() { return response.data.origFormula; },
               cexFormula: function() { return response.data.cexFormula; },
-              cexValues: function() { return response.data.cexValues; }
+              cexValues: function() { return response.data.cexValues; },
+              speculatedValues: function() { return response.data.speculatedValues; }
             }
           });
         })

@@ -9,13 +9,25 @@
         <div class="panel-body"><span ng-bind-html="cexFormula"></span></div>
     </div>
 
-    <div class="panel panel-default">
+    <div class="panel panel-default" ng-if="cexValues.length > 0">
         <div class="panel-heading">
             <h4 class="panel-title">Counter-example values</h4>
         </div>
         <div class="panel-body">
             <dl class="dl-horizontal">
                 <dt ng-repeat-start="cex in cexValues">{{cex.symbol}}</dt>
+                <dd ng-repeat-end>{{cex.value}}</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="panel panel-default" ng-if="speculatedValues.length > 0">
+        <div class="panel-heading">
+            <h4 class="panel-title">Speculated values for quantified variables</h4>
+        </div>
+        <div class="panel-body">
+            <dl class="dl-horizontal">
+                <dt ng-repeat-start="cex in speculatedValues">{{cex.symbol}}</dt>
                 <dd ng-repeat-end>{{cex.value}}</dd>
             </dl>
         </div>

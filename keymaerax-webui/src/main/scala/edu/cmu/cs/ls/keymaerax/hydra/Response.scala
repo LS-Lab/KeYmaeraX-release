@@ -941,17 +941,27 @@ class PruneBelowResponse(item:AgendaItem) extends Response {
 }
 
 class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSymbol, Expression] = Map()) extends Response {
-  def getJson = JsObject(
-    "result" -> JsString(kind),
-    "origFormula" -> JsString(fml.prettyString),
-    "cexFormula" -> JsString(createCexFormula(fml, cex)),
-    "cexValues" -> JsArray(
-      cex.map(e => JsObject(
-        "symbol" -> JsString(e._1.prettyString),
-        "value" -> JsString(e._2.prettyString))
-      ).toList:_*
+  def getJson: JsObject = {
+    val bv = StaticSemantics.boundVars(fml).toSet[NamedSymbol]
+    val (boundCex, freeCex) = cex.partition(e => bv.contains(e._1))
+    JsObject(
+      "result" -> JsString(kind),
+      "origFormula" -> JsString(fml.prettyString),
+      "cexFormula" -> JsString(createCexFormula(fml, cex)),
+      "cexValues" -> JsArray(
+        freeCex.map(e => JsObject(
+          "symbol" -> JsString(e._1.prettyString),
+          "value" -> JsString(e._2.prettyString))
+        ).toList:_*
+      ),
+      "speculatedValues" -> JsArray(
+        boundCex.map(e => JsObject(
+          "symbol" -> JsString(e._1.prettyString),
+          "value" -> JsString(e._2.prettyString))
+        ).toList:_*
+      )
     )
-  )
+  }
 
   private def createCexFormula(fml: Formula, cex: Map[NamedSymbol, Expression]): String = {
     def replaceWithCexVals(fml: Formula, cex: Map[NamedSymbol, Expression]): Formula = {
