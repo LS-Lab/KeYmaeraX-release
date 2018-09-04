@@ -27,8 +27,10 @@ class BelleThrowable(message: => String, cause: Throwable = null) extends Prover
     super.inContext(context.prettyString, additionalMessage)
     this
   }
-  override def toString: String = s"[Bellerophon Runtime] ${message.stripPrefix("[Bellerophon Runtime] ")}" + "\n" +
-    super.toString + "\nin " + tacticContext
+
+  override def getMessage: String = s"[Bellerophon Runtime] ${message.stripPrefix("[Bellerophon Runtime] ")}"
+
+  override def toString: String = getMessage() + "\n" + super.toString + "\nin " + tacticContext
 }
 
 /** Syntactic and semantic errors in bellerophon tactics, such as forgetting to provide an expected position.
