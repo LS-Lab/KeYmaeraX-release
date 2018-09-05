@@ -116,7 +116,7 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
-  "Custom tactic execution" should "expand tactic definitions" in withDatabase { db =>
+  "Custom tactic execution" should "expand tactic definitions" in withDatabase { db => withMathematica { _ =>
     val modelContents = "ProgramVariables. R x. End. Problem. x>=2 -> [{x:=x+1;}*]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
@@ -129,9 +129,9 @@ class ScriptedRequestTests extends TacticTestBase {
         root should have ('goal (Some("==> x>=2 -> [{x:=x+1;}*]x>=0".asSequent)))
         l1 should have ('goal (Some("x>=2 ==> [{x:=x+1;}*]x>=0".asSequent)))
     }
-  }
+  }}
 
-  "Step misapplication" should "give a useful error message on non-existing sequent top-level position" in withDatabase { db =>
+  "Step misapplication" should "give a useful error message on non-existing sequent top-level position" in withDatabase { db => withMathematica { _ =>
     val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> [x:=x+1;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
@@ -146,7 +146,7 @@ class ScriptedRequestTests extends TacticTestBase {
       case AgendaAwesomeResponse(_, _, leaves, _, _) =>
         leaves.loneElement should have ('goal (Some("==> x>=0 -> [x:=x+1;]x>=0".asSequent)))
     }
-  }
+  }}
 
   it should "report a readable error message when useAt tactic fails unification match" in withDatabase { db => withMathematica { _ =>
     val modelContents = "ProgramVariables. R x. R v. End. Problem. x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0 End."
@@ -200,7 +200,7 @@ class ScriptedRequestTests extends TacticTestBase {
     }
   }}
 
-  "Step details" should "work on a simple example" in withDatabase { db =>
+  "Step details" should "work on a simple example" in withDatabase { db => withMathematica { _ =>
     val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> [x:=x+1;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
@@ -213,9 +213,9 @@ class ScriptedRequestTests extends TacticTestBase {
         parentTactic shouldBe "implyR"
         stepsTactic shouldBe ""
     }
-  }
+  }}
 
-  it should "expand prop" in withDatabase { db =>
+  it should "expand prop" in withDatabase { db => withMathematica { _ =>
     val modelContents = "ProgramVariables. R x. R y. End. Problem. x>=0&y>0 -> [x:=x+y;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
@@ -228,7 +228,7 @@ class ScriptedRequestTests extends TacticTestBase {
         parentTactic shouldBe "prop"
         stepsTactic shouldBe "implyR(1) ; andL(-1)"
     }
-  }
+  }}
 
   it should "expand master" in withMathematica { _ => withDatabase { db =>
     val modelContents = "ProgramVariables. R x. R y. End. Problem. x>=0&y>0 -> [x:=x+y;]x>=0 End."
@@ -241,7 +241,7 @@ class ScriptedRequestTests extends TacticTestBase {
     inside(new ProofTaskExpandRequest(db.db, db.user.userName, proofId.toString, "()").getResultingResponses(t).loneElement) {
       case ExpandTacticResponse(_, parentTactic, stepsTactic, _, _) =>
         parentTactic shouldBe "master"
-        stepsTactic shouldBe "implyR(1) ; andL(-1) ; step(1) ; QE"
+        stepsTactic shouldBe "implyR('R) ; andL('L) ; step(1) ; QE"
     }
   }}
 
