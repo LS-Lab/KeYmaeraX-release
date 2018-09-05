@@ -404,7 +404,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
               (inv: Formula) => loop(inv)(pos) & onAll(auto) & done
             )
       }
-    case _ => skip
+    case _ => throw BelleTacticFailure("Loopauto is applicable to nondeterministic repetition only")
   })
 
   /** loopSR: cleverly prove a property of a loop automatically by induction, trying hard to generate loop invariants.
