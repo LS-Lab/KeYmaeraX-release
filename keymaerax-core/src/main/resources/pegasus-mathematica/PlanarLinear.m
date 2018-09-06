@@ -5,6 +5,7 @@
 
 
 Needs["FirstIntegralGen`",NotebookDirectory[]<>"FirstIntegralGen.m"] 
+Needs["Linear`",NotebookDirectory[]<>"Linear.m"] 
 
 
 BeginPackage[ "PlanarLinear`"]
@@ -16,10 +17,7 @@ LyapunovIdentity::usage="LyapunovIdentity[problem_List]"
 LyapunovRand::usage="LyapunovRand[problem_List]"
 
 
-Begin["`Private`"]
-
-
-(* Upper rational bound of a number *)
+(* Upper rational bound of a number
 UpperRat[x_?NumericQ]:=Module[{precision=10},
 uncertainty=Abs[x]*10^-precision;
 Rationalize[N[x,precision]+uncertainty, uncertainty]
@@ -28,7 +26,10 @@ Rationalize[N[x,precision]+uncertainty, uncertainty]
 LowerRat[x_?NumericQ]:=Module[{precision=10},
 uncertainty=Abs[x]*10^-precision;
 Rationalize[N[x,precision]-uncertainty, uncertainty]
-]
+] *)
+
+
+Begin["`Private`"]
 
 
 PlanarLinearClass[M_?MatrixQ]:=Module[{

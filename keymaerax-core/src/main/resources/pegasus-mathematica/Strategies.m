@@ -1,10 +1,11 @@
 (* ::Package:: *)
 
-Needs["Methods`",NotebookDirectory[]<>"Methods.m"] (* Load invariant generation methods package from current directory *)
 Needs["Classifier`",NotebookDirectory[]<>"Classifier.m"] (* Load classifier package from current directory *)
+Needs["QualitativeMethods`",NotebookDirectory[]<>"QualitativeMethods.m"] (* Load qualitative analysis-based invariant generation methods package from current directory *)
 Needs["AbstractionPolynomials`",NotebookDirectory[]<>"AbstractionPolynomials.m"] (* Polynomial sources for qualitative abstraction *)
 Needs["PlanarLinear`",NotebookDirectory[]<>"PlanarLinear.m"]  (* Planar linear system analysis package *)
 Needs["Linear`",NotebookDirectory[]<>"Linear.m"] (* Linear system analysis package *)
+Needs["FirstIntegralMethod`",NotebookDirectory[]<>"FirstIntegralMethod.m"] (* First integral generation and qualitative abstraction package *)
 Needs["MultiLinear`",NotebookDirectory[]<>"MultiLinear.m"] (* Linear system analysis package *)
 
 
@@ -46,7 +47,7 @@ Resolve[Exists[{PROJECTIONLAMBDA},proj&&PROJECTIONLAMBDA>=0],Reals]
 ]
 
 
-ConstantStrat[problem_List]:=Catch[Module[{inv,invs},
+ConstantStrat[problem_List]:=Catch[Module[{inv,invs,pre,f,vars,evoConst,post},
 (* Pattern match fields in the problem *)
 { pre, { f, vars, evoConst }, post } = problem;
 Print["CONSTANT STRATEGY"];
@@ -57,7 +58,7 @@ Throw[{inv}]
 ]]
 
 
-PlanarLinearStrat[problem_List]:=Catch[Module[{inv,invs},
+PlanarLinearStrat[problem_List]:=Catch[Module[{inv,invs,pre,f,vars,evoConst,post},
 (* Pattern match fields in the problem *)
 { pre, { f, vars, evoConst }, post } = problem;
 Print["PLANAR LINEAR STRATEGY"];
@@ -72,14 +73,14 @@ inv=If[Length[invs]>1, Throw[{Apply[Or, Map[First[#]&,invs]]}], Throw[invs]]
 ]]
 
 
-GeneralLinearStrat[problem_List]:=Catch[Module[{inv,invs},
+GeneralLinearStrat[problem_List]:=Catch[Module[{inv,invs,pre,f,vars,evoConst,post},
 (* Pattern match fields in the problem *)
 { pre, { f, vars, evoConst }, post } = problem;
 Print["GENERAL LINEAR STRATEGY"];
 Print["Trying first integrals first"];
-FIs=Linear`FirstIntegralMethod[pre, post, { f, vars, evoConst }, RationalsOnly->True, RationalPrecision->3];
+FIs=FirstIntegralMethod`FirstIntegralMethod[problem, RationalsOnly->True, RationalPrecision->3];
 If[Length[FIs]>0,
-{fiInv, cuts}= Methods`DWC[pre, post, { f, vars, evoConst }, FIs, {}];
+{fiInv, cuts}= QualitativeMethods`DWC[pre, post, { f, vars, evoConst }, FIs, {}];
 If[CheckSemiAlgInclusion[fiInv,post,vars], 
 Throw[cuts],
 Print["First integrals didn't do it. Proceeding to other qualitative methods."]
@@ -97,9 +98,9 @@ MultiLinearStrat[problem_List]:=Catch[Module[{inv,invs},
 { pre, { f, vars, evoConst }, post } = problem;
 Print["MULTI-LINEAR STRATEGY"];
 Print["Trying first integrals first"];
-FIs=Linear`FirstIntegralMethod[pre, post, { f, vars, evoConst }, RationalsOnly->True, RationalPrecision->3];
+FIs=FirstIntegralMethod[problem, RationalsOnly->True, RationalPrecision->3];
 If[Length[FIs]>0,
-{fiInv, cuts}= Methods`DWC[pre, post, { f, vars, evoConst }, FIs, {}];
+{fiInv, cuts}= QualitativeMethods`DWC[pre, post, { f, vars, evoConst }, FIs, {}];
 If[CheckSemiAlgInclusion[fiInv,post,vars], 
 Throw[cuts],
 Print["First integrals didn't do it. Proceeding to other qualitative methods."]
@@ -117,10 +118,10 @@ Print["BASIC QUALITATIVE STRATEGY (DWC)"];
 FIs={};
 (*Print["Trying first integrals first"];
 FIs=TimeConstrained[ (* Using a 5 second timeout *)
-Linear`FirstIntegralMethod[pre, post, { f, vars, evoConst }, RationalsOnly->True, RationalPrecision->3],
+FirstIntegralMethod[problem, RationalsOnly->True, RationalPrecision->3],
 5, {}];
 If[Length[FIs]>0,
-{fiInv,cuts}= Methods`DWC[pre, post, { f, vars, evoConst }, FIs, {}];
+{fiInv,cuts}= QualitativeMethods`DWC[pre, post, { f, vars, evoConst }, FIs, {}];
 If[CheckSemiAlgInclusion[fiInv,post,vars], 
 Throw[cuts],
 Print["First integrals didn't do it. Proceeding to other qualitative methods."]
@@ -152,9 +153,9 @@ Print["EXTENDED QUALITATIVE STRATEGY (DWCL i.e. full abstraction)"];
 
 fiInv=True;
 Print["Trying first integrals first"];
-FIs=Linear`FirstIntegralMethod[pre, post, { f, vars, evoConst }, RationalsOnly->True, RationalPrecision->3];
+FIs=FirstIntegralMethod[problem, RationalsOnly->True, RationalPrecision->3];
 If[Length[FIs]>0,
-{fiInv,cuts}= Methods`DWC[pre, post, { f, vars, evoConst }, FIs, {}];
+{fiInv,cuts}= QualitativeMethods`DWC[pre, post, { f, vars, evoConst }, FIs, {}];
 If[CheckSemiAlgInclusion[fiInv,post,vars], 
 Throw[cuts],
 Print["First integrals didn't do it. Proceeding to other qualitative methods."]
@@ -162,7 +163,7 @@ Print["First integrals didn't do it. Proceeding to other qualitative methods."]
 
 (* Postcondition and right-hand side factors *)
 abstraction=AbstractionPolynomials`PostRHSFactors[problem];
-inv=Methods`DWCLZR[pre, post, {f,vars,evoConst}, abstraction];
+inv=QualitativeMethods`DWCLZR[pre, post, {f,vars,evoConst}, abstraction];
 Throw[{inv}]
 ]]
 
@@ -216,22 +217,22 @@ If[ Not[TrueQ[preImpliesPost]],
 Print["Precondition does not imply postcondition! Nothing to do."]; Throw[{{False}, False}], 
 Print["Precondition implies postcondition. Proceeding."]];
 
-postInvariant=Methods`InvS[post, f, vars, evoConst];
+postInvariant=LZZ`InvS[post, f, vars, evoConst];
 If[ TrueQ[postInvariant], 
 Print["Postcondition is an invariant! Nothing to do."]; Throw[{{PreProcess[post]},True}], 
 Print["Postcondition is not an invariant. Proceeding."]];
 
-preInvariant=Methods`InvS[pre, f, vars, evoConst];
+preInvariant=LZZ`InvS[pre, f, vars, evoConst];
 If[ TrueQ[preInvariant], 
 Print["Precondition is an invariant! Nothing to do."]; Throw[{{PreProcess[pre]}, True}], 
-Print["Pretcondition is not an invariant. Proceeding."]];
+Print["Precondition is not an invariant. Proceeding."]];
 
 (* Determine strategies depending on problem classification by pattern matching on {dimension, classes} *)
 class=Classifier`ClassifyProblem[problem];
 strat = class/.{
 {1,CLASSES_List}-> OneDimStrat, 
 {dim_,{"Constant"}}-> ConstantStrat, 
-{2,{"Linear"}}-> PlanarLinearStrat, 
+{2,{"Linear"}}-> GeneralLinearStrat, 
 {dim_,{"Linear"}}-> GeneralLinearStrat, 
 {dim_,{"Multi-affine"}}-> MultiLinearStrat, 
 {dim_, CLASSES_List}-> QualitativeBasic
@@ -245,7 +246,7 @@ inv=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
 (* Return the invariant without strict inequalities - KeYmaera has trouble with mixed formulas *)
 inv=inv/.{Unequal[a_,b_]-> True};
 andinv=Apply[And,inv];
-relaxedInv=Methods`InvS[andinv, f, vars, evoConst];
+relaxedInv=LZZ`InvS[andinv, f, vars, evoConst];
 If[ TrueQ[relaxedInv], 
 Print["Relaxed invariant is still ok. Proceeding"], 
 Print["Relaxed invariant is no longer invariant. Sorry."];Throw[{{True},False}]];
@@ -261,27 +262,27 @@ RunMethod[methodID_String, problem_List, hintPolynomials_List]:=Module[{
  precond=problem[[1]], system=problem[[2]], postcond=problem[[3]]
 },
 Switch[methodID,
-(* Methods for one-dimensional systems *)
-"OneDimPotential", Methods`OneDimPotential[problem],
-"OneDimReach", Methods`OneDimReach[problem],
+(* QualitativeMethods for one-dimensional systems *)
+"OneDimPotential", OneDimensional`OneDimPotential[problem],
+"OneDimReach", OneDimensional`OneDimReach[problem],
 
 (* Planar constant systems *)
-"PlanarConstant", Methods`DWC[precond, postcond, system, Linear`PlanarConstantMethod[precond, postcond, system, RationalsOnly->True, RationalPrecision->3], {}],
+"PlanarConstant", QualitativeMethods`DWC[precond, postcond, system, Linear`PlanarConstantMethod[precond, postcond, system, RationalsOnly->False, RationalPrecision->3], {}],
 
-(*"PlanarLinear", Methods`DWC[precond, postcond, system, PlanarLinear`PlanarLinearMethod[precond, postcond, system]],*)
-"Linear", Methods`DWC[precond, postcond, system, Linear`LinearMethod[precond, postcond, system, RationalsOnly->True, RationalPrecision->3], {}],
-"Multi-Linear", Methods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSFactors[problem]], {}],
+(*"PlanarLinear", QualitativeMethods`DWC[precond, postcond, system, PlanarLinear`PlanarLinearMethod[precond, postcond, system]],*)
+"Linear", QualitativeMethods`DWC[precond, postcond, system, Linear`LinearMethod[precond, postcond, system, RationalsOnly->False, RationalPrecision->3], {}],
+"Multi-Linear", QualitativeMethods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSFactors[problem]], {}],
 
-(*"PlanarLinearSmallest", Methods`DWC[precond, postcond, system, PlanarLinear`PlanarLinearMethod[precond, postcond, system], Smallest->False],*)
-"LinearSmallest", Methods`DWC[precond, postcond, system, Linear`LinearMethod[precond, postcond, system], {}, Smallest->True],
+(*"PlanarLinearSmallest", QualitativeMethods`DWC[precond, postcond, system, PlanarLinear`PlanarLinearMethod[precond, postcond, system], Smallest->False],*)
+"LinearSmallest", QualitativeMethods`DWC[precond, postcond, system, Linear`LinearMethod[precond, postcond, system], {}, Smallest->True],
 
-(* Methods for non-linear systems based on qualitative analysis and discrete abstraction *)
-"DWC-Factors-RHS", Methods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSFactors[problem]], {}],
-"DWC-Factors-RHS-Lie", Methods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSLieDFactors[problem]], {}],
-"DWC-Factors-RHS-Product", Methods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSProductFactors[problem]], {}],
-"DWC-Factors-RHS-Lie-Product", Methods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSLieDProductFactors[problem]], {}],
-"DWCL-Factors-RHS-Product", Methods`DWCLZR[precond, postcond,system,  AbstractionPolynomials`PostRHSFactors[problem]],
-"DWCL-Factors-RHS-Lie-Product", Methods`DWCLZR[precond, postcond, system, AbstractionPolynomials`PostRHSLieDFactors[problem]]
+(* QualitativeMethods for non-linear systems based on qualitative analysis and discrete abstraction *)
+"DWC-Factors-RHS", QualitativeMethods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSFactors[problem]], {}],
+"DWC-Factors-RHS-Lie", QualitativeMethods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSLieDFactors[problem]], {}],
+"DWC-Factors-RHS-Product", QualitativeMethods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSProductFactors[problem]], {}],
+"DWC-Factors-RHS-Lie-Product", QualitativeMethods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSLieDProductFactors[problem]], {}],
+"DWCL-Factors-RHS-Product", QualitativeMethods`DWCLZR[precond, postcond,system,  AbstractionPolynomials`PostRHSFactors[problem]],
+"DWCL-Factors-RHS-Lie-Product", QualitativeMethods`DWCLZR[precond, postcond, system, AbstractionPolynomials`PostRHSLieDFactors[problem]]
 ]
 ]
 

@@ -9,6 +9,7 @@ BeginPackage["Classifier`"];
 SystemDimension::"Return the size n of the system, or 0 if the system is malformed."
 ConstantSystemQ::"Check if the system of ODEs is constant"
 LinearSystemQ::"Check if the system of ODEs is linear"
+NilpotentSystemQ::"Check if the system of ODEs is nilpotent linear"
 AffineSystemQ::"Check if the system of ODEs is affine"
 MultiAffineSystemQ::"Check if the system of ODEs is multi-affine"
 PolynomialSystemQ::"Check if the system of ODEs is polynomial"
@@ -33,6 +34,15 @@ TrueQ[Grad[vectorField,vars].vars == zeroVector]
 
 LinearSystemQ[vectorField_List, vars_List]:=Module[{},
 TrueQ[Grad[vectorField,vars].vars == vectorField]
+]
+
+
+(* Check if the system matrix is nilpotent *)
+NilpotentSystemQ[vectorField_List, vars_List]:=Module[{M},
+If[LinearSystemQ[vectorField,vars], 
+M=Grad[vectorField,vars];
+TrueQ[First[Eigenvalues[M]//DeleteDuplicates]==0],
+False]
 ]
 
 
