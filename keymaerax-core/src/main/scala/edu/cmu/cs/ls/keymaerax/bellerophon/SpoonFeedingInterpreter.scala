@@ -163,6 +163,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           (BelleProvable(result), resultCtx.closeBranch())
         case _ => throw new BelleThrowable("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(tactic, "")
       }
+
       case OnAll(e) =>
         val provable = goal match {
           case BelleProvable(p, _) => p
@@ -270,12 +271,25 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
             result
           case BelleProvable(provable, labels) if provable.subgoals.nonEmpty =>
             if (ctx.onBranch >= 0) {
-              runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
-              runningInner(tactic, BelleProvable(provable.sub(0), labels)) match {
-                case BelleProvable(innerProvable, _) =>
-                  val result = (BelleProvable(provable(innerProvable, 0), labels), ctx.store(tactic))
-                  runningInner = null
-                  result
+              if (provable.subgoals.size > 1) tactic match {
+                case t: BuiltInTactic if t.name.startsWith("assert") | t.name.startsWith("print") |
+                  t.name.startsWith("debug") | t.name == "done" =>
+                  //@note for now: execute but do not store these no-op tactics
+                  runningInner = inner(Nil)
+                  runningInner(tactic, goal) match {
+                    case _: BelleProvable =>
+                      runningInner = null
+                      (goal, ctx)
+                  }
+                case _ => ???
+              } else {
+                runningInner = inner(listenerFactory(rootProofId)(tactic.prettyString, ctx.parentId, ctx.onBranch))
+                runningInner(tactic, BelleProvable(provable.sub(0), labels)) match {
+                  case BelleProvable(innerProvable, _) =>
+                    val result = (BelleProvable(provable(innerProvable, 0), labels), ctx.store(tactic))
+                    runningInner = null
+                    result
+                }
               }
             } else if (provable.subgoals.size == 1) {
               // adapt context to continue on the sole open subgoal (either nil or some other atom to follow up on)

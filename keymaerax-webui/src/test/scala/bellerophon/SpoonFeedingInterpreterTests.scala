@@ -2,7 +2,7 @@ package bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, TacticTestBase}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra._
@@ -855,7 +855,26 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     //@todo reprove
   }}
 
-  it should "should work for prop on a simple example" in withDatabase { db =>
+  it should "work with assertions/print/debug on multi-subgoal provables" in withDatabase { db =>
+    val problem = "x>=0|!x<0 -> x>=0"
+    val modelContent = s"Variables. R x. R y. End.\n\n Problem. $problem End."
+    val proofId = db.createProof(modelContent, "proof1")
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter, 1))
+    interpreter(implyR(1) & orL(-1) & DebuggingTactics.assertProvableSize(2) <(closeId, nil), BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(closeId, nil)")
+
+    val proofId2 = db.createProof(modelContent, "proof2")
+    registerInterpreter(SpoonFeedingInterpreter(proofId2, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter, 1, strict=false))(
+      prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
+
+    DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(closeId, notL(-1))")
+  }
+
+  it should "work for prop on a simple example" in withDatabase { db =>
     val problem = "x>=0 -> x>=0"
     val modelContent = s"Variables. R x. R y. End.\n\n Problem. $problem End."
     val proofId = db.createProof(modelContent, "proof1")
@@ -896,7 +915,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
 
     val tree = DbProofTree(db.db, proofId.toString)
     tree.tactic shouldBe BelleParser("implyR(1) ; closeId")
-    tree.locate("(2,0)") match { //@note master tries close as step 1, which fails
+    tree.locate("(3,0)") match { //@note master skips decomposeToODE, then tries close, and finally implyR
       case Some(node) => stepInto(node, "implyR(1)")(db.db)._2 shouldBe BelleParser("implyR(1)")
     }
   }}
@@ -927,6 +946,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       ExhaustiveSequentialInterpreter, 1, strict=false))
     interpreter(prop, BelleProvable(ProvableSig.startProof(problem.asFormula)))
 
+    //@todo unsupported by SpoonFeedingInterpreter: prop with tacticChase now results in orL(-1) ; <(...) ; onall(andR(1) ; <(...))
     DbProofTree(db.db, proofId.toString).tactic shouldBe BelleParser(
       """implyR(1) ; orL(-1) ; <(
         |  andR(1) ; <(
