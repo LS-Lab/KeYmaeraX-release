@@ -10,7 +10,6 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.Configuration
 import org.apache.logging.log4j.scala.Logging
 
 import scala.annotation.tailrec
@@ -32,7 +31,7 @@ object LemmaFileMode extends LexerMode
   * @author Andre Platzer
  */
 sealed abstract class Terminal(val img: String) {
-  override def toString = getClass.getSimpleName// + "\"" + img + "\""
+  override def toString: String = getClass.getSimpleName// + "\"" + img + "\""
   /**
    * @return The regex that identifies this token.
    */
@@ -42,29 +41,29 @@ sealed abstract class Terminal(val img: String) {
 }
 private abstract class OPERATOR(val opcode: String) extends Terminal(opcode) {
   //final def opcode: String = img
-  override def toString = getClass.getSimpleName //+ "\"" + img + "\""
+  override def toString: String = getClass.getSimpleName //+ "\"" + img + "\""
 }
 private case class IDENT(name: String, index: Option[Int] = None) extends Terminal(name + (index match {case Some(x) => "_"+x.toString case None => ""})) {
-  override def toString = "ID(\"" + (index match {
+  override def toString: String = "ID(\"" + (index match {
     case None => name
     case Some(idx) => name + "," + idx
   }) + "\")"
-  override def regexp = IDENT.regexp
+  override def regexp: Regex = IDENT.regexp
 }
 private object IDENT {
   //@note Pattern is more permissive than NamedSymbol's since Lexer's IDENT will include the index, so xy_95 is acceptable.
-  def regexp = """([a-zA-Z][a-zA-Z0-9]*\_?\_?[0-9]*)""".r
+  def regexp: Regex = """([a-zA-Z][a-zA-Z0-9]*\_?\_?[0-9]*)""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
 private case class NUMBER(value: String) extends Terminal(value) {
-  override def toString = "NUM(" + value + ")"
-  override def regexp = NUMBER.regexp
+  override def toString: String = "NUM(" + value + ")"
+  override def regexp: Regex = NUMBER.regexp
 }
 private object NUMBER {
   //A bit weird, but this gives the entire number in a single group.
   //def regexp = """(-?[0-9]+\.?[0-9]*)""".r
   //@NOTE Minus sign artificially excluded from the number to make sure x-5 lexes as IDENT("x"),MINUS,NUMBER("5") not as IDENT("x"),NUMBER("-5")
-  def regexp = """([0-9]+\.?[0-9]*)""".r
+  def regexp: Regex = """([0-9]+\.?[0-9]*)""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
 
@@ -72,44 +71,44 @@ private object NUMBER {
  * End Of Stream
  */
 object EOF extends Terminal("<EOF>") {
-  override def regexp = "$^".r //none.
+  override def regexp: Regex = "$^".r //none.
 }
 
 private object LPAREN  extends Terminal("(") {
-  override def regexp = """\(""".r
+  override def regexp: Regex = """\(""".r
 }
 private object RPAREN  extends Terminal(")") {
-  override def regexp = """\)""".r
+  override def regexp: Regex = """\)""".r
 }
 private object LBANANA  extends Terminal("(|") {
-  override def regexp = """\(\|""".r
+  override def regexp: Regex = """\(\|""".r
 }
 private object RBANANA  extends Terminal("|)") {
-  override def regexp = """\|\)""".r
+  override def regexp: Regex = """\|\)""".r
 }
 private object LBRACE  extends Terminal("{") {
-  override def regexp = """\{""".r
+  override def regexp: Regex = """\{""".r
 }
 private object RBRACE  extends Terminal("}") {
-  override def regexp = """\}""".r
+  override def regexp: Regex = """\}""".r
 }
 private object LBARB   extends Terminal("{|") {
-  override def regexp = """\{\|""".r
+  override def regexp: Regex = """\{\|""".r
 }
 private object RBARB   extends Terminal("|}") {
-  override def regexp = """\|\}""".r
+  override def regexp: Regex = """\|\}""".r
 }
 private object LBOX    extends Terminal("[") {
-  override def regexp = """\[""".r
+  override def regexp: Regex = """\[""".r
 }
 private object RBOX    extends Terminal("]") {
-  override def regexp = """\]""".r
+  override def regexp: Regex = """\]""".r
 }
 private object LDIA    extends OPERATOR("<") {
-  override def regexp = """\<""".r
+  override def regexp: Regex = """\<""".r
 }//@todo really operator or better not?
 private object RDIA    extends OPERATOR(">") {
-  override def regexp = """\>""".r
+  override def regexp: Regex = """\>""".r
 }
 
 private object PRG_DEF  extends OPERATOR("::=")
@@ -118,23 +117,23 @@ private object COMMA   extends OPERATOR(",")
 
 private object PRIME   extends OPERATOR("'")
 private object POWER   extends OPERATOR("^") {
-  override def regexp = """\^""".r
+  override def regexp: Regex = """\^""".r
 }
 private object STAR    extends OPERATOR("*") {
-  override def regexp = """\*""".r
+  override def regexp: Regex = """\*""".r
 }
 private object SLASH   extends OPERATOR("/")
 private object PLUS    extends OPERATOR("+") {
-  override def regexp = """\+""".r
+  override def regexp: Regex = """\+""".r
 }
 private object MINUS   extends OPERATOR("-")
 
 private object NOT     extends OPERATOR("!") {
-  override def regexp = """\!""".r
+  override def regexp: Regex = """\!""".r
 }
 private object AMP     extends OPERATOR("&")
 private object OR      extends OPERATOR("|") {
-  override def regexp = """\|""".r
+  override def regexp: Regex = """\|""".r
 }
 private object EQUIV   extends OPERATOR("<->")
 private object EQUIV_UNICODE extends OPERATOR("↔")
@@ -146,15 +145,15 @@ private object REVIMPLY extends OPERATOR("<-")
 private object REVIMPLY_UNICODE extends OPERATOR("←")
 
 private object FORALL  extends OPERATOR("\\forall") {
-  override def regexp = """\\forall""".r
+  override def regexp: Regex = """\\forall""".r
 }
 private object EXISTS  extends OPERATOR("\\exists") {
-  override def regexp = """\\exists""".r
+  override def regexp: Regex = """\\exists""".r
 }
 
 private object EQ      extends OPERATOR("=")
 private object NOTEQ   extends OPERATOR("!=") {
-  override def regexp = """\!=""".r
+  override def regexp: Regex = """\!=""".r
 }
 private object GREATEREQ extends OPERATOR(">=")
 private object LESSEQ  extends OPERATOR("<=")
@@ -173,21 +172,21 @@ private object FALSE   extends OPERATOR("false")
 
 //@todo should probably also allow := *
 private object ASSIGNANY extends OPERATOR(":=*") {
-  override def regexp = """:=\*""".r
+  override def regexp: Regex = """:=\*""".r
 }
 private object ASSIGN  extends OPERATOR(":=")
 private object TEST    extends OPERATOR("?") {
-  override def regexp = """\?""".r
+  override def regexp: Regex = """\?""".r
 }
 private object IF extends OPERATOR("if")
 private object ELSE extends OPERATOR("else")
 private object SEMI    extends OPERATOR(";")
 private object CHOICE  extends OPERATOR("++") {
-  override def regexp = """\+\+""".r
+  override def regexp: Regex = """\+\+""".r
 }
 //@todo simplify lexer by using silly ^@ notation rather than ^d for now. @ for adversary isn't too bad to remember but doesn't look as good as ^d.
 private object DUAL    extends OPERATOR("^@") {
-  override def regexp = """\^\@""".r
+  override def regexp: Regex = """\^\@""".r
 }
 
 /*@TODO
@@ -213,7 +212,7 @@ private object DOT {
 
 private object PLACE   extends OPERATOR("⎵") //("_")
 private object ANYTHING extends OPERATOR("??") {
-  override def regexp = """\?\?""".r
+  override def regexp: Regex = """\?\?""".r
 }
 private object PSEUDO  extends Terminal("<pseudo>")
 
@@ -221,24 +220,24 @@ private object PSEUDO  extends Terminal("<pseudo>")
 // @annotations
 
 private object INVARIANT extends Terminal("@invariant") {
-  override def regexp = """\@invariant""".r
+  override def regexp: Regex = """\@invariant""".r
 }
 
 // axiom and problem file
 
 private object AXIOM_BEGIN extends Terminal("Axiom") {
-  override def regexp = """Axiom""".r
+  override def regexp: Regex = """Axiom""".r
 }
 private object END_BLOCK extends Terminal("End.")
 private case class LEMMA_AXIOM_NAME(var s: String) extends Terminal("<string>") {
-  override def regexp = LEMMA_AXIOM_NAME_PAT.regexp
+  override def regexp: Regex = LEMMA_AXIOM_NAME_PAT.regexp
 }
 private object LEMMA_AXIOM_NAME_PAT {
-  def regexp = """\"(.*)\"\.""".r
+  def regexp: Regex = """\"(.*)\"\.""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
 private object PERIOD extends Terminal(".") {
-  override def regexp = "\\.".r
+  override def regexp: Regex = "\\.".r
 }
 private object FUNCTIONS_BLOCK extends Terminal("Functions.") {
   //not totally necessary -- you'll still get the right behavior because . matches \. But also allows stuff like Functions: which maybe isn't terrible.
@@ -262,33 +261,33 @@ private object MFORMULA extends Terminal("$$F")
 // Section: Terminal signals for extended lemma files.
 ///////////
 private object SEQUENT_BEGIN extends Terminal("Sequent.")  {
-  override def regexp = """Sequent\.""".r
+  override def regexp: Regex = """Sequent\.""".r
 }
 private object TURNSTILE extends Terminal("==>") {
-  override def regexp = """==>""".r
+  override def regexp: Regex = """==>""".r
 }
 private object FORMULA_BEGIN extends Terminal("Formula:") {
-  override def regexp = """Formula:""".r
+  override def regexp: Regex = """Formula:""".r
 }
 
 ///////////
 // Section: Terminal signals for tool files.
 ///////////
 private object LEMMA_BEGIN extends Terminal("Lemma") {
-  override def regexp = """Lemma""".r
+  override def regexp: Regex = """Lemma""".r
 }
 private object TOOL_BEGIN extends Terminal("Tool") {
-  override def regexp = """Tool""".r
+  override def regexp: Regex = """Tool""".r
 }
 private object HASH_BEGIN extends Terminal("Hash") {
-  override def regexp = """Hash""".r
+  override def regexp: Regex = """Hash""".r
 }
 private case class TOOL_VALUE(var s: String) extends Terminal("<string>") {
-  override def regexp = TOOL_VALUE_PAT.regexp
+  override def regexp: Regex = TOOL_VALUE_PAT.regexp
 }
 private object TOOL_VALUE_PAT {
   // values are nested into quadruple ", because they can contain single, double, or triple " themselves (arbitrary Scala code)
-  def regexp = "\"{4}(([^\"]|\"(?!\"\"\")|\"\"(?!\"\")|\"\"\"(?!\"))*)\"{4}".r
+  def regexp: Regex = "\"{4}(([^\"]|\"(?!\"\"\")|\"\"(?!\"\")|\"\"\"(?!\"))*)\"{4}".r
 //  def regexp = "\"([^\"]*)\"".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
@@ -315,7 +314,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) with Logging {
    * @return A stream of symbols corresponding to input.
    */
   //@todo performance bottleneck
-  def inMode(input: String, mode: LexerMode) = {
+  def inMode(input: String, mode: LexerMode): KeYmaeraXLexer.TokenStream = {
     val correctedInput = normalizeNewlines(input)
     logger.debug("LEX: " + correctedInput)
     val output = lex(correctedInput, SuffixRegion(1,1), mode)
@@ -324,7 +323,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) with Logging {
     output
   }
 
-  def apply(input: String) = inMode(input, ExpressionMode)
+  def apply(input: String): KeYmaeraXLexer.TokenStream = inMode(input, ExpressionMode)
 
   /**
    * The lexer.
