@@ -26,7 +26,7 @@
         <span>Model changes are made on a copy, since the model already has proofs.</span>
         <button class="btn" ng-click="deleteModelProofs();modelDataForm.$show()">Delete all proofs and edit in place</button>
     </div>
-    <textarea class="k4-vertical-fill-flex" ng-if="modelDataForm.$visible" class="k4-modeleditor" ng-model="model.keyFile"></textarea>
+    <textarea class="k4-vertical-fill-flex k4-modeleditor" ng-if="modelDataForm.$visible" ng-model="model.keyFile"></textarea>
     <div class="k4-vertical-fill-flex" ng-if="!modelDataForm.$visible" hljs hljs-language="dl" hljs-source="model.keyFile"></div>
 </div>
 <div class="modal-footer">
