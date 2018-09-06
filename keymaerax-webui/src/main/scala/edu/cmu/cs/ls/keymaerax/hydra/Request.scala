@@ -223,40 +223,50 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
       case None => new ErrorResponse("Unknown node " + nodeId)::Nil
       case Some(node) =>
         //@note not a tactic because we don't want to change the proof tree just by looking for counterexamples
-        val sequent = node.goal.get
-        val fml = sequent.toFormula
-        def nonfoError = {
+        def nonfoError(sequent: Sequent) = {
           val nonFOAnte = sequent.ante.filterNot(_.isFOL)
           val nonFOSucc = sequent.succ.filterNot(_.isFOL)
           new CounterExampleResponse("cex.nonfo", (nonFOSucc ++ nonFOAnte).head) :: Nil
         }
+
+        def getCex(node: ProofTreeNode, cexTool: CounterExampleTool): List[CounterExampleResponse] = {
+          val sequent = node.goal.get
+          val fml = sequent.toFormula
+          if (fml.isFOL) {
+            if (StaticSemantics.symbols(fml).isEmpty) {
+              //@note counterexample on false (e.g., after QE on invalid formula)
+              node.parent match {
+                case Some(parent) => getCex(parent, cexTool)
+                case None => new CounterExampleResponse("cex.none") :: Nil
+              }
+            } else {
+              findCounterExample(fml, cexTool) match {
+                //@todo return actual sequent, use collapsiblesequentview to display counterexample
+                case Some(cex) => new CounterExampleResponse("cex.found", fml, cex) :: Nil
+                case None => new CounterExampleResponse("cex.none") :: Nil
+              }
+            }
+          } else {
+            /* TODO: Case on this instead */
+            val qeTool: QETool = ToolProvider.qeTool().get
+            val snode: SearchNode = ProgramSearchNode(fml)(qeTool)
+            val search = new BoundedDFS(10)
+            try {
+              search(snode) match {
+                case None => nonfoError(sequent)
+                case Some(cex) => new CounterExampleResponse("cex.found", fml, cex.map) :: Nil
+              }
+            } catch {
+              // Counterexample generation is quite hard for, e.g. ODEs, so expect some cases to be unimplemented.
+              // When that happens, just tell the user they need to simplify the formula more.
+              case _ : NotImplementedError => nonfoError(sequent)
+            }
+          }
+        }
+
         try {
           ToolProvider.cexTool() match {
-            case Some(cexTool) =>
-              if (fml.isFOL) {
-                findCounterExample(fml, cexTool) match {
-                  //@todo return actual sequent, use collapsiblesequentview to display counterexample
-                  case Some(cex) =>
-                    new CounterExampleResponse("cex.found", fml, cex) :: Nil
-                  case None => new CounterExampleResponse("cex.none") :: Nil
-                }
-              } else {
-                /* TODO: Case on this instead */
-                val qeTool:QETool = ToolProvider.qeTool().get
-                val snode: SearchNode = ProgramSearchNode(fml)(qeTool)
-                val search = new BoundedDFS(10)
-                try {
-                  search(snode) match {
-                    case None => nonfoError
-                    case Some(cex) =>
-                      new CounterExampleResponse("cex.found", fml, cex.map) :: Nil
-                  }
-                } catch {
-                  // Counterexample generation is quite hard for, e.g. ODEs, so expect some cases to be unimplemented.
-                  // When that happens, just tell the user they need to simplify the formula more.
-                  case _ : NotImplementedError => nonfoError
-                }
-              }
+            case Some(cexTool) => getCex(node, cexTool)
             case None => new CounterExampleResponse("cex.notool") :: Nil
           }
         } catch {

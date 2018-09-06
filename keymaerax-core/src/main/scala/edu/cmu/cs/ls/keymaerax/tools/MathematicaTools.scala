@@ -209,30 +209,36 @@ object PegasusM2KConverter extends UncheckedM2KConverter {
 class MathematicaCEXTool(override val link: MathematicaLink) extends BaseKeYmaeraMathematicaBridge[KExpr](link, CEXK2MConverter, CEXM2KConverter) with CounterExampleTool with Logging {
 
   def findCounterExample(fml: Formula): Option[Map[NamedSymbol, Expression]] = {
-    val input = new MExpr(new MExpr(Expr.SYMBOL,  "FindInstance"),
-      Array(k2m.convert(fml match { case Imply(a, b) => And(a, Not(b)) case _ => Not(fml) }),
-        new MExpr(
-          MathematicaSymbols.LIST,
-          StaticSemantics.symbols(fml).filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true}).toList.sorted.map(s => k2m.convert(s)).toArray),
-        new MExpr(Expr.SYMBOL, "Reals")))
+    val cexVars = StaticSemantics.symbols(fml).filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true})
 
-    run(input) match {
-      case (_, cex: Formula) => cex match {
-        case False =>
-          logger.debug("No counterexample, Mathematica returned: " + cex.prettyString)
+    if (cexVars.nonEmpty) {
+      val input = new MExpr(new MExpr(Expr.SYMBOL, "FindInstance"),
+        Array(k2m.convert(fml match { case Imply(a, b) => And(a, Not(b)) case _ => Not(fml) }),
+          new MExpr(
+            MathematicaSymbols.LIST,
+            cexVars.toList.sorted.map(s => k2m.convert(s)).toArray),
+          new MExpr(Expr.SYMBOL, "Reals")))
+
+      run(input) match {
+        case (_, cex: Formula) => cex match {
+          case False =>
+            logger.debug("No counterexample, Mathematica returned: " + cex.prettyString)
+            None
+          case _ =>
+            logger.debug("Counterexample " + cex.prettyString)
+            Some(FormulaTools.conjuncts(cex).map({
+              case Equal(name: Variable, value) => name -> value
+              case Equal(name: DifferentialSymbol, value) => name -> value
+              case Equal(FuncOf(fn, _), value) => fn -> value
+              case Equiv(PredOf(fn, _), value) => fn -> value
+            }).toMap)
+        }
+        case result =>
+          logger.debug("No counterexample, Mathematica returned: " + result)
           None
-        case _ =>
-          logger.debug("Counterexample " + cex.prettyString)
-          Some(FormulaTools.conjuncts(cex).map({
-            case Equal(name: Variable, value) => name -> value
-            case Equal(name: DifferentialSymbol, value) => name -> value
-            case Equal(FuncOf(fn, _), value) => fn -> value
-            case Equiv(PredOf(fn, _), value) => fn -> value
-          }).toMap)
       }
-      case result =>
-        logger.debug("No counterexample, Mathematica returned: " + result)
-        None
+    } else {
+      None
     }
   }
 }
