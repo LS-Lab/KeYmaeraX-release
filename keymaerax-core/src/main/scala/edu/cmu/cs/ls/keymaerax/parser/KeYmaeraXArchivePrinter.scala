@@ -88,8 +88,8 @@ class KeYmaeraXArchivePrinter extends (KeYmaeraXArchiveParser.ParsedArchiveEntry
     }).filter(_.nonEmpty).mkString("\n")
 
     val printedTactics = entry.tactics.map({
-      case (tname, t) =>
-        s"""$TACTIC_BEGIN "$tname".\n${BellePrettyPrinter(t)}\n$END_BLOCK"""
+      case (tname, t, _) =>
+        s"""$TACTIC_BEGIN "$tname".\n$t\n$END_BLOCK"""
     }).mkString("\n\n")
 
     val defsBlock =

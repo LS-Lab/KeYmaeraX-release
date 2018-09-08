@@ -19,6 +19,7 @@ import scala.annotation.tailrec
  * @author Nathan Fulton
  * Created by nfulton on 6/12/15.
  */
+@deprecated("Use KeYmaeraXArchiveParser instead")
 object KeYmaeraXProblemParser extends Logging {
   type Declaration = KeYmaeraXDeclarationsParser.Declaration
 
@@ -41,17 +42,6 @@ object KeYmaeraXProblemParser extends Logging {
       }
     } catch {
       case e: ParseException => throw e.inInput(input)
-    }
-  }
-
-  /** Tries parsing as a problem first. If it fails due to a missing Problem block, tries parsing as a plain formula. */
-  def parseAsProblemOrFormula(input : String): Formula = {
-    try {
-      val (d, fml) = KeYmaeraXProblemParser.parseProblem(input)
-      d.exhaustiveSubst(fml)
-    } catch {
-      case ex: ParseException if ex.msg == "Problem. block expected" =>
-        KeYmaeraXParser(input).asInstanceOf[Formula]
     }
   }
 
@@ -176,7 +166,7 @@ object KeYmaeraXDeclarationsParser extends Logging {
   /** Name is alphanumeric name and index. */
   type Name = (String, Option[Int])
   /** Signature is domain sort, codomain sort, "interpretation", token that starts the declaration. */
-  type Signature = (Option[Sort], Sort, Option[Expression], Token)
+  type Signature = (Option[Sort], Sort, Option[Expression], Location)
   /** A declaration */
   case class Declaration(decls: Map[Name, Signature]) {
     /** The declarations as substitution pair. */
@@ -333,27 +323,27 @@ object KeYmaeraXDeclarationsParser extends Logging {
   def typeAnalysis(d: Declaration, expr: Expression): Boolean = {
     StaticSemantics.symbols(expr).forall({
       case f:Function =>
-        val (declaredDomain,declaredSort, interpretation, declarationToken) = d.decls.get((f.name,f.index)) match {
+        val (declaredDomain,declaredSort, interpretation, loc) = d.decls.get((f.name,f.index)) match {
           case Some(decl) => decl
           case None => throw ParseException("type analysis" + ": " + "undefined symbol " + f, f)
         }
-        if(f.sort != declaredSort) throw ParseException(s"type analysis: ${f.prettyString} declared with sort $declaredSort but used where sort ${f.sort} was expected.", declarationToken.loc)
+        if(f.sort != declaredSort) throw ParseException(s"type analysis: ${f.prettyString} declared with sort $declaredSort but used where sort ${f.sort} was expected.", loc)
         else if (f.domain != declaredDomain.get) {
           (f.domain, declaredDomain) match {
-            case (l, Some(r)) => throw ParseException(s"type analysis: ${f.prettyString} declared with domain $r but used where domain ${f.domain} was expected.", declarationToken.loc)
-            case (l, None) => throw ParseException(s"type analysis: ${f.prettyString} declared as a non-function but used as a function.", declarationToken.loc)
+            case (l, Some(r)) => throw ParseException(s"type analysis: ${f.prettyString} declared with domain $r but used where domain ${f.domain} was expected.", loc)
+            case (l, None) => throw ParseException(s"type analysis: ${f.prettyString} declared as a non-function but used as a function.", loc)
             //The other cases can't happen -- we know f is a function so we know it has a domain.
           }
         }
         else true
       case x : Variable if quantifiedVars(expr).contains(x) => true //Allow all undeclared variables if they are at some point bound by a \forall or \exists. @todo this is an approximation. Should only allow quantifier bindings...
       case x: Variable =>
-        val (declaredSort, declarationToken) = d.decls.get((x.name,x.index)) match {
-          case Some((None,sort, _, token)) => (sort, token)
-          case Some((Some(domain), sort, _, token)) => throw ParseException(s"Type analysis: ${x.name} was declared as a function but used as a non-function.", token.loc)
+        val (declaredSort, declLoc) = d.decls.get((x.name,x.index)) match {
+          case Some((None,sort, _, loc)) => (sort, loc)
+          case Some((Some(domain), sort, _, loc)) => throw ParseException(s"Type analysis: ${x.name} was declared as a function but used as a non-function.", loc)
           case None => throw ParseException("type analysis" + ": " + "undefined symbol " + x + " with index " + x.index, x)
         }
-        if (x.sort != declaredSort) throw ParseException(s"type analysis: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.", declarationToken.loc)
+        if (x.sort != declaredSort) throw ParseException(s"type analysis: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.", declLoc)
         x.sort == declaredSort
       case _: UnitPredicational => true //@note needs not be declared
       case _: UnitFunctional => true //@note needs not be declared
@@ -381,7 +371,7 @@ object KeYmaeraXDeclarationsParser extends Logging {
   }
 
   /** Parses the declarations in a Functions/Definitions block. */
-  private def processDefinitions(tokens: List[Token]): (Declaration, List[Token]) = {
+  def processDefinitions(tokens: List[Token]): (Declaration, List[Token]) = {
     if (tokens.head.tok == FUNCTIONS_BLOCK || tokens.head.tok == DEFINITIONS_BLOCK) {
       val(funSymbolsTokens, remainder) = tokens.span(_.tok != END_BLOCK)
       val funSymbolsSection = funSymbolsTokens.tail
@@ -437,15 +427,15 @@ object KeYmaeraXDeclarationsParser extends Logging {
           "Expected declaration to end with . but found " + fnDef.last, fnDef.last.loc, "Reading a declaration")
         val (domainSort, domainSortRemainder) = parseFunctionDomainSort(fnDef.tail.tail, nameToken)
         val interpretation = parseInterpretation(sort, domainSortRemainder, nameToken)
-        (( (nameTerminal.name, nameTerminal.index), (Some(domainSort), sort, interpretation, nameToken)), remainder)
+        (( (nameTerminal.name, nameTerminal.index), (Some(domainSort), sort, interpretation, nameToken.loc)), remainder)
       } else if (afterName.head.tok == PRG_DEF) {
         val (fnDef, remainder) = splitDef(ts, RBRACE)
         checkInput(fnDef.last.tok == PERIOD,
           "Expected declaration to end with . but found " + fnDef.last, fnDef.last.loc, "Reading a declaration")
         val interpretation = parseInterpretation(sort, fnDef.tail.tail, nameToken)
-        (( (nameTerminal.name, nameTerminal.index), (None, sort, interpretation, nameToken)), remainder)
+        (( (nameTerminal.name, nameTerminal.index), (None, sort, interpretation, nameToken.loc)), remainder)
       } else if (afterName.head.tok == PERIOD) {
-        (((nameTerminal.name, nameTerminal.index), (None, sort, None, nameToken)), afterName.tail)
+        (((nameTerminal.name, nameTerminal.index), (None, sort, None, nameToken.loc)), afterName.tail)
       } else {
         throw new ParseException("Variable declarations should end with a period.", afterName.head.loc, afterName.head.tok.img, ".", "", "declaration parse")
       }

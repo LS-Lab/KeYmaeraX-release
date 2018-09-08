@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.api.ScalaTacticCompiler
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
@@ -495,11 +495,11 @@ object KeYmaeraX {
     val inputModelsWithTactics = inputModels.map(e => {
       defaultTactic match {
         case Some(t: NamedTactic) => ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model,
-          (t.name -> t)::Nil, e.info)
+          (t.name, BellePrettyPrinter(t), t)::Nil, e.info)
         case Some(t) => ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model,
-          ("User" -> t)::Nil, e.info)
+          ("User", BellePrettyPrinter(t), t)::Nil, e.info)
         case _ if e.tactics.isEmpty && tacticName.isEmpty =>
-          ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model, ("Auto" -> TactixLibrary.auto)::Nil, e.info)
+          ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model, ("Auto", BellePrettyPrinter(TactixLibrary.auto), TactixLibrary.auto)::Nil, e.info)
         case _ if e.tactics.nonEmpty || tacticName.nonEmpty => tacticName match {
           case Some(tn) =>
             val filtered = e.tactics.filter(_._1 == tn)
@@ -516,7 +516,7 @@ object KeYmaeraX {
         statisticsLogger.info(MarkerManager.getMarker("PROOF_STATISTICS"),
           ProofStatistics(e.name, "skip", "skipped", options('timeout).asInstanceOf[Long], -1, -1, -1, -1).toCsv)
       } else e.tactics.foreach(t => try {
-        prove(e.name, e.model.asInstanceOf[Formula], t._1, t._2, outputFileNames(e.name), options, storeWitness=true)
+        prove(e.name, e.model.asInstanceOf[Formula], t._1, t._3, outputFileNames(e.name), options, storeWitness=true)
       } catch {
         case ex: Throwable =>
           println("==================================================")
@@ -707,7 +707,7 @@ object KeYmaeraX {
     BelleInterpreter.setInterpreter(LazySequentialInterpreter(qeDurationListener::Nil))
 
     archiveContent.foreach({case ParsedArchiveEntry(modelName, kind, fileContent, _, model: Formula, tactics, _) =>
-      tactics.foreach({case (tacticName, tactic) =>
+      tactics.foreach({case (tacticName, _, tactic) =>
         val statisticName = modelName + " with " + tacticName
         try {
           println("==========================================")
@@ -727,7 +727,7 @@ object KeYmaeraX {
             val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
               "tool" -> "KeYmaera X",
               "model" -> fileContent,
-              "tactic" -> tactics.head._2.prettyString
+              "tactic" -> tactics.head._2
             )) :: Nil)
             LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
           }
@@ -801,14 +801,14 @@ object KeYmaeraX {
 
       //check safety proof
       println(s"Checking safety proof ${inputEntry.name}...")
-      assert(TactixLibrary.proveBy(inputEntry.model.asInstanceOf[Formula], inputEntry.tactics.head._2).isProved,
+      assert(TactixLibrary.proveBy(inputEntry.model.asInstanceOf[Formula], inputEntry.tactics.head._3).isProved,
         s"Sandbox synthesis requires a provably safe input model, but ${inputEntry.name} is not proved.")
       println(s"Done checking safety proof ${inputEntry.name}")
 
       println("Synthesizing sandbox and safety proof...")
       val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(
         inputEntry.name,
-        inputEntry.tactics.head._2,
+        inputEntry.tactics.head._3,
         Some(fallback),
         kind = 'ctrl,
         checkProvable =  None)(inputModel)
@@ -816,12 +816,14 @@ object KeYmaeraX {
 
       val db = new TempDBTools(Nil)
 
-      val lemmaEntries = lemmas.map({ case (name, fml, tactic) => ParsedArchiveEntry(name, "lemma", "", Declaration(Map.empty), fml,
-        (name + " Proof", db.extractSerializableTactic(fml, tactic))::Nil, Map.empty)})
+      val lemmaEntries = lemmas.map({ case (name, fml, tactic) =>
+        val serializableTactic = db.extractSerializableTactic(fml, tactic)
+        ParsedArchiveEntry(name, "lemma", "", Declaration(Map.empty), fml,
+          (name + " Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Map.empty)})
       // check and store lemmas
       lemmaEntries.foreach(entry => {
         println(s"Checking sandbox lemma ${entry.name}...")
-        val lemmaProof = TactixLibrary.proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._2)
+        val lemmaProof = TactixLibrary.proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3)
         assert(lemmaProof.isProved, s"Aborting sandbox synthesis: sandbox lemma ${entry.name} was not provable.")
         println(s"Done checking sandbox lemma ${entry.name}")
         val lemmaName = "user" + File.separator + entry.name
@@ -829,17 +831,18 @@ object KeYmaeraX {
         val evidence = Lemma.requiredEvidence(lemmaProof, ToolEvidence(List(
           "tool" -> "KeYmaera X",
           "model" -> entry.fileContent,
-          "tactic" -> entry.tactics.head._2.prettyString
+          "tactic" -> entry.tactics.head._2
         )) :: Nil)
         LemmaDBFactory.lemmaDB.add(new Lemma(lemmaProof, evidence, Some(lemmaName)))
       })
 
+      val serializableTactic = db.extractSerializableTactic(sandbox, sbTactic)
       val sandboxEntry = ParsedArchiveEntry(inputEntry.name + " Sandbox", "theorem", "", Declaration(Map.empty),
-        sandbox, (inputEntry.name + " Sandbox Proof", db.extractSerializableTactic(sandbox, sbTactic))::Nil, Map.empty)
+        sandbox, (inputEntry.name + " Sandbox Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Map.empty)
       // check sandbox proof
       println("Checking sandbox safety...")
       assert(TactixLibrary.proveBy(sandboxEntry.model.asInstanceOf[Formula],
-        sandboxEntry.tactics.head._2).isProved,
+        sandboxEntry.tactics.head._3).isProved,
         "Aborting sandbox synthesis: sandbox safety was not derivable from input model safety proof.")
       println("Done checking sandbox safety")
 

@@ -45,16 +45,16 @@ object DatabasePopulator extends Logging {
   /** Reads a .kya archive from the URL `url` as tutorial entries (i.e., one tactic per entry). */
   def readKya(url: String): List[TutorialEntry] = {
     val kya = loadResource(url)
-    val archiveEntries = KeYmaeraXArchiveParser.read(kya)
-    val entries = archiveEntries.flatMap({case (modelName, modelContent, kind, tactics, info) =>
-      if (tactics.nonEmpty) tactics.map({case (tname, tactic) =>
-        TutorialEntry(modelName, modelContent, info.get("Description"), info.get("Title"), info.get("Link"),
-          Some((tname, tactic, true)), kind)})
+    val archiveEntries = KeYmaeraXArchiveParser.parse(kya, parseTactics = false)
+    val entries = archiveEntries.flatMap(entry =>
+      if (entry.tactics.nonEmpty) entry.tactics.map({case (tname, tacticContent, _) =>
+        TutorialEntry(entry.name, entry.fileContent, entry.info.get("Description"), entry.info.get("Title"), entry.info.get("Link"),
+          Some((tname, tacticContent, true)), entry.kind)})
       else
-        TutorialEntry(modelName, modelContent, info.get("Description"), info.get("Title"), info.get("Link"),
-          None, kind) :: Nil
-    })
-    assert(entries.map(_.name).toSet.size == archiveEntries.map(_._1).toSet.size,
+        TutorialEntry(entry.name, entry.fileContent, entry.info.get("Description"), entry.info.get("Title"), entry.info.get("Link"),
+          None, entry.kind) :: Nil
+    )
+    assert(entries.map(_.name).toSet.size == archiveEntries.map(_.name).toSet.size,
       "Expected " + archiveEntries.size + " entries, but got " + entries.size)
     entries
   }

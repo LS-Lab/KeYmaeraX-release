@@ -83,7 +83,7 @@ class StttTutorial extends TacticTestBase {
   "Example 2" should "be provable with master and custom loop invariant" in withQE { _ => withDatabase { db =>
     val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 2", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
-    val Imply(_, Box(loop, _)) = KeYmaeraXProblemParser(modelContent)
+    val Imply(_, Box(loop, _)) = KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent)
     db.proveBy(modelContent, master(new ConfigurableGenerator(Map((loop, "v>=0".asFormula::Nil))))) shouldBe 'proved
   }}
 
@@ -145,7 +145,7 @@ class StttTutorial extends TacticTestBase {
     val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 3b", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get
     val modelContent = entry.fileContent
-    val tactic = entry.tactics.head._2
+    val tactic = entry.tactics.head._3
     val intermediate = db.proveBy(modelContent, tactic)
     intermediate.subgoals should have size 3
     intermediate.subgoals(0) shouldBe Sequent(

@@ -16,8 +16,8 @@ import org.apache.logging.log4j.scala.Logging
   * @author Nathan Fulton
   */
 object BelleParser extends (String => BelleExpr) with Logging {
-  private case class DefScope[K, V](defs: scala.collection.mutable.Map[K, V] = scala.collection.mutable.Map.empty[K, V],
-                                    parent: Option[DefScope[K, V]] = None) {
+  case class DefScope[K, V](defs: scala.collection.mutable.Map[K, V] = scala.collection.mutable.Map.empty[K, V],
+                            parent: Option[DefScope[K, V]] = None) {
     def get(key: K): Option[V] = defs.get(key) match {
       case Some(e) => Some(e)
       case None => parent match {
@@ -58,7 +58,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
 
   /** Parses the token stream `toks`. Expands tactic abbreviations according to `tacticDefs`, function and predicate
     * symbols according to `defs`, and passes the invariant generator `g` on to tactics requiring a generator. */
-  private def parseTokenStream(toks: TokenStream, tacticDefs: DefScope[String, DefTactic],
+  def parseTokenStream(toks: TokenStream, tacticDefs: DefScope[String, DefTactic],
                        exprDefs: DefScope[Expression, DefExpression], g: Option[Generator.Generator[Expression]],
                        defs: Declaration): BelleExpr = {
     val result = parseLoop(ParserState(Bottom, toks), tacticDefs, exprDefs, g, defs)
@@ -665,7 +665,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
     }
   }
   private trait FinalBelleItem
-  private[parser] case class BelleToken(terminal: BelleTerminal, location: Location) extends BelleItem
+  case class BelleToken(terminal: BelleTerminal, location: Location) extends BelleItem
   private case class ParsedBelleExpr(expr: BelleExpr, loc: Location) extends BelleItem
   private case class ParsedBelleExprList(exprs: Seq[ParsedBelleExpr]) extends BelleItem
   private case class ParsedPosition(pos: Position, loc: Location) extends BelleItem

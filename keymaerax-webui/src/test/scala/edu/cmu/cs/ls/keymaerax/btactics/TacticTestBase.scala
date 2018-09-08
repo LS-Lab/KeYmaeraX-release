@@ -223,7 +223,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     val qeFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
     entries.
       filter(e => e.tactics.nonEmpty &&
-        qeFinder.findAllMatchIn(BellePrettyPrinter(e.tactics.head._2)).forall(p => p.group("toolName") == tool.name))
+        qeFinder.findAllMatchIn(BellePrettyPrinter(e.tactics.head._3)).forall(p => p.group("toolName") == tool.name))
   }
 
   /** Checks a specific entry from a bundled archive. Uses the first tactic if tacticName is None. */
@@ -232,8 +232,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       getClass.getResourceAsStream(archive)).mkString).get
 
     val tactic = tacticName match {
-      case Some(tn) => entry.tactics.find(_._1 == tn).get._2
-      case None => entry.tactics.head._2
+      case Some(tn) => entry.tactics.find(_._1 == tn).get._3
+      case None => entry.tactics.head._3
     }
 
     val start = System.currentTimeMillis()
@@ -252,7 +252,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
         "tool" -> "KeYmaera X",
         "model" -> entry.fileContent,
-        "tactic" -> entry.tactics.head._2.prettyString
+        "tactic" -> entry.tactics.head._2
       )) :: Nil)
       LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
     }
@@ -284,7 +284,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
 
     for (entry <- entries.filter(_.tactics.nonEmpty)) {
       val tacticName = entry.tactics.head._1
-      val tactic = entry.tactics.head._2
+      val tactic = entry.tactics.head._3
 
       val statisticName = entry.name + " with " + tacticName
       println("Proving " + statisticName)
@@ -306,7 +306,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
           "tool" -> "KeYmaera X",
           "model" -> entry.fileContent,
-          "tactic" -> entry.tactics.head._2.prettyString
+          "tactic" -> entry.tactics.head._2
         )) :: Nil)
         LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
       }

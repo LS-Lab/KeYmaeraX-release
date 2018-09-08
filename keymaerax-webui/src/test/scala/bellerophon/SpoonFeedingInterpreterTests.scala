@@ -486,7 +486,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter))
 
-    val tactic = entry.tactics.head._2
+    val tactic = entry.tactics.head._3
     interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val extractedTactic = db.extractTactic(proofId)
@@ -514,7 +514,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter))
 
-    val tactic = entry.tactics.head._2
+    val tactic = entry.tactics.head._3
     interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
@@ -541,7 +541,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter))
 
-    val tactic = entry.tactics.head._2
+    val tactic = entry.tactics.head._3
     interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
@@ -565,7 +565,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter))
 
-    val tactic = entry.tactics.head._2
+    val tactic = entry.tactics.head._3
     interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
@@ -590,7 +590,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter))
 
-    val tactic = entry.tactics.head._2
+    val tactic = entry.tactics.head._3
     interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     val tree = DbProofTree(db.db, proofId.toString)
@@ -631,7 +631,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
       ExhaustiveSequentialInterpreter))
 
-    val tactic = entry.tactics.head._2
+    val tactic = entry.tactics.head._3
     interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(modelContent))))
 
     //db.extractTactic(proofId) shouldBe tactic //@note not exactly the same, because repetitions are unrolled etc.

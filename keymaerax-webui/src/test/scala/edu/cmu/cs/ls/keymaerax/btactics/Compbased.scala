@@ -537,13 +537,13 @@ class Compbased extends TacticTestBase {
   "STTT Examples" should "prove remote control contract compliance" in withMathematica { _ =>
     val entry = KeYmaeraXArchiveParser.getEntry("Remote Control Contract Compliance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._2) shouldBe 'proved)
+    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
   }
 
   it should "prove obstacle contract compliance" in withMathematica { _ =>
     val entry = KeYmaeraXArchiveParser.getEntry("Obstacle Contract Compliance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._2) shouldBe 'proved)
+    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
   }
 
   it should "prove choice implementation" in withMathematica { _ =>
@@ -643,22 +643,22 @@ class Compbased extends TacticTestBase {
   it should "prove robot contract compliance" in withMathematica { _ =>
     val entry = KeYmaeraXArchiveParser.getEntry("Robot Contract Compliance",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._2) shouldBe 'proved)
+    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
   }
 
   it should "prove compatibility of obstacle and robot" in withMathematica { _ =>
     val entry = KeYmaeraXArchiveParser.getEntry("Compatibility of Obstacle and Robot",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._2) shouldBe 'proved)
+    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
   }
 
   it should "prove communication guarantees" in withMathematica { _ =>
     val entry1 = KeYmaeraXArchiveParser.getEntry("Communication Guarantee Safety",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry1.tactics.foreach(t => proveBy(entry1.model.asInstanceOf[Formula], t._2) shouldBe 'proved)
+    entry1.tactics.foreach(t => proveBy(entry1.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
     val entry2 = KeYmaeraXArchiveParser.getEntry("Communication Guarantee Liveness",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry2.tactics.foreach(t => proveBy(entry2.model.asInstanceOf[Formula], t._2) shouldBe 'proved)
+    entry2.tactics.foreach(t => proveBy(entry2.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
   }
 
   it should "prove system safety" in withMathematica { _ =>

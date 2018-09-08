@@ -130,7 +130,7 @@ object CourseMain {
 
       if (doCheck) {
         val f = archiveEntries.head.model.asInstanceOf[Formula]
-        val expr = archiveEntries.head.tactics.head._2
+        val expr = archiveEntries.head.tactics.head._3
         /*val f = parseProblemFileOrFail(problem)*/
         /*val expr = parseTacticFileOrFail(solution)*/
 

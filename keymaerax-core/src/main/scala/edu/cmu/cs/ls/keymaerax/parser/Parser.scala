@@ -9,7 +9,6 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.core._
 
 /**
@@ -42,11 +41,31 @@ trait Parser extends (String => Expression) {
 
 }
 
+trait TokenParser {
+  /** Lexer's token stream with first token at head. */
+  type TokenStream = KeYmaeraXLexer.TokenStream
+
+  /** Parse the input tokens in the concrete syntax as a differential dynamic logic expression */
+  def parse(input: TokenStream): Expression
+
+  /** Parse the input tokens in the concrete syntax as a differential dynamic logic term */
+  val termTokenParser: (TokenStream => Term)
+
+  /** Parse the input tokens in the concrete syntax as a differential dynamic logic formula */
+  val formulaTokenParser: (TokenStream => Formula)
+
+  /** Parse the input tokens in the concrete syntax as a differential dynamic logic program */
+  val programTokenParser: (TokenStream => Program)
+
+  /** Parse the input tokens in the concrete syntax as a differential dynamic logic differential program */
+  val differentialProgramTokenParser: (TokenStream => DifferentialProgram)
+}
+
 object ParserHelper {
   /** Returns (approximately!) 's' without any Byte Order Mark.
     * @todo DANGER hack: actually just returns a version of 's' that is converted into ASCII (replacing non-ASCII bytes with '?') and then stripping all the '?' from the prefix of the string.
     * In particular, ay also remove completely valid '?' characters if that's what's at the beginning of the string. */
-  def removeBOM(s : String) = {
+  def removeBOM(s : String): String = {
     val asASCII = new String(s.getBytes("US-ASCII"), "US-ASCII")
     //Find the length of a uniformly-'?' prefix on asSCII, then remove that many characters from s.
     //This preserves other unicode characters is s, only removing the potential BOM.

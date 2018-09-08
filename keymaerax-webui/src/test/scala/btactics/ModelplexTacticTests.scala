@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.btactics.ModelPlex.createMonitorSpecificationConjecture
@@ -1032,7 +1032,7 @@ class ModelplexTacticTests extends TacticTestBase {
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
     val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Velocity Car Safety").head
-    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._2) shouldBe 'proved
+    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
   }
 
   it should "derive controller monitor for velocity car safety" taggedAs IgnoreInBuildTest in withMathematica { tool =>
@@ -1052,7 +1052,7 @@ class ModelplexTacticTests extends TacticTestBase {
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
     val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Controller Monitor Formula Implies Controller Monitor Specification").head
-    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._2) shouldBe 'proved
+    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
   }
 
   it should "generate a correct sandbox conjecture" taggedAs IgnoreInBuildTest in withMathematica { _ => withDatabase { db =>
@@ -1060,7 +1060,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
     val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Velocity Car Safety").head
     val fallback = "t:=0;v:=0;".asProgram
-    val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(entry.name, entry.tactics.head._2,
+    val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(entry.name, entry.tactics.head._3,
       Some(fallback), 'ctrl, None)(entry.model.asInstanceOf[Formula])
 
     sandbox shouldBe
@@ -1080,13 +1080,16 @@ class ModelplexTacticTests extends TacticTestBase {
 
     def defs(f: Formula): Declaration = Declaration(Map.empty)
 
-    val lemmaEntries = lemmas.map({ case (name, fml, tactic) => ParsedArchiveEntry(name, "lemma", "", defs(fml), fml,
-      (name + " Proof", db.extractSerializableTactic(fml, tactic))::Nil, Map.empty)})
+    val lemmaEntries = lemmas.map({ case (name, fml, tactic) =>
+      val serializableTactic = db.extractSerializableTactic(fml, tactic)
+      ParsedArchiveEntry(name, "lemma", "", defs(fml), fml,
+      (name + " Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Map.empty)})
     val lemmaTempArchive = lemmaEntries.map(new KeYmaeraXArchivePrinter()(_)).mkString("\n\n")
     checkArchiveEntries(KeYmaeraXArchiveParser.parse(lemmaTempArchive))
 
+    val serializableTactic = db.extractSerializableTactic(sandbox, sbTactic)
     val sandboxEntry = ParsedArchiveEntry(entry.name + " Sandbox", "theorem", "", defs(sandbox),
-      sandbox, (entry.name + " Sandbox Proof", db.extractSerializableTactic(sandbox, sbTactic))::Nil, Map.empty)
+      sandbox, (entry.name + " Sandbox Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Map.empty)
 
     val archive = (lemmaEntries :+ sandboxEntry).map(new KeYmaeraXArchivePrinter()(_)).mkString("\n\n")
     checkArchiveEntries(KeYmaeraXArchiveParser.parse(archive))
@@ -1096,7 +1099,7 @@ class ModelplexTacticTests extends TacticTestBase {
     //@note run this test with -DPLDI17_BASE_DIR=/path/to/paper
     val baseDir = System.getProperty("PLDI17_BASE_DIR")
     val entry = KeYmaeraXArchiveParser(s"$baseDir/models/velocitycar_dist.kyx#Fallback Preserves Controller Monitor").head
-    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._2) shouldBe 'proved
+    proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3) shouldBe 'proved
   }
 
   it should "check all archive entries" taggedAs IgnoreInBuildTest in withMathematica { _ =>

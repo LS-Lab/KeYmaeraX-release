@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Bool, Formula, Function, Real, Sequent, Sort, StaticSemantics, Tuple, Unit}
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 
@@ -58,7 +58,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
            |End.""".stripMargin
       }
 
-    augmentDeclarations(content, KeYmaeraXProblemParser.parseAsProblemOrFormula(content))
+    augmentDeclarations(content, KeYmaeraXArchiveParser.parseAsProblemOrFormula(content))
   }
 
   /** Creates a new proof entry in the database for a model parsed from `modelContent`. */
@@ -79,7 +79,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
                          interpreter: Seq[IOListener] => Interpreter = ExhaustiveSequentialInterpreter,
                          proofId: Option[Int] = None,
                          modelName: String = ""): (Int, ProvableSig) = {
-    val s: Sequent = KeYmaeraXProblemParser.parseAsProblemOrFormula(modelContent) match {
+    val s: Sequent = KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent) match {
       case fml: Formula => Sequent(IndexedSeq(), IndexedSeq(fml))
       case _ => throw new Exception("Model content " + modelContent + " cannot be parsed")
     }

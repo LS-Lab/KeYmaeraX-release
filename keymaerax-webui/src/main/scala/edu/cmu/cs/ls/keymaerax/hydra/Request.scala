@@ -710,7 +710,7 @@ class CreateModelRequest(db: DBAbstraction, userId: String, nameOfModel: String,
         new ModelUploadResponse(createdId, None) :: Nil
       }
     } else try {
-      KeYmaeraXProblemParser.parseAsProblemOrFormula(modelText) match {
+      KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelText) match {
         case fml: Formula =>
           if (db.getModelList(userId).map(_.name).contains(nameOfModel)) {
             new ModelUploadResponse(None, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
@@ -737,7 +737,7 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
         db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(content))
         BooleanResponse(flag = true) :: Nil
       } else try {
-        KeYmaeraXProblemParser.parseAsProblemOrFormula(content) match {
+        KeYmaeraXArchiveParser.parseAsProblemOrFormula(content) match {
           case fml: Formula =>
             val newContent = RequestHelper.augmentDeclarations(content, fml)
             db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(newContent))
@@ -754,24 +754,20 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
 class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: String) extends UserRequest(userId) with WriteRequest {
   def resultingResponses(): List[Response] = {
     try {
-      val archiveEntries = KeYmaeraXArchiveParser.read(kyaFileContents)
-      val (failedModels, succeededModels) = archiveEntries.foldLeft((List[String](), List[String]()))({ case ((failedImports, succeededImports), (name, modelFileContent, _, tactic, info)) =>
-        // parse entry's model and tactics
-        val (d, _) = KeYmaeraXProblemParser.parseProblem(modelFileContent)
-        tactic.foreach({ case (_, ttext) => BelleParser.parseWithInvGen(ttext, None, d) })
-
-        val uniqueModelName = db.getUniqueModelName(userId, name)
-        db.createModel(userId, uniqueModelName, modelFileContent, currentDate(), info.get("Description"),
-          info.get("Title"), info.get("Link"), tactic.headOption.map(_._2)) match {
+      val archiveEntries = KeYmaeraXArchiveParser.parse(kyaFileContents)
+      val (failedModels, succeededModels) = archiveEntries.foldLeft((List[String](), List[String]()))({ case ((failedImports, succeededImports), entry) =>
+        val uniqueModelName = db.getUniqueModelName(userId, entry.name)
+        db.createModel(userId, uniqueModelName, entry.fileContent, currentDate(), entry.info.get("Description"),
+          entry.info.get("Title"), entry.info.get("Link"), entry.tactics.headOption.map(_._2)) match {
           case None =>
             // really should not get here. print and continue importing the remainder of the archive
-            logger.info(s"Model import failed: model $name already exists in the database and attempt of importing under uniquified name $uniqueModelName failed. Continuing with remainder of the archive.")
-            (failedImports :+ name, succeededImports)
+            logger.info(s"Model import failed: model ${entry.name} already exists in the database and attempt of importing under uniquified name $uniqueModelName failed. Continuing with remainder of the archive.")
+            (failedImports :+ entry.name, succeededImports)
           case Some(modelId) =>
-            tactic.foreach({ case (tname, ttext) =>
+            entry.tactics.foreach({ case (tname, ttext, _) =>
               db.createProofForModel(modelId, tname, "Proof from archive", currentDate(), Some(ttext))
             })
-            (failedImports, succeededImports :+ name)
+            (failedImports, succeededImports :+ entry.name)
         }
       })
       if (failedModels.isEmpty) BooleanResponse(flag=true) :: Nil
@@ -854,7 +850,7 @@ class AddModelTacticRequest(db : DBAbstraction, userId : String, modelId : Strin
 class ModelPlexMandatoryVarsRequest(db: DBAbstraction, userId: String, modelId: String) extends UserRequest(userId) with RegisteredOnlyRequest {
   def resultingResponses(): List[Response] = {
     val model = db.getModel(modelId)
-    val modelFml = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
+    val modelFml = KeYmaeraXArchiveParser.parseAsProblemOrFormula(model.keyFile)
     new ModelPlexMandatoryVarsResponse(model, StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable])) :: Nil
   }
 }
@@ -864,7 +860,7 @@ class ModelPlexRequest(db: DBAbstraction, userId: String, modelId: String, artif
                        additionalVars: List[String]) extends UserRequest(userId) with RegisteredOnlyRequest {
   def resultingResponses(): List[Response]  = {
     val model = db.getModel(modelId)
-    val modelFml = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
+    val modelFml = KeYmaeraXArchiveParser.parseAsProblemOrFormula(model.keyFile)
     val vars: Set[BaseVariable] = (StaticSemantics.boundVars(modelFml).symbols ++ additionalVars.map(_.asVariable)).
       filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
 
@@ -1033,7 +1029,7 @@ class TestSynthesisRequest(db: DBAbstraction, userId: String, modelId: String, m
   def resultingResponses(): List[Response]  = {
     logger.debug("Got Test Synthesis Request")
     val model = db.getModel(modelId)
-    val modelFml = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
+    val modelFml = KeYmaeraXArchiveParser.parseAsProblemOrFormula(model.keyFile)
     val vars = StaticSemantics.boundVars(modelFml).symbols.filter(_.isInstanceOf[BaseVariable]).toList
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(modelFml, vars:_*)
     val monitorCond = (monitorKind, ToolProvider.simplifierTool()) match {
@@ -1956,7 +1952,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     val tree = DbProofTree(db, proofId)
     tree.load()
     val model = db.getModel(tree.info.modelId.get)
-    val conclusionFormula = KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
+    val conclusionFormula = KeYmaeraXArchiveParser.parseAsProblemOrFormula(model.keyFile)
     val conclusion = Sequent(IndexedSeq(), IndexedSeq(conclusionFormula))
     val provable = tree.root.provable
     if (!provable.isProved) new ErrorResponse("Proof verification failed: proof " + proofId + " is not closed.\n Expected a provable without subgoals, but result provable is\n" + provable.prettyString)::Nil

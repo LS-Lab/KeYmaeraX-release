@@ -114,6 +114,7 @@ private object RDIA    extends OPERATOR(">") {
 private object PRG_DEF  extends OPERATOR("::=")
 
 private object COMMA   extends OPERATOR(",")
+private object COLON   extends OPERATOR(":")
 
 private object PRIME   extends OPERATOR("'")
 private object POWER   extends OPERATOR("^") {
@@ -229,24 +230,25 @@ private object AXIOM_BEGIN extends Terminal("Axiom") {
   override def regexp: Regex = """Axiom""".r
 }
 private object END_BLOCK extends Terminal("End.")
-private case class LEMMA_AXIOM_NAME(var s: String) extends Terminal("<string>") {
-  override def regexp: Regex = LEMMA_AXIOM_NAME_PAT.regexp
+private case class DOUBLE_QUOTES_STRING(var s: String) extends Terminal("<string>") {
+  override def regexp: Regex = DOUBLE_QUOTES_STRING_PAT.regexp
 }
-private object LEMMA_AXIOM_NAME_PAT {
-  def regexp: Regex = """\"(.*)\"\.""".r
+private object DOUBLE_QUOTES_STRING_PAT {
+  def regexp: Regex = """\"(.*)\"""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
 private object PERIOD extends Terminal(".") {
   override def regexp: Regex = "\\.".r
 }
-private object FUNCTIONS_BLOCK extends Terminal("Functions.") {
+private object FUNCTIONS_BLOCK extends Terminal("Functions") {
   //not totally necessary -- you'll still get the right behavior because . matches \. But also allows stuff like Functions: which maybe isn't terrible.
 //  override def regexp = """Functions\.""".r
 }
-private object DEFINITIONS_BLOCK extends Terminal("Definitions.")
-private object PROGRAM_VARIABLES_BLOCK extends Terminal("ProgramVariables.")
-private object VARIABLES_BLOCK extends Terminal("Variables.") //used in axioms file...
-private object PROBLEM_BLOCK extends Terminal("Problem.")
+private object DEFINITIONS_BLOCK extends Terminal("Definitions")
+private object PROGRAM_VARIABLES_BLOCK extends Terminal("ProgramVariables")
+private object VARIABLES_BLOCK extends Terminal("Variables") //used in axioms file...
+private object PROBLEM_BLOCK extends Terminal("Problem")
+private object TACTIC_BLOCK extends Terminal("Tactic")
 //@todo the following R, B, T, P etc should be lexed as identifiers. Adapt code to make them disappear.
 //@todo the following should all be removed or at most used as val REAL = Terminal("R")
 private object REAL extends Terminal("$$$R")
@@ -260,14 +262,14 @@ private object MFORMULA extends Terminal("$$F")
 ///////////
 // Section: Terminal signals for extended lemma files.
 ///////////
-private object SEQUENT_BEGIN extends Terminal("Sequent.")  {
-  override def regexp: Regex = """Sequent\.""".r
+private object SEQUENT_BEGIN extends Terminal("Sequent")  {
+  override def regexp: Regex = """Sequent""".r
 }
 private object TURNSTILE extends Terminal("==>") {
   override def regexp: Regex = """==>""".r
 }
-private object FORMULA_BEGIN extends Terminal("Formula:") {
-  override def regexp: Regex = """Formula:""".r
+private object FORMULA_BEGIN extends Terminal("Formula") {
+  override def regexp: Regex = """Formula""".r
 }
 
 ///////////
@@ -291,6 +293,22 @@ private object TOOL_VALUE_PAT {
 //  def regexp = "\"([^\"]*)\"".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
+
+private object SHARED_DEFINITIONS_BEGIN extends Terminal("SharedDefinitions") {}
+
+private case class ARCHIVE_ENTRY_BEGIN(name: String) extends Terminal("ArchiveEntry|Lemma|Theorem|Exercise") {
+  override def toString: String = name
+  override def regexp: Regex = ARCHIVE_ENTRY_BEGIN.regexp
+}
+private object ARCHIVE_ENTRY_BEGIN {
+  def regexp: Regex = "(ArchiveEntry|Lemma|Theorem|Exercise)".r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
+}
+
+///////////
+// Section: Terminal signals for tactics.
+///////////
+private object BACKTICK extends Terminal("`") {}
 
 /**
  * Lexer for KeYmaera X turns string into list of tokens.
@@ -436,7 +454,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) with Logging {
         findNextToken(s.substring(theComment.length), loc match {
           case UnknownLocation => UnknownLocation
           case Region(sl, sc, el, ec) => Region(sl + lineCount - 1, lastLineCol, el, ec)
-          case SuffixRegion(sl, sc) => SuffixRegion(sl + lineCount - 1, theComment.length)
+          case SuffixRegion(sl, sc) => SuffixRegion(sl + lineCount - 1, sc + theComment.length)
         }, mode)
       }
 
@@ -457,6 +475,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) with Logging {
       //Lemma file cases
       case LEMMA_BEGIN.startPattern(_*) => mode match {
         case LemmaFileMode => consumeTerminalLength(LEMMA_BEGIN, loc)
+        case ProblemFileMode => consumeColumns(LEMMA_BEGIN.img.length, ARCHIVE_ENTRY_BEGIN("Lemma"), loc)
         case _ => throw new Exception("Encountered ``Lemma`` in non-lemma lexing mode.")
       }
       case TOOL_BEGIN.startPattern(_*) => mode match {
@@ -488,6 +507,11 @@ object KeYmaeraXLexer extends ((String) => List[Token]) with Logging {
         case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(PERIOD, loc)
         case _ => throw new Exception("Periods should only occur when processing files.")
       }*/
+      case ARCHIVE_ENTRY_BEGIN.startPattern(kind) => mode match {
+        case ProblemFileMode => consumeColumns(kind.length, ARCHIVE_ENTRY_BEGIN(kind), loc)
+        case LemmaFileMode if kind == "Lemma" => consumeTerminalLength(LEMMA_BEGIN, loc)
+        case _ => throw new Exception("Encountered ``" + ARCHIVE_ENTRY_BEGIN(kind).img + "`` in non-problem file lexing mode.")
+      }
       case FUNCTIONS_BLOCK.startPattern(_*) => mode match {
         case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(FUNCTIONS_BLOCK, loc)
         case _ => throw new Exception("Functions. should only occur when processing files.")
@@ -533,6 +557,26 @@ object KeYmaeraXLexer extends ((String) => List[Token]) with Logging {
         case AxiomFileMode | ProblemFileMode => consumeTerminalLength(PROBLEM_BLOCK, loc)
         case _ => throw new Exception("Problem./End. sections should only occur when processing .kyx files.")
       }
+      case TACTIC_BLOCK.startPattern(_*) => mode match {
+        case AxiomFileMode | ProblemFileMode => consumeTerminalLength(TACTIC_BLOCK, loc)
+        case _ => throw new Exception("Tactic./End. sections should only occur when processing .kyx files.")
+      }
+      case BACKTICK.startPattern(_*) => mode match {
+        case ProblemFileMode => consumeTerminalLength(BACKTICK, loc)
+        case _ => throw new Exception("Backtick ` should only occur when processing .kyx files.")
+      }
+      case SHARED_DEFINITIONS_BEGIN.startPattern(_*) => mode match {
+        case ProblemFileMode => consumeTerminalLength(SHARED_DEFINITIONS_BEGIN, loc)
+        case _ => throw new Exception("SharedDefinitions./End. sections should only occur when processing .kyx files.")
+      }
+      //Lemma file cases (2)
+      case TOOL_VALUE_PAT.startPattern(str, _) => mode match { //@note must be before DOUBLE_QUOTES_STRING
+        case LemmaFileMode =>
+          //A tool value looks like """"blah"""" but only blah gets grouped, so there are eight
+          // extra characters to account for.
+          consumeColumns(str.length + 8, TOOL_VALUE(str), loc)
+        case _ => throw new Exception("Encountered delimited string in non-lemma lexing mode.")
+      }
       //Axiom file cases
       case AXIOM_BEGIN.startPattern(_*) => mode match {
         case AxiomFileMode => consumeTerminalLength(AXIOM_BEGIN, loc)
@@ -542,20 +586,12 @@ object KeYmaeraXLexer extends ((String) => List[Token]) with Logging {
         case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(END_BLOCK, loc)
         case _ => throw new Exception("Encountered ``Axiom.`` in non-axiom lexing mode.")
       }
-      case LEMMA_AXIOM_NAME_PAT.startPattern(str) => mode match {
-        case AxiomFileMode | LemmaFileMode =>
+      case DOUBLE_QUOTES_STRING_PAT.startPattern(str) => mode match {
+        case AxiomFileMode | LemmaFileMode | ProblemFileMode =>
           //An axiom name looks like "blah". but only blah gets grouped, so there are three
           // extra characters to account for.
-          consumeColumns(str.length + 3, LEMMA_AXIOM_NAME(str), loc)
+          consumeColumns(str.length + 3, DOUBLE_QUOTES_STRING(str), loc)
         case _ => throw new Exception("Encountered delimited string in non-axiom lexing mode.")
-      }
-      //Lemma file cases (2)
-      case TOOL_VALUE_PAT.startPattern(str, _) => mode match {
-        case LemmaFileMode =>
-          //A tool value looks like """"blah"""" but only blah gets grouped, so there are eight
-          // extra characters to account for.
-          consumeColumns(str.length + 8, TOOL_VALUE(str), loc)
-        case _ => throw new Exception("Encountered delimited string in non-lemma lexing mode.")
       }
 
       //These have to come before LBOX,RBOX because otherwise <= becopmes LDIA, EQUALS
@@ -642,6 +678,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) with Logging {
       case RDIA.startPattern(_*) => consumeTerminalLength(RDIA, loc)
 
       case PRG_DEF.startPattern(_*) => consumeTerminalLength(PRG_DEF, loc)
+      case COLON.startPattern(_*) => consumeTerminalLength(COLON, loc)
 
       case _ if s.isEmpty => None
         //@todo should be LexException inheriting

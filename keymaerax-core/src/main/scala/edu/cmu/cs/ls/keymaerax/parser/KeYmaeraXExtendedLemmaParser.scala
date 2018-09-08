@@ -5,7 +5,6 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.core.{Evidence, Sequent}
-import edu.cmu.cs.ls.keymaerax.{Configuration, parser}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
 import edu.cmu.cs.ls.keymaerax.tools.{HashEvidence, ToolEvidence}
 import org.apache.logging.log4j.scala.Logging
@@ -45,7 +44,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutabl
     * @return A list of named lemmas, each with tool evidence (tool input/output) occurring in the file.
     */
   def apply(inputWithPossibleBOM: String) : Lemma = try {
-    val input = parser.ParserHelper.removeBOM(inputWithPossibleBOM)
+    val input = ParserHelper.removeBOM(inputWithPossibleBOM)
 
     val tokens = KeYmaeraXLexer.inMode(input, LemmaFileMode)
     logger.debug("Tokens are: " + tokens)
@@ -75,20 +74,27 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutabl
 
   def parseNextLemma(input: TokenStream): (Option[String], List[Sequent], List[Evidence], TokenStream) = {
     require(input.head.tok.equals(LEMMA_BEGIN), "expected ALP file to begin with Lemma block.")
-    require(input.tail.head.tok.isInstanceOf[LEMMA_AXIOM_NAME], "expected ALP block to have a string as a name")
+    require(input.tail.head.tok.isInstanceOf[DOUBLE_QUOTES_STRING], "expected ALP block to have a string as a name")
 
     val name = input.tail.head match {
-      case Token(LEMMA_AXIOM_NAME(x),_) if x != "" => Some(x)
-      case Token(LEMMA_AXIOM_NAME(x),_) if x == "" => None
+      case Token(DOUBLE_QUOTES_STRING(x),_) if x != "" => Some(x)
+      case Token(DOUBLE_QUOTES_STRING(x),_) if x == "" => None
       case _ => throw new AssertionError("Require should have failed.")
     }
 
     //Find the End. token and exclude it.
     val (lemmaTokens, remainderTokens) =
-      input.tail.tail.span(x => !x.tok.equals(END_BLOCK)) //1st element is LEMMA_BEGIN, 2nd is LEMMA_NAME.
+      //1st element is AXIOM_BEGIN, 2nd is AXIOM_NAME, 3rd is optional .
+      input.tail.tail.span(_.tok != END_BLOCK) match {
+        case (Token(PERIOD, _) :: a, r) => (a, r)
+        case x => x
+      }
 
     //Separate the lemma into subgoals.
-    val sequentTokens = splitAtTerminal(SEQUENT_BEGIN, lemmaTokens)
+    val sequentTokens = splitAtTerminal(SEQUENT_BEGIN, lemmaTokens).map({
+      case Token(PERIOD, _) :: s => s
+      case s => s
+    })
     val sequents = sequentTokens.map(sequentTokenParser)
     assert(sequents.nonEmpty, "Lemma should at least have a conclusion.")
 
@@ -111,16 +117,22 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutabl
   private def sequentTokenParser(ts: TokenStream): Sequent = {
     require(ts.map(_.tok).contains(TURNSTILE))
 
-    val (anteToks, succToksWithTurnstile) = ts.span(!_.tok.equals(TURNSTILE))
+    val (anteToks, succToksWithTurnstile) = ts.span(_.tok != TURNSTILE)
     val succToks = succToksWithTurnstile.tail
 
-    val anteParts = splitAtTerminal(FORMULA_BEGIN, anteToks)
+    val anteParts = splitAtTerminal(FORMULA_BEGIN, anteToks).map({
+      case Token(COLON, _) :: t => t
+      case t => t
+    })
     val antes = anteParts.map(x => KeYmaeraXParser.formulaTokenParser(x :+ Token(EOF)))
 
-    val succParts = splitAtTerminal(FORMULA_BEGIN, succToks)
+    val succParts = splitAtTerminal(FORMULA_BEGIN, succToks).map({
+      case Token(COLON, _) :: t => t
+      case t => t
+    })
     val succs = succParts.map(x => KeYmaeraXParser.formulaTokenParser(x :+ Token(EOF)))
 
-    new Sequent(antes.toIndexedSeq, succs.toIndexedSeq)
+    Sequent(antes.toIndexedSeq, succs.toIndexedSeq)
   }
 
   /**
@@ -131,11 +143,8 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutabl
   def parseAllEvidence(input: TokenStream, prevEvidence: List[Evidence] = Nil): (List[Evidence], TokenStream) = {
     require(input.last.tok == EOF, "token streams have to end in " + EOF)
     val (evidence, remainder) = parseNextEvidence(input)
-    (evidence, remainder)
-    if(remainder.length == 1 && remainder.head.tok.equals(EOF))
-      (prevEvidence :+ evidence, remainder)
-    else
-      parseAllEvidence(remainder, prevEvidence :+ evidence)
+    if (remainder.length == 1 && remainder.head.tok.equals(EOF)) (prevEvidence :+ evidence, remainder)
+    else parseAllEvidence(remainder, prevEvidence :+ evidence)
   }
 
   def parseNextEvidence(input: TokenStream): (Evidence, TokenStream) = {
@@ -144,16 +153,15 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutabl
 
     //Find the End. token and exclude it.
     val (toolTokens, remainderTokens) =
-      input.tail.tail.span(x => !x.tok.equals(END_BLOCK)) //1st element is TOOL_BEGIN, 2nd is a tool evidence key.
+      input.tail.tail.span(_.tok != END_BLOCK) //1st element is TOOL_BEGIN, 2nd is a tool evidence key.
 
     val evidenceLines = parseEvidenceLines(toolTokens)
 
     val evidence = input.head.tok match {
       case TOOL_BEGIN => ToolEvidence(evidenceLines)
-      case HASH_BEGIN => {
+      case HASH_BEGIN =>
         assert(evidenceLines.head._1 == "hash")
         HashEvidence(evidenceLines.head._2)
-      }
     }
 
     (evidence, remainderTokens.tail)

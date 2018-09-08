@@ -117,7 +117,7 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
       getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
     forEvery(Table(("Name", "Model", "Tactic"), entries.
       filter(e => e.tactics.nonEmpty).
-      map(e => (e.name, e.model, e.tactics.headOption.getOrElse("" -> TactixLibrary.auto)._2)): _*)) {
+      map(e => (e.name, e.model, e.tactics.headOption.getOrElse("", BellePrettyPrinter(TactixLibrary.auto), TactixLibrary.auto)._3)): _*)) {
       (name, model, tactic) =>
         println("\n" + name + " with " + BellePrettyPrinter(tactic))
         failAfter(5 minutes) {

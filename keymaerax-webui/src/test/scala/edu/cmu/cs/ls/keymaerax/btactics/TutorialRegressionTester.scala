@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Lemma, Program}
 import edu.cmu.cs.ls.keymaerax.hydra.{DatabasePopulator, TempDBTools}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser.Declaration
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
@@ -37,7 +37,7 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
       entries.map(e => (tutorialName, e.name, e.model, e.description, e.title, e.link, e.tactic, e.kind)):_*)
   }
 
-  private val tutorialEntries = table({
+  private lazy val tutorialEntries = table({
     println("Reading " + url)
     if (url.endsWith(".json")) DatabasePopulator.readTutorialEntries(url)
     else if (url.endsWith(".kya") || url.endsWith(".kyx")) DatabasePopulator.readKya(url)
@@ -46,7 +46,7 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
 
   tutorialName should "parse all models" in {
     forEvery (tutorialEntries) { (tutorialName, name, model, _, _, _, _, _) =>
-      withClue(tutorialName + "/" + name) { KeYmaeraXProblemParser(model) }
+      withClue(tutorialName + "/" + name) { KeYmaeraXArchiveParser.parseProblem(model, parseTactics=false) }
     }
   }
 
@@ -144,10 +144,10 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
     val generator = new ConfigurableGenerator[Formula]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ inv)))
-    val (decls, _) = KeYmaeraXProblemParser.parseProblem(model)
+    val entry = KeYmaeraXArchiveParser.parseProblem(model, parseTactics=false)
     TactixLibrary.invGenerator = generator
     KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {}) //@note cleanup for separation between tutorial entries
-    (decls, generator)
+    (entry.defs, generator)
   }
 
 }

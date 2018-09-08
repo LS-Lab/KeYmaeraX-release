@@ -15,10 +15,10 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, Sequential
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXDeclarationsParser, KeYmaeraXParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXDeclarationsParser, KeYmaeraXParser, KeYmaeraXProblemParser}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
-import edu.cmu.cs.ls.keymaerax.pt.{NoProof, ElidingProvable, TermProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, NoProof, ProvableSig, TermProvable}
 
 import scala.collection.immutable.Nil
 import scala.slick.driver.SQLiteDriver
@@ -428,7 +428,9 @@ object SQLite {
       synchronizedTransaction({
         nInserts = nInserts + 2
         val model = getModel(modelId)
-        val (d, problem) = KeYmaeraXProblemParser.parseProblem(model.keyFile)
+        val entry = KeYmaeraXArchiveParser.parseProblem(model.keyFile, parseTactics=false)
+        val d = entry.defs
+        val problem = entry.model.asInstanceOf[Formula]
 
         val substTactic = tactic match {
           case None => None
@@ -774,7 +776,7 @@ object SQLite {
       proofInfo.modelId match {
         case Some(modelId) =>
           val model = getModel(modelId)
-          KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile) match {
+          KeYmaeraXArchiveParser.parseAsProblemOrFormula(model.keyFile) match {
             case fml: Formula =>
               val sequent = Sequent(collection.immutable.IndexedSeq(), collection.immutable.IndexedSeq(fml))
               proofInfo.provableId match {
@@ -1006,7 +1008,7 @@ object SQLite {
       KeYmaeraXParser.setAnnotationListener{case (program, formula) =>
         invariants = invariants.+((program, formula))
       }
-      KeYmaeraXProblemParser.parseAsProblemOrFormula(model.keyFile)
+      KeYmaeraXArchiveParser.parseAsProblemOrFormula(model.keyFile)
       invariants
     }
 

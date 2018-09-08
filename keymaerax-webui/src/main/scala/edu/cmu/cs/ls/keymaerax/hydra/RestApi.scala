@@ -1061,7 +1061,7 @@ object RestApi extends Logging {
           complete(completeResponse(new ErrorResponse(s"Expected exactly one proof in the archive but found ${entries.head.tactics.length} proofs. Make sure you export from the Proofs page, not the Models page.") :: Nil))
         else {
           val model = entries.head.model.asInstanceOf[Formula]
-          val tactic = entries.head.tactics.head._2
+          val tactic = entries.head.tactics.head._3
           complete(standardCompletion(new ValidateProofRequest(database, model, tactic), EmptyToken()))
         }
       }}
