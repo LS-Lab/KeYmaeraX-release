@@ -872,6 +872,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     entry.info shouldBe empty
   }
 
+  "Convenience wrappers" should "parse a plain formula" in {
+    KeYmaeraXArchiveParser.parseAsProblemOrFormula("x>0") shouldBe "x>0".asFormula
+  }
+
   "Archive parser error message" should "report an invalid meta info key" in {
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1".

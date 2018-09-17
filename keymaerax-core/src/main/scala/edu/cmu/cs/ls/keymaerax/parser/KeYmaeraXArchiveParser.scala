@@ -274,7 +274,7 @@ object KeYmaeraXArchiveParser {
     try {
       parseProblem(input, parseTactics=false).model.asInstanceOf[Formula]
     } catch {
-      case ex: ParseException if ex.msg == "Problem. block expected" =>
+      case ex: ParseException if ex.msg.startsWith("Unexpected archive start") =>
         KeYmaeraXParser(input).asInstanceOf[Formula]
     }
   }
