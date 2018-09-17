@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
@@ -438,4 +439,20 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
       proveBy(fml, master()) shouldBe 'proved
     }
   }
+
+  it should "apply ODE duration heuristic to multiple ODEs" in withZ3 { _ =>
+    val problem = KeYmaeraXArchiveParser.parseAsProblemOrFormula(
+      """  x < -4
+        |  ->
+        |  [
+        |     t := 0;
+        |     v := 4;
+        |     {x' = v, t' = 1 & t <= 1};
+        |     a := 8/x;
+        |     {x' = v, v' = a & v >= 0}
+        |  ] x <= 0""".stripMargin)
+
+    proveBy(problem, master()) shouldBe 'proved
+  }
+
 }
