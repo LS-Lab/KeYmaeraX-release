@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.core.{Bool, Expression, Real, Sort, Trafo, Tuple, Unit}
+import edu.cmu.cs.ls.keymaerax.core.{Bool, Real, Trafo, Tuple, Unit}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
@@ -1133,5 +1133,17 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     ) should have message """2:24 Predicate definition expects a Formula
                             |Found:    5+7 at 2:24 to 2:26
                             |Expected: Formula""".stripMargin
+  }
+
+  it should "report tactic errors at the correct location" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.
+        | Tactic "Proof 1". implyR(1) ; End.
+        |End.""".stripMargin
+    ) should have message """4:31 A combinator should be followed by a full tactic expression
+                            |Found:    Some(BelleToken(EOF$,4:31 to EOF$)) at 4:31 to EOF$
+                            |Expected: """.stripMargin
   }
 }

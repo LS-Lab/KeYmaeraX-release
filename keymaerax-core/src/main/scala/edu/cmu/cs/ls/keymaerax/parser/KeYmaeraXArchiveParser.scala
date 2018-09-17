@@ -702,8 +702,20 @@ object KeYmaeraXArchiveParser {
   }
 
   private def convert(t: Tactic, defs: Declaration): (String, String, BelleExpr) = {
-    val tokens = BelleLexer(t.tacticText)
-    tokens.map(t => BelleToken(t.terminal, t.location.addLines(t.location.line)))
+    val tokens = BelleLexer(t.tacticText).map(tok =>
+      BelleToken(tok.terminal,
+        if (tok.location.line <= 1) tok.location match {
+          case Region(l, c, el, ec) if el == l =>
+            Region(l + t.begin.line - 1, c + t.begin.column - 1, el + t.begin.line -1, ec + t.begin.column - 1)
+          case Region(l, c, el, ec) if el > l =>
+            Region(l + t.begin.line - 1, c + t.begin.column - 1, el + t.begin.line -1, ec)
+          case SuffixRegion(l, c) => SuffixRegion(l + t.begin.line - 1, c + t.begin.column - 1)
+          case l => l.addLines(t.begin.line - 1) //
+        } else {
+          tok.location.addLines(t.begin.line - 1)
+        }
+      )
+    )
 
     val tactic = BelleParser.parseTokenStream(tokens,
       DefScope[String, DefTactic](), DefScope[Expression, DefExpression](), None, defs)
