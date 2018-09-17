@@ -134,7 +134,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[Formula]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
-      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv)))
+      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv).distinct))
     TactixLibrary.invGenerator = generator
     ToolProvider.setProvider(new NoneToolProvider())
   }
