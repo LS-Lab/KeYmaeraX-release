@@ -66,9 +66,16 @@ object QELogger extends Logging {
     */
   private val defaultPath: String = Configuration.path(Configuration.Keys.QE_LOG_PATH)
 
+  private def file(filename: String) =
+    if (scala.tools.nsc.io.File(filename).isDirectory) {
+      scala.tools.nsc.io.File(filename)./("qe.txt").toFile
+    } else {
+      scala.tools.nsc.io.File(filename)
+    }
+
   def clearLog(filename: String = defaultPath): Unit = {
     try {
-      val f = scala.tools.nsc.io.File(filename)
+      val f = file(filename)
       f.delete()
     } catch {
       case ex: Exception =>
@@ -78,7 +85,7 @@ object QELogger extends Logging {
 
   def logSequent(pr: Sequent, s: Sequent, name: String, filename: String = defaultPath): Unit = {
     try {
-      val f = scala.tools.nsc.io.File(filename)
+      val f = file(filename)
       f.parent.createDirectory(force=true)
       val namestr = "@"+name+"#"+pr.toString+"#"+s.toString+"\n"
       f.appendAll(namestr)
@@ -109,7 +116,7 @@ object QELogger extends Logging {
 
     var seqMap = new ListBuffer[(String,Sequent,Sequent)]()
     try {
-      for (line <- Source.fromFile(filename).getLines()) {
+      for (line <- Source.fromFile(file(filename).toURI).getLines()) {
         if (line.startsWith("@")) {
           parseStr(curString) match {
             case None => ()
@@ -167,7 +174,7 @@ object QELogger extends Logging {
 
   /** Exports the formula `fml` in SMT-Lib format to `exportFile`. */
   def exportSmtLibFormat(fml: Formula, exportFile: String): Unit = {
-    val f = scala.tools.nsc.io.File(exportFile)
+    val f = file(exportFile)
     f.appendAll(DefaultSMTConverter(fml))
   }
 
