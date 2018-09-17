@@ -765,7 +765,7 @@ object DerivationInfo {
       , RuleDisplayInfo(("∃L", "existsL"), (List("&Gamma;","∃x P(x)"),List("&Delta;")),
         List((List("&Gamma;","P(x)"),List("&Delta;"))))
       , {case () => SequentCalculus.existsL}),
-    new TacticInfo("G"
+    new PositionTacticInfo("G"
       , RuleDisplayInfo("G", (List("&Gamma;"), List("[a]P", "&Delta;")), List((List(),List("P"))))
       , {case () => HilbertCalculus.G}),
     new PositionTacticInfo("GV"
@@ -1084,7 +1084,7 @@ object DerivationInfo {
       , RuleDisplayInfo(SimpleDisplayInfo("[] monotone 2", "[]monotone 2"), SequentDisplay("[a;]Q"::Nil, "[a;]P"::Nil), SequentDisplay("Q"::Nil, "P"::Nil)::Nil)
       , "monb2", {case () => HilbertCalculus.useAt(DerivedAxioms.boxMonotone2)}),
     new DerivedRuleInfo("Goedel"
-      , RuleDisplayInfo(SimpleDisplayInfo("G", "G"), SequentDisplay(Nil, "[a;]P"::Nil), SequentDisplay(Nil, "P"::Nil)::Nil)
+      , RuleDisplayInfo(SimpleDisplayInfo("Goedel", "Goedel"), SequentDisplay(Nil, "[a;]P"::Nil), SequentDisplay(Nil, "P"::Nil)::Nil)
       , "Goedel", {case () => HilbertCalculus.useAt(DerivedAxioms.Goedel)}),
     new DerivedRuleInfo("CT term congruence"
       , RuleDisplayInfo(SimpleDisplayInfo("CT term congruence", "CTtermCongruence"), SequentDisplay(Nil, "ctx_(f_(||)) = ctx_(g_(||))"::Nil), SequentDisplay(Nil, "f_(||) = g_(||)"::Nil)::Nil)
