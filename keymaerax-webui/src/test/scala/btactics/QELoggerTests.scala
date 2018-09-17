@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DependencyAnalysis._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger._
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Box, Formula}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 

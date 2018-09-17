@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Bool, Formula, Function, Real, Sequent, Sort, StaticSemantics, Tuple, Unit}
 import edu.cmu.cs.ls.keymaerax.hydra.SQLite.SQLiteDB
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 
@@ -38,7 +38,7 @@ class TempDBTools(additionalListeners: Seq[IOListener]) {
     }
 
     def augmentDeclarations(content: String, parsedContent: Formula): String =
-      if (content.contains("Problem.")) content //@note determine by mandatory "Problem." block of KeYmaeraXProblemParser
+      if (content.contains("Problem")) content //@note determine by mandatory "Problem" block of KeYmaeraXArchiveParser
       else {
         val symbols = StaticSemantics.symbols(parsedContent)
         val fnDecls = symbols.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>

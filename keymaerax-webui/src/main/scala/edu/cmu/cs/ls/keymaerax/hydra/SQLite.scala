@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleProvable, Sequential
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXDeclarationsParser, KeYmaeraXParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXDeclarationsParser, KeYmaeraXParser}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent}
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, NoProof, ProvableSig, TermProvable}

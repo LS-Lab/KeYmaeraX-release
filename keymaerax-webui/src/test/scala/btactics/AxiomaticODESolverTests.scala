@@ -10,10 +10,10 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper._
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{byUS, _}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
-import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable$, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
+import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.scalatest.PrivateMethodTester
 import testHelper.KeYmaeraXTestTags.{DeploymentTest, IgnoreInBuildTest, SummaryTest, TodoTest}
 
@@ -577,7 +577,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
                     |  x<=m & b>0 -> [a:=-b; {x'=v,v'=a & v>=0}]x<=m
                     |End.
                     |""".stripMargin
-      val problem: Formula = KeYmaeraXProblemParser(model)
+      val problem: Formula = KeYmaeraXArchiveParser.parseAsProblemOrFormula(model)
 
       val t: BelleExpr = implyR(1) & composeb(1) & assignb(1) & AxiomaticODESolver.axiomaticSolve()(1) & allR(1) & implyR(1) & implyR(1) & assignb(1) & QE
 

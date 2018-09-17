@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.DLBySubst.assignbExists
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.DbProofTree
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
@@ -625,8 +625,8 @@ class DLTests extends TacticTestBase {
 
   it should "use close correctly" in withDatabase { db =>
     //@note regression test for bug where listeners were not notified correctly because of exception in close
-    val model = "Variables. R x. End.\nProblem. x>0 -> [{x:=x+1;}*]x>0 End."
-    val fml = KeYmaeraXProblemParser(model)
+    val model = "ProgramVariables. R x. End.\nProblem. x>0 -> [{x:=x+1;}*]x>0 End."
+    val fml = KeYmaeraXArchiveParser.parseAsProblemOrFormula(model)
     val tactic = implyR('R) & loop("x>0".asFormula)('R)
 
     val proofId = db.createProof(model)

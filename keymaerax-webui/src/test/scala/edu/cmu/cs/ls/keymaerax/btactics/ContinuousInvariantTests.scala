@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest}
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, ToolException}

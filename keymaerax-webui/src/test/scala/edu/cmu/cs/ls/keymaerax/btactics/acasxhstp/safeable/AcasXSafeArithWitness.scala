@@ -14,7 +14,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.CondCongruence._
 import edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable.SharedTactics._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest

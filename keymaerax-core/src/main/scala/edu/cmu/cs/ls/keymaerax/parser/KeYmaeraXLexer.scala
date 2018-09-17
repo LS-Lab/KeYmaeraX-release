@@ -590,7 +590,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) with Logging {
         case AxiomFileMode | LemmaFileMode | ProblemFileMode =>
           //An axiom name looks like "blah". but only blah gets grouped, so there are three
           // extra characters to account for.
-          consumeColumns(str.length + 3, DOUBLE_QUOTES_STRING(str), loc)
+          consumeColumns(str.length + 2, DOUBLE_QUOTES_STRING(str), loc)
         case _ => throw new Exception("Encountered delimited string in non-axiom lexing mode.")
       }
 

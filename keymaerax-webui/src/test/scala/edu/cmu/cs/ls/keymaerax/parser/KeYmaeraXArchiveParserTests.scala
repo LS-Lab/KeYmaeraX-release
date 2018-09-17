@@ -884,6 +884,31 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
                             |Expected: Link,Citation,Title,Description,Author,See""".stripMargin
   }
 
+  it should "report invalid meta info value" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | Title InvalidValue.
+        | ProgramVariables R x. End.
+        | Problem x>0 End.
+        |End.""".stripMargin
+    ) should have message """2:8 Invalid meta info value
+                            |Found:    InvalidValue (ID("InvalidValue")) at 2:8 to 2:19
+                            |Expected: <string> (DOUBLE_QUOTES_STRING)""".stripMargin
+  }
+
+  it should "report missing meta info delimiter" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1".
+        | Title "A title"
+        | ProgramVariables. R x. End.
+        | Problem. x>0 End.
+        |End.""".stripMargin
+    ) should have message """3:2 Missing meta info delimiter
+                            |Found:    ProgramVariables (PROGRAM_VARIABLES_BLOCK$) at 3:2 to 3:17
+                            |Expected: . (PERIOD$)
+                            |      or: ; (SEMI$)""".stripMargin
+  }
+
   it should "report missing or misplaced problem blocks" in {
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1".

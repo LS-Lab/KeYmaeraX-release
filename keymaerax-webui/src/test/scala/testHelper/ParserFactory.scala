@@ -5,7 +5,7 @@
 package testHelper
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXDeclarationsParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 
 /**
  * Created by ran on 2/4/15.
@@ -23,12 +23,8 @@ object ParserFactory {
 
   /** Parses from a string, substitutes function declarations. */
   def parseToSequent(in: String): Sequent = {
-    KeYmaeraXProblemParser.parseProblem(in) match {
-      case (decls, f: Formula) =>
-        Sequent(
-          collection.immutable.IndexedSeq[Formula](),
-          collection.immutable.IndexedSeq[Formula](USubst(decls.substs)(f)))
-      case (_, a) => throw new IllegalArgumentException("Parsing the input did not result in a formula but in: " + a)
-    }
+    Sequent(
+      collection.immutable.IndexedSeq[Formula](),
+      collection.immutable.IndexedSeq[Formula](KeYmaeraXArchiveParser.parseAsProblemOrFormula(in)))
   }
 }

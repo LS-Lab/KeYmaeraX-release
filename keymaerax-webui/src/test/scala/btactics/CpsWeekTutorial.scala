@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Formula, Function, Real, SubstitutionPair, USubst, Unit}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
@@ -81,7 +81,7 @@ class CpsWeekTutorial extends TacticTestBase {
   it should "stop after ODE to let users inspect a counterexample with false speed sb condition" in withQE { _ =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-falsespeedsb.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-falsespeedsb.kyt")).mkString)
-    val result = proveBy(KeYmaeraXProblemParser(modelContent), tactic)
+    val result = proveBy(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent), tactic)
     result.subgoals should have size 2
   }
 
@@ -161,7 +161,7 @@ class CpsWeekTutorial extends TacticTestBase {
   it should "find a hint for SB from parsed tactic" in withMathematica { _ =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-fullnaive.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-fullnaive.kyt")).mkString)
-    val result = proveBy(KeYmaeraXProblemParser(modelContent), tactic)
+    val result = proveBy(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent), tactic)
     result.subgoals should have size 2
     //unsimplified
     result.subgoals.last.succ should contain only "(m() < 0&(t<=0&((v < 0|v=0&(ep()<=0|ep()>0&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|v>0&(ep()<=0|ep()>0&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|t>0&((v < 0|v=0&((ep() < t|ep()=t&(A()<=0|A()>0&(b()<=0|b()>0&((x < m()|x=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m()))|x>m()))))|ep()>t&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|v>0&((ep() < t|ep()=t&(A() < 0|A()>=0&(b()<=0|b()>0&((x < m()|x=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m()))|x>m()))))|ep()>t&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m()))))))|m()=0&(t<=0&((v < 0|v=0&(ep()<=0|ep()>0&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2)|x>0)))))|v>0&(ep()<=0|ep()>0&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2)|x>0)))))|t>0&((v < 0|v=0&(ep()<=t|ep()>t&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2)|x>0)))))|v>0&(ep()<=t|ep()>t&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2)|x>0)))))))|m()>0&((t < 0&((v < 0|v=0&(ep()<=0|ep()>0&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|v>0&(ep()<=0|ep()>0&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|t=0&((v < 0|v=0&(ep()<=0|ep()>0&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*A()*ep()^2+2*m())|x>m())))))|v>0&(ep()<=0|ep()>0&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(-2*v*ep()+-1*A()*ep()^2+2*m())|x>m()))))))|t>0&((v < 0|v=0&(ep()<=t|ep()>t&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|v>0&(ep()<=t|ep()>t&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m()))))))".asFormula

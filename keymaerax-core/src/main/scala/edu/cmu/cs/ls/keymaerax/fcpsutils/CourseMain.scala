@@ -224,7 +224,7 @@ object CourseMain {
   private def parseProblemFileOrFail(v: ArgValue) : Formula = {
     val fileName = fileExistsOrFail(v)
     try {
-      val fml = edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser(scala.io.Source.fromFile(fileName).mkString)
+      val fml = edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.parseAsProblemOrFormula(scala.io.Source.fromFile(fileName).mkString)
       println(s"Problem file ${fileName} parsed successfully.")
       fml
     }

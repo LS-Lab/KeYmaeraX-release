@@ -103,7 +103,7 @@ class ModelListResponse(models : List[ModelPOJO]) extends Response {
     "title" -> JsString(modelpojo.title),
     "hasTactic" -> JsBoolean(modelpojo.tactic.isDefined),
     "numProofs" -> JsNumber(modelpojo.numProofs),
-    "isExercise" -> JsBoolean(KeYmaeraXProblemParser.isExercise(modelpojo.keyFile))
+    "isExercise" -> JsBoolean(KeYmaeraXArchiveParser.isExercise(modelpojo.keyFile))
   ))
 
   def getJson = JsArray(objects:_*)
@@ -173,7 +173,7 @@ class GetModelResponse(model : ModelPOJO) extends Response {
     "hasTactic" -> JsBoolean(model.tactic.isDefined),
     "tactic" -> JsString(model.tactic.getOrElse("")),
     "numProofs" -> JsNumber(model.numProofs),
-    "isExercise" -> JsBoolean(KeYmaeraXProblemParser.isExercise(model.keyFile))
+    "isExercise" -> JsBoolean(KeYmaeraXArchiveParser.isExercise(model.keyFile))
   )
 }
 

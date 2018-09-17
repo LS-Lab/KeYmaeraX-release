@@ -5,7 +5,7 @@ import java.util.Calendar
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import org.apache.logging.log4j.scala.Logging
 import spray.json._
@@ -135,7 +135,7 @@ object DatabasePopulator extends Logging {
   def executeTactic(db: DBAbstraction, model: String, proofId: Int, tactic: String): Unit = {
     val interpreter = prepareInterpreter(db, proofId)
     val parsedTactic = BelleParser(tactic)
-    interpreter(parsedTactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(model))))
+    interpreter(parsedTactic, BelleProvable(ProvableSig.startProof(KeYmaeraXArchiveParser.parseAsProblemOrFormula(model))))
     interpreter.kill()
   }
 

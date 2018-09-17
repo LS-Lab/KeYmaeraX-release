@@ -702,7 +702,7 @@ class CreateModelFromFormulaRequest(db: DBAbstraction, userId: String, nameOfMod
 
 class CreateModelRequest(db: DBAbstraction, userId: String, nameOfModel: String, modelText: String) extends UserRequest(userId) with WriteRequest {
   def resultingResponses(): List[Response] = {
-    if (KeYmaeraXProblemParser.isExercise(modelText)) {
+    if (KeYmaeraXArchiveParser.isExercise(modelText)) {
       if (db.getModelList(userId).map(_.name).contains(nameOfModel)) {
         new ModelUploadResponse(None, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
       } else {
@@ -733,7 +733,7 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
   def resultingResponses(): List[Response] = {
     val modelInfo = db.getModel(modelId)
     if (modelInfo.numProofs <= 0) {
-      if (KeYmaeraXProblemParser.isExercise(content)) {
+      if (KeYmaeraXArchiveParser.isExercise(content)) {
         db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(content))
         BooleanResponse(flag = true) :: Nil
       } else try {
@@ -1138,9 +1138,9 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
           KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
             generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ inv)))
           val defsGenerator = new ConfigurableGenerator[Expression]()
-          val (d, _) = KeYmaeraXProblemParser.parseProblem(db.getModel(mId).keyFile)
-          d.substs.foreach(sp => defsGenerator.products += (sp.what -> (sp.repl::Nil)))
-          session += proofId -> ProofSession(proofId, generator, d)
+          val problem = KeYmaeraXArchiveParser.parseProblem(db.getModel(mId).keyFile)
+          problem.defs.substs.foreach(sp => defsGenerator.products += (sp.what -> (sp.repl::Nil)))
+          session += proofId -> ProofSession(proofId, generator, problem.defs)
           TactixLibrary.invGenerator = generator //@todo should not store invariant generator globally for all users
           new OpenProofResponse(proofInfo, "loaded" /*TaskManagement.TaskLoadStatus.Loaded.toString.toLowerCase()*/) :: Nil
       }
@@ -1573,7 +1573,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
   }
 
   /** Basic input sanity checks w.r.t. symbols in `sequent`. */
-  private def checkInput(sequent: Sequent, input: BelleTermInput, defs: KeYmaeraXProblemParser.Declaration): Response = {
+  private def checkInput(sequent: Sequent, input: BelleTermInput, defs: KeYmaeraXDeclarationsParser.Declaration): Response = {
     try {
       val (arg, exprs) = input match {
         case BelleTermInput(value, Some(arg: TermArg)) => arg -> (KeYmaeraXParser(value) :: Nil)

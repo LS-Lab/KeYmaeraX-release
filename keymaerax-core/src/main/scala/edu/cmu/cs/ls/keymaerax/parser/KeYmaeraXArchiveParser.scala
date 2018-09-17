@@ -37,7 +37,7 @@ import scala.collection.mutable.ListBuffer
 object KeYmaeraXArchiveParser {
   /** The entry name, kyx file content (model), parsed model, and parsed name+tactic. */
   case class ParsedArchiveEntry(name: String, kind: String, fileContent: String,
-                                defs: KeYmaeraXProblemParser.Declaration,
+                                defs: KeYmaeraXDeclarationsParser.Declaration,
                                 model: Expression, tactics: List[(String, String, BelleExpr)],
                                 info: Map[String, String])
 
@@ -126,8 +126,24 @@ object KeYmaeraXArchiveParser {
     else throw ParseException("Expected a single entry, but got " + entries.size, UnknownLocation)
   }
 
+  /** Parses an archive from the source at path `file`. Use file#entry to refer to a specific entry in the file. */
+  def parseFromFile(file: String): List[ParsedArchiveEntry] = {
+    file.split('#').toList match {
+      case fileName :: Nil =>
+        val input = scala.io.Source.fromFile(fileName).mkString
+        KeYmaeraXArchiveParser.parse(input)
+      case fileName :: entryName :: Nil =>
+        val input = scala.io.Source.fromFile(fileName).mkString
+        KeYmaeraXArchiveParser.getEntry(entryName, input).
+          getOrElse(throw new IllegalArgumentException("Unknown archive entry " + entryName)) :: Nil
+    }
+  }
+
   /** Reads a specific entry from the archive. */
   def getEntry(name: String, content: String): Option[ParsedArchiveEntry] = parse(content).find(_.name == name)
+
+  /** Indicates whether or not the model represents an exercise. */
+  def isExercise(model: String): Boolean = model.contains("__________")
 
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
@@ -170,8 +186,8 @@ object KeYmaeraXArchiveParser {
         case _: DOUBLE_QUOTES_STRING => reduce(shift(st), 0, Bottom :+ MetaInfo(Map.empty), r :+ begin :+ input.head)
         case _ => throw ParseException("Missing archive name", st, nextTok, "\"<string>\"")
       }
-      case r :+ (begin@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ (name@Token(_: DOUBLE_QUOTES_STRING, _)) if la == PERIOD =>
-        reduce(shift(st), 1, Bottom, r :+ begin :+ name)
+      case r :+ (begin@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ (name@Token(_: DOUBLE_QUOTES_STRING, _)) :+ (info@MetaInfo(_)) if info.info.isEmpty && (la == PERIOD || la == SEMI) =>
+        reduce(shift(st), 1, Bottom, r :+ begin :+ name :+ info)
       // finish entry
       case r :+ Token(ARCHIVE_ENTRY_BEGIN(kind), startLoc) :+ Token(DOUBLE_QUOTES_STRING(name), _) :+ MetaInfo(info) :+ Definitions(defs, vars) :+
           Problem(problem, annotations) :+ Tactics(tactics) => la match {
@@ -186,6 +202,15 @@ object KeYmaeraXArchiveParser {
       case r :+ ArchiveEntries(lentries) :+ (rentry: ArchiveEntry) =>
         reduce(st, 2, Bottom :+ ArchiveEntries(lentries :+ rentry), r)
 
+      // metainfo
+      case r :+ Token(ARCHIVE_ENTRY_BEGIN(_), _) :+ Token(DOUBLE_QUOTES_STRING(_), _) :+ MetaInfo(_) :+ MetaInfoKey(_) => la match {
+        case DOUBLE_QUOTES_STRING(_) => shift(st)
+        case _ => throw ParseException("Invalid meta info value", st, Expected.ExpectTerminal(DOUBLE_QUOTES_STRING("")) :: Nil)
+      }
+      case r :+ (entry@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ (name@Token(DOUBLE_QUOTES_STRING(_), _)) :+ MetaInfo(info) :+ MetaInfoKey(infoKey) :+ Token(DOUBLE_QUOTES_STRING(infoValue), _) => la match {
+        case PERIOD | SEMI => reduce(shift(st), 4, Bottom :+ MetaInfo(info ++ Map(infoKey -> infoValue)), r :+ entry :+ name)
+        case _ => throw ParseException("Missing meta info delimiter", st, Expected.ExpectTerminal(PERIOD) :: Expected.ExpectTerminal(SEMI) :: Nil)
+      }
 
       // entry components: optional meta info, definitions, program variables before mandatory problem
       case r :+ (entry@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ (name@Token(DOUBLE_QUOTES_STRING(_), _)) :+ (info@MetaInfo(_)) => la match {
@@ -202,14 +227,6 @@ object KeYmaeraXArchiveParser {
         case IDENT(key, _) => throw ParseException("Invalid meta info key '" + key + "'", st, nextTok, MetaInfoKey.KEYS.mkString(","))
         case _ => throw ParseException("Invalid meta info key " + la, st, nextTok, MetaInfoKey.KEYS.mkString(","))
       }
-
-      // metainfo
-      case r :+ (entry@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ (name@Token(DOUBLE_QUOTES_STRING(_), _)) :+ MetaInfo(info) :+ MetaInfoKey(infoKey) => la match {
-        case DOUBLE_QUOTES_STRING(infoValue) => reduce(shift(st), 3, Bottom :+ MetaInfo(info ++ Map(infoKey -> infoValue)), r :+ entry :+ name)
-        case _ => throw ParseException("", currLoc)
-      }
-      case r :+ (entry@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ (name@Token(DOUBLE_QUOTES_STRING(_), _)) :+ (info@MetaInfo(_)) if la == PERIOD || la == SEMI =>
-        reduce(shift(st), 1, Bottom, r :+ entry :+ name :+ info)
 
       // definitions
       case _ :+ Token(ARCHIVE_ENTRY_BEGIN(_), _) :+ Token(DOUBLE_QUOTES_STRING(_), _) :+ MetaInfo(_) :+ Definitions(_, _) if la == DEFINITIONS_BLOCK || la == FUNCTIONS_BLOCK => shift(st)
@@ -369,6 +386,8 @@ object KeYmaeraXArchiveParser {
       case _ :+ Tactics(_) :+ Token(TACTIC_BLOCK, _) if la.isInstanceOf[DOUBLE_QUOTES_STRING] => shift(st)
       case r :+ (tactics@Tactics(_)) :+ (tacticBlock@Token(TACTIC_BLOCK, _)) if la == PERIOD =>
         reduce(shift(st), 1, Bottom :+ Token(DOUBLE_QUOTES_STRING("Unnamed"), currLoc), r :+ tactics :+ tacticBlock)
+      case r :+ (tactics@Tactics(_)) :+ (tacticBlock@Token(TACTIC_BLOCK, _)) :+ (name@Token(DOUBLE_QUOTES_STRING(_), _)) if la == PERIOD || la == SEMI =>
+        reduce(shift(st), 1, Bottom, r :+ tactics :+ tacticBlock :+ name)
       case r :+ (tactics@Tactics(_)) :+ Token(TACTIC_BLOCK, _) :+ Token(DOUBLE_QUOTES_STRING(name), _) =>
         //@note slice and parse later with BelleParser (needs converted definitions)
         //@todo reimplement BelleLexer/BelleParser

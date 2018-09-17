@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.universalGen
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 import edu.cmu.cs.ls.keymaerax.tools.Tool
@@ -228,7 +228,7 @@ class ODETests extends TacticTestBase with Timeouts {
   }
 
   it should "prove cheat sheet example" in withQE { _ => {
-    val f = KeYmaeraXProblemParser(
+    val f = KeYmaeraXArchiveParser.parseAsProblemOrFormula(
       """
         |/* Example from KeYmaera X Cheat Sheet */
         |Functions.        /* function symbols cannot change their value */

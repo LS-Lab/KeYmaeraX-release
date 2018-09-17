@@ -11,22 +11,7 @@ import org.scalatest.LoneElement._
   * Created by nfulton on 9/1/15.
   */
 class DeclsTests extends FlatSpec with Matchers {
-  "Declarations parser" should "parse declarations block correctly." in {
-    val input =
-      """ProgramVariables.
-        |R x.
-        |R z.
-        |R z_0.
-        |End.
-      """.stripMargin
-    val d = KeYmaeraXDeclarationsParser(KeYmaeraXLexer.inMode(input, ProblemFileMode))._1
-    d.decls.keySet.contains("x", None) shouldBe true
-    d.decls.keySet.contains("z", None) shouldBe true
-    d.decls.keySet.contains("z", Some(0)) shouldBe true
-    d.decls.keys.toList.length shouldBe 3
-  }
-
-  it should "parse declarations of z, z_0 as two separate declarations" in {
+  "Archive parser" should "parse declarations of z, z_0 as two separate declarations" in {
     val input =
       """ProgramVariables.
         |R x.
@@ -38,7 +23,7 @@ class DeclsTests extends FlatSpec with Matchers {
         |x + z + z_0 = z_0 + z + x
         |End.
       """.stripMargin
-    KeYmaeraXProblemParser(input)
+    KeYmaeraXArchiveParser.parseAsProblemOrFormula(input)
   }
 
   "Problem/Solution Block" should "parse correctly" in {
@@ -50,15 +35,15 @@ class DeclsTests extends FlatSpec with Matchers {
         |Problem.
         |  !(A() | !A()) -> !!(A() | !A())
         |End.
-        |Solution.
+        |Tactic.
         |  implyR(1)
         |End.
       """.stripMargin
 
-    val (problem, solution) = KeYmaeraXProblemParser.parseProblemAndTactic(input)
+    val parsed = KeYmaeraXArchiveParser.parse(input, parseTactics=true).loneElement
 
-    problem shouldBe "!(A() | !A()) -> !!(A() | !A())".asFormula
-    solution shouldBe TactixLibrary.implyR(1)
+    parsed.model shouldBe "!(A() | !A()) -> !!(A() | !A())".asFormula
+    parsed.tactics.head._3 shouldBe TactixLibrary.implyR(1)
   }
 
   "function domain" should "parse correctly" in {
@@ -72,7 +57,7 @@ class DeclsTests extends FlatSpec with Matchers {
         |End.
       """.stripMargin
 
-    KeYmaeraXProblemParser(input) shouldBe Equiv(
+    KeYmaeraXArchiveParser.parseAsProblemOrFormula(input) shouldBe Equiv(
       PredOf(Function("Cimpl", None, Tuple(Real, Tuple(Real, Real)), Bool), Pair(Number(0), Pair(Number(1), Number(2)))),
       True)
   }
@@ -88,7 +73,7 @@ class DeclsTests extends FlatSpec with Matchers {
         |End.
       """.stripMargin
 
-    a [ParseException] shouldBe thrownBy(KeYmaeraXProblemParser(input))
+    a [ParseException] shouldBe thrownBy(KeYmaeraXArchiveParser.parseAsProblemOrFormula(input))
   }
 
   it should "fail to parse when the function def'n has the wrong assoc" in {
@@ -102,32 +87,7 @@ class DeclsTests extends FlatSpec with Matchers {
         |End.
       """.stripMargin
 
-    a [ParseException] shouldBe thrownBy(KeYmaeraXProblemParser(input))
-  }
-
-  it should "parse correctly when fully explicit" in {
-    val input =
-      """
-        |Functions.
-        |  B Cimpl((R, R), R).
-        |End.
-        |Problem.
-        |  Cimpl((0,1),2) <-> true
-        |End.
-      """.stripMargin
-
-    val input2 =
-      """
-        |Functions.
-        |  B Cimpl(R, (R, R)).
-        |End.
-        |Problem.
-        |  Cimpl(0,(1,2)) <-> true
-        |End.
-      """.stripMargin
-
-    KeYmaeraXProblemParser(input) shouldBe "Cimpl((0,1),2) <-> true".asFormula
-    KeYmaeraXProblemParser(input2) shouldBe "Cimpl(0,(1,2)) <-> true".asFormula
+    a [ParseException] shouldBe thrownBy(KeYmaeraXArchiveParser.parseAsProblemOrFormula(input))
   }
 
   it should "substitute in definitions" in {
@@ -141,13 +101,13 @@ class DeclsTests extends FlatSpec with Matchers {
         |End.
       """.stripMargin
 
-    val (decls, formula) = KeYmaeraXProblemParser.parseProblem(input)
-    decls.decls.loneElement._2 match { case (Some(domain), codomain, Some(interpretation), _) =>
+    val parsed = KeYmaeraXArchiveParser(input).loneElement
+    parsed.defs.decls.loneElement._2 match { case (Some(domain), codomain, Some(interpretation), _) =>
       domain shouldBe Tuple(Real, Tuple(Real, Real))
       codomain shouldBe Bool
       interpretation shouldBe "(._0) + (._1) <= (._2)".asFormula
     }
-    formula shouldBe "0+1 <= 2 <-> true".asFormula
+    parsed.model shouldBe "0+1 <= 2 <-> true".asFormula
   }
 
   "Declarations type analysis" should "elaborate variables to no-arg functions per declaration" in {
@@ -171,7 +131,7 @@ class DeclsTests extends FlatSpec with Matchers {
     val x = Variable("x")
     val a = Variable("a")
     val v = Variable("v")
-    KeYmaeraXProblemParser(model) shouldBe Imply(
+    KeYmaeraXArchiveParser.parseAsProblemOrFormula(model) shouldBe Imply(
       And(LessEqual(x, m), Greater(b, Number(0))),
       Box(Compose(Assign(a, Neg(b)), ODESystem("{x'=v,v'=a}".asDifferentialProgram, GreaterEqual(v, Number(0)))), LessEqual(x, m)))
   }
@@ -192,7 +152,7 @@ class DeclsTests extends FlatSpec with Matchers {
                   |  x<=m & b>0 -> [a:=-b; {x'=v,v'=a & v>=0}]x<=m
                   |End.
                   |""".stripMargin
-    a[ParseException] should be thrownBy KeYmaeraXProblemParser(model)
+    a[ParseException] should be thrownBy KeYmaeraXArchiveParser.parseAsProblemOrFormula(model)
   }
 
   it should "succeed when ()'s are used." in {
@@ -211,13 +171,13 @@ class DeclsTests extends FlatSpec with Matchers {
                   |  x<=m() & b()>0 -> [a:=-b(); {x'=v,v'=a & v>=0}]x<=m()
                   |End.
                   |""".stripMargin
-    KeYmaeraXProblemParser(model) shouldBe "x<=m() & b()>0 -> [a:=-b(); {x'=v,v'=a & v>=0}]x<=m()".asFormula
+    KeYmaeraXArchiveParser.parseAsProblemOrFormula(model) shouldBe "x<=m() & b()>0 -> [a:=-b(); {x'=v,v'=a & v>=0}]x<=m()".asFormula
   }
 
   it should "detect and print undeclared symbols" in {
     val model = """Problem. x>0 End."""
     //@todo better location information
-    the [ParseException] thrownBy  KeYmaeraXProblemParser(model) should have message
+    the [ParseException] thrownBy  KeYmaeraXArchiveParser.parseAsProblemOrFormula(model) should have message
       """<somewhere> type analysis: undefined symbol x with index None
         |Found:    <unknown> at <somewhere>
         |Expected: <unknown>""".stripMargin

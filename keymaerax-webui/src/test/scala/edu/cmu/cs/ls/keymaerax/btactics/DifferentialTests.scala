@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest}
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, ToolException}
@@ -351,7 +351,7 @@ class DifferentialTests extends TacticTestBase with Timeouts {
                   |End.
                   |""".stripMargin
 
-    proveBy(KeYmaeraXProblemParser(input), implyR(1) & dI('full)(1)) shouldBe 'proved
+    proveBy(KeYmaeraXArchiveParser.parseAsProblemOrFormula(input), implyR(1) & dI('full)(1)) shouldBe 'proved
   }
 
   it should "prove with and without frame constraint y'=0" in withQE { _ =>

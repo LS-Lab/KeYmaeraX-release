@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.KeYmaeraXTestTags.TodoTest
@@ -77,7 +77,7 @@ class StttTutorial extends TacticTestBase {
 
     //@todo multi-argument diffInvariant not yet supported by TacticExtraction/BelleParser
 //    db.proveBy(modelContent, tactic) shouldBe 'proved
-    proveBy(KeYmaeraXProblemParser(modelContent), tactic) shouldBe 'proved
+    proveBy(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent), tactic) shouldBe 'proved
   }}
 
   "Example 2" should "be provable with master and custom loop invariant" in withQE { _ => withDatabase { db =>
@@ -342,7 +342,7 @@ class StttTutorial extends TacticTestBase {
 
     //@todo multi-argument diffInvariant not yet supported by TacticExtraction/BelleParser
     //db.proveBy(modelContent, tactic) shouldBe 'proved
-    proveBy(KeYmaeraXProblemParser(modelContent), tactic) shouldBe 'proved
+    proveBy(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent), tactic) shouldBe 'proved
   }}
 
 }

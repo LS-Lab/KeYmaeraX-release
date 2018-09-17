@@ -302,7 +302,7 @@ object KeYmaeraX {
 
   private def parseProblemFile(fileName: String) = {
     try {
-      KeYmaeraXArchiveParser(fileName).foreach(e => {
+      KeYmaeraXArchiveParser.parseFromFile(fileName).foreach(e => {
         println(e.name)
         println(KeYmaeraXPrettyPrinter(e.model))
         println("Parsed file successfully")
@@ -481,7 +481,7 @@ object KeYmaeraX {
     require(options.contains('in), usage)
 
     val inputIdentifier = options('in).toString
-    val inputModels = KeYmaeraXArchiveParser(inputIdentifier)
+    val inputModels = KeYmaeraXArchiveParser.parseFromFile(inputIdentifier)
     val inputFileName = inputIdentifier.split("#").toList.head
     val outputFilePrefix = options.getOrElse('out, inputFileName)
     val outputFileSuffix = ".kyp"
@@ -662,7 +662,7 @@ object KeYmaeraX {
     require(options.contains('in), usage)
 
     val inputFileName = options('in).toString
-    val archiveContent = KeYmaeraXArchiveParser(inputFileName)
+    val archiveContent = KeYmaeraXArchiveParser.parseFromFile(inputFileName)
 
     val statistics = scala.collection.mutable.LinkedHashMap[String, Either[(Long, Long, Int, Int, Int), Throwable]]()
 
@@ -762,7 +762,7 @@ object KeYmaeraX {
     require(options.contains('in), usage)
 
     val in = options('in).toString
-    val inputEntry = KeYmaeraXArchiveParser(in).head
+    val inputEntry = KeYmaeraXArchiveParser.parseFromFile(in).head
     val inputModel = inputEntry.model.asInstanceOf[Formula]
 
     val verifyOption:Option[(ProvableSig => Unit)] =
@@ -896,10 +896,7 @@ object KeYmaeraX {
     val modelInput = scala.io.Source.fromFile(modelFileNameDotKyx).mkString
     val tacticInput = tacticFileNameDotKyt.map(scala.io.Source.fromFile(_).mkString)
     val defsInput = scaladefsFilename.map(scala.io.Source.fromFile(_).mkString)
-    val inputFormula:Formula = KeYmaeraXProblemParser(modelInput) match {
-      case f:Formula => f
-      case _ => ???
-    }
+    val inputFormula: Formula = KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelInput)
     new BelleREPL(inputFormula, tacticInput, defsInput, tacticFileNameDotKyt, scaladefsFilename).run()
   }
 
@@ -958,7 +955,7 @@ object KeYmaeraX {
     require(options.contains('in) && options.contains('out), usage)
 
     val kyxFile = options('in).toString
-    val archiveContent = KeYmaeraXArchiveParser(kyxFile)
+    val archiveContent = KeYmaeraXArchiveParser.parseFromFile(kyxFile)
 
     //@note remove all tactics, e.model does not contain annotations anyway
     //@note remove all definitions too, those might be used as proof hints

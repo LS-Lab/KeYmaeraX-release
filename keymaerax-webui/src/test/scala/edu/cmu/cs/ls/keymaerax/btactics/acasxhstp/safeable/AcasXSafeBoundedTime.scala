@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleAbort, BelleExpr, PosInExpr}
@@ -215,7 +215,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
       " ((w * dhd <= w * dhfM & w * ao <= aM) | w * ao <= 0)))").asFormula
 
     /*** Main safe theorem and its tactic ***/
-    val safeImplicitTLFormula = KeYmaeraXProblemParser( io.Source.fromInputStream(
+    val safeImplicitTLFormula = KeYmaeraXArchiveParser.parseAsProblemOrFormula( io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/bounded_implicit.kyx")).mkString)
 
     val safeTac = implyR('R) & andL('L) &
@@ -273,7 +273,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
   it should "prove Lemma 4a: time-limited implicit-explicit lower equivalence" in withQE { tool =>
     if (containsLemma("bounded_lower_equivalence")) removeLemma("bounded_lower_equivalence")
 
-    val reductionFml = KeYmaeraXProblemParser(io.Source.fromInputStream(
+    val reductionFml = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/bounded_lower_equivalence.kyx")).mkString)
 
     def lweqvA(b:BelleExpr,s:BelleExpr,v:BelleExpr) =
@@ -513,7 +513,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
   }
 
   it should "prove Lemma 4b: time-limited implicit-explicit upper equivalence" in withQE { tool =>
-    val reductionFml = KeYmaeraXProblemParser(io.Source.fromInputStream(
+    val reductionFml = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/bounded_upper_equivalence.kyx")).mkString)
 
     /*** Label Open Goals ***/
@@ -843,10 +843,10 @@ class AcasXSafeBoundedTime extends AcasXBase {
     beforeEach()
     withQE { _ =>
 
-      val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
+      val lower = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/bounded_lower_equivalence.kyx")).mkString)
 
-      val upper = KeYmaeraXProblemParser(io.Source.fromInputStream(
+      val upper = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/bounded_upper_equivalence.kyx")).mkString)
 
       // lower proof has more general precondition, but does not fit to safety proof -> we are going to ask a less general equivalence question
@@ -933,9 +933,9 @@ class AcasXSafeBoundedTime extends AcasXBase {
     beforeEach()
     withQE { _ =>
 
-      val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
+      val lower = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/bounded_lower_equivalence.kyx")).mkString)
-      val upper = KeYmaeraXProblemParser(io.Source.fromInputStream(
+      val upper = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/bounded_upper_equivalence.kyx")).mkString)
 
       // lower proof has more general precondition, but does not fit to safety proof -> we are going to ask a less general equivalence question
@@ -1034,7 +1034,7 @@ class AcasXSafeBoundedTime extends AcasXBase {
     beforeEach()
     withQE { _ =>
 
-      val implicitSafety = KeYmaeraXProblemParser(io.Source.fromInputStream(
+      val implicitSafety = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/bounded_implicit.kyx")).mkString)
 
       val theorem4 = getLemma("bounded_implicit")

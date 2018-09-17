@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
 import edu.cmu.cs.ls.keymaerax.hydra.BelleParserLinker
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 class SCUBATests extends TacticTestBase {
@@ -93,7 +93,7 @@ class SCUBATests extends TacticTestBase {
                   |)]t>0
                   |End.""".stripMargin
 
-    val model = KeYmaeraXProblemParser.parseProblem(modelString)._2
+    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelString)
 
 //    val tacticDefns = scala.io.Source.fromFile("/home/nfulton/dev/scuba-release/tApprox/human_readable.kyt").mkString
 //    val tactic = BelleParserLinker(tacticDefns, "main").asTactic
