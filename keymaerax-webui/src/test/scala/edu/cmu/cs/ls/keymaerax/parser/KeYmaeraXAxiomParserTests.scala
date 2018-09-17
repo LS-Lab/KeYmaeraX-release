@@ -40,15 +40,9 @@ class KeYmaeraXAxiomParserTests extends FlatSpec with Matchers {
 
   it should "parse all instantiate (found failure case)" in {
     val input =
-      """
-                  |Variables.
-                  | F p(T).
-                  | R x.
-                  |End.
-                  |
-                  |Axiom /*\\foralli */ "all instantiate".
-                  |  (\forall x p(x)) -> p(t())
-                  |End.""".stripMargin
+      """Axiom /*\\foralli */ "all instantiate".
+        |  (\forall x p(x)) -> p(t())
+        |End.""".stripMargin
     val axioms = KeYmaeraXAxiomParser(input)
     axioms.length shouldBe 1
     axioms.head._1 shouldBe "all instantiate"

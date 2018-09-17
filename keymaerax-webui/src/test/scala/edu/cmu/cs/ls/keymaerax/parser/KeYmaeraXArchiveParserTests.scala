@@ -8,7 +8,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Bool, Expression, Real, Sort, Trafo, Tuple, Unit}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
 import org.scalatest.matchers.{MatchResult, Matcher}
@@ -19,9 +19,9 @@ import org.scalatest.matchers.{MatchResult, Matcher}
   */
 class KeYmaeraXArchiveParserTests extends TacticTestBase {
 
-  private def beDecl(right: KeYmaeraXDeclarationsParser.Declaration) =
-    new Matcher[KeYmaeraXDeclarationsParser.Declaration] {
-      def apply(left: KeYmaeraXDeclarationsParser.Declaration): MatchResult =
+  private def beDecl(right: Declaration) =
+    new Matcher[Declaration] {
+      def apply(left: Declaration): MatchResult =
         MatchResult(
           //compare without locations
           left.decls.map(v => v._1 -> (v._2._1, v._2._2, v._2._3)) == right.decls.map(v => v._1 -> (v._2._1, v._2._2, v._2._3)),

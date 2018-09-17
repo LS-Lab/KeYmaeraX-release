@@ -114,7 +114,7 @@ abstract class UserRequest(username: String) extends Request {
 }
 
 /** A proof session storing information between requests. */
-case class ProofSession(proofId: String, invGenerator: Generator[Formula], defs: KeYmaeraXDeclarationsParser.Declaration)
+case class ProofSession(proofId: String, invGenerator: Generator[Formula], defs: KeYmaeraXArchiveParser.Declaration)
 
 abstract class UserModelRequest(db: DBAbstraction, username: String, modelId: String) extends UserRequest(username) {
   override final def resultingResponses(): List[Response] = {
@@ -1573,7 +1573,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
   }
 
   /** Basic input sanity checks w.r.t. symbols in `sequent`. */
-  private def checkInput(sequent: Sequent, input: BelleTermInput, defs: KeYmaeraXDeclarationsParser.Declaration): Response = {
+  private def checkInput(sequent: Sequent, input: BelleTermInput, defs: KeYmaeraXArchiveParser.Declaration): Response = {
     try {
       val (arg, exprs) = input match {
         case BelleTermInput(value, Some(arg: TermArg)) => arg -> (KeYmaeraXParser(value) :: Nil)

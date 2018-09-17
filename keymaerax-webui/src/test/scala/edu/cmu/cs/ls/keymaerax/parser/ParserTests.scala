@@ -561,20 +561,6 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       }
     }
   }
-  
-  it should "not parse any examples/t/negativeALP files" in {
-    val files =
-      "undeclared.key.alp" :: Nil
-
-    for(testFile <- files) {
-      val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/negativeALP/" + testFile)).mkString
-      withSafeClue(testFile) {
-        a[Exception] should be thrownBy {
-          KeYmaeraXAxiomParser(src)
-        }
-      }
-    }
-  }
 
   //@todo this is a pretty random test case.
 //  "The lemma file parser" should "parse all positive axiom examples" in {

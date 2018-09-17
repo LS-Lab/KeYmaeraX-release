@@ -23,8 +23,7 @@ object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) with Logg
     val tokens = KeYmaeraXLexer.inMode(input, AxiomFileMode)
     logger.debug("Tokens are: " + tokens)
     try {
-      val (decls, axiomTokens) = KeYmaeraXDeclarationsParser(tokens)
-      val axioms = parseAxioms(axiomTokens)
+      val axioms = parseAxioms(tokens)
       //@note axiom file does not declare symbols
 //      assert(KeYmaeraXParser.LAX || axioms.forall(ax => KeYmaeraXDeclarationsParser.typeAnalysis(decls, ax._2)), "type analysis of axioms")
       axioms

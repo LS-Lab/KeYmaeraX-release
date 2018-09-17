@@ -48,9 +48,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutabl
 
     val tokens = KeYmaeraXLexer.inMode(input, LemmaFileMode)
     logger.debug("Tokens are: " + tokens)
-    val (decls, lemmaTokens) = KeYmaeraXDeclarationsParser(tokens)
-    logger.debug("Declarations: " + decls)
-    parseLemma(lemmaTokens)
+    parseLemma(tokens)
   } catch {
     case e: ParseException => throw e.inContext("input:  " + inputWithPossibleBOM)
     case e: IllegalArgumentException => throw ParseException("Illegal argument", e).inInput(inputWithPossibleBOM)
