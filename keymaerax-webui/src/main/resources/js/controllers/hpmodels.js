@@ -21,7 +21,6 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
   function ($scope, $http, $route, $uibModalInstance, $uibModal, $location, Models, sessionService, spinnerService) {
      /** Model data */
      $scope.model = {
-       uri: undefined,
        modelName: undefined,
        content: undefined
      };
@@ -31,14 +30,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
        if (!$scope.isKya(fileContent)) {
          $scope.model.modelName = fileName.substring(0, fileName.indexOf('.'));
        }
-       $scope.model.uri = "file://" + fileName;
        $scope.$digest();
-     };
-
-     $scope.updateModelContentFromURL = function() {
-       $http.get($scope.model.uri).then(function(response) {
-          $scope.model.content = response.data;
-       });
      };
 
      /* Indicates whether `content` is an archive or a plain model file. */
