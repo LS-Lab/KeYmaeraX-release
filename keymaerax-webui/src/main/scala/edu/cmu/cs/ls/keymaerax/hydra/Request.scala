@@ -704,19 +704,19 @@ class CreateModelRequest(db: DBAbstraction, userId: String, nameOfModel: String,
   def resultingResponses(): List[Response] = {
     if (KeYmaeraXArchiveParser.isExercise(modelText)) {
       if (db.getModelList(userId).map(_.name).contains(nameOfModel)) {
-        new ModelUploadResponse(None, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
+        ModelUploadResponse(None, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
       } else {
         val createdId = db.createModel(userId, nameOfModel, modelText, currentDate()).map(_.toString)
-        new ModelUploadResponse(createdId, None) :: Nil
+        ModelUploadResponse(createdId, None) :: Nil
       }
     } else try {
       KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelText) match {
         case fml: Formula =>
           if (db.getModelList(userId).map(_.name).contains(nameOfModel)) {
-            new ModelUploadResponse(None, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
+            ModelUploadResponse(None, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
           } else {
             val createdId = db.createModel(userId, nameOfModel, RequestHelper.augmentDeclarations(modelText, fml), currentDate()).map(_.toString)
-            new ModelUploadResponse(createdId, None) :: Nil
+            ModelUploadResponse(createdId, None) :: Nil
           }
         case t => new ErrorResponse("Expected a model formula, but got a file with a " + t.kind) :: Nil
       }
@@ -2236,7 +2236,7 @@ object RequestHelper {
   }
 
   def augmentDeclarations(content: String, parsedContent: Formula): String =
-    if (content.contains("Problem.")) content //@note determine by mandatory "Problem." block of KeYmaeraXProblemParser
+    if (content.contains("Problem")) content //@note determine by mandatory "Problem" block of KeYmaeraXArchiveParser
     else {
       val symbols = StaticSemantics.symbols(parsedContent)
       val fnDecls = symbols.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>
