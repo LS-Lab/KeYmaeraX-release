@@ -196,43 +196,13 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       }
     })
 
-    lazy val endODEHeuristic: BelleExpr = "ANON" by ((seq: Sequent) => {
-      val succInstantiators = seq.succ.indices.map(SuccPosition.base0(_)).flatMap(pos => {
-        Idioms.mapSubpositions(pos, seq, {
-          case (Forall((t@BaseVariable("t_", _, Real))::Nil, Imply(
-                  GreaterEqual(BaseVariable("t_", _, Real), _),
-                  Imply(Forall((s@BaseVariable("s_", _, Real))::Nil, Imply(And(
-                    LessEqual(_, BaseVariable("s_", _, Real)),
-                    LessEqual(BaseVariable("s_", _, Real), BaseVariable("t_", _, Real))), _)), _))), pp: Position) =>
-            Some(allR(pp) & implyR(pp)*2 & allL(s, t)('Llast))
-          case _ => None
-        })
-      })
-
-      val anteInstantiators = seq.ante.indices.map(AntePosition.base0(_)).flatMap(pos => {
-        Idioms.mapSubpositions(pos, seq, {
-          case (Forall((s@BaseVariable("s_", _, Real))::Nil, Imply(And(
-                  LessEqual(_, BaseVariable("s_", _, Real)),
-                  LessEqual(BaseVariable("s_", _, Real), t@BaseVariable("t_", _, Real))), _)), pp: Position) =>
-            Some(allL(s, t)(pp))
-          case _ => None
-        })
-      })
-
-      if ((succInstantiators ++ anteInstantiators).nonEmpty) {
-        (succInstantiators ++ anteInstantiators).reduce[BelleExpr](_ & _) & QE & done
-      } else {
-        fail
-      }
-    })
-
     onAll(decomposeToODE) &
     onAll(done | close |
       SaturateTactic(onAll(tacticChase(autoTacticIndex)(notL, andL, notR, implyR, orR, allR,
         TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
         implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
         andR, equivR, loop, odeR, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
-        onAll(SaturateTactic(exhaustiveEqL2R('L)) & (endODEHeuristic | ?(QE & (if (keepQEFalse) nil else done)))))
+        onAll(SaturateTactic(exhaustiveEqL2R('L)) & (DifferentialTactics.endODEHeuristic | ?(QE & (if (keepQEFalse) nil else done)))))
   }
 
   /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
