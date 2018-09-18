@@ -40,6 +40,10 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       case err: BelleThrowable =>
         listeners.foreach(_.end(v, expr, Right(err)))
         throw err
+      case e: StackOverflowError =>
+        // unable to recover, listeners are likely corrupted
+        logger.fatal("Fatal error: stack overflow, please restart KeYmaera X with increased stack size")
+        throw new BelleThrowable("Fatal error: stack overflow, please restart KeYmaera X with increased stack size", e)
       case e: Throwable =>
         val be = new BelleThrowable("Error in sequential interpreter: " + e.getMessage, e)
         listeners.foreach(_.end(v, expr, Right(be)))
