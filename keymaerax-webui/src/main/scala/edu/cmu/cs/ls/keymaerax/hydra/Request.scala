@@ -2118,13 +2118,13 @@ class ExtractLemmaRequest(db: DBAbstraction, userId: String, proofId: String) ex
 
 object ArchiveEntryPrinter {
   def tacticEntry(name: String, tactic: String): String =
-    s"""Tactic "$name".
+    s"""Tactic "$name"
        #  $tactic
        #End.
        """.stripMargin('#')
 
   def archiveEntry(model: ModelPOJO, tactics:List[(String, String)]): String =
-    s"""ArchiveEntry "${model.name}".
+    s"""ArchiveEntry "${model.name}"
        #
          #${model.keyFile}
        #
