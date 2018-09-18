@@ -48,8 +48,8 @@ class KeYmaeraXArchivePrinter extends (KeYmaeraXArchiveParser.ParsedArchiveEntry
     })
 
     def printSort(domain: Sort): String = domain match {
-      case Real => "R"
-      case Bool => "B"
+      case Real => "Real"
+      case Bool => "Bool"
       case Trafo => "HP"
       case Unit => ""
       case Tuple(l, r) => printSort(l) + "," + printSort(r)
@@ -72,39 +72,39 @@ class KeYmaeraXArchivePrinter extends (KeYmaeraXArchiveParser.ParsedArchiveEntry
 
     val printedDecls = symbols.filter(s => !defs.keySet.contains(s.name -> s.index)).map({
       case Function(name, idx, domain, sort, _) if !entry.defs.decls.contains((name, idx)) =>
-        s"  ${printSort(sort)} ${printName(name, idx)}(${printSort(domain)})."
+        s"  ${printSort(sort)} ${printName(name, idx)}(${printSort(domain)});"
       case _ => "" // either printedDefs or printedVars
     }).filter(_.nonEmpty).mkString("\n")
 
     val printedDefs = defs.map({
       case ((name, idx), (domain, codomain, interpretation, _)) =>
-        s"  ${printSort(codomain)} ${printName(name, idx)}(${printSort(domain.getOrElse(Unit))})${printDef(codomain, interpretation)}."
+        s"  ${printSort(codomain)} ${printName(name, idx)}(${printSort(domain.getOrElse(Unit))})${printDef(codomain, interpretation)};"
       case _ => ""
     }).filter(_.nonEmpty)
 
     val printedVars = symbols.map({
-      case v: BaseVariable => "  " + printSort(v.sort) + " " + printName(v.name, v.index) + "."
+      case v: BaseVariable => "  " + printSort(v.sort) + " " + printName(v.name, v.index) + ";"
       case _ => "" // see printDecls and printDefs above
     }).filter(_.nonEmpty).mkString("\n")
 
     val printedTactics = entry.tactics.map({
       case (tname, t, _) =>
-        s"""$TACTIC_BEGIN "$tname".\n$t\n$END_BLOCK"""
+        s"""$TACTIC_BEGIN "$tname"\n$t\n$END_BLOCK"""
     }).mkString("\n\n")
 
     val defsBlock =
-      if (printedDecls.nonEmpty || printedDefs.nonEmpty) "Definitions.\n" +
+      if (printedDecls.nonEmpty || printedDefs.nonEmpty) "Definitions\n" +
         printedDecls + (if (printedDecls.nonEmpty && printedDefs.nonEmpty) "\n" else "") +
         printedDefs.mkString("\n") + "\n" + END_BLOCK + "\n"
       else ""
 
-    s"""$head "${entry.name}".
+    s"""$head "${entry.name}"
        |$defsBlock
-       |ProgramVariables.
+       |ProgramVariables
        |$printedVars
        |$END_BLOCK
        |
-       |Problem.
+       |Problem
        |  ${entry.model.prettyString}
        |$END_BLOCK
        |
