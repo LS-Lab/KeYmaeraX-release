@@ -2,11 +2,11 @@
     <h3 class="modal-title">Error executing {{url}}</h3>
     <h5 class="modal-title">You can report this error to the KeYmaera X team by clicking <kbd>Report Error</kbd>.</h5>
 </div>
-<div class="modal-body" style="overflow: scroll; height: 300px;">
+<div class="modal-body k4-vertical-fill-flex">
     <div class="well well-sm">
         <p>{{errorText}}</p>
     </div>
-    <pre style="overflow: scroll; height: 200px;" ng-if="modelWithError">{{modelWithError}}</pre>
+    <pre class="k4-vertical-fill-flex" ng-if="modelWithError">{{modelWithError}}</pre>
     <div>
         <a ng-click="stacktraceCollapsed=!stacktraceCollapsed">
             <i class="fa fa-caret-right" ng-if="stacktraceCollapsed"></i>
