@@ -43,6 +43,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
 import org.apache.logging.log4j.scala.Logging
 
 import scala.util.Try
@@ -741,13 +742,13 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
       val archiveEntries =
         if (parsedArchiveEntries.size == 1 && parsedArchiveEntries.head.name == "<undefined>") {
           val entry = parsedArchiveEntries.head
-          KeYmaeraXArchiveParser.ParsedArchiveEntry(modelName, entry.kind, entry.fileContent, entry.defs,
-            entry.model, entry.tactics, entry.info) :: Nil
+          KeYmaeraXArchiveParser.ParsedArchiveEntry(modelName, entry.kind, entry.fileContent, entry.problemContent,
+            entry.defs, entry.model, entry.tactics, entry.info) :: Nil
         } else parsedArchiveEntries
 
       val (failedModels, succeededModels) = archiveEntries.foldLeft((List[String](), List[String]()))({ case ((failedImports, succeededImports), entry) =>
         val uniqueModelName = db.getUniqueModelName(userId, entry.name)
-        db.createModel(userId, uniqueModelName, entry.fileContent, currentDate(), entry.info.get("Description"),
+        db.createModel(userId, uniqueModelName, entry.problemContent, currentDate(), entry.info.get("Description"),
           entry.info.get("Title"), entry.info.get("Link"), entry.tactics.headOption.map(_._2)) match {
           case None =>
             // really should not get here. print and continue importing the remainder of the archive
@@ -1934,7 +1935,7 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
       uniqueProofName = proofName + "_" + i
     }
 
-    val archiveContent = ArchiveEntryPrinter.archiveEntry(model, (proofName, tactic)::Nil)
+    val archiveContent = ArchiveEntryPrinter.archiveEntry(model, (proofName, tactic)::Nil, withComments=false)
     Files.write(proofbackupPath.resolve(uniqueProofName), archiveContent.getBytes())
   }
 
@@ -2107,21 +2108,19 @@ class ExtractLemmaRequest(db: DBAbstraction, userId: String, proofId: String) ex
 }
 
 object ArchiveEntryPrinter {
-  def tacticEntry(name: String, tactic: String): String =
-    s"""Tactic "$name"
-       #  $tactic
-       #End.
-       """.stripMargin('#')
+  def archiveEntry(modelInfo: ModelPOJO, tactics:List[(String, String)], withComments: Boolean): String = {
+    KeYmaeraXArchiveParser(modelInfo.keyFile) match {
+      case (entry@KeYmaeraXArchiveParser.ParsedArchiveEntry(name, _, _, _, _, _, _, _)) :: Nil if name == "<undefined>" =>
+        new KeYmaeraXArchivePrinter(withComments)(replaceInfo(entry, modelInfo.name, tactics))
+      case (entry@KeYmaeraXArchiveParser.ParsedArchiveEntry(name, _, _, _, _, _, _, _)) :: Nil if name != "<undefined>" =>
+        new KeYmaeraXArchivePrinter(withComments)(replaceInfo(entry, entry.name, tactics))
+    }
+  }
 
-  def archiveEntry(model: ModelPOJO, tactics:List[(String, String)]): String =
-    s"""ArchiveEntry "${model.name}"
-       #
-         #${model.keyFile}
-       #
-         #${tactics.map(t => tacticEntry(t._1, t._2)).mkString("\n")}
-       #
-         #End.
-       """.stripMargin('#')
+  private def replaceInfo(entry: ParsedArchiveEntry, entryName: String, tactics: List[(String, String)]): ParsedArchiveEntry = {
+    KeYmaeraXArchiveParser.ParsedArchiveEntry(entryName, entry.kind, entry.fileContent, entry.problemContent,
+      entry.defs, entry.model, tactics.map(e => (e._1, e._2, TactixLibrary.skip)), entry.info)
+  }
 }
 
 class ExtractProblemSolutionRequest(db: DBAbstraction, userId: String, proofId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
@@ -2130,7 +2129,8 @@ class ExtractProblemSolutionRequest(db: DBAbstraction, userId: String, proofId: 
     val proofName = tree.info.name
     val tactic = tree.tacticString
     val model = db.getModel(tree.info.modelId.get)
-    val archiveContent = ArchiveEntryPrinter.archiveEntry(model, (proofName, tactic)::Nil)
+
+    val archiveContent = ArchiveEntryPrinter.archiveEntry(model, (proofName, tactic)::Nil, withComments=true)
     new ExtractProblemSolutionResponse(archiveContent) :: Nil
   }
 }
@@ -2144,7 +2144,7 @@ class ExtractModelSolutionsRequest(db: DBAbstraction, userId: String, modelIds: 
       else Nil
     }
     val models = modelIds.map(mid => db.getModel(mid) -> modelProofs(mid)).filter(exportEmptyProof || _._2.nonEmpty)
-    val archiveContent = models.map({case (model, proofs) => ArchiveEntryPrinter.archiveEntry(model, proofs)}).mkString("\n\n")
+    val archiveContent = models.map({case (model, proofs) => ArchiveEntryPrinter.archiveEntry(model, proofs, withComments=true)}).mkString("\n\n")
     new ExtractProblemSolutionResponse(archiveContent + "\n") :: Nil
   }
 }

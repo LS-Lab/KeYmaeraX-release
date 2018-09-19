@@ -40,6 +40,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input
+    entry.problemContent shouldBe input
     entry.defs should beDecl(
       Declaration(Map(
         ("x", None) -> (None, Real, None, UnknownLocation),
@@ -245,7 +246,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     val entry = KeYmaeraXArchiveParser.parse(input).loneElement
     entry.name shouldBe "<undefined>"
     entry.kind shouldBe "theorem"
-    entry.fileContent shouldBe input
+    entry.fileContent shouldBe input.trim()
+    entry.problemContent shouldBe input.trim()
     entry.defs should beDecl(
       Declaration(Map(
         ("x", None) -> (None, Real, None, UnknownLocation),
@@ -351,6 +353,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
+    entry.problemContent shouldBe """ArchiveEntry "Entry 1".
+                                    | ProgramVariables. R x. R y. End.
+                                    | Problem. x>y -> x>=y End.
+                                    |End.""".stripMargin.trim()
     entry.defs should beDecl(
       Declaration(Map(
         ("x", None) -> (None, Real, None, UnknownLocation),
@@ -374,6 +380,11 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
+    entry.problemContent shouldBe
+      """ArchiveEntry "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.
+        |End.""".stripMargin
     entry.defs should beDecl(
       Declaration(Map(
         ("x", None) -> (None, Real, None, UnknownLocation),
@@ -421,6 +432,11 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input.trim()
+    entry.problemContent shouldBe
+      """ArchiveEntry "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.
+        |End.""".stripMargin
     entry.defs should beDecl(
       Declaration(Map(
         ("x", None) -> (None, Real, None, UnknownLocation),
@@ -818,7 +834,15 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     entry1.name shouldBe "Entry 1"
     entry1.kind shouldBe "lemma"
     entry1.fileContent shouldBe
-      """SharedDefinitions.
+      """SharedDefinitions
+        |B gt(R,R) <-> ( ._0 > ._1 ).
+        |End.
+        |Lemma "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. gt(x,y) -> x>=y End.
+        |End.""".stripMargin
+    entry1.problemContent shouldBe
+      """SharedDefinitions
         |B gt(R,R) <-> ( ._0 > ._1 ).
         |End.
         |Lemma "Entry 1".
@@ -839,7 +863,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     entry2.name shouldBe "Entry 2"
     entry2.kind shouldBe "theorem"
     entry2.fileContent shouldBe
-      """SharedDefinitions.
+      """SharedDefinitions
         |B gt(R,R) <-> ( ._0 > ._1 ).
         |End.
         |Theorem "Entry 2".
@@ -909,7 +933,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     entry.name shouldBe "Entry 1"
     entry.kind shouldBe "lemma"
     entry.fileContent shouldBe
-      """SharedDefinitions.
+      """SharedDefinitions
         |B gt(R,R) <-> ( \exists t (t=1 & ._0*t > ._1) ).
         |End.
         |Lemma "Entry 1".

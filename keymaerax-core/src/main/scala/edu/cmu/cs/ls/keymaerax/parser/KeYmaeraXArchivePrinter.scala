@@ -5,7 +5,6 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.core._
 
 /**
@@ -25,7 +24,7 @@ import edu.cmu.cs.ls.keymaerax.core._
   *
   * Created by smitsch on 01/04/18.
   */
-class KeYmaeraXArchivePrinter extends (KeYmaeraXArchiveParser.ParsedArchiveEntry => String) {
+class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (KeYmaeraXArchiveParser.ParsedArchiveEntry => String) {
   private val ARCHIVE_ENTRY_BEGIN: String = "ArchiveEntry"
   private val LEMMA_BEGIN: String = "Lemma"
   private val THEOREM_BEGIN: String = "Theorem"
@@ -98,7 +97,7 @@ class KeYmaeraXArchivePrinter extends (KeYmaeraXArchiveParser.ParsedArchiveEntry
         printedDefs.mkString("\n") + "\n" + END_BLOCK + "\n"
       else ""
 
-    s"""$head "${entry.name}"
+    val printed = s"""$head "${entry.name}"
        |$defsBlock
        |ProgramVariables
        |$printedVars
@@ -110,6 +109,37 @@ class KeYmaeraXArchivePrinter extends (KeYmaeraXArchiveParser.ParsedArchiveEntry
        |
        |$printedTactics
        |$END_BLOCK""".stripMargin
+
+    if (withComments) {
+      assert(KeYmaeraXArchiveParser(printed).map(_.model) == KeYmaeraXArchiveParser(entry.problemContent).map(_.model),
+        "Expected printed entry and stored problem content to reparse to same model")
+
+      """(Theorem|Lemma|ArchiveEntry|Exercise)[^\"]*\"[^\"]*\"""".r.findFirstIn(entry.problemContent) match {
+        case Some(_) =>
+          s"""${entry.problemContent.stripSuffix(END_BLOCK).trim()}
+             |$printedTactics
+             |$END_BLOCK""".stripMargin
+        case None if entry.problemContent.contains(PROBLEM_BLOCK.img) =>
+          s"""$head "${entry.name}"
+             |${entry.problemContent}
+             |$printedTactics
+             |$END_BLOCK""".stripMargin
+        case None if !entry.problemContent.contains(PROBLEM_BLOCK.img) =>
+          // entry was imported from formula. augment header and blocks but print plain formula content.
+          s"""$head "${entry.name}"
+             |$defsBlock
+             |ProgramVariables
+             |$printedVars
+             |$END_BLOCK
+             |
+             |Problem
+             |  ${entry.problemContent}
+             |$END_BLOCK
+             |
+             |$printedTactics
+             |$END_BLOCK""".stripMargin
+      }
+    } else printed
   }
 
 

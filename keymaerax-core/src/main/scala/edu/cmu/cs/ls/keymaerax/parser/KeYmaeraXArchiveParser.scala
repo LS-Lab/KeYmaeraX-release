@@ -37,7 +37,7 @@ import scala.collection.mutable.ListBuffer
   */
 object KeYmaeraXArchiveParser {
   /** The entry name, kyx file content (model), parsed model, and parsed name+tactic. */
-  case class ParsedArchiveEntry(name: String, kind: String, fileContent: String,
+  case class ParsedArchiveEntry(name: String, kind: String, fileContent: String, problemContent: String,
                                 defs: Declaration,
                                 model: Expression, tactics: List[(String, String, BelleExpr)],
                                 info: Map[String, String])
@@ -235,7 +235,7 @@ object KeYmaeraXArchiveParser {
   private[parser] case class Definitions(defs: List[Definition], vars: List[Definition]) extends ArchiveItem
   private[parser] case class Annotation(element: Expression, annotation: Expression) extends ArchiveItem
   private[parser] case class Problem(fml: Formula, annotations: List[Annotation]) extends ArchiveItem
-  private[parser] case class Tactic(name: String, tacticText: String, begin: Location) extends ArchiveItem
+  private[parser] case class Tactic(name: String, tacticText: String, blockLoc: Location, belleExprLoc: Location) extends ArchiveItem
   private[parser] case class Tactics(tactics: List[Tactic]) extends ArchiveItem
   private[parser] case class MetaInfo(info: Map[String, String]) extends ArchiveItem
   private[parser] case class Accept(entries: List[ArchiveEntry]) extends FinalItem
@@ -269,7 +269,7 @@ object KeYmaeraXArchiveParser {
         // cannot parse as archive, try parse plain formula
         try {
           val fml = KeYmaeraXParser(input).asInstanceOf[Formula]
-          ParsedArchiveEntry("<undefined>", "theorem", stripped, declarationsOf(fml), fml, Nil, Map.empty) :: Nil
+          ParsedArchiveEntry("<undefined>", "theorem", stripped, stripped, declarationsOf(fml), fml, Nil, Map.empty) :: Nil
         } catch {
           // cannot parse as plain formula either, throw original exception
           case _: Throwable => throw e.inInput(stripped, Some(tokenStream))
@@ -471,7 +471,7 @@ object KeYmaeraXArchiveParser {
           } catch {
             case ex: ParseException =>
               val loc = predDefBlock.head.loc.spanTo(endLoc)
-              throw new ParseException("Predicate definition expects a Formula", loc, slice(text, loc.begin, loc.end), FormulaKind.toString, la.img, "", ex)
+              throw new ParseException("Predicate definition expects a Formula", loc, slice(text, loc), FormulaKind.toString, la.img, "", ex)
           }
           ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, Some(pred), next.loc.spanTo(endLoc)), remainder)
         case SEMI | PERIOD => shift(st)
@@ -495,7 +495,7 @@ object KeYmaeraXArchiveParser {
           } catch {
             case ex: ParseException =>
               val loc = funcDefBlock.head.loc.spanTo(endLoc)
-              throw new ParseException("Function definition expects a Term", loc, slice(text, loc.begin, loc.end), TermKind.toString, la.img, "", ex)
+              throw new ParseException("Function definition expects a Term", loc, slice(text, loc), TermKind.toString, la.img, "", ex)
           }
           ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, Some(term), next.loc.spanTo(endLoc)), remainder)
         case SEMI | PERIOD => shift(st)
@@ -521,7 +521,7 @@ object KeYmaeraXArchiveParser {
           } catch {
             case ex: ParseException =>
               val loc = prgDefBlock.head.loc.spanTo(endLoc)
-              throw new ParseException("Program definition expects a Program", loc, slice(text, loc.begin, loc.end), ProgramKind.toString, la.img, "", ex)
+              throw new ParseException("Program definition expects a Program", loc, slice(text, loc), ProgramKind.toString, la.img, "", ex)
           }
           parser.setAnnotationListener(annotationListener)
           ParseState(r :+ defs :+ defsBlock :+ ProgramDef(next.name, next.index, Some(program), annotations.toList, next.loc.spanTo(endLoc.end)), remainder)
@@ -585,14 +585,18 @@ object KeYmaeraXArchiveParser {
         reduce(shift(st), 1, Bottom :+ Token(DOUBLE_QUOTES_STRING("<undefined>"), currLoc), r :+ tactics :+ tacticBlock)
       case r :+ (tactics@Tactics(_)) :+ (tacticBlock@Token(TACTIC_BLOCK, _)) :+ (name@Token(DOUBLE_QUOTES_STRING(_), _)) if la == PERIOD || la == SEMI =>
         reduce(shift(st), 1, Bottom, r :+ tactics :+ tacticBlock :+ name)
-      case r :+ (tactics@Tactics(_)) :+ Token(TACTIC_BLOCK, _) :+ Token(DOUBLE_QUOTES_STRING(name), _) =>
+      case r :+ (tactics@Tactics(_)) :+ Token(TACTIC_BLOCK, blockLoc) :+ Token(DOUBLE_QUOTES_STRING(name), _) =>
         //@note slice and parse later with BelleParser (needs converted definitions)
         //@todo reimplement BelleLexer/BelleParser
-        val (tacticBlock, remainder) = input.span(_.tok != END_BLOCK)
-        val tacticText = slice(text, tacticBlock.head.loc.begin, tacticBlock.last.loc.end)
-        ParseState(r :+ tactics :+ Tactic(name, tacticText, currLoc), remainder)
-      case r :+ (tactics@Tactics(_)) :+ (tactic@Tactic(_, _, _)) if la == END_BLOCK => shift(st)
-      case r :+ (tactics@Tactics(_)) :+ (tactic@Tactic(_, _, _)) :+ Token(END_BLOCK, _) =>
+        val (belleExprBlock, remainder) = input.span(_.tok != END_BLOCK)
+        val blockEndLoc = remainder match {
+          case Token(END_BLOCK, _) :: Token(PERIOD, endLoc) :: _ => endLoc
+          case Token(END_BLOCK, endLoc) :: _ => endLoc
+        }
+        val tacticText = slice(text, belleExprBlock.head.loc.begin.spanTo(belleExprBlock.last.loc.end))
+        ParseState(r :+ tactics :+ Tactic(name, tacticText, blockLoc.spanTo(blockEndLoc), currLoc), remainder)
+      case r :+ (tactics@Tactics(_)) :+ (tactic@Tactic(_, _, _, _)) if la == END_BLOCK => shift(st)
+      case r :+ (tactics@Tactics(_)) :+ (tactic@Tactic(_, _, _, _)) :+ Token(END_BLOCK, _) =>
         reduce(shift(st), 4, Bottom :+ Tactics(tactics.tactics :+ tactic), r)
 
       // small stack cases
@@ -703,16 +707,23 @@ object KeYmaeraXArchiveParser {
       else entry.tactics.map(t => (t.name, t.tacticText, Idioms.nil))
 
     val sharedDefsText = if (entry.inheritedDefinitions.nonEmpty) {
-      "SharedDefinitions.\n" +
-      entry.inheritedDefinitions.map(d => slice(text, d.loc.begin, d.loc.end)).mkString("\n") +
+      "SharedDefinitions\n" +
+      entry.inheritedDefinitions.map(d => slice(text, d.loc)).mkString("\n") +
       "\nEnd.\n"
     } else ""
 
-    val entryText = sharedDefsText + (if (entry.loc.begin.line > 0) slice(text, entry.loc.begin, entry.loc.end) else text)
+    val entryText = sharedDefsText + (if (entry.loc.begin.line > 0) slice(text, entry.loc) else text)
+    val problemText = sharedDefsText + (
+      if (entry.loc.begin.line > 0) {
+        val tacticStripped = slice(text, entry.loc, entry.tactics.map(_.blockLoc)).trim()
+        if (tacticStripped.contains("End.")) {
+          tacticStripped.stripSuffix("End.").trim() + "\nEnd."
+        } else tacticStripped
+      } else text)
 
     val entryKinds = Map("ArchiveEntry"->"theorem", "Theorem"->"theorem", "Lemma"->"lemma", "Exercise"->"theorem")
 
-    ParsedArchiveEntry(entry.name, entryKinds(entry.kind), entryText, definitions, elaborated, tactics, entry.info)
+    ParsedArchiveEntry(entry.name, entryKinds(entry.kind), entryText.trim(), problemText.trim(), definitions, elaborated, tactics, entry.info)
   }
 
   private def convert(d: Definition): Declaration = d match {
@@ -744,13 +755,13 @@ object KeYmaeraXArchiveParser {
       BelleToken(tok.terminal,
         if (tok.location.line <= 1) tok.location match {
           case Region(l, c, el, ec) if el == l =>
-            Region(l + t.begin.line - 1, c + t.begin.column - 1, el + t.begin.line -1, ec + t.begin.column - 1)
+            Region(l + t.belleExprLoc.line - 1, c + t.belleExprLoc.column - 1, el + t.belleExprLoc.line -1, ec + t.belleExprLoc.column - 1)
           case Region(l, c, el, ec) if el > l =>
-            Region(l + t.begin.line - 1, c + t.begin.column - 1, el + t.begin.line -1, ec)
-          case SuffixRegion(l, c) => SuffixRegion(l + t.begin.line - 1, c + t.begin.column - 1)
-          case l => l.addLines(t.begin.line - 1) //
+            Region(l + t.belleExprLoc.line - 1, c + t.belleExprLoc.column - 1, el + t.belleExprLoc.line -1, ec)
+          case SuffixRegion(l, c) => SuffixRegion(l + t.belleExprLoc.line - 1, c + t.belleExprLoc.column - 1)
+          case l => l.addLines(t.belleExprLoc.line - 1) //
         } else {
-          tok.location.addLines(t.begin.line - 1)
+          tok.location.addLines(t.belleExprLoc.line - 1)
         }
       )
     )
@@ -761,16 +772,23 @@ object KeYmaeraXArchiveParser {
     (t.name, t.tacticText, tactic)
   }
 
-  private def slice(text: String, begin: Location, end: Location): String = {
-    val lines = text.lines.slice(begin.line - 1, end.line).toList
-    if (end.line > begin.line) {
-      val header = lines.head.drop(begin.column - 1)
-      val footer = lines.last.take(end.column)
+  private def slice(text: String, loc: Location): String = {
+    val lines = text.lines.slice(loc.begin.line - 1, loc.end.line).toList
+    if (loc.end.line > loc.begin.line) {
+      val header = lines.head.drop(loc.begin.column - 1)
+      val footer = lines.last.take(loc.end.column)
       (header +: lines.tail.dropRight(1) :+ footer).mkString("\n")
     } else {
-      val result = lines.head.take(end.column)
-      result.drop(begin.column - 1)
+      val result = lines.head.take(loc.end.column)
+      result.drop(loc.begin.column - 1)
     }
+  }
+
+  private def slice(text: String, loc: Location, except: List[Location]): String = {
+    if (except.isEmpty) slice(text, loc)
+    else slice(
+      slice(text, Region(1, 1, 1, 1).spanTo(except.last.begin)).dropRight(1) + slice(text, except.last.end.spanTo(loc.end)).drop(1),
+      loc, except.dropRight(1))
   }
 
   private def declarationsOf(parsedContent: Expression): Declaration = {

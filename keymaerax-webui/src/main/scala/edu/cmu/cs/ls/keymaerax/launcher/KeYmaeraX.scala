@@ -493,17 +493,17 @@ object KeYmaeraX {
 
     val inputModelsWithTactics = inputModels.map(e => {
       defaultTactic match {
-        case Some(t: NamedTactic) => ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model,
+        case Some(t: NamedTactic) => ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.problemContent, e.defs, e.model,
           (t.name, BellePrettyPrinter(t), t)::Nil, e.info)
-        case Some(t) => ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model,
+        case Some(t) => ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.problemContent, e.defs, e.model,
           ("User", BellePrettyPrinter(t), t)::Nil, e.info)
         case _ if e.tactics.isEmpty && tacticName.isEmpty =>
-          ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model, ("Auto", BellePrettyPrinter(TactixLibrary.auto), TactixLibrary.auto)::Nil, e.info)
+          ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.problemContent, e.defs, e.model, ("Auto", BellePrettyPrinter(TactixLibrary.auto), TactixLibrary.auto)::Nil, e.info)
         case _ if e.tactics.nonEmpty || tacticName.nonEmpty => tacticName match {
           case Some(tn) =>
             val filtered = e.tactics.filter(_._1 == tn)
             if (filtered.isEmpty) println("Entry '" + e.name + "' does not have a tactic '" + tn + "'")
-            ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model, filtered, e.info)
+            ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.problemContent, e.defs, e.model, filtered, e.info)
           case None => e
         }
       }
@@ -705,7 +705,7 @@ object KeYmaeraX {
 
     BelleInterpreter.setInterpreter(LazySequentialInterpreter(qeDurationListener::Nil))
 
-    archiveContent.foreach({case ParsedArchiveEntry(modelName, kind, fileContent, _, model: Formula, tactics, _) =>
+    archiveContent.foreach({case ParsedArchiveEntry(modelName, kind, _, problemContent, _, model: Formula, tactics, _) =>
       tactics.foreach({case (tacticName, _, tactic) =>
         val statisticName = modelName + " with " + tacticName
         try {
@@ -725,7 +725,7 @@ object KeYmaeraX {
             if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
             val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
               "tool" -> "KeYmaera X",
-              "model" -> fileContent,
+              "model" -> problemContent,
               "tactic" -> tactics.head._2
             )) :: Nil)
             LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
@@ -817,7 +817,7 @@ object KeYmaeraX {
 
       val lemmaEntries = lemmas.map({ case (name, fml, tactic) =>
         val serializableTactic = db.extractSerializableTactic(fml, tactic)
-        ParsedArchiveEntry(name, "lemma", "", Declaration(Map.empty), fml,
+        ParsedArchiveEntry(name, "lemma", "", "", Declaration(Map.empty), fml,
           (name + " Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Map.empty)})
       // check and store lemmas
       lemmaEntries.foreach(entry => {
@@ -836,7 +836,7 @@ object KeYmaeraX {
       })
 
       val serializableTactic = db.extractSerializableTactic(sandbox, sbTactic)
-      val sandboxEntry = ParsedArchiveEntry(inputEntry.name + " Sandbox", "theorem", "", Declaration(Map.empty),
+      val sandboxEntry = ParsedArchiveEntry(inputEntry.name + " Sandbox", "theorem", "", "", Declaration(Map.empty),
         sandbox, (inputEntry.name + " Sandbox Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Map.empty)
       // check sandbox proof
       println("Checking sandbox safety...")
@@ -959,7 +959,7 @@ object KeYmaeraX {
     //@note remove all tactics, e.model does not contain annotations anyway
     //@note remove all definitions too, those might be used as proof hints
     def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry =
-      ParsedArchiveEntry(e.name, e.kind, e.fileContent, Declaration(Map.empty), e.model, Nil, e.info)
+      ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.problemContent, Declaration(Map.empty), e.model, Nil, e.info)
 
     val printer = new KeYmaeraXArchivePrinter()
     val printedStrippedContent = archiveContent.map(stripEntry).map(printer(_)).mkString("\n\n")
