@@ -203,7 +203,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         |Problem. x>y -> x>=y End.
       """.stripMargin
     val entry = KeYmaeraXArchiveParser.parse(input).loneElement
-    entry.name shouldBe "Unnamed"
+    entry.name shouldBe "<undefined>"
     entry.kind shouldBe "theorem"
     entry.fileContent shouldBe input
     entry.defs should beDecl(
@@ -215,6 +215,23 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
+
+  it should "parse a plain formula" in {
+    val input = "x>y -> x>=y"
+    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    entry.name shouldBe "<undefined>"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x>y -> x>=y".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
 
   it should "refuse mixed plain and named entries" in {
     val input =
@@ -323,7 +340,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         ("y", None) -> (None, Real, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
-    entry.tactics shouldBe ("Unnamed", "implyR(1) & QE", implyR(1) & QE) :: Nil
+    entry.tactics shouldBe ("<undefined>", "implyR(1) & QE", implyR(1) & QE) :: Nil
     entry.info shouldBe empty
   }
 

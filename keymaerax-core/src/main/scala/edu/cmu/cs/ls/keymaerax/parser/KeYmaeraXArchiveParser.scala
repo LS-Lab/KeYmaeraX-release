@@ -265,23 +265,25 @@ object KeYmaeraXArchiveParser {
     try {
       parse(tokenStream, stripped, parseTactics)
     } catch {
+      case e: ParseException if e.msg.startsWith("Unexpected archive start") =>
+        // cannot parse as archive, try parse plain formula
+        try {
+          val fml = KeYmaeraXParser(input).asInstanceOf[Formula]
+          ParsedArchiveEntry("<undefined>", "theorem", stripped, declarationsOf(fml), fml, Nil, Map.empty) :: Nil
+        } catch {
+          // cannot parse as plain formula either, throw original exception
+          case _: Throwable => throw e.inInput(stripped, Some(tokenStream))
+        }
       case e: ParseException => throw e.inInput(stripped, Some(tokenStream))
     }
   }
 
   /** Tries parsing as a problem first. If it fails due to a missing Problem block, tries parsing as a plain formula. */
-  def parseAsProblemOrFormula(input: String): Formula = {
-    try {
-      parseProblem(input, parseTactics=false).model.asInstanceOf[Formula]
-    } catch {
-      case ex: ParseException if ex.msg.startsWith("Unexpected archive start") =>
-        KeYmaeraXParser(input).asInstanceOf[Formula]
-    }
-  }
+  def parseAsProblemOrFormula(input: String): Formula = parseProblem(input, parseTactics=false).model.asInstanceOf[Formula]
 
   /** Parses a single entry. */
   def parseProblem(input: String, parseTactics: Boolean = true): ParsedArchiveEntry = {
-    val entries = parse(input)
+    val entries = parse(input, parseTactics)
     if (entries.size == 1) entries.head
     else throw ParseException("Expected a single entry, but got " + entries.size, UnknownLocation)
   }
@@ -545,7 +547,7 @@ object KeYmaeraXArchiveParser {
       // tactic
       case _ :+ Tactics(_) :+ Token(TACTIC_BLOCK, _) if la.isInstanceOf[DOUBLE_QUOTES_STRING] => shift(st)
       case r :+ (tactics@Tactics(_)) :+ (tacticBlock@Token(TACTIC_BLOCK, _)) if la == PERIOD =>
-        reduce(shift(st), 1, Bottom :+ Token(DOUBLE_QUOTES_STRING("Unnamed"), currLoc), r :+ tactics :+ tacticBlock)
+        reduce(shift(st), 1, Bottom :+ Token(DOUBLE_QUOTES_STRING("<undefined>"), currLoc), r :+ tactics :+ tacticBlock)
       case r :+ (tactics@Tactics(_)) :+ (tacticBlock@Token(TACTIC_BLOCK, _)) :+ (name@Token(DOUBLE_QUOTES_STRING(_), _)) if la == PERIOD || la == SEMI =>
         reduce(shift(st), 1, Bottom, r :+ tactics :+ tacticBlock :+ name)
       case r :+ (tactics@Tactics(_)) :+ Token(TACTIC_BLOCK, _) :+ Token(DOUBLE_QUOTES_STRING(name), _) =>
@@ -591,7 +593,7 @@ object KeYmaeraXArchiveParser {
             case None =>
               val (tokens, eof) = input.splitAt(input.size - 1)
               ParseState(
-                Bottom :+ Token(ARCHIVE_ENTRY_BEGIN("ArchiveEntry"), UnknownLocation) :+ Token(DOUBLE_QUOTES_STRING("Unnamed"), UnknownLocation) :+ MetaInfo(Map.empty),
+                Bottom :+ Token(ARCHIVE_ENTRY_BEGIN("ArchiveEntry"), UnknownLocation) :+ Token(DOUBLE_QUOTES_STRING("<undefined>"), UnknownLocation) :+ MetaInfo(Map.empty),
                 (tokens :+ Token(END_BLOCK, UnknownLocation)) ++ eof)
           }
         case EOF => throw ParseException("Empty input is not a well-formed archive ", st, "ArchiveEntry|Theorem|Lemma|Exercise")
@@ -733,6 +735,17 @@ object KeYmaeraXArchiveParser {
       val result = lines.head.take(end.column)
       result.drop(begin.column - 1)
     }
+  }
+
+  private def declarationsOf(parsedContent: Expression): Declaration = {
+    val symbols = StaticSemantics.symbols(parsedContent)
+    val fnDecls = symbols.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function]).map(fn =>
+      (fn.name, fn.index) -> (Some(fn.domain), fn.sort, None, UnknownLocation)
+    ).toMap[(String, Option[Int]),(Option[Sort], Sort, Option[Expression], Location)]
+    val varDecls = symbols.filter(_.isInstanceOf[BaseVariable]).map(v =>
+      (v.name, v.index) -> (None, v.sort, None, UnknownLocation)
+    ).toMap[(String, Option[Int]),(Option[Sort], Sort, Option[Expression], Location)]
+    Declaration(fnDecls ++ varDecls)
   }
 
 }
