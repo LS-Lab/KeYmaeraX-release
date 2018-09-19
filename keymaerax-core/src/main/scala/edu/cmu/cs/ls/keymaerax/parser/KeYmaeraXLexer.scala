@@ -229,7 +229,7 @@ private object INVARIANT extends Terminal("@invariant") {
 private object AXIOM_BEGIN extends Terminal("Axiom") {
   override def regexp: Regex = """Axiom""".r
 }
-private object END_BLOCK extends Terminal("End.")
+private object END_BLOCK extends Terminal("End")
 private case class DOUBLE_QUOTES_STRING(var s: String) extends Terminal("<string>") {
   override def regexp: Regex = DOUBLE_QUOTES_STRING_PAT.regexp
 }

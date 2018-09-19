@@ -59,13 +59,14 @@ object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) with Logg
     val (axiomTokens, remainderTokens) =
       //1st element is AXIOM_BEGIN, 2nd is AXIOM_NAME, 3rd is optional .
       input.tail.tail.span(_.tok != END_BLOCK) match {
-        case (Token(PERIOD, _) :: a, r) => (a, r)
-        case x => x
+        case (Token(PERIOD, _) :: a, Token(END_BLOCK, _) :: Token(PERIOD, _) :: r) => (a, r)
+        case (a, Token(END_BLOCK, _) :: Token(PERIOD, _) :: r) => (a, r)
+        case (a, Token(END_BLOCK, _) :: r) => (a, r)
       }
 
     try {
       val axiom = KeYmaeraXParser.formulaTokenParser(axiomTokens :+ Token(EOF, UnknownLocation))
-      (name, axiom, remainderTokens.tail)
+      (name, axiom, remainderTokens)
     } catch {
       case e: ParseException => throw e.inContext(input.toString, " Error occurred while parsing formula associated with axiom named " + name)
       case e: AssertionError => throw new AssertionError(e.getMessage + " Error occurred while parsing formula associated with axiom named " + name)

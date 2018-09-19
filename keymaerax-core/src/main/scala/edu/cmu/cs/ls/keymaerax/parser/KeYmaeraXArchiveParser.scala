@@ -346,16 +346,42 @@ object KeYmaeraXArchiveParser {
       // start entry
       case r :+ (begin@Token(ARCHIVE_ENTRY_BEGIN(_), _)) => la match {
         case _: DOUBLE_QUOTES_STRING => reduce(shift(st), 0, Bottom :+ MetaInfo(Map.empty), r :+ begin :+ input.head)
+        case _: IDENT => shift(st)
         case _ => throw ParseException("Missing archive name", st, nextTok, "\"<string>\"")
       }
-      case r :+ (begin@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ (name@Token(_: DOUBLE_QUOTES_STRING, _)) :+ (info@MetaInfo(_)) if info.info.isEmpty && (la == PERIOD || la == SEMI) =>
+      case r :+ (begin@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ Token(entryId@IDENT(_, _), idLoc) => la match {
+        case COLON => shift(st)
+        case nextSegment: IDENT => reduce(shift(st), 2, Bottom :+ Token(IDENT(entryId.img + nextSegment.img, None), idLoc.spanTo(currLoc)), r :+ begin)
+        case _ => throw ParseException("Missing entry ID separator", st, Expected.ExpectTerminal(COLON) :: Nil)
+      }
+      case _ :+ Token(ARCHIVE_ENTRY_BEGIN(_), _) :+ Token(IDENT(_, _), _) :+ Token(COLON, _) => la match {
+        case _: DOUBLE_QUOTES_STRING => shift(st)
+        case _ => throw ParseException("Missing entry title", st, Expected.ExpectTerminal(DOUBLE_QUOTES_STRING("<string>")) :: Nil)
+      }
+      case r :+ (begin@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ Token(IDENT(entryId, entryIdx), _) :+ Token(COLON, _) :+ (name@Token(_: DOUBLE_QUOTES_STRING, _)) =>
+        reduce(st, 3, Bottom :+ name :+ MetaInfo(Map("id" -> (entryId+entryIdx.getOrElse("")))), r :+ begin)
+      case r :+ (begin@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ (name@Token(_: DOUBLE_QUOTES_STRING, _)) :+ (info@MetaInfo(_)) if la == PERIOD || la == SEMI =>
         reduce(shift(st), 1, Bottom, r :+ begin :+ name :+ info)
       // finish entry
-      case r :+ Token(ARCHIVE_ENTRY_BEGIN(kind), startLoc) :+ Token(DOUBLE_QUOTES_STRING(name), _) :+ MetaInfo(info) :+ Definitions(defs, vars) :+
-          Problem(problem, annotations) :+ Tactics(tactics) => la match {
-        case END_BLOCK => reduce(shift(st), 7, Bottom :+ ArchiveEntry(name, kind, startLoc.spanTo(currLoc.end), Nil, defs, vars, problem, annotations, tactics, info), r)
+      case r :+ Token(ARCHIVE_ENTRY_BEGIN(_), _) :+ Token(DOUBLE_QUOTES_STRING(_), _) :+ MetaInfo(_) :+
+          Definitions(_, _) :+ Problem(_, _) :+ Tactics(_) => la match {
+        case END_BLOCK => shift(st)
         case TACTIC_BLOCK => shift(st)
-        case _ => throw ParseException("Missing entry delimiter", st, nextTok, END_BLOCK.img)
+        case _ => throw ParseException("Missing entry delimiter", st, Expected.ExpectTerminal(END_BLOCK) :: Nil)
+      }
+      case r :+ Token(ARCHIVE_ENTRY_BEGIN(kind), startLoc) :+ Token(DOUBLE_QUOTES_STRING(name), _) :+ MetaInfo(info) :+ Definitions(defs, vars) :+
+        Problem(problem, annotations) :+ Tactics(tactics) :+ Token(END_BLOCK, _) => la match {
+        case PERIOD => reduce(shift(st), 8, Bottom :+ ArchiveEntry(name, kind, startLoc.spanTo(currLoc.end), Nil, defs, vars, problem, annotations, tactics, info), r)
+        case _: IDENT => shift(st)
+        case _ => throw ParseException("Missing entry delimiter", st, Expected.ExpectTerminal(PERIOD) :: Nil)
+      }
+      case r :+ (archiveBegin@Token(ARCHIVE_ENTRY_BEGIN(kind), _)) :+ (name@Token(DOUBLE_QUOTES_STRING(entryName), _)) :+ (info@MetaInfo(_)) :+ (defs@Definitions(_, _)) :+
+        (problem@Problem(_, _)) :+ (tactics@Tactics(_)) :+ (archiveEnd@Token(END_BLOCK, _)) :+ Token(entryId@IDENT(_, _), idLoc) => la match {
+        case PERIOD if info.info.contains("id") && info.info("id") == entryId.img => reduce(st, 1, Bottom, r :+ archiveBegin :+ name :+ info :+ defs :+ problem :+ tactics :+ archiveEnd)
+        case PERIOD if !info.info.contains("id") => throw ParseException("Archive entry ends with undefined ID " + entryId.img + "; define ID at entry start with " + kind + " " + entryId.img + " : \""  + entryName + "\"", idLoc)
+        case PERIOD if info.info("id") != entryId.img => throw ParseException("Archive entry ends with ID " + entryId.img + " but entry start defined " + info.info("id"), idLoc)
+        case nextSegment: IDENT => reduce(shift(st), 2, Bottom :+ Token(IDENT(entryId.img + nextSegment.img, None), idLoc.spanTo(currLoc)), r :+ archiveBegin :+ name :+ info :+ defs :+ problem :+ tactics :+ archiveEnd)
+        case _ => throw ParseException("Missing entry ID separator", st, Expected.ExpectTerminal(COLON) :: Nil)
       }
 
       // collect entries
@@ -396,9 +422,13 @@ object KeYmaeraXArchiveParser {
         reduce(st, 1, Bottom :+ Definitions(Nil, Nil) :+ defsBlock, r :+ entry :+ name :+ info)
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) => la match {
         case PERIOD => reduce(shift(st), 1, Bottom, r :+ defs :+ defsBlock)
-        case END_BLOCK => reduce(shift(st), 2, Bottom, r :+ defs)
+        case END_BLOCK => shift(st)
         case _ if isReal(la) || isBool(la) || isProgram(la) => shift(st)
-        case _ => throw ParseException("Missing definitions delimiter", st, nextTok, END_BLOCK.img)
+        case _ => throw ParseException("Missing definitions delimiter", st, Expected.ExpectTerminal(END_BLOCK) :: Nil)
+      }
+      case r :+ (defs: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ Token(END_BLOCK, _) => la match {
+        case PERIOD => reduce(shift(st), 3, Bottom, r :+ defs)
+        case _ => throw ParseException("Missing definitions delimiter", st, Expected.ExpectTerminal(PERIOD) :: Nil)
       }
       case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ Token(sort, _) if (isReal(sort) || isBool(sort) || isProgram(sort)) && la.isInstanceOf[IDENT] => shift(st)
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), endLoc) if isReal(sort) =>
@@ -506,10 +536,14 @@ object KeYmaeraXArchiveParser {
       case _ :+ Token(ARCHIVE_ENTRY_BEGIN(_), _) :+ Token(DOUBLE_QUOTES_STRING(_), _) :+ MetaInfo(_) :+ Definitions(_, _) if la == PROGRAM_VARIABLES_BLOCK => shift(st)
       case r :+ (varsBlock@Token(PROGRAM_VARIABLES_BLOCK, _)) => la match {
         case PERIOD => reduce(shift(st), 1, Bottom, r :+ varsBlock)
-        case END_BLOCK => reduce(shift(st), 2, Bottom, r)
+        case END_BLOCK => shift(st)
         case _ if isReal(la) => shift(st)
         case _ if isBool(la) || isProgram(la) => throw ParseException("Predicate and program definitions only allowed in Definitions block", st, nextTok, "Real")
-        case _ => throw ParseException("Missing program variables delimiter", st, nextTok, END_BLOCK.img)
+        case _ => throw ParseException("Missing program variables delimiter", st, Expected.ExpectTerminal(END_BLOCK) :: Nil)
+      }
+      case r :+ Token(PROGRAM_VARIABLES_BLOCK, _) :+ Token(END_BLOCK, _) => la match {
+        case PERIOD => reduce(shift(st), 3, Bottom, r)
+        case _ => throw ParseException("Missing program variables delimiter", st, Expected.ExpectTerminal(END_BLOCK) :: Nil)
       }
       case _ :+ Token(PROGRAM_VARIABLES_BLOCK, _) :+ Token(sort, _) if isReal(sort) && la.isInstanceOf[IDENT] => shift(st)
       case r :+ (defs: Definitions) :+ (varsBlock@Token(PROGRAM_VARIABLES_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), _) if isReal(sort) => la match {
@@ -530,8 +564,9 @@ object KeYmaeraXArchiveParser {
           parser.setAnnotationListener((prg, fml) => annotations += Annotation(prg, fml))
           if (!st.input.exists(_.tok == END_BLOCK)) throw ParseException("Missing problem delimiter", st, st.input.last, END_BLOCK.img)
           val (problemBlock, Token(END_BLOCK, endLoc) :: remainder) = st.input.span(_.tok != END_BLOCK) match {
-            case (Token(PROBLEM_BLOCK, _) :: Token(PERIOD, _) :: pb, r) => (pb, r)
-            case (Token(PROBLEM_BLOCK, _) :: pb, r) => (pb, r)
+            case (Token(PROBLEM_BLOCK, _) :: Token(PERIOD, _) :: pb, (endBlock@Token(END_BLOCK, _)) :: Token(PERIOD, _) :: r) => (pb, endBlock +: r)
+            case (Token(PROBLEM_BLOCK, _) :: pb, (endBlock@Token(END_BLOCK, _)) :: Token(PERIOD, _) :: r) => (pb, endBlock +: r)
+            case (Token(PROBLEM_BLOCK, _) :: _, r) => throw ParseException("Missing problem delimiter", r.last.loc, r.last.toString, END_BLOCK.img + PERIOD.img, "", st.toString)
           }
           problemBlock.find(_.tok == TACTIC_BLOCK) match {
             case Some(t) => throw ParseException("Missing problem delimiter", st, t, END_BLOCK.img)
@@ -556,8 +591,9 @@ object KeYmaeraXArchiveParser {
         val (tacticBlock, remainder) = input.span(_.tok != END_BLOCK)
         val tacticText = slice(text, tacticBlock.head.loc.begin, tacticBlock.last.loc.end)
         ParseState(r :+ tactics :+ Tactic(name, tacticText, currLoc), remainder)
-      case r :+ (tactics@Tactics(_)) :+ (tactic@Tactic(_, _, _)) if la == END_BLOCK =>
-        reduce(shift(st), 3, Bottom :+ Tactics(tactics.tactics :+ tactic), r)
+      case r :+ (tactics@Tactics(_)) :+ (tactic@Tactic(_, _, _)) if la == END_BLOCK => shift(st)
+      case r :+ (tactics@Tactics(_)) :+ (tactic@Tactic(_, _, _)) :+ Token(END_BLOCK, _) =>
+        reduce(shift(st), 4, Bottom :+ Tactics(tactics.tactics :+ tactic), r)
 
       // small stack cases
       case Bottom :+ ArchiveEntries(t) =>
@@ -594,7 +630,7 @@ object KeYmaeraXArchiveParser {
               val (tokens, eof) = input.splitAt(input.size - 1)
               ParseState(
                 Bottom :+ Token(ARCHIVE_ENTRY_BEGIN("ArchiveEntry"), UnknownLocation) :+ Token(DOUBLE_QUOTES_STRING("<undefined>"), UnknownLocation) :+ MetaInfo(Map.empty),
-                (tokens :+ Token(END_BLOCK, UnknownLocation)) ++ eof)
+                (tokens :+ Token(END_BLOCK, UnknownLocation) :+ Token(PERIOD, UnknownLocation)) ++ eof)
           }
         case EOF => throw ParseException("Empty input is not a well-formed archive ", st, "ArchiveEntry|Theorem|Lemma|Exercise")
         case _ => throw ParseException("Unexpected archive start ", st, "ArchiveEntry|Theorem|Lemma|Exercise")

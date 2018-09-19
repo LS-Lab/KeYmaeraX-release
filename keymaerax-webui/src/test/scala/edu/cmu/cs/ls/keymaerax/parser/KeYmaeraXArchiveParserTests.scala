@@ -50,6 +50,46 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     entry.info shouldBe empty
   }
 
+  it should "parse a model with entry ID" in {
+    val input =
+      """ArchiveEntry b01_8entry1_and_more_underscores : "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.
+        |End.""".stripMargin
+    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x>y -> x>=y".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe Map("id" -> "b01_8entry1_and_more_underscores")
+  }
+
+  it should "parse a model with entry ID repeated at end" in {
+    val input =
+      """ArchiveEntry b01_entry1 : "Entry 1".
+        | ProgramVariables. R x. R y. End.
+        | Problem. x>y -> x>=y End.
+        |End b01_entry1.""".stripMargin
+    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x>y -> x>=y".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe Map("id" -> "b01_entry1")
+  }
+
   it should "parse definitions before variables" in {
     val input =
       """
@@ -936,7 +976,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         | ProgramVariables. R x. End.
         |End.""".stripMargin
     ) should have message """3:1 Missing problem block
-                            |Found:    End. (END_BLOCK$) at 3:1 to 3:4
+                            |Found:    End (END_BLOCK$) at 3:1 to 3:3
                             |Expected: Problem""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
@@ -1006,7 +1046,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         | Problem. true End.""".stripMargin
     ) should have message """2:20 Missing entry delimiter
                             |Found:    <EOF> (EOF$) at 2:20 to EOF$
-                            |Expected: End.""".stripMargin
+                            |Expected: End (END_BLOCK$)""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1".
@@ -1016,7 +1056,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         |End.""".stripMargin
     ) should have message """3:1 Missing entry delimiter
                            |Found:    ArchiveEntry|Lemma|Theorem|Exercise (Theorem) at 3:1 to 3:7
-                           |Expected: End.""".stripMargin
+                           |Expected: End (END_BLOCK$)""".stripMargin
   }
 
   it should "report a missing definitions delimiter" in {
@@ -1027,7 +1067,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         |End.""".stripMargin
     ) should have message """3:2 Missing definitions delimiter
                             |Found:    Problem (PROBLEM_BLOCK$) at 3:2 to 3:8
-                            |Expected: End.""".stripMargin
+                            |Expected: End (END_BLOCK$)""".stripMargin
   }
 
   it should "report a missing program variables delimiter" in {
@@ -1038,7 +1078,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         |End.""".stripMargin
     ) should have message """3:2 Missing program variables delimiter
                             |Found:    Problem (PROBLEM_BLOCK$) at 3:2 to 3:8
-                            |Expected: End.""".stripMargin
+                            |Expected: End (END_BLOCK$)""".stripMargin
   }
 
   it should "report a missing problem delimiter" in {
@@ -1049,14 +1089,14 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         |End.""".stripMargin
     ) should have message """3:2 Missing problem delimiter
                             |Found:    Tactic (TACTIC_BLOCK$) at 3:2 to 3:7
-                            |Expected: End.""".stripMargin
+                            |Expected: End""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1".
         | Problem. true""".stripMargin
     ) should have message """2:15 Missing problem delimiter
                            |Found:    <EOF> (EOF$) at 2:15 to EOF$
-                           |Expected: End.""".stripMargin
+                           |Expected: End""".stripMargin
   }
 
   it should "report misplaced function, predicate, or program definitions" in {
@@ -1166,5 +1206,56 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     ) should have message """4:31 A combinator should be followed by a full tactic expression
                             |Found:    Some(BelleToken(EOF$,4:31 to EOF$)) at 4:31 to EOF$
                             |Expected: """.stripMargin
+  }
+
+  it should "report a missing entry ID separator" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry entry1 "Entry 1"
+        | ProgramVariables R x. R y. End.
+        | Problem x>y -> x>=y End.
+        |End.""".stripMargin
+    ) should have message """1:21 Missing entry ID separator
+                            |Found:    <string> (DOUBLE_QUOTES_STRING) at 1:21 to 1:29
+                            |Expected: : (COLON$)""".stripMargin
+
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry entry1
+        | ProgramVariables R x. R y. End.
+        | Problem x>y -> x>=y End.
+        |End.""".stripMargin
+    ) should have message """2:2 Missing entry ID separator
+                            |Found:    ProgramVariables (PROGRAM_VARIABLES_BLOCK$) at 2:2 to 2:17
+                            |Expected: : (COLON$)""".stripMargin
+  }
+
+  it should "report a missing entry title" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry entry1 :
+        | ProgramVariables R x. R y. End.
+        | Problem x>y -> x>=y End.
+        |End.""".stripMargin
+    ) should have message """2:2 Missing entry title
+                            |Found:    ProgramVariables (PROGRAM_VARIABLES_BLOCK$) at 2:2 to 2:17
+                            |Expected: <string> (DOUBLE_QUOTES_STRING)""".stripMargin
+  }
+
+  it should "report undefined entry IDs" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables R x. R y. End.
+        | Problem x>y -> x>=y End.
+        |End entry1.""".stripMargin
+    ) should have message """4:5 Archive entry ends with undefined ID entry1; define ID at entry start with ArchiveEntry entry1 : "Entry 1"
+                            |Found:    <unknown> at 4:5 to 4:10
+                            |Expected: <unknown>""".stripMargin
+
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry entry1 : "Entry 1"
+        | ProgramVariables R x. R y. End.
+        | Problem x>y -> x>=y End.
+        |End entry2.""".stripMargin
+    ) should have message """4:5 Archive entry ends with ID entry2 but entry start defined entry1
+                            |Found:    <unknown> at 4:5 to 4:10
+                            |Expected: <unknown>""".stripMargin
   }
 }

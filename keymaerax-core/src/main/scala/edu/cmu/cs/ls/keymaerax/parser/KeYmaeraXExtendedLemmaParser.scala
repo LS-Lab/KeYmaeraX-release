@@ -84,8 +84,9 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutabl
     val (lemmaTokens, remainderTokens) =
       //1st element is AXIOM_BEGIN, 2nd is AXIOM_NAME, 3rd is optional .
       input.tail.tail.span(_.tok != END_BLOCK) match {
-        case (Token(PERIOD, _) :: a, r) => (a, r)
-        case x => x
+        case (Token(PERIOD, _) :: a, Token(END_BLOCK, _) :: Token(PERIOD, _) :: r) => (a, r)
+        case (a, Token(END_BLOCK, _) :: Token(PERIOD, _) :: r) => (a, r)
+        case (a, Token(END_BLOCK, _) :: r) => (a, r)
       }
 
     //Separate the lemma into subgoals.
@@ -96,7 +97,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutabl
     val sequents = sequentTokens.map(sequentTokenParser)
     assert(sequents.nonEmpty, "Lemma should at least have a conclusion.")
 
-    val (allEvidence, remainder) = parseAllEvidence(remainderTokens.tail)
+    val (allEvidence, remainder) = parseAllEvidence(remainderTokens)
 
     (name, sequents, allEvidence, remainder)
   }
@@ -151,7 +152,12 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutabl
 
     //Find the End. token and exclude it.
     val (toolTokens, remainderTokens) =
-      input.tail.tail.span(_.tok != END_BLOCK) //1st element is TOOL_BEGIN, 2nd is a tool evidence key.
+      //1st element is TOOL_BEGIN, 2nd is a tool evidence key.
+      input.tail.tail.span(_.tok != END_BLOCK) match {
+        case (Token(PERIOD, _) :: a, Token(END_BLOCK, _) :: Token(PERIOD, _) :: r) => (a, r)
+        case (a, Token(END_BLOCK, _) :: Token(PERIOD, _) :: r) => (a, r)
+        case (a, Token(END_BLOCK, _) :: r) => (a, r)
+      }
 
     val evidenceLines = parseEvidenceLines(toolTokens)
 
@@ -162,7 +168,7 @@ object KeYmaeraXExtendedLemmaParser extends (String => (Option[String], immutabl
         HashEvidence(evidenceLines.head._2)
     }
 
-    (evidence, remainderTokens.tail)
+    (evidence, remainderTokens)
   }
 
   def parseEvidenceLines(input: TokenStream): immutable.List[(String, String)] = {
