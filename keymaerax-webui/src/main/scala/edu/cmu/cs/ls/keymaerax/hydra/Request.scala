@@ -746,7 +746,7 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
             entry.defs, entry.model, entry.tactics, entry.info) :: Nil
         } else parsedArchiveEntries
 
-      val (failedModels, succeededModels) = archiveEntries.foldLeft((List[String](), List[String]()))({ case ((failedImports, succeededImports), entry) =>
+      val (failedModels, succeededModels) = archiveEntries.foldLeft((List[String](), List[(String, Int)]()))({ case ((failedImports, succeededImports), entry) =>
         val uniqueModelName = db.getUniqueModelName(userId, entry.name)
         db.createModel(userId, uniqueModelName, entry.problemContent, currentDate(), entry.info.get("Description"),
           entry.info.get("Title"), entry.info.get("Link"), entry.tactics.headOption.map(_._2)) match {
@@ -758,11 +758,14 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
             entry.tactics.foreach({ case (tname, ttext, _) =>
               db.createProofForModel(modelId, tname, "Proof from archive", currentDate(), Some(ttext))
             })
-            (failedImports, succeededImports :+ entry.name)
+            (failedImports, succeededImports :+ (entry.name -> modelId))
         }
       })
-      if (failedModels.isEmpty) BooleanResponse(flag = true) :: Nil
-      else throw new Exception("Failed to import the following models\n" + failedModels.mkString("\n") +
+      if (failedModels.isEmpty) {
+        if (archiveEntries.size == 1) {
+          ModelUploadResponse(Some(succeededModels.head._2.toString), None) :: Nil
+        } else BooleanResponse(flag = true) :: Nil
+      } else throw new Exception("Failed to import the following models\n" + failedModels.mkString("\n") +
         "\nSucceeded importing:\n" + succeededModels.mkString("\n") +
         "\nModel import may have failed because of model name clashed. Try renaming the failed models in the archive to names that do not yet exist in your model list.")
     } catch {
