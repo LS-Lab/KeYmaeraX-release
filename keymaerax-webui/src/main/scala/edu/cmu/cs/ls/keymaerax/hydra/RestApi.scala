@@ -221,32 +221,7 @@ object RestApi extends Logging {
     completeRequest(request, t)
   }}}}
 
-  //POST /users/<user id>/model/< name >/< keyFile >
   val userModel: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => {pathPrefix("model" / Segment) {modelNameOrId => {pathEnd {
-    post {
-      entity(as[Multipart.FormData]) { formData => {
-        //@todo hacky.
-        //Note: I don't know how to ask for formData.parts.head, so instead I'll just map over all of them
-        //and throw an error if I manage to find more than one thing during that map. This variable keeps track
-        //of whether I'm processing the first element in formData.parts.
-        var processingFirstFile = true
-
-        //I'll also safe the request so that I can completeRequest with this request outside of the map.
-        var request : Request = null
-        formData.parts.map(part => {
-          if (processingFirstFile) {
-            val contents = getFileContentsFromFormData(part)
-            request = new CreateModelRequest(database, userId, modelNameOrId, contents)
-            processingFirstFile = false
-          }
-          else {
-            ??? //should only have a single file.
-          }
-        })
-
-        completeRequest(request, t)
-      }}
-    } ~
     get {
       val request = new GetModelRequest(database, userId, modelNameOrId)
       completeRequest(request, t)
@@ -340,16 +315,7 @@ object RestApi extends Logging {
   {pathEnd {
     post {
       entity(as[String]) { contents => {
-        def isArchive(c: String): Boolean = {
-          //@note identify archives by content (theorems etc.)
-          "(Theorem|Lemma|ArchiveEntry|Exercise) \\\"[^\\\"]*\\\"\\.".r.findFirstIn(c).isDefined
-        }
-        val request = if (isArchive(contents)) {
-          //@note ignore model name/ID in archives since entry names provide IDs.
-          new UploadArchiveRequest(database, userId, contents)
-        } else {
-          new CreateModelRequest(database, userId, modelNameOrId, contents)
-        }
+        val request = new UploadArchiveRequest(database, userId, contents, modelNameOrId)
         completeRequest(request, t)
       }}}}}}}}
 

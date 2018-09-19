@@ -700,32 +700,6 @@ class CreateModelFromFormulaRequest(db: DBAbstraction, userId: String, nameOfMod
   }
 }
 
-class CreateModelRequest(db: DBAbstraction, userId: String, nameOfModel: String, modelText: String) extends UserRequest(userId) with WriteRequest {
-  def resultingResponses(): List[Response] = {
-    if (KeYmaeraXArchiveParser.isExercise(modelText)) {
-      if (db.getModelList(userId).map(_.name).contains(nameOfModel)) {
-        ModelUploadResponse(None, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
-      } else {
-        val createdId = db.createModel(userId, nameOfModel, modelText, currentDate()).map(_.toString)
-        ModelUploadResponse(createdId, None) :: Nil
-      }
-    } else try {
-      KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelText) match {
-        case fml: Formula =>
-          if (db.getModelList(userId).map(_.name).contains(nameOfModel)) {
-            ModelUploadResponse(None, Some("A model with name " + nameOfModel + " already exists, please choose a different name")) :: Nil
-          } else {
-            val createdId = db.createModel(userId, nameOfModel, RequestHelper.augmentDeclarations(modelText, fml), currentDate()).map(_.toString)
-            ModelUploadResponse(createdId, None) :: Nil
-          }
-        case t => new ErrorResponse("Expected a model formula, but got a file with a " + t.kind) :: Nil
-      }
-    } catch {
-      case e: ParseException => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
-    }
-  }
-}
-
 class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, name: String, title: String,
                          description: String, content: String) extends UserRequest(userId) with WriteRequest {
   private def emptyToOption(s: String): Option[String] = if (s.isEmpty) None else Some(s)
@@ -751,10 +725,26 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
   }
 }
 
-class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: String) extends UserRequest(userId) with WriteRequest {
+class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: String, modelName: String) extends UserRequest(userId) with WriteRequest {
   def resultingResponses(): List[Response] = {
-    try {
-      val archiveEntries = KeYmaeraXArchiveParser.parse(kyaFileContents)
+    if (KeYmaeraXArchiveParser.isExercise(archiveText)) {
+      if (db.getModelList(userId).map(_.name).contains(modelName)) {
+        ModelUploadResponse(None, Some("A model with name " + modelName + " already exists, please choose a different name")) :: Nil
+      } else {
+        val createdId = db.createModel(userId, modelName, archiveText, currentDate()).map(_.toString)
+        ModelUploadResponse(createdId, None) :: Nil
+      }
+    } else try {
+      val parsedArchiveEntries = KeYmaeraXArchiveParser.parse(archiveText)
+
+      //@note archive parser augments a plain formula with definitions and flags it with name '<undefined>'
+      val archiveEntries =
+        if (parsedArchiveEntries.size == 1 && parsedArchiveEntries.head.name == "<undefined>") {
+          val entry = parsedArchiveEntries.head
+          KeYmaeraXArchiveParser.ParsedArchiveEntry(modelName, entry.kind, entry.fileContent, entry.defs,
+            entry.model, entry.tactics, entry.info) :: Nil
+        } else parsedArchiveEntries
+
       val (failedModels, succeededModels) = archiveEntries.foldLeft((List[String](), List[String]()))({ case ((failedImports, succeededImports), entry) =>
         val uniqueModelName = db.getUniqueModelName(userId, entry.name)
         db.createModel(userId, uniqueModelName, entry.fileContent, currentDate(), entry.info.get("Description"),
@@ -770,7 +760,7 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, kyaFileContents: S
             (failedImports, succeededImports :+ entry.name)
         }
       })
-      if (failedModels.isEmpty) BooleanResponse(flag=true) :: Nil
+      if (failedModels.isEmpty) BooleanResponse(flag = true) :: Nil
       else throw new Exception("Failed to import the following models\n" + failedModels.mkString("\n") +
         "\nSucceeded importing:\n" + succeededModels.mkString("\n") +
         "\nModel import may have failed because of model name clashed. Try renaming the failed models in the archive to names that do not yet exist in your model list.")

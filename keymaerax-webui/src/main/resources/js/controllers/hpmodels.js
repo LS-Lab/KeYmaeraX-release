@@ -36,7 +36,7 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
      /* Indicates whether `content` is an archive or a plain model file. */
      $scope.isKya = function(content) {
         // archives contain lemmas, theorems etc., e.g., search for matches: Theorem "...".
-        var regex = /(Theorem|Lemma|ArchiveEntry|Exercise) \"[^\"]*\"\./g;
+        var regex = /(Theorem|Lemma|ArchiveEntry|Exercise) \"[^\"]*\"/g;
         return content && content.search(regex) >= 0;
      };
 

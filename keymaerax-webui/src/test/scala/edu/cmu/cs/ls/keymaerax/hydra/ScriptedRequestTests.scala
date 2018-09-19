@@ -21,8 +21,8 @@ class ScriptedRequestTests extends TacticTestBase {
 
   "Model upload" should "work with a simple file" in withDatabase { db =>
     val modelContents = "ProgramVariables. R x. End.\n Problem. x=0->[x:=x+1;]x=1 End."
-    val request = new CreateModelRequest(db.db, "guest", "Simple", modelContents)
-    request.resultingResponses() should contain theSameElementsAs ModelUploadResponse(Some("1"), None)::Nil
+    val request = new UploadArchiveRequest(db.db, "guest", modelContents, "Simple")
+    request.resultingResponses() should contain theSameElementsAs BooleanResponse(flag=true, None)::Nil
     db.db.getModelList("guest").loneElement should have(
       'name ("Simple"),
       'keyFile (modelContents))
@@ -30,7 +30,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
   it should "report parse errors" in withDatabase { db =>
     val modelContents = "ProgramVariables. R x. End.\n Problem. x=0->[x:=x+1]x=1 End."
-    val request = new CreateModelRequest(db.db, "guest", "Simple", modelContents)
+    val request = new UploadArchiveRequest(db.db, "guest", modelContents,"Simple")
     val response = request.resultingResponses().loneElement
     response shouldBe a [ParseErrorResponse]
     response should have (
