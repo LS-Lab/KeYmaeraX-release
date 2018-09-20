@@ -602,6 +602,24 @@ object DerivedAxioms extends Logging {
   }
 
   /**
+    * {{{Axiom "[]~><> subst propagation".
+    *    <a;>true -> ([a;]p(||) -> <a;>p(||))
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note unsound for hybrid games
+    */
+  lazy val boxDiamondSubstPropagation: Lemma = derivedAxiom("[]~><> subst propagation",
+    Sequent(IndexedSeq(), IndexedSeq("<a_{|^@|};>true -> ([a_{|^@|};]p(||) -> <a_{|^@|};>p(||))".asFormula)),
+    cut("[a_{|^@|};]p(||) & <a_{|^@|};>true -> <a_{|^@|};>p(||)".asFormula) <(
+      prop & done,
+      hideR(1) & useAt(boxDiamondPropagation, PosInExpr(0::Nil))(1, 0::Nil) & useAt("&true")(1, 0::1::Nil) & 
+        prop & done
+    )
+  )
+
+  /**
     * {{{Axiom "K1".
     *   [a;](p(||)&q(||)) -> [a;]p(||) & [a;]q(||)
     * End.
