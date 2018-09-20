@@ -367,13 +367,13 @@ object KeYmaeraXArchiveParser {
           Definitions(_, _) :+ Problem(_, _) :+ Tactics(_) => la match {
         case END_BLOCK => shift(st)
         case TACTIC_BLOCK => shift(st)
-        case _ => throw ParseException("Missing entry delimiter", st, Expected.ExpectTerminal(END_BLOCK) :: Nil)
+        case _ => throw ParseException("Every entry (including ArchiveEntry, Lemma, Theorem, and Exercise)" +  " needs an " + END_BLOCK.img+PERIOD.img + " delimiter", st, Expected.ExpectTerminal(END_BLOCK) :: Nil)
       }
       case r :+ Token(ARCHIVE_ENTRY_BEGIN(kind), startLoc) :+ Token(DOUBLE_QUOTES_STRING(name), _) :+ MetaInfo(info) :+ Definitions(defs, vars) :+
         Problem(problem, annotations) :+ Tactics(tactics) :+ Token(END_BLOCK, _) => la match {
         case PERIOD => reduce(shift(st), 8, Bottom :+ ArchiveEntry(name, kind, startLoc.spanTo(currLoc.end), Nil, defs, vars, problem, annotations, tactics, info), r)
         case _: IDENT => shift(st)
-        case _ => throw ParseException("Missing entry delimiter", st, Expected.ExpectTerminal(PERIOD) :: Nil)
+        case _ => throw ParseException("Missing " + PERIOD.img + " after " + END_BLOCK.img + " delimiter", st, Expected.ExpectTerminal(PERIOD) :: Nil)
       }
       case r :+ (archiveBegin@Token(ARCHIVE_ENTRY_BEGIN(kind), _)) :+ (name@Token(DOUBLE_QUOTES_STRING(entryName), _)) :+ (info@MetaInfo(_)) :+ (defs@Definitions(_, _)) :+
         (problem@Problem(_, _)) :+ (tactics@Tactics(_)) :+ (archiveEnd@Token(END_BLOCK, _)) :+ Token(entryId@IDENT(_, _), idLoc) => la match {
@@ -424,7 +424,11 @@ object KeYmaeraXArchiveParser {
         case PERIOD => reduce(shift(st), 1, Bottom, r :+ defs :+ defsBlock)
         case END_BLOCK => shift(st)
         case _ if isReal(la) || isBool(la) || isProgram(la) => shift(st)
-        case _ => throw ParseException("Missing definitions delimiter", st, Expected.ExpectTerminal(END_BLOCK) :: Nil)
+        case _ => throw ParseException("Unexpected definition", st, 
+          Expected.ExpectTerminal(END_BLOCK) :: 
+          Expected.ExpectTerminal(IDENT("Real")) ::
+          Expected.ExpectTerminal(IDENT("Bool")) ::
+          Expected.ExpectTerminal(IDENT("HP")) :: Nil)
       }
       case r :+ (defs: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ Token(END_BLOCK, _) => la match {
         case PERIOD => reduce(shift(st), 3, Bottom, r :+ defs)
@@ -539,18 +543,29 @@ object KeYmaeraXArchiveParser {
         case END_BLOCK => shift(st)
         case _ if isReal(la) => shift(st)
         case _ if isBool(la) || isProgram(la) => throw ParseException("Predicate and program definitions only allowed in Definitions block", st, nextTok, "Real")
-        case _ => throw ParseException("Missing program variables delimiter", st, Expected.ExpectTerminal(END_BLOCK) :: Nil)
+        case _ => throw ParseException("Unexpected program variable definition", st, 
+          Expected.ExpectTerminal(END_BLOCK) :: 
+          Expected.ExpectTerminal(IDENT("Real")) :: Nil)
       }
       case r :+ Token(PROGRAM_VARIABLES_BLOCK, _) :+ Token(END_BLOCK, _) => la match {
         case PERIOD => reduce(shift(st), 3, Bottom, r)
         case _ => throw ParseException("Missing program variables delimiter", st, Expected.ExpectTerminal(END_BLOCK) :: Nil)
       }
-      case _ :+ Token(PROGRAM_VARIABLES_BLOCK, _) :+ Token(sort, _) if isReal(sort) && la.isInstanceOf[IDENT] => shift(st)
+      case _ :+ Token(PROGRAM_VARIABLES_BLOCK, _) :+ Token(sort, _) if isReal(sort) => la match {
+        case _: IDENT if !(isReal(la) || isBool(la) || isProgram(la)) => shift(st)
+        case i: IDENT if   isReal(la) || isBool(la) || isProgram(la)  => throw ParseException("Reserved identifier " + i.img + " cannot be used as variable name", st, Expected.ExpectTerminal(IDENT("...")) :: Nil)
+        case _ => throw ParseException("Missing identifier", st, Expected.ExpectTerminal(IDENT("<string>")) :: Nil)
+      }
       case r :+ (defs: Definitions) :+ (varsBlock@Token(PROGRAM_VARIABLES_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), _) if isReal(sort) => la match {
         case SEMI | PERIOD =>
           reduce(shift(st), 5, Bottom :+ Definitions(defs.defs, defs.vars :+ VarDef(name, index, startLoc)) :+ varsBlock, r)
-        case LPAREN => throw ParseException("Function definition only allowed in Definitions block", st, nextTok, SEMI.img + " or " + COMMA.img)
-        case _ => throw ParseException("Unexpected token in ProgramVariables block", st, nextTok, SEMI.img + " or " + COMMA.img)
+        case COMMA if isReal(rest.head.tok) => throw ParseException("Unexpected declaration delimiter", st, Expected.ExpectTerminal(SEMI) :: Nil)
+        case COMMA =>
+          reduce(shift(st), 5, Bottom :+ Definitions(defs.defs, defs.vars :+ VarDef(name, index, startLoc)) :+ varsBlock :+ Token(sort, startLoc), r)
+        case LPAREN => throw ParseException("Function definition only allowed in Definitions block", st, Expected.ExpectTerminal(SEMI) :: Expected.ExpectTerminal(COMMA) :: Nil)
+        case _ if isReal(la) || isBool(la) || isProgram(la) =>
+          throw ParseException("Missing variable declaration delimiter", st, Expected.ExpectTerminal(SEMI) :: Nil)
+        case _ => throw ParseException("Unexpected token in ProgramVariables block", st, Expected.ExpectTerminal(SEMI) :: Expected.ExpectTerminal(COMMA) :: Nil)
       }
       case r :+ (defs: Definitions) :+ (varsBlock@Token(PROGRAM_VARIABLES_BLOCK, _)) :+ (real@Token(sort, startLoc)) :+ Token(IDENT(name, index), _) if isReal(sort) && la == COMMA =>
         reduce(shift(st), 2, Bottom :+ Definitions(defs.defs, defs.vars :+ VarDef(name, index, startLoc)) :+ varsBlock :+ real, r)
@@ -566,6 +581,7 @@ object KeYmaeraXArchiveParser {
           val (problemBlock, Token(END_BLOCK, endLoc) :: remainder) = st.input.span(_.tok != END_BLOCK) match {
             case (Token(PROBLEM_BLOCK, _) :: Token(PERIOD, _) :: pb, (endBlock@Token(END_BLOCK, _)) :: Token(PERIOD, _) :: r) => (pb, endBlock +: r)
             case (Token(PROBLEM_BLOCK, _) :: pb, (endBlock@Token(END_BLOCK, _)) :: Token(PERIOD, _) :: r) => (pb, endBlock +: r)
+            case (Token(PROBLEM_BLOCK, _) :: pb, (endBlock@Token(END_BLOCK, _)) :: r) => throw ParseException("Missing " + PERIOD.img + " after delimiter " + END_BLOCK.img, r.head.loc, ParseException.tokenDescription(r.head), Expected.ExpectTerminal(PERIOD).toString, endBlock.toString, st.toString)
             case (Token(PROBLEM_BLOCK, _) :: _, r) => throw ParseException("Missing problem delimiter", r.last.loc, r.last.toString, END_BLOCK.img + PERIOD.img, "", st.toString)
           }
           problemBlock.find(_.tok == TACTIC_BLOCK) match {

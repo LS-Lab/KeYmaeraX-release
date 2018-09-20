@@ -188,6 +188,27 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     entry.tactics shouldBe empty
     entry.info shouldBe empty
   }
+  
+  it should "parse comma-separated variable declarations" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables R x, y; End.
+        | Problem x>y -> x>=y End.
+        |End.""".stripMargin
+    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input
+    entry.problemContent shouldBe input
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x>y -> x>=y".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
 
   it should "parse a problem without variables" in {
     val input =
@@ -1068,7 +1089,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1".
         | Problem. true End.""".stripMargin
-    ) should have message """2:20 Missing entry delimiter
+    ) should have message """2:20 Every entry (including ArchiveEntry, Lemma, Theorem, and Exercise) needs an End. delimiter
                             |Found:    <EOF> (EOF$) at 2:20 to EOF$
                             |Expected: End (END_BLOCK$)""".stripMargin
 
@@ -1078,7 +1099,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         |Theorem "Entry 2".
         | Problem. false->true End.
         |End.""".stripMargin
-    ) should have message """3:1 Missing entry delimiter
+    ) should have message """3:1 Every entry (including ArchiveEntry, Lemma, Theorem, and Exercise) needs an End. delimiter
                            |Found:    ArchiveEntry|Lemma|Theorem|Exercise (Theorem) at 3:1 to 3:7
                            |Expected: End (END_BLOCK$)""".stripMargin
   }
@@ -1089,9 +1110,12 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         | Definitions. R f().
         | Problem. true End.
         |End.""".stripMargin
-    ) should have message """3:2 Missing definitions delimiter
+    ) should have message """3:2 Unexpected definition
                             |Found:    Problem (PROBLEM_BLOCK$) at 3:2 to 3:8
-                            |Expected: End (END_BLOCK$)""".stripMargin
+                            |Expected: End (END_BLOCK$)
+                            |      or: Real (ID("Real"))
+                            |      or: Bool (ID("Bool"))
+                            |      or: HP (ID("HP"))""".stripMargin
   }
 
   it should "report a missing program variables delimiter" in {
@@ -1100,9 +1124,10 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         | ProgramVariables R x.
         | Problem. true End.
         |End.""".stripMargin
-    ) should have message """3:2 Missing program variables delimiter
+    ) should have message """3:2 Unexpected program variable definition
                             |Found:    Problem (PROBLEM_BLOCK$) at 3:2 to 3:8
-                            |Expected: End (END_BLOCK$)""".stripMargin
+                            |Expected: End (END_BLOCK$)
+                            |      or: Real (ID("Real"))""".stripMargin
   }
 
   it should "report a missing problem delimiter" in {
@@ -1121,6 +1146,70 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     ) should have message """2:15 Missing problem delimiter
                            |Found:    <EOF> (EOF$) at 2:15 to EOF$
                            |Expected: End""".stripMargin
+
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1".
+        | Problem. true End""".stripMargin
+    ) should have message """2:19 Missing . after delimiter End
+                            |Found:    <EOF> (EOF$) at 2:19 to EOF$
+                            |Expected: . (PERIOD$)""".stripMargin
+
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1".
+        | Problem. true End
+        |Tactic "My tactic" closeTrue End. """.stripMargin
+    ) should have message """3:1 Missing . after delimiter End
+                            |Found:    Tactic (TACTIC_BLOCK$) at 3:1 to 3:6
+                            |Expected: . (PERIOD$)""".stripMargin
+  }
+  
+  it should "report reserved identifiers" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real Real; End.
+        | Problem true End.
+        |End.""".stripMargin
+    ) should have message """2:24 Reserved identifier Real cannot be used as variable name
+                            |Found:    Real (ID("Real")) at 2:24 to 2:27
+                            |Expected: ... (ID("..."))""".stripMargin
+
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real R; End.
+        | Problem true End.
+        |End.""".stripMargin
+    ) should have message """2:24 Reserved identifier R cannot be used as variable name
+                            |Found:    R (ID("R")) at 2:24
+                            |Expected: ... (ID("..."))""".stripMargin
+    
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real Bool; End.
+        | Problem true End.
+        |End.""".stripMargin
+    ) should have message """2:24 Reserved identifier Bool cannot be used as variable name
+                            |Found:    Bool (ID("Bool")) at 2:24 to 2:27
+                            |Expected: ... (ID("..."))""".stripMargin
+
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real HP; End.
+        | Problem true End.
+        |End.""".stripMargin
+    ) should have message """2:24 Reserved identifier HP cannot be used as variable name
+                            |Found:    HP (ID("HP")) at 2:24 to 2:25
+                            |Expected: ... (ID("..."))""".stripMargin
+  }
+  
+  it should "report semicolon instead of comma" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real x, Real y; End.
+        | Problem true End.
+        |End.""".stripMargin
+    ) should have message """2:25 Unexpected declaration delimiter
+                            |Found:    , (COMMA$) at 2:25
+                            |Expected: ; (SEMI$)""".stripMargin
   }
 
   it should "report misplaced function, predicate, or program definitions" in {
@@ -1131,7 +1220,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         |End.""".stripMargin
     ) should have message """2:22 Function definition only allowed in Definitions block
                             |Found:    ( (LPAREN$) at 2:22
-                            |Expected: ; or ,""".stripMargin
+                            |Expected: ; (SEMI$)
+                            |      or: , (COMMA$)""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1".
@@ -1157,8 +1247,18 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         | Problem. true End.
         |End.""".stripMargin
     ) should have message """2:23 Unexpected token in ProgramVariables block
-                           |Found:    & (AMP$) at 2:23
-                           |Expected: ; or ,""".stripMargin
+                            |Found:    & (AMP$) at 2:23
+                            |Expected: ; (SEMI$)
+                            |      or: , (COMMA$)""".stripMargin
+
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real x Real y; End.
+        | Problem true End.
+        |End.""".stripMargin
+    ) should have message """2:26 Missing variable declaration delimiter
+                            |Found:    Real (ID("Real")) at 2:26 to 2:29
+                            |Expected: ; (SEMI$)""".stripMargin
   }
 
   it should "report function definition errors" in {
@@ -1281,5 +1381,28 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     ) should have message """4:5 Archive entry ends with ID entry2 but entry start defined entry1
                             |Found:    <unknown> at 4:5 to 4:10
                             |Expected: <unknown>""".stripMargin
+  }
+  
+  it should "report sort identifier mismatches" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ProgramVariables 
+        |  Real x; 
+        |  Rea y; 
+        |End.
+        |Problem x>y -> x>=y End.""".stripMargin
+    ) should have message """3:3 Unexpected program variable definition
+                            |Found:    Rea (ID("Rea")) at 3:3 to 3:5
+                            |Expected: End (END_BLOCK$)
+                            |      or: Real (ID("Real"))""".stripMargin
+
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ProgramVariables 
+        |  Real x; 
+        |  Bool y; 
+        |End.
+        |Problem x>y -> x>=y End.""".stripMargin
+    ) should have message """3:3 Predicate and program definitions only allowed in Definitions block
+                            |Found:    Bool (ID("Bool")) at 3:3 to 3:6
+                            |Expected: Real""".stripMargin
   }
 }
