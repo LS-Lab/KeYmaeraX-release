@@ -169,7 +169,7 @@ angular.module('keymaerax.controllers').controller('ParseErrorCtrl', function($s
   $scope.errorThrown = error.errorThrown;
   $scope.dismiss = function() { $uibModalInstance.dismiss('OK'); }
   $scope.modelWithErrorMsg = function() {
-    var lines = $.map(model.split('\n'), function(e, i) { return (i+1) + ': ' + e; });
+    var lines = $.map(model.split('\n'), function(e, i) { return ("00" + (i+1)).slice(-3) + ': ' + e; });
     var lineStr = error.location.line + ': ';
     var errorColumnIdx = error.location.column >= 0 ? error.location.column + lineStr.length :
       error.location.line >= 0 ? lines[error.location.line-1].length+1 : lines[lines.length-1].length+1;
