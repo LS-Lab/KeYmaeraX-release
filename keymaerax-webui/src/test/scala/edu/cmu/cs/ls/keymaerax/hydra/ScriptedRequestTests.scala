@@ -447,19 +447,22 @@ class ScriptedRequestTests extends TacticTestBase {
     val proofIdString = proofId.toString
     val request = new RunBelleTermRequest(db.db, db.user.userName, proofIdString, nodeId, tactic, pos1, pos2, inputs,
       consultAxiomInfo = consultAxiomInfo)
-    val response = request.getResultingResponses(token).loneElement
-    response shouldBe a [RunBelleTermResponse]
-    response should have (
-      'proofId (proofIdString),
-      'nodeId (nodeId)
-    )
-    val taskId = response.asInstanceOf[RunBelleTermResponse].taskId
-    while (new TaskStatusRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).
-      loneElement.asInstanceOf[TaskStatusResponse].status == "running") {
-      Thread.sleep(100)
+    request.getResultingResponses(token).loneElement match {
+      case response: RunBelleTermResponse =>
+        response should have (
+          'proofId (proofIdString),
+          'nodeId (nodeId)
+        )
+        val taskId = response.asInstanceOf[RunBelleTermResponse].taskId
+        while (new TaskStatusRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).
+          loneElement.asInstanceOf[TaskStatusResponse].status == "running") {
+          Thread.sleep(100)
+        }
+        new TaskStatusRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).loneElement should have ('status ("done"))
+        new TaskResultRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).loneElement
+      case response: ErrorResponse => fail(response.msg, response.exn)
+      case response => fail("Running tactic failed with response " + response)
     }
-    new TaskStatusRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).loneElement should have ('status ("done"))
-    new TaskResultRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).loneElement
   }
 
 }
