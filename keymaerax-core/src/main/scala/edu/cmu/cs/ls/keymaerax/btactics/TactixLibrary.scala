@@ -253,7 +253,12 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   // modalities
 
-  /** discreteGhost: introduces a discrete ghost called `ghost` defined as term `t`; if `ghost` is None the tactic chooses a name by inspecting `t`.
+  /** iG discreteGhost: introduces a discrete ghost called `ghost` defined as term `t`; if `ghost` is None the tactic chooses a name by inspecting `t`.
+    * {{{
+    *   G, y=e |- p(y), D
+    *   ------------------iG (where y is new)
+    *        G |- p(x), D
+    * }}}
     * @example{{{
     *         |- [y_0:=y;]x>0
     *         ----------------discreteGhost("y".asTerm)(1)
@@ -265,7 +270,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     *         |- [z:=2;]x>0
     * }}}
     * @param t The ghost's initial value.
-    * @param ghost The new ghost variable. If None, the tactic chooses a name by inspecting t (must be a variable then).
+    * @param ghost The new ghost variable. If `None`, the tactic chooses a name by inspecting t (must be a variable then).
+    *              For robustness you are advised to choose a name.
     * @incontext
     */
   def discreteGhost(t: Term, ghost: Option[Variable] = None): DependentPositionTactic = DLBySubst.discreteGhost(t, ghost)
