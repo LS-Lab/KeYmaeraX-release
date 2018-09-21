@@ -157,17 +157,17 @@ object DerivedAxioms extends Logging {
     val fields = fns.map(fn => ru.typeOf[DerivedAxioms.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     val fieldMirrors = fields.map(im.reflectMethod)
 
-    var failures: mutable.Buffer[String] = mutable.Buffer()
+    var failures: mutable.Buffer[(String,Throwable)] = mutable.Buffer()
     fieldMirrors.indices.foreach(idx => {
       try {
         fieldMirrors(idx)()
       } catch {
         case e: Throwable =>
-          failures += fns(idx)
+          failures += (fns(idx) -> e)
           logger.warn("WARNING: Failed to add derived lemma.", e)
       }
     })
-    if (failures.nonEmpty) throw new Exception(s"WARNING: Encountered ${failures.size} failures when trying to populate DerivedLemmas database. Unable to derive:\n" + failures.mkString("\n"))
+    if (failures.nonEmpty) throw new Exception(s"WARNING: Encountered ${failures.size} failures when trying to populate DerivedLemmas database. Unable to derive:\n" + failures.map(_._1).mkString("\n"), failures.head._2)
   }
 
   // derived rules
@@ -614,8 +614,8 @@ object DerivedAxioms extends Logging {
     Sequent(IndexedSeq(), IndexedSeq("<a_{|^@|};>true -> ([a_{|^@|};]p(||) -> <a_{|^@|};>p(||))".asFormula)),
     cut("[a_{|^@|};]p(||) & <a_{|^@|};>true -> <a_{|^@|};>p(||)".asFormula) <(
       prop & done,
-      hideR(1) & useAt(boxDiamondPropagation, PosInExpr(0::Nil))(1, 0::Nil) & useAt("&true")(1, 0::1::Nil) & 
-        prop & done
+      hideR(1) & useAt(boxDiamondPropagation, PosInExpr(0::Nil))(1, 0::Nil) & useAt(andTrue)(1, 0::1::Nil) &
+      prop & done
     )
   )
 
