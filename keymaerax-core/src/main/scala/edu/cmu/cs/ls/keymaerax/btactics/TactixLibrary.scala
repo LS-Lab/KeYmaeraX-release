@@ -331,10 +331,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @note Currently uses I induction axiom, which is unsound for hybrid games.
     */
   def loop(invariant : Formula)  : DependentPositionTactic = DLBySubst.loop(invariant)
-  /** loop=I: prove a property of a loop by induction with the given loop invariant (hybrid systems)
-    * @see [[loop()]]
-    */
-  //def I(invariant: Formula)      : DependentPositionTactic = loop(invariant)
+
   /** loop: prove a property of a loop by induction, if the given invariant generator finds a loop invariant
     * @see [[loop(Formula)]] */
   def loop(gen: Generator[Formula]): DependentPositionTactic = new DependentPositionTactic("I gen") {
@@ -395,6 +392,11 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     *      Example 32. */
   def loopPostMaster(gen: Generator[Formula]): DependentPositionTactic = InvariantProvers.loopPostMaster(gen)
+
+  /** I: prove a property of a loop [{a}*]P by induction axiom as P & [{a}*](P->[a]P) for hybrid systems.
+    * @see [[loop()]]
+    */
+  //def I      : DependentPositionTactic = useAt(DerivedAxioms.Ieq)
 
   /** throughout: prove a property of a loop by induction with the given loop invariant (hybrid systems) that
     * holds throughout the steps of the loop body.
