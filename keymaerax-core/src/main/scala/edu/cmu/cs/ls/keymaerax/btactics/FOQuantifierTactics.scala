@@ -39,6 +39,7 @@ protected object FOQuantifierTactics {
     what.map({ case (t, v) => allInstI(t, v)(pos) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
   })
 
+  /** @see [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.allL]] */
   def allInstantiate(quantified: Option[Variable] = None, instance: Option[Term] = None): DependentPositionTactic =
   //@note can be internalized to a USubst tactic with internalized if-condition language
     //@todo save Option[.]; works for now because web UI always supplies instance, never quantified
