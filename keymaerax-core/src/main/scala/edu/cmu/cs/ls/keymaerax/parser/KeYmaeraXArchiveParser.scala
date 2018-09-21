@@ -552,8 +552,7 @@ object KeYmaeraXArchiveParser {
         case _ => throw ParseException("Missing program variables delimiter", st, Expected.ExpectTerminal(END_BLOCK) :: Nil)
       }
       case _ :+ Token(PROGRAM_VARIABLES_BLOCK, _) :+ Token(sort, _) if isReal(sort) => la match {
-        case _: IDENT if !(isReal(la) || isBool(la) || isProgram(la)) => shift(st)
-        case i: IDENT if   isReal(la) || isBool(la) || isProgram(la)  => throw ParseException("Reserved identifier " + i.img + " cannot be used as variable name", st, Expected.ExpectTerminal(IDENT("...")) :: Nil)
+        case _: IDENT => shift(st)
         case _ => throw ParseException("Missing identifier", st, Expected.ExpectTerminal(IDENT("<string>")) :: Nil)
       }
       case r :+ (defs: Definitions) :+ (varsBlock@Token(PROGRAM_VARIABLES_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), _) if isReal(sort) => la match {
