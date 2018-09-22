@@ -460,7 +460,8 @@ class ScriptedRequestTests extends TacticTestBase {
         }
         new TaskStatusRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).loneElement should have ('status ("done"))
         new TaskResultRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).loneElement
-      case response: ErrorResponse => fail(response.msg, response.exn)
+      case response: ErrorResponse if response.exn != null => fail(response.msg, response.exn)
+      case response: ErrorResponse if response.exn == null => fail(response.msg)
       case response => fail("Running tactic failed with response " + response)
     }
   }
