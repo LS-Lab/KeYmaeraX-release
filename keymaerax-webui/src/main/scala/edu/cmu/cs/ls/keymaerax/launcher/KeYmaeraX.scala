@@ -89,6 +89,7 @@ object KeYmaeraX {
       |  -interval guard reals by interval arithmetic in floating point (recommended)
       |  -nointerval skip interval arithmetic presuming no floating point errors
       |  -savept path export proof term s-expression from -check to given path
+      |  -launch   use present JVM instead of launching better one with bigger stack
       |  -lax      use lax mode with more flexible parser, printer, prover etc.
       |  -strict   use strict mode with no flexibility in prover
       |  -debug    use debug mode with more exhaustive messages
@@ -104,7 +105,7 @@ object KeYmaeraX {
 
   private def launched() {
     LAUNCH = true
-    println("Launch flag was set.")
+    println("Launching KeYmaera X")
   }
   var LAUNCH: Boolean = false
 
@@ -293,7 +294,7 @@ object KeYmaeraX {
       case "-debug" :: tail => Configuration.set(Configuration.Keys.DEBUG, "true", saveToFile = false); nextOption(map, tail)
       case "-nodebug" :: tail => Configuration.set(Configuration.Keys.DEBUG, "false", saveToFile = false); nextOption(map, tail)
       case "-security" :: tail => activateSecurity(); nextOption(map, tail)
-      case "-launch" :: tail => launched(); nextOption(map, tail)
+      case "-launch" :: tail => println("Use present JVM"); launched(); nextOption(map, tail)
       case "-timeout" :: value :: tail =>
         if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('timeout -> value.toLong), tail)
         else optionErrorReporter("-timeout")
