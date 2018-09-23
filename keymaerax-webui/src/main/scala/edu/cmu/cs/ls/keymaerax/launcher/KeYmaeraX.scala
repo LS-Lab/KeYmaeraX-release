@@ -45,7 +45,7 @@ object KeYmaeraX {
 
   /** Usage -help information.
     *
-    * @note Formatted to 80 characters width. */
+    * @note Formatted to 80 characters terminal width. */
   val usage: String = "KeYmaera X Prover" + " " + VERSION +
     """
       |
