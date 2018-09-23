@@ -114,8 +114,9 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
                 """.stripMargin
     the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
       """3:1 Unexpected token in ProgramVariables block
-        |Found:    End. (END_BLOCK$) at 3:1 to 3:4
-        |Expected: ; or ,""".stripMargin
+        |Found:    End (END_BLOCK$) at 3:1 to 3:3
+        |Expected: ; (SEMI$)
+        |      or: , (COMMA$)""".stripMargin
   }
 
   it should "report useful message on missing semicolon in function definitions" in {
@@ -131,7 +132,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
                 """.stripMargin
     the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
       """3:1 Unexpected token in function definition
-        |Found:    End. (END_BLOCK$) at 3:1 to 3:4
+        |Found:    End (END_BLOCK$) at 3:1 to 3:3
         |Expected: = (EQ$)
         |      or: ; (SEMI$)""".stripMargin
   }
@@ -149,7 +150,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
                 """.stripMargin
     the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
       """3:1 Unexpected token in program definition
-        |Found:    End. (END_BLOCK$) at 3:1 to 3:4
+        |Found:    End (END_BLOCK$) at 3:1 to 3:3
         |Expected: ::= (PRG_DEF$)
         |      or: ; (SEMI$)""".stripMargin
   }

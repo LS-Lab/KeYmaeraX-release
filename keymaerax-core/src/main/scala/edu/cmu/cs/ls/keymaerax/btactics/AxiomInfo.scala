@@ -441,7 +441,7 @@ object DerivationInfo {
     new PositionTacticInfo("derive", "'", {case () => HilbertCalculus.derive}),
 
     // first-order logic quantifiers
-    new CoreAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", {case () => ???}),
+    new CoreAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", {case () => HilbertCalculus.useAt("all instantiate")}),
     new DerivedAxiomInfo("all distribute", ("∀→","all->"), "allDist", {case () => HilbertCalculus.allDist}),
     new CoreAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", {case () => HilbertCalculus.allV}),
     new DerivedAxiomInfo("vacuous exists quantifier", ("V∃","existsV"), "existsV", {case () => HilbertCalculus.existsV}),

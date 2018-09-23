@@ -210,6 +210,52 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     entry.info shouldBe empty
   }
 
+  it should "accept reserved identifiers" in {
+    val entry = KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real Real; End.
+        | Problem true End.
+        |End.""".stripMargin
+    ).loneElement.defs should beDecl(
+      Declaration(Map(
+        ("Real", None) -> (None, Real, None, UnknownLocation)
+      ))
+    )
+
+    KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real R; End.
+        | Problem true End.
+        |End.""".stripMargin
+    ).loneElement.defs  should beDecl(
+      Declaration(Map(
+        ("R", None) -> (None, Real, None, UnknownLocation)
+      ))
+    )
+
+    KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real Bool; End.
+        | Problem true End.
+        |End.""".stripMargin
+    ).loneElement.defs  should beDecl(
+      Declaration(Map(
+        ("Bool", None) -> (None, Real, None, UnknownLocation)
+      ))
+    )
+
+    KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real HP; End.
+        | Problem true End.
+        |End.""".stripMargin
+    ).loneElement.defs  should beDecl(
+      Declaration(Map(
+        ("HP", None) -> (None, Real, None, UnknownLocation)
+      ))
+    )
+  }
+
   it should "parse a problem without variables" in {
     val input =
       """ArchiveEntry "Entry 1".
@@ -1161,44 +1207,6 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     ) should have message """3:1 Missing . after delimiter End
                             |Found:    Tactic (TACTIC_BLOCK$) at 3:1 to 3:6
                             |Expected: . (PERIOD$)""".stripMargin
-  }
-  
-  it should "report reserved identifiers" in {
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
-      """ArchiveEntry "Entry 1"
-        | ProgramVariables Real Real; End.
-        | Problem true End.
-        |End.""".stripMargin
-    ) should have message """2:24 Reserved identifier Real cannot be used as variable name
-                            |Found:    Real (ID("Real")) at 2:24 to 2:27
-                            |Expected: ... (ID("..."))""".stripMargin
-
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
-      """ArchiveEntry "Entry 1"
-        | ProgramVariables Real R; End.
-        | Problem true End.
-        |End.""".stripMargin
-    ) should have message """2:24 Reserved identifier R cannot be used as variable name
-                            |Found:    R (ID("R")) at 2:24
-                            |Expected: ... (ID("..."))""".stripMargin
-    
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
-      """ArchiveEntry "Entry 1"
-        | ProgramVariables Real Bool; End.
-        | Problem true End.
-        |End.""".stripMargin
-    ) should have message """2:24 Reserved identifier Bool cannot be used as variable name
-                            |Found:    Bool (ID("Bool")) at 2:24 to 2:27
-                            |Expected: ... (ID("..."))""".stripMargin
-
-    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
-      """ArchiveEntry "Entry 1"
-        | ProgramVariables Real HP; End.
-        | Problem true End.
-        |End.""".stripMargin
-    ) should have message """2:24 Reserved identifier HP cannot be used as variable name
-                            |Found:    HP (ID("HP")) at 2:24 to 2:25
-                            |Expected: ... (ID("..."))""".stripMargin
   }
   
   it should "report semicolon instead of comma" in {

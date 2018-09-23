@@ -400,7 +400,7 @@ class DLTests extends TacticTestBase {
 
   "I" should "work on a simple example" in {
     val result = proveBy(Sequent(IndexedSeq("x>2".asFormula), IndexedSeq("[{x:=x+1;}*]x>0".asFormula)),
-      I("x>1".asFormula)(1))
+      loop("x>1".asFormula)(1))
 
     result.subgoals should have size 3
     // init
@@ -416,7 +416,7 @@ class DLTests extends TacticTestBase {
 
   it should "keep constants around" in {
     val result = proveBy(Sequent(IndexedSeq("x>2".asFormula, "y>0".asFormula), IndexedSeq("[{x:=x+y;}*]x>0".asFormula)),
-      I("x>1".asFormula)(1))
+      loop("x>1".asFormula)(1))
 
     result.subgoals should have size 3
     // init
@@ -431,7 +431,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "wipe all formulas mentioning bound variables from the context" in {
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "y>1".asFormula, "z>7".asFormula), IndexedSeq("[{x:=2;}*]x>2".asFormula, "x<3".asFormula, "y<4".asFormula)), I("x*y>5".asFormula)(1))
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "y>1".asFormula, "z>7".asFormula), IndexedSeq("[{x:=2;}*]x>2".asFormula, "x<3".asFormula, "y<4".asFormula)), loop("x*y>5".asFormula)(1))
 
     result.subgoals should have size 3
     // init
@@ -446,7 +446,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "do the same with a slightly more complicated formula" in {
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "y>1".asFormula, "z>7".asFormula), IndexedSeq("[{x:=2; ++ y:=z;}*]x>2".asFormula, "x<3".asFormula, "y<4".asFormula)), I("x*y>5".asFormula)(1))
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "y>1".asFormula, "z>7".asFormula), IndexedSeq("[{x:=2; ++ y:=z;}*]x>2".asFormula, "x<3".asFormula, "y<4".asFormula)), loop("x*y>5".asFormula)(1))
 
     result.subgoals should have size 3
     // init
@@ -461,7 +461,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "apply alpha rule to extract subformulas before wiping from the context" in {
-    val result = proveBy(Sequent(IndexedSeq("x>0&y>1&z>7".asFormula), IndexedSeq("x<3".asFormula, "[{x:=2;}*]x>2".asFormula, "x>5|y<4".asFormula)), I("x*y>5".asFormula)(2))
+    val result = proveBy(Sequent(IndexedSeq("x>0&y>1&z>7".asFormula), IndexedSeq("x<3".asFormula, "[{x:=2;}*]x>2".asFormula, "x>5|y<4".asFormula)), loop("x*y>5".asFormula)(2))
 
     result.subgoals should have size 3
     // init
@@ -476,7 +476,7 @@ class DLTests extends TacticTestBase {
   }
 
   it should "remove duplicated formulas" in {
-    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "x>0".asFormula, "y>1".asFormula, "z>7".asFormula), IndexedSeq("[{x:=2;}*]x>2".asFormula, "x<3".asFormula, "x<3".asFormula, "y<4".asFormula)), I("x*y>5".asFormula)(1))
+    val result = proveBy(Sequent(IndexedSeq("x>0".asFormula, "x>0".asFormula, "y>1".asFormula, "z>7".asFormula), IndexedSeq("[{x:=2;}*]x>2".asFormula, "x<3".asFormula, "x<3".asFormula, "y<4".asFormula)), loop("x*y>5".asFormula)(1))
 
     result.subgoals should have size 3
     // init

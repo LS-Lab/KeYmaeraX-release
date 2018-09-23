@@ -20,16 +20,16 @@ import org.scalatest.prop.TableDrivenPropertyChecks._
 class ScriptedRequestTests extends TacticTestBase {
 
   "Model upload" should "work with a simple file" in withDatabase { db =>
-    val modelContents = "ProgramVariables. R x. End.\n Problem. x=0->[x:=x+1;]x=1 End."
+    val modelContents = "ProgramVariables Real x; End.\n Problem x=0->[x:=x+1;]x=1 End."
     val request = new UploadArchiveRequest(db.db, "guest", modelContents, "Simple")
-    request.resultingResponses() should contain theSameElementsAs BooleanResponse(flag=true, None)::Nil
+    request.resultingResponses() should contain theSameElementsAs ModelUploadResponse(Some("1"), None)::Nil
     db.db.getModelList("guest").loneElement should have(
       'name ("Simple"),
       'keyFile (modelContents))
   }
 
   it should "report parse errors" in withDatabase { db =>
-    val modelContents = "ProgramVariables. R x. End.\n Problem. x=0->[x:=x+1]x=1 End."
+    val modelContents = "ProgramVariables Real x; End.\n Problem x=0->[x:=x+1]x=1 End."
     val request = new UploadArchiveRequest(db.db, "guest", modelContents,"Simple")
     val response = request.resultingResponses().loneElement
     response shouldBe a [ParseErrorResponse]
@@ -42,7 +42,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }
 
   "Proof step execution" should "make a simple step" in withDatabase { db => withMathematica { _ =>
-    val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> x>=0 End."
+    val modelContents = "ProgramVariables Real x; End. Problem x>=0 -> x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -61,7 +61,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }}
 
   it should "solve simple diamond ODE in context" in withDatabase { db => withMathematica { _ =>
-    val modelContents = "ProgramVariables. R x. R v. End. Problem. x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0 End."
+    val modelContents = "ProgramVariables Real x, v; End. Problem x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -77,7 +77,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }}
 
   it should "make a branching input step at a position" in withDatabase { db => withMathematica { _ =>
-    val modelContents = "ProgramVariables. R x. End. Problem. x>=2 -> [{x:=x+1;}*]x>=0 End."
+    val modelContents = "ProgramVariables Real x; End. Problem x>=2 -> [{x:=x+1;}*]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -95,7 +95,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }}
 
   it should "record hiding with formula checks" in withDatabase { db => withMathematica { _ =>
-    val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> x>=0 End."
+    val modelContents = "ProgramVariables Real x; End. Problem x>=0 -> x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -117,7 +117,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }}
 
   "Custom tactic execution" should "expand tactic definitions" in withDatabase { db => withMathematica { _ =>
-    val modelContents = "ProgramVariables. R x. End. Problem. x>=2 -> [{x:=x+1;}*]x>=0 End."
+    val modelContents = "ProgramVariables Real x; End. Problem x>=2 -> [{x:=x+1;}*]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -132,7 +132,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }}
 
   "Step misapplication" should "give a useful error message on non-existing sequent top-level position" in withDatabase { db => withMathematica { _ =>
-    val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> [x:=x+1;]x>=0 End."
+    val modelContents = "ProgramVariables Real x; End. Problem x>=0 -> [x:=x+1;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -149,7 +149,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }}
 
   it should "report a readable error message when useAt tactic fails unification match" in withDatabase { db => withMathematica { _ =>
-    val modelContents = "ProgramVariables. R x. R v. End. Problem. x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0 End."
+    val modelContents = "ProgramVariables Real x, v; End. Problem x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -166,7 +166,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }}
 
   it should "report a readable error message when useAt tactic points outside sequent" in withDatabase { db => withMathematica { _ =>
-    val modelContents = "ProgramVariables. R x. R v. End. Problem. x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0 End."
+    val modelContents = "ProgramVariables Real x, v; End. Problem x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -183,7 +183,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }}
 
   it should "report a readable error message when match in tactic does not provide one for wrong position" in withDatabase { db => withMathematica { _ =>
-    val modelContents = "ProgramVariables. R x. R v. End. Problem. x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0 End."
+    val modelContents = "ProgramVariables Real x, v; End. Problem x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -201,7 +201,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }}
 
   "Step details" should "work on a simple example" in withDatabase { db => withMathematica { _ =>
-    val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> [x:=x+1;]x>=0 End."
+    val modelContents = "ProgramVariables Real x; End. Problem x>=0 -> [x:=x+1;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -216,7 +216,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }}
 
   it should "expand prop" in withDatabase { db => withMathematica { _ =>
-    val modelContents = "ProgramVariables. R x. R y. End. Problem. x>=0&y>0 -> [x:=x+y;]x>=0 End."
+    val modelContents = "ProgramVariables Real x, y; End. Problem x>=0&y>0 -> [x:=x+y;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -231,7 +231,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }}
 
   it should "expand master" in withMathematica { _ => withDatabase { db =>
-    val modelContents = "ProgramVariables. R x. R y. End. Problem. x>=0&y>0 -> [x:=x+y;]x>=0 End."
+    val modelContents = "ProgramVariables Real x, y; End. Problem x>=0&y>0 -> [x:=x+y;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -246,7 +246,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }}
 
   "Applicable axioms" should "not choke on wrong positions" in withDatabase { db =>
-    val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> [x:=x+1;]x>=0 End."
+    val modelContents = "ProgramVariables Real x; End. Problem x>=0 -> [x:=x+1;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -257,7 +257,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }
 
   it should "work on a simple example without input suggestion" in withDatabase { db =>
-    val modelContents = "ProgramVariables. R x. End. Problem. x>=0 -> [x:=x+1;]x>=0 End."
+    val modelContents = "ProgramVariables Real x; End. Problem x>=0 -> [x:=x+1;]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -268,7 +268,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }
 
   it should "work with input suggestion" in withDatabase { db =>
-    val modelContents = "ProgramVariables. R x. End. Problem. [{x:=x+1;}*@invariant(x>-1)]x>=0 End."
+    val modelContents = "ProgramVariables Real x; End. Problem [{x:=x+1;}*@invariant(x>-1)]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -282,7 +282,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }
 
   "Tactic input checking" should "pass correct input" in withDatabase { db =>
-    val modelContents = "ProgramVariables. R x. End. Problem. [{x:=x+1;}*]x>=0 End."
+    val modelContents = "ProgramVariables Real x; End. Problem [{x:=x+1;}*]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -293,7 +293,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }
 
   it should "fail incorrect type" in withDatabase { db =>
-    val modelContents = "ProgramVariables. R x. End. Problem. [{x:=x+1;}*]x>=0 End."
+    val modelContents = "ProgramVariables Real x; End. Problem [{x:=x+1;}*]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -307,7 +307,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }
 
   it should "fail fresh symbols" in withDatabase { db =>
-    val modelContents = "ProgramVariables. R x. End. Problem. [{x:=x+1;}*]x>=0 End."
+    val modelContents = "ProgramVariables Real x; End. Problem [{x:=x+1;}*]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
@@ -321,7 +321,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }
 
   it should "allow defined functions" in withDatabase { db =>
-    val modelContents = "ProgramVariables. R x. End. Problem. [{x:=x+1;}*]x>=0 End."
+    val modelContents = "ProgramVariables Real x; End. Problem [{x:=x+1;}*]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
@@ -333,7 +333,7 @@ class ScriptedRequestTests extends TacticTestBase {
   }
 
   it should "fail when defined functions are used without ()" in withDatabase { db =>
-    val modelContents = "ProgramVariables. R x. End. Problem. [{x:=x+1;}*]x>=0 End."
+    val modelContents = "ProgramVariables Real x; End. Problem [{x:=x+1;}*]x>=0 End."
     val proofId = db.createProof(modelContents)
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
@@ -373,7 +373,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val modelInfos = models.asInstanceOf[JsArray].elements.
       filter(_.asJsObject.fields("hasTactic").asInstanceOf[JsBoolean].value).
       map(m => m.asJsObject.fields("name").asInstanceOf[JsString].value -> m.asJsObject.fields("id").asInstanceOf[JsString].value)
-    modelInfos should have size 59  // change when ListExamplesRequest is updated
+    modelInfos should have size 60  // change when ListExamplesRequest is updated
     val modelInfosTable = Table(("name", "id"), modelInfos:_*)
     forEvery(modelInfosTable) { (name, id) =>
       println("Importing and opening " + name + "...")
@@ -447,19 +447,23 @@ class ScriptedRequestTests extends TacticTestBase {
     val proofIdString = proofId.toString
     val request = new RunBelleTermRequest(db.db, db.user.userName, proofIdString, nodeId, tactic, pos1, pos2, inputs,
       consultAxiomInfo = consultAxiomInfo)
-    val response = request.getResultingResponses(token).loneElement
-    response shouldBe a [RunBelleTermResponse]
-    response should have (
-      'proofId (proofIdString),
-      'nodeId (nodeId)
-    )
-    val taskId = response.asInstanceOf[RunBelleTermResponse].taskId
-    while (new TaskStatusRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).
-      loneElement.asInstanceOf[TaskStatusResponse].status == "running") {
-      Thread.sleep(100)
+    request.getResultingResponses(token).loneElement match {
+      case response: RunBelleTermResponse =>
+        response should have (
+          'proofId (proofIdString),
+          'nodeId (nodeId)
+        )
+        val taskId = response.asInstanceOf[RunBelleTermResponse].taskId
+        while (new TaskStatusRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).
+          loneElement.asInstanceOf[TaskStatusResponse].status == "running") {
+          Thread.sleep(100)
+        }
+        new TaskStatusRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).loneElement should have ('status ("done"))
+        new TaskResultRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).loneElement
+      case response: ErrorResponse if response.exn != null => fail(response.msg, response.exn)
+      case response: ErrorResponse if response.exn == null => fail(response.msg)
+      case response => fail("Running tactic failed with response " + response)
     }
-    new TaskStatusRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).loneElement should have ('status ("done"))
-    new TaskResultRequest(db.db, db.user.userName, proofIdString, nodeId, taskId).getResultingResponses(token).loneElement
   }
 
 }
