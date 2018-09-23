@@ -178,7 +178,8 @@ class DeclsTests extends FlatSpec with Matchers {
     val model = """Problem. x>0 End."""
     //@todo better location information
     the [ParseException] thrownBy  KeYmaeraXArchiveParser.parseAsProblemOrFormula(model) should have message
-      """<somewhere> type analysis: undefined symbol x with index None Make sure to declare ProgramVariable and other Definitions.
+      """<somewhere> type analysis: undefined symbol x with index None
+        |Make sure to declare ProgramVariable and other Definitions.
         |Found:    <unknown> at <somewhere>
         |Expected: <unknown>""".stripMargin
   }
