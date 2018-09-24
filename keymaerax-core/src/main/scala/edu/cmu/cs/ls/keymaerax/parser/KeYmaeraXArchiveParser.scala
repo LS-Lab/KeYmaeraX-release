@@ -460,22 +460,29 @@ object KeYmaeraXArchiveParser {
         reduce(st, 3, Bottom :+ next.extendLocation(endLoc.end), r :+ defs :+ defsBlock)
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ (next: FuncPredDef) if next.sort == Bool => la match {
         case EQUIV =>
-          val (predDefBlock, remainder, endLoc) =
+          val (predDefBlock, endDef, remainder, endLoc) =
             if (rest.head.tok == LPAREN) {
               var openParens = 0
-              if (!rest.exists(_.tok == RPAREN)) throw ParseException.imbalancedError("Unmatched predicate definition delimiter", rest.head, RPAREN.img, ParseState(Bottom :+ rest.head, rest.tail))
-              val (Token(LPAREN, _) :: predDefBlock, Token(RPAREN, endLoc) :: remainder) = rest.span(t => { if (t.tok == LPAREN) openParens += 1 else if (t.tok == RPAREN) openParens -= 1; openParens > 0})
-              (predDefBlock, remainder, endLoc.end)
+              val (Token(LPAREN, _) :: predDefBlock, defEnd) = rest.span(t => { if (t.tok == LPAREN) openParens += 1 else if (t.tok == RPAREN) openParens -= 1; openParens > 0})
+              if (defEnd.isEmpty) throw ParseException.imbalancedError("Unmatched opening parenthesis in predicate definition", rest.head, RPAREN.img, ParseState(Bottom :+ rest.head, rest.tail))
+              val (rparen@Token(RPAREN, endLoc)) :: remainder = defEnd
+              (predDefBlock, rparen, remainder, endLoc.end)
             } else {
               val (predDefBlock, remainder) = rest.span(_.tok != SEMI)
-              (predDefBlock, remainder, predDefBlock.last.loc.end)
+              (predDefBlock, remainder.head, remainder, predDefBlock.last.loc.end)
             }
           val pred: Formula = try {
             KeYmaeraXParser.formulaTokenParser(predDefBlock :+ Token(EOF, remainder.head.loc))
           } catch {
             case ex: ParseException =>
-              val loc = predDefBlock.head.loc.spanTo(endLoc)
-              throw new ParseException("Predicate definition expects a Formula", loc, slice(text, loc), FormulaKind.toString, la.img, "", ex)
+              val (loc, found) = ex.loc match {
+                case UnknownLocation =>
+                  val defLoc = predDefBlock.head.loc.spanTo(endLoc)
+                  (defLoc, slice(text, defLoc))
+                case _ if ex.found != ParseException.tokenDescription(EOF) => (ex.loc, ex.found)
+                case _ if ex.found == ParseException.tokenDescription(EOF) => (ex.loc, ParseException.tokenDescription(endDef))
+              }
+              throw new ParseException(ex.msg, loc, found, ex.expect, ex.after, ex.state, ex)
           }
           ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, Some(pred), next.loc.spanTo(endLoc)), remainder)
         case SEMI | PERIOD => shift(st)
@@ -484,22 +491,29 @@ object KeYmaeraXArchiveParser {
       }
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ (next: FuncPredDef) if next.sort == Real => la match {
         case EQ =>
-          val (funcDefBlock, remainder, endLoc) =
+          val (funcDefBlock, endDef, remainder, endLoc) =
             if (rest.head.tok == LPAREN) {
               var openParens = 0
-              if (!rest.exists(_.tok == RPAREN)) throw ParseException.imbalancedError("Unmatched function definition delimiter", rest.head, RPAREN.img, ParseState(Bottom :+ rest.head, rest.tail))
-              val (Token(LPAREN, _) :: funcDefBlock, Token(RPAREN, endLoc) :: remainder) = rest.span(t => { if (t.tok == LPAREN) openParens += 1 else if (t.tok == RPAREN) openParens -= 1; openParens > 0})
-              (funcDefBlock, remainder, endLoc.end)
+              val (Token(LPAREN, _) :: funcDefBlock, defEnd) = rest.span(t => { if (t.tok == LPAREN) openParens += 1 else if (t.tok == RPAREN) openParens -= 1; openParens > 0})
+              if (defEnd.isEmpty) throw ParseException.imbalancedError("Unmatched opening parenthesis in function definition", rest.head, RPAREN.img, ParseState(Bottom :+ rest.head, rest.tail))
+              val (rparen@Token(RPAREN, endLoc)) :: remainder = defEnd
+              (funcDefBlock, rparen, remainder, endLoc.end)
             } else {
               val (funcDefBlock, remainder) = rest.span(_.tok != SEMI)
-              (funcDefBlock, remainder, funcDefBlock.last.loc.end)
+              (funcDefBlock, remainder.head, remainder, funcDefBlock.last.loc.end)
             }
           val term: Term = try {
             KeYmaeraXParser.termTokenParser(funcDefBlock :+ Token(EOF, remainder.head.loc))
           } catch {
             case ex: ParseException =>
-              val loc = funcDefBlock.head.loc.spanTo(endLoc)
-              throw new ParseException("Function definition expects a Term", loc, slice(text, loc), TermKind.toString, la.img, "", ex)
+              val (loc, found) = ex.loc match {
+                case UnknownLocation =>
+                  val defLoc = funcDefBlock.head.loc.spanTo(endLoc)
+                  (defLoc, slice(text, defLoc))
+                case _ if ex.found != ParseException.tokenDescription(EOF) => (ex.loc, ex.found)
+                case _ if ex.found == ParseException.tokenDescription(EOF) => (ex.loc, ParseException.tokenDescription(endDef))
+              }
+              throw new ParseException(ex.msg, loc, found, ex.expect, ex.after, ex.state, ex)
           }
           ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, Some(term), next.loc.spanTo(endLoc)), remainder)
         case SEMI | PERIOD => shift(st)
@@ -516,16 +530,22 @@ object KeYmaeraXArchiveParser {
           val annotations = new ListBuffer[Annotation]()
           parser.setAnnotationListener((prg, fml) => annotations += Annotation(prg, fml))
           if (rest.head.tok != LBRACE) throw ParseException("Missing program definition start delimiter", rest.head.loc, rest.head.tok.toString, LBRACE.img, "", "", null)
-          if (!rest.exists(_.tok == RBRACE)) throw ParseException.imbalancedError("Unmatched program definition delimiter", rest.head, RBRACE.img, ParseState(Bottom :+ rest.head, rest.tail))
           var openParens = 0
-          val (Token(LBRACE, _) :: prgDefBlock, Token(RBRACE, endLoc) :: remainder) =
-            rest.span(t => { if (t.tok == LBRACE) openParens += 1 else if (t.tok == RBRACE) openParens -= 1; openParens > 0})
+          val (Token(LBRACE, _) :: prgDefBlock, defEnd) = rest.span(t => { if (t.tok == LBRACE) openParens += 1 else if (t.tok == RBRACE) openParens -= 1; openParens > 0})
+          if (defEnd.isEmpty) throw ParseException.imbalancedError("Unmatched opening brace in program definition", rest.head, RBRACE.img, ParseState(Bottom :+ rest.head, rest.tail))
+          val (rbrace@Token(RBRACE, endLoc)) :: remainder = defEnd
           val program: Program = try {
             KeYmaeraXParser.programTokenParser(prgDefBlock :+ Token(EOF, endLoc))
           } catch {
             case ex: ParseException =>
-              val loc = prgDefBlock.head.loc.spanTo(endLoc)
-              throw new ParseException("Program definition expects a Program", loc, slice(text, loc), ProgramKind.toString, la.img, "", ex)
+              val (loc, found) = ex.loc match {
+                case UnknownLocation =>
+                  val defLoc = prgDefBlock.head.loc.spanTo(endLoc)
+                  (defLoc, slice(text, defLoc))
+                case _ if ex.found != ParseException.tokenDescription(EOF) => (ex.loc, ex.found)
+                case _ if ex.found == ParseException.tokenDescription(EOF) => (ex.loc, ParseException.tokenDescription(rbrace))
+              }
+              throw new ParseException(ex.msg, loc, found, ex.expect, ex.after, ex.state, ex)
           }
           parser.setAnnotationListener(annotationListener)
           ParseState(r :+ defs :+ defsBlock :+ ProgramDef(next.name, next.index, Some(program), annotations.toList, next.loc.spanTo(endLoc.end)), remainder)
@@ -766,20 +786,7 @@ object KeYmaeraXArchiveParser {
   }
 
   private def convert(t: Tactic, defs: Declaration): (String, String, BelleExpr) = {
-    val tokens = BelleLexer(t.tacticText).map(tok =>
-      BelleToken(tok.terminal,
-        if (tok.location.line <= 1) tok.location match {
-          case Region(l, c, el, ec) if el == l =>
-            Region(l + t.belleExprLoc.line - 1, c + t.belleExprLoc.column - 1, el + t.belleExprLoc.line -1, ec + t.belleExprLoc.column - 1)
-          case Region(l, c, el, ec) if el > l =>
-            Region(l + t.belleExprLoc.line - 1, c + t.belleExprLoc.column - 1, el + t.belleExprLoc.line -1, ec)
-          case SuffixRegion(l, c) => SuffixRegion(l + t.belleExprLoc.line - 1, c + t.belleExprLoc.column - 1)
-          case l => l.addLines(t.belleExprLoc.line - 1) //
-        } else {
-          tok.location.addLines(t.belleExprLoc.line - 1)
-        }
-      )
-    )
+    val tokens = BelleLexer(t.tacticText).map(tok => BelleToken(tok.terminal, shiftLoc(tok.location, t.belleExprLoc)))
 
     val tactic = BelleParser.parseTokenStream(tokens,
       DefScope[String, DefTactic](), DefScope[Expression, DefExpression](), None, defs)
@@ -815,6 +822,19 @@ object KeYmaeraXArchiveParser {
       (v.name, v.index) -> (None, v.sort, None, UnknownLocation)
     ).toMap[(String, Option[Int]),(Option[Sort], Sort, Option[Expression], Location)]
     Declaration(fnDecls ++ varDecls)
+  }
+  
+  private def shiftLoc(loc: Location, offset: Location): Location = {
+    if (loc.line <= 1) loc match {
+      case Region(l, c, el, ec) if el == l =>
+        Region(l + offset.line - 1, c + offset.column - 1, el + offset.line -1, ec + offset.column - 1)
+      case Region(l, c, el, ec) if el > l =>
+        Region(l + offset.line - 1, c + offset.column - 1, el + offset.line -1, ec)
+      case SuffixRegion(l, c) => SuffixRegion(l + offset.line - 1, c + offset.column - 1)
+      case l => l.addLines(offset.line - 1) //
+    } else {
+      loc.addLines(offset.line - 1)
+    }
   }
 
 }

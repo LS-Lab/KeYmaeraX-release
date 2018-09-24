@@ -1220,6 +1220,41 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
                             |Expected: ; (SEMI$)""".stripMargin
   }
 
+  it should "report parse errors in function definitions" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | Definitions Real f() = 5*g() + *h(); End.
+        | Problem. true End.
+        |End.""".stripMargin
+    ) should have message """2:33 Unexpected token cannot be parsed
+                            |Found:    * (STAR$) at 2:33
+                            |Expected: <BeginningOfExpression>""".stripMargin
+  }
+
+  it should "report parse errors in predicate definitions" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | Definitions Bool p() <-> f()+5^ > g(); End.
+        | Problem. true End.
+        |End.""".stripMargin
+    ) should have message """2:34 Unexpected token cannot be parsed
+                            |Found:    > (RDIA$) at 2:34
+                            |Expected: <BeginningOfExpression>""".stripMargin
+  }
+  
+  it should "report parse errors in program definitions" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | Definitions HP acc ::= { a:=* }; End.
+        | Problem. true End.
+        |End.""".stripMargin
+    ) should have message """2:32 Unexpected token cannot be parsed
+                            |Found:    } (RBRACE$) at 2:32
+                            |Expected: ; (SEMI$)""".stripMargin
+  }
+  
+  
+
   it should "report misplaced function, predicate, or program definitions" in {
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1".
@@ -1294,7 +1329,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         | Definitions R f() = 5!=7; End.
         | Problem. true End.
         |End.""".stripMargin
-    ) should have message """2:22 Function definition expects a Term
+    ) should have message """2:22 Impossible elaboration: Operator PSEUDO$ expects a Term as argument but got the Formula 5!=7
                             |Found:    5!=7 at 2:22 to 2:25
                             |Expected: Term""".stripMargin
   }
@@ -1323,9 +1358,31 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         | Definitions B p() <-> 5+7; End.
         | Problem. true End.
         |End.""".stripMargin
-    ) should have message """2:24 Predicate definition expects a Formula
+    ) should have message """2:24 Impossible elaboration: Operator PSEUDO$ expects a Formula as argument but got the Term 5+7
                             |Found:    5+7 at 2:24 to 2:26
                             |Expected: Formula""".stripMargin
+  }
+  
+  it should "report imbalanced parentheses in predicate definitions" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | Definitions B p() <-> ( true; End.
+        | Problem true End.
+        |End.""".stripMargin
+    ) should have message """2:24 Unmatched opening parenthesis in predicate definition
+                            |unmatched: LPAREN$ at 2:24--2:26 to 2:29
+                            |Found:    TRUE$ at 2:24 to 2:29
+                            |Expected: )""".stripMargin
+    
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | Definitions B p() <-> ( (true) | false; End.
+        | Problem true End.
+        |End.""".stripMargin
+    ) should have message """2:24 Unmatched opening parenthesis in predicate definition
+                            |unmatched: LPAREN$ at 2:24--2:26
+                            |Found:    LPAREN$ at 2:24 to 2:26
+                            |Expected: )""".stripMargin
   }
 
   it should "report tactic errors at the correct location" in {
