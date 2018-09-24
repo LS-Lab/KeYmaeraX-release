@@ -1280,7 +1280,7 @@ object DerivedAxioms extends Logging {
     "==> [{a_{|^@|};}*][{a_{|^@|};}*]p_(||) <-> [{a_{|^@|};}*]p_(||)".asSequent,
     equivR(1) <(
       useAt("[*] iterate")(-1) & prop & done,
-      implyRi & useAt("II induction", PosInExpr(1::Nil))(1) & G(1) & useAt("[*] iterate")(1, 0::Nil) & prop & done
+      implyRi & useAt(iiinduction, PosInExpr(1::Nil))(1) & G(1) & useAt("[*] iterate")(1, 0::Nil) & prop & done
     )
   )
 
@@ -1394,7 +1394,7 @@ object DerivedAxioms extends Logging {
     * @see Section 7.7.4 in textbook
     * @Derived for programs
     */
-  lazy val Ieq = derivedAxiom("Ieq induction",
+  lazy val Ieq = derivedAxiom("I",
     "==> [{a_{|^@|};}*]p_(||) <-> p_(||) & [{a_{|^@|};}*](p_(||)->[a_{|^@|};]p_(||))".asSequent,
     equivR(1) <(
       andR(1) <(

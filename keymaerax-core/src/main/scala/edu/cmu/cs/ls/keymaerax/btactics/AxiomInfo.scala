@@ -164,7 +164,7 @@ object DerivationInfo {
     new CoreAxiomInfo("K modal modus ponens", "K", "K", {case () => TactixLibrary.K}),
     //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I axiom
   //@todo why isn't the code name just "I"? And the belleExpr could be useAt("I")?
-    new CoreAxiomInfo("I induction", "I", "induction", {case () => ???}),
+    CoreAxiomInfo("I induction", "Iind", "Iind", {case () => ???}),
     new CoreAxiomInfo("VK vacuous"
       , AxiomDisplayInfo("VK", "(p→<span class=\"k4-axiom-key\">[a]p</span>)←[a]T")
       , "VK", {case () => HilbertCalculus.VK}),
@@ -557,7 +557,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("[*-] backiterate necessity", "[*-] backiterate necessity", "backiteratebnecc", {case () => useAt(DerivedAxioms.backiteratebnecc)}),
     new DerivedAxiomInfo("[*-] backiterate sufficiency", "[*-] backiterate sufficiency", "backiteratebsuff", {case () => useAt(DerivedAxioms.backiteratebsuff)}),
     new DerivedAxiomInfo("II induction", "II induction", "IIinduction", {case () => useAt(DerivedAxioms.iiinduction)}),
-    new DerivedAxiomInfo("Ieq induction", "I", "Ieq", {case () => useAt(DerivedAxioms.Ieq)}),
+    new DerivedAxiomInfo("I", "I", "I", {case () => useAt(DerivedAxioms.Ieq)}),
   //@todo might have a better name
     new DerivedAxiomInfo("exists generalize", ("∃G","existsG"), "existsGeneralize", {case () => useAt(DerivedAxioms.existsGeneralize)}),
     new DerivedAxiomInfo("all substitute", ("∀S","allS"), "allSubstitute", {case () => useAt(DerivedAxioms.allSubstitute)}),
