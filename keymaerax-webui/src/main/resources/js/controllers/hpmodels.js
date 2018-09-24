@@ -334,7 +334,7 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
         var modelCopyName = $scope.model.name + ' (Copy ';
         var i = 1;
         while ($scope.checkName(modelCopyName + i + ')') !== true) { ++i; }
-        var url = "user/" + userid + "/modeltextupload/" + modelCopyName + i + ')';
+        var url = "user/" + userid + "/modelupload/" + modelCopyName + i + ')';
         $http.post(url, $scope.model.keyFile).then(function(response) {
           $scope.model.id = response.data.modelId;
           $scope.model.name = modelCopyName + i + ')';
