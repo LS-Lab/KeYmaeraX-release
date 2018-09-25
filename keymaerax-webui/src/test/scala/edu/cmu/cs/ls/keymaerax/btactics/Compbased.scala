@@ -71,7 +71,7 @@ class Compbased extends TacticTestBase {
   )
 
   /** STTT Lemma 1 */
-  private lazy val programIndependence: DependentPositionTactic = "programIndependence" by ((pos: Position, seq: Sequent) => {
+  private def programIndependence(swapCompose: Boolean = true): DependentPositionTactic = "programIndependence" by ((pos: Position, seq: Sequent) => {
     seq.sub(pos) match {
       case Some(Box(Assign(x, s), Box(Assign(y, t), p))) =>
         val rensubst = (_: Option[Subst]) => RenUSubst(
@@ -109,11 +109,28 @@ class Compbased extends TacticTestBase {
       case Some(Box(_: AssignAny, Box(_: Test, _))) => useAt(assignmentIndependence5)(pos)
       case Some(Box(_: Test, Box(_: Test, _))) => useAt(testIndependence)(pos)
       case Some(Box(_: Test, Box(_: Assign, _))) => useAt(assignmentIndependence4, PosInExpr(1::Nil))(pos)
-      case Some(Box(Compose(a,b), p)) =>
-        composeb(pos) & programIndependence(pos) & useAt("[;] compose", PosInExpr(1::Nil))(pos)
+      case Some(Box(Compose(a,b), p)) if swapCompose =>
+        composeb(pos) & programIndependence(swapCompose=false)(pos) & useAt("[;] compose", PosInExpr(1::Nil))(pos)
       case Some(have@Box(a, Box(b, p))) =>
-        val swapped = proveBy(Equiv(Box(b, Box(a, p)), have), chase(1, 0::Nil) & chase(1, 1::Nil) & QE)
-        useAt(swapped, PosInExpr(1::Nil))(pos)
+        val prgVars = StaticSemantics.freeVars(p).intersect(StaticSemantics.boundVars(a) ++ StaticSemantics.boundVars(b)).
+          toSet[Variable].toList.sorted[NamedSymbol]
+        
+        val dots = prgVars.zipWithIndex.map({ case (v,i) => v -> DotTerm(Real, Some(i)) })
+        val args = prgVars.reduceOption(Pair).getOrElse(Nothing)
+        val q = PredOf(Function("q_", None, args.sort, Bool), args)
+        
+        val swapped = proveBy(Equiv(Box(b, Box(a, q)), Box(a, Box(b, q))),
+          chase(1, 0::Nil) & chase(1, 1::Nil) & equivR(1) & 
+            OnAll(
+              SaturateTactic(OnAll(allR(1) | prop)) & 
+              Idioms.?(OnAll(SaturateTactic(implyL('L) <(prop, nil) | allL('L)) & prop & done))
+            )
+        )
+        val rensubst = (_: Option[Subst]) => RenUSubst(
+          dots.map({ case (v,d) => d->v }) :+
+          (dots.foldLeft[Formula](q)({ case (qq, (v,d)) => qq.replaceAll(v, d) }) -> dots.foldLeft(p)({ case (pp, (v,d)) => pp.replaceFree(v, d) }))
+        )
+        useAt(swapped, PosInExpr(1::Nil), rensubst)(pos)
     }
   })
 
@@ -273,7 +290,7 @@ class Compbased extends TacticTestBase {
       // Step 2.7 (introduce output guarantee of component 2)
       introduceTest(outputGuarantees(headConVar))(pos.topLevel ++ pos.inExpr.parent.parent) <(skip, prop & done) & DebuggingTactics.print("Introduced test") &
       // Step 2.8 (move output guarantee past connection)
-      programIndependence(pos.topLevel ++ pos.inExpr.parent) & programIndependence(pos) & DebuggingTactics.print("Moved test") &
+      programIndependence()(pos.topLevel ++ pos.inExpr.parent) & programIndependence()(pos) & DebuggingTactics.print("Moved test") &
       // Step 2.9 (weaken output guarantee to input assumption)
       weakenTest(inputAssumptions(headConVar))(pos ++ PosInExpr(1::Nil)) <(
         skip,
@@ -303,6 +320,7 @@ class Compbased extends TacticTestBase {
   private def ports(program: Program): List[(Program, Test)] = {
     def ports(programs: List[Program]): List[(Program, Test)] = {
       if (programs.isEmpty) Nil
+      else if (programs.head == Test(True) && programs.tail.isEmpty) Nil
       else {
         val (p1, tail) = programs.span({ case _: Test => false case _ => true })
         (p1.reduce(Compose) -> tail.head.asInstanceOf[Test]) +: ports(tail.tail)
@@ -312,65 +330,106 @@ class Compbased extends TacticTestBase {
   }
 
   /** STTT Fig. 13 */
-  private def justifyFout(fout: Formula, keepPlantVars: Set[Variable], comGuaranteeLiveness: Lemma) = "justifyFout" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+  private def justifyFout(fout: Formula, keepPlantVars: Set[Variable], c1toC2comGuaranteeLiveness: Lemma, c2use: Lemma, c2step: Lemma) = "justifyFout" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(_: Imply) =>
-      val Diamond(a, _) = comGuaranteeLiveness.fact.conclusion.succ.head
       val Imply(_ , Box(_, Box(_, Box(_, Box(_, foutSafety))))) = fout
-
-      cohideR(pos) & dropPlant(keepPlantVars)(1, 1::1::1::1::Nil) & DebuggingTactics.print("Dropped plant1") &
-      composeb(1, 1::1::Nil) & dropControl(1, 1::1::Nil) & DebuggingTactics.print("Dropped ctrl1") &
-      composeb(1, 1::Nil) & dropControl(1, 1::Nil) & DebuggingTactics.print("Dropped delta1") &
-      cutAt(Diamond(a, foutSafety))(1, 1::1::1::1::1::Nil) & DebuggingTactics.print("Now what?") <(
-        // use
-        /*useAt(diamondToBox, PosInExpr(1::Nil))(1, 1::1::1::1::1::Nil) &*/ DebuggingTactics.print("Foo")
-        ,
-        // show
-        CMon(1, 1::1::1::1::1::1::Nil) & implyR(1) & useAt("<> diamond", PosInExpr(1::Nil))(-1) & notL(-1) & abstractionb(2) & prop & done
-      )
+      val Box(Compose(_, Compose(_, Compose(_, Compose(plant2, Compose(in2, cp2))))), c2inv) = c2step.fact.conclusion.succ.head
+      
+      DebuggingTactics.print("Justify Fout") &
+      cohideOnlyR(pos) & 
+      (if (foutSafety == True) implyR(1) & abstractionb(1, 1::1::1::Nil) & abstractionb(1, 1::1::Nil) & 
+        abstractionb(1, 1::Nil) & abstractionb(1) & closeT 
+       else dropPlant(keepPlantVars)(1, 1::1::1::1::Nil) & DebuggingTactics.print("Dropped plant1") &
+        composeb(1, 1::1::Nil) & dropControl(1, 1::1::Nil) & DebuggingTactics.print("Dropped ctrl1") &
+        composeb(1, 1::Nil) & dropControl(1, 1::Nil) & DebuggingTactics.print("Dropped delta1") &
+        cutAt(Diamond(Compose(in2, cp2), foutSafety))(1, 1::1::1::1::1::Nil) <(
+          // use
+          useAt(DerivedAxioms.boxDiamondSubstPropagation, PosInExpr(1::1::Nil))(1, 1::1::1::1::1::Nil) <(
+            DebuggingTactics.print("Strengthen") & /* todo: hide all non-const factcs */ hideL(-1) /* End todo */ & 
+            generalize(c2inv)(1, 1::1::1::1::1::Nil) <(
+              DebuggingTactics.print("Close by C2 induction step") &
+              boxAnd(1, 1::1::1::1::Nil) & abstractionb(1, 1::1::1::1::0::Nil) &
+              boxAnd(1, 1::1::1::Nil) & abstractionb(1, 1::1::1::0::Nil) &
+              boxAnd(1, 1::1::Nil) & abstractionb(1, 1::1::0::Nil) &
+              boxAnd(1, 1::Nil) & abstractionb(1, 1::0::Nil) &
+              implyR(1) & andR(1) <(prop, nil) &
+              DebuggingTactics.print("Generalized C2 induction step") &
+              cutAt(Box(plant2, Box(Compose(in2, cp2), c2inv)))(1, 1::1::1::Nil) & DebuggingTactics.print("Cut, now what?") <(
+                useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::1::Nil) &
+                useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::Nil) &
+                useAt("[;] compose", PosInExpr(1::Nil))(1, 1::Nil) &
+                useAt("[;] compose", PosInExpr(1::Nil))(1) &
+                useLemma(c2step, Some(prop)) &
+                DebuggingTactics.done("Close by C2 induction step")
+                ,
+                DebuggingTactics.print("Proving C2 diff. refine") & cohideR(1) & CMon(1, 1::1::1::1::Nil) & 
+                useAt(DerivedAxioms.DiffRefine, PosInExpr(1::Nil))(1) & 
+                dW(1) & prop & DebuggingTactics.done("Proving C2 diff. refine")
+              )
+              ,
+              DebuggingTactics.print("Close by C2 use case") & useLemma(c2use, Some(prop)) & DebuggingTactics.done("Close by C2 use case")
+            )
+            ,
+            DebuggingTactics.print("Close by communication guarantee liveness") & 
+            implyR(1) & ((abstractionb(1) & SaturateTactic(allR(1)))*4) & 
+            //@todo use communication guarantees of internal ports
+            composed(1) & testd(1, 1::Nil) & useAt(DerivedAxioms.trueAnd)(1, 1::Nil) &
+            useLemma(c1toC2comGuaranteeLiveness, Some(prop)) & DebuggingTactics.done("Close by communication guarantee liveness")
+          )
+          ,
+          // show
+          DebuggingTactics.print("Show InCp") & cohideR(1) &
+          CMon(1, 1::1::1::1::1::1::Nil) & implyR(1) & useAt("<> diamond", PosInExpr(1::Nil))(-1) & notL(-1) &
+          abstractionb(2) & prop & DebuggingTactics.done("Show InCp")
+        )
+      ) & DebuggingTactics.done("Justify Fout")
   })
 
-  /** STTT Fig. 11 */
-  private def proveSystemCompStep(step: Lemma, compatibility: Lemma, comGuaranteeLiveness: Lemma, fout: Formula) = "proveSystemCompStep" by ((pos: Position, seq: Sequent) => {
+  /** STTT Fig. 11: Component 1 */
+  private def proveSystemCompStep(c1step: Lemma, c2use: Lemma, c2step: Lemma, 
+                                  compatibility: Lemma, c1toc2comGuaranteeLiveness: Lemma, fout: Formula) = "proveSystemCompStepC1" by ((pos: Position, seq: Sequent) => {
     require(pos.isTopLevel)
     seq.sub(pos) match {
       case Some(Box(delta3, Box(Compose(ctrl1,ctrl2), Box(rememberStart@Assign(told, t), Box(ODESystem(DifferentialProduct(time, plant3), q3), Box(Compose(in3,cp3), inv1)))))) =>
-        val Box(Compose(delta1, Compose(_/*ctrl1*/, Compose(_/*rememberStart*/, Compose(plant1, Compose(in1, cp1))))), _) = step.fact.conclusion.succ.head
-
+        val Box(Compose(delta1, Compose(_/*ctrl1*/, Compose(_/*rememberStart*/, Compose(plant1, Compose(in1, cp1))))), _) = c1step.fact.conclusion.succ.head
+        
+        val Compose(_,in2) = in3
+        
         val piouts = fout match {
           case Imply(_, Box(delta, Box(ctrl, Box(remember, Box(plant, pi2Out))))) => FormulaTools.leftConjuncts(pi2Out)
         }
-        //val c2outvars = piouts.flatMap(StaticSemantics.freeVars(_).toSet).toSet
-
+        
         val plant1Vars = StaticSemantics.boundVars(plant1).toSet.filter(_.isInstanceOf[BaseVariable])
         val plant2Vars = (StaticSemantics.boundVars(plant3).toSet.filter(_.isInstanceOf[BaseVariable]) -- plant1Vars) ++
           StaticSemantics.boundVars(time).toSet.filter(_.isInstanceOf[BaseVariable])
 
         val Compose(_, Compose(_, con)) = cp3
         val connections = leftAssignments(con, piouts.size)
-        val foo = connections.map(p => StaticSemantics.boundVars(p) -> StaticSemantics.freeVars(p)).toMap
+        val conStaticSem = connections.map(p => StaticSemantics.boundVars(p) -> StaticSemantics.freeVars(p)).toMap
         val connectedVars = connections.flatMap(StaticSemantics.boundVars(_).toSet).toSet
-        //val connectionsFromC2 = connections.filter(c => !StaticSemantics.freeVars(c).intersect(c2outvars).isEmpty)
-
+        
         val in1cons = ports(in1).filter({ case (port, pin) => !StaticSemantics.boundVars(port).intersect(connectedVars).isEmpty })
         val in1Assumptions = in1cons.map({ case (port, pin) => StaticSemantics.boundVars(port).toSet -> pin.cond }).toMap
         val guarantees = in1cons.map({ case (port, _) =>
           StaticSemantics.boundVars(port).toSet ->
-          piouts.find(piout => !foo(StaticSemantics.boundVars(port)).intersect(StaticSemantics.freeVars(piout)).isEmpty).getOrElse(True) }).toMap
+          piouts.find(piout => !conStaticSem(StaticSemantics.boundVars(port)).intersect(StaticSemantics.freeVars(piout)).isEmpty).getOrElse(True) }).toMap
 
+        DebuggingTactics.print("Disassembling system into components") &
         cut(fout) <(
           // use
           //@todo S2.2 reorder to in1^*;in2^* (for now: assume they are in the right order)
           (4 to 6).map(i => PosInExpr(List.fill(i)(1))).map(i => composeb(pos ++ i)).reduce[BelleExpr](_&_) &
           composeb(pos ++ PosInExpr(List.fill(4)(1))) & // decompose in3 into [in1*][in2*]
           // Step 2.3 (move con between in1* and in2*)
-          (5 to 7).map(i => PosInExpr(List.fill(i)(1))).reverse.map(programIndependence(1, _)).reduce[BelleExpr](_&_) &
+          (5 to 7).map(i => PosInExpr(List.fill(i)(1))).reverse.map(programIndependence(false)(1, _)).reduce[BelleExpr](_&_) &
             DebuggingTactics.print("Step 2.3 done") &
           // Step 2.4 (drop cp2)
-          dropControl(pos ++ PosInExpr(List.fill(8)(1))) & DebuggingTactics.print("Step 2.4 done") &
+          dropControl(pos ++ PosInExpr(List.fill(7)(1))) & DebuggingTactics.print("Step 2.4 done") &
           // Step 2.5 (drop in2*)
-          dropControl(pos ++ PosInExpr(List.fill(6)(1))) & DebuggingTactics.print("Step 2.5 done") &
+          dropControl(pos ++ PosInExpr(List.fill(5)(1))) & DebuggingTactics.print("Step 2.5 done") &
           // Steps 2.6-2.11, note that reserved time `t` is present in contract models but not part of the plant per STTT
-          proveSystemCompStep4(in1Assumptions, guarantees, plant1Vars.filter(_.name != "t"), compatibility, in1Assumptions.size)(pos ++ PosInExpr(List.fill(5)(1))) &
+          proveSystemCompStep4(in1Assumptions, guarantees, plant1Vars.filter(_.name != "t"), compatibility, in1cons.size)(pos ++ PosInExpr(List.fill(5)(1))) &
+          (if (ports(in2).nonEmpty) abstractionb(pos ++ PosInExpr(List.fill(5)(1))) else skip) &  
           DebuggingTactics.print("Steps 2.6-2.11 done") &
           dropPlant(plant1Vars)(pos ++ PosInExpr(1::1::1::Nil)) & DebuggingTactics.print("Step 2.12 done") &
           composeb(pos ++ PosInExpr(1::Nil)) & dropControl(pos ++ PosInExpr(1::1::Nil)) & // drop ctrl2
@@ -380,61 +439,85 @@ class Compbased extends TacticTestBase {
           ("ANON" by ((pp: Position, ss: Sequent) => ss.sub(pp) match {
             case Some(have@Box(_, p)) =>
               useAt(proveBy(Equiv(Box(in1, p), have), chase(1, 0::Nil) & chase(1, 1::Nil) & QE), PosInExpr(1::Nil))(pp)
-          }))(pos ++ PosInExpr(1::1::1::1::Nil)) & DebuggingTactics.print("Using step lemma") &
-          useLemma(step, Some((0 to 4).map(i => PosInExpr(1 +: List.fill(i)(1))).map(i => composeb(LastAnte(0, i))).reduce[BelleExpr](_&_) & prop)) &
+          }))(pos ++ PosInExpr(1::1::1::1::Nil)) & 
+          DebuggingTactics.print("Using step lemma") &
+
+          cutAt(Box(plant1, Box(Compose(in1, cp1), inv1)))(1, 1::1::1::Nil) <(
+            useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::1::Nil) &
+            useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::Nil) &
+            useAt("[;] compose", PosInExpr(1::Nil))(1, 1::Nil) &
+            useAt("[;] compose", PosInExpr(1::Nil))(1) &
+            useLemma(c1step, Some(prop)) &
+            DebuggingTactics.done("Close by C1 induction step")
+            ,
+            DebuggingTactics.print("Proving C1 diff. refine") & cohideR(1) & CMon(1, 1::1::1::1::Nil) &
+            composeb(1, 0::1::Nil) & useAt(DerivedAxioms.DiffRefine, PosInExpr(1::Nil))(1) & 
+            dW(1) & prop & DebuggingTactics.done("Proving C1 diff. refine")
+          ) &
           DebuggingTactics.print("Step done") & DebuggingTactics.done("Step")
           ,
           // show
-          justifyFout(fout, plant2Vars, comGuaranteeLiveness)('Rlast)
-        )
+          justifyFout(fout, plant2Vars, c1toc2comGuaranteeLiveness, c2use, c2step)('Rlast)
+        ) & DebuggingTactics.print("Done disassembling system into components") & DebuggingTactics.done("Disassembling system into components")
     }
   })
 
   /** STTT Fig. 10 */
-  private def proveSystemStep(c1step: Lemma, c2step: Lemma, pi1Out: Formula, pi2Out: Formula,
-                              compatibility: Lemma, comGuaranteeSafety: Lemma, comGuaranteeLiveness: Lemma) = "proveSystemStep" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+  private def proveSystemStep(c1use: Lemma, c1step: Lemma, 
+                              c2use: Lemma, c2step: Lemma, 
+                              pi1Out: Formula, pi2Out: Formula,
+                              compatibility: Lemma,
+                              c1toc2comGuaranteeSafety: Lemma, c1toc2comGuaranteeLiveness: Lemma, 
+                              c2toc1comGuaranteeSafety: Lemma, c2toc1comGuaranteeLiveness: Lemma) = "proveSystemStep" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(Box(Compose(delta3, Compose(ctrl3, Compose(rememberStart@Assign(told, t), Compose(plant3@ODESystem(DifferentialProduct(_, _), q3), Compose(in3, Compose(cp1, Compose(cp2, con))))))), inv3@And(inv1, And(inv2, zeta)))) =>
       //@todo check program shapes in lemmas
       val cr1 :: cr2 :: Nil = (0 to 3) :: (4 to 6) :: Nil
+      
+      DebuggingTactics.print("Proving component loops and communication guarantees") &
       boxAnd(1) & andR(1) <(
         // inv1
+        DebuggingTactics.print("Proving inv1") &
         cr1.map(i => PosInExpr(List.fill(i)(1))).map(composeb(1, _)).reduce[BelleExpr](_ & _) &
-          proveSystemCompStep(c1step, compatibility, comGuaranteeLiveness, Imply(inv2, Box(delta3, Box(ctrl3, Box(rememberStart, Box(plant3, pi2Out))))))(pos)
+        proveSystemCompStep(c1step, c2use, c2step, compatibility, c1toc2comGuaranteeLiveness, Imply(inv2, Box(delta3, Box(ctrl3, Box(rememberStart, Box(plant3, pi2Out))))))(pos) &
+        DebuggingTactics.print("Done proving inv1") & DebuggingTactics.done("Proving inv1")
         ,
         boxAnd(1) & andR(1) <(
           // inv2
-          cr1.map(i => PosInExpr(List.fill(i)(1))).map(composeb(1, _)).reduce[BelleExpr](_ & _) /*&
-            proveSystemCompStep(c2step, Imply(inv1, Box(delta3, Box(ctrl3, Box(rememberStart, Box(plant3, pi1Out))))))(pos)*/
+          DebuggingTactics.print("Proving inv2") &
+          cr1.map(i => PosInExpr(List.fill(i)(1))).map(composeb(1, _)).reduce[BelleExpr](_ & _) &
+          DebuggingTactics.print("Reordering components") &
+          programIndependence()(1) & // swap delta 
+          programIndependence()(1, 1::Nil) & // swap controllers
+          composeb(1, 1::1::1::1::Nil) & 
+          programIndependence()(1, 1::1::1::1::Nil) & // swap ports
+          composeb(1, 1::1::1::1::1::Nil) &
+          composeb(1, 1::1::1::1::1::1::Nil) &
+          programIndependence()(1, 1::1::1::1::1::Nil) & // swap internal connections
+          useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::1::1::1::1::Nil) &
+          useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::1::1::1::Nil) &
+          useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::1::1::Nil) &
+          DebuggingTactics.print("Done reordering components") &
+          proveSystemCompStep(c2step, c1use, c1step, compatibility, c2toc1comGuaranteeLiveness, Imply(inv1, Box(delta3, Box(ctrl3, Box(rememberStart, Box(plant3, pi1Out))))))(pos) &
+          DebuggingTactics.print("Done proving inv2") & DebuggingTactics.done("Proving inv2")
           ,
           // zeta
+          DebuggingTactics.print("Proving communication guarantee (zeta step)") &
           cr1.map(i => PosInExpr(List.fill(i)(1))).map(composeb(1, _)).reduce[BelleExpr](_ & _) &
           cr2.map(i => PosInExpr(List.fill(i)(1))).map(composeb(1, _)).reduce[BelleExpr](_ & _) &
           (cr1.head to cr2.last).map(i => PosInExpr(List.fill(i)(1))).reverse.map(abstractionb(1, _)).reduce[BelleExpr](_ & _) &
-          (allR(1)*) & cohideR(1) & by(comGuaranteeSafety) & DebuggingTactics.done("Zeta Step")
+          (allR(1)*) & cohideR(1) & by(c2toc1comGuaranteeSafety) &
+          DebuggingTactics.print("Done proving communication guarantee (zeta step)") &
+          DebuggingTactics.done("Proving communication guarantee (zeta step)")
         )
-      )
-
-//      cr1.map(i => PosInExpr(List.fill(i)(1))).map(composeb(1, _)).reduce[BelleExpr](_ & _) &
-//      boxAnd(1, List.fill(cr1.last+1)(1)) & andR(1) <(
-//        // inv1
-//        skip
-//        ,
-//        boxAnd(1, List.fill(cr1.last+1)(1)) & andR(1) <(
-//          // inv2
-//          skip
-//          ,
-//          // zeta
-//          cr2.map(i => PosInExpr(List.fill(i)(1))).map(composeb(1, _)).reduce[BelleExpr](_ & _) & DebuggingTactics.print("Decomposed") &
-//          (cr1.head to cr2.last).map(i => PosInExpr(List.fill(i)(1))).reverse.map(abstractionb(1, _)).reduce[BelleExpr](_ & _) & DebuggingTactics.print("Abstracted") &
-//          (allR(1)*) & DebuggingTactics.print("AllR") & by(comGuarantee)
-//        )
-//      )
+      ) & DebuggingTactics.print("Done proving component loops and communication guarantees") & DebuggingTactics.done("Proving component loops and communication guarantees")
   })
 
   /** STTT Fig. 9 */
   private def proveSystem(c1base: Lemma, c1use: Lemma, c1step: Lemma,
                           c2base: Lemma, c2use: Lemma, c2step: Lemma,
-                          compatibility: Lemma, comGuaranteeSafety: Lemma, comGuaranteeLiveness: Lemma) = "proveSystem" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+                          compatibility: Lemma,
+                          c1toc2comGuaranteeSafety: Lemma, c1toc2comGuaranteeLiveness: Lemma,
+                          c2toc1comGuaranteeSafety: Lemma, c2toc1comGuaranteeLiveness: Lemma) = "proveSystem" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(Imply(And(timeInit, And(globalFacts, And(init1, And(init2, zeta)))), Box(Loop(sys), And(post1, post2)))) =>
       //@todo check lemma shapes
       val inv1 = c1base.fact.conclusion.succ.head
@@ -459,13 +542,23 @@ class Compbased extends TacticTestBase {
           useLemma(c1use, Some(prop)) & DebuggingTactics.done("C1Use"),
           useLemma(c2use, Some(prop)) & DebuggingTactics.done("C2Use")
         ),
-        proveSystemStep(c1step, c2step, pi1Out, pi2Out, compatibility, comGuaranteeSafety, comGuaranteeLiveness)(1)
+        proveSystemStep(
+          c1use, c1step, 
+          c2use, c2step, 
+          pi1Out, pi2Out, 
+          compatibility, 
+          c1toc2comGuaranteeSafety, c1toc2comGuaranteeLiveness, 
+          c2toc1comGuaranteeSafety, c2toc1comGuaranteeLiveness)(1)
       )
   })
 
   private def proveSystem(c1baseLemma: String, c1useLemma: String, c1stepLemma: String,
                           c2baseLemma: String, c2useLemma: String, c2stepLemma: String,
-                          compatibilityLemma: String, comGuaranteeSafetyLemma: String, comGuaranteeLivenessLemma: String): DependentPositionTactic = {
+                          compatibilityLemma: String,
+                          c1toc2comGuaranteeSafetyLemma: String,
+                          c1toc2comGuaranteeLivenessLemma: String,
+                          c2toc1comGuaranteeSafetyLemma: String,
+                          c2toc1comGuaranteeLivenessLemma: String): DependentPositionTactic = {
     proveSystem(
       LemmaDBFactory.lemmaDB.get("user/" + c1baseLemma).get,
       LemmaDBFactory.lemmaDB.get("user/" + c1useLemma).get,
@@ -474,36 +567,39 @@ class Compbased extends TacticTestBase {
       LemmaDBFactory.lemmaDB.get("user/" + c2useLemma).get,
       LemmaDBFactory.lemmaDB.get("user/" + c2stepLemma).get,
       LemmaDBFactory.lemmaDB.get("user/" + compatibilityLemma).get,
-      LemmaDBFactory.lemmaDB.get("user/" + comGuaranteeSafetyLemma).get,
-      LemmaDBFactory.lemmaDB.get("user/" + comGuaranteeLivenessLemma).get
+      LemmaDBFactory.lemmaDB.get("user/" + c1toc2comGuaranteeSafetyLemma).get,
+      LemmaDBFactory.lemmaDB.get("user/" + c1toc2comGuaranteeLivenessLemma).get,
+      LemmaDBFactory.lemmaDB.get("user/" + c2toc1comGuaranteeSafetyLemma).get,
+      LemmaDBFactory.lemmaDB.get("user/" + c2toc1comGuaranteeLivenessLemma).get
     )
   }
 
   "Lemma 1" should "work for easy case" in withMathematica { _ =>
-    proveBy("[x:=2;][y:=3;]x+y>=5".asFormula, programIndependence(1)).subgoals.loneElement shouldBe "==> [y:=3;][x:=2;]x+y>=5".asSequent
-    proveBy("[x:=2;][y:=*;]x+y>=5".asFormula, programIndependence(1)).subgoals.loneElement shouldBe "==> [y:=*;][x:=2;]x+y>=5".asSequent
-    proveBy("[x:=*;][y:=3;]x+y>=5".asFormula, programIndependence(1)).subgoals.loneElement shouldBe "==> [y:=3;][x:=*;]x+y>=5".asSequent
-    proveBy("[x:=2;][?y>=3;]x+y>=5".asFormula, programIndependence(1)).subgoals.loneElement shouldBe "==> [?y>=3;][x:=2;]x+y>=5".asSequent
-    proveBy("[x:=*;][?y>=3;]x+y>=5".asFormula, programIndependence(1)).subgoals.loneElement shouldBe "==> [?y>=3;][x:=*;]x+y>=5".asSequent
-    proveBy("[?x>=2;][?y>=3;]x+y>=5".asFormula, programIndependence(1)).subgoals.loneElement shouldBe "==> [?y>=3;][?x>=2;]x+y>=5".asSequent
+    proveBy("[x:=2;][y:=3;]x+y>=5".asFormula, programIndependence()(1)).subgoals.loneElement shouldBe "==> [y:=3;][x:=2;]x+y>=5".asSequent
+    proveBy("[x:=2;][y:=*;]x+y>=5".asFormula, programIndependence()(1)).subgoals.loneElement shouldBe "==> [y:=*;][x:=2;]x+y>=5".asSequent
+    proveBy("[x:=*;][y:=3;]x+y>=5".asFormula, programIndependence()(1)).subgoals.loneElement shouldBe "==> [y:=3;][x:=*;]x+y>=5".asSequent
+    proveBy("[x:=2;][?y>=3;]x+y>=5".asFormula, programIndependence()(1)).subgoals.loneElement shouldBe "==> [?y>=3;][x:=2;]x+y>=5".asSequent
+    proveBy("[x:=*;][?y>=3;]x+y>=5".asFormula, programIndependence()(1)).subgoals.loneElement shouldBe "==> [?y>=3;][x:=*;]x+y>=5".asSequent
+    proveBy("[?x>=2;][?y>=3;]x+y>=5".asFormula, programIndependence()(1)).subgoals.loneElement shouldBe "==> [?y>=3;][?x>=2;]x+y>=5".asSequent
   }
 
   it should "work in context" in withMathematica { _ =>
-    proveBy("[z:=1;][x:=2;][y:=3;]x+y>=5".asFormula, programIndependence(1, 1::Nil)).subgoals.loneElement shouldBe "==> [z:=1;][y:=3;][x:=2;]x+y>=5".asSequent
-    proveBy("[?z>=1;][x:=2;][y:=*;]x+y>=5".asFormula, programIndependence(1, 1::Nil)).subgoals.loneElement shouldBe "==> [?z>=1;][y:=*;][x:=2;]x+y>=5".asSequent
-    proveBy("[?z>=0;][?a<=1;][x:=*;][y:=3;]x+y>=5".asFormula, programIndependence(1, 1::1::Nil)).subgoals.loneElement shouldBe "==> [?z>=0;][?a<=1;][y:=3;][x:=*;]x+y>=5".asSequent
-    proveBy("[?z>=0;][a:=1;][x:=2;][?y>=3;]x+y>=5".asFormula, programIndependence(1, 1::1::Nil)).subgoals.loneElement shouldBe "==> [?z>=0;][a:=1;][?y>=3;][x:=2;]x+y>=5".asSequent
-    proveBy("[?z>=0;][a:=*;][x:=*;][?y>=3;]x+y>=5".asFormula, programIndependence(1, 1::1::Nil)).subgoals.loneElement shouldBe "==> [?z>=0;][a:=*;][?y>=3;][x:=*;]x+y>=5".asSequent
-    proveBy("[?x>=2;][?y>=3;]x+y>=5 -> z>=2".asFormula, programIndependence(1, 0::Nil)).subgoals.loneElement shouldBe "==> [?y>=3;][?x>=2;]x+y>=5 -> z>=2".asSequent
+    proveBy("[z:=1;][x:=2;][y:=3;]x+y>=5".asFormula, programIndependence()(1, 1::Nil)).subgoals.loneElement shouldBe "==> [z:=1;][y:=3;][x:=2;]x+y>=5".asSequent
+    proveBy("[?z>=1;][x:=2;][y:=*;]x+y>=5".asFormula, programIndependence()(1, 1::Nil)).subgoals.loneElement shouldBe "==> [?z>=1;][y:=*;][x:=2;]x+y>=5".asSequent
+    proveBy("[?z>=0;][?a<=1;][x:=*;][y:=3;]x+y>=5".asFormula, programIndependence()(1, 1::1::Nil)).subgoals.loneElement shouldBe "==> [?z>=0;][?a<=1;][y:=3;][x:=*;]x+y>=5".asSequent
+    proveBy("[?z>=0;][a:=1;][x:=2;][?y>=3;]x+y>=5".asFormula, programIndependence()(1, 1::1::Nil)).subgoals.loneElement shouldBe "==> [?z>=0;][a:=1;][?y>=3;][x:=2;]x+y>=5".asSequent
+    proveBy("[?z>=0;][a:=*;][x:=*;][?y>=3;]x+y>=5".asFormula, programIndependence()(1, 1::1::Nil)).subgoals.loneElement shouldBe "==> [?z>=0;][a:=*;][?y>=3;][x:=*;]x+y>=5".asSequent
+    proveBy("[?x>=2;][?y>=3;]x+y>=5 -> z>=2".asFormula, programIndependence()(1, 0::Nil)).subgoals.loneElement shouldBe "==> [?y>=3;][?x>=2;]x+y>=5 -> z>=2".asSequent
   }
 
   it should "work when boxes are not split" in withMathematica { _ =>
-    proveBy("[x:=2;y:=3;]x+y>=5".asFormula, programIndependence(1)).subgoals.loneElement shouldBe "==> [y:=3;x:=2;]x+y>=5".asSequent
-    proveBy("[x:=2;y:=*;]x+y>=5".asFormula, programIndependence(1)).subgoals.loneElement shouldBe "==> [y:=*;x:=2;]x+y>=5".asSequent
-    proveBy("[x:=*;y:=3;]x+y>=5".asFormula, programIndependence(1)).subgoals.loneElement shouldBe "==> [y:=3;x:=*;]x+y>=5".asSequent
-    proveBy("[x:=2;?y>=3;]x+y>=5".asFormula, programIndependence(1)).subgoals.loneElement shouldBe "==> [?y>=3;x:=2;]x+y>=5".asSequent
-    proveBy("[x:=*;?y>=3;]x+y>=5".asFormula, programIndependence(1)).subgoals.loneElement shouldBe "==> [?y>=3;x:=*;]x+y>=5".asSequent
-    proveBy("[?x>=2;?y>=3;]x+y>=5".asFormula, programIndependence(1)).subgoals.loneElement shouldBe "==> [?y>=3;?x>=2;]x+y>=5".asSequent
+    proveBy("[x:=2;y:=3;]x+y>=5".asFormula, programIndependence()(1)).subgoals.loneElement shouldBe "==> [y:=3;x:=2;]x+y>=5".asSequent
+    proveBy("[x:=2;y:=*;]x+y>=5".asFormula, programIndependence()(1)).subgoals.loneElement shouldBe "==> [y:=*;x:=2;]x+y>=5".asSequent
+    proveBy("[x:=*;y:=3;]x+y>=5".asFormula, programIndependence()(1)).subgoals.loneElement shouldBe "==> [y:=3;x:=*;]x+y>=5".asSequent
+    proveBy("[x:=2;?y>=3;]x+y>=5".asFormula, programIndependence()(1)).subgoals.loneElement shouldBe "==> [?y>=3;x:=2;]x+y>=5".asSequent
+    proveBy("[x:=*;?y>=3;]x+y>=5".asFormula, programIndependence()(1)).subgoals.loneElement shouldBe "==> [?y>=3;x:=*;]x+y>=5".asSequent
+    proveBy("[?x>=2;?y>=3;]x+y>=5".asFormula, programIndependence()(1)).subgoals.loneElement shouldBe "==> [?y>=3;?x>=2;]x+y>=5".asSequent
+    proveBy("[?x>=2;?y>=3;][z:=3;]x+y>=5".asFormula, programIndependence(false)(1)).subgoals.loneElement shouldBe "==> [z:=3;][?x>=2;?y>=3;]x+y>=5".asSequent
   }
 
   "Lemma 2" should "work for easy case" in withMathematica { _ =>
@@ -653,12 +749,18 @@ class Compbased extends TacticTestBase {
   }
 
   it should "prove communication guarantees" in withMathematica { _ =>
-    val entry1 = KeYmaeraXArchiveParser.getEntry("Communication Guarantee Safety",
+    val entry1 = KeYmaeraXArchiveParser.getEntry("Robot->Obstacle Communication Guarantee Safety",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
     entry1.tactics.foreach(t => proveBy(entry1.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
-    val entry2 = KeYmaeraXArchiveParser.getEntry("Communication Guarantee Liveness",
+    val entry2 = KeYmaeraXArchiveParser.getEntry("Robot->Obstacle Communication Guarantee Liveness",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
     entry2.tactics.foreach(t => proveBy(entry2.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
+    val entry3 = KeYmaeraXArchiveParser.getEntry("Obstacle->Robot Communication Guarantee Safety",
+      io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
+    entry3.tactics.foreach(t => proveBy(entry3.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
+    val entry4 = KeYmaeraXArchiveParser.getEntry("Obstacle->Robot Communication Guarantee Liveness",
+      io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
+    entry4.tactics.foreach(t => proveBy(entry4.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
   }
 
   it should "prove system safety" in withMathematica { _ =>
@@ -672,8 +774,10 @@ class Compbased extends TacticTestBase {
       "stttrunning/Obstacle Use Case",
       "stttrunning/Obstacle Step",
       "stttrunning/Compatibility of Obstacle and Robot",
-      "stttrunning/Communication Guarantee Safety",
-      "stttrunning/Communication Guarantee Liveness"
+      "stttrunning/Robot2Obstacle Communication Guarantee Safety",
+      "stttrunning/Robot2Obstacle Communication Guarantee Liveness",
+      "stttrunning/Obstacle2Robot Communication Guarantee Safety",
+      "stttrunning/Obstacle2Robot Communication Guarantee Liveness"
     )(1)) shouldBe 'proved
   }
 
