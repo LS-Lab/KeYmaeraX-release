@@ -45,12 +45,13 @@ object KeYmaeraX {
 
   /** Usage -help information.
     *
-    * @note Formatted to 80 characters width. */
+    * @note Formatted to 80 characters terminal width. */
   val usage: String = "KeYmaera X Prover" + " " + VERSION +
     """
       |
       |Usage: java -jar keymaerax.jar
-      |  -prove file.kyx -tactic file.kyt/BelleExpr [-tacticName name] [-out file.kyp] [-timeout seconds] |
+      |  -prove file.kyx [-tactic file.kyt/BelleExpr] [-tacticName name]
+      |     [-out file.kyp] [-timeout seconds] |
       |  -check file.kya |
       |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar]
       |     [-sandbox] [-fallback prg] |
@@ -72,21 +73,23 @@ object KeYmaeraX {
       |  -check     run KeYmaera X prover on an archive of models and tactics
       |  -modelplex synthesize monitor from given file by proof with ModelPlex tactic
       |  -codegen   generate executable code from given model file
-      |  -ui        start web user interface with optional server arguments
-      |  -parse     return error code !=0 if the input model file does not parse
-      |  -bparse    return error code !=0 if bellerophon tactic file does not parse
+      |  -ui        start web user interface with optional server arguments (default)
+      |  -parse     return error code 0 if the input model file parses
+      |  -bparse    return error code 0 if bellerophon tactic file parses
       |  -repl      prove interactively from REPL command line
       |  -coasterx  verify roller coasters
       |
       |Additional options:
-      |  -tool mathematica|z3 choose which tool to use for arithmetic
+      |  -tool mathematica|z3 choose which tool to use for real arithmetic
       |  -mathkernel MathKernel(.exe) path to the Mathematica kernel executable
       |  -jlink path/to/jlinkNativeLib path to the J/Link native library directory
+      |  -timeout  how many seconds to try proving before giving up, forever if <=0
       |  -monitor  ctrl|model what kind of monitor to generate with ModelPlex
       |  -vars     use ordered list of variables, treating others as constant functions
       |  -interval guard reals by interval arithmetic in floating point (recommended)
       |  -nointerval skip interval arithmetic presuming no floating point errors
-      |  -savept path export proof term s-expression from -check to path
+      |  -savept path export proof term s-expression from -check to given path
+      |  -launch   use present JVM instead of launching better one with bigger stack
       |  -lax      use lax mode with more flexible parser, printer, prover etc.
       |  -strict   use strict mode with no flexibility in prover
       |  -debug    use debug mode with more exhaustive messages
@@ -102,7 +105,7 @@ object KeYmaeraX {
 
   private def launched() {
     LAUNCH = true
-    println("Launch flag was set.")
+    println("Launching KeYmaera X")
   }
   var LAUNCH: Boolean = false
 
@@ -291,7 +294,7 @@ object KeYmaeraX {
       case "-debug" :: tail => Configuration.set(Configuration.Keys.DEBUG, "true", saveToFile = false); nextOption(map, tail)
       case "-nodebug" :: tail => Configuration.set(Configuration.Keys.DEBUG, "false", saveToFile = false); nextOption(map, tail)
       case "-security" :: tail => activateSecurity(); nextOption(map, tail)
-      case "-launch" :: tail => launched(); nextOption(map, tail)
+      case "-launch" :: tail => println("Use present JVM"); launched(); nextOption(map, tail)
       case "-timeout" :: value :: tail =>
         if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('timeout -> value.toLong), tail)
         else optionErrorReporter("-timeout")
@@ -513,7 +516,7 @@ object KeYmaeraX {
       if (e.tactics.isEmpty) {
         val statisticsLogger = Logger(getClass)
         statisticsLogger.info(MarkerManager.getMarker("PROOF_STATISTICS"),
-          ProofStatistics(e.name, "skip", "skipped", options('timeout).asInstanceOf[Long], -1, -1, -1, -1).toCsv)
+          ProofStatistics(e.name, "skip", "skipped", options.getOrElse('timeout, 0L).asInstanceOf[Long], -1, -1, -1, -1).toCsv)
       } else e.tactics.foreach(t => try {
         prove(e.name, e.model.asInstanceOf[Formula], t._1, t._3, outputFileNames(e.name), options, storeWitness=true)
       } catch {
@@ -537,7 +540,7 @@ object KeYmaeraX {
     //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
     val pw = new PrintWriter(outputFileName)
 
-    val timeout = options('timeout).asInstanceOf[Long]
+    val timeout = options.getOrElse('timeout, 0L).asInstanceOf[Long]
 
     //@todo turn the following into a transformation as well. The natural type is Prover: Tactic=>(Formula=>Provable) which however always forces 'verify=true. Maybe that's not bad.
 
@@ -557,7 +560,7 @@ object KeYmaeraX {
         Future {
           TactixLibrary.proveBy(inputSequent, tactic)
         },
-        Duration(timeout, TimeUnit.SECONDS)
+        if (timeout>0) Duration(timeout, TimeUnit.SECONDS) else Duration.Inf
       )
       val proofDuration = Platform.currentTime - proofStart
       val qeDuration = qeDurationListener.duration

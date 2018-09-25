@@ -179,6 +179,7 @@ class DeclsTests extends FlatSpec with Matchers {
     //@todo better location information
     the [ParseException] thrownBy  KeYmaeraXArchiveParser.parseAsProblemOrFormula(model) should have message
       """<somewhere> type analysis: undefined symbol x with index None
+        |Make sure to declare ProgramVariable and other Definitions.
         |Found:    <unknown> at <somewhere>
         |Expected: <unknown>""".stripMargin
   }

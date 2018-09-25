@@ -174,7 +174,7 @@ object KeYmaeraXArchiveParser {
       case f:Function =>
         val (declaredDomain,declaredSort, interpretation, loc) = d.decls.get((f.name,f.index)) match {
           case Some(decl) => decl
-          case None => throw ParseException("type analysis" + ": " + "undefined symbol " + f, f)
+          case None => throw ParseException("type analysis" + ": " + "undefined symbol " + f + "\nMake sure to declare ProgramVariable and other Definitions.", f)
         }
         if(f.sort != declaredSort) throw ParseException(s"type analysis: ${f.prettyString} declared with sort $declaredSort but used where sort ${f.sort} was expected.", loc)
         else if (f.domain != declaredDomain.get) {
@@ -190,7 +190,7 @@ object KeYmaeraXArchiveParser {
         val (declaredSort, declLoc) = d.decls.get((x.name,x.index)) match {
           case Some((None,sort, _, loc)) => (sort, loc)
           case Some((Some(domain), sort, _, loc)) => throw ParseException(s"Type analysis: ${x.name} was declared as a function but used as a non-function.", loc)
-          case None => throw ParseException("type analysis" + ": " + "undefined symbol " + x + " with index " + x.index, x)
+          case None => throw ParseException("type analysis" + ": " + "undefined symbol " + x + " with index " + x.index + "\nMake sure to declare ProgramVariable and other Definitions.", x)
         }
         if (x.sort != declaredSort) throw ParseException(s"type analysis: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.", declLoc)
         x.sort == declaredSort
