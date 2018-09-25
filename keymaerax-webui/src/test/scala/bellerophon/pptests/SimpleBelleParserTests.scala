@@ -64,6 +64,11 @@ class SimpleBelleParserTests extends TacticTestBase {
   "Atomic / Argument Parser" should "parse a built-in tactic" in {
     BelleParser("nil") shouldBe (round trip TactixLibrary.nil)
   }
+  
+  it should "accept id as well as closeId" in {
+    BelleParser("closeId") shouldBe (round trip TactixLibrary.closeId)
+    BelleParser("id") shouldBe (round trip TactixLibrary.closeId)
+  }
 
   it should "parse a built-in tactic with arguments" in {
     BelleParser("cut({`1=1`})") shouldBe (round trip TactixLibrary.cut("1=1".asFormula))
