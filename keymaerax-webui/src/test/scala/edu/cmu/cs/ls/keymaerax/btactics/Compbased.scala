@@ -207,18 +207,12 @@ class Compbased extends TacticTestBase {
   }
 
   it should "prove communication guarantees" in withMathematica { _ =>
-    val entry1 = KeYmaeraXArchiveParser.getEntry("Robot->Obstacle Communication Guarantee Safety",
+    val entry1 = KeYmaeraXArchiveParser.getEntry("Communication Guarantee Safety",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
     entry1.tactics.foreach(t => proveBy(entry1.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
-    val entry2 = KeYmaeraXArchiveParser.getEntry("Robot->Obstacle Communication Guarantee Liveness",
+    val entry2 = KeYmaeraXArchiveParser.getEntry("Communication Guarantee Liveness",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
     entry2.tactics.foreach(t => proveBy(entry2.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
-    val entry3 = KeYmaeraXArchiveParser.getEntry("Obstacle->Robot Communication Guarantee Safety",
-      io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry3.tactics.foreach(t => proveBy(entry3.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
-    val entry4 = KeYmaeraXArchiveParser.getEntry("Obstacle->Robot Communication Guarantee Liveness",
-      io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    entry4.tactics.foreach(t => proveBy(entry4.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
   }
 
   it should "prove system safety" in withMathematica { _ =>
@@ -232,10 +226,8 @@ class Compbased extends TacticTestBase {
       "stttrunning/Obstacle Use Case",
       "stttrunning/Obstacle Step",
       "stttrunning/Compatibility of Obstacle and Robot",
-      "stttrunning/Robot2Obstacle Communication Guarantee Safety",
-      "stttrunning/Robot2Obstacle Communication Guarantee Liveness",
-      "stttrunning/Obstacle2Robot Communication Guarantee Safety",
-      "stttrunning/Obstacle2Robot Communication Guarantee Liveness"
+      "stttrunning/Communication Guarantee Safety",
+      "stttrunning/Communication Guarantee Liveness"
     )(1)) shouldBe 'proved
   }
 

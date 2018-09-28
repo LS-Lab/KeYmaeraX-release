@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
-import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.core.{And, Compose, _}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -255,6 +255,9 @@ object ComponentSystem {
         dropControl(pos) & DebuggingTactics.print("Dropped all statements except port memory") &
         chase(1) & prop & DebuggingTactics.done("Fig. 12 done")
   })
+  
+  /** Communication liveness for empty connections */
+  private lazy val emptyConLiveness = AnonymousLemmas.remember("<?true;>true".asFormula, testd(1) & prop, namespace)
 
   private def proveSystemCompStep4(inputAssumptions: Map[Set[Variable],Formula], outputGuarantees: Map[Set[Variable],Formula],
                                    plant1Vars: Set[Variable],
@@ -311,7 +314,7 @@ object ComponentSystem {
   }
 
   /** STTT Fig. 13 */
-  private def justifyFout(fout: Formula, keepPlantVars: Set[Variable], c1toC2comGuaranteeLiveness: Lemma, c2use: Lemma, c2step: Lemma) = "justifyFout" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+  private def justifyFout(fout: Formula, keepPlantVars: Set[Variable], comGuaranteeLiveness: Lemma, c2use: Lemma, c2step: Lemma) = "justifyFout" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(_: Imply) =>
       val Imply(_ , Box(_, Box(_, Box(_, Box(_, foutSafety))))) = fout
       val Box(Compose(_, Compose(_, Compose(_, Compose(plant2, Compose(in2, cp2))))), c2inv) = c2step.fact.conclusion.succ.head
@@ -354,8 +357,8 @@ object ComponentSystem {
               DebuggingTactics.print("Close by communication guarantee liveness") &
                 implyR(1) & ((abstractionb(1) & SaturateTactic(allR(1)))*4) &
                 //@todo use communication guarantees of internal ports
-                composed(1) & testd(1, 1::Nil) & useAt(DerivedAxioms.trueAnd)(1, 1::Nil) &
-                useLemma(c1toC2comGuaranteeLiveness, Some(prop)) & DebuggingTactics.done("Close by communication guarantee liveness")
+                composed(1) & testd(1, 1::Nil) & useAt(DerivedAxioms.trueAnd)(1, 1::Nil) & DebuggingTactics.print("WTF: " + comGuaranteeLiveness.fact.conclusion.prettyString) &
+                useLemma(comGuaranteeLiveness, Some(prop)) & DebuggingTactics.done("Close by communication guarantee liveness")
             )
             ,
             // show
@@ -368,7 +371,7 @@ object ComponentSystem {
 
   /** STTT Fig. 11: Component 1 */
   private def proveSystemCompStep(c1step: Lemma, c2use: Lemma, c2step: Lemma,
-                                  compatibility: Lemma, c1toc2comGuaranteeLiveness: Lemma, fout: Formula) = "proveSystemCompStepC1" by ((pos: Position, seq: Sequent) => {
+                                  compatibility: Lemma, comGuaranteeLiveness: Lemma, fout: Formula) = "proveSystemCompStepC1" by ((pos: Position, seq: Sequent) => {
     require(pos.isTopLevel)
     seq.sub(pos) match {
       case Some(Box(delta3, Box(Compose(ctrl1,ctrl2), Box(rememberStart@Assign(told, t), Box(ODESystem(DifferentialProduct(time, plant3), q3), Box(Compose(in3,cp3), inv1)))))) =>
@@ -395,6 +398,11 @@ object ComponentSystem {
           StaticSemantics.boundVars(port).toSet ->
             piouts.find(piout => !conStaticSem(StaticSemantics.boundVars(port)).intersect(StaticSemantics.freeVars(piout)).isEmpty).getOrElse(True) }).toMap
 
+        //@todo support multiple connected ports, support bidirectional communication
+        val c2ComGuaranteeLiveness = 
+          if (ports(in2).isEmpty) emptyConLiveness
+          else comGuaranteeLiveness
+        
         DebuggingTactics.print("Disassembling system into components") &
           cut(fout) <(
             // use
@@ -438,7 +446,7 @@ object ComponentSystem {
               DebuggingTactics.print("Step done") & DebuggingTactics.done("Step")
             ,
             // show
-            justifyFout(fout, plant2Vars, c1toc2comGuaranteeLiveness, c2use, c2step)('Rlast)
+            justifyFout(fout, plant2Vars, c2ComGuaranteeLiveness, c2use, c2step)('Rlast)
           ) & DebuggingTactics.print("Done disassembling system into components") & DebuggingTactics.done("Disassembling system into components")
     }
   })
@@ -448,18 +456,17 @@ object ComponentSystem {
                               c2use: Lemma, c2step: Lemma,
                               pi1Out: Formula, pi2Out: Formula,
                               compatibility: Lemma,
-                              c1toc2comGuaranteeSafety: Lemma, c1toc2comGuaranteeLiveness: Lemma,
-                              c2toc1comGuaranteeSafety: Lemma, c2toc1comGuaranteeLiveness: Lemma) = "proveSystemStep" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+                              comGuaranteeSafety: Lemma, comGuaranteeLiveness: Lemma) = "proveSystemStep" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(Box(Compose(delta3, Compose(ctrl3, Compose(rememberStart@Assign(told, t), Compose(plant3@ODESystem(DifferentialProduct(_, _), q3), Compose(in3, Compose(cp1, Compose(cp2, con))))))), inv3@And(inv1, And(inv2, zeta)))) =>
       //@todo check program shapes in lemmas
       val cr1 :: cr2 :: Nil = (0 to 3) :: (4 to 6) :: Nil
-
+      
       DebuggingTactics.print("Proving component loops and communication guarantees") &
         boxAnd(1) & andR(1) <(
         // inv1
         DebuggingTactics.print("Proving inv1") &
           cr1.map(i => PosInExpr(List.fill(i)(1))).map(composeb(1, _)).reduce[BelleExpr](_ & _) &
-          proveSystemCompStep(c1step, c2use, c2step, compatibility, c1toc2comGuaranteeLiveness, Imply(inv2, Box(delta3, Box(ctrl3, Box(rememberStart, Box(plant3, pi2Out))))))(pos) &
+          proveSystemCompStep(c1step, c2use, c2step, compatibility, comGuaranteeLiveness, Imply(inv2, Box(delta3, Box(ctrl3, Box(rememberStart, Box(plant3, pi2Out))))))(pos) &
           DebuggingTactics.print("Done proving inv1") & DebuggingTactics.done("Proving inv1")
         ,
         boxAnd(1) & andR(1) <(
@@ -478,7 +485,7 @@ object ComponentSystem {
             useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::1::1::1::Nil) &
             useAt("[;] compose", PosInExpr(1::Nil))(1, 1::1::1::1::Nil) &
             DebuggingTactics.print("Done reordering components") &
-            proveSystemCompStep(c2step, c1use, c1step, compatibility, c2toc1comGuaranteeLiveness, Imply(inv1, Box(delta3, Box(ctrl3, Box(rememberStart, Box(plant3, pi1Out))))))(pos) &
+            proveSystemCompStep(c2step, c1use, c1step, compatibility, comGuaranteeLiveness, Imply(inv1, Box(delta3, Box(ctrl3, Box(rememberStart, Box(plant3, pi1Out))))))(pos) &
             DebuggingTactics.print("Done proving inv2") & DebuggingTactics.done("Proving inv2")
           ,
           // zeta
@@ -486,7 +493,7 @@ object ComponentSystem {
             cr1.map(i => PosInExpr(List.fill(i)(1))).map(composeb(1, _)).reduce[BelleExpr](_ & _) &
             cr2.map(i => PosInExpr(List.fill(i)(1))).map(composeb(1, _)).reduce[BelleExpr](_ & _) &
             (cr1.head to cr2.last).map(i => PosInExpr(List.fill(i)(1))).reverse.map(abstractionb(1, _)).reduce[BelleExpr](_ & _) &
-            (allR(1)*) & cohideR(1) & by(c2toc1comGuaranteeSafety) &
+            (allR(1)*) & cohideR(1) & by(comGuaranteeSafety) &
             DebuggingTactics.print("Done proving communication guarantee (zeta step)") &
             DebuggingTactics.done("Proving communication guarantee (zeta step)")
         )
@@ -497,8 +504,7 @@ object ComponentSystem {
   private def proveSystem(c1base: Lemma, c1use: Lemma, c1step: Lemma,
                           c2base: Lemma, c2use: Lemma, c2step: Lemma,
                           compatibility: Lemma,
-                          c1toc2comGuaranteeSafety: Lemma, c1toc2comGuaranteeLiveness: Lemma,
-                          c2toc1comGuaranteeSafety: Lemma, c2toc1comGuaranteeLiveness: Lemma) = "proveSystem" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+                          comGuaranteeSafety: Lemma, comGuaranteeLiveness: Lemma) = "proveSystem" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
     case Some(Imply(And(timeInit, And(globalFacts, And(init1, And(init2, zeta)))), Box(Loop(sys), And(post1, post2)))) =>
       //@todo check lemma shapes
       val inv1 = c1base.fact.conclusion.succ.head
@@ -528,31 +534,138 @@ object ComponentSystem {
           c2use, c2step,
           pi1Out, pi2Out,
           compatibility,
-          c1toc2comGuaranteeSafety, c1toc2comGuaranteeLiveness,
-          c2toc1comGuaranteeSafety, c2toc1comGuaranteeLiveness)(1)
+          comGuaranteeSafety, comGuaranteeLiveness)(1)
       )
   })
+  
+  private val shapeMsg =
+    s""""Expected a formula of the shape 
+       |   
+       |   t=t0 & Om & A1 & A2 
+       |   -> 
+       |   [{ {portmemory1;portmemory2}; 
+       |      {ctrl1;ctrl2}; 
+       |      to:=t; 
+       |      {t'=1,plant1,plant2};
+       |      {in1open;in2open};
+       |      {cp1;cp2;con};
+       |    }*]((G1&P1) & (G2&P2))
+       |  
+       |  where Om:    global facts about constant system parameters
+       |        A1,A2: assumptions of components
+       |        G1,G2: safety guarantees of components
+       |        P1,P2: output port guarantees of components
+       |        portmemory: remembers the value of input port x in portmemory x0 by x0:=x;
+       |        ctrl:       discrete component dynamics
+       |        plant:      continuous component dynamics
+       |        inXopen:    input ports that remain open in the system
+       |        cp:         internal connections of subcomponents
+       |        con:        connections between the composed components
+       |""".stripMargin
 
   /** Proves system safety from isolated component and compatibility proofs. */
   def proveSystem(c1baseLemma: String, c1useLemma: String, c1stepLemma: String,
                   c2baseLemma: String, c2useLemma: String, c2stepLemma: String,
                   compatibilityLemma: String,
-                  c1toc2comGuaranteeSafetyLemma: String,
-                  c1toc2comGuaranteeLivenessLemma: String,
-                  c2toc1comGuaranteeSafetyLemma: String,
-                  c2toc1comGuaranteeLivenessLemma: String): DependentPositionTactic = {
-    proveSystem(
-      LemmaDBFactory.lemmaDB.get("user/" + c1baseLemma).get,
-      LemmaDBFactory.lemmaDB.get("user/" + c1useLemma).get,
-      LemmaDBFactory.lemmaDB.get("user/" + c1stepLemma).get,
-      LemmaDBFactory.lemmaDB.get("user/" + c2baseLemma).get,
-      LemmaDBFactory.lemmaDB.get("user/" + c2useLemma).get,
-      LemmaDBFactory.lemmaDB.get("user/" + c2stepLemma).get,
-      LemmaDBFactory.lemmaDB.get("user/" + compatibilityLemma).get,
-      LemmaDBFactory.lemmaDB.get("user/" + c1toc2comGuaranteeSafetyLemma).get,
-      LemmaDBFactory.lemmaDB.get("user/" + c1toc2comGuaranteeLivenessLemma).get,
-      LemmaDBFactory.lemmaDB.get("user/" + c2toc1comGuaranteeSafetyLemma).get,
-      LemmaDBFactory.lemmaDB.get("user/" + c2toc1comGuaranteeLivenessLemma).get
-    )
+                  comGuaranteeSafetyLemma: String,
+                  comGuaranteeLivenessLemma: String): DependentPositionTactic = "proveSystem" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
+    case Some(Imply(asys, Box(Loop(prgsys), gsys))) =>
+      
+      val And(tbootstrap, And(omega, And(a1, a2))) = asys
+      val And(And(g1,p1), And(g2,p2)) = gsys
+      val Compose(memsys, Compose(ctrlsys, Compose(tmem, Compose(plantsys, Compose(insys, cpsys))))) = prgsys
+      
+      LemmaDBFactory.lemmaDB.get("user/" + c1baseLemma) match {
+        case Some(c1base) => LemmaDBFactory.lemmaDB.get("user/" + c1useLemma) match {
+          case Some(c1use) => LemmaDBFactory.lemmaDB.get("user/" + c1stepLemma) match {
+            case Some(c1step) => 
+              checkComponentLemmas(c1base, c1use, c1step)
+              checkSysC1Programs(c1step, prgsys)
+              LemmaDBFactory.lemmaDB.get("user/" + c2baseLemma) match {
+              case Some(c2base) => LemmaDBFactory.lemmaDB.get("user/" + c2useLemma) match {
+                case Some(c2use) => LemmaDBFactory.lemmaDB.get("user/" + c2stepLemma) match {
+                  case Some(c2step) =>
+                    checkComponentLemmas(c2base, c2use, c2step)
+                    checkSysC2Programs(c2step, prgsys)
+                    LemmaDBFactory.lemmaDB.get("user/" + compatibilityLemma) match {
+                    case Some(compatibility) => LemmaDBFactory.lemmaDB.get("user/" + comGuaranteeSafetyLemma) match {
+                      case Some(comSafety) => LemmaDBFactory.lemmaDB.get("user/" + comGuaranteeLivenessLemma) match {
+                        case Some(comLiveness) => 
+                          proveSystem(c1base, c1use, c1step, c2base, c2use, c2step,
+                            compatibility, comSafety, comLiveness)(pos)
+                        case None => throw BelleIllFormedError("Unknown lemma " + comGuaranteeLivenessLemma + "; please prove first")
+                      }
+                      case None => throw BelleIllFormedError("Unknown lemma " + comGuaranteeSafetyLemma + "; please prove first")
+                    }
+                    case None => throw BelleIllFormedError("Unknown lemma " + compatibilityLemma + "; please prove first")
+                  }
+                  case None => throw BelleIllFormedError("Unknown lemma " + c2stepLemma + "; please prove first")
+                }
+                case None => throw BelleIllFormedError("Unknown lemma " + c2useLemma + "; please prove first")
+              }
+              case None => throw BelleIllFormedError("Unknown lemma " + c2baseLemma + "; please prove first")
+            }
+            case None => throw BelleIllFormedError("Unknown lemma " + c1stepLemma + "; please prove first")
+          }
+          case None => throw BelleIllFormedError("Unknown lemma " + c1useLemma + "; please prove first")
+        }
+        case None => throw BelleIllFormedError("Unknown lemma " + c1baseLemma + "; please prove first")
+      }
+    case Some(fml) => throw BelleIllFormedError("Unexpected formula shape.\n" + shapeMsg + "\nBut got " + fml.prettyString)
+    case None => throw BelleIllFormedError("Position points outside formula")
+  })
+  
+  private def checkComponentLemmas(cbase: Lemma, cuse: Lemma, cstep: Lemma): Unit = {
+    val Imply(_, invbase) =
+      if (cbase.fact.conclusion.ante.isEmpty) cbase.fact.conclusion.succ.head
+      else cbase.fact.conclusion.toFormula
+      
+    val Imply(invuse, _) =
+      if (cuse.fact.conclusion.ante.isEmpty) cuse.fact.conclusion.succ.head
+      else cuse.fact.conclusion.toFormula
+
+    val Imply(invstepa, Box(_, invstepb)) =
+      if (cstep.fact.conclusion.ante.isEmpty) cuse.fact.conclusion.succ.head
+      else cstep.fact.conclusion.toFormula
+
+    if ((FormulaTools.conjuncts(invbase).toSet -- FormulaTools.conjuncts(invuse)).nonEmpty) throw BelleIllFormedError("Component invariants in base case and use case do not match: please provide lemmas A1->I, I -> G1, I->[c]I\n" + invbase.prettyString + " <> " + invuse.prettyString)
+    if ((FormulaTools.conjuncts(invstepb).toSet -- FormulaTools.conjuncts(invbase)).nonEmpty) throw BelleIllFormedError("Component invariants in base case and step do not match: please provide lemmas A1->I, I -> G1, I->[c]I\n" + invbase.prettyString + " <> " + invstepa.prettyString)
+    if ((FormulaTools.conjuncts(invstepb).toSet -- FormulaTools.conjuncts(invstepa)).nonEmpty) throw BelleIllFormedError("Component invariants in step do not match: please provide lemmas A1->I, I -> G1, I->[c]I\n" + invbase.prettyString + " <> " + invstepa.prettyString)
+    
+    if (StaticSemantics.freeVars((FormulaTools.conjuncts(invuse).toSet -- FormulaTools.conjuncts(invbase)).
+      reduceOption(And).getOrElse(True)).toSet.exists(_.isInstanceOf[Variable])) throw BelleIllFormedError("Component use case makes additional non-global assumptions")
+    if (StaticSemantics.freeVars((FormulaTools.conjuncts(invstepa).toSet -- FormulaTools.conjuncts(invbase)).
+      reduceOption(And).getOrElse(True)).toSet.exists(_.isInstanceOf[Variable])) throw BelleIllFormedError("Component step makes additional non-global assumptions")
+  }
+  
+  private def checkSysC1Programs(step: Lemma, sys: Program): Unit = {
+    val Compose(Compose(mem1,_), Compose(Compose(ctrl1,_), Compose(t1, Compose(plantsys: ODESystem, Compose(Compose(in1,_), Compose(cp1,Compose(_,con))))))) = sys
+    val Imply(_, Box(Compose(mem, Compose(ctrl, Compose(t, Compose(plant: ODESystem, Compose(in, cp))))), _)) = step.fact.conclusion.toFormula
+    
+    checkPrograms(mem1->mem, ctrl1->ctrl, t1->t, plantsys->plant, in1->in, cp1->cp)
+  }
+
+  private def checkSysC2Programs(step: Lemma, sys: Program): Unit = {
+    val Compose(Compose(_,mem2), Compose(Compose(_,ctrl2), Compose(t2, Compose(plantsys: ODESystem, Compose(Compose(_,in2), Compose(_,Compose(cp2,con))))))) = sys
+    val Imply(_, Box(Compose(mem, Compose(ctrl, Compose(t, Compose(plant: ODESystem, Compose(in, cp))))), _)) = step.fact.conclusion.toFormula
+
+    checkPrograms(mem2->mem, ctrl2->ctrl, t2->t, plantsys->plant, in2->in, cp2->cp)
+  }
+
+  private def checkPrograms(mem: (Program, Program), 
+                            ctrl: (Program, Program),
+                            t: (Program, Program),
+                            plant: (ODESystem, ODESystem),
+                            in: (Program, Program),
+                            cp: (Program, Program)): Unit = {
+    if (mem._1 != mem._2) throw BelleIllFormedError("System and component port memories must agree, but " + mem._1 + " <> " + mem._2)
+    if (ctrl._1 != ctrl._2) throw BelleIllFormedError("System and component controllers must agree, but " + ctrl._1 + " <> " + ctrl._2)
+    if (t._1 != t._2) throw BelleIllFormedError("System and component time memory must agree, but " + t._1 + " <> " + t._2)
+    if (!DifferentialHelper.atomicOdes(plant._2).toSet.subsetOf(DifferentialHelper.atomicOdes(plant._1).toSet)) throw BelleIllFormedError("System plant must contain component plant, but " + plant._1.prettyString + " does not contain all of " + plant._2)
+    if (!ports(in._1).toSet.subsetOf(ports(in._2).toSet)) throw BelleIllFormedError("System input ports must be subset of component input ports, but " +
+      ports(in._1).map(p => p._1.prettyString + " (" + p._2.prettyString + ")").mkString(",") + " not subset of " +
+      ports(in._2).map(p => p._1.prettyString + " (" + p._2.prettyString + ")").mkString(","))
+    if (cp._1 != cp._2) throw BelleIllFormedError("System and component internal connections must agree, but " + cp._1 + " <> " + cp._2)
+    //@todo check that connections cover remaining (non-open) input ports
   }
 }
