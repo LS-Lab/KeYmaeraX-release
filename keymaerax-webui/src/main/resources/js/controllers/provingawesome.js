@@ -172,14 +172,15 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
           spinnerService.hide('tacticExecutionSpinner');
         }
       );
-      $scope.runningTask.poll(taskId);
+      $scope.runningTask.poll(taskId, 0);
     },
-    poll: function(taskId) {
+    poll: function(taskId, elapsed) {
       $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/status')
         .then(function(response) {
           if (response.data.lastStep !== undefined) $scope.runningTask.lastStep = response.data.lastStep.ruleName;
           if (response.data.status === 'done') $scope.runningTask.future.resolve(taskId);
-          else $timeout($scope.runningTask.poll(taskId), 50);
+          else if (elapsed <= 20) $timeout(function() { $scope.runningTask.poll(taskId, elapsed+1); }, 50);
+          else $timeout(function() { $scope.runningTask.poll(taskId, elapsed); }, 1000);
         })
         .catch(function(error) { $scope.runningTask.future.reject(error); });
     },
@@ -276,14 +277,15 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
           spinnerService.hide('tacticExecutionSpinner');
         }
       );
-      $scope.runningTask.poll(taskId);
+      $scope.runningTask.poll(taskId, 0);
     },
-    poll: function(taskId) {
+    poll: function(taskId, elapsed) {
       $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + taskId + '/status')
         .then(function(response) {
           if (response.data.lastStep !== undefined) $scope.runningTask.lastStep = response.data.lastStep.ruleName;
           if (response.data.status === 'done') $scope.runningTask.future.resolve(taskId);
-          else $timeout($scope.runningTask.poll(taskId), 50);
+          else if (elapsed <= 20) $timeout(function() { $scope.runningTask.poll(taskId, elapsed+1); }, 50);
+          else $timeout(function() { $scope.runningTask.poll(taskId, elapsed); }, 1000);
         })
         .catch(function(error) { $scope.runningTask.future.reject(error); });
     },
