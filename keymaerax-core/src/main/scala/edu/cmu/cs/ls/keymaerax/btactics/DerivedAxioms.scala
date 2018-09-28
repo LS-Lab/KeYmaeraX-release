@@ -1122,7 +1122,7 @@ object DerivedAxioms extends Logging {
     * @Derived
     */
   lazy val nondetassigndAxiom = derivedAxiom("<:*> assign nondet",
-    Sequent(IndexedSeq(), IndexedSeq("<x_:=*;>p_(x_) <-> (\\exists x_ p_(x_))".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("<x_:=*;>p_(||) <-> (\\exists x_ p_(||))".asFormula)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("[:*] assign nondet")(1, 0::0::Nil) &
       useAt("all dual", PosInExpr(1::Nil))(1, 0::0::Nil) &
