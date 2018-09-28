@@ -229,6 +229,8 @@ class Compbased extends TacticTestBase {
       "stttrunning/Communication Guarantee Safety",
       "stttrunning/Communication Guarantee Liveness"
     )(1)) shouldBe 'proved
+
+    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
   }
 
   "Robix" should "prove the robot component" in withZ3 { implicit tool =>

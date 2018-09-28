@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
+import edu.cmu.cs.ls.keymaerax.btactics.components.ComponentSystem
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -1034,6 +1035,43 @@ object DerivationInfo {
                               (List("&Gamma;"),List("&Delta;", "C{repl}→C{c}"))))
       , List(FormulaArg("repl"))
       , _ => ((fml: Formula) => TactixLibrary.cutAt(fml)): TypedFunc[Formula, BelleExpr]),
+
+    InputPositionTacticInfo("componentSystem"
+      , RuleDisplayInfo("componentSystem",
+        /* conclusion */ (List("&Gamma;"), List("""t=t0 & Om & A1 & A2
+                                                  |->
+                                                  |[{ {portmemory1;portmemory2};
+                                                  |   {ctrl1;ctrl2};
+                                                  |   to:=t;
+                                                  |   {t'=1,plant1,plant2};
+                                                  |   {in1open;in2open};
+                                                  |   {cp1;cp2;con};
+                                                  | }*]((G1&P1) & (G2&P2))""".stripMargin, "&Delta;")),
+        /* premises */   List(
+          (List(),List("C1 Base: Om & A1 -> I1")),
+          (List(),List("C1 Use:  Om & I1 -> G1 & P1")),
+          (List(),List("C1 Step: Om & I1 -> [portmemory1; ctrl1; t0=t; {t'=1,plant1}; in1; cp1;]I1")),
+          (List(),List("C2 Base: Om & A2 -> I2")),
+          (List(),List("C2 Use:  Om & I2 -> G2 & P2")),
+          (List(),List("C2 Step: Om & I2 -> [portmemory2; ctrl2; t0=t; {t'=1,plant2}; in2; cp2;]I2")),
+          (List(),List("Compatibility: Om & Z -> [xin:=xo;](Pout(xo) -> Pin(xin))")),
+          (List(),List("Com Safety:   [xin:=xo;]Z")),
+          (List(),List("Com Liveness: <xin:=xo;>true"))
+        )
+      )
+      ,
+      List(
+        StringArg("C1 Base: Om & A1 -> I1"), StringArg("C1 Use:  Om & I1 -> G1 & P1"), StringArg("C1 Step: Om & I1 -> [portmemory1; ctrl1; t0=t; {t'=1,plant1}; in1; cp1;]I1"),
+        StringArg("C2 Base: Om & A2 -> I2"), StringArg("C2 Use:  Om & I2 -> G2 & P2"), StringArg("C2 Step: Om & I2 -> [portmemory2; ctrl2; t0=t; {t'=1,plant2}; in2; cp2;]I2"),
+        StringArg("Compatibility: Om & Z -> [xin:=xo;](Pout(xo) -> Pin(xin))"), StringArg("Com Safety:   [xin:=xo;]Z"), StringArg("Com Liveness: <xin:=xo;>true")
+      )
+      , _ => (
+        (c1base: String) => ((c1use: String) => ((c1step: String) => ((c2base: String) => ((c2use: String) =>
+        ((c2step: String) => ((compat: String) => ((comSafe: String) => ((comLive: String) =>
+          ComponentSystem.proveSystem(c1base, c1use, c1step, c2base, c2use, c2step, compat, comSafe, comLive)):
+          TypedFunc[String, BelleExpr]): TypedFunc[String, _]): TypedFunc[String, _]):
+          TypedFunc[String, _]): TypedFunc[String, _]): TypedFunc[String, _]): TypedFunc[String, _]): TypedFunc[String, _])
+    ),
 
     // Differential tactics
     new PositionTacticInfo("splitWeakInequality", "splitWeakInequality", {case () => DifferentialTactics.splitWeakInequality}, needsTool = true),
