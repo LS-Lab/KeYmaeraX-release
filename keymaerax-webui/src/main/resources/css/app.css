@@ -676,13 +676,12 @@ del {
 }
 
 .modal-fullscreen .modal-body {
-  height: calc(100% - 65px);
   display: flex;
   flex-direction: column;
 }
 
 .modal-fullscreen .modal-header~.modal-body {
-  height: calc(100% - 130px);
+
 }
 
 .k4-vertical-fill-flex {
