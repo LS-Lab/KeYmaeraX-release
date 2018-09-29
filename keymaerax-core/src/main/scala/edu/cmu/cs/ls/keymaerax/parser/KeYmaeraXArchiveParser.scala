@@ -740,7 +740,6 @@ object KeYmaeraXArchiveParser {
       case Annotation(e: Program, a: Formula) =>
         val substPrg = definitions.exhaustiveSubst(e)
         val substFml = definitions.exhaustiveSubst(a)
-        typeAnalysis(definitions ++ BuiltinDefinitions.defs, substPrg)
         typeAnalysis(definitions ++ BuiltinDefinitions.defs, substFml)
         KeYmaeraXParser.annotationListener(substPrg, substFml)
       case Annotation(_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
