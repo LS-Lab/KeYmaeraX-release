@@ -84,6 +84,15 @@ object ParseException {
   else
     new ParseException(msg + "\nunmatched: " + unmatched + " at " + unmatched.loc + "--" + state.location, unmatched.loc--state.location, state.la.toString, expect, state.topString, state.toString /*, cause*/)
 
+  def typeError(msg: String, illtyped: Expression, expectedType: String, loc: Location, hint: String = ""): ParseException =
+    apply("type analysis: " + msg + "\nFound:    " + illtyped + " " + illtyped.getClass + " of sort " + illtyped.sort + "\nExpected: " + expectedType + "\n" + hint, loc)
+
+  def typeDeclGuessError(msg: String, declaredType: String, expected: Expression, loc: Location, hint: String = ""): ParseException =
+    apply("type analysis: " + msg + "\nFound:    " + declaredType + "\nExpected: " + expected.getClass + " of sort " + expected.sort + "\n" + hint, loc)
+
+  def typeDeclError(msg: String, declaredType: String, expectedType: String, loc: Location, hint: String = ""): ParseException =
+    apply("type analysis: " + msg + "\nDeclared: " + declaredType + "\nExpected: " + expectedType + "\n" + hint, loc)
+
   private[parser] def tokenDescription(tok: Token): String = tokenDescription(tok.tok)
   private[parser] def tokenDescription(tok: Terminal): String = tok.img + " (" + tok + ")"
 }
