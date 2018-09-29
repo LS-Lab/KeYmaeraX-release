@@ -36,7 +36,7 @@ object InvariantProvers {
   /** loopSR: cleverly prove a property of a loop automatically by induction, trying hard to generate loop invariants.
     * Uses [[SearchAndRescueAgain]] to avoid repetitive proving.
     * @see [[loopauto]]
-    * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+    * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     *      Example 32. */
   def loopSR(gen: Generator[Formula]): DependentPositionTactic = "loopSR" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>

@@ -13,8 +13,8 @@ import org.apache.logging.log4j.scala.Logging
 /** Invariant generators and differential invariant generators.
   * @author Andre Platzer
   * @see [[TactixLibrary.invGenerator]]
-  * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-642-32347-8_3 A differential operator approach to equational differential invariants]]. In Lennart Beringer and Amy Felty, editors, Interactive Theorem Proving, International Conference, ITP 2012, August 13-15, Princeton, USA, Proceedings, volume 7406 of LNCS, pages 28-48. Springer, 2012.
-  * @see Andre Platzer and Edmund M. Clarke. [[http://dx.doi.org/10.1007/s10703-009-0079-8 Computing differential invariants of hybrid systems as fixedpoints]]. Formal Methods in System Design, 35(1), pp. 98-120, 2009
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-642-32347-8_3 A differential operator approach to equational differential invariants]]. In Lennart Beringer and Amy Felty, editors, Interactive Theorem Proving, International Conference, ITP 2012, August 13-15, Princeton, USA, Proceedings, volume 7406 of LNCS, pages 28-48. Springer, 2012.
+  * @see Andre Platzer and Edmund M. Clarke. [[https://doi.org/10.1007/s10703-009-0079-8 Computing differential invariants of hybrid systems as fixedpoints]]. Formal Methods in System Design, 35(1), pp. 98-120, 2009
   */
 object InvariantGenerator extends Logging {
   import Generator.Generator
@@ -165,7 +165,7 @@ object InvariantGenerator extends Logging {
   }
 
   /** Inverse Characteristic Method differential invariant generator.
-    * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-642-32347-8_3 A differential operator approach to equational differential invariants]]. In Lennart Beringer and Amy Felty, editors, Interactive Theorem Proving, International Conference, ITP 2012, August 13-15, Princeton, USA, Proceedings, volume 7406 of LNCS, pages 28-48. Springer, 2012.
+    * @see Andre Platzer. [[https://doi.org/10.1007/978-3-642-32347-8_3 A differential operator approach to equational differential invariants]]. In Lennart Beringer and Amy Felty, editors, Interactive Theorem Proving, International Conference, ITP 2012, August 13-15, Princeton, USA, Proceedings, volume 7406 of LNCS, pages 28-48. Springer, 2012.
     */
   val inverseCharacteristicDifferentialInvariantGenerator: Generator[Formula] = (sequent,pos) => {
     import FormulaTools._

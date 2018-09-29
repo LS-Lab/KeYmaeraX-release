@@ -1,3 +1,7 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
 package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io.{FilePermission, PrintWriter}
@@ -32,12 +36,23 @@ import scala.concurrent.duration.Duration
 import scala.reflect.io.File
 
 /**
- * Command-line interface launcher for KeYmaera X.
- *
- * @author Stefan Mitsch
- * @author Andre Platzer
- * @author Ran Ji
- * @author Brandon Bohrer
+  * Command-line interface launcher for [[http://keymaeraX.org/ KeYmaera X]],
+  * the aXiomatic Tactical Theorem Prover for Hybrid Systems and Hybrid Games.
+  *
+  * - `[[edu.cmu.cs.ls.keymaerax.core]]` - KeYmaera X kernel, proof certificates, main data structures
+  * - `[[edu.cmu.cs.ls.keymaerax.btactics]]` - Tactic language library
+  * - `[[edu.cmu.cs.ls.keymaerax.bellerophon]]` - Bellerophon tactic language and tactic interpreter
+  *
+  * @author Stefan Mitsch
+  * @author Andre Platzer
+  * @author Ran Ji
+  * @author Brandon Bohrer
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
+  * @see Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Volp and Andre Platzer. KeYmaera X: An axiomatic tactical theorem prover for hybrid systems.  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+  * @see Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+  * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.13 Logics of dynamical systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012
  */
 object KeYmaeraX {
 
@@ -60,7 +75,7 @@ object KeYmaeraX {
       |  -parse file.kyx |
       |  -bparse file.kyt |
       |  -repl file.kyx [file.kyt] [scaladefs]
-      |  -striphints file.kyx -out file2.kyx
+      |  -striphints file.kyx -out fileout.kyx
       |
       |Actions:
       |  -prove     run KeYmaera X prover on given model file with given tactic
@@ -71,7 +86,8 @@ object KeYmaeraX {
       |  -parse     return error code 0 if the input model file parses
       |  -bparse    return error code 0 if bellerophon tactic file parses
       |  -repl      prove interactively from REPL command line
-      |  -coasterx  verify roller coasters (-coasterx -help for more)
+      |  -striphints remove all proof annotations from the model
+      |  -coasterx  verify roller coasters
       |
       |Additional options:
       |  -tool mathematica|z3 choose which tool to use for real arithmetic

@@ -73,19 +73,19 @@ KeYmaera X implements the uniform substitution calculus for differential dynamic
 http://www.ls.cs.cmu.edu/publications.html
 
 1. André Platzer. 
-[A complete uniform substitution calculus for differential dynamic logic](http://dx.doi.org/10.1007/s10817-016-9385-1). 
+[A complete uniform substitution calculus for differential dynamic logic](https://doi.org/10.1007/s10817-016-9385-1).
 Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
 
 2. André Platzer.
-[Logics of dynamical systems](http://dx.doi.org/10.1109/LICS.2012.13).
+[Logics of dynamical systems](https://doi.org/10.1109/LICS.2012.13).
 ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012.
 
 3. Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Völp and André Platzer. 
-[KeYmaera X: An axiomatic tactical theorem prover for hybrid systems](http://dx.doi.org/10.1007/978-3-319-21401-6_36). 
+[KeYmaera X: An axiomatic tactical theorem prover for hybrid systems](https://doi.org/10.1007/978-3-319-21401-6_36).
 In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. 
 
 4. Nathan Fulton, Stefan Mitsch, Brandon Bohrer and André Platzer. 
-[Bellerophon: Tactical theorem proving for hybrid systems](http://dx.doi.org/10.1007/978-3-319-66107-0_14). 
+[Bellerophon: Tactical theorem proving for hybrid systems](https://doi.org/10.1007/978-3-319-66107-0_14).
 In Mauricio Ayala-Rincón and César Muñoz, editors, Interactive Theorem Proving, International Conference, ITP 2017, volume 10499 of LNCS. Springer, 2017. 
 
 5. André Platzer.
@@ -95,21 +95,21 @@ Springer, 2018.
 The soundness assurances provided by a small LCF-style kernel are further strengthened by a cross-verification of the soundness theorem for the uniform substitution calculus in [Isabelle/HOL](https://github.com/LS-Lab/Isabelle-dL) and [Coq](https://github.com/LS-Lab/Coq-dL).
 
 6. Brandon Bohrer, Vincent Rahli, Ivana Vukotic, Marcus Völp and André Platzer.
-[Formally verified differential dynamic logic](http://dx.doi.org/10.1145/3018610.3018616).
+[Formally verified differential dynamic logic](https://doi.org/10.1145/3018610.3018616).
 ACM SIGPLAN Conference on Certified Programs and Proofs, CPP 2017, Jan 16-17, 2017, Paris, France, pages 208-221, ACM, 2017.
 
 A secondary goal of KeYmaera X is to also make it possible to implement extensions of differential dynamic logic, such as differential game logic for hybrid games as well as quantified differential dynamic logic for distributed hybrid systems:
 
 7. André Platzer. 
-[Differential game logic](http://dx.doi.org/10.1145/2817824). 
+[Differential game logic](https://doi.org/10.1145/2817824).
 ACM Trans. Comput. Log., 17(1), 2015.
 
 8. André Platzer. 
-[Differential hybrid games](http://dx.doi.org/10.1145/3091123). 
+[Differential hybrid games](https://doi.org/10.1145/3091123).
 ACM Trans. Comput. Log., 18(3), 2017.
 
 9. André Platzer.
-[A complete axiomatization of quantified differential dynamic logic for distributed hybrid systems](http://dx.doi.org/10.2168/LMCS-8(4:17)2012).
+[A complete axiomatization of quantified differential dynamic logic for distributed hybrid systems](https://doi.org/10.2168/LMCS-8(4:17)2012).
 Logical Methods in Computer Science, 8(4), pages 1-44, 2012.
 
 Copyright and Licenses
