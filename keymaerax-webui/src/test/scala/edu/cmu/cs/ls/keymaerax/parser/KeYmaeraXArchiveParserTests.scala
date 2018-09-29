@@ -1513,7 +1513,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
         |  [{?true;}*@invariant(fg > 0)]true
         |End.""".stripMargin
     ) should have message """<somewhere> type analysis: undefined symbol fg with index None
-                            |Make sure to declare ProgramVariable and other Definitions.
+                            |Found:    undefined symbol
+                            |Expected: class edu.cmu.cs.ls.keymaerax.core.BaseVariable of sort Real
+                            |Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.
                             |Found:    <unknown> at <somewhere>
                             |Expected: <unknown>""".stripMargin
   }
