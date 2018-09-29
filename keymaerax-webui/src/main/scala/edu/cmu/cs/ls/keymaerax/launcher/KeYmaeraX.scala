@@ -61,12 +61,6 @@ object KeYmaeraX {
       |  -bparse file.kyt |
       |  -repl file.kyx [file.kyt] [scaladefs]
       |  -striphints file.kyx -out file2.kyx
-      |  -coasterx ( -component component-name [-formula] [-tactic] [-stats]
-      |                [-num-runs N] [-debug-level (0|1|2)]
-      |            | -coaster file.rctx -feet-per-unit X [-num-runs N]
-      |              [-velocityFPS V] [-formula] [-stats] [-compare-reuse]
-      |              [-debug-level (0|1|2)]  [-naive-arith]
-      |            | -table [-num-runs N] [-debug-level (0|1|2)])
       |
       |Actions:
       |  -prove     run KeYmaera X prover on given model file with given tactic
@@ -77,7 +71,7 @@ object KeYmaeraX {
       |  -parse     return error code 0 if the input model file parses
       |  -bparse    return error code 0 if bellerophon tactic file parses
       |  -repl      prove interactively from REPL command line
-      |  -coasterx  verify roller coasters
+      |  -coasterx  verify roller coasters (-coasterx -help for more)
       |
       |Additional options:
       |  -tool mathematica|z3 choose which tool to use for real arithmetic
