@@ -17,7 +17,7 @@ import scala.collection.immutable.IndexedSeq
   * A common signature for [[edu.cmu.cs.ls.keymaerax.pt.ProvableSig]]'s and [[TermProvable]]'s for use in the [[btactics]] package.
   * This allows for tactics to construct proof terms or not depending on which implementation they use.
   *
-  * This file mimics [[edu.cmu.cs.ls.keymaerax.core.Provable]] outside the core and forwards all operations to the core. 
+  * This file mimics [[edu.cmu.cs.ls.keymaerax.core.Provable]] outside the core and forwards all operations to the core.
   *
   * @author Andre Platzer
   * @author Nathan Fulton
