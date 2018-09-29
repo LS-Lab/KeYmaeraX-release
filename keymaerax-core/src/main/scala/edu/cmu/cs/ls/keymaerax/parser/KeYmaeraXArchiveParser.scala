@@ -60,7 +60,12 @@ object KeYmaeraXArchiveParser {
     def exhaustiveSubst[T <: Expression](arg: T): T = elaborateToFunctions(arg) match {
       case e: Expression =>
         def exhaustiveSubst(f: Expression): Expression = {
-          val fs = USubst(substs)(f)
+          val fs = try {
+            USubst(substs)(f)
+          } catch {
+            case ex: SubstitutionClashException =>
+              throw ParseException("Definition " + ex.e + " must declare arguments " + ex.clashes, ex)
+          }
           if (fs != f) exhaustiveSubst(fs) else fs
         }
         exhaustiveSubst(e).asInstanceOf[T]
@@ -135,7 +140,7 @@ object KeYmaeraXArchiveParser {
         expr
       } else {
         val elaboratables = StaticSemantics.freeVars(expr).toSet[Variable].filter({
-          case BaseVariable(name, i, _) => decls.contains((name, i)) && decls((name, i))._1 == Some(Unit)
+          case BaseVariable(name, i, _) => decls.contains((name, i)) && decls((name, i))._1.contains(Unit)
           case _ => false
         })
         elaboratables.foldLeft(expr)((e, v) =>
@@ -732,7 +737,12 @@ object KeYmaeraXArchiveParser {
 
     // report annotations
     (defAnnotations ++ entry.annotations).foreach({
-      case Annotation(e: Program, a: Formula) => KeYmaeraXParser.annotationListener(definitions.exhaustiveSubst(e), definitions.exhaustiveSubst(a))
+      case Annotation(e: Program, a: Formula) =>
+        val substPrg = definitions.exhaustiveSubst(e)
+        val substFml = definitions.exhaustiveSubst(a)
+        typeAnalysis(definitions ++ BuiltinDefinitions.defs, substPrg)
+        typeAnalysis(definitions ++ BuiltinDefinitions.defs, substFml)
+        KeYmaeraXParser.annotationListener(substPrg, substFml)
       case Annotation(_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
       case Annotation(e, _) => throw ParseException("Annotation on programs only, but was on " + e.prettyString, UnknownLocation)
     })

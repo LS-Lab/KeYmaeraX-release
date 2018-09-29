@@ -1363,6 +1363,18 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
                             |Expected: Formula""".stripMargin
   }
   
+  it should "report substitution errors" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | Definitions Bool p() <-> y>=0; End.
+        | ProgramVariables Real y; End.
+        | Problem [y:=0;]p() End.
+        |End.""".stripMargin
+    ) should have message """<somewhere> Definition p() must declare arguments {y}
+                            |Found:    <unknown> at <somewhere>
+                            |Expected: <unknown>""".stripMargin
+  }
+
   it should "report imbalanced parentheses in predicate definitions" in {
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1"
@@ -1469,5 +1481,21 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     ) should have message """3:3 Predicate and program definitions only allowed in Definitions block
                             |Found:    Bool (ID("Bool")) at 3:3 to 3:6
                             |Expected: Real""".stripMargin
+  }
+
+  it should "type-analyze annotations" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """Definitions
+        |  Real f;
+        |  Real g;
+        |End.
+        |
+        |Problem
+        |  [{?true;}*@invariant(fg > 0)]true
+        |End.""".stripMargin
+    ) should have message """<somewhere> type analysis: undefined symbol fg with index None
+                            |Make sure to declare ProgramVariable and other Definitions.
+                            |Found:    <unknown> at <somewhere>
+                            |Expected: <unknown>""".stripMargin
   }
 }
