@@ -128,7 +128,7 @@ trait ProvableSig {
     * @param subst The uniform substitution (of no free variables) to be used on the premises and conclusion of this Provable.
     * @return The Provable resulting from applying `subst` to our subgoals and conclusion.
     * @author Andre Platzer
-    * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Theorem 26+27."
+    * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Theorem 26+27."
     * @note soundness-critical. And soundness-critical that only locally sound Provables can be constructed (otherwise implementation would be more complicated).
     */
   def apply(subst: USubst): ProvableSig

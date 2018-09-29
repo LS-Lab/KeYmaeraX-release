@@ -45,8 +45,8 @@ import scala.collection.immutable.{List, _}
   *
   * @author Andre Platzer
   * @author Stefan Mitsch
-  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
-  * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
   * @see [[HilbertCalculus]]
   * @see [[SequentCalculus]]
   * @see [[UnifyUSCalculus]]
@@ -387,7 +387,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** loopSR: cleverly prove a property of a loop automatically by induction, trying hard to generate loop invariants.
     * Uses [[SearchAndRescueAgain]] to avoid repetitive proving.
     * @see [[loopauto]]
-    * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+    * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     *      Example 32. */
   def loopSR(gen: Generator[Formula]): DependentPositionTactic = InvariantProvers.loopSR(gen)
   /** loopPostMaster: search-and-rescue style automatic loop induction based on successive generator gen.
@@ -395,7 +395,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * Present implementation needs differential equations to occur somewhere within the loop.
     * @author Andre Platzer
     * @author Stefan Mitsch
-    * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+    * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     *      Example 32. */
   def loopPostMaster(gen: Generator[Formula]): DependentPositionTactic = InvariantProvers.loopPostMaster(gen)
 

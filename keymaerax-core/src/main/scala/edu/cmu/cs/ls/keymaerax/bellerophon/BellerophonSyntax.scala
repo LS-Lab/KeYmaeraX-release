@@ -647,7 +647,7 @@ case class LetInspect(abbr: Expression, instantiator: ProvableSig => Expression,
   *
   * @see [[ProvableSig.apply(USubst)]]
   * @param abbr the abbreviation to instantie, which should be fresh in the Provable
-  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   *      Example 32.
   * @see [[NoProverException]]
   */

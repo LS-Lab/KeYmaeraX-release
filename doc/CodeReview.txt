@@ -43,7 +43,7 @@ References
 [1] André Platzer. 
 A complete uniform substitution calculus for differential dynamic logic. 
 Journal of Automated Reasoning, 59(2), pp. 219-265, 2017.
-http://dx.doi.org/10.1007/s10817-016-9385-1 http://arxiv.org/abs/1601.06183
+https://doi.org/10.1007/s10817-016-9385-1 http://arxiv.org/abs/1601.06183
 
 André Platzer. 
 A uniform substitution calculus for differential dynamic logic.
@@ -52,12 +52,12 @@ In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automa
 [2] André Platzer. 
 Differential dynamic logic for hybrid systems. 
 Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
-http://dx.doi.org/10.1007/s10817-008-9103-8
+https://doi.org/10.1007/s10817-008-9103-8
 
 [3] André Platzer. 
 Differential game logic. 
 ACM Trans. Comput. Log., 17(1), pages 1:1-1:52, 2015.
-http://dx.doi.org/10.1145/2817824
+https://doi.org/10.1145/2817824
 
 ------------------------------------------------------------------
 The date of last full code review is added to the top of the file as @note Code Review: 2016-03-22.
