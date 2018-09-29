@@ -290,6 +290,25 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     entry.info shouldBe empty
   }
 
+  it should "parse an annotation that uses the reserved function symbol old" in {
+    val input =
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real x; End.
+        | Problem [{x:=x;}*@invariant(old(x)=x)]x=x End.
+        |End.""".stripMargin
+    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    entry.name shouldBe "Entry 1"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe input.trim()
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "[{x:=x;}*]x=x".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
   it should "parse a problem with neither definitions nor variables" in {
     val input =
       """ArchiveEntry "Entry 1".
@@ -1498,4 +1517,6 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
                             |Found:    <unknown> at <somewhere>
                             |Expected: <unknown>""".stripMargin
   }
+
+
 }
