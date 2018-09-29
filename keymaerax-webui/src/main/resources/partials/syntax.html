@@ -46,8 +46,8 @@
         </table>
 
         <p>
-The behavior of hybrid systems is specified as a hybrid program,
-which is a program notation for hybrid systems.
+            The behavior of hybrid systems is specified as a hybrid program,
+            which is the programming language for hybrid systems.
             The syntax of hybrid programs is shown together with an informal semantics in the table above. The basic terms
             (called <code>e</code> in the table) are either rational number constants, real-valued variables or (possibly
             nonlinear) polynomial or rational arithmetic expressions built from those.
@@ -150,29 +150,29 @@ In this model <var>x</var> is the position of the car, <var>v</var> the velocity
         This is an example of a <code>.kyx</code> model file that can be loaded into KeYmaera&#160;X.
         </p>
 
-        <code><pre>
-Functions.        /* function symbols cannot change their value */
-    R A.          /* maximum acceleration */
-    R B.          /* maximum braking */
+<code><pre>
+Definitions       /* function symbols cannot change their value */
+    Real A;       /* maximum acceleration constant of arbitrary value */
+    Real B;       /* maximum braking constant of arbitrary value */
 End.
 
-ProgramVariables. /* program variables may change their value over time */
-    R x.          /* position of a point moving along a straight line */
-    R v.          /* velocity */
-    R a.          /* current acceleration chosen by controller */
+ProgramVariables  /* program variables may change their value over time */
+    Real x;       /* position of a point moving along a straight line */
+    Real v;       /* velocity */
+    Real a;       /* current acceleration chosen by controller */
 End.
 
-Problem.          /* The differential dynamic logic formula to prove */
+Problem           /* The differential dynamic logic formula to prove */
   v >= 0 & A > 0 & B > 0               /* initial condition */
  ->                                    /* implies that */
-  [                                    /* all behavior of: */
+  [                                    /* all behavior of hybrid program: */
     {                                  /* system dynamics */
       {a := A; ++ a := 0; ++ a := -B;} /* non-deterministic acceleration choice */
       {x' = v, v' = a & v >= 0}        /* differential equation system in v>=0 */
     }* @invariant(v >= 0)              /* loop repeats transitions */
   ] v >= 0                             /* satisfies safety/postcondition */
 End.
-        </pre></code>
+</pre></code>
     </div>
 </div>
 
@@ -191,8 +191,8 @@ Journal of Automated Reasoning, <b>41</b>(2), pages 143-189, 2008.</li>
 
 <h3 id="Books">Compendia</h3>
 <ul>
-  <li>Andr&#233; Platzer. <a href="http://lfcps.org/course/fcps17.html">Foundations of Cyber-Physical Systems</a>. 
-Lecture Notes, Computer Science Department, Carnegie Mellon University. 2017.</li>
+  <li>Andr&#233; Platzer. <a href="http://lfcps.org/lfcps/">Logical Foundations of Cyber-Physical Systems</a>.
+Springer, 2018.</li>
   <li>Andr&#233; Platzer. <a href="https://doi.org/10.1007/978-3-642-14509-4">Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics</a>.
 Springer, 2010.</a></li>
 </ul>
