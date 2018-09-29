@@ -179,10 +179,10 @@ object KeYmaeraXArchiveParser {
       case f:Function =>
         val (declaredDomain,declaredSort, interpretation, loc: Location) = d.decls.get((f.name,f.index)) match {
           case Some(decl) => decl
-          case None => throw ParseException.typeError("undefined function symbol", f, f.sort + "", loc,
+          case None => throw ParseException.typeError("undefined function symbol", f, f.sort + "", UnknownLocation,
             "Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.")
         }
-        if(f.sort != declaredSort) throw ParseException.typeDeclError(s"${f.prettyString} declared with sort $declaredSort but used where sort ${f.sort} was expected.", declaredSort + "", f.sort + "", loc)
+        if(f.sort != declaredSort) throw ParseException.typeDeclError(s"${f.prettyString} declared with sort $declaredSort but used where sort ${f.sort} was expected.", declaredSort + " function", f.sort + "", loc)
         else if (f.domain != declaredDomain.get) {
           (f.domain, declaredDomain) match {
             case (l, Some(r)) => throw ParseException.typeDeclError(s"${f.prettyString} declared with domain $r but used where domain ${f.domain} was expected.", r + "", f.domain + "", loc)
