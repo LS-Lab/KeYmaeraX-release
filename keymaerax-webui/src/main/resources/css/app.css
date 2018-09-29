@@ -264,6 +264,14 @@ del {
   display: none !important;
 }
 
+.k4-large-sup {
+  position: relative;
+  top: -0.1em;
+  font-size: large;
+  line-height: 0;
+  vertical-align: baseline;
+}
+
 .k4-table-fixed {
   table-layout: fixed;
 }
