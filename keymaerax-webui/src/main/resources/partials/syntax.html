@@ -1,6 +1,8 @@
 <div class="row">
     <div class="col-md-10">
         <h2 id="HP-syntax">Hybrid Programs</h2>
+        The behavior of hybrid systems is specified as a hybrid program,
+        which is the programming language for hybrid systems.
 
         <table class="table table-hover">
             <thead>
@@ -46,8 +48,6 @@
         </table>
 
         <p>
-            The behavior of hybrid systems is specified as a hybrid program,
-            which is the programming language for hybrid systems.
             The syntax of hybrid programs is shown together with an informal semantics in the table above. The basic terms
             (called <code>e</code> in the table) are either rational number constants, real-valued variables or (possibly
             nonlinear) polynomial or rational arithmetic expressions built from those.
@@ -97,6 +97,8 @@
 
         <h2 id="dL-syntax">Differential Dynamic Logic</h2>
 
+        Differential dynamic logic can specify and verify the behavior of hybrid programs.
+
         <table class="table table-hover">
             <thead>
             <tr>
@@ -138,6 +140,7 @@ Using other propositional connectives, one can state the following dL formula
         <center><code>P &rarr; [&alpha;]Q</code></center>
 which expresses that, if hybrid program &alpha; initially starts in a state satisfying <var>P</var>, then
 it always remains in the region characterized by <var>Q</var>.
+        This dL formula expresses a safety contract for hybrid system &alpha; namely that the system always is in <var>Q</var> when it initially starts in <var>P</var>.
 For instance, the following dL formula expresses that for the state of a car controller <var>car</var>,
 the property <var>x&#x02264;m</var> always holds true when starting in a state
 where <var>v&gt;=0</var> and <var>A&#8805;0</var> and <var>B&gt;0</var> are true:
