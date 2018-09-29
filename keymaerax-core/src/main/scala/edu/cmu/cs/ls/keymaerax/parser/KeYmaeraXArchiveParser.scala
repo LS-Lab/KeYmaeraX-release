@@ -33,7 +33,7 @@ import scala.collection.mutable.ListBuffer
   *   ArchiveEntry "Entry 2". ... End.
   * }}}
   *
-  * Created by smitsch on 12/29/16.
+  * @author Stefan Mitsch
   */
 object KeYmaeraXArchiveParser {
   /** The entry name, kyx file content (model), parsed model, and parsed name+tactic. */
@@ -46,7 +46,7 @@ object KeYmaeraXArchiveParser {
   type Name = (String, Option[Int])
   /** Signature is domain sort, codomain sort, "interpretation", token that starts the declaration. */
   type Signature = (Option[Sort], Sort, Option[Expression], Location)
-  /** A declaration */
+  /** A parsed declaration, which assigns a signature to names */
   case class Declaration(decls: Map[Name, Signature]) {
     /** The declarations as substitution pair. */
     lazy val substs: List[SubstitutionPair] = decls.filter(_._2._3.isDefined).
@@ -179,13 +179,14 @@ object KeYmaeraXArchiveParser {
       case f:Function =>
         val (declaredDomain,declaredSort, interpretation, loc) = d.decls.get((f.name,f.index)) match {
           case Some(decl) => decl
-          case None => throw ParseException("type analysis" + ": " + "undefined symbol " + f + "\nMake sure to declare ProgramVariable and other Definitions.", f)
+          case None => throw ParseException("type analysis" + ": " + "undefined function symbol " + f +
+            "\nMake sure to declare all variables in ProgramVariable and all symbols in Definitions block.", f)
         }
         if(f.sort != declaredSort) throw ParseException(s"type analysis: ${f.prettyString} declared with sort $declaredSort but used where sort ${f.sort} was expected.", loc)
         else if (f.domain != declaredDomain.get) {
           (f.domain, declaredDomain) match {
             case (l, Some(r)) => throw ParseException(s"type analysis: ${f.prettyString} declared with domain $r but used where domain ${f.domain} was expected.", loc)
-            case (l, None) => throw ParseException(s"type analysis: ${f.prettyString} declared as a non-function but used as a function.", loc)
+            case (l, None) => throw ParseException(s"type analysis: ${f.prettyString} declared as ${f.getClass} of sort ${f.sort} but used as a function with arguments.", loc)
             //The other cases can't happen -- we know f is a function so we know it has a domain.
           }
         }
@@ -194,8 +195,9 @@ object KeYmaeraXArchiveParser {
       case x: Variable =>
         val (declaredSort, declLoc) = d.decls.get((x.name,x.index)) match {
           case Some((None,sort, _, loc)) => (sort, loc)
-          case Some((Some(domain), sort, _, loc)) => throw ParseException(s"Type analysis: ${x.name} was declared as a function but used as a non-function.", loc)
-          case None => throw ParseException("type analysis" + ": " + "undefined symbol " + x + " with index " + x.index + "\nMake sure to declare ProgramVariable and other Definitions.", x)
+          case Some((Some(domain), sort, _, loc)) => throw ParseException(s"type analysis: ${x.name} was declared as a function but must be a variable when it is assigned to or has a differential equation.", loc)
+          case None => throw ParseException("type analysis" + ": " + "undefined symbol " + x + " with index " + x.index +
+            "\nMake sure to declare all variables in ProgramVariable and all symbols in Definitions block.", x)
         }
         if (x.sort != declaredSort) throw ParseException(s"type analysis: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.", declLoc)
         x.sort == declaredSort
