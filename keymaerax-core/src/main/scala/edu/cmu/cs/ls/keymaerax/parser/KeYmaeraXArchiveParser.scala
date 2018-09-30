@@ -44,7 +44,7 @@ object KeYmaeraXArchiveParser {
 
   /** Name is alphanumeric name and index. */
   type Name = (String, Option[Int])
-  /** Signature is domain sort, codomain sort, "interpretation", token that starts the declaration. */
+  /** Signature is a domain sort, codomain sort, expression used as "interpretation", location that starts the declaration. */
   type Signature = (Option[Sort], Sort, Option[Expression], Location)
   /** A parsed declaration, which assigns a signature to names */
   case class Declaration(decls: Map[Name, Signature]) {
@@ -195,7 +195,7 @@ object KeYmaeraXArchiveParser {
       case x: Variable =>
         val (declaredSort, declLoc) = d.decls.get((x.name,x.index)) match {
           case Some((None,sort, _, loc)) => (sort, loc)
-          case Some((Some(domain), sort, _, loc)) => throw ParseException.typeDeclError(s"${x.name} was declared as a function but must be a variable when it is assigned to or has a differential equation.", domain + "->" + sort, "Variable of sort Real", loc)
+          case Some((Some(domain), sort, _, loc)) => throw ParseException.typeDeclError(s"${x.name} was declared as a function but must be a variable when it is assigned to or has a differential equation.", domain + "->" + sort + " Function", "Variable of sort Real", loc)
           case None => throw ParseException.typeDeclGuessError("undefined symbol " + x + " with index " + x.index, "undefined symbol", x, UnknownLocation,
             "Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.")
         }

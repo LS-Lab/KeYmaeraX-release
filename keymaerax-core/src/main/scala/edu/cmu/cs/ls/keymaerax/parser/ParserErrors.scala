@@ -76,22 +76,29 @@ object ParseException {
   def apply(msg: String, cause: Throwable): ParseException =
     new ParseException(msg, UnknownLocation, "<unknown>", "<unknown>", "", "", cause)
 
+  /** Imbalanced parentheses parse errors */
   def imbalancedError(msg: String, unmatched: Token, state: ParseState): ParseException =
     imbalancedError(msg, unmatched, "", state)
 
+  /** Imbalanced parentheses parse errors */
   def imbalancedError(msg: String, unmatched: Token, expect: String, state: ParseState): ParseException = if (state.la.tok == EOF)
     new ParseException(msg, unmatched.loc, unmatched.toString, expect, state.topString, state.toString /*, cause*/)
   else
     new ParseException(msg + "\nunmatched: " + unmatched + " at " + unmatched.loc + "--" + state.location, unmatched.loc--state.location, state.la.toString, expect, state.topString, state.toString /*, cause*/)
 
+  /** Type parse errors */
+  private def typeException(msg: String, loc: Location, found: String, expect: String, hint: String = "", cause: Throwable = null) =
+    new ParseException("type analysis: " + msg + (if(hint=="") "" else "\n" + hint), loc, found, expect, "", "", cause)
+
+  /** Type parse error with mismatch in found type illtyped and expected type */
   def typeError(msg: String, illtyped: Expression, expectedType: String, loc: Location, hint: String = ""): ParseException =
-    apply("type analysis: " + msg + "\nFound:    " + illtyped + " " + illtyped.getClass + " of sort " + illtyped.sort + "\nExpected: " + expectedType + "\n" + hint, loc)
+    typeException(msg, loc, illtyped + " " + illtyped.getClass + " of sort " + illtyped.sort, expectedType, hint=hint)
 
   def typeDeclGuessError(msg: String, declaredType: String, expected: Expression, loc: Location, hint: String = ""): ParseException =
-    apply("type analysis: " + msg + "\nFound:    " + declaredType + "\nExpected: " + expected.getClass + " of sort " + expected.sort + "\n" + hint, loc)
+    typeException(msg, loc, declaredType, expected.getClass + " of sort " + expected.sort, hint=hint)
 
   def typeDeclError(msg: String, declaredType: String, expectedType: String, loc: Location, hint: String = ""): ParseException =
-    apply("type analysis: " + msg + "\nDeclared: " + declaredType + "\nExpected: " + expectedType + "\n" + hint, loc)
+    typeException(msg, loc, declaredType, expectedType, hint=hint)
 
   private[parser] def tokenDescription(tok: Token): String = tokenDescription(tok.tok)
   private[parser] def tokenDescription(tok: Terminal): String = tok.img + " (" + tok + ")"
