@@ -92,10 +92,10 @@ object ParseException {
 
   /** Type parse error with mismatch in found type illtyped and expected type */
   def typeError(msg: String, illtyped: Expression, expectedType: String, loc: Location, hint: String = ""): ParseException =
-    typeException(msg, loc, illtyped + " " + illtyped.getClass + " of sort " + illtyped.sort, expectedType, hint=hint)
+    typeException(msg, loc, illtyped + " " + illtyped.getClass.getSimpleName + " of sort " + illtyped.sort, expectedType, hint=hint)
 
   def typeDeclGuessError(msg: String, declaredType: String, expected: Expression, loc: Location, hint: String = ""): ParseException =
-    typeException(msg, loc, declaredType, expected.getClass + " of sort " + expected.sort, hint=hint)
+    typeException(msg, loc, declaredType, expected.getClass.getSimpleName + " of sort " + expected.sort, hint=hint)
 
   def typeDeclError(msg: String, declaredType: String, expectedType: String, loc: Location, hint: String = ""): ParseException =
     typeException(msg, loc, declaredType, expectedType, hint=hint)
