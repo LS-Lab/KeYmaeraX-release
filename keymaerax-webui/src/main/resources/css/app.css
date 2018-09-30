@@ -264,6 +264,14 @@ del {
   display: none !important;
 }
 
+.k4-large-sup {
+  position: relative;
+  top: -0.1em;
+  font-size: large;
+  line-height: 0;
+  vertical-align: baseline;
+}
+
 .k4-table-fixed {
   table-layout: fixed;
 }
@@ -666,6 +674,7 @@ del {
    width: 180px;
 }
 
+/* Full-screen (full width, but at most available screen height) */
 .modal-fullscreen {
   width: 98%;
   height: 95%;
@@ -676,11 +685,33 @@ del {
 }
 
 .modal-fullscreen .modal-body {
+  max-height: calc(100vh - 90px);
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
 
 .modal-fullscreen .modal-header~.modal-body {
+  max-height: calc(100vh - 130px);
+  height: 100%;
+}
+
+/* Full-width modal that may exceed screen height */
+.modal-fullwidth {
+  width: 98%;
+  height: 95%;
+}
+
+.modal-fullwidth .modal-content {
+
+}
+
+.modal-fullwidth .modal-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-fullwidth .modal-header~.modal-body {
 
 }
 

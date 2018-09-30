@@ -262,6 +262,12 @@ object KeYmaeraXArchiveParser {
        Nil).map(convert).reduce(_++_)
   }
 
+  private[parser] object BuiltinAnnotationDefinitions {
+    val defs: Declaration =
+      (FuncPredDef("old", None, Real, DotTerm(Real, None) :: Nil, None, UnknownLocation) ::
+       Nil).map(convert).reduce(_++_)
+  }
+
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   def apply(input: String): List[ParsedArchiveEntry] = parse(input)
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression.
@@ -742,8 +748,7 @@ object KeYmaeraXArchiveParser {
       case Annotation(e: Program, a: Formula) =>
         val substPrg = definitions.exhaustiveSubst(e)
         val substFml = definitions.exhaustiveSubst(a)
-        typeAnalysis(definitions ++ BuiltinDefinitions.defs, substPrg)
-        typeAnalysis(definitions ++ BuiltinDefinitions.defs, substFml)
+        typeAnalysis(definitions ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, substFml)
         KeYmaeraXParser.annotationListener(substPrg, substFml)
       case Annotation(_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
       case Annotation(e, _) => throw ParseException("Annotation on programs only, but was on " + e.prettyString, UnknownLocation)

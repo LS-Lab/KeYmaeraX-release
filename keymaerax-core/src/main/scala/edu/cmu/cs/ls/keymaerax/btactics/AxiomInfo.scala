@@ -1036,8 +1036,8 @@ object DerivationInfo {
       , List(FormulaArg("repl"))
       , _ => ((fml: Formula) => TactixLibrary.cutAt(fml)): TypedFunc[Formula, BelleExpr]),
 
-    InputPositionTacticInfo("componentSystem"
-      , RuleDisplayInfo("componentSystem",
+    InputPositionTacticInfo("proveComponentSystem"
+      , RuleDisplayInfo("proveComponentSystem",
         /* conclusion */ (List("&Gamma;"), List("""t=t0 & Om & A1 & A2
                                                   |->
                                                   |[{ {portmemory1;portmemory2};
