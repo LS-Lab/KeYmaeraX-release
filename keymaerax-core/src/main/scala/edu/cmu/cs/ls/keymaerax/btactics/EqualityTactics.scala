@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
@@ -137,12 +138,18 @@ private object EqualityTactics {
   })
 
   /**
-   * Abbreviates a term to a variable.
-   * @example{{{
+   * Abbreviates a term `t` to a variable everywhere, except in places where some free variable of `t` is bound.
+    *
+    * @example{{{
    *   max_0 = max(c,d) |- a+b <= max_0+e
    *   ----------------------------------------abbrv("max(c,d)".asTerm)
    *                    |- a+b <= max(c, d) + e
    * }}}
+    * @example { { {
+    * *   e = max(c,d), e <= 7 |- [c:=2;]max(c, d) >= 2
+    * *   ---------------------------------------------abbrv("max(c,d)".asTerm, Some("e".asVariable))
+    * *         max(c, d) <= 7 |- [c:=2;]max(c, d) >= 2
+    * * }}}
    * @param abbrvV The abbreviation. If None, the tactic picks a name based on the top-level operator of the term.
    * @return The tactic.
    */
@@ -164,12 +171,47 @@ private object EqualityTactics {
         }
 
         cut(Exists(v :: Nil, Equal(v, t))) <(
-          /* use */ (existsL('Llast) & exhaustiveEqR2L('Llast)) partial,
+          /* use */ existsL('Llast) & exhaustiveEqR2L('Llast),
           /* show */ cohide('Rlast) & existsR(t)(1) & byUS("= reflexive")
         )
       }
     }
   }
+
+  /**
+    * Abbreviates a term to a variable at a position.
+    * @example{{{
+    *   |- [x:=2;]\exists z (z=min(x,y) & z<=2)
+    *   ---------------------------------------abbrvAt("min(x,y)".asTerm, Some("z".asVariable)(1,1::Nil)
+    *   |- [x:=2;]min(x,y) <= 2
+    * }}}
+    * @param abbrvV The abbreviation. If None, the tactic picks a name based on the top-level operator of the term.
+    * @return The tactic.
+    */
+  def abbrvAt(t: Term, abbrvV: Option[Variable] = None): DependentPositionWithAppliedInputTactic = "abbrvAt" byWithInputs(
+    abbrvV match { case Some(v) => t::v::Nil case None => t::Nil }, (pos: Position, sequent: Sequent) => {
+      val inFml = sequent.sub(pos) match {
+        case Some(p: Formula) => p
+        case Some(t: Term) => throw BelleTacticFailure("Position " + pos + " expected to point to a formula, but points to term " + t.prettyString)
+        case _ => throw BelleIllFormedError("Position " + pos + " does not point to an expression")
+      }
+      require(abbrvV.isEmpty ||
+        !sequent.sub(pos).map(StaticSemantics.signature).contains(abbrvV.get),
+        "Abbreviation must be fresh at position")
+      val v = abbrvV match {
+        case Some(vv) => vv
+        case None => t match {
+          case FuncOf(Function(n, _, _, sort,_), _) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
+          case BaseVariable(n, _, sort) => Variable(n, TacticHelper.freshIndexInSequent(n, sequent), sort)
+          case _ => Variable("x", TacticHelper.freshIndexInSequent("x", sequent), t.sort)
+        }
+      }
+
+      cutAt(Exists(v :: Nil, And(Equal(v, t), inFml.replaceFree(t, v))))(pos) <(
+        /* use */ skip,
+        /* show */ cohide('Rlast) & CMon(pos.inExpr) & implyR(1) & existsL(-1) & andL(-1) & exhaustiveEqL2R(-1) & prop & done
+      )
+  })
 
   /**
    * Expands an absolute value function.

@@ -165,6 +165,11 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "y>0, y=x+1 ==> [{x:=x+1;}*]x>0".asSequent
   }
 
+  "AbbrvAt tactic" should "abbreviate in places where at least one of the arguments is bound" in withQE { _ =>
+    val result = proveBy("==> [a:=0;]min(a,2) <= 2".asSequent, abbrvAt("min(a,2)".asTerm, Some("z".asVariable))(1, 1::Nil))
+    result.subgoals.loneElement shouldBe "==> [a:=0;]\\exists z (z=min(a,2) & z<=2)".asSequent
+  }
+
   "abs" should "expand abs(x) in succedent" in withQE { _ =>
     val result = proveBy("abs(x) >= 5".asFormula, abs(1, 0::Nil))
     result.subgoals.loneElement shouldBe "x>=0&abs_0=x | x<0&abs_0=-x ==> abs_0>=5".asSequent
