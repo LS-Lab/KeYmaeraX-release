@@ -7,6 +7,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
+import java.io.File
 import java.util.{Date, GregorianCalendar}
 
 import com.wolfram.jlink._
@@ -145,7 +146,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
         logger.error("Shutting down since Mathematica J/Link native library was not found in:\n" + jlinkLibDir +
           "\nOr this path did not contain the native library compatible with " + System.getProperties.getProperty("sun.arch.data.model") + "-bit " + System.getProperties.getProperty("os.name") + " " + System.getProperties.getProperty("os.version") +
           diagnostic +
-          "\nPlease provide paths to the J/Link native library in " + Configuration.KEYMAERAX_HOME_PATH + "/application.conf and restart KeYmaera X.", e)
+          "\nPlease provide paths to the J/Link native library in " + Configuration.KEYMAERAX_HOME_PATH + File.separator + "keymaerax.conf and restart KeYmaera X.", e)
         shutdown()
         false
       case e: MathLinkException if e.getErrCode == 1004 && e.getMessage.contains("Link failed to open") && remainingTrials > 0 =>
