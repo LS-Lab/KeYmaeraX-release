@@ -207,9 +207,18 @@ private object EqualityTactics {
         }
       }
 
-      cutAt(Exists(v :: Nil, And(Equal(v, t), inFml.replaceFree(t, v))))(pos) <(
+      val polarity = FormulaTools.polarityAt(sequent(pos.top), pos.inExpr) * (if (pos.isSucc) 1 else -1)
+
+      val cutFml =
+        if (polarity >= 0) /* positive and unknown polarity */ Forall(v :: Nil, Imply(Equal(v, t), inFml.replaceFree(t, v)))
+        else Exists(v :: Nil, And(Equal(v, t), inFml.replaceFree(t, v)))
+
+      cutAt(cutFml)(pos) <(
         /* use */ skip,
-        /* show */ cohide('Rlast) & CMon(pos.inExpr) & implyR(1) & existsL(-1) & andL(-1) & exhaustiveEqL2R(-1) & prop & done
+        /* show */ cohide('Rlast) & CMon(pos.inExpr) & implyR(1) &
+        (if (polarity >= 0) allL(t)(-1) & implyL(-1) <(cohide(2) & byUS(DerivedAxioms.equalReflex), closeId)
+         else existsR(t)(1) & andR(1) <(cohide(1) & byUS(DerivedAxioms.equalReflex), closeId)) &
+        done
       )
   })
 
@@ -231,6 +240,29 @@ private object EqualityTactics {
         useAt("= commute")('L, Equal(absVar, abs)) &
         useAt(fn)('L, Equal(abs, absVar))
   })
+  /** Expands abs only at a specific position (also works in contexts that bind the argument of abs). */
+  def absAt: DependentPositionTactic = "absExp" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    case Some(abs@FuncOf(Function(fn, None, Real, Real, true), _)) if fn == "abs" =>
+      val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
+      val absVar = Variable(fn, freshAbsIdx)
+
+      val parentPos = parentFormulaPos(pos, sequent)
+
+      abbrvAt(abs, Some(absVar))(parentFormulaPos(pos, sequent)) &
+        (if (parentPos.isTopLevel && parentPos.isSucc) {
+          allR(parentPos) & implyR(parentPos) &
+          useAt("= commute")('Llast, Equal(absVar, abs)) &
+          useAt(fn)('Llast, Equal(abs, absVar))
+        } else if (parentPos.isTopLevel && parentPos.isAnte) {
+          existsL(parentPos) & andL(parentPos) &
+          useAt("= commute")('L, Equal(absVar, abs)) &
+          useAt(fn)('L, Equal(abs, absVar))
+        } else {
+          val inContextEqPos = pos.topLevel ++ (pos.inExpr.parent ++ PosInExpr(0 :: 0 :: Nil))
+          useAt(DerivedAxioms.equalCommute)(inContextEqPos) & useAt(fn)(inContextEqPos)
+        }
+        )
+  })
 
   /**
    * Expands min/max function.
@@ -250,6 +282,29 @@ private object EqualityTactics {
         useAt("= commute")('L, Equal(minmaxVar, minmax)) &
         useAt(fn)('L, Equal(minmax, minmaxVar))
   })
+  /** Expands min/max only at a specific position (also works in contexts that bind some of the arguments). */
+  def minmaxAt: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+    case Some(minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), Pair(f, g))) if fn == "min" || fn == "max" =>
+      val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
+      val minmaxVar = Variable(fn, freshMinMaxIdx)
+
+      val parentPos = parentFormulaPos(pos, sequent)
+
+      abbrvAt(minmax, Some(minmaxVar))(parentFormulaPos(pos, sequent)) &
+        (if (parentPos.isTopLevel && parentPos.isSucc) {
+          allR(parentPos) & implyR(parentPos) &
+          useAt("= commute")('Llast, Equal(minmaxVar, minmax)) &
+          useAt(fn)('Llast, Equal(minmax, minmaxVar))
+        } else if (parentPos.isTopLevel && parentPos.isAnte) {
+          existsL(parentPos) & andL(parentPos) &
+          useAt("= commute")('L, Equal(minmaxVar, minmax)) &
+          useAt(fn)('L, Equal(minmax, minmaxVar))
+        } else {
+          val inContextEqPos = pos.topLevel ++ (pos.inExpr.parent ++ PosInExpr(0 :: 0 :: Nil))
+          useAt(DerivedAxioms.equalCommute)(inContextEqPos) & useAt(fn)(inContextEqPos)
+        }
+        )
+  })
 
   /** Expands all special functions (abs/min/max). */
   def expandAll: BelleExpr = "expandAll" by ((s: Sequent) => {
@@ -264,4 +319,11 @@ private object EqualityTactics {
     )
     tactics.reduceOption(_ & _).getOrElse(skip)
   })
+
+  private def parentFormulaPos(pos: Position, seq: Sequent): Position =
+    if (pos.isTopLevel) pos
+    else seq.sub(pos) match {
+      case Some(_: Formula) => pos
+      case Some(_) => pos.topLevel ++ pos.inExpr.parent
+    }
 }
