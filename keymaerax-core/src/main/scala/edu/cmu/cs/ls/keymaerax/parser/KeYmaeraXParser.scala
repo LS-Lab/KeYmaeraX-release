@@ -546,8 +546,10 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
           val result = elaborate(st, optok1, optok2, optok2, op(st, tok1, kinds).asInstanceOf[TernaryOpSpec[Expression]], t1, t2, t3)
           reduce(st, 7, result, r)
         } else shift(st)
-      case r :+ (optok1@Token(tok1@IF,_)) :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) :+ Token(LBRACE,_) :+ Expr(t2) :+ Token(RBRACE,_) :+ Token(ELSE,_)=>
-        shift(st)
+      case r :+ (optok1@Token(tok1@IF,_)) :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) :+ Token(LBRACE,_) :+ Expr(t2) :+ Token(RBRACE,_) :+ Token(ELSE,_)=> la match {
+        case LBRACE => shift(st)
+        case _ => error(st, List(LBRACE))
+      }
       case r :+ (optok1@Token(tok1@IF,_)) :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) :+ Token(LBRACE,_) :+ Expr(t2) :+ Token(RBRACE,_) :+ Token(ELSE,_) :+ Token(LBRACE, _)=>
         shift(st)
       case r :+ (optok1@Token(tok1@IF,_)) :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) :+ Token(LBRACE,_) :+ Expr(t2) :+ Token(RBRACE,_) :+ Token(ELSE,_) :+ Token(LBRACE, _) :+ Expr(t3) =>

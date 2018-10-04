@@ -334,7 +334,10 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       """.stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
-      """2:12 Type analysis: A was declared as a function but used as a non-function.
+      """2:12 type analysis: A was declared as a function but must be a variable when it is assigned to or has a differential equation.
+        |Declared: Unit->Real
+        |Expected: Variable of sort Real
+        |
         |Found:    <unknown> at 2:12 to 2:15
         |Expected: <unknown>""".stripMargin
   }
@@ -353,6 +356,27 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     }
   }
   */
+
+  it should "parse if-then-else" in {
+    KeYmaeraXParser.programParser(
+      """
+        |if (x>0) { x:=x; }
+        |else { x:=-x; }
+      """.stripMargin) shouldBe Choice(
+      Compose(Test("x>0".asFormula), Assign("x".asVariable, "x".asVariable)),
+      Compose(Test("!x>0".asFormula), Assign("x".asVariable, Neg("x".asVariable))))
+  }
+
+  it should "report missing opening bracket after else" in {
+    the [ParseException] thrownBy KeYmaeraXParser.programParser(
+      """
+        |if (x>0) { x:=x; }
+        |else if (x<0) { x:=-x; }
+        |else { x:=7; }
+      """.stripMargin) should have message """3:6 Unexpected token cannot be parsed
+                                             |Found:    if (IF$) at 3:6 to 3:7
+                                             |Expected: { (LBRACE$)""".stripMargin
+  }
 
   "Annotation parsing" should "populate easy loop annotations" in {
     val input = "x>=2 -> [{x:=x+1;}*@invariant(x>=1)]x>=0"
@@ -483,7 +507,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "complain about sort mismatches" in {
     val input = "Functions. R y() = (3>2). End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
     the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
-      """1:21 Function definition expects a Term
+      """1:21 Impossible elaboration: Operator PSEUDO$ expects a Term as argument but got the Formula 3>2
         |Found:    3>2) at 1:21 to 1:24
         |Expected: Term""".stripMargin
   }
@@ -491,7 +515,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   it should "complain about non-delimited definitions" in {
     val input = "Functions. R y() = (3>2. End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
     the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
-      """1:20 Unmatched function definition delimiter
+      """1:20 Unmatched opening parenthesis in function definition
         |unmatched: LPAREN$ at 1:20--1:21
         |Found:    NUM(3) at 1:20 to 1:21
         |Expected: )""".stripMargin
