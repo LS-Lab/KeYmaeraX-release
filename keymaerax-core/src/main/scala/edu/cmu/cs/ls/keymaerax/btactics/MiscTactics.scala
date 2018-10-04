@@ -22,13 +22,13 @@ object DebuggingTactics {
 
   private val logger = Logger(getClass)
 
-  def error(e : Throwable) = new BuiltInTactic("Error") {
+  def error(e: Throwable): BuiltInTactic = new BuiltInTactic("Error") {
     override def result(provable: ProvableSig): ProvableSig = throw e
   }
 
-  def error(s: => String) = new BuiltInTactic("Error") {
+  def error(s: => String): BuiltInTactic = new BuiltInTactic("Error") {
     override def result(provable: ProvableSig): ProvableSig = {
-      throw new BelleUserGeneratedError(s)
+      throw BelleUserGeneratedError(s + "\nThe error occurred on\n" + provable.underlyingProvable.prettyString)
     }
   }
 
@@ -169,7 +169,8 @@ object DebuggingTactics {
         print(msg + {if (msg.nonEmpty) ": " else ""} + "checked done")
         if (storeLemma.isDefined) LemmaDBFactory.lemmaDB.add(Lemma(provable, Lemma.requiredEvidence(provable), storeLemma))
         provable
-      } else throw new BelleThrowable((if (msg.nonEmpty) msg + "\n" else "") + "Expected proved provable, but got " + provable)
+      } else throw new BelleThrowable((if (msg.nonEmpty) msg + "\n" else "") +
+          "Expected proved provable, but got open goals\n" + provable.underlyingProvable.prettyString)
     }
   }
 }
