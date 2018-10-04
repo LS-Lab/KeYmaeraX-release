@@ -1,18 +1,15 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
-import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics.{diffCut, diffWeaken}
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{fail, _}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest}
+import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, ToolException}
+import edu.cmu.cs.ls.keymaerax.tools.ToolException
 import testHelper.CustomAssertions._
 import testHelper.KeYmaeraXTestTags
 
@@ -21,7 +18,6 @@ import org.scalatest.LoneElement._
 import org.scalatest.prop.TableDrivenPropertyChecks.forEvery
 import org.scalatest.prop.Tables._
 import org.scalatest.concurrent.Timeouts
-import org.scalatest.time.SpanSugar._
 
 /**
   * Basic differential equation proving technology tests
@@ -357,6 +353,48 @@ class DifferentialTests extends TacticTestBase with Timeouts {
   it should "prove with and without frame constraint y'=0" in withQE { _ =>
     proveBy("x=y ==> [{x'=2 & x>=0}]x>=y".asSequent, dI('full)('R)) shouldBe 'proved
     proveBy("x=y ==> [{x'=2, y'=0 & x>=0}]x>=y".asSequent, dI('full)('R)) shouldBe 'proved
+  }
+
+  it should "report when invariant not true in the beginning" in withQE { _ =>
+    the [BelleThrowable] thrownBy proveBy("x<0 ==> [{x'=-x}]x>0".asSequent, dI()(1)) should
+      have message """[Bellerophon Runtime] Differential invariant must hold in the beginning
+                     |Expected proved provable, but got open goals
+                     |Provable{
+                     |   -1:  x < 0	Less
+                     |   -2:  true	True$
+                     |==> 1:  x>0	Greater
+                     |  from
+                     |   -1:  x < 0	Less
+                     |   -2:  true	True$
+                     |==> 1:  x>0	Greater}""".stripMargin
+  }
+
+  it should "report when not an invariant" in withQE { _ =>
+    the [BelleThrowable] thrownBy proveBy("x>0 ==> [{x'=-x}]x>0".asSequent, dI()(1)) should
+      have message """[Bellerophon Runtime] Differential invariant must be preserved
+                     |Expected proved provable, but got open goals
+                     |Provable{
+                     |   -1:  x>0	Greater
+                     |   -2:  true	True$
+                     |==> 1:  [{x'=-x&true}](x>0)'	Box
+                     |  from
+                     |   -1:  x>0	Greater
+                     |   -2:  true	True$
+                     |==> 1:  \forall x -x>=0	Forall}""".stripMargin
+  }
+
+  it should "report when failing to derive postcondition" in withQE { _ =>
+    the [BelleThrowable] thrownBy proveBy("x>0 ==> [{x'=2}]max(x,y)>0".asSequent, dI()(1)) should
+      have message """[Bellerophon Runtime] [Bellerophon User-Generated Message] After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition
+                     |The error occurred on
+                     |Provable{
+                     |   -1:  x>0	Greater
+                     |   -2:  true	True$
+                     |==> 1:  [{x'=2&true}](max((x,y()))>0)'	Box
+                     |  from
+                     |   -1:  x>0	Greater
+                     |   -2:  true	True$
+                     |==> 1:  [{x'=2&true}][x':=2;](max((x,y())))'>=0	Box}""".stripMargin
   }
 
   "Dvariable" should "work when the Differential() occurs in a formula without []'s" in withQE { _ =>

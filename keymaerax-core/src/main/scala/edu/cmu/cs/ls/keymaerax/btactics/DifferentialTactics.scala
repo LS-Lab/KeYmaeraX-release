@@ -134,14 +134,17 @@ private object DifferentialTactics extends Logging {
         if (pos.isTopLevel) {
           val t = DI(pos) &
             implyR(pos) & andR(pos) & Idioms.<(
-              if (auto == 'full) ToolTactics.hideNonFOL & QE & done else skip,
+              if (auto == 'full) ToolTactics.hideNonFOL & (QE & done | DebuggingTactics.done("Differential invariant must hold in the beginning"))
+                 else skip,
               if (auto != 'none) {
                 //@note derive before DE to keep positions easier
                 derive(pos ++ PosInExpr(1 :: Nil)) &
                 DE(pos) &
-                (if (auto == 'full) Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) &
+                (if (auto == 'full)
+                  (Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) | DebuggingTactics.error("After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition")) &
                   //@note DW after DE to keep positions easier
-                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & ToolTactics.hideNonFOL & QE & done
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & ToolTactics.hideNonFOL &
+                    (QE & done | DebuggingTactics.done("Differential invariant must be preserved"))
                  else {
                   assert(auto == 'diffInd)
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
