@@ -62,8 +62,11 @@ class QETests extends TacticTestBase {
 
   it should "fail x()=x" in withMathematica { qeTool =>
     the [BelleThrowable] thrownBy proveBy("x()=x".asFormula, ToolTactics.fullQE(qeTool) & done) should have message
-      """[Bellerophon Runtime] Expected proved provable, but got ElidingProvable(Provable(  ==>  x()=x
-        |  from     ==>  false))""".stripMargin
+      """[Bellerophon Runtime] Expected proved provable, but got open goals
+        |Provable{
+        |==> 1:  x()=x	Equal
+        |  from
+        |==> 1:  false	False$}""".stripMargin
   }
 
   it should "not choke on predicates" in withMathematica { tool =>

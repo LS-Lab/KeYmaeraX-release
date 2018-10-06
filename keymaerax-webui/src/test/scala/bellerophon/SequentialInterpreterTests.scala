@@ -199,7 +199,7 @@ class SequentialInterpreterTests extends TacticTestBase {
 
   it should "trace in the database" in withDatabase { db => withMathematica { _ =>
     val fml = "[x:=3;](x>0 & x>1 & x>2)".asFormula
-    val modelContent = s"Variables. R x. End.\n Problem. ${fml.prettyString} End."
+    val modelContent = s"ProgramVariables Real x; End.\n Problem ${fml.prettyString} End."
     db.createProof(modelContent, "saturateTest")
     db.proveBy(modelContent, ((boxAnd('R) & andR('R))*) & master()) shouldBe 'proved
   }}
@@ -605,7 +605,13 @@ class SequentialInterpreterTests extends TacticTestBase {
     }
     the [BelleThrowable] thrownBy LazySequentialInterpreter(listener::Nil)(
       "andR(1) & <(close, close)".asTactic,
-      BelleProvable(ProvableSig.startProof("false & true".asFormula))) should have message "[Bellerophon Runtime] [Bellerophon User-Generated Message] Inapplicable close"
+      BelleProvable(ProvableSig.startProof("false & true".asFormula))) should have message
+        """[Bellerophon Runtime] [Bellerophon User-Generated Message] Inapplicable close
+          |The error occurred on
+          |Provable{
+          |==> 1:  false	False$
+          |  from
+          |==> 1:  false	False$}""".stripMargin
 
     listener.calls should have size 5
     listener.calls should contain theSameElementsInOrderAs(
@@ -623,7 +629,13 @@ class SequentialInterpreterTests extends TacticTestBase {
     }
     the [BelleThrowable] thrownBy ExhaustiveSequentialInterpreter(listener::Nil)(
       "andR(1) & <(close, close)".asTactic,
-      BelleProvable(ProvableSig.startProof("false & true".asFormula))) should have message "[Bellerophon Runtime] [Bellerophon User-Generated Message] Inapplicable close"
+      BelleProvable(ProvableSig.startProof("false & true".asFormula))) should have message
+        """[Bellerophon Runtime] [Bellerophon User-Generated Message] Inapplicable close
+          |The error occurred on
+          |Provable{
+          |==> 1:  false	False$
+          |  from
+          |==> 1:  false	False$}""".stripMargin
 
     listener.calls should have size 7
     listener.calls should contain theSameElementsInOrderAs(

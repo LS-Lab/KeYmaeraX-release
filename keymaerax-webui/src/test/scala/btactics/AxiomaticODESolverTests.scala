@@ -636,7 +636,14 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "Precondition check" should "fail early when the ODE doesn't have the correct shape" in withMathematica { qeTool =>
     val f = "x=1&v=2&a=0&t=0 -> [{x'=v,v'=x,t'=1}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
-    the [BelleUserGeneratedError] thrownBy proveBy(f, t) should have message "[Bellerophon Runtime] [Bellerophon User-Generated Message] Expected ODE to be linear and in correct order."
+    the [BelleUserGeneratedError] thrownBy proveBy(f, t) should have message
+      """[Bellerophon Runtime] [Bellerophon User-Generated Message] Expected ODE to be linear and in correct order.
+        |The error occurred on
+        |Provable{
+        |==> 1:  x=1&v=2&a=0&t=0->[{x'=v,v'=x,t'=1&true}]x^3>=1	Imply
+        |  from
+        |   -1:  x=1&v=2&a=0&t=0	And
+        |==> 1:  [kyxtime:=0;][{x'=v,v'=x,t'=1,kyxtime'=1&true&a=0}]x^3>=1	Box}""".stripMargin
   }
   //endregion
 
