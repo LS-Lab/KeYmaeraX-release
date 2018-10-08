@@ -72,8 +72,9 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
    * }}}
    * */
   def withMathematica(testcode: Mathematica => Any, timeout: Int = -1) {
-    val mathLinkTcp = System.getProperty("MATH_LINK_TCPIP", "true") // JVM parameter -DMATH_LINK_TCPIP=[true,false]
-    Configuration.set("MATH_LINK_TCPIP", mathLinkTcp, saveToFile = false)
+    val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, "true") // JVM parameter -DMATH_LINK_TCPIP=[true,false]
+    Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, mathLinkTcp, saveToFile = false)
+    Configuration.set(Configuration.Keys.QE_TOOL, "mathematica", saveToFile=false)
     val provider = mathematicaProvider() // new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig)
     ToolProvider.setProvider(provider)
     //@todo timeout
@@ -91,6 +92,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     * }}}
     * */
   def withZ3(testcode: Z3 => Any, timeout: Int = -1) {
+    Configuration.set(Configuration.Keys.QE_TOOL, "z3", saveToFile=false)
     val provider = new Z3ToolProvider
     ToolProvider.setProvider(provider)
     provider.tool().setOperationTimeout(timeout)
