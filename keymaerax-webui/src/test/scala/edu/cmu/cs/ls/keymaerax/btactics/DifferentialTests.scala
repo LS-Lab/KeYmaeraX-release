@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
+import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter}
@@ -1223,7 +1223,7 @@ class DifferentialTests extends TacticTestBase with Timeouts {
 
   it should "not try to preserve t_>=0 in evolution domain constraint when solving nested ODEs" in withQE { _ =>
     val result = proveBy("x>0 ==> [{x'=2}][{x'=3}][{x'=x}]x>0".asSequent, solve(1) & (allR(1) & implyR(1))*2 & solve(1))
-    result.subgoals.loneElement shouldBe "x_1>0, t_>=0, x_3=2*t_+x_1 ==> \\forall t_ (t_>=0->\\forall x (x=3*t_+x_3->[{x'=x}]x>0))".asSequent
+    result.subgoals.loneElement shouldBe "x_1>0, t_>=0, x_2=2*t_+x_1 ==> \\forall t_ (t_>=0->\\forall x (x=3*t_+x_2->[{x'=x}]x>0))".asSequent
   }
 
   it should "solve complicated nested ODEs" in withQE { _ =>
@@ -1242,9 +1242,9 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     result.subgoals.loneElement shouldBe "x<=0 ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> s_+x>0) -> t_+x>0)".asSequent
   }
 
-  it should "preserve contradictions in constants as false" in withQE { _ =>
+  it should "preserve contradictions in constants" in withQE { _ =>
     val result = proveBy("y>0 ==> [{x'=1&y<=0}]x>0".asSequent, solve(1))
-    result.subgoals.loneElement shouldBe "y>0 ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> false) -> t_+x>0)".asSequent
+    result.subgoals.loneElement shouldBe "y>0 ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> y <= 0) -> t_+x>0)".asSequent
   }
 
   it should "retain initial evolution domain for the sake of contradictions (2)" in withQE { _ =>
@@ -1374,16 +1374,16 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     }
   }
 
-  it should "prove boring case" taggedAs IgnoreInBuildTest in withQE { _ =>
+  it should "prove boring case" in withQE { _ =>
     proveBy("z*4>=-8 -> [{x'=0,y'=0}]z*4>=-8".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
   }
-  it should "prove ^0 case" taggedAs IgnoreInBuildTest in withQE { _ =>
+  it should "prove ^0 case" taggedAs (IgnoreInBuildTest,TodoTest) in withQE { _ =>
     proveBy("x^0+x>=68->[{x'=0,y'=1&true}]x^0+x>=68".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
   }
-  it should "prove crazy ^0 case" taggedAs IgnoreInBuildTest in withQE { _ =>
+  it should "prove crazy ^0 case" taggedAs (IgnoreInBuildTest,TodoTest) in withQE { _ =>
     proveBy("x+(y-y-(0-(0+0/1)+(41+x)^0))>=68->[{x'=0,y'=1&true}]x+(y-y-(0-(0+0/1)+(41+x)^0))>=68".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
   }
-  it should "prove crazy case" taggedAs IgnoreInBuildTest in withQE { _ =>
+  it should "prove crazy case" taggedAs (IgnoreInBuildTest,TodoTest) in withQE { _ =>
     proveBy("(z+y+x)*(41/(67/x+((0+0)/y)^1))!=94->[{x'=-41/67*x,y'=41/67*x+41/67*(x+y+z)&true}](z+y+x)*(41/(67/x+((0+0)/y)^1))!=94".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
   }
 
@@ -1391,7 +1391,7 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
 
-  it should "prove x^3>5 -> [{x'=x^3+x^4}]x^3>5 incontext" taggedAs IgnoreInBuildTest in withQE { _ =>
+  it should "prove x^3>5 -> [{x'=x^3+x^4}]x^3>5 incontext" taggedAs (IgnoreInBuildTest,TodoTest) in withQE { _ =>
     proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, openDiffInd(1, 1::Nil)) shouldBe 'proved
   }
 
