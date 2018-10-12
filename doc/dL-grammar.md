@@ -11,7 +11,7 @@ The grammar for the concrete syntax of differential dynamic logic is given below
     ' \forall,\exists,[],<>
         !   &    |   ->,<-   <->
         *   ;    ++
-    ,
+
 All arithmetic operators except `^` are left-associative.
 All logical and program operators except `<-` and `<->` are right-associative.
 
