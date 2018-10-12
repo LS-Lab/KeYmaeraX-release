@@ -142,7 +142,9 @@ object AxiomaticODESolver {
 
     DebuggingTactics.debug("SOLVE Start", ODE_DEBUGGER) &
       //@todo support the cases we now skip
-      (if (cutConsts) DifferentialTactics.diffInvariant(consts)(pos) else TactixLibrary.skip) &
+      (if (cutConsts) DifferentialTactics.diffCut(consts)(pos) <(skip, V('Rlast) & prop &
+        DebuggingTactics.done("Expected to prove constants invariant"))
+       else TactixLibrary.skip) &
       DebuggingTactics.debug("AFTER preserving consts", ODE_DEBUGGER) &
       addTimeVar(pos) &
       DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
