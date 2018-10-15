@@ -1518,5 +1518,58 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
                             |Expected: BaseVariable of sort Real""".stripMargin
   }
 
+  it should "report program constant and differential program constant mismatches" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ProgramVariables Real x; End.
+        |Definitions HP inc ::= { x:=x+1; }; End.
+        |Problem x>=0 -> [{inc}]x>=0 End.
+      """.stripMargin
+    ) should have message
+      """<somewhere> All definitions and uses must match, but found the following mismatches:
+        |Symbol 'inc;' defined as Program, but used as DifferentialProgram in {inc}
+        |Found:    {inc} at <somewhere>
+        |Expected: inc;""".stripMargin
+
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ProgramVariables Real x; End.
+        |Definitions
+        |  HP inc ::= { x:=x+1; };
+        |  HP useInc ::= { {inc} };
+        |End.
+        |Problem x>=0 -> [useInc;]x>=0 End.
+      """.stripMargin
+    ) should have message
+      """<somewhere> All definitions and uses must match, but found the following mismatches:
+        |Symbol 'inc;' defined as Program, but used as DifferentialProgram in {inc}
+        |Found:    {inc} at <somewhere>
+        |Expected: inc;""".stripMargin
+  }
+
+  it should "report illegal name overloading" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | Definitions Real f(Real x) = x+1; Real f(Real x, Real y) = x+y; Bool f(Real x) <-> x>0; End.
+        | Problem f(f(f(2,3))) End.
+        |End.""".stripMargin
+    ) should have message
+      """<somewhere> Semantic analysis error
+        |semantics: Expect unique names_index that identify a unique type.
+        |ambiguous: f:Real->Bool and f:Real->Real and f:(Real,Real)->Real
+        |symbols:   f, f, f
+        |Found:    <unknown> at <somewhere>
+        |Expected: <unknown>""".stripMargin
+
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | Definitions HP inc ::= { x:=x+1;}; HP inc ::= { {x'=1} }; End.
+        | ProgramVariables Real x; End.
+        | Problem x>0 -> [inc;]x>0 End.
+        |End.""".stripMargin
+    ) should have message
+      """2:37 Duplicate symbol 'inc'
+        |Found:    <unknown> at 2:37 to 2:58
+        |Expected: <unknown>""".stripMargin
+  }
+
 
 }

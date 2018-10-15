@@ -740,6 +740,23 @@ object KeYmaeraXArchiveParser {
     val elaborated = definitions.exhaustiveSubst(entry.problem)
     typeAnalysis(definitions ++ BuiltinDefinitions.defs, elaborated) //throws ParseExceptions.
 
+    // check that definitions and use match
+    val symbols = StaticSemantics.symbols(entry.problem) ++ definitions.substs.flatMap(s => StaticSemantics.symbols(s.repl))
+    val defSymbols = definitions.substs.map(_.what)
+    val mismatches = defSymbols.map({
+      case n: NamedSymbol => symbols.find(u => u.name == n.name && u.index == n.index && u.kind != n.kind).map(n -> _)
+      case _ => None
+    }).filter(_.isDefined).map(_.get)
+    if (mismatches.nonEmpty) {
+      val mismatchDescription = mismatches.map({ case (defSym, sym) =>
+        "Symbol '" + defSym.prettyString + "' defined as " + defSym.kind +
+          ", but used as " + sym.kind + " in " + sym.prettyString}).mkString("\n")
+      val found = mismatches.map({ case (_, sym) => sym.prettyString}).mkString(", ")
+      val expected = mismatches.map({ case (defSym, _) => defSym.prettyString }).mkString(", ")
+      throw new ParseException("All definitions and uses must match, but found the following mismatches:\n" +
+        mismatchDescription, UnknownLocation, found, expected, "", "")
+    }
+
     // collect annotations
     val defAnnotations = (entry.inheritedDefinitions ++ entry.definitions).flatMap({ case ProgramDef(_, _, _, annotations, _) => annotations case _ => Nil })
 
