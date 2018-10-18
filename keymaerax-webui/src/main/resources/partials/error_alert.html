@@ -6,7 +6,7 @@
     <div class="well well-sm">
         <p>{{errorText}}</p>
     </div>
-    <pre class="k4-vertical-fill-flex" ng-if="modelWithError">{{modelWithError}}</pre>
+    <pre class="k4-vertical-fill-flex" ng-if="context.modelWithError">{{context.modelWithError}}</pre>
     <div>
         <a ng-click="stacktraceCollapsed=!stacktraceCollapsed">
             <i class="fa fa-caret-right" ng-if="stacktraceCollapsed"></i>

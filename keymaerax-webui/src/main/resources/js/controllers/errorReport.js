@@ -6,7 +6,8 @@ function showCaughtErrorMessage(modal, data, message) {
     size: 'lg',
     resolve: {
       action: function () { return message; },
-      error: function () { return data; }
+      error: function () { return data; },
+      context: function () { return {}; }
     }
   });
 }
@@ -84,7 +85,8 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
           resolve: {
             url: function() { return rejection.config.url; },
             message: function () { return rejection.data.textStatus; },
-            error: function () { return rejection.data; }
+            error: function () { return rejection.data; },
+            context: function () { return {}; }
           }
         });
         // response handled here, prevent further calls
@@ -122,11 +124,13 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
 
 }]);
 
-angular.module('keymaerax.controllers').controller('ErrorAlertCtrl', function($scope, $uibModalInstance, $uibModal, url, message, error) {
+angular.module('keymaerax.controllers').controller('ErrorAlertCtrl', function($scope, $uibModalInstance, $uibModal, url,
+    message, error, context) {
   $scope.errorText = message !== undefined && message !== '' ? message : 'Sorry, no message available. Please look at the stack trace.';
   $scope.url = url;
   $scope.errorTrace = error.errorThrown;
   $scope.stacktraceCollapsed = true;
+  $scope.context = context !== undefined ? context : {};
   $scope.report = function() {
     $uibModalInstance.dismiss('cancel');
     var modalInstance = $uibModal.open({

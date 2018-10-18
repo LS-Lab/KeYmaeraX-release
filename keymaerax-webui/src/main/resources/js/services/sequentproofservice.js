@@ -280,8 +280,8 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
             }
           }
         })
-        .catch(function(data) {
-          $rootScope.$broadcast('agenda.loadError', userId, proofId);
+        .catch(function(error) {
+          $rootScope.$broadcast('agenda.loadError', userId, proofId, error.data);
         })
         .finally(function() { spinnerService.hideAll(); });
     },
