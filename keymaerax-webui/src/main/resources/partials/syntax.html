@@ -1,6 +1,7 @@
 <div class="row">
     <div class="col-md-12">
         <h2 id="HP-syntax">Hybrid Programs</h2>
+        <span style="float:right"><a href="http://keymaerax.org/doc/dL-grammar.md" target="_blank">grammar</a></span>
         The behavior of hybrid systems is specified as a hybrid program,
         which is the programming language for hybrid systems.
 
@@ -15,7 +16,7 @@
             <tbody>
                 <tr>
                     <td>x := e</td>
-                    <td><code>x := y;</code></td>
+                    <td><code>x := x*y+1;</code></td>
                     <td>discrete assignment of the value of term <code>e</code> to variable <var>x</var> (jump)</td>
                 </tr>
                 <tr>
@@ -31,12 +32,12 @@
                 </tr>
                 <tr>
                     <td>&alpha; ; &beta;</td>
-                    <td><code>x&#160;:=&#160;5; x&#160;:=&#160;x+1;</code></td>
+                    <td><code>v&#160;:=&#160;5; {x'=v}</code></td>
                     <td>sequential composition where <code>&beta;</code> starts after <code>&alpha;</code> finishes</td>
                 </tr>
                 <tr>
                     <td>&alpha; &cup; &beta;</td>
-                    <td><code>x&#160;:=&#160;5;&#160;++&#160;y&#160;:=&#160;x;</code></td>
+                    <td><code>x&#160;:=&#160;0;&#160;++&#160;x&#160;:=&#160;x+1;</code></td>
                     <td>nondeterministic choice, following either alternative <code>&alpha;</code> or <code>&beta;</code></td>
                 </tr>
                 <tr>
@@ -64,10 +65,10 @@
             The evolution is allowed to stop at any point in <var>Q</var>
             but it must not leave <var>Q</var>. Systems of differential equations
             and higher-order derivatives are defined accordingly:
-            <code>{p' = v, v' = -B &amp; v &ge; 0}</code>, for instance, characterizes
+            <code>{x' = v, v' = -B &amp; v &ge; 0}</code>, for instance, characterizes
             the braking mode of a car with braking force <code>B</code> that
             holds within <code>v &ge; 0</code> and stops any time before <code>v < 0</code>.
-            It indicates that the rate of change of the position <var>P</var> is given by the velocity <code>v</code>, which in turn changes at the rate <code>-B</code>.
+            It indicates that the rate of change of the position <var>x</var> is given by the velocity <code>v</code>, which in turn changes at the rate <code>-B</code>.
         </p>
         <p>
             For discrete control, the test action <code>?F</code> (read as "assume
@@ -83,6 +84,8 @@
             possible in the model of the system. Therefore, during
             verification we consider only those branches of a system
             where all tests succeed.
+            For example, <code>a := *; ?(-B &le; a &le; A)</code>
+            first assigns any arbitrary real number to <code>a</code>, but then subsequently tests that <code>a</code> is in between <code>-B</code> and <code>A</code>. This combination ensures that <code>a</code> is changed to any arbitrary real number within this range.
         </p>
         <p>
             From these basic constructs, more complex hybrid
@@ -96,6 +99,7 @@
         </p>
 
         <h2 id="dL-syntax">Differential Dynamic Logic</h2>
+        <span style="float:right"><a href="http://keymaerax.org/doc/dL-grammar.md" target="_blank">grammar</a></span>
 
         Differential dynamic logic can specify and verify the behavior of hybrid programs.
 
@@ -110,6 +114,7 @@
 <tbody>
   <tr>
     <tr><td><code>e &ge; t</code></td> <td><code>x^2&gt;=y+1</code></td> <td>Greater equals comparison: true iff value of <code>t</code> is at least <code>t</code></td></tr>
+    <tr><td><code>e = t</code></td> <td><code>x^2=y+1</code></td> <td>Equality comparison: true iff value of <code>t</code> and <code>t</code> equal</td></tr>
     <tr><td><code>&not; P</code></td> <td><code>!(x&gt;=5)</code></td> <td>Negation (not), true iff <var>P</var> is not true</td></tr>
   	<tr><td><code>P &and; Q</code></td> <td><code>x&lt;=10 &amp; v&gt;=0</code></td> <td>Conjunction (and), true iff both <var>P</var> and <var>Q</var> are true</td></tr>
   	<tr><td><code>P &or; Q</code></td> <td><code>v&lt;=30 | a&lt;2-b</code></td> <td>Disjunction (or), true iff <var>P</var> is true or <var>Q</var> is true</td></tr>

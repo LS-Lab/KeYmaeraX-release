@@ -8,6 +8,8 @@ KeYmaera X features a minimal core of just 1700 lines of code that isolates all 
 More information and precompiled binaries are available at:
   http://keymaeraX.org/
 
+  [Differential dynamic logic grammar](http://keymaerax.org/doc/dL-grammar.md)
+
 Installation
 ============
 The easiest way to run KeYmaera X is to download binaries 
@@ -116,7 +118,7 @@ Copyright and Licenses
 ======================
 
 Copyright (C) 2014-2018 Carnegie Mellon University. See COPYRIGHT.txt for details.
-Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Brandon Bohrer, Jan-David Quesel, Yong Kiam Tan, Marcus Voelp, Ran Ji.
+Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Brandon Bohrer, Jan-David Quesel, Yong Kiam Tan, Andrew Sogokon, Marcus Voelp, Ran Ji.
 
 See LICENSE.txt for the conditions of using this software.
 
