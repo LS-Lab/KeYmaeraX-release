@@ -139,9 +139,13 @@ object RestApi extends Logging {
       case _ => /* nothing to do */
     })
 
-    responses match {
-      case hd :: Nil => hd.print
-      case _         => JsArray(responses.map(_.getJson):_*).compactPrint
+    try {
+      responses match {
+        case hd :: Nil => hd.print
+        case _ => JsArray(responses.map(_.getJson): _*).compactPrint
+      }
+    } catch {
+      case ex: Throwable => new ErrorResponse("Error serializing response", ex).print
     }
   }
 
