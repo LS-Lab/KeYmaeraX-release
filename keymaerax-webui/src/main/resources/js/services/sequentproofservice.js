@@ -328,16 +328,20 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
 angular.module('keymaerax.services').factory('Poller', function($http, $timeout) {
   return {
     poll: function(url, interval) {
-      var data = { response: {}, calls: 0 };
+      var data = {
+        response: {},
+        calls: 0,
+        cancel: false
+      };
       var poller = function() {
         $http.get(url).then(function(r) {
           data.response = r.data;
           data.calls++;
-          $timeout(poller, interval);
+          if (!data.cancel) $timeout(poller, interval);
         },
         function(error) {
           // server is likely offline, poll less frequently
-          $timeout(poller, 10*interval);
+          if (!data.cancel) $timeout(poller, 10*interval);
         });
       };
       poller();
