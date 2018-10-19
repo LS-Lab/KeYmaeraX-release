@@ -186,8 +186,12 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
     },
     stop: function() {
       $http.get('proofs/user/' + $scope.userId + '/' + $scope.runningTask.proofId + '/' + $scope.runningTask.nodeId + '/' + $scope.runningTask.taskId + '/stop')
-        .then(function(response) { $scope.runningTask.future.reject('stopped'); })
-        .catch(function(err) { $scope.runningTask.future.reject(err); });
+        .then(function(response) {
+          if ($scope.runningTask.future) $scope.runningTask.future.reject('stopped');
+        })
+        .catch(function(err) {
+          if ($scope.runningTask.future) $scope.runningTask.future.reject(err);
+        });
     }
   }
 });
