@@ -51,6 +51,9 @@ function showMessage(modal, title, message, size) {
 
 angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['$q', '$injector', function($q, $injector) {
 
+  //@todo have pollers register here
+  var pollRequests = [ '/isLocal', 'tools/vitalSigns' ];
+
   var responseInterceptor = {
     loginPromise: null,
     response: function(response) {
@@ -64,17 +67,19 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
     responseError: function(rejection) {
       if (rejection.status == -1) {
         // server unavailable
-        var $uibModal = $injector.get('$uibModal'); // inject manually to avoid circular dependency
-        $uibModal.open({
-          //@note template instead of template URL, since server is offline already
-          template: '<div class="modal-header"><h3 class="modal-title">Server is offline</h3></div><div class="modal-body"><p>The KeYmaera X server is unavailable. All your recent work is saved (except for the click that just failed). If you run KeYmaera X locally, please restart the server.</p><p>This dialog will close automatically when the server is online again.</p></div>',
-          controller: 'ServerOfflineDialogCtrl',
-          size: 'md',
-          backdrop: 'static',
-          animation: false
-        });
-        // response handled here, prevent further calls
-        return rejection;
+        if (!pollRequests.includes(rejection.config.url)) {
+          var $uibModal = $injector.get('$uibModal'); // inject manually to avoid circular dependency
+          $injector.get("spinnerService").hideAll();
+          $uibModal.open({
+            //@note template instead of template URL, since server is offline already
+            template: '<div class="modal-header"><h3 class="modal-title">Server is offline</h3></div><div class="modal-body"><p>The KeYmaera X server is unavailable. All your recent work is saved (except for the click that just failed). If you run KeYmaera X locally, please restart the server.</p><p>This dialog will close automatically when the server is online again.</p></div>',
+            controller: 'ServerOfflineDialogCtrl',
+            size: 'md',
+            backdrop: 'static',
+            animation: false
+          });
+        }
+        return $q.reject(rejection);
       } else if (rejection.status === 500) {
         // report uncaught server-side exception
         var $uibModal = $injector.get('$uibModal'); // inject manually to avoid circular dependency
