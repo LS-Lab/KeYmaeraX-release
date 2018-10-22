@@ -384,6 +384,20 @@ class SequentialInterpreterTests extends TacticTestBase {
     finishedBranches should contain theSameElementsAs Seq(3)
   }
 
+  it should "assign labels correctly to remaining open subgoals" in withMathematica { _ =>
+    proveBy("x>=0 -> [{x:=x+1; ++ x:=x+2;}*]x>0".asFormula, implyR(1) &
+      loop("x>=0".asFormula)(1) <(
+        QE,
+        QE,
+        choiceb(1) & andR(1) <(
+          assignb(1),
+          assignb(1)
+        )
+      ), (labels: Option[List[BelleLabel]]) => {
+      labels shouldBe Some(BelleTopLevelLabel("QE CEX") :: BelleTopLevelLabel("1") :: BelleTopLevelLabel("2") :: Nil)
+    })
+  }
+
   "Let" should "fail (but not horribly) when inner proof cannot be started" in {
     val fml = "[{f'=g}][{g'=5}]f>=0".asFormula
     the [BelleThrowable] thrownBy proveBy(fml, BelleParser("let ({`f()=f`}) in (nil)")) should have message
