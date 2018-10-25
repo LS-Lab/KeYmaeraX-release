@@ -122,31 +122,51 @@ class FOQuantifierTests extends TacticTestBase {
   }
 
   it should "instantiate bound ODE modality" in {
-    val result = proveBy(
+    proveBy(
       Sequent(IndexedSeq("\\forall x [{x'=5}]x>=0".asFormula), IndexedSeq()),
-      allInstantiate(Some("x".asVariable), Some("z".asTerm))(-1))
-    result.subgoals.loneElement shouldBe "\\forall x (x=z -> [{x'=5}]x>=0) ==> ".asSequent
+      allInstantiate(Some("x".asVariable), Some("z".asTerm))(-1)).
+      subgoals.loneElement shouldBe "[{z'=5}]z>=0 ==> ".asSequent
+
+    proveBy(
+      Sequent(IndexedSeq("\\forall x [{x'=z}]x>=0".asFormula), IndexedSeq()),
+      allInstantiate(Some("x".asVariable), Some("z".asTerm))(-1)).
+      subgoals.loneElement shouldBe "\\forall x (x=z -> [{x'=z}]x>=0) ==> ".asSequent
+
+    proveBy(
+      Sequent(IndexedSeq("\\forall x [{x'=5}]x>=0".asFormula), IndexedSeq()),
+      allInstantiate(Some("x".asVariable), Some("z+7".asTerm))(-1)).
+      subgoals.loneElement shouldBe "\\forall x (x=z+7 -> [{x'=5}]x>=0) ==> ".asSequent
   }
 
   it should "instantiate bound ODE modality whatever the names" in {
     val result = proveBy(
       Sequent(IndexedSeq("\\forall y [{y'=5}]y>=0".asFormula), IndexedSeq()),
       allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1))
-    result.subgoals.loneElement shouldBe "\\forall y (y=z -> [{y'=5}]y>=0) ==> ".asSequent
+    result.subgoals.loneElement shouldBe "[{z'=5}]z>=0 ==> ".asSequent
   }
 
   it should "instantiate more complicated ODE modality" in {
-    val result = proveBy(
+    proveBy(
       Sequent(IndexedSeq("\\forall y [{y'=x & y>2}]y>0".asFormula), IndexedSeq()),
-      allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1))
-    result.subgoals.loneElement shouldBe "\\forall y (y=z -> [{y'=x & y>2}]y>0) ==> ".asSequent
+      allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1)).
+      subgoals.loneElement shouldBe "[{z'=x & z>2}]z>0 ==> ".asSequent
+
+    proveBy(
+      Sequent(IndexedSeq("\\forall y [{y'=x & y>2}]y>0".asFormula), IndexedSeq()),
+      allInstantiate(Some("y".asVariable), Some("z+7".asTerm))(-1)).
+      subgoals.loneElement shouldBe "\\forall y (y=z+7 -> [{y'=x & y>2}]y>0) ==> ".asSequent
   }
 
   it should "instantiate even if ODE modality follows in some subformula" in {
-    val result = proveBy(
+    proveBy(
       Sequent(IndexedSeq("\\forall y (y=0 -> [{y'=x & y>2}]y>0)".asFormula), IndexedSeq()),
-      allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1))
-    result.subgoals.loneElement shouldBe "\\forall y (y=z -> y=0 -> [{y'=x & y>2}]y>0) ==> ".asSequent
+      allInstantiate(Some("y".asVariable), Some("z".asTerm))(-1)).
+      subgoals.loneElement shouldBe "z=0 -> [{z'=x & z>2}]z>0 ==> ".asSequent
+
+    proveBy(
+      Sequent(IndexedSeq("\\forall y (y=0 -> [{y'=x & y>2}]y>0)".asFormula), IndexedSeq()),
+      allInstantiate(Some("y".asVariable), Some("z+7".asTerm))(-1)).
+      subgoals.loneElement shouldBe "\\forall y (y=z+7 -> y=0 -> [{y'=x & y>2}]y>0) ==> ".asSequent
   }
 
   it should "instantiate assignment irrespective of what follows" in {

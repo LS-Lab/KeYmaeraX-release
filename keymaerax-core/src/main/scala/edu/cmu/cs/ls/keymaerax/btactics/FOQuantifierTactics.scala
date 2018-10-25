@@ -63,10 +63,14 @@ protected object FOQuantifierTactics {
           val t = inst(vars)
           val p = forall(qf)
 
-          val assign = Box(Assign(x, t), p)
+          val (assign, assignPreprocess) = t match {
+            case vinst: Variable if !StaticSemantics.symbols(p).contains(vinst) =>
+              (Box(Assign(vinst, vinst), p.replaceAll(x, vinst)), boundRename(x, vinst)(pos))
+            case _ => (Box(Assign(x, t), p), skip)
+          }
 
           //@note stuttering needed for instantiating with terms in cases \forall x [x:=x+1;]x>0, plain useAt won't work
-          DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) &
+          DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) & assignPreprocess &
           ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
             assignb(pos),
             cohide('Rlast) & CMon(pos.inExpr) & byUS("all instantiate") & done
