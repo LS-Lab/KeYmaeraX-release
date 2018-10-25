@@ -231,10 +231,18 @@ class FOQuantifierTests extends TacticTestBase {
   }
 
   it should "instantiate variables bound in an ODE" in {
-    val result = proveBy(
+    proveBy(
       Sequent(IndexedSeq(), IndexedSeq("\\exists y [{x'=2,y'=0*y+1&true}]x>0".asFormula)),
-      existsInstantiate()(1))
-    result.subgoals.loneElement shouldBe "==> [{x'=2,y'=0*y+1&true}]x>0".asSequent
+      existsInstantiate()(1)).subgoals.loneElement shouldBe "==> [{x'=2,y'=0*y+1&true}]x>0".asSequent
+
+    proveBy(
+      Sequent(IndexedSeq(), IndexedSeq("\\exists y [{x'=2,y'=0*y+1&true}]x>0".asFormula)),
+      existsInstantiate(None, Some("z".asTerm))(1)).subgoals.loneElement shouldBe "==> [{x'=2,z'=0*z+1&true}]x>0".asSequent
+
+    proveBy(
+      Sequent(IndexedSeq(), IndexedSeq("\\exists y [{x'=2,y'=0*y+1&true}]x>0".asFormula)),
+      existsInstantiate(None, Some("z+7".asTerm))(1)).
+      subgoals.loneElement shouldBe "y=z+7 ==> [{x'=2,y'=0*y+1&true}]x>0".asSequent
   }
 
   it should "instantiate ODE" in {

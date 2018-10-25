@@ -106,12 +106,17 @@ protected object FOQuantifierTactics {
           val t = inst(vars)
           val p = exists(qf)
 
-          val assign = Box(Assign(x, t), p)
-
-          val subst = (us: Subst) => RenUSubst(("x_".asVariable, x) :: ("f()".asTerm, t.replaceFree(x, "x_".asVariable)) :: ("p_(.)".asFormula, Box(Assign("x_".asVariable, DotTerm()), p.replaceAll(x, "x_".asVariable))) :: Nil)
+          val (assign, assignPreprocess, subst) = t match {
+            case vinst: Variable if !StaticSemantics.symbols(p).contains(vinst) =>
+              (Box(Assign(vinst, vinst), p.replaceAll(x, vinst)), boundRename(x, vinst)(pos),
+                (us: Subst) => RenUSubst(("x_".asVariable, vinst) :: ("f()".asTerm, "x_".asVariable) :: ("p_(.)".asFormula, Box(Assign("x_".asVariable, DotTerm()), p.replaceAll(x, "x_".asVariable))) :: Nil))
+            case _ =>
+              (Box(Assign(x, t), p), skip,
+                (us: Subst) => RenUSubst(("x_".asVariable, x) :: ("f()".asTerm, t.replaceFree(x, "x_".asVariable)) :: ("p_(.)".asFormula, Box(Assign("x_".asVariable, DotTerm()), p.replaceAll(x, "x_".asVariable))) :: Nil))
+          }
 
           //@note stuttering needed for instantiating with terms in cases \exists x [x:=x+1;]x>0, plain useAt won't work
-          DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) &
+          DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) & assignPreprocess &
             ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
               assignb(pos),
               cohide('Rlast) & CMon(pos.inExpr) & byUS("exists generalize", subst) & done
