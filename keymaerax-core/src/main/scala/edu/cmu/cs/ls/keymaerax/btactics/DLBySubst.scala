@@ -215,13 +215,13 @@ private object DLBySubst {
             else sequent.ante.flatMap(FormulaTools.conjuncts).
               filter(StaticSemantics.symbols(_).intersect(aBVs.toSet).isEmpty).toList
           (constConjuncts, isGame) match {
-            case ((Nil, _) | (_, true)) => (c, skip, implyR(pos.top))
+            case ((Nil, _) | (_, true)) => (c, skip, implyR(1))
             case (consts, false) => (And(consts.reduceRight(And), c),
                 boxAnd(pos) &
                 abstractionb(pos ++ PosInExpr(0 :: Nil)) &
                 (if (pos.isTopLevel) andR(pos) & Idioms.<(prop & done, skip)
                 else skip),
-                implyR(pos.top) & andL(-1)
+                implyR(1) & andL(-1)
             )
           }
         }

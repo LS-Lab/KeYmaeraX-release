@@ -234,6 +234,11 @@ class DLTests extends TacticTestBase {
     result.subgoals shouldBe "==> [x:=2;]x>1".asSequent :: "x>1 ==> [y:=x;]y>1".asSequent :: Nil
   }
 
+  it should "work at any succedent position" in {
+    val result = proveBy("==> a=3, [x:=2;][y:=x;]y>1, b=4".asSequent, generalize("x>1".asFormula)(2))
+    result.subgoals shouldBe "==> a=3, [x:=2;]x>1, b=4".asSequent :: "x>1 ==> [y:=x;]y>1".asSequent :: Nil
+  }
+
   it should "introduce intermediate condition in context" in {
     val result = proveBy("a=2 -> [z:=3;][x:=2;][y:=x;]y>1".asFormula, generalize("x>1".asFormula)(1, 1::1::Nil))
     result.subgoals shouldBe "==> a=2 -> [z:=3;][x:=2;]x>1".asSequent :: "x>1 ==> [y:=x;]y>1".asSequent :: Nil
