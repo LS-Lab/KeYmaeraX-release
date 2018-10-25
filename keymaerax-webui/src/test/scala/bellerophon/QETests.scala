@@ -94,6 +94,14 @@ class QETests extends TacticTestBase {
     pr.subgoals.head.succ should contain theSameElementsAs "false".asFormula::Nil
   }
 
+  it should "not hide equalities about interpreted function symbols" in withMathematica { _ =>
+    proveBy("abs(x) = y -> x=y | x=-y".asFormula, QE) shouldBe 'proved
+  }
+
+  it should "rewrite equalities about uninterpreted function symbols" in withMathematica { _ =>
+    proveBy("f(a,b) = 3 -> f(a,b)>2".asFormula, QE) shouldBe 'proved
+  }
+
   "QE with specific tool" should "succeed with Mathematica" in withMathematica { _ =>
     val tactic = TactixLibrary.QE(Nil, Some("Mathematica"))
     proveBy("x>0 -> x>=0".asFormula, tactic) shouldBe 'proved
