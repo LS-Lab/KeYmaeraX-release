@@ -992,8 +992,45 @@ class DifferentialTests extends TacticTestBase with Timeouts {
   }
 
   it should "do basic unification" in {
-    val result = proveBy("[{x'=2}]x>0".asFormula, dG("{t'=0*t+1}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1))
-    result.subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1}]x>0".asSequent
+    //ay+b,ay-b,-ay+b,-ay-b
+    proveBy("[{x'=2}]x>0".asFormula, dG("{y'=2*y+3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=2*y+3}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{y'=2*y-3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=2*y+-3}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{y'=-2*y+3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=-2*y+3}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{y'=-2*y-z}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=-2*y+-z}]x>0".asSequent
+
+    //ay,-ay
+    proveBy("[{x'=2}]x>0".asFormula, dG("{y'=2*y}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=2*y+0}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{y'=-2*y}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=-2*y+0}]x>0".asSequent
+
+    //+b,-b
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=1}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=-1}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=-1}]x>0".asSequent
+
+    //y+b,y-b,-y+b,-y-b
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=t+3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1*t+3}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=t-3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1*t+-3}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=-t+3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=-1*t+3}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=-t-3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=-1*t+-3}]x>0".asSequent
+
+    // supported simplifications so far
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=0*t+1}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=0*t}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=0}]x>0".asSequent
+
+    // @todo simplify a*y+0, 1*y+b, a*y+-(b)
   }
 
   it should "not allow non-linear ghosts (1)" in {

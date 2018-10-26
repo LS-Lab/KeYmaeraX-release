@@ -117,10 +117,29 @@ object DifferentialHelper {
       case None =>
     }
 
-    //y' = ay - b
-    UnificationMatch.unifiable("{y_'=a(|y_|)*y_-b(|y_|)}".asDifferentialProgram, ghost) match {
-      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], s("a(|y_|)".asTerm), Neg(s("b(|y_|)".asTerm)))
+    //4 cases contain implicit a=1 and b: +y+b, +y-b, -y+b, -y-b
+    //y' = y + b
+    UnificationMatch.unifiable("{y_'=y_+b(|y_|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, s("b(|y_|)".asTerm))
       case None    =>
+    }
+
+    //y' = y - b
+    UnificationMatch.unifiable(" {y_'=y_-b(|y_|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "1".asTerm, Neg(s("b(|y_|)".asTerm)))
+      case None =>
+    }
+
+    //y' = -y + b
+    UnificationMatch.unifiable("{y_'=-y_+b(|y_|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, s("b(|y_|)".asTerm))
+      case None =>
+    }
+
+    //y' = -y - b
+    UnificationMatch.unifiable("{y_'=-y_-b(|y_|)}".asDifferentialProgram, ghost) match {
+      case Some(s) => return (s("y_".asVariable).asInstanceOf[Variable], "-1".asTerm, Neg(s("b(|y_|)".asTerm)))
+      case None =>
     }
 
     //2 cases contain just a: +a and -a

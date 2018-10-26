@@ -525,12 +525,17 @@ private object DifferentialTactics extends Logging {
               (Variable("y_",None,Real), y) ::
                 (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
             useAt("DG differential ghost constant", PosInExpr(0::Nil), subst)(pos)
+          case (_, Neg(Number(n))) =>
+            val subst = (us: Option[Subst]) => us.getOrElse(throw BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
+              (Variable("y_",None,Real), y) ::
+                (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a) ::
+                (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), Number(-n)) :: Nil)
+            useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
           case _ =>
             val subst = (us: Option[Subst]) => us.getOrElse(throw BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::
                 (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a) ::
                 (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
-
             useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
         }
     }
