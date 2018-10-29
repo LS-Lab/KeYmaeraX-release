@@ -327,6 +327,17 @@ private object EqualityTactics {
     )
     tactics.reduceOption(_ & _).getOrElse(skip)
   })
+  /** Expands all special functions (abs/min/max) underneath position `pos`. */
+  def expandAllAt: DependentPositionTactic = "expandAllAt" by ((pos: Position, seq: Sequent) => {
+    val tactics =
+      Idioms.mapSubpositions(pos, seq, {
+        case (FuncOf(Function("abs", _, _, _, true), _), pos: Position) => Some(?(abs(pos)))
+        case (FuncOf(Function("min", _, _, _, true), _), pos: Position) => Some(?(minmax(pos)))
+        case (FuncOf(Function("max", _, _, _, true), _), pos: Position) => Some(?(minmax(pos)))
+        case _ => None
+      })
+    tactics.reduceOption(_ & _).getOrElse(skip)
+  })
 
   private def parentFormulaPos(pos: Position, seq: Sequent): Position =
     if (pos.isTopLevel) pos
