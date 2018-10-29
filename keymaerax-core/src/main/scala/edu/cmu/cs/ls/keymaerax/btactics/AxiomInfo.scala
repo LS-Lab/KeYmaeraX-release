@@ -165,7 +165,7 @@ object DerivationInfo {
     new CoreAxiomInfo("K modal modus ponens", "K", "K", {case () => TactixLibrary.K}),
     //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I axiom
   //@todo why isn't the code name just "I"? And the belleExpr could be useAt("I")?
-    CoreAxiomInfo("I induction", "Iind", "Iind", {case () => ???}),
+    CoreAxiomInfo("I induction", "Iind", "Iind", {case () => HilbertCalculus.useAt("I induction") }),
     new CoreAxiomInfo("VK vacuous"
       , AxiomDisplayInfo("VK", "(p→<span class=\"k4-axiom-key\">[a]p</span>)←[a]T")
       , "VK", {case () => HilbertCalculus.VK}),
@@ -343,7 +343,7 @@ object DerivationInfo {
       , "DEs", {case () => HilbertCalculus.DE}),
     new CoreAxiomInfo("DI differential invariance"
       , AxiomDisplayInfo("DI", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[?Q]P)←(Q→[{x′=f(x)&Q}](P)′)")
-      , "DIequiv", {case () => ???}),
+      , "DIequiv", {case () => HilbertCalculus.useAt("DI differential invariance")}),
     new DerivedAxiomInfo("DI differential invariant"
       , AxiomDisplayInfo("DI", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>←(Q→P∧[{x′=f(x)&Q}](P)′)")
       , "DI", {case () => HilbertCalculus.DI}),
@@ -356,23 +356,23 @@ object DerivationInfo {
     new CoreAxiomInfo("DG differential ghost constant all"
       , AxiomDisplayInfo("DGa", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∀y [{x′=f(x),y′=g()&Q}]P")
       , "DGCa", {case () => HilbertCalculus.useAt("DG differential ghost constant all")}),
-    new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", {case () => ???}),
-    new CoreAxiomInfo("DG inverse differential ghost implicational", "DG inverse differential ghost implicational", "DGi", {case () => ???}),
+    new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", {case () => HilbertCalculus.useAt("DG inverse differential ghost") }),
+    new CoreAxiomInfo("DG inverse differential ghost implicational", "DG inverse differential ghost implicational", "DGi", {case () => HilbertCalculus.useAt("DG inverse differential ghost implicational") }),
     CoreAxiomInfo(", commute", ",", "commaCommute", {case () => HilbertCalculus.useAt(", commute")}),
     new CoreAxiomInfo(", sort", ",", "commaSort", {case () => HilbertCalculus.useAt(", sort")}),
     new CoreAxiomInfo("DS& differential equation solution", "DS&", "DS", {case () => HilbertCalculus.DS}),
     new CoreAxiomInfo("DIo open differential invariance >"
       , AxiomDisplayInfo("DIo >", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]f(x)>g(x)</span>↔[?Q]f(x)>g(x))←(Q→[{x′=f(x)&Q}](f(x)>g(x)→(f(x)>g(x))′))")
-      , "DIogreater", {case () => ???}),
+      , "DIogreater", {case () => HilbertCalculus.useAt("DIo open differential invariance >")}),
     new DerivedAxiomInfo("DIo open differential invariance <"
       , AxiomDisplayInfo("DIo <", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]f(x)<g(x)</span>↔[?Q]f(x)<g(x))←(Q→[{x′=f(x)&Q}](f(x)<g(x)→(f(x)<g(x))′))")
-      , "DIoless", {case () => ???}),
+      , "DIoless", {case () => HilbertCalculus.useAt("DIo open differential invariance <")}),
     new CoreAxiomInfo("DV differential variant >="
       , AxiomDisplayInfo("DVgeq", "todo DVgeq")
-      , "DVgeq", {case () => ???}),
+      , "DVgeq", {case () => HilbertCalculus.useAt("DV differential variant >=")}),
     new DerivedAxiomInfo("DV differential variant <="
       , AxiomDisplayInfo("DVleq", "todo DVleq")
-      , "DVleq", {case () => ???}),
+      , "DVleq", {case () => HilbertCalculus.useAt("DV differential variant <=")}),
 
     // Differential Axioms
     new CoreAxiomInfo("c()' derive constant fn"
@@ -456,10 +456,10 @@ object DerivationInfo {
     new DerivedAxiomInfo("partial vacuous exists quantifier", ("pV∃","pexistsV"), "pexistsV", {case () => HilbertCalculus.useAt("partial vacuous exists quantifier")}),
 
     // more
-    new CoreAxiomInfo("const congruence", "CCE", "constCongruence", {case () => ???}),
-    new CoreAxiomInfo("const formula congruence", "CCQ", "constFormulaCongruence", {case () => ???}),
+    new CoreAxiomInfo("const congruence", "CCE", "constCongruence", {case () => HilbertCalculus.useAt("const congruence") }),
+    new CoreAxiomInfo("const formula congruence", "CCQ", "constFormulaCongruence", {case () => HilbertCalculus.useAt("const formula congruence") }),
     // Note: only used to implement Dskipd
-    new CoreAxiomInfo("DX differential skip", "DX", "DX", {case () => ???}),
+    new CoreAxiomInfo("DX differential skip", "DX", "DX", {case () => throw new UnsupportedOperationException("DX differential skip is not available for general-purpose use") }),
 
     new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", {case () => posnil}),
     new CoreAxiomInfo("all dual time", ("∀d","alldt"), "alldt", {case () => posnil}),
