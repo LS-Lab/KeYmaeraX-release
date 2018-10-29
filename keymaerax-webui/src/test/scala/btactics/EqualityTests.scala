@@ -253,8 +253,8 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "max_0>=5, x>=y&max_0=x | x<y&max_0=y ==> ".asSequent
   }
 
-  "minmaxAt" should "expand max(x,y) binding context in antecedent" in withQE { _ =>
-    val result = proveBy("[x:=2;]max(x,y) >= 2 ==> ".asSequent, minmaxAt(-1, 1::0::Nil))
+  it should "expand max(x,y) binding context in antecedent" in withQE { _ =>
+    val result = proveBy("[x:=2;]max(x,y) >= 2 ==> ".asSequent, minmax(-1, 1::0::Nil))
     result.subgoals.loneElement shouldBe "[x:=2;]\\exists max_0 ((x>=y&max_0=x | x<y&max_0=y) & max_0>=2) ==> ".asSequent
   }
 
@@ -266,5 +266,21 @@ class EqualityTests extends TacticTestBase {
   it should "expand all special functions everywhere" in withQE { _ =>
     val result = proveBy("min(x,y)>0 ==> abs(a-5)>0, max(x,y)>37".asSequent, expandAll)
     result.subgoals.loneElement shouldBe "min_0>0, x<=y&min_0=x|x>y&min_0=y, a-5>=0&abs_0=a-5|a-5 < 0&abs_0=-(a-5), x>=y&max_0=x|x < y&max_0=y ==> abs_0>0, max_0>37".asSequent
+  }
+
+  it should "expand in context" in withQE { _ =>
+    val result = proveBy("min(x,y)>0, abs(a-5)>7 ==> abs(a-5)>0, [a:=3;]abs(a-5)>=2, max(x,y)>0, [x:=4;]min(x,y)>=4".asSequent, expandAll)
+    result.subgoals.loneElement shouldBe
+      """min_0>0,
+        |abs_0>7,
+        |x<=y&min_0=x|x>y&min_0=y,
+        |a-5>=0&abs_0=a-5|a-5 < 0&abs_0=-(a-5),
+        |x>=y&max_0=x|x < y&max_0=y
+        |==>
+        |abs_0>0,
+        |[a:=3;]\forall abs_1 (a-5>=0&abs_1=a-5|a-5 < 0&abs_1=-(a-5)->abs_1>=2),
+        |max_0>0,
+        |[x:=4;]\forall min_1 (x<=y&min_1=x|x>y&min_1=y->min_1>=4)
+      """.stripMargin.asSequent
   }
 }

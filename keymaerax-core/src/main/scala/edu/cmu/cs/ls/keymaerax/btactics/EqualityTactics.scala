@@ -278,14 +278,17 @@ private object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  def minmax: DependentPositionTactic = "minmax" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), Pair(f, g))) if fn == "min" || fn == "max" =>
-      val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
-      val minmaxVar = Variable(fn, freshMinMaxIdx)
-
-      abbrv(minmax, Some(minmaxVar)) &
-        useAt("= commute")('L, Equal(minmaxVar, minmax)) &
-        useAt(fn)('L, Equal(minmax, minmaxVar))
+  def minmax: DependentPositionTactic = "minmax" by ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
+    case (ctx, minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), t@Pair(f, g))) if fn == "min" || fn == "max" =>
+      if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
+        val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
+        val minmaxVar = Variable(fn, freshMinMaxIdx)
+        abbrv(minmax, Some(minmaxVar)) &
+          useAt("= commute")('L, Equal(minmaxVar, minmax)) &
+          useAt(fn)('L, Equal(minmax, minmaxVar))
+      } else {
+        minmaxAt(pos)
+      }
   })
   /** Expands min/max only at a specific position (also works in contexts that bind some of the arguments). */
   def minmaxAt: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
