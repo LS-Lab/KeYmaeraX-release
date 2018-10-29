@@ -231,17 +231,20 @@ private object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  def abs: DependentPositionTactic = "absExp" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(abs@FuncOf(Function(fn, None, Real, Real, true), _)) if fn == "abs" =>
-      val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
-      val absVar = Variable(fn, freshAbsIdx)
-
-      abbrv(abs, Some(absVar)) &
-        useAt("= commute")('L, Equal(absVar, abs)) &
-        useAt(fn)('L, Equal(abs, absVar))
+  def abs: DependentPositionTactic = "absExp" by ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
+    case (ctx, abs@FuncOf(Function(fn, None, Real, Real, true), t)) if fn == "abs" =>
+      if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
+        val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
+        val absVar = Variable(fn, freshAbsIdx)
+        abbrv(abs, Some(absVar)) &
+          useAt("= commute")('L, Equal(absVar, abs)) &
+          useAt(fn)('L, Equal(abs, absVar))
+      } else {
+        absAt(pos)
+      }
   })
   /** Expands abs only at a specific position (also works in contexts that bind the argument of abs). */
-  def absAt: DependentPositionTactic = "absExp" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  def absAt: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(abs@FuncOf(Function(fn, None, Real, Real, true), _)) if fn == "abs" =>
       val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
       val absVar = Variable(fn, freshAbsIdx)

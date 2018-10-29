@@ -190,8 +190,8 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "abs_0>=5, x>=0&abs_0=x | x<0&abs_0=-x ==> ".asSequent
   }
 
-  "absAt" should "expand abs(x) in context that binds x" in withQE { _ =>
-    val result = proveBy("[x:=-7;]abs(x) >= 5".asFormula, absAt(1, 1::0::Nil))
+  it should "expand abs(x) in context that binds x" in withQE { _ =>
+    val result = proveBy("[x:=-7;]abs(x) >= 5".asFormula, abs(1, 1::0::Nil))
     result.subgoals.loneElement shouldBe "==> [x:=-7;]\\forall abs_0 (x>=0&abs_0=x|x < 0&abs_0=-x->abs_0>=5)".asSequent
   }
 
