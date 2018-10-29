@@ -175,6 +175,16 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "==> [a:=0;]!\\exists z (z=min(a,2) & z<=2)".asSequent
   }
 
+  it should "work in any position" in withQE { _ =>
+    val result = proveBy("==> x=4, [a:=0;]!min(a,2) <= 2, y=3".asSequent, abbrvAt("min(a,2)".asTerm, Some("z".asVariable))(2, 1::0::Nil))
+    result.subgoals.loneElement shouldBe "==> x=4, [a:=0;]!\\exists z (z=min(a,2) & z<=2), y=3".asSequent
+  }
+
+  it should "work in any position in antecedent" in withQE { _ =>
+    val result = proveBy("x=4, [a:=0;]!min(a,2) <= 2, y=3 ==> ".asSequent, abbrvAt("min(a,2)".asTerm, Some("z".asVariable))(-2, 1::0::Nil))
+    result.subgoals.loneElement shouldBe "x=4, [a:=0;]!\\forall z (z=min(a,2) -> z<=2), y=3 ==> ".asSequent
+  }
+
   "abs" should "expand abs(x) in succedent" in withQE { _ =>
     val result = proveBy("abs(x) >= 5".asFormula, abs(1, 0::Nil))
     result.subgoals.loneElement shouldBe "x>=0&abs_0=x | x<0&abs_0=-x ==> abs_0>=5".asSequent
@@ -193,6 +203,11 @@ class EqualityTests extends TacticTestBase {
   it should "expand abs(x) in context that binds x" in withQE { _ =>
     val result = proveBy("[x:=-7;]abs(x) >= 5".asFormula, abs(1, 1::0::Nil))
     result.subgoals.loneElement shouldBe "==> [x:=-7;]\\forall abs_0 (x>=0&abs_0=x|x < 0&abs_0=-x->abs_0>=5)".asSequent
+  }
+
+  it should "expand abs(x) at any position in context that binds x" in withQE { _ =>
+    val result = proveBy("==> x=4, [x:=-7;]abs(x) >= 5, y=3".asSequent, absAt(2, 1::0::Nil))
+    result.subgoals.loneElement shouldBe "==> x=4, [x:=-7;]\\forall abs_0 (x>=0&abs_0=x|x < 0&abs_0=-x->abs_0>=5), y=3".asSequent
   }
 
   "min" should "expand min(x,y) in succedent" in withQE { _ =>

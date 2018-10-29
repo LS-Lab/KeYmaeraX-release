@@ -213,9 +213,11 @@ private object EqualityTactics {
         if (polarity >= 0) /* positive and unknown polarity */ Forall(v :: Nil, Imply(Equal(v, t), inFml.replaceFree(t, v)))
         else Exists(v :: Nil, And(Equal(v, t), inFml.replaceFree(t, v)))
 
+      val cohidePos = if (pos.isAnte) cohide('Rlast) else cohide(pos.top)
+
       cutAt(cutFml)(pos) <(
         /* use */ skip,
-        /* show */ cohide('Rlast) & CMon(pos.inExpr) & implyR(1) &
+        /* show */ cohidePos & CMon(pos.inExpr) & implyR(1) &
         (if (polarity >= 0) allL(t)(-1) & implyL(-1) <(cohide(2) & byUS(DerivedAxioms.equalReflex), closeId)
          else existsR(t)(1) & andR(1) <(cohide(1) & byUS(DerivedAxioms.equalReflex), closeId)) &
         done
