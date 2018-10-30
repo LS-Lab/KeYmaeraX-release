@@ -249,7 +249,9 @@ private object EqualityTactics {
       }
   })
 
-  private lazy val contradiction = AnonymousLemmas.remember("f()<0 & f()>=0 <-> false".asFormula, QE, namespace)
+  private lazy val absContradiction = AnonymousLemmas.remember("f()<0 & f()>=0 <-> false".asFormula, QE, namespace)
+  private lazy val minContradiction = AnonymousLemmas.remember("f()>g() & f()<=g() <-> false".asFormula, QE, namespace)
+  private lazy val maxContradiction = AnonymousLemmas.remember("f()<g() & f()>=g() <-> false".asFormula, QE, namespace)
 
   /** Expands abs only at a specific position (also works in contexts that bind the argument of abs). */
   def absAt: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
@@ -274,9 +276,9 @@ private object EqualityTactics {
         abs(1, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length))) & orL(-1) <(
           orL(-2) <(
             andL(-2) & eqL2R(-3)(1) & andL(-1) & closeId,
-            andL(-2) & andL(-1) & andLi(AntePos(0), AntePos(2)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF),
+            andL(-2) & andL(-1) & andLi(AntePos(0), AntePos(2)) & useAt(absContradiction, PosInExpr(0::Nil))(-3) & closeF),
           orL(-2) <(
-            andL(-2) & andL(-1) & andLi(AntePos(2), AntePos(0)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF,
+            andL(-2) & andL(-1) & andLi(AntePos(2), AntePos(0)) & useAt(absContradiction, PosInExpr(0::Nil))(-3) & closeF,
             andL(-2) & eqL2R(-3)(1) & andL(-1) & closeId))
       } else {
         abs(-1, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length))) & orR(1) & orL(-2) <(
@@ -313,26 +315,49 @@ private object EqualityTactics {
   })
   /** Expands min/max only at a specific position (also works in contexts that bind some of the arguments). */
   def minmaxAt: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), Pair(f, g))) if fn == "min" || fn == "max" =>
+    case Some(minmaxTerm@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), Pair(f, g))) if fn == "min" || fn == "max" =>
       val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
       val minmaxVar = Variable(fn, freshMinMaxIdx)
 
       val parentPos = parentFormulaPos(pos, sequent)
 
-      abbrvAt(minmax, Some(minmaxVar))(parentFormulaPos(pos, sequent)) &
-        (if (parentPos.isTopLevel && parentPos.isSucc) {
-          allR(parentPos) & implyR(parentPos) &
-          useAt("= commute")('Llast, Equal(minmaxVar, minmax)) &
-          useAt(fn)('Llast, Equal(minmax, minmaxVar))
-        } else if (parentPos.isTopLevel && parentPos.isAnte) {
-          existsL(parentPos) & andL(parentPos) &
-          useAt("= commute")('L, Equal(minmaxVar, minmax)) &
-          useAt(fn)('L, Equal(minmax, minmaxVar))
-        } else {
-          val inContextEqPos = pos.topLevel ++ (pos.inExpr.parent ++ PosInExpr(0 :: 0 :: Nil))
-          useAt(DerivedAxioms.equalCommute)(inContextEqPos) & useAt(fn)(inContextEqPos)
-        }
-        )
+      val expanded = sequent.sub(parentPos) match {
+        case Some(fml) if fn == "min" =>
+          Or(
+            And(LessEqual(f, g), fml.replaceFree(minmaxTerm, f).asInstanceOf[Formula]),
+            And(Greater(f, g), fml.replaceFree(minmaxTerm, g).asInstanceOf[Formula])
+          )
+        case Some(fml) if fn == "max" =>
+          Or(
+            And(GreaterEqual(f, g), fml.replaceFree(minmaxTerm, f).asInstanceOf[Formula]),
+            And(Less(f, g), fml.replaceFree(minmaxTerm, g).asInstanceOf[Formula])
+          )
+      }
+
+      val cohidePos = if (pos.isAnte) cohideR('Rlast) else cohideR(pos.top)
+
+      val polarity = FormulaTools.polarityAt(sequent(pos.top), parentPos.inExpr) * (if (pos.isSucc) 1 else -1)
+
+      val contradiction = if (fn == "min") minContradiction else maxContradiction
+
+      val proveMinMax = if (polarity >= 0) {
+        minmax(1, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length))) & orL(-1) <(
+          orL(-2) <(
+            andL(-2) & eqL2R(-3)(1) & andL(-1) & closeId,
+            andL(-2) & andL(-1) & andLi(AntePos(0), AntePos(2)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF),
+          orL(-2) <(
+            andL(-2) & andL(-1) & andLi(AntePos(2), AntePos(0)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF,
+            andL(-2) & eqL2R(-3)(1) & andL(-1) & closeId))
+      } else {
+        minmax(-1, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length))) & orR(1) & orL(-2) <(
+          andL(-2) & eqL2R(-3)(-1) & andR(1) & OnAll(closeId),
+          andL(-2) & eqL2R(-3)(-1) & andR(2) & OnAll(closeId))
+      }
+
+      cutAt(expanded)(parentPos) <(
+        nil,
+        cohidePos & CMon(parentPos.inExpr) & implyR(1) & proveMinMax
+      )
   })
 
   /** Expands all special functions (abs/min/max). */

@@ -231,27 +231,31 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "min_0>=5, x<=y&min_0=x | x>y&min_0=y ==> ".asSequent
   }
 
-  "minmaxAt" should "expand min(x,y) in binding context" in withQE { _ =>
-    val result = proveBy("[x:=2;]min(x,y) >= 2".asFormula, minmaxAt(1, 1::0::Nil))
-    result.subgoals.loneElement shouldBe "==> [x:=2;]\\forall min_0 (x<=y&min_0=x|x>y&min_0=y -> min_0>=2)".asSequent
+  it should "expand min(x,y) in binding context" in withQE { _ =>
+    val result = proveBy("[x:=2;]min(x,y) >= 2".asFormula, minmax(1, 1::0::Nil))
+    result.subgoals.loneElement shouldBe "==> [x:=2;](x<=y&x>=2|x>y&y>=2)".asSequent
+  }
+
+  it should "expand min(x,y) in any polarity in binding context" in withQE { _ =>
+    val result = proveBy("[x:=2;]!min(x,y) >= 2".asFormula, minmax(1, 1::0::0::Nil))
+    result.subgoals.loneElement shouldBe "==> [x:=2;]!(x<=y&x>=2|x>y&y>=2)".asSequent
   }
 
   it should "expand min(x,y) only at position" in withQE { _ =>
-    val result = proveBy("[x:=2;]((min(x,y) >= 2 | y=7) & min(x,y) <= 10)".asFormula, minmaxAt(1, 1::0::0::0::Nil))
-    result.subgoals.loneElement shouldBe "==> [x:=2;]((\\forall min_0 (x<=y&min_0=x|x>y&min_0=y -> min_0>=2) | y=7) & min(x,y) <= 10)".asSequent
+    val result = proveBy("[x:=2;]((min(x,y) >= 2 | y=7) & min(x,y) <= 10)".asFormula, minmax(1, 1::0::0::0::Nil))
+    result.subgoals.loneElement shouldBe "==> [x:=2;](((x<=y&x>=2|x>y&y>=2) | y=7) & min(x,y) <= 10)".asSequent
   }
 
   it should "be possible to combine with abbrvAt to expand min(x,y) broadly" in withQE { _ =>
     val result = proveBy("[x:=2;]((min(x,y) >= 2 | y=7) & min(x,y) <= 10)".asFormula,
-      abbrvAt("min(x,y)".asTerm)(1, 1::Nil) & minmaxAt(1, 1::0::0::1::Nil))
-    //@todo inner existential quantifier could be simplified
-    result.subgoals.loneElement shouldBe "==> [x:=2;]\\forall min_0 (\\exists min_1 ((x<=y&min_1=x|x>y&min_1=y)&min_0=min_1)->(min_0>=2|y=7)&min_0<=10)".asSequent
+      abbrvAt("min(x,y)".asTerm)(1, 1::Nil) & minmax(1, 1::0::0::1::Nil))
+    result.subgoals.loneElement shouldBe "==> [x:=2;]\\forall min_0 (x<=y&min_0=x|x>y&min_0=y->(min_0>=2|y=7)&min_0<=10)".asSequent
   }
 
   it should "be possible to combine with abbrv to expand min(x,y) broadly" in withQE { _ =>
     val result = proveBy("(min(x,y) >= 2 | y=7) & min(x,y) <= 10".asFormula,
-      abbrv("min(x,y)".asTerm) & minmaxAt(-1, 1::Nil))
-    result.subgoals.loneElement shouldBe "x<=y&min_1=x|x>y&min_1=y, min_0=min_1 ==> (min_0>=2|y=7)&min_0<=10".asSequent
+      abbrv("min(x,y)".asTerm) & minmax(-1, 1::Nil))
+    result.subgoals.loneElement shouldBe "min_0=min_1, x<=y&min_1=x|x>y&min_1=y ==> (min_0>=2|y=7)&min_0<=10".asSequent
   }
 
   "max" should "expand max(x,y) in succedent" in withQE { _ =>
@@ -264,9 +268,14 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "max_0>=5, x>=y&max_0=x | x<y&max_0=y ==> ".asSequent
   }
 
+  it should "expand max(x,y) binding context in succedent" in withQE { _ =>
+    val result = proveBy("==> [x:=2;]max(x,y) >= 2".asSequent, minmax(1, 1::0::Nil))
+    result.subgoals.loneElement shouldBe "==> [x:=2;](x>=y&x>=2 | x<y&y>=2)".asSequent
+  }
+
   it should "expand max(x,y) binding context in antecedent" in withQE { _ =>
     val result = proveBy("[x:=2;]max(x,y) >= 2 ==> ".asSequent, minmax(-1, 1::0::Nil))
-    result.subgoals.loneElement shouldBe "[x:=2;]\\exists max_0 ((x>=y&max_0=x | x<y&max_0=y) & max_0>=2) ==> ".asSequent
+    result.subgoals.loneElement shouldBe "[x:=2;](x>=y&x>=2 | x<y&y>=2) ==> ".asSequent
   }
 
   "expandAll" should "expand abs everywhere" in withQE { _ =>
@@ -291,7 +300,7 @@ class EqualityTests extends TacticTestBase {
         |abs_0>0,
         |[a:=3;](a-5>=0&a-5>=2|a-5 < 0&-(a-5)>=2),
         |max_0>0,
-        |[x:=4;]\forall min_1 (x<=y&min_1=x|x>y&min_1=y->min_1>=4)
+        |[x:=4;](x<=y&x>=4|x>y&y>=4)
       """.stripMargin.asSequent
   }
 }
