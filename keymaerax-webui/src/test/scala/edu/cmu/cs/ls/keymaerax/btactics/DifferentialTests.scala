@@ -384,17 +384,41 @@ class DifferentialTests extends TacticTestBase with Timeouts {
   }
 
   it should "report when failing to derive postcondition" in withQE { _ =>
-    the [BelleThrowable] thrownBy proveBy("x>0 ==> [{x'=2}]max(x,y)>0".asSequent, dI()(1)) should
+    the [BelleThrowable] thrownBy proveBy("x>0, f(x,y)>0 ==> [{x'=2}]f(x,y)>0".asSequent, dI()(1)) should
       have message """[Bellerophon Runtime] [Bellerophon User-Generated Message] After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition
                      |The error occurred on
                      |Provable{
                      |   -1:  x>0	Greater
-                     |   -2:  true	True$
-                     |==> 1:  [{x'=2&true}](max((x,y()))>0)'	Box
+                     |   -2:  f((x,y()))>0	Greater
+                     |   -3:  true	True$
+                     |==> 1:  [{x'=2&true}](f((x,y()))>0)'	Box
                      |  from
                      |   -1:  x>0	Greater
-                     |   -2:  true	True$
-                     |==> 1:  [{x'=2&true}][x':=2;](max((x,y())))'>=0	Box}""".stripMargin
+                     |   -2:  f((x,y()))>0	Greater
+                     |   -3:  true	True$
+                     |==> 1:  [{x'=2&true}][x':=2;](f((x,y())))'>=0	Box}""".stripMargin
+  }
+
+  //@todo unsupported so far (substitution clash in derive)
+  it should "prove with quantified postconditions" ignore withMathematica { _ =>
+    proveBy("[{x'=3}]\\exists y y<=x".asFormula, dI()(1)) shouldBe 'proved
+  }
+
+  it should "expand special functions" in withQE { _ =>
+    the [BelleThrowable] thrownBy proveBy("[{x'=3}]abs(x)>=0".asFormula, dI()(1)) should have message
+      """[Bellerophon Runtime] Differential invariant must be preserved
+        |Expected proved provable, but got open goals
+        |Provable{
+        |   -1:  true	True$
+        |==> 1:  [{x'=3&true}](x>=0&x>=0|x < 0&-x>=0)'	Box
+        |  from
+        |   -1:  true	True$
+        |==> 1:  (3>=0&3>=0)&3<=0&-(3)>=0	And}""".stripMargin
+  }
+
+  //@todo unsupported so far (substitution clash)
+  "Derive" should "derive quantifiers" ignore {
+    proveBy("(\\exists x x>=0)'".asFormula, derive(1)).subgoals.loneElement shouldBe "==> \\exists x x'>=0".asSequent
   }
 
   "Dvariable" should "work when the Differential() occurs in a formula without []'s" in withQE { _ =>

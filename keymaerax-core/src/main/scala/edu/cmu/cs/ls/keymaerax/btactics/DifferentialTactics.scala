@@ -127,12 +127,23 @@ private object DifferentialTactics extends Logging {
     require(auto == 'full || auto == 'none || auto == 'diffInd, "Expected one of ['none, 'diffInd, 'full] automation values, but got " + auto)
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
-        require(pos.isSucc && (sequent.sub(pos) match {
+        val diFml = sequent.sub(pos)
+
+        require(pos.isSucc && (diFml match {
           case Some(Box(_: ODESystem, _)) => true
           case _ => false
-        }), "diffInd only at ODE system in succedent, but got " + sequent.sub(pos))
+        }), "diffInd only at ODE system in succedent, but got " + diFml)
+
+        val expand = diFml match {
+          case Some(Box(_, post)) if StaticSemantics.symbols(post).exists(
+            { case Function(_, _, _, _, interpreted) => interpreted case _ => false }) =>
+            // expand all interpreted function symbols below pos.1
+            EqualityTactics.expandAllAt(pos ++ PosInExpr(1::Nil))
+          case _ => skip
+        }
+
         if (pos.isTopLevel) {
-          val t = DI(pos) &
+          val t = expand & DI(pos) &
             implyR(pos) & andR(pos) & Idioms.<(
               if (auto == 'full) ToolTactics.hideNonFOL & (QE & done | DebuggingTactics.done("Differential invariant must hold in the beginning"))
                  else skip,
@@ -154,7 +165,7 @@ private object DifferentialTactics extends Logging {
           if (auto == 'full) Dconstify(t)(pos)
           else t
         } else {
-          val t = DI(pos) &
+          val t = expand & DI(pos) &
             (if (auto != 'none) {
               shift(PosInExpr(1 :: 1 :: Nil), "ANON" by ((pos: Position, sequent: Sequent) =>
                 //@note derive before DE to keep positions easier
