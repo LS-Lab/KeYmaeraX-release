@@ -202,12 +202,23 @@ class EqualityTests extends TacticTestBase {
 
   it should "expand abs(x) in context that binds x" in withQE { _ =>
     val result = proveBy("[x:=-7;]abs(x) >= 5".asFormula, abs(1, 1::0::Nil))
-    result.subgoals.loneElement shouldBe "==> [x:=-7;]\\forall abs_0 (x>=0&abs_0=x|x < 0&abs_0=-x->abs_0>=5)".asSequent
+    result.subgoals.loneElement shouldBe "==> [x:=-7;](x>=0&x>=5|x < 0&-x>=5)".asSequent
+  }
+
+  it should "not abbreviate when expanding abs(x) in context that binds x" in withQE { _ =>
+    // the quantifier resulting from abbreviating is not supported by dI
+    val result = proveBy("[x:=-7;](abs(x) >= 5 & abs(x) <= 9)".asFormula, abs(1, 1::0::0::Nil))
+    result.subgoals.loneElement shouldBe "==> [x:=-7;]((x>=0&x>=5|x < 0&-x>=5) & abs(x) <= 9)".asSequent
   }
 
   it should "expand abs(x) at any position in context that binds x" in withQE { _ =>
-    val result = proveBy("==> x=4, [x:=-7;]abs(x) >= 5, y=3".asSequent, absAt(2, 1::0::Nil))
-    result.subgoals.loneElement shouldBe "==> x=4, [x:=-7;]\\forall abs_0 (x>=0&abs_0=x|x < 0&abs_0=-x->abs_0>=5), y=3".asSequent
+    val result = proveBy("x=4, [x:=-7;]abs(x) >= 5, y=3 ==> ".asSequent, abs(-2, 1::0::Nil))
+    result.subgoals.loneElement shouldBe "x=4, [x:=-7;](x>=0&x>=5|x < 0&-x>=5), y=3 ==> ".asSequent
+  }
+
+  it should "expand abs(x) at any position and polarity in context that binds x" in withQE { _ =>
+    val result = proveBy("x=4, [x:=-7;]!abs(x) >= 5, y=3 ==> ".asSequent, abs(-2, 1::0::0::Nil))
+    result.subgoals.loneElement shouldBe "x=4, [x:=-7;]!(x>=0&x>=5|x < 0&-x>=5), y=3 ==> ".asSequent
   }
 
   "min" should "expand min(x,y) in succedent" in withQE { _ =>
@@ -278,7 +289,7 @@ class EqualityTests extends TacticTestBase {
         |x>=y&max_0=x|x < y&max_0=y
         |==>
         |abs_0>0,
-        |[a:=3;]\forall abs_1 (a-5>=0&abs_1=a-5|a-5 < 0&abs_1=-(a-5)->abs_1>=2),
+        |[a:=3;](a-5>=0&a-5>=2|a-5 < 0&-(a-5)>=2),
         |max_0>0,
         |[x:=4;]\forall min_1 (x<=y&min_1=x|x>y&min_1=y->min_1>=4)
       """.stripMargin.asSequent

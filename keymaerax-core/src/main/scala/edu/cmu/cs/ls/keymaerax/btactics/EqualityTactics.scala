@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, Position, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import StaticSemanticsTools._
 
@@ -17,6 +18,8 @@ import scala.collection.immutable._
   *
  */
 private object EqualityTactics {
+
+  private val namespace = "eq"
 
   /**
    * Rewrites an equality exhaustively from right to left (i.e., replaces occurrences of left with right).
@@ -245,28 +248,46 @@ private object EqualityTactics {
         absAt(pos)
       }
   })
+
+  private lazy val contradiction = AnonymousLemmas.remember("f()<0 & f()>=0 <-> false".asFormula, QE, namespace)
+
   /** Expands abs only at a specific position (also works in contexts that bind the argument of abs). */
   def absAt: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-    case Some(abs@FuncOf(Function(fn, None, Real, Real, true), _)) if fn == "abs" =>
+    case Some(absTerm@FuncOf(Function(fn, None, Real, Real, true), x)) if fn == "abs" =>
       val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
       val absVar = Variable(fn, freshAbsIdx)
 
       val parentPos = parentFormulaPos(pos, sequent)
 
-      abbrvAt(abs, Some(absVar))(parentFormulaPos(pos, sequent)) &
-        (if (parentPos.isTopLevel && parentPos.isSucc) {
-          allR(parentPos) & implyR(parentPos) &
-          useAt("= commute")('Llast, Equal(absVar, abs)) &
-          useAt(fn)('Llast, Equal(abs, absVar))
-        } else if (parentPos.isTopLevel && parentPos.isAnte) {
-          existsL(parentPos) & andL(parentPos) &
-          useAt("= commute")('L, Equal(absVar, abs)) &
-          useAt(fn)('L, Equal(abs, absVar))
-        } else {
-          val inContextEqPos = pos.topLevel ++ (pos.inExpr.parent ++ PosInExpr(0 :: 0 :: Nil))
-          useAt(DerivedAxioms.equalCommute)(inContextEqPos) & useAt(fn)(inContextEqPos)
-        }
-        )
+      val expanded = sequent.sub(parentPos) match {
+        case Some(fml) =>
+          Or(
+            And(GreaterEqual(x, Number(0)), fml.replaceFree(absTerm, x).asInstanceOf[Formula]),
+            And(Less(x, Number(0)), fml.replaceFree(absTerm, Neg(x)).asInstanceOf[Formula]))
+      }
+
+      val cohidePos = if (pos.isAnte) cohideR('Rlast) else cohideR(pos.top)
+
+      val polarity = FormulaTools.polarityAt(sequent(pos.top), parentPos.inExpr) * (if (pos.isSucc) 1 else -1)
+
+      val proveAbs = if (polarity >= 0) {
+        abs(1, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length))) & orL(-1) <(
+          orL(-2) <(
+            andL(-2) & eqL2R(-3)(1) & andL(-1) & closeId,
+            andL(-2) & andL(-1) & andLi(AntePos(0), AntePos(2)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF),
+          orL(-2) <(
+            andL(-2) & andL(-1) & andLi(AntePos(2), AntePos(0)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF,
+            andL(-2) & eqL2R(-3)(1) & andL(-1) & closeId))
+      } else {
+        abs(-1, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length))) & orR(1) & orL(-2) <(
+          andL(-2) & eqL2R(-3)(-1) & andR(1) & OnAll(closeId),
+          andL(-2) & eqL2R(-3)(-1) & andR(2) & OnAll(closeId))
+      }
+
+      cutAt(expanded)(parentPos) <(
+        nil,
+        cohidePos & CMon(parentPos.inExpr) & implyR(1) & proveAbs
+      )
   })
 
   /**
