@@ -1242,7 +1242,7 @@ private object DifferentialTactics extends Logging {
     // First cut in the barrier property, then use dgdbx on it
     // Barrier condition is checked first to make it fail faster
     dC(barrierFml)(pos) <(
-      skip,diffWeakenG(pos) & useAt(barrierCond)(1,1::Nil) & timeoutQE & done
+      skip, /* diffWeakenG faster but loses assumptions */ dW(pos) & useAt(barrierCond)(1,1::Nil) & timeoutQE & done
     ) & starter & dgDbx(cofactor)(pos)
   })
 
