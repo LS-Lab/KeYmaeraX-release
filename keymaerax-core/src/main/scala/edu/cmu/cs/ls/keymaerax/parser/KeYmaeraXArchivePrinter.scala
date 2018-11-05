@@ -98,17 +98,17 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (KeYmaeraXA
       else ""
 
     val printed = s"""$head "${entry.name}"
-       |$defsBlock
-       |ProgramVariables
-       |$printedVars
-       |$END_BLOCK
-       |
-       |Problem
-       |  ${entry.model.prettyString}
-       |$END_BLOCK
-       |
-       |$printedTactics
-       |$END_BLOCK""".stripMargin
+       #$defsBlock
+       #ProgramVariables
+       #$printedVars
+       #$END_BLOCK
+       #
+       #Problem
+       #  ${entry.model.prettyString}
+       #$END_BLOCK
+       #
+       #$printedTactics
+       #$END_BLOCK""".stripMargin('#')
 
     if (withComments) {
       assert(KeYmaeraXArchiveParser(printed).map(_.model) == KeYmaeraXArchiveParser(entry.problemContent).map(_.model),
@@ -117,27 +117,27 @@ class KeYmaeraXArchivePrinter(withComments: Boolean = false) extends (KeYmaeraXA
       """(Theorem|Lemma|ArchiveEntry|Exercise)[^\"]*\"[^\"]*\"""".r.findFirstIn(entry.problemContent) match {
         case Some(_) =>
           s"""${entry.problemContent.stripSuffix(END_BLOCK).trim()}
-             |$printedTactics
-             |$END_BLOCK""".stripMargin
+             #$printedTactics
+             #$END_BLOCK""".stripMargin('#')
         case None if entry.problemContent.contains(PROBLEM_BLOCK.img) =>
           s"""$head "${entry.name}"
-             |${entry.problemContent}
-             |$printedTactics
-             |$END_BLOCK""".stripMargin
+             #${entry.problemContent}
+             #$printedTactics
+             #$END_BLOCK""".stripMargin('#')
         case None if !entry.problemContent.contains(PROBLEM_BLOCK.img) =>
           // entry was imported from formula. augment header and blocks but print plain formula content.
           s"""$head "${entry.name}"
-             |$defsBlock
-             |ProgramVariables
-             |$printedVars
-             |$END_BLOCK
-             |
-             |Problem
-             |  ${entry.problemContent}
-             |$END_BLOCK
-             |
-             |$printedTactics
-             |$END_BLOCK""".stripMargin
+             #$defsBlock
+             #ProgramVariables
+             #$printedVars
+             #$END_BLOCK
+             #
+             #Problem
+             #  ${entry.problemContent}
+             #$END_BLOCK
+             #
+             #$printedTactics
+             #$END_BLOCK""".stripMargin('#')
       }
     } else printed
   }
