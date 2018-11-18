@@ -621,7 +621,8 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
 //      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(p1:DifferentialProgram) :+ (tok2@Token(AMP,_)) :+ Expr(f1:Formula) :+ (tok3@Token(RBRACE,_)) =>
 //        reduce(st, 5, elaborate(st, tok2, OpSpec.sODESystem, p1, f1), r)
       case r :+ (tok1@Token(LBRACE,_)) :+ Expr(p1:DifferentialProgram) :+ (tok2@Token(AMP,_)) :+ Expr(f1) :+ (tok3@Token(RBRACE,_)) =>
-        reduce(st, 5, elaborate(st, tok2, OpSpec.sODESystem, p1, f1), r)
+        if (StaticSemantics.isDifferential(f1)) throw new ParseException("ODE evolution domain contains primes", tok2.loc.spanTo(tok3.loc), printer.stringify(f1), "Formula without primes", "", "")
+        else reduce(st, 5, elaborate(st, tok2, OpSpec.sODESystem, p1, f1), r)
 
       // elaboration special pattern case to DifferentialProgram
       case r :+ (tok1@Token(LBRACE,_)) :+ Expr(t1@Equal(_:DifferentialSymbol,_)) if (la==AMP || la==COMMA || la==RBRACE) &&

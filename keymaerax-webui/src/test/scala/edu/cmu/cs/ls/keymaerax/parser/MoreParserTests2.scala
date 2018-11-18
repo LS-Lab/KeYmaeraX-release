@@ -182,6 +182,17 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach {
         |Expected: } (RBRACE$)""".stripMargin
   }
 
+  it should "refuse primed variables in evolution domain constraint" in {
+    the [ParseException] thrownBy parser("[{x'=v,v'=3 & v'>0}]x=0") should have message
+      """1:13 ODE evolution domain contains primes
+        |Found:    v'>0 at 1:13 to 1:19
+        |Expected: Formula without primes""".stripMargin
+    the [ParseException] thrownBy parser("[{x'=v,v'=3 & (x+v)'>0}]x=0") should have message
+      """1:13 ODE evolution domain contains primes
+        |Found:    (x+v)'>0 at 1:13 to 1:23
+        |Expected: Formula without primes""".stripMargin
+  }
+
   it should "parse standalone differential symbols" in {
     parser("x'") shouldBe DifferentialSymbol(Variable("x"))
   }
