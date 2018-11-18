@@ -896,6 +896,29 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
       "Link" -> "http://web.keymaerax.org/show/entry1")
   }
 
+  it should "replace tabs with spaces" in {
+    // tabs throw off the position computation in the lexer. in archives, this leads to faulty tactic extraction.
+    val entry = KeYmaeraXArchiveParser.parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\n\tReal x;\nEnd.\nProblem\n\tx>0\nEnd.\nTactic \"Proof\" master End. End.").loneElement
+    entry.name shouldBe "Replace tabs"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe
+      """ArchiveEntry "Replace tabs"
+        |ProgramVariables
+        |  Real x;
+        |End.
+        |Problem
+        |  x>0
+        |End.
+        |Tactic "Proof" master End. End.""".stripMargin
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x>0".asFormula
+    entry.tactics shouldBe ("Proof", "master", TactixLibrary.master()) :: Nil
+    entry.info shouldBe empty
+  }
+
   "Global definitions" should "be added to all entries" in {
     val input =
       """SharedDefinitions.

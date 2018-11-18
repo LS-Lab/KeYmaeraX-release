@@ -273,7 +273,7 @@ object KeYmaeraXArchiveParser {
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression.
     * Skips parsing tactics if `parseTactics` is false. Requires KeYmaeraXPrettyPrinter setup if `parseTactics` is true. */
   def parse(input: String, parseTactics: Boolean = true): List[ParsedArchiveEntry] = {
-    val stripped = ParserHelper.removeBOM(input)
+    val stripped = ParserHelper.removeBOM(input).replaceAllLiterally("\t","  ")
     val tokenStream = KeYmaeraXLexer.inMode(stripped, ProblemFileMode)
     try {
       parse(tokenStream, stripped, parseTactics)
@@ -326,6 +326,7 @@ object KeYmaeraXArchiveParser {
   /** Parses the input token stream (lexed from `text`); skips tactic parsing if parseTactics is false. */
   private[parser] def parse(input: TokenStream, text: String, parseTactics: Boolean): List[ParsedArchiveEntry] = {
     require(input.last.tok == EOF, "token streams have to end in " + EOF)
+    require(!text.contains('\t'), "Tabs in input not supported, please replace with spaces")
 
     parseLoop(ParseState(Bottom, input), text).stack match {
       case Bottom :+ Accept(entries) => entries.map(convert(_, text, parseTactics))
