@@ -9,9 +9,12 @@ package edu.cmu.cs.ls.keymaerax.tools
 
 import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.btactics.FormulaTools
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
+import edu.cmu.cs.ls.keymaerax.tools.KMComparator.hasHead
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
@@ -24,20 +27,37 @@ import scala.collection.immutable
 class MathematicaQETool(override val link: MathematicaLink)
   extends BaseKeYmaeraMathematicaBridge[KExpr](link, KeYmaeraToMathematica, MathematicaToKeYmaera) with QETool with Logging {
 
-  /** Adds assertions of form {{{t \[Element] Reals}}} for each term in mustBeReal. */
-  private def conjunctDomainAssumptions(originalInput: MExpr, mustBeReal: List[Term]) = {
-    val domainAssumptions = mustBeReal.map(k2m).map(mTerm =>
-      //term \in Reals
-      new Expr(new Expr(Expr.SYMBOL, "Element"), (mTerm :: new Expr(Expr.SYMBOL, "Reals") :: Nil).toArray)
-    )
-    new Expr(new Expr(Expr.SYMBOL, "And"), (domainAssumptions :+ originalInput).toArray)
+  /** Converts Mathematica to KeYmaera, except that it undoes (t \in Reals) proof obligations added by the EnsureRealsConverter. */
+  private object EnsureRealsM2K extends MathematicaToKeYmaera {
+    override private[tools] def convert(e: MExpr) = {
+      if (hasHead(e, MathematicaSymbols.AND) && hasHead(e.args.head, MathematicaSymbols.ELEMENT)) super.convert(e.args.last)
+      else if (hasHead(e, MathematicaSymbols.IMPL) && hasHead(e.args.head, MathematicaSymbols.ELEMENT)) super.convert(e.args.last)
+      else super.convert(e)
+    }
+  }
+
+  /** Adds assertions of the form {{{t \[Element] Reals}}} for each term in mustBeReal at the term's parent formula. */
+  private class EnsureRealsK2M(fullFormula: Formula, mustBeReal: Map[Formula, (Term, PosInExpr)]) extends KeYmaeraToMathematica {
+    override def m2k: M2KConverter[KExpr] = EnsureRealsM2K
+
+    override protected def convertFormula(f: Formula): MExpr = mustBeReal.get(f) match {
+      case Some((t: Term, p: PosInExpr)) =>
+        //term \in Reals
+        val inReals = new Expr(MathematicaSymbols.ELEMENT, Array(k2m(t), MathematicaSymbols.REALS))
+        if (FormulaTools.polarityAt(fullFormula, p) >= 0) new Expr(MathematicaSymbols.AND, Array(inReals, k2m(f)))
+        else new Expr(MathematicaSymbols.IMPL, Array(inReals, k2m(f)))
+      case _ => super.convertFormula(f)
+    }
   }
 
   def qeEvidence(originalFormula: Formula): (Formula, Evidence) = {
     val f = {
       val mustBeReals = FormulaTools.unnaturalPowers(originalFormula)
-      val convertedFormula = k2m(originalFormula)
-      conjunctDomainAssumptions(convertedFormula, mustBeReals)
+      val mustBeRealsInParentFml = mustBeReals.map({ case (t: Term, p: PosInExpr) =>
+        val parentFormulaPos = FormulaTools.parentFormulaPos(p, originalFormula)
+        originalFormula.sub(parentFormulaPos).get.asInstanceOf[Formula] -> (t -> parentFormulaPos)
+      })
+      new EnsureRealsK2M(originalFormula, mustBeRealsInParentFml.toMap)(originalFormula)
     }
     val method = Configuration.getOption(Configuration.Keys.MATHEMATICA_QE_METHOD).getOrElse("Reduce") match {
       case "Reduce" => MathematicaSymbols.REDUCE

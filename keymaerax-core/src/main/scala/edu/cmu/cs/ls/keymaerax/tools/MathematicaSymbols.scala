@@ -60,6 +60,7 @@ private object MathematicaSymbols {
   def RESOLVE = new MExpr(Expr.SYMBOL,  "Resolve")
   def REALS = new MExpr(Expr.SYMBOL, "Reals")
   def RATIONALS = new MExpr(Expr.SYMBOL, "Rationals")
+  def ELEMENT = new Expr(Expr.SYMBOL, "Element")
   def SOLVE = new MExpr(Expr.SYMBOL,  "Solve")
   def DSOLVE = new MExpr(Expr.SYMBOL,  "DSolve")
   def FULLSIMPLIFY = new MExpr(Expr.SYMBOL,  "FullSimplify")
