@@ -786,12 +786,29 @@ object KeYmaeraXArchiveParser {
     val problemText = sharedDefsText + (
       if (entry.loc.begin.line > 0) {
         val tacticStripped = slice(text, entry.loc, entry.tactics.map(_.blockLoc)).trim()
-        if (tacticStripped.contains("End.")) {
-          tacticStripped.stripSuffix("End.").trim() + "\nEnd."
+        if (tacticStripped.trim().endsWith("End.")) {
+          tacticStripped.trim().stripSuffix("End.").trim() + "\nEnd."
         } else tacticStripped
       } else text)
 
     val entryKinds = Map("ArchiveEntry"->"theorem", "Theorem"->"theorem", "Lemma"->"lemma", "Exercise"->"theorem")
+
+    // double-check that the extracted problem text still parses
+
+    val tokens = KeYmaeraXLexer.inMode(problemText, ProblemFileMode)
+    val reparse = try {
+      parseLoop(ParseState(Bottom, tokens), text).stack
+    } catch {
+      case ex: ParseException => throw ParseException("Even though archive parses, extracted problem does not parse (try reformatting):\n" + problemText, UnknownLocation)
+    }
+    reparse match {
+      case Bottom :+ Accept(entries) if entries.size == 1 =>
+        if (entries.head.problem != entry.problem) throw ParseException("Even though archive parses, extracted problem does not match archive entry:\n" + problemText, UnknownLocation)
+      case Bottom :+ Accept(entries) if entries.size != 1 => throw ParseException("Even though archive parses, extracted problem artifact results in unexpected number of problems (expected 1 but got " + entries.size + "): \n" + entries.mkString("\n"), UnknownLocation)
+      case _ :+ Error(msg, loc, st) => throw ParseException("Even though archive parses, extracted problem artifact does not parse: " + msg, loc, "<unknown>", "<unknown>", "", st)
+      case _ => throw new AssertionError("Even though archive parses, extracted problem artifact does not parse: Parser terminated with unexpected stack")
+    }
+
 
     ParsedArchiveEntry(entry.name, entryKinds(entry.kind), entryText.trim(), problemText.trim(), definitions, elaborated, tactics, entry.info)
   }

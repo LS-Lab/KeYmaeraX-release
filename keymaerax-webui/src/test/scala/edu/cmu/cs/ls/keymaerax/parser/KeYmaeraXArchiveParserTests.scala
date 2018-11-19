@@ -8,16 +8,17 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Bool, Real, Trafo, Tuple, Unit}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import org.scalatest.LoneElement._
+import org.scalatest.PrivateMethodTester
 import org.scalatest.matchers.{MatchResult, Matcher}
 
 /**
   * Tests the archive parser.
   * Created by smitsch on 12/29/16.
   */
-class KeYmaeraXArchiveParserTests extends TacticTestBase {
+class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTester {
 
   private def beDecl(right: Declaration) =
     new Matcher[Declaration] {
@@ -917,6 +918,56 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase {
     entry.model shouldBe "x>0".asFormula
     entry.tactics shouldBe ("Proof", "master", TactixLibrary.master()) :: Nil
     entry.info shouldBe empty
+  }
+
+  it should "replace tabs with spaces in model-only entry" in {
+    // tabs throw off the position computation in the lexer (especially before \n). in archives without tactics, this leads to faulty model extraction.
+    val entry = KeYmaeraXArchiveParser.parse("ArchiveEntry \"Replace tabs\"\nProgramVariables\t\nReal x;\nEnd.\nProblem\nx>0 End. End.").loneElement
+    entry.name shouldBe "Replace tabs"
+    entry.kind shouldBe "theorem"
+    entry.fileContent shouldBe
+      s"""ArchiveEntry "Replace tabs"
+        |ProgramVariables${"  "}
+        |Real x;
+        |End.
+        |Problem
+        |x>0 End. End.""".stripMargin
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("x", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "x>0".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
+  it should "double-check extracted artifact strings" in {
+    val text = """ArchiveEntry "Entry 1"
+                 |ProgramVariables
+                 |  Real x;
+                 |End.
+                 |Problem
+                 |  x>0 End. End.""".stripMargin
+    val tokens = KeYmaeraXLexer.inMode(text, ProblemFileMode)
+    // temper with positioning
+    val problemIdx = tokens.indexWhere(_.tok.img == "Problem")
+    val (correctPosTokens, wrongPosTokens) = tokens.splitAt(problemIdx)
+    val wrongTokens: KeYmaeraXLexer.TokenStream = correctPosTokens ++ wrongPosTokens.map(t => Token(t.tok, t.loc match {
+      case Region(l, c, el, ec) => Region(l-1, c, el-1, ec)
+      case l => l
+    }))
+
+    val parse = PrivateMethod[List[ParsedArchiveEntry]]('parse)
+    KeYmaeraXArchiveParser invokePrivate parse(tokens, text, true) // should not fail
+    the [ParseException] thrownBy (KeYmaeraXArchiveParser invokePrivate parse(wrongTokens, text, true)) should
+      have message """<somewhere> Even though archive parses, extracted problem does not parse (try reformatting):
+                     |ArchiveEntry "Entry 1"
+                     |ProgramVariables
+                     |  Real x;
+                     |End.
+                     |Problem
+                     |Found:    <unknown> at <somewhere>
+                     |Expected: <unknown>""".stripMargin
   }
 
   "Global definitions" should "be added to all entries" in {
