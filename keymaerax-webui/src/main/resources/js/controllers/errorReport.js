@@ -231,17 +231,17 @@ angular.module('keymaerax.controllers').controller('ErrorReportCtrl', function($
 
   encodeText = function(str) {
     // replace characters not encoded by encodeURIComponent manually
-    return encodeURIComponent(str).replace(/[!'()*]/g, function(c) {
+    return encodeURIComponent(str).replace(/[-_.~!*'()]/g, function(c) {
       return '%' + c.charCodeAt(0).toString(16);
     });
   }
 
   $scope.bodyText = function() {
     return encodeText("Description\n" + ($scope.userDescription ? $scope.userDescription : "") +
-      "\n\nKeYmaera X v" + $scope.kyxVersion + ($scope.isLocal ? " (local)" : " (web.keymaerax.org)") +
-      ($scope.omitSysConfig ? "\n\nSystem configuration unreported" : "\n\nSystem configuration\n" + $scope.kyxConfig) +
-      "\n\nError message\n" + $scope.errorText +
-      "\n\nError trace\n" + $scope.errorTrace);
+      "\n\nKeYmaera X v" + ($scope.kyxVersion ? $scope.kyxVersion : "Unknown") + ($scope.isLocal ? " (local)" : " (web.keymaerax.org)") +
+      ($scope.omitSysConfig ? "\n\nSystem configuration unreported" : "\n\nSystem configuration\n" + ($scope.kyxConfig ? $scope.kyxConfig : "Unavailable")) +
+      "\n\nError message\n" + ($scope.errorText ? $scope.errorTest : "Unavailable") +
+      "\n\nError trace\n" + ($scope.errorTrace ? $scope.errorTrace : "Unavailable"));
   }
 
   $scope.cancel = function() {
