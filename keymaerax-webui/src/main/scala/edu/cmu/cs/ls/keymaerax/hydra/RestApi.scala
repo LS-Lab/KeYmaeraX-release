@@ -53,23 +53,6 @@ import StatusCodes._
 
 import scala.language.postfixOps
 
-//@todo not sure what this is or how to replicate this in Akka.
-//class RestApiActor extends Actor with RestApi {
-//  implicit def eh(implicit log: LoggingContext) = ExceptionHandler {
-//    case e: Throwable => ctx =>
-//      val errorJson: String = new ErrorResponse(e.getMessage, e).getJson.prettyPrint
-//      log.error(e, s"Request '${ctx.request.uri}' resulted in uncaught exception", ctx.request)
-//      ctx.complete(StatusCodes.InternalServerError, errorJson)
-//  }
-//
-//  def actorRefFactory: ActorContext = context
-//
-//  //Note: separating the actor and router allows testing of the router without
-//  //spinning up an actor.
-//  def receive: Actor.Receive = runRoute(myRoute)
-//
-//}
-
 /**
  * RestApi is the API router. See README.md for a description of the API.
  */
@@ -77,6 +60,15 @@ object RestApi extends Logging {
   //region Database setup
 
   private val database = DBAbstractionObj.defaultDatabase //SQLite //Not sure when or where to create this... (should be part of Boot?)
+
+  val catchAllExceptionHandler = ExceptionHandler {
+    case ex: Exception =>
+      extractUri { uri =>
+        val errorJson: String = new ErrorResponse(ex.getMessage, ex).getJson.prettyPrint
+        logger.error(s"Request '$uri' resulted in uncaught exception", ex)
+        complete(StatusCodes.InternalServerError, errorJson)
+      }
+  }
 
   //endregion
 
@@ -1167,12 +1159,12 @@ object RestApi extends Logging {
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil
 
-  val sessionRoutes : List[Route] = partialSessionRoutes.map(routeForSession => optionalHeaderValueByName("x-session-token") {
+  val sessionRoutes: List[Route] = partialSessionRoutes.map(routeForSession => optionalHeaderValueByName("x-session-token") {
     case Some(token) => routeForSession(SessionManager.token(token))
     case None => routeForSession(EmptyToken())
   })
 
-  val api : Route = (publicRoutes ++ sessionRoutes).reduce(_ ~ _)
+  val api: Route = handleExceptions(catchAllExceptionHandler)((publicRoutes ++ sessionRoutes).reduce(_ ~ _))
 
   //endregion
 }
