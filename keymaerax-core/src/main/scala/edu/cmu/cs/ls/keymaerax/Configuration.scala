@@ -37,6 +37,7 @@ object Configuration {
     val PROOF_TERM = "PROOF_TERM"
     val QE_LOG_PATH = "QE_LOG_PATH"
     val QE_TOOL = "QE_TOOL"
+    val CEX_SEARCH_DURATION = "CEX_SEARCH_DURATION"
     val MATHEMATICA_QE_METHOD = "QE_METHOD"
     val SMT_CACHE_PATH = "SMT_CACHE_PATH"
     val TEST_DB_PATH = "TEST_DB_PATH"

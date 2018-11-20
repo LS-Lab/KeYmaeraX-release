@@ -121,7 +121,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
    * @return A counterexample, if found. None otherwise.
    */
   override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Expression]] = {
-    mCEX.timeout = 10
+    mCEX.timeout = Integer.parseInt(Configuration.getOption(Configuration.Keys.CEX_SEARCH_DURATION).getOrElse("10"))
     mCEX.findCounterExample(formula)
   }
 
