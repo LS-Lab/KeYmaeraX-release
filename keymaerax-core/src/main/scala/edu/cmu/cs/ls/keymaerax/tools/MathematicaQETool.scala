@@ -51,14 +51,15 @@ class MathematicaQETool(override val link: MathematicaLink)
   }
 
   def qeEvidence(originalFormula: Formula): (Formula, Evidence) = {
-    val f = {
-      val mustBeReals = FormulaTools.unnaturalPowers(originalFormula)
-      val mustBeRealsInParentFml = mustBeReals.map({ case (t: Term, p: PosInExpr) =>
-        val parentFormulaPos = FormulaTools.parentFormulaPos(p, originalFormula)
-        originalFormula.sub(parentFormulaPos).get.asInstanceOf[Formula] -> (t -> parentFormulaPos)
-      })
-      new EnsureRealsK2M(originalFormula, mustBeRealsInParentFml.toMap)(originalFormula)
-    }
+//    val f = {
+//      val mustBeReals = FormulaTools.unnaturalPowers(originalFormula)
+//      val mustBeRealsInParentFml = mustBeReals.map({ case (t: Term, p: PosInExpr) =>
+//        val parentFormulaPos = FormulaTools.parentFormulaPos(p, originalFormula)
+//        originalFormula.sub(parentFormulaPos).get.asInstanceOf[Formula] -> (t -> parentFormulaPos)
+//      })
+//      new EnsureRealsK2M(originalFormula, mustBeRealsInParentFml.toMap)(originalFormula)
+//    }
+    val f = k2m(originalFormula)
     val method = Configuration.getOption(Configuration.Keys.MATHEMATICA_QE_METHOD).getOrElse("Reduce") match {
       case "Reduce" => MathematicaSymbols.REDUCE
       case "Resolve" => MathematicaSymbols.RESOLVE
