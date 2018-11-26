@@ -91,6 +91,10 @@ object ODEInvariance {
     remember("f_() = g_() -> (f_() >=0 -> g_()>=0)".asFormula,QE,
       namespace)
 
+  private lazy val fastSOS = proveBy("g() >= 0 & (P() <-> g() <= 0) -> (P()&f()=0 <-> g()+f()*f()<=0)".asFormula,
+    prop & OnAll(QE)
+  )
+
   private lazy val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
   private lazy val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
   private lazy val absF = Function("abs", None, Real, Real, interpreted=true)
@@ -691,9 +695,11 @@ object ODEInvariance {
         ps.map(p => Equal(p,zero)).reduce(And)
 
     //this can also be manually proved rather than using QE
-    val pr = proveBy(Equiv(cutp,
-      if(negate) Greater(sump,zero)
-      else LessEqual(sump,zero)),QE)
+    val pr =
+      if(negate)
+        proveBy(Equiv(cutp, Greater(sump,zero)), QE)
+      else
+        proveBy(Equiv(cutp,LessEqual(sump,zero)), ((useAt(fastSOS,PosInExpr(1::Nil))(1) & andR(1) <( prove_sos_positive, skip ))*) & QE )
 
     //Construct the term ||G||^2 + 1
     val cofactorPre = Plus(Gco.map(ts => ts.map(t=>Times(t,t):Term).reduceLeft(Plus)).reduceLeft(Plus),one)
@@ -746,7 +752,7 @@ object ODEInvariance {
                 //Cleanup the goal
                 hideL('Llast) &
                 exhaustiveEqL2R('Llast) &
-                useAt(ghostLem3,PosInExpr(1::Nil))(pos) &
+                // useAt(ghostLem3,PosInExpr(1::Nil))(pos) &
                 // This useAt doesn't work with Dconstify
                 // useAt(pr,PosInExpr(1::Nil))(pos) &
                 DebuggingTactics.debug("First Vdbx QE",debugTactic) &
@@ -807,6 +813,8 @@ object ODEInvariance {
     require(conjs.forall(f => f.isInstanceOf[Equal]), "dRI requires only equations in postcondition")
     val polys = conjs.map(f => f.asInstanceOf[Equal].left)
     val (r,groebner,cofactors) = rank(sys,polys)
+
+    //println(r,groebner,cofactors)
 
     diffUnpackEvolutionDomainInitially(pos) &
       DebuggingTactics.debug("dgVdbx",debugTactic) &

@@ -15,8 +15,8 @@ class ODEInvarianceTests extends TacticTestBase {
 
   "vdbx" should "prove matrix and vector bounds" in withMathematica { _ =>
     //These bounds ought to be enough for all intents and purposes
-    val cs = cauchy_schwartz_bound(10)
-    val fs = frobenius_subord_bound(10)
+    val cs = cauchy_schwartz_bound(5)
+    val fs = frobenius_subord_bound(5)
     cs shouldBe 'proved
     fs._1 shouldBe 'proved
     fs._2 shouldBe 'proved
@@ -24,7 +24,7 @@ class ODEInvarianceTests extends TacticTestBase {
 
   it should "test caching" in withMathematica { _ =>
     val lemmaDB = LemmaDBFactory.lemmaDB
-    val dim = 10
+    val dim = 5
 
     //Initial versions in DB
     println("Initial call")
@@ -173,7 +173,7 @@ class ODEInvarianceTests extends TacticTestBase {
     val fml = "y>=0 & x-z>=0|x+y*z>0 & x>=0 &x+y+z = 0".asFormula
     val fs = fStar(odeSys,fml)
     println(fs)
-    fs._1 shouldBe "(y>=0&(y=0->2*x+y>0)|1=0)&(x-z>=0&(x-z=0->1+(-1+x)*x+-1*y+-1*z>=0&(1+(-1+x)*x+-1*y+-1*z=0->-1+(-1+x)*x*(1+2*x)+-2*y+-1*z>0))|1=0)|(x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>0)))&(x>0|1=0)&(-31+z=0&36+y=0)&-5+x=0".asFormula
+    fs._1 shouldBe "(y>=0&(y=0->2*x+y>0))&x-z>=0&(x-z=0->1+(-1+x)*x+-1*y+-1*z>=0&(1+(-1+x)*x+-1*y+-1*z=0->-1+(-1+x)*x*(1+2*x)+-2*y+-1*z>0))|(x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>0)))&x>0&(-31+z=0&36+y=0)&-5+x=0".asFormula
   }
 
   "sAIc" should "take a local progress step" in withMathematica { qeTool =>
