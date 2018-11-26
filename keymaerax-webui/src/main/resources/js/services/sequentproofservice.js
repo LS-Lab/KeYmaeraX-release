@@ -223,15 +223,15 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           //@todo additionally check that deduction.sections are all the same (might be expensive, though)
         });
 
-        // update agenda: copy already cached deduction path into the remaining agenda item (new top item)
-        response.data.agendaItem.deduction = agendaItems[0].deduction;
-        theAgenda.itemsMap[response.data.agendaItem.id] = response.data.agendaItem;
-
         // delete previous items
         //@todo preserve previous tab order
         $.each(agendaItems, function(i, item) {
           delete theAgenda.itemsMap[item.id];
         });
+
+        // update agenda: copy already cached deduction path into the remaining agenda item (new top item)
+        response.data.agendaItem.deduction = agendaItems[0].deduction;
+        theAgenda.itemsMap[response.data.agendaItem.id] = response.data.agendaItem;
 
         // select new top item (@todo does not work with step back)
         theAgenda.select(response.data.agendaItem);

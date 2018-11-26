@@ -304,7 +304,8 @@
                                     <span class="input-group-btn"
                                           uib-tooltip="Rerun tactic from original conjecture"
                                           data-intro="Rerun the tactic from the start" data-position="right">
-                                        <button class="btn btn-default" ng-click="rerunTactic()">Rerun</button>
+                                        <button class="btn btn-default" ng-click="rerunTactic()"
+                                                ng-disabled="prooftree.root === agenda.selectedId()">Rerun</button>
                                     </span>
                                     <span class="input-group-addon">Fresh steps</span>
                                     <input type="text" class="form-control k4-abbreviate" placeholder="None"
