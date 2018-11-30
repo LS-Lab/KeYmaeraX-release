@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -8,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.Tool
+import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, Tool}
 
 import scala.collection.immutable.IndexedSeq
 
@@ -190,6 +191,29 @@ class QETests extends TacticTestBase {
     the [BelleThrowable] thrownBy interpreter(QE(Nil, Some("Mathematica"), Some(7)),
       BelleProvable(ProvableSig.startProof(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent)))) should have message "[Bellerophon Runtime] QE requires Mathematica, but got None"
   }}
+
+  "CEX in QE" should "not fail QE when FindInstance fails" in withMathematica { tool =>
+    val fml = """(\forall w2 \exists w3 \forall w4 \exists w5 \forall w6 \exists w7 \forall w8 \exists w9 \forall w10
+      #\exists w11 \forall w12 \exists w13 \forall w14 \exists w15 \forall w16 \exists w17 \forall w18 \exists w19 \forall w20
+      #(w11*100*w12^2*w13^2*w14^4*w15^777*w16^(15/552)*w7^44*w18^8*w19^2*w20^20 + y^100*x^1000 <= y^100*x^999*w1*w2^2*w3^3*w4^4*w5^5*w6^6*w7^7*w8^8*w9^9*w10^10)) &
+      #x^2 + y^2 != y^2 &
+      #y^100*x^1000 + w1*w5*w7 <= y^100*x^999*w1*w2^2*w3^3*w4^4*w5^5*w6^6*w7^7*w8^8*w9^9*w10^10 &
+      #y^2 + y^2 != y^2 &
+      #y^100*x^1000 + w3*w7*w8<= y^100*x^999*w1*w2^2*w3^3*w4^4*w5^5*w6^6*w7^7*w8^8*w9^9*w10^10 &
+      #w1^2 + y^2 != y^2 &
+      #y^100*x^1000 + w1*w2*w3*w4*w7 <= y^100*x^999*w1*w2^2*w3^3*w4^4*w5^5*w6^6*w7^7*w8^8*w9^9*w10^10 &
+      #z^2 + y^2 != y^2 &
+      #9000 * y^1000/2*z <= z^12
+      #-> x^2 + y^2 + w1^2 + z^2 > 0""".stripMargin('#').asFormula
+    Configuration.set(Configuration.Keys.MATHEMATICA_QE_METHOD, "Resolve", saveToFile = false)
+    tool.setOperationTimeout(1)
+    // CEX will fail, timeout from followup QE expected
+    val ex = the [BelleThrowable] thrownBy proveBy(fml, QE)
+    ex.getCause match {
+      case c: MathematicaComputationAbortedException => c.getMessage should include ("Resolve")
+      case _ => throw ex
+    }
+  }
 
   "Partial QE" should "not fail on |-" in withMathematica { qeTool =>
     val result = proveBy(Sequent(IndexedSeq(), IndexedSeq()), ToolTactics.partialQE(qeTool))

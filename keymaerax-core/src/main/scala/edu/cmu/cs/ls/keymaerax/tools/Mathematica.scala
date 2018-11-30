@@ -79,20 +79,21 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
     } catch {
       case _: MathematicaComputationAbortedException =>
         mCEX.timeout = qeCexTimeout
-        try {
-          mCEX.findCounterExample(stripUniversalClosure(formula)) match {
-            case None =>
-              mQE.timeout = qeMaxTimeout
-              mQE.qeEvidence(formula)
-            case Some(cex) => (False, ToolEvidence(List("input" -> formula.prettyString, "output" -> cex.mkString(","))))
-          }
+        val cex = try {
+          mCEX.findCounterExample(stripUniversalClosure(formula))
         } catch {
-          case _: MathematicaComputationAbortedException =>
-            mQE.timeout = qeMaxTimeout
-            mQE.qeEvidence(formula)
+          case _: MathematicaComputationAbortedException => None
+          case _: MathematicaComputationFailedException => None
+          case _: ToolException => None
           case ex: MathematicaComputationExternalAbortException =>
             //@note external abort means do not try any further
             throw ex
+        }
+        cex match {
+          case None =>
+            mQE.timeout = qeMaxTimeout
+            mQE.qeEvidence(formula)
+          case Some(cexFml) => (False, ToolEvidence(List("input" -> formula.prettyString, "output" -> cexFml.mkString(","))))
         }
       case ex: MathematicaComputationExternalAbortException => throw ex
     }
