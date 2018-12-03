@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
@@ -29,20 +30,24 @@ private object ToolTactics {
 
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(order: Seq[NamedSymbol] = Nil)(qeTool: => QETool): BelleExpr = Idioms.NamedTactic("QE", {
-    val prepareAndRcf = toSingleFormula & assertT(_.succ.head.isFOL, "QE on FOL only") &
+    val closureAndRcf = toSingleFormula & assertT(_.succ.head.isFOL, "QE on FOL only") &
       FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool) &
       (done | ("ANON" by ((s: Sequent) =>
         if (s.succ.head == False) label(BelleLabels.QECEX)
         else DebuggingTactics.done("QE was unable to prove: invalid formula")))
         )
 
+    val convertInterpretedSymbols = Configuration.getOption(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse("false").toBoolean
+    val expandAndRcf =
+      if (convertInterpretedSymbols) closureAndRcf | EqualityTactics.expandAll & closureAndRcf
+      else EqualityTactics.expandAll & closureAndRcf
+
     QELogger.getLogTactic &
     (done | //@note don't fail QE if already proved
       (SaturateTactic(alphaRule) &
         (close |
           (SaturateTactic(EqualityTactics.atomExhaustiveEqL2R('L)) &
-            hidePredicates &
-            (prepareAndRcf | EqualityTactics.expandAll & prepareAndRcf)
+            hidePredicates & expandAndRcf
           )
         )
       )
