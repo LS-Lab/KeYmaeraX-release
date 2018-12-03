@@ -401,12 +401,13 @@ class GetProblemResponse(proofid:String, tree:String) extends Response {
   )
 }
 
-case class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String) extends Response {
+case class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String, info: String) extends Response {
   def getJson = JsObject(
     "proofId" -> JsString(proofId),
     "nodeId" -> JsString(nodeId),
     "taskId" -> JsString(taskId),
-    "type" -> JsString("runbelleterm")
+    "type" -> JsString("runbelleterm"),
+    "info" -> JsString(info)
   )
 }
 

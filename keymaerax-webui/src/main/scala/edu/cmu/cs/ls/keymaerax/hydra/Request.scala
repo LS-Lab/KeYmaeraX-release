@@ -1698,6 +1698,23 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
     }
   }
 
+  private def executionInfo(ruleName: String): String = ruleName + ": " + (ruleName match {
+    case "solve" =>
+      """
+        |If it takes too long: provide invariants of the ODE manually using dC, and prove the invariants with ODE or
+        |if necessary one of the specialized ODE proof tactics, such as dI.
+      """.stripMargin
+    case "QE" =>
+      """
+        |If it takes too long, try to simplify arithmetic:
+        |(1) hide irrelevant assumptions
+        |(2) split into multiple goals
+        |(3) expand and simplify special functions
+        |(4) abbreviate or simplify complicated terms
+      """.stripMargin
+    case _ => ""
+  })
+
   override protected def doResultingResponses(): List[Response] = {
     if (backendAvailable) {
       val proof = db.getProofInfo(proofId)
@@ -1762,18 +1779,19 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                       + ". Expected step path ID of the form (node ID,branch index)")
                   }
                   val taskId = node.stepTactic(userId, interpreter(proofId.toInt, startStepIndex), appliedExpr)
-                  RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
+                  RunBelleTermResponse(proofId, node.id.toString, taskId, "Executing custom tactic") :: Nil
                 } else {
                   val localProvable = ProvableSig.startProof(sequent)
                   val localProofId = db.createProof(localProvable)
                   val executor = BellerophonTacticExecutor.defaultExecutor
                   val taskId = executor.schedule(userId, appliedExpr, BelleProvable(localProvable), interpreter(localProofId, -1))
-                  RunBelleTermResponse(localProofId.toString, "()", taskId) :: Nil
+                  RunBelleTermResponse(localProofId.toString, "()", taskId, "Executing internal steps of " + executionInfo(belleTerm)) :: Nil
                 }
               } else {
                 //@note execute clicked single-step tactics on sequential interpreter right away
                 val taskId = node.runTactic(userId, ExhaustiveSequentialInterpreter, appliedExpr, ruleName)
-                RunBelleTermResponse(proofId, node.id.toString, taskId) :: Nil
+                val info = "Executing " + executionInfo(belleTerm)
+                RunBelleTermResponse(proofId, node.id.toString, taskId, info) :: Nil
               }
             } catch {
               case e: ProverException if e.getMessage == "No step possible" => new ErrorResponse("No step possible") :: Nil
@@ -1802,14 +1820,14 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
           val interpreter = (_: List[IOListener]) => DatabasePopulator.prepareInterpreter(db, proofId.toInt)
           val tree: ProofTree = DbProofTree(db, proofId)
           val taskId = tree.root.runTactic(userId, interpreter, tactic, "")
-          RunBelleTermResponse(proofId, "()", taskId) :: Nil
+          RunBelleTermResponse(proofId, "()", taskId, "") :: Nil
         } catch {
           case _: Throwable =>
             //@note if spoonfeeding interpreter fails, try sequential interpreter so that tactics at least proofcheck
             //      even if browsing then shows a single step only
             val tree: ProofTree = DbProofTree(db, proofId)
             val taskId = tree.root.runTactic(userId, ExhaustiveSequentialInterpreter, tactic, "custom")
-            RunBelleTermResponse(proofId, "()", taskId) :: Nil
+            RunBelleTermResponse(proofId, "()", taskId, "") :: Nil
         }
     }
   }
@@ -1829,10 +1847,9 @@ class TaskStatusRequest(db: DBAbstraction, userId: String, proofId: String, node
 //        case Some(id) => db.getExecutionSteps(proofId.toInt, None).find(p => p.stepId == id)
 //        case None => None
 //      }
-
       (!executor.contains(taskId) || executor.isDone(taskId), None)
     }
-    new TaskStatusResponse(proofId, nodeId, taskId, if (isDone) "done" else "running", lastStep) :: Nil
+    TaskStatusResponse(proofId, nodeId, taskId, if (isDone) "done" else "running", lastStep) :: Nil
   }
 }
 

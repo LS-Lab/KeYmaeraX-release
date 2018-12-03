@@ -62,7 +62,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
         // imported but not yet executed proof
         spinnerService.show('tacticExecutionSpinner')
         $http.get('proofs/user/' + $scope.userId + '/' + $scope.proofId + '/initfromtactic')
-          .then(function(response) { $scope.runningTask.start($scope.proofId, '()', response.data.taskId,
+          .then(function(response) { $scope.runningTask.start($scope.proofId, '()', response.data.taskId, response.data.info,
                                      $scope.updateFreshProof, $scope.broadcastProofError, undefined); })
           .catch(function(err) {
             spinnerService.hide('tacticExecutionSpinner');
@@ -153,10 +153,12 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
     taskStepwiseRequest: undefined,
     future: undefined,
     lastStep: undefined,
-    start: function(proofId, nodeId, taskId, onTaskComplete, onTaskError, taskStepwiseRequest) {
+    info: undefined,
+    start: function(proofId, nodeId, taskId, info, onTaskComplete, onTaskError, taskStepwiseRequest) {
       $scope.runningTask.proofId = proofId;
       $scope.runningTask.nodeId = nodeId;
       $scope.runningTask.taskId = taskId;
+      $scope.runningTask.info = info;
       $scope.runningTask.taskStepwiseRequest = taskStepwiseRequest;
       $scope.runningTask.future = $q.defer();
       $scope.runningTask.future.promise.then(
@@ -262,10 +264,12 @@ angular.module('keymaerax.controllers').controller('InitBrowseProofCtrl',
     taskStepwiseRequest: undefined,
     future: undefined,
     lastStep: undefined,
-    start: function(proofId, nodeId, taskId, onTaskComplete, onTaskError, taskStepwiseRequest) {
+    info: undefined,
+    start: function(proofId, nodeId, taskId, info, onTaskComplete, onTaskError, taskStepwiseRequest) {
       $scope.runningTask.proofId = proofId;
       $scope.runningTask.nodeId = nodeId;
       $scope.runningTask.taskId = taskId;
+      $scope.runningTask.info = info;
       $scope.runningTask.taskStepwiseRequest = taskStepwiseRequest;
       $scope.runningTask.future = $q.defer();
       $scope.runningTask.future.promise.then(
@@ -442,7 +446,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           });
         }
 
-        $scope.runningTask.start(response.data.proofId, response.data.nodeId, response.data.taskId,
+        $scope.runningTask.start(response.data.proofId, response.data.nodeId, response.data.taskId, response.data.info,
           onStepwiseTaskComplete, onStepwiseTaskError);
       })
       .catch(function(err) {
@@ -483,7 +487,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var stepwise = { method: 'GET', url: uri + '?stepwise=true' };
       spinnerService.show('tacticExecutionSpinner')
       $http.get(uri + '?stepwise=false')
-        .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, $scope.updateMainProof, $scope.broadcastProofError, stepwise); })
+        .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info, $scope.updateMainProof, $scope.broadcastProofError, stepwise); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
           $rootScope.$broadcast("proof.message", err.data);
@@ -497,7 +501,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var uri = formulaId !== undefined ? base + '/' + formulaId + '/doInputAt/' + tacticId : base + '/doInput/' + tacticId
       var stepwise = { method: 'POST', url: uri + '?stepwise=true', data: input};
       $http.post(uri + '?stepwise=false', input)
-        .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, $scope.updateMainProof, $scope.broadcastProofError, stepwise); })
+        .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info, $scope.updateMainProof, $scope.broadcastProofError, stepwise); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
           $rootScope.$broadcast("proof.message", err.data);
@@ -510,7 +514,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var uri = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/' + fml1Id + '/' + fml2Id + '/doAt/' + tacticId;
       var stepwise = { method: 'GET', url: uri + '?stepwise=true' };
       $http.get(uri + '?stepwise=false')
-        .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, $scope.updateMainProof, $scope.broadcastProofError, stepwise); })
+        .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info, $scope.updateMainProof, $scope.broadcastProofError, stepwise); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
           $rootScope.$broadcast("proof.message", err.data);
@@ -525,7 +529,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var uri = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/doSearch/' + where + '/' + tacticId;
       var stepwise = input !== undefined ? { method: 'POST', url: uri + '?stepwise=true', data: input } : { method: 'GET', url: uri + '?stepwise=true' };
       var request = input !== undefined ? $http.post(uri + '?stepwise=false', input) : $http.get(uri + '?stepwise=false')
-      request.then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, $scope.updateMainProof, $scope.broadcastProofError, stepwise); })
+      request.then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info, $scope.updateMainProof, $scope.broadcastProofError, stepwise); })
         .catch(function(err) {
           spinnerService.hide('tacticExecutionSpinner');
         });
@@ -538,7 +542,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           spinnerService.show('tacticExecutionSpinner');
           var uri = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/doCustomTactic';
           $http.post(uri + '?stepwise='+stepwise, tacticText)
-            .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId,
+            .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info,
                                           $scope.updateFreshProof, $scope.broadcastProofError, undefined); })
             .catch(function(err) {
               spinnerService.hideAll();
