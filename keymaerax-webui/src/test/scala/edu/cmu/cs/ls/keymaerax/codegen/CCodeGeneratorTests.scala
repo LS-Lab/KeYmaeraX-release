@@ -907,13 +907,57 @@ class CCodeGeneratorTests extends TacticTestBase {
       |}
       |""".stripMargin
 
+    compileAndRun(code, "Choosing 2, result x=1.0\n")
+  }
+
+  "Deterministic controller generator" should "compile deterministic simple program" in {
+    val ctrlPrg = "y:=*; if (y<=1) { x:=2; } else { x:=3; }".asProgram
+
+    val stateVars = Set(Variable("x"), Variable("y"))
+
+    val declarations =
+      CGenerator.printParameterDeclaration(Set()) + "\n" +
+      CGenerator.printStateDeclaration(stateVars) + "\n" +
+      CGenerator.printInputDeclaration(Set(Variable("y")))
+    val ctrlCode = new CDetControllerGenerator()(ctrlPrg, stateVars)._2
+
+    ctrlCode shouldBe
+      """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+        |  curr.y = in->y;
+        |  if (curr.y <= 1.0L) {
+        |    curr.x = 2.0L;
+        |  } else {
+        |    curr.x = 3.0L;
+        |  }
+        |  return curr;
+        |}""".stripMargin
+
+    def code(y: String) = s"""
+      |#include <stdio.h>
+      |${CGenerator.INCLUDE_STATEMENTS}
+      |$declarations
+      |$ctrlCode
+      |
+      |
+      |int main() {
+      |  state current = { .x=0.2L };
+      |  input in = { .y=$y };
+      |  current = ctrlStep(current, 0, &in);
+      |  printf("Result x=%1.1Lf\\n", current.x);
+      |  return 0;
+      |}
+      |""".stripMargin
+
+    compileAndRun(code("1.0L"), "Result x=2.0\n")
+    compileAndRun(code("5.0L"), "Result x=3.0\n")
+  }
+
+  private def compileAndRun(code: String, expected: String) = {
     val cmd = CodeGenTestTools.compileC(code)
     val p = Runtime.getRuntime.exec(cmd)
     withClue(scala.io.Source.fromInputStream(p.getErrorStream).mkString) {
       p.waitFor() shouldBe 0
-      scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe
-        """Choosing 2, result x=1.0
-          |""".stripMargin
+      scala.io.Source.fromInputStream(p.getInputStream).mkString shouldBe expected
     }
   }
 }
