@@ -103,13 +103,6 @@ class QETests extends TacticTestBase {
     proveBy("f(a,b) = 3 -> f(a,b)>2".asFormula, QE) shouldBe 'proved
   }
 
-  it should "insist on terms being reals for unnatural powers" in withMathematica { _ =>
-    proveBy("==> (x^(1/2))^2 = x".asSequent, QE) should not be 'proved
-    proveBy("x>=0 ==> (x^(1/2))^2 = x".asSequent, QE) shouldBe 'proved
-    proveBy("(x^(1/2))^2 = y ==> y=x".asSequent, QE) should not be 'proved
-    proveBy("x>=0, (x^(1/2))^2 = y ==> y=x".asSequent, QE) shouldBe 'proved
-  }
-
   "QE with specific tool" should "succeed with Mathematica" in withMathematica { _ =>
     val tactic = TactixLibrary.QE(Nil, Some("Mathematica"))
     proveBy("x>0 -> x>=0".asFormula, tactic) shouldBe 'proved
