@@ -9,12 +9,13 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools._
 import java.math.BigDecimal
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 
 import scala.collection.immutable._
 
-class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAfterAll {
+class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   val mathematicaConfig: Map[String, String] = DefaultConfiguration.defaultMathematicaConfig
   var link: JLinkMathematicaLink = _
@@ -30,6 +31,14 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
   def num(n : Integer) = Number(new BigDecimal(n.toString))
   def snum(n : String) = Number(new BigDecimal(n))
+
+  override def beforeEach(): Unit = {
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "false", saveToFile = false)
+  }
+
+  override def afterEach(): Unit = {
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "false", saveToFile = false)
+  }
 
   override def beforeAll(): Unit = {
     //@note only once for the entire test suite, reduce number of Mathematica inits/shutdowns
@@ -216,7 +225,8 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     round trip FuncOf(Function("x", None, Real, Real), Variable("y", None, Real))
   }
 
-  it should "convert special functions" in {
+  it should "convert special functions only when forced to" in {
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
     round trip "abs(x)".asTerm
     round trip "min(x,y)".asTerm
     round trip "max(x,y)".asTerm
@@ -254,13 +264,21 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     KeYmaeraToMathematica(in) should be (expected)
   }
 
-  it should "convert special functions correctly" in {
+  it should "convert special functions only when forced to" in {
+    the [CoreException] thrownBy KeYmaeraToMathematica("abs(x)".asTerm) should have message
+      "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
+    the [CoreException] thrownBy KeYmaeraToMathematica("min(x,y)".asTerm) should have message
+      "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
+    the [CoreException] thrownBy KeYmaeraToMathematica("max(x,y)".asTerm) should have message
+      "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
     KeYmaeraToMathematica("abs(x)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Abs"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x")))
     KeYmaeraToMathematica("min(x,y)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Min"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
     KeYmaeraToMathematica("max(x,y)".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Max"), Array[MExpr](new MExpr(Expr.SYMBOL, "kyx`x"), new MExpr(Expr.SYMBOL, "kyx`y")))
   }
 
   it should "distinguish uninterpreted names from interpreted ones by namespace" in {
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
     KeYmaeraToMathematica(Variable("abs")) shouldBe new MExpr(Expr.SYMBOL, "kyx`abs")
     KeYmaeraToMathematica(Variable("Abs")) shouldBe new MExpr(Expr.SYMBOL, "kyx`Abs")
     a [CoreException] should be thrownBy KeYmaeraToMathematica("abs()".asTerm)

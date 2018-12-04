@@ -75,6 +75,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, "true") // JVM parameter -DMATH_LINK_TCPIP=[true,false]
     Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, mathLinkTcp, saveToFile = false)
     Configuration.set(Configuration.Keys.QE_TOOL, "mathematica", saveToFile=false)
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "false", saveToFile = false)
     val provider = mathematicaProvider() // new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig)
     ToolProvider.setProvider(provider)
     //@todo timeout
