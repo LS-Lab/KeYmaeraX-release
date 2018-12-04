@@ -1,7 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
@@ -256,16 +255,13 @@ private object EqualityTactics {
   /** Expands abs only at a specific position (also works in contexts that bind the argument of abs). */
   def absAt: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(absTerm@FuncOf(Function(fn, None, Real, Real, true), x)) if fn == "abs" =>
-      val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
-      val absVar = Variable(fn, freshAbsIdx)
-
-      val parentPos = parentFormulaPos(pos, sequent)
+      val parentPos = pos.topLevel ++ FormulaTools.parentFormulaPos(pos.inExpr, sequent(pos.top))
 
       val expanded = sequent.sub(parentPos) match {
-        case Some(fml) =>
+        case Some(fml: Formula) =>
           Or(
-            And(GreaterEqual(x, Number(0)), fml.replaceFree(absTerm, x).asInstanceOf[Formula]),
-            And(Less(x, Number(0)), fml.replaceFree(absTerm, Neg(x)).asInstanceOf[Formula]))
+            And(GreaterEqual(x, Number(0)), fml.replaceFree(absTerm, x)),
+            And(Less(x, Number(0)), fml.replaceFree(absTerm, Neg(x))))
       }
 
       val cohidePos = if (pos.isAnte) cohideR('Rlast) else cohideR(pos.top)
@@ -316,21 +312,18 @@ private object EqualityTactics {
   /** Expands min/max only at a specific position (also works in contexts that bind some of the arguments). */
   def minmaxAt: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(minmaxTerm@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), Pair(f, g))) if fn == "min" || fn == "max" =>
-      val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
-      val minmaxVar = Variable(fn, freshMinMaxIdx)
-
-      val parentPos = parentFormulaPos(pos, sequent)
+      val parentPos = pos.topLevel ++ FormulaTools.parentFormulaPos(pos.inExpr, sequent(pos.top))
 
       val expanded = sequent.sub(parentPos) match {
-        case Some(fml) if fn == "min" =>
+        case Some(fml: Formula) if fn == "min" =>
           Or(
-            And(LessEqual(f, g), fml.replaceFree(minmaxTerm, f).asInstanceOf[Formula]),
-            And(Greater(f, g), fml.replaceFree(minmaxTerm, g).asInstanceOf[Formula])
+            And(LessEqual(f, g), fml.replaceFree(minmaxTerm, f)),
+            And(Greater(f, g), fml.replaceFree(minmaxTerm, g))
           )
-        case Some(fml) if fn == "max" =>
+        case Some(fml: Formula) if fn == "max" =>
           Or(
-            And(GreaterEqual(f, g), fml.replaceFree(minmaxTerm, f).asInstanceOf[Formula]),
-            And(Less(f, g), fml.replaceFree(minmaxTerm, g).asInstanceOf[Formula])
+            And(GreaterEqual(f, g), fml.replaceFree(minmaxTerm, f)),
+            And(Less(f, g), fml.replaceFree(minmaxTerm, g))
           )
       }
 
@@ -371,7 +364,7 @@ private object EqualityTactics {
         case _ => None
       })
     )
-    tactics.reduceOption(_ & _).getOrElse(skip)
+    tactics.reduceOption[BelleExpr](_ & _).getOrElse(skip)
   })
   /** Expands all special functions (abs/min/max) underneath position `pos`. */
   def expandAllAt: DependentPositionTactic = "expandAllAt" by ((pos: Position, seq: Sequent) => {
@@ -384,11 +377,4 @@ private object EqualityTactics {
       })
     tactics.reduceOption(_ & _).getOrElse(skip)
   })
-
-  private def parentFormulaPos(pos: Position, seq: Sequent): Position =
-    if (pos.isTopLevel) pos
-    else seq.sub(pos) match {
-      case Some(_: Formula) => pos
-      case Some(_) => pos.topLevel ++ pos.inExpr.parent
-    }
 }

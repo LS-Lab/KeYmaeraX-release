@@ -303,4 +303,9 @@ class EqualityTests extends TacticTestBase {
         |[x:=4;](x<=y&x>=4|x>y&y>=4)
       """.stripMargin.asSequent
   }
+
+  it should "expand anywhere in a term" in withQE { _ =>
+    val result = proveBy("(x+4)/min(1,3) >= x".asFormula, expandAll)
+    result.subgoals.loneElement shouldBe "1<=3 & min_0=1 | 1>3 & min_0=3 ==> (x+4)/min_0 >= x".asSequent
+  }
 }
