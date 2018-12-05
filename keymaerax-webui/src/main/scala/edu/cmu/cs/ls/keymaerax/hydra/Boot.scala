@@ -186,6 +186,7 @@ object HyDRAInitializer extends Logging {
       if(StringToVersion(cacheVersion) < StringToVersion(edu.cmu.cs.ls.keymaerax.core.VERSION))
         LemmaDBFactory.lemmaDB.deleteDatabase()
       //Populate the derived axioms database.
+      Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
       DerivedAxioms.prepopulateDerivedLemmaDatabase()
     } catch {
       case e: Exception =>
@@ -194,6 +195,8 @@ object HyDRAInitializer extends Logging {
             |You should configure settings in the UI and restart KeYmaera X
           """.stripMargin
         logger.warn(msg, e)
+    } finally {
+      Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "false", saveToFile = false)
     }
   }
 
