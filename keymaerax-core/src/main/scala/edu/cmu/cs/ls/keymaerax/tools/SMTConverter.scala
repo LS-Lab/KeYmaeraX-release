@@ -87,7 +87,7 @@ abstract class SMTConverter extends (Formula=>String) with Logging {
     */
   private def nameIdentifier(s: NamedSymbol): String = {
     require(s.isInstanceOf[Function] || s.isInstanceOf[Variable])
-    require(s.sort == Real, "only real-valued symbols are currently supported")
+    require(s.sort == Real, "Only real-valued symbols are currently supported, but got " + s.prettyString + " of sort " + s.sort)
     if (s.index.isEmpty) s.name else s.name + "_" + s.index.get
   }
 
