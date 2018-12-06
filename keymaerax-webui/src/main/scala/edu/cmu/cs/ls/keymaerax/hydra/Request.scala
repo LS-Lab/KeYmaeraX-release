@@ -1699,7 +1699,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
   }
 
   private def executionInfo(ruleName: String): String = ruleName + ": " + (ruleName match {
-    case "solve" =>
+    case "solve" | "ODE" =>
       """
         |If it takes too long: provide invariants of the ODE manually using dC, and prove the invariants with ODE or
         |if necessary one of the specialized ODE proof tactics, such as dI.
