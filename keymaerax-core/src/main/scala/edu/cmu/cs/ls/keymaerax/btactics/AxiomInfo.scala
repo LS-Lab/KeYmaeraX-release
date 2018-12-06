@@ -1068,16 +1068,18 @@ object DerivationInfo {
       )
       ,
       List(
+        StringArg("System Name"),
         StringArg("C1 Base: Om & A1 -> I1"), StringArg("C1 Use:  Om & I1 -> G1 & P1"), StringArg("C1 Step: Om & I1 -> [portmemory1; ctrl1; t0=t; {t'=1,plant1}; in1; cp1;]I1"),
         StringArg("C2 Base: Om & A2 -> I2"), StringArg("C2 Use:  Om & I2 -> G2 & P2"), StringArg("C2 Step: Om & I2 -> [portmemory2; ctrl2; t0=t; {t'=1,plant2}; in2; cp2;]I2"),
         StringArg("Compatibility: Om & Z -> [xin:=xo;](Pout(xo) -> Pin(xin))"), StringArg("Com Safety:   [xin:=xo;]Z"), StringArg("Com Liveness: <xin:=xo;>true")
       )
       , _ => (
-        (c1base: String) => ((c1use: String) => ((c1step: String) => ((c2base: String) => ((c2use: String) =>
+        (systemName: String) =>
+        ((c1base: String) => ((c1use: String) => ((c1step: String) => ((c2base: String) => ((c2use: String) =>
         ((c2step: String) => ((compat: String) => ((comSafe: String) => ((comLive: String) =>
-          ComponentSystem.proveSystem(c1base, c1use, c1step, c2base, c2use, c2step, compat, comSafe, comLive)):
+          ComponentSystem.proveSystem(systemName, c1base, c1use, c1step, c2base, c2use, c2step, compat, comSafe, comLive)):
           TypedFunc[String, BelleExpr]): TypedFunc[String, _]): TypedFunc[String, _]):
-          TypedFunc[String, _]): TypedFunc[String, _]): TypedFunc[String, _]): TypedFunc[String, _]): TypedFunc[String, _])
+          TypedFunc[String, _]): TypedFunc[String, _]): TypedFunc[String, _]): TypedFunc[String, _]): TypedFunc[String, _]): TypedFunc[String, _])
     ),
 
     // Differential tactics

@@ -219,6 +219,7 @@ class Compbased extends TacticTestBase {
     val entry = KeYmaeraXArchiveParser.getEntry("Remote-Controlled Robot System Avoids Obstacles",
       io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
     proveBy(entry.model.asInstanceOf[Formula], proveSystem(
+      "stttrunning/Robot Obstacle",
       "stttrunning/Robot Base Case",
       "stttrunning/Robot Use Case",
       "stttrunning/Robot Step",

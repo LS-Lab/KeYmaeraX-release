@@ -501,7 +501,8 @@ object ComponentSystem {
   })
 
   /** STTT Fig. 9 */
-  private def proveSystem(c1base: Lemma, c1use: Lemma, c1step: Lemma,
+  private def proveSystem(systemName: String,
+                          c1base: Lemma, c1use: Lemma, c1step: Lemma,
                           c2base: Lemma, c2use: Lemma, c2step: Lemma,
                           compatibility: Lemma,
                           comGuaranteeSafety: Lemma, comGuaranteeLiveness: Lemma) = "ANON" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
@@ -524,17 +525,17 @@ object ComponentSystem {
             useLemma(c2base, Some(prop)) & DebuggingTactics.done("C2Base"),
             prop & DebuggingTactics.done("ZetaBase")
           )
-        ),
+        ) & DebuggingTactics.done("Component system base case", Some("user/" + systemName + " Base Case")),
         andR(1) <(
           useLemma(c1use, Some(prop)) & DebuggingTactics.done("C1Use"),
           useLemma(c2use, Some(prop)) & DebuggingTactics.done("C2Use")
-        ),
+        ) & DebuggingTactics.done("Component system use case", Some("user/" + systemName + " Use Case")),
         proveSystemStep(
           c1use, c1step,
           c2use, c2step,
           pi1Out, pi2Out,
           compatibility,
-          comGuaranteeSafety, comGuaranteeLiveness)(1)
+          comGuaranteeSafety, comGuaranteeLiveness)(1) & DebuggingTactics.done("Component system step", Some("user/" + systemName + " Step"))
       )
   })
   
@@ -564,7 +565,8 @@ object ComponentSystem {
        |""".stripMargin
 
   /** Proves system safety from isolated component and compatibility proofs. */
-  def proveSystem(c1baseLemma: String, c1useLemma: String, c1stepLemma: String,
+  def proveSystem(systemName: String,
+                  c1baseLemma: String, c1useLemma: String, c1stepLemma: String,
                   c2baseLemma: String, c2useLemma: String, c2stepLemma: String,
                   compatibilityLemma: String,
                   comGuaranteeSafetyLemma: String,
@@ -594,7 +596,7 @@ object ComponentSystem {
                     case Some(compatibility) => LemmaDBFactory.lemmaDB.get("user/" + comGuaranteeSafetyLemma) match {
                       case Some(comSafety) => LemmaDBFactory.lemmaDB.get("user/" + comGuaranteeLivenessLemma) match {
                         case Some(comLiveness) => 
-                          proveSystem(c1base, c1use, c1step, c2base, c2use, c2step,
+                          proveSystem(systemName, c1base, c1use, c1step, c2base, c2use, c2step,
                             compatibility, comSafety, comLiveness)(pos)
                         case None => throw BelleIllFormedError("Unknown lemma " + comGuaranteeLivenessLemma + "; please prove first")
                       }
