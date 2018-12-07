@@ -43,9 +43,6 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
     e match {
       case t: Term => convertTerm(t)
       case f: Formula => convertFormula(f)
-      case _: Function =>
-        // can override in non-soundness critical converters (e.g., CEX and Simulation)
-        throw new ConversionException("Uninterpreted function symbols are disallowed")
     }
   }
 
@@ -57,7 +54,7 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
   /**
    * Converts a KeYmaera terms to a Mathematica expression.
    */
-  protected def convertTerm(t : Term): MExpr = {
+  protected[tools] def convertTerm(t : Term): MExpr = {
     require(t.sort == Real || t.sort == Unit || FormulaTools.sortsList(t.sort).forall(_ == Real), "Mathematica can only deal with reals not with sort " + t.sort)
     t match {
       //@todo Code Review: clean up FuncOf conversion into two cases here
