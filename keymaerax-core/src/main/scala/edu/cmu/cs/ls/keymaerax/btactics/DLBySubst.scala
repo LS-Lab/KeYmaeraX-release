@@ -205,30 +205,53 @@ private object DLBySubst {
   /** @see [[TactixLibrary.generalize()]]
    * @todo same for diamonds by the dual of K
    */
-  def generalize(c: Formula, isGame:Boolean = false): DependentPositionTactic = {
+  def generalize(c: Formula, isGame: Boolean = false): DependentPositionTactic = {
     "MR" byWithInput(c, (pos: Position, sequent: Sequent) => sequent.at(pos) match {
       case (ctx, Box(a, p)) =>
+        val ov = FormulaTools.argsOf("old", c)
+
+        var freshOld: Variable = TacticHelper.freshNamedSymbol(Variable("old"), sequent)
+        val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {
+          val (ghost: Variable, ghostPos: Option[Position], nextCandidate) = TacticHelper.findSubst(old, freshOld, sequent)
+          freshOld = nextCandidate
+          (old -> ghost,
+            ghostPos match {
+              case None if pos.isTopLevel => discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) &
+                TactixLibrary.exhaustiveEqR2L(hide=false)('Llast)
+              case Some(gp) if pos.isTopLevel => TactixLibrary.exhaustiveEqR2L(hide=false)(gp)
+              case _ if !pos.isTopLevel => discreteGhost(old, Some(ghost))(pos)
+            })
+        }).toList
+        val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
+        val afterGhostsPos = pos ++ PosInExpr(List.fill(posIncrements)(1))
+
+        val oldifiedC = SubstitutionHelper.replaceFn("old", c, ghosts.map(_._1).toMap)
+        val oldifiedA = ghosts.foldLeft(a)({case (prg, ((w, r), _)) => SubstitutionHelper.replaceFree(prg)(w, r) })
+        val introduceGhosts = ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip)
+
         val (q, useCleanup, showCleanup) = {
           val aBVs = StaticSemantics.boundVars(a)
           val constConjuncts =
             if (aBVs.isInfinite) Nil
-            else sequent.ante.flatMap(FormulaTools.conjuncts).
+            else sequent.ante.map(fml =>
+              ghosts.foldLeft(fml)({ case (f, ((what, repl), _)) => SubstitutionHelper.replaceFree(f)(what, repl) })).
+              flatMap(FormulaTools.conjuncts).
               filter(StaticSemantics.symbols(_).intersect(aBVs.toSet).isEmpty).toList
           (constConjuncts, isGame) match {
-            case ((Nil, _) | (_, true)) => (c, skip, implyR(1))
-            case (consts, false) => (And(consts.reduceRight(And), c),
-                boxAnd(pos) &
-                abstractionb(pos ++ PosInExpr(0 :: Nil)) &
-                (if (pos.isTopLevel) andR(pos) & Idioms.<(prop & done, skip)
+            case ((Nil, _) | (_, true)) => (oldifiedC, skip, implyR(1))
+            case (consts, false) => (And(consts.reduceRight(And), oldifiedC),
+                boxAnd(afterGhostsPos) &
+                abstractionb(afterGhostsPos ++ PosInExpr(0 :: Nil)) &
+                (if (afterGhostsPos.isTopLevel) andR(afterGhostsPos) & Idioms.<(prop & done, skip)
                 else skip),
                 implyR(1) & andL(-1)
             )
           }
         }
-        cutR(ctx(Box(a, q)))(pos.checkSucc.top) < (
+        introduceGhosts & cutR(ctx(Box(oldifiedA, q)))(afterGhostsPos.checkSucc.top) < (
           /* use */
           /*label(BranchLabels.genUse)*/ useCleanup,
-          /* show */ cohide(pos.top) & CMon(pos.inExpr ++ 1) & showCleanup //& label(BranchLabels.genShow)
+          /* show */ cohide(afterGhostsPos.top) & CMon(afterGhostsPos.inExpr ++ 1) & showCleanup //& label(BranchLabels.genShow)
         )
     })
   }

@@ -4,6 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable.Set
@@ -31,6 +32,18 @@ object SubstitutionHelper {
     case f: Formula => replaceFree(f)(what, repl).asInstanceOf[T]
     case t: Term => replaceFree(t)(what, repl).asInstanceOf[T]
     case p: Program => replaceFree(p)(what, repl).asInstanceOf[T]
+  }
+
+  /** Replaces the any unary function application fn(.) per `subst`. */
+  def replaceFn(fn: String, fml: Formula, subst: Map[Term, Variable]): Formula = {
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+        case FuncOf(Function(fnname, None, Real, Real, false), t: Term) if fnname == fn => Right(subst(t))
+        case _ => Left(None)
+      }
+    }, fml) match {
+      case Some(g) => g
+    }
   }
 }
 

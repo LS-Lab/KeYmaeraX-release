@@ -294,32 +294,14 @@ private object DifferentialTactics extends Logging {
       case Some(Diamond(os: ODESystem, _)) => (os, DCd _)
     }
 
-    val ov = oldVars(f)
+    val ov = FormulaTools.argsOf("old", f)
     if (ov.isEmpty) {
       if (FormulaTools.conjuncts(f).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip else dc(f)(pos)
     } else {
-      var freshOld = TacticHelper.freshNamedSymbol(Variable("old"), origSeq)
+      var freshOld: Variable = TacticHelper.freshNamedSymbol(Variable("old"), origSeq)
       val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {
-        val (ghost: Variable, ghostPos: Option[Position]) = old match {
-          case v: Variable =>
-            origSeq.ante.zipWithIndex.find({
-              //@note heuristic to avoid new ghosts on repeated old(v) usage
-              case (Equal(x0: Variable, x: Variable), _) => v==x && x0.name==x.name
-              case _ => false
-            }).map[(Variable, Option[Position])]({ case (Equal(x0: Variable, _), i) => (x0, Some(AntePosition.base0(i))) }).
-              getOrElse((TacticHelper.freshNamedSymbol(v, origSeq), None))
-          case _ =>
-            origSeq.ante.zipWithIndex.find({
-              //@note heuristic to avoid new ghosts on repeated old(v) usage
-              case (Equal(x0: Variable, t: Term), _) => old==t && x0.name == "old"
-              case _ => false
-            }).map[(Variable, Option[Position])]({ case (Equal(x0: Variable, _), i) => (x0, Some(AntePosition.base0(i))) }).
-              getOrElse({
-                val fo = freshOld
-                freshOld = Variable("old", Some(freshOld.index.getOrElse(-1) + 1))
-                (fo, None)
-              })
-        }
+        val (ghost: Variable, ghostPos: Option[Position], nextCandidate) = TacticHelper.findSubst(old, freshOld, origSeq)
+        freshOld = nextCandidate
         (old -> ghost,
           ghostPos match {
             case None if pos.isTopLevel => discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) &
@@ -329,35 +311,11 @@ private object DifferentialTactics extends Logging {
           })
       }).toList
       val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
-      val oldified = replaceOld(f, ghosts.map(_._1).toMap)
+      val oldified = SubstitutionHelper.replaceFn("old", f, ghosts.map(_._1).toMap)
       if (FormulaTools.conjuncts(oldified).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip
       else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(pos ++ PosInExpr(List.fill(posIncrements)(1)))
     }
   })
-
-  /** Returns a set of variables that are arguments to a special 'old' function */
-  private def oldVars(fml: Formula): Set[Term] = {
-    var oldVars = Set[Term]()
-    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
-      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-        case FuncOf(Function("old", None, Real, Real, false), t: Term) => oldVars += t; Left(None)
-        case _ => Left(None)
-      }
-    }, fml)
-    oldVars
-  }
-
-  /** Replaces any old(.) with . in formula fml */
-  private def replaceOld(fml: Formula, ghostsByOld: Map[Term, Variable]): Formula = {
-    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
-      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-        case FuncOf(Function("old", None, Real, Real, false), t: Term) => Right(ghostsByOld(t))
-        case _ => Left(None)
-      }
-    }, fml) match {
-      case Some(g) => g
-    }
-  }
 
   //Domain constraint refinement step for box/diamond ODEs on either (top-level) side of a sequent
   //Hides other succedents in the refinement subgoal by default, e.g.:

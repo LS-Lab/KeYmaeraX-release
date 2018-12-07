@@ -265,6 +265,11 @@ class DLTests extends TacticTestBase {
     result.subgoals shouldBe "A>1&x>5 ==> [z:=3;][{z'=A}](A>1&[x:=A;]x>1)".asSequent :: "A>1, x>1 ==> [y:=A*x;]y>1".asSequent :: Nil
   }
 
+  it should "introduce ghosts for initial values old(.)" in withMathematica { _ =>
+    val result = proveBy("x>=0 ==> [x:=x+1;]x>0".asSequent, generalize("x>old(x)".asFormula)(1))
+    result.subgoals shouldBe "x_0>=0, x_0=x ==> [x:=x_0+1;]x>x_0".asSequent :: "x_0>=0, x>x_0 ==> x>0".asSequent :: Nil
+  }
+
   "postCut" should "introduce implication in simple example" in {
     val result = proveBy("[a:=5;]a>0".asFormula, postCut("a>1".asFormula)(1))
     result.subgoals.loneElement shouldBe "==> [a:=5;](a>1->a>0) & [a:=5;]a>1".asSequent
