@@ -137,7 +137,6 @@ object CEXK2MConverter extends K2MConverter[Either[KExpr, NamedSymbol]] {
 
 object CEXM2KConverter extends M2KConverter[Either[KExpr,NamedSymbol]] {
   private val baseConverter = new UncheckedBaseM2KConverter {
-    override def k2m: K2MConverter[KExpr] = null
     override def apply(e: MExpr): KExpr = convert(e)
 
     override protected def convertAtomicTerm(e: MExpr): KExpr = {
@@ -153,6 +152,7 @@ object CEXM2KConverter extends M2KConverter[Either[KExpr,NamedSymbol]] {
 
   override def k2m: K2MConverter[Either[KExpr, NamedSymbol]] = null
   override private[tools] def convert(e: MExpr): Either[KExpr,NamedSymbol] = Left(baseConverter.convert(e))
+  override def apply(e: MExpr): Either[KExpr,NamedSymbol] = convert(e)
 }
 
 object PegasusM2KConverter extends UncheckedBaseM2KConverter {
