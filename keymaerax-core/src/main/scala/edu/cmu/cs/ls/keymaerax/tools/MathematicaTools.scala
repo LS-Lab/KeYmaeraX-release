@@ -110,6 +110,17 @@ object CEXK2MConverter extends K2MConverter[Either[KExpr, NamedSymbol]] {
       case _ => super.convertFormula(f)
     }
 
+    override def convert(e: KExpr): MExpr = {
+      //insist on less strict input: interpreted function symbols allowed here
+      insist(StaticSemantics.symbols(e).forall({ case fn@Function(_, _, _, _, true) => interpretedSymbols.contains(fn) case _ => true }),
+        "Interpreted functions must have expected domain and sort")
+      insist(disjointNames(StaticSemantics.symbols(e)), "Disjoint names required for Mathematica conversion")
+      e match {
+        case t: Term => convertTerm(t)
+        case f: Formula => convertFormula(f)
+      }
+    }
+
     override protected[tools] def convertTerm(t: Term): MExpr = t match {
       //@note no back conversion -> no need to distinguish Differential from DifferentialSymbol
       case Differential(c) =>

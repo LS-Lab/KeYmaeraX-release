@@ -46,7 +46,7 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
     }
   }
 
-  private def disjointNames(symbols: Set[NamedSymbol]): Boolean = {
+  private[tools] def disjointNames(symbols: Set[NamedSymbol]): Boolean = {
     val names = symbols.map(x=>(x.name,x.index)).toList
     names.distinct.length == names.length
   }

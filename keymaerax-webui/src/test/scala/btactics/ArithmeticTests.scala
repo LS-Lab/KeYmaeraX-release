@@ -129,6 +129,14 @@ class ArithmeticTests extends TacticTestBase {
     tool.findCounterExample("a=1&a()=2 -> a<a()".asFormula) shouldBe None
   }
 
+  it should "support interpreted function symbols" in withMathematica { tool =>
+    tool.findCounterExample("abs(x) < 0".asFormula) match {
+      case Some(m) =>
+        m.size shouldBe 1
+        m.keySet should contain only Variable("x")
+    }
+  }
+
   "transform" should "prove a simple example" in withQE { _ =>
     proveBy(
       "a<b ==> b>a".asSequent,
