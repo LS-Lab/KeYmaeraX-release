@@ -298,32 +298,32 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "pick a name when generalizing only free occurrences" in {
     val result = proveBy("(\\forall x x>5) & x<2".asFormula, universalGen(None, "x".asTerm)(1))
-    result.subgoals.loneElement shouldBe "==> \\forall x_0 ((\\forall x x>5) & x_0<2)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall x ((\\forall x x>5) & x<2)".asSequent
   }
 
   "Universal closure" should "work for simple formula" in {
     val result = proveBy("x>5".asFormula, universalClosure(1))
-    result.subgoals.loneElement shouldBe "==> \\forall x_0 x_0>5".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall x x>5".asSequent
   }
 
   it should "work when indexed names are already there" in {
     val result = proveBy("x_0>0 & x_1>1 & x_2>2".asFormula, universalClosure(1))
-    result.subgoals.loneElement shouldBe "==> \\forall x_5 \\forall x_4 \\forall x_3 (x_3>0 & x_4>1 & x_5>2)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall x_2 \\forall x_1 \\forall x_0 (x_0>0 & x_1>1 & x_2>2)".asSequent
   }
 
   it should "compute closure for formulas with variables and parameterless function symbols" in {
     val result = proveBy("x>5 & f()<2 & y+3>z".asFormula, universalClosure(1))
-    result.subgoals.loneElement shouldBe "==> \\forall z_0 \\forall y_0 \\forall x_0 \\forall f_0 (x_0>5 & f_0<2 & y_0+3>z_0)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall z \\forall y \\forall x \\forall f (x>5 & f<2 & y+3>z)".asSequent
   }
 
   it should "ignore bound variables in closure" in {
     val result = proveBy("\\forall x \\forall y (x>5 & f()<2 & y+3>z)".asFormula, universalClosure(1))
-    result.subgoals.loneElement shouldBe "==> \\forall z_0 \\forall f_0 (\\forall x \\forall y (x>5 & f_0<2 & y+3>z_0))".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall z \\forall f (\\forall x \\forall y (x>5 & f<2 & y+3>z))".asSequent
   }
 
   it should "not ignore variables that are not bound everywhere" in {
     val result = proveBy("(\\forall x x>5) & x<2".asFormula, universalClosure(1))
-    result.subgoals.loneElement shouldBe "==> \\forall x_0 ((\\forall x x>5) & x_0<2)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall x ((\\forall x x>5) & x<2)".asSequent
   }
 
   it should "not do anything if all variables are bound" in {
@@ -333,12 +333,12 @@ class FOQuantifierTests extends TacticTestBase {
 
   it should "use the provided order of symbols" in {
     val result = proveBy("a>0 & x>5 & y<2".asFormula, universalClosure(Variable("x")::Variable("a")::Variable("y")::Nil)(1))
-    result.subgoals.loneElement shouldBe "==> \\forall x_0 \\forall a_0 \\forall y_0 (a_0>0 & x_0>5 & y_0<2)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall x \\forall a \\forall y (a>0 & x>5 & y<2)".asSequent
   }
 
   it should "append non-mentioned symbols in reverse alphabetical order" in {
     val result = proveBy("a>0 & x>5 & y<2".asFormula, universalClosure(Variable("x")::Nil)(1))
-    result.subgoals.loneElement shouldBe "==> \\forall x_0 \\forall y_0 \\forall a_0 (a_0>0 & x_0>5 & y_0<2)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall x \\forall y \\forall a (a>0 & x>5 & y<2)".asSequent
   }
 
   it should "not be applicable when the order is not a subset of the free variables plus signature" in {
