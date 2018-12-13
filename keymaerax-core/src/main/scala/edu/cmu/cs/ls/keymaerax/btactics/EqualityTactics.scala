@@ -11,6 +11,7 @@ import Augmentors._
 import StaticSemanticsTools._
 
 import scala.collection.immutable._
+import scala.collection.mutable.ListBuffer
 
 /**
  * Implementation: Tactics to rewrite equalities and introduce abbreviations.
@@ -29,36 +30,36 @@ private object EqualityTactics {
   private def exhaustiveEq(name: String): DependentPositionTactic = name by ((pos: Position, sequent: Sequent) => {
     require(pos.isAnte && pos.isTopLevel, "Equality must be top-level in antecedent")
     sequent.sub(pos) match {
-      case Some(eq@Equal(lhs, rhs)) =>
+      case Some(Equal(lhs, rhs)) =>
         // prevent endless self rewriting (e.g., 0=0) -> compute dependencies first to figure out what to rewrite when
         require(!lhs.isInstanceOf[Number], "Rewriting numbers not supported")
         require(lhs != rhs, "LHS and RHS are not allowed to overlap")
 
-        val occurrences = positionsOf(lhs, sequent).filter(p => p.isAnte != pos.isAnte || p.index0 != pos.index0).
-          filter(p => boundAt(sequent(p.top), p.inExpr).intersect(StaticSemantics.freeVars(lhs)).isEmpty).map(_.top).toList
-
-        if (occurrences.isEmpty) skip
-        else occurrences.map(eqL2R(pos.checkAnte)(_)).reduce[BelleExpr](_&_)
+        val fv = StaticSemantics.freeVars(lhs)
+        val occurrences = positionsOf(lhs, sequent).filter(p => p.isAnte != pos.isAnte || p.index0 != pos.index0)
+        occurrences.filter(p => boundAt(sequent(p.top), p.inExpr).intersect(fv).isEmpty).
+          map(_.top).
+          map(eqL2R(pos.checkAnte)(_)).reduceOption[BelleExpr](_&_).getOrElse(skip)
     }
   })
 
   /** Computes the positions of term t in sequent s */
-  private def positionsOf(t: Term, s: Sequent): Set[Position] = {
+  private def positionsOf(t: Term, s: Sequent): Seq[Position] = {
     val ante = s.ante.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => AntePosition.base0(i, p)) })
     val succ = s.succ.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => SuccPosition.base0(i, p)) })
-    (ante ++ succ).toSet
+    ante ++ succ
   }
 
   /** Computes the positions of term t in formula fml */
-  private def positionsOf(t: Term, fml: Formula): Set[PosInExpr] = {
-    var positions: Set[PosInExpr] = Set.empty
+  private def positionsOf(t: Term, fml: Formula): Seq[PosInExpr] = {
+    val positions: ListBuffer[PosInExpr] = ListBuffer()
     ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
       override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = {
-        if (e == t && !positions.exists(_.isPrefixOf(p))) positions += p
+        if (e == t) positions += p
         Left(None)
       }
     }, fml)
-    positions
+    positions.to[scala.collection.immutable.Seq]
   }
 
   /** @see [[TactixLibrary.eqL2R]] */
@@ -79,9 +80,11 @@ private object EqualityTactics {
         }
 
         //@note "stupid" order of cuts, since otherwise original formula not unambiguous from result (e.g., x=0, 0*y=0 ambiguous: was original formula x*y=x or x*y=0 or 0*y=x?)
-        val (equivifyCommute, closeWhere, inverseImply) = if (pos.isSucc) (equivifyR(pos.top) & commuteEquivR(pos.top), Fixed(pos), implyRi()(eqPos, pos)) else (equivifyR('Rlast), LastSucc(0), implyRi()(eqPos, SuccPosition.base0(sequent.succ.length-1)))
+        val (equivifyCommute, closeWhere) =
+          if (pos.isSucc) (equivifyR(pos.top) & commuteEquivR(pos.top), Fixed(pos))
+          else (equivifyR('Rlast), LastSucc(0))
         cut(condEquiv) <(
-          /* use */ (implyL('Llast) <(closeIdWith('Rlast), cutLR(repl)(pos) <(hide('Llast) partial, equivifyCommute & closeIdWith(closeWhere)) partial) partial) partial,
+          /* use */ implyL('Llast) <(closeIdWith('Rlast), cutLR(repl)(pos) <(hide('Llast), equivifyCommute & closeIdWith(closeWhere))),
           /* show */ cohide('Rlast) & by("const formula congruence", RenUSubst(
             (FuncOf(Function("s", None, Unit, Real), Nothing), lhs) ::
             (FuncOf(Function("t", None, Unit, Real), Nothing), rhs) ::

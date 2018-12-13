@@ -63,6 +63,11 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "y=x ==> x=2&y+y+2>y+1".asSequent
   }
 
+  it should "rewrite only free occurrences" in withQE { _ =>
+    val result = proveBy("y=x ==> y=2 & \\exists y y<3".asSequent, eqL2R(-1)(1))
+    result.subgoals.loneElement shouldBe "y=x ==> x=2 & \\exists y y<3".asSequent
+  }
+
   "eqR2L" should "rewrite x*y=0 to 0*y=0 using 0=x" in withQE { _ =>
     val result = proveBy("0=x ==> x*y=0".asSequent, eqR2L(-1)(1))
     result.subgoals.loneElement shouldBe "0=x ==> 0*y=0".asSequent
@@ -121,6 +126,11 @@ class EqualityTests extends TacticTestBase {
   it should "rewrite multiple occurrences of a term in one shot" in {
     val result = proveBy("x+2<=x+3, x=y ==> ".asSequent, exhaustiveEqL2R(-2))
     result.subgoals.loneElement shouldBe "y+2<=y+3, x=y ==> ".asSequent
+  }
+
+  it should "rewrite only free occurrences" in withQE { _ =>
+    val result = proveBy("y=x ==> y=2 & \\exists y y<3, \\forall y y>4, y=5".asSequent, exhaustiveEqL2R(-1))
+    result.subgoals.loneElement shouldBe "y=x ==> x=2 & \\exists y y<3, \\forall y y>4, x=5".asSequent
   }
 
   "Abbrv tactic" should "abbreviate a+b to z" in withQE { _ =>
