@@ -84,8 +84,8 @@ class SubstitutionHelper(what: Term, repl: Term) {
 //      case d: DifferentialSymbol if d != what => d
       case d: Differential if d == what => repl
       case d: Differential if d != what => d
-      case app@FuncOf(_, _) if /*!u.contains(fn) &&*/ app == what => repl
-      case app@FuncOf(fn, theta) if  /*u.contains(fn) ||*/ app != what => FuncOf(fn, usubst(o, u, theta))
+      case app@FuncOf(_, _) if u.intersect(StaticSemantics(t)).isEmpty && app == what => repl
+      case app@FuncOf(fn, theta) if app != what => FuncOf(fn, usubst(o, u, theta))
       case Nothing => Nothing
       case Number(_) if t == what => repl
       case x: AtomicTerm => x
