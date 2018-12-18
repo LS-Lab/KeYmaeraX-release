@@ -35,40 +35,20 @@ private object EqualityTactics {
         require(!lhs.isInstanceOf[Number], "Rewriting numbers not supported")
         require(lhs != rhs, "LHS and RHS are not allowed to overlap")
 
-        val fv = StaticSemantics.freeVars(lhs)
-        val occurrences = positionsOf(lhs, sequent).filter(p => p.isAnte != pos.isAnte || p.index0 != pos.index0)
-        occurrences.filter(p => boundAt(sequent(p.top), p.inExpr).intersect(fv).isEmpty).
-          map(_.top).
-          map(eqL2R(pos.checkAnte)(_)).reduceOption[BelleExpr](_&_).getOrElse(skip)
+        val occurrences = sequent.zipWithPositions.filter({ case (f, p) => p != pos && f.find(lhs).isDefined })
+        occurrences.map({ case (_, p) => eqL2R(pos.checkAnte)(p) }).reduceOption[BelleExpr](_&_).getOrElse(skip)
     }
   })
 
-  /** Computes the positions of term t in sequent s */
-  private def positionsOf(t: Term, s: Sequent): Seq[Position] = {
-    val ante = s.ante.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => AntePosition.base0(i, p)) })
-    val succ = s.succ.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => SuccPosition.base0(i, p)) })
-    ante ++ succ
-  }
-
-  /** Computes the positions of term t in formula fml */
-  private def positionsOf(t: Term, fml: Formula): Seq[PosInExpr] = {
-    val positions: ListBuffer[PosInExpr] = ListBuffer()
-    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
-      override def preT(p: PosInExpr, e: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = {
-        if (e == t) positions += p
-        Left(None)
-      }
-    }, fml)
-    positions.to[scala.collection.immutable.Seq]
-  }
-
   /** @see [[TactixLibrary.eqL2R]] */
   def eqL2R(eqPos: Int): DependentPositionTactic = eqL2R(Position(eqPos).checkAnte)
-  def eqL2R(eqPos: AntePosition): DependentPositionTactic = TacticFactory.anon ((pos:Position, sequent:Sequent) => {
+  def eqL2R(eqPos: AntePosition): DependentPositionTactic = TacticFactory.anon ((pos: Position, sequent: Sequent) => {
     sequent.sub(eqPos) match {
       case Some(eq@Equal(lhs, rhs)) =>
         val (condEquiv@Imply(_, Equiv(_, repl)), dottedRepl) = sequent.sub(pos) match {
-          case Some(f: Formula) =>
+          case Some(f: Formula) if pos.isTopLevel =>
+            (Imply(eq, Equiv(f, f.replaceFree(lhs, rhs))), f.replaceFree(lhs, DotTerm()))
+          case Some(f: Formula) if !pos.isTopLevel =>
             (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, f.replaceFree(lhs, rhs)))),
               sequent(pos.top).replaceAt(pos.inExpr, f.replaceFree(lhs, DotTerm())))
           case Some(t: Term) if t == lhs =>
@@ -83,13 +63,13 @@ private object EqualityTactics {
         val (equivifyCommute, closeWhere) =
           if (pos.isSucc) (equivifyR(pos.top) & commuteEquivR(pos.top), Fixed(pos))
           else (equivifyR('Rlast), LastSucc(0))
-        cut(condEquiv) <(
-          /* use */ implyL('Llast) <(closeIdWith('Rlast), cutLR(repl)(pos) <(hide('Llast), equivifyCommute & closeIdWith(closeWhere))),
+        cut(condEquiv) < (
+          /* use */ implyL('Llast) < (closeIdWith('Rlast), cutLR(repl)(pos) < (hide('Llast), equivifyCommute & closeIdWith(closeWhere))),
           /* show */ cohide('Rlast) & by("const formula congruence", RenUSubst(
-            (FuncOf(Function("s", None, Unit, Real), Nothing), lhs) ::
+          (FuncOf(Function("s", None, Unit, Real), Nothing), lhs) ::
             (FuncOf(Function("t", None, Unit, Real), Nothing), rhs) ::
             (PredOf(Function("ctxF_", None, Real, Bool), DotTerm()), dottedRepl) :: Nil))
-          )
+        )
     }
   })
 
@@ -115,7 +95,7 @@ private object EqualityTactics {
   lazy val exhaustiveEqL2R: DependentPositionTactic = exhaustiveEq("allL2R")
 
   /* Rewrites equalities exhaustively with hiding, but only if left-hand side is an atom (variable or uninterpreted function) */
-  def atomExhaustiveEqL2R: DependentPositionTactic = "atomAllL2R" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  lazy val atomExhaustiveEqL2R: DependentPositionTactic = "atomAllL2R" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(fml@Equal(_: Variable, _)) => EqualityTactics.exhaustiveEqL2R(pos) & hideL(pos, fml)
     case Some(fml@Equal(FuncOf(Function(_, _, _, _, false), _), _)) => EqualityTactics.exhaustiveEqL2R(pos) & hideL(pos, fml)
   })

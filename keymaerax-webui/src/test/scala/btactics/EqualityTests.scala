@@ -22,6 +22,16 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0&0+1=1, x+1>0".asSequent
   }
 
+  it should "rewrite entire subformula" in {
+    val result = proveBy("x=0 ==> x*y=x&(x+1=1|x-1=-1), x+1>0".asSequent, eqL2R(-1)(1, 1::Nil))
+    result.subgoals.loneElement shouldBe "x=0 ==> x*y=x&(0+1=1|0-1=-1), x+1>0".asSequent
+  }
+
+  it should "not rewrite bound occurrences" in {
+    val result = proveBy("x=0 ==> x*y=x&(x+1=1|[x:=-1;]x=-1), x+1>0".asSequent, eqL2R(-1)(1, 1::Nil))
+    result.subgoals.loneElement shouldBe "x=0 ==> x*y=x&(0+1=1|[x:=-1;]x=-1), x+1>0".asSequent
+  }
+
   it should "rewrite entire formula at specified position" in {
     val result = proveBy("x=0 ==> x*y=x&x+1=1, x+1>0".asSequent, eqL2R(-1)(1, 0::Nil))
     result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0&x+1=1, x+1>0".asSequent
