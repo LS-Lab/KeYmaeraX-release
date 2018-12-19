@@ -5,13 +5,12 @@ import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, Position, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import StaticSemanticsTools._
 
 import scala.collection.immutable._
-import scala.collection.mutable.ListBuffer
 
 /**
  * Implementation: Tactics to rewrite equalities and introduce abbreviations.
@@ -45,12 +44,21 @@ private object EqualityTactics {
   def eqL2R(eqPos: AntePosition): DependentPositionTactic = TacticFactory.anon ((pos: Position, sequent: Sequent) => {
     sequent.sub(eqPos) match {
       case Some(eq@Equal(lhs, rhs)) =>
+        val rhsFv = StaticSemantics.freeVars(rhs)
+        val lhsFv = StaticSemantics.freeVars(lhs)
+        val topFml = sequent(pos.top)
+
         val (condEquiv@Imply(_, Equiv(_, repl)), dottedRepl) = sequent.sub(pos) match {
-          case Some(f: Formula) if pos.isTopLevel =>
-            (Imply(eq, Equiv(f, f.replaceFree(lhs, rhs))), f.replaceFree(lhs, DotTerm()))
-          case Some(f: Formula) if !pos.isTopLevel =>
-            (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, f.replaceFree(lhs, rhs)))),
-              sequent(pos.top).replaceAt(pos.inExpr, f.replaceFree(lhs, DotTerm())))
+          case Some(f: Formula) =>
+            val lhsPos = FormulaTools.posOf(f, _ == lhs)
+            val freeRhsPos = lhsPos.filter(p => {
+              val bv = boundAt(topFml, pos.inExpr ++ p)
+              bv.intersect(rhsFv).isEmpty && bv.intersect(lhsFv).isEmpty })
+            val (replaced, dotted) = freeRhsPos.foldLeft((f, f))({ case ((fml, d), pp) =>
+              (fml.replaceAt(pp, rhs), d.replaceAt(pp, DotTerm())) })
+            if (pos.isTopLevel) (Imply(eq, Equiv(f, replaced)), dotted)
+            else (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, replaced))),
+              sequent(pos.top).replaceAt(pos.inExpr, dotted))
           case Some(t: Term) if t == lhs =>
             (Imply(eq, Equiv(sequent(pos.top), sequent(pos.top).replaceAt(pos.inExpr, rhs))),
               sequent(pos.top).replaceAt(pos.inExpr, DotTerm()))

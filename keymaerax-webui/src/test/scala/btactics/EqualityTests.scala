@@ -78,6 +78,26 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "y=x ==> x=2 & \\exists y y<3".asSequent
   }
 
+  it should "not fail bound occurrences" in withQE { _ =>
+    val result = proveBy("y=x ==> \\exists x x>=y".asSequent, eqL2R(-1)(1))
+    result.subgoals.loneElement shouldBe "y=x ==> \\exists x x>=y".asSequent
+  }
+
+  it should "not fail bound occurrences 2" in withQE { _ =>
+    val result = proveBy("y=x ==> x>=y & \\exists x x>=y".asSequent, eqL2R(-1)(1))
+    result.subgoals.loneElement shouldBe "y=x ==> x>=x & \\exists x x>=y".asSequent
+  }
+
+  it should "not fail bound occurrences 3" in withQE { _ =>
+    val result = proveBy("y=x ==> x>=y & [x:=2;]x>=y".asSequent, eqL2R(-1)(1))
+    result.subgoals.loneElement shouldBe "y=x ==> x>=x & [x:=2;]x>=y".asSequent
+  }
+
+  it should "not fail bound occurrences 4" in withQE { _ =>
+    val result = proveBy("y=x ==> [x:=2;]x>=y".asSequent, eqL2R(-1)(1))
+    result.subgoals.loneElement shouldBe "y=x ==> [x:=2;]x>=y".asSequent
+  }
+
   "eqR2L" should "rewrite x*y=0 to 0*y=0 using 0=x" in withQE { _ =>
     val result = proveBy("0=x ==> x*y=0".asSequent, eqR2L(-1)(1))
     result.subgoals.loneElement shouldBe "0=x ==> 0*y=0".asSequent
@@ -183,6 +203,11 @@ class EqualityTests extends TacticTestBase {
   it should "not try to abbreviate inside programs when not free" in withQE { _ =>
     val result = proveBy("x+1>0 ==> [{x:=x+1;}*]x>0".asSequent, abbrv("x+1".asTerm, Some("y".asVariable)))
     result.subgoals.loneElement shouldBe "y>0, y=x+1 ==> [{x:=x+1;}*]x>0".asSequent
+  }
+
+  it should "not try to abbreviate inside programs when not free 2" in withQE { _ =>
+    val result = proveBy("x+1>0 ==> [x:=x+1;x:=x+1;]x>0".asSequent, abbrv("x+1".asTerm, Some("y".asVariable)))
+    result.subgoals.loneElement shouldBe "y>0, y=x+1 ==> [x:=y;x:=x+1;]x>0".asSequent
   }
 
   "AbbrvAt tactic" should "abbreviate in places where at least one of the arguments is bound" in withQE { _ =>
