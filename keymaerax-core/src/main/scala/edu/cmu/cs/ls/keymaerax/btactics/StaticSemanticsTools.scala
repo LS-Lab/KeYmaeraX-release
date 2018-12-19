@@ -54,6 +54,7 @@ object StaticSemanticsTools {
     case a: ODESystem     => boundVars(a)
     // base cases
     case a: AtomicProgram => boundVars(a)
+    case a: Loop => boundVars(a)
     //@note acceptable but slightly dangerous catch-all but not soundness-critical
     case a: CompositeProgram => bottom
   }
