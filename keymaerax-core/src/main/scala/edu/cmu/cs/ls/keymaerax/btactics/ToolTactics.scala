@@ -45,18 +45,44 @@ private object ToolTactics {
     Idioms.doIf(!_.isProved)(
       tacticChase()(notL, andL, notR, implyR, orR) &
         Idioms.doIf(!_.isProved)(
-          close | (applyEqualities & hidePredicates & expandAndRcf)
+          close | hidePredicates & applyEqualities & hideTrivialFormulas & expandAndRcf
         )
       )
   })
 
+  /** Hides duplicate formulas (expensive because needs to sort positions). */
+  private val hideDuplicates = "ANON" by ((seq: Sequent) => {
+    val hidePos = seq.zipWithPositions.map(f => (f._1, f._2.isAnte, f._2)).groupBy(f => (f._1, f._2)).
+      filter({ case (_, l) => l.size > 1 })
+    val tactics = hidePos.values.flatMap({ case _ :: tail => tail.map(t => (t._3, hide(t._3))) }).toList
+    tactics.sortBy({ case (pos, _) => pos.index0 }).map(_._2).reverse.reduceOption[BelleExpr](_&_).getOrElse(skip)
+  })
+
+  /** Hides useless trivial true/false formulas. */
+  private val hideTrivialFormulas = "ANON" by ((seq: Sequent) => {
+    val hidePos = seq.zipWithPositions.filter({
+      case (True, pos) => pos.isAnte
+      case (False, pos) => pos.isSucc
+      case (Equal(l, r), pos) => pos.isAnte && l == r
+      case (LessEqual(l, r), pos) => pos.isAnte && l == r
+      case (GreaterEqual(l, r), pos) => pos.isAnte && l == r
+      case (NotEqual(l, r), pos) => pos.isSucc && l == r
+      case (Less(l, r), pos) => pos.isSucc && l == r
+      case (Greater(l, r), pos) => pos.isSucc && l == r
+      case _ => false
+    }).map(p => hide(p._2)).reverse
+    hidePos.reduceOption[BelleExpr](_&_).getOrElse(skip)
+  })
+
+  /** Rewrites all equalities in the assumptions. */
   private val applyEqualities = "ANON" by ((seq: Sequent) => {
     seq.zipAnteWithPositions.filter({
         case (Equal(_: Variable, _), _) => true
         case (Equal(FuncOf(Function(_, _, _, _, false), _), _), _) => true
         case _ => false }).
       reverse.
-      map({ case (_, pos) => EqualityTactics.atomExhaustiveEqL2R(pos) }).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+      map({ case (fml, pos) => Idioms.doIf(_.subgoals.head(pos.checkTop) == fml)(EqualityTactics.atomExhaustiveEqL2R(pos)) }).
+      reduceOption[BelleExpr](_ & _).getOrElse(skip)
   })
 
   def fullQE(qeTool: => QETool): BelleExpr = fullQE()(qeTool)
