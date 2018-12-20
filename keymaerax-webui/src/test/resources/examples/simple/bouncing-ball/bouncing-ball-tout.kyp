@@ -1,4 +1,4 @@
-Lemma "bouncing-ball-tout.key".
+Lemma "Bouncing Ball".
 Sequent.
 
 ==>
@@ -7,21 +7,23 @@ Formula: ((((v)^((2))) <= ((((2))*(g()))*((H)-(h))))&(((h) >= ((0)))&(((g()) > (
 End.
 Tool.
   tool """"KeYmaera X""""
-  model """"Functions.
-  R g().
+  model """"ArchiveEntry "Bouncing Ball"
+
+Definitions
+  Real g();
 End.
 
-ProgramVariables.
-  R h.
-  R v.
-  R t.
-  R c.
-  R V.
-  R H.
+ProgramVariables
+  Real h;
+  Real v;
+  Real t;
+  Real c;
+  Real V;
+  Real H;
 End.
 
 
-Problem.
+Problem
     v^2<=2*g()*(H-h) & h>=0 & g()>0 & H>=0 & 0<=c & c<1
  -> [
       {
@@ -31,10 +33,8 @@ Problem.
       }* /*@invariant(v^2<=2*g()*(H-h) & h>=0)*/
     ]
     (h>=0 & h<=H)
+End.
 End.""""
-  tactic """"implyR(1) & (andL('L)*) & loop({`v^2<=2*g()*(H-h) & h>=0`}, 1) & <(
-  QE & done,
-  QE & done,
-  composeb(1) & choiceb(1.1) & testb(1.1.0) & composeb(1.1.1) & testb(1.1.1) & assignb(1.1.1.1) & ODE(1) & done)""""
+  tactic """"master""""
   proof """"""""
 End.
