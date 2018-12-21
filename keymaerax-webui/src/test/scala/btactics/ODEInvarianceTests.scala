@@ -528,4 +528,35 @@ class ODEInvarianceTests extends TacticTestBase {
     p3 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>=0&(2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)=0->2+6*x^4+12*y+12*y^2+8*(1+y)*z+2*x^3*(6+y+2*z)+4*x^2*(8+3*y+2*z)+x*(12+37*y+18*z)>0)))".asFormula
   }
 
+  "nilpotent solver" should "determine naively whether given term matrices are nilpotent" in withMathematica { qeTool =>
+    val mat1 = List(List("0")).map( ls => ls.map(_.asTerm))
+    val mat2 = List(List("1","1"),List("1","1")).map( ls => ls.map(_.asTerm))
+    val mat3 = List(List("2","2","-2"),List("5","1","-3"),List("1","5","-3")).map( ls => ls.map(_.asTerm))
+    //val mat = List(List("a","b"),List("c","d")).map( ls => ls.map(_.asTerm))
+
+    nilpotentIndex(mat1) shouldBe Some(List())
+    nilpotentIndex(mat2) shouldBe None
+    nilpotentIndex(mat3) shouldBe Some(List(List(List(2, 2, -2), List(5, 1, -3), List(1, 5, -3)), List(List(12, -4, -4), List(12, -4, -4), List(24, -8, -8))))
+  }
+
+  it should "put an ODE into linear form and cut solution" in withMathematica { qeTool =>
+    //Runtime: 31s
+    val pr = proveBy("x=1&y=1 -> [{x'=v,v'=a,a'=j,j'=k}] x+v+a+j=1".asFormula,
+      implyR(1) & nilpotentSolve(1)
+    )
+    println(pr)
+    //Runtime : 20s
+//    val pr2 = proveBy("x=1&y=1 -> [{x'=v,v'=a,a'=j,j'=k}] x+v+a+j=1".asFormula,
+//      implyR(1) & solve(1)
+//    )
+//    println(pr2)
+  }
+
+  it should "put an ODE into linear form and cut solution (2)" in withMathematica { qeTool =>
+    val pr = proveBy("x=1&y=1 -> [{x'=2*x+2*y-2*z+A(),y'=5*x+1*y-3*z+B(),z'=1*x+5*y-3*z+C()}] true".asFormula,
+      //val pr = proveBy("x=1&y=1 -> [{x'=x+y,y'=-x-y}] x=0".asFormula,
+      implyR(1) & nilpotentSolve(1)
+    )
+    println(pr)
+  }
 }

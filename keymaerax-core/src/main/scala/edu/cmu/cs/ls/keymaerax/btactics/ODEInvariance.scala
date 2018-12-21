@@ -478,7 +478,8 @@ object ODEInvariance {
       }
       else {
         starter & cutR(f2)(pos) < (timeoutQE,
-          cohideR(pos) & implyR(1) & recRankOneTac(f2)
+          cohideR(pos) & implyR(1) &
+          recRankOneTac(f2)
         )
       }
     }
@@ -973,6 +974,15 @@ object ODEInvariance {
     m.map(ls => dot_prod(ls,v))
   }
 
+  //computes m x n (assumes n transposed)
+  private def matmat_prod (m:List[List[Term]],n:List[List[Term]]) : List[List[Term]] = {
+    m.map(ls => matvec_prod(n,ls))
+  }
+
+  private def vecvec_sum (v1:List[Term],v2:List[Term]) : List[Term] = {
+    (v1 zip v2).map({case (t1,t2)=>Plus(t1,t2)})
+  }
+
   private def mkConst(name : String, index: Int) : Term ={
     FuncOf(Function(name,Some(index),Unit,Real),Nothing)
   }
@@ -1285,5 +1295,193 @@ object ODEInvariance {
         implyR(1) & cutR(pf)(1)<(hideL(-3) & r2 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & timeoutQE & done, skip) //Don't bother running the rest if QE fails
         & cohide2(-3,1)& DebuggingTactics.debug("Finish step",doPrint = debugTactic) & implyR(1) & lpclosedPlus(inst)
     )
+  })
+
+  private def simplify_mat(m:List[List[Term]]) :List[List[Term]] = {
+    m.map(ls => ls.map (t => simpWithTool(None,t)))
+  }
+  private def is_zero_mat(m:List[List[Term]]) : Boolean = {
+    m.flatten.forall(p => p == Number(0))
+  }
+
+  //Computes and returns the sequence m, m^2, ... m^{k-1} if m^{k} = 0
+  def nilpotentIndex(m:List[List[Term]]) : Option[List[List[List[Term]]]] = {
+    val dim = m.length
+    assert(m.forall(ls => ls.length == dim))
+
+    var ctr = 1
+    //TODO: simplify here or later?
+    var curmat = simplify_mat(m)
+    val mt = curmat.transpose
+
+    var mats = ListBuffer[List[List[Term]]]()
+
+    while(ctr <= dim) { //k is bounded by the dimension of the matrix
+      if(is_zero_mat(curmat))
+        return Some(mats.toList)
+      else if(ctr < dim) {
+        mats += curmat
+        val newmat = simplify_mat(matmat_prod(curmat, mt))
+        curmat = newmat
+      }
+      ctr+=1
+    }
+    None
+  }
+
+  // Approximate coefficient of terms k in term t.
+  private def coefficientOf(k:List[BaseVariable],t:Term) : (Map[BaseVariable,Term],Term,List[BaseVariable]) = {
+    t match {
+      // Numerical Constants
+      case n:Number => (HashMap(),t,List())
+      // Symbolic Constants
+      case FuncOf(_,Nothing) =>  (HashMap(),t,List())
+      case v:BaseVariable =>
+        if(k.contains(v))
+          (HashMap((v,Number(1))),Number(0),List())
+        else
+          (HashMap(),v,List())
+      case Neg(t) =>
+        val (m,tt,b) = coefficientOf(k,t)
+        (m.mapValues(t => Neg(t)), Neg(tt),b)
+      case Times(l,r) =>
+        val (lm,lt,lb) = coefficientOf(k,l)
+        val (rm,rt,rb) = coefficientOf(k,r)
+        if(lm.isEmpty)
+          (rm.mapValues(t => Times(lt,t)), Times(lt,rt), lb++rb)
+        else if (rm.isEmpty)
+          (lm.mapValues(t => Times(t,rt)), Times(lt,rt), lb++rb)
+        else
+          (HashMap(),Number(0), (lm.keys++rm.keys).toList++lb++rb)
+      case Divide(l,r) =>
+        val (lm,lt,lb) = coefficientOf(k,l)
+        val (rm,rt,rb) = coefficientOf(k,r)
+        if (rm.isEmpty)
+          (lm.mapValues(t => Divide(t,rt)), Divide(lt,rt), lb++rb)
+        else
+          (HashMap(),Number(0), (lm.keys++rm.keys).toList++lb++rb)
+      case Plus(l,r) =>
+        val (lm,lt,lb) = coefficientOf(k,l)
+        val (rm,rt,rb) = coefficientOf(k,r)
+        ((lm.toList++rm.toList).groupBy(_._1).map( ff => ff._1 -> ff._2.map(_._2).reduceLeft(Plus)),Plus(lt,rt),lb++rb)
+      case Minus(l,r) =>
+        val (lm,lt,lb) = coefficientOf(k,l)
+        val (rm,rt,rb) = coefficientOf(k,r)
+        val rmneg = rm.mapValues(v => Neg(v))
+        //This is fine since lm,rm keys at most intersect once
+        ((lm.toList++rmneg.toList).groupBy(_._1).map( ff => ff._1 -> ff._2.map(_._2).reduceLeft(Plus)),Minus(lt,rt),lb++rb)
+      /* give up for the rest of the cases:
+       * Power, Differential, DifferentialSymbol, DotTerm, Nothing, Pair, UnitFunctional
+       */
+      case _ =>
+        (HashMap(),Number(0), k)
+    }
+  }
+
+  // Returns a representation in "linear" form x'=Ax+b for the given ODE if possible
+  // A,b are not allowed to mention x
+  def linFormODE(p:DifferentialProgram) : Option[(List[List[Term]],List[Term],List[BaseVariable])] = {
+    // flattened ODE
+    val flat = DependencyAnalysis.collapseODE(p)
+    val kv = flat.mapValues( t => coefficientOf(flat.keys.toList,t) )
+
+    //Turn kv into x'=Ax+b form
+    //Canonize variable order
+    val vars = kv.keys.toList.sortBy(f => f.toString)
+    if (vars.exists( v => kv(v)._3.nonEmpty)) return None
+
+    val A = vars.map( v => vars.map( vv =>  kv(v)._1 getOrElse (vv,Number(0))))
+    val b = vars.map( v => kv(v)._2)
+    Some(A,b,vars)
+  }
+
+  private def factorial(i:Int) : Int ={
+    if (i <= 1) 1
+    else i* factorial(i-1)
+  }
+
+  private def timeSeries(time:Term, ls:List[List[Term]]) : List[Term] = {
+    ls.zipWithIndex.map(
+      f =>
+        f._1.map(t =>
+          if (f._2==0) t
+          else Times(t,Divide(Power(time,Number(f._2)),Number(factorial(f._2)))))
+    ).reduce(vecvec_sum)
+  }
+
+  def nilpotentSolve : DependentPositionTactic = "nilpotentSolve" by ((pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "nilpotent solve only applicable in top-level succedent")
+
+    val (ode,dom,post) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
+      case _ => throw new BelleThrowable("nilpotent solve only applicable to box ODE in succedent")
+    }
+
+    val t = TacticHelper.freshNamedSymbol("timevar".asVariable, seq)
+    //Introduce a ghost variable
+
+    val linForm = linFormODE(ode)
+    if (linForm.isEmpty) ??? //todo: skip or fail?
+    val (m,b,x) = linForm.get
+
+    val npopt = nilpotentIndex(m)
+
+    if(npopt.isEmpty) ??? //todo: skip or fail?
+    val np = npopt.get
+
+    if(np.length == 0) skip
+    else {
+
+      val mats = np.zip( np.tail)
+
+      val bsimp = b.map (t => simpWithTool(None,t))
+
+      val oldx = x.map(TacticHelper.freshNamedSymbol(_, seq))
+
+      // Introduce the initial values x0
+      val storeInitialVals =
+        x.zip(oldx).map(v => discreteGhost(v._1, Some(v._2))(pos) & DLBySubst.assignEquality(pos)).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+
+      // Partial solutions
+      val sp =
+        np.map(m => matvec_prod(m, oldx))
+
+      //Forcing terms on partial solutions for x',x'',...
+      val sb =
+        bsimp :: np.map(m => matvec_prod(m,bsimp))
+
+      // Actual solution
+      val s =
+        (oldx :: sb.zip(sp).map(f => vecvec_sum(f._1,f._2))) ++ List(sb.last)
+
+      // LHS of partial solutions
+      val sL =
+        x :: np.map(m => matvec_prod(m, x)).zip(sb).map(f => vecvec_sum(f._1,f._2).map(t => simpWithTool(None,t)))
+
+      //The actual solution
+      val sol = timeSeries(t,s).map( t => simpWithTool(None,t))
+
+      val cut = x.zip(sol).map( f => Equal(f._1,f._2) ).reduce(And)
+
+      val cutPrep = Range(0,s.length).map(i => timeSeries(t,s.drop(i)).map(t => simpWithTool(None,t)))
+
+      //todo: need to filter out cuts that are irrelevant for the lower derivatives
+      val cuts = sL.zip(cutPrep).tail.map(
+        ff =>
+          ff._1.zip(ff._2).collect({
+            case f if f._1 != f._2 => Equal(f._1, f._2)
+          }
+          ).reduce(And)
+      )
+
+      HilbertCalculus.DGC(t, Number(1))(pos) & existsR(Number(0))(pos) & storeInitialVals &
+      dC(cut)(pos) <(
+        skip,
+        // dRI directly is actually a lot slower than the dC chain even with naive dI
+        // dRI(pos)
+        // todo: this can presumably be sped up by "let-ing" only once rather than on every dI
+        cuts.foldLeft(skip)( (t,f) => dC(f)(pos) < (t, dI('full)(pos)) ) & dI('full)(pos)
+      )
+    }
   })
 }
