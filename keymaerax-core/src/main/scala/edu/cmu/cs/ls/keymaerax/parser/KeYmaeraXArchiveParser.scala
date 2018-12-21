@@ -381,7 +381,8 @@ object KeYmaeraXArchiveParser {
           Definitions(_, _) :+ Problem(_, _) :+ Tactics(_) => la match {
         case END_BLOCK => shift(st)
         case TACTIC_BLOCK => shift(st)
-        case _ => throw ParseException((if (la==EOF) "Premature end of file\n" else "") + "Every entry (including ArchiveEntry, Problem, Lemma, Theorem, and Exercise)" +  " needs its own " + END_BLOCK.img+PERIOD.img + " delimiter. " + tok + " has no matching " + END_BLOCK.img+PERIOD.img, st, Expected.ExpectTerminal(END_BLOCK) :: Nil)
+        case _ => throw ParseException.imbalancedErrorHere(tok + /*" from " + tok.loc +*/ " has no matching " + END_BLOCK.img+PERIOD.img, unmatched=tok, END_BLOCK.img+PERIOD.img, st,
+          hint="Every entry (including ArchiveEntry, Problem, Lemma, Theorem, and Exercise)" +  " needs its own " + END_BLOCK.img+PERIOD.img + " delimiter.")
       }
       case r :+ Token(ARCHIVE_ENTRY_BEGIN(kind), startLoc) :+ Token(DOUBLE_QUOTES_STRING(name), _) :+ MetaInfo(info) :+ Definitions(defs, vars) :+
         Problem(problem, annotations) :+ Tactics(tactics) :+ Token(END_BLOCK, _) => la match {

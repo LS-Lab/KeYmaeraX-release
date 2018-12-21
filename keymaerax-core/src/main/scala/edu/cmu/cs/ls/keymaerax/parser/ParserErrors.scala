@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.{ParseState, TokenStream}
  * with the context information state.
  * @author Andre Platzer
  * @see [[ProverException.getContext]]
+  * @todo make hint a new constructor argument
  */
 case class ParseException (msg: String, loc: Location, found: String/*Token*/, expect: String/**/, after: String/*ParseState*/, state: String/*ParseState*/, cause: Throwable = null)
   extends ProverException(loc.begin + " " + msg + "\nFound:    " + found + " at " + loc + "\nExpected: " + expect, cause) {
@@ -78,13 +79,17 @@ object ParseException {
 
   /** Imbalanced parentheses parse errors */
   def imbalancedError(msg: String, unmatched: Token, state: ParseState): ParseException =
-    imbalancedError(msg, unmatched, "", state)
+    imbalancedError(msg, unmatched, expect="", state)
 
-  /** Imbalanced parentheses parse errors */
-  def imbalancedError(msg: String, unmatched: Token, expect: String, state: ParseState): ParseException = if (state.la.tok == EOF)
-    new ParseException(msg, unmatched.loc, unmatched.toString, expect, state.topString, state.toString /*, cause*/)
+  /** Imbalanced parentheses parse errors: opening `unmatched` expects closing `expect` at the latest at location of current parse state (location is unmatched) */
+  def imbalancedError(msg: String, unmatched: Token, expect: String, state: ParseState, hint: String = ""): ParseException = if (state.la.tok == EOF)
+    new ParseException(msg + (if(hint=="") "" else "\n" + hint), unmatched.loc, found=unmatched.toString, expect=expect, after=state.topString, state=state.toString /*, cause*/)
   else
-    new ParseException(msg + "\nunmatched: " + unmatched + " at " + unmatched.loc + "--" + state.location, unmatched.loc--state.location, state.la.toString, expect, state.topString, state.toString /*, cause*/)
+    new ParseException(msg + "\nunmatched: " + unmatched + " at " + unmatched.loc + "--" + state.location + (if(hint=="") "" else "\n" + hint), unmatched.loc--state.location, found=state.la.toString, expect=expect, after=state.topString, state.toString /*, cause*/)
+
+  /** Imbalanced parentheses parse errors needed here: opening `unmatched` expects closing `expect` exactly at the location of current parse state (location is state.location) */
+  def imbalancedErrorHere(msg: String, unmatched: Token, expect: String, state: ParseState, hint: String = ""): ParseException =
+    new ParseException(msg + "\nunmatched: " + unmatched + " at " + unmatched.loc + "--" + state.location + (if(hint=="") "" else "\n" + hint), if (false) unmatched.loc--state.location else state.location, found=state.la.toString, expect=expect, after=state.topString, state.toString /*, cause*/)
 
   /** Type parse errors */
   private def typeException(msg: String, loc: Location, found: String, expect: String, hint: String = "", cause: Throwable = null) =
