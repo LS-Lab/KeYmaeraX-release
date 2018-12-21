@@ -13,7 +13,6 @@ import edu.cmu.cs.ls.keymaerax.core._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.TacticRecursors
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import org.apache.logging.log4j.scala.Logger
@@ -74,7 +73,17 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to [[orL]], [[implyL]], [[equivL]], [[andR]], and [[equivR]]. */
   lazy val normalize: BelleExpr = "normalize" by normalize(orL, implyL, equivL, andR, equivR)
   /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to `beta` rules. */
-  def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by tacticChase()(notL::andL::notR::implyR::orR::allR::existsL::step::ProofRuleTactics.closeTrue::ProofRuleTactics.closeFalse::Nil ++ beta:_*)
+  def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by tacticChase(
+    new DefaultTacticIndex {
+      override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
+        case f@And(_, _)   if f.isFOL => (TactixLibrary.andL::Nil, Nil)
+        case f@Or(_, _)    if f.isFOL => (Nil, TactixLibrary.orR::Nil)
+        case f@Imply(_, _) if f.isFOL => (Nil, TactixLibrary.implyR::Nil)
+        case f@Equiv(_, _) if f.isFOL => (Nil, Nil)
+        case _ => super.tacticsFor(expr)
+      }
+    }
+  )(notL::andL::notR::implyR::orR::allR::existsL::step::ProofRuleTactics.closeTrue::ProofRuleTactics.closeFalse::Nil ++ beta:_*)
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). Keeps branching factor of [[tacticChase]] restricted to [[andR]]. */
   val unfoldProgramNormalize: BelleExpr = "unfold" by normalize(andR)
@@ -104,8 +113,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
     /** Apply `atPos` at the specified position, or search for the expected formula if it cannot be found there. */
     def atOrSearch(p: PositionLocator): BelleExpr = atPos(None)(p) | (p match {
-      case Fixed(pos, Some(fml), exact) if pos.isAnte => atPos(Some(pos))(Find.FindL(0, Some(fml), exact=exact)) | skip
-      case Fixed(pos, Some(fml), exact) if pos.isSucc => atPos(Some(pos))(Find.FindR(0, Some(fml), exact=exact)) | skip
+      case Fixed(pos, Some(fml), exact) if pos.isAnte => ?(atPos(Some(pos))(Find.FindL(0, Some(fml), exact=exact)))
+      case Fixed(pos, Some(fml), exact) if pos.isSucc => ?(atPos(Some(pos))(Find.FindR(0, Some(fml), exact=exact)))
       case _ => skip
     })
 
@@ -124,7 +133,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     /** Execute `t` at pos, read tactic recursors and schedule followup tactics. */
     def applyAndRecurse(t: AtPosition[_ <: BelleExpr], pos: Position, s: Sequent): BelleExpr = {
       val recursors = tacticIndex.tacticRecursors(t)
-      if (recursors.nonEmpty) t(new Fixed(pos)) & (done | recursors.map(r =>
+      if (recursors.nonEmpty) t(new Fixed(pos)) & Idioms.doIf(!_.isProved)(recursors.map(r =>
         DebuggingTactics.assertOnAll(_ != s ||
           //@note allow recursing on subposition after no-op steps that supply recursors
           r(s, pos).exists(_.exists({ case Fixed(pp, _, _) => !pp.isTopLevel && pp != pos case _ => false })), "Stopping to recurse on unchanged sequent") &
@@ -159,6 +168,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
         case Box(_: Loop, _) => (Nil, loop::Nil)
         case Box(_: ODESystem, _) => (TactixLibrary.solve::Nil, odeR::Nil)
+        case f@And(_, _)   if f.isFOL => (TactixLibrary.andL::Nil, Nil)
+        case f@Or(_, _)    if f.isFOL => (Nil, TactixLibrary.orR::Nil)
+        case f@Imply(_, _) if f.isFOL => (Nil, TactixLibrary.implyR::Nil)
+        case f@Equiv(_, _) if f.isFOL => (Nil, Nil)
         case _ => super.tacticsFor(expr)
       }
     }
@@ -190,19 +203,19 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       } else {
         SaturateTactic(close | alphaRule | loop('R) /* loopauto recurses into master */) &
           //@note loopauto should have closed all goals; but continue for programs without loop
-          (done | /* loop-free: decompose and handle ODE in context before splitting */
+          Idioms.doIf(!_.isProved)( /* loop-free: decompose and handle ODE in context before splitting */
             SaturateTactic(composeChase('R)) &
             SaturateTactic(odeInContext(odeR)('R)) /* master continues after ODEs in context */)
       }
     })
 
     onAll(decomposeToODE) &
-    onAll(done | close |
+    onAll(Idioms.doIf(!_.isProved)(close |
       SaturateTactic(onAll(tacticChase(autoTacticIndex)(notL, andL, notR, implyR, orR, allR,
         TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
         implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
         andR, equivR, loop, odeR, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
-        onAll(SaturateTactic(exhaustiveEqL2R('L)) & (DifferentialTactics.endODEHeuristic | ?(QE & (if (keepQEFalse) nil else done)))))
+        onAll(EqualityTactics.applyEqualities & (DifferentialTactics.endODEHeuristic | ?(QE & (if (keepQEFalse) nil else done))))))
   }
 
   /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a

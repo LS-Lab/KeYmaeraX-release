@@ -235,8 +235,6 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
-
-
   "SnR Loop Invariant" should "find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica{qeTool =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
@@ -261,26 +259,22 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
 
   it should "unfold simple formula" in {
     val f = "y>0 -> [x:=2;]x>0".asFormula
-    val proof = proveBy(f, normalize)
-    proof.subgoals should have size 1
-    proof.subgoals.head.ante should contain only "y>0".asFormula
-    proof.subgoals.head.succ should contain only "2>0".asFormula
+    proveBy(f, normalize).subgoals.loneElement shouldBe "y>0 ==> 2>0".asSequent
   }
 
   it should "unfold simple formula when other formulas are around" in {
     val f = "y>0 -> y>=0 | [x:=2;]x>0".asFormula
-    val proof = proveBy(f, normalize)
-    proof.subgoals should have size 1
-    proof.subgoals.head.ante should contain only "y>0".asFormula
-    proof.subgoals.head.succ should contain only ("y>=0".asFormula, "2>0".asFormula)
+    proveBy(f, normalize).subgoals.loneElement shouldBe "y>0 ==> y>=0, 2>0".asSequent
   }
 
   it should "unfold with ODE when other formulas are around" in {
     val f = "y>0 -> y>=0 | [x:=2;{x'=3}]x>0".asFormula
-    val proof = proveBy(f, normalize)
-    proof.subgoals should have size 1
-    proof.subgoals.head.ante should contain only ("y>0".asFormula, "x=2".asFormula)
-    proof.subgoals.head.succ should contain only ("y>=0".asFormula, "[{x'=3}]x>0".asFormula)
+    proveBy(f, normalize).subgoals.loneElement shouldBe "y>0, x=2 ==> y>=0, [{x'=3}]x>0".asSequent
+  }
+
+  it should "not unfold FOL formulas" in {
+    val f = "y>0 -> y>=0 & y>=-1".asFormula
+    proveBy(f, normalize).subgoals.loneElement shouldBe "y>0 ==> y>=0 & y>=-1".asSequent
   }
 
   "QE" should "reset timeout when done" in withQE {
