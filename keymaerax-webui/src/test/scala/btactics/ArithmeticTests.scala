@@ -39,7 +39,7 @@ class ArithmeticTests extends TacticTestBase {
 
   "fullQE" should "apply equalities, transform to implication, and compute universal closure" in {
     val tool = new MockTool(
-      "\\forall x_1 \\forall v_1 \\forall t_0 \\forall s_0 (v_1>0&x_1 < s_0&-1*(v_1^2/(2*(s_0-x_1)))*t_0+v_1>=0&t_0>=0->1/2*(-1*(v_1^2/(2*(s_0-x_1)))*t_0^2+2*t_0*v_1+2*x_1)+(-1*(v_1^2/(2*(s_0-x_1)))*t_0+v_1)^2/(2*(v_1^2/(2*(s_0-x_1))))<=s_0)".asFormula)
+      "\\forall x_0 \\forall v_0 \\forall t \\forall s (v_0>0&x_0 < s&-1*(v_0^2/(2*(s-x_0)))*t+v_0>=0&t>=0->1/2*(-1*(v_0^2/(2*(s-x_0)))*t^2+2*t*v_0+2*x_0)+(-1*(v_0^2/(2*(s-x_0)))*t+v_0)^2/(2*(v_0^2/(2*(s-x_0))))<=s)".asFormula)
     ToolProvider.setProvider(new PreferredToolProvider(tool::Nil))
     //@note actual assertions are made by MockTool, expect a BelleThrowable since MockTool returns false as QE answer
     val result = proveBy(
@@ -56,7 +56,7 @@ class ArithmeticTests extends TacticTestBase {
 
   it should "only apply equalities for variables" in {
     val tool = new MockTool(
-      "\\forall y_0 \\forall x_0 \\forall r_0 (x_0^2+y_0^2=r_0^2&r_0>0->y_0<=r_0)".asFormula)
+      "\\forall y \\forall x \\forall r (x^2+y^2=r^2&r>0->y<=r)".asFormula)
     ToolProvider.setProvider(new PreferredToolProvider(tool::Nil))
     val result = proveBy("x^2 + y^2 = r^2, r > 0 ==> y <= r".asSequent, TactixLibrary.QE)
     result.subgoals.loneElement shouldBe "==> false".asSequent
@@ -127,6 +127,14 @@ class ArithmeticTests extends TacticTestBase {
     }
 
     tool.findCounterExample("a=1&a()=2 -> a<a()".asFormula) shouldBe None
+  }
+
+  it should "support interpreted function symbols" in withMathematica { tool =>
+    tool.findCounterExample("abs(x) < 0".asFormula) match {
+      case Some(m) =>
+        m.size shouldBe 1
+        m.keySet should contain only Variable("x")
+    }
   }
 
   "transform" should "prove a simple example" in withQE { _ =>

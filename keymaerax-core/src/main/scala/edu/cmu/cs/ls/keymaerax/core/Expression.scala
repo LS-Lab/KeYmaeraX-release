@@ -253,7 +253,7 @@ case class Number(value: BigDecimal) extends AtomicTerm with RTerm
   * @param interpreted when `true` this function symbol has a fixed interpretation/definition.
   */
 sealed case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort, interpreted: Boolean = false)
-  extends Expression with NamedSymbol {
+    extends NamedSymbol {
   final val kind: Kind = FunctionKind
   /** Full string with names and full types */
   override def fullString: String = asString + ":" + domain + "->" + sort

@@ -133,7 +133,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "convert rules correctly with the nonQEConverter" in {
-    val localMl = new BaseKeYmaeraMathematicaBridge[KExpr](link, new  UncheckedK2MConverter(), new UncheckedM2KConverter()) {}
+    val localMl = new BaseKeYmaeraMathematicaBridge[KExpr](link, new  UncheckedBaseK2MConverter(), new UncheckedBaseM2KConverter()) {}
     localMl.runUnchecked("Rule[kyx`x,kyx`y]")._2 shouldBe Equal(x, y)
     localMl.runUnchecked("Rule[kyx`x[kyx`y],kyx`y]")._2 should be (Equal(FuncOf(xFn, y), y))
     localMl.runUnchecked("{{Rule[kyx`x,kyx`y]}}")._2 should be (Equal(x, y))
@@ -183,7 +183,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "convert derivatives with the nonQEConverter" in {
-    val localMl = new BaseKeYmaeraMathematicaBridge[KExpr](link, new  UncheckedK2MConverter(), new UncheckedM2KConverter()) {}
+    val localMl = new BaseKeYmaeraMathematicaBridge[KExpr](link, new  UncheckedBaseK2MConverter(), new UncheckedBaseM2KConverter()) {}
     localMl.runUnchecked("Derivative[1][kyx`x]")._2 shouldBe DifferentialSymbol(Variable("x"))
   }
 
@@ -233,9 +233,9 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "convert non-arg functions with nonQEConverter" in {
-    val localMl = new BaseKeYmaeraMathematicaBridge[KExpr](link, new  UncheckedK2MConverter(), new UncheckedM2KConverter()) {}
+    val localMl = new BaseKeYmaeraMathematicaBridge[KExpr](link, new  UncheckedBaseK2MConverter(), new UncheckedBaseM2KConverter()) {}
     val e = "g()".asTerm
-    val math = new UncheckedK2MConverter()(e)
+    val math = new UncheckedBaseK2MConverter()(e)
     localMl.run(math)._2 shouldBe e
   }
 

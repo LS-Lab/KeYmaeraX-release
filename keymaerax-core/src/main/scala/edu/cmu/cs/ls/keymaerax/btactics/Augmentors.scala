@@ -4,9 +4,9 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{TopPosition, PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.bellerophon._
 
 /**
  * If imported, automatically augments core data structures with convenience wrappers for tactic purposes
@@ -47,7 +47,7 @@ object Augmentors {
     /** Subexpression at indicated position */
     def apply(pos: PosInExpr): Expression = at(pos)._2
     /** Subexpression at indicated position if exists, or None */
-    def sub(pos: PosInExpr): Option[Expression] = try {Some(Context.sub(term, pos))} catch {case e: IllegalArgumentException => None}
+    def sub(pos: PosInExpr): Option[Expression] = try {Some(Context.sub(term, pos))} catch {case _: IllegalArgumentException => None}
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Term], Expression) = Context.at(term, pos)
     /** Replace at position pos by repl */
@@ -88,7 +88,7 @@ object Augmentors {
     /** Subexpression at indicated position */
     def apply(pos: PosInExpr): Expression = at(pos)._2
     /** Subexpression at indicated position if exists, or None*/
-    def sub(pos: PosInExpr): Option[Expression] = try {Some(Context.sub(fml, pos))} catch {case e: IllegalArgumentException => None}
+    def sub(pos: PosInExpr): Option[Expression] = try {Some(Context.sub(fml, pos))} catch {case _: IllegalArgumentException => None}
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Formula], Expression) = Context.at(fml, pos)
     /** Replace at position pos by repl */
@@ -215,7 +215,7 @@ object Augmentors {
     /** Subexpression at indicated position */
     def apply(pos: PosInExpr): Expression = at(pos)._2
     /** Subexpression at indicated position if exists, or None*/
-    def sub(pos: PosInExpr): Option[Expression] = try {Some(Context.sub(prog,pos))} catch {case e: IllegalArgumentException => None}
+    def sub(pos: PosInExpr): Option[Expression] = try {Some(Context.sub(prog,pos))} catch {case _: IllegalArgumentException => None}
     /** Split into expression and its context at the indicated position */
     def at(pos: PosInExpr): (Context[Program], Expression) = Context.at(prog, pos)
     /** Replace at position pos by repl */
@@ -244,8 +244,11 @@ object Augmentors {
     def replaceFree(what: Term, repl: Term): Sequent = SubstitutionHelper.replaceFree(seq)(what,repl)
     /** Replace all occurrences of `what` in `seq` by `repl`. */
     def replaceAll(what: Expression, repl: Expression) = Sequent(seq.ante.map(_.replaceAll(what, repl)), seq.succ.map(_.replaceAll(what, repl)))
-    //@todo implement returning both Ante+Succ
-    def zipWithPositions: List[(Formula, TopPosition)] = ???
+    def zipAnteWithPositions: List[(Formula, TopAntePosition)] =
+      seq.ante.zipWithIndex.map({ case (f, i) => (f, AntePosition(AntePos(i))) }).toList
+    def zipSuccWithPositions: List[(Formula, TopSuccPosition)] =
+      seq.succ.zipWithIndex.map({ case (f, i) => (f, SuccPosition(SuccPos(i))) }).toList
+    def zipWithPositions: List[(Formula, TopPosition)] = zipAnteWithPositions ++ zipSuccWithPositions
     /** Convert a sequent to its equivalent formula `/\antes -> \/succs` */
     def toFormula: Formula = {
       val anteAnd = seq.ante.reduceRightOption(And).getOrElse(True)

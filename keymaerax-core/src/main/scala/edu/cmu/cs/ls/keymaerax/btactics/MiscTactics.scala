@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.{Logger, Logging}
 
 import scala.collection.immutable
+import scala.collection.mutable.ListBuffer
 
 /**
  * @author Nathan Fulton
@@ -272,6 +273,14 @@ object Idioms {
     SaturateTactic(DebuggingTactics.assertAt((_: Expression) => "Stopping loop", condition)(pos) & t)
   }
 
+  /** Executes t if condition is true. */
+  def doIf(condition: ProvableSig => Boolean)(t: BelleExpr): DependentTactic = new DependentTactic("if") {
+    override def computeExpr(provable: ProvableSig): BelleExpr = {
+      if (condition(provable)) t
+      else nil
+    }
+  }
+
   /** must(t) runs tactic `t` but only if `t` actually changed the goal. */
   def must(t: BelleExpr): BelleExpr = new DependentTactic("ANON") {
     override def computeExpr(before: ProvableSig): BelleExpr = t & new BuiltInTactic(name) {
@@ -307,15 +316,15 @@ object Idioms {
 
   /** Map sub-positions of `pos` to Ts that fit to the expressions at those sub-positions per `trafo`. */
   def mapSubpositions[T](pos: Position, sequent: Sequent, trafo: (Expression, Position) => Option[T]): List[T] = {
-    var result: List[T] = Nil
+    val result: ListBuffer[T] = ListBuffer()
 
     def mapTerm(p: PosInExpr, t: Term) = trafo(t, pos ++ p) match {
-      case Some(tt) => result = tt +: result; Left(None)
+      case Some(tt) => tt +=: result; Left(None)
       case None => Left(None)
     }
 
     def mapFormula(p: PosInExpr, e: Formula) = trafo(e, pos ++ p) match {
-      case Some(tt) => result = tt +: result; Left(None)
+      case Some(tt) => tt +=: result; Left(None)
       case None => Left(None)
     }
 
@@ -333,7 +342,7 @@ object Idioms {
       case _ =>
     }
 
-    result
+    result.toList
   }
 
   /** Search for formula `f` in the sequent and apply tactic `t` at subposition `in` of the found position. */

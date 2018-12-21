@@ -32,9 +32,9 @@ private object ToolTactics {
   def fullQE(order: Seq[NamedSymbol] = Nil)(qeTool: => QETool): BelleExpr = Idioms.NamedTactic("QE", {
     val closureAndRcf = toSingleFormula & assertT(_.succ.head.isFOL, "QE on FOL only") &
       FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool) &
-      (done | ("ANON" by ((s: Sequent) =>
+      Idioms.doIf(!_.isProved)("ANON" by ((s: Sequent) =>
         if (s.succ.head == False) label(BelleLabels.QECEX)
-        else DebuggingTactics.done("QE was unable to prove: invalid formula")))
+        else DebuggingTactics.done("QE was unable to prove: invalid formula"))
         )
 
     val convertInterpretedSymbols = Configuration.getOption(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse("false").toBoolean
@@ -42,16 +42,47 @@ private object ToolTactics {
       if (convertInterpretedSymbols) closureAndRcf | EqualityTactics.expandAll & closureAndRcf
       else EqualityTactics.expandAll & closureAndRcf
 
-    QELogger.getLogTactic &
-    (done | //@note don't fail QE if already proved
-      (SaturateTactic(alphaRule) &
-        (close |
-          (SaturateTactic(EqualityTactics.atomExhaustiveEqL2R('L)) &
-            hidePredicates & expandAndRcf
-          )
+    Idioms.doIf(!_.isProved)(
+      tacticChase()(notL, andL, notR, implyR, orR) &
+        Idioms.doIf(!_.isProved)(
+          close | hidePredicates & applyEqualities & hideTrivialFormulas & expandAndRcf
         )
       )
-    )
+  })
+
+  /** Hides duplicate formulas (expensive because needs to sort positions). */
+  private val hideDuplicates = "ANON" by ((seq: Sequent) => {
+    val hidePos = seq.zipWithPositions.map(f => (f._1, f._2.isAnte, f._2)).groupBy(f => (f._1, f._2)).
+      filter({ case (_, l) => l.size > 1 })
+    val tactics = hidePos.values.flatMap({ case _ :: tail => tail.map(t => (t._3, hide(t._3))) }).toList
+    tactics.sortBy({ case (pos, _) => pos.index0 }).map(_._2).reverse.reduceOption[BelleExpr](_&_).getOrElse(skip)
+  })
+
+  /** Hides useless trivial true/false formulas. */
+  private val hideTrivialFormulas = "ANON" by ((seq: Sequent) => {
+    val hidePos = seq.zipWithPositions.filter({
+      case (True, pos) => pos.isAnte
+      case (False, pos) => pos.isSucc
+      case (Equal(l, r), pos) => pos.isAnte && l == r
+      case (LessEqual(l, r), pos) => pos.isAnte && l == r
+      case (GreaterEqual(l, r), pos) => pos.isAnte && l == r
+      case (NotEqual(l, r), pos) => pos.isSucc && l == r
+      case (Less(l, r), pos) => pos.isSucc && l == r
+      case (Greater(l, r), pos) => pos.isSucc && l == r
+      case _ => false
+    }).map(p => hide(p._2)).reverse
+    hidePos.reduceOption[BelleExpr](_&_).getOrElse(skip)
+  })
+
+  /** Rewrites all equalities in the assumptions. */
+  private val applyEqualities = "ANON" by ((seq: Sequent) => {
+    seq.zipAnteWithPositions.filter({
+        case (Equal(_: Variable, _), _) => true
+        case (Equal(FuncOf(Function(_, _, _, _, false), _), _), _) => true
+        case _ => false }).
+      reverse.
+      map({ case (fml, pos) => Idioms.doIf(_.subgoals.head(pos.checkTop) == fml)(EqualityTactics.atomExhaustiveEqL2R(pos)) }).
+      reduceOption[BelleExpr](_ & _).getOrElse(skip)
   })
 
   def fullQE(qeTool: => QETool): BelleExpr = fullQE()(qeTool)

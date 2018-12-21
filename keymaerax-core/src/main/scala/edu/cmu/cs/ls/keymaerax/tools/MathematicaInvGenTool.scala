@@ -19,7 +19,7 @@ import scala.util.Try
  * @author Andrew Sogokon, based on QETool by Nathan Fulton and Stefan Mitsch
  */
 class MathematicaInvGenTool(override val link: MathematicaLink)
-  extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter(), PegasusM2KConverter)
+  extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedBaseK2MConverter(), PegasusM2KConverter)
     with InvGenTool with Logging {
 
   init()

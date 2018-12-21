@@ -82,6 +82,10 @@ class QETests extends TacticTestBase {
     proveBy("x>0 -> x>0".asFormula, prop & ToolTactics.fullQE(tool)) shouldBe 'proved
   }
 
+  it should "not fail on duplicate formulas" in withMathematica { tool =>
+    proveBy("x=2, x=2, true, x=2 ==> x>=2, x>=2, x+1>=3".asSequent, ToolTactics.fullQE(tool)) shouldBe 'proved
+  }
+
   it should "not have soundness bug with decimal representations " in withMathematica { _ =>
 
     val pr = proveBy("false".asFormula,

@@ -1003,8 +1003,8 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
 
       val cexFml = UIKeYmaeraXPrettyPrinter.htmlEncode(Imply(assumptions, cexConclusion).prettyString)
 
-      //@note look for variables at word boundary (do not match in the middle of other words)
-      val symMatcher = s"(${cex.keySet.map(_.prettyString).mkString("|")})\\b".r("v")
+      //@note look for variables at word boundary (do not match in the middle of other words, do not match between &;)
+      val symMatcher = s"(${cex.keySet.map(_.prettyString).mkString("|")})(?![^&]*;)\\b".r("v")
       val cexFmlWithVals = symMatcher.replaceAllIn(cexFml, (m: Match) => {
         val cexSym = UIKeYmaeraXPrettyPrinter.htmlEncode(m.group("v"))
         if ((m.before + cexSym).endsWith("false")) {

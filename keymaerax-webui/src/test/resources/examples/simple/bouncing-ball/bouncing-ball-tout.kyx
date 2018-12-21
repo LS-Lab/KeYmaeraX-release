@@ -1,0 +1,33 @@
+ArchiveEntry "Bouncing Ball"
+
+Definitions
+  Real g();
+End.
+
+ProgramVariables
+  Real h;
+  Real v;
+  Real t;
+  Real c;
+  Real V;
+  Real H;
+End.
+
+
+Problem
+    v^2<=2*g()*(H-h) & h>=0 & g()>0 & H>=0 & 0<=c & c<1
+ -> [
+      {
+        {h'=v, v'=-g() & h>=0}
+        {  ?h>=0;
+        ++ ?h=0; v := -c*v; }
+      }* /*@invariant(v^2<=2*g()*(H-h) & h>=0)*/
+    ]
+    (h>=0 & h<=H)
+End.
+
+Tactic "Auto"
+  master
+End.
+
+End.

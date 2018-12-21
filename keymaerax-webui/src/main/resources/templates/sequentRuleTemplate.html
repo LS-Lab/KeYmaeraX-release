@@ -23,6 +23,7 @@
                                               ng-if="!readOnly && !premise.isClosed && antePart.isInput"
                                               uib-tooltip="{{antePart.value}}" tooltip-placement="auto top"
                                               editable-text="antePart.value" onbeforesave="saveValue(antePart, $data)"
+                                              blur="submit"
                                               e-required>{{antePart.value || antePart.placeholder}}</span>
                                     </span>
                                     {{$last ? '' : ','}}
@@ -40,6 +41,7 @@
                                               ng-if="!readOnly && !premise.isClosed && succPart.isInput"
                                               uib-tooltip="{{succPart.value}}" tooltip-placement="auto top"
                                               editable-text="succPart.value" onbeforesave="saveValue(succPart, $data)"
+                                              blur="submit"
                                               e-required>{{succPart.value || succPart.placeholder}}</span>
                                     </span>
                                     {{$last ? '' : ','}}
@@ -63,6 +65,7 @@
                           ng-if="!readOnly && antePart.isInput"
                           uib-tooltip="{{antePart.value}}" tooltip-placement="auto top"
                           editable-text="antePart.value" onbeforesave="saveValue(antePart, $data)"
+                          blur="submit"
                           e-required>{{antePart.value || antePart.placeholder}}</span>
                 </span>
                 {{$last ? '' : ','}}
@@ -79,6 +82,7 @@
                           ng-if="!readOnly && succPart.isInput"
                           uib-tooltip="{{succPart.value}}" tooltip-placement="auto top"
                           editable-text="succPart.value" onbeforesave="saveValue(succPart, $data)"
+                          blur="submit"
                           e-required>{{succPart.value || succPart.placeholder}}</span>
                 </span>
                 {{$last ? '' : ','}}
