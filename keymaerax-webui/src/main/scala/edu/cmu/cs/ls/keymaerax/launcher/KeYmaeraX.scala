@@ -70,36 +70,33 @@ object KeYmaeraX {
       |     [-sandbox] [-fallback prg] |
       |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c] |
       |  -ui [web server options] |
-      |  -parse file.kyx |
-      |  -bparse file.kyt |
-      |  -repl file.kyx [file.kyt] [scaladefs]
       |  -striphints file.kyx -out fileout.kyx
       |
       |Actions:
       |  -prove     run prover on given archive (ignores entries without tactic)
-      |  -modelplex synthesize monitor from given file by proof with ModelPlex tactic
+      |  -modelplex synthesize monitor from given model by proof with ModelPlex tactic
       |  -codegen   generate executable code from given model file
       |  -ui        start web user interface with optional server arguments (default)
-      |  -parse     return error code 0 if the input model file parses
-      |  -bparse    return error code 0 if bellerophon tactic file parses
-      |  -repl      prove interactively from REPL command line
       |  -striphints remove all proof annotations from the model
+      |  -parse     return error code 0 if the given model file parses
+      |  -bparse    return error code 0 if given bellerophon tactic file parses
+      |  -repl      prove interactively from REPL command line
       |  -coasterx  verify roller coasters
       |
       |Additional options:
       |  -tool mathematica|z3 choose which tool to use for real arithmetic
-      |  -mathkernel MathKernel(.exe) path to the Mathematica kernel executable
-      |  -jlink path/to/jlinkNativeLib path to the J/Link native library directory
+      |  -mathkernel MathKernel(.exe) path to Mathematica kernel executable
+      |  -jlink path/to/jlinkNativeLib path to Mathematica J/Link library directory
       |  -timeout  how many seconds to try proving before giving up, forever if <=0
       |  -monitor  ctrl|model what kind of monitor to generate with ModelPlex
       |  -vars     use ordered list of variables, treating others as constant functions
       |  -interval guard reals by interval arithmetic in floating point (recommended)
       |  -nointerval skip interval arithmetic presuming no floating point errors
       |  -savept path export proof term s-expression from -prove to given path
-      |  -launch   use present JVM instead of launching better one with bigger stack
+      |  -launch   use present JVM instead of launching one with a bigger stack
       |  -lax      use lax mode with more flexible parser, printer, prover etc.
       |  -strict   use strict mode with no flexibility in prover
-      |  -debug    use debug mode with more exhaustive messages
+      |  -debug    use debug mode with exhaustive messages
       |  -nodebug  disable debug mode to suppress intermediate messages
       |  -security use security manager imposing some runtime security restrictions
       |  -help     Display this usage information
