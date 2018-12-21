@@ -747,17 +747,20 @@ object ODEInvariance {
           boxAnd(pos) & andR(pos) < (
             dW(pos) & prop,
             //QE can't handle this alone: diffInd('full)(pos)
-            Dconstify(
+            Dconstify
+            (
               diffInd('diffInd)(pos) <(
                 //Cleanup the goal
+                //Extra domain constraint from diffInd step
                 hideL('Llast) &
+                //Get rid of dbxy_=1 assumption
                 exhaustiveEqL2R('Llast) &
-                // useAt(ghostLem3,PosInExpr(1::Nil))(pos) &
-                // This useAt doesn't work with Dconstify
-                // useAt(pr,PosInExpr(1::Nil))(pos) &
-                DebuggingTactics.debug("First Vdbx QE",debugTactic) &
+                // TODO: The next 3 steps do not work with Dconstify
+                //useAt(leftMultId)(pos++PosInExpr(0::Nil)) &
+                //useAt(pr,PosInExpr(1::Nil))(pos) &
+                //DebuggingTactics.debug("First Vdbx QE",true) &
                 //p=0 must be true initially
-                QE,
+                (QE & done | DebuggingTactics.done("dRI condition must hold in the beginning")),
                 cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) &
                   // At this point, we should get to (gy+0)p + y(p') <= 0
                   // or the negated version ((-g)y+0)p + y(p') >= 0
@@ -774,7 +777,7 @@ object ODEInvariance {
                     ,
                     // This is the only "real" use of QE.
                     DebuggingTactics.debug("Second Vdbx QE",debugTactic) &
-                      hideR(1) & QE
+                      hideR(1) & (QE & done | DebuggingTactics.done("Vdbx condition must be preserved"))
                   )
                 )
               )
@@ -805,7 +808,7 @@ object ODEInvariance {
 
     val (sys, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys, post)
-      case _ => throw new BelleThrowable("domain stuck for box ODE in succedent")
+      case _ => throw new BelleThrowable("dRI only applicable for box ODE in succedent")
     }
 
     val (f2, propt) = semiAlgNormalize(post)
@@ -958,7 +961,7 @@ object ODEInvariance {
   // Specialized lemma to rearrange the ghosts
   private val ghostLem1 = remember("y() > 0 & pp() <= (g()*p()) -> ((-g())*y()+0)*p() + y()*pp() <= 0".asFormula,QE)
   private val ghostLem2 = remember("y() > 0 & pp() >= -(g()*p()) -> ((--g())*y()+0)*p() + y()*pp() >= 0".asFormula,QE)
-  private val ghostLem3 = remember("a()<=0 -> 1*a()<=0".asFormula,QE)
+  private val leftMultId = remember("1*f() = f()".asFormula,QE)
 
   // Symbolic matrix and vector products, assuming that the dimensions all match up
   private def dot_prod (v1:List[Term],v2:List[Term]) : Term = {

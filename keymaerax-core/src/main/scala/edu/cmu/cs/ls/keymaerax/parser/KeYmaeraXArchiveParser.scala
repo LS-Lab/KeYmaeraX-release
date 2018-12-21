@@ -377,11 +377,11 @@ object KeYmaeraXArchiveParser {
       case r :+ (begin@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ (name@Token(_: DOUBLE_QUOTES_STRING, _)) :+ (info@MetaInfo(_)) if la == PERIOD || la == SEMI =>
         reduce(shift(st), 1, Bottom, r :+ begin :+ name :+ info)
       // finish entry
-      case r :+ Token(ARCHIVE_ENTRY_BEGIN(_), _) :+ Token(DOUBLE_QUOTES_STRING(_), _) :+ MetaInfo(_) :+
+      case r :+ (tok@Token(ARCHIVE_ENTRY_BEGIN(_), _)) :+ Token(DOUBLE_QUOTES_STRING(_), _) :+ MetaInfo(_) :+
           Definitions(_, _) :+ Problem(_, _) :+ Tactics(_) => la match {
         case END_BLOCK => shift(st)
         case TACTIC_BLOCK => shift(st)
-        case _ => throw ParseException("Every entry (including ArchiveEntry, Lemma, Theorem, and Exercise)" +  " needs an " + END_BLOCK.img+PERIOD.img + " delimiter", st, Expected.ExpectTerminal(END_BLOCK) :: Nil)
+        case _ => throw ParseException((if (la==EOF) "Premature end of file\n" else "") + "Every entry (including ArchiveEntry, Problem, Lemma, Theorem, and Exercise)" +  " needs its own " + END_BLOCK.img+PERIOD.img + " delimiter. " + tok + " has no matching " + END_BLOCK.img+PERIOD.img, st, Expected.ExpectTerminal(END_BLOCK) :: Nil)
       }
       case r :+ Token(ARCHIVE_ENTRY_BEGIN(kind), startLoc) :+ Token(DOUBLE_QUOTES_STRING(name), _) :+ MetaInfo(info) :+ Definitions(defs, vars) :+
         Problem(problem, annotations) :+ Tactics(tactics) :+ Token(END_BLOCK, _) => la match {
