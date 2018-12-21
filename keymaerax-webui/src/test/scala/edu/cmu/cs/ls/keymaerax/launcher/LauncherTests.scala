@@ -21,13 +21,18 @@ class LauncherTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     actualFileContent should include (expectedProof)
   }
 
-  it should "ignore entries without tactics" taggedAs IgnoreInBuildTest in {
+  it should "prove entries without tactics with auto" taggedAs IgnoreInBuildTest in {
     val inputFileName = "keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/bouncing-ball-notac.kyx"
     val outputFileName = File.createTempFile("bouncing-ball-tout", ".kyp").getAbsolutePath
-
     KeYmaeraX.main(Array("-prove", inputFileName, "-out", outputFileName))
+    scala.io.Source.fromFile(outputFileName).mkString should include ("tactic \"\"\"\"auto\"\"\"\"")
+  }
 
-    scala.io.Source.fromFile(outputFileName).mkString shouldBe empty
+  it should "report entries with tactic nil as unfinished" taggedAs IgnoreInBuildTest in {
+    val inputFileName = "keymaerax-webui/src/test/resources/examples/simple/bouncing-ball/bouncing-ball-niltac.kyx"
+    val outputFileName = File.createTempFile("bouncing-ball-tout", ".kyp").getAbsolutePath
+    KeYmaeraX.main(Array("-prove", inputFileName, "-out", outputFileName))
+    new File(outputFileName) should not (exist)
   }
 
   it should "report disproved entries" taggedAs IgnoreInBuildTest in {

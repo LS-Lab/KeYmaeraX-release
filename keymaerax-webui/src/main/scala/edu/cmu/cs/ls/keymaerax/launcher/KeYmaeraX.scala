@@ -76,7 +76,7 @@ object KeYmaeraX {
       |  -striphints file.kyx -out fileout.kyx
       |
       |Actions:
-      |  -prove     run prover on given archive (ignores entries without tactic)
+      |  -prove     run prover on given archive
       |  -modelplex synthesize monitor from given file by proof with ModelPlex tactic
       |  -codegen   generate executable code from given model file
       |  -ui        start web user interface with optional server arguments (default)
@@ -635,8 +635,8 @@ object KeYmaeraX {
       //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
       val outputFileName = outputFileNames(modelName)
 
-      if (tactics.isEmpty) ProofStatistics(modelName, "", "skipped", None, timeout, -1, -1, -1, -1) :: Nil
-      else tactics.zipWithIndex.map({case ((tacticName, _, tactic), i) =>
+      val t = if (tactics.isEmpty) ("auto", "auto", TactixLibrary.auto) :: Nil else tactics
+      t.zipWithIndex.map({case ((tacticName, _, tactic), i) =>
         val proofStat = prove(modelName, model, problemContent, tacticName, tactic, timeout,
           if (i == 0) Some(outputFileName) else None, options)
 
