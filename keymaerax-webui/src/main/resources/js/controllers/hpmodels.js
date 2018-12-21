@@ -27,22 +27,29 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
 
      $scope.updateModelContentFromFile = function(fileName, fileContent) {
        $scope.model.content = fileContent;
-       if (!$scope.isKya(fileContent)) {
+       if ($scope.numKyxEntries(fileContent) <= 0) {
          $scope.model.modelName = fileName.substring(0, fileName.indexOf('.'));
        }
        $scope.$digest();
      };
 
-     /* Indicates whether `content` is an archive or a plain model file. */
-     $scope.isKya = function(content) {
+     /* Number of archive entries contained in `content`. */
+     $scope.numKyxEntries = function(content) {
         // archives contain lemmas, theorems etc., e.g., search for matches: Theorem "...".
-        var regex = /(Theorem|Lemma|ArchiveEntry|Exercise) \"[^\"]*\"/g;
-        return content && content.search(regex) >= 0;
+        var entryRegex = /(Theorem|Lemma|ArchiveEntry|Exercise)(\s*)\"[^\"]*\"/g;
+        return (content && content.match(entryRegex) || []).length;
      };
+
+     /* Number of tactic entries contained in `content`. */
+     $scope.numKyxTactics = function(content) {
+       var tacticRegex = /Tactic(\s*)\"[^\"]*\"/g;
+       return (content && content.match(tacticRegex) || []).length;
+     }
 
      $scope.uploadContent = function(startProof) {
        var url =  "user/" + sessionService.getUser() + "/modelupload/" + $scope.model.modelName;
-       upload(url, $scope.model.content, startProof && !$scope.isKya($scope.model.content));
+       upload(url, $scope.model.content,
+         startProof && $scope.numKyxEntries($scope.model.content) <= 1 && $scope.numKyxTactics($scope.model.content) <= 0);
      }
 
      $scope.close = function() { $uibModalInstance.close(); };
