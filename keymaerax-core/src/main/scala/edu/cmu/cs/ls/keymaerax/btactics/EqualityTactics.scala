@@ -108,6 +108,17 @@ private object EqualityTactics {
     case Some(fml@Equal(FuncOf(Function(_, _, _, _, false), _), _)) => EqualityTactics.exhaustiveEqL2R(pos) & hideL(pos, fml)
   })
 
+  /** Rewrites all atom equalities in the assumptions. */
+  lazy val applyEqualities: DependentTactic = "ANON" by ((seq: Sequent) => {
+    seq.zipAnteWithPositions.filter({
+      case (Equal(_: Variable, _), _) => true
+      case (Equal(FuncOf(Function(_, _, _, _, false), _), _), _) => true
+      case _ => false }).
+      reverse.
+      map({ case (fml, pos) => Idioms.doIf(_.subgoals.head(pos.checkTop) == fml)(EqualityTactics.atomExhaustiveEqL2R(pos)) }).
+      reduceOption[BelleExpr](_ & _).getOrElse(skip)
+  })
+
   /**
    * Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively.
    * @example{{{

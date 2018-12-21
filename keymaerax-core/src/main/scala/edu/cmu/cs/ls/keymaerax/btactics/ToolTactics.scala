@@ -8,12 +8,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalF
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.toSingleFormula
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
-import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger.LogConfig
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 import scala.math.Ordering.Implicits._
 import scala.collection.immutable._
@@ -45,7 +42,7 @@ private object ToolTactics {
     Idioms.doIf(!_.isProved)(
       tacticChase()(notL, andL, notR, implyR, orR) &
         Idioms.doIf(!_.isProved)(
-          close | hidePredicates & applyEqualities & hideTrivialFormulas & expandAndRcf
+          close | hidePredicates & EqualityTactics.applyEqualities & hideTrivialFormulas & expandAndRcf
         )
       )
   })
@@ -72,17 +69,6 @@ private object ToolTactics {
       case _ => false
     }).map(p => hide(p._2)).reverse
     hidePos.reduceOption[BelleExpr](_&_).getOrElse(skip)
-  })
-
-  /** Rewrites all equalities in the assumptions. */
-  private val applyEqualities = "ANON" by ((seq: Sequent) => {
-    seq.zipAnteWithPositions.filter({
-        case (Equal(_: Variable, _), _) => true
-        case (Equal(FuncOf(Function(_, _, _, _, false), _), _), _) => true
-        case _ => false }).
-      reverse.
-      map({ case (fml, pos) => Idioms.doIf(_.subgoals.head(pos.checkTop) == fml)(EqualityTactics.atomExhaustiveEqL2R(pos)) }).
-      reduceOption[BelleExpr](_ & _).getOrElse(skip)
   })
 
   def fullQE(qeTool: => QETool): BelleExpr = fullQE()(qeTool)
