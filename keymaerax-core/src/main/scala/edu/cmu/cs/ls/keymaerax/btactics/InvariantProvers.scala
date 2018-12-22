@@ -109,17 +109,17 @@ object InvariantProvers {
       // completes ODE invariant proofs and arithmetic
       val finishOff: BelleExpr =
         OnAll(ifThenElse(DifferentialTactics.isODE,
-          odeInvariant(pos) |
+          DifferentialTactics.fastODE(pos) |
             // augment loop invariant to local ODE invariant if possible
             ("ANON" by ((pos: Position, seq: Sequent) => {
               val odePost = seq.sub(pos++PosInExpr(1::Nil))
               // no need to try same invariant again if odeInvariant(pos) already failed
               //@todo optimize: if the invariant generator were correct, could restrict to its first element
-              ChooseSome(() => gen(seq, pos).iterator.filterNot(localInv => Some(localInv)==odePost),
+              ChooseSome(() => gen(seq, pos).iterator.filterNot(localInv => odePost.contains(localInv)),
                 (localInv:Formula) => {
                   println/*logger.debug*/("loopPostMaster local " + localInv)
                   DebuggingTactics.debug("local")&
-                  dC(localInv)(pos) < (dW(pos) & QE(), odeInvariant(pos)) &
+                  dC(localInv)(pos) < (dW(pos) & QE(), DifferentialTactics.fastODE(pos)) &
                   done & DebuggingTactics.debug("success")
                 })
             }))(pos)
