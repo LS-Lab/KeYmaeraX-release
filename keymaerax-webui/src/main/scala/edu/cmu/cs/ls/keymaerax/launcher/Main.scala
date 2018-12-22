@@ -193,7 +193,7 @@ object Main {
     */
   private def exitIfDeprecated() = {
     val databaseVersion = SQLite.ProdDB.getConfiguration("version").config("version")
-    println("Current database version: " + databaseVersion)
+    println("Database version: " + databaseVersion)
     cleanupGuestData()
     if (UpdateChecker.upToDate().getOrElse(false) &&
         UpdateChecker.needDatabaseUpgrade(databaseVersion).getOrElse(false)) {
