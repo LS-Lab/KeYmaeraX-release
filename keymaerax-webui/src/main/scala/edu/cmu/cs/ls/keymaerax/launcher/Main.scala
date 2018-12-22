@@ -314,10 +314,10 @@ object Main {
   }
 
   private def cleanupGuestData() = {
-    launcherLog("Cleaning up guest data...")
+    launcherDebug("Cleaning up guest data...")
     val deleteModels = listOutdatedModels()
     val deleteModelsStatements = deleteModels.map("delete from models where _id = " + _.modelId)
-    launcherLog("...deleting " + deleteModels.size + " guest models")
+    launcherDebug("...deleting " + deleteModels.size + " guest models")
     if (deleteModels.nonEmpty) {
       val conn = SQLite.ProdDB.sqldb.createConnection()
       conn.createStatement().executeUpdate("PRAGMA journal_mode = WAL")
@@ -334,7 +334,7 @@ object Main {
         conn.close()
       }
     }
-    launcherLog("done.")
+    launcherDebug("done.")
   }
 
   def processIsAlive(proc : Process) = {
@@ -462,6 +462,11 @@ object Main {
 
   def launcherLog(s : String, isError:Boolean = false) = {
     val prefix = if(isError) "[launcher][ERROR] " else "[launcher] "
+    println(prefix + s)
+  }
+
+  def launcherDebug(s : String) = if (Configuration.getOption(Configuration.Keys.DEBUG)==Some("true")) {
+    val prefix = "[launcherDebug] "
     println(prefix + s)
   }
 
