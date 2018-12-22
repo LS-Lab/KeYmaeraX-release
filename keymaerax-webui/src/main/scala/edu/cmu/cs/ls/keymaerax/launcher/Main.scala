@@ -16,12 +16,15 @@ import spray.json._
 import spray.json.DefaultJsonProtocol._
 
 /**
- * Usage:
- *  java -jar KeYmaeraX.jar or else
- *  java -Xss20M -jar KeYmaeraX.jar
- * Created by nfulton on 4/17/15.
- * @todo move functionality directly into KeYmaeraX.scala?
- */
+  * Prelauncher that restarts a bigger stack JVM if necessary and then starts [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]].
+  * Usage:
+  * {{{
+  *  java -jar keymaerax.jar
+  *  java -Xss20M -jar keymaerax.jar
+  * }}}
+  * Created by nfulton on 4/17/15.
+  * @todo move functionality directly into KeYmaeraX.scala?
+  */
 object Main {
   /** This flag is set to true iff this process odes nothing but re-launch */
   var IS_RELAUNCH_PROCESS = false
@@ -38,7 +41,6 @@ object Main {
       IS_RELAUNCH_PROCESS = true
       val java : String = javaLocation
       val keymaeraxjar : String = jarLocation
-      println("Restarting KeYmaera X with sufficient stack space")
 
       val javaVersion = System.getProperty("java.version")
       val javaMajorMinor :: updateVersion :: Nil =
@@ -59,6 +61,7 @@ object Main {
             (java :: "-Xss20M" :: "--add-modules" :: "java.xml.bind" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
               (if (args.isEmpty) "-ui" :: Nil else Nil)
           }
+        launcherLog("Restarting KeYmaera X with sufficient stack space\n" + cmd.mkString(" "))
         runCmd(cmd)
       }
     } else if (args.contains("-ui")) {
@@ -86,7 +89,7 @@ object Main {
     LoadingDialogFactory().addToStatus(25, Some("Obtaining locks..."))
     KeYmaeraXLock.obtainLockOrExit()
 
-    launcherLog("-launch -- starting KeYmaera X Web UI server HyDRA.")
+    launcherDebug("-launch -- starting KeYmaera X Web UI server HyDRA.")
 
 
 //    try {
@@ -193,7 +196,7 @@ object Main {
     */
   private def exitIfDeprecated() = {
     val databaseVersion = SQLite.ProdDB.getConfiguration("version").config("version")
-    println("Database version: " + databaseVersion)
+    launcherLog("Database version: " + databaseVersion)
     cleanupGuestData()
     if (UpdateChecker.upToDate().getOrElse(false) &&
         UpdateChecker.needDatabaseUpgrade(databaseVersion).getOrElse(false)) {
@@ -348,7 +351,7 @@ object Main {
 
 
   private def runCmd(cmd: List[String]) = {
-    launcherLog("Running command:\n" + cmd.mkString(" "))
+    launcherDebug("Running command:\n" + cmd.mkString(" "))
 
     val pb = new ProcessBuilder(cmd)
     var pollOnStd = false
@@ -521,7 +524,7 @@ object Main {
       }
 
       //This file is later destroyed in the shutdown hook.
-      launcherLog("Obtaining lock.")
+      launcherDebug("Obtaining lock.")
       obtainLock()
     } ensuring(e => lockObtained == true && lockFile.exists())
 
