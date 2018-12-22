@@ -896,7 +896,7 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
     var brace = 0
     var paren = 0
     var box = 0
-    //@note dia is an approximation because 2<8 might be misunderstood during parse.
+    //@todo dia is an approximation because 2<8 might be misunderstood during parse.
     var dia = 0
     var stack = st.stack
     while (!stack.isEmpty) {

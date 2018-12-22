@@ -14,9 +14,11 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.{ParseState, TokenStream}
  * with the context information state.
  * @author Andre Platzer
  * @see [[ProverException.getContext]]
+  * @todo make hint a new constructor argument
  */
-case class ParseException (msg: String, loc: Location, found: String/*Token*/, expect: String/**/, after: String/*ParseState*/, state: String/*ParseState*/, cause: Throwable = null)
-  extends ProverException(loc.begin + " " + msg + "\nFound:    " + found + " at " + loc + "\nExpected: " + expect, cause) {
+case class ParseException (msg: String, loc: Location, found: String/*Token*/, expect: String/**/, after: String/*ParseState*/, state: String/*ParseState*/,
+                           cause: Throwable = null, hint: String = "")
+  extends ProverException(loc.begin + " " + msg + "\nFound:    " + found + " at " + loc + "\nExpected: " + expect + (if (hint=="") "" else "\nHint: " + hint), cause) {
   /**
     * Add the input context information to this exception, returning the resulting exception to be thrown.
     * @param input textual description of the input in which this prover exception occurred.
@@ -49,6 +51,10 @@ case class ParseException (msg: String, loc: Location, found: String/*Token*/, e
 }
 
 object ParseException {
+//  def apply(msg: String, loc: Location, found: Token, expect: String/**/, after: ParseState, state: ParseState,
+//            cause: Throwable = null, hint: String = ""): ParseException =
+//    new ParseException(msg, loc, found=found + "", expect=expect, after=after + "", state=state + "", cause, hint)
+
   def apply(msg: String, state: ParseState /*, cause: Throwable = null*/): ParseException =
     new ParseException(msg, state.location, state.la.toString, "", state.topString, state.toString /*, cause*/)
 
@@ -78,17 +84,21 @@ object ParseException {
 
   /** Imbalanced parentheses parse errors */
   def imbalancedError(msg: String, unmatched: Token, state: ParseState): ParseException =
-    imbalancedError(msg, unmatched, "", state)
+    imbalancedError(msg, unmatched, expect="", state)
 
-  /** Imbalanced parentheses parse errors */
-  def imbalancedError(msg: String, unmatched: Token, expect: String, state: ParseState): ParseException = if (state.la.tok == EOF)
-    new ParseException(msg, unmatched.loc, unmatched.toString, expect, state.topString, state.toString /*, cause*/)
+  /** Imbalanced parentheses parse errors: opening `unmatched` expects closing `expect` at the latest at location of current parse state (location is unmatched) */
+  def imbalancedError(msg: String, unmatched: Token, expect: String, state: ParseState, hint: String = ""): ParseException = if (state.la.tok == EOF)
+    new ParseException(msg, unmatched.loc, found=unmatched.toString, expect=expect, after=state.topString, state=state.toString, null, hint=hint)
   else
-    new ParseException(msg + "\nunmatched: " + unmatched + " at " + unmatched.loc + "--" + state.location, unmatched.loc--state.location, state.la.toString, expect, state.topString, state.toString /*, cause*/)
+    new ParseException(msg + "\nunmatched: " + unmatched + " at " + unmatched.loc + "--" + state.location, unmatched.loc--state.location, found=state.la.toString, expect=expect, after=state.topString, state.toString, hint=hint /*, cause*/)
+
+  /** Imbalanced parentheses parse errors needed here: opening `unmatched` expects closing `expect` exactly at the location of current parse state (location is state.location) */
+  def imbalancedErrorHere(msg: String, unmatched: Token, expect: String, state: ParseState, hint: String = ""): ParseException =
+    new ParseException(msg + "\nunmatched: " + unmatched + " at " + unmatched.loc + "--" + state.location, if (false) unmatched.loc--state.location else state.location, found=state.la.toString, expect=expect, after=state.topString, state.toString, null, hint=hint)
 
   /** Type parse errors */
   private def typeException(msg: String, loc: Location, found: String, expect: String, hint: String = "", cause: Throwable = null) =
-    new ParseException("type analysis: " + msg + (if(hint=="") "" else "\n" + hint), loc, found, expect, "", "", cause)
+    new ParseException("type analysis: " + msg, loc, found, expect, "", "", cause, hint=hint)
 
   /** Type parse error with mismatch in found type illtyped and expected type */
   def typeError(msg: String, illtyped: Expression, expectedType: String, loc: Location, hint: String = ""): ParseException =
