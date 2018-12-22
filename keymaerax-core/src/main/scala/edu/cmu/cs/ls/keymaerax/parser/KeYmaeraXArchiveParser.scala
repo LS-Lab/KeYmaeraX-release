@@ -494,8 +494,8 @@ object KeYmaeraXArchiveParser {
                 case UnknownLocation =>
                   val defLoc = predDefBlock.head.loc.spanTo(endLoc)
                   (defLoc, slice(text, defLoc))
-                case _ if ex.found != ParseException.tokenDescription(EOF) => (ex.loc, ex.found)
-                case _ if ex.found == ParseException.tokenDescription(EOF) => (ex.loc, ParseException.tokenDescription(endDef))
+                case _ if ex.found != EOF.description => (ex.loc, ex.found)
+                case _ if ex.found == EOF.description => (ex.loc, endDef.description)
               }
               throw new ParseException(ex.msg, loc, found, ex.expect, ex.after, ex.state, ex)
           }
@@ -525,8 +525,8 @@ object KeYmaeraXArchiveParser {
                 case UnknownLocation =>
                   val defLoc = funcDefBlock.head.loc.spanTo(endLoc)
                   (defLoc, slice(text, defLoc))
-                case _ if ex.found != ParseException.tokenDescription(EOF) => (ex.loc, ex.found)
-                case _ if ex.found == ParseException.tokenDescription(EOF) => (ex.loc, ParseException.tokenDescription(endDef))
+                case _ if ex.found != EOF.description => (ex.loc, ex.found)
+                case _ if ex.found == EOF.description => (ex.loc, endDef.description)
               }
               throw new ParseException(ex.msg, loc, found, ex.expect, ex.after, ex.state, ex)
           }
@@ -557,8 +557,8 @@ object KeYmaeraXArchiveParser {
                 case UnknownLocation =>
                   val defLoc = prgDefBlock.head.loc.spanTo(endLoc)
                   (defLoc, slice(text, defLoc))
-                case _ if ex.found != ParseException.tokenDescription(EOF) => (ex.loc, ex.found)
-                case _ if ex.found == ParseException.tokenDescription(EOF) => (ex.loc, ParseException.tokenDescription(rbrace))
+                case _ if ex.found != EOF.description => (ex.loc, ex.found)
+                case _ if ex.found == EOF.description => (ex.loc, rbrace.description)
               }
               throw new ParseException(ex.msg, loc, found, ex.expect, ex.after, ex.state, ex)
           }
@@ -615,7 +615,7 @@ object KeYmaeraXArchiveParser {
           val (problemBlock, Token(END_BLOCK, endLoc) :: remainder) = st.input.span(_.tok != END_BLOCK) match {
             case (Token(PROBLEM_BLOCK, _) :: Token(PERIOD, _) :: pb, (endBlock@Token(END_BLOCK, _)) :: Token(PERIOD, _) :: r) => (pb, endBlock +: r)
             case (Token(PROBLEM_BLOCK, _) :: pb, (endBlock@Token(END_BLOCK, _)) :: Token(PERIOD, _) :: r) => (pb, endBlock +: r)
-            case (Token(PROBLEM_BLOCK, _) :: pb, (endBlock@Token(END_BLOCK, _)) :: r) => throw ParseException("Missing " + PERIOD.img + " after delimiter " + END_BLOCK.img, r.head.loc, ParseException.tokenDescription(r.head), Expected.ExpectTerminal(PERIOD).toString, endBlock.toString, st.toString)
+            case (Token(PROBLEM_BLOCK, _) :: pb, (endBlock@Token(END_BLOCK, _)) :: r) => throw ParseException("Missing " + PERIOD.img + " after delimiter " + END_BLOCK.img, r.head.loc, r.head.description, Expected.ExpectTerminal(PERIOD).toString, endBlock.toString, st.toString)
             case (Token(PROBLEM_BLOCK, _) :: _, r) => throw ParseException("Missing problem delimiter", r.last.loc, r.last.toString, END_BLOCK.img + PERIOD.img, "", st.toString)
           }
           problemBlock.find(_.tok == TACTIC_BLOCK) match {

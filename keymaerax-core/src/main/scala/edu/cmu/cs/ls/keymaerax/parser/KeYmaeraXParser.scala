@@ -26,6 +26,8 @@ private[parser] sealed trait Item
 /** Tokens are terminals occurring at a given location in the input. */
 private[parser] case class Token(tok: Terminal, loc: Location = UnknownLocation) extends Item {
   override def toString = tok.toString
+  /** Human-readable description followed by internal info */
+  def description: String = tok.description
 }
 private[parser] object UnknownToken extends Token(PSEUDO, UnknownLocation)
 /** Expressions that are partially parsed on the parser item stack. */
@@ -64,7 +66,7 @@ private[parser] trait Expected
 private object Expected {
   /** Terminal input expected */
   private[parser] implicit class ExpectTerminal(tok: Terminal) extends Expected {
-    override def toString: String = ParseException.tokenDescription(tok)
+    override def toString: String = tok.description
   }
 }
 /** Nonterminal or pseudo-nonterminal input expected */
