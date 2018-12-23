@@ -294,7 +294,7 @@ object KeYmaeraX {
       case "-debug" :: tail => Configuration.set(Configuration.Keys.DEBUG, "true", saveToFile = false); nextOption(map, tail)
       case "-nodebug" :: tail => Configuration.set(Configuration.Keys.DEBUG, "false", saveToFile = false); nextOption(map, tail)
       case "-security" :: tail => activateSecurity(); nextOption(map, tail)
-      case "-launch" :: tail => println("Use present JVM"); launched(); nextOption(map, tail)
+      case "-launch" :: tail => print("Use present JVM "); launched(); nextOption(map, tail)
       case "-timeout" :: value :: tail =>
         if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('timeout -> value.toLong), tail)
         else optionErrorReporter("-timeout")
@@ -628,6 +628,7 @@ object KeYmaeraX {
 
     BelleInterpreter.setInterpreter(LazySequentialInterpreter(qeDurationListener::Nil))
 
+    println("Proving")
     val statistics = archiveContent.flatMap({case ParsedArchiveEntry(modelName, kind, _, problemContent, _, model: Formula, tactics, _) =>
       //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
       val outputFileName = outputFileNames(modelName)
