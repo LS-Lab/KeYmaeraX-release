@@ -29,14 +29,14 @@
             <div class="col-md-2"><b>Models</b></div>
             <div class="col-md-10">
                 <span class="pull-right" id="modelarchiving"
-                      data-intro="<strong>Export</strong> all models with/without proofs into a single archive (.kya, includes all models, optionally with all their partial or finished proofs)."
+                      data-intro="<strong>Export</strong> all models and proofs into a single .kyx archive."
                       data-position="left">
-                    <a class="btn btn-default"
+                    <!--a class="btn btn-default"
                        ng-click="downloadAllModels()"
-                       uib-tooltip="Export all models into a single archive (.kya)"><i class="fa fa-archive"></i> Export all</a>
+                       uib-tooltip="Export all models into a single archive (.kya)"><i class="fa fa-archive"></i> Export all</a-->
                     <a class="btn btn-default"
                        ng-click="downloadAllProofs()"
-                       uib-tooltip="Export all models with their proofs into a single archive (.kya)"><i class="fa fa-archive"></i> Export all (with proofs)</a>
+                       uib-tooltip="Export all models and proofs into a single archive (.kyx)"><i class="fa fa-archive"></i> Export all</a>
                 </span>
             </div>
         </div>
@@ -44,7 +44,7 @@
     <div class="panel-body">
         <div class="row">
             <div class="col-md-6" id="modelupload"
-                 data-intro="Write models, load new .kyx model files or .kya archive files here."
+                 data-intro="Write models, import .kyx model or proof archive files."
                  data-position="bottom">
                 <button class="btn btn-default" ng-click="openNewModelDialog()">New Model...</button>
             </div>
@@ -112,7 +112,7 @@
             <td class="k4-abbreviate"><button class="btn btn-link" ng-if="model.hasTactic"
                         ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></button></td>
             <td ng-model="model" id="modelactions"
-                data-intro="Start new proofs, generate monitor conditions, synthesize test cases, and download models (.kyx, includes only the model) and archives (.kya, includes a model with all its partial and finished proofs)."
+                data-intro="Start new proofs, generate monitor code, synthesize test cases, and download .kyx models and proofs."
                 data-position="bottom" ng-if="$first">
                 <div>
                 <a class="btn btn-default" ng-if="model.isExercise" ng-click="open(model.id)" uib-tooltip="Start exercise"><i class="fa fa-pencil-square-o"></i></a>
