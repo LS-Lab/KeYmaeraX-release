@@ -841,7 +841,7 @@ private object DifferentialTactics extends Logging {
     val addInvariant = ChooseSome(
       () => invariantCandidates.iterator,
       (inv: Formula) => {
-        DebuggingTactics.print(s"[ODE] Trying to cut in invariant candidate: $inv") &
+        DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
         /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
         diffCut(inv)(pos) <(skip, proveInvariant(pos) & done)
       }
@@ -1422,7 +1422,7 @@ private object DifferentialTactics extends Logging {
       //Naive simplification of domain constraint
 //      DebuggingTactics.print("domSimplify") &
       DifferentialTactics.domSimplify(pos) &
-      DebuggingTactics.print("close") &
+      DebuggingTactics.debug("odeInvariant close") &
       (
 //        DebuggingTactics.print("try DWQE") &
           (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
