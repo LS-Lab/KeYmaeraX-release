@@ -7,48 +7,24 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import java.security.SecureRandom
 import java.util.{Calendar, Date}
 
-import akka.event.slf4j.SLF4JLogging
-import akka.actor.{Actor, ActorContext}
 import akka.http.scaladsl.model.{Multipart, StatusCodes}
 import akka.http.scaladsl.server.ExceptionHandler
-import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, OptionArg}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
-import org.apache.logging.log4j.scala.Logging
-import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.Http
 import spray.json._
-import DefaultJsonProtocol._
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
-import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
-import akka.actor.{Actor, ActorSystem, Props}
-import akka.http.scaladsl.Http
-import akka.io.IO
-import akka.stream.ActorMaterializer
-import akka.util.Timeout
-import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, SequentialInterpreter}
-import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
-import edu.cmu.cs.ls.keymaerax.launcher.{DefaultConfiguration, LoadingDialogFactory, SystemWebBrowser}
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.core.Formula
 import org.apache.logging.log4j.scala.Logging
 
-import scala.concurrent.duration._
 import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.Multipart.FormData.BodyPart
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.model.headers.CacheDirectives.`max-age`
 import akka.http.scaladsl.model.headers.CacheDirectives.`no-cache`
-import akka.http.scaladsl.server._
 import StatusCodes._
 
 import scala.language.postfixOps
