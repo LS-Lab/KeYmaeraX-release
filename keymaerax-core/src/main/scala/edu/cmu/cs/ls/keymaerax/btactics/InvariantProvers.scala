@@ -76,20 +76,16 @@ object InvariantProvers {
     case loopfml@Box(prog, post) =>
       // extra information occasionally thrown in to help direct invariant generation
       val initialCond = seq.ante.reduceRightOption(And).getOrElse(True)
-      val bounds: List[Variable] =
-        // DependencyAnalysis is incorrect when primed symbols occur, so default to all bound variables in that case
+      //@note all variables since substitution disallows introducing free variables unless proved
+      val allVars: List[Variable] =
+        // DependencyAnalysis is incorrect when primed symbols occur, so default to all variables in that case
         if (StaticSemantics.freeVars(post).toSet.exists(v => v.isInstanceOf[DifferentialSymbol]))
-          StaticSemantics.boundVars(loopfml).toSet.toList
+          (StaticSemantics.boundVars(loopfml) ++ StaticSemantics.freeVars(loopfml)).toSet.toList
         else
           //@todo does not work: DependencyAnalysis.dependencies(prog, DependencyAnalysis.freeVars(post))._1.toList
-          StaticSemantics.boundVars(loopfml).toSet.toList.filterNot(v => v.isInstanceOf[DifferentialSymbol])
-      var i = -1
-      val subst: USubst = if (bounds.length == 1)
-        USubst(Seq(SubstitutionPair(DotTerm(), bounds.head)))
-      else
-        USubst(bounds.map(xi => {
-          i = i + 1; SubstitutionPair(DotTerm(Real, Some(i)), xi)
-        }))
+          (StaticSemantics.boundVars(loopfml) ++ StaticSemantics.freeVars(loopfml)).toSet.toList.
+            filterNot(v => v.isInstanceOf[DifferentialSymbol])
+      val subst: USubst = USubst(allVars.zipWithIndex.map({ case (v, i) => SubstitutionPair(DotTerm(Real, Some(i)), v) }))
 
       /** name(args) */
       def constructPred(name: String, args: Seq[Term]): Formula = {

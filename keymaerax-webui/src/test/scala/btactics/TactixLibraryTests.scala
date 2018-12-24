@@ -236,7 +236,19 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   }
 
   it should "find an invariant for curvebot" in withMathematica { _ =>
-    //@todo constify ox() and oy()
+    val fml = """x!=ox | y!=oy ->
+                #  [{
+                #    {?(x+w/-1-ox)^2+(y-v/-1-oy)^2!=v^2+w^2; om:=-1;
+                #    ++ ?(x+w-ox)^2+(y-v-oy)^2!=v^2+w^2; om:=1;
+                #    ++ ?(ox-x)*w!=(oy-y)*v; om:=0;}
+                #    {x'=v,y'=w,v'=om*w,w'=-om*v}
+                #   }*
+                #  ] !(x=ox & y=oy)""".stripMargin('#').asFormula
+    //@note postcondition is invariant
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
+  }
+
+  it should "find an invariant for curvebot with fns" in withMathematica { _ =>
     val fml = """x!=ox() | y!=oy() ->
                 #  [{
                 #    {?(x+w/-1-ox())^2+(y-v/-1-oy())^2!=v^2+w^2; om:=-1;
