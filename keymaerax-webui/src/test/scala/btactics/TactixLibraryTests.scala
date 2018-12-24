@@ -291,6 +291,19 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(f, normalize).subgoals.loneElement shouldBe "y>0 ==> y>=0 & y>=-1".asSequent
   }
 
+  it should "not unfold FOL negations" in {
+    val f = "y>0 -> !y>=0 | y>=-1".asFormula
+    proveBy(f, normalize).subgoals.loneElement shouldBe "y>0 ==> !y>=0, y>=-1".asSequent
+  }
+
+  it should "unfold non-FOL formulas" in {
+    val f = "y>0 -> ![y:=-1;]y>=0 & y>=-1".asFormula
+    val result = proveBy(f, normalize)
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe "y>0, -1>=0 ==> ".asSequent
+    result.subgoals(1) shouldBe "y>0 ==> y>=-1".asSequent
+  }
+
   "QE" should "reset timeout when done" in withQE {
     case tool: ToolOperationManagement =>
       val origTimeout = tool.getOperationTimeout

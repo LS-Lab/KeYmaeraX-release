@@ -76,6 +76,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by tacticChase(
     new DefaultTacticIndex {
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
+        case f@Not(_)      if f.isFOL => (Nil, Nil)
         case f@And(_, _)   if f.isFOL => (TactixLibrary.andL::Nil, Nil)
         case f@Or(_, _)    if f.isFOL => (Nil, TactixLibrary.orR::Nil)
         case f@Imply(_, _) if f.isFOL => (Nil, TactixLibrary.implyR::Nil)
@@ -168,6 +169,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
         case Box(_: Loop, _) => (Nil, loop::Nil)
         case Box(_: ODESystem, _) => (TactixLibrary.solve::Nil, odeR::Nil)
+        case f@Not(_)      if f.isFOL => (Nil, Nil)
         case f@And(_, _)   if f.isFOL => (TactixLibrary.andL::Nil, Nil)
         case f@Or(_, _)    if f.isFOL => (Nil, TactixLibrary.orR::Nil)
         case f@Imply(_, _) if f.isFOL => (Nil, TactixLibrary.implyR::Nil)
