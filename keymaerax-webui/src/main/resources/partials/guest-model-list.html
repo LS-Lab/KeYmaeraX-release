@@ -80,12 +80,12 @@
                 <button class="btn btn-link" ng-if="model.hasTactic"
                         ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></button></td>
             <td class="k4-abbreviate" ng-model="model" id="modelactions"
-                data-intro="Check proof, download models (.kyx, includes only the model) and archives (.kya, includes a model with all its partial and finished proofs)."
+                data-intro="Check proof, download .kyx models and proofs."
                 data-position="bottom" ng-if="$first">
                 <a class="btn btn-default" ng-disabled="!model.hasTactic" ng-controller="ModelProofCreateCtrl"
                    ng-click="openLastProof(model.id)" uib-tooltip="Check proof"><i class="fa fa-check-square"></i></a>
-                <a class="btn btn-default" ng-click="downloadModel(model.id)" uib-tooltip="Download model (.kyx)"><i class="fa fa-download"></i></a>
-                <a class="btn btn-default" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download model+proofs (.kya)"><i class="fa fa-archive"></i></a>
+                <!--a class="btn btn-default" ng-click="downloadModel(model.id)" uib-tooltip="Download model (.kyx)"><i class="fa fa-download"></i></a-->
+                <a class="btn btn-default" ng-click="downloadModelProofs(model.id)" uib-tooltip="Download model+proofs"><i class="fa fa-archive"></i></a>
             </td>
             <td class="k4-abbreviate" ng-model="model" ng-if="!$first">
                 <a class="btn btn-default" ng-disabled="!model.hasTactic" ng-controller="ModelProofCreateCtrl"

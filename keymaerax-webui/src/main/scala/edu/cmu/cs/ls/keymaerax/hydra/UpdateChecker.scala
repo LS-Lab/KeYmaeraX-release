@@ -65,7 +65,7 @@ object UpdateChecker extends Logging {
     try {
       val json = scala.io.Source.fromInputStream(getClass.getResourceAsStream("/sql/upgradescripts.json")).mkString
       val versionString = json.parseJson.asJsObject.fields("minVersion").convertTo[String]
-      logger.info("Oldest compatible database version: " + versionString)
+      logger.debug("Compatible database versions: " + versionString + "+")
       Some(versionString)
     } catch {
       case _: Throwable => None
