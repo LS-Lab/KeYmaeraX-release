@@ -109,7 +109,7 @@ object KeYmaeraX {
 
   private def launched() {
     LAUNCH = true
-    println("Launching KeYmaera X")
+    //println("Launching KeYmaera X")
   }
   var LAUNCH: Boolean = false
 
