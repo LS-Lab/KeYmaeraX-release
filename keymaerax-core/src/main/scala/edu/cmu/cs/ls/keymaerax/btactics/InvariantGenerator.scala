@@ -5,8 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleThrowable, Position}
-import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
+import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import Augmentors._
 import org.apache.logging.log4j.scala.Logging
 
@@ -99,33 +98,33 @@ object InvariantGenerator extends Logging {
 
   /** Default invariant generator used in Bellerophon tactics if no specific generator is requested. */
   lazy val defaultInvariantGenerator: Generator[Formula] = cached((sequent,pos) =>
-    loopInvariantGenerator(sequent,pos) #::: differentialInvariantGenerator(sequent,pos))
+    (loopInvariantGenerator(sequent,pos) #::: differentialInvariantGenerator(sequent,pos)).distinct)
 
   /** A differential invariant generator.
     * @author Andre Platzer */
   lazy val differentialInvariantGenerator: Generator[Formula] = cached((sequent,pos) =>
-    TactixLibrary.invGenerator(sequent,pos) #::: differentialInvariantCandidates(sequent,pos)
+    (TactixLibrary.invGenerator(sequent,pos) #::: differentialInvariantCandidates(sequent,pos)).distinct
   // ++ relevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
   )
 
   /** A more expensive extended differential invariant generator.
     * @author Andre Platzer */
   lazy val extendedDifferentialInvariantGenerator: Generator[Formula] = cached((sequent,pos) =>
-    sortedRelevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
+    sortedRelevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos).distinct
   )
 
   /** A loop invariant generator.
     * @author Andre Platzer */
   lazy val loopInvariantGenerator: Generator[Formula] = cached((sequent,pos) =>
-    TactixLibrary.invGenerator(sequent,pos) #::: sortedRelevanceFilter(loopInvariantCandidates)(sequent,pos)
+    (TactixLibrary.invGenerator(sequent,pos) #::: sortedRelevanceFilter(loopInvariantCandidates)(sequent,pos)).distinct
   )
 
   /** A simplistic differential invariant candidate generator.
     * @author Andre Platzer */
   lazy val differentialInvariantCandidates: Generator[Formula] = cached((sequent,pos) =>
     //@note be careful to not evaluate entire stream by sorting etc.
-    sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #:::
-      relevanceFilter(pegasusCandidates, analyzeMissing = false)(sequent,pos))
+    (sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #:::
+      relevanceFilter(pegasusCandidates, analyzeMissing = false)(sequent,pos)).distinct)
 
   /** A simplistic loop invariant candidate generator.
     * @author Andre Platzer */
@@ -139,8 +138,8 @@ object InvariantGenerator extends Logging {
       sequent.ante.toList.filter(fml => !StaticSemantics.freeVars(fml).intersect(StaticSemantics.boundVars(loop)).isEmpty).reduceOption(And).getOrElse(True)
     }
     sequent.sub(pos) match {
-      case Some(Box(_: ODESystem, post)) => FormulaTools.conjuncts(post +: sequent.ante.toList).toStream
-      case Some(Box(l: Loop, post))     => (FormulaTools.conjuncts(post +: sequent.ante.toList) :+ combinedAssumptions(l) :+ post).toStream
+      case Some(Box(_: ODESystem, post)) => FormulaTools.conjuncts(post +: sequent.ante.toList).toStream.distinct
+      case Some(Box(l: Loop, post))     => (FormulaTools.conjuncts(post +: sequent.ante.toList) :+ combinedAssumptions(l) :+ post).toStream.distinct
       case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }}
@@ -156,10 +155,10 @@ object InvariantGenerator extends Logging {
           lazy val invs =
             if (includeCandidates) pegasusInvs.flatMap({ case Left(l) => l case Right(r) => r })
             else pegasusInvs.filter(_.isLeft).flatMap(_.left.get)
-          Stream[Formula]() #::: invs.toStream
+          Stream[Formula]() #::: invs.toStream.distinct
         case _ => Seq().toStream
       }
-    case Some(Box(_: ODESystem, post: Formula)) if !post.isFOL => Seq().toStream
+    case Some(Box(_: ODESystem, post: Formula)) if !post.isFOL => Seq().toStream.distinct
     case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + sequent)
     case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
   }
@@ -173,12 +172,12 @@ object InvariantGenerator extends Logging {
     if (ToolProvider.pdeTool().isEmpty) throw new BelleThrowable("inverse characteristic method needs a PDE Solver")
     val (ode, constraint, post) = sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, pf)) => (ode.ode,ode.constraint,pf)
-      case Some(ow) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + sequent)
+      case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }
     val evos = if (constraint==True) Nil else FormulaTools.conjuncts(constraint)
     val solutions = try {
-      ToolProvider.pdeTool().get.pdeSolve(ode).toStream
+      ToolProvider.pdeTool().get.pdeSolve(ode).toStream.distinct
     } catch {
       case e: Throwable => throw new BelleThrowable("inverseCharacteristic generation unsuccessful", e)
     }
@@ -194,7 +193,7 @@ object InvariantGenerator extends Logging {
       val initial = algebra.polynomialReduce(inv, GB)._2
       //@todo could check that it's not a tautology using RCF
       List(Equal(inv,initial),GreaterEqual(inv,initial),LessEqual(inv,initial)).filter(cand => !evos.contains(cand))
-    })
+    }).distinct
   }
 
 
@@ -204,10 +203,10 @@ object InvariantGenerator extends Logging {
   def cached(generator: Generator[Formula]): Generator[Formula] = {
     val cache: scala.collection.mutable.Map[Box, Stream[Formula]] = new scala.collection.mutable.LinkedHashMap()
     (sequent,pos) => {
-      val (box, system, constraint, post) = sequent.sub(pos) match {
-        case Some(box@Box(ODESystem(ode, And(True, q)), pf)) => (Box(ODESystem(ode, q), pf), ode, q, pf)
-        case Some(box@Box(ode: ODESystem, pf)) => (box, ode.ode, ode.constraint, pf)
-        case Some(box@Box(system: Loop, pf)) => (box, system, True, pf)
+      val box = sequent.sub(pos) match {
+        case Some(Box(ODESystem(ode, And(True, q)), pf)) => Box(ODESystem(ode, q), pf)
+        case Some(box@Box(_: ODESystem, _)) => box
+        case Some(box@Box(_: Loop, _)) => box
         case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
         case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
       }

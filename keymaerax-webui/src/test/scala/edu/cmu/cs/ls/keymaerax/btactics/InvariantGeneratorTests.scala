@@ -59,6 +59,11 @@ class InvariantGeneratorTests extends TacticTestBase {
       "1=1".asFormula :: "2=2".asFormula :: "3=3".asFormula :: Nil
   }
 
+  it should "not generate duplicate invariants" in {
+    val s = "x>=0&x<=H(), g()>0, 1>=c(), c()>=0, x>=0&x=H()&v=0&g()>0&1>=c()&c()>=0 ==> [{x'=v,v'=-g()&x>=0}]((x=0->x>=0&x<=H())&(x!=0->x>=0&x<=H()))".asSequent
+    InvariantGenerator.defaultInvariantGenerator(s, SuccPos(0)).toList should contain theSameElementsAs("v=0".asFormula::Nil)
+  }
+
   "Auto with invariant generator" should "prove simple loop from precondition invariant" in withQE { _ =>
     proveBy("x=0 -> [{x:=-x;}*]x>=0".asFormula, auto) shouldBe 'proved
   }
