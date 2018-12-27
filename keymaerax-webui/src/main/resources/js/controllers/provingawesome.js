@@ -543,7 +543,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
           var uri = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/doCustomTactic';
           $http.post(uri + '?stepwise='+stepwise, tacticText)
             .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info,
-                                          $scope.updateFreshProof, $scope.broadcastProofError, undefined); })
+                                       $scope.updateMainProof, $scope.broadcastProofError, undefined); })
             .catch(function(err) {
               spinnerService.hideAll();
               if (err.data.errorThrown != undefined) {

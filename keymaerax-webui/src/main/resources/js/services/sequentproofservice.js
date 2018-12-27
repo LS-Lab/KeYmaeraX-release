@@ -44,6 +44,16 @@ angular.module('keymaerax.services').factory('Agenda', function() {
          if (item) {
            item.isSelected = true;
            this.selectedTab.tabId = item.id;
+         } else {
+           // select last item
+           var items = this.items();
+           if (items.length > 0) {
+             var lastItem = items[items.length-1];
+             lastItem.isSelected = true;
+             this.selectedTab.tabId = lastItem.id;
+           } else {
+             this.selectedTab.tabId = undefined;
+           }
          }
        },
        selectById: function(itemId) { this.select(this.itemsMap[itemId]); },
@@ -264,18 +274,18 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           $.each(response.data.proofTree.nodes, function(i, v) { makeLazyNode($http, userId, proofId, v); });
           theProofTree.nodesMap = response.data.proofTree.nodes;
           theProofTree.root = response.data.proofTree.root;
-          if (theAgenda.items().length > 0) {
+          var agendaItems = theAgenda.items();
+          if (agendaItems.length > 0 && theAgenda.selectedId() === undefined) {
             // select first task if nothing is selected yet
-            if (theAgenda.selectedId() === undefined) theAgenda.select(theAgenda.items()[0]);
+            theAgenda.select(agendaItems[0]);
           }
-          if (response.data.closed || theAgenda.items().length == 0) {
+          if (response.data.closed || agendaItems.length == 0) {
             // proof might be finished
             if(!theAgenda.proofStatusDisplayed) {
               theAgenda.proofStatusDisplayed == true
               $rootScope.$broadcast('agenda.isEmpty', {proofId: proofId});
               console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
-            }
-            else {
+            } else {
               console.log("Not showing agenda.isEmpty because it was already displayed.")
             }
           }
@@ -309,13 +319,16 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           theAgenda.itemsMap[newAgendaItem.id] = newAgendaItem;
         });
         delete theAgenda.itemsMap[oldAgendaItem.id];
-        theAgenda.select(theAgenda.itemsMap[theAgenda.selectedId()]);
-        if (theAgenda.itemIds().length == 0 && !theAgenda.proofStatusDisplayed) {
+        var agendaIds = theAgenda.itemIds();
+        if (theAgenda.selectedId() === undefined && agendaIds.length > 0) {
+          theAgenda.selectById(agendaIds[agendaIds.length-1]);
+        }
+        if (agendaIds.length == 0 && !theAgenda.proofStatusDisplayed) {
           theAgenda.proofStatusDisplayed == true
           console.log("Emitting agenda.isEmpty from sequentproofservice.js 1");
           $rootScope.$broadcast('agenda.isEmpty', {proofId: proofId});
         }
-        if(theAgenda.proofStatusDisplayed == true) {
+        if (theAgenda.proofStatusDisplayed == true) {
           console.log("Not emitting agenda.isEmpty because it's already been emitted.")
         }
       } else {
