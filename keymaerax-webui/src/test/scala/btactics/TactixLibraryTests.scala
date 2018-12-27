@@ -261,6 +261,16 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
+  it should "eventually run out of ideas" in {
+    val s = "x>=0, x=H(), v=0, g()>0, 1>=c(), c()>=0 ==> [{{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}}*](x>=0&x<=H())".asSequent
+    // defaultInvariantGenerator does not find an invariant, so loopPostMaster should eventually run out of ideas and
+    // not keep asking over and over again
+    failAfter(20 seconds) {
+      val result = the[BelleThrowable] thrownBy proveBy(s, loopPostMaster(InvariantGenerator.defaultInvariantGenerator)(1))
+      result.getMessage should include("[Bellerophon Runtime] loopPostMaster: Invariant generator ran out of ideas")
+    }
+  }
+
   "SnR Loop Invariant" should "find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica{qeTool =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)

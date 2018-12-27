@@ -123,8 +123,8 @@ object InvariantProvers {
           QE()
         )(pos)) & done
 
-      // present mutable invariant candidate source stream and its present iterator
-      var candidates: Option[(Stream[Formula], Iterator[Formula])] = None
+      // invariant candidate iterators (avoid retrying same invariants over and over again when same assume-more-sequents are revisited)
+      val generators: scala.collection.mutable.Map[Sequent, Iterator[Formula]] = scala.collection.mutable.Map.empty
 
       /** generate the next candidate from the given sequent of the given provable with the present candidate currentCandidate */
       def nextCandidate(pr: ProvableSig, sequent: Sequent, currentCandidate: Option[Formula]): Option[Formula] = currentCandidate match {
@@ -146,21 +146,18 @@ object InvariantProvers {
             val assumeMoreSeq = USubst(Seq(jjl ~>> cand, jja ~> initialCond))(sequent)
 
             val generator = gen(assumeMoreSeq, pos)
-            // keep iterating if same generator stream, else advance both
-            candidates = Some(candidates match {
-              case Some((s, it)) if s == generator => (s, it)
-              case Some((s, _)) if s != generator => (generator, generator.iterator)
-              case None => (generator, generator.iterator)
-            })
+            // keep iterating remembered iterator (otherwise generator restarts from the beginning)
+            if (!generators.contains(assumeMoreSeq)) generators.put(assumeMoreSeq, generator.iterator)
+            val candidates = generators(assumeMoreSeq)
 
-            while (candidates.get._2.hasNext) {
-              val next = Some(candidates.get._2.next())
+            while (candidates.hasNext) {
+              val next = Some(candidates.next())
               if (next != currentCandidate) {
                 println /*logger.info*/ ("loopPostMaster next    " + next.get)
                 return next
               }
             }
-            return None
+            None
           }
         case None => None
       }
