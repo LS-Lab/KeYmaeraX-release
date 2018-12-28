@@ -1886,7 +1886,7 @@ class TaskResultRequest(db: DBAbstraction, userId: String, proofId: String, node
           //val positionLocator = if (parentNode.subgoals.isEmpty) None else RequestHelper.stepPosition(db, parentNode.children.head)
           assert(noBogusClosing(tree, node), "Server thinks a goal has been closed when it clearly has not")
           TaskResultResponse(subId.toString, node, progress = true)
-        case Some(Right(error: BelleThrowable)) => new ErrorResponse("Tactic failed with error: " + error.getMessage, error.getCause)
+        case Some(Right(error: BelleThrowable)) => new TacticErrorResponse(error.getMessage, "", error)
         case None => new ErrorResponse("Could not get tactic result - execution cancelled? ")
       }
       //@note may have been cancelled in the meantime

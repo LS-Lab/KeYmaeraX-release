@@ -162,16 +162,15 @@ object DebuggingTactics {
   /** @see [[TactixLibrary.done]] */
   lazy val done: BelleExpr = done()
   def done(msg: String = "", storeLemma: Option[String] = None): BelleExpr = new StringInputTactic("done",
-      if (msg != "" && storeLemma.isDefined) msg::storeLemma.get::Nil
-      else if (msg != "") msg::Nil
+      if (msg.nonEmpty && storeLemma.isDefined) msg::storeLemma.get::Nil
+      else if (msg.nonEmpty) msg::Nil
       else Nil) {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.isProved) {
         print(msg + {if (msg.nonEmpty) ": " else ""} + "checked done")
         if (storeLemma.isDefined) LemmaDBFactory.lemmaDB.add(Lemma(provable, Lemma.requiredEvidence(provable), storeLemma))
         provable
-      } else throw new BelleThrowable((if (msg.nonEmpty) msg + "\n" else "") +
-          "Expected proved provable, but got open goals\n" + provable.underlyingProvable.prettyString)
+      } else throw new BelleUnexpectedProofStateError(msg + ": expected proved provable, but got open goals", provable.underlyingProvable)
     }
   }
 }
