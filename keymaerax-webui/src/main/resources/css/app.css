@@ -1133,6 +1133,10 @@ del {
   max-width: 100%;
 }
 
+.k4-help-content {
+  text-align: left;
+}
+
 /*
  *  Overridden UI-Tree
  */
