@@ -14,6 +14,7 @@
 
 body {
   font-size: var(--lsfontsize);
+  line-height: 1.1;
 }
 
 /* Convert Bootstrap absolute font sizes into relative font sizes */
@@ -91,6 +92,27 @@ output {
 
 .navbar-brand {
   font-size: 130%;
+}
+
+.k4-tactics-navbar {
+  min-height: inherit;
+}
+
+.k4-tactics-brand {
+  font-size: 100%;
+  height: inherit;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+.k4-tactics-nav-first > li > a {
+  padding-top: 5px;
+  padding-bottom: 2px;
+}
+
+.k4-tactics-nav-last > li > a {
+  padding-top: 2px;
+  padding-bottom: 5px;
 }
 
 .pagination-lg > li > a,
