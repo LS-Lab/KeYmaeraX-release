@@ -962,13 +962,18 @@ object DerivationInfo {
     new TacticInfo("mond", "Diamond Monotonicity", {case () => TactixLibrary.mond}),*/
 
     // TactixLibrary tactics
-    new PositionTacticInfo("step", "step", {case () => TactixLibrary.step}),
-    new PositionTacticInfo("stepAt", "stepAt", {case () => HilbertCalculus.stepAt}),
-    new PositionTacticInfo("normalize", "normalize", {case () => TactixLibrary.normalize}),
-    new PositionTacticInfo("unfold", "unfold", {case () => TactixLibrary.unfoldProgramNormalize}),
-    new PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}),
-    new PositionTacticInfo("chase", "chase", {case () => TactixLibrary.chase}),
-    new PositionTacticInfo("simplify", "simplify", {case () => SimplifierV3.simpTac()}, needsTool = true),
+    PositionTacticInfo("step", "step", {case () => TactixLibrary.step}),
+    PositionTacticInfo("stepAt", "stepAt", {case () => HilbertCalculus.stepAt}),
+    PositionTacticInfo("normalize", "normalize", {case () => TactixLibrary.normalize}),
+    PositionTacticInfo("unfold", "unfold", {case () => TactixLibrary.unfoldProgramNormalize}),
+    PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}),
+    PositionTacticInfo("chase", "chase", {case () => TactixLibrary.chase}),
+    PositionTacticInfo("chasemore", "chasemore", {case () => TactixLibrary.tacticChase()(
+      TactixLibrary.andL, TactixLibrary.implyR, TactixLibrary.orR, TactixLibrary.allR, TacticIndex.allLStutter,
+      TactixLibrary.existsL, TacticIndex.existsRStutter, TactixLibrary.step,
+      ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse
+    )(None)}),
+    PositionTacticInfo("simplify", "simplify", {case () => SimplifierV3.simpTac()}, needsTool = true),
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
     new TacticInfo("master", "master", {case () => (gen:Generator.Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true),
