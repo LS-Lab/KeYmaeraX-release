@@ -382,14 +382,30 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy("true<->(p()<->q())&q()->p()".asFormula, prop) shouldBe 'proved
   }
 
+  it should "chase at position" in {
+    val result = proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent, tacticChase()(implyR,step)(None)(2))
+    result.subgoals.loneElement shouldBe "y>2 ==> x>1 -> x>0, y+2+1>5".asSequent
+  }
+
+  it should "search for expected formula if positions shifted" in {
+    val result = proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent,
+      implyR(1) & tacticChase()(implyR,step)(Some("y>2 -> [y:=y+2;y:=y+1;]y>5".asFormula))(2))
+    result.subgoals.loneElement shouldBe "x>1, y>2 ==> x>0, y+2+1>5".asSequent
+  }
+
+  it should "chase everywhere" in {
+    val result = proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent, allTacticChase()(implyR,step))
+    result.subgoals.loneElement shouldBe "x>1, y>2 ==> x>0, y+2+1>5".asSequent
+  }
+
   "Loop convergence" should "prove x>=0 -> <{x:=x-1;}*>x<1 with conRule" in withMathematica {qeTool =>
     val fml = "x>=0 -> <{x:=x-1;}*>x<1".asFormula
     val vari = "x<v+1".asFormula
-    proveBy(fml, implyR(1) & DLBySubst.conRule("v".asVariable, vari)(1)).subgoals shouldBe (IndexedSeq(
+    proveBy(fml, implyR(1) & DLBySubst.conRule("v".asVariable, vari)(1)).subgoals shouldBe IndexedSeq(
       Sequent(IndexedSeq("x>=0".asFormula), IndexedSeq("\\exists v x<v+1".asFormula)),
       Sequent(IndexedSeq("v<=0".asFormula, "x<v+1".asFormula), IndexedSeq("x<1".asFormula)),
       Sequent(IndexedSeq("v>0".asFormula, "x<v+1".asFormula), IndexedSeq("<x:=x-1;>x<(v-1)+1".asFormula))
-    ))
+    )
     proveBy(fml, implyR(1) & DLBySubst.conRule("v".asVariable, vari)(1) <(
       debug("init") & QE(),
       debug("use") & QE(),

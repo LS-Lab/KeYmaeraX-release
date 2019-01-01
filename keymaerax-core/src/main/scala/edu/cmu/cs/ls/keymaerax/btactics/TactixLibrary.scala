@@ -73,7 +73,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to [[orL]], [[implyL]], [[equivL]], [[andR]], and [[equivR]]. */
   lazy val normalize: BelleExpr = "normalize" by normalize(orL, implyL, equivL, andR, equivR)
   /** Normalize to sequent form. Keeps branching factor of [[tacticChase]] restricted to `beta` rules. */
-  def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by tacticChase(
+  def normalize(beta: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by allTacticChase(
     new DefaultTacticIndex {
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
         case f@Not(_)      if f.isFOL => (Nil, Nil)
@@ -92,7 +92,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Exhaustively (depth-first) apply tactics from the tactic index, restricted to the tactics in `restrictTo`, to chase away.
     * Unlike [[chase]], tacticChase will use propositional proof rules and possibly branch
     * @see [[chase]] */
-  def tacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by ((seq: Sequent) => {
+  def tacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)
+                 (restrictTo: AtPosition[_ <: BelleExpr]*)
+                 (expected: Option[Formula]): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
     val restrictions = restrictTo.toList
 
     /** Apply the canonical tactic for the formula at position `pos`; exhaustively depth-first search on resulting other formulas */
@@ -114,8 +116,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
     /** Apply `atPos` at the specified position, or search for the expected formula if it cannot be found there. */
     def atOrSearch(p: PositionLocator): BelleExpr = atPos(None)(p) | (p match {
-      case Fixed(pos, Some(fml), exact) if pos.isAnte => ?(atPos(Some(pos))(Find.FindL(0, Some(fml), exact=exact)))
-      case Fixed(pos, Some(fml), exact) if pos.isSucc => ?(atPos(Some(pos))(Find.FindR(0, Some(fml), exact=exact)))
+      case Fixed(pp, Some(fml), exact) if pp.isAnte => ?(atPos(Some(pp))(Find.FindL(0, Some(fml), exact=exact)))
+      case Fixed(pp, Some(fml), exact) if pp.isSucc => ?(atPos(Some(pp))(Find.FindR(0, Some(fml), exact=exact)))
       case _ => skip
     })
 
@@ -144,12 +146,24 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       else t(new Fixed(pos))
     }
 
-    //@note Execute on formulas in order of sequent; might be useful to sort according to some tactic priority.
-    seq.ante.zipWithIndex.map({ case (fml, i) => onAll(atPos(None)(AntePosition.base0(i), fml) | atPos(Some(AntePosition.base0(i)))('L, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip) &
-    seq.succ.zipWithIndex.map({ case (fml, i) => onAll(atPos(None)(SuccPosition.base0(i), fml) | atPos(Some(SuccPosition.base0(i)))('R, fml))}).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+    seq.sub(pos) match {
+      case Some(fml: Formula) if expected.isEmpty || expected.contains(fml) => onAll(atPos(None)(pos, fml))
+      case Some(fml: Formula) if !expected.contains(fml) => onAll(atPos(Some(pos))(if (pos.isAnte) 'L else 'R, expected.get))
+      case None if expected.isDefined => onAll(atPos(Some(pos))(if (pos.isAnte) 'L else 'R, expected.get))
+      case None if expected.isEmpty => throw BelleTacticFailure("Position " + pos + " points outside sequent")
+      case _ => throw BelleTacticFailure("TacticChase is only applicable at formulas")
+    }
   })
 
-  val prop: BelleExpr = "prop" by tacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
+  /** Exhaustively chase all formulas in the sequent.
+    * @see [[tacticChase]] */
+  def allTacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = "ANON" by ((seq: Sequent) => {
+    //@note Execute on formulas in order of sequent; might be useful to sort according to some tactic priority.
+    seq.ante.zipWithIndex.map({ case (fml, i) => tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(AntePosition.base0(i)) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip) &
+    seq.succ.zipWithIndex.map({ case (fml, i) => tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(SuccPosition.base0(i)) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+  })
+
+  val prop: BelleExpr = "prop" by allTacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
                                                 ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse)
 
   /** Master/auto implementation with tactic `loop` for nondeterministic repetition and `odeR` for
@@ -213,7 +227,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
     onAll(decomposeToODE) &
     onAll(Idioms.doIf(!_.isProved)(close |
-      SaturateTactic(onAll(tacticChase(autoTacticIndex)(notL, andL, notR, implyR, orR, allR,
+      SaturateTactic(onAll(allTacticChase(autoTacticIndex)(notL, andL, notR, implyR, orR, allR,
         TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
         implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
         andR, equivR, loop, odeR, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably

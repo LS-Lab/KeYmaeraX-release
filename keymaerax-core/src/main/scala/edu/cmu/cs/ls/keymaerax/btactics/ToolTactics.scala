@@ -40,7 +40,7 @@ private object ToolTactics {
       else EqualityTactics.expandAll & closureAndRcf
 
     Idioms.doIf(!_.isProved)(
-      tacticChase()(notL, andL, notR, implyR, orR) &
+      allTacticChase()(notL, andL, notR, implyR, orR) &
         Idioms.doIf(!_.isProved)(
           close | hidePredicates & EqualityTactics.applyEqualities & hideTrivialFormulas & expandAndRcf
         )
