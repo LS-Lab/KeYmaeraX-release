@@ -1503,40 +1503,6 @@ private object DifferentialTactics extends Logging {
     }
   }
 
-  //Pulls out divisions
-  private def stripDenom(t:Term) : (Term,Term) = {
-    t match {
-      case Times(l,r) =>
-        val (ln,ld) = stripDenom(l)
-        val (rn,rd) = stripDenom(r)
-        (Times(ln,rn),Times(ld,rd))
-      case Divide(l,r) =>
-        val (ln,ld) = stripDenom(l)
-        val (rn,rd) = stripDenom(r)
-        (Times(ln,rd),Times(ld,rn))
-      case Power(tt,p:Number) if p.value < 0 =>
-        (Number(1),Power(tt,Number(-p.value)))
-      case Power(tt,p) =>
-        val (tn,td) = stripDenom(tt)
-        (Power(tn,p),Power(td,p))
-      //Ignore everything else todo: could deal with common denominators
-      case _ => (t,Number(1))
-    }
-  }
-
-  //@todo possibly should ask StaticSemantics.boundVars(ode).filter(_.isInstanceOf[DifferentialSymbol)
-  private def primedSymbols(ode: DifferentialProgram) = {
-    var primedSymbols = Set[Variable]()
-    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
-      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-        case DifferentialSymbol(ps) => primedSymbols += ps; Left(None)
-        case Differential(_) => throw new IllegalArgumentException("Only derivatives of variables supported")
-        case _ => Left(None)
-      }
-    }, ode)
-    primedSymbols
-  }
-
   /** Indicates whether there is an ODE at the indicated position of a sequent */
   val isODE: (Sequent,Position)=>Boolean = (sequent,pos) => {
     sequent.sub(pos) match {
@@ -1576,18 +1542,6 @@ private object DifferentialTactics extends Logging {
       case Some(e) => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
     }
-  }
-
-  private def dottedSymbols(ode: DifferentialProgram) = {
-    var dottedSymbols = List[Variable]()
-    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
-      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-        case DifferentialSymbol(ps) => ps :: dottedSymbols; Left(None)
-        case Differential(_) => throw new IllegalArgumentException("Only derivatives of variables supported")
-        case _ => Left(None)
-      }
-    }, ode)
-    dottedSymbols.reverse
   }
 
   /** Flattens a formula to a list of its top-level conjunctions */
