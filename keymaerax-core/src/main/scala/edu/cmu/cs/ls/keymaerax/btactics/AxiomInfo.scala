@@ -109,11 +109,11 @@ object DerivationInfo {
       , AxiomDisplayInfo(("[·]d", "[.]d"), "<span class=\"k4-axiom-key\">[a]P</span> ↔ &not;&langle;a&rangle;&not;P")
       , {case () => HilbertCalculus.useAt(DerivedAxioms.boxAxiom, PosInExpr(1::Nil))}),
     new PositionTacticInfo("assignb"
-      , AxiomDisplayInfo("[:=]", "<span class=\"k4-axiom-key\">[x:=c]p(x)</span>↔p(c)")
+      , AxiomDisplayInfo("[:=]", "<span class=\"k4-axiom-key\">[x:=e]p(x)</span>↔p(e)")
       , {case () => TactixLibrary.assignb}),
     new CoreAxiomInfo("[:=] assign", "[:=]", "assignbAxiom", {case () => HilbertCalculus.useAt("[:=] assign")}),
     new CoreAxiomInfo("[:=] self assign", "[:=]", "selfassignb", {case () => HilbertCalculus.useAt("[:=] self assign")}),
-    new DerivedAxiomInfo("<:=> assign", "<:=>", "assignd", {case () => HilbertCalculus.assignd}),
+    new DerivedAxiomInfo("<:=> assign", AxiomDisplayInfo("<:=>", "<span class=\"k4-axiom-key\">&langle;x:=e&rangle;p(x)</span>↔p(e)"), "assignd", {case () => HilbertCalculus.assignd}),
     new DerivedAxiomInfo("<:=> self assign", "<:=>", "selfassignd", {case () => HilbertCalculus.useAt("<:=> self assign")}),
     new DerivedAxiomInfo("<:=> assign equality", "<:=>", "assigndEquality", {case () => HilbertCalculus.useAt("<:=> assign equality")}),
     new DerivedAxiomInfo("<:=> assign equality all", "<:=>", "assigndEqualityAll", {case () => HilbertCalculus.useAt("<:=> assign equality all")}),
