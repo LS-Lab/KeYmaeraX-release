@@ -204,7 +204,7 @@ trait SequentCalculus {
     }
   })
   //@note do not forward to closeIdWith (performance)
-  val closeId           : DependentTactic = new DependentTactic("closeId") {
+  val closeId           : DependentTactic = new DependentTactic("id") {
     override def computeExpr(v : BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
         require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")
