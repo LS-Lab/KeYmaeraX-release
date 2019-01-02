@@ -970,7 +970,7 @@ object ODEInvariance {
     zipped.reduce(Plus.apply)
   }
 
-  private def matvec_prod (m:List[List[Term]],v:List[Term]) : List[Term] ={
+  private def matvec_prod (m:List[List[Term]],v:List[Term]) : List[Term] = {
     m.map(ls => dot_prod(ls,v))
   }
 
@@ -1004,6 +1004,11 @@ object ODEInvariance {
   private def replaceODEfree(t:Term, ode: DifferentialProgram) : Term = {
     val consts = (StaticSemantics.freeVars(t) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
     consts.foldLeft(t)( (tt, c) => tt.replaceFree(c, FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing)))
+  }
+
+  private def replaceODEfree(f:Formula, ode: DifferentialProgram) : Formula = {
+    val consts = (StaticSemantics.freeVars(f) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
+    consts.foldLeft(f)( (tt, c) => tt.replaceFree(c, FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing)))
   }
 
   // Proves SOS >= 0 by naive sum decomposition
@@ -1298,7 +1303,7 @@ object ODEInvariance {
   })
 
   private def simplify_mat(m:List[List[Term]]) :List[List[Term]] = {
-    m.map(ls => ls.map (t => simpWithTool(None,t)))
+    m.map(ls => ls.map (t => simpWithTool(ToolProvider.simplifierTool(),t)))
   }
   private def is_zero_mat(m:List[List[Term]]) : Boolean = {
     m.flatten.forall(p => p == Number(0))
@@ -1409,6 +1414,20 @@ object ODEInvariance {
     ).reduce(vecvec_sum)
   }
 
+  /** Given a top-level succedent position corresponding to [x'=f(x)&Q]P
+    * with x'=f(x) a linear, nilpotent ODE
+    *
+    * Adds the (polynomial) solution x=Phi(x_0,t) of that ODE to the domain constraint
+    *
+    * G,x=x_0, t=0 |-  [x'=f(x),t'=1& Q&t>=0& x=Phi(x_0,t)]P
+    * --------------- (sAIc)
+    * G |- [x'=f(x)&Q]P
+    *
+    * @return See the rule rendition above
+    *         Special failure cases:
+    *         1) Linearity heuristic checks fail e.g.: x'=1+x^2-x^2 will be treated as non-linear even though it is really linear
+    *
+    */
   def nilpotentSolve : DependentPositionTactic = "nilpotentSolve" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "nilpotent solve only applicable in top-level succedent")
 
@@ -1421,12 +1440,12 @@ object ODEInvariance {
     //Introduce a ghost variable
 
     val linForm = linFormODE(ode)
-    if (linForm.isEmpty) ??? //todo: skip or fail?
+    if (linForm.isEmpty) throw new BelleThrowable("ODE " + ode +" could not be put into linear form x'=Ax")
     val (m,b,x) = linForm.get
 
     val npopt = nilpotentIndex(m)
 
-    if(npopt.isEmpty) ??? //todo: skip or fail?
+    if(npopt.isEmpty)  throw new BelleThrowable("Coefficient matrix for " + ode +" is not nilpotent.")
     val np = npopt.get
 
     if(np.length == 0) skip
@@ -1434,7 +1453,7 @@ object ODEInvariance {
 
       val mats = np.zip( np.tail)
 
-      val bsimp = b.map (t => simpWithTool(None,t))
+      val bsimp = b.map (t => simpWithTool(ToolProvider.simplifierTool(),t))
 
       val oldx = x.map(TacticHelper.freshNamedSymbol(_, seq))
 
@@ -1443,45 +1462,47 @@ object ODEInvariance {
         x.zip(oldx).map(v => discreteGhost(v._1, Some(v._2))(pos) & DLBySubst.assignEquality(pos)).reduceOption[BelleExpr](_ & _).getOrElse(skip)
 
       // Partial solutions
-      val sp =
-        np.map(m => matvec_prod(m, oldx))
+      val sp = np.map(m => matvec_prod(m, oldx))
 
       //Forcing terms on partial solutions for x',x'',...
-      val sb =
-        bsimp :: np.map(m => matvec_prod(m,bsimp))
+      val sb = bsimp :: np.map(m => matvec_prod(m,bsimp))
 
       // Actual solution
-      val s =
-        (oldx :: sb.zip(sp).map(f => vecvec_sum(f._1,f._2))) ++ List(sb.last)
+      val s = (oldx :: sb.zip(sp).map(f => vecvec_sum(f._1,f._2))) ++ List(sb.last)
 
       // LHS of partial solutions
       val sL =
-        x :: np.map(m => matvec_prod(m, x)).zip(sb).map(f => vecvec_sum(f._1,f._2).map(t => simpWithTool(None,t)))
+        x :: np.map(m => matvec_prod(m, x)).zip(sb).map(f => vecvec_sum(f._1,f._2).map(t => simpWithTool(ToolProvider.simplifierTool(),t)))
 
       //The actual solution
-      val sol = timeSeries(t,s).map( t => simpWithTool(None,t))
+      val sol = timeSeries(t,s).map( t => simpWithTool(ToolProvider.simplifierTool(),t))
 
-      val cut = x.zip(sol).map( f => Equal(f._1,f._2) ).reduce(And)
+      val cut = And(GreaterEqual(t,Number(0)),x.zip(sol).map( f => Equal(f._1,f._2) ).reduceRight(And))
 
-      val cutPrep = Range(0,s.length).map(i => timeSeries(t,s.drop(i)).map(t => simpWithTool(None,t)))
+      val cutPrep = Range(0,s.length).map(i => timeSeries(t,s.drop(i)).map(t => simpWithTool(ToolProvider.simplifierTool(),t)))
 
-      //todo: need to filter out cuts that are irrelevant for the lower derivatives
       val cuts = sL.zip(cutPrep).tail.map(
         ff =>
           ff._1.zip(ff._2).collect({
             case f if f._1 != f._2 => Equal(f._1, f._2)
           }
           ).reduce(And)
-      )
+      ) //.map( f => replaceODEfree(f,DifferentialProduct(AtomicODE(DifferentialSymbol(t),Number(1)),ode)))
 
       HilbertCalculus.DGC(t, Number(1))(pos) & existsR(Number(0))(pos) & storeInitialVals &
       dC(cut)(pos) <(
         skip,
         // dRI directly is actually a lot slower than the dC chain even with naive dI
         // dRI(pos)
-        // todo: this can presumably be sped up by "let-ing" only once rather than on every dI
         cuts.foldLeft(skip)( (t,f) => dC(f)(pos) < (t, dI('full)(pos)) ) & dI('full)(pos)
+
+        // this does the "let" once rather than on every dI -- doesn't help speed much
+        //Dconstify(
+        //  cuts.foldLeft(skip)( (t,f) => dC(f)(pos) < (t, dI('diffInd)(pos)
+        //  <( QE , cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) & QE )) ) &
+        //    dI('diffInd)(pos)<( QE, cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) & QE ))(pos)
       )
     }
   })
+
 }

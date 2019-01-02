@@ -1,6 +1,6 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, SaturateTactic, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, PosInExpr, SaturateTactic, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -539,24 +539,101 @@ class ODEInvarianceTests extends TacticTestBase {
     nilpotentIndex(mat3) shouldBe Some(List(List(List(2, 2, -2), List(5, 1, -3), List(1, 5, -3)), List(List(12, -4, -4), List(12, -4, -4), List(24, -8, -8))))
   }
 
-  it should "put an ODE into linear form and cut solution" in withMathematica { qeTool =>
-    //Runtime: 31s
-    val pr = proveBy("x=1&y=1 -> [{x'=v,v'=a,a'=j,j'=k}] x+v+a+j=1".asFormula,
-      implyR(1) & nilpotentSolve(1)
+  it should "fail fast on various problematic examples" in withMathematica { qeTool =>
+
+    //Non-linear ODE
+    val pr = proveBy("[{x'=y,y'=x^2}] x+v+a+j=1".asFormula,
+      ?(nilpotentSolve(1))
     )
-    println(pr)
-    //Runtime : 20s
-//    val pr2 = proveBy("x=1&y=1 -> [{x'=v,v'=a,a'=j,j'=k}] x+v+a+j=1".asFormula,
-//      implyR(1) & solve(1)
-//    )
-//    println(pr2)
+
+    //Linear but not nilpotent
+    val pr2 = proveBy("[{x'=a()*y,y'=b*x}] x+v+a+j=1".asFormula,
+      ?(nilpotentSolve(1))
+    )
+
+    pr should not be 'proved
+    pr2 should not be 'proved
   }
 
-  it should "put an ODE into linear form and cut solution (2)" in withMathematica { qeTool =>
-    val pr = proveBy("x=1&y=1 -> [{x'=2*x+2*y-2*z+A(),y'=5*x+1*y-3*z+B(),z'=1*x+5*y-3*z+C()}] true".asFormula,
+  it should "solve ODE quickly (1)" in withMathematica { qeTool =>
+    def time[T](block: => T): T = {
+      val start = System.currentTimeMillis
+      val res = block
+      val totalTime = System.currentTimeMillis - start
+      println("Elapsed time: %1d ms".format(totalTime))
+      res
+    }
+
+    val fml = "x=0&v=0&a=1 -> [{x'=v,v'=a & x+v+a <= 100}] x+v+a>=0".asFormula
+
+    val pr = time { proveBy(fml,
+      implyR(1) & nilpotentSolve(1) & dW(1) & QE
+    )}
+    pr shouldBe 'proved
+
+    //Simulate solveEnd
+    val pr2 = time { proveBy(fml,
+      implyR(1) & nilpotentSolve(1) & dW(1) & // G |- Q&timevar>=0&ODEequations -> Post
+        hideL('Llast) & //Information about timevar is irrelevant
+        implyR(1) & andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
+        (andL('Llast)*) & //Splits conjunction of equations up
+        (exhaustiveEqL2R(true)('Llast)*) & //rewrite
+        QE
+    )}
+    pr2 shouldBe 'proved
+
+    val pr3 = time { proveBy(fml,
+      implyR(1) & solve(1) & QE
+    )}
+    pr3 shouldBe 'proved
+  }
+
+  it should "solve ODE quickly (2)" in withMathematica { qeTool =>
+    def time[T](block: => T): T = {
+      val start = System.currentTimeMillis
+      val res = block
+      val totalTime = System.currentTimeMillis - start
+      println("Elapsed time: %1d ms".format(totalTime))
+      res
+    }
+
+    val fml = "x=0&v=0&a=0&j=0&k=1&l=0 -> [{k'=l,l'=1,x'=v,v'=a,a'=j,j'=k & x+x*v+a+j+k <= 100}] x+v+a+j+k>=0".asFormula
+    val pr = time { proveBy(fml,
+      implyR(1) & nilpotentSolve(1) & dW(1) & QE
+    )}
+    pr shouldBe 'proved
+
+    //Simulate solveEnd
+    val pr2 = time { proveBy(fml,
+      implyR(1) & nilpotentSolve(1) & dW(1) & // G |- Q&timevar>=0&ODEequations -> Post
+        hideL('Llast) & //Information about timevar is irrelevant
+        implyR(1) & andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
+        (andL('Llast)*) & //Splits conjunction of equations up
+        (exhaustiveEqL2R(true)('Llast)*) & //rewrite
+        QE
+    )}
+    pr2 shouldBe 'proved
+
+    //Bug in solve
+//    val pr3 = time { proveBy(fml,
+//      implyR(1) & solve(1) & QE
+//    )}
+//    pr3 shouldBe 'proved
+  }
+
+  it should "put an obfuscated ODE into linear form and cut solution" in withMathematica { qeTool =>
+    // x'   (2 2 -2) x    A
+    // y' = (5 1 -3) y + -B
+    // z'   (1 5 -3) z   5C
+    val pr = proveBy("x=1&y=1&A()=1 -> [{x'=2*(-z+x+y)+A(),y'=y+5*x-3*z-B(),z'=x-3*z+5*(y+C)}] x+y+z >= 0".asFormula,
       //val pr = proveBy("x=1&y=1 -> [{x'=x+y,y'=-x-y}] x=0".asFormula,
-      implyR(1) & nilpotentSolve(1)
+      implyR(1) & nilpotentSolve(1) & dW(1) & implyR(1) &
+      (andL('Llast)*)
     )
-    println(pr)
+
+    pr.subgoals(0).ante.length shouldBe 7
+    pr.subgoals(0).ante(4) shouldBe "x=2/3*(3*A()+B()+-5*C)*timevar^3+x_0+timevar*(A()+2*(x_0+y_0+-1*z_0))+timevar^2*(A()+-1*B()+-5*C+6*x_0+-2*(y_0+z_0))".asFormula
+    pr.subgoals(0).ante(5) shouldBe "y=2/3*(3*A()+B()+-5*C)*timevar^3+y_0+timevar*(-1*B()+5*x_0+y_0+-3*z_0)+1/2*timevar^2*(5*A()+-1*B()+-15*C+12*x_0+-4*(y_0+z_0))".asFormula
+    pr.subgoals(0).ante(6) shouldBe "z=4/3*(3*A()+B()+-5*C)*timevar^3+timevar*(5*C+x_0+5*y_0+-3*z_0)+z_0+1/2*timevar^2*(A()+-5*B()+-15*C+24*x_0+-8*(y_0+z_0))".asFormula
   }
 }
