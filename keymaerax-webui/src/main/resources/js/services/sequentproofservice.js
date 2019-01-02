@@ -241,9 +241,10 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
 
         // update agenda: copy already cached deduction path into the remaining agenda item (new top item)
         response.data.agendaItem.deduction = agendaItems[0].deduction;
+        response.data.agendaItem.isSelected = true; // add item marked as selected, otherwise step back jumps to random tab
         theAgenda.itemsMap[response.data.agendaItem.id] = response.data.agendaItem;
 
-        // select new top item (@todo does not work with step back)
+        // select new top item
         theAgenda.select(response.data.agendaItem);
 
         // refresh tactic
