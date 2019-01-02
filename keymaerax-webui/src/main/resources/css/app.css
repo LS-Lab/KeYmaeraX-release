@@ -1159,6 +1159,10 @@ del {
   text-align: left;
 }
 
+.k4-rulemenu-helppopover {
+  width: 400px;
+}
+
 /*
  *  Overridden UI-Tree
  */

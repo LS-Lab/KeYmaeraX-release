@@ -593,6 +593,16 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       })
     }
 
+    $scope.rulehelp = {
+      codeName: undefined
+    };
+
+    $scope.fetchRuleHelp = function(codeName) {
+      $scope.rulehelp.codeName = codeName;
+      // return name of the ng-template in proofawesesome.html
+      return 'rulehelp.html';
+    }
+
     $scope.executeTacticDiff = function(stepwise) {
       if ($scope.tactic.tacticDel === '' || $scope.tactic.tacticDel === 'nil') {
         $scope.onTacticScript($scope.tactic.tacticDiff, stepwise);
