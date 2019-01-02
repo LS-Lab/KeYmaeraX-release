@@ -421,14 +421,14 @@
                                     <span class="input-group-btn"
                                           uib-tooltip="Augment the derivation on the current tab with fresh steps (execute as one proof step)"
                                           tooltip-placement="auto top-left"
-                                          data-intro="Run changes in the tactic as a single step." data-position="left">
+                                          data-intro="Run changes in the tactic as a single step." data-position="bottom">
                                         <button class="btn btn-default" ng-click="executeTacticDiff(false)"
                                                 ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Atomic</button>
                                     </span>
                                     <span class="input-group-btn"
                                           uib-tooltip="Augment the derivation on the current tab with fresh steps (execute step-by-step)"
                                           tooltip-placement="auto top-left"
-                                          data-intro="Run changes in the tactic step-by-step." data-position="left">
+                                          data-intro="Run changes in the tactic step-by-step." data-position="bottom">
                                         <button class="btn btn-default" ng-click="executeTacticDiff(true)"
                                                 ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Step-by-Step</button>
                                     </span>
