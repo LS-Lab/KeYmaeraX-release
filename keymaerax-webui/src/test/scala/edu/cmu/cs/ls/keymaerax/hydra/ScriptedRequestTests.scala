@@ -278,7 +278,7 @@ class ScriptedRequestTests extends TacticTestBase {
     response should have (
       'derivationInfos ((DerivationInfo("loop"), None)::(DerivationInfo("[*] iterate"), None)::
         (DerivationInfo("GV"), None)::(DerivationInfo("boxd"), None)::Nil),
-      'suggestedInput (Map(FormulaArg("j(x)") -> "x>-1".asFormula)))
+      'suggestedInput (Map(FormulaArg("J") -> "x>-1".asFormula)))
   }
 
   "Tactic input checking" should "pass correct input" in withDatabase { db =>
@@ -287,7 +287,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
 
-    val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "j(x)", "formula", "x>1").
+    val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x>1").
       getResultingResponses(t).loneElement
     response should have ('flag (true))
   }
@@ -298,7 +298,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
 
-    val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "j(x)", "formula", "x").
+    val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x").
       getResultingResponses(t).loneElement
     response should have (
       'flag (false),
@@ -312,11 +312,11 @@ class ScriptedRequestTests extends TacticTestBase {
     val t = SessionManager.token(SessionManager.add(db.user))
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil), Declaration(Map()))
 
-    val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "j(x)", "formula", "x+y>0").
+    val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x+y>0").
       getResultingResponses(t).loneElement
     response should have (
       'flag (false),
-      'errorText (Some("Argument j(x) uses new names that do not occur in the sequent: y, is it a typo?"))
+      'errorText (Some("Argument J uses new names that do not occur in the sequent: y, is it a typo?"))
     )
   }
 
@@ -327,7 +327,7 @@ class ScriptedRequestTests extends TacticTestBase {
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
       Declaration(Map(("f", None) -> (None, Real, Some("3+5".asTerm), null))))
 
-    val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "j(x)", "formula", "x+f()>0").
+    val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x+f()>0").
       getResultingResponses(t).loneElement
     response should have ('flag (true))
   }
@@ -339,11 +339,11 @@ class ScriptedRequestTests extends TacticTestBase {
     SessionManager.session(t) += proofId.toString -> ProofSession(proofId.toString, FixedGenerator(Nil),
       Declaration(Map(("f", None) -> (None, Real, Some("3+5".asTerm), null))))
 
-    val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "j(x)", "formula", "x+f>0").
+    val response = new CheckTacticInputRequest(db.db, db.user.userName, proofId.toString, "()", "loop", "J", "formula", "x+f>0").
       getResultingResponses(t).loneElement
     response should have (
       'flag (false),
-      'errorText (Some("Argument j(x) uses new names that do not occur in the sequent: f, is it a typo?"))
+      'errorText (Some("Argument J uses new names that do not occur in the sequent: f, is it a typo?"))
     )
   }
 
