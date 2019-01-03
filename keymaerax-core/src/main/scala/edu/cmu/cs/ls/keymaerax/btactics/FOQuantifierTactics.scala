@@ -119,7 +119,7 @@ protected object FOQuantifierTactics {
           DLBySubst.stutter(x)(pos ++ PosInExpr(0::Nil)) & assignPreprocess &
             ProofRuleTactics.cutLR(ctx(assign))(pos.topLevel) <(
               assignb(pos),
-              cohide('Rlast) & CMon(pos.inExpr) & byUS("exists generalize", subst) & done
+              cohide(pos) & CMon(pos.inExpr) & byUS("exists generalize", subst) & done
               )
         case (_, (f@Exists(v, _))) if quantified.isDefined && !v.contains(quantified.get) =>
           throw new BelleThrowable("Cannot instantiate: existential quantifier " + f + " does not bind " + quantified.get)
