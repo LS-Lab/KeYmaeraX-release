@@ -237,7 +237,7 @@ private object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  def abs: DependentPositionTactic = "absExp" by ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
+  lazy val abs: DependentPositionTactic = "absExp" by ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
     case (ctx, abs@FuncOf(Function(fn, None, Real, Real, true), t)) if fn == "abs" =>
       if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
         val freshAbsIdx = TacticHelper.freshIndexInSequent(fn, sequent)
@@ -255,7 +255,7 @@ private object EqualityTactics {
   private lazy val maxContradiction = AnonymousLemmas.remember("f()<g() & f()>=g() <-> false".asFormula, QE, namespace)
 
   /** Expands abs only at a specific position (also works in contexts that bind the argument of abs). */
-  def absAt: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  lazy val absAt: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(absTerm@FuncOf(Function(fn, None, Real, Real, true), x)) if fn == "abs" =>
       val parentPos = pos.topLevel ++ FormulaTools.parentFormulaPos(pos.inExpr, sequent(pos.top))
 
@@ -270,8 +270,11 @@ private object EqualityTactics {
 
       val polarity = FormulaTools.polarityAt(sequent(pos.top), parentPos.inExpr) * (if (pos.isSucc) 1 else -1)
 
+      val afterCMonPos =
+        if (polarity >= 0) SuccPosition.base0(0, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length)))
+        else AntePosition.base0(0, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length)))
       val proveAbs = if (polarity >= 0) {
-        abs(1, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length))) & orL(-1) <(
+        abs(afterCMonPos) & orL(-1) <(
           orL(-2) <(
             andL(-2) & eqL2R(-3)(1) & andL(-1) & closeId,
             andL(-2) & andL(-1) & andLi(AntePos(0), AntePos(2)) & useAt(absContradiction, PosInExpr(0::Nil))(-3) & closeF),
@@ -279,14 +282,19 @@ private object EqualityTactics {
             andL(-2) & andL(-1) & andLi(AntePos(2), AntePos(0)) & useAt(absContradiction, PosInExpr(0::Nil))(-3) & closeF,
             andL(-2) & eqL2R(-3)(1) & andL(-1) & closeId))
       } else {
-        abs(-1, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length))) & orR(1) & orL(-2) <(
+        abs(afterCMonPos) & orR(1) & orL(-2) <(
           andL(-2) & eqL2R(-3)(-1) & andR(1) & OnAll(closeId),
           andL(-2) & eqL2R(-3)(-1) & andR(2) & OnAll(closeId))
       }
 
       cutAt(expanded)(parentPos) <(
         nil,
-        cohidePos & CMon(parentPos.inExpr) & implyR(1) & proveAbs
+        cohidePos & CMon(parentPos.inExpr) & implyR(1) &
+          assertT(_.at(afterCMonPos) match {
+            case (ctx, FuncOf(_, t)) => StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty
+            case _ => false
+          }, "Unable to expand " + fn + " since its argument is bound in context") &
+          proveAbs
       )
   })
 
@@ -299,7 +307,7 @@ private object EqualityTactics {
    * }}}
    * @return The tactic.
    */
-  def minmax: DependentPositionTactic = "minmax" by ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
+  lazy val minmax: DependentPositionTactic = "minmax" by ((pos: Position, sequent: Sequent) => sequent.at(pos) match {
     case (ctx, minmax@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), t@Pair(f, g))) if fn == "min" || fn == "max" =>
       if (StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty) {
         val freshMinMaxIdx = TacticHelper.freshIndexInSequent(fn, sequent)
@@ -312,7 +320,7 @@ private object EqualityTactics {
       }
   })
   /** Expands min/max only at a specific position (also works in contexts that bind some of the arguments). */
-  def minmaxAt: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
+  lazy val minmaxAt: DependentPositionTactic = "ANON" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
     case Some(minmaxTerm@FuncOf(Function(fn, None, Tuple(Real, Real), Real, true), Pair(f, g))) if fn == "min" || fn == "max" =>
       val parentPos = pos.topLevel ++ FormulaTools.parentFormulaPos(pos.inExpr, sequent(pos.top))
 
@@ -335,8 +343,11 @@ private object EqualityTactics {
 
       val contradiction = if (fn == "min") minContradiction else maxContradiction
 
+      val afterCMonPos =
+        if (polarity >= 0) SuccPosition.base0(0, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length)))
+        else AntePosition.base0(0, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length)))
       val proveMinMax = if (polarity >= 0) {
-        minmax(1, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length))) & orL(-1) <(
+        minmax(afterCMonPos) & orL(-1) <(
           orL(-2) <(
             andL(-2) & eqL2R(-3)(1) & andL(-1) & closeId,
             andL(-2) & andL(-1) & andLi(AntePos(0), AntePos(2)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF),
@@ -344,20 +355,25 @@ private object EqualityTactics {
             andL(-2) & andL(-1) & andLi(AntePos(2), AntePos(0)) & useAt(contradiction, PosInExpr(0::Nil))(-3) & closeF,
             andL(-2) & eqL2R(-3)(1) & andL(-1) & closeId))
       } else {
-        minmax(-1, PosInExpr(pos.inExpr.pos.drop(parentPos.inExpr.pos.length))) & orR(1) & orL(-2) <(
+        minmax(afterCMonPos) & orR(1) & orL(-2) <(
           andL(-2) & eqL2R(-3)(-1) & andR(1) & OnAll(closeId),
           andL(-2) & eqL2R(-3)(-1) & andR(2) & OnAll(closeId))
       }
 
       cutAt(expanded)(parentPos) <(
         nil,
-        cohidePos & CMon(parentPos.inExpr) & implyR(1) & proveMinMax
+        cohidePos & CMon(parentPos.inExpr) & implyR(1) &
+          assertT(_.at(afterCMonPos) match {
+            case (ctx, FuncOf(_, t)) => StaticSemantics.boundVars(ctx.ctx).intersect(StaticSemantics.freeVars(t)).isEmpty
+            case _ => false
+          }, "Unable to expand " + fn + " since its arguments are bound in context") &
+          proveMinMax
       )
   })
 
   /** Expands all special functions (abs/min/max). */
-  def expandAll: BelleExpr = "expandAll" by ((s: Sequent) => {
-    val allTopPos = s.ante.indices.map(i => AntePos(i)) ++ s.succ.indices.map(i => SuccPos(i))
+  lazy val expandAll: BelleExpr = "expandAll" by ((s: Sequent) => {
+    val allTopPos = s.ante.indices.map(AntePos) ++ s.succ.indices.map(SuccPos)
     val tactics = allTopPos.flatMap(p =>
       Idioms.mapSubpositions(p, s, {
         case (FuncOf(Function("abs", _, _, _, true), _), pos: Position) => Some(?(abs(pos)))
@@ -369,7 +385,7 @@ private object EqualityTactics {
     tactics.reduceOption[BelleExpr](_ & _).getOrElse(skip)
   })
   /** Expands all special functions (abs/min/max) underneath position `pos`. */
-  def expandAllAt: DependentPositionTactic = "expandAllAt" by ((pos: Position, seq: Sequent) => {
+  lazy val expandAllAt: DependentPositionTactic = "expandAllAt" by ((pos: Position, seq: Sequent) => {
     val tactics =
       Idioms.mapSubpositions(pos, seq, {
         case (FuncOf(Function("abs", _, _, _, true), _), pos: Position) => Some(?(abs(pos)))

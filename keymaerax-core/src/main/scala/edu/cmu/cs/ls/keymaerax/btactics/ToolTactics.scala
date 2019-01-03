@@ -27,7 +27,7 @@ private object ToolTactics {
 
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(order: Seq[NamedSymbol] = Nil)(qeTool: => QETool): BelleExpr = Idioms.NamedTactic("QE", {
-    val closureAndRcf = toSingleFormula & assertT(_.succ.head.isFOL, "QE on FOL only") &
+    val closureAndRcf = toSingleFormula &
       FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool) &
       Idioms.doIf(!_.isProved)("ANON" by ((s: Sequent) =>
         if (s.succ.head == False) label(BelleLabels.QECEX)
@@ -37,9 +37,12 @@ private object ToolTactics {
     val convertInterpretedSymbols = Configuration.getOption(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse("false").toBoolean
     val expandAndRcf =
       if (convertInterpretedSymbols) closureAndRcf | EqualityTactics.expandAll & closureAndRcf
-      else EqualityTactics.expandAll & closureAndRcf
+      else EqualityTactics.expandAll &
+        assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, interpreted) => interpreted case _ => false }), "Aborting QE since not all interpreted functions are expanded") &
+        closureAndRcf
 
     Idioms.doIf(!_.isProved)(
+      assertT(_.isFOL, "QE on FOL only") &
       allTacticChase()(notL, andL, notR, implyR, orR) &
         Idioms.doIf(!_.isProved)(
           close | hidePredicates & EqualityTactics.applyEqualities & hideTrivialFormulas & expandAndRcf
