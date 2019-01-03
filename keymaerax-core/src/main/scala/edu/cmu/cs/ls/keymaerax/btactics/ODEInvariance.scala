@@ -1419,16 +1419,20 @@ object ODEInvariance {
     *
     * Adds the (polynomial) solution x=Phi(x_0,t) of that ODE to the domain constraint
     *
+    * --- QE
+    * Q(Phi(x_0,t)), t>=0 |- P(Phi(x_0,t))
+    * --- (only continues if solveEnd = true)
     * G,x=x_0, t=0 |-  [x'=f(x),t'=1& Q&t>=0& x=Phi(x_0,t)]P
-    * --------------- (sAIc)
+    * --------------- (nilpotent solve)
     * G |- [x'=f(x)&Q]P
     *
+    * @param solveEnd whether to continue with weaken and QE (see rule rendition above)
     * @return See the rule rendition above
     *         Special failure cases:
     *         1) Linearity heuristic checks fail e.g.: x'=1+x^2-x^2 will be treated as non-linear even though it is really linear
     *
     */
-  def nilpotentSolve : DependentPositionTactic = "nilpotentSolve" by ((pos:Position,seq:Sequent) => {
+  def nilpotentSolve(solveEnd : Boolean) : DependentPositionTactic = "nilpotentSolve" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "nilpotent solve only applicable in top-level succedent")
 
     val (ode,dom,post) = seq.sub(pos) match {
@@ -1459,7 +1463,7 @@ object ODEInvariance {
 
       // Introduce the initial values x0
       val storeInitialVals =
-        x.zip(oldx).map(v => discreteGhost(v._1, Some(v._2))(pos) & DLBySubst.assignEquality(pos)).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+        x.zip(oldx).map(v => discreteGhost(v._1, Some(v._2))('Rlast) & DLBySubst.assignEquality('Rlast)).reduceOption[BelleExpr](_ & _).getOrElse(skip)
 
       // Partial solutions
       val sp = np.map(m => matvec_prod(m, oldx))
@@ -1489,18 +1493,33 @@ object ODEInvariance {
           ).reduce(And)
       ) //.map( f => replaceODEfree(f,DifferentialProduct(AtomicODE(DifferentialSymbol(t),Number(1)),ode)))
 
-      HilbertCalculus.DGC(t, Number(1))(pos) & existsR(Number(0))(pos) & storeInitialVals &
-      dC(cut)(pos) <(
-        skip,
+      val finish =
+        if(solveEnd)
+          dW('Rlast) & //todo: dW repeats storing of initial values which isn't very useful here
+          //DebuggingTactics.print("extra dW work") &
+          implyR('Rlast) & andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
+          (andL('Llast)*) & //Splits conjunction of equations up
+          (exhaustiveEqL2R(true)('Llast)*) & //rewrite
+          QE
+        else
+          skip
+
+      HilbertCalculus.DGC(t, Number(1))(pos) &
+      existsR(Number(0))(pos) &
+      //NOTE: At this point, the box question is guaranteed to be 'Rlast because existR reorders succedents
+      //If existsR is changed, all the 'Rlast should turn back into pos instead
+      storeInitialVals &
+      dC(cut)('Rlast) <(
+        finish,
         // dRI directly is actually a lot slower than the dC chain even with naive dI
-        // dRI(pos)
-        cuts.foldLeft(skip)( (t,f) => dC(f)(pos) < (t, dI('full)(pos)) ) & dI('full)(pos)
+        // dRI('Rlast)
+        cuts.foldLeft(skip)( (t,f) => dC(f)('Rlast) < (t, dI('full)('Rlast)) ) & dI('full)('Rlast)
 
         // this does the "let" once rather than on every dI -- doesn't help speed much
         //Dconstify(
-        //  cuts.foldLeft(skip)( (t,f) => dC(f)(pos) < (t, dI('diffInd)(pos)
+        //  cuts.foldLeft(skip)( (t,f) => dC(f)('Rlast) < (t, dI('diffInd)('Rlast)
         //  <( QE , cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) & QE )) ) &
-        //    dI('diffInd)(pos)<( QE, cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) & QE ))(pos)
+        //    dI('diffInd)('Rlast)<( QE, cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) & QE ))('Rlast)
       )
     }
   })
