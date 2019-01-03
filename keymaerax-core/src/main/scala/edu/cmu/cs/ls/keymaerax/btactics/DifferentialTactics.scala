@@ -1430,7 +1430,7 @@ private object DifferentialTactics extends Logging {
           ODEInvariance.sAIclosedPlus(rankConfig)(pos) |
 //        DebuggingTactics.print("try sAIR1") &
           ODEInvariance.sAIRankOne(reorderConfig)(pos)
-        )
+        ) | DebuggingTactics.error("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
   })
 
   // Asks Pegasus invariant generator for an invariant (DC chain)
