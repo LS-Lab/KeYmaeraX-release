@@ -117,7 +117,7 @@ Logical Methods in Computer Science, 8(4), pages 1-44, 2012.
 Copyright and Licenses
 ======================
 
-Copyright (C) 2014-2018 Carnegie Mellon University. See COPYRIGHT.txt for details.
+Copyright (C) 2014-2019 Carnegie Mellon University. See COPYRIGHT.txt for details.
 Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Brandon Bohrer, Jan-David Quesel, Yong Kiam Tan, Andrew Sogokon, Marcus Voelp, Ran Ji.
 
 See LICENSE.txt for the conditions of using this software.

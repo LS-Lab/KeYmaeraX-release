@@ -882,10 +882,10 @@ object DerivationInfo {
     new InputPositionTacticInfo("loop",
       RuleDisplayInfo("Loop Induction",(List("&Gamma;"), List("[a*]P", "&Delta;")),
         List(
-          (List("&Gamma;"),List("j(x)", "&Delta;")),
-          (List("j(x)"),List("[a]j(x)")),
-          (List("j(x)"),List("P"))))
-      , List(FormulaArg("j(x)")), _ => ((fml: Formula) => TactixLibrary.loop(fml)): TypedFunc[Formula, BelleExpr]),
+          (List("&Gamma;"),List("J", "&Delta;")),
+          (List("J"),List("[a]J")),
+          (List("J"),List("P"))))
+      , List(FormulaArg("J")), _ => ((fml: Formula) => TactixLibrary.loop(fml)): TypedFunc[Formula, BelleExpr]),
     new PositionTacticInfo("loopAuto", "loopAuto",
       {case () => (gen:Generator.Generator[Formula]) => TactixLibrary.loop(gen)}, needsGenerator = true),
     new InputPositionTacticInfo("throughout",
