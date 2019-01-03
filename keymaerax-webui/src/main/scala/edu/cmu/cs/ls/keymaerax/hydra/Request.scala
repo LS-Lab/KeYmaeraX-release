@@ -630,6 +630,11 @@ class TestToolConnectionRequest(db: DBAbstraction, toolId: String) extends Local
   }
 }
 
+/** List of all predefined tutorials that can directly be imported from the KeYmaera X web UI
+  *
+  * @param db
+  * @param userId
+  */
 class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest(userId) with ReadRequest {
   override def resultingResponses(): List[Response] = {
     //@todo read from the database/some web page?
@@ -660,7 +665,13 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
           "",
           "classpath:/keymaerax-projects/dlds/dlds.kya",
           "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
-      Nil
+        new ExamplePOJO(3, "POPL 2019 Tutorial",
+          "Programming CPS With Proofs",
+          //"/keymaerax-projects/popltutorial/README.md",
+          "",
+          "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx",
+          "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
+        Nil
 
     db.getUser(userId) match {
       case Some(user) => new ListExamplesResponse(examples.filter(_.level <= user.level)) :: Nil
