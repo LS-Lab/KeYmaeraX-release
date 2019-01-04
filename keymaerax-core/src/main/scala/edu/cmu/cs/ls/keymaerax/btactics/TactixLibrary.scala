@@ -77,9 +77,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     new DefaultTacticIndex {
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
         case f@Not(_)      if f.isFOL => (Nil, Nil)
-        case f@And(_, _)   if f.isFOL => (TactixLibrary.andL::Nil, Nil)
-        case f@Or(_, _)    if f.isFOL => (Nil, TactixLibrary.orR::Nil)
-        case f@Imply(_, _) if f.isFOL => (Nil, TactixLibrary.implyR::Nil)
+        case f@And(_, _)   if f.isFOL => (andL::Nil, Nil)
+        case f@Or(_, _)    if f.isFOL => (Nil, orR::Nil)
+        case f@Imply(_, _) if f.isFOL => (Nil, implyR::Nil)
         case f@Equiv(_, _) if f.isFOL => (Nil, Nil)
         case _ => super.tacticsFor(expr)
       }
@@ -159,8 +159,12 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[tacticChase]] */
   def allTacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = SaturateTactic("ANON" by ((seq: Sequent) => {
     //@note Execute on formulas in order of sequent; might be useful to sort according to some tactic priority.
-    seq.ante.zipWithIndex.map({ case (fml, i) => Idioms.doIf(!_.isProved)(onAll(?(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(AntePosition.base0(i))))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip) &
-    seq.succ.zipWithIndex.map({ case (fml, i) => Idioms.doIf(!_.isProved)(onAll(?(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(SuccPosition.base0(i))))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+    onAll("ANON" by ((ss: Sequent) => {
+      ss.succ.zipWithIndex.map({ case (fml, i) => ?(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(SuccPosition.base0(i))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+    })) &
+    onAll("ANON" by ((ss: Sequent) => {
+      ss.ante.zipWithIndex.map({ case (fml, i) => ?(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(AntePosition.base0(i))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
+    }))
   }))
 
   val prop: BelleExpr = "prop" by allTacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
