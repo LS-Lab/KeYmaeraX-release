@@ -251,6 +251,14 @@ class FOQuantifierTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "t_=0 ==> t_=0&![{x'=2,t_'=1&true}]x>b".asSequent
   }
 
+  it should "instantiate ODE correctly when there are multiple succedents" in {
+    val result = proveBy("x = y ==> z != 1, \\exists z [{z'=1}]x=z , y!=1".asSequent,
+      existsR(Number(1))(2)
+    )
+    //note: there is a reordering of the succedents after existsR!
+    result.subgoals.loneElement shouldBe "x=y, z=1  ==>  z_0!=1, y!=1, [{z'=1&true}]x=z".asSequent
+  }
+
   "exists generalize" should "only generalize the specified occurrences of t" in {
     val result = proveBy(Sequent(IndexedSeq("a+b=a+b".asFormula), IndexedSeq()),
       existsGeneralize(Variable("z"), PosInExpr(0 :: Nil) :: Nil)(-1))

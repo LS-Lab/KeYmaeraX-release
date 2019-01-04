@@ -543,16 +543,43 @@ class ODEInvarianceTests extends TacticTestBase {
 
     //Non-linear ODE
     val pr = proveBy("[{x'=y,y'=x^2}] x+v+a+j=1".asFormula,
-      ?(nilpotentSolve(1))
+      ?(nilpotentSolve(false)(1))
     )
 
     //Linear but not nilpotent
     val pr2 = proveBy("[{x'=a()*y,y'=b*x}] x+v+a+j=1".asFormula,
-      ?(nilpotentSolve(1))
+      ?(nilpotentSolve(false)(1))
     )
 
     pr should not be 'proved
     pr2 should not be 'proved
+  }
+
+  it should "solve ODE with correct positioning" in withMathematica { qeTool =>
+    def time[T](block: => T): T = {
+      val start = System.currentTimeMillis
+      val res = block
+      val totalTime = System.currentTimeMillis - start
+      println("Elapsed time: %1d ms".format(totalTime))
+      res
+    }
+
+    val seq = "x=0&v=0 ==> j!=1,[{x'=v,v'=a, a'=j & x+v+a <= 100}] x+v+a>=0, a!=0".asSequent
+
+    val pr = time { proveBy(seq,
+      nilpotentSolve(false)(2) & dW(3) & QE
+    )}
+    pr shouldBe 'proved
+
+    val pr2 = time { proveBy(seq,
+      nilpotentSolve(true)(2)
+    )}
+    pr2 shouldBe 'proved
+
+    val pr3 = time { proveBy(seq,
+      solve(2) & QE
+    )}
+    pr3 shouldBe 'proved
   }
 
   it should "solve ODE quickly (1)" in withMathematica { qeTool =>
@@ -567,18 +594,13 @@ class ODEInvarianceTests extends TacticTestBase {
     val fml = "x=0&v=0&a=1 -> [{x'=v,v'=a & x+v+a <= 100}] x+v+a>=0".asFormula
 
     val pr = time { proveBy(fml,
-      implyR(1) & nilpotentSolve(1) & dW(1) & QE
+      implyR(1) & nilpotentSolve(false)(1) & dW(1) & QE
     )}
     pr shouldBe 'proved
 
     //Simulate solveEnd
     val pr2 = time { proveBy(fml,
-      implyR(1) & nilpotentSolve(1) & dW(1) & // G |- Q&timevar>=0&ODEequations -> Post
-        hideL('Llast) & //Information about timevar is irrelevant
-        implyR(1) & andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
-        (andL('Llast)*) & //Splits conjunction of equations up
-        (exhaustiveEqL2R(true)('Llast)*) & //rewrite
-        QE
+      implyR(1) & nilpotentSolve(true)(1)
     )}
     pr2 shouldBe 'proved
 
@@ -599,18 +621,12 @@ class ODEInvarianceTests extends TacticTestBase {
 
     val fml = "x=0&v=0&a=0&j=0&k=1&l=0 -> [{k'=l,l'=1,x'=v,v'=a,a'=j,j'=k & x+x*v+a+j+k <= 100}] x+v+a+j+k>=0".asFormula
     val pr = time { proveBy(fml,
-      implyR(1) & nilpotentSolve(1) & dW(1) & QE
+      implyR(1) & nilpotentSolve(false)(1) & dW(1) & QE
     )}
     pr shouldBe 'proved
 
-    //Simulate solveEnd
     val pr2 = time { proveBy(fml,
-      implyR(1) & nilpotentSolve(1) & dW(1) & // G |- Q&timevar>=0&ODEequations -> Post
-        hideL('Llast) & //Information about timevar is irrelevant
-        implyR(1) & andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
-        (andL('Llast)*) & //Splits conjunction of equations up
-        (exhaustiveEqL2R(true)('Llast)*) & //rewrite
-        QE
+      implyR(1) & nilpotentSolve(true)(1)
     )}
     pr2 shouldBe 'proved
 
@@ -627,7 +643,7 @@ class ODEInvarianceTests extends TacticTestBase {
     // z'   (1 5 -3) z   5C
     val pr = proveBy("x=1&y=1&A()=1 -> [{x'=2*(-z+x+y)+A(),y'=y+5*x-3*z-B(),z'=x-3*z+5*(y+C)}] x+y+z >= 0".asFormula,
       //val pr = proveBy("x=1&y=1 -> [{x'=x+y,y'=-x-y}] x=0".asFormula,
-      implyR(1) & nilpotentSolve(1) & dW(1) & implyR(1) &
+      implyR(1) & nilpotentSolve(false)(1) & dW(1) & implyR(1) &
       (andL('Llast)*)
     )
 
@@ -636,4 +652,5 @@ class ODEInvarianceTests extends TacticTestBase {
     pr.subgoals(0).ante(5) shouldBe "y=2/3*(3*A()+B()+-5*C)*timevar^3+y_0+timevar*(-1*B()+5*x_0+y_0+-3*z_0)+1/2*timevar^2*(5*A()+-1*B()+-15*C+12*x_0+-4*(y_0+z_0))".asFormula
     pr.subgoals(0).ante(6) shouldBe "z=4/3*(3*A()+B()+-5*C)*timevar^3+timevar*(5*C+x_0+5*y_0+-3*z_0)+z_0+1/2*timevar^2*(A()+-5*B()+-15*C+24*x_0+-8*(y_0+z_0))".asFormula
   }
+
 }
