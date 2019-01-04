@@ -231,7 +231,13 @@
                                     <span>[;]</span><code class="pull-right">composeb</code>
                                     </a>
                                 </li>
-                                <li><a ng-click="openInputTacticDialog('loop', 'R')"><span>Loop ...</span><code class="pull-right">loop</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('loop', 'R')"
+                                       uib-popover-template="fetchRuleHelp('loop')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>Loop ...</span><code class="pull-right">loop</code>
+                                    </a>
+                                </li>
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('boxAnd', 'R')"><span>[]&and;</span><code class="pull-right">boxAnd</code></a></li>
                                 <li><a ng-click="doSearch('GV', 'R')"><span>Abstract</span><code class="pull-right">GV</code></a></li>
@@ -249,9 +255,21 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Differential Equations <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doSearch('solve', 'R')"><span>Solve</span><code class="pull-right">solve</code></a></li>
+                                <li><a ng-click="doSearch('solve', 'R')"
+                                       uib-popover-template="fetchRuleHelp('solve')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>Solve</span><code class="pull-right">solve</code>
+                                    </a>
+                                </li>
                                 <li><a ng-click="doSearch('dW', 'R')"><span>Weaken</span><code class="pull-right">dW</code></a></li>
-                                <li><a ng-click="doSearch('dI', 'R')"><span>Diff. Invariant</span><code class="pull-right">dI</code></a></li>
+                                <li><a ng-click="doSearch('dI', 'R')"
+                                       uib-popover-template="fetchRuleHelp('dI')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>Diff. Invariant</span><code class="pull-right">dI</code>
+                                    </a>
+                                </li>
                                 <!-- TODO list further tactics -->
                                 <!--<li><a ng-click="doSearch('DEs', 'R')"><span>Diff. Effect</span><code class="pull-right">DEs</code></a></li>-->
                                 <!--<li><a ng-click="doSearch('Dassignb', 'R')"><span>Diff. Assign</span><code class="pull-right">Dassignb</code></a></li>-->
