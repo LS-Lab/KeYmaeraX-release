@@ -357,30 +357,12 @@ class DifferentialTests extends TacticTestBase with Timeouts {
 
   it should "report when invariant not true in the beginning" in withQE { _ =>
     the [BelleThrowable] thrownBy proveBy("x<0 ==> [{x'=-x}]x>0".asSequent, dI()(1)) should
-      have message """[Bellerophon Runtime] Differential invariant must hold in the beginning
-                     |Expected proved provable, but got open goals
-                     |Provable{
-                     |   -1:  x < 0	Less
-                     |   -2:  true	True$
-                     |==> 1:  x>0	Greater
-                     |  from
-                     |   -1:  x < 0	Less
-                     |   -2:  true	True$
-                     |==> 1:  x>0	Greater}""".stripMargin
+      have message "[Bellerophon Runtime] Differential invariant must hold in the beginning: expected proved provable, but got open goals"
   }
 
   it should "report when not an invariant" in withQE { _ =>
     the [BelleThrowable] thrownBy proveBy("x>0 ==> [{x'=-x}]x>0".asSequent, dI()(1)) should
-      have message """[Bellerophon Runtime] Differential invariant must be preserved
-                     |Expected proved provable, but got open goals
-                     |Provable{
-                     |   -1:  x>0	Greater
-                     |   -2:  true	True$
-                     |==> 1:  [{x'=-x&true}](x>0)'	Box
-                     |  from
-                     |   -1:  x>0	Greater
-                     |   -2:  true	True$
-                     |==> 1:  \forall x -x>=0	Forall}""".stripMargin
+      have message "[Bellerophon Runtime] Differential invariant must be preserved: expected proved provable, but got open goals"
   }
 
   it should "report when failing to derive postcondition" in withQE { _ =>
@@ -406,14 +388,7 @@ class DifferentialTests extends TacticTestBase with Timeouts {
 
   it should "expand special functions" in withQE { _ =>
     the [BelleThrowable] thrownBy proveBy("[{x'=3}]abs(x)>=0".asFormula, dI()(1)) should have message
-      """[Bellerophon Runtime] Differential invariant must be preserved
-        |Expected proved provable, but got open goals
-        |Provable{
-        |   -1:  true	True$
-        |==> 1:  [{x'=3&true}](x>=0&x>=0|x < 0&-x>=0)'	Box
-        |  from
-        |   -1:  true	True$
-        |==> 1:  (3>=0&3>=0)&3<=0&-(3)>=0	And}""".stripMargin
+      """[Bellerophon Runtime] Differential invariant must be preserved: expected proved provable, but got open goals""".stripMargin
   }
 
   //@todo unsupported so far (substitution clash)
@@ -1212,7 +1187,7 @@ class DifferentialTests extends TacticTestBase with Timeouts {
 
   it should "find solution for x'=v, v'=a" in withQE { _ =>
     val result = proveBy("x>0 & v>=0 & a>0 ==> [{x'=v,v'=a}]x>0".asSequent, solve(1))
-    result.subgoals.loneElement shouldBe "x>0 & v>=0 & a>0 ==> \\forall t_ (t_>=0 -> a/2*t_^2+v*t_+x>0)".asSequent
+    result.subgoals.loneElement shouldBe "x>0 & v>=0 & a>0 ==> \\forall t_ (t_>=0 -> a*(t_^2/2)+v*t_+x>0)".asSequent
   }
 
   it should "solve ODE with const factor" in withQE { _ =>
@@ -1222,43 +1197,43 @@ class DifferentialTests extends TacticTestBase with Timeouts {
 
   it should "solve ODE system with const factor" in withQE { _ =>
     val result = proveBy("[{x'=c*v,v'=a}]x>0".asFormula, solve(1))
-    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> c*(a/2*t_^2+v*t_)+x>0)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> c*(a*(t_^2/2)+v*t_)+x>0)".asSequent
   }
 
   it should "solve ODE system with number factor" in withQE { _ =>
     val result = proveBy("[{x'=3*v,v'=a}]x>0".asFormula, solve(1))
-    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> 3*(a/2*t_^2+v*t_)+x>0)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> 3*(a*(t_^2/2)+v*t_)+x>0)".asSequent
   }
 
   it should "solve straight 2D driving" in withQE { _ =>
     val result = proveBy("[{v'=a,x'=v*dx,y'=v*dy}]x^2+y^2<=r^2".asFormula, solve(1))
-    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> (dx*(a/2*t_^2+v*t_)+x)^2+(dy*(a/2*t_^2+v*t_)+y)^2<=r^2)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> (dx*(a*(t_^2/2)+v*t_)+x)^2+(dy*(a*(t_^2/2)+v*t_)+y)^2<=r^2)".asSequent
   }
 
   it should "solve straight 2D driving when only x is mentioned in p" in withQE { _ =>
     val result = proveBy("[{v'=a,x'=v*dx,y'=v*dy}]x>0".asFormula, solve(1))
-    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> dx*(a/2*t_^2+v*t_)+x>0)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> dx*(a*(t_^2/2)+v*t_)+x>0)".asSequent
   }
 
   it should "solve more complicated constants" in withQE { _ =>
     val result = proveBy("[{v'=a+c,t'=1,x'=(v+5)*dx^2,y'=v*(3-dy)*c}]x^2+y^2<=r^2".asFormula, solve(1))
-    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> (dx^2*((a+c)/2*t_^2+v*t_+5*t_)+x)^2+(c*((3-dy)*((a+c)/2*t_^2+v*t_))+y)^2<=r^2)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> (dx^2*((a+c)*(t_^2/2)+v*t_+5*t_)+x)^2+(c*((3-dy)*((a+c)*(t_^2/2)+v*t_))+y)^2<=r^2)".asSequent
   }
 
   it should "solve more complicated constants with explicit c'=0" in withQE { _ =>
     //@note dx'=0 omitted intentionally to test for mixed explicit/non-explicit constants
     val result = proveBy("[{v'=a+c,t'=1,c'=0,x'=(v+5)*dx^2,y'=v*(3-dy)*c,dy'=0}]x^2+y^2<=r^2".asFormula, solve(1))
-    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> (dx^2*(a/2*t_^2+c/2*t_^2+v*t_+5*t_)+x)^2+(c*((3-dy)*(a/2*t_^2+c/2*t_^2+v*t_))+y)^2<=r^2)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> (dx^2*((a+c)*(t_^2/2)+v*t_+5*t_)+x)^2+(c*((3-dy)*((a+c)*(t_^2/2)+v*t_))+y)^2<=r^2)".asSequent
   }
 
   it should "work when ODE is not sole formula in succedent" in withQE { _ =>
     val result = proveBy("x>0 & v>=0 & a>0 ==> y=1, [{x'=v,v'=a}]x>0, z=3".asSequent, solve(2))
-    result.subgoals.loneElement shouldBe "x>0 & v>=0 & a>0 ==> y=1, \\forall t_ (t_>=0 -> a/2*t_^2+v*t_+x>0), z=3".asSequent
+    result.subgoals.loneElement shouldBe "x>0 & v>=0 & a>0 ==> y=1, \\forall t_ (t_>=0 -> a*(t_^2/2)+v*t_+x>0), z=3".asSequent
   }
 
   it should "work when safety property is abstract" in withQE { _ =>
     val result = proveBy("J(x,v) ==> [{x'=v,v'=a}]J(x,v)".asSequent, solve(1))
-    result.subgoals.loneElement shouldBe "J(x,v) ==> \\forall t_ (t_>=0->J((a/2*t_^2+v*t_+x,a*t_+v)))".asSequent
+    result.subgoals.loneElement shouldBe "J(x,v) ==> \\forall t_ (t_>=0->J((a*(t_^2/2)+v*t_+x,a*t_+v)))".asSequent
   }
 
   it should "solve the simplest of all ODEs" in withQE { _ =>
@@ -1290,7 +1265,7 @@ class DifferentialTests extends TacticTestBase with Timeouts {
   it should "solve complicated nested ODEs" in withQE { _ =>
     val result = proveBy("v=0 & x<s & 0<T, t=0, a_0=(s-x)/T^2 ==> [{x'=v,v'=a_0,t'=1&v>=0&t<=T}](t>0->\\forall a (a = (v^2/(2 *(s - x)))->[{x'=v,v'=-a,t'=1 & v>=0}](x + v^2/(2*a) <= s & (x + v^2/(2*a)) >= s)))".asSequent,
       solve(1))
-    result.subgoals.loneElement shouldBe "v_1=0 & x_1<s & 0<T, t_1=0, a_0=(s-x_1)/T^2 ==> \\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->a_0*s_+v_1>=0&s_+t_1<=T)->\\forall t (t=t_+t_1->\\forall v (v=a_0*t_+v_1->\\forall x (x=a_0/2*t_^2+v_1*t_+x_1->t>0->\\forall a (a=v^2/(2*(s-x))->[{x'=v,v'=-a,t'=1&v>=0}](x+v^2/(2*a)<=s&x+v^2/(2*a)>=s))))))".asSequent
+    result.subgoals.loneElement shouldBe "v_1=0 & x_1<s & 0<T, t_1=0, a_0=(s-x_1)/T^2 ==> \\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->a_0*s_+v_1>=0&s_+t_1<=T)->\\forall t (t=t_+t_1->\\forall v (v=a_0*t_+v_1->\\forall x (x=a_0*(t_^2/2)+v_1*t_+x_1->t>0->\\forall a (a=v^2/(2*(s-x))->[{x'=v,v'=-a,t'=1&v>=0}](x+v^2/(2*a)<=s&x+v^2/(2*a)>=s))))))".asSequent
   }
 
   it should "not touch index of existing other occurrences of initial values" in withQE { _ =>
@@ -1365,12 +1340,12 @@ class DifferentialTests extends TacticTestBase with Timeouts {
 
   it should "solve triple integrator with division" in withMathematica { _ =>
     val result = proveBy("x>=0&v>=0&a>=0&s>=0&g()>0 -> [{x'=v,v'=a/g(),a'=s}]x>=0".asFormula, implyR(1) & solve(1))
-    result.subgoals.loneElement shouldBe "x>=0&v>=0&a>=0&s>=0&g()>0 ==> \\forall t_ (t_>=0->(s/2/3*t_^3+a/2*t_^2)/g()+v*t_+x>=0)".asSequent
+    result.subgoals.loneElement shouldBe "x>=0&v>=0&a>=0&s>=0&g()>0 ==> \\forall t_ (t_>=0->(s*(t_^3/6)+a*(t_^2/2))/g()+v*t_+x>=0)".asSequent
   }
 
   it should "solve double integrator with sum of constants" in withQE { _ =>
     val result = proveBy("y<b, x<=0, Y()>=0, Z()<Y() ==> [{y'=x, x'=-Y()+Z()}]y<b".asSequent, solve(1))
-    result.subgoals.loneElement shouldBe "y<b, x<=0, Y()>=0, Z()<Y() ==> \\forall t_ (t_>=0 -> (-Y()+Z())/2*t_^2+x*t_+y<b)".asSequent
+    result.subgoals.loneElement shouldBe "y<b, x<=0, Y()>=0, Z()<Y() ==> \\forall t_ (t_>=0 -> (-Y()+Z())*(t_^2/2)+x*t_+y<b)".asSequent
   }
 
   "diffUnpackEvolutionDomainInitially" should "unpack the evolution domain of an ODE as fact at time zero" in {

@@ -19,6 +19,8 @@ import testHelper.KeYmaeraXTestTags.{DeploymentTest, IgnoreInBuildTest, SummaryT
 
 import scala.collection.immutable._
 
+import org.scalatest.LoneElement._
+
 /**
   * Tests the axiomatic ODE solver.
   * @author Nathan Fulton
@@ -79,215 +81,166 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val f = "x=1&v=2 -> [{x'=v}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=1&v=2".asFormula
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->(v*t_+x)^3>=1)".asFormula
+    result.subgoals.loneElement shouldBe "x=1&v=2 ==> \\forall t_ (t_>=0->(v*t_+x)^3>=1)".asSequent
   }
 
   it should "retain initial evolution domain" in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=1&x<0}]x>=0".asFormula)), solve(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("x>0".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> s_+x<0) -> t_+x>=0)".asFormula)
+    result.subgoals.loneElement shouldBe "x>0 ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> s_+x<0) -> t_+x>=0)".asSequent
   }
 
   it should "work on the single integrator x'=v in context" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val result = proveBy("x=1&v=2 -> [{x'=v}]x^3>=1".asFormula, AxiomaticODESolver()(1, 1::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "x=1&v=2 -> \\forall t_ (t_>=0->(v*t_+x)^3>=1)".asFormula
+    result.subgoals.loneElement shouldBe "==> x=1&v=2 -> \\forall t_ (t_>=0->(v*t_+x)^3>=1)".asSequent
   }
 
   it should "work on the single integrator x'=v with evolution domain" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val result = proveBy("x=1&v=2 -> [{x'=v&x>=0}]x^3>=1".asFormula, implyR(1) & AxiomaticODESolver()(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs "x=1&v=2".asFormula::Nil
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_ -> v*s_+x>=0)->(v*t_+x)^3>=1)".asFormula
+    result.subgoals.loneElement shouldBe "x=1&v=2 ==> \\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_ -> v*s_+x>=0)->(v*t_+x)^3>=1)".asSequent
   }
 
   it should "work on the single integrator x'=v in the antecedent" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq("[{x'=v}]x^3>=1".asFormula), IndexedSeq()), AxiomaticODESolver()(-1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "\\forall t_ (t_>=0->(v*t_+x)^3>=1)".asFormula
-    result.subgoals.head.succ shouldBe empty
+    result.subgoals.loneElement shouldBe "\\forall t_ (t_>=0->(v*t_+x)^3>=1) ==> ".asSequent
   }
 
   it should "work on the single integrator x'=v in the antecedent when not sole formula" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq("a=2".asFormula, "[{x'=v}]x^3>=1".asFormula, "b=3".asFormula), IndexedSeq()), AxiomaticODESolver()(-2))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("a=2".asFormula, "\\forall t_ (t_>=0->(v*t_+x)^3>=1)".asFormula, "b=3".asFormula)
-    result.subgoals.head.succ shouldBe empty
+    result.subgoals.loneElement shouldBe "a=2, \\forall t_ (t_>=0->(v*t_+x)^3>=1), b=3 ==> ".asSequent
   }
 
   it should "introduce initial ghosts" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x>=1&v>=2 -> [{x'=v}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x>=1&v>=2".asFormula
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->(v*t_+x)^3>=1)".asFormula
+    result.subgoals.loneElement shouldBe "x>=1&v>=2 ==> \\forall t_ (t_>=0->(v*t_+x)^3>=1)".asSequent
   }
 
   it should "work on the double integrator x''=a" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x=1&v=2&a=0 -> [{x'=v,v'=a}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=1&v=2&a=0".asFormula
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->(a/2*t_^2+v*t_+x)^3>=1)".asFormula
+    result.subgoals.loneElement shouldBe "x=1&v=2&a=0 ==> \\forall t_ (t_>=0->(a*(t_^2/2)+v*t_+x)^3>=1)".asSequent
   }
 
   it should "work on the double integrator x''=a in the antecedent" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq("[{x'=v,v'=a}]x^3>=1".asFormula), IndexedSeq()), AxiomaticODESolver()(-1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "\\forall t_ (t_>=0->(a/2*t_^2+v*t_+x)^3>=1)".asFormula
-    result.subgoals.head.succ shouldBe empty
+    result.subgoals.loneElement shouldBe "\\forall t_ (t_>=0->(a*(t_^2/2)+v*t_+x)^3>=1) ==> ".asSequent
   }
 
   it should "work on the double integrator x''=a in context" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x=1&v=2&a=0 -> [{x'=v,v'=a}]x^3>=1".asFormula
     val t = AxiomaticODESolver()(1, 1::Nil)
     val result = proveBy(f, t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "x=1&v=2&a=0 -> \\forall t_ (t_>=0->(a/2*t_^2+v*t_+x)^3>=1)".asFormula
+    result.subgoals.loneElement shouldBe "==> x=1&v=2&a=0 -> \\forall t_ (t_>=0->(a*(t_^2/2)+v*t_+x)^3>=1)".asSequent
   }
 
   it should "still introduce internal time even if own time is present" in withMathematica { _ =>
     val f = "x=1&v=2&a=0&t=0 -> [{x'=v,v'=a,t'=1}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=1&v=2&a=0&t=0".asFormula
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->(a/2*t_^2+v*t_+x)^3>=1)".asFormula
+    result.subgoals.loneElement shouldBe "x=1&v=2&a=0&t=0 ==> \\forall t_ (t_>=0->(a*(t_^2/2)+v*t_+x)^3>=1)".asSequent
   }
 
   it should "solve double integrator" in  withMathematica { _ =>
     val f = "x=1&v=2&a=3&t=0 -> [{x'=v,v'=a, t'=1}]x>=0".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f,t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=1&v=2&a=3&t=0".asFormula
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->a/2*t_^2+v*t_+x>=0)".asFormula
+    result.subgoals.loneElement shouldBe "x=1&v=2&a=3&t=0 ==> \\forall t_ (t_>=0->a*(t_^2/2)+v*t_+x>=0)".asSequent
   }
 
   it should "solve double integrator out of order" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x=1&v=2&a=3&t=0 -> [{v'=a, t'=1, x'=v}]x>=0".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f,t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=1&v=2&a=3&t=0".asFormula
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->a/2*t_^2+v*t_+x>=0)".asFormula
+    result.subgoals.loneElement shouldBe "x=1&v=2&a=3&t=0 ==> \\forall t_ (t_>=0->a*(t_^2/2)+v*t_+x>=0)".asSequent
   }
 
-  it should "not fail reordering a single ODE" taggedAs TodoTest ignore withMathematica { _ =>
+  it should "not fail reordering a single ODE" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "t=0 -> [{t'=1}]t>=0".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f,t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "t=0".asFormula
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->t_+t>=0)".asFormula
+    result.subgoals.loneElement shouldBe "t=0 ==> \\forall t_ (t_>=0->t_+t>=0)".asSequent
   }
 
   it should "prove empty evolution domain" in  withMathematica { _ =>
     val f = "x=1&v=2&a=3&t=0 -> [{x'=v,v'=a, t'=1}]x>=0".asFormula
     val t = implyR(1) & AxiomaticODESolver.axiomaticSolve()(1)
     val result = proveBy(f,t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=1&v=2&a=3&t=0".asFormula
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0 -> a/2*t_^2+v*t_+x>=0)".asFormula
+    result.subgoals.loneElement shouldBe "x=1&v=2&a=3&t=0 ==> \\forall t_ (t_>=0 -> a*(t_^2/2)+v*t_+x>=0)".asSequent
   }
 
   it should "instantiate with duration when asked" in  withMathematica { _ =>
     val f = "x=1&v=2&a=3&t=0 -> [{x'=v,v'=a, t'=1 & v>=0}]x>=0".asFormula
     val t = implyR(1) & AxiomaticODESolver.axiomaticSolve(instEnd = true)(1)
     val result = proveBy(f,t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=1&v=2&a=3&t=0".asFormula
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0 -> (a*t_+v>=0 -> a/2*t_^2+v*t_+x>=0))".asFormula
+    result.subgoals.loneElement shouldBe "x=1&v=2&a=3&t=0 ==> \\forall t_ (t_>=0 -> (a*t_+v>=0 -> a*(t_^2/2)+v*t_+x>=0))".asSequent
   }
 
   it should "work with a non-arithmetic post-condition" in withMathematica { _ =>
     val f = "x=1&v=2&a=3&t=0 -> [{x'=v,v'=a, t'=1}][{j'=k,k'=l, z'=1}]x>=0".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f,t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=1&v=2&a=3&t=0".asFormula
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->[{j'=k,k'=l, z'=1}]a/2*t_^2+v*t_+x>=0)".asFormula
+    result.subgoals.loneElement shouldBe "x=1&v=2&a=3&t=0 ==> \\forall t_ (t_>=0->[{j'=k,k'=l, z'=1}]a*(t_^2/2)+v*t_+x>=0)".asSequent
   }
 
   it should "work on the triple integrator x'''=j" in withMathematica { _ =>
     val f = "x=1&v=2&a=3&j=4 -> [{x'=v,v'=a,a'=j}]x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    //@todo solution 1/6 (jt^3 + 3at^2 + 6vt + 6x)
-    //@todo solution 1 + 2 t + 3/2 t^2 + 4/6 t^3
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=1&v=2&a=3&j=4".asFormula
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->(j/2/3*t_^3+(a/2)*t_^2+v*t_+x)^3>=1)".asFormula
+    result.subgoals.loneElement shouldBe "x=1&v=2&a=3&j=4 ==> \\forall t_ (t_>=0->(j*(t_^3/6)+a*(t_^2/2)+v*t_+x)^3>=1)".asSequent
   }
 
   it should "work on the triple integrator x'''=j in the antecedent" in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq("[{x'=v,v'=a,a'=j}]x^3>=1".asFormula), IndexedSeq()), AxiomaticODESolver()(-1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "\\forall t_ (t_>=0->(j/2/3*t_^3+(a/2)*t_^2+v*t_+x)^3>=1)".asFormula
-    result.subgoals.head.succ shouldBe empty
+    result.subgoals.loneElement shouldBe "\\forall t_ (t_>=0->(j*(t_^3/6)+a*(t_^2/2)+v*t_+x)^3>=1) ==> ".asSequent
+  }
+
+  it should "work on the triple integrator x'''=1" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
+    val f = "x=1&v=2&a=0 -> [{a'=1,x'=v,v'=a}]x^3>=1".asFormula
+    val t = implyR(1) & AxiomaticODESolver()(1)
+    val result = proveBy(f, t)
+    result.subgoals.loneElement shouldBe "x=1&v=2&a=0 ==> \\forall t_ (t_>=0->(t_^3/6+a*(t_^2/2)+v*t_+x)^3>=1)".asSequent
   }
 
   it should "solve simple nested ODEs" in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("[{x'=2}][{x'=3}]x>0".asFormula)), solve(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("x_1>0".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
+    result.subgoals.loneElement shouldBe "x_1>0 ==> \\forall t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asSequent
   }
 
   it should "solve in universal context in ante" in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq("\\forall z [{x'=2}]x>0".asFormula), IndexedSeq()), solve(-1, PosInExpr(0::Nil)))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "\\forall z \\forall t_ (t_>=0 -> 2*t_+x>0)".asFormula
-    result.subgoals.head.succ shouldBe empty
+    result.subgoals.loneElement shouldBe "\\forall z \\forall t_ (t_>=0 -> 2*t_+x>0) ==> ".asSequent
   }
 
   it should "solve in nasty assignment context in ante" in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq("[x:=*;][{x'=2}]x>0".asFormula), IndexedSeq()), solve(-1, PosInExpr(1::Nil)))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "[x:=*;]\\forall t_ (t_>=0 -> 2*t_+x>0)".asFormula
-    result.subgoals.head.succ shouldBe empty
+    result.subgoals.loneElement shouldBe "[x:=*;]\\forall t_ (t_>=0 -> 2*t_+x>0) ==> ".asSequent
   }
 
   it should "solve in nasty universal context in ante" in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq("\\forall x [{x'=2}]x>0".asFormula), IndexedSeq()), solve(-1, PosInExpr(0::Nil)))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "\\forall x \\forall t_ (t_>=0 -> 2*t_+x>0)".asFormula
-    result.subgoals.head.succ shouldBe empty
+    result.subgoals.loneElement shouldBe "\\forall x \\forall t_ (t_>=0 -> 2*t_+x>0) ==> ".asSequent
   }
 
   it should "solve in unprovable context" in withMathematica { _ =>
     val result = proveBy("false & [{x'=2}]x>0".asFormula, solve(1, PosInExpr(1::Nil)))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "false & \\forall t_ (t_>=0 -> 2*t_+x>0)".asFormula
+    result.subgoals.loneElement shouldBe "==> false & \\forall t_ (t_>=0 -> 2*t_+x>0)".asSequent
   }
 
   it should "work on the single integrator x'=v in positive context in the antecedent" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq("a=2 -> [{x'=v}]x^3>=1".asFormula), IndexedSeq()), AxiomaticODESolver()(-1, 1::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "a=2 -> (\\forall t_ (t_>=0->(v*t_+x)^3>=1))".asFormula
-    result.subgoals.head.succ shouldBe empty
+    result.subgoals.loneElement shouldBe "a=2 -> (\\forall t_ (t_>=0->(v*t_+x)^3>=1)) ==> ".asSequent
   }
 
   it should "work on the single integrator x'=v in negative context in the antecedent" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq("[{x'=v}]x^3>=1 -> a=2".asFormula), IndexedSeq()), AxiomaticODESolver()(-1, 0::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "(\\forall t_ (t_>=0->(v*t_+x)^3>=1)) -> a=2".asFormula
-    result.subgoals.head.succ shouldBe empty
+    result.subgoals.loneElement shouldBe "(\\forall t_ (t_>=0->(v*t_+x)^3>=1)) -> a=2 ==> ".asSequent
   }
 
   it should "work on the single integrator x'=v in negative context in the succedent" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val result = proveBy("[{x'=v}]x^3>=1 -> x=1&v=2".asFormula, AxiomaticODESolver()(1, 0::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "(\\forall t_ (t_>=0->(v*t_+x)^3>=1)) -> x=1&v=2".asFormula
+    result.subgoals.loneElement shouldBe "==> (\\forall t_ (t_>=0->(v*t_+x)^3>=1)) -> x=1&v=2".asSequent
   }
 
   it should "work on single integrators with constant factors" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
@@ -295,164 +248,120 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val s = Sequent(IndexedSeq("x=0".asFormula, "t=0".asFormula), IndexedSeq("[{x'=2*t,t'=1}]x=t^2".asFormula))
     val t = AxiomaticODESolver()(1)
     val result = proveBy(s, t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain ("x=0".asFormula)
-    result.subgoals.head.ante should contain ("t=0".asFormula)
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->2*(t_^2/2+t*t_)+x=(t_+t)^2)".asFormula
+    result.subgoals.loneElement shouldBe "x=0, t=0 ==> \\forall t_ (t_>=0->2*(t_^2/2+t*t_)+x=(t_+t)^2)".asSequent
   }
 
   it should "work on double integrators with constant factors" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val s = Sequent(IndexedSeq("a=0".asFormula, "x=0".asFormula, "t=0".asFormula), IndexedSeq("[{x'=2*v,v'=a,t'=1}]x=a*t^2".asFormula))
     val t = AxiomaticODESolver()(1)
     val result = proveBy(s, t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain ("a=0".asFormula)
-    result.subgoals.head.ante should contain ("x=0".asFormula)
-    result.subgoals.head.ante should contain ("t=0".asFormula)
-    result.subgoals.head.succ should contain only "\\forall t_ (t_>=0->2*(a/2*t_^2+v*t_)+x=a*(t_+t)^2)".asFormula
+    result.subgoals.loneElement shouldBe "a=0, x=0, t=0 ==> \\forall t_ (t_>=0->2*(a*(t_^2/2)+v*t_)+x=a*(t_+t)^2)".asSequent
   }
 
   "Diamond axiomatic ODE solver" should "work on the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x=1&v=2 -> <{x'=v}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=1&v=2".asFormula
-    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0 & (v*t_+x)^3>=1)".asFormula
+    result.subgoals.loneElement shouldBe "x=1&v=2 ==> \\exists t_ (t_>=0 & (v*t_+x)^3>=1)".asSequent
   }
 
   it should "work on the single integrator x'=v with evolution domain constraint" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x=1&v=2 -> <{x'=v & x>=0}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=1&v=2".asFormula
-    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0 & \\forall s_ (0<=s_&s_<=t_ -> v*s_+x>=0) & (v*t_+x)^3>=1)".asFormula
+    result.subgoals.loneElement shouldBe "x=1&v=2 ==> \\exists t_ (t_>=0 & \\forall s_ (0<=s_&s_<=t_ -> v*s_+x>=0) & (v*t_+x)^3>=1)".asSequent
   }
 
   it should "work on the single integrator x'=v in context" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x=1&v=2 -> <{x'=v}>x^3>=1".asFormula
     val t = AxiomaticODESolver()(1, 1::Nil)
     val result = proveBy(f, t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "x=1&v=2 -> \\exists t_ (t_>=0 & (v*t_+x)^3>=1)".asFormula
+    result.subgoals.loneElement shouldBe "==> x=1&v=2 -> \\exists t_ (t_>=0 & (v*t_+x)^3>=1)".asSequent
   }
 
   it should "work on the single integrator x'=v in the antecedent" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val result = proveBy("<{x'=v}>x^3>=1 ==> x>=1 | v>0".asSequent, AxiomaticODESolver()(-1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "\\exists t_ (t_>=0 & (v*t_+x)^3>=1)".asFormula
-    result.subgoals.head.succ should contain only "x>=1 | v>0".asFormula
+    result.subgoals.loneElement shouldBe "\\exists t_ (t_>=0 & (v*t_+x)^3>=1) ==> x>=1 | v>0".asSequent
   }
 
   it should "work on the single integrator x'=v in negative polarity" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x=-1, v=-2, ==> !<{x'=v}>x^3>=1".asSequent
     val t = AxiomaticODESolver()(1, 0::Nil)
     val result = proveBy(f, t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only ("x=-1".asFormula, "v=-2".asFormula)
-    result.subgoals.head.succ should contain only "!\\exists t_ (t_>=0 & (v*t_+x)^3>=1)".asFormula
+    result.subgoals.loneElement shouldBe "x=-1, v=-2 ==> !\\exists t_ (t_>=0 & (v*t_+x)^3>=1)".asSequent
   }
 
   it should "introduce initial ghosts" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x>=1&v>=2 -> <{x'=v}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x>=1&v>=2".asFormula
-    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&(v*t_+x)^3>=1)".asFormula
+    result.subgoals.loneElement shouldBe "x>=1&v>=2 ==> \\exists t_ (t_>=0&(v*t_+x)^3>=1)".asSequent
   }
 
   it should "work on the double integrator x''=a" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x=1&v=2&a=0 -> <{x'=v,v'=a}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=1&v=2&a=0".asFormula
-    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&(a/2*t_^2+v*t_+x)^3>=1)".asFormula
+    result.subgoals.loneElement shouldBe "x=1&v=2&a=0 ==> \\exists t_ (t_>=0&(a*(t_^2/2)+v*t_+x)^3>=1)".asSequent
   }
 
   it should "still introduce internal time even if own time is present" in withMathematica { _ =>
     val f = "x=1&v=2&a=0&t=0 -> <{x'=v,v'=a,t'=1}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=1&v=2&a=0&t=0".asFormula
-    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&(a/2*t_^2+v*t_+x)^3>=1)".asFormula
+    result.subgoals.loneElement shouldBe "x=1&v=2&a=0&t=0 ==> \\exists t_ (t_>=0&(a*(t_^2/2)+v*t_+x)^3>=1)".asSequent
   }
 
   it should "solve double integrator" in  withMathematica { _ =>
     val f = "x=1&v=2&a=3&t=0 -> <{x'=v,v'=a, t'=1}>x>=0".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f,t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=1&v=2&a=3&t=0".asFormula
-    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&a/2*t_^2+v*t_+x>=0)".asFormula
+    result.subgoals.loneElement shouldBe "x=1&v=2&a=3&t=0 ==> \\exists t_ (t_>=0&a*(t_^2/2)+v*t_+x>=0)".asSequent
   }
 
   it should "work with a non-arithmetic post-condition" in withMathematica { _ =>
     val f = "x=1&v=2&a=3&t=0 -> <{x'=v,v'=a, t'=1}>[{j'=k,k'=l, z'=1}]x>=0".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f,t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=1&v=2&a=3&t=0".asFormula
-    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&[{j'=k,k'=l, z'=1}]a/2*t_^2+v*t_+x>=0)".asFormula
+    result.subgoals.loneElement shouldBe "x=1&v=2&a=3&t=0 ==> \\exists t_ (t_>=0&[{j'=k,k'=l, z'=1}]a*(t_^2/2)+v*t_+x>=0)".asSequent
   }
 
   it should "work on the triple integrator x'''=j" in withMathematica { _ =>
     val f = "x=1&v=2&a=3&j=4 -> <{x'=v,v'=a,a'=j}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
     val result = proveBy(f, t)
-    //@todo solution 1/6 (jt^3 + 3at^2 + 6vt + 6x)
-    //@todo solution 1 + 2 t + 3/2 t^2 + 4/6 t^3
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain only "x=1&v=2&a=3&j=4".asFormula
-    result.subgoals.head.succ should contain only "\\exists t_ (t_>=0&(j/2/3*t_^3+a/2*t_^2+v*t_+x)^3>=1)".asFormula
+    result.subgoals.loneElement shouldBe "x=1&v=2&a=3&j=4 ==> \\exists t_ (t_>=0&(j*(t_^3/6)+a*(t_^2/2)+v*t_+x)^3>=1)".asSequent
   }
 
   it should "solve simple nested ODEs" in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq("x>0".asFormula), IndexedSeq("<{x'=2}>[{x'=3}]x>0".asFormula)), solve(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List("x_1>0".asFormula)
-    result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 & \\exists x (x=2*t_+x_1 & [{x'=3}]x>0))".asFormula)
+    result.subgoals.loneElement shouldBe "x_1>0 ==> \\exists t_ (t_>=0 & \\exists x (x=2*t_+x_1 & [{x'=3}]x>0))".asSequent
   }
 
   it should "support diamond with postcond that binds variables we bind"  in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("<{x'=1}>\\forall x x^2 >= 0".asFormula)), solve(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List()
-    result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 & \\forall x x^2 >= 0)".asFormula)
+    result.subgoals.loneElement shouldBe "==> \\exists t_ (t_>=0 & \\forall x x^2 >= 0)".asSequent
   }
 
   it should "support box with postcond that binds variables we bind" in  withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=1}]\\forall x x^2 >= 0".asFormula)), solve(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List()
-    result.subgoals.head.succ should contain theSameElementsAs List("\\forall t_ (t_>=0 -> \\forall x x^2 >= 0)".asFormula)
+    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> \\forall x x^2 >= 0)".asSequent
   }
 
-  it should "support diamond with postcond that binds variables we bind via assignment" in  withMathematica { _ =>
+  it should "support diamond with postcond that binds variables we bind via assignment" in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("<{x'=1}>[x:= x + 1;] x^2 >= 0".asFormula)), solve(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante should contain theSameElementsAs List()
-    result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 & [x:=1*(0+1*t_-0)+x+1;]x^2 >= 0)".asFormula)
+    result.subgoals.loneElement shouldBe "==> \\exists t_ (t_>=0 & [x:=1*(0+1*t_-0)+x+1;]x^2 >= 0)".asSequent
   }
 
-  it should "support box with postcond that binds variables we bind via assignment" in  withMathematica { _ =>
+  it should "support box with postcond that binds variables we bind via assignment" in withMathematica { _ =>
     val result = proveBy(Sequent(IndexedSeq(), IndexedSeq("[{x'=1}][x:= x + 1;] x^2 >= 0".asFormula)), solve(1))
-    result.subgoals should have size 1
-    println("assign: result: " + result)
-    //result.subgoals.head.ante should contain theSameElementsAs List("x_1>0".asFormula)
-    //result.subgoals.head.succ should contain theSameElementsAs List("\\exists t_ (t_>=0 -> \\forall x (x=2*t_+x_1 -> [{x'=3}]x>0))".asFormula)
+    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0->[x:=1*(0+1*t_-0)+x+1;]x^2>=0)".asSequent
   }
 
   it should "solve a ModelPlex question" in withMathematica { _ =>
     val result = proveBy("(-1<=fpost_0()&fpost_0()<=(m-l)/ep)&\\forall c (c=cpost_0()->c=0&<{l'=fpost_0(),c'=1&0<=l&c<=ep}>((fpost()=fpost_0()&lpost()=l)&cpost()=c))".asFormula,
       solve(1, 1::0::1::1::Nil))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain theSameElementsAs List("(-1<=fpost_0()&fpost_0()<=(m-l)/ep)&\\forall c (c=cpost_0()->c=0&\\exists t_ (t_>=0 & \\forall s_ (0<=s_&s_<=t_ -> 0<=fpost_0()*s_+l&s_+c<=ep) & (fpost()=fpost_0()&lpost()=fpost_0()*t_+l)&cpost()=t_+c))".asFormula)
+    result.subgoals.loneElement shouldBe "==> (-1<=fpost_0()&fpost_0()<=(m-l)/ep)&\\forall c (c=cpost_0()->c=0&\\exists t_ (t_>=0 & \\forall s_ (0<=s_&s_<=t_ -> 0<=fpost_0()*s_+l&s_+c<=ep) & (fpost()=fpost_0()&lpost()=fpost_0()*t_+l)&cpost()=t_+c))".asSequent
   }
 
   "Axiomatic ODE solver for proofs" should "prove the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
@@ -494,9 +403,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "SetupTimeVar" should "work when time exists" in {
     val system = "[{x'=v}]1=1".asFormula
     val result = proveBy(system, addTimeVar(1))
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "[kyxtime:=0;][{x'=v,kyxtime'=1&true}]1=1".asFormula
+    result.subgoals.loneElement shouldBe "==> [kyxtime:=0;][{x'=v,kyxtime'=1&true}]1=1".asSequent
   }
 
   "CutInSolns" should "solve x'=y,t'=1" ignore withMathematica { _ =>
@@ -504,9 +411,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val f = "[kyxtime:=0;][kyxtime_0:=kyxtime;][x_0:=x;][t_0:=t;][{x'=y,t'=1}]x>=0".asFormula
     val t = AxiomaticODESolver.cutInSoln(2)(1, 1::1::1::1::Nil)
     val result = proveBy(f,t)
-    result.subgoals should have size 1
-    result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "[kyxtime:=0;][kyxtime_0:=kyxtime;][x_0:=x;][t_0:=t;][{x'=y,t'=1&true&x=y*(kyxtime-kyxtime_0)+x_0}]x>=0".asFormula
+    result.subgoals.loneElement shouldBe "==> [kyxtime:=0;][kyxtime_0:=kyxtime;][x_0:=x;][t_0:=t;][{x'=y,t'=1&true&x=y*(kyxtime-kyxtime_0)+x_0}]x>=0".asSequent
   }
 
   //@todo fix.
@@ -522,7 +427,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "SimplifyPostCondition" should "work" in withMathematica { _ =>
     val f = "[{x'=1}](true&x=22 -> x>0)".asFormula
     val t = simplifyPostCondition(1)(1, 1::Nil)
-    loneSucc(proveBy(f,t)) shouldBe "[{x'=1&true}]22>0".asFormula
+    proveBy(f,t).subgoals.loneElement shouldBe "==> [{x'=1&true}]22>0".asSequent
   }
 
   //@todo unsound bananas in post condition
@@ -548,7 +453,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val initialConds = conditionsToValues(extractInitialConditions(None)("x=1&v=2&a=3&t=0".asFormula))
     val system = "{x'=v,v'=a, t'=1}".asProgram.asInstanceOf[ODESystem]
     val result = Integrator.apply(initialConds, "t_".asVariable, system)
-    result shouldBe "x=a/2*t_^2+2*t_+1".asFormula :: "t=1*t_+0".asFormula :: "v=a*t_+2".asFormula :: Nil
+    result shouldBe "x=a*(t_^2/2)+2*t_+1".asFormula :: "t=1*t_+0".asFormula :: "v=a*t_+2".asFormula :: Nil
   }
 
   "IntegratorDiffSolution_" should "work as a _" in withMathematica { _ =>
@@ -594,20 +499,20 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "Tactic Library Dependencies" should "DGC" taggedAs IgnoreInBuildTest in {
     val f = "[{x' = v}]1=1".asFormula
     val t = (HilbertCalculus invokePrivate dgc(Variable("timeVar", None), Number(1)))(1)
-    loneSucc(proveBy(f,t)) shouldBe "\\exists timeVar [{x'=v,timeVar'=1&true}]1=1".asFormula
+    proveBy(f,t).subgoals.loneElement shouldBe "==> \\exists timeVar [{x'=v,timeVar'=1&true}]1=1".asSequent
   }
 
   /** @note there's a more robust version of this test in [[DifferentialTests]] */
   it should "DG" taggedAs IgnoreInBuildTest in {
     val f = "[{x'=v}]1=1".asFormula
     val t = DifferentialTactics.dG("zz' = 22*zz + 99".asDifferentialProgram, None)(1)
-    loneSucc(proveBy(f,t)) shouldBe "\\exists zz [{x'=v,zz'=22*zz+99&true}]1=1".asFormula
+    proveBy(f,t).subgoals.loneElement shouldBe "==> \\exists zz [{x'=v,zz'=22*zz+99&true}]1=1".asSequent
   }
 
   it should "assignbExists" in {
     val f = "\\exists kyxtime [{x'=v,kyxtime'=1&true}]1=1".asFormula
     val t = DLBySubst.assignbExists(Number(1))(1)
-    loneSucc(proveBy(f,t)) shouldBe "[kyxtime:=1;][{x'=v,kyxtime'=1&true}]1=1".asFormula
+    proveBy(f,t).subgoals.loneElement shouldBe "==> [kyxtime:=1;][{x'=v,kyxtime'=1&true}]1=1".asSequent
   }
 
   "Assignb in context" should "work" in {
@@ -615,7 +520,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     val pos = SuccPosition(SuccPos(0), PosInExpr(0::1::1::Nil)) //Also tests this as the appropriate position. See [[AxiomaticODESolver.apply]]'s definition of "timeAssignmentPos"
     val t = DebuggingTactics.debugAt("At that position is: ", doPrint=true)(pos) & HilbertCalculus.assignb(pos)
 
-    loneSucc(proveBy(f,t)) shouldBe "\\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(v*(kyxtime+1*t_)+1)^3>=1)".asFormula
+    proveBy(f,t).subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->true)->(v*(kyxtime+1*t_)+1)^3>=1)".asSequent
   }
 
   //endregion
