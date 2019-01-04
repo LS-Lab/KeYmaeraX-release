@@ -255,7 +255,7 @@ implyR(1); (andL('L)*); loop({`v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(
     diffInvariant({`y=old(y)`}, 1);
     dW(1); QE; done
     ,
-    hideL(-7=={`abs(x-xo_0)>v^2/(2*B())|abs(y-yo_0)>v^2/(2*B())`});
+    hideL(-13=={`abs(x-xo_0)>v^2/(2*B())|abs(y-yo_0)>v^2/(2*B())`});
     diffInvariant({`t>=0`}, 1);
     diffInvariant({`dx^2+dy^2=1`}, 1);
     diffInvariant({`v=old(v)+a*t`}, 1);

@@ -157,7 +157,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   /** Exhaustively chase all formulas in the sequent.
     * @see [[tacticChase]] */
-  def allTacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = SaturateTactic("ANON" by ((seq: Sequent) => {
+  def allTacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = SaturateTactic(
     //@note Execute on formulas in order of sequent; might be useful to sort according to some tactic priority.
     onAll("ANON" by ((ss: Sequent) => {
       ss.succ.zipWithIndex.map({ case (fml, i) => ?(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(SuccPosition.base0(i))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
@@ -165,7 +165,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     onAll("ANON" by ((ss: Sequent) => {
       ss.ante.zipWithIndex.map({ case (fml, i) => ?(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(AntePosition.base0(i))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
     }))
-  }))
+  )
 
   val prop: BelleExpr = "prop" by allTacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
                                                 ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse)

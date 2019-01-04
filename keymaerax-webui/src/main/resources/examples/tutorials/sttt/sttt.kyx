@@ -569,13 +569,13 @@ implyR(1) ; (andL('L)*) ; loop({`v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) +
   QE ; done,
   QE ; done,
   chase('R) ; normalize ; <(
-    hideL(-9) ; dC({`c>=0`}, 1) ; <(
+    hideL(-15=={`abs(y-ly())+v^2/(2*b()) < lw()`}) ; dC({`c>=0`}, 1) ; <(
       dC({`dx^2+dy^2=1`}, 1) ; <(
         dC({`v=old(v)+a*c`}, 1) ; <(
           dC({`-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)`}, 1) ; <(
             (andL('L)*) ; dW(1) ;
             (((andL('L)|(orR('R)|(implyR('R)|(notL('L)|notR('R))))))*) ;
-            transformEquality({`ep()=c`}, -9=={`abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()`}) ;
+            transformEquality({`ep()=c`}, -6=={`abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()`}) ;
             prop ; doall(smartQE; done),
             dI(1) ; done
           ),
