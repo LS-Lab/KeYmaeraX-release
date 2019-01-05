@@ -351,7 +351,7 @@ object AxiomaticODESolver {
   /* Produces a tactic that permutes ODE into canonical ordering or a tacatic that errors if ode contains cycles */
   def makeCanonical(ode: DifferentialProgram, dom: Formula, post: Formula, pos: Position): BelleExpr = {
     dfs(ode) match {
-      case None => DebuggingTactics.error("Expected ODE to be linear and in correct order.")
+      case None => DebuggingTactics.error("ODE not known to have polynomial solutions. Differential equations with cyclic dependencies need invariants.")
       case Some(ord) => DebuggingTactics.debug("Sorting to " + ord.mkString("::"), ODE_DEBUGGER) & selectionSort(dom, post, ode, ord, pos)
     }
   }
