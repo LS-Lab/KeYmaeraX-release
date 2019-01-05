@@ -227,16 +227,24 @@ object KeYmaeraXArchiveParser {
     def inheritDefs(defs: List[Definition]): ArchiveEntries = ArchiveEntries(entries.map(_.inheritDefs(defs)))
   }
 
-  private[parser] abstract class Definition(val name: String, val index: Option[Int], val definition: Option[Expression], val loc: Location) extends ArchiveItem {
+  private[parser] abstract class Definition(val name: String, val index: Option[Int],
+                                            val definition: Either[Option[Expression], List[Token]],
+                                            val loc: Location) extends ArchiveItem {
     def extendLocation(end: Location): Definition
   }
-  private[parser] case class FuncPredDef(override val name: String, override val index: Option[Int], sort: Sort, signature: List[NamedSymbol], override val definition: Option[Expression], override val loc: Location) extends Definition(name, index, definition, loc) {
+  private[parser] case class FuncPredDef(override val name: String, override val index: Option[Int], sort: Sort,
+                                         signature: List[NamedSymbol],
+                                         override val definition: Either[Option[Expression], List[Token]],
+                                         override val loc: Location) extends Definition(name, index, definition, loc) {
     override def extendLocation(end: Location): Definition = FuncPredDef(name, index, sort, signature, definition, loc.spanTo(end))
   }
-  private[parser] case class ProgramDef(override val name: String, override val index: Option[Int], override val definition: Option[Program], annotations: List[Annotation], override val loc: Location) extends Definition(name, index, definition, loc) {
+  private[parser] case class ProgramDef(override val name: String, override val index: Option[Int],
+                                        override val definition: Either[Option[Program], List[Token]],
+                                        annotations: List[Annotation], override val loc: Location) extends Definition(name, index, definition, loc) {
     override def extendLocation(end: Location): Definition = ProgramDef(name, index, definition, annotations, loc.spanTo(end))
   }
-  private[parser] case class VarDef(override val name: String, override val index: Option[Int], override val loc: Location) extends Definition(name, index, None, loc) {
+  private[parser] case class VarDef(override val name: String, override val index: Option[Int],
+                                    override val loc: Location) extends Definition(name, index, Left(None), loc) {
     override def extendLocation(end: Location): Definition = VarDef(name, index, loc.spanTo(end))
   }
   private[parser] case class Definitions(defs: List[Definition], vars: List[Definition]) extends ArchiveItem
@@ -256,15 +264,15 @@ object KeYmaeraXArchiveParser {
 
   private[parser] object BuiltinDefinitions {
     val defs: Declaration =
-      (FuncPredDef("abs", None, Real, DotTerm(Real, None) :: Nil, None, UnknownLocation) ::
-       FuncPredDef("min", None, Real, DotTerm(Real, Some(0)) :: DotTerm(Real, Some(1)) :: Nil, None, UnknownLocation) ::
-       FuncPredDef("max", None, Real, DotTerm(Real, Some(0)) :: DotTerm(Real, Some(1)) :: Nil, None, UnknownLocation) ::
+      (FuncPredDef("abs", None, Real, DotTerm(Real, None) :: Nil, Left(None), UnknownLocation) ::
+       FuncPredDef("min", None, Real, DotTerm(Real, Some(0)) :: DotTerm(Real, Some(1)) :: Nil, Left(None), UnknownLocation) ::
+       FuncPredDef("max", None, Real, DotTerm(Real, Some(0)) :: DotTerm(Real, Some(1)) :: Nil, Left(None), UnknownLocation) ::
        Nil).map(convert).reduce(_++_)
   }
 
   private[parser] object BuiltinAnnotationDefinitions {
     val defs: Declaration =
-      (FuncPredDef("old", None, Real, DotTerm(Real, None) :: Nil, None, UnknownLocation) ::
+      (FuncPredDef("old", None, Real, DotTerm(Real, None) :: Nil, Left(None), UnknownLocation) ::
        Nil).map(convert).reduce(_++_)
   }
 
@@ -451,11 +459,11 @@ object KeYmaeraXArchiveParser {
       }
       case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ Token(sort, _) if (isReal(sort) || isBool(sort) || isProgram(sort)) && la.isInstanceOf[IDENT] => shift(st)
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), endLoc) if isReal(sort) =>
-        reduce(st, 2, Bottom :+ FuncPredDef(name, index, Real, Nil, None, startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
+        reduce(st, 2, Bottom :+ FuncPredDef(name, index, Real, Nil, Left(None), startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), endLoc) if isBool(sort) =>
-        reduce(st, 2, Bottom :+ FuncPredDef(name, index, Bool, Nil, None, startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
+        reduce(st, 2, Bottom :+ FuncPredDef(name, index, Bool, Nil, Left(None), startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
       case r :+ (defs: Definitions) :+ (defsBlock@Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _)) :+ Token(sort, startLoc) :+ Token(IDENT(name, index), endLoc) if isProgram(sort) =>
-        reduce(st, 2, Bottom :+ ProgramDef(name, index, None, Nil, startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
+        reduce(st, 2, Bottom :+ ProgramDef(name, index, Left(None), Nil, startLoc.spanTo(endLoc.end)), r :+ defs :+ defsBlock)
 
       case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ (_: FuncPredDef) if la == LPAREN => shift(st)
       case _ :+ (_: Definitions) :+ Token(DEFINITIONS_BLOCK | FUNCTIONS_BLOCK, _) :+ (_: FuncPredDef) :+ Token(LPAREN, _) if isReal(la) => shift(st)
@@ -486,8 +494,12 @@ object KeYmaeraXArchiveParser {
               val (predDefBlock, remainder) = rest.span(_.tok != SEMI)
               (predDefBlock, remainder.head, remainder, predDefBlock.last.loc.end)
             }
-          val pred: Formula = try {
-            KeYmaeraXParser.formulaTokenParser(predDefBlock :+ Token(EOF, remainder.head.loc))
+          val pred: Either[Option[Formula], List[Token]] = try {
+            if (!predDefBlock.exists(_.tok == EXERCISE_PLACEHOLDER)) {
+              Left(Some(KeYmaeraXParser.formulaTokenParser(predDefBlock :+ Token(EOF, remainder.head.loc))))
+            } else {
+              Right(predDefBlock :+ Token(EOF, remainder.head.loc))
+            }
           } catch {
             case ex: ParseException =>
               val (loc, found) = ex.loc match {
@@ -499,7 +511,7 @@ object KeYmaeraXArchiveParser {
               }
               throw new ParseException(ex.msg, loc, found, ex.expect, ex.after, ex.state, ex)
           }
-          ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, Some(pred), next.loc.spanTo(endLoc)), remainder)
+          ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, pred, next.loc.spanTo(endLoc)), remainder)
         case SEMI | PERIOD => shift(st)
         case EQ => throw ParseException("Predicate must be defined by equivalence", st, nextTok, EQUIV.img)
         case _ => throw ParseException("Unexpected token in predicate definition", st, nextTok, EQUIV.img)
@@ -517,8 +529,12 @@ object KeYmaeraXArchiveParser {
               val (funcDefBlock, remainder) = rest.span(_.tok != SEMI)
               (funcDefBlock, remainder.head, remainder, funcDefBlock.last.loc.end)
             }
-          val term: Term = try {
-            KeYmaeraXParser.termTokenParser(funcDefBlock :+ Token(EOF, remainder.head.loc))
+          val term: Either[Option[Term], List[Token]] = try {
+            if (!funcDefBlock.exists(_.tok == EXERCISE_PLACEHOLDER)) {
+              Left(Some(KeYmaeraXParser.termTokenParser(funcDefBlock :+ Token(EOF, remainder.head.loc))))
+            } else {
+              Right(funcDefBlock :+ Token(EOF, remainder.head.loc))
+            }
           } catch {
             case ex: ParseException =>
               val (loc, found) = ex.loc match {
@@ -530,7 +546,7 @@ object KeYmaeraXArchiveParser {
               }
               throw new ParseException(ex.msg, loc, found, ex.expect, ex.after, ex.state, ex)
           }
-          ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, Some(term), next.loc.spanTo(endLoc)), remainder)
+          ParseState(r :+ defs :+ defsBlock :+ FuncPredDef(next.name, next.index, next.sort, next.signature, term, next.loc.spanTo(endLoc)), remainder)
         case SEMI | PERIOD => shift(st)
         case EQUIV => throw ParseException("Function must be defined by equality", st, nextTok, EQ.img)
         case _ => throw ParseException("Unexpected token in function definition", st, Expected.ExpectTerminal(EQ) :: Expected.ExpectTerminal(SEMI) :: Nil)
@@ -549,8 +565,12 @@ object KeYmaeraXArchiveParser {
           val (Token(LBRACE, _) :: prgDefBlock, defEnd) = rest.span(t => { if (t.tok == LBRACE) openParens += 1 else if (t.tok == RBRACE) openParens -= 1; openParens > 0})
           if (defEnd.isEmpty) throw ParseException.imbalancedError("Unmatched opening brace in program definition", rest.head, RBRACE.img, ParseState(Bottom :+ rest.head, rest.tail))
           val (rbrace@Token(RBRACE, endLoc)) :: remainder = defEnd
-          val program: Program = try {
-            KeYmaeraXParser.programTokenParser(prgDefBlock :+ Token(EOF, endLoc))
+          val program: Either[Option[Program], List[Token]] = try {
+            if (!prgDefBlock.exists(_.tok == EXERCISE_PLACEHOLDER)) {
+              Left(Some(KeYmaeraXParser.programTokenParser(prgDefBlock :+ Token(EOF, endLoc))))
+            } else {
+              Right(prgDefBlock :+ Token(EOF, endLoc))
+            }
           } catch {
             case ex: ParseException =>
               val (loc, found) = ex.loc match {
@@ -563,7 +583,7 @@ object KeYmaeraXArchiveParser {
               throw new ParseException(ex.msg, loc, found, ex.expect, ex.after, ex.state, ex)
           }
           parser.setAnnotationListener(annotationListener)
-          ParseState(r :+ defs :+ defsBlock :+ ProgramDef(next.name, next.index, Some(program), annotations.toList, next.loc.spanTo(endLoc.end)), remainder)
+          ParseState(r :+ defs :+ defsBlock :+ ProgramDef(next.name, next.index, program, annotations.toList, next.loc.spanTo(endLoc.end)), remainder)
         case SEMI | PERIOD => shift(st)
         case EQUIV | EQ => throw ParseException("Program must be defined by " + PRG_DEF.img, st, nextTok, PRG_DEF.img)
         case _ => throw ParseException("Unexpected token in program definition", st, Expected.ExpectTerminal(PRG_DEF) :: Expected.ExpectTerminal(SEMI) :: Nil)
@@ -824,7 +844,7 @@ object KeYmaeraXArchiveParser {
   }
 
   private def convert(d: Definition): Declaration = d match {
-    case FuncPredDef(name, index, sort, signature, definition, loc) =>
+    case FuncPredDef(name, index, sort, signature, Left(definition), loc) =>
       // backwards compatible dots
       val dotTerms =
         if (signature.size == 1) signature.map(v => v -> DotTerm(v.sort, None))
@@ -836,8 +856,12 @@ object KeYmaeraXArchiveParser {
         }
       }))
       Declaration(Map((name, index) -> (Some(toSort(signature)), sort, dottedDef, loc)))
-    case ProgramDef(name, index, definition, _, loc) =>
+    case FuncPredDef(name, index, sort, signature, Right(_), loc) =>
+      Declaration(Map((name, index) -> (Some(toSort(signature)), sort, None, loc)))
+    case ProgramDef(name, index, Left(definition), _, loc) =>
       Declaration(Map((name, index) -> (Some(Unit), Trafo, definition, loc)))
+    case ProgramDef(name, index, Right(_), _, loc) =>
+      Declaration(Map((name, index) -> (Some(Unit), Trafo, None, loc)))
     case VarDef(name, index, loc) =>
       Declaration(Map((name, index) -> (None, Real, None, loc)))
   }

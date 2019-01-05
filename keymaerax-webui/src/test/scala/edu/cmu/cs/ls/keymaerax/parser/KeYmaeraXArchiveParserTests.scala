@@ -1140,6 +1140,33 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.info shouldBe empty
   }
 
+  it should "accept exercises in definitions" in {
+    val input =
+      """Exercise "Exercise 1".
+        | Definitions Bool geq(Real a, Real b) <-> ( __________ ); End.
+        | ProgramVariables Real x, y; End.
+        | Problem __________ -> geq(x,y) End.
+        |End.""".stripMargin
+    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    entry.name shouldBe "Exercise 1"
+    entry.kind shouldBe "exercise"
+    entry.fileContent shouldBe
+      """Exercise "Exercise 1".
+        | Definitions Bool geq(Real a, Real b) <-> ( __________ ); End.
+        | ProgramVariables Real x, y; End.
+        | Problem __________ -> geq(x,y) End.
+        |End.""".stripMargin
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, None, UnknownLocation),
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "false".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
   "Convenience wrappers" should "parse a plain formula" in {
     KeYmaeraXArchiveParser.parseAsProblemOrFormula("x>0") shouldBe "x>0".asFormula
   }
