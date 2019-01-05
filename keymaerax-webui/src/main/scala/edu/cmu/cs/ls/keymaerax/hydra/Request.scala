@@ -751,19 +751,8 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
         } else parsedArchiveEntries
 
       val (failedModels, succeededModels) = archiveEntries.foldLeft((List[String](), List[(String, Int)]()))({ case ((failedImports, succeededImports), entry) =>
-        val uniqueModelName = db.getUniqueModelName(userId, entry.name)
-        db.createModel(userId, uniqueModelName, entry.problemContent, currentDate(), entry.info.get("Description"),
-          entry.info.get("Title"), entry.info.get("Link"), entry.tactics.headOption.map(_._2)) match {
-          case None =>
-            // really should not get here. print and continue importing the remainder of the archive
-            logger.info(s"Model import failed: model ${entry.name} already exists in the database and attempt of importing under uniquified name $uniqueModelName failed. Continuing with remainder of the archive.")
-            (failedImports :+ entry.name, succeededImports)
-          case Some(modelId) =>
-            entry.tactics.foreach({ case (tname, ttext, _) =>
-              db.createProofForModel(modelId, tname, "Proof from archive", currentDate(), Some(ttext))
-            })
-            (failedImports, succeededImports :+ (entry.name -> modelId))
-        }
+        val result = DatabasePopulator.importModel(db, userId, prove=false)(DatabasePopulator.toTutorialEntry(entry))
+        (failedImports ++ result.right.toSeq, succeededImports ++ result.left.toSeq)
       })
       if (failedModels.isEmpty) {
         if (archiveEntries.size == 1) {
