@@ -215,7 +215,7 @@ object KeYmaeraXArchiveParser {
                                           inheritedDefinitions: List[Definition],
                                           definitions: List[Definition],
                                           vars: List[Definition],
-                                          problem: Formula,
+                                          problem: Either[Formula,List[Token]],
                                           annotations: List[Annotation],
                                           tactics: List[Tactic],
                                           info: Map[String, String]) extends ArchiveItem {
@@ -241,7 +241,7 @@ object KeYmaeraXArchiveParser {
   }
   private[parser] case class Definitions(defs: List[Definition], vars: List[Definition]) extends ArchiveItem
   private[parser] case class Annotation(element: Expression, annotation: Expression) extends ArchiveItem
-  private[parser] case class Problem(fml: Formula, annotations: List[Annotation]) extends ArchiveItem
+  private[parser] case class Problem(fml: Either[Formula,List[Token]], annotations: List[Annotation]) extends ArchiveItem
   private[parser] case class Tactic(name: String, tacticText: String, blockLoc: Location, belleExprLoc: Location) extends ArchiveItem
   private[parser] case class Tactics(tactics: List[Tactic]) extends ArchiveItem
   private[parser] case class MetaInfo(info: Map[String, String]) extends ArchiveItem
@@ -622,9 +622,13 @@ object KeYmaeraXArchiveParser {
             case Some(t) => throw ParseException("Missing problem delimiter", st, t, END_BLOCK.img)
             case None => // problem seems correctly ended
           }
-          val problem: Formula = parser.formulaTokenParser(problemBlock :+ Token(EOF, endLoc))
-          parser.setAnnotationListener(annotationListener)
-          ParseState(st.stack :+ Problem(problem, annotations.toList) :+ Tactics(Nil), remainder)
+          if (problemBlock.exists(_.tok == EXERCISE_PLACEHOLDER)) {
+            ParseState(st.stack :+ Problem(Right(problemBlock :+ Token(EOF, endLoc)), annotations.toList) :+ Tactics(Nil), remainder)
+          } else {
+            val problem: Formula = parser.formulaTokenParser(problemBlock :+ Token(EOF, endLoc))
+            parser.setAnnotationListener(annotationListener)
+            ParseState(st.stack :+ Problem(Left(problem), annotations.toList) :+ Tactics(Nil), remainder)
+          }
         case _ if !rest.exists(_.tok == PROBLEM_BLOCK) => throw ParseException("Missing problem block", st, nextTok, PROBLEM_BLOCK.img)
         case _ if  rest.exists(_.tok == PROBLEM_BLOCK) => throw ParseException("Misplaced problem block: problem expected before tactics", st, nextTok, PROBLEM_BLOCK.img)
       }
@@ -721,11 +725,6 @@ object KeYmaeraXArchiveParser {
 
   /** Postprocesses parse results. */
   private def convert(entry: ArchiveEntry, text: String, parseTactics: Boolean): ParsedArchiveEntry = {
-    KeYmaeraXParser.semanticAnalysis(entry.problem) match {
-      case None =>
-      case Some(error) => throw ParseException("Semantic analysis error\n" + error, entry.problem)
-    }
-
     //@todo report multiple duplicate symbols
     val duplicateDefs = entry.definitions.groupBy(d => (d.name, d.index)).filter({case (_, defs) => defs.size > 1})
     if (duplicateDefs.nonEmpty) throw ParseException("Duplicate symbol '" + duplicateDefs.head._1._1 + "'", duplicateDefs.head._2.last.loc)
@@ -739,48 +738,11 @@ object KeYmaeraXArchiveParser {
     if (illegalOverride.nonEmpty) throw ParseException("Symbol '" + illegalOverride.head.name + "' overrides inherited definition; must declare override", illegalOverride.head.loc)
 
     val definitions = ((entry.inheritedDefinitions ++ entry.definitions).map(convert) ++ entry.vars.map(convert)).reduceOption(_++_).getOrElse(Declaration(Map.empty))
-    val elaborated = definitions.exhaustiveSubst(entry.problem)
-    typeAnalysis(definitions ++ BuiltinDefinitions.defs, elaborated) //throws ParseExceptions.
-
-    // check that definitions and use match
-    val symbols = StaticSemantics.symbols(entry.problem) ++ definitions.substs.flatMap(s => StaticSemantics.symbols(s.repl))
-    val defSymbols = definitions.substs.map(_.what)
-    val mismatches = defSymbols.map({
-      case n: NamedSymbol => symbols.find(u => u.name == n.name && u.index == n.index && u.kind != n.kind).map(n -> _)
-      case _ => None
-    }).filter(_.isDefined).map(_.get)
-    if (mismatches.nonEmpty) {
-      val mismatchDescription = mismatches.map({ case (defSym, sym) =>
-        "Symbol '" + defSym.prettyString + "' defined as " + defSym.kind +
-          ", but used as " + sym.kind + " in " + sym.prettyString}).mkString("\n")
-      val found = mismatches.map({ case (_, sym) => sym.prettyString}).mkString(", ")
-      val expected = mismatches.map({ case (defSym, _) => defSym.prettyString }).mkString(", ")
-      throw new ParseException("All definitions and uses must match, but found the following mismatches:\n" +
-        mismatchDescription, UnknownLocation, found, expected, "", "")
-    }
-
-    // collect annotations
-    val defAnnotations = (entry.inheritedDefinitions ++ entry.definitions).flatMap({ case ProgramDef(_, _, _, annotations, _) => annotations case _ => Nil })
-
-    // report annotations
-    (defAnnotations ++ entry.annotations).foreach({
-      case Annotation(e: Program, a: Formula) =>
-        val substPrg = definitions.exhaustiveSubst(e)
-        val substFml = definitions.exhaustiveSubst(a)
-        typeAnalysis(definitions ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, substFml)
-        KeYmaeraXParser.annotationListener(substPrg, substFml)
-      case Annotation(_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
-      case Annotation(e, _) => throw ParseException("Annotation on programs only, but was on " + e.prettyString, UnknownLocation)
-    })
-
-    val tactics =
-      if (parseTactics) entry.tactics.map(convert(_, definitions))
-      else entry.tactics.map(t => (t.name, t.tacticText, Idioms.nil))
 
     val sharedDefsText = if (entry.inheritedDefinitions.nonEmpty) {
       "SharedDefinitions\n" +
-      entry.inheritedDefinitions.map(d => slice(text, d.loc)).mkString("\n") +
-      "\nEnd.\n"
+        entry.inheritedDefinitions.map(d => slice(text, d.loc)).mkString("\n") +
+        "\nEnd.\n"
     } else ""
 
     val entryText = sharedDefsText + (if (entry.loc.begin.line > 0) slice(text, entry.loc) else text)
@@ -792,26 +754,73 @@ object KeYmaeraXArchiveParser {
         } else tacticStripped
       } else text)
 
-    val entryKinds = Map("ArchiveEntry"->"theorem", "Theorem"->"theorem", "Lemma"->"lemma", "Exercise"->"theorem")
+    entry.problem match {
+      case Left(problem) =>
+        KeYmaeraXParser.semanticAnalysis(problem) match {
+          case None =>
+          case Some(error) => throw ParseException("Semantic analysis error\n" + error, problem)
+        }
 
-    // double-check that the extracted problem text still parses
+        val elaborated = definitions.exhaustiveSubst(problem)
+        typeAnalysis(definitions ++ BuiltinDefinitions.defs, elaborated) //throws ParseExceptions.
 
-    val tokens = KeYmaeraXLexer.inMode(problemText, ProblemFileMode)
-    val reparse = try {
-      parseLoop(ParseState(Bottom, tokens), text).stack
-    } catch {
-      case ex: ParseException => throw ParseException("Even though archive parses, extracted problem does not parse (try reformatting):\n" + problemText, UnknownLocation)
+        // check that definitions and use match
+        val symbols = StaticSemantics.symbols(problem) ++ definitions.substs.flatMap(s => StaticSemantics.symbols(s.repl))
+        val defSymbols = definitions.substs.map(_.what)
+        val mismatches = defSymbols.map({
+          case n: NamedSymbol => symbols.find(u => u.name == n.name && u.index == n.index && u.kind != n.kind).map(n -> _)
+          case _ => None
+        }).filter(_.isDefined).map(_.get)
+        if (mismatches.nonEmpty) {
+          val mismatchDescription = mismatches.map({ case (defSym, sym) =>
+            "Symbol '" + defSym.prettyString + "' defined as " + defSym.kind +
+              ", but used as " + sym.kind + " in " + sym.prettyString}).mkString("\n")
+          val found = mismatches.map({ case (_, sym) => sym.prettyString}).mkString(", ")
+          val expected = mismatches.map({ case (defSym, _) => defSym.prettyString }).mkString(", ")
+          throw new ParseException("All definitions and uses must match, but found the following mismatches:\n" +
+            mismatchDescription, UnknownLocation, found, expected, "", "")
+        }
+
+        // collect annotations
+        val defAnnotations = (entry.inheritedDefinitions ++ entry.definitions).flatMap({ case ProgramDef(_, _, _, annotations, _) => annotations case _ => Nil })
+
+        // report annotations
+        (defAnnotations ++ entry.annotations).foreach({
+          case Annotation(e: Program, a: Formula) =>
+            val substPrg = definitions.exhaustiveSubst(e)
+            val substFml = definitions.exhaustiveSubst(a)
+            typeAnalysis(definitions ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, substFml)
+            KeYmaeraXParser.annotationListener(substPrg, substFml)
+          case Annotation(_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
+          case Annotation(e, _) => throw ParseException("Annotation on programs only, but was on " + e.prettyString, UnknownLocation)
+        })
+
+        val tactics =
+          if (parseTactics) entry.tactics.map(convert(_, definitions))
+          else entry.tactics.map(t => (t.name, t.tacticText, Idioms.nil))
+
+        val entryKinds = Map("ArchiveEntry"->"theorem", "Theorem"->"theorem", "Lemma"->"lemma", "Exercise"->"theorem")
+
+        // double-check that the extracted problem text still parses
+
+        val tokens = KeYmaeraXLexer.inMode(problemText, ProblemFileMode)
+        val reparse = try {
+          parseLoop(ParseState(Bottom, tokens), text).stack
+        } catch {
+          case _: ParseException => throw ParseException("Even though archive parses, extracted problem does not parse (try reformatting):\n" + problemText, UnknownLocation)
+        }
+        reparse match {
+          case Bottom :+ Accept(entries) if entries.size == 1 =>
+            if (entries.head.problem != entry.problem) throw ParseException("Even though archive parses, extracted problem does not match archive entry:\n" + problemText, UnknownLocation)
+          case Bottom :+ Accept(entries) if entries.size != 1 => throw ParseException("Even though archive parses, extracted problem artifact results in unexpected number of problems (expected 1 but got " + entries.size + "): \n" + entries.mkString("\n"), UnknownLocation)
+          case _ :+ Error(msg, loc, st) => throw ParseException("Even though archive parses, extracted problem artifact does not parse: " + msg, loc, "<unknown>", "<unknown>", "", st)
+          case _ => throw new AssertionError("Even though archive parses, extracted problem artifact does not parse: Parser terminated with unexpected stack")
+        }
+
+        ParsedArchiveEntry(entry.name, entryKinds(entry.kind), entryText.trim(), problemText.trim(), definitions, elaborated, tactics, entry.info)
+      case Right(_) =>
+        ParsedArchiveEntry(entry.name, "exercise", entryText.trim(), problemText.trim(), definitions, False, Nil, entry.info)
     }
-    reparse match {
-      case Bottom :+ Accept(entries) if entries.size == 1 =>
-        if (entries.head.problem != entry.problem) throw ParseException("Even though archive parses, extracted problem does not match archive entry:\n" + problemText, UnknownLocation)
-      case Bottom :+ Accept(entries) if entries.size != 1 => throw ParseException("Even though archive parses, extracted problem artifact results in unexpected number of problems (expected 1 but got " + entries.size + "): \n" + entries.mkString("\n"), UnknownLocation)
-      case _ :+ Error(msg, loc, st) => throw ParseException("Even though archive parses, extracted problem artifact does not parse: " + msg, loc, "<unknown>", "<unknown>", "", st)
-      case _ => throw new AssertionError("Even though archive parses, extracted problem artifact does not parse: Parser terminated with unexpected stack")
-    }
-
-
-    ParsedArchiveEntry(entry.name, entryKinds(entry.kind), entryText.trim(), problemText.trim(), definitions, elaborated, tactics, entry.info)
   }
 
   private def convert(d: Definition): Declaration = d match {

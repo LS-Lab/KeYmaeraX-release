@@ -739,14 +739,7 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
 
 class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: String, modelName: String) extends UserRequest(userId) with WriteRequest {
   def resultingResponses(): List[Response] = {
-    if (KeYmaeraXArchiveParser.isExercise(archiveText)) {
-      if (db.getModelList(userId).map(_.name).contains(modelName)) {
-        ModelUploadResponse(None, Some("A model with name " + modelName + " already exists, please choose a different name")) :: Nil
-      } else {
-        val createdId = db.createModel(userId, modelName, archiveText, currentDate()).map(_.toString)
-        ModelUploadResponse(createdId, None) :: Nil
-      }
-    } else try {
+    try {
       val parsedArchiveEntries = KeYmaeraXArchiveParser.parse(archiveText)
 
       //@note archive parser augments a plain formula with definitions and flags it with name '<undefined>'

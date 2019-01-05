@@ -219,6 +219,7 @@ private object ANYTHING extends OPERATOR("??") {
 }
 private object PSEUDO  extends Terminal("<pseudo>")
 
+private object EXERCISE_PLACEHOLDER extends Terminal("__________")
 
 // @annotations
 
@@ -681,6 +682,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) with Logging {
 
       case PRG_DEF.startPattern(_*) => consumeTerminalLength(PRG_DEF, loc)
       case COLON.startPattern(_*) => consumeTerminalLength(COLON, loc)
+
+      case EXERCISE_PLACEHOLDER.startPattern(_*) => consumeTerminalLength(EXERCISE_PLACEHOLDER, loc)
 
       case _ if s.isEmpty => None
         //@todo should be LexException inheriting

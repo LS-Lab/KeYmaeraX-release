@@ -1113,6 +1113,33 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     entry.info shouldBe empty
   }
 
+  it should "accept exercises" in {
+    val input =
+      """Exercise "Exercise 1".
+        | Definitions Bool geq(Real a, Real b) <-> ( a >= b ); End.
+        | ProgramVariables Real x, y; End.
+        | Problem __________ -> geq(x,y) End.
+        |End.""".stripMargin
+    val entry = KeYmaeraXArchiveParser.parse(input).loneElement
+    entry.name shouldBe "Exercise 1"
+    entry.kind shouldBe "exercise"
+    entry.fileContent shouldBe
+      """Exercise "Exercise 1".
+        | Definitions Bool geq(Real a, Real b) <-> ( a >= b ); End.
+        | ProgramVariables Real x, y; End.
+        | Problem __________ -> geq(x,y) End.
+        |End.""".stripMargin
+    entry.defs should beDecl(
+      Declaration(Map(
+        ("geq", None) -> (Some(Tuple(Real, Real)), Bool, Some("._0 >= ._1".asFormula), UnknownLocation),
+        ("x", None) -> (None, Real, None, UnknownLocation),
+        ("y", None) -> (None, Real, None, UnknownLocation)
+      )))
+    entry.model shouldBe "false".asFormula
+    entry.tactics shouldBe empty
+    entry.info shouldBe empty
+  }
+
   "Convenience wrappers" should "parse a plain formula" in {
     KeYmaeraXArchiveParser.parseAsProblemOrFormula("x>0") shouldBe "x>0".asFormula
   }
@@ -1228,9 +1255,11 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1".
         | Problem. true End.""".stripMargin
-    ) should have message """2:20 Every entry (including ArchiveEntry, Lemma, Theorem, and Exercise) needs an End. delimiter
-                            |Found:    <EOF> (EOF$) at 2:20 to EOF$
-                            |Expected: End (END_BLOCK$)""".stripMargin
+    ) should have message """2:20 ArchiveEntry has no matching End.
+                            |unmatched: ArchiveEntry|Lemma|Theorem|Exercise (ArchiveEntry) at 1:1 to 1:12--2:20 to EOF$
+                            |Found:    EOF$ at 2:20 to EOF$
+                            |Expected: End.
+                            |Hint: Every entry (including ArchiveEntry, Problem, Lemma, Theorem, and Exercise) needs its own End. delimiter.""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1".
@@ -1238,9 +1267,11 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |Theorem "Entry 2".
         | Problem. false->true End.
         |End.""".stripMargin
-    ) should have message """3:1 Every entry (including ArchiveEntry, Lemma, Theorem, and Exercise) needs an End. delimiter
-                           |Found:    ArchiveEntry|Lemma|Theorem|Exercise (Theorem) at 3:1 to 3:7
-                           |Expected: End (END_BLOCK$)""".stripMargin
+    ) should have message """3:1 ArchiveEntry has no matching End.
+                            |unmatched: ArchiveEntry|Lemma|Theorem|Exercise (ArchiveEntry) at 1:1 to 1:12--3:1 to 3:7
+                            |Found:    Theorem at 3:1 to 3:7
+                            |Expected: End.
+                            |Hint: Every entry (including ArchiveEntry, Problem, Lemma, Theorem, and Exercise) needs its own End. delimiter.""".stripMargin
   }
 
   it should "report a missing definitions delimiter" in {
@@ -1587,9 +1618,9 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |  [{?true;}*@invariant(fg > 0)]true
         |End.""".stripMargin
     ) should have message """<somewhere> type analysis: undefined symbol fg with index None
-                            |Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.
                             |Found:    undefined symbol at <somewhere>
-                            |Expected: BaseVariable of sort Real""".stripMargin
+                            |Expected: BaseVariable of sort Real
+                            |Hint: Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.""".stripMargin
   }
 
   it should "report program constant and differential program constant mismatches" in {
@@ -1626,11 +1657,8 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | Problem f(f(f(2,3))) End.
         |End.""".stripMargin
     ) should have message
-      """<somewhere> Semantic analysis error
-        |semantics: Expect unique names_index that identify a unique type.
-        |ambiguous: f:Real->Bool and f:Real->Real and f:(Real,Real)->Real
-        |symbols:   f, f, f
-        |Found:    <unknown> at <somewhere>
+      """2:66 Duplicate symbol 'f'
+        |Found:    <unknown> at 2:66 to 2:88
         |Expected: <unknown>""".stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
