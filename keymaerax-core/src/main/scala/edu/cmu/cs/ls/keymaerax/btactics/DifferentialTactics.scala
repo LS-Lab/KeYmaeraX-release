@@ -392,12 +392,12 @@ private object DifferentialTactics extends Logging {
    */
  def DconstV : DependentPositionTactic = "DconstV" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel, "DconstV only at top-level positions")
-    //TODO: possibly the postcondition could be simplified
     val dom = seq.sub(pos) match {
       case Some(Box(ODESystem(_, dom), p)) => dom
       case Some(Diamond(ODESystem(_, dom), p)) => dom
       case _ => throw new BelleThrowable("DconstV adds constants into domain constraint for box/diamond ODEs")
     }
+
     //The constant context
     val constCtxt = TacticHelper.propertiesOfConstants(seq,pos.checkTop)
     if(constCtxt.isEmpty)
@@ -928,9 +928,9 @@ private object DifferentialTactics extends Logging {
           /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
           diffCut(inv)(pos) <(
             skip,
-            odeInvariant()(pos) & done) &
+            odeInvariant()(pos)) &
         // continue outside <(skip, ...) so that cut is proved before used
-        (odeInvariant()(pos) & done | fastODE(finish)(pos)) &
+        (odeInvariant()(pos) | fastODE(finish)(pos)) &
         DebuggingTactics.debug("[ODE] Inv Candidate done")
       }
     )
@@ -1417,20 +1417,19 @@ private object DifferentialTactics extends Logging {
     val reorderConfig = tryHard
 
     //Add constant assumptions to domain constraint
-//    DebuggingTactics.print("DConstV") &
+    SaturateTactic(andL('L)) & //Safe because pos is guaranteed to be in the succedent
     DifferentialTactics.DconstV(pos) &
-      //Naive simplification of domain constraint
-//      DebuggingTactics.print("domSimplify") &
-      DifferentialTactics.domSimplify(pos) &
-      DebuggingTactics.debug("odeInvariant close") &
-      (
-//        DebuggingTactics.print("try DWQE") &
-          (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
-//        DebuggingTactics.print("try sAI closed plus") &
-          ODEInvariance.sAIclosedPlus(rankConfig)(pos) |
-//        DebuggingTactics.print("try sAIR1") &
-          ODEInvariance.sAIRankOne(reorderConfig)(pos)
-        ) | DebuggingTactics.error("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
+    //Naive simplification of postcondition with domain constraint
+    DifferentialTactics.domSimplify(pos) &
+    DebuggingTactics.debug("odeInvariant close") &
+    (
+      //DebuggingTactics.print("try DWQE") &
+      (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
+      //DebuggingTactics.print("try sAI closed plus") &
+      ODEInvariance.sAIclosedPlus(rankConfig)(pos) |
+      //DebuggingTactics.print("try sAIR1") &
+      ODEInvariance.sAIRankOne(reorderConfig)(pos)
+    ) | DebuggingTactics.error("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
   })
 
   // Asks Pegasus invariant generator for an invariant (DC chain)
@@ -1439,6 +1438,7 @@ private object DifferentialTactics extends Logging {
     require(pos.isTopLevel && pos.isSucc, "ODE invariant (with Pegasus) only applicable in top-level succedent")
     require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
 
+    SaturateTactic(andL('L)) & //Safe because pos is guaranteed to be in the succedent
     DifferentialTactics.DconstV(pos) & odeInvariantAutoBody(pos)
   })
 
