@@ -446,9 +446,9 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "prove with consts (auto const)" in withMathematica { qeTool =>
+  it should "prove with consts (auto andL)" in withMathematica { qeTool =>
     val fml = "x>=0 & y>0 -> [{x'=x+y}](x>=0 & y>0)".asFormula
-    val pr = proveBy(fml, implyR(1) & andL(-1) & odeInvariant(1))
+    val pr = proveBy(fml, implyR(1) & odeInvariant(1))
     println(pr)
     pr shouldBe 'proved
   }
@@ -528,18 +528,7 @@ class ODEInvarianceTests extends TacticTestBase {
     p3 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>=0&(2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)=0->2+6*x^4+12*y+12*y^2+8*(1+y)*z+2*x^3*(6+y+2*z)+4*x^2*(8+3*y+2*z)+x*(12+37*y+18*z)>0)))".asFormula
   }
 
-  "nilpotent solver" should "determine naively whether given term matrices are nilpotent" in withMathematica { qeTool =>
-    val mat1 = List(List("0")).map( ls => ls.map(_.asTerm))
-    val mat2 = List(List("1","1"),List("1","1")).map( ls => ls.map(_.asTerm))
-    val mat3 = List(List("2","2","-2"),List("5","1","-3"),List("1","5","-3")).map( ls => ls.map(_.asTerm))
-    //val mat = List(List("a","b"),List("c","d")).map( ls => ls.map(_.asTerm))
-
-    nilpotentIndex(mat1) shouldBe Some(List())
-    nilpotentIndex(mat2) shouldBe None
-    nilpotentIndex(mat3) shouldBe Some(List(List(List(2, 2, -2), List(5, 1, -3), List(1, 5, -3)), List(List(12, -4, -4), List(12, -4, -4), List(24, -8, -8))))
-  }
-
-  it should "fail fast on various problematic examples" in withMathematica { qeTool =>
+  "nilpotent solver" should "fail fast on various problematic examples" in withMathematica { qeTool =>
 
     //Non-linear ODE
     val pr = proveBy("[{x'=y,y'=x^2}] x+v+a+j=1".asFormula,
