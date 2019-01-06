@@ -77,7 +77,7 @@ object UpdateChecker extends Logging {
   /** Returns the current version # in keymaerax.org/version.json, or None if the contents cannot be downloaded/parsed. */
   private lazy val downloadCurrentVersion: Option[String] = {
     try {
-      readWithTimeout("http://keymaerax.org/version.json", 5000) match {
+      readWithTimeout("http://keymaerax.org/version.json", 3000) match {
         case None => None
         case Some(string) =>
           val json = JsonParser(string)
