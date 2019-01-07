@@ -47,7 +47,7 @@ class ExamplePOJO(val id: Int, val title: String, val description: String, val i
  */
 class ModelPOJO(val modelId:Int, val userId:String, val name:String, val date:String, val keyFile:String,
                 val description:String, val pubLink:String, val title:String, val tactic : Option[String],
-                val numProofs: Int, val temporary: Boolean) //the other guys on this linke should also be optional.
+                val numAllProofSteps: Int, val temporary: Boolean) //the other guys on this linke should also be optional.
 
 /**
   * Data object for users.
@@ -240,6 +240,10 @@ trait DBAbstraction {
 
   def getProofsForModel(modelId: String): List[ProofPOJO] = getProofsForModel(modelId.toInt)
 
+  /** Deletes the recorded proof steps, but keeps the proof and its tactic. */
+  def deleteProofSteps(proofId: Int): Boolean
+
+  /** Deletes the proof. */
   def deleteProof(proofId: Int) : Boolean
 
   //Proofs and Proof Nodes

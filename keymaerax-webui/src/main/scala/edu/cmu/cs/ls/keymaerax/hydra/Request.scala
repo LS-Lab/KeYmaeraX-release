@@ -718,7 +718,7 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
 
   def resultingResponses(): List[Response] = {
     val modelInfo = db.getModel(modelId)
-    if (modelInfo.numProofs <= 0) {
+    if (db.getProofsForModel(modelId).forall(_.stepCount == 0)) {
       if (KeYmaeraXArchiveParser.isExercise(content)) {
         db.updateModel(modelId.toInt, name, emptyToOption(title), emptyToOption(description), emptyToOption(content))
         BooleanResponse(flag = true) :: Nil
@@ -733,7 +733,7 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
       } catch {
         case e: ParseException => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
       }
-    } else new ErrorResponse("Unable to update model " + modelId + " because it has " + modelInfo.numProofs + " proofs") :: Nil
+    } else new ErrorResponse("Unable to update model " + modelId + " because it has " + modelInfo.numAllProofSteps + " proof steps") :: Nil
   }
 }
 
@@ -791,9 +791,9 @@ class DeleteModelRequest(db: DBAbstraction, userId: String, modelId: String) ext
   }
 }
 
-class DeleteModelProofsRequest(db: DBAbstraction, userId: String, modelId: String) extends UserModelRequest(db, userId, modelId) with WriteRequest {
+class DeleteModelProofStepsRequest(db: DBAbstraction, userId: String, modelId: String) extends UserModelRequest(db, userId, modelId) with WriteRequest {
   override def doResultingResponses(): List[Response] = {
-    val success = db.getProofsForModel(modelId).map(p => db.deleteProof(p.proofId)).reduce(_&&_)
+    val success = db.getProofsForModel(modelId).map(p => db.deleteProofSteps(p.proofId)).reduce(_&&_)
     BooleanResponse(success) :: Nil
   }
 }
@@ -1111,13 +1111,13 @@ class ProofsForModelRequest(db : DBAbstraction, userId: String, modelId: String)
 
 class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait: Boolean = false) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
-    val modelId = db.getProofInfo(proofId).modelId
+    val proofInfo = db.getProofInfo(proofId)
+    val modelId = proofInfo.modelId
     if (modelId.isEmpty) throw new Exception("Database consistency error: unable to open proof " + proofId + ", because it does not refer to a model")
     else if (db.getModel(modelId.get).userId != userId) new PossibleAttackResponse("Permission denied")::Nil
     else {
-      insist(db.getModel(db.getProofInfo(proofId).modelId.getOrElse(throw new CoreException(s"Cannot open a proof without model, proofId=$proofId"))).userId == userId, s"User $userId does not own the model associated with proof $proofId")
+      insist(db.getModel(proofInfo.modelId.getOrElse(throw new CoreException(s"Cannot open a proof without model, proofId=$proofId"))).userId == userId, s"User $userId does not own the model associated with proof $proofId")
 
-      val proofInfo = db.getProofInfo(proofId)
       proofInfo.modelId match {
         case None => new ErrorResponse("Unable to open proof " + proofId + ", because it does not refer to a model")::Nil // duplicate check to above
         case Some(mId) =>

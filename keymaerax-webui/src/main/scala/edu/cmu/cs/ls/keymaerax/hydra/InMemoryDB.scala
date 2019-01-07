@@ -75,13 +75,13 @@ class InMemoryDB extends DBAbstraction {
     proofs.values.map(_._2).filter(_.modelId == modelId).toList
   }
 
-  def deleteExecution(executionId: Int): Boolean = synchronized {
+  override def deleteProofSteps(executionId: Int): Boolean = synchronized {
     executionSteps.filter(_._2.executionId == executionId).foreach(s => executionSteps.remove(s._1))
     true
   }
 
   override def deleteProof(proofId: Int): Boolean = synchronized {
-    deleteExecution(proofId)
+    deleteProofSteps(proofId)
     proofs.remove(proofId).isDefined
   }
 
@@ -103,7 +103,7 @@ class InMemoryDB extends DBAbstraction {
   override def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String], content: Option[String]): Unit = {
     val model = models(modelId)
     val nm = new ModelPOJO(modelId, model.userId, name, model.date, content.get, description.get, model.pubLink,
-      title.get, model.tactic, model.numProofs, model.temporary)
+      title.get, model.tactic, model.numAllProofSteps, model.temporary)
     models(modelId) = nm
   }
 
@@ -112,7 +112,7 @@ class InMemoryDB extends DBAbstraction {
     val model = models(mId)
     if (model.tactic.isEmpty) {
       val nm = new ModelPOJO(mId, model.userId, model.name, model.date, model.keyFile, model.description, model.pubLink,
-        model.title, Some(fileContents), model.numProofs, model.temporary)
+        model.title, Some(fileContents), model.numAllProofSteps, model.temporary)
       models(mId) = nm
       Some(1)
     } else None

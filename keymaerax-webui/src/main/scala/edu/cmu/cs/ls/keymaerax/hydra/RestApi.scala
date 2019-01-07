@@ -235,9 +235,9 @@ object RestApi extends Logging {
     }
   }}}
 
-  val deleteModelProofs: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "deleteProofs") { modelId => pathEnd {
+  val deleteModelProofSteps: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "deleteProofs") { modelId => pathEnd {
     post {
-      val r = new DeleteModelProofsRequest(database, userId, modelId)
+      val r = new DeleteModelProofStepsRequest(database, userId, modelId)
       completeRequest(r, t)
     }
   }}}
@@ -379,7 +379,7 @@ object RestApi extends Logging {
           val submittedProofName = obj.asJsObject.getFields("proofName").last.asInstanceOf[JsString].value
           val proofName = if (submittedProofName == "") {
             val model = database.getModel(modelId)
-            model.name + ": Proof " + (model.numProofs + 1)
+            model.name + ": Proof"
           } else submittedProofName
           val proofDescription = obj.asJsObject.getFields("proofDescription").last.asInstanceOf[JsString].value
 
@@ -1130,7 +1130,7 @@ object RestApi extends Logging {
     userTheme             ::
     browseProofRoot       ::
     browseNodeChildren    ::
-    deleteModelProofs     ::
+    deleteModelProofSteps ::
     logoff                ::
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil

@@ -208,12 +208,13 @@ object SQLite {
         Models.filter(_.userid === userId).list.map(element => new ModelPOJO(element._Id.get, element.userid.get,
           element.name.get, blankOk(element.date), blankOk(element.filecontents),
           blankOk(element.description), blankOk(element.publink), blankOk(element.title), element.tactic,
-          getNumProofs(element._Id.get), element.istemporary.getOrElse(0) == 1))
+          getNumAllProofSteps(element._Id.get), element.istemporary.getOrElse(0) == 1))
       })
     }
 
-    private def getNumProofs(modelId: Int): Int = {
-      Proofs.filter(_.modelid === modelId).length.run
+    private def getNumAllProofSteps(modelId: Int): Int = {
+      Proofs.innerJoin(Executionsteps).on((proofs, steps) => steps.proofid === proofs._Id).
+        filter({ case (proofs, steps) => proofs.modelid === modelId }).length.run
     }
 
     private def configWithDefault(config: String, subconfig: String, default: Int): Int = {
@@ -293,6 +294,13 @@ object SQLite {
       synchronizedTransaction({
         val stepCount = stepCountQuery(proofId).run
         nSelects = nSelects + 1
+        val q = for { p <- Proofs if p._Id === proofId } yield (p.modelid, p.lemmaid)
+        val (modelId, lemmaId) = q.run.head
+        if (lemmaId.isEmpty) {
+          val (lemmaId, _) = initializeProofForModel(modelId.get, None)
+          q.update(modelId, Some(lemmaId))
+        }
+
         val list = Proofs.filter(_._Id === proofId)
           .list
           .map(p => new ProofPOJO(p._Id.get, p.modelid, blankOk(p.name), blankOk(p.description),
@@ -369,14 +377,21 @@ object SQLite {
         })
       })
 
-    def deleteExecution(proofId: Int): Boolean = synchronizedTransaction({
+    override def deleteProofSteps(proofId: Int): Boolean = synchronizedTransaction({
       val deletedExecutionSteps = Executionsteps.filter(_.proofid === proofId).delete == 1
       //@note deleting all steps, no need to update subgoal count
-      deletedExecutionSteps
+      val result = deletedExecutionSteps
+      val q = for { proof <- Proofs if proof._Id === proofId } yield (proof.closed, proof.lemmaid)
+      val (closed, lemmaid) = q.run.head
+      // delete associated lemma
+      Lemmas.filter(_._Id === lemmaid).delete
+      // reset closed flag and initial lemma
+      q.update(Some(0), None)
+      result
     })
 
     override def deleteProof(proofId: Int): Boolean = synchronizedTransaction({
-      deleteExecution(proofId)
+      deleteProofSteps(proofId)
       Proofs.filter(x => x._Id === proofId).delete == 1
     })
 
@@ -408,7 +423,8 @@ object SQLite {
 
     override def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String], content: Option[String]): Unit = synchronizedTransaction({
       assert(Models.filter(m => m._Id === modelId && m.filecontents === content).exists.run
-        || !Proofs.filter(_.modelid === modelId).exists.run, "Updating model content only possible for models without proofs")
+        || Proofs.innerJoin(Executionsteps).on((proofs, steps) => steps.proofid === proofs._Id).
+        filter({ case (proofs, _) => proofs.modelid === modelId }).length.run <= 0, "Updating model content only possible for models without proof steps")
       Models.filter(_._Id === modelId).map(m => (m.name, m.title, m.description, m.filecontents)).update(Some(name), title, description, content)
       nUpdates = nUpdates + 1
     })
@@ -423,21 +439,26 @@ object SQLite {
         else None
       })
 
+    /** Initializes the proof by creating a provable from the model, returns the provable ID and optional substituted tactic. */
+    private def initializeProofForModel(modelId: Int, tactic: Option[String]): (Int, Option[String]) = {
+      val model = getModel(modelId)
+      val entry = KeYmaeraXArchiveParser.parseProblem(model.keyFile, parseTactics=false)
+      val d = entry.defs
+      val problem = entry.model.asInstanceOf[Formula]
+
+      val substTactic = tactic match {
+        case None => None
+        case Some(t) => Some(BellePrettyPrinter(BelleParser.parseWithInvGen(t, None, d)))
+      }
+
+      val provable = ProvableSig.startProof(problem)
+      (createProvable(provable), substTactic)
+    }
+
     override def createProofForModel(modelId: Int, name: String, description: String, date: String, tactic: Option[String]): Int =
       synchronizedTransaction({
         nInserts = nInserts + 2
-        val model = getModel(modelId)
-        val entry = KeYmaeraXArchiveParser.parseProblem(model.keyFile, parseTactics=false)
-        val d = entry.defs
-        val problem = entry.model.asInstanceOf[Formula]
-
-        val substTactic = tactic match {
-          case None => None
-          case Some(t) => Some(BellePrettyPrinter(BelleParser.parseWithInvGen(t, None, d)))
-        }
-
-        val provable = ProvableSig.startProof(problem)
-        val provableId = createProvable(provable)
+        val (provableId, substTactic) = initializeProofForModel(modelId, tactic)
         val proofId =
           (Proofs.map(p => ( p.modelid.get, p.name.get, p.description.get, p.date.get, p.closed.get, p.lemmaid.get,
                              p.istemporary.get, p.tactic))
@@ -470,7 +491,7 @@ object SQLite {
             .list
             .map(m => new ModelPOJO(
               m._Id.get, m.userid.get, blankOk(m.name), blankOk(m.date), m.filecontents.get, blankOk(m.description),
-              blankOk(m.publink), blankOk(m.title), m.tactic, getNumProofs(m._Id.get), m.istemporary.getOrElse(0) == 1
+              blankOk(m.publink), blankOk(m.title), m.tactic, getNumAllProofSteps(m._Id.get), m.istemporary.getOrElse(0) == 1
             ))
         if (models.length < 1) throw new Exception("getModel type should be an Option")
         else if (models.length == 1) models.head

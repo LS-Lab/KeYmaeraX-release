@@ -99,7 +99,7 @@ class ModelListResponse(models: List[ModelPOJO]) extends Response {
     "keyFile" -> JsString(modelpojo.keyFile),
     "title" -> JsString(modelpojo.title),
     "hasTactic" -> JsBoolean(modelpojo.tactic.isDefined),
-    "numProofs" -> JsNumber(modelpojo.numProofs),
+    "numAllProofSteps" -> JsNumber(modelpojo.numAllProofSteps),
     "isExercise" -> JsBoolean(KeYmaeraXArchiveParser.isExercise(modelpojo.keyFile))
   ))
 
@@ -169,7 +169,7 @@ class GetModelResponse(model: ModelPOJO) extends Response {
     "title" -> JsString(model.title),
     "hasTactic" -> JsBoolean(model.tactic.isDefined),
     "tactic" -> JsString(model.tactic.getOrElse("")),
-    "numProofs" -> JsNumber(model.numProofs),
+    "numAllProofSteps" -> JsNumber(model.numAllProofSteps),
     "isExercise" -> JsBoolean(KeYmaeraXArchiveParser.isExercise(model.keyFile))
   )
 }

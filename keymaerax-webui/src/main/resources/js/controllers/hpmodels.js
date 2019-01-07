@@ -325,10 +325,10 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
   });
 
   /** Deletes all proofs of the model */
-  $scope.deleteModelProofs = function() {
+  $scope.deleteModelProofSteps = function() {
     $http.post('user/' + userid + "/model/" + modelid + "/deleteProofs").success(function(data) {
       if (data.success) {
-        $scope.model.numProofs = 0;
+        $scope.model.numAllProofSteps = 0;
       }
     });
   }
@@ -337,7 +337,7 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
     if ($scope.origModel.name !== $scope.model.name || $scope.origModel.title !== $scope.model.title
      || $scope.origModel.description !== $scope.model.description
      || $scope.origModel.keyFile !== $scope.model.keyFile) {
-      if ($scope.model.numProofs > 0) {
+      if ($scope.model.numAllProofSteps > 0) {
         var modelCopyName = $scope.model.name + ' (Copy ';
         var i = 1;
         while ($scope.checkName(modelCopyName + i + ')') !== true) { ++i; }
