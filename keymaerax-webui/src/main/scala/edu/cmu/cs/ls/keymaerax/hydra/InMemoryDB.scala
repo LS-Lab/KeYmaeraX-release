@@ -75,9 +75,9 @@ class InMemoryDB extends DBAbstraction {
     proofs.values.map(_._2).filter(_.modelId == modelId).toList
   }
 
-  override def deleteProofSteps(executionId: Int): Boolean = synchronized {
+  override def deleteProofSteps(executionId: Int): Int = synchronized {
     executionSteps.filter(_._2.executionId == executionId).foreach(s => executionSteps.remove(s._1))
-    true
+    1
   }
 
   override def deleteProof(proofId: Int): Boolean = synchronized {

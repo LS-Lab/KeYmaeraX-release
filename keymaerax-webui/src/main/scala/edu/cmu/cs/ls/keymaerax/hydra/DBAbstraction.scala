@@ -244,8 +244,8 @@ trait DBAbstraction {
 
   def getProofsForModel(modelId: String): List[ProofPOJO] = getProofsForModel(modelId.toInt)
 
-  /** Deletes the recorded proof steps, but keeps the proof and its tactic. */
-  def deleteProofSteps(proofId: Int): Boolean
+  /** Deletes the recorded proof steps, but keeps the proof and its tactic. Returns the number of deleted steps. */
+  def deleteProofSteps(proofId: Int): Int
 
   /** Deletes the proof. */
   def deleteProof(proofId: Int) : Boolean

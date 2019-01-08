@@ -377,17 +377,16 @@ object SQLite {
         })
       })
 
-    override def deleteProofSteps(proofId: Int): Boolean = synchronizedTransaction({
-      val deletedExecutionSteps = Executionsteps.filter(_.proofid === proofId).delete == 1
+    override def deleteProofSteps(proofId: Int): Int = synchronizedTransaction({
+      val deletedExecutionSteps = Executionsteps.filter(_.proofid === proofId).delete
       //@note deleting all steps, no need to update subgoal count
-      val result = deletedExecutionSteps
       val q = for { proof <- Proofs if proof._Id === proofId } yield (proof.closed, proof.lemmaid)
       val (closed, lemmaid) = q.run.head
       // delete associated lemma
       Lemmas.filter(_._Id === lemmaid).delete
       // reset closed flag and initial lemma
       q.update(Some(0), None)
-      result
+      deletedExecutionSteps
     })
 
     override def deleteProof(proofId: Int): Boolean = synchronizedTransaction({

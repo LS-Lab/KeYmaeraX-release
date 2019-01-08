@@ -793,8 +793,8 @@ class DeleteModelRequest(db: DBAbstraction, userId: String, modelId: String) ext
 
 class DeleteModelProofStepsRequest(db: DBAbstraction, userId: String, modelId: String) extends UserModelRequest(db, userId, modelId) with WriteRequest {
   override def doResultingResponses(): List[Response] = {
-    val success = db.getProofsForModel(modelId).map(p => db.deleteProofSteps(p.proofId)).reduce(_&&_)
-    BooleanResponse(success) :: Nil
+    val deletedSteps = db.getProofsForModel(modelId).map(p => db.deleteProofSteps(p.proofId)).sum
+    BooleanResponse(deletedSteps > 0) :: Nil
   }
 }
 
@@ -802,7 +802,7 @@ class DeleteProofRequest(db: DBAbstraction, userId: String, proofId: String) ext
   override protected def doResultingResponses(): List[Response] = {
     //TaskManagement.forceDeleteTask(proofId)
     val success = db.deleteProof(Integer.parseInt(proofId))
-    new BooleanResponse(success) :: Nil
+    BooleanResponse(success) :: Nil
   }
 }
 
