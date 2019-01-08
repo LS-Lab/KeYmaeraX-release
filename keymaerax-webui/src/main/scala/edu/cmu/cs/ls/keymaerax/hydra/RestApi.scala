@@ -235,7 +235,7 @@ object RestApi extends Logging {
     }
   }}}
 
-  val deleteModelProofSteps: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "deleteProofs") { modelId => pathEnd {
+  val deleteModelProofSteps: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "deleteProofSteps") { modelId => pathEnd {
     post {
       val r = new DeleteModelProofStepsRequest(database, userId, modelId)
       completeRequest(r, t)

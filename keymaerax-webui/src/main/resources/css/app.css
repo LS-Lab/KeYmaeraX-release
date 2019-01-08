@@ -1190,6 +1190,18 @@ del {
 }
 
 /*
+ * ACE editor layout.
+ */
+.ace_editor {
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+/*
  * Errors on input fields.
  */
 .k4-invalid-input {

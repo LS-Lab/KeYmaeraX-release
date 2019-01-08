@@ -18,6 +18,7 @@
   'ui.bootstrap.collapse',
   'ui.bootstrap.accordion',
   'ui.bootstrap.modal',
+  'ui.ace',
   'keymaerax.controllers',
   'keymaerax.errorHandlers',
   'keymaerax.interceptors',
