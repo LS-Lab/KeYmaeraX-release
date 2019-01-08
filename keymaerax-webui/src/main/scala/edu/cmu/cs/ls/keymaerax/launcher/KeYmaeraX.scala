@@ -596,7 +596,7 @@ object KeYmaeraX {
     require(options.contains('in), usage)
     val inputFileName = options('in).toString
     val archiveContent = KeYmaeraXArchiveParser.parseFromFile(inputFileName).
-      filter(entry => entry.kind != "Exercise")
+      filter(entry => entry.kind != "Exercise" && entry.kind != "exercise")
 
     val timeout = options.getOrElse('timeout, 0L).asInstanceOf[Long]
 

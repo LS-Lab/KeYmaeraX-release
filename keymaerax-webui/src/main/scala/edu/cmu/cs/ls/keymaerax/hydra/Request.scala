@@ -1583,7 +1583,7 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
         case _: VariableArg if exprs.size == 1 && exprs.head.kind == TermKind && exprs.head.isInstanceOf[Variable] => None
         case _: ExpressionArg if exprs.size == 1 => None
         case ListArg(_, "formula", _) if exprs.forall(_.kind == FormulaKind) => None
-        case _ => Some("Expected " + arg.sort + ", but got " + exprs.map(_.kind).mkString(",") + " " + exprs.map(_.prettyString).mkString(","))
+        case _ => Some("Expected: " + arg.sort + ", found: " + exprs.map(_.kind).mkString(",") + " " + exprs.map(_.prettyString).mkString(","))
       }
 
       sortMismatch match {
@@ -1604,8 +1604,8 @@ class CheckTacticInputRequest(db: DBAbstraction, userId: String, proofId: String
               if (fnVarMismatch.isEmpty) "Argument " + arg.name + " uses new names that do not occur in the sequent: " + hintFresh.mkString(",") +
                 (if (allowedFresh.nonEmpty) ", expected new names only as introduced for " + allowedFresh.mkString(",")
                 else ", is it a typo?")
-              else "Argument " + arg.name + " function/variable mismatch: " +
-                fnVarMismatch.map(m => "have " + printNamedSymbol(m._1) + ", expected " + printNamedSymbol(m._2.get)).mkString(",")
+              else "Argument " + arg.name + " function/variable mismatch. " +
+                fnVarMismatch.map(m => "Found: " + printNamedSymbol(m._1) + ", expected: " + printNamedSymbol(m._2.get)).mkString(",")
             BooleanResponse(flag=false, Some(msg))
           } else {
             BooleanResponse(flag=true)
