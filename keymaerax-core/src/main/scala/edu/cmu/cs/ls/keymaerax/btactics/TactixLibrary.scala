@@ -498,7 +498,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[dG]]
     */
   lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position) => {
-    if (ToolProvider.qeTool(Some("Mathematica")).isDefined) DifferentialTactics.fastODE(pos)
+    if (ToolProvider.qeTool(Some("Mathematica")).isDefined) DifferentialTactics.mathematicaODE(pos)
     else DifferentialTactics.ODE(pos)
   })
 
@@ -509,18 +509,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * G |- [x'=f(x)&Q]P
     * (Default behavior: fast (but incomplete) version, no solving attempted)
     **/
-  lazy val odeInvariant: DependentPositionTactic = DifferentialTactics.odeInvariant(false)
-
-  /**
-    * Attemppts to prove ODE property by asking for an automatically generated invariant C from Pegasus, i.e.,
-    *
-    * G |- C  C |- [x'=f(x)&Q]C C |- P
-    * ---
-    * G |- [x'=f(x)&Q]P
-    *
-    * (fast version, no solving attempted)
-    */
-  lazy val odeInvariantAuto: DependentPositionTactic = DifferentialTactics.odeInvariantAuto
+  lazy val odeInvariant: DependentPositionTactic = DifferentialTactics.odeInvariant(tryHard = false)
 
   /** DG/DA differential ghosts that are generated automatically to prove differential equations.
     *

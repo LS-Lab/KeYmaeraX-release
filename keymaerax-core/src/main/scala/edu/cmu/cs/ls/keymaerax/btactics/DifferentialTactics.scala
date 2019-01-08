@@ -12,7 +12,6 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3.{context, formulaIndex}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
@@ -881,34 +880,6 @@ private object DifferentialTactics extends Logging {
        else finish)
   })
 
-  /**
-    * @see [[TactixLibrary.ODE]]
-    * @author Andre Platzer
-    * @author Nathan Fulton
-    * @author Stefan Mitsch
-    */
-  lazy val fastODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
-    case Some(Box(ODESystem(ode, q), _)) =>
-      val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
-      val qAtoms = FormulaTools.conjuncts(q).toSet
-
-      odeInvariant()(pos) | (solve(pos) & ?(timeoutQE)) | fastODE(
-        //@note abort if unchanged
-        assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) match {
-          case Some(Box(ODESystem(extendedOde, extendedQ), _)) =>
-            odeAtoms.subsetOf(DifferentialHelper.atomicOdes(extendedOde).toSet) ||
-              qAtoms.subsetOf(FormulaTools.conjuncts(extendedQ).toSet)
-          case _ => false
-        }, failureMessage)(pos) &
-          ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
-            case Some(ODESystem(_, extendedQ)) =>
-              if (q == True && extendedQ != True) useAt("true&")(ppos ++
-                PosInExpr(1 +: FormulaTools.posOf(extendedQ, q).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
-              else skip
-          }))(pos ++ PosInExpr(0::Nil))
-      )(pos)
-  })
-
   /** Fast ODE implementation. Tactic `finish` is executed when fastODE itself cannot find a proof. */
   private def fastODE(finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
     lazy val invariantCandidates = try {
@@ -935,7 +906,45 @@ private object DifferentialTactics extends Logging {
       }
     )
 
-      addInvariant | finish
+    addInvariant | finish
+  })
+
+  /**
+    * @see [[TactixLibrary.ODE]]
+    * @author Andre Platzer
+    * @author Nathan Fulton
+    * @author Stefan Mitsch
+    */
+  lazy val mathematicaODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+    require(pos.isSucc && pos.isTopLevel, "ODE automation only applicable to top-level succedents")
+
+    seq.sub(pos) match {
+      case Some(Box(ODESystem(ode, q), _)) =>
+        val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
+        val qAtoms = FormulaTools.conjuncts(q).toSet
+
+        // Try to prove postcondition invariant
+        odeInvariant()(pos) |
+        // Some additional cases
+        ODEInvariance.nilpotentSolve(true)(pos) |
+        // todo: Insert G|-[x'=f(x)]P refutation here
+        // Ask for invariants and recursively tries to diff cut them in
+        // aborts with error if no extra cuts were found
+        fastODE(
+          //@note aborts with error if the ODE was left unchanged -- invariant generators failed
+          assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) != seq.sub(pos),
+            "ODE automation was neither able to prove the postcondition invariant nor automatically find new ODE invariants."+
+            "Try annotating the ODE with additional invariants or refining the evolution domain with a differential cut."
+          )(pos) &
+            ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
+              case Some(ODESystem(_, extendedQ)) =>
+                if (q == True && extendedQ != True) useAt("true&")(ppos ++
+                  PosInExpr(1 +: FormulaTools.posOf(extendedQ, q).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
+                else skip
+            })) (pos ++ PosInExpr(0 :: Nil))
+        )(pos)
+      case _ => throw new BelleThrowable("ODE automation only applies to box ODEs.")
+    }
   })
 
   /** Splits a post-condition containing a weak inequality into an open set case and an equillibrium point case.
@@ -1403,18 +1412,33 @@ private object DifferentialTactics extends Logging {
     SandR | fallback(pos)
   })
 
-  // Fresh implementation of ODE invariance tactics -- only applies for top-level succedents
-
-  // Try hard to prove G|-[x'=f(x)&Q]P by an invariance argument on P only (NO SOLVE)
+  /** Pieces together some ODE invariance tactics into a prover for ODE invariance:
+    *
+    * G |- P   P|-[x'=f(x)&Q]P
+    * ---
+    * G |- [x'=f(x)&Q]P
+    *
+    * @param tryHard configures how hard the tactic tries to prove invariance in particular
+    *                use tryHard = true when speed is secondary & certain that P is invariant
+    *                use tryHard = false when speed is of interest e.g., within automated invariant search
+    */
   def odeInvariant(tryHard:Boolean = false): DependentPositionTactic = "odeInvariant" by ((pos:Position) => {
     require(pos.isSucc && pos.isTopLevel, "ODE invariant only applicable in top-level succedent")
     //@note dW does not need algebra tool
     //require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
 
-    //todo: Ideally this will go for full rank + everything proof if tryHard=true
-    val rankConfig = if(tryHard) 3 else 1
-    //todo: and this should disappear for tryHard mode
-    val reorderConfig = tryHard
+    val invTactic =
+      if(tryHard)
+      {
+        ODEInvariance.sAIclosedPlus(bound = 3)(pos) |
+        //todo: duplication currently necessary between sAIclosedPlus and sAIclosed due to unresolved Mathematica issues
+        ODEInvariance.sAIclosed(pos) |
+        ODEInvariance.sAIRankOne(doReorder = true, skipClosed = false)(pos)
+      }
+      else {
+        ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
+        ODEInvariance.sAIRankOne(doReorder = false, skipClosed = false)(pos)
+      }
 
     //Add constant assumptions to domain constraint
     SaturateTactic(andL('L)) & //Safe because pos is guaranteed to be in the succedent
@@ -1423,13 +1447,10 @@ private object DifferentialTactics extends Logging {
     DifferentialTactics.domSimplify(pos) &
     DebuggingTactics.debug("odeInvariant close") &
     (
-      //DebuggingTactics.print("try DWQE") &
       (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
-      //DebuggingTactics.print("try sAI closed plus") &
-      ODEInvariance.sAIclosedPlus(rankConfig)(pos) |
-      //DebuggingTactics.print("try sAIR1") &
-      ODEInvariance.sAIRankOne(reorderConfig)(pos)
-    ) | DebuggingTactics.error("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
+      invTactic |
+      DebuggingTactics.error("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
+    )
   })
 
   // Asks Pegasus invariant generator for an invariant (DC chain)
@@ -1463,7 +1484,6 @@ private object DifferentialTactics extends Logging {
         )
     }
   })
-
 
   // implementation helpers
 

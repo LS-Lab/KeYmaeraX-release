@@ -1500,7 +1500,7 @@ object ODEInvariance {
           implyR('Rlast) & andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
           (andL('Llast)*) & //Splits conjunction of equations up
           (exhaustiveEqL2R(true)('Llast)*) & //rewrite
-          QE
+          timeoutQE & done
         else
           skip
 

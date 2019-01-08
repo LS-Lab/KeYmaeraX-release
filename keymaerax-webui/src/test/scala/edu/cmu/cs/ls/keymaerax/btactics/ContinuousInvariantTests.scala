@@ -127,46 +127,46 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
     }
   }
 
-  it should "standalone test of pegasus + odeInvariant only" taggedAs SlowTest in withMathematica { _ =>
-    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "180", saveToFile = false)
-    Configuration.set(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT, "60", saveToFile = false)
-
-    val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
-      getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
-    var generated = 0
-    var success = 0
-    var total = 0
-    forEvery(Table(("Name", "Model", "Tactic"), entries.
-      map(e => (e.name, e.model, e.tactics)): _*)) {
-      (name, model, _) =>
-        println("\n" + name + " " + model)
-        try {
-          failAfter(3 minutes) {
-            total+=1
-            try {
-              val pr = proveBy(model.asInstanceOf[Formula], implyR(1) & odeInvariantAuto(1) & done)
-              success+=1
-              generated += 1
-            }
-            catch {
-              case ex: BelleThrowable =>
-                if(ex.getMessage.contains("Pegasus failed to generate an invariant"))
-                  println("Pegasus did not generate an invariant")
-                else {
-                  println(ex.getMessage)
-                  generated += 1
-                }
-            }
-          }
-          println(name + " done.")
-          println("Total: "+total+" Generated: "+generated+" Proved: ",success)
-        }
-        catch {
-          case ex: IllegalArgumentException =>
-            println(name + " not of expected form")
-        }
-    }
-    println("Total: "+total+" Generated: "+generated+" Proved: ",success)
-  }
+//  it should "standalone test of pegasus + odeInvariant only" taggedAs SlowTest in withMathematica { _ =>
+//    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "180", saveToFile = false)
+//    Configuration.set(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT, "60", saveToFile = false)
+//
+//    val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
+//      getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
+//    var generated = 0
+//    var success = 0
+//    var total = 0
+//    forEvery(Table(("Name", "Model", "Tactic"), entries.
+//      map(e => (e.name, e.model, e.tactics)): _*)) {
+//      (name, model, _) =>
+//        println("\n" + name + " " + model)
+//        try {
+//          failAfter(3 minutes) {
+//            total+=1
+//            try {
+//              val pr = proveBy(model.asInstanceOf[Formula], implyR(1) & odeInvariantAuto(1) & done)
+//              success+=1
+//              generated += 1
+//            }
+//            catch {
+//              case ex: BelleThrowable =>
+//                if(ex.getMessage.contains("Pegasus failed to generate an invariant"))
+//                  println("Pegasus did not generate an invariant")
+//                else {
+//                  println(ex.getMessage)
+//                  generated += 1
+//                }
+//            }
+//          }
+//          println(name + " done.")
+//          println("Total: "+total+" Generated: "+generated+" Proved: ",success)
+//        }
+//        catch {
+//          case ex: IllegalArgumentException =>
+//            println(name + " not of expected form")
+//        }
+//    }
+//    println("Total: "+total+" Generated: "+generated+" Proved: ",success)
+//  }
 
 }
