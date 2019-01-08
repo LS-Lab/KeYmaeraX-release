@@ -667,7 +667,7 @@ private object DifferentialTactics extends Logging {
 
   //A user-friendly error message displayed when ODE can't find anything useful to do.
   private val failureMessage = "ODE automation was neither able to prove the postcondition invariant nor automatically find new ODE invariants."+
-    "Try annotating the ODE with additional invariants or refining the evolution domain with a differential cut."
+    " Try annotating the ODE with additional invariants or refining the evolution domain with a differential cut."
 
   /** Assert LZZ succeeds at a certain position. */
   lazy val lzzCheck: BuiltInPositionTactic = {
