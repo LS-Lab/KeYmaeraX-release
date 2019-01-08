@@ -159,12 +159,12 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[tacticChase]] */
   def allTacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)(restrictTo: AtPosition[_ <: BelleExpr]*): BelleExpr = SaturateTactic(
     //@note Execute on formulas in order of sequent; might be useful to sort according to some tactic priority.
-    onAll("ANON" by ((ss: Sequent) => {
+    Idioms.doIf(!_.isProved)(onAll("ANON" by ((ss: Sequent) => {
       ss.succ.zipWithIndex.map({ case (fml, i) => ?(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(SuccPosition.base0(i))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
-    })) &
-    onAll("ANON" by ((ss: Sequent) => {
+    }))) &
+    Idioms.doIf(!_.isProved)(onAll("ANON" by ((ss: Sequent) => {
       ss.ante.zipWithIndex.map({ case (fml, i) => ?(tacticChase(tacticIndex)(restrictTo:_*)(Some(fml))(AntePosition.base0(i))) }).reduceRightOption[BelleExpr](_&_).getOrElse(skip)
-    }))
+    })))
   )
 
   val prop: BelleExpr = "prop" by allTacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
@@ -235,7 +235,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
         implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
         andR, equivR, loop, odeR, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
-        onAll(EqualityTactics.applyEqualities & (DifferentialTactics.endODEHeuristic | ?(QE & (if (keepQEFalse) nil else done))))))
+        Idioms.doIf(!_.isProved)(onAll(EqualityTactics.applyEqualities & (DifferentialTactics.endODEHeuristic | ?(QE & (if (keepQEFalse) nil else done)))))))
   }
 
   /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
