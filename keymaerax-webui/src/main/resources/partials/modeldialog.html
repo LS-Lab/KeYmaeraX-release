@@ -1,28 +1,39 @@
-<form editable-form class="k4-vertical-fill-flex" name="modelDataForm" onbeforesave="checkModelData()" onaftersave="save()" shown="true">
-<div class="modal-header row">
-    <div class="col-md-12">
-        <h3 class="modal-title" ng-if="mode==='edit' || mode==='proofedit'"><span editable-text="model.name" e-name="modelName"
-                                      e-placeholder="Model name" e-required onbeforesave="checkName($data)">{{model.name}}</span></h3>
-        <h3 class="modal-title" ng-if="mode==='exercise'">{{model.name}}</h3>
+<form editable-form class="k4-vertical-fill-flex" name="modelDataForm" onbeforesave="checkModelData()"
+      onaftersave="save()" shown="true">
+<div class="modal-header">
+    <div class="row" ng-if="mode==='edit' || mode==='exercise'">
+        <div class="col-md-12">
+            <!--<h3 class="modal-title" ng-if="mode==='edit'">-->
+                <!--<span editable-text="model.name" e-name="modelName"-->
+                      <!--e-placeholder="Model name" e-required onbeforesave="checkName($data)">{{model.name}}</span></h3>-->
+            <h3 class="modal-title" ng-if="mode==='edit' || mode==='exercise'">{{model.name}}</h3>
+        </div>
+    </div>
+    <div class="row" ng-if="model.numAllProofSteps > 0">
+        <div class="col-md-12">
+            <div uib-alert class="alert-warning">
+                <span>Model has proofs with steps. Proof cache will be deleted. After making changes to the model, the stored
+                    tactics may need editing when re-opening the proofs. If you want to keep the proof cache, please copy the
+                    model content, cancel editing, and create a new model instead.</span>
+            </div>
+        </div>
     </div>
 </div>
 <div class="modal-body">
-    <!--<p ng-if="mode=='edit'"><strong><span editable-text="model.title" e-name="modelTitle" e-placeholder="Model title">{{model.title}}</span></strong></p>-->
-    <p ng-if="mode=='edit' || mode==='proofedit'" style="height:20px;">
-        <span editable-textarea="model.description" e-name="modelDescription"
-              e-placeholder="A short model description" e-rows="1" e-cols="100">{{model.description}}</span>
-    </p>
-    <!--<p>See additionally <a href="{{model.pubLink}}">{{model.pubLink}}</a> for further information</p>-->
-    <p>
-    <div ng-if="modelDataForm.$visible && model.numAllProofSteps > 0" uib-alert class="alert-warning">
-        <span>Model has proofs with steps. Proof cache will be deleted. After making changes to the model, the stored
-            tactics may need editing when re-opening the proofs. If you want to keep the proof cache, please copy the
-            model content, cancel editing, and create a new model instead.</span>
+    <!--<div class="row" ng-if="mode==='edit'">-->
+        <!--<div class="col-md-12">-->
+            <!--&lt;!&ndash;<p><strong><span editable-text="model.title" e-name="modelTitle" e-placeholder="Model title">{{model.title}}</span></strong></p>&ndash;&gt;-->
+            <!--<p><span editable-textarea="model.description" e-name="modelDescription"-->
+                     <!--e-placeholder="A short model description" e-rows="1" e-cols="100">{{model.description}}</span>-->
+            <!--</p>-->
+            <!--&lt;!&ndash;<p>See additionally <a href="{{model.pubLink}}">{{model.pubLink}}</a> for further information</p>&ndash;&gt;-->
+        <!--</div>-->
+    <!--</div>-->
+    <div class="row k4-vertical-fill-flex">
+        <div class="col-md-12 k4-vertical-fill k4-vertical-fill-flex">
+            <div ui-ace="{theme:'github',mode:'dl',showGutter:true}" ng-model="model.keyFile" id="editor"></div>
+        </div>
     </div>
-    </p>
-    <p>
-    <div ui-ace="{theme:'github',mode:'dl',showGutter:true}" ng-model="model.keyFile" id="editor"></div>
-    </p>
 </div>
 <div class="modal-footer">
     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='edit'"

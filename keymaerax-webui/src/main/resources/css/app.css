@@ -1199,6 +1199,7 @@ del {
   right: 0;
   bottom: 0;
   left: 0;
+  font-size: var(--lsfontsize);
 }
 
 /*
