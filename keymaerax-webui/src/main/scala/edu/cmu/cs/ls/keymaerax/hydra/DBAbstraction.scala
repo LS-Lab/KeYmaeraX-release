@@ -145,7 +145,11 @@ case class ExecutionTrace(proofId: String, executionId: String, steps: List[Exec
   assert(orderViolationStep.isEmpty, "Trace steps not ordered in descending branches:"
     + " branch " + orderViolationStep.get._1.branch
     + " of step " + orderViolationStep.get._1.stepId + " (" + orderViolationStep.get._1.rule + ")"
-    + " is not less than branch " + orderViolationStep.get._2.branch + " of its predecessor step " + orderViolationStep.get._2.stepId + " (" + orderViolationStep.get._2.rule + ")")
+    + " is not less than branch " + orderViolationStep.get._2.branch
+    + " of its sibling " + orderViolationStep.get._2.stepId + " (" + orderViolationStep.get._2.rule + ")"
+    + (if (orderViolationStep.get._1.prevStepId.isDefined) " on parent " + orderViolationStep.get._1.prevStepId.get + " (" + steps.find(_.stepId == orderViolationStep.get._1.prevStepId.get).map(_.rule).getOrElse("unknown") + ")"
+       else "")
+  )
 
   /** Finds the first step whose branch is out of order (higher than its predecessor's branch) */
   def findOutOfOrderBranchStep(steps: List[ExecutionStep]): Option[(ExecutionStep,ExecutionStep)] = steps match {
