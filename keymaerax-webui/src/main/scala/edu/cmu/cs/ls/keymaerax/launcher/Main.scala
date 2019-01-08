@@ -16,7 +16,7 @@ import spray.json._
 import spray.json.DefaultJsonProtocol._
 
 /**
-  * Prelauncher that restarts a bigger stack JVM if necessary and then starts [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]].
+  * Prelauncher that restarts a big stack JVM and then starts [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]].
   * Usage:
   * {{{
   *  java -jar keymaerax.jar
@@ -24,6 +24,9 @@ import spray.json.DefaultJsonProtocol._
   * }}}
   * Created by nfulton on 4/17/15.
   * @todo move functionality directly into KeYmaeraX.scala?
+  * @author Nathan Fulton
+  * @author Stefan Mitsch
+  * @see [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]]
   */
 object Main {
   /** This flag is set to true iff this process odes nothing but re-launch */
