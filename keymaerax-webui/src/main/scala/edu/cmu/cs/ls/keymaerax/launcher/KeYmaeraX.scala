@@ -587,18 +587,16 @@ object KeYmaeraX {
     * @param options The prover options.
     */
   def prove(options: OptionMap): Unit = {
-    //println("RUNNING CHECK")
     if (options.contains('ptOut)) {
-      //println("ENABLING PROOF TERMS")
       ProvableSig.PROOF_TERMS_ENABLED = true
     } else {
-      //println("DISABLING PROOF TERMS")
       ProvableSig.PROOF_TERMS_ENABLED = false
     }
 
     require(options.contains('in), usage)
     val inputFileName = options('in).toString
-    val archiveContent = KeYmaeraXArchiveParser.parseFromFile(inputFileName)
+    val archiveContent = KeYmaeraXArchiveParser.parseFromFile(inputFileName).
+      filter(entry => entry.kind != "Exercise")
 
     val timeout = options.getOrElse('timeout, 0L).asInstanceOf[Long]
 
@@ -632,7 +630,7 @@ object KeYmaeraX {
     BelleInterpreter.setInterpreter(LazySequentialInterpreter(qeDurationListener::Nil))
 
     println("Proving ...")
-    val statistics = archiveContent.filter(entry => entry.kind != "Exercise").flatMap(
+    val statistics = archiveContent.flatMap(
       {case ParsedArchiveEntry(modelName, kind, _, problemContent, _, model: Formula, tactics, _) =>
         //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
         val outputFileName = outputFileNames(modelName)

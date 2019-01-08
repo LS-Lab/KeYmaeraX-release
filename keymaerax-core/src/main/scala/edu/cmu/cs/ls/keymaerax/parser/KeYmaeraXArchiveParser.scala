@@ -820,6 +820,7 @@ object KeYmaeraXArchiveParser {
           if (parseTactics) entry.tactics.map(convert(_, definitions))
           else entry.tactics.map(t => (t.name, t.tacticText, Idioms.nil))
 
+        //@todo "Exercise"->"exercise"???
         val entryKinds = Map("ArchiveEntry"->"theorem", "Theorem"->"theorem", "Lemma"->"lemma", "Exercise"->"theorem")
 
         // double-check that the extracted problem text still parses
