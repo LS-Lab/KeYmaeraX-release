@@ -53,7 +53,8 @@ import scala.reflect.io.File
   * @see Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Volp and Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_36 KeYmaera X: An axiomatic tactical theorem prover for hybrid systems]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
   * @see Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
   * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.13 Logics of dynamical systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012
- */
+  * @see [[edu.cmu.cs.ls.keymaerax.launcher.Main]]
+  */
 object KeYmaeraX {
 
   private type OptionMap = Map[Symbol, Any]
@@ -546,6 +547,8 @@ object KeYmaeraX {
             w.write("/* @evidence: parse of print of result of a proof */\n\n")
             w.write(lemma.get.toString)
             w.close()
+          case None =>
+            // don't save proof as lemma since no outputFileName
         }
 
         ProofStatistics(name, tacticName, "proved", Some(witness), timeout, proofDuration, qeDuration, proofSteps, tacticSize)
@@ -578,24 +581,22 @@ object KeYmaeraX {
   }
 
   /**
-    * Proves entries in the given archive file.
+    * Proves all entries in the given archive file.
     * {{{KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))}}}
     *
     * @param options The prover options.
     */
   def prove(options: OptionMap): Unit = {
-    //println("RUNNING CHECK")
     if (options.contains('ptOut)) {
-      //println("ENABLING PROOF TERMS")
       ProvableSig.PROOF_TERMS_ENABLED = true
     } else {
-      //println("DISABLING PROOF TERMS")
       ProvableSig.PROOF_TERMS_ENABLED = false
     }
 
     require(options.contains('in), usage)
     val inputFileName = options('in).toString
-    val archiveContent = KeYmaeraXArchiveParser.parseFromFile(inputFileName)
+    val archiveContent = KeYmaeraXArchiveParser.parseFromFile(inputFileName).
+      filter(entry => entry.kind != "Exercise" && entry.kind != "exercise")
 
     val timeout = options.getOrElse('timeout, 0L).asInstanceOf[Long]
 
@@ -629,33 +630,34 @@ object KeYmaeraX {
     BelleInterpreter.setInterpreter(LazySequentialInterpreter(qeDurationListener::Nil))
 
     println("Proving ...")
-    val statistics = archiveContent.flatMap({case ParsedArchiveEntry(modelName, kind, _, problemContent, _, model: Formula, tactics, _) =>
-      //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
-      val outputFileName = outputFileNames(modelName)
+    val statistics = archiveContent.flatMap(
+      {case ParsedArchiveEntry(modelName, kind, _, problemContent, _, model: Formula, tactics, _) =>
+        //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
+        val outputFileName = outputFileNames(modelName)
 
-      val t = if (tactics.isEmpty) ("auto", "auto", TactixLibrary.auto) :: Nil else tactics
-      t.zipWithIndex.map({case ((tacticName, _, tactic), i) =>
-        val proofStat = prove(modelName, model, problemContent, tacticName, tactic, timeout,
-          if (i == 0) Some(outputFileName) else None, options)
+        val t = if (tactics.isEmpty) ("auto", "auto", TactixLibrary.auto) :: Nil else tactics
+        t.zipWithIndex.map({case ((tacticName, _, tactic), i) =>
+          val proofStat = prove(modelName, model, problemContent, tacticName, tactic, timeout,
+            if (i == 0) Some(outputFileName) else None, options)
 
-        proofStat.witness match {
-          case Some(proof) =>
-            if (kind == "lemma") {
-              val lemmaName = "user" + File.separator + modelName
-              if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
-              val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
-                "tool" -> "KeYmaera X",
-                "model" -> problemContent,
-                "tactic" -> tactics.head._2
-              )) :: Nil)
-              LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
-            }
-            savePt(proof)
-          case None => // nothing to do
-        }
-        proofStat
+          proofStat.witness match {
+            case Some(proof) =>
+              if (kind == "lemma") {
+                val lemmaName = "user" + File.separator + modelName
+                if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
+                val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
+                  "tool" -> "KeYmaera X",
+                  "model" -> problemContent,
+                  "tactic" -> tactics.head._2
+                )) :: Nil)
+                LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
+              }
+              savePt(proof)
+            case None => // nothing to do
+          }
+          proofStat
+        })
       })
-    })
 
     //statistics.foreach({ case (k, v) => printStatistics(k, v) })
     statistics.foreach(println)

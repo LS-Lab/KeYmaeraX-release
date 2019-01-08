@@ -16,7 +16,7 @@ import spray.json._
 import spray.json.DefaultJsonProtocol._
 
 /**
-  * Prelauncher that restarts a bigger stack JVM if necessary and then starts [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]].
+  * Prelauncher that restarts a big stack JVM and then starts [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]].
   * Usage:
   * {{{
   *  java -jar keymaerax.jar
@@ -24,6 +24,9 @@ import spray.json.DefaultJsonProtocol._
   * }}}
   * Created by nfulton on 4/17/15.
   * @todo move functionality directly into KeYmaeraX.scala?
+  * @author Nathan Fulton
+  * @author Stefan Mitsch
+  * @see [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]]
   */
 object Main {
   /** This flag is set to true iff this process odes nothing but re-launch */
@@ -85,7 +88,7 @@ object Main {
   }
 
   def startServer(args: Array[String]) : Unit = {
-    LoadingDialogFactory().addToStatus(25, Some("Obtaining locks..."))
+    LoadingDialogFactory().addToStatus(10, Some("Obtaining locks..."))
     KeYmaeraXLock.obtainLockOrExit()
 
     launcherDebug("-launch -- starting KeYmaera X Web UI server HyDRA.")
@@ -317,7 +320,7 @@ object Main {
   }
 
   private def cleanupGuestData() = {
-    LoadingDialogFactory().addToStatus(5, Some("Guest model updates ..."))
+    LoadingDialogFactory().addToStatus(10, Some("Guest model updates ..."))
     launcherDebug("Cleaning up guest data...")
     val deleteModels = listOutdatedModels()
     val deleteModelsStatements = deleteModels.map("delete from models where _id = " + _.modelId)

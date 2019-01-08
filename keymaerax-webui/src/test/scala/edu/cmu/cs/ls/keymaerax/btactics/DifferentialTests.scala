@@ -1451,6 +1451,10 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     proveBy("x>b, [y:=3;]y<=3 ==> <z:=2;>z=2, [{x'=2}]x>b".asSequent, openDiffInd(2)) shouldBe 'proved
   }
 
+  it should "directly prove x>0 -> [{x'=x}]x>0" in withQE { _ =>
+    proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
+  }
+
   "Differential Variant" should "diff var a()>0 |- <{x'=a()}>x>=b()" in withQE { _ =>
     proveBy(Sequent(IndexedSeq("a()>0".asFormula), IndexedSeq("<{x'=a()}>x>=b()".asFormula)), diffVar(1)) shouldBe 'proved
   }
@@ -1491,7 +1495,7 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     //(x+z)' =  x^2 + z*x + x^2 >= x*(x+z)
     //Maybe this should leave open that the remainder is >= 0?
     val seq = "x+z>=0 ==> [{x'=x^2, z' = z*x+y & y = x^2}] x+z>=0".asSequent
-    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
   }
 
   it should "prove >= fractional darboux" in withQE { _ =>
@@ -1506,14 +1510,12 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     val seq = "x+z<0 ==> [{x'=x^2, z' = z*x+y & y = -x^2}] x+z<0".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asVariable)(1)) shouldBe 'proved
     TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
-    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
   }
 
   it should "automatically find equational darboux" in withMathematica { _ =>
     //(x+z)' = (x*A+B)(x+z)
     val seq = "x+z=0 ==> [{x'=(A*x^2+B()*x), z' = A*z*x+B()*z}] 0=-x-z".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
-    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
   }
 
   it should "fail with evolution domain constraints" in withMathematica { _ =>
@@ -1529,19 +1531,16 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     //This one doesn't actually need the full power of strict barriers because it's also an inequational dbx
     val seq = "-x<=0 ==> [{x'=100*x^4+y*x^3-x^2+x+c, c'=x+y+z & c > x}] -x<=0".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier()(1)) shouldBe 'proved
-    //TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
   }
 
   it should "prove a strict barrier certificate 1" in withMathematica {qeTool =>
     val seq = "(87*x^2)/200 - (7*x*y)/180 >= -(209*y^2)/1080 + 10 ==> [{x'=(5*x)/4 - (5*y)/6, y'=(9*x)/4 + (5*y)/2}] (87*x^2)/200 - (7*x*y)/180>= -(209*y^2)/1080 + 10 ".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(Some(qeTool))(1)) shouldBe 'proved
-    //TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
   }
 
   it should "prove a strict barrier certificate 2" in withMathematica {qeTool =>
     val seq = "(23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5 <= 0 ==> [{x'=(x/2) + (7*y)/3 , y'=-x - y}] (23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5<=0".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(Some(qeTool))(1)) shouldBe 'proved
-    //TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
   }
 
   "DConstV" should "extend domain constraint with const assumptions" in withMathematica {_ =>
@@ -1549,6 +1548,15 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     val pr = TactixLibrary.proveBy(seq,DifferentialTactics.DconstV(3) & DifferentialTactics.DconstV(-5))
     pr.subgoals.loneElement shouldBe
       "f()>0, v>0, a>0, b>0, <{x'=c+f()&f()>0&c < 0&true}>x>0, c < 0 ==> z=1, a>0, [{v'=a+b,x'=y+f()&f()>0&a>0&b>0&(x>=v|x>=5)}]v>0, x=5, y=1".asSequent
+  }
+
+  it should "extend with assumptions hidden in conjuncts" in withMathematica {_ =>
+    val seq = "f()>0 & v>0 & x=0 & a>0, <{x'=c+f()}> x>0, x=0&c<0&(v<0 | x>0) ==> z=1 | a>0, !x=5, [{v'=a+b,x'=y+f() & x>=v | x>=5}]v>0, x=5 -> y=1".asSequent
+    val pr = TactixLibrary.proveBy(seq,
+      //This changes positions!: SaturateTactic(alphaRule)
+      SaturateTactic(andL('L)) & DifferentialTactics.DconstV(3))
+    pr.subgoals.loneElement shouldBe
+      "<{x'=c+f()&true}>x>0, f()>0, x=0, v>0, c < 0, v < 0|x>0, x=0, a>0 ==> z=1|a>0, !x=5, [{v'=a+b,x'=y+f()&f()>0&a>0&(x>=v|x>=5)}]v>0, x=5->y=1".asSequent
   }
 
   "domSimplify" should "simplify box succedent with domain constraint" in withMathematica {_ =>

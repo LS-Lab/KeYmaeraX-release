@@ -182,7 +182,7 @@ object HyDRAInitializer extends Logging {
         logger.warn(msg, e)
     }
 
-    LoadingDialogFactory().addToStatus(5, Some("Updating lemma caches..."))
+    LoadingDialogFactory().addToStatus(15, Some("Updating lemma caches..."))
 
     try {
       //Delete the lemma database if KeYmaera X has been updated since the last time the database was populated.

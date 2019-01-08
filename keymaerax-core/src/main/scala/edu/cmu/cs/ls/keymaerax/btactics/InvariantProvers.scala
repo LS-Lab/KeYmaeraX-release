@@ -105,7 +105,7 @@ object InvariantProvers {
       // completes ODE invariant proofs and arithmetic
       val finishOff: BelleExpr =
         OnAll(ifThenElse(DifferentialTactics.isODE,
-          DifferentialTactics.fastODE(pos) |
+          DifferentialTactics.mathematicaODE(pos) |
             // augment loop invariant to local ODE invariant if possible
             ("ANON" by ((pos: Position, seq: Sequent) => {
               val odePost = seq.sub(pos++PosInExpr(1::Nil))
@@ -115,7 +115,7 @@ object InvariantProvers {
                 (localInv:Formula) => {
                   println/*logger.debug*/("loopPostMaster local " + localInv)
                   DebuggingTactics.debug("local")&
-                  dC(localInv)(pos) < (dW(pos) & QE(), DifferentialTactics.fastODE(pos)) &
+                  dC(localInv)(pos) < (dW(pos) & QE(), DifferentialTactics.mathematicaODE(pos)) &
                   done & DebuggingTactics.debug("success")
                 })
             }))(pos)

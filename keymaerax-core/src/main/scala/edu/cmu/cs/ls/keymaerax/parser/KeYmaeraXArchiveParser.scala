@@ -24,11 +24,12 @@ import scala.collection.mutable.ListBuffer
   * Format example:
   * {{{
   *   ArchiveEntry "Entry 1".
-  *     Functions. ... End.
-  *     ProgramVariables. ... End.
-  *     Problem. ... End.
-  *     Tactic "Proof 1". ... End.
-  *     Tactic "Proof 2". ... End.
+  *     Description "optional description text".
+  *     ProgramVariables ... End.
+  *     Definitions ... End.
+  *     Problem ... End.
+  *     Tactic "Proof 1" ... End.
+  *     Tactic "Proof 2" ... End.
   *   End.
   *   ArchiveEntry "Entry 2". ... End.
   * }}}
@@ -36,7 +37,7 @@ import scala.collection.mutable.ListBuffer
   * @author Stefan Mitsch
   */
 object KeYmaeraXArchiveParser {
-  /** The entry name, kyx file content (model), parsed model, and parsed name+tactic. */
+  /** The entry name, kyx file content (model), definitions, parsed model, and parsed named tactics. */
   case class ParsedArchiveEntry(name: String, kind: String, fileContent: String, problemContent: String,
                                 defs: Declaration,
                                 model: Expression, tactics: List[(String, String, BelleExpr)],
@@ -819,6 +820,7 @@ object KeYmaeraXArchiveParser {
           if (parseTactics) entry.tactics.map(convert(_, definitions))
           else entry.tactics.map(t => (t.name, t.tacticText, Idioms.nil))
 
+        //@todo "Exercise"->"exercise"???
         val entryKinds = Map("ArchiveEntry"->"theorem", "Theorem"->"theorem", "Lemma"->"lemma", "Exercise"->"theorem")
 
         // double-check that the extracted problem text still parses
