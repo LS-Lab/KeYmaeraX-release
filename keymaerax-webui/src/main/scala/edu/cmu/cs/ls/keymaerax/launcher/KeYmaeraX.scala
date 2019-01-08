@@ -629,33 +629,34 @@ object KeYmaeraX {
     BelleInterpreter.setInterpreter(LazySequentialInterpreter(qeDurationListener::Nil))
 
     println("Proving ...")
-    val statistics = archiveContent.flatMap({case ParsedArchiveEntry(modelName, kind, _, problemContent, _, model: Formula, tactics, _) =>
-      //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
-      val outputFileName = outputFileNames(modelName)
+    val statistics = archiveContent.filter(entry => entry.kind != "Exercise").flatMap(
+      {case ParsedArchiveEntry(modelName, kind, _, problemContent, _, model: Formula, tactics, _) =>
+        //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
+        val outputFileName = outputFileNames(modelName)
 
-      val t = if (tactics.isEmpty) ("auto", "auto", TactixLibrary.auto) :: Nil else tactics
-      t.zipWithIndex.map({case ((tacticName, _, tactic), i) =>
-        val proofStat = prove(modelName, model, problemContent, tacticName, tactic, timeout,
-          if (i == 0) Some(outputFileName) else None, options)
+        val t = if (tactics.isEmpty) ("auto", "auto", TactixLibrary.auto) :: Nil else tactics
+        t.zipWithIndex.map({case ((tacticName, _, tactic), i) =>
+          val proofStat = prove(modelName, model, problemContent, tacticName, tactic, timeout,
+            if (i == 0) Some(outputFileName) else None, options)
 
-        proofStat.witness match {
-          case Some(proof) =>
-            if (kind == "lemma") {
-              val lemmaName = "user" + File.separator + modelName
-              if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
-              val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
-                "tool" -> "KeYmaera X",
-                "model" -> problemContent,
-                "tactic" -> tactics.head._2
-              )) :: Nil)
-              LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
-            }
-            savePt(proof)
-          case None => // nothing to do
-        }
-        proofStat
+          proofStat.witness match {
+            case Some(proof) =>
+              if (kind == "lemma") {
+                val lemmaName = "user" + File.separator + modelName
+                if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
+                val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
+                  "tool" -> "KeYmaera X",
+                  "model" -> problemContent,
+                  "tactic" -> tactics.head._2
+                )) :: Nil)
+                LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
+              }
+              savePt(proof)
+            case None => // nothing to do
+          }
+          proofStat
+        })
       })
-    })
 
     //statistics.foreach({ case (k, v) => printStatistics(k, v) })
     statistics.foreach(println)
