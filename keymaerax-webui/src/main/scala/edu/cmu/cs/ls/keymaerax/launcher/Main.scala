@@ -85,7 +85,7 @@ object Main {
   }
 
   def startServer(args: Array[String]) : Unit = {
-    LoadingDialogFactory().addToStatus(25, Some("Obtaining locks..."))
+    LoadingDialogFactory().addToStatus(10, Some("Obtaining locks..."))
     KeYmaeraXLock.obtainLockOrExit()
 
     launcherDebug("-launch -- starting KeYmaera X Web UI server HyDRA.")
@@ -317,7 +317,7 @@ object Main {
   }
 
   private def cleanupGuestData() = {
-    LoadingDialogFactory().addToStatus(5, Some("Guest model updates ..."))
+    LoadingDialogFactory().addToStatus(10, Some("Guest model updates ..."))
     launcherDebug("Cleaning up guest data...")
     val deleteModels = listOutdatedModels()
     val deleteModelsStatements = deleteModels.map("delete from models where _id = " + _.modelId)
