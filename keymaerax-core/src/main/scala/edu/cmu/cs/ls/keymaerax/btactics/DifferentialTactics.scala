@@ -725,11 +725,7 @@ private object DifferentialTactics extends Logging {
       })
     })
 
-    if ((succInstantiators ++ anteInstantiators).nonEmpty) {
-      (succInstantiators ++ anteInstantiators).reduce[BelleExpr](_ & _) & QE & done
-    } else {
-      fail
-    }
+    (succInstantiators ++ anteInstantiators).reduceOption[BelleExpr](_ & _).getOrElse(skip) & QE & done
   })
 
   /**

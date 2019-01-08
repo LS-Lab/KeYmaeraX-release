@@ -79,7 +79,6 @@ class ODETests extends TacticTestBase with Timeouts {
   }
 
   it should "solve to prove x>=0&v=1&a=2 -> [{x'=v,v'=a}]x>=0" in withQE { _ =>
-    //@todo succeeds on Mathematica but not Z3 because ODE not updated on Z3 yet.
     TactixLibrary.proveBy("x>=0&v=1&a=2 -> [{x'=v,v'=a}]x>=0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
