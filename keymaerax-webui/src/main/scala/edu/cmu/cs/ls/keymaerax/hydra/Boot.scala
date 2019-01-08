@@ -60,7 +60,7 @@ object NonSSLBoot extends App with Logging {
   Http().bindAndHandle(handler = api, interface = HyDRAServerConfig.host, port = HyDRAServerConfig.port) map {
     _ => {
       // Finally, print a message indicating that the server was started.
-      LoadingDialogFactory().addToStatus(15, Some("Finished loading"))
+      LoadingDialogFactory().addToStatus(10, Some("Finished loading"))
       logger.info(
         "\n**********************************************************\n" +
           "****                   KeYmaera X                     ****\n" +

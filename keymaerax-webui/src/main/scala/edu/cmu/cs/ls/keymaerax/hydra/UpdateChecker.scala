@@ -101,7 +101,7 @@ object UpdateChecker extends Logging {
     val conn = new URL(url).openConnection()
     conn.setConnectTimeout(timeout)
     conn.setReadTimeout(timeout)
-    val source = conn.getInputStream
+    val source = conn.getInputStream()
     val read = scala.io.Source.fromInputStream(source).mkString
     if (source != null) source.close()
     Some(read)
