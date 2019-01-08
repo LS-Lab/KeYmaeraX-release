@@ -666,8 +666,8 @@ private object DifferentialTactics extends Logging {
   })
 
   //A user-friendly error message displayed when ODE can't find anything useful to do.
-  private val failureMessage = "The automatic tactic does not currently provide automated proving capabilities for this " +
-    "combination of system and post-condition. Consider using the individual ODE tactics and/or submitting a feature request."
+  private val failureMessage = "ODE automation was neither able to prove the postcondition invariant nor automatically find new ODE invariants."+
+    "Try annotating the ODE with additional invariants or refining the evolution domain with a differential cut."
 
   /** Assert LZZ succeeds at a certain position. */
   lazy val lzzCheck: BuiltInPositionTactic = {
@@ -740,18 +740,12 @@ private object DifferentialTactics extends Logging {
     * @note Compatibility tactic for Z3 ([[DifferentialTactics.odeInvariant]] not supported with Z3).
     */
   lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
-    case Some(Box(ODESystem(ode, q), _)) =>
-      val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
-      val qAtoms = FormulaTools.conjuncts(q).toSet
-
+    case Some(Box(sys@ODESystem(ode, q), _)) =>
       lazy val recurseODE = ODE(useOdeInvariant = false, introduceStuttering = true,
         //@note abort if unchanged
-        assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) match {
-          case Some(Box(ODESystem(extendedOde, extendedQ), _)) =>
-            odeAtoms.subsetOf(DifferentialHelper.atomicOdes(extendedOde).toSet) ||
-              qAtoms.subsetOf(FormulaTools.conjuncts(extendedQ).toSet)
-          case _ => false
-        }, failureMessage)(pos) &
+        assertT((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0::Nil)).contains(sys),
+          failureMessage
+        )(pos) &
           ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
             case Some(ODESystem(_, extendedQ)) =>
               if (q == True && extendedQ != True) useAt("true&")(ppos ++
@@ -919,10 +913,7 @@ private object DifferentialTactics extends Logging {
     require(pos.isSucc && pos.isTopLevel, "ODE automation only applicable to top-level succedents")
 
     seq.sub(pos) match {
-      case Some(Box(ODESystem(ode, q), _)) =>
-        val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
-        val qAtoms = FormulaTools.conjuncts(q).toSet
-
+      case Some(Box(sys@ODESystem(ode, q), _)) =>
         // Try to prove postcondition invariant
         odeInvariant()(pos) |
         // Some additional cases
@@ -932,9 +923,8 @@ private object DifferentialTactics extends Logging {
         // aborts with error if no extra cuts were found
         fastODE(
           //@note aborts with error if the ODE was left unchanged -- invariant generators failed
-          assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) != seq.sub(pos),
-            "ODE automation was neither able to prove the postcondition invariant nor automatically find new ODE invariants."+
-            "Try annotating the ODE with additional invariants or refining the evolution domain with a differential cut."
+          assertT((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0::Nil)).contains(sys),
+            failureMessage
           )(pos) &
             ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
               case Some(ODESystem(_, extendedQ)) =>

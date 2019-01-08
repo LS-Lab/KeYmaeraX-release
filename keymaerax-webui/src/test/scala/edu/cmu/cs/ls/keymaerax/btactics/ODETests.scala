@@ -207,14 +207,12 @@ class ODETests extends TacticTestBase with Timeouts {
 
   it should "not stutter" in withQE { _ =>
     //@note now throws an error instead of stuttering
-    //todo: Z3 ODE needs to be updated to have the same behavior
-    a[BelleThrowable] should be thrownBy proveBy("[{x'=x^x}]x>0".asFormula, ODE(1))
+    a [BelleThrowable] should be thrownBy proveBy("[{x'=x^x}]x>0".asFormula, ODE(1))
   }
 
   it should "not fail evolution domain simplification on empty evolution domain constraint" in withQE { _ =>
     //@note now throws an error instead of stuttering
-    //todo: Z3 ODE needs to be updated to have the same behavior
-    a[BelleThrowable] should be thrownBy  proveBy("[{x'=x^x}]x>0".asFormula, ODE(1))
+    a [BelleThrowable] should be thrownBy proveBy("[{x'=x^x}]x>0".asFormula, ODE(1))
   }
 
   it should "prove cheat sheet example" in withQE { _ => {
