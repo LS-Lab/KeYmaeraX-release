@@ -833,6 +833,11 @@ object DerivationInfo {
           ((lemmaName: Option[String]) =>
             DebuggingTactics.done(msg.getOrElse(""), lemmaName)): TypedFunc[Option[String], BelleExpr]): TypedFunc[Option[String], _]
     ),
+    InputTacticInfo("pending"
+      , SimpleDisplayInfo("pending", "pending")
+      ,List(StringArg("tactic")), _ =>
+        ((tactic: String) => DebuggingTactics.pending(tactic)): TypedFunc[String, BelleExpr]
+    ),
 
     // Proof rule two-position tactics
     new TwoPositionTacticInfo("coHide2", "W", {case () => SequentCalculus.cohide2}),

@@ -173,6 +173,11 @@ object DebuggingTactics {
       } else throw new BelleUnexpectedProofStateError(msg + ": expected proved provable, but got open goals", provable.underlyingProvable)
     }
   }
+
+  /** Placeholder for a tactic string that is not executed. */
+  def pending(tactic: String): BelleExpr = new StringInputTactic("pending", tactic :: Nil) {
+    override def result(provable: ProvableSig): ProvableSig = provable
+  }
 }
 
 case class Case(fml: Formula, simplify: Boolean = true) {
