@@ -70,7 +70,6 @@ object Main {
         LoadingDialogFactory()
       }
 
-      LoadingDialogFactory().addToStatus(25, Some("Checking database version..."))
       exitIfDeprecated()
 
       LoadingDialogFactory().addToStatus(15, Some("Checking lemma caches..."))
@@ -198,6 +197,7 @@ object Main {
     val databaseVersion = SQLite.ProdDB.getConfiguration("version").config("version")
     launcherLog("Database version: " + databaseVersion)
     cleanupGuestData()
+    LoadingDialogFactory().addToStatus(25, Some("Checking database version..."))
     if (UpdateChecker.upToDate().getOrElse(false) &&
         UpdateChecker.needDatabaseUpgrade(databaseVersion).getOrElse(false)) {
       //Exit if KeYmaera X is up to date but the production database belongs to a deprecated version of KeYmaera X.
@@ -289,7 +289,6 @@ object Main {
 
   /** Returns a list of outdated guest-user created models (literal model content comparison) */
   private def listOutdatedModels(): List[ModelPOJO] = {
-    LoadingDialogFactory().addToStatus(5, Some("Guest model updates ..."))
     val db = DBAbstractionObj.defaultDatabase
     val tempUsers = db.getTempUsers
     val tempUrlsAndModels: List[(String, List[ModelPOJO])] = tempUsers.map(u => {
@@ -318,6 +317,7 @@ object Main {
   }
 
   private def cleanupGuestData() = {
+    LoadingDialogFactory().addToStatus(5, Some("Guest model updates ..."))
     launcherDebug("Cleaning up guest data...")
     val deleteModels = listOutdatedModels()
     val deleteModelsStatements = deleteModels.map("delete from models where _id = " + _.modelId)
