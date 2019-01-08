@@ -764,7 +764,7 @@ object Helpers {
   }
 }
 
-case class AgendaAwesomeResponse(proofId: String, root: ProofTreeNode, leaves: List[ProofTreeNode],
+case class AgendaAwesomeResponse(modelId: String, proofId: String, root: ProofTreeNode, leaves: List[ProofTreeNode],
                                  agenda: List[AgendaItem], closed: Boolean) extends Response {
   override val schema = Some("agendaawesome.js")
 
@@ -780,6 +780,7 @@ case class AgendaAwesomeResponse(proofId: String, root: ProofTreeNode, leaves: L
 
   def getJson =
     JsObject (
+      "modelId" -> JsString(modelId),
       "proofTree" -> proofTree,
       "agendaItems" -> agendaItems,
       "closed" -> JsBoolean(closed)

@@ -271,6 +271,7 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       this.tactic.fetch(userId, proofId);
       $http.get('proofs/user/' + userId + '/' + proofId + '/' + agendaKind)
         .then(function(response) {
+          theAgenda.modelId = response.data.modelId;
           theAgenda.itemsMap = response.data.agendaItems;
           $.each(response.data.proofTree.nodes, function(i, v) { makeLazyNode($http, userId, proofId, v); });
           theProofTree.nodesMap = response.data.proofTree.nodes;

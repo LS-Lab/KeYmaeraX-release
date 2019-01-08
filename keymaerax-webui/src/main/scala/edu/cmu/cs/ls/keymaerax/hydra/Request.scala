@@ -1232,7 +1232,7 @@ class OpenGuestArchiveRequest(db: DBAbstraction, uri: String, archiveName: Strin
   * @param userId Identifies the user.
   * @param proofId Identifies the proof.
   */
-class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
+class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String) extends UserProofRequest(db, userId, proofId) with ReadRequest {
   override protected def doResultingResponses(): List[Response] = {
     val tree: ProofTree = DbProofTree(db, proofId)
     val leaves = tree.openGoals
@@ -1248,7 +1248,7 @@ class GetAgendaAwesomeRequest(db : DBAbstraction, userId : String, proofId : Str
 
     val agendaItems: List[AgendaItem] = leaves.map(n =>
       AgendaItem(n.id.toString, "Goal: " + agendaItemName(n.makerShortName.getOrElse("").split("\\(").head), proofId))
-    AgendaAwesomeResponse(proofId, tree.root, leaves, agendaItems, closed) :: Nil
+    AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, leaves, agendaItems, closed) :: Nil
   }
 }
 
@@ -1263,7 +1263,7 @@ class GetProofRootAgendaRequest(db: DBAbstraction, userId: String, proofId: Stri
   override protected def doResultingResponses(): List[Response] = {
     val tree: ProofTree = DbProofTree(db, proofId)
     val agendaItems: List[AgendaItem] = AgendaItem(tree.root.id.toString, "Unnamed Goal", proofId) :: Nil
-    AgendaAwesomeResponse(proofId, tree.root, tree.root::Nil, agendaItems, closed=false) :: Nil
+    AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, tree.root::Nil, agendaItems, closed=false) :: Nil
   }
 }
 

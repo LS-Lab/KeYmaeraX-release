@@ -705,6 +705,20 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var nodeId = sequentProofData.agenda.selectedId();
       if (nodeId != undefined) $http.post("proofs/user/" + $scope.userId + "/" + $scope.proofId + "/" + nodeId + "/name/" + newName, {});
     }
+
+    $scope.openModelEditor = function (modelId) {
+        var modalInstance = $uibModal.open({
+          templateUrl: 'partials/modeldialog.html',
+          controller: 'ModelDialogCtrl',
+          size: 'fullscreen',
+          resolve: {
+            userid: function() { return $scope.userId; },
+            modelid: function() { return modelId; },
+            mode: function() { return 'proofedit'; },
+            proofid: function() { return $scope.proofId; }
+          }
+        });
+      };
   });
 
 angular.module('keymaerax.controllers').controller('ProofFinishedDialogCtrl',

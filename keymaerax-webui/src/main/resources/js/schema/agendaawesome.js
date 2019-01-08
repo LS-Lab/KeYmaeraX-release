@@ -27,6 +27,9 @@
     "items" : {
     "type" : "object",
         "properties" : {
+        "modelId" : {
+          "type": "number"
+        },
         "proofTree" : {
             "type" : "object",
                 "description" : "Partial proof tree, includes root and all leaves"
@@ -36,6 +39,6 @@
                 "description": "Tasks remaining to be done"
         }}
     ,
-    "required" : ["proofTree", "agendaItems"]
+    "required" : ["modelId", "proofTree", "agendaItems"]
 }
 }

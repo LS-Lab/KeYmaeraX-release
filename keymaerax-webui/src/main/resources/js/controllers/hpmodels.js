@@ -167,6 +167,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
       resolve: {
         userid: function() { return $scope.userId; },
         modelid: function() { return modelId; },
+        proofid: function() { return undefined; },
         mode: function() { return Models.getModel(modelId).isExercise ? 'exercise' : 'edit'; }
       }
     });
@@ -316,12 +317,15 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
 });
 
 angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
-    function ($scope, $http, $uibModal, $uibModalInstance, $location, Models, userid, modelid, mode) {
+    function ($scope, $route, $http, $uibModal, $uibModalInstance, $location, Models, userid, modelid, proofid, mode) {
   $scope.mode = mode;
+  $scope.proofId = proofid;
+  $scope.model = undefined;         // model with edits
+  $scope.origModel = undefined;     // original model from database
 
   $http.get("user/" + userid + "/model/" + modelid).then(function(response) {
-      $scope.model = response.data;
-      $scope.origModel = JSON.parse(JSON.stringify(response.data)); // deep copy
+    $scope.model = response.data;
+    $scope.origModel = JSON.parse(JSON.stringify(response.data)); // deep copy
   });
 
   /** Deletes all proofs of the model */
@@ -394,6 +398,10 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
       error(function(data, status, headers, config) {
         console.log('Error starting new proof for model ' + modelid)
       });
+  }
+
+  $scope.redoProof = function() {
+    $route.reload();
   }
 
   $scope.modelIsComplete = function() { return $scope.model && $scope.model.keyFile.indexOf('__________') < 0; }
