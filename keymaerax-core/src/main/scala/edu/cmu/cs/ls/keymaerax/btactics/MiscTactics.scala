@@ -273,7 +273,7 @@ object Idioms {
   }
 
   /** Executes t if condition is true. */
-  def doIf(condition: ProvableSig => Boolean)(t: BelleExpr): DependentTactic = new DependentTactic("if") {
+  def doIf(condition: ProvableSig => Boolean)(t: BelleExpr): DependentTactic = new DependentTactic("ANON") {
     override def computeExpr(provable: ProvableSig): BelleExpr = {
       if (condition(provable)) t
       else nil
