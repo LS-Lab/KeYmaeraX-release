@@ -978,6 +978,11 @@ object DerivationInfo {
       TactixLibrary.existsL, TacticIndex.existsRStutter, TactixLibrary.step,
       ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse
     )(None)}),
+    PositionTacticInfo("chaseAt", "chaseAt", {case () => TactixLibrary.chaseAt()(
+      TactixLibrary.andL, TactixLibrary.implyR, TactixLibrary.orR, TactixLibrary.allR, TacticIndex.allLStutter,
+      TactixLibrary.existsL, TacticIndex.existsRStutter,
+      ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse
+    )}),
     PositionTacticInfo("simplify", "simplify", {case () => SimplifierV3.simpTac()}, needsTool = true),
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
     new TacticInfo("master", "master", {case () => (gen:Generator.Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),

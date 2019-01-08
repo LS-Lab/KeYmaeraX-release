@@ -79,7 +79,7 @@ angular.module('formula')
                 spinnerService.show('tacticExecutionSpinner');
                 if (event.altKey) {
                   // chase
-                  scope.onTactic({formulaId: formulaId, tacticId: 'chasemore'})
+                  scope.onTactic({formulaId: formulaId, tacticId: 'chaseAt'})
                 } else {
                   // step
                   $http.get('proofs/user/' + scope.userId + '/' + scope.proofId + '/' + scope.nodeId + '/' + formulaId + '/whatStep').

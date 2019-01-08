@@ -167,6 +167,26 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     })))
   )
 
+  /** Chases program operators according to [[AxiomIndex]] or tactics according to `tacticIndex` (restricted to tactics
+    * in `restrictTo`) at a position. */
+  def chaseAt(tacticIndex: TacticIndex = new DefaultTacticIndex)
+             (restrictTo: AtPosition[_ <: BelleExpr]*): DependentPositionTactic = "chaseAt" by ((pos: Position, seq: Sequent) => {
+    seq.sub(pos) match {
+      case Some(e) =>
+        if (AxiomIndex.axiomsFor(e).nonEmpty) {
+          chase(pos)
+        } else {
+          val tactics = tacticIndex.tacticFor(e, restrictTo.toList)
+          if (pos.isAnte && tactics._1.isDefined || pos.isSucc && tactics._2.isDefined) {
+            tacticChase(tacticIndex)(restrictTo:_*)(None)(pos)
+          } else {
+            throw BelleTacticFailure("Inapplicable chase at position " + pos.prettyString + " in " + seq.prettyString)
+          }
+        }
+      case None => throw BelleTacticFailure("Position " + pos.prettyString + " is not a valid position in " + seq.prettyString)
+    }
+  })
+
   val prop: BelleExpr = "prop" by allTacticChase()(notL, andL, orL, implyL, equivL, notR, implyR, orR, andR, equivR,
                                                 ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse)
 
