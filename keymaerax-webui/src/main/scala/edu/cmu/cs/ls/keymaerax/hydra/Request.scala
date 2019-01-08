@@ -639,6 +639,12 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
   override def resultingResponses(): List[Response] = {
     //@todo read from the database/some web page?
     val examples =
+    new ExamplePOJO(5, "POPL 2019 Tutorial",
+      "Programming CPS With Proofs",
+      //"/keymaerax-projects/popltutorial/README.md",
+      "",
+      "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx",
+      "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
       new ExamplePOJO(0, "STTT Tutorial",
         "Automated stop sign braking for cars",
         "/dashboard.html?#/tutorials",
@@ -659,18 +665,18 @@ class ListExamplesRequest(db: DBAbstraction, userId: String) extends UserRequest
         "/dashboard.html?#/tutorials",
         "classpath:/examples/tutorials/basic/basictutorial.kyx",
         "/examples/tutorials/fm/fm.png", 0) ::
-        new ExamplePOJO(3, "DLDS",
+        new ExamplePOJO(4, "DLDS",
           "Dynamic Logic for Dynamical Systems Examples",
           //"/keymaerax-projects/dlds/README.md",
           "",
           "classpath:/keymaerax-projects/dlds/dlds.kya",
           "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
-        new ExamplePOJO(3, "POPL 2019 Tutorial",
-          "Programming CPS With Proofs",
-          //"/keymaerax-projects/popltutorial/README.md",
-          "",
-          "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx",
-          "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
+//        new ExamplePOJO(3, "POPL 2019 Tutorial",
+//          "Programming CPS With Proofs",
+//          //"/keymaerax-projects/popltutorial/README.md",
+//          "",
+//          "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx",
+//          "/examples/tutorials/cpsweek/cpsweek.png", 0) ::
         Nil
 
     db.getUser(userId) match {
