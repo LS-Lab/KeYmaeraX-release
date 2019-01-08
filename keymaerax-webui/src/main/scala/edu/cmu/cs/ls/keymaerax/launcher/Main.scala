@@ -70,7 +70,6 @@ object Main {
         LoadingDialogFactory()
       }
 
-      LoadingDialogFactory().addToStatus(25, Some("Checking database version..."))
       exitIfDeprecated()
 
       LoadingDialogFactory().addToStatus(15, Some("Checking lemma caches..."))
@@ -198,6 +197,7 @@ object Main {
     val databaseVersion = SQLite.ProdDB.getConfiguration("version").config("version")
     launcherLog("Database version: " + databaseVersion)
     cleanupGuestData()
+    LoadingDialogFactory().addToStatus(25, Some("Checking database version..."))
     if (UpdateChecker.upToDate().getOrElse(false) &&
         UpdateChecker.needDatabaseUpgrade(databaseVersion).getOrElse(false)) {
       //Exit if KeYmaera X is up to date but the production database belongs to a deprecated version of KeYmaera X.
@@ -292,18 +292,18 @@ object Main {
     val db = DBAbstractionObj.defaultDatabase
     val tempUsers = db.getTempUsers
     val tempUrlsAndModels: List[(String, List[ModelPOJO])] = tempUsers.map(u => {
-      launcherLog("Updating guest " + u.userName + "...")
+      launcherDebug("Updating guest " + u.userName + "...")
       val models = db.getModelList(u.userName)
-      launcherLog("...with " + models.size + " guest models")
+      launcherDebug("...with " + models.size + " guest models")
       (u.userName, models)
     })
 
     tempUrlsAndModels.flatMap({ case (url, models) =>
       try {
         if (models.nonEmpty) {
-          launcherLog("Reading guest source " + url)
+          launcherDebug("Reading guest source " + url)
           val content = DatabasePopulator.readKya(url)
-          launcherLog("Comparing cached and source content")
+          launcherDebug("Comparing cached and source content")
           models.flatMap(m => content.find(_.name == m.name) match {
             case Some(DatabasePopulator.TutorialEntry(_, model, _, _, _, _, _)) if model == m.keyFile => None
             case Some(DatabasePopulator.TutorialEntry(_, model, _, _, _, _, _)) if model != m.keyFile => Some(m)
@@ -317,6 +317,7 @@ object Main {
   }
 
   private def cleanupGuestData() = {
+    LoadingDialogFactory().addToStatus(5, Some("Guest model updates ..."))
     launcherDebug("Cleaning up guest data...")
     val deleteModels = listOutdatedModels()
     val deleteModelsStatements = deleteModels.map("delete from models where _id = " + _.modelId)
