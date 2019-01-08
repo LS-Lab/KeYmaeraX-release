@@ -546,6 +546,8 @@ object KeYmaeraX {
             w.write("/* @evidence: parse of print of result of a proof */\n\n")
             w.write(lemma.get.toString)
             w.close()
+          case None =>
+            // don't save proof as lemma since no outputFileName
         }
 
         ProofStatistics(name, tacticName, "proved", Some(witness), timeout, proofDuration, qeDuration, proofSteps, tacticSize)
