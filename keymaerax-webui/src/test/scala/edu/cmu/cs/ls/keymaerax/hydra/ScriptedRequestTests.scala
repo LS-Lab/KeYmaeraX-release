@@ -277,7 +277,7 @@ class ScriptedRequestTests extends TacticTestBase {
       getResultingResponses(t).loneElement
     response should have (
       'derivationInfos ((DerivationInfo("loop"), None)::(DerivationInfo("[*] iterate"), None)::
-        (DerivationInfo("GV"), None)::(DerivationInfo("boxd"), None)::Nil),
+        (DerivationInfo("GV"), None)::Nil),
       'suggestedInput (Map(FormulaArg("J") -> "x>-1".asFormula)))
   }
 
@@ -302,7 +302,7 @@ class ScriptedRequestTests extends TacticTestBase {
       getResultingResponses(t).loneElement
     response should have (
       'flag (false),
-      'errorText (Some("Expected formula, but got Term x"))
+      'errorText (Some("Expected: formula, found: Term x"))
     )
   }
 
@@ -354,7 +354,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val examplesResponse = new ListExamplesRequest(db.db, userName).getResultingResponses(t).loneElement.getJson
     examplesResponse shouldBe a [JsArray]
     val urls = examplesResponse.asInstanceOf[JsArray].elements.map(_.asJsObject.fields("url").asInstanceOf[JsString].value)
-    urls should have size 5 // change when ListExamplesRequest is updated
+    urls should have size 6 // change when ListExamplesRequest is updated
     val urlsTable = Table("url", urls:_*)
     forEvery(urlsTable) { (url) =>
       val response = new ImportExampleRepoRequest(db.db, userName, url).getResultingResponses(t).loneElement
@@ -373,7 +373,7 @@ class ScriptedRequestTests extends TacticTestBase {
     val modelInfos = models.asInstanceOf[JsArray].elements.
       filter(_.asJsObject.fields("hasTactic").asInstanceOf[JsBoolean].value).
       map(m => m.asJsObject.fields("name").asInstanceOf[JsString].value -> m.asJsObject.fields("id").asInstanceOf[JsString].value)
-    modelInfos should have size 67  // change when ListExamplesRequest is updated
+    modelInfos should have size 58  // change when ListExamplesRequest is updated
     val modelInfosTable = Table(("name", "id"), modelInfos:_*)
     forEvery(modelInfosTable) { (name, id) =>
       println("Importing and opening " + name + "...")
