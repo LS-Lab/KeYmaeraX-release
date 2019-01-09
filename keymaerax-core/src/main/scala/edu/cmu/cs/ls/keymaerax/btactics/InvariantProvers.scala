@@ -113,7 +113,7 @@ object InvariantProvers {
               //@todo optimize: if the invariant generator were correct, could restrict to its first element
               ChooseSome(() => gen(seq, pos).iterator.filterNot(localInv => odePost.contains(localInv)),
                 (localInv:Formula) => {
-                  println/*logger.debug*/("loopPostMaster local " + localInv)
+                  logger.debug("loopPostMaster local " + localInv)
                   DebuggingTactics.debug("local")&
                   dC(localInv)(pos) < (dW(pos) & QE(), DifferentialTactics.mathematicaODE(pos)) &
                   done & DebuggingTactics.debug("success")
@@ -153,7 +153,7 @@ object InvariantProvers {
             while (candidates.hasNext) {
               val next = Some(candidates.next())
               if (next != currentCandidate) {
-                println /*logger.info*/ ("loopPostMaster next    " + next.get)
+                logger.debug("loopPostMaster next    " + next.get)
                 return next
               }
             }
@@ -178,7 +178,7 @@ object InvariantProvers {
                     candidate = next
                     break
                   }
-                  println/*logger.debug*/("loopPostMaster branch skip")
+                  logger.debug("loopPostMaster branch skip")
                 case _ => // ignore branches that are not about ODEs
               }
             }
