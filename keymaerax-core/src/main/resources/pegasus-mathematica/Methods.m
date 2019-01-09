@@ -4,6 +4,7 @@ BeginPackage["Methods`"];
 
 
 InvS::usage="InvS[S,f,H] LZZ decision procedure]"
+RefuteS::usage="RefuteS[A,B,f,H] LZZ refutation procedure]"
 Abstraction::usage="GenerateDiscreteAbstraction[f_List,vars_List,H_,p_List] Generate a discrete abstraction of a continuous system."
 LazyReach::usage="LazyReach[precond_, postcond_, system_List, A_List] Lazily compute the continuous invariant by computing the reachable set in the abstraction from the initial set of states"
 LazyChain::usage="LazyReach[precond_, postcond_, system_List, A_List] Lazily compute the continuous invariant by computing the reachable set in the abstraction from the initial set of states"
@@ -154,6 +155,15 @@ Cond2 = Implies[S && H && InfS[H,f,vars], InfS[S,f,vars]],
 Cond3 = Implies[ComplementS[S] && H && IvInfS[H,f,vars], ComplementS[IvInfS[S,f,vars]]]
 },
 Resolve[ForAll[vars, Cond2 && Cond3], Reals] 
+]
+
+
+RefuteS[A_, B_, f_List, vars_List, Q_]:=Module[{
+Cond1 = Q && A && ComplementS[B],
+Cond2 = Q && A && InfS[Q,f,vars]&& ComplementS[InfS[B,f,vars]],
+Cond3 = Q && ComplementS[B] && IvInfS[Q,f,vars] && IvInfS[A,f,vars]
+},
+FindInstance[Cond1 || Cond2 || Cond3, vars, Reals] 
 ]
 
 
