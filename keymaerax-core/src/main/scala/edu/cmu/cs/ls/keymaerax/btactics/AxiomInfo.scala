@@ -973,11 +973,6 @@ object DerivationInfo {
     PositionTacticInfo("unfold", "unfold", {case () => TactixLibrary.unfoldProgramNormalize}),
     PositionTacticInfo("prop", "prop", {case () => TactixLibrary.prop}),
     PositionTacticInfo("chase", "chase", {case () => TactixLibrary.chase}),
-    PositionTacticInfo("chasemore", "chasemore", {case () => TactixLibrary.tacticChase()(
-      TactixLibrary.andL, TactixLibrary.implyR, TactixLibrary.orR, TactixLibrary.allR, TacticIndex.allLStutter,
-      TactixLibrary.existsL, TacticIndex.existsRStutter, TactixLibrary.step,
-      ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse
-    )(None)}),
     PositionTacticInfo("chaseAt", "chaseAt", {case () => TactixLibrary.chaseAt()(
       TactixLibrary.andL, TactixLibrary.implyR, TactixLibrary.orR, TactixLibrary.allR, TacticIndex.allLStutter,
       TactixLibrary.existsL, TacticIndex.existsRStutter,

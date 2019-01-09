@@ -94,7 +94,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @see [[chase]] */
   def tacticChase(tacticIndex: TacticIndex = new DefaultTacticIndex)
                  (restrictTo: AtPosition[_ <: BelleExpr]*)
-                 (expected: Option[Formula]): DependentPositionTactic = "chasemore" by ((pos: Position, seq: Sequent) => {
+                 (expected: Option[Formula]): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
     val restrictions = restrictTo.toList
 
     /** Apply the canonical tactic for the formula at position `pos`; exhaustively depth-first search on resulting other formulas */
