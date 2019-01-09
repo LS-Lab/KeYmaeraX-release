@@ -2,9 +2,8 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics._
-import edu.cmu.cs.ls.keymaerax.core.Variable
+import edu.cmu.cs.ls.keymaerax.core.{StaticSemantics, Variable}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-
 import org.scalatest.LoneElement._
 
 /**
@@ -108,6 +107,19 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "0=x ==> 0*y=0".asSequent
   }
 
+  it should "hide when there are no more free occurrences after rewriting" in {
+    StaticSemantics.freeVars("[x:=0+1;]x>=1".asFormula)
+    proveBy("0=x ==> [x:=x+1;]x>=1".asSequent, TactixLibrary.exhaustiveEqR2L(hide=true)(-1)).
+      subgoals.loneElement shouldBe " ==> [x:=0+1;]x>=1".asSequent
+  }
+
+  it should "not hide when there are still free occurrences after rewriting" in {
+    proveBy("0=x ==> [{x:=x+1;}*; x:=x+1;]x>=1".asSequent, TactixLibrary.exhaustiveEqR2L(hide=true)(-1)).
+      subgoals.loneElement shouldBe "0=x ==> [{x:=x+1;}*; x:=x+1;]x>=1".asSequent
+    proveBy("0=x ==> [x:=x+1; ++ y:=2;]x>=0".asSequent, TactixLibrary.exhaustiveEqR2L(hide=true)(-1)).
+      subgoals.loneElement shouldBe "0=x ==> [x:=0+1; ++ y:=2;]x>=0".asSequent
+  }
+
   "Exhaustive eqL2R" should "rewrite a single formula exhaustively" in {
     val result = proveBy("x=0 ==> x*y=0, z>2, z<x+1".asSequent, exhaustiveEqL2R(-1))
     result.subgoals.loneElement shouldBe "x=0 ==> 0*y=0, z>2, z<0+1".asSequent
@@ -161,6 +173,24 @@ class EqualityTests extends TacticTestBase {
   it should "rewrite only free occurrences" in withQE { _ =>
     val result = proveBy("y=x ==> y=2 & \\exists y y<3, \\forall y y>4, y=5".asSequent, exhaustiveEqL2R(-1))
     result.subgoals.loneElement shouldBe "y=x ==> x=2 & \\exists y y<3, \\forall y y>4, x=5".asSequent
+  }
+
+  it should "hide when there are no more free occurrences after rewriting" in {
+    proveBy("x=0 ==> [x:=x+1;]x>=1".asSequent, TactixLibrary.exhaustiveEqL2R(hide=true)(-1)).
+      subgoals.loneElement shouldBe " ==> [x:=0+1;]x>=1".asSequent
+    proveBy("x=0 ==> [x:=x+1;]x>=1".asSequent, EqualityTactics.atomExhaustiveEqL2R(-1)).
+      subgoals.loneElement shouldBe " ==> [x:=0+1;]x>=1".asSequent
+  }
+
+  it should "not hide when there are still free occurrences after rewriting" in {
+    proveBy("x=0 ==> [{x:=x+1;}*; x:=x+1;]x>=1".asSequent, TactixLibrary.exhaustiveEqL2R(hide=true)(-1)).
+      subgoals.loneElement shouldBe "x=0 ==> [{x:=x+1;}*; x:=x+1;]x>=1".asSequent
+    proveBy("x=0 ==> [x:=x+1; ++ y:=2;]x>=0".asSequent, TactixLibrary.exhaustiveEqL2R(hide=true)(-1)).
+      subgoals.loneElement shouldBe "x=0 ==> [x:=0+1; ++ y:=2;]x>=0".asSequent
+    proveBy("x=0 ==> [{x:=x+1;}*; x:=x+1;]x>=1".asSequent, EqualityTactics.atomExhaustiveEqL2R(-1)).
+      subgoals.loneElement shouldBe "x=0 ==> [{x:=x+1;}*; x:=x+1;]x>=1".asSequent
+    proveBy("x=0 ==> [x:=x+1; ++ y:=2;]x>=0".asSequent, EqualityTactics.atomExhaustiveEqL2R(-1)).
+      subgoals.loneElement shouldBe "x=0 ==> [x:=0+1; ++ y:=2;]x>=0".asSequent
   }
 
   "Abbrv tactic" should "abbreviate a+b to z" in withQE { _ =>

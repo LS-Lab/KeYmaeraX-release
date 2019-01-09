@@ -877,14 +877,20 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   lazy val exhaustiveEqL2R: DependentPositionTactic = exhaustiveEqL2R(false)
   def exhaustiveEqL2R(hide: Boolean = false): DependentPositionTactic =
     if (hide) "allL2R" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-      case Some(fml@Equal(_, _)) => EqualityTactics.exhaustiveEqL2R(pos) & hideL(pos, fml)
+      case Some(fml@Equal(l, _)) =>
+        val lvars = StaticSemantics.freeVars(l)
+        EqualityTactics.exhaustiveEqL2R(pos) &
+          Idioms.doIf(_.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(lvars).isEmpty))(hideL(pos, fml))
     })
     else EqualityTactics.exhaustiveEqL2R
   /** Rewrites free occurrences of the right-hand side of an equality into the left-hand side exhaustively ([[EqualityTactics.exhaustiveEqR2L]]). */
   lazy val exhaustiveEqR2L: DependentPositionTactic = exhaustiveEqR2L(false)
   def exhaustiveEqR2L(hide: Boolean = false): DependentPositionTactic =
     if (hide) "allR2L" by ((pos: Position, sequent: Sequent) => sequent.sub(pos) match {
-      case Some(fml@Equal(_, _)) => EqualityTactics.exhaustiveEqR2L(pos) & hideL(pos, fml)
+      case Some(fml@Equal(_, r)) =>
+        val rvars = StaticSemantics.freeVars(r)
+        EqualityTactics.exhaustiveEqR2L(pos) &
+          Idioms.doIf(_.subgoals.forall(s => StaticSemantics.freeVars(s.without(pos.checkTop)).intersect(rvars).isEmpty))(hideL(pos, fml))
     })
     else EqualityTactics.exhaustiveEqR2L
 

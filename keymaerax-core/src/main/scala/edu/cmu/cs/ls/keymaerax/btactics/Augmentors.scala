@@ -258,6 +258,10 @@ object Augmentors {
     }
     /** Returns true if all formulas in the sequent are FOL, false otherwise. */
     def isFOL: Boolean = seq.ante.forall(_.isFOL) && seq.succ.forall(_.isFOL)
+    /** Returns a copy without the position `pos`. */
+    def without(pos: SeqPos): Sequent =
+      if (pos.isAnte) Sequent(seq.ante.patch(pos.getIndex, Nil, 1), seq.succ)
+      else Sequent(seq.ante, seq.succ.patch(pos.getIndex, Nil, 1))
   }
 
   implicit class ExpressionAugmentor(val e: Expression) {
