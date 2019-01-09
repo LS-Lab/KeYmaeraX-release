@@ -627,7 +627,7 @@ private object DifferentialTactics extends Logging {
         val rewriteExistingGhosts = sequent.ante.zipWithIndex.filter({
           case (Equal(l: Variable, r: Variable), _) => primedVars.contains(r) && !primedVars.contains(l)
           case _ => false
-        }).reverse.map({ case (_, i) => exhaustiveEqR2L(hide=true)(AntePosition.base0(i)) }).
+        }).reverse.map({ case (_, i) => exhaustiveEqR2L(AntePosition.base0(i)) & hideL(AntePosition.base0(i)) }).
           reduceOption[BelleExpr](_&_).getOrElse(skip)
 
 
@@ -636,7 +636,7 @@ private object DifferentialTactics extends Logging {
           val storePrimedVars = primedVars.filter(anteSymbols.contains)
           storePrimedVars.
             map(discreteGhost(_)(pos)).reduceOption[BelleExpr](_&_).getOrElse(skip) &
-            (DLBySubst.assignEquality(pos) & exhaustiveEqR2L(hide=true)('Llast))*storePrimedVars.size
+            (DLBySubst.assignEquality(pos) & exhaustiveEqR2L('Llast) & hideL('Llast))*storePrimedVars.size
         })
 
         val dw = "ANON" by ((seq: Sequent) => {
