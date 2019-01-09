@@ -365,11 +365,14 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
     };
     $http.post("user/" + userid + "/model/" + modelid + "/update", data).then(function(response) {
       var model = Models.getModel(modelid);
-      model.name = $scope.model.name;
-      model.title = $scope.model.title;
-      model.description = $scope.model.description;
-      model.keyFile = $scope.model.keyFile;
-      $scope.origModel = JSON.parse(JSON.stringify($scope.model)); // deep copy
+      if (model) {
+        // model === undefined on proof page reload
+        model.name = $scope.model.name;
+        model.title = $scope.model.title;
+        model.description = $scope.model.description;
+        model.keyFile = $scope.model.keyFile;
+        $scope.origModel = JSON.parse(JSON.stringify($scope.model)); // deep copy
+      }
       $uibModalInstance.close();
       $scope.save.cmd();
     })
