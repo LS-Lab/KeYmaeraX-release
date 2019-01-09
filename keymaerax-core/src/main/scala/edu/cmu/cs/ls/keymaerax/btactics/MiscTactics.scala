@@ -110,7 +110,7 @@ object DebuggingTactics {
   def assert(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("assert") {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.size != 1 || !cond(provable.subgoals.head)) {
-        throw BelleUserGeneratedError(message + "\nExpected 1 subgoal whose sequent matches condition " + cond + ",\n\t but got " +
+        throw BelleUserGeneratedError(message + "\nExpected 1 subgoal matching that condition but got " +
           (if (provable.subgoals.size != 1) provable.subgoals.size + " subgoals"
           else provable.subgoals.head.prettyString))
       }
@@ -141,7 +141,7 @@ object DebuggingTactics {
   def assert(cond: (Sequent,Position)=>Boolean, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("assert") {
     override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
       if (provable.subgoals.size != 1 || !cond(provable.subgoals.head, pos)) {
-        throw new BelleUserGeneratedError(message + "\nExpected 1 subgoal whose sequent matches condition " + cond + " at position " + pos + ",\n\t but got " +
+        throw new BelleUserGeneratedError(message + "\nExpected 1 subgoal matching that condition at position " + pos + " but got " +
           provable.subgoals.size + " subgoals, or sole subgoal formula " + provable.subgoals.head.at(pos) + " does not match")
       }
       provable
