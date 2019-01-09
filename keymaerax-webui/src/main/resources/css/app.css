@@ -1193,6 +1193,7 @@ del {
  * ACE editor layout.
  */
 .ace_editor {
+  font-family: Menlo,monospace;
   overflow: hidden;
   position: absolute;
   top: 0;
