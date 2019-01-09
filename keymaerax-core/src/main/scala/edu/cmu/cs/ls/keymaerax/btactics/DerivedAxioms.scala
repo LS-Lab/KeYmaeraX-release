@@ -45,7 +45,8 @@ object DerivedAxioms extends Logging {
       case si: StorableInfo => si.storedName
       case _ => throw new IllegalArgumentException(s"Axiom or rule $name is not storable")
     }
-    require(derivedAxiomDB.contains(lemmaName), "Lemma " + lemmaName + " should already exist in the derived axioms database.")
+    require(derivedAxiomDB.contains(lemmaName), "Lemma " + lemmaName + " should already exist in the derived axioms database.\n" +
+      "Follow configuration instructions after restarting KeYmaera X with\n  java -jar keymaerax.jar")
     derivedAxiomDB.get(lemmaName).getOrElse(throw new IllegalArgumentException("Lemma " + lemmaName + " for derived axiom/rule " + name + " should have been added already")).fact
   }
 
