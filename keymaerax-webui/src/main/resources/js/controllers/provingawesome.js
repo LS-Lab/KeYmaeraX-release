@@ -3,7 +3,8 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 angular.module('keymaerax.controllers').controller('ProofCtrl',
-    function($scope, $rootScope, $http, $routeParams, $q, $uibModal, $timeout, sequentProofData, spinnerService, sessionService) {
+    function($scope, $rootScope, $http, $route, $routeParams, $q, $uibModal, $timeout,
+             sequentProofData, spinnerService, sessionService) {
 
   $scope.userId = sessionService.getUser();
   $scope.proofId = $routeParams.proofId;
@@ -102,7 +103,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
     if (taskResult.type === 'taskresult') {
       if ($scope.proofId === taskResult.proofId) {
         if ($scope.runningTask.nodeId === taskResult.parent.id) {
-          sequentProofData.fetchAgenda($scope, $scope.userId, $scope.proofId)
+          $route.reload();
         } else {
           showMessage($uibModal, "Unexpected tactic result, parent mismatch: expected " +
             $scope.runningTask.nodeId + " but got " + taskResult.parent.id);
@@ -541,9 +542,10 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
         if (tacticText != "nil") {
           spinnerService.show('tacticExecutionSpinner');
           var uri = 'proofs/user/' + $scope.userId + '/' + $scope.proofId + '/' + nodeId + '/doCustomTactic';
+          var updateProof = stepwise ? $scope.updateFreshProof : $scope.updateMainProof
           $http.post(uri + '?stepwise='+stepwise, tacticText)
             .then(function(response) { $scope.runningTask.start($scope.proofId, nodeId, response.data.taskId, response.data.info,
-                                       $scope.updateMainProof, $scope.broadcastProofError, undefined); })
+                                       updateProof, $scope.broadcastProofError, undefined); })
             .catch(function(err) {
               spinnerService.hideAll();
               if (err.data.errorThrown != undefined) {
@@ -615,7 +617,6 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var tactic = $scope.tactic.tacticText;
       sequentProofData.prune($scope.userId, $scope.proofId, $scope.prooftree.root, function() {
         $scope.onTacticScript(tactic, true);
-        $route.reload();
       });
     }
 
