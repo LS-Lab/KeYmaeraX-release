@@ -1498,9 +1498,9 @@ object ODEInvariance {
           dW('Rlast) & //todo: dW repeats storing of initial values which isn't very useful here
           //DebuggingTactics.print("extra dW work") &
           implyR('Rlast) & andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
-          (andL('Llast)*) & //Splits conjunction of equations up
-          (exhaustiveEqL2R(true)('Llast)*) & //rewrite
-          timeoutQE & done
+          SaturateTactic(andL('Llast)) & //Splits conjunction of equations up
+          ?(SaturateTactic(exhaustiveEqL2R(true)('Llast)) & //rewrite
+            timeoutQE)
         else
           skip
 
