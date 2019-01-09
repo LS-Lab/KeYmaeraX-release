@@ -526,4 +526,34 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(problem, master()) shouldBe 'proved
   }
 
+  it should "prove the bouncing ball with invariant annotation" in withQE { _ =>
+    val problem = KeYmaeraXArchiveParser.getEntry("Bouncing Ball", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/keymaerax-projects/lics/bouncing-ball.kya")).mkString).get.model.asInstanceOf[Formula]
+    proveBy(problem, master()) shouldBe 'proved
+  }
+
+  it should "prove regardless of order" in withQE { _ =>
+    val problem1 = """
+      v^2<=2*b*(m-x) & v>=0  & A>=0 & b>0
+      -> [
+           {
+             {?(v+A*ep)^2<=2*b*(m-x-A/2*ep^2-v*ep) ; a :=A; ++ a:=-b;}
+             t := 0;
+             {x'=v, v'=a, t'=1 & v>=0 & t<=ep}
+           }*
+         ] x <= m""".stripMargin(' ').asFormula
+    proveBy(problem1, master()) shouldBe 'proved
+
+    val problem2 = """
+      v^2<=2*b*(m-x) & v>=0  & A>=0 & b>0
+      -> [
+           {
+             {a:=-b; ++ ?(v+A*ep)^2<=2*b*(m-x-A/2*ep^2-v*ep) ; a :=A; }
+             t := 0;
+             {x'=v, v'=a, t'=1 & v>=0 & t<=ep}
+           }*
+         ] x <= m""".stripMargin(' ').asFormula
+    proveBy(problem2, master()) shouldBe 'proved
+  }
+
 }

@@ -230,7 +230,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
     def odeInContext(odeR: AtPosition[_ <: BelleExpr]): DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
       val solvers = Idioms.mapSubpositions(pos, seq, {
-        case (Box(ODESystem(_, _), _), pp: Position) => Some(odeR(pp))
+        case (Box(ODESystem(_, _), q), pp: Position) if pp.isTopLevel =>
+          if (q.isFOL) Some(odeR(pp))
+          else Some(chase(pp ++ PosInExpr(1::Nil)) & odeR(pp))
+        case (Box(ODESystem(_, _), q), pp: Position) if !pp.isTopLevel => Some(solve(pp))
         case _ => None
       })
 
@@ -255,7 +258,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
         implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
         andR, equivR, loop, odeR, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
-        Idioms.doIf(!_.isProved)(onAll(EqualityTactics.applyEqualities & (DifferentialTactics.endODEHeuristic | ?(QE & (if (keepQEFalse) nil else done)))))))
+        Idioms.doIf(!_.isProved)(onAll(EqualityTactics.applyEqualities &
+          (DifferentialTactics.endODEHeuristic | ?(QE & (if (keepQEFalse) nil else done)))))))
   }
 
   /** master: master tactic that tries hard to prove whatever it could. `keepQEFalse` indicates whether or not a
