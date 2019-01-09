@@ -315,7 +315,7 @@ angular.module('keymaerax.controllers').controller('BrowseProofCtrl',
 });
 
 angular.module('keymaerax.controllers').controller('TaskCtrl',
-  function($rootScope, $scope, $http, $routeParams, $q, $uibModal, Tactics, sequentProofData, spinnerService,
+  function($rootScope, $scope, $http, $route, $routeParams, $q, $uibModal, Tactics, sequentProofData, spinnerService,
            derivationInfos, sessionService, Poller) {
     $scope.proofId = $routeParams.proofId;
     $scope.userId = sessionService.getUser();
@@ -615,6 +615,7 @@ angular.module('keymaerax.controllers').controller('TaskCtrl',
       var tactic = $scope.tactic.tacticText;
       sequentProofData.prune($scope.userId, $scope.proofId, $scope.prooftree.root, function() {
         $scope.onTacticScript(tactic, true);
+        $route.reload();
       });
     }
 

@@ -239,8 +239,9 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           delete theAgenda.itemsMap[item.id];
         });
 
-        // update agenda: copy already cached deduction path into the remaining agenda item (new top item)
-        response.data.agendaItem.deduction = agendaItems[0].deduction;
+        // update agenda: if available, copy already cached deduction path into the remaining agenda item (new top item)
+        var topDeduction = agendaItems[0] ? agendaItems[0].deduction : response.data.agendaItem.deduction;
+        response.data.agendaItem.deduction = topDeduction;
         response.data.agendaItem.isSelected = true; // add item marked as selected, otherwise step back jumps to random tab
         theAgenda.itemsMap[response.data.agendaItem.id] = response.data.agendaItem;
 
