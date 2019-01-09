@@ -913,7 +913,10 @@ private object DifferentialTactics extends Logging {
         // Try to prove postcondition invariant
         odeInvariant()(pos) |
         // Some additional cases
+        //(solve(pos) & ?(timeoutQE))|
         ODEInvariance.nilpotentSolve(true)(pos) |
+        // todo: Pegasus should tell us for nonlinear ODEs
+        // (diffUnpackEvolutionDomainInitially(pos) & DebuggingTactics.print("diff unpack") & hideR(pos) & timeoutQE & done) |
         // todo: Insert G|-[x'=f(x)]P refutation here
         // Ask for invariants and recursively tries to diff cut them in
         // aborts with error if no extra cuts were found

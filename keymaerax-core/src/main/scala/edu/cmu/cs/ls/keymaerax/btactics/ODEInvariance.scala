@@ -1452,7 +1452,7 @@ object ODEInvariance {
     if(npopt.isEmpty)  throw new BelleThrowable("Coefficient matrix for " + ode +" is not nilpotent.")
     val np = npopt.get
 
-    if(np.length == 0) skip
+    if(np.length == 0) skip //todo: fix this for univariate ODE
     else {
 
       val mats = np.zip( np.tail)
@@ -1495,12 +1495,12 @@ object ODEInvariance {
 
       val finish =
         if(solveEnd)
+          diffUnpackEvolutionDomainInitially('Rlast) &
           dW('Rlast) & //todo: dW repeats storing of initial values which isn't very useful here
-          //DebuggingTactics.print("extra dW work") &
           implyR('Rlast) & andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
           SaturateTactic(andL('Llast)) & //Splits conjunction of equations up
           ?(SaturateTactic(exhaustiveEqL2R(true)('Llast)) & //rewrite
-            timeoutQE)
+            timeoutQE & done)
         else
           skip
 
