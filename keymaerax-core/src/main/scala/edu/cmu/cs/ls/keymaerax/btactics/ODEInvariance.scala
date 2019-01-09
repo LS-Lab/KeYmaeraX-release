@@ -1452,76 +1452,76 @@ object ODEInvariance {
     if(npopt.isEmpty)  throw new BelleThrowable("Coefficient matrix for " + ode +" is not nilpotent.")
     val np = npopt.get
 
-    if(np.length == 0) skip //todo: fix this for univariate ODE
-    else {
+    val bsimp = b.map (t => simpWithTool(ToolProvider.simplifierTool(),t))
 
-      val mats = np.zip( np.tail)
+    val oldx = x.map(TacticHelper.freshNamedSymbol(_, seq))
 
-      val bsimp = b.map (t => simpWithTool(ToolProvider.simplifierTool(),t))
+    // Introduce the initial values x0
+    val storeInitialVals =
+      x.zip(oldx).map(v => discreteGhost(v._1, Some(v._2))('Rlast) & DLBySubst.assignEquality('Rlast)).reduceOption[BelleExpr](_ & _).getOrElse(skip)
 
-      val oldx = x.map(TacticHelper.freshNamedSymbol(_, seq))
+    // Partial solutions
+    val sp = np.map(m => matvec_prod(m, oldx))
 
-      // Introduce the initial values x0
-      val storeInitialVals =
-        x.zip(oldx).map(v => discreteGhost(v._1, Some(v._2))('Rlast) & DLBySubst.assignEquality('Rlast)).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+    //Forcing terms on partial solutions for x',x'',...
+    val sb = bsimp :: np.map(m => matvec_prod(m,bsimp))
 
-      // Partial solutions
-      val sp = np.map(m => matvec_prod(m, oldx))
+    // Actual solution
+    val s = (oldx :: sb.zip(sp).map(f => vecvec_sum(f._1,f._2))) ++ List(sb.last)
 
-      //Forcing terms on partial solutions for x',x'',...
-      val sb = bsimp :: np.map(m => matvec_prod(m,bsimp))
+    // LHS of partial solutions
+    val sL =
+      x :: np.map(m => matvec_prod(m, x)).zip(sb).map(f => vecvec_sum(f._1,f._2).map(t => simpWithTool(ToolProvider.simplifierTool(),t)))
 
-      // Actual solution
-      val s = (oldx :: sb.zip(sp).map(f => vecvec_sum(f._1,f._2))) ++ List(sb.last)
+    //The actual solution
+    val sol = timeSeries(t,s).map(t => simpWithTool(ToolProvider.simplifierTool(),t))
 
-      // LHS of partial solutions
-      val sL =
-        x :: np.map(m => matvec_prod(m, x)).zip(sb).map(f => vecvec_sum(f._1,f._2).map(t => simpWithTool(ToolProvider.simplifierTool(),t)))
+    val cut = And(GreaterEqual(t,Number(0)),x.zip(sol).map( f => Equal(f._1,f._2) ).reduceRight(And))
 
-      //The actual solution
-      val sol = timeSeries(t,s).map( t => simpWithTool(ToolProvider.simplifierTool(),t))
+    val cutPrep = Range(0,s.length).map(i => timeSeries(t,s.drop(i)).map(t => simpWithTool(ToolProvider.simplifierTool(),t)))
 
-      val cut = And(GreaterEqual(t,Number(0)),x.zip(sol).map( f => Equal(f._1,f._2) ).reduceRight(And))
+    val cuts = sL.zip(cutPrep).tail.map(
+      ff =>
+        ff._1.zip(ff._2).collect({
+          case f if f._1 != f._2 => Equal(f._1, f._2)
+        }
+        ).reduce(And)
+    ) //.map( f => replaceODEfree(f,DifferentialProduct(AtomicODE(DifferentialSymbol(t),Number(1)),ode)))
 
-      val cutPrep = Range(0,s.length).map(i => timeSeries(t,s.drop(i)).map(t => simpWithTool(ToolProvider.simplifierTool(),t)))
+    val start =
+      if(solveEnd)
+        diffUnpackEvolutionDomainInitially('Rlast)
+      else
+        skip
 
-      val cuts = sL.zip(cutPrep).tail.map(
-        ff =>
-          ff._1.zip(ff._2).collect({
-            case f if f._1 != f._2 => Equal(f._1, f._2)
-          }
-          ).reduce(And)
-      ) //.map( f => replaceODEfree(f,DifferentialProduct(AtomicODE(DifferentialSymbol(t),Number(1)),ode)))
+    val finish =
+      if(solveEnd)
+        dW('Rlast) & //todo: dW repeats storing of initial values which isn't very useful here
+        implyR('Rlast) & andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
+        SaturateTactic(andL('Llast)) & //Splits conjunction of equations up
+        ?(SaturateTactic(exhaustiveEqL2R(true)('Llast)) & //rewrite
+          timeoutQE & done)
+      else
+        skip
 
-      val finish =
-        if(solveEnd)
-          diffUnpackEvolutionDomainInitially('Rlast) &
-          dW('Rlast) & //todo: dW repeats storing of initial values which isn't very useful here
-          implyR('Rlast) & andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
-          SaturateTactic(andL('Llast)) & //Splits conjunction of equations up
-          ?(SaturateTactic(exhaustiveEqL2R(true)('Llast)) & //rewrite
-            timeoutQE & done)
-        else
-          skip
+    start &
+    HilbertCalculus.DGC(t, Number(1))(pos) &
+    existsR(Number(0))(pos) &
+    //NOTE: At this point, the box question is guaranteed to be 'Rlast because existR reorders succedents
+    //If existsR is changed, all the 'Rlast should turn back into pos instead
+    storeInitialVals &
+    dC(cut)('Rlast) <(
+      finish,
+      // dRI directly is actually a lot slower than the dC chain even with naive dI
+      // dRI('Rlast)
+      cuts.foldLeft(skip)( (t,f) => dC(f)('Rlast) < (t, dI('full)('Rlast)) ) & dI('full)('Rlast)
 
-      HilbertCalculus.DGC(t, Number(1))(pos) &
-      existsR(Number(0))(pos) &
-      //NOTE: At this point, the box question is guaranteed to be 'Rlast because existR reorders succedents
-      //If existsR is changed, all the 'Rlast should turn back into pos instead
-      storeInitialVals &
-      dC(cut)('Rlast) <(
-        finish,
-        // dRI directly is actually a lot slower than the dC chain even with naive dI
-        // dRI('Rlast)
-        cuts.foldLeft(skip)( (t,f) => dC(f)('Rlast) < (t, dI('full)('Rlast)) ) & dI('full)('Rlast)
-
-        // this does the "let" once rather than on every dI -- doesn't help speed much
-        //Dconstify(
-        //  cuts.foldLeft(skip)( (t,f) => dC(f)('Rlast) < (t, dI('diffInd)('Rlast)
-        //  <( QE , cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) & QE )) ) &
-        //    dI('diffInd)('Rlast)<( QE, cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) & QE ))('Rlast)
-      )
-    }
+      // this does the "let" once rather than on every dI -- doesn't help speed much
+      //Dconstify(
+      //  cuts.foldLeft(skip)( (t,f) => dC(f)('Rlast) < (t, dI('diffInd)('Rlast)
+      //  <( QE , cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) & QE )) ) &
+      //    dI('diffInd)('Rlast)<( QE, cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) & QE ))('Rlast)
+    )
   })
 
 }
