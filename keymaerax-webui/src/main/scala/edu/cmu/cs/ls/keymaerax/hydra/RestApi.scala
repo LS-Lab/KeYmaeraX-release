@@ -52,7 +52,7 @@ object RestApi extends Logging {
 
   private val DEFAULT_ARCHIVE_LOCATION = "http://keymaerax.org/KeYmaeraX-projects/"
   private val BUNDLED_ARCHIVE_DIR = "/keymaerax-projects/"
-  private val BUNDLED_ARCHIVE_LOCATION = s"classpath:${BUNDLED_ARCHIVE_DIR}"
+  private val BUNDLED_ARCHIVE_LOCATION = s"classpath:$BUNDLED_ARCHIVE_DIR"
 
   //endregion
 
@@ -283,7 +283,7 @@ object RestApi extends Logging {
   }}}
 
   //Because apparently FTP > modern web.
-  val userModel2: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => {pathPrefix("modelupload" / Segment) {modelNameOrId =>
+  val userModel2: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => {pathPrefix("modelupload" / Segment.?) { modelNameOrId =>
   {pathEnd {
     post {
       entity(as[String]) { contents => {

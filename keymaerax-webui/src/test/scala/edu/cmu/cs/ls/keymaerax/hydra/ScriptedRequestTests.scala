@@ -21,7 +21,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
   "Model upload" should "work with a simple file" in withDatabase { db =>
     val modelContents = "ProgramVariables Real x; End.\n Problem x=0->[x:=x+1;]x=1 End."
-    val request = new UploadArchiveRequest(db.db, "guest", modelContents, "Simple")
+    val request = new UploadArchiveRequest(db.db, "guest", modelContents, Some("Simple"))
     request.resultingResponses() should contain theSameElementsAs ModelUploadResponse(Some("1"), None)::Nil
     db.db.getModelList("guest").loneElement should have(
       'name ("Simple"),
@@ -30,7 +30,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
   it should "report parse errors" in withDatabase { db =>
     val modelContents = "ProgramVariables Real x; End.\n Problem x=0->[x:=x+1]x=1 End."
-    val request = new UploadArchiveRequest(db.db, "guest", modelContents,"Simple")
+    val request = new UploadArchiveRequest(db.db, "guest", modelContents, Some("Simple"))
     val response = request.resultingResponses().loneElement
     response shouldBe a [ParseErrorResponse]
     response should have (
@@ -54,7 +54,7 @@ class ScriptedRequestTests extends TacticTestBase {
       'progress (true)
     )
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
-      case AgendaAwesomeResponse(_, root, leaves, _, _) =>
+      case AgendaAwesomeResponse(_, _, root, leaves, _, _) =>
         root should have ('goal (Some("==> x>=0 -> x>=0".asSequent)))
         leaves.loneElement should have ('goal (Some("x>=0 ==> x>=0".asSequent)))
     }
@@ -70,7 +70,7 @@ class ScriptedRequestTests extends TacticTestBase {
     tacticRunner("()", implyR(1))
     tacticRunner("(1,0)", solve(1, 1::Nil))
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
-      case AgendaAwesomeResponse(_, root, leaves, _, _) =>
+      case AgendaAwesomeResponse(_, _, root, leaves, _, _) =>
         root should have ('goal (Some("==> x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0".asSequent)))
         leaves.loneElement should have ('goal (Some("x>=0&v>=0 ==> [v:=v;]\\exists t_ (t_>=0 & v*t_+x>=0)".asSequent)))
     }
@@ -86,7 +86,7 @@ class ScriptedRequestTests extends TacticTestBase {
     tacticRunner("()", implyR(1))
     tacticRunner("(1,0)", loop("x>=1".asFormula)(1))
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
-      case AgendaAwesomeResponse(_, root, l1::l2::l3::Nil, _, _) =>
+      case AgendaAwesomeResponse(_, _, root, l1::l2::l3::Nil, _, _) =>
         root should have ('goal (Some("==> x>=2 -> [{x:=x+1;}*]x>=0".asSequent)))
         l1 should have ('goal (Some("x>=2 ==> x>=1".asSequent)))
         l2 should have ('goal (Some("x>=1 ==> x>=0".asSequent)))
@@ -107,7 +107,7 @@ class ScriptedRequestTests extends TacticTestBase {
       'progress (true)
     )
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
-      case AgendaAwesomeResponse(_, root, leaves, _, _) =>
+      case AgendaAwesomeResponse(_, _, root, leaves, _, _) =>
         root should have ('goal (Some("==> x>=0 -> x>=0".asSequent)))
         leaves.loneElement should have ('goal (Some(" ==> ".asSequent)))
     }
@@ -125,7 +125,7 @@ class ScriptedRequestTests extends TacticTestBase {
 
     tacticRunner("()", "tactic myImply as (implyR(1);nil); myImply")
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
-      case AgendaAwesomeResponse(_, root, l1::Nil, _, _) =>
+      case AgendaAwesomeResponse(_, _, root, l1::Nil, _, _) =>
         root should have ('goal (Some("==> x>=2 -> [{x:=x+1;}*]x>=0".asSequent)))
         l1 should have ('goal (Some("x>=2 ==> [{x:=x+1;}*]x>=0".asSequent)))
     }
@@ -143,7 +143,7 @@ class ScriptedRequestTests extends TacticTestBase {
     response should have ('msg ("Tactic failed with error: [Bellerophon Runtime] Position Fixed(2,None,true) may point outside the positions of the goal ElidingProvable(Provable{\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply\n  from\n==> 1:  x>=0->[x:=x+1;]x>=0\tImply})"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
-      case AgendaAwesomeResponse(_, _, leaves, _, _) =>
+      case AgendaAwesomeResponse(_, _, _, leaves, _, _) =>
         leaves.loneElement should have ('goal (Some("==> x>=0 -> [x:=x+1;]x>=0".asSequent)))
     }
   }}
@@ -160,7 +160,7 @@ class ScriptedRequestTests extends TacticTestBase {
     response should have ('msg ("Tactic failed with error: [Bellerophon Runtime] Tactic choiceb(1.1) is not applicable for\n    [v:=v;]<{x'=v&true}>x>=0\nat position Fixed(1.1,None,true)\nbecause No substitution found by unification, try to patch locally with own substitution"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
-      case AgendaAwesomeResponse(_, _, leaves, _, _) =>
+      case AgendaAwesomeResponse(_, _, _, leaves, _, _) =>
         leaves.loneElement should have ('goal (Some("==> x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0".asSequent)))
     }
   }}
@@ -177,7 +177,7 @@ class ScriptedRequestTests extends TacticTestBase {
     response should have ('msg ("Tactic failed with error: [Bellerophon Runtime] Tactic choiceb(2) is not applicable for\n    position outside sequent: expected -1...-0 or 1...1\nat position Fixed(2,None,true)\nbecause requirement failed: Cannot apply at undefined position 2 in sequent   ==>  x>=0&v>=0->[v:=v;]<{x'=v&true}>x>=0"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
-      case AgendaAwesomeResponse(_, _, leaves, _, _) =>
+      case AgendaAwesomeResponse(_, _, _, leaves, _, _) =>
         leaves.loneElement should have ('goal (Some("==> x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0".asSequent)))
     }
   }}
@@ -195,7 +195,7 @@ class ScriptedRequestTests extends TacticTestBase {
     response should have ('msg ("Tactic failed with error: [Bellerophon Runtime] Tactic ANON(1.1) is not applicable for\n    [v:=v;]<{x'=v&true}>x>=0\nat position Fixed(1.1,None,true)\nbecause Some([v:=v;]<{x'=v&true}>x>=0) (of class scala.Some)"))
 
     inside (new GetAgendaAwesomeRequest(db.db, db.user.userName, proofId.toString).getResultingResponses(t).loneElement) {
-      case AgendaAwesomeResponse(_, _, leaves, _, _) =>
+      case AgendaAwesomeResponse(_, _, _, leaves, _, _) =>
         leaves.loneElement should have ('goal (Some("==> x>=0&v>=0 -> [v:=v;]<{x'=v}>x>=0".asSequent)))
     }
   }}

@@ -743,7 +743,7 @@ class UpdateModelRequest(db: DBAbstraction, userId: String, modelId: String, nam
   }
 }
 
-class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: String, modelName: String) extends UserRequest(userId) with WriteRequest {
+class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: String, modelName: Option[String]) extends UserRequest(userId) with WriteRequest {
   def resultingResponses(): List[Response] = {
     try {
       val parsedArchiveEntries = KeYmaeraXArchiveParser.parse(archiveText)
@@ -752,7 +752,7 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
       val archiveEntries =
         if (parsedArchiveEntries.size == 1 && parsedArchiveEntries.head.name == "<undefined>") {
           val entry = parsedArchiveEntries.head
-          KeYmaeraXArchiveParser.ParsedArchiveEntry(modelName, entry.kind, entry.fileContent, entry.problemContent,
+          KeYmaeraXArchiveParser.ParsedArchiveEntry(modelName.getOrElse("undefined"), entry.kind, entry.fileContent, entry.problemContent,
             entry.defs, entry.model, entry.tactics, entry.info) :: Nil
         } else parsedArchiveEntries
 
