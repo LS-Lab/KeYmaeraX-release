@@ -19,6 +19,8 @@ class TutorialTests extends Suites(
   new TutorialRegressionTester("FM", "classpath:/examples/tutorials/fm/fm.kyx"),
   new TutorialRegressionTester("STTT", "classpath:/examples/tutorials/sttt/sttt.kyx"),
   new TutorialRegressionTester("CPSWeek", "classpath:/examples/tutorials/cpsweek/cpsweek.kyx"),
+  new TutorialRegressionTester("DLDS", "classpath:/keymaerax-projects/dlds/dlds.kya"),
+  new TutorialRegressionTester("POPL", "classpath:/keymaerax-projects/popltutorial/popltutorial.kyx"),
   // Course
   new TutorialRegressionTester("FCPS17-05", s"$COURSE17_PATH/05-dynax.kya"),
   new TutorialRegressionTester("FCPS17-07", s"$COURSE17_PATH/07-loops.kya"),
@@ -67,7 +69,7 @@ class TutorialTests extends Suites(
   new TutorialRegressionTester("Roundabout", s"$GITHUB_PROJECTS_RAW_PATH/roundabout/TRM-essentials.kya"),
   new TutorialRegressionTester("ACAS X", s"$GITHUB_PROJECTS_RAW_PATH/acasx/acasx.kyx"),
   new TutorialRegressionTester("Robix", s"$GITHUB_PROJECTS_RAW_PATH/ijrr/robix.kyx"),
-  new TutorialRegressionTester("ETCS", s"$GITHUB_PROJECTS_RAW_PATH/etcs/etcs.kyx")
+  new TutorialRegressionTester("ETCS", s"$GITHUB_PROJECTS_RAW_PATH/etcs/etcs.kyx"),
 )
 
 object TutorialTests {
