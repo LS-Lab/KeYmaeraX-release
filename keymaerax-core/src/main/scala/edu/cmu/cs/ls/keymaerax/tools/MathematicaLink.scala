@@ -73,6 +73,9 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
   override def runUnchecked(cmd: String): (String, T) = link.runUnchecked(timeConstrained(cmd), m2k)
   override def run(cmd: MExpr): (String, T) = link.run(timeConstrained(cmd), m2k, mathematicaExecutor)
 
+  def runUnchecked[S](cmd: String, localm2k: M2KConverter[S]): (String, S) =
+    link.runUnchecked(timeConstrained(cmd), localm2k)
+
   def availableWorkers: Int = mathematicaExecutor.availableWorkers()
   def shutdown(): Unit = mathematicaExecutor.shutdown()
 

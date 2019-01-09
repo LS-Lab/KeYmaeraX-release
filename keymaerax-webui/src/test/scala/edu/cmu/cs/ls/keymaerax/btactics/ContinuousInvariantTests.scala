@@ -127,6 +127,11 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
     }
   }
 
+  "Refute ODE" should "find a simple counterexample" in withMathematica { tool =>
+    val cex = tool.refuteODE("{x'=1}".asProgram.asInstanceOf[ODESystem], "x=1".asFormula :: Nil, "x=1".asFormula)
+    cex shouldBe Some(Map("x".asVariable -> "1".asTerm))
+  }
+
 //  it should "standalone test of pegasus + odeInvariant only" taggedAs SlowTest in withMathematica { _ =>
 //    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "180", saveToFile = false)
 //    Configuration.set(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT, "60", saveToFile = false)

@@ -91,6 +91,56 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     }
   }
 
+  override def refuteODE(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, KExpr]] = {
+    require(postCond.isFOL, "Unable to generate invariant, expected FOL post conditions but got " + postCond.prettyString)
+
+    val vars = DifferentialHelper.getPrimedVariables(ode)
+    //@todo vars
+    val stringVars = "{" + vars.map(k2m(_)).mkString(", ") + "}"
+    val vectorField = "{" + DifferentialHelper.atomicOdes(ode).map(o => k2m(o.e)).mkString(", ") + "}"
+    val problem =
+      k2m(assumptions.reduceOption(And).getOrElse(True)) + "," +
+      k2m(postCond) + "," +
+      vectorField + ", " +
+      stringVars + ", " +
+      k2m(ode.constraint)
+
+    logger.debug("Raw Mathematica input into Pegasus: " + problem)
+
+    timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
+
+    val command = s"""
+                     |Needs["Methods`","$pegasusPath/Methods.m"];
+                     |Methods`RefuteS[$problem]""".stripMargin
+
+    try {
+      val (output, result) = runUnchecked(command, CEXM2KConverter)
+      logger.debug("Counterexample: " + result + " from raw output " + output)
+      result match {
+        case Left(cex: Formula) => cex match {
+          case False =>
+            logger.debug("No counterexample, Mathematica returned: " + cex.prettyString)
+            None
+          case _ =>
+            logger.debug("Counterexample " + cex.prettyString)
+            Some(FormulaTools.conjuncts(cex).map({
+              case Equal(name: Variable, value) => name -> value
+              case Equal(name: DifferentialSymbol, value) => name -> value
+              case Equal(FuncOf(fn, _), value) => fn -> value
+              case Equiv(PredOf(fn, _), value) => fn -> value
+            }).toMap)
+        }
+        case _ =>
+          logger.debug("No counterexample, Mathematica returned: " + result)
+          None
+      }
+    } catch {
+      case ex: ConversionException =>
+        logger.warn("Conversion exception", ex)
+        None
+    }
+  }
+
   private def init(): Unit = {
     // copy Pegasus Mathematica notebooks
     val pegasusTempDir = Configuration.path(Configuration.Keys.PEGASUS_PATH)
