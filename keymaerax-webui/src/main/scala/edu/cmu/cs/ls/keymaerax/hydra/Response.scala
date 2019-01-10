@@ -1017,7 +1017,7 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
           case cmp: ComparisonFormula =>
             val cexCmp = TactixLibrary.proveBy(replaceWithCexVals(cmp, cex), TactixLibrary.RCF)
             if (cexCmp.subgoals.size > 1 || cexCmp.subgoals.headOption.getOrElse(makeSeq(True)) == makeSeq(False)) {
-              Right(Equiv(cmp, False))
+              Right(And(False, And(cmp, False)))
             } else Right(cmp)
           case _ => Left(None)
         }
@@ -1038,7 +1038,7 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
       })
 
       //@note look for (cexCmp<->false) groups and replace with boldface danger spans
-      val cexMatcher = "\\(([^\\)]+?)&#8596;false\\)".r("fml")
+      val cexMatcher = "\\(false&and;(.*?)&and;false\\)".r("fml")
       cexMatcher.replaceAllIn(cexFmlWithVals, (m: Match) => {
         val cexCmp = m.group("fml")
         s"""<div class="k4-cex-highlight text-danger">$cexCmp</div>"""
