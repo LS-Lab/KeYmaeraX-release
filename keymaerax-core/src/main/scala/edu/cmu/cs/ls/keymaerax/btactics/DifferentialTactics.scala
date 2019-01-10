@@ -952,7 +952,7 @@ private object DifferentialTactics extends Logging {
         // Try to prove postcondition invariant
         odeInvariant()(pos) |
         // Counterexample check
-        cexCheck(pos) &
+        // cexCheck(pos) &
         // Some additional cases
         //(solve(pos) & ?(timeoutQE))|
         (
