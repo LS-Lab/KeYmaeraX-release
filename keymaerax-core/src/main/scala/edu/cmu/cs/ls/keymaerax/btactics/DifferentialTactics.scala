@@ -701,6 +701,45 @@ private object DifferentialTactics extends Logging {
     }, "Invariant fast-check failed")
   }
 
+
+  /** Counterexample finder
+    * Fails with an error message if it finds a counterexample but succeeds in all other cases
+    * (including when the sequent or position are not of the expected shape)
+    */
+  lazy val cexCheck: DependentPositionTactic = "cexCheck" by ((pos: Position, seq:Sequent) => {
+    if(!(pos.isSucc && pos.isTopLevel && pos.checkSucc.index0 == 0 && seq.succ.length==1)) {
+      //todo: currently only works if there is exactly one succedent
+      logger.warn("ODE counterexample not called at top-level succedent")
+      skip
+    }
+    else if (ToolProvider.invGenTool().isEmpty) {
+      logger.warn("ODE counterexample requires an InvGenTool, but got None")
+      skip
+    }
+    else
+    {
+      val tool = ToolProvider.invGenTool().get
+
+      seq.sub(pos) match {
+        case Some(Box(ode:ODESystem, post)) =>
+          try {
+            tool.refuteODE(ode,seq.ante,post) match {
+              case None => skip
+              case Some(cex) =>
+                DebuggingTactics.error("Found a counterexample for the ODE conjecture: "+cex)
+            }
+
+          } catch {
+            // cannot falsify for whatever reason (timeout, ...), so continue with the tactic
+            case _: Exception => skip
+          }
+        case _ =>
+          logger.warn("ODE counterexample not called at box ODE in succedent")
+          skip
+      }
+    }
+  })
+
   /** Tries to instantiate the evolution domain fact with the ODE duration (assumes monotonicity). */
   lazy val endODEHeuristic: BelleExpr = "ANON" by ((seq: Sequent) => {
     val succInstantiators = seq.succ.indices.map(SuccPosition.base0(_)).flatMap(pos => {
@@ -912,26 +951,30 @@ private object DifferentialTactics extends Logging {
       case Some(Box(sys@ODESystem(ode, q), _)) =>
         // Try to prove postcondition invariant
         odeInvariant()(pos) |
+        // Counterexample check
+        cexCheck(pos) &
         // Some additional cases
         //(solve(pos) & ?(timeoutQE))|
-        ODEInvariance.nilpotentSolve(true)(pos) |
-        // todo: Pegasus should tell us for nonlinear ODEs
-        // (diffUnpackEvolutionDomainInitially(pos) & DebuggingTactics.print("diff unpack") & hideR(pos) & timeoutQE & done) |
-        // todo: Insert G|-[x'=f(x)]P refutation here
-        // Ask for invariants and recursively tries to diff cut them in
-        // aborts with error if no extra cuts were found
-        fastODE(
-          //@note aborts with error if the ODE was left unchanged -- invariant generators failed
-          assertT((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0::Nil)).contains(sys),
-            failureMessage
-          )(pos) &
-            ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
-              case Some(ODESystem(_, extendedQ)) =>
-                if (q == True && extendedQ != True) useAt("true&")(ppos ++
-                  PosInExpr(1 +: FormulaTools.posOf(extendedQ, q).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
-                else skip
-            })) (pos ++ PosInExpr(0 :: Nil))
-        )(pos)
+        (
+          ODEInvariance.nilpotentSolve(true)(pos) |
+          // todo: Pegasus should tell us for nonlinear ODEs
+          // (diffUnpackEvolutionDomainInitially(pos) & DebuggingTactics.print("diff unpack") & hideR(pos) & timeoutQE & done) |
+          // todo: Insert G|-[x'=f(x)]P refutation here
+          // Ask for invariants and recursively tries to diff cut them in
+          // aborts with error if no extra cuts were found
+          fastODE(
+            //@note aborts with error if the ODE was left unchanged -- invariant generators failed
+            assertT((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0::Nil)).contains(sys),
+              failureMessage
+            )(pos) &
+              ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
+                case Some(ODESystem(_, extendedQ)) =>
+                  if (q == True && extendedQ != True) useAt("true&")(ppos ++
+                    PosInExpr(1 +: FormulaTools.posOf(extendedQ, q).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
+                  else skip
+              })) (pos ++ PosInExpr(0 :: Nil))
+          )(pos)
+        )
       case _ => throw new BelleThrowable("ODE automation only applies to box ODEs.")
     }
   })
