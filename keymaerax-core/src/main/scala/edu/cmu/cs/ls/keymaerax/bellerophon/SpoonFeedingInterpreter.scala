@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms}
 import edu.cmu.cs.ls.keymaerax.core._
@@ -83,32 +83,36 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
     }
   }
 
-  private def runTactic(tactic: BelleExpr, goal: BelleValue, level: Int, ctx: ExecutionContext, convertPending: Boolean=true): (BelleValue, ExecutionContext) = synchronized {
+  private def runTactic(tactic: BelleExpr, goal: BelleValue, level: Int, ctx: ExecutionContext,
+                        convertPending: Boolean=true, executePending: Boolean=true): (BelleValue, ExecutionContext) = synchronized {
     if (isDead) (goal, ctx)
     else try {
       tactic match {
         // combinators
         case SeqTactic(left, right) =>
           val (leftResult, leftCtx) = try {
-            runTactic(left, goal, level, ctx, convertPending)
+            runTactic(left, goal, level, ctx, convertPending = false, executePending)
           } catch {
             case e: BelleThrowable =>
-              throw e.inContext(SeqTactic(e.context, right), "Failed left-hand side of &: " + left)
+              if (convertPending) return runTactic(DebuggingTactics.pending(BellePrettyPrinter(tactic)), goal, level, ctx,
+                convertPending = false, executePending = false)
+              else throw e.inContext(SeqTactic(e.context, right), "Failed left-hand side of &: " + left)
           }
           try {
-            runTactic(right, leftResult, level, leftCtx, convertPending)
+            runTactic(right, leftResult, level, leftCtx, convertPending, executePending)
           } catch {
             case e: BelleThrowable =>
               throw e.inContext(SeqTactic(left, e.context), "Failed right-hand side of &: " + right)
           }
         case EitherTactic(left, right) => try {
-          runTactic(left, goal, level, ctx, convertPending=false)
+          runTactic(left, goal, level, ctx, convertPending=false, executePending)
         } catch {
           case eleft: BelleThrowable => try {
-            runTactic(right, goal, level, ctx, convertPending=false)
+            runTactic(right, goal, level, ctx, convertPending=false, executePending)
           } catch {
             case eright: BelleThrowable =>
-              if (convertPending) runTactic(DebuggingTactics.pending(BellePrettyPrinter(tactic)), goal, level, ctx, convertPending = false)
+              if (convertPending) runTactic(DebuggingTactics.pending(BellePrettyPrinter(tactic)), goal, level, ctx,
+                convertPending = false, executePending = false)
               else throw eright.inContext(EitherTactic(eleft.context, eright.context),
               "Failed: both left-hand side and right-hand side " + goal)
           }
@@ -134,7 +138,8 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           //assert(times >= 1, "Invalid number of repetitions " + times + ", expected >= 1")
           var result: (BelleValue, ExecutionContext) = (goal, ctx)
           try {
-            result = runTactic(if (times == 1) child else SeqTactic(child, RepeatTactic(child, times - 1)), result._1, level, result._2, convertPending)
+            result = runTactic(if (times == 1) child else SeqTactic(child, RepeatTactic(child, times - 1)),
+              result._1, level, result._2, convertPending, executePending)
           } catch {
             case e: BelleThrowable => throw e.inContext(RepeatTactic(e.context, times),
               "Failed while repeating tactic with " + times + " repetitions remaining: " + child)
@@ -155,7 +160,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
             val (provables, resultCtx) = branchTactics.zipWithIndex.foldRight((List[BelleValue](), branchCtxs.last))({ case (((ct, cp), i), (accProvables, accCtx)) =>
               val localCtx = branchCtxs(i).glue(accCtx, 0)
               assert(i == localCtx.onBranch, "Expected context branch and branch tactic index to agree, but got context=" + localCtx.onBranch + " vs. index=" + i)
-              val branchResult = runTactic(ct, cp, level, localCtx, convertPending)
+              val branchResult = runTactic(ct, cp, level, localCtx, convertPending, executePending)
               val branchOpenGoals = branchResult._1 match {
                 case BelleProvable(bp, _) => bp.subgoals.size
               }
@@ -176,8 +181,9 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           }
           //@todo actually it would be nice to throw without wrapping inside an extra BranchTactic context
           try {
-            if (provable.subgoals.size <= 1) runTactic(e, goal, level, ctx, convertPending)
-            else runTactic(BranchTactic(Seq.tabulate(provable.subgoals.length)(_ => e)), goal, level, ctx, convertPending)
+            if (provable.subgoals.size <= 1) runTactic(e, goal, level, ctx, convertPending, executePending)
+            else runTactic(BranchTactic(Seq.tabulate(provable.subgoals.length)(_ => e)), goal, level, ctx,
+              convertPending, executePending)
           } catch {
             case e: BelleThrowable => throw e.inContext(OnAll(e.context), "")
           }
@@ -207,7 +213,8 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
             val innerId = idProvider(in)
             innerProofId = Some(innerId)
             val innerFeeder = SpoonFeedingInterpreter(innerId, -1, idProvider, listenerFactory, inner, descend, strict = strict)
-            val result = innerFeeder.runTactic(innerMost, BelleProvable(in), level, DbAtomPointer(-1), convertPending) match {
+            val result = innerFeeder.runTactic(innerMost, BelleProvable(in), level, DbAtomPointer(-1),
+                convertPending, executePending) match {
               case (BelleProvable(derivation, _), _) =>
                 val backsubst: ProvableSig = derivation(us)
                 //@todo store inner steps as part of this proof
@@ -256,7 +263,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
           val v = goal
           val valueDependentTactic = d.computeExpr(v)
           val levelDecrement = if (d.name == "ANON") 0 else 1
-          runTactic(valueDependentTactic, goal, level - levelDecrement, ctx, convertPending)
+          runTactic(valueDependentTactic, goal, level - levelDecrement, ctx, convertPending, executePending)
         } catch {
           case e: BelleThrowable => throw e.inContext(d, goal.prettyString)
           //@todo unable to create is a serious error in the tactic not just an "oops whatever try something else exception"
@@ -265,7 +272,10 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
 
         case n@NamedTactic(name, t) if level > 0 || name == "ANON" =>
           val levelDecrement = if (name == "ANON") 0 else 1
-          runTactic(t, goal, level - levelDecrement, ctx, convertPending)
+          runTactic(t, goal, level - levelDecrement, ctx, convertPending, executePending)
+
+        case t: StringInputTactic if t.name == "pending" && executePending =>
+          runTactic(BelleParser(t.inputs.head), goal, level, ctx, convertPending, executePending)
 
         // forward to inner interpreter
         case _ =>
@@ -303,7 +313,7 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
                 val newCtx = ctx match {
                   case DbBranchPointer(_, _, _, openBranchesAfterExec) if openBranchesAfterExec.size == 1 => DbAtomPointer(openBranchesAfterExec.head)
                 }
-                runTactic(tactic, goal, level, newCtx, convertPending)
+                runTactic(tactic, goal, level, newCtx, convertPending, executePending)
               } else {
                 //@todo store and reload a trace with branch -1 (=merging point of a branching tactic)
                 // possible solution: store a nil/applyUsubst step with prevStepId=StartOfBranching and branchOrder=-1, without a local provable;
@@ -318,7 +328,8 @@ case class SpoonFeedingInterpreter(rootProofId: Int, startStepIndex: Int, idProv
       }
     } catch {
       case e: BelleThrowable =>
-        if (convertPending) runTactic(DebuggingTactics.pending(BellePrettyPrinter(tactic)), goal, level, ctx, convertPending = false)
+        if (convertPending) runTactic(DebuggingTactics.pending(BellePrettyPrinter(tactic)), goal, level, ctx,
+          convertPending = false, executePending = false)
         else throw e
     }
   }

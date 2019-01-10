@@ -2,7 +2,7 @@ package bellerophon
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, TacticTestBase}
+import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, Idioms, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra._
@@ -114,6 +114,32 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     tree.root.children.head.children.head.children shouldBe empty
 
     tree.tactic shouldBe tactic
+  }
+
+  it should "be recorded as pending on failure" in withDatabase { db =>
+    val modelContent = "ProgramVariables. R x. End. Problem. x>0 & x>0 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter))
+
+    val tactic = implyR(1) & TactixLibrary.loop("x>0".asFormula)(1)
+    interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent))))
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tactic shouldBe BelleParser("pending({`implyR(1) ; loop({`x>0`}, 1)`})")
+  }
+
+  it should "record only RHS as pending on failure" in withDatabase { db =>
+    val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>0 End."
+    val proofId = db.createProof(modelContent)
+
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter))
+
+    val tactic = implyR(1) & TactixLibrary.loop("x>0".asFormula)(1)
+    interpreter(tactic, BelleProvable(ProvableSig.startProof(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent))))
+    val tree = DbProofTree(db.db, proofId.toString)
+    tree.tactic shouldBe BelleParser("implyR(1) ; pending({`loop({`x>0`}, 1)`})")
   }
 
   "Either tactic" should "be explored and only successful outcome stored in database" in withDatabase { db =>
@@ -1325,5 +1351,41 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
       ExhaustiveSequentialInterpreter, 2, strict=false))
     interpreter(tactic, BelleProvable(p))
     DbProofTree(db, proofId.toString).tactic shouldBe BelleParser("implyR(1) ; andL(-1) ; pending({`done`})")
+  }}
+
+  "Pending" should "execute and record successful tactic" in withQE { _ => withDatabase { db =>
+    val problem = "x>0 -> x>0".asFormula
+    val modelFile = s"ProgramVariables Real x. End.\n Problem $problem End."
+    val p = ProvableSig.startProof(problem)
+    val proofId = db.createProof(modelFile, "model1")
+    val tactic = BelleParser("pending({`implyR(1) ; id`})")
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter, 2, strict=false))
+    interpreter(tactic, BelleProvable(p))
+    db.extractTactic(proofId) shouldBe BelleParser("implyR(1) ; id")
+  }}
+
+  it should "try execute and record again as pending on failure" in withQE { _ => withDatabase { db =>
+    val problem = "x>0 -> x>0".asFormula
+    val modelFile = s"ProgramVariables Real x. End.\n Problem $problem End."
+    val p = ProvableSig.startProof(problem)
+    val proofId = db.createProof(modelFile, "model1")
+    val tactic = BelleParser("pending({`implyR(1) ; andR(1)`})")
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter, 2, strict=false))
+    interpreter(tactic, BelleProvable(p))
+    db.extractTactic(proofId) shouldBe BelleParser("implyR(1) ; pending({`andR(1)`})")
+  }}
+
+  it should "not fail on nested tactic with arguments" in withQE { _ => withDatabase { db =>
+    val problem = "x>0 -> [x:=x+1;]x>0".asFormula
+    val modelFile = s"ProgramVariables Real x. End.\n Problem $problem End."
+    val p = ProvableSig.startProof(problem)
+    val proofId = db.createProof(modelFile, "model1")
+    val tactic = BelleParser("pending({`implyR(1) ; loop({`x>0`}, 1)`})")
+    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
+      ExhaustiveSequentialInterpreter, 2, strict=false))
+    interpreter(tactic, BelleProvable(p))
+    db.extractTactic(proofId) shouldBe BelleParser("implyR(1) ; pending({`loop({`x>0`}, 1)`})")
   }}
 }
