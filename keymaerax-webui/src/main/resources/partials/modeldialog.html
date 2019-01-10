@@ -1,5 +1,5 @@
 <form editable-form class="k4-vertical-fill-flex" name="modelDataForm" onbeforesave="checkModelData()"
-      onaftersave="save()" shown="true">
+      onaftersave="save()" shown="save.editable">
 <div class="modal-header">
     <div class="row" ng-if="mode==='edit' || mode==='exercise'">
         <div class="col-md-12">
@@ -8,18 +8,23 @@
                       <!--e-placeholder="Model name" e-required onbeforesave="checkName($data)">{{model.name}}</span></h3>-->
             <h3 class="modal-title" ng-if="mode==='edit' || mode==='exercise'">
                 <span>{{model.name}}</span>
+                <a class="btn btn-link pull-right" ng-click="enableEditing()" ng-if="mode==='edit'"
+                   ng-disabled="modelDataForm.$visible"><i class="fa fa-pencil"></i> Edit</a>
                 <span class="pull-right text-danger" ng-if="mode==='exercise' && !modelIsComplete()">
                     Fill in the blanks (__________)
                 </span>
             </h3>
         </div>
     </div>
-    <div class="row" ng-if="model.numAllProofSteps > 0">
+    <div class="row" ng-if="modelDataForm.$visible && model.numAllProofSteps > 0">
         <div class="col-md-12">
-            <div uib-alert class="alert-warning">
+            <div uib-alert class="alert-warning" ng-if="mode ==='edit'">
                 <span>Model has proofs with steps. Proof cache will be deleted. After making changes to the model, the stored
                     tactics may need editing when re-opening the proofs. If you want to keep the proof cache, please copy the
                     model content, cancel editing, and create a new model instead.</span>
+            </div>
+            <div uib-alert class="alert-warning" ng-if="mode ==='proofedit'">
+                <span>After making changes to the model, the tactics may need editing.</span>
             </div>
         </div>
     </div>
@@ -36,13 +41,13 @@
     <!--</div>-->
     <div class="row k4-vertical-fill-flex">
         <div class="col-md-12 k4-vertical-fill k4-vertical-fill-flex">
-            <div ui-ace="{theme:'github',mode:'dl',showGutter:true}" ng-model="model.keyFile" id="editor"></div>
+            <div ui-ace="{theme:'github',mode:'dl',showGutter:true,onLoad:aceLoaded}" ng-model="model.keyFile" id="editor"></div>
         </div>
     </div>
 </div>
 <div class="modal-footer">
     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='edit'"
-            ng-click="save.cmd=refreshModels">Save</button>
+            ng-disabled="!modelDataForm.$visible" ng-click="save.cmd=refreshModels">Save</button>
     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='edit' && modelIsComplete()"
             ng-click="save.cmd=startProof">Start new proof</button>
     <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='proofedit' && modelIsComplete()"

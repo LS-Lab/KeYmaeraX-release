@@ -323,13 +323,25 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
   $scope.model = undefined;         // model with edits
   $scope.origModel = undefined;     // original model from database
   $scope.save = {
-    cmd: undefined                  // save command: set on submit buttons
+    cmd: undefined,                 // save command: set on submit buttons
+    editable: (mode === 'exercise' || mode === 'proofedit'),
+    editor: undefined
   }
 
   $http.get("user/" + userid + "/model/" + modelid).then(function(response) {
     $scope.model = response.data;
     $scope.origModel = JSON.parse(JSON.stringify(response.data)); // deep copy
   });
+
+  $scope.aceLoaded = function(editor) {
+    editor.setReadOnly(!$scope.save.editable);
+    $scope.save.editor = editor;
+  }
+
+  $scope.enableEditing = function() {
+    $scope.modelDataForm.$show();
+    $scope.save.editor.setReadOnly(false);
+  }
 
   /** Deletes all proofs of the model */
   $scope.deleteModelProofSteps = function(onSuccess) {
