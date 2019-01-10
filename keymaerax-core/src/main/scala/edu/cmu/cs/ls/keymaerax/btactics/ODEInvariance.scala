@@ -1440,7 +1440,7 @@ object ODEInvariance {
       case _ => throw new BelleThrowable("nilpotent solve only applicable to box ODE in succedent")
     }
 
-    val t = TacticHelper.freshNamedSymbol("timevar".asVariable, seq)
+    val t = TacticHelper.freshNamedSymbol("t_".asVariable, seq)
     //Introduce a ghost variable
 
     val linForm = linFormODE(ode)

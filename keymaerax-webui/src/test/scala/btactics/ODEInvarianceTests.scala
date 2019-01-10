@@ -637,9 +637,9 @@ class ODEInvarianceTests extends TacticTestBase {
     )
 
     pr.subgoals(0).ante.length shouldBe 7
-    pr.subgoals(0).ante(4) shouldBe "x=2/3*(3*A()+B()+-5*C)*timevar^3+x_0+timevar*(A()+2*(x_0+y_0+-1*z_0))+timevar^2*(A()+-1*B()+-5*C+6*x_0+-2*(y_0+z_0))".asFormula
-    pr.subgoals(0).ante(5) shouldBe "y=2/3*(3*A()+B()+-5*C)*timevar^3+y_0+timevar*(-1*B()+5*x_0+y_0+-3*z_0)+1/2*timevar^2*(5*A()+-1*B()+-15*C+12*x_0+-4*(y_0+z_0))".asFormula
-    pr.subgoals(0).ante(6) shouldBe "z=4/3*(3*A()+B()+-5*C)*timevar^3+timevar*(5*C+x_0+5*y_0+-3*z_0)+z_0+1/2*timevar^2*(A()+-5*B()+-15*C+24*x_0+-8*(y_0+z_0))".asFormula
+    pr.subgoals(0).ante(4) shouldBe "x=2/3*(3*A()+B()+-5*C)*t_^3+x_0+t_*(A()+2*(x_0+y_0+-1*z_0))+t_^2*(A()+-1*B()+-5*C+6*x_0+-2*(y_0+z_0))".asFormula
+    pr.subgoals(0).ante(5) shouldBe "y=2/3*(3*A()+B()+-5*C)*t_^3+y_0+t_*(-1*B()+5*x_0+y_0+-3*z_0)+1/2*t_^2*(5*A()+-1*B()+-15*C+12*x_0+-4*(y_0+z_0))".asFormula
+    pr.subgoals(0).ante(6) shouldBe "z=4/3*(3*A()+B()+-5*C)*t_^3+t_*(5*C+x_0+5*y_0+-3*z_0)+z_0+1/2*t_^2*(A()+-5*B()+-15*C+24*x_0+-8*(y_0+z_0))".asFormula
   }
 
 }
