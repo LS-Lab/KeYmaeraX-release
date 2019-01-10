@@ -303,6 +303,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *     - [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus]]: Forward Hilbert-style tactic combinators.
   *
   * @todo Expand descriptions
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus]]

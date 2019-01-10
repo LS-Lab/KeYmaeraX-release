@@ -1116,7 +1116,10 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
 
   ///
 
-  /* Axiom and tactic index for stepAt */
+  /** Axiom and tactic index for [[TactixLibrary.step]]
+    * @param isAnte true if occurs at top-level in antecedent, false if top-level in succedent
+    * @param expr the expression for which a canonical tactic step is sought.
+    * @see [[AxiomIndex]] */
   private def sequentStepIndex(isAnte: Boolean)(expr: Expression): Option[String] = (expr, isAnte) match {
     case (True, false) => Some("closeTrue")
     case (False, true) => Some("closeFalse")
