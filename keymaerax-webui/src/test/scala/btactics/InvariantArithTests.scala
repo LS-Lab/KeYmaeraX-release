@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
+import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest}
 
 import scala.collection.immutable._
@@ -15,6 +16,7 @@ import scala.collection.immutable._
   * From Lectures 10/11
   * Created by yongkiat on 2/3/16.
   */
+@SlowTest
 class InvariantArithTests extends TacticTestBase {
 
 
