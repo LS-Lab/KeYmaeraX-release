@@ -193,6 +193,15 @@ class EqualityTests extends TacticTestBase {
       subgoals.loneElement shouldBe "x=0 ==> [x:=0+1; ++ y:=2;]x>=0".asSequent
   }
 
+  "Apply Equalities" should "rewrite all plain equalities" in {
+    proveBy("x=2, x+y>=4, y=3 ==> y-x<=1, x=2".asSequent, applyEqualities).subgoals.loneElement shouldBe "2+3>=4 ==> 3-2<=1, 2=2".asSequent
+    proveBy("x=x+2, x+y>=4, y=3 ==> y-x<=1, x=2".asSequent, applyEqualities).subgoals.loneElement shouldBe "x=x+2, x+2+3>=4 ==> 3-(x+2)<=1, x+2=2".asSequent
+  }
+
+  it should "not endless rewrite equalities when LHS and RHS are the same" in {
+    proveBy("x=x, x+y>=4, y=3 ==> y-x<=1, x=2".asSequent, applyEqualities).subgoals.loneElement shouldBe "x=x, x+3>=4 ==> 3-x<=1, x=2".asSequent
+  }
+
   "Abbrv tactic" should "abbreviate a+b to z" in withQE { _ =>
     val result = proveBy("a+b < c".asFormula, abbrv(Variable("z"))(1, 0::Nil))
     result.subgoals.loneElement shouldBe "z = a+b ==> z < c".asSequent
