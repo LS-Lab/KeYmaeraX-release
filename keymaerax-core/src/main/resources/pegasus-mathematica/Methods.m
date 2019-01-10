@@ -158,12 +158,12 @@ Resolve[ForAll[vars, Cond2 && Cond3], Reals]
 ]
 
 
-RefuteS[A_, B_, f_List, vars_List, Q_]:=Module[{
+RefuteS[A_, B_, f_List, vars_List, Q_, avars_List]:=Module[{
 Cond1 = Q && A && ComplementS[B],
 Cond2 = Q && A && InfS[Q,f,vars]&& ComplementS[InfS[B,f,vars]],
 Cond3 = Q && ComplementS[B] && IvInfS[Q,f,vars] && IvInfS[A,f,vars]
 },
-FindInstance[Cond1 || Cond2 || Cond3, vars, Reals] 
+FindInstance[Cond1 || Cond2 || Cond3, avars, Reals] 
 ]
 
 

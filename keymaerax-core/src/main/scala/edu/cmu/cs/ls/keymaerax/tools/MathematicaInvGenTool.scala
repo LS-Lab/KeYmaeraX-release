@@ -92,20 +92,35 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
   }
 
   override def refuteODE(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, KExpr]] = {
-    require(postCond.isFOL, "Unable to generate invariant, expected FOL post conditions but got " + postCond.prettyString)
+    require(postCond.isFOL, "Unable to refute ODE, expected FOL post conditions but got " + postCond.prettyString)
+    require(assumptions.forall(_.isFOL), "Unable to refute ODE, expected FOL assumptions but got " + assumptions)
 
-    val vars = DifferentialHelper.getPrimedVariables(ode)
-    //@todo vars
+    // LHS of ODEs
+    val odevars = DifferentialHelper.getPrimedVariables(ode)
+
+    val rhs = DifferentialHelper.atomicOdes(ode).map(o => o.e)
+    // All things that need to be considered as parameters (or variables)
+    val fmlvars =
+      (assumptions.+:(postCond).+:(ode.constraint)).flatMap(f => StaticSemantics.symbols(f))
+    val trmvars = rhs.flatMap(t => StaticSemantics.symbols(t))
+
+    val vars = (trmvars ++ fmlvars).distinct.filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true}).sorted
+      .map(e => e match {
+        case f@Function(_,_,Unit,_,_) =>
+          FuncOf(f,Nothing) //for k2m conversion to work reliably on constants
+        case _ => e
+      } )
+
+    val stringodeVars = "{" + odevars.map(k2m(_)).mkString(", ") + "}"
     val stringVars = "{" + vars.map(k2m(_)).mkString(", ") + "}"
-    val vectorField = "{" + DifferentialHelper.atomicOdes(ode).map(o => k2m(o.e)).mkString(", ") + "}"
+    val vectorField = "{" + rhs.map(k2m(_)).mkString(", ") + "}"
     val problem =
       k2m(assumptions.reduceOption(And).getOrElse(True)) + "," +
       k2m(postCond) + "," +
       vectorField + ", " +
-      stringVars + ", " +
-      k2m(ode.constraint)
-
-    logger.debug("Raw Mathematica input into Pegasus: " + problem)
+      stringodeVars + ", " +
+      k2m(ode.constraint) + ", " +
+      stringVars
 
     timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
 

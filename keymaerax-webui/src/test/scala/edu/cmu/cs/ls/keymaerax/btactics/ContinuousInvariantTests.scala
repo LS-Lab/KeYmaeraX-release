@@ -128,9 +128,48 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
   }
 
   "Refute ODE" should "find a simple counterexample" in withMathematica { tool =>
-    val cex = tool.refuteODE("{x'=1}".asProgram.asInstanceOf[ODESystem], "x=1".asFormula :: Nil, "x=1".asFormula)
+    val cex = tool.refuteODE(
+      "{x'=1}".asProgram.asInstanceOf[ODESystem],
+      "x=1".asFormula :: Nil,
+      "x=1".asFormula)
     cex shouldBe Some(Map("x".asVariable -> "1".asTerm))
   }
+
+  it should "refute parametric ODEs" in withMathematica { tool =>
+    val cex = tool.refuteODE(
+      "{x'=v,v'=A()}".asProgram.asInstanceOf[ODESystem],
+      "A()=1 & x=1".asFormula :: Nil,
+      "x=1".asFormula)
+    val aFunc = "A()".asTerm.asInstanceOf[FuncOf]
+
+    cex shouldBe Some(Map("x".asVariable -> "1".asTerm,aFunc.func -> "1".asTerm,"v".asVariable -> "0".asTerm))
+  }
+
+  it should "not refute true invariants" in withMathematica { tool =>
+    val cex = tool.refuteODE(
+      "{x'=y,y'=-x}".asProgram.asInstanceOf[ODESystem],
+      "r()=s()&x^2+y^2=r()^2".asFormula :: Nil,
+      "x^2+y^2=s()^2".asFormula)
+
+    cex shouldBe None
+  }
+
+  it should "Fail for non-FOL assumptions" in withMathematica { tool =>
+
+    a [IllegalArgumentException] should be thrownBy
+      tool.refuteODE(
+        "{x'=y,y'=-x}".asProgram.asInstanceOf[ODESystem],
+        "r()=s()&x^2+y^2=r()^2".asFormula :: "[x:=x+1;]x=1".asFormula :: Nil,
+        "x^2+y^2=s()^2".asFormula)
+  }
+
+  it should "refute as a tactic" in withMathematica { tool =>
+    val fml = "x^2+y^2=r()^2 -> [{x'=y,y'=A()*x}] x^2+y^2=r()^2".asFormula
+
+    //throws an error
+    a [BelleThrowable] should be thrownBy proveBy(fml, implyR(1) & DifferentialTactics.cexCheck(1))
+  }
+
 
 //  it should "standalone test of pegasus + odeInvariant only" taggedAs SlowTest in withMathematica { _ =>
 //    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "180", saveToFile = false)
