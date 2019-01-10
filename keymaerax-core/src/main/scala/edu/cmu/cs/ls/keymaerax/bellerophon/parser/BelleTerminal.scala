@@ -148,14 +148,14 @@ private case class EXPRESSION(exprString: String) extends BelleTerminal(exprStri
   }
 }
 private object EXPRESSION {
-  def regexp = """(\{\`[^\`]*\`\})""".r
-  val startPattern = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
+  def regexp: Regex = """(\{\`[\s\S]*?\`\})""".r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
 /** For testing only. */
 object EXPRESSION2 {
-  val startPattern = EXPRESSION.startPattern
+  val startPattern: Regex = EXPRESSION.startPattern
 }
 
 object EOF extends BelleTerminal("<EOF>") {
-  override def regexp = "$^".r //none.
+  override def regexp: Regex = "$^".r //none.
 }

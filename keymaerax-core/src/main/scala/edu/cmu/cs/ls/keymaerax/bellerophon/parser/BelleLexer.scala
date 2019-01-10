@@ -2,9 +2,11 @@ package edu.cmu.cs.ls.keymaerax.bellerophon.parser
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.BelleToken
 import edu.cmu.cs.ls.keymaerax.parser._
+import org.apache.commons.lang3.StringUtils
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable.List
+import scala.collection.mutable.ListBuffer
 
 /**
   * A lexer for the Bellerophon tactics language.
@@ -128,10 +130,16 @@ object BelleLexer extends ((String) => List[BelleToken]) with Logging {
       case EXPRESSION.startPattern(expressionString) => try {
         //Constructing an EXPRESSION results in an attempt to parse expressionString, which might
         //result in a parse error that should be passed back to the user.
-        consumeTerminalLength(EXPRESSION(expressionString), loc)
+        val opening = expressionString.sliding(2).count(_ == "{`")
+        val closing = expressionString.sliding(2).count(_ == "`}")
+        if (opening-closing > 0) {
+          val remainder = input.stripPrefix(expressionString)
+          val matchingClosingIdx = StringUtils.ordinalIndexOf(remainder, "`}", opening - closing)
+          val suffix = remainder.substring(0, matchingClosingIdx + 2)
+          consumeTerminalLength(EXPRESSION(expressionString + suffix), loc)
+        } else consumeTerminalLength(EXPRESSION(expressionString), loc)
       } catch {
-        case e : Throwable => throw LexException(
-          s"Could not parse expression: $expressionString", loc)
+        case _: Throwable => throw LexException(s"Could not parse expression: $expressionString", loc)
       }
 
       //Misc.
