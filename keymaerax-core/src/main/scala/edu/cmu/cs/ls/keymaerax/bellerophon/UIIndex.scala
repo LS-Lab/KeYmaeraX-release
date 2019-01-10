@@ -102,7 +102,7 @@ object UIIndex {
           }, fml)
           foundPrime
         }
-        val rules = maybeSplit ++ ("GV" :: "MR" :: Nil)
+        val rules = maybeSplit ++  (if (pos.forall(_.isSucc)) "GV" :: "MR" :: Nil else Nil)
         a match {
           case Assign(_: DifferentialSymbol,_) => "[':=] differential assign" :: rules
           case Assign(_: BaseVariable, _) => "assignb" :: rules
@@ -118,7 +118,12 @@ object UIIndex {
             case _: DifferentialProduct => "DE differential effect (system)" :: "dW" :: "dC" :: rules
             case _ => rules
           }
-          case ODESystem(_, _) => ("ODE" :: "solve" :: "dC" :: "dI" ::  "dW" :: "dG" :: Nil) ++ rules
+          case ODESystem(_, _) =>
+            if (pos.forall(_.isSucc)) {
+              if (pos.forall(_.isTopLevel)) ("ODE" :: "solve" :: "dC" :: "dI" ::  "dW" :: "dG" :: Nil) ++ rules
+              else ("solve" :: "dC" :: "dI" ::  "dG" :: Nil) ++ rules
+            }
+            else ("solve" :: "dC" :: Nil) ++ rules
           case _ => rules
         }
 
