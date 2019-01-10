@@ -72,7 +72,7 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
           $injector.get("spinnerService").hideAll();
           $uibModal.open({
             //@note template instead of template URL, since server is offline already
-            template: '<div class="modal-header"><h3 class="modal-title">Server is offline</h3></div><div class="modal-body"><p>The KeYmaera X server is unavailable. All your recent work is saved (except for the click that just failed). If you run KeYmaera X locally, please restart the server.</p><p>This dialog will close automatically when the server is online again.</p></div>',
+            template: '<div class="modal-header"><h3 class="modal-title">Server is offline</h3></div><div class="modal-body"><p>The KeYmaera X server is unavailable. All your recent work is saved (except for the click that just failed). If you run KeYmaera X locally, just restart the server (<kbd>java -jar keymaerax.jar</kbd>)</p><p>This dialog will close automatically when the server is online again.</p></div>',
             controller: 'ServerOfflineDialogCtrl',
             size: 'md',
             backdrop: 'static',
