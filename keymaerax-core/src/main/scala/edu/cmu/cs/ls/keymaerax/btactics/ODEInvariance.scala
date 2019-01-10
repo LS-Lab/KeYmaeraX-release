@@ -1490,7 +1490,7 @@ object ODEInvariance {
 
     val start =
       if(solveEnd)
-        diffUnpackEvolutionDomainInitially('Rlast)
+        diffUnpackEvolutionDomainInitially(pos)
       else
         skip
 
