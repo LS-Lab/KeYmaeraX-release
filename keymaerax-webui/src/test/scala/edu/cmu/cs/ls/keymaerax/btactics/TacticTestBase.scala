@@ -37,8 +37,14 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     def asOption: Option[T] = option
   }
 
+  def configFileMathematicaConfig: Map[String, String] = {
+    Map(
+      "linkName" -> Configuration(Configuration.Keys.MATHEMATICA_LINK_NAME),
+      "libDir" -> Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR))
+  }
+
   //@note Initialize once per test class, but only if requested in a withMathematica call
-  private val mathematicaProvider = new Lazy(new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig))
+  private val mathematicaProvider = new Lazy(new MathematicaToolProvider(configFileMathematicaConfig))
   //@note setup lazy in beforeEach, automatically initialize in withDatabase, tear down in afterEach if initialized
   private var dbTester: Lazy[TempDBTools] = _
 
