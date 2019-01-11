@@ -1037,8 +1037,8 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
         }
       })
 
-      //@note look for (cexCmp<->false) groups and replace with boldface danger spans
-      val cexMatcher = "\\(false&and;(.*?)&and;false\\)".r("fml")
+      //@note look for (false & cexCmp & false) groups and replace with boldface danger spans
+      val cexMatcher = "false&and;(.*?)&and;false".r("fml")
       cexMatcher.replaceAllIn(cexFmlWithVals, (m: Match) => {
         val cexCmp = m.group("fml")
         s"""<div class="k4-cex-highlight text-danger">$cexCmp</div>"""
