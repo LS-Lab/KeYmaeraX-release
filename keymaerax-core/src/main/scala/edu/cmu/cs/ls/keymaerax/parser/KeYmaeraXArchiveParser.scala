@@ -660,7 +660,7 @@ object KeYmaeraXArchiveParser {
         reduce(shift(st), 1, Bottom :+ Token(DOUBLE_QUOTES_STRING("<undefined>"), currLoc), r :+ tactics :+ tacticBlock)
       case r :+ (tactics@Tactics(_)) :+ (tacticBlock@Token(TACTIC_BLOCK, _)) :+ (name@Token(DOUBLE_QUOTES_STRING(_), _)) if la == PERIOD || la == SEMI =>
         reduce(shift(st), 1, Bottom, r :+ tactics :+ tacticBlock :+ name)
-      case r :+ (tactics@Tactics(_)) :+ Token(TACTIC_BLOCK, blockLoc) :+ Token(DOUBLE_QUOTES_STRING(name), _) =>
+      case r :+ (tactics@Tactics(_)) :+ Token(TACTIC_BLOCK, blockLoc) :+ Token(DOUBLE_QUOTES_STRING(name), nameLoc) =>
         //@note slice and parse later with BelleParser (needs converted definitions)
         //@todo reimplement BelleLexer/BelleParser
         val (belleExprBlock, remainder) = input.span(_.tok != END_BLOCK)
@@ -668,7 +668,7 @@ object KeYmaeraXArchiveParser {
           case Token(END_BLOCK, _) :: Token(PERIOD, endLoc) :: _ => endLoc
           case Token(END_BLOCK, endLoc) :: _ => endLoc
         }
-        val tacticText = slice(text, belleExprBlock.head.loc.begin.spanTo(belleExprBlock.last.loc.end))
+        val tacticText = slice(text, nameLoc.end.spanTo(belleExprBlock.last.loc.end)).stripPrefix("\"").stripPrefix(".").trim
         ParseState(r :+ tactics :+ Tactic(name, tacticText, blockLoc.spanTo(blockEndLoc), currLoc), remainder)
       case r :+ (tactics@Tactics(_)) :+ (tactic@Tactic(_, _, _, _)) if la == END_BLOCK => shift(st)
       case r :+ (tactics@Tactics(_)) :+ (tactic@Tactic(_, _, _, _)) :+ Token(END_BLOCK, _) =>

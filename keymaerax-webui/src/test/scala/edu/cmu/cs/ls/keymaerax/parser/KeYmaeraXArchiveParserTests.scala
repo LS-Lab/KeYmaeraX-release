@@ -501,7 +501,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("y", None) -> (None, Real, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
-    entry.tactics shouldBe ("Empty", "nil partial", nil partial) :: Nil
+    entry.tactics shouldBe ("Empty", "/* a comment */ nil partial", nil partial) :: Nil
     entry.info shouldBe empty
   }
 
