@@ -338,6 +338,11 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     result.subgoals(2) shouldBe "A()>0, B()>=b(), b()>0, ep()>0, lw()>0, -B()<=a, a<=-b(), c=0, v>=0, dx^2+dy^2=1, r!=0, abs(y-ly())+v^2/(2*b()) < lw() ==> [{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())".asSequent
   }
 
+  it should "use abstraction" in {
+    val f = "x>=0 -> [y:=y+1;]x>=0".asFormula
+    proveBy(f, normalize) shouldBe 'proved
+  }
+
   "QE" should "reset timeout when done" in withQE {
     case tool: ToolOperationManagement =>
       val origTimeout = tool.getOperationTimeout

@@ -84,7 +84,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         case _ => super.tacticsFor(expr)
       }
     }
-  )(notL::andL::notR::implyR::orR::allR::existsL::step::ProofRuleTactics.closeTrue::ProofRuleTactics.closeFalse::Nil ++ beta:_*)
+  )(notL::andL::notR::implyR::orR::allR::existsL::abstractionb::step::ProofRuleTactics.closeTrue::ProofRuleTactics.closeFalse::Nil ++ beta:_*)
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). Keeps branching factor of [[tacticChase]] restricted to [[andR]]. */
   val unfoldProgramNormalize: BelleExpr = "unfold" by normalize(andR)
