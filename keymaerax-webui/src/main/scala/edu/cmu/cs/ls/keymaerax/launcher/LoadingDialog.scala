@@ -33,7 +33,9 @@ object LoadingDialogFactory {
   def apply(): LoadingDialog = {
     if (theDialog.isEmpty) {
       theDialog =
-        if (java.awt.GraphicsEnvironment.isHeadless) Some(new CLILoadingDialog())
+        if (java.awt.GraphicsEnvironment.isHeadless ||
+          (System.getenv().containsKey("HyDRA_SSL") &&
+           System.getenv("HyDRA_SSL").equals("on"))) Some(new CLILoadingDialog())
         else Some(new GraphicalLoadingDialog())
     }
     theDialog.get
