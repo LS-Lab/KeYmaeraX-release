@@ -106,7 +106,7 @@ class DefaultTacticIndex extends TacticIndex {
       one(new Fixed(p ++ childPos, c))
     }) :: Nil
     case TactixLibrary.ODE => ((_: Sequent, p: Position) => one(new Fixed(p))) :: Nil
-    case TactixLibrary.`solve` => ((_: Sequent, p: Position) => one(new Fixed(p))) :: Nil
+    case TactixLibrary.solve => ((_: Sequent, p: Position) => one(new Fixed(p))) :: Nil
     // default position: stop searching
     case _ => Nil
   }
