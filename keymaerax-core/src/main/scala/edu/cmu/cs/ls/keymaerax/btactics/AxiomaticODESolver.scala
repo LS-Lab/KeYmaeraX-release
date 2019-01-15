@@ -181,7 +181,7 @@ object AxiomaticODESolver {
         TactixLibrary.useAt("vacuous all quantifier")(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
         (TactixLibrary.useAt("true->")(pos ++ PosInExpr(0 :: 1 :: Nil))
           | TactixLibrary.useAt("true&")(pos ++ PosInExpr(0 :: 1 :: Nil)))
-      else if (instEnd) TactixLibrary.allL("t_".asVariable)(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
+      else if (instEnd && q != True) TactixLibrary.allL("t_".asVariable)(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
         TactixLibrary.useAt("<= flip")(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: 0 :: Nil))
       else TactixLibrary.skip) &
       DebuggingTactics.debug("AFTER handling evolution domain", ODE_DEBUGGER) &

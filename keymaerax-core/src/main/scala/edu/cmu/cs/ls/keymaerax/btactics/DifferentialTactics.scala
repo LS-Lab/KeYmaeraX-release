@@ -742,29 +742,18 @@ private object DifferentialTactics extends Logging {
 
   /** Tries to instantiate the evolution domain fact with the ODE duration (assumes monotonicity). */
   lazy val endODEHeuristic: BelleExpr = "ANON" by ((seq: Sequent) => {
-    val succInstantiators = seq.succ.indices.map(SuccPosition.base0(_)).flatMap(pos => {
-      Idioms.mapSubpositions(pos, seq, {
-        case (Forall((t@BaseVariable("t_", _, Real))::Nil, Imply(
-        GreaterEqual(BaseVariable("t_", _, Real), _),
-        Imply(Forall((s@BaseVariable("s_", _, Real))::Nil, Imply(And(
-        LessEqual(_, BaseVariable("s_", _, Real)),
-        LessEqual(BaseVariable("s_", _, Real), BaseVariable("t_", _, Real))), _)), _))), pp: Position) =>
-          Some(allR(pp) & implyR(pp)*2 & allL(s, t)('Llast))
-        case _ => None
-      })
+    val instantiators = (seq.ante.indices.map(AntePosition.base0(_)) ++ seq.succ.indices.map(SuccPosition.base0(_))).
+      flatMap(pos => {
+        Idioms.mapSubpositions(pos, seq, {
+          case (Forall((s@BaseVariable("s_", _, Real))::Nil, Imply(And(
+          LessEqual(_, BaseVariable("s_", _, Real)),
+          LessEqual(BaseVariable("s_", _, Real), t@BaseVariable("t_", _, Real))), _)), pp: Position) =>
+            Some(allL(s, t)(pp))
+          case _ => None
+        })
     })
 
-    val anteInstantiators = seq.ante.indices.map(AntePosition.base0(_)).flatMap(pos => {
-      Idioms.mapSubpositions(pos, seq, {
-        case (Forall((s@BaseVariable("s_", _, Real))::Nil, Imply(And(
-        LessEqual(_, BaseVariable("s_", _, Real)),
-        LessEqual(BaseVariable("s_", _, Real), t@BaseVariable("t_", _, Real))), _)), pp: Position) =>
-          Some(allL(s, t)(pp))
-        case _ => None
-      })
-    })
-
-    (succInstantiators ++ anteInstantiators).reduceOption[BelleExpr](_ & _).getOrElse(skip) & QE & done
+    instantiators.reduceOption[BelleExpr](_ & _).getOrElse(skip) & QE & done
   })
 
   /**
