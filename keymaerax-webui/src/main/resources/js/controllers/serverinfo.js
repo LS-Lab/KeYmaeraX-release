@@ -56,12 +56,17 @@ angular.module('keymaerax.controllers').controller('LicenseDialogCtrl', ['$scope
 angular.module('keymaerax.controllers').controller('ServerOfflineDialogCtrl', ['$scope', '$http', '$uibModalInstance', '$interval', function ($scope, $http, $uibModalInstance, $interval) {
   var heartbeat = $interval(function() {
     console.log("Pinging server...")
-    $http.get("/isLocal").success(function(data) {
-      // close the modal every time, because the failing /isLocal request will open another dialog...
-      // when we're back online, we close the final window and it stays closed
+    $http.get("/isLocal").then(
+    function(response) {
       $uibModalInstance.close();
       $interval.cancel(heartbeat);
       heartbeat = undefined;
+      // reload proof (continuing proof without reloading );
+      // do not reload models (model edit dialog disappears on reload and model may not be stored yet)
+      if (location.hash.startsWith("#/proofs")) location.reload();
+    },
+    function(error) {
+      // /isLocal is still failing == server is still offline
     });
   }, 10000);
 

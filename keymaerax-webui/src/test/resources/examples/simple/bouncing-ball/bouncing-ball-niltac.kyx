@@ -1,18 +1,20 @@
-Functions.
-  R g().
+ArchiveEntry "Bouncing Ball"
+
+Definitions
+  Real g();
 End.
 
-ProgramVariables.
-  R h.
-  R v.
-  R t.
-  R c.
-  R V.
-  R H.
+ProgramVariables
+  Real h;
+  Real v;
+  Real t;
+  Real c;
+  Real V;
+  Real H;
 End.
 
 
-Problem.
+Problem
     v^2<=2*g()*(H-h) & h>=0 & g()>0 & H>=0 & 0<=c & c<1
  -> [
       {
@@ -22,4 +24,8 @@ Problem.
       }* /*@invariant(v^2<=2*g()*(H-h) & h>=0)*/
     ]
     (h>=0 & h<=H)
+End.
+
+Tactic "Ignore" nil End.
+
 End.

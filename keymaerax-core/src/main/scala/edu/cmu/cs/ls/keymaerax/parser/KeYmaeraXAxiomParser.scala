@@ -23,8 +23,7 @@ object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) with Logg
     val tokens = KeYmaeraXLexer.inMode(input, AxiomFileMode)
     logger.debug("Tokens are: " + tokens)
     try {
-      val (decls, axiomTokens) = KeYmaeraXDeclarationsParser(tokens)
-      val axioms = parseAxioms(axiomTokens)
+      val axioms = parseAxioms(tokens)
       //@note axiom file does not declare symbols
 //      assert(KeYmaeraXParser.LAX || axioms.forall(ax => KeYmaeraXDeclarationsParser.typeAnalysis(decls, ax._2)), "type analysis of axioms")
       axioms
@@ -49,20 +48,25 @@ object KeYmaeraXAxiomParser extends (String => List[(String,Formula)]) with Logg
 
   def parseNextAxiom(input: TokenStream): (String, Formula, TokenStream) = {
     require(input.head.tok.equals(AXIOM_BEGIN), "expected ALP file to begin with Axiom block.")
-    require(input.tail.head.tok.isInstanceOf[LEMMA_AXIOM_NAME], "expected ALP block to have a string as a name")
+    require(input.tail.head.tok.isInstanceOf[DOUBLE_QUOTES_STRING], "expected ALP block to have a string as a name")
 
     val name = input.tail.head match {
-      case Token(LEMMA_AXIOM_NAME(x),_) => x
+      case Token(DOUBLE_QUOTES_STRING(x),_) => x
       case _ => throw new AssertionError("Require should have failed.")
     }
     logger.debug("Axiom " + name)
     //Find the End. token and exclude it.
     val (axiomTokens, remainderTokens) =
-      input.tail.tail.span(x => !x.tok.equals(END_BLOCK)) //1st element is AXIOM_BEGIN, 2nd is AXIOM_NAME.
+      //1st element is AXIOM_BEGIN, 2nd is AXIOM_NAME, 3rd is optional .
+      input.tail.tail.span(_.tok != END_BLOCK) match {
+        case (Token(PERIOD, _) :: a, Token(END_BLOCK, _) :: Token(PERIOD, _) :: r) => (a, r)
+        case (a, Token(END_BLOCK, _) :: Token(PERIOD, _) :: r) => (a, r)
+        case (a, Token(END_BLOCK, _) :: r) => (a, r)
+      }
 
     try {
       val axiom = KeYmaeraXParser.formulaTokenParser(axiomTokens :+ Token(EOF, UnknownLocation))
-      (name, axiom, remainderTokens.tail)
+      (name, axiom, remainderTokens)
     } catch {
       case e: ParseException => throw e.inContext(input.toString, " Error occurred while parsing formula associated with axiom named " + name)
       case e: AssertionError => throw new AssertionError(e.getMessage + " Error occurred while parsing formula associated with axiom named " + name)

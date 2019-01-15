@@ -1,6 +1,11 @@
 <div class="row">
-    <div class="col-md-10">
+    <div class="col-md-12">
+        Besides the <a href="http://lfcps.org/lfcps/">textbook</a>, more information on the input syntax can be found on the <a href="https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics">Wiki</a>
+
         <h2 id="HP-syntax">Hybrid Programs</h2>
+        <span style="float:right"><a href="http://keymaerax.org/doc/dL-grammar.md" target="_blank">grammar</a></span>
+        The behavior of hybrid systems is specified as a hybrid program,
+        which is the programming language for hybrid systems.
 
         <table class="table table-hover">
             <thead>
@@ -13,7 +18,7 @@
             <tbody>
                 <tr>
                     <td>x := e</td>
-                    <td><code>x := y;</code></td>
+                    <td><code>x := x*y+1;</code></td>
                     <td>discrete assignment of the value of term <code>e</code> to variable <var>x</var> (jump)</td>
                 </tr>
                 <tr>
@@ -29,16 +34,16 @@
                 </tr>
                 <tr>
                     <td>&alpha; ; &beta;</td>
-                    <td><code>x&#160;:=&#160;5; x&#160;:=&#160;x+1;</code></td>
+                    <td><code>v&#160;:=&#160;5; {x'=v}</code></td>
                     <td>sequential composition where <code>&beta;</code> starts after <code>&alpha;</code> finishes</td>
                 </tr>
                 <tr>
                     <td>&alpha; &cup; &beta;</td>
-                    <td><code>x&#160;:=&#160;5;&#160;++&#160;y&#160;:=&#160;x;</code></td>
+                    <td><code>x&#160;:=&#160;0;&#160;++&#160;x&#160;:=&#160;x+1;</code></td>
                     <td>nondeterministic choice, following either alternative <code>&alpha;</code> or <code>&beta;</code></td>
                 </tr>
                 <tr>
-                    <td>&alpha;<sup>*</sup></td>
+                    <td>&alpha;<span class="k4-large-sup">*</span></td>
                     <td><code>{x&#160;:=&#160;x+1;}*</code></td>
                     <td>nondeterministic repetition, repeating <code>&alpha;</code> <var>n</var> times for any <code>n &isin; &#8469;</code></td>
                 </tr>
@@ -46,8 +51,6 @@
         </table>
 
         <p>
-The behavior of hybrid systems is specified as a hybrid program,
-which is a program notation for hybrid systems.
             The syntax of hybrid programs is shown together with an informal semantics in the table above. The basic terms
             (called <code>e</code> in the table) are either rational number constants, real-valued variables or (possibly
             nonlinear) polynomial or rational arithmetic expressions built from those.
@@ -64,10 +67,10 @@ which is a program notation for hybrid systems.
             The evolution is allowed to stop at any point in <var>Q</var>
             but it must not leave <var>Q</var>. Systems of differential equations
             and higher-order derivatives are defined accordingly:
-            <code>{p' = v, v' = -B &amp; v &ge; 0}</code>, for instance, characterizes
+            <code>{x' = v, v' = -B &amp; v &ge; 0}</code>, for instance, characterizes
             the braking mode of a car with braking force <code>B</code> that
             holds within <code>v &ge; 0</code> and stops any time before <code>v < 0</code>.
-            It indicates that the rate of change of the position <var>P</var> is given by the velocity <code>v</code>, which in turn changes at the rate <code>-B</code>.
+            It indicates that the rate of change of the position <var>x</var> is given by the velocity <code>v</code>, which in turn changes at the rate <code>-B</code>.
         </p>
         <p>
             For discrete control, the test action <code>?F</code> (read as "assume
@@ -83,6 +86,8 @@ which is a program notation for hybrid systems.
             possible in the model of the system. Therefore, during
             verification we consider only those branches of a system
             where all tests succeed.
+            For example, <code>a := *; ?(-B &le; a &le; A)</code>
+            first assigns any arbitrary real number to <code>a</code>, but then subsequently tests that <code>a</code> is in between <code>-B</code> and <code>A</code>. This combination ensures that <code>a</code> is changed to any arbitrary real number within this range.
         </p>
         <p>
             From these basic constructs, more complex hybrid
@@ -96,6 +101,9 @@ which is a program notation for hybrid systems.
         </p>
 
         <h2 id="dL-syntax">Differential Dynamic Logic</h2>
+        <span style="float:right"><a href="http://keymaerax.org/doc/dL-grammar.md" target="_blank">grammar</a></span>
+
+        Differential dynamic logic can specify and verify the behavior of hybrid programs.
 
         <table class="table table-hover">
             <thead>
@@ -108,6 +116,7 @@ which is a program notation for hybrid systems.
 <tbody>
   <tr>
     <tr><td><code>e &ge; t</code></td> <td><code>x^2&gt;=y+1</code></td> <td>Greater equals comparison: true iff value of <code>t</code> is at least <code>t</code></td></tr>
+    <tr><td><code>e = t</code></td> <td><code>x^2=y+1</code></td> <td>Equality comparison: true iff value of <code>t</code> and <code>t</code> equal</td></tr>
     <tr><td><code>&not; P</code></td> <td><code>!(x&gt;=5)</code></td> <td>Negation (not), true iff <var>P</var> is not true</td></tr>
   	<tr><td><code>P &and; Q</code></td> <td><code>x&lt;=10 &amp; v&gt;=0</code></td> <td>Conjunction (and), true iff both <var>P</var> and <var>Q</var> are true</td></tr>
   	<tr><td><code>P &or; Q</code></td> <td><code>v&lt;=30 | a&lt;2-b</code></td> <td>Disjunction (or), true iff <var>P</var> is true or <var>Q</var> is true</td></tr>
@@ -138,6 +147,7 @@ Using other propositional connectives, one can state the following dL formula
         <center><code>P &rarr; [&alpha;]Q</code></center>
 which expresses that, if hybrid program &alpha; initially starts in a state satisfying <var>P</var>, then
 it always remains in the region characterized by <var>Q</var>.
+        This dL formula expresses a safety contract for hybrid system &alpha; namely that the system always is in <var>Q</var> when it initially starts in <var>P</var>.
 For instance, the following dL formula expresses that for the state of a car controller <var>car</var>,
 the property <var>x&#x02264;m</var> always holds true when starting in a state
 where <var>v&gt;=0</var> and <var>A&#8805;0</var> and <var>B&gt;0</var> are true:
@@ -150,29 +160,29 @@ In this model <var>x</var> is the position of the car, <var>v</var> the velocity
         This is an example of a <code>.kyx</code> model file that can be loaded into KeYmaera&#160;X.
         </p>
 
-        <code><pre>
-Functions.        /* function symbols cannot change their value */
-    R A.          /* maximum acceleration */
-    R B.          /* maximum braking */
+<code><pre>
+Definitions       /* function symbols cannot change their value */
+    Real A;       /* maximum acceleration constant of arbitrary value */
+    Real B;       /* maximum braking constant of arbitrary value */
 End.
 
-ProgramVariables. /* program variables may change their value over time */
-    R x.          /* position of a point moving along a straight line */
-    R v.          /* velocity */
-    R a.          /* current acceleration chosen by controller */
+ProgramVariables  /* program variables may change their value over time */
+    Real x;       /* position of a point moving along a straight line */
+    Real v;       /* velocity */
+    Real a;       /* current acceleration chosen by controller */
 End.
 
-Problem.          /* The differential dynamic logic formula to prove */
+Problem           /* The differential dynamic logic formula to prove */
   v >= 0 & A > 0 & B > 0               /* initial condition */
  ->                                    /* implies that */
-  [                                    /* all behavior of: */
+  [                                    /* all behavior of hybrid program: */
     {                                  /* system dynamics */
       {a := A; ++ a := 0; ++ a := -B;} /* non-deterministic acceleration choice */
       {x' = v, v' = a & v >= 0}        /* differential equation system in v>=0 */
     }* @invariant(v >= 0)              /* loop repeats transitions */
   ] v >= 0                             /* satisfies safety/postcondition */
 End.
-        </pre></code>
+</pre></code>
     </div>
 </div>
 
@@ -181,19 +191,20 @@ End.
   <li>Andr&#233; Platzer. <a href="http://symbolaris.com/pub/lds-lics.pdf">Logics of dynamical systems</a> (<a href="http://symbolaris.com/pub/lds-slides.pdf">invited tutorial</a>). 
 ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012</li>
   <li>Jan-David Quesel, Stefan Mitsch, Sarah Loos, Nikos Ar&#233;chiga, and Andr&#233; Platzer.
-<a href="http://dx.doi.org/10.1007/s10009-015-0367-0">How to model and prove hybrid systems with KeYmaera: A tutorial on safety</a>. 
+<a href="https://doi.org/10.1007/s10009-015-0367-0">How to model and prove hybrid systems with KeYmaera: A tutorial on safety</a>.
 STTT, <b>18</b>(1), pp. 67-91. 2016.
-  <li>Andr&#233; Platzer. <a href="http://symbolaris.com/pub/usubst-complete.pdf">A complete uniform substitution calculus for differential dynamic logic</a>. 
-Journal of Automated Reasoning, 2016.</li>
+  <li>Andr&#233; Platzer. <a href="https://doi.org/10.1007/s10817-016-9385-1">A complete uniform substitution calculus for differential dynamic logic</a>.
+Journal of Automated Reasoning, <b>59</b>(2), pp. 219-265, 2017.</li>
   <li>Andr&#233; Platzer. <a href="http://symbolaris.com/pub/freedL.pdf">Differential dynamic logic for hybrid systems</a>. 
 Journal of Automated Reasoning, <b>41</b>(2), pages 143-189, 2008.</li>
+    <li><a href="https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics">Wiki information</a></a></li>
 </ul>
 
 <h3 id="Books">Compendia</h3>
 <ul>
-  <li>Andr&#233; Platzer. <a href="http://lfcps.org/course/fcps17.html">Foundations of Cyber-Physical Systems</a>. 
-Lecture Notes, Computer Science Department, Carnegie Mellon University. 2017.</li>
-  <li>Andr&#233; Platzer. <a href="http://dx.doi.org/10.1007/978-3-642-14509-4">Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics</a>. 
+  <li>Andr&#233; Platzer. <a href="http://lfcps.org/lfcps/">Logical Foundations of Cyber-Physical Systems</a>.
+Springer, 2018.</li>
+  <li>Andr&#233; Platzer. <a href="https://doi.org/10.1007/978-3-642-14509-4">Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics</a>.
 Springer, 2010.</a></li>
 </ul>
 

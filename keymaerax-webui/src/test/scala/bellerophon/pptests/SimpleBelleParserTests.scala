@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Lemma, Real}
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
 import edu.cmu.cs.ls.keymaerax.parser.{ParseException, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
@@ -63,6 +63,11 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   "Atomic / Argument Parser" should "parse a built-in tactic" in {
     BelleParser("nil") shouldBe (round trip TactixLibrary.nil)
+  }
+  
+  it should "accept id as well as closeId" in {
+    BelleParser("closeId") shouldBe (round trip TactixLibrary.closeId)
+    BelleParser("id") shouldBe (round trip TactixLibrary.closeId)
   }
 
   it should "parse a built-in tactic with arguments" in {
@@ -142,6 +147,18 @@ class SimpleBelleParserTests extends TacticTestBase {
 
   it should "parse OptionArg arguments with option specified" in {
     val s = "dbx({`x`}, 1)"
+    val t = BelleParser(s)
+    BelleParser(s) shouldBe (round trip t)
+  }
+
+  it should "parse nested arguments" in {
+    val s = "pending({`loop({`x>=0`}, 1)`})"
+    val t = BelleParser(s)
+    BelleParser(s) shouldBe (round trip t)
+  }
+
+  it should "parse nested arguments with line breaks" in {
+    val s = "pending({`<(\n nil,\n nil\n, nil)`})"
     val t = BelleParser(s)
     BelleParser(s) shouldBe (round trip t)
   }
@@ -324,6 +341,12 @@ class SimpleBelleParserTests extends TacticTestBase {
     result shouldBe (round trip result)
     result.left shouldBe TactixLibrary.andR(1)
     result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(2), TactixLibrary.andR(3))
+  }
+
+  it should "parse <(andR(2), andR(3))" in {
+    val result = BelleParser("<(andR(2), andR(3))").asInstanceOf[SeqTactic]
+    result shouldBe (round trip result)
+    result.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(2), TactixLibrary.andR(3))
   }
 
   it should "parse e <()" in {

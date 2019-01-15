@@ -130,7 +130,7 @@ object CourseMain {
 
       if (doCheck) {
         val f = archiveEntries.head.model.asInstanceOf[Formula]
-        val expr = archiveEntries.head.tactics.head._2
+        val expr = archiveEntries.head.tactics.head._3
         /*val f = parseProblemFileOrFail(problem)*/
         /*val expr = parseTacticFileOrFail(solution)*/
 
@@ -189,8 +189,9 @@ object CourseMain {
 
   private def parseTacticFileOrFail(v: ArgValue): BelleExpr = {
     val fileName = fileExistsOrFail(v)
+    val bigString = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
     try {
-      BelleParser.parseWithInvGen(scala.io.Source.fromFile(new File(fileName)).mkString, Some(FixedGenerator[Formula](Nil)))
+      BelleParser.parseWithInvGen(bigString, Some(FixedGenerator[Formula](Nil)))
     } catch {
       case ex: ParseException =>
         println(s"Tactic in ${fileName} did not parse\n" + ex)
@@ -223,8 +224,9 @@ object CourseMain {
 
   private def parseProblemFileOrFail(v: ArgValue) : Formula = {
     val fileName = fileExistsOrFail(v)
+    val bigString = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
     try {
-      val fml = edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser(scala.io.Source.fromFile(fileName).mkString)
+      val fml = edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.parseAsProblemOrFormula(bigString)
       println(s"Problem file ${fileName} parsed successfully.")
       fml
     }

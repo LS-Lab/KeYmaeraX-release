@@ -1,18 +1,15 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
-import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics.{diffCut, diffWeaken}
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{fail, _}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest}
+import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, ToolException}
+import edu.cmu.cs.ls.keymaerax.tools.ToolException
 import testHelper.CustomAssertions._
 import testHelper.KeYmaeraXTestTags
 
@@ -21,7 +18,6 @@ import org.scalatest.LoneElement._
 import org.scalatest.prop.TableDrivenPropertyChecks.forEvery
 import org.scalatest.prop.Tables._
 import org.scalatest.concurrent.Timeouts
-import org.scalatest.time.SpanSugar._
 
 /**
   * Basic differential equation proving technology tests
@@ -351,12 +347,53 @@ class DifferentialTests extends TacticTestBase with Timeouts {
                   |End.
                   |""".stripMargin
 
-    proveBy(KeYmaeraXProblemParser(input), implyR(1) & dI('full)(1)) shouldBe 'proved
+    proveBy(KeYmaeraXArchiveParser.parseAsProblemOrFormula(input), implyR(1) & dI('full)(1)) shouldBe 'proved
   }
 
   it should "prove with and without frame constraint y'=0" in withQE { _ =>
     proveBy("x=y ==> [{x'=2 & x>=0}]x>=y".asSequent, dI('full)('R)) shouldBe 'proved
     proveBy("x=y ==> [{x'=2, y'=0 & x>=0}]x>=y".asSequent, dI('full)('R)) shouldBe 'proved
+  }
+
+  it should "report when invariant not true in the beginning" in withQE { _ =>
+    the [BelleThrowable] thrownBy proveBy("x<0 ==> [{x'=-x}]x>0".asSequent, dI()(1)) should
+      have message "[Bellerophon Runtime] Differential invariant must hold in the beginning: expected proved provable, but got open goals"
+  }
+
+  it should "report when not an invariant" in withQE { _ =>
+    the [BelleThrowable] thrownBy proveBy("x>0 ==> [{x'=-x}]x>0".asSequent, dI()(1)) should
+      have message "[Bellerophon Runtime] Differential invariant must be preserved: expected proved provable, but got open goals"
+  }
+
+  it should "report when failing to derive postcondition" in withQE { _ =>
+    the [BelleThrowable] thrownBy proveBy("x>0, f(x,y)>0 ==> [{x'=2}]f(x,y)>0".asSequent, dI()(1)) should
+      have message """[Bellerophon Runtime] [Bellerophon User-Generated Message] After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition
+                     |The error occurred on
+                     |Provable{
+                     |   -1:  x>0	Greater
+                     |   -2:  f((x,y()))>0	Greater
+                     |   -3:  true	True$
+                     |==> 1:  [{x'=2&true}](f((x,y()))>0)'	Box
+                     |  from
+                     |   -1:  x>0	Greater
+                     |   -2:  f((x,y()))>0	Greater
+                     |   -3:  true	True$
+                     |==> 1:  [{x'=2&true}][x':=2;](f((x,y())))'>=0	Box}""".stripMargin
+  }
+
+  //@todo unsupported so far (substitution clash in derive)
+  it should "prove with quantified postconditions" ignore withMathematica { _ =>
+    proveBy("[{x'=3}]\\exists y y<=x".asFormula, dI()(1)) shouldBe 'proved
+  }
+
+  it should "expand special functions" in withQE { _ =>
+    the [BelleThrowable] thrownBy proveBy("[{x'=3}]abs(x)>=0".asFormula, dI()(1)) should have message
+      """[Bellerophon Runtime] Differential invariant must be preserved: expected proved provable, but got open goals""".stripMargin
+  }
+
+  //@todo unsupported so far (substitution clash)
+  "Derive" should "derive quantifiers" ignore {
+    proveBy("(\\exists x x>=0)'".asFormula, derive(1)).subgoals.loneElement shouldBe "==> \\exists x x'>=0".asSequent
   }
 
   "Dvariable" should "work when the Differential() occurs in a formula without []'s" in withQE { _ =>
@@ -954,8 +991,45 @@ class DifferentialTests extends TacticTestBase with Timeouts {
   }
 
   it should "do basic unification" in {
-    val result = proveBy("[{x'=2}]x>0".asFormula, dG("{t'=0*t+1}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1))
-    result.subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1}]x>0".asSequent
+    //ay+b,ay-b,-ay+b,-ay-b
+    proveBy("[{x'=2}]x>0".asFormula, dG("{y'=2*y+3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=2*y+3}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{y'=2*y-3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=2*y+-3}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{y'=-2*y+3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=-2*y+3}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{y'=-2*y-z}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=-2*y+-z}]x>0".asSequent
+
+    //ay,-ay
+    proveBy("[{x'=2}]x>0".asFormula, dG("{y'=2*y}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=2*y+0}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{y'=-2*y}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "y=0 ==> [{x'=2,y'=-2*y+0}]x>0".asSequent
+
+    //+b,-b
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=1}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=-1}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=-1}]x>0".asSequent
+
+    //y+b,y-b,-y+b,-y-b
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=t+3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1*t+3}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=t-3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1*t+-3}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=-t+3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=-1*t+3}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=-t-3}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=-1*t+-3}]x>0".asSequent
+
+    // supported simplifications so far
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=0*t+1}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=1}]x>0".asSequent
+    proveBy("[{x'=2}]x>0".asFormula, dG("{t'=0*t}".asDifferentialProgram, None)(1) & existsR("0".asTerm)(1)).
+      subgoals.loneElement shouldBe "t=0 ==> [{x'=2,t'=0}]x>0".asSequent
+
+    // @todo simplify a*y+0, 1*y+b, a*y+-(b)
   }
 
   it should "not allow non-linear ghosts (1)" in {
@@ -1113,7 +1187,7 @@ class DifferentialTests extends TacticTestBase with Timeouts {
 
   it should "find solution for x'=v, v'=a" in withQE { _ =>
     val result = proveBy("x>0 & v>=0 & a>0 ==> [{x'=v,v'=a}]x>0".asSequent, solve(1))
-    result.subgoals.loneElement shouldBe "x>0 & v>=0 & a>0 ==> \\forall t_ (t_>=0 -> a/2*t_^2+v*t_+x>0)".asSequent
+    result.subgoals.loneElement shouldBe "x>0 & v>=0 & a>0 ==> \\forall t_ (t_>=0 -> a*(t_^2/2)+v*t_+x>0)".asSequent
   }
 
   it should "solve ODE with const factor" in withQE { _ =>
@@ -1123,43 +1197,43 @@ class DifferentialTests extends TacticTestBase with Timeouts {
 
   it should "solve ODE system with const factor" in withQE { _ =>
     val result = proveBy("[{x'=c*v,v'=a}]x>0".asFormula, solve(1))
-    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> c*(a/2*t_^2+v*t_)+x>0)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> c*(a*(t_^2/2)+v*t_)+x>0)".asSequent
   }
 
   it should "solve ODE system with number factor" in withQE { _ =>
     val result = proveBy("[{x'=3*v,v'=a}]x>0".asFormula, solve(1))
-    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> 3*(a/2*t_^2+v*t_)+x>0)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> 3*(a*(t_^2/2)+v*t_)+x>0)".asSequent
   }
 
   it should "solve straight 2D driving" in withQE { _ =>
     val result = proveBy("[{v'=a,x'=v*dx,y'=v*dy}]x^2+y^2<=r^2".asFormula, solve(1))
-    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> (dx*(a/2*t_^2+v*t_)+x)^2+(dy*(a/2*t_^2+v*t_)+y)^2<=r^2)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> (dx*(a*(t_^2/2)+v*t_)+x)^2+(dy*(a*(t_^2/2)+v*t_)+y)^2<=r^2)".asSequent
   }
 
   it should "solve straight 2D driving when only x is mentioned in p" in withQE { _ =>
     val result = proveBy("[{v'=a,x'=v*dx,y'=v*dy}]x>0".asFormula, solve(1))
-    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> dx*(a/2*t_^2+v*t_)+x>0)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> dx*(a*(t_^2/2)+v*t_)+x>0)".asSequent
   }
 
   it should "solve more complicated constants" in withQE { _ =>
     val result = proveBy("[{v'=a+c,t'=1,x'=(v+5)*dx^2,y'=v*(3-dy)*c}]x^2+y^2<=r^2".asFormula, solve(1))
-    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> (dx^2*((a+c)/2*t_^2+v*t_+5*t_)+x)^2+(c*((3-dy)*((a+c)/2*t_^2+v*t_))+y)^2<=r^2)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> (dx^2*((a+c)*(t_^2/2)+v*t_+5*t_)+x)^2+(c*((3-dy)*((a+c)*(t_^2/2)+v*t_))+y)^2<=r^2)".asSequent
   }
 
   it should "solve more complicated constants with explicit c'=0" in withQE { _ =>
     //@note dx'=0 omitted intentionally to test for mixed explicit/non-explicit constants
     val result = proveBy("[{v'=a+c,t'=1,c'=0,x'=(v+5)*dx^2,y'=v*(3-dy)*c,dy'=0}]x^2+y^2<=r^2".asFormula, solve(1))
-    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> (dx^2*(a/2*t_^2+c/2*t_^2+v*t_+5*t_)+x)^2+(c*((3-dy)*(a/2*t_^2+c/2*t_^2+v*t_))+y)^2<=r^2)".asSequent
+    result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> (dx^2*((a+c)*(t_^2/2)+v*t_+5*t_)+x)^2+(c*((3-dy)*((a+c)*(t_^2/2)+v*t_))+y)^2<=r^2)".asSequent
   }
 
   it should "work when ODE is not sole formula in succedent" in withQE { _ =>
     val result = proveBy("x>0 & v>=0 & a>0 ==> y=1, [{x'=v,v'=a}]x>0, z=3".asSequent, solve(2))
-    result.subgoals.loneElement shouldBe "x>0 & v>=0 & a>0 ==> y=1, \\forall t_ (t_>=0 -> a/2*t_^2+v*t_+x>0), z=3".asSequent
+    result.subgoals.loneElement shouldBe "x>0 & v>=0 & a>0 ==> y=1, \\forall t_ (t_>=0 -> a*(t_^2/2)+v*t_+x>0), z=3".asSequent
   }
 
   it should "work when safety property is abstract" in withQE { _ =>
     val result = proveBy("J(x,v) ==> [{x'=v,v'=a}]J(x,v)".asSequent, solve(1))
-    result.subgoals.loneElement shouldBe "J(x,v) ==> \\forall t_ (t_>=0->J((a/2*t_^2+v*t_+x,a*t_+v)))".asSequent
+    result.subgoals.loneElement shouldBe "J(x,v) ==> \\forall t_ (t_>=0->J((a*(t_^2/2)+v*t_+x,a*t_+v)))".asSequent
   }
 
   it should "solve the simplest of all ODEs" in withQE { _ =>
@@ -1185,13 +1259,13 @@ class DifferentialTests extends TacticTestBase with Timeouts {
 
   it should "not try to preserve t_>=0 in evolution domain constraint when solving nested ODEs" in withQE { _ =>
     val result = proveBy("x>0 ==> [{x'=2}][{x'=3}][{x'=x}]x>0".asSequent, solve(1) & (allR(1) & implyR(1))*2 & solve(1))
-    result.subgoals.loneElement shouldBe "x_1>0, t_>=0, x_3=2*t_+x_1 ==> \\forall t_ (t_>=0->\\forall x (x=3*t_+x_3->[{x'=x}]x>0))".asSequent
+    result.subgoals.loneElement shouldBe "x_1>0, t_>=0, x_2=2*t_+x_1 ==> \\forall t_ (t_>=0->\\forall x (x=3*t_+x_2->[{x'=x}]x>0))".asSequent
   }
 
   it should "solve complicated nested ODEs" in withQE { _ =>
     val result = proveBy("v=0 & x<s & 0<T, t=0, a_0=(s-x)/T^2 ==> [{x'=v,v'=a_0,t'=1&v>=0&t<=T}](t>0->\\forall a (a = (v^2/(2 *(s - x)))->[{x'=v,v'=-a,t'=1 & v>=0}](x + v^2/(2*a) <= s & (x + v^2/(2*a)) >= s)))".asSequent,
       solve(1))
-    result.subgoals.loneElement shouldBe "v_1=0 & x_1<s & 0<T, t_1=0, a_0=(s-x_1)/T^2 ==> \\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->a_0*s_+v_1>=0&s_+t_1<=T)->\\forall t (t=t_+t_1->\\forall v (v=a_0*t_+v_1->\\forall x (x=a_0/2*t_^2+v_1*t_+x_1->t>0->\\forall a (a=v^2/(2*(s-x))->[{x'=v,v'=-a,t'=1&v>=0}](x+v^2/(2*a)<=s&x+v^2/(2*a)>=s))))))".asSequent
+    result.subgoals.loneElement shouldBe "v_1=0 & x_1<s & 0<T, t_1=0, a_0=(s-x_1)/T^2 ==> \\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->a_0*s_+v_1>=0&s_+t_1<=T)->\\forall t (t=t_+t_1->\\forall v (v=a_0*t_+v_1->\\forall x (x=a_0*(t_^2/2)+v_1*t_+x_1->t>0->\\forall a (a=v^2/(2*(s-x))->[{x'=v,v'=-a,t'=1&v>=0}](x+v^2/(2*a)<=s&x+v^2/(2*a)>=s))))))".asSequent
   }
 
   it should "not touch index of existing other occurrences of initial values" in withQE { _ =>
@@ -1204,9 +1278,9 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     result.subgoals.loneElement shouldBe "x<=0 ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> s_+x>0) -> t_+x>0)".asSequent
   }
 
-  it should "preserve contradictions in constants as false" in withQE { _ =>
+  it should "preserve contradictions in constants" in withQE { _ =>
     val result = proveBy("y>0 ==> [{x'=1&y<=0}]x>0".asSequent, solve(1))
-    result.subgoals.loneElement shouldBe "y>0 ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> false) -> t_+x>0)".asSequent
+    result.subgoals.loneElement shouldBe "y>0 ==> \\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> y <= 0) -> t_+x>0)".asSequent
   }
 
   it should "retain initial evolution domain for the sake of contradictions (2)" in withQE { _ =>
@@ -1266,12 +1340,12 @@ class DifferentialTests extends TacticTestBase with Timeouts {
 
   it should "solve triple integrator with division" in withMathematica { _ =>
     val result = proveBy("x>=0&v>=0&a>=0&s>=0&g()>0 -> [{x'=v,v'=a/g(),a'=s}]x>=0".asFormula, implyR(1) & solve(1))
-    result.subgoals.loneElement shouldBe "x>=0&v>=0&a>=0&s>=0&g()>0 ==> \\forall t_ (t_>=0->(s/2/3*t_^3+a/2*t_^2)/g()+v*t_+x>=0)".asSequent
+    result.subgoals.loneElement shouldBe "x>=0&v>=0&a>=0&s>=0&g()>0 ==> \\forall t_ (t_>=0->(s*(t_^3/6)+a*(t_^2/2))/g()+v*t_+x>=0)".asSequent
   }
 
   it should "solve double integrator with sum of constants" in withQE { _ =>
     val result = proveBy("y<b, x<=0, Y()>=0, Z()<Y() ==> [{y'=x, x'=-Y()+Z()}]y<b".asSequent, solve(1))
-    result.subgoals.loneElement shouldBe "y<b, x<=0, Y()>=0, Z()<Y() ==> \\forall t_ (t_>=0 -> (-Y()+Z())/2*t_^2+x*t_+y<b)".asSequent
+    result.subgoals.loneElement shouldBe "y<b, x<=0, Y()>=0, Z()<Y() ==> \\forall t_ (t_>=0 -> (-Y()+Z())*(t_^2/2)+x*t_+y<b)".asSequent
   }
 
   "diffUnpackEvolutionDomainInitially" should "unpack the evolution domain of an ODE as fact at time zero" in {
@@ -1336,16 +1410,16 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     }
   }
 
-  it should "prove boring case" taggedAs IgnoreInBuildTest in withQE { _ =>
+  it should "prove boring case" in withQE { _ =>
     proveBy("z*4>=-8 -> [{x'=0,y'=0}]z*4>=-8".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
   }
-  it should "prove ^0 case" taggedAs IgnoreInBuildTest in withQE { _ =>
+  it should "prove ^0 case" taggedAs (IgnoreInBuildTest,TodoTest) in withQE { _ =>
     proveBy("x^0+x>=68->[{x'=0,y'=1&true}]x^0+x>=68".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
   }
-  it should "prove crazy ^0 case" taggedAs IgnoreInBuildTest in withQE { _ =>
+  it should "prove crazy ^0 case" taggedAs (IgnoreInBuildTest,TodoTest) in withQE { _ =>
     proveBy("x+(y-y-(0-(0+0/1)+(41+x)^0))>=68->[{x'=0,y'=1&true}]x+(y-y-(0-(0+0/1)+(41+x)^0))>=68".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
   }
-  it should "prove crazy case" taggedAs IgnoreInBuildTest in withQE { _ =>
+  it should "prove crazy case" taggedAs (IgnoreInBuildTest,TodoTest) in withQE { _ =>
     proveBy("(z+y+x)*(41/(67/x+((0+0)/y)^1))!=94->[{x'=-41/67*x,y'=41/67*x+41/67*(x+y+z)&true}](z+y+x)*(41/(67/x+((0+0)/y)^1))!=94".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
   }
 
@@ -1353,7 +1427,7 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
 
-  it should "prove x^3>5 -> [{x'=x^3+x^4}]x^3>5 incontext" taggedAs IgnoreInBuildTest in withQE { _ =>
+  it should "prove x^3>5 -> [{x'=x^3+x^4}]x^3>5 incontext" taggedAs (IgnoreInBuildTest,TodoTest) in withQE { _ =>
     proveBy("x^3>5 -> [{x'=x^3+x^4}]x^3>5".asFormula, openDiffInd(1, 1::Nil)) shouldBe 'proved
   }
 
@@ -1375,6 +1449,10 @@ class DifferentialTests extends TacticTestBase with Timeouts {
 
   it should "disregard other modalities" in withQE { _ =>
     proveBy("x>b, [y:=3;]y<=3 ==> <z:=2;>z=2, [{x'=2}]x>b".asSequent, openDiffInd(2)) shouldBe 'proved
+  }
+
+  it should "directly prove x>0 -> [{x'=x}]x>0" in withQE { _ =>
+    proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
 
   "Differential Variant" should "diff var a()>0 |- <{x'=a()}>x>=b()" in withQE { _ =>
@@ -1417,7 +1495,7 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     //(x+z)' =  x^2 + z*x + x^2 >= x*(x+z)
     //Maybe this should leave open that the remainder is >= 0?
     val seq = "x+z>=0 ==> [{x'=x^2, z' = z*x+y & y = x^2}] x+z>=0".asSequent
-    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
+    TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
   }
 
   it should "prove >= fractional darboux" in withQE { _ =>
@@ -1432,14 +1510,12 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     val seq = "x+z<0 ==> [{x'=x^2, z' = z*x+y & y = -x^2}] x+z<0".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgDbx("x".asVariable)(1)) shouldBe 'proved
     TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
-    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
   }
 
   it should "automatically find equational darboux" in withMathematica { _ =>
     //(x+z)' = (x*A+B)(x+z)
     val seq = "x+z=0 ==> [{x'=(A*x^2+B()*x), z' = A*z*x+B()*z}] 0=-x-z".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgDbxAuto(1)) shouldBe 'proved
-    TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
   }
 
   it should "fail with evolution domain constraints" in withMathematica { _ =>
@@ -1455,19 +1531,16 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     //This one doesn't actually need the full power of strict barriers because it's also an inequational dbx
     val seq = "-x<=0 ==> [{x'=100*x^4+y*x^3-x^2+x+c, c'=x+y+z & c > x}] -x<=0".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier()(1)) shouldBe 'proved
-    //TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
   }
 
   it should "prove a strict barrier certificate 1" in withMathematica {qeTool =>
     val seq = "(87*x^2)/200 - (7*x*y)/180 >= -(209*y^2)/1080 + 10 ==> [{x'=(5*x)/4 - (5*y)/6, y'=(9*x)/4 + (5*y)/2}] (87*x^2)/200 - (7*x*y)/180>= -(209*y^2)/1080 + 10 ".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(Some(qeTool))(1)) shouldBe 'proved
-    //TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
   }
 
   it should "prove a strict barrier certificate 2" in withMathematica {qeTool =>
     val seq = "(23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5 <= 0 ==> [{x'=(x/2) + (7*y)/3 , y'=-x - y}] (23*x^2)/11 + (34*x*y)/11 + (271*y^2)/66 - 5<=0".asSequent
     TactixLibrary.proveBy(seq, DifferentialTactics.dgBarrier(Some(qeTool))(1)) shouldBe 'proved
-    //TactixLibrary.proveBy(seq, ODE(1)) shouldBe 'proved
   }
 
   "DConstV" should "extend domain constraint with const assumptions" in withMathematica {_ =>
@@ -1475,6 +1548,15 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     val pr = TactixLibrary.proveBy(seq,DifferentialTactics.DconstV(3) & DifferentialTactics.DconstV(-5))
     pr.subgoals.loneElement shouldBe
       "f()>0, v>0, a>0, b>0, <{x'=c+f()&f()>0&c < 0&true}>x>0, c < 0 ==> z=1, a>0, [{v'=a+b,x'=y+f()&f()>0&a>0&b>0&(x>=v|x>=5)}]v>0, x=5, y=1".asSequent
+  }
+
+  it should "extend with assumptions hidden in conjuncts" in withMathematica {_ =>
+    val seq = "f()>0 & v>0 & x=0 & a>0, <{x'=c+f()}> x>0, x=0&c<0&(v<0 | x>0) ==> z=1 | a>0, !x=5, [{v'=a+b,x'=y+f() & x>=v | x>=5}]v>0, x=5 -> y=1".asSequent
+    val pr = TactixLibrary.proveBy(seq,
+      //This changes positions!: SaturateTactic(alphaRule)
+      SaturateTactic(andL('L)) & DifferentialTactics.DconstV(3))
+    pr.subgoals.loneElement shouldBe
+      "<{x'=c+f()&true}>x>0, f()>0, x=0, v>0, c < 0, v < 0|x>0, x=0, a>0 ==> z=1|a>0, !x=5, [{v'=a+b,x'=y+f()&f()>0&a>0&(x>=v|x>=5)}]v>0, x=5->y=1".asSequent
   }
 
   "domSimplify" should "simplify box succedent with domain constraint" in withMathematica {_ =>

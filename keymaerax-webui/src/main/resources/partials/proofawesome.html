@@ -9,6 +9,7 @@
     </div>
     <div class="tactic-spinner-please-wait">
         <p>Tactic is executing, please wait...</p>
+        <p ng-if="runningTask.info && runningTask.info !== ''">{{runningTask.info}}</p>
         <p><button class="btn btn-default" ng-click="runningTask.stop()"><i class="fa fa-stop"></i> Stop</button></p>
     </div>
     </div>
@@ -50,22 +51,28 @@
 <div class="row">
     <div class="col-md-12">
         <!-- Tool box -->
-        <div class="navbar navbar-default">
+        <div class="navbar navbar-default k4-tactics-navbar">
             <div class="navbar-inner">
             <div class="container-fluid">
-                <span class="brand navbar-brand">
+                <span class="brand navbar-brand k4-tactics-brand">
                     <span editable-text="proofName" onbeforesave="saveProofName($data)">
                         {{proofName}}
                     </span>
                 </span>
                 <div class="nav">
-                    <ul class="nav navbar-nav" id="provingautomation">
+                    <ul class="nav navbar-nav k4-tactics-nav-first" id="provingautomation">
                         <li><a ng-click="doTactic(undefined, 'master')"
                                data-intro="Automatic search" data-position="top"><span class="fa fa-play"> Auto</span></a></li>
                         <li><a ng-click="doTactic(undefined, 'unfold')"
-                               data-intro="Unfold all operators" data-position="top"><span class="fa fa-map-o"> Unfold</span></a></li>
+                               data-intro="Unfold all operators" data-position="top"
+                               uib-popover-template="fetchRuleHelp('unfold')"
+                               popover-class="k4-rulemenu-helppopover"
+                               popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                            <span class="fa fa-map-o"> Unfold</span>
+                            </a>
+                        </li>
                         <li><a ng-click="onTacticScript('prop;done',false)"
-                               data-intro="Automatic propositional search" data-position="top"><span class="fa fa-magic"> Prop-Auto</span></a></li>
+                               data-intro="Prove propositionally" data-position="top"><span class="fa fa-magic"> Prop-Auto</span></a></li>
                         <li><a ng-click="doTactic(undefined, 'fullSimplify')"
                                data-intro="Simplify formulas" data-position="top"><span class="fa fa-compress"> Simplify</span></a></li>
                         <li><a ng-click="undoLastStep()"
@@ -79,13 +86,15 @@
                         </li>
                         <li><a ng-click="openProofstepBrowser()"
                                data-intro="Browse all proof steps" data-position="top"><span class="fa fa-binoculars"> Browse...</span></a></li>
+                        <li><a ng-click="openModelEditor(agenda.modelId)"
+                               data-intro="View and edit model" data-position="top"><span class="fa fa-keyboard-o"> Model...</span></a></li>
                     </ul>
-                    <ul class="nav navbar-nav pull-right">
+                    <ul class="nav navbar-nav k4-tactics-nav-first pull-right">
                         <li><a ng-click="isNavbarCollapsed=!isNavbarCollapsed"><span class="fa fa-bars"></span></a></li>
                     </ul>
                 </div>
                 <div class="nav-collapse" uib-collapse="isNavbarCollapsed">
-                    <ul class="nav navbar-nav" id="provingbasictactics"
+                    <ul class="nav navbar-nav k4-tactics-nav-last" id="provingbasictactics"
                         data-intro="Basic tactics for propositional reasoning, hybrid programs, differential equations, and arithmetic."
                         data-position="right">
                         <li class="dropdown">
@@ -95,16 +104,76 @@
                                 <li><a ng-click="doTactic(undefined, 'prop')"><span>Exhaustive</span><code class="pull-right">prop</code></a></li>
                                 <li><a ng-click="openInputTacticDialog('cut', undefined)"><span>Cut ...</span><code class="pull-right">cut</code></a></li>
                                 <li role="separator" class="divider"></li>
-                                <li><a ng-click="doSearch('notR', 'R')"><span>&not;R</span><code class="pull-right">notR</code></a></li>
-                                <li><a ng-click="doSearch('notL', 'L')"><span>&not;L</span><code class="pull-right">notL</code></a></li>
-                                <li><a ng-click="doSearch('andR', 'R')"><span>&and;R</span><code class="pull-right">andR</code></a></li>
-                                <li><a ng-click="doSearch('andL', 'L')"><span>&and;L</span><code class="pull-right">andL</code></a></li>
-                                <li><a ng-click="doSearch('orR', 'R')"><span>&or;R</span><code class="pull-right">orR</code></a></li>
-                                <li><a ng-click="doSearch('orL', 'L')"><span>&or;L</span><code class="pull-right">orL</code></a></li>
-                                <li><a ng-click="doSearch('implyR', 'R')"><span>&#8594;R</span><code class="pull-right">implyR</code></a></li>
-                                <li><a ng-click="doSearch('implyL', 'L')"><span>&#8594;L</span><code class="pull-right">implyL</code></a></li>
-                                <li><a ng-click="doSearch('equivR', 'R')"><span>&#8596;R</span><code class="pull-right">equivR</code></a></li>
-                                <li><a ng-click="doSearch('equivL', 'L')"><span>&#8596;L</span><code class="pull-right">equivL</code></a></li>
+                                <li><a ng-click="doSearch('notR', 'R')"
+                                       uib-popover-template="fetchRuleHelp('notR')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>&not;R</span><code class="pull-right">notR</code>
+                                    </a>
+                                </li>
+                                <li><a ng-click="doSearch('notL', 'L')"
+                                       uib-popover-template="fetchRuleHelp('notL')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>&not;L</span><code class="pull-right">notL</code>
+                                    </a>
+                                </li>
+                                <li><a ng-click="doSearch('andR', 'R')"
+                                       uib-popover-template="fetchRuleHelp('andR')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>&and;R</span><code class="pull-right">andR</code>
+                                    </a>
+                                </li>
+                                <li><a ng-click="doSearch('andL', 'L')"
+                                       uib-popover-template="fetchRuleHelp('andL')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>&and;L</span><code class="pull-right">andL</code>
+                                    </a>
+                                </li>
+                                <li><a ng-click="doSearch('orR', 'R')"
+                                       uib-popover-template="fetchRuleHelp('orR')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>&or;R</span><code class="pull-right">orR</code>
+                                    </a>
+                                </li>
+                                <li><a ng-click="doSearch('orL', 'L')"
+                                       uib-popover-template="fetchRuleHelp('orL')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>&or;L</span><code class="pull-right">orL</code>
+                                    </a>
+                                </li>
+                                <li><a ng-click="doSearch('implyR', 'R')"
+                                       uib-popover-template="fetchRuleHelp('implyR')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>&#8594;R</span><code class="pull-right">implyR</code>
+                                    </a>
+                                </li>
+                                <li><a ng-click="doSearch('implyL', 'L')"
+                                       uib-popover-template="fetchRuleHelp('implyL')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>&#8594;L</span><code class="pull-right">implyL</code>
+                                    </a>
+                                </li>
+                                <li><a ng-click="doSearch('equivR', 'R')"
+                                       uib-popover-template="fetchRuleHelp('equivR')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>&#8596;R</span><code class="pull-right">equivR</code>
+                                    </a>
+                                </li>
+                                <li><a ng-click="doSearch('equivL', 'L')"
+                                       uib-popover-template="fetchRuleHelp('equivL')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>&#8596;L</span><code class="pull-right">equivL</code>
+                                    </a>
+                                </li>
                                 <li role="separator" class="divider"></li>
                                 <!-- do not pull-right longest label: pulling right results in a line break here -->
                                 <li><a ng-click="doSearch('commuteEquivR', 'R')"><span>&#8596;CR</span><code>commuteEquivR</code></a></li>
@@ -116,6 +185,8 @@
                                aria-haspopup="true" aria-expanded="false" disabledtooltip="First-order Logic">Quantifiers <span class="caret"></span></a>
                             <ul class="dropdown-menu">
                                 <li><a ng-click="doSearch('allR', 'R')"><span>&forall;R</span><code class="pull-right">allR</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('allL', 'L')"><span>&forall;L...</span><code class="pull-right">allL</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('existsR', 'R')"><span>&exist;R...</span><code class="pull-right">existsR</code></a></li>
                                 <li><a ng-click="doSearch('existsL', 'R')"><span>&exist;L</span><code class="pull-right">existsL</code></a></li>
                                 <!--<li role="separator" class="divider"></li>-->
                                 <!--<li><a ng-click="doSearch('min', 'R')"><span>min</span><code class="pull-right">min</code></a></li>-->
@@ -132,16 +203,48 @@
                             <ul class="dropdown-menu">
                                 <li><a ng-click="doSearch('chase', 'R')"><span>Exhaustive</span><code class="pull-right">chase</code></a></li>
                                 <li role="separator" class="divider"></li>
-                                <li><a ng-click="doSearch('assignb', 'R')"><span>[:=]</span><code class="pull-right">assignb</code></a></li>
+                                <li><a ng-click="doSearch('assignb', 'R')"
+                                       uib-popover-template="fetchRuleHelp('assignb')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>[:=]</span><code class="pull-right">assignb</code>
+                                    </a>
+                                </li>
                                 <li><a ng-click="doSearch('randomb', 'R')"><span>[:*]</span><code class="pull-right">randomb</code></a></li>
-                                <li><a ng-click="doSearch('testb', 'R')"><span>[?]</span><code class="pull-right">testb</code></a></li>
+                                <li><a ng-click="doSearch('testb', 'R')"
+                                       uib-popover-template="fetchRuleHelp('testb')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>[?]</span><code class="pull-right">testb</code>
+                                    </a>
+                                </li>
                                 <li role="separator" class="divider"></li>
-                                <li><a ng-click="doSearch('choiceb', 'R')"><span>[&cup;]</span><code class="pull-right">choiceb</code></a></li>
-                                <li><a ng-click="doSearch('composeb', 'R')"><span>[;]</span><code class="pull-right">composeb</code></a></li>
+                                <li><a ng-click="doSearch('choiceb', 'R')"
+                                       uib-popover-template="fetchRuleHelp('choiceb')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>[&cup;]</span><code class="pull-right">choiceb</code>
+                                    </a>
+                                </li>
+                                <li><a ng-click="doSearch('composeb', 'R')"
+                                       uib-popover-template="fetchRuleHelp('composeb')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>[;]</span><code class="pull-right">composeb</code>
+                                    </a>
+                                </li>
+                                <li><a ng-click="openInputTacticDialog('loop', 'R')"
+                                       uib-popover-template="fetchRuleHelp('loop')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>Loop ...</span><code class="pull-right">loop</code>
+                                    </a>
+                                </li>
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('boxAnd', 'R')"><span>[]&and;</span><code class="pull-right">boxAnd</code></a></li>
-                                <li><a ng-click="doSearch('GV', 'R')"><span>Abstract</span><code>GV</code></a></li>
+                                <li><a ng-click="doSearch('GV', 'R')"><span>Abstract</span><code class="pull-right">GV</code></a></li>
                                 <li><a ng-click="openInputTacticDialog('MR', 'R')"><span>Generalize ...</span><code class="pull-right">MR</code></a></li>
+                                <li><a ng-click="doSearch('boxd', 'R')"><span>[·]d</span><code class="pull-right">boxd</code></a></li>
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="openInputTacticDialog('discreteGhost', 'R')"><span>Discrete ghost ...</span><code class="pull-right">discreteGhost</code></a></li>
                                 <!-- TODO -->
@@ -154,13 +257,31 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Differential Equations <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doSearch('solve', 'R')"><span>Solve</span><code class="pull-right">solve</code></a></li>
+                                <li><a ng-click="doSearch('solve', 'R')"
+                                       uib-popover-template="fetchRuleHelp('solve')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>Solve</span><code class="pull-right">solve</code>
+                                    </a>
+                                </li>
                                 <li><a ng-click="doSearch('dW', 'R')"><span>Weaken</span><code class="pull-right">dW</code></a></li>
-                                <li><a ng-click="doSearch('dI', 'R')"><span>Diff. Invariant</span><code class="pull-right">dI</code></a></li>
+                                <li><a ng-click="doSearch('dI', 'R')"
+                                       uib-popover-template="fetchRuleHelp('dI')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>Diff. Invariant</span><code class="pull-right">dI</code>
+                                    </a>
+                                </li>
                                 <!-- TODO list further tactics -->
                                 <!--<li><a ng-click="doSearch('DEs', 'R')"><span>Diff. Effect</span><code class="pull-right">DEs</code></a></li>-->
                                 <!--<li><a ng-click="doSearch('Dassignb', 'R')"><span>Diff. Assign</span><code class="pull-right">Dassignb</code></a></li>-->
-                                <li><a ng-click="openInputTacticDialog('dC', 'R')"><span>Diff. Cut ...</span><code class="pull-right">dC</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('dC', 'R')"
+                                       uib-popover-template="fetchRuleHelp('dC')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>Diff. Cut ...</span><code class="pull-right">dC</code>
+                                    </a>
+                                </li>
                                 <li><a ng-click="openInputTacticDialog('dG', 'R')"><span>Diff. Ghost ...</span><code class="pull-right">dG</code></a></li>
                             </ul>
                         </li>
@@ -168,10 +289,16 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
                                aria-haspopup="true" aria-expanded="false">Closing <span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doTactic(undefined, 'closeId')"><span>Identity</span><code class="pull-right">closeId</code></a></li>
+                                <li><a ng-click="doTactic(undefined, 'id')"><span>Identity</span><code class="pull-right">id</code></a></li>
                                 <li><a ng-click="doTactic(undefined, 'closeTrue')"><span>True</span><code class="pull-right">closeTrue</code></a></li>
                                 <li><a ng-click="doTactic(undefined, 'closeFalse')"><span>False</span><code class="pull-right">closeFalse</code></a></li>
-                                <li><a ng-click="doTactic(undefined, 'QE')"><span>Real arithmetic</span><code class="pull-right">QE</code></a></li>
+                                <li><a ng-click="doTactic(undefined, 'QE')"
+                                       uib-popover-template="fetchRuleHelp('QE')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span>Real arithmetic</span><code class="pull-right">QE</code>
+                                    </a>
+                                </li>
                                 <li><a ng-click="doTactic(undefined, 'smartQE')"><span>Smart arithmetic</span><code class="pull-right">smartQE</code></a></li>
                                 <!-- TODO -->
                             </ul>
@@ -202,7 +329,7 @@
                     </ul>
                 </div>
                 <div class="nav">
-                    <ul class="nav navbar-nav">
+                    <ul class="nav navbar-nav k4-tactics-nav-last">
                         <li ng-controller="ProofMessagesCtrl">
                             <k4-auto-hide-alert message="proofMessage.text"
                                                 causeMsg="proofMessage.causeMsg"
@@ -231,7 +358,7 @@
                     <!--<span class="fa fa-tasks"> {{task.goalLabel}}</span>-->
                     <div class="row">
                         <div class="col-md-11" ng-if="$first"
-                             data-intro="Each unfinished subgoal of a proof is displayed on its own tab, which shows the current open proof goal at the top. Hover over formulas for tactic advice. Left-click to apply default, right-click for a list of tactics. Hover over &#8866; for tactics that transform the entire subgoal."
+                             data-intro="Each tab has an unfinished subgoal of a proof. The current open proof goal is at the top. Hover over formulas for tactic advice. Left-click to apply default, right-click for a list of tactics. Alt/Option-click to chase a formula part away. Hover over &#8866; for tactics that transform the entire subgoal."
                              data-position="bottom">
                             <span class="fa fa-tasks"></span>
                             <!-- have to use blur, because editable doesn't work with uib-tabs in any other way -->
@@ -298,12 +425,13 @@
                             <div class="panel-heading">
                                 <div class="col-md-2"><h3 class="panel-title k4-abbreviate"
                                                           uib-tooltip="Proof Programming" tooltip-placement="auto top"
-                                                          tooltip-popup-delay="1000">Proof Programming</h3></div>
+                                                          tooltip-popup-delay="1000">Tactic</h3></div>
                                 <div class="input-group col-md-10" ng-if="tactic.tacticDel === ''">
                                     <span class="input-group-btn"
                                           uib-tooltip="Rerun tactic from original conjecture"
-                                          data-intro="Rerun the tactic from the start" data-position="right">
-                                        <button class="btn btn-default" ng-click="rerunTactic()">Rerun</button>
+                                          data-intro="Rerun tactic from the start" data-position="right">
+                                        <button class="btn btn-default" ng-click="rerunTactic()"
+                                                ng-disabled="prooftree.root === agenda.selectedId()">Rerun</button>
                                     </span>
                                     <span class="input-group-addon">Fresh steps</span>
                                     <input type="text" class="form-control k4-abbreviate" placeholder="None"
@@ -314,14 +442,14 @@
                                     <span class="input-group-btn"
                                           uib-tooltip="Augment the derivation on the current tab with fresh steps (execute as one proof step)"
                                           tooltip-placement="auto top-left"
-                                          data-intro="Run changes in the tactic as a single step." data-position="left">
+                                          data-intro="Run changes in the tactic as a single step." data-position="bottom">
                                         <button class="btn btn-default" ng-click="executeTacticDiff(false)"
                                                 ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Atomic</button>
                                     </span>
                                     <span class="input-group-btn"
                                           uib-tooltip="Augment the derivation on the current tab with fresh steps (execute step-by-step)"
                                           tooltip-placement="auto top-left"
-                                          data-intro="Run changes in the tactic step-by-step." data-position="left">
+                                          data-intro="Run changes in the tactic step-by-step." data-position="bottom">
                                         <button class="btn btn-default" ng-click="executeTacticDiff(true)"
                                                 ng-disabled="tactic.tacticDiff == undefined || tactic.tacticDiff === ''">Step-by-Step</button>
                                     </span>
@@ -352,7 +480,7 @@
                                     </span>
                                 </div>
                             </div>
-                            <div class="panel-body" data-intro="Clicks are recorded here. Append to automate proof steps instead of clicking. <dl class='dl-horizontal'><dt><code>s ; t</code></dt><dd>Run t after s</dd><dt><code>s | t</code></dt><dd>Run t if s fails</dd><dt><code>t*</code></dt><dd>Repeat t exhaustively</dd><dt><code>t*n</code></dt><dd>Run t n times</dd><dt><code>&lt;(t1,...tn)</code></dt><dd>Run ti on subgoal i</dd><dt><code>doall(t)</code></dt><dd>Run t on every subgoal</dd><dt>t(j)</dt><dd>Apply t at position j</dd><dt>1, 2, 3, ..., 'Rlast</dt><dd>Succedent positions</dd><dt>-1, -2, -3, ..., 'Llast</dt><dd>Antecedent positions</dd><dt>4.0.1</dt><dd>Subposition, second child of first child of succedent 4</dd><dt>'L, 'R</dt><dd>Search left/right for first applicable formula</dd></dl>" data-position="bottom">
+                            <div class="panel-body" data-intro="Clicks are recorded as tactic here. Append to program proof steps instead of clicking. <dl class='dl-horizontal'><dt><code>s ; t</code></dt><dd>Run t after s</dd><dt><code>s | t</code></dt><dd>Run t if s fails</dd><dt><code>t*</code></dt><dd>Repeat t exhaustively</dd><dt><code>t*n</code></dt><dd>Run t n times</dd><dt><code>&lt;(t1,...tn)</code></dt><dd>Run ti on subgoal i</dd><dt><code>doall(t)</code></dt><dd>Run t on every subgoal</dd><dt>t(j)</dt><dd>Apply t at position j</dd><dt>1, 2, 3, ..., 'Rlast</dt><dd>Succedent positions</dd><dt>-1, -2, -3, ..., 'Llast</dt><dd>Antecedent positions</dd><dt>4.0.1</dt><dd>Subposition, second child of first child of succedent 4</dd><dt>'L, 'R</dt><dd>Search left/right for first applicable formula</dd></dl>" data-position="bottom">
                             <k4-tactic-editor user-id="userId" proof-id="proofId" node-id="task.id"
                                               on-tactic="doTactic(formulaId, tacticId)"
                                               on-tactic-script="onTacticScript(tacticText,stepwise)">
@@ -371,3 +499,7 @@
 </div>
 </div>
 </div>
+
+<script type="text/ng-template" id="rulehelp.html">
+    <ng-include src="'/help/axiomsrules/' + rulehelp.codeName + '.html'"></ng-include>
+</script>

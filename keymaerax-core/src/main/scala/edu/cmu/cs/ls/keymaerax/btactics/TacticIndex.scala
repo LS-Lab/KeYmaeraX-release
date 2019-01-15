@@ -106,7 +106,7 @@ class DefaultTacticIndex extends TacticIndex {
       one(new Fixed(p ++ childPos, c))
     }) :: Nil
     case TactixLibrary.ODE => ((_: Sequent, p: Position) => one(new Fixed(p))) :: Nil
-    case TactixLibrary.`solve` => ((_: Sequent, p: Position) => one(new Fixed(p))) :: Nil
+    case TactixLibrary.solve => ((_: Sequent, p: Position) => one(new Fixed(p))) :: Nil
     // default position: stop searching
     case _ => Nil
   }
@@ -134,8 +134,20 @@ class DefaultTacticIndex extends TacticIndex {
     if (expr.kind == TermKind) expr match {
       case _ => (Nil, Nil)
     } else expr match {
-      case Box(a, _) if !a.isInstanceOf[ODESystem] && !a.isInstanceOf[Loop] => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
-      case Box(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.solve::Nil, TactixLibrary.ODE::Nil)
+      case Box(a, p) =>
+        val bv = StaticSemantics.boundVars(a)
+        if (!bv.isEmpty && bv.intersect(StaticSemantics.freeVars(p)).isEmpty) {
+          a match {
+            case _: ODESystem => (TactixLibrary.solve :: Nil, TactixLibrary.abstractionb :: Nil)
+            case _ => (Nil, TactixLibrary.abstractionb :: Nil)
+          }
+
+        } else {
+          a match {
+            case _: ODESystem => (TactixLibrary.solve :: Nil, TactixLibrary.ODE :: Nil)
+            case _ => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
+          }
+        }
       case Diamond(a, _) if !a.isInstanceOf[ODESystem] && !a.isInstanceOf[Loop] => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
       case Diamond(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.solve::Nil, TactixLibrary.solve::Nil)
       case Forall(_, _) => (TacticIndex.allLStutter::Nil, TactixLibrary.allR::Nil)

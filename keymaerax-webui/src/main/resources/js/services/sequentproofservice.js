@@ -44,6 +44,16 @@ angular.module('keymaerax.services').factory('Agenda', function() {
          if (item) {
            item.isSelected = true;
            this.selectedTab.tabId = item.id;
+         } else {
+           // select last item
+           var items = this.items();
+           if (items.length > 0) {
+             var lastItem = items[items.length-1];
+             lastItem.isSelected = true;
+             this.selectedTab.tabId = lastItem.id;
+           } else {
+             this.selectedTab.tabId = undefined;
+           }
          }
        },
        selectById: function(itemId) { this.select(this.itemsMap[itemId]); },
@@ -223,17 +233,19 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           //@todo additionally check that deduction.sections are all the same (might be expensive, though)
         });
 
-        // update agenda: copy already cached deduction path into the remaining agenda item (new top item)
-        response.data.agendaItem.deduction = agendaItems[0].deduction;
-        theAgenda.itemsMap[response.data.agendaItem.id] = response.data.agendaItem;
-
         // delete previous items
         //@todo preserve previous tab order
         $.each(agendaItems, function(i, item) {
           delete theAgenda.itemsMap[item.id];
         });
 
-        // select new top item (@todo does not work with step back)
+        // update agenda: if available, copy already cached deduction path into the remaining agenda item (new top item)
+        var topDeduction = agendaItems[0] ? agendaItems[0].deduction : response.data.agendaItem.deduction;
+        response.data.agendaItem.deduction = topDeduction;
+        response.data.agendaItem.isSelected = true; // add item marked as selected, otherwise step back jumps to random tab
+        theAgenda.itemsMap[response.data.agendaItem.id] = response.data.agendaItem;
+
+        // select new top item
         theAgenda.select(response.data.agendaItem);
 
         // refresh tactic
@@ -260,28 +272,29 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
       this.tactic.fetch(userId, proofId);
       $http.get('proofs/user/' + userId + '/' + proofId + '/' + agendaKind)
         .then(function(response) {
+          theAgenda.modelId = response.data.modelId;
           theAgenda.itemsMap = response.data.agendaItems;
           $.each(response.data.proofTree.nodes, function(i, v) { makeLazyNode($http, userId, proofId, v); });
           theProofTree.nodesMap = response.data.proofTree.nodes;
           theProofTree.root = response.data.proofTree.root;
-          if (theAgenda.items().length > 0) {
+          var agendaItems = theAgenda.items();
+          if (agendaItems.length > 0 && theAgenda.selectedId() === undefined) {
             // select first task if nothing is selected yet
-            if (theAgenda.selectedId() === undefined) theAgenda.select(theAgenda.items()[0]);
+            theAgenda.select(agendaItems[0]);
           }
-          if (response.data.closed || theAgenda.items().length == 0) {
+          if (response.data.closed || agendaItems.length == 0) {
             // proof might be finished
             if(!theAgenda.proofStatusDisplayed) {
               theAgenda.proofStatusDisplayed == true
               $rootScope.$broadcast('agenda.isEmpty', {proofId: proofId});
               console.log("Emiting angeda.isEmpty from sequentproofservice.js 1");
-            }
-            else {
+            } else {
               console.log("Not showing agenda.isEmpty because it was already displayed.")
             }
           }
         })
-        .catch(function(data) {
-          $rootScope.$broadcast('agenda.loadError', userId, proofId);
+        .catch(function(error) {
+          $rootScope.$broadcast('agenda.loadError', userId, proofId, error.data);
         })
         .finally(function() { spinnerService.hideAll(); });
     },
@@ -309,13 +322,16 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
           theAgenda.itemsMap[newAgendaItem.id] = newAgendaItem;
         });
         delete theAgenda.itemsMap[oldAgendaItem.id];
-        theAgenda.select(theAgenda.itemsMap[theAgenda.selectedId()]);
-        if (theAgenda.itemIds().length == 0 && !theAgenda.proofStatusDisplayed) {
+        var agendaIds = theAgenda.itemIds();
+        if (theAgenda.selectedId() === undefined && agendaIds.length > 0) {
+          theAgenda.selectById(agendaIds[agendaIds.length-1]);
+        }
+        if (agendaIds.length == 0 && !theAgenda.proofStatusDisplayed) {
           theAgenda.proofStatusDisplayed == true
           console.log("Emitting agenda.isEmpty from sequentproofservice.js 1");
           $rootScope.$broadcast('agenda.isEmpty', {proofId: proofId});
         }
-        if(theAgenda.proofStatusDisplayed == true) {
+        if (theAgenda.proofStatusDisplayed == true) {
           console.log("Not emitting agenda.isEmpty because it's already been emitted.")
         }
       } else {
@@ -328,12 +344,20 @@ angular.module('keymaerax.services').factory('sequentProofData', ['$http', '$roo
 angular.module('keymaerax.services').factory('Poller', function($http, $timeout) {
   return {
     poll: function(url, interval) {
-      var data = { response: {}, calls: 0 };
+      var data = {
+        response: {},
+        calls: 0,
+        cancel: false
+      };
       var poller = function() {
         $http.get(url).then(function(r) {
           data.response = r.data;
           data.calls++;
-          $timeout(poller, interval);
+          if (!data.cancel) $timeout(poller, interval);
+        },
+        function(error) {
+          // server is likely offline, poll less frequently
+          if (!data.cancel) $timeout(poller, 10*interval);
         });
       };
       poller();

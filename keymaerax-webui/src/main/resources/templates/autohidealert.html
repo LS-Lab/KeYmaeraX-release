@@ -3,7 +3,7 @@
     <i class="fa fa-exclamation-triangle"></i> <span ng-bind-html="formattedMessage(message)"></span>&nbsp;
     <span ng-if="(details && details !== '') || (causeMsg && causeMsg !== '')"
           uib-popover-template="'proofmessagedetails.html'"
-          popover-placement="auto bottom" popover-trigger="'click'"
+          popover-placement="auto bottom" popover-trigger="'outsideClick'"
           popover-class="tacticalert-popover"
           popover-append-to-body="true"
           style="border-bottom: 1px dashed;"><i class="fa fa-bolt"></i> Details</span><!--&nbsp;

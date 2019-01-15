@@ -23,6 +23,8 @@ libraryDependencies += "org.apache.logging.log4j" % "log4j-core" % "2.10.0"
 
 libraryDependencies += "org.apache.logging.log4j" %% "log4j-api-scala" % "11.0"
 
+libraryDependencies += "org.typelevel" %% "paiges-core" % "0.2.1"
+
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 
 ////////////////////////////////////////////////////////////////////////////////

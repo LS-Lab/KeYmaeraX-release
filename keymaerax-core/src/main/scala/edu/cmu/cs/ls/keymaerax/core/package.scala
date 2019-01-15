@@ -11,15 +11,15 @@ import scala.io.Source
   * Soundness-critical core of the Axiomatic Tactical Theorem Prover KeYmaera X
   * ==============================================================================================
   *
-  * The KeYmaera X Kernel implements [[http://dx.doi.org/10.1007/s10817-016-9385-1 Differential Dynamic Logic]] and defines
+  * The KeYmaera X Kernel implements [[https://doi.org/10.1007/s10817-016-9385-1 Differential Dynamic Logic]] and defines
   *
   *   - Syntax of
   * [[http://symbolaris.com/logic/dL.html differential dynamic logic]]:
   *     - [[edu.cmu.cs.ls.keymaerax.core.Expression Syntax of dL Expressions]]
   *     - [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics Static Semantics]]
   *
-  *   - Proof Construction of [[edu.cmu.cs.ls.keymaerax.core.ProvableSig proof certificates]] from
-  *     - [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.axioms axioms]]
+  *   - Proof Construction of [[edu.cmu.cs.ls.keymaerax.core.Provable proof certificates]] from
+  *     - [[edu.cmu.cs.ls.keymaerax.core.Provable.axioms axioms]]
   *     - [[edu.cmu.cs.ls.keymaerax.core.USubst Uniform substitutions]]
   *     - [[edu.cmu.cs.ls.keymaerax.core.URename Uniform renamings]]
   *     - [[edu.cmu.cs.ls.keymaerax.core.Rule Proof rules]]
@@ -30,19 +30,19 @@ import scala.io.Source
   * [[edu.cmu.cs.ls.keymaerax.core.SetLattice set lattice management]] for sets of symbols.
   *
   * ==Usage Overview==
-  * The KeYmaera X Kernel package provides the ''soundness-critical core of [[http://dx.doi.org/10.1007/978-3-319-21401-6_36 KeYmaera X]]''.
+  * The KeYmaera X Kernel package provides the ''soundness-critical core of [[https://doi.org/10.1007/978-3-319-21401-6_36 KeYmaera X]]''.
   * It provides ways of constructing proofs that, by construction, can only be constructed using
   * the proof rules that the KeYmaera X Kernel provides.
   * The [[edu.cmu.cs.ls.keymaerax.btactics proof tactics]] that KeYmaera X provides give you a more powerful and flexible and easier way of
   * constructing and searching for proofs, but they internally reduce to what is shown here.
   *
   * ===Constructing Proofs===
-  * The proof certificates of KeYmaera X are of type [[edu.cmu.cs.ls.keymaerax.core.ProvableSig]].
-  * [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.startProof]] begins a new proof of a
+  * The proof certificates of KeYmaera X are of type [[edu.cmu.cs.ls.keymaerax.core.Provable]].
+  * [[edu.cmu.cs.ls.keymaerax.core.Provable.startProof]] begins a new proof of a
   * [[edu.cmu.cs.ls.keymaerax.core.Sequent]] containing the conjectured differential dynamic logic formula.
   * A proof rule of type [[edu.cmu.cs.ls.keymaerax.core.Rule]] can be applied to any subgoal of a
-  * [[edu.cmu.cs.ls.keymaerax.core.ProvableSig]] by [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.apply]] to advance the proof
-  * until that Provable has been proved since [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.isProved]] is true.
+  * [[edu.cmu.cs.ls.keymaerax.core.Provable]] by [[edu.cmu.cs.ls.keymaerax.core.Provable.apply]] to advance the proof
+  * until that Provable has been proved since [[edu.cmu.cs.ls.keymaerax.core.Provable.isProved]] is true.
   * Subgoals are identified by integers.
   * {{{
   *   import scala.collection.immutable._
@@ -61,7 +61,7 @@ import scala.io.Source
   *
   * ===Combining Proofs===
   * Multiple Provable objects for subderivations obtained from different sources can also be merged
-  * into a single Provable object by substitution with [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.apply()]]([[edu.cmu.cs.ls.keymaerax.core.ProvableSig]],Int).
+  * into a single Provable object by substitution with [[edu.cmu.cs.ls.keymaerax.core.Provable.apply()]]([[edu.cmu.cs.ls.keymaerax.core.Provable]],Int).
   * The above example can be continued to merge proofs as follows:
   * {{{
   *   // ... continued from above
@@ -76,7 +76,7 @@ import scala.io.Source
   *   // check if proof successful, i.e. no remaining subgoals
   *   if (mergedProof.isProved) println("Successfully proved " + mergedProof.proved)
   * }}}
-  * [[edu.cmu.cs.ls.keymaerax.core.ProvableSig More styles for proof construction are shown in Provable's]].
+  * [[edu.cmu.cs.ls.keymaerax.core.Provable More styles for proof construction are shown in Provable's]].
   *
   *
   * ==Differential Dynamic Logic==
@@ -97,7 +97,7 @@ import scala.io.Source
   *
   * 4. [[edu.cmu.cs.ls.keymaerax.core.DifferentialProgram differential programs]] are of type [[edu.cmu.cs.ls.keymaerax.core.DifferentialProgram]] of kind [[edu.cmu.cs.ls.keymaerax.core.DifferentialProgramKind]]
   *
-  * See [[http://dx.doi.org/10.1007/s10817-016-9385-1 Section 2.1]]
+  * See [[https://doi.org/10.1007/s10817-016-9385-1 Section 2.1]]
   *
   * ===Static Semantics===
   * The static semantics of differential dynamic logic is captured in
@@ -105,23 +105,23 @@ import scala.io.Source
   * in terms of the [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics#freeVars(edu.cmu.cs.ls.keymaerax.core.Expression) free variables]] and
   * [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics#boundVars(edu.cmu.cs.ls.keymaerax.core.Expression) bound variables]] that expressions have
   * as well as their [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics#signature(edu.cmu.cs.ls.keymaerax.core.Expression) signatures]] (set of occurring symbols).
-  * See [[http://dx.doi.org/10.1007/s10817-016-9385-1 Section 2.4]]
+  * See [[https://doi.org/10.1007/s10817-016-9385-1 Section 2.4]]
   *
   *
   * ==Theorem Prover==
   * The KeYmaera X Prover Kernel provides [[edu.cmu.cs.ls.keymaerax.core.USubst uniform substitutions]],
   * [[edu.cmu.cs.ls.keymaerax.core.UniformRenaming uniform]] and [[edu.cmu.cs.ls.keymaerax.core.BoundRenaming bound variable renaming]], and
-  * [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.axioms axioms]] of differential dynamic logic.
+  * [[edu.cmu.cs.ls.keymaerax.core.Provable.axioms axioms]] of differential dynamic logic.
   * For efficiency, it also directly provides propositional sequent proof rules and
   * [[edu.cmu.cs.ls.keymaerax.core.Skolemize Skolemization]].
   *
   * ===Axioms===
   * The axioms and axiomatic rules of differential dynamic logic can be looked up with
-  * [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.axioms]] and [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.rules]] respectively.
-  * All available axioms are listed in [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.axioms]],
-  * all available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.rules]]
+  * [[edu.cmu.cs.ls.keymaerax.core.Provable.axioms]] and [[edu.cmu.cs.ls.keymaerax.core.Provable.rules]] respectively.
+  * All available axioms are listed in [[edu.cmu.cs.ls.keymaerax.core.Provable.axioms]],
+  * all available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.Provable.rules]]
   * which both ultimately come from the file [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]].
-  * See [[http://dx.doi.org/10.1007/s10817-016-9385-1 Sections 4 and 5.0]]
+  * See [[https://doi.org/10.1007/s10817-016-9385-1 Sections 4 and 5.0]]
   * Additional axioms are available as derived axioms and lemmas in [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]].
   *
   * ===Uniform Substitutions===
@@ -129,18 +129,18 @@ import scala.io.Source
   * and likewise for function symbols f(.) and program constants.
   * Uniform substitutions and their application mechanism for differential dynamic logic
   * are implemented in [[edu.cmu.cs.ls.keymaerax.core.USubst]].
-  * See [[http://dx.doi.org/10.1007/s10817-016-9385-1 Section 3]]
+  * See [[https://doi.org/10.1007/s10817-016-9385-1 Section 3]]
   *
   * [[edu.cmu.cs.ls.keymaerax.core.USubst Uniform substitutions]] can be used on proof certificates with the
-  * [[edu.cmu.cs.ls.keymaerax.core.ProvableSig.apply(edu.cmu.cs.ls.keymaerax.core.USubst)]],
+  * [[edu.cmu.cs.ls.keymaerax.core.Provable.apply(edu.cmu.cs.ls.keymaerax.core.USubst)]],
   * including uniform substitution instances of axioms or axiomatic rules.
-  * See [[http://dx.doi.org/10.1007/s10817-016-9385-1 Section 3]]
+  * See [[https://doi.org/10.1007/s10817-016-9385-1 Section 3]]
   *
   * ===Sequent Proof Rules===
   * All proof rules for differential dynamic logic, including the uniform substitution and bound variable renaming rules as well as
   * efficient propositional sequent proof rules and Skolemization [[edu.cmu.cs.ls.keymaerax.core.Skolemize]]
   * are all of type [[edu.cmu.cs.ls.keymaerax.core.Rule]], which are the only proof rules that can ever be applied to a proof.
-  * See [[http://dx.doi.org/10.1007/s10817-008-9103-8 sequent calculus]]
+  * See [[https://doi.org/10.1007/s10817-008-9103-8 sequent calculus]]
   *
   * ==Additional Capabilities==
   * ===Lemma Mechanism===
@@ -158,15 +158,16 @@ import scala.io.Source
   * [[edu.cmu.cs.ls.keymaerax.core.SetLattice]] based on Scala's immutable sets.
   *
   * @author Andre Platzer
-  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
-  * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
   * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
-  * @see "Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Volp and Andre Platzer. KeYmaera X: An axiomatic tactical theorem prover for hybrid systems.  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015."
-  * @see Andre Platzer. [[http://dx.doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
-  * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.13 Logics of dynamical systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012
-  * @see Andre Platzer. [[http://dx.doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
-  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
-  * @see [[edu.cmu.cs.ls.keymaerax.core.ProvableSig]]
+  * @see Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Volp and Andre Platzer. KeYmaera X: An axiomatic tactical theorem prover for hybrid systems.  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+  * @see Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+  * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.13 Logics of dynamical systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012
+  * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.64 The complete proof theory of hybrid systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
+  * @see [[edu.cmu.cs.ls.keymaerax.core.Provable]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.Expression]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]

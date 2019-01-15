@@ -21,36 +21,35 @@ angular.module('keymaerax.controllers').controller('ModelUploadCtrl',
   function ($scope, $http, $route, $uibModalInstance, $uibModal, $location, Models, sessionService, spinnerService) {
      /** Model data */
      $scope.model = {
-       uri: undefined,
        modelName: undefined,
        content: undefined
      };
 
      $scope.updateModelContentFromFile = function(fileName, fileContent) {
        $scope.model.content = fileContent;
-       if (!$scope.isKya(fileContent)) {
+       if ($scope.numKyxEntries(fileContent) <= 0) {
          $scope.model.modelName = fileName.substring(0, fileName.indexOf('.'));
        }
-       $scope.model.uri = "file://" + fileName;
        $scope.$digest();
      };
 
-     $scope.updateModelContentFromURL = function() {
-       $http.get($scope.model.uri).then(function(response) {
-          $scope.model.content = response.data;
-       });
+     /* Number of archive entries contained in `content`. */
+     $scope.numKyxEntries = function(content) {
+        // archives contain lemmas, theorems etc., e.g., search for matches: Theorem "...".
+        var entryRegex = /(Theorem|Lemma|ArchiveEntry|Exercise)(\s*)\"[^\"]*\"/g;
+        return (content && content.match(entryRegex) || []).length;
      };
 
-     /* Indicates whether `content` is an archive or a plain model file. */
-     $scope.isKya = function(content) {
-        // archives contain lemmas, theorems etc., e.g., search for matches: Theorem "...".
-        var regex = /(Theorem|Lemma|ArchiveEntry|Exercise) \"[^\"]*\"\./g;
-        return content && content.search(regex) >= 0;
-     };
+     /* Number of tactic entries contained in `content`. */
+     $scope.numKyxTactics = function(content) {
+       var tacticRegex = /Tactic(\s*)\"[^\"]*\"/g;
+       return (content && content.match(tacticRegex) || []).length;
+     }
 
      $scope.uploadContent = function(startProof) {
        var url =  "user/" + sessionService.getUser() + "/modelupload/" + $scope.model.modelName;
-       upload(url, $scope.model.content, startProof && !$scope.isKya($scope.model.content));
+       upload(url, $scope.model.content,
+         startProof && $scope.numKyxEntries($scope.model.content) <= 1 && $scope.numKyxTactics($scope.model.content) <= 0);
      }
 
      $scope.close = function() { $uibModalInstance.close(); };
@@ -168,6 +167,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
       resolve: {
         userid: function() { return $scope.userId; },
         modelid: function() { return modelId; },
+        proofid: function() { return undefined; },
         mode: function() { return Models.getModel(modelId).isExercise ? 'exercise' : 'edit'; }
       }
     });
@@ -290,7 +290,7 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
     var modalInstance = $uibModal.open({
       templateUrl: 'templates/modelplex.html',
       controller: 'ModelPlexCtrl',
-      size: 'fullscreen',
+      size: 'fullwidth',
       resolve: {
         userid: function() { return $scope.userId; },
         modelid: function() { return modelid; }
@@ -317,84 +317,101 @@ angular.module('keymaerax.controllers').controller('ModelListCtrl', function ($s
 });
 
 angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
-    function ($scope, $http, $uibModal, $uibModalInstance, $location, Models, userid, modelid, mode) {
+    function ($scope, $route, $http, $uibModal, $uibModalInstance, $location, Models, userid, modelid, proofid, mode) {
   $scope.mode = mode;
+  $scope.proofId = proofid;
+  $scope.model = undefined;         // model with edits
+  $scope.origModel = undefined;     // original model from database
+  $scope.save = {
+    cmd: undefined,                 // save command: set on submit buttons
+    editable: (mode === 'exercise' || mode === 'proofedit'),
+    editor: undefined
+  }
 
   $http.get("user/" + userid + "/model/" + modelid).then(function(response) {
-      $scope.model = response.data;
-      $scope.origModel = JSON.parse(JSON.stringify(response.data)); // deep copy
+    $scope.model = response.data;
+    $scope.origModel = JSON.parse(JSON.stringify(response.data)); // deep copy
   });
 
+  $scope.aceLoaded = function(editor) {
+    editor.setReadOnly(!$scope.save.editable);
+    $scope.save.editor = editor;
+  }
+
+  $scope.enableEditing = function() {
+    $scope.modelDataForm.$show();
+    $scope.save.editor.setReadOnly(false);
+  }
+
   /** Deletes all proofs of the model */
-  $scope.deleteModelProofs = function() {
-    $http.post('user/' + userid + "/model/" + modelid + "/deleteProofs").success(function(data) {
+  $scope.deleteModelProofSteps = function(onSuccess) {
+    $http.post('user/' + userid + "/model/" + modelid + "/deleteProofSteps").success(function(data) {
       if (data.success) {
-        $scope.model.numProofs = 0;
+        $scope.model.numAllProofSteps = 0;
+        onSuccess();
       }
     });
   }
 
-  $scope.saveModelData = function() {
+  $scope.checkModelData = function() {
     if ($scope.origModel.name !== $scope.model.name || $scope.origModel.title !== $scope.model.title
      || $scope.origModel.description !== $scope.model.description
      || $scope.origModel.keyFile !== $scope.model.keyFile) {
-      if ($scope.model.numProofs > 0) {
-        var modelCopyName = $scope.model.name + ' (Copy ';
-        var i = 1;
-        while ($scope.checkName(modelCopyName + i + ')') !== true) { ++i; }
-        var url = "user/" + userid + "/modeltextupload/" + modelCopyName + i + ')';
-        $http.post(url, $scope.model.keyFile).then(function(response) {
-          $scope.model.id = response.data.modelId;
-          $scope.model.name = modelCopyName + i + ')';
-          $scope.origModel = JSON.parse(JSON.stringify($scope.model)); // deep copy
-        })
-        .catch(function(err) {
-          $uibModal.open({
-            templateUrl: 'templates/parseError.html',
-            controller: 'ParseErrorCtrl',
-            size: 'lg',
-            resolve: {
-              model: function () { return $scope.model.keyFile; },
-              error: function () { return err.data; }
-          }});
-        });
-      } else {
-        var data = {
-          name: $scope.model.name,
-          title: $scope.model.title,
-          description: $scope.model.description,
-          content: $scope.model.keyFile
-        };
-        $http.post("user/" + userid + "/model/" + modelid + "/update", data).then(function(response) {
-          var model = Models.getModel(modelid);
-          model.name = $scope.model.name;
-          model.title = $scope.model.title;
-          model.description = $scope.model.description;
-          model.keyFile = $scope.model.keyFile;
-          $scope.origModel = JSON.parse(JSON.stringify($scope.model)); // deep copy
-        })
-        .catch(function(err) {
-          $uibModal.open({
-            templateUrl: 'templates/parseError.html',
-            controller: 'ParseErrorCtrl',
-            size: 'lg',
-            resolve: {
-              model: function () { return $scope.model.keyFile; },
-              error: function () { return err.data; }
-          }});
-        });
-      }
+      if ($scope.model.numAllProofSteps > 0) {
+        $scope.deleteModelProofSteps($scope.uploadModel);
+      } else { $scope.uploadModel(); }
+      return false;           // form will not close automatically -> $scope.save.cmd() on successful parsing
+    } else {
+      $uibModalInstance.close();
+      if ($scope.save.cmd) $scope.save.cmd();
+      return true;
     }
   }
 
+  $scope.uploadModel = function() {
+    var data = {
+      name: $scope.model.name,
+      title: $scope.model.title,
+      description: $scope.model.description,
+      content: $scope.model.keyFile
+    };
+    $http.post("user/" + userid + "/model/" + modelid + "/update", data).then(function(response) {
+      var model = Models.getModel(modelid);
+      if (model) {
+        // model === undefined on proof page reload
+        model.name = $scope.model.name;
+        model.title = $scope.model.title;
+        model.description = $scope.model.description;
+        model.keyFile = $scope.model.keyFile;
+        $scope.origModel = JSON.parse(JSON.stringify($scope.model)); // deep copy
+      }
+      $uibModalInstance.close();
+      $scope.save.cmd();
+    })
+    .catch(function(err) {
+      $scope.modelDataForm.$setError("", err.data.textStatus);
+      $uibModal.open({
+        templateUrl: 'templates/parseError.html',
+        controller: 'ParseErrorCtrl',
+        size: 'lg',
+        resolve: {
+          model: function () { return $scope.model.keyFile; },
+          error: function () { return err.data; }
+      }});
+    });
+  }
+
   $scope.startProof = function() {
-    $uibModalInstance.close();
     var uri = 'models/users/' + userid + '/model/' + $scope.model.id + '/createProof'
     $http.post(uri, {proofName: '', proofDescription: ''}).
       success(function(data) { $location.path('proofs/' + data.id); }).
       error(function(data, status, headers, config) {
         console.log('Error starting new proof for model ' + modelid)
       });
+  }
+
+  $scope.redoProof = function() {
+    $route.reload();
   }
 
   $scope.modelIsComplete = function() { return $scope.model && $scope.model.keyFile.indexOf('__________') < 0; }
@@ -406,8 +423,12 @@ angular.module('keymaerax.controllers').controller('ModelDialogCtrl',
     else return true;
   }
 
-  $scope.ok = function() {
+  $scope.cancel = function() {
+    $scope.model.keyFile = $scope.origModel.keyFile;
     $uibModalInstance.close();
+  };
+
+  $scope.refreshModels = function() {
     // Update the models list
     while (Models.getModels().length != 0) { Models.getModels().shift(); }
     $http.get("models/users/" + userid).success(function(data) {

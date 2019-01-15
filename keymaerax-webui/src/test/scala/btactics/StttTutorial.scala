@@ -4,13 +4,13 @@
 */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, UnificationMatch}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, SaturateTactic, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 import edu.cmu.cs.ls.keymaerax.btactics.ArithmeticSimplification._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.KeYmaeraXTestTags.TodoTest
@@ -59,7 +59,7 @@ class StttTutorial extends TacticTestBase {
 
   "Example 1a" should "be provable" in withQE { _ => withDatabase { db =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.kyx")).mkString
-    val tactic = implyR('_) & (andL('_)*) & dC("v>=0".asFormula)(1) & Idioms.<(
+    val tactic = implyR('_) & SaturateTactic(andL('_)) & dC("v>=0".asFormula)(1) & Idioms.<(
       dC("x>=old(x)".asFormula)(1) & Idioms.<(
         dW(1) & exhaustiveEqL2R('L, "x0=x_0".asFormula) & prop,
         dI()(1)
@@ -72,18 +72,18 @@ class StttTutorial extends TacticTestBase {
 
   it should "be provable with multi-arg invariant" in withQE { _ => withDatabase { _ =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.kyx")).mkString
-    val tactic = implyR('_) & (andL('_)*) & diffInvariant("v>=0".asFormula, "x>=old(x)".asFormula)(1) &
+    val tactic = implyR('_) & SaturateTactic(andL('_)) & diffInvariant("v>=0".asFormula, "x>=old(x)".asFormula)(1) &
       dW(1) & exhaustiveEqL2R('L, "x0=x_0".asFormula) & prop
 
     //@todo multi-argument diffInvariant not yet supported by TacticExtraction/BelleParser
 //    db.proveBy(modelContent, tactic) shouldBe 'proved
-    proveBy(KeYmaeraXProblemParser(modelContent), tactic) shouldBe 'proved
+    proveBy(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent), tactic) shouldBe 'proved
   }}
 
   "Example 2" should "be provable with master and custom loop invariant" in withQE { _ => withDatabase { db =>
     val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 2", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
-    val Imply(_, Box(loop, _)) = KeYmaeraXProblemParser(modelContent)
+    val Imply(_, Box(loop, _)) = KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent)
     db.proveBy(modelContent, master(new ConfigurableGenerator(Map((loop, "v>=0".asFormula::Nil))))) shouldBe 'proved
   }}
 
@@ -97,10 +97,10 @@ class StttTutorial extends TacticTestBase {
     val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 2", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
 
-    val tactic = implyR('_) & (andL('_)*) & loop("J(v)".asFormula)('R) <(
+    val tactic = implyR('_) & SaturateTactic(andL('_)) & loop("J(v)".asFormula)('R) <(
       skip,
       skip,
-      chase('R) & prop & OnAll(solve('R) partial) partial
+      chase('R) & prop & OnAll(solve('R))
       ) &
       US(UnificationMatch("J(v)".asFormula, "v>=0".asFormula).usubst) &
       OnAll(QE)
@@ -120,18 +120,18 @@ class StttTutorial extends TacticTestBase {
     val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 3b", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
 
-    val tactic = implyR('_) & (andL('_)*) & chase('R) & normalize & OnAll(solve('R))
+    val tactic = implyR('_) & SaturateTactic(andL('_)) & chase('R) & normalize & OnAll(solve('R))
     val intermediate = db.proveBy(modelContent, tactic)
     intermediate.subgoals should have size 3
     intermediate.subgoals(0) shouldBe Sequent(
       IndexedSeq("v>=0".asFormula, "A()>0".asFormula, "B()>0".asFormula, "true".asFormula, "x<=S()".asFormula, "true".asFormula),
-      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> A()*s_+v>=0) -> A()/2*t_^2+v*t_+x<=S())".asFormula))
+      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> A()*s_+v>=0) -> A()*(t_^2/2)+v*t_+x<=S())".asFormula))
     intermediate.subgoals(1) shouldBe Sequent(
       IndexedSeq("v>=0".asFormula, "A()>0".asFormula, "B()>0".asFormula, "true".asFormula, "x<=S()".asFormula, "v=0".asFormula),
       IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> v>=0) -> v*t_+x<=S())".asFormula))
     intermediate.subgoals(2) shouldBe Sequent(
       IndexedSeq("v>=0".asFormula, "A()>0".asFormula, "B()>0".asFormula, "true".asFormula, "x<=S()".asFormula),
-      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> (-B())*s_+v>=0) -> (-B())/2*t_^2+v*t_+x<=S())".asFormula))
+      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> (-B())*s_+v>=0) -> (-B())*(t_^2/2)+v*t_+x<=S())".asFormula))
 
     val brake = proveBy(intermediate.subgoals(2), TactixLibrary.partialQE)
     brake.subgoals should have size 1
@@ -145,18 +145,18 @@ class StttTutorial extends TacticTestBase {
     val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 3b", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get
     val modelContent = entry.fileContent
-    val tactic = entry.tactics.head._2
+    val tactic = entry.tactics.head._3
     val intermediate = db.proveBy(modelContent, tactic)
     intermediate.subgoals should have size 3
     intermediate.subgoals(0) shouldBe Sequent(
       IndexedSeq("v>=0".asFormula, "A()>0".asFormula, "B()>0".asFormula, "true".asFormula, "x<=S()".asFormula, "true".asFormula),
-      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> A()*s_+v>=0) -> A()/2*t_^2+v*t_+x<=S())".asFormula))
+      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> A()*s_+v>=0) -> A()*(t_^2/2)+v*t_+x<=S())".asFormula))
     intermediate.subgoals(1) shouldBe Sequent(
       IndexedSeq("v>=0".asFormula, "A()>0".asFormula, "B()>0".asFormula, "true".asFormula, "x<=S()".asFormula, "v=0".asFormula),
       IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> v>=0) -> v*t_+x<=S())".asFormula))
     intermediate.subgoals(2) shouldBe Sequent(
       IndexedSeq("v>=0".asFormula, "A()>0".asFormula, "B()>0".asFormula, "true".asFormula, "x<=S()".asFormula),
-      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> (-B())*s_+v>=0) -> (-B())/2*t_^2+v*t_+x<=S())".asFormula))
+      IndexedSeq("\\forall t_ (t_>=0 -> \\forall s_ (0<=s_ & s_<=t_ -> (-B())*s_+v>=0) -> (-B())*(t_^2/2)+v*t_+x<=S())".asFormula))
   }}
 
   "Example 4a" should "be provable with master and loop invariant from file" in withQE { _ => withDatabase { db =>
@@ -183,7 +183,7 @@ class StttTutorial extends TacticTestBase {
 
     val plant = print("plant") & composeb('R) & assignb('R) & solveEnd('R)
 
-    val tactic = implyR('R) & (andL('L)*) &
+    val tactic = implyR('R) & SaturateTactic(andL('L)) &
       loop("v >= 0 & x+v^2/(2*B()) <= S()".asFormula)('R) <(
       print("Base Case") & andR('R) & OnAll(closeId),
       print("Use Case") & QE,
@@ -208,7 +208,7 @@ class StttTutorial extends TacticTestBase {
     val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 5", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
 
-    val tactic = implyR('R) & (andL('L)*) &
+    val tactic = implyR('R) & SaturateTactic(andL('L)) &
       loop("v >= 0 & x+v^2/(2*B()) <= S()".asFormula)('R) <(
         printIndexed("Base case") & andR('R) & OnAll(closeId),
         printIndexed("Use case") & QE,
@@ -224,11 +224,11 @@ class StttTutorial extends TacticTestBase {
       getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.model.asInstanceOf[Formula]
 
 
-    val tactic = implyR('R) & (andL('L)*) &
+    val tactic = implyR('R) & SaturateTactic(andL('L)) &
       loop("J(v,x,B,S)".asFormula)('R) <(
         skip,
         skip,
-        chase('R) & normalize & OnAll(solve('R) partial) partial
+        chase('R) & normalize & OnAll(solve('R))
         ) &
       US(UnificationMatch("J(v,x,B,S)".asFormula, "v >= 0 & x+v^2/(2*B) <= S".asFormula).usubst) &
       OnAll(QE)
@@ -257,7 +257,7 @@ class StttTutorial extends TacticTestBase {
   "Example 9a" should "be provable" in withQE { _ => withDatabase { db =>
     val modelContent = KeYmaeraXArchiveParser.getEntry("STTT Tutorial Example 9a", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/sttt/sttt.kyx")).mkString).get.fileContent
-    val tactic = implyR('R) & (andL('L)*) & dI()('R)
+    val tactic = implyR('R) & SaturateTactic(andL('L)) & dI()('R)
     db.proveBy(modelContent, tactic) shouldBe 'proved
   }}
 
@@ -271,12 +271,12 @@ class StttTutorial extends TacticTestBase {
       diffInvariant("5/4*(x-(xm+S())/2)^2 + (x-(xm+S())/2)*v/2 + v^2/4 < ((S()-xm)/2)^2".asFormula)('R) &
       dW('R)
 
-    val tactic = implyR('R) & (andL('L)*) &
+    val tactic = implyR('R) & SaturateTactic(andL('L)) &
       loop("v >= 0 & xm <= x & xr = (xm + S())/2 & 5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S() - xm)/2)^2".asFormula)('R) <(
-        print("Base case") & ((andR('R) <(closeId, skip))*) & closeId,
+        print("Base case") & SaturateTactic(andR('R) <(closeId, skip)) & closeId,
         print("Use case") & QE,
-        print("Step") & (andL('L)*) & chase('R) & andR('R) <(
-          allR('R) & (implyR('R)*) & ode & implyR('R) & (andL('L)*) & printIndexed("Foo") & QE,
+        print("Step") & SaturateTactic(andL('L)) & chase('R) & andR('R) <(
+          allR('R) & SaturateTactic(implyR('R)) & ode & implyR('R) & SaturateTactic(andL('L)) & QE,
           implyR('R) & ode & printIndexed("Bar") & QE
         )
       )
@@ -299,17 +299,16 @@ class StttTutorial extends TacticTestBase {
             dI()(1)),
           dI()(1)),
         dI()(1)
-        ) & (andL('L)*) & dW('R)
+        ) & SaturateTactic(andL('L)) & dW('R)
 
-    val tactic = implyR('R) & (andL('L)*) &
+    val tactic = implyR('R) & SaturateTactic(andL('L)) &
       loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()".asFormula)('R) <(
         print("Base case") & speculativeQE,
         print("Use case") & speculativeQE,
         print("Step") & chase('R) & normalize & printIndexed("Normalized") <(
-          //@todo position assertions not yet stored and extracted
-          printIndexed("Acc") & hideL(-9, "abs(y-ly())+v^2/(2*b()) < lw()".asFormula) & ode("a") &
-            (alphaRule*) &
-            printIndexed("Before replaceTransform") & replaceTransform("ep()".asTerm, "c".asTerm)(-9, "abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()".asFormula) &
+          printIndexed("Acc") & hideL(-15, "abs(y-ly())+v^2/(2*b()) < lw()".asFormula) & ode("a") &
+            SaturateTactic(alphaRule) &
+            printIndexed("Before replaceTransform") & replaceTransform("ep()".asTerm, "c".asTerm)(-6, "abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()".asFormula) &
             prop & OnAll(speculativeQE),
           printIndexed("Stop") & ode("0") & prop & OnAll(speculativeQE),
           printIndexed("Brake") & ode("a") & prop & OnAll(speculativeQE)
@@ -326,14 +325,14 @@ class StttTutorial extends TacticTestBase {
     def ode(a: String) = diffInvariant("c>=0".asFormula, "dx^2+dy^2=1".asFormula, s"v=old(v)+$a*c".asFormula,
       s"-c*(v-$a/2*c) <= y - old(y) & y - old(y) <= c*(v-$a/2*c)".asFormula)('R) & dW('R)
 
-    val tactic = implyR('R) & (andL('L)*) &
+    val tactic = implyR('R) & SaturateTactic(andL('L)) &
       loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()".asFormula)('R) <(
         print("Base case") & speculativeQE,
         print("Use case") & speculativeQE,
         print("Step") & chase('R) & normalize & printIndexed("Normalized") <(
-          printIndexed("Acc") & hideL(-9, "abs(y-ly())+v^2/(2*b()) < lw()".asFormula) & ode("a") &
-            (alphaRule*) &
-            printIndexed("Before replaceTransform") & replaceTransform("ep()".asTerm, "c".asTerm)(-9, "abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()".asFormula) &
+          printIndexed("Acc") & hideL(-15, "abs(y-ly())+v^2/(2*b()) < lw()".asFormula) & ode("a") &
+            SaturateTactic(alphaRule) &
+            printIndexed("Before replaceTransform") & replaceTransform("ep()".asTerm, "c".asTerm)(-6, "abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()".asFormula) &
             prop & OnAll(speculativeQE),
           printIndexed("Stop") & ode("0") & prop & OnAll(speculativeQE),
           printIndexed("Brake") & ode("a") & prop & OnAll(speculativeQE)
@@ -342,7 +341,7 @@ class StttTutorial extends TacticTestBase {
 
     //@todo multi-argument diffInvariant not yet supported by TacticExtraction/BelleParser
     //db.proveBy(modelContent, tactic) shouldBe 'proved
-    proveBy(KeYmaeraXProblemParser(modelContent), tactic) shouldBe 'proved
+    proveBy(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent), tactic) shouldBe 'proved
   }}
 
 }

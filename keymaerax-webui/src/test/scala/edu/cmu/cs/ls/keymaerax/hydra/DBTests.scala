@@ -23,7 +23,7 @@ class DBTests extends TacticTestBase {
       "/examples/tutorials/basic/basictutorial.kyx" :: Nil).
       map(getClass.getResourceAsStream(_)).
       flatMap(i => KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(i).mkString)).
-      flatMap(e => e.tactics.zipWithIndex.map(t => (e.name + " " + t._2, e.fileContent, t._1._2)))
+      flatMap(e => e.tactics.zipWithIndex.map(t => (e.name + " " + t._2, e.fileContent, t._1._3)))
 
     val tactics = Table(("name", "fileContent", "tactic"), entries:_*)
     forEvery(tactics) { (name, fileContent, tactic) =>

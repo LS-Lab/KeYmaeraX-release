@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.{Logger, Logging}
 
 import scala.collection.immutable
+import scala.collection.mutable.ListBuffer
 
 /**
  * @author Nathan Fulton
@@ -22,13 +23,13 @@ object DebuggingTactics {
 
   private val logger = Logger(getClass)
 
-  def error(e : Throwable) = new BuiltInTactic("Error") {
+  def error(e: Throwable): BuiltInTactic = new BuiltInTactic("Error") {
     override def result(provable: ProvableSig): ProvableSig = throw e
   }
 
-  def error(s: => String) = new BuiltInTactic("Error") {
+  def error(s: => String): BuiltInTactic = new BuiltInTactic("Error") {
     override def result(provable: ProvableSig): ProvableSig = {
-      throw new BelleUserGeneratedError(s)
+      throw BelleUserGeneratedError(s + "\nThe error occurred on\n" + provable.underlyingProvable.prettyString)
     }
   }
 
@@ -109,7 +110,7 @@ object DebuggingTactics {
   def assert(cond: Sequent=>Boolean, message: => String): BuiltInTactic = new BuiltInTactic("assert") {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.subgoals.size != 1 || !cond(provable.subgoals.head)) {
-        throw BelleUserGeneratedError(message + "\nExpected 1 subgoal whose sequent matches condition " + cond + ",\n\t but got " +
+        throw BelleUserGeneratedError(message + "\nExpected 1 subgoal matching a condition but got " +
           (if (provable.subgoals.size != 1) provable.subgoals.size + " subgoals"
           else provable.subgoals.head.prettyString))
       }
@@ -140,8 +141,8 @@ object DebuggingTactics {
   def assert(cond: (Sequent,Position)=>Boolean, message: => String): BuiltInPositionTactic = new BuiltInPositionTactic("assert") {
     override def computeResult(provable: ProvableSig, pos: Position): ProvableSig = {
       if (provable.subgoals.size != 1 || !cond(provable.subgoals.head, pos)) {
-        throw new BelleUserGeneratedError(message + "\nExpected 1 subgoal whose sequent matches condition " + cond + " at position " + pos + ",\n\t but got " +
-          provable.subgoals.size + " subgoals, or sole subgoal formula " + provable.subgoals.head.at(pos) + " does not match")
+        throw new BelleUserGeneratedError(message + "\nExpected 1 subgoal matching a condition at position " + pos + " but got " +
+          provable.subgoals.size + " subgoals, or sole subgoal formula " + provable.subgoals.head.at(pos)._2 + " does not match")
       }
       provable
     }
@@ -161,16 +162,21 @@ object DebuggingTactics {
   /** @see [[TactixLibrary.done]] */
   lazy val done: BelleExpr = done()
   def done(msg: String = "", storeLemma: Option[String] = None): BelleExpr = new StringInputTactic("done",
-      if (msg != "" && storeLemma.isDefined) msg::storeLemma.get::Nil
-      else if (msg != "") msg::Nil
+      if (msg.nonEmpty && storeLemma.isDefined) msg::storeLemma.get::Nil
+      else if (msg.nonEmpty) msg::Nil
       else Nil) {
     override def result(provable: ProvableSig): ProvableSig = {
       if (provable.isProved) {
         print(msg + {if (msg.nonEmpty) ": " else ""} + "checked done")
         if (storeLemma.isDefined) LemmaDBFactory.lemmaDB.add(Lemma(provable, Lemma.requiredEvidence(provable), storeLemma))
         provable
-      } else throw new BelleThrowable((if (msg.nonEmpty) msg + "\n" else "") + "Expected proved provable, but got " + provable)
+      } else throw new BelleUnexpectedProofStateError(msg + ": expected proved provable, but got open goals", provable.underlyingProvable)
     }
+  }
+
+  /** Placeholder for a tactic string that is not executed. */
+  def pending(tactic: String): BelleExpr = new StringInputTactic("pending", tactic :: Nil) {
+    override def result(provable: ProvableSig): ProvableSig = provable
   }
 }
 
@@ -271,6 +277,14 @@ object Idioms {
     SaturateTactic(DebuggingTactics.assertAt((_: Expression) => "Stopping loop", condition)(pos) & t)
   }
 
+  /** Executes t if condition is true. */
+  def doIf(condition: ProvableSig => Boolean)(t: BelleExpr): DependentTactic = new DependentTactic("ANON") {
+    override def computeExpr(provable: ProvableSig): BelleExpr = {
+      if (condition(provable)) t
+      else nil
+    }
+  }
+
   /** must(t) runs tactic `t` but only if `t` actually changed the goal. */
   def must(t: BelleExpr): BelleExpr = new DependentTactic("ANON") {
     override def computeExpr(before: ProvableSig): BelleExpr = t & new BuiltInTactic(name) {
@@ -306,15 +320,15 @@ object Idioms {
 
   /** Map sub-positions of `pos` to Ts that fit to the expressions at those sub-positions per `trafo`. */
   def mapSubpositions[T](pos: Position, sequent: Sequent, trafo: (Expression, Position) => Option[T]): List[T] = {
-    var result: List[T] = Nil
+    val result: ListBuffer[T] = ListBuffer()
 
     def mapTerm(p: PosInExpr, t: Term) = trafo(t, pos ++ p) match {
-      case Some(tt) => result = tt +: result; Left(None)
+      case Some(tt) => tt +=: result; Left(None)
       case None => Left(None)
     }
 
     def mapFormula(p: PosInExpr, e: Formula) = trafo(e, pos ++ p) match {
-      case Some(tt) => result = tt +: result; Left(None)
+      case Some(tt) => tt +=: result; Left(None)
       case None => Left(None)
     }
 
@@ -332,7 +346,7 @@ object Idioms {
       case _ =>
     }
 
-    result
+    result.toList
   }
 
   /** Search for formula `f` in the sequent and apply tactic `t` at subposition `in` of the found position. */

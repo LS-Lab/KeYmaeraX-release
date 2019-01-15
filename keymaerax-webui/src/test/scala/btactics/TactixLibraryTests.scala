@@ -11,11 +11,12 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest, TodoTest}
+import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -124,41 +125,39 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     ) shouldBe 'proved
   }
 
-  "LetInspect" should "post-hoc instantiate a j closing \\exists j 5+3=j" in withMathematica{qeTool =>
+  "LetInspect" should "post-hoc instantiate a j closing \\exists j 5+3=j" in withMathematica{ _ =>
     val proof = proveBy("\\exists jj 5+3=jj".asFormula,
       LetInspect("j()".asTerm,
         (pr:ProvableSig) => pr.subgoals.head.succ.head match {
-          case Equal(l,r) => l
+          case Equal(l, _) => l
         }
         ,
-        existsR("j()".asTerm)(1) &
-          (step(1, 0::Nil)*)
+        existsR("j()".asTerm)(1) & SaturateTactic(step(1, 0::Nil))
       ) & byUS("= reflexive")
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj 5+3=jj".asFormula))
     proof shouldBe 'proved
   }
 
-  it should "post-hoc instantiate a j(||) closing \\exists j 5+3=j" taggedAs(TodoTest,IgnoreInBuildTest) ignore withMathematica{ qeTool =>
+  it should "post-hoc instantiate a j(||) closing \\exists j 5+3=j" taggedAs(TodoTest,IgnoreInBuildTest) ignore withMathematica { _ =>
     val proof = proveBy("\\exists jj 5+3=jj".asFormula,
       LetInspect("j(||)".asTerm,
         (pr:ProvableSig) => pr.subgoals.head.succ.head match {
-          case Equal(l,r) => l
+          case Equal(l, _) => l
         }
         ,
-        existsR("j(||)".asTerm)(1) &
-          (step(1, 0::Nil)*)
+        existsR("j(||)".asTerm)(1) & SaturateTactic(step(1, 0::Nil))
       ) & byUS("= reflexive")
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq("\\exists jj 5+3=jj".asFormula))
     proof shouldBe 'proved
   }
 
-  it should "post-hoc instantiate a j closing \\exists j (x+x)'=j" ignore withMathematica{qeTool =>
+  it should "post-hoc instantiate a j closing \\exists j (x+x)'=j" ignore withMathematica { _ =>
     val proof = proveBy("\\exists jj (x+x)'=jj".asFormula,
       LetInspect("j(.)".asTerm,
         (pr:ProvableSig) => pr.subgoals.head.succ.head match {
-          case Equal(l,r) => l
+          case Equal(l, _) => l
         }
         ,
         existsR("j(x)".asTerm)(1) &
@@ -169,11 +168,11 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   }
 
   /** @see UnificationMatchTest should "unify j()=x+y with s()=s()" unifiable but not by mere matching, needs a proper unifier instead of a single sided matcher */
-  it should "post-hoc find a j() closing (x+x*y)'=j()" taggedAs(TodoTest,IgnoreInBuildTest) ignore withMathematica{_ =>
+  it should "post-hoc find a j() closing (x+x*y)'=j()" taggedAs(TodoTest,IgnoreInBuildTest) ignore withMathematica { _ =>
     val proof = proveBy("\\exists jj (x+x*y)'=jj".asFormula,
       LetInspect("j(||)".asTerm,
         (pr:ProvableSig) => pr.subgoals.head.succ.head match {
-          case Equal(l,_) => l
+          case Equal(l, _) => l
         }
         ,
         existsR("j()".asTerm)(1) &
@@ -184,11 +183,11 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   }
 
   /** @see UnificationMatchTest should "unify j()=x+y with s()=s()" */
-  it should "post-hoc find a j() closing j()=(x+x*y)'" taggedAs(TodoTest,IgnoreInBuildTest) ignore withMathematica{qeTool =>
+  it should "post-hoc find a j() closing j()=(x+x*y)'" taggedAs(TodoTest,IgnoreInBuildTest) ignore withMathematica { _ =>
     val proof = proveBy("\\exists jj jj=(x+x*y)'".asFormula,
       LetInspect("j(||)".asTerm,
         (pr:ProvableSig) => pr.subgoals.head.succ.head match {
-          case Equal(l,r) => r
+          case Equal(_, r) => r
         }
         ,
         existsR("j()".asTerm)(1) &
@@ -198,11 +197,11 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proof shouldBe 'proved
   }
 
-  it should "post-hoc find a j(||) closing (x+x*y)'=j(||)" taggedAs(TodoTest,IgnoreInBuildTest) ignore withMathematica{qeTool =>
+  it should "post-hoc find a j(||) closing (x+x*y)'=j(||)" taggedAs(TodoTest,IgnoreInBuildTest) ignore withMathematica{ _ =>
     val proof = proveBy("\\exists jj (x+x*y)'=jj".asFormula,
       LetInspect("j(||)".asTerm,
         (pr:ProvableSig) => pr.subgoals.head.succ.head match {
-          case Equal(l,r) => l
+          case Equal(l, _) => l
         }
         ,
         existsR("j(||)".asTerm)(1) &
@@ -217,11 +216,11 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     (_,e) => println("SnR loop status " + e)
       rem match {
         case hd::tail => rem = tail; hd :: Nil
-        case nil => throw new BelleThrowable("SearchAndRescueAgain ran out of alternatives among: " + list)
+        case _ => throw new BelleThrowable("SearchAndRescueAgain ran out of alternatives among: " + list)
       }
   }
 
-  "sAI" should "prove x>=0 -> [{x'=x^2+x+1}]x>=0" in withMathematica{qeTool =>
+  "sAI" should "prove x>=0 -> [{x'=x^2+x+1}]x>=0" in withMathematica { _ =>
     val fml = "x>=0 -> [{x'=x^2+x+1}]x>=0".asFormula
     proveBy(fml, implyR(1) & ODEInvariance.sAIclosedPlus()(1)) shouldBe 'proved
   }
@@ -234,9 +233,43 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
+  it should "find an invariant for curvebot" in withMathematica { _ =>
+    val fml = """x!=ox | y!=oy ->
+                #  [{
+                #    {?(x+w/-1-ox)^2+(y-v/-1-oy)^2!=v^2+w^2; om:=-1;
+                #    ++ ?(x+w-ox)^2+(y-v-oy)^2!=v^2+w^2; om:=1;
+                #    ++ ?(ox-x)*w!=(oy-y)*v; om:=0;}
+                #    {x'=v,y'=w,v'=om*w,w'=-om*v}
+                #   }*
+                #  ] !(x=ox & y=oy)""".stripMargin('#').asFormula
+    //@note postcondition is invariant
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
+  }
 
+  it should "find an invariant for curvebot with fns" in withMathematica { _ =>
+    val fml = """x!=ox() | y!=oy() ->
+                #  [{
+                #    {?(x+w/-1-ox())^2+(y-v/-1-oy())^2!=v^2+w^2; om:=-1;
+                #    ++ ?(x+w-ox())^2+(y-v-oy())^2!=v^2+w^2; om:=1;
+                #    ++ ?(ox()-x)*w!=(oy()-y)*v; om:=0;}
+                #    {x'=v,y'=w,v'=om*w,w'=-om*v}
+                #   }*
+                #  ] !(x=ox() & y=oy())""".stripMargin('#').asFormula
+    //@note postcondition is invariant
+    proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
+  }
 
-  "SnR Loop Invariant" should "find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica{qeTool =>
+  it should "eventually run out of ideas" in {
+    val s = "x>=0, x=H(), v=0, g()>0, 1>=c(), c()>=0 ==> [{{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}}*](x>=0&x<=H())".asSequent
+    // defaultInvariantGenerator does not find an invariant, so loopPostMaster should eventually run out of ideas and
+    // not keep asking over and over again
+    failAfter(20 seconds) {
+      val result = the[BelleThrowable] thrownBy proveBy(s, loopPostMaster(InvariantGenerator.defaultInvariantGenerator)(1))
+      result.getMessage should include("[Bellerophon Runtime] loopPostMaster: Invariant generator ran out of ideas")
+    }
+  }
+
+  "SnR Loop Invariant" should "find an invariant for x=5-> [{x:=x+2;}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;}*]x>=0".asFormula
     val invs = List(".>=-1".asFormula, ".=5".asFormula, ".>=0".asFormula)
     val jj = "j(.)".asFormula
@@ -249,7 +282,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
-    proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs.toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_, _) => invs.toStream)(1)) shouldBe 'proved
   }
 
 
@@ -260,26 +293,54 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
 
   it should "unfold simple formula" in {
     val f = "y>0 -> [x:=2;]x>0".asFormula
-    val proof = proveBy(f, normalize)
-    proof.subgoals should have size 1
-    proof.subgoals.head.ante should contain only "y>0".asFormula
-    proof.subgoals.head.succ should contain only "2>0".asFormula
+    proveBy(f, normalize).subgoals.loneElement shouldBe "y>0 ==> 2>0".asSequent
   }
 
   it should "unfold simple formula when other formulas are around" in {
     val f = "y>0 -> y>=0 | [x:=2;]x>0".asFormula
-    val proof = proveBy(f, normalize)
-    proof.subgoals should have size 1
-    proof.subgoals.head.ante should contain only "y>0".asFormula
-    proof.subgoals.head.succ should contain only ("y>=0".asFormula, "2>0".asFormula)
+    proveBy(f, normalize).subgoals.loneElement shouldBe "y>0 ==> y>=0, 2>0".asSequent
   }
 
   it should "unfold with ODE when other formulas are around" in {
     val f = "y>0 -> y>=0 | [x:=2;{x'=3}]x>0".asFormula
-    val proof = proveBy(f, normalize)
-    proof.subgoals should have size 1
-    proof.subgoals.head.ante should contain only ("y>0".asFormula, "x=2".asFormula)
-    proof.subgoals.head.succ should contain only ("y>=0".asFormula, "[{x'=3}]x>0".asFormula)
+    proveBy(f, normalize).subgoals.loneElement shouldBe "y>0, x=2 ==> y>=0, [{x'=3}]x>0".asSequent
+  }
+
+  it should "not unfold FOL formulas" in {
+    val f = "y>0 -> y>=0 & y>=-1".asFormula
+    proveBy(f, normalize).subgoals.loneElement shouldBe "y>0 ==> y>=0 & y>=-1".asSequent
+  }
+
+  it should "not unfold FOL negations" in {
+    val f = "y>0 -> !y>=0 | y>=-1".asFormula
+    proveBy(f, normalize).subgoals.loneElement shouldBe "y>0 ==> !y>=0, y>=-1".asSequent
+  }
+
+  it should "unfold non-FOL formulas" in {
+    val f = "y>0 -> ![y:=-1;]y>=0 & y>=-1".asFormula
+    val result = proveBy(f, normalize)
+    result.subgoals should have size 2
+    result.subgoals(0) shouldBe "y>0, -1>=0 ==> ".asSequent
+    result.subgoals(1) shouldBe "y>0 ==> y>=-1".asSequent
+  }
+
+  it should "unfold in succedent and antecedent" in {
+    val result = proveBy(
+      """v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw(), A()>0, B()>=b(), b()>0, ep()>0, lw()>0
+        #==>
+        #(abs(y-ly())+v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v) < lw()
+        #->  \forall a (-B()<=a&a<=A()->\forall w \forall r (r!=0&w*r=v->\forall c (c=0->[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())))))
+        #  & (v=0->\forall w (w=0->\forall c (c=0->[{x'=v*dx,y'=v*dy,v'=0,dx'=-dy*w,dy'=dx*w,w'=0/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw()))))
+        #  & \forall a (-B()<=a&a<=-b()->\forall c (c=0->[{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())))""".stripMargin('#').asSequent, normalize)
+    result.subgoals should have size 3
+    result.subgoals(0) shouldBe "A()>0, B()>=b(), b()>0, ep()>0, lw()>0, abs(y-ly())+v^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v) < lw(), -B()<=a, a<=A(), r!=0, w*r=v, c=0, v>=0, dx^2+dy^2=1, r_0!=0, abs(y-ly())+v^2/(2*b()) < lw() ==> [{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())".asSequent
+    result.subgoals(1) shouldBe "A()>0, B()>=b(), b()>0, ep()>0, lw()>0, v=0, w=0, c=0, v>=0, dx^2+dy^2=1, r!=0, abs(y-ly())+v^2/(2*b()) < lw() ==> [{x'=v*dx,y'=v*dy,v'=0,dx'=-dy*w,dy'=dx*w,w'=0/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())".asSequent
+    result.subgoals(2) shouldBe "A()>0, B()>=b(), b()>0, ep()>0, lw()>0, -B()<=a, a<=-b(), c=0, v>=0, dx^2+dy^2=1, r!=0, abs(y-ly())+v^2/(2*b()) < lw() ==> [{x'=v*dx,y'=v*dy,v'=a,dx'=-dy*w,dy'=dx*w,w'=a/r,c'=1&v>=0&c<=ep()}](v>=0&dx^2+dy^2=1&r!=0&abs(y-ly())+v^2/(2*b()) < lw())".asSequent
+  }
+
+  it should "use abstraction" in {
+    val f = "x>=0 -> [y:=y+1;]x>=0".asFormula
+    proveBy(f, normalize) shouldBe 'proved
   }
 
   "QE" should "reset timeout when done" in withQE {
@@ -324,7 +385,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
 
   "Tactic chase" should "not infinite recurse" in {
     var i = 0
-    val count = "ANON" by ((pos: Position, seq: Sequent) => { i=i+1; skip })
+    val count = "ANON" by ((_: Position, _: Sequent) => { i=i+1; skip })
 
     failAfter(1 second) {
       val result = proveBy("[{x'=1}]x>0".asFormula, master(loopauto(), count, keepQEFalse=false))
@@ -338,14 +399,30 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy("true<->(p()<->q())&q()->p()".asFormula, prop) shouldBe 'proved
   }
 
-  "Loop convergence" should "prove x>=0 -> <{x:=x-1;}*>x<1 with conRule" in withMathematica {qeTool =>
+  it should "chase at position" in {
+    val result = proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent, tacticChase()(implyR,step)(None)(2))
+    result.subgoals.loneElement shouldBe "y>2 ==> x>1 -> x>0, y+2+1>5".asSequent
+  }
+
+  it should "search for expected formula if positions shifted" in {
+    val result = proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent,
+      implyR(1) & tacticChase()(implyR,step)(Some("y>2 -> [y:=y+2;y:=y+1;]y>5".asFormula))(2))
+    result.subgoals.loneElement shouldBe "x>1, y>2 ==> x>0, y+2+1>5".asSequent
+  }
+
+  it should "chase everywhere" in {
+    val result = proveBy("==> x>1 -> x>0, y>2 -> [y:=y+2;y:=y+1;]y>5".asSequent, allTacticChase()(implyR,step))
+    result.subgoals.loneElement shouldBe "x>1, y>2 ==> x>0, y+2+1>5".asSequent
+  }
+
+  "Loop convergence" should "prove x>=0 -> <{x:=x-1;}*>x<1 with conRule" in withMathematica { _ =>
     val fml = "x>=0 -> <{x:=x-1;}*>x<1".asFormula
     val vari = "x<v+1".asFormula
-    proveBy(fml, implyR(1) & DLBySubst.conRule("v".asVariable, vari)(1)).subgoals shouldBe (IndexedSeq(
+    proveBy(fml, implyR(1) & DLBySubst.conRule("v".asVariable, vari)(1)).subgoals shouldBe IndexedSeq(
       Sequent(IndexedSeq("x>=0".asFormula), IndexedSeq("\\exists v x<v+1".asFormula)),
       Sequent(IndexedSeq("v<=0".asFormula, "x<v+1".asFormula), IndexedSeq("x<1".asFormula)),
       Sequent(IndexedSeq("v>0".asFormula, "x<v+1".asFormula), IndexedSeq("<x:=x-1;>x<(v-1)+1".asFormula))
-    ))
+    )
     proveBy(fml, implyR(1) & DLBySubst.conRule("v".asVariable, vari)(1) <(
       debug("init") & QE(),
       debug("use") & QE(),
@@ -353,14 +430,14 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
       ))
   }
 
-  it should "prove x>=0 -> <{x:=x-1;}*>x<1 with con" in withMathematica {qeTool =>
+  it should "prove x>=0 -> <{x:=x-1;}*>x<1 with con" in withMathematica { _ =>
     val fml = "x>=0 -> <{x:=x-1;}*>x<1".asFormula
     val vari = "x<v+1".asFormula
-    proveBy(fml, implyR(1) & con("v".asVariable, vari)(1)).subgoals shouldBe (IndexedSeq(
-      Sequent(IndexedSeq("x>=0".asFormula), IndexedSeq("\\exists v x<v+1".asFormula)),
-      Sequent(IndexedSeq("v<=0".asFormula, "x<v+1".asFormula), IndexedSeq("x<1".asFormula)),
-      Sequent(IndexedSeq("v>0".asFormula, "x<v+1".asFormula), IndexedSeq("<x:=x-1;>x<(v-1)+1".asFormula))
-    ))
+    proveBy(fml, implyR(1) & con("v".asVariable, vari)(1)).subgoals shouldBe IndexedSeq(
+      "x>=0 ==> \\exists v x<v+1".asSequent,
+      "v<=0, x<v+1 ==> x<1".asSequent,
+      "v>0, x<v+1 ==> <x:=x-1;>x<(v-1)+1".asSequent
+    )
     proveBy(fml, implyR(1) & DLBySubst.conRule("v".asVariable, vari)(1) <(
       debug("init") & QE(),
       debug("use") & QE(),
@@ -368,14 +445,14 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
       ))
   }
 
-  it should "prove x>=0 & c=1 -> <{x:=x-c;}*>x<1 with con" in withMathematica {qeTool =>
+  it should "prove x>=0 & c=1 -> <{x:=x-c;}*>x<1 with con" in withMathematica { _ =>
     val fml = "x>=0 & c=1 -> <{x:=x-c;}*>x<1".asFormula
     val vari = "x<z+1".asFormula
-    proveBy(fml, implyR(1) & andL(-1) & con("z".asVariable, vari)(1)).subgoals shouldBe (IndexedSeq(
-      Sequent(IndexedSeq("x>=0".asFormula, "c=1".asFormula), IndexedSeq("\\exists z x<z+1".asFormula)),
-      Sequent(IndexedSeq("z<=0".asFormula, "x<z+1".asFormula, "c=1".asFormula), IndexedSeq("x<1".asFormula)),
-      Sequent(IndexedSeq("z>0".asFormula, "x<z+1".asFormula, "c=1".asFormula), IndexedSeq("<x:=x-c;>x<(z-1)+1".asFormula))
-    ))
+    proveBy(fml, implyR(1) & andL(-1) & con("z".asVariable, vari)(1)).subgoals shouldBe IndexedSeq(
+      "x>=0, c=1 ==> \\exists z x<z+1".asSequent,
+      "z<=0, x<z+1, c=1 ==> x<1".asSequent,
+      "z>0, x<z+1, c=1 ==> <x:=x-c;>x<(z-1)+1".asSequent
+    )
     proveBy(fml, implyR(1) & con("z".asVariable, vari)(1) <(
       debug("init") & QE(),
       debug("use") & QE(),
@@ -438,4 +515,50 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
       proveBy(fml, master()) shouldBe 'proved
     }
   }
+
+  it should "apply ODE duration heuristic to multiple ODEs" in withZ3 { _ =>
+    val problem = KeYmaeraXArchiveParser.parseAsProblemOrFormula(
+      """  x < -4
+        |  ->
+        |  [
+        |     t := 0;
+        |     v := 4;
+        |     {x' = v, t' = 1 & t <= 1};
+        |     a := 8/x;
+        |     {x' = v, v' = a & v >= 0}
+        |  ] x <= 0""".stripMargin)
+
+    proveBy(problem, master()) shouldBe 'proved
+  }
+
+  it should "prove the bouncing ball with invariant annotation" in withQE { _ =>
+    val problem = KeYmaeraXArchiveParser.getEntry("Bouncing Ball", io.Source.fromInputStream(
+      getClass.getResourceAsStream("/keymaerax-projects/lics/bouncing-ball.kya")).mkString).get.model.asInstanceOf[Formula]
+    proveBy(problem, master()) shouldBe 'proved
+  }
+
+  it should "prove regardless of order" in withQE { _ =>
+    val problem1 = """
+      v^2<=2*b*(m-x) & v>=0  & A>=0 & b>0
+      -> [
+           {
+             {?(v+A*ep)^2<=2*b*(m-x-A/2*ep^2-v*ep) ; a :=A; ++ a:=-b;}
+             t := 0;
+             {x'=v, v'=a, t'=1 & v>=0 & t<=ep}
+           }*
+         ] x <= m""".stripMargin(' ').asFormula
+    proveBy(problem1, master()) shouldBe 'proved
+
+    val problem2 = """
+      v^2<=2*b*(m-x) & v>=0  & A>=0 & b>0
+      -> [
+           {
+             {a:=-b; ++ ?(v+A*ep)^2<=2*b*(m-x-A/2*ep^2-v*ep) ; a :=A; }
+             t := 0;
+             {x'=v, v'=a, t'=1 & v>=0 & t<=ep}
+           }*
+         ] x <= m""".stripMargin(' ').asFormula
+    proveBy(problem2, master()) shouldBe 'proved
+  }
+
 }

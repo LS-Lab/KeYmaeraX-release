@@ -45,7 +45,8 @@ object DerivedAxioms extends Logging {
       case si: StorableInfo => si.storedName
       case _ => throw new IllegalArgumentException(s"Axiom or rule $name is not storable")
     }
-    require(derivedAxiomDB.contains(lemmaName), "Lemma " + lemmaName + " should already exist in the derived axioms database.")
+    require(derivedAxiomDB.contains(lemmaName), "Lemma " + lemmaName + " should already exist in the derived axioms database.\n" +
+      "Follow configuration instructions after restarting KeYmaera X with\n  java -jar keymaerax.jar")
     derivedAxiomDB.get(lemmaName).getOrElse(throw new IllegalArgumentException("Lemma " + lemmaName + " for derived axiom/rule " + name + " should have been added already")).fact
   }
 
@@ -157,17 +158,17 @@ object DerivedAxioms extends Logging {
     val fields = fns.map(fn => ru.typeOf[DerivedAxioms.type].member(ru.TermName(fn)).asMethod.getter.asMethod)
     val fieldMirrors = fields.map(im.reflectMethod)
 
-    var failures: mutable.Buffer[String] = mutable.Buffer()
+    var failures: mutable.Buffer[(String,Throwable)] = mutable.Buffer()
     fieldMirrors.indices.foreach(idx => {
       try {
         fieldMirrors(idx)()
       } catch {
         case e: Throwable =>
-          failures += fns(idx)
+          failures += (fns(idx) -> e)
           logger.warn("WARNING: Failed to add derived lemma.", e)
       }
     })
-    if (failures.nonEmpty) throw new Exception(s"WARNING: Encountered ${failures.size} failures when trying to populate DerivedLemmas database. Unable to derive:\n" + failures.mkString("\n"))
+    if (failures.nonEmpty) throw new Exception(s"WARNING: Encountered ${failures.size} failures when trying to populate DerivedLemmas database. Unable to derive:\n" + failures.map(_._1).mkString("\n"), failures.head._2)
   }
 
   // derived rules
@@ -600,6 +601,24 @@ object DerivedAxioms extends Logging {
           )
     )
   }
+
+  /**
+    * {{{Axiom "[]~><> subst propagation".
+    *    <a;>true -> ([a;]p(||) -> <a;>p(||))
+    * End.
+    * }}}
+    *
+    * @Derived
+    * @note unsound for hybrid games
+    */
+  lazy val boxDiamondSubstPropagation: Lemma = derivedAxiom("[]~><> subst propagation",
+    Sequent(IndexedSeq(), IndexedSeq("<a_{|^@|};>true -> ([a_{|^@|};]p(||) -> <a_{|^@|};>p(||))".asFormula)),
+    cut("[a_{|^@|};]p(||) & <a_{|^@|};>true -> <a_{|^@|};>p(||)".asFormula) <(
+      prop & done,
+      hideR(1) & useAt(boxDiamondPropagation, PosInExpr(0::Nil))(1, 0::Nil) & useAt(andTrue)(1, 0::1::Nil) &
+      prop & done
+    )
+  )
 
   /**
     * {{{Axiom "K1".
@@ -1104,7 +1123,7 @@ object DerivedAxioms extends Logging {
     * @Derived
     */
   lazy val nondetassigndAxiom = derivedAxiom("<:*> assign nondet",
-    Sequent(IndexedSeq(), IndexedSeq("<x_:=*;>p_(x_) <-> (\\exists x_ p_(x_))".asFormula)),
+    Sequent(IndexedSeq(), IndexedSeq("<x_:=*;>p_(||) <-> (\\exists x_ p_(||))".asFormula)),
     useAt("<> diamond", PosInExpr(1::Nil))(1, 0::Nil) &
       useAt("[:*] assign nondet")(1, 0::0::Nil) &
       useAt("all dual", PosInExpr(1::Nil))(1, 0::0::Nil) &
@@ -1262,7 +1281,7 @@ object DerivedAxioms extends Logging {
     "==> [{a_{|^@|};}*][{a_{|^@|};}*]p_(||) <-> [{a_{|^@|};}*]p_(||)".asSequent,
     equivR(1) <(
       useAt("[*] iterate")(-1) & prop & done,
-      implyRi & useAt("II induction", PosInExpr(1::Nil))(1) & G(1) & useAt("[*] iterate")(1, 0::Nil) & prop & done
+      implyRi & useAt(iiinduction, PosInExpr(1::Nil))(1) & G(1) & useAt("[*] iterate")(1, 0::Nil) & prop & done
     )
   )
 
@@ -1376,7 +1395,7 @@ object DerivedAxioms extends Logging {
     * @see Section 7.7.4 in textbook
     * @Derived for programs
     */
-  lazy val Ieq = derivedAxiom("Ieq induction",
+  lazy val Ieq = derivedAxiom("I",
     "==> [{a_{|^@|};}*]p_(||) <-> p_(||) & [{a_{|^@|};}*](p_(||)->[a_{|^@|};]p_(||))".asSequent,
     equivR(1) <(
       andR(1) <(

@@ -37,8 +37,14 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     def asOption: Option[T] = option
   }
 
+  def configFileMathematicaConfig: Map[String, String] = {
+    Map(
+      "linkName" -> Configuration(Configuration.Keys.MATHEMATICA_LINK_NAME),
+      "libDir" -> Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR))
+  }
+
   //@note Initialize once per test class, but only if requested in a withMathematica call
-  private val mathematicaProvider = new Lazy(new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig))
+  private val mathematicaProvider = new Lazy(new MathematicaToolProvider(configFileMathematicaConfig))
   //@note setup lazy in beforeEach, automatically initialize in withDatabase, tear down in afterEach if initialized
   private var dbTester: Lazy[TempDBTools] = _
 
@@ -72,8 +78,10 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
    * }}}
    * */
   def withMathematica(testcode: Mathematica => Any, timeout: Int = -1) {
-    val mathLinkTcp = System.getProperty("MATH_LINK_TCPIP", "true") // JVM parameter -DMATH_LINK_TCPIP=[true,false]
-    Configuration.set("MATH_LINK_TCPIP", mathLinkTcp, saveToFile = false)
+    val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, "true") // JVM parameter -DMATH_LINK_TCPIP=[true,false]
+    Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, mathLinkTcp, saveToFile = false)
+    Configuration.set(Configuration.Keys.QE_TOOL, "mathematica", saveToFile=false)
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "false", saveToFile = false)
     val provider = mathematicaProvider() // new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig)
     ToolProvider.setProvider(provider)
     //@todo timeout
@@ -91,6 +99,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     * }}}
     * */
   def withZ3(testcode: Z3 => Any, timeout: Int = -1) {
+    Configuration.set(Configuration.Keys.QE_TOOL, "z3", saveToFile=false)
     val provider = new Z3ToolProvider
     ToolProvider.setProvider(provider)
     provider.tool().setOperationTimeout(timeout)
@@ -134,7 +143,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     val generator = new ConfigurableGenerator[Formula]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
-      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv)))
+      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv).distinct))
     TactixLibrary.invGenerator = generator
     ToolProvider.setProvider(new NoneToolProvider())
   }
@@ -223,7 +232,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     val qeFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
     entries.
       filter(e => e.tactics.nonEmpty &&
-        qeFinder.findAllMatchIn(BellePrettyPrinter(e.tactics.head._2)).forall(p => p.group("toolName") == tool.name))
+        qeFinder.findAllMatchIn(BellePrettyPrinter(e.tactics.head._3)).forall(p => p.group("toolName") == tool.name))
   }
 
   /** Checks a specific entry from a bundled archive. Uses the first tactic if tacticName is None. */
@@ -232,8 +241,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       getClass.getResourceAsStream(archive)).mkString).get
 
     val tactic = tacticName match {
-      case Some(tn) => entry.tactics.find(_._1 == tn).get._2
-      case None => entry.tactics.head._2
+      case Some(tn) => entry.tactics.find(_._1 == tn).get._3
+      case None => entry.tactics.head._3
     }
 
     val start = System.currentTimeMillis()
@@ -252,7 +261,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
         "tool" -> "KeYmaera X",
         "model" -> entry.fileContent,
-        "tactic" -> entry.tactics.head._2.prettyString
+        "tactic" -> entry.tactics.head._2
       )) :: Nil)
       LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
     }
@@ -284,7 +293,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
 
     for (entry <- entries.filter(_.tactics.nonEmpty)) {
       val tacticName = entry.tactics.head._1
-      val tactic = entry.tactics.head._2
+      val tactic = entry.tactics.head._3
 
       val statisticName = entry.name + " with " + tacticName
       println("Proving " + statisticName)
@@ -306,7 +315,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
           "tool" -> "KeYmaera X",
           "model" -> entry.fileContent,
-          "tactic" -> entry.tactics.head._2.prettyString
+          "tactic" -> entry.tactics.head._2
         )) :: Nil)
         LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
       }

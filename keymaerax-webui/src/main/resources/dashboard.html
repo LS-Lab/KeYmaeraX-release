@@ -32,12 +32,6 @@
 
 <body ng-controller="DashboardCtrl">
 
-<script type="text/ng-template" id="firstTimePopover.html">
-    <div uib-alert class="alert-success"
-         style="margin-bottom:0px;"
-         close="intro.firstTime=false;"><strong>Quick help</strong></div>
-</script>
-
 <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
     <div class="container">
         <div class="navbar-header">
@@ -79,7 +73,6 @@
                         <li class="divider"></li>
                         <li><a href="dashboard.html?#/tools" ng-show="isLocal"><i class="fa fa-wrench"></i> Tool Configuration</a></li>
                         <li><a href="dashboard.html?#/license"><i class="fa fa-copyright"></i> License</a></li>
-                        <li><a href="dashboard.html?#/import"><i class="fa fa-upload"></i> Import Case Study</a></li>
                         <!--<li><a href="#">Videos</a></li>-->
                         <li class="divider"></li>
                         <li><a href="dashboard.html?#/syntax"><i class="fa fa-info-circle"></i> Syntax and Semantics</a></li>
@@ -87,15 +80,12 @@
                         <li class="divider"></li>
                         <li><a ng-click="extractdb()" ng-show="isLocal"><i class="fa fa-archive"></i> Extract Database</a></li>
                         <li class="divider"></li>
-                        <li><a href="http://www.keymaerax.org"><i class="fa fa-download"></i> Download</a></li>
+                        <li><a href="http://www.keymaerax.org"><i class="fa fa-download"></i> Download KeYmaera&#160;X</a></li>
                     </ul>
                 </li>
                 <li class="dropdown">
                     <a>
                         <i class="fa fa-question-circle" ng-click="showOverlayHelp()"
-                           uib-popover-template="'firstTimePopover.html'" popover-trigger="'none'"
-                           popover-class="increase-popover-width"
-                           popover-is-open="intro.firstTime" popover-placement="bottom"
                            uib-tooltip="Quick usage help" tooltip-placement="auto bottom">
                         </i>
                     </a>
@@ -136,11 +126,11 @@
 
 <div class="footer" ng-controller="ServerInfoCtrl">
     <div class="container">
-        <p class="text-muted k4-server-info">KeYmaera X version {{keymaeraXVersion}}
+        <p class="text-muted k4-server-info">KeYmaera X {{keymaeraXVersion}}
             <span class="text-danger" ng-if="!upToDate && versionInfoAvailable">(<b>version {{latestVersion}} is now available from <a class="text-danger" href="http://keymaerax.org">KeYmaeraX.org</a></b>).</span>
-            <span ng-if="!versionInfoAvailable">(could not retrieve version information from KeYmaeraX.org).</span>
-            <span ng-if="upToDate && versionInfoAvailable">(latest release).</span>
-            <i class="fa fa-copyright"></i> <a href="http://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a>, Carnegie Mellon University 2018</p>
+            <span ng-if="!versionInfoAvailable">(no network).</span>
+            <span ng-if="upToDate && versionInfoAvailable">(latest).</span>
+            <i class="fa fa-copyright"></i> <a href="http://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a>, Carnegie Mellon University 2014-2019</p>
     </div>
 </div>
 
@@ -177,6 +167,8 @@
 <script src="/js/intro/angular-intro.min.js"></script> <!-- angular wrapper for intro -->
 <script src="/js/highlight/highlight.pack.js"></script>
 <script src="/js/angular-highlightjs/angular-highlightjs.min.js"></script>
+<script src="/js/ace/src-min-noconflict/ace.js"></script>
+<script src="/js/ace/ui-ace.min.js"></script>
 <script src="/js/app.js"></script>
 <!-- Load services -->
 <script src="/js/services/services.js"></script>

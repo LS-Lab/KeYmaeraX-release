@@ -6,7 +6,8 @@ function showCaughtErrorMessage(modal, data, message) {
     size: 'lg',
     resolve: {
       action: function () { return message; },
-      error: function () { return data; }
+      error: function () { return data; },
+      context: function () { return {}; }
     }
   });
 }
@@ -50,6 +51,9 @@ function showMessage(modal, title, message, size) {
 
 angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['$q', '$injector', function($q, $injector) {
 
+  //@todo have pollers register here
+  var pollRequests = [ '/isLocal', 'tools/vitalSigns' ];
+
   var responseInterceptor = {
     loginPromise: null,
     response: function(response) {
@@ -63,17 +67,19 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
     responseError: function(rejection) {
       if (rejection.status == -1) {
         // server unavailable
-        var $uibModal = $injector.get('$uibModal'); // inject manually to avoid circular dependency
-        $uibModal.open({
-          //@note template instead of template URL, since server is offline already
-          template: '<div class="modal-header"><h3 class="modal-title">Server is offline</h3></div><div class="modal-body"><p>The KeYmaera X server is unavailable. All your recent work is saved (except for the click that just failed). If you run KeYmaera X locally, please restart the server.</p><p>This dialog will close automatically when the server is online again.</p></div>',
-          controller: 'ServerOfflineDialogCtrl',
-          size: 'md',
-          backdrop: 'static',
-          animation: false
-        });
-        // response handled here, prevent further calls
-        return rejection;
+        if (!pollRequests.includes(rejection.config.url)) {
+          var $uibModal = $injector.get('$uibModal'); // inject manually to avoid circular dependency
+          $injector.get("spinnerService").hideAll();
+          $uibModal.open({
+            //@note template instead of template URL, since server is offline already
+            template: '<div class="modal-header"><h3 class="modal-title">Server is offline</h3></div><div class="modal-body"><p>The KeYmaera X server is unavailable. All your recent work is saved (except for the click that just failed). If you run KeYmaera X locally, just restart the server (<kbd>java -jar keymaerax.jar</kbd>)</p><p>This dialog will close automatically when the server is online again.</p></div>',
+            controller: 'ServerOfflineDialogCtrl',
+            size: 'md',
+            backdrop: 'static',
+            animation: false
+          });
+        }
+        return $q.reject(rejection);
       } else if (rejection.status === 500) {
         // report uncaught server-side exception
         var $uibModal = $injector.get('$uibModal'); // inject manually to avoid circular dependency
@@ -84,7 +90,8 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
           resolve: {
             url: function() { return rejection.config.url; },
             message: function () { return rejection.data.textStatus; },
-            error: function () { return rejection.data; }
+            error: function () { return rejection.data; },
+            context: function () { return {}; }
           }
         });
         // response handled here, prevent further calls
@@ -122,11 +129,13 @@ angular.module('keymaerax.errorHandlers', []).factory('ResponseErrorHandler', ['
 
 }]);
 
-angular.module('keymaerax.controllers').controller('ErrorAlertCtrl', function($scope, $uibModalInstance, $uibModal, url, message, error) {
+angular.module('keymaerax.controllers').controller('ErrorAlertCtrl', function($scope, $uibModalInstance, $uibModal, url,
+    message, error, context) {
   $scope.errorText = message !== undefined && message !== '' ? message : 'Sorry, no message available. Please look at the stack trace.';
   $scope.url = url;
   $scope.errorTrace = error.errorThrown;
   $scope.stacktraceCollapsed = true;
+  $scope.context = context !== undefined ? context : {};
   $scope.report = function() {
     $uibModalInstance.dismiss('cancel');
     var modalInstance = $uibModal.open({
@@ -169,14 +178,18 @@ angular.module('keymaerax.controllers').controller('ParseErrorCtrl', function($s
   $scope.errorThrown = error.errorThrown;
   $scope.dismiss = function() { $uibModalInstance.dismiss('OK'); }
   $scope.modelWithErrorMsg = function() {
-    var lines = $.map(model.split('\n'), function(e, i) { return (i+1) + ': ' + e; });
-    var lineStr = error.location.line + ': ';
-    var errorColumnIdx = error.location.column >= 0 ? error.location.column + lineStr.length :
-      error.location.line >= 0 ? lines[error.location.line-1].length+1 : lines[lines.length-1].length+1;
-    var inlineErrorMsg = new Array(errorColumnIdx).join(' ') + '^----' + error.textStatus;
-    if (error.location.line >= 0) lines.splice(error.location.line, 0, inlineErrorMsg);
-    else lines.splice(lines.length, 0, inlineErrorMsg);
-    return lines.join('\n');
+    var lines = $.map(model.split('\n'), function(e, i) { return ("00" + (i+1)).slice(-3) + ': ' + e; });
+    if (error.location) {
+      var lineStr = error.location.line + ': ';
+      var errorColumnIdx = error.location.column >= 0 ? error.location.column + lineStr.length :
+        error.location.line >= 0 ? lines[error.location.line-1].length+1 : lines[lines.length-1].length+1;
+      var inlineErrorMsg = new Array(errorColumnIdx).join(' ') + '^----' + error.textStatus;
+      if (error.location.line >= 0) lines.splice(error.location.line, 0, inlineErrorMsg);
+      else lines.splice(lines.length, 0, inlineErrorMsg);
+      return lines.join('\n');
+    } else {
+      return lines.join('\n');
+    }
   }
 });
 
@@ -218,17 +231,17 @@ angular.module('keymaerax.controllers').controller('ErrorReportCtrl', function($
 
   encodeText = function(str) {
     // replace characters not encoded by encodeURIComponent manually
-    return encodeURIComponent(str).replace(/[!'()*]/g, function(c) {
+    return encodeURIComponent(str).replace(/[-_.~!*'()]/g, function(c) {
       return '%' + c.charCodeAt(0).toString(16);
     });
   }
 
   $scope.bodyText = function() {
     return encodeText("Description\n" + ($scope.userDescription ? $scope.userDescription : "") +
-      "\n\nKeYmaera X v" + $scope.kyxVersion + ($scope.isLocal ? " (local)" : " (web.keymaerax.org)") +
-      ($scope.omitSysConfig ? "\n\nSystem configuration unreported" : "\n\nSystem configuration\n" + $scope.kyxConfig) +
-      "\n\nError message\n" + $scope.errorText +
-      "\n\nError trace\n" + $scope.errorTrace);
+      "\n\nKeYmaera X v" + ($scope.kyxVersion ? $scope.kyxVersion : "Unknown") + ($scope.isLocal ? " (local)" : " (web.keymaerax.org)") +
+      ($scope.omitSysConfig ? "\n\nSystem configuration unreported" : "\n\nSystem configuration\n" + ($scope.kyxConfig ? $scope.kyxConfig : "Unavailable")) +
+      "\n\nError message\n" + ($scope.errorText ? $scope.errorTest : "Unavailable") +
+      "\n\nError trace\n" + ($scope.errorTrace ? $scope.errorTrace : "Unavailable"));
   }
 
   $scope.cancel = function() {

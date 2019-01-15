@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.DependencyAnalysis._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger._
 import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Box, Formula}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
 
@@ -75,7 +75,7 @@ class QELoggerTests extends TacticTestBase {
     //Note: logger must be enabled before calling the parser, or it will parse explicit QE calls to the wrong tactic!
     val archiveL2::Nil = KeYmaeraXArchiveParser.parse(l2)
 
-    val (l2f,l2t) = (archiveL2.model.asInstanceOf[Formula],archiveL2.tactics.head._2)
+    val (l2f,l2t) = (archiveL2.model.asInstanceOf[Formula],archiveL2.tactics.head._3)
 
     println("Proving",l2f,l2t)
     println(proveBy(l2f,l2t))
@@ -88,7 +88,7 @@ class QELoggerTests extends TacticTestBase {
     //Note: logger must be enabled before calling the parser, or it will parse explicit QE calls to the wrong tactic!
     val archiveL3::Nil = KeYmaeraXArchiveParser.parse(l3)
 
-    val (l3f,l3t) = (archiveL3.model.asInstanceOf[Formula],archiveL3.tactics.head._2)
+    val (l3f,l3t) = (archiveL3.model.asInstanceOf[Formula],archiveL3.tactics.head._3)
 
     println("Proving",l3f,l3t)
     proveBy(l3f,l3t)

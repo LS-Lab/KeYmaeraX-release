@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Program}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
-import edu.cmu.cs.ls.keymaerax.parser.{/*KeYmaera3PrettyPrinter,*/ KeYmaeraXParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser}
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 
@@ -82,7 +82,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
 
   it should "prove interactive benchmarks" in withMathematica { tool =>
     setTimeouts(tool)
-    val results = entries.map(e => runInteractive(e.name, e.model, e.tactic.map(_._2)))
+    val results = entries.map(e => runInteractive(e.name, e.model, e.tactic.headOption.map(_._2)))
     val writer = new PrintWriter(benchmarkName + "_interactive.csv")
     writer.write(
       "Name,Status,Timeout[min],Duration[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv).mkString("\r\n"))
@@ -94,7 +94,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
 
   it should "prove benchmarks with proof hints and Mathematica" in withMathematica { tool =>
     setTimeouts(tool)
-    val results = entries.map(e => runWithHints(e.name, e.model, e.tactic.map(_._2)))
+    val results = entries.map(e => runWithHints(e.name, e.model, e.tactic.headOption.map(_._2)))
     val writer = new PrintWriter(benchmarkName + "_withhints.csv")
     writer.write(
       "Name,Status,Timeout[min],Duration[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv).mkString("\r\n"))
@@ -176,7 +176,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
     val generator = new ConfigurableGenerator[Formula]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ inv)))
-    val (_, model) = KeYmaeraXProblemParser.parseProblem(modelContent)
+    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent)
     TactixLibrary.invGenerator = generator
     KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {}) //@note cleanup for separation between tutorial entries
     model
@@ -186,8 +186,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String, val timeout: I
   private def parseStripHints(modelContent: String): Formula = {
     TactixLibrary.invGenerator = FixedGenerator(Nil)
     KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {})
-    val (_, model) = KeYmaeraXProblemParser.parseProblem(modelContent)
-    model
+    KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent)
   }
 
 }

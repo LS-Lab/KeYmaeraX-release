@@ -11,13 +11,14 @@ import org.apache.logging.log4j.scala.Logging
 import scala.annotation.switch
 
 /**
- * Axiom Indexing data structures for canonical proof strategies.
- * @note Could be generated automatically, yet better in a precomputation fashion, not on the fly.
- * @author Andre Platzer
- * @see Andre Platzer. [[http://dx.doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
- * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
- * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
- * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo]]
+  * Axiom Indexing data structures for canonical proof strategies and [[TactixLibrary.step]] and [[TactixLibrary.stepAt]].
+  * @note Could be generated automatically, yet better in a precomputation fashion, not on the fly.
+  * @author Andre Platzer
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+  * @see [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]]
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomInfo]]
+  * @see [[TactixLibrary.step]]
+  * @see [[TactixLibrary.sequentStepIndex]]
  */
 object AxiomIndex extends Logging {
 

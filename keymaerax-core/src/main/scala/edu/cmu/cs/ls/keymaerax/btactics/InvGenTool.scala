@@ -4,7 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.core.{Formula, ODESystem}
+import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, NamedSymbol, ODESystem}
 
 import scala.collection.immutable.Seq
 
@@ -24,5 +24,8 @@ trait InvGenTool {
 
   /** Fast check whether or not `inv` is worth proving to be an invariant of `ode`. */
   def lzzCheck(ode: ODESystem, inv: Formula): Boolean
+
+  /** Finds counterexamples to an ODE safety conjecture. */
+  def refuteODE(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]]
 }
 

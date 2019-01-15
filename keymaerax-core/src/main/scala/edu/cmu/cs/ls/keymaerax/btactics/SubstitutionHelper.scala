@@ -4,6 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable.Set
@@ -31,6 +32,18 @@ object SubstitutionHelper {
     case f: Formula => replaceFree(f)(what, repl).asInstanceOf[T]
     case t: Term => replaceFree(t)(what, repl).asInstanceOf[T]
     case p: Program => replaceFree(p)(what, repl).asInstanceOf[T]
+  }
+
+  /** Replaces the any unary function application fn(.) per `subst`. */
+  def replaceFn(fn: String, fml: Formula, subst: Map[Term, Variable]): Formula = {
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+        case FuncOf(Function(fnname, None, Real, Real, false), t: Term) if fnname == fn => Right(subst(t))
+        case _ => Left(None)
+      }
+    }, fml) match {
+      case Some(g) => g
+    }
   }
 }
 
@@ -71,8 +84,8 @@ class SubstitutionHelper(what: Term, repl: Term) {
 //      case d: DifferentialSymbol if d != what => d
       case d: Differential if d == what => repl
       case d: Differential if d != what => d
-      case app@FuncOf(_, _) if /*!u.contains(fn) &&*/ app == what => repl
-      case app@FuncOf(fn, theta) if  /*u.contains(fn) ||*/ app != what => FuncOf(fn, usubst(o, u, theta))
+      case app@FuncOf(_, _) if u.intersect(StaticSemantics(t)).isEmpty && app == what => repl
+      case app@FuncOf(fn, theta) if app != what => FuncOf(fn, usubst(o, u, theta))
       case Nothing => Nothing
       case Number(_) if t == what => repl
       case x: AtomicTerm => x

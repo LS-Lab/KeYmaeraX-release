@@ -6,8 +6,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import BelleLexer.TokenStream
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.Declaration
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
 import org.apache.logging.log4j.scala.Logging
 
 /**
@@ -16,8 +15,8 @@ import org.apache.logging.log4j.scala.Logging
   * @author Nathan Fulton
   */
 object BelleParser extends (String => BelleExpr) with Logging {
-  private case class DefScope[K, V](defs: scala.collection.mutable.Map[K, V] = scala.collection.mutable.Map.empty[K, V],
-                                    parent: Option[DefScope[K, V]] = None) {
+  case class DefScope[K, V](defs: scala.collection.mutable.Map[K, V] = scala.collection.mutable.Map.empty[K, V],
+                            parent: Option[DefScope[K, V]] = None) {
     def get(key: K): Option[V] = defs.get(key) match {
       case Some(e) => Some(e)
       case None => parent match {
@@ -34,8 +33,8 @@ object BelleParser extends (String => BelleExpr) with Logging {
     * expand function and predicate symbols. */
   def parseWithInvGen(s: String, g: Option[Generator.Generator[Expression]] = None,
                       defs: Declaration = Declaration(Map())): BelleExpr =
-    KeYmaeraXProblemParser.firstUnacceptableCharacter(s) match {
-      case Some((loc, char)) => throw ParseException(s"Found an unacceptable character when parsing tactic (allowed unicode: ${KeYmaeraXProblemParser.allowedUnicodeChars.toString}): $char", loc, "<unknown>", "<unknown>", "", "")
+    firstUnacceptableCharacter(s) match {
+      case Some((loc, char)) => throw ParseException(s"Found an unacceptable character when parsing tactic (allowed unicode: ${allowedUnicodeChars.toString}): $char", loc, "<unknown>", "<unknown>", "", "")
       case None => try {
         parseTokenStream(BelleLexer(s), DefScope[String, DefTactic](), DefScope[Expression, DefExpression](), g, defs)
       } catch {
@@ -44,6 +43,48 @@ object BelleParser extends (String => BelleExpr) with Logging {
           throw e
       }
     }
+
+  /** Non-unicode characters that are allowed in KeYmaera X input files.
+    * Should correspond to the unicode that's printed in the web UI. */
+  val allowedUnicodeChars : Set[Char] = Set[Char](
+    '≤',
+    '≥',
+    '∧',
+    '∨',
+    '≠',
+    '∀',
+    '∃',
+    '→',
+    '↔',
+    '←'
+  )
+
+  /** Returns the location and value of the first non-ASCII character in a string that is not in [[allowedUnicodeChars]] */
+  def firstUnacceptableCharacter(s : String) : Option[(Location, Char)] = {
+    val pattern = """([^\p{ASCII}])""".r
+    val nonAsciiChars = pattern.findAllIn(s).matchData.map(_.group(0).toCharArray.last).toList
+
+    //Some unicode is allowed! Find only the unicode that is not allwed.
+    val disallowedChars = nonAsciiChars.filter(!allowedUnicodeChars.contains(_))
+
+    if(disallowedChars.nonEmpty) {
+      val nonAsciiCharacter : Char = {
+        if(disallowedChars.nonEmpty) disallowedChars.head
+        else throw new Exception("Expected at least one match but matchData.hasNext returned false when matches.nonEmpty was true!")
+      }
+      val prefix = s.split(nonAsciiCharacter).head
+      val lines = prefix.split("\n")
+      assert(lines != null && lines.length > 0,
+        s"Expected a 'last' element but found ${lines} because there is a disallowed unicode character _${disallowedChars.mkString(" ")}_")
+      val lineNumber = lines.length
+      val columnNumber = lines.last.length + 1
+      Some(new Region(lineNumber, columnNumber, lineNumber, columnNumber), nonAsciiCharacter)
+    }
+    else {
+      //@todo change this assertion: assert(s.matches("\\A\\p{ASCII}*\\z"))
+      None
+    }
+  }
 
   //region The LL Parser
 
@@ -58,7 +99,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
 
   /** Parses the token stream `toks`. Expands tactic abbreviations according to `tacticDefs`, function and predicate
     * symbols according to `defs`, and passes the invariant generator `g` on to tactics requiring a generator. */
-  private def parseTokenStream(toks: TokenStream, tacticDefs: DefScope[String, DefTactic],
+  def parseTokenStream(toks: TokenStream, tacticDefs: DefScope[String, DefTactic],
                        exprDefs: DefScope[Expression, DefExpression], g: Option[Generator.Generator[Expression]],
                        defs: Declaration): BelleExpr = {
     val result = parseLoop(ParserState(Bottom, toks), tacticDefs, exprDefs, g, defs)
@@ -665,7 +706,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
     }
   }
   private trait FinalBelleItem
-  private[parser] case class BelleToken(terminal: BelleTerminal, location: Location) extends BelleItem
+  case class BelleToken(terminal: BelleTerminal, location: Location) extends BelleItem
   private case class ParsedBelleExpr(expr: BelleExpr, loc: Location) extends BelleItem
   private case class ParsedBelleExprList(exprs: Seq[ParsedBelleExpr]) extends BelleItem
   private case class ParsedPosition(pos: Position, loc: Location) extends BelleItem

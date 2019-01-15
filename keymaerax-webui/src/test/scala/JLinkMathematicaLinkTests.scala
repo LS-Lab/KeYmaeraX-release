@@ -3,7 +3,7 @@
 * See LICENSE.txt for the conditions of this license.
 */
 import com.wolfram.jlink.Expr
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleTopLevelLabel
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.{BelleLabels, TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -53,14 +53,23 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
   }
 
   "abs(-5) > 4" should "be provable with QE" in withMathematica { link =>
+    the [CoreException] thrownBy link.qeEvidence("abs(-5) > 4".asFormula) should have message
+      "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
     link.qeEvidence("abs(-5) > 4".asFormula)._1 shouldBe True
   }
 
   "min(1,3) = 1" should "be provable with QE" in withMathematica { link =>
+    the [CoreException] thrownBy link.qeEvidence("min(1,3) = 1".asFormula) should have message
+      "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
     link.qeEvidence("min(1,3) = 1".asFormula)._1 shouldBe True
   }
 
   "max(1,3) = 3" should "be provable with QE" in withMathematica { link =>
+    the [CoreException] thrownBy link.qeEvidence("max(1,3) = 3".asFormula) should have message
+      "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
     link.qeEvidence("max(1,3) = 3".asFormula)._1 shouldBe True
   }
 
@@ -115,20 +124,14 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     result.subgoals.head.succ should contain theSameElementsAs False::Nil
   }
 
-  "Blocking kernels" should "should be detected" in withMathematica { link =>
+  "Blocking kernels" should "be detected" in withMathematica { link =>
     val lnk = PrivateMethod[JLinkMathematicaLink]('link)
     val theLink = link invokePrivate lnk()
     val executor: ToolExecutor[(String, KExpr)] = new ToolExecutor(1)
 
-    val foo = new M2KConverter[KExpr] {
-      /** Converse conversion for contracts
-        *
-        * @ensures k2m(this(e)) == e
-        */
+    val trueConverter = new M2KConverter[KExpr] {
       override def k2m: K2MConverter[KExpr] = ???
-
       override def apply(e: MExpr): KExpr = True
-
       def convert(e: MExpr): KExpr = ???
     }
 
@@ -137,16 +140,15 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     println("Start with available workers: " + workers)
     val start = System.currentTimeMillis()
     new Thread(
-      new Runnable() {
-        override def run(): Unit = theLink.run(new MExpr(new MExpr(Expr.SYMBOL,  "Pause"), Array(new MExpr(5))), foo, executor)
-      }).start()
+      () => theLink.run(new MExpr(new MExpr(Expr.SYMBOL,  "Pause"), Array(new MExpr(5))), trueConverter, executor)
+    ).start()
     println("Started first task")
     (System.currentTimeMillis() - start) should be <= 200L
     Thread.sleep(1000)
     executor.availableWorkers() shouldBe (workers - 1)
     val intermediate = System.currentTimeMillis()
     println("Second task")
-    theLink.run(new MExpr(new MExpr(Expr.SYMBOL,  "Pause"), Array(new MExpr(5))), foo, executor)
+    theLink.run(new MExpr(new MExpr(Expr.SYMBOL,  "Pause"), Array(new MExpr(5))), trueConverter, executor)
     //@note we wait about 1s of the 5s of the first worker (so if only 1 worker we still wait about 4s)
     // and then another 5s in the second worker (check with a little slack time around 9s for <= 1 worker or 5s for > 1 worker)
     if (workers <= 1) (System.currentTimeMillis() - intermediate) should (be >= 8800L and be <= 9200L)
@@ -162,13 +164,11 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
 
     var compAfterRestart: Option[Expression] = None
 
-    val t = new Thread(new Runnable() {
-      override def run(): Unit = {
-        the [ToolException] thrownBy bridge.run(
-          new MExpr(new MExpr(Expr.SYMBOL, "Pause"), Array[MExpr](new MExpr(30)))
-        ) should have message "Restarted Mathematica, please rerun the failed command (error details below)"
-        compAfterRestart = Some(bridge.run(KeYmaeraToMathematica("2+3".asTerm))._2)
-      }
+    val t = new Thread(() => {
+      the [ToolException] thrownBy bridge.run(
+        new MExpr(new MExpr(Expr.SYMBOL, "Pause"), Array[MExpr](new MExpr(30)))
+      ) should have message "Restarted Mathematica, please rerun the failed command (error details below)"
+      compAfterRestart = Some(bridge.run(KeYmaeraToMathematica("2+3".asTerm))._2)
     })
     t.start()
     println("Sleeping for 5s...")

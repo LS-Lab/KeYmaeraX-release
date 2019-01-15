@@ -17,6 +17,8 @@ import scala.collection.immutable.IndexedSeq
   * A common signature for [[edu.cmu.cs.ls.keymaerax.pt.ProvableSig]]'s and [[TermProvable]]'s for use in the [[btactics]] package.
   * This allows for tactics to construct proof terms or not depending on which implementation they use.
   *
+  * This file mimics [[edu.cmu.cs.ls.keymaerax.core.Provable]] outside the core and forwards all operations to the core.
+  *
   * @author Andre Platzer
   * @author Nathan Fulton
   * @author Brandon Bohrer
@@ -126,7 +128,7 @@ trait ProvableSig {
     * @param subst The uniform substitution (of no free variables) to be used on the premises and conclusion of this Provable.
     * @return The Provable resulting from applying `subst` to our subgoals and conclusion.
     * @author Andre Platzer
-    * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Theorem 26+27."
+    * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017. Theorem 26+27."
     * @note soundness-critical. And soundness-critical that only locally sound Provables can be constructed (otherwise implementation would be more complicated).
     */
   def apply(subst: USubst): ProvableSig

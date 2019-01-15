@@ -36,7 +36,7 @@ object InvariantProvers {
   /** loopSR: cleverly prove a property of a loop automatically by induction, trying hard to generate loop invariants.
     * Uses [[SearchAndRescueAgain]] to avoid repetitive proving.
     * @see [[loopauto]]
-    * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+    * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
     *      Example 32. */
   def loopSR(gen: Generator[Formula]): DependentPositionTactic = "loopSR" by ((pos:Position,seq:Sequent) => Augmentors.SequentAugmentor(seq)(pos) match {
     case loopfml@Box(prog, post) =>
@@ -76,20 +76,16 @@ object InvariantProvers {
     case loopfml@Box(prog, post) =>
       // extra information occasionally thrown in to help direct invariant generation
       val initialCond = seq.ante.reduceRightOption(And).getOrElse(True)
-      val bounds: List[Variable] =
-        // DependencyAnalysis is incorrect when primed symbols occur, so default to all bound variables in that case
+      //@note all variables since substitution disallows introducing free variables unless proved
+      val allVars: List[Variable] =
+        // DependencyAnalysis is incorrect when primed symbols occur, so default to all variables in that case
         if (StaticSemantics.freeVars(post).toSet.exists(v => v.isInstanceOf[DifferentialSymbol]))
-          StaticSemantics.boundVars(loopfml).toSet.toList
+          (StaticSemantics.boundVars(loopfml) ++ StaticSemantics.freeVars(loopfml)).toSet.toList
         else
           //@todo does not work: DependencyAnalysis.dependencies(prog, DependencyAnalysis.freeVars(post))._1.toList
-          StaticSemantics.boundVars(loopfml).toSet.toList.filterNot(v => v.isInstanceOf[DifferentialSymbol])
-      var i = -1
-      val subst: USubst = if (bounds.length == 1)
-        USubst(Seq(SubstitutionPair(DotTerm(), bounds.head)))
-      else
-        USubst(bounds.map(xi => {
-          i = i + 1; SubstitutionPair(DotTerm(Real, Some(i)), xi)
-        }))
+          (StaticSemantics.boundVars(loopfml) ++ StaticSemantics.freeVars(loopfml)).toSet.toList.
+            filterNot(v => v.isInstanceOf[DifferentialSymbol])
+      val subst: USubst = USubst(allVars.zipWithIndex.map({ case (v, i) => SubstitutionPair(DotTerm(Real, Some(i)), v) }))
 
       /** name(args) */
       def constructPred(name: String, args: Seq[Term]): Formula = {
@@ -109,17 +105,17 @@ object InvariantProvers {
       // completes ODE invariant proofs and arithmetic
       val finishOff: BelleExpr =
         OnAll(ifThenElse(DifferentialTactics.isODE,
-          odeInvariant(pos) |
+          DifferentialTactics.mathematicaODE(pos) |
             // augment loop invariant to local ODE invariant if possible
             ("ANON" by ((pos: Position, seq: Sequent) => {
               val odePost = seq.sub(pos++PosInExpr(1::Nil))
               // no need to try same invariant again if odeInvariant(pos) already failed
               //@todo optimize: if the invariant generator were correct, could restrict to its first element
-              ChooseSome(() => gen(seq, pos).iterator.filterNot(localInv => Some(localInv)==odePost),
+              ChooseSome(() => gen(seq, pos).iterator.filterNot(localInv => odePost.contains(localInv)),
                 (localInv:Formula) => {
-                  println/*logger.debug*/("loopPostMaster local " + localInv)
+                  logger.debug("loopPostMaster local " + localInv)
                   DebuggingTactics.debug("local")&
-                  dC(localInv)(pos) < (dW(pos) & QE(), odeInvariant(pos)) &
+                  dC(localInv)(pos) < (dW(pos) & QE(), DifferentialTactics.mathematicaODE(pos)) &
                   done & DebuggingTactics.debug("success")
                 })
             }))(pos)
@@ -127,8 +123,8 @@ object InvariantProvers {
           QE()
         )(pos)) & done
 
-      // present mutable invariant candidate source stream and its present iterator
-      var candidates: Option[(Stream[Formula], Iterator[Formula])] = None
+      // invariant candidate iterators (avoid retrying same invariants over and over again when same assume-more-sequents are revisited)
+      val generators: scala.collection.mutable.Map[Sequent, Iterator[Formula]] = scala.collection.mutable.Map.empty
 
       /** generate the next candidate from the given sequent of the given provable with the present candidate currentCandidate */
       def nextCandidate(pr: ProvableSig, sequent: Sequent, currentCandidate: Option[Formula]): Option[Formula] = currentCandidate match {
@@ -150,21 +146,18 @@ object InvariantProvers {
             val assumeMoreSeq = USubst(Seq(jjl ~>> cand, jja ~> initialCond))(sequent)
 
             val generator = gen(assumeMoreSeq, pos)
-            // keep iterating if same generator stream, else advance both
-            candidates = Some(candidates match {
-              case Some((s, it)) if s == generator => (s, it)
-              case Some((s, _)) if s != generator => (generator, generator.iterator)
-              case None => (generator, generator.iterator)
-            })
+            // keep iterating remembered iterator (otherwise generator restarts from the beginning)
+            if (!generators.contains(assumeMoreSeq)) generators.put(assumeMoreSeq, generator.iterator)
+            val candidates = generators(assumeMoreSeq)
 
-            while (candidates.get._2.hasNext) {
-              val next = Some(candidates.get._2.next())
+            while (candidates.hasNext) {
+              val next = Some(candidates.next())
               if (next != currentCandidate) {
-                println /*logger.info*/ ("loopPostMaster next    " + next.get)
+                logger.debug("loopPostMaster next    " + next.get)
                 return next
               }
             }
-            return None
+            None
           }
         case None => None
       }
@@ -185,7 +178,7 @@ object InvariantProvers {
                     candidate = next
                     break
                   }
-                  println/*logger.debug*/("loopPostMaster branch skip")
+                  logger.debug("loopPostMaster branch skip")
                 case _ => // ignore branches that are not about ODEs
               }
             }

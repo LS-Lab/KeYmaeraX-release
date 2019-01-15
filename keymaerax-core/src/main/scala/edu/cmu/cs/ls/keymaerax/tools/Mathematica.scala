@@ -79,20 +79,21 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
     } catch {
       case _: MathematicaComputationAbortedException =>
         mCEX.timeout = qeCexTimeout
-        try {
-          mCEX.findCounterExample(stripUniversalClosure(formula)) match {
-            case None =>
-              mQE.timeout = qeMaxTimeout
-              mQE.qeEvidence(formula)
-            case Some(cex) => (False, ToolEvidence(List("input" -> formula.prettyString, "output" -> cex.mkString(","))))
-          }
+        val cex = try {
+          mCEX.findCounterExample(stripUniversalClosure(formula))
         } catch {
-          case _: MathematicaComputationAbortedException =>
-            mQE.timeout = qeMaxTimeout
-            mQE.qeEvidence(formula)
+          case _: MathematicaComputationAbortedException => None
+          case _: MathematicaComputationFailedException => None
+          case _: ToolException => None
           case ex: MathematicaComputationExternalAbortException =>
             //@note external abort means do not try any further
             throw ex
+        }
+        cex match {
+          case None =>
+            mQE.timeout = qeMaxTimeout
+            mQE.qeEvidence(formula)
+          case Some(cexFml) => (False, ToolEvidence(List("input" -> formula.prettyString, "output" -> cexFml.mkString(","))))
         }
       case ex: MathematicaComputationExternalAbortException => throw ex
     }
@@ -121,7 +122,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
    * @return A counterexample, if found. None otherwise.
    */
   override def findCounterExample(formula: Formula): Option[Predef.Map[NamedSymbol, Expression]] = {
-    mCEX.timeout = 10
+    mCEX.timeout = Integer.parseInt(Configuration.getOption(Configuration.Keys.CEX_SEARCH_DURATION).getOrElse("10"))
     mCEX.findCounterExample(formula)
   }
 
@@ -159,6 +160,7 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
   override def simplify(expr: Term, assumptions: List[Formula]): Term = mSimplify.simplify(expr, assumptions)
   override def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Either[Seq[Formula],Seq[Formula]]] = mPegasus.invgen(ode, assumptions, postCond)
   override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = mPegasus.lzzCheck(ode, inv)
+  override def refuteODE(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]] = mPegasus.refuteODE(ode, assumptions, postCond)
 
 
   /** Restarts the MathKernel with the current configuration */

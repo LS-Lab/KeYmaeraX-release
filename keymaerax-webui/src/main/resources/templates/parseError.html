@@ -1,5 +1,8 @@
 <div class="modal-header" >
-    <h3 class="modal-title">Error parsing model</h3>
+    <h3 class="modal-title">
+        <span>Error parsing model</span>
+        <button class="btn btn-primary pull-right" ng-click="dismiss()">OK</button>
+    </h3>
 </div>
 <div class="modal-body">
     <div class="well well-sm">
@@ -11,8 +14,8 @@
             <dd>{{details.found}}</dd>
         </dl>
     </div>
-    <pre style="overflow: scroll; height: 200px;">{{modelWithErrorMsg()}}</pre>
-    <div style="overflow: scroll; height: 200px">
+    <pre class="k4-vertical-fill-flex">{{modelWithErrorMsg()}}</pre>
+    <div class="k4-vertical-fill-flex">
         <a ng-click="stacktraceCollapsed=!stacktraceCollapsed">
             <i class="fa fa-caret-right" ng-if="stacktraceCollapsed"></i>
             <i class="fa fa-caret-down" ng-if="!stacktraceCollapsed"></i> Stacktrace
@@ -21,7 +24,4 @@
             <div class="well well-lg">{{errorThrown}}</div>
         </div>
     </div>
-</div>
-<div class="modal-footer">
-    <button class="btn btn-primary" ng-click="dismiss()">OK</button>
 </div>

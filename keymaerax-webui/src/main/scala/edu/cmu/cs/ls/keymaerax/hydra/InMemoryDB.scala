@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.hydra
 
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr
 import edu.cmu.cs.ls.keymaerax.core._
@@ -75,13 +75,13 @@ class InMemoryDB extends DBAbstraction {
     proofs.values.map(_._2).filter(_.modelId == modelId).toList
   }
 
-  def deleteExecution(executionId: Int): Boolean = synchronized {
+  override def deleteProofSteps(executionId: Int): Int = synchronized {
     executionSteps.filter(_._2.executionId == executionId).foreach(s => executionSteps.remove(s._1))
-    true
+    1
   }
 
   override def deleteProof(proofId: Int): Boolean = synchronized {
-    deleteExecution(proofId)
+    deleteProofSteps(proofId)
     proofs.remove(proofId).isDefined
   }
 
@@ -103,7 +103,7 @@ class InMemoryDB extends DBAbstraction {
   override def updateModel(modelId: Int, name: String, title: Option[String], description: Option[String], content: Option[String]): Unit = {
     val model = models(modelId)
     val nm = new ModelPOJO(modelId, model.userId, name, model.date, content.get, description.get, model.pubLink,
-      title.get, model.tactic, model.numProofs, model.temporary)
+      title.get, model.tactic, model.numAllProofSteps, model.temporary)
     models(modelId) = nm
   }
 
@@ -112,7 +112,7 @@ class InMemoryDB extends DBAbstraction {
     val model = models(mId)
     if (model.tactic.isEmpty) {
       val nm = new ModelPOJO(mId, model.userId, model.name, model.date, model.keyFile, model.description, model.pubLink,
-        model.title, Some(fileContents), model.numProofs, model.temporary)
+        model.title, Some(fileContents), model.numAllProofSteps, model.temporary)
       models(mId) = nm
       Some(1)
     } else None
@@ -122,7 +122,7 @@ class InMemoryDB extends DBAbstraction {
                                    tactic: Option[String]): Int = synchronized {
     val proofId = proofs.keys.size
     val provableId = provables.keys.size
-    val model = KeYmaeraXProblemParser(models(modelId).keyFile)
+    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(models(modelId).keyFile)
     val provable = ProvableSig.startProof(model)
     provables(provableId) = provable
     proofs(proofId) = (provable, new ProofPOJO(proofId, Some(modelId), name, description, date, 0, closed=false,

@@ -102,7 +102,7 @@ object UIIndex {
           }, fml)
           foundPrime
         }
-        val rules = maybeSplit ++ ("GV" :: "MR" :: "boxd" :: Nil)
+        val rules = maybeSplit ++  (if (pos.forall(_.isSucc)) "GV" :: "MR" :: Nil else Nil)
         a match {
           case Assign(_: DifferentialSymbol,_) => "[':=] differential assign" :: rules
           case Assign(_: BaseVariable, _) => "assignb" :: rules
@@ -111,14 +111,19 @@ object UIIndex {
           case _: Compose => "[;] compose" :: rules
           case _: Choice => "[++] choice" :: rules
           case _: Dual => "[d] dual direct" :: "[d] dual" :: Nil
-          case _: Loop => "loop" +: (maybeSplit ++ ("[*] iterate" :: "GV" :: "boxd" :: Nil))
+          case _: Loop => "loop" +: (maybeSplit ++ ("[*] iterate" :: "GV" :: Nil))
           //@note intermediate steps in dI
           case ODESystem(ode, _) if !post.isInstanceOf[Modal] && containsPrime(post) => ode match {
             case _: AtomicODE => "DE differential effect" :: "dW" :: "dC" :: rules
             case _: DifferentialProduct => "DE differential effect (system)" :: "dW" :: "dC" :: rules
             case _ => rules
           }
-          case ODESystem(_, _) => ("ODE" :: "solve" :: "dC" :: "dI" ::  "dW" :: "dG" :: Nil) ++ rules
+          case ODESystem(_, _) =>
+            if (pos.forall(_.isSucc)) {
+              if (pos.forall(_.isTopLevel)) ("ODE" :: "solve" :: "dC" :: "dI" ::  "dW" :: "dG" :: Nil) ++ rules
+              else ("solve" :: "dC" :: "dI" ::  "dG" :: Nil) ++ rules
+            }
+            else ("solve" :: "dC" :: Nil) ++ rules
           case _ => rules
         }
 

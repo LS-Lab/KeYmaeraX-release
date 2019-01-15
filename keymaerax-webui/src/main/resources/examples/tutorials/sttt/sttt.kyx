@@ -1,46 +1,46 @@
-ArchiveEntry "STTT Tutorial Example 1".
+ArchiveEntry "STTT Tutorial Example 1"
 
 Description "A simple system in which a car starts at some nonnegative velocity and accelerates at a constant rate along a straight lane. The requirement we want to prove is that the car never travels backward in space.".
 Title "Uncontrolled continuous car".
 Link "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=7".
 
-Functions.
-  R A.
+Definitions
+  Real A;
 End.
 
-ProgramVariables.
-  R x.
-  R v.
+ProgramVariables
+  Real x;
+  Real v;
 End.
 
-Problem.
+Problem
   v >= 0 & A > 0 -> [ { x' = v, v' = A } ] v >= 0
 End.
 
-Tactic "Proof STTT Tutorial Example 1".
+Tactic "Proof STTT Tutorial Example 1"
   implyR(1); andL('L); ODE(1); done
 End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 2".
+ArchiveEntry "STTT Tutorial Example 2"
 
 Description "A hybrid system model of a car with discrete control choices: accelerate, stay stopped, or brake. The requirement to prove is that the car never travels backwards in space.".
 Title "Simple Hybrid Car".
 Link "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=8".
 
-Functions.
-  R A.
-  R B.
+Definitions
+  Real A;
+  Real B;
 End.
 
-ProgramVariables.
-  R x.
-  R v.
-  R a.
+ProgramVariables
+  Real x;
+  Real v;
+  Real a;
 End.
 
-Problem.
+Problem
     v >= 0 & A > 0 & B > 0
  -> [
       { {a := A; ++ a := 0; ++ a := -B;};
@@ -49,7 +49,7 @@ Problem.
     ] v >= 0
 End.
 
-Tactic "Proof STTT Tutorial Example 2".
+Tactic "Proof STTT Tutorial Example 2"
 implyR(1); (andL('L)*); loop({`v >= 0`}, 1); <(
   QE; done,
   QE; done,
@@ -65,25 +65,25 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 3a".
+ArchiveEntry "STTT Tutorial Example 3a"
 
 Description "A hybrid car model where the controller runs when the car is about to run a stop sign. The requirement to prove is that the car never runs the stop sign.".
 Title "Event-triggered car control".
 Link "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=10".
 
-Functions.
-  R A.
-  R B.
-  R S.
+Definitions
+  Real A;
+  Real B;
+  Real S;
 End.
 
-ProgramVariables.
-  R x.
-  R v.
-  R a.
+ProgramVariables
+  Real x;
+  Real v;
+  Real a;
 End.
 
-Problem.
+Problem
     v >= 0 & A > 0 & B > 0 & x+v^2/(2*B) < S
  -> [
       { {   ?x+v^2/(2*B) < S; a := A;
@@ -99,7 +99,7 @@ Problem.
     ] x <= S
 End.
 
-Tactic "Proof STTT Tutorial Example 3a".
+Tactic "Proof STTT Tutorial Example 3a"
 implyR(1) ; (andL('L)*) ; loop({`v >= 0 & x+v^2/(2*B()) <= S()`}, 1) ; <(
   QE ; done,
   QE ; done,
@@ -115,25 +115,25 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 3b".
+ArchiveEntry "STTT Tutorial Example 3b"
 
 Description "A hybrid car model where the controller runs when some yet-to-be-discovered condition is met. The example illustrates how KeYmaera X can be used to discover constraints.".
 Title "Incomplete event-triggered car control".
 Link "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=11".
 
-Functions.
-  R A.
-  R B.
-  R S.
+Definitions
+  Real A;
+  Real B;
+  Real S;
 End.
 
-ProgramVariables.
-  R x.
-  R v.
-  R a.
+ProgramVariables
+  Real x;
+  Real v;
+  Real a;
 End.
 
-Problem.
+Problem
     v >= 0 & A > 0 & B > 0 & true & x <= S
  -> [
       {   ?true; a := A;
@@ -144,30 +144,30 @@ Problem.
     ] x <= S
 End.
 
-Tactic "Steps STTT Tutorial Example 3b".
+Tactic "Steps STTT Tutorial Example 3b"
 implyR('R); (andL('L)*); chase('R); unfold; doall(solve('R)) partial
 End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 4a".
+ArchiveEntry "STTT Tutorial Example 4a"
 
 Description "A hybrid car model where the controller runs when the car is about to run a stop sign. The example illustrates that certain modeling pitfalls result in vacuous proofs.".
 Title "Pitfalls in event-triggered car control: safety proof for correct controller".
 Link "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=12".
 
-Functions.
-  R A.
-  R V.
+Definitions
+  Real A;
+  Real V;
 End.
 
-ProgramVariables.
-  R x.
-  R v.
-  R a.
+ProgramVariables
+  Real x;
+  Real v;
+  Real a;
 End.
 
-Problem.
+Problem
     v <= V & A > 0
  -> [
       { {
@@ -180,7 +180,7 @@ Problem.
     ] v <= V
 End.
 
-Tactic "Proof STTT Tutorial Example 4a".
+Tactic "Proof STTT Tutorial Example 4a"
 implyR(1); (andL('L)*); loop({`v<=V()`}, 1); <(
   QE; done,
   QE; done,
@@ -192,24 +192,24 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 4b".
+ArchiveEntry "STTT Tutorial Example 4b"
 
 Description "A hybrid car model where the controller runs when the car is about to run a stop sign. The example illustrates that overly strong evolution domain constraints can result in a vacuous proof.".
 Title "Pitfalls in event-triggered car control: vacuous proof for faulty controller".
 Link "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=12".
 
 Functions.
-  R A.
-  R V.
+  Real A;
+  Real V;
 End.
 
-ProgramVariables.
-  R x.
-  R v.
-  R a.
+ProgramVariables
+  Real x;
+  Real v;
+  Real a;
 End.
 
-Problem.
+Problem
     v <= V & A > 0
  -> [
       { a := A;
@@ -219,7 +219,7 @@ Problem.
     ] v <= V
 End.
 
-Tactic "Proof STTT Tutorial Example 4b".
+Tactic "Proof STTT Tutorial Example 4b"
 implyR(1); (andL('L)*); loop({`v<=V()`}, 1); <(
   QE; done,
   QE; done,
@@ -229,24 +229,24 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 4c".
+ArchiveEntry "STTT Tutorial Example 4c"
 
 Description "A hybrid car model where the controller runs when the car is about to run a stop sign. The example illustrates the correct modeling idiom to prevent vacuous proofs from evolution domain constraints.".
 Title "Pitfalls in event-triggered car control: correct modeling idiom".
 Link "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=12".
 
-Functions.
-  R A.
-  R V.
+Definitions
+  Real A;
+  Real V;
 End.
 
-ProgramVariables.
-  R x.
-  R v.
-  R a.
+ProgramVariables
+  Real x;
+  Real v;
+  Real a;
 End.
 
-Problem.
+Problem
     v <= V & A > 0
  -> [
       { {
@@ -260,7 +260,7 @@ Problem.
     ] v <= V
 End.
 
-Tactic "Proof STTT Tutorial Example 4c".
+Tactic "Proof STTT Tutorial Example 4c"
 implyR(1); (andL('L)*); loop({`v<=V()`}, 1); <(
   QE; done,
   QE; done,
@@ -272,26 +272,27 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 5".
+ArchiveEntry "STTT Tutorial Example 5"
 
 Description "A hybrid car model where the controller runs periodically at some maximum time interval between executions. The requirement to prove is that the car never runs the stop sign.".
 Title "Time-triggered car control".
 Link "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=13".
-Functions.
-  R A.
-  R B.
-  R S.
-  R ep.
+
+Definitions
+  Real A;
+  Real B;
+  Real S;
+  Real ep;
 End.
 
-ProgramVariables.
-  R x.
-  R v.
-  R a.
-  R c.
+ProgramVariables
+  Real x;
+  Real v;
+  Real a;
+  Real c;
 End.
 
-Problem.
+Problem
     v >= 0 & A > 0 & B > 0 & x+v^2/(2*B) <= S & ep > 0
  -> [
       { {   ?x+v^2/(2*B) + (A/B+1)*(A/2*ep^2+ep*v) <= S; a := A;
@@ -305,7 +306,7 @@ Problem.
     ] x <= S
 End.
 
-Tactic "Proof STTT Tutorial Example 5".
+Tactic "Proof STTT Tutorial Example 5"
 implyR(1) ; (andL('L)*) ; loop({`v >= 0 & x+v^2/(2*B()) <= S()`}, 1) ; <(
   QE ; done,
   QE ; done,
@@ -321,27 +322,27 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 6".
+ArchiveEntry "STTT Tutorial Example 6"
 
 Description "A hybrid car model where the controller can make non-deterministic decisions on acceleration. The requirement to prove is that the controller never runs the stop sign.".
 Title "Non-deterministic acceleration".
 Link "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=14".
 
-Functions.
-  R A.
-  R B.
-  R S.
-  R ep.
+Definitions
+  Real A;
+  Real B;
+  Real S;
+  Real ep;
 End.
 
-ProgramVariables.
-  R x.
-  R v.
-  R a.
-  R c.
+ProgramVariables
+  Real x;
+  Real v;
+  Real a;
+  Real c;
 End.
 
-Problem.
+Problem
     v >= 0 & A > 0 & B > 0 & x+v^2/(2*B) <= S & ep > 0
  -> [
       { {   ?x+v^2/(2*B) + (A/B+1)*(A/2*ep^2+ep*v) <= S; a :=*; ?-B <= a & a <= A;
@@ -355,7 +356,7 @@ Problem.
     ] x <= S
 End.
 
-Tactic "Proof STTT Tutorial Example 6".
+Tactic "Proof STTT Tutorial Example 6"
 implyR(1) ; (andL('L)*) ; loop({`v >= 0 & x+v^2/(2*B()) <= S()`}, 1) ; <(
   QE ; done,
   QE ; done,
@@ -374,28 +375,28 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 7".
+ArchiveEntry "STTT Tutorial Example 7"
 
 Description "A hybrid car model with non-deterministic braking characteristics. The requirement to prove is that the car never runs a stop sign.".
 Title "Non-deterministic approximation of braking".
 Link "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=15".
 
-Functions.
-  R A.
-  R B.
-  R b.
-  R S.
-  R ep.
+Definitions
+  Real A;
+  Real B;
+  Real b;
+  Real S;
+  Real ep;
 End.
 
-ProgramVariables.
-  R x.
-  R v.
-  R a.
-  R c.
+ProgramVariables
+  Real x;
+  Real v;
+  Real a;
+  Real c;
 End.
 
-Problem.
+Problem
     v >= 0 & A > 0 & B >= b & b > 0 & x+v^2/(2*b) <= S & ep > 0
  -> [
       { {   ?x+v^2/(2*b) + (A/b+1)*(A/2*ep^2+ep*v) <= S; a :=*; ?-B <= a & a <= A;
@@ -409,7 +410,7 @@ Problem.
     ] x <= S
 End.
 
-Tactic "Proof STTT Tutorial Example 7".
+Tactic "Proof STTT Tutorial Example 7"
 implyR(1) ; (andL('L)*) ; loop({`v >= 0 & x+v^2/(2*b()) <= S()`}, 1) ; <(
   QE ; done,
   QE ; done,
@@ -425,32 +426,32 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 9a".
+ArchiveEntry "STTT Tutorial Example 9a"
 
 Description "A PD controlled car. The requirement to prove is that the Lyapunov function is a differential invariant.".
 Title "PD controller Lyapunov function".
 Link "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=17".
 
-Functions.
-  R Kp().
-  R Kd().
-  R xr().
-  R c().
+Definitions
+  Real Kp();
+  Real Kd();
+  Real xr();
+  Real c();
 End.
 
-ProgramVariables.
-  R x.
-  R v.
+ProgramVariables
+  Real x;
+  Real v;
 End.
 
-Problem.
+Problem
     v >= 0 & c() > 0 & Kp() = 2 & Kd() = 3 & 5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()
  -> [
       { x' = v, v' = -Kp()*(x-xr()) - Kd()*v }
     ] 5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()
 End.
 
-Tactic "Proof STTT Tutorial Example 9a".
+Tactic "Proof STTT Tutorial Example 9a"
 implyR(1); (andL('L)*); dC({`5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()`}, 1); <(
   dW(1); QE; done,
   dI(1); done
@@ -459,26 +460,26 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 9b".
+ArchiveEntry "STTT Tutorial Example 9b"
 
 Description "A PD controlled car with a trajectory generator for setting target speeds. The requirement to prove is that the car never runs a stop sign.".
 Title "PD controlled car".
 Link "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=18".
 
-Functions.
-  R Kp.
-  R Kd.
-  R S.
+Definitions
+  Real Kp;
+  Real Kd;
+  Real S;
 End.
 
-ProgramVariables.
-  R x.
-  R xm.
-  R xr.
-  R v.
+ProgramVariables
+  Real x;
+  Real xm;
+  Real xr;
+  Real v;
 End.
 
-Problem.
+Problem
     v >= 0 & xm <= x & x <= S & xr = (xm + S)/2 & Kp = 2 & Kd = 3
            & 5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S - xm)/2)^2
  -> [ { {  xm := x;
@@ -491,7 +492,7 @@ Problem.
     ] x <= S
 End.
 
-Tactic "Proof STTT Tutorial Example 9b".
+Tactic "Proof STTT Tutorial Example 9b"
 implyR(1); (andL('L)*); loop({`v >= 0 & xm <= x & xr = (xm + S())/2 & 5/4*(x-xr)^2 + (x-xr)*v/2 + v^2/4 < ((S() - xm)/2)^2`}, 1); <(
   QE; done,
   QE; done,
@@ -519,35 +520,34 @@ End.
 
 End.
 
-ArchiveEntry "STTT Tutorial Example 10".
+ArchiveEntry "STTT Tutorial Example 10"
 
 Description "A car with steering. The requirement to prove is that the car always stays inside the lane boundaries.".
 Title "Steering car".
 Link "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=20".
 
-Functions.
-  R A.
-  R B.
-  R b.
-  R ep.
-  R lw.
-  R ly.
-  R abs(R).
+Definitions
+  Real A;
+  Real B;
+  Real b;
+  Real ep;
+  Real lw;
+  Real ly;
 End.
 
-ProgramVariables.
-  R x.
-  R y.
-  R v.
-  R a.
-  R r.
-  R dx.
-  R dy.
-  R w.
-  R c.
+ProgramVariables
+  Real x;
+  Real y;
+  Real v;
+  Real a;
+  Real r;
+  Real dx;
+  Real dy;
+  Real w;
+  Real c;
 End.
 
-Problem.
+Problem
     v >= 0 & A > 0 & B >= b & b > 0 & ep > 0 & lw > 0 & y = ly & r != 0 & dx^2 + dy^2 = 1
            & abs(y-ly) + v^2/(2*b) < lw
  -> [
@@ -564,18 +564,18 @@ Problem.
     ] abs(y-ly) < lw
 End.
 
-Tactic "Proof STTT Tutorial Example 10".
+Tactic "Proof STTT Tutorial Example 10"
 implyR(1) ; (andL('L)*) ; loop({`v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()`}, 1) <(
   QE ; done,
   QE ; done,
   chase('R) ; normalize ; <(
-    hideL(-9) ; dC({`c>=0`}, 1) ; <(
+    hideL(-15=={`abs(y-ly())+v^2/(2*b()) < lw()`}) ; dC({`c>=0`}, 1) ; <(
       dC({`dx^2+dy^2=1`}, 1) ; <(
         dC({`v=old(v)+a*c`}, 1) ; <(
           dC({`-c*(v-a/2*c) <= y - old(y) & y - old(y) <= c*(v-a/2*c)`}, 1) ; <(
             (andL('L)*) ; dW(1) ;
             (((andL('L)|(orR('R)|(implyR('R)|(notL('L)|notR('R))))))*) ;
-            transformEquality({`ep()=c`}, -9=={`abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()`}) ;
+            transformEquality({`ep()=c`}, -6=={`abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()`}) ;
             prop ; doall(smartQE; done),
             dI(1) ; done
           ),

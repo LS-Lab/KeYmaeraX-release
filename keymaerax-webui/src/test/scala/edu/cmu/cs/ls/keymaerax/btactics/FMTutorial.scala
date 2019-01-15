@@ -29,7 +29,7 @@ class FMTutorial extends TacticTestBase {
     val entry = KeYmaeraXArchiveParser.getEntry("Formal Methods Tutorial Example 2", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/fm/fm.kyx")).mkString).get
     val modelContent = entry.fileContent
-    val tactic = entry.tactics.head._2
+    val tactic = entry.tactics.head._3
     val result = db.proveBy(modelContent, tactic)
     result.subgoals should have size 2
     result.subgoals(0) shouldBe "==> m-x>=A/2*ep^2+ep*v".asSequent

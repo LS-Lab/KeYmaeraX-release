@@ -15,6 +15,7 @@ import scala.collection.immutable._
   * From Lectures 10/11
   * Created by yongkiat on 2/3/16.
   */
+@edu.cmu.cs.ls.keymaerax.tags.SlowTest
 class InvariantArithTests extends TacticTestBase {
 
 

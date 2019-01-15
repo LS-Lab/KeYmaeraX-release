@@ -42,6 +42,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   }
 
   "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { qeTool =>
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
     DerivedAxioms.prepopulateDerivedLemmaDatabase()
     val cache = new File(Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH))
     val versionFile = new File(cache.getAbsolutePath + File.separator + "VERSION")
@@ -221,17 +222,35 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove >2!=" in withMathematica { qeTool => check(greaterImpliesNotEqual)}
   it should "prove > monotone" in withMathematica { qeTool => check(greaterMonotone)}
 
-  it should "prove abs" in withMathematica { qeTool => check(absDef)}
-  it should "prove min" in withMathematica { qeTool => check(minDef)}
-  it should "prove max" in withMathematica { qeTool => check(maxDef)}
+  it should "prove abs" in withMathematica { _ =>
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
+    check(absDef)
+  }
+  it should "prove min" in withMathematica { _ =>
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
+    check(minDef)
+  }
+  it should "prove max" in withMathematica { _ =>
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
+    check(maxDef)
+  }
   it should "prove & recusor" in withMathematica { qeTool => check(andRecursor)}
   it should "prove | recursor" in withMathematica { qeTool => check(orRecursor)}
   it should "prove <= both" in withMathematica { qeTool => check(intervalLEBoth)}
   it should "prove < both" in withMathematica { qeTool => check(intervalLBoth)}
   it should "prove neg<= up" in withMathematica { qeTool => check(intervalUpNeg)}
-  it should "prove abs<= up" in withMathematica { qeTool => check(intervalUpAbs)}
-  it should "prove max<= up" in withMathematica { qeTool => check(intervalUpMax)}
-  it should "prove min<= up" in withMathematica { qeTool => check(intervalUpMin)}
+  it should "prove abs<= up" in withMathematica { _ =>
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
+    check(intervalUpAbs)
+  }
+  it should "prove max<= up" in withMathematica { _ =>
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
+    check(intervalUpMax)
+  }
+  it should "prove min<= up" in withMathematica { _ =>
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
+    check(intervalUpMin)
+  }
   it should "prove +<= up" in withMathematica { qeTool => check(intervalUpPlus)}
   it should "prove -<= up" in withMathematica { qeTool => check(intervalUpMinus)}
   it should "prove *<= up" in withMathematica { qeTool => check(intervalUpTimes)}
@@ -282,9 +301,18 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "tactically prove DI differential invariant" in {check(DIinvariant)}
   it should "tactically prove DG differential pre-ghost" in {check(DGpreghost)}
   it should "tactically prove DW differential weakening" in {check(DWeakening)}
-  it should "tactically prove abs" in withMathematica { qeTool => check(absDef)}
-  it should "tactically prove min" in withMathematica { qeTool => check(minDef)}
-  it should "tactically prove max" in withMathematica { qeTool => check(maxDef)}
+  it should "tactically prove abs" in withMathematica { _ =>
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
+    check(absDef)
+  }
+  it should "tactically prove min" in withMathematica { _ =>
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
+    check(minDef)
+  }
+  it should "tactically prove max" in withMathematica { _ =>
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
+    check(maxDef)
+  }
 
   "Mathematica" should "derive compatibility axiom dgZeroEquilibrium" in withMathematica { qeTool =>
     import TactixLibrary._

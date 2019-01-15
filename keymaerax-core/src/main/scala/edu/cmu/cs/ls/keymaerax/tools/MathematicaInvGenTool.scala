@@ -19,7 +19,7 @@ import scala.util.Try
  * @author Andrew Sogokon, based on QETool by Nathan Fulton and Stefan Mitsch
  */
 class MathematicaInvGenTool(override val link: MathematicaLink)
-  extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedK2MConverter(), PegasusM2KConverter)
+  extends BaseKeYmaeraMathematicaBridge[KExpr](link, new UncheckedBaseK2MConverter(), PegasusM2KConverter)
     with InvGenTool with Logging {
 
   init()
@@ -88,6 +88,71 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
       case False => false
       case _ => throw ToolException("Expected true/false from Pegasus call but got expression: " +
         result.prettyString)
+    }
+  }
+
+  override def refuteODE(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, KExpr]] = {
+    require(postCond.isFOL, "Unable to refute ODE, expected FOL post conditions but got " + postCond.prettyString)
+    require(assumptions.forall(_.isFOL), "Unable to refute ODE, expected FOL assumptions but got " + assumptions)
+
+    // LHS of ODEs
+    val odevars = DifferentialHelper.getPrimedVariables(ode)
+
+    val rhs = DifferentialHelper.atomicOdes(ode).map(o => o.e)
+    // All things that need to be considered as parameters (or variables)
+    val fmlvars =
+      (assumptions.+:(postCond).+:(ode.constraint)).flatMap(f => StaticSemantics.symbols(f))
+    val trmvars = rhs.flatMap(t => StaticSemantics.symbols(t))
+
+    val vars = (trmvars ++ fmlvars).distinct.filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true}).sorted
+      .map(e => e match {
+        case f@Function(_,_,Unit,_,_) =>
+          FuncOf(f,Nothing) //for k2m conversion to work reliably on constants
+        case _ => e
+      } )
+
+    val stringodeVars = "{" + odevars.map(k2m(_)).mkString(", ") + "}"
+    val stringVars = "{" + vars.map(k2m(_)).mkString(", ") + "}"
+    val vectorField = "{" + rhs.map(k2m(_)).mkString(", ") + "}"
+    val problem =
+      k2m(assumptions.reduceOption(And).getOrElse(True)) + "," +
+      k2m(postCond) + "," +
+      vectorField + ", " +
+      stringodeVars + ", " +
+      k2m(ode.constraint) + ", " +
+      stringVars
+
+    timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
+
+    val command = s"""
+                     |Needs["Refute`","$pegasusPath/Refute.m"];
+                     |Refute`RefuteS[$problem]""".stripMargin
+
+    try {
+      val (output, result) = runUnchecked(command, CEXM2KConverter)
+      logger.debug("Counterexample: " + result + " from raw output " + output)
+      result match {
+        case Left(cex: Formula) => cex match {
+          case False =>
+            logger.debug("No counterexample, Mathematica returned: " + cex.prettyString)
+            None
+          case _ =>
+            logger.debug("Counterexample " + cex.prettyString)
+            Some(FormulaTools.conjuncts(cex).map({
+              case Equal(name: Variable, value) => name -> value
+              case Equal(name: DifferentialSymbol, value) => name -> value
+              case Equal(FuncOf(fn, _), value) => fn -> value
+              case Equiv(PredOf(fn, _), value) => fn -> value
+            }).toMap)
+        }
+        case _ =>
+          logger.debug("No counterexample, Mathematica returned: " + result)
+          None
+      }
+    } catch {
+      case ex: ConversionException =>
+        logger.warn("Conversion exception", ex)
+        None
     }
   }
 

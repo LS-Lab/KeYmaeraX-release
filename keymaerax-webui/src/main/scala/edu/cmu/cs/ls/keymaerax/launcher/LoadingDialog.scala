@@ -6,17 +6,21 @@ import javax.swing.{JLabel, JProgressBar, JWindow}
 import edu.cmu.cs.ls.keymaerax.core
 import org.apache.logging.log4j.scala.Logging
 
-/**
+/** The KeYmaera X loading splash screen.
   * @author Nathan Fulton
   */
 trait LoadingDialog {
-  /** The initial message displayed in the dialog. */
+  /** The initial welcome message displayed in the dialog. */
   val initialMsg: String
 
-  /** Updates the status with a `progress` indicator and a message `msg`. */
+  /** Updates the status with a `progress` indicator and a message `msg`.
+    *
+    * @param progress the percentage points of progress that are being made now.
+    *                 Overall, the percentage should sum to 100, at which point the splash screen will be closed automatically.
+    * */
   def addToStatus(progress: Int, msg: Option[String]): Unit
 
-  /** Closes the dialog. */
+  /** Closes the splash screen dialog. */
   def close(): Unit
 }
 
@@ -29,7 +33,9 @@ object LoadingDialogFactory {
   def apply(): LoadingDialog = {
     if (theDialog.isEmpty) {
       theDialog =
-        if (java.awt.GraphicsEnvironment.isHeadless) Some(new CLILoadingDialog())
+        if (java.awt.GraphicsEnvironment.isHeadless ||
+          (System.getenv().containsKey("HyDRA_SSL") &&
+           System.getenv("HyDRA_SSL").equals("on"))) Some(new CLILoadingDialog())
         else Some(new GraphicalLoadingDialog())
     }
     theDialog.get
@@ -38,6 +44,8 @@ object LoadingDialogFactory {
   def close(): Unit = theDialog = None
 }
 
+/** Headless command line interface version of loading dialog splash screen.
+  */
 class CLILoadingDialog() extends LoadingDialog with Logging {
   private var status: Int = 0
   override val initialMsg: String = "Headless KeYmaera X Server " + core.VERSION + " is Loading... "
@@ -55,7 +63,7 @@ class CLILoadingDialog() extends LoadingDialog with Logging {
 }
 
 /**
-  * Splash screen indicator that the user interface is in the process of loading.
+  * GUI version of splash screen indicator that the user interface is in the process of loading.
   */
 class GraphicalLoadingDialog() extends LoadingDialog {
   private val titleMsg: String = "KeYmaera X " + core.VERSION
@@ -78,6 +86,7 @@ class GraphicalLoadingDialog() extends LoadingDialog {
   window.setVisible(true)
 
   override def addToStatus(x : Int, msg: Option[String]): Unit = {
+    //println("PROGRESS: " + x + "\t" + msg)
     progressLabel.setText(msg.getOrElse(initialMsg))
     val newValue = progressBar.getValue + x
     progressBar.setValue(newValue)

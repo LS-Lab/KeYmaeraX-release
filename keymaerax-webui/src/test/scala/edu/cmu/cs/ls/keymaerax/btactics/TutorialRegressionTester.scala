@@ -13,8 +13,8 @@ import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Lemma, Program}
 import edu.cmu.cs.ls.keymaerax.hydra.{DatabasePopulator, TempDBTools}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXProblemParser}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.scalatest.AppendedClues
@@ -37,7 +37,11 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
       entries.map(e => (tutorialName, e.name, e.model, e.description, e.title, e.link, e.tactic, e.kind)):_*)
   }
 
-  private val tutorialEntries = table({
+  private def table(tactics: List[(String, String, Boolean)]) = {
+    Table(("Tactic name", "Tactic content"), tactics.map(t => (t._1, t._2)):_*)
+  }
+
+  private lazy val tutorialEntries = table({
     println("Reading " + url)
     if (url.endsWith(".json")) DatabasePopulator.readTutorialEntries(url)
     else if (url.endsWith(".kya") || url.endsWith(".kyx")) DatabasePopulator.readKya(url)
@@ -46,13 +50,15 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
 
   tutorialName should "parse all models" in {
     forEvery (tutorialEntries) { (tutorialName, name, model, _, _, _, _, _) =>
-      withClue(tutorialName + "/" + name) { KeYmaeraXProblemParser(model) }
+      withClue(tutorialName + "/" + name) { KeYmaeraXArchiveParser.parseProblem(model, parseTactics=false) }
     }
   }
 
   it should "parse all tactics" in {
-    forEvery (tutorialEntries.filter(_._7.isDefined)) { (tutorialName, name, _, _, _, _, tactic, _) =>
-      withClue(tutorialName + "/" + name + "/" + tactic.get._1) { BelleParser(tactic.get._2) }
+    forEvery (tutorialEntries.filter(_._7.nonEmpty)) { (tutorialName, name, _, _, _, _, tactics, _) =>
+      forEvery (table(tactics)) { ( tname, ttext) =>
+        withClue(tutorialName + "/" + name + "/" + tname) { BelleParser(ttext) }
+      }
     }
   }
 
@@ -68,12 +74,14 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
   it should "try all Mathematica entries also with Z3" in withZ3 { tool => withDatabase { db =>
     val qeFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
 
-    val mathematicaEntries = tutorialEntries.filter(e => e._7.isDefined && e._7.get._3 &&
-        qeFinder.findAllMatchIn(e._7.get._2).exists(p => p.group("toolName") == "Mathematica"))
+    val mathematicaEntries = tutorialEntries.
+      flatMap(e => e._7.filter(t => t._3 && qeFinder.findAllMatchIn(t._2).exists(_.group("toolName") == "Mathematica")).map(t =>
+        (e._1, e._2, e._3, e._4, e._5, e._6, t::Nil, e._8)
+      ))
 
     tool.setOperationTimeout(30) // avoid getting stuck
     forEvery (mathematicaEntries) { (_, name, model, _, _, _, tactic, kind) =>
-      val t = (tactic.get._1, qeFinder.replaceAllIn(tactic.get._2, "QE"), tactic.get._3)
+      val t = (tactic.head._1, qeFinder.replaceAllIn(tactic.head._2, "QE"), tactic.head._3)
       try {
         runEntry(name, model, kind, t, db)
         fail("Now works with Z3: " + tutorialName + "/" + name + "/" + t._1)
@@ -89,15 +97,15 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
     // finds all specific QE({`tool`}) entries, but ignores the generic QE that works with any tool
     val qeFinder = """QE\(\{`([^`]+)`\}\)""".r("toolName")
 
-    tutorialEntries.
-      filterNot(e => e._7.isDefined && e._7.get._3 &&
-        qeFinder.findAllMatchIn(e._7.get._2).forall(p => p.group("toolName") == tool)).
-      foreach(e => println(s"QE tool mismatch: skipping ${e._1}"))
+    val skipEntries = tutorialEntries.filter(e => e._7.nonEmpty && !e._7.exists(t => t._3 && qeFinder.findAllMatchIn(t._2).forall(p => p.group("toolName") == tool)))
+    skipEntries.foreach(e => println(s"QE tool mismatch: skipping ${e._1}"))
 
-    forEvery (tutorialEntries.
-      filter(e => e._7.isDefined && e._7.get._3 &&
-        qeFinder.findAllMatchIn(e._7.get._2).forall(p => p.group("toolName") == tool))) { (_, name, model, _, _, _, tactic, kind) =>
-      runEntry(name, model, kind, tactic.get, db)
+    val checkEntries = tutorialEntries.
+      flatMap(e => e._7.filter(t => t._3 && qeFinder.findAllMatchIn(t._2).forall(p => p.group("toolName") == tool)).map(t =>
+        (e._1, e._2, e._3, e._4, e._5, e._6, t::Nil, e._8)
+      ))
+    forEvery (checkEntries) { (_, name, model, _, _, _, tactic, kind) =>
+      runEntry(name, model, kind, tactic.head, db)
     }
   }
 
@@ -144,10 +152,10 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
     val generator = new ConfigurableGenerator[Formula]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ inv)))
-    val (decls, _) = KeYmaeraXProblemParser.parseProblem(model)
+    val entry = KeYmaeraXArchiveParser.parseProblem(model, parseTactics=false)
     TactixLibrary.invGenerator = generator
     KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {}) //@note cleanup for separation between tutorial entries
-    (decls, generator)
+    (entry.defs, generator)
   }
 
 }

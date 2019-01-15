@@ -25,7 +25,7 @@ object SequentCalculus extends SequentCalculus
   * Sequent Calculus for propositional and first-order logic.
   * @author Andre Platzer
   * @author Stefan Mitsch
-  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-008-9103-8 Differential dynamic logic for hybrid systems]]. Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
   * @see [[edu.cmu.cs.ls.keymaerax.core.Rule]]
   */
 trait SequentCalculus {
@@ -204,7 +204,7 @@ trait SequentCalculus {
     }
   })
   //@note do not forward to closeIdWith (performance)
-  val closeId           : DependentTactic = new DependentTactic("closeId") {
+  val closeId           : DependentTactic = new DependentTactic("id") {
     override def computeExpr(v : BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
         require(provable.subgoals.size == 1, "Expects exactly 1 subgoal, but got " + provable.subgoals.size + " subgoals")

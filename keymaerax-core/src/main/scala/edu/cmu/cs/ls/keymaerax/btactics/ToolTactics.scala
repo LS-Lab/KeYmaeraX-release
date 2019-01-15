@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
@@ -7,12 +8,9 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalF
 import edu.cmu.cs.ls.keymaerax.btactics.PropositionalTactics.toSingleFormula
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
-import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
-import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger.LogConfig
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tools.Tool
 
 import scala.math.Ordering.Implicits._
 import scala.collection.immutable._
@@ -29,24 +27,51 @@ private object ToolTactics {
 
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(order: Seq[NamedSymbol] = Nil)(qeTool: => QETool): BelleExpr = Idioms.NamedTactic("QE", {
-    val prepareAndRcf = toSingleFormula & assertT(_.succ.head.isFOL, "QE on FOL only") &
+    val closureAndRcf = toSingleFormula &
       FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool) &
-      (done | ("ANON" by ((s: Sequent) =>
+      Idioms.doIf(!_.isProved)("ANON" by ((s: Sequent) =>
         if (s.succ.head == False) label(BelleLabels.QECEX)
-        else DebuggingTactics.done("QE was unable to prove: invalid formula")))
+        else DebuggingTactics.done("QE was unable to prove: invalid formula"))
         )
 
-    QELogger.getLogTactic &
-    (done | //@note don't fail QE if already proved
-      (SaturateTactic(alphaRule) &
-        (close |
-          (SaturateTactic(EqualityTactics.atomExhaustiveEqL2R('L)) &
-            hidePredicates &
-            (prepareAndRcf | EqualityTactics.expandAll & prepareAndRcf)
-          )
+    val convertInterpretedSymbols = Configuration.getOption(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse("false").toBoolean
+    val expandAndRcf =
+      if (convertInterpretedSymbols) closureAndRcf | EqualityTactics.expandAll & closureAndRcf
+      else EqualityTactics.expandAll &
+        assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, interpreted) => interpreted case _ => false }), "Aborting QE since not all interpreted functions are expanded") &
+        closureAndRcf
+
+    Idioms.doIf(!_.isProved)(
+      assertT(_.isFOL, "QE on FOL only") &
+      allTacticChase()(notL, andL, notR, implyR, orR) &
+        Idioms.doIf(!_.isProved)(
+          close | hidePredicates & EqualityTactics.applyEqualities & hideTrivialFormulas & expandAndRcf
         )
       )
-    )
+  })
+
+  /** Hides duplicate formulas (expensive because needs to sort positions). */
+  private val hideDuplicates = "ANON" by ((seq: Sequent) => {
+    val hidePos = seq.zipWithPositions.map(f => (f._1, f._2.isAnte, f._2)).groupBy(f => (f._1, f._2)).
+      filter({ case (_, l) => l.size > 1 })
+    val tactics = hidePos.values.flatMap({ case _ :: tail => tail.map(t => (t._3, hide(t._3))) }).toList
+    tactics.sortBy({ case (pos, _) => pos.index0 }).map(_._2).reverse.reduceOption[BelleExpr](_&_).getOrElse(skip)
+  })
+
+  /** Hides useless trivial true/false formulas. */
+  private val hideTrivialFormulas = "ANON" by ((seq: Sequent) => {
+    val hidePos = seq.zipWithPositions.filter({
+      case (True, pos) => pos.isAnte
+      case (False, pos) => pos.isSucc
+      case (Equal(l, r), pos) => pos.isAnte && l == r
+      case (LessEqual(l, r), pos) => pos.isAnte && l == r
+      case (GreaterEqual(l, r), pos) => pos.isAnte && l == r
+      case (NotEqual(l, r), pos) => pos.isSucc && l == r
+      case (Less(l, r), pos) => pos.isSucc && l == r
+      case (Greater(l, r), pos) => pos.isSucc && l == r
+      case _ => false
+    }).map(p => hide(p._2)).reverse
+    hidePos.reduceOption[BelleExpr](_&_).getOrElse(skip)
   })
 
   def fullQE(qeTool: => QETool): BelleExpr = fullQE()(qeTool)

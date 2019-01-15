@@ -2,8 +2,10 @@ package edu.cmu.cs.ls.keymaerax.tacticsinterface
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.hydra.{ProofPOJO, ExecutionStepPOJO, DBAbstraction, ExecutionStepStatus}
+import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, ExecutionStepPOJO, ExecutionStepStatus, ProofPOJO}
 import edu.cmu.cs.ls.keymaerax.hydra.ExecutionStepStatus.ExecutionStepStatus
+
+import scala.collection.mutable.ListBuffer
 
 /**
   * Created by bbohrer on 11/20/15.
@@ -65,7 +67,7 @@ class TraceRecordingListener(db: DBAbstraction,
   var youngestSibling: Option[Int] = initialSibling
   var node: TraceNode = null
   var isDead: Boolean = false
-  var nodesWritten: List[TraceNode] = Nil
+  val nodesWritten: ListBuffer[TraceNode] = ListBuffer()
 
   /* Debug info: Records how deep inside the tree of begin-end pairs we are */
   var depth: Int = 0
@@ -88,8 +90,17 @@ class TraceRecordingListener(db: DBAbstraction,
         }
       }
       if (parent == null || recursive) {
+        // delete recorded steps that would become unwanted siblings of the current step
+        // (steps can succeed and be later undone with a failing & done; problematic when in a | combinator)
+        if (node.sibling.isDefined) {
+          val undoSiblings = db.getPlainStepSuccessors(proofId, node.sibling.get, node.branchOrder)
+          undoSiblings.foreach(f => db.deleteExecutionStep(proofId, f.stepId.get))
+        } else db.getFirstExecutionStep(proofId) match {
+          case Some(undo) if undo.branchOrder == node.branchOrder => db.deleteExecutionStep(proofId, undo.stepId.get)
+          case _ => //
+        }
         node.stepId = Some(db.addExecutionStep(node.asPOJO))
-        nodesWritten = node :: nodesWritten
+        nodesWritten.prepend(node)
       }
     }
   }

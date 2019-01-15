@@ -12,7 +12,6 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3.{context, formulaIndex}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
@@ -127,21 +126,35 @@ private object DifferentialTactics extends Logging {
     require(auto == 'full || auto == 'none || auto == 'diffInd, "Expected one of ['none, 'diffInd, 'full] automation values, but got " + auto)
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
       override def computeExpr(sequent: Sequent): BelleExpr = {
-        require(pos.isSucc && (sequent.sub(pos) match {
+        val diFml = sequent.sub(pos)
+
+        require(pos.isSucc && (diFml match {
           case Some(Box(_: ODESystem, _)) => true
           case _ => false
-        }), "diffInd only at ODE system in succedent, but got " + sequent.sub(pos))
+        }), "diffInd only at ODE system in succedent, but got " + diFml)
+
+        val expand = diFml match {
+          case Some(Box(_, post)) if StaticSemantics.symbols(post).exists(
+            { case Function(_, _, _, _, interpreted) => interpreted case _ => false }) =>
+            // expand all interpreted function symbols below pos.1
+            EqualityTactics.expandAllAt(pos ++ PosInExpr(1::Nil))
+          case _ => skip
+        }
+
         if (pos.isTopLevel) {
-          val t = DI(pos) &
+          val t = expand & DI(pos) &
             implyR(pos) & andR(pos) & Idioms.<(
-              if (auto == 'full) ToolTactics.hideNonFOL & QE & done else skip,
+              if (auto == 'full) ToolTactics.hideNonFOL & (QE & done | DebuggingTactics.done("Differential invariant must hold in the beginning"))
+                 else skip,
               if (auto != 'none) {
                 //@note derive before DE to keep positions easier
                 derive(pos ++ PosInExpr(1 :: Nil)) &
                 DE(pos) &
-                (if (auto == 'full) Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) &
+                (if (auto == 'full)
+                  (Dassignb(pos ++ PosInExpr(1::Nil))*getODEDim(sequent, pos) | DebuggingTactics.error("After deriving, the right-hand sides of ODEs cannot be substituted into the postcondition")) &
                   //@note DW after DE to keep positions easier
-                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & ToolTactics.hideNonFOL & QE & done
+                  (if (hasODEDomain(sequent, pos)) DW(pos) else skip) & abstractionb(pos) & ToolTactics.hideNonFOL &
+                    (QE & done | DebuggingTactics.done("Differential invariant must be preserved"))
                  else {
                   assert(auto == 'diffInd)
                   (if (hasODEDomain(sequent, pos)) DW(pos) else skip) &
@@ -151,7 +164,7 @@ private object DifferentialTactics extends Logging {
           if (auto == 'full) Dconstify(t)(pos)
           else t
         } else {
-          val t = DI(pos) &
+          val t = expand & DI(pos) &
             (if (auto != 'none) {
               shift(PosInExpr(1 :: 1 :: Nil), "ANON" by ((pos: Position, sequent: Sequent) =>
                 //@note derive before DE to keep positions easier
@@ -280,32 +293,14 @@ private object DifferentialTactics extends Logging {
       case Some(Diamond(os: ODESystem, _)) => (os, DCd _)
     }
 
-    val ov = oldVars(f)
+    val ov = FormulaTools.argsOf("old", f)
     if (ov.isEmpty) {
       if (FormulaTools.conjuncts(f).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip else dc(f)(pos)
     } else {
-      var freshOld = TacticHelper.freshNamedSymbol(Variable("old"), origSeq)
+      var freshOld: Variable = TacticHelper.freshNamedSymbol(Variable("old"), origSeq)
       val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {
-        val (ghost: Variable, ghostPos: Option[Position]) = old match {
-          case v: Variable =>
-            origSeq.ante.zipWithIndex.find({
-              //@note heuristic to avoid new ghosts on repeated old(v) usage
-              case (Equal(x0: Variable, x: Variable), _) => v==x && x0.name==x.name
-              case _ => false
-            }).map[(Variable, Option[Position])]({ case (Equal(x0: Variable, _), i) => (x0, Some(AntePosition.base0(i))) }).
-              getOrElse((TacticHelper.freshNamedSymbol(v, origSeq), None))
-          case _ =>
-            origSeq.ante.zipWithIndex.find({
-              //@note heuristic to avoid new ghosts on repeated old(v) usage
-              case (Equal(x0: Variable, t: Term), _) => old==t && x0.name == "old"
-              case _ => false
-            }).map[(Variable, Option[Position])]({ case (Equal(x0: Variable, _), i) => (x0, Some(AntePosition.base0(i))) }).
-              getOrElse({
-                val fo = freshOld
-                freshOld = Variable("old", Some(freshOld.index.getOrElse(-1) + 1))
-                (fo, None)
-              })
-        }
+        val (ghost: Variable, ghostPos: Option[Position], nextCandidate) = TacticHelper.findSubst(old, freshOld, origSeq)
+        freshOld = nextCandidate
         (old -> ghost,
           ghostPos match {
             case None if pos.isTopLevel => discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) &
@@ -315,50 +310,26 @@ private object DifferentialTactics extends Logging {
           })
       }).toList
       val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
-      val oldified = replaceOld(f, ghosts.map(_._1).toMap)
+      val oldified = SubstitutionHelper.replaceFn("old", f, ghosts.map(_._1).toMap)
       if (FormulaTools.conjuncts(oldified).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip
       else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(pos ++ PosInExpr(List.fill(posIncrements)(1)))
     }
   })
-
-  /** Returns a set of variables that are arguments to a special 'old' function */
-  private def oldVars(fml: Formula): Set[Term] = {
-    var oldVars = Set[Term]()
-    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
-      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-        case FuncOf(Function("old", None, Real, Real, false), t: Term) => oldVars += t; Left(None)
-        case _ => Left(None)
-      }
-    }, fml)
-    oldVars
-  }
-
-  /** Replaces any old(.) with . in formula fml */
-  private def replaceOld(fml: Formula, ghostsByOld: Map[Term, Variable]): Formula = {
-    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
-      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-        case FuncOf(Function("old", None, Real, Real, false), t: Term) => Right(ghostsByOld(t))
-        case _ => Left(None)
-      }
-    }, fml) match {
-      case Some(g) => g
-    }
-  }
 
   //Domain constraint refinement step for box/diamond ODEs on either (top-level) side of a sequent
   //Hides other succedents in the refinement subgoal by default, e.g.:
   // G|- [x'=f(x)&R]P, D     G|- [x'=f(x)&Q]R
   // --- dR
   // G|- [x'=f(x)&Q]P, D
-  def diffRefine(f:Formula,hide:Boolean=true) : DependentPositionTactic =
-    "diffRefine" byWithInputs (f::hide::Nil,(pos,sequent) => {
-    require(pos.isTopLevel, "diffRefine only at top-level succedents/antecedents")
+  def diffRefine(f: Formula, hide: Boolean=true): DependentPositionTactic =
+    "dR" byWithInputs (f::/* todo unsupported argument type (argument not used from UI yet) hide::*/Nil,(pos,sequent) => {
+    require(pos.isTopLevel, "dR only at top-level succedents/antecedents")
     val (newFml,ax) = sequent.sub(pos) match {
-      case Some(Diamond(sys:ODESystem,post)) => (Diamond(ODESystem(sys.ode,f),post),DerivedAxioms.DiffRefineDiamond.fact)
-      case Some(Box(sys:ODESystem,post)) => (Box(ODESystem(sys.ode,f),post),DerivedAxioms.DiffRefine.fact)
-      case _ => throw new IllegalArgumentException("diffRefine only for box/diamond ODEs")
+      case Some(Diamond(sys: ODESystem, post)) => (Diamond(ODESystem(sys.ode,f),post),DerivedAxioms.DiffRefineDiamond.fact)
+      case Some(Box(sys: ODESystem, post)) => (Box(ODESystem(sys.ode,f),post),DerivedAxioms.DiffRefine.fact)
+      case _ => throw new IllegalArgumentException("dR only for box/diamond ODEs")
     }
-    val cpos = if(pos.isSucc) Fixed(pos) else LastSucc(0)
+    val cpos = if (pos.isSucc) Fixed(pos) else LastSucc(0)
 
     cutLR(newFml)(pos) <(skip,useAt(ax,PosInExpr(1::Nil))(cpos) & (if(hide) cohideOnlyR(cpos) else skip))
   })
@@ -420,12 +391,12 @@ private object DifferentialTactics extends Logging {
    */
  def DconstV : DependentPositionTactic = "DconstV" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel, "DconstV only at top-level positions")
-    //TODO: possibly the postcondition could be simplified
     val dom = seq.sub(pos) match {
       case Some(Box(ODESystem(_, dom), p)) => dom
       case Some(Diamond(ODESystem(_, dom), p)) => dom
       case _ => throw new BelleThrowable("DconstV adds constants into domain constraint for box/diamond ODEs")
     }
+
     //The constant context
     val constCtxt = TacticHelper.propertiesOfConstants(seq,pos.checkTop)
     if(constCtxt.isEmpty)
@@ -522,12 +493,17 @@ private object DifferentialTactics extends Logging {
               (Variable("y_",None,Real), y) ::
                 (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
             useAt("DG differential ghost constant", PosInExpr(0::Nil), subst)(pos)
+          case (_, Neg(Number(n))) =>
+            val subst = (us: Option[Subst]) => us.getOrElse(throw BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
+              (Variable("y_",None,Real), y) ::
+                (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a) ::
+                (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), Number(-n)) :: Nil)
+            useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
           case _ =>
             val subst = (us: Option[Subst]) => us.getOrElse(throw BelleUnsupportedFailure("DG expects substitution result from unification")) ++ RenUSubst(
               (Variable("y_",None,Real), y) ::
                 (UnitFunctional("a", Except(Variable("y_", None, Real)), Real), a) ::
                 (UnitFunctional("b", Except(Variable("y_", None, Real)), Real), b) :: Nil)
-
             useAt("DG differential ghost", PosInExpr(0::Nil), subst)(pos)
         }
     }
@@ -651,7 +627,7 @@ private object DifferentialTactics extends Logging {
         val rewriteExistingGhosts = sequent.ante.zipWithIndex.filter({
           case (Equal(l: Variable, r: Variable), _) => primedVars.contains(r) && !primedVars.contains(l)
           case _ => false
-        }).reverse.map({ case (_, i) => exhaustiveEqR2L(hide=true)(AntePosition.base0(i)) }).
+        }).reverse.map({ case (_, i) => exhaustiveEqR2L(AntePosition.base0(i)) & hideL(AntePosition.base0(i)) }).
           reduceOption[BelleExpr](_&_).getOrElse(skip)
 
 
@@ -660,7 +636,7 @@ private object DifferentialTactics extends Logging {
           val storePrimedVars = primedVars.filter(anteSymbols.contains)
           storePrimedVars.
             map(discreteGhost(_)(pos)).reduceOption[BelleExpr](_&_).getOrElse(skip) &
-            (DLBySubst.assignEquality(pos) & exhaustiveEqR2L(hide=true)('Llast))*storePrimedVars.size
+            (DLBySubst.assignEquality(pos) & exhaustiveEqR2L('Llast) & hideL('Llast))*storePrimedVars.size
         })
 
         val dw = "ANON" by ((seq: Sequent) => {
@@ -690,8 +666,8 @@ private object DifferentialTactics extends Logging {
   })
 
   //A user-friendly error message displayed when ODE can't find anything useful to do.
-  private val failureMessage = "The automatic tactic does not currently provide automated proving capabilities for this " +
-    "combination of system and post-condition. Consider using the individual ODE tactics and/or submitting a feature request."
+  private val failureMessage = "ODE automation was neither able to prove the postcondition invariant nor automatically find new ODE invariants."+
+    " Try annotating the ODE with additional invariants or refining the evolution domain with a differential cut."
 
   /** Assert LZZ succeeds at a certain position. */
   lazy val lzzCheck: BuiltInPositionTactic = {
@@ -725,6 +701,61 @@ private object DifferentialTactics extends Logging {
     }, "Invariant fast-check failed")
   }
 
+
+  /** Counterexample finder
+    * Fails with an error message if it finds a counterexample but succeeds in all other cases
+    * (including when the sequent or position are not of the expected shape)
+    */
+  lazy val cexCheck: DependentPositionTactic = "cexCheck" by ((pos: Position, seq:Sequent) => {
+    if(!(pos.isSucc && pos.isTopLevel && pos.checkSucc.index0 == 0 && seq.succ.length==1)) {
+      //todo: currently only works if there is exactly one succedent
+      logger.warn("ODE counterexample not called at top-level succedent")
+      skip
+    }
+    else if (ToolProvider.invGenTool().isEmpty) {
+      logger.warn("ODE counterexample requires an InvGenTool, but got None")
+      skip
+    }
+    else
+    {
+      val tool = ToolProvider.invGenTool().get
+
+      seq.sub(pos) match {
+        case Some(Box(ode:ODESystem, post)) =>
+          try {
+            tool.refuteODE(ode,seq.ante,post) match {
+              case None => skip
+              case Some(cex) =>
+                DebuggingTactics.error("Found a counterexample for the ODE conjecture: "+cex)
+            }
+
+          } catch {
+            // cannot falsify for whatever reason (timeout, ...), so continue with the tactic
+            case _: Exception => skip
+          }
+        case _ =>
+          logger.warn("ODE counterexample not called at box ODE in succedent")
+          skip
+      }
+    }
+  })
+
+  /** Tries to instantiate the evolution domain fact with the ODE duration (assumes monotonicity). */
+  lazy val endODEHeuristic: BelleExpr = "ANON" by ((seq: Sequent) => {
+    val instantiators = (seq.ante.indices.map(AntePosition.base0(_)) ++ seq.succ.indices.map(SuccPosition.base0(_))).
+      flatMap(pos => {
+        Idioms.mapSubpositions(pos, seq, {
+          case (Forall((s@BaseVariable("s_", _, Real))::Nil, Imply(And(
+          LessEqual(_, BaseVariable("s_", _, Real)),
+          LessEqual(BaseVariable("s_", _, Real), t@BaseVariable("t_", _, Real))), _)), pp: Position) =>
+            Some(allL(s, t)(pp))
+          case _ => None
+        })
+    })
+
+    instantiators.reduceOption[BelleExpr](_ & _).getOrElse(skip) & QE & done
+  })
+
   /**
     * @see [[TactixLibrary.ODE]]
     * @author Andre Platzer
@@ -733,18 +764,12 @@ private object DifferentialTactics extends Logging {
     * @note Compatibility tactic for Z3 ([[DifferentialTactics.odeInvariant]] not supported with Z3).
     */
   lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
-    case Some(Box(ODESystem(ode, q), _)) =>
-      val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
-      val qAtoms = FormulaTools.conjuncts(q).toSet
-
+    case Some(Box(sys@ODESystem(ode, q), _)) =>
       lazy val recurseODE = ODE(useOdeInvariant = false, introduceStuttering = true,
         //@note abort if unchanged
-        assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) match {
-          case Some(Box(ODESystem(extendedOde, extendedQ), _)) =>
-            odeAtoms.subsetOf(DifferentialHelper.atomicOdes(extendedOde).toSet) ||
-              qAtoms.subsetOf(FormulaTools.conjuncts(extendedQ).toSet)
-          case _ => false
-        }, failureMessage)(pos) &
+        assertT((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0::Nil)).contains(sys),
+          failureMessage
+        )(pos) &
           ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
             case Some(ODESystem(_, extendedQ)) =>
               if (q == True && extendedQ != True) useAt("true&")(ppos ++
@@ -755,11 +780,11 @@ private object DifferentialTactics extends Logging {
 
       if (pos.isTopLevel) {
         proveWithoutCuts(false)(pos) |
-        solve(pos) |
+        solve(pos) & ?(endODEHeuristic) |
         recurseODE
       } else {
         //@note diffInd in context won't fail even if unprovable in the end; try solve first to support the usual examples
-        solve(pos) |
+        solve(pos) & ?(endODEHeuristic) |
         proveWithoutCuts(false)(pos) |
         recurseODE
       }
@@ -833,7 +858,7 @@ private object DifferentialTactics extends Logging {
     val addInvariant = ChooseSome(
       () => invariantCandidates.iterator,
       (inv: Formula) => {
-        DebuggingTactics.print(s"[ODE] Trying to cut in invariant candidate: $inv") &
+        DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
         /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
         diffCut(inv)(pos) <(skip, proveInvariant(pos) & done)
       }
@@ -873,34 +898,6 @@ private object DifferentialTactics extends Logging {
        else finish)
   })
 
-  /**
-    * @see [[TactixLibrary.ODE]]
-    * @author Andre Platzer
-    * @author Nathan Fulton
-    * @author Stefan Mitsch
-    */
-  lazy val fastODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => seq.sub(pos) match {
-    case Some(Box(ODESystem(ode, q), _)) =>
-      val odeAtoms = DifferentialHelper.atomicOdes(ode).toSet
-      val qAtoms = FormulaTools.conjuncts(q).toSet
-
-      odeInvariant()(pos) | (solve(pos) & ?(timeoutQE)) | fastODE(
-        //@note abort if unchanged
-        assertT((sseq: Sequent, ppos: Position) => sseq.sub(ppos) match {
-          case Some(Box(ODESystem(extendedOde, extendedQ), _)) =>
-            odeAtoms.subsetOf(DifferentialHelper.atomicOdes(extendedOde).toSet) ||
-              qAtoms.subsetOf(FormulaTools.conjuncts(extendedQ).toSet)
-          case _ => false
-        }, failureMessage)(pos) &
-          ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
-            case Some(ODESystem(_, extendedQ)) =>
-              if (q == True && extendedQ != True) useAt("true&")(ppos ++
-                PosInExpr(1 +: FormulaTools.posOf(extendedQ, q).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
-              else skip
-          }))(pos ++ PosInExpr(0::Nil))
-      )(pos)
-  })
-
   /** Fast ODE implementation. Tactic `finish` is executed when fastODE itself cannot find a proof. */
   private def fastODE(finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
     lazy val invariantCandidates = try {
@@ -920,14 +917,55 @@ private object DifferentialTactics extends Logging {
           /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
           diffCut(inv)(pos) <(
             skip,
-            odeInvariant()(pos) & done) &
+            odeInvariant()(pos)) &
         // continue outside <(skip, ...) so that cut is proved before used
-        (odeInvariant()(pos) & done | fastODE(finish)(pos)) &
+        (odeInvariant()(pos) | fastODE(finish)(pos)) &
         DebuggingTactics.debug("[ODE] Inv Candidate done")
       }
     )
 
-      addInvariant | finish
+    addInvariant | finish
+  })
+
+  /**
+    * @see [[TactixLibrary.ODE]]
+    * @author Andre Platzer
+    * @author Nathan Fulton
+    * @author Stefan Mitsch
+    */
+  lazy val mathematicaODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+    require(pos.isSucc && pos.isTopLevel, "ODE automation only applicable to top-level succedents")
+
+    seq.sub(pos) match {
+      case Some(Box(sys@ODESystem(ode, q), _)) =>
+        // Try to prove postcondition invariant
+        odeInvariant()(pos) |
+        // Counterexample check
+        // cexCheck(pos) &
+        // Some additional cases
+        //(solve(pos) & ?(timeoutQE))|
+        (
+          ODEInvariance.nilpotentSolve(true)(pos) |
+          // todo: Pegasus should tell us for nonlinear ODEs
+          // (diffUnpackEvolutionDomainInitially(pos) & DebuggingTactics.print("diff unpack") & hideR(pos) & timeoutQE & done) |
+          // todo: Insert G|-[x'=f(x)]P refutation here
+          // Ask for invariants and recursively tries to diff cut them in
+          // aborts with error if no extra cuts were found
+          fastODE(
+            //@note aborts with error if the ODE was left unchanged -- invariant generators failed
+            assertT((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0::Nil)).contains(sys),
+              failureMessage
+            )(pos) &
+              ("ANON" by ((ppos: Position, sseq: Sequent) => sseq.sub(ppos) match {
+                case Some(ODESystem(_, extendedQ)) =>
+                  if (q == True && extendedQ != True) useAt("true&")(ppos ++
+                    PosInExpr(1 +: FormulaTools.posOf(extendedQ, q).getOrElse(PosInExpr.HereP).pos.dropRight(1)))
+                  else skip
+              })) (pos ++ PosInExpr(0 :: Nil))
+          )(pos)
+        )
+      case _ => throw new BelleThrowable("ODE automation only applies to box ODEs.")
+    }
   })
 
   /** Splits a post-condition containing a weak inequality into an open set case and an equillibrium point case.
@@ -1192,7 +1230,7 @@ private object DifferentialTactics extends Logging {
     // First cut in the barrier property, then use dgdbx on it
     // Barrier condition is checked first to make it fail faster
     dC(barrierFml)(pos) <(
-      skip,diffWeakenG(pos) & useAt(barrierCond)(1,1::Nil) & timeoutQE & done
+      skip, /* diffWeakenG faster but loses assumptions */ dW(pos) & useAt(barrierCond)(1,1::Nil) & timeoutQE & done
     ) & starter & dgDbx(cofactor)(pos)
   })
 
@@ -1395,34 +1433,45 @@ private object DifferentialTactics extends Logging {
     SandR | fallback(pos)
   })
 
-  // Fresh implementation of ODE invariance tactics -- only applies for top-level succedents
-
-  // Try hard to prove G|-[x'=f(x)&Q]P by an invariance argument on P only (NO SOLVE)
+  /** Pieces together some ODE invariance tactics into a prover for ODE invariance:
+    *
+    * G |- P   P|-[x'=f(x)&Q]P
+    * ---
+    * G |- [x'=f(x)&Q]P
+    *
+    * @param tryHard configures how hard the tactic tries to prove invariance in particular
+    *                use tryHard = true when speed is secondary & certain that P is invariant
+    *                use tryHard = false when speed is of interest e.g., within automated invariant search
+    */
   def odeInvariant(tryHard:Boolean = false): DependentPositionTactic = "odeInvariant" by ((pos:Position) => {
     require(pos.isSucc && pos.isTopLevel, "ODE invariant only applicable in top-level succedent")
     //@note dW does not need algebra tool
     //require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
 
-    //todo: Ideally this will go for full rank + everything proof if tryHard=true
-    val rankConfig = if(tryHard) 3 else 1
-    //todo: and this should disappear for tryHard mode
-    val reorderConfig = tryHard
+    val invTactic =
+      if(tryHard)
+      {
+        ODEInvariance.sAIclosedPlus(bound = 3)(pos) |
+        //todo: duplication currently necessary between sAIclosedPlus and sAIclosed due to unresolved Mathematica issues
+        ODEInvariance.sAIclosed(pos) |
+        ODEInvariance.sAIRankOne(doReorder = true, skipClosed = false)(pos)
+      }
+      else {
+        ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
+        ODEInvariance.sAIRankOne(doReorder = false, skipClosed = false)(pos)
+      }
 
     //Add constant assumptions to domain constraint
-//    DebuggingTactics.print("DConstV") &
+    SaturateTactic(andL('L)) & //Safe because pos is guaranteed to be in the succedent
     DifferentialTactics.DconstV(pos) &
-      //Naive simplification of domain constraint
-//      DebuggingTactics.print("domSimplify") &
-      DifferentialTactics.domSimplify(pos) &
-      DebuggingTactics.print("close") &
-      (
-//        DebuggingTactics.print("try DWQE") &
-          (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
-//        DebuggingTactics.print("try sAI closed plus") &
-          ODEInvariance.sAIclosedPlus(rankConfig)(pos) |
-//        DebuggingTactics.print("try sAIR1") &
-          ODEInvariance.sAIRankOne(reorderConfig)(pos)
-        )
+    //Naive simplification of postcondition with domain constraint
+    DifferentialTactics.domSimplify(pos) &
+    DebuggingTactics.debug("odeInvariant close") &
+    (
+      (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
+      invTactic |
+      DebuggingTactics.error("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
+    )
   })
 
   // Asks Pegasus invariant generator for an invariant (DC chain)
@@ -1431,6 +1480,7 @@ private object DifferentialTactics extends Logging {
     require(pos.isTopLevel && pos.isSucc, "ODE invariant (with Pegasus) only applicable in top-level succedent")
     require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
 
+    SaturateTactic(andL('L)) & //Safe because pos is guaranteed to be in the succedent
     DifferentialTactics.DconstV(pos) & odeInvariantAutoBody(pos)
   })
 
@@ -1455,7 +1505,6 @@ private object DifferentialTactics extends Logging {
         )
     }
   })
-
 
   // implementation helpers
 
@@ -1493,40 +1542,6 @@ private object DifferentialTactics extends Logging {
       case Equal(l,r) => Some(Minus(l,r))
       case _ => None
     }
-  }
-
-  //Pulls out divisions
-  private def stripDenom(t:Term) : (Term,Term) = {
-    t match {
-      case Times(l,r) =>
-        val (ln,ld) = stripDenom(l)
-        val (rn,rd) = stripDenom(r)
-        (Times(ln,rn),Times(ld,rd))
-      case Divide(l,r) =>
-        val (ln,ld) = stripDenom(l)
-        val (rn,rd) = stripDenom(r)
-        (Times(ln,rd),Times(ld,rn))
-      case Power(tt,p:Number) if p.value < 0 =>
-        (Number(1),Power(tt,Number(-p.value)))
-      case Power(tt,p) =>
-        val (tn,td) = stripDenom(tt)
-        (Power(tn,p),Power(td,p))
-      //Ignore everything else todo: could deal with common denominators
-      case _ => (t,Number(1))
-    }
-  }
-
-  //@todo possibly should ask StaticSemantics.boundVars(ode).filter(_.isInstanceOf[DifferentialSymbol)
-  private def primedSymbols(ode: DifferentialProgram) = {
-    var primedSymbols = Set[Variable]()
-    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
-      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-        case DifferentialSymbol(ps) => primedSymbols += ps; Left(None)
-        case Differential(_) => throw new IllegalArgumentException("Only derivatives of variables supported")
-        case _ => Left(None)
-      }
-    }, ode)
-    primedSymbols
   }
 
   /** Indicates whether there is an ODE at the indicated position of a sequent */
@@ -1568,18 +1583,6 @@ private object DifferentialTactics extends Logging {
       case Some(e) => throw new IllegalArgumentException("no ODE at position " + pos + " in " + sequent + "\nFound: " + e)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " in " + sequent)
     }
-  }
-
-  private def dottedSymbols(ode: DifferentialProgram) = {
-    var dottedSymbols = List[Variable]()
-    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction {
-      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
-        case DifferentialSymbol(ps) => ps :: dottedSymbols; Left(None)
-        case Differential(_) => throw new IllegalArgumentException("Only derivatives of variables supported")
-        case _ => Left(None)
-      }
-    }, ode)
-    dottedSymbols.reverse
   }
 
   /** Flattens a formula to a list of its top-level conjunctions */

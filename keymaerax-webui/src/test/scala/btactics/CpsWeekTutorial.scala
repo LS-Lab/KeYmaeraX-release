@@ -5,18 +5,21 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
-import edu.cmu.cs.ls.keymaerax.bellerophon.OnAll
+import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, SaturateTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Formula, Function, Real, SubstitutionPair, USubst, Unit}
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
 
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
+import org.scalatest.concurrent.Timeouts
+import org.scalatest.time.SpanSugar._
 
 /**
  * Tutorial test cases.
@@ -24,14 +27,14 @@ import org.scalatest.LoneElement._
  * @author Stefan Mitsch
  */
 @SlowTest
-class CpsWeekTutorial extends TacticTestBase {
+class CpsWeekTutorial extends TacticTestBase with Timeouts {
 
   "Example 0" should "prove with abstract invariant J(x)" in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/00_robosimple.kyx"))
-    val tactic = implyR('R) & (andL('L)*) & loop("J(v)".asFormula)('R) <(
+    val tactic = implyR('R) & SaturateTactic(andL('L)) & loop("J(v)".asFormula)('R) <(
       skip,
       skip,
-      print("Step") & normalize & OnAll(solve('R) partial) partial
+      print("Step") & normalize & OnAll(solve('R))
       ) & US(USubst(SubstitutionPair(
             "J(v)".asFormula.replaceFree("v".asTerm, DotTerm()), "v<=10".asFormula.replaceFree("v".asTerm, DotTerm()))::Nil)) & OnAll(QE)
 
@@ -40,7 +43,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
   "Example 1" should "have 4 open goals for abstract invariant J(x,v)" in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1.kyx"))
-    val tactic = implyR('R) & (andL('L)*) & loop("J(x,v)".asFormula)('R) <(
+    val tactic = implyR('R) & SaturateTactic(andL('L)) & loop("J(x,v)".asFormula)('R) <(
       print("Base case"),
       print("Use case"),
       print("Step") & normalize & OnAll(solve('R))
@@ -49,8 +52,8 @@ class CpsWeekTutorial extends TacticTestBase {
     result.subgoals should have size 4
     result.subgoals(0) shouldBe "x!=m(), b()>0 ==> J(x,v)".asSequent
     result.subgoals(1) shouldBe "J(x,v), b()>0 ==> x!=m()".asSequent
-    result.subgoals(2) shouldBe "J(x,v), b()>0 ==> \\forall t_ (t_>=0 -> J(a/2*t_^2+v*t_+x,a*t_+v)), SB(x,m())".asSequent
-    result.subgoals(3) shouldBe "J(x,v), b()>0 ==> \\forall t_ (t_>=0 -> J((-b())/2*t_^2+v*t_+x,(-b())*t_+v))".asSequent
+    result.subgoals(2) shouldBe "J(x,v), b()>0, !SB(x,m()) ==> \\forall t_ (t_>=0 -> J(a*(t_^2/2)+v*t_+x,a*t_+v))".asSequent
+    result.subgoals(3) shouldBe "J(x,v), b()>0 ==> \\forall t_ (t_>=0 -> J((-b())*(t_^2/2)+v*t_+x,(-b())*t_+v))".asSequent
   }
 
   it should "have 4 open goals for abstract invariant J(x,v) with master" in withQE { _ =>
@@ -59,8 +62,8 @@ class CpsWeekTutorial extends TacticTestBase {
     result.subgoals should have size 4
     result.subgoals(0) shouldBe "x!=m(), b()>0 ==> J(x,v)".asSequent
     result.subgoals(1) shouldBe "J(x,v), b()>0 ==> x!=m()".asSequent
-    result.subgoals(2) shouldBe "J(x,v), b()>0, t_>=0 ==> SB(x,m()), J(a/2*t_^2+v*t_+x,a*t_+v)".asSequent
-    result.subgoals(3) shouldBe "J(x,v), b()>0, t_>=0 ==> J((-b())/2*t_^2+v*t_+x,(-b())*t_+v)".asSequent
+    result.subgoals(2) shouldBe "J(x,v), b()>0, t_>=0, !SB(x,m()) ==> J(a*(t_^2/2)+v*t_+x,a*t_+v)".asSequent
+    result.subgoals(3) shouldBe "J(x,v), b()>0, t_>=0 ==> J((-b())*(t_^2/2)+v*t_+x,(-b())*t_+v)".asSequent
   }
 
   it should "prove automatically with the correct conditions" in withQE { _ =>
@@ -70,7 +73,7 @@ class CpsWeekTutorial extends TacticTestBase {
 
   it should "prove with a manually written searchy tactic" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-full.kyx"))
-    val tactic = implyR('R) & (andL('L)*) & loop("v^2<=2*b()*(m()-x)".asFormula)('R) <(
+    val tactic = implyR('R) & SaturateTactic(andL('L)) & loop("v^2<=2*b()*(m()-x)".asFormula)('R) <(
       print("Base case") & closeId,
       print("Use case") & QE,
       print("Step") & normalize & solve('R) & QE
@@ -81,7 +84,7 @@ class CpsWeekTutorial extends TacticTestBase {
   it should "stop after ODE to let users inspect a counterexample with false speed sb condition" in withQE { _ =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-falsespeedsb.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1-falsespeedsb.kyt")).mkString)
-    val result = proveBy(KeYmaeraXProblemParser(modelContent), tactic)
+    val result = proveBy(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent), tactic)
     result.subgoals should have size 2
   }
 
@@ -89,7 +92,7 @@ class CpsWeekTutorial extends TacticTestBase {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/02_robo2-justbrakenaive.kyx"))
     val result = proveBy(s, master(keepQEFalse=false))
     result.isProved shouldBe false //@note This assertion is a soundness check!
-    result.subgoals.loneElement shouldBe "x<=m(), b()>0, t_>=0, \\forall s_ (0<=s_&s_<=t_ -> (-b())*s_+v>=0) ==> (-b())/2*t_^2+v*t_+x <= m()".asSequent
+    result.subgoals.loneElement shouldBe "x<=m(), b()>0, t_>=0, \\forall s_ (0<=s_&s_<=t_ -> (-b())*s_+v>=0) ==> (-b())*(t_^2/2)+v*t_+x <= m()".asSequent
 
     // counter example
     tool.findCounterExample(result.subgoals.head.toFormula).get.keySet should contain only (Function("b", None, Unit, Real),
@@ -112,7 +115,7 @@ class CpsWeekTutorial extends TacticTestBase {
   it should "find the braking condition" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/02_robo2-justbrakenaive.kyx"))
     val result = proveBy(s, master(keepQEFalse=false))
-    result.subgoals.loneElement shouldBe "x<=m(), b()>0, t_>=0, \\forall s_ (0<=s_&s_<=t_ -> (-b())*s_+v>=0) ==> (-b())/2*t_^2+v*t_+x <= m()".asSequent
+    result.subgoals.loneElement shouldBe "x<=m(), b()>0, t_>=0, \\forall s_ (0<=s_&s_<=t_ -> (-b())*s_+v>=0) ==> (-b())*(t_^2/2)+v*t_+x <= m()".asSequent
 
     val initCond = proveBy(result.subgoals.head, TactixLibrary.partialQE)
     initCond.subgoals.loneElement shouldBe "==> b()<=0|b()>0&(v<=0|v>0&((t_<=0|(0 < t_&t_<=v*b()^-1)&(x<=1/2*(-2*t_*v+t_^2*b()+2*m())|x>m()))|t_>v*b()^-1))".asSequent
@@ -134,10 +137,10 @@ class CpsWeekTutorial extends TacticTestBase {
   it should "find the acceleration condition" in withMathematica { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/04_robo2-justaccnaive.kyx"))
     val result = proveBy(s, master(keepQEFalse=false))
-    result.subgoals.loneElement shouldBe "A()>=0, b()>0, v^2<=2*b()*(m()-x), ep()>0, Q(x,v), t=0, t_>=0, \\forall s_ (0<=s_&s_<=t_ -> A()*s_+v>=0 & s_+0<=ep()) ==> (A()*t_+v)^2 <= 2*b()*(m()-(A()/2*t_^2+v*t_+x))".asSequent
+    result.subgoals.loneElement shouldBe "A()>=0, b()>0, v^2<=2*b()*(m()-x), ep()>0, Q(x,v), t_>=0, \\forall s_ (0<=s_&s_<=t_ -> A()*s_+v>=0 & s_+0<=ep()) ==> (A()*t_+v)^2 <= 2*b()*(m()-(A()*(t_^2/2)+v*t_+x))".asSequent
 
     val initCond = proveBy(result.subgoals.head, hideL(-5, "Q(x,v)".asFormula) & TactixLibrary.partialQE)
-    initCond.subgoals.loneElement shouldBe "==> t_<=0|t_>0&((v < 0|v=0&(A()<=0|A()>0&(b()<=0|b()>0&(ep() < t_|ep()>=t_&((t < 0|t=0&(x<=1/2*b()^-1*(-1*t_^2*A()^2+-1*t_^2*A()*b()+2*b()*m())|x>m()))|t>0)))))|v>0&(A() < 0|A()>=0&(b()<=0|b()>0&(ep() < t_|ep()>=t_&((t < 0|t=0&(x<=1/2*b()^-1*(-1*v^2+-2*t_*v*A()+-1*t_^2*A()^2+-2*t_*v*b()+-1*t_^2*A()*b()+2*b()*m())|x>1/2*b()^-1*(-1*v^2+2*b()*m())))|t>0)))))".asSequent
+    initCond.subgoals.loneElement shouldBe "==> t_<=0|t_>0&(ep() < t_|ep()>=t_&((v < 0|v=0&(A()<=0|A()>0&(b()<=0|b()>0&(m() < x|m()>=1/2*b()^-1*(t_^2*A()^2+2*x*b()+t_^2*A()*b())))))|v>0&(A() < 0|A()>=0&(b()<=0|b()>0&(m() < 1/2*b()^-1*(v^2+2*x*b())|m()>=1/2*b()^-1*(v^2+2*t_*v*A()+t_^2*A()^2+2*t_*v*b()+2*x*b()+t_^2*A()*b()))))))".asSequent
 
     // now get rid of stuff that violates our assumptions and transform into nicer shape
     val simpler = proveBy(initCond.subgoals.head, TactixLibrary.transform("b()>0 & A()>=0 & t_>=0 & m()>=1/2*b()^-1*(A()^2*t_^2+A()*b()*t_^2+2*A()*t_*v+2*b()*t_*v+v^2+2*b()*x)".asFormula)(1))
@@ -161,7 +164,7 @@ class CpsWeekTutorial extends TacticTestBase {
   it should "find a hint for SB from parsed tactic" in withMathematica { _ =>
     val modelContent = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-fullnaive.kyx")).mkString
     val tactic = BelleParser(io.Source.fromInputStream(getClass.getResourceAsStream("/examples/tutorials/cpsweek/06_robo2-fullnaive.kyt")).mkString)
-    val result = proveBy(KeYmaeraXProblemParser(modelContent), tactic)
+    val result = proveBy(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent), tactic)
     result.subgoals should have size 2
     //unsimplified
     result.subgoals.last.succ should contain only "(m() < 0&(t<=0&((v < 0|v=0&(ep()<=0|ep()>0&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|v>0&(ep()<=0|ep()>0&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|t>0&((v < 0|v=0&((ep() < t|ep()=t&(A()<=0|A()>0&(b()<=0|b()>0&((x < m()|x=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m()))|x>m()))))|ep()>t&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|v>0&((ep() < t|ep()=t&(A() < 0|A()>=0&(b()<=0|b()>0&((x < m()|x=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m()))|x>m()))))|ep()>t&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m()))))))|m()=0&(t<=0&((v < 0|v=0&(ep()<=0|ep()>0&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2)|x>0)))))|v>0&(ep()<=0|ep()>0&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2)|x>0)))))|t>0&((v < 0|v=0&(ep()<=t|ep()>t&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2)|x>0)))))|v>0&(ep()<=t|ep()>t&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2)|x>0)))))))|m()>0&((t < 0&((v < 0|v=0&(ep()<=0|ep()>0&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|v>0&(ep()<=0|ep()>0&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|t=0&((v < 0|v=0&(ep()<=0|ep()>0&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*A()*ep()^2+2*m())|x>m())))))|v>0&(ep()<=0|ep()>0&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(-2*v*ep()+-1*A()*ep()^2+2*m())|x>m()))))))|t>0&((v < 0|v=0&(ep()<=t|ep()>t&(A()<=0|A()>0&(b()<=0|b()>0&(x<=1/2*(-1*t^2*A()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m())))))|v>0&(ep()<=t|ep()>t&(A() < 0|A()>=0&(b()<=0|b()>0&(x<=1/2*(2*t*v+-1*t^2*A()+-2*v*ep()+2*t*A()*ep()+-1*A()*ep()^2+2*m())|x>m()))))))".asFormula
@@ -169,7 +172,7 @@ class CpsWeekTutorial extends TacticTestBase {
   }
 
   "A searchy tactic" should "prove both a simple and a complicated model" in withMathematica { _ =>
-    def tactic(j: Formula) = implyR('R) & (andL('L)*) & loop(j)('R) <(
+    def tactic(j: Formula) = implyR('R) & SaturateTactic(andL('L)) & loop(j)('R) <(
       print("Base case") & closeId,
       print("Use case") & QE,
       print("Step") & normalize & OnAll(solve('R) & QE)
@@ -191,20 +194,19 @@ class CpsWeekTutorial extends TacticTestBase {
       s"-t*(v-$a/2*t)<=x-old(x) & x-old(x)<=t*(v-$a/2*t)".asFormula,
       s"-t*(v-$a/2*t)<=y-old(y) & y-old(y)<=t*(v-$a/2*t)".asFormula)('R)
 
-    val dw = exhaustiveEqR2L(hide=true)('Llast)*3 /* 3 old(...) in DI */ & (andL('L)*) &
+    val dw = exhaustiveEqR2L(hide=true)('Llast)*3 /* 3 old(...) in DI */ & SaturateTactic(andL('L)) &
       print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
-    val tactic = implyR('R) & (andL('L)*) & loop("r!=0 & v>=0 & dx^2+dy^2=1 & (2*b()*abs(mx-x)>v^2 | 2*b()*abs(my-y)>v^2)".asFormula)('R) <(
+    val tactic = implyR('R) & SaturateTactic(andL('L)) & loop("r!=0 & v>=0 & dx^2+dy^2=1 & (2*b()*abs(mx-x)>v^2 | 2*b()*abs(my-y)>v^2)".asFormula)('R) <(
       print("Base case") & QE,
       print("Use case") & QE,
       print("Step") & chase('R) & andR('R) <(
-        allR('R) & implyR('R) & di("-b()") & dw & QE,
+        allR('R) & implyR('R) & di("-b()") & dw & prop & OnAll(ArithmeticSpeculativeSimplification.speculativeQE),
         // in tutorial: only show braking branch, acceleration takes too long (needs abs and hiding and cuts etc.)
         allR('R)*2 & implyR('R) & allR('R)*2 & implyR('R) & allR('R) & implyR('R) & di("A()") & dw
         )
       )
-    val result = proveBy(s, tactic)
-    result.subgoals should have size 1
+    failAfter(5 minutes) { proveBy(s, tactic).subgoals should have size 1 }
   }
 
   "Motzkin" should "be provable with DI+DW" in withQE { _ =>

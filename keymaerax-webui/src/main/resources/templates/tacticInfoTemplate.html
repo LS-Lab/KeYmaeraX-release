@@ -14,9 +14,12 @@
                                        code-name="{{tactic.selectedDerivation().codeName}}"></k4-tactic-name></b>
                 </a>
             </div>
-            <div class="col-md-9">
+            <div class="col-md-9" ng-if="tactic.selectedDerivation().derivation.displayInfoParts !== null">
                 <k4-axiom-key-selector axiom="tactic.selectedDerivation().derivation"
                                        readonly="axiomReadonly"></k4-axiom-key-selector>
+            </div>
+            <div class="col-md-9" ng-if="tactic.selectedDerivation().derivation.displayInfoParts === null">
+                <span ng-bind-html="tactic.selectedDerivation().derivation.formula"></span>
             </div>
         </div>
     </div>
@@ -67,6 +70,7 @@
             <div class="pull-right">
             <span ng-if="tactic.selectedDerivation().derivation.help"
                   uib-popover-html="tactic.selectedDerivation().derivation.help"
+                  popover-placement="bottom-right"
                   popover-trigger="'outsideClick'"><i class="fa fa-question-circle"></i></span>
                 <span ng-if="tactic.comfortDerivation !== undefined" ng-click="tactic.reduceBranching = !tactic.reduceBranching">Reduce branching <i ng-class="{'fa fa-toggle-off': !tactic.reduceBranching, 'fa fa-toggle-on': tactic.reduceBranching}"></i></span>
                 <span ng-click="tactic.isOpen = !tactic.isOpen"><i class="fa fa-bars"></i></span>

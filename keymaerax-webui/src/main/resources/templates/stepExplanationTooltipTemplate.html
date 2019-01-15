@@ -48,7 +48,8 @@
 <script type="text/ng-template" id="templates/stepExplanationPopover.html">
     <div>
         <div class="col-md-12" ng-if="stepExpl.derivation.type === 'axiom'" ng-bind-html="stepExpl.derivation.formula"></div>
-        <div class="col-md-12" ng-if="stepExpl.derivation.type === 'tactic'" ng-bind-html="stepExpl.derivation.formula"></div>
+        <div class="col-md-12" ng-if="stepExpl.derivation.type === 'tactic' &&  stepExpl.derivation.formula" ng-bind-html="stepExpl.derivation.formula"></div>
+        <div class="col-md-12 k4-help-content" ng-if="stepExpl.derivation.type === 'tactic' && !stepExpl.derivation.formula" ng-bind-html="stepExpl.derivation.help"></div>
         <div ng-if="stepExpl.derivation.type === 'sequentrule'">
             <div class="col-md-12" ng-repeat="stepDeriv in [stepExpl.derivation]"
                  ng-include="'templates/sequentRuleExplanationTemplate.html'"></div>

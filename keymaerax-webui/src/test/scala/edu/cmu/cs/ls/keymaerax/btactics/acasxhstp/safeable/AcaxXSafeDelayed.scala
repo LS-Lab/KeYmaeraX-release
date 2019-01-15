@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{USubst, _}
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 
@@ -40,7 +40,7 @@ import scala.language.postfixOps
 class AcaxXSafeDelayed extends AcasXBase {
 
   it should "parse Theorem 2: correctness of implicit safe regions" ignore {
-    val safeSeq = KeYmaeraXProblemParser(io.Source.fromInputStream(
+    val safeSeq = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_delay_implicit.kyx")).mkString)
   }
 
@@ -491,7 +491,7 @@ class AcaxXSafeDelayed extends AcasXBase {
       beforeEach()
 
       /** * Main safe theorem and its tactic ***/
-      val safeSeq = KeYmaeraXProblemParser(io.Source.fromInputStream(
+      val safeSeq = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_delay_implicit.kyx")).mkString)
 
       val safeTac = implyR('R) & eAndL & loop(invariant)('R) & Idioms.<(
@@ -529,7 +529,7 @@ class AcaxXSafeDelayed extends AcasXBase {
   }
 
   it should "parse Lemma 2: equivalence of delayed explicit safe regions" in {
-    val safeSeq = KeYmaeraXProblemParser(io.Source.fromInputStream(
+    val safeSeq = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_delay_equivalence.kyx")).mkString)
     println(safeSeq)
   }
@@ -586,7 +586,7 @@ class AcaxXSafeDelayed extends AcasXBase {
 //
 //    println(insts)
 //
-//    val s = KeYmaeraXProblemParser(io.Source.fromInputStream(
+//    val s = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
 //      getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_delay_equivalence.kyx")).mkString)
 //
 ////    val tactic =

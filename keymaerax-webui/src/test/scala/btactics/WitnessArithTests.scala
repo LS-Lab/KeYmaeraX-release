@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.ParseException
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.{IsabelleConverter, TermProvable$}
+import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
@@ -16,6 +17,7 @@ import scala.collection.mutable.ListBuffer
 /**
   * Created by yongkiat on 11/27/16.
   */
+@SlowTest
 class WitnessArithTests extends TacticTestBase {
 
 

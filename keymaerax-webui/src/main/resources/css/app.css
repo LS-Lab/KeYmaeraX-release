@@ -14,6 +14,7 @@
 
 body {
   font-size: var(--lsfontsize);
+  line-height: 1.1;
 }
 
 /* Convert Bootstrap absolute font sizes into relative font sizes */
@@ -91,6 +92,27 @@ output {
 
 .navbar-brand {
   font-size: 130%;
+}
+
+.k4-tactics-navbar {
+  min-height: inherit;
+}
+
+.k4-tactics-brand {
+  font-size: 100%;
+  height: inherit;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+.k4-tactics-nav-first > li > a {
+  padding-top: 5px;
+  padding-bottom: 2px;
+}
+
+.k4-tactics-nav-last > li > a {
+  padding-top: 2px;
+  padding-bottom: 5px;
 }
 
 .pagination-lg > li > a,
@@ -262,6 +284,14 @@ del {
 
 [ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
   display: none !important;
+}
+
+.k4-large-sup {
+  position: relative;
+  top: -0.1em;
+  font-size: large;
+  line-height: 0;
+  vertical-align: baseline;
 }
 
 .k4-table-fixed {
@@ -604,7 +634,7 @@ del {
   text-align: center;
   position: absolute;
   top: calc(10% + 25px);
-  left: calc(50% - 115px);
+  width: calc(100% + 10px);
   color: var(--lsmainback);
   z-index: 10;
 }
@@ -666,6 +696,7 @@ del {
    width: 180px;
 }
 
+/* Full-screen (full width, but at most available screen height) */
 .modal-fullscreen {
   width: 98%;
   height: 95%;
@@ -676,19 +707,41 @@ del {
 }
 
 .modal-fullscreen .modal-body {
-  height: calc(100% - 65px);
+  max-height: calc(100vh - 90px);
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
 
 .modal-fullscreen .modal-header~.modal-body {
-  height: calc(100% - 130px);
+  max-height: calc(100vh - 130px);
+  height: 100%;
+}
+
+/* Full-width modal that may exceed screen height */
+.modal-fullwidth {
+  width: 98%;
+  height: 95%;
+}
+
+.modal-fullwidth .modal-content {
+
+}
+
+.modal-fullwidth .modal-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-fullwidth .modal-header~.modal-body {
+
 }
 
 .k4-vertical-fill-flex {
   flex: 1;
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 .k4-vertical-fill {
   height: 100%;
@@ -1102,6 +1155,14 @@ del {
   max-width: 100%;
 }
 
+.k4-help-content {
+  text-align: left;
+}
+
+.k4-rulemenu-helppopover {
+  width: 400px;
+}
+
 /*
  *  Overridden UI-Tree
  */
@@ -1126,6 +1187,20 @@ del {
     background: var(--lsblue);
     color: var(--lsmainback);
     margin-right: 10px;
+}
+
+/*
+ * ACE editor layout.
+ */
+.ace_editor {
+  font-family: Menlo,monospace;
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  font-size: var(--lsfontsize);
 }
 
 /*

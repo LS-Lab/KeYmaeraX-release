@@ -1,5 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.hydra
 
+import java.net.{SocketTimeoutException, URL}
+
 import org.apache.logging.log4j.scala.Logging
 import spray.json._
 import spray.json.DefaultJsonProtocol._
@@ -65,7 +67,7 @@ object UpdateChecker extends Logging {
     try {
       val json = scala.io.Source.fromInputStream(getClass.getResourceAsStream("/sql/upgradescripts.json")).mkString
       val versionString = json.parseJson.asJsObject.fields("minVersion").convertTo[String]
-      logger.info("Oldest compatible database version: " + versionString)
+      logger.debug("Compatible database versions: " + versionString + "+")
       Some(versionString)
     } catch {
       case _: Throwable => None
@@ -75,18 +77,37 @@ object UpdateChecker extends Logging {
   /** Returns the current version # in keymaerax.org/version.json, or None if the contents cannot be downloaded/parsed. */
   private lazy val downloadCurrentVersion: Option[String] = {
     try {
-      val json = JsonParser(scala.io.Source.fromURL("http://keymaerax.org/version.json").mkString)
-      val version = json.asJsObject.getFields("version")
-      if (version.isEmpty)
-        throw new Exception("version.json does not contain a version key.")
-      else {
-        val versionString = version.last.toString.replace("\"", "")
-        Some(versionString)
+      readWithTimeout("http://keymaerax.org/version.json", 3000) match {
+        case None => None
+        case Some(string) =>
+          val json = JsonParser(string)
+          val version = json.asJsObject.getFields("version")
+          if (version.isEmpty)
+            throw new Exception("version.json does not contain a version key.")
+          else {
+            val versionString = version.last.toString.replace("\"", "")
+            Some(versionString)
+          }
       }
     }
     catch {
       case e: Throwable => None
     }
+  }
+
+  /** Read contents of url or None if unreachable within given timeout in milliseconds */
+  private def readWithTimeout(url: String, timeout: Int): Option[String] = try {
+    // like scala.io.Source.fromURL(url).mkString but with timeout
+    val conn = new URL(url).openConnection()
+    conn.setConnectTimeout(timeout)
+    conn.setReadTimeout(timeout)
+    val source = conn.getInputStream()
+    val read = scala.io.Source.fromInputStream(source).mkString
+    if (source != null) source.close()
+    Some(read)
+  }
+  catch {
+    case e: SocketTimeoutException => None
   }
 
 }

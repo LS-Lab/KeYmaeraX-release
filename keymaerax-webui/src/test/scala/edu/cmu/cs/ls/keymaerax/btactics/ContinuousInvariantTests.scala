@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest}
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, ToolException}
@@ -117,7 +117,7 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
       getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
     forEvery(Table(("Name", "Model", "Tactic"), entries.
       filter(e => e.tactics.nonEmpty).
-      map(e => (e.name, e.model, e.tactics.headOption.getOrElse("" -> TactixLibrary.auto)._2)): _*)) {
+      map(e => (e.name, e.model, e.tactics.headOption.getOrElse("", BellePrettyPrinter(TactixLibrary.auto), TactixLibrary.auto)._3)): _*)) {
       (name, model, tactic) =>
         println("\n" + name + " with " + BellePrettyPrinter(tactic))
         failAfter(5 minutes) {
@@ -127,46 +127,90 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
     }
   }
 
-  it should "standalone test of pegasus + odeInvariant only" taggedAs SlowTest in withMathematica { _ =>
-    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "180", saveToFile = false)
-    Configuration.set(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT, "60", saveToFile = false)
-
-    val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
-      getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
-    var generated = 0
-    var success = 0
-    var total = 0
-    forEvery(Table(("Name", "Model", "Tactic"), entries.
-      map(e => (e.name, e.model, e.tactics)): _*)) {
-      (name, model, _) =>
-        println("\n" + name + " " + model)
-        try {
-          failAfter(3 minutes) {
-            total+=1
-            try {
-              val pr = proveBy(model.asInstanceOf[Formula], implyR(1) & odeInvariantAuto(1) & done)
-              success+=1
-              generated += 1
-            }
-            catch {
-              case ex: BelleThrowable =>
-                if(ex.getMessage.contains("Pegasus failed to generate an invariant"))
-                  println("Pegasus did not generate an invariant")
-                else {
-                  println(ex.getMessage)
-                  generated += 1
-                }
-            }
-          }
-          println(name + " done.")
-          println("Total: "+total+" Generated: "+generated+" Proved: ",success)
-        }
-        catch {
-          case ex: IllegalArgumentException =>
-            println(name + " not of expected form")
-        }
-    }
-    println("Total: "+total+" Generated: "+generated+" Proved: ",success)
+  "Refute ODE" should "find a simple counterexample" in withMathematica { tool =>
+    val cex = tool.refuteODE(
+      "{x'=1}".asProgram.asInstanceOf[ODESystem],
+      "x=1".asFormula :: Nil,
+      "x=1".asFormula)
+    cex shouldBe Some(Map("x".asVariable -> "1".asTerm))
   }
+
+  it should "refute parametric ODEs" in withMathematica { tool =>
+    val cex = tool.refuteODE(
+      "{x'=v,v'=A()}".asProgram.asInstanceOf[ODESystem],
+      "A()=1 & x=1".asFormula :: Nil,
+      "x=1".asFormula)
+    val aFunc = "A()".asTerm.asInstanceOf[FuncOf]
+
+    cex shouldBe Some(Map("x".asVariable -> "1".asTerm,aFunc.func -> "1".asTerm,"v".asVariable -> "0".asTerm))
+  }
+
+  it should "not refute true invariants" in withMathematica { tool =>
+    val cex = tool.refuteODE(
+      "{x'=y,y'=-x}".asProgram.asInstanceOf[ODESystem],
+      "r()=s()&x^2+y^2=r()^2".asFormula :: Nil,
+      "x^2+y^2=s()^2".asFormula)
+
+    cex shouldBe None
+  }
+
+  it should "Fail for non-FOL assumptions" in withMathematica { tool =>
+
+    a [IllegalArgumentException] should be thrownBy
+      tool.refuteODE(
+        "{x'=y,y'=-x}".asProgram.asInstanceOf[ODESystem],
+        "r()=s()&x^2+y^2=r()^2".asFormula :: "[x:=x+1;]x=1".asFormula :: Nil,
+        "x^2+y^2=s()^2".asFormula)
+  }
+
+  it should "refute as a tactic" in withMathematica { tool =>
+    val fml = "x^2+y^2=r()^2 -> [{x'=y,y'=A()*x}] x^2+y^2=r()^2".asFormula
+
+    //throws an error
+    a [BelleThrowable] should be thrownBy proveBy(fml, implyR(1) & DifferentialTactics.cexCheck(1))
+  }
+
+
+//  it should "standalone test of pegasus + odeInvariant only" taggedAs SlowTest in withMathematica { _ =>
+//    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "180", saveToFile = false)
+//    Configuration.set(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT, "60", saveToFile = false)
+//
+//    val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
+//      getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
+//    var generated = 0
+//    var success = 0
+//    var total = 0
+//    forEvery(Table(("Name", "Model", "Tactic"), entries.
+//      map(e => (e.name, e.model, e.tactics)): _*)) {
+//      (name, model, _) =>
+//        println("\n" + name + " " + model)
+//        try {
+//          failAfter(3 minutes) {
+//            total+=1
+//            try {
+//              val pr = proveBy(model.asInstanceOf[Formula], implyR(1) & odeInvariantAuto(1) & done)
+//              success+=1
+//              generated += 1
+//            }
+//            catch {
+//              case ex: BelleThrowable =>
+//                if(ex.getMessage.contains("Pegasus failed to generate an invariant"))
+//                  println("Pegasus did not generate an invariant")
+//                else {
+//                  println(ex.getMessage)
+//                  generated += 1
+//                }
+//            }
+//          }
+//          println(name + " done.")
+//          println("Total: "+total+" Generated: "+generated+" Proved: ",success)
+//        }
+//        catch {
+//          case ex: IllegalArgumentException =>
+//            println(name + " not of expected form")
+//        }
+//    }
+//    println("Total: "+total+" Generated: "+generated+" Proved: ",success)
+//  }
 
 }

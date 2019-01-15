@@ -5,12 +5,12 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, PosInExpr}
-import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.bellerophon.{AntePosition, BelleThrowable, PosInExpr, Position}
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 
 object TacticHelper {
 
-  def freshIndexInFormula(name: String, f: Formula) =
+  def freshIndexInFormula(name: String, f: Formula): Option[Int] =
     if (symbols(f).exists(_.name == name)) {
       val vars = symbols(f).map(n => (n.name, n.index)).filter(_._1 == name)
       require(vars.nonEmpty)
@@ -40,9 +40,9 @@ object TacticHelper {
     symbols
   }
 
-  def names(s: Sequent) = s.ante.flatMap(symbols) ++ s.succ.flatMap(symbols)
+  def names(s: Sequent): IndexedSeq[NamedSymbol] = s.ante.flatMap(symbols) ++ s.succ.flatMap(symbols)
 
-  def freshIndexInSequent(name: String, s: Sequent) =
+  def freshIndexInSequent(name: String, s: Sequent): Option[Int] =
     if (names(s).exists(_.name == name))
       (s.ante.map(freshIndexInFormula(name, _)) ++ s.succ.map(freshIndexInFormula(name, _))).max
     else None
@@ -82,14 +82,13 @@ object TacticHelper {
   }
 
   /** Returns true iff {{{v^n}}} s.t. n!=0, n!=1 occurs in {{{term}}}*/
-  def variableOccursWithExponent(v: Variable, term: Term) = {
+  def variableOccursWithExponent(v: Variable, term: Term): Boolean = {
     var occursWithExponent = false
     val fn = new ExpressionTraversalFunction {
-      override def preT(p: PosInExpr, t: Term) = asMonomial(t) match {
-        case Some((_, x, Some(power))) if(power != Number(1) && power != Number(0) && x==v) => {
+      override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = asMonomial(t) match {
+        case Some((_, x, Some(power))) if power != Number(1) && power != Number(0) && x==v =>
           occursWithExponent = true
           Left(None)
-        }
         case _ => Left(None)
       }
     }
@@ -100,11 +99,9 @@ object TacticHelper {
   /** Transforms monomials in e using the xform function. */
   def transformMonomials(e: Term, xform: Term => Term): Term = {
     val fn = new ExpressionTraversalFunction {
-      override def preT(p:PosInExpr, term:Term) = {
-        if(isMonomial(term))
-          Right(xform(term))
-        else
-          Left(None)
+      override def preT(p: PosInExpr, term: Term): Either[Option[StopTraversal], Term] = {
+        if(isMonomial(term)) Right(xform(term))
+        else Left(None)
       }
     }
     ExpressionTraversal.traverse(fn, e).getOrElse(throw new BelleThrowable("Expected transformMonomials to succeed."))
@@ -114,12 +111,36 @@ object TacticHelper {
     * @return Optional coefficient, variable, optional exponent; or None if this isn't a monomial
     */
   def asMonomial(t: Term): Option[(Option[Term], Variable, Option[Term])] = t match {
-    case v:Variable => Some(None, v, None)
-    case Times(coeff:Term, v:Variable) if !StaticSemantics.vars(coeff).contains(v) => Some(Some(coeff), v, None)
-    case Times(coeff:Term, Power(v:Variable, exp:Term))
+    case v: Variable => Some(None, v, None)
+    case Times(coeff: Term, v: Variable) if !StaticSemantics.vars(coeff).contains(v) => Some(Some(coeff), v, None)
+    case Times(coeff: Term, Power(v:Variable, exp:Term))
       if !StaticSemantics.vars(coeff).contains(v) && !StaticSemantics.vars(exp).contains(v) => Some(Some(coeff), v, Some(exp))
     case _ => None
   }
 
-  def isMonomial(t:Term) = asMonomial(t).nonEmpty
+  def isMonomial(t:Term): Boolean = asMonomial(t).nonEmpty
+
+  /** Computes substitution with position of `name(old)` in sequent `seq` (either `replCandidate` or a previously
+    * introduced substitution that is present in `seq`). Returns (repl, replPos, nextReplCandidate). */
+  def findSubst(what: Term, replCandidate: Variable, seq: Sequent): (Variable, Option[Position], Variable) = {
+    val (repl: Variable, replPos: Option[Position], nextReplCandidate: Variable) = what match {
+      case v: Variable =>
+        seq.ante.zipWithIndex.find({
+          //@note heuristic to avoid new ghosts on repeated name(v) usage
+          case (Equal(x0: Variable, x: Variable), _) => v==x && x0.name==x.name
+          case _ => false
+        }).map[(Variable, Option[Position], Variable)]({ case (Equal(x0: Variable, _), i) => (x0, Some(AntePosition.base0(i)), replCandidate) }).
+          getOrElse((TacticHelper.freshNamedSymbol(v, seq), None, replCandidate))
+      case _ =>
+        seq.ante.zipWithIndex.find({
+          //@note heuristic to avoid new ghosts on repeated old(v) usage
+          case (Equal(x0: Variable, t: Term), _) => what==t && x0.name == replCandidate.name
+          case _ => false
+        }).map[(Variable, Option[Position], Variable)]({ case (Equal(x0: Variable, _), i) => (x0, Some(AntePosition.base0(i)), replCandidate) }).
+          getOrElse({
+            (replCandidate, None, Variable(replCandidate.name, Some(replCandidate.index.getOrElse(-1) + 1)))
+          })
+    }
+    (repl, replPos, nextReplCandidate)
+  }
 }

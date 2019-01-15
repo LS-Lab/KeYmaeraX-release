@@ -7,7 +7,8 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
-import java.util.{Date, GregorianCalendar}
+import java.io.File
+import java.time.LocalDate
 
 import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.Configuration
@@ -72,6 +73,9 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
   override def runUnchecked(cmd: String): (String, T) = link.runUnchecked(timeConstrained(cmd), m2k)
   override def run(cmd: MExpr): (String, T) = link.run(timeConstrained(cmd), m2k, mathematicaExecutor)
 
+  def runUnchecked[S](cmd: String, localm2k: M2KConverter[S]): (String, S) =
+    link.runUnchecked(timeConstrained(cmd), localm2k)
+
   def availableWorkers: Int = mathematicaExecutor.availableWorkers()
   def shutdown(): Unit = mathematicaExecutor.shutdown()
 
@@ -90,6 +94,11 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
  * @author Stefan Mitsch
  */
 class JLinkMathematicaLink extends MathematicaLink with Logging {
+  //@note using strings to be robust in case Wolfram decides to switch from current major:Double/minor:Int
+  private case class Version(major: String, minor: String, revision: String) {
+    override def toString: String = s"$major.$minor"
+  }
+
   private val TCPIP = Configuration(Configuration.Keys.MATH_LINK_TCPIP) == "true"
 
   //@todo really should be private -> fix SpiralGenerator
@@ -113,7 +122,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
   def init(linkName : String, jlinkLibDir : Option[String], remainingTrials: Int=5): Boolean = {
     this.linkName = linkName
     this.jlinkLibDir = jlinkLibDir
-    logger.info("Connecting to Mathematica over TCPIP: " + TCPIP)
+    //logger.info("Connecting to Mathematica over TCPIP: " + TCPIP)
     // set native library VM property for JLink
     if (jlinkLibDir.isDefined) {
       System.setProperty("com.wolfram.jlink.libdir", jlinkLibDir.get) //e.g., "/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink"
@@ -128,14 +137,18 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
         ml.discardAnswer()
         //@todo How to gracefully shutdown an unsuccessfully initialized math link again without causing follow-up problems?
         //@note print warnings for license issues instead of shutting down immediately
-        isActivated match {
-          case Some(true) => isComputing match {
-            case Some(true) => true // everything ok
-            case Some(false) => logger.error("ERROR: Test computation in Mathematica failed, shutting down.\n Please start a standalone Mathematica notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
-              throw new IllegalStateException("Test computation in Mathematica failed.\n Please start a standalone Mathematica notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
-            case None => logger.warn("WARNING: Unable to determine state of Mathematica, Mathematica may not be working.\n Restart KeYmaera X if you experience problems using arithmetic tactics."); true
-          }
-          case Some(false) => logger.warn("WARNING: Mathematica seems not activated or Mathematica license might be expired, Mathematica may not be working.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n If you experience problems during proofs, please renew your Mathematica license and restart KeYmaera X."); true
+        val version = getVersion
+        isActivated(version) match {
+          case Some((true, date)) =>
+            isComputing match {
+              case Some(true) =>
+                logger.info("Connected to Mathematica v" + version + " (TCPIP=" + TCPIP + ", license expires " + date + ")")
+                true // everything ok
+              case Some(false) => logger.error("ERROR: Test computation in Mathematica failed, shutting down.\n Please start a standalone Mathematica notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
+                throw new IllegalStateException("Test computation in Mathematica failed.\n Please start a standalone Mathematica notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
+              case None => logger.warn("WARNING: Unable to determine state of Mathematica, Mathematica may not be working.\n Restart KeYmaera X if you experience problems using arithmetic tactics."); true
+            }
+          case Some((false, date)) => logger.warn("WARNING: Mathematica seems not activated or Mathematica license might be expired (expires " + date + "), Mathematica may not be working.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n If you experience problems during proofs, please renew your Mathematica license and restart KeYmaera X."); true
           //throw new IllegalStateException("Mathematica is not activated or Mathematica license is expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please renew your Mathematica license and restart KeYmaera X.")
           case None => logger.warn("WARNING: Mathematica may not be activated or Mathematica license might be expired.\n A valid license is necessary to use Mathematica as backend of KeYmaera X.\n Please check your Mathematica license manually."); true
         }
@@ -145,7 +158,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
         logger.error("Shutting down since Mathematica J/Link native library was not found in:\n" + jlinkLibDir +
           "\nOr this path did not contain the native library compatible with " + System.getProperties.getProperty("sun.arch.data.model") + "-bit " + System.getProperties.getProperty("os.name") + " " + System.getProperties.getProperty("os.version") +
           diagnostic +
-          "\nPlease provide paths to the J/Link native library in " + Configuration.KEYMAERAX_HOME_PATH + "/application.conf and restart KeYmaera X.", e)
+          "\nPlease provide paths to the J/Link native library in " + Configuration.KEYMAERAX_HOME_PATH + File.separator + "keymaerax.conf and restart KeYmaera X.", e)
         shutdown()
         false
       case e: MathLinkException if e.getErrCode == 1004 && e.getMessage.contains("Link failed to open") && remainingTrials > 0 =>
@@ -171,13 +184,13 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
     if (ml == null) logger.trace("No need to shut down MathKernel if no link has been initialized")
     //if (ml == null) throw new IllegalStateException("Cannot shut down if no MathKernel has been initialized")
     else {
-      logger.info("Shutting down Mathematica...")
+      logger.debug("Shutting down Mathematica...")
       val l: KernelLink = ml
       ml = null
       l.abandonEvaluation()
       l.terminateKernel()
       l.close()
-      logger.info("...Done")
+      logger.info("Disconnected from Mathematica")
     }
   }
 
@@ -334,14 +347,14 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
     true
   }
 
-  /** Returns the version as (Major, Minor, Release) */
-  private def getVersion: (String, String, String) = {
+  /** Returns the version. */
+  private def getVersion: Version = {
     ml.evaluate("$VersionNumber")
     ml.waitForAnswer()
     val (major, minor) = importResult(
       ml.getExpr,
       version => {
-        logger.info("Running Mathematica version " + version.toString)
+        logger.debug("Running Mathematica version " + version.toString)
         val versionParts = version.toString.split("\\.")
         if (versionParts.length >= 2) (versionParts(0), versionParts(1))
         else ("Unknown", "Unknown")
@@ -349,36 +362,34 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
     ml.evaluate("$ReleaseNumber")
     ml.waitForAnswer()
     val release = importResult(ml.getExpr, _.toString)
-    //@note using strings to be robust in case Wolfram decides to switch from current major:Double/minor:Int
-    (major, minor, release)
+    Version(major, minor, release)
   }
 
   /** Checks if Mathematica is activated by querying the license expiration date */
-  private def isActivated: Option[Boolean] = {
+  private def isActivated(version: Version): Option[(Boolean, LocalDate)] = {
     val infinity = new MExpr(new MExpr(Expr.SYMBOL, "DirectedInfinity"), Array(new MExpr(1L)))
     try {
-      val version = getVersion
-
-      def checkExpired(date: Array[MExpr]): Option[Boolean] = {
-        logger.info("Mathematica license expires: " + date.mkString)
+      def toDate(date: Array[MExpr]): Option[LocalDate] = {
+        logger.debug("Mathematica license expires: " + date.mkString)
         if (date.length >= 3 && date(0).integerQ() && date(1).integerQ() && date(2).integerQ()) {
-          //@note month in calendar is 0-based, in Mathematica it's 1-based
-          val expiration = new GregorianCalendar(date(0).asInt(), date(1).asInt() - 1, date(2).asInt())
-          val today = new Date()
-          Some(expiration.getTime.after(today))
-        } else if (date.length >= 1 && date(0).equals(infinity)) {
-          Some(true)
+          Some(LocalDate.of(date(0).asInt(), date(1).asInt(), date(2).asInt()))
+        } else if (date.length >= 1 && date(0) == infinity) {
+          Some(LocalDate.MAX)
         } else {
           None
         }
       }
 
-      def licenseExpiredConverter(licenseExpirationDate: MExpr): Option[Boolean] = try {
+      def checkExpired(date: Option[LocalDate]): Option[(Boolean, LocalDate)] = {
+        date.map(d => d.isAfter(LocalDate.now()) -> d)
+      }
+
+      def licenseExpiredConverter(licenseExpirationDate: MExpr): Option[(Boolean, LocalDate)] = try {
         version match {
-          case ("9", _, _) => checkExpired(licenseExpirationDate.args)
-          case ("10", _, _) => checkExpired(licenseExpirationDate.args.head.args)
-          case ("11", _, _) => checkExpired(licenseExpirationDate.args.head.args)
-          case (major, minor, _) =>
+          case Version("9", _, _) => checkExpired(toDate(licenseExpirationDate.args))
+          case Version("10", _, _) => checkExpired(toDate(licenseExpirationDate.args.head.args))
+          case Version("11", _, _) => checkExpired(toDate(licenseExpirationDate.args.head.args))
+          case Version(major, minor, _) =>
             logger.debug("WARNING: Cannot check license expiration date since unknown Mathematica version " + major + "." + minor + ", only version 9.x, 10.x, and 11.x supported. Mathematica requests may fail if license is expired.")
             None
         }

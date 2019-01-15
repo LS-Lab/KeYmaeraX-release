@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BuiltInTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.DefaultSMTConverter
@@ -66,9 +67,16 @@ object QELogger extends Logging {
     */
   private val defaultPath: String = Configuration.path(Configuration.Keys.QE_LOG_PATH)
 
+  private def file(filename: String) =
+    if (scala.tools.nsc.io.File(filename).isDirectory) {
+      scala.tools.nsc.io.File(filename)./("qe.txt").toFile
+    } else {
+      scala.tools.nsc.io.File(filename)
+    }
+
   def clearLog(filename: String = defaultPath): Unit = {
     try {
-      val f = scala.tools.nsc.io.File(filename)
+      val f = file(filename)
       f.delete()
     } catch {
       case ex: Exception =>
@@ -78,7 +86,7 @@ object QELogger extends Logging {
 
   def logSequent(pr: Sequent, s: Sequent, name: String, filename: String = defaultPath): Unit = {
     try {
-      val f = scala.tools.nsc.io.File(filename)
+      val f = file(filename)
       f.parent.createDirectory(force=true)
       val namestr = "@"+name+"#"+pr.toString+"#"+s.toString+"\n"
       f.appendAll(namestr)
@@ -89,7 +97,7 @@ object QELogger extends Logging {
   }
 
   // Must be of the form Seq # Seq # Seq
-  def parseStr(s:String): Option[(String,Sequent,Sequent)] = {
+  def parseStr(s: String): Option[(String, Sequent, Sequent)] = {
     val ss = s.split("#")
     if (ss.length != 3) None
     else try {
@@ -103,30 +111,52 @@ object QELogger extends Logging {
     }
   }
 
-  def parseLog(filename:String = defaultPath): Map[String,List[(Sequent,Sequent)]] = {
+  def parseStr2(s: String): Option[(String, Sequent)] = {
+    val ss = s.split("#")
+    if (ss.length != 3) None
+    else try {
+      Some(ss(0),ss(2).asSequent)
+    } catch {
+      case ex: Exception =>
+        logger.error("Failed to parse " + s, ex)
+        None
+    }
+  }
+
+  /** Parses the log into a map (reads large log files into memory!). */
+  def parseLog(filename: String = defaultPath): Map[String, List[(Sequent, Sequent)]] = {
+    class LogCollector extends (((String, Sequent, Sequent)) => Unit) {
+      val entries: ListBuffer[(String, Sequent, Sequent)] = new ListBuffer[(String, Sequent, Sequent)]()
+      def apply(e: (String, Sequent, Sequent)): Unit = entries += e
+    }
+
+    val c = new LogCollector()
+    processLog(parseStr, c, filename)
+    c.entries.toList.groupBy(_._1).mapValues(_.map(p => (p._2,p._3)))
+  }
+
+  /** Process log one entry at a time. */
+  def processLog[T](parseEntry: String => Option[T], processEntry: T => Unit, filename: String = defaultPath): Unit = {
     // Upon reading @, save the previous sequent and provable
     var curString = ""
 
-    var seqMap = new ListBuffer[(String,Sequent,Sequent)]()
     try {
-      for (line <- Source.fromFile(filename).getLines()) {
+      for (line <- Source.fromFile(file(filename).toURI).getLines()) {
         if (line.startsWith("@")) {
-          parseStr(curString) match {
+          parseEntry(curString) match {
             case None => ()
-            case Some(p) => seqMap += p
+            case Some(p) => processEntry(p)
           }
-          curString=line.substring(1)
+          curString = line.substring(1)
         } else curString += line
       }
-      parseStr(curString) match {
+      parseEntry(curString) match {
         case None => ()
-        case Some(p) => seqMap += p
+        case Some(p) => processEntry(p)
       }
     } catch {
-      case ex: Exception =>
-        logger.error("File I/O exception", ex)
+      case ex: Exception => logger.error("File I/O exception", ex)
     }
-    seqMap.toList.groupBy(_._1).mapValues(_.map(p => (p._2,p._3)))
   }
 
   type LogConfig = (Int,String)
@@ -159,15 +189,22 @@ object QELogger extends Logging {
 
   /** Exports the entries of `logPath` as separate files in SMT-Lib format to `exportPath` */
   def exportSmtLibFormat(logPath: String, exportPath: String): Unit = {
-    val logEntries = parseLog(logPath)
-    logEntries.foreach({case (name, sequents) =>
-      val filePath = if (exportPath.contains("${entryname}")) exportPath else exportPath + "${entryname}"
-      exportSmtLibFormat(sequents.head._2.toFormula, filePath.replace("${entryname}", name.replaceAll(" ", "_")))})
+    val filePath = if (exportPath.contains("${entryname}")) exportPath else exportPath + "${entryname}"
+    def export(e: (String, Sequent)): Unit = {
+      print("Exporting " + e._1 + "...")
+      try {
+        exportSmtLibFormat(e._2.toFormula, filePath.replace("${entryname}", e._1.replaceAllLiterally(" ", "_")))
+        println("done")
+      } catch {
+        case ex: Throwable => println("failed: " + ex.getMessage)
+      }
+    }
+    processLog(parseStr2, export, logPath)
   }
 
   /** Exports the formula `fml` in SMT-Lib format to `exportFile`. */
   def exportSmtLibFormat(fml: Formula, exportFile: String): Unit = {
-    val f = scala.tools.nsc.io.File(exportFile)
+    val f = file(exportFile)
     f.appendAll(DefaultSMTConverter(fml))
   }
 
@@ -178,6 +215,7 @@ object QELogger extends Logging {
         case "smtlib" =>
           val logPath = options.getOrElse("logpath", throw new Exception("Missing log file path, use argument -logpath path/to/logfile"))
           val outputPath = options.getOrElse("outputpath", logPath + "${entryname}.smt")
+          PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
           exportSmtLibFormat(logPath, outputPath)
         case _ => throw new Exception("Unknown output format " + format + ", use one of [smtlib]")
       }

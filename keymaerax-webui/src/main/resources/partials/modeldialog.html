@@ -1,42 +1,63 @@
-<form editable-form name="modelDataForm" onaftersave="saveModelData()" style="height:100%;">
-<div class="modal-header row">
-    <div class="col-md-10">
-        <h3 class="modal-title" ng-if="mode==='edit'"><span editable-text="model.name" e-name="modelName"
-                                      e-placeholder="Model name" e-required onbeforesave="checkName($data)">{{model.name}}</span></h3>
-        <h3 class="modal-title" ng-if="mode==='exercise'">{{model.name}}</h3>
+<form editable-form class="k4-vertical-fill-flex" name="modelDataForm" onbeforesave="checkModelData()"
+      onaftersave="save()" shown="save.editable">
+<div class="modal-header">
+    <div class="row" ng-if="mode==='edit' || mode==='exercise'">
+        <div class="col-md-12">
+            <!--<h3 class="modal-title" ng-if="mode==='edit'">-->
+                <!--<span editable-text="model.name" e-name="modelName"-->
+                      <!--e-placeholder="Model name" e-required onbeforesave="checkName($data)">{{model.name}}</span></h3>-->
+            <h3 class="modal-title" ng-if="mode==='edit' || mode==='exercise'">
+                <span>{{model.name}}</span>
+                <a class="btn btn-link pull-right" ng-click="enableEditing()" ng-if="mode==='edit'"
+                   ng-disabled="modelDataForm.$visible"><i class="fa fa-pencil"></i> Edit</a>
+                <span class="pull-right text-danger" ng-if="mode==='exercise' && !modelIsComplete()">
+                    Fill in the blanks (__________)
+                </span>
+            </h3>
+        </div>
     </div>
-    <div class="col-md-2">
-        <a class="btn btn-link pull-right" ng-click="modelDataForm.$show()" ng-if="mode==='edit'" ng-hide="modelDataForm.$visible"><i class="fa fa-pencil"></i> Edit</a>
-        <a class="btn btn-link pull-right" ng-click="modelDataForm.$show()" ng-if="mode==='exercise'" ng-hide="modelDataForm.$visible"><i class="fa fa-pencil-square-o"></i> Fill in the blanks (______)</a>
-        <span ng-show="modelDataForm.$visible" class="pull-right">
-          <button type="submit" class="btn btn-primary" ng-disabled="modelDataForm.$waiting">
-              <i class="fa fa-check"></i>
-          </button>
-          <button type="button" class="btn btn-default" ng-disabled="modelDataForm.$waiting" ng-click="modelDataForm.$cancel()">
-              <i class="fa fa-remove"></i>
-          </button>
-        </span>
+    <div class="row" ng-if="modelDataForm.$visible && model.numAllProofSteps > 0">
+        <div class="col-md-12">
+            <div uib-alert class="alert-warning" ng-if="mode ==='edit'">
+                <span>Model has proofs with steps. Proof cache will be deleted. After making changes to the model, the stored
+                    tactics may need editing when re-opening the proofs. If you want to keep the proof cache, please copy the
+                    model content, cancel editing, and create a new model instead.</span>
+            </div>
+            <div uib-alert class="alert-warning" ng-if="mode ==='proofedit'">
+                <span>After making changes to the model, the tactics may need editing.</span>
+            </div>
+        </div>
     </div>
 </div>
 <div class="modal-body">
-    <!--<p ng-if="mode=='edit'"><strong><span editable-text="model.title" e-name="modelTitle" e-placeholder="Model title">{{model.title}}</span></strong></p>-->
-    <p ng-if="mode=='edit'" style="height:20px;"><span editable-textarea="model.description" e-name="modelDescription" e-placeholder="A short model description" e-rows="1" e-cols="100">{{model.description}}</span></p>
-    <!--<p>See additionally <a href="{{model.pubLink}}">{{model.pubLink}}</a> for further information</p>-->
-    <div ng-if="modelDataForm.$visible && model.numProofs > 0" uib-alert class="alert-warning">
-        <span>Model changes are made on a copy, since the model already has proofs.</span>
-        <button class="btn" ng-click="deleteModelProofs();modelDataForm.$show()">Delete all proofs and edit in place</button>
+    <!--<div class="row" ng-if="mode==='edit'">-->
+        <!--<div class="col-md-12">-->
+            <!--&lt;!&ndash;<p><strong><span editable-text="model.title" e-name="modelTitle" e-placeholder="Model title">{{model.title}}</span></strong></p>&ndash;&gt;-->
+            <!--<p><span editable-textarea="model.description" e-name="modelDescription"-->
+                     <!--e-placeholder="A short model description" e-rows="1" e-cols="100">{{model.description}}</span>-->
+            <!--</p>-->
+            <!--&lt;!&ndash;<p>See additionally <a href="{{model.pubLink}}">{{model.pubLink}}</a> for further information</p>&ndash;&gt;-->
+        <!--</div>-->
+    <!--</div>-->
+    <div class="row k4-vertical-fill-flex">
+        <div class="col-md-12 k4-vertical-fill k4-vertical-fill-flex">
+            <div ui-ace="{theme:'github',mode:'dl',showGutter:true,onLoad:aceLoaded}" ng-model="model.keyFile" id="editor"></div>
+        </div>
     </div>
-    <textarea class="k4-vertical-fill-flex" ng-if="modelDataForm.$visible" class="k4-modeleditor" ng-model="model.keyFile"></textarea>
-    <div class="k4-vertical-fill-flex" ng-if="!modelDataForm.$visible" hljs hljs-language="dl" hljs-source="model.keyFile"></div>
 </div>
 <div class="modal-footer">
-    <button class="btn btn-primary" ng-if="!user.isGuest() && mode==='edit'" ng-click="startProof()">Start new proof</button>
-    <button class="btn btn-primary" ng-if="!user.isGuest() && mode==='exercise'"
-            ng-disabled="modelDataForm.$visible || !modelIsComplete()" ng-click="startProof()">Proof exercise</button>
+    <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='edit'"
+            ng-disabled="!modelDataForm.$visible" ng-click="save.cmd=refreshModels">Save</button>
+    <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='edit' && modelIsComplete()"
+            ng-click="save.cmd=startProof">Start new proof</button>
+    <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='proofedit' && modelIsComplete()"
+            ng-click="save.cmd=redoProof">Save</button>
+    <button class="btn btn-primary" type="submit" ng-if="!user.isGuest() && mode==='exercise'"
+            ng-disabled="!modelIsComplete()" ng-click="save.cmd=startProof">Exercise</button>
     <span ng-controller="ModelProofCreateCtrl">
-    <button class="btn btn-primary" ng-if="model.hasTactic && !user.isGuest() && mode==='edit'"
-            ng-click="ok();proveFromTactic(model.id)">Prove with associated tactic</button>
+    <button class="btn btn-primary" type="submit" ng-if="model.hasTactic && !user.isGuest() && mode==='edit' && modelIsComplete()"
+            ng-click="save.cmd=delayedProveFromTactic(model.id)">Prove with associated tactic</button>
     </span>
-    <button class="btn btn-primary" ng-click="ok()">Close</button>
+    <button class="btn btn-primary" ng-click="modelDataForm.$cancel();cancel()">Cancel</button>
 </div>
 </form>

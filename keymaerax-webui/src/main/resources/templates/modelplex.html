@@ -21,9 +21,9 @@
     </div>
 </div>
 <div class="modal-body">
-    <div class="well">
+    <div class="well row">
         <form class="form-horizontal" ng-submit="synthesize()">
-            <div class="form-group">
+            <div class="row form-group">
                 <label for="monitorkind" class="col-md-2 control-label">Artifact</label>
                 <div class="col-md-10">
                     <select class="form-control" id="artifact" ng-model="mxdata.artifact">
@@ -39,7 +39,7 @@
                     </span>
                 </div>
             </div>
-            <div class="form-group">
+            <div class="row form-group">
                 <label for="monitorkind" class="col-md-2 control-label">Monitor Kind</label>
                 <div class="col-md-10">
                     <select class="form-control" id="monitorkind"
@@ -57,7 +57,7 @@
                     </span>
                 </div>
             </div>
-            <div class="form-group">
+            <div class="row form-group">
                 <label for="monitorShape" class="col-md-2 control-label">Monitor Shape</label>
                 <div class="col-md-10">
                     <select class="form-control" id="monitorShape"
@@ -73,7 +73,7 @@
                     </span>
                 </div>
             </div>
-            <div class="form-group">
+            <div class="row form-group">
                 <label for="additionalMonitorVars" class="col-md-2 control-label">Monitored Variables</label>
                 <div class="col-md-10">
                     <input class="form-control" id="monitorVars" type="text"
@@ -84,7 +84,7 @@
                     </span>
                 </div>
             </div>
-            <div class="form-group">
+            <div class="row form-group">
                 <label for="additionalMonitorVars" class="col-md-2 control-label">Additional Variables</label>
                 <div class="col-md-10">
                     <input class="form-control" id="additionalMonitorVars" type="text"
@@ -95,7 +95,7 @@
                     </span>
                 </div>
             </div>
-            <div class="form-group">
+            <div class="row form-group">
                 <div class="col-md-offset-2 col-md-10">
                     <button type="submit" class="btn btn-default">Synthesize</button>
                 </div>
@@ -103,7 +103,7 @@
 
         </form>
     </div>
-    <div class="well" ng-if="mxdata.generatedArtifact !== undefined">
+    <div class="well row" ng-if="mxdata.generatedArtifact !== undefined">
         <span class="k4-formula-preformat">{{mxdata.generatedArtifact.plainString}}</span>
     </div>
 </div>

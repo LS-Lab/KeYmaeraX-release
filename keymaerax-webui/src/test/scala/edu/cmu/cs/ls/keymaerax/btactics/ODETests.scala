@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.universalGen
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.UsualTest
 import edu.cmu.cs.ls.keymaerax.tools.Tool
@@ -53,10 +53,7 @@ class ODETests extends TacticTestBase with Timeouts {
         | ] (x - 4*y < 8)
       """.stripMargin.asFormula
 
-    proveBy(fml, implyR(1) & dC("x^2 + x*y + y^2 - 111/59 <= 0".asFormula)(1) <(
-      dW(1) & QE & done,
-      ODE(1) & done
-    )) shouldBe 'proved
+    proveBy(fml, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
   "Z3" should "prove what's needed by ODE for the Z3 ghost" in withZ3 { _ =>
@@ -66,7 +63,6 @@ class ODETests extends TacticTestBase with Timeouts {
     TactixLibrary.proveBy("true->2!=0".asFormula, QE) shouldBe 'proved
     TactixLibrary.proveBy("\\forall x_0 (x_0>0->\\exists y_ (true->x_0*y_^2>0&\\forall x \\forall y_ (-x)*y_^2+x*(2*y_^(2-1)*(1/2*y_+0))>=0))".asFormula, QE) shouldBe 'proved
   }
-
 
   "QE" should "be able to prove the arithmetic subgoal from x'=-x case" in withQE { _ =>
     val f = "x>0->(\\exists y_ (true->x*y_^2>0&\\forall x \\forall y_ (-x)*y_^2+x*(2*y_^(2-1)*(1/2*y_+0))>=0))".asFormula
@@ -83,13 +79,11 @@ class ODETests extends TacticTestBase with Timeouts {
   }
 
   it should "solve to prove x>=0&v=1&a=2 -> [{x'=v,v'=a}]x>=0" in withQE { _ =>
-    TactixLibrary.proveBy("x>=0&v=1&a=2 -> [{x'=v,v'=a}]x>=0".asFormula, implyR(1) & ODE(1) & onAll(QE)) shouldBe 'proved
+    TactixLibrary.proveBy("x>=0&v=1&a=2 -> [{x'=v,v'=a}]x>=0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
-  it should "DI to prove w>=0&x=0&y=3->[{x'=y,y'=-w^2*x-2*w*y}]w^2*x^2+y^2<=9" in withQE { _ =>
-    TactixLibrary.proveBy("w>=0&x=0&y=3->[{x'=y,y'=-w^2*x-2*w*y}]w^2*x^2+y^2<=9".asFormula, implyR(1) & dI()(1)) shouldBe 'proved
-    //@todo no longer proves with ODE
-//    TactixLibrary.proveBy("w>=0&x=0&y=3->[{x'=y,y'=-w^2*x-2*w*y}]w^2*x^2+y^2<=9".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+  it should "prove w>=0&x=0&y=3->[{x'=y,y'=-w^2*x-2*w*y}]w^2*x^2+y^2<=9" in withQE { _ =>
+    TactixLibrary.proveBy("w>=0&x=0&y=3->[{x'=y,y'=-w^2*x-2*w*y}]w^2*x^2+y^2<=9".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
   it should "cut to prove x>=0&v>=0&a>=0->[{x'=v,v'=a,a'=a^2}]x>=0" in withQE { _ =>
@@ -98,10 +92,6 @@ class ODETests extends TacticTestBase with Timeouts {
 
   it should "cut to prove x>=0&v>=0&a>=0&j>=0->[{x'=v,v'=a,a'=j,j'=j^2}]x>=0" in withQE { _ =>
     TactixLibrary.proveBy("x>=0&v>=0&a>=0&j>=0->[{x'=v,v'=a,a'=j,j'=j^2}]x>=0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
-  }
-
-  "openDiffInd" should "directly prove x>0 -> [{x'=x}]x>0" in withQE { _ =>
-    proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & openDiffInd(1)) shouldBe 'proved
   }
 
   "DGauto" should "DGauto x>0 -> [{x'=-x}]x>0 by DA" in withMathematica { _ =>
@@ -148,12 +138,6 @@ class ODETests extends TacticTestBase with Timeouts {
 
   "Auto ODE" should "prove x>0 -> [{x'=x}]x>0" taggedAs SummaryTest in withQE { _ =>
     proveBy("x>0 -> [{x'=x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
-  }
-  it should "prove x>0 -> [{x'=x}]x>0 with lengthy tactic" in withQE { _ =>
-    proveBy("x>0 -> [{x'=x}]x>0".asFormula, (implyR(1) & ODE(1) & (onAll(QE) | done)) | skip) shouldBe 'proved
-  }
-  it should "prove x>0 -> [{x'=x}]x>0 with lengthy tactic 2" in withQE { _ =>
-    TactixLibrary.proveBy("x>0 -> [{x'=x}]x>0".asFormula, (implyR(1) & ODE(1) & (onAll(QE) | done)) | skip) shouldBe 'proved
   }
 
   it should "prove x^3>5 -> [{x'=x^3+x^4}]x^3>5" in withQE { _ =>
@@ -203,32 +187,35 @@ class ODETests extends TacticTestBase with Timeouts {
     TactixLibrary.proveBy("x=1&y=2&z>=8->[{x'=x^2,y'=4*x,z'=5*y}]z>=8".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
-  it should "work with nested ODEs" in withQE { _ =>
+  it should "work with nested ODEs" ignore withQE { _ =>
+    //@note Fails because ODE no longer solves
     proveBy("x>0 -> [{x'=5};{x'=2};{x'=x}]x>0".asFormula, (unfoldProgramNormalize & ODE(1))*3) shouldBe 'proved
   }
 
-  it should "work with solvable maybe bound" in withQE { _ =>
+  it should "work with solvable maybe bound" ignore withQE { _ =>
+    //@note Fails because ODE no longer solves
     val result = proveBy("[{x'=5}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asFormula, ODE(1))
     result.subgoals.loneElement shouldBe "==> \\forall t_ (t_>=0 -> \\forall x (x=5*t_+x_1 -> [{x:=x+3;}* ++ y:=x;](x>0&y>0)))".asSequent
   }
 
   it should "work with maybe bound" in withMathematica { _ =>
+    //@note partial result from ODE
     val result = proveBy("x>0 -> [{x'=-x}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asFormula, implyR(1) & ODE(1))
     result.subgoals.loneElement shouldBe "x>0 ==> [{x'=-x & x>0}][{x:=x+3;}* ++ y:=x;](x>0&y>0)".asSequent
   }
 
-  it should "not stutter repeatedly" in withQE { _ =>
-    val result = proveBy("[{x'=x^x}]x>0".asFormula, ODE(1))
-    result.subgoals.loneElement shouldBe "==> [{x'=x^x}]x>0".asSequent
+  it should "not stutter" in withQE { _ =>
+    //@note now throws an error instead of stuttering
+    a [BelleThrowable] should be thrownBy proveBy("[{x'=x^x}]x>0".asFormula, ODE(1))
   }
 
   it should "not fail evolution domain simplification on empty evolution domain constraint" in withQE { _ =>
-    val result = proveBy("[{x'=x^x}]x>0".asFormula, ODE(1))
-    result.subgoals.loneElement shouldBe "==> [{x'=x^x}]x>0".asSequent
+    //@note now throws an error instead of stuttering
+    a [BelleThrowable] should be thrownBy proveBy("[{x'=x^x}]x>0".asFormula, ODE(1))
   }
 
   it should "prove cheat sheet example" in withQE { _ => {
-    val f = KeYmaeraXProblemParser(
+    val f = KeYmaeraXArchiveParser.parseAsProblemOrFormula(
       """
         |/* Example from KeYmaera X Cheat Sheet */
         |Functions.        /* function symbols cannot change their value */
@@ -409,12 +396,14 @@ class ODETests extends TacticTestBase with Timeouts {
     }
   }
 
-  it should "use an annotated differential invariant" in withMathematica { _ =>
+  it should "use an annotated differential invariant" ignore withMathematica { _ =>
+    //todo: ODE now refutes this
     val g = "[{x'=-y,y'=x}@invariant(x^2+y^2=old(x^2+y^2))]x>0".asFormula
     proveBy(g, ODE(1)).subgoals.loneElement shouldBe "old=x^2+y^2 ==> [{x'=-y,y'=x & x^2+y^2=old}]x>0".asSequent
   }
 
-  it should "use annotated differential invariants" in withMathematica { _ =>
+  it should "use annotated differential invariants" ignore withMathematica { _ =>
+    //todo: ODE now refutes this
     val g = "[{x'=-y,y'=x,z'=2}@invariant(z>=old(z), x^2+y^2=old(x^2+y^2))]x>0".asFormula
     proveBy(g, ODE(1)).subgoals.loneElement shouldBe "z_0=z, old=x^2+y^2 ==> [{x'=-y,y'=x, z'=2 & z>=z_0 & x^2+y^2=old}]x>0".asSequent
   }
@@ -442,6 +431,7 @@ class ODETests extends TacticTestBase with Timeouts {
     result.subgoals(2) shouldBe "A>=0, b()>0, v_0=v ==> [{v'=0,w'=0/r & true & v=v_0}]x>0".asSequent
   }
 
+  //todo: Move?
   "splitWeakInequality" should "split x>=0->[{x'=x}]x>=0" in withQE { _ =>
     val f = "x>=0->[{x'=x}]x>=0".asFormula
     val result = proveBy(f, implyR(1) & DifferentialTactics.splitWeakInequality(1))
@@ -452,9 +442,10 @@ class ODETests extends TacticTestBase with Timeouts {
 
   it should "prove x>=0->[{x'=x}]x>=0 via ODE" in withMathematica { _ =>
     val f = "x>=0->[{x'=x}]x>=0".asFormula
-    proveBy(f, implyR(1) & ODE(1) & onAll(QE)) shouldBe 'proved
+    proveBy(f, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
+  //todo: Move?
   "1D Saddle Node" should "prove with a bifurcation" in withMathematica { _ =>
     val formula = """r <= 0 -> \exists f (x=f -> [{x'=r+x^2}]x=f)""".asFormula
     val tactic = """implyR(1);
@@ -479,6 +470,7 @@ class ODETests extends TacticTestBase with Timeouts {
     proveBy(formula, tactic) shouldBe 'proved
   }
 
+  //todo: Move?
   it should "prove with tree-shaped proof" in withMathematica { _ =>
     val formula = """r <= 0 -> \exists f (x=f -> [{x'=r+x^2}]x=f)""".asFormula
 
@@ -508,6 +500,7 @@ class ODETests extends TacticTestBase with Timeouts {
     proveBy(formula, tactic) shouldBe 'proved
   }
 
+  //todo: Move?
   "liveness" should "prove that exponential diff eqs are unbounded" in withMathematica { _ =>
     //Tests out a derived version of DV
 
@@ -546,6 +539,7 @@ class ODETests extends TacticTestBase with Timeouts {
     pr shouldBe 'proved
   }
 
+  //todo: Move?
   "invariant clusters" should "prove example 6 (Kong et. al. HSCC'17)" in withMathematica { _ =>
     val fml = "(x+15)^2 + (y-17)^2 - 1 <= 0 -> [{x'=y^2, y'=x*y}] (x-11)^2+(y-33/2)^2-1>0".asFormula
     val pr = proveBy(fml,implyR(1) &

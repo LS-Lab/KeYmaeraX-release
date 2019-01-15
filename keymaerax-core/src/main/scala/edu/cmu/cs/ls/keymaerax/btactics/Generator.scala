@@ -36,7 +36,7 @@ class ConfigurableGenerator[A](var products: Map[Expression,Seq[A]] = Map[Expres
   def apply(s: Sequent, p: Position): Stream[A] = s.sub(p) match {
     case Some(Box(prg, _)) => findPrgProducts(prg)
     case Some(Diamond(prg, _)) => findPrgProducts(prg)
-    case Some(f) => products.getOrElse(f, Nil).toStream
+    case Some(f) => products.getOrElse(f, Nil).distinct.toStream
     case None => Nil.toStream
   }
 
@@ -44,8 +44,8 @@ class ConfigurableGenerator[A](var products: Map[Expression,Seq[A]] = Map[Expres
   private def findPrgProducts(prg: Program): Stream[A] = prg match {
     case sys@ODESystem(ode, _) =>
       products.find({ case (ODESystem(key, _), _) => ode == key case _ => false }).
-        getOrElse(() -> findConditionalDiffInv(sys))._2.toStream
-    case _ => products.getOrElse(prg, Nil).toStream
+        getOrElse(() -> findConditionalDiffInv(sys))._2.distinct.toStream
+    case _ => products.getOrElse(prg, Nil).distinct.toStream
   }
 
   /** Finds products that match the ODE `ode` by shape and with a condition that matches.

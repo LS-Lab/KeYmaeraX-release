@@ -6,7 +6,7 @@
  * Differential Dynamic Logic parser for concrete KeYmaera X notation.
   *
   * @author Andre Platzer
-  * @see Andre Platzer. [[http://dx.doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
@@ -26,6 +26,8 @@ private[parser] sealed trait Item
 /** Tokens are terminals occurring at a given location in the input. */
 private[parser] case class Token(tok: Terminal, loc: Location = UnknownLocation) extends Item {
   override def toString = tok.toString
+  /** Human-readable description followed by internal info */
+  def description: String = tok.description
 }
 private[parser] object UnknownToken extends Token(PSEUDO, UnknownLocation)
 /** Expressions that are partially parsed on the parser item stack. */
@@ -56,13 +58,15 @@ private[parser] trait FinalItem extends Item
 private[parser] case class Accept(expr: Expression) extends FinalItem
 /** Parser items representing erroneous ill-formed input. */
 private[parser] case class Error(msg: String, loc: Location, st: String) extends FinalItem
+/** Other items for extending the parser. */
+private[parser] trait OtherItem extends Item
 
 /** Expected inputs */
 private[parser] trait Expected
 private object Expected {
   /** Terminal input expected */
   private[parser] implicit class ExpectTerminal(tok: Terminal) extends Expected {
-    override def toString: String = ParseException.tokenDescription(tok)
+    override def toString: String = tok.description
   }
 }
 /** Nonterminal or pseudo-nonterminal input expected */
@@ -100,7 +104,7 @@ private object MORE extends ExpectNonterminal("<more>") {override def toString =
  * @see [[edu.cmu.cs.ls.keymaerax.parser]]
  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
-object KeYmaeraXParser extends Parser with Logging {
+object KeYmaeraXParser extends Parser with TokenParser with Logging {
   import OpSpec.statementSemicolon
   import OpSpec.func
 
@@ -122,9 +126,6 @@ object KeYmaeraXParser extends Parser with Logging {
 
   lazy val printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
 
-  /** Lexer's token stream with first token at head. */
-  type TokenStream = List[Token]
-
   /** Parser state consisting of expected syntactic kind to parse currently, the item stack, and remaining input. */
   private[parser] sealed case class ParseState(stack: Stack[Item], input: TokenStream) {
     /** Lookahead location of this parser state */
@@ -137,10 +138,17 @@ object KeYmaeraXParser extends Parser with Logging {
   }
 
   private val PSEUDOTOK = UnknownToken
+
   override val termParser: (String => Term) =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, TermKind, apply(input)) match {
       case t: Term => t
       case e@_ => throw ParseException("Input does not parse as a term but as " + e.kind, e).inInput(input)
+    }
+
+  override val termTokenParser: KeYmaeraXParser.TokenStream => Term =
+    input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, TermKind, parse(input)) match {
+      case t: Term => t
+      case e@_ => throw ParseException("Input does not parse as a term but as " + e.kind, e).inInput("<unknown>", Some(input))
     }
 
   override val formulaParser: (String => Formula) =
@@ -150,7 +158,7 @@ object KeYmaeraXParser extends Parser with Logging {
     }
 
   /** Parse the input token stream in the concrete syntax as a differential dynamic logic formula */
-  private[parser] val formulaTokenParser: (TokenStream => Formula) =
+  override val formulaTokenParser: (TokenStream => Formula) =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, FormulaKind, parse(input)) match {
       case f: Formula => f
       case e@_ => throw ParseException("Input does not parse as a formula but as " + e.kind, e).inInput("<unknown>", Some(input))
@@ -162,15 +170,27 @@ object KeYmaeraXParser extends Parser with Logging {
       case e@_ => throw ParseException("Input does not parse as a program but as " + e.kind, e).inInput(input)
     }
 
+  override val programTokenParser: KeYmaeraXParser.TokenStream => Program =
+    input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, ProgramKind, parse(input)) match {
+      case prg: Program => prg
+      case e@_ => throw ParseException("Input does not parse as a program but as " + e.kind, e).inInput("<unknown>", Some(input))
+    }
+
   override val differentialProgramParser: (String => DifferentialProgram) =
     input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, DifferentialProgramKind, apply(input)) match {
       case p: DifferentialProgram => p
       case e@_ => throw ParseException("Input does not parse as a program but as " + e.kind, e).inInput(input)
     }
 
+  override val differentialProgramTokenParser: KeYmaeraXParser.TokenStream => DifferentialProgram =
+    input => elaborate(eofState, PSEUDOTOK, OpSpec.sNone, DifferentialProgramKind, parse(input)) match {
+      case prg: DifferentialProgram => prg
+      case e@_ => throw ParseException("Input does not parse as a differential program but as " + e.kind, e).inInput("<unknown>", Some(input))
+    }
+
   private val eofState = ParseState(Bottom, List(Token(EOF, UnknownLocation)))
 
-  private[parser] def parse(input: TokenStream): Expression = {
+  def parse(input: TokenStream): Expression = {
     require(input.last.tok == EOF, "token streams have to end in " + EOF)
     val parse = parseLoop(ParseState(Bottom, input)).stack match {
       case Bottom :+ Accept(e) => e
@@ -528,8 +548,10 @@ object KeYmaeraXParser extends Parser with Logging {
           val result = elaborate(st, optok1, optok2, optok2, op(st, tok1, kinds).asInstanceOf[TernaryOpSpec[Expression]], t1, t2, t3)
           reduce(st, 7, result, r)
         } else shift(st)
-      case r :+ (optok1@Token(tok1@IF,_)) :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) :+ Token(LBRACE,_) :+ Expr(t2) :+ Token(RBRACE,_) :+ Token(ELSE,_)=>
-        shift(st)
+      case r :+ (optok1@Token(tok1@IF,_)) :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) :+ Token(LBRACE,_) :+ Expr(t2) :+ Token(RBRACE,_) :+ Token(ELSE,_)=> la match {
+        case LBRACE => shift(st)
+        case _ => error(st, List(LBRACE))
+      }
       case r :+ (optok1@Token(tok1@IF,_)) :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) :+ Token(LBRACE,_) :+ Expr(t2) :+ Token(RBRACE,_) :+ Token(ELSE,_) :+ Token(LBRACE, _)=>
         shift(st)
       case r :+ (optok1@Token(tok1@IF,_)) :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) :+ Token(LBRACE,_) :+ Expr(t2) :+ Token(RBRACE,_) :+ Token(ELSE,_) :+ Token(LBRACE, _) :+ Expr(t3) =>
@@ -601,7 +623,8 @@ object KeYmaeraXParser extends Parser with Logging {
 //      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(p1:DifferentialProgram) :+ (tok2@Token(AMP,_)) :+ Expr(f1:Formula) :+ (tok3@Token(RBRACE,_)) =>
 //        reduce(st, 5, elaborate(st, tok2, OpSpec.sODESystem, p1, f1), r)
       case r :+ (tok1@Token(LBRACE,_)) :+ Expr(p1:DifferentialProgram) :+ (tok2@Token(AMP,_)) :+ Expr(f1) :+ (tok3@Token(RBRACE,_)) =>
-        reduce(st, 5, elaborate(st, tok2, OpSpec.sODESystem, p1, f1), r)
+        if (StaticSemantics.isDifferential(f1)) throw new ParseException("No differentials can be used in evolution domain contains", tok2.loc.spanTo(tok3.loc), printer.stringify(f1), "In an evolution domain constraint, instead of the primed variables use their right-hand sides.", "", "")
+        else reduce(st, 5, elaborate(st, tok2, OpSpec.sODESystem, p1, f1), r)
 
       // elaboration special pattern case to DifferentialProgram
       case r :+ (tok1@Token(LBRACE,_)) :+ Expr(t1@Equal(_:DifferentialSymbol,_)) if (la==AMP || la==COMMA || la==RBRACE) &&
@@ -875,7 +898,7 @@ object KeYmaeraXParser extends Parser with Logging {
     var brace = 0
     var paren = 0
     var box = 0
-    //@note dia is an approximation because 2<8 might be misunderstood during parse.
+    //@todo dia is an approximation because 2<8 might be misunderstood during parse.
     var dia = 0
     var stack = st.stack
     while (!stack.isEmpty) {

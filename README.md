@@ -8,6 +8,8 @@ KeYmaera X features a minimal core of just 1700 lines of code that isolates all 
 More information and precompiled binaries are available at:
   http://keymaeraX.org/
 
+  [Differential dynamic logic grammar](http://keymaerax.org/doc/dL-grammar.md)
+
 Installation
 ============
 The easiest way to run KeYmaera X is to download binaries 
@@ -17,7 +19,7 @@ The easiest way to run KeYmaera X is to download binaries
 
 First ensure that the following software is installed
 - [Java Development Kit JDK](https://java.com/download)
-  (version 1.8+ recommended. Mathematica 9.0 is only compatible with Java 1.6 and 1.7. Mathematica 10.0+ are also compatible with Java 1.8)
+  (version 1.8 recommended, versions 1.9-1.10 work, as well. Mathematica 9.0 is only compatible with Java 1.6 and 1.7. Mathematica 10.0+ are also compatible with Java 1.8)
 - [Wolfram Mathematica](https://www.wolfram.com/mathematica/)
   (version 10+ recommended. Other versions may work.
   The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.
@@ -29,6 +31,8 @@ If running `java -jar keymaerax.jar` results in the error `Invalid or corrupt ja
 If you need to use an earlier version of Java or Mathematica, you can also run KeYmaera X via
 
     java -Xss20M -cp keymaerax.jar KeYmaeraX
+
+If running `java -jar keymaerax.jar` results in the error `java.lang.module.FindException: Module java.xml.bind not found` then downgrade JDK to version 1.8 till 1.10, because 1.11 is not yet supported.
 
 If KeYmaera X acts weird after an update, clean your local cache of lemmas by removing (or renaming) the directory `~/.keymaerax/cache`.
 You could also try renaming the model and proof database `~/.keymaerax/keymaerax.sqlite` (if this file has become corrupt, it may prevent KeYmaera X from working properly).
@@ -60,7 +64,7 @@ Windows, 64bit, Mathematica 10.4+
 Building
 ========
 To compile KeYmaera X from source code, see [Building Instructions](https://github.com/LS-Lab/KeYmaeraX-release/wiki/Building-Instructions).
-In a nutshell, run the following after installing the right software:
+In a nutshell, install the right software and run:
 
     sbt clean assembly
 
@@ -73,19 +77,19 @@ KeYmaera X implements the uniform substitution calculus for differential dynamic
 http://www.ls.cs.cmu.edu/publications.html
 
 1. André Platzer. 
-[A complete uniform substitution calculus for differential dynamic logic](http://dx.doi.org/10.1007/s10817-016-9385-1). 
+[A complete uniform substitution calculus for differential dynamic logic](https://doi.org/10.1007/s10817-016-9385-1).
 Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
 
 2. André Platzer.
-[Logics of dynamical systems](http://dx.doi.org/10.1109/LICS.2012.13).
+[Logics of dynamical systems](https://doi.org/10.1109/LICS.2012.13).
 ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012.
 
 3. Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Völp and André Platzer. 
-[KeYmaera X: An axiomatic tactical theorem prover for hybrid systems](http://dx.doi.org/10.1007/978-3-319-21401-6_36). 
+[KeYmaera X: An axiomatic tactical theorem prover for hybrid systems](https://doi.org/10.1007/978-3-319-21401-6_36).
 In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. 
 
 4. Nathan Fulton, Stefan Mitsch, Brandon Bohrer and André Platzer. 
-[Bellerophon: Tactical theorem proving for hybrid systems](http://dx.doi.org/10.1007/978-3-319-66107-0_14). 
+[Bellerophon: Tactical theorem proving for hybrid systems](https://doi.org/10.1007/978-3-319-66107-0_14).
 In Mauricio Ayala-Rincón and César Muñoz, editors, Interactive Theorem Proving, International Conference, ITP 2017, volume 10499 of LNCS. Springer, 2017. 
 
 5. André Platzer.
@@ -95,28 +99,28 @@ Springer, 2018.
 The soundness assurances provided by a small LCF-style kernel are further strengthened by a cross-verification of the soundness theorem for the uniform substitution calculus in [Isabelle/HOL](https://github.com/LS-Lab/Isabelle-dL) and [Coq](https://github.com/LS-Lab/Coq-dL).
 
 6. Brandon Bohrer, Vincent Rahli, Ivana Vukotic, Marcus Völp and André Platzer.
-[Formally verified differential dynamic logic](http://dx.doi.org/10.1145/3018610.3018616).
+[Formally verified differential dynamic logic](https://doi.org/10.1145/3018610.3018616).
 ACM SIGPLAN Conference on Certified Programs and Proofs, CPP 2017, Jan 16-17, 2017, Paris, France, pages 208-221, ACM, 2017.
 
 A secondary goal of KeYmaera X is to also make it possible to implement extensions of differential dynamic logic, such as differential game logic for hybrid games as well as quantified differential dynamic logic for distributed hybrid systems:
 
 7. André Platzer. 
-[Differential game logic](http://dx.doi.org/10.1145/2817824). 
+[Differential game logic](https://doi.org/10.1145/2817824).
 ACM Trans. Comput. Log., 17(1), 2015.
 
 8. André Platzer. 
-[Differential hybrid games](http://dx.doi.org/10.1145/3091123). 
+[Differential hybrid games](https://doi.org/10.1145/3091123).
 ACM Trans. Comput. Log., 18(3), 2017.
 
 9. André Platzer.
-[A complete axiomatization of quantified differential dynamic logic for distributed hybrid systems](http://dx.doi.org/10.2168/LMCS-8(4:17)2012).
+[A complete axiomatization of quantified differential dynamic logic for distributed hybrid systems](https://doi.org/10.2168/LMCS-8(4:17)2012).
 Logical Methods in Computer Science, 8(4), pages 1-44, 2012.
 
 Copyright and Licenses
 ======================
 
-Copyright (C) 2014-2018 Carnegie Mellon University. See COPYRIGHT.txt for details.
-Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Brandon Bohrer, Jan-David Quesel, Yong Kiam Tan, Marcus Voelp, Ran Ji.
+Copyright (C) 2014-2019 Carnegie Mellon University. See COPYRIGHT.txt for details.
+Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Brandon Bohrer, Jan-David Quesel, Yong Kiam Tan, Andrew Sogokon, Marcus Voelp, Ran Ji.
 
 See LICENSE.txt for the conditions of using this software.
 

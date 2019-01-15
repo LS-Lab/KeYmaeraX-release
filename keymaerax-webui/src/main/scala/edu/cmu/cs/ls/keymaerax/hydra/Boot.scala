@@ -10,7 +10,7 @@ import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, ExhaustiveSequentialInterpreter, SequentialInterpreter}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, ExhaustiveSequentialInterpreter}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
 import edu.cmu.cs.ls.keymaerax.launcher.{DefaultConfiguration, LoadingDialogFactory, SystemWebBrowser}
@@ -60,7 +60,7 @@ object NonSSLBoot extends App with Logging {
   Http().bindAndHandle(handler = api, interface = HyDRAServerConfig.host, port = HyDRAServerConfig.port) map {
     _ => {
       // Finally, print a message indicating that the server was started.
-      LoadingDialogFactory().addToStatus(15, Some("Finished loading"))
+      LoadingDialogFactory().addToStatus(10, Some("Finished loading"))
       logger.info(
         "\n**********************************************************\n" +
           "****                   KeYmaera X                     ****\n" +
@@ -149,17 +149,21 @@ object HyDRAInitializer extends Logging {
   def apply(args : Array[String], database: DBAbstraction): Unit = {
     val options = nextOption(Map('commandLine -> args.mkString(" ")), args.toList)
 
-    //@note setup interpreter
-    BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
     //@note pretty printer setup must be first, otherwise derived axioms print wrong
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
+
+//    val axioms = Provable.axioms
+//    LoadingDialogFactory().addToStatus(5, Some("Starting with " + axioms.size + " axioms ..."))
+
+    //@note setup interpreter
+    BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
     // connect invariant generator to tactix library
     val generator = new ConfigurableGenerator[Formula]()
     TactixLibrary.invGenerator = generator
     KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv)))
 
-    LoadingDialogFactory().addToStatus(15, Some("Connecting to arithmetic tools..."))
+    LoadingDialogFactory().addToStatus(10, Some("Connecting to arithmetic tools ..."))
 
     try {
       val preferredTool = preferredToolFromConfig
@@ -178,7 +182,7 @@ object HyDRAInitializer extends Logging {
         logger.warn(msg, e)
     }
 
-    LoadingDialogFactory().addToStatus(5, Some("Updating lemma caches..."))
+    LoadingDialogFactory().addToStatus(15, Some("Updating lemma caches..."))
 
     try {
       //Delete the lemma database if KeYmaera X has been updated since the last time the database was populated.
@@ -186,6 +190,7 @@ object HyDRAInitializer extends Logging {
       if(StringToVersion(cacheVersion) < StringToVersion(edu.cmu.cs.ls.keymaerax.core.VERSION))
         LemmaDBFactory.lemmaDB.deleteDatabase()
       //Populate the derived axioms database.
+      Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
       DerivedAxioms.prepopulateDerivedLemmaDatabase()
     } catch {
       case e: Exception =>
@@ -194,6 +199,8 @@ object HyDRAInitializer extends Logging {
             |You should configure settings in the UI and restart KeYmaera X
           """.stripMargin
         logger.warn(msg, e)
+    } finally {
+      Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "false", saveToFile = false)
     }
   }
 

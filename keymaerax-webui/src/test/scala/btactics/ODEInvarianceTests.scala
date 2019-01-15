@@ -1,6 +1,6 @@
 package btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, SaturateTactic, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleThrowable, PosInExpr, SaturateTactic, SuccPosition}
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -15,8 +15,8 @@ class ODEInvarianceTests extends TacticTestBase {
 
   "vdbx" should "prove matrix and vector bounds" in withMathematica { _ =>
     //These bounds ought to be enough for all intents and purposes
-    val cs = cauchy_schwartz_bound(10)
-    val fs = frobenius_subord_bound(10)
+    val cs = cauchy_schwartz_bound(5)
+    val fs = frobenius_subord_bound(5)
     cs shouldBe 'proved
     fs._1 shouldBe 'proved
     fs._2 shouldBe 'proved
@@ -24,7 +24,7 @@ class ODEInvarianceTests extends TacticTestBase {
 
   it should "test caching" in withMathematica { _ =>
     val lemmaDB = LemmaDBFactory.lemmaDB
-    val dim = 10
+    val dim = 5
 
     //Initial versions in DB
     println("Initial call")
@@ -152,6 +152,19 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
+  it should "solve nilpotent linear system" in withMathematica { _ =>
+    //Solves for all 3 variables
+    val pr = proveBy("x=x0&y=y0&z=z0&t=0 -> [{x'=5*x-3*y+2*z,y'=15*x-9*y+6*z,z'=10*x-6*y+4*z,t'=1}](x=(1+5*t)*x0-3*t*y0 + 2*t*z0 & y=15*t*x0 + (1 - 9*t)*y0 + 6*t*z0& z=10*t*x0 - 6*t*y0 + (1 + 4*t)*z0)".asFormula,
+      implyR(1) & dRI(1))
+    //partial solve for x only
+    val pr2 = proveBy("x=x0&y=y0&z=z0&t=0 -> [{x'=5*x-3*y+2*z,y'=15*x-9*y+6*z,z'=10*x-6*y+4*z,t'=1}](x=(1+5*t)*x0-3*t*y0 + 2*t*z0)".asFormula,
+      implyR(1) & dRI(1))
+    println(pr)
+    println(pr2)
+    pr shouldBe 'proved
+    pr2 shouldBe 'proved
+  }
+
   //Mathematica crashes badly
   //  it should "handle the largest example" in withMathematica { _ =>
   //    val pr = proveBy("(1 - 3*x1^2*x2^2 +x1^4*x2^2 +x1^2*x2^4)^13 = 0 & (x3^4*x4^2 + x3^2*x4^4 - 3*x3^2*x4^2*x5^2 +x5^6)^7 = 0 & (-1 +x6^2 +x7^2 + x8^2)^73 = 0 & (-3 + 6*x10^2 +x10^4 + 2*x10*x9 + 2*x10^3*x9 +x9^2)^21 = 0 & -1 +x13 +x11*x13 = 0 & x12=0 -> [{x1' = -292*x7*(-1 + x6^2 + x7^2 + x8^2)^145,\nx2' = -292*x8*(-1 + x6^2 + x7^2 + x8^2)^145,\nx3' = -42*(2*x10 + 2*x10^3 + 2*x9)* (-3 + 6*x10^2 + x10^4 + 2*x10*x9 + 2*x10^3*x9 + x9^2)^41,\nx4' = -42*(12*x10 + 4*x10^3 + 2*x9 + 6*x10^2*x9) * (-3 + 6*x10^2 + x10^4 + 2*x10*x9 + 2*x10^3*x9 + x9^2)^41,\nx5' = -2*x13*(-1 +x13 +x11*x13),\nx6' = -2*x12,\nx7' = 26*(-6*x1*x2^2 + 4*x1^3*x2^2 + 2*x1*x2^4)*(1 - 3*x1^2*x2^2 +x1^4*x2^2 +x1^2*x2^4)^25,\nx8' = 26*(-6*x1^2*x2 + 2*x1^4*x2 + 4*x1^2*x2^3) * (1 - 3*x1^2*x2^2 +x1^4*x2^2 +x1^2*x2^4)^25,\nx9' = 14*(4*x3^3*x4^2 + 2*x3*x4^4 - 6*x3*x4^2*x5^2)*(x3^4*x4^2 + x3^2*x4^4 - 3*x3^2*x4^2*x5^2 +x5^6)^13,\nx10' = 14*(2*x3^4*x4 + 4*x3^2*x4^3 - 6*x3^2*x4*x5^2)*(x3^4*x4^2 +x3^2*x4^4 - 3*x3^2*x4^2*x5^2 + x5^6)^13,\nx11'= 14*(-6*x3^2*x4^2*x5 + 6*x5^5)*(x3^4*x4^2 +x3^2*x4^4 - 3*x3^2*x4^2*x5^2 +x5^6)^13,\nx12'= 292*x6*(-1 +x6^2 +x7^2 +x8^2)^145}]((1 - 3*x1^2*x2^2 +x1^4*x2^2 +x1^2*x2^4)^13 = 0 & (x3^4*x4^2 + x3^2*x4^4 - 3*x3^2*x4^2*x5^2 +x5^6)^7 = 0 & (-1 +x6^2 +x7^2 + x8^2)^73 = 0 & (-3 + 6*x10^2 +x10^4 + 2*x10*x9 + 2*x10^3*x9 +x9^2)^21 = 0 & -1 +x13 +x11*x13 = 0 & x12=0)".asFormula,
@@ -173,7 +186,7 @@ class ODEInvarianceTests extends TacticTestBase {
     val fml = "y>=0 & x-z>=0|x+y*z>0 & x>=0 &x+y+z = 0".asFormula
     val fs = fStar(odeSys,fml)
     println(fs)
-    fs._1 shouldBe "(y>=0&(y=0->2*x+y>0)|1=0)&(x-z>=0&(x-z=0->1+(-1+x)*x+-1*y+-1*z>=0&(1+(-1+x)*x+-1*y+-1*z=0->-1+(-1+x)*x*(1+2*x)+-2*y+-1*z>0))|1=0)|(x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>0)))&(x>0|1=0)&(-31+z=0&36+y=0)&-5+x=0".asFormula
+    fs._1 shouldBe "(y>=0&(y=0->2*x+y>0))&x-z>=0&(x-z=0->1+(-1+x)*x+-1*y+-1*z>=0&(1+(-1+x)*x+-1*y+-1*z=0->-1+(-1+x)*x*(1+2*x)+-2*y+-1*z>0))|(x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>0)))&x>0&(-31+z=0&36+y=0)&-5+x=0".asFormula
   }
 
   "sAIc" should "take a local progress step" in withMathematica { qeTool =>
@@ -433,9 +446,9 @@ class ODEInvarianceTests extends TacticTestBase {
     pr shouldBe 'proved
   }
 
-  it should "prove with consts (auto const)" in withMathematica { qeTool =>
+  it should "prove with consts (auto andL)" in withMathematica { qeTool =>
     val fml = "x>=0 & y>0 -> [{x'=x+y}](x>=0 & y>0)".asFormula
-    val pr = proveBy(fml, implyR(1) & andL(-1) & odeInvariant(1))
+    val pr = proveBy(fml, implyR(1) & odeInvariant(1))
     println(pr)
     pr shouldBe 'proved
   }
@@ -513,6 +526,120 @@ class ODEInvarianceTests extends TacticTestBase {
     p1 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>0)".asFormula
     p2 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>0))".asFormula
     p3 shouldBe "x+y*z>=0&(x+y*z=0->1+x^2+x*y+y^2+2*(x+y)*z>=0&(1+x^2+x*y+y^2+2*(x+y)*z=0->2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)>=0&(2*x^3+y+2*z+4*y*(y+z)+x^2*(4+y+2*z)+x*(2+9*y+6*z)=0->2+6*x^4+12*y+12*y^2+8*(1+y)*z+2*x^3*(6+y+2*z)+4*x^2*(8+3*y+2*z)+x*(12+37*y+18*z)>0)))".asFormula
+  }
+
+  "nilpotent solver" should "fail fast on various problematic examples" in withMathematica { qeTool =>
+
+    //Non-linear ODE
+    val pr = proveBy("[{x'=y,y'=x^2}] x+v+a+j=1".asFormula,
+      ?(nilpotentSolve(false)(1))
+    )
+
+    //Linear but not nilpotent
+    val pr2 = proveBy("[{x'=a()*y,y'=b*x}] x+v+a+j=1".asFormula,
+      ?(nilpotentSolve(false)(1))
+    )
+
+    pr should not be 'proved
+    pr2 should not be 'proved
+  }
+
+  it should "solve ODE with correct positioning" in withMathematica { qeTool =>
+    def time[T](block: => T): T = {
+      val start = System.currentTimeMillis
+      val res = block
+      val totalTime = System.currentTimeMillis - start
+      println("Elapsed time: %1d ms".format(totalTime))
+      res
+    }
+
+    val seq = "x=0&v=0 ==> j!=1,[{x'=v,v'=a, a'=j & x+v+a <= 100}] x+v+a>=0, a!=0".asSequent
+
+    val pr = time { proveBy(seq,
+      nilpotentSolve(false)(2) & dW(3) & QE
+    )}
+    pr shouldBe 'proved
+
+    val pr2 = time { proveBy(seq,
+      nilpotentSolve(true)(2)
+    )}
+    pr2 shouldBe 'proved
+
+    val pr3 = time { proveBy(seq,
+      solve(2) & QE
+    )}
+    pr3 shouldBe 'proved
+  }
+
+  it should "solve ODE quickly (1)" in withMathematica { qeTool =>
+    def time[T](block: => T): T = {
+      val start = System.currentTimeMillis
+      val res = block
+      val totalTime = System.currentTimeMillis - start
+      println("Elapsed time: %1d ms".format(totalTime))
+      res
+    }
+
+    val fml = "x=0&v=0&a=1 -> [{x'=v,v'=a & x+v+a <= 100}] x+v+a>=0".asFormula
+
+    val pr = time { proveBy(fml,
+      implyR(1) & nilpotentSolve(false)(1) & dW(1) & QE
+    )}
+    pr shouldBe 'proved
+
+    //Simulate solveEnd
+    val pr2 = time { proveBy(fml,
+      implyR(1) & nilpotentSolve(true)(1)
+    )}
+    pr2 shouldBe 'proved
+
+    val pr3 = time { proveBy(fml,
+      implyR(1) & solve(1) & QE
+    )}
+    pr3 shouldBe 'proved
+  }
+
+  it should "solve ODE quickly (2)" in withMathematica { qeTool =>
+    def time[T](block: => T): T = {
+      val start = System.currentTimeMillis
+      val res = block
+      val totalTime = System.currentTimeMillis - start
+      println("Elapsed time: %1d ms".format(totalTime))
+      res
+    }
+
+    val fml = "x=0&v=0&a=0&j=0&k=1&l=0 -> [{k'=l,l'=1,x'=v,v'=a,a'=j,j'=k & x+x*v+a+j+k <= 100}] x+v+a+j+k>=0".asFormula
+    val pr = time { proveBy(fml,
+      implyR(1) & nilpotentSolve(false)(1) & dW(1) & QE
+    )}
+    pr shouldBe 'proved
+
+    val pr2 = time { proveBy(fml,
+      implyR(1) & nilpotentSolve(true)(1)
+    )}
+    pr2 shouldBe 'proved
+
+    //Bug in solve
+//    val pr3 = time { proveBy(fml,
+//      implyR(1) & solve(1) & QE
+//    )}
+//    pr3 shouldBe 'proved
+  }
+
+  it should "put an obfuscated ODE into linear form and cut solution" in withMathematica { qeTool =>
+    // x'   (2 2 -2) x    A
+    // y' = (5 1 -3) y + -B
+    // z'   (1 5 -3) z   5C
+    val pr = proveBy("x=1&y=1&A()=1 -> [{x'=2*(-z+x+y)+A(),y'=y+5*x-3*z-B(),z'=x-3*z+5*(y+C)}] x+y+z >= 0".asFormula,
+      //val pr = proveBy("x=1&y=1 -> [{x'=x+y,y'=-x-y}] x=0".asFormula,
+      implyR(1) & nilpotentSolve(false)(1) & dW(1) & implyR(1) &
+      (andL('Llast)*)
+    )
+
+    pr.subgoals(0).ante.length shouldBe 7
+    pr.subgoals(0).ante(4) shouldBe "x=2/3*(3*A()+B()+-5*C)*t_^3+x_0+t_*(A()+2*(x_0+y_0+-1*z_0))+t_^2*(A()+-1*B()+-5*C+6*x_0+-2*(y_0+z_0))".asFormula
+    pr.subgoals(0).ante(5) shouldBe "y=2/3*(3*A()+B()+-5*C)*t_^3+y_0+t_*(-1*B()+5*x_0+y_0+-3*z_0)+1/2*t_^2*(5*A()+-1*B()+-15*C+12*x_0+-4*(y_0+z_0))".asFormula
+    pr.subgoals(0).ante(6) shouldBe "z=4/3*(3*A()+B()+-5*C)*t_^3+t_*(5*C+x_0+5*y_0+-3*z_0)+z_0+1/2*t_^2*(A()+-5*B()+-15*C+24*x_0+-8*(y_0+z_0))".asFormula
   }
 
 }

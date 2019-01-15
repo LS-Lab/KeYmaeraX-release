@@ -9,12 +9,13 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.CustomAssertions.withSafeClue
 
 import org.scalatest._
+import org.scalatest.LoneElement._
 
 import scala.collection.immutable._
 
 class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   override def beforeEach(): Unit = { PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp) }
-  override def afterEach(): Unit = { KeYmaeraXParser.setAnnotationListener((prg, fml) =>{}) }
+  override def afterEach(): Unit = { KeYmaeraXParser.setAnnotationListener((_, _) => {}) }
 
   // type declaration header for tests
   def makeInput(program : String) : String = {
@@ -38,9 +39,8 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         |  [x := $s;]x > 3
         |End.
       """.stripMargin
-    KeYmaeraXProblemParser(input("1")) //the problem should be exactly the fact that we pass in some unicode.
-    a [Exception] shouldBe thrownBy(KeYmaeraXProblemParser("\\u03C0"))
-
+    KeYmaeraXArchiveParser(input("1")) //the problem should be exactly the fact that we pass in some unicode.
+    a [Exception] shouldBe thrownBy(KeYmaeraXArchiveParser("\\u03C0"))
   }
 
   it should "parse nullary predicate definitions" in {
@@ -55,7 +55,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       |  J() -> [{x:=x+1;}*@invariant(J())]J()
       |End.
     """.stripMargin
-    KeYmaeraXProblemParser(input) shouldBe "1>=0 -> [{x:=x+1;}*]1>=0".asFormula
+    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "1>=0 -> [{x:=x+1;}*]1>=0".asFormula
   }
 
   it should "parse unary predicate definitions" in {
@@ -70,7 +70,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       |  J(x) -> [{x:=x+1;}*@invariant(J(x))]J(x)
       |End.
     """.stripMargin
-    KeYmaeraXProblemParser(input) shouldBe "x>=0 -> [{x:=x+1;}*]x>=0".asFormula
+    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=0 -> [{x:=x+1;}*]x>=0".asFormula
   }
 
   it should "parse binary predicate definitions" in {
@@ -86,7 +86,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       |  J(x,y) -> [{x:=x+1;}*@invariant(J(x,y))]J(x,y)
       |End.
     """.stripMargin
-    KeYmaeraXProblemParser(input) shouldBe "x>=y -> [{x:=x+1;}*]x>=y".asFormula
+    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=y -> [{x:=x+1;}*]x>=y".asFormula
   }
 
   it should "parse program definitions" in {
@@ -101,10 +101,10 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
       |End.
     """.stripMargin
-    KeYmaeraXProblemParser(input) shouldBe "x>=0 -> [{x:=x+1;}*]x>=0".asFormula
+    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=0 -> [{x:=x+1;}*]x>=0".asFormula
   }
 
-  it should "report useful message on missing period in program variable declaration" in {
+  it should "report useful message on missing semicolon in program variable declaration" in {
     val input = """ProgramVariables.
                   |  R x
                   |End.
@@ -112,13 +112,14 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
                   |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
                   |End.
                 """.stripMargin
-    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
-      """2:5 Variable declarations should end with a period.
-        |Found:    x at 2:5
-        |Expected: .""".stripMargin
+    the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
+      """3:1 Unexpected token in ProgramVariables block
+        |Found:    End (END_BLOCK$) at 3:1 to 3:3
+        |Expected: ; (SEMI$)
+        |      or: , (COMMA$)""".stripMargin
   }
 
-  it should "report useful message on missing period in function definitions" in {
+  it should "report useful message on missing semicolon in function definitions" in {
     val input = """Definitions.
                   |  R func() = ( 4 )
                   |End.
@@ -129,30 +130,14 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
                   |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
                   |End.
                 """.stripMargin
-    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
-      """2:3 Non-delimited definition
-        |Found:    RPAREN$ at 2:3 to 2:18
-        |Expected: ).""".stripMargin
+    the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
+      """3:1 Unexpected token in function definition
+        |Found:    End (END_BLOCK$) at 3:1 to 3:3
+        |Expected: = (EQ$)
+        |      or: ; (SEMI$)""".stripMargin
   }
 
-  it should "report useful message on missing parentheses in function definitions" in {
-    val input = """Definitions.
-                  |  R func() = 4.
-                  |End.
-                  |ProgramVariables.
-                  |  R x.
-                  |End.
-                  |Problem.
-                  |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
-                  |End.
-                """.stripMargin
-    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
-      """2:3 Non-delimited definition
-        |Found:    NUM(4.) at 2:3 to 2:14
-        |Expected: ).""".stripMargin
-  }
-
-  it should "report useful message on missing period in program definitions" in {
+  it should "report useful message on missing semicolon in program definitions" in {
     val input = """Definitions.
                   |  HP prg ::= { x:=x+1; }
                   |End.
@@ -163,10 +148,11 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
                   |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
                   |End.
                 """.stripMargin
-    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
-      """2:3 Non-delimited definition
-        |Found:    RBRACE$ at 2:3 to 2:24
-        |Expected: }.""".stripMargin
+    the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
+      """3:1 Unexpected token in program definition
+        |Found:    End (END_BLOCK$) at 3:1 to 3:3
+        |Expected: ::= (PRG_DEF$)
+        |      or: ; (SEMI$)""".stripMargin
   }
 
   it should "report useful message on missing braces in program definitions" in {
@@ -180,10 +166,10 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
                   |  x>=0 -> [{prg;}*@invariant(x>=0)]x>=0
                   |End.
                 """.stripMargin
-    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
-      """2:3 Non-delimited definition
-        |Found:    SEMI$ at 2:3 to 2:20
-        |Expected: }.""".stripMargin
+    the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
+      """2:14 Missing program definition start delimiter
+        |Found:    ID("x") at 2:14
+        |Expected: {""".stripMargin
   }
 
   "The Parser" should "place implicit parens correctly (a.k.a. resolve abiguities correctly)" in {
@@ -289,14 +275,14 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     for(testFile <- files) {
       val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/" + testFile)).mkString
       withSafeClue(testFile) {
-        KeYmaeraXProblemParser(src) //test fails on exception.
+        KeYmaeraXArchiveParser(src) //test fails on exception.
       }
     }
   }
 
   it should "parse predicates using functions" in {
     val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/functions.key")).mkString
-    KeYmaeraXProblemParser(src)
+    KeYmaeraXArchiveParser(src)
   }
 
   it should "not parse any negative examples" in {
@@ -313,7 +299,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     for((testFile, message) <- files) {
       val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/negative/" + testFile)).mkString
       try {
-        KeYmaeraXProblemParser(src)
+        KeYmaeraXArchiveParser(src)
         fail("A negative file parsed correctly: " + testFile)
       }
       catch {
@@ -331,7 +317,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         |Problem. A>=0 -> [x:=A;]x>=0 End.
       """.stripMargin
 
-    val fml = KeYmaeraXProblemParser(input)
+    val fml = KeYmaeraXArchiveParser(input).loneElement.model
     val x = Variable("x")
     val a = FuncOf(Function("A", None, Unit, Real), Nothing)
     fml shouldBe Imply(
@@ -347,10 +333,10 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         |Problem. A>=0 -> [x:=A;A:=2;]x>=0 End.
       """.stripMargin
 
-    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
-      """2:14 Type analysis: A was declared as a function but used as a non-function.
-        |Found:    <unknown> at 2:14
-        |Expected: <unknown>""".stripMargin
+    the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
+      """2:12 type analysis: A was declared as a function but must be a variable when it is assigned to or has a differential equation.
+        |Found:    Unit->Real Function at 2:12 to 2:15
+        |Expected: Variable of sort Real""".stripMargin
   }
 
   /*
@@ -367,6 +353,27 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     }
   }
   */
+
+  it should "parse if-then-else" in {
+    KeYmaeraXParser.programParser(
+      """
+        |if (x>0) { x:=x; }
+        |else { x:=-x; }
+      """.stripMargin) shouldBe Choice(
+      Compose(Test("x>0".asFormula), Assign("x".asVariable, "x".asVariable)),
+      Compose(Test("!x>0".asFormula), Assign("x".asVariable, Neg("x".asVariable))))
+  }
+
+  it should "report missing opening bracket after else" in {
+    the [ParseException] thrownBy KeYmaeraXParser.programParser(
+      """
+        |if (x>0) { x:=x; }
+        |else if (x<0) { x:=-x; }
+        |else { x:=7; }
+      """.stripMargin) should have message """3:6 Unexpected token cannot be parsed
+                                             |Found:    if (IF$) at 3:6 to 3:7
+                                             |Expected: { (LBRACE$)""".stripMargin
+  }
 
   "Annotation parsing" should "populate easy loop annotations" in {
     val input = "x>=2 -> [{x:=x+1;}*@invariant(x>=1)]x>=0"
@@ -390,7 +397,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       prg shouldBe "{x:=x+1;}*".asProgram
       fml shouldBe "x>=y()+1".asFormula
     })
-    KeYmaeraXProblemParser(input) shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
+    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=y()+2 -> [{x:=x+1;}*]x>=y()".asFormula
     called shouldBe true
   }
 
@@ -403,7 +410,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       prg shouldBe "{x:=x+1;}*".asProgram
       fml shouldBe "x>=(3+7)+1".asFormula
     })
-    KeYmaeraXProblemParser(input) shouldBe "x>=(3+7)+2 -> [{x:=x+1;}*]x>=3+7".asFormula
+    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=(3+7)+2 -> [{x:=x+1;}*]x>=3+7".asFormula
     called shouldBe true
   }
 
@@ -415,7 +422,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       prg shouldBe "{x:=x+1;}*".asProgram
       fml shouldBe "x>=(3+7)+1".asFormula
     })
-    KeYmaeraXProblemParser(input) shouldBe "x>=(3+7)+2 -> [{x:=x+1;}*]x>=3+7".asFormula
+    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=(3+7)+2 -> [{x:=x+1;}*]x>=3+7".asFormula
     called shouldBe true
   }
 
@@ -428,7 +435,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       prg shouldBe "{x:=x+1;}*".asProgram
       fml shouldBe "x>=(3+7)+1".asFormula
     })
-    KeYmaeraXProblemParser(input) shouldBe "x>=(3+7)+2 -> [{x:=x+1;}*]x>=3+7".asFormula
+    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=(3+7)+2 -> [{x:=x+1;}*]x>=3+7".asFormula
     called shouldBe true
   }
 
@@ -441,13 +448,13 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       prg shouldBe "{x:=x+1;}*".asProgram
       fml shouldBe "x>=(3+7)+1".asFormula
     })
-    KeYmaeraXProblemParser(input) shouldBe "x>=(3+7)+2 -> [{x:=x+1;}*]x>=3+7".asFormula
+    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=(3+7)+2 -> [{x:=x+1;}*]x>=3+7".asFormula
     called shouldBe true
   }
 
   it should "expand properties to their definition" in {
     val input = "Functions. B init() <-> (x>=2). B safe(R) <-> (.>=0). End. ProgramVariables. R x. End. Problem. init() -> [{x:=x+1;}*]safe(x) End."
-    KeYmaeraXProblemParser(input) shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
+    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
   }
 
   it should "expand properties to their definition in annotations" in {
@@ -458,7 +465,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       prg shouldBe "{x:=x+1;}*".asProgram
       fml shouldBe "x>=1".asFormula
     })
-    KeYmaeraXProblemParser(input) shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
+    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
     called shouldBe true
   }
 
@@ -470,7 +477,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       prg shouldBe "{x:=x+1;}*".asProgram
       fml shouldBe "x>=3+7".asFormula
     })
-    KeYmaeraXProblemParser(input) shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
+    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+1;}*]x>=0".asFormula
     called shouldBe true
   }
 
@@ -482,32 +489,33 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       prg shouldBe "{x:=x+b();}*".asProgram
       fml shouldBe "x>=3+b()".asFormula
     })
-    KeYmaeraXProblemParser(input) shouldBe "x>=2 -> [{x:=x+b();}*]x>=0".asFormula
+    KeYmaeraXArchiveParser(input).loneElement.model shouldBe "x>=2 -> [{x:=x+b();}*]x>=0".asFormula
     called shouldBe true
   }
 
   it should "complain about sort mismatches in function declaration and operator" in {
     val input = "Functions. R y() <-> (3+7). End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
-    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
-      """1:18 Operator and sort mismatch
-        |Found:    <-> <EQUIV$> at 1:18 to 1:20
-        |Expected: = <EQ$>""".stripMargin
+    the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
+      """1:18 Function must be defined by equality
+        |Found:    <-> (EQUIV$) at 1:18 to 1:20
+        |Expected: =""".stripMargin
   }
 
   it should "complain about sort mismatches" in {
     val input = "Functions. R y() = (3>2). End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
-    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
-      """1:20 Definition sort does not match declaration
-        |Found:    <Bool> at 1:20 to 1:25
-        |Expected: <Real>""".stripMargin
+    the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
+      """1:21 Impossible elaboration: Operator PSEUDO$ expects a Term as argument but got the Formula 3>2
+        |Found:    3>2) at 1:21 to 1:24
+        |Expected: Term""".stripMargin
   }
 
   it should "complain about non-delimited definitions" in {
     val input = "Functions. R y() = (3>2. End. ProgramVariables. R x. End. Problem. x>=2 -> x>=0 End."
-    the [ParseException] thrownBy KeYmaeraXProblemParser(input) should have message
-      """1:12 Non-delimited definition
-        |Found:    NUM(2.) at 1:12 to 1:23
-        |Expected: ).""".stripMargin
+    the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
+      """1:20 Unmatched opening parenthesis in function definition
+        |unmatched: LPAREN$ at 1:20--1:21
+        |Found:    NUM(3) at 1:20 to 1:21
+        |Expected: )""".stripMargin
   }
 
   it should "populate easy ODE annotations" in {
@@ -572,20 +580,6 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         KeYmaeraXAxiomParser(src) //test fails on exception.
       } catch {
         case ex: Exception => fail("Unable to parse " + testFile, ex)
-      }
-    }
-  }
-  
-  it should "not parse any examples/t/negativeALP files" in {
-    val files =
-      "undeclared.key.alp" :: Nil
-
-    for(testFile <- files) {
-      val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/negativeALP/" + testFile)).mkString
-      withSafeClue(testFile) {
-        a[Exception] should be thrownBy {
-          KeYmaeraXAxiomParser(src)
-        }
       }
     }
   }

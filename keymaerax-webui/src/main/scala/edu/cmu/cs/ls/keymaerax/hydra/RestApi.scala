@@ -7,68 +7,27 @@ package edu.cmu.cs.ls.keymaerax.hydra
 import java.security.SecureRandom
 import java.util.{Calendar, Date}
 
-import akka.event.slf4j.SLF4JLogging
-import akka.actor.{Actor, ActorContext}
 import akka.http.scaladsl.model.{Multipart, StatusCodes}
 import akka.http.scaladsl.server.ExceptionHandler
-import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.{DerivationInfo, OptionArg}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.core.Formula
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
-import org.apache.logging.log4j.scala.Logging
-import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.Http
 import spray.json._
-import DefaultJsonProtocol._
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
-import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
-import akka.actor.{Actor, ActorSystem, Props}
-import akka.http.scaladsl.Http
-import akka.io.IO
-import akka.stream.ActorMaterializer
-import akka.util.Timeout
-import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleInterpreter, SequentialInterpreter}
-import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
-import edu.cmu.cs.ls.keymaerax.launcher.{DefaultConfiguration, LoadingDialogFactory, SystemWebBrowser}
-import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.core.Formula
 import org.apache.logging.log4j.scala.Logging
 
-import scala.concurrent.duration._
 import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.Multipart.FormData.BodyPart
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.model.headers.CacheDirectives.`max-age`
 import akka.http.scaladsl.model.headers.CacheDirectives.`no-cache`
-import akka.http.scaladsl.server._
 import StatusCodes._
 
 import scala.language.postfixOps
-
-//@todo not sure what this is or how to replicate this in Akka.
-//class RestApiActor extends Actor with RestApi {
-//  implicit def eh(implicit log: LoggingContext) = ExceptionHandler {
-//    case e: Throwable => ctx =>
-//      val errorJson: String = new ErrorResponse(e.getMessage, e).getJson.prettyPrint
-//      log.error(e, s"Request '${ctx.request.uri}' resulted in uncaught exception", ctx.request)
-//      ctx.complete(StatusCodes.InternalServerError, errorJson)
-//  }
-//
-//  def actorRefFactory: ActorContext = context
-//
-//  //Note: separating the actor and router allows testing of the router without
-//  //spinning up an actor.
-//  def receive: Actor.Receive = runRoute(myRoute)
-//
-//}
 
 /**
  * RestApi is the API router. See README.md for a description of the API.
@@ -78,13 +37,22 @@ object RestApi extends Logging {
 
   private val database = DBAbstractionObj.defaultDatabase //SQLite //Not sure when or where to create this... (should be part of Boot?)
 
+  val catchAllExceptionHandler = ExceptionHandler {
+    case ex: Exception =>
+      extractUri { uri =>
+        val errorJson: String = new ErrorResponse(ex.getMessage, ex).getJson.prettyPrint
+        logger.error(s"Request '$uri' resulted in uncaught exception", ex)
+        complete(StatusCodes.InternalServerError, errorJson)
+      }
+  }
+
   //endregion
 
   //region Constants for accessing resources and database values.
 
   private val DEFAULT_ARCHIVE_LOCATION = "http://keymaerax.org/KeYmaeraX-projects/"
   private val BUNDLED_ARCHIVE_DIR = "/keymaerax-projects/"
-  private val BUNDLED_ARCHIVE_LOCATION = s"classpath:${BUNDLED_ARCHIVE_DIR}"
+  private val BUNDLED_ARCHIVE_LOCATION = s"classpath:$BUNDLED_ARCHIVE_DIR"
 
   //endregion
 
@@ -139,9 +107,13 @@ object RestApi extends Logging {
       case _ => /* nothing to do */
     })
 
-    responses match {
-      case hd :: Nil => hd.print
-      case _         => JsArray(responses.map(_.getJson):_*).compactPrint
+    try {
+      responses match {
+        case hd :: Nil => hd.print
+        case _ => JsArray(responses.map(_.getJson): _*).compactPrint
+      }
+    } catch {
+      case ex: Throwable => new ErrorResponse("Error serializing response", ex).print
     }
   }
 
@@ -221,32 +193,7 @@ object RestApi extends Logging {
     completeRequest(request, t)
   }}}}
 
-  //POST /users/<user id>/model/< name >/< keyFile >
   val userModel: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => {pathPrefix("model" / Segment) {modelNameOrId => {pathEnd {
-    post {
-      entity(as[Multipart.FormData]) { formData => {
-        //@todo hacky.
-        //Note: I don't know how to ask for formData.parts.head, so instead I'll just map over all of them
-        //and throw an error if I manage to find more than one thing during that map. This variable keeps track
-        //of whether I'm processing the first element in formData.parts.
-        var processingFirstFile = true
-
-        //I'll also safe the request so that I can completeRequest with this request outside of the map.
-        var request : Request = null
-        formData.parts.map(part => {
-          if (processingFirstFile) {
-            val contents = getFileContentsFromFormData(part)
-            request = new CreateModelRequest(database, userId, modelNameOrId, contents)
-            processingFirstFile = false
-          }
-          else {
-            ??? //should only have a single file.
-          }
-        })
-
-        completeRequest(request, t)
-      }}
-    } ~
     get {
       val request = new GetModelRequest(database, userId, modelNameOrId)
       completeRequest(request, t)
@@ -288,9 +235,9 @@ object RestApi extends Logging {
     }
   }}}
 
-  val deleteModelProofs: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "deleteProofs") { modelId => pathEnd {
+  val deleteModelProofSteps: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => pathPrefix("model" / Segment / "deleteProofSteps") { modelId => pathEnd {
     post {
-      val r = new DeleteModelProofsRequest(database, userId, modelId)
+      val r = new DeleteModelProofStepsRequest(database, userId, modelId)
       completeRequest(r, t)
     }
   }}}
@@ -336,20 +283,11 @@ object RestApi extends Logging {
   }}}
 
   //Because apparently FTP > modern web.
-  val userModel2: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => {pathPrefix("modelupload" / Segment) {modelNameOrId =>
+  val userModel2: SessionToken=>Route = (t : SessionToken) => userPrefix {userId => {pathPrefix("modelupload" / Segment.?) { modelNameOrId =>
   {pathEnd {
     post {
       entity(as[String]) { contents => {
-        def isArchive(c: String): Boolean = {
-          //@note identify archives by content (theorems etc.)
-          "(Theorem|Lemma|ArchiveEntry|Exercise) \\\"[^\\\"]*\\\"\\.".r.findFirstIn(c).isDefined
-        }
-        val request = if (isArchive(contents)) {
-          //@note ignore model name/ID in archives since entry names provide IDs.
-          new UploadArchiveRequest(database, userId, contents)
-        } else {
-          new CreateModelRequest(database, userId, modelNameOrId, contents)
-        }
+        val request = new UploadArchiveRequest(database, userId, contents, modelNameOrId)
         completeRequest(request, t)
       }}}}}}}}
 
@@ -441,7 +379,7 @@ object RestApi extends Logging {
           val submittedProofName = obj.asJsObject.getFields("proofName").last.asInstanceOf[JsString].value
           val proofName = if (submittedProofName == "") {
             val model = database.getModel(modelId)
-            model.name + ": Proof " + (model.numProofs + 1)
+            model.name + ": Proof"
           } else submittedProofName
           val proofDescription = obj.asJsObject.getFields("proofDescription").last.asInstanceOf[JsString].value
 
@@ -1061,7 +999,7 @@ object RestApi extends Logging {
           complete(completeResponse(new ErrorResponse(s"Expected exactly one proof in the archive but found ${entries.head.tactics.length} proofs. Make sure you export from the Proofs page, not the Models page.") :: Nil))
         else {
           val model = entries.head.model.asInstanceOf[Formula]
-          val tactic = entries.head.tactics.head._2
+          val tactic = entries.head.tactics.head._3
           complete(standardCompletion(new ValidateProofRequest(database, model, tactic), EmptyToken()))
         }
       }}
@@ -1192,17 +1130,17 @@ object RestApi extends Logging {
     userTheme             ::
     browseProofRoot       ::
     browseNodeChildren    ::
-    deleteModelProofs     ::
+    deleteModelProofSteps ::
     logoff                ::
     // DO NOT ADD ANYTHING AFTER LOGOFF!
     Nil
 
-  val sessionRoutes : List[Route] = partialSessionRoutes.map(routeForSession => optionalHeaderValueByName("x-session-token") {
+  val sessionRoutes: List[Route] = partialSessionRoutes.map(routeForSession => optionalHeaderValueByName("x-session-token") {
     case Some(token) => routeForSession(SessionManager.token(token))
     case None => routeForSession(EmptyToken())
   })
 
-  val api : Route = (publicRoutes ++ sessionRoutes).reduce(_ ~ _)
+  val api: Route = handleExceptions(catchAllExceptionHandler)((publicRoutes ++ sessionRoutes).reduce(_ ~ _))
 
   //endregion
 }

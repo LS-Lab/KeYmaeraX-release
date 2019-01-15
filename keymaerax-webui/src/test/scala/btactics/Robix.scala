@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import testHelper.ParserFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.{print, printIndexed}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
@@ -100,7 +100,7 @@ class Robix extends TacticTestBase {
 
   it should "synthesize a controller monitor" in withMathematica { tool =>
     val in = getClass.getResourceAsStream("/examples/casestudies/robix/staticsafetyabs_curvestraight_curvature_brakingonly.kyx")
-    val model = KeYmaeraXProblemParser(io.Source.fromInputStream(in).mkString)
+    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model,
       Variable("x"), Variable("y"), Variable("v"), Variable("a"), Variable("dx"), Variable("dy"), Variable("w"))
 
@@ -112,7 +112,7 @@ class Robix extends TacticTestBase {
 
   it should "synthesize a controller monitor for IJRR static safety" in withMathematica { tool =>
     val in = DatabasePopulator.readKya("classpath:/keymaerax-projects/ijrr/robix.kyx").filter(_.name == "Theorem 1: Static safety").head
-    val model = KeYmaeraXProblemParser(in.model)
+    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(in.model)
     val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model,
       Variable("x"), Variable("y"), Variable("v"), Variable("a"), Variable("dx"), Variable("dy"), Variable("w"))
 

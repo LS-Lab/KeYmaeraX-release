@@ -5,7 +5,7 @@ import java.util.Calendar
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXProblemParser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.tacticsinterface.TraceRecordingListener
 import org.apache.logging.log4j.scala.Logging
 import spray.json._
@@ -23,40 +23,38 @@ object DatabasePopulator extends Logging {
   // and case studies and import into the database
 
   case class TutorialEntry(name: String, model: String, description: Option[String], title: Option[String],
-                           link: Option[String], tactic: Option[(String, String, Boolean)], kind: String = "Unknown")
+                           link: Option[String], tactic: List[(String, String, Boolean)], kind: String = "Unknown")
+
+  /** Succeeded imports: model name and created Id, failed: model name. */
+  case class ImportResult(succeeded: List[(String, Int)], failed: List[String])
 
   /** Imports tutorial entries from the JSON file at URL. Optionally proves the models when tactics are present. */
-  def importJson(db: DBAbstraction, user: String, url: String, prove: Boolean = false): Unit = {
-    readTutorialEntries(url).foreach(importModel(db, user, prove))
+  def importJson(db: DBAbstraction, user: String, url: String, prove: Boolean = false): ImportResult = {
+    val result = readTutorialEntries(url).map(importModel(db, user, prove))
+    ImportResult(result.flatMap(_.left.toOption), result.flatMap(_.right.toOption))
   }
 
   /** Imports an archive from URL. Optionally proves the models when tactics are present. */
-  def importKya(db: DBAbstraction, user: String, url: String, prove: Boolean, exclude: List[ModelPOJO]): Unit = {
-    //@note use tactic name as description if entry does not come with a description itself
-    readKya(url)
-      .map(e =>
-        if (e.description.isDefined) e
-        else TutorialEntry(e.name, e.model,
-          e.tactic match { case Some((tname, _, _)) => Some(tname) case None => None }, e.title, e.link, e.tactic))
+  def importKya(db: DBAbstraction, user: String, url: String, prove: Boolean, exclude: List[ModelPOJO]): ImportResult = {
+    val result = readKya(url)
       .filterNot(e => exclude.exists(_.name == e.name))
-      .foreach(DatabasePopulator.importModel(db, user, prove = false))
+      .map(DatabasePopulator.importModel(db, user, prove = false))
+    ImportResult(result.flatMap(_.left.toOption), result.flatMap(_.right.toOption))
   }
 
   /** Reads a .kya archive from the URL `url` as tutorial entries (i.e., one tactic per entry). */
   def readKya(url: String): List[TutorialEntry] = {
     val kya = loadResource(url)
-    val archiveEntries = KeYmaeraXArchiveParser.read(kya)
-    val entries = archiveEntries.flatMap({case (modelName, modelContent, kind, tactics, info) =>
-      if (tactics.nonEmpty) tactics.map({case (tname, tactic) =>
-        TutorialEntry(modelName, modelContent, info.get("Description"), info.get("Title"), info.get("Link"),
-          Some((tname, tactic, true)), kind)})
-      else
-        TutorialEntry(modelName, modelContent, info.get("Description"), info.get("Title"), info.get("Link"),
-          None, kind) :: Nil
-    })
-    assert(entries.map(_.name).toSet.size == archiveEntries.map(_._1).toSet.size,
-      "Expected " + archiveEntries.size + " entries, but got " + entries.size)
-    entries
+    val archiveEntries = KeYmaeraXArchiveParser.parse(kya, parseTactics = false)
+    archiveEntries.map(toTutorialEntry)
+
+  }
+
+  /** Converts a parsed archive entry into a tutorial entry as expected by this importer. */
+  def toTutorialEntry(entry: KeYmaeraXArchiveParser.ParsedArchiveEntry): TutorialEntry = {
+    TutorialEntry(entry.name, entry.fileContent, entry.info.get("Description"), entry.info.get("Title"),
+      entry.info.get("Link"), entry.tactics.map({ case (tname, tacticContent, _) => (tname, tacticContent, true) }),
+      entry.kind)
   }
 
   /** Reads tutorial entries from the specified URL. */
@@ -72,7 +70,7 @@ object DatabasePopulator extends Logging {
         getOptionalField(e, "title", _.convertTo[String]),
         getOptionalField(e, "link", _.convertTo[String]),
         getOptionalField[String](e, "tactic", v=>loadResource(v.convertTo[String])).map(
-          t => ("", t, getOptionalField(e, "proves", _.convertTo[Boolean]).getOrElse(true)))))
+          t => ("", t, getOptionalField(e, "proves", _.convertTo[Boolean]).getOrElse(true))).toList))
       .toList
   }
 
@@ -94,25 +92,26 @@ object DatabasePopulator extends Logging {
       }
     }
 
-  /** Imports a model with info into the database; optionally records a proof obtained using `tactic`. */
-  def importModel(db: DBAbstraction, user: String, prove: Boolean)(entry: TutorialEntry): Unit = {
+  /** Imports a model with info into the database; optionally records a proof obtained using `tactic`.
+    * Returns Left(modelName, ID) on success, Right(modelName) on failure */
+  def importModel(db: DBAbstraction, user: String, prove: Boolean)(entry: TutorialEntry): Either[(String, Int), String] = {
     val now = Calendar.getInstance()
     val entryName = db.getUniqueModelName(user, entry.name)
     logger.info("Importing model " + entryName + "...")
-    db.createModel(user, entryName, entry.model, now.getTime.toString, entry.description,
-      entry.link, entry.title, entry.tactic match { case Some((_, t, _)) => Some(t) case _ => None }) match {
-      case Some(modelId) => entry.tactic match {
-        case Some((tname, tacticText, _)) =>
+    val result = db.createModel(user, entryName, entry.model, now.getTime.toString, entry.description,
+      entry.link, entry.title, entry.tactic.headOption.map(_._2)) match {
+      case Some(modelId) =>
+        entry.tactic.foreach({ case (tname, ttext, _) =>
           logger.info("Importing proof...")
-          val proofId = db.createProofForModel(modelId, entryName + " (" + tname + ")", "Imported from tactic " + tname,
-            now.getTime.toString, Some(tacticText))
-          if (prove) executeTactic(db, entry.model, proofId, tacticText)
+          val proofId = db.createProofForModel(modelId, tname, "Proof from archive", now.getTime.toString, Some(ttext))
+          if (prove) executeTactic(db, entry.model, proofId, ttext)
           logger.info("...done")
-        case _ => // nothing else to do, not asked to prove or don't know how to prove without tactic
-      }
-      case None => ???
+        })
+        Left(entry.name -> modelId)
+      case None => Right(entry.name)
     }
     logger.info("...done")
+    result
   }
 
   /** Prepares an interpreter for executing tactics. */
@@ -135,7 +134,7 @@ object DatabasePopulator extends Logging {
   def executeTactic(db: DBAbstraction, model: String, proofId: Int, tactic: String): Unit = {
     val interpreter = prepareInterpreter(db, proofId)
     val parsedTactic = BelleParser(tactic)
-    interpreter(parsedTactic, BelleProvable(ProvableSig.startProof(KeYmaeraXProblemParser(model))))
+    interpreter(parsedTactic, BelleProvable(ProvableSig.startProof(KeYmaeraXArchiveParser.parseAsProblemOrFormula(model))))
     interpreter.kill()
   }
 

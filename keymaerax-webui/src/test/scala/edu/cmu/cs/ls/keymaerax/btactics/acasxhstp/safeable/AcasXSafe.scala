@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
@@ -164,7 +164,7 @@ class AcasXSafe extends AcasXBase {
     beforeEach()
     withQE { _ =>
       /** * Main safe theorem and its tactic ***/
-      val safeSeq = KeYmaeraXProblemParser(io.Source.fromInputStream(
+      val safeSeq = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_implicit.kyx")).mkString)
 
       val safeTac = implyR('R) & (andL('L) *) & loop(invariant)('R) & Idioms.<(
@@ -197,7 +197,7 @@ class AcasXSafe extends AcasXBase {
   it should "prove Lemma 1: equivalence between implicit and explicit region formulation" in withQE { _ =>
     if (containsLemma("safe_equivalence")) removeLemma("safe_equivalence")
 
-    val s = KeYmaeraXProblemParser(io.Source.fromInputStream(
+    val s = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_equivalence.kyx")).mkString)
 
     val tactic = implyR('R) & equivR('R) & Idioms.<(
@@ -557,9 +557,9 @@ class AcasXSafe extends AcasXBase {
     beforeEach() // rerun initialization (runTest runs afterEach() at the end)
     withQE {_ =>
       // load lemmas
-      val acasximplicit = KeYmaeraXProblemParser( io.Source.fromInputStream(
+      val acasximplicit = KeYmaeraXArchiveParser.parseAsProblemOrFormula( io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_implicit.kyx")).mkString)
-      val acasxexplicit = KeYmaeraXProblemParser(io.Source.fromInputStream(
+      val acasxexplicit = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_explicit.kyx")).mkString)
       val acasximplicitP = getLemma("safe_implicit")
       val implicitExplicitP = getLemma("safe_equivalence")

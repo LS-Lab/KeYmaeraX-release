@@ -91,6 +91,10 @@ object ODEInvariance {
     remember("f_() = g_() -> (f_() >=0 -> g_()>=0)".asFormula,QE,
       namespace)
 
+  private lazy val fastSOS = proveBy("g() >= 0 & (P() <-> g() <= 0) -> (P()&f()=0 <-> g()+f()*f()<=0)".asFormula,
+    prop & OnAll(QE)
+  )
+
   private lazy val maxF = Function("max", None, Tuple(Real, Real), Real, interpreted=true)
   private lazy val minF = Function("min", None, Tuple(Real, Real), Real, interpreted=true)
   private lazy val absF = Function("abs", None, Real, Real, interpreted=true)
@@ -474,7 +478,8 @@ object ODEInvariance {
       }
       else {
         starter & cutR(f2)(pos) < (timeoutQE,
-          cohideR(pos) & implyR(1) & recRankOneTac(f2)
+          cohideR(pos) & implyR(1) &
+          recRankOneTac(f2)
         )
       }
     }
@@ -691,9 +696,11 @@ object ODEInvariance {
         ps.map(p => Equal(p,zero)).reduce(And)
 
     //this can also be manually proved rather than using QE
-    val pr = proveBy(Equiv(cutp,
-      if(negate) Greater(sump,zero)
-      else LessEqual(sump,zero)),QE)
+    val pr =
+      if(negate)
+        proveBy(Equiv(cutp, Greater(sump,zero)), QE)
+      else
+        proveBy(Equiv(cutp,LessEqual(sump,zero)), ((useAt(fastSOS,PosInExpr(1::Nil))(1) & andR(1) <( prove_sos_positive, skip ))*) & QE )
 
     //Construct the term ||G||^2 + 1
     val cofactorPre = Plus(Gco.map(ts => ts.map(t=>Times(t,t):Term).reduceLeft(Plus)).reduceLeft(Plus),one)
@@ -741,17 +748,20 @@ object ODEInvariance {
           boxAnd(pos) & andR(pos) < (
             dW(pos) & prop,
             //QE can't handle this alone: diffInd('full)(pos)
-            Dconstify(
+            Dconstify
+            (
               diffInd('diffInd)(pos) <(
                 //Cleanup the goal
+                //Extra domain constraint from diffInd step
                 hideL('Llast) &
+                //Get rid of dbxy_=1 assumption
                 exhaustiveEqL2R('Llast) &
-                useAt(ghostLem3,PosInExpr(1::Nil))(pos) &
-                // This useAt doesn't work with Dconstify
-                // useAt(pr,PosInExpr(1::Nil))(pos) &
-                DebuggingTactics.debug("First Vdbx QE",debugTactic) &
+                // TODO: The next 3 steps do not work with Dconstify
+                //useAt(leftMultId)(pos++PosInExpr(0::Nil)) &
+                //useAt(pr,PosInExpr(1::Nil))(pos) &
+                //DebuggingTactics.debug("First Vdbx QE",true) &
                 //p=0 must be true initially
-                QE,
+                (QE & done | DebuggingTactics.done("dRI condition must hold in the beginning")),
                 cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) &
                   // At this point, we should get to (gy+0)p + y(p') <= 0
                   // or the negated version ((-g)y+0)p + y(p') >= 0
@@ -768,7 +778,7 @@ object ODEInvariance {
                     ,
                     // This is the only "real" use of QE.
                     DebuggingTactics.debug("Second Vdbx QE",debugTactic) &
-                      hideR(1) & QE
+                      hideR(1) & (QE & done | DebuggingTactics.done("Vdbx condition must be preserved"))
                   )
                 )
               )
@@ -799,7 +809,7 @@ object ODEInvariance {
 
     val (sys, post) = seq.sub(pos) match {
       case Some(Box(sys: ODESystem, post)) => (sys, post)
-      case _ => throw new BelleThrowable("domain stuck for box ODE in succedent")
+      case _ => throw new BelleThrowable("dRI only applicable for box ODE in succedent")
     }
 
     val (f2, propt) = semiAlgNormalize(post)
@@ -807,6 +817,8 @@ object ODEInvariance {
     require(conjs.forall(f => f.isInstanceOf[Equal]), "dRI requires only equations in postcondition")
     val polys = conjs.map(f => f.asInstanceOf[Equal].left)
     val (r,groebner,cofactors) = rank(sys,polys)
+
+    //println(r,groebner,cofactors)
 
     diffUnpackEvolutionDomainInitially(pos) &
       DebuggingTactics.debug("dgVdbx",debugTactic) &
@@ -950,7 +962,7 @@ object ODEInvariance {
   // Specialized lemma to rearrange the ghosts
   private val ghostLem1 = remember("y() > 0 & pp() <= (g()*p()) -> ((-g())*y()+0)*p() + y()*pp() <= 0".asFormula,QE)
   private val ghostLem2 = remember("y() > 0 & pp() >= -(g()*p()) -> ((--g())*y()+0)*p() + y()*pp() >= 0".asFormula,QE)
-  private val ghostLem3 = remember("a()<=0 -> 1*a()<=0".asFormula,QE)
+  private val leftMultId = remember("1*f() = f()".asFormula,QE)
 
   // Symbolic matrix and vector products, assuming that the dimensions all match up
   private def dot_prod (v1:List[Term],v2:List[Term]) : Term = {
@@ -958,8 +970,17 @@ object ODEInvariance {
     zipped.reduce(Plus.apply)
   }
 
-  private def matvec_prod (m:List[List[Term]],v:List[Term]) : List[Term] ={
+  private def matvec_prod (m:List[List[Term]],v:List[Term]) : List[Term] = {
     m.map(ls => dot_prod(ls,v))
+  }
+
+  //computes m x n (assumes n transposed)
+  private def matmat_prod (m:List[List[Term]],n:List[List[Term]]) : List[List[Term]] = {
+    m.map(ls => matvec_prod(n,ls))
+  }
+
+  private def vecvec_sum (v1:List[Term],v2:List[Term]) : List[Term] = {
+    (v1 zip v2).map({case (t1,t2)=>Plus(t1,t2)})
   }
 
   private def mkConst(name : String, index: Int) : Term ={
@@ -983,6 +1004,11 @@ object ODEInvariance {
   private def replaceODEfree(t:Term, ode: DifferentialProgram) : Term = {
     val consts = (StaticSemantics.freeVars(t) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
     consts.foldLeft(t)( (tt, c) => tt.replaceFree(c, FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing)))
+  }
+
+  private def replaceODEfree(f:Formula, ode: DifferentialProgram) : Formula = {
+    val consts = (StaticSemantics.freeVars(f) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
+    consts.foldLeft(f)( (tt, c) => tt.replaceFree(c, FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing)))
   }
 
   // Proves SOS >= 0 by naive sum decomposition
@@ -1275,4 +1301,227 @@ object ODEInvariance {
         & cohide2(-3,1)& DebuggingTactics.debug("Finish step",doPrint = debugTactic) & implyR(1) & lpclosedPlus(inst)
     )
   })
+
+  private def simplify_mat(m:List[List[Term]]) :List[List[Term]] = {
+    m.map(ls => ls.map (t => simpWithTool(ToolProvider.simplifierTool(),t)))
+  }
+  private def is_zero_mat(m:List[List[Term]]) : Boolean = {
+    m.flatten.forall(p => p == Number(0))
+  }
+
+  //Computes and returns the sequence m, m^2, ... m^{k-1} if m^{k} = 0
+  def nilpotentIndex(m:List[List[Term]]) : Option[List[List[List[Term]]]] = {
+    val dim = m.length
+    assert(m.forall(ls => ls.length == dim))
+
+    var ctr = 1
+    //TODO: simplify here or later?
+    var curmat = simplify_mat(m)
+    val mt = curmat.transpose
+
+    var mats = ListBuffer[List[List[Term]]]()
+
+    while(ctr <= dim) { //k is bounded by the dimension of the matrix
+      if(is_zero_mat(curmat))
+        return Some(mats.toList)
+      else if(ctr < dim) {
+        mats += curmat
+        val newmat = simplify_mat(matmat_prod(curmat, mt))
+        curmat = newmat
+      }
+      ctr+=1
+    }
+    None
+  }
+
+  // Approximate coefficient of terms k in term t.
+  private def coefficientOf(k:List[BaseVariable],t:Term) : (Map[BaseVariable,Term],Term,List[BaseVariable]) = {
+    t match {
+      // Numerical Constants
+      case n:Number => (HashMap(),t,List())
+      // Symbolic Constants
+      case FuncOf(_,Nothing) =>  (HashMap(),t,List())
+      case v:BaseVariable =>
+        if(k.contains(v))
+          (HashMap((v,Number(1))),Number(0),List())
+        else
+          (HashMap(),v,List())
+      case Neg(t) =>
+        val (m,tt,b) = coefficientOf(k,t)
+        (m.mapValues(t => Neg(t)), Neg(tt),b)
+      case Times(l,r) =>
+        val (lm,lt,lb) = coefficientOf(k,l)
+        val (rm,rt,rb) = coefficientOf(k,r)
+        if(lm.isEmpty)
+          (rm.mapValues(t => Times(lt,t)), Times(lt,rt), lb++rb)
+        else if (rm.isEmpty)
+          (lm.mapValues(t => Times(t,rt)), Times(lt,rt), lb++rb)
+        else
+          (HashMap(),Number(0), (lm.keys++rm.keys).toList++lb++rb)
+      case Divide(l,r) =>
+        val (lm,lt,lb) = coefficientOf(k,l)
+        val (rm,rt,rb) = coefficientOf(k,r)
+        if (rm.isEmpty)
+          (lm.mapValues(t => Divide(t,rt)), Divide(lt,rt), lb++rb)
+        else
+          (HashMap(),Number(0), (lm.keys++rm.keys).toList++lb++rb)
+      case Plus(l,r) =>
+        val (lm,lt,lb) = coefficientOf(k,l)
+        val (rm,rt,rb) = coefficientOf(k,r)
+        ((lm.toList++rm.toList).groupBy(_._1).map( ff => ff._1 -> ff._2.map(_._2).reduceLeft(Plus)),Plus(lt,rt),lb++rb)
+      case Minus(l,r) =>
+        val (lm,lt,lb) = coefficientOf(k,l)
+        val (rm,rt,rb) = coefficientOf(k,r)
+        val rmneg = rm.mapValues(v => Neg(v))
+        //This is fine since lm,rm keys at most intersect once
+        ((lm.toList++rmneg.toList).groupBy(_._1).map( ff => ff._1 -> ff._2.map(_._2).reduceLeft(Plus)),Minus(lt,rt),lb++rb)
+      /* give up for the rest of the cases:
+       * Power, Differential, DifferentialSymbol, DotTerm, Nothing, Pair, UnitFunctional
+       */
+      case _ =>
+        (HashMap(),Number(0), k)
+    }
+  }
+
+  // Returns a representation in "linear" form x'=Ax+b for the given ODE if possible
+  // A,b are not allowed to mention x
+  def linFormODE(p:DifferentialProgram) : Option[(List[List[Term]],List[Term],List[BaseVariable])] = {
+    // flattened ODE
+    val flat = DependencyAnalysis.collapseODE(p)
+    val kv = flat.mapValues( t => coefficientOf(flat.keys.toList,t) )
+
+    //Turn kv into x'=Ax+b form
+    //Canonize variable order
+    val vars = kv.keys.toList.sortBy(f => f.toString)
+    if (vars.exists( v => kv(v)._3.nonEmpty)) return None
+
+    val A = vars.map( v => vars.map( vv =>  kv(v)._1 getOrElse (vv,Number(0))))
+    val b = vars.map( v => kv(v)._2)
+    Some(A,b,vars)
+  }
+
+  private def factorial(i:Int) : Int ={
+    if (i <= 1) 1
+    else i* factorial(i-1)
+  }
+
+  private def timeSeries(time:Term, ls:List[List[Term]]) : List[Term] = {
+    ls.zipWithIndex.map(
+      f =>
+        f._1.map(t =>
+          if (f._2==0) t
+          else Times(t,Divide(Power(time,Number(f._2)),Number(factorial(f._2)))))
+    ).reduce(vecvec_sum)
+  }
+
+  /** Given a top-level succedent position corresponding to [x'=f(x)&Q]P
+    * with x'=f(x) a linear, nilpotent ODE
+    *
+    * Adds the (polynomial) solution x=Phi(x_0,t) of that ODE to the domain constraint
+    *
+    * --- QE
+    * Q(Phi(x_0,t)), t>=0 |- P(Phi(x_0,t))
+    * --- (only continues if solveEnd = true)
+    * G,x=x_0, t=0 |-  [x'=f(x),t'=1& Q&t>=0& x=Phi(x_0,t)]P
+    * --------------- (nilpotent solve)
+    * G |- [x'=f(x)&Q]P
+    *
+    * @param solveEnd whether to continue with weaken and QE (see rule rendition above)
+    * @return See the rule rendition above
+    *         Special failure cases:
+    *         1) Linearity heuristic checks fail e.g.: x'=1+x^2-x^2 will be treated as non-linear even though it is really linear
+    *
+    */
+  def nilpotentSolve(solveEnd : Boolean) : DependentPositionTactic = "nilpotentSolve" by ((pos:Position,seq:Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "nilpotent solve only applicable in top-level succedent")
+
+    val (ode,dom,post) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,post)) => (sys.ode,sys.constraint,post)
+      case _ => throw new BelleThrowable("nilpotent solve only applicable to box ODE in succedent")
+    }
+
+    val t = TacticHelper.freshNamedSymbol("t_".asVariable, seq)
+    //Introduce a ghost variable
+
+    val linForm = linFormODE(ode)
+    if (linForm.isEmpty) throw new BelleThrowable("ODE " + ode +" could not be put into linear form x'=Ax")
+    val (m,b,x) = linForm.get
+
+    val npopt = nilpotentIndex(m)
+
+    if(npopt.isEmpty)  throw new BelleThrowable("Coefficient matrix for " + ode +" is not nilpotent.")
+    val np = npopt.get
+
+    val bsimp = b.map (t => simpWithTool(ToolProvider.simplifierTool(),t))
+
+    val oldx = x.map(TacticHelper.freshNamedSymbol(_, seq))
+
+    // Introduce the initial values x0
+    val storeInitialVals =
+      x.zip(oldx).map(v => discreteGhost(v._1, Some(v._2))('Rlast) & DLBySubst.assignEquality('Rlast)).reduceOption[BelleExpr](_ & _).getOrElse(skip)
+
+    // Partial solutions
+    val sp = np.map(m => matvec_prod(m, oldx))
+
+    //Forcing terms on partial solutions for x',x'',...
+    val sb = bsimp :: np.map(m => matvec_prod(m,bsimp))
+
+    // Actual solution
+    val s = (oldx :: sb.zip(sp).map(f => vecvec_sum(f._1,f._2))) ++ List(sb.last)
+
+    // LHS of partial solutions
+    val sL =
+      x :: np.map(m => matvec_prod(m, x)).zip(sb).map(f => vecvec_sum(f._1,f._2).map(t => simpWithTool(ToolProvider.simplifierTool(),t)))
+
+    //The actual solution
+    val sol = timeSeries(t,s).map(t => simpWithTool(ToolProvider.simplifierTool(),t))
+
+    val cut = And(GreaterEqual(t,Number(0)),x.zip(sol).map( f => Equal(f._1,f._2) ).reduceRight(And))
+
+    val cutPrep = Range(0,s.length).map(i => timeSeries(t,s.drop(i)).map(t => simpWithTool(ToolProvider.simplifierTool(),t)))
+
+    val cuts = sL.zip(cutPrep).tail.map(
+      ff =>
+        ff._1.zip(ff._2).collect({
+          case f if f._1 != f._2 => Equal(f._1, f._2)
+        }
+        ).reduce(And)
+    ) //.map( f => replaceODEfree(f,DifferentialProduct(AtomicODE(DifferentialSymbol(t),Number(1)),ode)))
+
+    val start =
+      if(solveEnd)
+        diffUnpackEvolutionDomainInitially(pos)
+      else
+        skip
+
+    val finish =
+      if(solveEnd)
+        dW('Rlast) & //todo: dW repeats storing of initial values which isn't very useful here
+        implyR('Rlast) & andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
+        SaturateTactic(andL('Llast)) & //Splits conjunction of equations up
+        ?(SaturateTactic(exhaustiveEqL2R(true)('Llast)) & //rewrite
+          timeoutQE & done)
+      else
+        skip
+
+    start &
+    HilbertCalculus.DGC(t, Number(1))(pos) &
+    existsR(Number(0))(pos) &
+    //NOTE: At this point, the box question is guaranteed to be 'Rlast because existR reorders succedents
+    //If existsR is changed, all the 'Rlast should turn back into pos instead
+    storeInitialVals &
+    dC(cut)('Rlast) <(
+      finish,
+      // dRI directly is actually a lot slower than the dC chain even with naive dI
+      // dRI('Rlast)
+      cuts.foldLeft(skip)( (t,f) => dC(f)('Rlast) < (t, dI('full)('Rlast)) ) & dI('full)('Rlast)
+
+      // this does the "let" once rather than on every dI -- doesn't help speed much
+      //Dconstify(
+      //  cuts.foldLeft(skip)( (t,f) => dC(f)('Rlast) < (t, dI('diffInd)('Rlast)
+      //  <( QE , cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) & QE )) ) &
+      //    dI('diffInd)('Rlast)<( QE, cohideOnlyR('Rlast) & SaturateTactic(Dassignb(1)) & QE ))('Rlast)
+    )
+  })
+
 }

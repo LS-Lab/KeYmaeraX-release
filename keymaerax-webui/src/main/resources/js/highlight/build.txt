@@ -1,0 +1,14 @@
+Requirements: 
+highlight.js      https://highlightjs.org/
+node.js, npm      https://nodejs.org
+ 
+The following subdirectories in the highlight.js installation directory are relevant:
+src/languages/    language definitions
+src/styles/       style definitions
+tools/            build tools
+build/            highlight JS libraries after compilation
+
+Build the KeYmaera X model/tactic syntax highlighting:
+1. Copy bellerophon.js and dl.js into src/languages
+2. Compile with 'node tools/build.js bellerophon dl' 
+3. Copy build/highlight.pack.js into keymaerax-webui/src/main/resources/js/highlight

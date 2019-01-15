@@ -44,6 +44,10 @@ angular.module('keymaerax.controllers').controller('ModelProofCreateCtrl', funct
     }).finally(function() { spinnerService.hide('modelListProofLoadingSpinner'); });
   }
 
+  $scope.delayedProveFromTactic = function(modelId) {
+    return function() { $scope.proveFromTactic(modelId); }
+  }
+
   $scope.$emit('routeLoaded', {theview: '/models/:modelId/proofs/create'})
 });
 

@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.core.ProverException
+import edu.cmu.cs.ls.keymaerax.core.{Provable, ProverException}
 
 /**
  * KeYmaera X Tactic Exceptions.
@@ -33,6 +33,10 @@ class BelleThrowable(message: => String, cause: Throwable = null) extends Prover
   override def toString: String = getMessage() + "\n" + super.toString + "\nin " + tacticContext
 }
 
+/** Signals an unexpected proof state (e.g., an open goal that should have been closed). */
+class BelleUnexpectedProofStateError(message: => String, val proofState: Provable, cause: Throwable = null)
+  extends BelleThrowable(message, cause)
+
 /** Syntactic and semantic errors in bellerophon tactics, such as forgetting to provide an expected position.
   * BelleInterpreter will raise the error to the user's attention. */
 case class BelleIllFormedError(message: String, cause: Throwable = null) extends BelleThrowable(message, cause)
@@ -56,6 +60,6 @@ case class UnificationException(e1: String, e2: String, info: String = "")
 
 case class BelleUserGeneratedError(msg: String) extends BelleThrowable(s"[Bellerophon User-Generated Message] $msg")
 
-class CompoundException(left: BelleThrowable, right: BelleThrowable)
+class CompoundException(val left: BelleThrowable, val right: BelleThrowable)
   extends BelleThrowable(s"Left Message: ${left.getMessage}\nRight Message: ${right.getMessage})")
 

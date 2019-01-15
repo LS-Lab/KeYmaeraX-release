@@ -4,7 +4,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, Position}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, StopTraversal}
 import org.apache.logging.log4j.scala.Logging
@@ -235,6 +235,14 @@ object FormulaTools extends Logging {
     positions
   }
 
+  /** Finds the closest parent to `pos` in `formula` that is a formula. */
+  def parentFormulaPos(pos: PosInExpr, fml: Formula): PosInExpr =
+    if (pos.pos.isEmpty) pos
+    else Augmentors.FormulaAugmentor(fml).sub(pos) match {
+      case Some(_: Formula) => pos
+      case Some(_) => parentFormulaPos(pos.parent, fml)
+    }
+
   /** Read off the set of all possible singularities coming from divisors or negative powers.
     * @example {{{
     *           singularities("x>5/b+2".asFormula)==Set(b)
@@ -313,19 +321,27 @@ object FormulaTools extends Logging {
   /** Returns all terms {{{b^e}}} such that e is not a natural number occurring in given formula .
     * @note This is soundness-critical.
     * @author Nathan Fulton */
-  def unnaturalPowers(f: Formula): List[Term] = {
-    var problematicExponents = scala.collection.mutable.ListBuffer[Term]()
+  def unnaturalPowers(f: Formula): List[(Term, PosInExpr)] = {
+    var problematicExponents = scala.collection.mutable.ListBuffer[(Term, PosInExpr)]()
     ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
-      override def preT(p:PosInExpr,t:Term): Either[Option[StopTraversal], Term] = t match {
-        case Power(base, Number(n)) if(n.isValidInt && n >= 0) => Left(None)
-        case Power(base, exp) => {
-          problematicExponents += Power(base, exp)
-          Left(None)
-        }
+      override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
+        case Power(_, Number(n)) if n.isValidInt && n >= 0 => Left(None)
+        case Power(base, exp) => problematicExponents += Power(base, exp) -> p; Left(None)
         case _ => Left(None)
       }
     }, f)
-    return problematicExponents.toList
+    problematicExponents.toList
   }
 
+  /** Returns a set of variables that are arguments to any application of function 'fn' in the formula `fml`. */
+  def argsOf(fn: String, fml: Formula): Set[Term] = {
+    var args = Set[Term]()
+    ExpressionTraversal.traverse(new ExpressionTraversal.ExpressionTraversalFunction() {
+      override def preT(p: PosInExpr, t: Term): Either[Option[ExpressionTraversal.StopTraversal], Term] = t match {
+        case FuncOf(Function(fnname, None, Real, Real, false), t: Term) if fnname == fn => args += t; Left(None)
+        case _ => Left(None)
+      }
+    }, fml)
+    args
+  }
 }

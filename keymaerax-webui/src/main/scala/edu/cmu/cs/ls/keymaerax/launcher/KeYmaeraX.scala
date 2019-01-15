@@ -1,3 +1,7 @@
+/**
+  * Copyright (c) Carnegie Mellon University.
+  * See LICENSE.txt for the conditions of this license.
+  */
 package edu.cmu.cs.ls.keymaerax.launcher
 
 import java.io.{FilePermission, PrintWriter}
@@ -8,7 +12,7 @@ import java.util.concurrent.TimeUnit
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.api.ScalaTacticCompiler
 import edu.cmu.cs.ls.keymaerax.bellerophon._
-import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
@@ -16,8 +20,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.hydra.TempDBTools
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXDeclarationsParser.Declaration
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{ParsedArchiveEntry, Declaration}
 import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
 
 import scala.collection.immutable
@@ -33,64 +36,68 @@ import scala.concurrent.duration.Duration
 import scala.reflect.io.File
 
 /**
- * Command-line interface launcher for KeYmaera X.
- *
- * @author Stefan Mitsch
- * @author Andre Platzer
- * @author Ran Ji
- * @author Brandon Bohrer
- */
+  * Command-line interface launcher for [[http://keymaeraX.org/ KeYmaera X]],
+  * the aXiomatic Tactical Theorem Prover for Hybrid Systems and Hybrid Games.
+  *
+  * - `[[edu.cmu.cs.ls.keymaerax.core]]` - KeYmaera X kernel, proof certificates, main data structures
+  * - `[[edu.cmu.cs.ls.keymaerax.btactics]]` - Tactic language library
+  * - `[[edu.cmu.cs.ls.keymaerax.bellerophon]]` - Bellerophon tactic language and tactic interpreter
+  *
+  * @author Stefan Mitsch
+  * @author Andre Platzer
+  * @author Ran Ji
+  * @author Brandon Bohrer
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_32 A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. [[http://arxiv.org/pdf/1503.01981.pdf arXiv 1503.01981]]
+  * @see Andre Platzer. [[https://doi.org/10.1007/978-3-319-63588-0 Logical Foundations of Cyber-Physical Systems]]. Springer, 2018.
+  * @see Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Volp and Andre Platzer. [[https://doi.org/10.1007/978-3-319-21401-6_36 KeYmaera X: An axiomatic tactical theorem prover for hybrid systems]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+  * @see Andre Platzer. [[https://doi.org/10.1145/2817824 Differential game logic]]. ACM Trans. Comput. Log. 17(1), 2015. [[http://arxiv.org/pdf/1408.1980 arXiv 1408.1980]]
+  * @see Andre Platzer. [[https://doi.org/10.1109/LICS.2012.13 Logics of dynamical systems]]. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012
+  * @see [[edu.cmu.cs.ls.keymaerax.launcher.Main]]
+  */
 object KeYmaeraX {
 
   private type OptionMap = Map[Symbol, Any]
 
   /** Usage -help information.
     *
-    * @note Formatted to 80 characters width. */
+    * @note Formatted to 80 characters terminal width. */
   val usage: String = "KeYmaera X Prover" + " " + VERSION +
     """
       |
       |Usage: java -jar keymaerax.jar
-      |  -prove file.kyx -tactic file.kyt/BelleExpr [-tacticName name] [-out file.kyp] [-timeout seconds] |
-      |  -check file.kya |
+      |  -prove file.kyx [-out file.kyp] [-timeout seconds] |
       |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar]
       |     [-sandbox] [-fallback prg] |
       |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c] |
       |  -ui [web server options] |
-      |  -parse file.kyx |
-      |  -bparse file.kyt |
-      |  -repl file.kyx [file.kyt] [scaladefs]
-      |  -striphints file.kyx -out file2.kyx
-      |  -coasterx ( -component component-name [-formula] [-tactic] [-stats]
-      |                [-num-runs N] [-debug-level (0|1|2)]
-      |            | -coaster file.rctx -feet-per-unit X [-num-runs N]
-      |              [-velocityFPS V] [-formula] [-stats] [-compare-reuse]
-      |              [-debug-level (0|1|2)]  [-naive-arith]
-      |            | -table [-num-runs N] [-debug-level (0|1|2)])
+      |  -striphints file.kyx -out fileout.kyx
       |
       |Actions:
-      |  -prove     run KeYmaera X prover on given model file with given tactic
-      |  -check     run KeYmaera X prover on an archive of models and tactics
-      |  -modelplex synthesize monitor from given file by proof with ModelPlex tactic
+      |  -prove     run prover on given archive
+      |  -modelplex synthesize monitor from given model by proof with ModelPlex tactic
       |  -codegen   generate executable code from given model file
-      |  -ui        start web user interface with optional server arguments
-      |  -parse     return error code !=0 if the input model file does not parse
-      |  -bparse    return error code !=0 if bellerophon tactic file does not parse
+      |  -ui        start web user interface with optional server arguments (default)
+      |  -striphints remove all proof annotations from the model
+      |  -parse     return error code 0 if the given model file parses
+      |  -bparse    return error code 0 if given bellerophon tactic file parses
       |  -repl      prove interactively from REPL command line
       |  -coasterx  verify roller coasters
       |
       |Additional options:
-      |  -tool mathematica|z3 choose which tool to use for arithmetic
-      |  -mathkernel MathKernel(.exe) path to the Mathematica kernel executable
-      |  -jlink path/to/jlinkNativeLib path to the J/Link native library directory
+      |  -tool mathematica|z3 choose which tool to use for real arithmetic
+      |  -mathkernel MathKernel(.exe) path to Mathematica kernel executable
+      |  -jlink path/to/jlinkNativeLib path to Mathematica J/Link library directory
+      |  -timeout  how many seconds to try proving before giving up, forever if <=0
       |  -monitor  ctrl|model what kind of monitor to generate with ModelPlex
       |  -vars     use ordered list of variables, treating others as constant functions
       |  -interval guard reals by interval arithmetic in floating point (recommended)
       |  -nointerval skip interval arithmetic presuming no floating point errors
-      |  -savept path export proof term s-expression from -check to path
+      |  -savept path export proof term s-expression from -prove to given path
+      |  -launch   use present JVM instead of launching one with a bigger stack
       |  -lax      use lax mode with more flexible parser, printer, prover etc.
       |  -strict   use strict mode with no flexibility in prover
-      |  -debug    use debug mode with more exhaustive messages
+      |  -debug    use debug mode with exhaustive messages
       |  -nodebug  disable debug mode to suppress intermediate messages
       |  -security use security manager imposing some runtime security restrictions
       |  -help     Display this usage information
@@ -103,13 +110,13 @@ object KeYmaeraX {
 
   private def launched() {
     LAUNCH = true
-    println("Launch flag was set.")
+    //println("Launching KeYmaera X")
   }
   var LAUNCH: Boolean = false
 
 
   def main(args: Array[String]): Unit = {
-    if (args.length > 0 && (args(0)=="-help" || args(0)=="--help" || args(0)=="-h")) {println(usage); exit(1)}
+    if (args.length > 0 && List("-help", "--help", "-h", "-?").contains(args(0))) {println(usage); exit(1)}
     println("KeYmaera X Prover" + " " + VERSION + "\n" +
       "Use option -help for usage and license information")
     if (args.length == 0) launchUI(args)
@@ -137,7 +144,6 @@ object KeYmaeraX {
           //@todo allow multiple passes by filter architecture: -prove bla.key -tactic bla.scal -modelplex -codegen
           options.get('mode) match {
             case Some("prove") => prove(options)
-            case Some("check") => check(options)
             case Some("modelplex") => modelplex(options)
             case Some("codegen") => codegen(options)
             case Some("repl") => repl(options)
@@ -225,9 +231,6 @@ object KeYmaeraX {
       case "-prove" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "prove", 'in -> value), tail)
         else optionErrorReporter("-prove")
-      case "-check" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "check", 'in -> value), tail)
-        else optionErrorReporter("-check")
       case "-savept" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('ptOut -> value), tail)
         else optionErrorReporter("-savept")
@@ -302,7 +305,7 @@ object KeYmaeraX {
 
   private def parseProblemFile(fileName: String) = {
     try {
-      KeYmaeraXArchiveParser(fileName).foreach(e => {
+      KeYmaeraXArchiveParser.parseFromFile(fileName).foreach(e => {
         println(e.name)
         println(KeYmaeraXPrettyPrinter(e.model))
         println("Parsed file successfully")
@@ -339,7 +342,6 @@ object KeYmaeraX {
     val noValueMessage = "[Error] No value specified for " + option + " option. "
     option match {
       case "-prove" => println(noValueMessage + "Please use: -prove FILENAME.[key/kyx]\n\n" + usage); exit(1)
-      case "-check" => println(noValueMessage + "Please use: -check FILENAME.kya\n\n" + usage); exit(1)
       case "-modelPlex" => println(noValueMessage + "Please use: -modelPlex FILENAME.[key/kyx]\n\n" + usage); exit(1)
       case "-codegen" => println(noValueMessage + "Please use: -codegen FILENAME.kym\n\n" + usage); exit(1)
       case "-out" => println(noValueMessage + "Please use: -out FILENAME.proof | FILENAME.kym | FILENAME.c | FILENAME.g\n\n" + usage); exit(1)
@@ -459,86 +461,28 @@ object KeYmaeraX {
     }
   }
 
-  case class ProofStatistics(name: String, tacticName: String, status: String, timeout: Long,
+  case class ProofStatistics(name: String, tacticName: String, status: String, witness: Option[ProvableSig], timeout: Long,
                              duration: Long, qeDuration: Long, proofSteps: Int, tacticSize: Int) {
-    override def toString: String =
+    def summary: String =
       s"""Proof Statistics ($name $status, with tactic $tacticName and time budget [s] $timeout)
          |Duration [ms]: $duration
          |QE [ms]: $qeDuration
          |Proof steps: $proofSteps
          |Tactic size: $tacticSize""".stripMargin
 
+    override def toString: String = s"${status.toUpperCase} $name: tactic=$tacticName,tacticsize=$tacticSize,budget=$timeout[s],duration=$duration[ms],qe=$qeDuration[ms],steps=$proofSteps"
+
     def toCsv: String = s"$name,$tacticName,$status,${timeout*1000},$duration,$qeDuration,$proofSteps,$tacticSize"
   }
 
-  /**
-   * Prove given input file (with given tactic) to produce a lemma.
-   * {{{KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))}}}
-   *
-   * @param options The prover options.
-   */
-  def prove(options: OptionMap): Unit = {
-    require(options.contains('in), usage)
-
-    val inputIdentifier = options('in).toString
-    val inputModels = KeYmaeraXArchiveParser(inputIdentifier)
-    val inputFileName = inputIdentifier.split("#").toList.head
-    val outputFilePrefix = options.getOrElse('out, inputFileName)
-    val outputFileSuffix = ".kyp"
-    val outputFileNames: Map[String, String] = inputModels.map(e => {
-      e.name -> (outputFilePrefix + "-" + e.name.replaceAll("\\W", "_") + outputFileSuffix)
-    }).toMap
-
-    val defaultTactic = readTactic(options)
-    val tacticName = options.get('tacticName)
-
-    val inputModelsWithTactics = inputModels.map(e => {
-      defaultTactic match {
-        case Some(t: NamedTactic) => ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model,
-          (t.name -> t)::Nil, e.info)
-        case Some(t) => ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model,
-          ("User" -> t)::Nil, e.info)
-        case _ if e.tactics.isEmpty && tacticName.isEmpty =>
-          ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model, ("Auto" -> TactixLibrary.auto)::Nil, e.info)
-        case _ if e.tactics.nonEmpty || tacticName.nonEmpty => tacticName match {
-          case Some(tn) =>
-            val filtered = e.tactics.filter(_._1 == tn)
-            if (filtered.isEmpty) println("Entry '" + e.name + "' does not have a tactic '" + tn + "'")
-            ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.defs, e.model, filtered, e.info)
-          case None => e
-        }
-      }
-    })
-
-    inputModelsWithTactics.foreach(e =>
-      if (e.tactics.isEmpty) {
-        val statisticsLogger = Logger(getClass)
-        statisticsLogger.info(MarkerManager.getMarker("PROOF_STATISTICS"),
-          ProofStatistics(e.name, "skip", "skipped", options('timeout).asInstanceOf[Long], -1, -1, -1, -1).toCsv)
-      } else e.tactics.foreach(t => try {
-        prove(e.name, e.model.asInstanceOf[Formula], t._1, t._2, outputFileNames(e.name), options, storeWitness=true)
-      } catch {
-        case ex: Throwable =>
-          println("==================================================")
-          println(s"Error while checking $inputIdentifier")
-          println(s"${e.name} failed")
-          println(s"Error details:")
-          ex.printStackTrace(System.out)
-          println(s"Error while checking $inputIdentifier")
-          println("==================================================")
-          throw ex
-      }))
-  }
-
-  private def prove(name: String, input: Formula, tacticName: String, tactic: BelleExpr, outputFileName: String,
-                    options: OptionMap, storeWitness: Boolean): Unit = {
+  /** Proves a single entry */
+  private def prove(name: String, input: Formula, fileContent: String,
+                    tacticName: String, tactic: BelleExpr, timeout: Long,
+                    outputFileName: Option[String], options: OptionMap): ProofStatistics = {
     val inputSequent = Sequent(immutable.IndexedSeq[Formula](), immutable.IndexedSeq(input))
 
-    Console.println("[start proof " + outputFileName + "]")
     //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
-    val pw = new PrintWriter(outputFileName)
-
-    val timeout = options('timeout).asInstanceOf[Long]
+    val pw = outputFileName.map(new PrintWriter(_))
 
     //@todo turn the following into a transformation as well. The natural type is Prover: Tactic=>(Formula=>Provable) which however always forces 'verify=true. Maybe that's not bad.
 
@@ -558,27 +502,23 @@ object KeYmaeraX {
         Future {
           TactixLibrary.proveBy(inputSequent, tactic)
         },
-        Duration(timeout, TimeUnit.SECONDS)
+        if (timeout>0) Duration(timeout, TimeUnit.SECONDS) else Duration.Inf
       )
       val proofDuration = Platform.currentTime - proofStart
       val qeDuration = qeDurationListener.duration
       val proofSteps = witness.steps
       val tacticSize = TacticStatistics.size(tactic)
 
-      Console.println("[proof time " + proofDuration + "ms]")
-
       if (witness.isProved) {
         assert(witness.subgoals.isEmpty)
-        val witnessStart: Long = Platform.currentTime
         val proved = witness.proved
         //@note assert(witness.isProved, "Successful proof certificate") already checked in line above
         assert(inputSequent == proved, "Proved the original problem and not something else")
-        val witnessDuration = Platform.currentTime - witnessStart
 
         //@note printing original input rather than a pretty-print of proved ensures that @invariant annotations are preserved for reproves.
         val evidence = ToolEvidence(List(
           "tool" -> "KeYmaera X",
-          "model" -> input.prettyString,
+          "model" -> fileContent,
           "tactic" -> tactic.prettyString,
           "proof" -> "" //@todo serialize proof
         )) :: Nil
@@ -589,101 +529,84 @@ object KeYmaeraX {
         assert(witness.conclusion == inputSequent && witness.proved == inputSequent,
           "proved conclusion deviates from input")
 
-        assert(outputFileName.lastIndexOf(java.io.File.separatorChar) < outputFileName.length, "Input file name is not an absolute path")
-        val lemma = Lemma(witness, evidence,
-          Some(outputFileName.substring(outputFileName.lastIndexOf(java.io.File.separatorChar)+1)))
-
-        //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
-        assert(lemma.fact.conclusion.ante.isEmpty && lemma.fact.conclusion.succ.size == 1, "Illegal lemma form")
-        assert(KeYmaeraXExtendedLemmaParser(lemma.toString) == (lemma.name, lemma.fact.conclusion::Nil, lemma.evidence),
-          "reparse of printed lemma is not original lemma")
-
-        println("==================================")
-        println("Tactic finished the proof: " + outputFileName)
-        println("==================================")
-
-        if (storeWitness) {
-          pw.write(stampHead(options))
-          pw.write("/* @evidence: parse of print of result of a proof */\n\n")
-          pw.write(lemma.toString)
+        val lemma = outputFileName match {
+          case Some(_) =>
+            val lemma = Lemma(witness, evidence, Some(name))
+            //@see[[edu.cmu.cs.ls.keymaerax.core.Lemma]]
+            assert(lemma.fact.conclusion.ante.isEmpty && lemma.fact.conclusion.succ.size == 1, "Illegal lemma form")
+            assert(KeYmaeraXExtendedLemmaParser(lemma.toString) == (lemma.name, lemma.fact.conclusion::Nil, lemma.evidence),
+              "reparse of printed lemma is not original lemma")
+            Some(lemma)
+          case None => None
         }
-        pw.close()
 
-        ProofStatistics(name, tacticName, "proved", timeout, proofDuration, qeDuration, proofSteps, tacticSize)
+        pw match {
+          case Some(w) =>
+            assert(lemma.isDefined, "Lemma undefined even though writer is present")
+            w.write(stampHead(options))
+            w.write("/* @evidence: parse of print of result of a proof */\n\n")
+            w.write(lemma.get.toString)
+            w.close()
+          case None =>
+            // don't save proof as lemma since no outputFileName
+        }
+
+        ProofStatistics(name, tacticName, "proved", Some(witness), timeout, proofDuration, qeDuration, proofSteps, tacticSize)
       } else {
         // prove did not work
         assert(!witness.isProved)
         assert(witness.subgoals.nonEmpty)
-        //@note PrintWriter above has already emptied the output file
-        pw.close()
-        File(outputFileName).delete()
-        println("==================================")
-        println("Tactic did NOT finish the proof: " + outputFileName + "\n    open goals: " + witness.subgoals.size)
-        println("==================================")
-        printOpenGoals(witness)
-        println("NO completed proof: " + outputFileName)
-        println("==================================")
-        if (options.getOrElse('interactive,false)==true) {
-          interactiveProver(witness)
-        } else {
-          System.err.println("Incomplete proof: tactic did not finish the proof")
+        //@note instantiating PrintWriter above has already emptied the output file
+        (pw, outputFileName) match {
+          case (Some(w), Some(outName)) =>
+            w.close()
+            File(outName).delete()
+          case _ =>
         }
-        ProofStatistics(name, tacticName, "unfinished", timeout, -1, -1, -1, -1)
+
+        if (witness.subgoals.exists(s => s.ante.isEmpty && s.succ.head == False)) {
+          ProofStatistics(name, tacticName, "disproved", Some(witness), timeout, -1, -1, -1, -1)
+        } else {
+          ProofStatistics(name, tacticName, "unfinished", Some(witness), timeout, -1, -1, -1, -1)
+        }
       }
     } catch {
       case _: TimeoutException =>
-        println("==================================")
-        println("TIMEOUT: tactic did NOT finish the proof: " + outputFileName + "\n")
-        println("==================================")
         BelleInterpreter.kill()
         // prover shutdown cleanup is done when KeYmaeraX exits
-        ProofStatistics(name, tacticName, "timeout", timeout, -1, -1, -1, -1)
+        ProofStatistics(name, tacticName, "timeout", None, timeout, -1, -1, -1, -1)
     }
 
-    val statisticsLogger = Logger(getClass)
-    statisticsLogger.info(MarkerManager.getMarker("PROOF_STATISTICS"), proofStatistics.toCsv)
+    proofStatistics
   }
 
   /**
-    * Checks the given archive file.
+    * Proves all entries in the given archive file.
     * {{{KeYmaeraXLemmaPrinter(Prover(tactic)(KeYmaeraXProblemParser(input)))}}}
     *
     * @param options The prover options.
     */
-  def check(options: OptionMap): Unit = {
-    //println("RUNNING CHECK")
-    if(options.contains('ptOut)) {
-      //println("ENABLING PROOF TERMS")
+  def prove(options: OptionMap): Unit = {
+    if (options.contains('ptOut)) {
       ProvableSig.PROOF_TERMS_ENABLED = true
     } else {
-      //println("DISABLING PROOF TERMS")
       ProvableSig.PROOF_TERMS_ENABLED = false
     }
+
     require(options.contains('in), usage)
-
     val inputFileName = options('in).toString
-    val archiveContent = KeYmaeraXArchiveParser(inputFileName)
+    val archiveContent = KeYmaeraXArchiveParser.parseFromFile(inputFileName).
+      filter(entry => entry.kind != "Exercise" && entry.kind != "exercise")
 
-    val statistics = scala.collection.mutable.LinkedHashMap[String, Either[(Long, Long, Int, Int, Int), Throwable]]()
+    val timeout = options.getOrElse('timeout, 0L).asInstanceOf[Long]
 
-    def printStatistics(info: String, v: Either[(Long, Long, Int, Int, Int), Throwable]) = v match {
-      case Left((duration, qeDuration, tacticSize, tacticLines, proofSteps)) =>
-        println(s"=============== Succeeded ===============")
-        println(s"Proved $inputFileName: $info")
-        println("Proof duration [ms]: " + duration)
-        println("QE duration [ms]: " + qeDuration)
-        println("Tactic size: " + tacticSize)
-        println("Tactic lines: " + tacticLines)
-        println("Proof steps: " + proofSteps)
-        println("==========================================")
-      case Right(ex) =>
-        println(s"================ Failed =================")
-        println(s"Error while checking $inputFileName: $info")
-        println(s"Error details:")
-        ex.printStackTrace(System.out)
-        println(s"Error while checking $inputFileName: $info")
-        println("==========================================")
-    }
+    val outputFilePrefix = options.getOrElse('out, inputFileName).toString.stripSuffix(".kyp")
+    val outputFileSuffix = ".kyp"
+    val outputFileNames: Map[String, String] =
+      if (archiveContent.size > 1) archiveContent.map(e => {
+        e.name -> (outputFilePrefix + "-" + e.name.replaceAll("\\W", "_") + outputFileSuffix)
+      }).toMap
+      else archiveContent.map(_.name -> (outputFilePrefix + outputFileSuffix)).toMap
 
     def savePt(pt:ProvableSig):Unit = {
       (pt, options.get('ptOut)) match {
@@ -706,43 +629,38 @@ object KeYmaeraX {
 
     BelleInterpreter.setInterpreter(LazySequentialInterpreter(qeDurationListener::Nil))
 
-    archiveContent.foreach({case ParsedArchiveEntry(modelName, kind, fileContent, _, model: Formula, tactics, _) =>
-      tactics.foreach({case (tacticName, tactic) =>
-        val statisticName = modelName + " with " + tacticName
-        try {
-          println("==========================================")
-          println(s"Proving $inputFileName: model $modelName with tactic $tacticName")
-          qeDurationListener.reset()
-          val start = System.currentTimeMillis()
-          val proof = TactixLibrary.proveBy(model, tactic)
-          val end = System.currentTimeMillis()
-          val qeDuration = qeDurationListener.duration
-          assert(proof.isProved, "Expected finished proof")
+    println("Proving ...")
+    val statistics = archiveContent.flatMap(
+      {case ParsedArchiveEntry(modelName, kind, _, problemContent, _, model: Formula, tactics, _) =>
+        //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
+        val outputFileName = outputFileNames(modelName)
 
-          statistics(statisticName) = Left(end-start, qeDuration, TacticStatistics.size(tactic), TacticStatistics.lines(tactic), proof.steps)
+        val t = if (tactics.isEmpty) ("auto", "auto", TactixLibrary.auto) :: Nil else tactics
+        t.zipWithIndex.map({case ((tacticName, _, tactic), i) =>
+          val proofStat = prove(modelName, model, problemContent, tacticName, tactic, timeout,
+            if (i == 0) Some(outputFileName) else None, options)
 
-          if (kind == "lemma") {
-            val lemmaName = "user" + File.separator + modelName
-            if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
-            val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
-              "tool" -> "KeYmaera X",
-              "model" -> fileContent,
-              "tactic" -> tactics.head._2.prettyString
-            )) :: Nil)
-            LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
+          proofStat.witness match {
+            case Some(proof) =>
+              if (kind == "lemma") {
+                val lemmaName = "user" + File.separator + modelName
+                if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
+                val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
+                  "tool" -> "KeYmaera X",
+                  "model" -> problemContent,
+                  "tactic" -> tactics.head._2
+                )) :: Nil)
+                LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
+              }
+              savePt(proof)
+            case None => // nothing to do
           }
-
-          printStatistics(statisticName, statistics(statisticName))
-          savePt(proof)
-        } catch {
-          case ex: Throwable =>
-            statistics(statisticName) = Right(ex)
-            printStatistics(statisticName, Right(ex))
-        }
+          proofStat
+        })
       })
-    })
 
-    statistics.foreach({ case (k, v) => printStatistics(k, v) })
+    //statistics.foreach({ case (k, v) => printStatistics(k, v) })
+    statistics.foreach(println)
   }
 
   /**
@@ -762,7 +680,7 @@ object KeYmaeraX {
     require(options.contains('in), usage)
 
     val in = options('in).toString
-    val inputEntry = KeYmaeraXArchiveParser(in).head
+    val inputEntry = KeYmaeraXArchiveParser.parseFromFile(in).head
     val inputModel = inputEntry.model.asInstanceOf[Formula]
 
     val verifyOption:Option[(ProvableSig => Unit)] =
@@ -801,14 +719,14 @@ object KeYmaeraX {
 
       //check safety proof
       println(s"Checking safety proof ${inputEntry.name}...")
-      assert(TactixLibrary.proveBy(inputEntry.model.asInstanceOf[Formula], inputEntry.tactics.head._2).isProved,
+      assert(TactixLibrary.proveBy(inputEntry.model.asInstanceOf[Formula], inputEntry.tactics.head._3).isProved,
         s"Sandbox synthesis requires a provably safe input model, but ${inputEntry.name} is not proved.")
       println(s"Done checking safety proof ${inputEntry.name}")
 
       println("Synthesizing sandbox and safety proof...")
       val ((sandbox, sbTactic), lemmas) = ModelPlex.createSandbox(
         inputEntry.name,
-        inputEntry.tactics.head._2,
+        inputEntry.tactics.head._3,
         Some(fallback),
         kind = 'ctrl,
         checkProvable =  None)(inputModel)
@@ -816,12 +734,14 @@ object KeYmaeraX {
 
       val db = new TempDBTools(Nil)
 
-      val lemmaEntries = lemmas.map({ case (name, fml, tactic) => ParsedArchiveEntry(name, "lemma", "", Declaration(Map.empty), fml,
-        (name + " Proof", db.extractSerializableTactic(fml, tactic))::Nil, Map.empty)})
+      val lemmaEntries = lemmas.map({ case (name, fml, tactic) =>
+        val serializableTactic = db.extractSerializableTactic(fml, tactic)
+        ParsedArchiveEntry(name, "lemma", "", "", Declaration(Map.empty), fml,
+          (name + " Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Map.empty)})
       // check and store lemmas
       lemmaEntries.foreach(entry => {
         println(s"Checking sandbox lemma ${entry.name}...")
-        val lemmaProof = TactixLibrary.proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._2)
+        val lemmaProof = TactixLibrary.proveBy(entry.model.asInstanceOf[Formula], entry.tactics.head._3)
         assert(lemmaProof.isProved, s"Aborting sandbox synthesis: sandbox lemma ${entry.name} was not provable.")
         println(s"Done checking sandbox lemma ${entry.name}")
         val lemmaName = "user" + File.separator + entry.name
@@ -829,17 +749,18 @@ object KeYmaeraX {
         val evidence = Lemma.requiredEvidence(lemmaProof, ToolEvidence(List(
           "tool" -> "KeYmaera X",
           "model" -> entry.fileContent,
-          "tactic" -> entry.tactics.head._2.prettyString
+          "tactic" -> entry.tactics.head._2
         )) :: Nil)
         LemmaDBFactory.lemmaDB.add(new Lemma(lemmaProof, evidence, Some(lemmaName)))
       })
 
-      val sandboxEntry = ParsedArchiveEntry(inputEntry.name + " Sandbox", "theorem", "", Declaration(Map.empty),
-        sandbox, (inputEntry.name + " Sandbox Proof", db.extractSerializableTactic(sandbox, sbTactic))::Nil, Map.empty)
+      val serializableTactic = db.extractSerializableTactic(sandbox, sbTactic)
+      val sandboxEntry = ParsedArchiveEntry(inputEntry.name + " Sandbox", "theorem", "", "", Declaration(Map.empty),
+        sandbox, (inputEntry.name + " Sandbox Proof", BellePrettyPrinter(serializableTactic), serializableTactic)::Nil, Map.empty)
       // check sandbox proof
       println("Checking sandbox safety...")
       assert(TactixLibrary.proveBy(sandboxEntry.model.asInstanceOf[Formula],
-        sandboxEntry.tactics.head._2).isProved,
+        sandboxEntry.tactics.head._3).isProved,
         "Aborting sandbox synthesis: sandbox safety was not derivable from input model safety proof.")
       println("Done checking sandbox safety")
 
@@ -893,10 +814,7 @@ object KeYmaeraX {
     val modelInput = scala.io.Source.fromFile(modelFileNameDotKyx).mkString
     val tacticInput = tacticFileNameDotKyt.map(scala.io.Source.fromFile(_).mkString)
     val defsInput = scaladefsFilename.map(scala.io.Source.fromFile(_).mkString)
-    val inputFormula:Formula = KeYmaeraXProblemParser(modelInput) match {
-      case f:Formula => f
-      case _ => ???
-    }
+    val inputFormula: Formula = KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelInput)
     new BelleREPL(inputFormula, tacticInput, defsInput, tacticFileNameDotKyt, scaladefsFilename).run()
   }
 
@@ -955,12 +873,12 @@ object KeYmaeraX {
     require(options.contains('in) && options.contains('out), usage)
 
     val kyxFile = options('in).toString
-    val archiveContent = KeYmaeraXArchiveParser(kyxFile)
+    val archiveContent = KeYmaeraXArchiveParser.parseFromFile(kyxFile)
 
     //@note remove all tactics, e.model does not contain annotations anyway
     //@note remove all definitions too, those might be used as proof hints
     def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry =
-      ParsedArchiveEntry(e.name, e.kind, e.fileContent, Declaration(Map.empty), e.model, Nil, e.info)
+      ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.problemContent, Declaration(Map.empty), e.model, Nil, e.info)
 
     val printer = new KeYmaeraXArchivePrinter()
     val printedStrippedContent = archiveContent.map(stripEntry).map(printer(_)).mkString("\n\n")

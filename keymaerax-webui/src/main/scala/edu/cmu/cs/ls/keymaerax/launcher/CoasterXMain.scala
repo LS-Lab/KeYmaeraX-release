@@ -282,6 +282,17 @@ object CoasterXMain {
 
 
   def main(options:Map[Symbol,Any]):Unit = {
+    if (options.contains('help) || !options.contains('coasterxMode)) {
+      println("CoasterX\nUsage:")
+      println("""  -coasterx ( -component component-name [-formula] [-tactic] [-stats]
+                |                [-num-runs N] [-debug-level (0|1|2)]
+                |            | -coaster file.rctx -feet-per-unit X [-num-runs N]
+                |              [-velocityFPS V] [-formula] [-stats] [-compare-reuse]
+                |              [-debug-level (0|1|2)]  [-naive-arith]
+                |            | -table [-num-runs N] [-debug-level (0|1|2)])
+                |""".stripMargin)
+      System.exit(1)
+    }
     init()
     withMathematica(qeTool => {
     options('coasterxMode) match {

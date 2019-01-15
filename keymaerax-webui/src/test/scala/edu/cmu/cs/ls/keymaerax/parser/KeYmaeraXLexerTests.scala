@@ -39,6 +39,13 @@ class KeYmaeraXLexerTests extends FlatSpec with Matchers {
     KeYmaeraXLexer(input).head shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(LPAREN, Region(2, 4, 2, 4))
   }
 
+  it should "handle tabs correctly" in {
+    //@todo fails: fix lexer bug
+    val lexed = KeYmaeraXLexer("\n\t\n (").head
+    lexed.loc shouldBe Region(3, 2, 3, 2)
+    lexed shouldBe Token(LPAREN, Region(3, 2, 3, 2))
+  }
+
   it should "parse forall" in {
     val input = "\\forall"
     KeYmaeraXLexer(input).length shouldBe 2 //forall and EOS.

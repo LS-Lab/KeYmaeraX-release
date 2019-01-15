@@ -16,12 +16,18 @@ import spray.json._
 import spray.json.DefaultJsonProtocol._
 
 /**
- * Usage:
- *  java -jar KeYmaeraX.jar or else
- *  java -Xss20M -jar KeYmaeraX.jar
- * Created by nfulton on 4/17/15.
- * @todo move functionality directly into KeYmaeraX.scala?
- */
+  * Prelauncher that restarts a big stack JVM and then starts [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]].
+  * Usage:
+  * {{{
+  *  java -jar keymaerax.jar
+  *  java -Xss20M -jar keymaerax.jar
+  * }}}
+  * Created by nfulton on 4/17/15.
+  * @todo move functionality directly into KeYmaeraX.scala?
+  * @author Nathan Fulton
+  * @author Stefan Mitsch
+  * @see [[edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX]]
+  */
 object Main {
   /** This flag is set to true iff this process odes nothing but re-launch */
   var IS_RELAUNCH_PROCESS = false
@@ -38,7 +44,6 @@ object Main {
       IS_RELAUNCH_PROCESS = true
       val java : String = javaLocation
       val keymaeraxjar : String = jarLocation
-      println("Restarting KeYmaera X with sufficient stack space")
 
       val javaVersion = System.getProperty("java.version")
       val javaMajorMinor :: updateVersion :: Nil =
@@ -59,6 +64,7 @@ object Main {
             (java :: "-Xss20M" :: "--add-modules" :: "java.xml.bind" :: "-jar" :: keymaeraxjar :: "-launch" :: Nil) ++ args ++
               (if (args.isEmpty) "-ui" :: Nil else Nil)
           }
+        launcherLog("Restarting KeYmaera X with sufficient stack space\n" + cmd.mkString(" "))
         runCmd(cmd)
       }
     } else if (args.contains("-ui")) {
@@ -67,7 +73,6 @@ object Main {
         LoadingDialogFactory()
       }
 
-      LoadingDialogFactory().addToStatus(25, Some("Checking database version..."))
       exitIfDeprecated()
 
       LoadingDialogFactory().addToStatus(15, Some("Checking lemma caches..."))
@@ -83,10 +88,10 @@ object Main {
   }
 
   def startServer(args: Array[String]) : Unit = {
-    LoadingDialogFactory().addToStatus(25, Some("Obtaining locks..."))
+    LoadingDialogFactory().addToStatus(10, Some("Obtaining locks..."))
     KeYmaeraXLock.obtainLockOrExit()
 
-    launcherLog("-launch -- starting KeYmaera X Web UI server HyDRA.")
+    launcherDebug("-launch -- starting KeYmaera X Web UI server HyDRA.")
 
 
 //    try {
@@ -193,8 +198,9 @@ object Main {
     */
   private def exitIfDeprecated() = {
     val databaseVersion = SQLite.ProdDB.getConfiguration("version").config("version")
-    println("Current database version: " + databaseVersion)
+    launcherLog("Database version: " + databaseVersion)
     cleanupGuestData()
+    LoadingDialogFactory().addToStatus(25, Some("Checking database version..."))
     if (UpdateChecker.upToDate().getOrElse(false) &&
         UpdateChecker.needDatabaseUpgrade(databaseVersion).getOrElse(false)) {
       //Exit if KeYmaera X is up to date but the production database belongs to a deprecated version of KeYmaera X.
@@ -289,18 +295,18 @@ object Main {
     val db = DBAbstractionObj.defaultDatabase
     val tempUsers = db.getTempUsers
     val tempUrlsAndModels: List[(String, List[ModelPOJO])] = tempUsers.map(u => {
-      launcherLog("Updating guest " + u.userName + "...")
+      launcherDebug("Updating guest " + u.userName + "...")
       val models = db.getModelList(u.userName)
-      launcherLog("...with " + models.size + " guest models")
+      launcherDebug("...with " + models.size + " guest models")
       (u.userName, models)
     })
 
     tempUrlsAndModels.flatMap({ case (url, models) =>
       try {
         if (models.nonEmpty) {
-          launcherLog("Reading guest source " + url)
+          launcherDebug("Reading guest source " + url)
           val content = DatabasePopulator.readKya(url)
-          launcherLog("Comparing cached and source content")
+          launcherDebug("Comparing cached and source content")
           models.flatMap(m => content.find(_.name == m.name) match {
             case Some(DatabasePopulator.TutorialEntry(_, model, _, _, _, _, _)) if model == m.keyFile => None
             case Some(DatabasePopulator.TutorialEntry(_, model, _, _, _, _, _)) if model != m.keyFile => Some(m)
@@ -314,10 +320,11 @@ object Main {
   }
 
   private def cleanupGuestData() = {
-    launcherLog("Cleaning up guest data...")
+    LoadingDialogFactory().addToStatus(10, Some("Guest model updates ..."))
+    launcherDebug("Cleaning up guest data...")
     val deleteModels = listOutdatedModels()
     val deleteModelsStatements = deleteModels.map("delete from models where _id = " + _.modelId)
-    launcherLog("...deleting " + deleteModels.size + " guest models")
+    launcherDebug("...deleting " + deleteModels.size + " guest models")
     if (deleteModels.nonEmpty) {
       val conn = SQLite.ProdDB.sqldb.createConnection()
       conn.createStatement().executeUpdate("PRAGMA journal_mode = WAL")
@@ -334,7 +341,7 @@ object Main {
         conn.close()
       }
     }
-    launcherLog("done.")
+    launcherDebug("done.")
   }
 
   def processIsAlive(proc : Process) = {
@@ -348,7 +355,7 @@ object Main {
 
 
   private def runCmd(cmd: List[String]) = {
-    launcherLog("Running command:\n" + cmd.mkString(" "))
+    launcherDebug("Running command:\n" + cmd.mkString(" "))
 
     val pb = new ProcessBuilder(cmd)
     var pollOnStd = false
@@ -465,6 +472,11 @@ object Main {
     println(prefix + s)
   }
 
+  def launcherDebug(s : String) = if (Configuration.getOption(Configuration.Keys.DEBUG)==Some("true")) {
+    val prefix = "[launcherDebug] "
+    println(prefix + s)
+  }
+
   /** A robust locking mechanism for ensuring that there's only ever one instance of KeYmaera X running.
     * Also displays GUI messages when the lock cannot be obtained so that confused users don't have to wonder why KeYmaera X won't start.
     *
@@ -492,7 +504,7 @@ object Main {
       else if(lockFile.exists() && !bound) {
         if(!lockIsNewborn) {
           //lock file exists, but there's no new instance of KeYmaera X and the port isn't bound. Proceed, but show message to the user just in case.
-          val msg = "WARNING: A lock file exists but nothing is bound to the KeYmaera X web server's port.\nDeleting the lock file and starting KeYmaera X. If you experience errors, try killing all instances of KeYmaera X from your system's task manager."
+          val msg = "WARNING: A lock file exists but nothing is bound to the KeYmaera X web server's port.\nDeleting the lock file and starting KeYmaera X. If you experience errors, try killing all\ninstances of KeYmaera X from your system's task manager."
           forceDeleteLock()
           launcherLog(msg)
           if(!java.awt.GraphicsEnvironment.isHeadless)
@@ -516,7 +528,7 @@ object Main {
       }
 
       //This file is later destroyed in the shutdown hook.
-      launcherLog("Obtaining lock.")
+      launcherDebug("Obtaining lock.")
       obtainLock()
     } ensuring(e => lockObtained == true && lockFile.exists())
 

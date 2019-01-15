@@ -22,14 +22,14 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *
   * All tactics are implemented in the [[edu.cmu.cs.ls.keymaerax.bellerophon Bellerophon tactic language]],
   * including its dependent tactics, which ultimately produce
-  * [[edu.cmu.cs.ls.keymaerax.core.ProvableSig]] proof certificates by the [[edu.cmu.cs.ls.keymaerax.bellerophon.Interpreter Bellerophon interpreter]].
+  * [[edu.cmu.cs.ls.keymaerax.core.Provable]] proof certificates by the [[edu.cmu.cs.ls.keymaerax.bellerophon.Interpreter Bellerophon interpreter]].
   * The Provables that tactics produce can be extracted, for example, with [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.proveBy()]].
   *
   *
   * =Proof Styles=
   * KeYmaera X supports many different proof styles, including flexible combinations of the following styles:
   *
-  *     1. [[edu.cmu.cs.ls.keymaerax.core.ProvableSig Explicit proof certificates]] directly program the proof rules from the core.
+  *     1. [[edu.cmu.cs.ls.keymaerax.core.Provable Explicit proof certificates]] directly program the proof rules from the core.
   *
   *     2. [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.andR Explicit proofs]] use tactics to describe a proof directly mentioning all or most proof steps.
   *
@@ -44,7 +44,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *
   * ===Explicit Proof Certificates===
   * The most explicit types of proofs can be constructed directly using the
-  * [[edu.cmu.cs.ls.keymaerax.core.ProvableSig]] certificates in KeYmaera X's kernel
+  * [[edu.cmu.cs.ls.keymaerax.core.Provable]] certificates in KeYmaera X's kernel
   * without using any tactics.
   * Also see [[edu.cmu.cs.ls.keymaerax.core]].
   *
@@ -303,6 +303,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.Context
   *     - [[edu.cmu.cs.ls.keymaerax.btactics.UnifyUSCalculus]]: Forward Hilbert-style tactic combinators.
   *
   * @todo Expand descriptions
+  * @see Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 59(2), pp. 219-266, 2017.
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.SequentCalculus]]
   * @see [[edu.cmu.cs.ls.keymaerax.btactics.HilbertCalculus]]

@@ -78,8 +78,8 @@ object AxiomaticODESolver {
 
   /** Axiomatic solver for box ODEs. */
   private def boxAxiomaticSolve(instEnd: Boolean = false): DependentPositionTactic = "solve" by ((pos: Position, s: Sequent) => {
-    val (ode, q) = s.sub(pos) match {
-      case Some(Box(ODESystem(o, qq), _)) => (o, qq)
+    val (ode, q, post) = s.sub(pos) match {
+      case Some(Box(ODESystem(o, qq), pp)) => (o, qq, pp)
       case Some(f) => throw BelleUnsupportedFailure("Position " + pos + " does not point to a differential equation, but to " + f.prettyString)
       case None => throw BelleUnsupportedFailure("Position " + pos + " does not point to a differential equation")
     }
@@ -96,9 +96,11 @@ object AxiomaticODESolver {
     val assumptions = if (pos.isAnte) s.ante.patch(pos.index0, Nil, 1) else s.ante
     val odeVars = StaticSemantics.boundVars(ode).toSet + DURATION + EVOL_DOM_TIME
     val consts = assumptions.filter(_.isFOL).flatMap(FormulaTools.conjuncts).
-      filter(StaticSemantics.freeVars(_).toSet.intersect(odeVars).isEmpty).
+      filter(StaticSemantics.freeVars(_).intersect(odeVars).toSet.isEmpty).
       // filter quantified, avoid substitution clash in dI on formulas of the shape (\forall x x>0)'
       filter({ case _: Quantified => false case _ => true}).
+      // keep only relevant (occur in RHS of ODE, evolution domain, or postcondition)
+      filter(StaticSemantics.symbols(_).intersect(StaticSemantics.symbols(ode) ++ StaticSemantics.symbols(q) ++ StaticSemantics.symbols(post)).nonEmpty).
       map(SimplifierV3.simpWithDischarge(IndexedSeq[Formula](), _, SimplifierV3.defaultFaxs, SimplifierV3.defaultTaxs)._1).
       filterNot(f => f==True || f==False). //@todo improve DI
       reduceOption(And).getOrElse(True)
@@ -131,14 +133,18 @@ object AxiomaticODESolver {
                 useAt(allExtract3, PosInExpr(1::Nil))(pos) &
                 //@todo pos is top level, prove that consts are true in context
                 andR(pos) <(prop & done, skip)
-              else useAt(allExtract2)(pos ++ PosInExpr(0::1::0::Nil))
+              else skip//useAt(allExtract2)(pos ++ PosInExpr(0::1::0::Nil))
             case Some(Box(ODESystem(_, qq), _)) if polarity < 0 => skip //@todo
           }
       } else TactixLibrary.skip)
 
+    val cutConsts = consts != True && pos.isTopLevel && polarity >= 0
+
     DebuggingTactics.debug("SOLVE Start", ODE_DEBUGGER) &
       //@todo support the cases we now skip
-      (if (consts == True || !pos.isTopLevel || polarity < 0) TactixLibrary.skip else DifferentialTactics.diffInvariant(consts)(pos)) &
+      (if (cutConsts) DifferentialTactics.diffCut(consts)(pos) <(skip, V('Rlast) & prop &
+        DebuggingTactics.done("Expected to prove constants invariant"))
+       else TactixLibrary.skip) &
       DebuggingTactics.debug("AFTER preserving consts", ODE_DEBUGGER) &
       addTimeVar(pos) &
       DebuggingTactics.debug("AFTER time var", ODE_DEBUGGER) &
@@ -156,7 +162,7 @@ object AxiomaticODESolver {
       simplifyPostCondition(osize)(odePosAfterInitialVals ++ PosInExpr(1 :: Nil)) &
       DebuggingTactics.debug("AFTER simplifying post-condition", ODE_DEBUGGER) &
       //@todo box ODE in succedent: could shortcut with diffWeaken (but user-definable if used or not)
-      SaturateTactic(inverseDiffCut(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER)) &
+      (inverseDiffCut(osize)(odePosAfterInitialVals) & DebuggingTactics.debug("did an inverse diff cut", ODE_DEBUGGER))*(osize + (if (cutConsts) 1 else 0)) &
       DebuggingTactics.debug("AFTER all inverse diff cuts", ODE_DEBUGGER) &
       simplifier(odePosAfterInitialVals ++ PosInExpr(0 :: 1 :: Nil)) &
       DebuggingTactics.debug("AFTER simplifying evolution domain 2", ODE_DEBUGGER) &
@@ -175,7 +181,7 @@ object AxiomaticODESolver {
         TactixLibrary.useAt("vacuous all quantifier")(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
         (TactixLibrary.useAt("true->")(pos ++ PosInExpr(0 :: 1 :: Nil))
           | TactixLibrary.useAt("true&")(pos ++ PosInExpr(0 :: 1 :: Nil)))
-      else if (instEnd) TactixLibrary.allL("t_".asVariable)(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
+      else if (instEnd && q != True) TactixLibrary.allL("t_".asVariable)(pos ++ PosInExpr(0 :: 1 :: 0 :: Nil)) &
         TactixLibrary.useAt("<= flip")(pos ++ PosInExpr(0 :: 1 :: 0 :: 0 :: 0 :: Nil))
       else TactixLibrary.skip) &
       DebuggingTactics.debug("AFTER handling evolution domain", ODE_DEBUGGER) &
@@ -345,7 +351,7 @@ object AxiomaticODESolver {
   /* Produces a tactic that permutes ODE into canonical ordering or a tacatic that errors if ode contains cycles */
   def makeCanonical(ode: DifferentialProgram, dom: Formula, post: Formula, pos: Position): BelleExpr = {
     dfs(ode) match {
-      case None => DebuggingTactics.error("Expected ODE to be linear and in correct order.")
+      case None => DebuggingTactics.error("ODE not known to have polynomial solutions. Differential equations with cyclic dependencies need invariants instead of solve().")
       case Some(ord) => DebuggingTactics.debug("Sorting to " + ord.mkString("::"), ODE_DEBUGGER) & selectionSort(dom, post, ode, ord, pos)
     }
   }
@@ -425,14 +431,11 @@ object AxiomaticODESolver {
     val withInitialsPos = pos.topLevel ++ PosInExpr(pos.inExpr.pos.dropRight(contextSize))
 
     val fact = s.sub(withInitialsPos) match {
-      case Some(fml: Formula) =>
+      case Some(fml: Formula) if polarity > 0 =>
         val odePos = PosInExpr(pos.inExpr.pos.takeRight(contextSize))
         val (ctx, modal: Modal) = Context.at(fml, odePos)
         val ODESystem(_, e) = modal.program
-        val factFml =
-          if (polarity > 0) Imply(ctx(modal.replaceAt(PosInExpr(0::1::Nil), And(e, cut))), fml)
-          else Imply(fml, ctx(modal.replaceAt(PosInExpr(0::1::Nil), And(e, cut))))
-        TactixLibrary.proveBy(factFml,
+        TactixLibrary.proveBy(Imply(ctx(modal.replaceAt(PosInExpr(0::1::Nil), And(e, cut))), fml),
           TactixLibrary.implyR(1) & TactixLibrary.dC(cut)(if (polarity > 0) 1 else -1, odePos) <(
             TactixLibrary.close
             ,
@@ -441,6 +444,13 @@ object AxiomaticODESolver {
               DebuggingTactics.debug("diffInd", ODE_DEBUGGER) & DifferentialTactics.diffInd()(1) & DebuggingTactics.done
           )
         )
+      case Some(fml: Formula) if polarity < 0 =>
+        val odePos = PosInExpr(pos.inExpr.pos.takeRight(contextSize))
+        val (ctx, modal: Modal) = Context.at(fml, odePos)
+        val ODESystem(_, e) = modal.program
+        TactixLibrary.proveBy(Imply(fml, ctx(modal.replaceAt(PosInExpr(0::1::Nil), And(e, cut)))),
+          CMon(odePos) & useAt(DerivedAxioms.DiffRefine, PosInExpr(1::Nil))(1) &
+            DW(1) & G(1) & implyR(1) & andL(-1) & close(-1, 1))
     }
 
     TactixLibrary.useAt(fact, PosInExpr((if (polarity > 0) 1 else 0 )::Nil))(withInitialsPos)
@@ -527,14 +537,18 @@ object AxiomaticODESolver {
     val polarity = (if (pos.isSucc) 1 else -1) * FormulaTools.polarityAt(s(pos.top), pos.inExpr)
     val withInitialsPos = pos.topLevel ++ PosInExpr(pos.inExpr.pos.dropRight(odeSize+1))
     val fact = s.sub(withInitialsPos) match {
-      case Some(fml: Formula) =>
+      case Some(fml: Formula) if polarity > 0 =>
         val odePos = PosInExpr(pos.inExpr.pos.takeRight(odeSize+1))
         val (ctx, modal: Modal) = Context.at(fml, odePos)
         val ODESystem(_, And(e, soln)) = modal.program
-        val factFml =
-          if (polarity > 0) Imply(ctx(modal.replaceAt(PosInExpr(0::1::Nil), e)), fml)
-          else Imply(fml, ctx(modal.replaceAt(PosInExpr(0::1::Nil), e)))
-        TactixLibrary.proveBy(factFml,
+        TactixLibrary.proveBy(Imply(ctx(modal.replaceAt(PosInExpr(0::1::Nil), e)), fml),
+          CMon(odePos) & useAt(DerivedAxioms.DiffRefine, PosInExpr(1::Nil))(1) &
+            DW(1) & G(1) & implyR(1) & andL(-1) & close(-1, 1))
+      case Some(fml: Formula) if polarity < 0 =>
+        val odePos = PosInExpr(pos.inExpr.pos.takeRight(odeSize+1))
+        val (ctx, modal: Modal) = Context.at(fml, odePos)
+        val ODESystem(_, And(e, soln)) = modal.program
+        TactixLibrary.proveBy(Imply(fml, ctx(modal.replaceAt(PosInExpr(0::1::Nil), e))),
           TactixLibrary.implyR(1) & TactixLibrary.dC(soln)(if (polarity > 0) -1 else 1, odePos) <(
             TactixLibrary.close
             ,

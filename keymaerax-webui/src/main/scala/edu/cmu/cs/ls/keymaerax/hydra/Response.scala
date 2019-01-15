@@ -18,16 +18,13 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 
 import spray.json._
-import DefaultJsonProtocol._
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 
 import java.io.{PrintWriter, StringWriter}
 
 import Helpers._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
-import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
 
@@ -73,7 +70,7 @@ case class HtmlResponse(html: Elem) extends Response {
 case class BooleanResponse(flag : Boolean, errorText: Option[String] = None) extends Response {
   override val schema = Some("BooleanResponse.js")
 
-  def getJson = errorText match {
+  def getJson: JsObject = errorText match {
     case Some(s) =>
       JsObject(
         "success" -> (if(flag) JsTrue else JsFalse),
@@ -92,8 +89,8 @@ class PlainResponse(data: (String, JsValue)*) extends Response {
   override def getJson = JsObject(data:_*)
 }
 
-class ModelListResponse(models : List[ModelPOJO]) extends Response {
-  val objects = models.map(modelpojo => JsObject(
+class ModelListResponse(models: List[ModelPOJO]) extends Response {
+  val objects: List[JsObject] = models.map(modelpojo => JsObject(
     "id" -> JsString(modelpojo.modelId.toString),
     "name" -> JsString(modelpojo.name),
     "date" -> JsString(modelpojo.date),
@@ -102,8 +99,8 @@ class ModelListResponse(models : List[ModelPOJO]) extends Response {
     "keyFile" -> JsString(modelpojo.keyFile),
     "title" -> JsString(modelpojo.title),
     "hasTactic" -> JsBoolean(modelpojo.tactic.isDefined),
-    "numProofs" -> JsNumber(modelpojo.numProofs),
-    "isExercise" -> JsBoolean(KeYmaeraXProblemParser.isExercise(modelpojo.keyFile))
+    "numAllProofSteps" -> JsNumber(modelpojo.numAllProofSteps),
+    "isExercise" -> JsBoolean(KeYmaeraXArchiveParser.isExercise(modelpojo.keyFile))
   ))
 
   def getJson = JsArray(objects:_*)
@@ -116,7 +113,7 @@ case class ModelUploadResponse(modelId: Option[String], errorText: Option[String
     "modelId"->JsString(modelId.getOrElse("")))
 }
 
-class UpdateProofNameResponse(proofId : String, newName : String) extends Response {
+class UpdateProofNameResponse(proofId: String, newName: String) extends Response {
   def getJson = JsArray()
 }
 
@@ -125,7 +122,7 @@ class UpdateProofNameResponse(proofId : String, newName : String) extends Respon
  * @param proofs The list of proofs with their status in KeYmaera (proof, loadStatus).
  * @param models -- optionally, a list of model names associated with each of the proofs in <em>proofs</em>
  */
-class ProofListResponse(proofs : List[(ProofPOJO, String)], models : Option[List[String]] = None) extends Response {
+class ProofListResponse(proofs: List[(ProofPOJO, String)], models: Option[List[String]] = None) extends Response {
   override val schema = Some("prooflist.js")
 
   val objects : List[JsObject] = models match {
@@ -161,7 +158,7 @@ class ProofListResponse(proofs : List[(ProofPOJO, String)], models : Option[List
   def getJson = JsArray(objects:_*)
 }
 
-class GetModelResponse(model : ModelPOJO) extends Response {
+class GetModelResponse(model: ModelPOJO) extends Response {
   def getJson = JsObject(
     "id" -> JsString(model.modelId.toString),
     "name" -> JsString(model.name),
@@ -172,12 +169,12 @@ class GetModelResponse(model : ModelPOJO) extends Response {
     "title" -> JsString(model.title),
     "hasTactic" -> JsBoolean(model.tactic.isDefined),
     "tactic" -> JsString(model.tactic.getOrElse("")),
-    "numProofs" -> JsNumber(model.numProofs),
-    "isExercise" -> JsBoolean(KeYmaeraXProblemParser.isExercise(model.keyFile))
+    "numAllProofSteps" -> JsNumber(model.numAllProofSteps),
+    "isExercise" -> JsBoolean(KeYmaeraXArchiveParser.isExercise(model.keyFile))
   )
 }
 
-class GetModelTacticResponse(model : ModelPOJO) extends Response {
+class GetModelTacticResponse(model: ModelPOJO) extends Response {
   def getJson = JsObject(
     "modelId" -> JsString(model.modelId.toString),
     "modelName" -> JsString(model.name),
@@ -291,10 +288,10 @@ class ModelPlexArtifactCodeResponse(model: ModelPOJO, code: String) extends Resp
   )
 }
 
-class LoginResponse(flag:Boolean, user: UserPOJO, sessionToken : Option[String]) extends Response {
+class LoginResponse(flag: Boolean, user: UserPOJO, sessionToken: Option[String]) extends Response {
   def getJson = JsObject(
-    "success" -> (if(flag) JsTrue else JsFalse),
-    "sessionToken" -> (if(flag && sessionToken.isDefined) JsString(sessionToken.get) else JsFalse),
+    "success" -> (if (flag) JsTrue else JsFalse),
+    "sessionToken" -> (if (flag && sessionToken.isDefined) JsString(sessionToken.get) else JsFalse),
     "key" -> JsString("userId"),
     "value" -> JsString(user.userName.replaceAllLiterally("/", "%2F").replaceAllLiterally(":", "%3A")),
     "userAuthLevel" -> JsNumber(user.level),
@@ -302,7 +299,7 @@ class LoginResponse(flag:Boolean, user: UserPOJO, sessionToken : Option[String])
   )
 }
 
-class CreatedIdResponse(id : String) extends Response {
+class CreatedIdResponse(id: String) extends Response {
   def getJson = JsObject("id" -> JsString(id))
 }
 
@@ -354,10 +351,35 @@ case class ParseErrorResponse(override val msg: String, expect: String, found: S
   ))
 }
 
-class TacticErrorResponse(msg: String, tacticMsg: String, exn: Throwable = null) extends ErrorResponse(msg, exn) {
-  override def getJson = JsObject(super.getJson.fields ++ Map(
-    "tacticMsg" -> JsString(tacticMsg)
-  ))
+class TacticErrorResponse(msg: String, tacticMsg: String, exn: Throwable = null)
+    extends ErrorResponse("Tactic failed with error: " + msg, exn) {
+  override def getJson: JsObject = exn match {
+    case ex: BelleUnexpectedProofStateError =>
+      JsObject(super.getJson.fields ++ Map(
+        "tacticMsg" -> JsString(tacticMsg)
+      ))
+    case ex: CompoundException =>
+      val exceptions = flatten(ex)
+      val messages = exceptions.size + " tactic attempts failed:\n" + exceptions.zipWithIndex.map({
+        case (x: BelleUnexpectedProofStateError, i) =>
+          (i+1) + ". " + x.getMessage.replaceAllLiterally("[Bellerophon Runtime]", "") +
+            ":\n" + x.proofState.subgoals.map(_.toString).mkString(",")
+        case (x, i) => (i+1) + ". " + x.getMessage.replaceAllLiterally("[Bellerophon Runtime]", "")
+      }).mkString("\n") + "\n"
+      JsObject(super.getJson.fields.filter(_._1 != "textStatus") ++ Map(
+        "textStatus" -> JsString(messages),
+        "tacticMsg" -> JsString(tacticMsg)
+      ))
+    case _ =>
+      JsObject(super.getJson.fields ++ Map(
+        "tacticMsg" -> JsString(tacticMsg)
+      ))
+  }
+
+  private def flatten(ex: BelleThrowable): List[BelleThrowable] = ex match {
+    case ex: CompoundException => flatten(ex.left) ++ flatten(ex.right)
+    case _ => ex :: Nil
+  }
 }
 
 class GenericOKResponse() extends Response {
@@ -366,7 +388,7 @@ class GenericOKResponse() extends Response {
   )
 }
 
-class UnimplementedResponse(callUrl : String) extends ErrorResponse("Call unimplemented: " + callUrl) {}
+class UnimplementedResponse(callUrl: String) extends ErrorResponse("Call unimplemented: " + callUrl) {}
 
 class ProofStatusResponse(proofId: String, status: String, error: Option[String] = None) extends Response {
   override val schema = Some("proofstatus.js")
@@ -378,8 +400,8 @@ class ProofStatusResponse(proofId: String, status: String, error: Option[String]
     "errorThrown" -> JsString(error.getOrElse(""))
   )
 }
-class ProofIsLoadingResponse(proofId : String) extends ProofStatusResponse(proofId, "loading")
-class ProofNotLoadedResponse(proofId : String) extends ProofStatusResponse(proofId, "notloaded")
+class ProofIsLoadingResponse(proofId: String) extends ProofStatusResponse(proofId, "loading")
+class ProofNotLoadedResponse(proofId: String) extends ProofStatusResponse(proofId, "notloaded")
 class ProofIsLoadedResponse(proofId: String) extends ProofStatusResponse(proofId, "loaded")
 // progress "open": open goals
 // progress "closed": no open goals but not checked for isProved
@@ -394,19 +416,20 @@ class ProofVerificationResponse(proofId: String, provable: ProvableSig, tactic: 
     "tactic" -> JsString(tactic))
 }
 
-class GetProblemResponse(proofid:String, tree:String) extends Response {
+class GetProblemResponse(proofid: String, tree: String) extends Response {
   def getJson = JsObject(
     "proofid" -> JsString(proofid),
     "proofTree" -> JsonParser(tree)
   )
 }
 
-case class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String) extends Response {
+case class RunBelleTermResponse(proofId: String, nodeId: String, taskId: String, info: String) extends Response {
   def getJson = JsObject(
     "proofId" -> JsString(proofId),
     "nodeId" -> JsString(nodeId),
     "taskId" -> JsString(taskId),
-    "type" -> JsString("runbelleterm")
+    "type" -> JsString("runbelleterm"),
+    "info" -> JsString(info)
   )
 }
 
@@ -480,7 +503,7 @@ class ProofTreeResponse(tree: String) extends Response {
   )
 }
 
-class OpenProofResponse(proof : ProofPOJO, loadStatus : String) extends Response {
+class OpenProofResponse(proof: ProofPOJO, loadStatus: String) extends Response {
   override val schema = Some("proof.js")
   def getJson = JsObject(
     "id" -> JsString(proof.proofId.toString),
@@ -495,9 +518,9 @@ class OpenProofResponse(proof : ProofPOJO, loadStatus : String) extends Response
   )
 }
 
-class ProofAgendaResponse(tasks : List[(ProofPOJO, List[Int], String)]) extends Response {
+class ProofAgendaResponse(tasks: List[(ProofPOJO, List[Int], String)]) extends Response {
   override val schema = Some("proofagenda.js")
-  val objects = tasks.map({ case (proofPojo, nodeId, nodeJson) => JsObject(
+  val objects: List[JsObject] = tasks.map({ case (proofPojo, nodeId, nodeJson) => JsObject(
     "proofId" -> JsString(proofPojo.proofId.toString),
     "nodeId" -> Helpers.nodeIdJson(nodeId),
     "proofNode" -> JsonParser(nodeJson)
@@ -509,7 +532,7 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, List[Int], String)]) extends 
 /** JSON conversions for frequently-used response formats */
 object Helpers {
   def sequentJson(sequent: Sequent): JsValue = {
-    def fmlsJson (isAnte:Boolean, fmls: IndexedSeq[Formula]): JsValue = {
+    def fmlsJson(isAnte: Boolean, fmls: IndexedSeq[Formula]): JsValue = {
       JsArray(fmls.zipWithIndex.map { case (fml, i) =>
         /* Formula ID is formula number followed by comma-separated PosInExpr.
          formula number = strictly positive if succedent, strictly negative if antecedent, 0 is never used
@@ -622,7 +645,7 @@ object Helpers {
       case f: Box => print(q, "formula", hasStep, isEditable, expr.prettyString, print("[", "mod-open")::printJson(q ++ 0, f.program)::print("]", "mod-close")::Nil ++ wrapChild(f, printJson(q ++ 1, f.child)):_*)
       case f: Diamond => print(q, "formula", hasStep, isEditable, expr.prettyString, print("<", "mod-open")::printJson(q ++ 0, f.program)::print(">", "mod-close")::Nil ++ wrapChild(f, printJson(q ++ 1, f.child)):_*)
       case f: UnaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, op(f) +: wrapChild(f, printJson(q ++ 0, f.child)):_*)
-      case f: AtomicFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, print(expr.prettyString))
+      case _: AtomicFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, print(expr.prettyString))
       case f: Less => print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q++0, f.left)) ++ (print(" ")::op(f)::print(" ")::Nil) ++ wrapRight(f, printJson(q++1, f.right)):_*)
       case f: BinaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q ++ 0, f.left)) ++ (op(f)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right)):_*)
       case p: Program => print(q, "program", false, false, expr.prettyString, printPrgJson(q, p):_*)
@@ -640,6 +663,8 @@ object Helpers {
     case ODESystem(ode, f) => print("{", "prg-open")::printJson(q ++ 0, ode)::print(q, "&", "topop k4-prg-op")::printJson(q ++ 1, f)::print("}", "prg-close")::Nil
     case AtomicODE(xp, e) => printJson(q ++ 0, xp)::op(expr, "topop")::printJson(q ++ 1, e)::Nil
     case t: DifferentialProduct => printJson(q ++ 0, t.left)::op(t, "topop")::printJson(q ++ 1, t.right)::Nil
+    case c: DifferentialProgramConst => print(c.prettyString)::Nil
+    case c: ProgramConst => print(c.prettyString)::Nil
   }
 
   private def printRecPrgJson(q: PosInExpr, expr: Program)(implicit top: Position, topExpr: Expression): List[JsValue] = expr match {
@@ -652,6 +677,8 @@ object Helpers {
     case ODESystem(ode, f) => print("{", "prg-open")::printJson(q ++ 0, ode)::print("&")::printJson(q ++ 1, f)::print("}", "prg-close")::Nil
     case AtomicODE(xp, e) => printJson(q ++ 0, xp)::op(expr)::printJson(q ++ 1, e)::Nil
     case t: DifferentialProduct => printJson(q ++ 0, t.left)::op(t)::printJson(q ++ 1, t.right)::Nil
+    case c: DifferentialProgramConst => print(c.prettyString)::Nil
+    case c: ProgramConst => print(c.prettyString)::Nil
   }
 
 
@@ -703,14 +730,13 @@ object Helpers {
     (item.id.toString, value)
   }
 
-  def nodeIdJson(n: List[Int]):JsValue = ??? //JsString(NodeId.toString(n))
-  def proofIdJson(n: String):JsValue = JsString(n)
+  def nodeIdJson(n: List[Int]): JsValue = JsNull
+  def proofIdJson(n: String): JsValue = JsString(n)
 
-  def ruleJson(ruleName: String, pos: Option[PositionLocator]):JsValue = {
+  def ruleJson(ruleName: String, pos: Option[PositionLocator]): JsValue = {
     val belleTerm = ruleName.split("\\(")(0)
     val (name, codeName, asciiName, maker, derivation: JsValue) = Try(DerivationInfo.ofCodeName(belleTerm)).toOption match {
-      case Some(di) =>
-        (di.display.name, di.codeName, di.display.asciiName, ruleName,
+      case Some(di) => (di.display.name, di.codeName, di.display.asciiName, ruleName,
           ApplicableAxiomsResponse(Nil, Map.empty, pos).derivationJson(di).fields.getOrElse("derivation", JsNull))
       case None => (ruleName, ruleName, ruleName, ruleName, JsNull)
     }
@@ -738,7 +764,7 @@ object Helpers {
   }
 }
 
-case class AgendaAwesomeResponse(proofId: String, root: ProofTreeNode, leaves: List[ProofTreeNode],
+case class AgendaAwesomeResponse(modelId: String, proofId: String, root: ProofTreeNode, leaves: List[ProofTreeNode],
                                  agenda: List[AgendaItem], closed: Boolean) extends Response {
   override val schema = Some("agendaawesome.js")
 
@@ -754,6 +780,7 @@ case class AgendaAwesomeResponse(proofId: String, root: ProofTreeNode, leaves: L
 
   def getJson =
     JsObject (
+      "modelId" -> JsString(modelId),
       "proofTree" -> proofTree,
       "agendaItems" -> agendaItems,
       "closed" -> JsBoolean(closed)
@@ -761,11 +788,11 @@ case class AgendaAwesomeResponse(proofId: String, root: ProofTreeNode, leaves: L
 }
 
 class GetAgendaItemResponse(item: AgendaItemPOJO) extends Response {
-  def getJson = agendaItemJson(item)
+  def getJson: JsValue = agendaItemJson(item)
 }
 
 class SetAgendaItemNameResponse(item: AgendaItemPOJO) extends Response {
-  def getJson = agendaItemJson(item)
+  def getJson: JsValue = agendaItemJson(item)
 }
 
 class ProofTaskParentResponse (parent: ProofTreeNode) extends Response {
@@ -786,12 +813,12 @@ class GetBranchRootResponse(node: ProofTreeNode) extends Response {
 
 case class LemmasResponse(infos: List[ProvableInfo]) extends Response {
   override def getJson: JsValue = {
-    var json = infos.map(i =>
+    val json = infos.map(i =>
       JsObject(
         "name" -> JsString(i.canonicalName),
         "codeName" -> JsString(i.codeName),
         "defaultKeyPos" -> {
-          var key = AxiomIndex.axiomIndex(i.canonicalName)._1
+          val key = AxiomIndex.axiomIndex(i.canonicalName)._1
           JsString(key.pos.mkString("."))
         },
         "displayInfo" -> (i.display match {
@@ -804,7 +831,7 @@ case class LemmasResponse(infos: List[ProvableInfo]) extends Response {
   }
 }
 
-case class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Option[DerivationInfo])],
+case class ApplicableAxiomsResponse(derivationInfos: List[(DerivationInfo, Option[DerivationInfo])],
                                     suggestedInput: Map[ArgInfo, Expression],
                                     suggestedPosition: Option[PositionLocator] = None) extends Response {
   def inputJson(input: ArgInfo): JsValue = {
@@ -829,7 +856,7 @@ case class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Opti
     }
   }
 
-  def inputsJson(info:List[ArgInfo]): JsArray = {
+  def inputsJson(info: List[ArgInfo]): JsArray = {
     info match {
       case Nil => JsArray()
       case inputs => JsArray(inputs.map(inputJson):_*)
@@ -855,7 +882,7 @@ case class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Opti
       "codeName" -> JsString(info.codeName),
       "canonicalName" -> JsString(info.canonicalName),
       "defaultKeyPos" -> {
-        var key = AxiomIndex.axiomIndex(info.canonicalName)._1
+        val key = AxiomIndex.axiomIndex(info.canonicalName)._1
         JsString(key.pos.mkString("."))
       },
       "displayInfoParts" -> RequestHelper.jsonDisplayInfoComponents(info),
@@ -934,7 +961,7 @@ case class ApplicableAxiomsResponse(derivationInfos : List[(DerivationInfo, Opti
 
   def getJson = JsArray(derivationInfos.map(derivationJson):_*)
 }
-class PruneBelowResponse(item:AgendaItem) extends Response {
+class PruneBelowResponse(item: AgendaItem) extends Response {
   def getJson = JsObject (
   "agendaItem" -> Helpers.itemJson(item)._2
   )
@@ -990,7 +1017,7 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
           case cmp: ComparisonFormula =>
             val cexCmp = TactixLibrary.proveBy(replaceWithCexVals(cmp, cex), TactixLibrary.RCF)
             if (cexCmp.subgoals.size > 1 || cexCmp.subgoals.headOption.getOrElse(makeSeq(True)) == makeSeq(False)) {
-              Right(Equiv(cmp, False))
+              Right(And(False, And(cmp, False)))
             } else Right(cmp)
           case _ => Left(None)
         }
@@ -998,8 +1025,8 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
 
       val cexFml = UIKeYmaeraXPrettyPrinter.htmlEncode(Imply(assumptions, cexConclusion).prettyString)
 
-      //@note look for variables at word boundary (do not match in the middle of other words)
-      val symMatcher = s"(${cex.keySet.map(_.prettyString).mkString("|")})\\b".r("v")
+      //@note look for variables at word boundary (do not match in the middle of other words, do not match between &;)
+      val symMatcher = s"(${cex.keySet.map(_.prettyString).mkString("|")})(?![^&]*;)\\b".r("v")
       val cexFmlWithVals = symMatcher.replaceAllIn(cexFml, (m: Match) => {
         val cexSym = UIKeYmaeraXPrettyPrinter.htmlEncode(m.group("v"))
         if ((m.before + cexSym).endsWith("false")) {
@@ -1010,8 +1037,8 @@ class CounterExampleResponse(kind: String, fml: Formula = True, cex: Map[NamedSy
         }
       })
 
-      //@note look for (cexCmp<->false) groups and replace with boldface danger spans
-      val cexMatcher = "\\(([^\\)]+?)&#8596;false\\)".r("fml")
+      //@note look for (false & cexCmp & false) groups and replace with boldface danger spans
+      val cexMatcher = "false&and;(.*?)&and;false".r("fml")
       cexMatcher.replaceAllIn(cexFmlWithVals, (m: Match) => {
         val cexCmp = m.group("fml")
         s"""<div class="k4-cex-highlight text-danger">$cexCmp</div>"""
@@ -1030,17 +1057,17 @@ class SetupSimulationResponse(initial: Formula, stateRelation: Formula) extends 
 }
 
 class SimulationResponse(simulation: List[List[Map[NamedSymbol, Number]]], stepDuration: Term) extends Response {
-  def getJson = {
+  def getJson: JsObject = {
     val seriesList = simulation.map(convertToDataSeries)
     JsObject(
       "varNames" -> JsArray(seriesList.head.map(_._1).map(name => JsString(name.prettyString)).toVector),
       "ticks" -> JsArray(seriesList.head.head._2.indices.map(i => JsString(i.toString)).toVector),
       "lineStates" -> JsArray(seriesList.map(series =>
         JsArray(series.map({
-          case (n, vs) => JsArray(vs.map(v => JsNumber(v.value)).toVector)
+          case (_, vs) => JsArray(vs.map(v => JsNumber(v.value)).toVector)
         }).toVector)).toVector),
       "radarStates" -> JsArray(simulation.map(run => JsArray(run.map(state =>
-        JsArray(state.map({case (n, v) => JsNumber(v.value)}).toVector)).toVector)).toVector)
+        JsArray(state.map({case (_, v) => JsNumber(v.value)}).toVector)).toVector)).toVector)
     )
   }
 
@@ -1062,14 +1089,14 @@ class KyxConfigResponse(kyxConfig: String) extends Response {
 
 class KeymaeraXVersionResponse(installedVersion: String, upToDate: Option[Boolean], latestVersion: Option[String]) extends Response {
   assert(upToDate.isDefined == latestVersion.isDefined, "upToDate and latestVersion should both be defined, or both be undefined.")
-  def getJson = upToDate match {
+  def getJson: JsObject = upToDate match {
     case Some(b) if b => JsObject("keymaeraXVersion" -> JsString(installedVersion), "upToDate" -> JsTrue)
     case Some(b) if !b => JsObject("keymaeraXVersion" -> JsString(installedVersion), "upToDate" -> JsFalse, "latestVersion" -> JsString(latestVersion.get))
     case None => JsObject("keymaeraXVersion" -> JsString(installedVersion))
   }
 }
 
-class ConfigureMathematicaResponse(linkNamePrefix : String, jlinkLibDirPrefix : String, success : Boolean) extends Response {
+class ConfigureMathematicaResponse(linkNamePrefix: String, jlinkLibDirPrefix: String, success: Boolean) extends Response {
   def getJson = JsObject(
     "linkNamePrefix" -> JsString(linkNamePrefix),
     "jlinkLibDirPrefix" -> JsString(jlinkLibDirPrefix),
@@ -1153,12 +1180,12 @@ class ListExamplesResponse(examples: List[ExamplePOJO]) extends Response {
 /**
  * @return JSON that is directly usable by angular.treeview
  */
-class AngularTreeViewResponse(tree : String) extends Response {
+class AngularTreeViewResponse(tree: String) extends Response {
   override val schema = Some("angular.treeview.js")
 
   def getJson = JsArray( convert(JsonParser(tree).asJsObject) )
 
-  private def convert(node : JsObject) : JsValue = {
+  private def convert(node: JsObject) : JsValue = {
     //TODO switch to Jolt (https://github.com/bazaarvoice/jolt) once they can handle trees
     val children = (node.fields.get("children") match {
       case Some(c) => c
@@ -1205,7 +1232,7 @@ class AngularTreeViewResponse(tree : String) extends Response {
 }
 
 
-class DashInfoResponse(openProofs:Int, allModels: Int, provedModels: Int) extends Response {
+class DashInfoResponse(openProofs: Int, allModels: Int, provedModels: Int) extends Response {
   override val schema = Some("DashInfoResponse.js")
   def getJson = JsObject(
     "open_proof_count" -> JsNumber(openProofs),
@@ -1220,10 +1247,10 @@ class ExtractDatabaseResponse(path: String) extends Response {
   )
 }
 
-class NodeResponse(tree : String) extends Response {
+class NodeResponse(tree: String) extends Response {
   //todo add schema.
-  val node = JsonParser(tree).asJsObject
-  def getJson = node
+  val node: JsObject = JsonParser(tree).asJsObject
+  def getJson: JsObject = node
 }
 
 
@@ -1268,7 +1295,7 @@ class ExtractProblemSolutionResponse(tacticText: String) extends Response {
 }
 
 class ValidateProofResponse(taskId: String, proved: Option[Boolean]) extends Response {
-  def getJson = proved match {
+  def getJson: JsObject = proved match {
     case Some(isProved) => JsObject(
       "uuid" -> JsString(taskId),
       "running" -> JsBoolean(false),
@@ -1283,5 +1310,5 @@ class ValidateProofResponse(taskId: String, proved: Option[Boolean]) extends Res
 
 class MockResponse(resourceName: String) extends Response {
   //@todo add schema
-  def getJson = scala.io.Source.fromInputStream(getClass.getResourceAsStream(resourceName)).mkString.parseJson
+  def getJson: JsValue = scala.io.Source.fromInputStream(getClass.getResourceAsStream(resourceName)).mkString.parseJson
 }

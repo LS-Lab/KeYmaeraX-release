@@ -1,21 +1,21 @@
-ArchiveEntry "Formal Methods Tutorial Example 1".
+ArchiveEntry "Formal Methods Tutorial Example 1"
   Description "Simple model of straight-line driving. Car can never accelerate because of an always-false acceleration guard.".
   Title "1-dimensional car with false acceleration guard".
   Link "http://www.ls.cs.cmu.edu/KeYmaeraX/tutorial/KeYmaeraX-tutorial.pdf#page=23".
 
-ProgramVariables.
-  R m.  /* Stop-sign position */
-  R A.  /* Maximum acceleration */
-  R b.  /* Maximum braking */
-  R ep. /* Maximum control cycle duration */
-  R x.  /* Car position */
-  R v.  /* Speed */
-  R a.  /* Actual acceleration */
-  R sb. /* Start braking point */
-  R t.  /* Controller clock */
+ProgramVariables
+  Real m;  /* Stop-sign position */
+  Real A;  /* Maximum acceleration */
+  Real b;  /* Maximum braking */
+  Real ep; /* Maximum control cycle duration */
+  Real x;  /* Car position */
+  Real v;  /* Speed */
+  Real a;  /* Actual acceleration */
+  Real sb; /* Start braking point */
+  Real t;  /* Controller clock */
 End.
 
-Problem.
+Problem
     x <= m
   & A >= 0
   & b > 0
@@ -32,30 +32,30 @@ Problem.
   ]x <= m
 End.
 
-Tactic "Proof Formal Methods Tutorial Example 1".
+Tactic "Proof Formal Methods Tutorial Example 1"
   master
 End.
 
 End.
 
-ArchiveEntry "Formal Methods Tutorial Example 2".
+ArchiveEntry "Formal Methods Tutorial Example 2"
   Description "Simple model of straight-line driving that avoids collision. Car can accelerate or break, with the start braking distance left abstract.".
   Title "1-dimensional car with abstract start braking distance".
   Link "http://www.ls.cs.cmu.edu/KeYmaeraX/tutorial/KeYmaeraX-tutorial.pdf#page=50".
 
-ProgramVariables.
-  R m.  /* Stop-sign position */
-  R A.  /* Maximum acceleration */
-  R b.  /* Maximum braking */
-  R ep. /* Maximum control cycle duration */
-  R x.  /* Car position */
-  R v.  /* Speed */
-  R a.  /* Actual acceleration */
-  R sb. /* Start braking point */
-  R t.  /* Controller clock */
+ProgramVariables
+  Real m;  /* Stop-sign position */
+  Real A;  /* Maximum acceleration */
+  Real b;  /* Maximum braking */
+  Real ep; /* Maximum control cycle duration */
+  Real x;  /* Car position */
+  Real v;  /* Speed */
+  Real a;  /* Actual acceleration */
+  Real sb; /* Start braking point */
+  Real t;  /* Controller clock */
 End.
 
-Problem.
+Problem
     x <= m
   & A >= 0
   & b > 0
@@ -72,7 +72,7 @@ Problem.
   ]x <= m
 End.
 
-Tactic "Steps Formal Methods Tutorial Example 2".
+Tactic "Steps Formal Methods Tutorial Example 2"
 /* requires QE({`Mathematica`}) */
 implyR(1); andL('L)*; loop({`x<=m`}, 1); <(
   prop; done,
@@ -86,24 +86,24 @@ End.
 
 End.
 
-ArchiveEntry "Formal Methods Tutorial Example 3".
+ArchiveEntry "Formal Methods Tutorial Example 3"
   Description "Simple model of straight-line driving that avoids collision. Car can accelerate or break, with the start braking distance left abstract.".
   Title "1-dimensional car with safe start braking distance".
   Link "http://www.ls.cs.cmu.edu/KeYmaeraX/tutorial/KeYmaeraX-tutorial.pdf#page=97".
 
-ProgramVariables.
-  R m.  /* Stop-sign position */
-  R A.  /* Maximum acceleration */
-  R b.  /* Maximum braking */
-  R ep. /* Maximum control cycle duration */
-  R x.  /* Car position */
-  R v.  /* Speed */
-  R a.  /* Actual acceleration */
-  R sb. /* Start braking point */
-  R t.  /* Controller clock */
+ProgramVariables
+  Real m;  /* Stop-sign position */
+  Real A;  /* Maximum acceleration */
+  Real b;  /* Maximum braking */
+  Real ep; /* Maximum control cycle duration */
+  Real x;  /* Car position */
+  Real v;  /* Speed */
+  Real a;  /* Actual acceleration */
+  Real sb; /* Start braking point */
+  Real t;  /* Controller clock */
 End.
 
-Problem.
+Problem
     x <= m
   & A >= 0
   & b > 0
@@ -120,7 +120,7 @@ Problem.
   ]x <= m
 End.
 
-Tactic "Proof Formal Methods Tutorial Example 3".
+Tactic "Proof Formal Methods Tutorial Example 3"
 implyR(1) ; andL('L)* ; loop({`v>=0&x+v^2/(2*b)<=m`}, 1) ; <(
   QE; done,
   QE; done,
@@ -128,61 +128,62 @@ implyR(1) ; andL('L)* ; loop({`v>=0&x+v^2/(2*b)<=m`}, 1) ; <(
     assignb(1.1) ; andR('R) ; doall(prop ; QE({`Mathematica`}) ; done)
   )
 End.
+End.
 
-ArchiveEntry "Formal Methods Tutorial Example 4".
+ArchiveEntry "Formal Methods Tutorial Example 4"
   Description "Proving unsolvable ODEs with differential invariants.".
   Title "Increasingly Damped oscillator".
   Link "http://www.ls.cs.cmu.edu/KeYmaeraX/tutorial/KeYmaeraX-tutorial.pdf#page=114".
 
-Functions.
-  R w().
-  R c().
+Functions
+  Real w();
+  Real c();
 End.
 
-ProgramVariables.
-  R x.
-  R y.
-  R d.
+ProgramVariables
+  Real x;
+  Real y;
+  Real d;
 End.
 
-Problem.
+Problem
     w()^2*x^2 + y^2 <= c()^2
   & d>=0
 ->
   [{x'=y, y'=-w()^2*x-2*d*w()*y, d'=7 & w()>=0}]w()^2*x^2 + y^2 <= c()^2
 End.
 
-Tactic "Proof Formal Methods Tutorial Example 4".
+Tactic "Proof Formal Methods Tutorial Example 4"
   implyR(1); dC({`d>=0`}, 1); doall(dI(1); done)
 End.
+End.
 
-ArchiveEntry "Formal Methods Tutorial Example 5".
+ArchiveEntry "Formal Methods Tutorial Example 5"
   Description "Simple model of steering, car avoids collision with other cars.".
   Title "2-dimensional car".
   Link "http://www.ls.cs.cmu.edu/KeYmaeraX/tutorial/KeYmaeraX-tutorial.pdf#page=130".
 
-Functions.
-  R ep.   /* time limit for control decisions */
-  R B.    /* minimum braking capability of the robot */
-  R A.    /* maximum acceleration -B <= a <= A */
-  R abs(R).  /* predefined function of absolute value */
+Functions
+  Real ep;   /* time limit for control decisions */
+  Real B;    /* minimum braking capability of the robot */
+  Real A;    /* maximum acceleration -B <= a <= A */
 End.
 
-ProgramVariables.
-  R x.    /* robot position: x */
-  R y.    /* robot position: y */
-  R v.    /* robot translational velocity */
-  R a.    /* robot translational acceleration */
-  R dx.   /* robot orientation: x */
-  R dy.   /* robot orientation: y */
-  R w.    /* robot rotational velocity */
-  R r.    /* radius of curve (i)straight: k=infty; (ii)curve: k!=infty */
-  R xo.   /* position summary of obstacles */
-  R yo.
-  R t.    /* time */
+ProgramVariables
+  Real x;    /* robot position: x */
+  Real y;    /* robot position: y */
+  Real v;    /* robot translational velocity */
+  Real a;    /* robot translational acceleration */
+  Real dx;   /* robot orientation: x */
+  Real dy;   /* robot orientation: y */
+  Real w;    /* robot rotational velocity */
+  Real r;    /* radius of curve (i)straight: k=infty; (ii)curve: k!=infty */
+  Real xo;   /* position summary of obstacles */
+  Real yo;
+  Real t;    /* time */
 End.
 
-Problem.
+Problem
     v >= 0
   & ( abs(x-xo) > v^2 / (2*B)
     | abs(y-yo) > v^2 / (2*B))
@@ -235,7 +236,7 @@ Problem.
   ] (x - xo)^2 + (y - yo)^2 > 0
 End.
 
-Tactic "Proof Formal Methods Tutorial Example 5".
+Tactic "Proof Formal Methods Tutorial Example 5"
 implyR(1); (andL('L)*); loop({`v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(y-yo)>v^2/(2*B()))`}, 1); <(
   prop; done,
   QE; done,
@@ -254,7 +255,7 @@ implyR(1); (andL('L)*); loop({`v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(
     diffInvariant({`y=old(y)`}, 1);
     dW(1); QE; done
     ,
-    hideL(-7=={`abs(x-xo_0)>v^2/(2*B())|abs(y-yo_0)>v^2/(2*B())`});
+    hideL(-13=={`abs(x-xo_0)>v^2/(2*B())|abs(y-yo_0)>v^2/(2*B())`});
     diffInvariant({`t>=0`}, 1);
     diffInvariant({`dx^2+dy^2=1`}, 1);
     diffInvariant({`v=old(v)+a*t`}, 1);
@@ -271,4 +272,5 @@ implyR(1); (andL('L)*); loop({`v>=0&dx^2+dy^2=1&r!=0&(abs(x-xo)>v^2/(2*B())|abs(
     )
   )
 )
+End.
 End.

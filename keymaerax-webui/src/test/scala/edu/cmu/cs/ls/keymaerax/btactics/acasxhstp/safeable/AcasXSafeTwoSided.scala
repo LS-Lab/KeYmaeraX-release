@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXProblemParser
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable._
@@ -230,7 +230,7 @@ class AcasXSafeTwoSided extends AcasXBase {
       val ode = "r'=-rv,h'=-dhd,dhd'=ao".asDifferentialProgram
 
       /** * Main safe theorem and its tactic ***/
-      val safeSeq = KeYmaeraXProblemParser(io.Source.fromInputStream(
+      val safeSeq = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/twosided_implicit.kyx")).mkString)
 
       val safeTac = implyR('R) &
@@ -308,7 +308,7 @@ class AcasXSafeTwoSided extends AcasXBase {
   it should "prove Lemma 3b: implicit-explicit upper equivalence" in withMathematica { _ =>
     if (containsLemma("upper_equivalence")) removeLemma("upper_equivalence")
 
-    val reductionFml = KeYmaeraXProblemParser(io.Source.fromInputStream(
+    val reductionFml = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/upper_equivalence.kyx")).mkString)
 
     def caseSmasher(caseName: String): BelleExpr = dT(caseName) &
@@ -385,9 +385,9 @@ class AcasXSafeTwoSided extends AcasXBase {
     beforeEach()
     withQE { _ =>
 
-      val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
+      val lower = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_equivalence.kyx")).mkString)
-      val upper = KeYmaeraXProblemParser(io.Source.fromInputStream(
+      val upper = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/upper_equivalence.kyx")).mkString)
 
       val Imply(lP@And(And(lPhp, And(lPrp, And(lPrv, Greater(la, lz)))), lPw), Equiv(lI, lE)) = lower
@@ -453,9 +453,9 @@ class AcasXSafeTwoSided extends AcasXBase {
     beforeEach()
     withQE { _ =>
 
-      val lower = KeYmaeraXProblemParser(io.Source.fromInputStream(
+      val lower = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/safe_equivalence.kyx")).mkString)
-      val upper = KeYmaeraXProblemParser(io.Source.fromInputStream(
+      val upper = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/upper_equivalence.kyx")).mkString)
 
       val Imply(lP@And(And(lPhp, And(lPrp, And(lPrv, Greater(la, lz)))), lPw), Equiv(lI, lE)) = lower
@@ -532,7 +532,7 @@ class AcasXSafeTwoSided extends AcasXBase {
     beforeEach()
     withQE { _ =>
 
-      val implicitSafety = KeYmaeraXProblemParser(io.Source.fromInputStream(
+      val implicitSafety = KeYmaeraXArchiveParser.parseAsProblemOrFormula(io.Source.fromInputStream(
         getClass.getResourceAsStream("/examples/casestudies/acasx/sttt/twosided_implicit.kyx")).mkString)
 
       val theorem3 = getLemma("twosided_implicit")
