@@ -45,7 +45,6 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
     val command = s"""
        |Needs["Strategies`","$pegasusPath/Strategies.m"];
-       |Needs["Methods`","$pegasusPath/Methods.m"];
        |Needs["Classifier`","$pegasusPath/Classifier.m"];
        |Needs["AbstractionPolynomials`","$pegasusPath/AbstractionPolynomials.m"];
        |Strategies`Pegasus[$problem]""".stripMargin
@@ -78,8 +77,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
     timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
 
-    val command = s"""Needs["Methods`","$pegasusPath/Methods.m"];
-                     |Methods`InvS[$problem]""".stripMargin
+    val command = s"""Needs["LZZ`","$pegasusPath/LZZ.m"];
+                     |LZZ`InvS[$problem]""".stripMargin
 
     val (output, result) = runUnchecked(command)
     logger.debug("LZZ check: "+ result.prettyString + " from raw output " + output)
@@ -164,10 +163,22 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     val pegasusResourcePath = "/pegasus-mathematica/"
     val pegasusResourceNames =
       "AbstractionPolynomials.m" ::
+      "BarrierCertificateMethod.m" ::
+      "Boreale.m" ::
       "Classifier.m" ::
       "FirstIntegralGen.m" ::
-      "Methods.m" ::
+      "DiscreteAbstraction.m" ::
+      "FirstIntegralGen.m" ::
+      "FirstIntegralMethod.m" ::
+      "Linear.m" ::
+      "LZZ.m" ::
+      "MultiLinear.m" ::
+      "NilpotentMethod.m" ::
+      "OneDimensional.m" ::
       "PlanarLinear.m" ::
+      "Primitives.m" ::
+      "QualitativeMethods.m" ::
+      "Refute.m" ::
       "Strategies.m" :: Nil
 
     pegasusResourceNames.foreach(n => {
