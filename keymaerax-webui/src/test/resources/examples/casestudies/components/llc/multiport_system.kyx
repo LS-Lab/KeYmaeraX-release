@@ -1,26 +1,28 @@
-Functions.
-  R ep.   /* time limit for control decisions */
-  R A.
-  R B.
+ArchiveEntry "Full System"
+
+Definitions
+  Real ep;   /* time limit for control decisions */
+  Real A;
+  Real B;
 End.
 
-ProgramVariables.
-  R xl.
-  R vl.
-  R al.
-  R xlr.
-  R vlr.
-  R xf.
-  R vf.
-  R af.
-  R t.    /* time */
-  R xl0.
-  R vl0.
-  R xlr0.
-  R vlr0.
+ProgramVariables
+  Real xl;
+  Real vl;
+  Real al;
+  Real xlr;
+  Real vlr;
+  Real xf;
+  Real vf;
+  Real af;
+  Real t;    /* time */
+  Real xl0;
+  Real vl0;
+  Real xlr0;
+  Real vlr0;
 End.
 
-Problem.
+Problem
     ep > 0
   & A >= 0
   & B > 0
@@ -78,4 +80,28 @@ Problem.
       vlr := vl;
     }*
   ] (xf < xl)
+End.
+
+Tactic "Proof"
+unfold ; loop({`0<=vf&xf < xl&xf+vf^2/(2*B()) < xl+vl^2/(2*B())&0<=t&t<=ep()&xl-xl0>=(vl+vl0)/2*t&0<=vl&-B()*t<=vl-vl0&vl-vl0<=A()*t&xlr=xl&vlr=vl`}, 1) ; <(
+QE,
+QE,
+unfold ; <(
+solve(1) ; chase(1.0.1.1) ; QE,
+  solve(1) ; chase(1.0.1.1) ; QE,
+  solve(1) ; chase(1.0.1.1) ; allR(1) ; implyR(1) ; implyR(1) ; allL({`t_`}, -24) ; implyL(-24) ; <(
+  hideR(1) ; QE
+  ,
+  andL('L)* ; simplify(1) ; andR(1) ; <(
+    hideL(-5=={`-B()<=af`}) ; hideL(-7=={`al<=A()`}) ; allL2R(-7) ; hideL(-7=={`xl0=xl`}) ; allL2R(-7) ; hideL(-7=={`vl0=vl`}) ; allL2R(-16) ; hideL(-16=={`xlr=xl`}) ; allL2R(-16) ; hideL(-16=={`vlr=vl`}) ; allL2R(-16) ; hideL(-16=={`t=0`}) ; hideL(-15=={`vl-vl0_0<=A()*t_0`}) ; hideL(-9=={`xf+vf^2/(2*B()) < xl+vl^2/(2*B())`}) ; edit({`xf+vf^2/(2*B())+(A()/B()+1)*(A()/2*t_^2+t_*vf) < xl+vl^2/(2*B())`}, -4) ; hideL(-1=={`ep()>0`}) ; hideL(-9=={`t_0<=ep()`}) ; hideL(-15=={`t_+0<=ep()`}) ; hideL(-9=={`xl-xl0_0>=(vl+vl0_0)/2*t_0`}) ; hideL(-10=={`-B()*t_0<=vl-vl0_0`}) ; QE,
+    andR(1) ; <(
+      hideL(-5=={`-B()<=af`}) ; hideL(-7=={`al<=A()`}) ; allL2R(-7) ; hideL(-7=={`xl0=xl`}) ; allL2R(-7) ; hideL(-7=={`vl0=vl`}) ; allL2R(-16) ; hideL(-16=={`xlr=xl`}) ; allL2R(-16) ; hideL(-16=={`vlr=vl`}) ; allL2R(-16) ; hideL(-16=={`t=0`}) ; hideL(-9=={`xf+vf^2/(2*B()) < xl+vl^2/(2*B())`}) ; hideL(-9=={`0<=t_0`}) ; hideL(-9=={`t_0<=ep()`}) ; hideL(-9=={`xl-xl0_0>=(vl+vl0_0)/2*t_0`}) ; hideL(-10=={`-B()*t_0<=vl-vl0_0`}) ; hideL(-10=={`vl-vl0_0<=A()*t_0`}) ; edit({`xf+vf^2/(2*B())+(A()/B()+1)*(A()/2*t_^2+t_*vf) < xl+vl^2/(2*B())`}, -4) ; hideL(-13=={`t_+0<=ep()`}) ; hideL(-1=={`ep()>0`}) ; edit({`A()*(t_^2/2)+vf*t_+xf+(A()*t_+vf)^2/(2*B()) < al*(t_^2/2)+vl*t_+xl+(al*t_+vl)^2/(2*B())`}, 1) ; hideL(-4=={`af<=A()`}) ; hideL(-9=={`af*t_+vf>=0`}) ; QE,
+      QE
+      )
+    )
+  )
+)
+)
+End.
+
 End.
