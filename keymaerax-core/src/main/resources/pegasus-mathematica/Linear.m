@@ -4,8 +4,8 @@
    Comments: Tested in Mathematica 10.0   *)
 
 
-Needs["Primitives`",NotebookDirectory[]<>"Primitives.m"] 
-Needs["FirstIntegralGen`",NotebookDirectory[]<>"FirstIntegralGen.m"] 
+Needs["Primitives`",FileNameJoin[{Directory[],"Primitives.m"}]] 
+Needs["FirstIntegralGen`",FileNameJoin[{Directory[],"FirstIntegralGen.m"}]] 
 
 
 BeginPackage[ "Linear`"]

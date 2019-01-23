@@ -1,12 +1,12 @@
 (* ::Package:: *)
 
-Needs["Classifier`",NotebookDirectory[]<>"Classifier.m"] (* Load classifier package from current directory *)
-Needs["QualitativeMethods`",NotebookDirectory[]<>"QualitativeMethods.m"] (* Load qualitative analysis-based invariant generation methods package from current directory *)
-Needs["AbstractionPolynomials`",NotebookDirectory[]<>"AbstractionPolynomials.m"] (* Polynomial sources for qualitative abstraction *)
-Needs["PlanarLinear`",NotebookDirectory[]<>"PlanarLinear.m"]  (* Planar linear system analysis package *)
-Needs["Linear`",NotebookDirectory[]<>"Linear.m"] (* Linear system analysis package *)
-Needs["FirstIntegralMethod`",NotebookDirectory[]<>"FirstIntegralMethod.m"] (* First integral generation and qualitative abstraction package *)
-Needs["MultiLinear`",NotebookDirectory[]<>"MultiLinear.m"] (* Linear system analysis package *)
+Needs["Classifier`",FileNameJoin[{Directory[],"Classifier.m"}]] (* Load classifier package from current directory *)
+Needs["QualitativeMethods`",FileNameJoin[{Directory[],"QualitativeMethods.m"}]] (* Load qualitative analysis-based invariant generation methods package from current directory *)
+Needs["AbstractionPolynomials`",FileNameJoin[{Directory[],"AbstractionPolynomials.m"}]] (* Polynomial sources for qualitative abstraction *)
+Needs["PlanarLinear`",FileNameJoin[{Directory[],"PlanarLinear.m"}]]  (* Planar linear system analysis package *)
+Needs["Linear`",FileNameJoin[{Directory[],"Linear.m"}]] (* Linear system analysis package *)
+Needs["FirstIntegralMethod`",FileNameJoin[{Directory[],"FirstIntegralMethod.m"}]] (* First integral generation and qualitative abstraction package *)
+Needs["MultiLinear`",FileNameJoin[{Directory[],"MultiLinear.m"}]] (* Linear system analysis package *)
 
 
 BeginPackage["Strategies`"];
