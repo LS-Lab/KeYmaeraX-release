@@ -4,7 +4,7 @@
    Comments: Tested in Mathematica 10.0   *)
 
 
-Needs["FirstIntegralGen`",NotebookDirectory[]<>"FirstIntegralGen.m"] 
+Needs["FirstIntegralGen`",FileNameJoin[{Directory[],"FirstIntegralGen.m"}]] 
 
 
 BeginPackage[ "MultiLinear`"]

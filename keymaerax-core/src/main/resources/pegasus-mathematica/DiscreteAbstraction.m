@@ -1,6 +1,6 @@
 (* ::Package:: *)
 
-Needs["LZZ`",NotebookDirectory[]<>"LZZ.m"] 
+Needs["LZZ`",FileNameJoin[{Directory[],"LZZ.m"}]] 
 
 
 BeginPackage["DiscreteAbstraction`"];

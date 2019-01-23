@@ -1,7 +1,7 @@
 (* ::Package:: *)
 
-Needs["LZZ`",NotebookDirectory[]<>"LZZ.m"] 
-Needs["DiscreteAbstraction`",NotebookDirectory[]<>"DiscreteAbstraction.m"] 
+Needs["LZZ`",FileNameJoin[{Directory[],"LZZ.m"}]] 
+Needs["DiscreteAbstraction`",FileNameJoin[{Directory[],"DiscreteAbstraction.m"}]] 
 
 
 BeginPackage["QualitativeMethods`"];

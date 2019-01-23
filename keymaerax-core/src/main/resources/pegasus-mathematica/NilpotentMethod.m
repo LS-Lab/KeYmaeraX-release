@@ -1,6 +1,6 @@
 (* ::Package:: *)
 
-Needs["Classifier`",NotebookDirectory[]<>"Classifier.m"] 
+Needs["Classifier`",FileNameJoin[{Directory[],"Classifier.m"}]] 
 
 
 BeginPackage["NilpotentMethod`"];

@@ -1,7 +1,7 @@
 (* ::Package:: *)
 
-Needs["FirstIntegralGen`",NotebookDirectory[]<>"FirstIntegralGen.m"] 
-Needs["Primitives`",NotebookDirectory[]<>"Primitives.m"] 
+Needs["FirstIntegralGen`",FileNameJoin[{Directory[],"FirstIntegralGen.m"}]] 
+Needs["Primitives`",FileNameJoin[{Directory[],"Primitives.m"}]] 
 
 
 BeginPackage[ "FirstIntegralMethod`"]
