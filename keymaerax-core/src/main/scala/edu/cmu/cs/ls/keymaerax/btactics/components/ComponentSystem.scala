@@ -34,12 +34,12 @@ object ComponentSystem {
   )
   private lazy val assignmentIndependence3 = AnonymousLemmas.remember(
     "[x_:=*;][y_:=*;]p_(x_,y_) <-> [y_:=*;][x_:=*;]p_(x_,y_)".asFormula,
-    master() & done,
+    master() & prop & done,
     namespace
   )
   private lazy val assignmentIndependence4 = AnonymousLemmas.remember(
     "[x_:=s_();][?q_();]p_(x_) <-> [?q_();][x_:=s_();]p_(x_)".asFormula,
-    master() & done,
+    master() & prop & done,
     namespace
   )
   private lazy val assignmentIndependence5 = AnonymousLemmas.remember(
@@ -52,7 +52,7 @@ object ComponentSystem {
   )
   private lazy val testIndependence = AnonymousLemmas.remember(
     "[?q_();][?r_();]p_() <-> [?r_();][?q_();]p_()".asFormula,
-    master() & done,
+    master() & prop & done,
     namespace
   )
 

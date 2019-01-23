@@ -5,6 +5,8 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
+import java.io.InputStream
+
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, DefExpression, DefTactic, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser.{BelleToken, DefScope}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleLexer, BelleParser}
@@ -302,6 +304,7 @@ object KeYmaeraXArchiveParser {
 
   /** Tries parsing as a problem first. If it fails due to a missing Problem block, tries parsing as a plain formula. */
   def parseAsProblemOrFormula(input: String): Formula = parseProblem(input, parseTactics=false).model.asInstanceOf[Formula]
+  def parseAsProblemOrFormula(in: InputStream): Formula = parseAsProblemOrFormula(io.Source.fromInputStream(in).mkString)
 
   /** Parses a single entry. */
   def parseProblem(input: String, parseTactics: Boolean = true): ParsedArchiveEntry = {
