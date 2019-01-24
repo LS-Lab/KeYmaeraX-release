@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 
 import java.io.File
 
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
@@ -106,9 +107,9 @@ object AcasXRunner {
     initMathematica(options)
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
 
-    val generator = new ConfigurableGenerator[Formula]()
+    val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
-      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv)))
+      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
     TactixLibrary.invGenerator = generator
 
     //@note just in case the user shuts down the prover from the command line

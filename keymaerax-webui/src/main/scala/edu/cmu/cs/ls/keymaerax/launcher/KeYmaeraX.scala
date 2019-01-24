@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.api.ScalaTacticCompiler
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
@@ -20,7 +21,7 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import edu.cmu.cs.ls.keymaerax.codegen.{CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.hydra.TempDBTools
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{ParsedArchiveEntry, Declaration}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.pt.{HOLConverter, IsabelleConverter, ProvableSig, TermProvable}
 
 import scala.collection.immutable
@@ -365,9 +366,9 @@ object KeYmaeraX {
     BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
 
-    val generator = new ConfigurableGenerator[Formula]()
+    val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
-      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv)))
+      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
     TactixLibrary.invGenerator = generator
 
     //@note just in case the user shuts down the prover from the command line

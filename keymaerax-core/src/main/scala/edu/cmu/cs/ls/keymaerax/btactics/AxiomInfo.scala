@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.DerivationInfo.AxiomNotFoundException
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.components.ComponentSystem
@@ -913,7 +914,7 @@ object DerivationInfo {
           ((fml: Formula) => DLBySubst.con(x, fml)): TypedFunc[Formula, BelleExpr]): TypedFunc[Variable, _]),
 
     new PositionTacticInfo("loopauto", RuleDisplayInfo("loopauto",(List("&Gamma;"), List("[a*]P", "&Delta;")),
-      List()), {case () => (gen: Generator.Generator[Formula]) => TactixLibrary.loopauto(gen)}, needsGenerator = true),
+      List()), {case () => (gen: Generator.Generator[GenProduct]) => TactixLibrary.loopauto(gen)}, needsGenerator = true),
 
     new InputPositionTacticInfo("MR",
     RuleDisplayInfo("Monotonicity",(List("&Gamma;"), List("[a]P", "&Delta;")),
@@ -980,7 +981,7 @@ object DerivationInfo {
     )}),
     PositionTacticInfo("simplify", "simplify", {case () => SimplifierV3.simpTac()}, needsTool = true),
     // Technically in InputPositionTactic(Generator[Formula, {case () => ???}), but the generator is optional
-    new TacticInfo("master", "master", {case () => (gen:Generator.Generator[Formula]) => TactixLibrary.master(gen)}, needsGenerator = true),
+    new TacticInfo("master", "master", {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.master(gen)}, needsGenerator = true),
     new TacticInfo("auto", "auto", {case () => TactixLibrary.auto}, needsGenerator = true),
     InputTacticInfo("QE", "QE",
       List(OptionArg(StringArg("tool")), OptionArg(TermArg("timeout"))),

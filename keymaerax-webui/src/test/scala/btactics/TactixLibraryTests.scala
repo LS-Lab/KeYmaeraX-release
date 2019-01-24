@@ -227,7 +227,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
 
   "loopPostMaster" should "find an invariant for x=5-> [{x:=x+2;{x'=1}}*]x>=0" in withMathematica { _ =>
     val fml = "x>=5 -> [{x:=x+2;{x'=1}}*]x>=0".asFormula
-    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).toStream
+    val invs = List("x>=-1".asFormula, "x=5".asFormula, "x>=0".asFormula, "x=7".asFormula).map(_ -> None).toStream
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
     //@note postcondition is invariant, loopPostMaster won't ask invariant generator
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
@@ -282,7 +282,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     )
     proof.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(fml))
     proof shouldBe 'proved
-    proveBy(fml, implyR(1) & loopSR((_, _) => invs.toStream)(1)) shouldBe 'proved
+    proveBy(fml, implyR(1) & loopSR((_, _) => invs.map(_ -> None).toStream)(1)) shouldBe 'proved
   }
 
 

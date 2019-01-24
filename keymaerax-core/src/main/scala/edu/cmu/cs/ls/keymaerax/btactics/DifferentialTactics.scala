@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
@@ -850,17 +851,18 @@ private object DifferentialTactics extends Logging {
     } catch {
       case err: Exception =>
         logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
-        Stream[Formula]()
+        Stream[GenProduct]()
     }
 
     //Adds an invariant to the system's evolution domain constraint and tries to establish the invariant via proveWithoutCuts.
     //Fails if the invariant cannot be established by proveWithoutCuts.
     val addInvariant = ChooseSome(
       () => invariantCandidates.iterator,
-      (inv: Formula) => {
-        DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
-        /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
-        diffCut(inv)(pos) <(skip, proveInvariant(pos) & done)
+      (prod: GenProduct) => prod match {
+        case (inv, _) =>
+          DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
+          /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
+          diffCut(inv)(pos) <(skip, proveInvariant(pos) & done)
       }
     )
 
@@ -905,22 +907,23 @@ private object DifferentialTactics extends Logging {
     } catch {
       case err: Exception =>
         logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
-        Stream[Formula]()
+        Stream[GenProduct]()
     }
 
     //Adds an invariant to the system's evolution domain constraint and tries to establish the invariant via proveWithoutCuts.
     //Fails if the invariant cannot be established by proveWithoutCuts.
     val addInvariant = ChooseSome(
       () => invariantCandidates.iterator,
-      (inv: Formula) => {
-        DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
-          /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
-          diffCut(inv)(pos) <(
-            skip,
-            odeInvariant()(pos)) &
-        // continue outside <(skip, ...) so that cut is proved before used
-        (odeInvariant()(pos) | fastODE(finish)(pos)) &
-        DebuggingTactics.debug("[ODE] Inv Candidate done")
+      (prod: GenProduct) => prod match {
+        case (inv, None) =>
+          DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
+            /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
+            diffCut(inv)(pos) <(
+              skip,
+              odeInvariant()(pos)) &
+          // continue outside <(skip, ...) so that cut is proved before used
+          (odeInvariant()(pos) | fastODE(finish)(pos)) &
+          DebuggingTactics.debug("[ODE] Inv Candidate done")
       }
     )
 
@@ -1492,11 +1495,11 @@ private object DifferentialTactics extends Logging {
     // Assume that Pegasus hands us back a diffcut chain
     invs.headOption match {
       case None => throw new BelleThrowable(s"Pegasus failed to generate an invariant")
-      case Some(True) => diffWeakenG(pos) & timeoutQE & done
+      case Some((True, _)) => diffWeakenG(pos) & timeoutQE & done
       case _ =>
         invs.foldRight(diffWeakenG(pos) & timeoutQE & done)( (fml,tac) =>
           //DebuggingTactics.print("DC chain: "+fml) &
-          DC(fml)(pos) <(tac,
+          DC(fml._1)(pos) <(tac,
             (
             //note: repeated dW&QE not needed if Pegasus reports a correct dC chain
             //(DifferentialTactics.diffWeakenG(pos) & QE & done) |

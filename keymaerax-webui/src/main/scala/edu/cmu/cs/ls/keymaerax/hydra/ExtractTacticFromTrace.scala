@@ -2,8 +2,8 @@ package edu.cmu.cs.ls.keymaerax.hydra
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BRANCH_COMBINATOR, BelleParser, SEQ_COMBINATOR}
-import edu.cmu.cs.ls.keymaerax.btactics.{ConfigurableGenerator, Generator, Idioms}
-import edu.cmu.cs.ls.keymaerax.core.Formula
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
+import edu.cmu.cs.ls.keymaerax.btactics.{Generator, Idioms}
 
 class ExtractTacticFromTrace(db: DBAbstraction) {
   // Additional wrappers
@@ -45,7 +45,7 @@ class ExtractTacticFromTrace(db: DBAbstraction) {
     else sequentialTactic(thisTactic, BRANCH_COMBINATOR.img + "(\n" + indent + subgoals.mkString(",\n" + indent) + "\n" + indent + ")")
   }
 
-  private def tacticAt(gen: Option[Generator.Generator[Formula]], node: ProofTreeNode): BelleExpr = BelleParser.parseWithInvGen(tacticStringAt(node), gen)
+  private def tacticAt(gen: Option[Generator.Generator[GenProduct]], node: ProofTreeNode): BelleExpr = BelleParser.parseWithInvGen(tacticStringAt(node), gen)
 
   private def sequentialTactic(ts1: String, ts2: String): String = (ts1.trim(), ts2.trim()) match {
     case ("nil", _) => ts2

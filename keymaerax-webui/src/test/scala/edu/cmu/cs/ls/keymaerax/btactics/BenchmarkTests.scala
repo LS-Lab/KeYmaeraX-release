@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.TacticStatistics
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests._
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.core.{False, Formula, Imply, Program, Sequent, SuccPos}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser}
@@ -167,7 +168,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
         val invGenStart = System.currentTimeMillis()
         val candidates = InvariantGenerator.pegasusInvariants(seq, SuccPos(0)).toList
         val invGenEnd = System.currentTimeMillis()
-        println(s"Done generating (${candidates.map(_.prettyString).mkString(",")}) $name")
+        println(s"Done generating (${candidates.map(_._1.prettyString).mkString(",")}) $name")
         if (candidates.nonEmpty) {
           println(s"Checking $name")
           TactixLibrary.invGenerator = FixedGenerator(candidates)
@@ -237,9 +238,9 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
   /** Parse model and add proof hint annotations to invariant generator. */
   private def parseWithHints(modelContent: String): (Formula, KeYmaeraXArchiveParser.Declaration) = {
     TactixLibrary.invGenerator = FixedGenerator(Nil)
-    val generator = new ConfigurableGenerator[Formula]()
+    val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
-      generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ inv)))
+      generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
     val entry = KeYmaeraXArchiveParser(modelContent).head
     TactixLibrary.invGenerator = generator
     KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {}) //@note cleanup for separation between tutorial entries
