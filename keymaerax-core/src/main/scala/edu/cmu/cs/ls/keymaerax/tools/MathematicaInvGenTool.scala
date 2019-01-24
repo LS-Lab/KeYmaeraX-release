@@ -44,10 +44,9 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT))).getOrElse(-1)
 
     val command = s"""
+       |SetDirectory["$pegasusPath"];
        |Needs["Strategies`","$pegasusPath/Strategies.m"];
-       |Needs["Classifier`","$pegasusPath/Classifier.m"];
-       |Needs["AbstractionPolynomials`","$pegasusPath/AbstractionPolynomials.m"];
-       |Strategies`Pegasus[$problem]""".stripMargin
+       |Strategies`Pegasus[$problem]""".stripMargin.trim()
 
     try {
       val (output, result) = runUnchecked(command)
@@ -77,8 +76,10 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
     timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
 
-    val command = s"""Needs["LZZ`","$pegasusPath/LZZ.m"];
-                     |LZZ`InvS[$problem]""".stripMargin
+    val command = s"""
+                  |SetDirectory["$pegasusPath"];
+                  |Needs["LZZ`","$pegasusPath/LZZ.m"];
+                  |LZZ`InvS[$problem]""".stripMargin.trim()
 
     val (output, result) = runUnchecked(command)
     logger.debug("LZZ check: "+ result.prettyString + " from raw output " + output)
@@ -97,17 +98,16 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     // LHS of ODEs
     val odevars = DifferentialHelper.getPrimedVariables(ode)
 
-    val rhs = DifferentialHelper.atomicOdes(ode).map(o => o.e)
+    val rhs = DifferentialHelper.atomicOdes(ode).map(_.e)
     // All things that need to be considered as parameters (or variables)
-    val fmlvars =
-      (assumptions.+:(postCond).+:(ode.constraint)).flatMap(f => StaticSemantics.symbols(f))
-    val trmvars = rhs.flatMap(t => StaticSemantics.symbols(t))
+    val fmlvars = (assumptions :+ postCond :+ ode.constraint).flatMap(StaticSemantics.symbols)
+    val trmvars = rhs.flatMap(StaticSemantics.symbols)
 
     val vars = (trmvars ++ fmlvars).distinct.filter({ case Function(_, _, _, _, interpreted) => !interpreted case _ => true}).sorted
-      .map(e => e match {
+      .map({
         case f@Function(_,_,Unit,_,_) =>
           FuncOf(f,Nothing) //for k2m conversion to work reliably on constants
-        case _ => e
+        case e => e
       } )
 
     val stringodeVars = "{" + odevars.map(k2m(_)).mkString(", ") + "}"
@@ -124,8 +124,9 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
 
     val command = s"""
+                     |SetDirectory["$pegasusPath"];
                      |Needs["Refute`","$pegasusPath/Refute.m"];
-                     |Refute`RefuteS[$problem]""".stripMargin
+                     |Refute`RefuteS[$problem]""".stripMargin.trim()
 
     try {
       val (output, result) = runUnchecked(command, CEXM2KConverter)
