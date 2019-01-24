@@ -5,7 +5,7 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BelleThrowable}
 import Augmentors._
 import org.apache.logging.log4j.scala.Logging
 
@@ -18,10 +18,17 @@ import org.apache.logging.log4j.scala.Logging
 object InvariantGenerator extends Logging {
   import Generator.Generator
 
+  /** A proof hint on how to use an invariant. */
+  abstract class ProofHint
+  /** A tactic proof hint. */
+  case class BelleExprProofHint(t: BelleExpr)
+
+  type GenProduct = (Formula, Option[ProofHint])
+
   /** A relevance filtering tool for dependency-optimized invariant and differential invariant generation
     * based on the candidates from `generator`.
     * @author Andre Platzer */
-  def relevanceFilter(generator: Generator[Formula], analyzeMissing: Boolean): Generator[Formula] = (sequent,pos) => {
+  def relevanceFilter(generator: Generator[GenProduct], analyzeMissing: Boolean): Generator[GenProduct] = (sequent,pos) => {
     //@todo if frees depend on bound variables that are not mentioned in evolution domain constraint, then diffCut
     val (system, constraint, post, allowPost) = sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, pf)) => (ode.ode,ode.constraint,pf,false)
@@ -47,12 +54,12 @@ object InvariantGenerator extends Logging {
       distinct.
       // new invariants only that aren't in the evolution domain constraint yet
       //@note it's never a good idea to diffCut the postcondition itself, because a direct proof then also succeeds
-      filter(fml => (allowPost || fml!=post) && !evos.contains(fml)).
+      filter(prod => (allowPost || prod._1!=post) && !evos.contains(prod._1)).
       // filter out constants
       // filter(fml => !StaticSemantics.freeVars(fml).symbols.intersect(bounds).isEmpty)
       // candidates with knowledge about missing variables
       //@todo could check that a cut with this extra knowledge would actually prove invariant, but not sure if that pays off compared to just trying the proof.
-      filter(StaticSemantics.freeVars(_).symbols.intersect(missing).nonEmpty)
+      filter(prod => StaticSemantics.freeVars(prod._1).symbols.intersect(missing).nonEmpty)
       //@todo could check that it's not a tautology using RCF or check that it's not provable by DW
       //@todo postpone and try later candidates not covering all their dependencies (given the knowledge)
       //        filter(fml => {
@@ -63,7 +70,7 @@ object InvariantGenerator extends Logging {
   /** A relevance filtering tool for dependency-optimized invariant and differential invariant generation
     * based on the candidates from `generator`.
     * @author Andre Platzer */
-  def sortedRelevanceFilter(generator: Generator[Formula]): Generator[Formula] = (sequent,pos) => {
+  def sortedRelevanceFilter(generator: Generator[GenProduct]): Generator[GenProduct] = (sequent,pos) => {
     //@todo if frees depend on bound variables that are not mentioned in evolution domain constraint, then diffCut
     val system = sequent.sub(pos) match {
       case Some(Box(ode: ODESystem, _)) => ode.ode
@@ -88,66 +95,66 @@ object InvariantGenerator extends Logging {
     relevanceFilter(generator, analyzeMissing = true)(sequent, pos).
       // sort by dependency order
       //@todo performance construction should probably have been the other way around to ensure primitive dependencies are tried first and avoding sorting by that order retroactively
-      sortWith((a:Formula,b:Formula) =>
+      sortWith((a: GenProduct, b: GenProduct) =>
         //@todo improve sorting to take dependency order into account, not just number. If x depends on y then y is smaller.
         //@todo improve sorting to take dependency cluster into account, too.
-        if (a.isFOL == b.isFOL) sizeCompare(a, b)
-        else a.isFOL //@note a.isFOL != b.isFOL, FOL are smaller than non-FOL formulas
+        if (a._1.isFOL == b._1.isFOL) sizeCompare(a._1, b._1)
+        else a._1.isFOL //@note a.isFOL != b.isFOL, FOL are smaller than non-FOL formulas
       )
   }
 
   /** Default invariant generator used in Bellerophon tactics if no specific generator is requested. */
-  lazy val defaultInvariantGenerator: Generator[Formula] = cached((sequent,pos) =>
+  lazy val defaultInvariantGenerator: Generator[GenProduct] = cached((sequent,pos) =>
     (loopInvariantGenerator(sequent,pos) #::: differentialInvariantGenerator(sequent,pos)).distinct)
 
   /** A differential invariant generator.
     * @author Andre Platzer */
-  lazy val differentialInvariantGenerator: Generator[Formula] = cached((sequent,pos) =>
+  lazy val differentialInvariantGenerator: Generator[GenProduct] = cached((sequent,pos) =>
     (TactixLibrary.invGenerator(sequent,pos) #::: differentialInvariantCandidates(sequent,pos)).distinct
   // ++ relevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos)
   )
 
   /** A more expensive extended differential invariant generator.
     * @author Andre Platzer */
-  lazy val extendedDifferentialInvariantGenerator: Generator[Formula] = cached((sequent,pos) =>
+  lazy val extendedDifferentialInvariantGenerator: Generator[GenProduct] = cached((sequent,pos) =>
     sortedRelevanceFilter(inverseCharacteristicDifferentialInvariantGenerator)(sequent,pos).distinct
   )
 
   /** A loop invariant generator.
     * @author Andre Platzer */
-  lazy val loopInvariantGenerator: Generator[Formula] = cached((sequent,pos) =>
+  lazy val loopInvariantGenerator: Generator[GenProduct] = cached((sequent,pos) =>
     (TactixLibrary.invGenerator(sequent,pos) #::: sortedRelevanceFilter(loopInvariantCandidates)(sequent,pos)).distinct
   )
 
   /** A simplistic differential invariant candidate generator.
     * @author Andre Platzer */
-  lazy val differentialInvariantCandidates: Generator[Formula] = cached((sequent,pos) =>
+  lazy val differentialInvariantCandidates: Generator[GenProduct] = cached((sequent,pos) =>
     //@note be careful to not evaluate entire stream by sorting etc.
     (sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #:::
       relevanceFilter(pegasusCandidates, analyzeMissing = false)(sequent,pos)).distinct)
 
   /** A simplistic loop invariant candidate generator.
     * @author Andre Platzer */
-  lazy val loopInvariantCandidates: Generator[Formula] = simpleInvariantCandidates
+  lazy val loopInvariantCandidates: Generator[GenProduct] = simpleInvariantCandidates
 
 
   /** A simplistic invariant and differential invariant candidate generator.
     * @author Andre Platzer */
-  lazy val simpleInvariantCandidates: Generator[Formula] = (sequent,pos) => {
+  lazy val simpleInvariantCandidates: Generator[GenProduct] = (sequent,pos) => {
     def combinedAssumptions(loop: Loop): Formula = {
       sequent.ante.toList.filter(fml => !StaticSemantics.freeVars(fml).intersect(StaticSemantics.boundVars(loop)).isEmpty).reduceOption(And).getOrElse(True)
     }
     sequent.sub(pos) match {
-      case Some(Box(_: ODESystem, post)) => FormulaTools.conjuncts(post +: sequent.ante.toList).toStream.distinct
-      case Some(Box(l: Loop, post))     => (FormulaTools.conjuncts(post +: sequent.ante.toList) :+ combinedAssumptions(l) :+ post).toStream.distinct
+      case Some(Box(_: ODESystem, post)) => FormulaTools.conjuncts(post +: sequent.ante.toList).map(_ -> None).toStream.distinct
+      case Some(Box(l: Loop, post))     => (FormulaTools.conjuncts(post +: sequent.ante.toList) :+ combinedAssumptions(l) :+ post).map(_ -> None).toStream.distinct
       case Some(_) => throw new IllegalArgumentException("ill-positioned " + pos + " does not give a differential equation or loop in " + sequent)
       case None => throw new IllegalArgumentException("ill-positioned " + pos + " undefined in " + sequent)
     }}
 
   /** Pegasus invariant generator (requires Mathematica). */
-  lazy val pegasusInvariants: Generator[Formula] = pegasus(includeCandidates=false)
-  lazy val pegasusCandidates: Generator[Formula] = pegasus(includeCandidates=true)
-  def pegasus(includeCandidates: Boolean): Generator[Formula] = (sequent,pos) => sequent.sub(pos) match {
+  lazy val pegasusInvariants: Generator[GenProduct] = pegasus(includeCandidates=false)
+  lazy val pegasusCandidates: Generator[GenProduct] = pegasus(includeCandidates=true)
+  def pegasus(includeCandidates: Boolean): Generator[GenProduct] = (sequent,pos) => sequent.sub(pos) match {
     case Some(Box(ode: ODESystem, post: Formula)) if post.isFOL =>
       ToolProvider.invGenTool() match {
         case Some(tool) =>
@@ -155,7 +162,7 @@ object InvariantGenerator extends Logging {
           lazy val invs =
             if (includeCandidates) pegasusInvs.flatMap({ case Left(l) => l case Right(r) => r })
             else pegasusInvs.filter(_.isLeft).flatMap(_.left.get)
-          Stream[Formula]() #::: invs.toStream.distinct
+          Stream[GenProduct]() #::: invs.map(_ -> None).toStream.distinct
         case _ => Seq().toStream
       }
     case Some(Box(_: ODESystem, post: Formula)) if !post.isFOL => Seq().toStream.distinct
@@ -166,7 +173,7 @@ object InvariantGenerator extends Logging {
   /** Inverse Characteristic Method differential invariant generator.
     * @see Andre Platzer. [[https://doi.org/10.1007/978-3-642-32347-8_3 A differential operator approach to equational differential invariants]]. In Lennart Beringer and Amy Felty, editors, Interactive Theorem Proving, International Conference, ITP 2012, August 13-15, Princeton, USA, Proceedings, volume 7406 of LNCS, pages 28-48. Springer, 2012.
     */
-  val inverseCharacteristicDifferentialInvariantGenerator: Generator[Formula] = (sequent,pos) => {
+  val inverseCharacteristicDifferentialInvariantGenerator: Generator[GenProduct] = (sequent,pos) => {
     import FormulaTools._
     if (ToolProvider.algebraTool().isEmpty) throw new BelleThrowable("inverse characteristic method needs a computer algebra tool")
     if (ToolProvider.pdeTool().isEmpty) throw new BelleThrowable("inverse characteristic method needs a PDE Solver")
@@ -193,15 +200,15 @@ object InvariantGenerator extends Logging {
       val initial = algebra.polynomialReduce(inv, GB)._2
       //@todo could check that it's not a tautology using RCF
       List(Equal(inv,initial),GreaterEqual(inv,initial),LessEqual(inv,initial)).filter(cand => !evos.contains(cand))
-    }).distinct
+    }).map(_ -> None).distinct
   }
 
 
   /** A cached invariant generator based on the candidates from `generator` that also remembers answers
     * to speed up computations.
     * @author Andre Platzer */
-  def cached(generator: Generator[Formula]): Generator[Formula] = {
-    val cache: scala.collection.mutable.Map[Box, Stream[Formula]] = new scala.collection.mutable.LinkedHashMap()
+  def cached(generator: Generator[GenProduct]): Generator[GenProduct] = {
+    val cache: scala.collection.mutable.Map[Box, Stream[GenProduct]] = new scala.collection.mutable.LinkedHashMap()
     (sequent,pos) => {
       val box = sequent.sub(pos) match {
         case Some(Box(ODESystem(ode, And(True, q)), pf)) => Box(ODESystem(ode, q), pf)

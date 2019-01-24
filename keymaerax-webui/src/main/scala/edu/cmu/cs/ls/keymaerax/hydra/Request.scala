@@ -32,6 +32,7 @@ import java.util.{Calendar, Locale}
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 
 import scala.io.Source
@@ -115,7 +116,7 @@ abstract class UserRequest(username: String) extends Request {
 }
 
 /** A proof session storing information between requests. */
-case class ProofSession(proofId: String, invGenerator: Generator[Formula], defs: KeYmaeraXArchiveParser.Declaration)
+case class ProofSession(proofId: String, invGenerator: Generator[GenProduct], defs: KeYmaeraXArchiveParser.Declaration)
 
 abstract class UserModelRequest(db: DBAbstraction, username: String, modelId: String) extends UserRequest(username) {
   override final def resultingResponses(): List[Response] = {
@@ -1127,9 +1128,9 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
       proofInfo.modelId match {
         case None => new ErrorResponse("Unable to open proof " + proofId + ", because it does not refer to a model")::Nil // duplicate check to above
         case Some(mId) =>
-          val generator = new ConfigurableGenerator[Formula]()
+          val generator = new ConfigurableGenerator[GenProduct]()
           KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
-            generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ inv)))
+            generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
           val defsGenerator = new ConfigurableGenerator[Expression]()
           val problem = KeYmaeraXArchiveParser.parseProblem(db.getModel(mId).keyFile)
           problem.defs.substs.foreach(sp => defsGenerator.products += (sp.what -> (sp.repl::Nil)))

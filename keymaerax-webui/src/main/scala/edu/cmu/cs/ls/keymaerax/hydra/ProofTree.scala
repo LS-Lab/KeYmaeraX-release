@@ -225,7 +225,7 @@ abstract class DbProofTreeNode(db: DBAbstraction, val proofId: String) extends P
       subFormula match {
         case Box(Loop(_), _) =>
           val invariant = generator(goal, pos).iterator
-          if (invariant.hasNext) Map(FormulaArg("J") -> invariant.next)
+          if (invariant.hasNext) Map(FormulaArg("J") -> invariant.next._1)
           else Map.empty
         case Box(_: ODESystem, p) => Map(FormulaArg("P", List("y")) -> p) //@hack for dG
         case _ => Map.empty

@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.TacticStatistics
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests._
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.core.{False, Formula, Imply, Program, Sequent, SuccPos}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser}
@@ -158,7 +159,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
     if (genCheck) {
       beforeEach()
       withMathematica(_ => {}) //@HACK beforeEach and afterEach clean up tool provider
-      val model = parseStripHints(modelContent)
+      val (model, _) = parseStripHints(modelContent)
 
       try {
         val Imply(ante, succ) = model
@@ -167,7 +168,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
         val invGenStart = System.currentTimeMillis()
         val candidates = InvariantGenerator.pegasusInvariants(seq, SuccPos(0)).toList
         val invGenEnd = System.currentTimeMillis()
-        println(s"Done generating (${candidates.map(_.prettyString).mkString(",")}) $name")
+        println(s"Done generating (${candidates.map(_._1.prettyString).mkString(",")}) $name")
         if (candidates.nonEmpty) {
           println(s"Checking $name")
           TactixLibrary.invGenerator = FixedGenerator(candidates)
@@ -195,17 +196,17 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
     }
   }
 
-  private def runEntry(name: String, modelContent: String, modelParser: String => Formula, tactic: Option[String]): BenchmarkResult = {
+  private def runEntry(name: String, modelContent: String, modelParser: String => (Formula, KeYmaeraXArchiveParser.Declaration), tactic: Option[String]): BenchmarkResult = {
     beforeEach()
     withMathematica(_ => {}) //@HACK beforeEach and afterEach clean up tool provider
-    val model = modelParser(modelContent)
+    val (model, defs) = modelParser(modelContent)
     val result = tactic match {
       case Some(t) =>
         println(s"Proving $name")
 
         qeDurationListener.reset()
         val start = System.currentTimeMillis()
-        val theTactic = BelleParser(t)
+        val theTactic = BelleParser.parseWithInvGen(t, None, defs)
         try {
           val proof = failAfter(Span(timeout, Seconds))({
             proveBy(model, theTactic)
@@ -235,22 +236,23 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
   }
 
   /** Parse model and add proof hint annotations to invariant generator. */
-  private def parseWithHints(modelContent: String): Formula = {
+  private def parseWithHints(modelContent: String): (Formula, KeYmaeraXArchiveParser.Declaration) = {
     TactixLibrary.invGenerator = FixedGenerator(Nil)
-    val generator = new ConfigurableGenerator[Formula]()
+    val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
-      generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ inv)))
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent)
+      generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
+    val entry = KeYmaeraXArchiveParser(modelContent).head
     TactixLibrary.invGenerator = generator
     KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {}) //@note cleanup for separation between tutorial entries
-    model
+    (entry.model.asInstanceOf[Formula], entry.defs)
   }
 
   /** Parse model but ignore all proof hints. */
-  private def parseStripHints(modelContent: String): Formula = {
+  private def parseStripHints(modelContent: String): (Formula, KeYmaeraXArchiveParser.Declaration) = {
     TactixLibrary.invGenerator = FixedGenerator(Nil)
     KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {})
-    KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent)
+    val entry = KeYmaeraXArchiveParser(modelContent).head
+    (entry.model.asInstanceOf[Formula], entry.defs)
   }
 
 }
