@@ -727,7 +727,7 @@ private object DifferentialTactics extends Logging {
             tool.refuteODE(ode,seq.ante,post) match {
               case None => skip
               case Some(cex) =>
-                DebuggingTactics.error("Found a counterexample for the ODE conjecture: "+cex)
+                DebuggingTactics.error("Found a counterexample for the ODE conjecture (numeric values reported): "+cex)
             }
 
           } catch {
