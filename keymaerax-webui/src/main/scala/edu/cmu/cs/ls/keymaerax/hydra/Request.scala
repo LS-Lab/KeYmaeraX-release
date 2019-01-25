@@ -267,12 +267,24 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
         }
 
         try {
-          ToolProvider.cexTool() match {
-            case Some(cexTool) => getCex(node, cexTool)
-            case None => new CounterExampleResponse("cex.notool") :: Nil
+          node.goal match {
+            case Some(sequent) if sequent.isFOL => ToolProvider.cexTool() match {
+                case Some(cexTool) => getCex(node, cexTool)
+                case None => new CounterExampleResponse("cex.notool") :: Nil
+              }
+            case Some(sequent) => sequent.succ.find({ case Box(_: ODESystem, _) => true case _ => false }) match {
+              case Some(Box(ode: ODESystem, post)) => ToolProvider.invGenTool() match {
+                case Some(tool) => tool.refuteODE(ode, sequent.ante, post) match {
+                  case None => new CounterExampleResponse("cex.none") :: Nil
+                  case Some(cex) => new CounterExampleResponse("cex.found", sequent.toFormula, cex) :: Nil
+                }
+                case None => new CounterExampleResponse("cex.notool") :: Nil
+              }
+            }
+            case None => new CounterExampleResponse("cex.none") :: Nil
           }
         } catch {
-          case ex: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
+          case _: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
         }
     }
   }

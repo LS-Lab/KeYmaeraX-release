@@ -708,28 +708,23 @@ private object DifferentialTactics extends Logging {
     * (including when the sequent or position are not of the expected shape)
     */
   lazy val cexCheck: DependentPositionTactic = "cexCheck" by ((pos: Position, seq:Sequent) => {
-    if(!(pos.isSucc && pos.isTopLevel && pos.checkSucc.index0 == 0 && seq.succ.length==1)) {
+    if (!(pos.isSucc && pos.isTopLevel && pos.checkSucc.index0 == 0 && seq.succ.length==1)) {
       //todo: currently only works if there is exactly one succedent
       logger.warn("ODE counterexample not called at top-level succedent")
       skip
-    }
-    else if (ToolProvider.invGenTool().isEmpty) {
+    } else if (ToolProvider.invGenTool().isEmpty) {
       logger.warn("ODE counterexample requires an InvGenTool, but got None")
       skip
-    }
-    else
-    {
+    } else {
       val tool = ToolProvider.invGenTool().get
 
       seq.sub(pos) match {
         case Some(Box(ode:ODESystem, post)) =>
           try {
-            tool.refuteODE(ode,seq.ante,post) match {
+            tool.refuteODE(ode, seq.ante, post) match {
               case None => skip
-              case Some(cex) =>
-                DebuggingTactics.error("Found a counterexample for the ODE conjecture: "+cex)
+              case Some(_) => cut(False) <(closeF, cohideR('Rlast))
             }
-
           } catch {
             // cannot falsify for whatever reason (timeout, ...), so continue with the tactic
             case _: Exception => skip
@@ -944,10 +939,9 @@ private object DifferentialTactics extends Logging {
         // Try to prove postcondition invariant
         odeInvariant()(pos) |
         // Counterexample check
-        // cexCheck(pos) &
-        // Some additional cases
-        //(solve(pos) & ?(timeoutQE))|
-        (
+        cexCheck(pos) & doIf(!_.subgoals.exists(_.succ.forall(_ == False)))(
+          // Some additional cases
+          //(solve(pos) & ?(timeoutQE))|
           ODEInvariance.nilpotentSolve(true)(pos) |
           // todo: Pegasus should tell us for nonlinear ODEs
           // (diffUnpackEvolutionDomainInitially(pos) & DebuggingTactics.print("diff unpack") & hideR(pos) & timeoutQE & done) |
