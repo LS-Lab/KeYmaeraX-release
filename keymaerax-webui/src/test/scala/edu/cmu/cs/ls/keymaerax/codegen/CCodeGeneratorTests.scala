@@ -952,6 +952,18 @@ class CCodeGeneratorTests extends TacticTestBase {
     compileAndRun(code("5.0L"), "Result x=3.0\n")
   }
 
+  it should "compile standalone if" in {
+    val program = "if (x>=5) { y:=2; }".asProgram
+    val stateVars = Set(Variable("x"), Variable("y"))
+    new CDetControllerGenerator()(program, stateVars)._2 shouldBe
+      """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+        |  if (params->x >= 5.0L) {
+        |    curr.y = 2.0L;
+        |  }
+        |  return curr;
+        |}""".stripMargin
+  }
+
   private def compileAndRun(code: String, expected: String) = {
     val cmd = CodeGenTestTools.compileC(code)
     val p = Runtime.getRuntime.exec(cmd)
