@@ -18,7 +18,6 @@ package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable
 import SetLattice.bottom
 import SetLattice.allVars
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 /** Admissibility conditions. */
 object SubstitutionAdmissibility {
@@ -324,16 +323,6 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensuring contracts checked.
   def apply(s: Sequent): Sequent = try { Sequent(s.ante.map(apply), s.succ.map(apply)) } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 
-  /**
-    * Apply uniform substitution to a Provable (convenience method).
- *
-    * @return `pr(this)`
-    * @note Convenience method not used in the core.
-    * @see [[ProvableSig.apply(USubst)]]
-    */
-  def apply(pr: ProvableSig): ProvableSig = pr.apply(this)
-
-
   /** Union of uniform substitutions, i.e., both replacement lists merged.
     * @note Convenience method not used in the core, but used for stapling uniform substitutions together during unification etc.
     */
@@ -508,7 +497,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   } ensuring(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
 
   /** Turns matching terms into substitution pairs (traverses pairs to create component-wise substitutions). */
-  def toSubsPairs(w: Term, r: Term): List[SubstitutionPair] = (w, r) match {
+  private def toSubsPairs(w: Term, r: Term): List[SubstitutionPair] = (w, r) match {
     case (Pair(wl, wr), Pair(rl, rr)) => toSubsPairs(wl, rl) ++ toSubsPairs(wr, rr)
     case _ => SubstitutionPair(w, usubst(r)) :: Nil
   }

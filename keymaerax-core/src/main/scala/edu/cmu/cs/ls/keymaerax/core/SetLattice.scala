@@ -94,6 +94,7 @@ object SetLattice {
   //def apply[A](e: A*): SetLattice[A] = new FiniteSet(e.toSet)
   def apply[A](s: immutable.Set[A]): SetLattice[A] = FiniteSet(s)
   def apply[A](s: immutable.Seq[A]): SetLattice[A] = FiniteSet(s.toSet)
+  /** The empty lattice containing nothing */
   def bottom[A]: SetLattice[A] = FiniteSet(Set.empty[A])
   /** The set of all variables including differential symbols. */
   val allVars: SetLattice[Variable] = CoFiniteSet(Set.empty, Set.empty)
