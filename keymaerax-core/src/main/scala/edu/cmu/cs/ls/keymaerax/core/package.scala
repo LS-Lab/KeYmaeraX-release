@@ -178,6 +178,8 @@ package object core {
   /** KeYmaera X core kernel version number */
   val VERSION = Source.fromInputStream(getClass.getResourceAsStream("/VERSION")).getLines().next
 
+  type USubst = USubstOne
+
   /** Insist on `requirement` being true, throwing a [[CoreException]] if false.
     *  This method is a `require` coming from the prover core that cannot be disabled.
     *  Blame is on the caller of the method
