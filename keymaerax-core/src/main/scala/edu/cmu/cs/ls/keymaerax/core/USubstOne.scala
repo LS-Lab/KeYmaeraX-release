@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaerax.core
 
 import scala.collection.immutable
+import StaticSemantics.freeVars
 import StaticSemantics.boundVars
 import SetLattice.allVars
 import SetLattice.bottom
@@ -131,7 +132,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case f: UnitFunctional if subsDefs.exists(_.what==f) => subsDefs.find(_.what==f).get.repl.asInstanceOf[Term]
       case f: UnitFunctional if !subsDefs.exists(_.what==f) => f
     }
-  } ensuring(r => r.kind==term.kind && r.sort==term.sort, "Uniform Substitution leads to same kind and same sort " + term)
+  } //ensuring(r => r.kind==term.kind && r.sort==term.sort, "Uniform Substitution leads to same kind and same sort " + term)
 
 
   /** uniform substitution on formulas */
@@ -183,7 +184,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case Equiv(l, r) => Equiv(usubst(u, l), usubst(u, r))
 
       // NOTE DifferentialFormula in analogy to Differential
-      case der@DifferentialFormula(g) => DifferentialFormula(usubst(SetLattice.allVars, g))
+      case der@DifferentialFormula(g) => DifferentialFormula(usubst(allVars, g))
 
       // binding cases add bound variables to u
       case Forall(vars, g) => Forall(vars, usubst(u++vars, g))
@@ -194,7 +195,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case p: UnitPredicational if subsDefs.exists(_.what==p) => subsDefs.find(_.what==p).get.repl.asInstanceOf[Formula]
       case p: UnitPredicational if !subsDefs.exists(_.what==p) => p
     }
-  } ensuring(r => r.kind==formula.kind && r.sort==formula.sort, "Uniform Substitution leads to same kind and same sort " + formula)
+  } //ensuring(r => r.kind==formula.kind && r.sort==formula.sort, "Uniform Substitution leads to same kind and same sort " + formula)
 
   /** uniform substitution on programs */
   private def usubst(u: SetLattice[Variable], program: Program): (SetLattice[Variable],Program) = {
@@ -213,14 +214,14 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case Test(f)           => (u, Test(usubst(u,f)))
       case ODESystem(ode, h) =>
         //@todo could make smaller for substituted DifferentialProgramConst
-        val v = u++StaticSemantics(ode).bv
+        val v = u++boundVars(ode)
         (v, ODESystem(usubstODE(v, ode), usubst(v, h)))
       case Choice(a, b)      => val (v,ra) = usubst(u,a); val (w,rb) = usubst(u,b); (v++w, Choice(ra, rb))
       case Compose(a, b)     => val (v,ra) = usubst(u,a); val (w,rb) = usubst(v,b); (w, Compose(ra, rb))
       case Loop(a)           => val (v,_)  = usubst(u,a); val (w,ra) = usubst(v,a); (w, Loop(ra))
       case Dual(a)           => val (v,ra) = usubst(u,a); (v, Dual(ra))
     }
-  } ensuring(r => r._2.kind==program.kind && r._2.sort==program.sort, "Uniform Substitution leads to same kind and same sort " + program)
+  } //ensuring(r => r._2.kind==program.kind && r._2.sort==program.sort, "Uniform Substitution leads to same kind and same sort " + program)
 
   /** uniform substitutions on differential programs */
   private def usubstODE(v: SetLattice[Variable], ode: DifferentialProgram): DifferentialProgram = {
@@ -235,7 +236,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       // homomorphic cases
       case DifferentialProduct(a, b) => DifferentialProduct(usubstODE(v, a), usubstODE(v, b))
     }
-  } ensuring(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
+  } //ensuring(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
 
 
   // admissibility
@@ -245,7 +246,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
     * raise informative exception if not.
     */
   @inline private def requireAdmissible(taboo: SetLattice[Variable], e: Expression, context: Expression): Unit = {
-    val frees = StaticSemantics.freeVars(e)
+    val frees = freeVars(e)
     val clashes = frees.intersect(taboo)
     if (!clashes.isEmpty)
       throw new SubstitutionClashException(toString, taboo.prettyString, e.prettyString, context.prettyString, clashes.prettyString, "")
