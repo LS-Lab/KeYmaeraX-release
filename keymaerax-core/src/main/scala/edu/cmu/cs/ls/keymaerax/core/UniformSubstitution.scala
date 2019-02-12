@@ -246,7 +246,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
   *   println(next)
   * }}}
   */
-final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends (Expression => Expression) {
+final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) extends (Expression => Expression) {
   /** automatically filter out identity substitution no-ops, which can happen by systematic constructions such as unification */
   private[this] val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
 
@@ -326,7 +326,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   /** Union of uniform substitutions, i.e., both replacement lists merged.
     * @note Convenience method not used in the core, but used for stapling uniform substitutions together during unification etc.
     */
-  def ++(other: USubst): USubst = USubst((this.subsDefsInput ++ other.subsDefsInput).distinct)
+  def ++(other: USubstChurch): USubstChurch = USubstChurch((this.subsDefsInput ++ other.subsDefsInput).distinct)
 
 
   /**
@@ -337,7 +337,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
     subsDefs.exists(sp => sp.what.isInstanceOf[ApplicationOf] && sp.sameHead(e))
 
   // implementation of uniform substitution application
-      
+
   /** uniform substitution on terms */
   private def usubst(term: Term): Term = {
     term match {
@@ -351,7 +351,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
-        USubst(toSubsPairs(wArg, theta)).usubst(subs.repl.asInstanceOf[Term])
+        USubstChurch(toSubsPairs(wArg, theta)).usubst(subs.repl.asInstanceOf[Term])
       case app@FuncOf(g:Function, theta) if !matchHead(app) => FuncOf(g, usubst(theta))
       case Nothing =>
         assert(!subsDefs.exists(sp => sp.what == Nothing /*&& sp.repl != Nothing*/), "can replace Nothing only by Nothing, and nothing else");
@@ -388,7 +388,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
-        USubst(toSubsPairs(wArg, theta)).usubst(subs.repl.asInstanceOf[Formula])
+        USubstChurch(toSubsPairs(wArg, theta)).usubst(subs.repl.asInstanceOf[Formula])
       case app@PredOf(q, theta) if !matchHead(app) => PredOf(q, usubst(theta))
       case app@PredicationalOf(op, fml) if matchHead(app) =>
         requireAdmissible(allVars, fml, formula)
@@ -396,7 +396,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         val PredicationalOf(wp, wArg) = subs.what
         assert(wp == op, "match only if same head")
         assert(wArg == DotFormula)
-        USubst(SubstitutionPair(wArg, usubst(fml)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])
+        USubstChurch(SubstitutionPair(wArg, usubst(fml)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])
       case app@PredicationalOf(q, fml) if !matchHead(app) =>
         //@note admissibility is required for nonmatching predicationals since the arguments might be evaluated in different states.
         requireAdmissible(allVars, fml, formula)
@@ -559,7 +559,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
     * @see Definition 19 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
     * @see arXiv:1503.01981 Definition 12.
     */
-  @inline private def projection(affected: immutable.Set[NamedSymbol]): USubst = new USubst(
+  @inline private def projection(affected: immutable.Set[NamedSymbol]): USubstChurch = new USubstChurch(
     subsDefs.filter(sigma => affected.contains(sigma.matchKey))
   )
 
