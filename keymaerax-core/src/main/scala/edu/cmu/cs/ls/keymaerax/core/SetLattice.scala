@@ -195,7 +195,7 @@ private case class CoFiniteSet[A](excluded: immutable.Set[A], literally: immutab
   def symbols[B >: A]: Set[B] = literally.toSet
 
   override def toString: String = "all but " + excluded.toString
-  def prettyString: String = "all but {" + excluded.mkString(",") + "}"
+  def prettyString: String = if (excluded.isEmpty) "all" else "all but {" + excluded.mkString(",") + "}"
 }
 
 
