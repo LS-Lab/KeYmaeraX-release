@@ -22,7 +22,7 @@ import SetLattice.bottom
   */
 final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) extends (Expression => Expression) {
   /** automatically filter out identity substitution no-ops, which can happen by systematic constructions such as unification */
-  private[this] val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
+  private/*[this]*/ val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
 
   insist(noException(dataStructureInvariant), "unique left-hand sides in substitutees " + this)
 
@@ -88,7 +88,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   /** Union of uniform substitutions, i.e., both replacement lists merged.
     * @note Convenience method not used in the core, but used for stapling uniform substitutions together during unification etc.
     */
-  def ++(other: USubstOne): USubstOne = USubstOne((this.subsDefsInput ++ other.subsDefsInput).distinct)
+  def ++(other: USubstOne): USubstOne = USubstOne((this.subsDefs ++ other.subsDefs).distinct)
 
 
   /**
@@ -110,7 +110,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
         val FuncOf(wf, wArg) = subs.what
         assert(wf == of, "match on same function heads")
         assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
-        requireAdmissible(u, subs.repl, term)
+        requireAdmissible(u, subs.freeVars, subs.repl, term)
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
         USubstOne(toSubsPairs(u, wArg, theta)).usubst(bottom[Variable], subs.repl.asInstanceOf[Term])
@@ -119,9 +119,9 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
         assert(!subsDefs.exists(sp => sp.what == Nothing /*&& sp.repl != Nothing*/), "can replace Nothing only by Nothing, and nothing else");
         Nothing
       case d: DotTerm if  subsDefs.exists(_.what==d) =>
-        val r = subsDefs.find(_.what==d).get.repl.asInstanceOf[Term]
-        requireAdmissible(u, r, term)
-        r
+        val subs = subsDefs.find(_.what==d).get
+        requireAdmissible(u, subs.freeVars, subs.repl, term)
+        subs.repl.asInstanceOf[Term]
       case d: DotTerm if !subsDefs.exists(_.what==d) => term
       case n: Number => n
       //@note except for Differential, the following cases are equivalent to f.reapply but are left explicit to enforce revisiting this case when data structure changes.
@@ -150,7 +150,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
         val PredOf(wp, wArg) = subs.what
         assert(wp == op, "match only if same head")
         assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
-        requireAdmissible(u, subs.repl, formula)
+        requireAdmissible(u, subs.freeVars, subs.repl, formula)
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
         USubstOne(toSubsPairs(u, wArg, theta)).usubst(bottom[Variable], subs.repl.asInstanceOf[Formula])
@@ -251,9 +251,8 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
     * Require that this uniform substitution is admissible with the given taboos for expression e, and
     * raise informative exception if not.
     */
-  @inline private def requireAdmissible(taboo: SetLattice[Variable], e: Expression, context: Expression): Unit = {
-    val frees = freeVars(e)
-    val clashes = frees.intersect(taboo)
+  @inline private def requireAdmissible(taboo: SetLattice[Variable], frees: SetLattice[Variable], e: Expression, context: Expression): Unit = {
+    val clashes = taboo.intersect(frees)
     if (!clashes.isEmpty)
       throw new SubstitutionClashException(toString, taboo.prettyString, e.prettyString, context.prettyString, clashes.prettyString, "")
   }
