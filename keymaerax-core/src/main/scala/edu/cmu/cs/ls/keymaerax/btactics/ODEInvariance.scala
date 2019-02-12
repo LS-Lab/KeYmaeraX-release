@@ -915,7 +915,7 @@ object ODEInvariance {
         val subst1 = UnificationMatch.unifiable(lemDist.conclusion.succ(0).sub(PosInExpr(0::0::Nil)).get,cur.conclusion.succ(0)).get
         val subst2 = UnificationMatch.unifiable(lemDist.conclusion.succ(0).sub(PosInExpr(0::1::Nil)).get,pr.conclusion.succ(0)).get
         val subst = subst1++subst2
-        val lemma = subst.usubst(lemDist)
+        val lemma = lemDist(subst.usubst)
         val uspr = proveBy(lemma.conclusion.succ(0).sub(PosInExpr(1::Nil)).get.asInstanceOf[Formula],
           useAt(lemma,PosInExpr(1::Nil))(1) & andR(1) <(by(cur),by(pr))
         )

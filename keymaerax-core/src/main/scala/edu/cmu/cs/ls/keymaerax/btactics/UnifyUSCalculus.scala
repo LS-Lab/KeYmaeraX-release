@@ -103,7 +103,7 @@ trait UnifyUSCalculus {
     * @see [[byUS()]]
     */
   def by(name: String, subst: USubst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
-    by(subst(ProvableInfo(name).provable))
+    by(ProvableInfo(name).provable(subst))
   })
   /** by(name,subst) uses the given axiom or axiomatic rule under the given substitution to prove the sequent. */
   def by(name: String, subst: Subst): BelleExpr = new NamedTactic(ProvableInfo(name).codeName, {
