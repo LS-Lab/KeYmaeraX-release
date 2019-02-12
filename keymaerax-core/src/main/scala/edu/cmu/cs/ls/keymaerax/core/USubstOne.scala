@@ -66,16 +66,23 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   /** apply this uniform substitution everywhere in a program */
   def apply(p: Program): Program = try usubst(bottom[Variable], p)._2 catch {case ex: ProverException => throw ex.inContext(p.prettyString)}
   /** apply this uniform substitution everywhere in a differential program */
-  def apply(p: DifferentialProgram): DifferentialProgram = try usubst(bottom[Variable], p)._2.asInstanceOf[DifferentialProgram] catch {case ex: ProverException => throw ex.inContext(p.prettyString)}
-
-  /** apply this uniform substitution everywhere in a formula with allVariables as taboos */
-  def applyAllTaboo(f: Formula): Formula = try usubst(allVars, f) catch {case ex: ProverException => throw ex.inContext(f.prettyString)}
+  def apply(p: DifferentialProgram): DifferentialProgram = try usubstODE(boundVars(p), p).asInstanceOf[DifferentialProgram] catch {case ex: ProverException => throw ex.inContext(p.prettyString)}
 
   /**
     * Apply uniform substitution everywhere in the sequent.
     */
   //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensuring contracts checked.
   def apply(s: Sequent): Sequent = try { Sequent(s.ante.map(apply), s.succ.map(apply)) } catch { case ex: ProverException => throw ex.inContext(s.toString) }
+
+
+  /** apply this uniform substitution everywhere in a formula with allVariables as taboos */
+  def applyAllTaboo(f: Formula): Formula = try usubst(allVars, f) catch {case ex: ProverException => throw ex.inContext(f.prettyString)}
+
+  /**
+    * Apply uniform substitution everywhere in the sequent with allVariables as taboos.
+    */
+  //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensuring contracts checked.
+  def applyAllTaboo(s: Sequent): Sequent = try { Sequent(s.ante.map(applyAllTaboo(_)), s.succ.map(applyAllTaboo(_))) } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 
 
   /** Union of uniform substitutions, i.e., both replacement lists merged.
@@ -150,7 +157,6 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case app@PredOf(q, theta) if !matchHead(app) => PredOf(q, usubst(u, theta))
       // unofficial
       case app@PredicationalOf(op, fml) if matchHead(app) =>
-        requireAdmissible(allVars, fml, formula)
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[PredicationalOf] && sp.sameHead(app))
         val PredicationalOf(wp, wArg) = subs.what
         assert(wp == op, "match only if same head")
