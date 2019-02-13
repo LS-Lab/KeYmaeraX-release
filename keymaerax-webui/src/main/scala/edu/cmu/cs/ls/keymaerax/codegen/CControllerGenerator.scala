@@ -103,7 +103,7 @@ class CMpfrControllerGenerator extends CodeGenerator {
 
   private def printPlain(e: Expression)(implicit exprGenerator: Expression => (String, String)): (String, String) = {
     val printer = CPrettyPrinter.printer
-    CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter
+    CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter(printDebugOut=false)
     val result = exprGenerator(e)
     CPrettyPrinter.printer = printer
     result

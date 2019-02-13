@@ -7,9 +7,10 @@ package edu.cmu.cs.ls.keymaerax.codegen
 
 import java.io.File
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.SaturateTactic
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, Variable}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
+import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Box, Equiv, Formula, Imply, NamedSymbol, Variable}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser}
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
@@ -23,11 +24,11 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter()
+    CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter(printDebugOut = false)
   }
 
   override def afterEach(): Unit = {
-    CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter()
+    CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter(printDebugOut = false)
     super.afterEach()
   }
 
