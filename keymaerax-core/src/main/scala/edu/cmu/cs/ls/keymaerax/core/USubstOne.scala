@@ -39,11 +39,25 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   override def toString: String = "USubstOne{" + subsDefs.mkString(", ") + "}"
 
   /**
+    * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments).
+    * That is the (new) free variables introduced by this substitution, i.e.
+    * free variables of all repl that are not bound as arguments in what.
+    * @return union of the freeVars of all our substitution pairs.
+    */
+  lazy val freeVars: SetLattice[Variable] = subsDefs.foldLeft(bottom[Variable])((a,b) => a ++ b.freeVars)
+
+  /**
+    * The signature of the replacement introduced by this substitution.
+    * @return union of the freeVars of all our substitution pairs.
+    */
+  lazy val signature: immutable.Set[NamedSymbol] = subsDefs.foldLeft(Set.empty[NamedSymbol])((a,b) => a ++ b.signature)
+
+  /**
     * The key characteristic expression constituents that this Substitution is matching on.
     * @return union of the matchKeys of all our substitution pairs.
     */
   private[core] lazy val matchKeys: immutable.List[NamedSymbol] =
-  subsDefs.foldLeft(immutable.List[NamedSymbol]())((a,b) => a :+ b.matchKey)
+    subsDefs.foldLeft(immutable.List[NamedSymbol]())((a,b) => a :+ b.matchKey)
 
 
   // apply calls usubst, augmenting with contract and exception context handling
