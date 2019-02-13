@@ -171,6 +171,8 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   /** Generate a random admissible uniform substitution for the given Formula `fml` of expected complexity `size`.
     * @note Tries hard to be admissible but won't always be for all formulas.
+    *       It should shift variables on nesting occurrences such as
+    *       qq(ff()) for qq(.)~>[u1:=5].>=0, ff()~>2*u1
     * @requires no function/predicate occurrences within Differentials because those might cause inadmissibility if replaced free
     * @param diffs whether differentials can be used in the schematic instance. */
   def nextAdmissibleUSubst(fml: Formula, size: Int, diffs: Boolean = false): USubst = {
