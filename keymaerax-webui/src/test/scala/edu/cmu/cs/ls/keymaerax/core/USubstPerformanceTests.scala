@@ -25,9 +25,11 @@ import scala.concurrent.duration.Duration
 class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   val randomTrials = 200
-  val randomComplexity = 20
-  val randomSubstitutions = 10
+  val randomComplexity = 10
+  val randomSubstitutions = 5
   val rand = new RandomFormula()
+
+  val yellAtClash = true
 
   /** Test setup */
   override def beforeEach() = {
@@ -65,8 +67,8 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
         }
 
         withSafeClue("Random substitution " + us + "\n\n" + randClue) {
-          print("formula: " + fml)
           print("usubst:  " + us)
+          print("formula: " + fml)
           val t10 = System.nanoTime()
           val r = try { Some(USubst(us.subsDefsInput)(fml)) } catch {case e:SubstitutionClashException=> None}
           us1duration += System.nanoTime()-t10
@@ -76,6 +78,7 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
           us2duration += System.nanoTime()-t20
           print("result:  " + r2.getOrElse("clash"))
           r shouldBe r2
+          if (yellAtClash) Some(USubst(us.subsDefsInput)(fml))
           print("")
         }
       }
