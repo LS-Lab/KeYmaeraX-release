@@ -1,0 +1,68 @@
+/**
+  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+  * See LICENSE.txt for the conditions of this license.
+  */
+package edu.cmu.cs.ls.keymaerax.utils
+
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr, TacticStatistics}
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, FTPG, StopTraversal}
+import edu.cmu.cs.ls.keymaerax.core._
+
+/** Formula, term, and tactic statistics. */
+object Statistics {
+
+  /** Returns the number of operators in the formula `fml`, including the arithmetic operators if `arith` is true. */
+  def countFormulaOperators(fml: Formula, arith: Boolean = false): Int = {
+    var numOperators = 0
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+        case _: UnaryCompositeFormula => numOperators += 1; Left(None)
+        case _: BinaryCompositeFormula => numOperators += 1; Left(None)
+        case _ => Left(None)
+      }
+
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+        case _: UnaryCompositeTerm => if (arith) numOperators += 1; Left(None)
+        case _: BinaryCompositeTerm => if (arith) numOperators += 1; Left(None)
+        case _ => Left(None)
+      }
+    }, fml)
+    numOperators
+  }
+
+  /** The number of atomic comparisons in formula `fml`. */
+  def countAtomicFormulas(fml: Formula): Int = {
+    var numAtoms = 0
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+        case _: AtomicFormula => numAtoms += 1; Left(None)
+        case _ => Left(None)
+      }
+    }, fml)
+    numAtoms
+  }
+
+  /** The number of atomic terms in formula `fml`. */
+  def countAtomicTerms(fml: Formula): Int = doCountAtomicTerms(fml)
+
+  /** The number of atomic terms in term `trm` */
+  def countAtomicTerms(trm: Term): Int = doCountAtomicTerms(trm)
+
+  /** The number of atomic terms in expression `e`. */
+  private def doCountAtomicTerms[T: FTPG](e: T): Int = {
+    var numAtoms = 0
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+        case _: AtomicTerm => numAtoms += 1; Left(None)
+        case _ => Left(None)
+      }
+    }, e)
+    numAtoms
+  }
+
+  /** The number of tactic operators. See [[TacticStatistics.size]] */
+  def tacticSize(t: BelleExpr): Int = TacticStatistics.size(t)
+  /** The number of tactic lines. See [[TacticStatistics.lines]] */
+  def tacticLines(t: BelleExpr): Int = TacticStatistics.lines(t)
+}
