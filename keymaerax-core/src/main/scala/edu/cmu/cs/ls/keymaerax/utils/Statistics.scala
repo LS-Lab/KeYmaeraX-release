@@ -9,10 +9,13 @@ import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.{ExpressionTraversalFunction, FTPG, StopTraversal}
 import edu.cmu.cs.ls.keymaerax.core._
 
-/** Formula, term, and tactic statistics. */
+/** Formula, term, and tactic statistics.
+  * @author Stefan Mitsch
+  */
 object Statistics {
 
-  /** Returns the number of operators in the formula `fml`, including the arithmetic operators if `arith` is true. */
+  /** Returns the number of operators in the formula `fml`
+    * @param arith true to include counting arithmetic operators. */
   def countFormulaOperators(fml: Formula, arith: Boolean = false): Int = {
     var numOperators = 0
     ExpressionTraversal.traverse(new ExpressionTraversalFunction {
@@ -31,7 +34,7 @@ object Statistics {
     numOperators
   }
 
-  /** The number of atomic comparisons in formula `fml`. */
+  /** The number of atomic formulas in formula `fml`. */
   def countAtomicFormulas(fml: Formula): Int = {
     var numAtoms = 0
     ExpressionTraversal.traverse(new ExpressionTraversalFunction {

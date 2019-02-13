@@ -2,12 +2,14 @@
 * Copyright (c) Carnegie Mellon University.
 * See LICENSE.txt for the conditions of this license.
 */
+package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tags.USubstTest
+import edu.cmu.cs.ls.keymaerax.utils.Statistics
 import testHelper.CustomAssertions.withSafeClue
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
 
@@ -17,7 +19,6 @@ import scala.concurrent.duration.Duration
 
 /**
  * @author Andre Platzer
- * @note Test needs KeYmaereaXParser.LAX==true
  */
 @USubstTest
 class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
@@ -27,7 +28,7 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
   val randomSubstitutions = 5
   //RandomFormula(-1729150137019930293L)
   //RandomFormula(4131832182162163464L)
-  val rand = new RandomFormula(4131832182162163464L)
+  val randRoot = RepeatableRandom()
 
   val yellAtClash = false
 
@@ -43,7 +44,7 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
   }
 
   override def afterAll(): Unit = {
-    println("RandomFormula(" + rand.seed + "L) seed will regenerate this class's random sequence\n\n")
+    println("RepeatableRandom(" + randRoot.seed + "L) seed will regenerate this class's random sequence\n\n")
     super.afterAll()
   }
 
@@ -53,7 +54,8 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
 
   /** How to measure the size of the result `r` of having applied uniform substitution `us` to `fml`. */
   private def measure(us: USubst, fml: Formula, r: Formula): Int = {
-    r.toString.length
+    Statistics.countAtomicTerms(r)
+    //r.toString.length
   }
 
 
@@ -63,14 +65,16 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
     val stats1 = scala.collection.mutable.Map[Int,scala.collection.mutable.ListBuffer[Long]]()
     val stats2 = scala.collection.mutable.Map[Int,scala.collection.mutable.ListBuffer[Long]]()
     for (k <- 1 to randomTrials) {
-      val fml = rand.nextF(rand.nextNames("z", randomComplexity / 3 + 1), randomComplexity,
+      val randTrial = randRoot.nextFormulaEpisode()
+      val fml = randTrial.nextF(randTrial.nextNames("z", randomComplexity / 3 + 1), randomComplexity,
         modals=true, dotTs=false, dotFs=false, diffs=false, funcs=true, duals=true)
       for (i <- 1 to randomSubstitutions) {
         val randClue = "Uniform substitution produced for " + fml + " in\n\t " + i + "th run of " + randomTrials +
-          " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+          " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from random root " + randRoot.seed + " so trial seed " + randTrial.seed
 
+        val randSubst = randTrial.nextFormulaEpisode()
         val us = withSafeClue("Error generating uniform substitution\n\n" + randClue) {
-          rand.nextAdmissibleUSubst(fml, randomComplexity, false)
+          randSubst.nextAdmissibleUSubst(fml, randomComplexity, false)
         }
 
         withSafeClue("Random substitution " + us + "\n\n" + randClue) {
@@ -119,9 +123,9 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
     printf("USubstOne duration:   \t%9d ms\n", Duration.fromNanos(us1duration).toMillis)
     printf("USubstChurch duration:\t%9d ms\n", Duration.fromNanos(us2duration).toMillis)
     println()
-    //println("RandomFormula(" + rand.seed + "L) seed will regenerate this class's random sequence\n\n")
   }
 
+  /** Individual statistics of average duration per size */
   private def statalize(stat: scala.collection.mutable.Map[Int,scala.collection.mutable.ListBuffer[Long]]): String = {
     def average(l: scala.collection.mutable.ListBuffer[Long]): Long =
       l.sum / l.size

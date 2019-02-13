@@ -10,7 +10,8 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import scala.util.Random
 import scala.collection.immutable
 import scala.collection.immutable._
-import Augmentors.FormulaAugmentor
+import edu.cmu.cs.ls.keymaerax.btactics.Context
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 /**
@@ -28,7 +29,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
  * @param seed the random seed, for repeatable random testing purposes.
  */
 class RandomFormula(val seed: Long = new Random().nextLong()) {
-  println("RandomFormula(" + seed + "L) seed will regenerate the same random sequence\n\n")
+  println("RandomFormula(" + seed + "L) to regenerate")
   val rand: Random = new Random(seed)
   /** probability of prematurely stopping short at any given operator */
   private val shortProbability = 0.05
@@ -44,6 +45,9 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     case 2 => nextProgram(size)
     case 3 => nextDifferentialProgram(size)
   }
+
+  /** next RandomFormula episode */
+  def nextFormulaEpisode(): RandomFormula = {print("episode "); new RandomFormula(rand.nextLong())}
 
   /** randomly generate a term of the given expected size */
   def nextTerm(size : Int): Term = nextT(nextNames("z", size / 3 + 1), size)
@@ -76,7 +80,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   /** randomly generate a formula context C{_} of the given expected size */
   def nextFormulaContext(size : Int): Context[Formula] = {
-    import Augmentors._
+    import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
     val fml = nextF(nextNames("z", size / 3 + 1), 2*size, modals=true, dotTs=false, dotFs=false, diffs=false, funcs=false, duals=isGame)
     for (j <- 1 to randomReps) {
       //@todo min(size, fml.size)
