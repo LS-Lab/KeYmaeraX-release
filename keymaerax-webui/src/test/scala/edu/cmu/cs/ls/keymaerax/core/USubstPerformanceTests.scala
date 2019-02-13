@@ -11,10 +11,8 @@ import edu.cmu.cs.ls.keymaerax.tags.USubstTest
 import testHelper.CustomAssertions.withSafeClue
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FlatSpec, Matchers}
 
-import scala.collection.immutable.{List, Seq, Set}
+import scala.collection.immutable._
 import scala.util.Random
-import scala.collection.immutable.Seq
-import scala.collection.immutable.IndexedSeq
 import scala.concurrent.duration.Duration
 
 /**
@@ -24,11 +22,12 @@ import scala.concurrent.duration.Duration
 @USubstTest
 class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
-  val randomTrials = 20
+  val randomTrials = 4
   val randomComplexity = 20
   val randomSubstitutions = 5
   //RandomFormula(-1729150137019930293L)
-  val rand = new RandomFormula()
+  //RandomFormula(4131832182162163464L)
+  val rand = new RandomFormula(4131832182162163464L)
 
   val yellAtClash = false
 
@@ -112,7 +111,7 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
     println("USubstOne stats")
     println(statalize(stats1))
     println()
-    println("USubstChurrch stats")
+    println("USubstChurch stats")
     println(statalize(stats2))
     println()
     println("===================================")
@@ -127,6 +126,6 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
     def average(l: scala.collection.mutable.ListBuffer[Long]): Long =
       l.sum / l.size
 
-    stat.keySet.map(n=> "%4d".format(n) + ": " + "%9d".format(average(stat(n))) + " ms").mkString("\n")
+    stat.keySet.toList.sortWith((a,b)=>a<b).map(n=> "%6d".format(n) + ": " + "%9d".format(Duration.fromNanos(average(stat(n))).toMillis) + " ms").mkString("\n")
   }
 }
