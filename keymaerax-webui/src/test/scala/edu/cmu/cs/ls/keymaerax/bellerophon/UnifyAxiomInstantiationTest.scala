@@ -20,7 +20,7 @@ import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
 
   val randomTrials = 20
-  val randomComplexity = 2
+  val randomComplexity = 8
   val rand = new RandomFormula()
 
   val unify = UnificationMatch
