@@ -18,18 +18,18 @@ import scala.util.Random
 import scala.concurrent.duration.Duration
 
 /**
- * @author Andre Platzer
- */
+  * Repeatably randomly test and compare and stat uniform substitution application mechanisms USubstOne and USubstChurch.
+  * @author Andre Platzer
+  */
 @USubstTest
 class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
-  val randomTrials = 4
+  val randomTrials = 500
   val randomComplexity = 20
-  val randomSubstitutions = 5
-  //RandomFormula(-1729150137019930293L)
-  //RandomFormula(4131832182162163464L)
+  val randomSubstitutions = 10
   val randRoot = RepeatableRandom()
 
+  val logprint = false
   val yellAtClash = false
 
   /** Test setup */
@@ -49,7 +49,7 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
   }
 
   private def print(s: => String): Unit = {
-    println(s)
+    if (logprint) println(s)
   }
 
   /** How to measure the size of the result `r` of having applied uniform substitution `us` to `fml`. */
