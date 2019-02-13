@@ -25,7 +25,7 @@ import scala.collection.immutable._
   * @param seed the random seed, for repeatable random testing purposes.
   */
 class RepeatableRandom(val seed: Long = new Random().nextLong()) {
-  println("RepeatableRandom(" + seed + "L) to regenerate same repeatable random episodes\n\n")
+  println("regenerate by RepeatableRandom(" + seed + "L)\n\n")
   val rand: Random = new Random(seed)
 
   /** next Random episode */

@@ -29,7 +29,7 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
  * @param seed the random seed, for repeatable random testing purposes.
  */
 class RandomFormula(val seed: Long = new Random().nextLong()) {
-  println("RandomFormula(" + seed + "L) to regenerate")
+  println("regenerate by RandomFormula(" + seed + "L)")
   val rand: Random = new Random(seed)
   /** probability of prematurely stopping short at any given operator */
   private val shortProbability = 0.05
