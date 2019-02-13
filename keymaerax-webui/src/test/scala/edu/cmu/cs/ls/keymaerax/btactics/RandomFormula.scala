@@ -174,6 +174,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     * @requires no function/predicate occurrences within Differentials because those might cause inadmissibility if replaced free
     * @param diffs whether differentials can be used in the schematic instance. */
   def nextAdmissibleUSubst(fml: Formula, size: Int, diffs: Boolean = false): USubst = {
+    val replacedFuncs = false
     val ownvars: Set[Variable] = StaticSemantics.vars(fml).symbols.filter(x => x.isInstanceOf[BaseVariable])
     // disjoint pile of variables to avoid accidental capture during the schematic instantiation
     val othervars: IndexedSeq[Variable] = (nextNames("u", size / 5 + 1).toSet--ownvars).toIndexedSeq
@@ -181,22 +182,23 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     val symbols = StaticSemantics.signature(fml)
     //@todo make sure not to create diffs when the symbol occurs within another diff
     val repls: Set[(Expression,Expression)] = symbols.map(sym => sym match {
-      case p@UnitPredicational(_,AnyArg) => if (diffs) p->nextF(vars,size) else p->nextF(vars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=false,duals=isGame)
-      case p@UnitPredicational(_,Except(_)) => p->nextF(vars,size,modals=true,dotTs=false, dotFs=false,diffs=false,funcs=false,duals=isGame)
+      case p@UnitPredicational(_,AnyArg) => if (diffs) p->nextF(vars,size, modals=true,dotTs=false,dotFs=false,diffs=false,funcs=false,duals=isGame)
+      else p->nextF(vars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=replacedFuncs,duals=isGame)
+      case p@UnitPredicational(_,Except(_)) => p->nextF(vars,size,modals=true,dotTs=false, dotFs=false,diffs=false,funcs=replacedFuncs,duals=isGame)
       // need to teach the term some manners such as no diffs if occurs in ODE
-      case p@UnitFunctional(_,AnyArg,_) => p->nextT(vars,size,dots=false,diffs=false,funcs=true)
-      case p@UnitFunctional(_,Except(_),_) => p->nextT(vars,size,dots=false,diffs=false,funcs=false)
+      case p@UnitFunctional(_,AnyArg,_) => p->nextT(vars,size,dots=false,diffs=false,funcs=replacedFuncs)
+      case p@UnitFunctional(_,Except(_),_) => p->nextT(vars,size,dots=false,diffs=false,funcs=replacedFuncs)
       case a: ProgramConst => a->nextP(vars,size)
-      case a: SystemConst => a->nextP(vars,size,dotTs=true, dotFs=true, diffs=diffs, funcs=false, duals=false)
+      case a: SystemConst => a->nextP(vars,size,dotTs=true, dotFs=true, diffs=diffs, funcs=replacedFuncs, duals=false)
       case a: DifferentialProgramConst => a->nextDP(vars,size)
-      case f@Function(_,_,Unit,Real,false) => FuncOf(f,Nothing)->nextT(othervars,size,dots=false,diffs=false,funcs=false)
-      case p@Function(_,_,Unit,Bool,false) => PredOf(p,Nothing)->nextF(othervars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=false,duals=isGame)
-      case f@Function(_,_,Real,Real,false) => FuncOf(f,DotTerm())->nextT(othervars,size,dots=true,diffs=false,funcs=false)
-      case p@Function(_,_,Real,Bool,false) => PredOf(p,DotTerm())->nextF(othervars,size,modals=true, dotTs=true, dotFs=false,diffs=false,funcs=false,duals=isGame)
-      case p@Function(_,_,Bool,Bool,false) => PredicationalOf(p,DotFormula)->nextF(othervars,size,modals=true, dotTs=false,dotFs=true,diffs=false,funcs=false,duals=isGame)
+      case f@Function(_,_,Unit,Real,false) => FuncOf(f,Nothing)->nextT(othervars,size,dots=false,diffs=false,funcs=replacedFuncs)
+      case p@Function(_,_,Unit,Bool,false) => PredOf(p,Nothing)->nextF(othervars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=replacedFuncs,duals=isGame)
+      case f@Function(_,_,Real,Real,false) => FuncOf(f,DotTerm())->nextT(othervars,size,dots=true,diffs=false,funcs=replacedFuncs)
+      case p@Function(_,_,Real,Bool,false) => PredOf(p,DotTerm())->nextF(othervars,size,modals=true, dotTs=true, dotFs=false,diffs=false,funcs=replacedFuncs,duals=isGame)
+      case p@Function(_,_,Bool,Bool,false) => PredicationalOf(p,DotFormula)->nextF(othervars,size,modals=true, dotTs=false,dotFs=true,diffs=false,funcs=replacedFuncs,duals=isGame)
       case ow => ow->ow
     })
-    USubst(repls.map(pair=>SubstitutionPair(pair._1,pair._2)).to)
+    USubst(repls.filter(pair=>pair._1!=pair._2).map(pair=>SubstitutionPair(pair._1,pair._2)).to)
   }
 
 
@@ -268,7 +270,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean, diffs: Boolean, funcs: Boolean) : Term = {
     require(n>=0)
     if (n == 0 || rand.nextFloat()<=shortProbability) return if (dots && rand.nextInt(100)>=50) {assert(dots); DotTerm()} else Number(BigDecimal(1))
-    val r = rand.nextInt(if (dots) 105 else 95/*+1*/)
+    val r = rand.nextInt(if (dots) 110 else 95/*+1*/)
     r match {
       case 0 => Number(BigDecimal(0))
         //@todo directly generate negative numbers too?
