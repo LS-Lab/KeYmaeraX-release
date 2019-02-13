@@ -43,6 +43,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
     * That is the (new) free variables introduced by this substitution, i.e.
     * free variables of all repl that are not bound as arguments in what.
     * @return union of the freeVars of all our substitution pairs.
+    * @note unused
     */
   lazy val freeVars: SetLattice[Variable] = subsDefs.foldLeft(bottom[Variable])((a,b) => a ++ b.freeVars)
 
@@ -50,7 +51,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
     * The signature of the replacement introduced by this substitution.
     * @return union of the freeVars of all our substitution pairs.
     */
-  lazy val signature: immutable.Set[NamedSymbol] = subsDefs.foldLeft(Set.empty[NamedSymbol])((a,b) => a ++ b.signature)
+  //lazy val signature: immutable.Set[NamedSymbol] = subsDefs.foldLeft(Set.empty[NamedSymbol])((a,b) => a ++ b.signature)
 
   /**
     * The key characteristic expression constituents that this Substitution is matching on.

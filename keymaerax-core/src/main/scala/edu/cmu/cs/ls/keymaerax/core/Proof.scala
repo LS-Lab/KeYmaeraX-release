@@ -496,8 +496,15 @@ final case class Provable private(conclusion: Sequent, subgoals: immutable.Index
       //@note if isProved, uniform substitution of Provables has the same effect as the globally sound uniform substitution rule (whatever free variables), which is also locally sound if no premises.
       //@note case subst.freeVars.isEmpty is covered by "Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. Theorem 27."
       //@note case isProved is covered by "Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016. Theorem 26." and Theorem 27 without subgoals having same effect as Theorem 26. There is no difference between locally sound and globally sound if isProved so no subgoals.
-      insist(subst.freeVars.isEmpty || isProved || Provable.LAX_MODE&&this==Provable.rules("CQ equation congruence"), "Unless proved, uniform substitutions instances cannot introduce free variables " + subst.freeVars.prettyString + "\nin " + subst + " on\n" + this)
-      new Provable(subst(conclusion), subgoals.map(s => subst(s)))
+      if (usubstChurch) {
+        insist(subst.freeVars.isEmpty || isProved || Provable.LAX_MODE&&this==Provable.rules("CQ equation congruence"), "Unless proved, uniform substitutions instances cannot introduce free variables " + subst.freeVars.prettyString + "\nin " + subst + " on\n" + this)
+        new Provable(subst(conclusion), subgoals.map(s => subst(s)))
+      } else {
+        if (isProved || Provable.LAX_MODE&&this==Provable.rules("CQ equation congruence"))
+          new Provable(subst(conclusion), subgoals.map(s => subst(s)))
+        else
+          new Provable(subst.applyAllTaboo(conclusion), subgoals.map(s => subst.applyAllTaboo(s)))
+      }
     } catch { case exc: SubstitutionClashException => throw exc.inContext(subst + " on\n" + this) }
 
   // forward proofs (convenience)

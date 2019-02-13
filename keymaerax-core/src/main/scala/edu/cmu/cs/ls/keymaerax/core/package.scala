@@ -182,6 +182,8 @@ package object core {
   type USubst = USubstOne
   /** USubst factory method, forwards to constructor. */
   def USubst(subsDefsInput: immutable.Seq[SubstitutionPair]): USubst = USubstOne(subsDefsInput)
+  /** true if USubstChurch is used, false if USubstOne is used */
+  private[core] val usubstChurch = (USubst(immutable.Seq()).getClass==USubstOne.getClass)
 
   /** Insist on `requirement` being true, throwing a [[CoreException]] if false.
     *  This method is a `require` coming from the prover core that cannot be disabled.
