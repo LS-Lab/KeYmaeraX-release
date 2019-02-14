@@ -54,7 +54,8 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
 
   /** How to measure the size of the result `r` of having applied uniform substitution `us` to `fml`. */
   private def measure(us: USubst, fml: Formula, r: Formula): Int = {
-    Statistics.countAtomicTerms(r)
+    Statistics.countFormulaOperators(r, true)
+    //Statistics.countAtomicTerms(r)
     //r.toString.length
   }
 
