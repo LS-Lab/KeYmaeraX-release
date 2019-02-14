@@ -24,7 +24,7 @@ import scala.concurrent.duration.Duration
 @USubstTest
 class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
-  val randomTrials = 500
+  val randomTrials = 50//0
   val randomComplexity = 20
   val randomSubstitutions = 10
   val randRoot = RepeatableRandom()
@@ -54,7 +54,8 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
 
   /** How to measure the size of the result `r` of having applied uniform substitution `us` to `fml`. */
   private def measure(us: USubst, fml: Formula, r: Formula): Int = {
-    Statistics.countFormulaOperators(r, true)
+    Statistics.length(r)
+    //Statistics.countFormulaOperators(r, true)
     //Statistics.countAtomicTerms(r)
     //r.toString.length
   }

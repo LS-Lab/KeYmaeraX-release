@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 
 /** Formula, term, and tactic statistics.
   * @author Stefan Mitsch
+  * @author Andre Platzer
   */
 object Statistics {
 
@@ -71,4 +72,38 @@ object Statistics {
   def tacticSize(t: BelleExpr): Int = TacticStatistics.size(t)
   /** The number of tactic lines. See [[TacticStatistics.lines]] */
   def tacticLines(t: BelleExpr): Int = TacticStatistics.lines(t)
+
+
+  /** Length of term e, i.e., number of operators and atoms */
+  def length(e: Term): Int = e match {
+    case e: UnaryCompositeTerm  => 1 + length(e.child)
+    case e: BinaryCompositeTerm => 1 + length(e.left) + length(e.right)
+    case e: FuncOf              => 1 + length(e.child)
+    case e: AtomicTerm          => 1
+  }
+
+  /** Length of formula e, i.e., number of operators and atoms */
+  def length(e: Formula): Int = e match {
+    case e: UnaryCompositeFormula  => 1 + length(e.child)
+    case e: BinaryCompositeFormula => 1 + length(e.left) + length(e.right)
+    case e: ComparisonFormula      => 1 + length(e.left) + length(e.right)
+    case e: PredOf                 => 1 + length(e.child)
+    case e: PredicationalOf        => 1 + length(e.child)
+    case e: Quantified             => 1 + length(e.child)
+    case e: Modal                  => 1 + length(e.program) + length(e.child)
+    case e: AtomicFormula          => 1
+  }
+
+  /** Length of program e, i.e., number of operators and atoms */
+  def length(e: Program): Int = e match {
+    case e: UnaryCompositeProgram  => 1 + length(e.child)
+    case e: BinaryCompositeProgram => 1 + length(e.left) + length(e.right)
+    case e: Assign                 => 1 + length(e.e)
+    case e: Test                   => 1 + length(e.cond)
+    // don't double-count ODESystem so don't add 1
+    case e: ODESystem              => length(e.ode) + length(e.constraint)
+    case e: AtomicODE              => 1 + length(e.e)
+    case e: DifferentialProduct    => 1 + length(e.left) + length(e.right)
+    case e: AtomicProgram          => 1
+  }
 }
