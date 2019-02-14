@@ -24,7 +24,7 @@ import scala.concurrent.duration.Duration
 @USubstTest
 class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
-  val randomTrials = 50//0
+  val randomTrials = 500
   val randomComplexity = 20
   val randomSubstitutions = 10
   val randRoot = RepeatableRandom()
