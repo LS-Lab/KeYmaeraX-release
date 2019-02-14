@@ -14,20 +14,23 @@ import edu.cmu.cs.ls.keymaerax.core._
   */
 object Statistics {
 
-  /** Returns the number of operators in the formula `fml`
+  /** Returns the number of composition operators in the formula `fml`
     * @param arith true to include counting arithmetic operators. */
   def countFormulaOperators(fml: Formula, arith: Boolean = false): Int = {
     var numOperators = 0
     ExpressionTraversal.traverse(new ExpressionTraversalFunction {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-        case _: UnaryCompositeFormula => numOperators += 1; Left(None)
-        case _: BinaryCompositeFormula => numOperators += 1; Left(None)
+        case _: CompositeFormula => numOperators += 1; Left(None)
         case _ => Left(None)
       }
 
       override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-        case _: UnaryCompositeTerm => if (arith) numOperators += 1; Left(None)
-        case _: BinaryCompositeTerm => if (arith) numOperators += 1; Left(None)
+        case _: CompositeTerm => if (arith) numOperators += 1; Left(None)
+        case _ => Left(None)
+      }
+
+      override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
+        case _: CompositeProgram => numOperators += 1; Left(None)
         case _ => Left(None)
       }
     }, fml)

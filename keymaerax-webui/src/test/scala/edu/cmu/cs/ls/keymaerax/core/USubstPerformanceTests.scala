@@ -129,7 +129,7 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
   /** Individual statistics of average duration per size */
   private def statalize(stat: scala.collection.mutable.Map[Int,scala.collection.mutable.ListBuffer[Long]]): String = {
     def average(l: scala.collection.mutable.ListBuffer[Long]): Long =
-      l.sum / l.size
+      l.foldRight(0L)((a,b)=>a+b) / l.size
 
     stat.keySet.toList.sortWith((a,b)=>a<b).map(n=> "%6d".format(n) + ": " + "%9d".format(Duration.fromNanos(average(stat(n))).toMillis) + " ms").mkString("\n")
   }
