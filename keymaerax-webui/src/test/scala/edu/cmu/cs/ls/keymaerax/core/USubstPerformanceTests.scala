@@ -28,7 +28,7 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
   val randomComplexity = 20
   val randomSubstitutions = 10
   //val randRoot = RepeatableRandom(3913399508895174441L)
-  //val randRoot = RepeatableRandom()
+  val randRoot = RepeatableRandom()
 
   val logprint = false
   val yellAtClash = false
