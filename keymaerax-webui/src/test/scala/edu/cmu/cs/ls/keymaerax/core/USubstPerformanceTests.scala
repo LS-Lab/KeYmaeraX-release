@@ -27,7 +27,8 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
   val randomTrials = 500
   val randomComplexity = 20
   val randomSubstitutions = 10
-  val randRoot = RepeatableRandom()
+  //val randRoot = RepeatableRandom(3913399508895174441L)
+  //val randRoot = RepeatableRandom()
 
   val logprint = false
   val yellAtClash = false
@@ -124,6 +125,7 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
     println()
     printf("USubstOne duration:   \t%9d ms\n", Duration.fromNanos(us1duration).toMillis)
     printf("USubstChurch duration:\t%9d ms\n", Duration.fromNanos(us2duration).toMillis)
+    printf("USubstOne percentage: \t       %3.5f\n", (us1duration.toDouble*100.0)/us2duration.toDouble)
     println()
   }
 
