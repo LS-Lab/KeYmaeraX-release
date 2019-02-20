@@ -154,7 +154,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case f: UnitFunctional if subsDefs.exists(_.what==f) => subsDefs.find(_.what==f).get.repl.asInstanceOf[Term]
       case f: UnitFunctional if !subsDefs.exists(_.what==f) => f
     }
-  } //ensuring(r => r.kind==term.kind && r.sort==term.sort, "Uniform Substitution leads to same kind and same sort " + term)
+  }
 
 
   /** uniform substitution on formulas */
@@ -216,7 +216,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case p: UnitPredicational if subsDefs.exists(_.what==p) => subsDefs.find(_.what==p).get.repl.asInstanceOf[Formula]
       case p: UnitPredicational if !subsDefs.exists(_.what==p) => p
     }
-  } //ensuring(r => r.kind==formula.kind && r.sort==formula.sort, "Uniform Substitution leads to same kind and same sort " + formula)
+  }
 
   /** uniform substitution on programs */
   private def usubst(u: SetLattice[Variable], program: Program): (SetLattice[Variable],Program) = {
@@ -242,7 +242,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case Loop(a)           => val (v,_)  = usubst(u,a); val (w,ra) = usubst(v,a); (w, Loop(ra))
       case Dual(a)           => val (v,ra) = usubst(u,a); (v, Dual(ra))
     }
-  } //ensuring(r => r._2.kind==program.kind && r._2.sort==program.sort, "Uniform Substitution leads to same kind and same sort " + program)
+  }
 
   /** uniform substitutions on differential programs */
   private def usubstODE(v: SetLattice[Variable], ode: DifferentialProgram): DifferentialProgram = {
@@ -257,7 +257,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       // homomorphic cases
       case DifferentialProduct(a, b) => DifferentialProduct(usubstODE(v, a), usubstODE(v, b))
     }
-  } //ensuring(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
+  }
 
 
   // admissibility

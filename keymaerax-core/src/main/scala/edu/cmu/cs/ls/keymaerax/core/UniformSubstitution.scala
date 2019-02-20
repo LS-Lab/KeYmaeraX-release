@@ -376,7 +376,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
       case f: UnitFunctional if subsDefs.exists(_.what==f) => subsDefs.find(_.what==f).get.repl.asInstanceOf[Term]
       case f: UnitFunctional if !subsDefs.exists(_.what==f) => f
     }
-  } ensuring(r => r.kind==term.kind && r.sort==term.sort, "Uniform Substitution leads to same kind and same sort " + term)
+  } //ensuring(r => r.kind==term.kind && r.sort==term.sort, "Uniform Substitution leads to same kind and same sort " + term)
 
   /** uniform substitution on formulas */
   private def usubst(formula: Formula): Formula = {
@@ -442,7 +442,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
       case p: UnitPredicational if subsDefs.exists(_.what==p) => subsDefs.find(_.what==p).get.repl.asInstanceOf[Formula]
       case p: UnitPredicational if !subsDefs.exists(_.what==p) => p
     }
-  } ensuring(r => r.kind==formula.kind && r.sort==formula.sort, "Uniform Substitution leads to same kind and same sort " + formula)
+  } //ensuring(r => r.kind==formula.kind && r.sort==formula.sort, "Uniform Substitution leads to same kind and same sort " + formula)
 
   /** uniform substitution on programs */
   private def usubst(program: Program): Program = {
@@ -467,7 +467,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
         Loop(usubst(a))
       case Dual(a)           => Dual(usubst(a))
     }
-  } ensuring(r => r.kind==program.kind && r.sort==program.sort, "Uniform Substitution leads to same kind and same sort " + program)
+  } //ensuring(r => r.kind==program.kind && r.sort==program.sort, "Uniform Substitution leads to same kind and same sort " + program)
 
   /** uniform substitution on differential programs */
   private def usubst(ode: DifferentialProgram): DifferentialProgram = {
@@ -477,7 +477,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
     //@note the requires checking within usubstODE(ode, odeBV) will be redundant but locally the right thing to do.
     //@note usubstODE(ode, StaticSemantics(usubstODE(ode, SetLattice.bottom)).bv) would be sound just more permissive
     usubstODE(ode, StaticSemantics(ode).bv)
-  } ensuring(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
+  } //ensuring(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
 
   /**
     * uniform substitutions on differential programs
@@ -494,7 +494,7 @@ final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) ex
       // homomorphic cases
       case DifferentialProduct(a, b) => DifferentialProduct(usubstODE(a, odeBV), usubstODE(b, odeBV))
     }
-  } ensuring(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
+  } //ensuring(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
 
   /** Turns matching terms into substitution pairs (traverses pairs to create component-wise substitutions). */
   private def toSubsPairs(w: Term, r: Term): List[SubstitutionPair] = (w, r) match {
