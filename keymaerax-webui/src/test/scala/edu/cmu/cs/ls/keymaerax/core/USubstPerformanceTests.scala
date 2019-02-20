@@ -24,11 +24,15 @@ import scala.concurrent.duration.Duration
 @USubstTest
 class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
+  val deterministicComplexity = 20
+
   val randomTrials = 500
   val randomComplexity = 20
   val randomSubstitutions = 10
   //val randRoot = RepeatableRandom(3913399508895174441L)
+  //val randRoot = RepeatableRandom(8830041342121653583L) for randomTrials=20, randomComplexity=23, randomSubstitutions=1
   val randRoot = RepeatableRandom()
+  //val randRoot = RepeatableRandom()
 
   val logprint = false
   val yellAtClash = false
@@ -94,6 +98,7 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
           val locduration2 = System.nanoTime()-t20
           us2duration += locduration2
           print("result:  " + r2.getOrElse("clash"))
+          print("duration: " + Duration.fromNanos(locduration1).toMillis + " ms versus " + Duration.fromNanos(locduration2).toMillis + " ms")
           r1 shouldBe r2
           if (yellAtClash) Some(USubst(us.subsDefsInput)(fml))
 
@@ -135,5 +140,106 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
       l.foldRight(0L)((a,b)=>a+b) / l.size
 
     stat.keySet.toList.sortWith((a,b)=>a<b).map(n=> "%6d".format(n) + ": " + "%9d".format(Duration.fromNanos(average(stat(n))).toMillis) + " ms").mkString("\n")
+  }
+
+
+  it should "substitute admissibly into a simple right-associative ; chain" in {
+    //val rand = randRoot.nextFormulaEpisode()
+    var us1duration = 0L
+    var us2duration = 0L
+    val stats1 = scala.collection.mutable.Map[Int,scala.collection.mutable.ListBuffer[Long]]()
+    val stats2 = scala.collection.mutable.Map[Int,scala.collection.mutable.ListBuffer[Long]]()
+    for (i <- 1 to deterministicComplexity) {
+      val replacee = "p(x^2)".asFormula
+      val fml = Box(Range(1,i).foldRight[Program](Test(True))((v,prg)=>Compose(Assign(Variable("x"+v,None,Real), Variable("x"+(v-1),None,Real)), prg)), replacee)
+      val us = USubst(SubstitutionPair("p(.)".asFormula, "(.)^3>=(.)".asFormula)::Nil) //rand.nextAdmissibleUSubst(fml, randomComplexity, false)
+      print("usubst:  " + us)
+      print("formula: " + fml)
+      val t10 = System.nanoTime()
+      val r1 = try { Some(USubstOne(us.subsDefsInput)(fml)) } catch {case e:SubstitutionClashException=> None}
+      val locduration1 = System.nanoTime()-t10
+      us1duration += locduration1
+      print("result:  " + r1.getOrElse("clash"))
+
+      val t20 = System.nanoTime()
+      val r2 = try { Some(USubstChurch(us.subsDefsInput)(fml)) } catch {case e:SubstitutionClashException=> None}
+      val locduration2 = System.nanoTime()-t20
+      us2duration += locduration2
+      print("result:  " + r2.getOrElse("clash"))
+      print("duration: " + Duration.fromNanos(locduration1).toMillis + " ms versus " + Duration.fromNanos(locduration2).toMillis + " ms")
+      r1 shouldBe r2
+      if (yellAtClash) Some(USubst(us.subsDefsInput)(fml))
+      val size1 = measure(us, fml, r1.getOrElse(fml))
+      if (!stats1.contains(size1)) stats1.put(size1, new scala.collection.mutable.ListBuffer())
+      stats1(size1) += locduration1
+      val size2 = measure(us, fml, r2.getOrElse(fml))
+      if (!stats2.contains(size2)) stats2.put(size2, new scala.collection.mutable.ListBuffer())
+      stats2(size2) += locduration2
+    }
+    println()
+    println("===================================")
+    println()
+    println("USubstOne stats")
+    println(statalize(stats1))
+    println()
+    println("USubstChurch stats")
+    println(statalize(stats2))
+    println()
+    println("===================================")
+    println()
+    printf("USubstOne duration:   \t%9d ms\n", Duration.fromNanos(us1duration).toMillis)
+    printf("USubstChurch duration:\t%9d ms\n", Duration.fromNanos(us2duration).toMillis)
+    printf("USubstOne percentage: \t       %3.5f\n", (us1duration.toDouble*100.0)/us2duration.toDouble)
+    println()
+  }
+
+  it should "substitute admissibly into a simple left-associative ; chain" in {
+    //val rand = randRoot.nextFormulaEpisode()
+    var us1duration = 0L
+    var us2duration = 0L
+    val stats1 = scala.collection.mutable.Map[Int,scala.collection.mutable.ListBuffer[Long]]()
+    val stats2 = scala.collection.mutable.Map[Int,scala.collection.mutable.ListBuffer[Long]]()
+    for (i <- 1 to deterministicComplexity) {
+      val replacee = "p(x^2)".asFormula
+      val fml = Box(Range(1,i).reverse.foldRight[Program](Test(True))((v,prg)=>Compose(prg, Assign(Variable("x"+v,None,Real), Variable("x"+(v-1),None,Real)))), replacee)
+      val us = USubst(SubstitutionPair("p(.)".asFormula, "(.)^3>=(.)".asFormula)::Nil) //rand.nextAdmissibleUSubst(fml, randomComplexity, false)
+      print("usubst:  " + us)
+      print("formula: " + fml)
+      val t10 = System.nanoTime()
+      val r1 = try { Some(USubstOne(us.subsDefsInput)(fml)) } catch {case e:SubstitutionClashException=> None}
+      val locduration1 = System.nanoTime()-t10
+      us1duration += locduration1
+      print("result:  " + r1.getOrElse("clash"))
+
+      val t20 = System.nanoTime()
+      val r2 = try { Some(USubstChurch(us.subsDefsInput)(fml)) } catch {case e:SubstitutionClashException=> None}
+      val locduration2 = System.nanoTime()-t20
+      us2duration += locduration2
+      print("result:  " + r2.getOrElse("clash"))
+      print("duration: " + Duration.fromNanos(locduration1).toMillis + " ms versus " + Duration.fromNanos(locduration2).toMillis + " ms")
+      r1 shouldBe r2
+      if (yellAtClash) Some(USubst(us.subsDefsInput)(fml))
+      val size1 = measure(us, fml, r1.getOrElse(fml))
+      if (!stats1.contains(size1)) stats1.put(size1, new scala.collection.mutable.ListBuffer())
+      stats1(size1) += locduration1
+      val size2 = measure(us, fml, r2.getOrElse(fml))
+      if (!stats2.contains(size2)) stats2.put(size2, new scala.collection.mutable.ListBuffer())
+      stats2(size2) += locduration2
+    }
+    println()
+    println("===================================")
+    println()
+    println("USubstOne stats")
+    println(statalize(stats1))
+    println()
+    println("USubstChurch stats")
+    println(statalize(stats2))
+    println()
+    println("===================================")
+    println()
+    printf("USubstOne duration:   \t%9d ms\n", Duration.fromNanos(us1duration).toMillis)
+    printf("USubstChurch duration:\t%9d ms\n", Duration.fromNanos(us2duration).toMillis)
+    printf("USubstOne percentage: \t       %3.5f\n", (us1duration.toDouble*100.0)/us2duration.toDouble)
+    println()
   }
 }
