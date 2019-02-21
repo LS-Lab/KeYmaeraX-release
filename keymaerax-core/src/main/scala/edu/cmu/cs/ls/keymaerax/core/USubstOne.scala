@@ -239,7 +239,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
         (v, ODESystem(usubstODE(v, ode), usubst(v, h)))
       case Choice(a, b)      => val (v,ra) = usubst(u,a); val (w,rb) = usubst(u,b); (v++w, Choice(ra, rb))
       case Compose(a, b)     => val (v,ra) = usubst(u,a); val (w,rb) = usubst(v,b); (w, Compose(ra, rb))
-      case Loop(a)           => val (v,_)  = usubst(u,a); val (w,ra) = usubst(v,a); (w, Loop(ra))
+      case Loop(a)           => val (v,_)  = usubst(u,a); val (_,ra) = usubst(v,a); (v, Loop(ra))
       case Dual(a)           => val (v,ra) = usubst(u,a); (v, Dual(ra))
     }
   }
