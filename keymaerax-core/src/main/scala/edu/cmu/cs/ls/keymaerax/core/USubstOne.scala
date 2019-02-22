@@ -24,6 +24,9 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
   /** automatically filter out identity substitution no-ops, which can happen by systematic constructions such as unification */
   private/*[this]*/ val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
 
+  @inline
+  private val optima = true
+
   insist(noException(dataStructureInvariant), "unique left-hand sides in substitutees " + this)
 
   /** unique left hand sides in subsDefs */
@@ -224,6 +227,7 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case a: ProgramConst if subsDefs.exists(_.what == a) =>
         val r = subsDefs.find(_.what == a).get.repl.asInstanceOf[Program]
         (u++boundVars(r), r)
+      //@todo optimizable: store boundVars(ProgramConst/SystemConst/DifferentialProgramConst) in substitution pair
       //@todo improve: for ProgramConst(_,Taboo(except)) could return allVars-except
       case a: ProgramConst if !subsDefs.exists(_.what == a) => (allVars, a)
       case a: SystemConst  if subsDefs.exists(_.what == a) =>
@@ -234,12 +238,15 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
       case AssignAny(x)      => (u+x, program)
       case Test(f)           => (u, Test(usubst(u,f)))
       case ODESystem(ode, h) =>
-        //@todo could make smaller for substituted DifferentialProgramConst
+        //@todo improve: could make smaller for substituted DifferentialProgramConst
         val v = u++boundVars(ode)
         (v, ODESystem(usubstODE(v, ode), usubst(v, h)))
       case Choice(a, b)      => val (v,ra) = usubst(u,a); val (w,rb) = usubst(u,b); (v++w, Choice(ra, rb))
       case Compose(a, b)     => val (v,ra) = usubst(u,a); val (w,rb) = usubst(v,b); (w, Compose(ra, rb))
-      case Loop(a)           => val (v,_)  = usubst(u,a); val (_,ra) = usubst(v,a); (v, Loop(ra))
+      case Loop(a) if!optima => val (v,_)  = usubst(u,a); val (_,ra) = usubst(v,a); (v, Loop(ra))
+      case Loop(a) if optima => val v = u++substBoundVars(a); val (w,ra) = usubst(v,a);
+        // redundant: check result of substBoundVars for equality to make it not soundness-critical
+        if (v==w) (v, Loop(ra)) else {val (_,rb) = usubst(w, a); (w, Loop(rb))}
       case Dual(a)           => val (v,ra) = usubst(u,a); (v, Dual(ra))
     }
   }
@@ -287,5 +294,40 @@ final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) exten
     val matching = c.filter(pred)
     require(matching.tail.isEmpty, "unique elemented expected in " + c.mkString)
     matching.head
+  }
+
+  // optimization
+
+  /** Predict bound variables of this(program), whether substitution clashes or not.
+    * @note Not soundness-critical as result checked by inclusion for other usubst round */
+  private def substBoundVars(program: Program): SetLattice[Variable] = {
+    program match {
+      // base cases
+      //@todo optimizable: store boundVars(ProgramConst/SystemConst/DifferentialProgramConst) in substitution pair
+      case a: ProgramConst if subsDefs.exists(_.what == a) =>
+        StaticSemantics.boundVars(subsDefs.find(_.what == a).get.repl.asInstanceOf[Program])
+      case a: ProgramConst if !subsDefs.exists(_.what == a) => StaticSemantics.spaceVars(a.space)
+      case a: SystemConst  if subsDefs.exists(_.what == a) =>
+        StaticSemantics.boundVars(subsDefs.find(_.what == a).get.repl.asInstanceOf[Program])
+      case a: SystemConst  if !subsDefs.exists(_.what == a) => allVars
+      case c: DifferentialProgramConst if subsDefs.exists(_.what == c) =>
+        StaticSemantics.boundVars(subsDefs.find(_.what == c).get.repl.asInstanceOf[DifferentialProgram])
+      case c: DifferentialProgramConst if !subsDefs.exists(_.what == c) => StaticSemantics.spaceVars(c.space)
+      case Assign(x, e)                => SetLattice(x)
+      case Test(f)                     => bottom
+      case AtomicODE(xp@DifferentialSymbol(x), e) => SetLattice(Set(x,xp))
+      // combinator cases
+      case Choice(a, b)                => substBoundVars(a) ++ substBoundVars(b)
+      case Compose(a, b)               => substBoundVars(a) ++ substBoundVars(b)
+      case Loop(a)                     => substBoundVars(a)
+      case Dual(a)                     => substBoundVars(a)
+
+      // special cases
+      //@note x:=* in analogy to x:=e
+      case AssignAny(x)                => SetLattice(x)
+      //@note system generalization of x'=e&h
+      case ODESystem(a, h)             => substBoundVars(a)
+      case DifferentialProduct(a, b)   => substBoundVars(a) ++ substBoundVars(b)
+    }
   }
 }
