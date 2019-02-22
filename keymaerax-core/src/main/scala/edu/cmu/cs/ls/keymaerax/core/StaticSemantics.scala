@@ -412,7 +412,7 @@ object StaticSemantics {
 
   // helpers
   /** The variables and differential symbols that are in the given state space. */
-  private def spaceVars(space: Space): SetLattice[Variable] = space match {
+  private[core] def spaceVars(space: Space): SetLattice[Variable] = space match {
     case AnyArg => SetLattice.allVars
     case Except(taboo) => SetLattice.except(taboo)
   }
