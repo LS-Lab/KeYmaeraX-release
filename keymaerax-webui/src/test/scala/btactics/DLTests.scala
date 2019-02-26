@@ -321,9 +321,9 @@ class DLTests extends TacticTestBase {
     // init
     result.subgoals(0) shouldBe "x>0, y>1, z>7 ==> x*y>5, x<3, y<4".asSequent
     // use case
-    result.subgoals(1) shouldBe "x*y>5, y>1, z>7 ==> x>2".asSequent
+    result.subgoals(1) shouldBe "x*y>5, y>1, z>7 ==> x>2, y<4".asSequent
     // step
-    result.subgoals(2) shouldBe "x*y>5, y>1, z>7 ==> [x:=2;]x*y>5".asSequent
+    result.subgoals(2) shouldBe "x*y>5, y>1, z>7 ==> [x:=2;]x*y>5, y<4".asSequent
   }
 
   it should "do the same with a slightly more complicated formula" in {
@@ -345,9 +345,9 @@ class DLTests extends TacticTestBase {
     // init
     result.subgoals(0) shouldBe "x>0, y>1, z>7 ==> x<3, x*y>5, x>5, y<4".asSequent
     // use case
-    result.subgoals(1) shouldBe "x*y>5, y>1, z>7 ==> x>2".asSequent
+    result.subgoals(1) shouldBe "x*y>5, y>1, z>7 ==> x>2, y<4".asSequent
     // step
-    result.subgoals(2) shouldBe "x*y>5, y>1, z>7 ==> [x:=2;]x*y>5".asSequent
+    result.subgoals(2) shouldBe "x*y>5, y>1, z>7 ==> [x:=2;]x*y>5, y<4".asSequent
   }
 
   it should "not remove duplicated formulas" in {
@@ -357,9 +357,9 @@ class DLTests extends TacticTestBase {
     // init
     result.subgoals(0) shouldBe "x>0, x>0, y>1, z>7 ==> x*y>5, x<3, x<3, y<4".asSequent
     // use case
-    result.subgoals(1) shouldBe "x*y>5, y>1, z>7 ==> x>2".asSequent
+    result.subgoals(1) shouldBe "x*y>5, y>1, z>7 ==> x>2, y<4".asSequent
     // step
-    result.subgoals(2) shouldBe "x*y>5, y>1, z>7 ==> [x:=2;]x*y>5".asSequent
+    result.subgoals(2) shouldBe "x*y>5, y>1, z>7 ==> [x:=2;]x*y>5, y<4".asSequent
   }
 
   "I gen" should "work on a simple example" in {
@@ -539,16 +539,16 @@ class DLTests extends TacticTestBase {
 
   it should "keep constant context" in {
     val succ@Box(prg, _) = "[{x:=A+B+1;}*]x>0".asFormula
-    val result = proveBy(Sequent(IndexedSeq("A>0".asFormula, "x>2".asFormula, "B>0".asFormula), IndexedSeq("C<1".asFormula, succ, "D<1".asFormula)),
+    val result = proveBy(s"A>0, x>2, !B<=0 ==> C<1, ${succ.prettyString}, D<1".asSequent,
       loop(new ConfigurableGenerator[Formula](Map((prg, "x>1".asFormula::Nil))))(2))
 
     result.subgoals should have size 3
     // init
-    result.subgoals(0) shouldBe "A>0, x>2, B>0 ==> C<1, x>1, D<1".asSequent
+    result.subgoals(0) shouldBe "A>0, x>2 ==> C<1, x>1, D<1, B<=0".asSequent
     // use case
-    result.subgoals(1) shouldBe "x>1, A>0, B>0 ==> x>0".asSequent
+    result.subgoals(1) shouldBe "x>1, A>0 ==> x>0, B<=0, D<1, C<1".asSequent
     // step
-    result.subgoals(2) shouldBe "x>1, A>0, B>0 ==> [x:=A+B+1;]x>1".asSequent
+    result.subgoals(2) shouldBe "x>1, A>0 ==> [x:=A+B+1;]x>1, B<=0, D<1, C<1".asSequent
   }
 
   it should "not fail on program constants" in {
@@ -572,6 +572,17 @@ class DLTests extends TacticTestBase {
     result.subgoals(1) shouldBe "x>=x_0, x_0>=0 ==> x>=0".asSequent
     // step
     result.subgoals(2) shouldBe "x>=x_0, x_0>=0 ==> [x:=x+1;]x>=x_0".asSequent
+  }
+
+  it should "introduce discrete ghosts on old(.) notation and constant keep context" in {
+    val result = proveBy("x>=0, A>0, !B>0 ==> C>1, [{x:=x+1;}*]x>=0, D>2".asSequent, loop("x>=old(x)".asFormula)(2))
+    result.subgoals should have size 3
+    // init
+    result.subgoals(0) shouldBe "x_0>=0, A>0, x_0=x ==> C>1, D>2, B>0, x>=x_0".asSequent
+    // use case
+    result.subgoals(1) shouldBe "x>=x_0, x_0>=0, A>0 ==> x>=0, B>0, D>2, C>1".asSequent
+    // step
+    result.subgoals(2) shouldBe "x>=x_0, x_0>=0, A>0 ==> [x:=x+1;]x>=x_0, B>0, D>2, C>1".asSequent
   }
 
   "Throughout" should "split simple sequences" in {

@@ -266,21 +266,29 @@ private object DLBySubst {
     sequent.ante.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)
   }
 
+  private def constSuccConditions(sequent: Sequent, taboo: SetLattice[Variable]): IndexedSeq[Formula] = {
+    sequent.succ.filter(f => StaticSemantics.freeVars(f).intersect(taboo).isEmpty)
+  }
+
   /** @see [[TactixLibrary.loop]] */
   def loop(invariant: Formula, pre: BelleExpr = SaturateTactic(alphaRule)): DependentPositionWithAppliedInputTactic = "loop" byWithInput(invariant, (pos, sequent) => {
     require(pos.isTopLevel && pos.isSucc, "loop only at top-level in succedent, but got " + pos)
 
     val ov = FormulaTools.argsOf("old", invariant)
     val doloop = (ghosts: List[((Term, Variable), BelleExpr)]) => {
-      val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
+      val posIncrements = PosInExpr(List.fill(if (pos.isTopLevel) 0 else ghosts.size)(1))
       val oldified = SubstitutionHelper.replaceFn("old", invariant, ghosts.map(_._1).toMap)
+      val afterGhostsPos = if (ghosts.nonEmpty) LastSucc(0, posIncrements) else Fixed(pos.topLevel ++ posIncrements)
       ghosts.map(_._2).reduceOption(_ & _).getOrElse(skip) &
         ("doLoop" byWithInput(oldified, (pos, sequent) => {
           sequent.sub(pos) match {
             case Some(b@Box(Loop(a), p)) =>
               if (!FormulaTools.dualFree(a)) loopRule(oldified)(pos)
               else {
-                val consts = constAnteConditions(sequent, StaticSemantics(a).bv)
+                val abv = StaticSemantics(a).bv
+                val constSuccs = (constSuccConditions(sequent, abv) :+ False).map(Not)
+                val constAntes = constAnteConditions(sequent, abv)
+                val consts = constAntes ++ constSuccs
                 val q =
                   if (consts.size > 1) And(oldified, consts.reduceRight(And))
                   else if (consts.size == 1) And(oldified, consts.head)
@@ -289,16 +297,21 @@ private object DLBySubst {
                   /* c */ useAt("I induction")(pos) & andR(pos) & Idioms.<(
                     andR(pos) & Idioms.<(
                       label(initCase),
-                      (andR(pos) & Idioms.<(closeIdWith(pos), ident))*(consts.size-1) & close & done),
+                      (andR(pos) & Idioms.<(closeIdWith(pos), ident))*constAntes.size &
+                        (andR(pos) & Idioms.<(notR(pos) & closeIdWith('Llast), ident))*(constSuccs.size-1) &
+                        (if (constSuccs.nonEmpty) notR(pos) else skip) &
+                        close & done),
                     cohide(pos) & G & implyR(1) & boxAnd(1) & andR(1) & Idioms.<(
-                      (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hideL('Llast, True)) & label(indStep),
+                      (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
+                       else andL('Llast) & hideL('Llast, True)) & label(indStep),
                       andL(-1) & hideL(-1, oldified) & V(1) & close(-1, 1) & done)
                   ),
                   /* c -> d */ cohide(pos) & CMon(pos.inExpr++1) & implyR(1) &
-                    (if (consts.nonEmpty) andL('Llast)*consts.size else andL('Llast) & hideL('Llast, True)) & label(useCase)
+                    (if (consts.nonEmpty) andL('Llast)*consts.size & hideL('Llast, Not(False)) & notL('Llast)*(constSuccs.size-1)
+                     else andL('Llast) & hideL('Llast, True)) & label(useCase)
                 )
               }
-          }}))(pos ++ PosInExpr(List.fill(posIncrements)(1)))
+          }}))(afterGhostsPos)
     }
     pre & discreteGhosts(ov, sequent, doloop)(pos)
   })
