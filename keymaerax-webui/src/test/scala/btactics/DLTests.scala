@@ -563,6 +563,17 @@ class DLTests extends TacticTestBase {
     result.subgoals(2) shouldBe "x>1 ==> x>0".asSequent
   }
 
+  it should "introduce discrete ghosts on old(.) notation" in {
+    val result = proveBy("x>=0 ==> [{x:=x+1;}*]x>=0".asSequent, loop("x>=old(x)".asFormula)(1))
+    result.subgoals should have size 3
+    // init
+    result.subgoals(0) shouldBe "x_0>=0, x_0=x ==> x>=x_0".asSequent
+    // use case
+    result.subgoals(1) shouldBe "x>=x_0, x_0>=0 ==> x>=0".asSequent
+    // step
+    result.subgoals(2) shouldBe "x>=x_0, x_0>=0 ==> [x:=x+1;]x>=x_0".asSequent
+  }
+
   "Throughout" should "split simple sequences" in {
     val result = proveBy("x>2 ==> [{x:=x+1; x:=x+2; x:=x+3;}*]x>0".asSequent, throughout("x>1".asFormula)(1))
     result.subgoals should have size 5

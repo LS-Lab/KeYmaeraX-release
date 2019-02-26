@@ -298,22 +298,14 @@ private object DifferentialTactics extends Logging {
     if (ov.isEmpty) {
       if (FormulaTools.conjuncts(f).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip else dc(f)(pos)
     } else {
-      var freshOld: Variable = TacticHelper.freshNamedSymbol(Variable("old"), origSeq)
-      val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {
-        val (ghost: Variable, ghostPos: Option[Position], nextCandidate) = TacticHelper.findSubst(old, freshOld, origSeq)
-        freshOld = nextCandidate
-        (old -> ghost,
-          ghostPos match {
-            case None if pos.isTopLevel => discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) &
-              TactixLibrary.exhaustiveEqR2L(hide=false)('Llast)
-            case Some(gp) if pos.isTopLevel => TactixLibrary.exhaustiveEqR2L(hide=false)(gp)
-            case _ if !pos.isTopLevel => discreteGhost(old, Some(ghost))(pos)
-          })
-      }).toList
-      val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
-      val oldified = SubstitutionHelper.replaceFn("old", f, ghosts.map(_._1).toMap)
-      if (FormulaTools.conjuncts(oldified).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip
-      else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(pos ++ PosInExpr(List.fill(posIncrements)(1)))
+      DLBySubst.discreteGhosts(ov, origSeq,
+        (ghosts: List[((Term, Variable), BelleExpr)]) => {
+          val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
+          val oldified = SubstitutionHelper.replaceFn("old", f, ghosts.map(_._1).toMap)
+          if (FormulaTools.conjuncts(oldified).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip
+          else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(pos ++ PosInExpr(List.fill(posIncrements)(1)))
+        }
+      )(pos)
     }
   })
 
