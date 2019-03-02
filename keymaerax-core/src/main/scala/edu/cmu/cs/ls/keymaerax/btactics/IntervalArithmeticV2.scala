@@ -92,8 +92,8 @@ object IntervalArithmeticV2 {
   private val maxPower = 10
   private lazy val powerDownSeq =
     (1 to maxPower/2) flatMap (n =>
-      proveBy(("((ff_()<=f_() & f_()<=F_()) & (((h_()<=ff_()^"+(2*n-1)+" & h_()<=F_()^"+(2*n-1)+"))<->true)) ==> h_()<=f_()^"+(2*n-1)+"").asSequent, QE & done)::
-        proveBy(("((ff_()<=f_() & f_()<=F_()) & ((((0<=ff_() & h_()<=ff_()^"+(2*n)+") | (F_()<0 & h_()<=F_()^"+(2*n)+")))<->true)) ==> h_()<=f_()^"+(2*n)).asSequent, QE & done)::
+      proveBy(("((ff_()<=f_() & f_()<=F_()) & (((h_()<=ff_()^"+(2*n-1)+"))<->true)) ==> h_()<=f_()^"+(2*n-1)+"").asSequent, QE & done)::
+        proveBy(("((ff_()<=f_() & f_()<=F_()) & ((((0<=ff_() & h_()<=ff_()^"+(2*n)+") | (F_()<=0 & h_()<=F_()^"+(2*n)+") | (ff_() <= 0 & 0<= F_() & h_()<=0)))<->true)) ==> h_()<=f_()^"+(2*n)).asSequent, QE & done)::
         Nil
       )
   private lazy val powerUpSeq =
@@ -375,10 +375,21 @@ object IntervalArithmeticV2 {
               apply(H_le, 1).
               apply(ff_f_F_gg_g_G, 0)
             (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
-          case _: Power =>
+          case Power(_, i: Number) if i.value.isValidInt && i.value >= 1 =>
             // Lower Bound
-            val n = g.asInstanceOf[Number].value.toIntExact
-            val h = round_down_term(prec)(Power(ff, g))
+            val n = i.value.toIntExact
+            // TODO: it might be (slightly?) more efficient by using different rules for the following case distinctions:
+            val h =
+              if (n % 2 == 1) round_down_term(prec)(Power(ff, g))
+              else {
+                val ff_val = eval(ff)
+                if (0 <= ff_val) round_down_term(prec)(Power(ff, g))
+                else {
+                  val F_val = eval(F)
+                  if (F_val <= 0) round_down_term(prec)(Power(F, g))
+                  else Number(0)
+                }
+              }
             val powerDown = powerDownSeq(n - 1).apply(USubst(
               SubstitutionPair(t_h, h) ::
                 SubstitutionPair(t_ff, ff) ::
@@ -395,7 +406,9 @@ object IntervalArithmeticV2 {
               apply(ff_prv, 0)
 
             // Upper Bound
-            val H = round_up_term(prec)(Power(F, g))
+            val ff_power = round_up(prec)(eval(Power(ff, g)))
+            val F_power = round_up(prec)(eval(Power(F, g)))
+            val H = mathematicaFriendly(ff_power max F_power)
             val powerUp = powerUpSeq(n-1).apply(USubst(
               SubstitutionPair(t_h, H) ::
                 SubstitutionPair(t_ff, ff) ::
@@ -482,7 +495,7 @@ object IntervalArithmeticV2 {
     recurse(prec)(qeTool)(assms)(newlowers, newuppers)(t)
   }
 
-  def intervalCutTerms(terms: List[Term]) : BuiltInTactic = new BuiltInTactic("intervalCutTerms") {
+  def intervalCutTerms(terms: List[Term]) : BuiltInTactic = new BuiltInTactic("ANON") {
     override def result(provable: ProvableSig): ProvableSig = {
       requireOneSubgoal(provable, name)
       val sequent = provable.subgoals(0)
@@ -503,11 +516,9 @@ object IntervalArithmeticV2 {
     }
   }
 
-  // TODO: I don't really understand the business with InputTactic...
   def intervalCutTerms(terms: Term*): InputTactic = "intervalCutTerms" byWithInputs (terms.toList, intervalCutTerms(terms.toList))
 
-  // TODO: positional tactic for GUI?!
-  def intervalCut : DependentPositionTactic = "intervalCut" by { (pos: Position, seq: Sequent) =>
+  val intervalCut : DependentPositionTactic = "intervalCut" by { (pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
       case Some(fml: ComparisonFormula) => intervalCutTerms(List(fml.left, fml.right))
       case Some(t: Term) => intervalCutTerms(List(t))

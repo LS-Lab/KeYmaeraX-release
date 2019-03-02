@@ -1163,6 +1163,12 @@ object DerivationInfo {
         /* premises */ List((List("&Gamma;"), List("a <= trm", "trm <= b"), true),
           (List("&Gamma;", "a <= trm", "trm <= b"), List("&Delta;"), false)))
       ,List(TermArg("trm")), _ => ((t:Term) => IntervalArithmeticV2.intervalCutTerms(t)): TypedFunc[Term, BelleExpr]),
+    PositionTacticInfo("intervalCut"
+      , RuleDisplayInfo(("Interval Arithmetic Cut", "intervalCut"),
+        (List("&Gamma;"),List("&Delta;")),
+        List((List("&Gamma;"), List("a <= trm", "trm <= b"), true), (List("&Gamma;", "a <= trm", "trm <= b"), List("&Delta;"), false))
+      )
+      , {case () => IntervalArithmeticV2.intervalCut}),
 
     // assertions and messages
     InputTacticInfo("print"
