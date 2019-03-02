@@ -10,7 +10,13 @@ import scala.collection.immutable.Map
   */
 object BigDecimalQETool extends ToolBase("BigDecimal QE Tool") with QETool {
   initialized = true
-  def eval(t: Term): BigDecimal = t match {
+  def isNumeric(t: Term) : Boolean = t match {
+    case t: BinaryCompositeTerm => isNumeric(t.left) && isNumeric(t.right)
+    case t: UnaryCompositeTerm => isNumeric(t.child)
+    case Number(a) => true
+    case _ => false
+  }
+  def eval(t: Term) : BigDecimal = t match {
     case Plus(a, b) => eval(a) + eval(b)
     case Minus(a, b) => eval(a) - eval(b)
     case Neg(a) => -eval(a)
@@ -18,7 +24,7 @@ object BigDecimalQETool extends ToolBase("BigDecimal QE Tool") with QETool {
     case Power(a, Number(n)) if n.isValidInt => eval(a) pow n.toIntExact
     case Number(a) => a
   }
-  def eval(fml: Formula): Boolean = fml match {
+  def eval(fml: Formula) : Boolean = fml match {
     case LessEqual(s, t) => eval(s) <= eval(t)
     case GreaterEqual(s, t) => eval(s) >= eval(t)
     case Less(s, t) => eval(s) < eval(t)
@@ -33,7 +39,7 @@ object BigDecimalQETool extends ToolBase("BigDecimal QE Tool") with QETool {
   def qeEvidence(formula: Formula) = (if (eval(formula)) True else formula, new Evidence {
     val message = "evaluated BigDecimal numerics"
   })
-  def init(config : Map[String,String]) = ()
+  def init(config: Map[String,String]) = ()
   def restart() = ()
   def shutdown() = ()
 }

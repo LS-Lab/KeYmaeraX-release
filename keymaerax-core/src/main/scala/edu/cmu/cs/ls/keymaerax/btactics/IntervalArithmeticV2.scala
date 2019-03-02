@@ -476,27 +476,27 @@ object IntervalArithmeticV2 {
         (lu, assmi) match {
           case ((lowers, uppers), (assm, i)) =>
             assm match {
-              case LessEqual(t, n: Number) =>
+              case LessEqual(t, n) if BigDecimalQETool.isNumeric(n) =>
                 (lowers, uppers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)))
-              case LessEqual(n: Number, t) =>
+              case LessEqual(n, t) if BigDecimalQETool.isNumeric(n) =>
                 (lowers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)), uppers)
-              case Equal(t, n: Number)=>
+              case Equal(t, n) if BigDecimalQETool.isNumeric(n) =>
                 (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), eqBound2, (t_f, t)::(t_g, n)::Nil)),
                   uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound1, (t_f, t)::(t_g, n)::Nil)))
-              case Equal(n: Number, t) =>
+              case Equal(n, t) if BigDecimalQETool.isNumeric(n) =>
                 (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), eqBound1, (t_f, n)::(t_g, t)::Nil)),
                   uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound2, (t_f, n)::(t_g, t)::Nil)))
-              case Less(t, n: Number) =>
+              case Less(t, n) if BigDecimalQETool.isNumeric(n) =>
                 (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), ltBound, (t_f, t)::(t_g, n)::Nil)))
-              case Less(n: Number, t) =>
+              case Less(n, t) if BigDecimalQETool.isNumeric(n) =>
                 (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), ltBound, (t_f, n)::(t_g, t)::Nil)), uppers)
-              case Greater(t, n: Number) =>
+              case Greater(t, n) if BigDecimalQETool.isNumeric(n) =>
                 (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), gtBound, (t_f, t)::(t_g, n)::Nil)), uppers)
-              case Greater(n: Number, t) =>
+              case Greater(n, t) if BigDecimalQETool.isNumeric(n) =>
                 (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), gtBound, (t_f, n)::(t_g, t)::Nil)))
-              case GreaterEqual(t, n: Number) =>
+              case GreaterEqual(t, n) if BigDecimalQETool.isNumeric(n) =>
                 (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), geBound, (t_f, t)::(t_g, n)::Nil)), uppers)
-              case GreaterEqual(n: Number, t) =>
+              case GreaterEqual(n, t) if BigDecimalQETool.isNumeric(n) =>
                 (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), geBound, (t_f, n)::(t_g, t)::Nil)))
               case _ =>
                 (lowers, uppers)
