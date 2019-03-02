@@ -80,18 +80,23 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     res shouldBe 'proved
   }
 
+  it should "work with non-constant numerical bounds" in withMathematica { _ =>
+    proveBy("1/3<=x, x<=5*10^(-1)==>66666*10^-5<=2*x&2*x<=10*10^-1".asSequent, intervalCutTerms("2*x".asTerm) & prop) shouldBe
+      'proved
+  }
+
   it should "cut bounds for all terms" in withMathematica { _ =>
     val res = proveBy("0<=x,x<=1,4<=y,y<=5==>P(x+y)&Q{x*y>=0}&x<y".asSequent, intervalCut(1))
     res.subgoals.loneElement.ante shouldBe
       ((("0<=x,x<=1,4<=y,y<=5,4*10^0<=x+y,x+y<=6*10^0,0*10^0<=x*y,x*y<=5*10^0,0<=0,0<=0,0<=x,x<=1,4<=y,y<=5").split(',').map(_.asFormula)).toVector)
   }
 
-  "seq0" should "prove I don't know how slow with QE" in withMathematica { _ =>
+  ignore should "prove seq0 I don't know how slow with QE" in withMathematica { _ =>
     val res = proveBy(seq0, QE)
     res shouldBe 'proved
   }
 
-  "seq1" should "prove I don't know how slow with QE" in withMathematica { _ =>
+  ignore should "prove seq1 I don't know how slow with QE" in withMathematica { _ =>
     val res = proveBy(seq1, QE)
     res shouldBe 'proved
   }

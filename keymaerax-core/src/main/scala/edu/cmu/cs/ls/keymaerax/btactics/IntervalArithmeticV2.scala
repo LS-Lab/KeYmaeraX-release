@@ -22,32 +22,65 @@ object IntervalArithmeticV2 {
 
   def mathematicaFriendly(d: BigDecimal) : Term =
     Times(Number(BigDecimal(d.bigDecimal.unscaledValue())), Power(Number(10), Number(-d.scale)))
-  def mathematicaFriendly(n: Number) : Term = mathematicaFriendly(n.value)
 
-  private def eval(t: Term) : BigDecimal = BigDecimalQETool.eval(t)
+  private def downContext(prec: Int) = new MathContext(prec, RoundingMode.FLOOR)
+  private def upContext(prec: Int) = new MathContext(prec, RoundingMode.CEILING)
 
-  def round_down(prec: Int)(x: BigDecimal) : BigDecimal = x.round(new MathContext(prec, RoundingMode.FLOOR))
-  def round_up(prec: Int)(x: BigDecimal) : BigDecimal = x.round(new MathContext(prec, RoundingMode.CEILING))
-  def round_down_term(prec: Int)(x: Term) : Term = mathematicaFriendly(round_down(prec)(eval(x)))
-  def round_up_term(prec: Int)(x: Term) : Term = mathematicaFriendly(round_up(prec)(eval(x)))
-
-  private def div_down(prec: Int)(x: BigDecimal, y: BigDecimal) : BigDecimal =
-    x.bigDecimal.divide(y.bigDecimal, new MathContext(prec, RoundingMode.FLOOR))
-  private def div_up(prec: Int)(x: BigDecimal, y: BigDecimal) : BigDecimal =
-    x.bigDecimal.divide(y.bigDecimal, new MathContext(prec, RoundingMode.CEILING))
-
-  private def div_endpoints(prec: Int)(la: BigDecimal, ua: BigDecimal, lb: BigDecimal, ub: BigDecimal) : (BigDecimal, BigDecimal) = {
+  private def op_endpoints(f: (BigDecimal, BigDecimal, MathContext) => BigDecimal)
+                          (prec: Int)
+                          (lat: Term, uat: Term)
+                          (lbt: Term, ubt: Term) : (BigDecimal, BigDecimal) = {
+    val (la, _) = eval_ivl(prec)(lat)
+    val (_, ua) = eval_ivl(prec)(uat)
+    val (lb, _) = eval_ivl(prec)(lbt)
+    val (_, ub) = eval_ivl(prec)(ubt)
     val pairs = (List(la, la, ua, ua), List(lb, ub, lb, ub)).zipped
-    val lowers = pairs map ((a, b) => div_down(prec)(a, b))
-    val uppers = pairs map ((a, b) => div_up(prec)(a, b))
+    val lowers = pairs map ((a, b) => f(a, b, downContext(prec)))
+    val uppers = pairs map ((a, b) => f(a, b, upContext(prec)))
     (lowers.reduceLeft(_.min(_)), uppers.reduceLeft(_.max(_)))
   }
 
-  private def round2(prec: Int)(l: BigDecimal, u: BigDecimal) : (BigDecimal, BigDecimal) =
-    (round_down(prec)(l), round_up(prec)(u))
-  private def mult_endpoints(prec: Int)(la: BigDecimal, ua: BigDecimal, lb: BigDecimal, ub: BigDecimal) = {
-    val endpoints = List(la * lb, la * ub, ua * lb, ua * ub) // not really efficient...
-    round2(prec)(endpoints.reduceLeft(_.min(_)), endpoints.reduceLeft(_.max(_)))
+  private def mult_endpoints(prec: Int)(lat: Term, uat: Term)(lbt: Term, ubt: Term) : (BigDecimal, BigDecimal) =
+    op_endpoints((a, b, c) => a.bigDecimal.multiply(b.bigDecimal, c))(prec)(lat, uat)(lbt, ubt)
+  private def divide_endpoints(prec: Int)(lat: Term, uat: Term)(lbt: Term, ubt: Term) : (BigDecimal, BigDecimal) =
+    op_endpoints((a, b, c) => a.bigDecimal.divide(b.bigDecimal, c))(prec)(lat, uat)(lbt, ubt)
+
+  private def power_endpoints(prec: Int)(lat: Term, uat: Term)(n: Int) : (BigDecimal, BigDecimal) = {
+    val (la, _) = eval_ivl(prec)(lat)
+    val (_, ua) = eval_ivl(prec)(uat)
+    val lower: BigDecimal =
+      if (n % 2 == 1) la.bigDecimal.pow(n, downContext(prec))
+      else {
+        if (0 <= la) la.bigDecimal.pow(n, downContext(prec))
+        else {
+          if (ua <= 0) ua.bigDecimal.pow(n, downContext(prec))
+          else 0
+        }
+      }
+    val upper = (la.bigDecimal.pow(n, upContext(prec))) max (ua.bigDecimal.pow(n, upContext(prec)))
+    (lower, upper)
+  }
+
+  private def eval_ivl(prec: Int)(t: Term) : (BigDecimal, BigDecimal) = t match {
+    case Plus(a, b) =>
+      val (la, ua) = eval_ivl(prec)(a)
+      val (lb, ub) = eval_ivl(prec)(b)
+      (la.bigDecimal.add(lb.bigDecimal, downContext(prec)), ua.bigDecimal.add(ub.bigDecimal, upContext(prec)))
+    case Minus(a, b) =>
+      val (la, ua) = eval_ivl(prec)(a)
+      val (lb, ub) = eval_ivl(prec)(b)
+      (la.bigDecimal.subtract(ub.bigDecimal, downContext(prec)), ua.bigDecimal.subtract(lb.bigDecimal, upContext(prec)))
+    case Neg(a) =>
+      val (la, ua) = eval_ivl(prec)(a)
+      (-ua, -la)
+    case Number(n) => (n.bigDecimal.round(downContext(prec)), n.bigDecimal.round(upContext(prec)))
+    case Times(a, b) => mult_endpoints(prec)(a,a)(b,b)
+    case Divide(a, b) => divide_endpoints(prec)(a,a)(b,b)
+    case Power(a, Number(i)) if i.isValidInt => power_endpoints(prec)(a, a)(i.toInt)
+  }
+  private def eval_ivl_term(prec: Int)(t: Term) : (Term, Term) = {
+    val (l, u) = eval_ivl(prec)(t)
+    (mathematicaFriendly(l), mathematicaFriendly(u))
   }
 
   private val t_f = "f_()".asTerm
@@ -177,14 +210,14 @@ object IntervalArithmeticV2 {
         val F_fml = F_prv.conclusion.succ(0).asInstanceOf[LessEqual]
         val ff = ff_fml.left
         val F = F_fml.right
-        val h = round_down_term(prec)(Neg(F))
-        val H = round_up_term(prec)(Neg(ff))
+        val (h, _) = eval_ivl_term(prec)(Neg(F))
+        val (_, hH) = eval_ivl_term(prec)(Neg(ff))
         val negDown = negDownSeq.apply(USubst(
           SubstitutionPair(t_h, h) ::
             SubstitutionPair(t_f, f) ::
             SubstitutionPair(t_F, F) :: Nil))
         val negUp = negUpSeq.apply(USubst(
-          SubstitutionPair(t_h, H) ::
+          SubstitutionPair(t_h, hH) ::
             SubstitutionPair(t_f, f) ::
             SubstitutionPair(t_ff, ff) :: Nil))
 
@@ -197,7 +230,7 @@ object IntervalArithmeticV2 {
           apply(CoHideRight(SuccPos(0)), 1).
           apply(h_le, 1).
           apply(F_prv, 0)
-        val H_prv = (CutHide(negUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, H)))))).
+        val H_prv = (CutHide(negUp.conclusion.ante(0))(ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(t, hH)))))).
           apply(negUp, 0).
           apply(AndRight(SuccPos(0)), 0).
           apply(CoHideRight(SuccPos(0)), 1).
@@ -223,8 +256,8 @@ object IntervalArithmeticV2 {
         val G = G_fml.right
         binop match {
           case _: Plus =>
-            val h = round_down_term(prec)(Plus(ff, gg))
-            val H = round_up_term(prec)(Plus(F, G))
+            val h = eval_ivl_term(prec)(Plus(ff, gg))._1
+            val H = eval_ivl_term(prec)(Plus(F, G))._2
             val plusDown = plusDownSeq.apply(USubst(
               SubstitutionPair(t_h, h) ::
                 SubstitutionPair(t_f, f) ::
@@ -259,8 +292,8 @@ object IntervalArithmeticV2 {
               apply(F_prv, 0)
             (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
           case _: Minus =>
-            val h = round_down_term(prec)(Minus(ff, G))
-            val H = round_up_term(prec)(Minus(F, gg))
+            val h = eval_ivl_term(prec)(Minus(ff, G))._1
+            val H = eval_ivl_term(prec)(Minus(F, gg))._2
             val minusDown = minusDownSeq.apply(USubst(
               SubstitutionPair(t_h, h) ::
                 SubstitutionPair(t_f, f) ::
@@ -296,8 +329,7 @@ object IntervalArithmeticV2 {
             (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
           case _: Times =>
             // Bounds
-            val bnds = mult_endpoints(prec)(eval(ff), eval(F), eval(gg), eval(G))
-
+            val bnds = mult_endpoints(prec)(ff, F)(gg, G)
             val h = mathematicaFriendly(bnds._1)
             val H = mathematicaFriendly(bnds._2)
             val multDown = multDownSeq.apply(USubst(
@@ -343,7 +375,7 @@ object IntervalArithmeticV2 {
             (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
           case _: Divide =>
             // Bounds
-            val bnds = div_endpoints(prec)(eval(ff), eval(F), eval(gg), eval(G))
+            val bnds = divide_endpoints(prec)(ff, F)(gg, G)
             val h = mathematicaFriendly(bnds._1)
             val H = mathematicaFriendly(bnds._2)
             val divideDown = divideDownSeq.apply(USubst(
@@ -390,18 +422,9 @@ object IntervalArithmeticV2 {
           case Power(_, i: Number) if i.value.isValidInt && i.value >= 1 =>
             // Lower Bound
             val n = i.value.toIntExact
-            // TODO: it might be (slightly?) more efficient by using different rules for the following case distinctions:
-            val h =
-              if (n % 2 == 1) round_down_term(prec)(Power(ff, g))
-              else {
-                val ff_val = eval(ff)
-                if (0 <= ff_val) round_down_term(prec)(Power(ff, g))
-                else {
-                  val F_val = eval(F)
-                  if (F_val <= 0) round_down_term(prec)(Power(F, g))
-                  else Number(0)
-                }
-              }
+            val ivl = power_endpoints(prec)(ff, F)(n)
+            val h = mathematicaFriendly(ivl._1)
+            val H = mathematicaFriendly(ivl._2)
             val powerDown = powerDownSeq(n).apply(USubst(
               SubstitutionPair(t_h, h) ::
                 SubstitutionPair(t_ff, ff) ::
@@ -418,9 +441,6 @@ object IntervalArithmeticV2 {
               apply(ff_prv, 0)
 
             // Upper Bound
-            val ff_power = round_up(prec)(eval(Power(ff, g)))
-            val F_power = round_up(prec)(eval(Power(F, g)))
-            val H = mathematicaFriendly(ff_power max F_power)
             val powerUp = powerUpSeq(n).apply(USubst(
               SubstitutionPair(t_h, H) ::
                 SubstitutionPair(t_ff, ff) ::
