@@ -530,9 +530,17 @@ object IntervalArithmeticV2 {
 
   def intervalCutTerms(terms: Term*): InputTactic = "intervalCutTerms" byWithInputs (terms.toList, intervalCutTerms(terms.toList))
 
+  private def terms_of(fml: Formula) : List[Term] = fml match {
+    case fml: BinaryCompositeFormula => terms_of(fml.left) ++ terms_of(fml.right)
+    case fml: UnaryCompositeFormula => terms_of(fml.child)
+    case fml: PredOf => List(fml.child)
+    case fml: PredicationalOf => terms_of(fml.child)
+    case fml: ComparisonFormula => List(fml.left, fml.right)
+  }
+
   val intervalCut : DependentPositionTactic = "intervalCut" by { (pos: Position, seq: Sequent) =>
     seq.sub(pos) match {
-      case Some(fml: ComparisonFormula) => intervalCutTerms(List(fml.left, fml.right))
+      case Some(fml: Formula) => intervalCutTerms(terms_of(fml))
       case Some(t: Term) => intervalCutTerms(List(t))
       case _ => throw new BelleThrowable("intervalCut needs to be called on a ComparisonFormula or a Term")
     }

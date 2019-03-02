@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.IntervalArithmeticV2._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Sequent, True}
+import org.scalatest.LoneElement._
 
 import scala.collection.immutable._
 
@@ -77,6 +78,12 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
   "seq1" should "prove with interval arithmetic" in withMathematica { _ =>
     val res = proveBy(seq1, intervalCut(1, 0::Nil) & closeId)
     res shouldBe 'proved
+  }
+
+  it should "cut bounds for all terms" in withMathematica { _ =>
+    val res = proveBy("0<=x,x<=1,4<=y,y<=5==>P(x+y)&Q{x*y>=0}&x<y".asSequent, intervalCut(1))
+    res.subgoals.loneElement.ante shouldBe
+      ((("0<=x,x<=1,4<=y,y<=5,4*10^0<=x+y,x+y<=6*10^0,0*10^0<=x*y,x*y<=5*10^0,0<=0,0<=0,0<=x,x<=1,4<=y,y<=5").split(',').map(_.asFormula)).toVector)
   }
 
   "seq0" should "prove I don't know how slow with QE" in withMathematica { _ =>
