@@ -90,16 +90,31 @@ object IntervalArithmeticV2 {
   private lazy val divideDownSeq = proveBy(
     "((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & ((((G_()<0 | 0<gg_()) & (h_()<=ff_()/gg_() & h_()<=ff_()/G_() & h_()<=F_()/gg_() & h_()<=F_()/G_())))<->true) ==> h_()<=f_()/g_()".asSequent, QE & done)
   private val maxPower = 10
-  private lazy val powerDownSeq =
-    (1 to maxPower/2) flatMap (n =>
-      proveBy(("((ff_()<=f_() & f_()<=F_()) & (((h_()<=ff_()^"+(2*n-1)+"))<->true)) ==> h_()<=f_()^"+(2*n-1)+"").asSequent, QE & done)::
-        proveBy(("((ff_()<=f_() & f_()<=F_()) & ((((0<=ff_() & h_()<=ff_()^"+(2*n)+") | (F_()<=0 & h_()<=F_()^"+(2*n)+") | (ff_() <= 0 & 0<= F_() & h_()<=0)))<->true)) ==> h_()<=f_()^"+(2*n)).asSequent, QE & done)::
-        Nil
-      )
-  private lazy val powerUpSeq =
-    (1 to maxPower) map (n =>
-      proveBy(("((ff_()<=f_() & f_()<=F_()) & (((ff_()^"+n+" <= h_() & F_()^"+n+" <=h_()))<->true)) ==> f_()^"+n+" <=h_()").asSequent,
-        QE & done))
+
+  private var powerDownCache = new HashMap[Int, ProvableSig]()
+  private def powerDownSeq(n: Int): ProvableSig =
+    powerDownCache.get(n) match {
+      case Some(prv) => prv
+      case None =>
+        val prv: ProvableSig =
+          if (n % 2 == 0)
+            proveBy(("((ff_()<=f_() & f_()<=F_()) &" +
+              "((((0<=ff_() & h_()<=ff_()^"+n+") | (F_()<=0 & h_()<=F_()^"+n+") | (ff_() <= 0 & 0<= F_() & h_()<=0)))<->true))" +
+              "==> h_()<=f_()^"+n).asSequent, QE & done)
+          else
+            proveBy(("((ff_()<=f_() & f_()<=F_()) & (((h_()<=ff_()^"+n+"))<->true)) ==> h_()<=f_()^"+n+"").asSequent, QE & done)
+        powerDownCache = powerDownCache.updated(n, prv)
+        prv
+    }
+  private var powerUpCache = new HashMap[Int, ProvableSig]()
+  private def powerUpSeq(n: Int): ProvableSig =
+    powerUpCache.get(n) match {
+      case Some(prv) => prv
+      case None =>
+        val prv: ProvableSig = proveBy(("((ff_()<=f_() & f_()<=F_()) & (((ff_()^" + n + " <= h_() & F_()^" + n + " <=h_()))<->true)) ==> f_()^" + n + " <=h_()").asSequent, QE & done)
+        powerUpCache = powerUpCache.updated(n, prv)
+        prv
+    }
 
   /*
   fml |- P      G |- fml
@@ -118,9 +133,6 @@ object IntervalArithmeticV2 {
   type BoundMap = HashMap[Term, ProvableSig]
   def BoundMap(): BoundMap = HashMap[Term, ProvableSig]()
 
-  /*
-    * TODO: better cache for power-lemmas?!
-  */
   private def recurse(prec: Int)
              (qeTool: QETool)
              (assms: IndexedSeq[Formula])
@@ -390,7 +402,7 @@ object IntervalArithmeticV2 {
                   else Number(0)
                 }
               }
-            val powerDown = powerDownSeq(n - 1).apply(USubst(
+            val powerDown = powerDownSeq(n).apply(USubst(
               SubstitutionPair(t_h, h) ::
                 SubstitutionPair(t_ff, ff) ::
                 SubstitutionPair(t_f, f) ::
@@ -409,7 +421,7 @@ object IntervalArithmeticV2 {
             val ff_power = round_up(prec)(eval(Power(ff, g)))
             val F_power = round_up(prec)(eval(Power(F, g)))
             val H = mathematicaFriendly(ff_power max F_power)
-            val powerUp = powerUpSeq(n-1).apply(USubst(
+            val powerUp = powerUpSeq(n).apply(USubst(
               SubstitutionPair(t_h, H) ::
                 SubstitutionPair(t_ff, ff) ::
                 SubstitutionPair(t_f, f) ::
