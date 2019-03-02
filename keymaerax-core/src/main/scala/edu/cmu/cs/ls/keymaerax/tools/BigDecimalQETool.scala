@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.tools
 
+import java.math.{MathContext, RoundingMode}
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable.Map
@@ -22,7 +23,7 @@ object BigDecimalQETool extends ToolBase("BigDecimal QE Tool") with QETool {
     case Neg(a) => -eval(a)
     case Times(a, b) => eval(a) * eval(b)
     case Power(a, Number(n)) if n.isValidInt => eval(a) pow n.toIntExact
-    case Number(a) => a
+    case Number(a) => BigDecimal(a.bigDecimal, new MathContext(0, RoundingMode.UNNECESSARY))
   }
   def eval(fml: Formula) : Boolean = fml match {
     case LessEqual(s, t) => eval(s) <= eval(t)
