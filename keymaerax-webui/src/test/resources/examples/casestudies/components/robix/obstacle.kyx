@@ -1,16 +1,18 @@
-Functions.
-  R ep.   /* time limit for control decisions */
-  R V.    /* maximum velocity of obstacles */
+ArchiveEntry "Obstacle Component"
+
+Definitions
+  Real ep;   /* time limit for control decisions */
+  Real V;    /* maximum velocity of obstacles */
 End.
 
 ProgramVariables.
-  R xo.   /* position summary of obstacles */
-  R yo.
-  R dxo.  /* direction and linear velocity of obstacles */
-  R dyo.
-  R t.    /* time */
-  R xo0.
-  R yo0.
+  Real xo;   /* position summary of obstacles */
+  Real yo;
+  Real dxo;  /* direction and linear velocity of obstacles */
+  Real dyo;
+  Real t;    /* time */
+  Real xo0;
+  Real yo0;
 End.
 
 Problem.
@@ -40,4 +42,15 @@ Problem.
       }
     }*
   ] (-V*t <= xo-xo0 & xo-xo0 <= V*t & -V*t <= yo-yo0 & yo-yo0 <= V*t)
+End.
+
+Tactic "Proof"
+implyR(1) ; andL('L)* ; loop({`0<=t&t<=ep()&-V()*t<=xo-xo0&xo-xo0<=V()*t&-V()*t<=yo-yo0&yo-yo0<=V()*t`}, 1) ; <(
+  QE,
+  QE,
+  unfold ; diffInvariant({`0<=t`}, 1) ; diffInvariant({`-t*V()<=xo-old(xo)&xo-old(xo)<=t*V()`}, 1) ;
+  diffInvariant({`-t*V()<=yo-old(yo)&yo-old(yo)<=t*V()`}, 1) ; allR2L(-14) ; allR2L(-13) ; dW(1) ; QE
+  )
+End.
+
 End.

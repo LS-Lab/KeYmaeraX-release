@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
@@ -297,22 +298,14 @@ private object DifferentialTactics extends Logging {
     if (ov.isEmpty) {
       if (FormulaTools.conjuncts(f).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip else dc(f)(pos)
     } else {
-      var freshOld: Variable = TacticHelper.freshNamedSymbol(Variable("old"), origSeq)
-      val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {
-        val (ghost: Variable, ghostPos: Option[Position], nextCandidate) = TacticHelper.findSubst(old, freshOld, origSeq)
-        freshOld = nextCandidate
-        (old -> ghost,
-          ghostPos match {
-            case None if pos.isTopLevel => discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) &
-              TactixLibrary.exhaustiveEqR2L(hide=false)('Llast)
-            case Some(gp) if pos.isTopLevel => TactixLibrary.exhaustiveEqR2L(hide=false)(gp)
-            case _ if !pos.isTopLevel => discreteGhost(old, Some(ghost))(pos)
-          })
-      }).toList
-      val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
-      val oldified = SubstitutionHelper.replaceFn("old", f, ghosts.map(_._1).toMap)
-      if (FormulaTools.conjuncts(oldified).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip
-      else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(pos ++ PosInExpr(List.fill(posIncrements)(1)))
+      DLBySubst.discreteGhosts(ov, origSeq,
+        (ghosts: List[((Term, Variable), BelleExpr)]) => {
+          val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
+          val oldified = SubstitutionHelper.replaceFn("old", f, ghosts.map(_._1).toMap)
+          if (FormulaTools.conjuncts(oldified).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip
+          else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(pos ++ PosInExpr(List.fill(posIncrements)(1)))
+        }
+      )(pos)
     }
   })
 
@@ -707,28 +700,23 @@ private object DifferentialTactics extends Logging {
     * (including when the sequent or position are not of the expected shape)
     */
   lazy val cexCheck: DependentPositionTactic = "cexCheck" by ((pos: Position, seq:Sequent) => {
-    if(!(pos.isSucc && pos.isTopLevel && pos.checkSucc.index0 == 0 && seq.succ.length==1)) {
+    if (!(pos.isSucc && pos.isTopLevel && pos.checkSucc.index0 == 0 && seq.succ.length==1)) {
       //todo: currently only works if there is exactly one succedent
       logger.warn("ODE counterexample not called at top-level succedent")
       skip
-    }
-    else if (ToolProvider.invGenTool().isEmpty) {
+    } else if (ToolProvider.invGenTool().isEmpty) {
       logger.warn("ODE counterexample requires an InvGenTool, but got None")
       skip
-    }
-    else
-    {
+    } else {
       val tool = ToolProvider.invGenTool().get
 
       seq.sub(pos) match {
         case Some(Box(ode:ODESystem, post)) =>
           try {
-            tool.refuteODE(ode,seq.ante,post) match {
+            tool.refuteODE(ode, seq.ante, post) match {
               case None => skip
-              case Some(cex) =>
-                DebuggingTactics.error("Found a counterexample for the ODE conjecture (numeric values reported): "+cex)
+              case Some(_) => cut(False) <(closeF, cohideR('Rlast))
             }
-
           } catch {
             // cannot falsify for whatever reason (timeout, ...), so continue with the tactic
             case _: Exception => skip
@@ -850,17 +838,18 @@ private object DifferentialTactics extends Logging {
     } catch {
       case err: Exception =>
         logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
-        Stream[Formula]()
+        Stream[GenProduct]()
     }
 
     //Adds an invariant to the system's evolution domain constraint and tries to establish the invariant via proveWithoutCuts.
     //Fails if the invariant cannot be established by proveWithoutCuts.
     val addInvariant = ChooseSome(
       () => invariantCandidates.iterator,
-      (inv: Formula) => {
-        DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
-        /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
-        diffCut(inv)(pos) <(skip, proveInvariant(pos) & done)
+      (prod: GenProduct) => prod match {
+        case (inv, _) =>
+          DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
+          /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
+          diffCut(inv)(pos) <(skip, proveInvariant(pos) & done)
       }
     )
 
@@ -905,22 +894,23 @@ private object DifferentialTactics extends Logging {
     } catch {
       case err: Exception =>
         logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
-        Stream[Formula]()
+        Stream[GenProduct]()
     }
 
     //Adds an invariant to the system's evolution domain constraint and tries to establish the invariant via proveWithoutCuts.
     //Fails if the invariant cannot be established by proveWithoutCuts.
     val addInvariant = ChooseSome(
       () => invariantCandidates.iterator,
-      (inv: Formula) => {
-        DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
-          /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
-          diffCut(inv)(pos) <(
-            skip,
-            odeInvariant()(pos)) &
-        // continue outside <(skip, ...) so that cut is proved before used
-        (odeInvariant()(pos) | fastODE(finish)(pos)) &
-        DebuggingTactics.debug("[ODE] Inv Candidate done")
+      (prod: GenProduct) => prod match {
+        case (inv, None) =>
+          DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
+            /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
+            diffCut(inv)(pos) <(
+              skip,
+              odeInvariant()(pos)) &
+          // continue outside <(skip, ...) so that cut is proved before used
+          (odeInvariant()(pos) | fastODE(finish)(pos)) &
+          DebuggingTactics.debug("[ODE] Inv Candidate done")
       }
     )
 
@@ -941,10 +931,9 @@ private object DifferentialTactics extends Logging {
         // Try to prove postcondition invariant
         odeInvariant()(pos) |
         // Counterexample check
-        // cexCheck(pos) &
-        // Some additional cases
-        //(solve(pos) & ?(timeoutQE))|
-        (
+        cexCheck(pos) & doIf(!_.subgoals.exists(_.succ.forall(_ == False)))(
+          // Some additional cases
+          //(solve(pos) & ?(timeoutQE))|
           ODEInvariance.nilpotentSolve(true)(pos) |
           // todo: Pegasus should tell us for nonlinear ODEs
           // (diffUnpackEvolutionDomainInitially(pos) & DebuggingTactics.print("diff unpack") & hideR(pos) & timeoutQE & done) |
@@ -1492,11 +1481,11 @@ private object DifferentialTactics extends Logging {
     // Assume that Pegasus hands us back a diffcut chain
     invs.headOption match {
       case None => throw new BelleThrowable(s"Pegasus failed to generate an invariant")
-      case Some(True) => diffWeakenG(pos) & timeoutQE & done
+      case Some((True, _)) => diffWeakenG(pos) & timeoutQE & done
       case _ =>
         invs.foldRight(diffWeakenG(pos) & timeoutQE & done)( (fml,tac) =>
           //DebuggingTactics.print("DC chain: "+fml) &
-          DC(fml)(pos) <(tac,
+          DC(fml._1)(pos) <(tac,
             (
             //note: repeated dW&QE not needed if Pegasus reports a correct dC chain
             //(DifferentialTactics.diffWeakenG(pos) & QE & done) |

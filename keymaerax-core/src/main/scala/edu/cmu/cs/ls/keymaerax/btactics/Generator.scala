@@ -59,9 +59,9 @@ class ConfigurableGenerator[A](var products: Map[Expression,Seq[A]] = Map[Expres
         case _ => false
       }).map({ case (_, odeProducts) =>
         odeProducts.map({
-          case Imply(Equal(xp: DifferentialSymbol, e), invCandidate) =>
+          case (Imply(Equal(xp: DifferentialSymbol, e), invCandidate), hint) =>
             if (DifferentialHelper.atomicOdes(ode.ode).exists(a => a.xp == xp && a.e == e)) {
-              Some(invCandidate.asInstanceOf[A])
+              Some((invCandidate, hint).asInstanceOf[A])
             } else None
           case inv => Some(inv)
         })

@@ -305,6 +305,12 @@ class EqualityTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "x=4, [x:=-7;]!(x>=0&x>=5|x < 0&-x>=5), y=3 ==> ".asSequent
   }
 
+  it should "expand abs(x) in equivalences in context" ignore withQE { _ =>
+    //@todo not yet supported
+    proveBy("==> \\forall x (abs(x)>=0 <-> (x>=0 | x<=0))".asSequent, abs(1, 0::0::0::Nil)).subgoals.loneElement shouldBe
+      "==> \\forall x ( (x>=0 & x>=0 <-> (x>=0 | x<=0) ) | ( x<0 & -x>=0 <-> (x>=0 | x<=0) ) )".asSequent
+  }
+
   "min" should "expand min(x,y) in succedent" in withQE { _ =>
     val result = proveBy("min(x,y) >= 5".asFormula, minmax(1, 0::Nil))
     result.subgoals.loneElement shouldBe "x<=y&min_0=x | x>y&min_0=y ==> min_0>=5".asSequent

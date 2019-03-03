@@ -4,6 +4,7 @@ import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon._
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core.{Formula, PrettyPrinter, Program}
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, ParseException}
@@ -49,9 +50,9 @@ object CourseMain {
 
     //Intialize the printer, the configuration generator, the parser, and the invariant generator.
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.pp)
-    val generator = new ConfigurableGenerator[Formula]()
+    val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
-      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv)))
+      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
     TactixLibrary.invGenerator = generator
   }
 
@@ -191,7 +192,7 @@ object CourseMain {
     val fileName = fileExistsOrFail(v)
     val bigString = scala.io.Source.fromFile(fileName, "ISO-8859-1").mkString
     try {
-      BelleParser.parseWithInvGen(bigString, Some(FixedGenerator[Formula](Nil)))
+      BelleParser.parseWithInvGen(bigString, Some(FixedGenerator[GenProduct](Nil)))
     } catch {
       case ex: ParseException =>
         println(s"Tactic in ${fileName} did not parse\n" + ex)

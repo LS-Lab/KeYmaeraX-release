@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import BelleLexer.TokenStream
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
 import org.apache.logging.log4j.scala.Logging
 
@@ -31,7 +32,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
 
   /** Parses the string `s` as a Bellerophon tactic. Uses optional invariant generator `g` and definitions `defs` to
     * expand function and predicate symbols. */
-  def parseWithInvGen(s: String, g: Option[Generator.Generator[Expression]] = None,
+  def parseWithInvGen(s: String, g: Option[Generator.Generator[GenProduct]] = None,
                       defs: Declaration = Declaration(Map())): BelleExpr =
     firstUnacceptableCharacter(s) match {
       case Some((loc, char)) => throw ParseException(s"Found an unacceptable character when parsing tactic (allowed unicode: ${allowedUnicodeChars.toString}): $char", loc, "<unknown>", "<unknown>", "", "")
@@ -100,7 +101,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
   /** Parses the token stream `toks`. Expands tactic abbreviations according to `tacticDefs`, function and predicate
     * symbols according to `defs`, and passes the invariant generator `g` on to tactics requiring a generator. */
   def parseTokenStream(toks: TokenStream, tacticDefs: DefScope[String, DefTactic],
-                       exprDefs: DefScope[Expression, DefExpression], g: Option[Generator.Generator[Expression]],
+                       exprDefs: DefScope[Expression, DefExpression], g: Option[Generator.Generator[GenProduct]],
                        defs: Declaration): BelleExpr = {
     val result = parseLoop(ParserState(Bottom, toks), tacticDefs, exprDefs, g, defs)
     result.stack match {
@@ -112,7 +113,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
 
   //@tailrec
   private def parseLoop(st: ParserState, tacticDefs: DefScope[String, DefTactic],
-                        exprDefs: DefScope[Expression, DefExpression], g: Option[Generator.Generator[Expression]],
+                        exprDefs: DefScope[Expression, DefExpression], g: Option[Generator.Generator[GenProduct]],
                         defs: Declaration): ParserState = {
     logger.debug(s"Current state: $st")
 
@@ -123,7 +124,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
   }
 
   private def parseInnerExpr(tokens: List[BelleToken], tacticDefs: DefScope[String, DefTactic],
-                             exprDefs: DefScope[Expression, DefExpression], g: Option[Generator.Generator[Expression]],
+                             exprDefs: DefScope[Expression, DefExpression], g: Option[Generator.Generator[GenProduct]],
                              defs: Declaration): (BelleExpr, Location, List[BelleToken]) = tokens match {
     case BelleToken(OPEN_PAREN, oParenLoc) :: tail =>
       //@note find matching closing parenthesis, parse inner expr, then continue with remainder
@@ -140,7 +141,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
   }
 
   private def parseStep(st: ParserState, tacticDefs: DefScope[String, DefTactic],
-                        exprDefs: DefScope[Expression, DefExpression], g: Option[Generator.Generator[Expression]],
+                        exprDefs: DefScope[Expression, DefExpression], g: Option[Generator.Generator[GenProduct]],
                         defs: Declaration): ParserState = {
     val stack : Stack[BelleItem] = st.stack
 
@@ -486,7 +487,7 @@ object BelleParser extends (String => BelleExpr) with Logging {
 
   /** Constructs a tactic using the reflective expression builder. */
   private def constructTactic(name: String, args : Option[List[TacticArg]], location: Location,
-                              tacticDefs: DefScope[String, DefTactic], g: Option[Generator.Generator[Expression]],
+                              tacticDefs: DefScope[String, DefTactic], g: Option[Generator.Generator[GenProduct]],
                               defs: Declaration) : BelleExpr = {
     // Converts List[Either[Expression, Pos]] to List[Either[Seq[Expression], Pos]] by makikng a bunch of one-tuples.
     val newArgs = args match {

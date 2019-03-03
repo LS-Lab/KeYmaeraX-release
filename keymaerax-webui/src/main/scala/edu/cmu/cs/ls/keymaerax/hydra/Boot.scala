@@ -20,6 +20,7 @@ import org.apache.logging.log4j.scala.Logging
 
 import scala.concurrent.duration._
 import akka.http.scaladsl.server.Route
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.language.postfixOps
@@ -158,10 +159,10 @@ object HyDRAInitializer extends Logging {
     //@note setup interpreter
     BelleInterpreter.setInterpreter(ExhaustiveSequentialInterpreter())
     // connect invariant generator to tactix library
-    val generator = new ConfigurableGenerator[Formula]()
+    val generator = new ConfigurableGenerator[GenProduct]()
     TactixLibrary.invGenerator = generator
     KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) =>
-      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv)))
+      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
 
     LoadingDialogFactory().addToStatus(10, Some("Connecting to arithmetic tools ..."))
 

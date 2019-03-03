@@ -1,28 +1,29 @@
-Functions.
-  R ep.   /* time limit for control decisions */
-  R B.    /* minimum braking capability of the robot */
-  R A.    /* maximum acceleration -B <= a <= A */
-  R V.    /* maximum velocity of obstacles */
-  R abs(R).  /* predefined function of absolute value */
+ArchiveEntry "Robot Component"
+
+Definitions
+  Real ep;   /* time limit for control decisions */
+  Real B;    /* minimum braking capability of the robot */
+  Real A;    /* maximum acceleration -B <= a <= A */
+  Real V;    /* maximum velocity of obstacles */
 End.
 
-ProgramVariables.
-  R x.    /* robot position: x */
-  R y.    /* robot position: y */
-  R v.    /* robot translational velocity */
-  R a.    /* robot translational acceleration */
-  R dx.   /* robot orientation: x */
-  R dy.   /* robot orientation: y */
-  R w.    /* robot rotational velocity */
-  R k.    /* curvature of curve (i)straight: k=0; (ii)curve: k!=0 */
-  R xo.   /* position summary of obstacles */
-  R yo.
-  R t.    /* time */
-  R xo0.
-  R yo0.
+ProgramVariables
+  Real x;    /* robot position: x */
+  Real y;    /* robot position: y */
+  Real v;    /* robot translational velocity */
+  Real a;    /* robot translational acceleration */
+  Real dx;   /* robot orientation: x */
+  Real dy;   /* robot orientation: y */
+  Real w;    /* robot rotational velocity */
+  Real k;    /* curvature of curve (i)straight: k=0; (ii)curve: k!=0 */
+  Real xo;   /* position summary of obstacles */
+  Real yo;
+  Real t;    /* time */
+  Real xo0;
+  Real yo0;
 End.
 
-Problem.
+Problem
     v >= 0
   & ( abs(x-xo) > v^2 / (2*B) + V*(v/B)
     | abs(y-yo) > v^2 / (2*B) + V*(v/B))
@@ -76,4 +77,44 @@ Problem.
       yo :=*; ?-V*t <= yo-yo0 & yo-yo0 <= V*t;
     }*
   ] (v > 0 -> (x - xo)^2 + (y - yo)^2 > 0)
+End.
+
+Tactic "Proof"
+implyR(1) ; andL('L)* ; loop({`v>=0&dx^2+dy^2=1&0<=t&t<=ep()&-V()*t<=xo-xo0&xo-xo0<=V()*t&-V()*t<=yo-yo0&yo-yo0<=V()*t&(v=0|abs(x-xo)>v^2/(2*B())+V()*(v/B())|abs(y-yo)>v^2/(2*B())+V()*(v/B()))`}, 1) ; <(
+  QE,
+  QE,
+  unfold ; <(
+    diffInvariant({`0<=t`}, 1) ; diffInvariant({`dx^2+dy^2=1`}, 1) ; diffInvariant({`v=old(v)-B()*t`}, 1) ;
+    diffInvariant({`-t*(v+B()/2*t)<=x-old(x)&x-old(x)<=t*(v+B()/2*t)`}, 1) ;
+    diffInvariant({`-t*(v+B()/2*t)<=y-old(y)&y-old(y)<=t*(v+B()/2*t)`}, 1) ; dW(1) ; unfold ; simplify(1) ;
+    orR(1) ; orR(2) ; orL(-16) ; <(
+      hideR(2=={`abs(x-xo)>v^2/(2*B())+V()*(v/B())`}) ; hideR(2=={`abs(y-yo)>v^2/(2*B())+V()*(v/B())`}) ; QE,
+      orL(-16) ; <(
+        hideR(3=={`abs(y-yo)>v^2/(2*B())+V()*(v/B())`}) ; smartQE,
+        hideR(2=={`abs(x-xo)>v^2/(2*B())+V()*(v/B())`}) ; smartQE
+        )
+      ),
+    diffInvariant({`0<=t`}, 1) ; diffInvariant({`v=old(v)`}, 1) ; allR2L(-19) ; diffInvariant({`dx^2+dy^2=1`}, 1) ;
+    dW(1) ; unfold ; hideR(2) ; hideR(2) ; smartQE,
+    diffInvariant({`0<=t`}, 1) ; diffInvariant({`dx^2+dy^2=1`}, 1) ; diffInvariant({`v=old(v)+a*t`}, 1) ;
+    diffInvariant({`-t*(v-a/2*t)<=x-old(x)&x-old(x)<=t*(v-a/2*t)`}, 1) ;
+    diffInvariant({`-t*(v-a/2*t)<=y-old(y)&y-old(y)<=t*(v-a/2*t)`}, 1) ; dW(1) ; unfold ; simplify(1) ; orR(1) ;
+    orR(2) ; hideL(-20=={`v_0=0|abs(x_0-xo_0)>v_0^2/(2*B())+V()*(v_0/B())|abs(y_0-yo_0)>v_0^2/(2*B())+V()*(v_0/B())`}) ;
+    hideL(-25=={`dx^2+dy^2=1`}) ; hideL(-13=={`dx_0^2+dy_0^2=1`}) ; hideL(-7=={`v_0*k=w_0`}) ; orL(-7) ; <(
+      hideR(3=={`abs(y-yo)>v^2/(2*B())+V()*(v/B())`}) ; hideR(1=={`v=0`}) ; hideL(-16=={`-V()*t_1<=yo_0-yo0_0`}) ;
+      hideL(-16=={`yo_0-yo0_0<=V()*t_1`}) ; hideL(-16=={`-t*(v-a/2*t)<=y-y_0`}) ; hideL(-16=={`y-y_0<=t*(v-a/2*t)`}) ;
+      hideL(-24=={`-V()*t<=yo-yo0`}) ; hideL(-24=={`yo-yo0<=V()*t`}) ; hideL(-9=={`yo0=yo_0`}) ;
+      edit({`abs(x_0-xo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*t^2+t*(v_0+V()))`}, -7) ;
+      hideL(-12=={`t_1<=ep()`}) ; hideL(-18=={`t<=ep()`}) ; hideL(-4=={`ep()>0`}) ; smartQE
+      ,
+      hideR(2=={`abs(x-xo)>v^2/(2*B())+V()*(v/B())`}) ; hideL(-8=={`xo0=xo_0`}) ; hideL(-13=={`-V()*t_1<=xo_0-xo0_0`}) ;
+      hideL(-13=={`xo_0-xo0_0<=V()*t_1`}) ; hideL(-17=={`-t*(v-a/2*t)<=x-x_0`}) ; hideL(-17=={`x-x_0<=t*(v-a/2*t)`}) ;
+      hideL(-21=={`-V()*t<=xo-xo0`}) ; hideL(-21=={`xo-xo0<=V()*t`}) ;
+      edit({`abs(y_0-yo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*t^2+t*(v_0+V()))`}, -7) ;
+      hideL(-11=={`0<=t_1`}) ; hideL(-11=={`t_1<=ep()`}) ; hideL(-17=={`t<=ep()`}) ; hideL(-4=={`ep()>0`}) ; smartQE
+      )
+    )
+  )
+End.
+
 End.

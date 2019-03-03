@@ -81,7 +81,7 @@ object DatabasePopulator extends Logging {
   }
 
   /** Loads the specified resource, either from the JAR if URL starts with 'classpath:' or from the URL. */
-  private def loadResource(url: String): String =
+  def loadResource(url: String): String =
     if (url.startsWith("classpath:")) {
       io.Source.fromInputStream(getClass.getResourceAsStream(url.substring("classpath:".length))).mkString
     } else {
