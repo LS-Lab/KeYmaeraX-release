@@ -1157,6 +1157,7 @@ object DerivationInfo {
       , "conflat", {case () => HilbertCalculus.useAt(DerivedAxioms.convergenceFlat)}),
 
     // numerical bound tactics
+    new TacticInfo("intervalArithmetic", "intervalArithmetic",  {case () => IntervalArithmeticV2.intervalArithmetic}, needsTool = true),
     InputTacticInfo("intervalCutTerms",
       RuleDisplayInfo(("Interval Arithmetic Cut","intervalCutTerms"),
         (List("&Gamma;"),List("&Delta;")),

@@ -15,13 +15,13 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
 
   "proveBounds" should "pick up all kinds of constraints" in withMathematica { qeTool =>
     val assms = IndexedSeq("a = 0", "1 = b", "2 < c", "c < 3", "d <= 4", "5 <= d", "e >= 6", "7 >= e", "f > 8", "9 > f") map (_.asFormula)
-    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap())("0".asTerm)
+    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap())(List("0".asTerm))
     ("a,b,c,d,e,f" split(',')).toList.map(_.asTerm).forall(t => lowers.isDefinedAt(t) && uppers.isDefinedAt(t)) shouldBe true
   }
 
   "proveBounds" should "pick up all kinds of non-numbers" in withMathematica { qeTool =>
     val assms = IndexedSeq("0 <= f(x)", "f(x) <= 1", "0 <= x", "x <= 1", "0 <= c()", "c() <= 1") map (_.asFormula)
-    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap())("0".asTerm)
+    val (lowers, uppers) = proveBounds(5)(qeTool)(assms)(true)(BoundMap(), BoundMap())(List("0".asTerm))
     ("f(x),x,c()" split(',')).toList.map(_.asTerm).forall(t => lowers.isDefinedAt(t) && uppers.isDefinedAt(t)) shouldBe true
   }
 
@@ -112,6 +112,43 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     val toc = System.nanoTime()
     System.out.println("Timing for " + s + ": " + (toc - tic)/1000000000.0 + "s")
     res
+  }
+
+  "intervalArithmetic" should "prove Comparisons in succedent" in withMathematica { _ =>
+    proveBy("0<=a,a<=1,2<=b,b<=5 ==> a*b - a <= 5".asSequent, intervalArithmetic) shouldBe 'proved
+    proveBy("0<=a,a<=1,2<=b,b<=5 ==> a*b - a < 6".asSequent, intervalArithmetic) shouldBe 'proved
+    proveBy("0<=a,a<=1,2<=b,b<=5 ==> a*b - a >= -1".asSequent, intervalArithmetic) shouldBe 'proved
+    proveBy("0<=a,a<=1,2<=b,b<=5 ==> a*b - a > -2".asSequent, intervalArithmetic) shouldBe 'proved
+
+    proveBy("0<=a,a<=1,2<=b,b<=5 ==> 5 >= a*b - a".asSequent, intervalArithmetic) shouldBe 'proved
+    proveBy("0<=a,a<=1,2<=b,b<=5 ==> 6 > a*b - a".asSequent, intervalArithmetic) shouldBe 'proved
+    proveBy("0<=a,a<=1,2<=b,b<=5 ==> -1 <= a*b - a".asSequent, intervalArithmetic) shouldBe 'proved
+    proveBy("0<=a,a<=1,2<=b,b<=5 ==> -2 < a*b - a".asSequent, intervalArithmetic) shouldBe 'proved
+  }
+
+  "intervalArithmetic" should "cooperate with prop" in withMathematica { _ =>
+    proveBy("(0<=a&a<=1&2<=b&b<=5)->(-2 < a*b - a & a*b - a <= 5)".asFormula, intervalArithmetic) shouldBe 'proved
+  }
+
+  "IA subgoal for low order TM" should "prove #1" in withMathematica { _ =>
+    val seq = "t_0=0, I1() < 0.00000000010, -0.00000000010 < I1(), -0.00000000010 < I0(), I0() < 0.00000000010, y0() < 1, -1 < y0(), -1 < x0(), x0() < 1, x_0=1+x0()+y0()+I0(), y_0=0.1+0.5*x0()-y0()+I1(), t_0<=0.02, 0<=t, t<=0.02, -335074577049867*10^-16 < rem0, rem0 < 332987591698456*10^-16, -165372880199332*10^-15 < rem1, rem1 < 164937953442280*10^-15\n  ==>  (-83268644009967/50000000000000+-1*rem1+-1/2*x0()+y0())*1<=0".asSequent
+    val res = proveBy(seq, intervalArithmetic)
+    res shouldBe 'proved
+  }
+  "IA subgoal for low order TM" should "prove #2" in withMathematica { _ =>
+    val seq = "t_0=0, I1() < 0.00000000010, -0.00000000010 < I1(), -0.00000000010 < I0(), I0() < 0.00000000010, y0() < 1, -1 < y0(), -1 < x0(), x0() < 1, x_0=1+x0()+y0()+I0(), y_0=0.1+0.5*x0()-y0()+I1(), t_0<=0.02, 0<=t, t<=0.02, -335074577049867*10^-16 < rem0, rem0 < 332987591698456*10^-16, -165372880199332*10^-15 < rem1, rem1 < 164937953442280*10^-15\n  ==>  (-41623448836057/25000000000000+rem1+1/2*x0()+-1*y0())*1<=0".asSequent
+    val res = proveBy(seq, intervalArithmetic)
+    res shouldBe 'proved
+  }
+  "IA subgoal for low order TM" should "prove #3" in withMathematica { _ =>
+    val seq = "t_0=0, I1() < 0.00000000010, -0.00000000010 < I1(), -0.00000000010 < I0(), I0() < 0.00000000010, y0() < 1, -1 < y0(), -1 < x0(), x0() < 1, x_0=1+x0()+y0()+I0(), y_0=0.1+0.5*x0()-y0()+I1(), t_0<=0.02, 0<=t, t<=0.02, -335074577049867*10^-16 < rem0, rem0 < 332987591698456*10^-16, -165372880199332*10^-15 < rem1, rem1 < 164937953442280*10^-15\n  ==>  (-102521876236019/12500000000000+rem0^2+2*x0()+2*y0()+(x0()+y0())^2+2*rem0*(1+x0()+y0()))*1+(-55915715877171/12500000000000+11/5*rem0+11/5*x0()+11/5*y0())*t^1+-1/500000000000000*t^2<=0\n".asSequent
+    val res = proveBy(seq, intervalArithmetic)
+    res shouldBe 'proved
+  }
+  "IA subgoal for low order TM" should "prove #4" in withMathematica { _ =>
+    val seq = "t_0=0, I1() < 0.00000000010, -0.00000000010 < I1(), -0.00000000010 < I0(), I0() < 0.00000000010, y0() < 1, -1 < y0(), -1 < x0(), x0() < 1, x_0=1+x0()+y0()+I0(), y_0=0.1+0.5*x0()-y0()+I1(), t_0<=0.02, 0<=t, t<=0.02, -335074577049867*10^-16 < rem0, rem0 < 332987591698456*10^-16, -165372880199332*10^-15 < rem1, rem1 < 164937953442280*10^-15\n  ==>  (-410108025149723/50000000000000+-1*rem0^2+-2*x0()+-2*y0()+-1*(x0()+y0())^2+-2*rem0*(1+x0()+y0()))*1+(-223685820347549/50000000000000+-11/5*rem0+-11/5*x0()+-11/5*y0())*t^1+-1/1000000000000000*t^2<=0".asSequent
+    val res = proveBy(seq, intervalArithmetic)
+    res shouldBe 'proved
   }
 
   "Slow.intervalArithmetic" should "be slow" in withMathematica { _ =>

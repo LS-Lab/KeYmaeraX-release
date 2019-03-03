@@ -93,6 +93,28 @@ object IntervalArithmeticV2 {
     case _ => throw new RuntimeException("Unable to compute bounds for " + t)
   }
 
+  private def collect_bound(prec: Int)(fml: Formula, bounds: DecimalBounds): DecimalBounds = {
+    fml match {
+      case LessEqual(t, n) if BigDecimalQETool.isNumeric(n) =>
+        (bounds._1, bounds._2.updated(t, eval_ivl(prec)(DecimalBounds())(n)._2))
+      case LessEqual(n, t) if BigDecimalQETool.isNumeric(n) =>
+        (bounds._1.updated(t, eval_ivl(prec)(DecimalBounds())(n)._1), bounds._2)
+      case _ => bounds
+    }
+  }
+
+  /** Populate environment with bounds (only LessEqual are being considered)
+    *
+    * @param prec decimal precision
+    * @param bounds the environment to populate
+    * @param assms sequence of Formulas containing bounds
+    * @return updated environment
+    */
+  def collect_bounds(prec: Int, bounds: DecimalBounds, assms: Seq[Formula]): DecimalBounds =
+    assms.foldRight(bounds)(collect_bound(prec))
+  def collect_bounds(prec: Int, assms: Seq[Formula]): DecimalBounds = collect_bounds(prec, DecimalBounds(), assms)
+
+
   private def eval_ivl_term_in_env(prec: Int)(bounds: DecimalBounds)(t: Term) : (Term, Term) = {
     val (l, u) = eval_ivl(prec)(bounds)(t)
     (mathematicaFriendly(l), mathematicaFriendly(u))
@@ -138,7 +160,18 @@ object IntervalArithmeticV2 {
     "((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & ((((G_()<0 | 0<gg_()) & (ff_()/gg_()<=h_() & ff_()/G_()<=h_() & F_()/gg_()<=h_() & F_()/G_()<=h_())))<->true) ==> f_()/g_()<=h_()".asSequent, QE & done)
   private lazy val divideDownSeq = proveBy(
     "((ff_()<=f_() & f_()<=F_()) & (gg_()<=g_() & g_()<=G_())) & ((((G_()<0 | 0<gg_()) & (h_()<=ff_()/gg_() & h_()<=ff_()/G_() & h_()<=F_()/gg_() & h_()<=F_()/G_())))<->true) ==> h_()<=f_()/g_()".asSequent, QE & done)
-  private val maxPower = 10
+
+  // Formulas
+  private lazy val leBothSeq = proveBy(
+    "((f_()<=F_() & gg_()<=g_()) & (F_() <= gg_()<->true)) ==> f_()<=g_()".asSequent,
+    useAt("<= both", PosInExpr(1::Nil))(1) & prop & done)
+  private lazy val ltBothSeq = proveBy(
+    "((f_()<=F_() & gg_()<=g_()) & (F_() < gg_()<->true)) ==> f_()<g_()".asSequent,
+    useAt("< both", PosInExpr(1::Nil))(1) & prop & done)
+  private lazy val geBothSeq = proveBy(
+    "((g_()<=G_() & ff_()<=f_()) & (G_() <= ff_()<->true)) ==> f_()>=g_()".asSequent, QE & done)
+  private lazy val gtBothSeq = proveBy(
+    "((g_()<=G_() & ff_()<=f_()) & (G_() < ff_()<->true)) ==> f_()>g_()".asSequent, QE & done)
 
   private var powerDownCache = new HashMap[Int, ProvableSig]()
   private def powerDownSeq(n: Int): ProvableSig =
@@ -487,6 +520,40 @@ object IntervalArithmeticV2 {
       apply(CoHide2(AntePos(index), SuccPos(0)), 0).
       apply(rule.apply(USubst(instantiation map (ab => SubstitutionPair(ab._1, ab._2)))), 0)
 
+  private def collectBounds(assms: IndexedSeq[Formula])(lowers0: BoundMap, uppers0: BoundMap) : (BoundMap, BoundMap)  =
+  (assms,assms.indices).zipped.foldLeft(lowers0, uppers0) { (lu: (BoundMap, BoundMap), assmi) =>
+    (lu, assmi) match {
+      case ((lowers, uppers), (assm, i)) =>
+        assm match {
+          case LessEqual(t, n) if BigDecimalQETool.isNumeric(n) =>
+            (lowers, uppers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)))
+          case LessEqual(n, t) if BigDecimalQETool.isNumeric(n) =>
+            (lowers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)), uppers)
+          case Equal(t, n) if BigDecimalQETool.isNumeric(n) =>
+            (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), eqBound2, (t_f, t) :: (t_g, n) :: Nil)),
+              uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound1, (t_f, t) :: (t_g, n) :: Nil)))
+          case Equal(n, t) if BigDecimalQETool.isNumeric(n) =>
+            (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), eqBound1, (t_f, n) :: (t_g, t) :: Nil)),
+              uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound2, (t_f, n) :: (t_g, t) :: Nil)))
+          case Less(t, n) if BigDecimalQETool.isNumeric(n) =>
+            (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), ltBound, (t_f, t) :: (t_g, n) :: Nil)))
+          case Less(n, t) if BigDecimalQETool.isNumeric(n) =>
+            (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), ltBound, (t_f, n) :: (t_g, t) :: Nil)), uppers)
+          case Greater(t, n) if BigDecimalQETool.isNumeric(n) =>
+            (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), gtBound, (t_f, t) :: (t_g, n) :: Nil)), uppers)
+          case Greater(n, t) if BigDecimalQETool.isNumeric(n) =>
+            (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), gtBound, (t_f, n) :: (t_g, t) :: Nil)))
+          case GreaterEqual(t, n) if BigDecimalQETool.isNumeric(n) =>
+            (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), geBound, (t_f, t) :: (t_g, n) :: Nil)), uppers)
+          case GreaterEqual(n, t) if BigDecimalQETool.isNumeric(n) =>
+            (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), geBound, (t_f, n) :: (t_g, t) :: Nil)))
+          case _ =>
+            (lowers, uppers)
+        }
+    }
+  }
+
+
   /** Proves Bounds on all Subexpressions using Interval Arithmetic.
     *
     * @param prec          decimal precision
@@ -495,7 +562,7 @@ object IntervalArithmeticV2 {
     * @param include_assms if assms need to be added to lowers/uppers (False if re-using precomputed bounds)
     * @param lowers        precomputed bounds (can be used for cacheing results)
     * @param uppers        dito
-    * @param t             term whose subexpressions shall be bounded
+    * @param t             terms whose subexpressions shall be bounded
     * @return bounds on all subexpressions
     *
     * */
@@ -504,54 +571,86 @@ object IntervalArithmeticV2 {
                  (assms: IndexedSeq[Formula])
                  (include_assms: Boolean)
                  (lowers0: BoundMap, uppers0: BoundMap)
-                 (t: Term): (BoundMap, BoundMap) = {
+                 (terms: Seq[Term]): (BoundMap, BoundMap) = {
     // collect bounds from assms
     val (newlowers: BoundMap, newuppers: BoundMap) =
       if(!include_assms) (lowers0, uppers0)
-      else (assms,assms.indices).zipped.foldLeft(lowers0, uppers0) { (lu: (BoundMap, BoundMap), assmi) =>
-        (lu, assmi) match {
-          case ((lowers, uppers), (assm, i)) =>
-            assm match {
-              case LessEqual(t, n) if BigDecimalQETool.isNumeric(n) =>
-                (lowers, uppers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)))
-              case LessEqual(n, t) if BigDecimalQETool.isNumeric(n) =>
-                (lowers.updated(t, ProvableSig.startProof(Sequent(assms, IndexedSeq(assm))).apply(Close(AntePos(i), SuccPos(0)), 0)), uppers)
-              case Equal(t, n) if BigDecimalQETool.isNumeric(n) =>
-                (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), eqBound2, (t_f, t)::(t_g, n)::Nil)),
-                  uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound1, (t_f, t)::(t_g, n)::Nil)))
-              case Equal(n, t) if BigDecimalQETool.isNumeric(n) =>
-                (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), eqBound1, (t_f, n)::(t_g, t)::Nil)),
-                  uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), eqBound2, (t_f, n)::(t_g, t)::Nil)))
-              case Less(t, n) if BigDecimalQETool.isNumeric(n) =>
-                (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), ltBound, (t_f, t)::(t_g, n)::Nil)))
-              case Less(n, t) if BigDecimalQETool.isNumeric(n) =>
-                (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), ltBound, (t_f, n)::(t_g, t)::Nil)), uppers)
-              case Greater(t, n) if BigDecimalQETool.isNumeric(n) =>
-                (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), gtBound, (t_f, t)::(t_g, n)::Nil)), uppers)
-              case Greater(n, t) if BigDecimalQETool.isNumeric(n) =>
-                (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), gtBound, (t_f, n)::(t_g, t)::Nil)))
-              case GreaterEqual(t, n) if BigDecimalQETool.isNumeric(n) =>
-                (lowers.updated(t, extract_bound(assms, i, LessEqual(n, t), geBound, (t_f, t)::(t_g, n)::Nil)), uppers)
-              case GreaterEqual(n, t) if BigDecimalQETool.isNumeric(n) =>
-                (lowers, uppers.updated(t, extract_bound(assms, i, LessEqual(t, n), geBound, (t_f, n)::(t_g, t)::Nil)))
-              case _ =>
-                (lowers, uppers)
-            }
-        }
-      }
+      else collectBounds(assms)(lowers0, uppers0)
     // recurse over the structure of t and compute new bounds
-    recurse(prec)(qeTool)(assms)(newlowers, newuppers)(t)
+    terms.foldLeft(newlowers, newuppers)((a, t: Term) => recurse(prec)(qeTool)(assms)(a._1, a._2)(t))
   }
 
-  def intervalCutTerms(terms: List[Term]) : BuiltInTactic = new BuiltInTactic("ANON") {
+  private def proveCompBoth(qeTool: QETool, leBoth: ProvableSig, provable: ProvableSig, bound1: ProvableSig, bound2: ProvableSig) = {
+    val le_prv = ProvableSig.proveArithmetic(qeTool, leBoth.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+    CutHide(leBoth.conclusion.ante(0))(provable).
+      apply(AndRight(SuccPos(0)), 1).
+      apply(CoHideRight(SuccPos(0)), 2).
+      apply(le_prv, 2).
+      apply(AndRight(SuccPos(0)), 1).
+      apply(bound2, 2).
+      apply(bound1, 1).
+      apply(leBoth, 0)
+  }
+
+  def intervalArithmeticPlain = new BuiltInTactic("ANON") {
+    override def result(provable: ProvableSig): ProvableSig = {
+      requireOneSubgoal(provable, name)
+      val sequent = provable.subgoals(0)
+      val precision = 15
+      val qeTool = ToolProvider.qeTool().get
+      require(sequent.succ.length == 1)
+      sequent.succ(0) match {
+        case fml: ComparisonFormula =>
+          val f = fml.left
+          val g = fml.right
+          val (lowers, uppers) = proveBounds(precision)(qeTool)(sequent.ante)(true)(BoundMap(), BoundMap())(List(f, g))
+          val ff_prv = lowers(f)
+          val gg_prv = lowers(g)
+          val F_prv = uppers(f)
+          val G_prv = uppers(g)
+          val gg_fml = gg_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
+          val ff_fml = ff_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
+          val F_fml = F_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
+          val G_fml = G_prv.conclusion.succ(0).asInstanceOf[ComparisonFormula]
+          val ff = ff_fml.left
+          val gg = gg_fml.left
+          val F = F_fml.right
+          val G = G_fml.right
+          fml match {
+            case _: LessEqual =>
+              proveCompBoth(qeTool,
+                leBothSeq.apply(USubst((List(t_f, t_F, t_gg, t_g), List(f, F, gg, g)).zipped map SubstitutionPair)),
+                provable, F_prv, gg_prv)
+            case _: Less =>
+              proveCompBoth(qeTool,
+                ltBothSeq.apply(USubst((List(t_f, t_F, t_gg, t_g), List(f, F, gg, g)).zipped map SubstitutionPair)),
+                provable, F_prv, gg_prv)
+            case _: GreaterEqual =>
+              proveCompBoth(qeTool,
+                geBothSeq.apply(USubst((List(t_f, t_ff, t_G, t_g), List(f, ff, G, g)).zipped map SubstitutionPair)),
+                provable, G_prv, ff_prv)
+            case _: Greater =>
+              proveCompBoth(qeTool,
+                gtBothSeq.apply(USubst((List(t_f, t_ff, t_G, t_g), List(f, ff, G, g)).zipped map SubstitutionPair)),
+                provable, G_prv, ff_prv)
+          }
+        case _ =>
+          throw new BelleThrowable("intervalArithmetic requires either of <=,<,>,=> in the succedent")
+      }
+    }
+  }
+  val intervalArithmetic = "intervalArithmetic" by {
+    prop & OnAll(intervalArithmeticPlain)
+  }
+
+  def intervalCutTerms(terms: Seq[Term]) : BuiltInTactic = new BuiltInTactic("ANON") {
     override def result(provable: ProvableSig): ProvableSig = {
       requireOneSubgoal(provable, name)
       val sequent = provable.subgoals(0)
       val nantes = sequent.ante.length
       val prec = 5
       val qe = ToolProvider.qeTool().get
-      val bnds = terms.foldLeft(BoundMap(), BoundMap())((a, t: Term) =>
-        proveBounds(prec)(qe)(sequent.ante)(true)(a._1, a._2)(t))
+      val bnds = proveBounds(prec)(qe)(sequent.ante)(true)(BoundMap(), BoundMap())(terms)
       val prvs = terms flatMap (t => List(bnds._1(t), bnds._2(t)))
       (prvs, prvs.indices).zipped.foldLeft(provable) {
         (result, prvi) => prvi match {
@@ -584,18 +683,6 @@ object IntervalArithmeticV2 {
 
   /** Tactics appear to be a bit slow */
   object Slow {
-    private def collect_bound(prec: Int)(fml: Formula, bounds: DecimalBounds): DecimalBounds = {
-      fml match {
-        case LessEqual(t, n) if BigDecimalQETool.isNumeric(n) =>
-          (bounds._1, bounds._2.updated(t, eval_ivl(prec)(DecimalBounds())(n)._2))
-        case LessEqual(n, t) if BigDecimalQETool.isNumeric(n) =>
-          (bounds._1.updated(t, eval_ivl(prec)(DecimalBounds())(n)._1), bounds._2)
-        case _ => bounds
-      }
-    }
-
-    private[btactics] def collect_bounds(prec: Int)(bounds: DecimalBounds, assms: Seq[Formula]): DecimalBounds =
-      assms.foldRight(bounds)(collect_bound(prec))
 
     def usubst_append(ts: List[(Term, Term)])(uso: Option[Subst]) = uso match {
       case Some(us) => us ++ RenUSubst(USubst(ts.map(s => (SubstitutionPair(s._1, s._2)))))
@@ -637,14 +724,14 @@ object IntervalArithmeticV2 {
       eqL2R(pos.checkAnte)(1) // TODO: what about that subgoal 1?
     }
 
-    val intervalArithmetic = "intervalArithmetic" by { seq: Sequent =>
+    val intervalArithmetic = "slowIntervalArithmetic" by { seq: Sequent =>
       require (seq.succ.length == 1)
       val prec = 5
-      val bounds = collect_bounds(prec)(DecimalBounds(), seq.ante)
+      val bounds = collect_bounds(prec,DecimalBounds(), seq.ante)
 
       // TODO: should be cacheing bounds for subterms, but it seems we can easily afford excessive BigDecimal computations
       // recurse to find a lower bound for the expression on the rhs
-      def recurseLower: BelleExpr = "intervalArithmetic.recurseLower" by {
+      def recurseLower: BelleExpr = "slowIntervalArithmetic.recurseLower" by {
         seq: Sequent =>
           seq.succ(0) match {
             case LessEqual(_, Plus(a, b)) =>
@@ -670,7 +757,7 @@ object IntervalArithmeticV2 {
           }
       }
       // recurse to find an upper bound for the expression on the lhs
-      def recurseUpper: BelleExpr = "intervalArithmetic.recurseUpper" by {
+      def recurseUpper: BelleExpr = "slowIntervalArithmetic.recurseUpper" by {
         seq: Sequent =>
           seq.succ(0) match {
             case LessEqual(Plus(a, b), _) =>
@@ -696,7 +783,7 @@ object IntervalArithmeticV2 {
             case _ => throw new BelleThrowable("recurseUpper went wrong")
           }
       }
-      def recurseFormula: BelleExpr = "intervalArithmetic.recurseFormula" by {
+      def recurseFormula: BelleExpr = "slowIntervalArithmetic.recurseFormula" by {
         (seq: Sequent) =>
           (seq.succ(0) match {
             case And(_, _) => andR(1) & Idioms.<(recurseFormula, recurseFormula)
