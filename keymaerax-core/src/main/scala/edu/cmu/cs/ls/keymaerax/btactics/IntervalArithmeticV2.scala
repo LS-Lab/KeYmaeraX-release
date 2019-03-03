@@ -26,28 +26,32 @@ object IntervalArithmeticV2 {
   private def downContext(prec: Int) = new MathContext(prec, RoundingMode.FLOOR)
   private def upContext(prec: Int) = new MathContext(prec, RoundingMode.CEILING)
 
+  type DecimalBounds = (HashMap[Term, BigDecimal], HashMap[Term, BigDecimal])
+  def DecimalBounds(): DecimalBounds = (HashMap[Term, BigDecimal](), HashMap[Term, BigDecimal]())
+
   private def op_endpoints(f: (BigDecimal, BigDecimal, MathContext) => BigDecimal)
                           (prec: Int)
+                          (bounds: DecimalBounds)
                           (lat: Term, uat: Term)
                           (lbt: Term, ubt: Term) : (BigDecimal, BigDecimal) = {
-    val (la, _) = eval_ivl(prec)(lat)
-    val (_, ua) = eval_ivl(prec)(uat)
-    val (lb, _) = eval_ivl(prec)(lbt)
-    val (_, ub) = eval_ivl(prec)(ubt)
+    val (la, _) = eval_ivl(prec)(bounds)(lat)
+    val (_, ua) = eval_ivl(prec)(bounds)(uat)
+    val (lb, _) = eval_ivl(prec)(bounds)(lbt)
+    val (_, ub) = eval_ivl(prec)(bounds)(ubt)
     val pairs = (List(la, la, ua, ua), List(lb, ub, lb, ub)).zipped
     val lowers = pairs map ((a, b) => f(a, b, downContext(prec)))
     val uppers = pairs map ((a, b) => f(a, b, upContext(prec)))
     (lowers.reduceLeft(_.min(_)), uppers.reduceLeft(_.max(_)))
   }
 
-  private def mult_endpoints(prec: Int)(lat: Term, uat: Term)(lbt: Term, ubt: Term) : (BigDecimal, BigDecimal) =
-    op_endpoints((a, b, c) => a.bigDecimal.multiply(b.bigDecimal, c))(prec)(lat, uat)(lbt, ubt)
-  private def divide_endpoints(prec: Int)(lat: Term, uat: Term)(lbt: Term, ubt: Term) : (BigDecimal, BigDecimal) =
-    op_endpoints((a, b, c) => a.bigDecimal.divide(b.bigDecimal, c))(prec)(lat, uat)(lbt, ubt)
+  private def mult_endpoints(prec: Int)(bounds: DecimalBounds)(lat: Term, uat: Term)(lbt: Term, ubt: Term) : (BigDecimal, BigDecimal) =
+    op_endpoints((a, b, c) => a.bigDecimal.multiply(b.bigDecimal, c))(prec)(bounds)(lat, uat)(lbt, ubt)
+  private def divide_endpoints(prec: Int)(bounds: DecimalBounds)(lat: Term, uat: Term)(lbt: Term, ubt: Term) : (BigDecimal, BigDecimal) =
+    op_endpoints((a, b, c) => a.bigDecimal.divide(b.bigDecimal, c))(prec)(bounds)(lat, uat)(lbt, ubt)
 
-  private def power_endpoints(prec: Int)(lat: Term, uat: Term)(n: Int) : (BigDecimal, BigDecimal) = {
-    val (la, _) = eval_ivl(prec)(lat)
-    val (_, ua) = eval_ivl(prec)(uat)
+  private def power_endpoints(prec: Int)(bounds: DecimalBounds)(lat: Term, uat: Term)(n: Int) : (BigDecimal, BigDecimal) = {
+    val (la, _) = eval_ivl(prec)(bounds)(lat)
+    val (_, ua) = eval_ivl(prec)(bounds)(uat)
     val lower: BigDecimal =
       if (n % 2 == 1) la.bigDecimal.pow(n, downContext(prec))
       else {
@@ -61,25 +65,36 @@ object IntervalArithmeticV2 {
     (lower, upper)
   }
 
-  private def eval_ivl(prec: Int)(t: Term) : (BigDecimal, BigDecimal) = t match {
+  /** Compute interval bounds by recursing over the input term structure.
+    * An environment of bounds for variables and function symbols can be provided, too.
+    *
+    * @param prec   decimal precision for numeric bounds
+    * @param bounds environment of lower and upper bounds
+    * @param t      input term
+    * @return a tuple for lower and upper bounds on the term t
+    */
+  def eval_ivl(prec: Int)(bounds: DecimalBounds)(t: Term) : (BigDecimal, BigDecimal) = t match {
     case Plus(a, b) =>
-      val (la, ua) = eval_ivl(prec)(a)
-      val (lb, ub) = eval_ivl(prec)(b)
+      val (la, ua) = eval_ivl(prec)(bounds)(a)
+      val (lb, ub) = eval_ivl(prec)(bounds)(b)
       (la.bigDecimal.add(lb.bigDecimal, downContext(prec)), ua.bigDecimal.add(ub.bigDecimal, upContext(prec)))
     case Minus(a, b) =>
-      val (la, ua) = eval_ivl(prec)(a)
-      val (lb, ub) = eval_ivl(prec)(b)
+      val (la, ua) = eval_ivl(prec)(bounds)(a)
+      val (lb, ub) = eval_ivl(prec)(bounds)(b)
       (la.bigDecimal.subtract(ub.bigDecimal, downContext(prec)), ua.bigDecimal.subtract(lb.bigDecimal, upContext(prec)))
     case Neg(a) =>
-      val (la, ua) = eval_ivl(prec)(a)
+      val (la, ua) = eval_ivl(prec)(bounds)(a)
       (-ua, -la)
     case Number(n) => (n.bigDecimal.round(downContext(prec)), n.bigDecimal.round(upContext(prec)))
-    case Times(a, b) => mult_endpoints(prec)(a,a)(b,b)
-    case Divide(a, b) => divide_endpoints(prec)(a,a)(b,b)
-    case Power(a, Number(i)) if i.isValidInt => power_endpoints(prec)(a, a)(i.toInt)
+    case Times(a, b) => mult_endpoints(prec)(bounds)(a,a)(b,b)
+    case Divide(a, b) => divide_endpoints(prec)(bounds)(a,a)(b,b)
+    case Power(a, Number(i)) if i.isValidInt => power_endpoints(prec)(bounds)(a, a)(i.toInt)
+    case _ if bounds._1.isDefinedAt(t) && bounds._2.isDefinedAt(t) => (bounds._1(t), bounds._2(t))
+    case _ => throw new RuntimeException("Unable to compute bounds for " + t)
   }
+
   private def eval_ivl_term(prec: Int)(t: Term) : (Term, Term) = {
-    val (l, u) = eval_ivl(prec)(t)
+    val (l, u) = eval_ivl(prec)(DecimalBounds())(t)
     (mathematicaFriendly(l), mathematicaFriendly(u))
   }
 
@@ -329,7 +344,7 @@ object IntervalArithmeticV2 {
             (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
           case _: Times =>
             // Bounds
-            val bnds = mult_endpoints(prec)(ff, F)(gg, G)
+            val bnds = mult_endpoints(prec)(DecimalBounds)(ff, F)(gg, G)
             val h = mathematicaFriendly(bnds._1)
             val H = mathematicaFriendly(bnds._2)
             val multDown = multDownSeq.apply(USubst(
@@ -375,7 +390,7 @@ object IntervalArithmeticV2 {
             (lowers2.updated(t, h_prv), uppers2.updated(t, H_prv))
           case _: Divide =>
             // Bounds
-            val bnds = divide_endpoints(prec)(ff, F)(gg, G)
+            val bnds = divide_endpoints(prec)(DecimalBounds())(ff, F)(gg, G)
             val h = mathematicaFriendly(bnds._1)
             val H = mathematicaFriendly(bnds._2)
             val divideDown = divideDownSeq.apply(USubst(
@@ -422,7 +437,7 @@ object IntervalArithmeticV2 {
           case Power(_, i: Number) if i.value.isValidInt && i.value >= 1 =>
             // Lower Bound
             val n = i.value.toIntExact
-            val ivl = power_endpoints(prec)(ff, F)(n)
+            val ivl = power_endpoints(prec)(DecimalBounds())(ff, F)(n)
             val h = mathematicaFriendly(ivl._1)
             val H = mathematicaFriendly(ivl._2)
             val powerDown = powerDownSeq(n).apply(USubst(
