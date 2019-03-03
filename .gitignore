@@ -98,3 +98,6 @@ keymaerax-webui/src/main/resources/keymaerax-projects
 keymaerax-webui/src/test/resources/examples/course/labs/*
 release_scaladoc.pl
 redo
+
+#Generated with JFlex-Scala
+keymaerax-core/src/main/scala/KeYmaeraXLexer.scala

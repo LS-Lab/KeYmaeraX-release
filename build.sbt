@@ -7,6 +7,7 @@ scalaVersion in ThisBuild := "2.12.4"
 version := new BufferedReader(new FileReader("keymaerax-core/src/main/resources/VERSION")).readLine()
 
 lazy val core = (project in file("keymaerax-core"))
+   .enablePlugins(sbtjflexscala.SbtJFlexScala)
 
 lazy val keymaeraxAssemblySettings = AssemblyPlugin.assemblySettings ++ Seq(
   mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.Main"),
@@ -21,6 +22,7 @@ lazy val keymaeraxAssemblySettings = AssemblyPlugin.assemblySettings ++ Seq(
 lazy val keymaerax = (project in file("keymaerax-webui"))
   .dependsOn(core)
   .settings(inConfig(Test)(keymaeraxAssemblySettings): _*)
+  .disablePlugins(sbtjflexscala.SbtJFlexScala)
 
 lazy val root = (project in file("."))
   .settings(unidocSettings: _*)
@@ -30,6 +32,7 @@ lazy val root = (project in file("."))
   )
   .settings(inConfig(Test)(keymaeraxAssemblySettings): _*)
   .aggregate(core, keymaerax)
+  .disablePlugins(sbtjflexscala.SbtJFlexScala)
 
 
 // extra runtime checks for initialization order: "-Xcheckinit"

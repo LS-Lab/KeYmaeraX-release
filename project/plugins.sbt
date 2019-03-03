@@ -8,3 +8,4 @@ addSbtPlugin("com.eed3si9n" % "sbt-unidoc" % "0.3.2")
 
 addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.5.1")
 
+addSbtPlugin("com.github.3tty0n" % "sbt-jflex-scala" % "0.4.0")

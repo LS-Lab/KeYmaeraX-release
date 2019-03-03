@@ -66,7 +66,7 @@ Building
 To compile KeYmaera X from source code, see [Building Instructions](https://github.com/LS-Lab/KeYmaeraX-release/wiki/Building-Instructions).
 In a nutshell, install the right software and run:
 
-    sbt clean assembly
+    sbt clean compile assembly
 
 
 Publications
