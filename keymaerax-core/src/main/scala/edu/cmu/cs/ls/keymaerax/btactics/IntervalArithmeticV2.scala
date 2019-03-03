@@ -693,36 +693,36 @@ object IntervalArithmeticV2 {
     }
 
     def negDown(bound: Term) =
-      useAt("<=neg down", usubst_append(("F_()".asTerm, bound) :: Nil)(_))(1)
+      useAt("<=neg down", usubst_append((t_F, bound) :: Nil)(_))(1)
 
     def negUp(bound: Term) =
-      useAt("neg<= up", usubst_append(("ff_()".asTerm, bound) :: Nil)(_))(1)
+      useAt("neg<= up", usubst_append((t_ff, bound) :: Nil)(_))(1)
 
     def plusDown(bound1: Term, bound2: Term) =
-      useAt("<=+ down", usubst_append(("ff_()".asTerm, bound1) :: ("gg_()".asTerm, bound2) :: Nil)(_))(1)
+      useAt("<=+ down", usubst_append((t_ff, bound1) :: (t_gg, bound2) :: Nil)(_))(1)
 
     def plusUp(bound1: Term, bound2: Term) =
-      useAt("+<= up", usubst_append(("F_()".asTerm, bound1) :: ("G_()".asTerm, bound2) :: Nil)(_))(1)
+      useAt("+<= up", usubst_append((t_F, bound1) :: (t_G, bound2) :: Nil)(_))(1)
 
     def minusDown(bound1: Term, bound2: Term) =
-      useAt("<=- down", usubst_append(("ff_()".asTerm, bound1) :: ("G_()".asTerm, bound2) :: Nil)(_))(1)
+      useAt("<=- down", usubst_append((t_ff, bound1) :: (t_G, bound2) :: Nil)(_))(1)
 
     def minusUp(bound1: Term, bound2: Term) =
-      useAt("-<= up", usubst_append(("F_()".asTerm, bound1) :: ("gg_()".asTerm, bound2) :: Nil)(_))(1)
+      useAt("-<= up", usubst_append((t_F, bound1) :: (t_gg, bound2) :: Nil)(_))(1)
 
     def timesDown(ff: Term, F: Term, gg: Term, G: Term) =
       useAt("<=* down",
-        usubst_append(("ff_()".asTerm, ff) :: ("F_()".asTerm, F) :: ("gg_()".asTerm, gg) :: ("G_()".asTerm, G) :: Nil)(_))(1)
+        usubst_append((t_ff, ff) :: (t_F, F) :: (t_gg, gg) :: (t_G, G) :: Nil)(_))(1)
 
     def timesUp(ff: Term, F: Term, gg: Term, G: Term) =
       useAt("*<= up",
-        usubst_append(("ff_()".asTerm, ff) :: ("F_()".asTerm, F) :: ("gg_()".asTerm, gg) :: ("G_()".asTerm, G) :: Nil)(_))(1)
+        usubst_append((t_ff, ff) :: (t_F, F) :: (t_gg, gg) :: (t_G, G) :: Nil)(_))(1)
 
     def leBoth(F: Term, gg: Term) =
-      useAt("<= both", usubst_append(("F_()".asTerm, F) :: ("gg_()".asTerm, gg) :: Nil)(_))(1)
+      useAt("<= both", usubst_append((t_F, F) :: (t_gg, gg) :: Nil)(_))(1)
 
     def lessBoth(F: Term, gg: Term) =
-      useAt("< both", usubst_append(("F_()".asTerm, F) :: ("gg_()".asTerm, gg) :: Nil)(_))(1)
+      useAt("< both", usubst_append((t_F, F) :: (t_gg, gg) :: Nil)(_))(1)
 
     def eqL2R_dep = "eqL2R_last" by { (pos: Position) =>
       eqL2R(pos.checkAnte)(1) // TODO: what about that subgoal 1?
