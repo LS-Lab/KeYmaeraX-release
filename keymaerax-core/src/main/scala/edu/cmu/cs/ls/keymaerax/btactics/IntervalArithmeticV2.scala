@@ -93,10 +93,11 @@ object IntervalArithmeticV2 {
     case _ => throw new RuntimeException("Unable to compute bounds for " + t)
   }
 
-  private def eval_ivl_term(prec: Int)(t: Term) : (Term, Term) = {
-    val (l, u) = eval_ivl(prec)(DecimalBounds())(t)
+  private def eval_ivl_term_in_env(prec: Int)(bounds: DecimalBounds)(t: Term) : (Term, Term) = {
+    val (l, u) = eval_ivl(prec)(bounds)(t)
     (mathematicaFriendly(l), mathematicaFriendly(u))
   }
+  private def eval_ivl_term(prec: Int)(t: Term) : (Term, Term) = eval_ivl_term_in_env(prec)(DecimalBounds())(t)
 
   private val t_f = "f_()".asTerm
   private val t_g = "g_()".asTerm
@@ -579,6 +580,140 @@ object IntervalArithmeticV2 {
       case Some(t: Term) => intervalCutTerms(List(t))
       case _ => throw new BelleThrowable("intervalCut needs to be called on a ComparisonFormula or a Term")
     }
+  }
+
+  /** Tactics appear to be a bit slow */
+  object Slow {
+    private def collect_bound(prec: Int)(fml: Formula, bounds: DecimalBounds): DecimalBounds = {
+      fml match {
+        case LessEqual(t, n) if BigDecimalQETool.isNumeric(n) =>
+          (bounds._1, bounds._2.updated(t, eval_ivl(prec)(DecimalBounds())(n)._2))
+        case LessEqual(n, t) if BigDecimalQETool.isNumeric(n) =>
+          (bounds._1.updated(t, eval_ivl(prec)(DecimalBounds())(n)._1), bounds._2)
+        case _ => bounds
+      }
+    }
+
+    private[btactics] def collect_bounds(prec: Int)(bounds: DecimalBounds, assms: Seq[Formula]): DecimalBounds =
+      assms.foldRight(bounds)(collect_bound(prec))
+
+    def usubst_append(ts: List[(Term, Term)])(uso: Option[Subst]) = uso match {
+      case Some(us) => us ++ RenUSubst(USubst(ts.map(s => (SubstitutionPair(s._1, s._2)))))
+    }
+
+    def negDown(bound: Term) =
+      useAt("<=neg down", usubst_append(("F_()".asTerm, bound) :: Nil)(_))(1)
+
+    def negUp(bound: Term) =
+      useAt("neg<= up", usubst_append(("ff_()".asTerm, bound) :: Nil)(_))(1)
+
+    def plusDown(bound1: Term, bound2: Term) =
+      useAt("<=+ down", usubst_append(("ff_()".asTerm, bound1) :: ("gg_()".asTerm, bound2) :: Nil)(_))(1)
+
+    def plusUp(bound1: Term, bound2: Term) =
+      useAt("+<= up", usubst_append(("F_()".asTerm, bound1) :: ("G_()".asTerm, bound2) :: Nil)(_))(1)
+
+    def minusDown(bound1: Term, bound2: Term) =
+      useAt("<=- down", usubst_append(("ff_()".asTerm, bound1) :: ("G_()".asTerm, bound2) :: Nil)(_))(1)
+
+    def minusUp(bound1: Term, bound2: Term) =
+      useAt("-<= up", usubst_append(("F_()".asTerm, bound1) :: ("gg_()".asTerm, bound2) :: Nil)(_))(1)
+
+    def timesDown(ff: Term, F: Term, gg: Term, G: Term) =
+      useAt("<=* down",
+        usubst_append(("ff_()".asTerm, ff) :: ("F_()".asTerm, F) :: ("gg_()".asTerm, gg) :: ("G_()".asTerm, G) :: Nil)(_))(1)
+
+    def timesUp(ff: Term, F: Term, gg: Term, G: Term) =
+      useAt("*<= up",
+        usubst_append(("ff_()".asTerm, ff) :: ("F_()".asTerm, F) :: ("gg_()".asTerm, gg) :: ("G_()".asTerm, G) :: Nil)(_))(1)
+
+    def leBoth(F: Term, gg: Term) =
+      useAt("<= both", usubst_append(("F_()".asTerm, F) :: ("gg_()".asTerm, gg) :: Nil)(_))(1)
+
+    def lessBoth(F: Term, gg: Term) =
+      useAt("< both", usubst_append(("F_()".asTerm, F) :: ("gg_()".asTerm, gg) :: Nil)(_))(1)
+
+    def eqL2R_dep = "eqL2R_last" by { (pos: Position) =>
+      eqL2R(pos.checkAnte)(1) // TODO: what about that subgoal 1?
+    }
+
+    val intervalArithmetic = "intervalArithmetic" by { seq: Sequent =>
+      require (seq.succ.length == 1)
+      val prec = 5
+      val bounds = collect_bounds(prec)(DecimalBounds(), seq.ante)
+
+      // TODO: should be cacheing bounds for subterms, but it seems we can easily afford excessive BigDecimal computations
+      // recurse to find a lower bound for the expression on the rhs
+      def recurseLower: BelleExpr = "intervalArithmetic.recurseLower" by {
+        seq: Sequent =>
+          seq.succ(0) match {
+            case LessEqual(_, Plus(a, b)) =>
+              val aa = eval_ivl_term_in_env(prec)(bounds)(a)._1
+              val bb = eval_ivl_term_in_env(prec)(bounds)(b)._1
+              plusDown(aa, bb) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseLower, recurseLower), QE() & done)
+            case LessEqual(_, Minus(a, b)) =>
+              val aa = eval_ivl_term_in_env(prec)(bounds)(a)._1
+              val bB = eval_ivl_term_in_env(prec)(bounds)(b)._2
+              minusDown(aa, bB) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseLower, recurseUpper), QE() & done)
+            case LessEqual(_, Neg(a)) =>
+              val aA = eval_ivl_term_in_env(prec)(bounds)(a)._2
+              negDown(aA) & andR(1) & Idioms.<(recurseUpper, QE() & done)
+            case LessEqual(_, Times(f, g)) =>
+              val (ff, fF) = eval_ivl_term_in_env(prec)(bounds)(f)
+              val (gg, gG) = eval_ivl_term_in_env(prec)(bounds)(g)
+              timesDown(ff, fF, gg, gG) & andR(1) & Idioms.<(
+                andR(1) & Idioms.<(andR(1)&Idioms.<(recurseLower, recurseUpper), andR(1)&Idioms.<(recurseLower, recurseUpper)),
+                QE() & done)
+            case LessEqual(_, x) if bounds._1.isDefinedAt(x) => QE() & done
+            case LessEqual(_, n) if BigDecimalQETool.isNumeric(n) => QE() & done
+            case _ => throw new BelleThrowable("recurseLower went wrong")
+          }
+      }
+      // recurse to find an upper bound for the expression on the lhs
+      def recurseUpper: BelleExpr = "intervalArithmetic.recurseUpper" by {
+        seq: Sequent =>
+          seq.succ(0) match {
+            case LessEqual(Plus(a, b), _) =>
+              val aA = eval_ivl_term_in_env(prec)(bounds)(a)._2
+              val bB = eval_ivl_term_in_env(prec)(bounds)(b)._2
+              plusUp(aA, bB) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseUpper, recurseUpper), QE() & done)
+            case LessEqual(Minus(a, b), _) =>
+              val aA = eval_ivl_term_in_env(prec)(bounds)(a)._2
+              val bb = eval_ivl_term_in_env(prec)(bounds)(b)._1
+              minusUp(aA, bb) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseUpper, recurseLower), QE() & done)
+            case LessEqual(Neg(a), _) =>
+              val aa = eval_ivl_term_in_env(prec)(bounds)(a)._1
+              negUp(aa) & andR(1) & Idioms.<(recurseLower, QE() & done)
+            case LessEqual(Times(f, g), _) =>
+              val (ff, fF) = eval_ivl_term_in_env(prec)(bounds)(f)
+              val (gg, gG) = eval_ivl_term_in_env(prec)(bounds)(g)
+              //       h()<=f()*g()  <- (((ff()<=f() & f()<=F()) & (gg()<=g() & g()<=G())) & (h()<=ff()*gg() & h()<=ff()*G() & h()<=F()*gg() & h()<=F()*G()))
+              timesUp(ff, fF, gg, gG) & andR(1) & Idioms.<(
+                andR(1) & Idioms.<(andR(1)&Idioms.<(recurseLower, recurseUpper), andR(1)&Idioms.<(recurseLower, recurseUpper)),
+                QE() & done)
+            case LessEqual(x, _) if bounds._1.isDefinedAt(x) => QE() & done
+            case LessEqual(n, _) if BigDecimalQETool.isNumeric(n) => QE() & done
+            case _ => throw new BelleThrowable("recurseUpper went wrong")
+          }
+      }
+      def recurseFormula: BelleExpr = "intervalArithmetic.recurseFormula" by {
+        (seq: Sequent) =>
+          (seq.succ(0) match {
+            case And(_, _) => andR(1) & Idioms.<(recurseFormula, recurseFormula)
+            case LessEqual(a, b) =>
+              val aA = eval_ivl_term_in_env(prec)(bounds)(a)._2
+              val bb = eval_ivl_term_in_env(prec)(bounds)(b)._1
+              leBoth(aA, bb) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseUpper, recurseLower), QE() & done)
+            case Less(a, b) =>
+              val aA = eval_ivl_term_in_env(prec)(bounds)(a)._2
+              val bb = eval_ivl_term_in_env(prec)(bounds)(b)._1
+              lessBoth(aA, bb) & andR(1) & Idioms.<(andR(1) & Idioms.<(recurseUpper, recurseLower), QE() & done)
+            case _ => throw new BelleThrowable("recurseFormula went wrong")
+          })
+      }
+      recurseFormula
+    }
+
   }
 
 }

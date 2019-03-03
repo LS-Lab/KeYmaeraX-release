@@ -100,4 +100,29 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     val res = proveBy(seq1, QE)
     res shouldBe 'proved
   }
+
+  val seq2 = ("0 <= x, x <= 1, 2 <= y, y <= 4, 0 <= z, z <= 1, 2 <= a, a <= 4, 2 <= b, b <= 4, 2 <= c, c <= 4, 2 <= d, d <= 4, 2 <= e, e <= 4, 2 <= f, f <= 4, 2 <= g, g <= 4, 2 <= h, h <= 4," +
+    "0 <= i, i <= 1, 2 <= j, j <= 4, 0 <= k, k <= 1, 2 <= l, l <= 4, 2 <= m, m <= 4, 2 <= n, n <= 4, 2 <= o, o <= 4, 2 <= p, p <= 4, 2 <= q, q <= 4, 2 <= r, r <= 4, 2 <= s, s <= 4" +
+    "==>" +
+    "a*b+c*d*(e+f*g*h+x*y*z + i*j*k*(l + (m*n*(o + (p*q - r*s))))) <= 17808*10^0").asSequent
+
+  def timing[B](s: String)(f: () => B) : B = {
+    val tic = System.nanoTime()
+    val res = f()
+    val toc = System.nanoTime()
+    System.out.println("Timing for " + s + ": " + (toc - tic)/1000000000.0 + "s")
+    res
+  }
+
+  "Slow.intervalArithmetic" should "be slow" in withMathematica { _ =>
+    timing("intervalArithmetic")(() => proveBy(seq2, Slow.intervalArithmetic & done))
+    timing("intervalArithmetic (again)")(() => proveBy(seq2, Slow.intervalArithmetic & done))
+    timing("intervalArithmetic (again)")(() => proveBy(seq2, Slow.intervalArithmetic & done))
+  }
+
+  "intervalCut" should "be fast" in withMathematica { _ =>
+    timing("intervalCut")(() => proveBy(seq2, intervalCut(1, 0::Nil) & prop & done))
+    timing("intervalCut (again)")(() => proveBy(seq2, intervalCut(1, 0::Nil) & prop & done))
+    timing("intervalCut (again)")(() => proveBy(seq2, intervalCut(1, 0::Nil) & prop & done))
+  }
 }
