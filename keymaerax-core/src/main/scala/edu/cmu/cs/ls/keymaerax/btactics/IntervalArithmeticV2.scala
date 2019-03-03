@@ -99,6 +99,10 @@ object IntervalArithmeticV2 {
         (bounds._1, bounds._2.updated(t, eval_ivl(prec)(DecimalBounds())(n)._2))
       case LessEqual(n, t) if BigDecimalQETool.isNumeric(n) =>
         (bounds._1.updated(t, eval_ivl(prec)(DecimalBounds())(n)._1), bounds._2)
+      case Less(t, n) if BigDecimalQETool.isNumeric(n) =>
+        (bounds._1, bounds._2.updated(t, eval_ivl(prec)(DecimalBounds())(n)._2))
+      case Less(n, t) if BigDecimalQETool.isNumeric(n) =>
+        (bounds._1.updated(t, eval_ivl(prec)(DecimalBounds())(n)._1), bounds._2)
       case _ => bounds
     }
   }
@@ -592,12 +596,10 @@ object IntervalArithmeticV2 {
       apply(leBoth, 0)
   }
 
-  def intervalArithmeticPlain = new BuiltInTactic("ANON") {
+  def intervalArithmeticPlain(precision: Int, qeTool: QETool) = new BuiltInTactic("ANON") {
     override def result(provable: ProvableSig): ProvableSig = {
       requireOneSubgoal(provable, name)
       val sequent = provable.subgoals(0)
-      val precision = 15
-      val qeTool = ToolProvider.qeTool().get
       require(sequent.succ.length == 1)
       sequent.succ(0) match {
         case fml: ComparisonFormula =>
@@ -640,7 +642,9 @@ object IntervalArithmeticV2 {
     }
   }
   val intervalArithmetic = "intervalArithmetic" by {
-    prop & OnAll(intervalArithmeticPlain)
+    val qeTool = ToolProvider.qeTool().get
+    val precision = 15
+    prop & OnAll(intervalArithmeticPlain(precision, qeTool))
   }
 
   def intervalCutTerms(terms: Seq[Term]) : BuiltInTactic = new BuiltInTactic("ANON") {
