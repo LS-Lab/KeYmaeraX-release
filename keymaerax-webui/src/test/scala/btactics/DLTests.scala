@@ -502,7 +502,7 @@ class DLTests extends TacticTestBase {
 
     val proofId = db.createProof(model)
     val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter))
+      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
 
     val BelleProvable(result, _) = interpreter(tactic, BelleProvable(ProvableSig.startProof(fml)))
     result.subgoals.size shouldBe 3

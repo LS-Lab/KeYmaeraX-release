@@ -661,17 +661,28 @@ class SequentialInterpreterTests extends TacticTestBase with Timeouts {
   }
 
   it should "not spend extensive time searching positions" in {
-    val ante = (1 to 1000).map(i => Equal(Variable("x", Some(i)), Number(1))).reduce(And)
-    val succ = (1 to 500).map(i => Box(Assign(Variable("y", Some(i)), Number(2)), Greater(Variable("y", Some(i)), Number(1)))).reduce(Or)
+    val ante = (1 to 100).map(i => Equal(Variable("x", Some(i)), Number(1))).reduce(And)
+    val succ = (1 to 50).map(i => Box(Assign(Variable("y", Some(i)), Number(2)), Greater(Variable("y", Some(i)), Number(1)))).reduce(Or)
 
-    // should take less than 1s
-    failAfter(5 seconds) {
+    // should take about 500ms
+    failAfter(2 seconds) {
       val BelleProvable(result, _) = ExhaustiveSequentialInterpreter(Nil)(
         SaturateTactic(implyR('R) | andL('L) | orR('R) | assignb('R)),
         BelleProvable(ProvableSig.startProof(Imply(ante, succ)))
       )
-      result.subgoals.head.ante should have size 1000
-      result.subgoals.head.succ should have size 500
+      result.subgoals.head.ante should have size 100
+      result.subgoals.head.succ should have size 50
+      result.subgoals.head.succ.foreach(_ shouldBe a [Greater])
+    }
+
+    // should take about 1min
+    failAfter(2 minutes) {
+      val BelleProvable(result, _) = ExhaustiveSequentialInterpreter(Nil, throwWithDebugInfo = true)(
+        SaturateTactic(implyR('R) | andL('L) | orR('R) | assignb('R)),
+        BelleProvable(ProvableSig.startProof(Imply(ante, succ)))
+      )
+      result.subgoals.head.ante should have size 100
+      result.subgoals.head.succ should have size 50
       result.subgoals.head.succ.foreach(_ shouldBe a [Greater])
     }
   }
