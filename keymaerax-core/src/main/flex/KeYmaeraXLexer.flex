@@ -205,6 +205,12 @@ private case class ARCHIVE_ENTRY_BEGIN(name: String) extends Terminal("ArchiveEn
 ///////////
 private object BACKTICK extends Terminal("`")
 
+private sealed trait LexError {
+  self: Throwable =>
+  val err_loc: Location
+  val s : String
+}
+
 object KeYmaeraXLexer {
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
@@ -243,8 +249,6 @@ object KeYmaeraXLexer {
    * @return A token stream.
    */
   private def lex(input: String, inputLocation:Location, mode: LexerMode): TokenStream = {
-    // @todo - not sure if any other values are actually ever used; if so, need to map over the token stream
-    //         to adjust the locations
     // Rumor is, this newline is needed to avoid JFlex issue where we can't match EOF with lookahead
     val reader = new StringReader(input + "\n")
     // We are creating a fresh one, rather than retaining and reusing to make things thread-safe
@@ -253,10 +257,21 @@ object KeYmaeraXLexer {
     flex.mode = mode
     flex.loc = inputLocation
     var output: scala.collection.mutable.ListBuffer[Token] = scala.collection.mutable.ListBuffer.empty
-    var currentToken = flex.yylex()
-    while (currentToken != null) {
-      output.append(currentToken)
-      currentToken = flex.yylex()
+    try {
+      var currentToken = flex.yylex()
+      while (currentToken != null) {
+        output.append(currentToken)
+        currentToken = flex.yylex()
+      }
+    } catch {
+      case ex: Throwable with LexError =>
+        ex.err_loc match {
+          case UnknownLocation => throw LexException("Lexer does not recognize input beginning with character `" + ex.s(0) + "`=" + ex.s(0).toInt, ex.err_loc).inInput(ex.s)
+          case _ =>
+            val line = input.lines.drop(ex.err_loc.line-inputLocation.line).next
+            val col = if (inputLocation.line < ex.err_loc.line) ex.err_loc.column - 1 else ex.err_loc.column - inputLocation.column
+            throw LexException(ex.err_loc.begin + " Lexer does not recognize input at " + ex.err_loc + " in:\n" + line +"\n" + (" " * col) + "^\nbeginning with character `" + line(col) + "`=" + line(col).toInt, ex.err_loc).inInput(line.substring(col))
+        }
     }
     replaceAnything(output).to
   }
@@ -294,7 +309,6 @@ object KeYmaeraXLexer {
 //%char
 
 %{
-  /* @todo: make sure there are no off-by-1 errors here - not sure what the intended semantics is... */
   private def tok(term: Terminal) : Token = {
     val cols = yylength()
     val token = Token(term, spanningRegion(loc, cols-1))
@@ -358,12 +372,12 @@ IDENT = [a-zA-Z][a-zA-Z0-9]*\_?\_?[0-9]*
 //@NOTE Minus sign artificially excluded from the number to make sure x-5 lexes as IDENT("x"),MINUS,NUMBER("5") not as IDENT("x"),NUMBER("-5")
 NUMBER = [0-9]+\.?[0-9]*
 
-DOUBLE_QUOTES_STRING = \" [^\"]* \"
+DOUBLE_QUOTES_STRING = \" ~ \"
 
 DOT=("•"(\_[0-9]+)?) | (\.\_[0-9]+)
 
 // values are nested into quadruple ", because they can contain single, double, or triple " themselves (arbitrary Scala code)
-TOOL_VALUE = \"{4}([^\"]\"{0,3})*\"{4}
+TOOL_VALUE = \"{4} ~ \"{4}
 
 // The full set of options is "ArchiveEntry" | "Theorem" | "Exercise" | "Lemma".
 // but we omit "Lemma" to avoid conflict with LEMMA_BEGIN and instead have a
@@ -372,7 +386,7 @@ ARCHIVE_ENTRY_BEGIN = "ArchiveEntry" | "Theorem" | "Exercise"
 LEMMA_BEGIN = "Lemma"
 
 WHITESPACE = \s+
-COMMENT = "/*" [^*] ~"*/" | "/*" "*"+ "/"
+COMMENT = "/*" ~ "*/"
 
 %%
 
@@ -646,14 +660,10 @@ COMMENT = "/*" [^*] ~"*/" | "/*" "*"+ "/"
 
 /* error fallback */
 [^] {
-  // @todo: in order to have error messages that contain more that just the immediate
-  // next symbol, we could:
-  //   - enable %char
-  //   - raise an internal exception holding the value of yychar()
-  //   - catch the exception inside the lex function, and re-raise the LexException
-  //     using yychar-based subscring of the full input as s...
-  val s = yytext()
-  throw LexException(loc.begin + " Lexer does not recognize input at " + loc + " in `\n" + s +"\n` beginning with character `" + s(0) + "`=" + s(0).getNumericValue, loc).inInput(s)
+  throw new Exception() with LexError {
+    override val err_loc = loc
+    override val s = yytext()
+  }
 }
 
 <<EOF>> { tok(EOF) }
