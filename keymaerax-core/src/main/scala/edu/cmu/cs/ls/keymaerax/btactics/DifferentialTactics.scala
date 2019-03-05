@@ -899,7 +899,7 @@ private object DifferentialTactics extends Logging {
             /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
             diffCut(inv)(pos) <(
               skip,
-              odeInvariant()(pos)) &
+              odeInvariant(tryHard = false, useDw = false)(pos)) &
           // continue outside <(skip, ...) so that cut is proved before used
           (odeInvariant()(pos) | fastODE(invariantCandidates)(finish)(pos) /* with next option from iterator */) &
           DebuggingTactics.debug("[ODE] Inv Candidate done")
@@ -1432,7 +1432,7 @@ private object DifferentialTactics extends Logging {
     *                use tryHard = true when speed is secondary & certain that P is invariant
     *                use tryHard = false when speed is of interest e.g., within automated invariant search
     */
-  def odeInvariant(tryHard:Boolean = false): DependentPositionTactic = "odeInvariant" by ((pos:Position) => {
+  def odeInvariant(tryHard: Boolean = false, useDw: Boolean = true): DependentPositionTactic = "odeInvariant" by ((pos:Position) => {
     require(pos.isSucc && pos.isTopLevel, "ODE invariant only applicable in top-level succedent")
     //@note dW does not need algebra tool
     //require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
@@ -1457,9 +1457,14 @@ private object DifferentialTactics extends Logging {
     DifferentialTactics.domSimplify(pos) &
     DebuggingTactics.debug("odeInvariant close") &
     (
-      (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
-      invTactic |
-      DebuggingTactics.error("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
+      if (useDw) {
+        (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
+          invTactic |
+          DebuggingTactics.error("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
+      } else {
+        invTactic |
+          DebuggingTactics.error("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
+      }
     )
   })
 
