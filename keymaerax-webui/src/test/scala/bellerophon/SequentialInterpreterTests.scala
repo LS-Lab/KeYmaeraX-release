@@ -687,6 +687,25 @@ class SequentialInterpreterTests extends TacticTestBase with Timeouts {
     }
   }
 
+  it should "stop saturation when proof is closed" in {
+    val listener = new IOListener {
+      val calls: mutable.Buffer[BelleExpr] = mutable.Buffer[BelleExpr]()
+      override def begin(input: BelleValue, expr: BelleExpr): Unit = expr match {
+        case NamedTactic(name, _) if name == "prop" => calls += expr
+        case _ =>
+      }
+      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {}
+      override def kill(): Unit = {}
+    }
+    ExhaustiveSequentialInterpreter(listener :: Nil)(
+      SaturateTactic(prop),
+      BelleProvable(ProvableSig.startProof("x>0 -> x>0".asFormula))
+    ) match {
+      case BelleProvable(pr, _) => pr shouldBe 'proved
+    }
+    listener.calls should have size 1
+  }
+
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // Helper methods
   //////////////////////////////////////////////////////////////////////////////////////////////////

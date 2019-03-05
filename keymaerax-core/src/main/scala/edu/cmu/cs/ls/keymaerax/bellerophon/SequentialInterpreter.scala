@@ -13,6 +13,8 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.Logging
 
+import scala.util.control.Breaks._
+
 /**
  * Sequential interpreter for Bellerophon tactic expressions.
   *
@@ -166,14 +168,18 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
     case SaturateTactic(child) =>
       var prev: BelleValue = null
       var result: BelleValue = v
-      do {
+      breakable { do {
         prev = result
         try {
           result = apply(child, result)
+          result match {
+            case BelleProvable(pr, _) if pr.isProved => break
+            case _ => // continue
+          }
         } catch {
           case e: BelleThrowable => /*@note child no longer applicable */ result = prev
         }
-      } while (result != prev)
+      } while (result != prev) }
       result
 
     case RepeatTactic(child, times) =>
