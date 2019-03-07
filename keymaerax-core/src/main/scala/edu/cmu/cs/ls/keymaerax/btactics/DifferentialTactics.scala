@@ -1447,7 +1447,7 @@ private object DifferentialTactics extends Logging {
       }
       else {
         ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
-        ODEInvariance.sAIRankOne(doReorder = false, skipClosed = false)(pos)
+        ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
       }
 
     //Add constant assumptions to domain constraint
@@ -1489,8 +1489,8 @@ private object DifferentialTactics extends Logging {
             (
             //note: repeated dW&QE not needed if Pegasus reports a correct dC chain
             //(DifferentialTactics.diffWeakenG(pos) & QE & done) |
-            ODEInvariance.sAIclosedPlus(1)(pos) |
-            ODEInvariance.sAIRankOne(false)(pos)) & done)
+            ODEInvariance.sAIclosedPlus(bound=1)(pos) |
+            ODEInvariance.sAIRankOne(doReorder=false,skipClosed = true)(pos)) & done)
         )
     }
   })
