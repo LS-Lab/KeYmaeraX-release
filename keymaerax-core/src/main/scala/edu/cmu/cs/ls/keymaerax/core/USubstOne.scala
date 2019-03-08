@@ -6,6 +6,11 @@ import StaticSemantics.boundVars
 import SetLattice.allVars
 import SetLattice.bottom
 
+object USubstOne {
+  @inline
+  private val optima = true
+}
+
 /**
   * A Uniform Substitution with its one-pass application mechanism.
   * A Uniform Substitution uniformly replaces all occurrences of a given predicate p(.) by a formula in (.).
@@ -21,11 +26,9 @@ import SetLattice.bottom
   * Created by aplatzer on 2019-2-12.
   */
 final case class USubstOne(subsDefsInput: immutable.Seq[SubstitutionPair]) extends (Expression => Expression) {
+  import USubstOne.optima
   /** automatically filter out identity substitution no-ops, which can happen by systematic constructions such as unification */
   private/*[this]*/ val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
-
-  @inline
-  private val optima = true
 
   insist(noException(dataStructureInvariant), "unique left-hand sides in substitutees " + this)
 
