@@ -65,7 +65,7 @@ import scala.collection.immutable
 *In Mauricio Ayala-Rincon and Cesar Munoz, editors, Interactive Theorem Proving, International Conference, ITP 2017, volume 10499 of LNCS. Springer, 2017.
  */
 package object bellerophon {
-  type USubstRen = USubstRenChurch
+  type USubstRen = USubstRenOne
   /** USubstRen factory method, forwards to constructor. */
-  def USubstRen(subsDefsInput: immutable.Seq[(Expression,Expression)]): USubstRen = USubstRenChurch(subsDefsInput)
+  def USubstRen(subsDefsInput: immutable.Seq[(Expression,Expression)]): USubstRen = USubstRenOne(subsDefsInput)
 }
