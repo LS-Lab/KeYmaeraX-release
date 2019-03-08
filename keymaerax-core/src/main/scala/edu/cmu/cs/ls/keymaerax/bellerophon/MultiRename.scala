@@ -27,11 +27,11 @@ final case class MultiRename(rens: immutable.Seq[(Variable,Variable)]) extends (
   insist(rena.keySet.intersect(rena.values.toSet).isEmpty, "No replacement of a variable should be renamed yet again: " + this)
   /** including transpositions */
   private val renaming: immutable.Map[Variable,Variable] = {
-    if (USubstRen.TRANSPOSITION)
+    if (USubstRenChurch.TRANSPOSITION)
       rena ++ (rena.map(sp => (sp._2,sp._1)))
     else
       rena
-  } ensuring( r => !USubstRen.TRANSPOSITION || rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained")
+  } ensuring( r => !USubstRenChurch.TRANSPOSITION || rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained")
 
   /** `true` to also support program constants, predicationals etc and leaving them unmodified. 'false' to clash instead. */
   private val semanticRenaming: Boolean = true

@@ -1,7 +1,11 @@
 package edu.cmu.cs.ls.keymaerax
 
+import edu.cmu.cs.ls.keymaerax.core.Expression
+
+import scala.collection.immutable
+
 /**
- * Bellerophon tactics language framework. This package includes
+  * Bellerophon tactics language framework. This package includes
  *    - [[edu.cmu.cs.ls.keymaerax.bellerophon.BelleExpr tactic language expressions]]
  *    - a [[edu.cmu.cs.ls.keymaerax.bellerophon.SequentialInterpreter sequential tactic interpreter]]
  *
@@ -16,6 +20,7 @@ package edu.cmu.cs.ls.keymaerax
   *   - `t+` saturating repetition executes tactic `t` to a fixpoint, requires at least one successful application.
   *   - `<(e1,...,en)` [[edu.cmu.cs.ls.keymaerax.bellerophon.BranchTactic branching]] to run tactic `ei` on branch `i`, failing if any of them fail or if there are not exactly `n` branches.
   *   - `case _ of {fi => ei}` [[edu.cmu.cs.ls.keymaerax.bellerophon.USubstPatternTactic uniform substitution case pattern]] applies the first `ei` such that
+ *
   *     `fi` uniformly substitutes to current provable for which `ei` does not fail, fails if the `ei` of all matching `fi` fail.`
   *   - `t partial` [[edu.cmu.cs.ls.keymaerax.bellerophon.PartialTactic partial tactic marker]] marks that tactic `t` is allowed to not close all its goals.
   *
@@ -56,7 +61,11 @@ package edu.cmu.cs.ls.keymaerax
   * @author Stefan Mitsch
   * @author Andre Platzer
   * @see Nathan Fulton, Stefan Mitsch, Brandon Bohrer and Andre Platzer. 
-[[https://doi.org/10.1007/978-3-319-66107-0_14 Bellerophon: Tactical theorem proving for hybrid systems]].
-In Mauricio Ayala-Rincon and Cesar Munoz, editors, Interactive Theorem Proving, International Conference, ITP 2017, volume 10499 of LNCS. Springer, 2017.
+*[[https://doi.org/10.1007/978-3-319-66107-0_14 Bellerophon: Tactical theorem proving for hybrid systems]].
+*In Mauricio Ayala-Rincon and Cesar Munoz, editors, Interactive Theorem Proving, International Conference, ITP 2017, volume 10499 of LNCS. Springer, 2017.
  */
-package object bellerophon {}
+package object bellerophon {
+  type USubstRen = USubstRenChurch
+  /** USubstRen factory method, forwards to constructor. */
+  def USubstRen(subsDefsInput: immutable.Seq[(Expression,Expression)]): USubstRen = USubstRenChurch(subsDefsInput)
+}

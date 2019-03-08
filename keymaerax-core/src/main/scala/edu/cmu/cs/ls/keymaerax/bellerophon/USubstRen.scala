@@ -4,20 +4,20 @@
  */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.btactics.{Idioms, ProofRuleTactics}
 import edu.cmu.cs.ls.keymaerax.core.SetLattice._
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.collection.immutable
 import scala.collection.immutable._
 
-object USubstRen {
+object USubstRenChurch {
   /** `true` for transpositions (replace `what` by `repl` and `what'` by `repl'` and, vice versa, `repl` by `what` etc) or `false` to clash upon occurrences of `repl` or `repl'`. */
   private[bellerophon] val TRANSPOSITION: Boolean = URename(Variable("dummy"),Variable("ymmud"))(Variable("ymmud"))==Variable("dummy")
 }
 
 /**
   * Renaming Uniform Substitution, simultaneously combining [[URename]] and [[USubst]].
+  * This implementation uses Church-style uniform substitution implementation a la [[USubstChurch]].
   * Liberal list of SubstitutionPair represented as merely a list of Pair,
   * where the Variable~>Variable replacements are by uniform renaming,
   * and the other replacements are by uniform substitution, simultaneously.
@@ -25,12 +25,12 @@ object USubstRen {
   * @note This implementation performs semantic renaming.
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.core.URename]]
-  * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
+  * @see [[edu.cmu.cs.ls.keymaerax.core.USubstChurch]]
   * @see [[MultiRename]]
   */
 //@todo admissibility needs to be augmented with renamed variables too for soundness.
 //@todo does not check soundness-critical occurrence constraints for Taboos, but the core ultimately will.
-final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends (Expression => Expression) {
+final case class USubstRenChurch(private[bellerophon] val subsDefsInput: immutable.Seq[(Expression,Expression)]) extends (Expression => Expression) {
   insist(subsDefsInput.forall(sp => sp._1.kind == sp._2.kind), "Substitution renaming only to expressions of the same kind: " + this)
   insist(subsDefsInput.forall(sp => sp._1.sort == sp._2.sort), "Substitution renaming only to expressions of the same sort: " + this)
   insist({val repls = subsDefsInput.map(sp=>sp._1).toList; repls.length == repls.distinct.length}, "No contradictory or duplicate substitutions/renamings: " + this)
@@ -43,11 +43,11 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
   /** include transpositions for renamings if need be */
   private def augmentTranspositions(rena: immutable.Map[Variable,Variable]): immutable.Map[Variable,Variable] = {
     insist(rena.keySet.intersect(rena.values.toSet).isEmpty, "No replacement of a variable should be renamed in cyclic ways again: " + this)
-    if (USubstRen.TRANSPOSITION)
+    if (USubstRenChurch.TRANSPOSITION)
       rena ++ (rena.map(sp => sp._2->sp._1))
     else
       rena
-  } ensuring( r => !USubstRen.TRANSPOSITION || rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained for " + rena)
+  } ensuring( r => !USubstRenChurch.TRANSPOSITION || rena.forall(sp => r.get(sp._1)==Some(sp._2) && r.get(sp._2)==Some(sp._1)), "converse renamings are contained for " + rena)
 
   /** the ApplicationOf subset of subs with matching heads */
   private val matchHeads: immutable.Map[Function,(ApplicationOf,Expression)] =
@@ -61,9 +61,6 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
 
   //@todo check for substitutable expressions like in USubst
 
-  /** `true` to also support program constants, predicationals etc and leaving them unmodified. 'false' to clash instead. */
-  private val semanticRenaming: Boolean = true
-
   override def toString: String = "USubstRen{" + subsDefsInput.map(sp => sp._1.prettyString + "~>" + sp._2.prettyString).mkString(", ") + "}"
 
 
@@ -71,7 +68,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
   val toCore: Expression => Expression = e => {
     val renall = MultiRename(RenUSubst.renamingPartOnly(subsDefsInput))
     // rename all substitutions (by transposition) since they'll be renamed back subsequently
-    val usubst = USubst(subs.toList.map(sp => SubstitutionPair(sp._1, renall(sp._2))))
+    val usubst = USubstChurch(subs.toList.map(sp => SubstitutionPair(sp._1, renall(sp._2))))
     val replaced = usubst(e)
     renall.toCore(replaced)
   }
@@ -146,7 +143,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
         assert(isDot(wArg) || wArg == Nothing)
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
-        USubstRen(toSubsPairs(wArg, theta)).usubst(repl.asInstanceOf[Term])
+        USubstRenChurch(toSubsPairs(wArg, theta)).usubst(repl.asInstanceOf[Term])
       case app@FuncOf(g:Function, theta) if !matchHead(app) => FuncOf(g, usubst(theta))
       case Nothing => Nothing
       case d: DotTerm        => subs.getOrElse(d, d).asInstanceOf[Term]
@@ -179,7 +176,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
         assert(isDot(wArg) || wArg == Nothing)
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
-        USubstRen(toSubsPairs(wArg, theta)).usubst(repl.asInstanceOf[Formula])
+        USubstRenChurch(toSubsPairs(wArg, theta)).usubst(repl.asInstanceOf[Formula])
       case app@PredOf(q, theta) if !matchHead(app) => PredOf(q, usubst(theta))
       case app@PredicationalOf(op, fml) if matchHead(app) =>
         requireAdmissible(allVars, fml, formula)
@@ -187,7 +184,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
         val PredicationalOf(wp, wArg) = what
         assert(wp == op, "match only if same head")
         assert(wArg == DotFormula)
-        USubstRen((wArg, usubst(fml)) :: Nil).usubst(repl.asInstanceOf[Formula])
+        USubstRenChurch((wArg, usubst(fml)) :: Nil).usubst(repl.asInstanceOf[Formula])
       case app@PredicationalOf(q, fml) if !matchHead(app) =>
         requireAdmissible(allVars, fml, formula)
         PredicationalOf(q, usubst(fml))
@@ -307,7 +304,7 @@ final case class USubstRen(private[bellerophon] val subsDefsInput: immutable.Seq
    * Projects / restricts a substitution to only those that affect the symbols listed in occurrences.
    * @see arXiv:1503.01981 Definition 12.
    */
-  private def projection(affected: immutable.Set[NamedSymbol]): USubstRen = new USubstRen(
+  private def projection(affected: immutable.Set[NamedSymbol]): USubstRen = new USubstRenChurch(
     subsDefsInput.filter(sp => sp._1 match {
       case app: ApplicationOf => affected.contains(app.func)
       case _ => true
