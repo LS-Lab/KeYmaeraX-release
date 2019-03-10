@@ -46,7 +46,9 @@ trait Matcher extends ((Expression,Expression) => RenUSubst) with Logging {
   //  type SubstRepl = SubstitutionPair
   //  private def SubstRepl(what: Expression, repl: Expression): SubstRepl = SubstitutionPair(what,repl)
 
-  /** The (generalized) substitutions used for unification purposes */
+  /** The (generalized) substitutions used for unification purposes
+    * @see [[RenUSubst]]
+    */
   type Subst = RenUSubst
   /** Create a (generalized) substitution from the given representation `subs`. */
   //@todo .distinct may slow things down. Necessary all the time?
