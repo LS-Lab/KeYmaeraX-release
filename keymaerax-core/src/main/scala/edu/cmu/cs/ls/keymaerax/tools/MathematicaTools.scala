@@ -585,20 +585,22 @@ class MathematicaSimplificationTool(override val link: MathematicaLink) extends 
   override def simplify(expr: Term, assumptions: List[Formula]): Term =
     simplify(expr.asInstanceOf[Expression], assumptions).asInstanceOf[Term]
 
-  override def simplify(expr: Expression, assumptions: List[Formula]): Expression = {
-    val ex = k2m(expr)
-    val assuming = assumptions.map(k2m)
+  override def simplify(expr: Expression, assumptions: List[Formula]): Expression = expr match {
+    case _: AtomicTerm => expr
+    case _ =>
+      val ex = k2m(expr)
+      val assuming = assumptions.map(k2m)
 
-    val input = new MExpr(MathematicaSymbols.FULLSIMPLIFY,
-      Array[MExpr](
-        ex,
-        new MExpr(Expr.SYM_LIST, assuming.toArray)
-      ))
-    val (_, result) = run(input)
-    result match {
-      case r: Expression => r
-      case _ => throw ToolException("Mathematica did not successfuly simplify: " + expr + " under assumptions " + assumptions)
-    }
+      val input = new MExpr(MathematicaSymbols.FULLSIMPLIFY,
+        Array[MExpr](
+          ex,
+          new MExpr(Expr.SYM_LIST, assuming.toArray)
+        ))
+      val (_, result) = run(input)
+      result match {
+        case r: Expression => r
+        case _ => throw ToolException("Mathematica did not successfuly simplify: " + expr + " under assumptions " + assumptions)
+      }
   }
 }
 
