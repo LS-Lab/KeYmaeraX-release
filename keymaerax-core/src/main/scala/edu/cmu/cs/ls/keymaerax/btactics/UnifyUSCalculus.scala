@@ -41,6 +41,10 @@ trait UnifyUSCalculus {
   /** The (generalized) substitutions used for unification */
   type Subst = UnificationMatch.Subst
 
+  /** Which matcher this unification USubst calculus uses */
+  @inline
+  private val matcher = UnificationMatch
+
   /*******************************************************************
     * Stepping auto-tactic
     *******************************************************************/
@@ -264,7 +268,7 @@ trait UnifyUSCalculus {
   def US(fact: ProvableSig): DependentTactic = new SingleGoalDependentTactic("US") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       logger.debug("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " ... checking")
-      val subst = UnificationMatch(fact.conclusion, sequent)
+      val subst = matcher(fact.conclusion, sequent)
       logger.debug("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " by " + subst)
       if (sequent != subst(fact.conclusion)) throw BelleUnsupportedFailure("unification computed an incorrect unifier\nunification should match:\n  unify: " + sequent + "\n  gives: " + subst(fact.conclusion) + " when matching against\n  form:  " + fact.conclusion + "\n  by:    " + subst)
       by(subst.toForward(fact))
@@ -289,7 +293,7 @@ trait UnifyUSCalculus {
   //  def US(form: Sequent): DependentTactic = new SingleGoalDependentTactic("US") {
   //    override def computeExpr(sequent: Sequent): BelleExpr = {
   //      if (DEBUG) println("  US(" + form.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + form + " ... checking")
-  //      val subst = UnificationMatch(form, sequent)
+  //      val subst = matcher(form, sequent)
   //      if (DEBUG) println("  US(" + form.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + form + " by " + subst)
   //      Predef.assert(sequent == subst(form), "unification should match:\n  unify: " + sequent + "\n  gives: " + subst(form) + " when matching against\n  form:  " + form + "\n  by:    " + subst)
   //      subst.toTactic(form)
@@ -378,7 +382,7 @@ trait UnifyUSCalculus {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           val (ctx, expr) = sequent.at(pos)
-          val subst = inst(UnificationMatch.unifiable(keyPart, expr))
+          val subst = inst(matcher.unifiable(keyPart, expr))
           logger.debug("Doing a useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst)
           Predef.assert(!RECHECK || expr == subst(keyPart), "unification matched left successfully\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst + "\n  gave:    " + subst(keyPart) + "\n  that is: " + keyPart + " instantiated by " + subst)
           //val keyCtxMatched = Context(subst(keyCtx.ctx))
@@ -1319,7 +1323,7 @@ trait UnifyUSCalculus {
       // split proof into ctx{expr} at pos
       val (ctx, expr) = proof.conclusion.at(pos)
       // instantiated unification of expr against keyPart
-      val subst = inst(UnificationMatch(keyPart, expr))
+      val subst = inst(matcher(keyPart, expr))
       logger.debug("useFor(" + fact.conclusion.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
       logger.debug("useFor(" + fact.conclusion + ") on " + proof)
       Predef.assert(expr == subst(keyPart), "unification matched key successfully:\nexpr     " + expr + "\nequals   " + subst(keyPart) + "\nwhich is " + keyPart + "\ninstantiated by " + subst)
