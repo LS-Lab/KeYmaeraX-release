@@ -13,9 +13,9 @@ import scala.collection.immutable
 import scala.collection.immutable._
 
 object RenUSubst {
-  //@note See UniformRenaming.semanticRenaming: This should be false to disallow renaming within semantic constructs. Change to false after adapting tactics.
-  @inline
-  private[keymaerax] val semanticRenaming = false /*&& (try {
+  //@note semanticRenaming=false: to disallow renaming within semantic constructs as in the core.
+  /*@inline
+  private val semanticRenaming = false && (try {
     URename(Variable("quark"), Variable("quark", Some(5)))(ProgramConst("quarky")) == ProgramConst("quarky")
   } catch { case e: RenamingClashException => false })*/
 
@@ -24,11 +24,10 @@ object RenUSubst {
   } catch { case e: RenamingClashException => false }
 
   /** Create a renaming uniform substitution from the given list of replacements. */
-  def apply(subsDefsInput: immutable.Seq[(Expression,Expression)]) = if (semanticRenaming)
-      new URenAboveUSubst(subsDefsInput)
-    else
-      new DirectUSubstAboveURen(subsDefsInput)
-    //  new USubstAboveURen(subsDefsInput)
+  def apply(subsDefsInput: immutable.Seq[(Expression,Expression)]): RenUSubst =
+  //if (semanticRenaming) new URenAboveUSubst(subsDefsInput) else
+  new DirectUSubstAboveURen(subsDefsInput)
+  //  new USubstAboveURen(subsDefsInput)
 
   /** Create a (non-)renaming uniform substitution corresponding to the given ordinary uniform substitution. */
   def apply(us: USubst): RenUSubst = apply(us.subsDefsInput.map(sp=>(sp.what,sp.repl)))
@@ -238,7 +237,7 @@ final class USubstAboveURen(private[bellerophon] override val subsDefsInput: imm
 }
 
 /**
-  * Direct implementation of: Renaming Uniform Substitution that, in Sequent direction, first runs a uniform renaming and on the result subsequently the uniform substituion.
+  * Direct implementation of: Renaming Uniform Substitution that, in Sequent direction, first runs a uniform renaming and on the result subsequently the uniform substitution.
   * {{{
   *   s(RG) |- s(RD)
   *   -------------- USubst

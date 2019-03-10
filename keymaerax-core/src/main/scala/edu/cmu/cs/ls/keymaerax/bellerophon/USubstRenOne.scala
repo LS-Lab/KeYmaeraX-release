@@ -66,7 +66,8 @@ final case class URenSubstitutionPair(what: Expression, repl: Expression) {
 }
 
 /**
-  * Renaming Uniform Substitution, simultaneously combining [[URename]] and [[USubst]].
+  * Renaming Uniform Substitution, simultaneously combining [[URename]] and [[USubst]]
+  * to uniformly substitute while simultaneously uniformly renaming multiple variables.
   * This implementation uses one-pass uniform substitution implementation a la [[USubstOne]].
   * Liberal list of SubstitutionPair represented as merely a list of Pair,
   * where the Variable~>Variable replacements are by uniform renaming,
@@ -76,6 +77,7 @@ final case class URenSubstitutionPair(what: Expression, repl: Expression) {
   * @author Andre Platzer
   * @see [[edu.cmu.cs.ls.keymaerax.core.URename]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.USubstOne]]
+  * @see [[MultiRename]]
   */
 //@todo admissibility needs to be augmented with renamed variables too for soundness.
 //@todo does not check soundness-critical occurrence constraints for Taboos, but the core ultimately will.
@@ -116,7 +118,8 @@ final case class USubstRenOne(private[bellerophon] val subsDefsInput: immutable.
   override def toString: String = "USubstRen{" + subsDefsInput.map(sp => sp._1.prettyString + "~>" + sp._2.prettyString).mkString(", ") + "}"
 
 
-  /** This USubstRen implemented strictly from the core. */
+  /** This USubstRen implemented strictly from the core.
+    * Implemented by performing successive uniform renamings composed with renaming-aware uniform substitution. */
   val toCore: Expression => Expression = e => {
     val renall = MultiRename(RenUSubst.renamingPartOnly(subsDefsInput))
     // rename all substitutions (by transposition) since they'll be renamed back subsequently
