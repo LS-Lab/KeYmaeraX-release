@@ -14,8 +14,8 @@ import scala.collection.immutable._
 
 object RenUSubst {
   //@note semanticRenaming=false: to disallow renaming within semantic constructs as in the core.
-  /*@inline
-  private val semanticRenaming = false && (try {
+  @inline
+  private[keymaerax] val semanticRenaming = false /*&& (try {
     URename(Variable("quark"), Variable("quark", Some(5)))(ProgramConst("quarky")) == ProgramConst("quarky")
   } catch { case e: RenamingClashException => false })*/
 

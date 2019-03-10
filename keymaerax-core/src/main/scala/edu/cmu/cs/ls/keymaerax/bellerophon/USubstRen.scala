@@ -304,7 +304,7 @@ final case class USubstRenChurch(private[bellerophon] val subsDefsInput: immutab
    * Projects / restricts a substitution to only those that affect the symbols listed in occurrences.
    * @see arXiv:1503.01981 Definition 12.
    */
-  private def projection(affected: immutable.Set[NamedSymbol]): USubstRen = new USubstRenChurch(
+  private def projection(affected: immutable.Set[NamedSymbol]): USubstRenChurch = new USubstRenChurch(
     subsDefsInput.filter(sp => sp._1 match {
       case app: ApplicationOf => affected.contains(app.func)
       case _ => true
