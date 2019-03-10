@@ -11,6 +11,7 @@ import scala.collection.immutable._
   * Linear matchers require linear shapes, so no symbol can occur twice in the shape.
   * Or if a symbol does occur twice, then it is assumed that the identical match is found.
   * Implemented by a fast single pass.
+  * Possibly depends on using straight [[USubstRenOne]]
   * @author Andre Platzer
   */
 object LinearMatcher extends SchematicUnificationMatch {
