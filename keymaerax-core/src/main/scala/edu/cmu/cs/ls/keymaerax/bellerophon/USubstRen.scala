@@ -16,7 +16,7 @@ object USubstRenChurch {
 }
 
 /**
-  * Renaming Uniform Substitution, simultaneously combining [[URename]] and [[USubst]].
+  * Standalone Renaming Uniform Substitution operation, simultaneously combining [[URename]] and [[USubst]].
   * This implementation uses Church-style uniform substitution implementation a la [[USubstChurch]].
   * Liberal list of SubstitutionPair represented as merely a list of Pair,
   * where the Variable~>Variable replacements are by uniform renaming,
@@ -27,6 +27,7 @@ object USubstRenChurch {
   * @see [[edu.cmu.cs.ls.keymaerax.core.URename]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.USubstChurch]]
   * @see [[MultiRename]]
+  * @see [[USubstRenOne]]
   */
 //@todo admissibility needs to be augmented with renamed variables too for soundness.
 //@todo does not check soundness-critical occurrence constraints for Taboos, but the core ultimately will.

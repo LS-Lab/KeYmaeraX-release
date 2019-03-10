@@ -66,7 +66,7 @@ final case class URenSubstitutionPair(what: Expression, repl: Expression) {
 }
 
 /**
-  * Renaming Uniform Substitution, simultaneously combining [[URename]] and [[USubst]]
+  * Standalone Renaming Uniform Substitution operation, simultaneously combining [[URename]] and [[USubst]]
   * to uniformly substitute while simultaneously uniformly renaming multiple variables.
   * This implementation uses one-pass uniform substitution implementation a la [[USubstOne]].
   * Liberal list of SubstitutionPair represented as merely a list of Pair,
@@ -78,6 +78,7 @@ final case class URenSubstitutionPair(what: Expression, repl: Expression) {
   * @see [[edu.cmu.cs.ls.keymaerax.core.URename]]
   * @see [[edu.cmu.cs.ls.keymaerax.core.USubstOne]]
   * @see [[MultiRename]]
+  * @see [[USubstRenChurch]]
   */
 //@todo admissibility needs to be augmented with renamed variables too for soundness.
 //@todo does not check soundness-critical occurrence constraints for Taboos, but the core ultimately will.
