@@ -258,6 +258,11 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
     result.subgoals.loneElement shouldBe "a=0, x=0, t=0 ==> \\forall t_ (t_>=0->2*(a*(t_^2/2)+v*t_)+x=a*(t_+t)^2)".asSequent
   }
 
+  it should "solve when reserved time is present" in withMathematica { _ =>
+    val result = proveBy("[{v'=a}]v>=0, kyxtime=0 ==> [{x'=y}]x>=0".asSequent, solve(1) & solve(-1))
+    result.subgoals.loneElement shouldBe "\\forall t_ (t_>=0->a*t_+v>=0), kyxtime=0 ==> \\forall t_ (t_>=0->y*t_+x>=0)".asSequent
+  }
+
   "Diamond axiomatic ODE solver" should "work on the single integrator x'=v" taggedAs(DeploymentTest, SummaryTest) in withMathematica { _ =>
     val f = "x=1&v=2 -> <{x'=v}>x^3>=1".asFormula
     val t = implyR(1) & AxiomaticODESolver()(1)
