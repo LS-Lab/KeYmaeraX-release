@@ -139,10 +139,13 @@ TrueQ[ConjugatePolynomial[poly]==poly]
 ]
 
 
-DarbouxPolynomials[problem_List]:=Catch[Module[{pre,f,vars,Q,post,deg},
+DarbouxPolynomials[problem_List]:=Catch[Module[{pre,f,vars,Q,post,deg,dbx},
 {pre,{f,vars,Q},post}=problem;
 deg=Max[Map[Primitives`PolynomDegree,f]];
-Throw[DarbouxPolyGen`ManPS2[deg,f,vars]]
+dbx=DarbouxPolyGen`ManPS2[deg,f,vars];
+Print["Generated Darboux polynomials: "];
+Print[dbx];
+Throw[dbx]
 ]]
 
 

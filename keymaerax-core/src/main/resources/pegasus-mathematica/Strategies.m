@@ -138,15 +138,15 @@ aggregate=evoConst;
 cutsAggregate={};
 inv=True;
 Do[
-{inv,cuts}=RunMethod[method,problem,FIs];
-If[ TrueQ[Reduce[Implies[inv, post], vars, Reals]], Throw[cuts]];
+{inv,cuts}= TimeConstrained[RunMethod[method,problem,FIs], 20, {True,{}}];
+If[ TrueQ[Reduce[Implies[inv, post], vars, Reals]], Print["Basic qualitative strategy success!"]; Throw[cuts]];
 aggregate=FullSimplify[inv && aggregate];
 cutsAggregate=Join[cutsAggregate, cuts];
 If[TrueQ[Reduce[Implies[aggregate, post], vars, Reals]], Throw[cutsAggregate]],
 {method,{
-"DWC-Darboux",
 "DWC-Factors-Summands",
 "DWC-Factors-RHS", 
+"DWC-Darboux",
 "DWC-Factors-RHS-Lie", 
 "DWC-Factors-RHS-Product", 
 "DWC-Factors-RHS-Lie-Product"}}
