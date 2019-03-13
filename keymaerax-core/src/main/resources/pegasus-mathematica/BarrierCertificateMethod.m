@@ -107,7 +107,7 @@ Pegasus`NPRECISION=OptionValue[NPrecision];
 
 init=ExtractPolys[pre];
 unsafe=ExtractPolys[Not[post]];
-Q=If[TrueQ[evoConst],0, ExtractPolys[evoConst]];
+Q=If[TrueQ[evoConst],MmaToMatlab[{}], ExtractPolys[evoConst]];
 
 f=MmaToMatlab[vf];
 
@@ -168,24 +168,28 @@ for i=1:unsafe_dim
   [prog,FP(i)] = sossosvar(prog,monvec2);
 end
 
-%Constrain barrier to be > 0 on all unsafe
-%Note: could assume domain constraint here too
+% Constrain barrier to be > 0 on all unsafe
+% Note: could assume domain constraint here too
 prog = sosineq(prog, B - FP*unsafes - eps);
 
-%Lie derivatives for each component
+% Lie derivatives for each component
 dB = 0*vars(1);
 for i = 1:length(vars)
   dB = dB+diff(B,vars(i))*field(i);
 end
 
-% SOSes for each barrier in domain
-for i=1:dom_dim
-  [prog,DP(i)] = sossosvar(prog,monvec2);
-end
-
 % Constrain the Lie derivative
 expr = lambda * B - dB;
-prog = sosineq(prog, expr -DP*dom);
+
+if dom_dim > 0
+    % SOSes for each barrier in domain
+    for i=1:dom_dim
+      [prog,DP(i)] = sossosvar(prog,monvec2);
+    end
+    prog = sosineq(prog, expr -DP*dom);
+else
+    prog = sosineq(prog, expr);
+end
 
 opt.params.fid = 0;
 prog = sossolve(prog,opt);
