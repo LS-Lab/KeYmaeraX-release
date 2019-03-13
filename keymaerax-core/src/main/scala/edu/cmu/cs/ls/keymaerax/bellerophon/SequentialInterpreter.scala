@@ -13,6 +13,9 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.Logging
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Await, Future, TimeoutException}
+import scala.concurrent.duration.{Duration, MILLISECONDS}
 import scala.util.control.Breaks._
 
 /**
@@ -280,6 +283,19 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
         case None => throw new BelleThrowable("ChooseSome did not succeed with any of its options") //.inContext(ChooseSome(options, e), "Failed all options in ChooseSome: " + opts.toList + "\n" + errors)
       }
 
+    case TimeoutAlternatives(alternatives, timeout) => alternatives.headOption match {
+      case Some(tactic) =>
+        try {
+          Await.result(Future(apply(tactic, v)), Duration(timeout, MILLISECONDS))
+        } catch {
+          // current alternative failed within timeout, try next
+          case _: BelleThrowable => apply(TimeoutAlternatives(alternatives.tail, timeout), v)
+          case ex: TimeoutException => throw new BelleThrowable("Alternative timed out", ex)
+        }
+      case None => throw new BelleThrowable("Exhausted all timeout alternatives")
+    }
+
+
     case LabelBranch(label) => v match {
       case BelleProvable(pr, Some(labels)) => BelleProvable(pr, Some(labels :+ label))
       case BelleProvable(pr, None) => BelleProvable(pr, Some(label :: Nil))
@@ -317,10 +333,10 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
         assert(LemmaDBFactory.lemmaDB.get(lemmaName).head.fact.conclusion == lemma.conclusion)
       }
       else {
-        val BelleProvable(result, resultLabels) = apply(e, BelleProvable(lemma))
+        val BelleProvable(result, _) = apply(e, BelleProvable(lemma))
         assert(result.isProved, "Result of proveAs should always be proven.")
 
-        val tacticText: String = try { BellePrettyPrinter(e) } catch { case _ => "nil" }
+        val tacticText: String = try { BellePrettyPrinter(e) } catch { case _: Throwable => "nil" }
 
         val evidence = ToolEvidence(List(
           "tool" -> "KeYmaera X",
