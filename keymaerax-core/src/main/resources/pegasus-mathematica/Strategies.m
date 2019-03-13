@@ -1,10 +1,16 @@
 (* ::Package:: *)
 
+(* Strategies for continuous invariant generation.
+
+  Copyright 2009, Carnegie Mellon University *)
+
+
 Needs["Classifier`",FileNameJoin[{Directory[],"Classifier.m"}]] (* Load classifier package from current directory *)
 Needs["QualitativeMethods`",FileNameJoin[{Directory[],"QualitativeMethods.m"}]] (* Load qualitative analysis-based invariant generation methods package from current directory *)
 Needs["AbstractionPolynomials`",FileNameJoin[{Directory[],"AbstractionPolynomials.m"}]] (* Polynomial sources for qualitative abstraction *)
 Needs["PlanarLinear`",FileNameJoin[{Directory[],"PlanarLinear.m"}]]  (* Planar linear system analysis package *)
 Needs["Linear`",FileNameJoin[{Directory[],"Linear.m"}]] (* Linear system analysis package *)
+Needs["OneDimensional`",FileNameJoin[{Directory[],"OneDimensional.m"}]] (* One-dimensional system analysis package *)
 Needs["FirstIntegralMethod`",FileNameJoin[{Directory[],"FirstIntegralMethod.m"}]] (* First integral generation and qualitative abstraction package *)
 Needs["MultiLinear`",FileNameJoin[{Directory[],"MultiLinear.m"}]] (* Linear system analysis package *)
 
@@ -27,11 +33,12 @@ TrueQ[Reduce[ForAll[vars, Implies[subset,set]],Reals]]
 (* STRATEGIES *)
 
 
-OneDimStrat[problem_List]:=Catch[Module[{},
+(* Strategy for one-dimensional systems *)
+OneDimStrat[problem_List]:=Catch[Module[{pre,f,vars,evoConst,post,invPotential,reachSet},
 (* Pattern match fields in the problem *)
 { pre, { f, vars, evoConst }, post } = problem;
-(* Apply one-dimensional potential method *)
-invPotential=RunMethod["OneDimPotential", problem, {}];
+(* Attempt to find an invariant by computing the potential function *)
+invPotential=RunMethod["OneDimPotential", problem, {}]; 
 (* If resulting invariant is sufficient, return it *)
 If[CheckSemiAlgInclusion[invPotential,post,vars], Throw[invPotential],
 (* Otherwise, construct the reachable set and return *)
@@ -40,7 +47,7 @@ Throw[{reachSet}]]
 ]]
 
 
-ProjectAlongVec[S_,vf_List,vars_List]:=Module[{},
+ProjectAlongVec[S_,vf_List,vars_List]:=Module[{subst,proj},
 subst=Map[Apply[Rule,#]&,{vars,vars-vf*PROJECTIONLAMBDA}//Transpose];
 proj=S/.subst;
 Resolve[Exists[{PROJECTIONLAMBDA},proj&&PROJECTIONLAMBDA>=0],Reals]
@@ -58,7 +65,7 @@ Throw[{inv}]
 ]]
 
 
-PlanarLinearStrat[problem_List]:=Catch[Module[{inv,invs,pre,f,vars,evoConst,post},
+PlanarLinearStrat[problem_List]:=Catch[Module[{inv,invs,pre,f,vars,evoConst,post,initConnectedComponents,problems},
 (* Pattern match fields in the problem *)
 { pre, { f, vars, evoConst }, post } = problem;
 Print["PLANAR LINEAR STRATEGY"];
@@ -73,7 +80,7 @@ inv=If[Length[invs]>1, Throw[{Apply[Or, Map[First[#]&,invs]]}], Throw[invs]]
 ]]
 
 
-GeneralLinearStrat[problem_List]:=Catch[Module[{inv,invs,pre,f,vars,evoConst,post},
+GeneralLinearStrat[problem_List]:=Catch[Module[{inv,invs,pre,f,vars,evoConst,post,FIs,fiInv,cuts,problems,initConnectedComponents},
 (* Pattern match fields in the problem *)
 { pre, { f, vars, evoConst }, post } = problem;
 Print["GENERAL LINEAR STRATEGY"];
@@ -93,7 +100,7 @@ inv=If[Length[invs]>1, Throw[{Apply[Or, Map[First[#]&,invs]]}], Throw[invs]]
 ]]
 
 
-MultiLinearStrat[problem_List]:=Catch[Module[{inv,invs},
+MultiLinearStrat[problem_List]:=Catch[Module[{inv,invs,pre,f,vars,evoConst,post,FIs,fiInv,cuts,},
 (* Pattern match fields in the problem *)
 { pre, { f, vars, evoConst }, post } = problem;
 Print["MULTI-LINEAR STRATEGY"];
@@ -137,6 +144,8 @@ aggregate=FullSimplify[inv && aggregate];
 cutsAggregate=Join[cutsAggregate, cuts];
 If[TrueQ[Reduce[Implies[aggregate, post], vars, Reals]], Throw[cutsAggregate]],
 {method,{
+"DWC-Darboux",
+"DWC-Factors-Summands",
 "DWC-Factors-RHS", 
 "DWC-Factors-RHS-Lie", 
 "DWC-Factors-RHS-Product", 
@@ -146,7 +155,7 @@ Throw[QualitativeExtended[{pre, {f, vars, aggregate} ,post}]]
 ]]
 
 
-QualitativeExtended[problem_List]:=Catch[Module[{},
+QualitativeExtended[problem_List]:=Catch[Module[{pre,f,vars,evoConst,post,fiInv,FIs,cuts,abstraction,inv},
 (* Pattern match fields in the problem *)
 { pre, { f, vars, evoConst }, post } = problem;
 Print["EXTENDED QUALITATIVE STRATEGY (DWCL i.e. full abstraction)"];
@@ -195,7 +204,7 @@ LogicalExpand[BooleanMinimize[UnequalToLtOrGt[expression], "DNF"]]
 ] 
 
 
-AugmentWithParameters[problem_List]:=Module[{},
+AugmentWithParameters[problem_List]:=Module[{pre,post,f,vars,evoConst,symbols,parameters,newvars,newf},
 { pre, { f, vars, evoConst }, post } = problem;
 symbols=Complement[DeleteDuplicates@Cases[{pre, post, f, evoConst},_Symbol,Infinity], {True, False}];
 parameters=Complement[symbols, vars];
@@ -205,7 +214,8 @@ newf=Join[f,Table[0,{i,Length[parameters]}]];
 ]
 
 
-Pegasus[parametricProb_List]:=Catch[Module[{}, 
+Pegasus[parametricProb_List]:=Catch[Module[
+{problem,pre,f,vars,evoConst,post,preImpliesPost,postInvariant,preInvariant,class,strat,inv,andinv,relaxedInv,invImpliesPost}, 
 (* Bring symbolic parameters into the dynamics *)
 problem = AugmentWithParameters[parametricProb];
 { pre, { f, vars, evoConst }, post }=problem;
@@ -277,6 +287,8 @@ Switch[methodID,
 "LinearSmallest", QualitativeMethods`DWC[precond, postcond, system, Linear`LinearMethod[precond, postcond, system], {}, Smallest->True],
 
 (* QualitativeMethods for non-linear systems based on qualitative analysis and discrete abstraction *)
+"DWC-Factors-Summands", QualitativeMethods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`SummandFactors[problem]], {}],
+"DWC-Darboux", QualitativeMethods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`DarbouxPolynomials[problem]], {}],
 "DWC-Factors-RHS", QualitativeMethods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSFactors[problem]], {}],
 "DWC-Factors-RHS-Lie", QualitativeMethods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSLieDFactors[problem]], {}],
 "DWC-Factors-RHS-Product", QualitativeMethods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSProductFactors[problem]], {}],
