@@ -298,22 +298,14 @@ private object DifferentialTactics extends Logging {
     if (ov.isEmpty) {
       if (FormulaTools.conjuncts(f).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip else dc(f)(pos)
     } else {
-      var freshOld: Variable = TacticHelper.freshNamedSymbol(Variable("old"), origSeq)
-      val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {
-        val (ghost: Variable, ghostPos: Option[Position], nextCandidate) = TacticHelper.findSubst(old, freshOld, origSeq)
-        freshOld = nextCandidate
-        (old -> ghost,
-          ghostPos match {
-            case None if pos.isTopLevel => discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) &
-              TactixLibrary.exhaustiveEqR2L(hide=false)('Llast)
-            case Some(gp) if pos.isTopLevel => TactixLibrary.exhaustiveEqR2L(hide=false)(gp)
-            case _ if !pos.isTopLevel => discreteGhost(old, Some(ghost))(pos)
-          })
-      }).toList
-      val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
-      val oldified = SubstitutionHelper.replaceFn("old", f, ghosts.map(_._1).toMap)
-      if (FormulaTools.conjuncts(oldified).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip
-      else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(pos ++ PosInExpr(List.fill(posIncrements)(1)))
+      DLBySubst.discreteGhosts(ov, origSeq,
+        (ghosts: List[((Term, Variable), BelleExpr)]) => {
+          val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
+          val oldified = SubstitutionHelper.replaceFn("old", f, ghosts.map(_._1).toMap)
+          if (FormulaTools.conjuncts(oldified).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip
+          else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(pos ++ PosInExpr(List.fill(posIncrements)(1)))
+        }
+      )(pos)
     }
   })
 
@@ -895,29 +887,21 @@ private object DifferentialTactics extends Logging {
        else finish)
   })
 
-  /** Fast ODE implementation. Tactic `finish` is executed when fastODE itself cannot find a proof. */
-  private def fastODE(finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
-    lazy val invariantCandidates = try {
-      InvariantGenerator.differentialInvariantGenerator(seq,pos)
-    } catch {
-      case err: Exception =>
-        logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
-        Stream[GenProduct]()
-    }
-
-    //Adds an invariant to the system's evolution domain constraint and tries to establish the invariant via proveWithoutCuts.
-    //Fails if the invariant cannot be established by proveWithoutCuts.
+  /** Fast ODE implementation. Tries the provided `invariantCandidates`. Tactic `finish` is executed when fastODE itself cannot find a proof. */
+  private def fastODE(invariantCandidates: Iterator[GenProduct])(finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+    //Adds invariants to the system's evolution domain constraint and tries to establish them via odeInvariant.
+    //Fails if the invariants cannot be established by odeInvariant.
     val addInvariant = ChooseSome(
-      () => invariantCandidates.iterator,
+      () => invariantCandidates,
       (prod: GenProduct) => prod match {
         case (inv, None) =>
           DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
             /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
             diffCut(inv)(pos) <(
               skip,
-              odeInvariant()(pos)) &
+              odeInvariant(tryHard = false, useDw = false)(pos)) &
           // continue outside <(skip, ...) so that cut is proved before used
-          (odeInvariant()(pos) | fastODE(finish)(pos)) &
+          (odeInvariant()(pos) | fastODE(invariantCandidates)(finish)(pos) /* with next option from iterator */) &
           DebuggingTactics.debug("[ODE] Inv Candidate done")
       }
     )
@@ -949,6 +933,14 @@ private object DifferentialTactics extends Logging {
           // Ask for invariants and recursively tries to diff cut them in
           // aborts with error if no extra cuts were found
           fastODE(
+            try {
+              InvariantGenerator.differentialInvariantGenerator(seq,pos).iterator
+            } catch {
+              case err: Exception =>
+                logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
+                Stream[GenProduct]().iterator
+            }
+          )(
             //@note aborts with error if the ODE was left unchanged -- invariant generators failed
             assertT((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0::Nil)).contains(sys),
               failureMessage
@@ -1440,7 +1432,7 @@ private object DifferentialTactics extends Logging {
     *                use tryHard = true when speed is secondary & certain that P is invariant
     *                use tryHard = false when speed is of interest e.g., within automated invariant search
     */
-  def odeInvariant(tryHard:Boolean = false): DependentPositionTactic = "odeInvariant" by ((pos:Position) => {
+  def odeInvariant(tryHard: Boolean = false, useDw: Boolean = true): DependentPositionTactic = "odeInvariant" by ((pos:Position) => {
     require(pos.isSucc && pos.isTopLevel, "ODE invariant only applicable in top-level succedent")
     //@note dW does not need algebra tool
     //require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
@@ -1455,7 +1447,7 @@ private object DifferentialTactics extends Logging {
       }
       else {
         ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
-        ODEInvariance.sAIRankOne(doReorder = false, skipClosed = false)(pos)
+        ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
       }
 
     //Add constant assumptions to domain constraint
@@ -1465,9 +1457,14 @@ private object DifferentialTactics extends Logging {
     DifferentialTactics.domSimplify(pos) &
     DebuggingTactics.debug("odeInvariant close") &
     (
-      (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
-      invTactic |
-      DebuggingTactics.error("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
+      if (useDw) {
+        (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
+          invTactic |
+          DebuggingTactics.error("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
+      } else {
+        invTactic |
+          DebuggingTactics.error("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
+      }
     )
   })
 
@@ -1497,8 +1494,8 @@ private object DifferentialTactics extends Logging {
             (
             //note: repeated dW&QE not needed if Pegasus reports a correct dC chain
             //(DifferentialTactics.diffWeakenG(pos) & QE & done) |
-            ODEInvariance.sAIclosedPlus(1)(pos) |
-            ODEInvariance.sAIRankOne(false)(pos)) & done)
+            ODEInvariance.sAIclosedPlus(bound=1)(pos) |
+            ODEInvariance.sAIRankOne(doReorder=false,skipClosed = true)(pos)) & done)
         )
     }
   })

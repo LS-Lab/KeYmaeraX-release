@@ -72,7 +72,14 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
 
   private val entries = {
     println("Reading " + url)
-    DatabasePopulator.readKya(url)
+    try {
+      DatabasePopulator.readKya(url)
+    } catch {
+      case ex: Throwable =>
+        println("Failed reading: " + ex.getMessage)
+        ex.printStackTrace()
+        Nil
+    }
   }
 
   private def tableResults(results: Seq[BenchmarkResult]) = {
@@ -81,6 +88,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
   }
 
   private def setTimeouts(tool: ToolOperationManagement): Unit = {
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
     Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "120", saveToFile = false)
     Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, "60", saveToFile = false)
     Configuration.set(Configuration.Keys.LOG_QE_DURATION, "true", saveToFile = false)
@@ -184,7 +192,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
           BenchmarkResult(name, result, timeout, checkEnd - invGenStart,
             qeDurationListener.duration, invGenEnd - invGenStart, checkEnd - checkStart, proof.steps, 1, None)
         } else {
-          BenchmarkResult(name, "unfinished", timeout, invGenEnd - invGenStart, invGenEnd - invGenStart, -1, -1, 0, 1, None)
+          BenchmarkResult(name, "unfinished (gen)", timeout, invGenEnd - invGenStart, invGenEnd - invGenStart, -1, -1, 0, 1, None)
         }
       } catch {
         case ex: TestFailedDueToTimeoutException => BenchmarkResult(name, "timeout", timeout,
@@ -215,11 +223,11 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
             testThread.interrupt()
           })
           val end = System.currentTimeMillis()
-          println(s"Done proving $name")
           val result =
             if (proof.isProved) "proved"
             else if (proof.subgoals.exists(s => s.ante.isEmpty && s.succ.size == 1 && s.succ.head == False)) "disproved"
             else "unfinished"
+          println(s"Done proving $name: " + result + " in " + (end-start) + "ms")
           BenchmarkResult(name, result, timeout, end - start,
             qeDurationListener.duration, -1, -1, proof.steps, TacticStatistics.size(theTactic), None)
         } catch {

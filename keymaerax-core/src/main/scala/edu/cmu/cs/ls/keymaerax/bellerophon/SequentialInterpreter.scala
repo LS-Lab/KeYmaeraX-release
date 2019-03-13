@@ -13,6 +13,8 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.Logging
 
+import scala.util.control.Breaks._
+
 /**
  * Sequential interpreter for Bellerophon tactic expressions.
   *
@@ -20,7 +22,7 @@ import org.apache.logging.log4j.scala.Logging
  * @author Nathan Fulton
  * @author Andre Platzer
  */
-abstract class SequentialInterpreter(val listeners: scala.collection.immutable.Seq[IOListener])
+abstract class SequentialInterpreter(val listeners: scala.collection.immutable.Seq[IOListener], val throwWithDebugInfo: Boolean = false)
   extends Interpreter with Logging {
   var isDead: Boolean = false
 
@@ -62,9 +64,9 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       case BelleProvable(pr, lbl) => try {
         BelleProvable(builtIn.execute(pr), lbl)
       } catch {
-        case e: BelleThrowable => throw e.inContext(BelleDot, pr.prettyString)
+        case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(BelleDot, pr.prettyString)
       }
-      case _ => throw new BelleThrowable(s"Attempted to apply a built-in tactic to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
+      case _ => throw new BelleThrowable(s"Attempted to apply a built-in tactic to a value that is not a Provable: ${v.getClass.getName}") //.inContext(BelleDot, "")
     }
 
     case SeqTactic(left, right) => left match {
@@ -79,13 +81,13 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
         val leftResult = try {
           apply(left, v)
         } catch {
-          case e: BelleThrowable => throw e.inContext(SeqTactic(e.context, right), "Failed left-hand side of &: " + left)
+          case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(SeqTactic(e.context, right), "Failed left-hand side of &: " + left)
         }
 
         try {
           apply(right, leftResult)
         } catch {
-          case e: BelleThrowable => throw e.inContext(SeqTactic(left, e.context), "Failed right-hand side of &: " + right)
+          case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(SeqTactic(e.context, right), "Failed right-hand side of &: " + right)
         }
     }
 
@@ -96,8 +98,8 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
         try {
           apply(right, v)
         } catch {
-          case eright: BelleThrowable => throw eright.inContext(EitherTactic(eleft.context, eright.context),
-            "Failed: both left-hand side and right-hand side " + expr)
+          case eright: BelleThrowable if throwWithDebugInfo => throw eright.inContext(EitherTactic(eleft.context, eright.context),
+                      "Failed: both left-hand side and right-hand side " + expr)
         }
     }
 
@@ -143,7 +145,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
             (combinedProvable, nextIdx, combinedLabels)
           }})
         BelleProvable(combinedEffect._1, if (combinedEffect._3.isEmpty) None else combinedEffect._3)
-      case _ => throw new BelleThrowable("Cannot perform branching on a goal that is not a BelleValue of type Provable.").inContext(expr, "")
+      case _ => throw new BelleThrowable("Cannot perform branching on a goal that is not a BelleValue of type Provable.") //.inContext(expr, "")
     }
 
     case AfterTactic(left, right) =>
@@ -154,8 +156,8 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
           try {
             Right(apply(right, new BelleThrowable(eleft.getMessage, eleft.getCause) with BelleValue))
           } catch {
-            case eright: BelleThrowable => throw eright.inContext(EitherTactic(eleft.context, eright.context),
-              "Failed: both left-hand side and right-hand side " + expr)
+            case eright: BelleThrowable if throwWithDebugInfo => throw eright.inContext(EitherTactic(eleft.context, eright.context),
+                          "Failed: both left-hand side and right-hand side " + expr)
           }
       }
       leftResult match {
@@ -166,14 +168,18 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
     case SaturateTactic(child) =>
       var prev: BelleValue = null
       var result: BelleValue = v
-      do {
+      breakable { do {
         prev = result
         try {
           result = apply(child, result)
+          result match {
+            case BelleProvable(pr, _) if pr.isProved => break
+            case _ => // continue
+          }
         } catch {
           case e: BelleThrowable => /*@note child no longer applicable */ result = prev
         }
-      } while (result != prev)
+      } while (result != prev) }
       result
 
     case RepeatTactic(child, times) =>
@@ -181,19 +187,19 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       for (i <- 1 to times) try {
         result = apply(child, result)
       } catch {
-        case e: BelleThrowable => throw e.inContext(RepeatTactic(e.context, times),
-          "Failed while repating tactic " + i + "th iterate of " + times + ": " + child)
+        case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(RepeatTactic(e.context, times),
+                  "Failed while repating tactic " + i + "th iterate of " + times + ": " + child)
       }
       result
 
-    case (_: BuiltInPositionTactic) | (_:BuiltInLeftTactic) | (_:BuiltInRightTactic) | (_:BuiltInTwoPositionTactic) | (_:DependentPositionTactic) =>
-      throw new BelleThrowable(s"Need to apply position tactic at a position before executing it: ${expr}(???)").inContext(expr, "")
+    case _: BuiltInPositionTactic | _:BuiltInLeftTactic | _:BuiltInRightTactic | _:BuiltInTwoPositionTactic | _:DependentPositionTactic =>
+      throw new BelleThrowable(s"Need to apply position tactic at a position before executing it: $expr(???)").inContext(expr, "")
 
     case AppliedPositionTactic(positionTactic, pos) => v match {
       case BelleProvable(pr, lbl) => try {
         BelleProvable(positionTactic.apply(pos).computeResult(pr), lbl)
       } catch {
-        case e: BelleThrowable => throw e.inContext(positionTactic + " at " + pos, pr.prettyString)
+        case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(positionTactic + " at " + pos, pr.prettyString)
       }
     }
 
@@ -201,7 +207,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       case BelleProvable(pr, lbl) => try {
         BelleProvable(positionTactic.computeResult(pr), lbl)
       } catch {
-        case e: BelleThrowable => throw e.inContext(positionTactic + " at " + posOne + ", " + posTwo, pr.prettyString)
+        case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(positionTactic + " at " + posOne + ", " + posTwo, pr.prettyString)
       }
     }
 
@@ -210,7 +216,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       apply(valueDependentTactic, v)
     } catch {
       case e: BelleFriendlyUserMessage => throw e
-      case e: BelleThrowable => throw e.inContext(d, v.prettyString)
+      case e: BelleThrowable => throw e //throw e.inContext(d, v.prettyString)
       //@todo unable to create is a serious error in the tactic not just an "oops whatever try something else exception"
       case e: Throwable => throw new BelleThrowable("Unable to create dependent tactic: " + e.getMessage, e).inContext(d, "")
     }
@@ -218,14 +224,15 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
     case it: InputTactic => try {
       apply(it.computeExpr(), v)
     } catch {
-      case e: BelleThrowable => throw e.inContext(it, v.prettyString)
+      case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(it, v.prettyString)
+      case e: BelleThrowable => throw e
       case e: Throwable => throw new BelleThrowable("Unable to create input tactic: " + e.getMessage, e).inContext(it, "")
     }
 
     case PartialTactic(child, None) => try {
       apply(child, v)
     } catch {
-      case e: BelleThrowable => throw e.inContext(PartialTactic(e.context), "Tactic declared as partial failed to run: " + child)
+      case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(PartialTactic(e.context), "Tactic declared as partial failed to run: " + child)
     }
 
     case PartialTactic(child, Some(label)) => try {
@@ -235,7 +242,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
         case _ => throw new BelleThrowable(s"Attempted to give a label to a value that is not a Provable: ${v.getClass.getName}").inContext(BelleDot, "")
       }
     } catch {
-      case e: BelleThrowable => throw e.inContext(PartialTactic(e.context), "Tactic declared as partial failed to run: " + child)
+      case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(PartialTactic(e.context), "Tactic declared as partial failed to run: " + child)
     }
 
     case OnAll(e) =>
@@ -247,7 +254,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       try {
         apply(BranchTactic(Seq.tabulate(provable.subgoals.length)(_ => e)), v)
       } catch {
-        case e: BelleThrowable => throw e.inContext(OnAll(e.context), "")
+        case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(OnAll(e.context), "")
       }
 
     case ChooseSome(options, e) =>
@@ -270,7 +277,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       }
       result match {
         case Some(r) => r
-        case None => throw new BelleThrowable("ChooseSome did not succeed with any of its options").inContext(ChooseSome(options, e), "Failed all options in ChooseSome: " + opts.toList + "\n" + errors)
+        case None => throw new BelleThrowable("ChooseSome did not succeed with any of its options") //.inContext(ChooseSome(options, e), "Failed all options in ChooseSome: " + opts.toList + "\n" + errors)
       }
 
     case LabelBranch(label) => v match {
@@ -494,11 +501,13 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
 }
 
 /** Sequential interpreter that explores branching tactics exhaustively, regardless of failure of some. */
-case class ExhaustiveSequentialInterpreter(override val listeners: scala.collection.immutable.Seq[IOListener] = scala.collection.immutable.Seq())
-  extends SequentialInterpreter(listeners) { }
+case class ExhaustiveSequentialInterpreter(override val listeners: scala.collection.immutable.Seq[IOListener] = scala.collection.immutable.Seq(),
+                                           override val throwWithDebugInfo: Boolean = false)
+  extends SequentialInterpreter(listeners, throwWithDebugInfo) { }
 
 /** Sequential interpreter that stops exploring branching on the first failing branch. */
-case class LazySequentialInterpreter(override val listeners: scala.collection.immutable.Seq[IOListener] = scala.collection.immutable.Seq()) extends SequentialInterpreter(listeners) {
+case class LazySequentialInterpreter(override val listeners: scala.collection.immutable.Seq[IOListener] = scala.collection.immutable.Seq(),
+                                     override val throwWithDebugInfo: Boolean = false) extends SequentialInterpreter(listeners, throwWithDebugInfo) {
   override def runExpr(expr: BelleExpr, v: BelleValue): BelleValue = expr match {
     case BranchTactic(children) => v match {
       case BelleProvable(p, _) =>

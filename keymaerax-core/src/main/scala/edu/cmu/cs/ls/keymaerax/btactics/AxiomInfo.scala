@@ -1156,6 +1156,21 @@ object DerivationInfo {
       , RuleDisplayInfo(SimpleDisplayInfo("con flat", "conflat"), SequentDisplay("J"::Nil, "<a*>P"::Nil), SequentDisplay("\\exists v (v<=0&J)"::Nil, "P"::Nil)::SequentDisplay("v > 0"::"J"::Nil ,"<a>J(v-1)"::Nil)::Nil)
       , "conflat", {case () => HilbertCalculus.useAt(DerivedAxioms.convergenceFlat)}),
 
+    // numerical bound tactics
+    new TacticInfo("intervalArithmetic", "intervalArithmetic",  {case () => IntervalArithmeticV2.intervalArithmetic}, needsTool = true),
+    InputTacticInfo("intervalCutTerms",
+      RuleDisplayInfo(("Interval Arithmetic Cut","intervalCutTerms"),
+        (List("&Gamma;"),List("&Delta;")),
+        /* premises */ List((List("&Gamma;"), List("a <= trm", "trm <= b"), true),
+          (List("&Gamma;", "a <= trm", "trm <= b"), List("&Delta;"), false)))
+      ,List(TermArg("trm")), _ => ((t:Term) => IntervalArithmeticV2.intervalCutTerms(t)): TypedFunc[Term, BelleExpr]),
+    PositionTacticInfo("intervalCut"
+      , RuleDisplayInfo(("Interval Arithmetic Cut", "intervalCut"),
+        (List("&Gamma;"),List("&Delta;")),
+        List((List("&Gamma;"), List("a <= trm", "trm <= b"), true), (List("&Gamma;", "a <= trm", "trm <= b"), List("&Delta;"), false))
+      )
+      , {case () => IntervalArithmeticV2.intervalCut}),
+
     // assertions and messages
     InputTacticInfo("print"
       , SimpleDisplayInfo("Print","print")

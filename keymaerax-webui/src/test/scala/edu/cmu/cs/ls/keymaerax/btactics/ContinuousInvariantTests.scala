@@ -3,21 +3,16 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
-import edu.cmu.cs.ls.keymaerax.btactics.DifferentialTactics.{diffCut, diffWeaken}
-import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.{fail, _}
+import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest}
+import testHelper.KeYmaeraXTestTags.SlowTest
 
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, ToolException}
-import testHelper.CustomAssertions._
-import testHelper.KeYmaeraXTestTags
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
 
 import scala.collection.immutable.IndexedSeq
-import org.scalatest.LoneElement._
 import org.scalatest.prop.TableDrivenPropertyChecks.forEvery
 import org.scalatest.prop.Tables._
 import org.scalatest.concurrent.Timeouts
@@ -31,12 +26,24 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
   val randomComplexity = 6
   val rand = new RandomFormula()
 
+  "Continuous invariant lookup" should "provide a simple invariant from annotations" in {
+    val problem = "x>2 ==> [{x'=2}@invariant(x>1)]x>0".asSequent
+    TactixLibrary.invGenerator(problem, SuccPos(0)) should contain theSameElementsInOrderAs(
+      ("x>1".asFormula, None) :: Nil)
+  }
+
+  it should "provide a conditional invariant from annotations" in {
+    val problem = "x>2 ==> [{x'=2}@invariant(x>1, (x'=2 -> x>2), (x'=3 -> x>5))]x>0".asSequent
+    TactixLibrary.invGenerator(problem, SuccPos(0)) should contain theSameElementsInOrderAs(
+      ("x>1".asFormula, None) :: ("x>2".asFormula, None) :: Nil)
+  }
+
   "Continuous invariant generation" should "generate a simple invariant" in withMathematica { _ =>
     val problem = "x>-1 & -2*x > 1 & -2*y > 1 & y>=-1 ==> [{x'=y,y'=x^5 - x*y}] x+y<=1".asSequent
 
     InvariantGenerator.differentialInvariantCandidates(problem, SuccPos(0)) should contain theSameElementsInOrderAs(
-      "x>-1".asFormula::"-2*x>1".asFormula::"-2*y>1".asFormula::"y>=-1".asFormula::
-        "x^5<=(x+4*x^3)*y".asFormula::"y<=0".asFormula :: Nil)
+      ("x>-1".asFormula, None) :: ("-2*x>1".asFormula, None) :: ("-2*y>1".asFormula, None) ::
+        ("y>=-1".asFormula, None) :: ("x^5<=(x+4*x^3)*y".asFormula, None) :: ("y<=0".asFormula, None) :: Nil)
   }
 
   it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs SlowTest in withMathematica { _ =>
@@ -51,7 +58,7 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
       filter({ case (_, Imply(_, Box(_: ODESystem, _))) => true case _ => false })) {
       (name, model) =>
         println("\n" + name)
-        val Imply(assumptions, succFml@Box(ode@ODESystem(_, q), _)) = model
+        val Imply(assumptions, succFml@Box(ode@ODESystem(_, _), _)) = model
 
         //@note the annotations in nonlinear.kyx are produced by Pegasus
         val invariants = InvariantGenerator.pegasusInvariants(
@@ -84,7 +91,7 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
       filter({ case (_, Imply(_, Box(_: ODESystem, _))) => true case _ => false })) {
       (name, model) =>
         println("\n" + name)
-        val Imply(_, Box(ode@ODESystem(_, q), _)) = model
+        val Imply(_, Box(ode@ODESystem(_, _), _)) = model
         annotatedInvariants.products.get(ode) match {
           case Some(invs) => tool.lzzCheck(ode, invs.reduce(And)) shouldBe true
           case None => // no invariant to fast-check
@@ -163,7 +170,7 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
         "x^2+y^2=s()^2".asFormula)
   }
 
-  it should "refute as a tactic" in withMathematica { tool =>
+  it should "refute as a tactic" in withMathematica { _ =>
     val fml = "x^2+y^2=r()^2 -> [{x'=y,y'=A()*x}] x^2+y^2=r()^2".asFormula
 
     //throws an error

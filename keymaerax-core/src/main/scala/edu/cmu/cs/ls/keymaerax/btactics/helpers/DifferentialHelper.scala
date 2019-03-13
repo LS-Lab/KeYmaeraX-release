@@ -7,13 +7,14 @@ package edu.cmu.cs.ls.keymaerax.btactics.helpers
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, UnificationMatch}
 import edu.cmu.cs.ls.keymaerax.btactics.AxiomaticODESolver.AxiomaticODESolverExn
-import edu.cmu.cs.ls.keymaerax.btactics.{DLBySubst, FormulaTools, TactixLibrary}
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.tools.SimplificationTool
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 
 import scala.collection.immutable
+import scala.collection.immutable.Map
 
 /**
   * @todo move to formula tools? Or make this ProgramTools?
@@ -283,11 +284,35 @@ object DifferentialHelper {
     }
   }
 
+  private def derive(t : Term, odes: Map[BaseVariable,Term]) : Term ={
+    t match {
+      case n:Number => Number(0) //c'=0
+      case x:BaseVariable => odes.getOrElse(x,Number(0)) //x'
+      case Neg(t) => Neg(derive(t,odes)) //(-e)' = -(e')
+      case Times(l,r) =>
+        Plus(Times(derive(l,odes),r),Times(l,derive(r,odes))) //(l*r)' = l'r + lr'
+      case Power(l,n:Number) if n.value.isValidInt && n.value > 0 => //(l^n)' = n(l^{n-1})l'
+        if(n.value == 1) // (e^1)' = e'
+          derive(l,odes)
+        else
+          Times(Times(n,Power(l,Number(n.value-1))),derive(l,odes))
+      case Power(l,n:Number) if n.value == 0 => Number(0)
+      case Divide(l,r) => // (l/r)' = (l'r - l r')/(r^2)
+        Divide(Minus(Times(derive(l,odes),r),Times(l,derive(r,odes))), Times(r,r))
+      case Plus(l,r) => // (l+r)' = l'+r'
+        Plus(derive(l,odes),derive(r,odes))
+      case Minus(l,r) => // (l-r)' = l'-r'
+        Minus(derive(l,odes),derive(r,odes))
+      case FuncOf(_,Nothing) => //(c())'=0
+        Number(0)
+      case _ => ??? //Unimplemented stuff should never be derived
+    }
+  }
+
   def simplifiedLieDerivative(p:DifferentialProgram,t:Term, tool: Option[SimplificationTool]) : Term = {
-    val ld = stripConstants(lieDerivative(p,t))
+    val ld = derive(t,DependencyAnalysis.collapseODE(p))
     val ts1 = simpWithTool(tool,ld)
-    val ts2 = simpWithTool(tool,stripPowZero(ts1))
-    ts2
+    ts1
   }
 
   /**

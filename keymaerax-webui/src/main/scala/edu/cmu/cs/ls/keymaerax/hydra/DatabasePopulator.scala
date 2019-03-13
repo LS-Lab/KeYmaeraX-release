@@ -127,7 +127,7 @@ object DatabasePopulator extends Logging {
       new TraceRecordingListener(db, proofId, parentStep,
         globalProvable, branch, recursive = false, tacticName) :: Nil
     }
-    SpoonFeedingInterpreter(proofId, -1, db.createProof, listener, LazySequentialInterpreter)
+    SpoonFeedingInterpreter(proofId, -1, db.createProof, listener, LazySequentialInterpreter(_, throwWithDebugInfo = false))
   }
 
   /** Executes the `tactic` on the `model` and records the tactic steps as proof in the database. */

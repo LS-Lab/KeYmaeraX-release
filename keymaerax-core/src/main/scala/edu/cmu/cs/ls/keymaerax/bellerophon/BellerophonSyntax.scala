@@ -5,11 +5,11 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.btactics.{Augmentors, DerivationInfo, FormulaTools}
+import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.{Location, UnknownLocation}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import org.apache.logging.log4j.scala.{Logger, Logging}
+import org.apache.logging.log4j.scala.Logging
 
 object BelleExpr {
   private[keymaerax] val RECHECK = Configuration(Configuration.Keys.DEBUG) == "true"
@@ -56,8 +56,8 @@ abstract class BelleExpr(private var location: Location = UnknownLocation) {
   def prettyString: String
 
   /** @note location is private so that it's not something that effects case class quality, and mutable so that it can be ignored when building up custom tactics. */
-  def setLocation(newLocation: Location) = location = newLocation
-  def getLocation = location
+  def setLocation(newLocation: Location): Unit = location = newLocation
+  def getLocation: Location = location
 }
 
 /** A BelleExpr that has a proper code name, so is not just used internally during application. */
@@ -79,7 +79,7 @@ abstract case class BuiltInTactic(name: String) extends NamedBelleExpr {
     result(provable)
   } catch {
     case be: BelleThrowable => throw be
-    case e: MatchError => throw new BelleTacticFailure(s"Formula did not have the shape expected by ${name}: " + e.getMessage, e)
+    case e: MatchError => throw BelleTacticFailure(s"Formula did not have the shape expected by $name: " + e.getMessage, e)
   }
   private[bellerophon] def result(provable : ProvableSig): ProvableSig
 }
@@ -298,7 +298,7 @@ abstract case class BuiltInRightTactic(name: String) extends PositionalTactic wi
 
 @deprecated
 abstract case class DependentTwoPositionTactic(name: String) extends NamedBelleExpr {
-  override def prettyString: String = s"UnappliedTwoPositionTactic of name ${name}" //@todo
+  override def prettyString: String = s"UnappliedTwoPositionTactic of name $name" //@todo
 
   def computeExpr(p1: Position, p2: Position): DependentTactic
 
@@ -331,7 +331,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
           }
         case None => positionTactic.computeResult(provable, pos)
       }
-      case l@Find(goal, shape, start, exact) =>
+      case l@Find(goal, _, start, _) =>
         require(start.isTopLevel, "Start position must be top-level in sequent")
         require(start.isIndexDefined(provable.subgoals(goal)), "Start position must be valid in sequent")
         tryAllAfter(provable, l, null)
@@ -352,17 +352,21 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
   /** Recursively tries the position tactic at positions at or after the locator's start in the specified provable. */
   private def tryAllAfter(provable: ProvableSig, locator: Find, cause: BelleThrowable): ProvableSig =
     if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
-      try {
-        positionTactic.computeResult(provable, locator.toPosition(provable))
-      } catch {
-        //@todo should catch only fails not eat problems
-        case e: Throwable =>
-          val newCause = if (cause == null) new BelleThrowable(s"Position tactic $prettyString is not " +
-            s"applicable at ${locator.start.prettyString}", e)
-          else new CompoundException(
-            new BelleThrowable(s"Position tactic $prettyString is not applicable at ${locator.start.prettyString}", e),
-            cause)
-          tryAllAfter(provable, Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact), newCause)
+      def nextLocator(locator: Find) = Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact)
+      def toPos(locator: Find): Option[Position] = {
+        if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
+          val pos = locator.toPosition(provable)
+          provable.subgoals(locator.goal).sub(pos) match {
+            case Some(expr) if TacticIndex.default.isApplicable(expr, this) => Some(pos)
+            case _ => toPos(nextLocator(locator))
+          }
+        } else {
+          None
+        }
+      }
+      toPos(locator) match {
+        case Some(pos) => positionTactic.computeResult(provable, pos)
+        case _ => throw cause
       }
     } else throw cause
 
@@ -488,7 +492,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
         }
         case None => pt.factory(pos).computeExpr(v)
       }
-      case l@Find(goal, shape, start, exact) =>
+      case l@Find(goal, _, start, _) =>
         require(start.isTopLevel, "Start position must be top-level in sequent")
         tryAllAfter(l, null)
       case LastAnte(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition.base0(provable.subgoals(goal).ante.size - 1, sub) })
@@ -538,18 +542,22 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
         if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
-          try {
-            pt.factory(locator.toPosition(provable)) |
-              tryAllAfter(Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact), cause)
-          } catch {
-            // also advance if computeExpr already throws a BelleThrowable
-            case e: BelleThrowable =>
-              val newCause = if (cause == null) new BelleThrowable(s"Dependent position tactic ${pt.prettyString} is not " +
-                s"applicable at ${locator.start.prettyString}", e)
-              else new CompoundException(
-                new BelleThrowable(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString}", e),
-                cause)
-              tryAllAfter(Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact), newCause)
+          def nextLocator(locator: Find) = Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact)
+          def toPos(locator: Find): Option[Position] = {
+            if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
+              val pos = locator.toPosition(provable)
+              provable.subgoals(locator.goal).sub(pos) match {
+                case Some(expr) if TacticIndex.default.isApplicable(expr, this) => Some(pos)
+                case _ => toPos(nextLocator(locator))
+              }
+            } else {
+              None
+            }
+          }
+          toPos(locator) match {
+            case Some(pos) => pt.factory(pos) |
+              tryAllAfter(Find(locator.goal, locator.shape, pos.advanceIndex(1), locator.exact), cause)
+            case _ => throw cause
           }
         } else if (cause == null) {
           throw new BelleThrowable(s"Dependent position tactic $prettyString is not applicable at ${locator.start.prettyString} in ${provable.subgoals(locator.goal).prettyString}")
@@ -563,19 +571,19 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
 /** A partial tactic is allowed to leave its subgoals around as unproved */
 @deprecated("Replace with something else -- either assertProved or some sort of branch indicator?", "4.2")
 case class PartialTactic(child: BelleExpr, label: Option[BelleLabel] = None) extends BelleExpr {
-  override def prettyString = label match {
+  override def prettyString: String = label match {
     case Some(theLabel) => s"partial(${child.prettyString})@(${theLabel.prettyString})"
     case None => s"partial(${child.prettyString})"
   }
 }
 
-case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString = "(" + left.prettyString + "&" + right.prettyString + ")" }
-case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString = "(" + left.prettyString + "|" + right.prettyString + ")" }
-case class AfterTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString = "(" + left.prettyString + ">" + right.prettyString + ")" }
+case class SeqTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + "&" + right.prettyString + ")" }
+case class EitherTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + "|" + right.prettyString + ")" }
+case class AfterTactic(left: BelleExpr, right: BelleExpr) extends BelleExpr { override def prettyString: String = "(" + left.prettyString + ">" + right.prettyString + ")" }
 //@note saturate and repeat tactic fully parenthesize for parser
-case class SaturateTactic(child: BelleExpr) extends BelleExpr { override def prettyString = "((" + child.prettyString + ")*)" }
-case class RepeatTactic(child: BelleExpr, times: Int) extends BelleExpr { override def prettyString = "((" + child.prettyString + ")*" + times + ")" }
-case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override def prettyString = "<( " + children.map(_.prettyString).mkString(", ") + " )" }
+case class SaturateTactic(child: BelleExpr) extends BelleExpr { override def prettyString: String = "((" + child.prettyString + ")*)" }
+case class RepeatTactic(child: BelleExpr, times: Int) extends BelleExpr { override def prettyString: String = "((" + child.prettyString + ")*" + times + ")" }
+case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override def prettyString: String = "<( " + children.map(_.prettyString).mkString(", ") + " )" }
 /** USubstPatternTactic((form1, us=>t1) :: ... (form2, us=>t2) :: Nil)
   * runs the first tactic `ti` for the unification `us` with the first pattern `formi` that matches the current goal.
   */
@@ -587,7 +595,7 @@ case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]
   *
   * @todo eisegesis
   */
-case class OnAll(e: BelleExpr) extends BelleExpr { override def prettyString = "doall(" + e.prettyString + ")" }
+case class OnAll(e: BelleExpr) extends BelleExpr { override def prettyString: String = "doall(" + e.prettyString + ")" }
 
 /**
   * ChooseSome(options, e)(pr) proves `e(o)(pr)` after choosing some option `o` from `options`
@@ -601,7 +609,7 @@ case class OnAll(e: BelleExpr) extends BelleExpr { override def prettyString = "
   * @author Andre Platzer
   * @see [[EitherTactic]]
   */
-case class ChooseSome[A](options: () => Iterator[A], e: A => BelleExpr) extends BelleExpr { override def prettyString = "dosome(" + e + ")" }
+case class ChooseSome[A](options: () => Iterator[A], e: A => BelleExpr) extends BelleExpr { override def prettyString: String = "dosome(" + e + ")" }
 
 
 /**
@@ -614,7 +622,7 @@ case class ChooseSome[A](options: () => Iterator[A], e: A => BelleExpr) extends 
   */
 case class Let(abbr: Expression, value: Expression, inner: BelleExpr) extends BelleExpr {
   require(abbr.kind == value.kind, "Abbreviation and value must be of same kind, but got abbr.kind=" + abbr.kind + " and value.kind=" + value.kind)
-  override def prettyString = "let(" + abbr + "=" + value + " in " + inner + ")"
+  override def prettyString: String = "let(" + abbr + "=" + value + " in " + inner + ")"
 }
 
 /**
@@ -628,7 +636,7 @@ case class Let(abbr: Expression, value: Expression, inner: BelleExpr) extends Be
   * @note abbr should be fresh in the Provable
   */
 case class LetInspect(abbr: Expression, instantiator: ProvableSig => Expression, inner: BelleExpr) extends BelleExpr {
-  override def prettyString = "let(" + abbr + ":= inspect " + instantiator + " in " + inner + ")"
+  override def prettyString: String = "let(" + abbr + ":= inspect " + instantiator + " in " + inner + ")"
 }
 
 /**
@@ -688,7 +696,7 @@ case class ExpandDef(expr: DefExpression) extends BelleExpr {
 
 @deprecated("Does not work with useAt, which was the only point. There's also no way to print/parse ProveAs correctly, and scoping is global. So ProveAs should be replaced with something more systematic.", "4.2")
 case class ProveAs(lemmaName: String, f: Formula, e: BelleExpr) extends BelleExpr {
-  override def prettyString: String = s"proveAs(${lemmaName})"
+  override def prettyString: String = s"proveAs($lemmaName)"
 }
 
 /**

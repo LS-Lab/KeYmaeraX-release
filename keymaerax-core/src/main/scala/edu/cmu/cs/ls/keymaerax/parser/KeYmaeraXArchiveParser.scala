@@ -180,17 +180,17 @@ object KeYmaeraXArchiveParser {
     */
   def typeAnalysis(name: String, d: Declaration, expr: Expression): Boolean = {
     StaticSemantics.symbols(expr).forall({
-      case f:Function =>
-        val (declaredDomain,declaredSort, interpretation, loc: Location) = d.decls.get((f.name,f.index)) match {
+      case f: Function =>
+        val (declaredDomain, declaredSort, _, loc: Location) = d.decls.get((f.name,f.index)) match {
           case Some(decl) => decl
           case None => throw ParseException.typeError(name + ": undefined function symbol", f, f.sort + "", UnknownLocation,
             "Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.")
         }
-        if(f.sort != declaredSort) throw ParseException.typeDeclError(s"$name: ${f.prettyString} declared with sort $declaredSort but used where sort ${f.sort} was expected.", declaredSort + " function", f.sort + "", loc)
-        else if (f.domain != declaredDomain.get) {
+        if (f.sort != declaredSort) throw ParseException.typeDeclError(s"$name: ${f.prettyString} declared with sort $declaredSort but used where sort ${f.sort} was expected.", declaredSort + " function", f.sort + "", loc)
+        else if (!declaredDomain.contains(f.domain)) {
           (f.domain, declaredDomain) match {
-            case (l, Some(r)) => throw ParseException.typeDeclError(s"$name: ${f.prettyString} declared with domain $r but used where domain ${f.domain} was expected.", r + "", f.domain + "", loc)
-            case (l, None) => throw ParseException.typeDeclError(s"$name: ${f.prettyString} declared as ${f.getClass} of sort ${f.sort} but used as a function with arguments.", "no arguments", "function with arguments", loc)
+            case (_, Some(r)) => throw ParseException.typeDeclError(s"$name: ${f.prettyString} declared with domain $r but used where domain ${f.domain} was expected.", r + "", f.domain + "", loc)
+            case (_, None) => throw ParseException.typeDeclError(s"$name: ${f.prettyString} declared as a variable of sort ${f.sort} but used as a function with arguments.", "no arguments", "function with arguments", loc)
             //The other cases can't happen -- we know f is a function so we know it has a domain.
           }
         }

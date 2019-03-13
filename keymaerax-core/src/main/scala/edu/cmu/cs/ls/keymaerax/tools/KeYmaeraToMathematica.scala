@@ -67,7 +67,8 @@ class KeYmaeraToMathematica extends K2MConverter[KExpr] {
       case Plus(l, r) => new MExpr(MathematicaSymbols.PLUS, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Minus(l, r) => new MExpr(MathematicaSymbols.MINUS, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Times(l, r) => new MExpr(MathematicaSymbols.MULT, Array[MExpr](convertTerm(l), convertTerm(r)))
-      case Divide(l: Number, r: Number) => new MExpr(MathematicaSymbols.RATIONAL, Array[MExpr](convertTerm(l), convertTerm(r)))
+      case Divide(l: Number, r: Number) if l.value.isValidLong && r.value.isValidLong =>
+        new MExpr(MathematicaSymbols.RATIONAL, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Divide(l, r) => new MExpr(MathematicaSymbols.DIV, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Power(l, r) => new MExpr(MathematicaSymbols.EXP, Array[MExpr](convertTerm(l), convertTerm(r)))
       case Number(n) if n.isValidLong => new MExpr(n.longValue()) //@note matches isDecimalDouble && n.scale==0 with tighter max value

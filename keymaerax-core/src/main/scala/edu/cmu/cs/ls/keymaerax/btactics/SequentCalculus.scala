@@ -216,9 +216,9 @@ trait SequentCalculus {
     }
   }
   /** closeT: closes the branch when true is in the succedent ([[edu.cmu.cs.ls.keymaerax.core.CloseTrue CloseTrue]]) */
-  val closeT            = "closeTrue" by { ProofRuleTactics.closeTrue('R, True) }
+  val closeT: BelleExpr = "closeTrue" by { ProofRuleTactics.closeTrue('R, True) }
   /** closeF: closes the branch when false is in the antecedent ([[edu.cmu.cs.ls.keymaerax.core.CloseFalse CloseFalse]]) */
-  val closeF            = "closeFalse" by { ProofRuleTactics.closeFalse('L, False) }
+  val closeF: BelleExpr = "closeFalse" by { ProofRuleTactics.closeFalse('L, False) }
 
   // derived propositional
 

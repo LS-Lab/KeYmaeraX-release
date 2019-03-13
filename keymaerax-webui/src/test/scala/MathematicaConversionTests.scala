@@ -107,6 +107,13 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     ml.runUnchecked("Rational[2,5]")._2 shouldBe Divide(num(2), num(5))
   }
 
+  it should "only convert decimal numbers and division of long arguments to rational" in {
+    KeYmaeraToMathematica("0.1".asTerm).head.asString shouldBe "Rational"
+    KeYmaeraToMathematica("0.1/1".asTerm).head.asString should not be "Rational"
+    KeYmaeraToMathematica("0.1/1".asTerm).head.asString shouldBe "Divide"
+    KeYmaeraToMathematica("1/10".asTerm).head.asString shouldBe "Rational"
+  }
+
   it should "not choke on other reasonable numbers" in {
     ml.runUnchecked("Rationalize[0.5/10]")._2 should be (Divide(num(1),num(20)))
     ml.runUnchecked(".25/10")._2 shouldBe Number(0.025)
