@@ -587,7 +587,10 @@ case class BranchTactic(children: Seq[BelleExpr]) extends BelleExpr { override d
 /** USubstPatternTactic((form1, us=>t1) :: ... (form2, us=>t2) :: Nil)
   * runs the first tactic `ti` for the unification `us` with the first pattern `formi` that matches the current goal.
   */
-case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]) extends BelleExpr { override def prettyString = "case { " + options.mkString(", ") + " }"}
+case class USubstPatternTactic(options: Seq[(BelleType, RenUSubst => BelleExpr)]) extends BelleExpr { override def prettyString: String = "case { " + options.mkString(", ") + " }"}
+/** Advance through `alternatives` until the first succeeds or hits the timeout (tries each for at most `timeout` time,
+  * fails when first tactic exceeds the timeout or all alternatives are exhausted). */
+case class TimeoutAlternatives(alternatives: Seq[BelleExpr], timeout: Long) extends BelleExpr { override def prettyString: String = "timeout(" + alternatives.map(_.prettyString).mkString(",") + ", " + timeout + ")" }
 
 /**
   * OnAll(e)(BelleProvable(p)) == <(e, ..., e) does the same tactic on all branches
