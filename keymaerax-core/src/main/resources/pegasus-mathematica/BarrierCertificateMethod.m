@@ -42,7 +42,7 @@ MmaToMatlab[True]:="true"
 MmaToMatlab[False]:="false"
 
 
-(* Set righ-hand side of terms to zero *)
+(* Set right-hand side of terms to zero *)
 ZeroRHS[formula_]   :=  Module[{},formula/.{
 Equal[a_,b_]        :>  Equal[a-b,0],
 Unequal[a_,b_]      :>  Unequal[a-b,0],
@@ -75,14 +75,25 @@ Head[#]==LessEqual || Head[#]==GreaterEqual || Head[#]==Greater || Head[#]==Less
 ExtractPolys[form_]:=Module[{expr,lst},
 expr=form//LogicalExpand//PreProcess;
 If[TrueQ[Head[expr]==And],
-lst= expr/.{And->List, GreaterEqual[lhs_,0]:> lhs};
+lst= expr/.{And->List, GreaterEqual[lhs_,0]:> lhs, Greater[lhs_,0]:> lhs};
 MmaToMatlab[lst],
-"["<>MmaToMatlab[(expr//LogicalExpand//PreProcess)/.{GreaterEqual[lhs_,0]:> lhs}]<>"]"
+"["<>MmaToMatlab[(expr//LogicalExpand//PreProcess)/.{GreaterEqual[lhs_,0]:> lhs, Greater[lhs_,0]:> lhs}]<>"]"
 ]
 ]
 
 
-BarrierCertificate[{ pre_, { vf_List, vars_List, evoConst_ }, post_}, opts:OptionsPattern[]]:=Catch[Module[{init,unsafe,Q,f, precision,sosprog,res,lines,B, link, barrierscript},
+DefaultMonomials[vars_,degree_]:=Module[ {},
+  Times @@@ (vars^# & /@ 
+     Flatten[Permutations /@ PadRight[#, {Length@#, Length[vars]}] &[
+       Flatten[IntegerPartitions[#, Length[vars]] & /@ Range[0, degree], 
+        1]], 1])]
+
+
+HeuristicMonomials[vars_,vf_,degree_]:=Module[ {},
+DeleteDuplicates[Join[DefaultMonomials[vars,degree],Flatten[MonomialList[vf]]]]]
+
+
+BarrierCertificate[{ pre_, { vf_List, vars_List, evoConst_ }, post_}, opts:OptionsPattern[]]:=Catch[Module[{init,unsafe,Q,f, precision,sosprog,res,lines,B, link, barrierscript,heumons},
 If[Not[TrueQ[ 
 ConjunctiveIneqSetQ[pre//LogicalExpand] && 
 ConjunctiveIneqSetQ[Not[post]//LogicalExpand] && 
@@ -100,105 +111,96 @@ Q=If[TrueQ[evoConst],0, ExtractPolys[evoConst]];
 
 f=MmaToMatlab[vf];
 
+heumons = HeuristicMonomials[vars,vf,2];
 sosprog="
-% SOS vector barrier certificates
-% These are the two examples constructed by Khalil
-% for the original submission
-% ex 1 is the linear barriers example currently in the paper
+% Exponential barrier certificates
 
-clear; echo on;
+clear;
+% Inputs from Mathematica
+% Variables
 pvar "<>StringRiffle[Map[MmaToMatlab, vars], " "]<>";
 vars = "<>MmaToMatlab[vars]<>";
 
-%Working example (using 2D vector barrier + deg 2 polynomials):
+% Problem specification
+% The vector field for each coordinate
 field = "<>MmaToMatlab[vf]<>";
+% Conj. Polynomials characterizing the initial set
 inits = "<>init<>";
+% Conj. Polynomials characterizing the unsafe set
 unsafes = "<>unsafe<>" ;
+% Conj. Polynomials characterizing the ev. domain
+dom = "<>Q<>" ;
 
- A = [[-1]];
-
-%The problem (ex 2):
-%field = [ x1*x2; -x2^2; 1+x3-x2*x3];
-%x1<=-1,x2>=0,x3>=0 -- Bounding x1,x2,x3 away from zero helps a lot
-%inits = [-1-x1, x2, x3];
-%x1*x2>=1
-%unsafes = [x1*x2-1];
-%A = [[0 1 0];[0 0 0];[1 0 1]];
-
-init_dim = length(inits)
-unsafe_dim = length(unsafes)
-
-barrier_dim = 1;
-maxdeg = 2;
-maxsosdeg = 2;
-monvec = monomials("<>MmaToMatlab[vars]<>",0:1:maxdeg);
-monvec2 = monomials("<>MmaToMatlab[vars]<>",0:1:maxsosdeg);
-
-%strict inequality tolerance
+% Configurable options from Mathematica
+% Configurable lambda in B' >= lambda B
+lambda = -1;
+% Monomials to use when for representing the barrier certificate
+monvec = "<>MmaToMatlab[heumons]<>";
+% SOS basis monomials for SOS-variables
+monvec2 = "<>MmaToMatlab[heumons]<>";
+% Encode strict inequalities p>0 as p-eps >=0
 eps = 0.001;
-%polynomial coefficient tolerance
-poly_tol = 1e-4;
+% Minimum feasibility to accept a solution
+minfeas = 0.9;
 
+% MATLAB setup
+init_dim = length(inits);
+unsafe_dim = length(unsafes);
+dom_dim = length(dom);
+
+% The SOS program
 prog = sosprogram(vars);
-% The m-D vector barrier certificate (B1,...,Bm)
-for i=1:barrier_dim
-    [prog,B(i)] = sospolyvar(prog,monvec);
+
+% Template for the barrier certificate B
+[prog,B] = sospolyvar(prog,monvec);
+
+% SOS coefficients for each barrier in init
+for i=1:init_dim
+  [prog,IP(i)] = sossosvar(prog,monvec2);
 end
 
-% SOSes for each barrier in init
-for i = 1:barrier_dim
-    for j=1:init_dim
-        [prog,IP(i,j)] = sossosvar(prog,monvec2);
-    end
-end
-
-%Constrain barriers to be <= 0 on all inits
-for i=1:barrier_dim
-  sum = 0;
-  for j=1:init_dim
-      sum = sum + IP(i,j)*inits(j);
-  end
-  prog = sosineq(prog, -sum - B(i));
-end
+%Constrain barrier to be <= 0 on all inits
+%Note: could assume domain constraint here too
+prog = sosineq(prog, -IP*inits - B);
 
 % SOSes for the unsafe states
 for i=1:unsafe_dim
-    [prog,FP(i)] = sossosvar(prog,monvec2);
+  [prog,FP(i)] = sossosvar(prog,monvec2);
 end
 
-%Constrain only the first barrier to be > 0
-sum = 0;
-for i=1:unsafe_dim
-  sum = sum + FP(i) * unsafes(i);
-end
-prog = sosineq(prog, (B(1) - sum) - eps);
+%Constrain barrier to be > 0 on all unsafe
+%Note: could assume domain constraint here too
+prog = sosineq(prog, B - FP*unsafes - eps);
 
 %Lie derivatives for each component
-for i=1:barrier_dim
-    dB(i) = 0*vars(1);
-    for j = 1:length(vars)
-        dB(i) = dB(i)+diff(B(i),vars(j))*field(j);
-    end
+dB = 0*vars(1);
+for i = 1:length(vars)
+  dB = dB+diff(B,vars(i))*field(i);
 end
 
-expr = A * transpose(B) - transpose(dB);
-for i = 1:barrier_dim
-    prog = sosineq(prog,expr(i));
+% SOSes for each barrier in domain
+for i=1:dom_dim
+  [prog,DP(i)] = sossosvar(prog,monvec2);
 end
+
+% Constrain the Lie derivative
+expr = lambda * B - dB;
+prog = sosineq(prog, expr -DP*dom);
 
 opt.params.fid = 0;
 prog = sossolve(prog,opt);
 
 feasibility = prog.solinfo.info.feasratio;
-B2 = sosgetsol(prog,B);
-%for i = 1:barrier_dim
-%    [t,B2(i)] = truncate_coeffs(B2(i),poly_tol);
-%end
-B2";
-
-barrierscript=MATLink`MScript["expbarrier",sosprog];
+if feasibility >= minfeas
+    B2 = sosgetsol(prog,B)
+else
+    B2 = 0.0
+end;
+";
+barrierscript=MATLink`MScript["expbarrier",sosprog, "Overwrite" -> True];
+(* Print[sosprog]; *)
 res=MATLink`MEvaluate@barrierscript;
-lines=StringSplit[res,{"B2 = ", "break"}];
+lines=StringSplit[res,{"B2 =", "break"}];
 B=N[StringReplace[lines[[-1]], {"\n"->"", "e-"->"*10^-"}]//ToExpression//Expand, 10]//Rationalize;
 Throw[B];
 ]]
