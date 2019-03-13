@@ -2,7 +2,7 @@
 
 (* Strategies for continuous invariant generation.
 
-  Copyright 2009, Carnegie Mellon University *)
+  Copyright 2019, Carnegie Mellon University *)
 
 
 Needs["Classifier`",FileNameJoin[{Directory[],"Classifier.m"}]] (* Load classifier package from current directory *)
@@ -242,9 +242,9 @@ class=Classifier`ClassifyProblem[problem];
 strat = class/.{
 {1,CLASSES_List}-> OneDimStrat, 
 {dim_,{"Constant"}}-> ConstantStrat, 
-{2,{"Linear"}}-> GeneralLinearStrat, 
+(* {2,{"Linear"}}-> GeneralLinearStrat, *)
 {dim_,{"Linear"}}-> GeneralLinearStrat, 
-{dim_,{"Multi-affine"}}-> MultiLinearStrat, 
+(* {dim_,{"Multi-affine"}}-> MultiLinearStrat, *)
 {dim_, CLASSES_List}-> QualitativeBasic
 };
 (* Apply strategy to the problem and return the result *)
