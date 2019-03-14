@@ -138,7 +138,7 @@ aggregate=evoConst;
 cutsAggregate={};
 inv=True;
 Do[
-{inv,cuts}= TimeConstrained[RunMethod[method,problem,FIs], 20, {True,{}}];
+{inv,cuts}= TimeConstrained[RunMethod[method,problem,FIs], 60, {True,{}}];
 If[ TrueQ[Reduce[Implies[inv, post], vars, Reals]], Print["Basic qualitative strategy success!"]; Throw[cuts]];
 aggregate=FullSimplify[inv && aggregate];
 cutsAggregate=Join[cutsAggregate, cuts];
@@ -162,7 +162,9 @@ Print["EXTENDED QUALITATIVE STRATEGY (DWCL i.e. full abstraction)"];
 
 fiInv=True;
 Print["Trying first integrals first"];
-FIs=FirstIntegralMethod[problem, RationalsOnly->True, RationalPrecision->3];
+FIs=FirstIntegralMethod`FirstIntegralMethod[problem, RationalsOnly->True, RationalPrecision->3];
+Print["Found first integrals:"];
+Print[FIs];
 If[Length[FIs]>0,
 {fiInv,cuts}= QualitativeMethods`DWC[pre, post, { f, vars, evoConst }, FIs, {}];
 If[CheckSemiAlgInclusion[fiInv,post,vars], 
