@@ -21,7 +21,9 @@ object InvariantGenerator extends Logging {
   /** A proof hint on how to use an invariant. */
   abstract class ProofHint
   /** A tactic proof hint. */
-  case class BelleExprProofHint(t: BelleExpr)
+  case class BelleExprProofHint(t: BelleExpr) extends ProofHint
+  /** Proof hint from Pegasus */
+  case class PegasusProofHint(isInvariant: Boolean, t: Option[BelleExpr]) extends ProofHint
 
   type GenProduct = (Formula, Option[ProofHint])
 
@@ -159,10 +161,16 @@ object InvariantGenerator extends Logging {
       ToolProvider.invGenTool() match {
         case Some(tool) =>
           lazy val pegasusInvs = tool.invgen(ode, sequent.ante, post)
-          lazy val invs =
-            if (includeCandidates) pegasusInvs.flatMap({ case Left(l) => l case Right(r) => r })
-            else pegasusInvs.filter(_.isLeft).flatMap(_.left.get)
-          Stream[GenProduct]() #::: invs.map(_ -> None).toStream.distinct
+          lazy val invs: Seq[GenProduct] =
+            if (includeCandidates) {
+              pegasusInvs.flatMap({
+                case Left(l) => l.map(_ -> Some(PegasusProofHint(isInvariant = true, None)))
+                case Right(r) => r.map(_ -> Some(PegasusProofHint(isInvariant = false, None)))
+              })
+            } else {
+              pegasusInvs.filter(_.isLeft).flatMap(_.left.get.map(i => i -> Some(PegasusProofHint(isInvariant=true, None))))
+            }
+          Stream[GenProduct]() #::: invs.toStream.distinct
         case _ => Seq().toStream
       }
     case Some(Box(_: ODESystem, post: Formula)) if !post.isFOL => Seq().toStream.distinct
