@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{GenProduct, PegasusProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
@@ -31,8 +31,9 @@ private object DifferentialTactics extends Logging {
 
   private val namespace = "differentialtactics"
 
-  //QE with default timeout for use in ODE tactics
-  private[btactics] def timeoutQE = QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE))))
+  // QE with default timeout for use in ODE tactics (timeout in seconds)
+  private[btactics] val ODE_QE_TIMEOUT = Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE))
+  private[btactics] def timeoutQE = QE(Nil, None, Some(ODE_QE_TIMEOUT))
 
   /** @see [[HilbertCalculus.DE]] */
   lazy val DE: DependentPositionTactic = new DependentPositionTactic("DE") {
@@ -894,12 +895,16 @@ private object DifferentialTactics extends Logging {
     val addInvariant = ChooseSome(
       () => invariantCandidates,
       (prod: GenProduct) => prod match {
-        case (inv, None) =>
+        case (inv, proofHint) =>
           DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
             /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
             diffCut(inv)(pos) <(
               skip,
-              odeInvariant(tryHard = false, useDw = false)(pos)) &
+              proofHint match {
+                case Some(PegasusProofHint(_, None)) => odeInvariant(tryHard = true, useDw = false)(pos)
+                case _ => odeInvariant(tryHard = false, useDw = false)(pos)
+              }
+            ) &
           // continue outside <(skip, ...) so that cut is proved before used
           (odeInvariant()(pos) | fastODE(invariantCandidates)(finish)(pos) /* with next option from iterator */) &
           DebuggingTactics.debug("[ODE] Inv Candidate done")
