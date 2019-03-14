@@ -344,4 +344,15 @@ object FormulaTools extends Logging {
     }, fml)
     args
   }
+
+  /** Returns the formula strengthened by replacing inequalities with strict inequalities. */
+  def interior(fml: Formula): Formula = fml match {
+    case LessEqual(a, b) => Less(a, b)
+    case GreaterEqual(a, b) => Greater(a, b)
+    case _: Greater => fml
+    case _: Less => fml
+    case And(a, b) => And(interior(a), interior(b))
+    case Or(a, b) => And(interior(a), interior(b))
+  }
+
 }

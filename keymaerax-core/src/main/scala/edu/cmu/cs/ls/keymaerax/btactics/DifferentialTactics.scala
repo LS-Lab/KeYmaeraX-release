@@ -1591,4 +1591,79 @@ private object DifferentialTactics extends Logging {
     result
   }
 
+  /**
+    * Strengthens the postcondition to its interior and cuts in its closure
+    * (provided the closure holds initially).
+    *
+    * [{ode&p&closure(q)}]interior(q)           closure(q)
+    * ----------------------------------------------------dCClosure
+    * [{ode&p}]q
+    *
+    * q may involve &,|,<,<=,>=,>
+    * where interior and closure distribute over disjunction and conjunction and
+    *   interior(a <= b) = a < b
+    *   closure(a < b) = a <= b .
+    */
+  val dCClosure = "dCClosure" by { seq: Sequent =>
+    if (seq.succ.length != 1) throw new BelleThrowable("dCClosure expects a single succedent")
+    // TODO: several of these local tactics might be useful in a more general setting
+    val packInequalities = "ANON" by {(pos: Position, seq: Sequent) =>
+      def combineToLowerBound(fml: Formula): Term = fml match {
+        case Less(a, b) => Minus(b, a)
+        case LessEqual(a, b) => Minus(b, a)
+        case Greater(a, b) => Minus(a, b)
+        case GreaterEqual(a, b) => Minus(a, b)
+        case And(a, b) => FuncOf(minF, Pair(combineToLowerBound(a), combineToLowerBound(b)))
+        case Or(a, b) => FuncOf(maxF, Pair(combineToLowerBound(a), combineToLowerBound(b)))
+        case _ =>
+          throw new BelleThrowable("packInequalities expects conjunction, disjunction, or (strict) inequality but got " +
+            fml)
+      }
+      seq.sub(pos) match {
+        case Some(fml: Formula) =>
+          val fact = proveBy(Equiv(Greater(combineToLowerBound(fml), Number(0)), fml), QE()) // TODO: better avoid QE?
+          CEat(fact)(pos)
+        case x =>
+          throw new BelleThrowable("packInequalities expects Some formula but got " + x)
+      }
+    }
+    val unpackInequality = "ANON" by {(pos: Position, seq: Sequent) =>
+      def unpackMinMaxTerm(strict: Boolean, term: Term) : Formula = term match {
+        case FuncOf(m, Pair(a, b)) if m == maxF => Or(unpackMinMaxTerm(strict, a), unpackMinMaxTerm(strict, b))
+        case FuncOf(m, Pair(a, b)) if m == minF => And(unpackMinMaxTerm(strict, a), unpackMinMaxTerm(strict, b))
+        case Minus(a, b) => if (strict) Less(b, a) else LessEqual(b, a)
+      }
+      def unpackMinMaxFormula(fml: Formula) : Formula = fml match {
+        case Greater(a, Number(x)) if x == 0 =>
+          unpackMinMaxTerm(true, a)
+        case GreaterEqual(a, Number(x)) if x == 0 =>
+          unpackMinMaxTerm(false, a)
+        case _ =>
+          throw new BelleThrowable("packOpenFormula expects strict format.")
+      }
+      seq.sub(pos) match {
+        case Some(fml: Formula) =>
+          val fact = proveBy(Equiv(unpackMinMaxFormula(fml), fml), QE()) // TODO: avoid QE?
+          CEat(fact)(pos)
+        case _ =>
+          throw new BelleThrowable("packOpenFormula expects strict format.")
+      }
+    }
+    def interiorPostBox = "ANON" by { (seq: Sequent) =>
+      require (seq.succ.length == 1)
+      seq.succ(0) match {
+        case Box(a, post) =>
+          generalize(FormulaTools.interior(post))(1) & Idioms.<(skip, QE)
+        case x =>
+          throw new BelleThrowable("interiorPostcondition expected a Box but got " + x)
+      }
+    }
+    interiorPostBox &
+      packInequalities(1, 1 :: Nil) &
+      useAt("open invariant closure >")(1) & Idioms.<(
+      unpackInequality(1, 1 :: Nil) &
+        unpackInequality(1, 0 :: 1 :: 1 :: Nil),
+      unpackInequality(1))
+  }
+
 }

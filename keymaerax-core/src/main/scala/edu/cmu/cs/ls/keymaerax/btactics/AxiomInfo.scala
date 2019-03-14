@@ -1173,6 +1173,7 @@ object DerivationInfo {
         List((List("&Gamma;"), List("a <= trm", "trm <= b"), true), (List("&Gamma;", "a <= trm", "trm <= b"), List("&Delta;"), false))
       )
       , {case () => IntervalArithmeticV2.intervalCut}),
+    new TacticInfo("dCClosure", "dCClosure", {case () => DifferentialTactics.dCClosure}, needsTool = true),
 
     // assertions and messages
     InputTacticInfo("print"
