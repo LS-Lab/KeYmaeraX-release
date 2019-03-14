@@ -86,7 +86,7 @@ monomialList[poly_, vars_] := Times @@ (vars^#) & /@ CoefficientRules[poly, vars
 
 
 HeuristicMonomials[vars_,vf_,degree_]:=Module[ {},
-Flatten[Function[x,monomialList[x,vars]]/@vf]]
+DeleteDuplicates[Flatten[Function[x,monomialList[x,vars]]/@vf]]]
 
 
 BarrierCertificate[{ pre_, { vf_List, vars_List, evoConst_ }, post_}, opts:OptionsPattern[]]:=Catch[Module[{init,unsafe,Q,f, precision,sosprog,res,lines,B, link, barrierscript,heumons},
@@ -102,7 +102,7 @@ ConjunctiveIneqSetQ[evoConst//LogicalExpand]]]];
 (* Open a link to Matlab *)
 link=MATLink`OpenMATLAB[];
 
-Pegasus`NPRECISION=OptionValue[NPrecision];
+precision=OptionValue[NPrecision];
 
 init=ExtractPolys[pre];
 unsafe=ExtractPolys[Not[post]];
@@ -139,7 +139,7 @@ maxdeg = 10;
 % Additional monomials to use for the barrier certificate
 monheu =  "<>MmaToMatlab[heumons]<>";
 % Additional SOS basis monomials for SOS-variables
-monheu2 = "<>MmaToMatlab[heumons]<>";
+monheu2 = [];
 % Encode strict inequalities p>0 as p-eps >=0
 eps = 0.001;
 % Minimum feasibility to accept a solution
@@ -217,8 +217,8 @@ barrierscript=MATLink`MScript["expbarrier",sosprog, "Overwrite" -> True];
 (* Print[sosprog]; *)
 res=MATLink`MEvaluate@barrierscript;
 lines=StringSplit[res,{"B2 =", "break"}];
-B=N[StringReplace[StringDelete[lines[[-1]], "\n" | "\r" |" "], {"e-"->"*10^-"}]//ToExpression//Expand, 10]//Rationalize;
-Throw[B];
+B=N[StringReplace[StringDelete[lines[[-1]], "\n" | "\r" |" "], {"e-"->"*10^-"}]//ToExpression//Expand, 10];
+Throw[MapAt[Function[x,Rationalize[Round[x,1/10^precision]]],CoefficientRules[B],{All,2}]~FromCoefficientRules~vars];
 ]]
 
 
