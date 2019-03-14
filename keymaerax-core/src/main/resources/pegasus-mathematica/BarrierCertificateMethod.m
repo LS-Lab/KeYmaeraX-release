@@ -61,7 +61,7 @@ LeqToLtOrEqual[formula_]:=Module[{}, formula/.{   LessEqual[lhs_,rhs_]    :>  Or
 
 
 PreProcess[expression_]:=PreProcess[expression]=Module[{},
-BooleanMinimize[UnequalToLtOrGt[expression], "DNF"]//LogicalExpand//LtToGt//LeqToGeq//ZeroRHS ] 
+BooleanMinimize[UnequalToLtOrGt[expression], "DNF"]//LogicalExpand//EqualToLeqAndGeq//LtToGt//LeqToGeq//ZeroRHS ] 
 
 
 ConjunctiveIneqSetQ[set_]:=Module[{S=PreProcess[set]},
@@ -82,15 +82,11 @@ MmaToMatlab[lst],
 ]
 
 
-DefaultMonomials[vars_,degree_]:=Module[ {},
-  Times @@@ (vars^# & /@ 
-     Flatten[Permutations /@ PadRight[#, {Length@#, Length[vars]}] &[
-       Flatten[IntegerPartitions[#, Length[vars]] & /@ Range[0, degree], 
-        1]], 1])]
+monomialList[poly_, vars_] := Times @@ (vars^#) & /@ CoefficientRules[poly, vars][[All, 1]]
 
 
 HeuristicMonomials[vars_,vf_,degree_]:=Module[ {},
-DeleteDuplicates[Join[DefaultMonomials[vars,degree],Flatten[MonomialList[vf]]]]]
+Flatten[Function[x,monomialList[x,vars]]/@vf]]
 
 
 BarrierCertificate[{ pre_, { vf_List, vars_List, evoConst_ }, post_}, opts:OptionsPattern[]]:=Catch[Module[{init,unsafe,Q,f, precision,sosprog,res,lines,B, link, barrierscript,heumons},
@@ -98,7 +94,10 @@ If[Not[TrueQ[
 ConjunctiveIneqSetQ[pre//LogicalExpand] && 
 ConjunctiveIneqSetQ[Not[post]//LogicalExpand] && 
 ConjunctiveIneqSetQ[evoConst//LogicalExpand] ]], 
-Throw[evoConst]]; 
+Throw[[
+ConjunctiveIneqSetQ[pre//LogicalExpand],
+ConjunctiveIneqSetQ[Not[post]//LogicalExpand],
+ConjunctiveIneqSetQ[evoConst//LogicalExpand]]]]; 
 
 (* Open a link to Matlab *)
 link=MATLink`OpenMATLAB[];
@@ -133,11 +132,14 @@ dom = "<>Q<>" ;
 
 % Configurable options from Mathematica
 % Configurable lambda in B' >= lambda B
-lambda = -1;
-% Monomials to use when for representing the barrier certificate
-monvec = "<>MmaToMatlab[heumons]<>";
-% SOS basis monomials for SOS-variables
-monvec2 = "<>MmaToMatlab[heumons]<>";
+lambdas = [-1,0,1];
+% min and max degree bounds (incremented by 1 each time)
+mindeg = 0;
+maxdeg = 10;
+% Additional monomials to use for the barrier certificate
+monheu =  "<>MmaToMatlab[heumons]<>";
+% Additional SOS basis monomials for SOS-variables
+monheu2 = "<>MmaToMatlab[heumons]<>";
 % Encode strict inequalities p>0 as p-eps >=0
 eps = 0.001;
 % Minimum feasibility to accept a solution
@@ -148,64 +150,74 @@ init_dim = length(inits);
 unsafe_dim = length(unsafes);
 dom_dim = length(dom);
 
-% The SOS program
-prog = sosprogram(vars);
+for deg = mindeg : maxdeg
+    sosdeg = ceil(sqrt(deg));
+    fprintf('monomial degree: %i sos degree: %i\\n', deg, sosdeg);
+    monvec = vertcat(monomials(vars,0:1:deg),monheu);
+    monvec2 = vertcat(monomials(vars,0:1:sosdeg),monheu2); 
+    for i = 1 : length(lambdas)
+        lambda = lambdas(i);
+        fprintf('Trying lambda: %i\\n', lambda);
+        % The SOS program
+        prog = sosprogram(vars);
 
-% Template for the barrier certificate B
-[prog,B] = sospolyvar(prog,monvec);
+        % Template for the barrier certificate B
+        [prog,B] = sospolyvar(prog,monvec);
 
-% SOS coefficients for each barrier in init
-for i=1:init_dim
-  [prog,IP(i)] = sossosvar(prog,monvec2);
-end
+        % SOS coefficients for each barrier in init
+        for i=1:init_dim
+          [prog,IP(i)] = sossosvar(prog,monvec2);
+        end
 
-%Constrain barrier to be <= 0 on all inits
-%Note: could assume domain constraint here too
-prog = sosineq(prog, -IP*inits - B);
+        % Constrain barrier to be <= 0 on all inits
+        % Note: could assume domain constraint here too
+        prog = sosineq(prog, -IP*inits - B);
 
-% SOSes for the unsafe states
-for i=1:unsafe_dim
-  [prog,FP(i)] = sossosvar(prog,monvec2);
-end
+        % SOSes for the unsafe states
+        for i=1:unsafe_dim
+          [prog,FP(i)] = sossosvar(prog,monvec2);
+        end
 
-% Constrain barrier to be > 0 on all unsafe
-% Note: could assume domain constraint here too
-prog = sosineq(prog, B - FP*unsafes - eps);
+        % Constrain barrier to be > 0 on all unsafe
+        % Note: could assume domain constraint here too
+        prog = sosineq(prog, B - FP*unsafes - eps);
 
-% Lie derivatives for each component
-dB = 0*vars(1);
-for i = 1:length(vars)
-  dB = dB+diff(B,vars(i))*field(i);
-end
+        % Lie derivatives for each component
+        dB = 0*vars(1);
+        for i = 1:length(vars)
+          dB = dB+diff(B,vars(i))*field(i);
+        end
 
-% Constrain the Lie derivative
-expr = lambda * B - dB;
+        % Constrain the Lie derivative
+        expr = lambda * B - dB;
 
-if dom_dim > 0
-    % SOSes for each barrier in domain
-    for i=1:dom_dim
-      [prog,DP(i)] = sossosvar(prog,monvec2);
+        if dom_dim > 0
+            % SOSes for each barrier in domain
+            for i=1:dom_dim
+              [prog,DP(i)] = sossosvar(prog,monvec2);
+            end
+            prog = sosineq(prog, expr -DP*dom);
+        else
+            prog = sosineq(prog, expr);
+        end
+
+        opt.params.fid = 0;
+        prog = sossolve(prog,opt);
+
+        feasibility = prog.solinfo.info.feasratio;
+        if feasibility >= minfeas
+            B2 = sosgetsol(prog,B)
+            return;
+        end
     end
-    prog = sosineq(prog, expr -DP*dom);
-else
-    prog = sosineq(prog, expr);
 end
-
-opt.params.fid = 0;
-prog = sossolve(prog,opt);
-
-feasibility = prog.solinfo.info.feasratio;
-if feasibility >= minfeas
-    B2 = sosgetsol(prog,B)
-else
-    B2 = 0.0
-end;
+B2 = 0
 ";
 barrierscript=MATLink`MScript["expbarrier",sosprog, "Overwrite" -> True];
 (* Print[sosprog]; *)
 res=MATLink`MEvaluate@barrierscript;
 lines=StringSplit[res,{"B2 =", "break"}];
-B=N[StringReplace[lines[[-1]], {"\n"->"", "e-"->"*10^-"}]//ToExpression//Expand, 10]//Rationalize;
+B=N[StringReplace[StringDelete[lines[[-1]], "\n" | "\r" |" "], {"e-"->"*10^-"}]//ToExpression//Expand, 10]//Rationalize;
 Throw[B];
 ]]
 
