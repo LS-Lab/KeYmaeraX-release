@@ -1612,6 +1612,29 @@ private object DifferentialTactics extends Logging {
     case _ => Nil
   })
 
+  private def interiorImplication: DependentTactic = "ANON" by { (seq: Sequent) =>
+    require (seq.succ.length == 1)
+    require (seq.ante.length == 1)
+    (seq.ante(0), seq.succ(0)) match {
+      case (And(p, q), And(r, s)) =>
+        andL(-1) & andR(1) & Idioms.<(
+          hideL(-2) & interiorImplication,
+          hideL(-1) & interiorImplication
+        )
+      case (Or(p, q), Or(r, s)) =>
+        orR(1) & orL(-1) & Idioms.<(
+          hideR(2) & interiorImplication,
+          hideR(1) & interiorImplication
+        )
+      case (Less(a, b), LessEqual(c, d)) if a == c && b == d => useAt("<=")(1) & orR(1) & closeId
+      case (Greater(a, b), GreaterEqual(c, d)) if a == c && b == d => useAt(">=")(1) & orR(1) & closeId
+      case (False, _) => closeF
+      case (x, y) if x == y => closeId
+      case _ =>
+        throw new BelleThrowable("strengthenInequalities expected ante and succ of same shape, but got " + seq)
+    }
+  }
+
   /**
     * Strengthens the postcondition to its interior and cuts in its closure
     * (provided the closure holds initially).
@@ -1633,34 +1656,12 @@ private object DifferentialTactics extends Logging {
         throw new BelleThrowable("dCClosure expects succedent of shape [{ode&p}]q")
     }
     // TODO: several of these local tactics might be useful in a more general setting
-    def strengthenInequalities: DependentTactic = "ANON" by { (seq: Sequent) =>
-      require (seq.succ.length == 1)
-      require (seq.ante.length == 1)
-      (seq.ante(0), seq.succ(0)) match {
-        case (And(p, q), And(r, s)) =>
-          andL(-1) & andR(1) & Idioms.<(
-            hideL(-2) & strengthenInequalities,
-            hideL(-1) & strengthenInequalities
-          )
-        case (Or(p, q), Or(r, s)) =>
-          orR(1) & orL(-1) & Idioms.<(
-            hideR(2) & strengthenInequalities,
-            hideR(1) & strengthenInequalities
-          )
-        case (Less(a, b), LessEqual(c, d)) if a == c && b == d => useAt("<=")(1) & orR(1) & closeId
-        case (Greater(a, b), GreaterEqual(c, d)) if a == c && b == d => useAt(">=")(1) & orR(1) & closeId
-        case (False, _) => closeF
-        case (x, y) if x == y => closeId
-        case _ =>
-          throw new BelleThrowable("strengthenInequalities expected ante and succ of same shape, but got " + seq)
-      }
-    }
     def interiorPostBox = "ANON" by { (seq: Sequent) =>
       require (seq.succ.length == 1)
       seq.succ(0) match {
         case Box(a, post) =>
           generalize(FormulaTools.interior(post))(1) & Idioms.<(skip,
-            strengthenInequalities
+            interiorImplication
           )
         case x =>
           throw new BelleThrowable("interiorPostcondition expected a Box but got " + x)
@@ -1708,4 +1709,63 @@ private object DifferentialTactics extends Logging {
       hideR(1))
   }
 
+  /**
+    * assume closure of postcondition for proof of invariant interior
+    *
+    * G, p |- [{ode&p}](closure(q)->(interior(q))')          G |- interior(q)
+    * ------------------------------------------------------------------------dIClosure
+    * G |- [{ode&p}]q
+    *
+    * interior(q) and closure(q) are wrt. to the negation normal form (NNF) of q
+    * @see [[FormulaTools.interior]]
+    * @see [[FormulaTools.closure]]
+    *
+    */
+  val dIClosure: DependentTactic = "dIClosure" by { seq: Sequent =>
+    if (seq.succ.length != 1) throw new BelleThrowable("dCClosure expects a single succedent")
+    val (ode, p_fml, q_fml): (DifferentialProgram, Formula, Formula) = seq.succ(0) match {
+      case Box(ODESystem(ode, p_fml), q_fml) => (ode, p_fml, q_fml)
+      case _ =>
+        throw new BelleThrowable("dCClosure expects succedent of shape [{ode&p}]q")
+    }
+    val interior = FormulaTools.interior(q_fml)
+    val closure = FormulaTools.closure(q_fml)
+
+    /* Position of the formula corresponding to the left subgoal after cutting it in. */
+    val leftPosition = AntePosition(seq.ante.length + 2)
+    /* Position of the formula corresponding to the right subgoal after cutting it in. */
+    val rightPosition = AntePosition(seq.ante.length + 1)
+    /* cut right subgoal */
+    cut(interior) & Idioms.<(
+      /* cut left subgoal */
+      cut(Imply(p_fml, Box(ODESystem(ode, p_fml), Imply(closure,DifferentialFormula(interior))))) & Idioms.<(
+        DifferentialTactics.dCClosure & Idioms.<(
+          DI(1) & implyR(1) & andL('Llast) & implyL(leftPosition) & Idioms.<(
+            closeId,
+            andR(1) & Idioms.<(
+              closeId,
+              DW(1) & diffRefine(p_fml)(1) & Idioms.<(
+                TactixLibrary.generalize(Imply(closure,DifferentialFormula(interior)))(1) & Idioms.<(
+                  closeId,
+                  implyR(1) & andL('Llast) & implyL(-1) & Idioms.<(
+                    closeId,
+                    closeId
+                  )
+                ),
+                DW(1) & TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(
+                  cohideR(1) & boxTrue(1),
+                  implyR(1) & andL('Llast) & closeId
+                )
+              )
+            )
+          ),
+          cohideOnlyL(rightPosition) & interiorImplication & done
+        ),
+        /* leave only left subgoal */
+        hideR(1) & hideL(rightPosition) & implyR(1)
+      ),
+      /* leave only right subgoal */
+      hideR(1)
+    )
+  }
 }

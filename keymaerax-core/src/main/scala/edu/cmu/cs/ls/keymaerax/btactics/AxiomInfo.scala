@@ -1174,6 +1174,7 @@ object DerivationInfo {
       )
       , {case () => IntervalArithmeticV2.intervalCut}),
     new TacticInfo("dCClosure", "dCClosure", {case () => DifferentialTactics.dCClosure}, needsTool = true),
+    new TacticInfo("dIClosure", "dIClosure", {case () => DifferentialTactics.dIClosure}, needsTool = true),
 
     // assertions and messages
     InputTacticInfo("print"

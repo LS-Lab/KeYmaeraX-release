@@ -1582,4 +1582,11 @@ class DifferentialTests extends TacticTestBase with Timeouts {
     result.subgoals(1) shouldBe "t = 0, x = 1 ==> x>=0&x<=3".asSequent
   }
 
+  "dIClosure" should "assume closure of postcondition for proof of invariant interior" in withMathematica { qeTool =>
+    val result = proveBy("t = 0, x = 1 ==> [{t'=1, x'=x & t <= 1}](x>0&x<=3)".asSequent,
+      DifferentialTactics.dIClosure)
+    result.subgoals should have size 2
+    result.subgoals.head shouldBe ("t=0, x=1, t<=1 ==> [{t'=1,x'=x&t<=1}](x>=0&x<=3->(x>0&x<3)')").asSequent
+    result.subgoals(1) shouldBe "t=0, x=1 ==> x>0&x<3".asSequent
+  }
 }
