@@ -1609,10 +1609,6 @@ private object DifferentialTactics extends Logging {
       (maxPosOr.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)::Nil
     case GreaterEqual(FuncOf(m, _), Number(n)) if m == maxF =>
       (maxNonnegOr.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)::Nil
-    case Greater(Minus(a, b), Number(n)) if n == 0 =>
-      (minusPos.fact, PosInExpr(0::Nil), Nil)::Nil
-    case GreaterEqual(Minus(a, b), Number(n)) if n == 0 =>
-      (minusNonneg.fact, PosInExpr(0::Nil), Nil)::Nil
     case _ => Nil
   })
 
@@ -1620,19 +1616,19 @@ private object DifferentialTactics extends Logging {
     * Strengthens the postcondition to its interior and cuts in its closure
     * (provided the closure holds initially).
     *
-    * [{ode&p&closure(q)}]interior(q)           closure(q)
-    * ----------------------------------------------------dCClosure
-    * [{ode&p}]q
+    * G |- [{ode&p&closure(q)}]interior(q)           G |- closure(q)
+    * ----------------------------------------------------------------dCClosure
+    * G |- [{ode&p}]q
     *
-    * q may involve &,|,<,<=,>=,>
-    * where interior and closure distribute over disjunction and conjunction and
-    *   interior(a <= b) = a < b
-    *   closure(a < b) = a <= b .
+    * interior(q) and closure(q) are wrt. to the negation normal form (NNF) of q
+    * @see [[FormulaTools.interior]]
+    * @see [[FormulaTools.closure]]
+    *
     */
-  val dCClosure = "dCClosure" by { seq: Sequent =>
+  val dCClosure: DependentTactic = "dCClosure" by { seq: Sequent =>
     if (seq.succ.length != 1) throw new BelleThrowable("dCClosure expects a single succedent")
-    seq.succ(0) match {
-      case Box(ODESystem(_, _), _) =>
+    val (ode, p_fml, q_fml): (DifferentialProgram, Formula, Formula) = seq.succ(0) match {
+      case Box(ODESystem(ode, p_fml), q_fml) => (ode, p_fml, q_fml)
       case _ =>
         throw new BelleThrowable("dCClosure expects succedent of shape [{ode&p}]q")
     }
@@ -1653,6 +1649,7 @@ private object DifferentialTactics extends Logging {
           )
         case (Less(a, b), LessEqual(c, d)) if a == c && b == d => useAt("<=")(1) & orR(1) & closeId
         case (Greater(a, b), GreaterEqual(c, d)) if a == c && b == d => useAt(">=")(1) & orR(1) & closeId
+        case (False, _) => closeF
         case (x, y) if x == y => closeId
         case _ =>
           throw new BelleThrowable("strengthenInequalities expected ante and succ of same shape, but got " + seq)
@@ -1682,13 +1679,33 @@ private object DifferentialTactics extends Logging {
           throw new BelleThrowable("normalizeAt expected Some Formula but got " + x)
       }
     }
-    normalizeAt(SimplifierV3.semiAlgNormalize)(1, 1::Nil) &
-      interiorPostBox &
-      normalizeAt(SimplifierV3.maxMinGtNormalize)(1, 1::Nil) &
-      useAt("open invariant closure >")(1) & Idioms.<(
-        chaseMinMaxInequalities(1, 1::Nil) &
-          chaseMinMaxInequalities(1, 0::1::1::Nil),
-        chaseMinMaxInequalities(1))
+    val interior = FormulaTools.interior(q_fml)
+    val closure = FormulaTools.closure(q_fml)
+
+    /* Position of the formula corresponding to the left subgoal after cutting it in. */
+    val leftPosition = AntePosition(seq.ante.length + 2)
+    /* Position of the formula corresponding to the right subgoal after cutting it in. */
+    val rightPosition = AntePosition(seq.ante.length + 1)
+    /* cut right subgoal */
+    cut(closure) & Idioms.<(
+      /* cut left subgoal */
+      cut(Box(ODESystem(ode, And(p_fml, closure)), interior)) & Idioms.<(
+        normalizeAt(SimplifierV3.semiAlgNormalize)(1, 1::Nil) &
+          interiorPostBox &
+          normalizeAt(SimplifierV3.maxMinGtNormalize)(1, 1::Nil) &
+          useAt("open invariant closure >")(1) & Idioms.<(
+            chaseMinMaxInequalities(1, 1::Nil) &
+              normalizeAt(SimplifierV3.semiAlgNormalize)(leftPosition ++ PosInExpr(1::Nil)) &
+              chaseMinMaxInequalities(1, 0::1::1::Nil) &
+              normalizeAt(SimplifierV3.semiAlgNormalize)(leftPosition ++ PosInExpr(0::1::1::Nil)) &
+              closeId,
+            chaseMinMaxInequalities(1) &
+              normalizeAt(SimplifierV3.semiAlgNormalize)(rightPosition) &
+              closeId),
+        /* leave only left subgoal */
+        hideR(1) & hideL(rightPosition)),
+      /* leave only right subgoal */
+      hideR(1))
   }
 
 }

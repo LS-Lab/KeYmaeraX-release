@@ -345,14 +345,31 @@ object FormulaTools extends Logging {
     args
   }
 
-  /** Returns the formula strengthened by replacing inequalities with strict inequalities. */
-  def interior(fml: Formula): Formula = fml match {
+  /** Returns the formula in negation normal form, strengthened by replacing inequalities with strict inequalities. */
+  def interior(fml: Formula): Formula = negationNormalForm(fml) match {
     case LessEqual(a, b) => Less(a, b)
     case GreaterEqual(a, b) => Greater(a, b)
     case _: Greater => fml
     case _: Less => fml
     case And(a, b) => And(interior(a), interior(b))
     case Or(a, b) => Or(interior(a), interior(b))
+    case Equal(a, b) => False
+    case NotEqual(a, b) => NotEqual(a, b)
+    case True => True
+    case False => False
   }
 
+  /** Returns the formula in negation normal form, weakened by replacing strict inequalities with inequalities. */
+  def closure(fml: Formula): Formula = negationNormalForm(fml) match {
+    case Less(a, b) => LessEqual(a, b)
+    case Greater(a, b) => GreaterEqual(a, b)
+    case _: GreaterEqual => fml
+    case _: LessEqual => fml
+    case And(a, b) => And(closure(a), closure(b))
+    case Or(a, b) => Or(closure(a), closure(b))
+    case Equal(a, b) => Equal(a, b)
+    case NotEqual(a, b) => True
+    case True => True
+    case False => False
+  }
 }

@@ -1578,8 +1578,8 @@ class DifferentialTests extends TacticTestBase with Timeouts {
   "dCClosure" should "strengthen the postcondition to its interior and cut in the closure" in withMathematica { _ =>
     val result = proveBy("t = 0, x = 1 ==> [{t'=1, x'=x & t <= 1}](x>0&x<=3)".asSequent, DifferentialTactics.dCClosure)
     result.subgoals should have size 2
-    result.subgoals.head shouldBe "t = 0, x = 1 ==> [{t'=1,x'=x&t<=1&0<=x&x<=3}](0 < x&x < 3)".asSequent
-    result.subgoals(1) shouldBe "t = 0, x = 1 ==> 0<=x&x<=3".asSequent
+    result.subgoals.head shouldBe "t = 0, x = 1 ==> [{t'=1,x'=x&t<=1&x>=0&x<=3}](x>0&x<3)".asSequent
+    result.subgoals(1) shouldBe "t = 0, x = 1 ==> x>=0&x<=3".asSequent
   }
 
 }
