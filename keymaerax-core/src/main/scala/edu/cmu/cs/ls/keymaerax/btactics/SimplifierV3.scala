@@ -1030,9 +1030,9 @@ object SimplifierV3 {
   private lazy val minGeqNorm:ProvableSig = remember("f_()>=0&g_()>=0<->min((f_(),g_()))>=0".asFormula,QE,namespace).fact
   private lazy val maxGeqNorm:ProvableSig = remember("f_()>=0|g_()>=0<->max((f_(),g_()))>=0".asFormula,QE,namespace).fact
   private lazy val eqNormAbs:ProvableSig = remember("f_() = 0 <-> -abs(f_())>=0".asFormula,QE,namespace).fact
-  //private lazy val minGtNorm:ProvableSig = remember("f_()>0&g_()>0<->min((f_(),g_()))>0".asFormula,QE,namespace).fact
-  //private lazy val maxGtNorm:ProvableSig = remember("f_()>0|g_()>0<->max((f_(),g_()))>0".asFormula,QE,namespace).fact
-  //private lazy val neqNormAbs:ProvableSig = remember("f_() != g_()<-> abs(f_()-g_())>0".asFormula,QE,namespace).fact
+  private lazy val minGtNorm:ProvableSig = remember("f_()>0&g_()>0<->min((f_(),g_()))>0".asFormula,QE,namespace).fact
+  private lazy val maxGtNorm:ProvableSig = remember("f_()>0|g_()>0<->max((f_(),g_()))>0".asFormula,QE,namespace).fact
+  private lazy val neqNormAbs:ProvableSig = remember("f_() != g_()<-> abs(f_()-g_())>0".asFormula,QE,namespace).fact
 
   // Normalizes a formula recursively (under And/Or) to have >=0 on RHS
   // This is (very) lightly optimized to avoid generating additional 0s
@@ -1089,6 +1089,16 @@ object SimplifierV3 {
     }
   }
 
+  // Simplifier index that normalizes a formula into max/min > normal form
+  private def maxMinGtNormalizeIndex(f:Formula,ctx:context) : List[ProvableSig] = {
+    f match{
+      case Greater(l,r:Number) if r.value.toInt == 0 => List()
+      case And(l,r) =>  List(minGtNorm)
+      case Or(l,r) =>  List(maxGtNorm)
+      case _ => throw new IllegalArgumentException("cannot normalize "+f+" to max/min >0 normal form (must be a conjunction/disjunction of > 0s)")
+    }
+  }
+
   /**
     * Various normalization steps (the first thing each of them do is NNF normalize)
     * Note: This DOES NOT work with quantifiers!
@@ -1111,4 +1121,5 @@ object SimplifierV3 {
   val atomNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(atomNormalizeIndex)(_)
   val semiAlgNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(semiAlgNormalizeIndex)(_)
   val maxMinGeqNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGeqNormalizeIndex)(_)
+  val maxMinGtNormalize: Formula => (Formula,Option[ProvableSig]) = doNormalize(maxMinGtNormalizeIndex)(_)
 }

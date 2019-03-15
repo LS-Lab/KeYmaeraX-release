@@ -352,7 +352,7 @@ object FormulaTools extends Logging {
     case _: Greater => fml
     case _: Less => fml
     case And(a, b) => And(interior(a), interior(b))
-    case Or(a, b) => And(interior(a), interior(b))
+    case Or(a, b) => Or(interior(a), interior(b))
   }
 
 }

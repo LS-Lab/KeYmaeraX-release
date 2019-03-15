@@ -1591,6 +1591,31 @@ private object DifferentialTactics extends Logging {
     result
   }
 
+  // TODO: these Lemmas are just the symmetric versions of some DerivedAxioms.
+  // Using PosInExpr(1::Nil) as key in chaseCustom does not seem to work.
+  private lazy val minPosAnd = remember("min(f_(), g_())>0<->f_()>0 & g_()>0".asFormula, QE & done)
+  private lazy val minNonnegAnd = remember("min(f_(), g_())>=0<->f_()>=0 & g_()>=0".asFormula, QE & done)
+  private lazy val maxPosOr = remember("max(f_(), g_())>0<->f_()>0 | g_()>0".asFormula, QE & done)
+  private lazy val maxNonnegOr = remember("max(f_(), g_())>=0<->f_()>=0 | g_()>=0".asFormula, QE & done)
+  private lazy val minusPos = remember("f_()-g_()>0 <-> f_()>g_()".asFormula, QE & done)
+  private lazy val minusNonneg = remember("f_()-g_()>=0 <-> f_()>=g_()".asFormula, QE & done)
+  /** chases min/max Less/LessEqual 0 to conjunctions and disjunctions */
+  val chaseMinMaxInequalities : DependentPositionTactic = chaseCustom({
+    case Greater(FuncOf(m, _), Number(n)) if m == minF =>
+      (minPosAnd.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)::Nil
+    case GreaterEqual(FuncOf(m, _), Number(n)) if m == minF =>
+      (minNonnegAnd.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)::Nil
+    case Greater(FuncOf(m, _), Number(n)) if m == maxF =>
+      (maxPosOr.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)::Nil
+    case GreaterEqual(FuncOf(m, _), Number(n)) if m == maxF =>
+      (maxNonnegOr.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)::Nil
+    case Greater(Minus(a, b), Number(n)) if n == 0 =>
+      (minusPos.fact, PosInExpr(0::Nil), Nil)::Nil
+    case GreaterEqual(Minus(a, b), Number(n)) if n == 0 =>
+      (minusNonneg.fact, PosInExpr(0::Nil), Nil)::Nil
+    case _ => Nil
+  })
+
   /**
     * Strengthens the postcondition to its interior and cuts in its closure
     * (provided the closure holds initially).
@@ -1606,64 +1631,64 @@ private object DifferentialTactics extends Logging {
     */
   val dCClosure = "dCClosure" by { seq: Sequent =>
     if (seq.succ.length != 1) throw new BelleThrowable("dCClosure expects a single succedent")
-    // TODO: several of these local tactics might be useful in a more general setting
-    val packInequalities = "ANON" by {(pos: Position, seq: Sequent) =>
-      def combineToLowerBound(fml: Formula): Term = fml match {
-        case Less(a, b) => Minus(b, a)
-        case LessEqual(a, b) => Minus(b, a)
-        case Greater(a, b) => Minus(a, b)
-        case GreaterEqual(a, b) => Minus(a, b)
-        case And(a, b) => FuncOf(minF, Pair(combineToLowerBound(a), combineToLowerBound(b)))
-        case Or(a, b) => FuncOf(maxF, Pair(combineToLowerBound(a), combineToLowerBound(b)))
-        case _ =>
-          throw new BelleThrowable("packInequalities expects conjunction, disjunction, or (strict) inequality but got " +
-            fml)
-      }
-      seq.sub(pos) match {
-        case Some(fml: Formula) =>
-          val fact = proveBy(Equiv(Greater(combineToLowerBound(fml), Number(0)), fml), QE()) // TODO: better avoid QE?
-          CEat(fact)(pos)
-        case x =>
-          throw new BelleThrowable("packInequalities expects Some formula but got " + x)
-      }
+    seq.succ(0) match {
+      case Box(ODESystem(_, _), _) =>
+      case _ =>
+        throw new BelleThrowable("dCClosure expects succedent of shape [{ode&p}]q")
     }
-    val unpackInequality = "ANON" by {(pos: Position, seq: Sequent) =>
-      def unpackMinMaxTerm(strict: Boolean, term: Term) : Formula = term match {
-        case FuncOf(m, Pair(a, b)) if m == maxF => Or(unpackMinMaxTerm(strict, a), unpackMinMaxTerm(strict, b))
-        case FuncOf(m, Pair(a, b)) if m == minF => And(unpackMinMaxTerm(strict, a), unpackMinMaxTerm(strict, b))
-        case Minus(a, b) => if (strict) Less(b, a) else LessEqual(b, a)
-      }
-      def unpackMinMaxFormula(fml: Formula) : Formula = fml match {
-        case Greater(a, Number(x)) if x == 0 =>
-          unpackMinMaxTerm(true, a)
-        case GreaterEqual(a, Number(x)) if x == 0 =>
-          unpackMinMaxTerm(false, a)
+    // TODO: several of these local tactics might be useful in a more general setting
+    def strengthenInequalities: DependentTactic = "ANON" by { (seq: Sequent) =>
+      require (seq.succ.length == 1)
+      require (seq.ante.length == 1)
+      (seq.ante(0), seq.succ(0)) match {
+        case (And(p, q), And(r, s)) =>
+          andL(-1) & andR(1) & Idioms.<(
+            hideL(-2) & strengthenInequalities,
+            hideL(-1) & strengthenInequalities
+          )
+        case (Or(p, q), Or(r, s)) =>
+          orR(1) & orL(-1) & Idioms.<(
+            hideR(2) & strengthenInequalities,
+            hideR(1) & strengthenInequalities
+          )
+        case (Less(a, b), LessEqual(c, d)) if a == c && b == d => useAt("<=")(1) & orR(1) & closeId
+        case (Greater(a, b), GreaterEqual(c, d)) if a == c && b == d => useAt(">=")(1) & orR(1) & closeId
+        case (x, y) if x == y => closeId
         case _ =>
-          throw new BelleThrowable("packOpenFormula expects strict format.")
-      }
-      seq.sub(pos) match {
-        case Some(fml: Formula) =>
-          val fact = proveBy(Equiv(unpackMinMaxFormula(fml), fml), QE()) // TODO: avoid QE?
-          CEat(fact)(pos)
-        case _ =>
-          throw new BelleThrowable("packOpenFormula expects strict format.")
+          throw new BelleThrowable("strengthenInequalities expected ante and succ of same shape, but got " + seq)
       }
     }
     def interiorPostBox = "ANON" by { (seq: Sequent) =>
       require (seq.succ.length == 1)
       seq.succ(0) match {
         case Box(a, post) =>
-          generalize(FormulaTools.interior(post))(1) & Idioms.<(skip, QE)
+          generalize(FormulaTools.interior(post))(1) & Idioms.<(skip,
+            strengthenInequalities
+          )
         case x =>
           throw new BelleThrowable("interiorPostcondition expected a Box but got " + x)
       }
     }
-    interiorPostBox &
-      packInequalities(1, 1 :: Nil) &
+    def normalizeAt(nrmlz : Formula => (Formula,Option[ProvableSig])) : DependentPositionTactic = "ANON" by { (pos: Position, seq: Sequent) =>
+      seq.sub(pos) match {
+        case Some(fml: Formula) =>
+          nrmlz(fml) match {
+            case (a, Some(prv)) =>
+              useAt(prv)(pos)
+            case _ =>
+              skip
+          }
+        case x =>
+          throw new BelleThrowable("normalizeAt expected Some Formula but got " + x)
+      }
+    }
+    normalizeAt(SimplifierV3.semiAlgNormalize)(1, 1::Nil) &
+      interiorPostBox &
+      normalizeAt(SimplifierV3.maxMinGtNormalize)(1, 1::Nil) &
       useAt("open invariant closure >")(1) & Idioms.<(
-      unpackInequality(1, 1 :: Nil) &
-        unpackInequality(1, 0 :: 1 :: 1 :: Nil),
-      unpackInequality(1))
+        chaseMinMaxInequalities(1, 1::Nil) &
+          chaseMinMaxInequalities(1, 0::1::1::Nil),
+        chaseMinMaxInequalities(1))
   }
 
 }

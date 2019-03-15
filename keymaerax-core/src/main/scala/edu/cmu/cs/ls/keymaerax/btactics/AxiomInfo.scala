@@ -495,7 +495,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("DGd diamond differential ghost constant exists", "DGCde", "DGCde", {case () => useAt(DerivedAxioms.DGCddifferentialghostconstexists)}),
     new DerivedAxiomInfo("DCd diamond differential cut", "DCd", "DCd", {case () => useAt(DerivedAxioms.DCddifferentialcut)}),
     new DerivedAxiomInfo("leave within closed <=", "leaveWithinClosed", "leaveWithinClosed", {case () => useAt(DerivedAxioms.leaveWithinClosed)}),
-    new DerivedAxiomInfo("open invariant closure >", "openCutClosure", "openCutClosure", {case () => useAt(DerivedAxioms.openInvariantClosure)}),
+    new DerivedAxiomInfo("open invariant closure >", "openInvariantClosure", "openInvariantClosure", {case () => useAt(DerivedAxioms.openInvariantClosure)}),
     new DerivedAxiomInfo("DWd diamond differential weakening", "DWd", "DWd", {case () => useAt(DerivedAxioms.DWddifferentialweakening)}),
     new DerivedAxiomInfo("DWd2 diamond differential weakening", "DWd2", "DWd2", {case () => useAt(DerivedAxioms.DWd2differentialweakening)}),
     new DerivedAxiomInfo(",d commute", "commaCommuted", "commaCommuted", {case () => useAt(DerivedAxioms.commaCommuted)}),
