@@ -15,7 +15,7 @@ Begin["`Private`"]
 
 Options[FirstIntegralMethod]={RationalsOnly->False, RationalPrecision->10, FirstIntegralDegree->0};
 FirstIntegralMethod[{pre_, {f_List,statevars_List,Q_}, post_}, opts:OptionsPattern[]]:=Module[{
-rats,FIDeg,ratPrecision,upperRat,lowerRat,initConnectedComponents,FIs,maximise,minimise,maxFns,minFns,partitioning
+rats,FIDeg,ratPrecision,upperRat,lowerRat,initConnectedComponents,FIs,maxFns,minFns,partitioning
 },
 
 (* Process options *)
@@ -33,11 +33,8 @@ initConnectedComponents=CylindricalDecomposition[pre,statevars,"Components"];
 (* Compute first integral *)
 FIs=FirstIntegralGen`FuncIndep[FirstIntegralGen`FindFirstIntegrals[FIDeg, statevars, f],statevars];
 
-maximise=Union[FIs,{f.statevars}]//Flatten;
-minimise=Union[FIs,{f.statevars}]//Flatten;
-
-maxFns = Map[#[[1]]-upperRat[MaxValue[#,statevars]/.{Infinity -> 0,-Infinity -> 0}] &, Tuples[{maximise, initConnectedComponents}] ];
-minFns = Map[#[[1]]-lowerRat[MinValue[#,statevars]/.{Infinity -> 0,-Infinity -> 0}] &, Tuples[{minimise, initConnectedComponents}] ];
+maxFns = Map[#[[1]]-upperRat[MaxValue[#,statevars]/.{Infinity -> 0,-Infinity -> 0}] &, Tuples[{FIs, initConnectedComponents}] ];
+minFns = Map[#[[1]]-lowerRat[MinValue[#,statevars]/.{Infinity -> 0,-Infinity -> 0}] &, Tuples[{FIs, initConnectedComponents}] ];
 Print[Union[ maxFns, minFns]];
 partitioning=Union[ maxFns, minFns];
 partitioning
