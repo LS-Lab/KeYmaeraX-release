@@ -1274,14 +1274,23 @@ case class ListArg (override val name: String, elementSort: String, override val
   val sort = "list"
 }
 
-/** Meta-information on a derivation step, which is an axiom, derived axiom, proof rule, or tactic. */
+/** Central meta-information on a derivation step, which is an axiom, derived axiom, proof rule, or tactic.
+  * Provides information such as unique canonical names, internal code names, display information, etc.
+  * @see [[CoreAxiomInfo]]
+  * @see [[DerivedAxiomInfo]]
+  * @see [[AxiomaticRuleInfo]]
+  * @see [[DerivedRuleInfo]]
+  * @see [[TacticInfo]]
+  */
 sealed trait DerivationInfo {
-  /** Canonical name unique across all derivations (axioms or tactics). For axioms this is as declared in the
-    * axioms file, for and tactics it is identical to codeName. Can and will contain spaces and special chars. */
+  /** Canonical name unique across all derivations (axioms or tactics). For axioms or axiomatic rules this is as declared in
+    * [[AxiomBase]], for derived axioms or derived axiomatic rules as in [[DerivedAxioms]],
+    * and for [[BelleExpr]] tactics it is identical to their codeName.
+    * Canonical names can and will contain spaces and special chars. */
   val canonicalName: String
   /** How to display this inference step in a UI */
   val display: DisplayInfo
-  /** The unique alphanumeric identifier for this inference step. */
+  /** The unique alphanumeric identifier for this inference step, cannot contain spaces. */
   val codeName: String
   /** Specification of inputs (other than positions) to the derivation, along with names to use when displaying in the UI. */
   val inputs: List[ArgInfo] = Nil
@@ -1344,7 +1353,9 @@ trait AxiomInfo extends ProvableInfo {
   def formula: Formula
 }
 
-/** Meta-Information for an axiom from the prover core */
+/** Meta-Information for an axiom from the prover core
+  * @see [[AxiomBase]]
+  */
 case class CoreAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => DependentPositionTactic) extends AxiomInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory
@@ -1359,7 +1370,8 @@ case class CoreAxiomInfo(override val canonicalName:String, override val display
   override val numPositionArgs = 1
 }
 
-/** Information for a derived axiom proved from the core */
+/** Information for a derived axiom proved from the core
+  * @see [[DerivedAxioms]] */
 case class DerivedAxiomInfo(override val canonicalName: String, override val display: DisplayInfo, override val codeName: String, expr: Unit => DependentPositionTactic) extends AxiomInfo with StorableInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory
@@ -1425,7 +1437,8 @@ case class InputTwoPositionTacticInfo(override val codeName: String, override va
   override val numPositionArgs = 2
 }
 
-/** Information for an axiomatic rule */
+/** Information for an axiomatic rule
+  * @see [[AxiomBase]] */
 case class AxiomaticRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String) extends ProvableInfo {
   // lazy to avoid circular initializer call
   lazy val expr = TactixLibrary.by(provable, codeName)
