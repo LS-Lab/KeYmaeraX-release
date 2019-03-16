@@ -2240,6 +2240,75 @@ object DerivedAxioms extends Logging {
   )
 
   /**
+    * {{{Axiom "leave within closed <=".
+    *    (<{c&q}>p<=0 <-> <{c&q&p>=0}>p=0) <- p>=0
+    * End.
+    * }}}
+    */
+  lazy val leaveWithinClosed = derivedAxiom("leave within closed <=",
+    "==>(<{c_{|t_|}&q_(|t_|)}>p_(|t_|)<=0 <-> <{c_{|t_|}&q_(|t_|)&p_(|t_|)>=0}>p_(|t_|)=0)<-p_(|t_|)>=0".asSequent,
+      prop & Idioms.<(
+        cut("[{c_{|t_|}&q_(|t_|)}]p_(|t_|)>=0".asFormula) & Idioms.<(
+          dC("p_(|t_|)>=0".asFormula)(-2)& Idioms.<(
+            DWd(-2) & useAt("<> diamond", PosInExpr(1::Nil))(1) & useAt("<> diamond", PosInExpr(1::Nil))(-2) & notR(1) & notL(-2) &
+              generalize("(!p_(|t_|)=0)".asFormula)(1) & Idioms.<(closeId, useAt(equalExpand)(-1, 0::Nil) & useAt(flipGreaterEqual)(1, 0::0::1::Nil) & prop & done),
+            closeId
+          ),
+          useAt("<> diamond", PosInExpr(1::Nil))(1) & notR(1) &
+            useAt("RI& closed real induction >=", PosInExpr(0::Nil))(1) & prop & composeb(1) &
+            dC("!p_(|t_|)=0".asFormula)(1) & Idioms.<(
+            DW(1) &
+              TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(cohideR(1) & boxTrue(1), nil) /* TODO: Goedel? */ &
+              implyR(1) &
+              TactixLibrary.generalize("t_=0".asFormula)(1)& Idioms.<(cohideR(1) & assignb(1) & byUS(equalReflex), nil) /* TODO: assignb? */ &
+              implyR(1) &
+              dR("p_(|t_|)>0".asFormula)(1) & Idioms.<(
+              useAt("Cont continuous existence", PosInExpr(1::Nil))(1) &
+                useAt(greaterEqual)(-1, 1::1::0::Nil) &
+                prop &
+                done,
+              DW(1) &
+                TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(cohideR(1) & boxTrue(1), nil) /* TODO: Goedel? */ &
+                useAt(greaterEqual)(1, 1::Nil) &
+                prop &
+                done
+            ),
+            closeId)
+        ),
+        dR("q_(|t_|)".asFormula)(-2) & Idioms.<(
+          useAt("<> diamond", PosInExpr(1::Nil))(1) & notR(1) &
+            useAt("<> diamond", PosInExpr(1::Nil))(-2) & notL(-2) &
+            TactixLibrary.generalize("!p_(|t_|)<=0".asFormula)(1) & Idioms.<(closeId, useAt(lessEqual)(-1,0::Nil) & prop & done),
+          DW(1) &
+            TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(cohideR(1) & boxTrue(1), prop & done) /* TODO: Goedel? */)
+      )
+  )
+
+  /**
+    * {{{Axiom "open invariant closure >".
+    *    ([{c&q}]p>0 <-> [{c&q&p>=0}]p>0) <- p>=0
+    * End.
+    * }}}
+    */
+  lazy val openInvariantClosure = derivedAxiom("open invariant closure >",
+    "==>([{c_{|t_|}&q_(|t_|)}]p_(|t_|)>0 <-> [{c_{|t_|}&q_(|t_|)&p_(|t_|)>=0}]p_(|t_|)>0) <- p_(|t_|)>=0".asSequent,
+      implyR(1) &
+        useAt("[] box", PosInExpr(1::Nil))(1,0::Nil) &
+        useAt("[] box", PosInExpr(1::Nil))(1,1::Nil) &
+        useAt(notGreater)(1,0::0::1::Nil) &
+        prop & Idioms.<(
+        useAt(leaveWithinClosed, PosInExpr(1::0::Nil))(1) & Idioms.<(
+          useAt("<> diamond", PosInExpr(1::Nil))(1) & useAt("<> diamond", PosInExpr(1::Nil))(-2) & prop &
+            DW(1) & generalize("!p_(|t_|)=0".asFormula)(1) & Idioms.<(closeId, useAt(greaterEqual)(1, 0::1::Nil) & prop & done),
+          closeId),
+        useAt(leaveWithinClosed, PosInExpr(1::0::Nil))(-2) & Idioms.<(
+          useAt("<> diamond", PosInExpr(1::Nil))(1) & useAt("<> diamond", PosInExpr(1::Nil))(-2) & prop &
+            generalize("!!p_(|t_|)>0".asFormula)(1) & Idioms.<(closeId, useAt(gtzImpNez)(-1,0::0::Nil) & useAt(notNotEqual)(-1,0::Nil) & closeId),
+          closeId)
+      )
+    )
+
+  /**
     * {{{Axiom "DCd diamond differential cut".
     *   (<{c&q(||)}>p(||) <-> <{c&(q(||)&r(||))}>p(||)) <- [{c&q(||)}]r(||)
     *   // (<x'=f(x)&q(x); >p(x) <-> <x'=f(x)&(q(x)&r(x));>p(x)) <- [x'=f(x)&q(x);]r(x) THEORY
@@ -2432,6 +2501,17 @@ object DerivedAxioms extends Logging {
   lazy val lessEqual = derivedAxiom("<=", Sequent(IndexedSeq(), IndexedSeq("(f_()<=g_()) <-> ((f_()<g_()) | (f_()=g_()))".asFormula)),
     allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
     byUS(proveBy("\\forall y \\forall x (x<=y <-> (x<y | x=y))".asFormula, TactixLibrary.RCF))
+  )
+
+  /**
+    * {{{Axiom ">=".
+    *   (f()>=g()) <-> ((f()>g()) | (f()=g()))
+    * End.
+    * }}}
+    */
+  lazy val greaterEqual = derivedAxiom(">=", Sequent(IndexedSeq(), IndexedSeq("(f_()>=g_()) <-> ((f_()>g_()) | (f_()=g_()))".asFormula)),
+    allInstantiateInverse(("f_()".asTerm, "x".asVariable), ("g_()".asTerm, "y".asVariable))(1) &
+      byUS(proveBy("\\forall y \\forall x (x>=y <-> (x>y | x=y))".asFormula, TactixLibrary.RCF))
   )
 
   /**
