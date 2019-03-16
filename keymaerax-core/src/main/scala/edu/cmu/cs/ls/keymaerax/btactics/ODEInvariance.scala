@@ -208,14 +208,15 @@ object ODEInvariance {
           dR(GreaterEqual(lie,Number(0)),false)(pos) <(
             //left open for outer tactic
             skip,
-            //TODO: this may fail on consts -- check
             cohideOnlyL('Llast) &
               //This is a special case where we don't want full DI, because we already have everything
-              cohideOnlyR(pos) & dI('diffInd)(1) <(
-              useAt(geq)(1) & orR(1) & closeId,
-              cohideOnlyL('Llast) & SaturateTactic(Dassignb(1)) & implyRi &
-                useAt(fastGeqCheck,PosInExpr(1::Nil))(1) & timeoutQE
-            )
+              cohideOnlyR(pos) &
+              Dconstify(
+                dI('diffInd)(1) <(
+                  useAt(geq)(1) & orR(1) & closeId,
+                  cohideOnlyL('Llast) & SaturateTactic(Dassignb(1)) & implyRi &
+                  useAt(fastGeqCheck,PosInExpr(1::Nil))(1) & timeoutQE
+              ))(1)
           )
         ))
   })
@@ -225,7 +226,7 @@ object ODEInvariance {
     if (bound <= 0)
       useAt(contAx,PosInExpr(1::Nil))(1) & closeId
     else //Could also make this fallback to the continuity step for early termination
-      //DebuggingTactics.print("start") &
+      //DebuggingTactics.print("start "+bound) &
       andL(-1) & lpstep(1)< (
         hideL(-2) & useAt(geq)(-1) & closeId,
         hideL(-1) & implyL(-1) & <(closeId, hideL(-2) & lpgeq(bound-1))
