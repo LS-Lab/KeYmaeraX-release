@@ -353,11 +353,13 @@ trait UnifyUSCalculus {
     * }}}
     *
     * @author Andre Platzer
+    * @param codeName The unique alphanumeric identifier for this (derived) axiom use.
     * @param fact the fact to use to simplify at the indicated position of the sequent
     * @param key the part of the Formula fact to unify the indicated position of the sequent with
     * @param inst Transformation for instantiating additional unmatched symbols that do not occur in fact(key).
     *   Defaults to identity transformation, i.e., no change in substitution found by unification.
     *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
+    * @param serializeByCodeName
     * @example useAt("[a;++b;]p(||)<->[a;]p(||)&[b;]p(||)", PosInExpr(0::Nil), byUS("[;] compose"))
     * applied to the indicated 1::1::Nil of
     * [x:=1;][{x'=22}] [x:=2*x;++x:=0;]x>=0
@@ -370,19 +372,23 @@ trait UnifyUSCalculus {
   private[this] def useAt(codeName: String, fact: ProvableSig, key: PosInExpr,
             inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")),
             serializeByCodeName: Boolean = false): DependentPositionTactic = {
+    //@todo change useAt call hierarchy by passing AxiomInfo so that it's clear where AxiomIndex key data comes from and faster.
+    //@todo info.linear only holds for default key, not if a noncanonical key has been passed along.
+    val info = AxiomInfo.ofCodeName(codeName)
     val (name, inputs) =
       if (serializeByCodeName) (codeName, Nil)
-      else {
-        val info = AxiomInfo.ofCodeName(codeName)
+      else
         ("useAt", if (AxiomIndex.axiomIndex(info.canonicalName)._1 == key) info.canonicalName::Nil else info.canonicalName::key.prettyString.substring(1)::Nil)
-      }
     new DependentPositionWithAppliedInputTactic(name, inputs) {
       private val (keyCtx: Context[_], keyPart) = fact.conclusion.succ.head.at(key)
 
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           val (ctx, expr) = sequent.at(pos)
-          val subst = inst(matcher.unifiable(keyPart, expr))
+          val subst = if (info.linear)
+            inst(LinearMatcher.unifiable(keyPart, expr))
+          else
+            inst(matcher.unifiable(keyPart, expr))
           logger.debug("Doing a useAt(" + fact.prettyString + ")\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst)
           Predef.assert(!RECHECK || expr == subst(keyPart), "unification matched left successfully\n  unify:   " + expr + "\n  against: " + keyPart + "\n  by:      " + subst + "\n  gave:    " + subst(keyPart) + "\n  that is: " + keyPart + " instantiated by " + subst)
           //val keyCtxMatched = Context(subst(keyCtx.ctx))
