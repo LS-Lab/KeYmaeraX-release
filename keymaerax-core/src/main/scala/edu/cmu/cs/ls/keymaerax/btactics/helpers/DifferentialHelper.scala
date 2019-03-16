@@ -297,6 +297,8 @@ object DifferentialHelper {
         else
           Times(Times(n,Power(l,Number(n.value-1))),derive(l,odes))
       case Power(l,n:Number) if n.value == 0 => Number(0)
+      case Power(l, n: Number) if n.value < 0 => derive(Divide(Number(1), Power(l, Number(-n.value))), odes)
+      case Power(l, Neg(n: Number)) => derive(Power(l, Number(-n.value)), odes)
       case Divide(l,r) => // (l/r)' = (l'r - l r')/(r^2)
         Divide(Minus(Times(derive(l,odes),r),Times(l,derive(r,odes))), Times(r,r))
       case Plus(l,r) => // (l+r)' = l'+r'

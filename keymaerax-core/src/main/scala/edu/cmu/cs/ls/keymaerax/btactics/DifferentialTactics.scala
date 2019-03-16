@@ -1596,4 +1596,181 @@ private object DifferentialTactics extends Logging {
     result
   }
 
+  // TODO: these Lemmas are just the symmetric versions of some DerivedAxioms.
+  // Using PosInExpr(1::Nil) as key in chaseCustom does not seem to work.
+  private lazy val minPosAnd = remember("min(f_(), g_())>0<->f_()>0 & g_()>0".asFormula, QE & done)
+  private lazy val minNonnegAnd = remember("min(f_(), g_())>=0<->f_()>=0 & g_()>=0".asFormula, QE & done)
+  private lazy val maxPosOr = remember("max(f_(), g_())>0<->f_()>0 | g_()>0".asFormula, QE & done)
+  private lazy val maxNonnegOr = remember("max(f_(), g_())>=0<->f_()>=0 | g_()>=0".asFormula, QE & done)
+  private lazy val minusPos = remember("f_()-g_()>0 <-> f_()>g_()".asFormula, QE & done)
+  private lazy val minusNonneg = remember("f_()-g_()>=0 <-> f_()>=g_()".asFormula, QE & done)
+  /** chases min/max Less/LessEqual 0 to conjunctions and disjunctions */
+  val chaseMinMaxInequalities : DependentPositionTactic = chaseCustom({
+    case Greater(FuncOf(m, _), Number(n)) if m == minF =>
+      (minPosAnd.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)::Nil
+    case GreaterEqual(FuncOf(m, _), Number(n)) if m == minF =>
+      (minNonnegAnd.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)::Nil
+    case Greater(FuncOf(m, _), Number(n)) if m == maxF =>
+      (maxPosOr.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)::Nil
+    case GreaterEqual(FuncOf(m, _), Number(n)) if m == maxF =>
+      (maxNonnegOr.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)::Nil
+    case _ => Nil
+  })
+
+  private def interiorImplication: DependentTactic = "ANON" by { (seq: Sequent) =>
+    require (seq.succ.length == 1)
+    require (seq.ante.length == 1)
+    (seq.ante(0), seq.succ(0)) match {
+      case (And(p, q), And(r, s)) =>
+        andL(-1) & andR(1) & Idioms.<(
+          hideL(-2) & interiorImplication,
+          hideL(-1) & interiorImplication
+        )
+      case (Or(p, q), Or(r, s)) =>
+        orR(1) & orL(-1) & Idioms.<(
+          hideR(2) & interiorImplication,
+          hideR(1) & interiorImplication
+        )
+      case (Less(a, b), LessEqual(c, d)) if a == c && b == d => useAt("<=")(1) & orR(1) & closeId
+      case (Greater(a, b), GreaterEqual(c, d)) if a == c && b == d => useAt(">=")(1) & orR(1) & closeId
+      case (False, _) => closeF
+      case (x, y) if x == y => closeId
+      case _ =>
+        throw new BelleThrowable("strengthenInequalities expected ante and succ of same shape, but got " + seq)
+    }
+  }
+
+  /**
+    * Strengthens the postcondition to its interior and cuts in its closure
+    * (provided the closure holds initially).
+    *
+    * G |- [{ode&p&closure(q)}]interior(q)           G |- closure(q)
+    * ----------------------------------------------------------------dCClosure
+    * G |- [{ode&p}]q
+    *
+    * interior(q) and closure(q) are wrt. to the negation normal form (NNF) of q
+    * @see [[FormulaTools.interior]]
+    * @see [[FormulaTools.closure]]
+    *
+    */
+  val dCClosure: DependentTactic = "dCClosure" by { seq: Sequent =>
+    if (seq.succ.length != 1) throw new BelleThrowable("dCClosure expects a single succedent")
+    val (ode, p_fml, q_fml): (DifferentialProgram, Formula, Formula) = seq.succ(0) match {
+      case Box(ODESystem(ode, p_fml), q_fml) => (ode, p_fml, q_fml)
+      case _ =>
+        throw new BelleThrowable("dCClosure expects succedent of shape [{ode&p}]q")
+    }
+    // TODO: several of these local tactics might be useful in a more general setting
+    def interiorPostBox = "ANON" by { (seq: Sequent) =>
+      require (seq.succ.length == 1)
+      seq.succ(0) match {
+        case Box(a, post) =>
+          generalize(FormulaTools.interior(post))(1) & Idioms.<(skip,
+            interiorImplication
+          )
+        case x =>
+          throw new BelleThrowable("interiorPostcondition expected a Box but got " + x)
+      }
+    }
+    def normalizeAt(nrmlz : Formula => (Formula,Option[ProvableSig])) : DependentPositionTactic = "ANON" by { (pos: Position, seq: Sequent) =>
+      seq.sub(pos) match {
+        case Some(fml: Formula) =>
+          nrmlz(fml) match {
+            case (a, Some(prv)) =>
+              useAt(prv)(pos)
+            case _ =>
+              skip
+          }
+        case x =>
+          throw new BelleThrowable("normalizeAt expected Some Formula but got " + x)
+      }
+    }
+    val interior = FormulaTools.interior(q_fml)
+    val closure = FormulaTools.closure(q_fml)
+
+    /* Position of the formula corresponding to the left subgoal after cutting it in. */
+    val leftPosition = AntePosition(seq.ante.length + 2)
+    /* Position of the formula corresponding to the right subgoal after cutting it in. */
+    val rightPosition = AntePosition(seq.ante.length + 1)
+    /* cut right subgoal */
+    cut(closure) & Idioms.<(
+      /* cut left subgoal */
+      cut(Box(ODESystem(ode, And(p_fml, closure)), interior)) & Idioms.<(
+        normalizeAt(SimplifierV3.semiAlgNormalize)(1, 1::Nil) &
+          interiorPostBox &
+          normalizeAt(SimplifierV3.maxMinGtNormalize)(1, 1::Nil) &
+          useAt("open invariant closure >")(1) & Idioms.<(
+            chaseMinMaxInequalities(1, 1::Nil) &
+              normalizeAt(SimplifierV3.semiAlgNormalize)(leftPosition ++ PosInExpr(1::Nil)) &
+              chaseMinMaxInequalities(1, 0::1::1::Nil) &
+              normalizeAt(SimplifierV3.semiAlgNormalize)(leftPosition ++ PosInExpr(0::1::1::Nil)) &
+              closeId,
+            chaseMinMaxInequalities(1) &
+              normalizeAt(SimplifierV3.semiAlgNormalize)(rightPosition) &
+              closeId),
+        /* leave only left subgoal */
+        hideR(1) & hideL(rightPosition)),
+      /* leave only right subgoal */
+      hideR(1))
+  }
+
+  /**
+    * assume closure of postcondition for proof of invariant interior
+    *
+    * G, p |- [{ode&p}](closure(q)->(interior(q))')          G |- interior(q)
+    * ------------------------------------------------------------------------dIClosure
+    * G |- [{ode&p}]q
+    *
+    * interior(q) and closure(q) are wrt. to the negation normal form (NNF) of q
+    * @see [[FormulaTools.interior]]
+    * @see [[FormulaTools.closure]]
+    *
+    */
+  val dIClosure: DependentTactic = "dIClosure" by { seq: Sequent =>
+    if (seq.succ.length != 1) throw new BelleThrowable("dCClosure expects a single succedent")
+    val (ode, p_fml, q_fml): (DifferentialProgram, Formula, Formula) = seq.succ(0) match {
+      case Box(ODESystem(ode, p_fml), q_fml) => (ode, p_fml, q_fml)
+      case _ =>
+        throw new BelleThrowable("dCClosure expects succedent of shape [{ode&p}]q")
+    }
+    val interior = FormulaTools.interior(q_fml)
+    val closure = FormulaTools.closure(q_fml)
+
+    /* Position of the formula corresponding to the left subgoal after cutting it in. */
+    val leftPosition = AntePosition(seq.ante.length + 2)
+    /* Position of the formula corresponding to the right subgoal after cutting it in. */
+    val rightPosition = AntePosition(seq.ante.length + 1)
+    /* cut right subgoal */
+    cut(interior) & Idioms.<(
+      /* cut left subgoal */
+      cut(Imply(p_fml, Box(ODESystem(ode, p_fml), Imply(closure,DifferentialFormula(interior))))) & Idioms.<(
+        DifferentialTactics.dCClosure & Idioms.<(
+          DI(1) & implyR(1) & andL('Llast) & implyL(leftPosition) & Idioms.<(
+            closeId,
+            andR(1) & Idioms.<(
+              closeId,
+              DW(1) & diffRefine(p_fml)(1) & Idioms.<(
+                TactixLibrary.generalize(Imply(closure,DifferentialFormula(interior)))(1) & Idioms.<(
+                  closeId,
+                  implyR(1) & andL('Llast) & implyL(-1) & Idioms.<(
+                    closeId,
+                    closeId
+                  )
+                ),
+                DW(1) & TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(
+                  cohideR(1) & boxTrue(1),
+                  implyR(1) & andL('Llast) & closeId
+                )
+              )
+            )
+          ),
+          cohideOnlyL(rightPosition) & interiorImplication & done
+        ),
+        /* leave only left subgoal */
+        hideR(1) & hideL(rightPosition) & implyR(1)
+      ),
+      /* leave only right subgoal */
+      hideR(1)
+    )
+  }
 }
