@@ -224,7 +224,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   it should "associate correctly" in {
     round trip "\\forall x ((x<=y & y<=z) & z<0)".asFormula
     KeYmaeraToMathematica("5--2".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Subtract"),
-      Array(new MExpr(5), new MExpr(-2)))
+      Array(new MExpr(BigInt(5).bigInteger), new MExpr(BigInt(-2).bigInteger)))
   }
 
   it should "convert Apply()" in {
@@ -307,22 +307,19 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "convert decimal to rational" in {
-    KeYmaeraToMathematica("0.1".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Rational"), Array(new MExpr(1), new MExpr(10)))
+    KeYmaeraToMathematica("0.1".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Rational"), Array(new MExpr(BigInt(1).bigInteger), new MExpr(BigInt(10).bigInteger)))
     MathematicaToKeYmaera(KeYmaeraToMathematica("0.1".asTerm) ) shouldBe "1/10".asTerm
-    KeYmaeraToMathematica("1.5".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Rational"), Array(new MExpr(15), new MExpr(10)))
+    KeYmaeraToMathematica("1.5".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Rational"), Array(new MExpr(BigInt(15).bigInteger), new MExpr(BigInt(10).bigInteger)))
     MathematicaToKeYmaera(KeYmaeraToMathematica("1.5".asTerm) ) shouldBe "15/10".asTerm
-    KeYmaeraToMathematica("3.033".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Rational"), Array(new MExpr(3033), new MExpr(1000)))
+    KeYmaeraToMathematica("3.033".asTerm) shouldBe new MExpr(new MExpr(Expr.SYMBOL, "Rational"), Array(new MExpr(BigInt(3033).bigInteger), new MExpr(BigInt(1000).bigInteger)))
     MathematicaToKeYmaera(KeYmaeraToMathematica("3.033".asTerm) ) shouldBe "3033/1000".asTerm
   }
 
-  it should "refuse to convert non-long numbers" in {
-    KeYmaeraToMathematica(Number(Long.MaxValue)) shouldBe new MExpr(Long.MaxValue)
-    KeYmaeraToMathematica(Number(Long.MinValue)) shouldBe new MExpr(Long.MinValue)
-    the [ConversionException] thrownBy KeYmaeraToMathematica(Number(Number(Long.MaxValue).value + 1)) should have message
-      "Number is neither long nor encodable as rational of longs: " + (Number(Long.MaxValue).value + 1).toString
-    the [ConversionException] thrownBy KeYmaeraToMathematica(Number(Number(Long.MinValue).value - 1)) should have message
-      "Number is neither long nor encodable as rational of longs: " + (Number(Long.MinValue).value - 1).toString
-    the [ConversionException] thrownBy KeYmaeraToMathematica(Number(Double.MaxValue)) should have message
-      "Number is neither long nor encodable as rational of longs: 179769313486231570000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+  it should "convert big (non-long) numbers" in {
+    KeYmaeraToMathematica(Number(Long.MaxValue)) shouldBe new MExpr(BigInt(Long.MaxValue).bigInteger)
+    KeYmaeraToMathematica(Number(Long.MinValue)) shouldBe new MExpr(BigInt(Long.MinValue).bigInteger)
+    KeYmaeraToMathematica(Number(Number(Long.MaxValue).value + 1)) shouldBe new MExpr((BigInt(Long.MaxValue)+1).bigInteger)
+    KeYmaeraToMathematica(Number(Number(Long.MinValue).value - 1)) shouldBe new MExpr((BigInt(Long.MinValue)-1).bigInteger)
+    KeYmaeraToMathematica(Number(Double.MaxValue)) shouldBe new MExpr(scala.math.BigDecimal(Double.MaxValue).toBigIntExact().get.bigInteger)
   }
 }
