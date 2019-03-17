@@ -1,3 +1,7 @@
+/**
+  * Copyright (c) Carnegie Mellon University. CONFIDENTIAL
+  * See LICENSE.txt for the conditions of this license.
+  */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -6,12 +10,22 @@ import scala.collection.immutable._
 
 /**
   * LinearMatcher(shape, input) matches second argument `input` against the LINEAR pattern `shape` of the first argument but not vice versa.
-  * Matcher leaves input alone and only substitutes into shape.
+  * Matcher leaves input alone and only substitutes into linear shape.
   *
   * Linear matchers require linear shapes, so no symbol can occur twice in the shape.
-  * Or if a symbol does occur twice, then it is assumed that the identical match is found.
+  * If a symbol does occur twice, it is assumed that the identical match is found in all use cases,
+  * which is a strong assumption and can lead to unpredictable behavior.
   * Implemented by a fast single pass.
   * Possibly depends on using straight [[USubstRenOne]]
+  *
+  * @example Matching the formula on the right against a linear pattern shape
+  *          {{{
+  *           LinearMatcher.unify("[a;](p(||)&q(||))".asFormula, "[x:=2*x;{x'=5}](0<=x&x>=y)".asFormula)
+  *          }}}
+  * @example Except when lucky, nonlinear patterns will not be matched correctly by LinearMatcher even if they are unifiable.
+  *          {{{
+  *           LinearMatcher.unify("p(f())<->[x:=f()]p(x)".asFormula, "(2*x)^2>=2*x<->[x:=2*x;]x^2>=x".asFormula)
+  *          }}}
   * @author Andre Platzer
   */
 object LinearMatcher extends SchematicUnificationMatch {
@@ -28,7 +42,8 @@ object LinearMatcher extends SchematicUnificationMatch {
   }
 
   /** Composition of renaming substitution representations: compose(after, before) gives the representation of `after` performed after `before`. */
-  override protected def compose(after: List[(Expression, Expression)], before: List[(Expression, Expression)]): List[(Expression, Expression)] = before ++ after
+  override protected def compose(after: List[(Expression, Expression)], before: List[(Expression, Expression)]): List[(Expression, Expression)] =
+  before ++ after
 
   /** unifies(s1,s2, t1,t2) unifies (s1,s2) against (t1,t2) by matching.
     * Note: because this is for matching purposes, the unifier u1 is not applied to t2 on the right premise.

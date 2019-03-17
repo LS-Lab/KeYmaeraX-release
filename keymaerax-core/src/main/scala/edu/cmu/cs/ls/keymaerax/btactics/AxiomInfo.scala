@@ -1355,14 +1355,18 @@ object ProvableInfo {
 trait AxiomInfo extends ProvableInfo {
   /** The valid formula that this axiom represents */
   def formula: Formula
-  /** `true` indicates that the key of this axiom can be matched linearly [[LinearMatcher]] */
+  /** `true` indicates that the key of this axiom can be matched linearly [[LinearMatcher]].
+    * For completeness, this linearity declaration should be consistent with the default key from [[AxiomIndex.axiomFor()]]
+    * @see [[LinearMatcher]] */
   val linear: Boolean
 }
 
 /** Meta-Information for an axiom from the prover core
   * @see [[AxiomBase]]
+  * @see [[DerivedAxiomInfo]]
   */
-case class CoreAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, override val linear: Boolean, expr: Unit => DependentPositionTactic) extends AxiomInfo {
+case class CoreAxiomInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, override val linear: Boolean, expr: Unit => DependentPositionTactic)
+  extends AxiomInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory
   def belleExpr = codeName by ((pos:Position, seq:Sequent) => expr ()(pos))
@@ -1377,8 +1381,10 @@ case class CoreAxiomInfo(override val canonicalName:String, override val display
 }
 
 /** Information for a derived axiom proved from the core
-  * @see [[DerivedAxioms]] */
-case class DerivedAxiomInfo(override val canonicalName: String, override val display: DisplayInfo, override val codeName: String, override val linear: Boolean, expr: Unit => DependentPositionTactic) extends AxiomInfo with StorableInfo {
+  * @see [[DerivedAxioms]]
+  * @see [[CoreAxiomInfo]] */
+case class DerivedAxiomInfo(override val canonicalName: String, override val display: DisplayInfo, override val codeName: String, override val linear: Boolean, expr: Unit => DependentPositionTactic)
+  extends AxiomInfo with StorableInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory.TacticForNameFactory
   def belleExpr: BelleExpr = codeName by ((pos: Position, _: Sequent) => expr()(pos))
@@ -1414,7 +1420,8 @@ object DerivedAxiomInfo {
 // tactics
 
 /** Meta-information on a tactic performing a proof step (or more) */
-class TacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any, needsTool: Boolean = false, override val needsGenerator: Boolean = false) extends DerivationInfo {
+class TacticInfo(override val codeName: String, override val display: DisplayInfo, expr: Unit => Any, needsTool: Boolean = false, override val needsGenerator: Boolean = false)
+  extends DerivationInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
   val canonicalName = codeName
@@ -1444,8 +1451,10 @@ case class InputTwoPositionTacticInfo(override val codeName: String, override va
 }
 
 /** Information for an axiomatic rule
-  * @see [[AxiomBase]] */
-case class AxiomaticRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String) extends ProvableInfo {
+  * @see [[AxiomBase]]
+  * @see [[DerivedRuleInfo]] */
+case class AxiomaticRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String)
+  extends ProvableInfo {
   // lazy to avoid circular initializer call
   lazy val expr = TactixLibrary.by(provable, codeName)
   DerivationInfo.assertValidIdentifier(codeName)
@@ -1455,8 +1464,10 @@ case class AxiomaticRuleInfo(override val canonicalName:String, override val dis
 }
 
 
-/** Information for a derived rule proved from the core */
-case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any) extends ProvableInfo with StorableInfo {
+/** Information for a derived rule proved from the core
+  * @see [[AxiomaticRuleInfo]] */
+case class DerivedRuleInfo(override val canonicalName:String, override val display: DisplayInfo, override val codeName: String, expr: Unit => Any)
+  extends ProvableInfo with StorableInfo {
   DerivationInfo.assertValidIdentifier(codeName)
   def belleExpr = expr()
   lazy val provable: ProvableSig = DerivedAxioms.derivedAxiomOrRule(canonicalName)
