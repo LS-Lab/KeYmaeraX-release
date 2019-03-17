@@ -91,7 +91,7 @@ trait UnifyUSCalculus {
     }
   }
   /** by(lemma) uses the given Lemma literally to continue or close the proof (if it fits to what has been proved) */
-  def by(lemma: Lemma)        : BelleExpr = by(lemma.fact)
+  def by(lemma: Lemma)                     : BelleExpr = by(lemma.fact)
   def by(lemma: Lemma, name:String)        : BelleExpr = by(lemma.fact, name:String)
   /**
     * by(name,subst) uses the given axiom or axiomatic rule under the given substitution to prove the sequent.
@@ -224,11 +224,13 @@ trait UnifyUSCalculus {
   def useAt(axiom: String, key: PosInExpr): DependentPositionTactic =
     useAt(ProvableInfo(axiom), key)
   def useAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic =
-    useAt(axiom, AxiomIndex.axiomIndex(axiom)._1, inst)
-  /** useAt(axiom)(pos) uses the given (derived) axiom at the given position in the sequent (by unifying and equivalence rewriting). */
-  def useAt(axiom: String): DependentPositionTactic = {
-    val info = ProvableInfo(axiom)
-    useAt(info.codeName, info.provable, AxiomIndex.axiomIndex(axiom)._1,
+    useAt(ProvableInfo(axiom), inst)
+  /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
+  def useAt(axiom: String): DependentPositionTactic =
+    useAt(ProvableInfo(axiom))
+  /** useAt(axiom)(pos) uses the given (derived) axiom/axiomatic rule at the given position in the sequent (by unifying and equivalence rewriting). */
+  def useAt(axiom: ProvableInfo): DependentPositionTactic = {
+    useAt(axiom.codeName, axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear,
       us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")),
       serializeByCodeName = true)
   }
@@ -273,6 +275,8 @@ trait UnifyUSCalculus {
   def US(fact: ProvableSig): DependentTactic = new SingleGoalDependentTactic("US") {
     override def computeExpr(sequent: Sequent): BelleExpr = {
       logger.debug("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " ... checking")
+      //@todo is there a way of flagging a fact that comes from ProvableInfo with ProvableInfo.linear=true for faster LinearMatcher?
+      //@note Probably not worth it, because all axiomatic rules in AxiomBase are nonlinear
       val subst = matcher(fact.conclusion, sequent)
       logger.debug("  US(" + fact.conclusion.prettyString + ")\n  unify: " + sequent + " matches against\n  form:  " + fact.conclusion + " by " + subst)
       if (sequent != subst(fact.conclusion)) throw BelleUnsupportedFailure("unification computed an incorrect unifier\nunification should match:\n  unify: " + sequent + "\n  gives: " + subst(fact.conclusion) + " when matching against\n  form:  " + fact.conclusion + "\n  by:    " + subst)
@@ -326,11 +330,13 @@ trait UnifyUSCalculus {
 
 
   def useAt(axiom: ProvableInfo, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
-    useAt(axiom.codeName, axiom.provable, key, inst)
+    useAt(axiom.codeName, axiom.provable, key, linear=false, inst)
   def useAt(axiom: ProvableInfo, key: PosInExpr): DependentPositionTactic =
-    useAt(axiom.codeName, axiom.provable, key, us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
+    useAt(axiom.codeName, axiom.provable, key, linear=false, us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
+  def useAt(axiom: ProvableInfo, inst: Option[Subst]=>Subst): DependentPositionTactic =
+    useAt(axiom.codeName, axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear, inst)
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
-    useAt("ANON", fact, key, inst, serializeByCodeName=true)
+    useAt("ANON", fact, key, linear=false, inst, serializeByCodeName=true)
   private[btactics] def useAt(fact: ProvableSig, key: PosInExpr): DependentPositionTactic =
     useAt(fact, key, (us: Option[Subst])=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
   private[btactics] def useAt(fact: ProvableSig): DependentPositionTactic =
@@ -366,6 +372,7 @@ trait UnifyUSCalculus {
     * @param codeName The unique alphanumeric identifier for this (derived) axiom use.
     * @param fact the fact to use to simplify at the indicated position of the sequent
     * @param key the part of the Formula fact to unify the indicated position of the sequent with
+    * @param linear `true` indicates that fact(key) is a linear pattern, so fast [[LinearMatcher]] suffices.
     * @param inst Transformation for instantiating additional unmatched symbols that do not occur in fact(key).
     *   Defaults to identity transformation, i.e., no change in substitution found by unification.
     *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
@@ -380,15 +387,15 @@ trait UnifyUSCalculus {
     * @todo could directly use prop rules instead of CE if key close to HereP if more efficient.
     */
   private[this] def useAt(codeName: String, fact: ProvableSig, key: PosInExpr,
+            linear: Boolean,
             inst: Option[Subst]=>Subst = us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")),
             serializeByCodeName: Boolean = false): DependentPositionTactic = {
-    //@todo change useAt call hierarchy by passing AxiomInfo so that it's clear where AxiomIndex key data comes from and faster.
-    //@todo info.linear only holds for default key, not if a noncanonical key has been passed along.
-    val info = AxiomInfo.ofCodeName(codeName)
     val (name, inputs) =
       if (serializeByCodeName) (codeName, Nil)
-      else
-        ("useAt", if (AxiomIndex.axiomIndex(info.canonicalName)._1 == key) info.canonicalName::Nil else info.canonicalName::key.prettyString.substring(1)::Nil)
+      else {
+        val info = AxiomInfo.ofCodeName(codeName)
+        ("useAt", if (AxiomIndex.axiomIndex(info.canonicalName)._1 == key) info.canonicalName :: Nil else info.canonicalName :: key.prettyString.substring(1) :: Nil)
+      }
     new DependentPositionWithAppliedInputTactic(name, inputs) {
       //@note performance impact
       import BelleExpr.RECHECK
@@ -398,7 +405,7 @@ trait UnifyUSCalculus {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           val (ctx, expr) = sequent.at(pos)
-          val subst = if (info.linear)
+          val subst = if (linear)
             inst(LinearMatcher.unifiable(keyPart, expr))
           else
             inst(matcher.unifiable(keyPart, expr))
@@ -452,7 +459,7 @@ trait UnifyUSCalculus {
           debug("start useAt " + p) & cutLR(C(subst(other)))(p.top) < (
             //@todo would already know that ctx is the right context to use and subst(left)<->subst(right) is what we need to prove next, which results by US from left<->right
             //@todo could optimize equivalenceCongruenceT by a direct CE call using context ctx
-            /* use cut */ debug("    use cut") partial
+            /* use cut */ debug("    use cut")
             ,
             /* show cut */
             debug("    show cut") &
@@ -466,7 +473,7 @@ trait UnifyUSCalculus {
               else if (other.kind == TermKind) CQ(p.inExpr) & debug("     ...CQ done")
               else throw new IllegalArgumentException("Don't know how to handle kind " + other.kind + " of " + other)) &
               by(subst.toForward(fact))
-          ) & debug("end   useAt " + p) partial
+          ) & debug("end   useAt " + p)
         }
 
         def implyStep(other: Expression): BelleExpr = {
@@ -476,7 +483,7 @@ trait UnifyUSCalculus {
           }
           DebuggingTactics.debug("useAt implyStep") &
             cutLR(C(subst(other)))(p.topLevel) < (
-              /* use */ ident partial,
+              /* use */ ident,
               /* show */ cohide & CMon(p.inExpr) & by(subst.toForward(fact))
             )
         }
@@ -544,7 +551,7 @@ trait UnifyUSCalculus {
 
               val remKey: PosInExpr = key.child
               require(remFact.conclusion(SuccPos(0)).at(remKey)._2 == subst(keyPart), "position guess within fact are usually expected to succeed " + remKey + " in\n" + remFact + "\nis remaining from " + key + " in\n" + fact)
-              UnifyUSCalculus.this.useAt("useAtRem", remFact, remKey, inst, serializeByCodeName=true)(p)
+              UnifyUSCalculus.this.useAt("useAtRem", remFact, remKey, linear=false, inst, serializeByCodeName=true)(p)
             } catch {
               case err: Throwable =>
                 //@todo if global proof of prereq is unsuccessful could also rewrite (DotFormula<->bla)<-prereq to prereq&bla -> DotFormula and use the latter.
@@ -928,7 +935,7 @@ trait UnifyUSCalculus {
             })
         }
         cutLR(ctx(other))(pos.top) <(
-          /* use */ ident partial,
+          /* use */ ident,
           /* show */ cohideR(cutPos) & //assertT(0,1) &
           equivify & /*commuteEquivR(SuccPosition(0)) &*/
           commute &
@@ -996,15 +1003,17 @@ trait UnifyUSCalculus {
   )
 
 
-  /** useFor(axiom) use the given axiom forward for the selected position in the given Provable to conclude a new Provable */
-  def useFor(axiom: String): ForwardPositionTactic = useFor(axiom, AxiomIndex.axiomIndex(axiom)._1)
+  /** useFor(axiom) use the given (derived) axiom/axiomatic rule forward for the selected position in the given Provable to conclude a new Provable */
+  def useFor(axiom: String): ForwardPositionTactic = useFor(ProvableInfo(axiom))
+  /** useFor(axiom) use the given (derived) axiom/axiomatic rule forward for the selected position in the given Provable to conclude a new Provable */
+  def useFor(axiom: ProvableInfo): ForwardPositionTactic = useFor(axiom.provable, AxiomIndex.axiomIndex(axiom.canonicalName)._1, linear=axiom.linear)
 
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable */
-  def useFor(axiom: String, key: PosInExpr): ForwardPositionTactic = useFor(ProvableInfo(axiom).provable, key)
+  def useFor(axiom: String, key: PosInExpr): ForwardPositionTactic = useFor(ProvableInfo(axiom).provable, key, linear=false)
   /** useFor(axiom, key) use the key part of the given axiom forward for the selected position in the given Provable to conclude a new Provable
     * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
-  def useFor(axiom: String, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(ProvableInfo(axiom).provable, key, inst)
+  def useFor(axiom: String, key: PosInExpr, inst: Subst=>Subst): ForwardPositionTactic = useFor(ProvableInfo(axiom).provable, key, linear=false, inst)
 
   /** useExpansionFor(axiom) uses the given axiom forward to expand the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
   def useExpansionFor(axiom: String): ForwardPositionTactic = useFor(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
@@ -1319,6 +1328,7 @@ trait UnifyUSCalculus {
     * @author Andre Platzer
     * @param fact the Provable fact whose conclusion to use to simplify at the indicated position of the sequent
     * @param key the part of the fact's conclusion to unify the indicated position of the sequent with
+    * @param linear `true` indicates that fact(key) is a linear pattern, so fast [[LinearMatcher]] suffices.
     * @param inst Transformation for instantiating additional unmatched symbols that do not occur in `fact.conclusion(key)`.
     *   Defaults to identity transformation, i.e., no change in substitution found by unification.
     *   This transformation could also change the substitution if other cases than the most-general unifier are preferred.
@@ -1330,7 +1340,7 @@ trait UnifyUSCalculus {
     * @see [[useAt()]]
     * @see [[edu.cmu.cs.ls.keymaerax.btactics]]
     */
-  def useFor(fact: ProvableSig, key: PosInExpr, inst: Subst=>Subst = (us => us)): ForwardPositionTactic = {
+  def useFor(fact: ProvableSig, key: PosInExpr, linear: Boolean = false, inst: Subst=>Subst = (us => us)): ForwardPositionTactic = {
     // split key into keyCtx{keyPart} = fact
     val (keyCtx: Context[_], keyPart) = fact.conclusion(SuccPos(0)).at(key)
     logger.debug("useFor(" + fact.conclusion + ") key: " + keyPart + " in key context: " + keyCtx)
@@ -1339,7 +1349,10 @@ trait UnifyUSCalculus {
       // split proof into ctx{expr} at pos
       val (ctx, expr) = proof.conclusion.at(pos)
       // instantiated unification of expr against keyPart
-      val subst = inst(matcher(keyPart, expr))
+      val subst = if (linear)
+        inst(LinearMatcher(keyPart, expr))
+      else
+        inst(matcher(keyPart, expr))
       logger.debug("useFor(" + fact.conclusion.prettyString + ") unify: " + expr + " matches against " + keyPart + " by " + subst)
       logger.debug("useFor(" + fact.conclusion + ") on " + proof)
       Predef.assert(expr == subst(keyPart), "unification matched key successfully:\nexpr     " + expr + "\nequals   " + subst(keyPart) + "\nwhich is " + keyPart + "\ninstantiated by " + subst)
@@ -1591,7 +1604,7 @@ trait UnifyUSCalculus {
 
             val remKey: PosInExpr = key.child
             require(remFact.conclusion(SuccPos(0)).at(remKey)._2 == subst(keyPart), "position guess within fact are usually expected to succeed " + remKey + " in\n" + remFact + "\nis remaining from " + key + " in\n" + fact)
-            UnifyUSCalculus.this.useFor(remFact, remKey, inst)(pos)(proof)
+            UnifyUSCalculus.this.useFor(remFact, remKey, linear=false, inst)(pos)(proof)
 
 
           case DotFormula =>

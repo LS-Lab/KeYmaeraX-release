@@ -119,13 +119,13 @@ object DerivationInfo {
     new CoreAxiomInfo("[:=] self assign", "[:=]", "selfassignb", unsure, {case () => HilbertCalculus.useAt("[:=] self assign")}),
     new DerivedAxiomInfo("<:=> assign", AxiomDisplayInfo("<:=>", "<span class=\"k4-axiom-key\">&langle;x:=e&rangle;p(x)</span>↔p(e)"), "assignd", false, {case () => HilbertCalculus.assignd}),
     new DerivedAxiomInfo("<:=> self assign", "<:=>", "selfassignd", unsure, {case () => HilbertCalculus.useAt("<:=> self assign")}),
-    new DerivedAxiomInfo("<:=> assign equality", "<:=>", "assigndEquality", true, {case () => HilbertCalculus.useAt("<:=> assign equality")}),
+    new DerivedAxiomInfo("<:=> assign equality", "<:=>", "assigndEquality", unsure, {case () => HilbertCalculus.useAt("<:=> assign equality")}),
     new DerivedAxiomInfo("<:=> assign equality all", "<:=>", "assigndEqualityAll", unsure, {case () => HilbertCalculus.useAt("<:=> assign equality all")}),
-    new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", true, {case () => HilbertCalculus.useAt("[:=] assign equality")}),
+    new CoreAxiomInfo("[:=] assign equality", "[:=]=", "assignbeq", unsure, {case () => HilbertCalculus.useAt("[:=] assign equality")}),
     new PositionTacticInfo("assignEquality", "[:=]=", {case () => DLBySubst.assignEquality}),
     new DerivedAxiomInfo("[:=] assign exists", ("[:=]∃","[:=]exists"), "assignbexists", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.assignbImpliesExistsAxiom) }),
     new DerivedAxiomInfo("[:=] assign all", ("[:=]∀","[:=]all"), "assignball", unsure, {case () => HilbertCalculus.useAt(DerivedAxioms.forallImpliesAssignbAxiom) }),
-    new CoreAxiomInfo("[:=] assign equality exists", ("[:=]","[:=] assign exists"), "assignbequalityexists", true, {case () => HilbertCalculus.useAt("[:=] assign equality exists") }),
+    new CoreAxiomInfo("[:=] assign equality exists", ("[:=]","[:=] assign exists"), "assignbequalityexists", unsure, {case () => HilbertCalculus.useAt("[:=] assign equality exists") }),
     new InputPositionTacticInfo("assignbExistsRule",
       RuleDisplayInfo(
         "[:=] assign exists",
@@ -140,7 +140,7 @@ object DerivationInfo {
       , "Dassignb", false, {case () => HilbertCalculus.Dassignb}),
     new CoreAxiomInfo("[:*] assign nondet"
       , AxiomDisplayInfo("[:*]", "<span class=\"k4-axiom-key\">[x:=*]p(x)</span>↔∀x p(x)")
-      , "randomb", true, {case () => HilbertCalculus.randomb}),
+      , "randomb", false, {case () => HilbertCalculus.randomb}),
     new CoreAxiomInfo("[?] test"
       , AxiomDisplayInfo("[?]", "<span class=\"k4-axiom-key\">[?Q]P</span>↔(Q→P)")
       , "testb", true, {case () => HilbertCalculus.testb}),
@@ -170,13 +170,13 @@ object DerivationInfo {
     //@note the tactic I has a codeName and belleExpr, but there's no tactic that simply applies the I axiom
   //@todo why isn't the code name just "I"? And the belleExpr could be useAt("I")?
     //@todo which of the I axioms is this exactly?
-    CoreAxiomInfo("I induction", "Iind", "Iind", true, {case () => HilbertCalculus.useAt("I induction") }),
+    CoreAxiomInfo("I induction", "Iind", "Iind", unsure, {case () => HilbertCalculus.useAt("I induction") }),
     new CoreAxiomInfo("VK vacuous"
       , AxiomDisplayInfo("VK", "(p→<span class=\"k4-axiom-key\">[a]p</span>)←[a]T")
-      , "VK", true, {case () => HilbertCalculus.VK}),
+      , "VK", unsure, {case () => HilbertCalculus.VK}),
     new DerivedAxiomInfo("V vacuous"
       , AxiomDisplayInfo("V", "p→<span class=\"k4-axiom-key\">[a]p</span>")
-      , "V", true, {case () => HilbertCalculus.V}),
+      , "V", unsure, {case () => HilbertCalculus.V}),
     new CoreAxiomInfo("[]T system"
       , AxiomDisplayInfo("[]T", "[a]true")
       , "boxTrue", true, {case () => HilbertCalculus.boxTrue}),
@@ -342,10 +342,10 @@ object DerivationInfo {
 
     new CoreAxiomInfo("DE differential effect"
       , AxiomDisplayInfo("DE", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[x′=f(x)&Q][x′:=f(x)]P")
-      , "DE", true, {case () => HilbertCalculus.DE}),
+      , "DE", unsure, {case () => HilbertCalculus.DE}),
     new CoreAxiomInfo("DE differential effect (system)"
       , AxiomDisplayInfo("DE", "<span class=\"k4-axiom-key\">[{x′=F,c&Q}]P</span>↔[{c,x′=F&Q}][x′:=f(x)]P")
-      , "DEs", true, {case () => HilbertCalculus.DE}),
+      , "DEs", unsure, {case () => HilbertCalculus.DE}),
     new CoreAxiomInfo("DI differential invariance"
       , AxiomDisplayInfo("DI", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[?Q]P)←(Q→[{x′=f(x)&Q}](P)′)")
       , "DIequiv", true, {case () => HilbertCalculus.useAt("DI differential invariance")}),
@@ -454,10 +454,10 @@ object DerivationInfo {
     new PositionTacticInfo("derive", "'", {case () => HilbertCalculus.derive}),
 
     // first-order logic quantifiers
-    new CoreAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", true, {case () => HilbertCalculus.useAt("all instantiate")}),
-    new DerivedAxiomInfo("all distribute", ("∀→","all->"), "allDist", true, {case () => HilbertCalculus.allDist}),
-    new CoreAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", true, {case () => HilbertCalculus.allV}),
-    new DerivedAxiomInfo("vacuous exists quantifier", ("V∃","existsV"), "existsV", true, {case () => HilbertCalculus.existsV}),
+    new CoreAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", unsure, {case () => HilbertCalculus.useAt("all instantiate")}),
+    new DerivedAxiomInfo("all distribute", ("∀→","all->"), "allDist", unsure, {case () => HilbertCalculus.allDist}),
+    new CoreAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", unsure, {case () => HilbertCalculus.allV}),
+    new DerivedAxiomInfo("vacuous exists quantifier", ("V∃","existsV"), "existsV", unsure, {case () => HilbertCalculus.existsV}),
     new DerivedAxiomInfo("partial vacuous exists quantifier", ("pV∃","pexistsV"), "pexistsV", unsure, {case () => HilbertCalculus.useAt("partial vacuous exists quantifier")}),
 
     // more
@@ -475,13 +475,13 @@ object DerivationInfo {
     CoreAxiomInfo("dgZeroEquilibrium", "dgZeroEquilibrium", "dgZeroEquilibrium", unsure, _ => TactixLibrary.useAt("dgZeroEquilibrium")),
 
     // Derived axioms
-    new DerivedAxiomInfo("exists eliminate", ("∃e","existse"), "existse", true, {case () => HilbertCalculus.existsE}),
-    new DerivedAxiomInfo("[:=] assign update", "[:=]", "assignbup", true, {case () => HilbertCalculus.assignb}),
-    new DerivedAxiomInfo("<:=> assign update", "<:=>", "assigndup", true, {case () => HilbertCalculus.assignd}),
+    new DerivedAxiomInfo("exists eliminate", ("∃e","existse"), "existse", unsure, {case () => HilbertCalculus.existsE}),
+    new DerivedAxiomInfo("[:=] assign update", "[:=]", "assignbup", unsure, {case () => HilbertCalculus.assignb}),
+    new DerivedAxiomInfo("<:=> assign update", "<:=>", "assigndup", unsure, {case () => HilbertCalculus.assignd}),
     new DerivedAxiomInfo("<:*> assign nondet", "<:*>", "randomd", true, {case () => HilbertCalculus.randomd}),
     new DerivedAxiomInfo("[:=] assign equational", "[:=]==", "assignbequational", unsure, {case () => HilbertCalculus.assignb}),
     /* @todo replace all the axioms with useAt(axiom) */
-    new DerivedAxiomInfo("<':=> differential assign", ("<′:=>","<':=>"), "Dassignd", true, {case () => useAt(DerivedAxioms.assignDAxiom)}),
+    new DerivedAxiomInfo("<':=> differential assign", ("<′:=>","<':=>"), "Dassignd", unsure, {case () => useAt(DerivedAxioms.assignDAxiom)}),
     new DerivedAxiomInfo("DS differential equation solution", "DS", "DSnodomain", true, {case () => useAt(DerivedAxioms.DSnodomain)}),
     new DerivedAxiomInfo("Dsol& differential equation solution", "DS&", "DSddomain", true, {case () => useAt(DerivedAxioms.DSddomain)}),
     new DerivedAxiomInfo("Dsol differential equation solution", "DS", "DSdnodomain", true, {case () => useAt(DerivedAxioms.DSdnodomain)}),
@@ -505,7 +505,7 @@ object DerivationInfo {
 //    new DerivedAxiomInfo("all eliminate", "alle", "allEliminate", {case () => useAt(DerivedAxioms.allEliminateAxiom)}),
     //@note derived axiom exists eliminate not yet proven -> use core axiom instead
 //    new DerivedAxiomInfo("exists eliminate", "existse", "existsEliminate", {case () => useAt(DerivedAxioms.existsEliminate)}),
-    new DerivedAxiomInfo("\\exists& exists and", "∃∧", "existsAnd", true, {case () => useAt(DerivedAxioms.existsAndAxiom)}),
+    new DerivedAxiomInfo("\\exists& exists and", "∃∧", "existsAnd", unsure, {case () => useAt(DerivedAxioms.existsAndAxiom)}),
     new DerivedAxiomInfo("\\forall-> forall implies", "∀→", "forallImplies", unsure, {case () => useAt(DerivedAxioms.forallImpliesAxiom)}),
     new DerivedAxiomInfo("exists dual", ("∃d","existsd"), "existsDual", unsure, {case () => useAt(DerivedAxioms.existsDualAxiom)}),
     new DerivedAxiomInfo("' linear", ("l′","l'"), "Dlinear", true, {case () => useAt(DerivedAxioms.Dlinear)}),
@@ -1309,10 +1309,17 @@ sealed trait DerivationInfo {
   override def toString: String = "DerivationInfo(" + canonicalName + "," + codeName + ")"
 }
 
-/** Meta-Information for a (derived) axiom or (derived) axiomatic rule */
+/** Meta-Information for a (derived) axiom or (derived) axiomatic rule
+  * @see [[AxiomInfo]]
+  * @see [[AxiomaticRuleInfo]]
+  * @see [[DerivedRuleInfo]] */
 trait ProvableInfo extends DerivationInfo {
   /** The Provable representing this (derived) axiom or (derived) axiomatic rule */
   val provable: ProvableSig
+  /** `true` indicates that the key of this axiom/axiomatic proof rule can be matched linearly [[LinearMatcher]].
+    * For completeness, this linearity declaration must be consistent with the default key from [[AxiomIndex.axiomFor()]].
+    * @see [[LinearMatcher]] */
+  val linear: Boolean
 }
 
 /** Storable items (e.g., as lemmas) */
@@ -1351,14 +1358,11 @@ object ProvableInfo {
 }
 
 
-/** Meta-Information for an axiom or derived axiom */
+/** Meta-Information for an axiom or derived axiom
+  * @see [[edu.cmu.cs.ls.keymaerax.btactics.AxiomIndex]] */
 trait AxiomInfo extends ProvableInfo {
   /** The valid formula that this axiom represents */
   def formula: Formula
-  /** `true` indicates that the key of this axiom can be matched linearly [[LinearMatcher]].
-    * For completeness, this linearity declaration should be consistent with the default key from [[AxiomIndex.axiomFor()]]
-    * @see [[LinearMatcher]] */
-  val linear: Boolean
 }
 
 /** Meta-Information for an axiom from the prover core
@@ -1461,6 +1465,8 @@ case class AxiomaticRuleInfo(override val canonicalName:String, override val dis
   def belleExpr = expr
   lazy val provable: ProvableSig = ProvableSig.rules(canonicalName)
   override val numPositionArgs = 0
+  //@note Presently, only nonlinear shapes in core axiomatic rules in [[edu.cmu.cs.ls.keymaerax.core.AxiomBase.loadAxiomaticRules]]
+  override val linear: Boolean = false
 }
 
 
@@ -1472,6 +1478,8 @@ case class DerivedRuleInfo(override val canonicalName:String, override val displ
   def belleExpr = expr()
   lazy val provable: ProvableSig = DerivedAxioms.derivedAxiomOrRule(canonicalName)
   override val numPositionArgs = 0
+  //@note Presently, mostly nonlinear shapes in derived axiomatic rules
+  override val linear: Boolean = false
 }
 
 object DerivedRuleInfo {
