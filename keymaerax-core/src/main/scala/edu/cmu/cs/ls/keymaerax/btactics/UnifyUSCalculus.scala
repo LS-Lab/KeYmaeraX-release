@@ -320,11 +320,16 @@ trait UnifyUSCalculus {
   def uniformSubstitute(subst: USubst): BuiltInTactic = US(subst)
 
 
-  def useAt(axiom: ProvableInfo, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic = useAt(axiom.codeName, axiom.provable, key, inst)
-  def useAt(axiom: ProvableInfo, key: PosInExpr): DependentPositionTactic = useAt(axiom.codeName, axiom.provable, key, us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
-  private[btactics] def useAt(fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic = useAt("ANON", fact, key, inst, serializeByCodeName=true)
-  private[btactics] def useAt(fact: ProvableSig, key: PosInExpr): DependentPositionTactic = useAt(fact, key, (us: Option[Subst])=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
-  private[btactics] def useAt(fact: ProvableSig): DependentPositionTactic = useAt(fact, PosInExpr(0::Nil))
+  def useAt(axiom: ProvableInfo, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
+    useAt(axiom.codeName, axiom.provable, key, inst)
+  def useAt(axiom: ProvableInfo, key: PosInExpr): DependentPositionTactic =
+    useAt(axiom.codeName, axiom.provable, key, us=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
+  private[btactics] def useAt(fact: ProvableSig, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
+    useAt("ANON", fact, key, inst, serializeByCodeName=true)
+  private[btactics] def useAt(fact: ProvableSig, key: PosInExpr): DependentPositionTactic =
+    useAt(fact, key, (us: Option[Subst])=>us.getOrElse(throw new BelleThrowable("No substitution found by unification, try to patch locally with own substitution")))
+  private[btactics] def useAt(fact: ProvableSig): DependentPositionTactic =
+    useAt(fact, PosInExpr(0::Nil))
   /**
     * useAt(fact)(pos) uses the given fact at the given position in the sequent.
     * Unifies fact the left or right part of fact with what's found at sequent(pos) and use corresponding
