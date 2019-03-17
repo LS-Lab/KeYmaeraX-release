@@ -219,9 +219,12 @@ trait UnifyUSCalculus {
   /** useAt(axiom)(pos) uses the given (derived) axiom at the given position in the sequent (by unifying and equivalence rewriting).
     * @param key the optional position of the key in the axiom to unify with. Defaults to [[AxiomIndex]]
     * @param inst optional transformation augmenting or replacing the uniform substitutions after unification with additional information. */
-  def useAt(axiom: String, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic = useAt(ProvableInfo(axiom), key, inst)
-  def useAt(axiom: String, key: PosInExpr): DependentPositionTactic = useAt(ProvableInfo(axiom), key)
-  def useAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1, inst)
+  def useAt(axiom: String, key: PosInExpr, inst: Option[Subst]=>Subst): DependentPositionTactic =
+    useAt(ProvableInfo(axiom), key, inst)
+  def useAt(axiom: String, key: PosInExpr): DependentPositionTactic =
+    useAt(ProvableInfo(axiom), key)
+  def useAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic =
+    useAt(axiom, AxiomIndex.axiomIndex(axiom)._1, inst)
   /** useAt(axiom)(pos) uses the given (derived) axiom at the given position in the sequent (by unifying and equivalence rewriting). */
   def useAt(axiom: String): DependentPositionTactic = {
     val info = ProvableInfo(axiom)
@@ -231,8 +234,10 @@ trait UnifyUSCalculus {
   }
 
   /** useExpansionAt(axiom)(pos) uses the given axiom at the given position in the sequent (by unifying and equivalence rewriting) in the direction that expands as opposed to simplifies operators. */
-  def useExpansionAt(axiom: String): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
-  def useExpansionAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic = useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling, inst)
+  def useExpansionAt(axiom: String): DependentPositionTactic =
+    useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling)
+  def useExpansionAt(axiom: String, inst: Option[Subst]=>Subst): DependentPositionTactic =
+    useAt(axiom, AxiomIndex.axiomIndex(axiom)._1.sibling, inst)
 
   /*******************************************************************
     * unification and matching based auto-tactics (backward tableaux/sequent)
