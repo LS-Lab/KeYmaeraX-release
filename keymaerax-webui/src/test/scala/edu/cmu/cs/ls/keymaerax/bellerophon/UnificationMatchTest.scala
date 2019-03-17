@@ -17,10 +17,11 @@ import scala.collection.immutable._
 
 
 /**
- * Testing unifier and its limits.
+  * Testing unifier and its limits.
   *
   * @author Andre Platzer
- */
+  * @see [[UnificationMatch]]
+  */
 @SummaryTest
 @UsualTest
 class UnificationMatchTest extends SystemTestBase {

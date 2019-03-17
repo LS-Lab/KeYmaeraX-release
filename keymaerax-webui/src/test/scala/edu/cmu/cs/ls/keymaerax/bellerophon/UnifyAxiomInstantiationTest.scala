@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import edu.cmu.cs.ls.keymaerax.core.{AnyArg, Formula, UnitPredicational}
+import edu.cmu.cs.ls.keymaerax.core.{AnyArg, CoreException, Formula, UnitPredicational}
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
 import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, Suite}
@@ -15,6 +15,7 @@ import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
   * Test whether unification algorithm can instantiate axioms correctly.
   *
   * @author Andre Platzer
+  * @see [[UnificationMatch]]
   */
 @SummaryTest
 class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
@@ -30,7 +31,7 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
     new DerivedAxiomsTests().execute("The DerivedAxioms prepopulation procedure should not crash")
   }
 
-
+  /** Match given axiom directly against the given instance. */
   private def matchDirect(axiom: String, instance: Formula): Boolean = {
     val ax: Formula = AxiomInfo(axiom).formula
     val u = unify(ax, instance)
@@ -43,16 +44,28 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
     true
   }
 
+  /** Match the key of a given axiom against the given instance. */
   private def matchKey(axiom: String, instance: Formula): Boolean = {
     val ax: Formula = AxiomInfo(axiom).formula
-    val (keyCtx:Context[_],keyPart) = ax.at(AxiomIndex.axiomIndex(axiom)._1)
-    val u = unify(keyPart, instance)
-    println("unify1:  " + keyPart)
-    println("unify2:  " + instance)
-    println("unifier: " + u)
-    u(keyPart) shouldBe instance
-    //@todo this might fail when the instance requires semantic renaming
-    u.toCore(keyPart) shouldBe instance
+    val (keyCtx: Context[_], keyPart) = ax.at(AxiomIndex.axiomIndex(axiom)._1)
+    if (true) {
+      val u = unify(keyPart, instance)
+      println("unify1:  " + keyPart)
+      println("unify2:  " + instance)
+      println("unifier: " + u)
+      u(keyPart) shouldBe instance
+      //@todo this might fail when the instance requires semantic renaming
+      u.toCore(keyPart) shouldBe instance
+    }
+    if (AxiomInfo(axiom).linear) {
+      val u = LinearMatcher(keyPart, instance)
+      println("unify1:  " + keyPart)
+      println("unify2:  " + instance)
+      println("unifier: " + u)
+      u(keyPart) shouldBe instance
+      //@todo this might fail when the instance requires semantic renaming
+      u.toCore(keyPart) shouldBe instance
+    }
     true
   }
 
@@ -238,6 +251,8 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
 
   // random schematic instantiations
 
+  /** the names of schematic axioms in AxiomInfo, in reality only a subset. */
+
   private val schematicAxioms = "<> diamond" :: "[++] choice" :: "[;] compose" :: "[*] iterate" ::
     "DW base" :: "DC differential cut" :: "DE differential effect (system)" :: "DI differential invariance" ::
     "DX differential skip" ::
@@ -248,6 +263,7 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
     "K modal modus ponens" :: "I induction" ::
     "all dual" :: "all eliminate" :: "exists eliminate" ::
     Nil
+  /** the names of axioms in AxiomInfo that not quite schematic because compatibility is required, in reality only a subset. */
   private val limitedSchematicAxioms = "[:=] assign equality" :: "[:=] assign" :: "[:=] assign equality exists" ::
     "[:=] self assign" :: "[':=] differential assign" :: "[:*] assign nondet" :: "[?] test" ::
     "DE differential effect" :: "DG differential ghost" :: "DG differential ghost constant" ::
@@ -259,6 +275,9 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
     "const congruence" :: "const formula congruence" ::
     Nil
 
+  /** the names of problematic axioms, e.g., because random generators may unwittingly replace {c,d} to an illegal {z1'=1,z1'=1} with duplicate ODEs */
+  private val problematicAxioms = ", commute" :: ", sort" :: ",d commute" ::
+    Nil
 
   private val axiomNames = schematicAxioms ++ limitedSchematicAxioms
 
@@ -390,6 +409,33 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
           u(fml) shouldBe inst
           //@todo this might fail when the instance requires semantic renaming
           u.toCore(fml) shouldBe inst
+        }
+      }
+    }
+  }
+
+  "Random Renamed Instance Unification optimistic" should "instantiate keys of all axioms to random schematic instantiations" in {
+    for (ax <- AxiomInfo.allInfo.map(ifo=>ifo.canonicalName) /*if !problematicAxioms.contains(ax)*/) {
+      println("Axiom " + ax)
+      for (i <- 1 to randomTrials) {
+        try {
+          val randClue = "Instance produced for " + ax + " in\n\t " + i + "th run of " + randomTrials +
+            " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
+
+          if (AxiomInfo(ax).formula.at(AxiomIndex.axiomIndex(ax)._1)._2.isInstanceOf[Formula]) {
+            val inst = withSafeClue("Error generating schematic instance\n\n" + randClue) {
+              rand.nextSchematicInstance(AxiomInfo(ax).formula.at(AxiomIndex.axiomIndex(ax)._1)._2.asInstanceOf[Formula], randomComplexity)
+            }
+
+            withSafeClue("Random instance " + inst + "\n\n" + randClue) {
+              println("match instance: " + inst)
+              matchKey(ax, inst)
+            }
+          }
+        } catch {
+          case e: CoreException if e.getMessage.contains("duplicate differential equations") &&
+            problematicAxioms.contains(ax) => /* ignore */
+          case e => throw e
         }
       }
     }

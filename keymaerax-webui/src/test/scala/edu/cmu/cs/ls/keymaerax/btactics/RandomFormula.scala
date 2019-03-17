@@ -39,15 +39,18 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   private val predNames = "pp" :: "qq" :: "rr" :: "ss" :: Nil
   private val progNames = "aa" :: "bb" :: "cc" :: "dd" :: Nil
 
+
+  /** next RandomFormula episode */
+  def nextFormulaEpisode(): RandomFormula = {print("episode "); new RandomFormula(rand.nextLong())}
+
+  // expression generators
+
   def nextExpression(size: Int): Expression = rand.nextInt(4) match {
     case 0 => nextTerm(size)
     case 1 => nextFormula(size)
     case 2 => nextProgram(size)
     case 3 => nextDifferentialProgram(size)
   }
-
-  /** next RandomFormula episode */
-  def nextFormulaEpisode(): RandomFormula = {print("episode "); new RandomFormula(rand.nextLong())}
 
   /** randomly generate a term of the given expected size */
   def nextTerm(size : Int): Term = nextT(nextNames("z", size / 3 + 1), size)
@@ -119,6 +122,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       case p@UnitFunctional(_,Except(_),_) => p->nextT(vars,size,dots=false,diffs=false,funcs=false)
       case a: ProgramConst => a->nextP(vars,size)
       case a: SystemConst => a->nextP(vars,size,dotTs=true, dotFs=true, diffs=diffs, funcs=false, duals=false)
+      //@todo should have disjoint differential equations if occurs within DifferentialProduct.
       case a: DifferentialProgramConst => a->nextDP(vars,size)
       case f@Function(_,_,Unit,Real,false) => FuncOf(f,Nothing)->nextT(othervars,size,dots=false,diffs=false,funcs=false)
       case p@Function(_,_,Unit,Bool,false) => PredOf(p,Nothing)->nextF(othervars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=false,duals=isGame)

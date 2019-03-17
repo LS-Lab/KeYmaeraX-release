@@ -84,8 +84,10 @@ object DerivationInfo {
   //@todo
   private val needsCodeName = "TODOTHISAXIOMSTILLNEEDSACODENAME"
   /** Unsure whether linear matcher suffices so default to false */
-    //@todo avoid the use of unsure
+  //@todo avoid the use of unsure
   private val unsure = false
+  /** unsure because of variable renaming being separate from substitution */
+  private val unren = false
 
   private def useAt(l:Lemma):DependentPositionTactic = HilbertCalculus.useAt(l)
   private val posnil = TacticFactory.anon((pos,seq) => TactixLibrary.nil)
@@ -363,9 +365,9 @@ object DerivationInfo {
       , "DGCa", unsure, {case () => HilbertCalculus.useAt("DG differential ghost constant all")}),
     new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", unsure, {case () => HilbertCalculus.useAt("DG inverse differential ghost") }),
     new CoreAxiomInfo("DG inverse differential ghost implicational", "DG inverse differential ghost implicational", "DGi", unsure, {case () => HilbertCalculus.useAt("DG inverse differential ghost implicational") }),
-    CoreAxiomInfo(", commute", ",", "commaCommute", true, {case () => HilbertCalculus.useAt(", commute")}),
+    new CoreAxiomInfo(", commute", ",", "commaCommute", true, {case () => HilbertCalculus.useAt(", commute")}),
     new CoreAxiomInfo(", sort", ",", "commaSort", true, {case () => HilbertCalculus.useAt(", sort")}),
-    new CoreAxiomInfo("DS& differential equation solution", "DS&", "DS", true, {case () => HilbertCalculus.DS}),
+    new CoreAxiomInfo("DS& differential equation solution", "DS&", "DS", unren, {case () => HilbertCalculus.DS}),
     new CoreAxiomInfo("DIo open differential invariance >"
       , AxiomDisplayInfo("DIo >", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]g(x)>h(x)</span>↔[?Q]g(x)>h(x))←(Q→[{x′=f(x)&Q}](g(x)>h(x)→(g(x)>h(x))′))")
       , "DIogreater", true, {case () => HilbertCalculus.useAt("DIo open differential invariance >")}),
@@ -1239,6 +1241,8 @@ object AxiomInfo {
       case info:AxiomInfo => info
       case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom")
     }
+
+  val allInfo:List[AxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[AxiomInfo]).map(_.asInstanceOf[AxiomInfo])
 }
 
 object TacticInfo {
@@ -1383,6 +1387,24 @@ case class CoreAxiomInfo(override val canonicalName:String, override val display
   }
   override lazy val provable:ProvableSig = ProvableSig.axioms(canonicalName)
   override val numPositionArgs = 1
+}
+
+object CoreAxiomInfo {
+  /** Retrieve meta-information on a core axiom by the given canonical name `axiomName` */
+  def apply(axiomName: String): CoreAxiomInfo =
+  DerivationInfo(axiomName) match {
+    case info:CoreAxiomInfo => info
+    case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not a core axiom")
+  }
+
+  /** Retrieve meta-information on a core axiom by the given code name `codeName` */
+  def ofCodeName(codeName: String): CoreAxiomInfo =
+  DerivationInfo.ofCodeName(codeName) match {
+    case info:CoreAxiomInfo => info
+    case info => throw new Exception("Derivation \"" + info.canonicalName + "\" is not an axiom")
+  }
+
+  val allInfo:List[CoreAxiomInfo] =  DerivationInfo.allInfo.filter(_.isInstanceOf[CoreAxiomInfo]).map(_.asInstanceOf[CoreAxiomInfo])
 }
 
 /** Information for a derived axiom proved from the core
