@@ -71,7 +71,7 @@ private object DLBySubst {
                   foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
 
             cut(Imply(ctx(qPhi), ctx(b))) <(
-              /* use */ (implyL('Llast) <(hideR(pos.topLevel) partial /* result remains open */ , closeIdWith('Llast))) partial,
+              /* use */ (implyL('Llast) <(hideR(pos.topLevel) partial /* result remains open */ , closeIdWith('Llast))),
               /* show */ cohide('Rlast) & CMon(pos.inExpr) & implyR(1) &
               assertT(1, 1) & assertT(s => s.ante.head == qPhi && s.succ.head == b, s"Formula $qPhi and/or $b are not in the expected positions in abstractionb") &
               topAbstraction(1) & closeId
@@ -145,7 +145,7 @@ private object DLBySubst {
                     }
                     case _ => true
                   }, "abstractionb: foralls must match") & closeId
-                )) partial,
+                )),
               /* show */ hideR(pos.topLevel) & implyR('Rlast) & V('Rlast) & closeIdWith('Llast)
             )
         }
