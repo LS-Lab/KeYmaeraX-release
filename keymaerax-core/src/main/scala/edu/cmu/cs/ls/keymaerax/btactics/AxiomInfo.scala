@@ -354,13 +354,13 @@ object DerivationInfo {
       , "DI", true, {case () => HilbertCalculus.DI}),
     new CoreAxiomInfo("DG differential ghost"
       , AxiomDisplayInfo("DG", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∃y [{x′=f(x),y′=a*y+b&Q}]P")
-      , "DGa", true, {case () => HilbertCalculus.useAt("DG differential ghost")}),
+      , "DGa", unsure, {case () => HilbertCalculus.useAt("DG differential ghost")}),
     new CoreAxiomInfo("DG differential ghost constant"
       , AxiomDisplayInfo("DG", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∃y [{x′=f(x),y′=g()&Q}]P")
-      , "DGC", true, {case () => HilbertCalculus.useAt("DG differential ghost constant")}),
+      , "DGC", unsure, {case () => HilbertCalculus.useAt("DG differential ghost constant")}),
     new CoreAxiomInfo("DG differential ghost constant all"
       , AxiomDisplayInfo("DGa", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∀y [{x′=f(x),y′=g()&Q}]P")
-      , "DGCa", true, {case () => HilbertCalculus.useAt("DG differential ghost constant all")}),
+      , "DGCa", unsure, {case () => HilbertCalculus.useAt("DG differential ghost constant all")}),
     new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", unsure, {case () => HilbertCalculus.useAt("DG inverse differential ghost") }),
     new CoreAxiomInfo("DG inverse differential ghost implicational", "DG inverse differential ghost implicational", "DGi", unsure, {case () => HilbertCalculus.useAt("DG inverse differential ghost implicational") }),
     CoreAxiomInfo(", commute", ",", "commaCommute", true, {case () => HilbertCalculus.useAt(", commute")}),
