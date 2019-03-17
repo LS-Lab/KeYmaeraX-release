@@ -380,6 +380,9 @@ trait UnifyUSCalculus {
       else
         ("useAt", if (AxiomIndex.axiomIndex(info.canonicalName)._1 == key) info.canonicalName::Nil else info.canonicalName::key.prettyString.substring(1)::Nil)
     new DependentPositionWithAppliedInputTactic(name, inputs) {
+      //@note performance impact
+      import BelleExpr.RECHECK
+
       private val (keyCtx: Context[_], keyPart) = fact.conclusion.succ.head.at(key)
 
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
@@ -395,9 +398,6 @@ trait UnifyUSCalculus {
           useAt(subst, keyCtx, keyPart, pos, ctx, expr, sequent)
         }
       }
-
-      //@note performance impact
-      private[this] val RECHECK = BelleExpr.RECHECK
 
       /**
         * useAt(K{k})(C{c}) uses, already under the given substitution subst, the key k from context K{k}
