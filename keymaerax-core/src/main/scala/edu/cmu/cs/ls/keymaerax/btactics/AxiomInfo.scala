@@ -469,7 +469,8 @@ object DerivationInfo {
     new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", true, {case () => posnil}),
     new CoreAxiomInfo("all dual time", ("∀d","alldt"), "alldt", true, {case () => posnil}),
     new CoreAxiomInfo("all dual y", ("∀d","alldy"), "alldy", true, {case () => posnil}),
-    new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", true, {case () => posnil}),
+
+    new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", unsure, {case () => posnil}),
 
     // compatibility axioms (derivable with Mathematica, but not with Z3)
     CoreAxiomInfo("dgZeroEquilibrium", "dgZeroEquilibrium", "dgZeroEquilibrium", unsure, _ => TactixLibrary.useAt("dgZeroEquilibrium")),
