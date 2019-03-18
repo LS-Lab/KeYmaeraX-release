@@ -148,7 +148,7 @@ class DefaultTacticIndex extends TacticIndex {
 
         } else {
           a match {
-            case _: ODESystem => (TactixLibrary.solve :: Nil, TactixLibrary.ODE :: Nil)
+            case _: ODESystem => (TactixLibrary.solve :: Nil, TactixLibrary.ODE :: TactixLibrary.solve :: Nil)
             case _ => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
           }
         }
