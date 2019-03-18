@@ -396,13 +396,13 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     * @param invariant The loop invariant `I`.
     * @note Currently uses I induction axiom, which is unsound for hybrid games.
     */
-  def loop(invariant : Formula)  : DependentPositionTactic = DLBySubst.loop(invariant)
+  def loop(invariant: Formula)  : DependentPositionTactic = DLBySubst.loop(invariant)
 
   /** loop: prove a property of a loop by induction, if the given invariant generator finds a loop invariant
     * @see [[loop(Formula)]] */
-  def loop(gen: Generator[Formula]): DependentPositionTactic = new DependentPositionTactic("I gen") {
+  def loop(gen: Generator[GenProduct]): DependentPositionTactic = new DependentPositionTactic("I gen") {
     override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
-      override def computeExpr(sequent: Sequent): BelleExpr = loop(nextOrElse(gen(sequent, pos).iterator,
+      override def computeExpr(sequent: Sequent): BelleExpr = loop(nextOrElse(gen(sequent, pos).map(_._1).iterator,
         throw new BelleThrowable("Unable to generate an invariant for " + sequent(pos.checkTop) + " at position " + pos)))(pos)
       private def nextOrElse[A](it: Iterator[A], otherwise: => A) = if (it.hasNext) it.next else otherwise
     }
