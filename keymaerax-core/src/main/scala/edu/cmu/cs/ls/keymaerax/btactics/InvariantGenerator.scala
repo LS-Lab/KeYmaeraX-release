@@ -24,6 +24,8 @@ object InvariantGenerator extends Logging {
   case class BelleExprProofHint(t: BelleExpr) extends ProofHint
   /** Proof hint from Pegasus */
   case class PegasusProofHint(isInvariant: Boolean, t: Option[BelleExpr]) extends ProofHint
+  /** Proof hint from annotation */
+  case class AnnotationProofHint(tryHard: Boolean) extends ProofHint
 
   type GenProduct = (Formula, Option[ProofHint])
 

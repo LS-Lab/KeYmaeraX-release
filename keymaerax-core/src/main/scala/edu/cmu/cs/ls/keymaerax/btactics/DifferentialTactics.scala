@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{GenProduct, PegasusProofHint}
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct, PegasusProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
@@ -901,8 +901,9 @@ private object DifferentialTactics extends Logging {
             diffCut(inv)(pos) <(
               skip,
               proofHint match {
-                case Some(PegasusProofHint(_, None)) => odeInvariant(tryHard = true, useDw = false)(pos)
-                case _ => odeInvariant(tryHard = false, useDw = false)(pos)
+                case Some(PegasusProofHint(_, None)) => odeInvariant(tryHard = true, useDw = false)(pos) & done
+                case Some(AnnotationProofHint(tryHard)) => odeInvariant(tryHard = tryHard, useDw = false)(pos) & done
+                case _ => odeInvariant(tryHard = false, useDw = false)(pos) & done
               }
             ) &
           // continue outside <(skip, ...) so that cut is proved before used
@@ -920,7 +921,15 @@ private object DifferentialTactics extends Logging {
     * @author Nathan Fulton
     * @author Stefan Mitsch
     */
-  lazy val mathematicaODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+  lazy val mathematicaSplittingODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+    seq.sub(pos) match {
+      case Some(Box(sys@ODESystem(_, _), And(_, _))) =>
+        boxAnd(pos) & andR(pos) <(mathematicaSplittingODE(pos) & done, mathematicaSplittingODE(pos)) | mathematicaODE(pos)
+      case _ => mathematicaODE(pos)
+    }
+  })
+
+  lazy val mathematicaODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "ODE automation only applicable to top-level succedents")
 
     seq.sub(pos) match {
