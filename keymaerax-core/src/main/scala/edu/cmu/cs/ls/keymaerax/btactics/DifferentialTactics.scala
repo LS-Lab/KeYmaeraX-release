@@ -921,7 +921,15 @@ private object DifferentialTactics extends Logging {
     * @author Nathan Fulton
     * @author Stefan Mitsch
     */
-  lazy val mathematicaODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+  lazy val mathematicaSplittingODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+    seq.sub(pos) match {
+      case Some(Box(sys@ODESystem(_, _), And(_, _))) =>
+        boxAnd(pos) & andR(pos) <(mathematicaSplittingODE(pos) & done, mathematicaSplittingODE(pos)) | mathematicaODE(pos)
+      case _ => mathematicaODE(pos)
+    }
+  })
+
+  lazy val mathematicaODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "ODE automation only applicable to top-level succedents")
 
     seq.sub(pos) match {
