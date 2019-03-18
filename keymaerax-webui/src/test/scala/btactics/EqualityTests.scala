@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.BelleThrowable
 import edu.cmu.cs.ls.keymaerax.btactics.EqualityTactics._
 import edu.cmu.cs.ls.keymaerax.core.{StaticSemantics, Variable}
@@ -366,6 +367,11 @@ class EqualityTests extends TacticTestBase {
   it should "expand max(x,y) binding context in antecedent" in withQE { _ =>
     val result = proveBy("[x:=2;]max(x,y) >= 2 ==> ".asSequent, minmax(-1, 1::0::Nil))
     result.subgoals.loneElement shouldBe "[x:=2;](x>=y&x>=2 | x<y&y>=2) ==> ".asSequent
+  }
+
+  it should "expand with a term search locator" in withQE { _ =>
+    val result = proveBy("y=max(x,4) ==> y>=4".asSequent, BelleParser("minmax('L=={`max(x,4)`})"))
+    result.subgoals.loneElement shouldBe "y=max_0, x>=4&max_0=x|x < 4&max_0=4 ==> y>=4".asSequent
   }
 
   "expandAll" should "expand abs everywhere" in withQE { _ =>
