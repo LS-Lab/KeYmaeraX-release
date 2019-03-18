@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{GenProduct, PegasusProofHint}
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct, PegasusProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
@@ -901,8 +901,9 @@ private object DifferentialTactics extends Logging {
             diffCut(inv)(pos) <(
               skip,
               proofHint match {
-                case Some(PegasusProofHint(_, None)) => odeInvariant(tryHard = true, useDw = false)(pos)
-                case _ => odeInvariant(tryHard = false, useDw = false)(pos)
+                case Some(PegasusProofHint(_, None)) => odeInvariant(tryHard = true, useDw = false)(pos) & done
+                case Some(AnnotationProofHint(tryHard)) => odeInvariant(tryHard = tryHard, useDw = false)(pos) & done
+                case _ => odeInvariant(tryHard = false, useDw = false)(pos) & done
               }
             ) &
           // continue outside <(skip, ...) so that cut is proved before used
