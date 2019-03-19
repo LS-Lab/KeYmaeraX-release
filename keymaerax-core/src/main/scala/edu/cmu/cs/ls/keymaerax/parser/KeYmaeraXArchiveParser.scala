@@ -565,30 +565,35 @@ object KeYmaeraXArchiveParser {
           val annotationListener = parser.annotationListener
           val annotations = new ListBuffer[Annotation]()
           parser.setAnnotationListener((prg, fml) => annotations += Annotation(prg, fml))
-          if (rest.head.tok != LBRACE) throw ParseException("Missing program definition start delimiter", rest.head.loc, rest.head.tok.toString, LBRACE.img, "", "", null)
-          var openParens = 0
-          val (Token(LBRACE, _) :: prgDefBlock, defEnd) = rest.span(t => { if (t.tok == LBRACE) openParens += 1 else if (t.tok == RBRACE) openParens -= 1; openParens > 0})
-          if (defEnd.isEmpty) throw ParseException.imbalancedError("Unmatched opening brace in program definition", rest.head, RBRACE.img, ParseState(Bottom :+ rest.head, rest.tail))
-          val (rbrace@Token(RBRACE, endLoc)) :: remainder = defEnd
-          val program: Either[Option[Program], List[Token]] = try {
-            if (!prgDefBlock.exists(_.tok == EXERCISE_PLACEHOLDER)) {
-              Left(Some(KeYmaeraXParser.programTokenParser(prgDefBlock :+ Token(EOF, endLoc))))
-            } else {
-              Right(prgDefBlock :+ Token(EOF, endLoc))
-            }
-          } catch {
-            case ex: ParseException =>
-              val (loc, found) = ex.loc match {
-                case UnknownLocation =>
-                  val defLoc = prgDefBlock.head.loc.spanTo(endLoc)
-                  (defLoc, slice(text, defLoc))
-                case _ if ex.found != EOF.description => (ex.loc, ex.found)
-                case _ if ex.found == EOF.description => (ex.loc, rbrace.description)
+          try {
+            if (rest.head.tok != LBRACE) throw ParseException("Missing program definition start delimiter", rest.head.loc, rest.head.tok.toString, LBRACE.img, "", "", null)
+            var openParens = 0
+            val (Token(LBRACE, _) :: prgDefBlock, defEnd) = rest.span(t => {
+              if (t.tok == LBRACE) openParens += 1 else if (t.tok == RBRACE) openParens -= 1; openParens > 0
+            })
+            if (defEnd.isEmpty) throw ParseException.imbalancedError("Unmatched opening brace in program definition", rest.head, RBRACE.img, ParseState(Bottom :+ rest.head, rest.tail))
+            val (rbrace@Token(RBRACE, endLoc)) :: remainder = defEnd
+            val program: Either[Option[Program], List[Token]] = try {
+              if (!prgDefBlock.exists(_.tok == EXERCISE_PLACEHOLDER)) {
+                Left(Some(KeYmaeraXParser.programTokenParser(prgDefBlock :+ Token(EOF, endLoc))))
+              } else {
+                Right(prgDefBlock :+ Token(EOF, endLoc))
               }
-              throw new ParseException(ex.msg, loc, found, ex.expect, ex.after, ex.state, ex)
+            } catch {
+              case ex: ParseException =>
+                val (loc, found) = ex.loc match {
+                  case UnknownLocation =>
+                    val defLoc = prgDefBlock.head.loc.spanTo(endLoc)
+                    (defLoc, slice(text, defLoc))
+                  case _ if ex.found != EOF.description => (ex.loc, ex.found)
+                  case _ if ex.found == EOF.description => (ex.loc, rbrace.description)
+                }
+                throw new ParseException(ex.msg, loc, found, ex.expect, ex.after, ex.state, ex)
+            }
+            ParseState(r :+ defs :+ defsBlock :+ ProgramDef(next.name, next.index, program, annotations.toList, next.loc.spanTo(endLoc.end)), remainder)
+          } finally {
+            parser.setAnnotationListener(annotationListener)
           }
-          parser.setAnnotationListener(annotationListener)
-          ParseState(r :+ defs :+ defsBlock :+ ProgramDef(next.name, next.index, program, annotations.toList, next.loc.spanTo(endLoc.end)), remainder)
         case SEMI | PERIOD => shift(st)
         case EQUIV | EQ => throw ParseException("Program must be defined by " + PRG_DEF.img, st, nextTok, PRG_DEF.img)
         case _ => throw ParseException("Unexpected token in program definition", st, Expected.ExpectTerminal(PRG_DEF) :: Expected.ExpectTerminal(SEMI) :: Nil)
@@ -636,23 +641,26 @@ object KeYmaeraXArchiveParser {
           val annotationListener = parser.annotationListener
           val annotations = new ListBuffer[Annotation]()
           parser.setAnnotationListener((prg, fml) => annotations += Annotation(prg, fml))
-          if (!st.input.exists(_.tok == END_BLOCK)) throw ParseException("Missing problem delimiter", st, st.input.last, END_BLOCK.img)
-          val (problemBlock, Token(END_BLOCK, endLoc) :: remainder) = st.input.span(_.tok != END_BLOCK) match {
-            case (Token(PROBLEM_BLOCK, _) :: Token(PERIOD, _) :: pb, (endBlock@Token(END_BLOCK, _)) :: Token(PERIOD, _) :: r) => (pb, endBlock +: r)
-            case (Token(PROBLEM_BLOCK, _) :: pb, (endBlock@Token(END_BLOCK, _)) :: Token(PERIOD, _) :: r) => (pb, endBlock +: r)
-            case (Token(PROBLEM_BLOCK, _) :: pb, (endBlock@Token(END_BLOCK, _)) :: r) => throw ParseException("Missing " + PERIOD.img + " after delimiter " + END_BLOCK.img, r.head.loc, r.head.description, Expected.ExpectTerminal(PERIOD).toString, endBlock.toString, st.toString)
-            case (Token(PROBLEM_BLOCK, _) :: _, r) => throw ParseException("Missing problem delimiter", r.last.loc, r.last.toString, END_BLOCK.img + PERIOD.img, "", st.toString)
-          }
-          problemBlock.find(_.tok == TACTIC_BLOCK) match {
-            case Some(t) => throw ParseException("Missing problem delimiter", st, t, END_BLOCK.img)
-            case None => // problem seems correctly ended
-          }
-          if (problemBlock.exists(_.tok == EXERCISE_PLACEHOLDER)) {
-            ParseState(st.stack :+ Problem(Right(problemBlock :+ Token(EOF, endLoc)), annotations.toList) :+ Tactics(Nil), remainder)
-          } else {
-            val problem: Formula = parser.formulaTokenParser(problemBlock :+ Token(EOF, endLoc))
+          try {
+            if (!st.input.exists(_.tok == END_BLOCK)) throw ParseException("Missing problem delimiter", st, st.input.last, END_BLOCK.img)
+            val (problemBlock, Token(END_BLOCK, endLoc) :: remainder) = st.input.span(_.tok != END_BLOCK) match {
+              case (Token(PROBLEM_BLOCK, _) :: Token(PERIOD, _) :: pb, (endBlock@Token(END_BLOCK, _)) :: Token(PERIOD, _) :: r) => (pb, endBlock +: r)
+              case (Token(PROBLEM_BLOCK, _) :: pb, (endBlock@Token(END_BLOCK, _)) :: Token(PERIOD, _) :: r) => (pb, endBlock +: r)
+              case (Token(PROBLEM_BLOCK, _) :: pb, (endBlock@Token(END_BLOCK, _)) :: r) => throw ParseException("Missing " + PERIOD.img + " after delimiter " + END_BLOCK.img, r.head.loc, r.head.description, Expected.ExpectTerminal(PERIOD).toString, endBlock.toString, st.toString)
+              case (Token(PROBLEM_BLOCK, _) :: _, r) => throw ParseException("Missing problem delimiter", r.last.loc, r.last.toString, END_BLOCK.img + PERIOD.img, "", st.toString)
+            }
+            problemBlock.find(_.tok == TACTIC_BLOCK) match {
+              case Some(t) => throw ParseException("Missing problem delimiter", st, t, END_BLOCK.img)
+              case None => // problem seems correctly ended
+            }
+            if (problemBlock.exists(_.tok == EXERCISE_PLACEHOLDER)) {
+              ParseState(st.stack :+ Problem(Right(problemBlock :+ Token(EOF, endLoc)), annotations.toList) :+ Tactics(Nil), remainder)
+            } else {
+              val problem: Formula = parser.formulaTokenParser(problemBlock :+ Token(EOF, endLoc))
+              ParseState(st.stack :+ Problem(Left(problem), annotations.toList) :+ Tactics(Nil), remainder)
+            }
+          } finally {
             parser.setAnnotationListener(annotationListener)
-            ParseState(st.stack :+ Problem(Left(problem), annotations.toList) :+ Tactics(Nil), remainder)
           }
         case _ if !rest.exists(_.tok == PROBLEM_BLOCK) => throw ParseException("Missing problem block", st, nextTok, PROBLEM_BLOCK.img)
         case _ if  rest.exists(_.tok == PROBLEM_BLOCK) => throw ParseException("Misplaced problem block: problem expected before tactics", st, nextTok, PROBLEM_BLOCK.img)
