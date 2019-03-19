@@ -291,14 +291,15 @@ object DifferentialHelper {
       case Neg(t) => Neg(derive(t,odes)) //(-e)' = -(e')
       case Times(l,r) =>
         Plus(Times(derive(l,odes),r),Times(l,derive(r,odes))) //(l*r)' = l'r + lr'
-      case Power(l,n:Number) if n.value.isValidInt && n.value > 0 => //(l^n)' = n(l^{n-1})l'
-        if(n.value == 1) // (e^1)' = e'
-          derive(l,odes)
-        else
-          Times(Times(n,Power(l,Number(n.value-1))),derive(l,odes))
-      case Power(l,n:Number) if n.value == 0 => Number(0)
-      case Power(l, n: Number) if n.value < 0 => derive(Divide(Number(1), Power(l, Number(-n.value))), odes)
-      case Power(l, Neg(n: Number)) => derive(Power(l, Number(-n.value)), odes)
+      case Power(l,e) => // e is allowed to be symbolic, but is only correctly simplified if it is a number
+        e match {
+          case n:Number =>
+            if (n.value == 1) derive(l,odes)
+            else if (n.value==0) Number(0)
+            else Times(Times(n,Power(l,Number(n.value-1))),derive(l,odes))
+          case _ =>
+            Times(Times(e,Power(l,Minus(e,Number(-1)))),derive(l,odes))
+        }
       case Divide(l,r) => // (l/r)' = (l'r - l r')/(r^2)
         Divide(Minus(Times(derive(l,odes),r),Times(l,derive(r,odes))), Times(r,r))
       case Plus(l,r) => // (l+r)' = l'+r'
