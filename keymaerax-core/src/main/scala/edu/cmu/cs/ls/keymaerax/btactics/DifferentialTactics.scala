@@ -1746,7 +1746,7 @@ private object DifferentialTactics extends Logging {
           DW(pos) & diffRefine(p_fml)(pos) <(
             generalize(Imply(closure,DifferentialFormula(interior)))(pos) <(
               hideL(AntePosition(seq.ante.length+1)) & andL('Llast) & hideL('Llast),
-              implyR(1) & andL('Llast) & implyL(-1) <(closeId, closeId)
+              implyL('Llast) <( implyR(1) & andL('Llast) & closeId , implyR(1) & closeId )
             )
             ,
             diffWeakenG(pos) & implyR(1) & andL(-1) & closeId
