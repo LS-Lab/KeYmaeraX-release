@@ -9,6 +9,7 @@ import java.io.File
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula, Lemma, Program}
 import edu.cmu.cs.ls.keymaerax.hydra.{DatabasePopulator, TempDBTools}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
@@ -116,7 +117,7 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
       val t = BelleParser.parseWithInvGen(tactic._2, Some(invGen), decls)
 
       val start = System.currentTimeMillis()
-      val proof = db.proveBy(model, t, LazySequentialInterpreter, name)
+      val proof = db.proveBy(model, t, LazySequentialInterpreter(_, throwWithDebugInfo = false), name)
       val end = System.currentTimeMillis()
 
       println(s"Proof Statistics (proved: ${proof.isProved})")
@@ -147,11 +148,11 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
   }
 
   /** Parse a problem file to find declarations and invariant annotations */
-  private def parseProblem(model: String): (Declaration, Generator[Expression]) = {
+  private def parseProblem(model: String): (Declaration, Generator[GenProduct]) = {
     TactixLibrary.invGenerator = FixedGenerator(Nil)
-    val generator = new ConfigurableGenerator[Formula]()
+    val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
-      generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ inv)))
+      generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
     val entry = KeYmaeraXArchiveParser.parseProblem(model, parseTactics=false)
     TactixLibrary.invGenerator = generator
     KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {}) //@note cleanup for separation between tutorial entries

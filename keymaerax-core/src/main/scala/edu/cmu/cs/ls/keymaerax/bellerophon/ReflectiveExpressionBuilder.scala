@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
@@ -14,15 +15,15 @@ import scala.reflect.runtime.universe.typeTag
   */
 object ReflectiveExpressionBuilder extends Logging {
   def build(info: DerivationInfo, args: List[Either[Seq[Any], PositionLocator]],
-            generator: Option[Generator.Generator[Expression]], defs: Declaration): BelleExpr = {
+            generator: Option[Generator.Generator[GenProduct]], defs: Declaration): BelleExpr = {
     val posArgs = args.filter(_.isRight).map(_.right.getOrElse(throw new ReflectiveExpressionBuilderExn("Filtered down to only right-inhabited elements... this exn should never be thrown.")))
     val withGenerator =
       if (info.needsGenerator) {
         generator match {
-          case Some(theGenerator) => info.belleExpr.asInstanceOf[Generator.Generator[Expression] => Any](theGenerator)
+          case Some(theGenerator) => info.belleExpr.asInstanceOf[Generator.Generator[GenProduct] => Any](theGenerator)
           case None =>
             logger.debug(s"Need a generator for tactic ${info.codeName} but none was provided; switching to default.")
-            info.belleExpr.asInstanceOf[Generator.Generator[Formula] => Any](InvariantGenerator.defaultInvariantGenerator)
+            info.belleExpr.asInstanceOf[Generator.Generator[GenProduct] => Any](InvariantGenerator.defaultInvariantGenerator)
         }
       } else {
         info.belleExpr
@@ -79,7 +80,7 @@ object ReflectiveExpressionBuilder extends Logging {
   }
 
   def apply(name: String, arguments: List[Either[Seq[Any], PositionLocator]] = Nil,
-            generator: Option[Generator.Generator[Expression]], defs: Declaration) : BelleExpr = {
+            generator: Option[Generator.Generator[GenProduct]], defs: Declaration) : BelleExpr = {
     if (!DerivationInfo.hasCodeName(name)) {
       throw new ReflectiveExpressionBuilderExn(s"Identifier '$name' is not recognized as a tactic identifier.")
     } else {

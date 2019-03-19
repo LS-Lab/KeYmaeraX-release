@@ -81,7 +81,7 @@ object DatabasePopulator extends Logging {
   }
 
   /** Loads the specified resource, either from the JAR if URL starts with 'classpath:' or from the URL. */
-  private def loadResource(url: String): String =
+  def loadResource(url: String): String =
     if (url.startsWith("classpath:")) {
       io.Source.fromInputStream(getClass.getResourceAsStream(url.substring("classpath:".length))).mkString
     } else {
@@ -127,7 +127,7 @@ object DatabasePopulator extends Logging {
       new TraceRecordingListener(db, proofId, parentStep,
         globalProvable, branch, recursive = false, tacticName) :: Nil
     }
-    SpoonFeedingInterpreter(proofId, -1, db.createProof, listener, LazySequentialInterpreter)
+    SpoonFeedingInterpreter(proofId, -1, db.createProof, listener, LazySequentialInterpreter(_, throwWithDebugInfo = false))
   }
 
   /** Executes the `tactic` on the `model` and records the tactic steps as proof in the database. */

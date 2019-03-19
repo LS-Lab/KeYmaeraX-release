@@ -10,7 +10,8 @@ import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.TacticStatistics
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests._
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Imply, Program, Sequent, SuccPos}
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
+import edu.cmu.cs.ls.keymaerax.core.{False, Formula, Imply, Program, Sequent, SuccPos}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser}
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
@@ -71,7 +72,14 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
 
   private val entries = {
     println("Reading " + url)
-    DatabasePopulator.readKya(url)
+    try {
+      DatabasePopulator.readKya(url)
+    } catch {
+      case ex: Throwable =>
+        println("Failed reading: " + ex.getMessage)
+        ex.printStackTrace()
+        Nil
+    }
   }
 
   private def tableResults(results: Seq[BenchmarkResult]) = {
@@ -80,13 +88,14 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
   }
 
   private def setTimeouts(tool: ToolOperationManagement): Unit = {
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
     Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "120", saveToFile = false)
     Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, "60", saveToFile = false)
     Configuration.set(Configuration.Keys.LOG_QE_DURATION, "true", saveToFile = false)
     tool.setOperationTimeout(120)
   }
 
-  it should "prove interactive benchmarks" ignore withMathematica { tool =>
+  it should "prove interactive benchmarks" in withMathematica { tool =>
     setTimeouts(tool)
     val results = entries.map(e => runInteractive(e.name, e.model, e.tactic.headOption.map(_._2)))
     val writer = new PrintWriter(benchmarkName + "_interactive.csv")
@@ -98,7 +107,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
     }
   }
 
-  it should "prove benchmarks with proof hints and Mathematica" ignore withMathematica { tool =>
+  it should "prove benchmarks with proof hints and Mathematica" in withMathematica { tool =>
     setTimeouts(tool)
     val results = entries.map(e => runWithHints(e.name, e.model, e.tactic.headOption.map(_._2)))
     val writer = new PrintWriter(benchmarkName + "_withhints.csv")
@@ -116,7 +125,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
 //    forEvery (entries) { (_, name, modelContent, _) => runWithHints(name, modelContent) }
 //  }
 
-  it should "prove benchmarks without proof hints and in Mathematica" ignore withMathematica { tool =>
+  it should "prove benchmarks without proof hints and in Mathematica" in withMathematica { tool =>
     setTimeouts(tool)
     val results = entries.map(e => runAuto(e.name, e.model))
     val writer = new PrintWriter(benchmarkName + "_auto.csv")
@@ -158,7 +167,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
     if (genCheck) {
       beforeEach()
       withMathematica(_ => {}) //@HACK beforeEach and afterEach clean up tool provider
-      val model = parseStripHints(modelContent)
+      val (model, _) = parseStripHints(modelContent)
 
       try {
         val Imply(ante, succ) = model
@@ -167,7 +176,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
         val invGenStart = System.currentTimeMillis()
         val candidates = InvariantGenerator.pegasusInvariants(seq, SuccPos(0)).toList
         val invGenEnd = System.currentTimeMillis()
-        println(s"Done generating (${candidates.map(_.prettyString).mkString(",")}) $name")
+        println(s"Done generating (${candidates.map(_._1.prettyString).mkString(",")}) $name")
         if (candidates.nonEmpty) {
           println(s"Checking $name")
           TactixLibrary.invGenerator = FixedGenerator(candidates)
@@ -176,10 +185,14 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
           val checkEnd = System.currentTimeMillis()
           println(s"Done checking $name")
 
-          BenchmarkResult(name, if (proof.isProved) "proved" else "unfinished", timeout, checkEnd - invGenStart,
+          val result =
+            if (proof.isProved) "proved"
+            else if (proof.subgoals.exists(s => s.ante.isEmpty && s.succ.size == 1 && s.succ.head == False)) "disproved"
+            else "unfinished"
+          BenchmarkResult(name, result, timeout, checkEnd - invGenStart,
             qeDurationListener.duration, invGenEnd - invGenStart, checkEnd - checkStart, proof.steps, 1, None)
         } else {
-          BenchmarkResult(name, "unfinished", timeout, invGenEnd - invGenStart, invGenEnd - invGenStart, -1, -1, 0, 1, None)
+          BenchmarkResult(name, "unfinished (gen)", timeout, invGenEnd - invGenStart, invGenEnd - invGenStart, -1, -1, 0, 1, None)
         }
       } catch {
         case ex: TestFailedDueToTimeoutException => BenchmarkResult(name, "timeout", timeout,
@@ -191,17 +204,17 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
     }
   }
 
-  private def runEntry(name: String, modelContent: String, modelParser: String => Formula, tactic: Option[String]): BenchmarkResult = {
+  private def runEntry(name: String, modelContent: String, modelParser: String => (Formula, KeYmaeraXArchiveParser.Declaration), tactic: Option[String]): BenchmarkResult = {
     beforeEach()
     withMathematica(_ => {}) //@HACK beforeEach and afterEach clean up tool provider
-    val model = modelParser(modelContent)
+    val (model, defs) = modelParser(modelContent)
     val result = tactic match {
       case Some(t) =>
         println(s"Proving $name")
 
         qeDurationListener.reset()
         val start = System.currentTimeMillis()
-        val theTactic = BelleParser(t)
+        val theTactic = BelleParser.parseWithInvGen(t, None, defs)
         try {
           val proof = failAfter(Span(timeout, Seconds))({
             proveBy(model, theTactic)
@@ -210,8 +223,12 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
             testThread.interrupt()
           })
           val end = System.currentTimeMillis()
-          println(s"Done proving $name")
-          BenchmarkResult(name, if (proof.isProved) "proved" else "unfinished", timeout, end - start,
+          val result =
+            if (proof.isProved) "proved"
+            else if (proof.subgoals.exists(s => s.ante.isEmpty && s.succ.size == 1 && s.succ.head == False)) "disproved"
+            else "unfinished"
+          println(s"Done proving $name: " + result + " in " + (end-start) + "ms")
+          BenchmarkResult(name, result, timeout, end - start,
             qeDurationListener.duration, -1, -1, proof.steps, TacticStatistics.size(theTactic), None)
         } catch {
           case ex: TestFailedDueToTimeoutException => BenchmarkResult(name, "timeout", timeout,
@@ -227,22 +244,23 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
   }
 
   /** Parse model and add proof hint annotations to invariant generator. */
-  private def parseWithHints(modelContent: String): Formula = {
+  private def parseWithHints(modelContent: String): (Formula, KeYmaeraXArchiveParser.Declaration) = {
     TactixLibrary.invGenerator = FixedGenerator(Nil)
-    val generator = new ConfigurableGenerator[Formula]()
+    val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
-      generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ inv)))
-    val model = KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent)
+      generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
+    val entry = KeYmaeraXArchiveParser(modelContent).head
     TactixLibrary.invGenerator = generator
     KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {}) //@note cleanup for separation between tutorial entries
-    model
+    (entry.model.asInstanceOf[Formula], entry.defs)
   }
 
   /** Parse model but ignore all proof hints. */
-  private def parseStripHints(modelContent: String): Formula = {
+  private def parseStripHints(modelContent: String): (Formula, KeYmaeraXArchiveParser.Declaration) = {
     TactixLibrary.invGenerator = FixedGenerator(Nil)
     KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {})
-    KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent)
+    val entry = KeYmaeraXArchiveParser(modelContent).head
+    (entry.model.asInstanceOf[Formula], entry.defs)
   }
 
 }

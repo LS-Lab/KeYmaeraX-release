@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.launcher._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.Mathematica
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.hydra.HyDRAInitializer._
 import edu.cmu.cs.ls.keymaerax.hydra.{DBAbstraction, DBAbstractionObj, HyDRAInitializer, StringToVersion}
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX.shutdownProver
@@ -51,9 +52,9 @@ object CoasterXMain {
       (if (LOG_QE_DURATION) qeDurationListener::Nil else Nil)
     BelleInterpreter.setInterpreter(registerInterpreter(ExhaustiveSequentialInterpreter(listeners)))
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXNoContractPrettyPrinter)
-    val generator = new ConfigurableGenerator[Formula]()
+    val generator = new ConfigurableGenerator[GenProduct]()
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
-      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv)))
+      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
     TactixLibrary.invGenerator = generator
     ToolProvider.setProvider(new NoneToolProvider())
   }
@@ -191,10 +192,10 @@ object CoasterXMain {
     //@note pretty printer setup must be first, otherwise derived axioms print wrong
     PrettyPrinter.setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXNoContractPrettyPrinter)
     // connect invariant generator to tactix library
-    val generator = new ConfigurableGenerator[Formula]()
+    val generator = new ConfigurableGenerator[GenProduct]()
     TactixLibrary.invGenerator = generator
     KeYmaeraXParser.setAnnotationListener((p:Program,inv:Formula) =>
-      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ inv)))
+      generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, None))))
 
     println("Connecting to arithmetic tools...")
 

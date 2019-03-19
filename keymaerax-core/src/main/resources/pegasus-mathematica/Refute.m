@@ -45,7 +45,7 @@ PreProcess[expression_]:=Module[{},
 ZeroRHS[
 GeqToLeq[
 GtToLt[
-LogicalExpand[BooleanMinimize[UnequalToLtOrGt[expression], "DNF"]]
+LogicalExpand[BooleanMinimize[UnequalToLtOrGt[LogicalExpand[expression]], "DNF"]]
 ]
 ]
 ]
@@ -163,7 +163,7 @@ Cond1 = Q && A && ComplementS[B],
 Cond2 = Q && A && InfS[Q,f,vars]&& ComplementS[InfS[B,f,vars]],
 Cond3 = Q && ComplementS[B] && IvInfS[Q,f,vars] && IvInfS[A,f,vars]
 },
-FindInstance[Cond1 || Cond2 || Cond3, avars, Reals] 
+N[FindInstance[Cond1 || Cond2 || Cond3, avars, Reals] ]
 ]
 
 

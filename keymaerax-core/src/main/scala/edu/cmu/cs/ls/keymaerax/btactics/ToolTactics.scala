@@ -25,28 +25,38 @@ private object ToolTactics {
 
   private val namespace = "tooltactics"
 
+  private val convertInterpretedSymbols = Configuration.getOption(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse("false").toBoolean
+
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(order: Seq[NamedSymbol] = Nil)(qeTool: => QETool): BelleExpr = Idioms.NamedTactic("QE", {
-    val closureAndRcf = toSingleFormula &
-      FOQuantifierTactics.universalClosure(order)(1) & rcf(qeTool) &
+    val doRcf = rcf(qeTool) &
       Idioms.doIf(!_.isProved)("ANON" by ((s: Sequent) =>
         if (s.succ.head == False) label(BelleLabels.QECEX)
         else DebuggingTactics.done("QE was unable to prove: invalid formula"))
-        )
+      )
 
-    val convertInterpretedSymbols = Configuration.getOption(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse("false").toBoolean
-    val expandAndRcf =
-      if (convertInterpretedSymbols) closureAndRcf | EqualityTactics.expandAll & closureAndRcf
+    val closure = toSingleFormula & FOQuantifierTactics.universalClosure(order)(1)
+
+    val expand =
+      if (convertInterpretedSymbols) skip
       else EqualityTactics.expandAll &
-        assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, interpreted) => interpreted case _ => false }), "Aborting QE since not all interpreted functions are expanded") &
-        closureAndRcf
+        assertT(s => !StaticSemantics.symbols(s).exists({ case Function(_, _, _, _, interpreted) => interpreted case _ => false }), "Aborting QE since not all interpreted functions are expanded")
+
+    val plainQESteps =
+      if (convertInterpretedSymbols) (closure & doRcf) :: (EqualityTactics.expandAll & closure & doRcf) :: Nil
+      else (closure & doRcf) :: Nil // expanded already
+
+    val plainQE = plainQESteps.reduce[BelleExpr](_ | _)
+
+    //@note don't split exhaustively (may explode), but *3 is only a guess
+    val splittingQE =
+      ArithmeticSimplification.smartHide & Idioms.?(onAll(orL('L) | andR('R)))*3 & onAll(plainQE & done)
 
     Idioms.doIf(!_.isProved)(
       assertT(_.isFOL, "QE on FOL only") &
       allTacticChase()(notL, andL, notR, implyR, orR) &
         Idioms.doIf(!_.isProved)(
-          close | hidePredicates & EqualityTactics.applyEqualities & hideTrivialFormulas & expandAndRcf
-        )
+          close | hidePredicates & EqualityTactics.applyEqualities & hideTrivialFormulas & expand & (TimeoutAlternatives(plainQESteps, 5000) | splittingQE | plainQE))
       )
   })
 

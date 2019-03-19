@@ -7,6 +7,8 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+import org.scalatest.concurrent.Timeouts
+import org.scalatest.time.SpanSugar._
 
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable
@@ -18,7 +20,7 @@ import scala.language.postfixOps
  * theInterpreter when other interpreters are implemented.
  * @author Nathan Fulton
  */
-class SequentialInterpreterTests extends TacticTestBase {
+class SequentialInterpreterTests extends TacticTestBase with Timeouts {
 
   "AndR" should "prove |- 1=1 ^ 2=2" in {
     val tactic = andR(1)
@@ -273,7 +275,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     shouldResultIn(
       tactic,
       f,
-      Seq(toSequent("2=2"), toSequent("3=3"))
+      Seq("==> 2=2".asSequent, "==> 3=3".asSequent)
     )
   }
 
@@ -297,7 +299,7 @@ class SequentialInterpreterTests extends TacticTestBase {
     shouldResultIn(
       tactic,
       f,
-      Seq(toSequent("2=2"), toSequent("3=3"))
+      Seq("==> 2=2".asSequent, "==> 3=3".asSequent)
     )
   }
 
@@ -409,14 +411,14 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   "Unification" should "work on 1=1->1=1" in {
-    val pattern = SequentType(toSequent("p() -> p()"))
+    val pattern = SequentType("==> p() -> p()".asSequent)
     val e = USubstPatternTactic(Seq((pattern, (x:RenUSubst) => implyR(SuccPos(0)) & close)))
     shouldClose(e, "1=1->1=1".asFormula)
   }
 
   it should "work when there are non-working patterns" in {
-    val pattern1 = SequentType(toSequent("p() -> p()"))
-    val pattern2 = SequentType(toSequent("p() & q()"))
+    val pattern1 = SequentType("==> p() -> p()".asSequent)
+    val pattern2 = SequentType("==> p() & q()".asSequent)
     val e = USubstPatternTactic(Seq(
       (pattern2, (x:RenUSubst) => error("Should never get here.")),
       (pattern1, (x:RenUSubst) => implyR(SuccPos(0)) & close)
@@ -425,8 +427,8 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "work when there are non-working patterns -- flipped order." in {
-    val pattern1 = SequentType(toSequent("p() -> p()"))
-    val pattern2 = SequentType(toSequent("p() & q()"))
+    val pattern1 = SequentType("==> p() -> p()".asSequent)
+    val pattern2 = SequentType("==> p() & q()".asSequent)
     val e = USubstPatternTactic(Seq(
       (pattern1, (x:RenUSubst) => implyR(1) & close),
       (pattern2, (x:RenUSubst) => error("Should never get here."))
@@ -435,8 +437,8 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "choose the first applicable unification when there are many options" in {
-    val pattern1 = SequentType(toSequent("p() -> p()"))
-    val pattern2 = SequentType(toSequent("p() -> q()"))
+    val pattern1 = SequentType("==> p() -> p()".asSequent)
+    val pattern2 = SequentType("==> p() -> q()".asSequent)
     val e = USubstPatternTactic(Seq(
       (pattern1, (x:RenUSubst) => implyR(1) & close),
       (pattern2, (x:RenUSubst) => error("Should never get here."))
@@ -445,8 +447,8 @@ class SequentialInterpreterTests extends TacticTestBase {
   }
 
   it should "choose the first applicable unification when there are many options -- flipped order" in {
-    val pattern1 = SequentType(toSequent("p() -> p()"))
-    val pattern2 = SequentType(toSequent("p() -> q()"))
+    val pattern1 = SequentType("==> p() -> p()".asSequent)
+    val pattern2 = SequentType("==> p() -> q()".asSequent)
     val e = USubstPatternTactic(Seq(
       (pattern2, (x:RenUSubst) => error("Should never get here.")),
       (pattern1, (x:RenUSubst) => implyR(1) & close)
@@ -478,6 +480,59 @@ class SequentialInterpreterTests extends TacticTestBase {
 
     db.proveBy(modelContent, tactic(1)) shouldBe 'proved
   }}
+
+  def testTimeoutAlternatives(fml: Formula, t: Seq[BelleExpr], timeout: Long): (ProvableSig, Seq[String]) = {
+    val namesToRecord = t.map(_.prettyString)
+    val listener = new IOListener {
+      val calls: mutable.Buffer[String] = mutable.Buffer[String]()
+      override def begin(input: BelleValue, expr: BelleExpr): Unit = {
+        val name = expr.prettyString
+        if (namesToRecord.contains(name)) calls += name
+      }
+      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {}
+      override def kill(): Unit = {}
+    }
+
+    val BelleProvable(result, _) = ExhaustiveSequentialInterpreter(listener::Nil)(
+      TimeoutAlternatives(t, timeout),
+      BelleProvable(ProvableSig.startProof(fml))
+    )
+    (result, listener.calls)
+  }
+
+  "TimeoutAlternatives" should "succeed sole alternative" in {
+    val (result, recorded) = testTimeoutAlternatives("x>=0 -> x>=0".asFormula, prop::Nil, 1000)
+    result shouldBe 'proved
+    recorded should contain theSameElementsInOrderAs("prop" :: Nil)
+  }
+
+  it should "fail on timeout" in {
+    val wait: BuiltInTactic = new BuiltInTactic("wait") {
+      def result(p: ProvableSig): ProvableSig = { Thread.sleep(5000); p }
+    }
+    the [BelleThrowable] thrownBy testTimeoutAlternatives("x>=0 -> x>=0".asFormula, wait::Nil, 1000) should have message "[Bellerophon Runtime] Alternative timed out"
+  }
+
+  it should "succeed the first succeeding alternative" in {
+    val (result, recorded) = testTimeoutAlternatives("x>=0 -> x>=0".asFormula,
+      prop::DebuggingTactics.error("Should not be executed")::Nil, 1000)
+    result shouldBe 'proved
+    recorded should contain theSameElementsInOrderAs("prop" :: Nil)
+  }
+
+  it should "try until one succeeds" in {
+    val (result, recorded) = testTimeoutAlternatives("x>=0 -> x>=0".asFormula, (implyR(1)&done)::prop::Nil, 1000)
+    result shouldBe 'proved
+    recorded should contain theSameElementsInOrderAs("(implyR(1)&done())" :: "prop" :: Nil)
+  }
+
+  it should "stop trying on timeout" in {
+    val wait: BuiltInTactic = new BuiltInTactic("wait") {
+      def result(p: ProvableSig): ProvableSig = { Thread.sleep(5000); p }
+    }
+    the [BelleThrowable] thrownBy testTimeoutAlternatives("x>=0 -> x>=0".asFormula,
+      wait::DebuggingTactics.error("Should not be executed")::Nil, 1000) should have message "[Bellerophon Runtime] Alternative timed out"
+  }
 
   "Def tactic" should "define a tactic and apply it later" in {
     val fml = "x>0 -> [x:=2;++x:=x+1;]x>0".asFormula
@@ -658,11 +713,55 @@ class SequentialInterpreterTests extends TacticTestBase {
       DebuggingTactics.error("Inapplicable close") :: "close".asTactic :: ProofRuleTactics.closeTrue(1) :: Nil)
   }
 
+  it should "not spend extensive time searching positions" in {
+    val ante = (1 to 100).map(i => Equal(Variable("x", Some(i)), Number(1))).reduce(And)
+    val succ = (1 to 50).map(i => Box(Assign(Variable("y", Some(i)), Number(2)), Greater(Variable("y", Some(i)), Number(1)))).reduce(Or)
+
+    // should take about 500ms
+    failAfter(2 seconds) {
+      val BelleProvable(result, _) = ExhaustiveSequentialInterpreter(Nil)(
+        SaturateTactic(implyR('R) | andL('L) | orR('R) | assignb('R)),
+        BelleProvable(ProvableSig.startProof(Imply(ante, succ)))
+      )
+      result.subgoals.head.ante should have size 100
+      result.subgoals.head.succ should have size 50
+      result.subgoals.head.succ.foreach(_ shouldBe a [Greater])
+    }
+
+    // should take about 1min
+    failAfter(2 minutes) {
+      val BelleProvable(result, _) = ExhaustiveSequentialInterpreter(Nil, throwWithDebugInfo = true)(
+        SaturateTactic(implyR('R) | andL('L) | orR('R) | assignb('R)),
+        BelleProvable(ProvableSig.startProof(Imply(ante, succ)))
+      )
+      result.subgoals.head.ante should have size 100
+      result.subgoals.head.succ should have size 50
+      result.subgoals.head.succ.foreach(_ shouldBe a [Greater])
+    }
+  }
+
+  it should "stop saturation when proof is closed" in {
+    val listener = new IOListener {
+      val calls: mutable.Buffer[BelleExpr] = mutable.Buffer[BelleExpr]()
+      override def begin(input: BelleValue, expr: BelleExpr): Unit = expr match {
+        case NamedTactic(name, _) if name == "prop" => calls += expr
+        case _ =>
+      }
+      override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {}
+      override def kill(): Unit = {}
+    }
+    ExhaustiveSequentialInterpreter(listener :: Nil)(
+      SaturateTactic(prop),
+      BelleProvable(ProvableSig.startProof("x>0 -> x>0".asFormula))
+    ) match {
+      case BelleProvable(pr, _) => pr shouldBe 'proved
+    }
+    listener.calls should have size 1
+  }
+
   //////////////////////////////////////////////////////////////////////////////////////////////////
   // Helper methods
   //////////////////////////////////////////////////////////////////////////////////////////////////
-
-  private def toSequent(s : String) = new Sequent(IndexedSeq(), IndexedSeq(s.asFormula))
 
   private def shouldClose(expr: BelleExpr, f: Formula): Unit = shouldClose(expr, Sequent(IndexedSeq(), IndexedSeq(f)))
 

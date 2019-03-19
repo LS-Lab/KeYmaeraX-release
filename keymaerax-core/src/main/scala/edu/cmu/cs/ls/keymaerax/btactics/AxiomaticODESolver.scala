@@ -264,7 +264,7 @@ object AxiomaticODESolver {
           case None => None
           case Some(vs) =>
             // ODE solving tactic expects kyxtime variable to stay at the end. Let's keep it that way since it never depends on other variables
-            if (vs.contains(Variable("kyxtime"))) Some(vs.filter(_ != Variable("kyxtime")) :+ Variable("kyxtime"))
+            if (vs.exists(_.name == "kyxtime")) Some(vs.filter(_.name != "kyxtime") ++ vs.filter(_.name == "kyxtime").sortBy(_.index))
             else Some(vs)
         }
         case None => None

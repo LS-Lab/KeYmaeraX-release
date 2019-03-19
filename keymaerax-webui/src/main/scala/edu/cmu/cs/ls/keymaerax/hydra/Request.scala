@@ -32,6 +32,7 @@ import java.util.{Calendar, Locale}
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 
 import scala.io.Source
@@ -115,7 +116,7 @@ abstract class UserRequest(username: String) extends Request {
 }
 
 /** A proof session storing information between requests. */
-case class ProofSession(proofId: String, invGenerator: Generator[Formula], defs: KeYmaeraXArchiveParser.Declaration)
+case class ProofSession(proofId: String, invGenerator: Generator[GenProduct], defs: KeYmaeraXArchiveParser.Declaration)
 
 abstract class UserModelRequest(db: DBAbstraction, username: String, modelId: String) extends UserRequest(username) {
   override final def resultingResponses(): List[Response] = {
@@ -266,12 +267,24 @@ class CounterExampleRequest(db: DBAbstraction, userId: String, proofId: String, 
         }
 
         try {
-          ToolProvider.cexTool() match {
-            case Some(cexTool) => getCex(node, cexTool)
-            case None => new CounterExampleResponse("cex.notool") :: Nil
+          node.goal match {
+            case Some(sequent) if sequent.isFOL => ToolProvider.cexTool() match {
+                case Some(cexTool) => getCex(node, cexTool)
+                case None => new CounterExampleResponse("cex.notool") :: Nil
+              }
+            case Some(sequent) => sequent.succ.find({ case Box(_: ODESystem, _) => true case _ => false }) match {
+              case Some(Box(ode: ODESystem, post)) => ToolProvider.invGenTool() match {
+                case Some(tool) => tool.refuteODE(ode, sequent.ante, post) match {
+                  case None => new CounterExampleResponse("cex.none") :: Nil
+                  case Some(cex) => new CounterExampleResponse("cex.found", sequent.toFormula, cex) :: Nil
+                }
+                case None => new CounterExampleResponse("cex.notool") :: Nil
+              }
+            }
+            case None => new CounterExampleResponse("cex.none") :: Nil
           }
         } catch {
-          case ex: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
+          case _: MathematicaComputationAbortedException => new CounterExampleResponse("cex.timeout") :: Nil
         }
     }
   }
@@ -1127,9 +1140,9 @@ class OpenProofRequest(db: DBAbstraction, userId: String, proofId: String, wait:
       proofInfo.modelId match {
         case None => new ErrorResponse("Unable to open proof " + proofId + ", because it does not refer to a model")::Nil // duplicate check to above
         case Some(mId) =>
-          val generator = new ConfigurableGenerator[Formula]()
+          val generator = new ConfigurableGenerator[GenProduct]()
           KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
-            generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ inv)))
+            generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
           val defsGenerator = new ConfigurableGenerator[Expression]()
           val problem = KeYmaeraXArchiveParser.parseProblem(db.getModel(mId).keyFile)
           problem.defs.substs.foreach(sp => defsGenerator.products += (sp.what -> (sp.repl::Nil)))
@@ -1398,7 +1411,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val (localProvable, parentStep, parentRule) = (node.localProvable, node.children.head.maker.get, node.children.head.makerShortName.get)
         val localProofId = db.createProof(localProvable)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof,
-          RequestHelper.listenerFactory(db), ExhaustiveSequentialInterpreter, 1, strict=false)
+          RequestHelper.listenerFactory(db), ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1, strict=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(localProvable))
         innerInterpreter.kill()
@@ -1747,7 +1760,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 
               def interpreter(proofId: Int, startNodeId: Int) = new Interpreter {
                 val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof, RequestHelper.listenerFactory(db),
-                  ExhaustiveSequentialInterpreter, 0, strict = false)
+                  ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict = false)
 
                 override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
                   inner(expr, v)
@@ -1788,7 +1801,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                 }
               } else {
                 //@note execute clicked single-step tactics on sequential interpreter right away
-                val taskId = node.runTactic(userId, ExhaustiveSequentialInterpreter, appliedExpr, ruleName)
+                val taskId = node.runTactic(userId, ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), appliedExpr, ruleName)
                 val info = "Executing " + executionInfo(belleTerm)
                 RunBelleTermResponse(proofId, node.id.toString, taskId, info) :: Nil
               }
@@ -1825,7 +1838,7 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
             //@note if spoonfeeding interpreter fails, try sequential interpreter so that tactics at least proofcheck
             //      even if browsing then shows a single step only
             val tree: ProofTree = DbProofTree(db, proofId)
-            val taskId = tree.root.runTactic(userId, ExhaustiveSequentialInterpreter, tactic, "custom")
+            val taskId = tree.root.runTactic(userId, ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), tactic, "custom")
             RunBelleTermResponse(proofId, "()", taskId, "") :: Nil
         }
     }

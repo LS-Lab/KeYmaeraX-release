@@ -7,9 +7,10 @@ package edu.cmu.cs.ls.keymaerax.codegen
 
 import java.io.File
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.SaturateTactic
 import edu.cmu.cs.ls.keymaerax.btactics._
-import edu.cmu.cs.ls.keymaerax.core.{NamedSymbol, Variable}
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
+import edu.cmu.cs.ls.keymaerax.core.{BaseVariable, Box, Equiv, Formula, Imply, NamedSymbol, Variable}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser}
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.KeYmaeraXTestTags.IgnoreInBuildTest
@@ -23,11 +24,11 @@ class CCodeGeneratorTests extends TacticTestBase {
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter()
+    CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter(printDebugOut = false)
   }
 
   override def afterEach(): Unit = {
-    CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter()
+    CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter(printDebugOut = false)
     super.afterEach()
   }
 
@@ -950,6 +951,18 @@ class CCodeGeneratorTests extends TacticTestBase {
 
     compileAndRun(code("1.0L"), "Result x=2.0\n")
     compileAndRun(code("5.0L"), "Result x=3.0\n")
+  }
+
+  it should "compile standalone if" in {
+    val program = "if (x>=5) { y:=2; }".asProgram
+    val stateVars = Set(Variable("x"), Variable("y"))
+    new CDetControllerGenerator()(program, stateVars)._2 shouldBe
+      """state ctrlStep(state curr, const parameters* const params, const input* const in) {
+        |  if (params->x >= 5.0L) {
+        |    curr.y = 2.0L;
+        |  }
+        |  return curr;
+        |}""".stripMargin
   }
 
   private def compileAndRun(code: String, expected: String) = {

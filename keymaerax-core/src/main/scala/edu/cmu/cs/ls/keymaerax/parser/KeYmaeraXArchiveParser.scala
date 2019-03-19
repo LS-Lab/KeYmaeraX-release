@@ -173,23 +173,24 @@ object KeYmaeraXArchiveParser {
 
   /**
     * Type analysis of expression according to the given type declarations decls
+    * @param name the entry name
     * @param d the type declarations known from the context
     * @param expr the expression parsed
     * @throws [[edu.cmu.cs.ls.keymaerax.parser.ParseException]] if the type analysis fails.
     */
-  def typeAnalysis(d: Declaration, expr: Expression): Boolean = {
+  def typeAnalysis(name: String, d: Declaration, expr: Expression): Boolean = {
     StaticSemantics.symbols(expr).forall({
-      case f:Function =>
-        val (declaredDomain,declaredSort, interpretation, loc: Location) = d.decls.get((f.name,f.index)) match {
+      case f: Function =>
+        val (declaredDomain, declaredSort, _, loc: Location) = d.decls.get((f.name,f.index)) match {
           case Some(decl) => decl
-          case None => throw ParseException.typeError("undefined function symbol", f, f.sort + "", UnknownLocation,
+          case None => throw ParseException.typeError(name + ": undefined function symbol", f, f.sort + "", UnknownLocation,
             "Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.")
         }
-        if(f.sort != declaredSort) throw ParseException.typeDeclError(s"${f.prettyString} declared with sort $declaredSort but used where sort ${f.sort} was expected.", declaredSort + " function", f.sort + "", loc)
-        else if (f.domain != declaredDomain.get) {
+        if (f.sort != declaredSort) throw ParseException.typeDeclError(s"$name: ${f.prettyString} declared with sort $declaredSort but used where sort ${f.sort} was expected.", declaredSort + " function", f.sort + "", loc)
+        else if (!declaredDomain.contains(f.domain)) {
           (f.domain, declaredDomain) match {
-            case (l, Some(r)) => throw ParseException.typeDeclError(s"${f.prettyString} declared with domain $r but used where domain ${f.domain} was expected.", r + "", f.domain + "", loc)
-            case (l, None) => throw ParseException.typeDeclError(s"${f.prettyString} declared as ${f.getClass} of sort ${f.sort} but used as a function with arguments.", "no arguments", "function with arguments", loc)
+            case (_, Some(r)) => throw ParseException.typeDeclError(s"$name: ${f.prettyString} declared with domain $r but used where domain ${f.domain} was expected.", r + "", f.domain + "", loc)
+            case (_, None) => throw ParseException.typeDeclError(s"$name: ${f.prettyString} declared as a variable of sort ${f.sort} but used as a function with arguments.", "no arguments", "function with arguments", loc)
             //The other cases can't happen -- we know f is a function so we know it has a domain.
           }
         }
@@ -198,11 +199,11 @@ object KeYmaeraXArchiveParser {
       case x: Variable =>
         val (declaredSort, declLoc) = d.decls.get((x.name,x.index)) match {
           case Some((None,sort, _, loc)) => (sort, loc)
-          case Some((Some(domain), sort, _, loc)) => throw ParseException.typeDeclError(s"${x.name} was declared as a function but must be a variable when it is assigned to or has a differential equation.", domain + "->" + sort + " Function", "Variable of sort Real", loc)
-          case None => throw ParseException.typeDeclGuessError("undefined symbol " + x + " with index " + x.index, "undefined symbol", x, UnknownLocation,
+          case Some((Some(domain), sort, _, loc)) => throw ParseException.typeDeclError(s"$name: ${x.name} was declared as a function but must be a variable when it is assigned to or has a differential equation.", domain + "->" + sort + " Function", "Variable of sort Real", loc)
+          case None => throw ParseException.typeDeclGuessError(name +": undefined symbol " + x + " with index " + x.index, "undefined symbol", x, UnknownLocation,
             "Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.")
         }
-        if (x.sort != declaredSort) throw ParseException.typeDeclGuessError(s"${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.", declaredSort + "", x, declLoc)
+        if (x.sort != declaredSort) throw ParseException.typeDeclGuessError(s"$name: ${x.prettyString} declared with sort $declaredSort but used where a ${x.sort} was expected.", declaredSort + "", x, declLoc)
         x.sort == declaredSort
       case _: UnitPredicational => true //@note needs not be declared
       case _: UnitFunctional => true //@note needs not be declared
@@ -786,7 +787,7 @@ object KeYmaeraXArchiveParser {
         }
 
         val elaborated = definitions.exhaustiveSubst(problem)
-        typeAnalysis(definitions ++ BuiltinDefinitions.defs, elaborated) //throws ParseExceptions.
+        typeAnalysis(entry.name, definitions ++ BuiltinDefinitions.defs, elaborated) //throws ParseExceptions.
 
         // check that definitions and use match
         val symbols = StaticSemantics.symbols(problem) ++ definitions.substs.flatMap(s => StaticSemantics.symbols(s.repl))
@@ -813,7 +814,7 @@ object KeYmaeraXArchiveParser {
           case Annotation(e: Program, a: Formula) =>
             val substPrg = definitions.exhaustiveSubst(e)
             val substFml = definitions.exhaustiveSubst(a)
-            typeAnalysis(definitions ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, substFml)
+            typeAnalysis(entry.name, definitions ++ BuiltinDefinitions.defs ++ BuiltinAnnotationDefinitions.defs, substFml)
             KeYmaeraXParser.annotationListener(substPrg, substFml)
           case Annotation(_: Program, a) => throw ParseException("Annotation must be formula, but got " + a.prettyString, UnknownLocation)
           case Annotation(e, _) => throw ParseException("Annotation on programs only, but was on " + e.prettyString, UnknownLocation)
