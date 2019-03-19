@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.AnonymousLemmas._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
-import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.{Configuration, btactics}
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{GenProduct, PegasusProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -1448,10 +1448,12 @@ private object DifferentialTactics extends Logging {
         ODEInvariance.sAIclosedPlus(bound = 3)(pos) |
         //todo: duplication currently necessary between sAIclosedPlus and sAIclosed due to unresolved Mathematica issues
         ODEInvariance.sAIclosed(pos) |
+        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(QE,skip)) &
         ODEInvariance.sAIRankOne(doReorder = true, skipClosed = false)(pos)
       }
       else {
         ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
+        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(QE,skip)) & //strengthen to the closure if applicable
         ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
       }
 
@@ -1644,16 +1646,17 @@ private object DifferentialTactics extends Logging {
     * Strengthens the postcondition to its interior and cuts in its closure
     * (provided the closure holds initially).
     *
-    * G |- [{ode&p&closure(q)}]interior(q)           G |- closure(q)
+    * G |- [{ode&p&closure(q)}]interior(q)           G |- interior(q) (or closure(q) if cutInterior=false)
     * ----------------------------------------------------------------dCClosure
     * G |- [{ode&p}]q
     *
+    * Cuts interior(q) true initially by default (but this can be set to closure(q) instead)
     * interior(q) and closure(q) are wrt. to the negation normal form (NNF) of q
     * @see [[FormulaTools.interior]]
     * @see [[FormulaTools.closure]]
     *
     */
-  val dCClosure: DependentPositionTactic = "dCClosure" by ((pos:Position,seq: Sequent) => {
+  def dCClosure(cutInterior:Boolean = true): DependentPositionTactic = "dCClosure" byWithInput (cutInterior,(pos:Position,seq: Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "dCClosure expects to be called on top-level succedent")
 
     val (ode,p_fml,post) = seq.sub(pos) match {
@@ -1686,41 +1689,17 @@ private object DifferentialTactics extends Logging {
       case Some(pr) => (useAt(pr, PosInExpr(1 :: Nil))(pos ++ PosInExpr(0::1::1:: Nil)), useAt(pr, PosInExpr(1 :: Nil))(pos))
     }
 
-    // TODO: several of these local tactics might be useful in a more general setting
-//    def interiorPostBox = "ANON" by { (seq: Sequent) =>
-//      require (seq.succ.length == 1)
-//      seq.succ(0) match {
-//        case Box(a, post) =>
-//          generalize(FormulaTools.interior(post))(1) & Idioms.<(skip,
-//            cohideOnlyL('Llast) & interiorImplication
-//          )
-//        case x =>
-//          throw new BelleThrowable("interiorPostcondition expected a Box but got " + x)
-//      }
-//    }
-//    def normalizeAt(nrmlz : Formula => (Formula,Option[ProvableSig])) : DependentPositionTactic = "ANON" by { (pos: Position, seq: Sequent) =>
-//      seq.sub(pos) match {
-//        case Some(fml: Formula) =>
-//          nrmlz(fml) match {
-//            case (a, Some(prv)) =>
-//              useAt(prv)(pos)
-//            case _ =>
-//              skip
-//          }
-//        case x =>
-//          throw new BelleThrowable("normalizeAt expected Some Formula but got " + x)
-//      }
-//    }
-
     /* cut right subgoal */
     starter &
-    cutR(closure)(pos) <(
+    cutR(if(cutInterior) interior else closure)(pos) <(
       skip,
       // Turn postcondition into interior
       implyR(pos) & generalize(interior)(pos) <(
         maxminGt & useAt("open invariant closure >")(pos) <(
           backGt & backGe1 & hideL('Llast),
-          backGe2 & closeId
+          backGe2 &
+            (if(cutInterior) cohide2(AntePosition(seq.ante.length+1),pos) & interiorImplication
+            else closeId)
         ),
         cohideOnlyL('Llast) & interiorImplication
       )
@@ -1759,8 +1738,8 @@ private object DifferentialTactics extends Logging {
     cutR(interior)(pos) <(
       skip, //QE
       implyR(1) &
-      dCClosure(pos) <(
-        cohide2(AntePosition(seq.ante.length+1),pos) & interiorImplication,
+      dCClosure(cutInterior=true)(pos) <(
+        closeId,
         //dI('full)(pos)
         DI(pos) & implyR(pos) & andR(pos) <(
           closeId,
