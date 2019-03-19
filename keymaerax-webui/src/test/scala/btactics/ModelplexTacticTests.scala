@@ -1104,6 +1104,26 @@ class ModelplexTacticTests extends TacticTestBase {
     //checkArchiveEntries(entries.filter(_.name == "Velocity Car Sandbox Safety from Car Safety"))
   }
 
+  "Waypoint navigation" should "generate a controller monitor" in withMathematica { tool =>
+    //@note run this test with -DTEST_BASE_DIR=/path/to/modeldirectory
+    val baseDir = System.getProperty("TEST_BASE_DIR")
+    val entry = KeYmaeraXArchiveParser.parseFromFile(s"$baseDir/relative-full.kyx#Robot preserves loop invariant").head
+    val model = entry.model.asInstanceOf[Formula]
+    val Imply(_, Box(prg, _)) = model
+
+    val stateVars = ("xg" :: "yg" :: "v" :: "a" :: "t" :: "vl" :: "vh" :: "k" :: Nil).map(_.asVariable.asInstanceOf[BaseVariable])
+    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(model, stateVars: _*)
+    val simplifier = SimplifierV3.simpTac(taxs = SimplifierV3.composeIndex(
+      SimplifierV3.groundEqualityIndex, SimplifierV3.defaultTaxs))
+    val ctrlTactic = DebuggingTactics.print("Deriving Ctrl Monitor") & ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
+      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)) &
+      DebuggingTactics.print("Quantifiers instantiated") &
+      simplifier(1) & DebuggingTactics.print("Ctrl Monitor Result")
+    val ctrlResult = proveBy(modelplexInput, ctrlTactic)
+    val ctrlMonitorFml = ctrlResult.subgoals.head.succ.head
+    ctrlMonitorFml shouldBe "(xgpost>=0&kpost>=0|xgpost<=0&kpost<=0)&(ygpost>0&abs(kpost)*eps()<=100&((kpost*(eps()*eps())-200*eps())*100 < kpost*(xgpost*xgpost+ygpost*ygpost)-2*xgpost*100*10&kpost*(xgpost*xgpost+ygpost*ygpost)-2*xgpost*100*10 < (kpost*(eps()*eps())+200*eps())*100)&0<=vlpost&vlpost < vhpost&A()*T()<=10*(vhpost-vlpost)&B()*T()<=10*(vhpost-vlpost))&((-B()<=apost&apost<=A())&10*v+apost*T()>=0&(v<=vhpost&10*v+apost*T()<=10*vhpost|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(B()*(2*v*T()*10+apost*(T()*T()))+((v*10+apost*T())*(v*10+apost*T())-10*vhpost*(10*vhpost)))<=2*B()*(abs(xgpost)-10*eps())*10000*100|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(B()*(2*v*T()*10+apost*(T()*T()))+((v*10+apost*T())*(v*10+apost*T())-10*vhpost*(10*vhpost)))<=2*B()*(ygpost-10*eps())*10000*100)&(vlpost<=v&10*v+apost*T()>=10*vlpost|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(A()*(2*v*T()*10+apost*(T()*T()))+(vlpost*10*(vlpost*10)-(v*10+apost*T())*(v*10+apost*T())))<=2*A()*(abs(xgpost)-10*eps())*10000*100|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(A()*(2*v*T()*10+apost*(T()*T()))+(vlpost*10*(vlpost*10)-(v*10+apost*T())*(v*10+apost*T())))<=2*A()*(ygpost-10*eps())*10000*100))&(v>=0&0<=T())&vpost=v&tpost=0".asFormula
+  }
+
   "ModelPlex formula metric" should "convert simple formula" in withMathematica { tool =>
     val fml = "x>=y & a=b & c<=d+e".asFormula
     ModelPlex.toMetric(fml) shouldBe "max(y-x, max(max(a-b, b-a), c-(d+e)))<=0".asFormula
