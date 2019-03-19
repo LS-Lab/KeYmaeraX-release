@@ -1666,7 +1666,7 @@ private object DifferentialTactics extends Logging {
       seq.succ(0) match {
         case Box(a, post) =>
           generalize(FormulaTools.interior(post))(1) & Idioms.<(skip,
-            interiorImplication
+            cohideOnlyL('Llast) & interiorImplication
           )
         case x =>
           throw new BelleThrowable("interiorPostcondition expected a Box but got " + x)
@@ -1752,6 +1752,7 @@ private object DifferentialTactics extends Logging {
               DW(1) & diffRefine(p_fml)(1) & Idioms.<(
                 TactixLibrary.generalize(Imply(closure,DifferentialFormula(interior)))(1) & Idioms.<(
                   closeId,
+                  cohideOnlyL('Llast) &
                   implyR(1) & andL('Llast) & implyL(-1) & Idioms.<(
                     closeId,
                     closeId
@@ -1759,6 +1760,7 @@ private object DifferentialTactics extends Logging {
                 ),
                 DW(1) & TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(
                   cohideR(1) & boxTrue(1),
+                  cohideOnlyL('Llast) &
                   implyR(1) & andL('Llast) & closeId
                 )
               )
