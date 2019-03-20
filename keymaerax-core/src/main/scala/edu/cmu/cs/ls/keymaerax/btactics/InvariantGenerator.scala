@@ -160,12 +160,28 @@ object InvariantGenerator extends Logging {
   lazy val pegasusCandidates: Generator[GenProduct] = pegasus(includeCandidates=true)
   def pegasus(includeCandidates: Boolean): Generator[GenProduct] = (sequent,pos) => sequent.sub(pos) match {
     case Some(Box(ode: ODESystem, post: Formula)) if post.isFOL =>
+      def strictInequality(fml: Formula): Boolean = {
+        FormulaTools.atomicFormulas(fml).exists({
+          case _: Less => true
+          case _: Greater => true
+          case _: NotEqual => true
+          case _ => false
+        })
+      }
+
       ToolProvider.invGenTool() match {
         case Some(tool) =>
           lazy val pegasusInvs = tool.invgen(ode, sequent.ante, post)
+          lazy val conjunctiveCandidates: Seq[Either[Seq[Formula], Seq[Formula]]] = pegasusInvs.withFilter({
+            case Left(l) => l.length > 1 && l.exists(strictInequality)
+            case Right(r) => r.length > 1 && r.exists(strictInequality)
+          }).map({
+            case Left(l) => Right(l.reduce(And) :: Nil)
+            case Right(r) => Right(r.reduce(And) :: Nil)
+          })
           lazy val invs: Seq[GenProduct] =
             if (includeCandidates) {
-              pegasusInvs.flatMap({
+              (pegasusInvs ++ conjunctiveCandidates).flatMap({
                 case Left(l) => l.map(_ -> Some(PegasusProofHint(isInvariant = true, None)))
                 case Right(r) => r.map(_ -> Some(PegasusProofHint(isInvariant = false, None)))
               })
