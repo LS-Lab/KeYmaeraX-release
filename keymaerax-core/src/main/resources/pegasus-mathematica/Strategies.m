@@ -6,6 +6,7 @@
 
 
 Needs["Classifier`",FileNameJoin[{Directory[],"Classifier.m"}]] (* Load classifier package from current directory *)
+Needs["BarrierCertificateMethod`",FileNameJoin[{Directory[],"BarrierCertificateMethod.m"}]] (* Barrier certificates *)
 Needs["QualitativeMethods`",FileNameJoin[{Directory[],"QualitativeMethods.m"}]] (* Load qualitative analysis-based invariant generation methods package from current directory *)
 Needs["AbstractionPolynomials`",FileNameJoin[{Directory[],"AbstractionPolynomials.m"}]] (* Polynomial sources for qualitative abstraction *)
 Needs["PlanarLinear`",FileNameJoin[{Directory[],"PlanarLinear.m"}]]  (* Planar linear system analysis package *)
@@ -146,6 +147,7 @@ If[TrueQ[Reduce[Implies[aggregate, post], vars, Reals]], Throw[cutsAggregate]],
 {method,{
 "DWC-Factors-Summands",
 "DWC-Factors-RHS", 
+"DWC-BarrierCertificates",
 "DWC-Darboux",
 "DWC-Factors-RHS-Lie", 
 "DWC-Factors-RHS-Product", 
@@ -291,6 +293,7 @@ Switch[methodID,
 (* QualitativeMethods for non-linear systems based on qualitative analysis and discrete abstraction *)
 "DWC-Factors-Summands", QualitativeMethods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`SummandFactors[problem]], {}],
 "DWC-Darboux", QualitativeMethods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`DarbouxPolynomials[problem]], {}],
+"DWC-BarrierCertificates", QualitativeMethods`DWC[precond, postcond, system, Union[hintPolynomials,{BarrierCertificateMethod`SOSBarrier[problem]}], {}],
 "DWC-Factors-RHS", QualitativeMethods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSFactors[problem]], {}],
 "DWC-Factors-RHS-Lie", QualitativeMethods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSLieDFactors[problem]], {}],
 "DWC-Factors-RHS-Product", QualitativeMethods`DWC[precond, postcond, system, Union[hintPolynomials,AbstractionPolynomials`PostRHSProductFactors[problem]], {}],
