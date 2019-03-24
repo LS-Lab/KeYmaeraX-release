@@ -11,6 +11,12 @@ SOSBarrier::usage="SOSBarrierCertificate[problem_List] uses an interface to Matl
 Options[SOSBarrier]= {NPrecision->6};
 
 
+ConjunctiveIneqSetQ::usage="foo"
+
+
+PreProcess::usage="fooo"
+
+
 BTemplate::usage="BTemplate[deg_, vars_List] Polynomial template with symbolic coefficients (of degree at most 'deg')"
 
 
@@ -93,9 +99,9 @@ BooleanMinimize[UnequalToLtOrGt[expression], "DNF"]//LogicalExpand//EqualToLeqAn
 
 ConjunctiveIneqSetQ[set_]:=Module[{S=PreProcess[set]},
 TrueQ[S==True] || 
-(TrueQ[Head[S]==GreaterEqual || Head[S]==LessEqual] || Head[S]==Greater || Head[S]==Less) ||
-(TrueQ[Head[S]==And] && AllTrue[Map[
-Head[#]==LessEqual || Head[#]==GreaterEqual || Head[#]==Greater || Head[#]==Less &, Level[set,{1}]], TrueQ])
+(TrueQ[Head[S]===GreaterEqual || Head[S]===LessEqual] || Head[S]===Greater || Head[S]===Less || Head[S]===Equal) ||
+(TrueQ[Head[S]===And] && AllTrue[Map[
+ConjunctiveIneqSetQ[#] &, Level[S,{1}]], TrueQ])
 ]
 
 
@@ -118,11 +124,12 @@ If[Not[TrueQ[
 ConjunctiveIneqSetQ[pre//LogicalExpand] && 
 ConjunctiveIneqSetQ[Not[post]//LogicalExpand] && 
 ConjunctiveIneqSetQ[evoConst//LogicalExpand] ]], 
-Throw[[
+Throw[{
+(* Throws empty list if no result found
 ConjunctiveIneqSetQ[pre//LogicalExpand],
 ConjunctiveIneqSetQ[Not[post]//LogicalExpand],
-ConjunctiveIneqSetQ[evoConst//LogicalExpand]]]]; 
-
+ConjunctiveIneqSetQ[evoConst//LogicalExpand] *)
+}]]; 
 (* Open a link to Matlab *)
 link=MATLink`OpenMATLAB[];
 
@@ -242,7 +249,7 @@ barrierscript=MATLink`MScript["expbarrier",sosprog, "Overwrite" -> True];
 res=MATLink`MEvaluate@barrierscript;
 lines=StringSplit[res,{"B2 =", "break"}];
 B=CoefficientRules[N[StringReplace[StringDelete[lines[[-1]], "\n" | "\r" |" "], {"e-"->"*10^-"}]//ToExpression//Expand, 10]];
-If[B=={},Throw[0],Throw[MapAt[Function[x,Rationalize[Round[x,1/10^precision]]],B,{All,2}]~FromCoefficientRules~vars]];
+If[B=={},Throw[{}],Throw[MapAt[Function[x,Rationalize[Round[x,1/10^precision]]],B,{All,2}]~FromCoefficientRules~vars]];
 ]]
 
 
@@ -341,7 +348,7 @@ LPres=LinearProgramming[
   Join[beq,bineq],
   const, Method->"InteriorPoint"
 ];
-
+If[Head[LPres]===LinearProgramming, Throw[0]];
 LPsol=Thread[LPvars -> LPres]; 
 
 (* Solve the linear program conveniently using Minimize- optimising 0 to obtain a feasible point in the constraint *)
