@@ -268,7 +268,12 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
             case ex: MathematicaComputationAbortedException =>
               executor.remove(taskId)
               throw ex
+            case ex: ConversionException =>
+              executor.remove(taskId)
+              // conversion error, but Mathematica still functional
+              throw ToolException("Error converting Mathematica result from " + checkErrorMsgCmd, ex)
             case ex: IllegalArgumentException =>
+              executor.remove(taskId)
               // computation error, but Mathematica still functional
               throw ToolException("Error executing Mathematica command " + checkErrorMsgCmd, ex)
             case ex: Throwable =>
