@@ -30,6 +30,9 @@ FirstIntegrals`FuncIndep[FirstIntegrals`FindFirstIntegrals[deg, vars, vf],vars]
 SummandFactors[problem_List]:=QualitativeAbstraction`SummandFactors[problem]
 
 
+DarbouxPolynomials[problem_List]:=QualitativeAbstraction`DarbouxPolynomials[problem]
+
+
 BarrierCertificates[problem_List]:=Catch[Module[{pre,post,vf,vars,Q,decompositionList},
 {pre, { vf, vars, Q }, post} = problem;
 (* Initialize empty list of polynomials for the algebraic decomposition *)

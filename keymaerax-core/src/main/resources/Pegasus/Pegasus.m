@@ -116,18 +116,13 @@ Print[inv];
 inv=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
 Print[inv];
 
-(* Return the invariant without strict inequalities - KeYmaera has trouble with mixed formulas *)
-(*inv=inv/.{Unequal[a_,b_]-> True};
-andinv=Apply[And,inv];
-relaxedInv=LZZ`InvS[andinv, f, vars, evoConst];
-If[ TrueQ[relaxedInv], 
-Print["Relaxed invariant is still ok. Proceeding"], 
-Print["Relaxed invariant is no longer invariant. Sorry."];Throw[{{True},False}]]; *)
-
-invImpliesPost=CheckSemiAlgInclusion[Apply[And,inv//Flatten], post, vars];
+invImpliesPost=CheckSemiAlgInclusion[Apply[And,inv[[2]]], post, vars];
 If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{inv, True}],
-Print["Generated invariant does not imply postcondition. Bad luck; returning what I could find."]; Throw[{inv, False}]]
-,{ strat, strategies}(* End Do loop *)]
+Print["Generated invariant does not imply postcondition. Bad luck; returning what I could find."]]
+,{ strat, strategies}(* End Do loop *)];
+
+(* Throw whatever invariant was last computed *)
+Throw[{inv, False}]
 
 ]]
 

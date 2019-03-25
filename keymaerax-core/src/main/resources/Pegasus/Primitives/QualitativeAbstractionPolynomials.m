@@ -142,7 +142,7 @@ TrueQ[ConjugatePolynomial[poly]==poly]
 DarbouxPolynomials[problem_List]:=Catch[Module[{pre,f,vars,Q,post,deg,dbx,realdbx},
 {pre,{f,vars,Q},post}=problem;
 deg=Max[Map[Primitives`PolynomDegree,f]];
-dbx=DarbouxPolyGen`ManPS2[deg,f,vars];
+dbx=DarbouxPolynomials`ManPS2[deg,f,vars];
 Print["Generated Darboux polynomials: "];
 Print[dbx];
 (* Darboux polynomials come in complex conjugate pairs - we multiply with the conjugates to eliminate complex coefficients *)

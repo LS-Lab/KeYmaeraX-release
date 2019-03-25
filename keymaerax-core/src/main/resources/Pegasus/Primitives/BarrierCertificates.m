@@ -241,7 +241,9 @@ barrierscript=MATLink`MScript["expbarrier",sosprog, "Overwrite" -> True];
 res=MATLink`MEvaluate@barrierscript;
 lines=StringSplit[res,{"B2 =", "break"}];
 B=CoefficientRules[N[StringReplace[StringDelete[lines[[-1]], "\n" | "\r" |" "], {"e-"->"*10^-"}]//ToExpression//Expand, 10]];
-If[B=={},Throw[0],Throw[MapAt[Function[x,Rationalize[Round[x,1/10^precision]]],B,{All,2}]~FromCoefficientRules~vars]];
+If[B=={},Throw[0],Throw[
+{MapAt[Function[x,Rationalize[Round[x,1/10^precision]]],B,{All,2}]~FromCoefficientRules~vars} (* The output should be a singleton list *)
+]];
 ]]
 
 
