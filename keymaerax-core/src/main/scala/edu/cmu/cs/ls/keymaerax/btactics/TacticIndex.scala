@@ -148,7 +148,7 @@ class DefaultTacticIndex extends TacticIndex {
 
         } else {
           a match {
-            case _: ODESystem => (TactixLibrary.solve :: Nil, TactixLibrary.ODE :: Nil)
+            case _: ODESystem => (TactixLibrary.solve :: Nil, TactixLibrary.ODE :: TactixLibrary.solve :: Nil)
             case _ => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
           }
         }
@@ -206,8 +206,16 @@ class DefaultTacticIndex extends TacticIndex {
       case "allL" | "allR" | "all stutter" => expr.isInstanceOf[Forall]
       case "existsL" | "existsR" | "exists stutter" => expr.isInstanceOf[Exists]
       case "allL2R" | "allR2L" | "equalCommute" => expr.isInstanceOf[Equal]
-      case "abs" => expr match { case Equal(FuncOf(Function("abs", None, Real, Real, true), _), _) => true case _ => false }
-      case "minmax" => expr match { case Equal(FuncOf(Function("min" | "max", None, Tuple(Real, Real), Real, true), _), _) => true case _ => false }
+      case "abs" => expr match {
+        case Equal(FuncOf(Function("abs", None, Real, Real, true), _), _) => true
+        case FuncOf(Function("abs", None, Real, Real, true), _) => true
+        case _ => false
+      }
+      case "minmax" => expr match {
+        case Equal(FuncOf(Function("min" | "max", None, Tuple(Real, Real), Real, true), _), _) => true
+        case FuncOf(Function("min" | "max", None, Tuple(Real, Real), Real, true), _) => true
+        case _ => false
+      }
 
       // box/diamond
       case "solve" | "solveEnd" | "ODE" | "dC" | "dI" | "dW" | "diffInvariant" =>

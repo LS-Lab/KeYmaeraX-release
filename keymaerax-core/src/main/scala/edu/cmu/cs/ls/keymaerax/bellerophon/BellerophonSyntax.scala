@@ -352,13 +352,12 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
   /** Recursively tries the position tactic at positions at or after the locator's start in the specified provable. */
   private def tryAllAfter(provable: ProvableSig, locator: Find, cause: BelleThrowable): ProvableSig =
     if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
-      def nextLocator(locator: Find) = Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact)
       def toPos(locator: Find): Option[Position] = {
         if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
           val pos = locator.toPosition(provable)
           provable.subgoals(locator.goal).sub(pos) match {
             case Some(expr) if TacticIndex.default.isApplicable(expr, this) => Some(pos)
-            case _ => toPos(nextLocator(locator))
+            case _ => toPos(Find(locator.goal, locator.shape, pos.topLevel.advanceIndex(1), locator.exact))
           }
         } else {
           None
@@ -542,13 +541,12 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
     override def computeExpr(v: BelleValue): BelleExpr = v match {
       case BelleProvable(provable, _) =>
         if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
-          def nextLocator(locator: Find) = Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact)
           def toPos(locator: Find): Option[Position] = {
             if (locator.start.isIndexDefined(provable.subgoals(locator.goal))) {
               val pos = locator.toPosition(provable)
               provable.subgoals(locator.goal).sub(pos) match {
                 case Some(expr) if TacticIndex.default.isApplicable(expr, this) => Some(pos)
-                case _ => toPos(nextLocator(locator))
+                case _ => toPos(Find(locator.goal, locator.shape, pos.topLevel.advanceIndex(1), locator.exact))
               }
             } else {
               None
@@ -556,7 +554,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
           }
           toPos(locator) match {
             case Some(pos) => pt.factory(pos) |
-              tryAllAfter(Find(locator.goal, locator.shape, pos.advanceIndex(1), locator.exact), cause)
+              tryAllAfter(Find(locator.goal, locator.shape, pos.topLevel.advanceIndex(1), locator.exact), cause)
             case _ => throw cause
           }
         } else if (cause == null) {

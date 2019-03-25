@@ -25,7 +25,6 @@ HandelmanRepEps::usage="HandelmanRepEps[BTemp_, vars_List, deg_Integer, constrai
 
 BoundingBox::usage="BoundingBox[set_,vars_List] Computes a hyperbox in R^|vars| which bounds a given set."
 
-
 Begin["`Private`"]
 
 
@@ -91,11 +90,12 @@ PreProcess[expression_]:=PreProcess[expression]=Module[{},
 BooleanMinimize[UnequalToLtOrGt[expression], "DNF"]//LogicalExpand//EqualToLeqAndGeq//LtToGt//LeqToGeq//ZeroRHS ] 
 
 
-ConjunctiveIneqSetQ[set_]:=Module[{S=PreProcess[set]},
+(* Check whether S is a conjunctive formula of polynomial (in)equalities *)
+ConjunctiveIneqSetQ[set_,vars_]:=Module[{S=PreProcess[set]},
 TrueQ[S==True] || 
-(TrueQ[Head[S]==GreaterEqual || Head[S]==LessEqual] || Head[S]==Greater || Head[S]==Less) ||
-(TrueQ[Head[S]==And] && AllTrue[Map[
-Head[#]==LessEqual || Head[#]==GreaterEqual || Head[#]==Greater || Head[#]==Less &, Level[set,{1}]], TrueQ])
+((TrueQ[Head[S]===GreaterEqual || Head[S]===LessEqual] || Head[S]===Greater || Head[S]===Less || Head[S]===Equal) &&
+	AllTrue[Map[PolynomialQ[#,vars] &, Level[S,{1}]], TrueQ]) ||
+(TrueQ[Head[S]===And] && AllTrue[Map[ConjunctiveIneqSetQ[#,vars] &, Level[S,{1}]], TrueQ])
 ]
 
 
@@ -103,8 +103,8 @@ ExtractPolys[form_]:=Module[{expr,lst},
 expr=form//LogicalExpand//PreProcess;
 lst= expr/.{And->List, GreaterEqual[lhs_,0]:> lhs, Greater[lhs_,0]:> lhs};
 If[TrueQ[Head[expr]==And],
-lst,
-{lst}
+	lst,
+	{lst}
 ]
 ]
 
@@ -113,15 +113,19 @@ HeuristicMonomials[vars_,vf_,degree_]:=Module[ {},
 DeleteDuplicates[Flatten[Function[x,monomialList[x,vars]]/@vf]]]
 
 
-SOSBarrier[{ pre_, { vf_List, vars_List, evoConst_ }, post_}, opts:OptionsPattern[]]:=Catch[Module[{init,unsafe,Q,f, precision,sosprog,res,lines,B, link, barrierscript,heumons},
+SOSBarrier[{ pre_, { vf_List, vars_List, evoConst_ }, post_}, opts:OptionsPattern[]]:=Catch[Module[
+{init,unsafe,Q,f, precision,sosprog,res,lines,B, link, barrierscript,heumons},
+
+Print["Attempting to generate a barrier certificate with SOS Programming"];
+
 If[Not[TrueQ[ 
-ConjunctiveIneqSetQ[pre//LogicalExpand] && 
-ConjunctiveIneqSetQ[Not[post]//LogicalExpand] && 
-ConjunctiveIneqSetQ[evoConst//LogicalExpand] ]], 
-Throw[[
-ConjunctiveIneqSetQ[pre//LogicalExpand],
-ConjunctiveIneqSetQ[Not[post]//LogicalExpand],
-ConjunctiveIneqSetQ[evoConst//LogicalExpand]]]]; 
+ConjunctiveIneqSetQ[pre//LogicalExpand,vars] && 
+ConjunctiveIneqSetQ[Not[post]//LogicalExpand,vars] && 
+ConjunctiveIneqSetQ[evoConst//LogicalExpand,vars]]], 
+Print["Problem has incorrect shape for barrier certificate generation."];
+Throw[{
+(* Throws empty list if no result found *)
+}]];
 
 (* Open a link to Matlab *)
 link=MATLink`OpenMATLAB[];
@@ -237,12 +241,13 @@ for deg = mindeg : maxdeg
 end
 B2 = 0
 ";
+
 barrierscript=MATLink`MScript["expbarrier",sosprog, "Overwrite" -> True];
 (* Print[sosprog]; *)
 res=MATLink`MEvaluate@barrierscript;
 lines=StringSplit[res,{"B2 =", "break"}];
 B=CoefficientRules[N[StringReplace[StringDelete[lines[[-1]], "\n" | "\r" |" "], {"e-"->"*10^-"}]//ToExpression//Expand, 10]];
-If[B=={},Throw[0],Throw[MapAt[Function[x,Rationalize[Round[x,1/10^precision]]],B,{All,2}]~FromCoefficientRules~vars]];
+If[B=={},Throw[{}],Throw[MapAt[Function[x,Rationalize[Round[x,1/10^precision]]],B,{All,2}]~FromCoefficientRules~vars]];
 ]]
 
 
@@ -278,23 +283,24 @@ Throw[prob]
 
 
 LPBarrier[{ pre_, { vf_List, vars_List, evoConst_ }, post_}]:=Catch[Module[
-(* Declare local variables *)
 {init,unsafe,Q,B,LfB,BC1,BC2,BC3,deg,eps,lambda,prob,equations,inequalities,LPvars,
 Aeq,Aineq,beq,bineq,const,obbjFn,LPres,objFn,LPsol,Binst},
+
+Print["Attempting to generate a barrier certificate with Linear Programming"];
 
 (* TODO: pass these as params after unifying interfaces *)
 deg = 5;
 eps = 0.0001;
 lambda = -0.5;
 
-If[Not[TrueQ[ 
-ConjunctiveIneqSetQ[pre//LogicalExpand] && 
-ConjunctiveIneqSetQ[Not[post]//LogicalExpand] && 
-ConjunctiveIneqSetQ[evoConst//LogicalExpand] ]], 
-Throw[[
-ConjunctiveIneqSetQ[pre//LogicalExpand],
-ConjunctiveIneqSetQ[Not[post]//LogicalExpand],
-ConjunctiveIneqSetQ[evoConst//LogicalExpand]]]]; 
+If[Not[TrueQ[
+ConjunctiveIneqSetQ[pre//LogicalExpand,vars] && 
+ConjunctiveIneqSetQ[Not[post]//LogicalExpand,vars] && 
+ConjunctiveIneqSetQ[evoConst//LogicalExpand,vars]]], 
+Print["Problem has incorrect shape for barrier certificate generation."];
+Throw[{
+(* Throws empty list if no result found *)
+}]];
 
 init=ExtractPolys[pre];
 unsafe=ExtractPolys[Not[post]];
@@ -341,7 +347,7 @@ LPres=LinearProgramming[
   Join[beq,bineq],
   const, Method->"InteriorPoint"
 ];
-
+If[Head[LPres]===LinearProgramming, Throw[{}]];
 LPsol=Thread[LPvars -> LPres]; 
 
 (* Solve the linear program conveniently using Minimize- optimising 0 to obtain a feasible point in the constraint *)

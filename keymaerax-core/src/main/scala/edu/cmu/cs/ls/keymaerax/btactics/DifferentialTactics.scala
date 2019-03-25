@@ -12,14 +12,14 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{GenProduct, PegasusProofHint}
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct, PegasusProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
-import scala.collection.immutable.{IndexedSeq, List, Seq}
+import scala.collection.immutable.{IndexedSeq, List, Nil, Seq}
 
 /**
  * Implementation: provides tactics for differential equations.
@@ -901,8 +901,9 @@ private object DifferentialTactics extends Logging {
             diffCut(inv)(pos) <(
               skip,
               proofHint match {
-                case Some(PegasusProofHint(_, None)) => odeInvariant(tryHard = true, useDw = false)(pos)
-                case _ => odeInvariant(tryHard = false, useDw = false)(pos)
+                case Some(PegasusProofHint(_, None)) => odeInvariant(tryHard = true, useDw = false)(pos) & done
+                case Some(AnnotationProofHint(tryHard)) => odeInvariant(tryHard = tryHard, useDw = false)(pos) & done
+                case _ => odeInvariant(tryHard = false, useDw = false)(pos) & done
               }
             ) &
           // continue outside <(skip, ...) so that cut is proved before used
@@ -920,7 +921,15 @@ private object DifferentialTactics extends Logging {
     * @author Nathan Fulton
     * @author Stefan Mitsch
     */
-  lazy val mathematicaODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+  lazy val mathematicaSplittingODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+    seq.sub(pos) match {
+      case Some(Box(sys@ODESystem(_, _), And(_, _))) =>
+        boxAnd(pos) & andR(pos) <(mathematicaSplittingODE(pos) & done, mathematicaSplittingODE(pos)) | mathematicaODE(pos)
+      case _ => mathematicaODE(pos)
+    }
+  })
+
+  lazy val mathematicaODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "ODE automation only applicable to top-level succedents")
 
     seq.sub(pos) match {
@@ -1448,10 +1457,12 @@ private object DifferentialTactics extends Logging {
         ODEInvariance.sAIclosedPlus(bound = 3)(pos) |
         //todo: duplication currently necessary between sAIclosedPlus and sAIclosed due to unresolved Mathematica issues
         ODEInvariance.sAIclosed(pos) |
+        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(QE,skip)) &
         ODEInvariance.sAIRankOne(doReorder = true, skipClosed = false)(pos)
       }
       else {
         ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
+        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(QE,skip)) & //strengthen to the closure if applicable
         ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
       }
 
@@ -1644,75 +1655,65 @@ private object DifferentialTactics extends Logging {
     * Strengthens the postcondition to its interior and cuts in its closure
     * (provided the closure holds initially).
     *
-    * G |- [{ode&p&closure(q)}]interior(q)           G |- closure(q)
+    * G |- [{ode&p&closure(q)}]interior(q)           G |- interior(q) (or closure(q) if cutInterior=false)
     * ----------------------------------------------------------------dCClosure
     * G |- [{ode&p}]q
     *
+    * Cuts interior(q) true initially by default (but this can be set to closure(q) instead)
     * interior(q) and closure(q) are wrt. to the negation normal form (NNF) of q
     * @see [[FormulaTools.interior]]
     * @see [[FormulaTools.closure]]
     *
     */
-  val dCClosure: DependentTactic = "dCClosure" by { seq: Sequent =>
-    if (seq.succ.length != 1) throw new BelleThrowable("dCClosure expects a single succedent")
-    val (ode, p_fml, q_fml): (DifferentialProgram, Formula, Formula) = seq.succ(0) match {
-      case Box(ODESystem(ode, p_fml), q_fml) => (ode, p_fml, q_fml)
-      case _ =>
-        throw new BelleThrowable("dCClosure expects succedent of shape [{ode&p}]q")
+  def dCClosure(cutInterior:Boolean = true): DependentPositionTactic = "dCClosure" byWithInput (cutInterior,(pos:Position,seq: Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "dCClosure expects to be called on top-level succedent")
+
+    val (ode,p_fml,post) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,p)) => (sys.ode,sys.constraint,p)
+      case _ => throw new BelleThrowable("dCClosure expects succedent of shape [{ode&p}]q")
     }
-    // TODO: several of these local tactics might be useful in a more general setting
-    def interiorPostBox = "ANON" by { (seq: Sequent) =>
-      require (seq.succ.length == 1)
-      seq.succ(0) match {
-        case Box(a, post) =>
-          generalize(FormulaTools.interior(post))(1) & Idioms.<(skip,
-            interiorImplication
-          )
-        case x =>
-          throw new BelleThrowable("interiorPostcondition expected a Box but got " + x)
-      }
-    }
-    def normalizeAt(nrmlz : Formula => (Formula,Option[ProvableSig])) : DependentPositionTactic = "ANON" by { (pos: Position, seq: Sequent) =>
-      seq.sub(pos) match {
-        case Some(fml: Formula) =>
-          nrmlz(fml) match {
-            case (a, Some(prv)) =>
-              useAt(prv)(pos)
-            case _ =>
-              skip
-          }
-        case x =>
-          throw new BelleThrowable("normalizeAt expected Some Formula but got " + x)
-      }
-    }
+
+    val (q_fml, propt) = semiAlgNormalize(post)
+
+    /* Apply the semialg normalization step */
+    val starter = propt.map(pr => useAt(pr)(pos ++ PosInExpr(1 :: Nil))).getOrElse(skip)
+
     val interior = FormulaTools.interior(q_fml)
     val closure = FormulaTools.closure(q_fml)
 
-    /* Position of the formula corresponding to the left subgoal after cutting it in. */
-    val leftPosition = AntePosition(seq.ante.length + 2)
-    /* Position of the formula corresponding to the right subgoal after cutting it in. */
-    val rightPosition = AntePosition(seq.ante.length + 1)
+    val (mm_fmlGt, proptGt) = maxMinGtNormalize(interior)
+    val (mm_fmlGe, proptGe) = maxMinGeqNormalize(closure)
+
+    //NOTE: mm_fmlGt should be identical to mm_fmlGe except with > instead of >=
+
+    /* Apply/Undo the max-min normalization steps */
+
+    val (maxminGt, backGt) = proptGt match {
+      case None => (skip, skip)
+      case Some(pr) => (useAt(pr)(pos ++ PosInExpr(1 :: Nil)), useAt(pr, PosInExpr(1 :: Nil))(pos ++ PosInExpr(1 :: Nil)))
+    }
+
+    val (backGe1, backGe2) = proptGe match {
+      case None => (skip, skip)
+      case Some(pr) => (useAt(pr, PosInExpr(1 :: Nil))(pos ++ PosInExpr(0::1::1:: Nil)), useAt(pr, PosInExpr(1 :: Nil))(pos))
+    }
+
     /* cut right subgoal */
-    cut(closure) & Idioms.<(
-      /* cut left subgoal */
-      cut(Box(ODESystem(ode, And(p_fml, closure)), interior)) & Idioms.<(
-        normalizeAt(SimplifierV3.semiAlgNormalize)(1, 1::Nil) &
-          interiorPostBox &
-          normalizeAt(SimplifierV3.maxMinGtNormalize)(1, 1::Nil) &
-          useAt("open invariant closure >")(1) & Idioms.<(
-            chaseMinMaxInequalities(1, 1::Nil) &
-              normalizeAt(SimplifierV3.semiAlgNormalize)(leftPosition ++ PosInExpr(1::Nil)) &
-              chaseMinMaxInequalities(1, 0::1::1::Nil) &
-              normalizeAt(SimplifierV3.semiAlgNormalize)(leftPosition ++ PosInExpr(0::1::1::Nil)) &
-              closeId,
-            chaseMinMaxInequalities(1) &
-              normalizeAt(SimplifierV3.semiAlgNormalize)(rightPosition) &
-              closeId),
-        /* leave only left subgoal */
-        hideR(1) & hideL(rightPosition)),
-      /* leave only right subgoal */
-      hideR(1))
-  }
+    starter &
+    cutR(if(cutInterior) interior else closure)(pos) <(
+      skip,
+      // Turn postcondition into interior
+      implyR(pos) & generalize(interior)(pos) <(
+        maxminGt & useAt("open invariant closure >")(pos) <(
+          backGt & backGe1 & hideL('Llast),
+          backGe2 &
+            (if(cutInterior) cohide2(AntePosition(seq.ante.length+1),pos) & interiorImplication
+            else closeId)
+        ),
+        cohideOnlyL('Llast) & interiorImplication
+      )
+    )
+  })
 
   /**
     * assume closure of postcondition for proof of invariant interior
@@ -1726,51 +1727,41 @@ private object DifferentialTactics extends Logging {
     * @see [[FormulaTools.closure]]
     *
     */
-  val dIClosure: DependentTactic = "dIClosure" by { seq: Sequent =>
-    if (seq.succ.length != 1) throw new BelleThrowable("dCClosure expects a single succedent")
-    val (ode, p_fml, q_fml): (DifferentialProgram, Formula, Formula) = seq.succ(0) match {
-      case Box(ODESystem(ode, p_fml), q_fml) => (ode, p_fml, q_fml)
-      case _ =>
-        throw new BelleThrowable("dCClosure expects succedent of shape [{ode&p}]q")
+  val dIClosure: DependentPositionTactic = "dIClosure" by ((pos:Position,seq: Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "dIClosure expects to be called on top-level succedent")
+
+    val (ode,p_fml,post) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,p)) => (sys.ode,sys.constraint,p)
+      case _ => throw new BelleThrowable("dIClosure expects succedent of shape [{ode&p}]q")
     }
+
+    val (q_fml, propt) = semiAlgNormalize(post)
+    /* Apply the semialg normalization step */
+    val starter = propt.map(pr => useAt(pr)(pos ++ PosInExpr(1 :: Nil))).getOrElse(skip)
+
     val interior = FormulaTools.interior(q_fml)
+
     val closure = FormulaTools.closure(q_fml)
 
-    /* Position of the formula corresponding to the left subgoal after cutting it in. */
-    val leftPosition = AntePosition(seq.ante.length + 2)
-    /* Position of the formula corresponding to the right subgoal after cutting it in. */
-    val rightPosition = AntePosition(seq.ante.length + 1)
-    /* cut right subgoal */
-    cut(interior) & Idioms.<(
-      /* cut left subgoal */
-      cut(Imply(p_fml, Box(ODESystem(ode, p_fml), Imply(closure,DifferentialFormula(interior))))) & Idioms.<(
-        DifferentialTactics.dCClosure & Idioms.<(
-          DI(1) & implyR(1) & andL('Llast) & implyL(leftPosition) & Idioms.<(
-            closeId,
-            andR(1) & Idioms.<(
-              closeId,
-              DW(1) & diffRefine(p_fml)(1) & Idioms.<(
-                TactixLibrary.generalize(Imply(closure,DifferentialFormula(interior)))(1) & Idioms.<(
-                  closeId,
-                  implyR(1) & andL('Llast) & implyL(-1) & Idioms.<(
-                    closeId,
-                    closeId
-                  )
-                ),
-                DW(1) & TactixLibrary.generalize("true".asFormula)(1) & Idioms.<(
-                  cohideR(1) & boxTrue(1),
-                  implyR(1) & andL('Llast) & closeId
-                )
-              )
+    starter &
+    cutR(interior)(pos) <(
+      skip, //QE
+      implyR(1) &
+      dCClosure(cutInterior=true)(pos) <(
+        closeId,
+        //dI('full)(pos)
+        DI(pos) & implyR(pos) & andR(pos) <(
+          closeId,
+          DW(pos) & diffRefine(p_fml)(pos) <(
+            generalize(Imply(closure,DifferentialFormula(interior)))(pos) <(
+              hideL(AntePosition(seq.ante.length+1)) & andL('Llast) & hideL('Llast),
+              implyL('Llast) <( implyR(1) & andL('Llast) & closeId , implyR(1) & closeId )
             )
-          ),
-          cohideOnlyL(rightPosition) & interiorImplication & done
-        ),
-        /* leave only left subgoal */
-        hideR(1) & hideL(rightPosition) & implyR(1)
-      ),
-      /* leave only right subgoal */
-      hideR(1)
+            ,
+            diffWeakenG(pos) & implyR(1) & andL(-1) & closeId
+          )
+        )
+      )
     )
-  }
+  })
 }

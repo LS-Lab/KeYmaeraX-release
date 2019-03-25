@@ -1576,17 +1576,34 @@ class DifferentialTests extends TacticTestBase with Timeouts {
   }
 
   "dCClosure" should "strengthen the postcondition to its interior and cut in the closure" in withMathematica { _ =>
-    val result = proveBy("t = 0, x = 1 ==> [{t'=1, x'=x & t <= 1}](x>0&x<=3)".asSequent, DifferentialTactics.dCClosure)
+    val result = proveBy("t = 0, x = 1 ==> [{t'=1, x'=x & t <= 1}](x>0&x<=3)".asSequent, DifferentialTactics.dCClosure(true)(1))
+    val result2 = proveBy("t = 0, x = 1 ==> [{t'=1, x'=x & t <= 1}](x>0&x<=3)".asSequent, DifferentialTactics.dCClosure(false)(1))
+
     result.subgoals should have size 2
-    result.subgoals.head shouldBe "t = 0, x = 1 ==> [{t'=1,x'=x&t<=1&x>=0&x<=3}](x>0&x<3)".asSequent
-    result.subgoals(1) shouldBe "t = 0, x = 1 ==> x>=0&x<=3".asSequent
+    result.subgoals.head shouldBe "t = 0, x = 1 ==> x>0&3-x>0".asSequent
+    result.subgoals(1) shouldBe "t = 0, x = 1 ==> [{t'=1,x'=x&t<=1&x>=0&3-x>=0}](x>0&3-x>0)".asSequent
+    result2.subgoals should have size 2
+    result2.subgoals.head shouldBe "t = 0, x = 1 ==> x>=0&3-x>=0".asSequent
+    result2.subgoals(1) shouldBe "t = 0, x = 1 ==> [{t'=1,x'=x&t<=1&x>=0&3-x>=0}](x>0&3-x>0)".asSequent
+  }
+
+  it should "add syntactic closure to domain" in withMathematica { _ =>
+    val res = proveBy("a=1,b()=2 ==> x>=0,y>=0,[{x'=a,y'=b()}](x<=0&y<0)".asSequent,
+      DifferentialTactics.dCClosure(true)(3)
+        <(
+        QE,
+        skip
+      ))
+    res.subgoals.loneElement shouldBe
+    "a=1, b()=2 ==> x>=0, y>=0, [{x'=a,y'=b()&true&0-x>=0&0-y>=0}](0-x>0&0-y>0)".asSequent
   }
 
   "dIClosure" should "assume closure of postcondition for proof of invariant interior" in withMathematica { qeTool =>
     val result = proveBy("t = 0, x = 1 ==> [{t'=1, x'=x & t <= 1}](x>0&x<=3)".asSequent,
-      DifferentialTactics.dIClosure)
+      DifferentialTactics.dIClosure(1))
+
     result.subgoals should have size 2
-    result.subgoals.head shouldBe ("t=0, x=1, t<=1 ==> [{t'=1,x'=x&t<=1}](x>=0&x<=3->(x>0&x<3)')").asSequent
-    result.subgoals(1) shouldBe "t=0, x=1 ==> x>0&x<3".asSequent
+    result.subgoals.head shouldBe "t=0, x=1 ==> x>0&3-x>0".asSequent
+    result.subgoals(1) shouldBe "t=0, x=1, t<=1 ==> [{t'=1,x'=x&t<=1}](x>=0&3-x>=0->(x>0&3-x>0)')".asSequent
   }
 }

@@ -165,9 +165,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     val pegasusResourceNames =
       "AbstractionPolynomials.m" ::
       "BarrierCertificateMethod.m" ::
-      "Boreale.m" ::
       "Classifier.m" ::
-      "FirstIntegralGen.m" ::
+      "DarbouxPolyGen.m" ::
       "DiscreteAbstraction.m" ::
       "FirstIntegralGen.m" ::
       "FirstIntegralMethod.m" ::

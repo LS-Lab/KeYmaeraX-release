@@ -244,7 +244,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
   protected def run[T](cmd: MExpr, executor: ToolExecutor[(String, T)], converter: MExpr=>T): (String, T) = {
     try {
       if (ml == null) throw new IllegalStateException("No MathKernel set")
-      val qidx: Long = synchronized {
+      val qidx: Long = ml.synchronized {
         queryIndex += 1; queryIndex
       }
       val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(qidx), cmd))
@@ -254,8 +254,10 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
         logger.debug("Sending to Mathematica " + checkErrorMsgCmd)
 
         val taskId = executor.schedule(_ => {
-          dispatch(checkErrorMsgCmd.toString)
-          getAnswer(qidx, converter, indexedCmd.toString) //@note disposes indexedCmd, do not use (except dispose) afterwards
+          ml.synchronized {
+            dispatch(checkErrorMsgCmd.toString)
+            getAnswer(qidx, converter, indexedCmd.toString) //@note disposes indexedCmd, do not use (except dispose) afterwards
+          }
         })
 
         executor.wait(taskId) match {
@@ -266,10 +268,16 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
             case ex: MathematicaComputationAbortedException =>
               executor.remove(taskId)
               throw ex
+            case ex: ConversionException =>
+              executor.remove(taskId)
+              // conversion error, but Mathematica still functional
+              throw ToolException("Error converting Mathematica result from " + checkErrorMsgCmd, ex)
             case ex: IllegalArgumentException =>
+              executor.remove(taskId)
               // computation error, but Mathematica still functional
               throw ToolException("Error executing Mathematica command " + checkErrorMsgCmd, ex)
             case ex: Throwable =>
+              logger.warn(ex)
               executor.remove(taskId, force = true)
               try {
                 restart()
@@ -298,9 +306,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
   /** Send command `cmd` for evaluation to Mathematica kernel straight away */
   private def dispatch(cmd: String): Unit = {
     if (ml == null) throw new IllegalStateException("No MathKernel set")
-    ml.synchronized {
-      ml.evaluate(cmd)
-    }
+    ml.evaluate(cmd)
   }
 
   /**
