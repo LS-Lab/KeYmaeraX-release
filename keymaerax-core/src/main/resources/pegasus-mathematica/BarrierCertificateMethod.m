@@ -62,7 +62,7 @@ ConstTerm[P_,vrs_List]:=(Table[0,Length[vrs]]/.CoefficientRules[P,vrs])/.{a_List
 
 
 (* A very basic Mathematica to Matlab expression converter *)
-MmaToMatlab[list_List]:=StringReplace["["<>StringRiffle[Map[MmaToMatlab, list],"; "]<>"]",{"`"->"backtick"}]
+MmaToMatlab[list_List]:="["<>StringRiffle[Map[MmaToMatlab, list],"; "]<>"]"
 MmaToMatlab[Power[trm_,exp_]]:=MmaToMatlab[trm]<>"^("<>MmaToMatlab[exp]<>")"
 MmaToMatlab[Times[product_]]:= "("<>StringRiffle[MmaToMatlab /@ (List @@ product), "*"]<>")"
 MmaToMatlab[product_Plus]:= "("<>StringRiffle[MmaToMatlab /@ (List @@ product), "+"]<>")"
@@ -241,7 +241,7 @@ for deg = mindeg : maxdeg
 end
 B2 = 0
 ";
-
+sosprog=StringReplace[sosprog,{"`"->"backtick"}];
 barrierscript=MATLink`MScript["expbarrier",sosprog, "Overwrite" -> True];
 (* Print[sosprog]; *)
 res=MATLink`MEvaluate@barrierscript;
