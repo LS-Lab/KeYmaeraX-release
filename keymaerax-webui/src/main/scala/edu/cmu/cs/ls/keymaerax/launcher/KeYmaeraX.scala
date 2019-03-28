@@ -662,6 +662,10 @@ object KeYmaeraX {
 
     //statistics.foreach({ case (k, v) => printStatistics(k, v) })
     statistics.foreach(println)
+
+    val csvStatistics = statistics.map(_.toCsv).mkString("\\n")
+    val statisticsLogger = Logger(getClass)
+    statisticsLogger.info(MarkerManager.getMarker("PROOF_STATISTICS"), csvStatistics)
   }
 
   /**
