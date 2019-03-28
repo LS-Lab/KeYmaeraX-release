@@ -4,18 +4,22 @@
    Comments: Tested in Mathematica 10.0   *)
 
 
-BeginPackage[ "Primitives`"]
+BeginPackage["Primitives`"];
 
 
 PolynomDegree::usage="PolynomDegree[P,vars] returns the total degree of a polynomial P w.r.t. the list of variables (optional)."
+PolyMonomialList::usage"PolyMonomialList[P,vars] returns the list of monomials w.r.t. the list of variables(optional)"
 ConstTerm::usage="ConstTerm[P,vars] returns the constant term w.r.t. the list of variables (optional)."
+
 Lf::usage="Lf[P,vf,vars] returns the Lie derivative of P w.r.t. to ODE specified by vars'=vf"
+
 UpperRat::usage="UpperRat[number, precision] rounds number upwards to 10^-precision"
 LowerRat::usage="LowerRat[number, precision] rounds number downwards to 10^-precision"
 NearestRat::usage="NearestRat[number, precision] rounds number to 10^-precision"
 UpperRatCoeffs::usage="UpperRatCoeffs[number, precision]"
 LowerRatCoeffs::usage="LowerRatCoeffs[number, precision]"
 NearestRatCoeffs::usage="NearestRatCoeffs[number, precision]"
+
 DNFNormalize::usage="DNFNormalize[fml]"
 
 
@@ -26,6 +30,9 @@ Begin["`Private`"]
 PolynomDegree[P_,vars_List]:= Max[Cases[CoefficientRules[P,vars], v_?VectorQ :> Total[v], 2]]
 PolynomDegree[P_] := PolynomDegree[P,Variables[P]]
 
+(* Return all monomials of a given polynomial wrt the variables -- less annoying than the builtin MonomialList *)
+PolyMonomialList[P_, vars_list] := Times @@ (vars^#) & /@ CoefficientRules[P, vars][[All, 1]]
+PolyMonomialList[P_] := PolyMonomialList[P,Variables[P]]
 
 (* Return the constant term in a polynomial *)
 ConstTerm[P_,vars_List]:=(Table[0,Length[vars]]/.CoefficientRules[P,vars])/.{a_List:>0}
@@ -50,7 +57,6 @@ NearestRat[x_?NumericQ, precision_?Positive]:=Module[{uncertainty},
   Rationalize[N[x,precision], uncertainty]
 ]
 
-
 (* Rounding on polynomials *)
 RatCoeffs[p_?PolynomialQ, vars_List, precision_?NonNegative,dir_]:=Module[{coeffRules},
   coeffRules=CoefficientRules[p, vars];
@@ -62,6 +68,7 @@ RatCoeffs[p_?PolynomialQ, vars_List, precision_?NonNegative,dir_]:=Module[{coeff
   ];
   FromCoefficientRules[coeffRules,vars]
 ];
+
 UpperRatCoeffs[p_?PolynomialQ, vars_List, precision_?NonNegative] := RatCoeffs[p,vars,precision,"Upper"]
 LowerRatCoeffs[p_?PolynomialQ, vars_List, precision_?NonNegative] := RatCoeffs[p,vars,precision,"Lower"]
 NearestRatCoeffs[p_?PolynomialQ, vars_List, precision_?NonNegative] := RatCoeffs[p,vars,precision,"Nearest"]
