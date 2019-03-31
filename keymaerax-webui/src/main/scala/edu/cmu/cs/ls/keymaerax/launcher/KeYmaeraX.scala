@@ -630,40 +630,54 @@ object KeYmaeraX {
 
     BelleInterpreter.setInterpreter(LazySequentialInterpreter(qeDurationListener::Nil))
 
+    val tacticString = readTactic(options)
+    val reqTacticName = options.get('tacticName)
     println("Proving ...")
     val statistics = archiveContent.flatMap(
       {case ParsedArchiveEntry(modelName, kind, _, problemContent, _, model: Formula, tactics, _) =>
         //@note open print writer to create empty file (i.e., delete previous evidence if this proof fails).
         val outputFileName = outputFileNames(modelName)
 
-        val t = if (tactics.isEmpty) ("auto", "auto", TactixLibrary.auto) :: Nil else tactics
-        t.zipWithIndex.map({case ((tacticName, _, tactic), i) =>
-          val proofStat = prove(modelName, model, problemContent, tacticName, tactic, timeout,
-            if (i == 0) Some(outputFileName) else None, options)
+        val t = tacticString match {
+          case Some(tac) => ("user", "user", tac) :: Nil
+          case None =>
+            if (reqTacticName.isDefined) tactics.filter(_._1 == reqTacticName.get)
+            else if (tactics.isEmpty) ("auto", "auto", TactixLibrary.auto) :: Nil
+            else tactics
+        }
 
-          proofStat.witness match {
-            case Some(proof) =>
-              if (kind == "lemma") {
-                val lemmaName = "user" + File.separator + modelName
-                if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
-                val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
-                  "tool" -> "KeYmaera X",
-                  "model" -> problemContent,
-                  "tactic" -> tactics.head._2
-                )) :: Nil)
-                LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
-              }
-              savePt(proof)
-            case None => // nothing to do
-          }
-          proofStat
-        })
+        if (t.isEmpty) {
+          println("Unknown tactic " + reqTacticName + ", skipping entry")
+          ProofStatistics(modelName, reqTacticName.getOrElse("auto").toString, "skipped", None, timeout, -1, -1, -1, -1) :: Nil
+        } else {
+          t.zipWithIndex.map({ case ((tacticName, _, tactic), i) =>
+            val proofStat = prove(modelName, model, problemContent, tacticName, tactic, timeout,
+              if (i == 0) Some(outputFileName) else None, options)
+
+            proofStat.witness match {
+              case Some(proof) =>
+                if (kind == "lemma") {
+                  val lemmaName = "user" + File.separator + modelName
+                  if (LemmaDBFactory.lemmaDB.contains(lemmaName)) LemmaDBFactory.lemmaDB.remove(lemmaName)
+                  val evidence = Lemma.requiredEvidence(proof, ToolEvidence(List(
+                    "tool" -> "KeYmaera X",
+                    "model" -> problemContent,
+                    "tactic" -> tactics.head._2
+                  )) :: Nil)
+                  LemmaDBFactory.lemmaDB.add(new Lemma(proof, evidence, Some(lemmaName)))
+                }
+                savePt(proof)
+              case None => // nothing to do
+            }
+            proofStat
+          })
+        }
       })
 
     //statistics.foreach({ case (k, v) => printStatistics(k, v) })
     statistics.foreach(println)
 
-    val csvStatistics = statistics.map(_.toCsv).mkString("\\n")
+    val csvStatistics = statistics.map(_.toCsv).mkString("\n")
     val statisticsLogger = Logger(getClass)
     statisticsLogger.info(MarkerManager.getMarker("PROOF_STATISTICS"), csvStatistics)
   }
