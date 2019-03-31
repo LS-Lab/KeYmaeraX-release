@@ -1,64 +1,48 @@
 (* ::Package:: *)
 
+Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]]
 Needs["MATLink`"]
 
 
 BeginPackage["BarrierCertificates`"];
 
 
-SOSBarrier::usage="SOSBarrierCertificate[problem_List] uses an interface to Matlab (MatLink plugin required!) to compute barrier certificates."
-Options[SOSBarrier]= {NPrecision->6};
+SOSBarrier::usage="SOSBarrier[problem_List] uses an interface to Matlab (MatLink plugin required!) to compute barrier certificates.";
+Options[SOSBarrier]= {NPrecision -> 6, Lambda -> {}};
 
 
-BTemplate::usage="BTemplate[deg_, vars_List] Polynomial template with symbolic coefficients (of degree at most 'deg')"
+BTemplate::usage="BTemplate[deg_, vars_List] Polynomial template with symbolic coefficients (of degree at most 'deg')";
 
 
-LPBarrier::usage="LPBarrierCertificate[deg_, problem_List] Linear relaxation for barrier certificate search up to degree 'deg'"
+LPGen::usage="LPGen returns an LP problem for barrier certificate search";
 
 
-LPBarrierMATLAB::usage="LPBarrierMATLAB[deg_, problem_List] Linear relaxation for barrier certificate search up to degree 'deg'"
+LPBarrier::usage="LPBarrier[deg_, problem_List] Linear relaxation for barrier certificate search up to degree 'deg'";
 
 
-HandelmanRepEps::usage="HandelmanRepEps[BTemp_, vars_List, deg_Integer, constraints_List, eps_] Handelman representation of a template polynomial BTemp on a hyperbox given by constraints."
+LPBarrierMATLAB::usage="LPBarrierMATLAB[deg_, problem_List] Linear relaxation for barrier certificate search up to degree 'deg'";
 
 
-BoundingBox::usage="BoundingBox[set_,vars_List] Computes a hyperbox in R^|vars| which bounds a given set."
+HandelmanRepEps::usage="HandelmanRepEps[BTemp_, vars_List, deg_Integer, constraints_List, eps_] Handelman representation of a template polynomial BTemp on a hyperbox given by constraints.";
 
 
-Begin["`Private`"]
+BoundingBox::usage="BoundingBox[set_,vars_List] Computes a hyperbox in R^|vars| which bounds a given set.";
+
+
+ConjunctiveIneqSetQ::usage="ConjunctiveIneqSetQ[set_] Returns whether the set is represented as a conjunction of inequalities";
+
+
+ExtractPolys::usage="ExtractPolys[set_] extracts the LHS of inequalities in set";
+
+
+Begin["`Private`"];
 
 
 Pegasus`NPRECISION=6; (* Default precision for numericising rationals *)
 
 
-(* COMMON FUNCTIONS
-TODO: move to a common Pegasus library file?
-*)
-(* Lie derivative of P wrt ODEs *)
-Lf[P_,vars_,vf_]:=Grad[P,vars].vf;
-
-(* Normalize formulas *)
-LeqToGeq[formula_]:=Module[{}, formula/.{         LessEqual[lhs_,rhs_] :>  GreaterEqual[rhs,lhs]} ] 
-LtToGt[formula_]:=Module[{}, formula/.{           Less[lhs_,rhs_]      :>  Greater[rhs,lhs]} ] 
-UnequalToLtOrGt[formula_]:=Module[{}, formula/.{  Unequal[lhs_,rhs_]      :>  Or[Less[lhs,rhs] ,Less[rhs,lhs]]} ] 
-EqualToLeqAndGeq[formula_]:=Module[{}, formula/.{ Equal[lhs_,rhs_]        :>  And[LessEqual[lhs,rhs] ,LessEqual[rhs,lhs]]} ] 
-LeqToLtOrEqual[formula_]:=Module[{}, formula/.{   LessEqual[lhs_,rhs_]    :>  Or[Less[lhs,rhs] ,Equal[rhs,lhs]]} ] 
-
-(* Set right-hand side of terms to zero *)
-ZeroRHS[formula_]   :=  Module[{},formula/.{
-Equal[a_,b_]        :>  Equal[a-b,0],
-Unequal[a_,b_]      :>  Unequal[a-b,0],
-Greater[a_,b_]      :>  Greater[a-b,0],
-GreaterEqual[a_,b_] :>  GreaterEqual[a-b,0],
-Less[a_,b_]         :>  Less[a-b,0], 
-LessEqual[a_,b_]    :>  LessEqual[a-b,0]
-}]
-
 (* Return all monomials of a given polynomial wrt the variables *)
 monomialList[poly_, vars_] := Times @@ (vars^#) & /@ CoefficientRules[poly, vars][[All, 1]]
-
-(* Return the constant term in a polynomial *)
-ConstTerm[P_,vrs_List]:=(Table[0,Length[vrs]]/.CoefficientRules[P,vrs])/.{a_List:>0};
 
 
 (* A very basic Mathematica to Matlab expression converter *)
@@ -86,54 +70,54 @@ MmaToMatlab[True]:="true"
 MmaToMatlab[False]:="false"
 
 
-PreProcess[expression_]:=PreProcess[expression]=Module[{},
-BooleanMinimize[UnequalToLtOrGt[expression], "DNF"]//LogicalExpand//EqualToLeqAndGeq//LtToGt//LeqToGeq//ZeroRHS ] 
-
-
-ConjunctiveIneqSetQ[set_]:=Module[{S=PreProcess[set]},
+ConjunctiveIneqSetQ[S_]:=Module[{},
 TrueQ[S==True] || 
-(TrueQ[Head[S]==GreaterEqual || Head[S]==LessEqual] || Head[S]==Greater || Head[S]==Less) ||
-(TrueQ[Head[S]==And] && AllTrue[Map[
-Head[#]==LessEqual || Head[#]==GreaterEqual || Head[#]==Greater || Head[#]==Less &, Level[set,{1}]], TrueQ])
+((TrueQ[Head[S]===GreaterEqual || Head[S]===LessEqual] || Head[S]===Greater || Head[S]===Less || Head[S]===Equal) &&
+	AllTrue[Map[PolynomialQ[#,vars] &, Level[S,{1}]], TrueQ]) ||
+(TrueQ[Head[S]===And] && AllTrue[Map[ConjunctiveIneqSetQ[#] &, Level[S,{1}]], TrueQ])
 ]
 
 
-ExtractPolys[form_]:=Module[{expr,lst},
-expr=form//LogicalExpand//PreProcess;
-lst= expr/.{And->List, GreaterEqual[lhs_,0]:> lhs, Greater[lhs_,0]:> lhs};
-If[TrueQ[Head[expr]==And],
-lst,
-{lst}
-]
-]
+(* Checks that set is a conjunction and extracts polynomials TODO: this should "relax" equalities p=0 by bloating them to -eps \[LessEqual] p \[LessEqual] eps rather than p\[GreaterEqual]0 && p\[LessEqual]0 which are ill-behaved *)
+ExtractPolys[set_]:=Module[{S=Primitives`DNFNormalizeGtGeq[set],lst},
+If[ConjunctiveIneqSetQ[S],
+  lst= S/.{And->List, GreaterEqual[lhs_,0]:> lhs, Greater[lhs_,0]:> lhs};
+  If[TrueQ[Head[S]==And],
+    lst,
+    {lst}
+  ],
+  Print["Problem has incorrect shape for barrier certificate generation: ",set, " is not conjunctive."];
+  Throw[{}]
+]]
 
 
 HeuristicMonomials[vars_,vf_,degree_]:=Module[ {},
 DeleteDuplicates[Flatten[Function[x,monomialList[x,vars]]/@vf]]]
 
 
-SOSBarrier[{ pre_, { vf_List, vars_List, evoConst_ }, post_}, opts:OptionsPattern[]]:=Catch[Module[{init,unsafe,Q,f, precision,sosprog,res,lines,B, link, barrierscript,heumons},
-If[Not[TrueQ[ 
-ConjunctiveIneqSetQ[pre//LogicalExpand] && 
-ConjunctiveIneqSetQ[Not[post]//LogicalExpand] && 
-ConjunctiveIneqSetQ[evoConst//LogicalExpand] ]], 
-Throw[[
-ConjunctiveIneqSetQ[pre//LogicalExpand],
-ConjunctiveIneqSetQ[Not[post]//LogicalExpand],
-ConjunctiveIneqSetQ[evoConst//LogicalExpand]]]]; 
+HeuristicLambdas[vars_,vf_]:=Module[ {},
+{-1,0,1,Div[vf,vars],-Div[vf,vars]}]
+
+
+SOSBarrier[{ pre_, { vf_List, vars_List, evoConst_ }, post_}, opts:OptionsPattern[]]:=Catch[Module[
+{init,unsafe,Q,f, precision,sosprog,res,lines,B, link, barrierscript,heumons,heulambdas},
+
+Print["Attempting to generate a barrier certificate with SOS Programming"];
+
+init=ExtractPolys[pre];
+unsafe=ExtractPolys[Not[post]];
+Q=If[TrueQ[evoConst],{}, ExtractPolys[evoConst]];
 
 (* Open a link to Matlab *)
 link=MATLink`OpenMATLAB[];
 
 precision=OptionValue[NPrecision];
 
-init=ExtractPolys[pre];
-unsafe=ExtractPolys[Not[post]];
-Q=If[TrueQ[evoConst],{}, ExtractPolys[evoConst]];
-
 f=MmaToMatlab[vf];
 
 heumons = HeuristicMonomials[vars,vf,2];
+heulambdas = If[OptionValue[Lambda]==={},HeuristicLambdas[vars,vf], {OptionValue[Lambda]}];
+
 sosprog="
 % Exponential barrier certificates
 
@@ -155,7 +139,7 @@ dom = "<>MmaToMatlab[Q]<>" ;
 
 % Configurable options from Mathematica
 % Configurable lambda in B' >= lambda B
-lambdas = [-1,0,1];
+lambdas = "<>MmaToMatlab[heulambdas]<>";
 % min and max degree bounds (incremented by 1 each time)
 mindeg = 0;
 maxdeg = 10;
@@ -180,7 +164,8 @@ for deg = mindeg : maxdeg
     monvec2 = vertcat(monomials(vars,0:1:sosdeg),monheu2); 
     for i = 1 : length(lambdas)
         lambda = lambdas(i);
-        fprintf('Trying lambda: %i\\n', lambda);
+        fprintf('Trying lambda: \\n');
+		lambda
         % The SOS program
         prog = sosprogram(vars);
 
@@ -236,21 +221,27 @@ for deg = mindeg : maxdeg
 end
 B2 = 0
 ";
+sosprog=StringReplace[sosprog,{"`"->"backtick"}];
 barrierscript=MATLink`MScript["expbarrier",sosprog, "Overwrite" -> True];
 (* Print[sosprog]; *)
 res=MATLink`MEvaluate@barrierscript;
 lines=StringSplit[res,{"B2 =", "break"}];
-B=CoefficientRules[N[StringReplace[StringDelete[lines[[-1]], "\n" | "\r" |" "], {"e-"->"*10^-"}]//ToExpression//Expand, 10]];
-If[B=={},Throw[0],Throw[
-{MapAt[Function[x,Rationalize[Round[x,1/10^precision]]],B,{All,2}]~FromCoefficientRules~vars} (* The output should be a singleton list *)
-]];
+B=CoefficientRules[N[StringReplace[StringDelete[lines[[-1]], "\n" | "\r" |" "], {"e-"->"*10^-", "backtick"->"`"}]//ToExpression//Expand, 10]];
+If[B=={},
+  Print["No feasible solution found by SOS programming."];
+  Throw[{}],
+  Throw[MapAt[Function[x,Rationalize[Round[x,1/10^precision]]],B,{All,2}]~FromCoefficientRules~vars]];
 ]]
 
 
-BoundingBox[set_,vars_List]:=Catch[Module[{BoundingInterval},
-BoundingInterval[var_]:={MinValue[{var, set},vars,Reals], MaxValue[{var, set},vars,Reals]};
-Throw[Map[BoundingInterval, vars]]
-]]
+BoundingBox[set_,vars_List]:=Module[{BoundingInterval},
+BoundingInterval[var_]:=Module[{lb,ub},{
+	lb = NMinValue[{var, set},vars];
+	ub = NMaxValue[{var,set},vars];
+	If[lb>-100000,var-lb,##&[]], If[ub<100000,ub-var,##&[]]
+	}];
+Map[BoundingInterval, vars]
+]
 
 
 BTemplate[deg_Integer?NonNegative,vars_List]:=Catch[Module[{monBas,templateCoeffs,template},
@@ -263,105 +254,146 @@ Throw[template]
 ]]
 
 
-HandelmanRepEps[BTemp_, vars_List, deg_Integer, constraints_List, eps_] := Catch[Module[{m = Length[vars], 
+HandelmanRepEps[BTemp_, vars_List, deg_Integer, constraints_List, eps_] := Module[{m = Length[vars], 
 monExponents, lowerEval, upperEval, Bhandel, fjs, fjalphaprod, lambdas, lambdaB, lambdaPos, prob, B}, 
 (* Multi-index exponents up to degree bound *)
 monExponents =Flatten[Table[Flatten[Permutations/@IntegerPartitions[iter+Length[constraints],{Length[constraints]}]-1,1],{iter,0,deg,1}],1];
-B= Map[Times @@ Thread[constraints^#]&,monExponents] //DeleteDuplicates;
+B= Map[Expand[Times @@ Thread[constraints^#]]&,monExponents] //DeleteDuplicates;
 lambdas = Table[Unique["\[Lambda]"], {i, Length[B]}]; 
 (* Set all polynomial coefficients to 0 *)
 lambdaB = (#1 == 0 & ) /@ Last /@ CoefficientRules[BTemp - lambdas . B -eps, vars]; 
-(* Non-negative lambdas *)
+(* Non-negative lambdas
 lambdaPos = (#1 >= 0 & ) /@ lambdas; 
-prob = Join[lambdaB, lambdaPos]; 
-Throw[prob]
-]]
+prob = Join[lambdaB, lambdaPos];  *)
+prob = lambdaB
+]
 
 
-LPBarrierCertificate[{ pre_, { vf_List, vars_List, evoConst_ }, post_}, deg_, eps_, lambda_, method_]:=Catch[Module[
-(* Declare local variables *)
-{init,unsafe,Q,B,LfB,BC1,BC2,BC3,prob,equations,inequalities,LPvars,ibox,ubox,qbox,
-Aeq,Aineq,beq,bineq,const,obbjFn,LPres,objFn,LPsol,Binst},
+(* Common implementation returning an LP problem *)
+LPGen[{ pre_, { vf_List, vars_List, evoConst_ }, post_},deg_,eps_,lambda_]:=Catch[Module[
+{init,unsafe,Q,ibox,ubox,qbox,B,LfB,BC1,BC2,BC3},
+Print["Setting up an LP problem for BC generation. Degree ",deg," Eps ",eps," Lambda ",lambda];
 
-If[Not[TrueQ[ 
-ConjunctiveIneqSetQ[pre//LogicalExpand] && 
-ConjunctiveIneqSetQ[Not[post]//LogicalExpand] && 
-ConjunctiveIneqSetQ[evoConst//LogicalExpand] ]], 
-Throw[[
-ConjunctiveIneqSetQ[pre//LogicalExpand],
-ConjunctiveIneqSetQ[Not[post]//LogicalExpand],
-ConjunctiveIneqSetQ[evoConst//LogicalExpand]]]]; 
-
-(*
 init=ExtractPolys[pre];
 unsafe=ExtractPolys[Not[post]];
 Q=If[TrueQ[evoConst],{}, ExtractPolys[evoConst]];
-*)
 
-(* TODO: adjoint additional constraints for axis-aligned bounding boxes *)
+(* compute axis-aligned bounding boxes *)
 ibox=BoundingBox[pre,vars];
 ubox=BoundingBox[Not[post],vars];
 qbox=BoundingBox[evoConst,vars]; 
-
+ 
 (* Compute a symbolic template *)
 B=BTemplate[deg,vars];
 (* Compute the Lie derivative along the vector field *)
-LfB=Lf[B,vars,vf];
+LfB=Primitives`Lf[B,vf,vars];
+
 (* Compute Handelman representations for each of the barrier certificate conditions *)
-BC1=HandelmanRepEps[B,vars,deg, ubox, eps]; (* Ubox \[Rule] B\[GreaterEqual]eps>0 *)
-BC2=HandelmanRepEps[-B,vars,deg,ibox, 0]; (* Ibox \[Rule] B<=0 *)
-BC3=HandelmanRepEps[-LfB+lambda*B,vars,deg,qbox, 0]; (* qbox \[Rule] B'<=-B *)
+BC1=HandelmanRepEps[B,vars,deg, Flatten[ubox], eps]; (* Ubox \[Rule] B\[GreaterEqual]eps>0 *)
+BC2=HandelmanRepEps[-B,vars,deg, Flatten[ibox], 0]; (* Ibox \[Rule] B<=0 *)
+BC3=HandelmanRepEps[-LfB+lambda*B,vars,Primitives`PolynomDegree[-LfB+lambda*B,vars], Flatten[qbox], 0]; (* qbox \[Rule] B'<=-B *)
 
 (* Collect the systems of linear equations and inequalities into one *)
 prob=Union[BC1,BC2,BC3];
 
-(* Uncomment to return the linear program *)
-(* Throw[prob]; *)
+Throw[{prob,B}]
+]]
 
+
+LPBarrier[inp_, deg_, eps_, lambda_, tolerance_, method_]:=Catch[Module[
+(* Declare local variables *)
+{prob,B,equations,LPvars,
+Aeq,beq,const,obbjFn,LPres,objFn,LPsol,Binst},
+
+{prob,B} = LPGen[inp, deg,eps,lambda];
+
+Print["Solving LP problem in Mathematica"];
 (* Explicit LinearProgramming implementation *)
 equations=First/@Select[prob, Head[#]==Equal&];
-inequalities=First/@Select[prob, Head[#]==GreaterEqual&];
 
 (* Extract the symbolic variables for the linear program *)
-LPvars=(Variables/@(First/@prob))//Flatten//DeleteDuplicates//Sort;
+LPvars=(Variables/@(First/@prob))//Flatten//DeleteDuplicates//Sort//Reverse;
 Aeq=Map[Grad[#,LPvars]&,equations];
-Aineq=Map[Grad[#,LPvars]&,inequalities];
+beq=Map[{-Primitives`ConstTerm[#,LPvars],0}&, equations];
 
-beq=Map[{-ConstTerm[#,LPvars],0}&, equations];
-bineq=Table[{0,1}, Length[inequalities]];
-
-const=Map[If[StringContainsQ[ToString[#], "\[Lambda]"], 0,-Infinity]&,LPvars];
-objFn=Table[0,Length[LPvars]];
+const=Map[If[StringContainsQ[ToString[#], "\[Lambda]"], 0, -Infinity]&,LPvars];
+objFn=Map[If[StringContainsQ[ToString[#], "\[Lambda]"], 0, 0]&,LPvars];
 
 LPres=LinearProgramming[
   objFn,
-  Join[Aeq,Aineq],
-  Join[beq,bineq],
-  const, Method-> method 
+  Aeq,
+  beq,
+  const, Method-> method , Tolerance -> tolerance
   (* InteriorPoint is fast, but only works with machine precision. Other methods are "Simplex" and "RevisedSimplex" *)
 ];
 
 (* If no feasible point is found, Mathematica returns the expression unevaluated. Replace this with a 0 and return. *)
-If[Head[LPres]===LinearProgramming, Throw[0]];
-
+If[Head[LPres]===LinearProgramming,
+  Print["No feasible solution found by Linear Programming."];
+  Throw[{}]];
+ 
 LPsol=Thread[LPvars -> LPres]; 
 
 (* Solve the linear program conveniently using Minimize- optimising 0 to obtain a feasible point in the constraint *)
 (* LPsol=Minimize[{0,And@@prob},LPvars][[2]]; *)
 
 (* Instantiate solution and return *)
-Binst=B/.LPsol;
+Binst= B/.LPsol;
 Throw[Binst]
 ]]
 
 
 (* Default wrapper *)
-LPBarrierCertificate[problem_List]:=LPBarrierCertificate[problem, 
+LPBarrier[problem_List]:=LPBarrier[problem, 
 (*deg = *) 5,
-(*eps = *) 0.0001,
-(*lambda = *) -0.5 ,
-(* Method = *) "InteriorPoint"]
+(*eps = *) 0.01,
+(*lambda = *) 1,
+(* tolerance = *) 0.001,
+(* Method = *) "InteriorPoint"];
+LPBarrierMATLAB[problem_List]:=LPBarrierMATLAB[problem, 
+(*deg = *) 5,
+(*eps = *) 0.01,
+(*lambda = *) 1];
 
 
-End[]
-EndPackage[]
+LPBarrierMATLAB[inp_, deg_, eps_, lambda_ ]:=Catch[Module[
+(* Declare local variables *)
+{prob,B,equations,LPvars,Aeq,beq,lb,objFn,mSol,LPsol,Binst},
+
+{prob,B} = LPGen[inp, deg,eps,lambda];
+
+Print["Sending LP problem to MATLAB"];
+(* Explicit LinearProgramming implementation *)
+equations=First/@Select[prob, Head[#]==Equal&];
+
+(* Extract the symbolic variables for the linear program
+	Make sure \lambda variables come first so that the lower bounds are easy to specify
+  *)
+LPvars=(Variables/@(First/@prob))//Flatten//DeleteDuplicates//Sort//Reverse;
+MATLink`OpenMATLAB[];
+Aeq=Map[Grad[#,LPvars]&,equations];
+beq=Map[-Primitives`ConstTerm[#,LPvars]&, equations];
+
+lb= Flatten[Map[ If[StringContainsQ[ToString[#], "\[Lambda]"], {0}, {}] &,LPvars]];
+
+objFn=#*0&/@LPvars;
+(* objFn = Map[If[StringContainsQ[ToString[#], "\[Lambda]"], 10, 0] &,LPvars]; *)
+MATLink`MEvaluate["clear"];
+MATLink`MSet["aeq", Aeq];
+MATLink`MSet["beq", beq];
+MATLink`MSet["f", objFn];
+MATLink`MSet["lb", lb];
+MATLink`MEvaluate["lpsl = linprog(f,[],[],aeq,beq,lb,[])"];
+mSol=MATLink`MGet["lpsl"];
+(* If nothing was found, return 0 *)
+If[Length[mSol]==0, Throw[{}]];
+LPsol=Thread[LPvars -> mSol];
+
+(* Instantiate solution and return *)
+Binst=B/.LPsol;
+Throw[Binst[[1]]]
+]]
+
+
+End[];
+EndPackage[];
