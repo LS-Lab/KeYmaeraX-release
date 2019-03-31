@@ -8,8 +8,8 @@ BeginPackage["LZZ`"];
 
 NLieDerivatives::usage="NLieDerivatives[p,n,f,vars] returns the first n higher Lie derivatives of p (including p itself)";
 Rank::usage="Rank[p,f,vars] Computes the value n such that the ideal (p,...p'^(n)) is saturated";
-InfS::usage="InfS[S,f,vars] Computes the local progress formula for S wrt f, vars"
-IvInfS::usage="IvInfS[S,f,vars] Same as InfS except for -f instead of f"
+InfS::usage="InfS[S,f,vars] Computes the local progress formula for S wrt f, vars";
+IvInfS::usage="IvInfS[S,f,vars] Same as InfS except for -f instead of f";
 InvS::usage="InvS[S,f,H] LZZ decision procedure determining continuous invariance of semi-algebaic set S 
 under the flow of a polynomial vector field f with evolution constraint H.";
 

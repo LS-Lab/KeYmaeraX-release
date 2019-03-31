@@ -7,14 +7,17 @@ Needs["MATLink`"]
 BeginPackage["BarrierCertificates`"];
 
 
-SOSBarrier::usage="SOSBarrierCertificate[problem_List] uses an interface to Matlab (MatLink plugin required!) to compute barrier certificates.";
+SOSBarrier::usage="SOSBarrier[problem_List] uses an interface to Matlab (MatLink plugin required!) to compute barrier certificates.";
 Options[SOSBarrier]= {NPrecision -> 6, Lambda -> {}};
 
 
 BTemplate::usage="BTemplate[deg_, vars_List] Polynomial template with symbolic coefficients (of degree at most 'deg')";
 
 
-LPBarrier::usage="LPBarrierCertificate[deg_, problem_List] Linear relaxation for barrier certificate search up to degree 'deg'";
+LPGen::usage="LPGen returns an LP problem for barrier certificate search";
+
+
+LPBarrier::usage="LPBarrier[deg_, problem_List] Linear relaxation for barrier certificate search up to degree 'deg'";
 
 
 LPBarrierMATLAB::usage="LPBarrierMATLAB[deg_, problem_List] Linear relaxation for barrier certificate search up to degree 'deg'";
@@ -75,10 +78,7 @@ TrueQ[S==True] ||
 ]
 
 
-(*
-	Checks that set_ is a conjunction and extracts polynomials
-	TODO: this should "relax" equalities p=0 by bloating them to -eps \[LessEqual] p \[LessEqual] eps rather than p\[GreaterEqual]0 && p\[LessEqual]0 which are ill-behaved 
-*)
+(* Checks that set is a conjunction and extracts polynomials TODO: this should "relax" equalities p=0 by bloating them to -eps \[LessEqual] p \[LessEqual] eps rather than p\[GreaterEqual]0 && p\[LessEqual]0 which are ill-behaved *)
 ExtractPolys[set_]:=Module[{S=Primitives`DNFNormalizeGtGeq[set],lst},
 If[ConjunctiveIneqSetQ[S],
   lst= S/.{And->List, GreaterEqual[lhs_,0]:> lhs, Greater[lhs_,0]:> lhs};
@@ -269,18 +269,16 @@ prob = lambdaB
 ]
 
 
-LPBarrier[{ pre_, { vf_List, vars_List, evoConst_ }, post_}, deg_, eps_, lambda_, method_]:=Catch[Module[
-(* Declare local variables *)
-{init,unsafe,Q,B,LfB,BC1,BC2,BC3,prob,equations,inequalities,LPvars,ibox,ubox,qbox,
-Aeq,Aineq,beq,bineq,const,obbjFn,LPres,objFn,LPsol,Binst},
-
-Print["Attempting to generate a barrier certificate with Linear Programming. Degree ",deg," Lambda ",lambda];
+(* Common implementation returning an LP problem *)
+LPGen[{ pre_, { vf_List, vars_List, evoConst_ }, post_},deg_,eps_,lambda_]:=Catch[Module[
+{init,unsafe,Q,ibox,ubox,qbox,B,LfB,BC1,BC2,BC3},
+Print["Setting up an LP problem for BC generation. Degree ",deg," Eps ",eps," Lambda ",lambda];
 
 init=ExtractPolys[pre];
 unsafe=ExtractPolys[Not[post]];
 Q=If[TrueQ[evoConst],{}, ExtractPolys[evoConst]];
 
-(* TODO: compute axis-aligned bounding boxes *)
+(* compute axis-aligned bounding boxes *)
 ibox=BoundingBox[pre,vars];
 ubox=BoundingBox[Not[post],vars];
 qbox=BoundingBox[evoConst,vars]; 
@@ -297,30 +295,35 @@ BC3=HandelmanRepEps[-LfB+lambda*B,vars,Primitives`PolynomDegree[-LfB+lambda*B,va
 
 (* Collect the systems of linear equations and inequalities into one *)
 prob=Union[BC1,BC2,BC3];
-(* Uncomment to return the linear program *)
 
+Throw[{prob,B}]
+]]
+
+
+LPBarrier[inp_, deg_, eps_, lambda_, tolerance_, method_]:=Catch[Module[
+(* Declare local variables *)
+{prob,B,equations,LPvars,
+Aeq,beq,const,obbjFn,LPres,objFn,LPsol,Binst},
+
+{prob,B} = LPGen[inp, deg,eps,lambda];
+
+Print["Solving LP problem in Mathematica"];
 (* Explicit LinearProgramming implementation *)
 equations=First/@Select[prob, Head[#]==Equal&];
-(* NOTE: inequalities, Aineq and bineq are actually redundant
-   because we never generate \[GreaterEqual] constraints *)
-inequalities=First/@Select[prob, Head[#]==GreaterEqual&];
 
 (* Extract the symbolic variables for the linear program *)
-LPvars=(Variables/@(First/@prob))//Flatten//DeleteDuplicates//Sort;
+LPvars=(Variables/@(First/@prob))//Flatten//DeleteDuplicates//Sort//Reverse;
 Aeq=Map[Grad[#,LPvars]&,equations];
-Aineq=Map[Grad[#,LPvars]&,inequalities];
-
 beq=Map[{-Primitives`ConstTerm[#,LPvars],0}&, equations];
-bineq=Table[{0,1}, Length[inequalities]];
 
 const=Map[If[StringContainsQ[ToString[#], "\[Lambda]"], 0, -Infinity]&,LPvars];
 objFn=Map[If[StringContainsQ[ToString[#], "\[Lambda]"], 0, 0]&,LPvars];
 
 LPres=LinearProgramming[
   objFn,
-  Join[Aeq,Aineq],
-  Join[beq,bineq],
-  const, Method-> method , Tolerance -> 0.01
+  Aeq,
+  beq,
+  const, Method-> method , Tolerance -> tolerance
   (* InteriorPoint is fast, but only works with machine precision. Other methods are "Simplex" and "RevisedSimplex" *)
 ];
 
@@ -342,10 +345,54 @@ Throw[Binst]
 
 (* Default wrapper *)
 LPBarrier[problem_List]:=LPBarrier[problem, 
-(*deg = *) 4,
-(*eps = *) 0.001,
+(*deg = *) 5,
+(*eps = *) 0.01,
 (*lambda = *) 1,
-(* Method = *) "RevisedSimplex"]
+(* tolerance = *) 0.001,
+(* Method = *) "InteriorPoint"];
+LPBarrierMATLAB[problem_List]:=LPBarrierMATLAB[problem, 
+(*deg = *) 5,
+(*eps = *) 0.01,
+(*lambda = *) 1];
+
+
+LPBarrierMATLAB[inp_, deg_, eps_, lambda_ ]:=Catch[Module[
+(* Declare local variables *)
+{prob,B,equations,LPvars,Aeq,beq,lb,objFn,mSol,LPsol,Binst},
+
+{prob,B} = LPGen[inp, deg,eps,lambda];
+
+Print["Sending LP problem to MATLAB"];
+(* Explicit LinearProgramming implementation *)
+equations=First/@Select[prob, Head[#]==Equal&];
+
+(* Extract the symbolic variables for the linear program
+	Make sure \lambda variables come first so that the lower bounds are easy to specify
+  *)
+LPvars=(Variables/@(First/@prob))//Flatten//DeleteDuplicates//Sort//Reverse;
+MATLink`OpenMATLAB[];
+Aeq=Map[Grad[#,LPvars]&,equations];
+beq=Map[-Primitives`ConstTerm[#,LPvars]&, equations];
+
+lb= Flatten[Map[ If[StringContainsQ[ToString[#], "\[Lambda]"], {0}, {}] &,LPvars]];
+
+objFn=#*0&/@LPvars;
+(* objFn = Map[If[StringContainsQ[ToString[#], "\[Lambda]"], 10, 0] &,LPvars]; *)
+MATLink`MEvaluate["clear"];
+MATLink`MSet["aeq", Aeq];
+MATLink`MSet["beq", beq];
+MATLink`MSet["f", objFn];
+MATLink`MSet["lb", lb];
+MATLink`MEvaluate["lpsl = linprog(f,[],[],aeq,beq,lb,[])"];
+mSol=MATLink`MGet["lpsl"];
+(* If nothing was found, return 0 *)
+If[Length[mSol]==0, Throw[{}]];
+LPsol=Thread[LPvars -> mSol];
+
+(* Instantiate solution and return *)
+Binst=B/.LPsol;
+Throw[Binst[[1]]]
+]]
 
 
 End[];
