@@ -20,7 +20,8 @@ UpperRatCoeffs::usage="UpperRatCoeffs[number, precision]"
 LowerRatCoeffs::usage="LowerRatCoeffs[number, precision]"
 NearestRatCoeffs::usage="NearestRatCoeffs[number, precision]"
 
-DNFNormalize::usage="DNFNormalize[fml]"
+DNFNormalizeGtGeq::usage="DNFNormalizeGtGeq[fml] normalizes fml to a normal form only containing disjunction and conjunctions of >0 and >=0"
+DNFNormalizeLtLeq::usage="DNFNormalizeLtLeq[fml] normalizes fml to a normal form only containing disjunction and conjunctions of <0 and <=0"
 
 
 Begin["`Private`"]
@@ -40,7 +41,7 @@ ConstTerm[P_]:=ConstTerm[P,Variables[P]]
 
 
 (* Lie derivative of P w.r.t. ODEs *)
-Lf[P_,vars_List,vf_List] := Grad[P,vars].vf;
+Lf[P_,vf_List,vars_List] := Grad[P,vars].vf;
 
 
 (* Upper, lower and nearest rational bounds of a number, nearest 10^-precision *)
@@ -87,6 +88,8 @@ ZeroRHS[formula_]   :=  Module[{},formula/.{
 }]
 
 (* Standardize (in)equalities *)
+GeqToLeq[formula_]:=Module[{}, formula/.{         GreaterEqual[lhs_,rhs_] :>  LessEqual[rhs,lhs]} ] 
+GtToLt[formula_]:=Module[{}, formula/.{           Greater[lhs_,rhs_]      :>  Less[rhs,lhs]} ] 
 LeqToGeq[formula_]:=Module[{}, formula/.{         LessEqual[lhs_,rhs_] :>  GreaterEqual[rhs,lhs]} ] 
 LtToGt[formula_]:=Module[{}, formula/.{           Less[lhs_,rhs_]      :>  Greater[rhs,lhs]} ] 
 UnequalToLtOrGt[formula_]:=Module[{}, formula/.{  Unequal[lhs_,rhs_]      :>  Or[Less[lhs,rhs] ,Less[rhs,lhs]]} ] 
@@ -94,8 +97,11 @@ EqualToLeqAndGeq[formula_]:=Module[{}, formula/.{ Equal[lhs_,rhs_]        :>  An
 LeqToLtOrEqual[formula_]:=Module[{}, formula/.{   LessEqual[lhs_,rhs_]    :>  Or[Less[lhs,rhs] ,Equal[rhs,lhs]]} ] 
 
 (* Normalize expression to DNF form (Or of Ands) with >, \[GreaterEqual] only *)
-DNFNormalize[expression_]:=Module[{},
+DNFNormalizeGtGeq[expression_]:=Module[{},
   BooleanMinimize[expression//LogicalExpand//UnequalToLtOrGt//EqualToLeqAndGeq//LtToGt//LeqToGeq//ZeroRHS, "DNF"]] 
+DNFNormalizeLtLeq[expression_]:=Module[{},
+  BooleanMinimize[expression//LogicalExpand//UnequalToLtOrGt//EqualToLeqAndGeq//GtToLt//GeqToLeq//ZeroRHS, "DNF"]] 
+
 
 
 End[]

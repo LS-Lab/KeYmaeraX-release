@@ -79,7 +79,7 @@ TrueQ[S==True] ||
 	Checks that set_ is a conjunction and extracts polynomials
 	TODO: this should "relax" equalities p=0 by bloating them to -eps \[LessEqual] p \[LessEqual] eps rather than p\[GreaterEqual]0 && p\[LessEqual]0 which are ill-behaved 
 *)
-ExtractPolys[set_]:=Module[{S=Primitives`DNFNormalize[set],lst},
+ExtractPolys[set_]:=Module[{S=Primitives`DNFNormalizeGtGeq[set],lst},
 If[ConjunctiveIneqSetQ[S],
   lst= S/.{And->List, GreaterEqual[lhs_,0]:> lhs, Greater[lhs_,0]:> lhs};
   If[TrueQ[Head[S]==And],
@@ -236,8 +236,8 @@ If[B=={},
 
 BoundingBox[set_,vars_List]:=Module[{BoundingInterval},
 BoundingInterval[var_]:=Module[{lb,ub},{
-	lb = MinValue[{var, set},vars];
-	ub = MaxValue[{var,set},vars];
+	lb = NMinValue[{var, set},vars];
+	ub = NMaxValue[{var,set},vars];
 	If[lb>-100000,var-lb,##&[]], If[ub<100000,ub-var,##&[]]
 	}];
 Map[BoundingInterval, vars]
@@ -288,7 +288,7 @@ qbox=BoundingBox[evoConst,vars];
 (* Compute a symbolic template *)
 B=BTemplate[deg,vars];
 (* Compute the Lie derivative along the vector field *)
-LfB=Primitives`Lf[B,vars,vf];
+LfB=Primitives`Lf[B,vf,vars];
 
 (* Compute Handelman representations for each of the barrier certificate conditions *)
 BC1=HandelmanRepEps[B,vars,deg, Flatten[ubox], eps]; (* Ubox \[Rule] B\[GreaterEqual]eps>0 *)
@@ -298,7 +298,6 @@ BC3=HandelmanRepEps[-LfB+lambda*B,vars,Primitives`PolynomDegree[-LfB+lambda*B,va
 (* Collect the systems of linear equations and inequalities into one *)
 prob=Union[BC1,BC2,BC3];
 (* Uncomment to return the linear program *)
-(* Throw[prob]; *)
 
 (* Explicit LinearProgramming implementation *)
 equations=First/@Select[prob, Head[#]==Equal&];
@@ -321,7 +320,7 @@ LPres=LinearProgramming[
   objFn,
   Join[Aeq,Aineq],
   Join[beq,bineq],
-  const, Method-> method , Tolerance -> 0.001
+  const, Method-> method , Tolerance -> 0.01
   (* InteriorPoint is fast, but only works with machine precision. Other methods are "Simplex" and "RevisedSimplex" *)
 ];
 
@@ -343,10 +342,10 @@ Throw[Binst]
 
 (* Default wrapper *)
 LPBarrier[problem_List]:=LPBarrier[problem, 
-(*deg = *) 5,
+(*deg = *) 4,
 (*eps = *) 0.001,
 (*lambda = *) 1,
-(* Method = *) "InteriorPoint"]
+(* Method = *) "RevisedSimplex"]
 
 
 End[];
