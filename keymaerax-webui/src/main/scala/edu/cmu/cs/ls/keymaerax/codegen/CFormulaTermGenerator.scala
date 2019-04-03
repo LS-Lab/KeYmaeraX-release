@@ -85,11 +85,11 @@ class CFormulaTermGenerator(termContainer: Expression => String) extends CodeGen
         //@note assume the C compiler will detect representation-size errors
         CNumber(n)
       case t: Variable if t.name.endsWith("post") =>
-        CVariable(termContainer(t) + nameIdentifier(BaseVariable(t.name.stripSuffix("post"), None, t.sort)))
+        CVariable(termContainer(t) + nameIdentifier(BaseVariable(t.name.stripSuffix("post"), t.index, t.sort)))
       case t: Variable if !t.name.endsWith("post") => CVariable(termContainer(t) + nameIdentifier(t))
       //@note _idx are aliases for the same post variable, todo: preprocess with tactic
-      case t@FuncOf(Function(fname, _, fdom, fsort, fintr), Nothing) if fname.endsWith("post") =>
-        CVariable(termContainer(t) + nameIdentifier(Function(fname.stripSuffix("post"), None, fdom, fsort, fintr)))
+      case t@FuncOf(Function(fname, fidx, fdom, fsort, fintr), Nothing) if fname.endsWith("post") =>
+        CVariable(termContainer(t) + nameIdentifier(Function(fname.stripSuffix("post"), fidx, fdom, fsort, fintr)))
       case t@FuncOf(fn, Nothing) => CVariable(termContainer(t) + nameIdentifier(fn))
       case FuncOf(fn, child) if fn.interpreted =>
         nameIdentifier(fn) match {
