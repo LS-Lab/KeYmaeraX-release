@@ -23,6 +23,8 @@ NearestRatCoeffs::usage="NearestRatCoeffs[number, precision]"
 DNFNormalizeGtGeq::usage="DNFNormalizeGtGeq[fml] normalizes fml to a normal form only containing disjunction and conjunctions of >0 and >=0"
 DNFNormalizeLtLeq::usage="DNFNormalizeLtLeq[fml] normalizes fml to a normal form only containing disjunction and conjunctions of <0 and <=0"
 
+DrawPlanarProb::usage="DrawPlanarProb[prob,inv,w] draws a planar problem and invariant inv"
+
 
 Begin["`Private`"]
 
@@ -102,6 +104,35 @@ DNFNormalizeGtGeq[expression_]:=Module[{},
 DNFNormalizeLtLeq[expression_]:=Module[{},
   BooleanMinimize[expression//LogicalExpand//UnequalToLtOrGt//EqualToLeqAndGeq//GtToLt//GeqToLeq//ZeroRHS, "DNF"]] 
 
+
+
+(* Drawing primitive *)
+ExpandEq[formula_]   :=  Module[{},formula/.{
+	Equal[a_,b_]        :>  LessEqual[(a-b)^2,0.01]
+}]
+
+DrawPlanarProb[prob_List, invariant_, w_:6 ] := Module[{init,f,x,y,H,safe,x1min,x1max,x2min,x2max,rules,inv},
+  If[Length[prob[[2]][[2]]]!=2, Print["Non-planar problem"]; Return[]];
+  rules = Rule @@@ Transpose[{prob[[2]][[2]],{x,y}}];
+  {init, { f, {x, y}, H }, safe } = prob/.rules//ExpandEq;
+  inv = invariant/.rules//ExpandEq;
+  {x1min, x1max} = {-w, w};
+  {x2min, x2max} = {-w, w};
+    
+  Show[
+	(* Plot unsafe states in red *)
+    RegionPlot[Not[safe], {x, x1min, x1max}, {y, x2min, x2max}, PlotStyle -> Opacity[0.2,Red],
+      FrameLabel -> {prob[[2]][[2]][[1]], prob[[2]][[2]][[2]]}, FrameTicks -> None, LabelStyle -> Directive[Large],PlotPoints -> 100],
+    (* Plot initial states in green *)
+    RegionPlot[init, {x, x1min, x1max}, {y, x2min, x2max}, PlotStyle -> Opacity[0.2,Green],PlotPoints -> 100],
+    (* Plot invariant in magenta *)
+    RegionPlot[inv, {x, x1min, x1max}, {y, x2min, x2max}, PlotStyle -> Opacity[0.2,Magenta],PlotPoints -> 100],
+    (* Plot vector field *)
+    StreamPlot[f, {x, x1min, x1max}, {y, x2min, x2max}, StreamStyle -> Darker[Gray]],
+    (* Plot domain in blue *)
+    RegionPlot[H, {x, x1min, x1max}, {y, x2min, x2max}, PlotStyle -> Opacity[0.05,Blue]]
+    ]
+]
 
 
 End[]

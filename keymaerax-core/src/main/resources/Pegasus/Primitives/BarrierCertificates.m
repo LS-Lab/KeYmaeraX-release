@@ -15,6 +15,7 @@ BTemplate::usage="BTemplate[deg_, vars_List] Polynomial template with symbolic c
 
 
 LPGen::usage="LPGen returns an LP problem for barrier certificate search";
+LPGenVec::usage="LPGen returns an LP problem for vector barrier certificate search";
 
 
 LPBarrier::usage="LPBarrier[deg_, problem_List] Linear relaxation for barrier certificate search up to degree 'deg'";
@@ -96,7 +97,7 @@ DeleteDuplicates[Flatten[Function[x,monomialList[x,vars]]/@vf]]]
 
 
 HeuristicLambdas[vars_,vf_]:=Module[ {},
-{-1,0,1,Div[vf,vars],-Div[vf,vars]}]
+DeleteDuplicates[{-1,0,1,Div[vf,vars],-Div[vf,vars]}]]
 
 
 SOSBarrier[{ pre_, { vf_List, vars_List, evoConst_ }, post_}, opts:OptionsPattern[]]:=Catch[Module[
@@ -210,14 +211,17 @@ for deg = mindeg : maxdeg
         end
 
         opt.params.fid = 0;
-        prog = sossolve(prog,opt);
-
-        feasibility = prog.solinfo.info.feasratio;
-        if feasibility >= minfeas
-            B2 = sosgetsol(prog,B)
-            return;
+        try
+            prog = sossolve(prog,opt);
+            feasibility = prog.solinfo.info.feasratio;
+            if feasibility >= minfeas
+                B2 = sosgetsol(prog,B)
+                return;
+            end
+        catch
+            %ignore SOSTOOLS errors
         end
-    end
+   end
 end
 B2 = 0
 ";
@@ -226,7 +230,7 @@ barrierscript=MATLink`MScript["expbarrier",sosprog, "Overwrite" -> True];
 (* Print[sosprog]; *)
 res=MATLink`MEvaluate@barrierscript;
 lines=StringSplit[res,{"B2 =", "break"}];
-B=CoefficientRules[N[StringReplace[StringDelete[lines[[-1]], "\n" | "\r" |" "], {"e-"->"*10^-", "backtick"->"`"}]//ToExpression//Expand, 10]];
+B=CoefficientRules[N[StringReplace[StringDelete[lines[[-1]], "\n" | "\r" |" "], {"e-"->"*10^-", "backtick"->"`"}]//ToExpression//Expand, 10],vars];
 If[B=={},
   Print["No feasible solution found by SOS programming."];
   Throw[{}],
@@ -248,7 +252,7 @@ BTemplate[deg_Integer?NonNegative,vars_List]:=Catch[Module[{monBas,templateCoeff
 (* Compute the monomial basis up to given degree *)
 monBas=Map[#/CoefficientRules[#][[1]][[2]]&,MonomialList[ (Plus @@ Join[vars,{1}])^deg , vars, "DegreeLexicographic"]];
 (* Create a template polynomial with symbolic coefficients *)
-templateCoeffs=Table[Symbol["COEFF"<>ToString[i]], {i,1,Length[monBas]}];
+templateCoeffs=Table[Unique["COEFF"], {i,Length[monBas]}];
 template=Evaluate[templateCoeffs.monBas];
 Throw[template]
 ]]
@@ -305,7 +309,7 @@ LPBarrier[inp_, deg_, eps_, lambda_, tolerance_, method_]:=Catch[Module[
 {prob,B,equations,LPvars,
 Aeq,beq,const,obbjFn,LPres,objFn,LPsol,Binst},
 
-{prob,B} = LPGen[inp, deg,eps,lambda];
+{prob,B} = LPGen[inp, deg,eps, lambda];
 
 Print["Solving LP problem in Mathematica"];
 (* Explicit LinearProgramming implementation *)
@@ -345,13 +349,13 @@ Throw[Binst]
 
 (* Default wrapper *)
 LPBarrier[problem_List]:=LPBarrier[problem, 
-(*deg = *) 5,
+(*deg = *) 4,
 (*eps = *) 0.01,
 (*lambda = *) 1,
 (* tolerance = *) 0.001,
 (* Method = *) "InteriorPoint"];
 LPBarrierMATLAB[problem_List]:=LPBarrierMATLAB[problem, 
-(*deg = *) 5,
+(*deg = *) 4,
 (*eps = *) 0.01,
 (*lambda = *) 1];
 
@@ -392,6 +396,43 @@ LPsol=Thread[LPvars -> mSol];
 (* Instantiate solution and return *)
 Binst=B/.LPsol;
 Throw[Binst[[1]]]
+]]
+
+
+(* Common implementation returning an LP problem *)
+LPGenVec[{ pre_, { vf_List, vars_List, evoConst_ }, post_},deg_,eps_,lambda_]:=Catch[Module[
+{init,unsafe,Q,ibox,ubox,qbox,B,B2,LfB,LfB2,BC1,BC21,BC22,BC31,BC32,BC33,BC34},
+Print["Setting up an LP problem for vectorial BC generation. Degree ",deg," Eps ",eps," Lambda ",lambda];
+
+init=ExtractPolys[pre];
+unsafe=ExtractPolys[Not[post]];
+Q=If[TrueQ[evoConst],{}, ExtractPolys[evoConst]];
+
+(* compute axis-aligned bounding boxes *)
+ibox=BoundingBox[pre,vars];
+ubox=BoundingBox[Not[post],vars];
+qbox=BoundingBox[evoConst,vars];
+
+(* Compute a symbolic template *)
+B=BTemplate[deg,vars];
+B2=BTemplate[deg,vars];
+
+(* Compute the Lie derivative along the vector field *)
+LfB=Primitives`Lf[B,vf,vars];
+LfB2=Primitives`Lf[B2,vf,vars];
+
+(* Compute Handelman representations for each of the barrier certificate conditions *)
+BC1=HandelmanRepEps[B2,vars,deg, Flatten[ubox], eps]; (* Ubox \[Rule] B2\[GreaterEqual]eps>0 *)
+BC21=HandelmanRepEps[-B,vars,deg, Flatten[ibox], 0]; (* Ibox \[Rule] B<=0 *)
+BC22=HandelmanRepEps[-B2,vars,deg, Flatten[ibox], 0]; (* Ibox \[Rule] B2<=0 *)
+(* qbox \[Rule] B'<=-B *)
+BC31=HandelmanRepEps[-LfB+lambda[[1]]*B+lambda[[2]]*B2,vars,Primitives`PolynomDegree[-LfB+lambda[[1]]*B+lambda[[2]]*B2,vars], Flatten[qbox], 0];
+BC32=HandelmanRepEps[-LfB2+lambda[[3]]*B+lambda[[4]]*B2,vars,Primitives`PolynomDegree[-LfB2+lambda[[3]]*B+lambda[[4]]*B2,vars], Flatten[qbox], 0];
+
+(* Collect the systems of linear equations and inequalities into one *)
+prob=Union[BC1,BC21,BC22,BC31,BC32];
+
+Throw[{prob,{B,B2}}]
 ]]
 
 

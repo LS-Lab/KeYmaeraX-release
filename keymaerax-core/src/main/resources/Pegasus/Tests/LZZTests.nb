@@ -1,0 +1,322 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 11.3' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     11311,        314]
+NotebookOptionsPosition[     10713,        297]
+NotebookOutlinePosition[     11046,        312]
+CellTagsIndexPosition[     11003,        309]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Makes", " ", "the", " ", "directory", " ", 
+    RowBox[{"Pegasus", "/"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"SetDirectory", "[", 
+    RowBox[{"ParentDirectory", "[", 
+     RowBox[{"NotebookDirectory", "[", "]"}], "]"}], "]"}], ";", 
+   RowBox[{"Needs", "[", 
+    RowBox[{"\"\<LZZ`\>\"", ",", 
+     RowBox[{"FileNameJoin", "[", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"Directory", "[", "]"}], ",", "\"\<Primitives\>\"", ",", 
+        "\"\<LZZ.m\>\""}], "}"}], "]"}]}], "]"}], " ", ";"}]}]], "Input",
+ InitializationCell->True,
+ CellChangeTimes->{{3.763047186048777*^9, 3.7630471911548357`*^9}, 
+   3.763047223552949*^9},
+ CellLabel->"In[2]:=",ExpressionUUID->"a5c7efcf-a5c2-4456-bcbe-15a95af8e27b"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"poly", " ", "=", " ", 
+   RowBox[{"x", "*", 
+    RowBox[{"y", "^", "2"}]}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"vf", " ", "=", " ", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"-", "y"}], "+", "x"}], ",", 
+     RowBox[{"y", "*", "x"}]}], "}"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"vars", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{"x", ",", "y"}], "}"}]}], ";"}], "\[IndentingNewLine]", 
+  RowBox[{"(*", " ", 
+   RowBox[{"Note", ",", " ", 
+    RowBox[{
+    "the", " ", "Rank", " ", "computation", " ", "returns", " ", "1", " ", 
+     "less", " ", "than", " ", 
+     RowBox[{"LICS", "'"}], "18"}]}], " ", "*)"}]}], "\[IndentingNewLine]", 
+ RowBox[{"rank", " ", "=", " ", 
+  RowBox[{
+   RowBox[{"Rank", "[", 
+    RowBox[{"poly", ",", "vf", ",", "vars"}], "]"}], "+", 
+   "1"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"lies", " ", "=", 
+   RowBox[{"NLieDerivatives", "[", 
+    RowBox[{"poly", ",", "rank", ",", "vf", ",", "vars"}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"PolynomialReduce", "[", 
+    RowBox[{
+     RowBox[{"lies", "[", 
+      RowBox[{"[", 
+       RowBox[{"-", "1"}], "]"}], "]"}], ",", 
+     RowBox[{"GroebnerBasis", "[", 
+      RowBox[{
+       RowBox[{"Drop", "[", 
+        RowBox[{"lies", ",", 
+         RowBox[{"-", "1"}]}], "]"}], ",", "vars", ",", " ", 
+       RowBox[{
+       "MonomialOrder", " ", "->", " ", "DegreeReverseLexicographic"}]}], 
+      "]"}], ",", "vars", ",", " ", 
+     RowBox[{
+     "MonomialOrder", " ", "->", " ", "DegreeReverseLexicographic"}]}], "]"}],
+    "[", 
+   RowBox[{"[", "2", "]"}], "]"}], "\[Equal]", "0"}]}], "Input",
+ CellChangeTimes->{{3.763047579638339*^9, 3.7630476599588223`*^9}, {
+  3.763047975134447*^9, 3.7630480699147167`*^9}, {3.76304814100473*^9, 
+  3.763048194395443*^9}, {3.763048277598405*^9, 3.763048299452711*^9}, {
+  3.763049542892927*^9, 3.7630495528076773`*^9}, {3.763049584827078*^9, 
+  3.763049623018188*^9}, {3.763049658824956*^9, 3.763049721958234*^9}, {
+  3.763049945915433*^9, 3.763050011803684*^9}, {3.763050072586979*^9, 
+  3.76305010428463*^9}, {3.7630501547486963`*^9, 3.763050181232258*^9}, {
+  3.763050959815271*^9, 3.7630510079105377`*^9}},
+ CellLabel->"In[3]:=",ExpressionUUID->"3319162a-891b-48a3-9c2d-3cb98ce91f41"],
+
+Cell[BoxData[
+ RowBox[{"\[IndentingNewLine]", 
+  RowBox[{"(*", " ", 
+   RowBox[{"Test", " ", "some", " ", "known", " ", "algebraic", " ", "laws"}],
+    " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"~", 
+     RowBox[{"(", 
+      RowBox[{"InfS", 
+       RowBox[{"(", "S", ")"}]}], ")"}]}], " ", "\[DoubleLeftRightArrow]", 
+    " ", 
+    RowBox[{"InfS", 
+     RowBox[{"(", 
+      RowBox[{"~", "S"}], ")"}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"fml", " ", "=", " ", 
+     RowBox[{
+      RowBox[{"poly", " ", ">", "5"}], " ", "||", " ", 
+      RowBox[{
+       RowBox[{"poly", ">", " ", "0"}], " ", "&&", " ", 
+       RowBox[{"poly", " ", "<", " ", 
+        RowBox[{"1", "/", "2"}]}]}]}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"notInfS", " ", "=", 
+     RowBox[{"Not", "[", 
+      RowBox[{"InfS", "[", 
+       RowBox[{"fml", ",", "vf", ",", "vars"}], "]"}], "]"}]}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"infNotS", " ", "=", 
+     RowBox[{"InfS", "[", 
+      RowBox[{
+       RowBox[{"Not", "[", "fml", "]"}], ",", "vf", ",", "vars"}], "]"}]}], 
+    ";"}], "\[IndentingNewLine]", 
+   RowBox[{"Resolve", "[", 
+    RowBox[{
+     RowBox[{"ForAll", "[", 
+      RowBox[{
+       RowBox[{"Evaluate", "[", "vars", "]"}], ",", 
+       RowBox[{"notInfS", " ", "\[Implies]", "infNotS"}]}], "]"}], ",", 
+     "Reals"}], "]"}], "\[IndentingNewLine]", 
+   RowBox[{"Resolve", "[", 
+    RowBox[{
+     RowBox[{"ForAll", "[", 
+      RowBox[{
+       RowBox[{"Evaluate", "[", "vars", "]"}], ",", 
+       RowBox[{"infNotS", " ", "\[Implies]", "notInfS"}]}], "]"}], ",", 
+     "Reals"}], "]"}], "\[IndentingNewLine]", 
+   RowBox[{"(*", " ", 
+    RowBox[{
+     RowBox[{"InfS", 
+      RowBox[{"(", 
+       RowBox[{"InfS", 
+        RowBox[{"(", "S", ")"}]}], ")"}]}], " ", "\[DoubleLeftRightArrow]", 
+     " ", 
+     RowBox[{"Inf", 
+      RowBox[{"(", "S", ")"}], " ", "and", "\[IndentingNewLine]", " ", "InfS", 
+      RowBox[{"(", 
+       RowBox[{"IvInfS", 
+        RowBox[{"(", "S", ")"}]}], ")"}]}], " ", "\[DoubleLeftRightArrow]", 
+     " ", 
+     RowBox[{"Inf", 
+      RowBox[{"(", "S", ")"}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"fml", " ", "=", " ", 
+     RowBox[{"poly", ">", " ", "0"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"infS", " ", "=", " ", 
+     RowBox[{"InfS", "[", 
+      RowBox[{"fml", ",", "vf", ",", "vars"}], "]"}]}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"ivInfS", " ", "=", " ", 
+     RowBox[{"IvInfS", "[", 
+      RowBox[{"fml", ",", "vf", ",", "vars"}], "]"}]}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"infInfS", "=", 
+     RowBox[{"InfS", "[", 
+      RowBox[{"infS", ",", "vf", ",", "vars"}], "]"}]}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"infIvInfS", "=", 
+     RowBox[{"InfS", "[", 
+      RowBox[{"ivInfS", ",", "vf", ",", "vars"}], "]"}]}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{"Resolve", "[", 
+    RowBox[{
+     RowBox[{"ForAll", "[", 
+      RowBox[{
+       RowBox[{"Evaluate", "[", "vars", "]"}], ",", 
+       RowBox[{"infS", " ", "\[Implies]", "infInfS"}]}], "]"}], ",", 
+     "Reals"}], "]"}], "\[IndentingNewLine]", 
+   RowBox[{"Resolve", "[", 
+    RowBox[{
+     RowBox[{"ForAll", "[", 
+      RowBox[{
+       RowBox[{"Evaluate", "[", "vars", "]"}], ",", 
+       RowBox[{"infInfS", " ", "\[Implies]", "infS"}]}], "]"}], ",", 
+     "Reals"}], "]"}], "\[IndentingNewLine]", 
+   RowBox[{"Resolve", "[", 
+    RowBox[{
+     RowBox[{"ForAll", "[", 
+      RowBox[{
+       RowBox[{"Evaluate", "[", "vars", "]"}], ",", 
+       RowBox[{"infS", " ", "\[Implies]", "infIvInfS"}]}], "]"}], ",", 
+     "Reals"}], "]"}], "\[IndentingNewLine]", 
+   RowBox[{"Resolve", "[", 
+    RowBox[{
+     RowBox[{"ForAll", "[", 
+      RowBox[{
+       RowBox[{"Evaluate", "[", "vars", "]"}], ",", 
+       RowBox[{"infIvInfS", " ", "\[Implies]", "infS"}]}], "]"}], ",", 
+     "Reals"}], "]"}], "\[IndentingNewLine]", 
+   RowBox[{"(*", " ", 
+    RowBox[{
+     RowBox[{"InfS", 
+      RowBox[{"(", 
+       RowBox[{"p", ">", "0"}], ")"}]}], " ", "||", " ", 
+     RowBox[{
+      RowBox[{"InfS", 
+       RowBox[{"(", 
+        RowBox[{"p", "=", "0"}], ")"}]}], " ", "\[DoubleLeftRightArrow]", " ", 
+      RowBox[{"InfS", 
+       RowBox[{"(", 
+        RowBox[{"p", "\[GreaterEqual]", "0"}], ")"}]}]}]}], " ", "*)"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"infGt", " ", "=", " ", 
+     RowBox[{"InfS", "[", 
+      RowBox[{
+       RowBox[{"poly", " ", ">", " ", "0"}], ",", "vf", ",", "vars"}], 
+      "]"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"infEq", " ", "=", " ", 
+     RowBox[{"InfS", "[", 
+      RowBox[{
+       RowBox[{"poly", " ", "==", " ", "0"}], ",", "vf", ",", "vars"}], 
+      "]"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"infGeq", " ", "=", " ", 
+     RowBox[{"InfS", "[", 
+      RowBox[{
+       RowBox[{"poly", " ", ">=", " ", "0"}], ",", "vf", ",", "vars"}], 
+      "]"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"infNotS", " ", "=", 
+     RowBox[{"InfS", "[", 
+      RowBox[{
+       RowBox[{"Not", "[", "fml", "]"}], ",", "vf", ",", "vars"}], "]"}]}], 
+    ";"}], "\[IndentingNewLine]", 
+   RowBox[{"Resolve", "[", 
+    RowBox[{
+     RowBox[{"ForAll", "[", 
+      RowBox[{
+       RowBox[{"Evaluate", "[", "vars", "]"}], ",", 
+       RowBox[{
+        RowBox[{"infGt", "||", "infEq"}], " ", "\[Implies]", "infGeq"}]}], 
+      "]"}], ",", "Reals"}], "]"}], "\[IndentingNewLine]", 
+   RowBox[{"Resolve", "[", 
+    RowBox[{
+     RowBox[{"ForAll", "[", 
+      RowBox[{
+       RowBox[{"Evaluate", "[", "vars", "]"}], ",", 
+       RowBox[{"infGeq", " ", "\[Implies]", 
+        RowBox[{"infGt", "||", "infEq"}]}]}], "]"}], ",", "Reals"}], 
+    "]"}]}]}]], "Input",
+ CellChangeTimes->{{3.763047687815371*^9, 3.763047702150069*^9}, {
+  3.7630478843129187`*^9, 3.76304791162282*^9}, {3.763047961098955*^9, 
+  3.763047974205698*^9}, {3.763048911166009*^9, 3.7630489284014606`*^9}, {
+  3.7630490704989243`*^9, 3.7630490714108667`*^9}, {3.763049130564872*^9, 
+  3.763049138164125*^9}, {3.763050115164331*^9, 3.763050148315936*^9}, {
+  3.763050184921904*^9, 3.763050898417049*^9}, {3.7630509357518883`*^9, 
+  3.7630509426892776`*^9}, {3.763051024904827*^9, 3.7630511824353237`*^9}, {
+  3.7630513004065*^9, 3.763051501573286*^9}},
+ CellLabel->
+  "In[103]:=",ExpressionUUID->"273a1c42-ed8c-463c-915f-fa3474480071"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Trivialize", " ", "the", " ", "question"}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{"InvS", "[", 
+   RowBox[{"fml", ",", "vf", ",", "vars", ",", 
+    RowBox[{
+     RowBox[{"x", ">", "0"}], " ", "&&", " ", 
+     RowBox[{"y", "!=", "0"}]}]}], "]"}]}]], "Input",
+ CellChangeTimes->{{3.7630512740377817`*^9, 3.763051285991406*^9}, {
+  3.763051511270689*^9, 3.76305152728753*^9}},
+ CellLabel->"",ExpressionUUID->"fe3a4454-a30d-49ca-86c7-9ed1c6543b7a"]
+},
+WindowSize->{960, 1148},
+WindowMargins->{{Automatic, 0}, {0, Automatic}},
+FrontEndVersion->"11.3 for Linux x86 (64-bit) (March 6, 2018)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 795, 19, 94, "Input",ExpressionUUID->"a5c7efcf-a5c2-4456-bcbe-15a95af8e27b",
+ InitializationCell->True],
+Cell[1356, 41, 2347, 60, 216, "Input",ExpressionUUID->"3319162a-891b-48a3-9c2d-3cb98ce91f41"],
+Cell[3706, 103, 6486, 178, 607, "Input",ExpressionUUID->"273a1c42-ed8c-463c-915f-fa3474480071"],
+Cell[10195, 283, 514, 12, 55, "Input",ExpressionUUID->"fe3a4454-a30d-49ca-86c7-9ed1c6543b7a"]
+}
+]
+*)
+

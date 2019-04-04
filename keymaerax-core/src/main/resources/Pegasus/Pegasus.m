@@ -29,27 +29,6 @@ TrueQ[Reduce[ForAll[vars, Implies[subset,set]],Reals]]
 ]
 
 
-(* Set righ-hand side of terms to zero *)
-ZeroRHS[formula_] := Module[{},formula/.{
-Equal[a_,b_]        :>  Equal[a-b,0],
-Unequal[a_,b_]      :>  Unequal[a-b,0],
-Greater[a_,b_]      :>  Greater[a-b,0],
-GreaterEqual[a_,b_] :>  GreaterEqual[a-b,0],
-Less[a_,b_]         :>  Less[a-b,0], 
-LessEqual[a_,b_]    :>  LessEqual[a-b,0]
-}]
-
-GeqToLeq[formula_]:=Module[{}, formula/.{         GreaterEqual[lhs_,rhs_] :>  LessEqual[rhs,lhs]} ] 
-GtToLt[formula_]:=Module[{}, formula/.{           Greater[lhs_,rhs_]      :>  Less[rhs,lhs]} ] 
-UnequalToLtOrGt[formula_]:=Module[{}, formula/.{  Unequal[lhs_,rhs_]      :>  Or[Less[lhs,rhs] ,Less[rhs,lhs]]} ] 
-EqualToLeqAndGeq[formula_]:=Module[{}, formula/.{ Equal[lhs_,rhs_]        :>  And[LessEqual[lhs,rhs] ,LessEqual[rhs,lhs]]} ] 
-LeqToLtOrEqual[formula_]:=Module[{}, formula/.{   LessEqual[lhs_,rhs_]    :>  Or[Less[lhs,rhs] ,Equal[rhs,lhs]]} ] 
-
-PreProcess[expression_]:=Module[{},
-ZeroRHS[GeqToLeq[GtToLt[LogicalExpand[BooleanMinimize[UnequalToLtOrGt[expression], "DNF"]]]]]
-] 
-
-
 (* Add sym'=0 to the ODE if the dynamics of sym is undefined *)
 AugmentWithParameters[problem_List]:=Module[{pre,post,f,vars,evoConst,symbols,parameters,newvars,newf},
 { pre, { f, vars, evoConst }, post } = problem;
@@ -76,12 +55,12 @@ Print["Precondition implies postcondition. Proceeding."]];
 
 postInvariant=LZZ`InvS[post, f, vars, evoConst];
 If[ TrueQ[postInvariant], 
-Print["Postcondition is an invariant! Nothing to do."]; Throw[{{PreProcess[post]},True}], 
+Print["Postcondition is an invariant! Nothing to do."]; Throw[{{DNFNormalizeGtGeq[post]},True}], 
 Print["Postcondition is not an invariant. Proceeding."]];
 
 preInvariant=LZZ`InvS[pre, f, vars, evoConst];
 If[ TrueQ[preInvariant], 
-Print["Precondition is an invariant! Nothing to do."]; Throw[{{PreProcess[pre]}, True}], 
+Print["Precondition is an invariant! Nothing to do."]; Throw[{{DNFNormalizeGtGeq[pre]}, True}], 
 Print["Precondition is not an invariant. Proceeding."]];
 
 (* Determine strategies depending on problem classification by pattern matching on {dimension, classes} *)
@@ -102,7 +81,11 @@ BarrierCertificates`SOSBarrier
 
 (* For each strategy *)
 Do[
-Print[ToString[strat]];
+Print["\!\(\*
+StyleBox[\"Trying\",\nFontWeight->\"Bold\"]\)\!\(\*
+StyleBox[\" \",\nFontWeight->\"Bold\"]\)\!\(\*
+StyleBox[\"strategy\",\nFontWeight->\"Bold\"]\)\!\(\*
+StyleBox[\":\",\nFontWeight->\"Bold\"]\) ",ToString[strat]];
 (* Compute polynomials for the algebraic decomposition of the state space *)
 polyList=strat[problem]//DeleteDuplicates;
 Print[polyList];
