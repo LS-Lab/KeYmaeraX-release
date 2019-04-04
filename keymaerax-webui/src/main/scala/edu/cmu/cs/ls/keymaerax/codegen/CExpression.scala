@@ -50,7 +50,7 @@ object CFalse extends CFormula {}
 case class CIfThenElse(f: CFormula, ifP: CProgram, elseP: CProgram) extends CProgram
 case class COrProgram(l: CProgram, r: CProgram) extends CProgram
 case class CAndProgram(l: CProgram, r: CProgram) extends CProgram
-case class CError(retVal: CExpression, msg: String) extends CProgram
+case class CError(id: Int, retVal: CExpression, msg: String) extends CProgram
 case class CReturn(e: CExpression) extends CProgram
 object CNoop extends CProgram
 
@@ -76,22 +76,22 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
       s"""${printDefinitions(l)}
          |${printDefinitions(r)}
          |
-         |long double OrLeft${uniqueName(l)}(state pre, state curr, const parameters* const params) {
+         |verdict OrLeft${uniqueName(l)}(state pre, state curr, const parameters* const params) {
          |  ${print(l)}
          |}
          |
-         |long double OrRight${uniqueName(r)}(state pre, state curr, const parameters* const params) {
+         |verdict OrRight${uniqueName(r)}(state pre, state curr, const parameters* const params) {
          |  ${print(r)}
          |}""".stripMargin
     case CAndProgram(l, r) =>
       s"""${printDefinitions(l)}
          |${printDefinitions(r)}
          |
-         |long double AndLeft${uniqueName(l)}(state pre, state curr, const parameters* const params) {
+         |verdict AndLeft${uniqueName(l)}(state pre, state curr, const parameters* const params) {
          |  ${print(l)}
          |}
          |
-         |long double AndRight${uniqueName(r)}(state pre, state curr, const parameters* const params) {
+         |verdict AndRight${uniqueName(r)}(state pre, state curr, const parameters* const params) {
          |  ${print(r)}
          |}""".stripMargin
     case CIfThenElse(_, ifP, elseP) => printDefinitions(ifP) + "\n" + printDefinitions(elseP)
@@ -144,30 +144,38 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
     case CFalse => "-1.0L"
 
     case CIfThenElse(f, ifP, elseP) => "if (" + print(f) + ") {\n" + print(ifP) + "\n} else {\n" + print(elseP) + "\n}"
-    case CReturn(e: CExpression) => "return " + print(e) + ";"
-    case CError(retVal: CExpression, msg: String) =>
-      if (printDebugOut) s"""printf("Failed %s\\n", "$msg"); return ${print(retVal)};"""
-      else s"return ${print(retVal)};"
+    case CReturn(e: CExpression) => "verdict result = { .id=1, .val=" + print(e) + " }; return result;"
+    case CError(id: Int, retVal: CExpression, msg: String) =>
+      if (printDebugOut) s"""printf("Failed %d=%s\\n", $id, "$msg"); verdict result = { .id=$id, .val=${print(retVal)} }; return result;"""
+      else s"verdict result = { .id=$id, .val=${print(retVal)} }; return result;"
     case COrProgram(l, r) /* if kind=="boolean" */ =>
       if (printDebugOut)
-        s"""long double leftDist = OrLeft${uniqueName(l)}(pre,curr,params);
-         |long double rightDist = OrRight${uniqueName(r)}(pre,curr,params);
+        s"""verdict leftDist = OrLeft${uniqueName(l)}(pre,curr,params);
+         |verdict rightDist = OrRight${uniqueName(r)}(pre,curr,params);
          |printf("Or distances: %s=%Lf %s=%Lf\\n", "OrLeft${uniqueName(l)}", leftDist, "OrRight${uniqueName(r)}", rightDist);
-         |return fmaxl(leftDist, rightDist);""".stripMargin
+         |int verdictId = leftDist.val >= rightDist.val ? leftDist.id : rightDist.id;
+         |verdict result = { .id=verdictId, .val=fmaxl(leftDist, rightDist) };
+         |return result;""".stripMargin
       else
-        s"""long double leftDist = OrLeft${uniqueName(l)}(pre,curr,params);
-         |long double rightDist = OrRight${uniqueName(r)}(pre,curr,params);
-         |return fmaxl(leftDist, rightDist);""".stripMargin
+        s"""verdict leftDist = OrLeft${uniqueName(l)}(pre,curr,params);
+         |verdict rightDist = OrRight${uniqueName(r)}(pre,curr,params);
+         |int verdictId = leftDist.val >= rightDist.val ? leftDist.id : rightDist.id;
+         |verdict result = { .id=verdictId, .val=fmaxl(leftDist, rightDist) };
+         |return result;""".stripMargin
     case CAndProgram(l, r) /* if kind=="boolean" */ =>
       if (printDebugOut)
-        s"""long double leftDist = AndLeft${uniqueName(l)}(pre,curr,params);
-         |long double rightDist = AndRight${uniqueName(r)}(pre,curr,params);
+        s"""verdict leftDist = AndLeft${uniqueName(l)}(pre,curr,params);
+         |verdict rightDist = AndRight${uniqueName(r)}(pre,curr,params);
          |printf("And distances: %s=%Lf %s=%Lf\\n", "AndLeft${uniqueName(l)}", leftDist, "AndRight${uniqueName(r)}", rightDist);
-         |return fminl(leftDist, rightDist);""".stripMargin
+         |int verdictId = leftDist.val <= rightDist.val ? leftDist.id : rightDist.id;
+         |verdict result = { .id=verdictId, .val=fminl(leftDist, rightDist) };
+         |return result;""".stripMargin
       else
-        s"""long double leftDist = AndLeft${uniqueName(l)}(pre,curr,params);
-         |long double rightDist = AndRight${uniqueName(r)}(pre,curr,params);
-         |return fminl(leftDist, rightDist);""".stripMargin
+        s"""verdict leftDist = AndLeft${uniqueName(l)}(pre,curr,params);
+         |verdict rightDist = AndRight${uniqueName(r)}(pre,curr,params);
+         |int verdictId = leftDist.val <= rightDist.val ? leftDist.id : rightDist.id;
+         |verdict result = { .id=verdictId, .val=fminl(leftDist, rightDist) };
+         |return result;""".stripMargin
   }
 
 }
@@ -678,7 +686,7 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
     case COrProgram(l, r) => createMpfrVars(l); createMpfrVars(r)
     case CIfThenElse(cond, ifP, elseP) => createMpfrVars(cond); createMpfrVars(ifP); createMpfrVars(elseP)
     case CReturn(r) => createMpfrVars(r)
-    case CError(r, _) => createMpfrVars(r)
+    case CError(_, r, _) => createMpfrVars(r)
 
     case t@CNeg(c) => createMpfrVar(t); createMpfrVars(c)
     case t@CPlus(l, r) => createMpfrVar(t); createMpfrVars(l); createMpfrVars(r)
@@ -735,7 +743,7 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
     case COrProgram(l, r) => printMpfrArithmetic(l) + printMpfrArithmetic(r)
     case CIfThenElse(cond, ifP, elseP) => printMpfrArithmetic(cond) + printMpfrArithmetic(ifP) + printMpfrArithmetic(elseP)
     case CReturn(r) => printMpfrArithmetic(r)
-    case CError(r, _) => printMpfrArithmetic(r)
+    case CError(_, r, _) => printMpfrArithmetic(r)
   }
 
   //@todo print only necessary parentheses
@@ -764,8 +772,8 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
 
     case CIfThenElse(f, ifP, elseP) => "if (" + print(f) + ") {\n" + print(ifP) + "\n} else {\n" + print(elseP) + "\n}"
     case CReturn(e: CTerm) => s"return mpfr_get_ld(${mpfrVars(e)}, $roundingMode);"
-    case CError(retVal: CFormula, msg: String) => s"""printf("Failed %s\\n", "$msg"); return ${print(retVal)};"""
-    case CError(retVal: CTerm, msg: String) =>
+    case CError(_, retVal: CFormula, msg: String) => s"""printf("Failed %s\\n", "$msg"); return ${print(retVal)};"""
+    case CError(_, retVal: CTerm, msg: String) =>
       s"""printf("Failed %s\\n", "$msg"); return mpfr_get_ld(${mpfrVars(retVal)}, $roundingMode);"""
     case COrProgram(l, r) /* if kind=="boolean" */ =>
       s"""long double leftDist = OrLeft${uniqueName(l)}(pre,curr,params);

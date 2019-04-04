@@ -37,6 +37,8 @@ object CGenerator {
   /** Prints the input (non-deterministically assigned variables) struct declaration. */
   def printInputDeclaration(inputs: Set[BaseVariable]): String = printStructDeclaration("input", inputs)
 
+  def printVerdictDeclaration() = s"typedef struct verdict { int id; long double val; } verdict;\n\n"
+
   /**
     * Returns a set of names (excluding names in `exclude` and interpreted functions) that are immutable parameters of the
     * expression `expr`. */
@@ -89,6 +91,7 @@ class CGenerator(bodyGenerator: CodeGenerator) extends CodeGenerator {
       printParameterDeclaration(parameters) +
       printStateDeclaration(stateVars) +
       printInputDeclaration(inputVars) +
+      printVerdictDeclaration +
       bodyDefs, bodyBody)
   }
 

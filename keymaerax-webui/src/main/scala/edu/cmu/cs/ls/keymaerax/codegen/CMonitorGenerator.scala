@@ -30,7 +30,7 @@ class CMonitorGenerator extends CodeGenerator {
 
     val monitorDistFuncHead =
       s"""/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */
-         |long double boundaryDist(state pre, state curr, const parameters* const params)""".stripMargin
+         |verdict boundaryDist(state pre, state curr, const parameters* const params)""".stripMargin
 
     val monitorSatFuncHead =
       s"""/* Evaluates monitor condition in prior and current state */
@@ -58,17 +58,17 @@ class CMonitorGenerator extends CodeGenerator {
         val rhsMonitor = printMonitor(r, parameters)
         val lhs = negate(lhsMonitor._2)
         val rhs = negate(rhsMonitor._2)
-        ((lhsMonitor._1 + rhsMonitor._1, s"return $lhs"), "boundaryDist(pre,curr,params) >= " + rhs)
+        ((lhsMonitor._1 + rhsMonitor._1, s"return $lhs"), "boundaryDist(pre,curr,params).val >= " + rhs)
       case Less(l, r) =>
         val lhsMonitor = printMonitor(l, parameters)
         val rhsMonitor = printMonitor(r, parameters)
         val lhs = negate(lhsMonitor._2)
         val rhs = negate(rhsMonitor._2)
-        ((lhsMonitor._1 + rhsMonitor._1, s"return $lhs"), "boundaryDist(pre,curr,params) > " + rhs)
+        ((lhsMonitor._1 + rhsMonitor._1, s"return $lhs"), "boundaryDist(pre,curr,params).val > " + rhs)
       case f: Formula if f.isFOL =>
         val monitor = printMonitor(expr, parameters)
-        ((monitor._1, s"return ${monitor._2} ? 1.0L : -1.0L"), "boundaryDist(pre,curr,params) >= 0.0L")
-      case f: Formula if !f.isFOL => (printMonitor(expr, parameters), "boundaryDist(pre,curr,params) >= 0.0L")
+        ((monitor._1, s"verdict result = { .id=(${monitor._2} ? 1 : -1), .val=(${monitor._2} ? 1.0L : -1.0L) }; return result"), "boundaryDist(pre,curr,params).val >= 0.0L")
+      case f: Formula if !f.isFOL => (printMonitor(expr, parameters), "boundaryDist(pre,curr,params).val >= 0.0L")
     }
 
     (s"""$monitorDistFuncHead {
@@ -95,6 +95,13 @@ class CMonitorGenerator extends CodeGenerator {
 
   /** Some reserved names, such as: main, Main */
   private val RESERVED_NAMES = Set("main", "Main")
+
+  private val errorIds = scala.collection.mutable.HashMap[Formula, Int]()
+
+  private def errorId(fml: Formula): Int = {
+    if (!errorIds.contains(fml)) errorIds.put(fml, if (errorIds.isEmpty) -1 else errorIds.minBy(_._2)._2-1)
+    errorIds(fml)
+  }
 
   /**
     * Returns a set of names (excluding names in `vars` and interpreted functions) that are immutable parameters of the
@@ -167,7 +174,7 @@ class CMonitorGenerator extends CodeGenerator {
         }
         //@note offset error distance from -1 since weak inequalities may otherwise result in safe distance 0
         val errorDist = pMetric.map(t => CPlus(CNumber(-1), compileTerm(t))).getOrElse(CFalse)
-        CIfThenElse(compileFormula(p), compileProgramFormula(q, pSatDist), CError(errorDist, p.prettyString))
+        CIfThenElse(compileFormula(p), compileProgramFormula(q, pSatDist), CError(errorId(p), errorDist, p.prettyString))
     }
   }
 

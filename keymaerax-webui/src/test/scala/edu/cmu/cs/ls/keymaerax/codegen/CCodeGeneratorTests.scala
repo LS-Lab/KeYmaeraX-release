@@ -39,11 +39,11 @@ class CCodeGeneratorTests extends TacticTestBase {
                               paramDecl: String = "", stateDecl: String = "", inputDecl: String = "",
                               definitions: String = "", kind: String = "boolean"): String = {
     val (safetyDistBody, monitorSatisfiedBody) = kind match {
-      case "boolean" => (s"return $compiledMonitorExpr ? 1.0L : -1.0L", "boundaryDist(pre,curr,params) >= 0.0L")
-      case "program" => (compiledMonitorExpr, "boundaryDist(pre,curr,params) >= 0.0L")
+      case "boolean" => (s"verdict result = { .id=($compiledMonitorExpr ? 1 : -1), .val=($compiledMonitorExpr ? 1.0L : -1.0L) }; return result", "boundaryDist(pre,curr,params).val >= 0.0L")
+      case "program" => (compiledMonitorExpr, "boundaryDist(pre,curr,params).val >= 0.0L")
       case "metric" => (
         "return " + compiledMonitorExpr.substring(0, compiledMonitorExpr.indexOf(" >")),
-        "boundaryDist(pre,curr,params)" + compiledMonitorExpr.substring(compiledMonitorExpr.indexOf(" >")))
+        "boundaryDist(pre,curr,params).val" + compiledMonitorExpr.substring(compiledMonitorExpr.indexOf(" >")))
     }
 
     def structBody(body: String) = if (body.isEmpty) "" else "{\n  " + body + "\n} "
@@ -62,10 +62,12 @@ class CCodeGeneratorTests extends TacticTestBase {
        |
        |typedef struct input ${structBody(inputDecl)}input;
        |
+       |typedef struct verdict { int id; long double val; } verdict;
+       |
        |$definitions
        |
        |/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */
-       |long double boundaryDist(state pre, state curr, const parameters* const params) {
+       |verdict boundaryDist(state pre, state curr, const parameters* const params) {
        |  $safetyDistBody;
        |}
        |
@@ -247,9 +249,10 @@ class CCodeGeneratorTests extends TacticTestBase {
     val monitor = (new CGenerator(new CMonitorGenerator()))("<?x>=y;>true".asFormula)
     monitor._1 + "\n\n" + monitor._2 shouldBe expectedMonitor(
       """if (params->x >= params->y) {
-        |return (0.0L)+(-((params->y)-(params->x)));
+        |verdict result = { .id=1, .val=(0.0L)+(-((params->y)-(params->x))) }; return result;
         |} else {
         |return ((-1.0L))+(-((params->y)-(params->x)));
+        |verdict result = { .id=-1, .val=((-1.0L))+(-((params->y)-(params->x))) }; return result;
         |}""".stripMargin, paramDecls,
       "", "", "", "program")
   }
@@ -294,7 +297,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val genCode = (new CGenerator(new CMonitorGenerator()))(monitorExp, Set(Variable("a"),Variable("w"),Variable("r"),Variable("xo"),Variable("yo"),
       Variable("dxo"),Variable("dyo"),Variable("t")))
     genCode._1 + "\n\n" + genCode._2 shouldBe expectedMonitor(
-      "(((curr.dxo)*(curr.dxo))+((curr.dyo)*(curr.dyo)) <= (params->V)*(params->V)) && (((curr.a == -(params->B)) && ((curr.w == pre.w) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo) && ((curr.dyo == curr.dyo) && (curr.t == 0.0L)))))))) || (((params->v == 0.0L) && ((curr.a == 0.0L) && ((curr.w == 0.0L) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo) && ((curr.dyo == curr.dyo) && (curr.t == 0.0L))))))))) || ((-(params->B) <= curr.a) && ((curr.a <= params->A) && ((curr.r != 0.0L) && (((curr.w)*(curr.r) == params->v) && (((((!((params->x)-(curr.xo) >= 0.0L)) || ((params->x)-(curr.xo) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->x)-(curr.xo) <= 0.0L)) || ((curr.xo)-(params->x) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V)))))))) || (((!((params->y)-(curr.yo) >= 0.0L)) || ((params->y)-(curr.yo) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->y)-(curr.yo) <= 0.0L)) || ((curr.yo)-(params->y) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))))) && ((curr.a == curr.a) && ((curr.w == curr.w) && ((curr.r == curr.r) && ((curr.xo == curr.xo) && ((curr.yo == curr.yo) && ((curr.dxo == curr.dxo) && ((curr.dyo == curr.dyo) && (curr.t == 0.0L)))))))))))))))",
+      "(((curr.dxo_0)*(curr.dxo_0))+((curr.dyo_0)*(curr.dyo_0)) <= (params->V)*(params->V)) && (((curr.a == -(params->B)) && ((curr.w == pre.w) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L)))))))) || (((params->v == 0.0L) && ((curr.a == 0.0L) && ((curr.w == 0.0L) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L))))))))) || ((-(params->B) <= curr.a_0) && ((curr.a_0 <= params->A) && ((curr.r_0 != 0.0L) && (((curr.w_0)*(curr.r_0) == params->v) && (((((!((params->x)-(curr.xo_0) >= 0.0L)) || ((params->x)-(curr.xo_0) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->x)-(curr.xo_0) <= 0.0L)) || ((curr.xo_0)-(params->x) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V)))))))) || (((!((params->y)-(curr.yo_0) >= 0.0L)) || ((params->y)-(curr.yo_0) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->y)-(curr.yo_0) <= 0.0L)) || ((curr.yo_0)-(params->y) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->V)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))))) && ((curr.a == curr.a_0) && ((curr.w == curr.w_0) && ((curr.r == curr.r_0) && ((curr.xo == curr.xo_0) && ((curr.yo == curr.yo_0) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L)))))))))))))))",
       paramDecls, stateDecls)
     }
 
@@ -322,7 +325,7 @@ class CCodeGeneratorTests extends TacticTestBase {
       Variable("dxo"),Variable("dyo"),Variable("t")))
     genCode._1 + "\n\n" + genCode._2 shouldBe
       expectedMonitor(
-        "(((curr.dxo)*(curr.dxo))+((curr.dyo)*(curr.dyo)) <= (params->Vo)*(params->Vo)) && (((curr.a == -(params->B)) && ((curr.om == pre.om) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo) && ((curr.dyo == curr.dyo) && (curr.t == 0.0L)))))))) || (((params->v == 0.0L) && ((curr.a == 0.0L) && ((curr.om == 0.0L) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo) && ((curr.dyo == curr.dyo) && (curr.t == 0.0L))))))))) || ((-(params->B) <= curr.a) && ((curr.a <= params->A) && ((curr.r != 0.0L) && (((curr.om)*(curr.r) == params->v) && (((((!((params->x)-(curr.xo) >= 0.0L)) || ((params->x)-(curr.xo) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo))))))) && ((!((params->x)-(curr.xo) <= 0.0L)) || ((curr.xo)-(params->x) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo)))))))) || (((!((params->y)-(curr.yo) >= 0.0L)) || ((params->y)-(curr.yo) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo))))))) && ((!((params->y)-(curr.yo) <= 0.0L)) || ((curr.yo)-(params->y) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo))))))))) && ((curr.a == curr.a) && ((curr.om == curr.om) && ((curr.r == curr.r) && ((curr.xo == curr.xo) && ((curr.yo == curr.yo) && ((curr.dxo == curr.dxo) && ((curr.dyo == curr.dyo) && (curr.t == 0.0L)))))))))))))))",
+        "(((curr.dxo_0)*(curr.dxo_0))+((curr.dyo_0)*(curr.dyo_0)) <= (params->Vo)*(params->Vo)) && (((curr.a == -(params->B)) && ((curr.om == pre.om) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L)))))))) || (((params->v == 0.0L) && ((curr.a == 0.0L) && ((curr.om == 0.0L) && ((curr.r == pre.r) && ((curr.xo == pre.xo) && ((curr.yo == pre.yo) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L))))))))) || ((-(params->B) <= curr.a_0) && ((curr.a_0 <= params->A) && ((curr.r_0 != 0.0L) && (((curr.om_0)*(curr.r_0) == params->v) && (((((!((params->x)-(curr.xo_0) >= 0.0L)) || ((params->x)-(curr.xo_0) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo))))))) && ((!((params->x)-(curr.xo_0) <= 0.0L)) || ((curr.xo_0)-(params->x) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo)))))))) || (((!((params->y)-(curr.yo_0) >= 0.0L)) || ((params->y)-(curr.yo_0) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo))))))) && ((!((params->y)-(curr.yo_0) <= 0.0L)) || ((curr.yo_0)-(params->y) > ((((params->v)*(params->v))/((2.0L)*(params->B)))+(((params->Vo)*(params->v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->Vo))))))))) && ((curr.a == curr.a_0) && ((curr.om == curr.om_0) && ((curr.r == curr.r_0) && ((curr.xo == curr.xo_0) && ((curr.yo == curr.yo_0) && ((curr.dxo == curr.dxo_0) && ((curr.dyo == curr.dyo_0) && (curr.t == 0.0L)))))))))))))))",
         paramDecls, stateDecls)
   }
 
@@ -354,7 +357,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val genCode = (new CGenerator(new CMonitorGenerator()))(monitorExp, vars)
     genCode._1 + "\n\n" + genCode._2 shouldBe
       expectedMonitor(
-        "(((curr.dxo)*(curr.dxo))+((curr.dyo)*(curr.dyo)) <= (params->V)*(params->V)) && ((((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == pre.xo) && (curr.yo == pre.yo)) && (curr.dxo == curr.dxo)) && (curr.dyo == curr.dyo)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == pre.w)) && (curr.a == -(params->B))) && (curr.r == pre.r)) && (curr.t == 0.0L))) || (((pre.v == 0.0L) && (((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == pre.xo) && (curr.yo == pre.yo)) && (curr.dxo == curr.dxo)) && (curr.dyo == curr.dyo)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == 0.0L)) && (curr.a == 0.0L)) && (curr.r == pre.r)) && (curr.t == 0.0L)))) || (((-(params->B) <= curr.a) && (curr.a <= params->A)) && ((curr.r != 0.0L) && (((curr.w)*(curr.r) == pre.v) && (((fabsl((pre.x)-(curr.xo)) > ((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V)))))) || (fabsl((pre.y)-(curr.yo)) > ((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))) && (((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == curr.xo) && (curr.yo == curr.yo)) && (curr.dxo == curr.dxo)) && (curr.dyo == curr.dyo)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == curr.w)) && (curr.a == curr.a)) && (curr.r == curr.r)) && (curr.t == 0.0L)))))))))",
+        "(((curr.dxo_0)*(curr.dxo_0))+((curr.dyo_0)*(curr.dyo_0)) <= (params->V)*(params->V)) && ((((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == pre.xo) && (curr.yo == pre.yo)) && (curr.dxo == curr.dxo_0)) && (curr.dyo == curr.dyo_0)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == pre.w)) && (curr.a == -(params->B))) && (curr.r == pre.r)) && (curr.t == 0.0L))) || (((pre.v == 0.0L) && (((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == pre.xo) && (curr.yo == pre.yo)) && (curr.dxo == curr.dxo_0)) && (curr.dyo == curr.dyo_0)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == 0.0L)) && (curr.a == 0.0L)) && (curr.r == pre.r)) && (curr.t == 0.0L)))) || (((-(params->B) <= curr.a_0) && (curr.a_0 <= params->A)) && ((curr.r_0 != 0.0L) && (((curr.w_0)*(curr.r_0) == pre.v) && (((fabsl((pre.x)-(curr.xo_0)) > ((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V)))))) || (fabsl((pre.y)-(curr.yo_0)) > ((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))) && (((0.0L <= params->ep) && (pre.v >= 0.0L)) && (((((((((((((curr.xo == curr.xo_0) && (curr.yo == curr.yo_0)) && (curr.dxo == curr.dxo_0)) && (curr.dyo == curr.dyo_0)) && (curr.x == pre.x)) && (curr.y == pre.y)) && (curr.dx == pre.dx)) && (curr.dy == pre.dy)) && (curr.v == pre.v)) && (curr.w == curr.w_0)) && (curr.a == curr.a_0)) && (curr.r == curr.r_0)) && (curr.t == 0.0L)))))))))",
         paramDecls, stateDecls)
   }
 
@@ -386,7 +389,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     val genCode = (new CGenerator(new CMonitorGenerator))(monitorExp, vars)
     genCode._1 + "\n\n" + genCode._2 shouldBe
       expectedMonitor(
-        "-(fmaxl((((curr.dxo)*(curr.dxo))+((curr.dyo)*(curr.dyo)))-((params->V)*(params->V)), fminl(fmaxl(fmaxl((0.0L)-(params->ep), (0.0L)-(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(pre.xo), (pre.xo)-(curr.xo)), fmaxl((curr.yo)-(pre.yo), (pre.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo), (curr.dxo)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo), (curr.dyo)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl((curr.w)-(pre.w), (pre.w)-(curr.w))), fmaxl((curr.a)-(-(params->B)), (-(params->B))-(curr.a))), fmaxl((curr.r)-(pre.r), (pre.r)-(curr.r))), fmaxl(curr.t, (0.0L)-(curr.t)))), fminl(fmaxl(fmaxl(pre.v, (0.0L)-(pre.v)), fmaxl(fmaxl((0.0L)-(params->ep), (0.0L)-(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(pre.xo), (pre.xo)-(curr.xo)), fmaxl((curr.yo)-(pre.yo), (pre.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo), (curr.dxo)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo), (curr.dyo)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl(curr.w, (0.0L)-(curr.w))), fmaxl(curr.a, (0.0L)-(curr.a))), fmaxl((curr.r)-(pre.r), (pre.r)-(curr.r))), fmaxl(curr.t, (0.0L)-(curr.t))))), fmaxl(fmaxl((-(params->B))-(curr.a), (curr.a)-(params->A)), fmaxl(fminl((0.0L)-(curr.r), curr.r), fmaxl(fmaxl(((curr.w)*(curr.r))-(pre.v), (pre.v)-((curr.w)*(curr.r))), fmaxl(fminl((((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))-(fabsl((pre.x)+(-(curr.xo)))), (((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))-(fabsl((pre.y)+(-(curr.yo))))), fmaxl(fmaxl((0.0L)-(params->ep), (0.0L)-(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(curr.xo), (curr.xo)-(curr.xo)), fmaxl((curr.yo)-(curr.yo), (curr.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo), (curr.dxo)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo), (curr.dyo)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl((curr.w)-(curr.w), (curr.w)-(curr.w))), fmaxl((curr.a)-(curr.a), (curr.a)-(curr.a))), fmaxl((curr.r)-(curr.r), (curr.r)-(curr.r))), fmaxl(curr.t, (0.0L)-(curr.t)))))))))))) > -(0.0L)",
+        "-(fmaxl((((curr.dxo_0)*(curr.dxo_0))+((curr.dyo_0)*(curr.dyo_0)))-((params->V)*(params->V)), fminl(fmaxl(fmaxl((0.0L)-(params->ep), (0.0L)-(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(pre.xo), (pre.xo)-(curr.xo)), fmaxl((curr.yo)-(pre.yo), (pre.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo_0), (curr.dxo_0)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo_0), (curr.dyo_0)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl((curr.w)-(pre.w), (pre.w)-(curr.w))), fmaxl((curr.a)-(-(params->B)), (-(params->B))-(curr.a))), fmaxl((curr.r)-(pre.r), (pre.r)-(curr.r))), fmaxl(curr.t, (0.0L)-(curr.t)))), fminl(fmaxl(fmaxl(pre.v, (0.0L)-(pre.v)), fmaxl(fmaxl((0.0L)-(params->ep), (0.0L)-(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(pre.xo), (pre.xo)-(curr.xo)), fmaxl((curr.yo)-(pre.yo), (pre.yo)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo_0), (curr.dxo_0)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo_0), (curr.dyo_0)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl(curr.w, (0.0L)-(curr.w))), fmaxl(curr.a, (0.0L)-(curr.a))), fmaxl((curr.r)-(pre.r), (pre.r)-(curr.r))), fmaxl(curr.t, (0.0L)-(curr.t))))), fmaxl(fmaxl((-(params->B))-(curr.a_0), (curr.a_0)-(params->A)), fmaxl(fminl((0.0L)-(curr.r_0), curr.r_0), fmaxl(fmaxl(((curr.w_0)*(curr.r_0))-(pre.v), (pre.v)-((curr.w_0)*(curr.r_0))), fmaxl(fminl((((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))-(fabsl((pre.x)+(-(curr.xo_0)))), (((((pre.v)*(pre.v))/((2.0L)*(params->B)))+(((params->V)*(pre.v))/(params->B)))+((((params->A)/(params->B))+(1.0L))*((((params->A)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((pre.v)+(params->V))))))-(fabsl((pre.y)+(-(curr.yo_0))))), fmaxl(fmaxl((0.0L)-(params->ep), (0.0L)-(pre.v)), fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl(fmaxl((curr.xo)-(curr.xo_0), (curr.xo_0)-(curr.xo)), fmaxl((curr.yo)-(curr.yo_0), (curr.yo_0)-(curr.yo))), fmaxl((curr.dxo)-(curr.dxo_0), (curr.dxo_0)-(curr.dxo))), fmaxl((curr.dyo)-(curr.dyo_0), (curr.dyo_0)-(curr.dyo))), fmaxl((curr.x)-(pre.x), (pre.x)-(curr.x))), fmaxl((curr.y)-(pre.y), (pre.y)-(curr.y))), fmaxl((curr.dx)-(pre.dx), (pre.dx)-(curr.dx))), fmaxl((curr.dy)-(pre.dy), (pre.dy)-(curr.dy))), fmaxl((curr.v)-(pre.v), (pre.v)-(curr.v))), fmaxl((curr.w)-(curr.w_0), (curr.w_0)-(curr.w))), fmaxl((curr.a)-(curr.a_0), (curr.a_0)-(curr.a))), fmaxl((curr.r)-(curr.r_0), (curr.r_0)-(curr.r))), fmaxl(curr.t, (0.0L)-(curr.t)))))))))))) > -(0.0L)",
         paramDecls, stateDecls, "", "", "metric")
   }
 
@@ -399,6 +402,7 @@ class CCodeGeneratorTests extends TacticTestBase {
 
     KeYmaeraX.main(Array("-codegen", inputFileName, "-vars", "a,w,r,xo,yo,dxo,dyo", "-nointerval", "-out", outputFileName))
 
+    //@todo fix
     val expectedCCode = scala.io.Source.fromFile("./keymaerax-webui/src/test/resources/examples/casestudies/robix/passivesafetyabs.c").mkString
     val actualFileContent = scala.io.Source.fromFile(outputFileName).mkString
     println(actualFileContent)
@@ -437,11 +441,12 @@ class CCodeGeneratorTests extends TacticTestBase {
            Variable("talpha")))
     genCode._1 + "\n\n" + genCode._2 shouldBe
       expectedMonitor(
-        "(((curr.odx)*(curr.odx))+((curr.ody)*(curr.ody)) <= (params->V)*(params->V)) && ((((curr.w)*(pre.r) == params->v) && ((curr.a == -(params->b)) && ((curr.w == curr.w) && ((curr.dx == pre.dx) && ((curr.dy == pre.dy) && ((curr.r == pre.r) && ((curr.t == 0.0L) && ((curr.ox == pre.ox) && ((curr.oy == pre.oy) && ((curr.odx == curr.odx) && ((curr.ody == curr.ody) && ((curr.isVisible == pre.isVisible) && (curr.talpha == pre.talpha))))))))))))) || (((params->v == 0.0L) && (((curr.w)*(pre.r) == params->v) && ((curr.a == 0.0L) && ((curr.w == curr.w) && ((curr.dx == -(pre.dx)) && ((curr.dy == -(pre.dy)) && ((curr.r == pre.r) && ((curr.t == 0.0L) && ((curr.ox == pre.ox) && ((curr.oy == pre.oy) && ((curr.odx == curr.odx) && ((curr.ody == curr.ody) && ((curr.isVisible == pre.isVisible) && (curr.talpha == pre.talpha)))))))))))))) || ((-(params->b) <= curr.a) && ((curr.a <= params->A) && ((curr.r != 0.0L) && ((((params->v)+((curr.a)*(params->ep)) < 0.0L) && (((curr.isVisible < 0.0L) || ((((!((params->x)-(curr.ox) >= 0.0L)) || ((params->x)-(curr.ox) > (((params->v)*(params->v))/(((-2.0L))*(curr.a)))+((params->V)*((params->v)/(-(curr.a)))))) && ((!((params->x)-(curr.ox) <= 0.0L)) || ((curr.ox)-(params->x) > (((params->v)*(params->v))/(((-2.0L))*(curr.a)))+((params->V)*((params->v)/(-(curr.a))))))) || (((!((params->y)-(curr.oy) >= 0.0L)) || ((params->y)-(curr.oy) > (((params->v)*(params->v))/(((-2.0L))*(curr.a)))+((params->V)*((params->v)/(-(curr.a)))))) && ((!((params->y)-(curr.oy) <= 0.0L)) || ((curr.oy)-(params->y) > (((params->v)*(params->v))/(((-2.0L))*(curr.a)))+((params->V)*((params->v)/(-(curr.a))))))))) && (((!(curr.r >= 0.0L)) || (((params->v)*(params->v))/(((-2.0L))*(curr.a)) < (params->alpha)*(curr.r))) && (((!(curr.r < 0.0L)) || (((params->v)*(params->v))/(((-2.0L))*(curr.a)) < -((params->alpha)*(curr.r)))) && (((curr.w)*(curr.r) == params->v) && ((curr.a == curr.a) && ((curr.w == curr.w) && ((curr.dx == pre.dx) && ((curr.dy == pre.dy) && ((curr.r == curr.r) && ((curr.t == 0.0L) && ((curr.ox == curr.ox) && ((curr.oy == curr.oy) && ((curr.odx == curr.odx) && ((curr.ody == curr.ody) && ((curr.isVisible == curr.isVisible) && (curr.talpha == 0.0L))))))))))))))))) || (((params->v)+((curr.a)*(params->ep)) >= 0.0L) && (((curr.isVisible < 0.0L) || ((((!((params->x)-(curr.ox) >= 0.0L)) || ((params->x)-(curr.ox) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a)/(params->b))+(1.0L))*((((curr.a)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->x)-(curr.ox) <= 0.0L)) || ((curr.ox)-(params->x) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a)/(params->b))+(1.0L))*((((curr.a)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V)))))))) || (((!((params->y)-(curr.oy) >= 0.0L)) || ((params->y)-(curr.oy) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a)/(params->b))+(1.0L))*((((curr.a)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->y)-(curr.oy) <= 0.0L)) || ((curr.oy)-(params->y) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a)/(params->b))+(1.0L))*((((curr.a)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V)))))))))) && (((!(curr.r >= 0.0L)) || ((((params->v)*(params->v))/((2.0L)*(params->b)))+((((curr.a)/(params->b))+(1.0L))*((((curr.a)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*(params->v)))) < (params->alpha)*(curr.r))) && (((!(curr.r < 0.0L)) || ((((params->v)*(params->v))/((2.0L)*(params->b)))+((((curr.a)/(params->b))+(1.0L))*((((curr.a)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*(params->v)))) < -((params->alpha)*(curr.r)))) && (((curr.w)*(curr.r) == params->v) && ((curr.a == curr.a) && ((curr.w == curr.w) && ((curr.dx == pre.dx) && ((curr.dy == pre.dy) && ((curr.r == curr.r) && ((curr.t == 0.0L) && ((curr.ox == curr.ox) && ((curr.oy == curr.oy) && ((curr.odx == curr.odx) && ((curr.ody == curr.ody) && ((curr.isVisible == curr.isVisible) && (curr.talpha == 0.0L)))))))))))))))))))))))",
+        "(((curr.odx_0)*(curr.odx_0))+((curr.ody_0)*(curr.ody_0)) <= (params->V)*(params->V)) && ((((curr.w_0)*(pre.r) == params->v) && ((curr.a == -(params->b)) && ((curr.w == curr.w_0) && ((curr.dx == pre.dx) && ((curr.dy == pre.dy) && ((curr.r == pre.r) && ((curr.t == 0.0L) && ((curr.ox == pre.ox) && ((curr.oy == pre.oy) && ((curr.odx == curr.odx_0) && ((curr.ody == curr.ody_0) && ((curr.isVisible == pre.isVisible) && (curr.talpha == pre.talpha))))))))))))) || (((params->v == 0.0L) && (((curr.w_0)*(pre.r) == params->v) && ((curr.a == 0.0L) && ((curr.w == curr.w_0) && ((curr.dx == -(pre.dx)) && ((curr.dy == -(pre.dy)) && ((curr.r == pre.r) && ((curr.t == 0.0L) && ((curr.ox == pre.ox) && ((curr.oy == pre.oy) && ((curr.odx == curr.odx_0) && ((curr.ody == curr.ody_0) && ((curr.isVisible == pre.isVisible) && (curr.talpha == pre.talpha)))))))))))))) || ((-(params->b) <= curr.a_0) && ((curr.a_0 <= params->A) && ((curr.r_0 != 0.0L) && ((((params->v)+((curr.a_0)*(params->ep)) < 0.0L) && (((curr.isVisible_0 < 0.0L) || ((((!((params->x)-(curr.ox_0) >= 0.0L)) || ((params->x)-(curr.ox_0) > (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)))+((params->V)*((params->v)/(-(curr.a_0)))))) && ((!((params->x)-(curr.ox_0) <= 0.0L)) || ((curr.ox_0)-(params->x) > (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)))+((params->V)*((params->v)/(-(curr.a_0))))))) || (((!((params->y)-(curr.oy_0) >= 0.0L)) || ((params->y)-(curr.oy_0) > (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)))+((params->V)*((params->v)/(-(curr.a_0)))))) && ((!((params->y)-(curr.oy_0) <= 0.0L)) || ((curr.oy_0)-(params->y) > (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)))+((params->V)*((params->v)/(-(curr.a_0))))))))) && (((!(curr.r_0 >= 0.0L)) || (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)) < (params->alpha)*(curr.r_0))) && (((!(curr.r_0 < 0.0L)) || (((params->v)*(params->v))/(((-2.0L))*(curr.a_0)) < -((params->alpha)*(curr.r_0)))) && (((curr.w_0)*(curr.r_0) == params->v) && ((curr.a == curr.a_0) && ((curr.w == curr.w_0) && ((curr.dx == pre.dx) && ((curr.dy == pre.dy) && ((curr.r == curr.r_0) && ((curr.t == 0.0L) && ((curr.ox == curr.ox_0) && ((curr.oy == curr.oy_0) && ((curr.odx == curr.odx_0) && ((curr.ody == curr.ody_0) && ((curr.isVisible == curr.isVisible_0) && (curr.talpha == 0.0L))))))))))))))))) || (((params->v)+((curr.a_0)*(params->ep)) >= 0.0L) && (((curr.isVisible_0 < 0.0L) || ((((!((params->x)-(curr.ox_0) >= 0.0L)) || ((params->x)-(curr.ox_0) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->x)-(curr.ox_0) <= 0.0L)) || ((curr.ox_0)-(params->x) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V)))))))) || (((!((params->y)-(curr.oy_0) >= 0.0L)) || ((params->y)-(curr.oy_0) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V))))))) && ((!((params->y)-(curr.oy_0) <= 0.0L)) || ((curr.oy_0)-(params->y) > ((((params->v)*(params->v))/((2.0L)*(params->b)))+((params->V)*((params->v)/(params->b))))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*((params->v)+(params->V)))))))))) && (((!(curr.r_0 >= 0.0L)) || ((((params->v)*(params->v))/((2.0L)*(params->b)))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*(params->v)))) < (params->alpha)*(curr.r_0))) && (((!(curr.r_0 < 0.0L)) || ((((params->v)*(params->v))/((2.0L)*(params->b)))+((((curr.a_0)/(params->b))+(1.0L))*((((curr.a_0)/(2.0L))*((params->ep)*(params->ep)))+((params->ep)*(params->v)))) < -((params->alpha)*(curr.r_0)))) && (((curr.w_0)*(curr.r_0) == params->v) && ((curr.a == curr.a_0) && ((curr.w == curr.w_0) && ((curr.dx == pre.dx) && ((curr.dy == pre.dy) && ((curr.r == curr.r_0) && ((curr.t == 0.0L) && ((curr.ox == curr.ox_0) && ((curr.oy == curr.oy_0) && ((curr.odx == curr.odx_0) && ((curr.ody == curr.ody_0) && ((curr.isVisible == curr.isVisible_0) && (curr.talpha == 0.0L)))))))))))))))))))))))",
         paramDecls, stateDecls)
   }
 
   "quadcopter" should "generate C code for hybridquadrotor" in {
+    //@todo fix
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/quadcopter/hybridquadrotor.kym")
     val monitorExp = KeYmaeraXParser(io.Source.fromInputStream(inputFile).mkString)
     val paramDecls =
@@ -516,8 +521,10 @@ class CCodeGeneratorTests extends TacticTestBase {
         |
         |typedef struct input input;
         |
+        |typedef struct verdict { int id; long double val; } verdict;
+        |
         |/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */
-        |long double boundaryDist(state pre, state curr, const parameters* const params) {
+        |verdict boundaryDist(state pre, state curr, const parameters* const params) {
         |  if (((curr.xg >= 0.0L) && (curr.k >= 0.0L)) || ((curr.xg <= 0.0L) && (curr.k <= 0.0L))) {
         |if (curr.yg > 0.0L) {
         |if ((fabsl(curr.k))*(params->eps) <= 100.0L) {
@@ -536,66 +543,66 @@ class CCodeGeneratorTests extends TacticTestBase {
         |if (0.0L <= params->T) {
         |if (curr.v == pre.v) {
         |if (curr.t == 0.0L) {
-        |return ((((((((((((((((0.0L)+(-(fminl(fmaxl((0.0L)-(curr.xg), (0.0L)-(curr.k)), fmaxl(curr.xg, curr.k)))))+(-((0.0L)-(curr.yg))))+(-(((fabsl(curr.k))*(params->eps))-(100.0L))))+(-(((((curr.k)*((params->eps)*(params->eps)))+(-((200.0L)*(params->eps))))*(100.0L))-(((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))+(-((((2.0L)*(curr.xg))*(100.0L))*(10.0L)))))))+(-((((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))+(-((((2.0L)*(curr.xg))*(100.0L))*(10.0L))))-((((curr.k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L)))))+(-((0.0L)-(curr.vl))))+(-((curr.vl)-(curr.vh))))+(-(((params->A)*(params->T))-((10.0L)*((curr.vh)+(-(curr.vl)))))))+(-(((params->B)*(params->T))-((10.0L)*((curr.vh)+(-(curr.vl)))))))+(-((-(params->B))-(curr.a))))+(-((curr.a)-(params->A))))+(-((0.0L)-(((10.0L)*(pre.v))+((curr.a)*(params->T))))))+(-(fminl(fmaxl((pre.v)-(curr.vh), (((10.0L)*(pre.v))+((curr.a)*(params->T)))-((10.0L)*(curr.vh))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))+(-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh)))))))-(((((2.0L)*(params->B))*((fabsl(curr.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))+(-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh)))))))-(((((2.0L)*(params->B))*((curr.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)))))))+(-(fminl(fmaxl((curr.vl)-(pre.v), ((10.0L)*(curr.vl))-(((10.0L)*(pre.v))+((curr.a)*(params->T)))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))+(-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))))))-(((((2.0L)*(params->A))*((fabsl(curr.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))+(-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))))))-(((((2.0L)*(params->A))*((curr.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)))))))+(-((0.0L)-(pre.v))))+(-((0.0L)-(params->T)));
+        |verdict result = { .id=1, .val=((((((((((((((((0.0L)+(-(fminl(fmaxl((0.0L)-(curr.xg), (0.0L)-(curr.k)), fmaxl(curr.xg, curr.k)))))+(-((0.0L)-(curr.yg))))+(-(((fabsl(curr.k))*(params->eps))-(100.0L))))+(-(((((curr.k)*((params->eps)*(params->eps)))+(-((200.0L)*(params->eps))))*(100.0L))-(((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))+(-((((2.0L)*(curr.xg))*(100.0L))*(10.0L)))))))+(-((((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))+(-((((2.0L)*(curr.xg))*(100.0L))*(10.0L))))-((((curr.k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L)))))+(-((0.0L)-(curr.vl))))+(-((curr.vl)-(curr.vh))))+(-(((params->A)*(params->T))-((10.0L)*((curr.vh)+(-(curr.vl)))))))+(-(((params->B)*(params->T))-((10.0L)*((curr.vh)+(-(curr.vl)))))))+(-((-(params->B))-(curr.a))))+(-((curr.a)-(params->A))))+(-((0.0L)-(((10.0L)*(pre.v))+((curr.a)*(params->T))))))+(-(fminl(fmaxl((pre.v)-(curr.vh), (((10.0L)*(pre.v))+((curr.a)*(params->T)))-((10.0L)*(curr.vh))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))+(-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh)))))))-(((((2.0L)*(params->B))*((fabsl(curr.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))+(-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh)))))))-(((((2.0L)*(params->B))*((curr.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)))))))+(-(fminl(fmaxl((curr.vl)-(pre.v), ((10.0L)*(curr.vl))-(((10.0L)*(pre.v))+((curr.a)*(params->T)))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))+(-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))))))-(((((2.0L)*(params->A))*((fabsl(curr.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))+(-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))))))-(((((2.0L)*(params->A))*((curr.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)))))))+(-((0.0L)-(pre.v))))+(-((0.0L)-(params->T))) }; return result;
         |} else {
-        |return -1.0L;
+        |verdict result = { .id=-1, .val=-1.0L }; return result;
         |}
         |} else {
-        |return -1.0L;
+        |verdict result = { .id=-2, .val=-1.0L }; return result;
         |}
         |} else {
-        |return ((-1.0L))+(-((0.0L)-(params->T)));
+        |verdict result = { .id=-3, .val=((-1.0L))+(-((0.0L)-(params->T))) }; return result;
         |}
         |} else {
-        |return ((-1.0L))+(-((0.0L)-(pre.v)));
+        |verdict result = { .id=-4, .val=((-1.0L))+(-((0.0L)-(pre.v))) }; return result;
         |}
         |} else {
-        |return ((-1.0L))+(-(fminl(fmaxl((curr.vl)-(pre.v), ((10.0L)*(curr.vl))-(((10.0L)*(pre.v))+((curr.a)*(params->T)))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))+(-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))))))-(((((2.0L)*(params->A))*((fabsl(curr.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))+(-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))))))-(((((2.0L)*(params->A))*((curr.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L))))));
+        |verdict result = { .id=-5, .val=((-1.0L))+(-(fminl(fmaxl((curr.vl)-(pre.v), ((10.0L)*(curr.vl))-(((10.0L)*(pre.v))+((curr.a)*(params->T)))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))+(-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))))))-(((((2.0L)*(params->A))*((fabsl(curr.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->A)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+((((curr.vl)*(10.0L))*((curr.vl)*(10.0L)))+(-((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))))))-(((((2.0L)*(params->A))*((curr.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)))))) }; return result;
         |}
         |} else {
-        |return ((-1.0L))+(-(fminl(fmaxl((pre.v)-(curr.vh), (((10.0L)*(pre.v))+((curr.a)*(params->T)))-((10.0L)*(curr.vh))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))+(-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh)))))))-(((((2.0L)*(params->B))*((fabsl(curr.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))+(-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh)))))))-(((((2.0L)*(params->B))*((curr.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L))))));
+        |verdict result = { .id=-6, .val=((-1.0L))+(-(fminl(fmaxl((pre.v)-(curr.vh), (((10.0L)*(pre.v))+((curr.a)*(params->T)))-((10.0L)*(curr.vh))), fminl(((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))+(-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh)))))))-(((((2.0L)*(params->B))*((fabsl(curr.xg))+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)), ((((10000.0L)+((((2.0L)*(params->eps))*(fabsl(curr.k)))*(100.0L)))+(((params->eps)*(params->eps))*((curr.k)*(curr.k))))*(((params->B)*(((((2.0L)*(pre.v))*(params->T))*(10.0L))+((curr.a)*((params->T)*(params->T)))))+(((((pre.v)*(10.0L))+((curr.a)*(params->T)))*(((pre.v)*(10.0L))+((curr.a)*(params->T))))+(-(((10.0L)*(curr.vh))*((10.0L)*(curr.vh)))))))-(((((2.0L)*(params->B))*((curr.yg)+(-((10.0L)*(params->eps)))))*(10000.0L))*(100.0L)))))) }; return result;
         |}
         |} else {
-        |return ((-1.0L))+(-((0.0L)-(((10.0L)*(pre.v))+((curr.a)*(params->T)))));
+        |verdict result = { .id=-7, .val=((-1.0L))+(-((0.0L)-(((10.0L)*(pre.v))+((curr.a)*(params->T))))) }; return result;
         |}
         |} else {
-        |return ((-1.0L))+(-((curr.a)-(params->A)));
+        |verdict result = { .id=-8, .val=((-1.0L))+(-((curr.a)-(params->A))) }; return result;
         |}
         |} else {
-        |return ((-1.0L))+(-((-(params->B))-(curr.a)));
+        |verdict result = { .id=-9, .val=((-1.0L))+(-((-(params->B))-(curr.a))) }; return result;
         |}
         |} else {
-        |return ((-1.0L))+(-(((params->B)*(params->T))-((10.0L)*((curr.vh)+(-(curr.vl))))));
+        |verdict result = { .id=-10, .val=((-1.0L))+(-(((params->B)*(params->T))-((10.0L)*((curr.vh)+(-(curr.vl)))))) }; return result;
         |}
         |} else {
-        |return ((-1.0L))+(-(((params->A)*(params->T))-((10.0L)*((curr.vh)+(-(curr.vl))))));
+        |verdict result = { .id=-11, .val=((-1.0L))+(-(((params->A)*(params->T))-((10.0L)*((curr.vh)+(-(curr.vl)))))) }; return result;
         |}
         |} else {
-        |return ((-1.0L))+(-((curr.vl)-(curr.vh)));
+        |verdict result = { .id=-12, .val=((-1.0L))+(-((curr.vl)-(curr.vh))) }; return result;
         |}
         |} else {
-        |return ((-1.0L))+(-((0.0L)-(curr.vl)));
+        |verdict result = { .id=-13, .val=((-1.0L))+(-((0.0L)-(curr.vl))) }; return result;
         |}
         |} else {
-        |return ((-1.0L))+(-((((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))+(-((((2.0L)*(curr.xg))*(100.0L))*(10.0L))))-((((curr.k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L))));
+        |verdict result = { .id=-14, .val=((-1.0L))+(-((((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))+(-((((2.0L)*(curr.xg))*(100.0L))*(10.0L))))-((((curr.k)*((params->eps)*(params->eps)))+((200.0L)*(params->eps)))*(100.0L)))) }; return result;
         |}
         |} else {
-        |return ((-1.0L))+(-(((((curr.k)*((params->eps)*(params->eps)))+(-((200.0L)*(params->eps))))*(100.0L))-(((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))+(-((((2.0L)*(curr.xg))*(100.0L))*(10.0L))))));
+        |verdict result = { .id=-15, .val=((-1.0L))+(-(((((curr.k)*((params->eps)*(params->eps)))+(-((200.0L)*(params->eps))))*(100.0L))-(((curr.k)*(((curr.xg)*(curr.xg))+((curr.yg)*(curr.yg))))+(-((((2.0L)*(curr.xg))*(100.0L))*(10.0L)))))) }; return result;
         |}
         |} else {
-        |return ((-1.0L))+(-(((fabsl(curr.k))*(params->eps))-(100.0L)));
+        |verdict result = { .id=-16, .val=((-1.0L))+(-(((fabsl(curr.k))*(params->eps))-(100.0L))) }; return result;
         |}
         |} else {
-        |return ((-1.0L))+(-((0.0L)-(curr.yg)));
+        |verdict result = { .id=-17, .val=((-1.0L))+(-((0.0L)-(curr.yg))) }; return result;
         |}
         |} else {
-        |return ((-1.0L))+(-(fminl(fmaxl((0.0L)-(curr.xg), (0.0L)-(curr.k)), fmaxl(curr.xg, curr.k))));
+        |verdict result = { .id=-18, .val=((-1.0L))+(-(fminl(fmaxl((0.0L)-(curr.xg), (0.0L)-(curr.k)), fmaxl(curr.xg, curr.k)))) }; return result;
         |};
         |}
         |
         |/* Evaluates monitor condition in prior and current state */
         |bool monitorSatisfied(state pre, state curr, const parameters* const params) {
-        |  return boundaryDist(pre,curr,params) >= 0.0L;
+        |  return boundaryDist(pre,curr,params).val >= 0.0L;
         |}
         |
         |/* Run controller `ctrl` monitored, return `fallback` if `ctrl` violates monitor */
@@ -610,16 +617,51 @@ class CCodeGeneratorTests extends TacticTestBase {
         |""".stripMargin
   }
 
+  it should "approximate robix liveness" in withMathematica { tool =>
+    //@note run this test with -DTEST_BASE_DIR=/path/to/modeldirectory
+    val baseDir = System.getProperty("TEST_BASE_DIR")
+    val entry = KeYmaeraXArchiveParser.parseFromFile(s"$baseDir/relative-full.kyx#Robot preserves loop invariant").head
+    val tactic = entry.tactics.head._3
+
+    val approx = ModelPlex.createNonlinearModelApprox(entry.name, tactic)(entry.model)
+
+    approx._1 shouldBe "T()>0&eps()>0&A()>0&B()>0&v>=0&abs(k)*eps()<=100*1&((k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10))&(0<=vl&vl < vh&A()*T()<=10*(vh-vl)&B()*T()<=10*(vh-vl))&(v<=vh|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(v*10*(v*10)-vh*10*(vh*10))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(v*10*(v*10)-vh*10*(vh*10))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&(vl<=v|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(vl*10*(vl*10)-v*10*(v*10))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(vl*10*(vl*10)-v*10*(v*10))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10))->[{{{xg:=*;yg:=*;vl:=*;vh:=*;k:=*;a:=*;?xg>=0&k>=0|xg<=0&k<=0;?yg>0&abs(k)*eps()<=100*1&((k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10))&0<=vl&vl < vh&A()*T()<=10*(vh-vl)&B()*T()<=10*(vh-vl);?(-B()<=a&a<=A())&10*v+a*T()>=0&(v<=vh&10*v+a*T()<=10*vh|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*T()*10+a*(T()*T()))+((v*10+a*T())*(v*10+a*T())-10*vh*(10*vh)))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*T()*10+a*(T()*T()))+((v*10+a*T())*(v*10+a*T())-10*vh*(10*vh)))<=2*B()*(yg-10*eps())*(100*100)*(10*10))&(vl<=v&10*v+a*T()>=10*vl|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*T()*10+a*(T()*T()))+(vl*10*(vl*10)-(v*10+a*T())*(v*10+a*T())))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*T()*10+a*(T()*T()))+(vl*10*(vl*10)-(v*10+a*T())*(v*10+a*T())))<=2*A()*(yg-10*eps())*(100*100)*(10*10));}t:=0;}{t_0:=t;v_0:=v;xg_0:=xg;yg_0:=yg;}?(v>=0&t<=T())&(t>=0&(k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10)|10*v+a*(T()-t)>=0&((a>=0&10*v+a*(T()-t)<=10*vh|a<=0&v<=vh)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&((a>=0&v>=vl|a<=0&10*v+a*(T()-t)>=10*vl)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)));{t:=*;v:=*;xg:=*;yg:=*;}?(v>=0&t<=T())&(t>=0&(k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10)|10*v+a*(T()-t)>=0&((a>=0&10*v+a*(T()-t)<=10*vh|a<=0&v<=vh)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&((a>=0&v>=vl|a<=0&10*v+a*(T()-t)>=10*vl)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)));}*](v>=0&abs(k)*eps()<=100*1&((k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10))&(0<=vl&vl < vh&A()*T()<=10*(vh-vl)&B()*T()<=10*(vh-vl))&(v<=vh|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(v*10*(v*10)-vh*10*(vh*10))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(v*10*(v*10)-vh*10*(vh*10))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&(vl<=v|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(vl*10*(vl*10)-v*10*(v*10))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(vl*10*(vl*10)-v*10*(v*10))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)))".asFormula
+
+    // modelplex
+    val stateVars = ("xg"::"yg"::"v"::"a"::"t"::"vl"::"vh"::"k"::"t_0"::"xg_0"::"v_0"::"yg_0"::Nil).map(_.asVariable.asInstanceOf[BaseVariable])
+    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(approx._1, stateVars:_*)
+    val simplifier = SimplifierV3.simpTac(taxs = SimplifierV3.composeIndex(
+      SimplifierV3.groundEqualityIndex, SimplifierV3.defaultTaxs))
+
+    val mxtactic = ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
+      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)) &
+      DebuggingTactics.print("Quantifiers instantiated") &
+      simplifier(1) & DebuggingTactics.print("Simplified")
+
+    val result = proveBy(modelplexInput, mxtactic)
+    val monitorFml = result.subgoals.head.succ.head
+    val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
+    println("Monitor formula " + monitorFml.prettyString + "\nPretty " + reassociatedMonitorFml.prettyString)
+    proveBy(Equiv(monitorFml, reassociatedMonitorFml), TactixLibrary.prop) shouldBe 'proved
+
+    val testProg = proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
+    println("Test prog " + testProg.prettyString)
+
+    val inputs = CGenerator.getInputs(testProg)
+    val monitorCode = (new CGenerator(new CMonitorGenerator()))(testProg, stateVars.toSet, inputs, "Monitor")
+    println(monitorCode)
+  }
+
   "Compiled controller monitor" should "evaluate boolean correctly" in {
     val inputFile = getClass.getResourceAsStream("/examples/casestudies/robix/passivesafetyabs.kym")
     val monitorExp = KeYmaeraXParser(io.Source.fromInputStream(inputFile).mkString)
     val vars =
-      Set(Variable("a"),Variable("dx"),Variable("dy"),Variable("r"),Variable("v"),Variable("w"),Variable("x"),Variable("y"),
-        Variable("xo"),Variable("yo"),Variable("dxo"),Variable("dyo"),Variable("t"))
+      ("a"::"dx"::"dy"::"r"::"v"::"w"::"x"::"y"::"xo"::"yo"::"dxo"::"dyo"::"t"::"a_0"::"dxo_0"::"dyo_0"::"r_0"::"w_0"::"xo_0"::"yo_0"::Nil).map(_.asVariable.asInstanceOf[BaseVariable]).toSet
     val genCode = (new CGenerator(new CMonitorGenerator()))(monitorExp, vars)
     val monitorCode = genCode._1 + "\n\n" + genCode._2
 
     // robot and obstacle drive straight towards each other
+    //@todo fix
     val code =
       s"""
         |#include <stdio.h>
@@ -629,11 +671,11 @@ class CCodeGeneratorTests extends TacticTestBase {
         |state fallback(state curr, const parameters* const params, const input* const in) { printf("Fallback returns -B\\n"); curr.a = -params->B; return curr; }
         |
         |int main() {
-        |  state current = { .a=0.0, .dx=1.0, .dy=0.0, .r=1.0, .v=1.0, .w=1.0, .x=0.0, .y=0.0, .xo=10.0, .yo=0.0, .dxo=-1.0, .dyo=0.0, .t=0.0 };
+        |  state current = { .a=0.0, .dx=1.0, .dy=0.0, .r=1.0, .v=1.0, .w=1.0, .x=0.0, .y=0.0, .xo=10.0, .yo=0.0, .dxo=-1.0, .dyo=0.0, .t=0.0, .a_0=0.0, .dxo_0=1.0, .dyo_0=0.0, .r_0=1.0, .w_0=1.0, .xo_0=10.0, .yo_0=0.0 };
         |  parameters params = { .A=1.0, .B=2.0, .V=1.0, .ep=0.05 };
         |  printf("Returned a=%1.1Lf\\n", monitoredCtrl(current, &params, (const input* const)0, &ctrl, &fallback).a);
         |  /* jump robot ahead and speed up, now unsafe */
-        |  state next = { .a=0.0, .dx=1.0, .dy=0.0, .r=1.0, .v=4.0, .w=4.0, .x=9.0, .y=0.0, .xo=10.0, .yo=0.0, .dxo=-1.0, .dyo=0.0 };
+        |  state next = { .a=0.0, .dx=1.0, .dy=0.0, .r=1.0, .v=4.0, .w=4.0, .x=9.0, .y=0.0, .xo=10.0, .yo=0.0, .dxo=-1.0, .dyo=0.0, .a_0=0.0, .dxo_0=1.0, .dyo_0=0.0, .r_0=1.0, .w_0=4.0, .xo_0=10.0, .yo_0=0.0 };
         |  printf("Returned a=%1.1Lf", monitoredCtrl(next, &params, (const input* const)0, &ctrl, &fallback).a);
         |  return 0;
         |}
@@ -987,7 +1029,8 @@ class CCodeGeneratorTests extends TacticTestBase {
     val declarations =
       CGenerator.printParameterDeclaration(params) + "\n" +
       CGenerator.printStateDeclaration(stateVars) + "\n" +
-      CGenerator.printInputDeclaration(inputs)
+      CGenerator.printInputDeclaration(inputs) + "\n" +
+      CGenerator.printVerdictDeclaration()
     val fallbackCode = new CControllerGenerator()(ctrlPrg, stateVars)._2
     val monitorCode = new CMonitorGenerator()(monitor, stateVars)._1
 
@@ -1037,7 +1080,8 @@ class CCodeGeneratorTests extends TacticTestBase {
     val declarations =
       CGenerator.printParameterDeclaration(params) + "\n" +
         CGenerator.printStateDeclaration(stateVars) + "\n" +
-        CGenerator.printInputDeclaration(Set())
+        CGenerator.printInputDeclaration(Set()) + "\n" +
+        CGenerator.printVerdictDeclaration()
     val fallbackCode = new CControllerGenerator()(ctrlPrg, stateVars)._2
     val monitorCode = new CMonitorGenerator()(monitor, stateVars)._1
 
