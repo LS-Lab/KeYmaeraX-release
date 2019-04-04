@@ -24,7 +24,12 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
   init()
 
-  private val pegasusPath = System.getProperty("user.home") + File.separator + Configuration(Configuration.Keys.PEGASUS_PATH)
+  private val pegasusPath = File.separator + Configuration(Configuration.Keys.PEGASUS_PATH)
+  private val joinedPath = "FileNameJoin[{$HomeDirectory," + scala.reflect.io.File(pegasusPath).segments.map(seg => "\"" + seg + "\"").mkString(",") + "}]"
+  private val setPathsCmd =
+    s"""
+      |SetDirectory[$joinedPath];
+      |AppendTo[$$Path, $joinedPath];""".stripMargin.trim
 
   def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Either[Seq[Formula],Seq[Formula]]] = {
     require(postCond.isFOL, "Unable to generate invariant, expected FOL post conditions but got " + postCond.prettyString)
@@ -44,8 +49,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT))).getOrElse(-1)
 
     val command = s"""
-       |SetDirectory["$pegasusPath"];
-       |Needs["Strategies`","$pegasusPath/Strategies.m"];
+       |$setPathsCmd
+       |Needs["Strategies`","Strategies.m"];
        |Strategies`Pegasus[$problem]""".stripMargin.trim()
 
     try {
@@ -77,8 +82,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
 
     val command = s"""
-                  |SetDirectory["$pegasusPath"];
-                  |Needs["LZZ`","$pegasusPath/LZZ.m"];
+                  |$setPathsCmd
+                  |Needs["LZZ`","LZZ.m"];
                   |LZZ`InvS[$problem]""".stripMargin.trim()
 
     val (output, result) = runUnchecked(command)
@@ -124,8 +129,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
 
     val command = s"""
-                     |SetDirectory["$pegasusPath"];
-                     |Needs["Refute`","$pegasusPath/Refute.m"];
+                     |$setPathsCmd
+                     |Needs["Refute`","Refute.m"];
                      |Refute`RefuteS[$problem]""".stripMargin.trim()
 
     try {
