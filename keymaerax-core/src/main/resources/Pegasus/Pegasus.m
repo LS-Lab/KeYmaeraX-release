@@ -9,6 +9,7 @@ Needs["Classifier`",FileNameJoin[{Directory[],"Classifier.m"}]] (* Load classifi
 Needs["InvariantExtractor`",FileNameJoin[{Directory[],"InvariantExtractor.m"}]] (* Load classifier package from current directory *)
 (* Load specialized invariant generation strategies *)
 Needs["Strategies`GenericNonLinear`",FileNameJoin[{Directory[],"Strategies","GenericNonLinear.m"}]]
+Needs["Strategies`OneDimensional`",FileNameJoin[{Directory[],"Strategies","OneDimensional.m"}]]
 Needs["BarrierCertificates`",FileNameJoin[{Directory[],"Primitives","BarrierCertificates.m"}]] 
 Needs["DarbouxPolynomials`",FileNameJoin[{Directory[],"Primitives","DarbouxPolynomials.m"}]] 
 Needs["QualitativeAbstraction`",FileNameJoin[{Directory[],"Primitives","QualitativeAbstractionPolynomials.m"}]] 
@@ -65,9 +66,13 @@ Print["Precondition is not an invariant. Proceeding."]];
 
 (* Determine strategies depending on problem classification by pattern matching on {dimension, classes} *)
 class=Classifier`ClassifyProblem[problem];
+Print[class];
 strategies={};
 strategies = class/.{
-(* {1,CLASSES_List}-> OneDimStrat, *)
+ {1,CLASSES_List}-> {
+ Strategies`OneDimensional`OneDimPotential, 
+ Strategies`OneDimensional`OneDimReach
+ }, 
 (* {dim_,{"Constant"}}-> ConstantStrat, *)
 (* {2,{"Linear"}}-> PlanarLinearStrat, *)
 (* {dim_,{"Linear"}}-> GeneralLinearStrat, *)
