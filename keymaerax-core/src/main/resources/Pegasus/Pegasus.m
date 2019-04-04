@@ -42,12 +42,14 @@ newf=Join[f,Table[0,{i,Length[parameters]}]];
 
 
 InvGen[parametricProb_List]:=Catch[Module[
-{problem,pre,f,vars,evoConst,post,preImpliesPost,postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,polyList}, 
+{problem,pre1,post1,pre,f,vars,evoConst,post,preImpliesPost,postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,polyList}, 
 
 (* Bring symbolic parameters into the dynamics *)
 problem = AugmentWithParameters[parametricProb];
-{ pre, { f, vars, evoConst }, post }=problem;
+{ pre1, { f, vars, evoConst }, post1 }=problem;
 
+pre = Primitives`DNFNormalizeGtGeq[pre1];
+post=Primitives`DNFNormalizeGtGeq[post1];
 (* Sanity checks *)
 preImpliesPost=CheckSemiAlgInclusion[pre, post, vars];
 If[ Not[TrueQ[preImpliesPost]], 
@@ -56,12 +58,12 @@ Print["Precondition implies postcondition. Proceeding."]];
 
 postInvariant=LZZ`InvS[post, f, vars, evoConst];
 If[ TrueQ[postInvariant], 
-Print["Postcondition is an invariant! Nothing to do."]; Throw[{{DNFNormalizeGtGeq[post]},True}], 
+Print["Postcondition is an invariant! Nothing to do."]; Throw[{{post,{post1}},True}], 
 Print["Postcondition is not an invariant. Proceeding."]];
 
 preInvariant=LZZ`InvS[pre, f, vars, evoConst];
 If[ TrueQ[preInvariant], 
-Print["Precondition is an invariant! Nothing to do."]; Throw[{{DNFNormalizeGtGeq[pre]}, True}], 
+Print["Precondition is an invariant! Nothing to do."]; Throw[{{pre,{pre}}, True}], 
 Print["Precondition is not an invariant. Proceeding."]];
 
 (* Determine strategies depending on problem classification by pattern matching on {dimension, classes} *)

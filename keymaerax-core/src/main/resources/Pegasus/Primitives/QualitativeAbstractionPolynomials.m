@@ -109,14 +109,14 @@ FromCoefficientRules[CoefficientRules[poly,vars]/.{Rule[a_,b_]:>Rule[a,Conjugate
 ]
 
 
-IsRealPolynomial[poly_]:=Module[{},
-TrueQ[ConjugatePolynomial[poly]==poly]
+IsRealPolynomial[poly_]:=Module[{vars=Variables[poly]},
+AllTrue[Flatten[CoefficientList[poly,vars]], PossibleZeroQ[Im[#]]&]
 ]
 
 
 DarbouxPolynomials[problem_List]:=Catch[Module[{pre,f,vars,Q,post,deg,dbx,realdbx},
 {pre,{f,vars,Q},post}=problem;
-deg=Max[Map[Primitives`PolynomDegree,f]];
+deg=Min[Max[Map[Primitives`PolynomDegree,f]],3];
 dbx=DarbouxPolynomials`ManPS2[deg,f,vars];
 Print["Generated Darboux polynomials: ",dbx];
 (* Darboux polynomials come in complex conjugate pairs - we multiply with the conjugates to eliminate complex coefficients *)
