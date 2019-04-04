@@ -234,7 +234,9 @@ B=CoefficientRules[N[StringReplace[StringDelete[lines[[-1]], "\n" | "\r" |" "], 
 If[B=={},
   Print["No feasible solution found by SOS programming."];
   Throw[{}],
-  Throw[MapAt[Function[x,Rationalize[Round[x,1/10^precision]]],B,{All,2}]~FromCoefficientRules~vars]];
+  Throw[
+  {MapAt[Function[x,Rationalize[Round[x,1/10^precision]]],B,{All,2}]~FromCoefficientRules~vars}]
+  ];
 ]]
 
 
@@ -343,7 +345,7 @@ LPsol=Thread[LPvars -> LPres];
 
 (* Instantiate solution and return *)
 Binst= B/.LPsol;
-Throw[Binst]
+Throw[ {Binst} ]
 ]]
 
 
@@ -395,7 +397,7 @@ LPsol=Thread[LPvars -> mSol];
 
 (* Instantiate solution and return *)
 Binst=B/.LPsol;
-Throw[Binst[[1]]]
+Throw[ {Binst[[1]]} ]
 ]]
 
 

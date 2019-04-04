@@ -86,24 +86,20 @@ BarrierCertificates`SOSBarrier
 
 (* For each strategy *)
 Do[
-Print["\!\(\*
-StyleBox[\"Trying\",\nFontWeight->\"Bold\"]\)\!\(\*
-StyleBox[\" \",\nFontWeight->\"Bold\"]\)\!\(\*
-StyleBox[\"strategy\",\nFontWeight->\"Bold\"]\)\!\(\*
-StyleBox[\":\",\nFontWeight->\"Bold\"]\) ",ToString[strat]];
+Print["Trying: ",ToString[strat]];
 (* Compute polynomials for the algebraic decomposition of the state space *)
 polyList=strat[problem]//DeleteDuplicates;
-Print[polyList];
+Print["Generated polynomials: ",polyList];
 
 (* Extract an invariant from the algebraic decomposition *)
 inv=InvariantExtractor`DWC[pre, post, {f,vars,evoConst}, polyList, {}];
-Print["Invariant"];
-Print[inv];
 
 (* Simplify invariant w.r.t. the domain constraint *)
 inv=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
-Print[inv];
+Print["Extracted (simplified) invariants: ",inv];
 
+(* Needs something like this?
+ evoConst=And[evoConst,inv[[1]]]; *)
 invImpliesPost=CheckSemiAlgInclusion[Apply[And,inv[[2]]], post, vars];
 If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{inv, True}],
 Print["Generated invariant does not imply postcondition. Bad luck; returning what I could find."]]

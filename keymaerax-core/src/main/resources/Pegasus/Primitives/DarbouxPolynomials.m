@@ -128,7 +128,7 @@ ManPS2[deg_Integer,vf_List,vars_List]:=Catch[Module[
 {monbas, moncoeffs, monictemplate, LieD, MonBas, cofactCoeffs, cofactBasis, 
 cofactTemplate, Lftemplate, Lfdeg, lhs ,sol, problem, LT, LC, n, gi, indivisible, 
 eqns,feqns,geqns, elimvar, s, geqnsol,feqnsol,Sfg,irreducibles,monomialOrder,k,monicTemplates},
-If[deg<=0, Throw[0]];
+If[deg<=0, Throw[{}]];
 (* Fix monomial order *)
 monomialOrder="DegreeReverseLexicographic";
 (* Final solution set is initially empty *)
