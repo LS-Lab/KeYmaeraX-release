@@ -1,5 +1,8 @@
 (* ::Package:: *)
 
+Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]]
+
+
 BeginPackage["DarbouxPolynomials`"];
 
 
@@ -22,27 +25,17 @@ See alorithm new_ps_1 in Y.K. Man 'Computing Closed Form Solutions of First Orde
 Begin["`Private`"];
 
 
-(* Computing the maximal total polynomial degree of a given polynomial P *)
-PolynomDegree[P_]:=Module[{},
-Max[Map[Apply[Plus, #]&,Map[#[[1]]&,CoefficientRules[P]]]]
-]
-
-
-PolynomDegree[P_, vars_List]:=Module[{},
-Max[Map[Apply[Plus, #]&,Map[#[[1]]&,CoefficientRules[P, vars]]]]
-]
-
-
 DbxNaive[deg_Integer,vf_List,vars_List]:=Catch[Module[
-{monbas, coeffs, template, LieD, MonBas, cofactCoeffs, 
+{monbas, coeffs, template, MonBas, cofactCoeffs, 
 cofactBasis, cofactTemplate, Lftemplate, Lfdeg, lhs ,sol,
  problem, monomialOrder,
 (* Maximum total polynomial degree of the vector field *)
-m=Max[Map[PolynomDegree[#,vars]&,vf]]},
-If[deg<=0, Throw[0]];
+m=Max[Map[Primitives`PolynomDegree[#,vars]&,vf]]},
+
+If[deg<=0, Throw[{}]];
 
 (* Compute monomial basis with given monomial order *)
-monomialOrder="DegreeLexicographic";
+monomialOrder="DegreeReverseLexicographic";
 MonBas[maxdeg_]:=Map[#/CoefficientRules[#][[1]][[2]]&,MonomialList[ (Plus @@ Join[vars,{1}])^maxdeg , vars, monomialOrder]];
 monbas=MonBas[deg];
 
@@ -51,9 +44,8 @@ coeffs=Table[Symbol["COEFF"<>ToString[i]],{i,1,Length[monbas]}];
 template=coeffs.monbas;
 
 (* Lie derivative of template *)
-LieD[p_]:=Grad[p,vars].vf;
-Lftemplate=LieD[template];
-Lfdeg=PolynomDegree[Lftemplate,vars];
+Lftemplate=Primitives`Lf[template,vf,vars];
+Lfdeg = Primitives`PolynomDegree[Lftemplate,vars];
 
 (* Set maximum degree of the cofactor template to be at most m-1 *)
 cofactBasis=MonBas[m-1];
@@ -77,7 +69,7 @@ Throw[Select[ (* Cleanup: return only non-numeric factors, without any duplicate
 MonicTemplatesAlt[deg_,vars_List]:=Catch[Module[
 {MonBas,monbas,moncoeffs,monictemplate,monomialOrder},
 (* Fix monomial order *)
-monomialOrder="DegreeLexicographic";
+monomialOrder="DegreeReverseLexicographic";
 MonBas[maxdeg_]:=MonBas[maxdeg]=Map[#/CoefficientRules[#][[1]][[2]]&,MonomialList[ (Plus @@ Join[vars,{1}])^maxdeg , vars, monomialOrder]];
 monbas=MonBas[deg];
 Throw[Most[UpperTriangularize[Table[If[i==j,1,Symbol["\[Alpha]"<>ToString[j]]],{i,Length[monbas]},{j,Length[monbas]}]]].monbas];
@@ -86,7 +78,7 @@ Throw[Most[UpperTriangularize[Table[If[i==j,1,Symbol["\[Alpha]"<>ToString[j]]],{
 
 ManPS1[deg_Integer,vf_List,vars_List]:=Catch[Module[
 {monicTemplates,Sfg,k, Dfi, monomialOrder,
-LT,LC,LieD, MonBas, ltfi,ltDfi,n, cofactBasis, 
+LT,LC, MonBas, ltfi,ltDfi,n, cofactBasis, 
 cofactCoeffs,gi,eqns,geqns,feqns,geqnsol,feqnsol},
 k=1;
 (* Final solution set is initially empty *)
@@ -94,22 +86,22 @@ Sfg={};
 While[k<=deg,
 (* Step 1 - construct all monic templates up to given degree *)
 monicTemplates=MonicTemplatesAlt[k,vars];
-monomialOrder="DegreeLexicographic";
+monomialOrder="DegreeReverseLexicographic";
 MonBas[maxdeg_]:=MonBas[maxdeg]=Map[#/CoefficientRules[#][[1]][[2]]&,MonomialList[ (Plus @@ Join[vars,{1}])^maxdeg , vars, monomialOrder]];
+
 (* Leading Term computation *)
-LT[p_]:=LT[p]=FromCoefficientRules[{CoefficientRules[p,vars, "DegreeLexicographic"][[1]]}, vars];
+LT[p_]:=LT[p]=FromCoefficientRules[{CoefficientRules[p,vars, monomialOrder][[1]]}, vars];
 (* Leading Coefficient computation *)
 LC[p_]:=LC[p]=(CoefficientRules[p,vars, monomialOrder][[1]])/.Rule[exp_,coeff_]:>coeff;(* Lie derivative of template *)
-LieD[p_]:=Grad[p,vars].vf;
 
 (* Step 2 - main procedure foreach loop *)
 Do[
-Dfi=LieD[fi]; (* Compute the derivative of the template *)
+Dfi=Primitives`Lf[fi,vf,vars]; (* Compute the derivative of the template *)
 ltfi=LT[fi];
 ltDfi=LT[Dfi];
 (* If LT(fi) divides LT(D(fi)) *)
 If[TrueQ[PolynomialReduce[ltDfi,ltfi,vars][[2]]==0], 
-n=PolynomDegree[Dfi,vars]-PolynomDegree[fi,vars];
+n= Primitives`PolynomDegree[Dfi,vars]-Primitives`PolynomDegree[fi,vars];
 If[n<0, n=0];
 
 (* Create a parametric cofactor of degree n *)
@@ -138,15 +130,14 @@ cofactTemplate, Lftemplate, Lfdeg, lhs ,sol, problem, LT, LC, n, gi, indivisible
 eqns,feqns,geqns, elimvar, s, geqnsol,feqnsol,Sfg,irreducibles,monomialOrder,k,monicTemplates},
 If[deg<=0, Throw[0]];
 (* Fix monomial order *)
-monomialOrder="DegreeLexicographic";
+monomialOrder="DegreeReverseLexicographic";
 (* Final solution set is initially empty *)
 Sfg={};
 (* Leading Term computation *)
-LT[p_]:=LT[p]=FromCoefficientRules[{CoefficientRules[p,vars, "DegreeLexicographic"][[1]]}, vars];
+LT[p_]:=LT[p]=FromCoefficientRules[{CoefficientRules[p,vars, "DegreeReverseLexicographic"][[1]]}, vars];
 (* Leading Coefficient computation *)
 LC[p_]:=LC[p]=(CoefficientRules[p,vars, monomialOrder][[1]])/.Rule[exp_,coeff_]:>coeff;
-(* Lie derivative of template *)
-LieD[p_]:=Grad[p,vars].vf;
+
 (* Compute monomial basis in lexicographic order *)
 MonBas[maxdeg_]:=MonBas[maxdeg]=Map[#/CoefficientRules[#][[1]][[2]]&,MonomialList[ (Plus @@ Join[vars,{1}])^maxdeg , vars, monomialOrder]];
 monbas=MonBas[1];
@@ -157,7 +148,7 @@ While[k<=deg,
 monicTemplates=MonicTemplatesAlt[k,vars];
 Do[
 (* Compute Lie deriovative of the monic template *)
-Lftemplate=LieD[monictemplate];
+Lftemplate=Primitives`Lf[monictemplate,vf,vars];
 
 gi=0;
 indivisible=False;

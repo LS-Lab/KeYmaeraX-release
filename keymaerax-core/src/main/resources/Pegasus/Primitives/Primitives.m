@@ -111,10 +111,11 @@ ExpandEq[formula_]   :=  Module[{},formula/.{
 	Equal[a_,b_]        :>  LessEqual[(a-b)^2,0.01]
 }]
 
-DrawPlanarProb[prob_List, invariant_, w_:6 ] := Module[{init,f,x,y,H,safe,x1min,x1max,x2min,x2max,rules},
+DrawPlanarProb[prob_List, invariant_, w_:6 ] := Module[{init,f,x,y,H,safe,x1min,x1max,x2min,x2max,rules,inv},
   If[Length[prob[[2]][[2]]]!=2, Print["Non-planar problem"]; Return[]];
   rules = Rule @@@ Transpose[{prob[[2]][[2]],{x,y}}];
   {init, { f, {x, y}, H }, safe } = prob/.rules//ExpandEq;
+  inv = invariant/.rules//ExpandEq;
   {x1min, x1max} = {-w, w};
   {x2min, x2max} = {-w, w};
     
@@ -125,7 +126,7 @@ DrawPlanarProb[prob_List, invariant_, w_:6 ] := Module[{init,f,x,y,H,safe,x1min,
     (* Plot initial states in green *)
     RegionPlot[init, {x, x1min, x1max}, {y, x2min, x2max}, PlotStyle -> Opacity[0.2,Green],PlotPoints -> 100],
     (* Plot invariant in magenta *)
-    RegionPlot[invariant, {x, x1min, x1max}, {y, x2min, x2max}, PlotStyle -> Opacity[0.2,Magenta],PlotPoints -> 100],
+    RegionPlot[inv, {x, x1min, x1max}, {y, x2min, x2max}, PlotStyle -> Opacity[0.2,Magenta],PlotPoints -> 100],
     (* Plot vector field *)
     StreamPlot[f, {x, x1min, x1max}, {y, x2min, x2max}, StreamStyle -> Darker[Gray]],
     (* Plot domain in blue *)
