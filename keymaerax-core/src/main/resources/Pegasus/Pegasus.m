@@ -80,7 +80,8 @@ strategies = class/.{
 (* {dim_,{"Linear"}}-> GeneralLinearStrat, *)
 (* {dim_,{"Multi-affine"}}-> MultiLinearStrat, *)
 {dim_, CLASSES_List}-> {
-QualitativeAbstraction`SummandFactors,
+Strategies`GenericNonLinear`SummandFactors,
+Strategies`GenericNonLinear`FirstIntegrals,
 QualitativeAbstraction`DarbouxPolynomials,
 BarrierCertificates`SOSBarrier
 }

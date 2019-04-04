@@ -1,5 +1,6 @@
 (* ::Package:: *)
 
+Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]]
 (*
    Description:
 	Implementation of a procedure for generating polynomial first integrals for
@@ -8,11 +9,11 @@
    Comments: Tested in Mathematica 10.0   *)
 
 
-BeginPackage[ "FirstIntegrals`"]
+BeginPackage[ "FirstIntegrals`"];
 
 FindFirstIntegrals::usage="
 FindFirstIntegral[deg_Integer?NonNegative, vars_List, vectorField_List] 
-Method of undetermined coefficients relies on Solve"
+Method of undetermined coefficients relies on Solve";
 
 FindFirstIntegralsMatringe::usage="
 FindFirstIntegrals[deg_Integer?NonNegative, vars_List, vectorField_List] 
@@ -21,7 +22,7 @@ polynomial total degree in the variables 'vars') for the system of ODEs
 described by vectorField. The variable order MATTERS, e.g. if vars={x,y} and
 vectorField={x^2+1, x+y-2}, this is interpreted as the system of ODEs x'=x^2+1,
 y'=x+y-2. Changing the order of variables or entries in vectorField will
-generally result in different systems of ODEs."
+generally result in different systems of ODEs.";
 
 FindFirstIntegralsPDE::usage="
 FindFirstIntegralsPDE[vars_List, vectorField_List] 
@@ -29,20 +30,15 @@ computes a list of POTENTIALLY NON-POLYNOMIAL first integrals in the variables '
 for the system of ODEs described by vectorField. The variable order MATTERS, e.g. if vars={x,y} and
 vectorField={x^2+1, x+y-2}, this is interpreted as the system of ODEs x'=x^2+1,
 y'=x+y-2. Changing the order of variables or entries in vectorField will
-generally result in different systems of ODEs."
+generally result in different systems of ODEs.";
 
 FuncIndep::usage="
 FuncIndep[polynomials_List, vars_List] 
-Returns a list of functionally independent polynomials from a given list."
-GenMonomialBasis::usage="Generate a monomial basis"
+Returns a list of functionally independent polynomials from a given list.";
 
-Begin[ "Private`" ]
+GenMonomialBasis::usage="Generate a monomial basis";
 
-
-(* Computing the Lie derivative of some given function P w.r.t. the given vector field *)
-LieDerivative[P_,vars_List,VectorField_List]:=Module[{},
-Expand[Grad[P,vars].VectorField]
-]
+Begin[ "Private`" ];
 
 
 (* Computing the monomial basis for polynomials of maximal total degree maxdeg *)
@@ -51,15 +47,9 @@ Select[Permutations[Flatten[Table[Table[j,{i,1,Length[vars]}],{j,0,maxdeg}]],{Le
 ]
 
 
-(* Computing the maximal total polynomial degree of a given polynomial P *)
-PolynomDegree[P_]:=Module[{},
-Max[Map[Apply[Plus, #]&,Map[#[[1]]&,CoefficientRules[P]]]]
-]
-
-
 FuncIndep[polys_List, vars_List]:=Module[{sortedlist,span,pool,gradList,Gramian},
 If[Length[polys]>0,
-sortedlist=Sort[polys,And[PolynomDegree[#1]<=PolynomDegree[#2], Length[#1]<=Length[#2]]&];
+sortedlist=Sort[polys,And[Primitives`PolynomDegree[#1]<=Primitives`PolynomDegree[#2], Length[#1]<=Length[#2]]&];
 span={First[sortedlist]};
 pool=Rest[sortedlist];
 While[Length[pool]>0 && Length[span]<Length[vars],
@@ -83,11 +73,11 @@ FindFirstIntegralsMatringe[deg_Integer?NonNegative,vars_List,vectorField_List]:=
 (* Maximum total polynomial degree of the first integral being sought *)
 r=deg, 
 (* Maximum total polynomial degree of the vector field *)
-d=Max[Map[PolynomDegree,vectorField]]},
+d=Max[Map[Primitives`PolynomDegree,vectorField]]},
 (* Compute the monomial basis *)
 MonBas=MonomialList[FromCoefficientRules[Map[Rule[#,1]&,GenMonomialBasis[vars,r]],vars]];
 (* Compute the Lie derivatives of the monomial basis *)
-LieDMonBas=Map[LieDerivative[#,vars,vectorField]&, MonBas];
+LieDMonBas=Map[Primitives`Lf[#,vectorField,vars]&, MonBas];
 (* Compute the coefficient rules for each of the Lie derivatives of the monomial basis *)
 LieDMonBasCoeffs=Map[CoefficientRules[#,vars]&, LieDMonBas];
 (* Create a matrix of monomial basis elements for polynomials of degree r+d-1 as its row entries, with |MonBas| rows in total *)
@@ -106,7 +96,7 @@ FindFirstIntegrals[deg_Integer?NonNegative,vars_List,vectorField_List]:=Module[{
 (* Maximum total polynomial degree of the first integral being sought *)
 r=deg, 
 (* Maximum total polynomial degree of the vector field *)
-d=Max[Map[PolynomDegree,vectorField]]},
+d=Max[Map[Primitives`PolynomDegree,vectorField]]},
 (* Compute the monomial basis *)
 MonBas=MonomialList[FromCoefficientRules[Map[Rule[#,1]&,GenMonomialBasis[vars,r]],vars]];
 (* Create a template polynomial with symbolic coefficients *)
@@ -130,7 +120,7 @@ FindFirstIntegralsPDE[vars_List,vectorField_List]:=Module[{FIC,PDE,OverReals,sol
 (* Set FIC to be the First Integral Candidate in the state variables *)
 FIC=FICandidate[Apply[Sequence,vars]];
 (* Formulate PDE problem: seeking function in the state variables, i.e. (\[PartialD]FIC/\[PartialD]x)*x' + (\[PartialD]FIC/\[PartialD]y)*y' + etc. = 0 *)
-PDE=(LieDerivative[FIC,vars,vectorField]==0);
+PDE=(Primitives`Lf[FIC,vectorField,vars]==0);
 (* Reals assumption*)
 OverReals=Apply[And, Map[#\[Element]Reals &, vars]];
 (* Solve the PDE using methods available in Mathematica *)

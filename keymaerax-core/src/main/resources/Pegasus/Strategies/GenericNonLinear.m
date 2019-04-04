@@ -15,15 +15,31 @@ BeginPackage[ "Strategies`GenericNonLinear`"]
 
 BarrierCertificates::usage="BarrierCertificates[problem_List]"
 SummandFactors::usage="SummandFactors[problem_List]"
+FirstIntegrals::usage="FirstIntegrals[problem_List,degree]"
 
 
 Begin["`Private`"]
 
 
-FirstIntegrals[problem_List,deg_Integer?NonNegative]:=Module[{pre,post,vf,vars,Q},
+FirstIntegrals[problem_List]:=Module[{pre,post,vf,vars,Q,fIs,maxVs,minVs,deg,rat},
 {pre, { vf, vars, Q }, post} = problem;
+
+(* TODO: should be parameters *)
+deg = 10;
+rat = 10000;
+
+(* Create rationalization function wrappers *)
+upperRat[num_]:=If[TrueQ[Element[num,Reals]],Primitives`UpperRat[num, rat], num];
+lowerRat[num_]:=If[TrueQ[Element[num,Reals]],Primitives`LowerRat[num, rat], num];
+
 (* Compute functionally independent first integrals up to given degree *)
-FirstIntegrals`FuncIndep[FirstIntegrals`FindFirstIntegrals[deg, vars, vf],vars]
+fIs=FirstIntegrals`FuncIndep[FirstIntegrals`FindFirstIntegrals[deg, vars, vf],vars];
+(* Return polynomials encoding the max/min values that the integrals can take on the initial set *)
+(* p-c \[LessEqual] invariant *)
+maxVs = Map[#-(upperRat[NMaxValue[{#,pre},vars]]/.{Infinity -> 0,-Infinity -> 0})&,fIs];
+(* p+c \[GreaterEqual]0 invariant *)
+minVs = Map[#-(lowerRat[NMinValue[{#,pre},vars]]/.{Infinity -> 0,-Infinity -> 0})&,fIs];
+Union[maxVs,minVs]
 ]
 
 
