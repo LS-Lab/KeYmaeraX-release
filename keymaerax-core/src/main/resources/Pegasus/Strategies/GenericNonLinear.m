@@ -13,18 +13,18 @@ Needs["QualitativeAbstraction`",FileNameJoin[{Directory[],"Primitives","Qualitat
 BeginPackage[ "Strategies`GenericNonLinear`"]
 
 
-BarrierCertificates::usage="BarrierCertificates[problem_List]"
-SummandFactors::usage="SummandFactors[problem_List]"
-FirstIntegrals::usage="FirstIntegrals[problem_List,degree]"
+BarrierCert::usage="BarrierCertificates[problem_List]";
+SummandFacts::usage="SummandFactors[problem_List]";
+FirstIntegrals::usage="FirstIntegrals[problem_List,degree]";
+DbxPoly::usage="FirstIntegrals[problem_List,degree]";
 
 
-Begin["`Private`"]
+Begin["`Private`"];
 
 
 FirstIntegrals[problem_List]:=Module[{pre,post,vf,vars,Q,fIs,maxVs,minVs,deg,rat},
 {pre, { vf, vars, Q }, post} = problem;
 
-(* TODO: should be parameters *)
 deg = 10;
 rat = 10000;
 
@@ -43,19 +43,23 @@ Union[maxVs,minVs]
 ]
 
 
-SummandFactors[problem_List]:=QualitativeAbstraction`SummandFactors[problem]
+SummandFacts[problem_List]:=QualitativeAbstraction`SummandFactors[problem]
 
 
-DarbouxPolynomials[problem_List]:=QualitativeAbstraction`DarbouxPolynomials[problem]
+DbxPoly[problem_List] := QualitativeAbstraction`DarbouxPolynomials[problem, 5, 10]
 
 
-BarrierCertificates[problem_List]:=Catch[Module[{pre,post,vf,vars,Q,decompositionList},
-{pre, { vf, vars, Q }, post} = problem;
-(* Initialize empty list of polynomials for the algebraic decomposition *)
-decompositionList={};
-(* Try to compute a barrier certificate *)
-decompositionList=decompositionList~Join~{BarrierCertificates`SOSBarrier[problem]};
-Throw[decompositionList]
+(* Round to precisions 2,4,6,8 *)
+RoundPolys[p_,vars_]:=Module[{cr},
+cr = CoefficientRules[p,vars];
+Map[MapAt[Function[x,Rationalize[Round[x,1/10^#]]],cr,{All,2}]~FromCoefficientRules~vars&,{2,4,6,8}]//DeleteDuplicates
+]
+
+
+BarrierCert[problem_List]:=Catch[Module[{pre,post,vf,vars,Q,polySOS},
+  {pre, { vf, vars, Q }, post} = problem;
+  polySOS=BarrierCertificates`SOSBarrierMATLAB[problem];
+  Flatten[Map[RoundPolys[#,vars]&,polySOS]]
 ]]
 
 

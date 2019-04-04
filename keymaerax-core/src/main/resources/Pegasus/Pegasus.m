@@ -10,9 +10,6 @@ Needs["InvariantExtractor`",FileNameJoin[{Directory[],"InvariantExtractor.m"}]] 
 (* Load specialized invariant generation strategies *)
 Needs["Strategies`GenericNonLinear`",FileNameJoin[{Directory[],"Strategies","GenericNonLinear.m"}]]
 Needs["Strategies`OneDimensional`",FileNameJoin[{Directory[],"Strategies","OneDimensional.m"}]]
-Needs["BarrierCertificates`",FileNameJoin[{Directory[],"Primitives","BarrierCertificates.m"}]] 
-Needs["DarbouxPolynomials`",FileNameJoin[{Directory[],"Primitives","DarbouxPolynomials.m"}]] 
-Needs["QualitativeAbstraction`",FileNameJoin[{Directory[],"Primitives","QualitativeAbstractionPolynomials.m"}]] 
 
 
 BeginPackage["Pegasus`"];
@@ -80,10 +77,10 @@ strategies = class/.{
 (* {dim_,{"Linear"}}-> GeneralLinearStrat, *)
 (* {dim_,{"Multi-affine"}}-> MultiLinearStrat, *)
 {dim_, CLASSES_List}-> {
-Strategies`GenericNonLinear`SummandFactors,
+Strategies`GenericNonLinear`SummandFacts,
 Strategies`GenericNonLinear`FirstIntegrals,
-QualitativeAbstraction`DarbouxPolynomials,
-BarrierCertificates`SOSBarrier
+Strategies`GenericNonLinear`DbxPoly,
+Strategies`GenericNonLinear`BarrierCert
 }
 };
 
@@ -103,6 +100,8 @@ Print["Extracted (simplified) invariants: ",inv];
 
 (* Needs something like this?
  evoConst=And[evoConst,inv[[1]]]; *)
+(* Implementation sanity check *)
+If[ListQ[inv],,Print["ERROR, NOT A LIST: ",inv];Throw[{}]]; 
 invImpliesPost=CheckSemiAlgInclusion[Apply[And,inv[[2]]], post, vars];
 If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{inv, True}],
 Print["Generated invariant does not imply postcondition. Bad luck; returning what I could find."]]

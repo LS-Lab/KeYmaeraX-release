@@ -114,10 +114,19 @@ AllTrue[Flatten[CoefficientList[poly,vars]], PossibleZeroQ[Im[#]]&]
 ]
 
 
-DarbouxPolynomials[problem_List]:=Catch[Module[{pre,f,vars,Q,post,deg,dbx,realdbx},
+IsConcretePolynomial[poly_,vars_]:=Module[{pvars=Variables[poly]},
+  SubsetQ[vars,pvars]
+]
+
+
+DarbouxPolynomials[problem_List,time_Integer,maxdeg_Integer]:=Catch[Module[{pre,f,vars,Q,post,deg,dbx,realdbx,i},
 {pre,{f,vars,Q},post}=problem;
-deg=Min[Max[Map[Primitives`PolynomDegree,f]],3];
-dbx=DarbouxPolynomials`ManPS2[deg,f,vars];
+
+dbx={};
+TimeConstrained[For[i=1,i<=maxdeg,i++,
+  dbx=Union[dbx,DarbouxPolynomials`ManPS2[i,f,vars]]],time];
+(* Currently unable to take advantage of parametric Darboux polynomials *)
+dbx=Select[dbx,IsConcretePolynomial[#,vars]&];
 Print["Generated Darboux polynomials: ",dbx];
 (* Darboux polynomials come in complex conjugate pairs - we multiply with the conjugates to eliminate complex coefficients *)
 realdbx=Map[If[IsRealPolynomial[#], #, #*ConjugatePolynomial[#]//Expand]&, dbx]//DeleteDuplicates;
