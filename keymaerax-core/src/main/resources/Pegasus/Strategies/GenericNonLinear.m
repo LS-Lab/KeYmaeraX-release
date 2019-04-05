@@ -52,8 +52,8 @@ DbxPoly[problem_List] := QualitativeAbstraction`DarbouxPolynomials[problem, 5, 1
 (* Round to precisions 2,4,6,8 *)
 RoundPolys[p_,vars_]:=Module[{cr},
 cr = CoefficientRules[p,vars];
-Map[MapAt[Function[x,Rationalize[Round[x,1/10^#]]],cr,{All,2}]~FromCoefficientRules~vars&,{2,4,6,8}]//DeleteDuplicates
-]
+If[Length[cr] > 0,Map[MapAt[Function[x,Rationalize[Round[x,1/10^#]]],cr,{All,2}]~FromCoefficientRules~vars&,{2,4,6,8}]//DeleteDuplicates
+,{}]]
 
 
 BarrierCert[problem_List]:=Catch[Module[{pre,post,vf,vars,Q,polySOS},
