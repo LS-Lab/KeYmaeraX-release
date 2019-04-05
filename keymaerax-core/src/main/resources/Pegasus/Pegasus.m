@@ -39,7 +39,7 @@ newf=Join[f,Table[0,{i,Length[parameters]}]];
 
 
 InvGen[parametricProb_List]:=Catch[Module[
-{problem,pre1,post1,pre,f,vars,evoConst,post,preImpliesPost,postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,polyList}, 
+{problem,pre1,post1,pre,f,vars,evoConst,post,preImpliesPost,postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,polyList,invlist,cuts,cutlist}, 
 
 (* Bring symbolic parameters into the dynamics *)
 problem = AugmentWithParameters[parametricProb];
@@ -80,10 +80,13 @@ strategies = class/.{
 Strategies`GenericNonLinear`SummandFacts,
 Strategies`GenericNonLinear`FirstIntegrals,
 Strategies`GenericNonLinear`DbxPoly,
-Strategies`GenericNonLinear`BarrierCert
+Strategies`GenericNonLinear`BarrierCert,
+Strategies`GenericNonLinear`SummandFacts
 }
 };
 
+invlist=True;
+cutlist={};
 (* For each strategy *)
 Do[
 Print["Trying: ",ToString[strat]];
@@ -95,20 +98,27 @@ Print["Generated polynomials: ",polyList];
 inv=InvariantExtractor`DWC[pre, post, {f,vars,evoConst}, polyList, {}];
 
 (* Simplify invariant w.r.t. the domain constraint *)
-inv=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
+{inv,cuts}=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
 Print["Extracted (simplified) invariants: ",inv];
 
 (* Needs something like this?
  evoConst=And[evoConst,inv[[1]]]; *)
 (* Implementation sanity check *)
-If[ListQ[inv],,Print["ERROR, NOT A LIST: ",inv];Throw[{}]]; 
-invImpliesPost=CheckSemiAlgInclusion[Apply[And,inv[[2]]], post, vars];
-If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{inv, True}],
+If[ListQ[cuts],,Print["ERROR, NOT A LIST: ",cuts];Throw[{}]];
+
+invlist=And[invlist,inv];
+cutlist=Union[cuts,cutlist];
+evoConst=And[evoConst,inv];
+
+Print["Inv: ",inv];
+Print["Invs: ",invlist," Evo: "evoConst];
+invImpliesPost=CheckSemiAlgInclusion[evoConst, post, vars];
+If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{{invlist,cutlist}, True}],
 Print["Generated invariant does not imply postcondition. Bad luck; returning what I could find."]]
 ,{ strat, strategies}(* End Do loop *)];
 
 (* Throw whatever invariant was last computed *)
-Throw[{inv, False}]
+Throw[{{invlist,cutlist}, False}]
 
 ]]
 
