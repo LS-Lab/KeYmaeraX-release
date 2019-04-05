@@ -48,7 +48,7 @@ problem = AugmentWithParameters[parametricProb];
 pre = Primitives`DNFNormalizeGtGeq[pre1];
 post=Primitives`DNFNormalizeGtGeq[post1];
 (* Sanity checks *)
-preImpliesPost=CheckSemiAlgInclusion[pre, post, vars];
+(*preImpliesPost=CheckSemiAlgInclusion[pre, post, vars];
 If[ Not[TrueQ[preImpliesPost]], 
 Print["Precondition does not imply postcondition! Nothing to do."]; Throw[{{False}, False}], 
 Print["Precondition implies postcondition. Proceeding."]];
@@ -61,7 +61,7 @@ Print["Postcondition is not an invariant. Proceeding."]];
 preInvariant=LZZ`InvS[pre, f, vars, evoConst];
 If[ TrueQ[preInvariant], 
 Print["Precondition is an invariant! Nothing to do."]; Throw[{{pre,{pre}}, True}], 
-Print["Precondition is not an invariant. Proceeding."]];
+Print["Precondition is not an invariant. Proceeding."]];*)
 
 (* Determine strategies depending on problem classification by pattern matching on {dimension, classes} *)
 class=Classifier`ClassifyProblem[problem];
@@ -91,7 +91,7 @@ cutlist={};
 Do[
 Print["Trying: ",ToString[strat]];
 (* Compute polynomials for the algebraic decomposition of the state space *)
-polyList=strat[problem]//DeleteDuplicates;
+polyList=strat[{pre,{f,vars,evoConst},post}]//DeleteDuplicates;
 Print["Generated polynomials: ",polyList];
 
 (* Extract an invariant from the algebraic decomposition *)
@@ -110,8 +110,10 @@ invlist=And[invlist,inv];
 cutlist=Union[cuts,cutlist];
 evoConst=And[evoConst,inv];
 
+post=Assuming[evoConst, FullSimplify[post, Reals]];
 Print["Inv: ",inv];
 Print["Invs: ",invlist," Evo: "evoConst];
+Print["Post: ",post];
 invImpliesPost=CheckSemiAlgInclusion[evoConst, post, vars];
 If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{{invlist,cutlist}, True}],
 Print["Generated invariant does not imply postcondition. Bad luck; returning what I could find."]]
