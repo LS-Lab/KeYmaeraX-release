@@ -948,7 +948,7 @@ private object DifferentialTactics extends Logging {
           // aborts with error if no extra cuts were found
           fastODE(
             try {
-              InvariantGenerator.differentialInvariantGenerator(seq,pos).iterator
+              TactixLibrary.differentialInvGenerator(seq,pos).iterator
             } catch {
               case err: Exception =>
                 logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
