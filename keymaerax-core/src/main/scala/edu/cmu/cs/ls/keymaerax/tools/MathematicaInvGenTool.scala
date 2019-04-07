@@ -50,8 +50,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
     val command = s"""
        |$setPathsCmd
-       |Needs["Strategies`","Strategies.m"];
-       |Strategies`Pegasus[$problem]""".stripMargin.trim()
+       |Needs["Pegasus`","Pegasus.m"];
+       |Pegasus`InvGen[$problem]""".stripMargin.trim()
 
     try {
       val (output, result) = runUnchecked(command)
@@ -83,7 +83,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
     val command = s"""
                   |$setPathsCmd
-                  |Needs["LZZ`","LZZ.m"];
+                  |Needs["LZZ`",FileNameJoin["Primitives","LZZ.m"]];
                   |LZZ`InvS[$problem]""".stripMargin.trim()
 
     val (output, result) = runUnchecked(command)
@@ -166,28 +166,25 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     val pegasusTempDir = Configuration.path(Configuration.Keys.PEGASUS_PATH)
     if (!new File(pegasusTempDir).exists) new File(pegasusTempDir).mkdirs
 
-    val pegasusResourcePath = "/pegasus-mathematica/"
+    val pegasusResourcePath = "/Pegasus/"
     val pegasusResourceNames =
-      "AbstractionPolynomials.m" ::
-      "BarrierCertificateMethod.m" ::
+      "Primitives/BarrierCertificates.m" ::
+      "Primitives/DarbouxPolynomials.m" ::
+      "Primitives/DiscreteAbstraction.m" ::
+      "Primitives/FirstIntegrals.m" ::
+      "Primitives/LZZ.m" ::
+      "Primitives/Primitives.m" ::
+      "Primitives/QualitativeAbstractionPolynomials.m" ::
+      //"Refute.m" ::
+      "Strategies/GenericNonLinear.m" ::
       "Classifier.m" ::
-      "DarbouxPolyGen.m" ::
-      "DiscreteAbstraction.m" ::
-      "FirstIntegralGen.m" ::
-      "FirstIntegralMethod.m" ::
-      "Linear.m" ::
-      "LZZ.m" ::
-      "MultiLinear.m" ::
-      "NilpotentMethod.m" ::
-      "OneDimensional.m" ::
-      "PlanarLinear.m" ::
-      "Primitives.m" ::
-      "QualitativeMethods.m" ::
-      "Refute.m" ::
-      "Strategies.m" :: Nil
+      "InvariantExtractor.m" ::
+      "Pegasus.m" :: Nil
 
     pegasusResourceNames.foreach(n => {
-      val pegasusDest = new FileOutputStream(pegasusTempDir + File.separator + n)
+      val pegasusDestPath = pegasusTempDir + File.separator + n
+      if (!new File(pegasusDestPath).getParentFile.exists) new File(pegasusDestPath).getParentFile.mkdirs
+      val pegasusDest = new FileOutputStream(pegasusDestPath)
       val pegasusSrc = Channels.newChannel(getClass.getResourceAsStream(pegasusResourcePath + n))
       pegasusDest.getChannel.transferFrom(pegasusSrc, 0, Long.MaxValue)
     })
