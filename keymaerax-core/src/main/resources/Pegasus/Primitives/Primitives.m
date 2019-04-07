@@ -111,7 +111,7 @@ ExpandEq[formula_]   :=  Module[{},formula/.{
 	Equal[a_,b_]        :>  LessEqual[(a-b)^2,0.01]
 }]
 
-DrawPlanarProb[prob_List, invariant_, w_:6 ] := Module[{init,f,x,y,H,safe,x1min,x1max,x2min,x2max,rules,inv},
+DrawPlanarProb[prob_List, invariant_:False, w_:6 ] := Module[{init,f,x,y,H,safe,x1min,x1max,x2min,x2max,rules,inv},
   If[Length[prob[[2]][[2]]]!=2, Print["Non-planar problem"]; Return[]];
   rules = Rule @@@ Transpose[{prob[[2]][[2]],{x,y}}];
   {init, { f, {x, y}, H }, safe } = prob/.rules//ExpandEq;

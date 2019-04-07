@@ -9,9 +9,7 @@ Needs["Classifier`",FileNameJoin[{Directory[],"Classifier.m"}]] (* Load classifi
 Needs["InvariantExtractor`",FileNameJoin[{Directory[],"InvariantExtractor.m"}]] (* Load classifier package from current directory *)
 (* Load specialized invariant generation strategies *)
 Needs["Strategies`GenericNonLinear`",FileNameJoin[{Directory[],"Strategies","GenericNonLinear.m"}]]
-Needs["BarrierCertificates`",FileNameJoin[{Directory[],"Primitives","BarrierCertificates.m"}]] 
-Needs["DarbouxPolynomials`",FileNameJoin[{Directory[],"Primitives","DarbouxPolynomials.m"}]] 
-Needs["QualitativeAbstraction`",FileNameJoin[{Directory[],"Primitives","QualitativeAbstractionPolynomials.m"}]] 
+Needs["Strategies`OneDimensional`",FileNameJoin[{Directory[],"Strategies","OneDimensional.m"}]]
 
 
 BeginPackage["Pegasus`"];
@@ -41,71 +39,88 @@ newf=Join[f,Table[0,{i,Length[parameters]}]];
 
 
 InvGen[parametricProb_List]:=Catch[Module[
-{problem,pre,f,vars,evoConst,post,preImpliesPost,postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,polyList}, 
+{problem,pre1,post1,pre,f,vars,evoConst,post,preImpliesPost,postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,polyList,invlist,cuts,cutlist}, 
 
 (* Bring symbolic parameters into the dynamics *)
 problem = AugmentWithParameters[parametricProb];
-{ pre, { f, vars, evoConst }, post }=problem;
+{ pre1, { f, vars, evoConst }, post1 }=problem;
 
+pre = Primitives`DNFNormalizeGtGeq[pre1];
+post=Primitives`DNFNormalizeGtGeq[post1];
 (* Sanity checks *)
-preImpliesPost=CheckSemiAlgInclusion[pre, post, vars];
+(*preImpliesPost=CheckSemiAlgInclusion[pre, post, vars];
 If[ Not[TrueQ[preImpliesPost]], 
 Print["Precondition does not imply postcondition! Nothing to do."]; Throw[{{False}, False}], 
 Print["Precondition implies postcondition. Proceeding."]];
 
 postInvariant=LZZ`InvS[post, f, vars, evoConst];
 If[ TrueQ[postInvariant], 
-Print["Postcondition is an invariant! Nothing to do."]; Throw[{{DNFNormalizeGtGeq[post]},True}], 
+Print["Postcondition is an invariant! Nothing to do."]; Throw[{{post,{post1}},True}], 
 Print["Postcondition is not an invariant. Proceeding."]];
 
 preInvariant=LZZ`InvS[pre, f, vars, evoConst];
 If[ TrueQ[preInvariant], 
-Print["Precondition is an invariant! Nothing to do."]; Throw[{{DNFNormalizeGtGeq[pre]}, True}], 
-Print["Precondition is not an invariant. Proceeding."]];
+Print["Precondition is an invariant! Nothing to do."]; Throw[{{pre,{pre}}, True}], 
+Print["Precondition is not an invariant. Proceeding."]];*)
 
 (* Determine strategies depending on problem classification by pattern matching on {dimension, classes} *)
 class=Classifier`ClassifyProblem[problem];
+Print[class];
 strategies={};
 strategies = class/.{
-(* {1,CLASSES_List}-> OneDimStrat, *)
+ {1,CLASSES_List}-> {
+ Strategies`OneDimensional`OneDimPotential, 
+ Strategies`OneDimensional`OneDimReach
+ }, 
 (* {dim_,{"Constant"}}-> ConstantStrat, *)
 (* {2,{"Linear"}}-> PlanarLinearStrat, *)
 (* {dim_,{"Linear"}}-> GeneralLinearStrat, *)
 (* {dim_,{"Multi-affine"}}-> MultiLinearStrat, *)
 {dim_, CLASSES_List}-> {
-QualitativeAbstraction`SummandFactors,
-QualitativeAbstraction`DarbouxPolynomials,
-BarrierCertificates`SOSBarrier
+Strategies`GenericNonLinear`SummandFacts,
+Strategies`GenericNonLinear`FirstIntegrals,
+Strategies`GenericNonLinear`DbxPoly,
+Strategies`GenericNonLinear`BarrierCert,
+Strategies`GenericNonLinear`SummandFacts
 }
 };
 
+invlist=True;
+cutlist={};
 (* For each strategy *)
 Do[
-Print["\!\(\*
-StyleBox[\"Trying\",\nFontWeight->\"Bold\"]\)\!\(\*
-StyleBox[\" \",\nFontWeight->\"Bold\"]\)\!\(\*
-StyleBox[\"strategy\",\nFontWeight->\"Bold\"]\)\!\(\*
-StyleBox[\":\",\nFontWeight->\"Bold\"]\) ",ToString[strat]];
+Print["Trying: ",ToString[strat]];
 (* Compute polynomials for the algebraic decomposition of the state space *)
-polyList=strat[problem]//DeleteDuplicates;
-Print[polyList];
+polyList=strat[{pre,{f,vars,evoConst},post}]//DeleteDuplicates;
+Print["Generated polynomials: ",polyList];
 
 (* Extract an invariant from the algebraic decomposition *)
 inv=InvariantExtractor`DWC[pre, post, {f,vars,evoConst}, polyList, {}];
-Print["Invariant"];
-Print[inv];
 
 (* Simplify invariant w.r.t. the domain constraint *)
-inv=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
-Print[inv];
+{inv,cuts}=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
+Print["Extracted (simplified) invariants: ",inv];
 
-invImpliesPost=CheckSemiAlgInclusion[Apply[And,inv[[2]]], post, vars];
-If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{inv, True}],
+(* Needs something like this?
+ evoConst=And[evoConst,inv[[1]]]; *)
+(* Implementation sanity check *)
+If[ListQ[cuts],,Print["ERROR, NOT A LIST: ",cuts];Throw[{}]];
+
+invlist=And[invlist,inv];
+cutlist=Union[cuts,cutlist];
+evoConst=And[evoConst,inv];
+
+post=Assuming[evoConst, FullSimplify[post, Reals]];
+Print["Inv: ",inv];
+Print["Invs: ",invlist," Evo: "evoConst];
+Print["Post: ",post];
+invImpliesPost=CheckSemiAlgInclusion[evoConst, post, vars];
+If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{{invlist,cutlist}, True}],
 Print["Generated invariant does not imply postcondition. Bad luck; returning what I could find."]]
 ,{ strat, strategies}(* End Do loop *)];
 
 (* Throw whatever invariant was last computed *)
-Throw[{inv, False}]
+Throw[{{invlist,cutlist}, False}]
 
 ]]
 
