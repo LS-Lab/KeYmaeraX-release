@@ -48,15 +48,16 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
     timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT))).getOrElse(-1)
 
+    val pegasusMain = Configuration.getOption(Configuration.Keys.PEGASUS_MAIN_FILE).getOrElse("Pegasus.m")
     val command = s"""
        |$setPathsCmd
-       |Needs["Pegasus`","Pegasus.m"];
+       |Needs["Pegasus`","$pegasusMain"];
        |Pegasus`InvGen[$problem]""".stripMargin.trim()
 
     try {
       val (output, result) = runUnchecked(command)
       logger.debug("Generated invariant: " + result.prettyString + " from raw output " + output)
-      PegasusM2KConverter.decodeFormulaList(result).map({ case (fmls, flag) =>
+      (PegasusM2KConverter.decodeFormulaList(result)::Nil).map({ case (fmls, flag) =>
         assert(flag == True || flag == False, "Expected invariant/candidate flag, but got " + flag.prettyString)
         if (flag == True) Left(fmls) else Right(fmls)
       })
