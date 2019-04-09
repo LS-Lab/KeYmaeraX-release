@@ -11,6 +11,10 @@ SOSBarrierMATLAB::usage="SOSBarrierMATLAB[problem_List] uses an interface to Mat
 Options[SOSBarrierMATLAB]= {Lambda -> {}, MaxDeg -> 10};
 
 
+SOSBarrierVecMATLAB::usage="SOSBarrierMATLAB[problem_List] uses an interface to Matlab (MatLink plugin required!) to compute barrier certificates.";
+Options[SOSBarrierVecMATLAB]= {Lambda -> {}, MaxDeg -> 10, RandIter->5, NumBarriers->2};
+
+
 BTemplate::usage="BTemplate[deg_, vars_List] Polynomial template with symbolic coefficients (of degree at most 'deg')";
 
 
@@ -94,12 +98,18 @@ If[ConjunctiveIneqSetQ[S],
 ]]
 
 
+JacobianMatrix[f_List?VectorQ,x_List]:=Outer[D,f,x]/;Equal@@(Dimensions/@{f,x})
+
+JacobianDeterminant[f_List?VectorQ,x_List]:=Det[JacobianMatrix[f,x]]/;Equal@@(Dimensions/@{f,x})
+JacobianDeterminant[probC1[[2]][[1]],probC1[[2]][[2]]]
+
+
 HeuristicMonomials[vars_,vf_]:=Module[ {},
 DeleteDuplicates[Flatten[Function[x,monomialList[x,vars]]/@vf]]]
 
 
 HeuristicLambdas[vars_,vf_]:=Module[ {},
-DeleteDuplicates[{-1,0,1,Div[vf,vars],-Div[vf,vars]}]]
+DeleteDuplicates[{-1,0,1,Div[vf,vars],-Div[vf,vars](*,JacobianDeterminant[vf,vars],-JacobianDeterminant[vf,vars]*)}]]
 
 
 SOSBarrierMATLAB[{ pre_, { vf_List, vars_List, evoConst_ }, post_}, opts:OptionsPattern[]]:=Catch[Module[
@@ -227,13 +237,162 @@ B2 = 0
 ";
 sosprog=StringReplace[sosprog,{"`"->"backtick"}];
 barrierscript=MATLink`MScript["expbarrier",sosprog, "Overwrite" -> True];
-(* Print[sosprog]; *)
-res=MATLink`MEvaluate@barrierscript;
-lines=StringSplit[res,{"B2 =", "break"}];
+(*Print[sosprog];*)
+res =MATLink`MEvaluate@barrierscript;
+lines=StringSplit[res,{"B2"~~___~~"=", "break"}];
 B=N[StringReplace[StringDelete[lines[[-1]], "\n" | "\r" |" "], {"e-"->"*10^-", "backtick"->"`"}]//ToExpression//Expand, DEFAULTPRECISION];
-If[B=={},
-  Print["No feasible solution found by SOS programming."]];
-  Throw[{B}];
+If[B=={}, Print["No feasible solution found by SOS programming."];Throw[{}]];
+Throw[{B}];
+]]
+
+
+SOSBarrierVecMATLAB[{ pre_, { vf_List, vars_List, evoConst_ }, post_}, opts:OptionsPattern[]]:=Catch[Module[
+{init,unsafe,Q,f,sosprog,res,lines,B, link, barrierscript,heumons,heulambdas},
+
+Print["Attempting to generate a vector barrier certificate with SOS Programming"];
+
+init=ExtractPolys[pre];
+unsafe=ExtractPolys[Not[post]];
+Q=If[TrueQ[evoConst],{}, ExtractPolys[evoConst]];
+
+(* Open a link to Matlab *)
+link=MATLink`OpenMATLAB[];
+
+f=MmaToMatlab[vf];
+
+heumons = HeuristicMonomials[vars,vf];
+heulambdas = If[OptionValue[Lambda]==={}, HeuristicLambdas[vars,vf], {OptionValue[Lambda]}];
+
+sosprog="
+% Vector barrier certificates
+
+clear;
+% Inputs from Mathematica
+% Variables
+pvar "<>StringRiffle[Map[MmaToMatlab, vars], " "]<>";
+vars = "<>MmaToMatlab[vars]<>";
+
+% Problem specification
+% The vector field for each coordinate
+field = "<>MmaToMatlab[vf]<>";
+% Conj. Polynomials characterizing the initial set
+inits = "<>MmaToMatlab[init]<>";
+% Conj. Polynomials characterizing the unsafe set
+unsafes = "<>MmaToMatlab[unsafe]<>" ;
+% Conj. Polynomials characterizing the ev. domain
+dom = "<>MmaToMatlab[Q]<>" ;
+
+% Configurable options from Mathematica
+% Configurable lambda in B' >= lambda B
+lambdas = "<>MmaToMatlab[heulambdas]<>";
+% min and max degree bounds (incremented by 1 each time)
+mindeg = 0;
+maxdeg = "<>MmaToMatlab[OptionValue[MaxDeg]]<>";
+% Additional monomials to use for the barrier certificate
+monheu =  "<>MmaToMatlab[heumons]<>";
+% Additional SOS basis monomials for SOS-variables
+monheu2 = [];
+% Encode strict inequalities p>0 as p-eps >=0
+eps = 0.001;
+% Minimum feasibility to accept a solution
+minfeas = 0.9;
+% Size of barrier certificate to try
+barrier_dim = "<>MmaToMatlab[OptionValue[NumBarriers]]<>";
+% Number of random trials at each iteration
+numrand = "<>MmaToMatlab[OptionValue[RandIter]]<>";
+
+% MATLAB setup
+init_dim = length(inits);
+unsafe_dim = length(unsafes);
+dom_dim = length(dom);
+
+for deg = mindeg : maxdeg
+    sosdeg = ceil(sqrt(deg));
+    fprintf('monomial degree: % i sos degree: % i \\n', deg, sosdeg);
+    monvec = vertcat(monomials(vars,0:1:deg),monheu);
+    monvecs = vertcat(monomials(vars,0:1:floor(deg/2)),monheu);
+    monvec2 = vertcat(monomials(vars,0:1:sosdeg),monheu2);
+    for i = 1 : numrand
+
+        split = rand(1,barrier_dim);
+        A = rand(barrier_dim,barrier_dim);
+        for j=1:barrier_dim
+            A(j,j) = randsample(lambdas,1);
+        end
+        A
+
+        % The SOS program
+        prog = sosprogram(vars);
+
+        % The m-D vector barrier certificate (B1,...,Bm)
+        for i=1:barrier_dim-1
+            [prog,B(i)] = sospolyvar(prog,monvecs);
+        end
+        
+        [prog,B(barrier_dim)] = sospolyvar(prog,monvec);
+        
+        % SOSes for each barrier in init
+        for i = 1:barrier_dim
+            for j=1:init_dim
+                [prog,IP(i,j)] = sossosvar(prog,monvec2);
+            end
+            %Constrain barriers to be <= 0 on all inits
+            prog = sosineq(prog, -IP(i,:)*inits - B(i));
+        end
+
+        % SOSes for the unsafe states
+        for i=1:unsafe_dim
+          [prog,FP(i)] = sossosvar(prog,monvec2);
+        end
+
+        % Constrain barrier to be > 0 on one coordinate
+        prog = sosineq(prog, split*transpose(B) - FP*unsafes - eps);
+
+        % Lie derivatives for each component
+        for i=1:barrier_dim
+            dB(i) = 0*vars(1);
+            for j = 1:length(vars)
+                dB(i) = dB(i)+diff(B(i),vars(j))*field(j);
+            end
+        end
+
+        % Constrain the Lie derivative
+        expr = A * transpose(B) - transpose(dB);
+
+        if dom_dim > 0
+            % SOSes for each barrier in domain
+            for i = 1:barrier_dim
+                for j=1:dom_dim
+                  [prog,DP(i,j)] = sossosvar(prog,monvec2);
+                end
+                prog = sosineq(prog, expr(i)-DP(i,:)*dom);
+            end
+        else
+            for i = 1:barrier_dim
+                prog = sosineq(prog,expr(i));
+            end
+        end
+
+        opt.params.fid = 0;
+        prog = sossolve(prog,opt);
+
+        feasibility = prog.solinfo.info.feasratio;
+        if feasibility >= minfeas
+            B2 = sosgetsol(prog,B)
+            return;
+        end
+    end
+end
+B2 = 0
+";
+sosprog=StringReplace[sosprog,{"`"->"backtick"}];
+barrierscript=MATLink`MScript["expbarrier",sosprog, "Overwrite" -> True];
+(*Print[sosprog]*);
+res=MATLink`MEvaluate@barrierscript;
+lines=Map[StringReplace[StringDelete[First[#],"\n" | "\r" |" "|"="],{"e-"->"*10^-", "backtick"->"`"}]&,StringCases[StringSplit[res,"B2"][[2;;-1]],"="~~___]];
+B=N[lines//ToExpression//Expand, DEFAULTPRECISION];
+If[B=={}, Print["No feasible solution found by SOS programming."];Throw[{}]];
+Throw[B];
 ]]
 
 
