@@ -901,7 +901,13 @@ private object DifferentialTactics extends Logging {
             diffCut(inv)(pos) <(
               skip,
               proofHint match {
-                case Some(PegasusProofHint(_, None)) => odeInvariant(tryHard = true, useDw = false)(pos) & done
+                case Some(PegasusProofHint(_, Some("Barrier"))) =>
+                  dgBarrier(None)(pos) & done | odeInvariant(tryHard = true, useDw = false)(pos) & done
+                case Some(PegasusProofHint(_, Some("Darboux"))) =>
+                  dgDbxAuto(pos) & done | odeInvariant(tryHard = true, useDw = false)(pos) & done
+                case Some(PegasusProofHint(_, Some("FirstIntegral"))) =>
+                  dI()(pos) & done | odeInvariant(tryHard = true, useDw = false)(pos) & done
+                case Some(PegasusProofHint(_, _)) => odeInvariant(tryHard = true, useDw = false)(pos) & done
                 case Some(AnnotationProofHint(tryHard)) => odeInvariant(tryHard = tryHard, useDw = false)(pos) & done
                 case _ => odeInvariant(tryHard = false, useDw = false)(pos) & done
               }

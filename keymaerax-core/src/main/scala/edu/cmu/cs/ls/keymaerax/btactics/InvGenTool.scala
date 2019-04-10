@@ -20,7 +20,7 @@ trait InvGenTool {
     * @param postCond What to prove from the invariants.
     * @return A sequence of continuous invariants, each to be proved with a diffcut chain (left=invariant, right=candidate).
     */
-  def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Either[Seq[Formula],Seq[Formula]]]
+  def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Either[Seq[(Formula, String)],Seq[(Formula, String)]]]
 
   /** Fast check whether or not `inv` is worth proving to be an invariant of `ode`. */
   def lzzCheck(ode: ODESystem, inv: Formula): Boolean

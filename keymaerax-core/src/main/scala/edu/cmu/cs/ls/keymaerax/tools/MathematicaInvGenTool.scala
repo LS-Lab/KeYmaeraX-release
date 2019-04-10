@@ -31,7 +31,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
       |SetDirectory[$joinedPath];
       |AppendTo[$$Path, $joinedPath];""".stripMargin.trim
 
-  def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Either[Seq[Formula],Seq[Formula]]] = {
+  def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Either[Seq[(Formula, String)],Seq[(Formula, String)]]] = {
     require(postCond.isFOL, "Unable to generate invariant, expected FOL post conditions but got " + postCond.prettyString)
 
     val vars = DifferentialHelper.getPrimedVariables(ode)
@@ -57,9 +57,9 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     try {
       val (output, result) = runUnchecked(command)
       logger.debug("Generated invariant: " + result.prettyString + " from raw output " + output)
-      (PegasusM2KConverter.decodeFormulaList(result)::Nil).map({ case (fmls, flag) =>
+      (PegasusM2KConverter.decodeFormulaList(result)::Nil).map({ case (invariants, flag) =>
         assert(flag == True || flag == False, "Expected invariant/candidate flag, but got " + flag.prettyString)
-        if (flag == True) Left(fmls) else Right(fmls)
+        if (flag == True) Left(invariants) else Right(invariants)
       })
     } catch {
       case ex: ConversionException =>

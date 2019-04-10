@@ -49,7 +49,7 @@ class InvariantGeneratorTests extends TacticTestBase {
   it should "use Pegasus if available" in withMathematica { _ =>
     val gen = InvariantGenerator.pegasusInvariants("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0))
     gen should not be 'empty
-    gen.head shouldBe ("-1*x<=0".asFormula, Some(PegasusProofHint(isInvariant = true, None)))
+    gen.head shouldBe ("x>0".asFormula, Some(PegasusProofHint(isInvariant = true, None)))
   }
 
   it should "split formulas correctly" in {
@@ -75,8 +75,8 @@ class InvariantGeneratorTests extends TacticTestBase {
       override def invGenTool(name: Option[String]): Option[InvGenTool] = {
         requestedInvGenerators = requestedInvGenerators :+ name
         Some(new InvGenTool {
-          override def invgen(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): immutable.Seq[Either[immutable.Seq[Formula], immutable.Seq[Formula]]] = {
-            Left("x>0".asFormula :: "y>1".asFormula :: Nil) :: Nil
+          override def invgen(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): immutable.Seq[Either[immutable.Seq[(Formula, String)], immutable.Seq[(Formula, String)]]] = {
+            Left(("x>0".asFormula, "Unknown") :: ("y>1".asFormula, "Unknown") :: Nil) :: Nil
           }
           override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = ???
           override def refuteODE(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]] = ???
@@ -101,8 +101,8 @@ class InvariantGeneratorTests extends TacticTestBase {
 
   "Configurable generator" should "return annotated conditional invariants" in withQE { _ =>
     val fml = "y>0 ==> [{x:=2; ++ x:=-2;}{{y'=x*y}@invariant((y'=2*y -> y>=old(y)), (y'=-2*y -> y<=old(y)))}]y>0".asSequent
-    TactixLibrary.invGenerator("==> [{y'=2*y&true}]y>0".asSequent, SuccPosition(1)).loneElement shouldBe ("y>=old(y)".asFormula, Some(AnnotationProofHint(tryHard = false)))
-    TactixLibrary.invGenerator("==> [{y'=-2*y&true}]y>0".asSequent, SuccPosition(1)).loneElement shouldBe ("y<=old(y)".asFormula, Some(AnnotationProofHint(tryHard = false)))
+    TactixLibrary.invGenerator("==> [{y'=2*y&true}]y>0".asSequent, SuccPosition(1)).loneElement shouldBe ("y>=old(y)".asFormula, Some(AnnotationProofHint(tryHard = true)))
+    TactixLibrary.invGenerator("==> [{y'=-2*y&true}]y>0".asSequent, SuccPosition(1)).loneElement shouldBe ("y<=old(y)".asFormula, Some(AnnotationProofHint(tryHard = true)))
   }
 
 }
