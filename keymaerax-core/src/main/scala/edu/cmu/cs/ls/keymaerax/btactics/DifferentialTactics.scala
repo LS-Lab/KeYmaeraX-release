@@ -902,11 +902,14 @@ private object DifferentialTactics extends Logging {
               skip,
               proofHint match {
                 case Some(PegasusProofHint(_, Some("Barrier"))) =>
-                  dgBarrier(None)(pos) & done | odeInvariant(tryHard = true, useDw = false)(pos) & done
+                  dgBarrier(pos) & done|
+                    odeInvariant(tryHard = true, useDw = false)(pos) & done
                 case Some(PegasusProofHint(_, Some("Darboux"))) =>
-                  dgDbxAuto(pos) & done | odeInvariant(tryHard = true, useDw = false)(pos) & done
+                  dgDbxAuto(pos) & done |
+                    odeInvariant(tryHard = true, useDw = false)(pos) & done
                 case Some(PegasusProofHint(_, Some("FirstIntegral"))) =>
-                  dI()(pos) & done | odeInvariant(tryHard = true, useDw = false)(pos) & done
+                  dI()(pos) & done |
+                    odeInvariant(tryHard = true, useDw = false)(pos) & done
                 case Some(PegasusProofHint(_, _)) => odeInvariant(tryHard = true, useDw = false)(pos) & done
                 case Some(AnnotationProofHint(tryHard)) => odeInvariant(tryHard = tryHard, useDw = false)(pos) & done
                 case _ => odeInvariant(tryHard = false, useDw = false)(pos) & done
@@ -1127,6 +1130,9 @@ private object DifferentialTactics extends Logging {
     * Rationale: this tactic requires a cofactor input, and so it would be surprising if it normalizes internally
     * All automation tactics around dgDbx will need to normalize their input
     */
+  //todo: Awkward usubst lemma placement because this is also needed in ODEInvariance...
+  private lazy val dbxCond: ProvableSig = remember("((-g_())*y_()+0)*(z_())^2 + y_()*(2*z_()^(2-1)*(g_()/2*z_()+0))=0".asFormula,QE,namespace).fact
+
   def dgDbx(qco: Term): DependentPositionWithAppliedInputTactic = "dbx" byWithInput (qco, (pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "dbx only at top-level succedent")
 
@@ -1185,13 +1191,17 @@ private object DifferentialTactics extends Logging {
         existsR(one)(pos) & //Anything works here, as long as it is > 0, 1 is convenient
         diffCut(gtz)(pos) < (
           boxAnd(pos) & andR(pos) < (
-            dW(pos) & prop,
+            diffWeakenG(pos) & implyR(1) & andL('Llast) & closeId,
             if (isOpen) openDiffInd(pos) else diffInd('full)(pos)
           ) // Closes p z = 0 invariant
           ,
-          dG(dez, Some(pcz))(pos) & //Introduce the dbx ghost
+          DifferentialTactics.dG(dez, Some(pcz))(pos) & //Introduce the dbx ghost
             existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
-            diffInd('full)(pos) // Closes z > 0 invariant with another diff ghost
+            diffInd('diffInd)(pos) // Closes z > 0 invariant with another diff ghost
+              <(
+              hideL('Llast) & QE,
+              cohideR('Rlast) & SaturateTactic(Dassignb(1)) & byUS(dbxCond)
+            )
         )
     }
   })
@@ -1209,7 +1219,7 @@ private object DifferentialTactics extends Logging {
 
   private lazy val barrierCond: ProvableSig = remember("max(f_()*f_(),g_()) > 0 <-> f_()=0 -> g_()>0".asFormula,QE,namespace).fact
 
-  def dgBarrier(tool: Option[SimplificationTool] = None): DependentPositionTactic = "barrier" by ((pos: Position, seq:Sequent) => {
+  def dgBarrier: DependentPositionTactic = "barrier" by ((pos: Position, seq:Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "barrier only at top-level succedent")
 
     val (system,dom,post) = seq.sub(pos) match {
@@ -1225,22 +1235,66 @@ private object DifferentialTactics extends Logging {
     }
 
     //p>=0 or p>0
-    val barrier = property.asInstanceOf[ComparisonFormula].left
+    val cf = property.asInstanceOf[ComparisonFormula]
 
-    val lie = DifferentialHelper.simplifiedLieDerivative(system, barrier, tool)
+    if(cf.isInstanceOf[GreaterEqual])
+      ODEInvariance.sAIclosedPlus(bound = 1)(pos)
 
-    val zero = Number(0)
-    //The special max term
-    val barrierAlg = FuncOf(maxF,Pair(Times(barrier,barrier),lie))
-    val barrierFml = Greater(barrierAlg,zero)
-    //The cofactor
-    val cofactor = Divide(Times(barrier,lie),barrierAlg)
+    else {
+      val barrier = cf.left
 
-    // First cut in the barrier property, then use dgdbx on it
-    // Barrier condition is checked first to make it fail faster
-    dC(barrierFml)(pos) <(
-      skip, /* diffWeakenG faster but loses assumptions */ dW(pos) & useAt(barrierCond)(1,1::Nil) & timeoutQE & done
-    ) & starter & dgDbx(cofactor)(pos)
+      val lie = DifferentialHelper.simplifiedLieDerivative(system, barrier, ToolProvider.simplifierTool())
+
+      val zero = Number(0)
+      //The special max term
+      val barrierAlg = FuncOf(maxF, Pair(Times(barrier, barrier), lie))
+      val barrierFml = Greater(barrierAlg, zero)
+      //The cofactor
+      val cofactor = Divide(Times(barrier, lie), barrierAlg)
+
+      // First cut in the barrier property, then use dgdbx on it
+      // Barrier condition is checked first to make it fail faster
+      val pre = dC(barrierFml)(pos) < (
+        skip, /* diffWeakenG faster but loses assumptions*/ dW(pos) & useAt(barrierCond)(1, 1 :: Nil) & timeoutQE & done
+      ) & starter
+
+      // Same as dgDbx but bypasses extra checks since we already know
+      /** The ghost variable */
+      val gvy = "dbxy_".asVariable
+      /** Another ghost variable */
+      val gvz = "dbxz_".asVariable
+
+      val one = Number(1)
+      val two = Number(2)
+
+      //Postcond:
+      val gtz = Greater(gvy, zero)
+      val pcy = And(gtz, cf.reapply(Times(gvy, barrier), zero))
+      val pcz = Equal(Times(gvy, Power(gvz, two)), one)
+
+      //Construct the diff ghost y' = -qy
+      val dey = AtomicODE(DifferentialSymbol(gvy), Times(Neg(cofactor), gvy))
+
+      //Diff ghost z' = qz/2
+      val dez = AtomicODE(DifferentialSymbol(gvz), Times(Divide(cofactor, Number(2)), gvz))
+      pre &
+        DifferentialTactics.dG(dey, Some(pcy))(pos) & //Introduce the dbx ghost
+        existsR(one)(pos) & //Anything works here, as long as it is > 0, 1 is convenient
+        dC(gtz)(pos) < (
+          boxAnd(pos) & andR(pos) < (
+            diffWeakenG(pos) & implyR(1) & andL('Llast) & closeId,
+            diffInd('full)(pos)
+          )
+          ,
+          DifferentialTactics.dG(dez, Some(pcz))(pos) & //Introduce the dbx ghost
+            existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
+            diffInd('diffInd)(pos) // Closes z > 0 invariant with another diff ghost
+              < (
+              hideL('Llast) & QE,
+              cohideR('Rlast) & SaturateTactic(Dassignb(1)) & byUS(dbxCond)
+            )
+        )
+    }
   })
 
   /** Find Q|- p' = q p + r, and proves |- Q -> r~0 with appropriate
