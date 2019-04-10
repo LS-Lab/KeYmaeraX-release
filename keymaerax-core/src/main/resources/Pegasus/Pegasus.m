@@ -101,16 +101,18 @@ inv=InvariantExtractor`DWC[pre, post, {f,vars,evoConst}, polyList, {}];
 
 (* Simplify invariant w.r.t. the domain constraint *)
 {inv,cuts}=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
-Print["Extracted (simplified) invariants: ",inv];
+
+Print["Extracted (simplified) invariants: ",inv," ",cuts];
 
 (* Needs something like this?
  ecvoConst=And[evoConst,inv[[1]]]; *)
 (* Implementation sanity check *)
 If[ListQ[cuts],,Print["ERROR, NOT A LIST: ",cuts];Throw[{}]];
 
-invlist=And[invlist,inv];
-cutlist=Union[Map[{#,hint}&,cuts],cutlist];
-evoConst=And[evoConst,inv];
+If[TrueQ[inv], Print["Skipped"],
+	invlist=And[invlist,inv];
+	cutlist=Union[Map[{#,hint}&,cuts],cutlist];
+	evoConst=And[evoConst,inv]];
 
 post=Assuming[evoConst, FullSimplify[post, Reals]];
 Print["Inv: ",inv];

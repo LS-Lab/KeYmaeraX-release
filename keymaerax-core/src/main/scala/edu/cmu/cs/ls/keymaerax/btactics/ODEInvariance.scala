@@ -433,7 +433,7 @@ object ODEInvariance {
         useAt(boxOrL,PosInExpr(1::Nil))(1) & recRankOneTac(l),
         useAt(boxOrR,PosInExpr(1::Nil))(1) & recRankOneTac(r)
       )
-      case _ => (dgDbxAuto(1) | dgBarrier()(1)) & done
+      case _ => (dgDbxAuto(1) | dgBarrier(1)) & done
     })
   }
 
@@ -671,6 +671,8 @@ object ODEInvariance {
     * @return tactic implementing vdbx as described above
     * @see Andre Platzer and Yong Kiam Tan. [[https://doi.org/10.1145/3209108.3209147 Differential equation axiomatization: The impressive power of differential ghosts]]. In Anuj Dawar and Erich Grädel, editors, Proceedings of the 33rd Annual ACM/IEEE Symposium on Logic in Computer Science, LICS'18, ACM 2018.
     */
+  private lazy val dbxCond: ProvableSig = remember("((-g_())*y_()+0)*(z_())^2 + y_()*(2*z_()^(2-1)*(g_()/2*z_()+0))=0".asFormula,QE,namespace).fact
+
   def dgVdbx(Gco:List[List[Term]],ps:List[Term], negate:Boolean = false) : DependentPositionTactic = "dgVdbx" byWithInput ((Gco,ps),(pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "dgVdbx only applicable in top-level succedent")
     val dim = ps.length
@@ -746,7 +748,7 @@ object ODEInvariance {
         dC(gtz)(pos) < (
           // Do the vdbx case manually
           boxAnd(pos) & andR(pos) < (
-            dW(pos) & prop,
+            diffWeakenG(pos) & implyR(1) & andL('Llast) & closeId,
             //QE can't handle this alone: diffInd('full)(pos)
             Dconstify
             (
@@ -787,8 +789,11 @@ object ODEInvariance {
           ,
           DifferentialTactics.dG(dez, Some(pcz))(pos) & //Introduce the dbx ghost
             existsR(one)(pos) & //The sqrt inverse of y, 1 is convenient
-            //TODO: this appears to be fast enough, but this step can also be done manually easily
-            diffInd('full)(pos) // Closes z > 0 invariant with another diff ghost
+            diffInd('diffInd)(pos) // Closes z > 0 invariant with another diff ghost
+              <(
+              hideL('Llast) & QE,
+              cohideR('Rlast) & SaturateTactic(Dassignb(1)) & byUS(dbxCond)
+            )
         )
     )
   })
