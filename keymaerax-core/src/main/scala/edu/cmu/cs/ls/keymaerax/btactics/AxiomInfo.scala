@@ -306,7 +306,7 @@ object DerivationInfo {
         /* conclusion */ (List("p≳0"), List("[{x′=f(x) & Q}]p≳0")),
         /* premises */ List( (List("Q ∧ p=0"), List("p'>0")) )
       ),
-      _ => DifferentialTactics.dgBarrier(ToolProvider.simplifierTool())
+      _ => DifferentialTactics.dgBarrier
       , needsTool = true
     ),
     PositionTacticInfo("dRI",

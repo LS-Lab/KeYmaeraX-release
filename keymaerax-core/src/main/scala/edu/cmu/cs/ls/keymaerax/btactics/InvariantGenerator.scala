@@ -23,7 +23,7 @@ object InvariantGenerator extends Logging {
   /** A tactic proof hint. */
   case class BelleExprProofHint(t: BelleExpr) extends ProofHint
   /** Proof hint from Pegasus */
-  case class PegasusProofHint(isInvariant: Boolean, t: Option[BelleExpr]) extends ProofHint
+  case class PegasusProofHint(isInvariant: Boolean, t: Option[String]) extends ProofHint
   /** Proof hint from annotation */
   case class AnnotationProofHint(tryHard: Boolean) extends ProofHint
 
@@ -172,21 +172,21 @@ object InvariantGenerator extends Logging {
       ToolProvider.invGenTool() match {
         case Some(tool) =>
           lazy val pegasusInvs = tool.invgen(ode, sequent.ante, post)
-          lazy val conjunctiveCandidates: Seq[Either[Seq[Formula], Seq[Formula]]] = pegasusInvs.withFilter({
-            case Left(l) => l.length > 1 && l.exists(strictInequality)
-            case Right(r) => r.length > 1 && r.exists(strictInequality)
+          lazy val conjunctiveCandidates: Seq[Either[Seq[(Formula, String)], Seq[(Formula, String)]]] = pegasusInvs.withFilter({
+            case Left(l) => l.length > 1 && l.map(_._1).exists(strictInequality)
+            case Right(r) => r.length > 1 && r.map(_._1).exists(strictInequality)
           }).map({
-            case Left(l) => Right(l.reduce(And) :: Nil)
-            case Right(r) => Right(r.reduce(And) :: Nil)
+            case Left(l) => Right((l.map(_._1).reduce(And), "Unknown") :: Nil)
+            case Right(r) => Right((r.map(_._1).reduce(And), "Unknown") :: Nil)
           })
           lazy val invs: Seq[GenProduct] =
             if (includeCandidates) {
               (pegasusInvs ++ conjunctiveCandidates).flatMap({
-                case Left(l) => l.map(_ -> Some(PegasusProofHint(isInvariant = true, None)))
-                case Right(r) => r.map(_ -> Some(PegasusProofHint(isInvariant = false, None)))
+                case Left(l) => l.map(i => i._1 -> Some(PegasusProofHint(isInvariant = true, Some(i._2))))
+                case Right(r) => r.map(i => i._1 -> Some(PegasusProofHint(isInvariant = false, Some(i._2))))
               })
             } else {
-              pegasusInvs.filter(_.isLeft).flatMap(_.left.get.map(i => i -> Some(PegasusProofHint(isInvariant=true, None))))
+              pegasusInvs.filter(_.isLeft).flatMap(_.left.get.map(i => i._1 -> Some(PegasusProofHint(isInvariant=true, Some(i._2)))))
             }
           Stream[GenProduct]() #::: invs.toStream.distinct
         case _ => Seq().toStream

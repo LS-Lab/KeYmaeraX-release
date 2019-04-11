@@ -1,14 +1,28 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.SuccPosition
-import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, PegasusProofHint}
+import java.io.PrintWriter
+
+import edu.cmu.cs.ls.keymaerax.Configuration
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
+import edu.cmu.cs.ls.keymaerax.bellerophon.{SuccPosition, TacticStatistics}
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct, PegasusProofHint, ProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tags.UsualTest
+import edu.cmu.cs.ls.keymaerax.tags.{SlowTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tools.{PegasusM2KConverter, ToolOperationManagement}
+import edu.cmu.cs.ls.keymaerax.btactics.NonlinearExamplesTests._
+import org.scalatest.{AppendedClues, Suites}
 import org.scalatest.LoneElement._
+import org.scalatest.concurrent.Timeouts
+import org.scalatest.exceptions.TestFailedDueToTimeoutException
+import org.scalatest.prop.TableDrivenPropertyChecks._
+import org.scalatest.time.{Seconds, Span}
 
 import scala.collection.immutable
+import scala.collection.immutable.{IndexedSeq, Nil}
 
 /**
  * Tests invariant generators.
@@ -49,7 +63,7 @@ class InvariantGeneratorTests extends TacticTestBase {
   it should "use Pegasus if available" in withMathematica { _ =>
     val gen = InvariantGenerator.pegasusInvariants("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0))
     gen should not be 'empty
-    gen.head shouldBe ("-1*x<=0".asFormula, Some(PegasusProofHint(isInvariant = true, None)))
+    gen.head shouldBe ("x>0".asFormula, Some(PegasusProofHint(isInvariant = true, None)))
   }
 
   it should "split formulas correctly" in {
@@ -75,8 +89,8 @@ class InvariantGeneratorTests extends TacticTestBase {
       override def invGenTool(name: Option[String]): Option[InvGenTool] = {
         requestedInvGenerators = requestedInvGenerators :+ name
         Some(new InvGenTool {
-          override def invgen(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): immutable.Seq[Either[immutable.Seq[Formula], immutable.Seq[Formula]]] = {
-            Left("x>0".asFormula :: "y>1".asFormula :: Nil) :: Nil
+          override def invgen(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): immutable.Seq[Either[immutable.Seq[(Formula, String)], immutable.Seq[(Formula, String)]]] = {
+            Left(("x>0".asFormula, "Unknown") :: ("y>1".asFormula, "Unknown") :: Nil) :: Nil
           }
           override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = ???
           override def refuteODE(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]] = ???
@@ -101,8 +115,231 @@ class InvariantGeneratorTests extends TacticTestBase {
 
   "Configurable generator" should "return annotated conditional invariants" in withQE { _ =>
     val fml = "y>0 ==> [{x:=2; ++ x:=-2;}{{y'=x*y}@invariant((y'=2*y -> y>=old(y)), (y'=-2*y -> y<=old(y)))}]y>0".asSequent
-    TactixLibrary.invGenerator("==> [{y'=2*y&true}]y>0".asSequent, SuccPosition(1)).loneElement shouldBe ("y>=old(y)".asFormula, Some(AnnotationProofHint(tryHard = false)))
-    TactixLibrary.invGenerator("==> [{y'=-2*y&true}]y>0".asSequent, SuccPosition(1)).loneElement shouldBe ("y<=old(y)".asFormula, Some(AnnotationProofHint(tryHard = false)))
+    TactixLibrary.invGenerator("==> [{y'=2*y&true}]y>0".asSequent, SuccPosition(1)).loneElement shouldBe ("y>=old(y)".asFormula, Some(AnnotationProofHint(tryHard = true)))
+    TactixLibrary.invGenerator("==> [{y'=-2*y&true}]y>0".asSequent, SuccPosition(1)).loneElement shouldBe ("y<=old(y)".asFormula, Some(AnnotationProofHint(tryHard = true)))
+  }
+
+}
+
+object NonlinearExamplesTests {
+  private val GITHUB_PROJECTS_RAW_PATH = "file:/Users/smitsch/Documents/projects/keymaera/documents/Papers/pegasus_paper"
+}
+
+@SlowTest
+class NonlinearExamplesTests extends Suites(
+  new NonlinearExamplesTester("Nonlinear", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx", 300, genCheck=true)
+//  new NonlinearExamplesTester("Invariant", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/invariant.kyx", 300, genCheck=true)
+)
+
+@SlowTest
+class NonlinearExamplesTester(val benchmarkName: String, val url: String, val timeout: Int,
+                              val genCheck: Boolean) extends TacticTestBase with AppendedClues with Timeouts {
+
+  private val entries = {
+    println("Reading " + url)
+    try {
+      DatabasePopulator.readKya(url)
+    } catch {
+      case ex: Throwable =>
+        println("Failed reading: " + ex.getMessage)
+        ex.printStackTrace()
+        Nil
+    }
+  }
+
+  private def tableResults(results: Seq[BenchmarkResult]) = {
+    Table(("Benchmark name", "Entry name", "Status", "Duration", "Failure Cause"),
+      results.map(r => (benchmarkName, r.name, r.status, r.totalDuration, r.ex)):_*)
+  }
+
+  private def setTimeouts(tool: ToolOperationManagement): Unit = {
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
+    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "120", saveToFile = false)
+    Configuration.set(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT, "120", saveToFile = false)
+    Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, "60", saveToFile = false)
+    Configuration.set(Configuration.Keys.LOG_QE_DURATION, "true", saveToFile = false)
+    tool.setOperationTimeout(120)
+  }
+
+  private val infoPrinter = (info: Any) => info match {
+    case i: Map[String, Any] => i.values.mkString(",")
+  }
+
+  it should "generate invariants" ignore withMathematica { tool =>
+    setTimeouts(tool)
+    val results = entries.map(e => runInvGen(e.name, e.model))
+    val writer = new PrintWriter(benchmarkName + "_invgen.csv")
+    writer.write(
+      "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
+    writer.close()
+  }
+
+  it should "generate invariants with Barrier only" ignore withMathematica { tool =>
+    setTimeouts(tool)
+    Configuration.set(Configuration.Keys.PEGASUS_MAIN_FILE, "Pegasus_BarrierOnly.m", saveToFile = false)
+    val results = entries.map(e => runInvGen(e.name, e.model))
+    val writer = new PrintWriter(benchmarkName + "_invgen_barrier.csv")
+    writer.write(
+      "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
+    writer.close()
+  }
+
+  it should "generate invariants with Darboux only" ignore withMathematica { tool =>
+    setTimeouts(tool)
+    Configuration.set(Configuration.Keys.PEGASUS_MAIN_FILE, "Pegasus_DbxOnly.m", saveToFile = false)
+    val results = entries.map(e => runInvGen(e.name, e.model))
+    val writer = new PrintWriter(benchmarkName + "_invgen_dbx.csv")
+    writer.write(
+      "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
+    writer.close()
+  }
+
+  it should "generate invariants with summands and first integrals only" in withMathematica { tool =>
+    setTimeouts(tool)
+    Configuration.set(Configuration.Keys.PEGASUS_MAIN_FILE, "Pegasus_SummandFirstIntegralsOnly.m", saveToFile = false)
+    val results = entries.map(e => runInvGen(e.name, e.model))
+    val writer = new PrintWriter(benchmarkName + "_invgen_summands.csv")
+    writer.write(
+      "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
+    writer.close()
+  }
+
+  private def pegasusGen(name: String, model: Formula) = {
+    model match {
+      case Imply(ante, succ@Box(_: ODESystem, _)) =>
+        val seq = Sequent(IndexedSeq(ante), IndexedSeq(succ))
+        println(s"Generating invariants $name")
+        val invGenStart = System.currentTimeMillis()
+        val candidates = InvariantGenerator.pegasusCandidates(seq, SuccPos(0)).toList
+        val invGenEnd = System.currentTimeMillis()
+        println(s"Done generating (${candidates.map(c => c._1.prettyString + " (proof hint " + c._2 + ")").mkString(",")}) $name")
+        Some((candidates, invGenStart, invGenEnd))
+      case _ => None
+    }
+  }
+
+  private def runCheckCandidates(name: String, modelContent: String, tactic: Option[String], candidates: List[(Formula, Option[ProofHint])]): BenchmarkResult = {
+    beforeEach()
+    withMathematica(_ => {}) //@HACK beforeEach and afterEach clean up tool provider
+    qeDurationListener.reset()
+    if (candidates.nonEmpty) {
+      println(s"Checking $name with candidates " + candidates.mkString(","))
+      val (model, _) = parseStripHints(modelContent)
+      TactixLibrary.invGenerator = FixedGenerator(candidates)
+      TactixLibrary.differentialInvGenerator = FixedGenerator(candidates)
+      val start = System.currentTimeMillis()
+      try {
+        val proof = failAfter(Span(timeout, Seconds))({
+          proveBy(model, TactixLibrary.master())
+        })((testThread: Thread) => {
+          theInterpreter.kill()
+          testThread.interrupt()
+        })
+        val end = System.currentTimeMillis()
+        println(s"Done checking $name " + (if (proof.isProved) "(proved)" else "(unfinished)"))
+        val result =
+          if (proof.isProved) "proved"
+          else if (proof.subgoals.exists(s => s.ante.isEmpty && s.succ.size == 1 && s.succ.head == False)) "disproved"
+          else "unfinished"
+        BenchmarkResult(name, result, timeout, end-start, qeDurationListener.duration, 0, end-start, proof.steps, 1, None)
+      } catch {
+        case ex: TestFailedDueToTimeoutException =>
+          println(s"Timeout checking $name")
+          BenchmarkResult(name, "timeout", timeout, -1, -1, -1, -1, -1, -1, Some(ex))
+      }
+    } else if (tactic.isDefined) {
+      println(s"Checking $name with tactic script")
+      val (model, defs) = parseStripHints(modelContent)
+      val t = BelleParser.parseWithInvGen(tactic.get, None, defs)
+      val start = System.currentTimeMillis()
+      try {
+        val proof = failAfter(Span(timeout, Seconds))({
+          proveBy(model, t)
+        })((testThread: Thread) => {
+          theInterpreter.kill()
+          testThread.interrupt()
+        })
+        val end = System.currentTimeMillis()
+        println(s"Done checking $name " + (if (proof.isProved) "(proved)" else "(unfinished)"))
+        val result =
+          if (proof.isProved) "proved"
+          else if (proof.subgoals.exists(s => s.ante.isEmpty && s.succ.size == 1 && s.succ.head == False)) "disproved"
+          else "unfinished"
+        BenchmarkResult(name, result, timeout, end - start, qeDurationListener.duration, 0, end - start, proof.steps,
+          TacticStatistics.size(t), None)
+      } catch {
+        case ex: TestFailedDueToTimeoutException =>
+          println(s"Timeout checking $name")
+          BenchmarkResult(name, "timeout", timeout, -1, -1, -1, -1, -1, -1, Some(ex))
+      }
+    } else {
+      BenchmarkResult(name, "skipped", timeout, -1, -1, -1, -1, -1, -1, None)
+    }
+  }
+
+  private def runInvGen(name: String, modelContent: String) = {
+    if (genCheck) {
+      beforeEach()
+      withMathematica(_ => {}) //@HACK beforeEach and afterEach clean up tool provider
+      qeDurationListener.reset()
+      val (model, _) = parseStripHints(modelContent)
+
+      try {
+        pegasusGen(name, model) match {
+          case Some((candidates, invGenStart, invGenEnd)) =>
+            if (candidates.nonEmpty) {
+              println(s"Checking $name with candidates " + candidates.map(_._1.prettyString).mkString(","))
+              TactixLibrary.invGenerator = FixedGenerator(candidates)
+              TactixLibrary.differentialInvGenerator = FixedGenerator(candidates)
+              val checkStart = System.currentTimeMillis()
+              //val proof = proveBy(seq, TactixLibrary.master())
+              try {
+                val proof = failAfter(Span(timeout, Seconds))({
+                  proveBy(model, TactixLibrary.master())
+                })((testThread: Thread) => {
+                  theInterpreter.kill()
+                  testThread.interrupt()
+                })
+
+                val checkEnd = System.currentTimeMillis()
+                println(s"Done checking $name " + (if (proof.isProved) "(proved)" else "(unfinished)"))
+
+                val result =
+                  if (proof.isProved) "proved"
+                  else if (proof.subgoals.exists(s => s.ante.isEmpty && s.succ.size == 1 && s.succ.head == False)) "disproved"
+                  else "unfinished"
+                BenchmarkResult(name, result, timeout, checkEnd - invGenStart,
+                  qeDurationListener.duration, invGenEnd - invGenStart, checkEnd - checkStart, proof.steps, 1, None,
+                  Map("dchainlength" -> (candidates.length-1)))
+              } catch {
+                case ex: TestFailedDueToTimeoutException =>
+                  println(s"Timeout checking $name")
+                  BenchmarkResult(name, "timeout", timeout, -1, -1, -1, -1, -1, -1, Some(ex))
+              }
+            } else {
+              BenchmarkResult(name, "unfinished (gen)", timeout, invGenEnd - invGenStart, invGenEnd - invGenStart, -1, -1, 0, 1, None)
+            }
+          case None =>
+            println("Skipping " + name + " for unknown shape, expected A -> [{x'=f(x)}]p(x), but got " + model.prettyString)
+            BenchmarkResult(name, "skipped", timeout, -1, -1, -1, -1, -1, -1, None)
+        }
+      } catch {
+        case ex: TestFailedDueToTimeoutException => BenchmarkResult(name, "timeout", timeout,
+          -1, qeDurationListener.duration, -1, -1, -1, -1, Some(ex))
+        case ex => BenchmarkResult(name, "failed", timeout, -1, qeDurationListener.duration, -1, -1, -1, -1, Some(ex))
+      }
+    } else {
+      BenchmarkResult(name, "skipped", timeout, -1, -1, -1, -1, -1, -1, None)
+    }
+  }
+
+  /** Parse model but ignore all proof hints. */
+  private def parseStripHints(modelContent: String): (Formula, KeYmaeraXArchiveParser.Declaration) = {
+    TactixLibrary.invGenerator = FixedGenerator(Nil)
+    TactixLibrary.differentialInvGenerator = FixedGenerator(Nil)
+    KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {})
+    val entry = KeYmaeraXArchiveParser(modelContent).head
+    (entry.model.asInstanceOf[Formula], entry.defs)
   }
 
 }

@@ -56,7 +56,7 @@ object BenchmarkTests {
 case class BenchmarkResult(name: String, status: String, timeout: Int, totalDuration: Long, qeDuration: Long,
                            invGenDuration: Long, invCheckDuration: Long,
                            proofSteps: Int, tacticSize: Int,
-                           ex: Option[Throwable]) {
+                           ex: Option[Throwable], info: Any = Map.empty) {
   override def toString: String =
     s"""Proof Statistics ($name $status, with time budget $timeout)
       |Duration [ms]: $totalDuration
@@ -67,7 +67,7 @@ case class BenchmarkResult(name: String, status: String, timeout: Int, totalDura
       |Tactic size: $tacticSize
     """.stripMargin
 
-def toCsv: String = s"$name,$status,$timeout,$totalDuration,$qeDuration,$invGenDuration,$invCheckDuration,$proofSteps,$tacticSize"
+  def toCsv(infoPrinter: Any=>String = (_: Any)=>""): String = s"$name,$status,$timeout,$totalDuration,$qeDuration,$invGenDuration,$invCheckDuration,$proofSteps,$tacticSize" + infoPrinter(info)
 }
 
 /** Exports to different formats */
@@ -158,7 +158,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
     val results = entries.map(e => runInteractive(e.name, e.model, e.tactic.headOption.map(_._2)))
     val writer = new PrintWriter(benchmarkName + "_interactive.csv")
     writer.write(
-      "Name,Status,Timeout[min],Duration[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv).mkString("\r\n"))
+      "Name,Status,Timeout[min],Duration[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv()).mkString("\r\n"))
     writer.close()
     forEvery(tableResults(results)) { (_, _, status, _, cause) =>
       status should (be ("proved") withClue cause or be ("skipped"))
@@ -170,7 +170,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
     val results = entries.map(e => runWithHints(e.name, e.model, e.tactic.headOption.map(_._2)))
     val writer = new PrintWriter(benchmarkName + "_withhints.csv")
     writer.write(
-      "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv).mkString("\r\n"))
+      "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv()).mkString("\r\n"))
     writer.close()
     forEvery(tableResults(results)) { (_, name, status, _, cause) =>
       if (entries.find(_.name == name).get.tactic.map(_._2.trim()).contains("master")) status shouldBe "proved" withClue cause
@@ -188,7 +188,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
     val results = entries.map(e => runAuto(e.name, e.model))
     val writer = new PrintWriter(benchmarkName + "_auto.csv")
     writer.write(
-      "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv).mkString("\r\n"))
+      "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv()).mkString("\r\n"))
     writer.close()
     forEvery(tableResults(results)) { (_, name, status, _, cause) =>
       if (entries.find(_.name == name).get.tactic.map(_._2.trim()).contains("master")) status shouldBe "proved" withClue cause
@@ -201,7 +201,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
     val results = entries.map(e => runInvGen(e.name, e.model))
     val writer = new PrintWriter(benchmarkName + "_invgen.csv")
     writer.write(
-      "Name,Status,Timeout[min],Duration total[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv).mkString("\r\n"))
+      "Name,Status,Timeout[min],Duration total[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv()).mkString("\r\n"))
     writer.close()
     if (genCheck) {
       forEvery(tableResults(results)) { (_, name, status, _, cause) =>

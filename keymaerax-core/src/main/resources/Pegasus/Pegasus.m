@@ -39,7 +39,8 @@ newf=Join[f,Table[0,{i,Length[parameters]}]];
 
 
 InvGen[parametricProb_List]:=Catch[Module[
-{problem,pre1,post1,pre,f,vars,evoConst,post,preImpliesPost,postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,polyList,invlist,cuts,cutlist}, 
+{problem,pre1,post1,pre,f,vars,evoConst,post,preImpliesPost,postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,polyList,invlist,cuts,cutlist,strat,hint,
+(*ProofHint,Unknown,FirstIntegral,Darboux,Barrier*)}, 
 
 (* Bring symbolic parameters into the dynamics *)
 problem = AugmentWithParameters[parametricProb];
@@ -69,19 +70,19 @@ Print[class];
 strategies={};
 strategies = class/.{
  {1,CLASSES_List}-> {
- Strategies`OneDimensional`OneDimPotential, 
- Strategies`OneDimensional`OneDimReach
+ {Strategies`OneDimensional`OneDimPotential, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]}, 
+ {Strategies`OneDimensional`OneDimReach, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]}
  }, 
 (* {dim_,{"Constant"}}-> ConstantStrat, *)
 (* {2,{"Linear"}}-> PlanarLinearStrat, *)
 (* {dim_,{"Linear"}}-> GeneralLinearStrat, *)
 (* {dim_,{"Multi-affine"}}-> MultiLinearStrat, *)
 {dim_, CLASSES_List}-> {
-Strategies`GenericNonLinear`SummandFacts,
-Strategies`GenericNonLinear`FirstIntegrals,
-Strategies`GenericNonLinear`DbxPoly,
-Strategies`GenericNonLinear`BarrierCert,
-Strategies`GenericNonLinear`SummandFacts
+{Strategies`GenericNonLinear`SummandFacts, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]},
+{Strategies`GenericNonLinear`FirstIntegrals, Symbol["kyx`ProofHint"]==Symbol["kyx`FirstIntegral"]},
+{Strategies`GenericNonLinear`DbxPoly, Symbol["kyx`ProofHint"]==Symbol["kyx`Darboux"]},
+{Strategies`GenericNonLinear`BarrierCert, Symbol["kyx`ProofHint"]==Symbol["kyx`Barrier"]},
+{Strategies`GenericNonLinear`SummandFacts, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]}
 }
 };
 
@@ -89,7 +90,8 @@ invlist=True;
 cutlist={};
 (* For each strategy *)
 Do[
-Print["Trying: ",ToString[strat]];
+{strat,hint}=strathint;
+Print["Trying: ",ToString[strat]," ",hint];
 (* Compute polynomials for the algebraic decomposition of the state space *)
 polyList=strat[{pre,{f,vars,evoConst},post}]//DeleteDuplicates;
 Print["Generated polynomials: ",polyList];
@@ -99,16 +101,18 @@ inv=InvariantExtractor`DWC[pre, post, {f,vars,evoConst}, polyList, {}];
 
 (* Simplify invariant w.r.t. the domain constraint *)
 {inv,cuts}=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
-Print["Extracted (simplified) invariants: ",inv];
+
+Print["Extracted (simplified) invariants: ",inv," ",cuts];
 
 (* Needs something like this?
- evoConst=And[evoConst,inv[[1]]]; *)
+ ecvoConst=And[evoConst,inv[[1]]]; *)
 (* Implementation sanity check *)
 If[ListQ[cuts],,Print["ERROR, NOT A LIST: ",cuts];Throw[{}]];
 
-invlist=And[invlist,inv];
-cutlist=Union[cuts,cutlist];
-evoConst=And[evoConst,inv];
+If[TrueQ[inv], Print["Skipped"],
+	invlist=And[invlist,inv];
+	cutlist=Union[Map[{#,hint}&,cuts],cutlist];
+	evoConst=And[evoConst,inv]];
 
 post=Assuming[evoConst, FullSimplify[post, Reals]];
 Print["Inv: ",inv];
@@ -117,7 +121,7 @@ Print["Post: ",post];
 invImpliesPost=CheckSemiAlgInclusion[evoConst, post, vars];
 If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{{invlist,cutlist}, True}],
 Print["Generated invariant does not imply postcondition. Bad luck; returning what I could find."]]
-,{ strat, strategies}(* End Do loop *)];
+,{strathint, strategies}(* End Do loop *)];
 
 (* Throw whatever invariant was last computed *)
 Throw[{{invlist,cutlist}, False}]

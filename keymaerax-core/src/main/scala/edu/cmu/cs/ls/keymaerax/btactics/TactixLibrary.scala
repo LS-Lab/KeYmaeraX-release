@@ -63,6 +63,9 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
   /** Default generator for loop invariants and differential invariants to use.
     * @see [[InvariantGenerator]] */
   var invGenerator: Generator[GenProduct] = FixedGenerator(Nil)
+  /** Default generator for differential invariants to use.
+    * @see [[InvariantGenerator]] */
+  var differentialInvGenerator: Generator[GenProduct] = InvariantGenerator.differentialInvariantCandidates
 
   /** step: one canonical simplifying proof step at the indicated formula/term position (unless @invariant etc needed) */
   val step          : DependentPositionTactic = "step" by ((pos: Position) =>

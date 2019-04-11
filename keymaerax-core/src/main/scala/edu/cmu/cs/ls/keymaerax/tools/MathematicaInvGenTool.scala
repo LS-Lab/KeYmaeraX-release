@@ -24,9 +24,14 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
   init()
 
-  private val pegasusPath = System.getProperty("user.home") + File.separator + Configuration(Configuration.Keys.PEGASUS_PATH)
+  private val pegasusPath = File.separator + Configuration(Configuration.Keys.PEGASUS_PATH)
+  private val joinedPath = "FileNameJoin[{$HomeDirectory," + scala.reflect.io.File(pegasusPath).segments.map(seg => "\"" + seg + "\"").mkString(",") + "}]"
+  private val setPathsCmd =
+    s"""
+      |SetDirectory[$joinedPath];
+      |AppendTo[$$Path, $joinedPath];""".stripMargin.trim
 
-  def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Either[Seq[Formula],Seq[Formula]]] = {
+  def invgen(ode: ODESystem, assumptions: Seq[Formula], postCond: Formula): Seq[Either[Seq[(Formula, String)],Seq[(Formula, String)]]] = {
     require(postCond.isFOL, "Unable to generate invariant, expected FOL post conditions but got " + postCond.prettyString)
 
     val vars = DifferentialHelper.getPrimedVariables(ode)
@@ -43,17 +48,18 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
     timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT))).getOrElse(-1)
 
+    val pegasusMain = Configuration.getOption(Configuration.Keys.PEGASUS_MAIN_FILE).getOrElse("Pegasus.m")
     val command = s"""
-       |SetDirectory["$pegasusPath"];
-       |Needs["Strategies`","$pegasusPath/Strategies.m"];
-       |Strategies`Pegasus[$problem]""".stripMargin.trim()
+       |$setPathsCmd
+       |Needs["Pegasus`","$pegasusMain"];
+       |Pegasus`InvGen[$problem]""".stripMargin.trim()
 
     try {
       val (output, result) = runUnchecked(command)
       logger.debug("Generated invariant: " + result.prettyString + " from raw output " + output)
-      PegasusM2KConverter.decodeFormulaList(result).map({ case (fmls, flag) =>
+      (PegasusM2KConverter.decodeFormulaList(result)::Nil).map({ case (invariants, flag) =>
         assert(flag == True || flag == False, "Expected invariant/candidate flag, but got " + flag.prettyString)
-        if (flag == True) Left(fmls) else Right(fmls)
+        if (flag == True) Left(invariants) else Right(invariants)
       })
     } catch {
       case ex: ConversionException =>
@@ -77,8 +83,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
 
     val command = s"""
-                  |SetDirectory["$pegasusPath"];
-                  |Needs["LZZ`","$pegasusPath/LZZ.m"];
+                  |$setPathsCmd
+                  |Needs["LZZ`",FileNameJoin["Primitives","LZZ.m"]];
                   |LZZ`InvS[$problem]""".stripMargin.trim()
 
     val (output, result) = runUnchecked(command)
@@ -124,8 +130,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT))).getOrElse(-1)
 
     val command = s"""
-                     |SetDirectory["$pegasusPath"];
-                     |Needs["Refute`","$pegasusPath/Refute.m"];
+                     |$setPathsCmd
+                     |Needs["Refute`","Refute.m"];
                      |Refute`RefuteS[$problem]""".stripMargin.trim()
 
     try {
@@ -161,28 +167,26 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     val pegasusTempDir = Configuration.path(Configuration.Keys.PEGASUS_PATH)
     if (!new File(pegasusTempDir).exists) new File(pegasusTempDir).mkdirs
 
-    val pegasusResourcePath = "/pegasus-mathematica/"
+    val pegasusResourcePath = "/Pegasus/"
     val pegasusResourceNames =
-      "AbstractionPolynomials.m" ::
-      "BarrierCertificateMethod.m" ::
+      "Primitives/BarrierCertificates.m" ::
+      "Primitives/DarbouxPolynomials.m" ::
+      "Primitives/DiscreteAbstraction.m" ::
+      "Primitives/FirstIntegrals.m" ::
+      "Primitives/LZZ.m" ::
+      "Primitives/Primitives.m" ::
+      "Primitives/QualitativeAbstractionPolynomials.m" ::
+      //"Refute.m" ::
+      "Strategies/GenericNonLinear.m" ::
+      "Strategies/OneDimensional.m" ::
       "Classifier.m" ::
-      "DarbouxPolyGen.m" ::
-      "DiscreteAbstraction.m" ::
-      "FirstIntegralGen.m" ::
-      "FirstIntegralMethod.m" ::
-      "Linear.m" ::
-      "LZZ.m" ::
-      "MultiLinear.m" ::
-      "NilpotentMethod.m" ::
-      "OneDimensional.m" ::
-      "PlanarLinear.m" ::
-      "Primitives.m" ::
-      "QualitativeMethods.m" ::
-      "Refute.m" ::
-      "Strategies.m" :: Nil
+      "InvariantExtractor.m" ::
+      "Pegasus.m" :: Nil
 
     pegasusResourceNames.foreach(n => {
-      val pegasusDest = new FileOutputStream(pegasusTempDir + File.separator + n)
+      val pegasusDestPath = pegasusTempDir + File.separator + n
+      if (!new File(pegasusDestPath).getParentFile.exists) new File(pegasusDestPath).getParentFile.mkdirs
+      val pegasusDest = new FileOutputStream(pegasusDestPath)
       val pegasusSrc = Channels.newChannel(getClass.getResourceAsStream(pegasusResourcePath + n))
       pegasusDest.getChannel.transferFrom(pegasusSrc, 0, Long.MaxValue)
     })
