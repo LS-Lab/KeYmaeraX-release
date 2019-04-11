@@ -19,7 +19,7 @@ PostRHSLieDProductFactors::usage="PostRHSFactors[problem] Generate irreducible f
 PostRHSLieNFactors::usage="PostRHSFactors[problem] Generate irreducible factors of the right-hand side and the post-condition."
 PostRHSProductFactors::usage="PostRHSLieDFactors[problem] Generate irreducible factors of the right-hand side and the post-condition, and their Lie derivatives."
 DarbouxPolynomials::usage="DarbouxPolynomials[problem]"
-SummandFactors::usafe="SummandFactors[problem]"
+SummandFactors::usage="SummandFactors[problem]"
 
 
 Begin["`Private`"]
