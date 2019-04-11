@@ -9,6 +9,10 @@ BeginPackage["DiscreteAbstraction`"];
 Abstraction::usage="GenerateDiscreteAbstraction[f_List,vars_List,H_,p_List] 
     Generate a discrete abstraction of a continuous system."
     
+QALazyReach::usage="QALazyReach[precond_, postcond_, system_List, A_List] 
+    Lazily compute the continuous invariant by computing the reachable set in the abstraction from the initial set of states using techniques from 
+    Qualitative Analysis. N.B. Assumes that the polynomials in the abstraction are factors of the right-hand side of the ODE."
+
 LazyReach::usage="LazyReach[precond_, postcond_, system_List, A_List] 
     Lazily compute the continuous invariant by computing the reachable set in the abstraction from the initial set of states."
 
@@ -153,6 +157,38 @@ If[TrueQ[Reduce[condition, Reals]], False, transition]
 ]
 
 
+ValidateTransitionQA[transition_DirectedEdge, f_List, vars_List]:=Module[{
+state1=transition[[1]],
+state2=transition[[2]],
+context,signcond1,signcond2,pairs,samplePoint,condition
+},
+context=Apply[And, state1];
+(* Get sign conditions for polynomials in A *)
+signcond1=Rest[state1];
+signcond2=Rest[state2];
+
+(* Otherwise, align the corresponding sign conditions: this relies on the ordering from the construction process *)
+pairs = Transpose[{signcond1,signcond2}];
+
+(* Pairs converted to True if the transition can be removed using Cordwell's abstraction method *)
+samplePoint=First[FindInstance[context,vars]];
+condition = pairs/.{
+{p_<0, p_==0} :> TrueQ[(LD[p,f,vars]<=0)/.samplePoint], 
+{p_>0, p_==0} :> TrueQ[(LD[p,f,vars]>=0)/.samplePoint], 
+{p_==0, p_<0} :> TrueQ[(LD[p,f,vars]>0  || LD[p,f,vars]==0)/.samplePoint], 
+{p_==0, p_>0} :> TrueQ[(LD[p,f,vars]<0  || LD[p,f,vars]==0)/.samplePoint],
+{p_==0, p_==0} :> False,
+{p_>0, p_>0} :> False,
+{p_<0, p_<0} :> False,
+{p_<0, p_>0} :> False,
+{p_>0, p_<0} :> False
+};
+condition=Apply[Or,condition];
+
+If[TrueQ[Reduce[condition, Reals]], False, transition]
+]
+
+
 ValidateTransitionTiwari[transition_DirectedEdge, f_List, vars_List]:=Module[{
 state1=transition[[1]],
 state2=transition[[2]]
@@ -237,8 +273,10 @@ MAP=OptionValue[Parallel]/.{True-> ParallelMap, _->Map};
 (* Use the selected way of removing discrete transitions to construct the transition relation T from Tn *)
 T=OptionValue[TransitionRemovalMethod]/.{
 "Tiwari-FMSD"          -> Complement[MAP[ValidateTransitionTiwari[#,f,vars]&, Tn],{False}],
+"QA"                   -> Complement[MAP[ValidateTransitionQA[#,f,vars]&, Tn],{False}],
 "Tiwari-FMSD-strict"   -> Complement[MAP[ValidateTransitionTiwariStrict[#,f,vars]&, Tn],{False}],
 "LZZ-vanilla"          -> Complement[MAP[ValidateTransitionLZZvanilla[#,f,vars]&, Tn],{False}],
+"LZZ-opt"              -> Complement[MAP[ValidateTransitionLZZopt[#,f,vars]&, Tn],{False}],
 "LZZ-opt"              -> Complement[MAP[ValidateTransitionLZZopt[#,f,vars]&, Tn],{False}],
                      _ -> Tn
 };
@@ -393,6 +431,11 @@ SIMPLIFY=OptionValue[SimplifyInvariant]/.{FullSimplify-> FullSimplify, Simplify 
 (* Return the union of all the visited states *)
 If[Length[Visited]==0, False, Simplify[Apply[Or, Map[Apply[And, #]&,Visited]],Reals]]
 ]
+
+
+Options[QALazyReach]={TransitionRemovalMethod->"QA", Parallel->False, SimplifyInvariant->Simplify, WorkingPrecision -> \[Infinity] };
+(* Qualitative analysis version of LazyReach. N.B. Assumes the polynomials in A come from the factors of the right-hand side. *)
+QALazyReach[precond_, postcond_, system_List, A_List, opts:OptionsPattern[]]:=LazyReach[precond,postcond,system,A,TransitionRemovalMethod->"QA"];
 
 
 End[]
