@@ -168,7 +168,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
   it should "generate invariants" ignore withMathematica { tool =>
     setTimeouts(tool)
     val results = entries.map(e => runInvGen(e.name, e.model))
-    val writer = new PrintWriter(benchmarkName + "_invgen.csv")
+    val writer = new PrintWriter(benchmarkName + "_invgen_saturate_proofhints.csv")
     writer.write(
       "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
     writer.close()
@@ -178,7 +178,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
     setTimeouts(tool)
     Configuration.set(Configuration.Keys.PEGASUS_MAIN_FILE, "Pegasus_BarrierOnly.m", saveToFile = false)
     val results = entries.map(e => runInvGen(e.name, e.model))
-    val writer = new PrintWriter(benchmarkName + "_invgen_barrier.csv")
+    val writer = new PrintWriter(benchmarkName + "_invgen_barrier_proofhints.csv")
     writer.write(
       "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
     writer.close()
@@ -188,17 +188,27 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
     setTimeouts(tool)
     Configuration.set(Configuration.Keys.PEGASUS_MAIN_FILE, "Pegasus_DbxOnly.m", saveToFile = false)
     val results = entries.map(e => runInvGen(e.name, e.model))
-    val writer = new PrintWriter(benchmarkName + "_invgen_dbx.csv")
+    val writer = new PrintWriter(benchmarkName + "_invgen_dbx_proofhints.csv")
     writer.write(
       "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
     writer.close()
   }
 
-  it should "generate invariants with summands and first integrals only" in withMathematica { tool =>
+  it should "generate invariants with summands only" in withMathematica { tool =>
     setTimeouts(tool)
-    Configuration.set(Configuration.Keys.PEGASUS_MAIN_FILE, "Pegasus_SummandFirstIntegralsOnly.m", saveToFile = false)
+    Configuration.set(Configuration.Keys.PEGASUS_MAIN_FILE, "Pegasus_SummandsOnly.m", saveToFile = false)
     val results = entries.map(e => runInvGen(e.name, e.model))
-    val writer = new PrintWriter(benchmarkName + "_invgen_summands.csv")
+    val writer = new PrintWriter(benchmarkName + "_invgen_summands_proofhints.csv")
+    writer.write(
+      "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
+    writer.close()
+  }
+
+  it should "generate invariants with first integrals only" ignore withMathematica { tool =>
+    setTimeouts(tool)
+    Configuration.set(Configuration.Keys.PEGASUS_MAIN_FILE, "Pegasus_FIOnly.m", saveToFile = false)
+    val results = entries.map(e => runInvGen(e.name, e.model))
+    val writer = new PrintWriter(benchmarkName + "_invgen_firstintegrals_proofhints.csv")
     writer.write(
       "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
     writer.close()
