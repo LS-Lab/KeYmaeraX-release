@@ -43,7 +43,7 @@ Union[maxVs,minVs]
 ]
 
 
-SummandFacts[problem_List]:=QualitativeAbstraction`SummandFactors[problem]
+SummandFacts[problem_List]:=DeleteDuplicates[Join[QualitativeAbstraction`SummandFactors[problem],QualitativeAbstraction`SFactorList[problem]]]
 
 
 DbxPoly[problem_List] := QualitativeAbstraction`DarbouxPolynomials[problem, 5, 10]
