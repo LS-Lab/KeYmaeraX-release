@@ -902,7 +902,8 @@ private object DifferentialTactics extends Logging {
               skip,
               proofHint match {
                 case Some(PegasusProofHint(_, Some("Barrier"))) =>
-                  dgBarrier(pos) & done|
+                  dgDbxAuto(pos) & done |
+                    dgBarrier(pos) & done |
                     odeInvariant(tryHard = true, useDw = false)(pos) & done
                 case Some(PegasusProofHint(_, Some("Darboux"))) =>
                   dgDbxAuto(pos) & done |
