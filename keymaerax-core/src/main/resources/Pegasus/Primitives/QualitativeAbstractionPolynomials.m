@@ -19,7 +19,8 @@ PostRHSLieDProductFactors::usage="PostRHSFactors[problem] Generate irreducible f
 PostRHSLieNFactors::usage="PostRHSFactors[problem] Generate irreducible factors of the right-hand side and the post-condition."
 PostRHSProductFactors::usage="PostRHSLieDFactors[problem] Generate irreducible factors of the right-hand side and the post-condition, and their Lie derivatives."
 DarbouxPolynomials::usage="DarbouxPolynomials[problem]"
-SummandFactors::usafe="SummandFactors[problem]"
+SummandFactors::usage="SummandFactors[problem]"
+SFactorList::usage="SFactorList[problem]"
 
 
 Begin["`Private`"]
@@ -141,6 +142,16 @@ Select[Map[FactorSquareFreeList,
 If[Head[#]===Plus, Apply[List,#],#]&/@f//Flatten//Expand]//Flatten, 
 Not[NumericQ[#]]&]
 ]
+
+
+(* Obtain a list of factors by Solve insted of Factor *)
+SFactorList[problem_List] := Module[{pre,f,vars,Q,post,factorList,a,b},
+{pre,{f,vars,Q},post}=problem;
+factorList = {};
+For[i = 1, i <= Length[f], i++, For[j = 1, j <= Length[vars], j++, factorList = Join[factorList, Flatten[Solve[f[[i]] == 0, vars[[j]], Reals]]]]
+];
+Select[factorList/.{Rule[a_,b_] -> a-b}/.{ConditionalExpression[a_,_]-> a},PolynomialQ[#,vars]&]
+];
 
 
 End[]

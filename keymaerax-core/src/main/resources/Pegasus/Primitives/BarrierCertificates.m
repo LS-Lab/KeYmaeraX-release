@@ -98,12 +98,6 @@ If[ConjunctiveIneqSetQ[S],
 ]]
 
 
-JacobianMatrix[f_List?VectorQ,x_List]:=Outer[D,f,x]/;Equal@@(Dimensions/@{f,x})
-
-JacobianDeterminant[f_List?VectorQ,x_List]:=Det[JacobianMatrix[f,x]]/;Equal@@(Dimensions/@{f,x})
-JacobianDeterminant[probC1[[2]][[1]],probC1[[2]][[2]]]
-
-
 HeuristicMonomials[vars_,vf_]:=Module[ {},
 DeleteDuplicates[Flatten[Function[x,monomialList[x,vars]]/@vf]]]
 

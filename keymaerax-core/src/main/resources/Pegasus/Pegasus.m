@@ -99,6 +99,7 @@ Print["Generated polynomials: ",polyList];
 (* Extract an invariant from the algebraic decomposition *)
 inv=InvariantExtractor`DWC[pre, post, {f,vars,evoConst}, polyList, {}];
 
+Print["Extracted invariants: ",inv];
 (* Simplify invariant w.r.t. the domain constraint *)
 {inv,cuts}=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
 
@@ -111,13 +112,14 @@ If[ListQ[cuts],,Print["ERROR, NOT A LIST: ",cuts];Throw[{}]];
 
 If[TrueQ[inv], Print["Skipped"],
 	invlist=And[invlist,inv];
-	cutlist=Union[Map[{#,hint}&,cuts],cutlist];
+	cutlist=Join[cutlist,Map[{#,hint}&,Select[cuts,Not[TrueQ[#]]&]]];
 	evoConst=And[evoConst,inv]];
 
 post=Assuming[evoConst, FullSimplify[post, Reals]];
 Print["Inv: ",inv];
-Print["Invs: ",invlist," Evo: "evoConst];
-Print["Post: ",post];
+Print["Invs: ",invlist];
+Print["Cuts: ",cutlist];
+Print["Evo: ",evoConst," Post: ",post];
 invImpliesPost=CheckSemiAlgInclusion[evoConst, post, vars];
 If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{{invlist,cutlist}, True}],
 Print["Generated invariant does not imply postcondition. Bad luck; returning what I could find."]]
