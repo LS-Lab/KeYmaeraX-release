@@ -176,9 +176,9 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
       "Primitives/LZZ.m" ::
       "Primitives/Primitives.m" ::
       "Primitives/QualitativeAbstractionPolynomials.m" ::
-      //"Refute.m" ::
       "Strategies/GenericNonLinear.m" ::
       "Strategies/OneDimensional.m" ::
+      "Refute.m" ::
       "Classifier.m" ::
       "InvariantExtractor.m" ::
       "Pegasus.m" :: Nil

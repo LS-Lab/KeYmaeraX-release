@@ -696,8 +696,9 @@ private object DifferentialTactics extends Logging {
   }
 
 
-  /** Counterexample finder
-    * Fails with an error message if it finds a counterexample but succeeds in all other cases
+  /** ODE counterexample finder
+    * Fails with an error message if it finds a counterexample at the position it is called
+    * but succeeds in all other cases
     * (including when the sequent or position are not of the expected shape)
     */
   lazy val cexCheck: DependentPositionTactic = "cexCheck" by ((pos: Position, seq:Sequent) => {
