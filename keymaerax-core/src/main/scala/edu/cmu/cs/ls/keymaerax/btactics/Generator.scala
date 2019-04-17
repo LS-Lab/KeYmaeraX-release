@@ -21,7 +21,7 @@ object Generator {
     * @tparam A the type of results that are being generated.
     * @author Stefan Mitsch
     */
-  type Generator[A] = ((Sequent, Position) => Stream[A])
+  type Generator[A] = (Sequent, Position) => Stream[A]
 }
 
 /** Generator always providing a fixed list as output. */
@@ -43,8 +43,12 @@ class ConfigurableGenerator[A](var products: Map[Expression,Seq[A]] = Map[Expres
   /** Finds products that match the program `prg` either literally, or if ODE then without evolution domain constraint. */
   private def findPrgProducts(prg: Program): Stream[A] = prg match {
     case sys@ODESystem(ode, _) =>
-      products.find({ case (ODESystem(key, _), _) => ode == key case _ => false }).
-        getOrElse(() -> findConditionalDiffInv(sys))._2.distinct.toStream
+      val odeProducts = products.find({ case (ODESystem(key, _), _) => ode == key case _ => false })
+      val extractedConditionalProducts = odeProducts.map(p => (
+        p._1,
+        p._2.map(extractConditionalDiffInv(DifferentialHelper.atomicOdes(p._1.asInstanceOf[ODESystem]), _)).
+          filter(_.isDefined).flatten))
+      extractedConditionalProducts.getOrElse(() -> findConditionalDiffInv(sys))._2.distinct.toStream
     case _ => products.getOrElse(prg, Nil).distinct.toStream
   }
 
@@ -58,13 +62,16 @@ class ConfigurableGenerator[A](var products: Map[Expression,Seq[A]] = Map[Expres
           NonSubstUnificationMatch.unifier(subs)(key) == ode.ode
         case _ => false
       }).map({ case (_, odeProducts) =>
-        odeProducts.map({
-          case (Imply(Equal(xp: DifferentialSymbol, e), invCandidate), hint) =>
-            if (DifferentialHelper.atomicOdes(ode.ode).exists(a => a.xp == xp && a.e == e)) {
-              Some((invCandidate, hint).asInstanceOf[A])
-            } else None
-          case inv => Some(inv)
-        })
-      }).getOrElse(Nil).filter(_.isDefined).map(_.get).distinct
+        odeProducts.map(extractConditionalDiffInv(DifferentialHelper.atomicOdes(ode.ode), _))
+      }).getOrElse(Nil).filter(_.isDefined).flatten.distinct
+  }
+
+  /** Extracts the right-hand side of a conditional differential invariant. */
+  private def extractConditionalDiffInv(odeAtoms: List[AtomicODE], product: A): Option[A] = product match {
+    case (Imply(Equal(xp: DifferentialSymbol, e), invCandidate), hint) =>
+      if (odeAtoms.exists(a => a.xp == xp && a.e == e)) {
+        Some((invCandidate, hint).asInstanceOf[A])
+      } else None
+    case _ => Some(product)
   }
 }

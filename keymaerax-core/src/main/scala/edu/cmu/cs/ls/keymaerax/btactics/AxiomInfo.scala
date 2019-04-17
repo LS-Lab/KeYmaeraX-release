@@ -501,6 +501,8 @@ object DerivationInfo {
     new DerivedAxiomInfo("DGd diamond differential ghost constant converse", "DGCdc", "DGCdc", unsure, {case () => useAt(DerivedAxioms.DGCddifferentialghostconstconv)}),
     new DerivedAxiomInfo("DGd diamond differential ghost constant exists", "DGCde", "DGCde", unsure, {case () => useAt(DerivedAxioms.DGCddifferentialghostconstexists)}),
     new DerivedAxiomInfo("DCd diamond differential cut", "DCd", "DCd", unsure, {case () => useAt(DerivedAxioms.DCddifferentialcut)}),
+    new DerivedAxiomInfo("leave within closed <=", "leaveWithinClosed", "leaveWithinClosed", unsure, {case () => useAt(DerivedAxioms.leaveWithinClosed)}),
+    new DerivedAxiomInfo("open invariant closure >", "openInvariantClosure", "openInvariantClosure", unsure, {case () => useAt(DerivedAxioms.openInvariantClosure)}),
     new DerivedAxiomInfo("DWd diamond differential weakening", "DWd", "DWd", unsure, {case () => useAt(DerivedAxioms.DWddifferentialweakening)}),
     new DerivedAxiomInfo("DWd2 diamond differential weakening", "DWd2", "DWd2", unsure, {case () => useAt(DerivedAxioms.DWd2differentialweakening)}),
     new DerivedAxiomInfo(",d commute", "commaCommuted", "commaCommuted", unsure, {case () => useAt(DerivedAxioms.commaCommuted)}),
@@ -607,6 +609,7 @@ object DerivationInfo {
     new DerivedAxiomInfo(">= reflexive", ">=R", "greaterEqualReflexive", false, {case () => useAt(DerivedAxioms.greaterEqualReflex)}),
     new DerivedAxiomInfo("= commute", "=C", "equalCommute", true, {case () => useAt(DerivedAxioms.equalCommute)}),
     new DerivedAxiomInfo("<=", "<=", "lessEqual", true, {case () => useAt(DerivedAxioms.lessEqual)}),
+    new DerivedAxiomInfo(">=", ">=", "greaterEqual", true, {case () => useAt(DerivedAxioms.greaterEqual)}),
     new DerivedAxiomInfo("! <"
       , AxiomDisplayInfo(("¬<","!<"), "<span class=\"k4-axiom-key\">¬(f<g)</span>↔(f≥g)")
       , "notLess", true, {case () => useAt(DerivedAxioms.notLess)}),
@@ -900,7 +903,7 @@ object DerivationInfo {
           (List("J"),List("P"))))
       , List(FormulaArg("J")), _ => ((fml: Formula) => TactixLibrary.loop(fml)): TypedFunc[Formula, BelleExpr]),
     new PositionTacticInfo("loopAuto", "loopAuto",
-      {case () => (gen:Generator.Generator[Formula]) => TactixLibrary.loop(gen)}, needsGenerator = true),
+      {case () => (gen:Generator.Generator[GenProduct]) => TactixLibrary.loop(gen)}, needsGenerator = true),
     new InputPositionTacticInfo("throughout",
       RuleDisplayInfo("Loop Induction Throughout",(List("&Gamma;"), List("[{a;{b;c};d}*]P", "&Delta;")),
         List(
@@ -1162,6 +1165,23 @@ object DerivationInfo {
     new DerivedRuleInfo("con convergence flat"
       , RuleDisplayInfo(SimpleDisplayInfo("con flat", "conflat"), SequentDisplay("J"::Nil, "<a*>P"::Nil), SequentDisplay("\\exists v (v<=0&J)"::Nil, "P"::Nil)::SequentDisplay("v > 0"::"J"::Nil ,"<a>J(v-1)"::Nil)::Nil)
       , "conflat", {case () => HilbertCalculus.useAt(DerivedAxioms.convergenceFlat)}),
+
+    // numerical bound tactics
+    new TacticInfo("intervalArithmetic", "intervalArithmetic",  {case () => IntervalArithmeticV2.intervalArithmetic}, needsTool = true),
+    InputTacticInfo("intervalCutTerms",
+      RuleDisplayInfo(("Interval Arithmetic Cut","intervalCutTerms"),
+        (List("&Gamma;"),List("&Delta;")),
+        /* premises */ List((List("&Gamma;"), List("a <= trm", "trm <= b"), true),
+          (List("&Gamma;", "a <= trm", "trm <= b"), List("&Delta;"), false)))
+      ,List(TermArg("trm")), _ => ((t:Term) => IntervalArithmeticV2.intervalCutTerms(t)): TypedFunc[Term, BelleExpr]),
+    PositionTacticInfo("intervalCut"
+      , RuleDisplayInfo(("Interval Arithmetic Cut", "intervalCut"),
+        (List("&Gamma;"),List("&Delta;")),
+        List((List("&Gamma;"), List("a <= trm", "trm <= b"), true), (List("&Gamma;", "a <= trm", "trm <= b"), List("&Delta;"), false))
+      )
+      , {case () => IntervalArithmeticV2.intervalCut}),
+    new PositionTacticInfo("dCClosure", "dCClosure", {case () => DifferentialTactics.dCClosure(true)}, needsTool = true),
+    new PositionTacticInfo("dIClosure", "dIClosure", {case () => DifferentialTactics.dIClosure}, needsTool = true),
 
     // assertions and messages
     InputTacticInfo("print"

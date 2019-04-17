@@ -7,7 +7,6 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.btactics.TacticIndex.{Branches, TacticRecursors}
-import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.annotation.switch
@@ -37,9 +36,14 @@ object TacticIndex {
 }
 
 trait TacticIndex {
+  /** Recursors pointing to the result positions of `tactic`. */
   def tacticRecursors(tactic: BelleExpr): TacticRecursors
+  /** Returns canonical tactics to try at `expr` restricted to the ones in `restrictTo` (tuple of antecedent and succedent tactics) */
   def tacticFor(expr: Expression, restrictTo: List[AtPosition[_ <: BelleExpr]]): (Option[AtPosition[_ <: BelleExpr]], Option[AtPosition[_ <: BelleExpr]])
+  /** Returns canonical tactics to try at `expr` (tuple of antecedent and succedent tactics) */
   def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]])
+  /** Indicates whether `tactic` is potentially applicable at `expr`. */
+  def isApplicable(expr: Expression, tactic: BelleExpr): Boolean
 }
 
 class DefaultTacticIndex extends TacticIndex {
@@ -144,7 +148,7 @@ class DefaultTacticIndex extends TacticIndex {
 
         } else {
           a match {
-            case _: ODESystem => (TactixLibrary.solve :: Nil, TactixLibrary.ODE :: Nil)
+            case _: ODESystem => (TactixLibrary.solve :: Nil, TactixLibrary.ODE :: TactixLibrary.solve :: Nil)
             case _ => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
           }
         }
@@ -160,6 +164,65 @@ class DefaultTacticIndex extends TacticIndex {
       case True => (Nil, ProofRuleTactics.closeTrue::Nil)
       case False => (ProofRuleTactics.closeFalse::Nil, Nil)
       case _ => (Nil, Nil)
+    }
+  }
+
+  def isApplicable(expr: Expression, tactic: BelleExpr): Boolean = {
+    val name = tactic match {
+      case AppliedPositionTactic(BuiltInRightTactic(n), _) => n
+      case AppliedPositionTactic(BuiltInLeftTactic(n), _) => n
+      case DependentTactic(n) => n
+      case DependentPositionTactic(n) => n
+      case _ => ""
+    }
+    name match {
+      // propositional
+      case "orL"    | "orR"    => expr.isInstanceOf[Or]
+      case "andL"   | "andR"   => expr.isInstanceOf[And]
+      case "implyL" | "implyR" => expr.isInstanceOf[Imply]
+      case "equivL" | "equivR" => expr.isInstanceOf[Equiv]
+      case "notL"   | "notR"   => expr.isInstanceOf[Not]
+      case "CloseTrue"         => expr == True
+      case "CloseFalse"        => expr == False
+
+      // box
+      case "assignb"  => expr match { case Box(_: Assign, _) => true case _ => false }
+      case "randomb"  => expr match { case Box(_: AssignAny, _) => true case _ => false }
+      case "choiceb"  => expr match { case Box(_: Choice, _) => true case _ => false }
+      case "testb"    => expr match { case Box(_: Test, _) => true case _ => false }
+      case "composeb" => expr match { case Box(_: Compose, _) => true case _ => false }
+      case "iterateb" | "loop" | "loopauto" =>
+        expr match { case Box(_: Loop, _) => true case _ => false }
+      case "GV"       => expr.isInstanceOf[Box]
+
+      // diamond
+      case "assignd"  => expr match { case Diamond(_: Assign, _) => true case _ => false }
+      case "randomd"  => expr match { case Diamond(_: AssignAny, _) => true case _ => false }
+      case "choiced"  => expr match { case Diamond(_: Choice, _) => true case _ => false }
+      case "testd"    => expr match { case Diamond(_: Test, _) => true case _ => false }
+      case "composed" => expr match { case Diamond(_: Compose, _) => true case _ => false }
+
+      // FOL
+      case "allL" | "allR" | "all stutter" => expr.isInstanceOf[Forall]
+      case "existsL" | "existsR" | "exists stutter" => expr.isInstanceOf[Exists]
+      case "allL2R" | "allR2L" | "equalCommute" => expr.isInstanceOf[Equal]
+      case "abs" => expr match {
+        case Equal(FuncOf(Function("abs", None, Real, Real, true), _), _) => true
+        case FuncOf(Function("abs", None, Real, Real, true), _) => true
+        case _ => false
+      }
+      case "minmax" => expr match {
+        case Equal(FuncOf(Function("min" | "max", None, Tuple(Real, Real), Real, true), _), _) => true
+        case FuncOf(Function("min" | "max", None, Tuple(Real, Real), Real, true), _) => true
+        case _ => false
+      }
+
+      // box/diamond
+      case "solve" | "solveEnd" | "ODE" | "dC" | "dI" | "dW" | "diffInvariant" =>
+        expr match { case Box(_: ODESystem, _) => true case Diamond(_: ODESystem, _) => true case _ => false }
+
+      // fallback to trial-and-error in all other cases
+      case _ => true
     }
   }
 

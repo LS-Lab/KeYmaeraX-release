@@ -12,14 +12,14 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct, PegasusProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.apache.logging.log4j.scala.Logging
 
 import scala.collection.immutable
-import scala.collection.immutable.{IndexedSeq, List, Seq}
+import scala.collection.immutable.{IndexedSeq, List, Nil, Seq}
 
 /**
  * Implementation: provides tactics for differential equations.
@@ -31,8 +31,9 @@ private object DifferentialTactics extends Logging {
 
   private val namespace = "differentialtactics"
 
-  //QE with default timeout for use in ODE tactics
-  private[btactics] def timeoutQE = QE(Nil, None, Some(Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE))))
+  // QE with default timeout for use in ODE tactics (timeout in seconds)
+  private[btactics] val ODE_QE_TIMEOUT = Integer.parseInt(Configuration(Configuration.Keys.ODE_TIMEOUT_FINALQE))
+  private[btactics] def timeoutQE = QE(Nil, None, Some(ODE_QE_TIMEOUT))
 
   /** @see [[HilbertCalculus.DE]] */
   lazy val DE: DependentPositionTactic = new DependentPositionTactic("DE") {
@@ -298,22 +299,14 @@ private object DifferentialTactics extends Logging {
     if (ov.isEmpty) {
       if (FormulaTools.conjuncts(f).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip else dc(f)(pos)
     } else {
-      var freshOld: Variable = TacticHelper.freshNamedSymbol(Variable("old"), origSeq)
-      val ghosts: List[((Term, Variable), BelleExpr)] = ov.map(old => {
-        val (ghost: Variable, ghostPos: Option[Position], nextCandidate) = TacticHelper.findSubst(old, freshOld, origSeq)
-        freshOld = nextCandidate
-        (old -> ghost,
-          ghostPos match {
-            case None if pos.isTopLevel => discreteGhost(old, Some(ghost))(pos) & DLBySubst.assignEquality(pos) &
-              TactixLibrary.exhaustiveEqR2L(hide=false)('Llast)
-            case Some(gp) if pos.isTopLevel => TactixLibrary.exhaustiveEqR2L(hide=false)(gp)
-            case _ if !pos.isTopLevel => discreteGhost(old, Some(ghost))(pos)
-          })
-      }).toList
-      val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
-      val oldified = SubstitutionHelper.replaceFn("old", f, ghosts.map(_._1).toMap)
-      if (FormulaTools.conjuncts(oldified).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip
-      else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(pos ++ PosInExpr(List.fill(posIncrements)(1)))
+      DLBySubst.discreteGhosts(ov, origSeq,
+        (ghosts: List[((Term, Variable), BelleExpr)]) => {
+          val posIncrements = if (pos.isTopLevel) 0 else ghosts.size
+          val oldified = SubstitutionHelper.replaceFn("old", f, ghosts.map(_._1).toMap)
+          if (FormulaTools.conjuncts(oldified).toSet.subsetOf(FormulaTools.conjuncts(ode.constraint).toSet)) skip
+          else ghosts.map(_._2).reduce(_ & _) & dc(oldified)(pos ++ PosInExpr(List.fill(posIncrements)(1)))
+        }
+      )(pos)
     }
   })
 
@@ -895,29 +888,26 @@ private object DifferentialTactics extends Logging {
        else finish)
   })
 
-  /** Fast ODE implementation. Tactic `finish` is executed when fastODE itself cannot find a proof. */
-  private def fastODE(finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
-    lazy val invariantCandidates = try {
-      InvariantGenerator.differentialInvariantGenerator(seq,pos)
-    } catch {
-      case err: Exception =>
-        logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
-        Stream[GenProduct]()
-    }
-
-    //Adds an invariant to the system's evolution domain constraint and tries to establish the invariant via proveWithoutCuts.
-    //Fails if the invariant cannot be established by proveWithoutCuts.
+  /** Fast ODE implementation. Tries the provided `invariantCandidates`. Tactic `finish` is executed when fastODE itself cannot find a proof. */
+  private def fastODE(invariantCandidates: Iterator[GenProduct])(finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+    //Adds invariants to the system's evolution domain constraint and tries to establish them via odeInvariant.
+    //Fails if the invariants cannot be established by odeInvariant.
     val addInvariant = ChooseSome(
-      () => invariantCandidates.iterator,
+      () => invariantCandidates,
       (prod: GenProduct) => prod match {
-        case (inv, None) =>
+        case (inv, proofHint) =>
           DebuggingTactics.debug(s"[ODE] Trying to cut in invariant candidate: $inv") &
             /*@note diffCut skips previously cut in invs, which means <(...) will fail and we try the next candidate */
             diffCut(inv)(pos) <(
               skip,
-              odeInvariant()(pos)) &
+              proofHint match {
+                case Some(PegasusProofHint(_, None)) => odeInvariant(tryHard = true, useDw = false)(pos) & done
+                case Some(AnnotationProofHint(tryHard)) => odeInvariant(tryHard = tryHard, useDw = false)(pos) & done
+                case _ => odeInvariant(tryHard = false, useDw = false)(pos) & done
+              }
+            ) &
           // continue outside <(skip, ...) so that cut is proved before used
-          (odeInvariant()(pos) | fastODE(finish)(pos)) &
+          (odeInvariant()(pos) | fastODE(invariantCandidates)(finish)(pos) /* with next option from iterator */) &
           DebuggingTactics.debug("[ODE] Inv Candidate done")
       }
     )
@@ -931,7 +921,15 @@ private object DifferentialTactics extends Logging {
     * @author Nathan Fulton
     * @author Stefan Mitsch
     */
-  lazy val mathematicaODE: DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+  lazy val mathematicaSplittingODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
+    seq.sub(pos) match {
+      case Some(Box(sys@ODESystem(_, _), And(_, _))) =>
+        boxAnd(pos) & andR(pos) <(mathematicaSplittingODE(pos) & done, mathematicaSplittingODE(pos)) | mathematicaODE(pos)
+      case _ => mathematicaODE(pos)
+    }
+  })
+
+  lazy val mathematicaODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "ODE automation only applicable to top-level succedents")
 
     seq.sub(pos) match {
@@ -949,6 +947,14 @@ private object DifferentialTactics extends Logging {
           // Ask for invariants and recursively tries to diff cut them in
           // aborts with error if no extra cuts were found
           fastODE(
+            try {
+              InvariantGenerator.differentialInvariantGenerator(seq,pos).iterator
+            } catch {
+              case err: Exception =>
+                logger.warn("Failed to produce a proof for this ODE. Underlying cause: ChooseSome: error listing options " + err)
+                Stream[GenProduct]().iterator
+            }
+          )(
             //@note aborts with error if the ODE was left unchanged -- invariant generators failed
             assertT((sseq: Sequent, ppos: Position) => !sseq.sub(ppos ++ PosInExpr(0::Nil)).contains(sys),
               failureMessage
@@ -1440,7 +1446,7 @@ private object DifferentialTactics extends Logging {
     *                use tryHard = true when speed is secondary & certain that P is invariant
     *                use tryHard = false when speed is of interest e.g., within automated invariant search
     */
-  def odeInvariant(tryHard:Boolean = false): DependentPositionTactic = "odeInvariant" by ((pos:Position) => {
+  def odeInvariant(tryHard: Boolean = false, useDw: Boolean = true): DependentPositionTactic = "odeInvariant" by ((pos:Position) => {
     require(pos.isSucc && pos.isTopLevel, "ODE invariant only applicable in top-level succedent")
     //@note dW does not need algebra tool
     //require(ToolProvider.algebraTool().isDefined,"ODE invariance tactic needs an algebra tool (and Mathematica)")
@@ -1451,11 +1457,13 @@ private object DifferentialTactics extends Logging {
         ODEInvariance.sAIclosedPlus(bound = 3)(pos) |
         //todo: duplication currently necessary between sAIclosedPlus and sAIclosed due to unresolved Mathematica issues
         ODEInvariance.sAIclosed(pos) |
+        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(QE,skip)) &
         ODEInvariance.sAIRankOne(doReorder = true, skipClosed = false)(pos)
       }
       else {
         ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
-        ODEInvariance.sAIRankOne(doReorder = false, skipClosed = false)(pos)
+        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(QE,skip)) & //strengthen to the closure if applicable
+        ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
       }
 
     //Add constant assumptions to domain constraint
@@ -1465,9 +1473,14 @@ private object DifferentialTactics extends Logging {
     DifferentialTactics.domSimplify(pos) &
     DebuggingTactics.debug("odeInvariant close") &
     (
-      (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
-      invTactic |
-      DebuggingTactics.error("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
+      if (useDw) {
+        (DifferentialTactics.diffWeakenG(pos) & timeoutQE & done) |
+          invTactic |
+          DebuggingTactics.error("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
+      } else {
+        invTactic |
+          DebuggingTactics.error("odeInvariant failed to prove postcondition invariant for ODE. Try using a differential cut to refine the domain constraint first.")
+      }
     )
   })
 
@@ -1497,8 +1510,8 @@ private object DifferentialTactics extends Logging {
             (
             //note: repeated dW&QE not needed if Pegasus reports a correct dC chain
             //(DifferentialTactics.diffWeakenG(pos) & QE & done) |
-            ODEInvariance.sAIclosedPlus(1)(pos) |
-            ODEInvariance.sAIRankOne(false)(pos)) & done)
+            ODEInvariance.sAIclosedPlus(bound=1)(pos) |
+            ODEInvariance.sAIRankOne(doReorder=false,skipClosed = true)(pos)) & done)
         )
     }
   })
@@ -1594,4 +1607,161 @@ private object DifferentialTactics extends Logging {
     result
   }
 
+  // TODO: these Lemmas are just the symmetric versions of some DerivedAxioms.
+  // Using PosInExpr(1::Nil) as key in chaseCustom does not seem to work.
+  private lazy val minPosAnd = remember("min(f_(), g_())>0<->f_()>0 & g_()>0".asFormula, QE & done)
+  private lazy val minNonnegAnd = remember("min(f_(), g_())>=0<->f_()>=0 & g_()>=0".asFormula, QE & done)
+  private lazy val maxPosOr = remember("max(f_(), g_())>0<->f_()>0 | g_()>0".asFormula, QE & done)
+  private lazy val maxNonnegOr = remember("max(f_(), g_())>=0<->f_()>=0 | g_()>=0".asFormula, QE & done)
+  private lazy val minusPos = remember("f_()-g_()>0 <-> f_()>g_()".asFormula, QE & done)
+  private lazy val minusNonneg = remember("f_()-g_()>=0 <-> f_()>=g_()".asFormula, QE & done)
+  /** chases min/max Less/LessEqual 0 to conjunctions and disjunctions */
+  val chaseMinMaxInequalities : DependentPositionTactic = chaseCustom({
+    case Greater(FuncOf(m, _), Number(n)) if m == minF =>
+      (minPosAnd.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)::Nil
+    case GreaterEqual(FuncOf(m, _), Number(n)) if m == minF =>
+      (minNonnegAnd.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)::Nil
+    case Greater(FuncOf(m, _), Number(n)) if m == maxF =>
+      (maxPosOr.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)::Nil
+    case GreaterEqual(FuncOf(m, _), Number(n)) if m == maxF =>
+      (maxNonnegOr.fact, PosInExpr(0::Nil), PosInExpr(0::Nil)::PosInExpr(1::Nil)::Nil)::Nil
+    case _ => Nil
+  })
+
+  private def interiorImplication: DependentTactic = "ANON" by { (seq: Sequent) =>
+    require (seq.succ.length == 1)
+    require (seq.ante.length == 1)
+    (seq.ante(0), seq.succ(0)) match {
+      case (And(p, q), And(r, s)) =>
+        andL(-1) & andR(1) & Idioms.<(
+          hideL(-2) & interiorImplication,
+          hideL(-1) & interiorImplication
+        )
+      case (Or(p, q), Or(r, s)) =>
+        orR(1) & orL(-1) & Idioms.<(
+          hideR(2) & interiorImplication,
+          hideR(1) & interiorImplication
+        )
+      case (Less(a, b), LessEqual(c, d)) if a == c && b == d => useAt("<=")(1) & orR(1) & closeId
+      case (Greater(a, b), GreaterEqual(c, d)) if a == c && b == d => useAt(">=")(1) & orR(1) & closeId
+      case (False, _) => closeF
+      case (x, y) if x == y => closeId
+      case _ =>
+        throw new BelleThrowable("strengthenInequalities expected ante and succ of same shape, but got " + seq)
+    }
+  }
+
+  /**
+    * Strengthens the postcondition to its interior and cuts in its closure
+    * (provided the closure holds initially).
+    *
+    * G |- [{ode&p&closure(q)}]interior(q)           G |- interior(q) (or closure(q) if cutInterior=false)
+    * ----------------------------------------------------------------dCClosure
+    * G |- [{ode&p}]q
+    *
+    * Cuts interior(q) true initially by default (but this can be set to closure(q) instead)
+    * interior(q) and closure(q) are wrt. to the negation normal form (NNF) of q
+    * @see [[FormulaTools.interior]]
+    * @see [[FormulaTools.closure]]
+    *
+    */
+  def dCClosure(cutInterior:Boolean = true): DependentPositionTactic = "dCClosure" byWithInput (cutInterior,(pos:Position,seq: Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "dCClosure expects to be called on top-level succedent")
+
+    val (ode,p_fml,post) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,p)) => (sys.ode,sys.constraint,p)
+      case _ => throw new BelleThrowable("dCClosure expects succedent of shape [{ode&p}]q")
+    }
+
+    val (q_fml, propt) = semiAlgNormalize(post)
+
+    /* Apply the semialg normalization step */
+    val starter = propt.map(pr => useAt(pr)(pos ++ PosInExpr(1 :: Nil))).getOrElse(skip)
+
+    val interior = FormulaTools.interior(q_fml)
+    val closure = FormulaTools.closure(q_fml)
+
+    val (mm_fmlGt, proptGt) = maxMinGtNormalize(interior)
+    val (mm_fmlGe, proptGe) = maxMinGeqNormalize(closure)
+
+    //NOTE: mm_fmlGt should be identical to mm_fmlGe except with > instead of >=
+
+    /* Apply/Undo the max-min normalization steps */
+
+    val (maxminGt, backGt) = proptGt match {
+      case None => (skip, skip)
+      case Some(pr) => (useAt(pr)(pos ++ PosInExpr(1 :: Nil)), useAt(pr, PosInExpr(1 :: Nil))(pos ++ PosInExpr(1 :: Nil)))
+    }
+
+    val (backGe1, backGe2) = proptGe match {
+      case None => (skip, skip)
+      case Some(pr) => (useAt(pr, PosInExpr(1 :: Nil))(pos ++ PosInExpr(0::1::1:: Nil)), useAt(pr, PosInExpr(1 :: Nil))(pos))
+    }
+
+    /* cut right subgoal */
+    starter &
+    cutR(if(cutInterior) interior else closure)(pos) <(
+      skip,
+      // Turn postcondition into interior
+      implyR(pos) & generalize(interior)(pos) <(
+        maxminGt & useAt("open invariant closure >")(pos) <(
+          backGt & backGe1 & hideL('Llast),
+          backGe2 &
+            (if(cutInterior) cohide2(AntePosition(seq.ante.length+1),pos) & interiorImplication
+            else closeId)
+        ),
+        cohideOnlyL('Llast) & interiorImplication
+      )
+    )
+  })
+
+  /**
+    * assume closure of postcondition for proof of invariant interior
+    *
+    * G, p |- [{ode&p}](closure(q)->(interior(q))')          G |- interior(q)
+    * ------------------------------------------------------------------------dIClosure
+    * G |- [{ode&p}]q
+    *
+    * interior(q) and closure(q) are wrt. to the negation normal form (NNF) of q
+    * @see [[FormulaTools.interior]]
+    * @see [[FormulaTools.closure]]
+    *
+    */
+  val dIClosure: DependentPositionTactic = "dIClosure" by ((pos:Position,seq: Sequent) => {
+    require(pos.isTopLevel && pos.isSucc, "dIClosure expects to be called on top-level succedent")
+
+    val (ode,p_fml,post) = seq.sub(pos) match {
+      case Some(Box(sys:ODESystem,p)) => (sys.ode,sys.constraint,p)
+      case _ => throw new BelleThrowable("dIClosure expects succedent of shape [{ode&p}]q")
+    }
+
+    val (q_fml, propt) = semiAlgNormalize(post)
+    /* Apply the semialg normalization step */
+    val starter = propt.map(pr => useAt(pr)(pos ++ PosInExpr(1 :: Nil))).getOrElse(skip)
+
+    val interior = FormulaTools.interior(q_fml)
+
+    val closure = FormulaTools.closure(q_fml)
+
+    starter &
+    cutR(interior)(pos) <(
+      skip, //QE
+      implyR(1) &
+      dCClosure(cutInterior=true)(pos) <(
+        closeId,
+        //dI('full)(pos)
+        DI(pos) & implyR(pos) & andR(pos) <(
+          closeId,
+          DW(pos) & diffRefine(p_fml)(pos) <(
+            generalize(Imply(closure,DifferentialFormula(interior)))(pos) <(
+              hideL(AntePosition(seq.ante.length+1)) & andL('Llast) & hideL('Llast),
+              implyL('Llast) <( implyR(1) & andL('Llast) & closeId , implyR(1) & closeId )
+            )
+            ,
+            diffWeakenG(pos) & implyR(1) & andL(-1) & closeId
+          )
+        )
+      )
+    )
+  })
 }

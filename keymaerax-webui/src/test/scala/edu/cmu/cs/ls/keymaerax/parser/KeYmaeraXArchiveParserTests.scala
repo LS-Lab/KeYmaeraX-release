@@ -1700,5 +1700,17 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |Expected: <unknown>""".stripMargin
   }
 
+  it should "report variables used as functions" in {
+    the [ParseException] thrownBy KeYmaeraXArchiveParser.parse(
+      """ArchiveEntry "Entry 1"
+        | ProgramVariables Real x; End.
+        | Problem x()>0 End.
+        |End.""".stripMargin
+    ) should have message
+      """2:19 type analysis: Entry 1: x declared as a variable of sort Real but used as a function with arguments.
+        |Found:    no arguments at 2:19 to 2:22
+        |Expected: function with arguments""".stripMargin
+  }
+
 
 }

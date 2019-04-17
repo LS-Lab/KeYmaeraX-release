@@ -11,9 +11,10 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.TacticStatistics
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.BenchmarkTests._
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
-import edu.cmu.cs.ls.keymaerax.core.{False, Formula, Imply, Program, Sequent, SuccPos}
+import edu.cmu.cs.ls.keymaerax.core.{Box, False, Formula, Imply, ODESystem, Program, Sequent, SuccPos}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
+import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 
@@ -24,7 +25,8 @@ import org.scalatest.concurrent._
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import org.scalatest.time.{Seconds, Span}
 
-import scala.collection.immutable.IndexedSeq
+import scala.collection.immutable.{IndexedSeq, Map, Nil}
+import scala.reflect.io.File
 
 /**
   * Benchmarks.
@@ -36,6 +38,8 @@ class BenchmarkTests extends Suites(
 //  new TutorialRegressionTester("Basic Benchmark", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/basic.kyx"),
 //  new TutorialRegressionTester("Advanced Benchmark", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/advanced.kyx"),
 //  new TutorialRegressionTester("Nonlinear Benchmark", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx")
+  // export
+//  new BenchmarkExporter("Export", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/basic.kyx")
   // benchmark problems
   new BenchmarkTester("Basic", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/basic.kyx", 300, genCheck=false),
   new BenchmarkTester("Nonlinear", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx", 300, genCheck=true),
@@ -66,13 +70,73 @@ case class BenchmarkResult(name: String, status: String, timeout: Int, totalDura
 def toCsv: String = s"$name,$status,$timeout,$totalDuration,$qeDuration,$invGenDuration,$invCheckDuration,$proofSteps,$tacticSize"
 }
 
+/** Exports to different formats */
+class BenchmarkExporter(val benchmarkName: String, val url: String) extends TacticTestBase {
+
+  private val EXPORT_DIR = "export" + File.separator
+
+  private val content = DatabasePopulator.loadResource(url)
+
+  it should "export KeYmaera X legacy format" ignore {
+    val entries = KeYmaeraXArchiveParser.parse(content, parseTactics = false)
+    val printer = new KeYmaeraXLegacyArchivePrinter()
+    val printedContent = entries.map(printer(_)).mkString("\n\n")
+
+    // @todo tactic legacy format (so far only id -> closeId renamed manually after export)
+    val archive = File(EXPORT_DIR + "legacy")
+    archive.createDirectory()
+    val pw = (archive / File(url.substring(url.lastIndexOf("/")+1))).printWriter()
+    pw.write(printedContent)
+    pw.close()
+  }
+
+  it should "export KeYmaera X stripped" ignore {
+    def stripEntry(e: ParsedArchiveEntry): ParsedArchiveEntry =
+      ParsedArchiveEntry(e.name, e.kind, e.fileContent, e.problemContent, Declaration(Map.empty), e.model, Nil, e.info)
+
+    val entries = KeYmaeraXArchiveParser.parse(content, parseTactics = false)
+    val printer = new KeYmaeraXArchivePrinter()
+    val printedStrippedContent = entries.map(stripEntry).map(printer(_)).mkString("\n\n")
+
+    val archive = File(EXPORT_DIR + "stripped" + url.substring(url.lastIndexOf("/")+1))
+    archive.createDirectory()
+    val pws = archive.printWriter()
+    pws.write(printedStrippedContent)
+    pws.close()
+  }
+
+  it should "export KeYmaera 3 format" in {
+    val printer = KeYmaera3PrettyPrinter
+    val entries = KeYmaeraXArchiveParser.parse(content, parseTactics = false)
+    val printedEntries = entries.map(e =>
+      e.name.replaceAll("[ :\\/\\(\\)]", "_") -> printer.printFile(e.model.asInstanceOf[Formula]))
+
+    val archive = File(EXPORT_DIR + url.substring(url.lastIndexOf("/")+1))
+    archive.createDirectory()
+    printedEntries.foreach(e => {
+      // replace special characters in file name
+      val pw = (archive / File(e._1 + ".key")).printWriter()
+      pw.write(e._2)
+      pw.close()
+    })
+  }
+
+}
+
 @SlowTest
 class BenchmarkTester(val benchmarkName: String, val url: String,
                       val timeout: Int, val genCheck: Boolean) extends TacticTestBase with AppendedClues with Timeouts {
 
   private val entries = {
     println("Reading " + url)
-    DatabasePopulator.readKya(url)
+    try {
+      DatabasePopulator.readKya(url)
+    } catch {
+      case ex: Throwable =>
+        println("Failed reading: " + ex.getMessage)
+        ex.printStackTrace()
+        Nil
+    }
   }
 
   private def tableResults(results: Seq[BenchmarkResult]) = {
@@ -81,7 +145,9 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
   }
 
   private def setTimeouts(tool: ToolOperationManagement): Unit = {
+    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
     Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "120", saveToFile = false)
+    Configuration.set(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT, "120", saveToFile = false)
     Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, "60", saveToFile = false)
     Configuration.set(Configuration.Keys.LOG_QE_DURATION, "true", saveToFile = false)
     tool.setOperationTimeout(120)
@@ -137,9 +203,11 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
     writer.write(
       "Name,Status,Timeout[min],Duration total[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv).mkString("\r\n"))
     writer.close()
-    forEvery(tableResults(results)) { (_, name, status, _, cause) =>
-      if (entries.find(_.name == name).get.tactic.map(_._2.trim()).contains("master")) status shouldBe "proved" withClue cause
-      else if (status == "proved") fail("Learned how to prove " + name + "; add automated tactic to benchmark")
+    if (genCheck) {
+      forEvery(tableResults(results)) { (_, name, status, _, cause) =>
+        if (entries.find(_.name == name).get.tactic.map(_._2.trim()).contains("master")) status shouldBe "proved" withClue cause
+        else if (status == "proved") fail("Learned how to prove " + name + "; add automated tactic to benchmark")
+      }
     }
   }
 
@@ -163,28 +231,34 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
 
       try {
         val Imply(ante, succ) = model
-        val seq = Sequent(IndexedSeq(ante), IndexedSeq(succ))
-        println(s"Generating invariants $name")
-        val invGenStart = System.currentTimeMillis()
-        val candidates = InvariantGenerator.pegasusInvariants(seq, SuccPos(0)).toList
-        val invGenEnd = System.currentTimeMillis()
-        println(s"Done generating (${candidates.map(_._1.prettyString).mkString(",")}) $name")
-        if (candidates.nonEmpty) {
-          println(s"Checking $name")
-          TactixLibrary.invGenerator = FixedGenerator(candidates)
-          val checkStart = System.currentTimeMillis()
-          val proof = proveBy(seq, TactixLibrary.master())
-          val checkEnd = System.currentTimeMillis()
-          println(s"Done checking $name")
+        succ match {
+          case Box(_: ODESystem, _) =>
+            val seq = Sequent(IndexedSeq(ante), IndexedSeq(succ))
+            println(s"Generating invariants $name")
+            val invGenStart = System.currentTimeMillis()
+            val candidates = InvariantGenerator.pegasusCandidates(seq, SuccPos(0)).toList
+            val invGenEnd = System.currentTimeMillis()
+            println(s"Done generating (${candidates.map(c => c._1.prettyString + " (proof hint " + c._2 + ")").mkString(",")}) $name")
+            if (candidates.nonEmpty) {
+              println(s"Checking $name with candidates " + candidates.map(_._1.prettyString).mkString(","))
+              TactixLibrary.invGenerator = FixedGenerator(candidates)
+              val checkStart = System.currentTimeMillis()
+              val proof = proveBy(seq, TactixLibrary.master())
+              val checkEnd = System.currentTimeMillis()
+              println(s"Done checking $name " + (if (proof.isProved) "(proved)" else "(unfinished)"))
 
-          val result =
-            if (proof.isProved) "proved"
-            else if (proof.subgoals.exists(s => s.ante.isEmpty && s.succ.size == 1 && s.succ.head == False)) "disproved"
-            else "unfinished"
-          BenchmarkResult(name, result, timeout, checkEnd - invGenStart,
-            qeDurationListener.duration, invGenEnd - invGenStart, checkEnd - checkStart, proof.steps, 1, None)
-        } else {
-          BenchmarkResult(name, "unfinished", timeout, invGenEnd - invGenStart, invGenEnd - invGenStart, -1, -1, 0, 1, None)
+              val result =
+                if (proof.isProved) "proved"
+                else if (proof.subgoals.exists(s => s.ante.isEmpty && s.succ.size == 1 && s.succ.head == False)) "disproved"
+                else "unfinished"
+              BenchmarkResult(name, result, timeout, checkEnd - invGenStart,
+                qeDurationListener.duration, invGenEnd - invGenStart, checkEnd - checkStart, proof.steps, 1, None)
+            } else {
+              BenchmarkResult(name, "unfinished (gen)", timeout, invGenEnd - invGenStart, invGenEnd - invGenStart, -1, -1, 0, 1, None)
+            }
+          case _ =>
+            println("Skipping " + name + " for unknown shape, expected [{x'=f(x)}]p(x), but got " + ante.prettyString)
+            BenchmarkResult(name, "skipped", timeout, -1, -1, -1, -1, -1, -1, None)
         }
       } catch {
         case ex: TestFailedDueToTimeoutException => BenchmarkResult(name, "timeout", timeout,
@@ -215,11 +289,11 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
             testThread.interrupt()
           })
           val end = System.currentTimeMillis()
-          println(s"Done proving $name")
           val result =
             if (proof.isProved) "proved"
             else if (proof.subgoals.exists(s => s.ante.isEmpty && s.succ.size == 1 && s.succ.head == False)) "disproved"
             else "unfinished"
+          println(s"Done proving $name: " + result + " in " + (end-start) + "ms")
           BenchmarkResult(name, result, timeout, end - start,
             qeDurationListener.duration, -1, -1, proof.steps, TacticStatistics.size(theTactic), None)
         } catch {

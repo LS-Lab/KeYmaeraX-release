@@ -24,7 +24,7 @@ private object ProofRuleTactics extends Logging {
   /**
    * Throw exception if there is more than one open subgoal on the provable.
    */
-  private[btactics] def requireOneSubgoal(provable: ProvableSig, msg: => String) =
+  private[btactics] def requireOneSubgoal(provable: ProvableSig, msg: => String): Unit =
     if(provable.subgoals.length != 1) throw new BelleThrowable(s"Expected exactly one sequent in Provable but found ${provable.subgoals.length}\n" + msg)
 
   def applyRule(rule: Rule): BuiltInTactic = new BuiltInTactic("Apply Rule") {
@@ -34,8 +34,8 @@ private object ProofRuleTactics extends Logging {
     }
   }
 
-  def cut(f: Formula) = new InputTactic("cut", f::Nil) {
-    override def computeExpr(): BelleExpr = new BuiltInTactic(s"$name(${f.prettyString})") {
+  def cut(f: Formula): InputTactic = new InputTactic("cut", f::Nil) {
+    override def computeExpr(): BelleExpr = new BuiltInTactic(name) {
       override def result(provable: ProvableSig): ProvableSig = {
         provable(core.Cut(f), 0)
       }
@@ -70,7 +70,7 @@ private object ProofRuleTactics extends Logging {
     }
   })
 
-  def hide = new DependentPositionTactic("hide") {
+  def hide: DependentPositionTactic = new DependentPositionTactic("hide") {
     //@todo this should not be a dependent tactic, just a by(Position=>Belle)
     override def factory(pos: Position): DependentTactic = pos match {
       case p: AntePosition => new DependentTactic(name) {

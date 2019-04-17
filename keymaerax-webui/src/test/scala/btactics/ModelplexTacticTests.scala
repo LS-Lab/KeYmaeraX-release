@@ -275,7 +275,7 @@ class ModelplexTacticTests extends TacticTestBase {
     testProg2.subgoals.loneElement shouldBe "==> <?((((-1<=fpost&fpost<=(m()-l)/ep())&0<=l)&0<=ep())&lpost=l)&cpost=0;>true".asSequent
 
     val inputs = CGenerator.getInputs(prg)
-    CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter()
+    CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter(printDebugOut = true)
     val code = (new CMonitorGenerator())(testProg.subgoals.head.succ.head, stateVars.toSet, inputs, "Monitor")
     code._1 shouldBe
       """/* Computes distance to safety boundary on prior and current state (>=0 is safe, <0 is unsafe) */

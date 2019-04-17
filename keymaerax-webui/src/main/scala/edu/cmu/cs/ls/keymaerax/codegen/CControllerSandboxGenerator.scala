@@ -36,7 +36,9 @@ class CControllerSandboxGenerator(val monitorKind: String, val logEval: Boolean)
       val prgIVars = ivars.toSet
       assert(prgIVars == inputVars, s"All and only nondeterministically assigned variables should be inputs: expected $prgIVars but got $inputVars")
 
-      CPrettyPrinter.printer = if (logEval) new CExpressionLogPrettyPrinter else new CExpressionPlainPrettyPrinter
+      CPrettyPrinter.printer =
+        if (logEval) new CExpressionLogPrettyPrinter
+        else new CExpressionPlainPrettyPrinter(printDebugOut = false)
 
       val fallbackCode = new CControllerGenerator()(ctrl, vars, inputVars)
 

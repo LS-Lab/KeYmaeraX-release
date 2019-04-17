@@ -57,12 +57,12 @@ object CNoop extends CProgram
 
 /** Prints C expressions. */
 object CPrettyPrinter extends (CExpression => (String, String)) {
-  var printer: (CExpression => (String, String)) = new CExpressionPlainPrettyPrinter
+  var printer: (CExpression => (String, String)) = new CExpressionPlainPrettyPrinter(printDebugOut = false)
   override def apply(e: CExpression): (String, String) = printer(e)
 }
 
 /** Prints expressions in plain C. */
-class CExpressionPlainPrettyPrinter extends (CExpression => (String, String)) {
+class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression => (String, String)) {
 
   /** Ensure to print literals as long double literals to avoid truncation. */
   private def longDoubleLiteral(n: BigDecimal): String = {
@@ -145,16 +145,28 @@ class CExpressionPlainPrettyPrinter extends (CExpression => (String, String)) {
 
     case CIfThenElse(f, ifP, elseP) => "if (" + print(f) + ") {\n" + print(ifP) + "\n} else {\n" + print(elseP) + "\n}"
     case CReturn(e: CExpression) => "return " + print(e) + ";"
-    case CError(retVal: CExpression, msg: String) => s"""printf("Failed %s\\n", "$msg"); return ${print(retVal)};"""
+    case CError(retVal: CExpression, msg: String) =>
+      if (printDebugOut) s"""printf("Failed %s\\n", "$msg"); return ${print(retVal)};"""
+      else s"return ${print(retVal)};"
     case COrProgram(l, r) /* if kind=="boolean" */ =>
-      s"""long double leftDist = OrLeft${uniqueName(l)}(pre,curr,params);
+      if (printDebugOut)
+        s"""long double leftDist = OrLeft${uniqueName(l)}(pre,curr,params);
          |long double rightDist = OrRight${uniqueName(r)}(pre,curr,params);
          |printf("Or distances: %s=%Lf %s=%Lf\\n", "OrLeft${uniqueName(l)}", leftDist, "OrRight${uniqueName(r)}", rightDist);
          |return fmaxl(leftDist, rightDist);""".stripMargin
+      else
+        s"""long double leftDist = OrLeft${uniqueName(l)}(pre,curr,params);
+         |long double rightDist = OrRight${uniqueName(r)}(pre,curr,params);
+         |return fmaxl(leftDist, rightDist);""".stripMargin
     case CAndProgram(l, r) /* if kind=="boolean" */ =>
-      s"""long double leftDist = AndLeft${uniqueName(l)}(pre,curr,params);
+      if (printDebugOut)
+        s"""long double leftDist = AndLeft${uniqueName(l)}(pre,curr,params);
          |long double rightDist = AndRight${uniqueName(r)}(pre,curr,params);
          |printf("And distances: %s=%Lf %s=%Lf\\n", "AndLeft${uniqueName(l)}", leftDist, "AndRight${uniqueName(r)}", rightDist);
+         |return fminl(leftDist, rightDist);""".stripMargin
+      else
+        s"""long double leftDist = AndLeft${uniqueName(l)}(pre,curr,params);
+         |long double rightDist = AndRight${uniqueName(r)}(pre,curr,params);
          |return fminl(leftDist, rightDist);""".stripMargin
   }
 
@@ -569,7 +581,7 @@ class CMpfrPrettyPrinter(precision: Int = 200, roundingMode: String = "MPFR_RNDD
   private def printMpfr(): String = {
     val arithmetic = topExpressions.map(printMpfrArithmetic).filter(_.nonEmpty).mkString("\n")
     val mpfrInit =
-      mpfrVars.toList.sortBy(_._2).map(e => e._2 + s" /* ${new CExpressionPlainPrettyPrinter()(e._1)._2} */").mkString("mpfr_t ", ",\n  ", ";\n\n") +
+      mpfrVars.toList.sortBy(_._2).map(e => e._2 + s" /* ${new CExpressionPlainPrettyPrinter(printDebugOut=false)(e._1)._2} */").mkString("mpfr_t ", ",\n  ", ";\n\n") +
         mpfrVars.values.toList.sorted.map("mpfr_init2(" + _ + ", " + precision + ")").mkString("void mpfrInit() {\n  ", ";\n  ", ";\n}\n")
     val mpfrCompute = {
       val (mpfrVarsLiterals, mpfrTerms) = mpfrVars.toList.partition(_._1 match { case _: CVariable => true case _: CNumber => true case _ => false })

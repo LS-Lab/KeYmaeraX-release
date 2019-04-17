@@ -1411,7 +1411,7 @@ class ProofTaskExpandRequest(db: DBAbstraction, userId: String, proofId: String,
         val (localProvable, parentStep, parentRule) = (node.localProvable, node.children.head.maker.get, node.children.head.makerShortName.get)
         val localProofId = db.createProof(localProvable)
         val innerInterpreter = SpoonFeedingInterpreter(localProofId, -1, db.createProof,
-          RequestHelper.listenerFactory(db), ExhaustiveSequentialInterpreter, 1, strict=false)
+          RequestHelper.listenerFactory(db), ExhaustiveSequentialInterpreter(_, throwWithDebugInfo=false), 1, strict=false)
         val parentTactic = BelleParser(parentStep)
         innerInterpreter(parentTactic, BelleProvable(localProvable))
         innerInterpreter.kill()
@@ -1515,7 +1515,7 @@ class ExportCurrentSubgoal(db: DBAbstraction, userId: String, proofId: String, n
       case Some(goal) =>
         val provable = ProvableSig.startProof(goal)
         val lemma = Lemma.apply(provable, List(ToolEvidence(List("tool" -> "mock"))), None)
-        new KvpResponse("sequent", "Provable: \n" + provable.prettyString + "\n\nLemma:\n" + lemma.toString) :: Nil
+        new KvpResponse("sequent", "Sequent: \n" + goal.toString + "\n\nProvable: \n" + provable.prettyString + "\n\nLemma:\n" + lemma.toString) :: Nil
     }
   }
 }
@@ -1760,7 +1760,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 
               def interpreter(proofId: Int, startNodeId: Int) = new Interpreter {
                 val inner = SpoonFeedingInterpreter(proofId, startNodeId, db.createProof, RequestHelper.listenerFactory(db),
-                  ExhaustiveSequentialInterpreter, 0, strict = false)
+                  ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), 0, strict = false)
 
                 override def apply(expr: BelleExpr, v: BelleValue): BelleValue = try {
                   inner(expr, v)
@@ -1801,7 +1801,7 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
                 }
               } else {
                 //@note execute clicked single-step tactics on sequential interpreter right away
-                val taskId = node.runTactic(userId, ExhaustiveSequentialInterpreter, appliedExpr, ruleName)
+                val taskId = node.runTactic(userId, ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), appliedExpr, ruleName)
                 val info = "Executing " + executionInfo(belleTerm)
                 RunBelleTermResponse(proofId, node.id.toString, taskId, info) :: Nil
               }
@@ -1838,7 +1838,7 @@ class InitializeProofFromTacticRequest(db: DBAbstraction, userId: String, proofI
             //@note if spoonfeeding interpreter fails, try sequential interpreter so that tactics at least proofcheck
             //      even if browsing then shows a single step only
             val tree: ProofTree = DbProofTree(db, proofId)
-            val taskId = tree.root.runTactic(userId, ExhaustiveSequentialInterpreter, tactic, "custom")
+            val taskId = tree.root.runTactic(userId, ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false), tactic, "custom")
             RunBelleTermResponse(proofId, "()", taskId, "") :: Nil
         }
     }

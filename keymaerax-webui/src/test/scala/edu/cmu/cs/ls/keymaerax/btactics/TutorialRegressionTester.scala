@@ -117,7 +117,7 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
       val t = BelleParser.parseWithInvGen(tactic._2, Some(invGen), decls)
 
       val start = System.currentTimeMillis()
-      val proof = db.proveBy(model, t, LazySequentialInterpreter, name)
+      val proof = db.proveBy(model, t, LazySequentialInterpreter(_, throwWithDebugInfo = false), name)
       val end = System.currentTimeMillis()
 
       println(s"Proof Statistics (proved: ${proof.isProved})")

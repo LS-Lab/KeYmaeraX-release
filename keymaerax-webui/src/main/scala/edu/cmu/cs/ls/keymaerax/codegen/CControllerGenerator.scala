@@ -103,7 +103,7 @@ class CMpfrControllerGenerator extends CodeGenerator {
 
   private def printPlain(e: Expression)(implicit exprGenerator: Expression => (String, String)): (String, String) = {
     val printer = CPrettyPrinter.printer
-    CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter
+    CPrettyPrinter.printer = new CExpressionPlainPrettyPrinter(printDebugOut=false)
     val result = exprGenerator(e)
     CPrettyPrinter.printer = printer
     result
@@ -188,11 +188,16 @@ class CDetControllerGenerator extends CodeGenerator {
     case Assign(x, t) => indent + exprGenerator(x)._2 + " = " + exprGenerator(t)._2 + ";"
     case AssignAny(x) => indent + exprGenerator(x)._2 + " = " + INPUTS_NAME + "->" + nameIdentifier(x) + ";"
     case Test(_) => throw new IllegalArgumentException("Compiling tests is not supported")
-    case Loop(c) => throw new IllegalArgumentException("Compiling loops is not supported")
+    case Loop(_) => throw new IllegalArgumentException("Compiling loops is not supported")
     case _: ODESystem => throw new IllegalArgumentException("Compiling ODEs is not supported")
     case Compose(a, b) =>
       s"""${generateProgramBody(a, indent)}
          |${generateProgramBody(b, indent)}""".stripMargin
+    case Choice(Compose(Test(p), a), Compose(Test(Not(q)), Test(True))) if p == q =>
+      // standalone if (without else)
+      s"""${indent}if (${exprGenerator(p)._2}) {
+         |${generateProgramBody(a, indent + "  ")}
+         |$indent}""".stripMargin
     case Choice(Compose(Test(p), a), Compose(Test(Not(q)), b)) if p == q =>
       // find leading tests
       s"""${indent}if (${exprGenerator(p)._2}) {

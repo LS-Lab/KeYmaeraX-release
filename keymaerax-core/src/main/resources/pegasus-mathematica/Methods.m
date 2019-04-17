@@ -45,7 +45,7 @@ PreProcess[expression_]:=Module[{},
 ZeroRHS[
 GeqToLeq[
 GtToLt[
-LogicalExpand[BooleanMinimize[UnequalToLtOrGt[expression], "DNF"]]
+LogicalExpand[BooleanMinimize[UnequalToLtOrGt[LogicalExpand[expression]], "DNF"]]
 ]
 ]
 ]

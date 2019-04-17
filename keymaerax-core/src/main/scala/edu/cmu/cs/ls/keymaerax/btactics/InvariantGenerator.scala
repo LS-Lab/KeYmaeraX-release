@@ -21,7 +21,11 @@ object InvariantGenerator extends Logging {
   /** A proof hint on how to use an invariant. */
   abstract class ProofHint
   /** A tactic proof hint. */
-  case class BelleExprProofHint(t: BelleExpr)
+  case class BelleExprProofHint(t: BelleExpr) extends ProofHint
+  /** Proof hint from Pegasus */
+  case class PegasusProofHint(isInvariant: Boolean, t: Option[BelleExpr]) extends ProofHint
+  /** Proof hint from annotation */
+  case class AnnotationProofHint(tryHard: Boolean) extends ProofHint
 
   type GenProduct = (Formula, Option[ProofHint])
 
@@ -156,13 +160,35 @@ object InvariantGenerator extends Logging {
   lazy val pegasusCandidates: Generator[GenProduct] = pegasus(includeCandidates=true)
   def pegasus(includeCandidates: Boolean): Generator[GenProduct] = (sequent,pos) => sequent.sub(pos) match {
     case Some(Box(ode: ODESystem, post: Formula)) if post.isFOL =>
+      def strictInequality(fml: Formula): Boolean = {
+        FormulaTools.atomicFormulas(fml).exists({
+          case _: Less => true
+          case _: Greater => true
+          case _: NotEqual => true
+          case _ => false
+        })
+      }
+
       ToolProvider.invGenTool() match {
         case Some(tool) =>
           lazy val pegasusInvs = tool.invgen(ode, sequent.ante, post)
-          lazy val invs =
-            if (includeCandidates) pegasusInvs.flatMap({ case Left(l) => l case Right(r) => r })
-            else pegasusInvs.filter(_.isLeft).flatMap(_.left.get)
-          Stream[GenProduct]() #::: invs.map(_ -> None).toStream.distinct
+          lazy val conjunctiveCandidates: Seq[Either[Seq[Formula], Seq[Formula]]] = pegasusInvs.withFilter({
+            case Left(l) => l.length > 1 && l.exists(strictInequality)
+            case Right(r) => r.length > 1 && r.exists(strictInequality)
+          }).map({
+            case Left(l) => Right(l.reduce(And) :: Nil)
+            case Right(r) => Right(r.reduce(And) :: Nil)
+          })
+          lazy val invs: Seq[GenProduct] =
+            if (includeCandidates) {
+              (pegasusInvs ++ conjunctiveCandidates).flatMap({
+                case Left(l) => l.map(_ -> Some(PegasusProofHint(isInvariant = true, None)))
+                case Right(r) => r.map(_ -> Some(PegasusProofHint(isInvariant = false, None)))
+              })
+            } else {
+              pegasusInvs.filter(_.isLeft).flatMap(_.left.get.map(i => i -> Some(PegasusProofHint(isInvariant=true, None))))
+            }
+          Stream[GenProduct]() #::: invs.toStream.distinct
         case _ => Seq().toStream
       }
     case Some(Box(_: ODESystem, post: Formula)) if !post.isFOL => Seq().toStream.distinct

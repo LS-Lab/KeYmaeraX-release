@@ -208,14 +208,15 @@ object ODEInvariance {
           dR(GreaterEqual(lie,Number(0)),false)(pos) <(
             //left open for outer tactic
             skip,
-            //TODO: this may fail on consts -- check
             cohideOnlyL('Llast) &
               //This is a special case where we don't want full DI, because we already have everything
-              cohideOnlyR(pos) & dI('diffInd)(1) <(
-              useAt(geq)(1) & orR(1) & closeId,
-              cohideOnlyL('Llast) & SaturateTactic(Dassignb(1)) & implyRi &
-                useAt(fastGeqCheck,PosInExpr(1::Nil))(1) & timeoutQE
-            )
+              cohideOnlyR(pos) &
+              Dconstify(
+                dI('diffInd)(1) <(
+                  useAt(geq)(1) & orR(1) & closeId,
+                  cohideOnlyL('Llast) & SaturateTactic(Dassignb(1)) & implyRi &
+                  useAt(fastGeqCheck,PosInExpr(1::Nil))(1) & timeoutQE
+              ))(1)
           )
         ))
   })
@@ -225,7 +226,7 @@ object ODEInvariance {
     if (bound <= 0)
       useAt(contAx,PosInExpr(1::Nil))(1) & closeId
     else //Could also make this fallback to the continuity step for early termination
-      //DebuggingTactics.print("start") &
+      //DebuggingTactics.print("start "+bound) &
       andL(-1) & lpstep(1)< (
         hideL(-2) & useAt(geq)(-1) & closeId,
         hideL(-1) & implyL(-1) & <(closeId, hideL(-2) & lpgeq(bound-1))
@@ -357,7 +358,7 @@ object ODEInvariance {
       case Some(Or(Greater(p,_),Equal(t,_))) => (p,t)
       case e => throw new BelleThrowable("lpgt called with incorrect result at expected position: " + e)
     }
-    println(p,t)
+    //println(p,t)
     val unlocked = GreaterEqual(Minus(p,Power(t,Number(2*bound))),Number(0))
     dR(unlocked)(1)<(
       lpgeq(bound),
@@ -493,7 +494,6 @@ object ODEInvariance {
       val reorder = proveBy(Equiv(f2, f3), timeoutQE)
       assert(reorder.isProved)
 
-      logger.debug("Rank 1: " + f3)
       starter & useAt(reorder)(pos ++ PosInExpr(1 :: Nil)) & cutR(f3)(pos) < (
         useAt(reorder, PosInExpr(1 :: Nil))(pos) & timeoutQE,
         cohideR(pos) & implyR(1) & recRankOneTac(f3)
@@ -1160,41 +1160,71 @@ object ODEInvariance {
   case class Triv() extends Instruction
 
   // A more exhaustive implementation
-  private def pStarHomPlus(ode: DifferentialProgram, dom:Formula, p:Term, bound: Int) : (Formula,Instruction) = {
+  private def pStarHomPlus(ode: DifferentialProgram, dom:Formula, p:Term, bound: Int, context : Option[Formula]) : (Formula,Instruction,BelleExpr) = {
     p match {
       case FuncOf(f, Pair(l, r)) =>
         if (f == maxF) {
-          val (lfml, linst) = pStarHomPlus(ode, dom, l, bound)
-          val (rfml, rinst) = pStarHomPlus(ode, dom, r, bound)
-          (Or(lfml, rfml), Disj(linst, rinst))
+          //Encodes disjunctions
+          val (lfml, linst, _) = pStarHomPlus(ode, dom, l, bound, None)
+          val (rfml, rinst, _) = pStarHomPlus(ode, dom, r, bound, None)
+          (Or(lfml, rfml), Disj(linst, rinst), QE)
         }
         else if (f == minF) {
-          val (lfml, linst) = pStarHomPlus(ode, dom, l, bound)
-          val (rfml, rinst) = pStarHomPlus(ode, dom, r, bound)
-          (And(lfml, rfml), Conj(linst, rinst))
+          //Encodes conjunctions
+          val (lfml, linst, ltac) = pStarHomPlus(ode, dom, l, bound, context)
+          val (rfml, rinst, rtac) = pStarHomPlus(ode, dom, r, bound, context)
+          (And(lfml, rfml), Conj(linst, rinst),
+            if(context.isDefined) andR(1) <( ltac, rtac) else skip
+          )
         }
         else ???
       case Neg(FuncOf(a, p)) =>
         if (a == absF) {
-          try {
-            val prop = Equal(p, Number(0))
-            val (pr, cofactor, rem) = findDbx(ode, dom, prop)
-            (prop, Darboux(true, cofactor, pr))
+          //Encodes equalities
+          val (prop,inst) =
+            try {
+              val prop = Equal(p, Number(0))
+              val (pr, cofactor, rem) = findDbx(ode, dom, prop)
+              (prop,Darboux(true, cofactor, pr))
+            }
+            catch {
+              case e: BelleThrowable => (False, Triv())
+            }
+
+          if(context.isDefined)
+          {
+            val prf = proveBy(Sequent(IndexedSeq(context.get),IndexedSeq(prop)),QE)
+            if(prf.isProved)
+              (prop, inst, by(prf))
+            else
+              throw new BelleThrowable("QE failed")
           }
-          catch {
-            case e: BelleThrowable => (False, Triv())
-          }
+          else
+            (prop, inst, QE)
         }
         else ???
       case _ => {
-        try {
-          val prop = GreaterEqual(p, Number(0))
-          val (pr, cofactor, rem) = findDbx(ode, dom, prop)
-          (prop, Darboux(false, cofactor, pr))
+        //Encodes >=0
+        val (prop,inst) =
+          try {
+            val prop = GreaterEqual(p, Number(0))
+            val (pr, cofactor, rem) = findDbx(ode, dom, prop)
+            (prop, Darboux(false, cofactor, pr))
+          }
+          catch {
+            case e: BelleThrowable => (pStar(ODESystem(ode,True), p, Some(bound)), Strict(bound))
+          }
+
+        if(context.isDefined)
+        {
+          val prf = proveBy(Sequent(IndexedSeq(context.get),IndexedSeq(prop)),QE)
+          if(prf.isProved)
+            (prop, inst, by(prf))
+          else
+            throw new BelleThrowable("QE failed")
         }
-        catch {
-          case e: BelleThrowable => (pStar(ODESystem(ode,True), p, Some(bound)), Strict(bound))
-        }
+        else
+          (prop, inst, QE)
       }
     }
   }
@@ -1274,10 +1304,9 @@ object ODEInvariance {
 
     require(fml.isInstanceOf[GreaterEqual], "Normalization failed to reach normal form "+fml)
     val f2 = fml.asInstanceOf[GreaterEqual]
-
     //println("Rank reordering:",rankReorder(ODESystem(ode,dom),post))
 
-    val (pf,inst) = pStarHomPlus(ode,dom,f2.left,bound)
+    val (pf,inst,qetac) = pStarHomPlus(ode,dom,f2.left,bound,Some(And(dom,post)))
 
     //println("HOMPLUS:"+pf+" "+inst)
 
@@ -1297,7 +1326,7 @@ object ODEInvariance {
       starter & useAt("RI& closed real induction >=")(pos) & andR(pos)<(
       implyR(pos) & r1 & ?(closeId) & timeoutQE & done, //common case?
       cohideR(pos) & composeb(1) & dW(1) & implyR(1) & assignb(1) &
-        implyR(1) & cutR(pf)(1)<(hideL(-3) & r2 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & timeoutQE & done, skip) //Don't bother running the rest if QE fails
+        implyR(1) & cutR(pf)(1)<(hideL(-3) & hideL(-2) & r2 & DebuggingTactics.debug("QE step",doPrint = debugTactic) & qetac & done, skip) //Don't bother running the rest if QE fails
         & cohide2(-3,1)& DebuggingTactics.debug("Finish step",doPrint = debugTactic) & implyR(1) & lpclosedPlus(inst)
     )
   })
@@ -1496,11 +1525,11 @@ object ODEInvariance {
 
     val finish =
       if(solveEnd)
-        dW('Rlast) & //todo: dW repeats storing of initial values which isn't very useful here
-        implyR('Rlast) & andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
-        SaturateTactic(andL('Llast)) & //Splits conjunction of equations up
-        ?(SaturateTactic(exhaustiveEqL2R(true)('Llast)) & //rewrite
-          timeoutQE & done)
+        ?(dW('Rlast) & //todo: dW repeats storing of initial values which isn't very useful here
+          implyR('Rlast) & andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
+          SaturateTactic(andL('Llast)) & //Splits conjunction of equations up
+          SaturateTactic(exhaustiveEqL2R(true)('Llast)) & //rewrite
+            timeoutQE & done)
       else
         skip
 
