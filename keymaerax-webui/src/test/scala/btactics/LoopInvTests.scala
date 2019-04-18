@@ -414,7 +414,7 @@ class LoopInvTests extends TacticTestBase with Timeouts /* TimeLimits does not a
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs.toStream)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant for x>=5 & y>=1 -> [{x:=x+y;y:=y+1;{x'=x^2+2*y+x,y'=y^2+y}}*]x>=1" in withMathematica { _ =>
+  it should "find an invariant for x>=5 & y>=1 -> [{x:=x+y;y:=y+1;{x'=x^2+2*y+x,y'=y^2+y}}*]x>=1" taggedAs SlowTest in withMathematica { _ =>
     val fml = "x>=5 & y>=1 -> [{x:=x+y;y:=y+1;{x'=x^2+2*y+x,y'=y^2+y}}*]x>=1".asFormula
     val invs = List("x>=-1".asFormula, "y>=1".asFormula, "x>=0&y>=0".asFormula, "x>=1&y>=1".asFormula, "x>=1&y>=0".asFormula, "x=7".asFormula).map(_ -> None)
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs.toStream)(1)) shouldBe 'proved
