@@ -55,10 +55,10 @@ object AxiomIndex extends Logging {
     case "DW base"              => (PosInExpr(Nil), Nil)
     case "DC differential cut" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
     case "DCd diamond differential cut" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
-    case "DE differential effect" | "DE differential effect (system)" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
+    case "DE differential effect (system)" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
     case "DI differential invariance" => (PosInExpr(1::0::Nil), PosInExpr(Nil)::Nil)
     case "DI differential invariant" => (PosInExpr(1::Nil), PosInExpr(1::1::Nil)::Nil)
-    case "DE differential effect" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
+    case "DE differential effect" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::PosInExpr(Nil)::Nil)
     //@todo unclear recursor
     case "DE differential effect system" => (PosInExpr(0::Nil), PosInExpr(1::Nil)::Nil)
     case "DG differential ghost" => directReduction
@@ -290,8 +290,8 @@ object AxiomIndex extends Logging {
 
       case And(True, _) => "true&" :: Nil
       case And(_, True) => "&true" :: Nil
-      case And(True, _) => "false&" :: Nil
-      case And(_, True) => "&false" :: Nil
+      case And(False, _) => "false&" :: Nil
+      case And(_, False) => "&false" :: Nil
       case Imply(True, _) => "true->" :: Nil
       case Imply(_, True) => "->true" :: Nil
 
