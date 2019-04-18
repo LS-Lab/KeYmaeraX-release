@@ -97,7 +97,7 @@ object DerivationInfo {
     rules.keys.map(name => AxiomaticRuleInfo(name, SimpleDisplayInfo(name, name), canonicalize(name))).toList
   private def canonicalize(name: String): String = name.filter(c => c.isLetterOrDigit)
 
-  private val modalityInfos: List[DerivationInfo] = List(
+  private lazy val modalityInfos: List[DerivationInfo] = List(
     // [a] modalities and <a> modalities
     new CoreAxiomInfo("<> diamond"
       , AxiomDisplayInfo(("<·>", "<.>"), "<span class=\"k4-axiom-key\">&not;[a]&not;P</span> ↔ &langle;a&rangle;P")
@@ -181,7 +181,7 @@ object DerivationInfo {
       , "boxTrue", true, {case () => HilbertCalculus.boxTrue})
   )
 
-  private val odeInfos: List[DerivationInfo] = List(
+  private lazy val odeInfos: List[DerivationInfo] = List(
     new CoreAxiomInfo("DW base", "DWbase", "DWbase", true, {case () => HilbertCalculus.DW}),
     new PositionTacticInfo("dW"
       , RuleDisplayInfo("Differential Weaken"
@@ -380,7 +380,7 @@ object DerivationInfo {
       , "DVleq", unsure, {case () => HilbertCalculus.useAt("DV differential variant <=")})
   )
 
-  private val differentialInfos: List[DerivationInfo] = List(
+  private lazy val differentialInfos: List[DerivationInfo] = List(
     new CoreAxiomInfo("c()' derive constant fn"
       , AxiomDisplayInfo(("c()'", "c()′"), "<span class=\"k4-axiom-key\">(c)′</span>=0")
       , "Dconst", true, {case () => HilbertCalculus.Derive.Dconst}),
@@ -455,7 +455,7 @@ object DerivationInfo {
     new PositionTacticInfo("derive", "'", {case () => HilbertCalculus.derive})
   )
 
-  private val foInfos: List[DerivationInfo] = List(
+  private lazy val foInfos: List[DerivationInfo] = List(
     new CoreAxiomInfo("all instantiate", ("∀inst","allInst"), "allInst", unsure, {case () => HilbertCalculus.useAt("all instantiate")}),
     new DerivedAxiomInfo("all distribute", ("∀→","all->"), "allDist", unsure, {case () => HilbertCalculus.allDist}),
     new CoreAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", unsure, {case () => HilbertCalculus.allV}),
@@ -467,7 +467,7 @@ object DerivationInfo {
     new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", unsure, {case () => posnil})
   )
 
-  private val miscInfos: List[DerivationInfo] = List(
+  private lazy val miscInfos: List[DerivationInfo] = List(
     // more
     new CoreAxiomInfo("const congruence", "CCE", "constCongruence", false, {case () => HilbertCalculus.useAt("const congruence") }),
     new CoreAxiomInfo("const formula congruence", "CCQ", "constFormulaCongruence", false, {case () => HilbertCalculus.useAt("const formula congruence") }),
@@ -478,7 +478,7 @@ object DerivationInfo {
     CoreAxiomInfo("dgZeroEquilibrium", "dgZeroEquilibrium", "dgZeroEquilibrium", unsure, _ => TactixLibrary.useAt("dgZeroEquilibrium"))
   )
 
-  private val derivedAxiomsInfos: List[DerivationInfo] = List(
+  private lazy val derivedAxiomsInfos: List[DerivationInfo] = List(
     new DerivedAxiomInfo("exists eliminate", ("∃e","existse"), "existse", unsure, {case () => HilbertCalculus.existsE}),
     new DerivedAxiomInfo("[:=] assign update", "[:=]", "assignbup", unsure, {case () => HilbertCalculus.assignb}),
     new DerivedAxiomInfo("<:=> assign update", "<:=>", "assigndup", unsure, {case () => HilbertCalculus.assignd}),
@@ -730,7 +730,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("< antisym", "lessNotSym", "lessNotSym", unsure, {case () => useAt(DerivedAxioms.lessNotSym)})
   )
 
-  private val sequentCalculusInfos: List[DerivationInfo] = List(
+  private lazy val sequentCalculusInfos: List[DerivationInfo] = List(
     new PositionTacticInfo("notL"
       , RuleDisplayInfo(("¬L", "!L"), (List("¬P", "&Gamma;"),List("&Delta;")), List((List("&Gamma;"),List("&Delta;","P"))))
       , {case () => SequentCalculus.notL}),
