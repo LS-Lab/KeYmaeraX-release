@@ -646,7 +646,6 @@ object Helpers {
       case f: Diamond => print(q, "formula", hasStep, isEditable, expr.prettyString, print("<", "mod-open")::printJson(q ++ 0, f.program)::print(">", "mod-close")::Nil ++ wrapChild(f, printJson(q ++ 1, f.child)):_*)
       case f: UnaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, op(f) +: wrapChild(f, printJson(q ++ 0, f.child)):_*)
       case _: AtomicFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, print(expr.prettyString))
-      case f: Less => print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q++0, f.left)) ++ (print(" ")::op(f)::print(" ")::Nil) ++ wrapRight(f, printJson(q++1, f.right)):_*)
       case f: BinaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q ++ 0, f.left)) ++ (op(f)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right)):_*)
       case p: Program => print(q, "program", false, false, expr.prettyString, printPrgJson(q, p):_*)
       case _ => print(q, expr.prettyString, "term")
