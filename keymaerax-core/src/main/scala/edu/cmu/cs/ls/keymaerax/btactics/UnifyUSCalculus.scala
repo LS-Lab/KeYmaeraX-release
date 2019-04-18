@@ -1259,6 +1259,11 @@ trait UnifyUSCalculus {
                 usB4URen.reapply(us.usubst.subsDefsInput.map(sp => (
                   sp.what,
                   sp.repl match { case t: Term => t.replaceFree(vars.head, Variable("x_")) case f: Formula => f.replaceAll(vars.head, Variable("x_"))})))
+              case usB4URen: FastUSubstAboveURen =>
+                //@note transpose substitution since subsequent renaming does the same
+                usB4URen.reapply(us.usubst.subsDefsInput.map(sp => (
+                  sp.what,
+                  sp.repl match { case t: Term => t.replaceFree(vars.head, Variable("x_")) case f: Formula => f.replaceAll(vars.head, Variable("x_"))})))
               case _ => us
             }) ++ RenUSubst(Seq((Variable("x_"), vars.head)))
             useFor("all eliminate", PosInExpr(1::Nil), rename)(AntePosition.base0(1-1))(monStep(Context(c), mon)) (
@@ -1277,6 +1282,11 @@ trait UnifyUSCalculus {
             //@note would also work with Skolemize and all instantiate but disjointness is more painful
             val rename = (us: RenUSubst) => (us match {
               case usB4URen: DirectUSubstAboveURen =>
+                //@note transpose substitution since subsequent renaming does the same
+                usB4URen.reapply(us.usubst.subsDefsInput.map(sp => (
+                  sp.what,
+                  sp.repl match { case t: Term => t.replaceFree(vars.head, Variable("x_")) case f: Formula => f.replaceAll(vars.head, Variable("x_"))})))
+              case usB4URen: FastUSubstAboveURen =>
                 //@note transpose substitution since subsequent renaming does the same
                 usB4URen.reapply(us.usubst.subsDefsInput.map(sp => (
                   sp.what,
