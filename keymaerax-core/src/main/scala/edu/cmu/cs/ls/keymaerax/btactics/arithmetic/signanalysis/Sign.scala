@@ -57,8 +57,8 @@ object Sign extends Enumeration {
   def num(n: Number): Sign = if (n.value >= 0) Pos0 else /* n.value <= 0 */ Neg0
 
   def sign(term: Term)(implicit atoms: Map[Term, Sign] = Map()): Sign = atoms.getOrElse(term, term match {
-    case x: Variable => Unknown
     case xp: DifferentialSymbol => Unknown
+    case x: Variable => Unknown
     case n: Number => num(n)
     case f: FuncOf => Unknown
     case edu.cmu.cs.ls.keymaerax.core.Neg(e)       => plusConverse(sign(e))

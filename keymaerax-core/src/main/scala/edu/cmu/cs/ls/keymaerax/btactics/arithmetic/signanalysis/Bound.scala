@@ -43,8 +43,8 @@ object Bound extends Enumeration {
   def power(l: Bound, r: Int): Bound = Unknown
 
   def bound(term: Term)(implicit atoms: Map[Term, Bound] = Map()): Bound = atoms.getOrElse(term, term match {
-    case x: Variable => Unknown
     case xp: DifferentialSymbol => Unknown
+    case x: Variable => Unknown
     case n: Number => Exact
     case f: FuncOf => Unknown
     case edu.cmu.cs.ls.keymaerax.core.Neg(e)       => converse(bound(e))
