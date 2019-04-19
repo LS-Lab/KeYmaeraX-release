@@ -257,6 +257,7 @@ object AxiomaticODESolver {
     }
   }
 
+  //@todo performance bottleneck
   def dfs(ode: DifferentialProgram): Option[List[Variable]] = {
     try {
       alist(ode) match {

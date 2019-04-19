@@ -45,6 +45,9 @@ trait UnifyUSCalculus {
   @inline
   private val matcher = UnificationMatch
 
+  /** Whether to benefit from linearity info about axioms using [[LinearMatcher]] */
+  private val exploitLinearity = false
+
   /*******************************************************************
     * Stepping auto-tactic
     *******************************************************************/
@@ -405,7 +408,7 @@ trait UnifyUSCalculus {
       override def factory(pos: Position): DependentTactic = new SingleGoalDependentTactic(name) {
         override def computeExpr(sequent: Sequent): BelleExpr = {
           val (ctx, expr) = sequent.at(pos)
-          val subst = if (linear)
+          val subst = if (exploitLinearity && linear)
             inst(LinearMatcher.unifiable(keyPart, expr))
           else
             inst(matcher.unifiable(keyPart, expr))
@@ -1359,7 +1362,7 @@ trait UnifyUSCalculus {
       // split proof into ctx{expr} at pos
       val (ctx, expr) = proof.conclusion.at(pos)
       // instantiated unification of expr against keyPart
-      val subst = if (linear)
+      val subst = if (exploitLinearity && linear)
         inst(LinearMatcher(keyPart, expr))
       else
         inst(matcher(keyPart, expr))

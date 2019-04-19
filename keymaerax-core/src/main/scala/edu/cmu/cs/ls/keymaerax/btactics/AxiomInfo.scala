@@ -139,7 +139,7 @@ object DerivationInfo {
       , "Dassignb", false, {case () => HilbertCalculus.Dassignb}),
     new CoreAxiomInfo("[:*] assign nondet"
       , AxiomDisplayInfo("[:*]", "<span class=\"k4-axiom-key\">[x:=*]p(x)</span>↔∀x p(x)")
-      , "randomb", false, {case () => HilbertCalculus.randomb}),
+      , "randomb", unren, {case () => HilbertCalculus.randomb}),
     new CoreAxiomInfo("[?] test"
       , AxiomDisplayInfo("[?]", "<span class=\"k4-axiom-key\">[?Q]P</span>↔(Q→P)")
       , "testb", true, {case () => HilbertCalculus.testb}),
@@ -461,9 +461,9 @@ object DerivationInfo {
     new CoreAxiomInfo("vacuous all quantifier", ("V∀","allV"), "allV", unsure, {case () => HilbertCalculus.allV}),
     new DerivedAxiomInfo("vacuous exists quantifier", ("V∃","existsV"), "existsV", unsure, {case () => HilbertCalculus.existsV}),
     new DerivedAxiomInfo("partial vacuous exists quantifier", ("pV∃","pexistsV"), "pexistsV", unsure, {case () => HilbertCalculus.useAt("partial vacuous exists quantifier")}),
-    new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", true, {case () => posnil}),
-    new CoreAxiomInfo("all dual time", ("∀d","alldt"), "alldt", true, {case () => posnil}),
-    new CoreAxiomInfo("all dual y", ("∀d","alldy"), "alldy", true, {case () => posnil}),
+    new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", unsure, {case () => posnil}),
+    new CoreAxiomInfo("all dual time", ("∀d","alldt"), "alldt", unsure, {case () => posnil}),
+    new CoreAxiomInfo("all dual y", ("∀d","alldy"), "alldy", unsure, {case () => posnil}),
     new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", unsure, {case () => posnil})
   )
 
@@ -482,7 +482,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("exists eliminate", ("∃e","existse"), "existse", unsure, {case () => HilbertCalculus.existsE}),
     new DerivedAxiomInfo("[:=] assign update", "[:=]", "assignbup", unsure, {case () => HilbertCalculus.assignb}),
     new DerivedAxiomInfo("<:=> assign update", "<:=>", "assigndup", unsure, {case () => HilbertCalculus.assignd}),
-    new DerivedAxiomInfo("<:*> assign nondet", "<:*>", "randomd", true, {case () => HilbertCalculus.randomd}),
+    new DerivedAxiomInfo("<:*> assign nondet", "<:*>", "randomd", unren, {case () => HilbertCalculus.randomd}),
     new DerivedAxiomInfo("[:=] assign equational", "[:=]==", "assignbequational", unsure, {case () => HilbertCalculus.assignb}),
     /* @todo replace all the axioms with useAt(axiom) */
     new DerivedAxiomInfo("<':=> differential assign", ("<′:=>","<':=>"), "Dassignd", unsure, {case () => useAt(DerivedAxioms.assignDAxiom)}),
