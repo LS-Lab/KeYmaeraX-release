@@ -116,7 +116,7 @@ class LoopInvTests extends TacticTestBase with Timeouts /* TimeLimits does not a
 
   it should "prove x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]v>=0 by invariant v>=0" in withMathematica { _ =>
     val fml = "x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]v>=0".asFormula
-    proveBy(fml, implyR(1) &  loop("v>=0".asFormula)(1) <(QE,QE, chase(1) & unfoldProgramNormalize & OnAll(odeInvariant(1)))) shouldBe 'proved
+    proveBy(fml, implyR(1) &  loop("v>=0".asFormula)(1) <(QE,QE, chase(1) & unfoldProgramNormalize)) shouldBe 'proved
   }
 
   it should "find an invariant for x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]v>=0" in withMathematica { _ =>
