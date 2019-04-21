@@ -334,7 +334,8 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
       case l@Find(goal, _, start, _) =>
         require(start.isTopLevel, "Start position must be top-level in sequent")
         require(start.isIndexDefined(provable.subgoals(goal)), "Start position must be valid in sequent")
-        tryAllAfter(provable, l, null)
+        tryAllAfter(provable, l, BelleTacticFailure("Position tactic " + prettyString +
+          " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent")))
       case LastAnte(goal, sub) => positionTactic.computeResult(provable, AntePosition.base0(provable.subgoals(goal).ante.size-1, sub))
       case LastSucc(goal, sub) => positionTactic.computeResult(provable, SuccPosition.base0(provable.subgoals(goal).succ.size-1, sub))
     }
@@ -493,7 +494,8 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
       }
       case l@Find(goal, _, start, _) =>
         require(start.isTopLevel, "Start position must be top-level in sequent")
-        tryAllAfter(l, null)
+        tryAllAfter(l, BelleTacticFailure("Position tactic " + prettyString +
+          " is not applicable anywhere in " + (if (start.isAnte) "antecedent" else "succedent")))
       case LastAnte(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => AntePosition.base0(provable.subgoals(goal).ante.size - 1, sub) })
       case LastSucc(goal, sub) => pt.factory(v match { case BelleProvable(provable, _) => SuccPosition.base0(provable.subgoals(goal).succ.size - 1, sub) })
     }
