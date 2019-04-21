@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, PegasusProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import testHelper.KeYmaeraXTestTags.SlowTest
@@ -29,13 +30,13 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
   "Continuous invariant lookup" should "provide a simple invariant from annotations" in {
     val problem = "x>2 ==> [{x'=2}@invariant(x>1)]x>0".asSequent
     TactixLibrary.invGenerator(problem, SuccPos(0)) should contain theSameElementsInOrderAs(
-      ("x>1".asFormula, None) :: Nil)
+      ("x>1".asFormula, Some(AnnotationProofHint(tryHard = true))) :: Nil)
   }
 
   it should "provide a conditional invariant from annotations" in {
     val problem = "x>2 ==> [{x'=2}@invariant(x>1, (x'=2 -> x>2), (x'=3 -> x>5))]x>0".asSequent
     TactixLibrary.invGenerator(problem, SuccPos(0)) should contain theSameElementsInOrderAs(
-      ("x>1".asFormula, None) :: ("x>2".asFormula, None) :: Nil)
+      ("x>1".asFormula, Some(AnnotationProofHint(tryHard = true))) :: ("x>2".asFormula, Some(AnnotationProofHint(tryHard = true))) :: Nil)
   }
 
   "Continuous invariant generation" should "generate a simple invariant" in withMathematica { _ =>
@@ -43,7 +44,8 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
 
     InvariantGenerator.differentialInvariantCandidates(problem, SuccPos(0)) should contain theSameElementsInOrderAs(
       ("x>-1".asFormula, None) :: ("-2*x>1".asFormula, None) :: ("-2*y>1".asFormula, None) ::
-        ("y>=-1".asFormula, None) :: ("x^5<=(x+4*x^3)*y".asFormula, None) :: ("y<=0".asFormula, None) :: Nil)
+        ("y>=-1".asFormula, None) :: ("x^5<=(x+4*x^3)*y".asFormula, Some(PegasusProofHint(isInvariant = true, None))) ::
+        ("y<=0".asFormula, Some(PegasusProofHint(isInvariant = true, None))) :: Nil)
   }
 
   it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs SlowTest in withMathematica { _ =>
