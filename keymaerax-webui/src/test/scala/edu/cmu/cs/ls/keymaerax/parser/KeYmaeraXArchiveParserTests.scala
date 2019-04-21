@@ -5,6 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.PartialTactic
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Bool, Real, Trafo, Tuple, Unit}
@@ -212,7 +213,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
   }
 
   it should "accept reserved identifiers" in {
-    val entry = KeYmaeraXArchiveParser.parse(
+    KeYmaeraXArchiveParser.parse(
       """ArchiveEntry "Entry 1"
         | ProgramVariables Real Real; End.
         | Problem true End.
@@ -501,7 +502,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("y", None) -> (None, Real, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
-    entry.tactics shouldBe ("Empty", "/* a comment */ nil partial", nil partial) :: Nil
+    entry.tactics shouldBe ("Empty", "/* a comment */ nil partial", PartialTactic(nil)) :: Nil
     entry.info shouldBe empty
   }
 
@@ -1521,7 +1522,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         | ProgramVariables Real y; End.
         | Problem [y:=0;]p() End.
         |End.""".stripMargin
-    ) should have message """<somewhere> Definition p() must declare arguments {y}
+    ) should have message """<somewhere> Definition p() as y>=0 must declare arguments {y}
                             |Found:    <unknown> at <somewhere>
                             |Expected: <unknown>""".stripMargin
   }
@@ -1644,7 +1645,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         |Problem
         |  [{?true;}*@invariant(fg > 0)]true
         |End.""".stripMargin
-    ) should have message """<somewhere> type analysis: undefined symbol fg with index None
+    ) should have message """<somewhere> type analysis: <undefined>: undefined symbol fg with index None
                             |Found:    undefined symbol at <somewhere>
                             |Expected: BaseVariable of sort Real
                             |Hint: Make sure to declare all variables in ProgramVariable and all symbols in Definitions block.""".stripMargin

@@ -21,11 +21,11 @@ class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEa
   val three = Number(3)
   val six = Number(6)
 
-  override def beforeEach() = {
+  override def beforeEach(): Unit = {
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
   }
 
-  override def afterEach() = {
+  override def afterEach(): Unit = {
     PrettyPrinter.setPrinter(e => e.getClass.getName)
   }
 
@@ -101,7 +101,7 @@ class ArithmeticParserTests extends FlatSpec with Matchers with BeforeAndAfterEa
   "Power" should "give useful location information" in {
     val ex = the [ParseException] thrownBy "((f(||)^(c()))'".asTerm
     ex.getMessage should include ("1:1 Imbalanced parenthesis")
-    ex.getMessage should include ("Found:    LPAREN$ at 1:1")
+    ex.getMessage should include ("Found:    ( (LPAREN$) at 1:1")
   }
 
 
