@@ -408,7 +408,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
   "SetupTimeVar" should "work when time exists" in {
     val system = "[{x'=v}]1=1".asFormula
     val result = proveBy(system, addTimeVar(1))
-    result.subgoals.loneElement shouldBe "==> [kyxtime:=0;][{x'=v,kyxtime'=1&true}]1=1".asSequent
+    result.subgoals.loneElement shouldBe "==> [kyxtime_0:=0;][{x'=v,kyxtime_0'=1&true}]1=1".asSequent
   }
 
   "CutInSolns" should "solve x'=y,t'=1" ignore withMathematica { _ =>
@@ -552,7 +552,7 @@ class AxiomaticODESolverTests extends TacticTestBase with PrivateMethodTester {
         |==> 1:  x=1&v=2&a=0&t=0->[{x'=v,v'=x,t'=1&true}]x^3>=1	Imply
         |  from
         |   -1:  x=1&v=2&a=0&t=0	And
-        |==> 1:  [kyxtime:=0;][{x'=v,v'=x,t'=1,kyxtime'=1&true}]x^3>=1	Box}""".stripMargin
+        |==> 1:  [kyxtime_0:=0;][{x'=v,v'=x,t'=1,kyxtime_0'=1&true}]x^3>=1	Box}""".stripMargin
   }
   //endregion
 
