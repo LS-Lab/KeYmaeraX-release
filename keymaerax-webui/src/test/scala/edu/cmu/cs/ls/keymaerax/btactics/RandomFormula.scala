@@ -10,9 +10,11 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import scala.util.Random
 import scala.collection.immutable
 import scala.collection.immutable._
-import edu.cmu.cs.ls.keymaerax.btactics.Context
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+
+import scala.collection.mutable.ListBuffer
 
 /**
  * Random formula generator and random term generator and random program generator
@@ -107,14 +109,31 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     * @param builtins whether built-in names can be used in the schematic instance, or 'false' if fresh.
     * @param diffs whether differentials can be used in the schematic instance. */
   def nextSchematicInstance(fml: Formula, size: Int, renamed: Boolean = true, builtins: Boolean = false, diffs: Boolean = false): Formula = {
+    val diffPrgConsts = new ListBuffer[Set[NamedSymbol]]()
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preP(p: PosInExpr, e: Program): Either[Option[ExpressionTraversal.StopTraversal], Program] = e match {
+        case ODESystem(ode: DifferentialProduct, _) =>
+          val diffconsts = StaticSemantics.signature(ode).filter(_.isInstanceOf[DifferentialProgramConst])
+          diffconsts.subsets(1).foreach(diffPrgConsts += _)
+          Left(None)
+        case _ => Left(None)
+      }
+    }, fml)
+
+    val signature = StaticSemantics.signature(fml)
+    val symbols =
+      if (diffPrgConsts.size <= 1) signature.groupBy(_ => 0)
+      else signature.groupBy(s => diffPrgConsts.indexWhere(_.contains(s)))
+
     val ownvars = StaticSemantics.vars(fml).symbols.filter(x => x.isInstanceOf[BaseVariable]).
       filter(x => builtins || !x.name.endsWith("_"))
-    // two different piles of variables to avoid accidental capture during the schematic instantiation
+    // three different piles of variables to avoid accidental capture during the schematic instantiation
     val vars = nextNames("z", size / 3 + 1)
+    val odevars = (1 to symbols.partition(_._1 >= 0)._1.size).map(i => nextNames("o" + i, size / 3 + 1))
     val othervars = nextNames("y", size / 5 + 1)
-    val symbols = StaticSemantics.signature(fml)
+
     //@todo make sure not to create diffs when the symbol occurs within another diff
-    val repls: Set[(Expression,Expression)] = symbols.map(sym => sym match {
+    val repls: Set[(Expression,Expression)] = symbols.map({ case (i, s) => s.map({
       case p@UnitPredicational(_,AnyArg) => if (diffs) p->nextF(vars,size) else p->nextF(vars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=false,duals=isGame)
       case p@UnitPredicational(_,Except(_)) => p->nextF(vars,size,modals=true,dotTs=false, dotFs=false,diffs=false,funcs=false,duals=isGame)
       // need to teach the term some manners such as no diffs if occurs in ODE
@@ -122,15 +141,14 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       case p@UnitFunctional(_,Except(_),_) => p->nextT(vars,size,dots=false,diffs=false,funcs=false)
       case a: ProgramConst => a->nextP(vars,size)
       case a: SystemConst => a->nextP(vars,size,dotTs=true, dotFs=true, diffs=diffs, funcs=false, duals=false)
-      //@todo should have disjoint differential equations if occurs within DifferentialProduct.
-      case a: DifferentialProgramConst => a->nextDP(vars,size)
+      case a: DifferentialProgramConst => a->nextDP(odevars(i),size)
       case f@Function(_,_,Unit,Real,false) => FuncOf(f,Nothing)->nextT(othervars,size,dots=false,diffs=false,funcs=false)
       case p@Function(_,_,Unit,Bool,false) => PredOf(p,Nothing)->nextF(othervars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=false,duals=isGame)
       case f@Function(_,_,Real,Real,false) => FuncOf(f,DotTerm())->nextT(othervars,size,dots=true,diffs=false,funcs=false)
       case p@Function(_,_,Real,Bool,false) => PredOf(p,DotTerm())->nextF(othervars,size,modals=true, dotTs=true, dotFs=false,diffs=false,funcs=false,duals=isGame)
       //@todo replace also as PredicationalOf
       case ow => ow->ow
-    })
+    })}).toSet.flatten
     def doRepl(f: Formula, repl: (Expression, Expression)): Formula =
       if (repl._1==repl._2) f else FormulaAugmentor(f).replaceAll(repl._1, repl._2)
     println("Replace all " + repls.mkString(", "))

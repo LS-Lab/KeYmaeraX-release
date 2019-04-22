@@ -2,8 +2,7 @@ package edu.cmu.cs.ls.keymaerax.bellerophon
 
 import edu.cmu.cs.ls.keymaerax.core.{AnyArg, CoreException, Formula, UnitPredicational}
 import edu.cmu.cs.ls.keymaerax.tags.SummaryTest
-import edu.cmu.cs.ls.keymaerax.tools.KeYmaeraXTool
-import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers, Suite}
+import org.scalatest.BeforeAndAfterAll
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -20,13 +19,13 @@ import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 @SummaryTest
 class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll {
 
-  val randomTrials = 20
-  val randomComplexity = 8
-  val rand = new RandomFormula()
+  private val randomTrials = 20
+  private val randomComplexity = 8
+  private val rand = new RandomFormula()
 
-  val unify = UnificationMatch
+  private val unify = UnificationMatch
 
-  override def beforeAll() = {
+  override def beforeAll(): Unit = {
     // the tests in here rely on a populated lemma database, since otherwise some of them require QE (depends on the queried axiom).
     new DerivedAxiomsTests().execute("The DerivedAxioms prepopulation procedure should not crash")
   }
@@ -47,7 +46,7 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
   /** Match the key of a given axiom against the given instance. */
   private def matchKey(axiom: String, instance: Formula): Boolean = {
     val ax: Formula = AxiomInfo(axiom).formula
-    val (keyCtx: Context[_], keyPart) = ax.at(AxiomIndex.axiomIndex(axiom)._1)
+    val (_, keyPart) = ax.at(AxiomIndex.axiomIndex(axiom)._1)
     if (true) {
       val u = unify(keyPart, instance)
       println("unify1:  " + keyPart)
@@ -224,7 +223,7 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
     u.toCore(ax) shouldBe instance
   }
   //@todo FreshPostUnificationMatch solves this test (see above) but fails some tactics
-  ignore should "exists eliminate" in {
+  it should "exists eliminate" ignore {
     matchDirect("exists eliminate", "\\exists z1 \\exists z1 true->\\exists z1 \\exists z1 \\exists z1 true".asFormula)
   }
 
@@ -240,11 +239,11 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
     matchDirect("[:=] assign exists", "[t:=0;][{x'=1,t'=1&true}]x>0->\\exists t [{x'=1,t'=1&true}]x>0".asFormula)
   }
 
-  it should "all eliminate built-in clash crazy" taggedAs(IgnoreInBuildTest) in {
+  it should "all eliminate built-in clash crazy" taggedAs IgnoreInBuildTest in {
     matchDirect("all eliminate", "\\forall z1 \\forall x_ (true<->true)->\\forall x_ (true<->true)".asFormula)
   }
 
-  ignore should "exists eliminate built-in clash crazy" taggedAs(IgnoreInBuildTest, TodoTest) in {
+  it should "exists eliminate built-in clash crazy" taggedAs(IgnoreInBuildTest, TodoTest) ignore {
     matchDirect("exists eliminate", "\\forall x_ [?true;]true->\\exists z1 \\forall x_ [?true;]true".asFormula)
   }
 
@@ -312,7 +311,7 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
           " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
         val inst = withSafeClue("Error generating schematic instance\n\n" + randClue) {
-          rand.nextSchematicInstance(AxiomInfo(ax).formula, randomComplexity, false)
+          rand.nextSchematicInstance(AxiomInfo(ax).formula, randomComplexity, renamed = false)
         }
 
         withSafeClue("Random instance " + inst + "\n\n" + randClue) {
@@ -331,7 +330,7 @@ class UnifyAxiomInstantiationTest extends SystemTestBase with BeforeAndAfterAll 
           " random trials,\n\t generated with " + randomComplexity + " random complexity\n\t from seed " + rand.seed
 
         val inst = withSafeClue("Error generating schematic instance\n\n" + randClue) {
-          rand.nextSchematicInstance(fml, randomComplexity, false)
+          rand.nextSchematicInstance(fml, randomComplexity, renamed = false)
         }
 
         withSafeClue("Random instance " + inst + "\n\n" + randClue) {
