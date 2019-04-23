@@ -36,7 +36,7 @@ FirstIntegralGen`FuncIndep[FirstIntegralGen`FindFirstIntegrals[deg, vars, M.vars
 ]
 
 
-LyapunovIdentity[M_,vars_List]:=Module[{},
+LyapunovIdentity[M_,vars_List]:=Module[{ID,NDM,LM},
 ID=IdentityMatrix[Length[vars]];
 NDM=-(ID);
 LM=LyapunovSolve[Transpose[M],NDM];
@@ -49,7 +49,7 @@ Table[Table[RandomInteger[{1,range}]/RandomInteger[{1,range}],{i,1,size}],{j,1,s
 ]
 
 
-LyapunovRand[M_,vars_List]:=Module[{},
+LyapunovRand[M_,vars_List]:=Module[{RM, NDM, LM},
 RM=RandomPosMatrix[5,Length[vars]];
 NDM=-(RM.Transpose[RM]);
 LM=LyapunovSolve[Transpose[M],NDM];
@@ -125,6 +125,8 @@ class
 
 Options[PlanarConstantMethod]={RationalsOnly->False, RationalPrecision->10, FirstIntegralDegree->1};
 PlanarConstantMethod[Init_, Postcond_, System_List, opts:OptionsPattern[]]:=Module[{
+rats,FIDeg,ratPrecision,upperRat,lowerRat,initConnectedComponents,FIs,maximise,minimise,
+maxFns,minFns,partitioning,
 f=System[[1]],
 statevars=System[[2]]
 },
