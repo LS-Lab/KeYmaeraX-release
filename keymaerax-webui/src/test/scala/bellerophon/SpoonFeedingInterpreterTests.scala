@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaerax.hydra._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import testHelper.KeYmaeraXTestTags.SlowTest
+import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -1016,7 +1016,7 @@ class SpoonFeedingInterpreterTests extends TacticTestBase {
     DbProofTree(db.db, proofId2.toString).tactic shouldBe BelleParser("implyR(1) ; orL(-1) ; <(id, notL(-1))")
   }
 
-  it should "should work for prop with nested branching" in withDatabase { db =>
+  it should "should work for prop with nested branching" taggedAs TodoTest in withDatabase { db =>
     val problem = "x>=0|x<y -> x>=0&x<y"
     val modelContent = s"ProgramVariables. R x. R y. End.\n\n Problem. $problem End."
     val proofId = db.createProof(modelContent, "proof")
