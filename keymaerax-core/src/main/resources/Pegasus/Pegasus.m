@@ -15,8 +15,9 @@ Needs["Strategies`OneDimensional`",FileNameJoin[{Directory[],"Strategies","OneDi
 BeginPackage["Pegasus`"];
 
 
-RunMethod::usage="Run designated method on a problem"
-InvGen::usafe="Run Pegasus"
+(*RunMethod::usage="Run designated method on a problem"*)
+InvGen::usage="Pegasus[problem_List] Run Pegasus on problem"
+Options[InvGen]= {SanityTimeout -> 0};
 
 
 Begin["`Private`"]
@@ -38,7 +39,7 @@ newf=Join[f,Table[0,{i,Length[parameters]}]];
 ]
 
 
-InvGen[parametricProb_List]:=Catch[Module[
+InvGen[parametricProb_List, opts:OptionsPattern[]]:=Catch[Module[
 {problem,pre1,post1,pre,f,vars,evoConst,post,preImpliesPost,postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,polyList,invlist,cuts,cutlist,strat,hint,
 (*ProofHint,Unknown,FirstIntegral,Darboux,Barrier*)}, 
 
@@ -48,21 +49,25 @@ problem = AugmentWithParameters[parametricProb];
 
 pre = Primitives`DNFNormalizeGtGeq[pre1];
 post=Primitives`DNFNormalizeGtGeq[post1];
-(* Sanity checks *)
-(*preImpliesPost=CheckSemiAlgInclusion[pre, post, vars];
-If[ Not[TrueQ[preImpliesPost]], 
-Print["Precondition does not imply postcondition! Nothing to do."]; Throw[{{False}, False}], 
-Print["Precondition implies postcondition. Proceeding."]];
 
-postInvariant=LZZ`InvS[post, f, vars, evoConst];
-If[ TrueQ[postInvariant], 
-Print["Postcondition is an invariant! Nothing to do."]; Throw[{{post,{post1}},True}], 
-Print["Postcondition is not an invariant. Proceeding."]];
+(* Sanity check with timeout *)
+If[OptionValue[SanityTimeout] > 0,
+  TimeConstrained[Block[{},
+  preImpliesPost=CheckSemiAlgInclusion[pre, post, vars];
+  If[ Not[TrueQ[preImpliesPost]], 
+  Print["Precondition does not imply postcondition! Nothing to do."]; Throw[{{}, False}], 
+  Print["Precondition implies postcondition. Proceeding."]];
 
-preInvariant=LZZ`InvS[pre, f, vars, evoConst];
-If[ TrueQ[preInvariant], 
-Print["Precondition is an invariant! Nothing to do."]; Throw[{{pre,{pre}}, True}], 
-Print["Precondition is not an invariant. Proceeding."]];*)
+  postInvariant=LZZ`InvS[post, f, vars, evoConst];
+  If[ TrueQ[postInvariant], 
+  Print["Postcondition is an invariant! Nothing to do."]; Throw[{{post,{{post,Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]}}},True}], 
+  Print["Postcondition is not an invariant. Proceeding."]];
+
+  preInvariant=LZZ`InvS[pre, f, vars, evoConst];
+  If[ TrueQ[preInvariant], 
+  Print["Precondition is an invariant! Nothing to do."]; Throw[{{pre,{{pre,Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]}}}, True}], 
+  Print["Precondition is not an invariant. Proceeding."]];
+],OptionValue[SanityTimeout]]];
 
 (* Determine strategies depending on problem classification by pattern matching on {dimension, classes} *)
 class=Classifier`ClassifyProblem[problem];
