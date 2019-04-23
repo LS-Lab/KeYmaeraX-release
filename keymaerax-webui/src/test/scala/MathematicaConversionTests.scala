@@ -10,14 +10,16 @@ import edu.cmu.cs.ls.keymaerax.tools._
 import java.math.BigDecimal
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 
 import scala.collection.immutable._
 
 class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
-  val mathematicaConfig: Map[String, String] = DefaultConfiguration.defaultMathematicaConfig
+  val mathematicaConfig: Map[String, String] = Map(
+      "linkName" -> Configuration(Configuration.Keys.MATHEMATICA_LINK_NAME),
+      "libDir" -> Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR))
+
   var link: JLinkMathematicaLink = _
   var ml : KeYmaeraMathematicaBridge[KExpr] = _ //var so that we can instantiate within a test case.
 

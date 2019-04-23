@@ -6,7 +6,6 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, Tool}
@@ -121,7 +120,7 @@ class QETests extends TacticTestBase {
   }
 
   it should "switch between tools" in withDatabase { db =>
-    val provider = new MathematicaZ3ToolProvider(DefaultConfiguration.currentMathematicaConfig)
+    val provider = new MathematicaZ3ToolProvider(configFileMathematicaConfig)
     ToolProvider.setProvider(provider)
     val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>=0&\\exists s x*s^2>0 End."
     val proofId = db.createProof(modelContent)
@@ -134,7 +133,7 @@ class QETests extends TacticTestBase {
   }
 
   it should "use the default tool" in withDatabase { db =>
-    val provider = new MathematicaZ3ToolProvider(DefaultConfiguration.currentMathematicaConfig)
+    val provider = new MathematicaZ3ToolProvider(configFileMathematicaConfig)
     ToolProvider.setProvider(provider)
     val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>=0&x>=-1 End."
     val proofId = db.createProof(modelContent)
@@ -146,7 +145,7 @@ class QETests extends TacticTestBase {
   }
 
   it should "switch between tools from parsed tactic" in {
-    val provider = new MathematicaZ3ToolProvider(DefaultConfiguration.currentMathematicaConfig)
+    val provider = new MathematicaZ3ToolProvider(configFileMathematicaConfig)
     ToolProvider.setProvider(provider)
     val tactic = BelleParser("andR(1); <(QE({`Z3`}), andR(1) ; <(QE({`Mathematica`}), QE))")
     proveBy("x>0 ==> x>=0&\\exists s x*s^2>0&x>=-2".asSequent, tactic) shouldBe 'proved
