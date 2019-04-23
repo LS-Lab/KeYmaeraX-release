@@ -5,6 +5,7 @@
 
 package btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.SaturateTactic
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary, Transitivity}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
@@ -12,9 +13,9 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
   * @author Nathan Fulton
   */
 class TransitivityTacticTests extends TacticTestBase {
-  val setupTactic = TactixLibrary.implyR(1) & (TactixLibrary.andL('L)*)
+  private val setupTactic = TactixLibrary.implyR(1) & SaturateTactic(TactixLibrary.andL('L))
 
-  "Search function" should "Find result" in (withMathematica(_ => {
+  "Search function" should "Find result" in withMathematica { _ =>
     val f = "a>=b & b >= c -> a >= c".asFormula
     val sequent = proveBy(f, setupTactic).subgoals(0)
 
@@ -24,40 +25,40 @@ class TransitivityTacticTests extends TacticTestBase {
 
     val transitivyTacticResult = proveBy(sequent, Transitivity.closeTransitive)
     transitivyTacticResult.isProved shouldBe true
-  }))
+  }
 
-  it should "prove 3 chained inequalities" in (withMathematica(_ => {
+  it should "prove 3 chained inequalities" in withMathematica { _ =>
     val f = "a>=b & b >= c & c >= d -> a >= d".asFormula
     val sequent = proveBy(f, setupTactic).subgoals(0)
     val transitivyTacticResult = proveBy(sequent, Transitivity.closeTransitive)
     transitivyTacticResult.isProved shouldBe true
-  }))
+  }
 
-  it should "prove 4 chained inequalities" in (withMathematica(_ => {
+  it should "prove 4 chained inequalities" in withMathematica { _ =>
     val f = "a>=b & b >= c & c >= d & d >= e & e >= f & f >= z -> a >= z".asFormula
     val sequent = proveBy(f, setupTactic).subgoals(0)
     val transitivyTacticResult = proveBy(sequent, Transitivity.closeTransitive)
     transitivyTacticResult.isProved shouldBe true
-  }))
+  }
 
-  it should "prove 4 chained inequalities when there are extra facts around" in (withMathematica(_ => {
+  it should "prove 4 chained inequalities when there are extra facts around" in withMathematica { _ =>
     val f = "a>=b & b >= c & c >= d & d >= e & e >= f & f >= z & f >= w -> a >= z".asFormula
     val sequent = proveBy(f, setupTactic).subgoals(0)
     val transitivyTacticResult = proveBy(sequent, Transitivity.closeTransitive)
     transitivyTacticResult.isProved shouldBe true
-  }))
+  }
 
-  it should "prove 4 chained inequalities when there are extra facts around about the starting term" in (withMathematica(_ => {
+  it should "prove 4 chained inequalities when there are extra facts around about the starting term" in withMathematica { _ =>
     val f = "a >= w & a>=b & b >= c & c >= d & d >= e & e >= f & f >= z -> a >= z".asFormula
     val sequent = proveBy(f, setupTactic).subgoals(0)
     val transitivyTacticResult = proveBy(sequent, Transitivity.closeTransitive)
     transitivyTacticResult.isProved shouldBe true
-  }))
+  }
 
-  it should "prove 4 chained inequalities when there are extra facts around about the ending term" in (withMathematica(_ => {
+  it should "prove 4 chained inequalities when there are extra facts around about the ending term" in withMathematica { _ =>
     val f = " w >= z & a>=b & b >= c & c >= d & d >= e & e >= f & f >= z -> a >= z".asFormula
     val sequent = proveBy(f, setupTactic).subgoals(0)
     val transitivyTacticResult = proveBy(sequent, Transitivity.closeTransitive)
     transitivyTacticResult.isProved shouldBe true
-  }))
+  }
 }

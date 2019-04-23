@@ -185,7 +185,7 @@ class ModelplexTacticTests extends TacticTestBase {
 
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
     val tactic = ModelPlex.modelMonitorByChase(ModelPlex.eulerSystemAllIn)(1) & Idioms.<(
-      ModelPlex.unrollLoop(1)(1) & (ModelPlex.chaseEulerAssignments(1)*),
+      ModelPlex.unrollLoop(1)(1) & SaturateTactic(ModelPlex.chaseEulerAssignments(1)),
       skip)
     val result = proveBy(modelplexInput, tactic)
     result.subgoals should have size 2
@@ -238,7 +238,8 @@ class ModelplexTacticTests extends TacticTestBase {
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model,
       Variable("f"), Variable("l"), Variable("c"))
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
-    val tactic = ModelPlex.controllerMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*) & simplifier(1)
+    val tactic = ModelPlex.controllerMonitorByChase(1) &
+      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)) & simplifier(1)
     val result = proveBy(modelplexInput, tactic)
 
     // with ordinary diamond test
@@ -260,7 +261,8 @@ class ModelplexTacticTests extends TacticTestBase {
     val stateVars = ("f"::"l"::"c"::Nil).map(_.asVariable.asInstanceOf[BaseVariable])
     val (modelplexInput, assumptions) = createMonitorSpecificationConjecture(model, stateVars:_*)
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
-    val tactic = ModelPlex.controllerMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*) & simplifier(1)
+    val tactic = ModelPlex.controllerMonitorByChase(1) &
+      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)) & simplifier(1)
     val result = proveBy(modelplexInput, tactic)
 
     val testProg = proveBy(result.subgoals.loneElement, ModelPlex.chaseToTests(combineTests=false)(1))
@@ -593,13 +595,13 @@ class ModelplexTacticTests extends TacticTestBase {
     foResult.subgoals.head.ante shouldBe empty
     foResult.subgoals.head.succ should contain only "\\exists dxo \\exists dyo (dxo^2+dyo^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&rpost=r&tpost=0|v=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&rpost=r&tpost=0|\\exists a ((-B()<=a&a<=A())&\\exists r (r!=0&\\exists w (w*r=v&\\exists xo \\exists yo ((abs(x-xo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=a&rpost=r&tpost=0))))))".asFormula
     // Opt. 1
-    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*)
+    val opt1Result = proveBy(foResult.subgoals.head, SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)))
     opt1Result.subgoals should have size 1
     opt1Result.subgoals.head.ante shouldBe empty
     opt1Result.subgoals.head.succ should contain only "dxopost^2+dyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&rpost=r&tpost=0|v=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&rpost=r&tpost=0|(-B()<=apost&apost<=A())&rpost!=0&wpost*rpost=v&(abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xopost=xopost&yopost=yopost&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=wpost&apost=apost&rpost=rpost&tpost=0)".asFormula
 
     // Opt. 1 with less simplification
-    val opt1AltResult = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(None, assumptions)(1)*)
+    val opt1AltResult = proveBy(foResult.subgoals.head, SaturateTactic(ModelPlex.optimizationOneWithSearch(None, assumptions)(1)))
     opt1AltResult.subgoals should have size 1
     opt1AltResult.subgoals.head.ante shouldBe empty
     opt1AltResult.subgoals.head.succ should contain only "dxopost^2+dyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&rpost=r&tpost=0|v=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&rpost=r&tpost=0|(-B()<=apost&apost<=A())&rpost!=0&wpost*rpost=v&(abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xopost=xopost&yopost=yopost&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=wpost&apost=apost&rpost=rpost&tpost=0)".asFormula
@@ -626,7 +628,7 @@ class ModelplexTacticTests extends TacticTestBase {
     foResult.subgoals.head.succ should contain only "\\exists dxo \\exists dyo (dxo^2+dyo^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&rpost=r&tpost=0|v=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&rpost=r&tpost=0|\\exists a ((-B()<=a&a<=A())&\\exists r (r!=0&\\exists w (w*r=v&\\exists xo \\exists yo ((abs(x-xo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=a&rpost=r&tpost=0))))))".asFormula
 
     // Opt. 1 with less simplification
-    val opt1AltResult = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(None, assumptions)(1)*)
+    val opt1AltResult = proveBy(foResult.subgoals.head, SaturateTactic(ModelPlex.optimizationOneWithSearch(None, assumptions)(1)))
     opt1AltResult.subgoals should have size 1
     opt1AltResult.subgoals.head.ante shouldBe empty
     opt1AltResult.subgoals.head.succ should contain only "dxopost^2+dyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&rpost=r&tpost=0|v=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&rpost=r&tpost=0|(-B()<=apost&apost<=A())&rpost!=0&wpost*rpost=v&(abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xopost=xopost&yopost=yopost&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=wpost&apost=apost&rpost=rpost&tpost=0)".asFormula
@@ -689,7 +691,7 @@ class ModelplexTacticTests extends TacticTestBase {
     foResult.subgoals.head.succ should contain only "\\exists odx \\exists ody (odx^2+ody^2<=V()^2&(\\exists w (w*r=v&(0<=ep()&v>=0)&apost=-b()&rpost=r&talphapost=talpha&odxpost=odx&odypost=ody&oxpost=ox&oypost=oy&dxpost=dx&dypost=dy&wpost=w&isVisiblepost=isVisible&tpost=0&vpost=v&talphapost=talpha&xpost=x&ypost=y)|v=0&\\exists w (w*r=v&(0<=ep()&v>=0)&apost=0&rpost=r&talphapost=talpha&odxpost=odx&odypost=ody&oxpost=ox&oypost=oy&dxpost=-dx&dypost=-dy&wpost=w&isVisiblepost=isVisible&tpost=0&vpost=v&talphapost=talpha&xpost=x&ypost=y)|\\exists a ((-b()<=a&a<=A())&\\exists r (r!=0&\\exists ox \\exists oy \\exists isVisible (v+a*ep() < 0&(isVisible < 0|(x-ox>=0->x-ox>v^2/(-2*a)+V()*(v/(-a)))&(x-ox<=0->ox-x>v^2/(-2*a)+V()*(v/(-a)))|(y-oy>=0->y-oy>v^2/(-2*a)+V()*(v/(-a)))&(y-oy<=0->oy-y>v^2/(-2*a)+V()*(v/(-a))))&((r>=0->v^2/(-2*a) < alpha()*r)&(r < 0->v^2/(-2*a) < -alpha()*r))&\\exists w (w*r=v&(0<=ep()&v>=0)&apost=a&rpost=r&talphapost=0&odxpost=odx&odypost=ody&oxpost=ox&oypost=oy&dxpost=dx&dypost=dy&wpost=w&isVisiblepost=isVisible&tpost=0&vpost=v&talphapost=0&xpost=x&ypost=y)|v+a*ep()>=0&(isVisible < 0|(x-ox>=0->x-ox>v^2/(2*b())+V()*(v/b())+(a/b()+1)*(a/2*ep()^2+ep()*(v+V())))&(x-ox<=0->ox-x>v^2/(2*b())+V()*(v/b())+(a/b()+1)*(a/2*ep()^2+ep()*(v+V())))|(y-oy>=0->y-oy>v^2/(2*b())+V()*(v/b())+(a/b()+1)*(a/2*ep()^2+ep()*(v+V())))&(y-oy<=0->oy-y>v^2/(2*b())+V()*(v/b())+(a/b()+1)*(a/2*ep()^2+ep()*(v+V()))))&((r>=0->v^2/(2*b())+(a/b()+1)*(a/2*ep()^2+ep()*v) < alpha()*r)&(r < 0->v^2/(2*b())+(a/b()+1)*(a/2*ep()^2+ep()*v) < -alpha()*r))&\\exists w (w*r=v&(0<=ep()&v>=0)&apost=a&rpost=r&talphapost=0&odxpost=odx&odypost=ody&oxpost=ox&oypost=oy&dxpost=dx&dypost=dy&wpost=w&isVisiblepost=isVisible&tpost=0&vpost=v&talphapost=0&xpost=x&ypost=y))))))".asFormula
 
     // Opt. 1
-    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*)
+    val opt1Result = proveBy(foResult.subgoals.head, SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)))
     opt1Result.subgoals should have size 1
     opt1Result.subgoals.head.ante shouldBe empty
     opt1Result.subgoals.head.succ should contain only "odxpost^2+odypost^2<=V()^2&(wpost*r=v&(0<=ep()&v>=0)&apost=-b()&rpost=r&talphapost=talpha&odxpost=odxpost&odypost=odypost&oxpost=ox&oypost=oy&dxpost=dx&dypost=dy&wpost=wpost&isVisiblepost=isVisible&tpost=0&vpost=v&talphapost=talpha&xpost=x&ypost=y|v=0&wpost*r=v&(0<=ep()&v>=0)&apost=0&rpost=r&talphapost=talpha&odxpost=odxpost&odypost=odypost&oxpost=ox&oypost=oy&dxpost=-dx&dypost=-dy&wpost=wpost&isVisiblepost=isVisible&tpost=0&vpost=v&talphapost=talpha&xpost=x&ypost=y|(-b()<=apost&apost<=A())&rpost!=0&(v+apost*ep() < 0&(isVisiblepost < 0|(x-oxpost>=0->x-oxpost>v^2/(-2*apost)+V()*(v/(-apost)))&(x-oxpost<=0->oxpost-x>v^2/(-2*apost)+V()*(v/(-apost)))|(y-oypost>=0->y-oypost>v^2/(-2*apost)+V()*(v/(-apost)))&(y-oypost<=0->oypost-y>v^2/(-2*apost)+V()*(v/(-apost))))&((rpost>=0->v^2/(-2*apost) < alpha()*rpost)&(rpost < 0->v^2/(-2*apost) < -alpha()*rpost))&wpost*rpost=v&(0<=ep()&v>=0)&apost=apost&rpost=rpost&talphapost=0&odxpost=odxpost&odypost=odypost&oxpost=oxpost&oypost=oypost&dxpost=dx&dypost=dy&wpost=wpost&isVisiblepost=isVisiblepost&tpost=0&vpost=v&talphapost=0&xpost=x&ypost=y|v+apost*ep()>=0&(isVisiblepost < 0|(x-oxpost>=0->x-oxpost>v^2/(2*b())+V()*(v/b())+(apost/b()+1)*(apost/2*ep()^2+ep()*(v+V())))&(x-oxpost<=0->oxpost-x>v^2/(2*b())+V()*(v/b())+(apost/b()+1)*(apost/2*ep()^2+ep()*(v+V())))|(y-oypost>=0->y-oypost>v^2/(2*b())+V()*(v/b())+(apost/b()+1)*(apost/2*ep()^2+ep()*(v+V())))&(y-oypost<=0->oypost-y>v^2/(2*b())+V()*(v/b())+(apost/b()+1)*(apost/2*ep()^2+ep()*(v+V()))))&((rpost>=0->v^2/(2*b())+(apost/b()+1)*(apost/2*ep()^2+ep()*v) < alpha()*rpost)&(rpost < 0->v^2/(2*b())+(apost/b()+1)*(apost/2*ep()^2+ep()*v) < -alpha()*rpost))&wpost*rpost=v&(0<=ep()&v>=0)&apost=apost&rpost=rpost&talphapost=0&odxpost=odxpost&odypost=odypost&oxpost=oxpost&oypost=oypost&dxpost=dx&dypost=dy&wpost=wpost&isVisiblepost=isVisiblepost&tpost=0&vpost=v&talphapost=0&xpost=x&ypost=y))".asFormula
@@ -716,7 +718,7 @@ class ModelplexTacticTests extends TacticTestBase {
     foResult.subgoals.head.succ should contain only "\\exists dxo \\exists dyo (dxo^2+dyo^2<=V()^2&((w=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&rpost=r&tpost=0|w!=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&rpost=r&tpost=0)|v=0&(0=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&rpost=r&tpost=0|0!=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&rpost=r&tpost=0)|\\exists a ((-B()<=a&a<=A())&(\\exists xo \\exists yo ((abs(x-xo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=a&rpost=r&tpost=0|0!=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=a&rpost=r&tpost=0))|\\exists r (r!=0&\\exists w (w*r=v&\\exists xo \\exists yo ((abs(x-xo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(w=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=a&rpost=r&tpost=0|w!=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=a&rpost=r&tpost=0))))))))".asFormula
 
     // Opt. 1
-    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*)
+    val opt1Result = proveBy(foResult.subgoals.head, SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)))
     opt1Result.subgoals should have size 1
     opt1Result.subgoals.head.ante shouldBe empty
     opt1Result.subgoals.head.succ should contain only "dxopost^2+dyopost^2<=V()^2&((w=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&rpost=r&tpost=0|w!=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&rpost=r&tpost=0)|v=0&(0=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&rpost=r&tpost=0|0!=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&rpost=r&tpost=0)|(-B()<=apost&apost<=A())&((abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0=0&(0<=ep()&v>=0)&xopost=xopost&yopost=yopost&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=apost&rpost=r&tpost=0|0!=0&(0<=ep()&v>=0)&xopost=xopost&yopost=yopost&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=apost&rpost=r&tpost=0)|rpost!=0&wpost*rpost=v&(abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(wpost=0&(0<=ep()&v>=0)&xopost=xopost&yopost=yopost&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=wpost&apost=apost&rpost=rpost&tpost=0|wpost!=0&(0<=ep()&v>=0)&xopost=xopost&yopost=yopost&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=wpost&apost=apost&rpost=rpost&tpost=0)))".asFormula
@@ -738,7 +740,7 @@ class ModelplexTacticTests extends TacticTestBase {
       Variable("dy"), Variable("v"), Variable("w"), Variable("a"), Variable("r"), Variable("t"))
 
     val foResult = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1))
-    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*)
+    val opt1Result = proveBy(foResult.subgoals.head, SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)))
 
     val testResult = proveBy(opt1Result.subgoals.head, ModelPlex.chaseToTests(combineTests=false)(1))
     testResult.subgoals.loneElement shouldBe "==> <?dxopost^2+dyopost^2<=V()^2;>((<?w=0;><?0<=ep()&v>=0;><?xopost=xo;><?yopost=yo;><?dxopost=dxopost;><?dyopost=dyopost;><?xpost=x;><?ypost=y;><?dxpost=dx;><?dypost=dy;><?vpost=v;><?wpost=w;><?apost=-B();><?rpost=r;><?tpost=0;>true|<?w!=0;><?0<=ep()&v>=0;><?xopost=xo;><?yopost=yo;><?dxopost=dxopost;><?dyopost=dyopost;><?xpost=x;><?ypost=y;><?dxpost=dx;><?dypost=dy;><?vpost=v;><?wpost=w;><?apost=-B();><?rpost=r;><?tpost=0;>true)|<?v=0;>(<?0=0;><?0<=ep()&v>=0;><?xopost=xo;><?yopost=yo;><?dxopost=dxopost;><?dyopost=dyopost;><?xpost=x;><?ypost=y;><?dxpost=dx;><?dypost=dy;><?vpost=v;><?wpost=0;><?apost=0;><?rpost=r;><?tpost=0;>true|<?0!=0;><?0<=ep()&v>=0;><?xopost=xo;><?yopost=yo;><?dxopost=dxopost;><?dyopost=dyopost;><?xpost=x;><?ypost=y;><?dxpost=dx;><?dypost=dy;><?vpost=v;><?wpost=0;><?apost=0;><?rpost=r;><?tpost=0;>true)|<?-B()<=apost&apost<=A();>(<?abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()));>(<?0=0;><?0<=ep()&v>=0;><?xopost=xopost;><?yopost=yopost;><?dxopost=dxopost;><?dyopost=dyopost;><?xpost=x;><?ypost=y;><?dxpost=dx;><?dypost=dy;><?vpost=v;><?wpost=0;><?apost=apost;><?rpost=r;><?tpost=0;>true|<?0!=0;><?0<=ep()&v>=0;><?xopost=xopost;><?yopost=yopost;><?dxopost=dxopost;><?dyopost=dyopost;><?xpost=x;><?ypost=y;><?dxpost=dx;><?dypost=dy;><?vpost=v;><?wpost=0;><?apost=apost;><?rpost=r;><?tpost=0;>true)|<?rpost!=0;><?wpost*rpost=v;><?abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()));>(<?wpost=0;><?0<=ep()&v>=0;><?xopost=xopost;><?yopost=yopost;><?dxopost=dxopost;><?dyopost=dyopost;><?xpost=x;><?ypost=y;><?dxpost=dx;><?dypost=dy;><?vpost=v;><?wpost=wpost;><?apost=apost;><?rpost=rpost;><?tpost=0;>true|<?wpost!=0;><?0<=ep()&v>=0;><?xopost=xopost;><?yopost=yopost;><?dxopost=dxopost;><?dyopost=dyopost;><?xpost=x;><?ypost=y;><?dxpost=dx;><?dypost=dy;><?vpost=v;><?wpost=wpost;><?apost=apost;><?rpost=rpost;><?tpost=0;>true)))".asSequent
@@ -756,7 +758,7 @@ class ModelplexTacticTests extends TacticTestBase {
     foResult.subgoals.loneElement.succ.loneElement shouldBe "\\exists dxo \\exists dyo (dxo^2+dyo^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&kpost=k&tpost=0|v=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&kpost=k&tpost=0|\\exists a ((-B()<=a&a<=A())&\\exists k \\exists w (v*k=w&\\exists xo \\exists yo ((abs(x-xo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yo)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxo&dyopost=dyo&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=a&kpost=k&tpost=0)))))".asFormula
 
     //Opt. 1
-    val opt1Result = proveBy(foResult.subgoals.head, ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*)
+    val opt1Result = proveBy(foResult.subgoals.head, SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)))
     opt1Result.subgoals.loneElement.ante shouldBe empty
     opt1Result.subgoals.loneElement.succ.loneElement shouldBe "dxopost^2+dyopost^2<=V()^2&((0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=w&apost=-B()&kpost=k&tpost=0|v=0&(0<=ep()&v>=0)&xopost=xo&yopost=yo&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=0&apost=0&kpost=k&tpost=0|(-B()<=apost&apost<=A())&v*kpost=wpost&(abs(x-xopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V()))|abs(y-yopost)>v^2/(2*B())+V()*v/B()+(A()/B()+1)*(A()/2*ep()^2+ep()*(v+V())))&(0<=ep()&v>=0)&xopost=xopost&yopost=yopost&dxopost=dxopost&dyopost=dyopost&xpost=x&ypost=y&dxpost=dx&dypost=dy&vpost=v&wpost=wpost&apost=apost&kpost=kpost&tpost=0)".asFormula
 
@@ -920,7 +922,8 @@ class ModelplexTacticTests extends TacticTestBase {
       Variable("x"), Variable("v"), Variable("a"), Variable("t"))
 
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
-    val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*) & simplifier(1))
+    val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
+      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)) & simplifier(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&(v>=0&0<=ep)&xpost=x&vpost=v&apost=A&tpost=0|v=0&0<=ep&xpost=x&vpost=0&apost=0&tpost=0|(v>=0&0<=ep)&xpost=x&vpost=v&apost=-b&tpost=0".asFormula
@@ -938,7 +941,8 @@ class ModelplexTacticTests extends TacticTestBase {
       Variable("x"), Variable("v"), Variable("t"))
 
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
-    val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*) & simplifier(1))
+    val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
+      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)) & simplifier(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "S-x>=ep*vpost&0<=ep&xpost=x&tpost=0|0<=ep&xpost=x&vpost=0&tpost=0".asFormula
@@ -955,7 +959,8 @@ class ModelplexTacticTests extends TacticTestBase {
       Variable("x"), Variable("v"), Variable("d"), Variable("c"), Variable("t"))
 
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
-    val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*) & simplifier(1))
+    val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
+      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)) & simplifier(1))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
     result.subgoals.head.succ should contain only "S-x>=ep*(v+cpost+D)&(-D<=dpost&dpost<=D)&0<=ep&xpost=x&vpost=v&tpost=0|0<=ep&xpost=x&vpost=0&dpost=0&cpost=0&tpost=0".asFormula
@@ -974,7 +979,7 @@ class ModelplexTacticTests extends TacticTestBase {
     val mxResult = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1))
     mxResult.subgoals.loneElement shouldBe "==> S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->A*s_+v>=0&s_+0<=ep)&xpost=A/2*t_^2+v*t_+x&vpost=A*t_+v&apost=A&tpost=t_+0)|v=0&\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->0*s_+v>=0&s_+0<=ep)&xpost=0/2*t_^2+v*t_+x&vpost=0*t_+v&apost=0&tpost=t_+0)|\\exists t_ (t_>=0&\\forall s_ (0<=s_&s_<=t_->(-b)*s_+v>=0&s_+0<=ep)&xpost=(-b)/2*t_^2+v*t_+x&vpost=(-b)*t_+v&apost=-b&tpost=t_+0)".asSequent
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
-    val result = proveBy(mxResult, (ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*) & simplifier(1))
+    val result = proveBy(mxResult, SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)) & simplifier(1))
     result.subgoals.loneElement shouldBe "==> S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&((A>=0&b>0)&ep>0)&(((((((((tpost=0&(A=0|A=apost))&(apost=0|A=apost))&(apost=0|A>0))&(v=0|v=vpost))&v>=0)&(vpost=0|v=vpost))&(vpost=0|v>0))&x=xpost|(tpost>0&tpost < ep)&((A=0&apost=0)&((v=0&vpost=0)&x=xpost|(v=vpost&tpost*v+x=xpost)&v>0)|(A=apost&A>0)&((A*tpost=vpost&v=0)&xpost=0.5*A*tpost^2+x|(A*tpost+v=vpost&xpost=0.5*A*tpost^2+tpost*v+x)&v>0)))|ep=tpost&((A=0&apost=0)&((v=0&vpost=0)&x=xpost|(v=vpost&tpost*v+x=xpost)&v>0)|(A=apost&A>0)&((A*tpost=vpost&v=0)&xpost=0.5*A*tpost^2+x|(A*tpost+v=vpost&xpost=0.5*A*tpost^2+tpost*v+x)&v>0)))|v=0&((A>=0&b>0)&ep>0)&(((tpost>=0&ep>=tpost)&x=xpost)&0=vpost)&apost=0|((A>=0&b>0)&ep>0)&((((v=0&vpost=0)&x=xpost)&apost+b=0)&tpost=0|(v>0&apost+b=0)&((tpost=0&v=vpost)&x=xpost|(0.5*b*tpost^2+xpost=tpost*v+x&ep>=tpost)&(b*tpost=v&vpost=0|(b*tpost+vpost=v&vpost>0)&vpost < v)))".asSequent
     val Or(acc,Or(coast,brake)) = result.subgoals.head.succ.head
     acc shouldBe "S-x>=v^2/(2*b)+(A/b+1)*(A/2*ep^2+ep*v)&((A>=0&b>0)&ep>0)&(((((((((tpost=0&(A=0|A=apost))&(apost=0|A=apost))&(apost=0|A>0))&(v=0|v=vpost))&v>=0)&(vpost=0|v=vpost))&(vpost=0|v>0))&x=xpost|(tpost>0&tpost < ep)&((A=0&apost=0)&((v=0&vpost=0)&x=xpost|(v=vpost&tpost*v+x=xpost)&v>0)|(A=apost&A>0)&((A*tpost=vpost&v=0)&xpost=0.5*A*tpost^2+x|(A*tpost+v=vpost&xpost=0.5*A*tpost^2+tpost*v+x)&v>0)))|ep=tpost&((A=0&apost=0)&((v=0&vpost=0)&x=xpost|(v=vpost&tpost*v+x=xpost)&v>0)|(A=apost&A>0)&((A*tpost=vpost&v=0)&xpost=0.5*A*tpost^2+x|(A*tpost+v=vpost&xpost=0.5*A*tpost^2+tpost*v+x)&v>0)))".asFormula
@@ -989,7 +994,8 @@ class ModelplexTacticTests extends TacticTestBase {
       Variable("x"), Variable("v"), Variable("t"))
 
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
-    val result = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*) & simplifier(1))
+    val result = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
+      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)) & simplifier(1))
     result.subgoals.loneElement shouldBe "==> S-x>=ep*vpost&ep>0&(tpost>=0&ep>=tpost)&tpost*vpost+x=xpost|ep>0&((tpost>=0&ep>=tpost)&x=xpost)&vpost=0".asSequent
 
     val Or(acc,stop) = result.subgoals.head.succ.head
@@ -1004,7 +1010,8 @@ class ModelplexTacticTests extends TacticTestBase {
       Variable("x"), Variable("v"), Variable("d"), Variable("c"), Variable("t"))
 
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
-    val result = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*) & simplifier(1))
+    val result = proveBy(modelplexInput, ModelPlex.modelMonitorByChase(1) &
+      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)) & simplifier(1))
     result.subgoals.loneElement shouldBe "==> S-x>=ep*(v+cpost+D)&(-D<=dpost&dpost<=D)&(ep>0&D>=0)&((tpost>=0&ep>=tpost)&tpost*(cpost+dpost+v)+x=xpost)&v=vpost|(ep>0&D>=0)&((((tpost>=0&ep>=tpost)&x=xpost)&vpost=0)&dpost=0)&cpost=0".asSequent
 
     val Or(acc,stop) = result.subgoals.head.succ.head
@@ -1028,7 +1035,8 @@ class ModelplexTacticTests extends TacticTestBase {
       Variable("d"), Variable("v"), Variable("t"))
 
     val simplifier = SimplifierV3.simpTac(taxs=composeIndex(groundEqualityIndex,defaultTaxs))
-    val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) & (ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)*) & simplifier(1))
+    val result = proveBy(modelplexInput, ModelPlex.controllerMonitorByChase(1) &
+      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)) & simplifier(1))
     result.subgoals.loneElement shouldBe "==> d>=V()*ep()&(0<=vpost&vpost<=V())&0<=ep()&dpost=d&tpost=0|0<=ep()&dpost=d&vpost=0&tpost=0".asSequent
   }
 

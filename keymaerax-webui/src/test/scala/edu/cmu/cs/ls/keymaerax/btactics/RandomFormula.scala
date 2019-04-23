@@ -154,7 +154,6 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     println("Replace all " + repls.mkString(", "))
     // do all replacements repl to fml
     val inst = repls.foldRight(fml) ((repl, f) => doRepl(f,repl))
-    inst
     if (!renamed)
       inst
     else {

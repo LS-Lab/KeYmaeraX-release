@@ -69,7 +69,7 @@ class PrimeSubstituterTest extends TacticTestBase {
       StaticSemantics.symbols(pr.conclusion) should not contain UnitPredicational("p",AnyArg)
     } catch {
       case _: CoreException =>
-      case ex => fail("Expected a CoreException, but got " + ex)
+      case ex: Throwable => fail("Expected a CoreException, but got " + ex)
     }
     // would prove bogus [x'=2&true]x'=5 <-> \forall t>=0 (\forall 0<=s<=t true -> [x:=x+2*t;]x'=5)
     // which is not valid in a state where x'=5
