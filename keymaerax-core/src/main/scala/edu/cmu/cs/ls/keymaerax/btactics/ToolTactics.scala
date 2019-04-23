@@ -244,8 +244,8 @@ private object ToolTactics {
           //@todo find specific transform position based on diff (needs unification for terms like 2+3, 5)
           val diff = UnificationMatch(to, e)
           if (diff.usubst.subsDefsInput.forall(_.what match {
-            case FuncOf(Function("abbrv", None, _, _, _), _) => true case _ => false
-            case FuncOf(Function("expand", None, _, _, _), _) => true case _ => false
+            case FuncOf(Function(name, None, _, _, _), _) => name == "abbrv" || name == "expand"
+            case _ => false
           })) skip
           else transform(expandTo)(pos)
         } catch {

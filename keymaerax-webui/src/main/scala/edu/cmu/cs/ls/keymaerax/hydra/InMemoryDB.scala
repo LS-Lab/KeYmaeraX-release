@@ -72,7 +72,7 @@ class InMemoryDB extends DBAbstraction {
 
   //returns id of create object
   override def getProofsForModel(modelId: Int): List[ProofPOJO] = synchronized {
-    proofs.values.map(_._2).filter(_.modelId == modelId).toList
+    proofs.values.map(_._2).filter(_.modelId.contains(modelId)).toList
   }
 
   override def deleteProofSteps(executionId: Int): Int = synchronized {
@@ -142,7 +142,7 @@ class InMemoryDB extends DBAbstraction {
   override def getModel(modelId: Int): ModelPOJO = synchronized { models(modelId) }
 
   override def deleteModel(modelId: Int): Boolean = synchronized {
-    proofs.filter({case (_, (_, p)) => p.modelId == Some(modelId)}).foreach({case (_, (_, p)) => deleteProof(p.proofId)})
+    proofs.filter({case (_, (_, p)) => p.modelId.contains(modelId)}).foreach({case (_, (_, p)) => deleteProof(p.proofId)})
     models.remove(modelId).isDefined
   }
 
@@ -255,15 +255,15 @@ class InMemoryDB extends DBAbstraction {
   }
 
   override def getPlainExecutionStep(executionId: Int, stepId: Int): Option[ExecutionStepPOJO] =
-    getExecutionSteps(executionId).find(_.stepId == Some(stepId))
+    getExecutionSteps(executionId).find(_.stepId.contains(stepId))
 
   override def getPlainStepSuccessors(proofId: Int, prevStepId: Int, branchOrder: Int): List[ExecutionStepPOJO] = {
-    proofSteps(proofId).filter(s => s.previousStep == Some(prevStepId) && s.branchOrder == branchOrder)
+    proofSteps(proofId).filter(s => s.previousStep.contains(prevStepId) && s.branchOrder == branchOrder)
   }
 
   override def getExecutionStep(proofId: Int, stepId: Int): Option[ExecutionStep] = {
     val steps = proofSteps(proofId)
-    steps.find(_.stepId == Some(stepId)) match {
+    steps.find(_.stepId.contains(stepId)) match {
       case None => None
       case Some(step) =>
         val successorIds = steps.filter(_.previousStep == step.stepId).flatMap(_.stepId)

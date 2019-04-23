@@ -18,7 +18,6 @@ class DatabaseTacticSerializer(db: DBAbstraction) extends IOListener with Loggin
           print(t.prettyString)
           ignoreUntilAfter = Some(expr)
         }
-        case t: InputTactic => logger.warn("Don't know what to do with InputTactics that don't take Formulas.")
         case PartialTactic(t, _) => print("partial(")
       }
     }

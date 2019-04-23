@@ -315,11 +315,11 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     MathematicaToKeYmaera(KeYmaeraToMathematica("3.033".asTerm) ) shouldBe "3033/1000".asTerm
   }
 
-  it should "convert big (non-long) numbers" in {
+  it should "convert non-long numbers to big ints" in {
     KeYmaeraToMathematica(Number(Long.MaxValue)) shouldBe new MExpr(BigInt(Long.MaxValue).bigInteger)
     KeYmaeraToMathematica(Number(Long.MinValue)) shouldBe new MExpr(BigInt(Long.MinValue).bigInteger)
-    KeYmaeraToMathematica(Number(Number(Long.MaxValue).value + 1)) shouldBe new MExpr((BigInt(Long.MaxValue)+1).bigInteger)
-    KeYmaeraToMathematica(Number(Number(Long.MinValue).value - 1)) shouldBe new MExpr((BigInt(Long.MinValue)-1).bigInteger)
-    KeYmaeraToMathematica(Number(Double.MaxValue)) shouldBe new MExpr(scala.math.BigDecimal(Double.MaxValue).toBigIntExact().get.bigInteger)
+    KeYmaeraToMathematica(Number(Number(Long.MaxValue).value + 1)) shouldBe new MExpr((BigInt(Long.MaxValue) + 1).bigInteger)
+    KeYmaeraToMathematica(Number(Number(Long.MinValue).value - 1)) shouldBe new MExpr((BigInt(Long.MinValue) - 1).bigInteger)
+    KeYmaeraToMathematica(Number(Double.MaxValue)) shouldBe new MExpr(scala.BigDecimal(Double.MaxValue).toBigInt().bigInteger)
   }
 }

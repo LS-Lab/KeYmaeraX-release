@@ -145,8 +145,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
           case _ =>
             logger.debug("Counterexample " + cex.prettyString)
             Some(FormulaTools.conjuncts(cex).map({
-              case Equal(name: Variable, value) => name -> value
               case Equal(name: DifferentialSymbol, value) => name -> value
+              case Equal(name: Variable, value) => name -> value
               case Equal(FuncOf(fn, _), value) => fn -> value
               case Equiv(PredOf(fn, _), value) => fn -> value
             }).toMap)

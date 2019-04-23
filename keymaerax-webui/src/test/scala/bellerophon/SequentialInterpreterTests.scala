@@ -125,7 +125,7 @@ class SequentialInterpreterTests extends TacticTestBase with Timeouts {
 
   it should "support 'Rlike' unification matching" in {
     val result = proveBy("(a=0&b=1 -> c=2) | (d=3 -> e=4) | (f=5&g=6 -> h=7)".asFormula,
-      (orR('R)*) & (onAll(implyR('Rlike, "p_()&q_()->r_()".asFormula))*)
+      SaturateTactic(orR('R)) & SaturateTactic(onAll(implyR('Rlike, "p_()&q_()->r_()".asFormula)))
     )
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("a=0&b=1".asFormula, "f=5&g=6".asFormula)
@@ -134,7 +134,7 @@ class SequentialInterpreterTests extends TacticTestBase with Timeouts {
 
   it should "support 'Llike' unification matching" in {
     val result = proveBy("(a=0&b=1 -> c=2) & (d=3 -> e=4) & (f=5&g=6 -> h=7) -> i=8".asFormula,
-      implyR('R) & (andL('L)*) & (onAll(implyL('Llike, "p_()&q_()->r_()".asFormula))*)
+      implyR('R) & SaturateTactic(andL('L)) & SaturateTactic(onAll(implyL('Llike, "p_()&q_()->r_()".asFormula)))
     )
     result.subgoals should have size 4
     result.subgoals(0).ante should contain only "d=3->e=4".asFormula
@@ -157,26 +157,26 @@ class SequentialInterpreterTests extends TacticTestBase with Timeouts {
 
   "* combinator" should "prove |- (1=1->1=1) & (2=2->2=2)" in {
     val f = "(1=1->1=1) & (2=2->2=2)".asFormula
-    val expr = (
+    val expr = SaturateTactic(
           OnAll(andR(SuccPos(0))) |
           OnAll(implyR(SuccPos(0)) & close)
-        )*
+        )
   }
 
   it should "prove x=2&y=3&z=4 |- z=4" in {
-    shouldClose((andL('_)*) &
+    shouldClose(SaturateTactic(andL('_)) &
       assertE("x=2".asFormula, "x=2 not at -1")(-1) & assertE("y=3".asFormula, "y=3 not at -2")(-2) &
       assertE("z=4".asFormula, "z=4 not at -3")(-3) & close,
       Sequent(IndexedSeq("x=2&y=3&z=4".asFormula), IndexedSeq("z=4".asFormula)))
   }
 
   it should "repeat 0 times if not applicable" in {
-    shouldClose((andL('_)*) & close,
+    shouldClose(SaturateTactic(andL('_)) & close,
       Sequent(IndexedSeq("x=2".asFormula), IndexedSeq("x=2".asFormula)))
   }
 
   it should "saturate until no longer applicable" in {
-    shouldClose((andL('Llast)*) &
+    shouldClose(SaturateTactic(andL('Llast)) &
       assertE("x=2".asFormula, "x=2 not at -1")(-1) & assertE("y=3".asFormula, "y=3 not at -2")(-2) &
       assertE("z=4|z=5".asFormula, "z=4|z=5 not at -3")(-3) & close,
       Sequent(IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)))
@@ -184,7 +184,7 @@ class SequentialInterpreterTests extends TacticTestBase with Timeouts {
 
   it should "not try right branch when used in combination with either combinator" in {
     val result = proveBy(Sequent(IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)),
-      (((andL('Llast)*) partial) | close)*)
+      SaturateTactic(SaturateTactic(andL('Llast)) | close))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x=2".asFormula, "y=3".asFormula, "z=4 | z=5".asFormula)
     result.subgoals.head.succ should contain only "x=2".asFormula
@@ -192,7 +192,7 @@ class SequentialInterpreterTests extends TacticTestBase with Timeouts {
 
   it should "saturate 'Rlike' unification matching" in {
     val result = proveBy("(a=0&b=1 -> c=2) | (d=3 -> e=4) | (f=5&g=6 -> h=7)".asFormula,
-      (orR('R)*) & (implyR('Rlike, "p_()&q_()->r_()".asFormula)*)
+      SaturateTactic(orR('R)) & SaturateTactic(implyR('Rlike, "p_()&q_()->r_()".asFormula))
       )
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("a=0&b=1".asFormula, "f=5&g=6".asFormula)
@@ -203,12 +203,12 @@ class SequentialInterpreterTests extends TacticTestBase with Timeouts {
     val fml = "[x:=3;](x>0 & x>1 & x>2)".asFormula
     val modelContent = s"ProgramVariables Real x; End.\n Problem ${fml.prettyString} End."
     db.createProof(modelContent, "saturateTest")
-    db.proveBy(modelContent, ((boxAnd('R) & andR('R))*) & master()) shouldBe 'proved
+    db.proveBy(modelContent, SaturateTactic(boxAnd('R) & andR('R)) & master()) shouldBe 'proved
   }}
 
   "+ combinator" should "saturate with at least 1 repetition" in {
     val result = proveBy(Sequent(IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)),
-      andL('Llast) & (andL('Llast)*))
+      andL('Llast) & SaturateTactic(andL('Llast)))
     result.subgoals should have size 1
     result.subgoals.head.ante should contain only ("x=2".asFormula, "y=3".asFormula, "z=4 | z=5".asFormula)
     result.subgoals.head.succ should contain only "x=2".asFormula
@@ -216,12 +216,12 @@ class SequentialInterpreterTests extends TacticTestBase with Timeouts {
 
   it should "fail when not at least 1 repetition is possible" in {
     a [BelleThrowable] should be thrownBy proveBy(Sequent(IndexedSeq("z=4|z=5".asFormula), IndexedSeq("x=2".asFormula)),
-      andL('Llast) & (andL('Llast)*))
+      andL('Llast) & SaturateTactic(andL('Llast)))
   }
 
   it should "saturate with at least 1 repetition and try right branch in combination with either combinator" in {
     proveBy(Sequent(IndexedSeq("x=2&y=3&(z=4|z=5)".asFormula), IndexedSeq("x=2".asFormula)),
-      (((andL('Llast) & (andL('Llast)*)) partial) | close)*) shouldBe 'proved
+      SaturateTactic((andL('Llast) & SaturateTactic(andL('Llast))) | close)) shouldBe 'proved
   }
 
   "must idiom" should "fail when no change occurs" in {
@@ -268,7 +268,7 @@ class SequentialInterpreterTests extends TacticTestBase with Timeouts {
 
   it should "handle cases were subgoals are added." in {
     val tactic = andR(SuccPos(0)) < (
-      andR(SuccPos(0)) partial,
+      andR(SuccPos(0)),
       implyR(SuccPos(0)) & close
     )
     val f = "(2=2 & 3=3) & (1=1->1=1)".asFormula
@@ -293,7 +293,7 @@ class SequentialInterpreterTests extends TacticTestBase with Timeouts {
   it should "handle cases were subgoals are added -- switch order" in {
     val tactic = andR(SuccPos(0)) < (
       implyR(SuccPos(0)) & close,
-      andR(SuccPos(0)) partial
+      andR(SuccPos(0))
       )
     val f = "(1=1->1=1) & (2=2 & 3=3)".asFormula
     shouldResultIn(

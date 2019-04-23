@@ -1,5 +1,6 @@
 package btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.SaturateTactic
 import edu.cmu.cs.ls.keymaerax.btactics.Idioms.?
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics._
@@ -9,7 +10,6 @@ import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 
 import scala.collection.immutable.IndexedSeq
-
 import org.scalatest.LoneElement._
 
 class ODEInvarianceTests extends TacticTestBase {
@@ -634,7 +634,7 @@ class ODEInvarianceTests extends TacticTestBase {
     val pr = proveBy("x=1&y=1&A()=1 -> [{x'=2*(-z+x+y)+A(),y'=y+5*x-3*z-B(),z'=x-3*z+5*(y+C)}] x+y+z >= 0".asFormula,
       //val pr = proveBy("x=1&y=1 -> [{x'=x+y,y'=-x-y}] x=0".asFormula,
       implyR(1) & nilpotentSolve(false)(1) & dW(1) & implyR(1) &
-      (andL('Llast)*)
+      SaturateTactic(andL('Llast))
     )
 
     pr.subgoals(0).ante.length shouldBe 7
