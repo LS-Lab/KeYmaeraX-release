@@ -21,6 +21,7 @@ PostRHSProductFactors::usage="PostRHSLieDFactors[problem] Generate irreducible f
 DarbouxPolynomials::usage="DarbouxPolynomials[problem]"
 SummandFactors::usage="SummandFactors[problem]"
 SFactorList::usage="SFactorList[problem]"
+PhysicalQuantities::usage="PhysicalQuantities[problem]"
 
 
 Begin["`Private`"]
@@ -154,5 +155,33 @@ Select[factorList/.{Rule[a_,b_] -> a-b}/.{ConditionalExpression[a_,_]-> a},Polyn
 ];
 
 
-End[]
+(* Computes polynomials that (hopefully) represent importnat physical quantities in the underlying system *)
+PhysicalQuantities[problem_List]:=Catch[Module[{pre,f,vars,Q,post,J,divergence, jacDet,spinTensor,strainRateTensor,plist,flist},
+{pre,{f,vars,Q},post}=problem;
+(* Compute the Jacobian matrix *)
+J=Grad[f,vars];
+(* Compute some common physical quantities *)
+divergence=Tr[J];
+jacDet=Det[J]; (* Jacobian determinant *)
+strainRateTensor=1/2(J+Transpose[J]);
+spinTensor=1/2(J-Transpose[J]);
+
+(* Combine the square free factors of the above, do some basic redundancy filtering *)
+plist=Expand/@Select[FactorSquareFreeList[
+{divergence,jacDet,strainRateTensor, spinTensor}//Flatten//DeleteDuplicates
+]//Flatten//DeleteDuplicates, Not[NumericQ[#]]&];
+
+(* Iteratively filter out all linearly dependent polynomials *)
+flist={};
+Do[If[
+Not[ AnyTrue[flist, TrueQ[PolynomialReduce[#,{p},vars][[2]]==0]&]]
+,flist=Join[flist,{Expand[p]}]
+],
+{p,plist}];
+(* Return filtered list *)
+Throw[flist];
+]];
+
+
+ End[]
 EndPackage[]
