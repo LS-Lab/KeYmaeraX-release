@@ -171,6 +171,7 @@ object InvariantGenerator extends Logging {
 
       ToolProvider.invGenTool() match {
         case Some(tool) =>
+          def proofHint(s: String): Option[String] = if (s != "Unknown") Some(s) else None
           lazy val pegasusInvs = tool.invgen(ode, sequent.ante, post)
           lazy val conjunctiveCandidates: Seq[Either[Seq[(Formula, String)], Seq[(Formula, String)]]] = pegasusInvs.withFilter({
             case Left(l) => l.length > 1 && l.map(_._1).exists(strictInequality)
@@ -182,11 +183,11 @@ object InvariantGenerator extends Logging {
           lazy val invs: Seq[GenProduct] =
             if (includeCandidates) {
               (pegasusInvs ++ conjunctiveCandidates).flatMap({
-                case Left(l) => l.map(i => i._1 -> Some(PegasusProofHint(isInvariant = true, Some(i._2))))
-                case Right(r) => r.map(i => i._1 -> Some(PegasusProofHint(isInvariant = false, Some(i._2))))
+                case Left(l) => l.map(i => i._1 -> Some(PegasusProofHint(isInvariant = true, proofHint(i._2))))
+                case Right(r) => r.map(i => i._1 -> Some(PegasusProofHint(isInvariant = false, proofHint(i._2))))
               })
             } else {
-              pegasusInvs.filter(_.isLeft).flatMap(_.left.get.map(i => i._1 -> Some(PegasusProofHint(isInvariant=true, Some(i._2)))))
+              pegasusInvs.filter(_.isLeft).flatMap(_.left.get.map(i => i._1 -> Some(PegasusProofHint(isInvariant=true, proofHint(i._2)))))
             }
           Stream[GenProduct]() #::: invs.toStream.distinct
         case _ => Seq().toStream
