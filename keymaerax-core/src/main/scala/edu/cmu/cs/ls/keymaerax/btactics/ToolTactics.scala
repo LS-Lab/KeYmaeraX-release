@@ -25,8 +25,6 @@ private object ToolTactics {
 
   private val namespace = "tooltactics"
 
-  private val convertInterpretedSymbols = Configuration.getOption(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse("false").toBoolean
-
   /** Performs QE and fails if the goal isn't closed. */
   def fullQE(order: Seq[NamedSymbol] = Nil)(qeTool: => QETool): BelleExpr = Idioms.NamedTactic("QE", {
     val doRcf = rcf(qeTool) &
@@ -37,6 +35,7 @@ private object ToolTactics {
 
     val closure = toSingleFormula & FOQuantifierTactics.universalClosure(order)(1)
 
+    val convertInterpretedSymbols = Configuration.getOption(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS).getOrElse("false").toBoolean
     val expand =
       if (convertInterpretedSymbols) skip
       else EqualityTactics.expandAll &
