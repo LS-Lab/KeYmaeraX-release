@@ -334,7 +334,7 @@ class ParserTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       """.stripMargin
 
     the [ParseException] thrownBy KeYmaeraXArchiveParser(input) should have message
-      """2:12 type analysis: A was declared as a function but must be a variable when it is assigned to or has a differential equation.
+      """2:12 type analysis: <undefined>: A was declared as a function but must be a variable when it is assigned to or has a differential equation.
         |Found:    Unit->Real Function at 2:12 to 2:15
         |Expected: Variable of sort Real""".stripMargin
   }

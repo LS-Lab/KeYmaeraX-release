@@ -833,7 +833,7 @@ class USubstTests extends SystemTestBase {
         val pr = ProvableSig.rules("CE congruence")(s)
         pr.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
         pr.subgoals should contain only Sequent(IndexedSeq(), IndexedSeq(prem))
-        val pr2 = s(ProvableSig.rules("CE congruence"))
+        val pr2 = ProvableSig.rules("CE congruence")(s)
         pr2.conclusion shouldBe Sequent(IndexedSeq(), IndexedSeq(conc))
         pr2.subgoals should contain only Sequent(IndexedSeq(), IndexedSeq(prem))
       }

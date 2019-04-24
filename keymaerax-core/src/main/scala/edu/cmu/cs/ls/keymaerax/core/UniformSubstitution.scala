@@ -18,7 +18,6 @@ package edu.cmu.cs.ls.keymaerax.core
 import scala.collection.immutable
 import SetLattice.bottom
 import SetLattice.allVars
-import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 /** Admissibility conditions. */
 object SubstitutionAdmissibility {
@@ -247,7 +246,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
   *   println(next)
   * }}}
   */
-final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends (Expression => Expression) {
+final case class USubstChurch(subsDefsInput: immutable.Seq[SubstitutionPair]) extends (Expression => Expression) {
   /** automatically filter out identity substitution no-ops, which can happen by systematic constructions such as unification */
   private[this] val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
 
@@ -324,20 +323,10 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
   //@note mapping apply instead of the equivalent usubst makes sure the exceptions are augmented and the ensuring contracts checked.
   def apply(s: Sequent): Sequent = try { Sequent(s.ante.map(apply), s.succ.map(apply)) } catch { case ex: ProverException => throw ex.inContext(s.toString) }
 
-  /**
-    * Apply uniform substitution to a Provable (convenience method).
- *
-    * @return `pr(this)`
-    * @note Convenience method not used in the core.
-    * @see [[ProvableSig.apply(USubst)]]
-    */
-  def apply(pr: ProvableSig): ProvableSig = pr.apply(this)
-
-
   /** Union of uniform substitutions, i.e., both replacement lists merged.
     * @note Convenience method not used in the core, but used for stapling uniform substitutions together during unification etc.
     */
-  def ++(other: USubst): USubst = USubst((this.subsDefsInput ++ other.subsDefsInput).distinct)
+  def ++(other: USubstChurch): USubstChurch = USubstChurch((this.subsDefsInput ++ other.subsDefsInput).distinct)
 
 
   /**
@@ -348,7 +337,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
     subsDefs.exists(sp => sp.what.isInstanceOf[ApplicationOf] && sp.sameHead(e))
 
   // implementation of uniform substitution application
-      
+
   /** uniform substitution on terms */
   private def usubst(term: Term): Term = {
     term match {
@@ -362,7 +351,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
-        USubst(toSubsPairs(wArg, theta)).usubst(subs.repl.asInstanceOf[Term])
+        USubstChurch(toSubsPairs(wArg, theta)).usubst(subs.repl.asInstanceOf[Term])
       case app@FuncOf(g:Function, theta) if !matchHead(app) => FuncOf(g, usubst(theta))
       case Nothing =>
         assert(!subsDefs.exists(sp => sp.what == Nothing /*&& sp.repl != Nothing*/), "can replace Nothing only by Nothing, and nothing else");
@@ -387,7 +376,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       case f: UnitFunctional if subsDefs.exists(_.what==f) => subsDefs.find(_.what==f).get.repl.asInstanceOf[Term]
       case f: UnitFunctional if !subsDefs.exists(_.what==f) => f
     }
-  } ensuring(r => r.kind==term.kind && r.sort==term.sort, "Uniform Substitution leads to same kind and same sort " + term)
+  } //ensuring(r => r.kind==term.kind && r.sort==term.sort, "Uniform Substitution leads to same kind and same sort " + term)
 
   /** uniform substitution on formulas */
   private def usubst(formula: Formula): Formula = {
@@ -399,7 +388,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         assert(SubstitutionAdmissibility.isSubstitutableArg(wArg))
         // unofficial substitution for Nothing (no effect) and Anything in analogy to substitution for DotTerm
         //@note Uniform substitution of the argument placeholder applied to the replacement subs.repl for the shape subs.what
-        USubst(toSubsPairs(wArg, theta)).usubst(subs.repl.asInstanceOf[Formula])
+        USubstChurch(toSubsPairs(wArg, theta)).usubst(subs.repl.asInstanceOf[Formula])
       case app@PredOf(q, theta) if !matchHead(app) => PredOf(q, usubst(theta))
       case app@PredicationalOf(op, fml) if matchHead(app) =>
         requireAdmissible(allVars, fml, formula)
@@ -407,7 +396,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         val PredicationalOf(wp, wArg) = subs.what
         assert(wp == op, "match only if same head")
         assert(wArg == DotFormula)
-        USubst(SubstitutionPair(wArg, usubst(fml)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])
+        USubstChurch(SubstitutionPair(wArg, usubst(fml)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])
       case app@PredicationalOf(q, fml) if !matchHead(app) =>
         //@note admissibility is required for nonmatching predicationals since the arguments might be evaluated in different states.
         requireAdmissible(allVars, fml, formula)
@@ -453,7 +442,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       case p: UnitPredicational if subsDefs.exists(_.what==p) => subsDefs.find(_.what==p).get.repl.asInstanceOf[Formula]
       case p: UnitPredicational if !subsDefs.exists(_.what==p) => p
     }
-  } ensuring(r => r.kind==formula.kind && r.sort==formula.sort, "Uniform Substitution leads to same kind and same sort " + formula)
+  } //ensuring(r => r.kind==formula.kind && r.sort==formula.sort, "Uniform Substitution leads to same kind and same sort " + formula)
 
   /** uniform substitution on programs */
   private def usubst(program: Program): Program = {
@@ -478,7 +467,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
         Loop(usubst(a))
       case Dual(a)           => Dual(usubst(a))
     }
-  } ensuring(r => r.kind==program.kind && r.sort==program.sort, "Uniform Substitution leads to same kind and same sort " + program)
+  } //ensuring(r => r.kind==program.kind && r.sort==program.sort, "Uniform Substitution leads to same kind and same sort " + program)
 
   /** uniform substitution on differential programs */
   private def usubst(ode: DifferentialProgram): DifferentialProgram = {
@@ -488,7 +477,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
     //@note the requires checking within usubstODE(ode, odeBV) will be redundant but locally the right thing to do.
     //@note usubstODE(ode, StaticSemantics(usubstODE(ode, SetLattice.bottom)).bv) would be sound just more permissive
     usubstODE(ode, StaticSemantics(ode).bv)
-  } ensuring(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
+  } //ensuring(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
 
   /**
     * uniform substitutions on differential programs
@@ -505,10 +494,10 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
       // homomorphic cases
       case DifferentialProduct(a, b) => DifferentialProduct(usubstODE(a, odeBV), usubstODE(b, odeBV))
     }
-  } ensuring(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
+  } //ensuring(r => r.kind==ode.kind && r.sort==ode.sort, "Uniform Substitution leads to same kind and same sort " + ode)
 
   /** Turns matching terms into substitution pairs (traverses pairs to create component-wise substitutions). */
-  def toSubsPairs(w: Term, r: Term): List[SubstitutionPair] = (w, r) match {
+  private def toSubsPairs(w: Term, r: Term): List[SubstitutionPair] = (w, r) match {
     case (Pair(wl, wr), Pair(rl, rr)) => toSubsPairs(wl, rl) ++ toSubsPairs(wr, rr)
     case _ => SubstitutionPair(w, usubst(r)) :: Nil
   }
@@ -570,7 +559,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends 
     * @see Definition 19 in Andre Platzer. [[https://doi.org/10.1007/s10817-016-9385-1 A complete uniform substitution calculus for differential dynamic logic]]. Journal of Automated Reasoning, 2016.
     * @see arXiv:1503.01981 Definition 12.
     */
-  @inline private def projection(affected: immutable.Set[NamedSymbol]): USubst = new USubst(
+  @inline private def projection(affected: immutable.Set[NamedSymbol]): USubstChurch = new USubstChurch(
     subsDefs.filter(sigma => affected.contains(sigma.matchKey))
   )
 

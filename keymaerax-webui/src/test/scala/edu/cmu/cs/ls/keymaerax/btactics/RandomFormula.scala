@@ -10,8 +10,11 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import scala.util.Random
 import scala.collection.immutable
 import scala.collection.immutable._
-import Augmentors.FormulaAugmentor
+import edu.cmu.cs.ls.keymaerax.btactics.Augmentors.FormulaAugmentor
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
+
+import scala.collection.mutable.ListBuffer
 
 /**
  * Random formula generator and random term generator and random program generator
@@ -28,14 +31,21 @@ import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
  * @param seed the random seed, for repeatable random testing purposes.
  */
 class RandomFormula(val seed: Long = new Random().nextLong()) {
-  println("RandomFormula(" + seed + "L) seed will regenerate the same random sequence\n\n")
+  println("regenerate by RandomFormula(" + seed + "L)")
   val rand: Random = new Random(seed)
-  private val shortProbability = 0.10
+  /** probability of prematurely stopping short at any given operator */
+  private val shortProbability = 0.05
   private val randomReps = 500
 
-  private val funcNames = "ff" :: "gg" :: "hh" :: Nil
-  private val predNames = "pp" :: "qq" :: "rr" :: Nil
-  private val progNames = "aa" :: "bb" :: "cc" :: Nil
+  private val funcNames = "ff" :: "gg" :: "hh" :: "ii" :: Nil
+  private val predNames = "pp" :: "qq" :: "rr" :: "ss" :: Nil
+  private val progNames = "aa" :: "bb" :: "cc" :: "dd" :: Nil
+
+
+  /** next RandomFormula episode */
+  def nextFormulaEpisode(): RandomFormula = {print("episode "); new RandomFormula(rand.nextLong())}
+
+  // expression generators
 
   def nextExpression(size: Int): Expression = rand.nextInt(4) match {
     case 0 => nextTerm(size)
@@ -44,14 +54,19 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     case 3 => nextDifferentialProgram(size)
   }
 
+  /** randomly generate a term of the given expected size */
   def nextTerm(size : Int): Term = nextT(nextNames("z", size / 3 + 1), size)
 
+  /** randomly generate a formula of the given expected size */
   def nextFormula(size : Int): Formula = nextF(nextNames("z", size / 3 + 1), size)
 
+  /** randomly generate a program/game of the given expected size */
   def nextProgram(size : Int): Program = nextP(nextNames("z", size / 3 + 1), size)
 
+  /** randomly generate a hybrid system without games of the given expected size */
   def nextSystem(size : Int): Program = nextP(nextNames("z", size / 3 + 1), size, dotTs=false, dotFs=false, diffs=true, funcs=false, duals=false)
 
+  /** randomly generate a differential program of the given expected size */
   def nextDifferentialProgram(size : Int): DifferentialProgram = nextDP(nextNames("z", size / 3 + 1), size)
 
 
@@ -68,8 +83,9 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     case 2 => nextDotProgram(size)
   }
 
+  /** randomly generate a formula context C{_} of the given expected size */
   def nextFormulaContext(size : Int): Context[Formula] = {
-    import Augmentors._
+    import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
     val fml = nextF(nextNames("z", size / 3 + 1), 2*size, modals=true, dotTs=false, dotFs=false, diffs=false, funcs=false, duals=isGame)
     for (j <- 1 to randomReps) {
       //@todo min(size, fml.size)
@@ -85,22 +101,39 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     Sequent(Range(0,rand.nextInt(size/2)).map(i => nextF(vars, size-1)), Range(0,rand.nextInt(size/2)).map(i => nextF(vars, size-1)))
   }
 
-  /** Generate a random proof of a random tautological sequents */
+  /** Generate a random proof of a random tautological sequent */
   def nextProvable(size: Int): ProvableSig = nextPr(nextNames("z", size / 3 + 1), size)
 
-  /** Generate a random schematic instance of the given Formula `fml` of complexity `size`.
+  /** Generate a random schematic instance of the given Formula `fml` of expected complexity `size`.
     * @param renamed whether variables can have been renamed in the schematic instance generated.
     * @param builtins whether built-in names can be used in the schematic instance, or 'false' if fresh.
     * @param diffs whether differentials can be used in the schematic instance. */
   def nextSchematicInstance(fml: Formula, size: Int, renamed: Boolean = true, builtins: Boolean = false, diffs: Boolean = false): Formula = {
+    val diffPrgConsts = new ListBuffer[Set[NamedSymbol]]()
+    ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+      override def preP(p: PosInExpr, e: Program): Either[Option[ExpressionTraversal.StopTraversal], Program] = e match {
+        case ODESystem(ode: DifferentialProduct, _) =>
+          val diffconsts = StaticSemantics.signature(ode).filter(_.isInstanceOf[DifferentialProgramConst])
+          diffconsts.subsets(1).foreach(diffPrgConsts += _)
+          Left(None)
+        case _ => Left(None)
+      }
+    }, fml)
+
+    val signature = StaticSemantics.signature(fml)
+    val symbols =
+      if (diffPrgConsts.size <= 1) signature.groupBy(_ => 0)
+      else signature.groupBy(s => diffPrgConsts.indexWhere(_.contains(s)))
+
     val ownvars = StaticSemantics.vars(fml).symbols.filter(x => x.isInstanceOf[BaseVariable]).
       filter(x => builtins || !x.name.endsWith("_"))
-    // two different piles of variables to avoid accidental capture during the schematic instantiation
+    // three different piles of variables to avoid accidental capture during the schematic instantiation
     val vars = nextNames("z", size / 3 + 1)
+    val odevars = (1 to symbols.partition(_._1 >= 0)._1.size).map(i => nextNames("o" + i, size / 3 + 1))
     val othervars = nextNames("y", size / 5 + 1)
-    val symbols = StaticSemantics.signature(fml)
+
     //@todo make sure not to create diffs when the symbol occurs within another diff
-    val repls: Set[(Expression,Expression)] = symbols.map(sym => sym match {
+    val repls: Set[(Expression,Expression)] = symbols.map({ case (i, s) => s.map({
       case p@UnitPredicational(_,AnyArg) => if (diffs) p->nextF(vars,size) else p->nextF(vars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=false,duals=isGame)
       case p@UnitPredicational(_,Except(_)) => p->nextF(vars,size,modals=true,dotTs=false, dotFs=false,diffs=false,funcs=false,duals=isGame)
       // need to teach the term some manners such as no diffs if occurs in ODE
@@ -108,13 +141,14 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
       case p@UnitFunctional(_,Except(_),_) => p->nextT(vars,size,dots=false,diffs=false,funcs=false)
       case a: ProgramConst => a->nextP(vars,size)
       case a: SystemConst => a->nextP(vars,size,dotTs=true, dotFs=true, diffs=diffs, funcs=false, duals=false)
-      case a: DifferentialProgramConst => a->nextDP(vars,size)
+      case a: DifferentialProgramConst => a->nextDP(odevars(i),size)
       case f@Function(_,_,Unit,Real,false) => FuncOf(f,Nothing)->nextT(othervars,size,dots=false,diffs=false,funcs=false)
       case p@Function(_,_,Unit,Bool,false) => PredOf(p,Nothing)->nextF(othervars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=false,duals=isGame)
       case f@Function(_,_,Real,Real,false) => FuncOf(f,DotTerm())->nextT(othervars,size,dots=true,diffs=false,funcs=false)
       case p@Function(_,_,Real,Bool,false) => PredOf(p,DotTerm())->nextF(othervars,size,modals=true, dotTs=true, dotFs=false,diffs=false,funcs=false,duals=isGame)
+      //@todo replace also as PredicationalOf
       case ow => ow->ow
-    })
+    })}).toSet.flatten
     def doRepl(f: Formula, repl: (Expression, Expression)): Formula =
       if (repl._1==repl._2) f else FormulaAugmentor(f).replaceAll(repl._1, repl._2)
     println("Replace all " + repls.mkString(", "))
@@ -159,7 +193,43 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
     }
   }
 
-  /** Generate a random (propositionally) provable formula */
+
+  /** Generate a random admissible uniform substitution for the given Formula `fml` of expected complexity `size`.
+    * @note Tries hard to be admissible but won't always be for all formulas.
+    *       It should shift variables on nesting occurrences such as
+    *       qq(ff()) for qq(.)~>[u1:=5].>=0, ff()~>2*u1
+    * @requires no function/predicate occurrences within Differentials because those might cause inadmissibility if replaced free
+    * @param diffs whether differentials can be used in the schematic instance. */
+  def nextAdmissibleUSubst(fml: Formula, size: Int, diffs: Boolean = false): USubst = {
+    val replacedFuncs = false
+    val ownvars: Set[Variable] = StaticSemantics.vars(fml).symbols.filter(x => x.isInstanceOf[BaseVariable])
+    // disjoint pile of variables to avoid accidental capture during the schematic instantiation
+    val othervars: IndexedSeq[Variable] = (nextNames("u", size / 5 + 1).toSet--ownvars).toIndexedSeq
+    val vars = (ownvars++othervars).toIndexedSeq
+    val symbols = StaticSemantics.signature(fml)
+    //@todo make sure not to create diffs when the symbol occurs within another diff
+    val repls: Set[(Expression,Expression)] = symbols.map(sym => sym match {
+      case p@UnitPredicational(_,AnyArg) => if (diffs) p->nextF(vars,size, modals=true,dotTs=false,dotFs=false,diffs=false,funcs=false,duals=isGame)
+      else p->nextF(vars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=replacedFuncs,duals=isGame)
+      case p@UnitPredicational(_,Except(_)) => p->nextF(vars,size,modals=true,dotTs=false, dotFs=false,diffs=false,funcs=replacedFuncs,duals=isGame)
+      // need to teach the term some manners such as no diffs if occurs in ODE
+      case p@UnitFunctional(_,AnyArg,_) => p->nextT(vars,size,dots=false,diffs=false,funcs=replacedFuncs)
+      case p@UnitFunctional(_,Except(_),_) => p->nextT(vars,size,dots=false,diffs=false,funcs=replacedFuncs)
+      case a: ProgramConst => a->nextP(vars,size)
+      case a: SystemConst => a->nextP(vars,size,dotTs=true, dotFs=true, diffs=diffs, funcs=replacedFuncs, duals=false)
+      case a: DifferentialProgramConst => a->nextDP(vars,size)
+      case f@Function(_,_,Unit,Real,false) => FuncOf(f,Nothing)->nextT(othervars,size,dots=false,diffs=false,funcs=replacedFuncs)
+      case p@Function(_,_,Unit,Bool,false) => PredOf(p,Nothing)->nextF(othervars,size,modals=true, dotTs=false, dotFs=false,diffs=false,funcs=replacedFuncs,duals=isGame)
+      case f@Function(_,_,Real,Real,false) => FuncOf(f,DotTerm())->nextT(othervars,size,dots=true,diffs=false,funcs=replacedFuncs)
+      case p@Function(_,_,Real,Bool,false) => PredOf(p,DotTerm())->nextF(othervars,size,modals=true, dotTs=true, dotFs=false,diffs=false,funcs=replacedFuncs,duals=isGame)
+      case p@Function(_,_,Bool,Bool,false) => PredicationalOf(p,DotFormula)->nextF(othervars,size,modals=true, dotTs=false,dotFs=true,diffs=false,funcs=replacedFuncs,duals=isGame)
+      case ow => ow->ow
+    })
+    USubst(repls.filter(pair=>pair._1!=pair._2).map(pair=>SubstitutionPair(pair._1,pair._2)).to)
+  }
+
+
+    /** Generate a random (propositionally) provable formula */
   //def nextProved(size: Int): Sequent = nextProvable(size).conclusion
 
   /** weaken p1 and p2 such that they have the same context except at position `pos` */
@@ -215,11 +285,11 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
 
   private def nextPos(n : Int) : List[Int] = {
     require(n >= 0)
-    if (n == 0 || rand.nextFloat() <= shortProbability) return Nil
+    if (n == 0 || rand.nextFloat()<=shortProbability) return Nil
     (if (rand.nextBoolean()) 1 else 0) :: nextPos(n - 1)
   }
 
-  // random generator implementations
+  // configurable random generator implementations
 
   def nextT(vars : IndexedSeq[Variable], n : Int) : Term = nextT(vars, n, dots=false, diffs=true, funcs=true)
   def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean) : Term = nextT(vars, n, dots=dots, diffs= !dots, funcs=true)
@@ -227,7 +297,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean, diffs: Boolean, funcs: Boolean) : Term = {
     require(n>=0)
     if (n == 0 || rand.nextFloat()<=shortProbability) return if (dots && rand.nextInt(100)>=50) {assert(dots); DotTerm()} else Number(BigDecimal(1))
-    val r = rand.nextInt(if (dots) 105 else 95/*+1*/)
+    val r = rand.nextInt(if (dots) 110 else 95/*+1*/)
     r match {
       case 0 => Number(BigDecimal(0))
         //@todo directly generate negative numbers too?
@@ -260,7 +330,7 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
   def nextF(vars : IndexedSeq[Variable], n : Int, modals: Boolean, dotTs: Boolean, dotFs: Boolean, diffs: Boolean, funcs: Boolean, duals: Boolean) : Formula = {
 	  require(n>=0)
 	  if (n == 0 || rand.nextFloat()<=shortProbability) return if (dotFs && rand.nextInt(100)>=70) {assert(dotFs);DotFormula} else True
-      val r = rand.nextInt(if (dotFs) 330 else 320)
+      val r = rand.nextInt(if (dotFs) 380 else 340)
       r match {
         case 0 => False
         case 1 => True
@@ -280,11 +350,11 @@ class RandomFormula(val seed: Long = new Random().nextLong()) {
         case it if 170 until 230 contains it => Box(nextP(vars, n-1, dotTs, dotFs, diffs, funcs,duals=duals), nextF(vars, n-1, modals=modals,dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs,duals=duals))
         case it if 230 until 290 contains it => Diamond(nextP(vars, n-1, dotTs, dotFs, diffs, funcs,duals=duals), nextF(vars, n-1, modals=modals,dotTs=dotTs,dotFs=dotFs,diffs=diffs,funcs=funcs,duals=duals))
         case it if (290 until 300 contains it) && diffs => DifferentialFormula(nextF(vars, n-1, false, false, false, false, false,duals=false))
-        case it if (300 until 304 contains it) && funcs => PredOf(Function(predNames(rand.nextInt(predNames.length))+ "0",None,Unit,Bool),Nothing)
-        case it if (304 until 308 contains it) && funcs => PredOf(Function(predNames(rand.nextInt(predNames.length)),None,Real,Bool), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))
-        case it if (308 until 310 contains it) && funcs => PredicationalOf(Function(predNames(rand.nextInt(predNames.length)).toUpperCase + "1",None,Bool,Bool), nextF(vars, n-1, modals, false, false, diffs, funcs,duals=duals))
-        case it if (310 until 320 contains it) && funcs => UnitPredicational(predNames(rand.nextInt(predNames.length)).toUpperCase,AnyArg)
-        case it if 320 until 400 contains it => assert(dotFs); DotFormula
+        case it if (300 until 310 contains it) && funcs => PredOf(Function(predNames(rand.nextInt(predNames.length))+ "0",None,Unit,Bool),Nothing)
+        case it if (310 until 320 contains it) && funcs => PredOf(Function(predNames(rand.nextInt(predNames.length)),None,Real,Bool), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))
+        case it if (320 until 330 contains it) && funcs => PredicationalOf(Function(predNames(rand.nextInt(predNames.length)).toUpperCase + "1",None,Bool,Bool), nextF(vars, n-1, modals, dotTs=false, dotFs=false, diffs=diffs,funcs=funcs,duals=duals))
+        case it if (330 until 340 contains it) && funcs => UnitPredicational(predNames(rand.nextInt(predNames.length)).toUpperCase,AnyArg)
+        case it if 340 until 400 contains it => assert(dotFs); DotFormula
         case it if (0 to 400 contains it) && (!diffs || !funcs) => GreaterEqual(nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs), nextT(vars, n-1, dots=dotTs,diffs=diffs,funcs=funcs))
         case _ => throw new IllegalStateException("random number generator range for formula generation produces the right range " + r)
       }

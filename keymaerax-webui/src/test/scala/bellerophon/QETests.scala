@@ -6,7 +6,6 @@ import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.launcher.DefaultConfiguration
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, Tool}
@@ -63,11 +62,10 @@ class QETests extends TacticTestBase {
 
   it should "fail x()=x" in withMathematica { qeTool =>
     the [BelleThrowable] thrownBy proveBy("x()=x".asFormula, ToolTactics.fullQE(qeTool) & done) should have message
-      """[Bellerophon Runtime] Expected proved provable, but got open goals
-        |Provable{
-        |==> 1:  x()=x	Equal
-        |  from
-        |==> 1:  false	False$}""".stripMargin
+      """[Bellerophon Runtime] Tactic useAt({`-> self`},1) is not applicable for
+        |    \forall x (true->x=x)->\forall x (true->x()=x)
+        |at position Fixed(1,None,true)
+        |because No substitution found by unification, try to patch locally with own substitution""".stripMargin
   }
 
   it should "not choke on predicates" in withMathematica { tool =>
@@ -122,7 +120,7 @@ class QETests extends TacticTestBase {
   }
 
   it should "switch between tools" in withDatabase { db =>
-    val provider = new MathematicaZ3ToolProvider(DefaultConfiguration.currentMathematicaConfig)
+    val provider = new MathematicaZ3ToolProvider(configFileMathematicaConfig)
     ToolProvider.setProvider(provider)
     val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>=0&\\exists s x*s^2>0 End."
     val proofId = db.createProof(modelContent)
@@ -135,7 +133,7 @@ class QETests extends TacticTestBase {
   }
 
   it should "use the default tool" in withDatabase { db =>
-    val provider = new MathematicaZ3ToolProvider(DefaultConfiguration.currentMathematicaConfig)
+    val provider = new MathematicaZ3ToolProvider(configFileMathematicaConfig)
     ToolProvider.setProvider(provider)
     val modelContent = "ProgramVariables. R x. End. Problem. x>0 -> x>=0&x>=-1 End."
     val proofId = db.createProof(modelContent)
@@ -147,7 +145,7 @@ class QETests extends TacticTestBase {
   }
 
   it should "switch between tools from parsed tactic" in {
-    val provider = new MathematicaZ3ToolProvider(DefaultConfiguration.currentMathematicaConfig)
+    val provider = new MathematicaZ3ToolProvider(configFileMathematicaConfig)
     ToolProvider.setProvider(provider)
     val tactic = BelleParser("andR(1); <(QE({`Z3`}), andR(1) ; <(QE({`Mathematica`}), QE))")
     proveBy("x>0 ==> x>=0&\\exists s x*s^2>0&x>=-2".asSequent, tactic) shouldBe 'proved
@@ -180,14 +178,9 @@ class QETests extends TacticTestBase {
     db.extractTactic(proofId) shouldBe BelleParser(s"QE({`${tool.name}`}, {`7`})")
   }}
 
-  it should "complain about the wrong tool" in withDatabase{ db => withZ3 { _ =>
-    val modelContent = "ProgramVariables. R x. End. Problem. x>1 -> x>0 End."
-    val proofId = db.createProof(modelContent)
-    val interpreter = registerInterpreter(SpoonFeedingInterpreter(proofId, -1, db.db.createProof, listener(db.db),
-      ExhaustiveSequentialInterpreter(_, throwWithDebugInfo = false)))
-    the [BelleThrowable] thrownBy interpreter(QE(Nil, Some("Mathematica"), Some(7)),
-      BelleProvable(ProvableSig.startProof(KeYmaeraXArchiveParser.parseAsProblemOrFormula(modelContent)))) should have message "[Bellerophon Runtime] QE requires Mathematica, but got None"
-  }}
+  it should "complain about the wrong tool" in withZ3 { _ =>
+    the [BelleThrowable] thrownBy proveBy("x>1 -> x>0".asFormula, QE(Nil, Some("Mathematica"), Some(7))) should have message "[Bellerophon Runtime] QE requires Mathematica, but got None"
+  }
 
   "CEX in QE" should "not fail QE when FindInstance fails" in withMathematica { tool =>
     val fml = """(\forall w2 \exists w3 \forall w4 \exists w5 \forall w6 \exists w7 \forall w8 \exists w9 \forall w10
@@ -223,7 +216,7 @@ class QETests extends TacticTestBase {
     val result = proveBy(Sequent(IndexedSeq("x^2>=0".asFormula), IndexedSeq("y>1".asFormula)), ToolTactics.partialQE(qeTool))
     result.subgoals should have size 1
     result.subgoals.head.ante shouldBe empty
-    result.subgoals.head.succ should contain only "y>1".asFormula
+    result.subgoals.head.succ should contain only "x^2>=0 -> y>1".asFormula
   }
 
 }

@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.SimplifierV3._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.launcher.KeYmaeraX
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{ParsedArchiveEntry,Declaration}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.parser._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
@@ -21,6 +21,7 @@ import org.scalatest.LoneElement._
 import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.codegen._
+import edu.cmu.cs.ls.keymaerax.utils.Statistics
 
 /**
   * Created by smitsch on 3/8/15.
@@ -31,23 +32,7 @@ import edu.cmu.cs.ls.keymaerax.codegen._
 @SlowTest
 class ModelplexTacticTests extends TacticTestBase {
 
-  def monitorSize(f: Formula): Int = {
-    var numOperators = 0
-    ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-        case _ => numOperators += 1; Left(None)
-      }
-
-      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-        case _: Variable => Left(None)
-        case Number(_) => Left(None)
-        case FuncOf(_, _) => Left(None)
-        case Nothing => Left(None)
-        case _ => numOperators += 1; Left(None)
-      }
-    }, f)
-    numOperators
-  }
+  def monitorSize(f: Formula): Int = Statistics.countFormulaOperators(f, arith = true)
 
 //  def numSteps(n: Provable): Int = if (n.subgoals.nonEmpty) n.subgoals.map(numSteps).min else 0
 //  def numSteps(s: ProofStep): Int = if (s.subgoals.nonEmpty) 1 + s.subgoals.map(numSteps).sum else 1

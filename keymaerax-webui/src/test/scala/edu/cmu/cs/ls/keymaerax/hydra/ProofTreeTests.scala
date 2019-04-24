@@ -220,11 +220,11 @@ class ProofTreeTests extends TacticTestBase {
     val tree = DbProofTree(db.db, proofId.toString)
     tree.openGoals should have size 1
     val tactics = tree.openGoals.head.applicableTacticsAt(SuccPosition(1))
-    tactics should have size 4
-    tactics.map(_._1.codeName) should contain theSameElementsAs "loop"::"iterateb"::"GV"::"boxd"::Nil
+    tactics should have size 3
+    tactics.map(_._1.codeName) should contain theSameElementsAs "loop"::"iterateb"::"GV"::Nil
     val inputSuggestions = tree.openGoals.head.tacticInputSuggestions(SuccPosition(1))
     inputSuggestions should have size 1
-    inputSuggestions.head shouldBe (FormulaArg("j(x)") -> "x>7".asFormula)
+    inputSuggestions.head shouldBe (FormulaArg("J") -> "x>7".asFormula)
   }
 
   it should "return two-pos tactics" in withDatabase { db =>

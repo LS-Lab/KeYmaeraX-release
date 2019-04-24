@@ -67,7 +67,7 @@ object KeYmaeraXArchiveParser {
             USubst(substs)(f)
           } catch {
             case ex: SubstitutionClashException =>
-              throw ParseException("Definition " + ex.e + " must declare arguments " + ex.clashes, ex)
+              throw ParseException("Definition " + ex.context + " as " + ex.e + " must declare arguments " + ex.clashes, ex)
           }
           if (fs != f) exhaustiveSubst(fs) else fs
         }

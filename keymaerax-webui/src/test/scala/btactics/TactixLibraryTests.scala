@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
+import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest, TodoTest}
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -259,7 +259,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => Nil.toStream)(1)) shouldBe 'proved
   }
 
-  it should "eventually run out of ideas" in {
+  it should "eventually run out of ideas" taggedAs SlowTest in {
     val s = "x>=0, x=H(), v=0, g()>0, 1>=c(), c()>=0 ==> [{{x'=v,v'=-g()&x>=0}{?x=0;v:=-c()*v;++?x!=0;}}*](x>=0&x<=H())".asSequent
     // defaultInvariantGenerator does not find an invariant, so loopPostMaster should eventually run out of ideas and
     // not keep asking over and over again
@@ -418,7 +418,7 @@ class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does
   it should "chase multiple tactic options" in withMathematica { _ =>
     val result = proveBy("l() < r(), l()<=x, x<=r(), x=l() ==> [{x'=1&l()>=x|x>=r()}](l()<=x&x<=r())".asSequent,
       allTacticChase()(ODE, solve))
-    result.subgoals.loneElement shouldBe "l() < r(), l()<=x, x<=r(), x=l(), l()>=x|x>=r(), t_=0, x_0=x, t__0=t_ ==> \\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->(l()>=s_+x|s_+x>=r())&s_+t__0>=0&s_+x=s_+t__0+x_0)->l()<=t_+x&t_+x<=r())".asSequent
+    result.subgoals.loneElement shouldBe "l() < r(), l()<=x, x<=r(), x=l(), l()>=x|x>=r(), t_=0, x_0=x, t__0=t_ ==> \\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->(l()>=s_+x|s_+x>=r())&s_+t__0>=0&s_+x=s_+t__0+x_0)->t_+x<=r())".asSequent
   }
 
   "Loop convergence" should "prove x>=0 -> <{x:=x-1;}*>x<1 with conRule" in withMathematica { _ =>
