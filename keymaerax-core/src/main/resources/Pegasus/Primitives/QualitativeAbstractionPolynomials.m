@@ -171,9 +171,12 @@ plist=Expand/@Select[FactorSquareFreeList[
 {divergence,jacDet,strainRateTensor, spinTensor}//Flatten//DeleteDuplicates
 ]//Flatten//DeleteDuplicates, Not[NumericQ[#]]&];
 
-(* Iteratively filter out all polynomials differing only by sign *)
+(* Iteratively filter out all linearly dependent polynomials *)
 flist={};
-Do[If[Not[MemberQ[flist,Expand[-p]]],flist=Join[flist,{Expand[p]}]],
+Do[If[
+Not[ AnyTrue[flist, TrueQ[PolynomialReduce[#,{p},vars][[2]]==0]&]]
+,flist=Join[flist,{Expand[p]}]
+],
 {p,plist}];
 (* Return filtered list *)
 Throw[flist];
