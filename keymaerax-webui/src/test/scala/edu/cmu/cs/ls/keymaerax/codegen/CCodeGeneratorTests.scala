@@ -249,7 +249,7 @@ class CCodeGeneratorTests extends TacticTestBase {
       """if (params->x >= params->y) {
         |return (0.0L)+(-((params->y)-(params->x)));
         |} else {
-        |printf("Failed %s\n", "x>=y"); return ((-1.0L))+(-((params->y)-(params->x)));
+        |return ((-1.0L))+(-((params->y)-(params->x)));
         |}""".stripMargin, paramDecls,
       "", "", "", "program")
   }
@@ -792,7 +792,7 @@ class CCodeGeneratorTests extends TacticTestBase {
     }
   }
 
-  it should "compile and run a controller with MPFR" in {
+  it should "compile and run a controller with MPFR" taggedAs IgnoreInBuildTest in {
     val ctrlPrg = "x:=*;?x<=A; ++ x:=7;".asProgram
     CPrettyPrinter.printer = new CMpfrPrettyPrinter()
     val code = (new CGenerator(new CMpfrControllerGenerator()))(ctrlPrg, Set(Variable("x")), Set(Variable("x")))
