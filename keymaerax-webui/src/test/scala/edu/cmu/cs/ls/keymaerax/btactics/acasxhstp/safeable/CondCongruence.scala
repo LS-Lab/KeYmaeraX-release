@@ -5,7 +5,7 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr}
+import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr, SaturateTactic}
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
@@ -216,7 +216,7 @@ object CondCongruence {
                 , close(-3,1))))
               ,
 
-              /*use case*/ sublabel("final use") & printIndexed("final use") & (andL('L)*) & implyR('R)*2
+              /*use case*/ sublabel("final use") & printIndexed("final use") & SaturateTactic(andL('L)) & implyR('R)*2
                 & andR('R) & onAll(closeId) & done
               ,
 
@@ -231,7 +231,7 @@ object CondCongruence {
                   // W(w) invariant as above
                   printIndexed("W invariant again") &
                     andL('L, And(w,And(u, i))) & andL('L, And(u, i))
-                    & hideL('L, i) & hideL('L, u) & (hideL('L, a)*) & // a appears duplicated
+                    & hideL('L, i) & hideL('L, u) & SaturateTactic(hideL('L, a)) & // a appears duplicated
                     by(invariantWe)
                   ,
                   // u&Ce invariant
@@ -405,9 +405,9 @@ object CondCongruence {
             ,
             /*step*/ sublabel("W(w) step") &
               /* rebuild and hide a */
-              (("ANON" by {(seq: Sequent) =>
+              SaturateTactic("ANON" by {(seq: Sequent) =>
                   DebuggingTactics.assertAt((_: Expression) => "Stopping repeat", (e: Expression) => e != a)(AntePos(seq.ante.length-1)) &
-                  andLi(AntePos(seq.ante.length-2), AntePos(seq.ante.length-1))})*) &
+                  andLi(AntePos(seq.ante.length-2), AntePos(seq.ante.length-1))}) &
               hideL('Llast) & printIndexed("step w=-1 | w=1") & by(invariantWe)
           )
           // end show postCut(w)
@@ -560,7 +560,7 @@ object CondCongruence {
             )
           )
           ),
-        /*show*/ (andL('L)*) & printIndexed("W gen DW") & dW(1) & prop & done
+        /*show*/ SaturateTactic(andL('L)) & printIndexed("W gen DW") & dW(1) & prop & done
       )
 
     // W is invariant proof for both implicit and explicit models. Same tactic above.
@@ -613,7 +613,7 @@ object CondCongruence {
                   // W(w) invariant
                   printIndexed("W invariant again") &
                     andL('L, And(w,And(u1, And(u2, i)))) & andL('L, And(u1, And(u2, i))) & andL('L, And(u2, i))
-                    & hideL('L, i) & hideL('L, u1) & (hideL('L, a)*) & /* hide duplicate w*/ hideL('L, w) &
+                    & hideL('L, i) & hideL('L, u1) & SaturateTactic(hideL('L, a)) & /* hide duplicate w*/ hideL('L, w) &
                     by(invariantWe)
                   ,
                   // u&Ce invariant

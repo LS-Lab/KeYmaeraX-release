@@ -85,7 +85,7 @@ object SimplifierV2 {
     //todo: filter the list, like what happens in chase
     for ((tt, pr) <- arithProps)
       try {
-        return Some(useFor(pr, PosInExpr(0 :: Nil),s=>mksubst(s))(SuccPosition(1, 1 :: Nil))(eq))
+        return Some(useFor(pr, PosInExpr(0 :: Nil), linear=false, s=>mksubst(s))(SuccPosition(1, 1 :: Nil))(eq))
       } catch {
         case _: ProverException =>
         case _: AssertionError => // raised by useFor if unification does not work out

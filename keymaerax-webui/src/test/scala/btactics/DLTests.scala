@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
 import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.DLBySubst]]
@@ -429,11 +430,12 @@ class DLTests extends TacticTestBase {
     result.subgoals(2) shouldBe "v_>0, v_>x, 0>=0 ==> <x:=x-1;>v_-1>x".asSequent
   }
 
-  it should "accept modal convergence conditions" in {
+  it should "accept modal convergence conditions" taggedAs TodoTest in {
     val result = proveBy("<{{x'=-1}}*>x < 0".asFormula, DLBySubst.con("v_".asVariable, "<{{x'=-1};v_:=v_-1;}*>(v_>0 & x<0)".asFormula)(1))
     result.subgoals should have size 3
     result.subgoals(0) shouldBe "==> \\exists v_ <{{x'=-1};v_:=v_-1;}*>(v_>0 & x<0)".asSequent
     result.subgoals(1) shouldBe "v_<=0, <{{x'=-1};v_:=v_-1;}*>(v_>0&x < 0) ==> x < 0".asSequent
+    //todo: renaming transposes v__0 to x__0
     result.subgoals(2) shouldBe "v__0>0, <{{x'=-1};v__0:=v__0-1;}*>(v__0>0&x<0) ==> <{x'=-1}>\\forall v_ (v_=v__0-1-><{{x'=-1};v_:=v_-1;}*>(v_>0&x < 0))".asSequent
   }
 

@@ -17,18 +17,18 @@ import scala.collection.immutable._
 
 
 /**
-  * Testing unifier and its limits.
+ * Testing linear matcher.
   *
   * @author Andre Platzer
-  * @see [[UnificationMatch]]
-  */
+ */
 @SummaryTest
 @UsualTest
-class UnificationMatchTest extends SystemTestBase {
+class LinearMatcherTest extends SystemTestBase {
+  import UnificationMatch.Subst
 
-  val matcher = if (true) UnificationMatch else new FreshPostUnificationMatch
+  val matcher = LinearMatcher
 
-  private def should(e1: Expression, e2: Expression, us: Option[USubst]): Unit = {
+  private def should(e1: Expression, e2: Expression, us: Option[Subst]): Unit = {
     if (us.isDefined) {
       println("Expression: " + e1)
       println("Expression: " + e2)
@@ -36,7 +36,7 @@ class UnificationMatchTest extends SystemTestBase {
       println("Unified:  " + s)
       println("Expected: " + us.get)
       s(e1) shouldBe e2
-      s shouldBe RenUSubst(us.get)
+      s shouldBe us.get
     } else {
       println("Expression: " + e1)
       println("Expression: " + e2)
@@ -45,7 +45,10 @@ class UnificationMatchTest extends SystemTestBase {
     }
   }
 
-  private def shouldUnify(e1: Expression, e2: Expression, us: USubst): Unit = should(e1,e2,Some(us))
+  private def shouldUnify(e1: Expression, e2: Expression, us: Option[USubst]): Unit =
+    should(e1, e2, us match {case None => None case Some(us) => Some(RenUSubst(us))})
+
+  private def shouldUnify(e1: Expression, e2: Expression, us: USubst): Unit = shouldUnify(e1,e2,Some(us))
 
   "Unification terms" should "unify f() with x^2+y" in {
     shouldUnify("f()".asTerm, "x^2+y".asTerm, USubst(
@@ -93,18 +96,6 @@ class UnificationMatchTest extends SystemTestBase {
       SubstitutionPair("a;".asProgram, "x:=x+5;".asProgram) :: Nil))
   }
 
-  "Old unification match" should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0 (fails)" ignore {
-    val s1 = Sequent(IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
-    val s2 = Sequent(IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
-    //@todo not sure about the expected result
-    UnificationMatch(s1, s2) shouldBe RenUSubst(new USubst(
-      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "0".asTerm)) ::
-        SubstitutionPair(Variable("x"), Variable("y")) ::
-        SubstitutionPair("t()".asTerm, Variable("z")) :: Nil))
-  }
-
-  //@todo split this test case
-
   // new unification matchers from now on
 
   private def shouldMatch(e1: Expression, e2: Expression, us: Option[RenUSubst]): Unit = {
@@ -150,27 +141,16 @@ class UnificationMatchTest extends SystemTestBase {
   }
 
 
-  it should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0 (failed setup)" in {
+  it should "fail to unify nonlinear (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0 (failed setup)" in {
     val s1 = Sequent(IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
     val s2 = Sequent(IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
-    //@todo not sure about the expected exception
-    a[ProverException] shouldBe thrownBy(
-    UnificationMatch(s1, s2) shouldBe RenUSubst(new USubst(
-      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "0".asTerm)) ::
-        SubstitutionPair(Variable("x"), Variable("y")) ::
-        SubstitutionPair("t()".asTerm, Variable("z")) :: Nil))
-    )
+    a[ProverException] shouldBe thrownBy(matcher(s1, s2))
   }
 
-  it should "unify (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0" in {
+  it should "fail to unify nonlinear (\\forall x p(x)) -> p(t()) with (\\forall y y>0) -> z>0" in {
     val s1 = Sequent(IndexedSeq(), IndexedSeq("\\forall x p(x) -> p(t())".asFormula))
     val s2 = Sequent(IndexedSeq(), IndexedSeq("\\forall y y>0 -> z>0".asFormula))
-    println("Unify " + s1 + "\nwith  " + s2 + "\nyields " + UnificationMatch(s1, s2))
-    //@todo not sure about the expected result
-    UnificationMatch(s1, s2) shouldBe RenUSubst(
-      (PredOf(Function("p", None, Real, Bool), DotTerm()), Greater(DotTerm(), "0".asTerm)) ::
-        (Variable("x"), Variable("y")) ::
-        ("t()".asTerm, Variable("z")) :: Nil)
+    a[ProverException] shouldBe thrownBy(matcher(s1, s2))
   }
 
   it should "unify [x:=f();]p(x) with [x:=7+x;]x^2>=5" in {
@@ -179,10 +159,8 @@ class UnificationMatchTest extends SystemTestBase {
           (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
   }
 
-  it should "unify [x:=f();]p(x) <-> p(f()) with [x:=7+x;]x^2>=5 <-> (7+x)^2>=5" in {
-    shouldMatch("[x:=f();]p(x) <-> p(f())".asFormula, "[x:=7+x;]x^2>=5 <-> (7+x)^2>=5".asFormula, RenUSubst(
-      ("f()".asTerm, "7+x".asTerm) ::
-        (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
+  it should "fail unify nonlinear [x:=f();]p(x) <-> p(f()) with [x:=7+x;]x^2>=5 <-> (7+x)^2>=5" in {
+    a[ProverException] shouldBe thrownBy(matcher("[x:=f();]p(x) <-> p(f())".asFormula, "[x:=7+x;]x^2>=5 <-> (7+x)^2>=5".asFormula))
   }
 
   it should "unify [x:=f();]p(x) with [y:=7+z;]y^2>=5" in {
@@ -192,24 +170,16 @@ class UnificationMatchTest extends SystemTestBase {
         (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
   }
 
-  it should "unify [y:=f();]p(y) <-> p(f()) with [y:=7+z;]y^2>=5 <-> (7+z)^2>=5" in {
-    shouldMatch("[y:=f();]p(y) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula, RenUSubst(
-      (("f()".asTerm, "7+z".asTerm) ::
-        (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil)))
+  it should "fail to unify nonlinear [y:=f();]p(y) <-> p(f()) with [y:=7+z;]y^2>=5 <-> (7+z)^2>=5" in {
+    a[ProverException] shouldBe thrownBy(matcher("[y:=f();]p(y) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula))
   }
 
-  it should "unify [x_:=f();]p(x_) <-> p(f()) with [y:=7+z;]y^2>=5 <-> (7+z)^2>=5" in {
-    shouldMatch("[x_:=f();]p(x_) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula, RenUSubst(
-      (Variable("x_"), Variable("y")) ::
-        ("f()".asTerm, "7+z".asTerm) ::
-        (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
+  it should "fail to unify nonlinear [x_:=f();]p(x_) <-> p(f()) with [y:=7+z;]y^2>=5 <-> (7+z)^2>=5" in {
+    a[ProverException] shouldBe thrownBy(matcher("[x_:=f();]p(x_) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula))
   }
 
-  it should "unify [x:=f();]p(x) <-> p(f()) with [y:=7+z;]y^2>=5 <-> (7+z)^2>=5" in {
-    shouldMatch("[x:=f();]p(x) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula, RenUSubst(
-      (Variable("x"), Variable("y")) ::
-        ("f()".asTerm, "7+z".asTerm) ::
-        (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
+  it should "fail to unify nonlinear [x:=f();]p(x) <-> p(f()) with [y:=7+z;]y^2>=5 <-> (7+z)^2>=5" in {
+    a[ProverException] shouldBe thrownBy(matcher("[x:=f();]p(x) <-> p(f())".asFormula, "[y:=7+z;]y^2>=5 <-> (7+z)^2>=5".asFormula))
   }
 
   it should "unify [x_:=y;]p(x_) with [y_0:=y;]y_0>2" in {
@@ -230,17 +200,17 @@ class UnificationMatchTest extends SystemTestBase {
 //      (Variable("x_"), Variable("y",Some(0))) :: Nil))
 //  }
 
-  it should "unify [x_:=y;]y_0>0<->y_0>0 with [a:=z;]y_0>0<->y_0>0" in {
+  it should "maybe unify [x_:=y;]y_0>0<->y_0>0 with [a:=z;]y_0>0<->y_0>0" in {
     shouldMatch("[x_:=y;]y_0>0<->y_0>0".asFormula, "[a:=z;]y_0>0<->y_0>0".asFormula, RenUSubst(
       (Variable("x_"), Variable("a")) :: (Variable("y"), Variable("z")) :: Nil))
   }
 
-  it should "unify [x_:=y;]x_>0<->y>0 with [a:=z;]a>0<->z>0" in {
+  it should "maybe unify [x_:=y;]x_>0<->y>0 with [a:=z;]a>0<->z>0" in {
     shouldMatch("[x_:=y;]x_>0<->y>0".asFormula, "[a:=z;]a>0<->z>0".asFormula, RenUSubst(
       (Variable("x_"), Variable("a")) :: (Variable("y"), Variable("z")) :: Nil))
   }
 
-  it should "unify [x_:=y;]y>0<->y>0 with [a:=z;]z>0<->z>0" in {
+  it should "maybe unify [x_:=y;]y>0<->y>0 with [a:=z;]z>0<->z>0" in {
     shouldMatch("[x_:=y;]y>0<->y>0".asFormula, "[a:=z;]z>0<->z>0".asFormula, RenUSubst(
       (Variable("x_"), Variable("a")) :: (Variable("y"), Variable("z")) :: Nil))
   }
@@ -301,13 +271,13 @@ class UnificationMatchTest extends SystemTestBase {
   }
 
 
-  "More unification" should "unify y>0 -> [x:=2;]y>0 with p() -> [a;]p()" in {
+  "More unification" should "maybe unify p() -> [a;]p() with y>0 -> [x:=2;]y>0 " in {
     shouldMatch("p() -> [a;]p()".asFormula, "y>0 -> [x:=2;]y>0".asFormula, RenUSubst(
       (PredOf(Function("p", None, Unit, Bool), Nothing), "y>0".asFormula) ::
         (ProgramConst("a"), Assign(Variable("x"), Number(2))) :: Nil))
   }
 
-  it should "unify [x:=2;]y>0 -> y>0 with [a;]p() -> p()" in {
+  it should "unify [a;]p() -> p() with [x:=2;]y>0 -> y>0" in {
     // not an axiom, just to test both directions
     shouldMatch("[a;]p() -> p()".asFormula, "[x:=2;]y>0 -> y>0".asFormula, RenUSubst(
       (ProgramConst("a"), Assign(Variable("x"), Number(2))) ::
@@ -323,13 +293,12 @@ class UnificationMatchTest extends SystemTestBase {
     ))
   }
 
-  it should "unify renaming and instance [y:=y;]p(||)<->p(||) and [y_0:=y_0;](true)<->(true)" in {
+  it should "maybe unify renaming and instance [y:=y;]p(||)<->p(||) and [y_0:=y_0;](true)<->(true)" in {
     shouldMatch("[y:=y;]p(||)<->p(||)".asFormula,
       "[y_0:=y_0;](true)<->(true)".asFormula, RenUSubst(
-      (Variable("y"), Variable("y",Some(0))) ::
-        (UnitPredicational("p", AnyArg), "(true)".asFormula) ::
-        Nil
-    ))
+        (Variable("y"), Variable("y",Some(0))) ::
+          (UnitPredicational("p", AnyArg), "(true)".asFormula) ::
+          Nil))
   }
 
   it should "unify renaming x=0 and y_0=0" in {
@@ -338,48 +307,48 @@ class UnificationMatchTest extends SystemTestBase {
       (Variable("x"), Variable("y",Some(0))) :: Nil))
   }
 
-  it should "unify renaming x=0<->x=0 and y_0=0<->y_0=0" in {
+  it should "maybe unify renaming x=0<->x=0 and y_0=0<->y_0=0" in {
     shouldMatch("x=0<->x=0".asFormula,
       "y_0=0<->y_0=0".asFormula, RenUSubst(
       (Variable("x"), Variable("y",Some(0))) :: Nil))
   }
 
-  it should "unify renaming x=0&x=0<->x=0 and y_0=0&y_0=0<->y_0=0" in {
+  it should "maybe unify renaming x=0&x=0<->x=0 and y_0=0&y_0=0<->y_0=0" in {
     shouldMatch("x=0&x=0<->x=0".asFormula,
       "y_0=0&y_0=0<->y_0=0".asFormula, RenUSubst(
       (Variable("x"), Variable("y",Some(0))) :: Nil
     ))
   }
 
-  it should "unify renaming x=0<->x=0&x=0 and y_0=0<->y_0=0&y_0=0" in {
+  it should "maybe unify renaming x=0<->x=0&x=0 and y_0=0<->y_0=0&y_0=0" in {
     shouldMatch("x=0<->x=0&x=0".asFormula,
       "y_0=0<->y_0=0&y_0=0".asFormula, RenUSubst(
       (Variable("x"), Variable("y",Some(0))) :: Nil
     ))
   }
 
-  it should "unify renaming x>1&x=2<->x<3 and y_0>1&y_0=2<->y_0<3" in {
+  it should "maybe unify renaming x>1&x=2<->x<3 and y_0>1&y_0=2<->y_0<3" in {
     shouldMatch("x>1&x=2<->x<3".asFormula,
       "y_0>1&y_0=2<->y_0<3".asFormula, RenUSubst(
       (Variable("x"), Variable("y",Some(0))) :: Nil
     ))
   }
 
-  it should "unify renaming x>1<->x=2&x<3 and y_0>1<->y_0=2&y_0<3" in {
+  it should "maybe unify renaming x>1<->x=2&x<3 and y_0>1<->y_0=2&y_0<3" in {
     shouldMatch("x>1<->x=2&x<3".asFormula,
       "y_0>1<->y_0=2&y_0<3".asFormula, RenUSubst(
       (Variable("x"), Variable("y",Some(0))) :: Nil
     ))
   }
 
-  it should "unify renaming and instance [y:=y;]y>5<->y>5 and [y_0:=y_0;]y_0>5<->y_0>5" in {
+  it should "maybe unify renaming and instance [y:=y;]y>5<->y>5 and [y_0:=y_0;]y_0>5<->y_0>5" in {
     shouldMatch("[y:=y;]y>5<->y>5".asFormula,
       "[y_0:=y_0;]y_0>5<->y_0>5".asFormula, RenUSubst(
       (Variable("y"), Variable("y",Some(0))) :: Nil
     ))
   }
 
-  it should "unify renaming and instance p(||)<->[y:=y;]p(||) and (y_0=1)<->[y_0:=y_0;](y_0=1)" ignore {
+  it should "maybe unify renaming and instance p(||)<->[y:=y;]p(||) and (y_0=1)<->[y_0:=y_0;](y_0=1)" ignore {
     shouldMatch("p(||)<->[y:=y;]p(||)".asFormula,
       "(y_0=1)<->[y_0:=y_0;](y_0=1)".asFormula, RenUSubst(
       (Variable("y"), Variable("y",Some(0))) ::
@@ -388,7 +357,7 @@ class UnificationMatchTest extends SystemTestBase {
     ))
   }
 
-  it should "unify renaming and instance [y:=y;]p(||)<->p(||) and [y_0:=y_0;](y_0=0)<->(y_0=0)" in {
+  it should "maybe unify renaming and instance [y:=y;]p(||)<->p(||) and [y_0:=y_0;](y_0=0)<->(y_0=0)" in {
     shouldMatch("[y:=y;]p(||)<->p(||)".asFormula,
       "[y_0:=y_0;](y_0=0)<->(y_0=0)".asFormula, RenUSubst(
       (Variable("y"), Variable("y",Some(0))) ::
@@ -397,7 +366,7 @@ class UnificationMatchTest extends SystemTestBase {
     ))
   }
 
-  it should "unify renaming and instance p(||)<->[y:=y;]p(||) and (true)<->[y_0:=y_0;](true)" in {
+  it should "maybe unify renaming and instance p(||)<->[y:=y;]p(||) and (true)<->[y_0:=y_0;](true)" in {
     shouldMatch("p(||)<->[y:=y;]p(||)".asFormula,
       "(true)<->[y_0:=y_0;](true)".asFormula, RenUSubst(
       (Variable("y"), Variable("y",Some(0))) ::
@@ -406,7 +375,7 @@ class UnificationMatchTest extends SystemTestBase {
     ))
   }
 
-  it should "unify renaming and instance p(||)<->[y:=y;]p(||) and (y_0>77&true)<->[y_0:=y_0;](y_0>77&true)" ignore {
+  it should "maybe unify renaming and instance p(||)<->[y:=y;]p(||) and (y_0>77&true)<->[y_0:=y_0;](y_0>77&true)" ignore {
     shouldMatch("p(||)<->[y:=y;]p(||)".asFormula,
       "(y_0>77&true)<->[y_0:=y_0;](y_0>77&true)".asFormula, RenUSubst(
       (Variable("y"), Variable("y",Some(0))) ::
@@ -415,7 +384,7 @@ class UnificationMatchTest extends SystemTestBase {
     ))
   }
 
-  it should "unify renaming and instance [y:=y;]p(||)<->p(||) and [y_0:=y_0;](y_0>77&true)<->(y_0>77&true)" in {
+  it should "maybe unify renaming and instance [y:=y;]p(||)<->p(||) and [y_0:=y_0;](y_0>77&true)<->(y_0>77&true)" in {
     shouldMatch("[y:=y;]p(||)<->p(||)".asFormula,
       "[y_0:=y_0;](y_0>77&true)<->(y_0>77&true)".asFormula, RenUSubst(
       (Variable("y"), Variable("y",Some(0))) ::
@@ -424,7 +393,7 @@ class UnificationMatchTest extends SystemTestBase {
     ))
   }
 
-  it should "unify renaming and long instance" in {
+  it should "maybe unify renaming and long instance" in {
     shouldMatch("[x_:=x_;]p(||)<->p(||)".asFormula,
       "[x_0:=x_0;](((x_0>0&true)&true)&true->(2>=0|false)|false)<->((x_0>0&true)&true)&true->(2>=0|false)|false".asFormula, RenUSubst(
       (Variable("x_"), Variable("x",Some(0))) ::
@@ -483,20 +452,18 @@ class UnificationMatchTest extends SystemTestBase {
     )
   }
 
-  it should "unify DC axiom" in {
+  it should "maybe unify nonlinear DC axiom" in {
     shouldMatch(
       "([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)".asFormula,
       "([{x'=v&v>=0&v>0}]x>=0 <-> [{x'=v&(v>=0&v>0)&x>0}]x>=0) <- [{x'=v&v>=0&v>0}]x>0".asFormula,
       RenUSubst(
         (DifferentialProgramConst("c"), "{x'=v}".asDifferentialProgram) ::
-        (UnitPredicational("p", AnyArg), "x>=0".asFormula) ::
-        (UnitPredicational("q", AnyArg), "v>=0&v>0".asFormula) ::
-        (UnitPredicational("r", AnyArg), "x>0".asFormula) :: Nil
-      )
-    )
+          (UnitPredicational("p", AnyArg), "x>=0".asFormula) ::
+          (UnitPredicational("q", AnyArg), "v>=0&v>0".asFormula) ::
+          (UnitPredicational("r", AnyArg), "x>0".asFormula) :: Nil))
   }
 
-  it should "unify DC axiom without evolution domain" in {
+  it should "maybe unify nonlinear DC axiom without evolution domain" in {
     shouldMatch(
       "([{c&q(||)}]p(||) <-> [{c&(q(||)&r(||))}]p(||)) <- [{c&q(||)}]r(||)".asFormula,
       "([{x'=v}]x>=0 <-> [{x'=v&true&x>0}]x>=0) <- [{x'=v}]x>0".asFormula,
@@ -505,15 +472,12 @@ class UnificationMatchTest extends SystemTestBase {
           (UnitPredicational("p", AnyArg), "x>=0".asFormula) ::
           (UnitPredicational("q", AnyArg), "true".asFormula) ::
           (UnitPredicational("r", AnyArg), "x>0".asFormula) :: Nil
-      )
-    )
+      ))
   }
 
   //@todo this test case would need the expensive reunify to be activated in UnificationMatch again
-  "Reunifier ideally" should "unify p(f()) <-> [x:=f();]p(x) with (7+x)^2>=5 <-> [x:=7+x;]x^2>=5" taggedAs OptimisticTest ignore {
-    shouldMatch("p(f()) <-> [x:=f();]p(x)".asFormula, "(7+x)^2>=5 <-> [x:=7+x;]x^2>=5".asFormula, RenUSubst(
-      ("f()".asTerm, "7+x".asTerm) ::
-        (PredOf(Function("p", None, Real, Bool), DotTerm()), GreaterEqual(Power(DotTerm(), "2".asTerm), "5".asTerm)) :: Nil))
+  "Reunifier ideally" should "fail to unify nonlinear p(f()) <-> [x:=f();]p(x) with (7+x)^2>=5 <-> [x:=7+x;]x^2>=5" taggedAs OptimisticTest ignore {
+    a[ProverException] shouldBe thrownBy(matcher("p(f()) <-> [x:=f();]p(x)".asFormula, "(7+x)^2>=5 <-> [x:=7+x;]x^2>=5".asFormula))
   }
 
   "Projection unification" should "projection unify 3+f(x,y) with 3+(x^2+y)" taggedAs(IgnoreInBuildTest, TodoTest) ignore {

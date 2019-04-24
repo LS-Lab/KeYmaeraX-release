@@ -1,6 +1,6 @@
 package bellerophon.pptests
 
-import edu.cmu.cs.ls.keymaerax.bellerophon.PosInExpr
+import edu.cmu.cs.ls.keymaerax.bellerophon.{PosInExpr, SaturateTactic}
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.{TacticTestBase, TactixLibrary}
@@ -81,7 +81,7 @@ class BTacticPrettyPrinterTests extends TacticTestBase {
   it should "parenthesize partial" in { roundTrip("implyR(1) ; (andL(1) partial)") }
 
   it should "parenthesize tactic combinators" in {
-    parser(BellePrettyPrinter(TactixLibrary.alphaRule*)) shouldBe (TactixLibrary.alphaRule*)
+    parser(BellePrettyPrinter(SaturateTactic(TactixLibrary.alphaRule))) shouldBe SaturateTactic(TactixLibrary.alphaRule)
   }
 
 }

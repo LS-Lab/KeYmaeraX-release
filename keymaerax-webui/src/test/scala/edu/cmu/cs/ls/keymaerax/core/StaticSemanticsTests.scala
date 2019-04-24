@@ -4,17 +4,16 @@
 */
 package edu.cmu.cs.ls.keymaerax.core
 
-import edu.cmu.cs.ls.keymaerax.btactics.{RandomFormula, StaticSemanticsTools}
-import edu.cmu.cs.ls.keymaerax.core.StaticSemantics.VCF
-import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXParser, KeYmaeraXPrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.btactics.RandomFormula
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
 import testHelper.KeYmaeraXTestTags._
 import testHelper.CustomAssertions.withSafeClue
 
-import scala.collection.immutable
 import scala.collection.immutable._
 import org.scalatest.{FlatSpec, Matchers}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import testHelper.KeYmaeraXTestTags
+
 /**
  * Tests static semantics.
   *
@@ -22,9 +21,9 @@ import testHelper.KeYmaeraXTestTags
  */
 class StaticSemanticsTests extends FlatSpec with Matchers {
   PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
-  val randomTrials = 1000
-  val randomComplexity = 6
-  val rand = if (false) new RandomFormula(-6907410306474577855L) else new RandomFormula()
+  private val randomTrials = 1000
+  private val randomComplexity = 6
+  private val rand = if (false) new RandomFormula(-6907410306474577855L) else new RandomFormula()
 
 
   "Static Semantics" should "compute v>=0&v>0 -> [{{a:=-b;++a:=5;} {x'=v,v'=a&v>=0}}*]v>=0 correctly" in {
@@ -72,7 +71,7 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
     vc.mbv shouldBe SetLattice(Set(Variable("z")))
   }
 
-  ignore should "@todo test symbols, signature" in {}
+  it should "@todo test symbols, signature" ignore {}
 
 
   "Static Semantics" should "consistently compute randomly (checkin)" taggedAs(CheckinTest,CoverageTest) in {test(10)}
@@ -80,7 +79,7 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
   it should "consistently compute randomly (usual)" taggedAs(UsualTest,CoverageTest) in {test(1000,10)}
   it should "consistently compute randomly (slow)" taggedAs(SlowTest,CoverageTest) in {test(randomTrials,20)}
 
-  private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity) = {
+  private def test(randomTrials: Int= randomTrials, randomComplexity: Int = randomComplexity): Unit = {
     for (i <- 1 to randomTrials) {
       val e = rand.nextTerm(randomComplexity)
       val randClue = "Term produced in\n\t " + i + "th run of " + randomTrials +
@@ -91,7 +90,6 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
       }
 
       withSafeClue("Random term " + outString + "\n\n" + randClue) {
-        println(e)
         val vc = StaticSemantics(e)
         vc shouldBe StaticSemantics.freeVars(e)
         vc shouldBe StaticSemantics.freeVars(e.asInstanceOf[Expression])
@@ -111,7 +109,6 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
       }
 
       withSafeClue("Random formula " + outString + "\n\n" + randClue) {
-        println(e)
         val vc = StaticSemantics(e)
         vc.fv shouldBe StaticSemantics.freeVars(e)
         vc.bv shouldBe StaticSemantics.boundVars(e)
@@ -132,7 +129,6 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
       }
 
       withSafeClue("Random program " + outString + "\n\n" + randClue) {
-        println(e)
         val vc = StaticSemantics(e)
         vc.fv shouldBe StaticSemantics.freeVars(e)
         vc.bv shouldBe StaticSemantics.boundVars(e)
@@ -146,7 +142,7 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
     }
   }
 
-  it should "sequent" taggedAs (KeYmaeraXTestTags.CoverageTest) in {
+  it should "sequent" taggedAs KeYmaeraXTestTags.CoverageTest in {
     for (i <- 1 to randomTrials) {
       val e = rand.nextSequent(randomComplexity)
       val randClue = "Sequent produced in\n\t " + i + "th run of " + randomTrials +
@@ -157,7 +153,6 @@ class StaticSemanticsTests extends FlatSpec with Matchers {
       }
 
       withSafeClue("Random sequent " + outString + "\n\n" + randClue) {
-        println(e)
         StaticSemantics.freeVars(e) shouldBe e.ante.map(StaticSemantics.freeVars).foldRight(SetLattice.bottom[Variable])((a, b) => a ++ b) ++ e.succ.map(StaticSemantics.freeVars).foldRight(SetLattice.bottom[Variable])((a, b) => a ++ b)
         StaticSemantics.boundVars(e) shouldBe e.ante.map(StaticSemantics.boundVars).foldRight(SetLattice.bottom[Variable])((a, b) => a ++ b) ++ e.succ.map(StaticSemantics.boundVars).foldRight(SetLattice.bottom[Variable])((a, b) => a ++ b)
         StaticSemantics.symbols(e) shouldBe e.ante.map(StaticSemantics.symbols).foldRight(Set[NamedSymbol]())((a, b) => a ++ b) ++ e.succ.map(StaticSemantics.symbols).foldRight(Set[NamedSymbol]())((a, b) => a ++ b)

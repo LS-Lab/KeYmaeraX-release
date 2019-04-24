@@ -29,6 +29,9 @@ import scala.util.Try
 // 1 pass for fresh cases of !semanticRenaming
 object UnificationMatch extends FreshUnificationMatch
 
+//@todo not general enough, limited to linear pattern matching only
+//object UnificationMatch extends LinearMatcher
+
 // 1.5 pass for fresh cases of !semanticRenaming
 //object UnificationMatch extends FreshPostUnificationMatch
 
@@ -41,16 +44,14 @@ trait Matcher extends ((Expression,Expression) => RenUSubst) with Logging {
   /** Check result of unification for being a valid unifier/matcher */
   private[bellerophon] val REVERIFY = BelleExpr.RECHECK
 
-  //  type Subst = USubst
-  //  private def Subst(subs: List[SubstRepl]): Subst = USubst(subs)
-  //  type SubstRepl = SubstitutionPair
-  //  private def SubstRepl(what: Expression, repl: Expression): SubstRepl = SubstitutionPair(what,repl)
-
-  /** The (generalized) substitutions used for unification */
+  /** The (generalized) substitutions used for unification purposes
+    * @see [[RenUSubst]]
+    */
   type Subst = RenUSubst
   /** Create a (generalized) substitution from the given representation `subs`. */
   //@todo .distinct may slow things down. Necessary all the time?
   protected def Subst(subs: List[SubstRepl]): Subst = RenUSubst(subs.distinct)
+
   /** A (generalized) substitution pair. */
   type SubstRepl = Tuple2[Expression,Expression]
   /** Create a (generalized) substitution pair. */
@@ -171,7 +172,9 @@ trait BaseMatcher extends Matcher {
     //println(new UnificationException(shape.toString, input.toString))
     throw new UnificationException(shape.toString, input.toString)}
 
-  /** Construct the unifier that forces `shape` and `input` to unify unless equal already (requires: check that this gives a valid substitution) */
+  /** Construct the base unifier that forces `shape` and `input` to unify unless equal already
+    * @requires shape is a substitutable expression
+    */
   protected def unifier(shape: Expression, input: Expression): List[SubstRepl] = if (shape == input) id else SubstRepl(shape, input) :: Nil
 
 }
@@ -192,74 +195,19 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
   protected def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl]
 
   /** unifies(s1,s2, t1,t2) unifies (s2,s2) against (t1,t2) by matching.
-    * Implemented by unifying from left to right, but will fall back to converse direction if exception.
-    * {{{
-    *   s1 = t1 | u1     u1(s2) = t2 | u2
-    *   ----------------------------------
-    *   (s1,s2) = (t1,t2)   | u2 after u1
-    * }}}
     * Note: because this is for matching purposes, the unifier u1 is not applied to t2 on the right premise.
     */
   //@note optimized: repeated implementation per type to enable the static type inference that Scala generics won't give.
-  protected def unifies(s1:Expression,s2:Expression, t1:Expression,t2:Expression): List[SubstRepl] = {
-    val u1 = unify(s1, t1)
-    try {
-      compose(unify(Subst(u1)(s2), t2), u1)
-    } catch {
-      case e: ProverException =>
-        logger.trace("      try converse since " + e.getMessage)
-        val u2 = unify(s2, t2)
-        compose(unify(t1, Subst(u2)(s1)), u2)
-      //@todo incomplete: match [a;]p() -> [a;]p() with [x:=x+1;]y>0 -> [x:=x+1;]y>0  will fail since both pieces need to be unified and then combined subsequently. But that's okay for now
-    }
-  }
-  protected def unifies(s1:Term,s2:Term, t1:Term,t2:Term): List[SubstRepl] = {
-    val u1 = unify(s1, t1)
-    try {
-      compose(unify(Subst(u1)(s2), t2), u1)
-    } catch {
-      case e: ProverException =>
-        logger.trace("      try converse since " + e.getMessage)
-        val u2 = unify(s2, t2)
-        compose(unify(t1, Subst(u2)(s1)), u2)
-    }
-  }
-  protected def unifies(s1:Formula,s2:Formula, t1:Formula,t2:Formula): List[SubstRepl] = {
-    val u1 = unify(s1, t1)
-    try {
-      compose(unify(Subst(u1)(s2), t2), u1)
-    } catch {
-      case e: ProverException =>
-        logger.trace("      try converse since " + e.getMessage)
-        val u2 = unify(s2, t2)
-        compose(unify(t1, Subst(u2)(s1)), u2)
-    }
-  }
-  protected def unifies(s1:Program,s2:Program, t1:Program,t2:Program): List[SubstRepl] = {
-    val u1 = unify(s1, t1)
-    try {
-      compose(unify(Subst(u1)(s2), t2), u1)
-    } catch {
-      case e: ProverException =>
-        logger.trace("      try converse since " + e.getMessage)
-        val u2 = unify(s2, t2)
-        compose(unify(t1, Subst(u2)(s1)), u2)
-    }
-  }
-  protected def unifiesODE(s1:DifferentialProgram,s2:DifferentialProgram, t1:DifferentialProgram,t2:DifferentialProgram): List[SubstRepl] = {
-    val u1 = unifyODE(s1, t1)
-    try {
-      compose(unifyODE(Subst(u1)(s2).asInstanceOf[DifferentialProgram], t2), u1)
-    } catch {
-      case e: ProverException =>
-        logger.trace("      try converse since " + e.getMessage)
-        val u2 = unifyODE(s2, t2)
-        compose(unifyODE(t1, Subst(u2)(s1).asInstanceOf[DifferentialProgram]), u2)
-    }
-  }
+  protected def unifies(s1:Expression,s2:Expression, t1:Expression,t2:Expression): List[SubstRepl]
+  protected def unifies(s1:Term,s2:Term, t1:Term,t2:Term): List[SubstRepl]
+  protected def unifies(s1:Formula,s2:Formula, t1:Formula,t2:Formula): List[SubstRepl]
+  protected def unifies(s1:Program,s2:Program, t1:Program,t2:Program): List[SubstRepl]
+  protected def unifiesODE(s1:DifferentialProgram,s2:DifferentialProgram, t1:DifferentialProgram,t2:DifferentialProgram): List[SubstRepl]
+
+  // schematic unification
 
   protected def unifyVar(x1: Variable, e2: Expression): List[SubstRepl] = if (x1==e2) id else e2 match { case _: Variable => unifier(x1,e2.asInstanceOf[Variable]) case _ => ununifiable(x1,e2)}
-  protected def unifyVar(xp1: DifferentialSymbol, e2: Expression): List[SubstRepl] = if (xp1==e2) id else e2 match { case _: DifferentialSymbol => unifier(xp1.x,e2.asInstanceOf[DifferentialSymbol].x) case _ => ununifiable(xp1,e2)}
+  protected def unifyVar(xp1: DifferentialSymbol, e2: Expression): List[SubstRepl] = if (xp1==e2) id else e2 match { case xp2: DifferentialSymbol => unifier(xp1.x,xp2.x) case _ => ununifiable(xp1,e2)}
 
 
   /** A simple recursive unification algorithm that actually just recursive single-sided matching without occurs check */
@@ -369,6 +317,88 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
     r
   }
 
+}
+
+/**
+  * Generic schematic unification/matching algorithm for tactics.
+  * Unify(shape, input) matches second argument `input` against the pattern `shape` of the first argument but not vice versa.
+  * Matcher leaves input alone and only substitutes into shape.
+  * Reasonably fast single-pass matcher.
+  * Defined by recursive unification from compositions.
+  * @author Andre Platzer
+  */
+abstract class SchematicComposedUnificationMatch extends SchematicUnificationMatch {
+
+  /** Composition of renaming substitution representations: compose(after, before) gives the representation of `after` performed after `before`. */
+  protected def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl]
+
+  /** unifies(s1,s2, t1,t2) unifies (s1,s2) against (t1,t2) by matching.
+    * Implemented by unifying from left to right, but will fall back to converse direction if exception.
+    * {{{
+    *   s1 = t1 | u1     u1(s2) = t2 | u2
+    *   ----------------------------------
+    *   (s1,s2) = (t1,t2)   | u2 after u1
+    * }}}
+    * Note: because this is for matching purposes, the unifier u1 is not applied to t2 on the right premise.
+    */
+  //@note optimized: repeated implementation per type to enable the static type inference that Scala generics won't give.
+  protected def unifies(s1:Expression,s2:Expression, t1:Expression,t2:Expression): List[SubstRepl] = {
+    val u1 = unify(s1, t1)
+    try {
+      compose(unify(Subst(u1)(s2), t2), u1)
+    } catch {
+      case e: ProverException =>
+        logger.trace("      try converse since " + e.getMessage)
+        val u2 = unify(s2, t2)
+        compose(unify(t1, Subst(u2)(s1)), u2)
+      //@todo incomplete: match [a;]p() -> [a;]p() with [x:=x+1;]y>0 -> [x:=x+1;]y>0  will fail since both pieces need to be unified and then combined subsequently. But that's okay for now
+    }
+  }
+  protected def unifies(s1:Term,s2:Term, t1:Term,t2:Term): List[SubstRepl] = {
+    val u1 = unify(s1, t1)
+    try {
+      compose(unify(Subst(u1)(s2), t2), u1)
+    } catch {
+      case e: ProverException =>
+        logger.trace("      try converse since " + e.getMessage)
+        val u2 = unify(s2, t2)
+        compose(unify(t1, Subst(u2)(s1)), u2)
+    }
+  }
+  protected def unifies(s1:Formula,s2:Formula, t1:Formula,t2:Formula): List[SubstRepl] = {
+    val u1 = unify(s1, t1)
+    try {
+      compose(unify(Subst(u1)(s2), t2), u1)
+    } catch {
+      case e: ProverException =>
+        logger.trace("      try converse since " + e.getMessage)
+        val u2 = unify(s2, t2)
+        compose(unify(t1, Subst(u2)(s1)), u2)
+    }
+  }
+  protected def unifies(s1:Program,s2:Program, t1:Program,t2:Program): List[SubstRepl] = {
+    val u1 = unify(s1, t1)
+    try {
+      compose(unify(Subst(u1)(s2), t2), u1)
+    } catch {
+      case e: ProverException =>
+        logger.trace("      try converse since " + e.getMessage)
+        val u2 = unify(s2, t2)
+        compose(unify(t1, Subst(u2)(s1)), u2)
+    }
+  }
+  protected def unifiesODE(s1:DifferentialProgram,s2:DifferentialProgram, t1:DifferentialProgram,t2:DifferentialProgram): List[SubstRepl] = {
+    val u1 = unifyODE(s1, t1)
+    try {
+      compose(unifyODE(Subst(u1)(s2).asInstanceOf[DifferentialProgram], t2), u1)
+    } catch {
+      case e: ProverException =>
+        logger.trace("      try converse since " + e.getMessage)
+        val u2 = unifyODE(s2, t2)
+        compose(unifyODE(t1, Subst(u2)(s1).asInstanceOf[DifferentialProgram]), u2)
+    }
+  }
+
   protected def unify(s1: Sequent, s2: Sequent): List[SubstRepl] =
     if (!(s1.ante.length == s2.ante.length && s1.succ.length == s2.succ.length)) ununifiable(s1,s2)
     else {
@@ -394,7 +424,7 @@ abstract class SchematicUnificationMatch extends BaseMatcher {
   * Reasonably fast single-pass matcher.
   * @author Andre Platzer
   */
-class UnificationMatchBase extends SchematicUnificationMatch {
+class UnificationMatchBase extends SchematicComposedUnificationMatch {
 
   /** Composition of renaming substitution representations: Compose renaming substitution `after` after renaming substitution `before` */
   protected override def compose(after: List[SubstRepl], before: List[SubstRepl]): List[SubstRepl] =
@@ -422,7 +452,7 @@ class UnificationMatchBase extends SchematicUnificationMatch {
   *       Usually shape has all built-in names ending in underscore _ and no input is like that.
   * @author Andre Platzer
   */
-class FreshUnificationMatch extends SchematicUnificationMatch {
+class FreshUnificationMatch extends SchematicComposedUnificationMatch {
 
   //private def renamingPart(repl: List[SubstRepl]): List[SubstRepl] = repl.distinct.filter(sp => sp._1.isInstanceOf[Variable] && sp._2.isInstanceOf[Variable])
   private def renameIfNeedBe(repl: List[SubstRepl], e: Expression): Expression = {
@@ -477,7 +507,7 @@ class FreshUnificationMatch extends SchematicUnificationMatch {
   *       Usually shape has all built-in names ending in underscore _ and no input is like that.
   * @author Andre Platzer
   */
-class FreshPostUnificationMatch extends SchematicUnificationMatch {
+class FreshPostUnificationMatch extends SchematicComposedUnificationMatch {
 
   /**
     * Quickly compose patterns coming from fresh shapes by just concatenating them.

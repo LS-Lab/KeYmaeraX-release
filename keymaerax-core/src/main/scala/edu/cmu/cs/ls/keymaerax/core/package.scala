@@ -4,6 +4,7 @@
 */
 package edu.cmu.cs.ls.keymaerax
 
+import scala.collection.immutable
 import scala.io.Source
 
 /**
@@ -177,6 +178,12 @@ import scala.io.Source
 package object core {
   /** KeYmaera X core kernel version number */
   val VERSION = Source.fromInputStream(getClass.getResourceAsStream("/VERSION")).getLines().next
+
+  type USubst = USubstOne
+  /** USubst factory method, forwards to constructor. */
+  def USubst(subsDefsInput: immutable.Seq[SubstitutionPair]): USubst = USubstOne(subsDefsInput)
+  /** true if USubstChurch is used, false if USubstOne is used */
+  private[core] val usubstChurch = (USubst(immutable.Seq()).getClass==USubstOne.getClass)
 
   /** Insist on `requirement` being true, throwing a [[CoreException]] if false.
     *  This method is a `require` coming from the prover core that cannot be disabled.

@@ -24,8 +24,6 @@ import scala.collection.immutable
 object ProofChecker {
   case class ProofCheckException(str: String) extends Exception {}
 
-  private val tool = new edu.cmu.cs.ls.keymaerax.tools.Mathematica()
-
   private def goalSequent(phi : Formula) = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(phi))
   private def proofNode(phi : Formula) = ProvableSig.startProof(goalSequent(phi))
   private def proofNode(phi : Sequent) = ProvableSig.startProof(phi)
@@ -50,13 +48,13 @@ object ProofChecker {
             val node = proofNode(axiomFml)
             //@TODO: Why?
             //Just do an empty uniform substitution...
-            proveBy(node, US(USubst.apply(scala.collection.immutable.Seq()), info.canonicalName))
+            proveBy(node, US(USubst(scala.collection.immutable.Seq()), info.canonicalName))
           } catch {
             // If derived axioms didn't do it, try core axioms too
             case e:Exception =>
               val axiomFml = AxiomInfo(axiomName).provable.conclusion
               val node = proofNode(axiomFml)
-              proveBy(node, US(USubst.apply(scala.collection.immutable.Seq()), axiomName))
+              proveBy(node, US(USubst(scala.collection.immutable.Seq()), axiomName))
           }
         }
 

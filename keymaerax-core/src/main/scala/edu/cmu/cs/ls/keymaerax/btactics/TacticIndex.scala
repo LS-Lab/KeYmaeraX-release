@@ -142,7 +142,7 @@ class DefaultTacticIndex extends TacticIndex {
         val bv = StaticSemantics.boundVars(a)
         if (!bv.isEmpty && bv.intersect(StaticSemantics.freeVars(p)).isEmpty) {
           a match {
-            case _: ODESystem => (TactixLibrary.solve :: Nil, TactixLibrary.abstractionb :: Nil)
+            case _: ODESystem => (TactixLibrary.solve :: Nil, TactixLibrary.dW :: Nil)
             case _ => (Nil, TactixLibrary.abstractionb :: Nil)
           }
 

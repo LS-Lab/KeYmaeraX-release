@@ -343,12 +343,6 @@ class SimpleBelleParserTests extends TacticTestBase {
     result.right.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(2), TactixLibrary.andR(3))
   }
 
-  it should "parse <(andR(2), andR(3))" in {
-    val result = BelleParser("<(andR(2), andR(3))").asInstanceOf[SeqTactic]
-    result shouldBe (round trip result)
-    result.asInstanceOf[BranchTactic].children shouldBe Seq(TactixLibrary.andR(2), TactixLibrary.andR(3))
-  }
-
   it should "parse e <()" in {
     val result = BelleParser("andR(1) <()").asInstanceOf[SeqTactic]
     result shouldBe (round trip result)
@@ -400,12 +394,12 @@ class SimpleBelleParserTests extends TacticTestBase {
     val tactic = BelleParser("andR(1) & andR(2)*")
     tactic shouldBe (round trip tactic)
     tactic shouldBe a [SeqTactic]
-    tactic shouldBe TactixLibrary.andR(1) & (TactixLibrary.andR(2)*)
+    tactic shouldBe TactixLibrary.andR(1) & SaturateTactic(TactixLibrary.andR(2))
   }
 
   it should "parse fully parenthesized" in {
     val tactic = BelleParser("andR(1) & (andR(2)*)")
-    tactic shouldBe (round trip TactixLibrary.andR(1) & (TactixLibrary.andR(2)*))
+    tactic shouldBe (round trip TactixLibrary.andR(1) & SaturateTactic(TactixLibrary.andR(2)))
   }
 
   "NTIMES repeat combinator parser" should "parse e*22" in {
@@ -431,7 +425,7 @@ class SimpleBelleParserTests extends TacticTestBase {
   it should "get precedence right" in {
     val tactic = BelleParser("andR(1) & andR(2)*")
     tactic shouldBe a [SeqTactic]
-    tactic shouldBe (round trip TactixLibrary.andR(1) & (TactixLibrary.andR(2)*))
+    tactic shouldBe (round trip TactixLibrary.andR(1) & SaturateTactic(TactixLibrary.andR(2)))
   }
 
   "doall combinator parser" should "parse doall(closeId)" in {

@@ -125,11 +125,11 @@ object FullPrettyPrinter extends BasePrettyPrinter {
     case DotTerm(sort, idx) => "•" +
       (idx match { case None => "" case Some(i) => "_" + i }) +
       (sort match { case Tuple(_, _) => sort.toString case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
-    case x: Variable            => x.asString
     case DifferentialSymbol(x)  => pp(x) + op(term).opcode
+    case x: Variable            => x.asString
     case Differential(t)        => "(" + pp(t) + ")" + op(term).opcode
     // forcing parentheses around numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x. Alternatively could add space after unary Neg.
-    case Number(n)              => "(" + n.bigDecimal.toPlainString() + ")"
+    case Number(n)              => "(" + n.bigDecimal.toPlainString + ")"
     case FuncOf(f, c)           => f.asString + "(" + pp(c) + ")"
     // special notation
     case Pair(l, r)             => "(" + pp(l) + op(term).opcode + pp(r) + ")"
@@ -254,14 +254,14 @@ class KeYmaeraXPrinter extends BasePrettyPrinter {
     case DotTerm(sort, idx) => "•" +
         (idx match { case None => "" case Some(i) => "_" + i }) +
         (sort match { case Tuple(_, _) => sort.toString case _ => "" }) //@note will parse as Pair(Variable("Real"), ...), which has Sort sort
-    case x: Variable            => x.asString
     case DifferentialSymbol(x)  => x.asString + ppOp(term)
+    case x: Variable            => x.asString
     case Differential(t)        => "(" + pp(q++0, t) + ")" + ppOp(term)
       // special case forcing parentheses around numbers to avoid Neg(Times(Number(5),Variable("x")) to be printed as -5*x yet reparsed as (-5)*x. Alternatively could add space after unary Neg.
     case Number(n)              => if (negativeBrackets) {
-      if (OpSpec.negativeNumber) "(" + n.bigDecimal.toPlainString() + ")"
-      else assert(n>=0 || OpSpec.negativeNumber); n.bigDecimal.toPlainString()
-    } else n.bigDecimal.toPlainString()
+      if (OpSpec.negativeNumber) "(" + n.bigDecimal.toPlainString + ")"
+      else assert(n>=0 || OpSpec.negativeNumber); n.bigDecimal.toPlainString
+    } else n.bigDecimal.toPlainString
     case FuncOf(f, c)           => f.asString + "(" + pp(q++0, c) + ")"
     // special notation
     case Pair(l, r)             => wrap(pp(q++0, l) + ppOp(term) + pp(q++1, r), term)

@@ -134,7 +134,7 @@ object InvariantProvers {
           logger.debug("loopPostMaster subst " + USubst(Seq(jjl ~>> cand, jja ~> True)))
           // plug in true for jja, commit if succeeded. Else plug in init for jja and generate
           val wouldBeSeq = USubst(Seq(jjl ~>> cand, jja ~> True))(sequent)
-          lazy val wouldBeSubgoals = USubst(Seq(jjl ~>> cand, jja ~> True))(pr)
+          lazy val wouldBeSubgoals = pr(USubst(Seq(jjl ~>> cand, jja ~> True)))
           logger.debug("loopPostMaster looks at\n" + wouldBeSeq)
           //@note first check induction step; then lazily check all subgoals (candidate may not be true initially or not strong enough)
           val stepProof = proveBy(wouldBeSeq, ?(finishOff))

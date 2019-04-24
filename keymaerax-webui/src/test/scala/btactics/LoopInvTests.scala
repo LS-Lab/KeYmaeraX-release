@@ -116,7 +116,7 @@ class LoopInvTests extends TacticTestBase with Timeouts /* TimeLimits does not a
 
   it should "prove x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]v>=0 by invariant v>=0" in withMathematica { _ =>
     val fml = "x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]v>=0".asFormula
-    proveBy(fml, implyR(1) &  loop("v>=0".asFormula)(1) <(QE,QE, chase(1) & unfoldProgramNormalize & OnAll(odeInvariant(1)))) shouldBe 'proved
+    proveBy(fml, implyR(1) &  loop("v>=0".asFormula)(1) <(QE,QE, chase(1) & unfoldProgramNormalize)) shouldBe 'proved
   }
 
   it should "find an invariant for x=0&v=0-> [{{v:=-1; ++ v:=1;};{x'=v&v>=0}}*]v>=0" in withMathematica { _ =>
@@ -299,32 +299,32 @@ class LoopInvTests extends TacticTestBase with Timeouts /* TimeLimits does not a
     proveBy(fml, implyR(1) & loop("v*v<=10-x".asFormula)(1) <(QE(), QE(), master())) shouldBe 'proved
   }
 
-  it should "find an invariant when first a branch informative (scripted)" in withMathematica { _ =>
+  it should "find an invariant when first a branch informative (scripted)" taggedAs SlowTest in withMathematica { _ =>
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1&t<=1&v>=0}}*]x<=10".asFormula
     val invs = ("10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0" :: "v*v<=10-x" :: "v=0&x<=10" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula -> None).toStream
     //todo: this fails with the default (fast) odeInvariance setting because of DC chain v=0 & x<=10
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant when first a branch informative (scripted) nosolve" in withMathematica { _ =>
+  it should "find an invariant when first a branch informative (scripted) nosolve" taggedAs SlowTest in withMathematica { _ =>
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}}*]x<=10".asFormula
     val invs = ("10-x>=2*(1-t)^2+(4*(1-t)+v)*v&t>=0" :: "v*v<=10-x" :: "v=0&x<=10" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula -> None).toStream
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant when first a branch informative" in withMathematica { _ =>
+  it should "find an invariant when first a branch informative" taggedAs TodoTest in withMathematica { _ =>
     //todo: Pegasus doesn't generate the invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1&t<=1&v>=0}}*]x<=10".asFormula
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant when first a branch informative nosolve" in withMathematica { _ =>
+  it should "find an invariant when first a branch informative nosolve" taggedAs TodoTest in withMathematica { _ =>
     //todo: Pegasus doesn't generate the invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0; ++ a:=-1;};t:=0;{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}}*]x<=10".asFormula
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant when middle branch informative" in withMathematica { _ =>
+  it should "find an invariant when middle branch informative" taggedAs TodoTest in withMathematica { _ =>
     //todo: Pegasus doesn't generate the invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{a:=-1; ++ ?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0;};t:=0;{x'=v,v'=a,t'=1&t<=1&v>=0}}*]x<=10".asFormula
     val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula -> None).toStream
@@ -333,7 +333,7 @@ class LoopInvTests extends TacticTestBase with Timeouts /* TimeLimits does not a
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant when middle branch informative nosolve" in withMathematica { _ =>
+  it should "find an invariant when middle branch informative nosolve" taggedAs TodoTest in withMathematica { _ =>
     //todo: Pegasus doesn't generate the invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{a:=-1; ++ ?10-x>=2+(4+v)*v; a:=1; ++ v:=0;a:=0;};t:=0;{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}}*]x<=10".asFormula
     val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula -> None).toStream
@@ -342,7 +342,7 @@ class LoopInvTests extends TacticTestBase with Timeouts /* TimeLimits does not a
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant when first a branch uninformative" in withMathematica { _ =>
+  it should "find an invariant when first a branch uninformative" taggedAs TodoTest in withMathematica { _ =>
     //todo: Pegasus doesn't generate the invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{v:=0;a:=0; ++ a:=-1; ++ ?10-x>=2+(4+v)*v; a:=1;};t:=0;{x'=v,v'=a,t'=1&t<=1&v>=0}}*]x<=10".asFormula
     val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula -> None).toStream
@@ -351,7 +351,7 @@ class LoopInvTests extends TacticTestBase with Timeouts /* TimeLimits does not a
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant when first a branch uninformative nosolve" in withMathematica { _ =>
+  it should "find an invariant when first a branch uninformative nosolve" taggedAs TodoTest in withMathematica { _ =>
     //todo: Pegasus doesn't generate the invariant for a:=1 case
     val fml = "x=0&v=0&a=0 -> [{{v:=0;a:=0; ++ a:=-1; ++ ?10-x>=2+(4+v)*v; a:=1;};t:=0;{x'=v,v'=a,t'=1,z'=z&t<=1&v>=0}}*]x<=10".asFormula
     val invs = ("x<9+t&t>=0" :: "v<=1" :: "v>=0" :: "x<=10" :: "x=0" :: Nil).map(_.asFormula -> None).toStream
@@ -360,7 +360,7 @@ class LoopInvTests extends TacticTestBase with Timeouts /* TimeLimits does not a
     proveBy(fml, implyR(1) & loopPostMaster((_, _) => invs)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant for the Ahmadi Parillo Kristic benchmark example" in withMathematica { _ =>
+  it should "find an invariant for the Ahmadi Parillo Kristic benchmark example" taggedAs TodoTest in withMathematica { _ =>
     //todo: Pegasus never gets asked with precondition
     val fml = "1/2*x<=x & x<=7/10 & 0<=y & y<=3/10 -> [{{x'=-x+x*y, y'=-y}}*]!(-8/10>=x & x>=-1 & -7/10>=y & y>=-1)".asFormula
     val invs = ("y<=0" :: "y>=0" :: "y=0" :: Nil).map(_.asFormula -> None).toStream
@@ -369,7 +369,8 @@ class LoopInvTests extends TacticTestBase with Timeouts /* TimeLimits does not a
     proveBy(fml, implyR(1) & loopPostMaster(InvariantGenerator.pegasusInvariants)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant for a simple time-triggered example" ignore withMathematica { _ =>
+  it should "find an invariant for a simple time-triggered example" taggedAs TodoTest in withMathematica { _ =>
+    //todo
     val fml =
       """v=0 & A>=0 & b>0 & x<=m & ep>=0
         | -> [
@@ -414,7 +415,7 @@ class LoopInvTests extends TacticTestBase with Timeouts /* TimeLimits does not a
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs.toStream)(1)) shouldBe 'proved
   }
 
-  it should "find an invariant for x>=5 & y>=1 -> [{x:=x+y;y:=y+1;{x'=x^2+2*y+x,y'=y^2+y}}*]x>=1" in withMathematica { _ =>
+  it should "find an invariant for x>=5 & y>=1 -> [{x:=x+y;y:=y+1;{x'=x^2+2*y+x,y'=y^2+y}}*]x>=1" taggedAs SlowTest in withMathematica { _ =>
     val fml = "x>=5 & y>=1 -> [{x:=x+y;y:=y+1;{x'=x^2+2*y+x,y'=y^2+y}}*]x>=1".asFormula
     val invs = List("x>=-1".asFormula, "y>=1".asFormula, "x>=0&y>=0".asFormula, "x>=1&y>=1".asFormula, "x>=1&y>=0".asFormula, "x=7".asFormula).map(_ -> None)
     proveBy(fml, implyR(1) & loopPostMaster((seq,pos)=>invs.toStream)(1)) shouldBe 'proved
@@ -496,18 +497,18 @@ class LoopInvTests extends TacticTestBase with Timeouts /* TimeLimits does not a
     proveBy(fml, implyR(1) & loopSR((seq,pos)=>invs2.toStream)(1)) shouldBe 'proved
   }
 
-  it should "prove x>=5 & y>=0 -> [{{x'=x^2+y,y'=x+1}}*]x>=0 by invariant x>=0&y>=0" in withMathematica{qeTool =>
+  it should "prove x>=5 & y>=0 -> [{{x'=x^2+y,y'=x+1}}*]x>=0 by invariant x>=0&y>=0" taggedAs TodoTest in withMathematica{ _ =>
     val fml = "x>=5 & y>=0 -> [{{x'=x^2+y,y'=x+1}}*]x>=0".asFormula
     proveBy(fml, implyR(1) & loop("x>=0&y>=0".asFormula)(1) <(QE(), QE(), odeInvariant(1))) shouldBe 'proved
   }
 
-  it should "prove x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x+1}}*]x>=0 by invariant x>=0&y>=0" in withMathematica{qeTool =>
+  it should "prove x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x+1}}*]x>=0 by invariant x>=0&y>=0" taggedAs TodoTest in withMathematica{ _ =>
     val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x+1}}*]x>=0".asFormula
     proveBy(fml, implyR(1) & loop("x>=0&y>=0".asFormula)(1) <(QE(), QE(), composeb(1) & assignb(1) & composeb(1) & assignb(1) &
       odeInvariant(1))) shouldBe 'proved
   }
 
-  it should "prove x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0 by invariant x>=0&y>=0" ignore withMathematica{qeTool =>
+  it should "prove x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0 by invariant x>=0&y>=0" ignore withMathematica{ _ =>
     // Failing test case because of equilibrium at x=0,y=0
     val fml = "x>=5 & y>=0 -> [{x:=x+y;y:=y+1;{x'=x^2+y,y'=x}}*]x>=0".asFormula
     proveBy(fml, implyR(1) & loop("x>=0&y>=0".asFormula)(1) <(QE(), QE(), composeb(1) & assignb(1) & composeb(1) & assignb(1) &

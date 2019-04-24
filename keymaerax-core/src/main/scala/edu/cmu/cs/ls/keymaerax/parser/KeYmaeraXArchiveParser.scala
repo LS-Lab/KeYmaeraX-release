@@ -67,7 +67,7 @@ object KeYmaeraXArchiveParser {
             USubst(substs)(f)
           } catch {
             case ex: SubstitutionClashException =>
-              throw ParseException("Definition " + ex.e + " must declare arguments " + ex.clashes, ex)
+              throw ParseException("Definition " + ex.context + " as " + ex.e + " must declare arguments " + ex.clashes, ex)
           }
           if (fs != f) exhaustiveSubst(fs) else fs
         }
@@ -195,6 +195,7 @@ object KeYmaeraXArchiveParser {
           }
         }
         else true
+      case DifferentialSymbol(v) => d.decls.contains(v.name, v.index) //@note hence it is checked as variable already
       case x: Variable if quantifiedVars(expr).contains(x) => true //Allow all undeclared variables if they are at some point bound by a \forall or \exists. @todo this is an approximation. Should only allow quantifier bindings...
       case x: Variable =>
         val (declaredSort, declLoc) = d.decls.get((x.name,x.index)) match {
@@ -208,7 +209,6 @@ object KeYmaeraXArchiveParser {
       case _: UnitPredicational => true //@note needs not be declared
       case _: UnitFunctional => true //@note needs not be declared
       case _: DotTerm => true //@note needs not be declared
-      case DifferentialSymbol(v) => d.decls.contains(v.name, v.index) //@note hence it is checked as variable already
       case _ => false
     })
   }
