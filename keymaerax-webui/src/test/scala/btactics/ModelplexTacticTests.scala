@@ -1124,6 +1124,39 @@ class ModelplexTacticTests extends TacticTestBase {
     ctrlMonitorFml shouldBe "(xgpost>=0&kpost>=0|xgpost<=0&kpost<=0)&(ygpost>0&abs(kpost)*eps()<=100&((kpost*(eps()*eps())-200*eps())*100 < kpost*(xgpost*xgpost+ygpost*ygpost)-2*xgpost*100*10&kpost*(xgpost*xgpost+ygpost*ygpost)-2*xgpost*100*10 < (kpost*(eps()*eps())+200*eps())*100)&0<=vlpost&vlpost < vhpost&A()*T()<=10*(vhpost-vlpost)&B()*T()<=10*(vhpost-vlpost))&((-B()<=apost&apost<=A())&10*v+apost*T()>=0&(v<=vhpost&10*v+apost*T()<=10*vhpost|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(B()*(2*v*T()*10+apost*(T()*T()))+((v*10+apost*T())*(v*10+apost*T())-10*vhpost*(10*vhpost)))<=2*B()*(abs(xgpost)-10*eps())*10000*100|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(B()*(2*v*T()*10+apost*(T()*T()))+((v*10+apost*T())*(v*10+apost*T())-10*vhpost*(10*vhpost)))<=2*B()*(ygpost-10*eps())*10000*100)&(vlpost<=v&10*v+apost*T()>=10*vlpost|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(A()*(2*v*T()*10+apost*(T()*T()))+(vlpost*10*(vlpost*10)-(v*10+apost*T())*(v*10+apost*T())))<=2*A()*(abs(xgpost)-10*eps())*10000*100|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(A()*(2*v*T()*10+apost*(T()*T()))+(vlpost*10*(vlpost*10)-(v*10+apost*T())*(v*10+apost*T())))<=2*A()*(ygpost-10*eps())*10000*100))&(v>=0&0<=T())&vpost=v&tpost=0".asFormula
   }
 
+  it should "generate a model monitor from plant overapproximation" in withMathematica { tool =>
+    //@note run this test with -DTEST_BASE_DIR=/path/to/modeldirectory
+    val baseDir = System.getProperty("TEST_BASE_DIR")
+    val entry = KeYmaeraXArchiveParser.parseFromFile(s"$baseDir/relative-full.kyx#Robot preserves loop invariant").head
+    val model = entry.model.asInstanceOf[Formula]
+    val Imply(_, Box(Loop(Compose(prg, _)), _)) = model
+
+    val diffCuts = "(t>=0&(k*(eps()*eps())-2*100*eps())*(10*10) < k*(xg*xg+yg*yg)-2*xg*100*10&k*(xg*xg+yg*yg)-2*xg*100*10 < (k*(eps()*eps())+2*100*eps())*(10*10)|10*v+a*(T()-t)>=0&((a>=0&10*v+a*(T()-t)<=10*vh|a<=0&v<=vh)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(B()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+((v*10+a*(T()-t))*(v*10+a*(T()-t))-10*vh*(10*vh)))<=2*B()*(abs(xg)-10*eps())*(100*100)*(10*10))&((a>=0&v>=vl|a<=0&10*v+a*(T()-t)>=10*vl)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(yg-10*eps())*(100*100)*(10*10)|(1*100*(1*100)+2*eps()*abs(k)*1*100+eps()*eps()*(k*k))*(A()*(2*v*(T()-t)*10+a*((T()-t)*(T()-t)))+(vl*10*(vl*10)-(v*10+a*(T()-t))*(v*10+a*(T()-t))))<=2*A()*(abs(xg)-10*eps())*(100*100)*(10*10)))".asFormula
+    val expectedEvolutionDomain = And("v>=0&t<=T()".asFormula, diffCuts)
+
+    val nonlinearModelApprox = ModelPlex.createNonlinearModelApprox("Waypoint", entry.tactics.head._3)(model)
+    val Imply(_, Box(Loop(Compose(
+      ctrl,
+      Compose(x0Ghosts, Compose(Test(x0EvolDomain), Compose(nondetPlant, Test(evolDomain)))))), _)) = nonlinearModelApprox._1
+    ctrl shouldBe prg
+    x0Ghosts shouldBe "t_0:=t;v_0:=v;xg_0:=xg;yg_0:=yg;".asProgram
+    x0EvolDomain shouldBe expectedEvolutionDomain
+    nondetPlant shouldBe "t:=*;v:=*;xg:=*;yg:=*;".asProgram
+    evolDomain shouldBe expectedEvolutionDomain
+
+    val stateVars = ("xg" :: "yg" :: "v" :: "a" :: "t" :: "vl" :: "vh" :: "k" :: "t_0" :: "v_0" :: "xg_0" :: "yg_0" :: Nil).map(_.asVariable.asInstanceOf[BaseVariable])
+    val (modelplexInput, assumptions) = ModelPlex.createMonitorSpecificationConjecture(nonlinearModelApprox._1, stateVars: _*)
+    val simplifier = SimplifierV3.simpTac(taxs = SimplifierV3.composeIndex(
+      SimplifierV3.groundEqualityIndex, SimplifierV3.defaultTaxs))
+    val ctrlTactic = DebuggingTactics.print("Deriving Monitor") & ModelPlex.controllerMonitorByChase(1) & DebuggingTactics.print("Chased") &
+      SaturateTactic(ModelPlex.optimizationOneWithSearch(Some(tool), assumptions)(1)) &
+      DebuggingTactics.print("Quantifiers instantiated") &
+      simplifier(1) & DebuggingTactics.print("Monitor Result")
+    val result = proveBy(modelplexInput, ctrlTactic)
+    val monitorFml = result.subgoals.head.succ.head
+    monitorFml shouldBe "(xgpost_0>=0&kpost>=0|xgpost_0<=0&kpost<=0)&(ygpost_0>0&abs(kpost)*eps()<=100&((kpost*(eps()*eps())-200*eps())*100 < kpost*(xgpost_0*xgpost_0+ygpost_0*ygpost_0)-2*xgpost_0*100*10&kpost*(xgpost_0*xgpost_0+ygpost_0*ygpost_0)-2*xgpost_0*100*10 < (kpost*(eps()*eps())+200*eps())*100)&0<=vlpost&vlpost < vhpost&A()*T()<=10*(vhpost-vlpost)&B()*T()<=10*(vhpost-vlpost))&((-B()<=apost&apost<=A())&10*v+apost*T()>=0&(v<=vhpost&10*v+apost*T()<=10*vhpost|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(B()*(2*v*T()*10+apost*(T()*T()))+((v*10+apost*T())*(v*10+apost*T())-10*vhpost*(10*vhpost)))<=2*B()*(abs(xgpost_0)-10*eps())*10000*100|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(B()*(2*v*T()*10+apost*(T()*T()))+((v*10+apost*T())*(v*10+apost*T())-10*vhpost*(10*vhpost)))<=2*B()*(ygpost_0-10*eps())*10000*100)&(vlpost<=v&10*v+apost*T()>=10*vlpost|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(A()*(2*v*T()*10+apost*(T()*T()))+(vlpost*10*(vlpost*10)-(v*10+apost*T())*(v*10+apost*T())))<=2*A()*(abs(xgpost_0)-10*eps())*10000*100|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(A()*(2*v*T()*10+apost*(T()*T()))+(vlpost*10*(vlpost*10)-(v*10+apost*T())*(v*10+apost*T())))<=2*A()*(ygpost_0-10*eps())*10000*100))&(v>=0&0<=T())&((vpost>=0&tpost<=T())&(tpost>=0&(kpost*(eps()*eps())-200*eps())*100 < kpost*(xgpost*xgpost+ygpost*ygpost)-2*xgpost*100*10&kpost*(xgpost*xgpost+ygpost*ygpost)-2*xgpost*100*10 < (kpost*(eps()*eps())+200*eps())*100|10*vpost+apost*(T()-tpost)>=0&((apost>=0&10*vpost+apost*(T()-tpost)<=10*vhpost|apost<=0&vpost<=vhpost)|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(B()*(2*vpost*(T()-tpost)*10+apost*((T()-tpost)*(T()-tpost)))+((vpost*10+apost*(T()-tpost))*(vpost*10+apost*(T()-tpost))-10*vhpost*(10*vhpost)))<=2*B()*(ygpost-10*eps())*10000*100|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(B()*(2*vpost*(T()-tpost)*10+apost*((T()-tpost)*(T()-tpost)))+((vpost*10+apost*(T()-tpost))*(vpost*10+apost*(T()-tpost))-10*vhpost*(10*vhpost)))<=2*B()*(abs(xgpost)-10*eps())*10000*100)&((apost>=0&vpost>=vlpost|apost<=0&10*vpost+apost*(T()-tpost)>=10*vlpost)|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(A()*(2*vpost*(T()-tpost)*10+apost*((T()-tpost)*(T()-tpost)))+(vlpost*10*(vlpost*10)-(vpost*10+apost*(T()-tpost))*(vpost*10+apost*(T()-tpost))))<=2*A()*(ygpost-10*eps())*10000*100|(10000+2*eps()*abs(kpost)*100+eps()*eps()*(kpost*kpost))*(A()*(2*vpost*(T()-tpost)*10+apost*((T()-tpost)*(T()-tpost)))+(vlpost*10*(vlpost*10)-(vpost*10+apost*(T()-tpost))*(vpost*10+apost*(T()-tpost))))<=2*A()*(abs(xgpost)-10*eps())*10000*100)))&tpost_0=0&vpost_0=v".asFormula
+  }
+
   "ModelPlex formula metric" should "convert simple formula" in withMathematica { tool =>
     val fml = "x>=y & a=b & c<=d+e".asFormula
     ModelPlex.toMetric(fml) shouldBe "max(y-x, max(max(a-b, b-a), c-(d+e)))<=0".asFormula
