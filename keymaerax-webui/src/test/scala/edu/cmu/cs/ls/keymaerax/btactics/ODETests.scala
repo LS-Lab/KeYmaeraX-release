@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.FOQuantifierTactics.universalGen
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.AnnotationProofHint
 import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
@@ -49,10 +50,11 @@ class ODETests extends TacticTestBase with Timeouts {
         |x^2 <= 1/2 & y^2 <= 1/3 ->
         | [
         |   {x'=-x - (1117*y)/500 + (439*y^3)/200 - (333*y^5)/500, y'=x + (617*y)/500 - (439*y^3)/200 + (333*y^5)/500}
-        |   @invariant(x^2 + x*y + y^2 - 111/59 <= 0)
         | ] (x - 4*y < 8)
       """.stripMargin.asFormula
 
+    TactixLibrary.differentialInvGenerator = new FixedGenerator[(Formula, Option[InvariantGenerator.ProofHint])](
+      ("x^2 + x*y + y^2 - 111/59 <= 0".asFormula -> Some(AnnotationProofHint(tryHard = false))) :: Nil)
     proveBy(fml, implyR(1) & ODE(1)) shouldBe 'proved
   }
 
