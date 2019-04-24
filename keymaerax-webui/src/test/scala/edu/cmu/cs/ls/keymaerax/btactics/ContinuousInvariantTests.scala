@@ -1,7 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, PegasusProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
@@ -18,6 +17,7 @@ import org.scalatest.prop.TableDrivenPropertyChecks.forEvery
 import org.scalatest.prop.Tables._
 import org.scalatest.concurrent.Timeouts
 import org.scalatest.time.SpanSugar._
+import org.scalatest.LoneElement._
 
 /**
  * Continuous invariant generation tests.
@@ -151,7 +151,7 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
       "x=1".asFormula)
     val aFunc = "A()".asTerm.asInstanceOf[FuncOf]
 
-    cex shouldBe Some(Map("x".asVariable -> "1".asTerm,aFunc.func -> "1".asTerm,"v".asVariable -> "0".asTerm))
+    cex shouldBe Some(Map("x".asVariable -> "1.0".asTerm,aFunc.func -> "1.0".asTerm,"v".asVariable -> "-1.0".asTerm))
   }
 
   it should "not refute true invariants" in withMathematica { tool =>
@@ -174,9 +174,7 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
 
   it should "refute as a tactic" in withMathematica { _ =>
     val fml = "x^2+y^2=r()^2 -> [{x'=y,y'=A()*x}] x^2+y^2=r()^2".asFormula
-
-    //throws an error
-    a [BelleThrowable] should be thrownBy proveBy(fml, implyR(1) & DifferentialTactics.cexCheck(1))
+    proveBy(fml, implyR(1) & DifferentialTactics.cexCheck(1)).subgoals.loneElement shouldBe "==> false".asSequent
   }
 
 
