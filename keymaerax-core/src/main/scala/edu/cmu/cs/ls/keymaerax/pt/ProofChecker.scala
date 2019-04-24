@@ -24,8 +24,6 @@ import scala.collection.immutable
 object ProofChecker {
   case class ProofCheckException(str: String) extends Exception {}
 
-  private val tool = new edu.cmu.cs.ls.keymaerax.tools.Mathematica()
-
   private def goalSequent(phi : Formula) = Sequent(immutable.IndexedSeq(), immutable.IndexedSeq(phi))
   private def proofNode(phi : Formula) = ProvableSig.startProof(goalSequent(phi))
   private def proofNode(phi : Sequent) = ProvableSig.startProof(phi)

@@ -78,6 +78,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
       val mathematica = new Mathematica()
       mathematica.init(Map("linkName" -> "/Applications/Mathematica9.app/Contents/MacOS/MathKernel"))
       mathematica shouldBe 'initialized
+      mathematica.shutdown()
     }
   }
 
@@ -85,6 +86,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
     val mathematica = new Mathematica()
     mathematica.init(Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel"))
     mathematica shouldBe 'initialized
+    mathematica.shutdown()
   }
 
   "Function conversion" should "prove no-argument functions correctly" in withMathematica { link =>
