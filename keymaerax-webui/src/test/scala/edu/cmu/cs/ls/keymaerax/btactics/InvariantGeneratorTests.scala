@@ -165,7 +165,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
     case i: Map[String, Any] => i.values.mkString(",")
   }
 
-  it should "generate invariants" ignore withMathematica { tool =>
+  it should "generate invariants" in withMathematica { tool =>
     setTimeouts(tool)
     val results = entries.map(e => runInvGen(e.name, e.model))
     val writer = new PrintWriter(benchmarkName + "_invgen_saturate_proofhints.csv")
@@ -194,7 +194,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
     writer.close()
   }
 
-  it should "generate invariants with summands only" in withMathematica { tool =>
+  it should "generate invariants with summands only" ignore withMathematica { tool =>
     setTimeouts(tool)
     Configuration.set(Configuration.Keys.PEGASUS_MAIN_FILE, "Pegasus_SummandsOnly.m", saveToFile = false)
     val results = entries.map(e => runInvGen(e.name, e.model))
