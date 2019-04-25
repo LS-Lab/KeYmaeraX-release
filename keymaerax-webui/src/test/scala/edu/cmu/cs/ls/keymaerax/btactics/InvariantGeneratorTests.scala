@@ -119,6 +119,14 @@ class InvariantGeneratorTests extends TacticTestBase {
     TactixLibrary.invGenerator("==> [{y'=-2*y&true}]y>0".asSequent, SuccPosition(1)).loneElement shouldBe ("y<=old(y)".asFormula, Some(AnnotationProofHint(tryHard = true)))
   }
 
+  "Pegasus" should "return invariant postcondition if sanity timeout > 0" in withMathematica { _ =>
+    val seq = "x^2+y^2=2 ==> [{x'=-x,y'=-y}]x^2+y^2<=2".asSequent
+    Configuration.set(Configuration.Keys.PEGASUS_SANITY_TIMEOUT, "0", saveToFile = false)
+    InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs Nil
+    Configuration.set(Configuration.Keys.PEGASUS_SANITY_TIMEOUT, "5", saveToFile = false)
+    InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs ("2+-1*x^2+-1*y^2>=0".asFormula -> PegasusProofHint(isInvariant=true, None)) :: Nil
+  }
+
 }
 
 object NonlinearExamplesTests {

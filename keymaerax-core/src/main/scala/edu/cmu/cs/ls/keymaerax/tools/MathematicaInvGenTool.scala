@@ -44,6 +44,8 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
       k2m(ode.constraint) + " }, " +
       k2m(postCond) + " }"
 
+    val sanityTimeout = "SanityTimeout -> " + Configuration.getOption(Configuration.Keys.PEGASUS_SANITY_TIMEOUT).getOrElse(0)
+
     logger.debug("Raw Mathematica input into Pegasus: " + problem)
 
     timeout = Try(Integer.parseInt(Configuration(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT))).getOrElse(-1)
@@ -52,7 +54,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     val command = s"""
        |$setPathsCmd
        |Needs["Pegasus`","$pegasusMain"];
-       |Pegasus`InvGen[$problem]""".stripMargin.trim()
+       |Pegasus`InvGen[$problem,$sanityTimeout]""".stripMargin.trim()
 
     try {
       val (output, result) = runUnchecked(command)
