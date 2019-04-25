@@ -124,7 +124,7 @@ class InvariantGeneratorTests extends TacticTestBase {
     Configuration.set(Configuration.Keys.PEGASUS_SANITY_TIMEOUT, "0", saveToFile = false)
     InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs Nil
     Configuration.set(Configuration.Keys.PEGASUS_SANITY_TIMEOUT, "5", saveToFile = false)
-    InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs ("2+-1*x^2+-1*y^2>=0".asFormula -> PegasusProofHint(isInvariant=true, None)) :: Nil
+    InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs ("2+-1*x^2+-1*y^2>=0".asFormula -> Some(PegasusProofHint(isInvariant=true, None))) :: Nil
   }
 
 }
