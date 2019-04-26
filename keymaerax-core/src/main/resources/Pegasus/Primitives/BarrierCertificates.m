@@ -171,51 +171,52 @@ for deg = mindeg : maxdeg
         lambda = lambdas(i);
         fprintf('Trying lambda: \\n');
 		lambda
-        % The SOS program
-        prog = sosprogram(vars);
+        try %NOTE: This try is dangerous!
+            % The SOS program
+            prog = sosprogram(vars);
 
-        % Template for the barrier certificate B
-        [prog,B] = sospolyvar(prog,monvec);
+            % Template for the barrier certificate B
+            [prog,B] = sospolyvar(prog,monvec);
 
-        % SOS coefficients for each barrier in init
-        for i=1:init_dim
-          [prog,IP(i)] = sossosvar(prog,monvec2);
-        end
-
-        % Constrain barrier to be <= 0 on all inits
-        % Note: could assume domain constraint here too
-        prog = sosineq(prog, -IP*inits - B);
-
-        % SOSes for the unsafe states
-        for i=1:unsafe_dim
-          [prog,FP(i)] = sossosvar(prog,monvec2);
-        end
-
-        % Constrain barrier to be > 0 on all unsafe
-        % Note: could assume domain constraint here too
-        prog = sosineq(prog, B - FP*unsafes - eps);
-
-        % Lie derivatives for each component
-        dB = 0*vars(1);
-        for i = 1:length(vars)
-          dB = dB+diff(B,vars(i))*field(i);
-        end
-
-        % Constrain the Lie derivative
-        expr = lambda * B - dB;
-
-        if dom_dim > 0
-            % SOSes for each barrier in domain
-            for i=1:dom_dim
-              [prog,DP(i)] = sossosvar(prog,monvec2);
+            % SOS coefficients for each barrier in init
+            for i=1:init_dim
+              [prog,IP(i)] = sossosvar(prog,monvec2);
             end
-            prog = sosineq(prog, expr -DP*dom);
-        else
-            prog = sosineq(prog, expr);
-        end
 
-        opt.params.fid = 0;
-        try
+            % Constrain barrier to be <= 0 on all inits
+            % Note: could assume domain constraint here too
+            prog = sosineq(prog, -IP*inits - B);
+
+            % SOSes for the unsafe states
+            for i=1:unsafe_dim
+              [prog,FP(i)] = sossosvar(prog,monvec2);
+            end
+
+            % Constrain barrier to be > 0 on all unsafe
+            % Note: could assume domain constraint here too
+            prog = sosineq(prog, B - FP*unsafes - eps);
+
+            % Lie derivatives for each component
+            dB = 0*vars(1);
+            for i = 1:length(vars)
+              dB = dB+diff(B,vars(i))*field(i);
+            end
+
+            % Constrain the Lie derivative
+            expr = lambda * B - dB;
+
+            if dom_dim > 0
+                % SOSes for each barrier in domain
+                for i=1:dom_dim
+                  [prog,DP(i)] = sossosvar(prog,monvec2);
+                end
+                prog = sosineq(prog, expr -DP*dom);
+            else
+                prog = sosineq(prog, expr);
+            end
+
+            opt.params.fid = 0;
+        %try OLD position of try
             prog = sossolve(prog,opt);
             feasibility = prog.solinfo.info.feasratio;
             if feasibility >= minfeas
@@ -223,7 +224,7 @@ for deg = mindeg : maxdeg
                 return;
             end
         catch
-            %ignore SOSTOOLS errors
+            % ignore SOSTOOLS errors
         end
    end
 end
