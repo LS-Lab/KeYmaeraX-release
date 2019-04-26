@@ -70,10 +70,10 @@ class TutorialTests extends Suites(
 
 @ExtremeTest
 class CaseStudyTests extends Suites(
-  new TutorialRegressionTester("Roundabout", s"$GITHUB_PROJECTS_RAW_PATH/roundabout/TRM-essentials.kya"),
-  new TutorialRegressionTester("ACAS X", s"$GITHUB_PROJECTS_RAW_PATH/acasx/acasx.kyx"),
-  new TutorialRegressionTester("Robix", s"$GITHUB_PROJECTS_RAW_PATH/ijrr/robix.kyx"),
-  new TutorialRegressionTester("ETCS", s"$GITHUB_PROJECTS_RAW_PATH/etcs/etcs.kyx"),
+  new CaseStudyRegressionTester("Roundabout", s"$GITHUB_PROJECTS_RAW_PATH/roundabout/TRM-essentials.kya"),
+  new CaseStudyRegressionTester("ACAS X", s"$GITHUB_PROJECTS_RAW_PATH/acasx/acasx.kyx"),
+  new CaseStudyRegressionTester("Robix", s"$GITHUB_PROJECTS_RAW_PATH/ijrr/robix.kyx"),
+  new CaseStudyRegressionTester("ETCS", s"$GITHUB_PROJECTS_RAW_PATH/etcs/etcs.kyx"),
 )
 
 object TutorialTests {

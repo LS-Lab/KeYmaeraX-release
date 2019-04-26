@@ -123,7 +123,7 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
 
 }
 
-@SlowTest
+@ExtremeTest
 class BenchmarkTester(val benchmarkName: String, val url: String,
                       val timeout: Int, val genCheck: Boolean) extends TacticTestBase with AppendedClues with Timeouts {
 

@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest}
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleAbort, BelleExpr, PosInExpr}
 
 import scala.collection.immutable._
@@ -36,7 +36,7 @@ import scala.language.postfixOps
  * @author Stefan Mitsch
  * @author Andre Platzer
  */
-@SlowTest
+@ExtremeTest
 class AcasXSafeBoundedTime extends AcasXBase {
 
   private val condImplLower =

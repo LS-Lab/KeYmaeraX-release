@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest}
 
 import scala.language.postfixOps
 
@@ -32,7 +32,7 @@ import scala.language.postfixOps
  * @author Stefan Mitsch
  * @author Andre Platzer
  */
-@SlowTest
+@ExtremeTest
 class AcasXSafeable extends AcasXBase {
 
   private def eqHide(f: String) = exhaustiveEqL2R('L, f.asFormula)

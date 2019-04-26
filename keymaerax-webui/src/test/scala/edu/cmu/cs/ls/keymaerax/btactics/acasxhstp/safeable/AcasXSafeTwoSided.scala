@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.BelleLabels._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest}
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, PosInExpr}
 import edu.cmu.cs.ls.keymaerax.btactics._
 import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
@@ -39,7 +39,7 @@ import scala.language.postfixOps
  * @author Stefan Mitsch
  * @author Andre Platzer
  */
-@SlowTest
+@ExtremeTest
 class AcasXSafeTwoSided extends AcasXBase {
 
   private val safeLemmaFormula =

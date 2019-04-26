@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest}
 
 import scala.collection.immutable._
 import scala.language.postfixOps
@@ -37,7 +37,7 @@ import scala.language.postfixOps
  * @author Stefan Mitsch
  * @author Andre Platzer
  */
-@SlowTest
+@ExtremeTest
 class AcasXSafe extends AcasXBase {
 
   /*** Invariants etc. ***/

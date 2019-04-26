@@ -16,7 +16,7 @@ import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.Declaration
-import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest}
 import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.scalatest.AppendedClues
 import org.scalatest.exceptions.TestFailedException
@@ -26,12 +26,10 @@ import scala.language.postfixOps
 import org.scalatest.prop.TableDrivenPropertyChecks._
 
 /**
- * Tutorial test cases.
- *
+ * Tutorial and case study test cases.
  * @author Stefan Mitsch
  */
-@SlowTest
-class TutorialRegressionTester(val tutorialName: String, val url: String) extends TacticTestBase with AppendedClues {
+abstract class RegressionTesterBase(val tutorialName: String, val url: String) extends TacticTestBase with AppendedClues {
 
   private def table(entries: List[TutorialEntry]) = {
     Table(("Tutorial name", "Entry name", "Model", "Description", "Title", "Link", "Tactic", "Kind"),
@@ -160,3 +158,9 @@ class TutorialRegressionTester(val tutorialName: String, val url: String) extend
   }
 
 }
+
+@SlowTest
+class TutorialRegressionTester(override val tutorialName: String, override val url: String) extends RegressionTesterBase(tutorialName, url)
+
+@ExtremeTest
+class CaseStudyRegressionTester(override val tutorialName: String, override val url: String) extends RegressionTesterBase(tutorialName, url)
