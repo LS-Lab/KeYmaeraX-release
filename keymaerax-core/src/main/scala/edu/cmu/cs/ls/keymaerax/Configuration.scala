@@ -98,6 +98,12 @@ object Configuration {
     if (saveToFile) config.write(new PrintWriter(new File(CONFIG_PATH)))
   }
 
+  /** Removes a configuration element and stores the configuration file (unless !`saveToFile`). */
+  def remove(key: String, saveToFile: Boolean = true): Unit = {
+    config.clearProperty(key)
+    if (saveToFile) config.write(new PrintWriter(new File(CONFIG_PATH)))
+  }
+
   private def updateConfig(config: PropertiesConfiguration): PropertiesConfiguration = {
     val default = new PropertiesConfiguration()
     default.read(scala.io.Source.fromInputStream(getClass.getResourceAsStream(DEFAULT_CONFIG_PATH)).reader)
