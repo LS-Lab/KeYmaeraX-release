@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tags.{SlowTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest, UsualTest}
 import edu.cmu.cs.ls.keymaerax.tools.{PegasusM2KConverter, ToolOperationManagement}
 import edu.cmu.cs.ls.keymaerax.btactics.NonlinearExamplesTests._
 import org.scalatest.{AppendedClues, Suites}
@@ -135,13 +135,13 @@ object NonlinearExamplesTests {
   private val GITHUB_PROJECTS_RAW_PATH = "file:/Users/smitsch/Documents/projects/keymaera/documents/Papers/pegasus_paper"
 }
 
-@SlowTest
+@ExtremeTest
 class NonlinearExamplesTests extends Suites(
   new NonlinearExamplesTester("Nonlinear", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx", 300, genCheck=true)
 //  new NonlinearExamplesTester("Invariant", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/invariant.kyx", 300, genCheck=true)
 )
 
-@SlowTest
+@ExtremeTest
 class NonlinearExamplesTester(val benchmarkName: String, val url: String, val timeout: Int,
                               val genCheck: Boolean) extends TacticTestBase with AppendedClues with Timeouts {
 

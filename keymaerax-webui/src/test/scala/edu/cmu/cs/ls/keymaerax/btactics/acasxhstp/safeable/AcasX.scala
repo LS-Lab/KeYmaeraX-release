@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics.acasxhstp.safeable
 
-import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import edu.cmu.cs.ls.keymaerax.tags.ExtremeTest
 import org.scalatest._
 
 /**
@@ -24,7 +24,7 @@ import org.scalatest._
   * @author Stefan Mitsch
   * @author Andre Platzer
   */
-@SlowTest
+@ExtremeTest
 class AcasX extends Suites(
   new AcasXSafe,
   new AcasXSafeTwoSided,

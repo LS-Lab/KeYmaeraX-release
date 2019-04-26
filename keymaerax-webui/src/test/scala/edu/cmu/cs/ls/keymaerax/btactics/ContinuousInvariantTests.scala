@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, PegasusProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
-import testHelper.KeYmaeraXTestTags.SlowTest
+import testHelper.KeYmaeraXTestTags.{ExtremeTest, SlowTest}
 
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
@@ -119,7 +119,7 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
     }
   }
 
-  it should "produce invariants that are provable with ODE" taggedAs SlowTest in withMathematica { _ =>
+  it should "produce invariants that are provable with ODE" taggedAs ExtremeTest in withMathematica { _ =>
     withTemporaryConfig(Map(
         Configuration.Keys.ODE_TIMEOUT_FINALQE -> "300",
         Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT -> "60")) {

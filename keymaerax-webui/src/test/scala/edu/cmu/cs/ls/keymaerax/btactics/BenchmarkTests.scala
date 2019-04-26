@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Box, False, Formula, Imply, ODESystem, Prog
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser._
-import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest}
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 
 import scala.language.postfixOps
@@ -32,7 +32,7 @@ import scala.reflect.io.File
   * Benchmarks.
   * Created by smitsch on 4/26/18.
   */
-@SlowTest
+@ExtremeTest
 class BenchmarkTests extends Suites(
   // benchmark problems from tactics and with database recording
 //  new TutorialRegressionTester("Basic Benchmark", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/basic.kyx"),

@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.btactics
 
-import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest}
 import org.scalatest.Suites
 import TutorialTests._
 
@@ -65,7 +65,11 @@ class TutorialTests extends Suites(
   new TutorialRegressionTester("LICS 6", s"$GITHUB_PROJECTS_RAW_PATH/lics/lics2-hybrid-forward.kya"),
   new TutorialRegressionTester("LICS 7", s"$GITHUB_PROJECTS_RAW_PATH/lics/lics4a-time-safe.kya"),
   new TutorialRegressionTester("LICS 8", s"$GITHUB_PROJECTS_RAW_PATH/lics/rotational.kya"),
-  new TutorialRegressionTester("LMPC", s"$GITHUB_PROJECTS_RAW_PATH/LMPC/LMPC.kya"),
+  new TutorialRegressionTester("LMPC", s"$GITHUB_PROJECTS_RAW_PATH/LMPC/LMPC.kya")
+)
+
+@ExtremeTest
+class CaseStudyTests extends Suites(
   new TutorialRegressionTester("Roundabout", s"$GITHUB_PROJECTS_RAW_PATH/roundabout/TRM-essentials.kya"),
   new TutorialRegressionTester("ACAS X", s"$GITHUB_PROJECTS_RAW_PATH/acasx/acasx.kyx"),
   new TutorialRegressionTester("Robix", s"$GITHUB_PROJECTS_RAW_PATH/ijrr/robix.kyx"),
@@ -73,9 +77,9 @@ class TutorialTests extends Suites(
 )
 
 object TutorialTests {
-  private val COURSE17_PATH = "http://symbolaris.com/course/fcps17"
-  private val GITHUB_PROJECTS_RAW_PATH = "https://raw.githubusercontent.com/LS-Lab/KeYmaeraX-projects/master"
+  val COURSE17_PATH: String = "http://symbolaris.com/course/fcps17"
+  val GITHUB_PROJECTS_RAW_PATH: String = "https://raw.githubusercontent.com/LS-Lab/KeYmaeraX-projects/master"
   // for testing changes in a locally cloned repository
-//  private val COURSE17_PATH = "classpath:/course"
-//  private val GITHUB_PROJECTS_RAW_PATH = "classpath:/keymaerax-projects"
+//  private val COURSE17_PATH: String = "classpath:/course"
+//  private val GITHUB_PROJECTS_RAW_PATH: String = "classpath:/keymaerax-projects"
 }

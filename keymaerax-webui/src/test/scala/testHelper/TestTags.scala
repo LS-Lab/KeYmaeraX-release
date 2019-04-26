@@ -36,6 +36,12 @@ object KeYmaeraXTestTags {
   object SlowTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.SlowTest")
 
   /**
+    * Usually tests that call QE or test a lot of cases.
+    * Set runs for unbounded amount of time.
+    */
+  object ExtremeTest extends org.scalatest.Tag("edu.cmu.cs.ls.keymaerax.tags.ExtremeTest")
+
+  /**
    * Case Study tests are (typically long-running) tests that run an entire case study, sometimes
    * step-by-step.
    * Set runs for unbounded amount of time.

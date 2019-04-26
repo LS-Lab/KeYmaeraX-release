@@ -9,14 +9,13 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser
 
 import scala.collection.immutable
-
-import edu.cmu.cs.ls.keymaerax.tags.SlowTest
+import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest}
 
 /**
   * Created by bbohrer on 12/3/16.
   * Note these tests can take on the order of a few hours combined, even on fast machine. Quantifier elimination is VERY slow.
   */
-@SlowTest
+@ExtremeTest
 class KaisarTests extends TacticTestBase {
   val pq: Formula = "p() & q()".asFormula
   val p: Formula = "p()".asFormula
