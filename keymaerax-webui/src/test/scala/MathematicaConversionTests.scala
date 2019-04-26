@@ -31,6 +31,8 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
   val zero = Number(new BigDecimal("0"))
 
+  private val origConfig = Configuration.getOption(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS)
+
   def num(n : Integer) = Number(new BigDecimal(n.toString))
   def snum(n : String) = Number(new BigDecimal(n))
 
@@ -39,7 +41,10 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   override def afterEach(): Unit = {
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "false", saveToFile = false)
+    origConfig match {
+      case Some(v) => Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, v, saveToFile = false)
+      case None => Configuration.remove(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, saveToFile = false)
+    }
   }
 
   override def beforeAll(): Unit = {

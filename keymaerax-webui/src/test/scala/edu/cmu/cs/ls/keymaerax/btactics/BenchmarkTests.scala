@@ -144,29 +144,31 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
     results.map(r => (benchmarkName, r.name, r.status, r.totalDuration, r.ex)):_*)
   }
 
-  private def setTimeouts(tool: ToolOperationManagement): Unit = {
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "120", saveToFile = false)
-    Configuration.set(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT, "120", saveToFile = false)
-    Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, "60", saveToFile = false)
-    Configuration.set(Configuration.Keys.LOG_QE_DURATION, "true", saveToFile = false)
-    tool.setOperationTimeout(120)
+  private def setTimeouts(tool: ToolOperationManagement)(testcode: => Any): Unit = {
+    withTemporaryConfig(Map(
+        Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true",
+        Configuration.Keys.ODE_TIMEOUT_FINALQE -> "120",
+        Configuration.Keys.PEGASUS_INVGEN_TIMEOUT -> "120",
+        Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT ->"60",
+        Configuration.Keys.LOG_QE_DURATION -> "true")) {
+      tool.setOperationTimeout(120)
+      testcode
+    }
   }
 
-  it should "prove interactive benchmarks" in withMathematica { tool =>
-    setTimeouts(tool)
+  it should "prove interactive benchmarks" in withMathematica { tool => setTimeouts(tool) {
     val results = entries.map(e => runInteractive(e.name, e.model, e.tactic.headOption.map(_._2)))
     val writer = new PrintWriter(benchmarkName + "_interactive.csv")
     writer.write(
       "Name,Status,Timeout[min],Duration[ms],Proof Steps,Tactic Size\r\n" + results.map(_.toCsv()).mkString("\r\n"))
     writer.close()
     forEvery(tableResults(results)) { (_, _, status, _, cause) =>
-      status should (be ("proved") withClue cause or be ("skipped"))
+      status should (be("proved") withClue cause or be("skipped"))
     }
   }
+  }
 
-  it should "prove benchmarks with proof hints and Mathematica" in withMathematica { tool =>
-    setTimeouts(tool)
+  it should "prove benchmarks with proof hints and Mathematica" in withMathematica { tool => setTimeouts(tool) {
     val results = entries.map(e => runWithHints(e.name, e.model, e.tactic.headOption.map(_._2)))
     val writer = new PrintWriter(benchmarkName + "_withhints.csv")
     writer.write(
@@ -177,14 +179,14 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
       else if (status == "proved") fail("Learned how to prove " + name + "; add automated tactic to benchmark")
     }
   }
+  }
 
 //  it should "prove benchmarks with proof hints and in Z3" in withZ3 { tool =>
 //    setTimeouts(tool)
 //    forEvery (entries) { (_, name, modelContent, _) => runWithHints(name, modelContent) }
 //  }
 
-  it should "prove benchmarks without proof hints and in Mathematica" in withMathematica { tool =>
-    setTimeouts(tool)
+  it should "prove benchmarks without proof hints and in Mathematica" in withMathematica { tool => setTimeouts(tool) {
     val results = entries.map(e => runAuto(e.name, e.model))
     val writer = new PrintWriter(benchmarkName + "_auto.csv")
     writer.write(
@@ -195,9 +197,9 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
       else if (status == "proved") fail("Learned how to prove " + name + "; add automated tactic to benchmark")
     }
   }
+  }
 
-  it should "generate invariants" in withMathematica { tool =>
-    setTimeouts(tool)
+  it should "generate invariants" in withMathematica { tool => setTimeouts(tool) {
     val results = entries.map(e => runInvGen(e.name, e.model))
     val writer = new PrintWriter(benchmarkName + "_invgen.csv")
     writer.write(
@@ -209,6 +211,7 @@ class BenchmarkTester(val benchmarkName: String, val url: String,
         else if (status == "proved") fail("Learned how to prove " + name + "; add automated tactic to benchmark")
       }
     }
+  }
   }
 
 //  it should "prove benchmarks without proof hints and in Z3" in withZ3 { tool =>

@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable
+import scala.collection.immutable.Map
 
 /**
  * Tests [[edu.cmu.cs.ls.keymaerax.btactics.DerivedAxioms]]
@@ -42,17 +43,18 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   }
 
   "The DerivedAxioms prepopulation procedure" should "not crash" taggedAs KeYmaeraXTestTags.CheckinTest in withMathematica { qeTool =>
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-    DerivedAxioms.prepopulateDerivedLemmaDatabase()
-    val cache = new File(Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH))
-    val versionFile = new File(cache.getAbsolutePath + File.separator + "VERSION")
-    if (!versionFile.exists()) {
-      if (!versionFile.createNewFile()) throw new Exception(s"Could not create ${versionFile.getAbsolutePath}")
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      DerivedAxioms.prepopulateDerivedLemmaDatabase()
+      val cache = new File(Configuration.path(Configuration.Keys.LEMMA_CACHE_PATH))
+      val versionFile = new File(cache.getAbsolutePath + File.separator + "VERSION")
+      if (!versionFile.exists()) {
+        if (!versionFile.createNewFile()) throw new Exception(s"Could not create ${versionFile.getAbsolutePath}")
+      }
+      assert(versionFile.exists())
+      val fw = new FileWriter(versionFile)
+      fw.write(edu.cmu.cs.ls.keymaerax.core.VERSION)
+      fw.close()
     }
-    assert(versionFile.exists())
-    val fw = new FileWriter(versionFile)
-    fw.write(edu.cmu.cs.ls.keymaerax.core.VERSION)
-    fw.close()
   }
 
   "Derived Rule" should "prove allG" in withMathematica { qeTool => allGeneralize.fact.subgoals shouldBe List(
@@ -223,16 +225,13 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove > monotone" in withMathematica { qeTool => check(greaterMonotone)}
 
   it should "prove abs" in withMathematica { _ =>
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-    check(absDef)
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { check(absDef) }
   }
   it should "prove min" in withMathematica { _ =>
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-    check(minDef)
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { check(minDef) }
   }
   it should "prove max" in withMathematica { _ =>
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-    check(maxDef)
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) { check(maxDef) }
   }
   it should "prove & recusor" in withMathematica { qeTool => check(andRecursor)}
   it should "prove | recursor" in withMathematica { qeTool => check(orRecursor)}
@@ -240,16 +239,19 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove < both" in withMathematica { qeTool => check(intervalLBoth)}
   it should "prove neg<= up" in withMathematica { qeTool => check(intervalUpNeg)}
   it should "prove abs<= up" in withMathematica { _ =>
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-    check(intervalUpAbs)
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      check(intervalUpAbs)
+    }
   }
   it should "prove max<= up" in withMathematica { _ =>
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-    check(intervalUpMax)
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      check(intervalUpMax)
+    }
   }
   it should "prove min<= up" in withMathematica { _ =>
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-    check(intervalUpMin)
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      check(intervalUpMin)
+    }
   }
   it should "prove +<= up" in withMathematica { qeTool => check(intervalUpPlus)}
   it should "prove -<= up" in withMathematica { qeTool => check(intervalUpMinus)}
@@ -302,16 +304,19 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "tactically prove DG differential pre-ghost" in {check(DGpreghost)}
   it should "tactically prove DW differential weakening" in {check(DWeakening)}
   it should "tactically prove abs" in withMathematica { _ =>
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-    check(absDef)
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      check(absDef)
+    }
   }
   it should "tactically prove min" in withMathematica { _ =>
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-    check(minDef)
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      check(minDef)
+    }
   }
   it should "tactically prove max" in withMathematica { _ =>
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-    check(maxDef)
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      check(maxDef)
+    }
   }
 
   "Mathematica" should "derive compatibility axiom dgZeroEquilibrium" in withMathematica { qeTool =>

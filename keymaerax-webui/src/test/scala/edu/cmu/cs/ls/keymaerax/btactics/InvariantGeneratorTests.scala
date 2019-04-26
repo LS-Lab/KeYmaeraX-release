@@ -22,7 +22,7 @@ import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.time.{Seconds, Span}
 
 import scala.collection.immutable
-import scala.collection.immutable.{IndexedSeq, Nil}
+import scala.collection.immutable.{IndexedSeq, Map, Nil}
 
 /**
  * Tests invariant generators.
@@ -121,10 +121,12 @@ class InvariantGeneratorTests extends TacticTestBase {
 
   "Pegasus" should "return invariant postcondition if sanity timeout > 0" in withMathematica { _ =>
     val seq = "x^2+y^2=2 ==> [{x'=-x,y'=-y}]x^2+y^2<=2".asSequent
-    Configuration.set(Configuration.Keys.PEGASUS_SANITY_TIMEOUT, "0", saveToFile = false)
-    InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs Nil
-    Configuration.set(Configuration.Keys.PEGASUS_SANITY_TIMEOUT, "5", saveToFile = false)
-    InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs ("2+-1*x^2+-1*y^2>=0".asFormula -> Some(PegasusProofHint(isInvariant=true, None))) :: Nil
+    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_SANITY_TIMEOUT -> "0")) {
+      InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs Nil
+    }
+    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_SANITY_TIMEOUT -> "5")) {
+      InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs ("2+-1*x^2+-1*y^2>=0".asFormula -> PegasusProofHint(isInvariant = true, None)) :: Nil
+    }
   }
 
 }
@@ -160,66 +162,73 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       results.map(r => (benchmarkName, r.name, r.status, r.totalDuration, r.ex)):_*)
   }
 
-  private def setTimeouts(tool: ToolOperationManagement): Unit = {
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "120", saveToFile = false)
-    Configuration.set(Configuration.Keys.PEGASUS_INVGEN_TIMEOUT, "120", saveToFile = false)
-    Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, "60", saveToFile = false)
-    Configuration.set(Configuration.Keys.LOG_QE_DURATION, "true", saveToFile = false)
-    tool.setOperationTimeout(120)
+  private def setTimeouts(tool: ToolOperationManagement)(testcode: => Any): Unit = {
+    withTemporaryConfig(Map(
+      Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true",
+      Configuration.Keys.ODE_TIMEOUT_FINALQE -> "120",
+      Configuration.Keys.PEGASUS_INVGEN_TIMEOUT -> "120",
+      Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT ->"60",
+      Configuration.Keys.LOG_QE_DURATION -> "true")) {
+      tool.setOperationTimeout(120)
+      testcode
+    }
   }
 
   private val infoPrinter = (info: Any) => info match {
     case i: Map[String, Any] => i.values.mkString(",")
   }
 
-  it should "generate invariants" in withMathematica { tool =>
-    setTimeouts(tool)
+  it should "generate invariants" in withMathematica { tool => setTimeouts(tool) {
     val results = entries.map(e => runInvGen(e.name, e.model))
     val writer = new PrintWriter(benchmarkName + "_invgen_saturate_proofhints.csv")
     writer.write(
       "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
     writer.close()
   }
-
-  it should "generate invariants with Barrier only" ignore withMathematica { tool =>
-    setTimeouts(tool)
-    Configuration.set(Configuration.Keys.PEGASUS_MAIN_FILE, "Pegasus_BarrierOnly.m", saveToFile = false)
-    val results = entries.map(e => runInvGen(e.name, e.model))
-    val writer = new PrintWriter(benchmarkName + "_invgen_barrier_proofhints.csv")
-    writer.write(
-      "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
-    writer.close()
   }
 
-  it should "generate invariants with Darboux only" ignore withMathematica { tool =>
-    setTimeouts(tool)
-    Configuration.set(Configuration.Keys.PEGASUS_MAIN_FILE, "Pegasus_DbxOnly.m", saveToFile = false)
-    val results = entries.map(e => runInvGen(e.name, e.model))
-    val writer = new PrintWriter(benchmarkName + "_invgen_dbx_proofhints.csv")
-    writer.write(
-      "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
-    writer.close()
+  it should "generate invariants with Barrier only" ignore withMathematica { tool => setTimeouts(tool) {
+    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_MAIN_FILE -> "Pegasus_BarrierOnly.m")) {
+      val results = entries.map(e => runInvGen(e.name, e.model))
+      val writer = new PrintWriter(benchmarkName + "_invgen_barrier_proofhints.csv")
+      writer.write(
+        "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
+      writer.close()
+    }
+  }
   }
 
-  it should "generate invariants with summands only" ignore withMathematica { tool =>
-    setTimeouts(tool)
-    Configuration.set(Configuration.Keys.PEGASUS_MAIN_FILE, "Pegasus_SummandsOnly.m", saveToFile = false)
-    val results = entries.map(e => runInvGen(e.name, e.model))
-    val writer = new PrintWriter(benchmarkName + "_invgen_summands_proofhints.csv")
-    writer.write(
-      "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
-    writer.close()
+  it should "generate invariants with Darboux only" ignore withMathematica { tool => setTimeouts(tool) {
+    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_MAIN_FILE -> "Pegasus_DbxOnly.m")) {
+      val results = entries.map(e => runInvGen(e.name, e.model))
+      val writer = new PrintWriter(benchmarkName + "_invgen_dbx_proofhints.csv")
+      writer.write(
+        "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
+      writer.close()
+    }
+  }
   }
 
-  it should "generate invariants with first integrals only" ignore withMathematica { tool =>
-    setTimeouts(tool)
-    Configuration.set(Configuration.Keys.PEGASUS_MAIN_FILE, "Pegasus_FIOnly.m", saveToFile = false)
-    val results = entries.map(e => runInvGen(e.name, e.model))
-    val writer = new PrintWriter(benchmarkName + "_invgen_firstintegrals_proofhints.csv")
-    writer.write(
-      "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
-    writer.close()
+  it should "generate invariants with summands only" ignore withMathematica { tool => setTimeouts(tool) {
+    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_MAIN_FILE -> "Pegasus_SummandsOnly.m")) {
+      val results = entries.map(e => runInvGen(e.name, e.model))
+      val writer = new PrintWriter(benchmarkName + "_invgen_summands_proofhints.csv")
+      writer.write(
+        "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
+      writer.close()
+    }
+  }
+  }
+
+  it should "generate invariants with first integrals only" ignore withMathematica { tool => setTimeouts(tool) {
+    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_MAIN_FILE ->"Pegasus_FIOnly.m")) {
+      val results = entries.map(e => runInvGen(e.name, e.model))
+      val writer = new PrintWriter(benchmarkName + "_invgen_firstintegrals_proofhints.csv")
+      writer.write(
+        "Name,Status,Timeout[min],Duration total[ms],Duration QE[ms],Duration gen[ms],Duration check[ms],Proof Steps,Tactic Size,Info\r\n" + results.map(_.toCsv(infoPrinter)).mkString("\r\n"))
+      writer.close()
+    }
+  }
   }
 
   private def pegasusGen(name: String, model: Formula) = {
