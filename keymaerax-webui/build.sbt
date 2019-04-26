@@ -95,6 +95,9 @@ testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-h", "target/te
 // record and report test durations
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 
+// report long-running tests (report every hour for tests that run longer than 1hr)
+testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-W", "3600", "3600")
+
 testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework")
 
 logBuffered := false
