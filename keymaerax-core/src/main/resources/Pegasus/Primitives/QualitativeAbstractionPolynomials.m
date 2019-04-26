@@ -1,7 +1,7 @@
 (* ::Package:: *)
 
-Needs["DarbouxPolynomials`",FileNameJoin[{Directory[],"DarbouxPolynomials.m"}]] (* Load algorithms for Darboux polynomial generation from current directory *)
-Needs["Primitives`",FileNameJoin[{ParentDirectory[],"Primitives.m"}]] (* Load primitives package *)
+Needs["DarbouxPolynomials`",FileNameJoin[{Directory[],"Primitives","DarbouxPolynomials.m"}]] (* Load algorithms for Darboux polynomial generation from current directory *)
+Needs["Primitives`",FileNameJoin[{Directory[],"Primitives","Primitives.m"}]] (* Load primitives package *)
 
 
 (* ::Input:: *)
@@ -20,7 +20,7 @@ PostRHSLieNFactors::usage="PostRHSFactors[problem] Generate irreducible factors 
 PostRHSProductFactors::usage="PostRHSLieDFactors[problem] Generate irreducible factors of the right-hand side and the post-condition, and their Lie derivatives."
 DarbouxPolynomials::usage="DarbouxPolynomials[problem]"
 SummandFactors::usage="SummandFactors[problem]"
-SFactorList::usage="SFactorList[problem]"
+SFactorList::usage="SFactorList[problem] returns factors of RHS (1 list per RHS)"
 PhysicalQuantities::usage="PhysicalQuantities[problem]"
 
 
@@ -145,15 +145,25 @@ Not[NumericQ[#]]&]
 ]
 
 
-(* Obtain a list of factors by Solve insted of Factor *)
-SFactorList[problem_List] := Module[{pre,f,vars,Q,post,factorList,a,b},
-{pre,{f,vars,Q},post}=problem;
-factorList = {};
-For[i = 1, i <= Length[f], i++, For[j = 1, j <= Length[vars], j++, factorList = Join[factorList, Flatten[Solve[f[[i]] == 0, vars[[j]], Reals]]]]
-];
-Select[factorList/.{Rule[a_,b_] -> a-b}/.{ConditionalExpression[a_,_]-> a},PolynomialQ[#,vars]&]
-];
+(*
+Solves RHS individually for each variable. Postprocessing removes conditional expressions.
+NOTE: The RHS should NOT contain real algebraic numbers after postprocessing.
+*)
+SFactorList[problem_List,postprocess_:True] := Module[{pre,f,vars,Q,post,a,b,factorMap},
 
+{pre,{f,vars,Q},post}=problem;
+Map[
+Block[{factorList},
+  factorList = {};
+  For[j = 1, j <= Length[vars], j++,
+    factorList = Join[factorList, Flatten[Solve[# == 0, vars[[j]], Reals]]]];
+  factorList=factorList/.{Rule[a_,b_] -> a-b};
+  If[postprocess,factorList=Select[factorList/.{ConditionalExpression[a_,_]-> a},PolynomialQ[#,vars]&]];
+  DeleteDuplicates[factorList]]
+    &,f
+]
+(* Possibly need to get rid of factors multiplied by different coefficients as well *)
+];
 
 (* Computes polynomials that (hopefully) represent importnat physical quantities in the underlying system *)
 PhysicalQuantities[problem_List]:=Catch[Module[{pre,f,vars,Q,post,J,divergence, jacDet,spinTensor,strainRateTensor,plist,flist},
