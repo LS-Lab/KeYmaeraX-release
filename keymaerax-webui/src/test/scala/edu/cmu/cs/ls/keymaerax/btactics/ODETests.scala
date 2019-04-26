@@ -72,8 +72,9 @@ class ODETests extends TacticTestBase with Timeouts {
   }
 
   "Pretest" should "PDEify x^2+y^2=1&e=x -> [{x'=-y,y'=e,e'=-y}](x^2+y^2=1&e=x)" in withQE { _ =>
-    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "-1", saveToFile = false)
-    TactixLibrary.proveBy("x^2+y^2=1&e=x -> [{x'=-y,y'=e,e'=-y}](x^2+y^2=1&e=x)".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    withTemporaryConfig(Map(Configuration.Keys.ODE_TIMEOUT_FINALQE -> "-1")) {
+      TactixLibrary.proveBy("x^2+y^2=1&e=x -> [{x'=-y,y'=e,e'=-y}](x^2+y^2=1&e=x)".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    }
   }
 
   it should "autocut x>=0&y>=0 -> [{x'=y,y'=y^2}]x>=0" in withQE { _ =>
@@ -359,30 +360,32 @@ class ODETests extends TacticTestBase with Timeouts {
   )
 
   it should "prove a list of ODEs" in withQE { qeTool =>
-    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "60", saveToFile = false)
-    forEvery (list) {
-      (formula, requiredTool) =>
-        println("Proving " + formula)
-        if (requiredTool == "Any" || qeTool.asInstanceOf[Tool].name == requiredTool) {
-          TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE)) shouldBe 'proved
-        }
+    withTemporaryConfig(Map(Configuration.Keys.ODE_TIMEOUT_FINALQE -> "60")) {
+      forEvery(list) {
+        (formula, requiredTool) =>
+          println("Proving " + formula)
+          if (requiredTool == "Any" || qeTool.asInstanceOf[Tool].name == requiredTool) {
+            TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE)) shouldBe 'proved
+          }
+      }
     }
   }
 
   it should "detect when additional auto ODEs become supported" in withQE { qeTool =>
-    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "60", saveToFile = false)
-    forEvery (list) {
-      (formula, requiredTool) =>
-        if (requiredTool != "Any" && qeTool.asInstanceOf[Tool].name != requiredTool) {
-          println("Works now with " + qeTool.asInstanceOf[Tool].name + "? " + formula)
-          try {
-            cancelAfter(2 minutes) {
-              a[BelleThrowable] should be thrownBy TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE) & done)
+    withTemporaryConfig(Map(Configuration.Keys.ODE_TIMEOUT_FINALQE -> "60")) {
+      forEvery(list) {
+        (formula, requiredTool) =>
+          if (requiredTool != "Any" && qeTool.asInstanceOf[Tool].name != requiredTool) {
+            println("Works now with " + qeTool.asInstanceOf[Tool].name + "? " + formula)
+            try {
+              cancelAfter(2 minutes) {
+                a[BelleThrowable] should be thrownBy TactixLibrary.proveBy(formula.asFormula, implyR(1) & ODE(1) & onAll(QE) & done)
+              }
+            } catch {
+              case _: TestCanceledException => // cancelled by timeout, not yet solved fast enough
             }
-          } catch {
-            case _: TestCanceledException => // cancelled by timeout, not yet solved fast enough
           }
-        }
+      }
     }
   }
 

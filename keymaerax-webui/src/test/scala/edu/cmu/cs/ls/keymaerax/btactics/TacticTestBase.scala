@@ -79,13 +79,15 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
    * */
   def withMathematica(testcode: Mathematica => Any, timeout: Int = -1) {
     val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, "true") // JVM parameter -DMATH_LINK_TCPIP=[true,false]
-    Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, mathLinkTcp, saveToFile = false)
-    Configuration.set(Configuration.Keys.QE_TOOL, "mathematica", saveToFile=false)
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "false", saveToFile = false)
-    val provider = mathematicaProvider() // new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig)
-    ToolProvider.setProvider(provider)
-    //@todo timeout
-    testcode(provider.tool())
+    withTemporaryConfig(Map(
+        Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
+        Configuration.Keys.QE_TOOL -> "mathematica",
+        Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")) {
+      val provider = mathematicaProvider() // new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig)
+      ToolProvider.setProvider(provider)
+      //@todo timeout
+      testcode(provider.tool())
+    }
   }
 
   /**
@@ -99,11 +101,12 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     * }}}
     * */
   def withZ3(testcode: Z3 => Any, timeout: Int = -1) {
-    Configuration.set(Configuration.Keys.QE_TOOL, "z3", saveToFile=false)
-    val provider = new Z3ToolProvider
-    ToolProvider.setProvider(provider)
-    provider.tool().setOperationTimeout(timeout)
-    testcode(provider.tool())
+    withTemporaryConfig(Map(Configuration.Keys.QE_TOOL -> "z3")) {
+      val provider = new Z3ToolProvider
+      ToolProvider.setProvider(provider)
+      provider.tool().setOperationTimeout(timeout)
+      testcode(provider.tool())
+    }
   }
 
   /** Tests with both Mathematica and Z3 as QE tools. */
@@ -128,6 +131,20 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     val provider = new PolyaToolProvider
     ToolProvider.setProvider(provider)
     testcode(provider.tool())
+  }
+
+  /** Executes `testcode` with a temporary configuration that gets reset after execution. */
+  def withTemporaryConfig(tempConfig: Map[String, String])(testcode: => Any) {
+    val origConfig = tempConfig.keys.map(k => k -> Configuration.getOption(k))
+    try {
+      tempConfig.foreach({ case (k, v) => Configuration.set(k, v, saveToFile = false) })
+      testcode
+    } finally {
+      origConfig.foreach({
+        case (k, None) => Configuration.remove(k, saveToFile = false)
+        case (k, Some(v)) => Configuration.set(k, v, saveToFile = false)
+      })
+    }
   }
 
   /** Test setup */

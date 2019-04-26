@@ -80,59 +80,61 @@ class ContinuousInvariantTests extends TacticTestBase with Timeouts {
   }
 
   it should "fast-check invariants with LZZ" taggedAs SlowTest in withMathematica { tool =>
-    Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, "-1", saveToFile = false)
+    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT -> "-1")) {
+      val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
+        getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
+      val annotatedInvariants: ConfigurableGenerator[Formula] = TactixLibrary.invGenerator match {
+        case gen: ConfigurableGenerator[Formula] => gen
+      }
 
-    val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
-      getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
-    val annotatedInvariants: ConfigurableGenerator[Formula] = TactixLibrary.invGenerator match {
-      case gen: ConfigurableGenerator[Formula] => gen
-    }
-
-    forEvery(Table(("Name", "Model"),
-      entries.map(e => e.name -> e.model):_*).
-      filter({ case (_, Imply(_, Box(_: ODESystem, _))) => true case _ => false })) {
-      (name, model) =>
-        println("\n" + name)
-        val Imply(_, Box(ode@ODESystem(_, _), _)) = model
-        annotatedInvariants.products.get(ode) match {
-          case Some(invs) => tool.lzzCheck(ode, invs.reduce(And)) shouldBe true
-          case None => // no invariant to fast-check
-        }
-        println(name + " done")
+      forEvery(Table(("Name", "Model"),
+        entries.map(e => e.name -> e.model): _*).
+        filter({ case (_, Imply(_, Box(_: ODESystem, _))) => true case _ => false })) {
+        (name, model) =>
+          println("\n" + name)
+          val Imply(_, Box(ode@ODESystem(_, _), _)) = model
+          annotatedInvariants.products.get(ode) match {
+            case Some(invs) => tool.lzzCheck(ode, invs.reduce(And)) shouldBe true
+            case None => // no invariant to fast-check
+          }
+          println(name + " done")
+      }
     }
   }
 
   it should "consider constants when fast-checking invariants with LZZ" in withMathematica { tool =>
-    Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, "5", saveToFile = false)
-    val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial: Example 9a", io.Source.fromInputStream(
-      getClass.getResourceAsStream("/keymaerax-projects/benchmarks/basic.kyx")).mkString).head
+    withTemporaryConfig(Map(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT -> "5")) {
+      val entry = KeYmaeraXArchiveParser.getEntry("STTT Tutorial: Example 9a", io.Source.fromInputStream(
+        getClass.getResourceAsStream("/keymaerax-projects/benchmarks/basic.kyx")).mkString).head
 
-    a [MathematicaComputationAbortedException] should be thrownBy tool.lzzCheck(
-      "{ x' = v, v' = -Kp()*(x-xr()) - Kd()*v }".asProgram.asInstanceOf[ODESystem],
-      "5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()".asFormula)
+      a[MathematicaComputationAbortedException] should be thrownBy tool.lzzCheck(
+        "{ x' = v, v' = -Kp()*(x-xr()) - Kd()*v }".asProgram.asInstanceOf[ODESystem],
+        "5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()".asFormula)
 
-    tool.lzzCheck(
-      "{ x' = v, v' = -Kp()*(x-xr()) - Kd()*v }".asProgram.asInstanceOf[ODESystem],
-      "c()>0 & Kp()=2 & Kd()=3 & 5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()".asFormula) shouldBe true
+      tool.lzzCheck(
+        "{ x' = v, v' = -Kp()*(x-xr()) - Kd()*v }".asProgram.asInstanceOf[ODESystem],
+        "c()>0 & Kp()=2 & Kd()=3 & 5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()".asFormula) shouldBe true
 
-    proveBy(entry.model.asInstanceOf[Formula], implyR(1) & dI()(1)) shouldBe 'proved
+      proveBy(entry.model.asInstanceOf[Formula], implyR(1) & dI()(1)) shouldBe 'proved
+    }
   }
 
   it should "produce invariants that are provable with ODE" taggedAs SlowTest in withMathematica { _ =>
-    Configuration.set(Configuration.Keys.ODE_TIMEOUT_FINALQE, "300", saveToFile = false)
-    Configuration.set(Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT, "60", saveToFile = false)
-
-    val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
-      getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
-    forEvery(Table(("Name", "Model", "Tactic"), entries.
-      filter(e => e.tactics.nonEmpty).
-      map(e => (e.name, e.model, e.tactics.headOption.getOrElse("", BellePrettyPrinter(TactixLibrary.auto), TactixLibrary.auto)._3)): _*)) {
-      (name, model, tactic) =>
-        println("\n" + name + " with " + BellePrettyPrinter(tactic))
-        failAfter(5 minutes) {
-          proveBy(model.asInstanceOf[Formula], tactic) shouldBe 'proved
-        }
-        println(name + " done")
+    withTemporaryConfig(Map(
+        Configuration.Keys.ODE_TIMEOUT_FINALQE -> "300",
+        Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT -> "60")) {
+      val entries = KeYmaeraXArchiveParser.parse(io.Source.fromInputStream(
+        getClass.getResourceAsStream("/keymaerax-projects/benchmarks/nonlinear.kyx")).mkString)
+      forEvery(Table(("Name", "Model", "Tactic"), entries.
+        filter(e => e.tactics.nonEmpty).
+        map(e => (e.name, e.model, e.tactics.headOption.getOrElse("", BellePrettyPrinter(TactixLibrary.auto), TactixLibrary.auto)._3)): _*)) {
+        (name, model, tactic) =>
+          println("\n" + name + " with " + BellePrettyPrinter(tactic))
+          failAfter(5 minutes) {
+            proveBy(model.asInstanceOf[Formula], tactic) shouldBe 'proved
+          }
+          println(name + " done")
+      }
     }
   }
 

@@ -55,22 +55,25 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
   "abs(-5) > 4" should "be provable with QE" in withMathematica { link =>
     the [CoreException] thrownBy link.qeEvidence("abs(-5) > 4".asFormula) should have message
       "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-    link.qeEvidence("abs(-5) > 4".asFormula)._1 shouldBe True
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      link.qeEvidence("abs(-5) > 4".asFormula)._1 shouldBe True
+    }
   }
 
   "min(1,3) = 1" should "be provable with QE" in withMathematica { link =>
     the [CoreException] thrownBy link.qeEvidence("min(1,3) = 1".asFormula) should have message
       "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-    link.qeEvidence("min(1,3) = 1".asFormula)._1 shouldBe True
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      link.qeEvidence("min(1,3) = 1".asFormula)._1 shouldBe True
+    }
   }
 
   "max(1,3) = 3" should "be provable with QE" in withMathematica { link =>
     the [CoreException] thrownBy link.qeEvidence("max(1,3) = 3".asFormula) should have message
       "Core requirement failed: Interpreted functions not allowed in soundness-critical conversion to Mathematica"
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-    link.qeEvidence("max(1,3) = 3".asFormula)._1 shouldBe True
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      link.qeEvidence("max(1,3) = 3".asFormula)._1 shouldBe True
+    }
   }
 
   if (new java.io.File("/Applications/Mathematica9.app").exists) {

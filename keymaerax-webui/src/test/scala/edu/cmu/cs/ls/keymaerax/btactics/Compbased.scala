@@ -215,23 +215,24 @@ class Compbased extends TacticTestBase {
   }
 
   it should "prove system safety" in withMathematica { _ =>
-    Configuration.set(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS, "true", saveToFile = false)
-    val entry = KeYmaeraXArchiveParser.getEntry("Remote-Controlled Robot System Avoids Obstacles",
-      io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
-    proveBy(entry.model.asInstanceOf[Formula], proveSystem(
-      "robotcomponents/Robot Obstacle",
-      "robotcomponents/Robot Base Case",
-      "robotcomponents/Robot Use Case",
-      "robotcomponents/Robot Step",
-      "robotcomponents/Obstacle Base Case",
-      "robotcomponents/Obstacle Use Case",
-      "robotcomponents/Obstacle Step",
-      "robotcomponents/Compatibility of Obstacle and Robot",
-      "robotcomponents/Communication Guarantee Safety",
-      "robotcomponents/Communication Guarantee Liveness"
-    )(1)) shouldBe 'proved
+    withTemporaryConfig(Map(Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "true")) {
+      val entry = KeYmaeraXArchiveParser.getEntry("Remote-Controlled Robot System Avoids Obstacles",
+        io.Source.fromInputStream(getClass.getResourceAsStream("/keymaerax-projects/components/sttttacticalcomponents.kyx")).mkString).get
+      proveBy(entry.model.asInstanceOf[Formula], proveSystem(
+        "robotcomponents/Robot Obstacle",
+        "robotcomponents/Robot Base Case",
+        "robotcomponents/Robot Use Case",
+        "robotcomponents/Robot Step",
+        "robotcomponents/Obstacle Base Case",
+        "robotcomponents/Obstacle Use Case",
+        "robotcomponents/Obstacle Step",
+        "robotcomponents/Compatibility of Obstacle and Robot",
+        "robotcomponents/Communication Guarantee Safety",
+        "robotcomponents/Communication Guarantee Liveness"
+      )(1)) shouldBe 'proved
 
-    entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
+      entry.tactics.foreach(t => proveBy(entry.model.asInstanceOf[Formula], t._3) shouldBe 'proved)
+    }
   }
 
   "Robix" should "prove the robot component" in withMathematica { _ =>
