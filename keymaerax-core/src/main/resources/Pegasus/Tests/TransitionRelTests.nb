@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[      4645,        128]
-NotebookOptionsPosition[      4144,        112]
-NotebookOutlinePosition[      4477,        127]
-CellTagsIndexPosition[      4434,        124]
+NotebookDataLength[     10332,        293]
+NotebookOptionsPosition[      9534,        274]
+NotebookOutlinePosition[      9867,        289]
+CellTagsIndexPosition[      9824,        286]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -28,13 +28,6 @@ Cell[BoxData[
     RowBox[{"ParentDirectory", "[", 
      RowBox[{"NotebookDirectory", "[", "]"}], "]"}], "]"}], ";", 
    RowBox[{"Needs", "[", 
-    RowBox[{"\"\<Primitives`\>\"", ",", 
-     RowBox[{"FileNameJoin", "[", 
-      RowBox[{"{", 
-       RowBox[{
-        RowBox[{"Directory", "[", "]"}], ",", "\"\<Primitives\>\"", ",", 
-        "\"\<Primitives.m\>\""}], "}"}], "]"}]}], "]"}], " ", ";", 
-   RowBox[{"Needs", "[", 
     RowBox[{"\"\<TransitionRelation`\>\"", ",", 
      RowBox[{"FileNameJoin", "[", 
       RowBox[{"{", 
@@ -46,7 +39,7 @@ Cell[BoxData[
  CellChangeTimes->{{3.76278128104568*^9, 3.7627812963899393`*^9}, {
    3.763047112232011*^9, 3.763047153714343*^9}, {3.764007372790724*^9, 
    3.764007391796558*^9}, 3.764007524669445*^9, {3.7640077463636208`*^9, 
-   3.764007763051547*^9}},
+   3.764007763051547*^9}, 3.765278327319776*^9},
  CellLabel->"In[2]:=",ExpressionUUID->"6b3cadf1-f28a-49a8-90cf-e708abba129c"],
 
 Cell[BoxData[
@@ -74,15 +67,21 @@ Cell[BoxData[
           RowBox[{"-", "2"}]}], " ", "&&", " ", 
          RowBox[{"x", " ", "\[GreaterEqual]", " ", "1"}]}], "]"}]}], "}"}]}], 
     ";"}], "\[IndentingNewLine]", 
-   RowBox[{"ConstantDirections", "[", "prob", "]"}], "\[IndentingNewLine]", 
-   RowBox[{"DrawPlanarProb", "[", "prob", "]"}]}]}]], "Input",
+   RowBox[{
+    RowBox[{"{", "dir", "}"}], "=", 
+    RowBox[{"ConstantDirections", "[", "prob", "]"}]}], "\[IndentingNewLine]", 
+   RowBox[{"DrawPlanarProb", "[", 
+    RowBox[{"prob", ",", 
+     RowBox[{"dir", "\[GreaterEqual]", "0"}]}], "]"}]}]}]], "Input",
  CellChangeTimes->{{3.76278129984638*^9, 3.762781303509128*^9}, {
-  3.762781651018383*^9, 3.7627817440572166`*^9}, {3.7627818731946287`*^9, 
-  3.762781887292953*^9}, {3.762781987435916*^9, 3.762781989867481*^9}, {
-  3.762782332447692*^9, 3.762782333950472*^9}, {3.7640074565189457`*^9, 
-  3.764007474725012*^9}, {3.76400750970507*^9, 3.764007526293944*^9}, {
-  3.7640077674335814`*^9, 3.764007769895108*^9}},
- CellLabel->"In[24]:=",ExpressionUUID->"e8186881-d54b-45bb-85c3-cbf87365d8bd"],
+   3.762781651018383*^9, 3.7627817440572166`*^9}, {3.7627818731946287`*^9, 
+   3.762781887292953*^9}, {3.762781987435916*^9, 3.762781989867481*^9}, {
+   3.762782332447692*^9, 3.762782333950472*^9}, {3.7640074565189457`*^9, 
+   3.764007474725012*^9}, {3.76400750970507*^9, 3.764007526293944*^9}, {
+   3.7640077674335814`*^9, 3.764007769895108*^9}, {3.7652784697859783`*^9, 
+   3.76527847509435*^9}, {3.765279708354143*^9, 3.76527970851682*^9}, 
+   3.765281983740087*^9},ExpressionUUID->"e8186881-d54b-45bb-85c3-\
+cbf87365d8bd"],
 
 Cell[BoxData[{
  RowBox[{"prob", "=", 
@@ -95,20 +94,183 @@ Cell[BoxData[{
     RowBox[{"{", 
      RowBox[{
       RowBox[{"{", 
-       RowBox[{"x", ",", 
-        RowBox[{"(", 
-         RowBox[{
-          RowBox[{"x", "^", "2"}], "+", 
-          RowBox[{"y", "^", "2"}]}], ")"}]}], "}"}], ",", 
+       RowBox[{
+        RowBox[{"x", "^", "2"}], ",", 
+        RowBox[{"x", "+", "y", "+", 
+         RowBox[{"y", "^", "2"}]}]}], "}"}], ",", 
       RowBox[{"{", 
        RowBox[{"x", ",", "y"}], "}"}], ",", "True"}], "}"}], ",", 
     RowBox[{"Not", "[", 
      RowBox[{"y", "<=", 
-      RowBox[{"-", "1"}]}], "]"}]}], "}"}]}], "\[IndentingNewLine]", 
- RowBox[{"ConstantDirections", "[", "prob", "]"}], "\[IndentingNewLine]", 
- RowBox[{"DrawPlanarProb", "[", "prob", "]"}]}], "Input",
- CellChangeTimes->{{3.7640078116884327`*^9, 3.7640078251828327`*^9}},
- CellLabel->"In[27]:=",ExpressionUUID->"ab635e72-cf8c-4a43-a57a-b0f8b91fb6da"]
+      RowBox[{"-", "2"}]}], "]"}]}], "}"}]}], "\[IndentingNewLine]", 
+ RowBox[{"inv", "=", 
+  RowBox[{"TransitionRel", "[", "prob", "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{"DrawPlanarProb", "[", 
+  RowBox[{"prob", ",", "inv"}], "]"}]}], "Input",
+ CellChangeTimes->{{3.7640078116884327`*^9, 3.7640078251828327`*^9}, {
+  3.76527519390038*^9, 3.765275199354089*^9}, {3.7652819891306057`*^9, 
+  3.765281991157401*^9}, {3.765282032335474*^9, 3.765282051030047*^9}},
+ CellLabel->"In[20]:=",ExpressionUUID->"ab635e72-cf8c-4a43-a57a-b0f8b91fb6da"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"prob", "=", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{
+      RowBox[{
+       RowBox[{"-", 
+        RowBox[{"(", 
+         RowBox[{"1", "/", "5000"}], ")"}]}], "+", 
+       RowBox[{
+        RowBox[{"(", 
+         RowBox[{
+          RowBox[{"1", "/", "20"}], "+", "kyx`x"}], ")"}], "^", "2"}], "+", 
+       RowBox[{
+        RowBox[{"(", 
+         RowBox[{
+          RowBox[{"3", "/", "200"}], "+", "kyx`y"}], ")"}], "^", "2"}]}], 
+      "\[LessEqual]", "0"}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{
+          RowBox[{"-", 
+           RowBox[{"(", 
+            RowBox[{
+             RowBox[{"(", 
+              RowBox[{"3", " ", 
+               RowBox[{"kyx`x", "^", "2"}]}], ")"}], "/", "2"}], ")"}]}], "-", 
+          RowBox[{
+           RowBox[{"kyx`x", "^", "3"}], "/", "2"}], "-", "kyx`y"}], ",", 
+         RowBox[{
+          RowBox[{"3", " ", "kyx`x"}], "-", "kyx`y"}]}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"kyx`x", ",", "kyx`y"}], "}"}], ",", "True"}], "}"}], ",", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"49", "/", "100"}], "+", "kyx`x", "+", 
+       RowBox[{"kyx`x", "^", "2"}], "+", "kyx`y", "+", 
+       RowBox[{"kyx`y", "^", "2"}]}], ">", "0"}]}], "}"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"inv", "=", 
+  RowBox[{"TransitionRel", "[", "prob", "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{"DrawPlanarProb", "[", 
+  RowBox[{"prob", ",", "inv"}], "]"}], "\[IndentingNewLine]"}], "Input",
+ CellChangeTimes->{{3.765278818440885*^9, 3.7652788257051992`*^9}, {
+  3.7652813790344543`*^9, 3.76528140469842*^9}, {3.765281596291691*^9, 
+  3.76528160019687*^9}},
+ CellLabel->
+  "In[130]:=",ExpressionUUID->"78e6efcc-eb5a-4bf4-b185-eea56ee322d5"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"prob", "=", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{
+      RowBox[{
+       RowBox[{"-", 
+        RowBox[{"(", 
+         RowBox[{"1", "/", "20"}], ")"}]}], "+", 
+       RowBox[{
+        RowBox[{"(", 
+         RowBox[{
+          RowBox[{"5", "/", "4"}], "+", "kyx`x"}], ")"}], "^", "2"}], "+", 
+       RowBox[{
+        RowBox[{"(", 
+         RowBox[{
+          RowBox[{"-", 
+           RowBox[{"(", 
+            RowBox[{"5", "/", "4"}], ")"}]}], "+", "kyx`y"}], ")"}], "^", 
+        "2"}]}], "\[LessEqual]", "0"}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{
+          RowBox[{"7", "/", "8"}], "+", "kyx`x", "-", 
+          RowBox[{
+           RowBox[{"kyx`x", "^", "3"}], "/", "3"}], "-", "kyx`y"}], ",", 
+         RowBox[{
+          RowBox[{"2", "/", "25"}], " ", 
+          RowBox[{"(", 
+           RowBox[{
+            RowBox[{"7", "/", "10"}], "+", "kyx`x", "-", 
+            RowBox[{
+             RowBox[{"(", 
+              RowBox[{"4", " ", "kyx`y"}], ")"}], "/", "5"}]}], ")"}]}]}], 
+        "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"kyx`x", ",", "kyx`y"}], "}"}], ",", "True"}], "}"}], ",", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"36", "/", "5"}], "+", 
+       RowBox[{"5", " ", "kyx`x"}], "+", 
+       RowBox[{"kyx`x", "^", "2"}], "+", 
+       RowBox[{"2", " ", "kyx`y"}], "+", 
+       RowBox[{"kyx`y", "^", "2"}]}], ">", "0"}]}], "}"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"inv", "=", 
+   RowBox[{"TransitionRel", "[", "prob", "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"DrawPlanarProb", "[", 
+  RowBox[{"prob", ",", "inv"}], "]"}]}], "Input",
+ CellChangeTimes->{{3.765282317980233*^9, 3.765282332729793*^9}, {
+  3.765282375500651*^9, 3.765282400525646*^9}},
+ CellLabel->
+  "In[142]:=",ExpressionUUID->"23894424-26a1-4015-82b6-ffaee7f1a6df"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"prob", "=", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"x", "\[Equal]", 
+       RowBox[{"-", "1"}]}], " ", "&&", " ", 
+      RowBox[{"y", "\[Equal]", "1"}]}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"-", 
+          RowBox[{"(", 
+           RowBox[{
+            RowBox[{
+             RowBox[{"(", 
+              RowBox[{"x", "+", "1"}], ")"}], "*", 
+             RowBox[{"(", 
+              RowBox[{"x", "+", "2"}], ")"}], "*", "y", "*", "x", "*", "x"}], 
+            " ", "+", " ", "2"}], ")"}]}], ",", 
+         RowBox[{
+          RowBox[{"x", "^", "2"}], "+", 
+          RowBox[{"y", "^", "2"}]}]}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"x", ",", "y"}], "}"}], ",", 
+       RowBox[{
+        RowBox[{
+         RowBox[{
+          RowBox[{"-", "1"}], "*", "y"}], "<", "0"}], "&&", 
+        RowBox[{"x", "\[LessEqual]", "0"}]}]}], "}"}], ",", 
+     RowBox[{"Not", "[", 
+      RowBox[{
+       RowBox[{"x", ">", "0"}], " ", "||", " ", 
+       RowBox[{"y", "\[LessEqual]", "0"}]}], "]"}]}], "}"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"inv", "=", 
+   RowBox[{"TransitionRel", "[", "prob", "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"DrawPlanarProb", "[", 
+  RowBox[{"prob", ",", "inv"}], "]"}]}], "Input",
+ CellChangeTimes->{{3.765282302072098*^9, 3.765282302122863*^9}, {
+  3.765282352507553*^9, 3.765282379287917*^9}, {3.7652824397141743`*^9, 
+  3.765282469028824*^9}},
+ CellLabel->
+  "In[151]:=",ExpressionUUID->"c887446e-eb14-4552-b107-55e2a450ea51"]
 },
 WindowSize->{960, 1148},
 WindowMargins->{{Automatic, 0}, {0, Automatic}},
@@ -126,10 +288,13 @@ CellTagsIndex->{}
 *)
 (*NotebookFileOutline
 Notebook[{
-Cell[558, 20, 1256, 29, 117, "Input",ExpressionUUID->"6b3cadf1-f28a-49a8-90cf-e708abba129c",
+Cell[558, 20, 998, 22, 94, "Input",ExpressionUUID->"6b3cadf1-f28a-49a8-90cf-e708abba129c",
  InitializationCell->True],
-Cell[1817, 51, 1414, 33, 101, "Input",ExpressionUUID->"e8186881-d54b-45bb-85c3-cbf87365d8bd"],
-Cell[3234, 86, 906, 24, 78, "Input",ExpressionUUID->"ab635e72-cf8c-4a43-a57a-b0f8b91fb6da"]
+Cell[1559, 44, 1638, 39, 101, "Input",ExpressionUUID->"e8186881-d54b-45bb-85c3-cbf87365d8bd"],
+Cell[3200, 85, 1073, 27, 78, "Input",ExpressionUUID->"ab635e72-cf8c-4a43-a57a-b0f8b91fb6da"],
+Cell[4276, 114, 1764, 50, 147, "Input",ExpressionUUID->"78e6efcc-eb5a-4bf4-b185-eea56ee322d5"],
+Cell[6043, 166, 1887, 57, 124, "Input",ExpressionUUID->"23894424-26a1-4015-82b6-ffaee7f1a6df"],
+Cell[7933, 225, 1597, 47, 101, InheritFromParent,ExpressionUUID->"c887446e-eb14-4552-b107-55e2a450ea51"]
 }
 ]
 *)

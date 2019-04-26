@@ -23,6 +23,7 @@ NearestRatCoeffs::usage="NearestRatCoeffs[number, precision]"
 DNFNormalizeGtGeq::usage="DNFNormalizeGtGeq[fml] normalizes fml to a normal form only containing disjunction and conjunctions of >0 and >=0"
 DNFNormalizeLtLeq::usage="DNFNormalizeLtLeq[fml] normalizes fml to a normal form only containing disjunction and conjunctions of <0 and <=0"
 
+WeakenInequalities::usage="WeakenInequalities[fml] turns all strict inequalities to their weakened versions"
 DrawPlanarProb::usage="DrawPlanarProb[prob,inv,w] draws a planar problem and invariant inv"
 
 
@@ -104,6 +105,14 @@ DNFNormalizeGtGeq[expression_]:=Module[{},
 DNFNormalizeLtLeq[expression_]:=Module[{},
   BooleanMinimize[expression//LogicalExpand//UnequalToLtOrGt//EqualToLeqAndGeq//GtToLt//GeqToLeq//ZeroRHS, "DNF"]] 
 
+
+
+(* Weaken inequalities *)
+WeakenInequalities[formula_]  :=  Module[{},formula/.{
+	Unequal[a_,b_]      :>  True,
+	Greater[a_,b_]      :>  GreaterEqual[a,b],
+	Less[a_,b_]         :>  LessEqual[a,b]
+	}]
 
 
 (* Drawing primitive *)
