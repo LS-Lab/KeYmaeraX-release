@@ -14,13 +14,11 @@ import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
-import edu.cmu.cs.ls.keymaerax.tags.SlowTest
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalactic.{AbstractStringUniformity, Uniformity}
 import org.scalatest._
 import org.scalatest.concurrent.TimeLimitedTests
-import org.scalatest.time.{Hour, Minute, Span}
-import testHelper.KeYmaeraXTestTags
+import org.scalatest.time._
 
 import scala.collection.immutable._
 
@@ -31,11 +29,11 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   override def timeLimit: Span = {
     val simpleNames = this.getClass.getAnnotations.map(_.annotationType().getSimpleName)
     if (simpleNames.contains("ExtremeTest")) {
-      Span(3, Hour)
+      Span(3, Hours)
     } else if (simpleNames.contains("SlowTest")) {
       Span(1, Hour)
     } else {
-      Span(20, Minute)
+      Span(20, Minutes)
     }
   }
 
