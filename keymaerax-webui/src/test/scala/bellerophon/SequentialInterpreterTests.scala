@@ -7,7 +7,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import org.scalatest.concurrent.Timeouts
 import org.scalatest.time.SpanSugar._
 
 import scala.collection.immutable.IndexedSeq
@@ -20,7 +19,7 @@ import scala.language.postfixOps
  * theInterpreter when other interpreters are implemented.
  * @author Nathan Fulton
  */
-class SequentialInterpreterTests extends TacticTestBase with Timeouts {
+class SequentialInterpreterTests extends TacticTestBase {
 
   "AndR" should "prove |- 1=1 ^ 2=2" in {
     val tactic = andR(1)

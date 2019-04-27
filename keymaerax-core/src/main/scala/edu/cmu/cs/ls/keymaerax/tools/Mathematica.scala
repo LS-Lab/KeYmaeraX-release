@@ -166,6 +166,8 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
   /** Restarts the MathKernel with the current configuration */
   override def restart(): Unit = link.restart()
 
+  override def cancel(): Boolean = link.cancel()
+
   override def setOperationTimeout(timeout: Int): Unit = qeMaxTimeout = timeout
   override def getOperationTimeout: Int = qeMaxTimeout
   override def getAvailableWorkers: Int = mQE.availableWorkers

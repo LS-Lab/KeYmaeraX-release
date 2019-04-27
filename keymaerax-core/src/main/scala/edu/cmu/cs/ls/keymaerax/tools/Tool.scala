@@ -41,4 +41,6 @@ trait Tool {
    */
   def shutdown()
 
+  /** Cancels the current tool operation and returns true on success, false otherwise. */
+  def cancel(): Boolean
 }

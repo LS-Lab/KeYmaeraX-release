@@ -16,7 +16,6 @@ import edu.cmu.cs.ls.keymaerax.tools.{PegasusM2KConverter, ToolOperationManageme
 import edu.cmu.cs.ls.keymaerax.btactics.NonlinearExamplesTests._
 import org.scalatest.{AppendedClues, Suites}
 import org.scalatest.LoneElement._
-import org.scalatest.concurrent.Timeouts
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.time.{Seconds, Span}
@@ -143,7 +142,7 @@ class NonlinearExamplesTests extends Suites(
 
 @ExtremeTest
 class NonlinearExamplesTester(val benchmarkName: String, val url: String, val timeout: Int,
-                              val genCheck: Boolean) extends TacticTestBase with AppendedClues with Timeouts {
+                              val genCheck: Boolean) extends TacticTestBase with AppendedClues {
 
   private val entries = {
     println("Reading " + url)

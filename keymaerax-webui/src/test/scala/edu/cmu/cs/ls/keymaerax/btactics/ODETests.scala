@@ -17,7 +17,6 @@ import scala.collection.immutable._
 import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
-import org.scalatest.concurrent.Timeouts
 import org.scalatest.exceptions.TestCanceledException
 import org.scalatest.prop.TableDrivenPropertyChecks._
 import org.scalatest.time.SpanSugar._
@@ -27,7 +26,7 @@ import org.scalatest.time.SpanSugar._
  * [[edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary.ODE]] differential equations proving.
  */
 @UsualTest
-class ODETests extends TacticTestBase with Timeouts {
+class ODETests extends TacticTestBase {
 
   "ODE" should "prove x=0 -> [{x'=-x}]x=0" in withMathematica { _ =>
     TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved

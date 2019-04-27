@@ -18,7 +18,6 @@ import testHelper.ParserFactory._
 
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
-import org.scalatest.concurrent.Timeouts
 import org.scalatest.time.SpanSugar._
 
 /**
@@ -27,7 +26,7 @@ import org.scalatest.time.SpanSugar._
  * @author Stefan Mitsch
  */
 @SlowTest
-class CpsWeekTutorial extends TacticTestBase with Timeouts {
+class CpsWeekTutorial extends TacticTestBase {
 
   "Example 0" should "prove with abstract invariant J(x)" in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/00_robosimple.kyx"))

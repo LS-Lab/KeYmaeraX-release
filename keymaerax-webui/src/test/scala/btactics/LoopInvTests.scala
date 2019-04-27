@@ -5,29 +5,22 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics
 
-
-import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
-import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
-import edu.cmu.cs.ls.keymaerax.tags.{SummaryTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
-import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest, TodoTest}
+import testHelper.KeYmaeraXTestTags.{SlowTest, TodoTest}
 
 import scala.collection.immutable._
 import scala.language.postfixOps
-import org.scalatest.LoneElement._
 import org.scalatest.concurrent._
-import org.scalatest.time.SpanSugar._
 
 /**
  * Loop invariant checking and generation tests etc.
  * @author Andre Platzer
  */
-class LoopInvTests extends TacticTestBase with Timeouts /* TimeLimits does not abort test */ {
+class LoopInvTests extends TacticTestBase {
   private val someList: () => Iterator[Formula] = () =>
       ("x>=4".asFormula :: "x>=6".asFormula :: "x<2".asFormula :: "x>=5".asFormula :: "x>=0".asFormula :: Nil).iterator
 

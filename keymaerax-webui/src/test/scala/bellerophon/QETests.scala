@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaerax.tools.{MathematicaComputationAbortedException, To
 
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
+import org.scalatest.exceptions.TestFailedDueToTimeoutException
 
 /**
  * Tests [[ToolTactics.fullQE]] and [[ToolTactics.partialQE]].
@@ -100,6 +101,11 @@ class QETests extends TacticTestBase {
   it should "rewrite equalities about uninterpreted function symbols" in withMathematica { _ =>
     proveBy("f(a,b) = 3 -> f(a,b)>2".asFormula, QE) shouldBe 'proved
   }
+
+  it should "abort on test timeout" in { the [TestFailedDueToTimeoutException] thrownBy withMathematica ({ _ =>
+    val s = "A()>=0, B()>0, V()>=0, ep()>0, -B()<=a, a<=A(), r!=0, w_0*r=v_0, abs(x_0-xo_0)>v_0^2/(2*B())+V()*v_0/B()+(A()/B()+1)*(A()/2*t^2+t*(v_0+V())), t_0=0, v_0>=0, dx_0^2+dy_0^2=1, r_0!=0, -t*V()<=xo-xo_0, xo-xo_0<=t*V(), -t*(v-a/2*t)<=x-x_0, x-x_0<=t*(v-a/2*t), v=v_0+a*t, dx^2+dy^2=1, t>=0, t<=ep(), v>=0 ==> v=0, abs(x-xo)>v^2/(2*B())+V()*(v/B())".asSequent
+    proveBy(s, QE()) shouldBe 'proved
+  }, 2) should have message "The code passed to failAfter did not complete within 2 seconds." }
 
   "QE with specific tool" should "succeed with Mathematica" in withMathematica { _ =>
     val tactic = TactixLibrary.QE(Nil, Some("Mathematica"))

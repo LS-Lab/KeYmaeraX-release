@@ -18,4 +18,5 @@ abstract class ToolBase(val name: String) extends Tool {
 
   def isInitialized: Boolean = initialized
 
+  override def cancel(): Boolean = true
 }

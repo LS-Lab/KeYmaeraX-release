@@ -17,7 +17,6 @@ import scala.collection.immutable.IndexedSeq
 import org.scalatest.LoneElement._
 import org.scalatest.prop.TableDrivenPropertyChecks.forEvery
 import org.scalatest.prop.Tables._
-import org.scalatest.concurrent.Timeouts
 
 /**
   * Basic differential equation proving technology tests
@@ -28,7 +27,7 @@ import org.scalatest.concurrent.Timeouts
   */
 @SummaryTest
 @UsualTest
-class DifferentialTests extends TacticTestBase with Timeouts {
+class DifferentialTests extends TacticTestBase {
   val randomTrials = 500
   val randomComplexity = 6
   val rand = new RandomFormula()

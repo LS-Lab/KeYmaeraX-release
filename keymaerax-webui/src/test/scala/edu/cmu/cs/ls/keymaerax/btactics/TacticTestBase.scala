@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalactic.{AbstractStringUniformity, Uniformity}
 import org.scalatest._
-import org.scalatest.concurrent.TimeLimitedTests
+import org.scalatest.concurrent.{Interruptor, Signaler, TimeLimitedTests, TimeLimits}
 import org.scalatest.time._
 
 import scala.collection.immutable._
@@ -25,7 +25,7 @@ import scala.collection.immutable._
 /**
  * Base class for tactic tests.
  */
-class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with AppendedClues with TimeLimitedTests {
+class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with AppendedClues with TimeLimitedTests with TimeLimits {
   override def timeLimit: Span = {
     val simpleNames = this.getClass.getAnnotations.map(_.annotationType().getSimpleName)
     if (simpleNames.contains("ExtremeTest")) {
@@ -57,7 +57,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   }
 
   //@note Initialize once per test class, but only if requested in a withMathematica call
-  private val mathematicaProvider = new Lazy(new MathematicaToolProvider(configFileMathematicaConfig))
+  private var mathematicaProvider = new Lazy(new MathematicaToolProvider(configFileMathematicaConfig))
   //@note setup lazy in beforeEach, automatically initialize in withDatabase, tear down in afterEach if initialized
   private var dbTester: Lazy[TempDBTools] = _
 
@@ -98,8 +98,17 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")) {
       val provider = mathematicaProvider() // new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig)
       ToolProvider.setProvider(provider)
-      //@todo timeout
-      testcode(provider.tool())
+      val tool = provider.tool()
+      val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
+      implicit val signaler: Signaler = (t: Thread) => {
+        tool.cancel()
+        t.interrupt()
+        provider.shutdown()
+        mathematicaProvider = new Lazy(new MathematicaToolProvider(configFileMathematicaConfig))
+      }
+      failAfter(to) {
+        testcode(tool)
+      }
     }
   }
 
@@ -118,7 +127,12 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       val provider = new Z3ToolProvider
       ToolProvider.setProvider(provider)
       provider.tool().setOperationTimeout(timeout)
-      testcode(provider.tool())
+      val tool = provider.tool()
+      val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
+      implicit val signaler: Signaler = { _: Thread => tool.cancel() }
+      failAfter(to) {
+        testcode(tool)
+      }
     }
   }
 
@@ -143,7 +157,11 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   def withPolya(testcode: Polya => Any) {
     val provider = new PolyaToolProvider
     ToolProvider.setProvider(provider)
-    testcode(provider.tool())
+    val tool = provider.tool()
+    implicit val signaler: Signaler = { _: Thread => tool.cancel() }
+    failAfter(timeLimit) {
+      testcode(tool)
+    }
   }
 
   /** Executes `testcode` with a temporary configuration that gets reset after execution. */

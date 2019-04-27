@@ -15,13 +15,12 @@ import edu.cmu.cs.ls.keymaerax.core.{Box, False, Formula, Imply, ODESystem, Prog
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.{Declaration, ParsedArchiveEntry}
 import edu.cmu.cs.ls.keymaerax.parser._
-import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest}
+import edu.cmu.cs.ls.keymaerax.tags.ExtremeTest
 import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 
 import scala.language.postfixOps
 import org.scalatest.{AppendedClues, Suites}
 import org.scalatest.prop.TableDrivenPropertyChecks._
-import org.scalatest.concurrent._
 import org.scalatest.exceptions.TestFailedDueToTimeoutException
 import org.scalatest.time.{Seconds, Span}
 
@@ -125,7 +124,7 @@ class BenchmarkExporter(val benchmarkName: String, val url: String) extends Tact
 
 @ExtremeTest
 class BenchmarkTester(val benchmarkName: String, val url: String,
-                      val timeout: Int, val genCheck: Boolean) extends TacticTestBase with AppendedClues with Timeouts {
+                      val timeout: Int, val genCheck: Boolean) extends TacticTestBase with AppendedClues {
 
   private val entries = {
     println("Reading " + url)

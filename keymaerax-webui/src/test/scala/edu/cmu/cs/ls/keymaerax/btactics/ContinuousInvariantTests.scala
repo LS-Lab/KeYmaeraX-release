@@ -15,14 +15,13 @@ import edu.cmu.cs.ls.keymaerax.tools.MathematicaComputationAbortedException
 import scala.collection.immutable.IndexedSeq
 import org.scalatest.prop.TableDrivenPropertyChecks.forEvery
 import org.scalatest.prop.Tables._
-import org.scalatest.concurrent.Timeouts
 import org.scalatest.time.SpanSugar._
 import org.scalatest.LoneElement._
 
 /**
  * Continuous invariant generation tests.
  */
-class ContinuousInvariantTests extends TacticTestBase with Timeouts {
+class ContinuousInvariantTests extends TacticTestBase {
   val randomTrials = 500
   val randomComplexity = 6
   val rand = new RandomFormula()

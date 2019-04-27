@@ -21,7 +21,6 @@ import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, SlowTest, TodoTest}
 import scala.collection.immutable._
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
-import org.scalatest.concurrent._
 import org.scalatest.time.SpanSugar._
 
 /**
@@ -30,7 +29,7 @@ import org.scalatest.time.SpanSugar._
  */
 @SummaryTest
 @UsualTest
-class TactixLibraryTests extends TacticTestBase with Timeouts /* TimeLimits does not abort test */ {
+class TactixLibraryTests extends TacticTestBase {
   private val someList: () => Iterator[Formula] = () =>
       ("x>=4".asFormula :: "x>=6".asFormula :: "x<2".asFormula :: "x>=5".asFormula :: "x>=0".asFormula :: Nil).iterator
 
