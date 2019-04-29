@@ -66,15 +66,19 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
   val TIMEOUT_OFF: Int = -1
   /** Timeout for Mathematica requests in seconds, set to TIMEOUT_OFF to disable. */
   var timeout: Int = TIMEOUT_OFF
+  /** Default memory limit: no limit. */
+  val MEMORY_LIMIT_OFF: Long = -1
+  /** Memory limit for Mathematica requests in MB, set to MEMORY_LIMIT_OFF to disable. */
+  var memoryLimit: Long = MEMORY_LIMIT_OFF
 
   protected val DEBUG: Boolean = Configuration(Configuration.Keys.DEBUG) == "true"
   protected val mathematicaExecutor: ToolExecutor[(String, T)] = new ToolExecutor(1)
 
-  override def runUnchecked(cmd: String): (String, T) = link.runUnchecked(timeConstrained(cmd), m2k)
-  override def run(cmd: MExpr): (String, T) = link.run(timeConstrained(cmd), m2k, mathematicaExecutor)
+  override def runUnchecked(cmd: String): (String, T) = link.runUnchecked(memoryConstrained(timeConstrained(cmd)), m2k)
+  override def run(cmd: MExpr): (String, T) = link.run(memoryConstrained(timeConstrained(cmd)), m2k, mathematicaExecutor)
 
   def runUnchecked[S](cmd: String, localm2k: M2KConverter[S]): (String, S) =
-    link.runUnchecked(timeConstrained(cmd), localm2k)
+    link.runUnchecked(memoryConstrained(timeConstrained(cmd)), localm2k)
 
   def availableWorkers: Int = mathematicaExecutor.availableWorkers()
   def shutdown(): Unit = mathematicaExecutor.shutdown()
@@ -86,6 +90,14 @@ abstract class BaseKeYmaeraMathematicaBridge[T](val link: MathematicaLink, val k
   protected def timeConstrained(cmd: String): String =
     if (timeout < 0) cmd
     else "TimeConstrained[" + cmd + "," + timeout + "]"
+
+  protected def memoryConstrained(cmd: MExpr): MExpr =
+    if (memoryLimit < 0) cmd
+    else new MExpr(new MExpr(Expr.SYMBOL,  "MemoryConstrained"), Array(cmd, new MExpr(memoryLimit*1000000)))
+
+  protected def memoryConstrained(cmd: String): String =
+    if (memoryLimit < 0) cmd
+    else "MemoryConstrained[" + cmd + "," + memoryLimit*1000000 + "]"
 }
 
 /**

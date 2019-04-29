@@ -41,6 +41,8 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
   private val qeCexTimeout = Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_CEX))
   private var qeMaxTimeout = Integer.parseInt(Configuration(Configuration.Keys.QE_TIMEOUT_MAX))
 
+  private val memoryLimit: Long = Configuration.getOption(Configuration.Keys.MATHEMATICA_MEMORY_LIMIT).map(java.lang.Long.parseLong).getOrElse(-1)
+
   override def init(config: Map[String,String]): Unit = {
     val linkName = config.get("linkName") match {
       case Some(l) => l
@@ -51,6 +53,15 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
 //        "  java -jar keymaerax.jar -mathkernel pathtokernel -jlink pathtojlink")
     }
     val libDir = config.get("libDir") // doesn't need to be defined
+
+    mQE.memoryLimit = memoryLimit
+    mPegasus.memoryLimit = memoryLimit
+    mCEX.memoryLimit = memoryLimit
+    mODE.memoryLimit = memoryLimit
+    mSim.memoryLimit = memoryLimit
+    mSolve.memoryLimit = memoryLimit
+    mAlgebra.memoryLimit = memoryLimit
+    mSimplify.memoryLimit = memoryLimit
 
     initialized = link.init(linkName, libDir)
   }
