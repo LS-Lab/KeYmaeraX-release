@@ -67,7 +67,7 @@ class ContinuousInvariantTests extends TacticTestBase {
 
         annotatedInvariants.products.get(ode) match {
           case Some(invs) =>
-            invariants should contain theSameElementsInOrderAs invs
+            invariants.map(_._1) should contain theSameElementsInOrderAs invs
           case None =>
             //@note invariant generator did not produce an invariant before, not expected to produce one now. Test will
             // fail if invariant generator improves and finds an invariant.
