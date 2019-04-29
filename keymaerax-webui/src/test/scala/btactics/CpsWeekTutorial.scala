@@ -19,6 +19,7 @@ import testHelper.ParserFactory._
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
 import org.scalatest.time.SpanSugar._
+import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
  * Tutorial test cases.
@@ -55,7 +56,7 @@ class CpsWeekTutorial extends TacticTestBase {
     result.subgoals(3) shouldBe "J(x,v), b()>0 ==> \\forall t_ (t_>=0 -> J((-b())*(t_^2/2)+v*t_+x,(-b())*t_+v))".asSequent
   }
 
-  it should "have 4 open goals for abstract invariant J(x,v) with master" in withQE { _ =>
+  it should "have 4 open goals for abstract invariant J(x,v) with master" taggedAs TodoTest in withQE { _ =>
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/cpsweek/01_robo1.kyx"))
     val result = proveBy(s, master(keepQEFalse=false))
     result.subgoals should have size 4
