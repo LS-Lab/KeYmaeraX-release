@@ -25,11 +25,11 @@ import scala.concurrent.duration.Duration
 @SlowTest
 class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
-  val deterministicComplexity = 20
+  val deterministicComplexity = 10
 
-  val randomTrials = 500
-  val randomComplexity = 20
-  val randomSubstitutions = 10
+  val randomTrials = 50
+  val randomComplexity = 10
+  val randomSubstitutions = 5
   //val randRoot = RepeatableRandom(3913399508895174441L)
   //val randRoot = RepeatableRandom(8830041342121653583L) for randomTrials=20, randomComplexity=23, randomSubstitutions=1
   val randRoot = RepeatableRandom()
@@ -39,13 +39,13 @@ class USubstPerformanceTests extends FlatSpec with Matchers with BeforeAndAfterE
   val yellAtClash = false
 
   /** Test setup */
-  override def beforeEach() = {
+  override def beforeEach(): Unit = {
     PrettyPrinter.setPrinter(KeYmaeraXPrettyPrinter.pp)
     //KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) => None)
   }
 
   /* Test teardown */
-  override def afterEach() = {
+  override def afterEach(): Unit = {
     PrettyPrinter.setPrinter(e => e.getClass.getName)
   }
 
