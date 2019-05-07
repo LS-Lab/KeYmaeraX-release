@@ -1519,12 +1519,12 @@ private object DifferentialTactics extends Logging {
         ODEInvariance.sAIclosedPlus(bound = 3)(pos) |
         //todo: duplication currently necessary between sAIclosedPlus and sAIclosed due to unresolved Mathematica issues
         ODEInvariance.sAIclosed(pos) |
-        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(QE,skip)) &
+        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE,skip)) & //strengthen to the closure if applicable
         ODEInvariance.sAIRankOne(doReorder = true, skipClosed = false)(pos)
       }
       else {
         ODEInvariance.sAIclosedPlus(bound = 1)(pos) |
-        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(QE,skip)) & //strengthen to the closure if applicable
+        ?(DifferentialTactics.dCClosure(cutInterior=true)(pos) <(timeoutQE,skip)) & //strengthen to the closure if applicable
         ODEInvariance.sAIRankOne(doReorder = false, skipClosed = true)(pos)
       }
 
