@@ -298,7 +298,7 @@ object DifferentialHelper {
             else if (n.value==0) Number(0)
             else Times(Times(n,Power(l,Number(n.value-1))),derive(l,odes))
           case _ =>
-            Times(Times(e,Power(l,Minus(e,Number(-1)))),derive(l,odes))
+            Times(Times(e,Power(l,Minus(e,Number(1)))),derive(l,odes))
         }
       case Divide(l,r) => // (l/r)' = (l'r - l r')/(r^2)
         Divide(Minus(Times(derive(l,odes),r),Times(l,derive(r,odes))), Times(r,r))
@@ -314,6 +314,7 @@ object DifferentialHelper {
 
   def simplifiedLieDerivative(p:DifferentialProgram,t:Term, tool: Option[SimplificationTool]) : Term = {
     val ld = derive(t,DependencyAnalysis.collapseODE(p))
+    println("LD",ld)
     val ts1 = simpWithTool(tool,ld)
     ts1
   }
