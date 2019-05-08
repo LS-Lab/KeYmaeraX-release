@@ -777,7 +777,7 @@ object SimplifierV3 {
       case Plus(n:Number,m:Number) => Some(n.value+m.value)
       case Minus(n:Number,m:Number) => Some(n.value-m.value)
       case Times(n:Number,m:Number) => Some(n.value*m.value)
-      case Divide(n:Number,m:Number) => Some(n.value/m.value)
+      case Divide(n:Number,m:Number) if m.value!=0 => Some(n.value/m.value)
       case Power(n:Number,m:Number) => Some(n.value.pow(m.value.toInt))
       case Neg(n:Number) => Some(-n.value)
       case _ => None

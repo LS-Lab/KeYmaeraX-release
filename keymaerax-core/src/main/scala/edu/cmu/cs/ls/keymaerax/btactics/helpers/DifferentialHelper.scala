@@ -314,7 +314,6 @@ object DifferentialHelper {
 
   def simplifiedLieDerivative(p:DifferentialProgram,t:Term, tool: Option[SimplificationTool]) : Term = {
     val ld = derive(t,DependencyAnalysis.collapseODE(p))
-    println("LD",ld)
     val ts1 = simpWithTool(tool,ld)
     ts1
   }

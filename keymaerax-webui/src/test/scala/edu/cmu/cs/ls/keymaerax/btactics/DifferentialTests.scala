@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
+import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.core._
 import testHelper.KeYmaeraXTestTags.{IgnoreInBuildTest, TodoTest}
 
@@ -1604,5 +1605,75 @@ class DifferentialTests extends TacticTestBase {
     result.subgoals should have size 2
     result.subgoals.head shouldBe "t=0, x=1 ==> x>0&3-x>0".asSequent
     result.subgoals(1) shouldBe "t=0, x=1, t<=1 ==> [{t'=1,x'=x&t<=1}](x>=0&3-x>=0->(x>0&3-x>0)')".asSequent
+  }
+
+  "Derive" should "correctly derive" taggedAs IgnoreInBuildTest in withMathematica { tool =>
+    val vx = Variable("x")
+    val vy = Variable("y")
+    val vz = Variable("z")
+    val vars = IndexedSeq(vx,vy,vz)
+
+    for (i <- 1 to randomTrials) {
+      //@todo avoid divisions by zero
+      val inv = rand.nextT(vars, randomComplexity, dots=false, diffs=false, funcs=false)
+
+      val dx = rand.nextT(vars, randomComplexity, dots=false, diffs=false, funcs=false)
+      val dy = rand.nextT(vars, randomComplexity, dots=false, diffs=false, funcs=false)
+      val dz = rand.nextT(vars, randomComplexity, dots=false, diffs=false, funcs=false)
+
+      val ode =
+        DifferentialProduct(
+          AtomicODE(DifferentialSymbol(vx), dx),
+          DifferentialProduct(
+          AtomicODE(DifferentialSymbol(vy), dy),
+          AtomicODE(DifferentialSymbol(vz), dz))
+        )
+
+      //Uses dI
+      val l1 =
+        try {
+          Some(DifferentialHelper.lieDerivative(ode,inv))
+        }
+        catch {
+          case ex: BelleThrowable => None
+        }
+      val l2 =
+        try {
+          Some(DifferentialHelper.simplifiedLieDerivative(ode,inv,None))
+        }
+        catch {
+          case ex: ToolException => None
+        }
+      val l3 =
+        try {
+          Some(Plus(
+            Times(tool.deriveBy(inv, vx), dx),
+            Plus(Times(tool.deriveBy(inv, vy), dy), Times(tool.deriveBy(inv, vz), dz))))
+        }
+        catch {
+          case ex: ToolException => None
+        }
+
+      (l1,l2,l3) match {
+        case (Some(r1),Some(r2),Some(r3)) =>
+          try {
+            val pr1 = proveBy(Equal(r1, r2), QE)
+            val pr2 = proveBy(Equal(r2, r3), QE)
+            val pr3 = proveBy(Equal(r3, r1), QE) //this should be unnecessary
+
+            (pr1.isProved,pr2.isProved,pr3.isProved) shouldBe (true,true,true)
+          }
+          catch {
+            case ex: BelleThrowable =>
+              // Ignores failures due to division by 0
+              println("Lie derivatives mismatch (QE fails) on: ", ode, inv)
+              println(l1,l2,l3)
+          }
+        case _ =>
+          // Ignores failures due to ^0
+          println("Lie derivatives mismatch (Calculation) on: ",ode,inv)
+          println(l1,l2,l3)
+      }
+    }
   }
 }
