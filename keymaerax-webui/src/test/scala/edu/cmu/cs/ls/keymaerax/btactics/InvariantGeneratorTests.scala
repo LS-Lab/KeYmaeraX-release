@@ -5,14 +5,14 @@ import java.io.PrintWriter
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.bellerophon.{SuccPosition, TacticStatistics}
-import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, GenProduct, PegasusProofHint, ProofHint}
+import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.{AnnotationProofHint, PegasusProofHint, ProofHint}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser}
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
-import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, SlowTest, UsualTest}
-import edu.cmu.cs.ls.keymaerax.tools.{PegasusM2KConverter, ToolOperationManagement}
+import edu.cmu.cs.ls.keymaerax.tags.{ExtremeTest, UsualTest}
+import edu.cmu.cs.ls.keymaerax.tools.ToolOperationManagement
 import edu.cmu.cs.ls.keymaerax.btactics.NonlinearExamplesTests._
 import org.scalatest.{AppendedClues, Suites}
 import org.scalatest.LoneElement._
@@ -22,6 +22,7 @@ import org.scalatest.time.{Seconds, Span}
 
 import scala.collection.immutable
 import scala.collection.immutable.{IndexedSeq, Map, Nil}
+import scala.collection.mutable.ListBuffer
 
 /**
  * Tests invariant generators.
@@ -52,6 +53,25 @@ class InvariantGeneratorTests extends TacticTestBase {
     mockProvider.requestedInvGenerators shouldBe 'empty
     gen should not be 'empty
     gen.head shouldBe ("x>0".asFormula, None)
+  }
+
+  it should "use Pegasus lazily from ODE" in {
+    // InvariantGenerator relevance filter tends to break this test
+    val mockInvgen = new InvGenTool {
+      var requestedInvs: ListBuffer[ODESystem] = ListBuffer.empty
+      override def invgen(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): immutable.Seq[Either[immutable.Seq[(Formula, String)], immutable.Seq[(Formula, String)]]] = {
+        requestedInvs += ode
+        Nil
+      }
+      override def lzzCheck(ode: ODESystem, inv: Formula): Boolean = true
+      override def refuteODE(ode: ODESystem, assumptions: immutable.Seq[Formula], postCond: Formula): Option[Map[NamedSymbol, Expression]] = None
+    }
+
+    ToolProvider.setProvider(new MathematicaToolProvider(configFileMathematicaConfig) {
+      override def invGenTool(name: Option[String]): Option[InvGenTool] = Some(mockInvgen)
+    })
+    TactixLibrary.proveBy("x>0 -> [{x'=-x}]x>0".asFormula, implyR(1) & ODE(1)) shouldBe 'proved
+    mockInvgen.requestedInvs shouldBe 'empty
   }
 
   it should "not fail if Mathematica is unavailable" in {

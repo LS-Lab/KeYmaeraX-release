@@ -133,9 +133,8 @@ object InvariantGenerator extends Logging {
   /** A simplistic differential invariant candidate generator.
     * @author Andre Platzer */
   lazy val differentialInvariantCandidates: Generator[GenProduct] = cached((sequent,pos) =>
-    //@note be careful to not evaluate entire stream by sorting etc.
-    (sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #:::
-      relevanceFilter(pegasusCandidates, analyzeMissing = false)(sequent,pos)).distinct)
+    //@note be careful to not evaluate entire stream by sorting/filtering etc.
+    (sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #::: pegasusCandidates(sequent, pos)).distinct)
 
   /** A simplistic loop invariant candidate generator.
     * @author Andre Platzer */
@@ -172,24 +171,25 @@ object InvariantGenerator extends Logging {
       ToolProvider.invGenTool() match {
         case Some(tool) =>
           def proofHint(s: String): Option[String] = if (s != "Unknown") Some(s) else None
-          lazy val pegasusInvs = tool.invgen(ode, sequent.ante, post)
-          lazy val conjunctiveCandidates: Seq[Either[Seq[(Formula, String)], Seq[(Formula, String)]]] = pegasusInvs.withFilter({
+          def pegasusInvs = tool.invgen(ode, sequent.ante, post)
+          def conjunctiveCandidates: Seq[Either[Seq[(Formula, String)], Seq[(Formula, String)]]] = pegasusInvs.withFilter({
             case Left(l) => l.length > 1 && l.map(_._1).exists(strictInequality)
             case Right(r) => r.length > 1 && r.map(_._1).exists(strictInequality)
           }).map({
             case Left(l) => Right((l.map(_._1).reduce(And), "Unknown") :: Nil)
             case Right(r) => Right((r.map(_._1).reduce(And), "Unknown") :: Nil)
           })
-          lazy val invs: Seq[GenProduct] =
+          def invs: Stream[GenProduct] =
             if (includeCandidates) {
-              (pegasusInvs ++ conjunctiveCandidates).flatMap({
+              (pegasusInvs ++ conjunctiveCandidates).toStream.flatMap({
                 case Left(l) => l.map(i => i._1 -> Some(PegasusProofHint(isInvariant = true, proofHint(i._2))))
                 case Right(r) => r.map(i => i._1 -> Some(PegasusProofHint(isInvariant = false, proofHint(i._2))))
               })
             } else {
-              pegasusInvs.filter(_.isLeft).flatMap(_.left.get.map(i => i._1 -> Some(PegasusProofHint(isInvariant=true, proofHint(i._2)))))
+              pegasusInvs.toStream.filter(_.isLeft).flatMap(_.left.get.map(i => i._1 -> Some(PegasusProofHint(isInvariant=true, proofHint(i._2)))))
             }
-          Stream[GenProduct]() #::: invs.toStream.distinct
+          // toStream evaluates first element, which calls Pegasus. Create a stream with dummy first element and Pegasus invs appended, filter dummy element lazy
+          Stream.cons(True -> Some(PegasusProofHint(isInvariant=false, proofHint("Unknown"))), invs).filter(_._1 == True).distinct
         case _ => Seq().toStream
       }
     case Some(Box(_: ODESystem, post: Formula)) if !post.isFOL => Seq().toStream.distinct
