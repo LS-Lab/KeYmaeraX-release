@@ -134,7 +134,8 @@ object InvariantGenerator extends Logging {
     * @author Andre Platzer */
   lazy val differentialInvariantCandidates: Generator[GenProduct] = cached((sequent,pos) =>
     //@note be careful to not evaluate entire stream by sorting/filtering etc.
-    (sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #::: pegasusCandidates(sequent, pos)).distinct)
+    (sortedRelevanceFilter(simpleInvariantCandidates)(sequent,pos) #:::
+      relevanceFilter(pegasusCandidates, analyzeMissing = false)(sequent, pos)).distinct)
 
   /** A simplistic loop invariant candidate generator.
     * @author Andre Platzer */
@@ -188,8 +189,7 @@ object InvariantGenerator extends Logging {
             } else {
               pegasusInvs.toStream.filter(_.isLeft).flatMap(_.left.get.map(i => i._1 -> Some(PegasusProofHint(isInvariant=true, proofHint(i._2)))))
             }
-          // toStream evaluates first element, which calls Pegasus. Create a stream with dummy first element and Pegasus invs appended, filter dummy element lazy
-          Stream.cons(True -> Some(PegasusProofHint(isInvariant=false, proofHint("Unknown"))), invs).filter(_._1 == True).distinct
+          invs
         case _ => Seq().toStream
       }
     case Some(Box(_: ODESystem, post: Formula)) if !post.isFOL => Seq().toStream.distinct

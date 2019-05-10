@@ -82,7 +82,7 @@ class InvariantGeneratorTests extends TacticTestBase {
   it should "use Pegasus if available" in withMathematica { _ =>
     val gen = InvariantGenerator.pegasusInvariants("x>0 ==> [{x'=x^2&true}]x>=0".asSequent, SuccPos(0))
     gen should not be 'empty
-    gen.head shouldBe ("x>0".asFormula, Some(PegasusProofHint(isInvariant = true, None)))
+    gen.head shouldBe ("x>=0".asFormula, Some(PegasusProofHint(isInvariant = true, None)))
   }
 
   it should "split formulas correctly" in {
@@ -144,7 +144,7 @@ class InvariantGeneratorTests extends TacticTestBase {
       InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs Nil
     }
     withTemporaryConfig(Map(Configuration.Keys.PEGASUS_SANITY_TIMEOUT -> "5")) {
-      InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs ("2+-1*x^2+-1*y^2>=0".asFormula -> PegasusProofHint(isInvariant = true, None)) :: Nil
+      InvariantGenerator.pegasusInvariants(seq, SuccPosition(1)).toList should contain theSameElementsInOrderAs ("2+-1*x^2+-1*y^2>=0".asFormula -> Some(PegasusProofHint(isInvariant = true, None))) :: Nil
     }
   }
 

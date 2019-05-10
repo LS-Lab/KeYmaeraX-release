@@ -890,7 +890,7 @@ private object DifferentialTactics extends Logging {
   })
 
   /** Fast ODE implementation. Tries the provided `invariantCandidates`. Tactic `finish` is executed when fastODE itself cannot find a proof. */
-  private def fastODE(invariantCandidates: Iterator[GenProduct])(finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
+  private def fastODE(invariantCandidates: => Iterator[GenProduct])(finish: BelleExpr): DependentPositionTactic = "ODE" by ((pos: Position, seq: Sequent) => {
     //Adds invariants to the system's evolution domain constraint and tries to establish them via odeInvariant.
     //Fails if the invariants cannot be established by odeInvariant.
     val addInvariant = ChooseSome(
