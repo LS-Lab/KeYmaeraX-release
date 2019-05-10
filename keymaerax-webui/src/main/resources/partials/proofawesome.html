@@ -178,6 +178,10 @@
                                 <!-- do not pull-right longest label: pulling right results in a line break here -->
                                 <li><a ng-click="doSearch('commuteEquivR', 'R')"><span>&#8596;CR</span><code>commuteEquivR</code></a></li>
                                 <li><a ng-click="doSearch('commuteEquivL', 'L')"><span>&#8596;CL</span><code>commuteEquivL</code></a></li>
+                                <li role="separator" class="divider"></li>
+                                <li><a ng-click="doTactic(undefined, 'id')"><span>Identity</span><code class="pull-right">id</code></a></li>
+                                <li><a ng-click="doTactic(undefined, 'closeTrue')"><span>True</span><code class="pull-right">closeTrue</code></a></li>
+                                <li><a ng-click="doTactic(undefined, 'closeFalse')"><span>False</span><code class="pull-right">closeFalse</code></a></li>
                             </ul>
                         </li>
                         <li class="dropdown">
@@ -287,11 +291,12 @@
                         </li>
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
-                               aria-haspopup="true" aria-expanded="false">Closing <span class="caret"></span></a>
+                               aria-haspopup="true" aria-expanded="false">Tools
+                                <i class="fa fa-spinner fa-spin fa-fw"
+                                   ng-if="backend.busypoller.data.response.busy"></i>
+                                <span class="caret"></span>
+                            </a>
                             <ul class="dropdown-menu">
-                                <li><a ng-click="doTactic(undefined, 'id')"><span>Identity</span><code class="pull-right">id</code></a></li>
-                                <li><a ng-click="doTactic(undefined, 'closeTrue')"><span>True</span><code class="pull-right">closeTrue</code></a></li>
-                                <li><a ng-click="doTactic(undefined, 'closeFalse')"><span>False</span><code class="pull-right">closeFalse</code></a></li>
                                 <li><a ng-click="doTactic(undefined, 'QE')"
                                        uib-popover-template="fetchRuleHelp('QE')"
                                        popover-class="k4-rulemenu-helppopover"
@@ -300,37 +305,17 @@
                                     </a>
                                 </li>
                                 <li><a ng-click="doTactic(undefined, 'smartQE')"><span>Smart arithmetic</span><code class="pull-right">smartQE</code></a></li>
-                                <!-- TODO -->
-                            </ul>
-                        </li>
-                        <li class="dropdown">
-                            <a class="dropdown-toggle" data-toggle="dropdown" role="button"
-                               aria-haspopup="true" aria-expanded="false">Numerical Bounds<span class="caret"></span></a>
-                            <ul class="dropdown-menu">
+                                <li><a ng-click="getCounterExample()">Counterexample</a></li>
+                                <li><a ng-click="doTactic(undefined, 'pQE')">Find assumptions</a></li>
+                                <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('intervalArithmetic', 'R')"><span>Interval Arithmetic</span><code class="pull-right">intervalArithmetic</code></a></li>
                                 <li><a ng-click="doSearch('intervalCut', 'R')"><span>Cut Intervals</span><code class="pull-right">intervalCut</code></a></li>
                                 <li><a ng-click="openInputTacticDialog('intervalCutTerms', undefined)"><span>Cut Intervals on Term...</span><code class="pull-right">intervalCutTerms</code></a></li>
-                            </ul>
-                        </li>
-                        <li class="dropdown" id="provingadditionaltools">
-                            <a class="dropdown-toggle" data-toggle="dropdown" role="button"
-                               aria-haspopup="true" aria-expanded="false">Inspect <span class="caret"></span></a>
-                            <ul class="dropdown-menu">
-                                <li><a ng-click="getCounterExample()">Counterexample</a></li>
+                                <li role="separator" class="divider"></li>
                                 <li><a ng-click="simulate()">Simulate</a></li>
-                                <li><a ng-click="doTactic(undefined, 'pQE')">Find assumptions</a></li>
                                 <li><a ng-click="exportSubgoal()">Export current subgoal</a></li>
                                 <li><a ng-click="downloadProblemSolution()">Download proof</a></li>
-                            </ul>
-                        </li>
-                        <li class="dropdown" id="toolstatus">
-                            <a class="dropdown-toggle" data-toggle="dropdown" role="button"
-                               aria-haspopup="true" aria-expanded="false">Backend
-                                <i class="fa fa-spinner fa-spin fa-fw"
-                                   ng-if="backend.busypoller.data.response.busy"></i>
-                                <span class="caret"></span>
-                            </a>
-                            <ul class="dropdown-menu">
+                                <li role="separator" class="divider"></li>
                                 <li><a ng-click="restartBackend()">Restart</a></li>
                                 <li><a ng-click="testBackendConnection()">Test Connection</a></li>
                             </ul>
