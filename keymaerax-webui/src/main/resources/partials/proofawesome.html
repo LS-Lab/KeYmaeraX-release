@@ -272,7 +272,11 @@
                                     </a>
                                 </li>
                                 <li role="separator" class="divider"></li>
-                                <li><a ng-click="doSearch('boxAnd', 'R')"><span>[]&and;</span><code class="pull-right">boxAnd</code></a></li>
+                                <li><a ng-click="doSearch('boxAnd', 'R')"
+                                  uib-popover-template="fetchRuleHelp('boxAnd')"
+                                  popover-class="k4-rulemenu-helppopover"
+                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                  <span>[]&and;</span><code class="pull-right">boxAnd</code></a></li>
                                 <li><a ng-click="doSearch('GV', 'R')"><span>Abstract</span><code class="pull-right">GV</code></a></li>
                                 <li><a ng-click="openInputTacticDialog('MR', 'R')"><span>Generalize ...</span><code class="pull-right">MR</code></a></li>
                                 <li><a ng-click="doSearch('boxd', 'R')"><span>[·]d</span><code class="pull-right">boxd</code></a></li>
