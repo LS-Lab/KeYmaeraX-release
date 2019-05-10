@@ -304,9 +304,24 @@
                                         <span>Real arithmetic</span><code class="pull-right">QE</code>
                                     </a>
                                 </li>
-                                <li><a ng-click="doTactic(undefined, 'smartQE')"><span>Smart arithmetic</span><code class="pull-right">smartQE</code></a></li>
-                                <li><a ng-click="getCounterExample()">Counterexample</a></li>
-                                <li><a ng-click="doTactic(undefined, 'pQE')">Find assumptions</a></li>
+                                <li><a ng-click="doTactic(undefined, 'smartQE')" uib-popover-template="fetchRuleHelp('smartQE')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span>Smart arithmetic</span><code class="pull-right">smartQE</code>
+                                    </a>
+                                </li>
+                                <li><a ng-click="getCounterExample()" uib-popover-template="fetchRuleHelp('findCounterexample')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span>Counterexample</span>
+                                    </a>
+                                </li>
+                                <li><a ng-click="doTactic(undefined, 'pQE')" uib-popover-template="fetchRuleHelp('pQE')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span>Find assumptions</span><code class="pull-right">pQE</code>
+                                    </a>
+                                </li>
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('intervalArithmetic', 'R')"><span>Interval Arithmetic</span><code class="pull-right">intervalArithmetic</code></a></li>
                                 <li><a ng-click="doSearch('intervalCut', 'R')"><span>Cut Intervals</span><code class="pull-right">intervalCut</code></a></li>
