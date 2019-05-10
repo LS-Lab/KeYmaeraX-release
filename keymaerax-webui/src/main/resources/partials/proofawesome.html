@@ -278,10 +278,18 @@
                                   popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                   <span>[]&and;</span><code class="pull-right">boxAnd</code></a></li>
                                 <li><a ng-click="doSearch('GV', 'R')"><span>Abstract</span><code class="pull-right">GV</code></a></li>
-                                <li><a ng-click="openInputTacticDialog('MR', 'R')"><span>Generalize ...</span><code class="pull-right">MR</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('MR', 'R')"
+                                  uib-popover-template="fetchRuleHelp('MR')"
+                                  popover-class="k4-rulemenu-helppopover"
+                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                  <span>Generalize ...</span><code class="pull-right">MR</code></a></li>
                                 <li><a ng-click="doSearch('boxd', 'R')"><span>[·]d</span><code class="pull-right">boxd</code></a></li>
                                 <li role="separator" class="divider"></li>
-                                <li><a ng-click="openInputTacticDialog('discreteGhost', 'R')"><span>Discrete ghost ...</span><code class="pull-right">discreteGhost</code></a></li>
+                                <li><a ng-click="openInputTacticDialog('discreteGhost', 'R')"
+                                  uib-popover-template="fetchRuleHelp('discreteGhost')"
+                                  popover-class="k4-rulemenu-helppopover"
+                                  popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                  <span>Discrete ghost ...</span><code class="pull-right">discreteGhost</code></a></li>
                                 <!-- TODO -->
                                 <!--<li role="separator" class="divider"></li>-->
                                 <!--<li><a ng-click="doSearch('DiamondCompose', 'R')"><span>&lang;;&rang;</span><code class="pull-right">composed</code></a></li>-->
@@ -303,7 +311,7 @@
                                   uib-popover-template="fetchRuleHelp('dW')"
                                   popover-class="k4-rulemenu-helppopover"
                                   popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                  <span>Weaken</span><code class="pull-right">dW</code></a></li>
+                                  <span>Diff. Weaken</span><code class="pull-right">dW</code></a></li>
                                 <li><a ng-click="doSearch('dI', 'R')"
                                        uib-popover-template="fetchRuleHelp('dI')"
                                        popover-class="k4-rulemenu-helppopover"
