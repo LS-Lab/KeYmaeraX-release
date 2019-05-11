@@ -110,6 +110,10 @@
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                        <span>Cut ...</span><code class="pull-right">cut</code></a></li>
+                                <li><a ng-click="doTactic(undefined, 'id')"                                  uib-popover-template="fetchRuleHelp('id')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>Identity</span><code class="pull-right">id</code></a></li>
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('notR', 'R')"
                                        uib-popover-template="fetchRuleHelp('notR')"
@@ -186,10 +190,6 @@
                                 <li><a ng-click="doSearch('commuteEquivR', 'R')"><span>&#8596;CR</span><code>commuteEquivR</code></a></li>
                                 <li><a ng-click="doSearch('commuteEquivL', 'L')"><span>&#8596;CL</span><code>commuteEquivL</code></a></li>
                                 <li role="separator" class="divider"></li>
-                                <li><a ng-click="doTactic(undefined, 'id')"                                  uib-popover-template="fetchRuleHelp('id')"
-                                       popover-class="k4-rulemenu-helppopover"
-                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                    <span>Identity</span><code class="pull-right">id</code></a></li>
                                 <li><a ng-click="doTactic(undefined, 'closeTrue')"
                                        uib-popover-template="fetchRuleHelp('closeTrue')"
                                        popover-class="k4-rulemenu-helppopover"
@@ -204,7 +204,7 @@
                         </li>
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
-                               aria-haspopup="true" aria-expanded="false" disabledtooltip="First-order Logic">Quantifiers <span class="caret"></span></a>
+                               aria-haspopup="true" aria-expanded="false" disabledtooltip="First-order Logic">Quantifier <span class="caret"></span></a>
                             <ul class="dropdown-menu">
                                 <li><a ng-click="doSearch('allR', 'R')"
                                   uib-popover-template="fetchRuleHelp('allR')"
@@ -215,12 +215,12 @@
                                   uib-popover-template="fetchRuleHelp('allL')"
                                   popover-class="k4-rulemenu-helppopover"
                                   popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                  <span>&forall;L...</span><code class="pull-right">allL</code></a></li>
+                                  <span>&forall;L ...</span><code class="pull-right">allL</code></a></li>
                                 <li><a ng-click="openInputTacticDialog('existsR', 'R')"
                                   uib-popover-template="fetchRuleHelp('existsR')"
                                   popover-class="k4-rulemenu-helppopover"
                                   popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
-                                  <span>&exist;R...</span><code class="pull-right">existsR</code></a></li>
+                                  <span>&exist;R ...</span><code class="pull-right">existsR</code></a></li>
                                 <li><a ng-click="doSearch('existsL', 'R')"
                                   uib-popover-template="fetchRuleHelp('existsL')"
                                   popover-class="k4-rulemenu-helppopover"
@@ -237,7 +237,7 @@
                         </li>
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
-                               aria-haspopup="true" aria-expanded="false">Hybrid Programs <span class="caret"></span></a>
+                               aria-haspopup="true" aria-expanded="false">Hybrid Program <span class="caret"></span></a>
                             <ul class="dropdown-menu">
                                 <li><a ng-click="doSearch('chase', 'R')"
                                   uib-popover-template="fetchRuleHelp('chase')"
@@ -264,7 +264,6 @@
                                     <span>[?]</span><code class="pull-right">testb</code>
                                     </a>
                                 </li>
-                                <li role="separator" class="divider"></li>
                                 <li><a ng-click="doSearch('choiceb', 'R')"
                                        uib-popover-template="fetchRuleHelp('choiceb')"
                                        popover-class="k4-rulemenu-helppopover"
@@ -277,6 +276,13 @@
                                        popover-class="k4-rulemenu-helppopover"
                                        popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
                                     <span>[;]</span><code class="pull-right">composeb</code>
+                                    </a>
+                                </li>
+                                <li><a ng-click="doSearch('iterateb', 'R')"
+                                       uib-popover-template="fetchRuleHelp('iterateb')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                    <span>[*]</span><code class="pull-right">iterateb</code>
                                     </a>
                                 </li>
                                 <li><a ng-click="openInputTacticDialog('loop', 'R')"
@@ -313,7 +319,7 @@
                         </li>
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" role="button"
-                               aria-haspopup="true" aria-expanded="false">Differential Equations <span class="caret"></span></a>
+                               aria-haspopup="true" aria-expanded="false">ODE <span class="caret"></span></a>
                             <ul class="dropdown-menu">
                                 <li><a ng-click="doSearch('solve', 'R')"
                                        uib-popover-template="fetchRuleHelp('solve')"
