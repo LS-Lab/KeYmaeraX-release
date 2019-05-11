@@ -78,4 +78,10 @@ private object MathematicaSymbols {
   def CHECK = new MExpr(Expr.SYMBOL, "Check")
   def EXCEPTION = new MExpr(Expr.SYMBOL, "$Exception")
   def ABORTED = new MExpr(Expr.SYMBOL, "$Aborted")
+  
+  // diagnostics
+  
+  def VERSIONNUMBER = "$VersionNumber"
+  def RELEASENUMBER = "$ReleaseNumber"
+  def LICENSEEXPIRATIONDATE = "$LicenseExpirationDate"
 }

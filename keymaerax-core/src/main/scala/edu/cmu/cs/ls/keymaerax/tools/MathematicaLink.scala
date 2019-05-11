@@ -367,7 +367,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
 
   /** Returns the version. */
   private def getVersion: Version = {
-    ml.evaluate("$VersionNumber")
+    ml.evaluate(MathematicaSymbols.VERSIONNUMBER)
     ml.waitForAnswer()
     val (major, minor) = importResult(
       ml.getExpr,
@@ -377,7 +377,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
         if (versionParts.length >= 2) (versionParts(0), versionParts(1))
         else ("Unknown", "Unknown")
       })
-    ml.evaluate("$ReleaseNumber")
+    ml.evaluate(MathematicaSymbols.RELEASENUMBER)
     ml.waitForAnswer()
     val release = importResult(ml.getExpr, _.toString)
     Version(major, minor, release)
@@ -416,7 +416,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
         case e: ExprFormatException => logger.warn("WARNING: Unable to determine Mathematica expiration date\n cause: " + e, e); None
       }
 
-      ml.evaluate("$LicenseExpirationDate")
+      ml.evaluate(MathematicaSymbols.LICENSEEXPIRATIONDATE)
       ml.waitForAnswer()
       importResult(ml.getExpr, licenseExpiredConverter)
     } finally {
