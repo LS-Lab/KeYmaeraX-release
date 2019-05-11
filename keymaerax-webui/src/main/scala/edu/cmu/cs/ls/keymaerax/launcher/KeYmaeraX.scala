@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.launcher
 
-import java.io.{FilePermission, PrintWriter}
+import java.io.{FilePermission, FileWriter, PrintWriter}
 import java.lang.reflect.ReflectPermission
 import java.security.Permission
 import java.util.concurrent.TimeUnit
@@ -70,7 +70,7 @@ object KeYmaeraX {
       |  -prove file.kyx [-out file.kyp] [-timeout seconds] |
       |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar]
       |     [-sandbox] [-fallback prg] |
-      |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c] |
+      |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c] [-quantitative ctrl|model|plant] |
       |  -ui [web server options] |
       |  -striphints file.kyx -out fileout.kyx
       |
@@ -129,10 +129,15 @@ object KeYmaeraX {
         //@note this should be a bad state but apparently it happens.
         launchUI(args)
       }
-      else if (options.get('mode).contains("codegen"))
-      //@note no MathKernel initialization needed for C generation
+      else if (options.get('mode).contains("codegen")) {
+        //@note Mathematica needed for quantitative ModelPlex
+        if (options.get('quantitative).isDefined) {
+          initializeProver(
+            if (options.contains('tool)) options
+            else options ++ configFromFile("mathematica"))
+        }
         codegen(options)
-      else if (options.get('mode).contains("coasterx")) {
+      } else if (options.get('mode).contains("coasterx")) {
         CoasterXMain.main(options)
         shutdownProver()
       }
@@ -242,8 +247,9 @@ object KeYmaeraX {
         else optionErrorReporter("-modelPlex")
       case "-isar" :: tail => nextOption(map ++ Map('isar -> true), tail)
       case "-codegen" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
+        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "codegen", 'in -> value), tail)
         else optionErrorReporter("-codegen")
+      case "-quantitative" :: value :: tail => nextOption(map ++ Map('quantitative -> value), tail)
       case "-coasterx" :: tail =>
         nextCoasterOption(map ++ Map('mode -> "coasterx"), tail)
       case "-repl" :: model :: tactic_and_scala_and_tail =>
@@ -841,17 +847,42 @@ object KeYmaeraX {
    * Code generation
    * {{{CGenerator()(input)}}}
    */
-  def codegen(options: OptionMap) = {
+  def codegen(options: OptionMap): Unit = {
     require(options.contains('in), usage)
 
-    val inputFileNameDotMx = options('in).toString
-    assert(inputFileNameDotMx.endsWith(".kym"),
-      "\n[Error] Wrong file name " + inputFileNameDotMx + " used for -codegen! Code generator only handles .kym file. Please use: -codegen FILENAME.kym")
-    val input = scala.io.Source.fromFile(inputFileNameDotMx).mkString
-    val inputFormula = KeYmaeraXParser(input)
-    val inputFileName = inputFileNameDotMx.dropRight(3)
+    val inputFileName = options('in).toString
+    val inputFile =
+      if (inputFileName.contains("#")) File(inputFileName.substring(0, inputFileName.lastIndexOf("#")))
+      else File(inputFileName)
 
-    if (options.getOrElse('interval, true).asInstanceOf[Boolean]) {
+    val inputFormulas = KeYmaeraXArchiveParser.parseFromFile(inputFileName)
+    var outputFile = inputFile.changeExtension("c")
+    if (options.contains('out)) outputFile = File(options('out).toString)
+
+    val vars: Option[Set[BaseVariable]] =
+      if (options.contains('vars)) Some(options('vars).asInstanceOf[Array[BaseVariable]].toSet)
+      else None
+
+    val interval = options.getOrElse('interval, true).asInstanceOf[Boolean]
+    val head = stampHead(options)
+    val quantitative = options.get('quantitative)
+    val written = inputFormulas.map(e => {
+      val outputFileName =
+        if (inputFormulas.size <= 1) outputFile.toString()
+        else {
+          val ext = outputFile.extension
+          outputFile.addExtension(e.name.replaceAll("\\s", "_")).addExtension(ext).toString()
+        }
+      if (quantitative.isDefined) codegenQuantitative(e, outputFileName, head, vars, quantitative.get.toString)
+      else codegen(e, interval, outputFileName, head, vars)
+      outputFileName
+    })
+    println("Generated\n  " + written.mkString("\n  "))
+  }
+
+  def codegen(entry: ParsedArchiveEntry, interval: Boolean, outputFileName: String, head: String,
+              vars: Option[Set[BaseVariable]]): Unit = {
+    if (interval) {
       //@todo check that when assuming the output formula as an additional untrusted lemma, the Provable isProved.
       System.err.println("Cannot yet augment compiled code with interval arithmetic to guard against floating-point roundoff errors\n(use -nointerval instead)")
 
@@ -865,25 +896,82 @@ object KeYmaeraX {
       println("Interval arithmetic: Skipped interval arithmetic generation\n(use -interval to guard against floating-point roundoff errors)")
     }
 
-    //@note codegen in C format only
-    var outputFileName = inputFileName
-    if(options.contains('out)) {
-      val outputFileNameDotC = options('out).toString
-      assert(outputFileNameDotC.endsWith(".c"),
-        "\n[Error] Wrong file name " + outputFileNameDotC + " used for -out! C generator only generates .c file. Please use： -out FILENAME.c")
-      outputFileName = outputFileNameDotC.dropRight(2)
+    val inputFormula = entry.model.asInstanceOf[Formula]
+
+    //@note codegen in C format only regardless of file extension
+    val theVars = vars match {
+      case Some(v) => v
+      case None => StaticSemantics.vars(inputFormula).symbols.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
     }
-    val vars: Set[BaseVariable] =
-      if (options.contains('vars)) options('vars).asInstanceOf[Array[BaseVariable]].toSet
-      else StaticSemantics.vars(inputFormula).symbols.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
+
     val codegenStart = Platform.currentTime
     //@todo input variables (nondeterministically assigned in original program)
-    val output = (new CGenerator(new CMonitorGenerator()))(inputFormula, vars, Set(), outputFileName)
+    val output = (new CGenerator(new CMonitorGenerator()))(inputFormula, theVars, Set(), outputFileName)
     Console.println("[codegen time " + (Platform.currentTime - codegenStart) + "ms]")
-    val pw = new PrintWriter(outputFileName + ".c")
-    pw.write(stampHead(options))
+    val pw = new PrintWriter(outputFileName)
+    pw.write(head)
     pw.write("/* @evidence: print of CGenerator of input */\n\n")
     pw.write(output._1 + "\n" + output._2)
+    pw.close()
+  }
+
+  def codegenQuantitative(entry: ParsedArchiveEntry, outputFileName: String, head: String,
+                          vars: Option[Set[BaseVariable]], kind: String): Unit = {
+    import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
+    val (monitorFml: Formula, monitorStateVars: Set[BaseVariable]) =
+      if (entry.model.asInstanceOf[Formula].isFOL) {
+        val stateVars = vars match {
+          case Some(v) => v
+          case None => StaticSemantics.vars(entry.model).symbols.filter(_.isInstanceOf[BaseVariable]).map(_.asInstanceOf[BaseVariable])
+        }
+        (entry.model.asInstanceOf[Formula], stateVars)
+      } else {
+        val model@Imply(_, Box(Loop(Compose(prg, _)), _)) = entry.model
+
+        val nonlinearModelApprox = ModelPlex.createNonlinearModelApprox(entry.name, entry.tactics.head._3)(model)
+        val Imply(init, Box(Loop(Compose(
+          ctrl,
+          plant@Compose(x0Ghosts, Compose(Test(x0EvolDomain), Compose(nondetPlant, Test(evolDomain)))))), safe)) = nonlinearModelApprox._1
+
+        val monitorStateVars = vars match {
+          case Some(v) => v.toSeq
+          case None => kind match {
+            case "model" => StaticSemantics.boundVars(nonlinearModelApprox._1).symbols.toSeq
+            case "ctrl" => StaticSemantics.boundVars(ctrl).symbols.toSeq
+            case "plant" => StaticSemantics.boundVars(plant).symbols.toSeq
+          }
+        }
+
+        val (monitorInput, assumptions) = kind match {
+          case "model" => ModelPlex.createMonitorSpecificationConjecture(nonlinearModelApprox._1, monitorStateVars: _*)
+          case "ctrl" => ModelPlex.createMonitorSpecificationConjecture(Imply(init, Box(Loop(ctrl), safe)), monitorStateVars: _*)
+          case "plant" => ModelPlex.createMonitorSpecificationConjecture(Imply(init, Box(Loop(plant), safe)), monitorStateVars: _*)
+        }
+
+        val simplifier = SimplifierV3.simpTac(taxs = SimplifierV3.composeIndex(
+          SimplifierV3.groundEqualityIndex, SimplifierV3.defaultTaxs))
+        val monitorTactic = DebuggingTactics.print("Deriving Monitor") &
+          ModelPlex.controllerMonitorByChase(1) &
+          DebuggingTactics.print("Chased") &
+          SaturateTactic(ModelPlex.optimizationOneWithSearch(ToolProvider.simplifierTool(), assumptions)(1)) &
+          DebuggingTactics.print("Quantifiers instantiated") &
+          simplifier(1) & DebuggingTactics.print("Monitor Result")
+
+        val monitorResult = TactixLibrary.proveBy(monitorInput, monitorTactic)
+        val monitorFml = monitorResult.subgoals.head.succ.head
+        (monitorFml, monitorStateVars.toSet)
+      }
+
+    val reassociatedMonitorFml = FormulaTools.reassociate(monitorFml)
+    //proveBy(Equiv(modelMonitorFml, reassociatedCtrlMonitorFml), TactixLibrary.prop)
+    val monitorProg = TactixLibrary.proveBy(reassociatedMonitorFml, ModelPlex.chaseToTests(combineTests=false)(1)*2).subgoals.head.succ.head
+    val inputs = CGenerator.getInputs(monitorProg)
+    val monitorCode = (new CGenerator(new CMonitorGenerator()))(monitorProg, monitorStateVars, inputs, "Monitor")
+
+    val pw = new PrintWriter(outputFileName)
+    pw.write(head)
+    pw.write("/* @evidence: print of CGenerator of input */\n\n")
+    pw.write(monitorCode._1 + "\n" + monitorCode._2)
     pw.close()
   }
 
