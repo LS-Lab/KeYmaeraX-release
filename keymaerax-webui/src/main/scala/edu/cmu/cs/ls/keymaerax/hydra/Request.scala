@@ -1265,8 +1265,9 @@ class GetAgendaAwesomeRequest(db: DBAbstraction, userId: String, proofId: String
       }
     }
 
+    // Goals in web UI
     val agendaItems: List[AgendaItem] = leaves.map(n =>
-      AgendaItem(n.id.toString, "Goal: " + agendaItemName(n.makerShortName.getOrElse("").split("\\(").head), proofId))
+      AgendaItem(n.id.toString, "Conjecture: " + agendaItemName(n.makerShortName.getOrElse("").split("\\(").head), proofId))
     AgendaAwesomeResponse(tree.info.modelId.get.toString, proofId, tree.root, leaves, agendaItems, closed) :: Nil
   }
 }
