@@ -586,6 +586,12 @@ object IntervalArithmeticV2 {
 
   private def proveCompBoth(qeTool: QETool, leBoth: ProvableSig, provable: ProvableSig, bound1: ProvableSig, bound2: ProvableSig) = {
     val le_prv = ProvableSig.proveArithmetic(qeTool, leBoth.conclusion.ante(0).asInstanceOf[And].right.asInstanceOf[Equiv].left).fact
+    le_prv.conclusion.succ(0) match {
+      case Equiv(a, True) =>
+      case _ =>
+        throw new BelleThrowable ("Interval Arithmetic unable to conclude from numerical bounds: " + le_prv +
+          "\nFrom: " + bound1.conclusion + "\n" + bound2.conclusion)
+    }
     CutHide(leBoth.conclusion.ante(0))(provable).
       apply(AndRight(SuccPos(0)), 1).
       apply(CoHideRight(SuccPos(0)), 2).
