@@ -391,9 +391,20 @@
                                     </a>
                                 </li>
                                 <li role="separator" class="divider"></li>
-                                <li><a ng-click="doSearch('intervalArithmetic', 'R')"><span>Interval Arithmetic</span><code class="pull-right">intervalArithmetic</code></a></li>
-                                <li><a ng-click="doSearch('intervalCut', 'R')"><span>Cut Intervals</span><code class="pull-right">intervalCut</code></a></li>
-                                <li><a ng-click="openInputTacticDialog('intervalCutTerms', undefined)"><span>Cut Intervals on Term...</span><code class="pull-right">intervalCutTerms</code></a></li>
+                                <li><a ng-click="doSearch('intervalArithmetic', 'R')"
+                                       uib-popover-template="fetchRuleHelp('intervalArithmetic')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span>Interval Arithmetic</span><code class="pull-right">intervalArithmetic</code>
+                                    </a>
+                                </li>
+                                <li><a ng-click="openInputTacticDialog('intervalCutTerms', undefined)"
+                                       uib-popover-template="fetchRuleHelp('intervalCutTerms')"
+                                       popover-class="k4-rulemenu-helppopover"
+                                       popover-trigger="'mouseenter'" popover-placement="auto right-top" popover-popup-delay="1000">
+                                        <span>Cut Interval Bounds...</span><code class="pull-right">intervalCutTerms</code>
+                                    </a>
+                                </li>
                                 <li role="separator" class="divider"></li>
                                 <li><a ng-click="simulate()">Simulate</a></li>
                                 <li><a ng-click="exportSubgoal()">Export Subgoal</a></li>
