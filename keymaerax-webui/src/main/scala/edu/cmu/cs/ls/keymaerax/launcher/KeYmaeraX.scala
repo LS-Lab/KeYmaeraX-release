@@ -70,7 +70,8 @@ object KeYmaeraX {
       |  -prove file.kyx [-out file.kyp] [-timeout seconds] |
       |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar]
       |     [-sandbox] [-fallback prg] |
-      |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c] [-quantitative ctrl|model|plant] |
+      |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c]
+      |     [-quantitative ctrl|model|plant] |
       |  -ui [web server options] |
       |  -striphints file.kyx -out fileout.kyx
       |
