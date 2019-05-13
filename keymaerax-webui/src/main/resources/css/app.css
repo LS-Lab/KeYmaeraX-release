@@ -272,6 +272,13 @@ del {
 
 .container {
   width: auto; /* full-width proofs */
+  padding-right: 5px;
+  padding-left: 5px;
+}
+
+.container-fluid {
+  padding-right: 5px;
+  padding-left: 5px;
 }
 
 .popover {
