@@ -704,6 +704,14 @@ del {
    width: 180px;
 }
 
+.modal-header {
+  padding: 5px 15px 5px 15px;
+}
+
+.modal-footer {
+  padding: 5px;
+}
+
 /* Full-screen (full width, but at most available screen height) */
 .modal-fullscreen {
   width: 98%;
