@@ -90,8 +90,18 @@ output {
   font-size: 130%;
 }
 
+.navbar {
+  min-height: 30px;
+}
+
 .navbar-brand {
   font-size: 130%;
+  height: 30px;
+  padding: 5px 5px 5px 15px;
+}
+
+.navbar-nav > li > a {
+  padding: 5px 15px 5px 5px;
 }
 
 .k4-tactics-navbar {
