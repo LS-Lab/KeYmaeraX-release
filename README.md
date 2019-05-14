@@ -1,15 +1,5 @@
 KeYmaera X
 ==========
-Branch: usubstone for one-pass uniform substitution experiment
-
-New one-pass uniform substitution algorithm: 
-edu.cmu.cs.ls.keymaerax.core.USubstOne
-
-Experiments:
-sbt "testOnly edu.cmu.cs.ls.keymaerax.core.USubstPerformanceTests"
-
-
-==========
 
 Self-driving cars, autonomous robots, modern airplanes, or robotic surgery: we increasingly entrust our lives to computers and therefore should strive for nothing but the highest safety standards - mathematical correctness proof. Proofs for such cyber-physical systems can be constructed with the KeYmaera X prover. As a hybrid systems theorem prover, KeYmaera X analyzes the control program and the physical behavior of the controlled system together in differential dynamic logic.
 
@@ -104,7 +94,7 @@ In Mauricio Ayala-Rincón and César Muñoz, editors, Interactive Theorem Provin
 
 5. André Platzer.
 [Logical Foundations of Cyber-Physical Systems](http://lfcps.org/lfcps/).
-Springer, 2018.
+Springer, Cham, 2018.
 
 The soundness assurances provided by a small LCF-style kernel are further strengthened by a cross-verification of the soundness theorem for the uniform substitution calculus in [Isabelle/HOL](https://github.com/LS-Lab/Isabelle-dL) and [Coq](https://github.com/LS-Lab/Coq-dL).
 
