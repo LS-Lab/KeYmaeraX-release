@@ -19,25 +19,25 @@ The easiest way to run KeYmaera X is to download binaries
 
 First ensure that the following software is installed
 - [Java Development Kit JDK](https://java.com/download)
-  (version 1.8 recommended, versions 1.9-1.10 work, as well. Mathematica 9.0 is only compatible with Java 1.6 and 1.7. Mathematica 10.0+ are also compatible with Java 1.8)
+  (version 1.8 recommended, versions 1.9-1.10 work as well but are not recommended. Mathematica 9.0 is only compatible with Java 1.6 and 1.7. Mathematica 10.0+ is also compatible with Java 1.8)
 - [Wolfram Mathematica](https://www.wolfram.com/mathematica/)
-  (version 10+ recommended. Other versions may work.
+  (version 10+ recommended. Previous versions may work.
   The Mathematica J/Link library that comes with Mathematica is needed during compilation. Mathematica needs to be activated to use it also at runtime.
   Otherwise the [Z3 Solver](https://github.com/Z3Prover/z3) is automatically used for real arithmetic.)
 
 #### FAQ: Run Problems
+
+If running `java -jar keymaerax.jar` results in the error `java.lang.module.FindException: Module java.xml.bind not found` then downgrade JDK to version 1.8 till 1.10, because JDK 1.11 is not yet supported.
 
 If running `java -jar keymaerax.jar` results in the error `Invalid or corrupt jarfile` then update to Java 1.8 and to Mathematica 10+.
 If you need to use an earlier version of Java or Mathematica, you can also run KeYmaera X via
 
     java -Xss20M -cp keymaerax.jar KeYmaeraX
 
-If running `java -jar keymaerax.jar` results in the error `java.lang.module.FindException: Module java.xml.bind not found` then downgrade JDK to version 1.8 till 1.10, because 1.11 is not yet supported.
-
 If KeYmaera X acts weird after an update, clean your local cache of lemmas by removing (or renaming) the directory `~/.keymaerax/cache`.
 You could also try renaming the model and proof database `~/.keymaerax/keymaerax.sqlite` (if this file has become corrupt, it may prevent KeYmaera X from working properly).
 
-Errors related to `com.wolfram.jlink` or `JLinkNativeLibrary` are caused by incompatibilities of Java 1.8 in combination with Mathematica 9. It is recommended to use Mathematica 10. Or they may be caused by some operating system configuration issues.
+Errors related to `com.wolfram.jlink` or `JLinkNativeLibrary` are caused by incompatibilities of Java 1.8 in combination with Mathematica 9. It is recommended to use Mathematica 10+. Or they may be caused by operating system configuration issues.
 
 #### Configuration
 KeYmaera X requires a decision procedure for real arithmetic to finalize proofs. It is tested best with Mathematica.
@@ -68,6 +68,7 @@ In a nutshell, install the right software and run:
 
     sbt clean assembly
 
+For developers, significantly faster incremental compilation comes with using an IDE instead.
 
 Publications
 ============
