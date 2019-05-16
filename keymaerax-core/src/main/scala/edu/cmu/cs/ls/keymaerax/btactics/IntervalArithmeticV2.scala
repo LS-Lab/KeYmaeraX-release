@@ -231,24 +231,7 @@ object IntervalArithmeticV2 {
       "Maybe try Propositional->Exhaustive (prop) first?"
     if (lowers.isDefinedAt(t) && uppers.isDefinedAt(t)) (lowers, uppers)
     else t match {
-      case v if PolynomialArith.isVar(v) =>
-        val idx = assms.indexWhere(fml => fml match { case LessEqual(_, w) => v == w })
-        val newlowers = if (idx >= 0) {
-          val seq = Sequent(assms, IndexedSeq(assms(idx)))
-          val prv = ProvableSig.startProof(seq).apply(Close(AntePos(idx), SuccPos(0)), 0)
-          lowers.updated(t, prv)
-        } else {
-          throw new BelleThrowable (unknown_bound(v))
-        }
-        val IDX = assms.indexWhere(fml => fml match { case LessEqual(w, _) => v == w })
-        val newuppers = if (IDX >= 0) {
-          val seq = Sequent(assms, IndexedSeq(assms(IDX)))
-          val prv = ProvableSig.startProof(seq).apply(Close(AntePos(IDX), SuccPos(0)), 0)
-          uppers.updated(t, prv)
-        } else {
-          throw new BelleThrowable(unknown_bound(v))
-        }
-        (newlowers, newuppers)
+      case v if PolynomialArith.isVar(v) => throw new BelleThrowable (unknown_bound(v))
       case n: Number =>
         val refl = (ProvableSig.startProof(Sequent(assms, IndexedSeq(LessEqual(n, n))))).
           apply(CoHideRight(SuccPos(0)), 0).
@@ -564,9 +547,9 @@ object IntervalArithmeticV2 {
     * @param qeTool        Tool for QE, it will only be called on formulas without variables and without quantifiers
     * @param assms         list of constraints on variables
     * @param include_assms if assms need to be added to lowers/uppers (False if re-using precomputed bounds)
-    * @param lowers        precomputed bounds (can be used for cacheing results)
-    * @param uppers        dito
-    * @param t             terms whose subexpressions shall be bounded
+    * @param lowers0       precomputed bounds (can be used for cacheing results)
+    * @param uppers0       dito
+    * @param terms         terms whose subexpressions shall be bounded
     * @return bounds on all subexpressions
     *
     * */
