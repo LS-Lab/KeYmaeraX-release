@@ -63,12 +63,10 @@ Windows, 64bit, Mathematica 10.4+
 
 Building
 ========
-To compile KeYmaera X from source code, see [Building Instructions](https://github.com/LS-Lab/KeYmaeraX-release/wiki/Building-Instructions).
-In a nutshell, install the right software and run:
+To compile KeYmaera X from source code and learn about faster incremental compilation in IDEs, see [Building Instructions](https://github.com/LS-Lab/KeYmaeraX-release/wiki/Building-Instructions).
+In a nutshell, however, install the right software and run:
 
     sbt clean assembly
-
-For developers, significantly faster incremental compilation comes with using an IDE instead.
 
 Publications
 ============
