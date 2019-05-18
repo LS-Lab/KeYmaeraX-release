@@ -193,7 +193,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     KeYmaeraXParser.setAnnotationListener((p: Program, inv: Formula) =>
       generator.products += (p->(generator.products.getOrElse(p, Nil) :+ (inv, Some(AnnotationProofHint(tryHard=true)))).distinct))
     TactixLibrary.invGenerator = generator
-    TactixLibrary.differentialInvGenerator = InvariantGenerator.differentialInvariantCandidates
+    TactixLibrary.differentialInvGenerator =
+      (sequent,pos) => generator(sequent,pos) #::: InvariantGenerator.differentialInvariantCandidates(sequent,pos)
     ToolProvider.setProvider(new NoneToolProvider())
   }
 

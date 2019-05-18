@@ -153,6 +153,8 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
       generator.products += (p -> (generator.products.getOrElse(p, Nil) :+ (inv, None))))
     val entry = KeYmaeraXArchiveParser.parseProblem(model, parseTactics=false)
     TactixLibrary.invGenerator = generator
+    TactixLibrary.differentialInvGenerator =
+      (sequent,pos) => generator(sequent,pos) #::: InvariantGenerator.differentialInvariantCandidates(sequent,pos)
     KeYmaeraXParser.setAnnotationListener((_: Program, _: Formula) => {}) //@note cleanup for separation between tutorial entries
     (entry.defs, generator)
   }
