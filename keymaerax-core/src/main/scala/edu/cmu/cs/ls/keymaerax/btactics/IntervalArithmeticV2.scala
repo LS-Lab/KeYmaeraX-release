@@ -572,7 +572,7 @@ object IntervalArithmeticV2 {
     le_prv.conclusion.succ(0) match {
       case Equiv(a, True) =>
       case _ =>
-        throw new BelleThrowable ("Interval Arithmetic unable to conclude from numerical bounds: " + le_prv +
+        throw new BelleThrowable ("Interval Arithmetic unable to conclude from numerical bounds: " + le_prv.conclusion.succ(0) +
           "\nFrom: " + bound1.conclusion + "\n" + bound2.conclusion)
     }
     CutHide(leBoth.conclusion.ante(0))(provable).
@@ -585,9 +585,9 @@ object IntervalArithmeticV2 {
       apply(leBoth, 0)
   }
 
-  def intervalArithmeticPlain(precision: Int, qeTool: QETool) = new BuiltInTactic("ANON") {
+  private def intervalArithmeticComparison(precision: Int, qeTool: QETool) = new BuiltInTactic("ANON") {
     override def result(provable: ProvableSig): ProvableSig = {
-      requireOneSubgoal(provable, name)
+      require(provable.subgoals.length == 1)
       val sequent = provable.subgoals(0)
       require(sequent.succ.length == 1)
       sequent.succ(0) match {
@@ -630,15 +630,96 @@ object IntervalArithmeticV2 {
       }
     }
   }
+
+  private lazy val equivIff = proveBy("(p()<->q())<->(p()&q())|(!p()&!q())".asFormula, prop & done)
+  private lazy val equalIff = proveBy("(f()=g())<->f()<=g()&f()>=g()".asFormula, QE & done)
+  private lazy val notEqual = proveBy("(!f()=g())<->f()<g()|f()>g()".asFormula, QE & done)
+
+  private[btactics] def intervalArithmeticPreproc: DependentPositionTactic = "intervalArithmeticPreproc" by { (pos: Position, seq: Sequent) =>
+    def unsupportedError(e: Expression) = throw new BelleThrowable("Interval Arithmetic does not support " + e.getClass.getSimpleName)
+    seq.sub(pos) match {
+      case Some(e: Expression) =>
+        e match {
+          case And(f, g) =>
+            intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
+              intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
+          case Or(f, g) =>
+            intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
+              intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
+          case Imply(f, g) =>
+            useAt("-> expand", PosInExpr(0 :: Nil))(pos) &
+              intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
+              intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
+          case Equiv(f, g) =>
+            useAt(equivIff, PosInExpr(0 :: Nil))(pos) &
+              intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
+              intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
+          case Equal(f, g) =>
+            useAt(equalIff, PosInExpr(0 :: Nil))(pos)
+          case Not(fml) =>
+            fml match {
+              case And(f, g) =>
+                useAt(DerivedAxioms.notAnd, PosInExpr(0 :: Nil))(pos) &
+                  intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
+                  intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
+              case Or(f, g) =>
+                useAt(DerivedAxioms.notOr, PosInExpr(0 :: Nil))(pos) &
+                  intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
+                  intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
+              case Imply(f, g) =>
+                useAt(DerivedAxioms.notImply, PosInExpr(0 :: Nil))(pos) &
+                  intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
+                  intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
+              case Equiv(f, g) =>
+                useAt(DerivedAxioms.notEquiv, PosInExpr(0 :: Nil))(pos) &
+                  intervalArithmeticPreproc(pos ++ PosInExpr(0 :: Nil)) &
+                  intervalArithmeticPreproc(pos ++ PosInExpr(1 :: Nil))
+              case Not(f) =>
+                useAt(DerivedAxioms.doubleNegationAxiom, PosInExpr(0::Nil))(pos) &
+                  intervalArithmeticPreproc(pos)
+              case Equal(f, g) =>
+                useAt(notEqual, PosInExpr(0 :: Nil))(pos)
+              case Less(a, b) =>
+                useAt(DerivedAxioms.notLess, PosInExpr(0 :: Nil))(pos)
+              case LessEqual(a, b) =>
+                useAt(DerivedAxioms.notLessEqual, PosInExpr(0 :: Nil))(pos)
+              case Greater(a, b) =>
+                useAt(DerivedAxioms.notGreater, PosInExpr(0 :: Nil))(pos)
+              case GreaterEqual(a, b) =>
+                useAt(DerivedAxioms.notGreaterEqual, PosInExpr(0 :: Nil))(pos)
+              case _ => unsupportedError(fml)
+            }
+          case Equal(f, g) => nil
+          case Less(a, b) => nil
+          case LessEqual(a, b) => nil
+          case Greater(a, b) => nil
+          case GreaterEqual(a, b) => nil
+          case e => unsupportedError(e)
+        }
+    }
+  }
+
+  private def intervalArithmeticBool(precision: Int, qeTool: QETool) : DependentTactic = "intervalArithmeticBool" by { (seq: Sequent) =>
+    require(seq.succ.length == 1)
+    seq.succ(0) match {
+      case And(a, b) => andR(1) & Idioms.<(intervalArithmeticBool(precision, qeTool), intervalArithmeticBool(precision, qeTool))
+      case Or(a, b) => orR(1) & ((hideR(2) & intervalArithmeticBool(precision, qeTool)) | (hideR(1) & intervalArithmeticBool(precision, qeTool)))
+      case _: ComparisonFormula => intervalArithmeticComparison(precision, qeTool)
+      case _ => throw new IllegalArgumentException("intervalArithmeticBool requires conjunction, disjunction, or comparison")
+    }
+  }
+
   val intervalArithmetic = "intervalArithmetic" by {
     val qeTool = ToolProvider.qeTool().get
     val precision = 15
-    prop & OnAll(intervalArithmeticPlain(precision, qeTool))
+    SaturateTactic(orRi) &
+      intervalArithmeticPreproc(1) &
+      intervalArithmeticBool(precision, qeTool)
   }
 
   def intervalCutTerms(terms: Seq[Term]) : BuiltInTactic = new BuiltInTactic("ANON") {
     override def result(provable: ProvableSig): ProvableSig = {
-      requireOneSubgoal(provable, name)
+      require(provable.subgoals.length == 1)
       val sequent = provable.subgoals(0)
       val nantes = sequent.ante.length
       val prec = 5

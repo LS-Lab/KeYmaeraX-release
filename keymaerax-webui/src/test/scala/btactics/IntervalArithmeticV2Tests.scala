@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.btactics
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.OnAll
 import edu.cmu.cs.ls.keymaerax.btactics.IntervalArithmeticV2._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
@@ -127,7 +128,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
   }
 
   "intervalArithmetic" should "cooperate with prop" in withMathematica { _ =>
-    proveBy("(0<=a&a<=1&2<=b&b<=5)->(-2 < a*b - a & a*b - a <= 5)".asFormula, intervalArithmetic) shouldBe 'proved
+    proveBy("(0<=a&a<=1&2<=b&b<=5)->(-2 < a*b - a & a*b - a <= 5)".asFormula, prop & OnAll(intervalArithmetic)) shouldBe 'proved
   }
 
   "IA subgoal for low order TM" should "prove #1" in withMathematica { _ =>
@@ -150,16 +151,36 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     val res = proveBy(seq, intervalArithmetic)
     res shouldBe 'proved
   }
-
+  "IA with disjunction" should "prove" in withMathematica { _ =>
+    val seq = "-1 <= x , x <= 1 ==> x+x <= 1, x*x <= 1, x - x <= 1".asSequent
+    val res = proveBy(seq, intervalArithmetic)
+    res shouldBe 'proved
+  }
+  "IA preproc" should "preprocess" in withMathematica { _ =>
+    val res = proveBy(("(x > 0 & (x <= 0 | x < 0 -> x >0 ) <-> (x = 0 | x >= 0)) <->" +
+      "!(x > 0 & (x <= 0 | x < 0 -> x >0 ) <-> (x = 0 | x >= 0))").asFormula,
+          intervalArithmeticPreproc(1))
+    res.subgoals.loneElement.succ.loneElement shouldBe
+      ("((x>0&(x>0&x>=0|x>0))&(x<=0&x>=0|x>=0)|(x<=0|(x<=0|x<0)&x<=0)&(x<0|x>0)&x<0)&" +
+        "((x>0&(x>0&x>=0|x>0))&(x<0|x>0)&x<0|(x<=0|(x<=0|x<0)&x<=0)&(x<=0&x>=0|x>=0))|" +
+        "((x>0&(x>0&x>=0|x>0))&(x<0|x>0)&x<0|(x<=0|(x<=0|x<0)&x<=0)&(x<=0&x>=0|x>=0))&" +
+        "((x>0&(x>0&x>=0|x>0))&(x<=0&x>=0|x>=0)|(x<=0|(x<=0|x<0)&x<=0)&(x<0|x>0)&x<0)").
+        asFormula
+  }
+  it should "prove" in withMathematica { _ =>
+    val seq = "0 <= x, x <= 1, -1 <= y, y <= 2 ==> (x < -1 -> y >= 0)".asSequent
+    val res = proveBy(seq, intervalArithmetic)
+    res shouldBe 'proved
+  }
+  "intervalCut" should "be fast" in withMathematica { _ =>
+    timing("intervalCut")(() => proveBy(seq2, intervalCut(1, 0::Nil) & prop & done))
+    timing("intervalCut (again)")(() => proveBy(seq2, intervalCut(1, 0::Nil) & prop & done))
+    timing("intervalCut (again)")(() => proveBy(seq2, intervalCut(1, 0::Nil) & prop & done))
+  }
   "Slow.intervalArithmetic" should "be slow" in withMathematica { _ =>
     timing("intervalArithmetic")(() => proveBy(seq2, Slow.intervalArithmetic & done))
     timing("intervalArithmetic (again)")(() => proveBy(seq2, Slow.intervalArithmetic & done))
     timing("intervalArithmetic (again)")(() => proveBy(seq2, Slow.intervalArithmetic & done))
   }
 
-  "intervalCut" should "be fast" in withMathematica { _ =>
-    timing("intervalCut")(() => proveBy(seq2, intervalCut(1, 0::Nil) & prop & done))
-    timing("intervalCut (again)")(() => proveBy(seq2, intervalCut(1, 0::Nil) & prop & done))
-    timing("intervalCut (again)")(() => proveBy(seq2, intervalCut(1, 0::Nil) & prop & done))
-  }
 }
