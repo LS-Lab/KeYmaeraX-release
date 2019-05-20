@@ -8,7 +8,8 @@ KeYmaera X features a minimal core of just 1700 lines of code that isolates all 
 More information and precompiled binaries are available at:
   http://keymaeraX.org/
 
-  [Differential dynamic logic grammar](http://keymaerax.org/doc/dL-grammar.md)
+* [Differential dynamic logic grammar](http://keymaerax.org/doc/dL-grammar.md)
+* [Informal KeYmaera X Syntax](https://github.com/LS-Lab/KeYmaeraX-release/wiki/KeYmaera-X-Syntax-and-Informal-Semantics)
 
 Installation
 ============
