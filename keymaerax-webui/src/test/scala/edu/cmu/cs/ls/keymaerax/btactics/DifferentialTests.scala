@@ -915,14 +915,6 @@ class DifferentialTests extends TacticTestBase {
     proveBy("a>=0 & x>=0 & v>=0 -> [{x'=v,v'=a}]v>=0".asFormula, implyR(1) & let(FuncOf(Function("gobananas",None,Unit,Real),Nothing), Variable("a"), dI('full)(1))) shouldBe 'proved
   }
 
-
-  private def mockTactic(expected: Sequent) = new SingleGoalDependentTactic("mock") {
-    override def computeExpr(sequent: Sequent): BelleExpr = {
-      sequent shouldBe expected
-      skip
-    }
-  }
-
   private val dconstifyTests = Table(("Name", "Sequent", "Expected"),
     ("replace a with a() in v'=a",
       "==> [{v'=a}]v=v0()+a*t()",
@@ -942,15 +934,17 @@ class DifferentialTests extends TacticTestBase {
   )
 
   "Differential introduce constants" should "replace a with a()" in {
+    def checkSequentTactic(expected: Sequent) = new SingleGoalDependentTactic("mock") {
+      override def computeExpr(sequent: Sequent): BelleExpr = {
+        sequent shouldBe expected
+        throw BelleUserGeneratedError("Success: sequent as expected, now aborting")
+      }
+    }
+
     forEvery (dconstifyTests) {
-      (name, input, expected) => withClue(name) {
-        try {
-          proveBy(input.asSequent, DifferentialTactics.Dconstify(mockTactic(expected.asSequent))(1))
-        } catch {
-          // proveBy may throw an expected exception sometimes -> filter the expected one
-          case ex: Throwable if ex.getCause != null && ex.getCause.getMessage.contains("Unless proved, uniform substitutions instances cannot introduce free variables") => // expected
-          case ex: Throwable => throw ex
-        }
+      (name, input, expectedResult) => withClue(name) {
+        the [BelleUserGeneratedError] thrownBy proveBy(input.asSequent, DifferentialTactics.Dconstify(
+          checkSequentTactic(expectedResult.asSequent))(1)) should have message "[Bellerophon Runtime] [Bellerophon User-Generated Message] Success: sequent as expected, now aborting"
       }
     }
   }
