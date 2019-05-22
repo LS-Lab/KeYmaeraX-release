@@ -170,7 +170,7 @@ angular.module('keymaerax.services').factory('derivationInfos', ['$http', '$root
           input.value = newValue;
           var d = $q.defer();
           var uri = 'proofs/user/' + userId + '/' + proofId + '/' + nodeId + '/checkInput/' + tactic.id;
-          $http.get(uri, {params: input}).then(function(response) {
+          $http.post(uri, input).then(function(response) {
             if (response.data.success) d.resolve();
             else d.resolve("Warning: tactic may fail, because " + response.data.errorText);
           })

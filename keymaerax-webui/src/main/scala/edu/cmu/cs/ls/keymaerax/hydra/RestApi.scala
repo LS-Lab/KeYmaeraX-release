@@ -578,9 +578,11 @@ object RestApi extends Logging {
     }}
 
     val checkInput: SessionToken=>Route = (t: SessionToken) => path("proofs" / "user" / Segment / Segment / Segment / "checkInput" / Segment) { (userId, proofId, nodeId, tacticId) => { pathEnd {
-      get {
-        parameters('param, 'type, 'value) { (pName, pType, pValue) =>
-          completeRequest(new CheckTacticInputRequest(database, userId, proofId, nodeId, tacticId, pName, pType, pValue), t)
+      post {
+        entity(as[String]) { params =>
+          val (pName: JsString) :: (pType: JsString) :: (pValue: JsString) :: Nil =
+            JsonParser(params).asJsObject.getFields("param", "type", "value").toList
+          completeRequest(new CheckTacticInputRequest(database, userId, proofId, nodeId, tacticId, pName.value, pType.value, pValue.value), t)
         }
       }
     }}}
@@ -647,10 +649,9 @@ object RestApi extends Logging {
           val inputs =
             paramArray.elements.map({ elem =>
               val obj = elem.asJsObject()
-              val paramName = obj.getFields("param").head.asInstanceOf[JsString].value
-              val paramValue = obj.getFields("value").head.asInstanceOf[JsString].value
-              val paramInfo = expectedInputs.find(_.name == paramName)
-              BelleTermInput(paramValue, paramInfo)
+              val (paramName: JsString) :: (paramValue: JsString) :: Nil = obj.getFields("param", "value").toList
+              val paramInfo = expectedInputs.find(_.name == paramName.value)
+              BelleTermInput(paramValue.value, paramInfo)
             })
           val request = new RunBelleTermRequest(database, userId, proofId, nodeId, tacticId, None, None, inputs.toList, consultAxiomInfo=true, stepwise=stepwise)
           completeRequest(request, t)
