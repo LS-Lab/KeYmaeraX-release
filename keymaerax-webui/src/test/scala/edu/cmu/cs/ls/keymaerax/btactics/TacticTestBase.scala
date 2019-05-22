@@ -14,10 +14,11 @@ import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXArchiveParser, KeYmaeraXParser, KeYmaeraXPrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
+import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion.{KExpr, MExpr}
 import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalactic.{AbstractStringUniformity, Uniformity}
 import org.scalatest._
-import org.scalatest.concurrent.{Interruptor, Signaler, TimeLimitedTests, TimeLimits}
+import org.scalatest.concurrent.{Signaler, TimeLimitedTests, TimeLimits}
 import org.scalatest.time._
 
 import scala.collection.immutable._
@@ -25,7 +26,8 @@ import scala.collection.immutable._
 /**
  * Base class for tactic tests.
  */
-class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll with AppendedClues with TimeLimitedTests with TimeLimits {
+class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll
+    with AppendedClues with TimeLimitedTests with TimeLimits with PrivateMethodTester {
   override def timeLimit: Span = {
     val simpleNames = this.getClass.getAnnotations.map(_.annotationType().getSimpleName)
     if (simpleNames.contains("ExtremeTest")) {
@@ -160,6 +162,24 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
     val tool = provider.tool()
     implicit val signaler: Signaler = { _: Thread => tool.cancel() }
     failAfter(timeLimit) {
+      testcode(tool)
+    }
+  }
+
+  /** Creates and initializes Mathematica; checks that a Matlab bridge is configured. @see[[withMathematica]]. */
+  def withMathematicaMatlab(testcode: Mathematica => Any) {
+    withMathematica { tool =>
+      val getLink = PrivateMethod[JLinkMathematicaLink]('link)
+      val link = tool invokePrivate getLink()
+      link.runUnchecked("""Needs["MATLink`"]""", new M2KConverter[KExpr]() {
+        override def k2m: K2MConverter[KExpr] = throw new Exception("Unexpected call to k2m")
+        override def apply(e: MExpr): KExpr = {
+          e shouldBe 'symbolQ
+          e.asString() should not equal "$Failed"
+          True
+        }
+        override def convert(e: MExpr): KExpr = throw new Exception("Unexpected call to convert")
+      })
       testcode(tool)
     }
   }

@@ -38,13 +38,20 @@ class ContinuousInvariantTests extends TacticTestBase {
       ("x>1".asFormula, Some(AnnotationProofHint(tryHard = true))) :: ("x>2".asFormula, Some(AnnotationProofHint(tryHard = true))) :: Nil)
   }
 
-  "Continuous invariant generation" should "generate a simple invariant" in withMathematica { _ =>
+  "Continuous invariant generation" should "generate a simple invariant" in withMathematicaMatlab { _ =>
     val problem = "x>-1 & -2*x > 1 & -2*y > 1 & y>=-1 ==> [{x'=y,y'=x^5 - x*y}] x+y<=1".asSequent
+    proveBy(problem, ODE(1)) shouldBe 'proved
 
-    InvariantGenerator.differentialInvariantCandidates(problem, SuccPos(0)) should contain theSameElementsInOrderAs(
+    val (simpleInvariants, pegasusInvariants) = InvariantGenerator.differentialInvariantCandidates(problem, SuccPos(0)).splitAt(4)
+    simpleInvariants should contain theSameElementsAs(
       ("x>-1".asFormula, None) :: ("-2*x>1".asFormula, None) :: ("-2*y>1".asFormula, None) ::
-        ("y>=-1".asFormula, None) :: ("x^5<=(x+4*x^3)*y".asFormula, Some(PegasusProofHint(isInvariant = true, None))) ::
-        ("y<=0".asFormula, Some(PegasusProofHint(isInvariant = true, None))) :: Nil)
+        ("y>=-1".asFormula, None) :: Nil)
+    // pegasus result may vary depending on its internal configuration - check only basic properties
+    // (last element is a candidate composed of all other candidates)
+    pegasusInvariants should have size 3
+    val invariants = pegasusInvariants.take(pegasusInvariants.size-1)
+    val candidate = pegasusInvariants.last
+    candidate shouldBe invariants.map(_._1).reduce(And) -> Some(PegasusProofHint(isInvariant=false, None))
   }
 
   it should "generate invariants for nonlinear benchmarks with Pegasus" taggedAs SlowTest in withMathematica { _ =>
