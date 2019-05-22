@@ -391,8 +391,6 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
         logger.debug("Mathematica license expires: " + date.mkString)
         if (date.length >= 3 && date(0).integerQ() && date(1).integerQ() && date(2).integerQ()) {
           Some(LocalDate.of(date(0).asInt(), date(1).asInt(), date(2).asInt()))
-        } else if (date.length >= 1 && date(0) == infinity) {
-          Some(LocalDate.MAX)
         } else {
           None
         }
@@ -402,9 +400,14 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
         date.map(d => d.isAfter(LocalDate.now()) -> d)
       }
 
+      def checkInfinity(date: MExpr): Boolean = {
+        date == infinity || date.head == infinity || date.args().exists(checkInfinity)
+      }
+
       def licenseExpiredConverter(licenseExpirationDate: MExpr): Option[(Boolean, LocalDate)] = try {
         version match {
-          case Version("9", _, _) => checkExpired(toDate(licenseExpirationDate.args))
+          case _ if checkInfinity(licenseExpirationDate) => Some(true, LocalDate.MAX)
+          case Version("9", _, _)  => checkExpired(toDate(licenseExpirationDate.args))
           case Version("10", _, _) => checkExpired(toDate(licenseExpirationDate.args.head.args))
           case Version("11", _, _) => checkExpired(toDate(licenseExpirationDate.args.head.args))
           case Version(major, minor, _) =>
