@@ -185,20 +185,20 @@ private object PropositionalTactics extends Logging {
     *   \forall x. p(x) <-> q(z), p(x) |-
     * }}}
     */
-    val equivRewriting = "equivRewriting" byTactic ((p: ProvableSig, equivPos: Position, targetPos: Position) => {
+    val equivRewriting: DependentTwoPositionTactic = "equivRewriting" byTactic ((p: ProvableSig, equivPos: Position, targetPos: Position) => {
       assert(p.subgoals.length == 1, "Assuming one subgoal.")
       val target = p.subgoals(0)(targetPos).asInstanceOf[Formula]
       p.subgoals(0)(equivPos) match {
         case Equiv(_,_) => builtInEquivRewriting(equivPos, targetPos)
-        case fa: Forall => {
+        case fa: Forall =>
           /*
-         * Game plan:
-         *   1. Compute the instantiation of p(equivPos) that matches p(targetPos)
-         *   2. Cut in a new quantified equivalence
-         *   3. Perform instantiations on this new quantified equivalence.
-         *   4. perform instantiatedEquivRewritingImpl using the newly instantiated equivalence
-         *   5. Hide the instantiated equivalence OR the original assumption.
-         */
+           * Game plan:
+           *   1. Compute the instantiation of p(equivPos) that matches p(targetPos)
+           *   2. Cut in a new quantified equivalence
+           *   3. Perform instantiations on this new quantified equivalence.
+           *   4. perform instantiatedEquivRewritingImpl using the newly instantiated equivalence
+           *   5. Hide the instantiated equivalence OR the original assumption.
+           */
           //1
           val instantiation = computeInstantiation(fa, target)
 
@@ -210,49 +210,43 @@ private object PropositionalTactics extends Logging {
           )
 
           //3: input is postCut and output is instantiatedEquivalence
-          val instantiatedEquivalence = vars(fa).foldLeft(cutExpr)((e:BelleExpr,x:Variable) => {
+          val instantiatedEquivalence = vars(fa).foldLeft(cutExpr)((e: BelleExpr, x: Variable) => {
             e & FOQuantifierTactics.allInstantiate(Some(x), Some(instantiation(x)))(cutPos)
           })
 
           //step 5.
-          val hidingTactic = if(targetPos.isAnte) TactixLibrary.hideL(targetPos) else TactixLibrary.hideL(cutPos)
+          val hidingTactic = if (targetPos.isAnte) TactixLibrary.hideL(targetPos) else TactixLibrary.hideL(cutPos)
 
           //4 & 5
           instantiatedEquivalence & builtInEquivRewriting(cutPos, targetPos) & hidingTactic
-        }
       }
     })
 
   private def computeInstantiation(fa: Forall, target: Formula): RenUSubst = {
-    val allVars = vars(fa)
-    val equiv   = bodyOf(fa)
+    val equiv = bodyOf(fa)
 
     //@note it's important to only use the renaming; otherwise unification is too clever and comes up with predicate substitutions that cannot be achieved by instantiation alone.
     val leftRenaming: Option[RenUSubst] = try {
-      val renaming = new UnificationMatchURenAboveUSubst().apply(equiv.left, target).renaming
-      if(renaming.isEmpty) None
-      else Some(new UnificationMatchURenAboveUSubst().apply(equiv.left, target).renaming)
+      val renaming = new UnificationMatchUSubstAboveURen().apply(equiv.left, target).renaming
+      if (renaming.isEmpty) None
+      else Some(renaming)
     } catch {
-      case _:Throwable => None
-    } finally {
-      None //Maybe we actually should not catch quite everything here?
+      case _: UnificationException => None
     }
 
     val rightRenaming: Option[RenUSubst] = try {
-      val renaming = new UnificationMatchURenAboveUSubst().apply(equiv.right, target).renaming
-      if(renaming.isEmpty) None
+      val renaming = new UnificationMatchUSubstAboveURen().apply(equiv.right, target).renaming
+      if (renaming.isEmpty) None
       else Some(renaming)
     } catch {
-      case _:Throwable => None
-    } finally {
-      None //Maybe we actually should not catch quite everything here?
+      case _: UnificationException => None
     }
 
     //First try to left-unify, then try to right-unify. I.e., default to left-rewriting when bot hare available.
     //@note This is also the default behavior of instantiatedEquivRewriting, and the two should be consistent on defaults.
     (leftRenaming, rightRenaming) match {
-      case (Some(subst), _)  => { logger.trace(s"Unified ${equiv.right} with ${target} under ${subst}"); subst }
-      case (None, Some(subst)) => { logger.trace(s"Unified ${equiv.left} with ${target} under ${subst}"); subst }
+      case (Some(subst), _)  => logger.trace(s"Unified ${equiv.right} with $target under $subst"); subst
+      case (None, Some(subst)) => logger.trace(s"Unified ${equiv.left} with $target under $subst"); subst
       case _ => RenUSubst(Nil) //Try to go ahead with an empty renaming since it will work more often than not.
     }
   }
