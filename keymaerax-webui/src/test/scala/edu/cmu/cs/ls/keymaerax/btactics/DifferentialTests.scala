@@ -948,7 +948,8 @@ class DifferentialTests extends TacticTestBase {
           proveBy(input.asSequent, DifferentialTactics.Dconstify(mockTactic(expected.asSequent))(1))
         } catch {
           // proveBy may throw an expected exception sometimes -> filter the expected one
-          case ex: Throwable if ex.getCause != null && ex.getCause.getMessage.contains("Unless proved, uniform substitutions instances cannot introduce free variables") => // expected
+          case ex: CoreException if ex.getCause != null && ex.getCause.getMessage.contains("Unless proved, uniform substitutions instances cannot introduce free variables") => // expected
+          case ex: CoreException if ex.getCause != null && ex.getCause.getMessage.contains("Substitution Clash") && ex.getCause.getMessage.contains("is not (all)-admissible") => // expected
           case ex: Throwable => throw ex
         }
       }
