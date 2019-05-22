@@ -55,6 +55,40 @@ class MoreParserTests2 extends FlatSpec with Matchers with BeforeAndAfterEach {
       And(Greater(Variable("x"), Variable("y")), Greater(Variable("y"), Variable("z"))))))
   }
 
+  it should "parse \\forall x \\exists y \\exists z (x>y & y>z)" in {
+    parser("\\forall x \\exists y \\exists z (x>y & y>z)") should be
+    Forall(Seq(Variable("x")), Exists(Seq(Variable("y")), Exists(Seq(Variable("z")),
+      And(Greater(Variable("x"), Variable("y")), Greater(Variable("y"), Variable("z"))))))
+  }
+
+  it should "parse \\forall x,y,z (x>y & y>z)" in {
+    parser("\\forall x,y,z (x>y & y>z)") should be
+    Forall(Seq(Variable("x"), Variable("y"), Variable("z")),
+      And(Greater(Variable("x"), Variable("y")), Greater(Variable("y"), Variable("z"))))
+  }
+
+  it should "parse \\forall x,y \\forall s,t (x>y & y>s & s>t)" in {
+    parser("\\forall x,y,z (x>y & y>z)") should be
+    Forall(Seq(Variable("x"), Variable("y")), Forall(Seq(Variable("s"), Variable("t")),
+      And(Greater(Variable("x"), Variable("y")), Greater(Variable("y"), Variable("z")))))
+  }
+
+  it should "report missing identifiers in block quantifiers" in {
+    the [ParseException] thrownBy parser("\\forall x,y, (x>y)") should have message """1:14 Unexpected token cannot be parsed
+                                                                                      |Found:    ( (LPAREN$) at 1:14
+                                                                                      |Expected: IDENT (ID("IDENT"))""".stripMargin
+    the [ParseException] thrownBy parser("\\forall x,y, x>y") should have message """1:15 Unexpected token cannot be parsed
+                                                                                    |Found:    > (RDIA$) at 1:15
+                                                                                    |Expected: , (COMMA$)
+                                                                                    |      or: <BeginningOfFormula>""".stripMargin
+  }
+
+  it should "parse \\exists x,y,z (x>y & y>z)" in {
+    parser("\\exists x,y,z (x>y & y>z)") should be
+    Exists(Seq(Variable("x"), Variable("y"), Variable("z")),
+      And(Greater(Variable("x"), Variable("y")), Greater(Variable("y"), Variable("z"))))
+  }
+
   it should "parse \\forall v (v>=0&true&0>=0->v=v+0*0)<->true" in {
     val v = Variable("v")
     val n0 = Number(0)

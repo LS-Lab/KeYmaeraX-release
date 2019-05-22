@@ -36,9 +36,9 @@ private[parser] case class Expr(expr: Expression) extends Item {
   override def toString: String = KeYmaeraXPrettyPrinter.stringify(expr)
 }
 /** Parts of expressions that are partially recognized on the parser item stack but not parsed to a proper Expression yet so merely stashed for later. */
-private[parser] case class RecognizedQuant(v: Expression) extends Item {
+private[parser] case class RecognizedQuant[T <: Expression](v: List[T]) extends Item {
   //@NOTE Not just "override def toString = expr.toString" to avoid infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
-  override def toString: String = "Rec(" + KeYmaeraXPrettyPrinter.stringify(v) +")"
+  override def toString: String = "Rec(" + v.map(KeYmaeraXPrettyPrinter.stringify).mkString(",") +")"
 }
 /** Parts of expressions that are partially recognized on the parser item stack but not parsed to a proper Expression yet so merely stashed for later. */
 private[parser] case class RecognizedModal(ltok: Token, program: Program, rtok: Token) extends Item {
@@ -356,24 +356,32 @@ object KeYmaeraXParser extends Parser with TokenParser with Logging {
 
 
       // special quantifier notation
-      case r :+ (tok1@Token(FORALL, _)) :+ RecognizedQuant(v1: Variable) :+ Expr(f1: Formula) =>
-        reduce(st, 3, OpSpec.sForall.const(tok1.tok.img, v1, f1), r)
+      case r :+ (tok1@Token(FORALL, _)) :+ RecognizedQuant(vs: List[Variable]) :+ Expr(f1: Formula) =>
+        reduce(st, 3, vs.foldLeft[Expression](f1)((f,v) => OpSpec.sForall.const(tok1.tok.img, v, f)), r)
 
-      case r :+ (tok1@Token(EXISTS, _)) :+ RecognizedQuant(v1: Variable) :+ Expr(f1: Formula) =>
-        reduce(st, 3, OpSpec.sExists.const(tok1.tok.img, v1, f1), r)
+      case r :+ (tok1@Token(EXISTS, _)) :+ RecognizedQuant(vs: List[Variable]) :+ Expr(f1: Formula) =>
+        reduce(st, 3, vs.foldLeft[Expression](f1)((f,v) => OpSpec.sExists.const(tok1.tok.img, v, f)), r)
 
       // special case typing to force elaboration of quantifiers at the end
-      case r :+ (tok1@Token(FORALL | EXISTS, _)) :+ (tok2@RecognizedQuant(_: Variable)) :+ Expr(e1)
+      case r :+ (tok1@Token(FORALL | EXISTS, _)) :+ (tok2@RecognizedQuant(_: List[Variable])) :+ Expr(e1)
         if (la == EOF || la == RPAREN || la == RBRACE || la == SEMI || formulaBinOp(la)) && e1.kind != FormulaKind =>
         //@todo assert(!formulaBinOp(la) || quantifier binds stronger than la)
         reduce(st, 1, elaborate(st, tok1, OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ tok2)
 
       // ordinary identifiers disambiguate quantifiers versus predicate/function/predicational versus variable
+      case r :+ (tok1@Token(FORALL | EXISTS, _)) :+ RecognizedQuant(vs: List[Variable]) :+ Token(COMMA, _) :+ Token(IDENT(name, idx), _) =>
+        if (la == COMMA || firstFormula(la)) shift(reduce(st, 3, Bottom :+ RecognizedQuant(vs :+ Variable(name, idx, Real)), r :+ tok1))
+        else error(st, List(COMMA,FIRSTFORMULA))
+
+      case _ :+ Token(FORALL | EXISTS, _) :+ RecognizedQuant(_) :+ Token(COMMA, _) =>
+        if (la.isInstanceOf[IDENT]) shift(st) else error(st, List(IDENT("IDENT")))
+
       case r :+ (tok1@Token(FORALL | EXISTS, _)) :+ Token(IDENT(name, idx), _) =>
         //@note Recognized(Variable()) instead of IDENT to avoid item overlap IDENT LPAREN with function/predicate symbols
         //@note Recognized(Variable()) instead of Variable to avoid detecting lookup confusion with Variable PLUS ... too late
         //@note Recognized should also generalize better to block quantifiers and multi-sorted quantifiers
-        if (firstFormula(la)) shift(reduce(st, 1, Bottom :+ RecognizedQuant(Variable(name, idx, Real)), r :+ tok1)) else error(st, List(FIRSTFORMULA))
+        if (la == COMMA || firstFormula(la)) shift(reduce(st, 1, Bottom :+ RecognizedQuant(Variable(name, idx, Real) :: Nil), r :+ tok1))
+        else error(st, List(COMMA,FIRSTFORMULA))
 
       case r :+ (tok1@Token(FORALL | EXISTS, _)) =>
         if (la.isInstanceOf[IDENT]) shift(st) else error(st, List(IDENT("IDENT")))
