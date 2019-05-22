@@ -416,10 +416,4 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       def normalized(s: String): String = s.replaceAll("\\s+", "")
       override def toString: String = "whiteSpaceRemoved"
     }
-
-  def loneSucc(p: ProvableSig): Formula = {
-    assert(p.subgoals.length==1)
-    assert(p.subgoals.last.succ.length==1)
-    p.subgoals.last.succ.last
-  }
 }
