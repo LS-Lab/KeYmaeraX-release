@@ -86,7 +86,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
 
     val command = s"""
                   |$setPathsCmd
-                  |Needs["LZZ`",FileNameJoin["Primitives","LZZ.m"]];
+                  |Needs["LZZ`",FileNameJoin[{"Primitives","LZZ.m"}]];
                   |LZZ`InvS[$problem]""".stripMargin.trim()
 
     val (output, result) = runUnchecked(command)
