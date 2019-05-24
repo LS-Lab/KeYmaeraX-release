@@ -191,6 +191,7 @@ private object CHOICE  extends OPERATOR("++") {
 private object DUAL    extends OPERATOR("^@") {
   override def regexp: Regex = """\^\@""".r
 }
+private object TILDE      extends OPERATOR("~")
 
 /*@TODO
 private object DCHOICE  extends OPERATOR("--") {
@@ -684,6 +685,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) with Logging {
       case COLON.startPattern(_*) => consumeTerminalLength(COLON, loc)
 
       case EXERCISE_PLACEHOLDER.startPattern(_*) => consumeTerminalLength(EXERCISE_PLACEHOLDER, loc)
+
+      case TILDE.startPattern(_*) => consumeTerminalLength(TILDE, loc)
 
       case _ if s.isEmpty => None
         //@todo should be LexException inheriting
