@@ -221,7 +221,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
       case e: BelleFriendlyUserMessage => throw e
       case e: BelleThrowable => throw e //throw e.inContext(d, v.prettyString)
       //@todo unable to create is a serious error in the tactic not just an "oops whatever try something else exception"
-      case e: Throwable => throw new BelleThrowable("Unable to create dependent tactic: " + e.getMessage, e).inContext(d, "")
+      case e: Throwable => throw new BelleThrowable("Unable to create dependent tactic '" + d.name + "', cause: " + e.getMessage, e).inContext(d, "")
     }
 
     case it: InputTactic => try {
@@ -229,7 +229,7 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
     } catch {
       case e: BelleThrowable if throwWithDebugInfo => throw e.inContext(it, v.prettyString)
       case e: BelleThrowable => throw e
-      case e: Throwable => throw new BelleThrowable("Unable to create input tactic: " + e.getMessage, e).inContext(it, "")
+      case e: Throwable => throw new BelleThrowable("Unable to create input tactic '" + it.name + "', cause: " + e.getMessage, e).inContext(it, "")
     }
 
     case PartialTactic(child, None) => try {
