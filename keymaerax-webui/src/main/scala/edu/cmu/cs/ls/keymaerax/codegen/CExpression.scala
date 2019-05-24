@@ -154,13 +154,13 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
          |verdict rightDist = OrRight${uniqueName(r)}(pre,curr,params);
          |printf("Or distances: %s=%Lf %s=%Lf\\n", "OrLeft${uniqueName(l)}", leftDist, "OrRight${uniqueName(r)}", rightDist);
          |int verdictId = leftDist.val >= rightDist.val ? leftDist.id : rightDist.id;
-         |verdict result = { .id=verdictId, .val=fmaxl(leftDist, rightDist) };
+         |verdict result = { .id=verdictId, .val=fmaxl(leftDist.val, rightDist.val) };
          |return result;""".stripMargin
       else
         s"""verdict leftDist = OrLeft${uniqueName(l)}(pre,curr,params);
          |verdict rightDist = OrRight${uniqueName(r)}(pre,curr,params);
          |int verdictId = leftDist.val >= rightDist.val ? leftDist.id : rightDist.id;
-         |verdict result = { .id=verdictId, .val=fmaxl(leftDist, rightDist) };
+         |verdict result = { .id=verdictId, .val=fmaxl(leftDist.val, rightDist.val) };
          |return result;""".stripMargin
     case CAndProgram(l, r) /* if kind=="boolean" */ =>
       if (printDebugOut)
@@ -168,13 +168,13 @@ class CExpressionPlainPrettyPrinter(printDebugOut: Boolean) extends (CExpression
          |verdict rightDist = AndRight${uniqueName(r)}(pre,curr,params);
          |printf("And distances: %s=%Lf %s=%Lf\\n", "AndLeft${uniqueName(l)}", leftDist, "AndRight${uniqueName(r)}", rightDist);
          |int verdictId = leftDist.val <= rightDist.val ? leftDist.id : rightDist.id;
-         |verdict result = { .id=verdictId, .val=fminl(leftDist, rightDist) };
+         |verdict result = { .id=verdictId, .val=fminl(leftDist.val, rightDist.val) };
          |return result;""".stripMargin
       else
         s"""verdict leftDist = AndLeft${uniqueName(l)}(pre,curr,params);
          |verdict rightDist = AndRight${uniqueName(r)}(pre,curr,params);
          |int verdictId = leftDist.val <= rightDist.val ? leftDist.id : rightDist.id;
-         |verdict result = { .id=verdictId, .val=fminl(leftDist, rightDist) };
+         |verdict result = { .id=verdictId, .val=fminl(leftDist.val, rightDist.val) };
          |return result;""".stripMargin
   }
 
