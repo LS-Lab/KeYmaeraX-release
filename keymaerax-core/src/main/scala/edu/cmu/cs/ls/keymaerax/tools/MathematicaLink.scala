@@ -410,6 +410,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
           case Version("9", _, _)  => checkExpired(toDate(licenseExpirationDate.args))
           case Version("10", _, _) => checkExpired(toDate(licenseExpirationDate.args.head.args))
           case Version("11", _, _) => checkExpired(toDate(licenseExpirationDate.args.head.args))
+          case Version("12", _, _) => checkExpired(toDate(licenseExpirationDate.args.head.args))
           case Version(major, minor, _) =>
             logger.debug("WARNING: Cannot check license expiration date since unknown Mathematica version " + major + "." + minor + ", only version 9.x, 10.x, and 11.x supported. Mathematica requests may fail if license is expired.")
             None
