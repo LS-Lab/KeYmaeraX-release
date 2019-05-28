@@ -117,6 +117,16 @@ class MoreSimpleBelleParserTests extends TacticTestBase {
     result shouldBe "dG({`{y'=0}`},{`1=1`},1)"
   }
 
+  it should "parse multiple nested arguments" in {
+    val t = DebuggingTactics.pending("andR(1) ; <( QE({`Mathematica`}), QE({`Mathematica`}) )")
+    parser(t.prettyString) shouldBe t
+  }
+
+  it should "parse deeply nested arguments" in {
+    val t = DebuggingTactics.pending("pending({`QE({`Mathematica`})`})")
+    parser(t.prettyString) shouldBe t
+  }
+
   "Propositional Examples" should "close p() -> p()" in {
     val tactic = parser("implyR(1) & closeId")
 //    val tactic = ExposedTacticsLibrary.tactics("implyR") & ExposedTacticsLibrary.tactics("TrivialCloser")

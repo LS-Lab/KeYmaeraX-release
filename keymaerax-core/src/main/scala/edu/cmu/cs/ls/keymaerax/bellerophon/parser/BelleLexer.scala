@@ -130,14 +130,18 @@ object BelleLexer extends ((String) => List[BelleToken]) with Logging {
       case EXPRESSION.startPattern(expressionString) => try {
         //Constructing an EXPRESSION results in an attempt to parse expressionString, which might
         //result in a parse error that should be passed back to the user.
-        val opening = expressionString.sliding(2).count(_ == "{`")
-        val closing = expressionString.sliding(2).count(_ == "`}")
-        if (opening-closing > 0) {
-          val remainder = input.stripPrefix(expressionString)
+        var opening = expressionString.sliding(2).count(_ == "{`")
+        var closing = expressionString.sliding(2).count(_ == "`}")
+        val expression: StringBuilder = new StringBuilder(expressionString)
+        while (opening-closing > 0) {
+          val remainder = input.substring(expression.length)
           val matchingClosingIdx = StringUtils.ordinalIndexOf(remainder, "`}", opening - closing)
           val suffix = remainder.substring(0, matchingClosingIdx + 2)
-          consumeTerminalLength(EXPRESSION(expressionString + suffix), loc)
-        } else consumeTerminalLength(EXPRESSION(expressionString), loc)
+          opening += suffix.sliding(2).count(_ == "{`")
+          closing += suffix.sliding(2).count(_ == "`}")
+          expression.append(suffix)
+        }
+        consumeTerminalLength(EXPRESSION(expression.toString), loc)
       } catch {
         case _: Throwable => throw LexException(s"Could not parse expression: $expressionString", loc)
       }
