@@ -77,7 +77,8 @@ object IOListeners {
     private var start = System.currentTimeMillis()
 
     override def begin(input: BelleValue, expr: BelleExpr): Unit = {
-      if (expr == executionStack.head._1) expr match {
+      //@todo recursive calls to same tactic may pop from stack prematurely (master? ODE?)
+      if (executionStack.nonEmpty && expr == executionStack.head._1) expr match {
         case SeqTactic(l, _) => executionStack = (l->0) +: executionStack
         case BranchTactic(b) => executionStack = (b.head->0) +: executionStack
         case SaturateTactic(e) => executionStack = (e->0) +: executionStack
@@ -98,7 +99,7 @@ object IOListeners {
     }
 
     override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {
-      if (expr == executionStack.head._1) {
+      if (executionStack.nonEmpty && expr == executionStack.head._1) {
         executionStack = executionStack.tail
         executionStack.headOption match {
           case Some((SeqTactic(l, r), _)) if expr == l => executionStack = (r->0) +: executionStack
