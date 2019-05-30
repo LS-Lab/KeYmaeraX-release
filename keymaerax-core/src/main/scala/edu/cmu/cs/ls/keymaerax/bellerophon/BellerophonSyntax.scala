@@ -327,7 +327,7 @@ case class AppliedPositionTactic(positionTactic: PositionalTactic, locator: Posi
             positionTactic.computeResult(provable, pos)
           } else {
             throw BelleIllFormedError("Formula " + provable.subgoals.head.sub(pos).getOrElse("") + " at position " + pos +
-              " is not of expected shape " + f)
+              " is not of expected shape " + f + " in sequent \n" + provable.subgoals.head.prettyString)
           }
         case None => positionTactic.computeResult(provable, pos)
       }
@@ -459,17 +459,32 @@ abstract case class InputTactic(name: String, inputs: Seq[Any]) extends BelleExp
 abstract class StringInputTactic(override val name: String, val inputs: Seq[String]) extends BuiltInTactic(name) {
   override def prettyString: String =
     s"$name(${inputs.map(input => s"{`$input`}").mkString(",")})"
+
+  override def equals(other: Any): Boolean = other match {
+    case o: StringInputTactic => name == o.name && inputs == o.inputs
+    case _ => false
+  }
 }
 
 abstract class DependentPositionWithAppliedInputTactic(private val n: String, val inputs: Seq[Any]) extends DependentPositionTactic(n) {
   override def apply(locator: PositionLocator): AppliedDependentPositionTacticWithAppliedInput = new AppliedDependentPositionTacticWithAppliedInput(this, locator)
   //@note non-serializable pretty-string, only applied tactic is serializable. @see AppliedDependendPositionTacticWithAppliedInput
   override def prettyString: String = super.prettyString + "(" + inputs.mkString(",") + ")"
+
+  override def equals(other: Any): Boolean = other match {
+    case o: DependentPositionWithAppliedInputTactic => o.n == n && o.inputs == inputs
+    case _ => false
+  }
 }
 class AppliedDependentPositionTacticWithAppliedInput(pt: DependentPositionWithAppliedInputTactic, locator: PositionLocator) extends AppliedDependentPositionTactic(pt, locator) {
   override def prettyString: String =
     if (pt.inputs.nonEmpty) s"${pt.name}(${pt.inputs.map({ case input: Expression => s"{`${input.prettyString}`}" case input => s"{`${input.toString}`}"}).mkString(",")},${locator.prettyString})"
     else pt.name + "(" + locator.prettyString + ")"
+
+  override def equals(other: Any): Boolean = other match {
+    case o: AppliedDependentPositionTacticWithAppliedInput => o.pt == pt && o.locator == locator
+    case _ => false
+  }
 }
 class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locator: PositionLocator) extends DependentTactic(pt.name) {
   import Augmentors._
@@ -487,7 +502,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
               pt.factory(pos).computeExpr(v)
             } else {
               throw new BelleThrowable("Formula " + provable.subgoals.head.sub(pos) + " at position " + pos +
-                " is not of expected shape " + f)
+                " is not of expected shape " + f + " in sequent \n" + provable.subgoals.head.prettyString)
             }
         }
         case None => pt.factory(pos).computeExpr(v)
@@ -565,6 +580,11 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
       case _ => pt.factory(locator.start).computeExpr(v) |
         tryAllAfter(Find(locator.goal, locator.shape, locator.start.advanceIndex(1), locator.exact), cause)
     }
+  }
+
+  override def equals(other: Any): Boolean = other match {
+    case o: AppliedDependentPositionTactic => o.pt == pt && o.locator == locator
+    case _ => false
   }
 }
 

@@ -5,6 +5,9 @@
 
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import java.io.PrintStream
+
+import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
 import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, StaticSemantics}
@@ -63,6 +66,56 @@ object IOListeners {
         recordedDuration += System.currentTimeMillis() - startTime
         start = None
       case _ => // do nothing
+    }
+
+    override def kill(): Unit = {}
+  }
+
+  /** Prints tactic progress to the console. */
+  class PrintProgressListener(t: BelleExpr, printer: PrintStream = Console.out) extends IOListener() {
+    private var executionStack = (t->0) :: Nil // branch index =0 except for BranchTactic
+    private var start = System.currentTimeMillis()
+
+    override def begin(input: BelleValue, expr: BelleExpr): Unit = {
+      if (expr == executionStack.head._1) expr match {
+        case SeqTactic(l, _) => executionStack = (l->0) +: executionStack
+        case BranchTactic(b) => executionStack = (b.head->0) +: executionStack
+        case SaturateTactic(e) => executionStack = (e->0) +: executionStack
+        case RepeatTactic(e, i) => executionStack = List.fill(i)(e->0) ++ executionStack
+        case EitherTactic(l, _) => executionStack = (l->0) +: executionStack
+        case OnAll(e) => input match {
+          case BelleProvable(p, _) => executionStack = (BranchTactic(Seq.fill(p.subgoals.size)(e))->0) +: executionStack
+          case _ =>
+        }
+        case ApplyDefTactic(DefTactic(name, e)) => printer.println(name); executionStack = (e->0) +: executionStack
+        case e: AppliedPositionTactic => printer.println(BellePrettyPrinter(e))
+        case e: NamedBelleExpr =>
+          start = System.currentTimeMillis()
+          printer.println(BellePrettyPrinter(e))
+          if (e.name == "QE" || e.name == "smartQE") printer.println(input.prettyString)
+        case _ =>
+      }
+    }
+
+    override def end(input: BelleValue, expr: BelleExpr, output: Either[BelleValue, BelleThrowable]): Unit = {
+      if (expr == executionStack.head._1) {
+        executionStack = executionStack.tail
+        executionStack.headOption match {
+          case Some((SeqTactic(l, r), _)) if expr == l => executionStack = (r->0) +: executionStack
+          case Some((BranchTactic(b), i)) =>
+            if (i+1 < b.size) executionStack = (b(i+1)->0) +: (BranchTactic(b)->(i+1)) +: executionStack.tail
+          case Some((SaturateTactic(e), _)) if output.isLeft => executionStack = (e->0) +: executionStack
+          case Some((EitherTactic(l, r), _)) if expr == l && output.isRight => executionStack = (r->0) +: executionStack
+          case _ =>
+        }
+
+        expr match {
+          case ApplyDefTactic(DefTactic(name, _)) =>
+            printer.println(s"$name done")
+          case e: NamedBelleExpr => printer.println(s"${e.name} done (" + (System.currentTimeMillis()-start) + "ms)")
+          case _ =>
+        }
+      }
     }
 
     override def kill(): Unit = {}

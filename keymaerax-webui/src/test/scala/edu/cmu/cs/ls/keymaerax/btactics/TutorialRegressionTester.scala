@@ -6,6 +6,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 
 import java.io.File
 
+import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.PrintProgressListener
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BelleParser
 import edu.cmu.cs.ls.keymaerax.btactics.Generator.Generator
@@ -115,7 +116,7 @@ abstract class RegressionTesterBase(val tutorialName: String, val url: String) e
       val t = BelleParser.parseWithInvGen(tactic._2, Some(invGen), decls)
 
       val start = System.currentTimeMillis()
-      val proof = db.proveBy(model, t, LazySequentialInterpreter(_, throwWithDebugInfo = false), name)
+      val proof = db.proveBy(model, t, l => LazySequentialInterpreter(l :+ new PrintProgressListener(t), throwWithDebugInfo = false), name)
       val end = System.currentTimeMillis()
 
       println(s"Proof Statistics (proved: ${proof.isProved})")
