@@ -583,7 +583,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
   }
 
   override def equals(other: Any): Boolean = other match {
-    case o: AppliedDependentPositionTactic => o.pt == pt && o.locator == locator
+    case o: AppliedDependentPositionTactic => o.pt.name == pt.name && o.locator == locator
     case _ => false
   }
 }
