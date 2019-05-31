@@ -1466,6 +1466,8 @@ object ODEInvariance {
     *         1) Linearity heuristic checks fail e.g.: x'=1+x^2-x^2 will be treated as non-linear even though it is really linear
     *
     */
+  private val nilpotentSolveTimeVar = "time_".asVariable
+
   def nilpotentSolve(solveEnd : Boolean) : DependentPositionTactic = "nilpotentSolve" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "nilpotent solve only applicable in top-level succedent")
 
@@ -1474,19 +1476,23 @@ object ODEInvariance {
       case _ => throw new BelleThrowable("nilpotent solve only applicable to box ODE in succedent")
     }
 
-    val t = TacticHelper.freshNamedSymbol("t_".asVariable, seq)
+    if(TacticHelper.names(seq).contains(nilpotentSolveTimeVar))
+      throw new BelleThrowable("nilpotent solve should not be called twice (solution already available from prior call)")
+
+    val t = nilpotentSolveTimeVar //explicitly non-idempotent
+    //val t = TacticHelper.freshNamedSymbol(nilpotentSolveTimeVar, seq)
     //Introduce a ghost variable
 
     val linForm = linFormODE(ode)
-    if (linForm.isEmpty) throw new BelleThrowable("ODE " + ode +" could not be put into linear form x'=Ax")
-    val (m,b,x) = linForm.get
+    if (linForm.isEmpty) throw new BelleThrowable("ODE " + ode + " could not be put into linear form x'=Ax")
+    val (m, b, x) = linForm.get
 
     val npopt = nilpotentIndex(m)
 
-    if(npopt.isEmpty)  throw new BelleThrowable("Coefficient matrix for " + ode +" is not nilpotent.")
+    if (npopt.isEmpty) throw new BelleThrowable("Coefficient matrix for " + ode + " is not nilpotent.")
     val np = npopt.get
 
-    val bsimp = b.map (t => simpWithTool(ToolProvider.simplifierTool(),t))
+    val bsimp = b.map(t => simpWithTool(ToolProvider.simplifierTool(), t))
 
     val oldx = x.map(TacticHelper.freshNamedSymbol(_, seq))
 
@@ -1498,21 +1504,21 @@ object ODEInvariance {
     val sp = np.map(m => matvec_prod(m, oldx))
 
     //Forcing terms on partial solutions for x',x'',...
-    val sb = bsimp :: np.map(m => matvec_prod(m,bsimp))
+    val sb = bsimp :: np.map(m => matvec_prod(m, bsimp))
 
     // Actual solution
-    val s = (oldx :: sb.zip(sp).map(f => vecvec_sum(f._1,f._2))) ++ List(sb.last)
+    val s = (oldx :: sb.zip(sp).map(f => vecvec_sum(f._1, f._2))) ++ List(sb.last)
 
     // LHS of partial solutions
     val sL =
-      x :: np.map(m => matvec_prod(m, x)).zip(sb).map(f => vecvec_sum(f._1,f._2).map(t => simpWithTool(ToolProvider.simplifierTool(),t)))
+      x :: np.map(m => matvec_prod(m, x)).zip(sb).map(f => vecvec_sum(f._1, f._2).map(t => simpWithTool(ToolProvider.simplifierTool(), t)))
 
     //The actual solution
-    val sol = timeSeries(t,s).map(t => simpWithTool(ToolProvider.simplifierTool(),t))
+    val sol = timeSeries(t, s).map(t => simpWithTool(ToolProvider.simplifierTool(), t))
 
-    val cut = And(GreaterEqual(t,Number(0)),x.zip(sol).map( f => Equal(f._1,f._2) ).reduceRight(And))
+    val cut = And(GreaterEqual(t, Number(0)), x.zip(sol).map(f => Equal(f._1, f._2)).reduceRight(And))
 
-    val cutPrep = Range(0,s.length).map(i => timeSeries(t,s.drop(i)).map(t => simpWithTool(ToolProvider.simplifierTool(),t)))
+    val cutPrep = Range(0, s.length).map(i => timeSeries(t, s.drop(i)).map(t => simpWithTool(ToolProvider.simplifierTool(), t)))
 
     val cuts = sL.zip(cutPrep).tail.map(
       ff =>
@@ -1523,32 +1529,32 @@ object ODEInvariance {
     ) //.map( f => replaceODEfree(f,DifferentialProduct(AtomicODE(DifferentialSymbol(t),Number(1)),ode)))
 
     val start =
-      if(solveEnd)
+      if (solveEnd)
         diffUnpackEvolutionDomainInitially(pos)
       else
         skip
 
     val finish =
-      if(solveEnd)
+      if (solveEnd)
         ?(dW('Rlast) & //todo: dW repeats storing of initial values which isn't very useful here
           implyR('Rlast) & andL('Llast) & andL('Llast) & //Last three assumptions should be Q, timevar>=0, solved ODE equations
           SaturateTactic(andL('Llast)) & //Splits conjunction of equations up
           SaturateTactic(exhaustiveEqL2R(true)('Llast)) & //rewrite
-            timeoutQE & done)
+          timeoutQE & done)
       else
         skip
 
     start &
-    HilbertCalculus.DGC(t, Number(1))(pos) &
-    existsR(Number(0))(pos) &
-    //NOTE: At this point, the box question is guaranteed to be 'Rlast because existR reorders succedents
-    //If existsR is changed, all the 'Rlast should turn back into pos instead
-    storeInitialVals &
-    dC(cut)('Rlast) <(
+      HilbertCalculus.DGC(t, Number(1))(pos) &
+      existsR(Number(0))(pos) &
+      //NOTE: At this point, the box question is guaranteed to be 'Rlast because existR reorders succedents
+      //If existsR is changed, all the 'Rlast should turn back into pos instead
+      storeInitialVals &
+      dC(cut)('Rlast) < (
       finish,
       // dRI directly is actually a lot slower than the dC chain even with naive dI
       // dRI('Rlast)
-      cuts.foldLeft(skip)( (t,f) => dC(f)('Rlast) < (t, dI('full)('Rlast)) ) & dI('full)('Rlast)
+      cuts.foldLeft(skip)((t, f) => dC(f)('Rlast) < (t, dI('full)('Rlast))) & dI('full)('Rlast)
 
       // this does the "let" once rather than on every dI -- doesn't help speed much
       //Dconstify(
