@@ -548,7 +548,7 @@ class KeYmaeraXArchiveParserTests extends TacticTestBase with PrivateMethodTeste
         ("y", None) -> (None, Real, None, UnknownLocation)
       )))
     entry.model shouldBe "x>y -> x>=y".asFormula
-    entry.tactics shouldBe ("Pending", "implyR(1) ; pending({`QE({`Mathematica`}) | QE({`Z3`})`})", implyR(1) & DebuggingTactics.pending("QE({`Mathematica`})")) :: Nil
+    entry.tactics shouldBe ("Pending", "implyR(1) ; pending({`QE({`Mathematica`}) | QE({`Z3`})`})", implyR(1) & DebuggingTactics.pending("QE({`Mathematica`}) | QE({`Z3`})")) :: Nil
     entry.info shouldBe empty
   }
 
