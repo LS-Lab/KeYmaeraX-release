@@ -39,7 +39,7 @@ sealed abstract class Terminal(val img: String) {
    */
   def regexp : scala.util.matching.Regex = img.r
 
-  val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
 private abstract class OPERATOR(val opcode: String) extends Terminal(opcode) {
   //final def opcode: String = img
@@ -55,7 +55,7 @@ private case class IDENT(name: String, index: Option[Int] = None) extends Termin
 private object IDENT {
   //@note Pattern is more permissive than NamedSymbol's since Lexer's IDENT will include the index, so xy_95 is acceptable.
   def regexp: Regex = """([a-zA-Z][a-zA-Z0-9]*\_?\_?[0-9]*)""".r
-  val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
 private case class NUMBER(value: String) extends Terminal(value) {
   override def toString: String = "NUM(" + value + ")"
@@ -66,7 +66,7 @@ private object NUMBER {
   //def regexp = """(-?[0-9]+\.?[0-9]*)""".r
   //@NOTE Minus sign artificially excluded from the number to make sure x-5 lexes as IDENT("x"),MINUS,NUMBER("5") not as IDENT("x"),NUMBER("-5")
   def regexp: Regex = """([0-9]+\.?[0-9]*)""".r
-  val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
 
 /**
@@ -211,7 +211,7 @@ private case class DOT(index: Option[Int] = None) extends Terminal("•" + (inde
 }
 private object DOT {
   def regexp: Regex = """((?:•(?:\_[0-9]+)?)|(?:\.\_[0-9]+))""".r
-  val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
 
 private object PLACE   extends OPERATOR("⎵") //("_")
@@ -239,7 +239,7 @@ private case class DOUBLE_QUOTES_STRING(var s: String) extends Terminal("<string
 }
 private object DOUBLE_QUOTES_STRING_PAT {
   def regexp: Regex = """\"(.*)\"""".r
-  val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
 private object PERIOD extends Terminal(".") {
   override def regexp: Regex = "\\.".r
@@ -295,7 +295,7 @@ private object TOOL_VALUE_PAT {
   // values are nested into quadruple ", because they can contain single, double, or triple " themselves (arbitrary Scala code)
   def regexp: Regex = "\"{4}(([^\"]|\"(?!\"\"\")|\"\"(?!\"\")|\"\"\"(?!\"))*)\"{4}".r
 //  def regexp = "\"([^\"]*)\"".r
-  val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
 
 private object SHARED_DEFINITIONS_BEGIN extends Terminal("SharedDefinitions") {}
@@ -306,7 +306,7 @@ private case class ARCHIVE_ENTRY_BEGIN(name: String) extends Terminal("ArchiveEn
 }
 private object ARCHIVE_ENTRY_BEGIN {
   def regexp: Regex = "(ArchiveEntry|Lemma|Theorem|Exercise)".r
-  val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern).r
 }
 
 ///////////
@@ -320,9 +320,13 @@ private object BACKTICK extends Terminal("`") {}
   * @author Andre Platzer
  * @author nfulton
  */
-object KeYmaeraXLexer extends ((String) => List[Token]) with Logging {
+object KeYmaeraXLexer extends (String => List[Token]) with Logging {
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
+
+  private val whitespace = """^(\s+)""".r
+  private val newline = """(?s)(^\n)""".r //@todo use something more portable.
+  private val comment = """(?s)(^/\*[\s\S]*?\*/)""".r
 
   /** Normalize all new lines in input to a s*/
   def normalizeNewlines(input: String): String = input.replace("\r\n", "\n").replace("\r", "\n").replaceAll(" *\n", "\n")
@@ -373,7 +377,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) with Logging {
   private def lex(input: String, inputLocation:Location, mode: LexerMode): TokenStream = {
     var remaining: String = input
     var loc: Location = inputLocation
-    var output: scala.collection.mutable.ListBuffer[Token] = scala.collection.mutable.ListBuffer.empty
+    val output: scala.collection.mutable.ListBuffer[Token] = scala.collection.mutable.ListBuffer.empty
     while (!remaining.isEmpty) {
       findNextToken(remaining, loc, mode) match {
         case Some((nextInput, token, nextLoc)) =>
@@ -400,6 +404,251 @@ object KeYmaeraXLexer extends ((String) => List[Token]) with Logging {
   }
 
   /**
+    *
+    * @param cols Number of columns to move cursor.
+    * @param terminal terminal to generate a token for.
+    * @param location Current location.
+    * @return Return value of findNextToken
+    */
+  private def consumeColumns(s: String, cols: Int, terminal: Terminal, location: Location) : Option[(String, Token, Location)] = {
+    assert(cols > 0, "Cannot move cursor less than 1 columns.")
+    Some((
+      s.substring(cols),
+      Token(terminal, spanningRegion(location, cols-1)),
+      suffixOf(location, cols)))
+  }
+
+  private def consumeTerminalLength(s: String, terminal: Terminal, location: Location): Option[(String, Token, Location)] =
+    consumeColumns(s, terminal.img.length, terminal, location)
+
+  private def consumeUnicodeTerminalLength(s: String, terminal: Terminal, location: Location, replacementTerminal: Terminal): Option[(String, Token, Location)] = {
+    consumeColumns(s, terminal.img.length, terminal, location).map({ case (st, t, l) => (st, Token(replacementTerminal, t.loc), l) })
+  }
+
+  private val lexers: Seq[(Regex, (String, Location, LexerMode, String) => Either[(String, Location, LexerMode),Option[(String, Token, Location)]])] = Seq(
+    //update location if we encounter whitespace/comments.
+    comment -> ((s: String, loc: Location, mode: LexerMode, theComment: String) => {
+      val comment = s.substring(0, theComment.length)
+      val lastLineCol = comment.lines.toList.last.length //column of last line.
+      val lineCount = comment.lines.length
+      Left((s.substring(theComment.length), loc match {
+        case UnknownLocation       => UnknownLocation
+        case Region(sl, _, el, ec) => Region(sl + lineCount - 1, lastLineCol, el, ec)
+        case SuffixRegion(sl, sc)  => SuffixRegion(sl + lineCount - 1, sc + theComment.length)
+      }, mode)) }),
+    newline -> ((s: String, loc: Location, mode: LexerMode, _) =>
+      Left((s.tail, loc match {
+        case UnknownLocation       => UnknownLocation
+        case Region(sl, _, el, ec) => Region(sl+1,1,el,ec)
+        case SuffixRegion(sl, _)   => SuffixRegion(sl+1, 1)
+      }, mode))),
+    whitespace -> ((s: String, loc: Location, mode: LexerMode, spaces: String) =>
+      Left((s.substring(spaces.length), loc match {
+        case UnknownLocation        => UnknownLocation
+        case Region(sl, sc, el, ec) => Region(sl, sc+spaces.length, el, ec)
+        case SuffixRegion(sl, sc)   => SuffixRegion(sl, sc+ spaces.length)
+      }, mode))),
+    //Lemma file cases
+    LEMMA_BEGIN.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case LemmaFileMode => Right(consumeTerminalLength(s, LEMMA_BEGIN, loc))
+      case ProblemFileMode => Right(consumeColumns(s, LEMMA_BEGIN.img.length, ARCHIVE_ENTRY_BEGIN("Lemma"), loc))
+      case _ => throw new Exception("Encountered ``Lemma`` in non-lemma lexing mode.")
+    }),
+    TOOL_BEGIN.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case LemmaFileMode => Right(consumeTerminalLength(s, TOOL_BEGIN, loc))
+      case _ => throw new Exception("Encountered ``Tool`` in non-lemma lexing mode.")
+    }),
+    HASH_BEGIN.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case LemmaFileMode => Right(consumeTerminalLength(s, HASH_BEGIN, loc))
+      case _ => throw new Exception("Encountered ``Tool`` in non-lemma lexing mode.")
+    }),
+    SEQUENT_BEGIN.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case LemmaFileMode => Right(consumeTerminalLength(s, SEQUENT_BEGIN, loc))
+      case _ => throw new Exception("Encountered ``Sequent`` in a non-lemma file.")
+    }),
+    TURNSTILE.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case LemmaFileMode => Right(consumeTerminalLength(s, TURNSTILE, loc))
+      case _ => throw new Exception("Encountered a turnstile symbol ==> in a non-lemma file.")
+    }),
+    FORMULA_BEGIN.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case LemmaFileMode => Right(consumeTerminalLength(s, FORMULA_BEGIN, loc))
+      case _ => throw new Exception("Encountered a formula begin symbol (Formula:) in a non-lemma file.")
+    }),
+    DOT.startPattern -> ((s: String, loc: Location, _: LexerMode, dot: String) => { val (_, idx) = splitName(dot); Right(consumeTerminalLength(s, DOT(idx), loc)) }),
+    // File cases
+    PERIOD.startPattern -> ((s: String, loc: Location, _: LexerMode, _) => Right(consumeTerminalLength(s, PERIOD, loc))), //swapOutFor(consumeTerminalLength(PERIOD, loc), DOT)
+    ARCHIVE_ENTRY_BEGIN.startPattern -> ((s: String, loc: Location, mode: LexerMode, kind: String) => mode match {
+      case ProblemFileMode => Right(consumeColumns(s, kind.length, ARCHIVE_ENTRY_BEGIN(kind), loc))
+      case LemmaFileMode if kind == "Lemma" => Right(consumeTerminalLength(s, LEMMA_BEGIN, loc))
+      case _ => throw new Exception("Encountered ``" + ARCHIVE_ENTRY_BEGIN(kind).img + "`` in non-problem file lexing mode.")
+    }),
+    FUNCTIONS_BLOCK.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case AxiomFileMode | ProblemFileMode | LemmaFileMode => Right(consumeTerminalLength(s, FUNCTIONS_BLOCK, loc))
+      case _ => throw new Exception("Functions. should only occur when processing files.")
+    }),
+    DEFINITIONS_BLOCK.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case AxiomFileMode | ProblemFileMode | LemmaFileMode => Right(consumeTerminalLength(s, DEFINITIONS_BLOCK, loc))
+      case _ => throw new Exception("Definitions. should only occur when processing files.")
+    }),
+    PROGRAM_VARIABLES_BLOCK.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case AxiomFileMode | ProblemFileMode | LemmaFileMode => Right(consumeTerminalLength(s, PROGRAM_VARIABLES_BLOCK, loc))
+      case _ => throw new Exception("ProgramVariables. should only occur when processing files.")
+    }),
+    VARIABLES_BLOCK.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case AxiomFileMode | ProblemFileMode | LemmaFileMode => Right(consumeTerminalLength(s, VARIABLES_BLOCK, loc))
+      case _ => throw new Exception("Variables. should only occur when processing files.")
+    }),
+    BOOL.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case AxiomFileMode | ProblemFileMode | LemmaFileMode => Right(consumeTerminalLength(s, BOOL, loc))
+      case _ => throw new Exception("Bool symbol declaration should only occur when processing files.")
+    }),
+    REAL.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case AxiomFileMode | ProblemFileMode | LemmaFileMode => Right(consumeTerminalLength(s,REAL, loc))
+      case _ => throw new Exception("Real symbol declaration should only occur when processing files.")
+    }),
+    TERM.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case AxiomFileMode | ProblemFileMode | LemmaFileMode => Right(consumeTerminalLength(s, TERM, loc))
+      case _ => throw new Exception("Term symbol declaration should only occur when processing files.")
+    }),
+    PROGRAM.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case AxiomFileMode | ProblemFileMode | LemmaFileMode => Right(consumeTerminalLength(s, PROGRAM, loc))
+      case _ => throw new Exception("Program symbol declaration should only occur when processing files.")
+    }),
+    CP.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case AxiomFileMode | ProblemFileMode | LemmaFileMode => Right(consumeTerminalLength(s, CP, loc))
+      case _ => throw new Exception("CP symbol declaration should only occur when processing files.")
+    }),
+    MFORMULA.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case AxiomFileMode | ProblemFileMode | LemmaFileMode => Right(consumeTerminalLength(s, MFORMULA, loc))
+      case _ => throw new Exception("MFORMULA symbol declaration should only occur when processing files.")
+    }),
+    //.kyx file cases
+    PROBLEM_BLOCK.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case AxiomFileMode | ProblemFileMode => Right(consumeTerminalLength(s, PROBLEM_BLOCK, loc))
+      case _ => throw new Exception("Problem./End. sections should only occur when processing .kyx files.")
+    }),
+    TACTIC_BLOCK.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case AxiomFileMode | ProblemFileMode => Right(consumeTerminalLength(s, TACTIC_BLOCK, loc))
+      case _ => throw new Exception("Tactic./End. sections should only occur when processing .kyx files.")
+    }),
+    BACKTICK.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case ProblemFileMode => Right(consumeTerminalLength(s, BACKTICK, loc))
+      case _ => throw new Exception("Backtick ` should only occur when processing .kyx files.")
+    }),
+    SHARED_DEFINITIONS_BEGIN.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case ProblemFileMode => Right(consumeTerminalLength(s, SHARED_DEFINITIONS_BEGIN, loc))
+      case _ => throw new Exception("SharedDefinitions./End. sections should only occur when processing .kyx files.")
+    }),
+    //Lemma file cases (2)
+    TOOL_VALUE_PAT.startPattern -> ((s: String, loc: Location, mode: LexerMode, str: String) => mode match { //@note must be before DOUBLE_QUOTES_STRING
+      case LemmaFileMode =>
+        Right(consumeColumns(s, str.length, TOOL_VALUE(str.stripPrefix("\"\"\"\"").stripSuffix("\"\"\"\"")), loc))
+      case _ => throw new Exception("Encountered delimited string in non-lemma lexing mode.")
+    }),
+    //Axiom file cases
+    AXIOM_BEGIN.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case AxiomFileMode => Right(consumeTerminalLength(s, AXIOM_BEGIN, loc))
+      case _ => throw new Exception("Encountered ``Axiom.`` in non-axiom lexing mode.")
+    }),
+    END_BLOCK.startPattern -> ((s: String, loc: Location, mode: LexerMode, _) => mode match {
+      case AxiomFileMode | ProblemFileMode | LemmaFileMode => Right(consumeTerminalLength(s, END_BLOCK, loc))
+      case _ => throw new Exception("Encountered ``Axiom.`` in non-axiom lexing mode.")
+    }),
+    DOUBLE_QUOTES_STRING_PAT.startPattern -> ((s: String, loc: Location, mode: LexerMode, str: String) => mode match {
+      case AxiomFileMode | LemmaFileMode | ProblemFileMode =>
+        Right(consumeColumns(s, str.length, DOUBLE_QUOTES_STRING(str.stripPrefix("\"").stripSuffix("\"")), loc))
+      case _ => throw new Exception("Encountered delimited string in non-axiom lexing mode.")
+    }),
+    //These have to come before LBOX,RBOX because otherwise <= becopmes LDIA, EQUALS
+    GREATEREQ.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, GREATEREQ, loc))),
+    GREATEREQ_UNICODE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeUnicodeTerminalLength(s, GREATEREQ_UNICODE, loc, GREATEREQ))),
+    LESSEQ.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, LESSEQ, loc))),
+    LESSEQ_UNICODE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeUnicodeTerminalLength(s, LESSEQ_UNICODE, loc, LESSEQ))),
+    NOTEQ.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, NOTEQ, loc))),
+
+    LBANANA.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, LBANANA, loc))),
+    RBANANA.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, RBANANA, loc))),
+    LPAREN.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, LPAREN, loc))),
+    RPAREN.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, RPAREN, loc))),
+    LBOX.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, LBOX, loc))),
+    RBOX.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, RBOX, loc))),
+    LBARB.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, LBARB, loc))),
+    RBARB.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, RBARB, loc))),
+    LBRACE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, LBRACE, loc))),
+    RBRACE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, RBRACE, loc))),
+
+    COMMA.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, COMMA, loc))),
+    //
+    IF.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, IF, loc))),
+    ELSE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, ELSE, loc))),
+    //This has to come before PLUS because otherwise ++ because PLUS,PLUS instead of CHOICE.
+    CHOICE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, CHOICE, loc))),
+    //This has to come before MINUS because otherwise -- because MINUS,MINUS instead of DCHOICE.
+    //@TODO case DCHOICE.startPattern(_*) => consumeTerminalLength(s, DCHOICE, loc)
+    //@note must be before POWER
+    DUAL.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, DUAL, loc))),
+    //
+    PRIME.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, PRIME, loc))),
+    SLASH.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, SLASH, loc))),
+    POWER.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, POWER, loc))),
+    STAR.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, STAR, loc))),
+    PLUS.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, PLUS, loc))),
+    //
+    AMP.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, AMP, loc))),
+    AND_UNICODE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeUnicodeTerminalLength(s, AND_UNICODE, loc, AMP))),
+    NOT.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, NOT, loc))),
+    OR.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, OR, loc))),
+    OR_UNICODE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeUnicodeTerminalLength(s, OR_UNICODE, loc, OR))),
+    EQUIV.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, EQUIV, loc))),
+    EQUIV_UNICODE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeUnicodeTerminalLength(s, EQUIV_UNICODE, loc, EQUIV))),
+    IMPLY.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, IMPLY, loc))),
+    IMPLY_UNICODE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeUnicodeTerminalLength(s, IMPLY_UNICODE, loc, IMPLY))),
+    REVIMPLY.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, REVIMPLY, loc))),
+    REVIMPLY_UNICODE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeUnicodeTerminalLength(s, REVIMPLY_UNICODE, loc, REVIMPLY))),
+    //
+    FORALL.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, FORALL, loc))),
+    FORALL_UNICODE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeUnicodeTerminalLength(s, FORALL_UNICODE, loc, FORALL))),
+    EXISTS.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, EXISTS, loc))),
+    EXISTS_UNICODE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeUnicodeTerminalLength(s, EXISTS_UNICODE, loc, EXISTS))),
+    //
+    EQ.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, EQ, loc))),
+    UNEQUAL_UNICODE.startPattern -> ((s: String, loc: Location, _, _) => ???),
+    TRUE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, TRUE, loc))),
+    FALSE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, FALSE, loc))),
+    //
+    ANYTHING.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, ANYTHING, loc))), //@note this token is stripped out and replaced with (! !) in [[fin`dNextToken]].
+    //
+    ASSIGNANY.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, ASSIGNANY, loc))),
+    ASSIGN.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, ASSIGN, loc))),
+    TEST.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, TEST, loc))),
+    SEMI.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, SEMI, loc))),
+    //
+    PLACE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, PLACE, loc))),
+    PSEUDO.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, PSEUDO, loc))),
+    //
+    INVARIANT.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, INVARIANT, loc))),
+    //
+    IDENT.startPattern -> ((s: String, loc: Location, _, name: String) => {
+      val (n, idx) = splitName(name)
+      Right(consumeTerminalLength(s, IDENT(n, idx), loc))
+    }),
+    NUMBER.startPattern -> ((s: String, loc: Location, _, n: String) => Right(consumeTerminalLength(s, NUMBER(n), loc))),
+    //@NOTE Minus has to come after number so that -9 is lexed as Number(-9) instead of as Minus::Number(9).
+    //@NOTE Yet NUMBER has been demoted not to feature - signs, so it has become irrelevant for now.
+    MINUS.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, MINUS, loc))),
+    //
+    LDIA.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, LDIA, loc))),
+    RDIA.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, RDIA, loc))),
+    //
+    PRG_DEF.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, PRG_DEF, loc))),
+    COLON.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, COLON, loc))),
+    //
+    EXERCISE_PLACEHOLDER.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, EXERCISE_PLACEHOLDER, loc))),
+    //
+    TILDE.startPattern -> ((s: String, loc: Location, _, _) => Right(consumeTerminalLength(s, TILDE, loc)))
+  )
+
+  /**
    * Finds the next token in a string.
     *
     * @todo Untested correctness condition: If a token's regex pattern contains another's, then the more restrictive token is processed first in the massive if/else.
@@ -413,284 +662,15 @@ object KeYmaeraXLexer extends ((String) => List[Token]) with Logging {
    */
   @tailrec
   private def findNextToken(s: String, loc: Location, mode: LexerMode): Option[(String, Token, Location)] = {
-    val whitespace = """^(\s+)[\s\S]*""".r
-    val newline = """(?s)(^\n)[\s\S]*""".r //@todo use something more portable.
-    val comment = """(?s)(^/\*[\s\S]*?\*/)[\s\S]*""".r
-
-    /**
-     *
-     * @param cols Number of columns to move cursor.
-     * @param terminal terminal to generate a token for.
-     * @param location Current location.
-     * @return Return value of findNextToken
-     */
-    def consumeColumns(cols: Int, terminal: Terminal, location: Location) : Option[(String, Token, Location)] = {
-      assert(cols > 0, "Cannot move cursor less than 1 columns.")
-      Some((
-        s.substring(cols),
-        Token(terminal, spanningRegion(loc, cols-1)),
-        suffixOf(loc, cols)))
-    }
-
-    def consumeTerminalLength(terminal: Terminal, location: Location): Option[(String, Token, Location)] =
-      consumeColumns(terminal.img.length, terminal, location)
-
-    def consumeUnicodeTerminalLength(terminal: Terminal, location: Location, replacementTerminal: Terminal): Option[(String, Token, Location)] = {
-      val result: Option[(String, Token, Location)] = consumeColumns(terminal.img.length, terminal, location)
-
-      result match {
-        case None => None
-        case Some((s,t,l)) => Some((s, Token(replacementTerminal, t.loc), l))
+    if (s.isEmpty) {
+      None
+    } else {
+      val lexPrefix = lexers.view.map({ case (r,lexer) => r.findPrefixOf(s).map(lexer(s, loc, mode, _)) }).find(_.isDefined).flatten
+      lexPrefix match {
+        case Some(Left(lexed)) => findNextToken(lexed._1, lexed._2, lexed._3)
+        case Some(Right(lexed)) => lexed
+        case None => throw LexException(loc.begin + " Lexer does not recognize input at " + loc + " in `\n" + s +"\n` beginning with character `" + s(0) + "`=" + s(0).getNumericValue, loc).inInput(s)
       }
-    }
-
-    def swapOutFor(found: Option[(String, Token, Location)], repl: Terminal): Option[(String, Token, Location)] = found match {
-      case None => None
-      case Some((s,tok,cur)) => Some((s,Token(repl,tok.loc),cur))
-    }
-
-    s match {
-      //update location if we encounter whitespace/comments.
-      case comment(theComment) => {
-        val comment = s.substring(0, theComment.length)
-        val lastLineCol = comment.lines.toList.last.length //column of last line.
-        val lineCount = comment.lines.length
-        findNextToken(s.substring(theComment.length), loc match {
-          case UnknownLocation => UnknownLocation
-          case Region(sl, sc, el, ec) => Region(sl + lineCount - 1, lastLineCol, el, ec)
-          case SuffixRegion(sl, sc) => SuffixRegion(sl + lineCount - 1, sc + theComment.length)
-        }, mode)
-      }
-
-      case newline(_*) =>
-        findNextToken(s.tail, loc match {
-          case UnknownLocation     => UnknownLocation
-          case Region(sl,sc,el,ec) => Region(sl+1,1,el,ec)
-          case SuffixRegion(sl,sc) => SuffixRegion(sl+1, 1)
-        }, mode)
-
-      case whitespace(spaces) =>
-        findNextToken(s.substring(spaces.length), loc match {
-          case UnknownLocation => UnknownLocation
-          case Region(sl,sc,el,ec) => Region(sl, sc+spaces.length, el, ec)
-          case SuffixRegion(sl,sc) => SuffixRegion(sl, sc+ spaces.length)
-        }, mode)
-
-      //Lemma file cases
-      case LEMMA_BEGIN.startPattern(_*) => mode match {
-        case LemmaFileMode => consumeTerminalLength(LEMMA_BEGIN, loc)
-        case ProblemFileMode => consumeColumns(LEMMA_BEGIN.img.length, ARCHIVE_ENTRY_BEGIN("Lemma"), loc)
-        case _ => throw new Exception("Encountered ``Lemma`` in non-lemma lexing mode.")
-      }
-      case TOOL_BEGIN.startPattern(_*) => mode match {
-        case LemmaFileMode => consumeTerminalLength(TOOL_BEGIN, loc)
-        case _ => throw new Exception("Encountered ``Tool`` in non-lemma lexing mode.")
-      }
-      case HASH_BEGIN.startPattern(_*) => mode match {
-        case LemmaFileMode => consumeTerminalLength(HASH_BEGIN, loc)
-        case _ => throw new Exception("Encountered ``Tool`` in non-lemma lexing mode.")
-      }
-      case SEQUENT_BEGIN.startPattern(_*) => mode match {
-        case LemmaFileMode => consumeTerminalLength(SEQUENT_BEGIN, loc)
-        case _ => throw new Exception("Encountered ``Sequent`` in a non-lemma file.")
-      }
-      case TURNSTILE.startPattern(_*) => mode match {
-        case LemmaFileMode => consumeTerminalLength(TURNSTILE, loc)
-        case _ => throw new Exception("Encountered a turnstile symbol ==> in a non-lemma file.")
-      }
-      case FORMULA_BEGIN.startPattern(_*) => mode match {
-        case LemmaFileMode => consumeTerminalLength(FORMULA_BEGIN, loc)
-        case _ => throw new Exception("Encountered a formula begin symbol (Formula:) in a non-lemma file.")
-      }
-
-      case DOT.startPattern(dot) => val (_, idx) = splitName(dot); consumeTerminalLength(DOT(idx), loc)
-
-      // File cases
-      case PERIOD.startPattern(_*) => consumeTerminalLength(PERIOD, loc) //swapOutFor(consumeTerminalLength(PERIOD, loc), DOT)
-        /*mode match {
-        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(PERIOD, loc)
-        case _ => throw new Exception("Periods should only occur when processing files.")
-      }*/
-      case ARCHIVE_ENTRY_BEGIN.startPattern(kind) => mode match {
-        case ProblemFileMode => consumeColumns(kind.length, ARCHIVE_ENTRY_BEGIN(kind), loc)
-        case LemmaFileMode if kind == "Lemma" => consumeTerminalLength(LEMMA_BEGIN, loc)
-        case _ => throw new Exception("Encountered ``" + ARCHIVE_ENTRY_BEGIN(kind).img + "`` in non-problem file lexing mode.")
-      }
-      case FUNCTIONS_BLOCK.startPattern(_*) => mode match {
-        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(FUNCTIONS_BLOCK, loc)
-        case _ => throw new Exception("Functions. should only occur when processing files.")
-      }
-      case DEFINITIONS_BLOCK.startPattern(_*) => mode match {
-        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(DEFINITIONS_BLOCK, loc)
-        case _ => throw new Exception("Definitions. should only occur when processing files.")
-      }
-      case PROGRAM_VARIABLES_BLOCK.startPattern(_*) => mode match {
-        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(PROGRAM_VARIABLES_BLOCK, loc)
-        case _ => throw new Exception("ProgramVariables. should only occur when processing files.")
-      }
-      case VARIABLES_BLOCK.startPattern(_*) => mode match {
-        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(VARIABLES_BLOCK, loc)
-        case _ => throw new Exception("Variables. should only occur when processing files.")
-      }
-      case BOOL.startPattern(_*) => mode match {
-        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(BOOL, loc)
-        case _ => throw new Exception("Bool symbol declaration should only occur when processing files.")
-      }
-      case REAL.startPattern(_*) => mode match {
-        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(REAL, loc)
-        case _ => throw new Exception("Real symbol declaration should only occur when processing files.")
-      }
-      case TERM.startPattern(_*) => mode match {
-        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(TERM, loc)
-        case _ => throw new Exception("Term symbol declaration should only occur when processing files.")
-      }
-      case PROGRAM.startPattern(_*) => mode match {
-        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(PROGRAM, loc)
-        case _ => throw new Exception("Program symbol declaration should only occur when processing files.")
-      }
-      case CP.startPattern(_*) => mode match {
-        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(CP, loc)
-        case _ => throw new Exception("CP symbol declaration should only occur when processing files.")
-      }
-      case MFORMULA.startPattern(_*) => mode match {
-        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(MFORMULA, loc)
-        case _ => throw new Exception("MFORMULA symbol declaration should only occur when processing files.")
-      }
-      //.kyx file cases
-      case PROBLEM_BLOCK.startPattern(_*) => mode match {
-        case AxiomFileMode | ProblemFileMode => consumeTerminalLength(PROBLEM_BLOCK, loc)
-        case _ => throw new Exception("Problem./End. sections should only occur when processing .kyx files.")
-      }
-      case TACTIC_BLOCK.startPattern(_*) => mode match {
-        case AxiomFileMode | ProblemFileMode => consumeTerminalLength(TACTIC_BLOCK, loc)
-        case _ => throw new Exception("Tactic./End. sections should only occur when processing .kyx files.")
-      }
-      case BACKTICK.startPattern(_*) => mode match {
-        case ProblemFileMode => consumeTerminalLength(BACKTICK, loc)
-        case _ => throw new Exception("Backtick ` should only occur when processing .kyx files.")
-      }
-      case SHARED_DEFINITIONS_BEGIN.startPattern(_*) => mode match {
-        case ProblemFileMode => consumeTerminalLength(SHARED_DEFINITIONS_BEGIN, loc)
-        case _ => throw new Exception("SharedDefinitions./End. sections should only occur when processing .kyx files.")
-      }
-      //Lemma file cases (2)
-      case TOOL_VALUE_PAT.startPattern(str, _) => mode match { //@note must be before DOUBLE_QUOTES_STRING
-        case LemmaFileMode =>
-          //A tool value looks like """"blah"""" but only blah gets grouped, so there are eight
-          // extra characters to account for.
-          consumeColumns(str.length + 8, TOOL_VALUE(str), loc)
-        case _ => throw new Exception("Encountered delimited string in non-lemma lexing mode.")
-      }
-      //Axiom file cases
-      case AXIOM_BEGIN.startPattern(_*) => mode match {
-        case AxiomFileMode => consumeTerminalLength(AXIOM_BEGIN, loc)
-        case _ => throw new Exception("Encountered ``Axiom.`` in non-axiom lexing mode.")
-      }
-      case END_BLOCK.startPattern(_*) => mode match {
-        case AxiomFileMode | ProblemFileMode | LemmaFileMode => consumeTerminalLength(END_BLOCK, loc)
-        case _ => throw new Exception("Encountered ``Axiom.`` in non-axiom lexing mode.")
-      }
-      case DOUBLE_QUOTES_STRING_PAT.startPattern(str) => mode match {
-        case AxiomFileMode | LemmaFileMode | ProblemFileMode =>
-          //An axiom name looks like "blah". but only blah gets grouped, so there are three
-          // extra characters to account for.
-          consumeColumns(str.length + 2, DOUBLE_QUOTES_STRING(str), loc)
-        case _ => throw new Exception("Encountered delimited string in non-axiom lexing mode.")
-      }
-
-      //These have to come before LBOX,RBOX because otherwise <= becopmes LDIA, EQUALS
-      case GREATEREQ.startPattern(_*) => consumeTerminalLength(GREATEREQ, loc)
-      case GREATEREQ_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(GREATEREQ_UNICODE, loc, GREATEREQ)
-      case LESSEQ.startPattern(_*) => consumeTerminalLength(LESSEQ, loc)
-      case LESSEQ_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(LESSEQ_UNICODE, loc, LESSEQ)
-      case NOTEQ.startPattern(_*) => consumeTerminalLength(NOTEQ, loc)
-
-      case LBANANA.startPattern(_*) => consumeTerminalLength(LBANANA, loc)
-      case RBANANA.startPattern(_*) => consumeTerminalLength(RBANANA, loc)
-      case LPAREN.startPattern(_*) => consumeTerminalLength(LPAREN, loc)
-      case RPAREN.startPattern(_*) => consumeTerminalLength(RPAREN, loc)
-      case LBOX.startPattern(_*) => consumeTerminalLength(LBOX, loc)
-      case RBOX.startPattern(_*) => consumeTerminalLength(RBOX, loc)
-      case LBARB.startPattern(_*) => consumeTerminalLength(LBARB, loc)
-      case RBARB.startPattern(_*) => consumeTerminalLength(RBARB, loc)
-      case LBRACE.startPattern(_*) => consumeTerminalLength(LBRACE, loc)
-      case RBRACE.startPattern(_*) => consumeTerminalLength(RBRACE, loc)
-
-      case COMMA.startPattern(_*) => consumeTerminalLength(COMMA, loc)
-
-      case IF.startPattern(_*) => consumeTerminalLength(IF, loc)
-      case ELSE.startPattern(_*) => consumeTerminalLength(ELSE, loc)
-      //This has to come before PLUS because otherwise ++ because PLUS,PLUS instead of CHOICE.
-      case CHOICE.startPattern(_*) => consumeTerminalLength(CHOICE, loc)
-      //This has to come before MINUS because otherwise -- because MINUS,MINUS instead of DCHOICE.
-      //@TODO case DCHOICE.startPattern(_*) => consumeTerminalLength(DCHOICE, loc)
-      //@note must be before POWER
-      case DUAL.startPattern(_*) => consumeTerminalLength(DUAL, loc)
-
-      case PRIME.startPattern(_*) => consumeTerminalLength(PRIME, loc)
-      case SLASH.startPattern(_*) => consumeTerminalLength(SLASH, loc)
-      case POWER.startPattern(_*) => consumeTerminalLength(POWER, loc)
-      case STAR.startPattern(_*) => consumeTerminalLength(STAR, loc)
-      case PLUS.startPattern(_*) => consumeTerminalLength(PLUS, loc)
-
-
-      case AMP.startPattern(_*) => consumeTerminalLength(AMP, loc)
-      case AND_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(AND_UNICODE, loc, AMP)
-      case NOT.startPattern(_*) => consumeTerminalLength(NOT, loc)
-      case OR.startPattern(_*) => consumeTerminalLength(OR, loc)
-      case OR_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(OR_UNICODE, loc, OR)
-      case EQUIV.startPattern(_*) => consumeTerminalLength(EQUIV, loc)
-      case EQUIV_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(EQUIV_UNICODE, loc, EQUIV)
-      case IMPLY.startPattern(_*) => consumeTerminalLength(IMPLY, loc)
-      case IMPLY_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(IMPLY_UNICODE, loc, IMPLY)
-      case REVIMPLY.startPattern(_*) => consumeTerminalLength(REVIMPLY, loc)
-      case REVIMPLY_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(REVIMPLY_UNICODE, loc, REVIMPLY)
-
-      case FORALL.startPattern(_*) => consumeTerminalLength(FORALL, loc)
-      case FORALL_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(FORALL_UNICODE, loc, FORALL)
-      case EXISTS.startPattern(_*) => consumeTerminalLength(EXISTS, loc)
-      case EXISTS_UNICODE.startPattern(_*) => consumeUnicodeTerminalLength(EXISTS_UNICODE, loc, EXISTS)
-
-      case EQ.startPattern(_*) => consumeTerminalLength(EQ, loc)
-      case UNEQUAL_UNICODE.startPattern(_*) => ???
-      case TRUE.startPattern(_*) => consumeTerminalLength(TRUE, loc)
-      case FALSE.startPattern(_*) => consumeTerminalLength(FALSE, loc)
-
-      case ANYTHING.startPattern(_*) => consumeTerminalLength(ANYTHING, loc) //@note this token is stripped out and replaced with (! !) in [[fin`dNextToken]].
-
-      case ASSIGNANY.startPattern(_*) => consumeTerminalLength(ASSIGNANY, loc)
-      case ASSIGN.startPattern(_*) => consumeTerminalLength(ASSIGN, loc)
-      case TEST.startPattern(_*) => consumeTerminalLength(TEST, loc)
-      case SEMI.startPattern(_*) => consumeTerminalLength(SEMI, loc)
-
-
-      case PLACE.startPattern(_*) => consumeTerminalLength(PLACE, loc)
-      case PSEUDO.startPattern(_*) => consumeTerminalLength(PSEUDO, loc)
-
-      case INVARIANT.startPattern(_*) => consumeTerminalLength(INVARIANT, loc)
-
-      case IDENT.startPattern(name) => {
-        val (s, idx) = splitName(name)
-        consumeTerminalLength(IDENT(s, idx), loc)
-      }
-      case NUMBER.startPattern(n) => consumeTerminalLength(NUMBER(n), loc)
-      //@NOTE Minus has to come after number so that -9 is lexed as Number(-9) instead of as Minus::Number(9).
-      //@NOTE Yet NUMBER has been demoted not to feature - signs, so it has become irrelevant for now.
-      case MINUS.startPattern(_*) => consumeTerminalLength(MINUS, loc)
-
-      case LDIA.startPattern(_*) => consumeTerminalLength(LDIA, loc)
-      case RDIA.startPattern(_*) => consumeTerminalLength(RDIA, loc)
-
-      case PRG_DEF.startPattern(_*) => consumeTerminalLength(PRG_DEF, loc)
-      case COLON.startPattern(_*) => consumeTerminalLength(COLON, loc)
-
-      case EXERCISE_PLACEHOLDER.startPattern(_*) => consumeTerminalLength(EXERCISE_PLACEHOLDER, loc)
-
-      case TILDE.startPattern(_*) => consumeTerminalLength(TILDE, loc)
-
-      case _ if s.isEmpty => None
-        //@todo should be LexException inheriting
-      case _ => throw LexException(loc.begin + " Lexer does not recognize input at " + loc + " in `\n" + s +"\n` beginning with character `" + s(0) + "`=" + s(0).getNumericValue, loc).inInput(s)
     }
   }
 
@@ -705,9 +685,9 @@ object KeYmaeraXLexer extends ((String) => List[Token]) with Logging {
    */
   private def spanningRegion(location: Location, endColOffset: Int) =
     location match {
-      case UnknownLocation        => UnknownLocation
-      case Region(sl, sc, el, ec) => Region(sl, sc, sl, sc + endColOffset)
-      case SuffixRegion(sl, sc)   => Region(sl, sc, sl, sc + endColOffset)
+      case UnknownLocation      => UnknownLocation
+      case Region(sl, sc, _, _) => Region(sl, sc, sl, sc + endColOffset)
+      case SuffixRegion(sl, sc) => Region(sl, sc, sl, sc + endColOffset)
     }
 
   /**
