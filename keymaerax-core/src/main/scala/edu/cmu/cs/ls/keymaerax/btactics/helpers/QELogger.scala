@@ -5,6 +5,8 @@
 
 package edu.cmu.cs.ls.keymaerax.btactics.helpers
 
+import java.io.FileWriter
+
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.bellerophon.{BelleExpr, BuiltInTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
@@ -67,11 +69,11 @@ object QELogger extends Logging {
     */
   private val defaultPath: String = Configuration.path(Configuration.Keys.QE_LOG_PATH)
 
-  private def file(filename: String) =
-    if (scala.tools.nsc.io.File(filename).isDirectory) {
-      scala.tools.nsc.io.File(filename)./("qe.txt").toFile
+  private def file(filename: String): java.io.File =
+    if (new java.io.File(filename).isDirectory) {
+      new java.io.File(filename, "qe.txt")
     } else {
-      scala.tools.nsc.io.File(filename)
+      new java.io.File(filename)
     }
 
   def clearLog(filename: String = defaultPath): Unit = {
@@ -87,9 +89,11 @@ object QELogger extends Logging {
   def logSequent(pr: Sequent, s: Sequent, name: String, filename: String = defaultPath): Unit = {
     try {
       val f = file(filename)
-      f.parent.createDirectory(force=true)
+      f.mkdirs()
       val namestr = "@"+name+"#"+pr.toString+"#"+s.toString+"\n"
-      f.appendAll(namestr)
+      val fw = new FileWriter(f)
+      fw.append(namestr)
+      fw.close()
     } catch {
       case ex: Exception =>
         logger.error("Failed to record sequent", ex)
@@ -140,8 +144,9 @@ object QELogger extends Logging {
     // Upon reading @, save the previous sequent and provable
     var curString = ""
 
+    val src = Source.fromFile(file(filename).toURI)
     try {
-      for (line <- Source.fromFile(file(filename).toURI).getLines()) {
+      for (line <- src.getLines()) {
         if (line.startsWith("@")) {
           parseEntry(curString) match {
             case None => ()
@@ -156,6 +161,8 @@ object QELogger extends Logging {
       }
     } catch {
       case ex: Exception => logger.error("File I/O exception", ex)
+    } finally {
+      src.close()
     }
   }
 
@@ -205,7 +212,9 @@ object QELogger extends Logging {
   /** Exports the formula `fml` in SMT-Lib format to `exportFile`. */
   def exportSmtLibFormat(fml: Formula, exportFile: String): Unit = {
     val f = file(exportFile)
-    f.appendAll(DefaultSMTConverter(fml))
+    val fw = new FileWriter(f)
+    fw.append(DefaultSMTConverter(fml))
+    fw.close()
   }
 
   def main(args: Array[String]): Unit = {
