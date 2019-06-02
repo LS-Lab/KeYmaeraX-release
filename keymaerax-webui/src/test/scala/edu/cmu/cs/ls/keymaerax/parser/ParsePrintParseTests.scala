@@ -16,9 +16,9 @@ import org.scalatest.{FlatSpec, Matchers}
  */
 class ParsePrintParseTests extends FlatSpec with Matchers {
 
-    val randomTrials = 40*10
+    val randomTrials = 4000
     val randomComplexity = 20
-    val rand = new RandomFormula()
+    val rand = new RandomFormula(2784046900084013503L)
 
   // type declaration header for tests
   def makeInput(program : String) : String = {
@@ -123,7 +123,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers {
 
   "Parsing pretty-printer output" should "be the same as the original expression (random)" in {
     for (i <- 1 to randomTrials) {
-		val expected = rand.nextFormula(randomComplexity)
+		  val expected = rand.nextFormulaEpisode().nextFormula(randomComplexity)
       // asFormula runs the parser, but declares the variables occurring in the formula
       KeYmaeraXPrettyPrinter(expected).asFormula shouldBe expected
     }
