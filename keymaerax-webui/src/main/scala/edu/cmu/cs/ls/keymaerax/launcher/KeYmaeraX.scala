@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit
 
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.api.ScalaTacticCompiler
+import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.PrintProgressListener
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
 import edu.cmu.cs.ls.keymaerax.btactics.InvariantGenerator.GenProduct
@@ -67,7 +68,7 @@ object KeYmaeraX {
     """
       |
       |Usage: java -jar keymaerax.jar
-      |  -prove file.kyx [-out file.kyp] [-timeout seconds] |
+      |  -prove file.kyx [-out file.kyp] [-timeout seconds] [-verbose] |
       |  -modelplex file.kyx [-monitor ctrl|model] [-out file.kym] [-isar]
       |     [-sandbox] [-fallback prg] |
       |  -codegen file.kyx [-vars var1,var2,..,varn] [-out file.c]
@@ -236,8 +237,10 @@ object KeYmaeraX {
       case "-bparse" :: value :: tail =>
         parseBelleTactic(value); ???
       case "-prove" :: value :: tail =>
-        if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "prove", 'in -> value), tail)
+        if (value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('mode -> "prove", 'in -> value), tail)
         else optionErrorReporter("-prove")
+      case "-verbose" :: tail =>
+        require(!map.contains('verbose)); nextOption(map ++ Map('verbose -> true), tail)
       case "-savept" :: value :: tail =>
         if(value.nonEmpty && !value.toString.startsWith("-")) nextOption(map ++ Map('ptOut -> value), tail)
         else optionErrorReporter("-savept")
@@ -500,7 +503,11 @@ object KeYmaeraX {
       case _ => false
     })
 
-    BelleInterpreter.setInterpreter(LazySequentialInterpreter(qeDurationListener::Nil))
+    val verbose = options.getOrElse('verbose, false).asInstanceOf[Boolean]
+    val listeners =
+      if (verbose) qeDurationListener :: new PrintProgressListener(tactic) :: Nil
+      else qeDurationListener :: Nil
+    BelleInterpreter.setInterpreter(LazySequentialInterpreter(listeners))
 
     val proofStatistics = try {
       qeDurationListener.reset()
@@ -635,8 +642,7 @@ object KeYmaeraX {
       case _ => false
     })
 
-    BelleInterpreter.setInterpreter(LazySequentialInterpreter(qeDurationListener::Nil))
-
+    val verbose = options.getOrElse('verbose, false).asInstanceOf[Boolean]
     val tacticString = readTactic(options)
     val reqTacticName = options.get('tacticName)
     println("Proving ...")
@@ -658,6 +664,11 @@ object KeYmaeraX {
           ProofStatistics(modelName, reqTacticName.getOrElse("auto").toString, "skipped", None, timeout, -1, -1, -1, -1) :: Nil
         } else {
           t.zipWithIndex.map({ case ((tacticName, _, tactic), i) =>
+            val listeners =
+              if (verbose) qeDurationListener :: new PrintProgressListener(tactic) :: Nil
+              else qeDurationListener :: Nil
+            BelleInterpreter.setInterpreter(LazySequentialInterpreter(listeners))
+
             val proofStat = prove(modelName, model, problemContent, tacticName, tactic, timeout,
               if (i == 0) Some(outputFileName) else None, options)
 
