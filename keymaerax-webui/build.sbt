@@ -12,11 +12,11 @@ assemblyJarName in (Test, assembly) := s"keymaerax-${version.value}.jar"
 
 scalacOptions in (Compile, doc) ++= Seq("-doc-root-content", "rootdoc.txt")
 
-libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.12.4"
+libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.12.8"
 
-libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.12.4"
+libraryDependencies += "org.scala-lang" % "scala-compiler" % "2.12.8"
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.4" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 
 libraryDependencies += "org.pegdown" % "pegdown" % "1.6.0" % "test"      // (For Html Scalatest reports)
 
@@ -26,7 +26,7 @@ libraryDependencies += "com.typesafe.slick" %% "slick" % "2.1.0"
 
 libraryDependencies += "com.typesafe.slick" %% "slick-codegen" % "2.1.0"
 
-libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.20.1"
+libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.27.2"
 
 ////////////////////////////////////////////////////////////////////////////////
 // HyDRA Settings
@@ -41,22 +41,22 @@ javaOptions += "-Xss20M"
 
 //region Akka
 
-val akkaV = "2.5.11"
+val akkaV = "2.5.23"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-http"   % "10.1.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-http"   % "10.1.8"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-http-xml" % "10.1.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-http-xml" % "10.1.8"
 
 libraryDependencies += "com.typesafe.akka" %% "akka-stream" % akkaV
 
-libraryDependencies += "io.spray" %% "spray-json" % "1.3.3"
+libraryDependencies += "io.spray" %% "spray-json" % "1.3.4"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.8"
 
 libraryDependencies += "com.typesafe.akka"   %% "akka-slf4j"     % akkaV
 
 // disable slf4j logging of Akka
-libraryDependencies += "org.slf4j" % "slf4j-nop" % "1.7.25"
+libraryDependencies += "org.slf4j" % "slf4j-nop" % "1.7.26"
 
 //endregion
 
