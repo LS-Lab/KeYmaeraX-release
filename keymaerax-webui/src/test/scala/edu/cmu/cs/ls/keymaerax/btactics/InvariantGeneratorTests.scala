@@ -151,13 +151,12 @@ class InvariantGeneratorTests extends TacticTestBase {
 }
 
 object NonlinearExamplesTests {
-  private val GITHUB_PROJECTS_RAW_PATH = "file:/Users/smitsch/Documents/projects/keymaera/documents/Papers/pegasus_paper"
+  private val GITHUB_PROJECTS_RAW_PATH = "https://github.com/LS-Lab/KeYmaeraX-projects/tree/master"
 }
 
 @ExtremeTest
 class NonlinearExamplesTests extends Suites(
   new NonlinearExamplesTester("Nonlinear", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/nonlinear.kyx", 300, genCheck=true)
-//  new NonlinearExamplesTester("Invariant", s"$GITHUB_PROJECTS_RAW_PATH/benchmarks/invariant.kyx", 300, genCheck=true)
 )
 
 @ExtremeTest
