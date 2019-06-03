@@ -1,7 +1,7 @@
 KeYmaera X
 Copyright (C) 2014-2019 Carnegie Mellon University 
 Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Brandon Bohrer,
-Jan-David Quesel, Yong Kiam Tan, Andrew Sogokon, Marcus Voelp, Ran Ji.
+Jan-David Quesel, Yong Kiam Tan, Andrew Sogokon, Fabian Immler, Marcus Voelp, Ran Ji.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
