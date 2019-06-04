@@ -317,7 +317,12 @@ Axiom "DE differential effect (system)".
   [{x_'=f(||),c&q(||)}]p(||) <-> [{c,x_'=f(||)&q(||)}][x_':=f(||);]p(||)
 End.
 
-Axiom "DI differential invariance".
+ Axiom "DE differential effect (system) y".
+   /* @note Soundness: f(||) cannot have ' by data structure invariant. AtomicODE requires explicit-form so f(||) cannot have differentials/differential symbols */
+   [{y_'=f(||),c&q(||)}]p(||) <-> [{c,y_'=f(||)&q(||)}][y_':=f(||);]p(||)
+ End.
+
+ Axiom "DI differential invariance".
   ([{c&q(||)}]p(||) <-> [?q(||);]p(||)) <- (q(||) -> [{c&q(||)}](p(||)'))
 /* ([x'=f(x)&q(x);]p(x) <-> [?q(x);]p(x)) <- (q(x) -> [x'=f(x)&q(x);]((p(x))') THEORY */
 End.
@@ -518,8 +523,16 @@ Axiom "all eliminate".
   (\forall x_ p(||)) -> p(||)
 End.
 
+Axiom "all eliminate y".
+  (\forall y_ p(||)) -> p(||)
+End.
+
 Axiom "exists eliminate".
   p(||) -> \exists x_ p(||)
+End.
+
+Axiom "exists eliminate y".
+  p(||) -> \exists y_ p(||)
 End.
 
 Axiom "vacuous all quantifier".
