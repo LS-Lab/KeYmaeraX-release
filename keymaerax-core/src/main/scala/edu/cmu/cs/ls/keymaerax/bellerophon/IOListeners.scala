@@ -89,11 +89,12 @@ object IOListeners {
           case _ =>
         }
         case ApplyDefTactic(DefTactic(name, e)) => printer.println(name); executionStack = (e->0) +: executionStack
-        case e: AppliedPositionTactic => printer.println(BellePrettyPrinter(e))
-        case e: NamedBelleExpr =>
+        case e: AppliedPositionTactic => printer.print(BellePrettyPrinter(e) + "... ")
+        // avoid duplicate printing of DependentPositionTactic and AppliedDependentPositionTactic
+        case e: NamedBelleExpr if e.getClass == executionStack.head._1.getClass =>
           start = System.currentTimeMillis()
-          printer.println(BellePrettyPrinter(e))
-          if (e.name == "QE" || e.name == "smartQE") printer.println(input.prettyString)
+          printer.print(BellePrettyPrinter(e) + "... ")
+          if (e.name == "QE" || e.name == "smartQE") printer.println("\n" + input.prettyString)
         case _ =>
       }
     }
@@ -113,7 +114,10 @@ object IOListeners {
         expr match {
           case ApplyDefTactic(DefTactic(name, _)) =>
             printer.println(s"$name done")
-          case e: NamedBelleExpr => printer.println(s"${e.name} done (" + (System.currentTimeMillis()-start) + "ms)")
+          case e: AppliedPositionTactic => printer.println("done")
+          case e: NamedBelleExpr if e.name == "QE" || e.name == "smartQE" =>
+            printer.println(s"${e.name} done (" + (System.currentTimeMillis()-start) + "ms)")
+          case _: NamedBelleExpr => printer.println("done (" + (System.currentTimeMillis()-start) + "ms)")
           case _ =>
         }
       }
