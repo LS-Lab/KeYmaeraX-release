@@ -474,11 +474,13 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Localhos
 
     val pathTuples = osPathGuesses.map(osPath =>
       (osPath.getFields("version").head.convertTo[String],
-       osPath.getFields("kernelPath").head.convertTo[String],
+       osPath.getFields("kernelPath").head.convertTo[List[String]],
        osPath.getFields("kernelName").head.convertTo[String],
-       osPath.getFields("jlinkPath").head.convertTo[String] +
-         (if (jvmBits == "64") "-" + jvmBits else "") + File.separator,
-       osPath.getFields("jlinkName").head.convertTo[String]))
+       osPath.getFields("jlinkPath").head.convertTo[List[String]].map(p => p +
+         (if (jvmBits == "64") "-" + jvmBits else "") + File.separator),
+       osPath.getFields("jlinkName").head.convertTo[String])).flatMap({
+      case (p1, p2, p3, p4, p5) => p2.zipWithIndex.map({ case (p, i) => (p1, p, p3, p4(i), p5) })
+    })
 
     val (suggestionFound, suggestion) = pathTuples.find(path => new java.io.File(path._2 + path._3).exists &&
         new java.io.File(path._4 + path._5).exists) match {
