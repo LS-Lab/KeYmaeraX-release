@@ -120,7 +120,7 @@ Copyright and Licenses
 ======================
 
 Copyright (C) 2014-2019 Carnegie Mellon University. See COPYRIGHT.txt for details.
-Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Brandon Bohrer, Jan-David Quesel, Yong Kiam Tan, Andrew Sogokon, Marcus Voelp, Ran Ji.
+Developed by Andre Platzer, Stefan Mitsch, Nathan Fulton, Brandon Bohrer, Jan-David Quesel, Yong Kiam Tan, Andrew Sogokon, Fabian Immler, Marcus Voelp, Ran Ji.
 
 See LICENSE.txt for the conditions of using this software.
 
