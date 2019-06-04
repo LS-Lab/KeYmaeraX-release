@@ -301,6 +301,8 @@ class StttTutorial extends TacticTestBase {
         dI()(1)
         ) & SaturateTactic(andL('L)) & dW('R)
 
+    def hideQE = SaturateTactic(hideL('Llike, "dx_0^2+dy_0^2=1".asFormula)) & hideL('L, "c<=ep()".asFormula) & hideL('L, "r!=0".asFormula)
+
     val tactic = implyR('R) & SaturateTactic(andL('L)) &
       loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()".asFormula)('R) <(
         print("Base case") & speculativeQE,
@@ -310,8 +312,8 @@ class StttTutorial extends TacticTestBase {
             SaturateTactic(alphaRule) &
             printIndexed("Before replaceTransform") & replaceTransform("ep()".asTerm, "c".asTerm)(-6, "abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()".asFormula) &
             prop & OnAll(speculativeQE),
-          printIndexed("Stop") & ode("0") & prop & OnAll(speculativeQE),
-          printIndexed("Brake") & ode("a") & prop & OnAll(speculativeQE)
+          printIndexed("Stop") & ode("0") & prop & OnAll(hideQE & speculativeQE),
+          printIndexed("Brake") & ode("a") & prop & OnAll(hideQE & speculativeQE)
           )
         )
 
@@ -325,6 +327,8 @@ class StttTutorial extends TacticTestBase {
     def ode(a: String) = diffInvariant("c>=0".asFormula, "dx^2+dy^2=1".asFormula, s"v=old(v)+$a*c".asFormula,
       s"-c*(v-$a/2*c) <= y - old(y) & y - old(y) <= c*(v-$a/2*c)".asFormula)('R) & dW('R)
 
+    def hideQE = SaturateTactic(hideL('Llike, "dx_0^2+dy_0^2=1".asFormula)) & hideL('L, "c<=ep()".asFormula) & hideL('L, "r!=0".asFormula)
+
     val tactic = implyR('R) & SaturateTactic(andL('L)) &
       loop("v >= 0 & dx^2+dy^2 = 1 & r != 0 & abs(y-ly()) + v^2/(2*b()) < lw()".asFormula)('R) <(
         print("Base case") & speculativeQE,
@@ -334,8 +338,8 @@ class StttTutorial extends TacticTestBase {
             SaturateTactic(alphaRule) &
             printIndexed("Before replaceTransform") & replaceTransform("ep()".asTerm, "c".asTerm)(-6, "abs(y_0-ly())+v_0^2/(2*b())+(A()/b()+1)*(A()/2*ep()^2+ep()*v_0) < lw()".asFormula) &
             prop & OnAll(speculativeQE),
-          printIndexed("Stop") & ode("0") & prop & OnAll(speculativeQE),
-          printIndexed("Brake") & ode("a") & prop & OnAll(speculativeQE)
+          printIndexed("Stop") & ode("0") & prop & OnAll(hideQE & speculativeQE),
+          printIndexed("Brake") & ode("a") & prop & OnAll(hideQE & speculativeQE)
           )
         )
 
