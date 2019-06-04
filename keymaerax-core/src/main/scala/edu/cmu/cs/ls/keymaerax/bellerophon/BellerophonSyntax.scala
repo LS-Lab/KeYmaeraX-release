@@ -473,6 +473,7 @@ abstract class DependentPositionWithAppliedInputTactic(private val n: String, va
 
   override def equals(other: Any): Boolean = other match {
     case o: DependentPositionWithAppliedInputTactic => o.n == n && o.inputs == inputs
+    case o: DependentPositionTactic => inputs.isEmpty && o.name == n
     case _ => false
   }
 }
@@ -482,7 +483,7 @@ class AppliedDependentPositionTacticWithAppliedInput(pt: DependentPositionWithAp
     else pt.name + "(" + locator.prettyString + ")"
 
   override def equals(other: Any): Boolean = other match {
-    case o: AppliedDependentPositionTacticWithAppliedInput => o.pt == pt && o.locator == locator
+    case o: AppliedDependentPositionTactic => o.pt == pt && o.locator == locator
     case _ => false
   }
 }
@@ -583,7 +584,7 @@ class AppliedDependentPositionTactic(val pt: DependentPositionTactic, val locato
   }
 
   override def equals(other: Any): Boolean = other match {
-    case o: AppliedDependentPositionTactic => o.pt.name == pt.name && o.locator == locator
+    case o: AppliedDependentPositionTactic => o.pt == pt && o.locator == locator
     case _ => false
   }
 }
