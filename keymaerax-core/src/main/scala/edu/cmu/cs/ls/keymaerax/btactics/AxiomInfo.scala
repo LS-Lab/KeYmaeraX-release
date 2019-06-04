@@ -137,6 +137,9 @@ object DerivationInfo {
     new CoreAxiomInfo("[':=] differential assign"
       , AxiomDisplayInfo(("[′:=]","[':=]"), "<span class=\"k4-axiom-key\">[x′:=c]p(x′)</span>↔p(c)")
       , "Dassignb", false, {case () => HilbertCalculus.Dassignb}),
+    new DerivedAxiomInfo("[':=] differential assign y"
+      , AxiomDisplayInfo(("[y′:=]","[y':=]"), "<span class=\"k4-axiom-key\">[y′:=c]p(y′)</span>↔p(c)")
+      , "Dassignby", false, {case () => useAt(DerivedAxioms.assignDAxiomby)}),
     new CoreAxiomInfo("[:*] assign nondet"
       , AxiomDisplayInfo("[:*]", "<span class=\"k4-axiom-key\">[x:=*]p(x)</span>↔∀x p(x)")
       , "randomb", unren, {case () => HilbertCalculus.randomb}),
@@ -346,6 +349,9 @@ object DerivationInfo {
     new CoreAxiomInfo("DE differential effect (system)"
       , AxiomDisplayInfo("DE", "<span class=\"k4-axiom-key\">[{x′=F,c&Q}]P</span>↔[{c,x′=F&Q}][x′:=f(x)]P")
       , "DEs", unsure, {case () => HilbertCalculus.DE}),
+    new CoreAxiomInfo("DE differential effect (system) y"
+      , AxiomDisplayInfo("DEsysy", "<span class=\"k4-axiom-key\">[{y′=F,c&Q}]P</span>↔[{c,y′=F&Q}][y′:=f(x)]P")
+      , "DEsysy", unsure, {case () => HilbertCalculus.useAt("DE differential effect (system) y")}),
     new CoreAxiomInfo("DI differential invariance"
       , AxiomDisplayInfo("DI", "(<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔[?Q]P)←(Q→[{x′=f(x)&Q}](P)′)")
       , "DIequiv", true, {case () => HilbertCalculus.useAt("DI differential invariance")}),
@@ -361,6 +367,7 @@ object DerivationInfo {
     new CoreAxiomInfo("DG differential ghost constant all"
       , AxiomDisplayInfo("DGa", "<span class=\"k4-axiom-key\">[{x′=f(x)&Q}]P</span>↔∀y [{x′=f(x),y′=g()&Q}]P")
       , "DGCa", unsure, {case () => HilbertCalculus.useAt("DG differential ghost constant all")}),
+    //@todo name: why inverse instead of universal?
     new CoreAxiomInfo("DG inverse differential ghost", "DG inverse differential ghost", "DGpp", unsure, {case () => HilbertCalculus.useAt("DG inverse differential ghost") }),
     new CoreAxiomInfo("DG inverse differential ghost implicational", "DG inverse differential ghost implicational", "DGi", unsure, {case () => HilbertCalculus.useAt("DG inverse differential ghost implicational") }),
     new CoreAxiomInfo(", commute", ",", "commaCommute", true, {case () => HilbertCalculus.useAt(", commute")}),
@@ -464,7 +471,8 @@ object DerivationInfo {
     new CoreAxiomInfo("all dual", ("∀d","alld"), "alld", unsure, {case () => posnil}),
     new CoreAxiomInfo("all dual time", ("∀d","alldt"), "alldt", unsure, {case () => posnil}),
     new CoreAxiomInfo("all dual y", ("∀d","alldy"), "alldy", unsure, {case () => posnil}),
-    new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", unsure, {case () => posnil})
+    new CoreAxiomInfo("all eliminate", ("∀e","alle"), "alle", unsure, {case () => posnil}),
+    new CoreAxiomInfo("all eliminate y", ("∀y","ally"), "ally", unsure, {case () => posnil})
   )
 
   private lazy val miscInfos: List[DerivationInfo] = List(
@@ -473,6 +481,8 @@ object DerivationInfo {
     new CoreAxiomInfo("const formula congruence", "CCQ", "constFormulaCongruence", false, {case () => HilbertCalculus.useAt("const formula congruence") }),
     // Note: only used to implement Dskipd
     new CoreAxiomInfo("DX differential skip", "DX", "DX", true, {case () => throw new UnsupportedOperationException("DX differential skip is not available for general-purpose use") }),
+
+    new CoreAxiomInfo("exists eliminate y", ("∃ey","existsey"), "existsey", unsure, {case () => HilbertCalculus.useAt("exists eliminate y")}),
 
     // compatibility axioms (derivable with Mathematica, but not with Z3)
     CoreAxiomInfo("dgZeroEquilibrium", "dgZeroEquilibrium", "dgZeroEquilibrium", unsure, _ => TactixLibrary.useAt("dgZeroEquilibrium"))
@@ -508,6 +518,7 @@ object DerivationInfo {
     new DerivedAxiomInfo("DWd2 diamond differential weakening", "DWd2", "DWd2", unsure, {case () => useAt(DerivedAxioms.DWd2differentialweakening)}),
     new DerivedAxiomInfo(",d commute", "commaCommuted", "commaCommuted", unsure, {case () => useAt(DerivedAxioms.commaCommuted)}),
     new DerivedAxiomInfo("DGd diamond inverse differential ghost implicational", "DGdi", "DGdi", unsure, {case () => useAt(DerivedAxioms.DGdinversedifferentialghostimplicational)}),
+    new DerivedAxiomInfo("DBX>", "DBXgt", "DBXgt", unsure, {case () => useAt(DerivedAxioms.darbouxGt)}),
     //    new DerivedAxiomInfo("all eliminate", "alle", "allEliminate", {case () => useAt(DerivedAxioms.allEliminateAxiom)}),
     //@note derived axiom exists eliminate not yet proven -> use core axiom instead
     //    new DerivedAxiomInfo("exists eliminate", "existse", "existsEliminate", {case () => useAt(DerivedAxioms.existsEliminate)}),

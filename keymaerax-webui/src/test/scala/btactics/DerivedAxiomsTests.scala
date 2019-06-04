@@ -121,6 +121,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   //@todo it should "prove [':=] differential assign" in {check(assignDAxiomb)}
   it should "prove <':=> differential assign" in {check(assignDAxiom)}
   it should "prove <:*> assign nondet" in {check(nondetassigndAxiom)}
+  it should "prove [y':=] differential assign 2" in {check(assignDAxiomby)}
   it should "prove <?> test" in {check(testdAxiom)}
   it should "prove <++> choice" in {check(choicedAxiom)}
   it should "prove <;> compose" in {check(composedAxiom)}
@@ -185,6 +186,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove 'linear right" in withMathematica { qeTool => check(DlinearRight)}
   it should "prove DG differential pre-ghost" in {check(DGpreghost)}
   it should "prove DX diamond differential skip" in {check(Dskipd)}
+  it should "prove DBX>" in withMathematica {qeTool => check(darbouxGt)}
   it should "prove 0*" in withMathematica { qeTool => check(zeroTimes)}
   it should "prove 0+" in withMathematica { qeTool => check(zeroPlus)}
   it should "prove +0" in withMathematica { qeTool => check(plusZero)}
