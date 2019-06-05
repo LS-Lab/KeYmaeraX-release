@@ -16,9 +16,10 @@ import org.scalatest.{FlatSpec, Matchers}
  */
 class ParsePrintParseTests extends FlatSpec with Matchers {
 
-    val randomTrials = 400
+    val randomTrials = 20
     val randomComplexity = 25
-    val rand = new RandomFormula(2784046900084013503L)
+    val rand = new RandomFormula()
+  //val rand = new RandomFormula(2784046900084013503L)
 
   // type declaration header for tests
   def makeInput(program : String) : String = {
