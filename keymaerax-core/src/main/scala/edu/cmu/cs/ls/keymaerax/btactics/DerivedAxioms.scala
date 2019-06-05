@@ -2352,6 +2352,7 @@ object DerivedAxioms extends Logging {
     * }}}
     * @note More precisely: this derivation assumes that y_ does not occur, hence the more fancy space dependents.
     * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+    * @see [[darbouxOpenGt]]
     */
   lazy val darbouxGt = derivedAxiom("DBX>",
     Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|))'>=g(|y_|)*e(|y_|)".asFormula)),
@@ -2393,6 +2394,15 @@ object DerivedAxioms extends Logging {
         )
   )
 
+  /**
+    * {{{Axiom "DBX> open".
+    *   (e>0 -> [c&q(||)]e>0) <- [c&q(||)](e>0 -> (e)'>=g*e)
+    * End.
+    * }}}
+    * @note More precisely: this derivation assumes that y_ does not occur, hence the more fancy space dependents.
+    * @see André Platzer and Yong Kiam Tan. Differential Equation Invariance Axiomatization. arXiv:1905.13429, May 2019.
+    * @see [[darbouxGt]]
+    */
   lazy val darbouxOpenGt = derivedAxiom("DBX> open",
     Sequent(IndexedSeq(), IndexedSeq("(e(|y_|)>0 -> [{c{|y_|}&q(|y_|)}]e(|y_|)>0) <- [{c{|y_|}&q(|y_|)}](e(|y_|) > 0 -> (e(|y_|)'>=g(|y_|)*e(|y_|)))".asFormula)),
     implyR(1) & implyR(1) &

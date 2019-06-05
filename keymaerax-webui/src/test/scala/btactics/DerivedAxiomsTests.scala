@@ -187,6 +187,7 @@ class DerivedAxiomsTests extends edu.cmu.cs.ls.keymaerax.btactics.TacticTestBase
   it should "prove DG differential pre-ghost" in {check(DGpreghost)}
   it should "prove DX diamond differential skip" in {check(Dskipd)}
   it should "prove DBX>" in withMathematica {qeTool => check(darbouxGt)}
+  it should "prove DBX> open" in withMathematica {qeTool => check(darbouxOpenGt)}
   it should "prove 0*" in withMathematica { qeTool => check(zeroTimes)}
   it should "prove 0+" in withMathematica { qeTool => check(zeroPlus)}
   it should "prove +0" in withMathematica { qeTool => check(plusZero)}
