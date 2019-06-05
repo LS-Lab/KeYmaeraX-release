@@ -1466,7 +1466,8 @@ object ODEInvariance {
     *         1) Linearity heuristic checks fail e.g.: x'=1+x^2-x^2 will be treated as non-linear even though it is really linear
     *
     */
-  private val nilpotentSolveTimeVar = "time_".asVariable
+  // TODO: hacky communication of global time marker for nilpotentSolve
+  val nilpotentSolveTimeVar = "time_".asVariable
 
   def nilpotentSolve(solveEnd : Boolean) : DependentPositionTactic = "nilpotentSolve" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "nilpotent solve only applicable in top-level succedent")

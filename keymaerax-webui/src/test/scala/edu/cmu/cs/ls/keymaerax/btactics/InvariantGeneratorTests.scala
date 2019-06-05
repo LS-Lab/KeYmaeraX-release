@@ -151,7 +151,7 @@ class InvariantGeneratorTests extends TacticTestBase {
 }
 
 object NonlinearExamplesTests {
-  private val GITHUB_PROJECTS_RAW_PATH = "https://github.com/LS-Lab/KeYmaeraX-projects/tree/master"
+  private val GITHUB_PROJECTS_RAW_PATH = "https://raw.githubusercontent.com/LS-Lab/KeYmaeraX-projects/master"
 }
 
 @ExtremeTest
