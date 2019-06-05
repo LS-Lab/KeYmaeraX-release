@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.scalatest.time.SpanSugar._
+import testHelper.KeYmaeraXTestTags.SlowTest
 
 import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable
@@ -712,13 +713,13 @@ class SequentialInterpreterTests extends TacticTestBase {
       DebuggingTactics.error("Inapplicable close") :: "close".asTactic :: ProofRuleTactics.closeTrue(1) :: Nil)
   }
 
-  it should "not spend extensive time searching positions" in {
+  it should "confirm that interpreter debug information slows down search" taggedAs SlowTest in {
     val ante = (1 to 100).map(i => Equal(Variable("x", Some(i)), Number(1))).reduce(And)
     val succ = (1 to 50).map(i => Box(Assign(Variable("y", Some(i)), Number(2)), Greater(Variable("y", Some(i)), Number(1)))).reduce(Or)
 
-    // should take about 500ms
-    failAfter(2 seconds) {
-      val BelleProvable(result, _) = ExhaustiveSequentialInterpreter(Nil)(
+    // should take about 1min
+    failAfter(2 minutes) {
+      val BelleProvable(result, _) = ExhaustiveSequentialInterpreter(Nil, throwWithDebugInfo = true)(
         SaturateTactic(implyR('R) | andL('L) | orR('R) | assignb('R)),
         BelleProvable(ProvableSig.startProof(Imply(ante, succ)))
       )
@@ -726,10 +727,15 @@ class SequentialInterpreterTests extends TacticTestBase {
       result.subgoals.head.succ should have size 50
       result.subgoals.head.succ.foreach(_ shouldBe a [Greater])
     }
+  }
 
-    // should take about 1min
-    failAfter(2 minutes) {
-      val BelleProvable(result, _) = ExhaustiveSequentialInterpreter(Nil, throwWithDebugInfo = true)(
+  it should "not spend extensive time searching positions without debug information" in {
+    val ante = (1 to 100).map(i => Equal(Variable("x", Some(i)), Number(1))).reduce(And)
+    val succ = (1 to 50).map(i => Box(Assign(Variable("y", Some(i)), Number(2)), Greater(Variable("y", Some(i)), Number(1)))).reduce(Or)
+
+    // should take about 500ms
+    failAfter(2 seconds) {
+      val BelleProvable(result, _) = ExhaustiveSequentialInterpreter(Nil)(
         SaturateTactic(implyR('R) | andL('L) | orR('R) | assignb('R)),
         BelleProvable(ProvableSig.startProof(Imply(ante, succ)))
       )
