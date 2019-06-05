@@ -269,12 +269,20 @@ Axiom "[:=] assign equality".
   [x_:=f();]p(||) <-> \forall x_ (x_=f() -> p(||))
 End.
 
+Axiom "[:=] assign equality y".
+  [y_:=f();]p(||) <-> \forall y_ (y_=f() -> p(||))
+End.
+
 Axiom "[:=] assign equality exists".
   [x_:=f();]p(||) <-> \exists x_ (x_=f() & p(||))
 End.
 
 Axiom "[:=] self assign".
   [x_:=x_;]p(||) <-> p(||)
+End.
+
+Axiom "[:=] self assign y".
+  [y_:=y_;]p(||) <-> p(||)
 End.
 
 Axiom "[':=] differential assign".
