@@ -943,6 +943,9 @@ private object DifferentialTactics extends Logging {
   lazy val mathematicaODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "ODE automation only applicable to top-level succedents")
 
+    if(TacticHelper.names(seq).contains(ODEInvariance.nilpotentSolveTimeVar))
+      throw new BelleThrowable("Strongest ODE invariant already added to domain constraints.")
+
     seq.sub(pos) match {
       case Some(Box(sys@ODESystem(ode, q), _)) =>
         // Try to prove postcondition invariant
