@@ -43,6 +43,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, BreadthFirstSearc
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
+import edu.cmu.cs.ls.keymaerax.launcher.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
 import org.apache.logging.log4j.scala.Logging
@@ -448,10 +449,10 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
       new ConfigureMathematicaResponse(
         if (linkNamePrefix.exists()) linkNamePrefix.toString else "",
         if (jlinkLibNamePrefix.exists()) jlinkLibNamePrefix.toString else "", false) :: Nil
-    }
-    else {
+    } else {
       Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkName)
       Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
+      ToolProvider.setProvider(new MathematicaToolProvider(ToolConfiguration.config("mathematica")))
       new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
     }
   }
@@ -541,6 +542,12 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
     else {
       assert(tool == "mathematica" || tool == "z3", "Expected either Mathematica or Z3 tool")
       Configuration.set(Configuration.Keys.QE_TOOL, tool)
+      val config = ToolConfiguration.config(tool)
+      tool match {
+        case "mathematica" => ToolProvider.setProvider(new MathematicaToolProvider(config))
+        case "z3" => ToolProvider.setProvider(new Z3ToolProvider())
+        case _ => ToolProvider.setProvider(new NoneToolProvider)
+      }
       new KvpResponse("tool", tool) :: Nil
     }
   }

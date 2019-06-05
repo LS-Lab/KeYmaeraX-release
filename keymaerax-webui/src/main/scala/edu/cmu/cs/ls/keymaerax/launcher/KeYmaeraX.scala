@@ -167,21 +167,10 @@ object KeYmaeraX {
 
   private def configFromFile(defaultTool: String): OptionMap = {
     Configuration.getOption(Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
-      case "mathematica" => Map('tool -> "mathematica") ++ mathematicaConfig
-      case "z3" => Map('tool -> "z3")
+      case "mathematica" => Map('tool -> "mathematica") ++
+        ToolConfiguration.mathematicaConfig.map({ case (k,v) => Symbol(k) -> v })
+      case "z3" => Map('tool -> "z3") ++ ToolConfiguration.z3Config.map({ case (k, v) => Symbol(k) -> v })
       case t => throw new Exception("Unknown tool '" + t + "'")
-    }
-  }
-
-  private def mathematicaConfig: OptionMap = {
-    Configuration.getOption(Configuration.Keys.MATHEMATICA_LINK_NAME) match {
-      case Some(l) => Configuration.getOption(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) match {
-        case Some(libDir) => Map('mathkernel -> l, 'jlink -> libDir)
-        case None => Map('mathkernel -> l)
-      }
-      case None =>
-        val default = DefaultConfiguration.defaultMathematicaConfig
-        Map('mathkernel -> default("linkName"), 'jlink -> default("jlinkLibDir"))
     }
   }
 
