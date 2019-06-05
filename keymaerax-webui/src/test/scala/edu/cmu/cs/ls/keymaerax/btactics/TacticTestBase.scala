@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
+import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{PrintProgressListener, QEFileLogListener, QELogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
@@ -295,6 +295,19 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       case BelleProvable(provable, _) => provable
       case r => fail("Unexpected tactic result " + r)
     }
+  }
+
+  /** Execute a task with tactic progress.
+    * @example{{{
+    *   withTacticProgress("implyR(1)".asTactic) { proveBy("x>0 -> x>=0".asFormula, _) }
+    * }}}
+    */
+  def withTacticProgress(tactic: BelleExpr)(task: BelleExpr => ProvableSig): ProvableSig = {
+    val orig = theInterpreter
+    val progressInterpreter = LazySequentialInterpreter(orig.listeners :+ new PrintProgressListener(tactic), throwWithDebugInfo = false)
+    registerInterpreter(progressInterpreter)
+    BelleInterpreter.setInterpreter(progressInterpreter)
+    try { task(tactic) } finally { BelleInterpreter.setInterpreter(orig) }
   }
 
   /** Filters the archive entries that should be provable with the `tool`. */
