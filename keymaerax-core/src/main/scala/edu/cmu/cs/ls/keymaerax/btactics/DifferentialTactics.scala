@@ -462,7 +462,7 @@ private object DifferentialTactics extends Logging {
         //But ultimately, we need a systematic way of checking this in the
         //core (last-case resort could always just move this check into the core and apply
         //it whenever DG differential ghost is applied, but that's pretty
-        //hacky).
+        //hacky and won't suffice).
         val singular = {
           val evDomFmls = flattenConjunctions(h)
           (FormulaTools.singularities(a) ++ FormulaTools.singularities(b)).filter(v =>
