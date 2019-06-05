@@ -28,6 +28,12 @@ import scala.collection.immutable._
  */
 class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll
     with AppendedClues with TimeLimitedTests with TimeLimits with PrivateMethodTester {
+
+  /** Default signaler for failAfter in tests without tools. */
+  protected implicit val signaler: Signaler = { t: Thread =>
+    theInterpreter.kill(); t.interrupt()
+  }
+
   override def timeLimit: Span = {
     val simpleNames = this.getClass.getAnnotations.map(_.annotationType().getSimpleName)
     if (simpleNames.contains("ExtremeTest")) {
@@ -103,14 +109,13 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       val tool = provider.tool()
       val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
       implicit val signaler: Signaler = (t: Thread) => {
+        theInterpreter.kill()
         tool.cancel()
         t.interrupt()
         provider.shutdown()
         mathematicaProvider = new Lazy(new MathematicaToolProvider(configFileMathematicaConfig))
       }
-      failAfter(to) {
-        testcode(tool)
-      }
+      failAfter(to) { testcode(tool) }
     }
   }
 
@@ -131,19 +136,22 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       provider.tool().setOperationTimeout(timeout)
       val tool = provider.tool()
       val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
-      implicit val signaler: Signaler = { _: Thread => tool.cancel() }
-      failAfter(to) {
-        testcode(tool)
+      implicit val signaler: Signaler = { t: Thread =>
+        theInterpreter.kill()
+        tool.cancel()
+        t.interrupt()
+        provider.shutdown()
       }
+      failAfter(to) { testcode(tool) }
     }
   }
 
   /** Tests with both Mathematica and Z3 as QE tools. */
   def withQE(testcode: QETool => Any, timeout: Int = -1): Unit = {
-    withClue("Mathematica") { withMathematica(testcode) }
+    withClue("Mathematica") { withMathematica(testcode, timeout) }
     afterEach()
     beforeEach()
-    withClue("Z3") { withZ3(testcode) }
+    withClue("Z3") { withZ3(testcode, timeout) }
   }
 
   /**
