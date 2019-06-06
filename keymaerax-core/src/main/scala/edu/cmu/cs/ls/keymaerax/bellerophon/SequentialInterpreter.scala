@@ -4,7 +4,7 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
-import java.util.concurrent.{Callable, FutureTask}
+import java.util.concurrent.{Callable, ExecutionException, FutureTask}
 
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
@@ -312,7 +312,10 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
           Await.result(c.future, Duration(timeout, MILLISECONDS))
         } catch {
           // current alternative failed within timeout, try next
-          case _: BelleThrowable => apply(TimeoutAlternatives(alternatives.tail, timeout), v)
+          case ex: ExecutionException => ex.getCause match {
+            case _: BelleThrowable => apply(TimeoutAlternatives(alternatives.tail, timeout), v)
+            case e => throw e
+          }
           case ex: TimeoutException =>
             c.cancel()
             throw new BelleThrowable("Alternative timed out", ex)
