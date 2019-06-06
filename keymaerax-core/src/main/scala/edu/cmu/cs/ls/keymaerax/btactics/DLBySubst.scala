@@ -92,12 +92,12 @@ private object DLBySubst {
         val fmls: ListBuffer[Formula] = ListBuffer.empty
         ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
           override def preP(p: PosInExpr, e: Program): Either[Option[ExpressionTraversal.StopTraversal], Program] = e match {
-            case Test(q) => fmls.append(q); Left(None)
-            case ODESystem(_, q) => fmls.append(q); Left(None)
+            case Test(q) if q != True => fmls.append(q); Left(Some(ExpressionTraversal.stop))
+            case ODESystem(_, q) if q != True => fmls.append(q); Left(Some(ExpressionTraversal.stop))
             case _ => Left(None)
           }
         }, prg)
-        if (fmls.map(StaticSemantics.freeVars).reduceOption(_ ++ _).getOrElse(SetLattice.bottom).intersect(fv).isEmpty) abstractionb(pos)
+        if (fmls.isEmpty) abstractionb(pos)
         else throw new BelleFriendlyUserMessage("Abstraction would lose information from tests and/or evolution domain constraints")
       case e => throw BelleTacticFailure("Inapplicable tactic: expected formula of the shape [a;]p but got " +
         e.map(_.prettyString) + " at position " + pos.prettyString + " in sequent " + seq.prettyString)

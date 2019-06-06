@@ -94,6 +94,12 @@ class DLTests extends TacticTestBase {
         |    [?x>0;]x>0
         |at position Fixed(1,None,true)
         |because Abstraction would lose information from tests and/or evolution domain constraints""".stripMargin
+    // tests could be unsatisfiable
+    the [BelleThrowable] thrownBy proveBy("[?false;]x>0".asFormula, DLBySubst.autoabstractionb(1)) should have message
+      """[Bellerophon Runtime] Tactic autoabstractionb(1) is not applicable for
+        |    [?false;]x>0
+        |at position Fixed(1,None,true)
+        |because Abstraction would lose information from tests and/or evolution domain constraints""".stripMargin
   }
 
   it should "not lose information from evolution domain constraints" in {
@@ -103,12 +109,18 @@ class DLTests extends TacticTestBase {
         |    [{y'=3&x>0}]x>0
         |at position Fixed(1,None,true)
         |because Abstraction would lose information from tests and/or evolution domain constraints""".stripMargin
+    proveBy("[{y'=3 & y>0}]x>0".asFormula, abstractionb(1)).subgoals.loneElement shouldBe "==> x>0".asSequent
+    // evolution domain constraint could be unsatisfiable or not hold initially
+    the [BelleThrowable] thrownBy proveBy("[{y'=3 & 0>1}]x>0".asFormula, DLBySubst.autoabstractionb(1)) should have message
+      """[Bellerophon Runtime] Tactic autoabstractionb(1) is not applicable for
+        |    [{y'=3&0>1}]x>0
+        |at position Fixed(1,None,true)
+        |because Abstraction would lose information from tests and/or evolution domain constraints""".stripMargin
+    proveBy("[{y'=3}]x>0".asFormula, DLBySubst.autoabstractionb(1)).subgoals.loneElement shouldBe "==> x>0".asSequent
   }
 
-  it should "abstract if no overlap between tests/evolution domain constraints and postcondition" in {
+  it should "abstract if no tests/evolution domain constraints" in {
     proveBy("[y:=3;]x>0".asFormula, DLBySubst.autoabstractionb(1)).subgoals.loneElement shouldBe "==> x>0".asSequent
-    proveBy("[y:=*; ?y>=3;]x>0".asFormula, DLBySubst.autoabstractionb(1)).subgoals.loneElement shouldBe "==> x>0".asSequent
-    proveBy("[{y'=-2 & y>=0}]x>0".asFormula, DLBySubst.autoabstractionb(1)).subgoals.loneElement shouldBe "==> x>0".asSequent
   }
 
   it should "only abstract if no overlap between bound variables of program and free variables of postcondition" in {
