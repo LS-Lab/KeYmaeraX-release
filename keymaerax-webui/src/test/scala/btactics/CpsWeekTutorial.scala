@@ -9,7 +9,6 @@ import edu.cmu.cs.ls.keymaerax.bellerophon.{OnAll, SaturateTactic}
 import edu.cmu.cs.ls.keymaerax.btactics.DebuggingTactics.print
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.arithmetic.speculative.ArithmeticSpeculativeSimplification
 import edu.cmu.cs.ls.keymaerax.core.{DotTerm, Formula, Function, Real, SubstitutionPair, USubst, Unit}
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
@@ -18,7 +17,6 @@ import testHelper.ParserFactory._
 
 import scala.language.postfixOps
 import org.scalatest.LoneElement._
-import org.scalatest.time.SpanSugar._
 import testHelper.KeYmaeraXTestTags.TodoTest
 
 /**
@@ -186,7 +184,7 @@ class CpsWeekTutorial extends TacticTestBase {
     proveBy(harder, tactic("v^2<=2*b()*(m()-x)".asFormula)) shouldBe 'proved
   }
 
-  "2D Car" should "be provable" in withQE { _ =>
+  "2D Car" should "be provable" in withQE ({ _ =>
     val s = KeYmaeraXArchiveParser.getEntry("CPSWeek Tutorial Example 4", io.Source.fromInputStream(
       getClass.getResourceAsStream("/examples/tutorials/cpsweek/cpsweek.kyx")).mkString).get.model.asInstanceOf[Formula]
 
@@ -197,17 +195,23 @@ class CpsWeekTutorial extends TacticTestBase {
     val dw = exhaustiveEqR2L(hide=true)('Llast)*3 /* 3 old(...) in DI */ & SaturateTactic(andL('L)) &
       print("Before diffWeaken") & dW(1) & print("After diffWeaken")
 
+    def hideQE(x: String) = SaturateTactic(hideL('Llike, "dx^2+dy^2=1".asFormula)) & hideL('L, "t<=ep()".asFormula) &
+      hideL('L, s"-t*(v--b()/2*t)<=$x-${x}_0".asFormula) & hideL('L, s"$x-${x}_0<=t*(v--b()/2*t)".asFormula) &
+      hideL('L, "r!=0".asFormula) & hideL('L, "A()>=0".asFormula) & hideL('L, "ep()>0".asFormula) &
+      hideR('R, s"2*b()*abs(m$x-$x)>v^2".asFormula)
+
     val tactic = implyR('R) & SaturateTactic(andL('L)) & loop("r!=0 & v>=0 & dx^2+dy^2=1 & (2*b()*abs(mx-x)>v^2 | 2*b()*abs(my-y)>v^2)".asFormula)('R) <(
       print("Base case") & QE,
       print("Use case") & QE,
       print("Step") & chase('R) & andR('R) <(
-        allR('R) & implyR('R) & di("-b()") & dw & prop & OnAll(ArithmeticSpeculativeSimplification.speculativeQE),
+        allR('R) & implyR('R) & di("-b()") & dw & prop <(hideQE("y") & QE, hideQE("x") & QE),
         // in tutorial: only show braking branch, acceleration takes too long (needs abs and hiding and cuts etc.)
-        allR('R)*2 & implyR('R) & allR('R)*2 & implyR('R) & allR('R) & implyR('R) & di("A()") & dw
+        SaturateTactic(allR('R) | implyR('R)) & di("A()") & dw
         )
       )
-    failAfter(5 minutes) { proveBy(s, tactic).subgoals should have size 1 }
-  }
+
+    proveBy(s, tactic).subgoals should have size 1
+  }, 300)
 
   "Motzkin" should "be provable with DI+DW" in withQE { _ =>
     val s = KeYmaeraXArchiveParser.getEntry("CPSWeek Tutorial Example 3", io.Source.fromInputStream(
