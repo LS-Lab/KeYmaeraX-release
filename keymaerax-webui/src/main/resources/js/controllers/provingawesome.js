@@ -52,6 +52,10 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
     doneLabel: 'Done'
   }
 
+  $http.get("/config/tool").success(function(data) {
+    $scope.tool = data.tool;
+  });
+
   $http.get('proofs/user/' + $scope.userId + "/" + $scope.proofId).success(function(data) {
       $scope.proofId = data.id;
       $scope.proofName = data.name;
