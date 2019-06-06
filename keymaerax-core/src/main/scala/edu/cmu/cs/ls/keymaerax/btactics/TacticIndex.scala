@@ -140,17 +140,10 @@ class DefaultTacticIndex extends TacticIndex {
     } else expr match {
       case Box(a, p) =>
         val bv = StaticSemantics.boundVars(a)
-        if (!bv.isEmpty && bv.intersect(StaticSemantics.freeVars(p)).isEmpty) {
-          a match {
-            case _: ODESystem => (TactixLibrary.solve :: Nil, TactixLibrary.dW :: Nil)
-            case _ => (Nil, TactixLibrary.abstractionb :: Nil)
-          }
-
-        } else {
-          a match {
-            case _: ODESystem => (TactixLibrary.solve :: Nil, TactixLibrary.ODE :: TactixLibrary.solve :: Nil)
-            case _ => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
-          }
+        a match {
+          case _: ODESystem if  bv.intersect(StaticSemantics.freeVars(p)).isEmpty => (TactixLibrary.solve::Nil, TactixLibrary.dW::Nil)
+          case _: ODESystem if !bv.intersect(StaticSemantics.freeVars(p)).isEmpty => (TactixLibrary.solve::Nil, TactixLibrary.ODE::TactixLibrary.solve::Nil)
+          case _ => (TactixLibrary.step::Nil, DLBySubst.autoabstractionb::TactixLibrary.step::Nil)
         }
       case Diamond(a, _) if !a.isInstanceOf[ODESystem] && !a.isInstanceOf[Loop] => (TactixLibrary.step::Nil, TactixLibrary.step::Nil)
       case Diamond(a, _) if a.isInstanceOf[ODESystem] => (TactixLibrary.solve::Nil, TactixLibrary.solve::Nil)

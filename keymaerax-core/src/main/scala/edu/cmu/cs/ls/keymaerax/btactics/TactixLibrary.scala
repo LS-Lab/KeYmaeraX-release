@@ -88,7 +88,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
         case _ => super.tacticsFor(expr)
       }
     }
-  )(notL::andL::notR::implyR::orR::allR::existsL::abstractionb::dW::step::ProofRuleTactics.closeTrue::ProofRuleTactics.closeFalse::Nil ++ beta:_*)
+  )(notL::andL::notR::implyR::orR::allR::existsL::DLBySubst.autoabstractionb::dW::step::ProofRuleTactics.closeTrue::ProofRuleTactics.closeFalse::Nil ++ beta:_*)
 
   /** Follow program structure when normalizing but avoid branching in typical safety problems (splits andR but nothing else). Keeps branching factor of [[tacticChase]] restricted to [[andR]]. */
   val unfoldProgramNormalize: BelleExpr = "unfold" by normalize(andR)
@@ -207,12 +207,8 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
           ((_: Sequent, p: Position) => (new Fixed(p)::Nil)::Nil) :: Nil
         } else super.tacticRecursors(tactic)
       override def tacticsFor(expr: Expression): (List[AtPosition[_ <: BelleExpr]], List[AtPosition[_ <: BelleExpr]]) = expr match {
-        case Box(l: Loop, p) =>
-          if (StaticSemantics.boundVars(l).intersect(StaticSemantics.freeVars(p)).isEmpty) (Nil, abstractionb::Nil)
-          else (Nil, loop::Nil)
-        case Box(ode: ODESystem, p) =>
-          if (StaticSemantics.boundVars(ode).intersect(StaticSemantics.freeVars(p)).isEmpty) (Nil, abstractionb::Nil)
-          else (TactixLibrary.solve::Nil, odeR::solve::Nil)
+        case Box(l: Loop, p) => (Nil, DLBySubst.autoabstractionb::loop::Nil)
+        case Box(ode: ODESystem, p) => (TactixLibrary.solve::Nil, DLBySubst.autoabstractionb::odeR::solve::Nil)
         case f@Not(_)      if f.isFOL => (Nil, Nil)
         case f@And(_, _)   if f.isFOL => (TactixLibrary.andL::Nil, Nil)
         case f@Or(_, _)    if f.isFOL => (Nil, TactixLibrary.orR::Nil)
@@ -263,7 +259,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
       SaturateTactic(onAll(allTacticChase(autoTacticIndex)(notL, andL, notR, implyR, orR, allR,
         TacticIndex.allLStutter, existsL, TacticIndex.existsRStutter, step, orL,
         implyL, equivL, ProofRuleTactics.closeTrue, ProofRuleTactics.closeFalse,
-        andR, equivR, abstractionb, loop, odeR, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
+        andR, equivR, DLBySubst.autoabstractionb, loop, odeR, solve))) & //@note repeat, because step is sometimes unstable and therefore recursor doesn't work reliably
         Idioms.doIf(!_.isProved)(onAll(EqualityTactics.applyEqualities &
           (DifferentialTactics.endODEHeuristic | ?(QE & (if (keepQEFalse) nil else done)))))))
   }
