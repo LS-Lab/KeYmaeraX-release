@@ -112,12 +112,14 @@ class Etcs extends TacticTestBase {
     proveBy(s, tactic) shouldBe 'proved
   }
 
-  it should "prove safety lemma with master" in withQE { _ =>
+  it should "prove safety lemma with master" in withMathematica { _ =>
+    //@todo gets stuck with Z3
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma.kyx"))
     proveBy(s, master()) shouldBe 'proved
   }
 
-  it should "prove safety with piecewise constant actuation disturbance" in withQE { _ =>
+  it should "prove safety with piecewise constant actuation disturbance" in withMathematica { _ =>
+    //@todo gets stuck with Z3
     val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/etcs/rephrased/safety-lemma-disturbed-simplified-piecewise.kyx"))
     proveBy(s, master()) shouldBe 'proved
   }
