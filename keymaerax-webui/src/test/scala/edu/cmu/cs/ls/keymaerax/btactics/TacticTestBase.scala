@@ -308,11 +308,13 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   /** Execute a task with tactic progress.
     * @example{{{
     *   withTacticProgress("implyR(1)".asTactic) { proveBy("x>0 -> x>=0".asFormula, _) }
+    *   withTacticProgress("master".asTactic, "master"::"step"::"stepAt"::Nil) { proveBy("x>0 -> x>=0".asFormula, _) }
     * }}}
     */
-  def withTacticProgress(tactic: BelleExpr)(task: BelleExpr => ProvableSig): ProvableSig = {
+  def withTacticProgress(tactic: BelleExpr, stepInto: List[String] = Nil)(task: BelleExpr => ProvableSig): ProvableSig = {
     val orig = theInterpreter
-    val progressInterpreter = LazySequentialInterpreter(orig.listeners :+ new PrintProgressListener(tactic), throwWithDebugInfo = false)
+    val progressInterpreter = LazySequentialInterpreter(
+      orig.listeners :+ new PrintProgressListener(tactic, stepInto), throwWithDebugInfo = false)
     registerInterpreter(progressInterpreter)
     BelleInterpreter.setInterpreter(progressInterpreter)
     try { task(tactic) } finally { BelleInterpreter.setInterpreter(orig) }

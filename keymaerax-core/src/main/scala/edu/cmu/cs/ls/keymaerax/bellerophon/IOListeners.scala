@@ -10,7 +10,7 @@ import java.io.PrintStream
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.QELogger
-import edu.cmu.cs.ls.keymaerax.core.{Formula, Sequent, StaticSemantics}
+import edu.cmu.cs.ls.keymaerax.core.{False, Formula, Sequent, StaticSemantics}
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 
 import scala.collection.immutable.IndexedSeq
@@ -72,15 +72,21 @@ object IOListeners {
   }
 
   /** Prints tactic progress to the console. */
-  class PrintProgressListener(t: BelleExpr, printer: PrintStream = Console.out) extends IOListener() {
+  class PrintProgressListener(t: BelleExpr, stepInto: List[String] = Nil, printer: PrintStream = Console.out) extends IOListener() {
     private var executionStack = (t->0) :: Nil // branch index =0 except for BranchTactic
     private var start = System.currentTimeMillis()
 
+    private def stepInto(e: BelleExpr): Boolean = stepInto.nonEmpty && (e match {
+      case n: NamedBelleExpr if n.name == "ANON" => true
+      case n: NamedBelleExpr => stepInto.contains(n.name)
+      case _ => false
+    })
+
     override def begin(input: BelleValue, expr: BelleExpr): Unit = {
       //@todo recursive calls to same tactic may pop from stack prematurely (master? ODE?)
-      if (executionStack.nonEmpty && expr == executionStack.head._1) expr match {
+      if (executionStack.nonEmpty && (expr == executionStack.head._1 || stepInto(executionStack.head._1))) expr match {
         case SeqTactic(l, _) => executionStack = (l->0) +: executionStack
-        case BranchTactic(b) => executionStack = (b.head->0) +: executionStack
+        case BranchTactic(b) if b.nonEmpty => executionStack = (b.head->0) +: executionStack
         case SaturateTactic(e) => executionStack = (e->0) +: executionStack
         case RepeatTactic(e, i) => executionStack = List.fill(i)(e->0) ++ executionStack
         case EitherTactic(l, _) => executionStack = (l->0) +: executionStack
@@ -90,6 +96,7 @@ object IOListeners {
         }
         case ApplyDefTactic(DefTactic(name, e)) => printer.println(name); executionStack = (e->0) +: executionStack
         case e: AppliedPositionTactic => printer.print(BellePrettyPrinter(e) + "... ")
+        case e: NamedBelleExpr if e.name == "ANON" => // always step into ANON
         // avoid duplicate printing of DependentPositionTactic and AppliedDependentPositionTactic
         case e: NamedBelleExpr if e.getClass == executionStack.head._1.getClass =>
           start = System.currentTimeMillis()
@@ -116,7 +123,14 @@ object IOListeners {
             printer.println(s"$name done")
           case e: AppliedPositionTactic => printer.println("done")
           case e: NamedBelleExpr if e.name == "QE" || e.name == "smartQE" =>
-            printer.println(s"${e.name} done (" + (System.currentTimeMillis()-start) + "ms)")
+            val status = output match {
+              case Left(BelleProvable(p, _)) =>
+                if (p.isProved) "proved"
+                else if (p.subgoals.head.succ.headOption.contains(False)) "disproved"
+                else "unfinished"
+              case _ => "failed"
+            }
+            printer.println(s"${e.name} done (" + status + ", " + (System.currentTimeMillis()-start) + "ms)")
           case _: NamedBelleExpr => printer.println("done (" + (System.currentTimeMillis()-start) + "ms)")
           case _ =>
         }
