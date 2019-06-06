@@ -10,7 +10,6 @@ import edu.cmu.cs.ls.keymaerax.btactics.TacticFactory._
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import edu.cmu.cs.ls.keymaerax.tools.BigDecimalQETool
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
-import edu.cmu.cs.ls.keymaerax.btactics.ProofRuleTactics.requireOneSubgoal
 
 import scala.collection.immutable._
 
@@ -208,9 +207,10 @@ object IntervalArithmeticV2 {
     G |- P
    */
   private def CutHide(fml: Formula)(prv: ProvableSig) = {
-    require(prv.subgoals.length == 1)
-    require(prv.subgoals(0).succ.length == 1)
-    (0 until prv.subgoals(0).ante.length).foldLeft(prv.apply(Cut(fml), 0).apply(HideRight(SuccPos(0)), 1)) {
+    requireOneSubgoal(prv, "CutHide")
+    val seq = prv.subgoals(0)
+    requireOneSucc(seq, "CutHide")
+    (0 until seq.ante.length).foldLeft(prv.apply(Cut(fml), 0).apply(HideRight(SuccPos(0)), 1)) {
       (p, _) =>
         p.apply(HideLeft(AntePos(0)), 0)
     }
@@ -585,11 +585,17 @@ object IntervalArithmeticV2 {
       apply(leBoth, 0)
   }
 
+  private def requireOneSubgoal(prv: ProvableSig, who: String) : Unit =
+    require(prv.subgoals.length == 1, who + " only works on one sequent at a time.")
+
+  private def requireOneSucc(seq: Sequent, who: String) : Unit =
+    require(seq.succ.length == 1, who + " requires exactly one formula in the succedent.")
+
   private def intervalArithmeticComparison(precision: Int, qeTool: QETool) = new BuiltInTactic("ANON") {
     override def result(provable: ProvableSig): ProvableSig = {
-      require(provable.subgoals.length == 1)
+      requireOneSubgoal(provable, "intervalArithmeticComparison")
       val sequent = provable.subgoals(0)
-      require(sequent.succ.length == 1)
+      requireOneSucc(sequent, "intervalArithmeticComparison")
       sequent.succ(0) match {
         case fml: ComparisonFormula =>
           val f = fml.left
@@ -700,7 +706,7 @@ object IntervalArithmeticV2 {
   }
 
   private def intervalArithmeticBool(precision: Int, qeTool: QETool) : DependentTactic = "intervalArithmeticBool" by { (seq: Sequent) =>
-    require(seq.succ.length == 1)
+    requireOneSucc(seq, "intervalArithmeticBool")
     seq.succ(0) match {
       case And(a, b) => andR(1) & Idioms.<(intervalArithmeticBool(precision, qeTool), intervalArithmeticBool(precision, qeTool))
       case Or(a, b) => orR(1) & ((hideR(2) & intervalArithmeticBool(precision, qeTool)) | (hideR(1) & intervalArithmeticBool(precision, qeTool)))
@@ -719,7 +725,7 @@ object IntervalArithmeticV2 {
 
   def intervalCutTerms(terms: Seq[Term]) : BuiltInTactic = new BuiltInTactic("ANON") {
     override def result(provable: ProvableSig): ProvableSig = {
-      require(provable.subgoals.length == 1)
+      requireOneSubgoal(provable, "intervalCutTerms")
       val sequent = provable.subgoals(0)
       val nantes = sequent.ante.length
       val prec = 5
@@ -799,7 +805,7 @@ object IntervalArithmeticV2 {
     }
 
     val intervalArithmetic = "slowIntervalArithmetic" by { seq: Sequent =>
-      require (seq.succ.length == 1)
+      requireOneSucc (seq, "slowIntervalArithmetic")
       val prec = 5
       val bounds = collect_bounds(prec,DecimalBounds(), seq.ante)
 
