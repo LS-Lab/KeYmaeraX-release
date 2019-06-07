@@ -219,10 +219,11 @@ object RestApi extends Logging {
     }
   }}}}}
 
-  val importExampleRepo: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "importRepo") { (userId) => { pathEnd {
+  val importExampleRepo: SessionToken=>Route = (t: SessionToken) => path("models" / "users" / Segment / "importRepo") { userId => { pathEnd {
     post {
       entity(as[String]) { repoUrl => {
-        val r = new ImportExampleRepoRequest(database, userId, repoUrl)
+        val content = DatabasePopulator.loadResource(repoUrl)
+        val r = new UploadArchiveRequest(database, userId, content, None)
         completeRequest(r, t)
       }}
     }

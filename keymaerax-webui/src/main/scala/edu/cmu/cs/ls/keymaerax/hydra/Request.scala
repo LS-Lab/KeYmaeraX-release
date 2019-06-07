@@ -796,20 +796,6 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
   }
 }
 
-class ImportExampleRepoRequest(db: DBAbstraction, userId: String, repoUrl: String) extends UserRequest(userId) with WriteRequest {
-  override def resultingResponses(): List[Response] = {
-    if (repoUrl.endsWith(".json")) {
-      DatabasePopulator.importJson(db, userId, repoUrl, prove=false)
-      BooleanResponse(flag=true) :: Nil
-    } else if (repoUrl.endsWith(".kya") || repoUrl.endsWith(".kyx")) {
-      DatabasePopulator.importKya(db, userId, repoUrl, prove=false, Nil)
-      BooleanResponse(flag=true) :: Nil
-    } else {
-      new ErrorResponse("Unknown repository type " + repoUrl + ". Expected .json or .kya") :: Nil
-    }
-  }
-}
-
 class DeleteModelRequest(db: DBAbstraction, userId: String, modelId: String) extends UserModelRequest(db, userId, modelId) with WriteRequest {
   override def doResultingResponses(): List[Response] = {
     val id = Integer.parseInt(modelId)
