@@ -28,12 +28,6 @@ object DatabasePopulator extends Logging {
   /** Succeeded imports: model name and created Id, failed: model name. */
   case class ImportResult(succeeded: List[(String, Int)], failed: List[String])
 
-  /** Imports tutorial entries from the JSON file at URL. Optionally proves the models when tactics are present. */
-  def importJson(db: DBAbstraction, user: String, url: String, prove: Boolean = false): ImportResult = {
-    val result = readTutorialEntries(url).map(importModel(db, user, prove))
-    ImportResult(result.flatMap(_.left.toOption), result.flatMap(_.right.toOption))
-  }
-
   /** Imports an archive from URL. Optionally proves the models when tactics are present. */
   def importKya(db: DBAbstraction, user: String, url: String, prove: Boolean, exclude: List[ModelPOJO]): ImportResult = {
     val result = readKya(url)
