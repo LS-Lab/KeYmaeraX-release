@@ -417,7 +417,7 @@ class TactixLibraryTests extends TacticTestBase {
   it should "chase multiple tactic options" in withMathematica { _ =>
     val result = proveBy("l() < r(), l()<=x, x<=r(), x=l() ==> [{x'=1&l()>=x|x>=r()}](l()<=x&x<=r())".asSequent,
       allTacticChase()(ODE, solve))
-    result.subgoals.loneElement shouldBe "l() < r(), l()<=x, x<=r(), x=l(), l()>=x|x>=r(), t_=0, x_0=x, t__0=t_ ==> \\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->(l()>=s_+x|s_+x>=r())&s_+t__0>=0&s_+x=s_+t__0+x_0)->t_+x<=r())".asSequent
+    result.subgoals.loneElement shouldBe "l() < r(), l()<=x, x<=r(), x=l(), l()>=x|x>=r(), time_=0, x_0=x ==> \\forall t_ (t_>=0->\\forall s_ (0<=s_&s_<=t_->(l()>=s_+x|s_+x>=r())&s_+time_>=0&s_+x=s_+time_+x_0)->t_+x<=r())".asSequent
   }
 
   "Loop convergence" should "prove x>=0 -> <{x:=x-1;}*>x<1 with conRule" in withMathematica { _ =>
@@ -465,7 +465,7 @@ class TactixLibraryTests extends TacticTestBase {
       ))
   }
 
-  "Master" should "not split unnecessarily early" in withMathematica { _ =>
+  "Master" should "not split unnecessarily early" in withMathematica ({ _ =>
     val fml = """
                 |  /* INITIAL CONDITIONS */
                 |  (velCtrl >= 0 & velLead >= 0 & A > 0 & B > 0 & T > 0 & posCtrl <= posLead &
@@ -516,10 +516,8 @@ class TactixLibraryTests extends TacticTestBase {
                 |  ]
                 |  (posCtrl <= posLead) /* safety condition */""".stripMargin.asFormula
 
-    failAfter(3 minutes) {
-      proveBy(fml, master()) shouldBe 'proved
-    }
-  }
+    proveBy(fml, master()) shouldBe 'proved
+  }, 180)
 
   it should "apply ODE duration heuristic to multiple ODEs" in withZ3 { _ =>
     val problem = KeYmaeraXArchiveParser.parseAsProblemOrFormula(
@@ -542,7 +540,7 @@ class TactixLibraryTests extends TacticTestBase {
     proveBy(problem, master()) shouldBe 'proved
   }
 
-  it should "prove regardless of order" in withQE { _ =>
+  it should "prove regardless of order" taggedAs SlowTest in withQE { _ =>
     val problem1 = """
       v^2<=2*b*(m-x) & v>=0  & A>=0 & b>0
       -> [
