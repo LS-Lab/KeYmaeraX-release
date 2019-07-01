@@ -26,12 +26,16 @@ object ToolConfiguration {
     }
   }
 
+  /** Returns the Wolfram Engine configuration. */
+  def wolframEngineConfig: Map[String, String] = Map.empty
+
   /** Returns the Z3 configuration. */
   def z3Config: Map[String, String] = Map.empty
 
   /** Returns the tool configuration for the name `tool`. */
   def config(tool: String): Map[String, String] = tool.toLowerCase() match {
     case "mathematica" => Map("tool" -> "mathematica") ++ ToolConfiguration.mathematicaConfig
+    case "wolframengine" => Map("tool" -> "wolframengine") ++ ToolConfiguration.wolframEngineConfig
     case "z3" => Map("tool" -> "z3") ++ ToolConfiguration.z3Config
     case t => throw new Exception("Unknown tool '" + t + "'")
   }

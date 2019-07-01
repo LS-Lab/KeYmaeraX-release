@@ -10,10 +10,11 @@
         <form name="toolSelection">
             <label for="toolSelect">Arithmetic Solver: </label>
             <span style="padding-right: 10px;"
-                 data-intro="Choose an arithmetic solver (Z3 ships with KeYmaera X; Mathematica requires external installation but provides more features)."
+                 data-intro="Choose an arithmetic solver (Z3 ships with KeYmaera X; Mathematica and Wolfram Engine require external installation but provide more features)."
                  data-position="right">
             <select name="toolSelect" id="toolSelect" ng-model="tool" ng-change="toolChange()">
                 <option value="mathematica">Mathematica</option>
+                <option value="wolframengine">Wolfram Engine</option>
                 <option value="z3">Z3</option>
             </select>
             </span>
@@ -41,12 +42,15 @@
 <div ng-if="tool==='mathematica'">
     <div ng-include="'/partials/mathematica_config.html'" ng-controller="MathematicaConfig"></div>
 </div>
+<div ng-if="tool==='wolframengine'">
+    <div ng-include="'/partials/wolframengine_config.html'" ng-controller="WolframEngineConfig"></div>
+</div>
 
 <div ng-if="tool==='z3'">
     <h2>Z3 Configuration</h2>
     <p><b>Limited functionality with Z3.</b></p>
     <p>For advanced functionality, such as counterexample generation, monitor synthesis, test case generation,
-        simplification, and arithmetic with alternating quantifiers please choose <kbd>Mathematica</kbd> as Arithmetic Solver from the
+        simplification, and arithmetic with alternating quantifiers please choose <kbd>Mathematica</kbd> or <kbd>Wolfram Engine</kbd> as Arithmetic Solver from the
         drop-down box above.</p>
     <p>In general, complex problems may require trying different tools.</p>
 </div>

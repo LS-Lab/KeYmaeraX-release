@@ -15,17 +15,16 @@ import edu.cmu.cs.ls.keymaerax.tools.SimulationTool.{SimRun, SimState, Simulatio
 import scala.collection.immutable.{Map, Seq}
 
 /**
- * Mathematica tool for quantifier elimination and solving differential equations.
+ * Mathematica/Wolfram Engine tool for quantifier elimination and solving differential equations.
+ * @param link How to connect to the tool, either JLink or WolframScript.
  *
  * Created by smitsch on 4/27/15.
  * @author Stefan Mitsch
  * @todo Code Review: Move non-critical tool implementations into a separate package tactictools
  */
-class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool with ODESolverTool with CounterExampleTool
+class Mathematica(private[tools] val link: MathematicaLink, override val name: String) extends ToolBase(name) with QETool with InvGenTool with ODESolverTool with CounterExampleTool
     with SimulationTool with DerivativeTool with EquationSolverTool with SimplificationTool with AlgebraTool
     with PDESolverTool with ToolOperationManagement {
-  // JLink, shared between tools
-  private[tools] val link = new JLinkMathematicaLink
 
   private val mQE = new MathematicaQETool(link)
   private val mPegasus = new MathematicaInvGenTool(link)  
@@ -44,16 +43,6 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
   private val memoryLimit: Long = Configuration.getOption(Configuration.Keys.MATHEMATICA_MEMORY_LIMIT).map(java.lang.Long.parseLong).getOrElse(-1)
 
   override def init(config: Map[String,String]): Unit = {
-    val linkName = config.get("linkName") match {
-      case Some(l) => l
-      case None => throw new IllegalArgumentException("Mathematica not configured. Configure Mathematica and restart KeYmaera X.\nMissing configuration parameter 'linkName'\n")
-        //@todo More helpful error messages about how to solve configuration issues again.
-//        "You should configure settings in the UI and restart KeYmaera X." +
-//        "Or specify the paths explicitly from command line by running\n" +
-//        "  java -jar keymaerax.jar -mathkernel pathtokernel -jlink pathtojlink")
-    }
-    val libDir = config.get("libDir") // doesn't need to be defined
-
     mQE.memoryLimit = memoryLimit
     mPegasus.memoryLimit = memoryLimit
     mCEX.memoryLimit = memoryLimit
@@ -63,7 +52,22 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
     mAlgebra.memoryLimit = memoryLimit
     mSimplify.memoryLimit = memoryLimit
 
-    initialized = link.init(linkName, libDir)
+    initialized = link match {
+      case l: JLinkMathematicaLink =>
+        val linkName = config.get("linkName") match {
+          case Some(ln) => ln
+          case None =>
+            throw new IllegalArgumentException(
+              """Mathematica not configured. Missing configuration parameter 'linkName'
+                |Please configure settings in the UI.
+                |Or specify the paths explicitly from command line by running
+                |  java -jar keymaerax.jar -mathkernel pathtokernel -jlink pathtojlink
+              """.stripMargin)
+        }
+        val libDir = config.get("libDir") // doesn't need to be defined
+        l.init(linkName, libDir)
+      case l: WolframScript => l.init()
+    }
   }
 
   /** Closes the connection to Mathematica */
@@ -78,7 +82,10 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
     mAlgebra.shutdown()
     mSimplify.shutdown()
     //@note last, because we want to shut down all executors (tool threads) before shutting down the JLink interface
-    link.shutdown()
+    link match {
+      case l: JLinkMathematicaLink => l.shutdown()
+      case l: WolframScript => l.shutdown()
+    }
     initialized = false
   }
 
@@ -175,7 +182,10 @@ class Mathematica extends ToolBase("Mathematica") with QETool with InvGenTool wi
 
 
   /** Restarts the MathKernel with the current configuration */
-  override def restart(): Unit = link.restart()
+  override def restart(): Unit = link match {
+    case l: JLinkMathematicaLink => l.restart()
+    case l: WolframScript => l.restart()
+  }
 
   override def cancel(): Boolean = link.cancel()
 

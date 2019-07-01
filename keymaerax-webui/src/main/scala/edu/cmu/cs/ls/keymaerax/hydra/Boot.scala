@@ -214,30 +214,33 @@ object HyDRAInitializer extends Logging {
   }
 
   private def createTool(options: OptionMap, config: ToolProvider.Configuration, preferredTool: String): Unit = {
+    def initFallbackZ3(p: ToolProvider, toolName: String): ToolProvider = {
+      try {
+        if (!p.tools().forall(_.isInitialized)) {
+          val msg =
+            s"""Unable to connect to $toolName, switching to Z3
+              |Please check your $toolName configuration in Help->Tools
+            """.stripMargin
+          logger.info(msg)
+          new Z3ToolProvider
+        } else p
+      } catch {
+        case ex: Throwable =>
+          val msg =
+            s"""Unable to connect to $toolName, switching to Z3
+              |Please check your $toolName configuration in Help->Tools
+              |$toolName initialization failed with the error below
+            """.stripMargin
+          logger.warn(msg, ex)
+          logger.info(s"Starting with Z3 since $toolName initialization failed")
+          new Z3ToolProvider
+      }
+    }
+
     val tool: String = options.getOrElse('tool, preferredTool).toString
     val provider = tool.toLowerCase() match {
-      case "mathematica" =>
-        try {
-          val p = new MathematicaToolProvider(config)
-          if (!p.tools().forall(_.isInitialized)) {
-            val msg =
-              """Unable to connect to Mathematica, switching to Z3
-                |Please check your Mathematica configuration in Help->Tools
-              """.stripMargin
-            logger.info(msg)
-            new Z3ToolProvider
-          } else p
-        } catch {
-          case ex: Throwable =>
-            val msg =
-              """Unable to connect to Mathematica, switching to Z3
-                |Please check your Mathematica configuration in Help->Tools
-                |Mathematica initialization failed with the error below
-              """.stripMargin
-            logger.warn(msg, ex)
-            logger.info("Starting with Z3 since Mathematica initialization failed")
-            new Z3ToolProvider
-        }
+      case "mathematica" => initFallbackZ3(new MathematicaToolProvider(config), "Mathematica")
+      case "wolframengine" => initFallbackZ3(new WolframEngineToolProvider, "Wolfram Engine")
       case "z3" => new Z3ToolProvider
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
@@ -249,6 +252,7 @@ object HyDRAInitializer extends Logging {
     val tool: String = options.getOrElse('tool, preferredTool).toString
     tool.toLowerCase() match {
       case "mathematica" => mathematicaConfig
+      case "wolframengine" => Map.empty
       case "z3" => Map.empty
       case t => throw new Exception("Unknown tool '" + t + "'")
     }

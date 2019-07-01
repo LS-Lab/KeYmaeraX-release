@@ -505,6 +505,7 @@ object TactixLibrary extends HilbertCalculus with SequentCalculus {
     */
   lazy val ODE: DependentPositionTactic = "ODE" by ((pos: Position) => {
     if (ToolProvider.qeTool(Some("Mathematica")).isDefined) DifferentialTactics.mathematicaSplittingODE(pos)
+    else if (ToolProvider.qeTool(Some("WolframEngine")).isDefined) DifferentialTactics.mathematicaSplittingODE(pos)
     else DifferentialTactics.ODE(pos)
   })
 

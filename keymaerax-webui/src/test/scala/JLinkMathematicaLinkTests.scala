@@ -78,7 +78,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
 
   if (new java.io.File("/Applications/Mathematica9.app").exists) {
     "Mathematica 9" should "not fail activation test on MacOS" taggedAs IgnoreInBuildTest in {
-      val mathematica = new Mathematica()
+      val mathematica = new Mathematica(new JLinkMathematicaLink, "Mathematica")
       mathematica.init(Map("linkName" -> "/Applications/Mathematica9.app/Contents/MacOS/MathKernel"))
       mathematica shouldBe 'initialized
       mathematica.shutdown()
@@ -86,7 +86,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
   }
 
   "Mathematica 10" should "not fail activation test on MacOS" taggedAs IgnoreInBuildTest in {
-    val mathematica = new Mathematica()
+    val mathematica = new Mathematica(new JLinkMathematicaLink, "Mathematica")
     mathematica.init(Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel"))
     mathematica shouldBe 'initialized
     mathematica.shutdown()
@@ -130,7 +130,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
   }
 
   "Blocking kernels" should "be detected" in withMathematica { link =>
-    val lnk = PrivateMethod[JLinkMathematicaLink]('link)
+    val lnk = PrivateMethod[MathematicaLink]('link)
     val theLink = link invokePrivate lnk()
     val executor: ToolExecutor[(String, KExpr)] = new ToolExecutor(1)
 
@@ -163,7 +163,7 @@ class JLinkMathematicaLinkTests extends TacticTestBase with PrivateMethodTester 
 
   "Restarting Mathematica" should "work from a killed kernel" taggedAs IgnoreInBuildTest in withMathematica { link =>
     //@note Kills all WolframKernel!
-    val lnk = PrivateMethod[JLinkMathematicaLink]('link)
+    val lnk = PrivateMethod[MathematicaLink]('link)
     val theLink = link invokePrivate lnk()
     val bridge = new MathematicaQETool(theLink)
 

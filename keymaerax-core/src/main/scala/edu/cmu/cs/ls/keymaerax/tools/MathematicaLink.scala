@@ -7,15 +7,19 @@
   */
 package edu.cmu.cs.ls.keymaerax.tools
 
-import java.io.File
+import java.io.{File, FileWriter}
 import java.time.LocalDate
 
 import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion._
 import org.apache.logging.log4j.scala.Logging
+import spray.json.{JsArray, JsFalse, JsNull, JsNumber, JsObject, JsString, JsTrue, JsValue, JsonParser}
 
 import scala.collection.immutable
+import scala.concurrent._
+import scala.sys.process._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * An abstract interface to Mathematica link implementations.
@@ -438,5 +442,325 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
       //@todo need better error reporting, this way it will never show up on UI
       case e: Throwable => logger.warn("WARNING: Mathematica may not be functional \n cause: " + e, e); None
     }
+  }
+}
+
+/**
+  * A link to Wolfram Engine via WolframScript.
+  * @author Stefan Mitsch
+  */
+class WolframScript extends MathematicaLink with Logging {
+  //@note using strings to be robust in case Wolfram decides to switch from current major:Double/minor:Int
+  private case class Version(major: String, minor: String, revision: String) {
+    override def toString: String = s"$major.$minor"
+  }
+
+  //@note all access to queryIndex must be synchronized
+  private var queryIndex: Long = 0
+
+  private val fetchMessagesCmd = "$MessageList"
+
+  /** The currently running Wolfram Engine process. */
+  private var wolframProcess: Option[Process] = None
+
+  /**
+    * Initializes the connection to Wolfram Engine.
+    * @return true if initialization was successful
+    * @note Must be called before first use of [[run]]
+    */
+  def init(remainingTrials: Int=5): Boolean = {
+    try {
+      val version = getVersion
+      isActivated(version) match {
+        case Some((true, date)) =>
+          isComputing match {
+            case Some(true) =>
+              logger.info("Connected to Wolfram Engine v" + version + " (license expires " + date + ")")
+              true // everything ok
+            case Some(false) => logger.error("ERROR: Test computation in Wolfram Engine failed, shutting down.\n Please start a standalone Wolfram Engine and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
+              throw new IllegalStateException("Test computation in Wolfram Engine failed.\n Please start a standalone Wolfram Engine and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
+            case None => logger.warn("WARNING: Unable to determine state of Wolfram Engine, Wolfram Engine may not be working.\n Restart KeYmaera X if you experience problems using arithmetic tactics."); true
+          }
+        case Some((false, date)) => logger.warn("WARNING: Wolfram Engine seems not activated or license might be expired (expires " + date + "), Wolfram Engine may not be working.\n A valid license is necessary to use Wolfram Engine as backend of KeYmaera X.\n If you experience problems during proofs, please renew your license and restart KeYmaera X."); true
+        case None => logger.warn("WARNING: Wolfram Engine may not be activated or license might be expired.\n A valid license is necessary to use Wolfram Engine as backend of KeYmaera X.\n Please check your license manually."); true
+      }
+    } catch {
+      case e: MathLinkException if e.getErrCode == 1004 && e.getMessage.contains("Link failed to open") && remainingTrials > 0 =>
+        // link did not open, wait a little and retry
+        logger.info("Repeating connection attempt\nWolfram Engine failed to open " + e +
+          "\nRepeating connection attempt (remaining trials: " + (remainingTrials-1) + ")\n" + diagnostic)
+        Thread.sleep(10000)
+        init(remainingTrials-1)
+      case ex: Throwable =>
+        logger.warn("Unknown error " + ex + "\nWolfram Engine may or may not be working. If you experience problems, please double check configuration paths and license.\n" + diagnostic, ex)
+        true
+    }
+  }
+
+  /** Closes the connection to Wolfram Engine. */
+  def shutdown(): Unit = {}
+
+  /** Restarts the Wolfram Engine connection */
+  def restart(): Unit = {}
+
+  /**
+    * Runs the command and then halts program execution until answer is returned.
+    *
+    * @param cmd The WolframScript command.
+    * @param m2k The converter Mathematica->KeYmaera X
+    * @tparam T The exact KeYmaera X expression type expected as result.
+    * @return The result, as string and as KeYmaera X expression.
+    */
+  def runUnchecked[T](cmd: String, m2k: M2KConverter[T]): (String, T) = {
+    wolframProcess.synchronized {
+      val result = evaluate(cmd)
+      importResult(result, res => (res.toString, m2k(res)))
+    }
+  }
+
+  /**
+    * Runs a Mathematica command.
+    *
+    * @param cmd The Mathematica command to run. Disposed as a result of this method.
+    * @param m2k The converter Mathematica->KeYmaera X
+    * @tparam T The exact KeYmaera X expression type expected as result.
+    * @return The result, as string and as KeYmaera X expression.
+    * @note Disposes cmd, do not use afterwards.
+    * @see [[run()]]
+    */
+  def run[T](cmd: MExpr, m2k: M2KConverter[T], executor: ToolExecutor[(String, T)]): (String, T) = run(cmd, executor, m2k)
+
+  /**
+    * Runs a Mathematica command on the specified executor, converts the result back with converter.
+    *
+    * @param cmd The command to run. Disposed as a result of this method.
+    * @param executor Executes commands (scheduled).
+    * @param converter Converts Mathematica expressions to KeYmaera X expressions.
+    * @tparam T The exact KeYmaera X expression type expected as result.
+    * @return The result, as string and as KeYmaera X expression.
+    * @ensures cmd is freed and should not ever be used again.
+    */
+  protected def run[T](cmd: MExpr, executor: ToolExecutor[(String, T)], converter: MExpr=>T): (String, T) = {
+    try {
+      val qidx: Long = wolframProcess.synchronized {
+        queryIndex += 1; queryIndex
+      }
+      val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(qidx), cmd))
+      // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
+      val checkErrorMsgCmd = new MExpr(MathematicaSymbols.CHECK, Array(indexedCmd, MathematicaSymbols.EXCEPTION /*, checkedMessagesExpr*/))
+      try {
+        logger.debug("Sending to Wolfram Engine " + checkErrorMsgCmd)
+
+        val taskId = executor.schedule(_ => {
+          wolframProcess.synchronized {
+            getAnswer(checkErrorMsgCmd.toString, qidx, converter, indexedCmd.toString) //@note disposes indexedCmd, do not use (except dispose) afterwards
+          }
+        })
+
+        executor.wait(taskId) match {
+          case Some(Left(result)) =>
+            executor.remove(taskId)
+            result
+          case Some(Right(throwable)) => throwable match {
+            case ex: MathematicaComputationAbortedException =>
+              executor.remove(taskId)
+              throw ex
+            case ex: ConversionException =>
+              executor.remove(taskId)
+              // conversion error, but Wolfram Engine still functional
+              throw ToolException("Error converting Wolfram Engine result from " + checkErrorMsgCmd, ex)
+            case ex: IllegalArgumentException =>
+              executor.remove(taskId)
+              // computation error, but Wolfram Engine still functional
+              throw ToolException("Error executing Wolfram Engine command " + checkErrorMsgCmd, ex)
+            case ex: Throwable =>
+              logger.warn(ex)
+              executor.remove(taskId, force = true)
+              try {
+                restart()
+              } catch {
+                case restartEx: Throwable =>
+                  throw ToolException("Restarting Wolfram Engine failed. Please restart KeYmaera X. If the problem persists, try Z3 instead of Wolfram Engine (Help->Tools). Wolfram Engine error that triggered the restart:\n" + ex.getMessage, restartEx)
+              }
+              throw ToolException("Restarted Wolfram Engine, please rerun the failed command (error details below)", throwable)
+          }
+          case None =>
+            //@note Thread is interrupted by another thread (e.g., UI button 'stop')
+            cancel()
+            executor.remove(taskId, force = true)
+            logger.debug("Initiated aborting Wolfram Engine " + checkErrorMsgCmd)
+            throw new MathematicaComputationExternalAbortException(checkErrorMsgCmd.toString)
+        }
+      } finally {
+        //@note dispose in finally instead of after getAnswer, because interrupting thread externally aborts the scheduled task without dispose
+        //@note nested cmd is disposed automatically
+        checkErrorMsgCmd.dispose()
+      }
+      //@note during normal execution, this disposes cmd twice (once via checkErrorMsgCmd) but J/Link ensures us this would be acceptable.
+    } finally { cmd.dispose() }
+  }
+
+  /**
+    * Blocks and returns the answer (as string and as KeYmaera X expression).
+    *
+    * @param cmd The command to execute.
+    * @param cmdIdx The command index.
+    * @param converter Converts Mathematica expressions back to KeYmaera X expressions.
+    * @param ctx The context for error messages in exceptions.
+    * @tparam T The exact KeYmaera X expression type expected as result.
+    * @return The result as string and converted to the expected result type.
+    */
+  private def getAnswer[T](cmd: String, cmdIdx: Long, converter: MExpr=>T, ctx: String): (String, T) = {
+    val result = evaluate(cmd)
+    importResult(result,
+      res => {
+        //@todo check with MathematicaToKeYmaera.isAborted
+        if (res == MathematicaSymbols.ABORTED) {
+          throw new MathematicaComputationAbortedException(ctx)
+        } else if (res == MathematicaSymbols.EXCEPTION) {
+          // an exception occurred, rerun to get the messages
+          val msgResult = evaluate(ctx + ";" + fetchMessagesCmd)
+          val txtMsg = importResult(msgResult, _.toString)
+          throw new IllegalArgumentException("Input " + ctx + " cannot be evaluated: " + txtMsg)
+        } else {
+          val head = res.head
+          if (head.equals(MathematicaSymbols.CHECK)) {
+            throw new IllegalStateException("Wolfram Engine returned input as answer: " + res.toString)
+          } else if (res.head == Expr.SYM_LIST && res.args().length == 2 && res.args.head.asBigDecimal().intValueExact() == cmdIdx) {
+            val theResult = res.args.last
+            //@todo check with MathematicaToKeYmaera.isAborted
+            if (theResult == MathematicaSymbols.ABORTED) throw new MathematicaComputationAbortedException(ctx)
+            else (theResult.toString, converter(theResult))
+          } else {
+            throw new IllegalStateException("Wolfram Engine returned a stale answer for " + res.toString)
+          }
+        }
+      })
+  }
+
+  def cancel(): Boolean = wolframProcess match {
+    case Some(p) =>
+      wolframProcess = None
+      p.destroy()
+      true
+    case None => true
+  }
+
+  /** Returns the version. */
+  private def getVersion: Version = {
+    val mmResult = evaluate(MathematicaSymbols.VERSIONNUMBER)
+    val (major, minor) = importResult(
+      mmResult,
+      version => {
+        logger.debug("Running Wolfram Engine version " + version.toString)
+        val versionParts = version.toString.split("\\.")
+        if (versionParts.length >= 2) (versionParts(0), versionParts(1))
+        else if (versionParts.nonEmpty) (versionParts(0), "0")
+        else ("Unknown", "Unknown")
+      })
+    val rResult = evaluate(MathematicaSymbols.RELEASENUMBER)
+    val release = importResult(rResult, _.toString)
+    Version(major, minor, release)
+  }
+
+  /** Checks if Wolfram Engine is activated by querying the license expiration date */
+  private def isActivated(version: Version): Option[(Boolean, LocalDate)] = {
+    val infinity = new MExpr(new MExpr(Expr.SYMBOL, "DirectedInfinity"), Array(new MExpr(1L)))
+    try {
+      def toDate(date: Array[MExpr]): Option[LocalDate] = {
+        logger.debug("Wolfram Engine license expires: " + date.mkString)
+        if (date.length >= 3 && date(0).integerQ() && date(1).integerQ() && date(2).integerQ()) {
+          Some(LocalDate.of(date(0).asInt(), date(1).asInt(), date(2).asInt()))
+        } else {
+          None
+        }
+      }
+
+      def checkExpired(date: Option[LocalDate]): Option[(Boolean, LocalDate)] = {
+        date.map(d => d.isAfter(LocalDate.now()) -> d)
+      }
+
+      def checkInfinity(date: MExpr): Boolean = {
+        date == infinity || date.head == infinity || date.args().exists(checkInfinity)
+      }
+
+      def licenseExpiredConverter(licenseExpirationDate: MExpr): Option[(Boolean, LocalDate)] = try {
+        version match {
+          case _ if checkInfinity(licenseExpirationDate) => Some(true, LocalDate.MAX)
+          case Version("12", _, _) => checkExpired(toDate(licenseExpirationDate.args.head.args))
+          case Version(major, minor, _) =>
+            logger.debug("WARNING: Cannot check license expiration date since unknown Wolfram Engine version " + major + "." + minor + ", only version 12.x supported. Wolfram Engine requests may fail if license is expired.")
+            None
+        }
+        //@note date disposed as part of licenseExpirationDate
+      } catch {
+        case e: ExprFormatException => logger.warn("WARNING: Unable to determine Wolfram Engine expiration date\n cause: " + e, e); None
+      }
+
+      val result = evaluate(MathematicaSymbols.LICENSEEXPIRATIONDATE)
+      importResult(result, licenseExpiredConverter)
+    } finally {
+      infinity.dispose()
+    }
+  }
+
+  /** Sends a simple computation to Wolfram Engine to ensure its actually working */
+  private def isComputing: Option[Boolean] = {
+    try {
+      val result = evaluate("6*9")
+      Some(importResult(result, e => e.integerQ() && e.asInt() == 54))
+    } catch {
+      //@todo need better error reporting, this way it will never show up on UI
+      case e: Throwable => logger.warn("WARNING: Wolfram Engine may not be functional \n cause: " + e, e); None
+    }
+  }
+
+  def evaluate(cmd: String): MExpr = {
+    val wolframFile = File.createTempFile("wolfram", ".wl")
+    val writer = new FileWriter(wolframFile)
+    writer.write(s"Print[$cmd]")
+    writer.close()
+
+    val scriptCmd = "wolframscript -file " + wolframFile.getAbsolutePath + " -format ExpressionJSON"
+    val result: StringBuilder = new StringBuilder()
+    val pl = ProcessLogger(s => result.append(s))
+    val p = scriptCmd.run(pl) // start asynchronously, log output to logger
+    wolframProcess = Some(p)
+    val f = Future(blocking(p.exitValue()))
+    val exitVal = try {
+      Await.result(f, duration.Duration.Inf)
+    } catch {
+      case _: InterruptedException => p.destroy
+    } finally {
+      wolframProcess = None
+    }
+
+    val rs = result.toString
+    if (exitVal == 0) {
+      // rerun if Wolfram Engine fails with allocation errors
+      if (rs.contains("malloc")) evaluate(cmd)
+      else parseExpressionJSON(rs)
+    } else {
+      throw ToolException(s"Error executing Wolfram Engine, exit value $exitVal")
+    }
+  }
+
+  private def parseExpressionJSON(expr: String): MExpr = {
+    def convertJSON(v: JsValue): MExpr = v match {
+      // strings are "'string'"
+      case JsString(s) if s.startsWith("'") => new MExpr(s.substring(1, s.length-1))
+      // symbols are "symbol"
+      case JsString(s) => new MExpr(Expr.SYMBOL, s)
+      case JsNumber(n) if  n.isWhole() => new MExpr(n.toBigIntExact().getOrElse(
+        throw new ConversionException("Unexpected: whole BigDecimal cannot be converted to BigInteger")).bigInteger)
+      case JsNumber(n) if !n.isWhole() => new MExpr(n.bigDecimal)
+      case JsTrue => MathematicaSymbols.TRUE
+      case JsFalse => MathematicaSymbols.FALSE
+      case JsNull => new MExpr(Expr.SYMBOL, "null")
+      case JsArray(elems) =>
+        val converted = elems.map(convertJSON)
+        new MExpr(converted.head, converted.tail.toArray)
+    }
+    convertJSON(JsonParser(expr))
   }
 }

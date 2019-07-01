@@ -885,6 +885,7 @@ object RestApi extends Logging {
       get {
         Configuration(Configuration.Keys.QE_TOOL) match {
           case "mathematica" => completeRequest(new MathematicaConfigStatusRequest(database), EmptyToken())
+          case "wolframengine" => completeRequest(new WolframEngineConfigStatusRequest(database), EmptyToken())
           case "z3" => completeRequest(new Z3ConfigStatusRequest(database), EmptyToken())
         }
       }

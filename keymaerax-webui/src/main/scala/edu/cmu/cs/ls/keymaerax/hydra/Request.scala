@@ -38,11 +38,9 @@ import edu.cmu.cs.ls.keymaerax.pt.{ElidingProvable, ProvableSig}
 import scala.io.Source
 import scala.collection.immutable._
 import scala.collection.mutable
-import edu.cmu.cs.ls.keymaerax.btactics.cexsearch
-import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, BreadthFirstSearch, ProgramSearchNode, SearchNode}
+import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, ProgramSearchNode, SearchNode}
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
-import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
 import edu.cmu.cs.ls.keymaerax.launcher.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
@@ -500,6 +498,20 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Localhos
   }
 }
 
+class GetWolframEngineConfigSuggestionRequest(db: DBAbstraction) extends LocalhostOnlyRequest with ReadRequest {
+  override def resultingResponses(): List[Response] = {
+    val os = System.getProperty("os.name")
+    val jvmBits = System.getProperty("sun.arch.data.model")
+    try {
+      new WolframScript().evaluate("2+2")
+      new MathematicaConfigSuggestionResponse(os, jvmBits, true, "", "", "", "", "", Nil) :: Nil
+    } catch {
+      case _: Throwable =>
+        new MathematicaConfigSuggestionResponse(os, jvmBits, false, "", "", "", "", "", Nil) :: Nil
+    }
+  }
+}
+
 class SystemInfoRequest(db: DBAbstraction) extends LocalhostOnlyRequest with ReadRequest {
   override def resultingResponses(): List[Response] = {
     new SystemInfoResponse(
@@ -538,13 +550,14 @@ class GetToolRequest(db: DBAbstraction) extends LocalhostOnlyRequest with ReadRe
 class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyRequest with WriteRequest {
   override def resultingResponses(): List[Response] = {
     //@todo more/different tools
-    if (tool != "mathematica" && tool != "z3") new ErrorResponse("Unknown tool " + tool + ", expected either 'mathematica' or 'z3'")::Nil
+    if (tool != "mathematica" && tool != "z3" && tool != "wolframengine") new ErrorResponse("Unknown tool " + tool + ", expected either 'mathematica' or 'z3' or 'wolframengine'")::Nil
     else {
-      assert(tool == "mathematica" || tool == "z3", "Expected either Mathematica or Z3 tool")
+      assert(tool == "mathematica" || tool == "z3" || tool == "wolframengine", "Expected either Mathematica or Z3 or Wolfram Engine tool")
       Configuration.set(Configuration.Keys.QE_TOOL, tool)
       val config = ToolConfiguration.config(tool)
       tool match {
         case "mathematica" => ToolProvider.setProvider(new MathematicaToolProvider(config))
+        case "wolframengine" => ToolProvider.setProvider(new WolframEngineToolProvider())
         case "z3" => ToolProvider.setProvider(new Z3ToolProvider())
         case _ => ToolProvider.setProvider(new NoneToolProvider)
       }
@@ -597,6 +610,10 @@ class MathematicaConfigStatusRequest(db : DBAbstraction) extends Request with Re
     new ToolConfigStatusResponse("Mathematica", Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
       Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)) :: Nil
   }
+}
+
+class WolframEngineConfigStatusRequest(db : DBAbstraction) extends Request with ReadRequest {
+  override def resultingResponses(): List[Response] = new ToolConfigStatusResponse("WolframEngine", true) :: Nil
 }
 
 class ToolStatusRequest(db: DBAbstraction, toolId: String) extends Request with ReadRequest {
@@ -1699,6 +1716,10 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
 
   private def backendAvailable: Boolean = Configuration(Configuration.Keys.QE_TOOL) match {
     case "mathematica" => ToolProvider.tool("Mathematica") match {
+      case Some(mathematica: Mathematica) => mathematica.getAvailableWorkers > 0
+      case _ => false
+    }
+    case "wolframengine" => ToolProvider.tool("WolframEngine") match {
       case Some(mathematica: Mathematica) => mathematica.getAvailableWorkers > 0
       case _ => false
     }

@@ -39,6 +39,8 @@ object ToolProvider extends ToolProvider {
 
   // convenience methods forwarding to the current factory
 
+  def defaultTool(): Option[Tool] = f.defaultTool()
+
   def qeTool(name: Option[String] = None): Option[QETool] = f.qeTool(name)
 
   def invGenTool(name: Option[String] = None): Option[InvGenTool] = f.invGenTool(name)
@@ -70,6 +72,9 @@ object ToolProvider extends ToolProvider {
 trait ToolProvider {
   /** The provided tools. */
   def tools(): List[Tool]
+
+  /** Returns the default tool */
+  def defaultTool(): Option[Tool]
 
   /** Returns the tool with `name` */
   def tool(name: String): Option[Tool] = tools().find(_.name.equalsIgnoreCase(name))
@@ -122,6 +127,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
   private[this] lazy val algebra: Option[Tool with AlgebraTool] = toolPreferences.find(_.isInstanceOf[AlgebraTool]).map(_.asInstanceOf[Tool with AlgebraTool])
 
   override def tools(): List[Tool] = toolPreferences
+  override def defaultTool(): Option[Tool] = toolPreferences.headOption
   override def qeTool(name: Option[String] = None): Option[QETool] = ensureInitialized[Tool with QETool](name match {
     case Some(qeToolName) => toolPreferences.find(t => t.isInstanceOf[QETool] && t.name == qeToolName).map(_.asInstanceOf[Tool with QETool])
     case None => qe
@@ -151,6 +157,7 @@ class PreferredToolProvider[T <: Tool](val toolPreferences: List[T]) extends Too
   */
 class NoneToolProvider extends ToolProvider {
   override def tools(): List[Tool] = Nil
+  override def defaultTool(): Option[Tool] = None
   override def qeTool(name: Option[String] = None): Option[QETool] = None
   override def invGenTool(name: Option[String] = None): Option[InvGenTool] = None
   override def odeTool(): Option[ODESolverTool] = None
@@ -174,7 +181,14 @@ class PolyaToolProvider extends PreferredToolProvider({ val p = new Polya; p.ini
   * @param config The Mathematica configuration (linkName, libDir).
   * @author Stefan Mitsch
   */
-class MathematicaToolProvider(config: Configuration) extends PreferredToolProvider({ val m = new Mathematica(); m.init(config); m :: Nil }) {
+class MathematicaToolProvider(config: Configuration) extends PreferredToolProvider({ val m = new Mathematica(new JLinkMathematicaLink, "Mathematica"); m.init(config); m :: Nil }) {
+  def tool(): Mathematica = tools().head.asInstanceOf[Mathematica]
+}
+
+/** A tool provider that initializes tools to Wolfram Engine.
+  * @author Stefan Mitsch
+  */
+class WolframEngineToolProvider extends PreferredToolProvider({ val m = new Mathematica(new WolframScript, "WolframEngine"); m.init(Map.empty); m :: Nil }) {
   def tool(): Mathematica = tools().head.asInstanceOf[Mathematica]
 }
 
@@ -189,4 +203,4 @@ class Z3ToolProvider extends PreferredToolProvider({ val z = new Z3; z.init(Map(
   * @author Stefan Mitsch
   */
 class MathematicaZ3ToolProvider(config: Configuration) extends PreferredToolProvider(
-  { val m = new Mathematica(); m.init(config); val z = new Z3; z.init(Map()); z :: m :: Nil }) { }
+  { val m = new Mathematica(new JLinkMathematicaLink, "Mathematica"); m.init(config); val z = new Z3; z.init(Map()); z :: m :: Nil }) { }

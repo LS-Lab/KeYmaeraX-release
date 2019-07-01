@@ -64,8 +64,14 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       "libDir" -> Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR))
   }
 
+  // start test with -DWOLFRAM=... (one of 'Mathematica' or 'WolframEngine') to select the Wolfram backend.
+  private val WOLFRAM = System.getProperty("WOLFRAM", "Mathematica")
+
   //@note Initialize once per test class, but only if requested in a withMathematica call
-  private var mathematicaProvider = new Lazy(new MathematicaToolProvider(configFileMathematicaConfig))
+  private var mathematicaProvider =
+    if (WOLFRAM.equalsIgnoreCase("Mathematica")) new Lazy(new MathematicaToolProvider(configFileMathematicaConfig))
+    else if (WOLFRAM.equalsIgnoreCase("WolframEngine")) new Lazy(new WolframEngineToolProvider)
+    else throw new IllegalArgumentException("Unknown Wolfram backend, please provide either 'Mathematica' or 'WolframEngine'")
   //@note setup lazy in beforeEach, automatically initialize in withDatabase, tear down in afterEach if initialized
   private var dbTester: Lazy[TempDBTools] = _
 
@@ -106,7 +112,10 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         Configuration.Keys.QE_ALLOW_INTERPRETED_FNS -> "false")) {
       val provider = mathematicaProvider() // new MathematicaToolProvider(DefaultConfiguration.currentMathematicaConfig)
       ToolProvider.setProvider(provider)
-      val tool = provider.tool()
+      val tool = provider.defaultTool() match {
+        case Some(m: Mathematica) => m
+        case _ => fail("Illegal Wolfram tool, please use one of 'Mathematica' or 'Wolfram Engine' in test setup")
+      }
       val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
       implicit val signaler: Signaler = (t: Thread) => {
         theInterpreter.kill()
@@ -183,7 +192,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
         override def k2m: K2MConverter[KExpr] = throw new Exception("Unexpected call to k2m")
         override def apply(e: MExpr): KExpr = {
           e shouldBe 'symbolQ
-          e.asString() should not equal "$Failed"
+          if (e.asString() == "$Failed") fail("Test case requires Matlab, but MATLink bridge from Mathematica to Matlab not configured")
           True
         }
         override def convert(e: MExpr): KExpr = throw new Exception("Unexpected call to convert")

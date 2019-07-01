@@ -169,6 +169,8 @@ object KeYmaeraX {
     Configuration.getOption(Configuration.Keys.QE_TOOL).getOrElse(defaultTool).toLowerCase() match {
       case "mathematica" => Map('tool -> "mathematica") ++
         ToolConfiguration.mathematicaConfig.map({ case (k,v) => Symbol(k) -> v })
+      case "wolframengine" => Map('tool -> "wolframengine") ++
+        ToolConfiguration.wolframEngineConfig.map({ case (k,v) => Symbol(k) -> v })
       case "z3" => Map('tool -> "z3") ++ ToolConfiguration.z3Config.map({ case (k, v) => Symbol(k) -> v })
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
@@ -358,6 +360,7 @@ object KeYmaeraX {
   private def initializeProver(options: OptionMap): Unit = {
     options('tool) match {
       case "mathematica" => initMathematica(options)
+      case "wolframEngine" => initWolframEngine(options)
       case "z3" => initZ3(options)
       case tool => throw new Exception("Unknown tool " + tool)
     }
@@ -422,6 +425,11 @@ object KeYmaeraX {
         "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
 
     ToolProvider.setProvider(new MathematicaToolProvider(mathematicaConfig))
+  }
+
+  /** Initializes Wolfram Engine from command line options. */
+  private def initWolframEngine(options: OptionMap): Unit = {
+    ToolProvider.setProvider(new WolframEngineToolProvider)
   }
 
   /** Shuts down the backend solver and invariant generator. */
@@ -709,7 +717,7 @@ object KeYmaeraX {
     val inputEntry = KeYmaeraXArchiveParser.parseFromFile(in).head
     val inputModel = inputEntry.model.asInstanceOf[Formula]
 
-    val verifyOption:Option[(ProvableSig => Unit)] =
+    val verifyOption: Option[ProvableSig => Unit] =
       if (options.getOrElse('verify, false).asInstanceOf[Boolean]) {
         Some({case ptp:TermProvable =>
           val conv = new IsabelleConverter(ptp.pt)
@@ -829,7 +837,7 @@ object KeYmaeraX {
     }
   }
 
-  def repl(options: OptionMap) = {
+  def repl(options: OptionMap): Unit = {
     require(options.contains('model), usage)
     val modelFileNameDotKyx = options('model).toString
     val tacticFileNameDotKyt = options.get('tactic).map(_.toString)

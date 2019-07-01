@@ -243,6 +243,7 @@ object CoasterXMain {
     val tool: String = options.getOrElse('tool, preferredTool).toString
     val provider = tool.toLowerCase() match {
       case "mathematica" => new MathematicaToolProvider(config)
+      case "wolframengine" => new WolframEngineToolProvider
       case "z3" => new Z3ToolProvider
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
@@ -254,6 +255,7 @@ object CoasterXMain {
     val tool: String = options.getOrElse('tool, preferredTool).toString
     tool.toLowerCase() match {
       case "mathematica" => mathematicaConfig
+      case "wolframengine" => Map.empty
       case "z3" => Map.empty
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
