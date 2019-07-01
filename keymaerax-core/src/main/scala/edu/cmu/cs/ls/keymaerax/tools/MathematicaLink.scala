@@ -451,7 +451,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
   */
 class WolframScript extends MathematicaLink with Logging {
   //@note using strings to be robust in case Wolfram decides to switch from current major:Double/minor:Int
-  private case class Version(major: String, minor: String, revision: String) {
+  case class Version(major: String, minor: String, revision: String) {
     override def toString: String = s"$major.$minor"
   }
 
@@ -647,7 +647,7 @@ class WolframScript extends MathematicaLink with Logging {
   }
 
   /** Returns the version. */
-  private def getVersion: Version = {
+  def getVersion: Version = {
     val mmResult = evaluate(MathematicaSymbols.VERSIONNUMBER)
     val (major, minor) = importResult(
       mmResult,

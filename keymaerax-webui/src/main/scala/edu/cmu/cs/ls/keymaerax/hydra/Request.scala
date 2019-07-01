@@ -503,8 +503,12 @@ class GetWolframEngineConfigSuggestionRequest(db: DBAbstraction) extends Localho
     val os = System.getProperty("os.name")
     val jvmBits = System.getProperty("sun.arch.data.model")
     try {
-      new WolframScript().evaluate("2+2")
-      new MathematicaConfigSuggestionResponse(os, jvmBits, true, "", "", "", "", "", Nil) :: Nil
+      val we = new WolframScript()
+      we.evaluate("2+2")
+      val version = we.getVersion
+      new MathematicaConfigSuggestionResponse(os, jvmBits, true,
+        version.major + "." + version.minor + "." + version.revision, "", "", "",
+        "", Nil) :: Nil
     } catch {
       case _: Throwable =>
         new MathematicaConfigSuggestionResponse(os, jvmBits, false, "", "", "", "", "", Nil) :: Nil

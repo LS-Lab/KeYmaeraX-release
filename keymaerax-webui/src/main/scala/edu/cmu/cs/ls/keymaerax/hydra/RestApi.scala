@@ -845,6 +845,15 @@ object RestApi extends Logging {
     }
   }
 
+  val wolframEngineConfSuggestion: Route = path("config" / "wolframengine" / "suggest") {
+    pathEnd {
+      get {
+        val request = new GetWolframEngineConfigSuggestionRequest(database)
+        completeRequest(request, EmptyToken())
+      }
+    }
+  }
+
   val tool: Route = path("config" / "tool") {
     pathEnd {
       get {
@@ -1056,6 +1065,7 @@ object RestApi extends Logging {
     guestBrowseArchiveRequest ::
     systemInfo         ::
     mathConfSuggestion ::
+    wolframEngineConfSuggestion ::
     devAction          ::
     checkProofValidation ::
     validateProof      ::

@@ -1,10 +1,13 @@
 <h2>Wolfram Engine Configuration</h2>
 
-<p ng-if="mathematicaConfigSuggestion.suggestionFound" ng-cloak>
-Your system looks as if you have installed Wolfram Engine {{wolframEngineConfigSuggestion.suggestion.version}} on {{wolframEngineConfigSuggestion.os}}.
+<p ng-if="wolframEngineConfigSuggestion.suggestionFound" ng-cloak>
+Found Wolfram Engine {{wolframEngineConfigSuggestion.suggestion.version}} on {{wolframEngineConfigSuggestion.os}}.
 </p>
-<p ng-if="!mathematicaConfigSuggestion.suggestionFound" ng-cloak>
+<p ng-if="wolframEngineConfigSuggestion.os !== undefined && !wolframEngineConfigSuggestion.suggestionFound" ng-cloak>
 Your system looks like {{wolframEngineConfigSuggestion.os}}, but Wolfram Engine and/or WolframScript may not be installed or may not be activated.
 You can obtain Wolfram Engine and WolframScript from <a href="http://www.wolfram.com/engine">Wolfram</a>. Please follow the
     <a href="http://support.wolfram.com/kb/45743">installation and activation instructions</a>.
+</p>
+<p ng-if="wolframEngineConfigSuggestion.os === undefined" ng-cloak>
+    Searching...
 </p>

@@ -6,9 +6,9 @@ angular.module('keymaerax.controllers').controller('WolframEngineConfig',
           else $scope.wolframEngineConfigSuggestion = data
       });
 
-    $http.get("/config/wolframengine")
-      .success(function(data) {
-          if (data.errorThrown) showCaughtErrorMessage($uibModal, data, "Failed to retrieve the server's current Wolfram Engine configuration")
-          // no further configuration necessary with WolframScript
-      });
+//    $http.get("/config/wolframengine")
+//      .success(function(data) {
+//          if (data.errorThrown) showCaughtErrorMessage($uibModal, data, "Failed to retrieve the server's current Wolfram Engine configuration")
+//          // no further configuration necessary with WolframScript
+//      });
 });
