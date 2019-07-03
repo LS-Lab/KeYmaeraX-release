@@ -34,7 +34,10 @@ object ToolProvider extends ToolProvider {
     * @param provider the tool provider to use in KeYmaera X from now on.
     */
   def setProvider(provider: ToolProvider): Unit = {
-    if (provider!=this) this.f = provider else throw new IllegalArgumentException("Provide a concrete tool provider, not this repository.")
+    if (provider!=this) {
+      f.shutdown()
+      f = provider
+    } else throw new IllegalArgumentException("Provide a concrete tool provider, not this repository.")
   }
 
   // convenience methods forwarding to the current factory
@@ -188,7 +191,14 @@ class MathematicaToolProvider(config: Configuration) extends PreferredToolProvid
 /** A tool provider that initializes tools to Wolfram Engine.
   * @author Stefan Mitsch
   */
-class WolframEngineToolProvider extends PreferredToolProvider({ val m = new Mathematica(new WolframScript, "WolframEngine"); m.init(Map.empty); m :: Nil }) {
+class WolframEngineToolProvider(config: Configuration) extends PreferredToolProvider({ val m = new Mathematica(new JLinkMathematicaLink, "WolframEngine"); m.init(config); m :: Nil }) {
+  def tool(): Mathematica = tools().head.asInstanceOf[Mathematica]
+}
+
+/** A tool provider that initializes tools to Wolfram Script backend.
+  * @author Stefan Mitsch
+  */
+class WolframScriptToolProvider extends PreferredToolProvider({ val m = new Mathematica(new WolframScript, "WolframScript"); m.init(Map.empty); m :: Nil }) {
   def tool(): Mathematica = tools().head.asInstanceOf[Mathematica]
 }
 

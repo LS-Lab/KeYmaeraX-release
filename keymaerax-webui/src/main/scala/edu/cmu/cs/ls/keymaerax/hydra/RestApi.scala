@@ -854,6 +854,15 @@ object RestApi extends Logging {
     }
   }
 
+  val wolframScriptConfSuggestion: Route = path("config" / "wolframscript" / "suggest") {
+    pathEnd {
+      get {
+        val request = new GetWolframScriptConfigSuggestionRequest(database)
+        completeRequest(request, EmptyToken())
+      }
+    }
+  }
+
   val tool: Route = path("config" / "tool") {
     pathEnd {
       get {
@@ -897,6 +906,7 @@ object RestApi extends Logging {
         Configuration(Configuration.Keys.QE_TOOL) match {
           case "mathematica" => completeRequest(new MathematicaConfigStatusRequest(database), EmptyToken())
           case "wolframengine" => completeRequest(new WolframEngineConfigStatusRequest(database), EmptyToken())
+          case "wolframscript" => completeRequest(new WolframScriptConfigStatusRequest(database), EmptyToken())
           case "z3" => completeRequest(new Z3ConfigStatusRequest(database), EmptyToken())
         }
       }
@@ -1068,6 +1078,7 @@ object RestApi extends Logging {
     systemInfo         ::
     mathConfSuggestion ::
     wolframEngineConfSuggestion ::
+    wolframScriptConfSuggestion::
     devAction          ::
     checkProofValidation ::
     validateProof      ::

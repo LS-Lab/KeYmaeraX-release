@@ -34,8 +34,8 @@ object DefaultConfiguration {
   }
 
   def defaultMathematicaConfig: Map[String, String] = {
-    if(defaultMathLinkPath._1 != "" && defaultMathLinkPath._2 != "") Map("linkName" -> defaultMathLinkPath._1, "libDir" -> defaultMathLinkPath._2)
-    else Map()
+    if (defaultMathLinkPath._1 != "" && defaultMathLinkPath._2 != "") Map("linkName" -> defaultMathLinkPath._1, "libDir" -> defaultMathLinkPath._2, "tcpip" -> "false")
+    else Map.empty
   }
 
   /** Assumes that directory is a directory that contains subdirectory for each installed version of Mathematica.

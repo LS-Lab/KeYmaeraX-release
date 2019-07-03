@@ -361,6 +361,7 @@ object KeYmaeraX {
     options('tool) match {
       case "mathematica" => initMathematica(options)
       case "wolframEngine" => initWolframEngine(options)
+      case "wolframScript" => initWolframScript(options)
       case "z3" => initZ3(options)
       case tool => throw new Exception("Unknown tool " + tool)
     }
@@ -382,8 +383,7 @@ object KeYmaeraX {
     ToolProvider.setProvider(new Z3ToolProvider())
   }
 
-  /** Initializes Mathematica from command line options, if present; else from default config */
-  private def initMathematica(options: OptionMap): Unit = {
+  private def mathematicaConfig(options: OptionMap): Map[String, String] = {
     assert((options.contains('mathkernel) && options.contains('jlink)) || (!options.contains('mathkernel) && !options.contains('jlink)),
       "\n[Error] Please always use command line option -mathkernel and -jlink together," +
         "and specify the Mathematica link paths with:\n" +
@@ -424,12 +424,23 @@ object KeYmaeraX {
         " -jlink PATH_TO_DIRECTORY_CONTAINS_" +  DefaultConfiguration.defaultMathLinkName._2 + "_FILE\n" +
         "[Note] Please always use command line option -mathkernel and -jlink together. \n\n" + usage)
 
-    ToolProvider.setProvider(new MathematicaToolProvider(mathematicaConfig))
+    mathematicaConfig
+  }
+
+  /** Initializes Mathematica from command line options, if present; else from default config */
+  private def initMathematica(options: OptionMap): Unit = {
+    ToolProvider.setProvider(new MathematicaToolProvider(mathematicaConfig(options)))
   }
 
   /** Initializes Wolfram Engine from command line options. */
   private def initWolframEngine(options: OptionMap): Unit = {
-    ToolProvider.setProvider(new WolframEngineToolProvider)
+    Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, "true", saveToFile = false)
+    ToolProvider.setProvider(new WolframEngineToolProvider(mathematicaConfig(options)))
+  }
+
+  /** Initializes Wolfram Script from command line options. */
+  private def initWolframScript(options: OptionMap): Unit = {
+    ToolProvider.setProvider(new WolframScriptToolProvider)
   }
 
   /** Shuts down the backend solver and invariant generator. */

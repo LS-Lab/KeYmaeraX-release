@@ -103,7 +103,7 @@
 
 <div class="container">
 
-<div ng-if="toolConfig.tool !== undefined && ((toolConfig.tool !== 'Mathematica' && toolConfig.tool !== 'WolframEngine')
+<div ng-if="toolConfig.tool !== undefined && ((toolConfig.tool !== 'Mathematica' && toolConfig.tool !== 'WolframEngine' && toolConfig.tool !== 'WolframScript')
                                               || !toolConfig.configured)" ng-cloak>
     <div class="alert alert-warning" role="alert">
         <button type="button" class="close" data-dismiss="alert">&times;</button>
@@ -192,6 +192,7 @@
 <script src="/js/controllers/toolConfig.js"></script>
 <script src="/js/controllers/mathematicaConfig.js"></script>
 <script src="/js/controllers/wolframEngineConfig.js"></script>
+<script src="/js/controllers/wolframScriptConfig.js"></script>
 <script src="/js/controllers/proofRuleChoice.js"></script>
 <script src="/js/controllers/proofs.js"></script>
 <script src="/js/controllers/provingawesome.js"></script>

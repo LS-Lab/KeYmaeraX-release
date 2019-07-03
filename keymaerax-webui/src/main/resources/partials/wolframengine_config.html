@@ -1,13 +1,146 @@
 <h2>Wolfram Engine Configuration</h2>
 
 <p ng-if="wolframEngineConfigSuggestion.suggestionFound" ng-cloak>
-Found Wolfram Engine {{wolframEngineConfigSuggestion.suggestion.version}} on {{wolframEngineConfigSuggestion.os}}.
+    Your system looks as if you have installed Wolfram Engine {{wolframEngineConfigSuggestion.suggestion.version}} on {{wolframEngineConfigSuggestion.os}}.
 </p>
-<p ng-if="wolframEngineConfigSuggestion.os !== undefined && !wolframEngineConfigSuggestion.suggestionFound" ng-cloak>
-Your system looks like {{wolframEngineConfigSuggestion.os}}, but Wolfram Engine and/or WolframScript may not be installed or may not be activated.
-You can obtain Wolfram Engine and WolframScript from <a href="http://www.wolfram.com/engine">Wolfram</a>. Please follow the
+<p ng-if="!wolframEngineConfigSuggestion.suggestionFound" ng-cloak>
+    Your system looks like {{wolframEngineConfigSuggestion.os}}, but Wolfram Engine may not be installed or may not be activated.
+    You can obtain Wolfram Engine from <a href="http://www.wolfram.com/engine">Wolfram</a>. Please follow the
     <a href="http://support.wolfram.com/kb/45743">installation and activation instructions</a>.
 </p>
-<p ng-if="wolframEngineConfigSuggestion.os === undefined" ng-cloak>
-    Searching...
-</p>
+
+<script type="text/ng-template" id="kernelSuggestionTooltipTemplate.html">
+    <div style="text-align: left;">
+        Other locations where you might find the Wolfram Engine Kernel:
+        <ul>
+            <li ng-repeat="suggestion in wolframEngineConfigSuggestion.allSuggestions">
+                {{suggestion.version}}: {{suggestion.kernelPath}}
+            </li>
+        </ul>
+    </div>
+</script>
+
+<script type="text/ng-template" id="jlinkSuggestionTooltipTemplate.html">
+    <div style="text-align: left;">
+        Other locations where you might find the J/Link native library:
+        <ul>
+            <li ng-repeat="suggestion in wolframEngineConfigSuggestion.allSuggestions">
+                {{suggestion.version}}: {{suggestion.jlinkPath}}
+            </li>
+        </ul>
+    </div>
+</script>
+
+<form ng-controller="WolframEngineConfig" name="WolframEngineForm">
+    <div class="form-group">
+        <h4 for="linkName">Wolfram Engine Kernel</h4>
+
+        <div>
+            <p>
+                Please configure the path to the Wolfram Engine kernel. On your operating system
+                ({{wolframEngineConfigSuggestion.os}}) look for an executable file named
+                <code>{{wolframEngineConfigSuggestion.suggestion.kernelName}}</code>.<br/>
+                If Wolfram Engine is installed at its default location, you might find that file at
+            </p>
+            <p>
+                <code uib-tooltip-template="'kernelSuggestionTooltipTemplate.html'"
+                      tooltip-placement="auto top">{{wolframEngineConfigSuggestion.suggestion.kernelPath}}{{wolframEngineConfigSuggestion.suggestion.kernelName}}</code>.
+            </p>
+        </div>
+
+        <div class="input-group"
+             data-intro="Configure the path to the Wolfram Engine kernel executable, corresponding to your operating system. Look for an executable file named <code>{{wolframEngineConfigSuggestion.suggestion.kernelName}}</code>. You might find it at <br/>{{wolframEngineConfigSuggestion.suggestion.kernelPath}}{{wolframEngineConfigSuggestion.suggestion.kernelName}}."
+             data-position="top" style="padding-top: 10px;">
+            <span class="input-group-addon" ng-if="linkName"><i class="fa fa-check"></i></span>
+            <span class="input-group-addon" ng-if="linkName === undefined"><i class="fa fa-wrench"></i></span>
+            <input type="text" name="linkName" id="linkName" class="form-control" ng-model="linkName"/>
+            <span class="input-group-btn">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="tooltip"
+                        data-placement="bottom"
+                        aria-expanded="false" ng-click="setDefaultMathKernel()"
+                        title="{{wolframEngineConfigSuggestion.suggestion.kernelPath}}{{wolframEngineConfigSuggestion.suggestion.kernelName}}">
+                    <span ng-if="linkName">Reset to </span><span ng-if="linkName === undefined">Use </span> {{wolframEngineConfigSuggestion.os}} Default
+                </button>
+            </span>
+        </div>
+        <div ng-show="WolframEngineForm.linkName.$invalid" class="alert alert-danger"><i class="fa fa-bolt"></i>
+            <span ng-if="!linkNameIncomplete">
+                This file does not exist on your system:
+                <span>{{linkNameOkPrefix}}</span><span><strong><em>{{linkNameWrong}}</em></strong></span><br/>
+                The segment of the path highlighted in bold-face seems wrong.
+            </span>
+            <span ng-if="linkNameIncomplete">The path exists, but it does not point to {{wolframEngineConfigSuggestion.suggestion.kernelName}}.</span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <h4 for="jlinkLibDir">
+            Wolfram Engine J/Link Native Library
+        </h4>
+
+        <div>
+            <p>
+                Please configure the path to the J/Link native library on your system architecture.
+                On your operating system ({{wolframEngineConfigSuggestion.os}} with <b>{{wolframEngineConfigSuggestion.jvmArchitecture}}-bit</b> Java Virtual Machine) look for a
+                file named <code>{{wolframEngineConfigSuggestion.suggestion.jlinkName}}</code>.<br/>
+                If Wolfram Engine is installed at its default location, you might find that file at
+            </p>
+            <p>
+                <code uib-tooltip-template="'jlinkSuggestionTooltipTemplate.html'"
+                      tooltip-placement="auto top">{{wolframEngineConfigSuggestion.suggestion.jlinkPath}}{{wolframEngineConfigSuggestion.suggestion.jlinkName}}</code>.
+            </p>
+        </div>
+
+        <div class="input-group"
+             data-intro="Configure the path to the Wolfram Engine J/Link native library. Look for a file named <code>{{wolframEngineConfigSuggestion.suggestion.jlinkName}}</code> at <br/>{{wolframEngineConfigSuggestion.suggestion.jlinkPath}}{{wolframEngineConfigSuggestion.suggestion.jlinkName}}.<br/>Make sure that you choose a <b>{{wolframEngineConfigSuggestion.jvmArchitecture}}-bit</b> library that fits to your system architecture, since you are running a <b>{{wolframEngineConfigSuggestion.jvmArchitecture}}-bit Java Virtual Machine</b>."
+             data-position="bottom" style="padding-top: 10px; padding-bottom: 10px;">
+            <span class="input-group-addon" ng-if="jlinkLibPath"><i class="fa fa-check"></i></span>
+            <span class="input-group-addon" ng-if="jlinkLibPath === undefined"><i class="fa fa-wrench"></i></span>
+            <input type="text" name="jlinkLibDir" id="jlinkLibDir" class="form-control" ng-model="jlinkLibPath"/>
+            <span class="input-group-btn">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="tooltip"
+                        data-placement="bottom"
+                        aria-expanded="false" ng-click="setDefaultJLinkLibPath()"
+                        title="{{wolframEngineConfigSuggestion.suggestion.jlinkPath}}{{wolframEngineConfigSuggestion.suggestion.jlinkName}}">
+                    <span ng-if="jlinkLibPath">Reset to </span><span ng-if="jlinkLibPath === undefined">Use </span> {{wolframEngineConfigSuggestion.os}} Default
+                </button>
+            </span>
+        </div>
+        <div ng-show="WolframEngineForm.jlinkLibDir.$invalid" class="alert alert-danger"><i class="fa fa-bolt"></i>
+            <span ng-if="!jlinkPathIncomplete">
+                This file does not exist on your system:
+                <span>{{jlinkLibPathOkPrefix}}</span><span><strong><em>{{jlinkLibPathWrong}}</em></strong></span><br/>
+                The segment of the path highlighted in bold-face seems wrong.
+            </span>
+            <span ng-if="jlinkPathIncomplete">The path exists, but it does not point to {{wolframEngineConfigSuggestion.suggestion.jlinkName}}.</span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <h4 for="jlinktcpip">
+            Kernel Connection
+        </h4>
+
+        <div>
+            <p>
+                Please configure how to connect to the Wolfram Engine kernel.
+                Enter <kbd>port</kbd> to start a local Wolfram Engine in its own process and connect via TCPIP.
+                Enter <kbd>port@remotemachine</kbd> to connect to an already running remote Wolfram Engine.
+            </p>
+        </div>
+
+        <div class="input-group"
+             data-intro="Configure how to connect to the Wolfram Engine kernel."
+             data-position="bottom" style="padding-top: 10px; padding-bottom: 10px;">
+            <span class="input-group-addon" ng-if="jlinkTcpip"><i class="fa fa-check"></i></span>
+            <span class="input-group-addon" ng-if="jlinkTcpip === undefined"><i class="fa fa-wrench"></i></span>
+            <input type="text" name="jlinktcpip" id="jlinktcpip" class="form-control" ng-model="jlinkTcpip"/>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <div class="col-md-3 pull-right">
+            <button ng-click="configureWolframEngine()" class="form-control btn btn-primary">Save Configuration</button>
+        </div>
+    </div>
+</form>

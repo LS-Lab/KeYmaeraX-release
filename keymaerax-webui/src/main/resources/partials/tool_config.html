@@ -15,6 +15,7 @@
             <select name="toolSelect" id="toolSelect" ng-model="tool" ng-change="toolChange()">
                 <option value="mathematica">Mathematica</option>
                 <option value="wolframengine">Wolfram Engine</option>
+                <option value="wolframscript">Wolfram Script</option>
                 <option value="z3">Z3</option>
             </select>
             </span>
@@ -44,6 +45,9 @@
 </div>
 <div ng-if="tool==='wolframengine'">
     <div ng-include="'/partials/wolframengine_config.html'" ng-controller="WolframEngineConfig"></div>
+</div>
+<div ng-if="tool==='wolframscript'">
+    <div ng-include="'/partials/wolframscript_config.html'" ng-controller="WolframScriptConfig"></div>
 </div>
 
 <div ng-if="tool==='z3'">

@@ -243,7 +243,8 @@ object CoasterXMain {
     val tool: String = options.getOrElse('tool, preferredTool).toString
     val provider = tool.toLowerCase() match {
       case "mathematica" => new MathematicaToolProvider(config)
-      case "wolframengine" => new WolframEngineToolProvider
+      case "wolframengine" => new WolframEngineToolProvider(config)
+      case "wolframscript" => new WolframScriptToolProvider
       case "z3" => new Z3ToolProvider
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
@@ -255,7 +256,8 @@ object CoasterXMain {
     val tool: String = options.getOrElse('tool, preferredTool).toString
     tool.toLowerCase() match {
       case "mathematica" => mathematicaConfig
-      case "wolframengine" => Map.empty
+      case "wolframengine" => mathematicaConfig
+      case "wolframscript" => Map.empty
       case "z3" => Map.empty
       case t => throw new Exception("Unknown tool '" + t + "'")
     }
@@ -268,8 +270,8 @@ object CoasterXMain {
   private def mathematicaConfig: ToolProvider.Configuration = {
     getMathematicaLinkName match {
       case Some(l) => getMathematicaLibDir match {
-        case Some(libDir) => Map("linkName" -> l, "libDir" -> libDir)
-        case None => Map("linkName" -> l)
+        case Some(libDir) => Map("linkName" -> l, "libDir" -> libDir, "tcpip" -> getMathematicaTcpip)
+        case None => Map("linkName" -> l, "tcpip" -> getMathematicaTcpip)
       }
       case None => DefaultConfiguration.defaultMathematicaConfig
     }
@@ -281,6 +283,10 @@ object CoasterXMain {
 
   private def getMathematicaLibDir: Option[String] = {
     Configuration.getOption(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
+  }
+
+  private def getMathematicaTcpip: String = {
+    Configuration.getOption(Configuration.Keys.MATH_LINK_TCPIP).getOrElse("false")
   }
 
 

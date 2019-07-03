@@ -61,7 +61,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   def configFileMathematicaConfig: Map[String, String] = {
     Map(
       "linkName" -> Configuration(Configuration.Keys.MATHEMATICA_LINK_NAME),
-      "libDir" -> Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR))
+      "libDir" -> Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR),
+      "tcpip" -> Configuration(Configuration.Keys.MATH_LINK_TCPIP))
   }
 
   // start test with -DWOLFRAM=... (one of 'Mathematica' or 'WolframEngine') to select the Wolfram backend.
@@ -70,7 +71,8 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
   //@note Initialize once per test class, but only if requested in a withMathematica call
   private var mathematicaProvider =
     if (WOLFRAM.equalsIgnoreCase("Mathematica")) new Lazy(new MathematicaToolProvider(configFileMathematicaConfig))
-    else if (WOLFRAM.equalsIgnoreCase("WolframEngine")) new Lazy(new WolframEngineToolProvider)
+    else if (WOLFRAM.equalsIgnoreCase("WolframEngine")) new Lazy(new WolframEngineToolProvider(configFileMathematicaConfig))
+    else if (WOLFRAM.equalsIgnoreCase("WolframScript")) new Lazy(new WolframScriptToolProvider)
     else throw new IllegalArgumentException("Unknown Wolfram backend, please provide either 'Mathematica' or 'WolframEngine'")
   //@note setup lazy in beforeEach, automatically initialize in withDatabase, tear down in afterEach if initialized
   private var dbTester: Lazy[TempDBTools] = _
