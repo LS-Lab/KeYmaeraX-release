@@ -58,15 +58,15 @@ If[OptionValue[SanityTimeout] > 0,
   Print["Precondition does not imply postcondition! Nothing to do."]; Throw[{{}, False}], 
   Print["Precondition implies postcondition. Proceeding."]];
 
-  postInvariant=LZZ`InvS[post, f, vars, evoConst];
+  postInvariant=LZZ`InvSFast[post, f, vars, evoConst];
   If[ TrueQ[postInvariant], 
   Print["Postcondition is an invariant! Nothing to do."]; Throw[{{post,{{post,Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]}}},True}], 
-  Print["Postcondition is not an invariant. Proceeding."]];
+  Print["Postcondition is (probably) not an invariant. Proceeding."]];
 
-  preInvariant=LZZ`InvS[pre, f, vars, evoConst];
+  preInvariant=LZZ`InvSFast[pre, f, vars, evoConst];
   If[ TrueQ[preInvariant], 
   Print["Precondition is an invariant! Nothing to do."]; Throw[{{pre,{{pre,Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]}}}, True}], 
-  Print["Precondition is not an invariant. Proceeding."]];
+  Print["Precondition is (probably) not an invariant. Proceeding."]];
 ],OptionValue[SanityTimeout]]];
 
 (* Determine strategies depending on problem classification by pattern matching on {dimension, classes} *)
