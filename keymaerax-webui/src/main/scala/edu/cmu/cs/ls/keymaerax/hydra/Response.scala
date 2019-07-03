@@ -1138,10 +1138,11 @@ class SystemInfoResponse(os: String, osVersion: String, jvmHome: String, jvmVend
   )
 }
 
-class MathematicaConfigurationResponse(linkName: String, jlinkLibDir: String) extends Response {
+class MathematicaConfigurationResponse(linkName: String, jlinkLibDir: String, jlinkTcpip: String) extends Response {
   def getJson: JsValue = JsObject(
     "linkName" -> JsString(linkName),
-    "jlinkLibDir" -> JsString(jlinkLibDir)
+    "jlinkLibDir" -> JsString(jlinkLibDir),
+    "jlinkTcpip" -> JsString(jlinkTcpip)
   )
 }
 

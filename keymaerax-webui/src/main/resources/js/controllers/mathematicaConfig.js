@@ -13,6 +13,7 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
               if (data.linkName !== "" && data.jlinkLibPath !== "") {
                   $scope.linkName = data.linkName;
                   $scope.jlinkLibPath = data.jlinkLibDir;
+                  $scope.jlinkTcpip = data.jlinkTcpip;
               }
 //          else {
 //            $http.get("/config/mathematica/suggest")
@@ -28,7 +29,8 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
         var uri     = "/config/mathematica"
         var linkName = $scope.linkName ? $scope.linkName : "";
         var jlinkLibPath = $scope.jlinkLibPath ? $scope.jlinkLibPath : "";
-        var dataObj = {linkName: linkName, jlinkLibDir: jlinkLibPath}
+        var jlinkTcpip = $scope.jlinkTcpip ? $scope.jlinkTcpip : "";
+        var dataObj = { linkName: linkName, jlinkLibDir: jlinkLibPath, jlinkTcpip: jlinkTcpip };
 
         $http.post(uri, dataObj)
             .success(function(data) {

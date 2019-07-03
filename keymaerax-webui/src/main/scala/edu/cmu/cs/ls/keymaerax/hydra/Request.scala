@@ -411,7 +411,8 @@ class KeymaeraXVersionRequest() extends Request with ReadRequest {
   }
 }
 
-class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLibFileName : String) extends LocalhostOnlyRequest with WriteRequest {
+class ConfigureMathematicaRequest(db: DBAbstraction, linkName: String, jlinkLibFileName: String, jlinkTcpip: String)
+    extends LocalhostOnlyRequest with WriteRequest {
   private def isLinkNameCorrect(linkNameFile: java.io.File): Boolean = {
     linkNameFile.getName == "MathKernel" || linkNameFile.getName == "MathKernel.exe"
   }
@@ -450,6 +451,7 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
     } else {
       Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkName)
       Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
+      Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, jlinkTcpip)
       ToolProvider.setProvider(new MathematicaToolProvider(ToolConfiguration.config("mathematica")))
       new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
     }
@@ -574,15 +576,19 @@ class GetMathematicaConfigurationRequest(db : DBAbstraction) extends LocalhostOn
   override def resultingResponses(): List[Response] = {
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
     val jlinkLibFile = {
-      if(osName.contains("win")) "JLinkNativeLibrary.dll"
-      else if(osName.contains("mac")) "libJLinkNativeLibrary.jnilib"
-      else if(osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) "libJLinkNativeLibrary.so"
+      if (osName.contains("win")) "JLinkNativeLibrary.dll"
+      else if (osName.contains("mac")) "libJLinkNativeLibrary.jnilib"
+      else if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) "libJLinkNativeLibrary.so"
       else "Unknown"
     }
     if (Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) && Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)) {
-      new MathematicaConfigurationResponse(Configuration(Configuration.Keys.MATHEMATICA_LINK_NAME), Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) + File.separator + jlinkLibFile) :: Nil
+      new MathematicaConfigurationResponse(
+        Configuration(Configuration.Keys.MATHEMATICA_LINK_NAME),
+        Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) + File.separator + jlinkLibFile,
+        Configuration.getOption(Configuration.Keys.MATH_LINK_TCPIP).getOrElse("")
+      ) :: Nil
     } else {
-      new MathematicaConfigurationResponse("", "") :: Nil
+      new MathematicaConfigurationResponse("", "", "") :: Nil
     }
   }
 }

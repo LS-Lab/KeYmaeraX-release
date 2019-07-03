@@ -880,9 +880,11 @@ object RestApi extends Logging {
           val p = JsonParser(params).asJsObject.fields.map(param => param._1.toString -> param._2.asInstanceOf[JsString].value)
           assert(p.contains("linkName"), "linkName not in: " + p.keys.toString())
           assert(p.contains("jlinkLibDir"), "jlinkLibDir not in: " + p.keys.toString()) //@todo These are schema violations and should be checked as such, but I needed to disable the validator.
-          val linkName : String = p("linkName")
-          val jlinkLibDir : String = p("jlinkLibDir")
-          val request = new ConfigureMathematicaRequest(database, linkName, jlinkLibDir)
+          assert(p.contains("jlinkTcpip"), "jlinkTcpip not in: " + p.keys.toString())
+          val linkName: String = p("linkName")
+          val jlinkLibDir: String = p("jlinkLibDir")
+          val jlinkTcpip: String = p("jlinkTcpip")
+          val request = new ConfigureMathematicaRequest(database, linkName, jlinkLibDir, jlinkTcpip)
           completeRequest(request, EmptyToken())
         }}
       }

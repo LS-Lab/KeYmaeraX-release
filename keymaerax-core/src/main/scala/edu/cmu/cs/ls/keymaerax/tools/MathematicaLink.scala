@@ -115,7 +115,8 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
     override def toString: String = s"$major.$minor"
   }
 
-  private val TCPIP = Configuration(Configuration.Keys.MATH_LINK_TCPIP) == "true"
+  private val TCPIP = Configuration(Configuration.Keys.MATH_LINK_TCPIP)
+  private val DEFAULT_PORT = "1234"
 
   //@todo really should be private -> fix SpiralGenerator
   //@todo concurrent access to ml needs ml access to be synchronized everywhere or pooled or
@@ -128,26 +129,51 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
 
   private val fetchMessagesCmd = "$MessageList"
 
+  private var mathProcess: Option[Process] = None
+
+  /** Starts a kernel process if connecting over TCPIP. */
+  private def startKernel(linkName: String, port: String): Option[Process] = {
+    val cmd = linkName::"-mathlink"::"-linkmode"::"listen"::"-linkname"::port::"-linkprotocol"::"tcpip"::Nil
+    val result: StringBuilder = new StringBuilder()
+    val pl = ProcessLogger(s => result.append(s))
+    val p = cmd.run(pl) // start asynchronously, log output to logger
+    Some(p)
+  }
+
   /**
-   * Initializes the connection to Mathematica.
-    *
-    * @param linkName The name of the link to use (platform-dependent, see Mathematica documentation)
-   * @return true if initialization was successful
-   * @note Must be called before first use of ml
-   */
-  def init(linkName : String, jlinkLibDir : Option[String], remainingTrials: Int=5): Boolean = {
+    * Initializes the connection to Mathematica.
+    * @param linkName The name of the link to use (platform-dependent, see Mathematica documentation, or a port number if on TCPIP)
+    * @return true if initialization was successful
+    * @note Must be called before first use of ml
+    */
+  def init(linkName: String, jlinkLibDir: Option[String], remainingTrials: Int=5): Boolean = {
     this.linkName = linkName
     this.jlinkLibDir = jlinkLibDir
-    //logger.info("Connecting to Mathematica over TCPIP: " + TCPIP)
     // set native library VM property for JLink
     if (jlinkLibDir.isDefined) {
       System.setProperty("com.wolfram.jlink.libdir", jlinkLibDir.get) //e.g., "/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink"
     }
     try {
-      val args = ("-linkmode"::"launch"::"-linkname"::linkName + " -mathlink"::Nil ++
-        (if (TCPIP) "-linkprotocol"::"tcpip"::Nil else Nil)).toArray
+      ml = if (TCPIP.nonEmpty && TCPIP != "false") {
+        logger.info("Connecting to Math Kernel over TCPIP to " + TCPIP)
+        val port::machine = TCPIP match {
+          case "true" => DEFAULT_PORT::Nil
+          case _ => TCPIP.split("@").toList
+        }
+        val args =
+          if (machine.isEmpty) {
+            mathProcess = startKernel(linkName, port)
+            ("-linkmode"::"connect"::"-linkprotocol"::"tcpip"::"-linkname"::port::Nil).toArray
+          } else {
+            ("-linkmode"::"connect"::"-linkprotocol"::"tcpip"::"-linkname"::TCPIP::Nil).toArray
+          }
+        MathLinkFactory.createKernelLink(args)
+      } else {
+        logger.info("Launching Math Kernel")
+        val args = ("-linkmode"::"launch"::"-linkname"::linkName + " -mathlink"::Nil).toArray
+        MathLinkFactory.createKernelLink(args)
+      }
 
-      ml = MathLinkFactory.createKernelLink(args)
       ml.synchronized {
         ml.connect()
         ml.discardAnswer()
@@ -198,7 +224,6 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
    */
   def shutdown(): Unit = {
     if (ml == null) logger.trace("No need to shut down MathKernel if no link has been initialized")
-    //if (ml == null) throw new IllegalStateException("Cannot shut down if no MathKernel has been initialized")
     else {
       logger.debug("Shutting down Mathematica...")
       val l: KernelLink = ml
@@ -207,6 +232,12 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
       l.terminateKernel()
       l.close()
       logger.info("Disconnected from Mathematica")
+    }
+    mathProcess match {
+      case Some(p) =>
+        mathProcess = None
+        p.destroy()
+      case None =>
     }
   }
 

@@ -105,7 +105,7 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
    * }}}
    * */
   def withMathematica(testcode: Mathematica => Any, timeout: Int = -1) {
-    val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, "true") // JVM parameter -DMATH_LINK_TCPIP=[true,false]
+    val mathLinkTcp = System.getProperty(Configuration.Keys.MATH_LINK_TCPIP, Configuration(Configuration.Keys.MATH_LINK_TCPIP)) // JVM parameter -DMATH_LINK_TCPIP=[true,false]
     withTemporaryConfig(Map(
         Configuration.Keys.MATH_LINK_TCPIP -> mathLinkTcp,
         Configuration.Keys.QE_TOOL -> "mathematica",

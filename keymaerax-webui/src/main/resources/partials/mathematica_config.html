@@ -120,6 +120,29 @@ You can obtain Mathematica from <a href="http://www.wolfram.com/mathematica/">Wo
     </div>
 
     <div class="form-group">
+        <h4 for="jlinktcpip">
+            Kernel Connection
+        </h4>
+
+        <div>
+            <p>
+                Please configure how to connect to the Mathematica kernel. If empty or <kbd>false</kbd>,
+                KeYmaera X will start local kernels with shared memory connection.
+                Enter <kbd>port</kbd> to start local kernels in their own process and connect via TCPIP.
+                Enter <kbd>port@remotemachine</kbd> to connect to an already running remote kernel.
+            </p>
+        </div>
+
+        <div class="input-group"
+             data-intro="Configure how to connect to the Mathematica kernel."
+             data-position="bottom" style="padding-top: 10px; padding-bottom: 10px;">
+            <span class="input-group-addon" ng-if="jlinkTcpip"><i class="fa fa-check"></i></span>
+            <span class="input-group-addon" ng-if="jlinkTcpip === undefined"><i class="fa fa-wrench"></i></span>
+            <input type="text" name="jlinktcpip" id="jlinktcpip" class="form-control" ng-model="jlinkTcpip"/>
+        </div>
+    </div>
+
+    <div class="form-group">
         <div class="col-md-3 pull-right">
         <button ng-click="configureMathematica()" class="form-control btn btn-primary">Save Configuration</button>
         </div>
