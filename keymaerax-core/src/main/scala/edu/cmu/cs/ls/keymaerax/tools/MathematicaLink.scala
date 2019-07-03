@@ -14,7 +14,7 @@ import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.Configuration
 import edu.cmu.cs.ls.keymaerax.tools.MathematicaConversion._
 import org.apache.logging.log4j.scala.Logging
-import spray.json.{JsArray, JsFalse, JsNull, JsNumber, JsObject, JsString, JsTrue, JsValue, JsonParser}
+import spray.json.{JsArray, JsFalse, JsNull, JsNumber, JsString, JsTrue, JsValue, JsonParser}
 
 import scala.collection.immutable
 import scala.concurrent._
@@ -761,6 +761,11 @@ class WolframScript extends MathematicaLink with Logging {
         val converted = elems.map(convertJSON)
         new MExpr(converted.head, converted.tail.toArray)
     }
-    convertJSON(JsonParser(expr))
+    val json = try {
+      JsonParser(expr)
+    } catch {
+      case ex: JsonParser.ParsingException => throw ToolException("Error parsing Wolfram Engine response; checking license may have failed, please double-check Wolfram Engine is activated and retry", ex)
+    }
+    convertJSON(json)
   }
 }
