@@ -20,8 +20,7 @@ BeginPackage["Pegasus`"];
 
 (*RunMethod::usage="Run designated method on a problem"*)
 InvGen::usage="Pegasus[problem_List] Run Pegasus on problem"
-(* SanityTimeout: for the pre/post invariance check. DWCTimeout: controls internal QE duration *)
-Options[InvGen]= {SanityTimeout -> 0,StrategyTimeoutFactor -> Infinity,DWCTimeout->30};
+Options[InvGen]= {SanityTimeout -> 0,StrategyTimeoutFactor -> Infinity};
 
 
 Begin["`Private`"]
@@ -128,11 +127,12 @@ subproblem=Dependency`FilterVars[curproblem,curdep];
 (* Time constrain the cut *)
 (* Compute polynomials for the algebraic decomposition of the state space *)
 (*Print[subproblem];*)
-
-polyList=TimeConstrained[strat[subproblem],OptionValue[StrategyTimeoutFactor]*timeoutmultiplier,{}]//DeleteDuplicates;
-Print["Extracted polynomials:",polyList];
-	
-inv=InvariantExtractor`TimedDWC[pre, post, {f,vars,evoConst}, polyList, Timeout->OptionValue[DWCTimeout]];
+inv=TimeConstrained[
+	polyList=strat[subproblem]//DeleteDuplicates;
+	InvariantExtractor`DWC[pre, post, {f,vars,evoConst}, polyList, {}],
+	OptionValue[StrategyTimeoutFactor]*timeoutmultiplier,
+	Print["Strategy timed out after: ",OptionValue[StrategyTimeoutFactor]*timeoutmultiplier];
+	{True,{True}}];
 
 (* Simplify invariant w.r.t. the domain constraint *)
 {inv,cuts}=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
