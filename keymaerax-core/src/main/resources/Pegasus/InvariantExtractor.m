@@ -98,7 +98,7 @@ Throw[{H0, cuts}]
 
 
 TimedDWC[precond_, postcond_, system_List, A0_List, opts:OptionsPattern[]]:=TimedDWC[precond, postcond, system, A0, cuts]=Catch[
-Module[{GT,EQ,LT,p,f=system[[1]],vars=system[[2]],H0=system[[3]],time,cuts},
+Module[{GT,EQ,LT,p,f=system[[1]],vars=system[[2]],H0=True,time,cuts},
 
 SetOptions[Reduce,WorkingPrecision-> OptionValue[WorkingPrecision]];
 
@@ -114,6 +114,7 @@ TimeConstrained[
 If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p==0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p==0, f, vars, H0]]),
 Print["DC on ", p==0];
 cuts = Join[cuts,{p==0}];
+H0=H0 && p==0;
 Continue[];
 ]
 
@@ -121,6 +122,7 @@ Continue[];
 If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p>0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p>0, f, vars, H0]]),
 Print["DC on ", p>0];
 cuts=Join[cuts,{p>0}];
+H0=H0 && p>0;
 Continue[];
 ]
 
@@ -128,6 +130,7 @@ Continue[];
 If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p<0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p<0, f, vars, H0]]),
 Print["DC on ", p<0];
 cuts=Join[cuts,{p<0}];
+H0=H0 && p<0;
 Continue[];
 ]
 
@@ -135,6 +138,7 @@ Continue[];
 If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p>=0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p>=0, f, vars, H0]]),
 Print["DC on ", p>=0];
 cuts=Join[cuts,{p>=0}];
+H0=H0 && p>=0;
 Continue[];
 ]
 
@@ -142,6 +146,7 @@ Continue[];
 If[(TrueQ[Reduce[ForAll[vars,Implies[H0 && precond, p<=0]],vars,Reals]]) && (TrueQ[LZZ`InvSFast[p<=0, f, vars, H0]]),
 Print["DC on ", p<=0];
 cuts=Join[cuts,{p<=0}];
+H0=H0 && p<=0;
 Continue[];
 ]
 
