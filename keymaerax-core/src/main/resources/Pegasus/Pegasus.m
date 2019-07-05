@@ -20,7 +20,7 @@ BeginPackage["Pegasus`"];
 
 (*RunMethod::usage="Run designated method on a problem"*)
 InvGen::usage="Pegasus[problem_List] Run Pegasus on problem"
-Options[InvGen]= {SanityTimeout -> 0,StrategyTimeoutFactor -> 20};
+Options[InvGen]= {SanityTimeout -> 0,StrategyTimeoutFactor -> Infinity};
 
 
 Begin["`Private`"]
