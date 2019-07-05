@@ -126,15 +126,14 @@ subproblem=Dependency`FilterVars[curproblem,curdep];
 
 (* Time constrain the cut *)
 (* Compute polynomials for the algebraic decomposition of the state space *)
-
+(*Print[subproblem];*)
 inv=TimeConstrained[
 	polyList=strat[subproblem]//DeleteDuplicates;
 	InvariantExtractor`DWC[pre, post, {f,vars,evoConst}, polyList, {}],
 	OptionValue[StrategyTimeoutFactor]*timeoutmultiplier,
 	Print["Strategy timed out after: ",OptionValue[StrategyTimeoutFactor]*timeoutmultiplier];
-	True];
+	{True,{True}}];
 
-(*Print["Extracted invariants: ",inv];*)
 (* Simplify invariant w.r.t. the domain constraint *)
 {inv,cuts}=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
 
@@ -157,7 +156,7 @@ Print["Cuts: ",cutlist];
 Print["Evo: ",evoConst," Post: ",post];
 invImpliesPost=CheckSemiAlgInclusion[evoConst, post, vars];
 If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{{invlist,cutlist}, True}],
-Print["Generated invariant does not imply postcondition. Bad luck; returning what I could find."]]
+(*Print["Generated invariant does not imply postcondition. Bad luck; returning what I could find."]*)]
 ,{strathint, strategies}(* End Do loop *)]
 ,{curdep,deps}(* End Do loop *)];
 

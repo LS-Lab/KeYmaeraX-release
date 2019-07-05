@@ -47,9 +47,9 @@ ffil,varsfil
 If[Not[IntersectingQ[fvars,vars]],
 	Print["No vars left after filtering! Filter ignored."];
 	Return[problem]];
-prefil = FilterAtom[pre,fvars]//FilterTrue;
-Qfil = FilterAtom[Q,fvars]//FilterTrue;
-postfil = (FilterAtom[post,fvars]//FilterDrop)/.{ {} :> False };
+prefil = FilterAtom[pre//Primitives`DNFNormalizeGtGeq,fvars]//FilterTrue;
+Qfil = FilterAtom[Q//Primitives`DNFNormalizeGtGeq,fvars]//FilterTrue;
+postfil = (FilterAtom[post//Primitives`DNFNormalizeGtGeq,fvars]//FilterDrop)/.{ {} :> False };
 {ffil,varsfil}=Transpose[Select[Transpose[{f,vars}],MemberQ[fvars,#[[2]]]&]];
 
 Return[{prefil,{ffil,varsfil,Qfil},postfil}];

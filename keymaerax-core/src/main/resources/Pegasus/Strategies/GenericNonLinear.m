@@ -26,7 +26,7 @@ FirstIntegrals[problem_List]:=Module[{pre,post,vf,vars,Q,fIs,maxVs,minVs,deg,rat
 {pre, { vf, vars, Q }, post} = problem;
 
 (* Heuristic *)
-deg = Max[15-Length[vars],1];
+deg = Max[10-Length[vars],1];
 rat = 10000;
 
 (* Create rationalization function wrappers *)
@@ -49,7 +49,7 @@ SummandFacts[problem_List]:=DeleteDuplicates[Join[QualitativeAbstraction`Summand
 
 DbxPoly[problem_List] := Module[{pre,post,vf,vars,Q,fIs,maxVs,minVs,deg,rat},
 {pre, { vf, vars, Q }, post} = problem;
-QualitativeAbstraction`DarbouxPolynomials[problem, 10, Max[15-Length[vars],1]]
+QualitativeAbstraction`DarbouxPolynomials[problem, 10, Max[10-Length[vars],1]]
 ]
 
 
