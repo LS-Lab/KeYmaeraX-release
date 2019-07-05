@@ -10,6 +10,9 @@ Needs["InvariantExtractor`",FileNameJoin[{Directory[],"InvariantExtractor.m"}]] 
 (* Load specialized invariant generation strategies *)
 Needs["Strategies`GenericNonLinear`",FileNameJoin[{Directory[],"Strategies","GenericNonLinear.m"}]]
 Needs["Strategies`OneDimensional`",FileNameJoin[{Directory[],"Strategies","OneDimensional.m"}]]
+(* For whatever reason, this load is needed *)
+Needs["Dependency`",FileNameJoin[{Directory[],"Primitives","Dependency.m"}]]
+
 
 
 BeginPackage["Pegasus`"];
@@ -17,7 +20,7 @@ BeginPackage["Pegasus`"];
 
 (*RunMethod::usage="Run designated method on a problem"*)
 InvGen::usage="Pegasus[problem_List] Run Pegasus on problem"
-Options[InvGen]= {SanityTimeout -> 0};
+Options[InvGen]= {SanityTimeout -> 0,StrategyTimeoutFactor -> 20};
 
 
 Begin["`Private`"]
@@ -54,8 +57,10 @@ newf=Join[f,Table[0,{i,Length[paramfree]}]];
 
 
 InvGen[parametricProb_List, opts:OptionsPattern[]]:=Catch[Module[
-{problem,pre1,post1,pre,f,vars,evoConst,post,preImpliesPost,postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,polyList,invlist,cuts,cutlist,strat,hint,
-(*ProofHint,Unknown,FirstIntegral,Darboux,Barrier*)}, 
+{problem,pre1,post1,pre,f,vars,evoConst,post,preImpliesPost,
+postInvariant,preInvariant,class,strategies,inv,andinv,relaxedInv,invImpliesPost,
+polyList,invlist,cuts,cutlist,strat,hint,
+curproblem,subproblem,deps,curdep,timeoutmultiplier},
 
 (* Bring symbolic parameters into the dynamics *)
 problem = AugmentWithParameters[parametricProb];
@@ -88,36 +93,48 @@ Print[class];
 strategies={};
 strategies = class/.{
  {1,CLASSES_List}-> {
- {Strategies`OneDimensional`OneDimPotential, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]}, 
- {Strategies`OneDimensional`OneDimReach, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]}
+ {Strategies`OneDimensional`OneDimPotential, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"],1}, 
+ {Strategies`OneDimensional`OneDimReach, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"],1}
  }, 
 (* {dim_,{"Constant"}}-> ConstantStrat, *)
 (* {2,{"Linear"}}-> PlanarLinearStrat, *)
 (* {dim_,{"Linear"}}-> GeneralLinearStrat, *)
 (* {dim_,{"Multi-affine"}}-> MultiLinearStrat, *)
 {dim_, CLASSES_List}-> {
-{Strategies`GenericNonLinear`SummandFacts, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]},
-{Strategies`GenericNonLinear`FirstIntegrals, Symbol["kyx`ProofHint"]==Symbol["kyx`FirstIntegral"]},
-{Strategies`GenericNonLinear`DbxPoly, Symbol["kyx`ProofHint"]==Symbol["kyx`Darboux"]},
-{Strategies`GenericNonLinear`BarrierCert, Symbol["kyx`ProofHint"]==Symbol["kyx`Barrier"]},
-{Strategies`GenericNonLinear`SummandFacts, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"]}
+{Strategies`GenericNonLinear`SummandFacts, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"],1},
+{Strategies`GenericNonLinear`FirstIntegrals, Symbol["kyx`ProofHint"]==Symbol["kyx`FirstIntegral"],2},
+{Strategies`GenericNonLinear`DbxPoly, Symbol["kyx`ProofHint"]==Symbol["kyx`Darboux"],2},
+{Strategies`GenericNonLinear`BarrierCert, Symbol["kyx`ProofHint"]==Symbol["kyx`Barrier"],3},
+{Strategies`GenericNonLinear`SummandFacts, Symbol["kyx`ProofHint"]==Symbol["kyx`Unknown"],1}
 }
 };
 
 invlist=True;
 cutlist={};
-(* For each strategy *)
+
+deps=Join[Dependency`VariableDependencies[problem],{vars}];
+(* For each depednency *)
 Do[
-{strat,hint}=strathint;
-Print["Trying: ",ToString[strat]," ",hint];
+(* For each strategy *)
+Print["Using dependencies: ",curdep];
+Do[
+{strat,hint,timeoutmultiplier}=strathint;
+Print["Trying strategy: ",ToString[strat]," ",hint];
+
+curproblem = {pre,{f,vars,evoConst},post};
+subproblem=Dependency`FilterVars[curproblem,curdep];
+
+(* Time constrain the cut *)
 (* Compute polynomials for the algebraic decomposition of the state space *)
-polyList=strat[{pre,{f,vars,evoConst},post}]//DeleteDuplicates;
-Print["Generated polynomials: ",polyList];
 
-(* Extract an invariant from the algebraic decomposition *)
-inv=InvariantExtractor`DWC[pre, post, {f,vars,evoConst}, polyList, {}];
+inv=TimeConstrained[
+	polyList=strat[subproblem]//DeleteDuplicates;
+	InvariantExtractor`DWC[pre, post, {f,vars,evoConst}, polyList, {}],
+	OptionValue[StrategyTimeoutFactor]*timeoutmultiplier,
+	Print["Strategy timed out after: ",OptionValue[StrategyTimeoutFactor]*timeoutmultiplier];
+	True];
 
-Print["Extracted invariants: ",inv];
+(*Print["Extracted invariants: ",inv];*)
 (* Simplify invariant w.r.t. the domain constraint *)
 {inv,cuts}=Map[Assuming[evoConst, FullSimplify[#, Reals]]&, inv];
 
@@ -128,20 +145,21 @@ Print["Extracted (simplified) invariants: ",inv," ",cuts];
 (* Implementation sanity check *)
 If[ListQ[cuts],,Print["ERROR, NOT A LIST: ",cuts];Throw[{}]];
 
-If[TrueQ[inv], Print["Skipped"],
+If[TrueQ[inv], (*Print["Skipped"]*),
 	invlist=And[invlist,inv];
 	cutlist=Join[cutlist,Map[{#,hint}&,Select[cuts,Not[TrueQ[#]]&]]];
 	evoConst=And[evoConst,inv]];
 
 post=Assuming[evoConst, FullSimplify[post, Reals]];
-Print["Inv: ",inv];
-Print["Invs: ",invlist];
+(*Print["Inv: ",inv];
+Print["Invs: ",invlist];*)
 Print["Cuts: ",cutlist];
 Print["Evo: ",evoConst," Post: ",post];
 invImpliesPost=CheckSemiAlgInclusion[evoConst, post, vars];
 If[TrueQ[invImpliesPost], Print["Generated invariant implies postcondition. Returning."]; Throw[{{invlist,cutlist}, True}],
 Print["Generated invariant does not imply postcondition. Bad luck; returning what I could find."]]
-,{strathint, strategies}(* End Do loop *)];
+,{strathint, strategies}(* End Do loop *)]
+,{curdep,deps}(* End Do loop *)];
 
 (* Throw whatever invariant was last computed *)
 Throw[{{invlist,cutlist}, False}]

@@ -230,12 +230,13 @@ for deg = mindeg : maxdeg
 end
 B2 = 0
 ";
-sosprog=StringReplace[sosprog,{"`"->"backtick"}];
+sosprog=StringReplace[sosprog,{"`"->"backtick","$"->"dollar"}];
 barrierscript=MATLink`MScript["expbarrier",sosprog, "Overwrite" -> True];
 (*Print[sosprog];*)
 res =MATLink`MEvaluate@barrierscript;
+(*Print[res];*)
 lines=StringSplit[res,{"B2"~~___~~"=", "break"}];
-B=N[StringReplace[StringDelete[lines[[-1]], "\n" | "\r" |" "], {"e-"->"*10^-", "backtick"->"`"}]//ToExpression//Expand, DEFAULTPRECISION];
+B=N[StringReplace[StringDelete[lines[[-1]], "\n" | "\r" |" "], {"e-"->"*10^-", "backtick"->"`","dollar"->"$"}]//ToExpression//Expand, DEFAULTPRECISION];
 If[B=={}, Print["No feasible solution found by SOS programming."];Throw[{}]];
 Throw[{B}];
 ]]
