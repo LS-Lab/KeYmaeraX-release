@@ -28,13 +28,27 @@ TrueQ[Reduce[ForAll[vars, Implies[subset,set]],Reals]]
 ]
 
 
+FindConst[ff_,var_,symbols_]:=Module[{ls,repr},
+ls = {ff//.And -> List}//Flatten;
+repr = Select[Cases[ls,Equal[var,rhs_]->rhs],Not[MemberQ[symbols,#]]&]//DeleteDuplicates;
+If[Length[repr]>1,Print["Detected multiple values for ",var,repr]];
+If[Length[repr]==1,{var -> First[repr]},{}]
+]
+
+
 (* Add sym'=0 to the ODE if the dynamics of sym is undefined *)
-AugmentWithParameters[problem_List]:=Module[{pre,post,f,vars,evoConst,symbols,parameters,newvars,newf},
+AugmentWithParameters[problem_List]:=Module[{pre,post,f,vars,evoConst,symbols,parameters,newvars,newf,
+paramrep,paramfixed,paramfree},
 { pre, { f, vars, evoConst }, post } = problem;
 symbols=Complement[DeleteDuplicates@Cases[{pre, post, f, evoConst},_Symbol,Infinity], {True, False}];
 parameters=Complement[symbols, vars];
-newvars=Join[vars,parameters];
-newf=Join[f,Table[0,{i,Length[parameters]}]];
+(* If the parameters have fixed values in pre then substitute that *)
+paramrep=Map[{#,FindConst[pre,#,symbols]}&,parameters];
+paramfixed=Map[#[[2]]&,Select[paramrep,Length[#[[2]]]!=0 &]]//Flatten;
+paramfree=Map[#[[1]]&,Select[paramrep,Length[#[[2]]]==0&]];
+{ pre, { f, vars, evoConst }, post } = problem /. paramfixed;
+newvars=Join[vars,paramfree];
+newf=Join[f,Table[0,{i,Length[paramfree]}]];
 { pre, { newf, newvars, evoConst }, post }
 ]
 
@@ -46,7 +60,6 @@ InvGen[parametricProb_List, opts:OptionsPattern[]]:=Catch[Module[
 (* Bring symbolic parameters into the dynamics *)
 problem = AugmentWithParameters[parametricProb];
 { pre1, { f, vars, evoConst }, post1 }=problem;
-
 pre = Primitives`DNFNormalizeGtGeq[pre1];
 post=Primitives`DNFNormalizeGtGeq[post1];
 
