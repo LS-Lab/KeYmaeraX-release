@@ -173,6 +173,7 @@ class MathematicaInvGenTool(override val link: MathematicaLink)
     val pegasusResourceNames =
       "Primitives/BarrierCertificates.m" ::
       "Primitives/DarbouxPolynomials.m" ::
+      "Primitives/Dependency.m" ::
       "Primitives/DiscreteAbstraction.m" ::
       "Primitives/FirstIntegrals.m" ::
       "Primitives/LZZ.m" ::
