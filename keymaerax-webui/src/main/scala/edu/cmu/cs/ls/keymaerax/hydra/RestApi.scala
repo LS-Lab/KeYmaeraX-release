@@ -866,8 +866,12 @@ object RestApi extends Logging {
   val tool: Route = path("config" / "tool") {
     pathEnd {
       get {
-        val request = new GetToolRequest(database)
-        completeRequest(request, EmptyToken())
+        Configuration(Configuration.Keys.QE_TOOL) match {
+          case "mathematica" => completeRequest(new MathematicaConfigStatusRequest(database), EmptyToken())
+          case "wolframengine" => completeRequest(new WolframEngineConfigStatusRequest(database), EmptyToken())
+          case "wolframscript" => completeRequest(new WolframScriptConfigStatusRequest(database), EmptyToken())
+          case "z3" => completeRequest(new Z3ConfigStatusRequest(database), EmptyToken())
+        }
       } ~
       post {
         entity(as[String]) { tool =>
@@ -896,19 +900,6 @@ object RestApi extends Logging {
           val request = new ConfigureMathematicaRequest(database, linkName, jlinkLibDir, jlinkTcpip)
           completeRequest(request, EmptyToken())
         }}
-      }
-    }
-  }
-
-  val toolConfigStatus: Route = path("config" / "toolStatus") {
-    pathEnd {
-      get {
-        Configuration(Configuration.Keys.QE_TOOL) match {
-          case "mathematica" => completeRequest(new MathematicaConfigStatusRequest(database), EmptyToken())
-          case "wolframengine" => completeRequest(new WolframEngineConfigStatusRequest(database), EmptyToken())
-          case "wolframscript" => completeRequest(new WolframScriptConfigStatusRequest(database), EmptyToken())
-          case "z3" => completeRequest(new Z3ConfigStatusRequest(database), EmptyToken())
-        }
       }
     }
   }
@@ -1071,7 +1062,6 @@ object RestApi extends Logging {
     kyxConfig          ::
     keymaeraXVersion   ::
     mathematicaConfig  ::
-    toolConfigStatus   ::
     toolStatus         ::
     tool               ::
     guestBrowseArchiveRequest ::

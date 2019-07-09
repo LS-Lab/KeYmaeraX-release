@@ -65,7 +65,7 @@ class Mathematica(private[tools] val link: MathematicaLink, override val name: S
               """.stripMargin)
         }
         val libDir = config.get("libDir") // doesn't need to be defined
-        l.init(linkName, libDir)
+        l.init(linkName, libDir, config.getOrElse("tcpip", "true"))
       case l: WolframScript => l.init()
     }
   }

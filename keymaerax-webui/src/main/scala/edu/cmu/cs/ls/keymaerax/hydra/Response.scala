@@ -16,15 +16,14 @@ import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
-
 import spray.json._
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
-
 import java.io.{PrintWriter, StringWriter}
 
 import Helpers._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
+import edu.cmu.cs.ls.keymaerax.launcher.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.pt.ProvableSig
 import org.apache.logging.log4j.scala.Logging
 
@@ -1103,29 +1102,28 @@ class ConfigureMathematicaResponse(linkNamePrefix: String, jlinkLibDirPrefix: St
   )
 }
 
-//@todo these are a mess.
 class MathematicaConfigSuggestionResponse(os: String, jvmBits: String, suggestionFound: Boolean,
-                                          version: String, kernelPath: String, kernelName: String,
-                                          jlinkPath: String, jlinkName: String,
-                                          allSuggestions: List[(String, String, String, String, String)]) extends Response {
+                                          suggestion: ToolConfiguration.ConfigSuggestion,
+                                          allSuggestions: List[ToolConfiguration.ConfigSuggestion]) extends Response {
 
-  private def convertSuggestion(info: (String, String, String, String, String)): JsValue = JsObject(
-    "version" -> JsString(info._1),
-    "kernelPath" -> JsString(info._2),
-    "kernelName" -> JsString(info._3),
-    "jlinkPath" -> JsString(info._4),
-    "jlinkName" -> JsString(info._5)
+  private def convertSuggestion(info: ToolConfiguration.ConfigSuggestion): JsValue = JsObject(
+    "version" -> JsString(info.version),
+    "kernelPath" -> JsString(info.kernelPath),
+    "kernelName" -> JsString(info.kernelName),
+    "jlinkPath" -> JsString(info.jlinkPath),
+    "jlinkName" -> JsString(info.jlinkName)
   )
 
   def getJson: JsValue = JsObject(
     "os" -> JsString(os),
     "jvmArchitecture" -> JsString(jvmBits),
     "suggestionFound" -> JsBoolean(suggestionFound),
-    "suggestion" -> convertSuggestion((version, kernelPath, kernelName, jlinkPath, jlinkName)),
+    "suggestion" -> convertSuggestion(suggestion),
     "allSuggestions" -> JsArray(allSuggestions.map(convertSuggestion):_*)
   )
 }
 
+//@todo these are a mess.
 class SystemInfoResponse(os: String, osVersion: String, jvmHome: String, jvmVendor: String,
                          jvmVersion: String, jvmBits: String) extends Response {
   def getJson: JsValue = JsObject(

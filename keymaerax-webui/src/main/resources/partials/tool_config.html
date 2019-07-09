@@ -12,7 +12,7 @@
             <span style="padding-right: 10px;"
                  data-intro="Choose an arithmetic solver (Z3 ships with KeYmaera X; Mathematica and Wolfram Engine require external installation but provide more features)."
                  data-position="right">
-            <select name="toolSelect" id="toolSelect" ng-model="tool" ng-change="toolChange()">
+            <select name="toolSelect" id="toolSelect" ng-model="toolConfig.tool" ng-change="toolChange()">
                 <option value="mathematica">Mathematica</option>
                 <option value="wolframengine">Wolfram Engine</option>
                 <option value="wolframscript">Wolfram Script</option>
@@ -40,17 +40,17 @@
     </div>
 </div>
 
-<div ng-if="tool==='mathematica'">
+<div ng-if="toolConfig.tool==='mathematica'">
     <div ng-include="'/partials/mathematica_config.html'" ng-controller="MathematicaConfig"></div>
 </div>
-<div ng-if="tool==='wolframengine'">
+<div ng-if="toolConfig.tool==='wolframengine'">
     <div ng-include="'/partials/wolframengine_config.html'" ng-controller="WolframEngineConfig"></div>
 </div>
-<div ng-if="tool==='wolframscript'">
+<div ng-if="toolConfig.tool==='wolframscript'">
     <div ng-include="'/partials/wolframscript_config.html'" ng-controller="WolframScriptConfig"></div>
 </div>
 
-<div ng-if="tool==='z3'">
+<div ng-if="toolConfig.tool==='z3'">
     <h2>Z3 Configuration</h2>
     <p><b>Limited functionality with Z3.</b></p>
     <p>For advanced functionality, such as counterexample generation, monitor synthesis, test case generation,

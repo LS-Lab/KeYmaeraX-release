@@ -115,7 +115,6 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
     override def toString: String = s"$major.$minor"
   }
 
-  private val TCPIP = Configuration(Configuration.Keys.MATH_LINK_TCPIP)
   private val DEFAULT_PORT = "1234"
 
   //@todo really should be private -> fix SpiralGenerator
@@ -123,6 +122,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
   private[keymaerax] var ml: KernelLink = _
   private var linkName: String = _
   private var jlinkLibDir: Option[String] = None
+  private var tcpip: String = ""
 
   //@note all access to queryIndex must be synchronized
   private var queryIndex: Long = 0
@@ -146,26 +146,27 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
     * @return true if initialization was successful
     * @note Must be called before first use of ml
     */
-  def init(linkName: String, jlinkLibDir: Option[String], remainingTrials: Int=5): Boolean = {
+  def init(linkName: String, jlinkLibDir: Option[String], tcpip: String, remainingTrials: Int=5): Boolean = {
     this.linkName = linkName
     this.jlinkLibDir = jlinkLibDir
+    this.tcpip = tcpip
     // set native library VM property for JLink
     if (jlinkLibDir.isDefined) {
       System.setProperty("com.wolfram.jlink.libdir", jlinkLibDir.get) //e.g., "/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink"
     }
     try {
-      ml = if (TCPIP.nonEmpty && TCPIP != "false") {
-        logger.info("Connecting to Math Kernel over TCPIP to " + TCPIP)
-        val port::machine = TCPIP match {
+      ml = if (tcpip.nonEmpty && tcpip != "false") {
+        logger.info("Connecting to Math Kernel over TCPIP to " + tcpip)
+        val port::machine = tcpip match {
           case "true" => DEFAULT_PORT::Nil
-          case _ => TCPIP.split("@").toList
+          case _ => tcpip.split("@").toList
         }
         val args =
           if (machine.isEmpty) {
             mathProcess = startKernel(linkName, port)
             ("-linkmode"::"connect"::"-linkprotocol"::"tcpip"::"-linkname"::port::Nil).toArray
           } else {
-            ("-linkmode"::"connect"::"-linkprotocol"::"tcpip"::"-linkname"::TCPIP::Nil).toArray
+            ("-linkmode"::"connect"::"-linkprotocol"::"tcpip"::"-linkname"::tcpip::Nil).toArray
           }
         MathLinkFactory.createKernelLink(args)
       } else {
@@ -184,7 +185,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
           case Some((true, date)) =>
             isComputing match {
               case Some(true) =>
-                logger.info("Connected to Mathematica v" + version + " (TCPIP=" + TCPIP + ", license expires " + date + ")")
+                logger.info("Connected to Mathematica v" + version + " (TCPIP=" + tcpip + ", license expires " + date + ")")
                 true // everything ok
               case Some(false) => logger.error("ERROR: Test computation in Mathematica failed, shutting down.\n Please start a standalone Mathematica notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
                 throw new IllegalStateException("Test computation in Mathematica failed.\n Please start a standalone Mathematica notebook and check that it can compute simple facts, such as 6*9. Then restart KeYmaera X.")
@@ -208,7 +209,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
         logger.info("Repeating connection attempt\nMathematica J/Link failed to open " + e +
           "\nRepeating connection attempt (remaining trials: " + (remainingTrials-1) + ")\n" + diagnostic)
         Thread.sleep(10000)
-        init(linkName, jlinkLibDir, remainingTrials-1)
+        init(linkName, jlinkLibDir, tcpip, remainingTrials-1)
       case e: MathLinkException =>
         logger.error("Shutting down since Mathematica J/Link errored " + e + "\nPlease double check configuration and Mathematica license.\n" + diagnostic, e)
         shutdown()
@@ -246,7 +247,7 @@ class JLinkMathematicaLink extends MathematicaLink with Logging {
     // only stable with MATH_LINK_TCPIP, may fail due to Mathematica JLink segmentation fault otherwise
     shutdown()
     Thread.sleep(2000) // try to avoid Mathematica segmentation fault by waiting
-    init(linkName, jlinkLibDir)
+    init(linkName, jlinkLibDir, tcpip)
   }
 
   /**

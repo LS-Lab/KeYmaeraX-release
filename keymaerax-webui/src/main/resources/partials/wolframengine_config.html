@@ -124,17 +124,21 @@
         <div>
             <p>
                 Please configure how to connect to the Wolfram Engine kernel.
-                Enter <kbd>port</kbd> to start a local Wolfram Engine in its own process and connect via TCPIP.
-                Enter <kbd>port@remotemachine</kbd> to connect to an already running remote Wolfram Engine.
+                Enter an optional port number (default is 1234) to let KeYmaera X start a local Wolfram Engine in its
+                own process and connect via TCPIP.
+                Enter an optional remote machine name to connect to an already running remote
+                Wolfram Engine at <code>port@remotemachine</code>.
             </p>
         </div>
 
         <div class="input-group"
              data-intro="Configure how to connect to the Wolfram Engine kernel."
              data-position="bottom" style="padding-top: 10px; padding-bottom: 10px;">
-            <span class="input-group-addon" ng-if="jlinkTcpip"><i class="fa fa-check"></i></span>
-            <span class="input-group-addon" ng-if="jlinkTcpip === undefined"><i class="fa fa-wrench"></i></span>
-            <input type="text" name="jlinktcpip" id="jlinktcpip" class="form-control" ng-model="jlinkTcpip"/>
+            <span class="input-group-addon" ng-if="jlinkTcpip.port"><i class="fa fa-check"></i></span>
+            <span class="input-group-addon" ng-if="!jlinkTcpip.port"><i class="fa fa-wrench"></i></span>
+            <input type="number" min="1024" max="65535" placeholder="Port number (1024-65535)" name="jlinktcpipport" id="jlinktcpipport" class="form-control" ng-model="jlinkTcpip.port"/>
+            <span class="input-group-addon">@</span>
+            <input type="text" placeholder="Remote machine name (optional)" name="jlinktcpipmachine" id="jlinktcpipmachine" class="form-control" ng-model="jlinkTcpip.machine"/>
         </div>
     </div>
 

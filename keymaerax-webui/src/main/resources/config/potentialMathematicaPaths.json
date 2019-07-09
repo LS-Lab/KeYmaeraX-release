@@ -1,7 +1,7 @@
 [
   {
     "os" : "MacOS",
-    "mathematicaPaths" : [
+    "paths" : [
       {
         "version" : "10.0.2 or later",
         "kernelPath" : ["/Applications/Mathematica.app/Contents/MacOS/"],
@@ -27,7 +27,7 @@
   },
   {
     "os" : "Unix",
-    "mathematicaPaths" : [
+    "paths" : [
       {
         "version" : "12.x or later",
         "kernelPath" : ["/usr/local/Wolfram/Mathematica/12.0/Executables/"],
@@ -60,7 +60,7 @@
   },
   {
     "os" : "Windows",
-    "mathematicaPaths" : [
+    "paths" : [
       {
         "version" : "12.x or later",
         "kernelPath" : ["C:\\Program Files\\Wolfram Research\\Mathematica\\12.0\\"],
@@ -117,7 +117,7 @@
   },
   {
     "os" : "Unknown",
-    "mathematicaPaths" : [
+    "paths" : [
       {
         "version" : "10.x or later",
         "kernelPath" : ["path to e.g., MathKernel[.exe]"],

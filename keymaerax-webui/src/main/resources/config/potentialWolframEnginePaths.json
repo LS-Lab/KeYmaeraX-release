@@ -1,7 +1,7 @@
 [
   {
     "os" : "MacOS",
-    "enginePaths" : [
+    "paths" : [
       {
         "version" : "12.x or later",
         "kernelPath" : ["/Applications/Wolfram Engine.app/Contents/Resources/Wolfram Player.app/Contents/MacOS/"],
@@ -13,7 +13,7 @@
   },
   {
     "os" : "Unix",
-    "enginePaths" : [
+    "paths" : [
       {
         "version" : "12.x or later",
         "kernelPath" : ["/usr/local/Wolfram/Wolfram Engine/12.0/Executables/"],
@@ -25,7 +25,7 @@
   },
   {
     "os" : "Windows",
-    "enginePaths" : [
+    "paths" : [
       {
         "version" : "12.x or later",
         "kernelPath" : ["C:\\Program Files\\Wolfram Research\\Wolfram Engine\\12.0\\"],
@@ -37,7 +37,7 @@
   },
   {
     "os" : "Unknown",
-    "enginePaths" : [
+    "paths" : [
       {
         "version" : "12.x or later",
         "kernelPath" : ["path to e.g., MathKernel[.exe]"],

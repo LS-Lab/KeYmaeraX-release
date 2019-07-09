@@ -1,5 +1,10 @@
 angular.module('keymaerax.controllers').controller('WolframEngineConfig',
   function($scope, $rootScope, $http, $uibModal) {
+    $scope.jlinkTcpip = {
+      port: undefined,
+      machine: undefined
+    };
+
     $http.get("/config/wolframengine/suggest")
       .success(function(data) {
           if(data.errorThrown) showCaughtErrorMessage($uibModal, data, "Encountered an error when attempting to get a suggested Wolfram Engine configuration.")
@@ -13,7 +18,11 @@ angular.module('keymaerax.controllers').controller('WolframEngineConfig',
               if (data.linkName !== "" && data.jlinkLibPath !== "") {
                   $scope.linkName = data.linkName;
                   $scope.jlinkLibPath = data.jlinkLibDir;
-                  $scope.jlinkTcpip = data.jlinkTcpip;
+                  var portMachine = data.jlinkTcpip.split("@");
+                  var port = parseInt(portMachine[0]);
+                  if (isNaN(port)) $scope.jlinkTcpip.port = undefined;
+                  else $scope.jlinkTcpip.port = port;
+                  $scope.jlinkTcpip.machine = portMachine.length > 1 ? portMachine[1] : undefined;
               }
           }
       });
@@ -22,7 +31,9 @@ angular.module('keymaerax.controllers').controller('WolframEngineConfig',
         var uri     = "/config/mathematica"
         var linkName = $scope.linkName ? $scope.linkName : "";
         var jlinkLibPath = $scope.jlinkLibPath ? $scope.jlinkLibPath : "";
-        var jlinkTcpip = $scope.jlinkTcpip ? $scope.jlinkTcpip : "";
+        var jlinkTcpip = $scope.jlinkTcpip.port ? "" + ($scope.jlinkTcpip.machine ? $scope.jlinkTcpip.port + "@" + $scope.jlinkTcpip.machine
+                                                                                          : $scope.jlinkTcpip.port)
+                                                : "true";
         var dataObj = { linkName: linkName, jlinkLibDir: jlinkLibPath, jlinkTcpip: jlinkTcpip };
 
         $http.post(uri, dataObj)

@@ -461,85 +461,31 @@ class ConfigureMathematicaRequest(db: DBAbstraction, linkName: String, jlinkLibF
 
 class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends LocalhostOnlyRequest with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    val reader = this.getClass.getResourceAsStream("/config/potentialMathematicaPaths.json")
-    val contents: String = Source.fromInputStream(reader).mkString
-    val source: JsArray = contents.parseJson.asInstanceOf[JsArray]
-
-    // TODO provide classes and spray JSON protocol to convert
-    val os = System.getProperty("os.name")
-    val osKey = osKeyOf(os.toLowerCase)
-    val jvmBits = System.getProperty("sun.arch.data.model")
-    val osPathGuesses = source.elements.find(osCfg => osCfg.asJsObject.getFields("os").head.convertTo[String] == osKey) match {
-      case Some(opg) => opg.asJsObject.getFields("mathematicaPaths").head.convertTo[List[JsObject]]
-      case None => throw new IllegalStateException("No default configuration for Unknown OS")
-    }
-
-    val pathTuples = osPathGuesses.map(osPath =>
-      (osPath.getFields("version").head.convertTo[String],
-       osPath.getFields("kernelPath").head.convertTo[List[String]],
-       osPath.getFields("kernelName").head.convertTo[String],
-       osPath.getFields("jlinkPath").head.convertTo[List[String]].map(p => p +
-         (if (jvmBits == "64") "-" + jvmBits else "") + File.separator),
-       osPath.getFields("jlinkName").head.convertTo[String])).flatMap({
-      case (p1, p2, p3, p4, p5) => p2.zipWithIndex.map({ case (p, i) => (p1, p, p3, p4(i), p5) })
-    })
-
-    val (suggestionFound, suggestion) = pathTuples.find(path => new java.io.File(path._2 + path._3).exists &&
-        new java.io.File(path._4 + path._5).exists) match {
+    val allSuggestions = ToolConfiguration.mathematicaSuggestion()
+    val (suggestionFound, suggestion) = allSuggestions.find(s => new java.io.File(s.kernelPath + s.kernelName).exists &&
+        new java.io.File(s.jlinkPath + s.jlinkName).exists) match {
       case Some(s) => (true, s)
-      case None => (false, pathTuples.head) // use the first configuration as suggestion when nothing else matches
+      case None => (false, allSuggestions.head) // use the first configuration as suggestion when nothing else matches
     }
 
-    new MathematicaConfigSuggestionResponse(os, jvmBits, suggestionFound, suggestion._1, suggestion._2, suggestion._3, suggestion._4, suggestion._5, pathTuples) :: Nil
-  }
-
-  private def osKeyOf(osName: String): String = {
-    if (osName.contains("win")) "Windows"
-    else if (osName.contains("mac")) "MacOS"
-    else if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) "Unix"
-    else "Unknown"
+    val os = System.getProperty("os.name")
+    val jvmBits = System.getProperty("sun.arch.data.model")
+    new MathematicaConfigSuggestionResponse(os, jvmBits, suggestionFound, suggestion, allSuggestions) :: Nil
   }
 }
 
 class GetWolframEngineConfigSuggestionRequest(db: DBAbstraction) extends LocalhostOnlyRequest with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    val reader = this.getClass.getResourceAsStream("/config/potentialWolframEnginePaths.json")
-    val contents: String = Source.fromInputStream(reader).mkString
-    val source: JsArray = contents.parseJson.asInstanceOf[JsArray]
-
-    // TODO provide classes and spray JSON protocol to convert
-    val os = System.getProperty("os.name")
-    val osKey = osKeyOf(os.toLowerCase)
-    val jvmBits = System.getProperty("sun.arch.data.model")
-    val osPathGuesses = source.elements.find(osCfg => osCfg.asJsObject.getFields("os").head.convertTo[String] == osKey) match {
-      case Some(opg) => opg.asJsObject.getFields("enginePaths").head.convertTo[List[JsObject]]
-      case None => throw new IllegalStateException("No default configuration for Unknown OS")
-    }
-
-    val pathTuples = osPathGuesses.map(osPath =>
-      (osPath.getFields("version").head.convertTo[String],
-        osPath.getFields("kernelPath").head.convertTo[List[String]],
-        osPath.getFields("kernelName").head.convertTo[String],
-        osPath.getFields("jlinkPath").head.convertTo[List[String]].map(p => p +
-          (if (jvmBits == "64") "-" + jvmBits else "") + File.separator),
-        osPath.getFields("jlinkName").head.convertTo[String])).flatMap({
-      case (p1, p2, p3, p4, p5) => p2.zipWithIndex.map({ case (p, i) => (p1, p, p3, p4(i), p5) })
-    })
-
-    val (suggestionFound, suggestion) = pathTuples.find(path => new java.io.File(path._2 + path._3).exists &&
-      new java.io.File(path._4 + path._5).exists) match {
+    val allSuggestions = ToolConfiguration.wolframEngineSuggestion()
+    val (suggestionFound, suggestion) = allSuggestions.find(s => new java.io.File(s.kernelPath + s.kernelName).exists &&
+      new java.io.File(s.jlinkPath + s.jlinkName).exists) match {
       case Some(s) => (true, s)
-      case None => (false, pathTuples.head) // use the first configuration as suggestion when nothing else matches
+      case None => (false, allSuggestions.head) // use the first configuration as suggestion when nothing else matches
     }
 
-    new MathematicaConfigSuggestionResponse(os, jvmBits, suggestionFound, suggestion._1, suggestion._2, suggestion._3, suggestion._4, suggestion._5, pathTuples) :: Nil
-  }
-
-  private def osKeyOf(osName: String): String = {
-    if (osName.contains("win")) "Windows"
-    else if (osName.contains("mac")) "MacOS"
-    else if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) "Unix"
-    else "Unknown"
+    val os = System.getProperty("os.name")
+    val jvmBits = System.getProperty("sun.arch.data.model")
+    new MathematicaConfigSuggestionResponse(os, jvmBits, suggestionFound, suggestion, allSuggestions) :: Nil
   }
 }
 
@@ -552,11 +498,12 @@ class GetWolframScriptConfigSuggestionRequest(db: DBAbstraction) extends Localho
       val version = we.getVersion
       we.shutdown()
       new MathematicaConfigSuggestionResponse(os, jvmBits, true,
-        version.major + "." + version.minor + "." + version.revision, "", "", "",
-        "", Nil) :: Nil
+        ToolConfiguration.ConfigSuggestion(version.major + "." + version.minor + "." + version.revision, "", "", "",
+        ""), Nil) :: Nil
     } catch {
       case _: Throwable =>
-        new MathematicaConfigSuggestionResponse(os, jvmBits, false, "", "", "", "", "", Nil) :: Nil
+        new MathematicaConfigSuggestionResponse(os, jvmBits, false,
+          ToolConfiguration.ConfigSuggestion("", "", "", "", ""), Nil) :: Nil
     }
   }
 }
@@ -605,14 +552,21 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
       ToolProvider.shutdown()
       Configuration.set(Configuration.Keys.QE_TOOL, tool)
       val config = ToolConfiguration.config(tool)
-      tool match {
-        case "mathematica" => ToolProvider.setProvider(new MathematicaToolProvider(config))
-        case "wolframengine" => ToolProvider.setProvider(new WolframEngineToolProvider(config))
-        case "wolframscript" => ToolProvider.setProvider(new WolframScriptToolProvider())
-        case "z3" => ToolProvider.setProvider(new Z3ToolProvider())
-        case _ => ToolProvider.setProvider(new NoneToolProvider)
+      val isConfigured = tool match {
+        case "mathematica" =>
+          ToolProvider.setProvider(new MathematicaToolProvider(config))
+          Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
+            Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
+        case "wolframengine" =>
+          ToolProvider.setProvider(new WolframEngineToolProvider(config))
+          Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
+            Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) &&
+            Configuration.contains(Configuration.Keys.MATH_LINK_TCPIP)
+        case "wolframscript" => ToolProvider.setProvider(new WolframScriptToolProvider()); true
+        case "z3" => ToolProvider.setProvider(new Z3ToolProvider()); true
+        case _ => ToolProvider.setProvider(new NoneToolProvider); false
       }
-      new KvpResponse("tool", tool) :: Nil
+      new ToolConfigStatusResponse(tool, isConfigured) :: Nil
     }
   }
 }
@@ -662,7 +616,7 @@ class SetUserThemeRequest(db: DBAbstraction, userName: String, themeCss: String,
 
 class MathematicaConfigStatusRequest(db: DBAbstraction) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    new ToolConfigStatusResponse("Mathematica",
+    new ToolConfigStatusResponse("mathematica",
       Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
       Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)) :: Nil
   }
@@ -670,7 +624,7 @@ class MathematicaConfigStatusRequest(db: DBAbstraction) extends Request with Rea
 
 class WolframEngineConfigStatusRequest(db: DBAbstraction) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
-    new ToolConfigStatusResponse("WolframEngine",
+    new ToolConfigStatusResponse("wolframengine",
       Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
       Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) &&
       Configuration.contains(Configuration.Keys.MATH_LINK_TCPIP)) :: Nil
@@ -678,7 +632,7 @@ class WolframEngineConfigStatusRequest(db: DBAbstraction) extends Request with R
 }
 
 class WolframScriptConfigStatusRequest(db: DBAbstraction) extends Request with ReadRequest {
-  override def resultingResponses(): List[Response] = new ToolConfigStatusResponse("WolframScript", true) :: Nil
+  override def resultingResponses(): List[Response] = new ToolConfigStatusResponse("wolframscript", true) :: Nil
 }
 
 class ToolStatusRequest(db: DBAbstraction, toolId: String) extends Request with ReadRequest {
@@ -692,7 +646,7 @@ class ToolStatusRequest(db: DBAbstraction, toolId: String) extends Request with 
 }
 
 class Z3ConfigStatusRequest(db : DBAbstraction) extends Request with ReadRequest {
-  override def resultingResponses(): List[Response] = new ToolConfigStatusResponse("Z3", true) :: Nil
+  override def resultingResponses(): List[Response] = new ToolConfigStatusResponse("z3", true) :: Nil
 }
 
 class RestartToolRequest(db: DBAbstraction, toolId: String) extends LocalhostOnlyRequest {

@@ -1,21 +1,34 @@
-angular.module('keymaerax.controllers').controller('ToolConfig',
-  function($scope, $http) {
+angular.module('keymaerax.services').service('ToolConfigService', function($http) {
+  var toolConfig = {};
 
-    $http.get("/config/systeminfo").then(function(response) {
-      $scope.systemInfo = response.data;
+  this.toolChange = function() {
+    $http.post("/config/tool", toolConfig.tool).success(function(data) {
+      toolConfig.configured = data.configured;
+      toolConfig.tool = data.tool;
+    });
+  }
+
+  this.getTool = function() {
+    $http.get("/config/tool").success(function(data) {
+      toolConfig.configured = data.configured;
+      toolConfig.tool = data.tool;
+    });
+  }
+
+  this.getToolConfig = function() { return toolConfig; }
+
+  this.getTool();
+});
+
+angular.module('keymaerax.controllers').controller('ToolConfig',
+  function($scope, $http, ToolConfigService) {
+
+    $scope.toolConfig = ToolConfigService.getToolConfig();
+
+    $http.get("/config/systeminfo").success(function(data) {
+      $scope.systemInfo = data;
     });
 
-    $scope.toolChange = function() {
-      $http.post("/config/tool", $scope.tool).success(function(data) {
-        $scope.tool = data.tool;
-      });
-    }
-
-    $scope.getTool = function() {
-      $http.get("/config/tool").success(function(data) {
-        $scope.tool = data.tool;
-      });
-    }
-
-    $scope.getTool();
+    $scope.toolChange = ToolConfigService.toolChange;
+    $scope.getTool = ToolConfigService.getTool;
 });
