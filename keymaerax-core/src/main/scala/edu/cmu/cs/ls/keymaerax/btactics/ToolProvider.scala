@@ -173,6 +173,9 @@ class NoneToolProvider extends ToolProvider {
   override def shutdown(): Unit = {}
 }
 
+/** Combines multiple tool providers. */
+class MultiToolProvider(providers: List[ToolProvider]) extends PreferredToolProvider(providers.flatMap(_.tools())) {}
+
 /** A tool provider that provides Polya as a QE tools, everything else is None.
   * @author Stefan Mitsch
   */

@@ -239,9 +239,12 @@ object HyDRAInitializer extends Logging {
 
     val tool: String = options.getOrElse('tool, preferredTool).toString
     val provider = tool.toLowerCase() match {
-      case "mathematica" => initFallbackZ3(new MathematicaToolProvider(config), "Mathematica")
-      case "wolframengine" => initFallbackZ3(new WolframEngineToolProvider(config), "Wolfram Engine")
-      case "wolframscript" => initFallbackZ3(new WolframScriptToolProvider, "Wolfram Script")
+      case "mathematica" => initFallbackZ3(new MultiToolProvider(
+          new MathematicaToolProvider(config) :: new Z3ToolProvider() :: Nil), "Mathematica")
+      case "wolframengine" => initFallbackZ3(new MultiToolProvider(
+        new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil), "Wolfram Engine")
+      case "wolframscript" => initFallbackZ3(new MultiToolProvider(
+        new WolframScriptToolProvider :: new Z3ToolProvider() :: Nil), "Wolfram Script")
       case "z3" => new Z3ToolProvider
       case t => throw new Exception("Unknown tool '" + t + "'")
     }

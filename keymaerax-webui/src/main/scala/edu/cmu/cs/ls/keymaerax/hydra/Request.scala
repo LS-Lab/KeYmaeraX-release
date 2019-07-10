@@ -453,7 +453,9 @@ class ConfigureMathematicaRequest(db: DBAbstraction, linkName: String, jlinkLibF
       Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
       Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, jlinkTcpip)
       ToolProvider.shutdown()
-      ToolProvider.setProvider(new MathematicaToolProvider(ToolConfiguration.config("mathematica")))
+      ToolProvider.setProvider(
+        new MultiToolProvider(
+          new MathematicaToolProvider(ToolConfiguration.config("mathematica")) :: new Z3ToolProvider() :: Nil))
       new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
     }
   }
@@ -554,15 +556,15 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
       val config = ToolConfiguration.config(tool)
       val isConfigured = tool match {
         case "mathematica" =>
-          ToolProvider.setProvider(new MathematicaToolProvider(config))
+          ToolProvider.setProvider(new MultiToolProvider(new MathematicaToolProvider(config) :: new Z3ToolProvider() :: Nil))
           Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
             Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
         case "wolframengine" =>
-          ToolProvider.setProvider(new WolframEngineToolProvider(config))
+          ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
           Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
             Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) &&
             Configuration.contains(Configuration.Keys.MATH_LINK_TCPIP)
-        case "wolframscript" => ToolProvider.setProvider(new WolframScriptToolProvider()); true
+        case "wolframscript" => ToolProvider.setProvider(new MultiToolProvider(new WolframScriptToolProvider() :: new Z3ToolProvider() :: Nil)); true
         case "z3" => ToolProvider.setProvider(new Z3ToolProvider()); true
         case _ => ToolProvider.setProvider(new NoneToolProvider); false
       }
