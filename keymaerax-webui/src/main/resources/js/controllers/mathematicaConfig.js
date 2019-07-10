@@ -1,5 +1,5 @@
 angular.module('keymaerax.controllers').controller('MathematicaConfig',
-  function($scope, $rootScope, $http, $uibModal) {
+  function($scope, $rootScope, $http, $uibModal, ToolConfigService) {
     $scope.jlinkTcpip = {
       port: undefined,
       machine: undefined
@@ -41,13 +41,11 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
                 if (data.success) {
                     $scope.MathematicaForm.linkName.$setValidity("FileExists", true);
                     $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", true);
-                    $("#mathematicaConfigurationAlert").hide();
-                    $rootScope.mathematicaIsConfigured = data.configured;
-                }
-                else if(data.errorThrown) {
+                    ToolConfigService.getToolConfig().tool = "mathematica";
+                    ToolConfigService.getToolConfig().configured = data.success;
+                } else if (data.errorThrown) {
                     showCaughtErrorMessage($uibModal, data, "Exception encountered while attempting to set a user-defined Mathematica configuration")
-                }
-                else {
+                } else {
                     var kernelNameExists = $scope.linkName.indexOf($scope.mathematicaConfigSuggestion.suggestion.kernelName) > -1 &&
                       data.linkNamePrefix == $scope.linkName
                     var jlinkExists = $scope.jlinkLibPath.indexOf($scope.mathematicaConfigSuggestion.suggestion.jlinkName) > -1 &&

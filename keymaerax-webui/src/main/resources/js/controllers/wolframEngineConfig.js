@@ -1,5 +1,5 @@
 angular.module('keymaerax.controllers').controller('WolframEngineConfig',
-  function($scope, $rootScope, $http, $uibModal) {
+  function($scope, $rootScope, $http, $uibModal, ToolConfigService) {
     $scope.jlinkTcpip = {
       port: undefined,
       machine: undefined
@@ -41,13 +41,11 @@ angular.module('keymaerax.controllers').controller('WolframEngineConfig',
                 if (data.success) {
                     $scope.WolframEngineForm.linkName.$setValidity("FileExists", true);
                     $scope.WolframEngineForm.jlinkLibDir.$setValidity("FileExists", true);
-                    $("#mathematicaConfigurationAlert").hide();
-                    $rootScope.mathematicaIsConfigured = data.configured;
-                }
-                else if(data.errorThrown) {
+                    ToolConfigService.getToolConfig().tool = "wolframengine";
+                    ToolConfigService.getToolConfig().configured = data.success;
+                } else if (data.errorThrown) {
                     showCaughtErrorMessage($uibModal, data, "Exception encountered while attempting to set a user-defined Wolfram Engine configuration")
-                }
-                else {
+                } else {
                     var kernelNameExists = $scope.linkName.indexOf($scope.wolframEngineConfigSuggestion.suggestion.kernelName) > -1 &&
                       data.linkNamePrefix == $scope.linkName
                     var jlinkExists = $scope.jlinkLibPath.indexOf($scope.wolframEngineConfigSuggestion.suggestion.jlinkName) > -1 &&
