@@ -1744,6 +1744,10 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case Some(mathematica: Mathematica) => mathematica.getAvailableWorkers > 0
       case _ => false
     }
+    case "wolframscript" => ToolProvider.tool("WolframScript") match {
+      case Some(mathematica: Mathematica) => mathematica.getAvailableWorkers > 0
+      case _ => false
+    }
     case "z3" => ToolProvider.tool("Z3") match {
       case Some(z3: Z3) => z3.getAvailableWorkers > 0
       case _ => false
