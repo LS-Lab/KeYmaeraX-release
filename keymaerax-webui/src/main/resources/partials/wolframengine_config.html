@@ -5,8 +5,14 @@
 </p>
 <p ng-if="!wolframEngineConfigSuggestion.suggestionFound" ng-cloak>
     Your system looks like {{wolframEngineConfigSuggestion.os}}, but Wolfram Engine may not be installed or may not be activated.
-    You can obtain Wolfram Engine from <a href="http://www.wolfram.com/engine">Wolfram</a>. Please follow the
-    <a href="http://support.wolfram.com/kb/45743">installation and activation instructions</a>.
+    <ol>
+    <li>Download Wolfram Engine from <a href="http://www.wolfram.com/engine">Wolfram</a></li>
+    <li>Install Wolfram Engine</li>
+    <li>Install Wolfram Script (included with Wolfram Engine download)</li>
+    <li>Activate Wolfram Engine</li>
+    <li>Configure how KeYmaera X connects to Wolfram Engine below</li>
+    </ol>
+    See also the <a href="http://support.wolfram.com/kb/45743">installation and activation instructions</a>.
 </p>
 
 <script type="text/ng-template" id="kernelSuggestionTooltipTemplate.html">

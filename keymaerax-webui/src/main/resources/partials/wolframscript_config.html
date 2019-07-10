@@ -7,8 +7,13 @@ Found WolframScript {{wolframScriptConfigSuggestion.suggestion.version}} on {{wo
 </p>
 <p ng-if="wolframScriptConfigSuggestion.os !== undefined && !wolframScriptConfigSuggestion.suggestionFound" ng-cloak>
 Your system looks like {{wolframScriptConfigSuggestion.os}}, but WolframScript may not be installed or may not be activated.
-You can obtain Wolfram Engine and WolframScript from <a href="http://www.wolfram.com/engine">Wolfram</a>. Please follow the
-    <a href="http://support.wolfram.com/kb/45743">installation and activation instructions</a>.
+<ol>
+    <li>Download Wolfram Engine from <a href="http://www.wolfram.com/engine">Wolfram</a></li>
+    <li>Install Wolfram Engine</li>
+    <li>Install Wolfram Script (included with Wolfram Engine download)</li>
+    <li>Activate Wolfram Engine</li>
+</ol>
+See also the <a href="http://support.wolfram.com/kb/45743">installation and activation instructions</a>.
 </p>
 <p ng-if="wolframScriptConfigSuggestion.os === undefined" ng-cloak>
     Searching...
