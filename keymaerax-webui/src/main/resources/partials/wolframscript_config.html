@@ -5,8 +5,8 @@
 <p ng-if="wolframScriptConfigSuggestion.suggestionFound" ng-cloak>
 Found WolframScript {{wolframScriptConfigSuggestion.suggestion.version}} on {{wolframScriptConfigSuggestion.os}}.
 </p>
-<p ng-if="wolframScriptConfigSuggestion.os !== undefined && !wolframScriptConfigSuggestion.suggestionFound" ng-cloak>
-Your system looks like {{wolframScriptConfigSuggestion.os}}, but WolframScript may not be installed or may not be activated.
+<div ng-if="wolframScriptConfigSuggestion.os && !wolframScriptConfigSuggestion.suggestionFound" ng-cloak>
+<p>Your system looks like {{wolframScriptConfigSuggestion.os}}, but WolframScript may not be installed or may not be activated.
 <ol>
     <li>Download Wolfram Engine from <a href="http://www.wolfram.com/engine">Wolfram</a></li>
     <li>Install Wolfram Engine</li>
@@ -15,6 +15,7 @@ Your system looks like {{wolframScriptConfigSuggestion.os}}, but WolframScript m
 </ol>
 See also the <a href="http://support.wolfram.com/kb/45743">installation and activation instructions</a>.
 </p>
-<p ng-if="wolframScriptConfigSuggestion.os === undefined" ng-cloak>
+</div>
+<p ng-if="!wolframScriptConfigSuggestion.os" ng-cloak>
     Searching...
 </p>
