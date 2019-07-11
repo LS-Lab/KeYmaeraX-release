@@ -710,6 +710,13 @@ del {
   font-size: 100%;
 }
 
+.k4-stepexplanation-popover {
+  width: 30%;
+  font-size: 100%;
+  color: var(--lsmainback);
+  background-color: var(--lsmain);
+}
+
 .increase-popover-width {
    width: 180px;
 }

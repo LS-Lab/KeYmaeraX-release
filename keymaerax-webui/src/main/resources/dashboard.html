@@ -85,6 +85,15 @@
                 </li>
                 <li class="dropdown">
                     <a>
+                        <i class="fa fa-info-circle"
+                           uib-popover-template="'templates/stepExplanationTooltipTemplate.html'"
+                           popover-class="k4-stepexplanation-popover"
+                           popover-append-to-body="true" popover-placement="auto bottom-right">
+                        </i>
+                    </a>
+                </li>
+                <li class="dropdown">
+                    <a>
                         <i class="fa fa-question-circle" ng-click="showOverlayHelp()"
                            uib-tooltip="Quick usage help" tooltip-placement="auto bottom">
                         </i>
