@@ -885,7 +885,7 @@ object RestApi extends Logging {
   val mathematicaConfig: Route = path("config" / "mathematica") {
     pathEnd {
       get {
-          val request = new GetMathematicaConfigurationRequest(database)
+          val request = new GetMathematicaConfigurationRequest(database, "mathematica")
           completeRequest(request, EmptyToken())
       } ~
       post {
@@ -897,10 +897,32 @@ object RestApi extends Logging {
           val linkName: String = p("linkName")
           val jlinkLibDir: String = p("jlinkLibDir")
           val jlinkTcpip: String = p("jlinkTcpip")
-          val request = new ConfigureMathematicaRequest(database, linkName, jlinkLibDir, jlinkTcpip)
+          val request = new ConfigureMathematicaRequest(database, "mathematica", linkName, jlinkLibDir, jlinkTcpip)
           completeRequest(request, EmptyToken())
         }}
       }
+    }
+  }
+
+  val wolframEngineConfig: Route = path("config" / "wolframengine") {
+    pathEnd {
+      get {
+        val request = new GetMathematicaConfigurationRequest(database, "wolframengine")
+        completeRequest(request, EmptyToken())
+      } ~
+        post {
+          entity(as[String]) { params => {
+            val p = JsonParser(params).asJsObject.fields.map(param => param._1.toString -> param._2.asInstanceOf[JsString].value)
+            assert(p.contains("linkName"), "linkName not in: " + p.keys.toString())
+            assert(p.contains("jlinkLibDir"), "jlinkLibDir not in: " + p.keys.toString()) //@todo These are schema violations and should be checked as such, but I needed to disable the validator.
+            assert(p.contains("jlinkTcpip"), "jlinkTcpip not in: " + p.keys.toString())
+            val linkName: String = p("linkName")
+            val jlinkLibDir: String = p("jlinkLibDir")
+            val jlinkTcpip: String = p("jlinkTcpip")
+            val request = new ConfigureMathematicaRequest(database, "wolframengine", linkName, jlinkLibDir, jlinkTcpip)
+            completeRequest(request, EmptyToken())
+          }}
+        }
     }
   }
 
@@ -1062,6 +1084,7 @@ object RestApi extends Logging {
     kyxConfig          ::
     keymaeraXVersion   ::
     mathematicaConfig  ::
+    wolframEngineConfig ::
     toolStatus         ::
     tool               ::
     guestBrowseArchiveRequest ::

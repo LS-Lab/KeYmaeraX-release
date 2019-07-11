@@ -32,7 +32,7 @@ object ToolConfiguration {
     Configuration.getOption(Configuration.Keys.MATHEMATICA_LINK_NAME) match {
       case Some(l) => Configuration.getOption(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) match {
         //@todo unify command line name and internal mathematica name (mathkernel vs. linkName)
-        case Some(libDir) => Map("mathkernel" -> l, "linkName" -> l, "jlink" -> libDir, "tcpip" -> tcpip)
+        case Some(libDir) => Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "tcpip" -> tcpip)
         case None => Map("mathkernel" -> l, "linkName" -> l, "tcpip" -> tcpip)
       }
       case None => DefaultConfiguration.defaultMathematicaConfig
@@ -43,14 +43,14 @@ object ToolConfiguration {
   /** Returns the Wolfram Engine configuration. */
   def wolframEngineConfig: Map[String, String] = {
     def tcpip: String = {
-      Configuration.getOption(Configuration.Keys.MATH_LINK_TCPIP).
+      Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_TCPIP).
         map(s => Try(Integer.parseInt(s)).getOrElse(s).toString).getOrElse("true")
     }
 
-    Configuration.getOption(Configuration.Keys.MATHEMATICA_LINK_NAME) match {
-      case Some(l) => Configuration.getOption(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) match {
+    Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) match {
+      case Some(l) => Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) match {
         //@todo unify command line name and internal mathematica name (mathkernel vs. linkName)
-        case Some(libDir) => Map("mathkernel" -> l, "linkName" -> l, "jlink" -> libDir, "tcpip" -> tcpip)
+        case Some(libDir) => Map("mathkernel" -> l, "linkName" -> l, "libDir" -> libDir, "tcpip" -> tcpip)
         case None => Map("mathkernel" -> l, "linkName" -> l, "tcpip" -> tcpip)
       }
       case None => DefaultConfiguration.defaultWolframEngineConfig

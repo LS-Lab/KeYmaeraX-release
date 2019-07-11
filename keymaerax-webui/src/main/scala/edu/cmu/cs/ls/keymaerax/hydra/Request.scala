@@ -411,7 +411,8 @@ class KeymaeraXVersionRequest() extends Request with ReadRequest {
   }
 }
 
-class ConfigureMathematicaRequest(db: DBAbstraction, linkName: String, jlinkLibFileName: String, jlinkTcpip: String)
+class ConfigureMathematicaRequest(db: DBAbstraction, toolName: String,
+                                  linkName: String, jlinkLibFileName: String, jlinkTcpip: String)
     extends LocalhostOnlyRequest with WriteRequest {
   private def isLinkNameCorrect(linkNameFile: java.io.File): Boolean = {
     linkNameFile.getName == "MathKernel" || linkNameFile.getName == "MathKernel.exe"
@@ -449,13 +450,20 @@ class ConfigureMathematicaRequest(db: DBAbstraction, linkName: String, jlinkLibF
         if (linkNamePrefix.exists()) linkNamePrefix.toString else "",
         if (jlinkLibNamePrefix.exists()) jlinkLibNamePrefix.toString else "", false) :: Nil
     } else {
-      Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkName)
-      Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
-      Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, jlinkTcpip)
       ToolProvider.shutdown()
-      ToolProvider.setProvider(
-        new MultiToolProvider(
-          new MathematicaToolProvider(ToolConfiguration.config("mathematica")) :: new Z3ToolProvider() :: Nil))
+      val wolframProvider = toolName match {
+        case "wolframengine" =>
+          Configuration.set(Configuration.Keys.WOLFRAMENGINE_TCPIP, jlinkTcpip)
+          Configuration.set(Configuration.Keys.WOLFRAMENGINE_LINK_NAME, linkName)
+          Configuration.set(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
+          new WolframEngineToolProvider(ToolConfiguration.config(toolName))
+        case "mathematica" =>
+          Configuration.set(Configuration.Keys.MATH_LINK_TCPIP, jlinkTcpip)
+          Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkName)
+          Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
+          new MathematicaToolProvider(ToolConfiguration.config(toolName))
+      }
+      ToolProvider.setProvider(new MultiToolProvider(wolframProvider :: new Z3ToolProvider() :: Nil))
       new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
     }
   }
@@ -561,9 +569,9 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
             Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)
         case "wolframengine" =>
           ToolProvider.setProvider(new MultiToolProvider(new WolframEngineToolProvider(config) :: new Z3ToolProvider() :: Nil))
-          Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
-            Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) &&
-            Configuration.contains(Configuration.Keys.MATH_LINK_TCPIP)
+          Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
+            Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) &&
+            Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)
         case "wolframscript" => ToolProvider.setProvider(new MultiToolProvider(new WolframScriptToolProvider() :: new Z3ToolProvider() :: Nil)); true
         case "z3" => ToolProvider.setProvider(new Z3ToolProvider()); true
         case _ => ToolProvider.setProvider(new NoneToolProvider); false
@@ -573,7 +581,7 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
   }
 }
 
-class GetMathematicaConfigurationRequest(db : DBAbstraction) extends LocalhostOnlyRequest with ReadRequest {
+class GetMathematicaConfigurationRequest(db: DBAbstraction, toolName: String) extends LocalhostOnlyRequest with ReadRequest {
   override def resultingResponses(): List[Response] = {
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
     val jlinkLibFile = {
@@ -582,14 +590,20 @@ class GetMathematicaConfigurationRequest(db : DBAbstraction) extends LocalhostOn
       else if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) "libJLinkNativeLibrary.so"
       else "Unknown"
     }
-    if (Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) && Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR)) {
-      new MathematicaConfigurationResponse(
-        Configuration(Configuration.Keys.MATHEMATICA_LINK_NAME),
-        Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) + File.separator + jlinkLibFile,
-        Configuration.getOption(Configuration.Keys.MATH_LINK_TCPIP).getOrElse("")
-      ) :: Nil
-    } else {
-      new MathematicaConfigurationResponse("", "", "") :: Nil
+    toolName match {
+      case "mathematica" if Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) && Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) =>
+          new MathematicaConfigurationResponse(
+            Configuration(Configuration.Keys.MATHEMATICA_LINK_NAME),
+            Configuration(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) + File.separator + jlinkLibFile,
+            Configuration.getOption(Configuration.Keys.MATH_LINK_TCPIP).getOrElse("")
+          ) :: Nil
+      case "wolframengine" if Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) && Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) =>
+        new MathematicaConfigurationResponse(
+          Configuration(Configuration.Keys.WOLFRAMENGINE_LINK_NAME),
+          Configuration(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) + File.separator + jlinkLibFile,
+          Configuration.getOption(Configuration.Keys.WOLFRAMENGINE_TCPIP).getOrElse("")
+        ) :: Nil
+      case _ => new MathematicaConfigurationResponse("", "", "") :: Nil
     }
   }
 }
@@ -627,9 +641,9 @@ class MathematicaConfigStatusRequest(db: DBAbstraction) extends Request with Rea
 class WolframEngineConfigStatusRequest(db: DBAbstraction) extends Request with ReadRequest {
   override def resultingResponses(): List[Response] = {
     new ToolConfigStatusResponse("wolframengine",
-      Configuration.contains(Configuration.Keys.MATHEMATICA_LINK_NAME) &&
-      Configuration.contains(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR) &&
-      Configuration.contains(Configuration.Keys.MATH_LINK_TCPIP)) :: Nil
+      Configuration.contains(Configuration.Keys.WOLFRAMENGINE_LINK_NAME) &&
+      Configuration.contains(Configuration.Keys.WOLFRAMENGINE_JLINK_LIB_DIR) &&
+      Configuration.contains(Configuration.Keys.WOLFRAMENGINE_TCPIP)) :: Nil
   }
 }
 

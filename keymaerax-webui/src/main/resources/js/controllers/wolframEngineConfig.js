@@ -11,7 +11,7 @@ angular.module('keymaerax.controllers').controller('WolframEngineConfig',
           else $scope.wolframEngineConfigSuggestion = data
       });
 
-    $http.get("/config/mathematica")
+    $http.get("/config/wolframengine")
       .success(function(data) {
           if (data.errorThrown) showCaughtErrorMessage($uibModal, data, "Failed to retrieve the server's current Wolfram Engine configuration")
           else {
@@ -28,7 +28,7 @@ angular.module('keymaerax.controllers').controller('WolframEngineConfig',
       });
 
     $scope.configureWolframEngine = function() {
-        var uri     = "/config/mathematica"
+        var uri     = "/config/wolframengine"
         var linkName = $scope.linkName ? $scope.linkName : "";
         var jlinkLibPath = $scope.jlinkLibPath ? $scope.jlinkLibPath : "";
         var jlinkTcpip = $scope.jlinkTcpip.port ? "" + ($scope.jlinkTcpip.machine ? $scope.jlinkTcpip.port + "@" + $scope.jlinkTcpip.machine
