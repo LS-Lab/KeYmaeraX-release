@@ -1957,7 +1957,8 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     val proofbackupPath = Paths.get(Configuration.KEYMAERAX_HOME_PATH + File.separator + "proofbackup")
     if (!Files.exists(proofbackupPath)) Files.createDirectories(proofbackupPath)
 
-    val proofName = model.name + "_" + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(Calendar.getInstance().getTime)
+    val sanitizedModelName = model.name.replaceAll("\\W", "_")
+    val proofName = sanitizedModelName + "_" + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(Calendar.getInstance().getTime)
     var i = 0
     var uniqueProofName = proofName
     while (Files.exists(proofbackupPath.resolve(uniqueProofName))) {
