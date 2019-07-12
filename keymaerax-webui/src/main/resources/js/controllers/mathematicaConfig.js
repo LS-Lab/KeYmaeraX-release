@@ -35,13 +35,6 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
                 if (data.success) {
                     $scope.MathematicaForm.linkName.$setValidity("FileExists", true);
                     $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", true);
-
-                    $uibModal.open({
-                        templateUrl: 'partials/mathematicaconfig_update.html',
-                        controller: 'MathematicaConfig.UpdateDialog',
-                        size: 'md'
-                    })
-
                     $("#mathematicaConfigurationAlert").hide();
                     $rootScope.mathematicaIsConfigured = data.configured;
                 }
@@ -85,12 +78,6 @@ angular.module('keymaerax.controllers').controller('MathematicaConfig',
 });
 
 angular.module('keymaerax.controllers').controller('MathematicaConfig.FailureDialog', function($scope, $uibModalInstance) {
-  $scope.cancel = function() {
-      $uibModalInstance.dismiss('cancel');
-  }
-});
-
-angular.module('keymaerax.controllers').controller('MathematicaConfig.UpdateDialog', function($scope, $uibModalInstance) {
   $scope.cancel = function() {
       $uibModalInstance.dismiss('cancel');
   }

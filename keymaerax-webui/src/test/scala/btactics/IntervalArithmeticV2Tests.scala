@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import edu.cmu.cs.ls.keymaerax.btactics.TactixLibrary._
 import edu.cmu.cs.ls.keymaerax.core.{Sequent, True}
 import org.scalatest.LoneElement._
+import testHelper.KeYmaeraXTestTags.SlowTest
 
 import scala.collection.immutable._
 
@@ -177,7 +178,7 @@ class IntervalArithmeticV2Tests extends TacticTestBase  {
     timing("intervalCut (again)")(() => proveBy(seq2, intervalCut(1, 0::Nil) & prop & done))
     timing("intervalCut (again)")(() => proveBy(seq2, intervalCut(1, 0::Nil) & prop & done))
   }
-  "Slow.intervalArithmetic" should "be slow" in withMathematica { _ =>
+  "Slow.intervalArithmetic" should "be slow" taggedAs(SlowTest) in withMathematica { _ =>
     timing("intervalArithmetic")(() => proveBy(seq2, Slow.intervalArithmetic & done))
     timing("intervalArithmetic (again)")(() => proveBy(seq2, Slow.intervalArithmetic & done))
     timing("intervalArithmetic (again)")(() => proveBy(seq2, Slow.intervalArithmetic & done))

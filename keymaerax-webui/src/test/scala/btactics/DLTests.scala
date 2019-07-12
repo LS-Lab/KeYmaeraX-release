@@ -87,6 +87,50 @@ class DLTests extends TacticTestBase {
     result.subgoals.loneElement shouldBe "==> \\forall x \\forall y \\forall z (y>=0->[z':=x^2;][y':=z;][x':=y;]x'>=0)".asSequent
   }
 
+  "Auto abstraction" should "not lose information from tests" in {
+    proveBy("[?x>0;]x>0".asFormula, abstractionb(1)).subgoals.loneElement shouldBe "==> x>0".asSequent
+    the [BelleThrowable] thrownBy proveBy("[?x>0;]x>0".asFormula, DLBySubst.autoabstractionb(1)) should have message
+      """[Bellerophon Runtime] Tactic autoabstractionb(1) is not applicable for
+        |    [?x>0;]x>0
+        |at position Fixed(1,None,true)
+        |because Abstraction would lose information from tests and/or evolution domain constraints""".stripMargin
+    // tests could be unsatisfiable
+    the [BelleThrowable] thrownBy proveBy("[?false;]x>0".asFormula, DLBySubst.autoabstractionb(1)) should have message
+      """[Bellerophon Runtime] Tactic autoabstractionb(1) is not applicable for
+        |    [?false;]x>0
+        |at position Fixed(1,None,true)
+        |because Abstraction would lose information from tests and/or evolution domain constraints""".stripMargin
+  }
+
+  it should "not lose information from evolution domain constraints" in {
+    proveBy("[{y'=3 & x>0}]x>0".asFormula, abstractionb(1)).subgoals.loneElement shouldBe "==> x>0".asSequent
+    the [BelleThrowable] thrownBy proveBy("[{y'=3 & x>0}]x>0".asFormula, DLBySubst.autoabstractionb(1)) should have message
+      """[Bellerophon Runtime] Tactic autoabstractionb(1) is not applicable for
+        |    [{y'=3&x>0}]x>0
+        |at position Fixed(1,None,true)
+        |because Abstraction would lose information from tests and/or evolution domain constraints""".stripMargin
+    proveBy("[{y'=3 & y>0}]x>0".asFormula, abstractionb(1)).subgoals.loneElement shouldBe "==> x>0".asSequent
+    // evolution domain constraint could be unsatisfiable or not hold initially
+    the [BelleThrowable] thrownBy proveBy("[{y'=3 & 0>1}]x>0".asFormula, DLBySubst.autoabstractionb(1)) should have message
+      """[Bellerophon Runtime] Tactic autoabstractionb(1) is not applicable for
+        |    [{y'=3&0>1}]x>0
+        |at position Fixed(1,None,true)
+        |because Abstraction would lose information from tests and/or evolution domain constraints""".stripMargin
+    proveBy("[{y'=3}]x>0".asFormula, DLBySubst.autoabstractionb(1)).subgoals.loneElement shouldBe "==> x>0".asSequent
+  }
+
+  it should "abstract if no tests/evolution domain constraints" in {
+    proveBy("[y:=3;]x>0".asFormula, DLBySubst.autoabstractionb(1)).subgoals.loneElement shouldBe "==> x>0".asSequent
+  }
+
+  it should "only abstract if no overlap between bound variables of program and free variables of postcondition" in {
+    the [BelleThrowable] thrownBy proveBy("[x:=3;]x>0".asFormula, DLBySubst.autoabstractionb(1)) should have message
+      """[Bellerophon Runtime] Tactic autoabstractionb(1) is not applicable for
+        |    [x:=3;]x>0
+        |at position Fixed(1,None,true)
+        |because Abstraction would lose information from program""".stripMargin
+  }
+
   "withAbstraction" should "work on top-level when abstraction produces no quantifiers" in {
     val result = proveBy("[{x'=2}]x>0".asFormula, withAbstraction(DW)(1))
     result.subgoals.loneElement shouldBe "==> true->x>0".asSequent

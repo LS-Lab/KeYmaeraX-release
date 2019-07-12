@@ -462,7 +462,7 @@ private object DifferentialTactics extends Logging {
         //But ultimately, we need a systematic way of checking this in the
         //core (last-case resort could always just move this check into the core and apply
         //it whenever DG differential ghost is applied, but that's pretty
-        //hacky).
+        //hacky and won't suffice).
         val singular = {
           val evDomFmls = flattenConjunctions(h)
           (FormulaTools.singularities(a) ++ FormulaTools.singularities(b)).filter(v =>
@@ -942,6 +942,9 @@ private object DifferentialTactics extends Logging {
 
   lazy val mathematicaODE: DependentPositionTactic = "ANON" by ((pos: Position, seq: Sequent) => {
     require(pos.isSucc && pos.isTopLevel, "ODE automation only applicable to top-level succedents")
+
+    if(TacticHelper.names(seq).contains(ODEInvariance.nilpotentSolveTimeVar))
+      throw new BelleThrowable("Strongest ODE invariant already added to domain constraints.")
 
     seq.sub(pos) match {
       case Some(Box(sys@ODESystem(ode, q), _)) =>

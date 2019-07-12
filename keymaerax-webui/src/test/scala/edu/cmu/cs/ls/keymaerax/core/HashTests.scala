@@ -72,7 +72,7 @@ class HashTests extends FlatSpec with Matchers {
     for (e <- other) storage.contains(e) shouldBe true
   }
 
-  it should "lookup in hash maps" in {
+  it should "lookup in hash maps" taggedAs(SlowTest) in {
     testmap((1 to collectionSize).map(i=>rand.nextExpression(randomComplexity)).to)
   }
 

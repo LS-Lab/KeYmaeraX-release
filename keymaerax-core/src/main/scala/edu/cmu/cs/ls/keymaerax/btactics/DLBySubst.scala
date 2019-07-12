@@ -11,8 +11,10 @@ import BelleLabels._
 import edu.cmu.cs.ls.keymaerax.parser.StringConverter._
 import Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics
+import edu.cmu.cs.ls.keymaerax.btactics.ExpressionTraversal.ExpressionTraversalFunction
 
 import scala.collection.immutable.IndexedSeq
+import scala.collection.mutable.ListBuffer
 
 /**
   * Implementation: some dL tactics using substitution tactics.
@@ -37,14 +39,13 @@ private object DLBySubst {
               SubstitutionPair(UnitPredicational("q_", AnyArg), True) :: Nil
             )) &
               hideL(-1, True)
-              partial
             ,
             hide(1) & boxTrue(1)
             ))::Nil)
     else
       USubstPatternTactic(
         (pattern, (ru:RenUSubst) => {
-          Predef.assert(ru.getRenamingTactic == ident, "no renaming for Goedel");
+          Predef.assert(ru.getRenamingTactic == ident, "no renaming for Goedel")
           //ru.getRenamingTactic & by("Goedel", ru.substitution.usubst)
           TactixLibrary.by("Goedel", ru.usubst)
         })::Nil
@@ -71,7 +72,7 @@ private object DLBySubst {
                   foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
 
             cut(Imply(ctx(qPhi), ctx(b))) <(
-              /* use */ (implyL('Llast) <(hideR(pos.topLevel) partial /* result remains open */ , closeIdWith('Llast))),
+              /* use */ implyL('Llast) <(hideR(pos.topLevel) /* result remains open */ , closeIdWith('Llast)),
               /* show */ cohide('Rlast) & CMon(pos.inExpr) & implyR(1) &
               assertT(1, 1) & assertT(s => s.ante.head == qPhi && s.succ.head == b, s"Formula $qPhi and/or $b are not in the expected positions in abstractionb") &
               topAbstraction(1) & closeId
@@ -80,6 +81,28 @@ private object DLBySubst {
       }
     }
   }
+
+  /** Automated abstraction checks to not lose information from tests and evolution domain constraints before it abstracts. */
+  def autoabstractionb: DependentPositionTactic = "autoabstractionb" by ((pos: Position, seq: Sequent) => {
+    seq.sub(pos) match {
+      case Some(Box(prg, fml)) =>
+        val fv = StaticSemantics.freeVars(fml)
+        val bv = StaticSemantics.boundVars(prg)
+        if (!bv.intersect(fv).isEmpty) throw new BelleFriendlyUserMessage("Abstraction would lose information from program")
+        val fmls: ListBuffer[Formula] = ListBuffer.empty
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction() {
+          override def preP(p: PosInExpr, e: Program): Either[Option[ExpressionTraversal.StopTraversal], Program] = e match {
+            case Test(q) if q != True => fmls.append(q); Left(Some(ExpressionTraversal.stop))
+            case ODESystem(_, q) if q != True => fmls.append(q); Left(Some(ExpressionTraversal.stop))
+            case _ => Left(None)
+          }
+        }, prg)
+        if (fmls.isEmpty) abstractionb(pos)
+        else throw new BelleFriendlyUserMessage("Abstraction would lose information from tests and/or evolution domain constraints")
+      case e => throw BelleTacticFailure("Inapplicable tactic: expected formula of the shape [a;]p but got " +
+        e.map(_.prettyString) + " at position " + pos.prettyString + " in sequent " + seq.prettyString)
+    }
+  })
 
   /**
     * Introduces a self assignment [x:=x;]p(||) in front of p(||).

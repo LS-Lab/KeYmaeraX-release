@@ -33,10 +33,14 @@ angular.module('keymaerax.services').factory('Agenda', function() {
        itemIds: function() { return Object.keys(this.itemsMap); },
        items: function() {
          //@HACK set selectedTab here because angular bootstrap v2.5.0 screws up active=selectedTab when tabs are removed
+         var selected = this.selectedItem();
+         if (selected !== undefined) this.selectedTab = selected.id;
+         return $.map(this.itemsMap, function(v) {return v;});;
+       },
+       selectedItem: function() {
          var theItems = $.map(this.itemsMap, function(v) {return v;});
          var selected = $.grep(theItems, function(e, i) { return e.isSelected; });
-         if (selected !== undefined && selected.length > 0) this.selectedTab = selected[0].id;
-         return theItems;
+         return selected !== undefined && selected.length > 0 ? selected[0] : undefined;
        },
        deselect: function(item) { /* do not deselect item, otherwise agenda name textbox won't show */ },
        select: function(item) {

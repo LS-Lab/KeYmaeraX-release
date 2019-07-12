@@ -347,7 +347,7 @@ class ScriptedRequestTests extends TacticTestBase {
     )
   }
 
-  private def importExamplesIntoDB(db: TempDBTools) = {
+  private def importExamplesIntoDB(db: TempDBTools): Unit = {
     val userName = "maxLevelUser"
     db.db.createUser(userName, "", "1") // industry mode - return all examples
     val t = SessionManager.token(SessionManager.add(db.db.getUser(userName).get))
@@ -356,8 +356,9 @@ class ScriptedRequestTests extends TacticTestBase {
     val urls = examplesResponse.asInstanceOf[JsArray].elements.map(_.asJsObject.fields("url").asInstanceOf[JsString].value)
     urls should have size 6 // change when ListExamplesRequest is updated
     val urlsTable = Table("url", urls:_*)
-    forEvery(urlsTable) { (url) =>
-      val response = new ImportExampleRepoRequest(db.db, userName, url).getResultingResponses(t).loneElement
+    forEvery(urlsTable) { url =>
+      val content = DatabasePopulator.loadResource(url)
+      val response = new UploadArchiveRequest(db.db, userName, content, None).getResultingResponses(t).loneElement
       response should have ('flag (true), 'errorText (None))
     }
   }

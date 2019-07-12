@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.btactics
 import java.io.File
 
 import edu.cmu.cs.ls.keymaerax.Configuration
-import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{QEFileLogListener, QELogListener, StopwatchListener}
+import edu.cmu.cs.ls.keymaerax.bellerophon.IOListeners.{PrintProgressListener, QEFileLogListener, QELogListener, StopwatchListener}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
@@ -28,6 +28,12 @@ import scala.collection.immutable._
  */
 class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll
     with AppendedClues with TimeLimitedTests with TimeLimits with PrivateMethodTester {
+
+  /** Default signaler for failAfter in tests without tools. */
+  protected implicit val signaler: Signaler = { t: Thread =>
+    theInterpreter.kill(); t.interrupt()
+  }
+
   override def timeLimit: Span = {
     val simpleNames = this.getClass.getAnnotations.map(_.annotationType().getSimpleName)
     if (simpleNames.contains("ExtremeTest")) {
@@ -103,14 +109,13 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       val tool = provider.tool()
       val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
       implicit val signaler: Signaler = (t: Thread) => {
+        theInterpreter.kill()
         tool.cancel()
         t.interrupt()
         provider.shutdown()
         mathematicaProvider = new Lazy(new MathematicaToolProvider(configFileMathematicaConfig))
       }
-      failAfter(to) {
-        testcode(tool)
-      }
+      failAfter(to) { testcode(tool) }
     }
   }
 
@@ -131,19 +136,22 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       provider.tool().setOperationTimeout(timeout)
       val tool = provider.tool()
       val to = if (timeout == -1) timeLimit else Span(timeout, Seconds)
-      implicit val signaler: Signaler = { _: Thread => tool.cancel() }
-      failAfter(to) {
-        testcode(tool)
+      implicit val signaler: Signaler = { t: Thread =>
+        theInterpreter.kill()
+        tool.cancel()
+        t.interrupt()
+        provider.shutdown()
       }
+      failAfter(to) { testcode(tool) }
     }
   }
 
   /** Tests with both Mathematica and Z3 as QE tools. */
   def withQE(testcode: QETool => Any, timeout: Int = -1): Unit = {
-    withClue("Mathematica") { withMathematica(testcode) }
+    withClue("Mathematica") { withMathematica(testcode, timeout) }
     afterEach()
     beforeEach()
-    withClue("Z3") { withZ3(testcode) }
+    withClue("Z3") { withZ3(testcode, timeout) }
   }
 
   /**
@@ -295,6 +303,21 @@ class TacticTestBase extends FlatSpec with Matchers with BeforeAndAfterEach with
       case BelleProvable(provable, _) => provable
       case r => fail("Unexpected tactic result " + r)
     }
+  }
+
+  /** Execute a task with tactic progress.
+    * @example{{{
+    *   withTacticProgress("implyR(1)".asTactic) { proveBy("x>0 -> x>=0".asFormula, _) }
+    *   withTacticProgress("master".asTactic, "master"::"step"::"stepAt"::Nil) { proveBy("x>0 -> x>=0".asFormula, _) }
+    * }}}
+    */
+  def withTacticProgress(tactic: BelleExpr, stepInto: List[String] = Nil)(task: BelleExpr => ProvableSig): ProvableSig = {
+    val orig = theInterpreter
+    val progressInterpreter = LazySequentialInterpreter(
+      orig.listeners :+ new PrintProgressListener(tactic, stepInto), throwWithDebugInfo = false)
+    registerInterpreter(progressInterpreter)
+    BelleInterpreter.setInterpreter(progressInterpreter)
+    try { task(tactic) } finally { BelleInterpreter.setInterpreter(orig) }
   }
 
   /** Filters the archive entries that should be provable with the `tool`. */

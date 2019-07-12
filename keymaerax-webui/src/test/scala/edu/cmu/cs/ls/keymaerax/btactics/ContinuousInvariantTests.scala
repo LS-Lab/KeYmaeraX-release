@@ -125,7 +125,7 @@ class ContinuousInvariantTests extends TacticTestBase {
     }
   }
 
-  it should "produce invariants that are provable with ODE" taggedAs ExtremeTest in withMathematica { _ =>
+  it should "produce invariants that are provable with ODE" taggedAs ExtremeTest in withMathematica ({ _ =>
     withTemporaryConfig(Map(
         Configuration.Keys.ODE_TIMEOUT_FINALQE -> "300",
         Configuration.Keys.PEGASUS_INVCHECK_TIMEOUT -> "60")) {
@@ -136,13 +136,11 @@ class ContinuousInvariantTests extends TacticTestBase {
         map(e => (e.name, e.model, e.tactics.headOption.getOrElse("", BellePrettyPrinter(TactixLibrary.auto), TactixLibrary.auto)._3)): _*)) {
         (name, model, tactic) =>
           println("\n" + name + " with " + BellePrettyPrinter(tactic))
-          failAfter(5 minutes) {
-            proveBy(model.asInstanceOf[Formula], tactic) shouldBe 'proved
-          }
+          proveBy(model.asInstanceOf[Formula], tactic) shouldBe 'proved
           println(name + " done")
       }
     }
-  }
+  }, 300)
 
   "Refute ODE" should "find a simple counterexample" in withMathematica { tool =>
     val cex = tool.refuteODE(

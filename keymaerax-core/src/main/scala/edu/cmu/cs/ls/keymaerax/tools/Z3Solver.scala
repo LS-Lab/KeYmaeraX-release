@@ -19,7 +19,7 @@ import org.apache.logging.log4j.scala.Logging
 import scala.collection.immutable
 import scala.concurrent._
 import scala.sys.process._
-import ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * Created by ran on 3/27/15.
@@ -27,6 +27,9 @@ import ExecutionContext.Implicits.global
  * @author Stefan Mitsch
  */
 class Z3Solver(val converter: SMTConverter = DefaultSMTConverter) extends ToolOperationManagementBase with SMTSolver with Logging {
+  /** The currently running Z3 process. */
+  private var z3Process: Option[Process] = None
+
   /** Get the absolute path to Z3 executable
     * Copies Z3 out of the JAR if the KeYmaera X version has updated. */
   private val pathToZ3 : String = {
@@ -57,18 +60,17 @@ class Z3Solver(val converter: SMTConverter = DefaultSMTConverter) extends ToolOp
   /** Returns the version of Z3 that the current system's JAR was updated from. */
   private def needsUpdate(z3TempDir: String) = {
     val versionWhenLastCopied =
-      if(versionFile(z3TempDir).exists()) {
+      if (versionFile(z3TempDir).exists()) {
         val source = scala.io.Source.fromFile(versionFile(z3TempDir))
         val result = source.mkString
         source.close()
         result
-      }
-      else {
+      } else {
         "Not A Version Number" //Return an invalid version number, forcing Z3 to be copied to disk.
       }
     //Update if the version stroed in the version file does not equal the current version.
     val result = !versionWhenLastCopied.equals(edu.cmu.cs.ls.keymaerax.core.VERSION)
-    if(result) logger.debug("Updating Z3 binary...")
+    if (result) logger.debug("Updating Z3 binary...")
     result
   }
 
@@ -77,7 +79,6 @@ class Z3Solver(val converter: SMTConverter = DefaultSMTConverter) extends ToolOp
     //Update the version number.
     new PrintWriter(versionFile(z3TempDir)) { write(edu.cmu.cs.ls.keymaerax.core.VERSION); close() }
     //Copy z3 binary to disk.
-    scala.io.Source.fromFile(versionFile(z3TempDir))
     val osArch = System.getProperty("os.arch")
     var resource : InputStream = null
     if (osName.contains("mac")) {
@@ -166,11 +167,12 @@ class Z3Solver(val converter: SMTConverter = DefaultSMTConverter) extends ToolOp
     }
   }
 
-
-
   /** Calls Z3 with the command `z3Command` for at most `timeout` time, and returns the resulting output. */
   private def callZ3(z3Command: String, tmpFilePrefix: String, timeout: Int): String = {
     logger.debug("[Calling Z3...] \n" + z3Command)
+
+    if (z3Process.isDefined) throw ToolException("Z3 is busy")
+
     val smtFile = File.createTempFile(tmpFilePrefix, ".smt2")
     val writer = new FileWriter(smtFile)
     writer.write(z3Command)
@@ -180,14 +182,19 @@ class Z3Solver(val converter: SMTConverter = DefaultSMTConverter) extends ToolOp
     var result: String = ""
     val pl = ProcessLogger(s => result = s)
     val p = cmd.run(pl) // start asynchronously, log output to logger
-    val f = Future(blocking(p.exitValue())) // wrap in Future
+    z3Process = Some(p)
+    val f = Future(blocking(p.exitValue()))
     val exitVal = try {
+
       if (timeout >= 0) Await.result(f, duration.Duration(timeout, "sec"))
       else Await.result(f, duration.Duration.Inf)
     } catch {
       case ex: TimeoutException =>
         p.destroy()
         throw ToolException(s"Z3 timeout of ${timeout}s exceeded", ex)
+      case _: InterruptedException => p.destroy
+    } finally {
+      z3Process = None
     }
 
     if (exitVal == 0) {
@@ -195,6 +202,15 @@ class Z3Solver(val converter: SMTConverter = DefaultSMTConverter) extends ToolOp
     } else {
       throw ToolException(s"Error executing Z3, exit value $exitVal")
     }
+  }
+
+  /** Cancels the current Z3 process. */
+  def cancel(): Boolean = z3Process match {
+    case Some(p) =>
+      z3Process = None
+      p.destroy()
+      true
+    case None => true
   }
 
   override def getAvailableWorkers: Int = 1

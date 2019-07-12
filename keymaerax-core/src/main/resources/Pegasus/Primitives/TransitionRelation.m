@@ -86,9 +86,6 @@ Return[returnList];
 ]
 
 
-
-
-
 TransitionRel[problem_List]:=Module[{
   pre,f,vars,Q,post,
   i, j, k, startRegion, partitionSpace, partitionSpaceSigns, newPartitionSpaceSigns, 

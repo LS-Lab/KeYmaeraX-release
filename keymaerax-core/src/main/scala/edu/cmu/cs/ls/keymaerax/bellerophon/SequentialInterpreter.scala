@@ -4,6 +4,8 @@
   */
 package edu.cmu.cs.ls.keymaerax.bellerophon
 
+import java.util.concurrent.{Callable, ExecutionException, FutureTask}
+
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.BellePrettyPrinter
 import edu.cmu.cs.ls.keymaerax.btactics.Augmentors._
 import edu.cmu.cs.ls.keymaerax.btactics.{DebuggingTactics, TactixLibrary}
@@ -14,8 +16,9 @@ import edu.cmu.cs.ls.keymaerax.tools.ToolEvidence
 import org.apache.logging.log4j.scala.Logging
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future, TimeoutException}
+import scala.concurrent.{Await, Future, Promise, TimeoutException}
 import scala.concurrent.duration.{Duration, MILLISECONDS}
+import scala.util.Try
 import scala.util.control.Breaks._
 
 /**
@@ -28,6 +31,25 @@ import scala.util.control.Breaks._
 abstract class SequentialInterpreter(val listeners: scala.collection.immutable.Seq[IOListener], val throwWithDebugInfo: Boolean = false)
   extends Interpreter with Logging {
   var isDead: Boolean = false
+
+  /** Cancellable future, @see https://stackoverflow.com/questions/16009837/how-to-cancel-future-in-scala */
+  class Cancellable[T](executionContext: scala.concurrent.ExecutionContext, todo: => T) {
+    private val promise = Promise[T]()
+
+    def future: Future[T] = promise.future
+
+    private val jf: FutureTask[T] = new FutureTask[T](() => todo) {
+      override def done(): Unit = promise.complete(Try(get()))
+    }
+
+    def cancel(): Unit = jf.cancel(true)
+
+    executionContext.execute(jf)
+  }
+  object Cancellable {
+    def apply[T](todo: => T)(implicit executionContext: scala.concurrent.ExecutionContext): Cancellable[T] =
+      new Cancellable[T](executionContext, todo)
+  }
 
   override def apply(expr: BelleExpr, v: BelleValue): BelleValue = {
     if (Thread.currentThread().isInterrupted || isDead) {
@@ -285,12 +307,18 @@ abstract class SequentialInterpreter(val listeners: scala.collection.immutable.S
 
     case TimeoutAlternatives(alternatives, timeout) => alternatives.headOption match {
       case Some(tactic) =>
+        val c = Cancellable(apply(tactic, v))
         try {
-          Await.result(Future(apply(tactic, v)), Duration(timeout, MILLISECONDS))
+          Await.result(c.future, Duration(timeout, MILLISECONDS))
         } catch {
           // current alternative failed within timeout, try next
-          case _: BelleThrowable => apply(TimeoutAlternatives(alternatives.tail, timeout), v)
-          case ex: TimeoutException => throw new BelleThrowable("Alternative timed out", ex)
+          case ex: ExecutionException => ex.getCause match {
+            case _: BelleThrowable => apply(TimeoutAlternatives(alternatives.tail, timeout), v)
+            case e => throw e
+          }
+          case ex: TimeoutException =>
+            c.cancel()
+            throw new BelleThrowable("Alternative timed out", ex)
         }
       case None => throw new BelleThrowable("Exhausted all timeout alternatives")
     }

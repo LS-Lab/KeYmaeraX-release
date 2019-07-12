@@ -151,7 +151,7 @@ class InvariantGeneratorTests extends TacticTestBase {
 }
 
 object NonlinearExamplesTests {
-  private val GITHUB_PROJECTS_RAW_PATH = "https://github.com/LS-Lab/KeYmaeraX-projects/tree/master"
+  private val GITHUB_PROJECTS_RAW_PATH = "https://raw.githubusercontent.com/LS-Lab/KeYmaeraX-projects/master"
 }
 
 @ExtremeTest
@@ -274,12 +274,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       TactixLibrary.differentialInvGenerator = FixedGenerator(candidates)
       val start = System.currentTimeMillis()
       try {
-        val proof = failAfter(Span(timeout, Seconds))({
-          proveBy(model, TactixLibrary.master())
-        })((testThread: Thread) => {
-          theInterpreter.kill()
-          testThread.interrupt()
-        })
+        val proof = failAfter(Span(timeout, Seconds)) { proveBy(model, TactixLibrary.master()) }
         val end = System.currentTimeMillis()
         println(s"Done checking $name " + (if (proof.isProved) "(proved)" else "(unfinished)"))
         val result =
@@ -298,12 +293,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
       val t = BelleParser.parseWithInvGen(tactic.get, None, defs)
       val start = System.currentTimeMillis()
       try {
-        val proof = failAfter(Span(timeout, Seconds))({
-          proveBy(model, t)
-        })((testThread: Thread) => {
-          theInterpreter.kill()
-          testThread.interrupt()
-        })
+        val proof = failAfter(Span(timeout, Seconds)) { proveBy(model, t) }
         val end = System.currentTimeMillis()
         println(s"Done checking $name " + (if (proof.isProved) "(proved)" else "(unfinished)"))
         val result =
@@ -339,13 +329,7 @@ class NonlinearExamplesTester(val benchmarkName: String, val url: String, val ti
               val checkStart = System.currentTimeMillis()
               //val proof = proveBy(seq, TactixLibrary.master())
               try {
-                val proof = failAfter(Span(timeout, Seconds))({
-                  proveBy(model, TactixLibrary.master())
-                })((testThread: Thread) => {
-                  theInterpreter.kill()
-                  testThread.interrupt()
-                })
-
+                val proof = failAfter(Span(timeout, Seconds)) { proveBy(model, TactixLibrary.master()) }
                 val checkEnd = System.currentTimeMillis()
                 println(s"Done checking $name " + (if (proof.isProved) "(proved)" else "(unfinished)"))
 

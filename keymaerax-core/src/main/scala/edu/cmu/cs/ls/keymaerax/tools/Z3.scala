@@ -32,6 +32,7 @@ class Z3 extends ToolBase("Z3") with QETool with ToolOperationManagement {
 
   override def restart(): Unit = { initialized = true }
   override def shutdown(): Unit = { initialized = false }
+  override def cancel(): Boolean = z3.cancel()
 
   /** Sets a maximum duration of this tool's operations (e.g., QE). */
   override def setOperationTimeout(timeout: Int): Unit = z3.setOperationTimeout(timeout)

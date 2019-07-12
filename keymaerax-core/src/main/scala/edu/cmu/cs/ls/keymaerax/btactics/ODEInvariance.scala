@@ -730,11 +730,11 @@ object ODEInvariance {
     val frobenius = if(negate) frobeniusLem._2 else frobeniusLem._1
 
     //TODO: Is this the right place to handle constification??
-    val sumpRepl = replaceODEfree(sump,ode)
+    val sumpRepl = replaceODEfree(sump,sump,ode)
     val liePre = lieDerivative(ode,sumpRepl)
-    val lie = replaceODEfree(liePre,ode)
+    val lie = replaceODEfree(sump,liePre,ode)
     val dpPre = dot_prod(matvec_prod(Gco,ps),ps)
-    val dp = replaceODEfree(dpPre,ode)
+    val dp = replaceODEfree(sump,dpPre,ode)
     if(lie == Number(0))
       dC(cutp)(pos) <( skip, dI('full)(pos))
 
@@ -1006,13 +1006,13 @@ object ODEInvariance {
     ()
   }
 
-  private def replaceODEfree(t:Term, ode: DifferentialProgram) : Term = {
-    val consts = (StaticSemantics.freeVars(t) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
+  private def replaceODEfree(post:Term, t:Term, ode: DifferentialProgram) : Term = {
+    val consts = (StaticSemantics.freeVars(post) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
     consts.foldLeft(t)( (tt, c) => tt.replaceFree(c, FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing)))
   }
 
-  private def replaceODEfree(f:Formula, ode: DifferentialProgram) : Formula = {
-    val consts = (StaticSemantics.freeVars(f) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
+  private def replaceODEfree(post:Term, f:Formula, ode: DifferentialProgram) : Formula = {
+    val consts = (StaticSemantics.freeVars(post) -- StaticSemantics.boundVars(ode)).toSet.filter(_.isInstanceOf[BaseVariable])
     consts.foldLeft(f)( (tt, c) => tt.replaceFree(c, FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing)))
   }
 
@@ -1466,7 +1466,8 @@ object ODEInvariance {
     *         1) Linearity heuristic checks fail e.g.: x'=1+x^2-x^2 will be treated as non-linear even though it is really linear
     *
     */
-  private val nilpotentSolveTimeVar = "time_".asVariable
+  // TODO: hacky communication of global time marker for nilpotentSolve
+  val nilpotentSolveTimeVar = "time_".asVariable
 
   def nilpotentSolve(solveEnd : Boolean) : DependentPositionTactic = "nilpotentSolve" by ((pos:Position,seq:Sequent) => {
     require(pos.isTopLevel && pos.isSucc, "nilpotent solve only applicable in top-level succedent")

@@ -43,6 +43,7 @@ import edu.cmu.cs.ls.keymaerax.btactics.cexsearch.{BoundedDFS, BreadthFirstSearc
 import edu.cmu.cs.ls.keymaerax.btactics.helpers.DifferentialHelper
 import edu.cmu.cs.ls.keymaerax.codegen.{CControllerGenerator, CGenerator, CMonitorGenerator}
 import edu.cmu.cs.ls.keymaerax.hydra.DatabasePopulator.TutorialEntry
+import edu.cmu.cs.ls.keymaerax.launcher.ToolConfiguration
 import edu.cmu.cs.ls.keymaerax.lemma.LemmaDBFactory
 import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXArchiveParser.ParsedArchiveEntry
 import org.apache.logging.log4j.scala.Logging
@@ -448,10 +449,10 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
       new ConfigureMathematicaResponse(
         if (linkNamePrefix.exists()) linkNamePrefix.toString else "",
         if (jlinkLibNamePrefix.exists()) jlinkLibNamePrefix.toString else "", false) :: Nil
-    }
-    else {
+    } else {
       Configuration.set(Configuration.Keys.MATHEMATICA_LINK_NAME, linkName)
       Configuration.set(Configuration.Keys.MATHEMATICA_JLINK_LIB_DIR, jlinkLibDir.getAbsolutePath)
+      ToolProvider.setProvider(new MathematicaToolProvider(ToolConfiguration.config("mathematica")))
       new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, true) :: Nil
     }
   }
@@ -474,11 +475,13 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Localhos
 
     val pathTuples = osPathGuesses.map(osPath =>
       (osPath.getFields("version").head.convertTo[String],
-       osPath.getFields("kernelPath").head.convertTo[String],
+       osPath.getFields("kernelPath").head.convertTo[List[String]],
        osPath.getFields("kernelName").head.convertTo[String],
-       osPath.getFields("jlinkPath").head.convertTo[String] +
-         (if (jvmBits == "64") "-" + jvmBits else "") + File.separator,
-       osPath.getFields("jlinkName").head.convertTo[String]))
+       osPath.getFields("jlinkPath").head.convertTo[List[String]].map(p => p +
+         (if (jvmBits == "64") "-" + jvmBits else "") + File.separator),
+       osPath.getFields("jlinkName").head.convertTo[String])).flatMap({
+      case (p1, p2, p3, p4, p5) => p2.zipWithIndex.map({ case (p, i) => (p1, p, p3, p4(i), p5) })
+    })
 
     val (suggestionFound, suggestion) = pathTuples.find(path => new java.io.File(path._2 + path._3).exists &&
         new java.io.File(path._4 + path._5).exists) match {
@@ -539,6 +542,12 @@ class SetToolRequest(db: DBAbstraction, tool: String) extends LocalhostOnlyReque
     else {
       assert(tool == "mathematica" || tool == "z3", "Expected either Mathematica or Z3 tool")
       Configuration.set(Configuration.Keys.QE_TOOL, tool)
+      val config = ToolConfiguration.config(tool)
+      tool match {
+        case "mathematica" => ToolProvider.setProvider(new MathematicaToolProvider(config))
+        case "z3" => ToolProvider.setProvider(new Z3ToolProvider())
+        case _ => ToolProvider.setProvider(new NoneToolProvider)
+      }
       new KvpResponse("tool", tool) :: Nil
     }
   }
@@ -783,20 +792,6 @@ class UploadArchiveRequest(db: DBAbstraction, userId: String, archiveText: Strin
     } catch {
       //@todo adapt parse error positions (are relative to problem inside entry)
       case e: ParseException => ParseErrorResponse(e.msg, e.expect, e.found, e.getDetails, e.loc, e) :: Nil
-    }
-  }
-}
-
-class ImportExampleRepoRequest(db: DBAbstraction, userId: String, repoUrl: String) extends UserRequest(userId) with WriteRequest {
-  override def resultingResponses(): List[Response] = {
-    if (repoUrl.endsWith(".json")) {
-      DatabasePopulator.importJson(db, userId, repoUrl, prove=false)
-      BooleanResponse(flag=true) :: Nil
-    } else if (repoUrl.endsWith(".kya") || repoUrl.endsWith(".kyx")) {
-      DatabasePopulator.importKya(db, userId, repoUrl, prove=false, Nil)
-      BooleanResponse(flag=true) :: Nil
-    } else {
-      new ErrorResponse("Unknown repository type " + repoUrl + ". Expected .json or .kya") :: Nil
     }
   }
 }
@@ -1673,6 +1668,8 @@ class RunBelleTermRequest(db: DBAbstraction, userId: String, proofId: String, no
       case BelleTermInput(value, Some(_:ExpressionArg)) => "{`"+value+"`}"
       case BelleTermInput(value, Some(ListArg(_, "formula", _))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
       case BelleTermInput(value, Some(_:StringArg)) => "{`"+value+"`}"
+      case BelleTermInput(value, Some(OptionArg(_: ListArg))) => "[" + value.split(",").map("{`"+_+"`}").mkString(",") + "]"
+      case BelleTermInput(value, Some(OptionArg(_))) => "{`"+value+"`}"
       case BelleTermInput(value, None) => value
     }
     //@note stepAt(pos) may refer to a search tactic without position (e.g, closeTrue, closeFalse)
@@ -1960,7 +1957,8 @@ class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) e
     val proofbackupPath = Paths.get(Configuration.KEYMAERAX_HOME_PATH + File.separator + "proofbackup")
     if (!Files.exists(proofbackupPath)) Files.createDirectories(proofbackupPath)
 
-    val proofName = model.name + "_" + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(Calendar.getInstance().getTime)
+    val sanitizedModelName = model.name.replaceAll("\\W", "_")
+    val proofName = sanitizedModelName + "_" + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(Calendar.getInstance().getTime)
     var i = 0
     var uniqueProofName = proofName
     while (Files.exists(proofbackupPath.resolve(uniqueProofName))) {

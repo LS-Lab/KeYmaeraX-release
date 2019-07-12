@@ -13,7 +13,7 @@ import edu.cmu.cs.ls.keymaerax.core.{Provable, ProverException}
 
 /** These exceptions have well-understood causes and the given explanation should be propagated all the way to the user.
   * @todo give proper formatting and inContext and such. */
-class BelleFriendlyUserMessage(message: String) extends Exception
+class BelleFriendlyUserMessage(message: => String) extends Exception(message)
 
 /** Common exception type for all Bellerophon tactic exceptions. */
 class BelleThrowable(message: => String, cause: Throwable = null) extends ProverException("", cause) {
