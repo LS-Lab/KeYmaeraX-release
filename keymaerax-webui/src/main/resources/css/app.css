@@ -852,6 +852,10 @@ del {
   width: 80%;
 }
 
+.k4-axiomtactichelp-popover {
+  max-width: 90%;
+}
+
 .k4-axiomtactic-input {
   display: inline-block;
   max-width: 100px;
