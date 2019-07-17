@@ -16,20 +16,11 @@ angular.module('keymaerax.controllers').controller('DashboardCtrl.ExtractDB', ['
     }
 }]);
 
-angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '$uibModal', '$http', 'sessionService', 'sequentProofData',
-    function ($scope, $uibModal, $http, sessionService, sequentProofData) {
+angular.module('keymaerax.controllers').controller('DashboardCtrl', ['$scope', '$uibModal', '$http', 'sessionService',
+    function ($scope, $uibModal, $http, sessionService) {
   $scope.intro = {
     introOptions: {},
     firstTime: false
-  }
-
-  $scope.stepAxiom = function() {
-    var selectedItem = sequentProofData.agenda.selectedItem()
-    if (selectedItem) {
-      var explanationNodeId = selectedItem.deduction.sections[0].path[0];
-      var node = sequentProofData.proofTree.node(explanationNodeId);
-      return [node.rule];
-    } else return [];
   }
 
   $scope.showOverlayHelp = function() {
