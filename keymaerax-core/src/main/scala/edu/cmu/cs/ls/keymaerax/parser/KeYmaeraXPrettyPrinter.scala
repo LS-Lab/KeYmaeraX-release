@@ -548,11 +548,11 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
 
   protected def docOf(term: Term): Doc = term match {
     case Differential(t)        => encloseText("(", docOf(t),")" + ppOp(term))
-    case FuncOf(f, c)           => (Doc.text(f.asString) + Doc.lineOrEmpty + encloseText("(", docOf(c), ")").nested(2)).grouped
+    case FuncOf(f, c)           => (Doc.text(f.asString) + encloseText("(", Doc.lineOrEmpty + docOf(c), ")").nested(2)).grouped
     case Pair(l, r)             => wrapDoc((Doc.lineOrEmpty + docOf(l) + Doc.text(ppOp(term)) + Doc.lineOrEmpty + docOf(r) + Doc.lineOrEmpty).nested(2).grouped, term)
     case t@Neg(Number(n))       => Doc.text(pp(HereP, term))
-    case t: UnaryCompositeTerm  => (Doc.text(ppOp(t)) + wrapChildDoc(t, docOf(t.child)))
-    case t: BinaryCompositeTerm => (wrapLeftDoc(t, docOf(t.left)) + Doc.space + Doc.text(ppOp(t)) + Doc.line + wrapRightDoc(t, docOf(t.right))).grouped
+    case t: UnaryCompositeTerm  => (Doc.text(ppOp(t)) + wrapChildDoc(t, docOf(t.child))).grouped
+    case t: BinaryCompositeTerm => (wrapLeftDoc(t, docOf(t.left)) + Doc.space + Doc.text(ppOp(t)) + Doc.lineOrSpace + wrapRightDoc(t, docOf(t.right))).grouped
     case _ => Doc.text(pp(HereP, term))
   }
 
@@ -560,15 +560,15 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case True|False|DotFormula  => Doc.text(ppOp(formula))
     case PredOf(p, c)           => (Doc.text(p.asString) + Doc.lineOrEmpty + encloseText("(", docOf(c), ")").nested(2)).grouped
     case PredicationalOf(p, c)  => (Doc.text(p.asString) + Doc.lineOrEmpty + encloseText("{", docOf(c), "}").nested(2)).grouped
-    case f: ComparisonFormula   => (wrapLeftDoc(f, docOf(f.left)) + Doc.space + Doc.text(ppOp(formula)) + Doc.line + wrapRightDoc(f, docOf(f.right))).grouped
+    case f: ComparisonFormula   => (wrapLeftDoc(f, docOf(f.left)) + Doc.space + Doc.text(ppOp(formula)) + Doc.lineOrSpace + wrapRightDoc(f, docOf(f.right))).grouped
     case DifferentialFormula(g) => encloseText("(", docOf(g), ")" + ppOp(formula))
     case f: Quantified          => Doc.text(ppOp(formula)) + Doc.space + Doc.intercalate(Doc.comma+Doc.space, f.vars.map(docOf(_))) +
       Doc.line + wrapChildDoc(f, docOf(f.child))
     case f: Box                 => (wrapDoc(docOf(f.program), f) + Doc.lineOrEmpty + wrapChildDoc(f, docOf(f.child)).nested(2)).grouped
     case f: Diamond             => (wrapDoc(docOf(f.program), f) + Doc.lineOrEmpty + wrapChildDoc(f, docOf(f.child)).nested(2)).grouped
     case UnitPredicational(name,space) => Doc.text(name) + encloseText("(", Doc.text(space.toString), ")")
-    case t: UnaryCompositeFormula => (Doc.text(ppOp(t)) + wrapChildDoc(t, docOf(t.child)))
-    case t: BinaryCompositeFormula=> (wrapLeftDoc(t, docOf(t.left)) + Doc.space + Doc.text(ppOp(t)) + Doc.line + wrapRightDoc(t, docOf(t.right)))
+    case t: UnaryCompositeFormula => (Doc.text(ppOp(t)) + wrapChildDoc(t, docOf(t.child))).grouped
+    case t: BinaryCompositeFormula=> (wrapLeftDoc(t, docOf(t.left)) + Doc.space + Doc.text(ppOp(t)) + Doc.lineOrSpace + wrapRightDoc(t, docOf(t.right))).grouped
   }
 
   protected def statementDoc(s: Doc): Doc = if (OpSpec.statementSemicolon) s + Doc.text(";") else s
@@ -579,8 +579,9 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case Assign(x, e)           => statementDoc(docOf(x) + Doc.text(ppOp(program)) + docOf(e))
     case AssignAny(x)           => statementDoc(docOf(x) + Doc.text(ppOp(program)))
     case Test(f)                => statementDoc(Doc.text(ppOp(program)) + docOf(f))
-    case ODESystem(ode, f)      => wrapDoc(docOfODE(ode) + Doc.space + Doc.text(ppOp(program)) + Doc.line + docOf(f), program)
-    case ode: DifferentialProgram => (Doc.line + wrapDoc(docOfODE(ode), program) + Doc.line)
+    case ODESystem(ode, f) if f != True => wrapDoc(docOfODE(ode) + Doc.space + Doc.text(ppOp(program)) + Doc.line + docOf(f), program)
+    case ODESystem(ode, f) if f == True => wrapDoc(docOfODE(ode), program)
+    case ode: DifferentialProgram => (Doc.line + wrapDoc(docOfODE(ode), program) + Doc.line).grouped
     case t: UnaryCompositeProgram => wrapDoc(docOf(t.child), program) + Doc.text(ppOp(program))
     case t: Compose => pwrapLeftDoc(t, docOf(t.left)) + Doc.line + Doc.text(ppOp(t)) + pwrapRightDoc(t, docOf(t.right))
     case t: BinaryCompositeProgram => pwrapLeftDoc(t, docOf(t.left)) + Doc.line + Doc.text(ppOp(t)) + Doc.line + pwrapRightDoc(t, docOf(t.right))
@@ -590,11 +591,11 @@ class KeYmaeraXPrettierPrinter(margin: Int) extends KeYmaeraXPrecedencePrinter {
     case a: DifferentialProgramConst => Doc.text(a.asString)
     case AtomicODE(xp, e)       => docOf(xp) + Doc.text(ppOp(program)) + docOf(e)
     case t: DifferentialProduct =>
-      assert(op(t).assoc==RightAssociative && !t.left.isInstanceOf[DifferentialProduct], "differential products are always right-associative")
+      assert(op(t).assoc == RightAssociative && !t.left.isInstanceOf[DifferentialProduct], "differential products are always right-associative")
       docOfODE(t.left) + Doc.text(ppOp(t)) + Doc.line + docOfODE(t.right)
   }
 
-  override def stringify(expr: Expression) = {
+  override def stringify(expr: Expression): String = {
     val doc = expr match {
       case t: Term    => docOf(t)
       case f: Formula => docOf(f)

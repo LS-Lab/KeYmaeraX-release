@@ -16,12 +16,11 @@ import edu.cmu.cs.ls.keymaerax.core.{Expression, Formula}
 import edu.cmu.cs.ls.keymaerax.bellerophon._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
-
 import spray.json._
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
-
 import java.io.{PrintWriter, StringWriter}
+import java.util.regex.Pattern
 
 import Helpers._
 import edu.cmu.cs.ls.keymaerax.bellerophon.parser.{BelleParser, BellePrettyPrinter}
@@ -485,7 +484,7 @@ case class ProofNodeSequentResponse(proofId: String, node: ProofTreeNode) extend
   def getJson = JsObject(
     "proofId" -> JsString(proofId),
     "nodeId" -> JsString(node.id.toString),
-    "sequent" -> (node.goal match { case None => JsNull case Some(goal) => sequentJson(goal) })
+    "sequent" -> (node.goal match { case None => JsNull case Some(goal) => sequentJson(goal, 40, 80) })
   )
 }
 
@@ -531,7 +530,54 @@ class ProofAgendaResponse(tasks: List[(ProofPOJO, List[Int], String)]) extends R
 
 /** JSON conversions for frequently-used response formats */
 object Helpers {
-  def sequentJson(sequent: Sequent): JsValue = {
+  trait FormatProvider {
+    /** Prints whitespace and checks that the remaining format string starts with `check` (literally). Advances the format string past `check`. */
+    def printWS(check: String = ""): String
+    /** Prints whitespace prefix and formats `next` according to the format string. */
+    def print(next: String): String
+  }
+
+  /** Stateful format provider to read off whitespace and line breaks from a pretty-printed string. */
+  case class PrettyPrintFormatProvider(var format: String) extends FormatProvider {
+    private val LINEINDENT = "\\n(\\s*)".r
+    private val SPACES = "\\s+".r
+
+    /** Advances the format string `format` to the first non-whitespace character and returns the whitespace prefix. */
+    def advanceWS(): String = {
+      LINEINDENT.findPrefixMatchOf(format) match {
+        case Some(m) =>
+          format = format.substring(m.end)
+          m.matched
+        case None => SPACES.findPrefixMatchOf(format) match {
+          case Some(m) =>
+            format = format.substring(m.end)
+            m.matched
+          case None => ""
+        }
+      }
+    }
+
+    /** Prints whitespace and checks that the remaining format string starts with `check` (literally). Advances the format string past `check`. */
+    def printWS(check: String = ""): String = {
+      val result = advanceWS().replaceAllLiterally("\n", "<br/>").replaceAll("\\s", "&nbsp;")
+      assert(format.startsWith(check), s"'$format' did not start with '$check'")
+      format = format.substring(check.length)
+      result
+    }
+
+    /** Prints whitespace prefix and formats `next` according to the format string. */
+    def print(next: String): String = {
+      advanceWS() + next.map(c => printWS(c.toString) + c).reduceOption(_+_).getOrElse("")
+    }
+  }
+
+  /** Noop format provider. */
+  class NoneFormatProvider extends FormatProvider {
+    override def printWS(check: String): String = ""
+    override def print(next: String): String = next
+  }
+
+  def sequentJson(sequent: Sequent, marginLeft: Int, marginRight: Int): JsValue = {
     def fmlsJson(isAnte: Boolean, fmls: IndexedSeq[Formula]): JsValue = {
       JsArray(fmls.zipWithIndex.map { case (fml, i) =>
         /* Formula ID is formula number followed by comma-separated PosInExpr.
@@ -539,14 +585,17 @@ object Helpers {
         */
         val idx = if (isAnte) (-i)-1 else i+1
         val fmlString = JsString(UIKeYmaeraXPrettyPrinter(idx.toString, plainText=true)(fml))
-        val fmlJson = printJson(PosInExpr(), fml)(Position(idx), fml)
+
+        val format = new KeYmaeraXPrettierPrinter(if (isAnte) marginLeft else marginRight)(fml)
+        val fmlJson = printJson(PosInExpr(), fml, PrettyPrintFormatProvider(format))(Position(idx), fml)
         JsObject(
           "id" -> JsString(idx.toString),
           "formula" -> JsObject(
             "json" -> fmlJson,
             "string" -> fmlString
           )
-        )}.toVector)
+        )
+      }.toVector)
     }
     JsObject(
       "ante" -> fmlsJson(isAnte = true, sequent.ante),
@@ -554,10 +603,11 @@ object Helpers {
     )
   }
 
-  private def print(text: String, kind: String = "text"): JsValue = JsObject("text"->JsString(text), "kind" -> JsString(kind))
-  private def print(q: PosInExpr, text: String, kind: String)(implicit top: Position): JsValue =
+  private def printObject(text: String, kind: String = "text"): JsValue = JsObject("text"->JsString(text), "kind" -> JsString(kind))
+  private def print(text: String, fp: FormatProvider, kind: String = "text"): JsValue = printObject(fp.print(text), kind)
+  private def print(q: PosInExpr, text: String, kind: String, fp: FormatProvider)(implicit top: Position): JsValue =
     JsObject("id" -> JsString(top + (if (q.pos.nonEmpty) "," + q.pos.mkString(",") else "")),
-      "text"->JsString(text), "kind" -> JsString(kind))
+      "text"->JsString(fp.print(text)), "kind" -> JsString(kind))
   private def print(q: PosInExpr, kind: String, hasStep: Boolean, isEditable: Boolean, plainText: => String,
                     children: JsValue*)(implicit top: Position): JsValue = {
     JsObject(
@@ -569,29 +619,29 @@ object Helpers {
       "children"->JsArray(children:_*))
   }
 
-  private def op(expr: Expression, opLevel: String = "op"): JsValue = expr match {
+  private def op(expr: Expression, fp: FormatProvider, opLevel: String = "op"): JsValue = expr match {
     // terms
-    case _: Minus        => print("&minus;", opLevel + " k4-term-op")
-    case _: Neg          => print("&minus;", opLevel + " k4-term-op")
-    case _: Term         => print(OpSpec.op(expr).opcode, opLevel + " k4-term-op")
+    case _: Minus        => printObject(fp.printWS(OpSpec.op(expr).opcode) + "&minus;", opLevel + " k4-term-op")
+    case _: Neg          => printObject(fp.printWS(OpSpec.op(expr).opcode) + "&minus;", opLevel + " k4-term-op")
+    case _: Term         => printObject(fp.print(OpSpec.op(expr).opcode), opLevel + " k4-term-op")
     // formulas
-    case _: NotEqual     => print("&ne;", opLevel + " k4-cmpfml-op")
-    case _: GreaterEqual => print("&ge;", opLevel + " k4-cmpfml-op")
-    case _: Greater      => print("&gt;", opLevel + " k4-cmpfml-op")
-    case _: LessEqual    => print("&le;", opLevel + " k4-cmpfml-op")
-    case _: Less         => print("&lt;", opLevel + " k4-cmpfml-op")
-    case _: Forall       => print("&forall;", opLevel + " k4-fml-op")
-    case _: Exists       => print("&exist;", opLevel + " k4-fml-op")
-    case _: Not          => print("&not;", opLevel + " k4-propfml-op")
-    case _: And          => print("&and;", opLevel + " k4-propfml-op")
-    case _: Or           => print("&or;", opLevel + " k4-propfml-op")
-    case _: Imply        => print("&rarr;", opLevel + " k4-propfml-op")
-    case _: Equiv        => print("&#8596;", opLevel + " k4-propfml-op")
-    case _: Formula      => print(OpSpec.op(expr).opcode, opLevel + " k4-fml-op")
+    case _: NotEqual     => printObject(fp.printWS(OpSpec.op(expr).opcode) + "&ne;", opLevel + " k4-cmpfml-op")
+    case _: GreaterEqual => printObject(fp.printWS(OpSpec.op(expr).opcode) + "&ge;", opLevel + " k4-cmpfml-op")
+    case _: Greater      => printObject(fp.printWS(OpSpec.op(expr).opcode) + "&gt;", opLevel + " k4-cmpfml-op")
+    case _: LessEqual    => printObject(fp.printWS(OpSpec.op(expr).opcode) + "&le;", opLevel + " k4-cmpfml-op")
+    case _: Less         => printObject(fp.printWS(OpSpec.op(expr).opcode) + "&lt;", opLevel + " k4-cmpfml-op")
+    case _: Forall       => printObject(fp.printWS(OpSpec.op(expr).opcode) + "&forall;", opLevel + " k4-fml-op")
+    case _: Exists       => printObject(fp.printWS(OpSpec.op(expr).opcode) + "&exist;", opLevel + " k4-fml-op")
+    case _: Not          => printObject(fp.printWS(OpSpec.op(expr).opcode) + "&not;", opLevel + " k4-propfml-op")
+    case _: And          => printObject(fp.printWS(OpSpec.op(expr).opcode) + "&and;", opLevel + " k4-propfml-op")
+    case _: Or           => printObject(fp.printWS(OpSpec.op(expr).opcode) + "&or;", opLevel + " k4-propfml-op")
+    case _: Imply        => printObject(fp.printWS(OpSpec.op(expr).opcode) + "&rarr;", opLevel + " k4-propfml-op")
+    case _: Equiv        => printObject(fp.printWS(OpSpec.op(expr).opcode) + "&#8596;", opLevel + " k4-propfml-op")
+    case _: Formula      => printObject(fp.printWS(OpSpec.op(expr).opcode) + OpSpec.op(expr).opcode, opLevel + " k4-fml-op")
     // programs
-    case _: Choice       => print("&cup;", opLevel + " k4-prg-op")
-    case _: Program      => print(OpSpec.op(expr).opcode, opLevel + " k4-prg-op")
-    case _ => print(OpSpec.op(expr).opcode, opLevel)
+    case _: Choice       => printObject(fp.printWS(OpSpec.op(expr).opcode) + "&cup;", opLevel + " k4-prg-op")
+    case _: Program      => printObject(fp.printWS(OpSpec.op(expr).opcode) + OpSpec.op(expr).opcode, opLevel + " k4-prg-op")
+    case _ => printObject(fp.printWS(OpSpec.op(expr).opcode) + OpSpec.op(expr).opcode, opLevel)
   }
 
   private def skipParens(expr: Modal): Boolean = OpSpec.op(expr.child) <= OpSpec.op(expr)
@@ -604,24 +654,22 @@ object Helpers {
     OpSpec.op(expr.right) < OpSpec.op(expr) || OpSpec.op(expr.right) <= OpSpec.op(expr) &&
       OpSpec.op(expr).assoc == RightAssociative && OpSpec.op(expr.right).assoc == RightAssociative
 
-  private def wrapLeft(expr: BinaryComposite, left: JsValue): List[JsValue] =
-    if (skipParensLeft(expr)) left::Nil else print("(")::left::print(")")::Nil
-  private def wrapRight(expr: BinaryComposite, right: JsValue): List[JsValue] =
-    if (skipParensRight(expr)) right::Nil else print("(")::right::print(")")::Nil
-  private def wrapChild(expr: UnaryComposite, child: JsValue): List[JsValue] =
-    if (skipParens(expr)) child::Nil else print("(")::child::print(")")::Nil
-  private def wrapChild(expr: Quantified, child: JsValue): List[JsValue] =
-    if (skipParens(expr)) child::Nil else print("(")::child::print(")")::Nil
-  private def wrapChild(expr: Modal, child: JsValue): List[JsValue] =
-    if (skipParens(expr)) child::Nil else print("(")::child::print(")")::Nil
-  private def pwrapLeft(expr: BinaryCompositeProgram, left: List[JsValue]): List[JsValue] =
-    if (skipParensLeft(expr)) left else print("{", "prg-open")+:left:+print("}", "prg-close")
-  private def pwrapRight(expr: BinaryCompositeProgram, right: List[JsValue]): List[JsValue] =
-    if (skipParensRight(expr)) right else print("{", "prg-open")+:right:+print("}", "prg-close")
+  private def wrapLeft(expr: BinaryComposite, left: => JsValue, fp: FormatProvider): List[JsValue] =
+    if (skipParensLeft(expr)) left::Nil else print("(", fp)::left::print(")", fp)::Nil
+  private def wrapRight(expr: BinaryComposite, right: => JsValue, fp: FormatProvider): List[JsValue] =
+    if (skipParensRight(expr)) right::Nil else print("(", fp)::right::print(")", fp)::Nil
+  private def wrapChild(expr: UnaryComposite, child: => JsValue, fp: FormatProvider): List[JsValue] =
+    if (skipParens(expr)) child::Nil else print("(", fp)::child::print(")", fp)::Nil
+  private def wrapChild(expr: Quantified, child: => JsValue, fp: FormatProvider): List[JsValue] =
+    if (skipParens(expr)) child::Nil else print("(", fp)::child::print(")", fp)::Nil
+  private def wrapChild(expr: Modal, child: => JsValue, fp: FormatProvider): List[JsValue] =
+    if (skipParens(expr)) child::Nil else print("(", fp)::child::print(")", fp)::Nil
+  private def pwrapLeft(expr: BinaryCompositeProgram, left: => List[JsValue], fp: FormatProvider): List[JsValue] =
+    if (skipParensLeft(expr)) left else print("{", fp, "prg-open")+:left:+print("}", fp, "prg-close")
+  private def pwrapRight(expr: BinaryCompositeProgram, right: => List[JsValue], fp: FormatProvider): List[JsValue] =
+    if (skipParensRight(expr)) right else print("{", fp, "prg-open")+:right:+print("}", fp, "prg-close")
 
-  //@todo spacing see KeYmaeraXPrettyPrinter
-
-  private def printJson(q: PosInExpr, expr: Expression)(implicit top: Position, topExpr: Expression): JsValue = {
+  private def printJson(q: PosInExpr, expr: Expression, fp: FormatProvider)(implicit top: Position, topExpr: Expression): JsValue = {
     val hasStep = UIIndex.allStepsAt(expr, Some(top++q), None).nonEmpty
     val parent = if (q.pos.isEmpty) None else topExpr match {
       case t: Term => t.sub(q.parent)
@@ -639,48 +687,48 @@ object Helpers {
       //case t: UnaryCompositeTerm => print("", q, "term", hasStep, isEditable, op(t) +: wrapChild(t, printJson(q ++ 0, t.child)):_*)
       //case t: BinaryCompositeTerm => print("", q, "term", hasStep, isEditable, wrapLeft(t, printJson(q ++ 0, t.left)) ++ (op(t)::Nil) ++ wrapRight(t, printJson(q ++ 1, t.right)):_*)
       case f: ComparisonFormula =>
-        print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q ++ 0, f.left)) ++ (op(f)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right)):_*)
-      case DifferentialFormula(g) => print(q, "formula", hasStep, isEditable, expr.prettyString, print("("), print(g.prettyString), print(")"), op(expr))
-      case f: Quantified => print(q, "formula", hasStep, isEditable, expr.prettyString, op(f)::print(" ")::print(f.vars.map(_.prettyString).mkString(","))::print(" ")::Nil ++ wrapChild(f, printJson(q ++ 0, f.child)):_*)
-      case f: Box => print(q, "formula", hasStep, isEditable, expr.prettyString, print("[", "mod-open")::printJson(q ++ 0, f.program)::print("]", "mod-close")::Nil ++ wrapChild(f, printJson(q ++ 1, f.child)):_*)
-      case f: Diamond => print(q, "formula", hasStep, isEditable, expr.prettyString, print("<", "mod-open")::printJson(q ++ 0, f.program)::print(">", "mod-close")::Nil ++ wrapChild(f, printJson(q ++ 1, f.child)):_*)
-      case f: UnaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, op(f) +: wrapChild(f, printJson(q ++ 0, f.child)):_*)
-      case _: AtomicFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, print(expr.prettyString))
-      case f: BinaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q ++ 0, f.left)) ++ (op(f)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right)):_*)
-      case p: Program => print(q, "program", false, false, expr.prettyString, printPrgJson(q, p):_*)
-      case _ => print(q, expr.prettyString, "term")
+        print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q ++ 0, f.left, fp), fp) ++ (op(f, fp)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right, fp), fp):_*)
+      case DifferentialFormula(g) => print(q, "formula", hasStep, isEditable, expr.prettyString, print("(", fp), print(g.prettyString, fp), print(")", fp), op(expr, fp))
+      case f: Quantified => print(q, "formula", hasStep, isEditable, expr.prettyString, op(f, fp)::print(f.vars.map(_.prettyString).mkString(","), fp)::Nil ++ wrapChild(f, printJson(q ++ 0, f.child, fp), fp):_*)
+      case f: Box => print(q, "formula", hasStep, isEditable, expr.prettyString, print("[", fp, "mod-open")::printJson(q ++ 0, f.program, fp)::print("]", fp, "mod-close")::Nil ++ wrapChild(f, printJson(q ++ 1, f.child, fp), fp):_*)
+      case f: Diamond => print(q, "formula", hasStep, isEditable, expr.prettyString, print("<", fp, "mod-open")::printJson(q ++ 0, f.program, fp)::print(">", fp, "mod-close")::Nil ++ wrapChild(f, printJson(q ++ 1, f.child, fp), fp):_*)
+      case f: UnaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, op(f, fp)+:wrapChild(f, printJson(q ++ 0, f.child, fp), fp):_*)
+      case _: AtomicFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, print(expr.prettyString, fp))
+      case f: BinaryCompositeFormula => print(q, "formula", hasStep, isEditable, expr.prettyString, wrapLeft(f, printJson(q ++ 0, f.left, fp), fp) ++ (op(f, fp)::Nil) ++ wrapRight(f, printJson(q ++ 1, f.right, fp), fp):_*)
+      case p: Program => print(q, "program", false, false, expr.prettyString, printPrgJson(q, p, fp):_*)
+      case _ => print(q, expr.prettyString, "term", fp)
     }
   }
 
-  private def printPrgJson(q: PosInExpr, expr: Program)(implicit top: Position, topExpr: Expression): List[JsValue] = expr match {
-    case Assign(x, e) => printJson(q ++ 0, x)::op(expr, "topop")::printJson(q ++ 1, e)::print(";")::Nil
-    case AssignAny(x) => printJson(q ++ 0, x)::op(expr, "topop")::print(";")::Nil
-    case Test(f) => op(expr, "topop")::printJson(q ++ 0, f)::print(";")::Nil
-    case t: UnaryCompositeProgram => print("{", "prg-open")+:printRecPrgJson(q ++ 0, t.child):+print("}", "prg-close"):+op(t, "topop")
-    case t: Compose => pwrapLeft(t, printRecPrgJson(q ++ 0, t.left))++(print(q, "", "topop k4-prg-op")::Nil)++pwrapRight(t, printRecPrgJson(q ++ 1, t.right))
-    case t: BinaryCompositeProgram => pwrapLeft(t, printRecPrgJson(q ++ 0, t.left)) ++ (op(t, "topop")::Nil) ++ pwrapRight(t, printRecPrgJson(q ++ 1, t.right))
-    case ODESystem(ode, f) => print("{", "prg-open")::printJson(q ++ 0, ode)::print(q, "&", "topop k4-prg-op")::printJson(q ++ 1, f)::print("}", "prg-close")::Nil
-    case AtomicODE(xp, e) => printJson(q ++ 0, xp)::op(expr, "topop")::printJson(q ++ 1, e)::Nil
-    case t: DifferentialProduct => printJson(q ++ 0, t.left)::op(t, "topop")::printJson(q ++ 1, t.right)::Nil
-    case c: DifferentialProgramConst => print(c.prettyString)::Nil
-    case c: ProgramConst => print(c.prettyString)::Nil
+  private def printPrgJson(q: PosInExpr, expr: Program, fp: FormatProvider)(implicit top: Position, topExpr: Expression): List[JsValue] = expr match {
+    case Assign(x, e) => printJson(q ++ 0, x, fp)::op(expr, fp, "topop")::printJson(q ++ 1, e, fp)::print(";", fp)::Nil
+    case AssignAny(x) => printJson(q ++ 0, x, fp)::op(expr, fp, "topop")::print(";", fp)::Nil
+    case Test(f) => op(expr, fp, "topop")::printJson(q ++ 0, f, fp)::print(";", fp)::Nil
+    case t: UnaryCompositeProgram => print("{", fp, "prg-open")+:printRecPrgJson(q ++ 0, t.child, fp):+print("}", fp, "prg-close"):+op(t, fp, "topop")
+    case t: Compose => pwrapLeft(t, printRecPrgJson(q ++ 0, t.left, fp), fp)++(print(q, "", "topop k4-prg-op", fp)::Nil)++pwrapRight(t, printRecPrgJson(q ++ 1, t.right, fp), fp)
+    case t: BinaryCompositeProgram => pwrapLeft(t, printRecPrgJson(q ++ 0, t.left, fp), fp) ++ (op(t, fp, "topop")::Nil) ++ pwrapRight(t, printRecPrgJson(q ++ 1, t.right, fp), fp)
+    case ODESystem(ode, f) if f != True => print("{", fp, "prg-open")::printJson(q ++ 0, ode, fp)::print(q, "&", "topop k4-prg-op", fp)::printJson(q ++ 1, f, fp)::print("}", fp, "prg-close")::Nil
+    case ODESystem(ode, f) if f == True => print("{", fp, "prg-open")::printJson(q ++ 0, ode, fp)::print("}", fp, "prg-close")::Nil
+    case AtomicODE(xp, e) => printJson(q ++ 0, xp, fp)::op(expr, fp, "topop")::printJson(q ++ 1, e, fp)::Nil
+    case t: DifferentialProduct => printJson(q ++ 0, t.left, fp)::op(t, fp, "topop")::printJson(q ++ 1, t.right, fp)::Nil
+    case c: DifferentialProgramConst => print(c.prettyString, fp)::Nil
+    case c: ProgramConst => print(c.prettyString, fp)::Nil
   }
 
-  private def printRecPrgJson(q: PosInExpr, expr: Program)(implicit top: Position, topExpr: Expression): List[JsValue] = expr match {
-    case Assign(x, e) => printJson(q ++ 0, x)::op(expr)::printJson(q ++ 1, e)::print(";")::Nil
-    case AssignAny(x) => printJson(q ++ 0, x)::op(expr)::print(";")::Nil
-    case Test(f) => op(expr)::printJson(q ++ 0, f)::print(";")::Nil
-    case t: UnaryCompositeProgram => print("{", "prg-open")+:printRecPrgJson(q ++ 0, t.child):+print("}", "prg-close"):+op(t)
-    case t: Compose => pwrapLeft(t, printRecPrgJson(q ++ 0, t.left)) ++ pwrapRight(t, printRecPrgJson(q ++ 1, t.right))
-    case t: BinaryCompositeProgram => pwrapLeft(t, printRecPrgJson(q ++ 0, t.left)) ++ (op(t)::Nil) ++ pwrapRight(t, printRecPrgJson(q ++ 1, t.right))
-    case ODESystem(ode, f) => print("{", "prg-open")::printJson(q ++ 0, ode)::print("&")::printJson(q ++ 1, f)::print("}", "prg-close")::Nil
-    case AtomicODE(xp, e) => printJson(q ++ 0, xp)::op(expr)::printJson(q ++ 1, e)::Nil
-    case t: DifferentialProduct => printJson(q ++ 0, t.left)::op(t)::printJson(q ++ 1, t.right)::Nil
-    case c: DifferentialProgramConst => print(c.prettyString)::Nil
-    case c: ProgramConst => print(c.prettyString)::Nil
+  private def printRecPrgJson(q: PosInExpr, expr: Program, fp: FormatProvider)(implicit top: Position, topExpr: Expression): List[JsValue] = expr match {
+    case Assign(x, e) => printJson(q ++ 0, x, fp)::op(expr, fp)::printJson(q ++ 1, e, fp)::print(";", fp)::Nil
+    case AssignAny(x) => printJson(q ++ 0, x, fp)::op(expr, fp)::print(";", fp)::Nil
+    case Test(f) => op(expr, fp)::printJson(q ++ 0, f, fp)::print(";", fp)::Nil
+    case t: UnaryCompositeProgram => print("{", fp, "prg-open")+:printRecPrgJson(q ++ 0, t.child, fp):+print("}", fp, "prg-close"):+op(t, fp)
+    case t: Compose => pwrapLeft(t, printRecPrgJson(q ++ 0, t.left, fp), fp) ++ pwrapRight(t, printRecPrgJson(q ++ 1, t.right, fp), fp)
+    case t: BinaryCompositeProgram => pwrapLeft(t, printRecPrgJson(q ++ 0, t.left, fp), fp) ++ (op(t, fp)::Nil) ++ pwrapRight(t, printRecPrgJson(q ++ 1, t.right, fp), fp)
+    case ODESystem(ode, f) if f != True => print("{", fp, "prg-open")::printJson(q ++ 0, ode, fp)::print("&", fp)::printJson(q ++ 1, f, fp)::print("}", fp, "prg-close")::Nil
+    case ODESystem(ode, f) if f == True => print("{", fp, "prg-open")::printJson(q ++ 0, ode, fp)::print("}", fp, "prg-close")::Nil
+    case AtomicODE(xp, e) => printJson(q ++ 0, xp, fp)::op(expr, fp)::printJson(q ++ 1, e, fp)::Nil
+    case t: DifferentialProduct => printJson(q ++ 0, t.left, fp)::op(t, fp)::printJson(q ++ 1, t.right, fp)::Nil
+    case c: DifferentialProgramConst => print(c.prettyString, fp)::Nil
+    case c: ProgramConst => print(c.prettyString, fp)::Nil
   }
-
-
 
   /** Only first node's sequent is printed. */
   def nodesJson(nodes: List[ProofTreeNode]): List[(String, JsValue)] = {
@@ -691,7 +739,7 @@ object Helpers {
   def nodeJson(node: ProofTreeNode, withSequent: Boolean = true): (String, JsValue) = {
     val id = JsString(node.id.toString)
     val sequent =
-      if (withSequent) node.goal match { case None => JsNull case Some(goal) => sequentJson(goal) }
+      if (withSequent) node.goal match { case None => JsNull case Some(goal) => sequentJson(goal, 40, 80) }
       else JsNull
     val childrenIds = JsArray(node.children.map(s => JsString(s.id.toString)):_*)
     val parent = node.parent.map(n => JsString(n.id.toString)).getOrElse(JsNull)
