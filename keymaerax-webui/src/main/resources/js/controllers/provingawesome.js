@@ -11,7 +11,7 @@ angular.module('keymaerax.controllers').controller('ProofCtrl',
   sequentProofData.clear(); // @note we load a new proof, so clear agenda and proof tree
 
   $scope.taskExplanation = {
-    selection: "Tactic"
+    selection: "Rule"
   };
   $scope.stepAxiom = function() {
         var selectedItem = sequentProofData.agenda.selectedItem()
