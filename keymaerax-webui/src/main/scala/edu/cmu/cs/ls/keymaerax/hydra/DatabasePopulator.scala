@@ -22,6 +22,8 @@ object DatabasePopulator extends Logging {
   //@todo publish the tutorials and case studies somewhere on the web page, add Web UI functionality to explore tutorials
   // and case studies and import into the database
 
+  private val GITHUB_PROJECTS_RAW_PATH = "https://raw.githubusercontent.com/LS-Lab/KeYmaeraX-projects/master"
+
   case class TutorialEntry(name: String, model: String, description: Option[String], title: Option[String],
                            link: Option[String], tactic: List[(String, String, Boolean)], kind: String = "Unknown")
 
@@ -77,10 +79,16 @@ object DatabasePopulator extends Logging {
   /** Loads the specified resource, either from the JAR if URL starts with 'classpath:' or from the URL. */
   def loadResource(url: String): String =
     if (url.startsWith("classpath:")) {
-      io.Source.fromInputStream(getClass.getResourceAsStream(url.substring("classpath:".length))).mkString
+      val resource = getClass.getResourceAsStream(url.substring("classpath:".length))
+      if (resource != null) io.Source.fromInputStream(resource).mkString
+      else if (url.startsWith("classpath:/keymaerax-projects")) loadResource(GITHUB_PROJECTS_RAW_PATH + url.substring("classpath:/keymaerax-projects".length))
+      else throw new Exception(s"Example '$url' neither included in build nor available in projects repository")
     } else {
       try {
-        io.Source.fromURL(url).mkString
+        val src = io.Source.fromURL(url)
+        val result = src.mkString
+        src.close()
+        result
       } catch {
         case _: java.net.MalformedURLException => throw new Exception(s"Malformed URL $url")
       }
